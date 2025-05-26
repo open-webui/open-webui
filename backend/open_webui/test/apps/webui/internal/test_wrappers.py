@@ -38,8 +38,8 @@ class TestWrappers:
                 result = register_connection(db_url)
                 
                 # Assertions
-                mock_connect.assert_called_once_with(db_url, unquote_password=True)
-                mock_parse.assert_called_once_with(db_url, unquote_password=True)
+                mock_connect.assert_called_once_with(db_url, unquote_user=True, unquote_password=True)
+                mock_parse.assert_called_once_with(db_url, unquote_user=True, unquote_password=True)
                 
                 # Check that options were added with schema
                 expected_connection = {
@@ -186,7 +186,7 @@ class TestWrappers:
                 result = register_connection(db_url)
                 
                 # Assertions
-                mock_connect.assert_called_once_with(db_url, unquote_password=True)
+                mock_connect.assert_called_once_with(db_url, unquote_user=True, unquote_password=True)
                 
                 # Verify SQLite database properties are set
                 assert mock_sqlite_db.autoconnect is True

@@ -52,11 +52,29 @@ def register_connection(db_url):
 
         # Get the connection details
         connection = parse(db_url, unquote_user=True, unquote_password=True)
+        
         if DATABASE_SCHEMA:
+            # Create schema if it doesn't exist
+            try:
+                cursor = db.cursor()
+                log.info(f"Creating schema '{DATABASE_SCHEMA}' if it doesn't exist...")
+                cursor.execute(f"CREATE SCHEMA IF NOT EXISTS {DATABASE_SCHEMA}")
+                db.commit()
+                cursor.close()
+                log.info(f"Schema '{DATABASE_SCHEMA}' is ready")
+            except Exception as e:
+                log.error(f"Error creating schema '{DATABASE_SCHEMA}': {e}")
+                # Continue with the connection even if schema creation fails
+            
+            log.info(f"Setting search path to {DATABASE_SCHEMA},public")
+            # Add schema to search path options
             if "options" not in connection:
                 connection["options"] = f"-c search_path={DATABASE_SCHEMA},public"
             else:
                 connection["options"] += f" -c search_path={DATABASE_SCHEMA},public"
+            
+            # Close the temporary connection
+            db.close()
 
         # Use our custom database class that supports reconnection
         db = ReconnectingPostgresqlDatabase(**connection)

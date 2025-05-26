@@ -100,7 +100,12 @@ else:
 SessionLocal = sessionmaker(
     autocommit=False, autoflush=False, bind=engine, expire_on_commit=False
 )
-metadata_obj = MetaData(schema=DATABASE_SCHEMA)
+# SQLite를 사용하는 경우 스키마를 None으로 설정
+if "sqlite" in SQLALCHEMY_DATABASE_URL:
+    metadata_obj = MetaData(schema=None)
+else:
+    metadata_obj = MetaData(schema=DATABASE_SCHEMA)
+    
 Base = declarative_base(metadata=metadata_obj)
 Session = scoped_session(SessionLocal)
 

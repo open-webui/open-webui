@@ -77,7 +77,8 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        if target_metadata.schema:
+        if target_metadata.schema and connection.dialect.name == 'postgresql':
+            # PostgreSQL에서만 스키마 설정 적용
             connection.execute(
                 text(f"SET search_path TO {target_metadata.schema}, public")
             )
@@ -87,6 +88,7 @@ def run_migrations_online() -> None:
                 version_table_schema=target_metadata.schema,
             )
         else:
+            # For SQLite, ignore schema and use default behavior
             context.configure(
                 connection=connection,
                 target_metadata=target_metadata,
