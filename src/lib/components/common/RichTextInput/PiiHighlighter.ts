@@ -7,6 +7,8 @@ import { PiiSessionManager } from '$lib/utils/pii';
 export interface PiiHighlighterOptions {
 	piiEntities: ExtendedPiiEntity[];
 	highlightClass: string;
+	onHover?: (entity: ExtendedPiiEntity, position: { x: number, y: number }) => void;
+	onHoverEnd?: () => void;
 }
 
 export const PiiHighlighter = Extension.create<PiiHighlighterOptions>({
@@ -15,7 +17,9 @@ export const PiiHighlighter = Extension.create<PiiHighlighterOptions>({
 	addOptions() {
 		return {
 			piiEntities: [],
-			highlightClass: 'pii-highlight'
+			highlightClass: 'pii-highlight',
+			onHover: undefined,
+			onHoverEnd: undefined
 		};
 	},
 
@@ -55,7 +59,7 @@ export const PiiHighlighter = Extension.create<PiiHighlighterOptions>({
 											'data-pii-text': entity.text,
 											'data-pii-occurrence': occurrenceIndex.toString(),
 											'data-should-mask': shouldMask.toString(),
-											title: `${entity.label} (${entity.type}) - Click to toggle masking\n${statusText}`
+											'data-entity-index': piiEntities.indexOf(entity).toString()
 										})
 									);
 								}
@@ -90,6 +94,36 @@ export const PiiHighlighter = Extension.create<PiiHighlighterOptions>({
 							}
 						}
 						return false;
+					},
+					handleDOMEvents: {
+						mouseenter: (view, event) => {
+							const target = event.target as HTMLElement;
+							if (target.classList.contains('pii-highlight')) {
+								const entityIndex = parseInt(target.getAttribute('data-entity-index') || '0');
+								const { piiEntities, onHover } = this.options;
+								
+								if (onHover && piiEntities[entityIndex]) {
+									const rect = target.getBoundingClientRect();
+									const position = {
+										x: rect.left + rect.width / 2,
+										y: rect.top
+									};
+									onHover(piiEntities[entityIndex], position);
+								}
+							}
+							return false;
+						},
+						mouseleave: (view, event) => {
+							const target = event.target as HTMLElement;
+							if (target.classList.contains('pii-highlight')) {
+								const { onHoverEnd } = this.options;
+								if (onHoverEnd) {
+									// Add a small delay to prevent flickering when moving between elements
+									setTimeout(onHoverEnd, 100);
+								}
+							}
+							return false;
+						}
 					}
 				}
 			})

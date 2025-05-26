@@ -8,7 +8,8 @@
 
 	import { marked, type Token } from 'marked';
 	import { unescapeHtml } from '$lib/utils';
-	import { PiiSessionManager, highlightUnmaskedEntities } from '$lib/utils/pii';
+
+	import PiiAwareText from './PiiAwareText.svelte';
 
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
@@ -43,17 +44,7 @@
 		return 'h' + depth;
 	};
 	
-	// PII highlighting function
-	const addPiiHighlighting = (text: string): string => {
-		const piiSessionManager = PiiSessionManager.getInstance();
-		const entities = piiSessionManager.getEntities();
-		
-		if (!entities.length) {
-			return text;
-		}
-		
-		return highlightUnmaskedEntities(text, entities);
-	};
+
 
 	const exportTableToCSVHandler = (token, tokenIdx = 0) => {
 		console.log('Exporting table to CSV');
@@ -307,12 +298,7 @@
 				{#if token.tokens}
 					<MarkdownInlineTokens id={`${id}-${tokenIdx}-t`} tokens={token.tokens} {onSourceClick} />
 				{:else}
-					{@const highlightedText = addPiiHighlighting(unescapeHtml(token.text))}
-					{#if highlightedText !== unescapeHtml(token.text)}
-						{@html DOMPurify.sanitize(highlightedText)}
-					{:else}
-						{unescapeHtml(token.text)}
-					{/if}
+					<PiiAwareText text={unescapeHtml(token.text)} id={`${id}-${tokenIdx}-text`} />
 				{/if}
 			</p>
 		{:else if token.tokens}
@@ -322,12 +308,7 @@
 				{onSourceClick}
 			/>
 		{:else}
-			{@const highlightedText = addPiiHighlighting(unescapeHtml(token.text))}
-			{#if highlightedText !== unescapeHtml(token.text)}
-				{@html DOMPurify.sanitize(highlightedText)}
-			{:else}
-				{unescapeHtml(token.text)}
-			{/if}
+			<PiiAwareText text={unescapeHtml(token.text)} id={`${id}-${tokenIdx}-text-inline`} />
 		{/if}
 	{:else if token.type === 'inlineKatex'}
 		{#if token.text}
