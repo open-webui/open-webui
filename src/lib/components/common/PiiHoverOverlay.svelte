@@ -65,6 +65,17 @@
 		dispatch('overlayMouseLeave');
 	};
 	
+	// Placeholder functions to maintain compatibility with parent components
+	const handleToggle = () => {
+		// Dispatch toggle event to parent components that expect it
+		dispatch('toggle', { entity });
+	};
+	
+	const handleCopy = (text: string) => {
+		// Dispatch copy event to parent components that expect it
+		dispatch('copy', { text });
+	};
+	
 	onMount(() => {
 		document.addEventListener('click', handleClickOutside);
 	});
