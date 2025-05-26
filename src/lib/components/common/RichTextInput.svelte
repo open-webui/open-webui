@@ -83,7 +83,9 @@
 	let hoverOverlayVisible = false;
 	let hoverOverlayEntity: ExtendedPiiEntity | null = null;
 	let hoverOverlayPosition = { x: 0, y: 0 };
-	let hoverTimeout: number;
+	let hoverTimeout: ReturnType<typeof setTimeout> | null = null;
+	let isOverPiiElement = false;
+	let isOverOverlay = false;
 
 	const options = {
 		throwOnError: false
@@ -92,6 +94,17 @@
 	$: if (editor) {
 		editor.setOptions({
 			editable: editable
+		});
+	}
+	
+	// Debug PII entities and editor state
+	$: {
+		console.log('RichTextInput debug:', {
+			enablePiiDetection,
+			hasApiKey: !!piiApiKey,
+			piiEntitiesCount: piiEntities.length,
+			hasEditor: !!editor,
+			editorHasPiiCommand: editor ? !!editor.commands.updatePiiEntities : false
 		});
 	}
 
@@ -159,26 +172,33 @@
 	// PII Detection function
 	const detectPii = async (text: string) => {
 		if (!enablePiiDetection || !piiApiKey || !text.trim() || text === lastDetectedText) {
+			console.log('RichTextInput: PII detection skipped', { enablePiiDetection, hasApiKey: !!piiApiKey, textLength: text.length, sameAsLast: text === lastDetectedText });
 			return;
 		}
 		
+		console.log('RichTextInput: Starting PII detection for text:', text.substring(0, 100));
 		isDetectingPii = true;
 		lastDetectedText = text;
 		
 		try {
 			const response = await maskPiiText(piiApiKey, [text], false, false);
 			if (response.pii && response.pii[0]) {
+				console.log('RichTextInput: PII detection successful, found entities:', response.pii[0]);
 				// Set entities in session manager (this converts them to ExtendedPiiEntity)
 				piiSessionManager.setEntities(response.pii[0]);
 				piiEntities = piiSessionManager.getEntities();
+				console.log('RichTextInput: Updated session manager, entities count:', piiEntities.length);
 				
 				// Update the editor with PII highlighting
 				if (editor && editor.commands.updatePiiEntities) {
 					editor.commands.updatePiiEntities(piiEntities);
+					console.log('RichTextInput: Updated editor with PII entities');
 				}
 				
 				// Notify parent component
 				onPiiDetected(piiEntities, response.text[0]);
+			} else {
+				console.log('RichTextInput: No PII entities found in response');
 			}
 		} catch (error) {
 			console.error('PII detection failed:', error);
@@ -192,18 +212,58 @@
 	
 	// Hover overlay handlers
 	const handlePiiHover = (entity: ExtendedPiiEntity, position: { x: number, y: number }) => {
-		clearTimeout(hoverTimeout);
+		console.log('RichTextInput: handlePiiHover called', { entity: entity.label, position });
+		if (hoverTimeout) {
+			clearTimeout(hoverTimeout);
+			hoverTimeout = null;
+		}
+		isOverPiiElement = true;
 		hoverOverlayEntity = entity;
 		hoverOverlayPosition = position;
 		hoverOverlayVisible = true;
+		console.log('RichTextInput: Overlay should now be visible:', hoverOverlayVisible);
 	};
 	
 	const handlePiiHoverEnd = () => {
-		clearTimeout(hoverTimeout);
-		hoverTimeout = setTimeout(() => {
-			hoverOverlayVisible = false;
-			hoverOverlayEntity = null;
-		}, 200);
+		console.log('handlePiiHoverEnd called');
+		isOverPiiElement = false;
+		checkShouldCloseOverlay();
+	};
+	
+	// Overlay mouse events to prevent disappearing when hovering over dialog
+	const handleOverlayMouseEnter = () => {
+		console.log('Mouse entered overlay');
+		if (hoverTimeout) {
+			clearTimeout(hoverTimeout);
+			hoverTimeout = null;
+		}
+		isOverOverlay = true;
+	};
+	
+	const handleOverlayMouseLeave = () => {
+		console.log('Mouse left overlay');
+		isOverOverlay = false;
+		checkShouldCloseOverlay();
+	};
+	
+	// Helper function to check if overlay should close
+	const checkShouldCloseOverlay = () => {
+		console.log('checkShouldCloseOverlay called:', { isOverPiiElement, isOverOverlay });
+		if (hoverTimeout) {
+			clearTimeout(hoverTimeout);
+		}
+		
+		// Only close if we're not over either the PII element or the overlay
+		if (!isOverPiiElement && !isOverOverlay) {
+			console.log('Starting close timeout');
+			hoverTimeout = setTimeout(() => {
+				console.log('Closing overlay due to timeout');
+				hoverOverlayVisible = false;
+				hoverOverlayEntity = null;
+			}, 300); // Slightly longer delay to handle rapid mouse movements
+		} else {
+			console.log('Not closing overlay - still hovering');
+		}
 	};
 	
 	const handleOverlayToggle = (event: CustomEvent) => {
@@ -565,6 +625,14 @@
 		entity={hoverOverlayEntity}
 		position={hoverOverlayPosition}
 		on:toggle={handleOverlayToggle}
+		on:overlayMouseEnter={(e) => {
+			console.log('RichTextInput: overlayMouseEnter event received');
+			handleOverlayMouseEnter();
+		}}
+		on:overlayMouseLeave={(e) => {
+			console.log('RichTextInput: overlayMouseLeave event received');
+			handleOverlayMouseLeave();
+		}}
 		on:copy={(event) => {
 			// Optional: Show a toast notification
 			console.log('Copied:', event.detail.text);
