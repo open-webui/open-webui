@@ -576,6 +576,9 @@ async def generate_chat_completion(
 
     payload["model"] = model_name
 
+    if (model_name == "Mistral Large 2"):
+        payload["stream"] = False
+
     if has_chat_id or magic_prompt:
         credit_service = CreditService()
         credit_service.check_for_sufficient_balance(user)
