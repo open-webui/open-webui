@@ -1,0 +1,139 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# PII API Integration Guide
+
+## NENNA.ai API Integration
+
+### API Configuration
+The PII detection system integrates with NENNA.ai's API for real-time PII detection and masking.
+
+#### API Functions ([pii.ts](mdc:src/lib/apis/pii.ts))
+```javascript
+export const maskPiiText = async (
+  apiKey: string,
+  texts: string[],
+  unmask: boolean = false,
+  returnOriginal: boolean = false
+) => {
+  // Main API call for PII detection and masking
+  // Returns: { text: string[], pii: PiiEntity[][] }
+};
+
+export const unmaskPiiTextWithSession = async (
+  apiKey: string,
+  sessionId: string,
+  texts: string[]
+) => {
+  // Session-based unmasking for previously detected PII
+};
+```
+
+### API Response Format
+```typescript
+interface PiiApiResponse {
+  text: string[];      // Processed text (masked/unmasked)
+  pii: PiiEntity[][];  // Detected entities per text
+}
+
+interface PiiEntity {
+  label: string;       // Unique identifier (e.g., "PERSON_1")
+  type: string;        // PII type (e.g., "PERSON", "EMAIL")
+  text: string;        // Original text content
+  start: number;       // Start position in text
+  end: number;         // End position in text
+}
+```
+
+## Session Management
+
+### PiiSessionManager ([pii.ts](mdc:src/lib/utils/pii.ts))
+```javascript
+class PiiSessionManager {
+  private static instance: PiiSessionManager;
+  private entities: ExtendedPiiEntity[] = [];
+  private apiKey: string = '';
+
+  static getInstance(): PiiSessionManager {
+    // Singleton pattern for cross-component state
+  }
+
+  setEntities(entities: PiiEntity[]): void {
+    // Convert PiiEntity[] to ExtendedPiiEntity[] with masking state
+  }
+
+  toggleEntityMasking(label: string, occurrenceIndex: number): void {
+    // Toggle shouldMask state for specific entity occurrence
+  }
+}
+```
+
+### Extended Entity Format
+```typescript
+interface ExtendedPiiEntity extends PiiEntity {
+  shouldMask: boolean;           // Current masking state
+  occurrences: Array<{          // Multiple occurrences in text
+    start: number;
+    end: number;
+    shouldMask: boolean;
+  }>;
+}
+```
+
+## Detection Workflow
+
+### Input Field Detection
+1. **User Input**: Text entered in [RichTextInput.svelte](mdc:src/lib/components/common/RichTextInput.svelte)
+2. **Debounced API Call**: 500ms delay to avoid excessive requests
+3. **Entity Storage**: Results stored in `PiiSessionManager`
+4. **Real-time Highlighting**: TipTap extension applies highlighting
+5. **Interactive Overlay**: Mouse events trigger information display
+
+### Response Processing
+1. **AI Response**: Contains masked patterns like `[{PERSON_1}]`
+2. **Pattern Detection**: [PiiAwareText.svelte](mdc:src/lib/components/chat/Messages/Markdown/PiiAwareText.svelte) detects patterns
+3. **Unmasking**: Replaces patterns with original text from session
+4. **Highlighting**: Applies visual highlighting to unmasked entities
+5. **Interaction**: Same overlay system as input field
+
+## Error Handling
+
+### API Failures
+```javascript
+try {
+  const response = await maskPiiText(apiKey, [text], false, false);
+  // Process successful response
+} catch (error) {
+  console.error('PII detection failed:', error);
+  // Graceful degradation - continue without PII features
+} finally {
+  isDetectingPii = false;
+}
+```
+
+### Missing API Key
+```javascript
+if (!enablePiiDetection || !piiApiKey || !text.trim()) {
+  console.log('PII detection skipped');
+  return; // Skip processing without errors
+}
+```
+
+## Performance Considerations
+
+### Debouncing
+- **Input Detection**: 500ms debounce prevents excessive API calls
+- **Event Handling**: 100-300ms delays prevent UI flickering
+- **DOM Updates**: `setTimeout(0)` ensures proper rendering order
+
+### Caching Strategy
+- **Session-based**: Entities cached in singleton for conversation duration
+- **Text Patterns**: Masked patterns preserved in message content
+- **State Persistence**: Masking preferences maintained across interactions
+
+### Memory Management
+- **Event Listeners**: Proper cleanup in `onDestroy`
+- **Timeouts**: Clear all timeouts to prevent memory leaks
+- **DOM References**: Remove stored event handlers on cleanup

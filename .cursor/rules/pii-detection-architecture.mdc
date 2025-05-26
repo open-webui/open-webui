@@ -1,0 +1,52 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# PII Detection System Architecture
+
+## Overview
+The PII detection system integrates NENNA.ai API to identify, mask, and highlight personally identifiable information across the Open WebUI chat interface. The system uses a three-path architecture to handle PII in different contexts.
+
+## Architecture Paths
+
+### 1. Input Field Path
+**RichTextInput → PiiHighlighter TipTap extension → PiiHoverOverlay**
+- [RichTextInput.svelte](mdc:src/lib/components/common/RichTextInput.svelte) - Main input component with TipTap editor
+- [PiiHighlighter.ts](mdc:src/lib/components/common/RichTextInput/PiiHighlighter.ts) - TipTap extension for real-time highlighting
+- [PiiHoverOverlay.svelte](mdc:src/lib/components/common/PiiHoverOverlay.svelte) - Interactive overlay dialog
+
+### 2. User Messages Path  
+**UserMessage → Markdown → MarkdownTokens → PiiAwareText → PiiHoverOverlay**
+- [UserMessage.svelte](mdc:src/lib/components/chat/Messages/UserMessage.svelte) - User message container
+- [PiiAwareText.svelte](mdc:src/lib/components/chat/Messages/Markdown/PiiAwareText.svelte) - Text processing with PII highlighting
+- [PiiHoverOverlay.svelte](mdc:src/lib/components/common/PiiHoverOverlay.svelte) - Same overlay component
+
+### 3. Response Messages Path
+**ResponseMessage → ContentRenderer → Markdown → PiiAwareText → PiiHoverOverlay**
+- [ResponseMessage.svelte](mdc:src/lib/components/chat/Messages/ResponseMessage.svelte) - AI response container
+- [ContentRenderer.svelte](mdc:src/lib/components/chat/Messages/ContentRenderer.svelte) - Content processing wrapper
+- [PiiAwareText.svelte](mdc:src/lib/components/chat/Messages/Markdown/PiiAwareText.svelte) - Same text processing component
+
+## Core Components
+
+### Session Management
+- [pii.ts](mdc:src/lib/utils/pii.ts) - `PiiSessionManager` singleton for entity state management
+- [pii.ts](mdc:src/lib/apis/pii.ts) - NENNA.ai API integration functions
+
+### Key Classes
+- `ExtendedPiiEntity` - Enhanced entity with masking state
+- `PiiSessionManager` - Singleton for cross-component entity sharing
+- `PiiHighlighter` - TipTap extension for real-time detection
+
+## Data Flow
+1. **Detection**: Text input triggers debounced PII detection via NENNA.ai API
+2. **Storage**: Entities stored in `PiiSessionManager` singleton
+3. **Highlighting**: Text processed with `highlightUnmaskedEntities()` 
+4. **Interaction**: Mouse events trigger `PiiHoverOverlay` display
+5. **State Management**: Toggle actions update entity masking state globally
+
+## Event Handling Patterns
+- **Mouse Events**: `mouseover`/`mouseout` with DOM traversal for event delegation
+- **Hover Management**: Timeout-based with overlay mouse enter/leave prevention
+- **Entity Toggle**: Click events toggle masking state via session manager
