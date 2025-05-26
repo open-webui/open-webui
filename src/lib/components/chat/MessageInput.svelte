@@ -327,7 +327,8 @@
 				toast.info($i18n.t('No vision models available. Extracting text from image using OCR...'));
 				
 				// Process the image file for OCR text extraction instead of vision
-				uploadFileHandler(file);
+				// This will upload the file and extract text content for RAG
+				await uploadFileHandler(file);
 				return;
 			}
 				let reader = new FileReader();
