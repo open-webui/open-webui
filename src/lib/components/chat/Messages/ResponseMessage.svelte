@@ -176,7 +176,7 @@
 		}
 	};
 	
-	// PII Unmasking and highlighting function
+	// PII Unmasking function (without highlighting for now)
 	const processResponseContent = (content: string): string => {
 		const entities = piiSessionManager.getEntities();
 		
@@ -184,11 +184,8 @@
 			return content;
 		}
 		
-		// First unmask any [{LABEL_ID}] patterns
+		// Only unmask the [{LABEL_ID}] patterns, don't add HTML highlighting yet
 		let processedContent = unmaskTextWithEntities(content, entities);
-		
-		// Then highlight the unmasked entities
-		processedContent = highlightUnmaskedEntities(processedContent, entities);
 		
 		return processedContent;
 	};

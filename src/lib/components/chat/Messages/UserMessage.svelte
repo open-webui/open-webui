@@ -6,6 +6,9 @@
 	import { models, settings } from '$lib/stores';
 	import { user as _user } from '$lib/stores';
 	import { copyToClipboard as _copyToClipboard, formatDate } from '$lib/utils';
+	
+	// PII Detection imports
+	import { PiiSessionManager, highlightUnmaskedEntities, unmaskTextWithEntities, type ExtendedPiiEntity } from '$lib/utils/pii';
 
 	import Name from './Name.svelte';
 	import ProfileImage from './ProfileImage.svelte';
@@ -53,12 +56,28 @@
 			message = JSON.parse(JSON.stringify(history.messages[messageId]));
 		}
 	}
+	
+	// PII Detection state
+	let piiSessionManager = PiiSessionManager.getInstance();
 
 	const copyToClipboard = async (text) => {
 		const res = await _copyToClipboard(text);
 		if (res) {
 			toast.success($i18n.t('Copying to clipboard was successful!'));
 		}
+	};
+	
+	// PII processing function for user messages - unmask and let markdown components handle highlighting
+	const processUserMessageContent = (content: string): string => {
+		const entities = piiSessionManager.getEntities();
+		
+		if (!entities.length) {
+			return content;
+		}
+		
+		// Unmask any [{LABEL_ID}] patterns to show original text
+		// The markdown components will then apply PII highlighting
+		return unmaskTextWithEntities(content, entities);
 	};
 
 	const editMessageHandler = async () => {
@@ -96,6 +115,45 @@
 
 	onMount(() => {
 		// console.log('UserMessage mounted');
+		
+		// Add PII highlighting styles if not already present
+		if (!document.getElementById('pii-user-styles')) {
+			const styleElement = document.createElement('style');
+			styleElement.id = 'pii-user-styles';
+			styleElement.textContent = `
+				.pii-highlight {
+					border-radius: 3px;
+					padding: 1px 2px;
+					position: relative;
+					transition: all 0.2s ease;
+					border: 1px solid transparent;
+				}
+				
+				.pii-highlight:hover {
+					border: 1px solid #333;
+					box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+				}
+				
+				/* Masked entities - green background */
+				.pii-highlight.pii-masked {
+					background-color: rgba(34, 197, 94, 0.2);
+				}
+				
+				.pii-highlight.pii-masked:hover {
+					background-color: rgba(34, 197, 94, 0.3);
+				}
+				
+				/* Unmasked entities - red background */
+				.pii-highlight.pii-unmasked {
+					background-color: rgba(239, 68, 68, 0.2);
+				}
+				
+				.pii-highlight.pii-unmasked:hover {
+					background-color: rgba(239, 68, 68, 0.3);
+				}
+			`;
+			document.head.appendChild(styleElement);
+		}
 	});
 </script>
 
@@ -302,7 +360,7 @@
 									: ' w-full'}"
 							>
 								{#if message.content}
-									<Markdown id={message.id} content={message.content} />
+									<Markdown id={message.id} content={processUserMessageContent(message.content)} />
 								{/if}
 							</div>
 						</div>
