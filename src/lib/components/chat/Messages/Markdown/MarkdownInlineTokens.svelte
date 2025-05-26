@@ -9,7 +9,8 @@
 
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import { copyToClipboard, unescapeHtml } from '$lib/utils';
-	import { PiiSessionManager, highlightUnmaskedEntities } from '$lib/utils/pii';
+
+	import PiiAwareText from './PiiAwareText.svelte';
 
 	import Image from '$lib/components/common/Image.svelte';
 	import KatexRenderer from './KatexRenderer.svelte';
@@ -20,17 +21,7 @@
 	export let tokens: Token[];
 	export let onSourceClick: Function = () => {};
 	
-	// PII highlighting function
-	const addPiiHighlighting = (text: string): string => {
-		const piiSessionManager = PiiSessionManager.getInstance();
-		const entities = piiSessionManager.getEntities();
-		
-		if (!entities.length) {
-			return text;
-		}
-		
-		return highlightUnmaskedEntities(text, entities);
-	};
+
 </script>
 
 {#each tokens as token}
@@ -79,11 +70,6 @@
 			onload="this.style.height=(this.contentWindow.document.body.scrollHeight+20)+'px';"
 		></iframe>
 	{:else if token.type === 'text'}
-		{@const highlightedText = addPiiHighlighting(token.raw)}
-		{#if highlightedText !== token.raw}
-			{@html DOMPurify.sanitize(highlightedText)}
-		{:else}
-			{token.raw}
-		{/if}
+		<PiiAwareText text={token.raw} id={`${id}-text-${token.type}`} />
 	{/if}
 {/each}

@@ -31,6 +31,7 @@
 	import { maskPiiText, type PiiEntity } from '$lib/apis/pii';
 	import { PiiHighlighter } from './RichTextInput/PiiHighlighter';
 	import { debounce, extractPlainTextFromEditor, createPiiHighlightStyles, PiiSessionManager, type ExtendedPiiEntity } from '$lib/utils/pii';
+	import PiiHoverOverlay from './PiiHoverOverlay.svelte';
 
 	export let oncompositionstart = (e: CompositionEvent) => {};
 	export let oncompositionend = (e: CompositionEvent) => {};
@@ -70,6 +71,12 @@
 	let isDetectingPii = false;
 	let lastDetectedText = '';
 	let piiSessionManager = PiiSessionManager.getInstance();
+	
+	// Hover overlay state
+	let hoverOverlayVisible = false;
+	let hoverOverlayEntity: ExtendedPiiEntity | null = null;
+	let hoverOverlayPosition = { x: 0, y: 0 };
+	let hoverTimeout: number;
 
 	const options = {
 		throwOnError: false
@@ -175,6 +182,30 @@
 	
 	// Debounced PII detection
 	const debouncedDetectPii = debounce(detectPii, 500);
+	
+	// Hover overlay handlers
+	const handlePiiHover = (entity: ExtendedPiiEntity, position: { x: number, y: number }) => {
+		clearTimeout(hoverTimeout);
+		hoverOverlayEntity = entity;
+		hoverOverlayPosition = position;
+		hoverOverlayVisible = true;
+	};
+	
+	const handlePiiHoverEnd = () => {
+		clearTimeout(hoverTimeout);
+		hoverTimeout = setTimeout(() => {
+			hoverOverlayVisible = false;
+			hoverOverlayEntity = null;
+		}, 200);
+	};
+	
+	const handleOverlayToggle = (event: CustomEvent) => {
+		// Update the entities in the editor
+		piiEntities = piiSessionManager.getEntities();
+		if (editor && editor.commands.updatePiiEntities) {
+			editor.commands.updatePiiEntities(piiEntities);
+		}
+	};
 
 	const selectTemplate = () => {
 		if (value !== '') {
@@ -260,7 +291,9 @@
 					? [
 							PiiHighlighter.configure({
 								piiEntities: piiEntities,
-								highlightClass: 'pii-highlight'
+								highlightClass: 'pii-highlight',
+								onHover: handlePiiHover,
+								onHoverEnd: handlePiiHoverEnd
 							})
 						]
 					: []),
@@ -513,3 +546,17 @@
 </script>
 
 <div bind:this={element} class="relative w-full min-w-full h-full min-h-fit {className}" />
+
+<!-- PII Hover Overlay -->
+{#if enablePiiDetection}
+	<PiiHoverOverlay
+		bind:visible={hoverOverlayVisible}
+		entity={hoverOverlayEntity}
+		position={hoverOverlayPosition}
+		on:toggle={handleOverlayToggle}
+		on:copy={(event) => {
+			// Optional: Show a toast notification
+			console.log('Copied:', event.detail.text);
+		}}
+	/>
+{/if}

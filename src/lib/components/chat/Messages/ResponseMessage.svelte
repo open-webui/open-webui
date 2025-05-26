@@ -176,18 +176,11 @@
 		}
 	};
 	
-	// PII Unmasking function (without highlighting for now)
+	// PII Processing function - let markdown components handle unmasking and highlighting
 	const processResponseContent = (content: string): string => {
-		const entities = piiSessionManager.getEntities();
-		
-		if (!entities.length) {
-			return content;
-		}
-		
-		// Only unmask the [{LABEL_ID}] patterns, don't add HTML highlighting yet
-		let processedContent = unmaskTextWithEntities(content, entities);
-		
-		return processedContent;
+		// Don't unmask here - let the PiiAwareText components in markdown handle it
+		// This preserves the [{LABEL_ID}] patterns for the markdown components to process
+		return content;
 	};
 
 	const playAudio = (idx: number) => {
