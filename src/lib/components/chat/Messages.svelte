@@ -22,8 +22,6 @@
 
 	import ChatPlaceholder from './ChatPlaceholder.svelte';
 	import SearchMessages from './SearchMessages.svelte';
-	import DateNavigation from './DateNavigation.svelte';
-	import NavigationToolbar from './NavigationToolbar.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -39,7 +37,7 @@
 
 	let messages = [];
 	let showSearch = false;
-	let showDateNav = false;
+
 	let searchQuery = '';
 	let searchResults = [];
 	let currentSearchIndex = -1;
@@ -511,35 +509,7 @@
 	}}
 />
 
-<DateNavigation
-	{history}
-	show={showDateNav}
-	on:jump={(e) => jumpToMessage(e.detail)}
-	on:close={() => showDateNav = false}
-/>
 
-<NavigationToolbar
-	{history}
-	{messagesCount}
-	on:search={() => showSearch = true}
-	on:dateNav={() => showDateNav = true}
-	on:loadAll={() => messagesCount = Object.keys(history?.messages || {}).length}
-	on:export={() => {
-		// Trigger export functionality
-		const chatData = {
-			title: history.title || 'Chat Export',
-			messages: Object.values(history.messages || {}),
-			exportDate: new Date().toISOString()
-		};
-		const blob = new Blob([JSON.stringify(chatData, null, 2)], { type: 'application/json' });
-		const url = URL.createObjectURL(blob);
-		const a = document.createElement('a');
-		a.href = url;
-		a.download = `chat-export-${new Date().toISOString().split('T')[0]}.json`;
-		a.click();
-		URL.revokeObjectURL(url);
-	}}
-/>
 
 <div class={className}>
 	{#if Object.keys(history?.messages ?? {}).length == 0}
