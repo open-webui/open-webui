@@ -4,9 +4,10 @@ Both "blobs" change shape, rotation.
 Two different blobs rotate with two different rates and rotation
 offsets to create a "beating" effect.
 -->
-
-<div class="animated"></div>
-<div class="animated config-2"></div>
+<div class="overflow-hidden">
+	<div class="animated"></div>
+	<div class="animated config-2"></div>
+</div>
 
 <style>
 	@property --blob-color-1 {
