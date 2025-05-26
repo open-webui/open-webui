@@ -100,7 +100,7 @@ else:
 SessionLocal = sessionmaker(
     autocommit=False, autoflush=False, bind=engine, expire_on_commit=False
 )
-# SQLite를 사용하는 경우 스키마를 None으로 설정
+# Set schema to None if using SQLite
 if "sqlite" in SQLALCHEMY_DATABASE_URL:
     metadata_obj = MetaData(schema=None)
 else:

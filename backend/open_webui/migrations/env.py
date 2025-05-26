@@ -78,7 +78,7 @@ def run_migrations_online() -> None:
 
     with connectable.connect() as connection:
         if target_metadata.schema and connection.dialect.name == 'postgresql':
-            # PostgreSQL에서만 스키마 설정 적용
+            # Applying schema settings only in PostgreSQL
             connection.execute(
                 text(f"SET search_path TO {target_metadata.schema}, public")
             )
