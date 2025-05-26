@@ -1,0 +1,124 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# PII Event Handling Patterns
+
+## Event System Architecture
+
+### Mouse Event Delegation
+The PII system uses event delegation to handle mouse interactions efficiently:
+
+#### TipTap Extension ([PiiHighlighter.ts](mdc:src/lib/components/common/RichTextInput/PiiHighlighter.ts))
+```javascript
+handleDOMEvents: {
+  mouseover: (view, event) => {
+    // Use mouseover (bubbles) instead of mouseenter
+    // Find PII element via target or DOM traversal
+    let piiElement = findPiiElement(event.target);
+    if (piiElement && onHover) {
+      onHover(entity, position);
+    }
+  },
+  mouseout: (view, event) => {
+    // Check relatedTarget to prevent flickering
+    if (leavingPiiElement) {
+      setTimeout(onHoverEnd, 100); // Delay to prevent flicker
+    }
+  }
+}
+```
+
+#### Markdown Components ([PiiAwareText.svelte](mdc:src/lib/components/chat/Messages/Markdown/PiiAwareText.svelte))
+```javascript
+const addPiiEventListeners = () => {
+  piiElements.forEach((element) => {
+    element.addEventListener('mouseenter', handleMouseEnter);
+    element.addEventListener('mouseleave', handleMouseLeave);
+    element.addEventListener('click', handleClick);
+  });
+};
+```
+
+## Overlay Lifecycle Management
+
+### Hover State Machine
+1. **Mouse Enter PII Element**: Set `isOverPiiElement = true`, show overlay
+2. **Mouse Leave PII Element**: Set `isOverPiiElement = false`, start close timer
+3. **Mouse Enter Overlay**: Set `isOverOverlay = true`, cancel close timer
+4. **Mouse Leave Overlay**: Set `isOverOverlay = false`, start close timer
+5. **Close Decision**: Only close if both `isOverPiiElement` and `isOverOverlay` are false
+
+### Event Dispatching Pattern
+```javascript
+// Parent Component (RichTextInput, PiiAwareText)
+const handleOverlayMouseEnter = () => {
+  isOverOverlay = true;
+  if (hoverTimeout) clearTimeout(hoverTimeout);
+};
+
+// Child Component (PiiHoverOverlay)
+const handleOverlayMouseEnter = () => {
+  dispatch('overlayMouseEnter');
+};
+```
+
+## DOM Traversal Strategy
+
+### Finding PII Elements
+```javascript
+// Check target directly
+if (target.classList.contains('pii-highlight')) {
+  piiElement = target;
+} else {
+  // Traverse up DOM tree until hitting view boundary
+  let current = target.parentElement;
+  while (current && current !== view.dom) {
+    if (current.classList.contains('pii-highlight')) {
+      piiElement = current;
+      break;
+    }
+    current = current.parentElement;
+  }
+}
+```
+
+### Data Attributes
+Essential attributes for PII elements:
+- `data-pii-label`: Entity identifier (e.g., "PERSON_1")
+- `data-pii-occurrence`: Occurrence index for multiple instances
+- `data-entity-index`: Array index in entities list
+
+## Timing & Performance
+
+### Debounced Detection
+```javascript
+// Input field detection uses 500ms debounce
+const debouncedDetectPii = debounce(detectPii, 500);
+```
+
+### Event Listener Cleanup
+```javascript
+// Always clean up listeners to prevent memory leaks
+onDestroy(() => {
+  removePiiEventListeners();
+  clearTimeout(hoverTimeout);
+});
+```
+
+### DOM Update Timing
+```javascript
+// Wait for DOM updates before adding listeners
+setTimeout(() => {
+  removePiiEventListeners();
+  addPiiEventListeners();
+}, 0);
+```
+
+## Common Pitfalls
+
+1. **Using `mouseenter` instead of `mouseover`**: Mouseover bubbles from child elements
+2. **Not checking `relatedTarget` in mouseout**: Causes flickering between elements
+3. **Missing timeout cleanup**: Memory leaks and conflicting timers
+4. **Immediate overlay closure**: No grace period for mouse movement between elements

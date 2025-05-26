@@ -1,0 +1,61 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# PII Detection Debugging Guide
+
+## Common Issues & Solutions
+
+### Overlay Not Showing in ResponseMessage
+**Symptoms**: PII highlighting works in input but not in AI responses
+**Debug Steps**:
+1. Check browser console for `PiiAwareText debug:` logs
+2. Verify `entitiesCount > 0` in session manager
+3. Check if response content contains masked patterns `[{LABEL_ID}]`
+4. Verify `hasMaskedPatterns` detection in logs
+
+**Root Causes**:
+- No PII entities detected in original input
+- Response content doesn't contain PII references
+- Event listeners not properly attached to highlighted elements
+
+### Mouse Events Not Working
+**Symptoms**: PII highlights visible but no hover overlay
+**Debug Steps**:
+1. Check if `.pii-highlight` elements exist in DOM
+2. Verify `data-pii-label` attributes are present
+3. Test event delegation with `mouseover` vs `mouseenter`
+4. Check DOM traversal in event handlers
+
+**Key Files**: [PiiHighlighter.ts](mdc:src/lib/components/common/RichTextInput/PiiHighlighter.ts), [PiiAwareText.svelte](mdc:src/lib/components/chat/Messages/Markdown/PiiAwareText.svelte)
+
+### Session Manager State Issues
+**Symptoms**: Entities lost between components
+**Debug Steps**:
+1. Verify `PiiSessionManager.getInstance()` usage
+2. Check entity storage with `getEntities()`
+3. Test API key configuration
+4. Verify debounced detection timing
+
+**Key File**: [pii.ts](mdc:src/lib/utils/pii.ts)
+
+## Debug Console Commands
+```javascript
+// Check session manager state
+window.piiManager = PiiSessionManager.getInstance();
+console.log(window.piiManager.getEntities());
+
+// Test API connectivity
+// (Check network tab for NENNA.ai requests)
+
+// Inspect DOM for PII highlights
+document.querySelectorAll('.pii-highlight');
+```
+
+## Essential Debug Logs
+Enable these console.log statements for debugging:
+- `PiiAwareText debug:` - Entity processing status
+- `RichTextInput: PII detection` - Input field detection
+- `Mouse enter event triggered` - Event handling verification
+- `Overlay should now be visible` - Overlay state changes
