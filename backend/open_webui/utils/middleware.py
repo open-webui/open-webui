@@ -1008,6 +1008,8 @@ async def process_chat_response(
             if not message_list:
                 log.warning(f"⚠️  MIDDLEWARE: get_message_list returned empty for chat_id={metadata.get('chat_id')}, message_id={metadata.get('message_id')}")
                 return  # Exit early if no valid message list
+            
+            log.debug(f"🔍 MIDDLEWARE: Processing {len(message_list)} messages for background tasks")
 
             # Remove details tags and files from the messages.
             # as get_message_list creates a new list, it does not affect
@@ -1030,10 +1032,14 @@ async def process_chat_response(
                         flags=re.S | re.I,
                     ).strip()
 
+                # Handle missing role field with safe fallback
+                role = message.get("role", "assistant")  # Default to assistant if role is missing
+                log.debug(f"🔍 MIDDLEWARE: Processing message with role='{role}', content_length={len(content)}")
+
                 messages.append(
                     {
                         **message,
-                        "role": message["role"],
+                        "role": role,
                         "content": content,
                     }
                 )
@@ -1201,6 +1207,7 @@ async def process_chat_response(
                         metadata["chat_id"],
                         metadata["message_id"],
                         {
+                            "role": "assistant",  # Assistant response
                             "content": content,
                         },
                     )
@@ -1289,6 +1296,7 @@ async def process_chat_response(
             metadata["chat_id"],
             metadata["message_id"],
             {
+                "role": "assistant",  # Assistant response
                 "model": model_id,
             },
         )
@@ -1918,6 +1926,7 @@ async def process_chat_response(
                                                 metadata["chat_id"],
                                                 metadata["message_id"],
                                                 {
+                                                    "role": "assistant",  # Assistant response
                                                     "content": serialize_content_blocks(
                                                         content_blocks
                                                     ),
@@ -2323,6 +2332,7 @@ async def process_chat_response(
                         metadata["chat_id"],
                         metadata["message_id"],
                         {
+                            "role": "assistant",  # Assistant response
                             "content": serialize_content_blocks(content_blocks),
                         },
                     )
@@ -2361,6 +2371,7 @@ async def process_chat_response(
                         metadata["chat_id"],
                         metadata["message_id"],
                         {
+                            "role": "assistant",  # Assistant response
                             "content": serialize_content_blocks(content_blocks),
                         },
                     )
