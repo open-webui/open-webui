@@ -155,9 +155,11 @@ def upload_file(
         if process:
             try:
                 if file.content_type:
+                    log.info(f"Processing file with content_type: {file.content_type}")
                     if file.content_type.startswith("audio/") or file.content_type in {
                         "video/webm"
                     }:
+                        log.info("Processing as audio/video file")
                         file_path = Storage.get_file(file_path)
                         result = transcribe(request, file_path, file_metadata)
 
@@ -172,7 +174,12 @@ def upload_file(
                         file.content_type.startswith("image/") and 
                         request.app.state.config.ENABLE_IMAGE_OCR_FALLBACK
                     ):
+                        log.info(f"Processing file for content extraction. Image OCR fallback enabled: {request.app.state.config.ENABLE_IMAGE_OCR_FALLBACK}")
+                        log.info(f"Content extraction engine: {request.app.state.config.CONTENT_EXTRACTION_ENGINE}")
+                        log.info(f"File content type starts with image: {file.content_type.startswith('image/')}")
                         process_file(request, ProcessFileForm(file_id=id), user=user)
+                    else:
+                        log.info(f"Skipping file processing - content_type: {file.content_type}, OCR fallback: {request.app.state.config.ENABLE_IMAGE_OCR_FALLBACK}")
                 else:
                     log.info(
                         f"File type {file.content_type} is not provided, but trying to process anyway"
@@ -556,7 +563,7 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
                     detail=ERROR_MESSAGES.NOT_FOUND,
                 )
         else:
-            # File path doesn’t exist, return the content as .txt if possible
+            # File path doesn't exist, return the content as .txt if possible
             file_content = file.content.get("content", "")
             file_name = file.filename
 

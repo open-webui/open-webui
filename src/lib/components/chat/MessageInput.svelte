@@ -116,7 +116,7 @@
 
 	let visionCapableModels = [];
 	$: visionCapableModels = (atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).filter(
-		(model) => $models.find((m) => m.id === model)?.info?.meta?.capabilities?.vision ?? true
+		(model) => $models.find((m) => m.id === model)?.info?.meta?.capabilities?.vision ?? false
 	);
 
 	let fileUploadCapableModels = [];

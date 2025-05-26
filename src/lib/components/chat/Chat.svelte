@@ -1496,7 +1496,7 @@
 						message.files?.some((file) => file.type === 'image')
 					);
 
-					if (hasImages && !(model.info?.meta?.capabilities?.vision ?? true)) {
+					if (hasImages && !(model.info?.meta?.capabilities?.vision ?? false)) {
 						toast.error(
 							$i18n.t('Model {{modelName}} is not vision capable', {
 								modelName: model.name ?? model.id
