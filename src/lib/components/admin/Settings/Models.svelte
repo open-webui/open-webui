@@ -34,6 +34,7 @@
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
 	import Eye from '$lib/components/icons/Eye.svelte';
+	import { copyToClipboard } from '$lib/utils';
 
 	let shiftKey = false;
 
@@ -180,6 +181,17 @@
 		);
 
 		upsertModelHandler(model);
+	};
+
+	const copyLinkHandler = async (model) => {
+		const baseUrl = window.location.origin;
+		const res = await copyToClipboard(`${baseUrl}/?model=${encodeURIComponent(model.id)}`);
+
+		if (res) {
+			toast.success($i18n.t('Copied link to clipboard'));
+		} else {
+			toast.error($i18n.t('Failed to copy link'));
+		}
 	};
 
 	const exportModelHandler = async (model) => {
@@ -393,6 +405,9 @@
 									}}
 									hideHandler={() => {
 										hideModelHandler(model);
+									}}
+									copyLinkHandler={() => {
+										copyLinkHandler(model);
 									}}
 									onClose={() => {}}
 								>

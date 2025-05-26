@@ -33,7 +33,7 @@
 	import ChevronRight from '../icons/ChevronRight.svelte';
 	import Switch from '../common/Switch.svelte';
 	import Spinner from '../common/Spinner.svelte';
-	import { capitalizeFirstLetter } from '$lib/utils';
+	import { capitalizeFirstLetter, copyToClipboard } from '$lib/utils';
 	import XMark from '../icons/XMark.svelte';
 	import EyeSlash from '../icons/EyeSlash.svelte';
 	import Eye from '../icons/Eye.svelte';
@@ -139,6 +139,17 @@
 			)
 		);
 		models = await getWorkspaceModels(localStorage.token);
+	};
+
+	const copyLinkHandler = async (model) => {
+		const baseUrl = window.location.origin;
+		const res = await copyToClipboard(`${baseUrl}/?model=${encodeURIComponent(model.id)}`);
+
+		if (res) {
+			toast.success($i18n.t('Copied link to clipboard'));
+		} else {
+			toast.error($i18n.t('Failed to copy link'));
+		}
 	};
 
 	const downloadModels = async (models) => {
@@ -382,6 +393,9 @@
 								}}
 								hideHandler={() => {
 									hideModelHandler(model);
+								}}
+								copyLinkHandler={() => {
+									copyLinkHandler(model);
 								}}
 								deleteHandler={() => {
 									selectedModel = model;
