@@ -270,12 +270,12 @@
 									</div>
 									<div class=" self-center">{$i18n.t('Personalization')}</div>
 								</div>
-									{#if (!$mobile)}
+									<!-- {#if (!$mobile)}
 										<div class="{selectedTab ===
 										'personalization'
 											? ''
 											: 'invisible'} font-normal text-xs dark:text-white/50">{$i18n.t('Personalise the look and feel')}</div>
-									{/if}	
+									{/if}	 -->
 							</button>
 							
 							{:else if tabId === 'chats'}
@@ -294,12 +294,12 @@
 									</div>
 									<div class=" self-center">{$i18n.t('Chats')}</div>
 								</div>
-								{#if (!$mobile)}
+								<!-- {#if (!$mobile)}
 									<div class="{selectedTab ===
 									'chats'
 										? ''
 										: 'invisible'} font-normal text-xs dark:text-white/50">{$i18n.t('Manage your personal details')}</div>
-							  	{/if}	
+							  	{/if}	 -->
 							</button>
 							{:else if tabId === 'account'}
 								<button
@@ -317,12 +317,12 @@
 										</div>
 										<div class=" self-center">{$i18n.t('Profile')}</div>
 									</div>
-									{#if (!$mobile)}
+									<!-- {#if (!$mobile)}
 										<div class="{selectedTab ===
 										'account'
 											? ''
 											: 'invisible'} font-normal text-xs dark:text-white/50">{$i18n.t('Manage your personal details')}</div>
-									{/if}	
+									{/if}	 -->
 							</button>
 							{:else if tabId === 'admin'}
 								<!-- {#if $user.role === 'admin'}

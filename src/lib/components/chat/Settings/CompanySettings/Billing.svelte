@@ -246,8 +246,8 @@
 								{$i18n.t('Monthly')}
 							</div>
 						</div>
-						<div class="text-xs text-lightGray-100/50 dark:text-customGray-100/50">
-							€{currentPlan?.price_monthly ? (currentPlan?.price_monthly / 100).toFixed(2) : '0.00'}/mo
+						<div class="text-xs text-lightGray-100 dark:text-customGray-100/50">
+							€{currentPlan?.price_monthly ? (currentPlan?.price_monthly / 100).toFixed(2) : '0.00'}/month
 						</div>
 					</div>
 				</div>
@@ -267,11 +267,11 @@
 				<div class="text-xs text-lightGray-100 dark:text-customGray-100">{$i18n.t('Billing details')}</div>
 				{#if $subscription?.cancel_at_period_end}
 					<div class="text-xs dark:text-customGray-590">
-						Canceled at {dayjs($subscription?.end_date * 1000)?.format('DD.MM.YYYY')}
+						Active until {dayjs($subscription?.end_date * 1000)?.format('DD.MM.YYYY')}
 					</div>
 				{:else if $subscription?.plan !== 'free'}
 					<div class="text-xs dark:text-customGray-590">
-						Monthly (renews ({dayjs($subscription?.next_billing_date * 1000)?.format('DD.MM.YYYY')}))
+						Monthly (renews {dayjs($subscription?.next_billing_date * 1000)?.format('DD.MM.YYYY')})
 					</div>
 				{/if}
 			</div>

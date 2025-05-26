@@ -116,7 +116,7 @@
 								<textarea
 									bind:value={inputValue}
 									placeholder={inputPlaceholder ? inputPlaceholder : $i18n.t('Enter your message')}
-									class="w-full mt-2 placeholder:text-lightGray-100 rounded-md px-4 py-2 text-sm bg-lightGray-300 text-lightGray-100 dark:text-gray-300 dark:bg-customGray-900 outline-none resize-none"
+									class="w-full mt-2 placeholder:text-lightGray-100 dark:placeholder:text-customGray-100 rounded-md px-4 py-2 text-sm bg-lightGray-300 text-lightGray-100 dark:text-gray-300 dark:bg-customGray-900 outline-none resize-none"
 									rows="3"
 									required
 								/>
@@ -124,7 +124,7 @@
 								<input
 									bind:value={inputValue}
 									placeholder={inputPlaceholder ? inputPlaceholder : $i18n.t('Enter your message')}
-									class="w-full mt-2 placeholder:text-lightGray-100 rounded-md px-4 py-3 text-sm bg-lightGray-300 text-lightGray-100 dark:text-gray-300 dark:bg-customGray-900 outline-none resize-none"
+									class="w-full mt-2 placeholder:text-lightGray-100 dark:placeholder:text-customGray-100 rounded-md px-4 py-3 text-sm bg-lightGray-300 text-lightGray-100 dark:text-gray-300 dark:bg-customGray-900 outline-none resize-none"
 									required
 								/>
 							{/if}

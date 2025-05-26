@@ -344,9 +344,9 @@
 	{#each filteredUsers as user, userIdx (user.id)}
 		<div class="grid grid-cols-[1fr_96px_50px_20px] md:grid-cols-[238px_110px_100px_26px] gap-x-2 mb-2 group cursor-pointer">
 			<div class="flex md:items-center flex-col md:flex-row">
-				<div class="flex items-center">
+				<div class="flex items-center shrink-0">
 					<img
-						class=" rounded-full w-3 h-3 object-cover md:mr-2.5"
+						class=" rounded-full w-3 h-3 object-cover mr-1 md:mr-2.5"
 						src={user.profile_image_url.startsWith(WEBUI_BASE_URL) ||
 						user.profile_image_url.startsWith('https://www.gravatar.com/avatar/') ||
 						user.profile_image_url.startsWith('data:')

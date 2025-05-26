@@ -533,7 +533,7 @@
 											<span
 												class="absolute top-1/2 right-2.5 -translate-y-1/2 text-xs text-lightGray-100/50 dark:text-customGray-100/50 pointer-events-none select-none"
 											>
-												{$i18n.t('E.g. Super Mario')}
+												{$i18n.t('AI-Assistant')}
 											</span>
 										{/if}
 									</div>
@@ -552,7 +552,7 @@
 											<span
 												class="absolute top-1/2 right-2.5 -translate-y-1/2 text-xs text-lightGray-100/50 dark:text-customGray-100/50 pointer-events-none select-none"
 											>
-												{$i18n.t('About what this model does')}
+												{$i18n.t('Brief description of the assistant')}
 											</span>
 										{/if}
 									</div>
@@ -572,7 +572,7 @@
 											<span
 												class="absolute top-[26px] w-[180px] text-right right-2.5 -translate-y-1/2 text-xs text-lightGray-100/50 dark:text-customGray-100/50 pointer-events-none select-none"
 											>
-												{$i18n.t('E.g. You are Mario Bros, acting as an assistant')}
+												{$i18n.t('You are a helpful assistant that helps users with tasks.')}
 											</span>
 										{/if}
 									</div>
