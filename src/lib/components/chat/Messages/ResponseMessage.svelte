@@ -212,7 +212,7 @@
 
 		speaking = true;
 
-		const content = removeAllDetails(content);
+		const content = removeAllDetails(message.content);
 
 		if ($config.audio.tts.engine === '') {
 			let voices = [];
