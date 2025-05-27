@@ -117,7 +117,7 @@
 						{/if}
 					{:else}
 						<div class=" font-medium text-gray-400 dark:text-gray-500 line-clamp-1 font-p">
-							{$i18n.t('How can I prut you today?')}
+							Selectionnez un assistant pour commencer.
 						</div>
 					{/if}
 				</div>
