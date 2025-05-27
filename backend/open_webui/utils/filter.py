@@ -12,7 +12,7 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
-def get_function_module(request, function_id, load_from_db=False):
+def get_function_module(request, function_id, load_from_db=True):
     """
     Get the function module by its ID.
     """
