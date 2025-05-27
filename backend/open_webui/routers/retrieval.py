@@ -989,18 +989,13 @@ def save_docs_to_vector_db(
         processed_docs = []
         
         for doc in docs:
-            # Clean the text content first - enable debug for PPTX files
-            source_file = doc.metadata.get('source', '').lower()
-            is_pptx = source_file.endswith('.pptx') or source_file.endswith('.ppt')
-            
-            cleaned_content = clean_text_content(doc.page_content, debug=is_pptx)
-            
-            if not cleaned_content:
+            # Text is already cleaned at source, just chunk it
+            if not doc.page_content:
                 continue
             
             # Create semantic chunks
             chunks = create_semantic_chunks(
-                cleaned_content,
+                doc.page_content,
                 request.app.state.config.CHUNK_SIZE,
                 request.app.state.config.CHUNK_OVERLAP
             )
@@ -1081,11 +1076,23 @@ def save_docs_to_vector_db(
 
         # Apply final text cleaning for embedding (text already cleaned during chunking)
         cleaned_texts = []
-        for text in texts:
+        for i, text in enumerate(texts):
+            # Debug logging for PPTX files
+            if any(doc.metadata.get('source', '').lower().endswith(('.pptx', '.ppt')) for doc in docs):
+                if i == 0:  # Log first chunk only to avoid spam
+                    log.info(f"=== EMBEDDING PREP DEBUG ===")
+                    log.info(f"Text before embedding prep (first 200 chars): {repr(text[:200])}")
+            
             # Text is already cleaned, just flatten for embedding (convert line breaks to spaces)
             cleaned_text = re.sub(r'\n+', ' ', text)
             cleaned_text = re.sub(r'\s+', ' ', cleaned_text)  # Final whitespace normalization
             cleaned_text = cleaned_text.strip()
+            
+            if any(doc.metadata.get('source', '').lower().endswith(('.pptx', '.ppt')) for doc in docs):
+                if i == 0:  # Log first chunk only
+                    log.info(f"Text after embedding prep (first 200 chars): {repr(cleaned_text[:200])}")
+                    log.info(f"=== END EMBEDDING PREP DEBUG ===")
+            
             cleaned_texts.append(cleaned_text)
         
         embeddings = embedding_function(
@@ -1094,15 +1101,24 @@ def save_docs_to_vector_db(
             user=user,
         )
 
-        items = [
-            {
+        # Store the fully cleaned text (not the original chunk text)
+        items = []
+        for idx in range(len(texts)):
+            text_to_store = texts[idx]
+            
+            # Debug logging for PPTX files - show what we're actually storing
+            if any(doc.metadata.get('source', '').lower().endswith(('.pptx', '.ppt')) for doc in docs):
+                if idx == 0:  # Log first chunk only
+                    log.info(f"=== STORAGE DEBUG ===")
+                    log.info(f"Text being stored (first 200 chars): {repr(text_to_store[:200])}")
+                    log.info(f"=== END STORAGE DEBUG ===")
+            
+            items.append({
                 "id": str(uuid.uuid4()),
-                "text": text,
+                "text": text_to_store,
                 "vector": embeddings[idx],
                 "metadata": metadatas[idx],
-            }
-            for idx, text in enumerate(texts)
-        ]
+            })
 
         VECTOR_DB_CLIENT.insert(
             collection_name=collection_name,
@@ -1148,7 +1164,7 @@ def process_file(
 
             docs = [
                 Document(
-                    page_content=form_data.content.replace("<br/>", "\n"),
+                    page_content=clean_text_content(form_data.content.replace("<br/>", "\n")),
                     metadata={
                         **file.meta,
                         "name": file.filename,
@@ -1171,7 +1187,7 @@ def process_file(
             if result is not None and len(result.ids[0]) > 0:
                 docs = [
                     Document(
-                        page_content=result.documents[0][idx],
+                        page_content=clean_text_content(result.documents[0][idx]),
                         metadata=result.metadatas[0][idx],
                     )
                     for idx, id in enumerate(result.ids[0])
@@ -1179,7 +1195,7 @@ def process_file(
             else:
                 docs = [
                     Document(
-                        page_content=file.data.get("content", ""),
+                        page_content=clean_text_content(file.data.get("content", "")),
                         metadata={
                             **file.meta,
                             "name": file.filename,
@@ -1215,9 +1231,10 @@ def process_file(
                     file.filename, file.meta.get("content_type"), file_path
                 )
 
+                # Clean the loaded documents before processing
                 docs = [
                     Document(
-                        page_content=doc.page_content,
+                        page_content=clean_text_content(doc.page_content),
                         metadata={
                             **doc.metadata,
                             "name": file.filename,
@@ -1231,7 +1248,7 @@ def process_file(
             else:
                 docs = [
                     Document(
-                        page_content=file.data.get("content", ""),
+                        page_content=clean_text_content(file.data.get("content", "")),
                         metadata={
                             **file.meta,
                             "name": file.filename,
@@ -1323,7 +1340,7 @@ def process_text(
 
     docs = [
         Document(
-            page_content=form_data.content,
+            page_content=clean_text_content(form_data.content),
             metadata={"name": form_data.name, "created_by": user.id},
         )
     ]
@@ -2031,7 +2048,7 @@ def process_files_batch(
 
             docs: List[Document] = [
                 Document(
-                    page_content=text_content.replace("<br/>", "\n"),
+                    page_content=clean_text_content(text_content.replace("<br/>", "\n")),
                     metadata={
                         **file.meta,
                         "name": file.filename,
