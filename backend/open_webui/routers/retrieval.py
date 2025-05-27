@@ -2169,6 +2169,7 @@ def clean_text_content(text: str, debug: bool = False) -> str:
     text = text.replace('\\n', '\n')    # Single-escaped newlines
     text = text.replace('\\t', ' ')     # Single-escaped tabs to spaces
     text = text.replace('\\"', '"')     # Single-escaped quotes
+    text = text.replace('\\\'', "'")    # Single-escaped single quotes
     text = text.replace('\\r', '')      # Remove escaped carriage returns
     text = text.replace('\\/', '/')     # Convert escaped slashes
     text = text.replace('\\\\', '\\')   # Convert double backslashes
@@ -2217,7 +2218,12 @@ def clean_text_content(text: str, debug: bool = False) -> str:
     text = re.sub(r'\n\s*\n\s*\n+', '\n\n', text) # Multiple empty lines -> double line break
     text = re.sub(r'^\s+|\s+$', '', text)         # Remove leading/trailing whitespace
     
-    # Step 7: Fix orphaned punctuation
+    # Step 7: Additional quote cleaning
+    text = re.sub(r'\\+"', '"', text)     # Multiple backslashes before quotes
+    text = re.sub(r'\\"', '"', text)      # Any remaining escaped quotes
+    text = re.sub(r"\\'", "'", text)      # Any remaining escaped single quotes
+    
+    # Step 8: Fix orphaned punctuation
     text = re.sub(r'^\s*[)\]}]+\s*', '', text)    # Remove orphaned closing brackets/parens at start
     text = re.sub(r'\n\s*[)\]}]+\s*\n', '\n\n', text)  # Remove orphaned closing brackets on their own lines
     
