@@ -142,13 +142,13 @@ COPY --chown=$UID:$GID pyproject.toml uv.lock ./
 RUN pip3 install --no-cache-dir uv && \
     if [ "$USE_CUDA" = "true" ]; then \
     # If you use CUDA the whisper and embedding model will be downloaded on first use
-    uv pip install --system --no-cache-dir --index-url https://download.pytorch.org/whl/$USE_CUDA_DOCKER_VER torch torchvision torchaudio && \
+    uv add --system --no-cache-dir --index-url https://download.pytorch.org/whl/$USE_CUDA_DOCKER_VER torch torchvision torchaudio && \
     uv sync --no-cache && \
     uv run python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ['RAG_EMBEDDING_MODEL'], device='cpu')" && \
     uv run python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])"; \
     uv run python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])"; \
     else \
-    uv pip install --system --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch torchvision torchaudio && \
+    uv add --system --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch torchvision torchaudio && \
     uv sync --no-cache && \
     uv run python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ['RAG_EMBEDDING_MODEL'], device='cpu')" && \
     uv run python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])"; \
