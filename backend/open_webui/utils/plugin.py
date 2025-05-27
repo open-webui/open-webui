@@ -200,8 +200,7 @@ def get_function_module_from_cache(request, function_id, load_from_db=True):
             hasattr(request.app.state, "FUNCTIONS")
             and function_id in request.app.state.FUNCTIONS
         ):
-            if request.app.state.FUNCTION_CONTENTS[function_id] == content:
-                return request.app.state.FUNCTIONS[function_id], None, None
+            return request.app.state.FUNCTIONS[function_id], None, None
 
         function_module, function_type, frontmatter = load_function_module_by_id(
             function_id
