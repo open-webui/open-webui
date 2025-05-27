@@ -167,9 +167,11 @@ def load_function_module_by_id(function_id: str, content: str | None = None):
 
 
 def get_function_module_from_cache(request, function_id, load_from_db=True):
-
     if load_from_db:
-        # Always load from the database if requested
+        # Always load from the database by default
+        # This is useful for hooks like "inlet" or "outlet" where the content might change
+        # and we want to ensure the latest content is used.
+
         function = Functions.get_function_by_id(function_id)
         if not function:
             raise Exception(f"Function not found: {function_id}")
@@ -196,6 +198,8 @@ def get_function_module_from_cache(request, function_id, load_from_db=True):
         )
     else:
         # Load from cache (e.g. "stream" hook)
+        # This is useful for performance reasons
+
         if (
             hasattr(request.app.state, "FUNCTIONS")
             and function_id in request.app.state.FUNCTIONS
