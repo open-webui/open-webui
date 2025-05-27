@@ -1199,6 +1199,12 @@ class ChatTable:
                 print(f"🧪 DIRECT PRINT: Created adapter, testing database detection...")
                 log.info(f"🧪 INFO: Created adapter, testing database detection...")
                 
+                # Force database type detection
+                meta_type = adapter.get_database_type("meta")
+                chat_type = adapter.get_database_type("chat")
+                print(f"🧪 DIRECT PRINT: Database types - meta: {meta_type.value}, chat: {chat_type.value}")
+                log.info(f"🧪 INFO: Database types - meta: {meta_type.value}, chat: {chat_type.value}")
+                
                 chat = db.get(Chat, id)
                 return ChatModel.model_validate(chat)
         except Exception as e:
