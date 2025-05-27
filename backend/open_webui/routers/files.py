@@ -4,7 +4,7 @@ import uuid
 from pathlib import Path
 from typing import Optional
 from urllib.parse import quote
-
+import time 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
 from fastapi.responses import FileResponse, StreamingResponse
 from open_webui.constants import ERROR_MESSAGES
@@ -26,6 +26,7 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 
 router = APIRouter()
+TEMP_LINKS = {}
 
 ############################
 # Upload File
@@ -74,6 +75,7 @@ def upload_file(
                 "audio/ogg",
                 "audio/x-m4a",
             ]:
+                
                 file_path = Storage.get_file(file_path)
                 result = transcribe(request, file_path)
                 process_file(
@@ -83,6 +85,11 @@ def upload_file(
                 )
             else:
                 process_file(request, ProcessFileForm(file_id=id), user=user)
+            
+            ## Store temporary link which will be used for download link expiry to (5 minutes) /start
+            expiry=time.time() + 1800
+            TEMP_LINKS[id] = (file_path, expiry)
+            ##  Store temporary link which will be used for download link expiry( 5 minutes) /end
 
             file_item = Files.get_file_by_id(id=id)
         except Exception as e:
@@ -109,6 +116,83 @@ def upload_file(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.DEFAULT(e),
         )
+
+
+
+
+## download file with temporary link /start
+
+@router.get("/download/{id}")
+async def download_by_id(id: str, user=Depends(get_verified_user)):
+    
+    data = TEMP_LINKS.get(id)
+    if data:
+        file_path, expiry = data
+        if time.time() > expiry:
+            del TEMP_LINKS[id]
+            raise HTTPException(
+                status_code=status.HTTP_410_GONE,
+                detail=ERROR_MESSAGES.DEFAULT("Download link has expired"),
+            )
+    else:
+        # If no temporary link exists, this is likely a direct access attempt
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.DEFAULT("Download link not found or expired. Links are valid for 30 minutes."),
+        )
+    
+    file = Files.get_file_by_id(id)
+    
+    if file and (file.user_id == user.id or user.role == "admin"):
+        try:
+            file_path = Storage.get_file(file.path)
+            file_path = Path(file_path)
+
+            # Check if the file already exists in the cache
+            if file_path.is_file():
+                # Handle Unicode filenames
+                filename = file.meta.get("name", file.filename)
+                encoded_filename = quote(filename)  # RFC5987 encoding
+
+                content_type = file.meta.get("content_type")
+                filename = file.meta.get("name", file.filename)
+                encoded_filename = quote(filename)
+                headers = {}
+
+                if content_type == "application/pdf" or filename.lower().endswith(
+                    ".pdf"
+                ):
+                    headers["Content-Disposition"] = (
+                        f"inline; filename*=UTF-8''{encoded_filename}"
+                    )
+                    content_type = "application/pdf"
+                elif content_type != "text/plain":
+                    headers["Content-Disposition"] = (
+                        f"attachment; filename*=UTF-8''{encoded_filename}"
+                    )
+
+                return FileResponse(file_path, headers=headers, media_type=content_type)
+
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=ERROR_MESSAGES.NOT_FOUND,
+                )
+        except Exception as e:
+            log.exception(e)
+            log.error("Error downloading file content")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT("Error downloading file content"),
+            )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+## download file with temporary link /end
+
+
 
 
 ############################
@@ -210,17 +294,6 @@ async def update_file_data_content_by_id(
                 user=user,
             )
             file = Files.get_file_by_id(id=id)
-            if file.path:
-                try:
-                    file_path = Storage.get_file(file.path)
-                    file_path = Path(file_path)
-                    
-                    with open(file_path, 'w', encoding='utf-8') as f:
-                        f.write(form_data.content)
-                    log.info(f"Updated physical file content at {file_path}")
-                except Exception as e:
-                    log.exception(e)
-                    log.error(f"Failed to update physical file content: {file.path}")
         except Exception as e:
             log.exception(e)
             log.error(f"Error processing file: {file.id}")
