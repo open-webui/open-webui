@@ -154,7 +154,7 @@ RUN pip3 install --no-cache-dir uv && \
     uv run python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])"; \
     uv run python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])"; \
     fi; \
-    chown -R $UID:$GID /app/backend/data/
+    chown -R $UID:$GID /app/backend/data/ || true
 
 
 
