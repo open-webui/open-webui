@@ -2181,10 +2181,35 @@ def clean_text_content(text: str, debug: bool = False) -> str:
     if debug:
         log.info(f"After step 4 (PPTX artifacts): {repr(text[:200])}")
     
-    # Step 5: Normalize whitespace
+    # Step 5: Fix Unicode and special characters
+    unicode_replacements = [
+        ('–', '-'),        # En dash to hyphen
+        ('—', '-'),        # Em dash to hyphen  
+        (''', "'"),        # Smart single quotes
+        (''', "'"),        # Smart single quotes
+        ('"', '"'),        # Smart double quotes
+        ('"', '"'),        # Smart double quotes
+        ('…', '...'),      # Ellipsis to three dots
+    ]
+    
+    for old_char, new_char in unicode_replacements:
+        if old_char in text:
+            if debug:
+                count = text.count(old_char)
+                log.info(f"Replacing {count} instances of '{old_char}' with '{new_char}'")
+            text = text.replace(old_char, new_char)
+    
+    if debug:
+        log.info(f"After step 5 (Unicode cleanup): {repr(text[:200])}")
+    
+    # Step 6: Clean up spacing and formatting
     text = re.sub(r'[ \t]+', ' ', text)           # Multiple spaces/tabs -> single space
     text = re.sub(r'\n\s*\n\s*\n+', '\n\n', text) # Multiple empty lines -> double line break
     text = re.sub(r'^\s+|\s+$', '', text)         # Remove leading/trailing whitespace
+    
+    # Step 7: Fix orphaned punctuation
+    text = re.sub(r'^\s*[)\]}]+\s*', '', text)    # Remove orphaned closing brackets/parens at start
+    text = re.sub(r'\n\s*[)\]}]+\s*\n', '\n\n', text)  # Remove orphaned closing brackets on their own lines
     
     if debug:
         log.info(f"Final cleaned text (first 200 chars): {repr(text[:200])}")
