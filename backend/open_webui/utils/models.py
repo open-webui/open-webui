@@ -34,7 +34,7 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
-async def fetch_ollama_models(request, user):
+async def fetch_ollama_models(request: Request, user: UserModel = None):
     raw_ollama_models = await ollama.get_all_models(request, user=user)
     return [
         {
@@ -51,7 +51,7 @@ async def fetch_ollama_models(request, user):
     ]
     
 
-async def fetch_openai_models(request, user):
+async def fetch_openai_models(request: Request, user: UserModel = None):
     openai_response = await openai.get_all_models(request, user=user)
     return openai_response["data"]
 
