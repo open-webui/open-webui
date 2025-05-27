@@ -1494,7 +1494,7 @@ Ensure that the tools are effectively utilized to achieve the highest-quality an
 # Vector Database
 ####################################
 
-VECTOR_DB = os.environ.get("VECTOR_DB", "weaviate")
+VECTOR_DB = os.environ.get("VECTOR_DB", "chroma")
 
 # Chroma
 CHROMA_DATA_PATH = f"{DATA_DIR}/vector_db"
@@ -1547,7 +1547,7 @@ PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH = int(
 WEAVIATE_HTTP_HOST = os.environ.get("WEAVIATE_HTTP_HOST", "localhost")
 WEAVIATE_HTTP_PORT = os.environ.get("WEAVIATE_HTTP_PORT", 8080)
 WEAVIATE_GRPC_HOST = WEAVIATE_HTTP_HOST
-WEAVIATE_GRPC_PORT = 50051
+WEAVIATE_GRPC_PORT = os.environ.get("WEAVIATE_GRPC_PORT", 50051)
 WEAVIATE_API_KEY = os.environ.get("WEAVIATE_API_KEY", "")
 
 
