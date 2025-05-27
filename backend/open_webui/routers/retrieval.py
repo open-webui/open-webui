@@ -1076,12 +1076,12 @@ def save_docs_to_vector_db(
             request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
         )
 
-        # Apply final text cleaning for embedding
+        # Apply final text cleaning for embedding (text already cleaned during chunking)
         cleaned_texts = []
         for text in texts:
-            # Additional cleaning for embedding - preserve structure but clean formatting
-            cleaned_text = re.sub(r'\n+', ' ', text)  # Convert line breaks to spaces
-            cleaned_text = re.sub(r'\s+', ' ', cleaned_text)  # Normalize whitespace
+            # Text is already cleaned, just flatten for embedding (convert line breaks to spaces)
+            cleaned_text = re.sub(r'\n+', ' ', text)
+            cleaned_text = re.sub(r'\s+', ' ', cleaned_text)  # Final whitespace normalization
             cleaned_text = cleaned_text.strip()
             cleaned_texts.append(cleaned_text)
         
@@ -2070,24 +2070,47 @@ def clean_text_content(text: str) -> str:
     if not text:
         return text
     
-    # Remove excessive whitespace and normalize line breaks
-    text = re.sub(r'\n\s*\n\s*\n+', '\n\n', text)  # Multiple empty lines -> double line break
-    text = re.sub(r'\n\s+\n', '\n\n', text)  # Lines with only whitespace -> double line break
+    # Step 1: Handle escaped characters and JSON-like artifacts
+    text = re.sub(r'\\n', '\n', text)  # Convert escaped newlines to actual newlines
+    text = re.sub(r'\\t', ' ', text)  # Convert escaped tabs to spaces
+    text = re.sub(r'\\"', '"', text)  # Convert escaped quotes to regular quotes
+    text = re.sub(r'\\r', '', text)  # Remove escaped carriage returns
+    text = re.sub(r'\\/', '/', text)  # Convert escaped forward slashes
+    text = re.sub(r'\\\\', '\\', text)  # Convert double backslashes to single
+    
+    # Step 2: Remove document processing artifacts
+    text = re.sub(r'\\[a-zA-Z]+\\', '', text)  # Remove LaTeX-like commands (\command\)
+    text = re.sub(r'\\[a-zA-Z]+\{[^}]*\}', '', text)  # Remove LaTeX commands with braces
+    text = re.sub(r'\{\\[^}]*\}', '', text)  # Remove formatting commands in braces
+    text = re.sub(r'\\[0-9]+', '', text)  # Remove numeric escape sequences
+    
+    # Step 3: Clean up HTML/XML artifacts
+    text = re.sub(r'<[^>]+>', '', text)  # Remove HTML/XML tags
+    text = re.sub(r'&[a-zA-Z]+;', ' ', text)  # Remove HTML entities like &nbsp;
+    text = re.sub(r'&[#][0-9]+;', ' ', text)  # Remove numeric HTML entities
+    
+    # Step 4: Remove PDF/document extraction artifacts
+    text = re.sub(r'\x0c', '\n', text)  # Form feed characters to newlines
+    text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]', '', text)  # Control characters
+    text = re.sub(r'[^\x00-\x7F]+', lambda m: m.group(0) if ord(m.group(0)[0]) > 127 else '', text)  # Keep valid Unicode
+    
+    # Step 5: Normalize whitespace and line breaks
     text = re.sub(r'[ \t]+', ' ', text)  # Multiple spaces/tabs -> single space
     text = re.sub(r'\n[ \t]+', '\n', text)  # Leading whitespace on lines
     text = re.sub(r'[ \t]+\n', '\n', text)  # Trailing whitespace on lines
+    text = re.sub(r'\n\s*\n\s*\n+', '\n\n', text)  # Multiple empty lines -> double line break
+    text = re.sub(r'\n\s+\n', '\n\n', text)  # Lines with only whitespace -> double line break
     
-    # Clean up formatting artifacts
-    text = re.sub(r'\\n\\n+', '\n\n', text)  # Escaped newlines
-    text = re.sub(r'\\t', ' ', text)  # Escaped tabs
-    text = re.sub(r'\\strong\\|\\b\\|\\i\\', '', text)  # HTML-like formatting artifacts
-    text = re.sub(r'\n\\[a-zA-Z]+\\', '\n', text)  # Other escaped formatting
+    # Step 6: Clean up specific document artifacts
+    text = re.sub(r'^\s*[-•*]\s*$', '', text, flags=re.MULTILINE)  # Empty bullet points
+    text = re.sub(r'^\s*[0-9]+\.\s*$', '', text, flags=re.MULTILINE)  # Empty numbered lists
+    text = re.sub(r'^\s*[|]+\s*$', '', text, flags=re.MULTILINE)  # Table separators
+    text = re.sub(r'_{3,}|={3,}|-{3,}', '', text)  # Long underlines/separators
     
-    # Normalize paragraph breaks
+    # Step 7: Final normalization
     text = re.sub(r'\n\n+', '\n\n', text)  # Multiple paragraph breaks -> double line break
-    
-    # Clean up start and end
-    text = text.strip()
+    text = re.sub(r'^\n+|\n+$', '', text)  # Remove leading/trailing newlines
+    text = text.strip()  # Remove leading/trailing whitespace
     
     return text
 
