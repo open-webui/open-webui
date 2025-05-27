@@ -989,8 +989,11 @@ def save_docs_to_vector_db(
         processed_docs = []
         
         for doc in docs:
-            # Clean the text content first
-            cleaned_content = clean_text_content(doc.page_content)
+            # Clean the text content first - enable debug for PPTX files
+            source_file = doc.metadata.get('source', '').lower()
+            is_pptx = source_file.endswith('.pptx') or source_file.endswith('.ppt')
+            
+            cleaned_content = clean_text_content(doc.page_content, debug=is_pptx)
             
             if not cleaned_content:
                 continue
@@ -1972,6 +1975,24 @@ if ENV == "dev":
             )
         }
 
+    @router.post("/debug/clean-text")
+    async def debug_clean_text(request: Request, text: str = ""):
+        """Debug endpoint to test text cleaning with detailed logging"""
+        if not text:
+            return {"error": "No text provided"}
+        
+        log.info(f"Debug text cleaning requested for text length: {len(text)}")
+        cleaned = clean_text_content(text, debug=True)
+        
+        return {
+            "original_length": len(text),
+            "cleaned_length": len(cleaned),
+            "original_preview": text[:200],
+            "cleaned_preview": cleaned[:200],
+            "original_repr": repr(text[:100]),
+            "cleaned_repr": repr(cleaned[:100])
+        }
+
 
 class BatchProcessFilesForm(BaseModel):
     files: List[FileModel]
@@ -2065,15 +2086,39 @@ def process_files_batch(
     return BatchProcessFilesResponse(results=results, errors=errors)
 
 
-def clean_text_content(text: str) -> str:
+def clean_text_content(text: str, debug: bool = False) -> str:
     """Simple, effective text cleaning with special handling for PPTX artifacts"""
     if not text:
         return text
+    
+    original_text = text
+    if debug:
+        log.info(f"=== TEXT CLEANING DEBUG ===")
+        log.info(f"Original text (first 200 chars): {repr(text[:200])}")
+        log.info(f"Original text length: {len(text)}")
+        
+        # Show problematic patterns in original text
+        problematic_patterns = [
+            (r'\\n', 'Escaped newlines'),
+            (r'\\t', 'Escaped tabs'),
+            (r'\\"', 'Escaped quotes'),
+            (r'\\\\', 'Double backslashes'),
+            (r'\\[a-zA-Z]', 'Backslash + letter'),
+            (r'\\[0-9]', 'Backslash + number'),
+        ]
+        
+        for pattern, description in problematic_patterns:
+            matches = re.findall(pattern, text)
+            if matches:
+                log.info(f"Found {description}: {matches[:10]}...")  # Show first 10 matches
     
     # Step 1: PPTX-specific cleaning - handle double-escaped sequences first
     text = text.replace('\\\\n', '\n')  # Double-escaped newlines in PPTX
     text = text.replace('\\\\t', ' ')   # Double-escaped tabs in PPTX
     text = text.replace('\\\\"', '"')   # Double-escaped quotes in PPTX
+    
+    if debug:
+        log.info(f"After step 1 (double-escaped): {repr(text[:200])}")
     
     # Step 2: Standard escape sequences
     text = text.replace('\\n', '\n')    # Single-escaped newlines
@@ -2083,19 +2128,34 @@ def clean_text_content(text: str) -> str:
     text = text.replace('\\/', '/')     # Convert escaped slashes
     text = text.replace('\\\\', '\\')   # Convert double backslashes
     
+    if debug:
+        log.info(f"After step 2 (standard escapes): {repr(text[:200])}")
+    
     # Step 3: Remove any remaining backslash artifacts
     text = re.sub(r'\\[a-zA-Z]', '', text)  # Remove \letter patterns
     text = re.sub(r'\\[0-9]', '', text)     # Remove \number patterns
     text = re.sub(r'\\[^a-zA-Z0-9\s]', '', text)  # Remove \symbol patterns
     
+    if debug:
+        log.info(f"After step 3 (backslash cleanup): {repr(text[:200])}")
+    
     # Step 4: PPTX-specific artifacts cleanup
     text = re.sub(r'\s*\\n\s*', '\n', text)  # Clean up any remaining \\n with spaces
     text = re.sub(r'\\+', '', text)          # Remove any remaining multiple backslashes
+    
+    if debug:
+        log.info(f"After step 4 (PPTX artifacts): {repr(text[:200])}")
     
     # Step 5: Normalize whitespace
     text = re.sub(r'[ \t]+', ' ', text)           # Multiple spaces/tabs -> single space
     text = re.sub(r'\n\s*\n\s*\n+', '\n\n', text) # Multiple empty lines -> double line break
     text = re.sub(r'^\s+|\s+$', '', text)         # Remove leading/trailing whitespace
+    
+    if debug:
+        log.info(f"Final cleaned text (first 200 chars): {repr(text[:200])}")
+        log.info(f"Final text length: {len(text)}")
+        log.info(f"Characters removed: {len(original_text) - len(text)}")
+        log.info(f"=== END TEXT CLEANING DEBUG ===")
     
     return text
 
