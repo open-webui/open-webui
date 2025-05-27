@@ -38,7 +38,8 @@ class DatabaseAdapter:
         self.db = db
         self.dialect = db.bind.dialect.name
         self._cache: Dict[str, DatabaseType] = {}
-        self._log = logging.getLogger(f"{__name__}.DatabaseAdapter")
+        self._log = logging.getLogger(__name__)
+        self._log.setLevel(logging.INFO)  # Ensure INFO level is set
     
     def get_database_type(self, column_name: str = "meta") -> DatabaseType:
         """Determine database type with caching"""
@@ -228,6 +229,18 @@ def normalize_tag_names(tag_names: List[str]) -> List[str]:
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
+# Ensure we can see our logs
+print(f"🧪 DIRECT PRINT: Current log level for {__name__}: {log.level} (INFO={logging.INFO})")
+print(f"🧪 DIRECT PRINT: SRC_LOG_LEVELS['MODELS']: {SRC_LOG_LEVELS.get('MODELS', 'NOT_SET')}")
+
+if log.level > logging.INFO:
+    log.setLevel(logging.INFO)
+    print("🧪 DIRECT PRINT: Set log level to INFO")
+    log.info("🔧 Set chat models logger to INFO level for database detection visibility")
+else:
+    print(f"🧪 DIRECT PRINT: Log level already at {log.level}, should see INFO logs")
+    log.info("🔧 Chat models logger already at appropriate level for database detection visibility")
+
 
 class Chat(Base):
     __tablename__ = "chat"
@@ -315,6 +328,13 @@ class ChatTitleIdResponse(BaseModel):
 class ChatTable:
     def __init__(self):
         """Initialize ChatTable and log database configuration"""
+        # Test logging immediately
+        print("🧪 DIRECT PRINT: ChatTable initializing...")  # This should always show
+        log.error("🧪 ERROR LEVEL: ChatTable initializing...")  # This should show if any logging works
+        log.warning("🧪 WARNING LEVEL: ChatTable initializing...")  # This should show
+        log.info("🧪 INFO LEVEL: ChatTable initializing...")  # This is what we want to test
+        log.debug("🧪 DEBUG LEVEL: ChatTable initializing...")  # This might not show
+        
         log.info("🚀 Initializing ChatTable with database detection system")
         # Log configuration on first use
         try:
