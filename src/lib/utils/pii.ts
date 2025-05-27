@@ -251,7 +251,7 @@ export class PiiSessionManager {
 		return entities.map(entity => ({
 			id: entity.id,
 			label: entity.label,
-			name: entity.text
+			name: entity.raw_text
 		}));
 	}
 
@@ -327,8 +327,8 @@ export function unmaskTextWithEntities(text: string, entities: ExtendedPiiEntity
 	let unmaskedText = text;
 	entities.forEach(entity => {
 		const { label } = entity;
-		// Use entity.text as the raw text for unmasking
-		const rawText = entity.text;
+		// Use entity.raw_text as the raw text for unmasking
+		const rawText = entity.raw_text;
 
 		if (!label || !rawText) return;
 		
@@ -361,10 +361,10 @@ export function highlightUnmaskedEntities(text: string, entities: ExtendedPiiEnt
 	let highlightedText = text;
 	
 	// Sort entities by text length (longest first) to avoid partial replacements
-	const sortedEntities = [...entities].sort((a, b) => b.text.length - a.text.length);
+	const sortedEntities = [...entities].sort((a, b) => b.raw_text.length - a.raw_text.length);
 	
 	sortedEntities.forEach(entity => {
-		const escapedText = entity.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+		const escapedText = entity.raw_text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 		const regex = new RegExp(`\\b${escapedText}\\b`, 'gi');
 		
 		highlightedText = highlightedText.replace(regex, (match) => {

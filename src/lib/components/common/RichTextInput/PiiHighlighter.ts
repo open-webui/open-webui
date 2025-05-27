@@ -57,7 +57,7 @@ export const PiiHighlighter = Extension.create<PiiHighlighterOptions>({
 											class: `${highlightClass} ${maskingClass}`,
 											'data-pii-type': entity.type,
 											'data-pii-label': entity.label,
-											'data-pii-text': entity.text,
+											'data-pii-text': entity.raw_text,
 											'data-pii-occurrence': occurrenceIndex.toString(),
 											'data-should-mask': shouldMask.toString(),
 											'data-entity-index': piiEntities.indexOf(entity).toString()
