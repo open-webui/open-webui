@@ -92,13 +92,7 @@ class DatalabMarkerLoader:
             "output_format": self.output_format,
         }
 
-        request_params = {
-            "filename": filename,
-            "mime_type": mime_type,
-            **form_data,
-        }
-
-        log.info(f"Datalab Marker POST request parameters: {request_params}")
+        log.info(f"Datalab Marker POST request parameters: {{'filename': '{filename}', 'mime_type': '{mime_type}', **{form_data}}}")
 
         try:
             with open(self.file_path, "rb") as f:
@@ -138,7 +132,6 @@ class DatalabMarkerLoader:
             success_val = poll_result.get("success")
 
             if status_val == "complete":
-                # Log key details
                 summary = {
                     k: poll_result.get(k)
                     for k in ("status", "output_format", "success", "error", "page_count", "total_cost")
@@ -158,11 +151,18 @@ class DatalabMarkerLoader:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=f"Final processing failed: {error_msg}")
 
         content_key = self.output_format.lower()
-        full_text = poll_result.get(content_key, "").strip()
+        raw_content = poll_result.get(content_key)
+
+        if content_key == "json":
+            full_text = json.dumps(raw_content, indent=2)
+        elif content_key in {"markdown", "html"}:
+            full_text = str(raw_content).strip()
+        else:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=f"Unsupported output format: {self.output_format}")
+
         if not full_text:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Datalab Marker returned empty content")
 
-        # Write output to uploads/marker_output
         marker_output_dir = os.path.join("/app/backend/data/uploads", "marker_output")
         os.makedirs(marker_output_dir, exist_ok=True)
 
