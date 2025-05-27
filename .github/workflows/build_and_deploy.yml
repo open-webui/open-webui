@@ -30,6 +30,9 @@ jobs:
           VERSION="${COMMIT_DATE}.${COMMIT_NUMBER}"
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
 
+      - name: generate /version/ page
+        run: ./scripts/generate-version-html-page.sh
+
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:

@@ -620,7 +620,12 @@
 					await config.set(await getBackendConfig());
 				} else {
 					// Redirect Invalid Session User to /auth Page
-					if ($page.url.pathname !== '/auth' && $page.url.pathname !== '/logadmin') {
+					const trimedPathname = $page.url.pathname.replace(/\/+$/, '');
+					if (
+						(trimedPathname !== '/auth') &&
+						(trimedPathname !== '/logadmin') &&
+						(trimedPathname !== '/version')
+					) {
 						await goto('/auth');
 					}
 				}
