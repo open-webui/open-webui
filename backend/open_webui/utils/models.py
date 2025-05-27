@@ -13,7 +13,10 @@ from open_webui.models.functions import Functions
 from open_webui.models.models import Models
 
 
-from open_webui.utils.plugin import load_function_module_by_id
+from open_webui.utils.plugin import (
+    load_function_module_by_id,
+    get_function_module_from_cache,
+)
 from open_webui.utils.access_control import has_access
 
 
@@ -239,8 +242,7 @@ async def get_all_models(request, user: UserModel = None):
         ]
 
     def get_function_module_by_id(function_id):
-        function_module, _, _ = load_function_module_by_id(function_id)
-        request.app.state.FUNCTIONS[function_id] = function_module
+        function_module, _, _ = get_function_module_from_cache(request, function_id)
         return function_module
 
     for model in models:

@@ -1,7 +1,10 @@
 import inspect
 import logging
 
-from open_webui.utils.plugin import load_function_module_by_id
+from open_webui.utils.plugin import (
+    load_function_module_by_id,
+    get_function_module_from_cache,
+)
 from open_webui.models.functions import Functions
 from open_webui.env import SRC_LOG_LEVELS
 
@@ -13,10 +16,7 @@ def get_function_module(request, function_id):
     """
     Get the function module by its ID.
     """
-
-    function_module, _, _ = load_function_module_by_id(function_id)
-    request.app.state.FUNCTIONS[function_id] = function_module
-
+    function_module, _, _ = get_function_module_from_cache(request, function_id)
     return function_module
 
 

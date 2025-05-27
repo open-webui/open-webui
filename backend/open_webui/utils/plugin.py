@@ -166,6 +166,24 @@ def load_function_module_by_id(function_id, content=None):
         os.unlink(temp_file.name)
 
 
+def get_function_module_from_cache(request, function_id):
+    if (
+        hasattr(request.app.state, "FUNCTIONS")
+        and function_id in request.app.state.FUNCTIONS
+    ):
+        return request.app.state.FUNCTIONS[function_id], None, None
+
+    function_module, function_type, frontmatter = load_function_module_by_id(
+        function_id
+    )
+
+    if not hasattr(request.app.state, "FUNCTIONS"):
+        request.app.state.FUNCTIONS = {}
+
+    request.app.state.FUNCTIONS[function_id] = function_module
+    return function_module, function_type, frontmatter
+
+
 def install_frontmatter_requirements(requirements: str):
     if requirements:
         try:

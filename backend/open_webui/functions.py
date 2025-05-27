@@ -28,7 +28,10 @@ from open_webui.socket.main import (
 from open_webui.models.functions import Functions
 from open_webui.models.models import Models
 
-from open_webui.utils.plugin import load_function_module_by_id
+from open_webui.utils.plugin import (
+    load_function_module_by_id,
+    get_function_module_from_cache,
+)
 from open_webui.utils.tools import get_tools
 from open_webui.utils.access_control import has_access
 
@@ -53,9 +56,7 @@ log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
 def get_function_module_by_id(request: Request, pipe_id: str):
-    # Check if function is already loaded
-    function_module, _, _ = load_function_module_by_id(pipe_id)
-    request.app.state.FUNCTIONS[pipe_id] = function_module
+    function_module, _, _ = get_function_module_from_cache(request, pipe_id)
 
     if hasattr(function_module, "valves") and hasattr(function_module, "Valves"):
         valves = Functions.get_function_valves_by_id(pipe_id)
