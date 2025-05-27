@@ -1113,6 +1113,14 @@ def save_docs_to_vector_db(
             # Convert ALL newlines to spaces for storage (preserve readability but remove line breaks)
             text_to_store = re.sub(r'\n+', ' ', text_to_store)
             text_to_store = re.sub(r'\s+', ' ', text_to_store)  # Normalize all whitespace
+            
+            # Final aggressive quote cleaning for storage
+            text_to_store = re.sub(r'\\+"', '"', text_to_store)     # Multiple backslashes before quotes
+            text_to_store = re.sub(r'\\"', '"', text_to_store)      # Any escaped quotes
+            text_to_store = re.sub(r"\\'", "'", text_to_store)      # Any escaped single quotes
+            text_to_store = re.sub(r'\\&', '&', text_to_store)      # Escaped ampersands
+            text_to_store = re.sub(r'\\([^a-zA-Z0-9\s])', r'\1', text_to_store)  # Any other escaped special chars
+            
             text_to_store = text_to_store.strip()
             
             # Debug logging for PPTX files - show what we're actually storing for ALL chunks
