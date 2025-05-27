@@ -476,7 +476,7 @@
 					>
 						<div class="flex items-start justify-between">
 							<div class="flex items-center">
-								<button on:click={() => bookmarkAssistant(model.id, model.bookmarked)} class="text-lightGray-100 dark:text-customGray-300">
+								<button on:click={() => bookmarkAssistant(model.id, model.bookmarked)} class="text-lightGray-100 dark:text-customGray-300 mr-1">
 									{#if model?.bookmarked}
 										<BookmarkedIcon/>
 									{:else}

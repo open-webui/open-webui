@@ -31,6 +31,9 @@
 	import MenuIcon from '../icons/MenuIcon.svelte';
 	import FilterDropdown from './Models/FilterDropdown.svelte';
 	import BackIcon from '../icons/BackIcon.svelte';
+	import BookmarkIcon from '../icons/BookmarkIcon.svelte';
+	import BookmarkedIcon from '../icons/BookmarkedIcon.svelte';
+	import { bookmarkPrompt } from '$lib/apis/prompts';
 
 	const i18n = getContext('i18n');
 	let promptsImportInputElement: HTMLInputElement;
@@ -170,6 +173,15 @@
 	}
 	let hoveredPrompt = null;
 	let menuIdOpened = null;
+
+	const bookmarkPromptHandler = async (command, bookmarkedPrompt) => {
+		const bookmarked = !bookmarkedPrompt;
+		const res = await bookmarkPrompt(localStorage.token, command, bookmarked);
+		if (res) {
+			prompts = await getPromptList(localStorage.token);
+		    _prompts.set(await getPrompts(localStorage.token));
+		}
+	}
 	
 </script>
 
@@ -349,6 +361,14 @@
 					>
 						<div class="flex items-start justify-between">
 							<div class="flex items-center">
+								<button on:click={() => bookmarkPromptHandler(prompt.command, prompt.bookmarked)} class="text-lightGray-100 dark:text-customGray-300">
+									{#if prompt?.bookmarked}
+										<BookmarkedIcon/>
+									{:else}
+										<BookmarkIcon/>
+									{/if}
+									
+								</button>
 								<div class="flex items-center gap-1 flex-wrap">
 									{#if prompt.access_control == null && prompt.prebuilt}
 										<div
