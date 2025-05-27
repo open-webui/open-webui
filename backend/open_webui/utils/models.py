@@ -239,9 +239,31 @@ async def get_all_models(request, user: UserModel = None):
         ]
 
     def get_function_module_by_id(function_id):
+        if function_id in request.app.state.FUNCTIONS:
+            return request.app.state.FUNCTIONS[function_id]
+
         function_module, _, _ = load_function_module_by_id(function_id)
         request.app.state.FUNCTIONS[function_id] = function_module
         return function_module
+
+    def reload_function_module_by_id(function_id):
+        function_module, _, _ = load_function_module_by_id(function_id)
+        request.app.state.FUNCTIONS[function_id] = function_module
+        return function_module
+
+    all_function_ids = set()
+    for model in models:
+        action_ids = list(set(model.get("action_ids", []) + global_action_ids))
+        filter_ids = list(set(model.get("filter_ids", []) + global_filter_ids))
+        all_function_ids.update(
+            [aid for aid in action_ids if aid in enabled_action_ids]
+        )
+        all_function_ids.update(
+            [fid for fid in filter_ids if fid in enabled_filter_ids]
+        )
+
+    for function_id in all_function_ids:
+        reload_function_module_by_id(function_id)
 
     for model in models:
         action_ids = [
