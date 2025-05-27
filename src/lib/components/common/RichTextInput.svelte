@@ -91,7 +91,7 @@
 					id: e.id,
 					type: e.type,
 					label: e.label,
-					text: e.text,
+					raw_text: e.raw_text,
 					occurrences: e.occurrences || []
 				}));
 				piiSessionManager.setConversationEntities(conversationId, piiEntitiesForMigration);
@@ -233,7 +233,7 @@
 				: piiSessionManager.getEntities().map(entity => ({
 					id: entity.id,
 					label: entity.label,
-					name: entity.text
+					name: entity.raw_text
 				}));
 			
 			console.log('RichTextInput: Sending known entities to API:', knownEntities.length, 'for conversation:', conversationId, 'entities:', knownEntities);

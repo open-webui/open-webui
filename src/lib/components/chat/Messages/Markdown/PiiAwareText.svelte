@@ -22,7 +22,7 @@
 			id,
 			text: text.substring(0, 50) + '...',
 			entitiesCount: entities.length,
-			entities: entities.map(e => ({ label: e.label, text: e.text })),
+			entities: entities.map(e => ({ label: e.label, text: e.raw_text })),
 			hasContainer: !!containerElement
 		});
 	}
