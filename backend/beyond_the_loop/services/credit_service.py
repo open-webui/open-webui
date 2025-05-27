@@ -3,12 +3,12 @@ import math
 import stripe
 from typing import Optional
 from fastapi import HTTPException
+import time
 
 from beyond_the_loop.models.users import Users
 from beyond_the_loop.models.companies import Companies
 from beyond_the_loop.services.email_service import EmailService
 from beyond_the_loop.models.model_costs import ModelCosts
-from beyond_the_loop.routers.payments import FLEX_CREDITS_DEFAULT_PRICE_IN_CENTS
 
 PROFIT_MARGIN_FACTOR = 1.5
 DOLLAR_PER_EUR = 0.9
@@ -249,11 +249,26 @@ class CreditService:
             limit=1
         )
         
+        # Check for expired trials
+        expired_trials = stripe.Subscription.list(
+            customer=company.stripe_customer_id,
+            status='canceled',
+            limit=10  # Check a few recent subscriptions
+        )
+
+        has_expired_trial = any(sub.get('status') == 'canceled' and sub.get('metadata', {}).get('plan_id', "") == "free" for sub in expired_trials.data)
+
         if not subscriptions.data and not trails.data:
-            raise HTTPException(
-                status_code=402,  # 402 Payment Required
-                detail="No active subscription found. Please subscribe to a plan.",
-            )
+            if has_expired_trial:
+                raise HTTPException(
+                    status_code=402,  # 402 Payment Required
+                    detail="Your trial period has expired. Please subscribe to a plan to continue using the service.",
+                )
+            else:
+                raise HTTPException(
+                    status_code=402,  # 402 Payment Required
+                    detail="No active subscription found. Please subscribe to a plan.",
+                )
         
         # Proceed with credit balance check
         current_balance = Companies.get_credit_balance(user.company_id)
