@@ -51,11 +51,11 @@ async def get_tools(request: Request, user=Depends(get_verified_user)):
                 **{
                     "id": f"server:{server['idx']}",
                     "user_id": f"server:{server['idx']}",
-                    "name": server["openapi"]
+                    "name": server.get("openapi", {})
                     .get("info", {})
                     .get("title", "Tool Server"),
                     "meta": {
-                        "description": server["openapi"]
+                        "description": server.get("openapi", {})
                         .get("info", {})
                         .get("description", ""),
                     },

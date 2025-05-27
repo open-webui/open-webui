@@ -170,7 +170,8 @@
 			await embeddingModelUpdateHandler();
 		}
 
-		RAGConfig.ALLOWED_FILE_EXTENSIONS = RAGConfig.ALLOWED_FILE_EXTENSIONS.split(',')
+		RAGConfig.ALLOWED_FILE_EXTENSIONS = (RAGConfig?.ALLOWED_FILE_EXTENSIONS ?? '')
+			.split(',')
 			.map((ext) => ext.trim())
 			.filter((ext) => ext !== '');
 
@@ -767,6 +768,26 @@
 										{$i18n.t(
 											'Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score.'
 										)}
+									</div>
+								</div>
+							{/if}
+
+							{#if RAGConfig.ENABLE_RAG_HYBRID_SEARCH === true}
+								<div class="mb-2.5 flex w-full justify-between">
+									<div class="self-center text-xs font-medium">
+										{$i18n.t('Weight of BM25 Retrieval')}
+									</div>
+									<div class="flex items-center relative">
+										<input
+											class="flex-1 w-full text-sm bg-transparent outline-hidden"
+											type="number"
+											step="0.01"
+											placeholder={$i18n.t('Enter BM25 Weight')}
+											bind:value={RAGConfig.HYBRID_BM25_WEIGHT}
+											autocomplete="off"
+											min="0.0"
+											max="1.0"
+										/>
 									</div>
 								</div>
 							{/if}
