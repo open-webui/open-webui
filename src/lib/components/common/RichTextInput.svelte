@@ -84,6 +84,7 @@
 	let piiEntities: ExtendedPiiEntity[] = [];
 	let isDetectingPii = false;
 	let lastDetectedText = '';
+	let lastBrTagCount = 0; // Track br tag count to detect structural changes
 	let piiSessionManager = PiiSessionManager.getInstance();
 
 	// Reactive statement to restore entities when conversation changes or input is cleared
@@ -139,7 +140,8 @@
 			piiEntities = storedEntities;
 			// Update editor if it exists
 			if (editor && editor.commands.updatePiiEntities) {
-				editor.commands.updatePiiEntities(piiEntities);
+				const editorHtml = editor.getHTML();
+				editor.commands.updatePiiEntities(piiEntities, editorHtml);
 			}
 		}
 	}
@@ -169,7 +171,8 @@
 			);
 			piiEntities = storedEntities;
 			if (editor && editor.commands.updatePiiEntities) {
-				editor.commands.updatePiiEntities(piiEntities);
+				const editorHtml = editor.getHTML();
+				editor.commands.updatePiiEntities(piiEntities, editorHtml);
 			}
 		}
 	}
@@ -325,8 +328,12 @@
 
 				// Update the editor with PII highlighting
 				if (editor && editor.commands.updatePiiEntities) {
-					editor.commands.updatePiiEntities(piiEntities);
-					console.log('RichTextInput: Updated editor with PII entities');
+					// Pass editor HTML for position mapping
+					const editorHtml = editor.getHTML();
+					editor.commands.updatePiiEntities(piiEntities, editorHtml);
+					// Update br tag count tracking
+					lastBrTagCount = (editorHtml.match(/<br\s*\/?>/gi) || []).length;
+					console.log('RichTextInput: Updated editor with PII entities and position mapping');
 				}
 
 				// Notify parent component
@@ -343,6 +350,13 @@
 
 	// Debounced PII detection
 	const debouncedDetectPii = debounce(detectPii, 500);
+
+	// Debounced position update (less aggressive than detection)
+	const debouncedUpdatePositions = debounce((editorHtml: string) => {
+		if (enablePiiDetection && piiEntities.length > 0 && editor?.commands.updatePiiEntities) {
+			editor.commands.updatePiiEntities(piiEntities, editorHtml);
+		}
+	}, 150); // Faster than PII detection but still debounced
 
 	// Hover overlay handlers
 	const handlePiiHover = (entity: ExtendedPiiEntity, position: { x: number; y: number }) => {
@@ -408,7 +422,8 @@
 			piiEntities = piiSessionManager.getEntities();
 		}
 		if (editor && editor.commands.updatePiiEntities) {
-			editor.commands.updatePiiEntities(piiEntities);
+			const editorHtml = editor.getHTML();
+			editor.commands.updatePiiEntities(piiEntities, editorHtml);
 		}
 	};
 
@@ -571,7 +586,19 @@
 					}
 				}
 
-				// Trigger PII detection on content change
+				// Check if document structure changed (br tags added/removed)
+				if (enablePiiDetection && piiEntities.length > 0) {
+					const editorHtml = editor.getHTML();
+					const currentBrTagCount = (editorHtml.match(/<br\s*\/?>/gi) || []).length;
+					
+					// Only update positions if br tag count changed (structural change)
+					if (currentBrTagCount !== lastBrTagCount) {
+						debouncedUpdatePositions(editorHtml);
+						lastBrTagCount = currentBrTagCount;
+					}
+				}
+
+				// Trigger PII detection on content change (debounced)
 				if (enablePiiDetection && piiApiKey) {
 					const plainText = extractPlainTextFromEditor(editor.getHTML());
 					if (plainText.trim()) {
@@ -700,6 +727,12 @@
 
 		if (messageInput) {
 			selectTemplate();
+		}
+
+		// Initialize br tag count
+		if (enablePiiDetection) {
+			const initialHtml = editor.getHTML();
+			lastBrTagCount = (initialHtml.match(/<br\s*\/?>/gi) || []).length;
 		}
 	});
 

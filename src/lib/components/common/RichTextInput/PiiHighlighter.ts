@@ -2,11 +2,12 @@ import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey } from 'prosemirror-state';
 import { Decoration, DecorationSet } from 'prosemirror-view';
 import type { ExtendedPiiEntity } from '$lib/utils/pii';
-import { PiiSessionManager } from '$lib/utils/pii';
+import { PiiSessionManager, mapPlainTextPositionToProseMirror } from '$lib/utils/pii';
 
 export interface PiiHighlighterOptions {
 	piiEntities: ExtendedPiiEntity[];
 	highlightClass: string;
+	editorHtml?: string;
 	onHover?: (entity: ExtendedPiiEntity, position: { x: number; y: number }) => void;
 	onHoverEnd?: () => void;
 }
@@ -18,6 +19,7 @@ export const PiiHighlighter = Extension.create<PiiHighlighterOptions>({
 		return {
 			piiEntities: [],
 			highlightClass: 'pii-highlight',
+			editorHtml: undefined,
 			onHover: undefined,
 			onHoverEnd: undefined
 		};
@@ -39,13 +41,22 @@ export const PiiHighlighter = Extension.create<PiiHighlighterOptions>({
 
 						// Update decorations based on current PII entities
 						const decorations: Decoration[] = [];
-						const { piiEntities, highlightClass } = options;
+						const { piiEntities, highlightClass, editorHtml } = options;
 
 						piiEntities.forEach((entity) => {
 							entity.occurrences.forEach((occurrence, occurrenceIndex) => {
-								// Add 1 to account for the document structure offset
-								const from = occurrence.start_idx + 1;
-								const to = occurrence.end_idx + 1;
+								let from: number;
+								let to: number;
+
+								if (editorHtml) {
+									// Use position mapping to account for br tags and other structural elements
+									from = mapPlainTextPositionToProseMirror(occurrence.start_idx, editorHtml);
+									to = mapPlainTextPositionToProseMirror(occurrence.end_idx, editorHtml);
+								} else {
+									// Fallback to old method with simple offset
+									from = occurrence.start_idx + 1;
+									to = occurrence.end_idx + 1;
+								}
 
 								// Ensure the range is valid for the current document
 								if (from >= 1 && to <= tr.doc.content.size && from < to) {
@@ -166,13 +177,16 @@ export const PiiHighlighter = Extension.create<PiiHighlighterOptions>({
 		const self = this;
 		return {
 			updatePiiEntities:
-				(entities: ExtendedPiiEntity[]) =>
+				(entities: ExtendedPiiEntity[], editorHtml?: string) =>
 				({ tr, dispatch }: any) => {
 					if (dispatch) {
-						// Update the options with new entities
+						// Update the options with new entities and editor HTML
 						self.options.piiEntities = entities;
+						if (editorHtml) {
+							self.options.editorHtml = editorHtml;
+						}
 						// Force a state update to refresh decorations
-						dispatch(tr.setMeta('piiHighlighter', { entities }));
+						dispatch(tr.setMeta('piiHighlighter', { entities, editorHtml }));
 					}
 					return true;
 				}

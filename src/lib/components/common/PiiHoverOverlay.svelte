@@ -106,7 +106,7 @@
 						<div class="flex items-center gap-1.5">
 							<div class="w-4 h-4 rounded flex items-center justify-center overflow-hidden">
 								<img
-									src="/static/static/icon-purple-128.png"
+									src="/static/icon-purple-128.png"
 									alt="Logo"
 									class="w-full h-full object-cover"
 								/>

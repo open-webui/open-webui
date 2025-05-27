@@ -41,6 +41,59 @@ export function extractPlainTextFromEditor(editorContent: string): string {
 	return tempDiv.textContent || tempDiv.innerText || '';
 }
 
+// Count br tags before a given plain text position
+function countBrTagsBeforePosition(html: string, plainTextPos: number): number {
+	// Extract plain text to find character positions
+	const tempDiv = document.createElement('div');
+	tempDiv.innerHTML = html;
+	const plainText = tempDiv.textContent || tempDiv.innerText || '';
+	
+	if (plainTextPos >= plainText.length) {
+		// Count all br tags if position is at or beyond end
+		return (html.match(/<br\s*\/?>/gi) || []).length;
+	}
+	
+	// Walk through the HTML and count br tags that appear before the target plain text position
+	let currentPlainTextPos = 0;
+	let brCount = 0;
+	let htmlPos = 0;
+	
+	while (htmlPos < html.length && currentPlainTextPos < plainTextPos) {
+		// Check if we're at a br tag
+		const brMatch = html.slice(htmlPos).match(/^<br\s*\/?>/i);
+		if (brMatch) {
+			brCount++;
+			htmlPos += brMatch[0].length;
+			continue;
+		}
+		
+		// Check if we're at the start of any tag
+		const tagMatch = html.slice(htmlPos).match(/^<[^>]*>/);
+		if (tagMatch) {
+			htmlPos += tagMatch[0].length;
+			continue;
+		}
+		
+		// Regular character
+		currentPlainTextPos++;
+		htmlPos++;
+	}
+	
+	return brCount;
+}
+
+// Simple position mapping that accounts for br tags
+export function mapPlainTextPositionToProseMirror(
+	plainTextPos: number,
+	editorHtml: string
+): number {
+	// Count br tags that appear before this position in the plain text
+	const brTagsBeforePosition = countBrTagsBeforePosition(editorHtml, plainTextPos);
+	
+	// ProseMirror positions start at 1, add 1 for document offset, plus br tag positions
+	return plainTextPos + 1 + brTagsBeforePosition;
+}
+
 // Convert masked text back to editor format
 export function convertMaskedTextToEditor(maskedText: string, originalHtml: string): string {
 	// For now, return the masked text as-is
