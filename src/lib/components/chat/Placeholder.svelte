@@ -34,6 +34,8 @@
 	export let files = [];
 
 	export let selectedToolIds = [];
+	export let selectedFilterIds = [];
+
 	export let imageGenerationEnabled = false;
 	export let codeInterpreterEnabled = false;
 	export let webSearchEnabled = false;
@@ -136,7 +138,7 @@
 					</div>
 				</div>
 
-				<div class=" text-3xl @sm:text-4xl line-clamp-1" in:fade={{ duration: 100 }}>
+				<div class=" text-3xl @sm:text-3xl line-clamp-1" in:fade={{ duration: 100 }}>
 					{#if models[selectedModelIdx]?.name}
 						{models[selectedModelIdx]?.name}
 					{:else}
@@ -192,6 +194,7 @@
 					bind:prompt
 					bind:autoScroll
 					bind:selectedToolIds
+					bind:selectedFilterIds
 					bind:imageGenerationEnabled
 					bind:codeInterpreterEnabled
 					bind:webSearchEnabled
@@ -218,7 +221,7 @@
 			</div>
 		</div>
 	</div>
-	<div class="mx-auto max-w-2xl font-primary" in:fade={{ duration: 200, delay: 200 }}>
+	<div class="mx-auto max-w-2xl font-primary mt-2" in:fade={{ duration: 200, delay: 200 }}>
 		<div class="mx-5">
 			<Suggestions
 				suggestionPrompts={atSelectedModel?.info?.meta?.suggestion_prompts ??

@@ -7,6 +7,9 @@ from functools import lru_cache
 from pathlib import Path
 from pydub import AudioSegment
 from pydub.silence import split_on_silence
+from concurrent.futures import ThreadPoolExecutor
+from typing import Optional
+
 
 import aiohttp
 import aiofiles
@@ -17,6 +20,7 @@ from fastapi import (
     Depends,
     FastAPI,
     File,
+    Form,
     HTTPException,
     Request,
     UploadFile,
@@ -38,6 +42,7 @@ from open_webui.config import (
 
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import (
+    AIOHTTP_CLIENT_SESSION_SSL,
     AIOHTTP_CLIENT_TIMEOUT,
     ENV,
     SRC_LOG_LEVELS,
@@ -49,7 +54,7 @@ from open_webui.env import (
 router = APIRouter()
 
 # Constants
-MAX_FILE_SIZE_MB = 25
+MAX_FILE_SIZE_MB = 20
 MAX_FILE_SIZE = MAX_FILE_SIZE_MB * 1024 * 1024  # Convert MB to bytes
 AZURE_MAX_FILE_SIZE_MB = 200
 AZURE_MAX_FILE_SIZE = AZURE_MAX_FILE_SIZE_MB * 1024 * 1024  # Convert MB to bytes
@@ -71,31 +76,50 @@ from pydub import AudioSegment
 from pydub.utils import mediainfo
 
 
-def get_audio_format(file_path):
-    """Check if the given file needs to be converted to a different format."""
+def is_audio_conversion_required(file_path):
+    """
+    Check if the given audio file needs conversion to mp3.
+    """
+    SUPPORTED_FORMATS = {"flac", "m4a", "mp3", "mp4", "mpeg", "wav", "webm"}
+
     if not os.path.isfile(file_path):
         log.error(f"File not found: {file_path}")
         return False
 
-    info = mediainfo(file_path)
-    if (
-        info.get("codec_name") == "aac"
-        and info.get("codec_type") == "audio"
-        and info.get("codec_tag_string") == "mp4a"
-    ):
-        return "mp4"
-    elif info.get("format_name") == "ogg":
-        return "ogg"
-    elif info.get("format_name") == "matroska,webm":
-        return "webm"
-    return None
+    try:
+        info = mediainfo(file_path)
+        codec_name = info.get("codec_name", "").lower()
+        codec_type = info.get("codec_type", "").lower()
+        codec_tag_string = info.get("codec_tag_string", "").lower()
+
+        if codec_name == "aac" and codec_type == "audio" and codec_tag_string == "mp4a":
+            # File is AAC/mp4a audio, recommend mp3 conversion
+            return True
+
+        # If the codec name or file extension is in the supported formats
+        if (
+            codec_name in SUPPORTED_FORMATS
+            or os.path.splitext(file_path)[1][1:].lower() in SUPPORTED_FORMATS
+        ):
+            return False  # Already supported
+
+        return True
+    except Exception as e:
+        log.error(f"Error getting audio format: {e}")
+        return False
 
 
-def convert_audio_to_wav(file_path, output_path, conversion_type):
-    """Convert MP4/OGG audio file to WAV format."""
-    audio = AudioSegment.from_file(file_path, format=conversion_type)
-    audio.export(output_path, format="wav")
-    log.info(f"Converted {file_path} to {output_path}")
+def convert_audio_to_mp3(file_path):
+    """Convert audio file to mp3 format."""
+    try:
+        output_path = os.path.splitext(file_path)[0] + ".mp3"
+        audio = AudioSegment.from_file(file_path)
+        audio.export(output_path, format="mp3")
+        log.info(f"Converted {file_path} to {output_path}")
+        return output_path
+    except Exception as e:
+        log.error(f"Error converting audio file: {e}")
+        return None
 
 
 def set_faster_whisper_model(model: str, auto_update: bool = False):
@@ -322,6 +346,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                             else {}
                         ),
                     },
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
                 ) as r:
                     r.raise_for_status()
 
@@ -377,6 +402,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                         "Content-Type": "application/json",
                         "xi-api-key": request.app.state.config.TTS_API_KEY,
                     },
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
                 ) as r:
                     r.raise_for_status()
 
@@ -435,6 +461,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                         "X-Microsoft-OutputFormat": output_format,
                     },
                     data=data,
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
                 ) as r:
                     r.raise_for_status()
 
@@ -503,11 +530,12 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         return FileResponse(file_path)
 
 
-def transcribe(request: Request, file_path):
-    log.info(f"transcribe: {file_path}")
+def transcription_handler(request, file_path, metadata):
     filename = os.path.basename(file_path)
     file_dir = os.path.dirname(file_path)
     id = filename.split(".")[0]
+
+    metadata = metadata or {}
 
     if request.app.state.config.STT_ENGINE == "":
         if request.app.state.faster_whisper_model is None:
@@ -520,7 +548,7 @@ def transcribe(request: Request, file_path):
             file_path,
             beam_size=5,
             vad_filter=request.app.state.config.WHISPER_VAD_FILTER,
-            language=WHISPER_LANGUAGE,
+            language=metadata.get("language") or WHISPER_LANGUAGE,
         )
         log.info(
             "Detected language '%s' with probability %f"
@@ -538,16 +566,6 @@ def transcribe(request: Request, file_path):
         log.debug(data)
         return data
     elif request.app.state.config.STT_ENGINE == "openai":
-        audio_format = get_audio_format(file_path)
-        if audio_format:
-            os.rename(file_path, file_path.replace(".wav", f".{audio_format}"))
-            # Convert unsupported audio file to WAV format
-            convert_audio_to_wav(
-                file_path.replace(".wav", f".{audio_format}"),
-                file_path,
-                audio_format,
-            )
-
         r = None
         try:
             r = requests.post(
@@ -556,7 +574,14 @@ def transcribe(request: Request, file_path):
                     "Authorization": f"Bearer {request.app.state.config.STT_OPENAI_API_KEY}"
                 },
                 files={"file": (filename, open(file_path, "rb"))},
-                data={"model": request.app.state.config.STT_MODEL},
+                data={
+                    "model": request.app.state.config.STT_MODEL,
+                    **(
+                        {"language": metadata.get("language")}
+                        if metadata.get("language")
+                        else {}
+                    ),
+                },
             )
 
             r.raise_for_status()
@@ -764,41 +789,135 @@ def transcribe(request: Request, file_path):
             )
 
 
+def transcribe(request: Request, file_path: str, metadata: Optional[dict] = None):
+    log.info(f"transcribe: {file_path} {metadata}")
+
+    if is_audio_conversion_required(file_path):
+        file_path = convert_audio_to_mp3(file_path)
+
+    try:
+        file_path = compress_audio(file_path)
+    except Exception as e:
+        log.exception(e)
+
+    # Always produce a list of chunk paths (could be one entry if small)
+    try:
+        chunk_paths = split_audio(file_path, MAX_FILE_SIZE)
+        print(f"Chunk paths: {chunk_paths}")
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(e),
+        )
+
+    results = []
+    try:
+        with ThreadPoolExecutor() as executor:
+            # Submit tasks for each chunk_path
+            futures = [
+                executor.submit(transcription_handler, request, chunk_path, metadata)
+                for chunk_path in chunk_paths
+            ]
+            # Gather results as they complete
+            for future in futures:
+                try:
+                    results.append(future.result())
+                except Exception as transcribe_exc:
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail=f"Error transcribing chunk: {transcribe_exc}",
+                    )
+    finally:
+        # Clean up only the temporary chunks, never the original file
+        for chunk_path in chunk_paths:
+            if chunk_path != file_path and os.path.isfile(chunk_path):
+                try:
+                    os.remove(chunk_path)
+                except Exception:
+                    pass
+
+    return {
+        "text": " ".join([result["text"] for result in results]),
+    }
+
+
 def compress_audio(file_path):
     if os.path.getsize(file_path) > MAX_FILE_SIZE:
+        id = os.path.splitext(os.path.basename(file_path))[
+            0
+        ]  # Handles names with multiple dots
         file_dir = os.path.dirname(file_path)
+
         audio = AudioSegment.from_file(file_path)
         audio = audio.set_frame_rate(16000).set_channels(1)  # Compress audio
-        compressed_path = f"{file_dir}/{id}_compressed.opus"
-        audio.export(compressed_path, format="opus", bitrate="32k")
-        log.debug(f"Compressed audio to {compressed_path}")
 
-        if (
-            os.path.getsize(compressed_path) > MAX_FILE_SIZE
-        ):  # Still larger than MAX_FILE_SIZE after compression
-            raise Exception(ERROR_MESSAGES.FILE_TOO_LARGE(size=f"{MAX_FILE_SIZE_MB}MB"))
+        compressed_path = os.path.join(file_dir, f"{id}_compressed.mp3")
+        audio.export(compressed_path, format="mp3", bitrate="32k")
+        # log.debug(f"Compressed audio to {compressed_path}")  # Uncomment if log is defined
+
         return compressed_path
     else:
         return file_path
+
+
+def split_audio(file_path, max_bytes, format="mp3", bitrate="32k"):
+    """
+    Splits audio into chunks not exceeding max_bytes.
+    Returns a list of chunk file paths. If audio fits, returns list with original path.
+    """
+    file_size = os.path.getsize(file_path)
+    if file_size <= max_bytes:
+        return [file_path]  # Nothing to split
+
+    audio = AudioSegment.from_file(file_path)
+    duration_ms = len(audio)
+    orig_size = file_size
+
+    approx_chunk_ms = max(int(duration_ms * (max_bytes / orig_size)) - 1000, 1000)
+    chunks = []
+    start = 0
+    i = 0
+
+    base, _ = os.path.splitext(file_path)
+
+    while start < duration_ms:
+        end = min(start + approx_chunk_ms, duration_ms)
+        chunk = audio[start:end]
+        chunk_path = f"{base}_chunk_{i}.{format}"
+        chunk.export(chunk_path, format=format, bitrate=bitrate)
+
+        # Reduce chunk duration if still too large
+        while os.path.getsize(chunk_path) > max_bytes and (end - start) > 5000:
+            end = start + ((end - start) // 2)
+            chunk = audio[start:end]
+            chunk.export(chunk_path, format=format, bitrate=bitrate)
+
+        if os.path.getsize(chunk_path) > max_bytes:
+            os.remove(chunk_path)
+            raise Exception("Audio chunk cannot be reduced below max file size.")
+
+        chunks.append(chunk_path)
+        start = end
+        i += 1
+
+    return chunks
 
 
 @router.post("/transcriptions")
 def transcription(
     request: Request,
     file: UploadFile = File(...),
+    language: Optional[str] = Form(None),
     user=Depends(get_verified_user),
 ):
     log.info(f"file.content_type: {file.content_type}")
 
-    supported_filetypes = (
-        "audio/mpeg",
-        "audio/wav",
-        "audio/ogg",
-        "audio/x-m4a",
-        "audio/webm",
-    )
-
-    if not file.content_type.startswith(supported_filetypes):
+    SUPPORTED_CONTENT_TYPES = {"video/webm"}  # Extend if you add more video types!
+    if not (
+        file.content_type.startswith("audio/")
+        or file.content_type in SUPPORTED_CONTENT_TYPES
+    ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.FILE_NOT_SUPPORTED,
@@ -819,19 +938,18 @@ def transcription(
             f.write(contents)
 
         try:
-            try:
-                file_path = compress_audio(file_path)
-            except Exception as e:
-                log.exception(e)
+            metadata = None
 
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=ERROR_MESSAGES.DEFAULT(e),
-                )
+            if language:
+                metadata = {"language": language}
 
-            data = transcribe(request, file_path)
-            file_path = file_path.split("/")[-1]
-            return {**data, "filename": file_path}
+            result = transcribe(request, file_path, metadata)
+
+            return {
+                **result,
+                "filename": os.path.basename(file_path),
+            }
+
         except Exception as e:
             log.exception(e)
 

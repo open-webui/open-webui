@@ -57,8 +57,10 @@ def apply_model_params_to_body_openai(params: dict, form_data: dict) -> dict:
     mappings = {
         "temperature": float,
         "top_p": float,
+        "min_p": float,
         "max_tokens": int,
         "frequency_penalty": float,
+        "presence_penalty": float,
         "reasoning_effort": str,
         "seed": lambda x: x,
         "stop": lambda x: [bytes(s, "utf-8").decode("unicode_escape") for s in x],
