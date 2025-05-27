@@ -4,7 +4,8 @@ import mimetypes
 import os
 import shutil
 import asyncio
-
+import re
+from typing import List as TypingList
 
 import uuid
 from datetime import datetime
@@ -984,28 +985,36 @@ def save_docs_to_vector_db(
                 raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
 
     if split:
-        if request.app.state.config.TEXT_SPLITTER in ["", "character"]:
-            text_splitter = RecursiveCharacterTextSplitter(
-                chunk_size=request.app.state.config.CHUNK_SIZE,
-                chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
-                add_start_index=True,
+        # Apply advanced content-aware splitting and text cleaning
+        processed_docs = []
+        
+        for doc in docs:
+            # Clean the text content first
+            cleaned_content = clean_text_content(doc.page_content)
+            
+            if not cleaned_content:
+                continue
+            
+            # Create semantic chunks
+            chunks = create_semantic_chunks(
+                cleaned_content,
+                request.app.state.config.CHUNK_SIZE,
+                request.app.state.config.CHUNK_OVERLAP
             )
-        elif request.app.state.config.TEXT_SPLITTER == "token":
-            log.info(
-                f"Using token text splitter: {request.app.state.config.TIKTOKEN_ENCODING_NAME}"
-            )
-
-            tiktoken.get_encoding(str(request.app.state.config.TIKTOKEN_ENCODING_NAME))
-            text_splitter = TokenTextSplitter(
-                encoding_name=str(request.app.state.config.TIKTOKEN_ENCODING_NAME),
-                chunk_size=request.app.state.config.CHUNK_SIZE,
-                chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
-                add_start_index=True,
-            )
-        else:
-            raise ValueError(ERROR_MESSAGES.DEFAULT("Invalid text splitter"))
-
-        docs = text_splitter.split_documents(docs)
+            
+            # Create new documents for each chunk
+            for i, chunk in enumerate(chunks):
+                chunk_metadata = {
+                    **doc.metadata,
+                    "chunk_index": i,
+                    "total_chunks": len(chunks)
+                }
+                processed_docs.append(Document(
+                    page_content=chunk,
+                    metadata=chunk_metadata
+                ))
+        
+        docs = processed_docs
 
     if len(docs) == 0:
         raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
@@ -1067,8 +1076,17 @@ def save_docs_to_vector_db(
             request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
         )
 
+        # Apply final text cleaning for embedding
+        cleaned_texts = []
+        for text in texts:
+            # Additional cleaning for embedding - preserve structure but clean formatting
+            cleaned_text = re.sub(r'\n+', ' ', text)  # Convert line breaks to spaces
+            cleaned_text = re.sub(r'\s+', ' ', cleaned_text)  # Normalize whitespace
+            cleaned_text = cleaned_text.strip()
+            cleaned_texts.append(cleaned_text)
+        
         embeddings = embedding_function(
-            list(map(lambda x: x.replace("\n", " "), texts)),
+            cleaned_texts,
             prefix=RAG_EMBEDDING_CONTENT_PREFIX,
             user=user,
         )
@@ -2045,3 +2063,134 @@ def process_files_batch(
                 )
 
     return BatchProcessFilesResponse(results=results, errors=errors)
+
+
+def clean_text_content(text: str) -> str:
+    """Advanced text cleaning to remove unwanted characters and normalize formatting"""
+    if not text:
+        return text
+    
+    # Remove excessive whitespace and normalize line breaks
+    text = re.sub(r'\n\s*\n\s*\n+', '\n\n', text)  # Multiple empty lines -> double line break
+    text = re.sub(r'\n\s+\n', '\n\n', text)  # Lines with only whitespace -> double line break
+    text = re.sub(r'[ \t]+', ' ', text)  # Multiple spaces/tabs -> single space
+    text = re.sub(r'\n[ \t]+', '\n', text)  # Leading whitespace on lines
+    text = re.sub(r'[ \t]+\n', '\n', text)  # Trailing whitespace on lines
+    
+    # Clean up formatting artifacts
+    text = re.sub(r'\\n\\n+', '\n\n', text)  # Escaped newlines
+    text = re.sub(r'\\t', ' ', text)  # Escaped tabs
+    text = re.sub(r'\\strong\\|\\b\\|\\i\\', '', text)  # HTML-like formatting artifacts
+    text = re.sub(r'\n\\[a-zA-Z]+\\', '\n', text)  # Other escaped formatting
+    
+    # Normalize paragraph breaks
+    text = re.sub(r'\n\n+', '\n\n', text)  # Multiple paragraph breaks -> double line break
+    
+    # Clean up start and end
+    text = text.strip()
+    
+    return text
+
+def create_semantic_chunks(text: str, max_chunk_size: int, overlap_size: int) -> TypingList[str]:
+    """Create semantically aware chunks that respect document structure"""
+    if not text or len(text) <= max_chunk_size:
+        return [text] if text else []
+    
+    chunks = []
+    
+    # Split by double line breaks (paragraphs) first
+    paragraphs = text.split('\n\n')
+    
+    current_chunk = ""
+    
+    for paragraph in paragraphs:
+        paragraph = paragraph.strip()
+        if not paragraph:
+            continue
+            
+        # If adding this paragraph would exceed chunk size
+        if current_chunk and len(current_chunk) + len(paragraph) + 2 > max_chunk_size:
+            # Try to split the current chunk at sentence boundaries if it's too long
+            if len(current_chunk) > max_chunk_size:
+                sentence_chunks = split_by_sentences(current_chunk, max_chunk_size, overlap_size)
+                chunks.extend(sentence_chunks)
+            else:
+                chunks.append(current_chunk.strip())
+            
+            # Start new chunk with overlap from previous chunk if applicable
+            if chunks and overlap_size > 0:
+                prev_chunk = chunks[-1]
+                overlap_text = get_text_overlap(prev_chunk, overlap_size)
+                current_chunk = overlap_text + "\n\n" + paragraph if overlap_text else paragraph
+            else:
+                current_chunk = paragraph
+        else:
+            # Add paragraph to current chunk
+            if current_chunk:
+                current_chunk += "\n\n" + paragraph
+            else:
+                current_chunk = paragraph
+    
+    # Add the last chunk
+    if current_chunk:
+        if len(current_chunk) > max_chunk_size:
+            sentence_chunks = split_by_sentences(current_chunk, max_chunk_size, overlap_size)
+            chunks.extend(sentence_chunks)
+        else:
+            chunks.append(current_chunk.strip())
+    
+    return [chunk for chunk in chunks if chunk.strip()]
+
+def split_by_sentences(text: str, max_chunk_size: int, overlap_size: int) -> TypingList[str]:
+    """Split text by sentences when paragraph-level splitting isn't sufficient"""
+    # Split by sentence endings
+    sentences = re.split(r'(?<=[.!?])\s+', text)
+    
+    chunks = []
+    current_chunk = ""
+    
+    for sentence in sentences:
+        sentence = sentence.strip()
+        if not sentence:
+            continue
+            
+        # If adding this sentence would exceed chunk size
+        if current_chunk and len(current_chunk) + len(sentence) + 1 > max_chunk_size:
+            chunks.append(current_chunk.strip())
+            
+            # Start new chunk with overlap
+            if overlap_size > 0:
+                overlap_text = get_text_overlap(current_chunk, overlap_size)
+                current_chunk = overlap_text + " " + sentence if overlap_text else sentence
+            else:
+                current_chunk = sentence
+        else:
+            # Add sentence to current chunk
+            if current_chunk:
+                current_chunk += " " + sentence
+            else:
+                current_chunk = sentence
+    
+    # Add the last chunk
+    if current_chunk:
+        chunks.append(current_chunk.strip())
+    
+    return [chunk for chunk in chunks if chunk.strip()]
+
+def get_text_overlap(text: str, overlap_size: int) -> str:
+    """Get the last overlap_size characters from text, preferring word boundaries"""
+    if not text or overlap_size <= 0:
+        return ""
+    
+    if len(text) <= overlap_size:
+        return text
+    
+    # Try to find a good word boundary within the overlap region
+    overlap_text = text[-overlap_size:]
+    
+    # Find the first space to avoid cutting words
+    space_index = overlap_text.find(' ')
+    if space_index > 0:
+        return overlap_text[space_index:].strip()
+    
+    return overlap_text.strip()
