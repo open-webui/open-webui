@@ -21,6 +21,8 @@
 			errorType = 'subscription';
 		} else if ($blockedMessage?.includes('You have reached the maximum number of seats')) {
 			errorType = 'seats';
+		} else if ($blockedMessage?.includes('Your trial period is over.')) {
+			errorType = 'trial-over'
 		}
 	}
 
@@ -48,7 +50,7 @@
 	}}
 >
 	<div
-		class=" m-auto relative rounded-2xl max-w-full w-[27rem] mx-2 bg-gray-50 dark:bg-customGray-800 max-h-[100dvh] shadow-3xl"
+		class=" m-auto relative rounded-2xl max-w-full w-[30rem] mx-2 bg-gray-50 dark:bg-customGray-800 max-h-[100dvh] shadow-3xl"
 		in:flyAndScale
 		on:mousedown={(e) => {
 			e.stopPropagation();
@@ -64,7 +66,7 @@
 							{$i18n.t('You’ve run out of credits')}
 						</div>
 					</div>
-					<div class="text-base dark:text-customGray-100 max-w-[26rem]">
+					<div class="text-base dark:text-customGray-100 max-w-[26rem] text-center">
 						{#if $user?.role === 'admin'}
 							{$i18n.t(
 								'You’ve used all available credits. To continue using the platform, action is required.'
@@ -101,7 +103,7 @@
 							{$i18n.t('No active subscription found')}
 						</div>
 					</div>
-					<div class="text-base dark:text-customGray-100 max-w-[26rem]">
+					<div class="text-base dark:text-customGray-100 max-w-[26rem] text-center">
 						{#if $user?.role === 'admin'}
 							{$i18n.t('To continue using the platform, please select a plan')}
 						{:else}
@@ -136,7 +138,7 @@
 						{$i18n.t('You have reached the maximum number of seats in your subscription.')}
 					</div>
 				</div>
-				<div class="text-base dark:text-customGray-100 max-w-[26rem]">
+				<div class="text-base dark:text-customGray-100 max-w-[26rem] text-center">
 					{#if $user?.role === 'admin'}
 						{$i18n.t('Please upgrade your plan or remove some users.')}
 					{:else}
@@ -161,6 +163,41 @@
 				</div>
 			{/if}
 		</div>
+		{:else if errorType === 'trial-over'}
+			<div class="px-5 py-5 flex flex-col items-center">
+				<WarningIcon />
+				<div class="mt-5">
+					<div class="flex items-center mb-1">
+						
+						<div class="text-base dark:text-white text-center w-full font-medium">
+							{$i18n.t('Your trial period is over')}
+						</div>
+					</div>
+					<div class="text-base dark:text-customGray-100 max-w-[26rem] text-center">
+						{#if $user?.role === 'admin'}
+							{$i18n.t('To continue using the platform, please select a plan.')}
+						{:else}
+							{$i18n.t('To continue using the platform, please contact your administrator.')}
+						{/if}
+					</div>
+				</div>
+				{#if $user?.role === 'admin'}
+					<div class="mt-5">
+						<a
+							on:click={() => {
+								// show = false;
+								{
+									isBlocked.set(false);
+								}
+							}}
+							href="/?modal=company-settings&tab=billing&plans=open"
+							class="flex items-center justify-center h-10 rounded-mdx dark:bg-customGray-900 hover:dark:bg-customGray-950 border dark:border-customGray-700 px-8 py-3 text-xs dark:text-customGray-200"
+						>
+							{$i18n.t('Select a plan')}
+						</a>
+					</div>
+				{/if}
+			</div>
 		{/if}
 	</div>
 </div>
