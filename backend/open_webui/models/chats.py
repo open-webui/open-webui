@@ -230,16 +230,8 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 # Ensure we can see our logs
-print(f"🧪 DIRECT PRINT: Current log level for {__name__}: {log.level} (INFO={logging.INFO})")
-print(f"🧪 DIRECT PRINT: SRC_LOG_LEVELS['MODELS']: {SRC_LOG_LEVELS.get('MODELS', 'NOT_SET')}")
-
 if log.level > logging.INFO:
     log.setLevel(logging.INFO)
-    print("🧪 DIRECT PRINT: Set log level to INFO")
-    log.info("🔧 Set chat models logger to INFO level for database detection visibility")
-else:
-    print(f"🧪 DIRECT PRINT: Log level already at {log.level}, should see INFO logs")
-    log.info("🔧 Chat models logger already at appropriate level for database detection visibility")
 
 
 class Chat(Base):
@@ -327,20 +319,9 @@ class ChatTitleIdResponse(BaseModel):
 
 class ChatTable:
     def __init__(self):
-        """Initialize ChatTable and log database configuration"""
-        # Test logging immediately
-        print("🧪 DIRECT PRINT: ChatTable initializing...")  # This should always show
-        log.error("🧪 ERROR LEVEL: ChatTable initializing...")  # This should show if any logging works
-        log.warning("🧪 WARNING LEVEL: ChatTable initializing...")  # This should show
-        log.info("🧪 INFO LEVEL: ChatTable initializing...")  # This is what we want to test
-        log.debug("🧪 DEBUG LEVEL: ChatTable initializing...")  # This might not show
-        
-        log.info("🚀 Initializing ChatTable with database detection system")
-        # Log configuration on first use
-        try:
-            self.log_database_configuration()
-        except Exception as e:
-            log.warning(f"⚠️ Could not log database configuration at startup: {e}")
+        """Initialize ChatTable with database detection system"""
+        print("🚀 ChatTable initialized with database detection system")
+        # Database configuration will be logged on first use
     
     def _get_adapter(self, db) -> DatabaseAdapter:
         """Get database adapter for the current session"""
@@ -442,31 +423,28 @@ class ChatTable:
             return False
 
     def create_gin_indexes(self) -> bool:
-        """
-        Create GIN indexes on JSONB columns for better query performance.
-        Only creates indexes if columns are JSONB type and database is PostgreSQL.
-        Returns True if indexes were created or already exist, False on error.
-        """
+        """Create GIN indexes on JSONB columns for better query performance"""
         try:
             with get_db() as db:
-                dialect_name = db.bind.dialect.name
-                log.info(f"🏗️ GIN Index Creation - Database: {dialect_name}")
+                adapter = self._get_adapter(db)
                 
-                if dialect_name != "postgresql":
+                if db.bind.dialect.name != "postgresql":
                     log.info("ℹ️ GIN indexes are only supported on PostgreSQL")
                     return False
 
-                # Check if we have JSONB columns
-                log.info("🔍 Analyzing column types for GIN index optimization...")
-                has_jsonb_meta = self._is_jsonb_column(db, "meta")
-                has_jsonb_chat = self._is_jsonb_column(db, "chat")
-                log.info(f"📊 Column analysis: meta={has_jsonb_meta}, chat={has_jsonb_chat}")
+                # Check column types using our adapter
+                meta_type = adapter.get_database_type("meta")
+                chat_type = adapter.get_database_type("chat")
+                
+                has_jsonb_meta = meta_type == DatabaseType.POSTGRESQL_JSONB
+                has_jsonb_chat = chat_type == DatabaseType.POSTGRESQL_JSONB
 
                 if not (has_jsonb_meta or has_jsonb_chat):
                     log.info("ℹ️ No JSONB columns found, skipping GIN index creation")
                     return False
 
                 indexes_created = []
+                indexes_failed = []
 
                 # Create GIN index on meta column if it's JSONB
                 if has_jsonb_meta:
@@ -475,9 +453,33 @@ class ChatTable:
                             CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_chat_meta_gin 
                             ON chat USING GIN (meta)
                         """))
-                        indexes_created.append("idx_chat_meta_gin")
+                        indexes_created.append("idx_chat_meta_gin (full meta column)")
+                        log.info("🏗️ Created GIN index on meta column")
                     except Exception as e:
-                        log.warning(f"Failed to create GIN index on meta column: {e}")
+                        indexes_failed.append(f"idx_chat_meta_gin: {e}")
+
+                    # Create specialized GIN index for tags
+                    try:
+                        db.execute(text("""
+                            CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_chat_meta_tags_gin 
+                            ON chat USING GIN ((meta->'tags'))
+                        """))
+                        indexes_created.append("idx_chat_meta_tags_gin (tags array)")
+                        log.info("🏗️ Created GIN index on meta->tags")
+                    except Exception as e:
+                        indexes_failed.append(f"idx_chat_meta_tags_gin: {e}")
+
+                    # Create BTREE indexes for tag operations
+                    try:
+                        db.execute(text("""
+                            CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_chat_has_tags 
+                            ON chat USING BTREE ((meta ? 'tags' AND jsonb_array_length(meta->'tags') > 0))
+                            WHERE meta ? 'tags'
+                        """))
+                        indexes_created.append("idx_chat_has_tags (has tags check)")
+                        log.info("🏗️ Created BTREE index for tag existence")
+                    except Exception as e:
+                        indexes_failed.append(f"idx_chat_has_tags: {e}")
 
                 # Create GIN index on chat column if it's JSONB
                 if has_jsonb_chat:
@@ -486,79 +488,39 @@ class ChatTable:
                             CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_chat_chat_gin 
                             ON chat USING GIN (chat)
                         """))
-                        indexes_created.append("idx_chat_chat_gin")
+                        indexes_created.append("idx_chat_chat_gin (full chat column)")
+                        log.info("🏗️ Created GIN index on chat column")
                     except Exception as e:
-                        log.warning(f"Failed to create GIN index on chat column: {e}")
+                        indexes_failed.append(f"idx_chat_chat_gin: {e}")
 
-                # Create specialized GIN index for tags if meta is JSONB
-                if has_jsonb_meta:
-                    try:
-                        db.execute(text("""
-                            CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_chat_meta_tags_gin 
-                            ON chat USING GIN ((meta->'tags'))
-                        """))
-                        indexes_created.append("idx_chat_meta_tags_gin")
-                    except Exception as e:
-                        log.warning(f"Failed to create GIN index on meta->tags: {e}")
-
-                    # Create additional tag-specific indexes for optimal performance
-                    try:
-                        # Index for checking if tags array exists and is not empty
-                        db.execute(text("""
-                            CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_chat_has_tags 
-                            ON chat USING BTREE ((meta ? 'tags' AND jsonb_array_length(meta->'tags') > 0))
-                            WHERE meta ? 'tags'
-                        """))
-                        indexes_created.append("idx_chat_has_tags")
-                    except Exception as e:
-                        log.warning(f"Failed to create has_tags index: {e}")
-
-                    try:
-                        # Index for tag array length (useful for filtering by number of tags)
-                        db.execute(text("""
-                            CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_chat_tag_count 
-                            ON chat USING BTREE ((jsonb_array_length(meta->'tags')))
-                            WHERE meta ? 'tags'
-                        """))
-                        indexes_created.append("idx_chat_tag_count")
-                    except Exception as e:
-                        log.warning(f"Failed to create tag_count index: {e}")
-
-                # Create tag indexes even for JSON columns (less optimal but still helpful)
-                elif has_jsonb_meta == False and db.bind.dialect.name == "postgresql":
-                    try:
-                        # For JSON columns, create a functional index on tags
-                        db.execute(text("""
-                            CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_chat_json_tags 
-                            ON chat USING GIN ((meta->'tags'))
-                            WHERE meta ? 'tags'
-                        """))
-                        indexes_created.append("idx_chat_json_tags")
-                    except Exception as e:
-                        log.warning(f"Failed to create JSON tags index: {e}")
-
-                # Create specialized GIN index for messages if chat is JSONB
-                if has_jsonb_chat:
+                    # Create specialized index for message content search
                     try:
                         db.execute(text("""
                             CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_chat_messages_gin 
-                            ON chat USING GIN ((chat->'history'->'messages'))
+                            ON chat USING GIN ((chat->'messages'))
                         """))
-                        indexes_created.append("idx_chat_messages_gin")
+                        indexes_created.append("idx_chat_messages_gin (messages array)")
+                        log.info("🏗️ Created GIN index on chat->messages")
                     except Exception as e:
-                        log.warning(f"Failed to create GIN index on chat->messages: {e}")
+                        indexes_failed.append(f"idx_chat_messages_gin: {e}")
 
                 db.commit()
                 
+                # Report results
                 if indexes_created:
-                    log.info(f"✅ Successfully created GIN indexes: {', '.join(indexes_created)}")
-                else:
-                    log.info("ℹ️ No GIN indexes were created")
+                    log.info(f"✅ Created {len(indexes_created)} GIN indexes:")
+                    for idx in indexes_created:
+                        log.info(f"   • {idx}")
                 
-                return True
+                if indexes_failed:
+                    log.warning(f"⚠️ Failed to create {len(indexes_failed)} indexes:")
+                    for idx in indexes_failed:
+                        log.warning(f"   • {idx}")
+                
+                return len(indexes_created) > 0
 
         except Exception as e:
-            log.error(f"Error creating GIN indexes: {e}")
+            log.error(f"❌ Error creating GIN indexes: {e}")
             return False
 
     def check_gin_indexes(self) -> dict:
@@ -1188,28 +1150,34 @@ class ChatTable:
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
     def get_chat_by_id(self, id: str) -> Optional[ChatModel]:
-        # Add database detection logging on first chat access
-        print(f"🧪 DIRECT PRINT: get_chat_by_id called for {id}")
-        log.info(f"🧪 INFO: get_chat_by_id called for {id}")
+        # Log database detection and setup indexes on first call
+        if not hasattr(self, '_db_logged'):
+            try:
+                with get_db() as db:
+                    adapter = self._get_adapter(db)
+                    meta_type = adapter.get_database_type("meta")
+                    chat_type = adapter.get_database_type("chat")
+                    log.info(f"🗄️ Database Detection: meta={meta_type.value}, chat={chat_type.value}")
+                    
+                    # Auto-create GIN indexes for JSONB columns
+                    if meta_type == DatabaseType.POSTGRESQL_JSONB or chat_type == DatabaseType.POSTGRESQL_JSONB:
+                        log.info("🏗️ JSONB columns detected, creating GIN indexes for optimal performance...")
+                        success = self.create_gin_indexes()
+                        if success:
+                            log.info("✅ GIN indexes created successfully")
+                        else:
+                            log.warning("⚠️ Some GIN indexes could not be created")
+                    
+                    self._db_logged = True
+            except Exception as e:
+                log.warning(f"⚠️ Could not detect database types: {e}")
+                self._db_logged = True
         
         try:
             with get_db() as db:
-                # Test database detection
-                adapter = self._get_adapter(db)
-                print(f"🧪 DIRECT PRINT: Created adapter, testing database detection...")
-                log.info(f"🧪 INFO: Created adapter, testing database detection...")
-                
-                # Force database type detection
-                meta_type = adapter.get_database_type("meta")
-                chat_type = adapter.get_database_type("chat")
-                print(f"🧪 DIRECT PRINT: Database types - meta: {meta_type.value}, chat: {chat_type.value}")
-                log.info(f"🧪 INFO: Database types - meta: {meta_type.value}, chat: {chat_type.value}")
-                
                 chat = db.get(Chat, id)
                 return ChatModel.model_validate(chat)
-        except Exception as e:
-            print(f"🧪 DIRECT PRINT: Exception in get_chat_by_id: {e}")
-            log.error(f"🧪 ERROR: Exception in get_chat_by_id: {e}")
+        except Exception:
             return None
 
     def get_chat_by_share_id(self, id: str) -> Optional[ChatModel]:
@@ -1601,15 +1569,4 @@ class ChatTable:
             return False
 
 
-# Add immediate module-level logging
-print("🧪 DIRECT PRINT: chats.py module loading...")
-log.info("🧪 INFO: chats.py module loading...")
-
-# Try root logger too
-root_logger = logging.getLogger()
-root_logger.info("🧪 ROOT LOGGER INFO: chats.py module loading...")
-
-# Create the ChatTable instance
-print("🧪 DIRECT PRINT: Creating ChatTable instance...")
 Chats = ChatTable()
-print("🧪 DIRECT PRINT: ChatTable instance created successfully")
