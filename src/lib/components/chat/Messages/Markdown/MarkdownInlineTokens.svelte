@@ -19,7 +19,7 @@
 	export let onSourceClick: Function = () => {};
 </script>
 
-<div class="py-1.5">
+<span class="py-1.5">
 {#each tokens as token}
 	{#if token.type === 'escape'}
 		{unescapeHtml(token.text)}
@@ -84,4 +84,4 @@
 		{token.raw}
 	{/if}
 {/each}
-</div>
+</span>
