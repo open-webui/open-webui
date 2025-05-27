@@ -1106,12 +1106,16 @@ def save_docs_to_vector_db(
         for idx in range(len(texts)):
             text_to_store = texts[idx]
             
-            # Debug logging for PPTX files - show what we're actually storing
+            # Debug logging for PPTX files - show what we're actually storing for ALL chunks
             if any(doc.metadata.get('source', '').lower().endswith(('.pptx', '.ppt')) for doc in docs):
-                if idx == 0:  # Log first chunk only
-                    log.info(f"=== STORAGE DEBUG ===")
-                    log.info(f"Text being stored (first 200 chars): {repr(text_to_store[:200])}")
-                    log.info(f"=== END STORAGE DEBUG ===")
+                log.info(f"=== STORAGE DEBUG CHUNK {idx + 1}/{len(texts)} ===")
+                log.info(f"Text being stored (first 200 chars): {repr(text_to_store[:200])}")
+                # Check for escape sequences specifically
+                if '\\n' in text_to_store:
+                    log.error(f"❌ FOUND ESCAPE SEQUENCES in chunk {idx + 1}: {repr(text_to_store[:100])}")
+                else:
+                    log.info(f"✅ No escape sequences found in chunk {idx + 1}")
+                log.info(f"=== END STORAGE DEBUG CHUNK {idx + 1} ===")
             
             items.append({
                 "id": str(uuid.uuid4()),
@@ -1232,9 +1236,24 @@ def process_file(
                 )
 
                 # Clean the loaded documents before processing
-                docs = [
-                    Document(
-                        page_content=clean_text_content(doc.page_content),
+                cleaned_docs = []
+                for doc in docs:
+                    original_content = doc.page_content
+                    cleaned_content = clean_text_content(doc.page_content)
+                    
+                    # Debug logging for PPTX files
+                    if file.filename.lower().endswith(('.pptx', '.ppt')):
+                        log.info(f"=== DOCUMENT LOADING DEBUG ===")
+                        log.info(f"Original content (first 200 chars): {repr(original_content[:200])}")
+                        log.info(f"Cleaned content (first 200 chars): {repr(cleaned_content[:200])}")
+                        if '\\n' in original_content:
+                            log.info(f"✅ Found escape sequences in original, cleaning applied")
+                        if '\\n' in cleaned_content:
+                            log.error(f"❌ Escape sequences still present after cleaning!")
+                        log.info(f"=== END DOCUMENT LOADING DEBUG ===")
+                    
+                    cleaned_docs.append(Document(
+                        page_content=cleaned_content,
                         metadata={
                             **doc.metadata,
                             "name": file.filename,
@@ -1242,9 +1261,8 @@ def process_file(
                             "file_id": file.id,
                             "source": file.filename,
                         },
-                    )
-                    for doc in docs
-                ]
+                    ))
+                docs = cleaned_docs
             else:
                 docs = [
                     Document(
