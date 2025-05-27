@@ -26,7 +26,6 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 
 router = APIRouter()
-TEMP_LINKS = {}
 
 ############################
 # Upload File
@@ -86,10 +85,12 @@ def upload_file(
             else:
                 process_file(request, ProcessFileForm(file_id=id), user=user)
             
-            ## Store temporary link which will be used for download link expiry to (5 minutes) /start
+            ## Store EXPIRY timing which will be used for download link expiry to (30 minutes) /start
             expiry=time.time() + 1800
-            TEMP_LINKS[id] = (file_path, expiry)
-            ##  Store temporary link which will be used for download link expiry( 5 minutes) /end
+            Files.update_file_metadata_by_id(id, {"download_expiry": expiry})
+            log.info(f"[UPLOAD] File ID {id} - download expiry set to {expiry} (in 30 min) for download link.")
+
+            ##  Store EXPIRY timing which will  be used for download link expiry(30 minutes) /end
 
             file_item = Files.get_file_by_id(id=id)
         except Exception as e:
@@ -124,24 +125,22 @@ def upload_file(
 
 @router.get("/download/{id}")
 async def download_by_id(id: str, user=Depends(get_verified_user)):
-    
-    data = TEMP_LINKS.get(id)
-    if data:
-        file_path, expiry = data
-        if time.time() > expiry:
-            del TEMP_LINKS[id]
-            raise HTTPException(
-                status_code=status.HTTP_410_GONE,
-                detail=ERROR_MESSAGES.DEFAULT("Download link has expired"),
-            )
-    else:
-        # If no temporary link exists, this is likely a direct access attempt
+
+    file = Files.get_file_by_id(id)
+    if not file:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=ERROR_MESSAGES.DEFAULT("Download link not found or expired. Links are valid for 30 minutes."),
+            detail=ERROR_MESSAGES.NOT_FOUND,
         )
+
+    expiry = file.meta.get("download_expiry") if file.meta else None
+    if not expiry or time.time() > expiry:
+        raise HTTPException(
+            status_code=status.HTTP_410_GONE,
+            detail=ERROR_MESSAGES.DEFAULT("Download link has expired. Download links are valid for 30 minutes."),
+        )
+        
     
-    file = Files.get_file_by_id(id)
     
     if file and (file.user_id == user.id or user.role == "admin"):
         try:
