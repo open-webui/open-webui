@@ -2076,7 +2076,7 @@ def clean_text_content(text: str) -> str:
     text = re.sub(r'\\"', '"', text)  # Convert escaped quotes to regular quotes
     text = re.sub(r'\\r', '', text)  # Remove escaped carriage returns
     text = re.sub(r'\\/', '/', text)  # Convert escaped forward slashes
-    text = re.sub(r'\\\\', '\\', text)  # Convert double backslashes to single
+    text = re.sub(r'\\\\', r'\\', text)  # Convert double backslashes to single
     
     # Step 2: Remove document processing artifacts
     text = re.sub(r'\\[a-zA-Z]+\\', '', text)  # Remove LaTeX-like commands (\command\)
@@ -2092,7 +2092,6 @@ def clean_text_content(text: str) -> str:
     # Step 4: Remove PDF/document extraction artifacts
     text = re.sub(r'\x0c', '\n', text)  # Form feed characters to newlines
     text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]', '', text)  # Control characters
-    text = re.sub(r'[^\x00-\x7F]+', lambda m: m.group(0) if ord(m.group(0)[0]) > 127 else '', text)  # Keep valid Unicode
     
     # Step 5: Normalize whitespace and line breaks
     text = re.sub(r'[ \t]+', ' ', text)  # Multiple spaces/tabs -> single space
