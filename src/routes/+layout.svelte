@@ -10,11 +10,11 @@
 	// Set theme immediately
 	theme.set('light');
 	localStorage.setItem('theme', 'light');
-	
+
 	// Apply theme to DOM immediately
 	if (typeof document !== 'undefined') {
 		document.documentElement.setAttribute('theme', 'light');
-		
+
 		const metaThemeColor = document.querySelector('meta[name="theme-color"]');
 		if (metaThemeColor) {
 			metaThemeColor.setAttribute('content', '#ffffff');
@@ -40,7 +40,7 @@
 		isLastActiveTab,
 		isApp,
 		appInfo,
-		toolServers,
+		toolServers
 	} from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -728,7 +728,13 @@
 {/if}
 
 <Toaster
-	theme={'light'}
+	theme={$theme.includes('dark')
+		? 'dark'
+		: $theme === 'system'
+			? window.matchMedia('(prefers-color-scheme: dark)').matches
+				? 'dark'
+				: 'light'
+			: 'light'}
 	richColors
 	position="top-right"
 />
