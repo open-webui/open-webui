@@ -989,13 +989,16 @@ def save_docs_to_vector_db(
         processed_docs = []
         
         for doc in docs:
-            # Text is already cleaned at source, just chunk it
+            # Clean the text content before chunking
             if not doc.page_content:
                 continue
             
-            # Create semantic chunks
+            # Apply text cleaning before chunking
+            cleaned_content = clean_text_content(doc.page_content, debug=doc.metadata.get('source', '').lower().endswith(('.pptx', '.ppt')))
+            
+            # Create semantic chunks from cleaned content
             chunks = create_semantic_chunks(
-                doc.page_content,
+                cleaned_content,
                 request.app.state.config.CHUNK_SIZE,
                 request.app.state.config.CHUNK_OVERLAP
             )
@@ -1101,20 +1104,27 @@ def save_docs_to_vector_db(
             user=user,
         )
 
-        # Store the fully cleaned text (not the original chunk text)
+        # Store the fully cleaned text - apply final aggressive cleaning for storage
         items = []
         for idx in range(len(texts)):
+            # Apply final aggressive cleaning specifically for storage
             text_to_store = texts[idx]
+            
+            # Convert ALL newlines to spaces for storage (preserve readability but remove line breaks)
+            text_to_store = re.sub(r'\n+', ' ', text_to_store)
+            text_to_store = re.sub(r'\s+', ' ', text_to_store)  # Normalize all whitespace
+            text_to_store = text_to_store.strip()
             
             # Debug logging for PPTX files - show what we're actually storing for ALL chunks
             if any(doc.metadata.get('source', '').lower().endswith(('.pptx', '.ppt')) for doc in docs):
                 log.info(f"=== STORAGE DEBUG CHUNK {idx + 1}/{len(texts)} ===")
-                log.info(f"Text being stored (first 200 chars): {repr(text_to_store[:200])}")
-                # Check for escape sequences specifically
-                if '\\n' in text_to_store:
-                    log.error(f"❌ FOUND ESCAPE SEQUENCES in chunk {idx + 1}: {repr(text_to_store[:100])}")
+                log.info(f"Original chunk text (first 100 chars): {repr(texts[idx][:100])}")
+                log.info(f"Final storage text (first 200 chars): {repr(text_to_store[:200])}")
+                # Check for any problematic characters
+                if '\\n' in text_to_store or '\n' in text_to_store:
+                    log.error(f"❌ FOUND NEWLINES in chunk {idx + 1}: {repr(text_to_store[:100])}")
                 else:
-                    log.info(f"✅ No escape sequences found in chunk {idx + 1}")
+                    log.info(f"✅ No newlines found in chunk {idx + 1}")
                 log.info(f"=== END STORAGE DEBUG CHUNK {idx + 1} ===")
             
             items.append({
