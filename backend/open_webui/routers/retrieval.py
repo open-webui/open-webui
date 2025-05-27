@@ -994,7 +994,7 @@ def save_docs_to_vector_db(
                 continue
             
             # Apply text cleaning before chunking
-            cleaned_content = clean_text_content(doc.page_content, debug=doc.metadata.get('source', '').lower().endswith(('.pptx', '.ppt')))
+            cleaned_content = clean_text_content(doc.page_content)
             
             # Create semantic chunks from cleaned content
             chunks = create_semantic_chunks(
@@ -1080,22 +1080,10 @@ def save_docs_to_vector_db(
         # Apply final text cleaning for embedding (text already cleaned during chunking)
         cleaned_texts = []
         for i, text in enumerate(texts):
-            # Debug logging for PPTX files
-            if any(doc.metadata.get('source', '').lower().endswith(('.pptx', '.ppt')) for doc in docs):
-                if i == 0:  # Log first chunk only to avoid spam
-                    log.info(f"=== EMBEDDING PREP DEBUG ===")
-                    log.info(f"Text before embedding prep (first 200 chars): {repr(text[:200])}")
-            
             # Text is already cleaned, just flatten for embedding (convert line breaks to spaces)
             cleaned_text = re.sub(r'\n+', ' ', text)
             cleaned_text = re.sub(r'\s+', ' ', cleaned_text)  # Final whitespace normalization
             cleaned_text = cleaned_text.strip()
-            
-            if any(doc.metadata.get('source', '').lower().endswith(('.pptx', '.ppt')) for doc in docs):
-                if i == 0:  # Log first chunk only
-                    log.info(f"Text after embedding prep (first 200 chars): {repr(cleaned_text[:200])}")
-                    log.info(f"=== END EMBEDDING PREP DEBUG ===")
-            
             cleaned_texts.append(cleaned_text)
         
         embeddings = embedding_function(
@@ -1122,18 +1110,6 @@ def save_docs_to_vector_db(
             text_to_store = re.sub(r'\\([^a-zA-Z0-9\s])', r'\1', text_to_store)  # Any other escaped special chars
             
             text_to_store = text_to_store.strip()
-            
-            # Debug logging for PPTX files - show what we're actually storing for ALL chunks
-            if any(doc.metadata.get('source', '').lower().endswith(('.pptx', '.ppt')) for doc in docs):
-                log.info(f"=== STORAGE DEBUG CHUNK {idx + 1}/{len(texts)} ===")
-                log.info(f"Original chunk text (first 100 chars): {repr(texts[idx][:100])}")
-                log.info(f"Final storage text (first 200 chars): {repr(text_to_store[:200])}")
-                # Check for any problematic characters
-                if '\\n' in text_to_store or '\n' in text_to_store:
-                    log.error(f"❌ FOUND NEWLINES in chunk {idx + 1}: {repr(text_to_store[:100])}")
-                else:
-                    log.info(f"✅ No newlines found in chunk {idx + 1}")
-                log.info(f"=== END STORAGE DEBUG CHUNK {idx + 1} ===")
             
             items.append({
                 "id": str(uuid.uuid4()),
@@ -1256,19 +1232,7 @@ def process_file(
                 # Clean the loaded documents before processing
                 cleaned_docs = []
                 for doc in docs:
-                    original_content = doc.page_content
                     cleaned_content = clean_text_content(doc.page_content)
-                    
-                    # Debug logging for PPTX files
-                    if file.filename.lower().endswith(('.pptx', '.ppt')):
-                        log.info(f"=== DOCUMENT LOADING DEBUG ===")
-                        log.info(f"Original content (first 200 chars): {repr(original_content[:200])}")
-                        log.info(f"Cleaned content (first 200 chars): {repr(cleaned_content[:200])}")
-                        if '\\n' in original_content:
-                            log.info(f"✅ Found escape sequences in original, cleaning applied")
-                        if '\\n' in cleaned_content:
-                            log.error(f"❌ Escape sequences still present after cleaning!")
-                        log.info(f"=== END DOCUMENT LOADING DEBUG ===")
                     
                     cleaned_docs.append(Document(
                         page_content=cleaned_content,
@@ -2028,23 +1992,6 @@ if ENV == "dev":
             )
         }
 
-    @router.post("/debug/clean-text")
-    async def debug_clean_text(request: Request, text: str = ""):
-        """Debug endpoint to test text cleaning with detailed logging"""
-        if not text:
-            return {"error": "No text provided"}
-        
-        log.info(f"Debug text cleaning requested for text length: {len(text)}")
-        cleaned = clean_text_content(text, debug=True)
-        
-        return {
-            "original_length": len(text),
-            "cleaned_length": len(cleaned),
-            "original_preview": text[:200],
-            "cleaned_preview": cleaned[:200],
-            "original_repr": repr(text[:100]),
-            "cleaned_repr": repr(cleaned[:100])
-        }
 
 
 class BatchProcessFilesForm(BaseModel):
@@ -2139,39 +2086,15 @@ def process_files_batch(
     return BatchProcessFilesResponse(results=results, errors=errors)
 
 
-def clean_text_content(text: str, debug: bool = False) -> str:
+def clean_text_content(text: str) -> str:
     """Simple, effective text cleaning with special handling for PPTX artifacts"""
     if not text:
         return text
-    
-    original_text = text
-    if debug:
-        log.info(f"=== TEXT CLEANING DEBUG ===")
-        log.info(f"Original text (first 200 chars): {repr(text[:200])}")
-        log.info(f"Original text length: {len(text)}")
-        
-        # Show problematic patterns in original text
-        problematic_patterns = [
-            (r'\\n', 'Escaped newlines'),
-            (r'\\t', 'Escaped tabs'),
-            (r'\\"', 'Escaped quotes'),
-            (r'\\\\', 'Double backslashes'),
-            (r'\\[a-zA-Z]', 'Backslash + letter'),
-            (r'\\[0-9]', 'Backslash + number'),
-        ]
-        
-        for pattern, description in problematic_patterns:
-            matches = re.findall(pattern, text)
-            if matches:
-                log.info(f"Found {description}: {matches[:10]}...")  # Show first 10 matches
     
     # Step 1: PPTX-specific cleaning - handle double-escaped sequences first
     text = text.replace('\\\\n', '\n')  # Double-escaped newlines in PPTX
     text = text.replace('\\\\t', ' ')   # Double-escaped tabs in PPTX
     text = text.replace('\\\\"', '"')   # Double-escaped quotes in PPTX
-    
-    if debug:
-        log.info(f"After step 1 (double-escaped): {repr(text[:200])}")
     
     # Step 2: Standard escape sequences
     text = text.replace('\\n', '\n')    # Single-escaped newlines
@@ -2182,23 +2105,14 @@ def clean_text_content(text: str, debug: bool = False) -> str:
     text = text.replace('\\/', '/')     # Convert escaped slashes
     text = text.replace('\\\\', '\\')   # Convert double backslashes
     
-    if debug:
-        log.info(f"After step 2 (standard escapes): {repr(text[:200])}")
-    
     # Step 3: Remove any remaining backslash artifacts
     text = re.sub(r'\\[a-zA-Z]', '', text)  # Remove \letter patterns
     text = re.sub(r'\\[0-9]', '', text)     # Remove \number patterns
     text = re.sub(r'\\[^a-zA-Z0-9\s]', '', text)  # Remove \symbol patterns
     
-    if debug:
-        log.info(f"After step 3 (backslash cleanup): {repr(text[:200])}")
-    
     # Step 4: PPTX-specific artifacts cleanup
     text = re.sub(r'\s*\\n\s*', '\n', text)  # Clean up any remaining \\n with spaces
     text = re.sub(r'\\+', '', text)          # Remove any remaining multiple backslashes
-    
-    if debug:
-        log.info(f"After step 4 (PPTX artifacts): {repr(text[:200])}")
     
     # Step 5: Fix Unicode and special characters
     unicode_replacements = [
@@ -2213,13 +2127,7 @@ def clean_text_content(text: str, debug: bool = False) -> str:
     
     for old_char, new_char in unicode_replacements:
         if old_char in text:
-            if debug:
-                count = text.count(old_char)
-                log.info(f"Replacing {count} instances of '{old_char}' with '{new_char}'")
             text = text.replace(old_char, new_char)
-    
-    if debug:
-        log.info(f"After step 5 (Unicode cleanup): {repr(text[:200])}")
     
     # Step 6: Clean up spacing and formatting
     text = re.sub(r'[ \t]+', ' ', text)           # Multiple spaces/tabs -> single space
@@ -2234,12 +2142,6 @@ def clean_text_content(text: str, debug: bool = False) -> str:
     # Step 8: Fix orphaned punctuation
     text = re.sub(r'^\s*[)\]}]+\s*', '', text)    # Remove orphaned closing brackets/parens at start
     text = re.sub(r'\n\s*[)\]}]+\s*\n', '\n\n', text)  # Remove orphaned closing brackets on their own lines
-    
-    if debug:
-        log.info(f"Final cleaned text (first 200 chars): {repr(text[:200])}")
-        log.info(f"Final text length: {len(text)}")
-        log.info(f"Characters removed: {len(original_text) - len(text)}")
-        log.info(f"=== END TEXT CLEANING DEBUG ===")
     
     return text
 
