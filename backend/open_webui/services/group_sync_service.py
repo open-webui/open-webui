@@ -310,7 +310,7 @@ async def synchronize_user_groups_from_sql(user: UserModel, db: Session):
                 try:
                     form_data = GroupForm(
                         name=group_name_from_sql,
-                        description="由 SQL Server 同步建立的群組"
+                        description="Automatically created group from SQL Server",
                     )
                     new_group = groups_table.insert_new_group(user_id=user.id, form_data=form_data)
                     if new_group:
