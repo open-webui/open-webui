@@ -163,6 +163,17 @@ class FunctionsTable:
                 return FunctionModel.model_validate(function)
         except Exception:
             return None
+    
+    def get_functions_by_ids(self, ids: list[str]) -> list[FunctionModel]:
+        try:
+            with get_db() as db:
+                return [
+                    FunctionModel.model_validate(function)
+                    for function in db.query(Function).filter(Function.id.in_(ids)).all()
+                ]
+        except Exception as e:
+            log.exception(f"Error getting functions by ids {ids}: {e}")
+            return []
 
     def get_functions(self, active_only=False) -> list[FunctionModel]:
         with get_db() as db:
