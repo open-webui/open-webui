@@ -86,9 +86,9 @@ def upload_file(
                 process_file(request, ProcessFileForm(file_id=id), user=user)
             
             ## Store EXPIRY timing which will be used for download link expiry to (30 minutes) /start
-            expiry=time.time() + 1800
-            Files.update_file_metadata_by_id(id, {"download_expiry": expiry})
-            log.info(f"[UPLOAD] File ID {id} - download expiry set to {expiry} (in 30 min) for download link.")
+            #expiry=time.time() + 1800
+            #Files.update_file_metadata_by_id(id, {"download_expiry": expiry})
+            #log.info(f"[UPLOAD] File ID {id} - download expiry set to {expiry} (in 30 min) for download link.")
 
             ##  Store EXPIRY timing which will  be used for download link expiry(30 minutes) /end
 
@@ -127,18 +127,18 @@ def upload_file(
 async def download_by_id(id: str, user=Depends(get_verified_user)):
 
     file = Files.get_file_by_id(id)
-    if not file:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
+    # if not file:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_404_NOT_FOUND,
+    #         detail=ERROR_MESSAGES.NOT_FOUND,
+    #     )
 
-    expiry = file.meta.get("download_expiry") if file.meta else None
-    if not expiry or time.time() > expiry:
-        raise HTTPException(
-            status_code=status.HTTP_410_GONE,
-            detail=ERROR_MESSAGES.DEFAULT("Download link has expired. Download links are valid for 30 minutes."),
-        )
+    # expiry = file.meta.get("download_expiry") if file.meta else None
+    # if not expiry or time.time() > expiry:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_410_GONE,
+    #         detail=ERROR_MESSAGES.DEFAULT("Download link has expired. Download links are valid for 30 minutes."),
+    #     )
         
     
     
