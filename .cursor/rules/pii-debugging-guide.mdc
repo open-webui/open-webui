@@ -1,6 +1,6 @@
 ---
-description:
-globs:
+description: 
+globs: 
 alwaysApply: false
 ---
 # PII Detection Debugging Guide
@@ -34,17 +34,40 @@ alwaysApply: false
 **Symptoms**: Entities lost between components
 **Debug Steps**:
 1. Verify `PiiSessionManager.getInstance()` usage
-2. Check entity storage with `getEntities()`
+2. Check entity storage with `getEntities()` or `getConversationEntities(conversationId)`
 3. Test API key configuration
 4. Verify debounced detection timing
+5. Check conversation-specific state persistence
 
 **Key File**: [pii.ts](mdc:src/lib/utils/pii.ts)
+
+### Unmasking Issues (FIXED)
+**Symptoms**: Garbled output like `berlGANISATION_5}]OCATION_4}]ON_3}]ERSON_2}]RSON_1}]in`
+**Root Cause**: Incorrect regex pattern construction in `unmaskTextWithEntities()`
+**Fix Applied**: 
+- Extract base type and ID from entity label correctly
+- Entity `label: "PERSON_1"` → `baseType: "PERSON"`, `labelId: "1"`
+- Build pattern `{PERSON_1}` not `{PERSON_1_1}`
+
+**Debug Steps**:
+1. Check entity label format matches `TYPE_NUMBER` pattern
+2. Verify `unmaskTextWithEntities()` is using fixed regex logic
+3. Test with various masking patterns: `[{TYPE_ID}]`, `[TYPE_ID]`, `{TYPE_ID}`, `TYPE_ID`
 
 ## Debug Console Commands
 ```javascript
 // Check session manager state
 window.piiManager = PiiSessionManager.getInstance();
 console.log(window.piiManager.getEntities());
+
+// Check conversation-specific state
+console.log(window.piiManager.getConversationEntities('conversation-id'));
+console.log(window.piiManager.getKnownEntitiesForApi('conversation-id'));
+
+// Test unmasking function
+const testText = "Hello [{PERSON_1}] from [{LOCATION_2}]!";
+const entities = window.piiManager.getEntities();
+console.log(unmaskTextWithEntities(testText, entities));
 
 // Test API connectivity
 // (Check network tab for NENNA.ai requests)
