@@ -1188,11 +1188,22 @@ class ChatTable:
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
     def get_chat_by_id(self, id: str) -> Optional[ChatModel]:
+        # Add database detection logging on first chat access
+        print(f"🧪 DIRECT PRINT: get_chat_by_id called for {id}")
+        log.info(f"🧪 INFO: get_chat_by_id called for {id}")
+        
         try:
             with get_db() as db:
+                # Test database detection
+                adapter = self._get_adapter(db)
+                print(f"🧪 DIRECT PRINT: Created adapter, testing database detection...")
+                log.info(f"🧪 INFO: Created adapter, testing database detection...")
+                
                 chat = db.get(Chat, id)
                 return ChatModel.model_validate(chat)
-        except Exception:
+        except Exception as e:
+            print(f"🧪 DIRECT PRINT: Exception in get_chat_by_id: {e}")
+            log.error(f"🧪 ERROR: Exception in get_chat_by_id: {e}")
             return None
 
     def get_chat_by_share_id(self, id: str) -> Optional[ChatModel]:
@@ -1584,4 +1595,15 @@ class ChatTable:
             return False
 
 
+# Add immediate module-level logging
+print("🧪 DIRECT PRINT: chats.py module loading...")
+log.info("🧪 INFO: chats.py module loading...")
+
+# Try root logger too
+root_logger = logging.getLogger()
+root_logger.info("🧪 ROOT LOGGER INFO: chats.py module loading...")
+
+# Create the ChatTable instance
+print("🧪 DIRECT PRINT: Creating ChatTable instance...")
 Chats = ChatTable()
+print("🧪 DIRECT PRINT: ChatTable instance created successfully")
