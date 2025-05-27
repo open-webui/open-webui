@@ -2066,23 +2066,33 @@ def process_files_batch(
 
 
 def clean_text_content(text: str) -> str:
-    """Simple, effective text cleaning focused on common problematic characters"""
+    """Simple, effective text cleaning with special handling for PPTX artifacts"""
     if not text:
         return text
     
-    # Step 1: Remove common escape sequences and unwanted characters
-    text = text.replace('\\n', '\n')  # Convert escaped newlines
-    text = text.replace('\\t', ' ')   # Convert escaped tabs to spaces
-    text = text.replace('\\"', '"')   # Convert escaped quotes
-    text = text.replace('\\r', '')    # Remove escaped carriage returns
-    text = text.replace('\\/', '/')   # Convert escaped slashes
-    text = text.replace('\\\\', '\\') # Convert double backslashes
+    # Step 1: PPTX-specific cleaning - handle double-escaped sequences first
+    text = text.replace('\\\\n', '\n')  # Double-escaped newlines in PPTX
+    text = text.replace('\\\\t', ' ')   # Double-escaped tabs in PPTX
+    text = text.replace('\\\\"', '"')   # Double-escaped quotes in PPTX
     
-    # Step 2: Remove other common problematic characters
-    text = re.sub(r'\\[a-zA-Z]', '', text)  # Remove single backslash + letter (like \n that wasn't caught)
-    text = re.sub(r'\\[0-9]', '', text)     # Remove backslash + number
+    # Step 2: Standard escape sequences
+    text = text.replace('\\n', '\n')    # Single-escaped newlines
+    text = text.replace('\\t', ' ')     # Single-escaped tabs to spaces
+    text = text.replace('\\"', '"')     # Single-escaped quotes
+    text = text.replace('\\r', '')      # Remove escaped carriage returns
+    text = text.replace('\\/', '/')     # Convert escaped slashes
+    text = text.replace('\\\\', '\\')   # Convert double backslashes
     
-    # Step 3: Clean up whitespace
+    # Step 3: Remove any remaining backslash artifacts
+    text = re.sub(r'\\[a-zA-Z]', '', text)  # Remove \letter patterns
+    text = re.sub(r'\\[0-9]', '', text)     # Remove \number patterns
+    text = re.sub(r'\\[^a-zA-Z0-9\s]', '', text)  # Remove \symbol patterns
+    
+    # Step 4: PPTX-specific artifacts cleanup
+    text = re.sub(r'\s*\\n\s*', '\n', text)  # Clean up any remaining \\n with spaces
+    text = re.sub(r'\\+', '', text)          # Remove any remaining multiple backslashes
+    
+    # Step 5: Normalize whitespace
     text = re.sub(r'[ \t]+', ' ', text)           # Multiple spaces/tabs -> single space
     text = re.sub(r'\n\s*\n\s*\n+', '\n\n', text) # Multiple empty lines -> double line break
     text = re.sub(r'^\s+|\s+$', '', text)         # Remove leading/trailing whitespace
