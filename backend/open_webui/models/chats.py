@@ -32,69 +32,43 @@ class DatabaseType(Enum):
     UNSUPPORTED = "unsupported"
 
 class DatabaseAdapter:
-    """Centralized database-specific query generation with caching and error handling"""
+    """Centralized database-specific query generation with caching"""
     
     def __init__(self, db):
         self.db = db
         self.dialect = db.bind.dialect.name
         self._cache: Dict[str, DatabaseType] = {}
-        self._log = logging.getLogger(__name__)
-        self._log.setLevel(logging.INFO)  # Ensure INFO level is set
     
     def get_database_type(self, column_name: str = "meta") -> DatabaseType:
         """Determine database type with caching"""
         cache_key = f"{self.dialect}_{column_name}"
         if cache_key in self._cache:
-            cached_result = self._cache[cache_key]
-            self._log.info(f"🔄 Using cached database type: {cached_result.value} for column '{column_name}'")
-            return cached_result
-        
-        self._log.info(f"🔍 Detecting database type for dialect '{self.dialect}', column '{column_name}'")
+            return self._cache[cache_key]
         
         if self.dialect == "sqlite":
             result = DatabaseType.SQLITE
-            self._log.info(f"✅ SQLite detected - will use JSON1 extension for column '{column_name}'")
         elif self.dialect == "postgresql":
-            is_jsonb = self._is_jsonb_column(column_name)
-            result = DatabaseType.POSTGRESQL_JSONB if is_jsonb else DatabaseType.POSTGRESQL_JSON
-            column_type = "JSONB" if is_jsonb else "JSON"
-            self._log.info(f"✅ PostgreSQL {column_type} detected for column '{column_name}'")
+            result = DatabaseType.POSTGRESQL_JSONB if self._is_jsonb_column(column_name) else DatabaseType.POSTGRESQL_JSON
         else:
             result = DatabaseType.UNSUPPORTED
-            self._log.warning(f"⚠️ Unsupported database dialect: {self.dialect}")
         
         self._cache[cache_key] = result
-        self._log.info(f"💾 Cached database type: {result.value} for {cache_key}")
         return result
     
     def _is_jsonb_column(self, column_name: str) -> bool:
-        """Check if column is JSONB type with proper error handling"""
-        if JSONB is None:
-            self._log.info(f"📦 JSONB not available - PostgreSQL dependencies not installed")
-            return False
-            
-        if self.dialect != "postgresql":
-            self._log.info(f"📊 Non-PostgreSQL database ({self.dialect}) - JSONB not applicable")
+        """Check if column is JSONB type"""
+        if JSONB is None or self.dialect != "postgresql":
             return False
         
         try:
-            self._log.info(f"🔬 Checking actual database schema for column '{column_name}' type...")
             result = self.db.execute(text("""
                 SELECT data_type FROM information_schema.columns 
                 WHERE table_name = 'chat' AND column_name = :column_name
             """), {"column_name": column_name})
             
             row = result.fetchone()
-            if row:
-                actual_type = row[0].lower()
-                is_jsonb = actual_type == 'jsonb'
-                self._log.info(f"🔬 Column '{column_name}' schema analysis: {actual_type.upper()} -> JSONB: {is_jsonb}")
-                return is_jsonb
-            else:
-                self._log.warning(f"⚠️ Column '{column_name}' not found in database schema")
-                return False
-        except Exception as e:
-            self._log.error(f"❌ Error checking JSONB column type for '{column_name}': {e}")
+            return row[0].lower() == 'jsonb' if row else False
+        except Exception:
             return False
     
     def _get_function_template(self, db_type: DatabaseType, function_type: str) -> Optional[str]:
@@ -135,33 +109,24 @@ class DatabaseAdapter:
         return templates.get(db_type, {}).get(function_type)
     
     def build_tag_filter(self, column_name: str, tag_ids: List[str], match_all: bool = True) -> Optional[Union[TextClause, and_, or_]]:
-        """Build optimized tag filtering query with proper parameter handling"""
+        """Build optimized tag filtering query"""
         if not tag_ids:
-            self._log.info(f"🏷️ No tag IDs provided for filtering")
             return None
             
         db_type = self.get_database_type(column_name)
         template = self._get_function_template(db_type, "tag_exists")
         
         if not template:
-            self._log.warning(f"⚠️ No tag filter template available for {db_type.value}")
             return None
-        
-        match_type = "ALL" if match_all else "ANY"
-        self._log.info(f"🏷️ Building {match_type} tag filter for {len(tag_ids)} tags using {db_type.value}")
         
         query_template = template.replace("{column}", f"Chat.{column_name}")
         
         if match_all:
-            # For AND conditions, create separate parameters for each tag
-            self._log.info(f"🔧 Using AND logic for tags: {tag_ids}")
             return and_(*[
                 text(query_template).params(tag_id=tag_id)
                 for tag_id in tag_ids
             ])
         else:
-            # For OR conditions, use indexed parameters to avoid conflicts
-            self._log.info(f"🔧 Using OR logic for tags: {tag_ids}")
             conditions = []
             params = {}
             for idx, tag_id in enumerate(tag_ids):
@@ -170,38 +135,29 @@ class DatabaseAdapter:
                 condition_template = query_template.replace(":tag_id", f":{param_name}")
                 conditions.append(text(condition_template))
             
-            # Apply all parameters to the final OR condition
             return or_(*conditions).params(**params)
     
     def build_search_filter(self, search_text: str) -> Optional[TextClause]:
-        """Build content search query with proper parameter binding"""
-        self._log.info(f"🔍 Building content search filter for: '{search_text}'")
-        
+        """Build content search query"""
         db_type = self.get_database_type("chat")
         template = self._get_function_template(db_type, "content_search")
         
         if not template:
-            self._log.warning(f"⚠️ No content search template available for {db_type.value}")
             return None
         
-        self._log.info(f"🔧 Using {db_type.value} content search functions")
         query = template.replace("{column}", "Chat.chat")
         return text(query).params(search_text=search_text)
     
     def build_untagged_filter(self, column_name: str = "meta") -> Optional[or_]:
         """Build filter for chats without tags"""
-        self._log.info(f"🏷️ Building untagged filter for column '{column_name}'")
-        
         db_type = self.get_database_type(column_name)
         
         has_key_template = self._get_function_template(db_type, "has_key")
         array_length_template = self._get_function_template(db_type, "array_length")
         
         if not has_key_template or not array_length_template:
-            self._log.warning(f"⚠️ Missing templates for untagged filter with {db_type.value}")
             return None
         
-        self._log.info(f"🔧 Using {db_type.value} functions for untagged filter")
         has_key = has_key_template.replace("{column}", f"Chat.{column_name}").replace("{path}", "tags")
         array_length = array_length_template.replace("{column}", f"Chat.{column_name}").replace("{path}", "tags")
         
@@ -229,9 +185,7 @@ def normalize_tag_names(tag_names: List[str]) -> List[str]:
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
-# Ensure we can see our logs
-if log.level > logging.INFO:
-    log.setLevel(logging.INFO)
+
 
 
 class Chat(Base):
@@ -319,9 +273,7 @@ class ChatTitleIdResponse(BaseModel):
 
 class ChatTable:
     def __init__(self):
-        """Initialize ChatTable with database detection system"""
-        print("🚀 ChatTable initialized with database detection system")
-        # Database configuration will be logged on first use
+        pass
     
     def _get_adapter(self, db) -> DatabaseAdapter:
         """Get database adapter for the current session"""
@@ -378,49 +330,7 @@ class ChatTable:
             log.error(f"Error checking database compatibility: {e}")
             return {"error": str(e), "database_type": "unknown"}
 
-    def log_database_configuration(self) -> None:
-        """Log database configuration summary"""
-        try:
-            compatibility = self.check_database_compatibility()
-            log.info("=" * 60)
-            log.info("🗄️ DATABASE CONFIGURATION SUMMARY")
-            log.info("=" * 60)
-            log.info(f"📊 Database: {compatibility.get('database_type', 'unknown').upper()}")
-            log.info(f"🔬 Meta column: {compatibility.get('meta_column_type', 'unknown').upper()}")
-            log.info(f"🔬 Chat column: {compatibility.get('chat_column_type', 'unknown').upper()}")
-            log.info(f"✨ Features: {', '.join(compatibility.get('features', []))}")
-            if compatibility.get('limitations'):
-                log.info(f"⚠️ Limitations: {', '.join(compatibility['limitations'])}")
-            log.info("=" * 60)
-        except Exception as e:
-            log.error(f"❌ Error logging database configuration: {e}")
-    
-    def validate_database_support(self) -> bool:
-        """Validate that the database supports required operations"""
-        try:
-            with get_db() as db:
-                adapter = self._get_adapter(db)
-                
-                # Test basic database type detection
-                meta_type = adapter.get_database_type("meta")
-                chat_type = adapter.get_database_type("chat")
-                
-                if meta_type == DatabaseType.UNSUPPORTED:
-                    log.error("❌ Database type not supported for JSON operations")
-                    return False
-                
-                # Test that we can build basic queries
-                test_filter = adapter.build_tag_filter("meta", ["test"], match_all=True)
-                if test_filter is None and meta_type != DatabaseType.UNSUPPORTED:
-                    log.error("❌ Failed to build tag filter queries")
-                    return False
-                
-                log.info(f"✅ Database validation passed: {meta_type.value}")
-                return True
-                
-        except Exception as e:
-            log.error(f"❌ Database validation failed: {e}")
-            return False
+
 
     def create_gin_indexes(self) -> bool:
         """Create GIN indexes on JSONB columns for better query performance"""
@@ -429,10 +339,8 @@ class ChatTable:
                 adapter = self._get_adapter(db)
                 
                 if db.bind.dialect.name != "postgresql":
-                    log.info("ℹ️ GIN indexes are only supported on PostgreSQL")
                     return False
 
-                # Check column types using our adapter
                 meta_type = adapter.get_database_type("meta")
                 chat_type = adapter.get_database_type("chat")
                 
@@ -440,88 +348,44 @@ class ChatTable:
                 has_jsonb_chat = chat_type == DatabaseType.POSTGRESQL_JSONB
 
                 if not (has_jsonb_meta or has_jsonb_chat):
-                    log.info("ℹ️ No JSONB columns found, skipping GIN index creation")
                     return False
 
-                indexes_created = []
-                indexes_failed = []
-
-                # Create GIN index on meta column if it's JSONB
+                # Create GIN indexes
                 if has_jsonb_meta:
                     try:
-                        # Use regular CREATE INDEX (not CONCURRENTLY) to avoid transaction issues
                         db.execute(text("""
                             CREATE INDEX IF NOT EXISTS idx_chat_meta_gin 
                             ON chat USING GIN (meta)
                         """))
-                        indexes_created.append("idx_chat_meta_gin (full meta column)")
-                        log.info("🏗️ Created GIN index on meta column")
-                    except Exception as e:
-                        indexes_failed.append(f"idx_chat_meta_gin: {str(e)[:100]}...")
-
-                    # Create specialized GIN index for tags
-                    try:
                         db.execute(text("""
                             CREATE INDEX IF NOT EXISTS idx_chat_meta_tags_gin 
                             ON chat USING GIN ((meta->'tags'))
                         """))
-                        indexes_created.append("idx_chat_meta_tags_gin (tags array)")
-                        log.info("🏗️ Created GIN index on meta->tags")
-                    except Exception as e:
-                        indexes_failed.append(f"idx_chat_meta_tags_gin: {str(e)[:100]}...")
-
-                    # Create BTREE indexes for tag operations
-                    try:
                         db.execute(text("""
                             CREATE INDEX IF NOT EXISTS idx_chat_has_tags 
                             ON chat USING BTREE ((meta ? 'tags' AND jsonb_array_length(meta->'tags') > 0))
                             WHERE meta ? 'tags'
                         """))
-                        indexes_created.append("idx_chat_has_tags (has tags check)")
-                        log.info("🏗️ Created BTREE index for tag existence")
-                    except Exception as e:
-                        indexes_failed.append(f"idx_chat_has_tags: {str(e)[:100]}...")
+                    except Exception:
+                        pass
 
-                # Create GIN index on chat column if it's JSONB
                 if has_jsonb_chat:
                     try:
                         db.execute(text("""
                             CREATE INDEX IF NOT EXISTS idx_chat_chat_gin 
                             ON chat USING GIN (chat)
                         """))
-                        indexes_created.append("idx_chat_chat_gin (full chat column)")
-                        log.info("🏗️ Created GIN index on chat column")
-                    except Exception as e:
-                        indexes_failed.append(f"idx_chat_chat_gin: {str(e)[:100]}...")
-
-                    # Create specialized index for message content search
-                    try:
                         db.execute(text("""
                             CREATE INDEX IF NOT EXISTS idx_chat_messages_gin 
                             ON chat USING GIN ((chat->'messages'))
                         """))
-                        indexes_created.append("idx_chat_messages_gin (messages array)")
-                        log.info("🏗️ Created GIN index on chat->messages")
-                    except Exception as e:
-                        indexes_failed.append(f"idx_chat_messages_gin: {str(e)[:100]}...")
+                    except Exception:
+                        pass
 
                 db.commit()
-                
-                # Report results
-                if indexes_created:
-                    log.info(f"✅ Created {len(indexes_created)} GIN indexes:")
-                    for idx in indexes_created:
-                        log.info(f"   • {idx}")
-                
-                if indexes_failed:
-                    log.warning(f"⚠️ Failed to create {len(indexes_failed)} indexes:")
-                    for idx in indexes_failed:
-                        log.warning(f"   • {idx}")
-                
-                return len(indexes_created) > 0
+                return True
 
-        except Exception as e:
-            log.error(f"❌ Error creating GIN indexes: {e}")
+        except Exception:
             return False
 
     def check_gin_indexes(self) -> dict:
@@ -570,14 +434,10 @@ class ChatTable:
             return {"error": str(e)}
 
     def drop_gin_indexes(self) -> bool:
-        """
-        Drop all GIN indexes on the chat table.
-        Use with caution - this will impact query performance.
-        """
+        """Drop all GIN indexes on the chat table"""
         try:
             with get_db() as db:
                 if db.bind.dialect.name != "postgresql":
-                    log.info("GIN indexes are only supported on PostgreSQL")
                     return False
 
                 indexes_to_drop = [
@@ -590,25 +450,16 @@ class ChatTable:
                     "idx_chat_messages_gin"
                 ]
 
-                dropped_indexes = []
                 for idx_name in indexes_to_drop:
                     try:
                         db.execute(text(f"DROP INDEX CONCURRENTLY IF EXISTS {idx_name}"))
-                        dropped_indexes.append(idx_name)
-                    except Exception as e:
-                        log.warning(f"Failed to drop index {idx_name}: {e}")
+                    except Exception:
+                        pass
 
                 db.commit()
-                
-                if dropped_indexes:
-                    log.info(f"Successfully dropped GIN indexes: {', '.join(dropped_indexes)}")
-                else:
-                    log.info("No GIN indexes were dropped")
-                
                 return True
 
-        except Exception as e:
-            log.error(f"Error dropping GIN indexes: {e}")
+        except Exception:
             return False
 
     def create_tag_indexes(self) -> bool:
@@ -1151,29 +1002,6 @@ class ChatTable:
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
     def get_chat_by_id(self, id: str) -> Optional[ChatModel]:
-        # Log database detection and setup indexes on first call
-        if not hasattr(self, '_db_logged'):
-            try:
-                with get_db() as db:
-                    adapter = self._get_adapter(db)
-                    meta_type = adapter.get_database_type("meta")
-                    chat_type = adapter.get_database_type("chat")
-                    log.info(f"🗄️ Database Detection: meta={meta_type.value}, chat={chat_type.value}")
-                    
-                    # Auto-create GIN indexes for JSONB columns
-                    if meta_type == DatabaseType.POSTGRESQL_JSONB or chat_type == DatabaseType.POSTGRESQL_JSONB:
-                        log.info("🏗️ JSONB columns detected, creating GIN indexes for optimal performance...")
-                        success = self.create_gin_indexes()
-                        if success:
-                            log.info("✅ GIN indexes created successfully")
-                        else:
-                            log.warning("⚠️ Some GIN indexes could not be created")
-                    
-                    self._db_logged = True
-            except Exception as e:
-                log.warning(f"⚠️ Could not detect database types: {e}")
-                self._db_logged = True
-        
         try:
             with get_db() as db:
                 chat = db.get(Chat, id)
@@ -1207,8 +1035,10 @@ class ChatTable:
         with get_db() as db:
             all_chats = (
                 db.query(Chat)
-                # .limit(limit).offset(skip)
                 .order_by(Chat.updated_at.desc())
+                .offset(skip)
+                .limit(limit)
+                .all()
             )
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
@@ -1282,7 +1112,6 @@ class ChatTable:
 
             # Use adapter for cleaner query building
             adapter = self._get_adapter(db)
-            log.info(f"🔍 Search query - text: '{search_text}', tags: {tag_ids}")
             
             # Add search filter if search text provided
             if search_text:
@@ -1291,30 +1120,22 @@ class ChatTable:
                     query = query.filter(
                         Chat.title.ilike(f"%{search_text}%") | search_filter
                     )
-                    log.info(f"✅ Applied content search filter for: '{search_text}'")
                 else:
                     # Fallback to title-only search for unsupported databases
                     query = query.filter(Chat.title.ilike(f"%{search_text}%"))
-                    log.info(f"⚠️ Using title-only search fallback for: '{search_text}'")
             
             # Add tag filters
             if "none" in tag_ids:
-                log.info(f"🏷️ Filtering for untagged chats")
                 untagged_filter = adapter.build_untagged_filter("meta")
                 if untagged_filter is not None:
                     query = query.filter(untagged_filter)
-                    log.info(f"✅ Applied untagged filter")
             elif tag_ids:
-                log.info(f"🏷️ Filtering for chats with ALL tags: {tag_ids}")
                 tag_filter = adapter.build_tag_filter("meta", tag_ids, match_all=True)
                 if tag_filter is not None:
                     query = query.filter(tag_filter)
-                    log.info(f"✅ Applied tag filter for: {tag_ids}")
 
             # Perform pagination at the SQL level
             all_chats = query.offset(skip).limit(limit).all()
-
-            log.info(f"The number of chats: {len(all_chats)}")
 
             # Validate and return chats
             return [ChatModel.model_validate(chat) for chat in all_chats]
@@ -1371,7 +1192,6 @@ class ChatTable:
     def get_chat_list_by_user_id_and_tag_name(
         self, user_id: str, tag_name: str, skip: int = 0, limit: int = 50
     ) -> list[ChatModel]:
-        log.info(f"🏷️ Getting chats for user {user_id} with tag '{tag_name}'")
         with get_db() as db:
             adapter = self._get_adapter(db)
             query = db.query(Chat).filter_by(user_id=user_id)
@@ -1382,25 +1202,19 @@ class ChatTable:
             if tag_filter is not None:
                 query = query.filter(tag_filter)
                 all_chats = query.all()
-                log.info(f"✅ Found {len(all_chats)} chats with tag '{tag_name}'")
                 return [ChatModel.model_validate(chat) for chat in all_chats]
             else:
-                log.warning("⚠️ Tag filtering not available for this database type")
                 return []
 
     def get_chats_by_multiple_tags(
         self, user_id: str, tag_names: List[str], match_all: bool = True, skip: int = 0, limit: int = 50
     ) -> list[ChatModel]:
         """Get chats that match multiple tags"""
-        match_type = "ALL" if match_all else "ANY"
-        log.info(f"🏷️ Getting chats for user {user_id} with {match_type} of tags: {tag_names}")
-        
         with get_db() as db:
             adapter = self._get_adapter(db)
             query = db.query(Chat).filter_by(user_id=user_id, archived=False)
             
             if not tag_names:
-                log.info("📝 No tag names provided, returning empty list")
                 return []
             
             # Normalize tag names
@@ -1413,16 +1227,12 @@ class ChatTable:
                 # Apply pagination and ordering
                 query = query.order_by(Chat.updated_at.desc()).offset(skip).limit(limit)
                 all_chats = query.all()
-                log.info(f"✅ Found {len(all_chats)} chats matching {match_type} of tags: {tag_names}")
                 return [ChatModel.model_validate(chat) for chat in all_chats]
             else:
-                log.warning("⚠️ Multi-tag filtering not available for this database type")
                 return []
 
     def get_chats_without_tags(self, user_id: str, skip: int = 0, limit: int = 50) -> list[ChatModel]:
         """Get chats that have no tags"""
-        log.info(f"🏷️ Getting untagged chats for user {user_id}")
-        
         with get_db() as db:
             adapter = self._get_adapter(db)
             query = db.query(Chat).filter_by(user_id=user_id, archived=False)
@@ -1433,10 +1243,8 @@ class ChatTable:
                 query = query.filter(untagged_filter)
                 query = query.order_by(Chat.updated_at.desc()).offset(skip).limit(limit)
                 all_chats = query.all()
-                log.info(f"✅ Found {len(all_chats)} untagged chats")
                 return [ChatModel.model_validate(chat) for chat in all_chats]
             else:
-                log.warning("⚠️ Tag filtering not available for this database type")
                 return []
 
     def add_chat_tag_by_id_and_user_id_and_tag_name(
@@ -1476,7 +1284,6 @@ class ChatTable:
                 query = query.filter(tag_filter)
                 return query.count()
             else:
-                log.warning("⚠️ Tag counting not available for this database type")
                 return 0
 
     def delete_tag_by_id_and_user_id_and_tag_name(
