@@ -5,7 +5,7 @@ export interface PiiEntity {
 	id: number;
 	type: string;
 	label: string;
-	text: string;
+	raw_text: string;
 	occurrences: Array<{
 		start_idx: number;
 		end_idx: number;
