@@ -93,7 +93,8 @@ body:
           required: true
         - label: I have clearly **listed every relevant configuration, custom setting, environment variable, and command-line option that influences my setup** (such as Docker Compose overrides, .env values, browser settings, authentication configurations, etc).
           required: true
-        - label: I have documented **step-by-step reproduction instructions that are precise, sequential, and leave nothing to interpretation**. My steps:
+        - label: |
+            I have documented **step-by-step reproduction instructions that are precise, sequential, and leave nothing to interpretation**. My steps:
             - Start with the initial platform/version/OS and dependencies used,
             - Specify exact install/launch/configure commands,
             - List URLs visited, user input (incl. example values/emails/passwords if needed),
@@ -102,7 +103,6 @@ body:
             - Identify the expected and actual result at each stage,
             - Ensure any reasonably skilled user can follow and hit the same issue.
           required: true
-          
   - type: textarea
     id: expected-behavior
     attributes:

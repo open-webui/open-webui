@@ -405,7 +405,6 @@
 
 	const onBlur = () => {
 		shiftKey = false;
-		selectedChatId = null;
 	};
 
 	onMount(async () => {
