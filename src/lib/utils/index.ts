@@ -90,8 +90,72 @@ export const sanitizeResponseContent = (content: string) => {
 };
 
 export const processResponseContent = (content: string) => {
+	content = processChineseContent(content);
 	return content.trim();
 };
+
+function isChineseChar(char: string): boolean {
+	return /\p{Script=Han}/u.test(char);
+}
+
+// Tackle "Model output issue not following the standard Markdown/LaTeX format" in Chinese.
+function processChineseContent(content: string): string {
+	// This function is used to process the response content before the response content is rendered.
+	const lines = content.split('\n');
+	const processedLines = lines.map((line) => {
+		if (/[\u4e00-\u9fa5]/.test(line)) {
+			// Problems caused by Chinese parentheses
+			/* Discription:
+			 *   When `*` has Chinese parentheses on the inside, markdown parser ignore bold or italic style.
+			 *   - e.g. `**中文名（English）**中文内容` will be parsed directly,
+			 *          instead of `<strong>中文名（English）</strong>中文内容`.
+			 * Solution:
+			 *   Adding a `space` before and after the bold/italic part can solve the problem.
+			 *   - e.g. `**中文名（English）**中文内容` -> ` **中文名（English）** 中文内容`
+			 * Note:
+			 *   Similar problem was found with English parentheses and other full delimiters,
+			 *   but they are not handled here because they are less likely to appear in LLM output.
+			 *   Change the behavior in future if needed.
+			 */
+			if (line.includes('*')) {
+				// Handle **bold** with Chinese parentheses
+				line = processChineseParentheses(line, '**', '（', '）');
+				// Handle *italic* with Chinese parentheses
+				line = processChineseParentheses(line, '*', '（', '）');
+			}
+		}
+		return line;
+	});
+	content = processedLines.join('\n');
+
+	return content;
+}
+
+// Helper function for `processChineseContent`
+function processChineseParentheses(
+	line: string,
+	symbol: string,
+	leftSymbol: string,
+	rightSymbol: string
+): string {
+	// NOTE: If needed, with a little modification, this function can be applied to more cases.
+	const escapedSymbol = escapeRegExp(symbol);
+	const regex = new RegExp(
+		`(.?)(?<!${escapedSymbol})(${escapedSymbol})([^${escapedSymbol}]+)(${escapedSymbol})(?!${escapedSymbol})(.)`,
+		'g'
+	);
+	return line.replace(regex, (match, l, left, content, right, r) => {
+		const result =
+			(content.startsWith(leftSymbol) && l && l.length > 0 && isChineseChar(l[l.length - 1])) ||
+			(content.endsWith(rightSymbol) && r && r.length > 0 && isChineseChar(r[0]));
+
+		if (result) {
+			return `${l} ${left}${content}${right} ${r}`;
+		} else {
+			return match;
+		}
+	});
+}
 
 export function unescapeHtml(html: string) {
 	const doc = new DOMParser().parseFromString(html, 'text/html');
@@ -324,6 +388,7 @@ export const copyToClipboard = async (text, formatted = false) => {
 		};
 		marked.use(markedKatexExtension(options));
 		marked.use(markedExtension(options));
+		// DEVELOPER NOTE: Go to `$lib/components/chat/Messages/Markdown.svelte` to add extra markdown extensions for rendering.
 
 		const htmlContent = marked.parse(text);
 
@@ -867,11 +932,10 @@ export const extractSentencesForAudio = (text: string) => {
 	}, [] as string[]);
 };
 
-export const getMessageContentParts = (content: string, split_on: string = 'punctuation') => {
-	content = removeDetails(content, ['reasoning', 'code_interpreter', 'tool_calls']);
+export const getMessageContentParts = (content: string, splitOn: string = 'punctuation') => {
 	const messageContentParts: string[] = [];
 
-	switch (split_on) {
+	switch (splitOn) {
 		default:
 		case TTS_RESPONSE_SPLIT.PUNCTUATION:
 			messageContentParts.push(...extractSentencesForAudio(content));
