@@ -449,60 +449,61 @@ class ChatTable:
                 # Create GIN index on meta column if it's JSONB
                 if has_jsonb_meta:
                     try:
+                        # Use regular CREATE INDEX (not CONCURRENTLY) to avoid transaction issues
                         db.execute(text("""
-                            CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_chat_meta_gin 
+                            CREATE INDEX IF NOT EXISTS idx_chat_meta_gin 
                             ON chat USING GIN (meta)
                         """))
                         indexes_created.append("idx_chat_meta_gin (full meta column)")
                         log.info("🏗️ Created GIN index on meta column")
                     except Exception as e:
-                        indexes_failed.append(f"idx_chat_meta_gin: {e}")
+                        indexes_failed.append(f"idx_chat_meta_gin: {str(e)[:100]}...")
 
                     # Create specialized GIN index for tags
                     try:
                         db.execute(text("""
-                            CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_chat_meta_tags_gin 
+                            CREATE INDEX IF NOT EXISTS idx_chat_meta_tags_gin 
                             ON chat USING GIN ((meta->'tags'))
                         """))
                         indexes_created.append("idx_chat_meta_tags_gin (tags array)")
                         log.info("🏗️ Created GIN index on meta->tags")
                     except Exception as e:
-                        indexes_failed.append(f"idx_chat_meta_tags_gin: {e}")
+                        indexes_failed.append(f"idx_chat_meta_tags_gin: {str(e)[:100]}...")
 
                     # Create BTREE indexes for tag operations
                     try:
                         db.execute(text("""
-                            CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_chat_has_tags 
+                            CREATE INDEX IF NOT EXISTS idx_chat_has_tags 
                             ON chat USING BTREE ((meta ? 'tags' AND jsonb_array_length(meta->'tags') > 0))
                             WHERE meta ? 'tags'
                         """))
                         indexes_created.append("idx_chat_has_tags (has tags check)")
                         log.info("🏗️ Created BTREE index for tag existence")
                     except Exception as e:
-                        indexes_failed.append(f"idx_chat_has_tags: {e}")
+                        indexes_failed.append(f"idx_chat_has_tags: {str(e)[:100]}...")
 
                 # Create GIN index on chat column if it's JSONB
                 if has_jsonb_chat:
                     try:
                         db.execute(text("""
-                            CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_chat_chat_gin 
+                            CREATE INDEX IF NOT EXISTS idx_chat_chat_gin 
                             ON chat USING GIN (chat)
                         """))
                         indexes_created.append("idx_chat_chat_gin (full chat column)")
                         log.info("🏗️ Created GIN index on chat column")
                     except Exception as e:
-                        indexes_failed.append(f"idx_chat_chat_gin: {e}")
+                        indexes_failed.append(f"idx_chat_chat_gin: {str(e)[:100]}...")
 
                     # Create specialized index for message content search
                     try:
                         db.execute(text("""
-                            CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_chat_messages_gin 
+                            CREATE INDEX IF NOT EXISTS idx_chat_messages_gin 
                             ON chat USING GIN ((chat->'messages'))
                         """))
                         indexes_created.append("idx_chat_messages_gin (messages array)")
                         log.info("🏗️ Created GIN index on chat->messages")
                     except Exception as e:
-                        indexes_failed.append(f"idx_chat_messages_gin: {e}")
+                        indexes_failed.append(f"idx_chat_messages_gin: {str(e)[:100]}...")
 
                 db.commit()
                 
