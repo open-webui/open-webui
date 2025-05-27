@@ -117,10 +117,12 @@ class WeaviateClient:
         self.client.collections.create(
             collection_name,
             vectorizer_config=[
-                Configure.NamedVectors.text2vec_openai(
-                    name="documents",
-                    source_properties=["documents"],
+                Configure.NamedVectors.text2vec_aws(
+                    name="text",
+                    source_properties=["text"],
                     vector_index_config=Configure.VectorIndex.hnsw(),
+                    region="sa-east-1",
+                    model= "amazon.titan-embed-text-v2:0"
                 ),
             ],
             properties=[
