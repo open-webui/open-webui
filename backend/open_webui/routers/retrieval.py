@@ -2066,50 +2066,26 @@ def process_files_batch(
 
 
 def clean_text_content(text: str) -> str:
-    """Advanced text cleaning to remove unwanted characters and normalize formatting"""
+    """Simple, effective text cleaning focused on common problematic characters"""
     if not text:
         return text
     
-    # Step 1: Handle escaped characters and JSON-like artifacts
-    text = re.sub(r'\\n', '\n', text)  # Convert escaped newlines to actual newlines
-    text = re.sub(r'\\t', ' ', text)  # Convert escaped tabs to spaces
-    text = re.sub(r'\\"', '"', text)  # Convert escaped quotes to regular quotes
-    text = re.sub(r'\\r', '', text)  # Remove escaped carriage returns
-    text = re.sub(r'\\/', '/', text)  # Convert escaped forward slashes
-    text = re.sub(r'\\\\', r'\\', text)  # Convert double backslashes to single
+    # Step 1: Remove common escape sequences and unwanted characters
+    text = text.replace('\\n', '\n')  # Convert escaped newlines
+    text = text.replace('\\t', ' ')   # Convert escaped tabs to spaces
+    text = text.replace('\\"', '"')   # Convert escaped quotes
+    text = text.replace('\\r', '')    # Remove escaped carriage returns
+    text = text.replace('\\/', '/')   # Convert escaped slashes
+    text = text.replace('\\\\', '\\') # Convert double backslashes
     
-    # Step 2: Remove document processing artifacts
-    text = re.sub(r'\\[a-zA-Z]+\\', '', text)  # Remove LaTeX-like commands (\command\)
-    text = re.sub(r'\\[a-zA-Z]+\{[^}]*\}', '', text)  # Remove LaTeX commands with braces
-    text = re.sub(r'\{\\[^}]*\}', '', text)  # Remove formatting commands in braces
-    text = re.sub(r'\\[0-9]+', '', text)  # Remove numeric escape sequences
+    # Step 2: Remove other common problematic characters
+    text = re.sub(r'\\[a-zA-Z]', '', text)  # Remove single backslash + letter (like \n that wasn't caught)
+    text = re.sub(r'\\[0-9]', '', text)     # Remove backslash + number
     
-    # Step 3: Clean up HTML/XML artifacts
-    text = re.sub(r'<[^>]+>', '', text)  # Remove HTML/XML tags
-    text = re.sub(r'&[a-zA-Z]+;', ' ', text)  # Remove HTML entities like &nbsp;
-    text = re.sub(r'&[#][0-9]+;', ' ', text)  # Remove numeric HTML entities
-    
-    # Step 4: Remove PDF/document extraction artifacts
-    text = re.sub(r'\x0c', '\n', text)  # Form feed characters to newlines
-    text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]', '', text)  # Control characters
-    
-    # Step 5: Normalize whitespace and line breaks
-    text = re.sub(r'[ \t]+', ' ', text)  # Multiple spaces/tabs -> single space
-    text = re.sub(r'\n[ \t]+', '\n', text)  # Leading whitespace on lines
-    text = re.sub(r'[ \t]+\n', '\n', text)  # Trailing whitespace on lines
-    text = re.sub(r'\n\s*\n\s*\n+', '\n\n', text)  # Multiple empty lines -> double line break
-    text = re.sub(r'\n\s+\n', '\n\n', text)  # Lines with only whitespace -> double line break
-    
-    # Step 6: Clean up specific document artifacts
-    text = re.sub(r'^\s*[-•*]\s*$', '', text, flags=re.MULTILINE)  # Empty bullet points
-    text = re.sub(r'^\s*[0-9]+\.\s*$', '', text, flags=re.MULTILINE)  # Empty numbered lists
-    text = re.sub(r'^\s*[|]+\s*$', '', text, flags=re.MULTILINE)  # Table separators
-    text = re.sub(r'_{3,}|={3,}|-{3,}', '', text)  # Long underlines/separators
-    
-    # Step 7: Final normalization
-    text = re.sub(r'\n\n+', '\n\n', text)  # Multiple paragraph breaks -> double line break
-    text = re.sub(r'^\n+|\n+$', '', text)  # Remove leading/trailing newlines
-    text = text.strip()  # Remove leading/trailing whitespace
+    # Step 3: Clean up whitespace
+    text = re.sub(r'[ \t]+', ' ', text)           # Multiple spaces/tabs -> single space
+    text = re.sub(r'\n\s*\n\s*\n+', '\n\n', text) # Multiple empty lines -> double line break
+    text = re.sub(r'^\s+|\s+$', '', text)         # Remove leading/trailing whitespace
     
     return text
 
