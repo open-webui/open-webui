@@ -323,7 +323,8 @@
 			<div class="">
 				<div class=" mb-1 text-sm font-medium">{i18nInstance?.t('WebUI Settings')}</div>
 
-				<div class="flex w-full justify-between">
+				<!-- https://linear.app/albert-conversation/issue/ALB-149/desactiver-totalement-le-theme-dark-dans-openwebui-le-temps-de-fixer -->
+				<!-- <div class="flex w-full justify-between">
 					<div class=" self-center text-xs font-medium">{i18nInstance?.t('Theme')}</div>
 					<div class="flex items-center relative">
 						<select
@@ -337,7 +338,7 @@
 							<option value="light">☀️ {i18nInstance?.t('Light')}</option>
 						</select>
 					</div>
-				</div>
+				</div> -->
 
 				<div class=" flex w-full justify-between">
 					<div class=" self-center text-xs font-medium">{i18nInstance?.t('Language')}</div>
