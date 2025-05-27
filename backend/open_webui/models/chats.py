@@ -2,7 +2,8 @@ import logging
 import json
 import time
 import uuid
-from typing import Optional
+from typing import Optional, Dict, Any, List, Union
+from enum import Enum
 
 from open_webui.internal.db import Base, get_db
 from open_webui.models.tags import TagModel, Tag, Tags
@@ -12,12 +13,175 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON
 from sqlalchemy import or_, func, select, and_, text
 from sqlalchemy.sql import exists
+from sqlalchemy.sql.elements import TextClause
 
 # Import JSONB for PostgreSQL support
 try:
     from sqlalchemy.dialects.postgresql import JSONB
 except ImportError:
     JSONB = None
+
+####################
+# Database Adapter
+####################
+
+class DatabaseType(Enum):
+    SQLITE = "sqlite"
+    POSTGRESQL_JSON = "postgresql_json"
+    POSTGRESQL_JSONB = "postgresql_jsonb"
+    UNSUPPORTED = "unsupported"
+
+class DatabaseAdapter:
+    """Centralized database-specific query generation with caching and error handling"""
+    
+    def __init__(self, db):
+        self.db = db
+        self.dialect = db.bind.dialect.name
+        self._cache: Dict[str, DatabaseType] = {}
+        self._log = logging.getLogger(f"{__name__}.DatabaseAdapter")
+    
+    def get_database_type(self, column_name: str = "meta") -> DatabaseType:
+        """Determine database type with caching"""
+        cache_key = f"{self.dialect}_{column_name}"
+        if cache_key in self._cache:
+            return self._cache[cache_key]
+        
+        if self.dialect == "sqlite":
+            result = DatabaseType.SQLITE
+        elif self.dialect == "postgresql":
+            result = DatabaseType.POSTGRESQL_JSONB if self._is_jsonb_column(column_name) else DatabaseType.POSTGRESQL_JSON
+        else:
+            result = DatabaseType.UNSUPPORTED
+        
+        self._cache[cache_key] = result
+        return result
+    
+    def _is_jsonb_column(self, column_name: str) -> bool:
+        """Check if column is JSONB type with proper error handling"""
+        if JSONB is None or self.dialect != "postgresql":
+            return False
+        
+        try:
+            result = self.db.execute(text("""
+                SELECT data_type FROM information_schema.columns 
+                WHERE table_name = 'chat' AND column_name = :column_name
+            """), {"column_name": column_name})
+            
+            row = result.fetchone()
+            return row and row[0].lower() == 'jsonb'
+        except Exception:
+            return False
+    
+    def _get_function_template(self, db_type: DatabaseType, function_type: str) -> Optional[str]:
+        """Get function template for specific database type and function"""
+        templates = {
+            DatabaseType.SQLITE: {
+                "tag_exists": "EXISTS (SELECT 1 FROM json_each({column}, '$.tags') WHERE json_each.value = :tag_id)",
+                "has_key": "json_extract({column}, '$.{path}') IS NOT NULL",
+                "array_length": "json_array_length({column}, '$.{path}')",
+                "array_elements": "json_each({column}, '$.{path}')",
+                "content_search": """EXISTS (
+                    SELECT 1 FROM json_each({column}, '$.messages') AS message 
+                    WHERE LOWER(message.value->>'content') LIKE '%' || :search_text || '%'
+                )"""
+            },
+            DatabaseType.POSTGRESQL_JSON: {
+                "tag_exists": "EXISTS (SELECT 1 FROM json_array_elements_text({column}->'tags') elem WHERE elem = :tag_id)",
+                "has_key": "{column} ? '{path}'",
+                "array_length": "json_array_length({column}->'{path}')",
+                "array_elements": "json_array_elements({column}->'{path}')",
+                "content_search": """EXISTS (
+                    SELECT 1 FROM json_array_elements({column}->'messages') AS message
+                    WHERE LOWER(message->>'content') LIKE '%' || :search_text || '%'
+                )"""
+            },
+            DatabaseType.POSTGRESQL_JSONB: {
+                "tag_exists": "EXISTS (SELECT 1 FROM jsonb_array_elements_text({column}->'tags') elem WHERE elem = :tag_id)",
+                "has_key": "{column} ? '{path}'",
+                "array_length": "jsonb_array_length({column}->'{path}')",
+                "array_elements": "jsonb_array_elements({column}->'{path}')",
+                "content_search": """EXISTS (
+                    SELECT 1 FROM jsonb_array_elements({column}->'messages') AS message
+                    WHERE LOWER(message->>'content') LIKE '%' || :search_text || '%'
+                )"""
+            }
+        }
+        
+        return templates.get(db_type, {}).get(function_type)
+    
+    def build_tag_filter(self, column_name: str, tag_ids: List[str], match_all: bool = True) -> Optional[Union[TextClause, and_, or_]]:
+        """Build optimized tag filtering query with proper parameter handling"""
+        if not tag_ids:
+            return None
+            
+        db_type = self.get_database_type(column_name)
+        template = self._get_function_template(db_type, "tag_exists")
+        
+        if not template:
+            self._log.debug(f"No tag filter template available for {db_type.value}")
+            return None
+        
+        query_template = template.replace("{column}", f"Chat.{column_name}")
+        
+        if match_all:
+            # For AND conditions, create separate parameters for each tag
+            return and_(*[
+                text(query_template).params(tag_id=tag_id)
+                for tag_id in tag_ids
+            ])
+        else:
+            # For OR conditions, use indexed parameters to avoid conflicts
+            conditions = []
+            params = {}
+            for idx, tag_id in enumerate(tag_ids):
+                param_name = f"tag_id_{idx}"
+                params[param_name] = tag_id
+                condition_template = query_template.replace(":tag_id", f":{param_name}")
+                conditions.append(text(condition_template))
+            
+            # Apply all parameters to the final OR condition
+            return or_(*conditions).params(**params)
+    
+    def build_search_filter(self, search_text: str) -> Optional[TextClause]:
+        """Build content search query with proper parameter binding"""
+        db_type = self.get_database_type("chat")
+        template = self._get_function_template(db_type, "content_search")
+        
+        if not template:
+            return None
+        
+        query = template.replace("{column}", "Chat.chat")
+        return text(query).params(search_text=search_text)
+    
+    def build_untagged_filter(self, column_name: str = "meta") -> Optional[or_]:
+        """Build filter for chats without tags"""
+        db_type = self.get_database_type(column_name)
+        
+        has_key_template = self._get_function_template(db_type, "has_key")
+        array_length_template = self._get_function_template(db_type, "array_length")
+        
+        if not has_key_template or not array_length_template:
+            return None
+        
+        has_key = has_key_template.replace("{column}", f"Chat.{column_name}").replace("{path}", "tags")
+        array_length = array_length_template.replace("{column}", f"Chat.{column_name}").replace("{path}", "tags")
+        
+        return or_(
+            text(f"NOT ({has_key})"),
+            text(f"{array_length} = 0")
+        )
+
+####################
+# Utility Functions
+####################
+
+def normalize_tag_name(tag_name: str) -> str:
+    """Normalize tag name for consistent storage and querying"""
+    return tag_name.replace(" ", "_").lower()
+
+def normalize_tag_names(tag_names: List[str]) -> List[str]:
+    """Normalize multiple tag names"""
+    return [normalize_tag_name(tag) for tag in tag_names]
 
 ####################
 # Chat DB Schema
@@ -111,229 +275,104 @@ class ChatTitleIdResponse(BaseModel):
 
 
 class ChatTable:
+    def _get_adapter(self, db) -> DatabaseAdapter:
+        """Get database adapter for the current session"""
+        return DatabaseAdapter(db)
+    
+    # Legacy methods for backward compatibility
     def _is_jsonb_column(self, db, column_name: str) -> bool:
-        """
-        Helper method to detect if a column is using JSONB type.
-        Returns True if the column is JSONB, False otherwise.
-        """
-        if JSONB is None:
-            log.info(f"📦 JSONB not available - PostgreSQL dependencies not installed")
-            return False
-            
-        if db.bind.dialect.name != "postgresql":
-            log.info(f"📊 Non-PostgreSQL database - JSONB not applicable")
-            return False
-        
-        try:
-            # Get the table metadata
-            table = Chat.__table__
-            column = table.columns.get(column_name)
-            if column is not None:
-                is_jsonb = isinstance(column.type, type(JSONB()))
-                column_type = type(column.type).__name__
-                log.info(f"🔬 Column '{column_name}' type analysis: {column_type} -> JSONB: {is_jsonb}")
-                return is_jsonb
-            else:
-                log.warning(f"⚠️ Column '{column_name}' not found in table metadata")
-                return False
-        except Exception as e:
-            log.error(f"❌ Error checking JSONB column type for '{column_name}': {e}")
-            return False
-
+        """Legacy method - use adapter instead"""
+        adapter = self._get_adapter(db)
+        return adapter.get_database_type(column_name) == DatabaseType.POSTGRESQL_JSONB
+    
     def _get_json_query_type(self, db, column_name: str = "meta") -> str:
-        """
-        Determine the appropriate JSON query type based on database dialect and column type.
-        Returns: 'sqlite', 'postgresql_json', 'postgresql_jsonb', or 'unsupported'
-        """
-        try:
-            dialect_name = db.bind.dialect.name
-            log.info(f"🔍 Database Detection - Dialect: {dialect_name}")
-            
-            if dialect_name == "sqlite":
-                log.info(f"✅ SQLite detected - Using JSON1 extension for column '{column_name}'")
-                return "sqlite"
-            elif dialect_name == "postgresql":
-                is_jsonb = self._is_jsonb_column(db, column_name)
-                if is_jsonb:
-                    log.info(f"✅ PostgreSQL JSONB detected - Using optimized JSONB queries for column '{column_name}'")
-                    return "postgresql_jsonb"
-                else:
-                    log.info(f"✅ PostgreSQL JSON detected - Using standard JSON queries for column '{column_name}'")
-                    return "postgresql_json"
-            else:
-                # Return 'unsupported' instead of raising exception
-                log.warning(f"⚠️ Unsupported database dialect: {dialect_name}. JSON queries will be skipped.")
-                return "unsupported"
-        except Exception as e:
-            log.error(f"❌ Error determining JSON query type: {e}")
-            return "unsupported"
+        """Legacy method - use adapter instead"""
+        adapter = self._get_adapter(db)
+        db_type = adapter.get_database_type(column_name)
+        return db_type.value
 
     def check_database_compatibility(self) -> dict:
-        """
-        Check database compatibility and available features.
-        Returns a comprehensive report of what features are supported.
-        """
+        """Check database compatibility and available features"""
         try:
             with get_db() as db:
+                adapter = self._get_adapter(db)
                 dialect_name = db.bind.dialect.name
+                
+                meta_type = adapter.get_database_type("meta")
+                chat_type = adapter.get_database_type("chat")
                 
                 compatibility = {
                     "database_type": dialect_name,
-                    "json_support": False,
-                    "jsonb_support": False,
-                    "gin_indexes_support": False,
-                    "tag_filtering_support": False,
-                    "advanced_search_support": False,
+                    "json_support": meta_type != DatabaseType.UNSUPPORTED,
+                    "jsonb_support": meta_type == DatabaseType.POSTGRESQL_JSONB or chat_type == DatabaseType.POSTGRESQL_JSONB,
+                    "gin_indexes_support": dialect_name == "postgresql",
+                    "tag_filtering_support": meta_type != DatabaseType.UNSUPPORTED,
+                    "advanced_search_support": chat_type != DatabaseType.UNSUPPORTED,
+                    "meta_column_type": meta_type.value,
+                    "chat_column_type": chat_type.value,
                     "features": [],
                     "limitations": [],
                     "recommendations": []
                 }
                 
+                # Add features based on database type
                 if dialect_name == "sqlite":
-                    compatibility.update({
-                        "json_support": True,
-                        "tag_filtering_support": True,
-                        "advanced_search_support": True,
-                        "features": [
-                            "JSON1 extension support",
-                            "Basic tag filtering",
-                            "Message content search",
-                            "Cross-platform compatibility"
-                        ],
-                        "limitations": [
-                            "No GIN indexes (PostgreSQL only)",
-                            "Limited JSON query optimization",
-                            "No JSONB support"
-                        ],
-                        "recommendations": [
-                            "Consider PostgreSQL for high-volume applications",
-                            "Ensure JSON1 extension is enabled"
-                        ]
-                    })
-                    
+                    compatibility["features"] = ["JSON1 extension", "Basic tag filtering", "Message search"]
+                    compatibility["limitations"] = ["No GIN indexes", "Limited JSON optimization"]
                 elif dialect_name == "postgresql":
-                    has_jsonb_meta = self._is_jsonb_column(db, "meta")
-                    has_jsonb_chat = self._is_jsonb_column(db, "chat")
-                    
-                    compatibility.update({
-                        "json_support": True,
-                        "jsonb_support": has_jsonb_meta or has_jsonb_chat,
-                        "gin_indexes_support": True,
-                        "tag_filtering_support": True,
-                        "advanced_search_support": True,
-                        "features": [
-                            "Full JSON/JSONB support",
-                            "GIN indexes for performance",
-                            "Advanced tag filtering",
-                            "Optimized message search",
-                            "Concurrent index creation"
-                        ],
-                        "limitations": [],
-                        "recommendations": []
-                    })
-                    
-                    if has_jsonb_meta or has_jsonb_chat:
-                        compatibility["features"].extend([
-                            "JSONB binary format for speed",
-                            "Advanced JSONB operators",
-                            "Specialized tag indexes"
-                        ])
-                        compatibility["recommendations"].append(
-                            "Create GIN indexes for optimal performance"
-                        )
-                    else:
-                        compatibility["limitations"].append(
-                            "Using JSON instead of JSONB (consider migration)"
-                        )
-                        compatibility["recommendations"].extend([
-                            "Consider migrating to JSONB for better performance",
-                            "Create functional indexes on JSON columns"
-                        ])
-                        
-                else:
-                    compatibility.update({
-                        "limitations": [
-                            f"Database type '{dialect_name}' not officially supported",
-                            "No JSON query optimization",
-                            "No tag filtering support",
-                            "Limited search capabilities"
-                        ],
-                        "recommendations": [
-                            "Consider migrating to PostgreSQL or SQLite",
-                            "Basic CRUD operations should still work",
-                            "Contact support for database-specific optimizations"
-                        ]
-                    })
+                    compatibility["features"] = ["Full JSON/JSONB support", "GIN indexes", "Advanced filtering"]
+                    if compatibility["jsonb_support"]:
+                        compatibility["features"].append("JSONB binary format optimization")
                 
                 return compatibility
-                 
+                
         except Exception as e:
             log.error(f"Error checking database compatibility: {e}")
-            return {
-                "error": str(e),
-                "database_type": "unknown",
-                "json_support": False,
-                "recommendations": ["Check database connection and configuration"]
-            }
+            return {"error": str(e), "database_type": "unknown"}
 
     def log_database_configuration(self) -> None:
-        """
-        Log a comprehensive summary of the current database configuration and capabilities.
-        This helps with debugging and monitoring which query paths are being used.
-        """
+        """Log database configuration summary"""
         try:
-            with get_db() as db:
-                dialect_name = db.bind.dialect.name
-                log.info("=" * 60)
-                log.info("🗄️ DATABASE CONFIGURATION SUMMARY")
-                log.info("=" * 60)
-                log.info(f"📊 Database Type: {dialect_name.upper()}")
-                
-                # Check column types
-                has_jsonb_meta = self._is_jsonb_column(db, "meta")
-                has_jsonb_chat = self._is_jsonb_column(db, "chat")
-                
-                log.info(f"🔬 Column Types:")
-                log.info(f"   • meta column: {'JSONB' if has_jsonb_meta else 'JSON'}")
-                log.info(f"   • chat column: {'JSONB' if has_jsonb_chat else 'JSON'}")
-                
-                # Determine query paths
-                meta_query_type = self._get_json_query_type(db, "meta")
-                chat_query_type = self._get_json_query_type(db, "chat")
-                
-                log.info(f"🚀 Query Paths:")
-                log.info(f"   • Meta queries: {meta_query_type.upper()}")
-                log.info(f"   • Chat queries: {chat_query_type.upper()}")
-                
-                # Check capabilities
-                capabilities = []
-                if dialect_name == "sqlite":
-                    capabilities = ["JSON1 Extension", "Tag Filtering", "Message Search"]
-                elif dialect_name == "postgresql":
-                    capabilities = ["JSON/JSONB Support", "Tag Filtering", "Message Search", "GIN Indexes"]
-                    if has_jsonb_meta or has_jsonb_chat:
-                        capabilities.append("JSONB Optimization")
-                else:
-                    capabilities = ["Basic CRUD Operations"]
-                
-                log.info(f"✨ Available Features:")
-                for capability in capabilities:
-                    log.info(f"   ✅ {capability}")
-                
-                # Performance recommendations
-                if dialect_name == "postgresql" and (has_jsonb_meta or has_jsonb_chat):
-                    log.info(f"🚀 Performance: OPTIMIZED (JSONB + GIN indexes available)")
-                elif dialect_name == "postgresql":
-                    log.info(f"⚡ Performance: GOOD (JSON with functional indexes)")
-                elif dialect_name == "sqlite":
-                    log.info(f"🔧 Performance: STANDARD (JSON1 extension)")
-                else:
-                    log.info(f"⚠️ Performance: LIMITED (Basic operations only)")
-                
-                log.info("=" * 60)
-                 
+            compatibility = self.check_database_compatibility()
+            log.info("=" * 60)
+            log.info("🗄️ DATABASE CONFIGURATION SUMMARY")
+            log.info("=" * 60)
+            log.info(f"📊 Database: {compatibility.get('database_type', 'unknown').upper()}")
+            log.info(f"🔬 Meta column: {compatibility.get('meta_column_type', 'unknown').upper()}")
+            log.info(f"🔬 Chat column: {compatibility.get('chat_column_type', 'unknown').upper()}")
+            log.info(f"✨ Features: {', '.join(compatibility.get('features', []))}")
+            if compatibility.get('limitations'):
+                log.info(f"⚠️ Limitations: {', '.join(compatibility['limitations'])}")
+            log.info("=" * 60)
         except Exception as e:
             log.error(f"❌ Error logging database configuration: {e}")
+    
+    def validate_database_support(self) -> bool:
+        """Validate that the database supports required operations"""
+        try:
+            with get_db() as db:
+                adapter = self._get_adapter(db)
+                
+                # Test basic database type detection
+                meta_type = adapter.get_database_type("meta")
+                chat_type = adapter.get_database_type("chat")
+                
+                if meta_type == DatabaseType.UNSUPPORTED:
+                    log.error("❌ Database type not supported for JSON operations")
+                    return False
+                
+                # Test that we can build basic queries
+                test_filter = adapter.build_tag_filter("meta", ["test"], match_all=True)
+                if test_filter is None and meta_type != DatabaseType.UNSUPPORTED:
+                    log.error("❌ Failed to build tag filter queries")
+                    return False
+                
+                log.info(f"✅ Database validation passed: {meta_type.value}")
+                return True
+                
+        except Exception as e:
+            log.error(f"❌ Database validation failed: {e}")
+            return False
 
     def create_gin_indexes(self) -> bool:
         """
@@ -1169,7 +1208,7 @@ class ChatTable:
 
         # search_text might contain 'tag:tag_name' format so we need to extract the tag_name, split the search_text and remove the tags
         tag_ids = [
-            word.replace("tag:", "").replace(" ", "_").lower()
+            normalize_tag_name(word.replace("tag:", ""))
             for word in search_text_words
             if word.startswith("tag:")
         ]
@@ -1188,169 +1227,29 @@ class ChatTable:
 
             query = query.order_by(Chat.updated_at.desc())
 
-            # Determine the JSON query type based on database dialect and column types
-            json_query_type = self._get_json_query_type(db, "meta")
-            log.info(f"🚀 Search Query Path: {json_query_type.upper()}")
+            # Use adapter for cleaner query building
+            adapter = self._get_adapter(db)
             
-            # Handle unsupported databases gracefully
-            if json_query_type == "unsupported":
-                log.warning("⚠️ Skipping JSON-based tag filtering due to unsupported database")
-                # Continue with basic query without JSON filtering
-            elif json_query_type == "sqlite":
-                # SQLite case: using JSON1 extension for JSON searching
-                log.info("🔧 Executing SQLite JSON1 queries for search and tag filtering")
-                query = query.filter(
-                    (
-                        Chat.title.ilike(
-                            f"%{search_text}%"
-                        )  # Case-insensitive search in title
-                        | text(
-                            """
-                            EXISTS (
-                                SELECT 1 
-                                FROM json_each(Chat.chat, '$.messages') AS message 
-                                WHERE LOWER(message.value->>'content') LIKE '%' || :search_text || '%'
-                            )
-                            """
-                        )
-                    ).params(search_text=search_text)
-                )
-
-                # Check if there are any tags to filter, it should have all the tags
-                if "none" in tag_ids:
+            # Add search filter if search text provided
+            if search_text:
+                search_filter = adapter.build_search_filter(search_text)
+                if search_filter is not None:
                     query = query.filter(
-                        text(
-                            """
-                            NOT EXISTS (
-                                SELECT 1
-                                FROM json_each(Chat.meta, '$.tags') AS tag
-                            )
-                            """
-                        )
+                        Chat.title.ilike(f"%{search_text}%") | search_filter
                     )
-                elif tag_ids:
-                    query = query.filter(
-                        and_(
-                            *[
-                                text(
-                                    f"""
-                                    EXISTS (
-                                        SELECT 1
-                                        FROM json_each(Chat.meta, '$.tags') AS tag
-                                        WHERE tag.value = :tag_id_{tag_idx}
-                                    )
-                                    """
-                                ).params(**{f"tag_id_{tag_idx}": tag_id})
-                                for tag_idx, tag_id in enumerate(tag_ids)
-                            ]
-                        )
-                    )
-
-            elif json_query_type == "postgresql_json":
-                # PostgreSQL with JSON type: using standard JSON functions
-                log.info("🔧 Executing PostgreSQL JSON queries for search and tag filtering")
-                query = query.filter(
-                    (
-                        Chat.title.ilike(
-                            f"%{search_text}%"
-                        )  # Case-insensitive search in title
-                        | text(
-                            """
-                            EXISTS (
-                                SELECT 1
-                                FROM json_array_elements(Chat.chat->'messages') AS message
-                                WHERE LOWER(message->>'content') LIKE '%' || :search_text || '%'
-                            )
-                            """
-                        )
-                    ).params(search_text=search_text)
-                )
-
-                # Check if there are any tags to filter, it should have all the tags
-                if "none" in tag_ids:
-                    query = query.filter(
-                        text(
-                            """
-                            NOT EXISTS (
-                                SELECT 1
-                                FROM json_array_elements_text(Chat.meta->'tags') AS tag
-                            )
-                            """
-                        )
-                    )
-                elif tag_ids:
-                    query = query.filter(
-                        and_(
-                            *[
-                                text(
-                                    f"""
-                                    EXISTS (
-                                        SELECT 1
-                                        FROM json_array_elements_text(Chat.meta->'tags') AS tag
-                                        WHERE tag = :tag_id_{tag_idx}
-                                    )
-                                    """
-                                ).params(**{f"tag_id_{tag_idx}": tag_id})
-                                for tag_idx, tag_id in enumerate(tag_ids)
-                            ]
-                        )
-                    )
-
-            elif json_query_type == "postgresql_jsonb":
-                # PostgreSQL with JSONB type: using JSONB operators for better performance
-                log.info("🚀 Executing PostgreSQL JSONB optimized queries for search and tag filtering")
-                query = query.filter(
-                    (
-                        Chat.title.ilike(
-                            f"%{search_text}%"
-                        )  # Case-insensitive search in title
-                        | text(
-                            """
-                            EXISTS (
-                                SELECT 1
-                                FROM jsonb_array_elements(Chat.chat->'messages') AS message
-                                WHERE LOWER(message->>'content') ILIKE '%' || :search_text || '%'
-                            )
-                            """
-                        )
-                    ).params(search_text=search_text)
-                )
-
-                # Check if there are any tags to filter, it should have all the tags
-                if "none" in tag_ids:
-                    query = query.filter(
-                        text(
-                            """
-                            NOT EXISTS (
-                                SELECT 1
-                                FROM jsonb_array_elements_text(Chat.meta->'tags') AS tag
-                            )
-                            """
-                        )
-                    )
-                elif tag_ids:
-                    query = query.filter(
-                        and_(
-                            *[
-                                text(
-                                    f"""
-                                    EXISTS (
-                                        SELECT 1
-                                        FROM jsonb_array_elements_text(Chat.meta->'tags') AS tag
-                                        WHERE tag = :tag_id_{tag_idx}
-                                    )
-                                    """
-                                ).params(**{f"tag_id_{tag_idx}": tag_id})
-                                for tag_idx, tag_id in enumerate(tag_ids)
-                            ]
-                        )
-                    )
-            else:
-                # For unsupported databases, log warning but don't crash
-                if json_query_type == "unsupported":
-                    log.warning("⚠️ JSON-based search not available for this database type")
                 else:
-                    log.error(f"❌ Unexpected JSON query type: {json_query_type}")
+                    # Fallback to title-only search for unsupported databases
+                    query = query.filter(Chat.title.ilike(f"%{search_text}%"))
+            
+            # Add tag filters
+            if "none" in tag_ids:
+                untagged_filter = adapter.build_untagged_filter("meta")
+                if untagged_filter is not None:
+                    query = query.filter(untagged_filter)
+            elif tag_ids:
+                tag_filter = adapter.build_tag_filter("meta", tag_ids, match_all=True)
+                if tag_filter is not None:
+                    query = query.filter(tag_filter)
 
             # Perform pagination at the SQL level
             all_chats = query.offset(skip).limit(limit).all()
@@ -1413,196 +1312,66 @@ class ChatTable:
         self, user_id: str, tag_name: str, skip: int = 0, limit: int = 50
     ) -> list[ChatModel]:
         with get_db() as db:
+            adapter = self._get_adapter(db)
             query = db.query(Chat).filter_by(user_id=user_id)
-            tag_id = tag_name.replace(" ", "_").lower()
+            tag_id = normalize_tag_name(tag_name)
 
-            json_query_type = self._get_json_query_type(db, "meta")
-            log.info(f"🏷️ Tag Filtering Path: {json_query_type.upper()} for tag '{tag_name}'")
-            
-            if json_query_type == "sqlite":
-                log.info("🔧 Using SQLite JSON1 for tag filtering")
-                # SQLite JSON1 querying for tags within the meta JSON field
-                query = query.filter(
-                    text(
-                        f"EXISTS (SELECT 1 FROM json_each(Chat.meta, '$.tags') WHERE json_each.value = :tag_id)"
-                    )
-                ).params(tag_id=tag_id)
-            elif json_query_type == "postgresql_json":
-                # PostgreSQL JSON query for tags within the meta JSON field
-                log.info("🔧 Using PostgreSQL JSON functions for tag filtering")
-                query = query.filter(
-                    text(
-                        "EXISTS (SELECT 1 FROM json_array_elements_text(Chat.meta->'tags') elem WHERE elem = :tag_id)"
-                    )
-                ).params(tag_id=tag_id)
-            elif json_query_type == "postgresql_jsonb":
-                # PostgreSQL JSONB query for tags within the meta JSONB field
-                log.info("🚀 Using PostgreSQL JSONB optimized functions for tag filtering")
-                query = query.filter(
-                    text(
-                        "EXISTS (SELECT 1 FROM jsonb_array_elements_text(Chat.meta->'tags') elem WHERE elem = :tag_id)"
-                    )
-                ).params(tag_id=tag_id)
+            # Use adapter to build tag filter
+            tag_filter = adapter.build_tag_filter("meta", [tag_id], match_all=True)
+            if tag_filter is not None:
+                query = query.filter(tag_filter)
             else:
-                # For unsupported databases, log warning but don't crash
-                if json_query_type == "unsupported":
-                    log.warning("⚠️ Tag filtering not available for this database type")
-                else:
-                    log.error(f"❌ Unexpected JSON query type: {json_query_type}")
+                log.warning("⚠️ Tag filtering not available for this database type")
+                return []
 
             all_chats = query.all()
-            log.debug(f"all_chats: {all_chats}")
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
     def get_chats_by_multiple_tags(
-        self, user_id: str, tag_names: list[str], match_all: bool = True, skip: int = 0, limit: int = 50
+        self, user_id: str, tag_names: List[str], match_all: bool = True, skip: int = 0, limit: int = 50
     ) -> list[ChatModel]:
-        """
-        Get chats that match multiple tags. Optimized to use tag indexes when available.
-        
-        Args:
-            user_id: User ID to filter by
-            tag_names: List of tag names to search for
-            match_all: If True, chat must have ALL tags. If False, chat must have ANY tag.
-            skip: Number of results to skip (pagination)
-            limit: Maximum number of results to return
-        """
+        """Get chats that match multiple tags"""
         with get_db() as db:
+            adapter = self._get_adapter(db)
             query = db.query(Chat).filter_by(user_id=user_id, archived=False)
             
             if not tag_names:
                 return []
             
             # Normalize tag names
-            tag_ids = [tag_name.replace(" ", "_").lower() for tag_name in tag_names]
-            json_query_type = self._get_json_query_type(db, "meta")
-            log.info(f"🏷️ Multi-Tag Query Path: {json_query_type.upper()} for tags {tag_names} (match_all={match_all})")
+            tag_ids = normalize_tag_names(tag_names)
             
-            if json_query_type == "postgresql_jsonb":
-                log.info("🚀 Using PostgreSQL JSONB operators for multi-tag filtering")
-                # JSONB optimized queries - these will use our GIN indexes
-                if match_all:
-                    # Chat must contain ALL specified tags
-                    for tag_id in tag_ids:
-                        query = query.filter(
-                            text("meta->'tags' ? :tag_id").params(tag_id=tag_id)
-                        )
-                else:
-                    # Chat must contain ANY of the specified tags
-                    tag_conditions = [
-                        text("meta->'tags' ? :tag_id").params(tag_id=f"tag_{idx}")
-                        for idx, tag_id in enumerate(tag_ids)
-                    ]
-                    # Build parameters dict
-                    params = {f"tag_{idx}": tag_id for idx, tag_id in enumerate(tag_ids)}
-                    query = query.filter(or_(*[
-                        text(f"meta->'tags' ? :tag_{idx}")
-                        for idx in range(len(tag_ids))
-                    ])).params(**params)
-                    
-            elif json_query_type == "postgresql_json":
-                # JSON queries (less optimal but still functional)
-                log.info("🔧 Using PostgreSQL JSON functions for multi-tag filtering")
-                if match_all:
-                    for tag_id in tag_ids:
-                        query = query.filter(
-                            text(
-                                "EXISTS (SELECT 1 FROM json_array_elements_text(meta->'tags') elem WHERE elem = :tag_id)"
-                            ).params(tag_id=tag_id)
-                        )
-                else:
-                    tag_conditions = [
-                        text(
-                            f"EXISTS (SELECT 1 FROM json_array_elements_text(meta->'tags') elem WHERE elem = :tag_id_{idx})"
-                        ).params(**{f"tag_id_{idx}": tag_id})
-                        for idx, tag_id in enumerate(tag_ids)
-                    ]
-                    query = query.filter(or_(*tag_conditions))
-                    
-            elif json_query_type == "sqlite":
-                # SQLite queries
-                log.info("🔧 Using SQLite JSON1 for multi-tag filtering")
-                if match_all:
-                    for tag_id in tag_ids:
-                        query = query.filter(
-                            text(
-                                "EXISTS (SELECT 1 FROM json_each(Chat.meta, '$.tags') WHERE json_each.value = :tag_id)"
-                            ).params(tag_id=tag_id)
-                        )
-                else:
-                    tag_conditions = [
-                        text(
-                            f"EXISTS (SELECT 1 FROM json_each(Chat.meta, '$.tags') WHERE json_each.value = :tag_id_{idx})"
-                        ).params(**{f"tag_id_{idx}": tag_id})
-                        for idx, tag_id in enumerate(tag_ids)
-                    ]
-                    query = query.filter(or_(*tag_conditions))
+            # Use adapter to build tag filter
+            tag_filter = adapter.build_tag_filter("meta", tag_ids, match_all=match_all)
+            if tag_filter is not None:
+                query = query.filter(tag_filter)
             else:
-                # For unsupported databases, log warning and return empty list
-                if json_query_type == "unsupported":
-                    log.warning("⚠️ Multi-tag filtering not available for this database type")
-                    return []
-                else:
-                    log.error(f"❌ Unexpected JSON query type: {json_query_type}")
-                    return []
+                log.warning("⚠️ Multi-tag filtering not available for this database type")
+                return []
             
             # Apply pagination and ordering
             query = query.order_by(Chat.updated_at.desc()).offset(skip).limit(limit)
-            
             all_chats = query.all()
-            log.info(f"Found {len(all_chats)} chats matching tags: {tag_names} (match_all={match_all})")
             
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
     def get_chats_without_tags(self, user_id: str, skip: int = 0, limit: int = 50) -> list[ChatModel]:
-        """
-        Get chats that have no tags. Optimized to use tag indexes when available.
-        """
+        """Get chats that have no tags"""
         with get_db() as db:
+            adapter = self._get_adapter(db)
             query = db.query(Chat).filter_by(user_id=user_id, archived=False)
-            json_query_type = self._get_json_query_type(db, "meta")
-            log.info(f"🏷️ Untagged Chats Query Path: {json_query_type.upper()}")
             
-            if json_query_type == "postgresql_jsonb":
-                log.info("🚀 Using PostgreSQL JSONB operators for untagged chat filtering")
-                # JSONB optimized: use the has_tags index
-                query = query.filter(
-                    or_(
-                        text("NOT (meta ? 'tags')"),  # No tags key at all
-                        text("jsonb_array_length(meta->'tags') = 0")  # Empty tags array
-                    )
-                )
-            elif json_query_type == "postgresql_json":
-                # JSON version
-                log.info("🔧 Using PostgreSQL JSON functions for untagged chat filtering")
-                query = query.filter(
-                    or_(
-                        text("NOT (meta ? 'tags')"),
-                        text("json_array_length(meta->'tags') = 0")
-                    )
-                )
-            elif json_query_type == "sqlite":
-                # SQLite version
-                log.info("🔧 Using SQLite JSON1 for untagged chat filtering")
-                query = query.filter(
-                    or_(
-                        text("NOT EXISTS (SELECT 1 FROM json_each(Chat.meta, '$.tags'))"),
-                        text("json_array_length(Chat.meta, '$.tags') = 0")
-                    )
-                )
+            # Use adapter to build untagged filter
+            untagged_filter = adapter.build_untagged_filter("meta")
+            if untagged_filter is not None:
+                query = query.filter(untagged_filter)
             else:
-                # For unsupported databases, log warning and return empty list
-                if json_query_type == "unsupported":
-                    log.warning("⚠️ Tag filtering not available for this database type")
-                    return []
-                else:
-                    log.error(f"❌ Unexpected JSON query type: {json_query_type}")
-                    return []
+                log.warning("⚠️ Tag filtering not available for this database type")
+                return []
             
             query = query.order_by(Chat.updated_at.desc()).offset(skip).limit(limit)
             all_chats = query.all()
             
-            log.info(f"Found {len(all_chats)} chats without tags")
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
     def add_chat_tag_by_id_and_user_id_and_tag_name(
@@ -1629,58 +1398,21 @@ class ChatTable:
             return None
 
     def count_chats_by_tag_name_and_user_id(self, tag_name: str, user_id: str) -> int:
-        with get_db() as db:  # Assuming `get_db()` returns a session object
+        with get_db() as db:
+            adapter = self._get_adapter(db)
             query = db.query(Chat).filter_by(user_id=user_id, archived=False)
 
             # Normalize the tag_name for consistency
-            tag_id = tag_name.replace(" ", "_").lower()
+            tag_id = normalize_tag_name(tag_name)
 
-            json_query_type = self._get_json_query_type(db, "meta")
-            log.info(f"🔢 Tag Count Query Path: {json_query_type.upper()} for tag '{tag_name}'")
-            
-            if json_query_type == "sqlite":
-                log.info("🔧 Using SQLite JSON1 for tag counting")
-                # SQLite JSON1 support for querying the tags inside the `meta` JSON field
-                query = query.filter(
-                    text(
-                        f"EXISTS (SELECT 1 FROM json_each(Chat.meta, '$.tags') WHERE json_each.value = :tag_id)"
-                    )
-                ).params(tag_id=tag_id)
-
-            elif json_query_type == "postgresql_json":
-                # PostgreSQL JSON support for querying the tags inside the `meta` JSON field
-                log.info("🔧 Using PostgreSQL JSON functions for tag counting")
-                query = query.filter(
-                    text(
-                        "EXISTS (SELECT 1 FROM json_array_elements_text(Chat.meta->'tags') elem WHERE elem = :tag_id)"
-                    )
-                ).params(tag_id=tag_id)
-
-            elif json_query_type == "postgresql_jsonb":
-                # PostgreSQL JSONB support for querying the tags inside the `meta` JSONB field
-                log.info("🚀 Using PostgreSQL JSONB optimized functions for tag counting")
-                query = query.filter(
-                    text(
-                        "EXISTS (SELECT 1 FROM jsonb_array_elements_text(Chat.meta->'tags') elem WHERE elem = :tag_id)"
-                    )
-                ).params(tag_id=tag_id)
-
+            # Use adapter to build tag filter
+            tag_filter = adapter.build_tag_filter("meta", [tag_id], match_all=True)
+            if tag_filter is not None:
+                query = query.filter(tag_filter)
+                return query.count()
             else:
-                # For unsupported databases, log warning but don't crash
-                if json_query_type == "unsupported":
-                    log.warning("⚠️ Tag counting not available for this database type")
-                    return 0  # Return 0 for unsupported databases
-                else:
-                    log.error(f"❌ Unexpected JSON query type: {json_query_type}")
-                    return 0
-
-            # Get the count of matching records
-            count = query.count()
-
-            # Debugging output for inspection
-            log.info(f"Count of chats for tag '{tag_name}': {count}")
-
-            return count
+                log.warning("⚠️ Tag counting not available for this database type")
+                return 0
 
     def delete_tag_by_id_and_user_id_and_tag_name(
         self, id: str, user_id: str, tag_name: str
@@ -1689,7 +1421,7 @@ class ChatTable:
             with get_db() as db:
                 chat = db.get(Chat, id)
                 tags = chat.meta.get("tags", [])
-                tag_id = tag_name.replace(" ", "_").lower()
+                tag_id = normalize_tag_name(tag_name)
 
                 tags = [tag for tag in tags if tag != tag_id]
                 chat.meta = {
