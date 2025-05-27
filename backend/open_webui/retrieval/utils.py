@@ -12,7 +12,7 @@ from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document
 
 from open_webui.config import VECTOR_DB
-from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
+from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 
 from open_webui.models.users import UserModel
 from open_webui.models.files import Files
@@ -116,6 +116,7 @@ def query_doc_with_hybrid_search(
     reranking_function,
     k_reranker: int,
     r: float,
+    hybrid_bm25_weight: float,
 ) -> dict:
     try:
         log.debug(f"query_doc_with_hybrid_search:doc {collection_name}")
@@ -131,9 +132,20 @@ def query_doc_with_hybrid_search(
             top_k=k,
         )
 
-        ensemble_retriever = EnsembleRetriever(
-            retrievers=[bm25_retriever, vector_search_retriever], weights=[0.5, 0.5]
-        )
+        if hybrid_bm25_weight <= 0:
+            ensemble_retriever = EnsembleRetriever(
+                retrievers=[vector_search_retriever], weights=[1.0]
+            )
+        elif hybrid_bm25_weight >= 1:
+            ensemble_retriever = EnsembleRetriever(
+                retrievers=[bm25_retriever], weights=[1.0]
+            )
+        else:
+            ensemble_retriever = EnsembleRetriever(
+                retrievers=[bm25_retriever, vector_search_retriever],
+                weights=[hybrid_bm25_weight, 1.0 - hybrid_bm25_weight],
+            )
+
         compressor = RerankCompressor(
             embedding_function=embedding_function,
             top_n=k_reranker,
@@ -207,7 +219,7 @@ def merge_and_sort_query_results(query_results: list[dict], k: int) -> dict:
 
         for distance, document, metadata in zip(distances, documents, metadatas):
             if isinstance(document, str):
-                doc_hash = hashlib.md5(
+                doc_hash = hashlib.sha256(
                     document.encode()
                 ).hexdigest()  # Compute a hash for uniqueness
 
@@ -260,23 +272,47 @@ def query_collection(
     k: int,
 ) -> dict:
     results = []
-    for query in queries:
-        log.debug(f"query_collection:query {query}")
-        query_embedding = embedding_function(query, prefix=RAG_EMBEDDING_QUERY_PREFIX)
-        for collection_name in collection_names:
+    error = False
+
+    def process_query_collection(collection_name, query_embedding):
+        try:
             if collection_name:
-                try:
-                    result = query_doc(
-                        collection_name=collection_name,
-                        k=k,
-                        query_embedding=query_embedding,
-                    )
-                    if result is not None:
-                        results.append(result.model_dump())
-                except Exception as e:
-                    log.exception(f"Error when querying the collection: {e}")
-            else:
-                pass
+                result = query_doc(
+                    collection_name=collection_name,
+                    k=k,
+                    query_embedding=query_embedding,
+                )
+                if result is not None:
+                    return result.model_dump(), None
+            return None, None
+        except Exception as e:
+            log.exception(f"Error when querying the collection: {e}")
+            return None, e
+
+    # Generate all query embeddings (in one call)
+    query_embeddings = embedding_function(queries, prefix=RAG_EMBEDDING_QUERY_PREFIX)
+    log.debug(
+        f"query_collection: processing {len(queries)} queries across {len(collection_names)} collections"
+    )
+
+    with ThreadPoolExecutor() as executor:
+        future_results = []
+        for query_embedding in query_embeddings:
+            for collection_name in collection_names:
+                result = executor.submit(
+                    process_query_collection, collection_name, query_embedding
+                )
+                future_results.append(result)
+        task_results = [future.result() for future in future_results]
+
+    for result, err in task_results:
+        if err is not None:
+            error = True
+        elif result is not None:
+            results.append(result)
+
+    if error and not results:
+        log.warning("All collection queries failed. No results returned.")
 
     return merge_and_sort_query_results(results, k=k)
 
@@ -289,6 +325,7 @@ def query_collection_with_hybrid_search(
     reranking_function,
     k_reranker: int,
     r: float,
+    hybrid_bm25_weight: float,
 ) -> dict:
     results = []
     error = False
@@ -322,6 +359,7 @@ def query_collection_with_hybrid_search(
                 reranking_function=reranking_function,
                 k_reranker=k_reranker,
                 r=r,
+                hybrid_bm25_weight=hybrid_bm25_weight,
             )
             return result, None
         except Exception as e:
@@ -409,6 +447,7 @@ def get_sources_from_files(
     reranking_function,
     k_reranker,
     r,
+    hybrid_bm25_weight,
     hybrid_search,
     full_context=False,
 ):
@@ -526,6 +565,7 @@ def get_sources_from_files(
                                     reranking_function=reranking_function,
                                     k_reranker=k_reranker,
                                     r=r,
+                                    hybrid_bm25_weight=hybrid_bm25_weight,
                                 )
                             except Exception as e:
                                 log.debug(
@@ -794,7 +834,9 @@ class RerankCompressor(BaseDocumentCompressor):
             )
             scores = util.cos_sim(query_embedding, document_embedding)[0]
 
-        docs_with_scores = list(zip(documents, scores.tolist()))
+        docs_with_scores = list(
+            zip(documents, scores.tolist() if not isinstance(scores, list) else scores)
+        )
         if self.r_score:
             docs_with_scores = [
                 (d, s) for d, s in docs_with_scores if s >= self.r_score

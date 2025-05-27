@@ -7,7 +7,7 @@
 		stiffness: 0.05
 	});
 
-	import { onMount, tick, setContext } from 'svelte';
+	import { onMount, tick, setContext, onDestroy } from 'svelte';
 	import {
 		config,
 		user,
@@ -26,14 +26,15 @@
 		isLastActiveTab,
 		isApp,
 		appInfo,
-		toolServers
+		toolServers,
+		playingNotificationSound
 	} from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { Toaster, toast } from 'svelte-sonner';
 
 	import { executeToolServer, getBackendConfig } from '$lib/apis';
-	import { getSessionUser } from '$lib/apis/auths';
+	import { getSessionUser, userSignOut } from '$lib/apis/auths';
 
 	import '../tailwind.css';
 	import '../app.css';
@@ -48,11 +49,22 @@
 	import AppSidebar from '$lib/components/app/AppSidebar.svelte';
 	import { chatCompletion } from '$lib/apis/openai';
 
+	import { beforeNavigate } from '$app/navigation';
+	import { updated } from '$app/state';
+
+	// handle frontend updates (https://svelte.dev/docs/kit/configuration#version)
+	beforeNavigate(({ willUnload, to }) => {
+		if (updated.current && !willUnload && to?.url) {
+			location.href = to.url.href;
+		}
+	});
+
 	setContext('i18n', i18n);
 
 	const bc = new BroadcastChannel('active-tab-channel');
 
 	let loaded = false;
+	let tokenTimer = null;
 
 	const BREAKPOINT = 768;
 
@@ -259,9 +271,19 @@
 				const { done, content, title } = data;
 
 				if (done) {
+					if ($settings?.notificationSoundAlways ?? false) {
+						playingNotificationSound.set(true);
+
+						const audio = new Audio(`/audio/notification.mp3`);
+						audio.play().finally(() => {
+							// Ensure the global state is reset after the sound finishes
+							playingNotificationSound.set(false);
+						});
+					}
+
 					if ($isLastActiveTab) {
 						if ($settings?.notificationEnabled ?? false) {
-							new Notification(`${title} | Open WebUI`, {
+							new Notification(`${title} • Open WebUI`, {
 								body: content,
 								icon: `${WEBUI_BASE_URL}/static/favicon.png`
 							});
@@ -410,7 +432,7 @@
 			if (type === 'message') {
 				if ($isLastActiveTab) {
 					if ($settings?.notificationEnabled ?? false) {
-						new Notification(`${data?.user?.name} (#${event?.channel?.name}) | Open WebUI`, {
+						new Notification(`${data?.user?.name} (#${event?.channel?.name}) • Open WebUI`, {
 							body: data?.content,
 							icon: data?.user?.profile_image_url ?? `${WEBUI_BASE_URL}/static/favicon.png`
 						});
@@ -429,6 +451,25 @@
 					unstyled: true
 				});
 			}
+		}
+	};
+
+	const TOKEN_EXPIRY_BUFFER = 60; // seconds
+	const checkTokenExpiry = async () => {
+		const exp = $user?.expires_at; // token expiry time in unix timestamp
+		const now = Math.floor(Date.now() / 1000); // current time in unix timestamp
+
+		if (!exp) {
+			// If no expiry time is set, do nothing
+			return;
+		}
+
+		if (now >= exp - TOKEN_EXPIRY_BUFFER) {
+			const res = await userSignOut();
+			user.set(null);
+			localStorage.removeItem('token');
+
+			location.href = res?.redirect_url ?? '/auth';
 		}
 	};
 
@@ -468,6 +509,9 @@
 			if (document.visibilityState === 'visible') {
 				isLastActiveTab.set(true); // This tab is now the active tab
 				bc.postMessage('active'); // Notify other tabs that this tab is active
+
+				// Check token expiry when the tab becomes active
+				checkTokenExpiry();
 			}
 		};
 
@@ -497,6 +541,12 @@
 
 				$socket?.on('chat-events', chatEventHandler);
 				$socket?.on('channel-events', channelEventHandler);
+
+				// Set up the token expiry check
+				if (tokenTimer) {
+					clearInterval(tokenTimer);
+				}
+				tokenTimer = setInterval(checkTokenExpiry, 15000);
 			} else {
 				$socket?.off('chat-events', chatEventHandler);
 				$socket?.off('channel-events', channelEventHandler);
@@ -639,4 +689,5 @@
 			: 'light'}
 	richColors
 	position="top-right"
+	closeButton
 />

@@ -20,10 +20,7 @@ from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.constants import TASKS
 
 from open_webui.routers.pipelines import process_pipeline_inlet_filter
-from open_webui.utils.filter import (
-    get_sorted_filter_ids,
-    process_filter_functions,
-)
+
 from open_webui.utils.task import get_task_model_id
 
 from open_webui.config import (
@@ -186,24 +183,17 @@ async def generate_title(
     else:
         template = DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE
 
-    messages = form_data["messages"]
-
-    # Remove reasoning details from the messages
-    for message in messages:
-        message["content"] = re.sub(
-            r"<details\s+type=\"reasoning\"[^>]*>.*?<\/details>",
-            "",
-            message["content"],
-            flags=re.S,
-        ).strip()
-
     content = title_generation_template(
         template,
-        messages,
+        form_data["messages"],
         {
             "name": user.name,
             "location": user.info.get("location") if user.info else None,
         },
+    )
+
+    max_tokens = (
+        models[task_model_id].get("info", {}).get("params", {}).get("max_tokens", 1000)
     )
 
     payload = {
@@ -211,10 +201,10 @@ async def generate_title(
         "messages": [{"role": "user", "content": content}],
         "stream": False,
         **(
-            {"max_tokens": 1000}
+            {"max_tokens": max_tokens}
             if models[task_model_id].get("owned_by") == "ollama"
             else {
-                "max_completion_tokens": 1000,
+                "max_completion_tokens": max_tokens,
             }
         ),
         "metadata": {
