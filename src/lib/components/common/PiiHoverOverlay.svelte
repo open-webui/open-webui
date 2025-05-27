@@ -139,7 +139,7 @@
 					<div class="flex items-center justify-between">
 						<span class="text-xs font-medium text-[#3f3d8a] dark:text-[#f8b76b]">Text:</span>
 						<span class="text-xs text-[#3f3d8a] dark:text-white text-right break-all bg-[#f8b76b]/10 dark:bg-[#3f3d8a]/10 px-1.5 py-0.5 rounded italic max-w-32">
-							"{entity.text}"
+							"{entity.raw_text}"
 						</span>
 					</div>
 					
