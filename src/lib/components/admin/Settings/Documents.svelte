@@ -314,6 +314,7 @@
 									bind:value={RAGConfig.CONTENT_EXTRACTION_ENGINE}
 								>
 									<option value="">{$i18n.t('Default')}</option>
+									<option value="datalab_marker">{ $i18n.t('Datalab Marker API') }</option>
 									<option value="external">{$i18n.t('External')}</option>
 									<option value="tika">{$i18n.t('Tika')}</option>
 									<option value="docling">{$i18n.t('Docling')}</option>
