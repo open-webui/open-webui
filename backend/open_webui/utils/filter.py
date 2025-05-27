@@ -66,7 +66,9 @@ async def process_filter_functions(
         if not filter:
             continue
 
-        function_module = get_function_module(request, filter_id)
+        function_module = get_function_module(
+            request, filter_id, load_from_db=(filter_type != "stream")
+        )
         # Prepare handler function
         handler = getattr(function_module, filter_type, None)
         if not handler:
