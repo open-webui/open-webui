@@ -262,7 +262,7 @@ class CreditService:
             if has_expired_trial:
                 raise HTTPException(
                     status_code=402,  # 402 Payment Required
-                    detail="Your trial period has expired. Please subscribe to a plan to continue using the service.",
+                    detail="Your trial period is over. To continue using the platform, please select a plan.",
                 )
             else:
                 raise HTTPException(
