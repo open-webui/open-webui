@@ -42,7 +42,11 @@
 			public_models: false,
 			public_knowledge: false,
 			public_prompts: false,
-			public_tools: false
+			public_tools: false,
+			private_models: false,
+			private_knowledge: false,
+			private_prompts: false,
+			private_tools: false
 		},
 		chat: {
 			controls: true,

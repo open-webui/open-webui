@@ -541,6 +541,8 @@
 							<AccessControl
 								bind:accessControl
 								accessRoles={['read', 'write']}
+								allowPrivate={$user?.permissions?.sharing?.private_models ||
+									$user?.role === 'admin'}
 								allowPublic={$user?.permissions?.sharing?.public_models || $user?.role === 'admin'}
 							/>
 						</div>

@@ -16,6 +16,7 @@
 	export let accessControl = {};
 
 	export let allowPublic = true;
+	export let allowPrivate = true;
 
 	let selectedGroupId = '';
 	let groups = [];
@@ -34,11 +35,25 @@
 		onChange(accessControl);
 	}
 
+	$: if (!allowPrivate && accessControl === null) {
+		accessControl = {
+			read: {
+				group_ids: [],
+				user_ids: []
+			},
+			write: {
+				group_ids: [],
+				user_ids: []
+			}
+		};
+		onChange(accessControl);
+	}
+
 	onMount(async () => {
 		groups = await getGroups(localStorage.token);
 
 		if (accessControl === null) {
-			if (allowPublic) {
+			if (allowPublic || allowPrivate) {
 				accessControl = null;
 			} else {
 				accessControl = {
@@ -161,7 +176,7 @@
 			</div>
 		</div>
 	</div>
-	{#if accessControl !== null}
+	{#if accessControl !== null && allowPrivate}
 		{@const accessGroups = groups.filter((group) =>
 			accessControl.read.group_ids.includes(group.id)
 		)}

@@ -9,6 +9,7 @@
 	export let accessControl = {};
 	export let accessRoles = ['read'];
 	export let allowPublic = true;
+	export let allowPrivate = true;
 
 	export let onChange = () => {};
 </script>
@@ -39,7 +40,7 @@
 		</div>
 
 		<div class="w-full px-5 pb-4 dark:text-white">
-			<AccessControl bind:accessControl {onChange} {accessRoles} {allowPublic} />
+			<AccessControl bind:accessControl {onChange} {accessRoles} {allowPrivate} {allowPublic} />
 		</div>
 	</div>
 </Modal>

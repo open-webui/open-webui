@@ -189,6 +189,7 @@ class Tools:
 	bind:show={showAccessControlModal}
 	bind:accessControl
 	accessRoles={['read', 'write']}
+	allowPrivate={$user?.permissions?.sharing?.private_tools || $user?.role === 'admin'}
 	allowPublic={$user?.permissions?.sharing?.public_tools || $user?.role === 'admin'}
 />
 

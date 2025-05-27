@@ -17,7 +17,11 @@
 			public_models: false,
 			public_knowledge: false,
 			public_prompts: false,
-			public_tools: false
+			public_tools: false,
+			private_models: false,
+			private_knowledge: false,
+			private_prompts: false,
+			private_tools: false
 		},
 		chat: {
 			controls: true,
@@ -239,6 +243,34 @@
 				{$i18n.t('Tools Public Sharing')}
 			</div>
 			<Switch bind:state={permissions.sharing.public_tools} />
+		</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Models Private Sharing')}
+			</div>
+			<Switch bind:state={permissions.sharing.private_models} />
+		</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Knowledge Private Sharing')}
+			</div>
+			<Switch bind:state={permissions.sharing.private_knowledge} />
+		</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Prompts Private Sharing')}
+			</div>
+			<Switch bind:state={permissions.sharing.private_prompts} />
+		</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Tools Private Sharing')}
+			</div>
+			<Switch bind:state={permissions.sharing.private_tools} />
 		</div>
 	</div>
 

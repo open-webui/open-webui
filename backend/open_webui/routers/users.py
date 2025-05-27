@@ -107,6 +107,10 @@ class SharingPermissions(BaseModel):
     public_knowledge: bool = True
     public_prompts: bool = True
     public_tools: bool = True
+    private_models: bool = True
+    private_knowledge: bool = True
+    private_prompts: bool = True
+    private_tools: bool = True
 
 
 class ChatPermissions(BaseModel):
