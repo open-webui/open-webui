@@ -637,8 +637,12 @@ app.state.WEBUI_AUTH_SIGNOUT_REDIRECT_URL = WEBUI_AUTH_SIGNOUT_REDIRECT_URL
 app.state.EXTERNAL_PWA_MANIFEST_URL = EXTERNAL_PWA_MANIFEST_URL
 
 app.state.USER_COUNT = None
+
 app.state.TOOLS = {}
+app.state.TOOL_CONTENTS = {}
+
 app.state.FUNCTIONS = {}
+app.state.FUNCTION_CONTENTS = {}
 
 ########################################
 #
