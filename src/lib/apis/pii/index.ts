@@ -43,7 +43,10 @@ export interface PiiSession {
 }
 
 // Create a session for consistent masking/unmasking
-export const createPiiSession = async (apiKey: string, ttl: string = '24h'): Promise<PiiSession> => {
+export const createPiiSession = async (
+	apiKey: string,
+	ttl: string = '24h'
+): Promise<PiiSession> => {
 	const response = await fetch(`${NENNA_API_BASE_URL}/sessions`, {
 		method: 'POST',
 		headers: {
@@ -219,4 +222,4 @@ export const getPiiSession = async (apiKey: string, sessionId: string): Promise<
 	}
 
 	return response.json();
-}; 
+};

@@ -14,10 +14,15 @@
 	import { createNewFeedback, getFeedbackById, updateFeedbackById } from '$lib/apis/evaluations';
 	import { getChatById } from '$lib/apis/chats';
 	import { generateTags } from '$lib/apis';
-	
+
 	// PII Detection imports
 	import { unmaskPiiTextWithSession, type PiiEntity } from '$lib/apis/pii';
-	import { PiiSessionManager, unmaskTextWithEntities, highlightUnmaskedEntities, type ExtendedPiiEntity } from '$lib/utils/pii';
+	import {
+		PiiSessionManager,
+		unmaskTextWithEntities,
+		highlightUnmaskedEntities,
+		type ExtendedPiiEntity
+	} from '$lib/utils/pii';
 
 	import { config, models, settings, temporaryChatEnabled, TTSWorker, user } from '$lib/stores';
 	import { synthesizeOpenAISpeech } from '$lib/apis/audio';
@@ -114,7 +119,7 @@
 			message = JSON.parse(JSON.stringify(history.messages[messageId]));
 		}
 	}
-	
+
 	// PII Detection state
 	let piiSessionManager = PiiSessionManager.getInstance();
 	let unmaskedContent = '';
@@ -175,7 +180,7 @@
 			toast.success($i18n.t('Copying to clipboard was successful!'));
 		}
 	};
-	
+
 	// PII Processing function - let markdown components handle unmasking and highlighting
 	const processResponseContent = (content: string): string => {
 		// Don't unmask here - let the PiiAwareText components in markdown handle it

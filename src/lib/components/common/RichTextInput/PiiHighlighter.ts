@@ -7,7 +7,7 @@ import { PiiSessionManager } from '$lib/utils/pii';
 export interface PiiHighlighterOptions {
 	piiEntities: ExtendedPiiEntity[];
 	highlightClass: string;
-	onHover?: (entity: ExtendedPiiEntity, position: { x: number, y: number }) => void;
+	onHover?: (entity: ExtendedPiiEntity, position: { x: number; y: number }) => void;
 	onHoverEnd?: () => void;
 }
 
@@ -25,7 +25,7 @@ export const PiiHighlighter = Extension.create<PiiHighlighterOptions>({
 
 	addProseMirrorPlugins() {
 		const options = this.options;
-		
+
 		return [
 			new Plugin({
 				key: new PluginKey('piiHighlighter'),
@@ -36,7 +36,7 @@ export const PiiHighlighter = Extension.create<PiiHighlighterOptions>({
 					apply: (tr, decorationSet) => {
 						// Map decorations through document changes
 						decorationSet = decorationSet.map(tr.mapping, tr.doc);
-						
+
 						// Update decorations based on current PII entities
 						const decorations: Decoration[] = [];
 						const { piiEntities, highlightClass } = options;
@@ -46,12 +46,12 @@ export const PiiHighlighter = Extension.create<PiiHighlighterOptions>({
 								// Add 1 to account for the document structure offset
 								const from = occurrence.start_idx + 1;
 								const to = occurrence.end_idx + 1;
-								
+
 								// Ensure the range is valid for the current document
 								if (from >= 1 && to <= tr.doc.content.size && from < to) {
 									const shouldMask = entity.shouldMask ?? true;
 									const maskingClass = shouldMask ? 'pii-masked' : 'pii-unmasked';
-									
+
 									decorations.push(
 										Decoration.inline(from, to, {
 											class: `${highlightClass} ${maskingClass}`,
@@ -79,17 +79,17 @@ export const PiiHighlighter = Extension.create<PiiHighlighterOptions>({
 						if (target.classList.contains('pii-highlight')) {
 							const entityLabel = target.getAttribute('data-pii-label');
 							const occurrenceIndex = parseInt(target.getAttribute('data-pii-occurrence') || '0');
-							
+
 							if (entityLabel) {
 								const piiSessionManager = PiiSessionManager.getInstance();
 								piiSessionManager.toggleEntityMasking(entityLabel, occurrenceIndex);
-								
+
 								// Force a re-render by dispatching a transaction
-								const tr = view.state.tr.setMeta('piiHighlighter', { 
-									entities: piiSessionManager.getEntities() 
+								const tr = view.state.tr.setMeta('piiHighlighter', {
+									entities: piiSessionManager.getEntities()
 								});
 								view.dispatch(tr);
-								
+
 								event.preventDefault();
 								return true;
 							}
@@ -99,10 +99,10 @@ export const PiiHighlighter = Extension.create<PiiHighlighterOptions>({
 					handleDOMEvents: {
 						mouseover: (view, event) => {
 							const target = event.target as HTMLElement;
-							
+
 							// Find the PII element - could be the target itself or need to traverse up
 							let piiElement: HTMLElement | null = null;
-							
+
 							if (target.classList.contains('pii-highlight')) {
 								piiElement = target;
 							} else {
@@ -116,11 +116,11 @@ export const PiiHighlighter = Extension.create<PiiHighlighterOptions>({
 									current = current.parentElement;
 								}
 							}
-							
+
 							if (piiElement) {
 								const entityIndex = parseInt(piiElement.getAttribute('data-entity-index') || '0');
 								const { piiEntities, onHover } = options;
-								
+
 								if (onHover && piiEntities[entityIndex]) {
 									const rect = piiElement.getBoundingClientRect();
 									const position = {
@@ -136,17 +136,17 @@ export const PiiHighlighter = Extension.create<PiiHighlighterOptions>({
 						mouseout: (view, event) => {
 							const target = event.target as HTMLElement;
 							const relatedTarget = event.relatedTarget as HTMLElement;
-							
+
 							// Find if we're leaving a PII element
 							let leavingPiiElement = false;
-							
+
 							if (target.classList.contains('pii-highlight')) {
 								// Check if we're moving to a non-PII element
 								if (!relatedTarget || !relatedTarget.classList.contains('pii-highlight')) {
 									leavingPiiElement = true;
 								}
 							}
-							
+
 							if (leavingPiiElement) {
 								const { onHoverEnd } = options;
 								if (onHoverEnd) {
@@ -165,15 +165,17 @@ export const PiiHighlighter = Extension.create<PiiHighlighterOptions>({
 	addCommands() {
 		const self = this;
 		return {
-			updatePiiEntities: (entities: ExtendedPiiEntity[]) => ({ tr, dispatch }: any) => {
-				if (dispatch) {
-					// Update the options with new entities
-					self.options.piiEntities = entities;
-					// Force a state update to refresh decorations
-					dispatch(tr.setMeta('piiHighlighter', { entities }));
+			updatePiiEntities:
+				(entities: ExtendedPiiEntity[]) =>
+				({ tr, dispatch }: any) => {
+					if (dispatch) {
+						// Update the options with new entities
+						self.options.piiEntities = entities;
+						// Force a state update to refresh decorations
+						dispatch(tr.setMeta('piiHighlighter', { entities }));
+					}
+					return true;
 				}
-				return true;
-			}
 		} as any;
 	}
-}); 
+});

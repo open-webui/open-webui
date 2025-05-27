@@ -1,7 +1,12 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import DOMPurify from 'dompurify';
-	import { PiiSessionManager, highlightUnmaskedEntities, unmaskTextWithEntities, type ExtendedPiiEntity } from '$lib/utils/pii';
+	import {
+		PiiSessionManager,
+		highlightUnmaskedEntities,
+		unmaskTextWithEntities,
+		type ExtendedPiiEntity
+	} from '$lib/utils/pii';
 	import PiiHoverOverlay from '../../../common/PiiHoverOverlay.svelte';
 
 	export let text: string;
@@ -9,7 +14,7 @@
 
 	let containerElement: HTMLElement;
 	let piiSessionManager = PiiSessionManager.getInstance();
-	
+
 	// Hover overlay state
 	let hoverOverlayVisible = false;
 	let hoverOverlayEntity: ExtendedPiiEntity | null = null;
@@ -22,7 +27,7 @@
 			id,
 			text: text.substring(0, 50) + '...',
 			entitiesCount: entities.length,
-			entities: entities.map(e => ({ label: e.label, text: e.raw_text })),
+			entities: entities.map((e) => ({ label: e.label, text: e.raw_text })),
 			hasContainer: !!containerElement
 		});
 	}
@@ -31,17 +36,17 @@
 			console.log('PiiAwareText: No entities, returning original text');
 			return text;
 		}
-		
+
 		// First, check if the text contains masked patterns like [{LABEL_ID}]
 		// Create a fresh regex each time to avoid state issues
 		const maskedPatternRegex = /\[?\{?([A-Z_]+_\d+)\}?\]?/;
 		const hasMaskedPatterns = maskedPatternRegex.test(text);
-		
+
 		console.log('PiiAwareText processing:', {
 			hasMaskedPatterns,
 			textSample: text.substring(0, 100)
 		});
-		
+
 		if (hasMaskedPatterns) {
 			// If it has masked patterns, unmask them first
 			const unmaskedText = unmaskTextWithEntities(text, entities);
@@ -59,7 +64,7 @@
 	$: hasHighlighting = processedText !== text;
 
 	// Hover overlay handlers
-	const handlePiiHover = (entity: ExtendedPiiEntity, position: { x: number, y: number }) => {
+	const handlePiiHover = (entity: ExtendedPiiEntity, position: { x: number; y: number }) => {
 		clearTimeout(hoverTimeout);
 		hoverOverlayEntity = entity;
 		hoverOverlayPosition = position;
@@ -88,18 +93,18 @@
 
 		const piiElements = containerElement.querySelectorAll('.pii-highlight');
 		console.log('PiiAwareText: Adding event listeners to', piiElements.length, 'PII elements');
-		
+
 		piiElements.forEach((element) => {
 			const htmlElement = element as HTMLElement;
-			
+
 			const handleMouseEnter = (event: MouseEvent) => {
 				console.log('PiiAwareText: Mouse enter event triggered');
 				const target = event.target as HTMLElement;
 				const entityLabel = target.getAttribute('data-pii-label');
 				console.log('PiiAwareText: Entity label found:', entityLabel);
-				
+
 				if (entityLabel) {
-					const entity = entities.find(e => e.label === entityLabel);
+					const entity = entities.find((e) => e.label === entityLabel);
 					console.log('PiiAwareText: Found entity:', entity);
 					if (entity) {
 						const rect = target.getBoundingClientRect();
@@ -120,7 +125,7 @@
 			const handleClick = (event: MouseEvent) => {
 				const target = event.target as HTMLElement;
 				const entityLabel = target.getAttribute('data-pii-label');
-				
+
 				if (entityLabel) {
 					piiSessionManager.toggleEntityMasking(entityLabel, 0);
 					handleOverlayToggle();
@@ -131,7 +136,7 @@
 			htmlElement.addEventListener('mouseenter', handleMouseEnter);
 			htmlElement.addEventListener('mouseleave', handleMouseLeave);
 			htmlElement.addEventListener('click', handleClick);
-			
+
 			// Store event listeners for cleanup
 			(htmlElement as any)._piiEventListeners = {
 				mouseenter: handleMouseEnter,
@@ -145,11 +150,11 @@
 		if (!containerElement) return;
 
 		const piiElements = containerElement.querySelectorAll('.pii-highlight');
-		
+
 		piiElements.forEach((element) => {
 			const htmlElement = element as HTMLElement;
 			const listeners = (htmlElement as any)._piiEventListeners;
-			
+
 			if (listeners) {
 				htmlElement.removeEventListener('mouseenter', listeners.mouseenter);
 				htmlElement.removeEventListener('mouseleave', listeners.mouseleave);
@@ -205,9 +210,9 @@
 		cursor: pointer;
 		transition: all 0.2s ease;
 	}
-	
+
 	:global(.pii-highlight:hover) {
 		transform: translateY(-1px);
-		box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 	}
-</style> 
+</style>

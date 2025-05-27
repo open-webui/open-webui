@@ -20,8 +20,6 @@
 	export let id: string;
 	export let tokens: Token[];
 	export let onSourceClick: Function = () => {};
-	
-
 </script>
 
 {#each tokens as token}

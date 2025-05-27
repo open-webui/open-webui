@@ -161,7 +161,7 @@ export class PiiSessionManager {
 	// Set entities for the current global session (backwards compatibility)
 	setEntities(entities: PiiEntity[]) {
 		// Convert to extended entities with default masking enabled
-		this.entities = entities.map(entity => ({
+		this.entities = entities.map((entity) => ({
 			...entity,
 			shouldMask: true // Default to masking enabled
 		}));
@@ -174,7 +174,7 @@ export class PiiSessionManager {
 
 	// Conversation-specific methods
 	setConversationEntities(conversationId: string, entities: PiiEntity[], sessionId?: string) {
-		const newExtendedEntities = entities.map(entity => ({
+		const newExtendedEntities = entities.map((entity) => ({
 			...entity,
 			shouldMask: true // Default to masking enabled
 		}));
@@ -185,11 +185,13 @@ export class PiiSessionManager {
 
 		// Merge new entities with existing ones, avoiding duplicates by label
 		const mergedEntities = [...existingEntities];
-		
-		console.log(`PiiSessionManager: Merging ${newExtendedEntities.length} new entities with ${existingEntities.length} existing entities for conversation: ${conversationId}`);
-		
-		newExtendedEntities.forEach(newEntity => {
-			const existingIndex = mergedEntities.findIndex(e => e.label === newEntity.label);
+
+		console.log(
+			`PiiSessionManager: Merging ${newExtendedEntities.length} new entities with ${existingEntities.length} existing entities for conversation: ${conversationId}`
+		);
+
+		newExtendedEntities.forEach((newEntity) => {
+			const existingIndex = mergedEntities.findIndex((e) => e.label === newEntity.label);
 			if (existingIndex >= 0) {
 				// Update existing entity (preserve shouldMask state)
 				console.log(`PiiSessionManager: Updating existing entity: ${newEntity.label}`);
@@ -203,7 +205,7 @@ export class PiiSessionManager {
 				mergedEntities.push(newEntity);
 			}
 		});
-		
+
 		console.log(`PiiSessionManager: Final merged entities count: ${mergedEntities.length}`);
 
 		this.conversationStates.set(conversationId, {
@@ -246,9 +248,11 @@ export class PiiSessionManager {
 	}
 
 	// Convert conversation entities to known entities format for API
-	getKnownEntitiesForApi(conversationId: string): Array<{id: number, label: string, name: string}> {
+	getKnownEntitiesForApi(
+		conversationId: string
+	): Array<{ id: number; label: string; name: string }> {
 		const entities = this.getConversationEntities(conversationId);
-		return entities.map(entity => ({
+		return entities.map((entity) => ({
 			id: entity.id,
 			label: entity.label,
 			name: entity.raw_text
@@ -256,16 +260,20 @@ export class PiiSessionManager {
 	}
 
 	// Toggle entity masking for specific conversation
-	toggleConversationEntityMasking(conversationId: string, entityId: string, occurrenceIndex: number) {
+	toggleConversationEntityMasking(
+		conversationId: string,
+		entityId: string,
+		occurrenceIndex: number
+	) {
 		const state = this.conversationStates.get(conversationId);
 		if (state) {
-			const entity = state.entities.find(e => e.label === entityId);
+			const entity = state.entities.find((e) => e.label === entityId);
 			if (entity && entity.occurrences[occurrenceIndex]) {
 				entity.shouldMask = !entity.shouldMask;
 				state.lastUpdated = Date.now();
-				
+
 				// Update global state if this is the current conversation
-				const globalEntity = this.entities.find(e => e.label === entityId);
+				const globalEntity = this.entities.find((e) => e.label === entityId);
 				if (globalEntity) {
 					globalEntity.shouldMask = entity.shouldMask;
 				}
@@ -275,14 +283,14 @@ export class PiiSessionManager {
 
 	// Backwards compatibility
 	toggleEntityMasking(entityId: string, occurrenceIndex: number) {
-		const entity = this.entities.find(e => e.label === entityId);
+		const entity = this.entities.find((e) => e.label === entityId);
 		if (entity && entity.occurrences[occurrenceIndex]) {
 			entity.shouldMask = !entity.shouldMask;
 		}
 	}
 
 	getEntityMaskingState(entityId: string): boolean {
-		const entity = this.entities.find(e => e.label === entityId);
+		const entity = this.entities.find((e) => e.label === entityId);
 		return entity?.shouldMask ?? true;
 	}
 
@@ -307,13 +315,15 @@ function getLabelVariations(label: string): string {
 	const labelMap: Record<string, string[]> = {
 		ORGANIZATION: ['ORGANIZATION', 'ORGANISATION', 'ORGANIZACION'],
 		PERSON: ['PERSON', 'PERSONS', 'PERSONNE'],
-		LOCATION: ['LOCATION', 'LIEU', 'LUGAR'],
+		LOCATION: ['LOCATION', 'LIEU', 'LUGAR']
 		// Add more mappings as needed
 	};
 
 	// Find the canonical form (first matching key or value in the map)
 	const canonicalLabel =
-		Object.entries(labelMap).find(([, variations]) => variations.includes(label.toUpperCase()))?.[0] || label;
+		Object.entries(labelMap).find(([, variations]) =>
+			variations.includes(label.toUpperCase())
+		)?.[0] || label;
 
 	return labelMap[canonicalLabel] ? `(?:${labelMap[canonicalLabel].join('|')})` : label;
 }
@@ -325,20 +335,20 @@ export function unmaskTextWithEntities(text: string, entities: ExtendedPiiEntity
 
 	// Replace each masked pattern with its original text
 	let unmaskedText = text;
-	entities.forEach(entity => {
+	entities.forEach((entity) => {
 		const { label } = entity;
 		// Use entity.raw_text as the raw text for unmasking
 		const rawText = entity.raw_text;
 
 		if (!label || !rawText) return;
-		
+
 		// Extract the base type and ID from the label (e.g., "PERSON_1" -> baseType="PERSON", labelId="1")
 		const labelMatch = label.match(/^(.+)_(\d+)$/);
 		if (!labelMatch) return; // Skip if label doesn't match expected format
-		
+
 		const [, baseType, labelId] = labelMatch;
 		const labelVariations = getLabelVariations(baseType);
-		
+
 		// Create patterns for the exact label as it appears in masked text
 		// The pattern should be {baseType_labelId}, not {baseType_entity.id}
 		const labelRegex = new RegExp(
@@ -346,7 +356,7 @@ export function unmaskTextWithEntities(text: string, entities: ExtendedPiiEntity
 				`\\[${labelVariations}_${labelId}\\]|` + // [TYPE_ID]
 				`\\{${labelVariations}_${labelId}\\}|` + // {TYPE_ID}
 				`\\b${labelVariations}_${labelId}\\b`, // TYPE_ID
-			'g',
+			'g'
 		);
 		unmaskedText = unmaskedText.replace(labelRegex, rawText);
 	});
@@ -357,24 +367,24 @@ export function unmaskTextWithEntities(text: string, entities: ExtendedPiiEntity
 // Function to highlight unmasked entities in response text
 export function highlightUnmaskedEntities(text: string, entities: ExtendedPiiEntity[]): string {
 	if (!entities.length) return text;
-	
+
 	let highlightedText = text;
-	
+
 	// Sort entities by text length (longest first) to avoid partial replacements
 	const sortedEntities = [...entities].sort((a, b) => b.raw_text.length - a.raw_text.length);
-	
-	sortedEntities.forEach(entity => {
+
+	sortedEntities.forEach((entity) => {
 		const escapedText = entity.raw_text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 		const regex = new RegExp(`\\b${escapedText}\\b`, 'gi');
-		
+
 		highlightedText = highlightedText.replace(regex, (match) => {
 			const shouldMask = entity.shouldMask ?? true;
 			const maskingClass = shouldMask ? 'pii-masked' : 'pii-unmasked';
 			const statusText = shouldMask ? 'Was masked in input' : 'Was NOT masked in input';
-			
+
 			return `<span class="pii-highlight ${maskingClass}" title="${entity.label} (${entity.type}) - ${statusText}" data-pii-type="${entity.type}" data-pii-label="${entity.label}">${match}</span>`;
 		});
 	});
-	
+
 	return highlightedText;
-} 
+}

@@ -159,7 +159,7 @@ type Settings = {
 	num_batch?: string;
 	num_keep?: string;
 	options?: ModelOptions;
-	
+
 	// PII Detection settings
 	piiDetection?: PiiDetectionSettings;
 };

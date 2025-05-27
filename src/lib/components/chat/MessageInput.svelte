@@ -53,7 +53,7 @@
 	import Sparkles from '../icons/Sparkles.svelte';
 
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
-	
+
 	// PII Detection imports
 	import { maskPiiTextWithSession, createPiiSession, type PiiEntity } from '$lib/apis/pii';
 	import { PiiSessionManager, type ExtendedPiiEntity } from '$lib/utils/pii';
@@ -119,12 +119,12 @@
 
 	let user = null;
 	export let placeholder = '';
-	
+
 	// PII Detection state
 	let piiSessionManager = PiiSessionManager.getInstance();
 	let currentPiiEntities: ExtendedPiiEntity[] = [];
 	let maskedPrompt = '';
-	
+
 	// Get PII settings from store
 	$: enablePiiDetection = $settings?.piiDetection?.enabled ?? false;
 	$: piiApiKey = $settings?.piiDetection?.apiKey ?? '';
@@ -196,39 +196,41 @@
 			behavior: 'smooth'
 		});
 	};
-	
+
 	// PII Detection handler
 	const handlePiiDetected = (entities: ExtendedPiiEntity[], maskedText: string) => {
 		currentPiiEntities = entities;
 		maskedPrompt = maskedText;
 	};
-	
+
 	// Function to get the prompt to send (masked if PII detected)
 	const getPromptToSend = (): string => {
 		if (!enablePiiDetection || !currentPiiEntities.length) {
 			return prompt;
 		}
-		
+
 		// Create a masked version based on user's masking preferences
 		let maskedText = prompt;
-		const entitiesToMask = currentPiiEntities.filter(entity => entity.shouldMask);
-		
+		const entitiesToMask = currentPiiEntities.filter((entity) => entity.shouldMask);
+
 		// Sort occurrences by start position in reverse order to avoid index shifting
-		const allOccurrences = entitiesToMask.flatMap(entity => 
-			entity.occurrences.map(occ => ({
-				...occ,
-				label: entity.label,
-				type: entity.type
-			}))
-		).sort((a, b) => b.start_idx - a.start_idx);
-		
+		const allOccurrences = entitiesToMask
+			.flatMap((entity) =>
+				entity.occurrences.map((occ) => ({
+					...occ,
+					label: entity.label,
+					type: entity.type
+				}))
+			)
+			.sort((a, b) => b.start_idx - a.start_idx);
+
 		// Replace text with masked versions using LABEL_ID pattern
-		allOccurrences.forEach(occurrence => {
+		allOccurrences.forEach((occurrence) => {
 			const before = maskedText.substring(0, occurrence.start_idx);
 			const after = maskedText.substring(occurrence.end_idx);
 			maskedText = before + `[{${occurrence.label}}]` + after;
 		});
-		
+
 		return maskedText;
 	};
 
@@ -634,12 +636,12 @@
 
 								recording = false;
 
-																								await tick();
-																document.getElementById('chat-input')?.focus();
+								await tick();
+								document.getElementById('chat-input')?.focus();
 
-																if ($settings?.speechAutoSend ?? false) {
-																	dispatch('submit', getPromptToSend());
-																}
+								if ($settings?.speechAutoSend ?? false) {
+									dispatch('submit', getPromptToSend());
+								}
 							}}
 						/>
 					{:else}
@@ -769,8 +771,8 @@
 												largeTextAsFile={($settings?.largeTextAsFile ?? false) && !shiftKey}
 												autocomplete={$config?.features?.enable_autocomplete_generation &&
 													($settings?.promptAutocomplete ?? false)}
-												enablePiiDetection={enablePiiDetection}
-												piiApiKey={piiApiKey}
+												{enablePiiDetection}
+												{piiApiKey}
 												conversationId={chatId || ''}
 												onPiiDetected={handlePiiDetected}
 												generateAutoCompletion={async (text) => {

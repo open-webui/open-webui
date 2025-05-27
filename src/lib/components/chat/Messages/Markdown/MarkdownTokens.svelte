@@ -43,8 +43,6 @@
 	const headerComponent = (depth: number) => {
 		return 'h' + depth;
 	};
-	
-
 
 	const exportTableToCSVHandler = (token, tokenIdx = 0) => {
 		console.log('Exporting table to CSV');

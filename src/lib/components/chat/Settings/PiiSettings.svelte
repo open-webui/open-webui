@@ -78,9 +78,7 @@
 	{#if enablePiiDetection}
 		<div class="space-y-3">
 			<div class="flex flex-col space-y-2">
-				<label for="pii-api-key" class="text-sm font-medium">
-					NENNA API Key
-				</label>
+				<label for="pii-api-key" class="text-sm font-medium"> NENNA API Key </label>
 				<div class="flex space-x-2">
 					<input
 						id="pii-api-key"
@@ -122,7 +120,7 @@
 						{/if}
 					</button>
 				</div>
-				
+
 				{#if connectionStatus === 'success'}
 					<div class="text-sm text-green-600 dark:text-green-400 flex items-center space-x-1">
 						<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -149,9 +147,18 @@
 			</div>
 
 			<div class="text-xs text-gray-500 space-y-1">
-				<p>Get your API key from <a href="https://nenna.ai" target="_blank" class="text-blue-600 hover:underline">nenna.ai</a></p>
-				<p>PII detection will highlight sensitive information in your messages and mask it before sending to the AI model.</p>
+				<p>
+					Get your API key from <a
+						href="https://nenna.ai"
+						target="_blank"
+						class="text-blue-600 hover:underline">nenna.ai</a
+					>
+				</p>
+				<p>
+					PII detection will highlight sensitive information in your messages and mask it before
+					sending to the AI model.
+				</p>
 			</div>
 		</div>
 	{/if}
-</div> 
+</div>

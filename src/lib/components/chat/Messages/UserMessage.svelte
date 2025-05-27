@@ -6,9 +6,14 @@
 	import { models, settings } from '$lib/stores';
 	import { user as _user } from '$lib/stores';
 	import { copyToClipboard as _copyToClipboard, formatDate } from '$lib/utils';
-	
+
 	// PII Detection imports
-	import { PiiSessionManager, highlightUnmaskedEntities, unmaskTextWithEntities, type ExtendedPiiEntity } from '$lib/utils/pii';
+	import {
+		PiiSessionManager,
+		highlightUnmaskedEntities,
+		unmaskTextWithEntities,
+		type ExtendedPiiEntity
+	} from '$lib/utils/pii';
 
 	import Name from './Name.svelte';
 	import ProfileImage from './ProfileImage.svelte';
@@ -56,7 +61,7 @@
 			message = JSON.parse(JSON.stringify(history.messages[messageId]));
 		}
 	}
-	
+
 	// PII Detection state
 	let piiSessionManager = PiiSessionManager.getInstance();
 
@@ -66,15 +71,15 @@
 			toast.success($i18n.t('Copying to clipboard was successful!'));
 		}
 	};
-	
+
 	// PII processing function for user messages - unmask and let markdown components handle highlighting
 	const processUserMessageContent = (content: string): string => {
 		const entities = piiSessionManager.getEntities();
-		
+
 		if (!entities.length) {
 			return content;
 		}
-		
+
 		// Unmask any [{LABEL_ID}] patterns to show original text
 		// The markdown components will then apply PII highlighting
 		return unmaskTextWithEntities(content, entities);
@@ -115,7 +120,7 @@
 
 	onMount(() => {
 		// console.log('UserMessage mounted');
-		
+
 		// Add PII highlighting styles if not already present
 		if (!document.getElementById('pii-user-styles')) {
 			const styleElement = document.createElement('style');

@@ -33,11 +33,17 @@
 	import Typography from '@tiptap/extension-typography';
 
 	import { PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
-	
+
 	// PII Detection imports
 	import { maskPiiText, type PiiEntity, type KnownPiiEntity } from '$lib/apis/pii';
 	import { PiiHighlighter } from './RichTextInput/PiiHighlighter';
-	import { debounce, extractPlainTextFromEditor, createPiiHighlightStyles, PiiSessionManager, type ExtendedPiiEntity } from '$lib/utils/pii';
+	import {
+		debounce,
+		extractPlainTextFromEditor,
+		createPiiHighlightStyles,
+		PiiSessionManager,
+		type ExtendedPiiEntity
+	} from '$lib/utils/pii';
 	import PiiHoverOverlay from './PiiHoverOverlay.svelte';
 
 	export let oncompositionstart = (e: CompositionEvent) => {};
@@ -64,7 +70,7 @@
 	export let messageInput = false;
 	export let shiftEnter = false;
 	export let largeTextAsFile = false;
-	
+
 	// PII Detection props
 	export let enablePiiDetection = false;
 	export let piiApiKey = '';
@@ -73,28 +79,40 @@
 
 	let element: HTMLElement;
 	let editor: any;
-	
+
 	// PII Detection state
 	let piiEntities: ExtendedPiiEntity[] = [];
 	let isDetectingPii = false;
 	let lastDetectedText = '';
 	let piiSessionManager = PiiSessionManager.getInstance();
-	
+
 	// Reactive statement to restore entities when conversation changes or input is cleared
 	$: if (enablePiiDetection && conversationId) {
 		// Get entities for this conversation
 		let storedEntities = piiSessionManager.getConversationEntities(conversationId);
-		console.log('RichTextInput: Reactive check for conversation:', conversationId, 'stored entities:', storedEntities.length, 'current entities:', piiEntities.length);
-		
+		console.log(
+			'RichTextInput: Reactive check for conversation:',
+			conversationId,
+			'stored entities:',
+			storedEntities.length,
+			'current entities:',
+			piiEntities.length
+		);
+
 		// If no entities found for this conversationId, check if there are entities stored under empty string
 		// This handles the case where entities were stored before conversationId was assigned
 		if (storedEntities.length === 0) {
 			const emptyIdEntities = piiSessionManager.getConversationEntities('');
 			if (emptyIdEntities.length > 0) {
-				console.log('RichTextInput: Migrating', emptyIdEntities.length, 'entities from empty conversationId to:', conversationId);
-				// Migrate entities from empty ID to actual conversationId  
+				console.log(
+					'RichTextInput: Migrating',
+					emptyIdEntities.length,
+					'entities from empty conversationId to:',
+					conversationId
+				);
+				// Migrate entities from empty ID to actual conversationId
 				// Convert ExtendedPiiEntity back to PiiEntity for setConversationEntities
-				const piiEntitiesForMigration = emptyIdEntities.map(e => ({
+				const piiEntitiesForMigration = emptyIdEntities.map((e) => ({
 					id: e.id,
 					type: e.type,
 					label: e.label,
@@ -108,9 +126,16 @@
 				storedEntities = piiSessionManager.getConversationEntities(conversationId);
 			}
 		}
-		
+
 		if (storedEntities.length > 0) {
-			console.log('RichTextInput: Restoring', storedEntities.length, 'PII entities for conversation:', conversationId, 'entities:', storedEntities.map(e => e.label));
+			console.log(
+				'RichTextInput: Restoring',
+				storedEntities.length,
+				'PII entities for conversation:',
+				conversationId,
+				'entities:',
+				storedEntities.map((e) => e.label)
+			);
 			piiEntities = storedEntities;
 			// Update editor if it exists
 			if (editor && editor.commands.updatePiiEntities) {
@@ -120,18 +145,35 @@
 	}
 
 	// Additional reactive statement to restore entities when value is cleared but entities exist
-	$: if (enablePiiDetection && conversationId && (!value || value.trim() === '') && piiEntities.length === 0) {
+	$: if (
+		enablePiiDetection &&
+		conversationId &&
+		(!value || value.trim() === '') &&
+		piiEntities.length === 0
+	) {
 		const storedEntities = piiSessionManager.getConversationEntities(conversationId);
-		console.log('RichTextInput: Input cleared check for conversation:', conversationId, 'value:', value, 'stored entities:', storedEntities.length);
+		console.log(
+			'RichTextInput: Input cleared check for conversation:',
+			conversationId,
+			'value:',
+			value,
+			'stored entities:',
+			storedEntities.length
+		);
 		if (storedEntities.length > 0) {
-			console.log('RichTextInput: Input cleared, restoring', storedEntities.length, 'conversation entities:', storedEntities.map(e => e.label));
+			console.log(
+				'RichTextInput: Input cleared, restoring',
+				storedEntities.length,
+				'conversation entities:',
+				storedEntities.map((e) => e.label)
+			);
 			piiEntities = storedEntities;
 			if (editor && editor.commands.updatePiiEntities) {
 				editor.commands.updatePiiEntities(piiEntities);
 			}
 		}
 	}
-	
+
 	// Hover overlay state
 	let hoverOverlayVisible = false;
 	let hoverOverlayEntity: ExtendedPiiEntity | null = null;
@@ -149,7 +191,7 @@
 			editable: editable
 		});
 	}
-	
+
 	// Debug PII entities and editor state
 	$: {
 		console.log('RichTextInput debug:', {
@@ -221,30 +263,48 @@
 	export const setContent = (content: any) => {
 		editor.commands.setContent(content);
 	};
-	
+
 	// PII Detection function
 	const detectPii = async (text: string) => {
 		if (!enablePiiDetection || !piiApiKey || !text.trim() || text === lastDetectedText) {
-			console.log('RichTextInput: PII detection skipped', { enablePiiDetection, hasApiKey: !!piiApiKey, textLength: text.length, sameAsLast: text === lastDetectedText, conversationId });
+			console.log('RichTextInput: PII detection skipped', {
+				enablePiiDetection,
+				hasApiKey: !!piiApiKey,
+				textLength: text.length,
+				sameAsLast: text === lastDetectedText,
+				conversationId
+			});
 			return;
 		}
-		
-		console.log('RichTextInput: Starting PII detection for text:', text.substring(0, 100), 'conversationId:', conversationId);
+
+		console.log(
+			'RichTextInput: Starting PII detection for text:',
+			text.substring(0, 100),
+			'conversationId:',
+			conversationId
+		);
 		isDetectingPii = true;
 		lastDetectedText = text;
-		
+
 		try {
 			// Get known entities from current conversation if available
-			const knownEntities = conversationId 
+			const knownEntities = conversationId
 				? piiSessionManager.getKnownEntitiesForApi(conversationId)
-				: piiSessionManager.getEntities().map(entity => ({
-					id: entity.id,
-					label: entity.label,
-					name: entity.raw_text
-				}));
-			
-			console.log('RichTextInput: Sending known entities to API:', knownEntities.length, 'for conversation:', conversationId, 'entities:', knownEntities);
-			
+				: piiSessionManager.getEntities().map((entity) => ({
+						id: entity.id,
+						label: entity.label,
+						name: entity.raw_text
+					}));
+
+			console.log(
+				'RichTextInput: Sending known entities to API:',
+				knownEntities.length,
+				'for conversation:',
+				conversationId,
+				'entities:',
+				knownEntities
+			);
+
 			const response = await maskPiiText(piiApiKey, [text], knownEntities, false, false);
 			if (response.pii && response.pii[0]) {
 				console.log('RichTextInput: PII detection successful, found entities:', response.pii[0]);
@@ -256,14 +316,19 @@
 					piiSessionManager.setEntities(response.pii[0]);
 					piiEntities = piiSessionManager.getEntities();
 				}
-				console.log('RichTextInput: Updated session manager, entities count:', piiEntities.length, 'all entities:', piiEntities.map(e => e.label));
-				
+				console.log(
+					'RichTextInput: Updated session manager, entities count:',
+					piiEntities.length,
+					'all entities:',
+					piiEntities.map((e) => e.label)
+				);
+
 				// Update the editor with PII highlighting
 				if (editor && editor.commands.updatePiiEntities) {
 					editor.commands.updatePiiEntities(piiEntities);
 					console.log('RichTextInput: Updated editor with PII entities');
 				}
-				
+
 				// Notify parent component
 				onPiiDetected(piiEntities, response.text[0]);
 			} else {
@@ -275,12 +340,12 @@
 			isDetectingPii = false;
 		}
 	};
-	
+
 	// Debounced PII detection
 	const debouncedDetectPii = debounce(detectPii, 500);
-	
+
 	// Hover overlay handlers
-	const handlePiiHover = (entity: ExtendedPiiEntity, position: { x: number, y: number }) => {
+	const handlePiiHover = (entity: ExtendedPiiEntity, position: { x: number; y: number }) => {
 		console.log('RichTextInput: handlePiiHover called', { entity: entity.label, position });
 		if (hoverTimeout) {
 			clearTimeout(hoverTimeout);
@@ -292,13 +357,13 @@
 		hoverOverlayVisible = true;
 		console.log('RichTextInput: Overlay should now be visible:', hoverOverlayVisible);
 	};
-	
+
 	const handlePiiHoverEnd = () => {
 		console.log('handlePiiHoverEnd called');
 		isOverPiiElement = false;
 		checkShouldCloseOverlay();
 	};
-	
+
 	// Overlay mouse events to prevent disappearing when hovering over dialog
 	const handleOverlayMouseEnter = () => {
 		console.log('Mouse entered overlay');
@@ -308,20 +373,20 @@
 		}
 		isOverOverlay = true;
 	};
-	
+
 	const handleOverlayMouseLeave = () => {
 		console.log('Mouse left overlay');
 		isOverOverlay = false;
 		checkShouldCloseOverlay();
 	};
-	
+
 	// Helper function to check if overlay should close
 	const checkShouldCloseOverlay = () => {
 		console.log('checkShouldCloseOverlay called:', { isOverPiiElement, isOverOverlay });
 		if (hoverTimeout) {
 			clearTimeout(hoverTimeout);
 		}
-		
+
 		// Only close if we're not over either the PII element or the overlay
 		if (!isOverPiiElement && !isOverOverlay) {
 			console.log('Starting close timeout');
@@ -334,7 +399,7 @@
 			console.log('Not closing overlay - still hovering');
 		}
 	};
-	
+
 	const handleOverlayToggle = (event: CustomEvent) => {
 		// Update the entities in the editor using conversation-specific entities
 		if (conversationId) {
@@ -368,14 +433,14 @@
 		if (enablePiiDetection && piiApiKey) {
 			piiSessionManager.setApiKey(piiApiKey);
 		}
-		
+
 		// Add PII highlighting styles
 		if (enablePiiDetection) {
 			const styleElement = document.createElement('style');
 			styleElement.textContent = createPiiHighlightStyles();
 			document.head.appendChild(styleElement);
 		}
-		
+
 		let content = value;
 
 		if (!json) {
@@ -505,7 +570,7 @@
 						value = editor.getHTML();
 					}
 				}
-				
+
 				// Trigger PII detection on content change
 				if (enablePiiDetection && piiApiKey) {
 					const plainText = extractPlainTextFromEditor(editor.getHTML());

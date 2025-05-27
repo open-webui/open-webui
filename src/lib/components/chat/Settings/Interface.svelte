@@ -1120,9 +1120,9 @@
 				</div>
 			{/if}
 
-					<div class=" my-1.5 text-sm font-medium">Privacy</div>
+			<div class=" my-1.5 text-sm font-medium">Privacy</div>
 
-		<PiiSettings {saveSettings} />
+			<PiiSettings {saveSettings} />
 		</div>
 	</div>
 
