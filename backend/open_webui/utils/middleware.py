@@ -658,6 +658,12 @@ async def chat_completion_files_handler(
 
 def apply_params_to_form_data(form_data, model):
     params = form_data.pop("params", {})
+    custom_params = params.pop("custom_params", {})
+
+    if custom_params:
+        # If custom_params are provided, merge them into params
+        params = deep_update(params, custom_params)
+
     if model.get("ollama"):
         form_data["options"] = params
 

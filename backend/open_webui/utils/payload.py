@@ -1,5 +1,6 @@
 from open_webui.utils.task import prompt_template, prompt_variables_template
 from open_webui.utils.misc import (
+    deep_update,
     add_or_update_system_message,
 )
 
@@ -59,6 +60,11 @@ def apply_model_params_to_body(
 
 # inplace function: form_data is modified
 def apply_model_params_to_body_openai(params: dict, form_data: dict) -> dict:
+    custom_params = params.pop("custom_params", {})
+    if custom_params:
+        # If there are custom parameters, we need to apply them first
+        params = deep_update(params, custom_params)
+
     mappings = {
         "temperature": float,
         "top_p": float,
@@ -76,6 +82,11 @@ def apply_model_params_to_body_openai(params: dict, form_data: dict) -> dict:
 
 
 def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
+    custom_params = params.pop("custom_params", {})
+    if custom_params:
+        # If there are custom parameters, we need to apply them first
+        params = deep_update(params, custom_params)
+
     # Convert OpenAI parameter names to Ollama parameter names if needed.
     name_differences = {
         "max_tokens": "num_predict",
