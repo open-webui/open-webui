@@ -21,9 +21,11 @@ from langchain_community.document_loaders import (
 )
 from langchain_core.documents import Document
 
-from open_webui.retrieval.loaders.datalab_marker_loader import DatalabMarkerLoader
 from open_webui.retrieval.loaders.external_document import ExternalDocumentLoader
+
 from open_webui.retrieval.loaders.mistral import MistralLoader
+from open_webui.retrieval.loaders.datalab_marker import DatalabMarkerLoader
+
 
 from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
 
