@@ -108,7 +108,7 @@ RUN chown -R $UID:$GID /app $HOME
 RUN if [ "$USE_OLLAMA" = "true" ]; then \
     apt-get update && \
     # Install pandoc and netcat
-    apt-get install -y --no-install-recommends git build-essential pandoc netcat-openbsd curl && \
+    apt-get install -y --no-install-recommends git build-essential pandoc netcat-openbsd curl unixodbc-dev && \
     apt-get install -y --no-install-recommends gcc python3-dev && \
     # for RAG OCR
     apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 && \
@@ -121,7 +121,7 @@ RUN if [ "$USE_OLLAMA" = "true" ]; then \
     else \
     apt-get update && \
     # Install pandoc, netcat and gcc
-    apt-get install -y --no-install-recommends git build-essential pandoc gcc netcat-openbsd curl jq && \
+    apt-get install -y --no-install-recommends git build-essential pandoc gcc netcat-openbsd curl jq unixodbc-dev && \
     apt-get install -y --no-install-recommends gcc python3-dev && \
     # for RAG OCR
     apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 && \
