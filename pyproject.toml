@@ -1,6 +1,6 @@
 [project]
-name = "open-webui"
-description = "Open WebUI"
+name = "cgce-techsense"
+description = "CGCE TechSense"
 authors = [
     { name = "Timothy Jaeryang Baek", email = "tim@openwebui.com" }
 ]
