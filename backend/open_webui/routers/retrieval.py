@@ -1835,6 +1835,7 @@ class QueryCollectionsForm(BaseModel):
     k_reranker: Optional[int] = None
     r: Optional[float] = None
     hybrid: Optional[bool] = None
+    hybrid_bm25_weight: Optional[float] = None
 
 
 @router.post("/query/collection")
