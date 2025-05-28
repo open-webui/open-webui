@@ -120,6 +120,7 @@
 		}
 
 		info.params = { ...info.params, ...params };
+
 		info.access_control = accessControl;
 		info.meta.capabilities = capabilities;
 

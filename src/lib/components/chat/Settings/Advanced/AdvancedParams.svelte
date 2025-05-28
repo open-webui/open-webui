@@ -1420,7 +1420,7 @@
 				{/each}
 
 				<button
-					class=" flex gap-2 items-center w-full text-center justify-center mb-5"
+					class=" flex gap-2 items-center w-full text-center justify-center mt-1 mb-5"
 					type="button"
 					on:click={() => {
 						params.custom_params = (params?.custom_params ?? {}) || {};
