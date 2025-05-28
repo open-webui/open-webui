@@ -17,18 +17,18 @@ const config: ForgeConfig = {
     extraResource: [
       // Include only essential files needed for initial setup
       // The rest will be installed via the wheel
-      '../backend/requirements.txt',
-      '../backend/start.sh',
-      '../backend/start_windows.bat'
+      '../backend/requirements.txt'
     ],
     executableName: 'raux',
+    icon: 'static/favicon.ico'
   },
   rebuildConfig: {},
   makers: [
     new MakerSquirrel({
-      name: 'raux',
+      name: 'GaiaBeta',
       exe: 'raux.exe',
       setupExe: 'raux-setup.exe',
+      setupIcon: 'static/favicon.ico'
     }),
     new MakerZIP({}, ['darwin']),
     new MakerRpm({}),
@@ -42,7 +42,7 @@ const config: ForgeConfig = {
         config: rendererConfig,
         entryPoints: [
           {
-            html: './src/index.html',
+            html: './src/pages/loading/loading.html',
             js: './src/renderer.ts',
             name: 'main_window',
             preload: {

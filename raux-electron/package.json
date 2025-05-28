@@ -1,9 +1,9 @@
 {
-  "name": "raux",
-  "productName": "raux",
+  "name": "gaia-beta",
+  "productName": "GAIA BETA",
   "version": "0.2.0",
   "raux-version": "0.6.5+raux.0.2.0",
-  "description": "My Electron application description",
+  "description": "GAIA's Ryzen AI User Experience (RAUX)",
   "main": ".webpack/main",
   "scripts": {
     "start": "electron-forge start",
@@ -30,6 +30,7 @@
     "@typescript-eslint/eslint-plugin": "^5.62.0",
     "@typescript-eslint/parser": "^5.62.0",
     "@vercel/webpack-asset-relocator-loader": "^1.7.3",
+    "copy-webpack-plugin": "^13.0.0",
     "css-loader": "^6.11.0",
     "electron": "36.2.0",
     "eslint": "^8.57.1",

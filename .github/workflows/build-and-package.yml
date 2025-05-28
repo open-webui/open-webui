@@ -102,15 +102,13 @@ jobs:
       - name: Extract CHANGELOG entry
         id: changelog
         run: |
-          pattern="## [v${{ needs.build-preparation.outputs.production_version }}]"
-          content=$(cat CHANGELOG.md)
-          regex="(?s)$pattern(.*?)(?=\n## \[v|$)"
-          notes=$(echo "$content" | perl -0777 -ne "print $1 if /$regex/")
-          if [ -z "$notes" ]; then
-            notes="Release v${{ needs.build-preparation.outputs.production_version }}%0ANo release notes available."
-          fi
-          notes="${notes//$'\n'/%0A}"
-          echo "notes=$notes" >> $GITHUB_OUTPUT
+          CHANGELOG_CONTENT=$(awk 'BEGIN {print_section=0;} /^## \[/ {if (print_section == 0) {print_section=1;} else {exit;}} print_section {print;}' CHANGELOG.md)
+          echo "Extracted latest release notes from CHANGELOG.md:" 
+          echo -e "$CHANGELOG_CONTENT"
+          # Use EOF delimiter to handle multiline content
+          echo "notes<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG_CONTENT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Install dependencies
         run: |

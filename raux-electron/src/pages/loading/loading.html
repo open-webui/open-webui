@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Loading...</title>
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      font-family: sans-serif;
+      background: #18181b;
+    }
+
+    .spinner {
+      border: 8px solid #23232a;
+      border-top: 8px solid #aaa;
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      animation: spin 1s linear infinite;
+      margin-bottom: 24px;
+    }
+
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    .loading {
+      font-size: 2rem;
+      color: #f3f4f6;
+      margin-bottom: 16px;
+    }
+
+    .loading-layout {
+      width: 500px;
+      height: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 32px 24px;
+      gap: 16px;
+    }
+
+    .welcome-image {
+      width: 100%;
+      height: auto;
+      max-width: 100%;
+      margin-bottom: 16px;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .center-row {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      position: relative;
+      margin-bottom: 16px;
+    }
+
+    #status-messages {
+      background: #23232a;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+      padding: 16px;
+      font-size: 0.75rem;
+      color: #e5e7eb;
+      min-height: 40px;
+      font-family: 'Consolas', 'Menlo', 'Monaco', 'Liberation Mono', 'Courier New', monospace;
+      height: 270px;
+      overflow-y: auto;
+      z-index: 1;
+      opacity: 0.95;
+      min-width: 360px;
+      margin-left: -90px;
+      text-align: right;
+    }
+
+    #status-messages div {
+      margin-bottom: 6px;
+    }
+
+    #status-messages::-webkit-scrollbar {
+      display: none;
+    }
+
+    .progress-bar-container {
+      background: transparent;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 16px;
+    }
+
+    .progress-message {
+      color: #e5e7eb;
+      font-family: system-ui, sans-serif;
+      font-size: 1rem;
+      margin-bottom: 6px;
+      text-align: center;
+      width: 100%;
+      opacity: 0.95;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 0.5rem;
+      background: linear-gradient(90deg, #22c55e 0%, #2563eb 100%);
+      border-radius: 4px;
+      animation: progress-indeterminate 2s linear infinite;
+      background-size: 200% 100%;
+      background-position: 100% 0;
+      border: 2px solid #444;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+    }
+
+    @keyframes progress-indeterminate {
+      0% {
+        background-position: 100% 0;
+      }
+
+      100% {
+        background-position: 0 0;
+      }
+    }
+
+    .gaia-image {
+      width: 400px;
+      max-width: 90%;
+      z-index: 2;
+      pointer-events: none;
+      opacity: 1;
+      margin-left: 0;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="loading-layout">
+    <img src="../../../static/welcome.png" alt="Welcome" class="welcome-image" />
+    <div class="center-row">
+      <img src="../../../static/gaia.png" alt="GAIA" class="gaia-image" />
+      <div id="status-messages">
+        <div>Pre-install checklist...</div>
+        <div>Preparing Install...</div>
+        <div>Ensuring requirements...</div>
+        <div>Checking connections...</div>
+        <div>Establishing connection...</div>
+        <div>Connection established.</div>
+      </div>
+    </div>
+    <div class="progress-bar-container">
+      <div class="progress-message">Configuration and setup in progress, please wait...</div>
+      <div class="progress-bar"></div>
+    </div>
+  </div>
+  <!-- <script src="loading.js"></script> -->
+  <script>
+    // Listen for IPC messages and update the status messages container
+    const statusDiv = document.getElementById('status-messages');
+
+    // Store all messages
+    const messages = [];
+
+    // Helper to render all messages
+    function renderMessages() {
+      statusDiv.innerHTML = messages.map(msg => {
+        if (msg.type === 'error') {
+          return `<div style="color:#c0392b">${msg.message}</div>`;
+        }
+        // if (msg.type === 'success') color = '#27ae60';
+        // if (msg.type === 'info') color = '#2980b9';
+        // if (msg.type === 'progress') color = '#f39c12';
+        return `<div>${msg.message}</div>`;
+      }).join('');
+    }
+
+    // Listen for all relevant channels
+    ['installation:status', 'installation:progress', 'installation:error'].forEach(channel => {
+      window.ipc?.on(channel, (msg) => {
+        if (msg && msg.message) {
+          messages.push(msg);
+          renderMessages();
+        }
+      });
+    });
+
+    // Optionally, scroll to bottom on new message
+    const statusObserver = new MutationObserver(() => {
+      statusDiv.scrollTop = statusDiv.scrollHeight;
+    });
+    statusObserver.observe(statusDiv, { childList: true });
+
+    // Initial scroll
+    statusDiv.scrollTop = statusDiv.scrollHeight;
+  </script>
+</body>
+
+</html>

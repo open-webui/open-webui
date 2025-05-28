@@ -83,7 +83,7 @@
 			"command": "cmd",
 			"args": [
 				"/c",
-				"rmdir /s /q \"%LOCALAPPDATA%\\raux\" & rmdir /s /q \"%APPDATA%\\raux\""
+				"rmdir /s /q \"%LOCALAPPDATA%\\GaiaBeta\" & rmdir /s /q \"%APPDATA%\\GaiaBeta\""
 			],
 			"presentation": {
 				"reveal": "silent",

@@ -1,212 +1,247 @@
 # RAUX Integration with GAIA
 
-This document describes how RAUX (Open WebUI) integrates with [GAIA](https://github.com/amd/gaia), including the build process, installation options, and how the components fit together.
+This document describes how RAUX (AMD's fork of Open WebUI) integrates with [GAIA](https://github.com/amd/gaia), including the build process, installation options, and how the components fit together.
 
 ## Architecture Overview
 
-RAUX (Open WebUI) can be installed in three different ways:
+RAUX is an Electron-based desktop application that can be installed in two primary ways:
 
-1. Using the standalone RAUX installer (Installer-UX.nsi)
-2. Using the standalone Python installation script (install.py)
-3. As part of the [GAIA](https://github.com/amd/gaia) installation process (Installer.nsi)
+1. **Standalone Installation**: Using the RAUX Electron installer (`raux-setup.exe`)
+2. **GAIA Integration**: As part of the [GAIA](https://github.com/amd/gaia) installation process
 
 The diagram below illustrates how these components fit together:
 
 ```mermaid
 graph TD
     subgraph "Build Process"
-        A[GitHub Action: build-release.yml] --> B[Build Wheel Package]
-        B --> C[Create Windows Installer]
-        B --> D[Upload Artifacts to GitHub Release]
+        A[GitHub Actions Workflow] --> B[Build Python Wheel]
+        B --> C[Create Wheel Context]
+        C --> D[Build Electron Installer]
+        D --> E[Upload to GitHub Release]
     end
 
-    subgraph "Installation Options"
-        D --> E[Standalone RAUX Installer]
-        D --> F[Python install.py Script]
-        D --> G[GAIA Installer]
+    subgraph "Release Artifacts"
+        E --> F[raux-setup.exe<br/>Electron/Squirrel Installer]
+        E --> G[raux-wheel-context.zip<br/>Python Wheel + Env Files]
     end
 
-    subgraph "GAIA Integration"
-        G --> H[GAIA Installation Process]
-        H --> I[run_raux_installer Section]
-        I --> J[raux_installer.py]
-        J --> K[Download & Install RAUX Wheel]
+    subgraph "Installation Paths"
+        F --> H[Standalone Installation]
+        G --> I[GAIA Integration]
     end
 
-    K --> L[End User Installation]
+    subgraph "GAIA Installation Flow"
+        I --> J[GAIA NSIS Installer]
+        J --> K[Download raux-setup.exe]
+        K --> L[Execute with Auto-Launch Prevention]
+        L --> M[RAUX Installation Complete]
+    end
+
+    subgraph "Standalone Installation Flow"
+        H --> N[User Runs raux-setup.exe]
+        N --> O[Squirrel Installer Runs]
+        O --> P[Auto-Launch RAUX]
+    end
 ```
 
 ## Build Process
 
-The build process for RAUX is managed by the GitHub Actions workflow defined in `.github/workflows/build-release.yml`. This workflow automates the building and packaging of RAUX.
+The build process for RAUX is managed by GitHub Actions workflows. The key workflow creates both the Electron installer and the wheel context for GAIA integration.
 
-### Key Steps in the Build Process:
+### Key Build Artifacts:
 
-1. **Wheel Package Creation**:
+1. **Python Wheel Package (.whl)**:
+   - Contains the backend Python code
+   - Includes the built frontend static files
+   - Packaged with environment configuration files
 
-   - The workflow builds a Python wheel package (.whl) containing the RAUX application
-   - This wheel file is the primary artifact used for all installation methods
+2. **Wheel Context (raux-wheel-context.zip)**:
+   - Contains the Python wheel
+   - Includes `raux-hybrid.env` (for Lemonade integration)
+   - Includes `raux-generic.env` (for standalone mode)
+   - Used by the Electron installer for Python environment setup
 
-2. **Windows Installer Creation**:
+3. **Electron Installer (raux-setup.exe)**:
+   - Built using Electron Forge with Squirrel
+   - Self-contained Windows installer
+   - Handles installation, updates, and uninstallation
+   - Auto-launches RAUX after installation (unless prevented)
 
-   - The workflow uses NSIS (Nullsoft Scriptable Install System) to create a Windows installer
-   - The installer is built using the `Installer-UX.nsi` script
-   - The installer bundles the wheel file and necessary installation scripts
+## Installation Architecture
 
-3. **Artifact Publishing**:
-   - The wheel file and installer are uploaded to GitHub Releases
-   - These artifacts are then available for download and installation
+### Installer Types
 
-## Installation Options
+RAUX uses different installer technologies for different purposes:
 
-### 1. Standalone RAUX Installer (Installer-UX.nsi)
+- **RAUX Installer**: Uses **Squirrel** (Electron Forge's auto-updater/installer)
+  - Modern, lightweight installer for Electron apps
+  - Supports auto-updates and seamless installation
+  - Auto-launches the application after installation by default
 
-The standalone RAUX installer provides a user-friendly way to install RAUX on Windows systems. The installer:
+- **GAIA Installer**: Uses **NSIS** (Nullsoft Scriptable Install System)
+  - Traditional Windows installer system
+  - More control over installation process
+  - Downloads and invokes the RAUX Squirrel installer
 
-- Creates a conda environment for RAUX
-- Downloads and installs the RAUX wheel package
-- Creates desktop shortcuts for easy access
-- Handles dependencies and environment setup
+### Installation Options
 
-The installer is built using the `Installer-UX.nsi` script, which defines the installation process and user interface.
+#### 1. Standalone RAUX Installation
 
-### 2. Standalone Python Installation (install.py)
+When users run `raux-setup.exe` directly:
 
-For more flexibility, RAUX can be installed using the Python installation script (`install.py`). This script:
+1. **Squirrel Installer Execution**:
+   - Handles Windows installation events
+   - Creates desktop shortcuts
+   - Installs to user's local app data
 
-- Can be run directly with Python
-- Downloads the latest RAUX wheel from GitHub
-- Installs RAUX and its dependencies
-- Provides options for customizing the installation
+2. **First Launch Setup**:
+   - Detects missing Python environment
+   - Downloads `raux-wheel-context.zip` from GitHub
+   - Extracts and installs Python environment
+   - Installs RAUX wheel package
 
-This method is useful for advanced users or automated deployments.
+3. **Environment Detection**:
+   - Checks for Lemonade/GAIA presence
+   - Selects appropriate configuration:
+     - **Hybrid Mode**: If Lemonade detected → uses `raux-hybrid.env`
+     - **Generic Mode**: Otherwise → uses `raux-generic.env`
 
-#### How to Invoke the Standalone Python Installation Script
+4. **Auto-Launch**:
+   - Application automatically starts after installation
+   - Shows progress during Python setup
+   - Opens browser when backend is ready
 
-To install RAUX using the standalone Python script, follow these steps:
+#### 2. GAIA Integration
 
-1. Download the `install.py` script from the installer directory
-2. Open a command prompt or terminal
-3. Navigate to the directory containing the script
-4. Run the script with Python using one of the following commands:
+When RAUX is installed as part of GAIA:
 
-```bash
-# Basic installation with default settings
-python install.py
+1. **GAIA Installer Process**:
+   - GAIA NSIS installer runs its installation
+   - Downloads `raux-setup.exe` from GitHub releases
+   - Creates auto-launch prevention flag
+   - Executes RAUX installer
 
-# Installation with a custom installation directory
-python install.py --install-dir C:\path\to\install\directory
+2. **Auto-Launch Prevention**:
+   - GAIA creates `RAUX_PREVENT_AUTOLAUNCH` flag file
+   - RAUX installer detects flag and skips auto-launch
+   - Shows success message and exits cleanly
+   - User can launch RAUX later from desktop shortcut
 
-# Installation with debug logging enabled
-python install.py --debug
+3. **Integration Benefits**:
+   - Seamless installation experience
+   - No duplicate RAUX windows during GAIA install
+   - Automatic hybrid mode configuration
+   - Integrated with GAIA's Lemonade server
 
-# Installation with all options specified
-python install.py --install-dir C:\path\to\install\directory --yes --force --debug
-```
+## Environment Modes
 
-Available command-line options:
+RAUX automatically configures itself based on the detected environment:
 
-- `--install-dir`: Specify the installation directory (default: %LOCALAPPDATA%\raux)
-- `--yes` or `-y`: Automatically answer 'yes' to all prompts
-- `--force`: Force installation even if files are in use
-- `--debug`: Enable detailed debug logging
+### Hybrid Mode (GAIA/Lemonade Integration)
 
-### 3. GAIA Integration (Installer.nsi)
+**Activation Conditions**:
+- `GAIA_MODE=HYBRID` environment variable is set
+- OR Lemonade executable found in PATH or USERPROFILE
 
-RAUX is also integrated into the [GAIA](https://github.com/amd/gaia) installation process. When installing GAIA, the installer:
+**Configuration**:
+- Uses `raux-hybrid.env` configuration file
+- Connects to Lemonade API at `http://localhost:8000/api/v0`
+- Integrates with GAIA's AI infrastructure
 
-1. Performs the main GAIA installation steps
-2. Reaches the `run_raux_installer` section in `Installer.nsi`
-3. Creates a temporary directory for RAUX installation
-4. Copies the `raux_installer.py` script to this directory
-5. Executes the script to download and install the RAUX wheel
+### Generic Mode (Standalone)
 
-The `raux_installer.py` script is a simplified version that:
+**Activation Conditions**:
+- Default when Lemonade is not detected
+- No GAIA environment variables set
 
-- Downloads the latest RAUX wheel from GitHub releases
-- Installs the wheel using pip
-- Logs the installation process
+**Configuration**:
+- Uses `raux-generic.env` configuration file
+- Connects to Ollama at `http://localhost:11434`
+- Operates independently of GAIA
 
-## How the Components Work Together
+## Technical Implementation Details
 
-The following diagram illustrates how the components exist in the environment after installation:
+### Auto-Launch Prevention Mechanism
+
+The auto-launch prevention ensures RAUX doesn't automatically start when installed via GAIA:
 
 ```mermaid
-graph TD
-    subgraph "User Environment"
-        A[User Desktop] --> B[RAUX Shortcut]
-        B --> C[Web Browser]
-    end
+sequenceDiagram
+    participant GAIA as GAIA Installer
+    participant FS as File System
+    participant RAUX as RAUX Installer
+    participant APP as RAUX App
 
-    subgraph "Installation Directory"
-        D[Python Environment] --> E[RAUX Wheel Package]
-        E --> F[RAUX Application]
-        F --> G[Web Server]
-        G --> C
-    end
-
-    subgraph "GAIA Integration"
-        H[GAIA Installation] --> I[GAIA Environment]
-        I --> J[RAUX Component]
-        J --> G
-    end
-
-    subgraph "File System"
-        K[Configuration Files]
-        L[Log Files]
-        F --> K
-        F --> L
-    end
+    GAIA->>FS: Create RAUX_PREVENT_AUTOLAUNCH flag
+    GAIA->>RAUX: Execute raux-setup.exe
+    RAUX->>RAUX: Squirrel installation
+    RAUX->>APP: Attempt to launch
+    APP->>FS: Check for prevention flag
+    FS-->>APP: Flag exists
+    APP->>FS: Remove flag
+    APP->>APP: Show success & exit
+    Note over APP: No auto-launch occurs
 ```
 
-### Wheel Package (.whl)
+### Installation Flow Components
 
-The wheel package is the central artifact that contains the RAUX application code. It is:
+1. **Squirrel Events Handler** (`squirrelEvents.ts`):
+   - Handles `--squirrel-install`, `--squirrel-updated`, `--squirrel-uninstall`
+   - Creates/removes shortcuts
+   - Patches Python configuration
 
-- Built by the GitHub Actions workflow
-- Used by all installation methods
-- Downloaded during installation (either pre-bundled or from GitHub)
+2. **RAUX Setup** (`rauxSetup.ts`):
+   - Downloads wheel context from GitHub
+   - Extracts Python environment
+   - Installs RAUX wheel via pip
+   - Configures environment files
 
-### raux_installer.py
+3. **Main Process** (`index.ts`):
+   - Checks for auto-launch prevention
+   - Verifies installation status
+   - Manages backend process lifecycle
+   - Handles IPC communication
 
-This Python script is the core component that handles the actual installation of RAUX. It:
+4. **Python Execution** (`pythonExec.ts`):
+   - Manages Python subprocess
+   - Configures Python paths
+   - Handles process communication
 
-- Is used by both the standalone installer and the [GAIA](https://github.com/amd/gaia) installer
-- Handles downloading the wheel package (if not already available)
-- Manages the installation process using pip
-- Provides logging and error handling
+## Versioning Scheme
 
-### GAIA Integration
+RAUX uses a dual-versioning scheme:
 
-The integration with [GAIA](https://github.com/amd/gaia) happens in the `run_raux_installer` section of `Installer.nsi`. This section:
+- **Product Version**: Full semantic version (e.g., `0.6.5+raux.0.2.0`)
+  - First part (`0.6.5`): Original Open-WebUI version
+  - Second part (`raux.0.2.0`): RAUX-specific changes
 
-- Creates a temporary directory for RAUX installation
-- Copies the `raux_installer.py` script
-- Executes the script to perform the installation
-- Intentionally leaves the temporary directory for system cleanup
+- **Electron Version**: Numeric only (e.g., `0.2.0`)
+  - Required for Windows/Electron compatibility
+  - Derived from RAUX portion of product version
+  - Used in `raux-electron/package.json`
 
-## Versioning Scheme for Build and Packaging
+## File Structure
 
-RAUX uses a dual-versioning scheme to support both rich semantic versioning for npm/GitHub and strict numeric versioning for Electron/Windows packaging:
+Key files in the Electron implementation:
 
-- **Product version**: This is the full version string (e.g., `0.6.5+raux.0.1.1`) and is set in the root `package.json`. The first part (`0.6.5`) is pegged to the original Open-WebUI version, giving credit and thanks to Open-WebUI and its creator, Timothy Jaeryang Baek (Tim). The second part (`raux.0.1.1`) is the RAUX-specific version, tracking changes made in this fork.
-
-- **Electron version**: This is a simplified, strictly numeric version (e.g., `0.1.1`) and is set in `raux-electron/package.json`. It is derived from the RAUX-specific portion of the product version. This separation is necessary because Electron/Windows packaging requires a version string in the format `Major.Minor.Patch[.Build]` (numbers and dots only), and does not support the richer semantic versioning or build metadata used in npm/GitHub.
-
-**Why this split?**
-- The product version allows us to both credit upstream work and clearly track RAUX's own changes, while remaining compatible with npm and GitHub's versioning systems.
-- The electron version is required because Windows and Electron installers will fail if the version string contains anything other than numbers and dots. By pegging the electron version to the RAUX-specific portion (e.g., `0.1.1` from `raux.0.1.1`), we maintain a clear mapping between the two.
-
-The GitHub Actions workflow (`.github/workflows/build-electron.yml`) takes both versions as inputs:
-
-- `product-version`: Used for the root package.json and release tagging.
-- `electron-version`: Used for the Electron app packaging.
-
-This ensures compatibility with all distribution channels and avoids build errors during Electron packaging. When triggering a build, always supply both versions as workflow inputs.
+```
+raux-electron/
+├── src/
+│   ├── index.ts              # Main process entry point
+│   ├── rauxSetup.ts          # Installation orchestration
+│   ├── pythonExec.ts         # Python environment management
+│   ├── squirrelEvents.ts     # Squirrel installer handlers
+│   ├── windowManager.ts      # Electron window management
+│   └── ipc/                  # Inter-process communication
+│       ├── ipcChannels.ts
+│       ├── ipcManager.ts
+│       └── ipcTypes.ts
+├── forge.config.ts           # Electron Forge configuration
+└── package.json              # Electron app configuration
+```
 
 ## Conclusion
 
-The RAUX integration with [GAIA](https://github.com/amd/gaia) provides a seamless installation experience for users. By leveraging the wheel package and installation scripts, RAUX can be installed either as a standalone application or as part of the GAIA ecosystem.
+The new Electron-based RAUX installer provides a modern, seamless installation experience that works both as a standalone application and as part of the GAIA ecosystem. The Squirrel installer handles Windows integration efficiently, while the intelligent environment detection ensures RAUX configures itself appropriately for its runtime context.
 
-The modular design allows for flexibility in how RAUX is deployed while ensuring a consistent installation process across different methods.
-
+The auto-launch prevention mechanism enables smooth integration with GAIA's NSIS installer, preventing duplicate windows during installation while maintaining the convenient auto-launch behavior for standalone installations.

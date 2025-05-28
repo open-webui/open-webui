@@ -68,6 +68,7 @@ class RauxProcessManager {
           cwd: this.backendDir,
           stdio: 'pipe',
         });
+
         pw.stdout.on('data', (data) => logInfo(`[playwright][stdout] ${data}`));
         pw.stderr.on('data', (data) => logError(`[playwright][stderr] ${data}`));
         pw.on('close', (code) => {
@@ -78,6 +79,7 @@ class RauxProcessManager {
           }
         });
       });
+      
       // Download NLTK data
       await new Promise<void>((resolve, reject) => {
         const nltk = spawn(this.pythonPath, ['-c', "import nltk; nltk.download('punkt_tab')"], {
@@ -115,9 +117,12 @@ class RauxProcessManager {
         ...envOverrides,
       };
       await this.ensurePlaywrightInstalled(env);
+
       logInfo('[RauxProcessManager] Ensured Playwright installed');
+      
       // Ensure log file exists
       if (!existsSync(this.logPath)) openSync(this.logPath, 'w');
+      
       // Windows dev mode: use start_windows.bat
       if (isDev && process.platform === 'win32') {
         const batPath = join(this.backendDir, 'start_windows.bat');
@@ -149,10 +154,12 @@ class RauxProcessManager {
           executable = openWebuiExe;
           args = ['serve'];
         }
+        
         logInfo(`[RauxProcessManager] Spawning RAUX backend:`);
-        logInfo(`[RauxProcessManager]   Executable: ${executable}`);
-        logInfo(`[RauxProcessManager]   Args: ${JSON.stringify(args)}`);
-        logInfo(`[RauxProcessManager]   CWD: ${this.backendDir}`);
+        logInfo(`[RauxProcessManager] - Executable: ${executable}`);
+        logInfo(`[RauxProcessManager] - Args: ${JSON.stringify(args)}`);
+        logInfo(`[RauxProcessManager] - CWD: ${this.backendDir}`);
+
         this.rauxProcess = spawn(executable, args, {
           cwd: this.backendDir,
           env,

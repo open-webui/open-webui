@@ -28,6 +28,8 @@ alwaysApply: true
 - Describe what you see in the current state.
 - Identify potential issues before suggesting fixes.
 - Run OS specific CLI tools to help you analyze
+- Never ask or confirm if you can inspect files or directories.
+- Run any CLI cmd you need to, apart from destructive ones, to get your answer
 
 3. ONE STEP AT A TIME
 - Focus on one task at a time.
