@@ -45,9 +45,14 @@ def apply_model_params_to_body(
     if not params:
         return form_data
 
-    for key, cast_func in mappings.items():
-        if (value := params.get(key)) is not None:
-            form_data[key] = cast_func(value)
+    for key, value in params.items():
+        if value is not None:
+            if key in mappings:
+                cast_func = mappings[key]
+                if isinstance(cast_func, Callable):
+                    form_data[key] = cast_func(value)
+            else:
+                form_data[key] = value
 
     return form_data
 
