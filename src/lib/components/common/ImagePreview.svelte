@@ -107,7 +107,9 @@
 
 							const mimeType = blob.type || 'image/png';
 							// create file name based on the MIME type, alt should be a valid file name with extension
-							const fileName = alt ? `${alt}.${mimeType.split('/')[1]}` : 'download.png';
+							const fileName = alt
+								? `${alt.replaceAll('.', '')}.${mimeType.split('/')[1]}`
+								: 'download.png';
 
 							// Use FileSaver to save the blob
 							saveAs(blob, fileName);
@@ -124,7 +126,9 @@
 									const blobWithType = new Blob([blob], { type: mimeType });
 
 									// create file name based on the MIME type, alt should be a valid file name with extension
-									const fileName = alt ? `${alt}.${mimeType.split('/')[1]}` : 'download.png';
+									const fileName = alt
+										? `${alt.replaceAll('.', '')}.${mimeType.split('/')[1]}`
+										: 'download.png';
 
 									// Use FileSaver to save the blob
 									saveAs(blobWithType, fileName);
@@ -149,7 +153,9 @@
 									const blobWithType = new Blob([blob], { type: mimeType });
 
 									// create file name based on the MIME type, alt should be a valid file name with extension
-									const fileName = alt ? `${alt}.${mimeType.split('/')[1]}` : 'download.png';
+									const fileName = alt
+										? `${alt.replaceAll('.', '')}.${mimeType.split('/')[1]}`
+										: 'download.png';
 
 									// Use FileSaver to save the blob
 									saveAs(blobWithType, fileName);
