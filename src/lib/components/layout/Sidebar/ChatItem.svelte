@@ -256,7 +256,10 @@
 			}
 
 			confirmEdit = false;
+		} else {
+			chatTitle = title;
 		}
+
 		generating = false;
 	};
 </script>

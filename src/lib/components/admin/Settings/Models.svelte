@@ -20,6 +20,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import XMark from '$lib/components/icons/XMark.svelte';
 
 	import ModelEditor from '$lib/components/workspace/Models/ModelEditor.svelte';
 	import { toast } from 'svelte-sonner';
@@ -33,6 +34,7 @@
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
 	import Eye from '$lib/components/icons/Eye.svelte';
+	import { copyToClipboard } from '$lib/utils';
 
 	let shiftKey = false;
 
@@ -166,7 +168,7 @@
 			hidden: !(model?.meta?.hidden ?? false)
 		};
 
-		console.log(model);
+		console.debug(model);
 
 		toast.success(
 			model.meta.hidden
@@ -179,6 +181,17 @@
 		);
 
 		upsertModelHandler(model);
+	};
+
+	const copyLinkHandler = async (model) => {
+		const baseUrl = window.location.origin;
+		const res = await copyToClipboard(`${baseUrl}/?model=${encodeURIComponent(model.id)}`);
+
+		if (res) {
+			toast.success($i18n.t('Copied link to clipboard'));
+		} else {
+			toast.error($i18n.t('Failed to copy link'));
+		}
 	};
 
 	const exportModelHandler = async (model) => {
@@ -271,6 +284,18 @@
 						bind:value={searchValue}
 						placeholder={$i18n.t('Search Models')}
 					/>
+					{#if searchValue}
+						<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
+							<button
+								class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+								on:click={() => {
+									searchValue = '';
+								}}
+							>
+								<XMark className="size-3" strokeWidth="2" />
+							</button>
+						</div>
+					{/if}
 				</div>
 			</div>
 		</div>
@@ -380,6 +405,9 @@
 									}}
 									hideHandler={() => {
 										hideModelHandler(model);
+									}}
+									copyLinkHandler={() => {
+										copyLinkHandler(model);
 									}}
 									onClose={() => {}}
 								>
@@ -495,7 +523,7 @@
 						}}
 					>
 						<div class=" self-center mr-2 font-medium line-clamp-1">
-							{$i18n.t('Export Presets')}
+							{$i18n.t('Export Presets')} ({models.length})
 						</div>
 
 						<div class=" self-center">

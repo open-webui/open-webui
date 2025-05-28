@@ -40,6 +40,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
+from starlette_compress import CompressMiddleware
+
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
@@ -103,6 +105,7 @@ from open_webui.config import (
     ENABLE_OPENAI_API,
     ONEDRIVE_CLIENT_ID,
     ONEDRIVE_SHAREPOINT_URL,
+    ONEDRIVE_SHAREPOINT_TENANT_ID,
     OPENAI_API_BASE_URLS,
     OPENAI_API_KEYS,
     OPENAI_API_CONFIGS,
@@ -166,6 +169,7 @@ from open_webui.config import (
     AUDIO_TTS_SPLIT_ON,
     AUDIO_TTS_VOICE,
     AUDIO_TTS_AZURE_SPEECH_REGION,
+    AUDIO_TTS_AZURE_SPEECH_BASE_URL,
     AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT,
     PLAYWRIGHT_WS_URL,
     PLAYWRIGHT_TIMEOUT,
@@ -186,12 +190,19 @@ from open_webui.config import (
     RAG_EMBEDDING_MODEL,
     RAG_EMBEDDING_MODEL_AUTO_UPDATE,
     RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
+    RAG_RERANKING_ENGINE,
     RAG_RERANKING_MODEL,
+    RAG_EXTERNAL_RERANKER_URL,
+    RAG_EXTERNAL_RERANKER_API_KEY,
     RAG_RERANKING_MODEL_AUTO_UPDATE,
     RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
     RAG_EMBEDDING_ENGINE,
     RAG_EMBEDDING_BATCH_SIZE,
+    RAG_TOP_K,
+    RAG_TOP_K_RERANKER,
     RAG_RELEVANCE_THRESHOLD,
+    RAG_HYBRID_BM25_WEIGHT,
+    RAG_ALLOWED_FILE_EXTENSIONS,
     RAG_FILE_MAX_COUNT,
     RAG_FILE_MAX_SIZE,
     RAG_OPENAI_API_BASE_URL,
@@ -201,15 +212,16 @@ from open_webui.config import (
     CHUNK_OVERLAP,
     CHUNK_SIZE,
     CONTENT_EXTRACTION_ENGINE,
+    EXTERNAL_DOCUMENT_LOADER_URL,
+    EXTERNAL_DOCUMENT_LOADER_API_KEY,
     TIKA_SERVER_URL,
     DOCLING_SERVER_URL,
     DOCLING_OCR_ENGINE,
     DOCLING_OCR_LANG,
+    DOCLING_DO_PICTURE_DESCRIPTION,
     DOCUMENT_INTELLIGENCE_ENDPOINT,
     DOCUMENT_INTELLIGENCE_KEY,
     MISTRAL_OCR_API_KEY,
-    RAG_TOP_K,
-    RAG_TOP_K_RERANKER,
     RAG_TEXT_SPLITTER,
     TIKTOKEN_ENCODING_NAME,
     PDF_EXTRACT_IMAGES,
@@ -219,6 +231,7 @@ from open_webui.config import (
     ENABLE_WEB_SEARCH,
     WEB_SEARCH_ENGINE,
     BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL,
+    BYPASS_WEB_SEARCH_WEB_LOADER,
     WEB_SEARCH_RESULT_COUNT,
     WEB_SEARCH_CONCURRENT_REQUESTS,
     WEB_SEARCH_TRUST_ENV,
@@ -254,6 +267,7 @@ from open_webui.config import (
     GOOGLE_DRIVE_API_KEY,
     ONEDRIVE_CLIENT_ID,
     ONEDRIVE_SHAREPOINT_URL,
+    ONEDRIVE_SHAREPOINT_TENANT_ID,
     ENABLE_RAG_HYBRID_SEARCH,
     ENABLE_RAG_LOCAL_WEB_FETCH,
     ENABLE_WEB_LOADER_SSL_VERIFICATION,
@@ -285,6 +299,8 @@ from open_webui.config import (
     ENABLE_EVALUATION_ARENA_MODELS,
     USER_PERMISSIONS,
     DEFAULT_USER_ROLE,
+    PENDING_USER_OVERLAY_CONTENT,
+    PENDING_USER_OVERLAY_TITLE,
     DEFAULT_PROMPT_SUGGESTIONS,
     DEFAULT_MODELS,
     DEFAULT_ARENA_MODEL,
@@ -311,6 +327,7 @@ from open_webui.config import (
     LDAP_APP_PASSWORD,
     LDAP_USE_TLS,
     LDAP_CA_CERT_FILE,
+    LDAP_VALIDATE_CERT,
     LDAP_CIPHERS,
     # Misc
     ENV,
@@ -321,6 +338,7 @@ from open_webui.config import (
     DEFAULT_LOCALE,
     OAUTH_PROVIDERS,
     WEBUI_URL,
+    RESPONSE_WATERMARK,
     # Admin
     ENABLE_ADMIN_CHAT_ACCESS,
     ENABLE_ADMIN_EXPORT,
@@ -367,6 +385,7 @@ from open_webui.env import (
     OFFLINE_MODE,
     ENABLE_OTEL,
     EXTERNAL_PWA_MANIFEST_URL,
+    AIOHTTP_CLIENT_SESSION_SSL,
 )
 
 
@@ -437,7 +456,7 @@ print(
  ╚═════╝ ╚═╝     ╚══════╝╚═╝  ╚═══╝     ╚══╝╚══╝ ╚══════╝╚═════╝  ╚═════╝ ╚═╝
 
 
-v{VERSION} - building the best open-source AI user interface.
+v{VERSION} - building the best AI user interface.
 {f"Commit: {WEBUI_BUILD_HASH}" if WEBUI_BUILD_HASH != "dev-build" else ""}
 https://github.com/open-webui/open-webui
 """
@@ -458,10 +477,9 @@ async def lifespan(app: FastAPI):
     log.info("Installing external dependencies of functions and tools...")
     install_tool_and_function_dependencies()
 
-    pool_size = THREAD_POOL_SIZE
-    if pool_size and pool_size > 0:
+    if THREAD_POOL_SIZE and THREAD_POOL_SIZE > 0:
         limiter = anyio.to_thread.current_default_thread_limiter()
-        limiter.total_tokens = pool_size
+        limiter.total_tokens = THREAD_POOL_SIZE
 
     asyncio.create_task(periodic_usage_pool_cleanup())
 
@@ -568,6 +586,11 @@ app.state.config.DEFAULT_MODELS = DEFAULT_MODELS
 app.state.config.DEFAULT_PROMPT_SUGGESTIONS = DEFAULT_PROMPT_SUGGESTIONS
 app.state.config.DEFAULT_USER_ROLE = DEFAULT_USER_ROLE
 
+app.state.config.PENDING_USER_OVERLAY_CONTENT = PENDING_USER_OVERLAY_CONTENT
+app.state.config.PENDING_USER_OVERLAY_TITLE = PENDING_USER_OVERLAY_TITLE
+
+app.state.config.RESPONSE_WATERMARK = RESPONSE_WATERMARK
+
 app.state.config.USER_PERMISSIONS = USER_PERMISSIONS
 app.state.config.WEBHOOK_URL = WEBHOOK_URL
 app.state.config.BANNERS = WEBUI_BANNERS
@@ -604,6 +627,7 @@ app.state.config.LDAP_SEARCH_BASE = LDAP_SEARCH_BASE
 app.state.config.LDAP_SEARCH_FILTERS = LDAP_SEARCH_FILTERS
 app.state.config.LDAP_USE_TLS = LDAP_USE_TLS
 app.state.config.LDAP_CA_CERT_FILE = LDAP_CA_CERT_FILE
+app.state.config.LDAP_VALIDATE_CERT = LDAP_VALIDATE_CERT
 app.state.config.LDAP_CIPHERS = LDAP_CIPHERS
 
 
@@ -626,6 +650,8 @@ app.state.FUNCTIONS = {}
 app.state.config.TOP_K = RAG_TOP_K
 app.state.config.TOP_K_RERANKER = RAG_TOP_K_RERANKER
 app.state.config.RELEVANCE_THRESHOLD = RAG_RELEVANCE_THRESHOLD
+app.state.config.HYBRID_BM25_WEIGHT = RAG_HYBRID_BM25_WEIGHT
+app.state.config.ALLOWED_FILE_EXTENSIONS = RAG_ALLOWED_FILE_EXTENSIONS
 app.state.config.FILE_MAX_SIZE = RAG_FILE_MAX_SIZE
 app.state.config.FILE_MAX_COUNT = RAG_FILE_MAX_COUNT
 
@@ -636,10 +662,13 @@ app.state.config.ENABLE_RAG_HYBRID_SEARCH = ENABLE_RAG_HYBRID_SEARCH
 app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION = ENABLE_WEB_LOADER_SSL_VERIFICATION
 
 app.state.config.CONTENT_EXTRACTION_ENGINE = CONTENT_EXTRACTION_ENGINE
+app.state.config.EXTERNAL_DOCUMENT_LOADER_URL = EXTERNAL_DOCUMENT_LOADER_URL
+app.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY = EXTERNAL_DOCUMENT_LOADER_API_KEY
 app.state.config.TIKA_SERVER_URL = TIKA_SERVER_URL
 app.state.config.DOCLING_SERVER_URL = DOCLING_SERVER_URL
 app.state.config.DOCLING_OCR_ENGINE = DOCLING_OCR_ENGINE
 app.state.config.DOCLING_OCR_LANG = DOCLING_OCR_LANG
+app.state.config.DOCLING_DO_PICTURE_DESCRIPTION = DOCLING_DO_PICTURE_DESCRIPTION
 app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT = DOCUMENT_INTELLIGENCE_ENDPOINT
 app.state.config.DOCUMENT_INTELLIGENCE_KEY = DOCUMENT_INTELLIGENCE_KEY
 app.state.config.MISTRAL_OCR_API_KEY = MISTRAL_OCR_API_KEY
@@ -653,7 +682,12 @@ app.state.config.CHUNK_OVERLAP = CHUNK_OVERLAP
 app.state.config.RAG_EMBEDDING_ENGINE = RAG_EMBEDDING_ENGINE
 app.state.config.RAG_EMBEDDING_MODEL = RAG_EMBEDDING_MODEL
 app.state.config.RAG_EMBEDDING_BATCH_SIZE = RAG_EMBEDDING_BATCH_SIZE
+
+app.state.config.RAG_RERANKING_ENGINE = RAG_RERANKING_ENGINE
 app.state.config.RAG_RERANKING_MODEL = RAG_RERANKING_MODEL
+app.state.config.RAG_EXTERNAL_RERANKER_URL = RAG_EXTERNAL_RERANKER_URL
+app.state.config.RAG_EXTERNAL_RERANKER_API_KEY = RAG_EXTERNAL_RERANKER_API_KEY
+
 app.state.config.RAG_TEMPLATE = RAG_TEMPLATE
 
 app.state.config.RAG_OPENAI_API_BASE_URL = RAG_OPENAI_API_BASE_URL
@@ -678,6 +712,7 @@ app.state.config.WEB_SEARCH_TRUST_ENV = WEB_SEARCH_TRUST_ENV
 app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = (
     BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
 )
+app.state.config.BYPASS_WEB_SEARCH_WEB_LOADER = BYPASS_WEB_SEARCH_WEB_LOADER
 
 app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION = ENABLE_GOOGLE_DRIVE_INTEGRATION
 app.state.config.ENABLE_ONEDRIVE_INTEGRATION = ENABLE_ONEDRIVE_INTEGRATION
@@ -734,7 +769,10 @@ try:
     )
 
     app.state.rf = get_rf(
+        app.state.config.RAG_RERANKING_ENGINE,
         app.state.config.RAG_RERANKING_MODEL,
+        app.state.config.RAG_EXTERNAL_RERANKER_URL,
+        app.state.config.RAG_EXTERNAL_RERANKER_API_KEY,
         RAG_RERANKING_MODEL_AUTO_UPDATE,
     )
 except Exception as e:
@@ -852,6 +890,7 @@ app.state.config.TTS_SPLIT_ON = AUDIO_TTS_SPLIT_ON
 
 
 app.state.config.TTS_AZURE_SPEECH_REGION = AUDIO_TTS_AZURE_SPEECH_REGION
+app.state.config.TTS_AZURE_SPEECH_BASE_URL = AUDIO_TTS_AZURE_SPEECH_BASE_URL
 app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT = AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT
 
 
@@ -926,6 +965,7 @@ class RedirectMiddleware(BaseHTTPMiddleware):
 
 
 # Add the middleware to the app
+app.add_middleware(CompressMiddleware)
 app.add_middleware(RedirectMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 
@@ -1153,11 +1193,12 @@ async def chat_completion(
             "chat_id": form_data.pop("chat_id", None),
             "message_id": form_data.pop("id", None),
             "session_id": form_data.pop("session_id", None),
+            "filter_ids": form_data.pop("filter_ids", []),
             "tool_ids": form_data.get("tool_ids", None),
             "tool_servers": form_data.pop("tool_servers", None),
             "files": form_data.get("files", None),
-            "features": form_data.get("features", None),
-            "variables": form_data.get("variables", None),
+            "features": form_data.get("features", {}),
+            "variables": form_data.get("variables", {}),
             "model": model,
             "direct": model_item.get("direct", False),
             **(
@@ -1379,6 +1420,12 @@ async def get_app_config(request: Request):
                 "onedrive": {
                     "client_id": ONEDRIVE_CLIENT_ID.value,
                     "sharepoint_url": ONEDRIVE_SHAREPOINT_URL.value,
+                    "sharepoint_tenant_id": ONEDRIVE_SHAREPOINT_TENANT_ID.value,
+                },
+                "ui": {
+                    "pending_user_overlay_title": app.state.config.PENDING_USER_OVERLAY_TITLE,
+                    "pending_user_overlay_content": app.state.config.PENDING_USER_OVERLAY_CONTENT,
+                    "response_watermark": app.state.config.RESPONSE_WATERMARK,
                 },
                 "license_metadata": app.state.LICENSE_METADATA,
                 **(
@@ -1431,7 +1478,8 @@ async def get_app_latest_release_version(user=Depends(get_verified_user)):
         timeout = aiohttp.ClientTimeout(total=1)
         async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
             async with session.get(
-                "https://api.github.com/repos/open-webui/open-webui/releases/latest"
+                "https://api.github.com/repos/open-webui/open-webui/releases/latest",
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as response:
                 response.raise_for_status()
                 data = await response.json()

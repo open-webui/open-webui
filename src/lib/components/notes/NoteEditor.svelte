@@ -180,7 +180,10 @@
 			return;
 		}
 
-		const model = $models.find((model) => model.id === selectedModelId);
+		const model = $models
+			.filter((model) => model.id === selectedModelId && !(model?.info?.meta?.hidden ?? false))
+			.find((model) => model.id === selectedModelId);
+
 		if (!model) {
 			selectedModelId = '';
 			return;
@@ -273,8 +276,19 @@
 		files = [...files, fileItem];
 
 		try {
+			// If the file is an audio file, provide the language for STT.
+			let metadata = null;
+			if (
+				(file.type.startsWith('audio/') || file.type.startsWith('video/')) &&
+				$settings?.audio?.stt?.language
+			) {
+				metadata = {
+					language: $settings?.audio?.stt?.language
+				};
+			}
+
 			// During the file upload, file content is automatically extracted.
-			const uploadedFile = await uploadFile(localStorage.token, file);
+			const uploadedFile = await uploadFile(localStorage.token, file, metadata);
 
 			if (uploadedFile) {
 				console.log('File upload completed:', {
@@ -599,6 +613,16 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 			selectedModelId = '';
 		}
 
+		if (selectedModelId) {
+			const model = $models
+				.filter((model) => model.id === selectedModelId && !(model?.info?.meta?.hidden ?? false))
+				.find((model) => model.id === selectedModelId);
+
+			if (!model) {
+				selectedModelId = '';
+			}
+		}
+
 		const dropzoneElement = document.getElementById('note-editor');
 
 		dropzoneElement?.addEventListener('dragover', onDragOver);
@@ -660,7 +684,10 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 							class="w-full bg-transparent text-sm outline-hidden"
 							bind:value={selectedModelId}
 						>
-							{#each $models as model}
+							<option value="" class="bg-gray-50 dark:bg-gray-700" disabled>
+								{$i18n.t('Select a model')}
+							</option>
+							{#each $models.filter((model) => !(model?.info?.meta?.hidden ?? false)) as model}
 								<option value={model.id} class="bg-gray-50 dark:bg-gray-700">{model.name}</option>
 							{/each}
 						</select>

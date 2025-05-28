@@ -1,6 +1,7 @@
 import logging
 import os
 import uuid
+import json
 from fnmatch import fnmatch
 from pathlib import Path
 from typing import Optional
@@ -10,6 +11,7 @@ from fastapi import (
     APIRouter,
     Depends,
     File,
+    Form,
     HTTPException,
     Request,
     UploadFile,
@@ -84,16 +86,43 @@ def has_access_to_file(
 def upload_file(
     request: Request,
     file: UploadFile = File(...),
-    user=Depends(get_verified_user),
-    file_metadata: dict = None,
+    metadata: Optional[dict | str] = Form(None),
     process: bool = Query(True),
+    internal: bool = False,
+    user=Depends(get_verified_user),
 ):
     log.info(f"file.content_type: {file.content_type}")
 
-    file_metadata = file_metadata if file_metadata else {}
+    if isinstance(metadata, str):
+        try:
+            metadata = json.loads(metadata)
+        except json.JSONDecodeError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT("Invalid metadata format"),
+            )
+    file_metadata = metadata if metadata else {}
+
     try:
         unsanitized_filename = file.filename
         filename = os.path.basename(unsanitized_filename)
+
+        file_extension = os.path.splitext(filename)[1]
+        # Remove the leading dot from the file extension
+        file_extension = file_extension[1:] if file_extension else ""
+
+        if (not internal) and request.app.state.config.ALLOWED_FILE_EXTENSIONS:
+            request.app.state.config.ALLOWED_FILE_EXTENSIONS = [
+                ext for ext in request.app.state.config.ALLOWED_FILE_EXTENSIONS if ext
+            ]
+
+            if file_extension not in request.app.state.config.ALLOWED_FILE_EXTENSIONS:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=ERROR_MESSAGES.DEFAULT(
+                        f"File type {file_extension} is not allowed"
+                    ),
+                )
 
         # replace filename with uuid
         id = str(uuid.uuid4())
@@ -125,33 +154,26 @@ def upload_file(
         )
         if process:
             try:
+                if file.content_type:
+                    if file.content_type.startswith("audio/") or file.content_type in {
+                        "video/webm"
+                    }:
+                        file_path = Storage.get_file(file_path)
+                        result = transcribe(request, file_path, file_metadata)
 
-                if file.content_type.startswith(
-                    (
-                        "audio/mpeg",
-                        "audio/wav",
-                        "audio/ogg",
-                        "audio/x-m4a",
-                        "audio/webm",
+                        process_file(
+                            request,
+                            ProcessFileForm(file_id=id, content=result.get("text", "")),
+                            user=user,
+                        )
+                    elif (not file.content_type.startswith(("image/", "video/"))) or (
+                        request.app.state.config.CONTENT_EXTRACTION_ENGINE == "external"
+                    ):
+                        process_file(request, ProcessFileForm(file_id=id), user=user)
+                else:
+                    log.info(
+                        f"File type {file.content_type} is not provided, but trying to process anyway"
                     )
-                ):
-                    file_path = Storage.get_file(file_path)
-                    result = transcribe(request, file_path)
-
-                    process_file(
-                        request,
-                        ProcessFileForm(file_id=id, content=result.get("text", "")),
-                        user=user,
-                    )
-                elif file.content_type not in [
-                    "image/png",
-                    "image/jpeg",
-                    "image/gif",
-                    "video/mp4",
-                    "video/ogg",
-                    "video/quicktime",
-                    "video/webm",
-                ]:
                     process_file(request, ProcessFileForm(file_id=id), user=user)
 
                 file_item = Files.get_file_by_id(id=id)
@@ -177,7 +199,7 @@ def upload_file(
         log.exception(e)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(e),
+            detail=ERROR_MESSAGES.DEFAULT("Error uploading file"),
         )
 
 
