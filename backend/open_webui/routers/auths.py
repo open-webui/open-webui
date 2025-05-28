@@ -452,10 +452,12 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
             request.app.state.config.ENABLE_SIGNUP = False
 
         hashed = get_password_hash(form_data.password)
+        # Use email as name if no name is provided
+        name = form_data.name if form_data.name else form_data.email
         user = Auths.insert_new_auth(
             form_data.email.lower(),
             hashed,
-            form_data.name,
+            name,
             form_data.profile_image_url,
             role,
         )

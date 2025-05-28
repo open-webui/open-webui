@@ -19,7 +19,6 @@
 	let inputFiles;
 
 	let _user = {
-		name: '',
 		email: '',
 		password: '',
 		role: 'user'
@@ -27,7 +26,6 @@
 
 	$: if (show) {
 		_user = {
-			name: '',
 			email: '',
 			password: '',
 			role: 'user'
@@ -45,11 +43,11 @@
 
 			const res = await addUser(
 				localStorage.token,
-				_user.name,
+				_user.email,  // Use email as name
 				_user.email,
 				_user.password,
 				_user.role,
-				generateInitialsImage(_user.name)
+				generateInitialsImage(_user.email)  // Use email for initials
 			).catch((error) => {
 				toast.error(`${error}`);
 			});
@@ -77,16 +75,16 @@
 
 						if (idx > 0) {
 							if (
-								columns.length === 4 &&
-								['admin', 'user', 'pending'].includes(columns[3].toLowerCase())
+								columns.length === 3 &&
+								['admin', 'user', 'pending'].includes(columns[2].toLowerCase())
 							) {
 								const res = await addUser(
 									localStorage.token,
-									columns[0],
-									columns[1],
-									columns[2],
-									columns[3].toLowerCase(),
-									generateInitialsImage(columns[0])
+									columns[0],  // email as name
+									columns[0],  // email
+									columns[1],  // password
+									columns[2].toLowerCase(),  // role
+									generateInitialsImage(columns[0])  // use email for initials
 								).catch((error) => {
 									toast.error(`Row ${idx + 1}: ${error}`);
 									return null;
@@ -196,23 +194,6 @@
 								</div>
 							</div>
 
-							<div class="flex flex-col w-full mt-1">
-								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Name')}</div>
-
-								<div class="flex-1">
-									<input
-										class="w-full text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-hidden"
-										type="text"
-										bind:value={_user.name}
-										placeholder={$i18n.t('Enter Your Full Name')}
-										autocomplete="off"
-										required
-									/>
-								</div>
-							</div>
-
-							<hr class=" border-gray-100 dark:border-gray-850 my-2.5 w-full" />
-
 							<div class="flex flex-col w-full">
 								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Email')}</div>
 
@@ -268,7 +249,7 @@
 
 								<div class=" text-xs text-gray-500">
 									ⓘ {$i18n.t(
-										'Ensure your CSV file includes 4 columns in this order: Name, Email, Password, Role.'
+										'Ensure your CSV file includes 3 columns in this order: Email, Password, Role.'
 									)}
 									<a
 										class="underline dark:text-gray-200"

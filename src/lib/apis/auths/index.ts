@@ -287,7 +287,6 @@ export const userSignIn = async (email: string, password: string) => {
 };
 
 export const userSignUp = async (
-	name: string,
 	email: string,
 	password: string,
 	profile_image_url: string
@@ -301,7 +300,6 @@ export const userSignUp = async (
 		},
 		credentials: 'include',
 		body: JSON.stringify({
-			name: name,
 			email: email,
 			password: password,
 			profile_image_url: profile_image_url
@@ -367,7 +365,7 @@ export const addUser = async (
 			...(token && { authorization: `Bearer ${token}` })
 		},
 		body: JSON.stringify({
-			name: name,
+			name: name || email,  // Use email as name if name is not provided
 			email: email,
 			password: password,
 			role: role,
