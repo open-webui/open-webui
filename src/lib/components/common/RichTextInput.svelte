@@ -42,6 +42,7 @@
 		extractPlainTextFromEditor,
 		createPiiHighlightStyles,
 		PiiSessionManager,
+		countBrTagsBeforePosition,
 		type ExtendedPiiEntity
 	} from '$lib/utils/pii';
 	import PiiHoverOverlay from './PiiHoverOverlay.svelte';
@@ -311,6 +312,7 @@
 			const response = await maskPiiText(piiApiKey, [text], knownEntities, false, false);
 			if (response.pii && response.pii[0]) {
 				console.log('RichTextInput: PII detection successful, found entities:', response.pii[0]);
+				
 				// Set entities in session manager (conversation-specific if conversationId provided)
 				if (conversationId) {
 					piiSessionManager.setConversationEntities(conversationId, response.pii[0]);

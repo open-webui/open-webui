@@ -3,8 +3,7 @@
 	import DOMPurify from 'dompurify';
 	import {
 		PiiSessionManager,
-		highlightUnmaskedEntities,
-		unmaskTextWithEntities,
+		unmaskAndHighlightTextForDisplay,
 		type ExtendedPiiEntity
 	} from '$lib/utils/pii';
 	import PiiHoverOverlay from '../../../common/PiiHoverOverlay.svelte';
@@ -37,29 +36,20 @@
 			return text;
 		}
 
-		// First, check if the text contains masked patterns like [{LABEL_ID}]
-		// Create a fresh regex each time to avoid state issues
-		const maskedPatternRegex = /\[?\{?([A-Z_]+_\d+)\}?\]?/;
-		const hasMaskedPatterns = maskedPatternRegex.test(text);
+		// Check if text has already been processed (contains PII highlight spans)
+		if (text.includes('<span class="pii-highlight')) {
+			console.log('PiiAwareText: Text already contains PII highlights, skipping processing');
+			return text;
+		}
 
 		console.log('PiiAwareText processing:', {
-			hasMaskedPatterns,
+			entitiesCount: entities.length,
 			textSample: text.substring(0, 100)
 		});
 
-		if (hasMaskedPatterns) {
-			// If it has masked patterns, unmask them first
-			const unmaskedText = unmaskTextWithEntities(text, entities);
-			// Then apply highlighting to the unmasked text
-			const highlighted = highlightUnmaskedEntities(unmaskedText, entities);
-			console.log('PiiAwareText: Unmasked and highlighted', { unmaskedText, highlighted });
-			return highlighted;
-		} else {
-			// If no masked patterns, just apply highlighting directly
-			const highlighted = highlightUnmaskedEntities(text, entities);
-			console.log('PiiAwareText: Direct highlighting', { original: text, highlighted });
-			return highlighted;
-		}
+		// Use the combined function that handles both unmasking and highlighting
+		// This prevents double processing and position-based issues
+		return unmaskAndHighlightTextForDisplay(text, entities);
 	})();
 	$: hasHighlighting = processedText !== text;
 

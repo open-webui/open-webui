@@ -10,8 +10,7 @@
 	// PII Detection imports
 	import {
 		PiiSessionManager,
-		highlightUnmaskedEntities,
-		unmaskTextWithEntities,
+		unmaskAndHighlightTextForDisplay,
 		type ExtendedPiiEntity
 	} from '$lib/utils/pii';
 
@@ -72,17 +71,34 @@
 		}
 	};
 
-	// PII processing function for user messages - unmask and let markdown components handle highlighting
+	// PII processing function for user messages - ensure entities are synchronized for markdown components
 	const processUserMessageContent = (content: string): string => {
-		const entities = piiSessionManager.getEntities();
+		// Get conversation-specific entities if we have a history object with conversationId
+		const conversationId = history?.id || '';
+		const entities = conversationId 
+			? piiSessionManager.getConversationEntities(conversationId)
+			: piiSessionManager.getEntities();
 
 		if (!entities.length) {
 			return content;
 		}
 
-		// Unmask any [{LABEL_ID}] patterns to show original text
-		// The markdown components will then apply PII highlighting
-		return unmaskTextWithEntities(content, entities);
+		// Ensure global entities are synchronized with conversation entities for PiiAwareText components
+		if (conversationId && entities.length > 0) {
+			// Temporarily set global entities to match conversation entities
+			// This ensures PiiAwareText components (which use global entities) work correctly
+			piiSessionManager.setEntities(entities);
+			console.log('UserMessage: Synchronized global entities with conversation entities', {
+				conversationId,
+				entitiesCount: entities.length
+			});
+		}
+
+		console.log('UserMessage: Entity synchronization complete, letting PiiAwareText handle processing for conversation:', conversationId);
+		
+		// Return content as-is - let PiiAwareText components handle the actual processing
+		// This prevents double processing while ensuring entities are available
+		return content;
 	};
 
 	const editMessageHandler = async () => {

@@ -213,24 +213,43 @@
 		let maskedText = prompt;
 		const entitiesToMask = currentPiiEntities.filter((entity) => entity.shouldMask);
 
-		// Sort occurrences by start position in reverse order to avoid index shifting
-		const allOccurrences = entitiesToMask
-			.flatMap((entity) =>
-				entity.occurrences.map((occ) => ({
-					...occ,
-					label: entity.label,
-					type: entity.type
-				}))
-			)
-			.sort((a, b) => b.start_idx - a.start_idx);
+		console.log('MessageInput: Creating masked prompt, entities to mask:', entitiesToMask.length);
+		console.log('MessageInput: Original prompt:', prompt.substring(0, 200));
 
-		// Replace text with masked versions using LABEL_ID pattern
-		allOccurrences.forEach((occurrence) => {
-			const before = maskedText.substring(0, occurrence.start_idx);
-			const after = maskedText.substring(occurrence.end_idx);
-			maskedText = before + `[{${occurrence.label}}]` + after;
+		// Use a more robust approach: sort entities by raw text length (longest first)
+		// to avoid partial replacements, then replace by raw text instead of positions
+		const sortedEntities = entitiesToMask.sort((a, b) => b.raw_text.length - a.raw_text.length);
+
+		sortedEntities.forEach((entity) => {
+			if (!entity.raw_text || entity.raw_text.trim() === '') {
+				console.log('MessageInput: Skipping entity with empty raw text:', entity.label);
+				return;
+			}
+
+			// Escape special regex characters
+			const escapedText = entity.raw_text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+			
+			// Use word boundaries for better matching, but handle special characters gracefully
+			const hasSpecialChars = /[^\w\s]/.test(entity.raw_text);
+			const regex = hasSpecialChars 
+				? new RegExp(escapedText, 'gi')
+				: new RegExp(`\\b${escapedText}\\b`, 'gi');
+
+			console.log('MessageInput: Replacing text for entity', entity.label, 'raw text:', entity.raw_text);
+
+			// Replace all occurrences of the raw text with the masked pattern
+			const replacementPattern = `[{${entity.label}}]`;
+			const beforeReplace = maskedText;
+			maskedText = maskedText.replace(regex, replacementPattern);
+			
+			if (maskedText !== beforeReplace) {
+				console.log('MessageInput: Successfully masked entity', entity.label);
+			} else {
+				console.log('MessageInput: No replacements made for entity', entity.label);
+			}
 		});
 
+		console.log('MessageInput: Final masked prompt:', maskedText.substring(0, 200));
 		return maskedText;
 	};
 

@@ -42,7 +42,7 @@ export function extractPlainTextFromEditor(editorContent: string): string {
 }
 
 // Count br tags before a given plain text position
-function countBrTagsBeforePosition(html: string, plainTextPos: number): number {
+export function countBrTagsBeforePosition(html: string, plainTextPos: number): number {
 	// Extract plain text to find character positions
 	const tempDiv = document.createElement('div');
 	tempDiv.innerHTML = html;
@@ -386,6 +386,12 @@ export function unmaskTextWithEntities(text: string, entities: ExtendedPiiEntity
 	if (!text) return '';
 	if (!entities || !entities.length) return text;
 
+	// Check if text is already highlighted (indicating it's been processed)
+	if (text.includes('<span class="pii-highlight')) {
+		console.log('PII: Text already highlighted, skipping unmasking');
+		return text;
+	}
+
 	// Replace each masked pattern with its original text
 	let unmaskedText = text;
 	entities.forEach((entity) => {
@@ -393,11 +399,17 @@ export function unmaskTextWithEntities(text: string, entities: ExtendedPiiEntity
 		// Use entity.raw_text as the raw text for unmasking
 		const rawText = entity.raw_text;
 
-		if (!label || !rawText) return;
+		if (!label || !rawText) {
+			console.log('PII: Skipping entity with missing label or rawText:', { label, rawText });
+			return;
+		}
 
 		// Extract the base type and ID from the label (e.g., "PERSON_1" -> baseType="PERSON", labelId="1")
 		const labelMatch = label.match(/^(.+)_(\d+)$/);
-		if (!labelMatch) return; // Skip if label doesn't match expected format
+		if (!labelMatch) {
+			console.log('PII: Skipping entity with invalid label format:', label);
+			return; // Skip if label doesn't match expected format
+		}
 
 		const [, baseType, labelId] = labelMatch;
 		const labelVariations = getLabelVariations(baseType);
@@ -411,7 +423,14 @@ export function unmaskTextWithEntities(text: string, entities: ExtendedPiiEntity
 				`\\b${labelVariations}_${labelId}\\b`, // TYPE_ID
 			'g'
 		);
+		
+		console.log('PII: Unmasking entity', label, 'pattern:', labelRegex.source, 'with text:', rawText);
+		const originalLength = unmaskedText.length;
 		unmaskedText = unmaskedText.replace(labelRegex, rawText);
+		
+		if (unmaskedText.length !== originalLength) {
+			console.log('PII: Successfully unmasked', label);
+		}
 	});
 
 	return unmaskedText;
@@ -419,7 +438,13 @@ export function unmaskTextWithEntities(text: string, entities: ExtendedPiiEntity
 
 // Function to highlight unmasked entities in response text
 export function highlightUnmaskedEntities(text: string, entities: ExtendedPiiEntity[]): string {
-	if (!entities.length) return text;
+	if (!entities.length || !text) return text;
+
+	// Check if text is already highlighted to prevent double processing
+	if (text.includes('<span class="pii-highlight')) {
+		console.log('PII: Text already highlighted, skipping');
+		return text;
+	}
 
 	let highlightedText = text;
 
@@ -427,8 +452,22 @@ export function highlightUnmaskedEntities(text: string, entities: ExtendedPiiEnt
 	const sortedEntities = [...entities].sort((a, b) => b.raw_text.length - a.raw_text.length);
 
 	sortedEntities.forEach((entity) => {
+		// Skip entities with empty or invalid raw_text
+		if (!entity.raw_text || entity.raw_text.trim() === '') {
+			console.log('PII: Skipping entity with empty raw_text:', entity.label);
+			return;
+		}
+
 		const escapedText = entity.raw_text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-		const regex = new RegExp(`\\b${escapedText}\\b`, 'gi');
+		
+		// Use global flag but be more careful about word boundaries
+		// Don't use word boundaries if the text contains special characters
+		const hasSpecialChars = /[^\w\s]/.test(entity.raw_text);
+		const regex = hasSpecialChars 
+			? new RegExp(escapedText, 'gi')
+			: new RegExp(`\\b${escapedText}\\b`, 'gi');
+
+		console.log('PII: Highlighting entity', entity.label, 'with text:', entity.raw_text);
 
 		highlightedText = highlightedText.replace(regex, (match) => {
 			const shouldMask = entity.shouldMask ?? true;
@@ -440,4 +479,191 @@ export function highlightUnmaskedEntities(text: string, entities: ExtendedPiiEnt
 	});
 
 	return highlightedText;
+}
+
+// Adjust PII entity positions when br tags are removed from text
+export function adjustPiiEntityPositionsForDisplay(
+	entities: ExtendedPiiEntity[],
+	originalHtmlText: string
+): ExtendedPiiEntity[] {
+	if (!entities.length || !originalHtmlText) return entities;
+
+	// Extract plain text without br tags for comparison
+	const textWithoutBrTags = originalHtmlText.replace(/<br\s*\/?>/gi, '');
+	
+	// If no br tags were present, no adjustment needed
+	if (originalHtmlText === textWithoutBrTags) {
+		return entities;
+	}
+
+	console.log('PII: Adjusting entity positions for br tag removal', {
+		originalLength: originalHtmlText.length,
+		newLength: textWithoutBrTags.length,
+		brTagsRemoved: (originalHtmlText.match(/<br\s*\/?>/gi) || []).length
+	});
+
+	return entities.map(entity => {
+		const adjustedOccurrences = entity.occurrences.map(occurrence => {
+			// Count br tags before this position in the original text
+			const brTagsBeforeStart = countBrTagsBeforePosition(originalHtmlText, occurrence.start_idx);
+			const brTagsBeforeEnd = countBrTagsBeforePosition(originalHtmlText, occurrence.end_idx);
+			
+			// Each br tag that was removed shifts positions back
+			// Estimate br tag length as 4 characters (e.g., "<br>")
+			const averageBrTagLength = 4;
+			const startAdjustment = brTagsBeforeStart * averageBrTagLength;
+			const endAdjustment = brTagsBeforeEnd * averageBrTagLength;
+			
+			const adjustedStart = Math.max(0, occurrence.start_idx - startAdjustment);
+			const adjustedEnd = Math.max(adjustedStart, occurrence.end_idx - endAdjustment);
+			
+			console.log('PII: Position adjustment for entity', entity.label, {
+				original: { start: occurrence.start_idx, end: occurrence.end_idx },
+				adjusted: { start: adjustedStart, end: adjustedEnd },
+				brTagsRemoved: { beforeStart: brTagsBeforeStart, beforeEnd: brTagsBeforeEnd }
+			});
+
+			return {
+				...occurrence,
+				start_idx: adjustedStart,
+				end_idx: adjustedEnd
+			};
+		});
+
+		return {
+			...entity,
+			occurrences: adjustedOccurrences
+		};
+	});
+}
+
+// Combined function to unmask and highlight in one step for display purposes
+// This avoids position-based issues by working purely with pattern matching
+export function unmaskAndHighlightTextForDisplay(text: string, entities: ExtendedPiiEntity[]): string {
+	if (!entities.length || !text) return text;
+
+	// Check if text is already processed to prevent double processing
+	if (text.includes('<span class="pii-highlight')) {
+		console.log('PII: Text already highlighted for display, skipping');
+		return text;
+	}
+
+	let processedText = text;
+	let replacementsMade = 0;
+
+	console.log('PII: Starting unmask and highlight for display. Original text:', text.substring(0, 200));
+	console.log('PII: Available entities:', entities.map(e => ({ label: e.label, rawText: e.raw_text })));
+
+	// Step 1: Unmask all patterns and simultaneously replace with highlighted spans
+	entities.forEach((entity) => {
+		const { label } = entity;
+		const rawText = entity.raw_text;
+
+		if (!label || !rawText) {
+			console.log('PII: Skipping entity with missing label or rawText:', { label, rawText });
+			return;
+		}
+
+		// Extract the base type and ID from the label (e.g., "PERSON_1" -> baseType="PERSON", labelId="1")
+		const labelMatch = label.match(/^(.+)_(\d+)$/);
+		if (!labelMatch) {
+			console.log('PII: Skipping entity with invalid label format:', label);
+			return;
+		}
+
+		const [, baseType, labelId] = labelMatch;
+		const labelVariations = getLabelVariations(baseType);
+
+		// Create more comprehensive patterns for the exact label as it appears in masked text
+		const patterns = [
+			`\\[\\{${labelVariations}_${labelId}\\}\\]`,  // [{TYPE_ID}]
+			`\\[${labelVariations}_${labelId}\\]`,        // [TYPE_ID]
+			`\\{${labelVariations}_${labelId}\\}`,        // {TYPE_ID}
+			`${labelVariations}_${labelId}(?=\\s|$|[^\\w])` // TYPE_ID as word boundary
+		];
+		
+		// Use case-insensitive matching and global flag
+		const labelRegex = new RegExp(patterns.join('|'), 'gi');
+
+		console.log('PII: Processing entity for display', label, 'patterns:', patterns);
+		console.log('PII: Looking for patterns in text:', processedText.substring(0, 300));
+
+		// Count matches before replacement
+		const matches = processedText.match(labelRegex);
+		if (matches) {
+			console.log('PII: Found', matches.length, 'matches for entity', label, ':', matches);
+		} else {
+			console.log('PII: No pattern matches found for entity', label);
+		}
+
+		// Replace masked patterns with highlighted spans containing the original text
+		const beforeLength = processedText.length;
+		processedText = processedText.replace(labelRegex, (match) => {
+			const shouldMask = entity.shouldMask ?? true;
+			const maskingClass = shouldMask ? 'pii-masked' : 'pii-unmasked';
+			const statusText = shouldMask ? 'Was masked in input' : 'Was NOT masked in input';
+
+			console.log('PII: Replacing pattern', match, 'with highlighted span for', label, 'using raw text:', rawText);
+			replacementsMade++;
+			return `<span class="pii-highlight ${maskingClass}" title="${entity.label} (${entity.type}) - ${statusText}" data-pii-type="${entity.type}" data-pii-label="${entity.label}">${rawText}</span>`;
+		});
+
+		if (processedText.length !== beforeLength) {
+			console.log('PII: Successfully replaced patterns for', label, 'text length changed from', beforeLength, 'to', processedText.length);
+		}
+	});
+
+	console.log('PII: After pattern replacement, made', replacementsMade, 'replacements. Text:', processedText.substring(0, 300));
+
+	// Step 2: If no masked patterns were found, highlight any remaining raw text instances
+	// This handles cases where text was already unmasked but not highlighted
+	if (replacementsMade === 0) {
+		console.log('PII: No masked patterns found, checking for raw text to highlight');
+		
+		// Sort entities by text length (longest first) to avoid partial replacements
+		const sortedEntities = [...entities].sort((a, b) => b.raw_text.length - a.raw_text.length);
+
+		sortedEntities.forEach((entity) => {
+			// Skip entities with empty or invalid raw_text
+			if (!entity.raw_text || entity.raw_text.trim() === '') {
+				return;
+			}
+
+			// Escape special regex characters and create pattern
+			const escapedText = entity.raw_text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+			
+			// Use word boundaries for better matching, but handle special characters gracefully
+			const hasSpecialChars = /[^\w\s]/.test(entity.raw_text);
+			const regex = hasSpecialChars 
+				? new RegExp(escapedText, 'gi')
+				: new RegExp(`\\b${escapedText}\\b`, 'gi');
+
+			console.log('PII: Highlighting raw text for entity', entity.label, 'with text:', entity.raw_text, 'pattern:', regex.source);
+
+			// Count matches before replacement
+			const matches = processedText.match(regex);
+			if (matches) {
+				console.log('PII: Found', matches.length, 'raw text matches for entity', entity.label, ':', matches);
+			}
+
+			processedText = processedText.replace(regex, (match) => {
+				const shouldMask = entity.shouldMask ?? true;
+				const maskingClass = shouldMask ? 'pii-masked' : 'pii-unmasked';
+				const statusText = shouldMask ? 'Was masked in input' : 'Was NOT masked in input';
+
+				console.log('PII: Highlighting raw text match:', match, 'for entity', entity.label);
+				replacementsMade++;
+				return `<span class="pii-highlight ${maskingClass}" title="${entity.label} (${entity.type}) - ${statusText}" data-pii-type="${entity.type}" data-pii-label="${entity.label}">${match}</span>`;
+			});
+		});
+	}
+
+	console.log('PII: Final result after', replacementsMade, 'total replacements:', processedText.substring(0, 300));
+	
+	// Detect potential issues in the final result
+	if (processedText.includes('</span>') && processedText.match(/[a-zA-Z]+\s*<\/span>\s*[a-zA-Z]+/)) {
+		console.warn('PII: WARNING - Detected potential incomplete replacement in final text:', processedText.substring(0, 200));
+	}
+
+	return processedText;
 }
