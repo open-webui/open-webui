@@ -658,6 +658,12 @@ async def chat_completion_files_handler(
 
 def apply_params_to_form_data(form_data, model):
     params = form_data.pop("params", {})
+    custom_params = params.pop("custom_params", {})
+
+    if custom_params:
+        # If custom_params are provided, merge them into params
+        params = deep_update(params, custom_params)
+
     if model.get("ollama"):
         form_data["options"] = params
 
@@ -667,29 +673,10 @@ def apply_params_to_form_data(form_data, model):
         if "keep_alive" in params:
             form_data["keep_alive"] = params["keep_alive"]
     else:
-        if "seed" in params and params["seed"] is not None:
-            form_data["seed"] = params["seed"]
-
-        if "stop" in params and params["stop"] is not None:
-            form_data["stop"] = params["stop"]
-
-        if "temperature" in params and params["temperature"] is not None:
-            form_data["temperature"] = params["temperature"]
-
-        if "max_tokens" in params and params["max_tokens"] is not None:
-            form_data["max_tokens"] = params["max_tokens"]
-
-        if "top_p" in params and params["top_p"] is not None:
-            form_data["top_p"] = params["top_p"]
-
-        if "frequency_penalty" in params and params["frequency_penalty"] is not None:
-            form_data["frequency_penalty"] = params["frequency_penalty"]
-
-        if "presence_penalty" in params and params["presence_penalty"] is not None:
-            form_data["presence_penalty"] = params["presence_penalty"]
-
-        if "reasoning_effort" in params and params["reasoning_effort"] is not None:
-            form_data["reasoning_effort"] = params["reasoning_effort"]
+        if isinstance(params, dict):
+            for key, value in params.items():
+                if value is not None:
+                    form_data[key] = value
 
         if "logit_bias" in params and params["logit_bias"] is not None:
             try:
@@ -703,7 +690,6 @@ def apply_params_to_form_data(form_data, model):
 
 
 async def process_chat_payload(request, form_data, user, metadata, model):
-
     form_data = apply_params_to_form_data(form_data, model)
     log.debug(f"form_data: {form_data}")
 

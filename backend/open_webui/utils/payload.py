@@ -1,5 +1,6 @@
 from open_webui.utils.task import prompt_template, prompt_variables_template
 from open_webui.utils.misc import (
+    deep_update,
     add_or_update_system_message,
 )
 
@@ -45,15 +46,25 @@ def apply_model_params_to_body(
     if not params:
         return form_data
 
-    for key, cast_func in mappings.items():
-        if (value := params.get(key)) is not None:
-            form_data[key] = cast_func(value)
+    for key, value in params.items():
+        if value is not None:
+            if key in mappings:
+                cast_func = mappings[key]
+                if isinstance(cast_func, Callable):
+                    form_data[key] = cast_func(value)
+            else:
+                form_data[key] = value
 
     return form_data
 
 
 # inplace function: form_data is modified
 def apply_model_params_to_body_openai(params: dict, form_data: dict) -> dict:
+    custom_params = params.pop("custom_params", {})
+    if custom_params:
+        # If there are custom parameters, we need to apply them first
+        params = deep_update(params, custom_params)
+
     mappings = {
         "temperature": float,
         "top_p": float,
@@ -71,6 +82,11 @@ def apply_model_params_to_body_openai(params: dict, form_data: dict) -> dict:
 
 
 def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
+    custom_params = params.pop("custom_params", {})
+    if custom_params:
+        # If there are custom parameters, we need to apply them first
+        params = deep_update(params, custom_params)
+
     # Convert OpenAI parameter names to Ollama parameter names if needed.
     name_differences = {
         "max_tokens": "num_predict",

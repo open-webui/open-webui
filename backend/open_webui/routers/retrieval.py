@@ -353,6 +353,15 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         # Content extraction settings
         "CONTENT_EXTRACTION_ENGINE": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
         "PDF_EXTRACT_IMAGES": request.app.state.config.PDF_EXTRACT_IMAGES,
+        "DATALAB_MARKER_API_KEY": request.app.state.config.DATALAB_MARKER_API_KEY,
+        "DATALAB_MARKER_LANGS": request.app.state.config.DATALAB_MARKER_LANGS,
+        "DATALAB_MARKER_SKIP_CACHE": request.app.state.config.DATALAB_MARKER_SKIP_CACHE,
+        "DATALAB_MARKER_FORCE_OCR": request.app.state.config.DATALAB_MARKER_FORCE_OCR,
+        "DATALAB_MARKER_PAGINATE": request.app.state.config.DATALAB_MARKER_PAGINATE,
+        "DATALAB_MARKER_STRIP_EXISTING_OCR": request.app.state.config.DATALAB_MARKER_STRIP_EXISTING_OCR,
+        "DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION": request.app.state.config.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION,
+        "DATALAB_MARKER_USE_LLM": request.app.state.config.DATALAB_MARKER_USE_LLM,
+        "DATALAB_MARKER_OUTPUT_FORMAT": request.app.state.config.DATALAB_MARKER_OUTPUT_FORMAT,
         "EXTERNAL_DOCUMENT_LOADER_URL": request.app.state.config.EXTERNAL_DOCUMENT_LOADER_URL,
         "EXTERNAL_DOCUMENT_LOADER_API_KEY": request.app.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY,
         "TIKA_SERVER_URL": request.app.state.config.TIKA_SERVER_URL,
@@ -500,6 +509,15 @@ class ConfigForm(BaseModel):
     # Content extraction settings
     CONTENT_EXTRACTION_ENGINE: Optional[str] = None
     PDF_EXTRACT_IMAGES: Optional[bool] = None
+    DATALAB_MARKER_API_KEY: Optional[str] = None
+    DATALAB_MARKER_LANGS: Optional[str] = None
+    DATALAB_MARKER_SKIP_CACHE: Optional[bool] = None
+    DATALAB_MARKER_FORCE_OCR: Optional[bool] = None
+    DATALAB_MARKER_PAGINATE: Optional[bool] = None
+    DATALAB_MARKER_STRIP_EXISTING_OCR: Optional[bool] = None
+    DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION: Optional[bool] = None
+    DATALAB_MARKER_USE_LLM: Optional[bool] = None
+    DATALAB_MARKER_OUTPUT_FORMAT: Optional[str] = None
     EXTERNAL_DOCUMENT_LOADER_URL: Optional[str] = None
     EXTERNAL_DOCUMENT_LOADER_API_KEY: Optional[str] = None
 
@@ -598,6 +616,51 @@ async def update_rag_config(
         form_data.PDF_EXTRACT_IMAGES
         if form_data.PDF_EXTRACT_IMAGES is not None
         else request.app.state.config.PDF_EXTRACT_IMAGES
+    )
+    request.app.state.config.DATALAB_MARKER_API_KEY = (
+        form_data.DATALAB_MARKER_API_KEY
+        if form_data.DATALAB_MARKER_API_KEY is not None
+        else request.app.state.config.DATALAB_MARKER_API_KEY
+    )
+    request.app.state.config.DATALAB_MARKER_LANGS = (
+        form_data.DATALAB_MARKER_LANGS
+        if form_data.DATALAB_MARKER_LANGS is not None
+        else request.app.state.config.DATALAB_MARKER_LANGS
+    )
+    request.app.state.config.DATALAB_MARKER_SKIP_CACHE = (
+        form_data.DATALAB_MARKER_SKIP_CACHE
+        if form_data.DATALAB_MARKER_SKIP_CACHE is not None
+        else request.app.state.config.DATALAB_MARKER_SKIP_CACHE
+    )
+    request.app.state.config.DATALAB_MARKER_FORCE_OCR = (
+        form_data.DATALAB_MARKER_FORCE_OCR
+        if form_data.DATALAB_MARKER_FORCE_OCR is not None
+        else request.app.state.config.DATALAB_MARKER_FORCE_OCR
+    )
+    request.app.state.config.DATALAB_MARKER_PAGINATE = (
+        form_data.DATALAB_MARKER_PAGINATE
+        if form_data.DATALAB_MARKER_PAGINATE is not None
+        else request.app.state.config.DATALAB_MARKER_PAGINATE
+    )
+    request.app.state.config.DATALAB_MARKER_STRIP_EXISTING_OCR = (
+        form_data.DATALAB_MARKER_STRIP_EXISTING_OCR
+        if form_data.DATALAB_MARKER_STRIP_EXISTING_OCR is not None
+        else request.app.state.config.DATALAB_MARKER_STRIP_EXISTING_OCR
+    )
+    request.app.state.config.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION = (
+        form_data.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION
+        if form_data.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION is not None
+        else request.app.state.config.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION
+    )
+    request.app.state.config.DATALAB_MARKER_OUTPUT_FORMAT = (
+        form_data.DATALAB_MARKER_OUTPUT_FORMAT
+        if form_data.DATALAB_MARKER_OUTPUT_FORMAT is not None
+        else request.app.state.config.DATALAB_MARKER_OUTPUT_FORMAT
+    )
+    request.app.state.config.DATALAB_MARKER_USE_LLM = (
+        form_data.DATALAB_MARKER_USE_LLM
+        if form_data.DATALAB_MARKER_USE_LLM is not None
+        else request.app.state.config.DATALAB_MARKER_USE_LLM
     )
     request.app.state.config.EXTERNAL_DOCUMENT_LOADER_URL = (
         form_data.EXTERNAL_DOCUMENT_LOADER_URL
@@ -853,6 +916,15 @@ async def update_rag_config(
         # Content extraction settings
         "CONTENT_EXTRACTION_ENGINE": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
         "PDF_EXTRACT_IMAGES": request.app.state.config.PDF_EXTRACT_IMAGES,
+        "DATALAB_MARKER_API_KEY": request.app.state.config.DATALAB_MARKER_API_KEY,
+        "DATALAB_MARKER_LANGS": request.app.state.config.DATALAB_MARKER_LANGS,
+        "DATALAB_MARKER_SKIP_CACHE": request.app.state.config.DATALAB_MARKER_SKIP_CACHE,
+        "DATALAB_MARKER_FORCE_OCR": request.app.state.config.DATALAB_MARKER_FORCE_OCR,
+        "DATALAB_MARKER_PAGINATE": request.app.state.config.DATALAB_MARKER_PAGINATE,
+        "DATALAB_MARKER_STRIP_EXISTING_OCR": request.app.state.config.DATALAB_MARKER_STRIP_EXISTING_OCR,
+        "DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION": request.app.state.config.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION,
+        "DATALAB_MARKER_USE_LLM": request.app.state.config.DATALAB_MARKER_USE_LLM,
+        "DATALAB_MARKER_OUTPUT_FORMAT": request.app.state.config.DATALAB_MARKER_OUTPUT_FORMAT,
         "EXTERNAL_DOCUMENT_LOADER_URL": request.app.state.config.EXTERNAL_DOCUMENT_LOADER_URL,
         "EXTERNAL_DOCUMENT_LOADER_API_KEY": request.app.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY,
         "TIKA_SERVER_URL": request.app.state.config.TIKA_SERVER_URL,
@@ -1178,6 +1250,15 @@ def process_file(
                 file_path = Storage.get_file(file_path)
                 loader = Loader(
                     engine=request.app.state.config.CONTENT_EXTRACTION_ENGINE,
+                    DATALAB_MARKER_API_KEY=request.app.state.config.DATALAB_MARKER_API_KEY,
+                    DATALAB_MARKER_LANGS=request.app.state.config.DATALAB_MARKER_LANGS,
+                    DATALAB_MARKER_SKIP_CACHE=request.app.state.config.DATALAB_MARKER_SKIP_CACHE,
+                    DATALAB_MARKER_FORCE_OCR=request.app.state.config.DATALAB_MARKER_FORCE_OCR,
+                    DATALAB_MARKER_PAGINATE=request.app.state.config.DATALAB_MARKER_PAGINATE,
+                    DATALAB_MARKER_STRIP_EXISTING_OCR=request.app.state.config.DATALAB_MARKER_STRIP_EXISTING_OCR,
+                    DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION=request.app.state.config.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION,
+                    DATALAB_MARKER_USE_LLM=request.app.state.config.DATALAB_MARKER_USE_LLM,
+                    DATALAB_MARKER_OUTPUT_FORMAT=request.app.state.config.DATALAB_MARKER_OUTPUT_FORMAT,
                     EXTERNAL_DOCUMENT_LOADER_URL=request.app.state.config.EXTERNAL_DOCUMENT_LOADER_URL,
                     EXTERNAL_DOCUMENT_LOADER_API_KEY=request.app.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY,
                     TIKA_SERVER_URL=request.app.state.config.TIKA_SERVER_URL,
@@ -1835,6 +1916,7 @@ class QueryCollectionsForm(BaseModel):
     k_reranker: Optional[int] = None
     r: Optional[float] = None
     hybrid: Optional[bool] = None
+    hybrid_bm25_weight: Optional[float] = None
 
 
 @router.post("/query/collection")
