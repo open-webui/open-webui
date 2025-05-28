@@ -45,7 +45,6 @@
 		countBrTagsBeforePosition,
 		type ExtendedPiiEntity
 	} from '$lib/utils/pii';
-	import PiiHoverOverlay from './PiiHoverOverlay.svelte';
 
 	export let oncompositionstart = (e: CompositionEvent) => {};
 	export let oncompositionend = (e: CompositionEvent) => {};
@@ -177,14 +176,6 @@
 			}
 		}
 	}
-
-	// Hover overlay state
-	let hoverOverlayVisible = false;
-	let hoverOverlayEntity: ExtendedPiiEntity | null = null;
-	let hoverOverlayPosition = { x: 0, y: 0 };
-	let hoverTimeout: ReturnType<typeof setTimeout> | null = null;
-	let isOverPiiElement = false;
-	let isOverOverlay = false;
 
 	const options = {
 		throwOnError: false
@@ -360,62 +351,6 @@
 		}
 	}, 150); // Faster than PII detection but still debounced
 
-	// Hover overlay handlers
-	const handlePiiHover = (entity: ExtendedPiiEntity, position: { x: number; y: number }) => {
-		console.log('RichTextInput: handlePiiHover called', { entity: entity.label, position });
-		if (hoverTimeout) {
-			clearTimeout(hoverTimeout);
-			hoverTimeout = null;
-		}
-		isOverPiiElement = true;
-		hoverOverlayEntity = entity;
-		hoverOverlayPosition = position;
-		hoverOverlayVisible = true;
-		console.log('RichTextInput: Overlay should now be visible:', hoverOverlayVisible);
-	};
-
-	const handlePiiHoverEnd = () => {
-		console.log('handlePiiHoverEnd called');
-		isOverPiiElement = false;
-		checkShouldCloseOverlay();
-	};
-
-	// Overlay mouse events to prevent disappearing when hovering over dialog
-	const handleOverlayMouseEnter = () => {
-		console.log('Mouse entered overlay');
-		if (hoverTimeout) {
-			clearTimeout(hoverTimeout);
-			hoverTimeout = null;
-		}
-		isOverOverlay = true;
-	};
-
-	const handleOverlayMouseLeave = () => {
-		console.log('Mouse left overlay');
-		isOverOverlay = false;
-		checkShouldCloseOverlay();
-	};
-
-	// Helper function to check if overlay should close
-	const checkShouldCloseOverlay = () => {
-		console.log('checkShouldCloseOverlay called:', { isOverPiiElement, isOverOverlay });
-		if (hoverTimeout) {
-			clearTimeout(hoverTimeout);
-		}
-
-		// Only close if we're not over either the PII element or the overlay
-		if (!isOverPiiElement && !isOverOverlay) {
-			console.log('Starting close timeout');
-			hoverTimeout = setTimeout(() => {
-				console.log('Closing overlay due to timeout');
-				hoverOverlayVisible = false;
-				hoverOverlayEntity = null;
-			}, 300); // Slightly longer delay to handle rapid mouse movements
-		} else {
-			console.log('Not closing overlay - still hovering');
-		}
-	};
-
 	const handleOverlayToggle = (event: CustomEvent) => {
 		// Update the entities in the editor using conversation-specific entities
 		if (conversationId) {
@@ -513,9 +448,7 @@
 					? [
 							PiiHighlighter.configure({
 								piiEntities: piiEntities,
-								highlightClass: 'pii-highlight',
-								onHover: handlePiiHover,
-								onHoverEnd: handlePiiHoverEnd
+								highlightClass: 'pii-highlight'
 							})
 						]
 					: []),
@@ -790,25 +723,3 @@
 </script>
 
 <div bind:this={element} class="relative w-full min-w-full h-full min-h-fit {className}" />
-
-<!-- PII Hover Overlay -->
-{#if enablePiiDetection}
-	<PiiHoverOverlay
-		bind:visible={hoverOverlayVisible}
-		entity={hoverOverlayEntity}
-		position={hoverOverlayPosition}
-		on:toggle={handleOverlayToggle}
-		on:overlayMouseEnter={(e) => {
-			console.log('RichTextInput: overlayMouseEnter event received');
-			handleOverlayMouseEnter();
-		}}
-		on:overlayMouseLeave={(e) => {
-			console.log('RichTextInput: overlayMouseLeave event received');
-			handleOverlayMouseLeave();
-		}}
-		on:copy={(event) => {
-			// Optional: Show a toast notification
-			console.log('Copied:', event.detail.text);
-		}}
-	/>
-{/if}

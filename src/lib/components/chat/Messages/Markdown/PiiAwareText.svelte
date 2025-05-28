@@ -6,19 +6,12 @@
 		unmaskAndHighlightTextForDisplay,
 		type ExtendedPiiEntity
 	} from '$lib/utils/pii';
-	import PiiHoverOverlay from '../../../common/PiiHoverOverlay.svelte';
 
 	export let text: string;
 	export let id: string = '';
 
 	let containerElement: HTMLElement;
 	let piiSessionManager = PiiSessionManager.getInstance();
-
-	// Hover overlay state
-	let hoverOverlayVisible = false;
-	let hoverOverlayEntity: ExtendedPiiEntity | null = null;
-	let hoverOverlayPosition = { x: 0, y: 0 };
-	let hoverTimeout: ReturnType<typeof setTimeout>;
 
 	$: entities = piiSessionManager.getEntities();
 	$: {
@@ -53,22 +46,6 @@
 	})();
 	$: hasHighlighting = processedText !== text;
 
-	// Hover overlay handlers
-	const handlePiiHover = (entity: ExtendedPiiEntity, position: { x: number; y: number }) => {
-		clearTimeout(hoverTimeout);
-		hoverOverlayEntity = entity;
-		hoverOverlayPosition = position;
-		hoverOverlayVisible = true;
-	};
-
-	const handlePiiHoverEnd = () => {
-		clearTimeout(hoverTimeout);
-		hoverTimeout = setTimeout(() => {
-			hoverOverlayVisible = false;
-			hoverOverlayEntity = null;
-		}, 200);
-	};
-
 	const handleOverlayToggle = () => {
 		// Refresh the highlighting when an entity is toggled
 		// The reactive statement will automatically update processedText
@@ -87,31 +64,6 @@
 		piiElements.forEach((element) => {
 			const htmlElement = element as HTMLElement;
 
-			const handleMouseEnter = (event: MouseEvent) => {
-				console.log('PiiAwareText: Mouse enter event triggered');
-				const target = event.target as HTMLElement;
-				const entityLabel = target.getAttribute('data-pii-label');
-				console.log('PiiAwareText: Entity label found:', entityLabel);
-
-				if (entityLabel) {
-					const entity = entities.find((e) => e.label === entityLabel);
-					console.log('PiiAwareText: Found entity:', entity);
-					if (entity) {
-						const rect = target.getBoundingClientRect();
-						const position = {
-							x: rect.left + rect.width / 2,
-							y: rect.top
-						};
-						console.log('PiiAwareText: Calling handlePiiHover with position:', position);
-						handlePiiHover(entity, position);
-					}
-				}
-			};
-
-			const handleMouseLeave = () => {
-				handlePiiHoverEnd();
-			};
-
 			const handleClick = (event: MouseEvent) => {
 				const target = event.target as HTMLElement;
 				const entityLabel = target.getAttribute('data-pii-label');
@@ -123,14 +75,10 @@
 				}
 			};
 
-			htmlElement.addEventListener('mouseenter', handleMouseEnter);
-			htmlElement.addEventListener('mouseleave', handleMouseLeave);
 			htmlElement.addEventListener('click', handleClick);
 
 			// Store event listeners for cleanup
 			(htmlElement as any)._piiEventListeners = {
-				mouseenter: handleMouseEnter,
-				mouseleave: handleMouseLeave,
 				click: handleClick
 			};
 		});
@@ -146,8 +94,6 @@
 			const listeners = (htmlElement as any)._piiEventListeners;
 
 			if (listeners) {
-				htmlElement.removeEventListener('mouseenter', listeners.mouseenter);
-				htmlElement.removeEventListener('mouseleave', listeners.mouseleave);
 				htmlElement.removeEventListener('click', listeners.click);
 				delete (htmlElement as any)._piiEventListeners;
 			}
@@ -171,7 +117,6 @@
 
 	onDestroy(() => {
 		removePiiEventListeners();
-		clearTimeout(hoverTimeout);
 	});
 </script>
 
@@ -182,17 +127,6 @@
 		{text}
 	{/if}
 </span>
-
-<!-- PII Hover Overlay -->
-<PiiHoverOverlay
-	bind:visible={hoverOverlayVisible}
-	entity={hoverOverlayEntity}
-	position={hoverOverlayPosition}
-	on:toggle={handleOverlayToggle}
-	on:copy={(event) => {
-		console.log('Copied:', event.detail.text);
-	}}
-/>
 
 <style>
 	/* Ensure PII highlights are interactive */

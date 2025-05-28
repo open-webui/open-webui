@@ -18,31 +18,62 @@
 	$: statusColor = shouldMask ? 'text-[#3f3d8a]' : 'text-red-600 dark:text-red-400';
 	$: statusBgColor = shouldMask ? 'bg-[#f8b76b]/20' : 'bg-red-50 dark:bg-red-900/20';
 
+	// Force reposition when overlay becomes visible
+	$: if (visible && overlayElement) {
+		// Use requestAnimationFrame to ensure DOM is fully updated and measured
+		requestAnimationFrame(() => {
+			// Trigger a re-measurement by updating a dummy variable
+			overlayElement = overlayElement;
+		});
+	}
+
 	// Position the overlay to avoid going off-screen
 	$: overlayStyle = (() => {
-		if (!visible || !overlayElement) return '';
+		if (!visible) return 'display: none;';
+		if (!overlayElement) return `left: ${position.x}px; top: ${position.y - 100}px; opacity: 0;`;
 
-		const rect = overlayElement.getBoundingClientRect();
+		// Use a small delay to ensure DOM measurements are accurate
+		let rect: DOMRect;
+		try {
+			rect = overlayElement.getBoundingClientRect();
+			// If the element has no dimensions, it's not properly rendered yet
+			if (rect.width === 0 || rect.height === 0) {
+				return `left: ${position.x}px; top: ${position.y - 100}px; opacity: 0;`;
+			}
+		} catch (e) {
+			// Fallback if element not yet in DOM
+			return `left: ${position.x}px; top: ${position.y - 100}px; opacity: 0;`;
+		}
+		
 		const viewportWidth = window.innerWidth;
 		const viewportHeight = window.innerHeight;
 
-		let x = position.x;
-		let y = position.y - rect.height - 10; // Position above the element by default
+		// Position.x is the center of the PII element
+		// For better visual balance, especially in centered layouts, offset more to the left
+		let x = position.x - rect.width * 0.75; // Offset more to the left for better visual balance
+		let y = position.y - rect.height - 15; // Position above with slightly more spacing
 
-		// Adjust horizontal position if it would go off-screen
-		if (x + rect.width > viewportWidth) {
-			x = viewportWidth - rect.width - 10;
-		}
+		// Ensure overlay doesn't go off the left edge
 		if (x < 10) {
 			x = 10;
+		}
+		
+		// Ensure overlay doesn't go off the right edge
+		if (x + rect.width > viewportWidth - 10) {
+			x = viewportWidth - rect.width - 10;
 		}
 
 		// If positioning above would go off-screen, position below
 		if (y < 10) {
-			y = position.y + 30; // Position below the element
+			y = position.y + 25; // Position below the element with less spacing
+		}
+		
+		// Ensure overlay doesn't go off the bottom of the viewport
+		if (y + rect.height > viewportHeight - 10) {
+			y = viewportHeight - rect.height - 10;
 		}
 
-		return `left: ${x}px; top: ${y}px;`;
+		return `left: ${x}px; top: ${y}px; opacity: 1;`;
 	})();
 
 	// Close overlay when clicking outside
@@ -86,14 +117,17 @@
 {#if visible && entity}
 	<div
 		bind:this={overlayElement}
-		class="fixed z-50 pointer-events-auto"
+		class="fixed z-50 pointer-events-auto transition-opacity duration-200"
 		style={overlayStyle}
 		on:click|stopPropagation
 		on:mouseenter={handleOverlayMouseEnter}
 		on:mouseleave={handleOverlayMouseLeave}
 	>
+		<!-- Invisible padding area to extend mouse interaction zone -->
+		<div class="absolute -inset-4 pointer-events-auto" aria-hidden="true"></div>
+		
 		<div
-			class="bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-[#f8b76b] dark:border-[#3f3d8a] min-w-56 max-w-80 custom-overlay"
+			class="bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-[#f8b76b] dark:border-[#3f3d8a] min-w-56 max-w-80 custom-overlay relative"
 			transition:fly={{ y: 10, duration: 200 }}
 		>
 			<!-- Header -->

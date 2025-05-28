@@ -161,8 +161,8 @@ export const PiiHighlighter = Extension.create<PiiHighlighterOptions>({
 							if (leavingPiiElement) {
 								const { onHoverEnd } = options;
 								if (onHoverEnd) {
-									// Add a small delay to prevent flickering when moving between elements
-									setTimeout(onHoverEnd, 100);
+									// Longer delay to allow mouse movement to overlay
+									setTimeout(onHoverEnd, 200);
 								}
 							}
 							return false;
