@@ -1258,7 +1258,11 @@ def process_file(
                         },
                     )
                 ]
-            text_content = " ".join([doc.page_content for doc in docs])
+            text_content = " ".join([doc.page_content for doc in docs if doc.page_content])
+
+        # Ensure text_content is never None or empty for hash calculation
+        if not text_content:
+            text_content = ""
 
         log.debug(f"text_content: {text_content}")
         Files.update_file_data_by_id(
@@ -1266,7 +1270,9 @@ def process_file(
             {"content": text_content},
         )
 
-        hash = calculate_sha256_string(text_content)
+        # Ensure we always pass a valid string to calculate_sha256_string
+        hash_input = text_content if text_content else ""
+        hash = calculate_sha256_string(hash_input)
         Files.update_file_hash_by_id(file.id, hash)
 
         if not request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL:
@@ -2042,7 +2048,7 @@ def process_files_batch(
                 )
             ]
 
-            hash = calculate_sha256_string(text_content)
+            hash = calculate_sha256_string(text_content or "")
             Files.update_file_hash_by_id(file.id, hash)
             Files.update_file_data_by_id(file.id, {"content": text_content})
 
@@ -2088,8 +2094,12 @@ def process_files_batch(
 
 def clean_text_content(text: str) -> str:
     """Simple, effective text cleaning with special handling for PPTX artifacts"""
-    if not text:
-        return text
+    if not text or text is None:
+        return ""  # Always return empty string instead of None
+    
+    # Ensure we have a string
+    if not isinstance(text, str):
+        text = str(text)
     
     # Step 1: PPTX-specific cleaning - handle double-escaped sequences first
     text = text.replace('\\\\n', '\n')  # Double-escaped newlines in PPTX
