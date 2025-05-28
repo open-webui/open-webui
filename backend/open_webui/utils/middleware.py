@@ -1748,7 +1748,15 @@ async def process_chat_response(
 
                                     delta = choices[0].get("delta", {})
                                     delta_tool_calls = delta.get("tool_calls", None)
-
+                                    if delta_tool_calls and content_blocks and content_blocks[-1]["type"] == "reasoning" and "duration" not in content_blocks[-1]:
+                                        reasoning_block = content_blocks[-1]
+                                        reasoning_block["ended_at"] = time.time()
+                                        reasoning_block["duration"] = int(reasoning_block["ended_at"] - reasoning_block["started_at"])
+                                        content_blocks.append({"type": "text", "content": ""})
+                                        await event_emitter({
+                                            "type": "chat:completion",
+                                            "data": {"content": serialize_content_blocks(content_blocks)},
+                                        })
                                     if delta_tool_calls:
                                         for delta_tool_call in delta_tool_calls:
                                             tool_call_index = delta_tool_call.get(
