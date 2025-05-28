@@ -27,7 +27,6 @@
 	import AdjustmentsHorizontal from '../icons/AdjustmentsHorizontal.svelte';
 	import ChevronDown from '../icons/ChevronDown.svelte';
 
-
 	import PencilSquare from '../icons/PencilSquare.svelte';
 	import ShowSidebarIcon from '../icons/ShowSidebarIcon.svelte';
 	import MenuIcon from '../icons/MenuIcon.svelte';
@@ -51,7 +50,11 @@
 
 <ShareChatModal bind:show={showShareChatModal} chatId={$chatId} />
 
-<nav class="sticky top-0 z-30 {$mobile ? 'bg-lightGray-300 dark:bg-customGray-900' : 'bg-transparent'} w-full px-1.5 py-1.5 -mb-12 flex items-center drag-region h-12">
+<nav
+	class="sticky top-0 z-30 {$mobile
+		? 'bg-lightGray-300 dark:bg-customGray-900'
+		: 'bg-transparent'} w-full px-1.5 py-1.5 -mb-12 flex items-center drag-region h-12"
+>
 	<!-- <div
 		class="{$mobile ? 'bg-lightGray-300 dark:bg-customGray-900' : 'bg-transparent'} pointer-events-none absolute inset-0 -bottom-7 z-[-1]"
 	></div> -->
@@ -72,11 +75,11 @@
 					aria-label="Toggle Sidebar"
 				>
 					<div class="flex items-center">
-						{#if ($mobile)}
-							<MenuIcon/>
+						{#if $mobile}
+							<MenuIcon />
 						{:else}
-							<ShowSidebarIcon/>
-						{/if}	
+							<ShowSidebarIcon />
+						{/if}
 					</div>
 				</button>
 			</div>
@@ -86,45 +89,48 @@
 			{$showSidebar ? 'ml-1' : ''}
 			"
 			>
-			{#if ($mobile)}
-			<div class="flex flex-col font-primary">
-				{#if $user !== undefined}
-					<UserMenu
-						role={$user.role}
-						on:show={(e) => {
-							if (e.detail === 'archived-chat') {
-								showArchivedChats.set(true);
-							}
-						}}
-					>
-						<button
-							class=" flex items-center rounded-xl px-2.5 w-full transition"
-							on:click={() => {
-								showDropdown = !showDropdown;
-							}}
-						>
-							<div class=" self-center mr-3">
-								<img
-									src={$company?.profile_image_url}
-									class=" max-w-[28px] object-cover rounded-md"
-									alt="User profile"
-								/>
-							</div>
-							<div class=" self-center font-medium text-sm mr-1 text-lightGray-1300 dark:text-customGray-100">{$company?.name}</div>
-							<ChevronDown className=" size-3" strokeWidth="2.5" />
-						</button>
-					</UserMenu>
+				{#if $mobile}
+					<div class="flex flex-col font-primary">
+						{#if $user !== undefined}
+							<UserMenu
+								role={$user.role}
+								on:show={(e) => {
+									if (e.detail === 'archived-chat') {
+										showArchivedChats.set(true);
+									}
+								}}
+							>
+								<button
+									class=" flex items-center rounded-xl px-2.5 w-full transition"
+									on:click={() => {
+										showDropdown = !showDropdown;
+									}}
+								>
+									<div class=" self-center mr-3">
+										<img
+											src={$company?.profile_image_url}
+											class=" max-w-[28px] object-cover rounded-md"
+											alt="User profile"
+										/>
+									</div>
+									<div
+										class=" self-center font-medium text-sm mr-1 text-lightGray-1300 dark:text-customGray-100"
+									>
+										{$company?.name}
+									</div>
+									<ChevronDown className=" size-3" strokeWidth="2.5" />
+								</button>
+							</UserMenu>
+						{/if}
+					</div>
 				{/if}
-			</div>
-			{/if}
-			
-			<!-- {#if showModelSelector}
+
+				<!-- {#if showModelSelector}
 				<ModelSelector bind:selectedModels showSetDefault={!shareEnabled} />
 			{/if} -->
-			</div> 
+			</div>
 
 			<div class="self-start flex flex-none items-center text-gray-600 dark:text-gray-400">
-				
 				<!-- {#if shareEnabled && chat && (chat.id || $temporaryChatEnabled)}
 					<Menu
 						{chat}
@@ -173,7 +179,7 @@
 						</button>
 					</Tooltip>
 				{/if} -->
-<!-- 
+				<!-- 
 				{#if !$mobile && ($user.role === 'admin' || $user?.permissions.chat?.controls)}
 					<Tooltip content={$i18n.t('Controls')}>
 						<button
@@ -190,23 +196,19 @@
 					</Tooltip>
 				{/if} -->
 
-				{#if ($mobile)}
-					<button
-						id="new-chat-button"
-						class=" {$showSidebar
-							? 'md:hidden'
-							: ''} cursor-pointer font-medium flex justify-center items-center flex-1 rounded-lg text-xs px-3 py-1 border border-lightGray-400 dark:border-customGray-700 h-[35px] text-right text-lightGray-100 dark:text-customGray-200 dark:hover:text-white bg-lightGray-300 dark:bg-customGray-900 hover:bg-gray-100 dark:hover:bg-customGray-950 transition"
-						on:click={() => {
-							initNewChat();
-						}}
-						aria-label="New Chat"
-					>
+				<button
+					id="new-chat-button"
+					class="md:hidden cursor-pointer font-medium flex justify-center items-center flex-1 rounded-lg text-xs px-3 py-1 border border-lightGray-400 dark:border-customGray-700 h-[35px] text-right text-lightGray-100 dark:text-customGray-200 dark:hover:text-white bg-lightGray-300 dark:bg-customGray-900 hover:bg-gray-100 dark:hover:bg-customGray-950 transition"
+					on:click={() => {
+						initNewChat();
+					}}
+					aria-label="New Chat"
+				>
 					<div class="relative bottom-[0.5px] mr-[6px]">
 						<Plus className="w-[12px] h-[12px]" />
 					</div>
-						{$i18n.t('New Chat')}	
-					</button>
-				{/if}
+					{$i18n.t('New Chat')}
+				</button>
 
 				<!-- {#if $user !== undefined}
 					<UserMenu

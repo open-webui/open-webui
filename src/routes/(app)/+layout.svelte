@@ -48,8 +48,22 @@
 	import { isBlocked, subscription } from '$lib/stores';
 	import CustomChatError from '$lib/components/chat/Messages/CustomChatError.svelte';
 	import { getCurrentSubscription } from '$lib/apis/payments';
+	import LibrarySidebar from '$lib/components/layout/Sidebar/LibrarySidebar.svelte';
+	import { showLibrary } from '$lib/stores';
 
+	page.subscribe(($page) => {
+		const path = $page.url.pathname;
+
+		const isRoot = path === '/';
+		const isChat = /^\/c\/[^/]+$/.test(path);
+
+		if (!isRoot && !isChat) {
+			showLibrary.set(false);
+		}
+	});
 	const i18n = getContext('i18n');
+
+	let selectedChatId = null;
 
 	let loaded = false;
 	let DB = null;
@@ -322,8 +336,9 @@
 				</div>
 			{/if}
 
-			<Sidebar />
+			<Sidebar bind:selectedChatId/>
 			<slot />
+			<LibrarySidebar bind:selectedChatId/>
 		{/if}
 	</div>
 </div>

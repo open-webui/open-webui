@@ -36,7 +36,10 @@
 		chatTitle,
 		showArtifacts,
 		tools,
-		companyConfig
+		companyConfig,
+
+		showLibrary
+
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
@@ -2003,9 +2006,7 @@
 									class="flex space-x-[5px] items-center py-[3px] px-[6px] rounded-md bg-lightGray-800 dark:bg-customGray-800"
 								>
 									<BookIcon />
-									<a class="min-w-fit text-xs text-customGray-600 dark:text-customGray-600 font-medium" href="/workspace/prompts"
-										>{$i18n.t('Prompts')}
-									</a>
+									<button class="min-w-fit text-xs text-customGray-600 dark:text-customGray-600 font-medium" on:click={() => showLibrary.set(true)}>{$i18n.t('Library')}</button>
 								</div>
 							</div>
 							<div class="mb-4">

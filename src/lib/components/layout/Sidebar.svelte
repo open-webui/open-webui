@@ -75,7 +75,7 @@
 
 	let shiftKey = false;
 
-	let selectedChatId = null;
+	export let selectedChatId = null;
 	let showDropdown = false;
 	let showPinnedChat = true;
 
