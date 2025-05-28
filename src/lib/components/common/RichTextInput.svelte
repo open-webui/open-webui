@@ -35,15 +35,12 @@
 	import { PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
 
 	// PII Detection imports
-	import { maskPiiText, type PiiEntity, type KnownPiiEntity } from '$lib/apis/pii';
-	import { PiiHighlighter } from './RichTextInput/PiiHighlighter';
+	import { type ExtendedPiiEntity } from '$lib/utils/pii';
+	import { PiiDetectionExtension } from './RichTextInput/PiiDetectionExtension';
 	import {
 		debounce,
-		extractPlainTextFromEditor,
 		createPiiHighlightStyles,
-		PiiSessionManager,
-		countBrTagsBeforePosition,
-		type ExtendedPiiEntity
+		PiiSessionManager
 	} from '$lib/utils/pii';
 
 	export let oncompositionstart = (e: CompositionEvent) => {};
@@ -80,102 +77,8 @@
 	let element: HTMLElement;
 	let editor: any;
 
-	// PII Detection state
-	let piiEntities: ExtendedPiiEntity[] = [];
-	let isDetectingPii = false;
-	let lastDetectedText = '';
-	let lastBrTagCount = 0; // Track br tag count to detect structural changes
+	// PII Session Manager for conversation state
 	let piiSessionManager = PiiSessionManager.getInstance();
-
-	// Reactive statement to restore entities when conversation changes or input is cleared
-	$: if (enablePiiDetection && conversationId) {
-		// Get entities for this conversation
-		let storedEntities = piiSessionManager.getConversationEntities(conversationId);
-		console.log(
-			'RichTextInput: Reactive check for conversation:',
-			conversationId,
-			'stored entities:',
-			storedEntities.length,
-			'current entities:',
-			piiEntities.length
-		);
-
-		// If no entities found for this conversationId, check if there are entities stored under empty string
-		// This handles the case where entities were stored before conversationId was assigned
-		if (storedEntities.length === 0) {
-			const emptyIdEntities = piiSessionManager.getConversationEntities('');
-			if (emptyIdEntities.length > 0) {
-				console.log(
-					'RichTextInput: Migrating',
-					emptyIdEntities.length,
-					'entities from empty conversationId to:',
-					conversationId
-				);
-				// Migrate entities from empty ID to actual conversationId
-				// Convert ExtendedPiiEntity back to PiiEntity for setConversationEntities
-				const piiEntitiesForMigration = emptyIdEntities.map((e) => ({
-					id: e.id,
-					type: e.type,
-					label: e.label,
-					raw_text: e.raw_text,
-					occurrences: e.occurrences || []
-				}));
-				piiSessionManager.setConversationEntities(conversationId, piiEntitiesForMigration);
-				// Clear the empty ID storage
-				piiSessionManager.clearConversationState('');
-				// Get the migrated entities
-				storedEntities = piiSessionManager.getConversationEntities(conversationId);
-			}
-		}
-
-		if (storedEntities.length > 0) {
-			console.log(
-				'RichTextInput: Restoring',
-				storedEntities.length,
-				'PII entities for conversation:',
-				conversationId,
-				'entities:',
-				storedEntities.map((e) => e.label)
-			);
-			piiEntities = storedEntities;
-			// Update editor if it exists
-			if (editor && editor.commands.updatePiiEntities) {
-				const editorHtml = editor.getHTML();
-				editor.commands.updatePiiEntities(piiEntities, editorHtml);
-			}
-		}
-	}
-
-	// Additional reactive statement to restore entities when value is cleared but entities exist
-	$: if (
-		enablePiiDetection &&
-		conversationId &&
-		(!value || value.trim() === '') &&
-		piiEntities.length === 0
-	) {
-		const storedEntities = piiSessionManager.getConversationEntities(conversationId);
-		console.log(
-			'RichTextInput: Input cleared check for conversation:',
-			conversationId,
-			'value:',
-			value,
-			'stored entities:',
-			storedEntities.length
-		);
-		if (storedEntities.length > 0) {
-			console.log(
-				'RichTextInput: Input cleared, restoring',
-				storedEntities.length,
-				'conversation entities:',
-				storedEntities.map((e) => e.label)
-			);
-			piiEntities = storedEntities;
-			if (editor && editor.commands.updatePiiEntities) {
-				const editorHtml = editor.getHTML();
-				editor.commands.updatePiiEntities(piiEntities, editorHtml);
-			}
-		}
-	}
 
 	const options = {
 		throwOnError: false
@@ -184,17 +87,6 @@
 	$: if (editor) {
 		editor.setOptions({
 			editable: editable
-		});
-	}
-
-	// Debug PII entities and editor state
-	$: {
-		console.log('RichTextInput debug:', {
-			enablePiiDetection,
-			hasApiKey: !!piiApiKey,
-			piiEntitiesCount: piiEntities.length,
-			hasEditor: !!editor,
-			editorHasPiiCommand: editor ? !!editor.commands.updatePiiEntities : false
 		});
 	}
 
@@ -257,111 +149,6 @@
 
 	export const setContent = (content: any) => {
 		editor.commands.setContent(content);
-	};
-
-	// PII Detection function
-	const detectPii = async (text: string) => {
-		if (!enablePiiDetection || !piiApiKey || !text.trim() || text === lastDetectedText) {
-			console.log('RichTextInput: PII detection skipped', {
-				enablePiiDetection,
-				hasApiKey: !!piiApiKey,
-				textLength: text.length,
-				sameAsLast: text === lastDetectedText,
-				conversationId
-			});
-			return;
-		}
-
-		console.log(
-			'RichTextInput: Starting PII detection for text:',
-			text.substring(0, 100),
-			'conversationId:',
-			conversationId
-		);
-		isDetectingPii = true;
-		lastDetectedText = text;
-
-		try {
-			// Get known entities from current conversation if available
-			const knownEntities = conversationId
-				? piiSessionManager.getKnownEntitiesForApi(conversationId)
-				: piiSessionManager.getEntities().map((entity) => ({
-						id: entity.id,
-						label: entity.label,
-						name: entity.raw_text
-					}));
-
-			console.log(
-				'RichTextInput: Sending known entities to API:',
-				knownEntities.length,
-				'for conversation:',
-				conversationId,
-				'entities:',
-				knownEntities
-			);
-
-			const response = await maskPiiText(piiApiKey, [text], knownEntities, false, false);
-			if (response.pii && response.pii[0]) {
-				console.log('RichTextInput: PII detection successful, found entities:', response.pii[0]);
-				
-				// Set entities in session manager (conversation-specific if conversationId provided)
-				if (conversationId) {
-					piiSessionManager.setConversationEntities(conversationId, response.pii[0]);
-					piiEntities = piiSessionManager.getConversationEntities(conversationId);
-				} else {
-					piiSessionManager.setEntities(response.pii[0]);
-					piiEntities = piiSessionManager.getEntities();
-				}
-				console.log(
-					'RichTextInput: Updated session manager, entities count:',
-					piiEntities.length,
-					'all entities:',
-					piiEntities.map((e) => e.label)
-				);
-
-				// Update the editor with PII highlighting
-				if (editor && editor.commands.updatePiiEntities) {
-					// Pass editor HTML for position mapping
-					const editorHtml = editor.getHTML();
-					editor.commands.updatePiiEntities(piiEntities, editorHtml);
-					// Update br tag count tracking
-					lastBrTagCount = (editorHtml.match(/<br\s*\/?>/gi) || []).length;
-					console.log('RichTextInput: Updated editor with PII entities and position mapping');
-				}
-
-				// Notify parent component
-				onPiiDetected(piiEntities, response.text[0]);
-			} else {
-				console.log('RichTextInput: No PII entities found in response');
-			}
-		} catch (error) {
-			console.error('PII detection failed:', error);
-		} finally {
-			isDetectingPii = false;
-		}
-	};
-
-	// Debounced PII detection
-	const debouncedDetectPii = debounce(detectPii, 500);
-
-	// Debounced position update (less aggressive than detection)
-	const debouncedUpdatePositions = debounce((editorHtml: string) => {
-		if (enablePiiDetection && piiEntities.length > 0 && editor?.commands.updatePiiEntities) {
-			editor.commands.updatePiiEntities(piiEntities, editorHtml);
-		}
-	}, 150); // Faster than PII detection but still debounced
-
-	const handleOverlayToggle = (event: CustomEvent) => {
-		// Update the entities in the editor using conversation-specific entities
-		if (conversationId) {
-			piiEntities = piiSessionManager.getConversationEntities(conversationId);
-		} else {
-			piiEntities = piiSessionManager.getEntities();
-		}
-		if (editor && editor.commands.updatePiiEntities) {
-			const editorHtml = editor.getHTML();
-			editor.commands.updatePiiEntities(piiEntities, editorHtml);
-		}
 	};
 
 	const selectTemplate = () => {
@@ -434,6 +221,13 @@
 
 		console.log('content', content);
 
+		console.log('RichTextInput: Initializing editor with PII detection:', {
+			enablePiiDetection,
+			hasApiKey: !!piiApiKey,
+			conversationId,
+			apiKeyLength: piiApiKey?.length || 0
+		});
+
 		editor = new Editor({
 			element: element,
 			extensions: [
@@ -446,9 +240,15 @@
 				Placeholder.configure({ placeholder }),
 				...(enablePiiDetection
 					? [
-							PiiHighlighter.configure({
-								piiEntities: piiEntities,
-								highlightClass: 'pii-highlight'
+							PiiDetectionExtension.configure({
+								enabled: true,
+								apiKey: piiApiKey,
+								conversationId: conversationId,
+								onPiiDetected: onPiiDetected,
+								onPiiToggled: (entities) => {
+									// Handle PII toggle events
+									console.log('PII entities toggled:', entities);
+								}
 							})
 						]
 					: []),
@@ -518,26 +318,6 @@
 						}
 					} else {
 						value = editor.getHTML();
-					}
-				}
-
-				// Check if document structure changed (br tags added/removed)
-				if (enablePiiDetection && piiEntities.length > 0) {
-					const editorHtml = editor.getHTML();
-					const currentBrTagCount = (editorHtml.match(/<br\s*\/?>/gi) || []).length;
-					
-					// Only update positions if br tag count changed (structural change)
-					if (currentBrTagCount !== lastBrTagCount) {
-						debouncedUpdatePositions(editorHtml);
-						lastBrTagCount = currentBrTagCount;
-					}
-				}
-
-				// Trigger PII detection on content change (debounced)
-				if (enablePiiDetection && piiApiKey) {
-					const plainText = extractPlainTextFromEditor(editor.getHTML());
-					if (plainText.trim()) {
-						debouncedDetectPii(plainText);
 					}
 				}
 			},
@@ -662,12 +442,6 @@
 
 		if (messageInput) {
 			selectTemplate();
-		}
-
-		// Initialize br tag count
-		if (enablePiiDetection) {
-			const initialHtml = editor.getHTML();
-			lastBrTagCount = (initialHtml.match(/<br\s*\/?>/gi) || []).length;
 		}
 	});
 
