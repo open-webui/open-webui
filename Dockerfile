@@ -151,23 +151,23 @@ RUN pip3 install --no-cache-dir uv
 # sync uv
 RUN uv sync --no-cache
 
-# install python dependencies
+# activate venv
+RUN . .venv/bin/activate
+
+# # Set PyTorch index URL based on CUDA flag
+ARG PYTORCH_INDEX_URL
 RUN if [ "$USE_CUDA" = "true" ]; then \
-    # If you use CUDA the whisper and embedding model will be downloaded on first use
-    uv add --system --no-cache-dir --index-url https://download.pytorch.org/whl/$USE_CUDA_DOCKER_VER torch torchvision torchaudio && \
-    uv run python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ['RAG_EMBEDDING_MODEL'], device='cpu')" && \
-    uv run python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])"; \
-    uv run python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])"; \
+        export PYTORCH_INDEX_URL="https://download.pytorch.org/whl/$USE_CUDA_DOCKER_VER"; \
     else \
-    uv sync --no-cache && \
-    uv add --system --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch torchvision torchaudio && \
+        export PYTORCH_INDEX_URL="https://download.pytorch.org/whl/cpu"; \
+    fi
+
+# install python dependencies
+RUN uv add --no-cache-dir --index https://pypi.org/simple --default-index $PYTORCH_INDEX_URL torch torchvision torchaudio && \
     uv run python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ['RAG_EMBEDDING_MODEL'], device='cpu')" && \
-    uv run python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])"; \
-    uv run python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])"; \
-    fi; \
+    uv run python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])" && \
+    uv run python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])" && \
     chown -R $UID:$GID /app/backend/data/ || true
-
-
 
 # copy embedding weight from build
 # RUN mkdir -p /root/.cache/chroma/onnx_models/all-MiniLM-L6-v2
