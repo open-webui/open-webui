@@ -17,7 +17,6 @@
 	import OnBoarding from '$lib/components/OnBoarding.svelte';
 
 	const i18n = getContext('i18n');
-
 	let loaded = false;
 
 	let mode = $config?.features.enable_ldap ? 'ldap' : 'signin';
@@ -27,6 +26,8 @@
 	let password = '';
 
 	let ldapUsername = '';
+
+	let consentChecked = false;
 
 	const querystringValue = (key) => {
 		const querystring = window.location.search;
@@ -41,6 +42,7 @@
 			if (sessionUser.token) {
 				localStorage.token = sessionUser.token;
 			}
+
 			$socket.emit('user-join', { auth: { token: sessionUser.token } });
 			await user.set(sessionUser);
 			await config.set(await getBackendConfig());
@@ -183,7 +185,7 @@
 						crossorigin="anonymous"
 						src="{WEBUI_BASE_URL}/static/splash.png"
 						class=" w-6 rounded-full"
-						alt=""
+						alt="logo"
 					/>
 				</div>
 			</div>
@@ -230,7 +232,7 @@
 								</div>
 
 								{#if $config?.onboarding ?? false}
-									<div class="mt-1 text-xs font-medium text-gray-600 dark:text-gray-500">
+									<div class=" mt-1 text-xs font-medium text-gray-500">
 										ⓘ {$WEBUI_NAME}
 										{$i18n.t(
 											'does not make any external connections, and your data stays securely on your locally hosted server.'
@@ -243,13 +245,10 @@
 								<div class="flex flex-col mt-4">
 									{#if mode === 'signup'}
 										<div class="mb-2">
-											<label for="name" class="text-sm font-medium text-left mb-1 block"
-												>{$i18n.t('Name')}</label
-											>
+											<div class=" text-sm font-medium text-left mb-1">{$i18n.t('Name')}</div>
 											<input
 												bind:value={name}
 												type="text"
-												id="name"
 												class="my-0.5 w-full text-sm outline-hidden bg-transparent"
 												autocomplete="name"
 												placeholder={$i18n.t('Enter Your Full Name')}
@@ -260,46 +259,38 @@
 
 									{#if mode === 'ldap'}
 										<div class="mb-2">
-											<label for="username" class="text-sm font-medium text-left mb-1 block"
-												>{$i18n.t('Username')}</label
-											>
+											<div class=" text-sm font-medium text-left mb-1">{$i18n.t('Username')}</div>
 											<input
 												bind:value={ldapUsername}
 												type="text"
 												class="my-0.5 w-full text-sm outline-hidden bg-transparent"
 												autocomplete="username"
 												name="username"
-												id="username"
 												placeholder={$i18n.t('Enter Your Username')}
 												required
 											/>
 										</div>
 									{:else}
 										<div class="mb-2">
-											<label for="email" class="text-sm font-medium text-left mb-1 block"
-												>{$i18n.t('Email')}</label
-											>
+											<div class=" text-sm font-medium text-left mb-1">{$i18n.t('Username')}</div>
 											<input
 												bind:value={email}
-												type="email"
-												id="email"
+												type="text"
 												class="my-0.5 w-full text-sm outline-hidden bg-transparent"
-												autocomplete="email"
-												name="email"
-												placeholder={$i18n.t('Enter Your Email')}
+												autocomplete="username"
+												name="text"
+												placeholder={$i18n.t('Username')}
 												required
 											/>
 										</div>
 									{/if}
 
 									<div>
-										<label for="password" class="text-sm font-medium text-left mb-1 block"
-											>{$i18n.t('Password')}</label
-										>
+										<div class=" text-sm font-medium text-left mb-1">{$i18n.t('Password')}</div>
+
 										<input
 											bind:value={password}
 											type="password"
-											id="password"
 											class="my-0.5 w-full text-sm outline-hidden bg-transparent"
 											placeholder={$i18n.t('Enter Your Password')}
 											autocomplete="current-password"
@@ -319,9 +310,28 @@
 											{$i18n.t('Authenticate')}
 										</button>
 									{:else}
+										{#if mode !== 'signin' && !($config?.onboarding ?? false)}
+											<div class="mb-4 flex items-start text-sm text-gray-700 dark:text-gray-300">
+												<input
+													id="privacyConsent"
+													type="checkbox"
+													bind:checked={consentChecked}
+													class="mt-1 mr-2 accent-blue-600"
+												/>
+												<label for="privacyConsent" class="leading-tight">
+													I understand that by using this platform developers will have access to my
+													chat history, feedback and notes. I understand that chat functionality uses 
+													OpenAI's APIs and that my data may be stored by OpenAI.
+												</label>
+											</div>
+										{/if}
+
 										<button
-											class="bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5"
+											class="bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
 											type="submit"
+											disabled={mode !== 'signin' &&
+												!($config?.onboarding ?? false) &&
+												!consentChecked}
 										>
 											{mode === 'signin'
 												? $i18n.t('Sign in')
@@ -331,13 +341,13 @@
 										</button>
 
 										{#if $config?.features.enable_signup && !($config?.onboarding ?? false)}
-											<div class=" mt-4 text-sm text-center">
+											<div class="mt-4 text-sm text-center">
 												{mode === 'signin'
 													? $i18n.t("Don't have an account?")
 													: $i18n.t('Already have an account?')}
 
 												<button
-													class=" font-medium underline"
+													class="font-medium underline"
 													type="button"
 													on:click={() => {
 														if (mode === 'signin') {
