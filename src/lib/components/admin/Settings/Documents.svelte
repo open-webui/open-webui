@@ -58,27 +58,6 @@
 	};
 
 	let RAGConfig = null;
-	let selectedLanguages: string[] = ['en'];
-	let langsHydrated = false;
-
-	const SUPPORTED_LANGUAGES = {
-		"af": "Afrikaans", "am": "Amharic", "ar": "Arabic", "as": "Assamese", "az": "Azerbaijani", "be": "Belarusian",
-		"bg": "Bulgarian", "bn": "Bengali", "br": "Breton", "bs": "Bosnian", "ca": "Catalan", "cs": "Czech",
-		"cy": "Welsh", "da": "Danish", "de": "German", "el": "Greek", "en": "English", "eo": "Esperanto",
-		"es": "Spanish", "et": "Estonian", "eu": "Basque", "fa": "Persian", "fi": "Finnish", "fr": "French",
-		"fy": "Western Frisian", "ga": "Irish", "gd": "Scottish Gaelic", "gl": "Galician", "gu": "Gujarati",
-		"ha": "Hausa", "he": "Hebrew", "hi": "Hindi", "hr": "Croatian", "hu": "Hungarian", "hy": "Armenian",
-		"id": "Indonesian", "is": "Icelandic", "it": "Italian", "ja": "Japanese", "jv": "Javanese", "ka": "Georgian",
-		"kk": "Kazakh", "km": "Khmer", "kn": "Kannada", "ko": "Korean", "ku": "Kurdish", "ky": "Kyrgyz",
-		"la": "Latin", "lo": "Lao", "lt": "Lithuanian", "lv": "Latvian", "mg": "Malagasy", "mk": "Macedonian",
-		"ml": "Malayalam", "mn": "Mongolian", "mr": "Marathi", "ms": "Malay", "my": "Burmese", "ne": "Nepali",
-		"nl": "Dutch", "no": "Norwegian", "om": "Oromo", "or": "Oriya", "pa": "Punjabi", "pl": "Polish",
-		"ps": "Pashto", "pt": "Portuguese", "ro": "Romanian", "ru": "Russian", "sa": "Sanskrit", "sd": "Sindhi",
-		"si": "Sinhala", "sk": "Slovak", "sl": "Slovenian", "so": "Somali", "sq": "Albanian", "sr": "Serbian",
-		"su": "Sundanese", "sv": "Swedish", "sw": "Swahili", "ta": "Tamil", "te": "Telugu", "th": "Thai",
-		"tl": "Tagalog", "tr": "Turkish", "ug": "Uyghur", "uk": "Ukrainian", "ur": "Urdu", "uz": "Uzbek",
-		"vi": "Vietnamese", "xh": "Xhosa", "yi": "Yiddish", "zh": "Chinese", "_math": "Math"
-	};
 
 	const embeddingModelUpdateHandler = async () => {
 		if (embeddingEngine === '' && embeddingModel.split('/').length - 1 > 1) {
@@ -145,10 +124,6 @@
 	};
 
 	const submitHandler = async () => {
-		if (RAGConfig.CONTENT_EXTRACTION_ENGINE === 'datalab_marker' && !RAGConfig.DATALAB_MARKER_API_KEY) {
-			toast.error($i18n.t('Datalab Marker API Key required.'));
-			return;
-		}
 		if (
 			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'external' &&
 			RAGConfig.EXTERNAL_DOCUMENT_LOADER_URL === ''
@@ -172,6 +147,14 @@
 			toast.error(
 				$i18n.t('Both Docling OCR Engine and Language(s) must be provided or both left empty.')
 			);
+			return;
+		}
+
+		if (
+			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'datalab_marker' &&
+			!RAGConfig.DATALAB_MARKER_API_KEY
+		) {
+			toast.error($i18n.t('Datalab Marker API Key required.'));
 			return;
 		}
 
@@ -200,6 +183,11 @@
 			.map((ext) => ext.trim())
 			.filter((ext) => ext !== '');
 
+		RAGConfig.DATALAB_MARKER_LANGS = RAGConfig.DATALAB_MARKER_LANGS.split(',')
+			.map((code) => code.trim())
+			.filter((code) => code !== '')
+			.join(', ');
+
 		const res = await updateRAGConfig(localStorage.token, RAGConfig);
 		dispatch('save');
 	};
@@ -224,27 +212,8 @@
 
 		const config = await getRAGConfig(localStorage.token);
 		config.ALLOWED_FILE_EXTENSIONS = (config?.ALLOWED_FILE_EXTENSIONS ?? []).join(', ');
-
-		if (!config.DATALAB_MARKER_OUTPUT_FORMAT) {
-			config.DATALAB_MARKER_OUTPUT_FORMAT = 'markdown';
-		}
-
-		if (config.DATALAB_MARKER_LANGS) {
-			selectedLanguages = config.DATALAB_MARKER_LANGS
-				.split(',')
-				.map(code => code.trim())
-				.filter(Boolean);
-		}
-
 		RAGConfig = config;
-		langsHydrated = true;
 	});
-
-	$: if (langsHydrated && RAGConfig) {
-		RAGConfig.DATALAB_MARKER_LANGS = selectedLanguages.length
-			? selectedLanguages.join(',')
-			: 'en';
-	}
 </script>
 
 <ResetUploadDirConfirmDialog
@@ -314,10 +283,10 @@
 									bind:value={RAGConfig.CONTENT_EXTRACTION_ENGINE}
 								>
 									<option value="">{$i18n.t('Default')}</option>
-									<option value="datalab_marker">{ $i18n.t('Datalab Marker API') }</option>
 									<option value="external">{$i18n.t('External')}</option>
 									<option value="tika">{$i18n.t('Tika')}</option>
 									<option value="docling">{$i18n.t('Docling')}</option>
+									<option value="datalab_marker">{$i18n.t('Datalab Marker API')}</option>
 									<option value="document_intelligence">{$i18n.t('Document Intelligence')}</option>
 									<option value="mistral_ocr">{$i18n.t('Mistral OCR')}</option>
 								</select>
@@ -336,106 +305,136 @@
 								</div>
 							</div>
 						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'datalab_marker'}
-						  <div class="my-0.5 flex gap-2 pr-2">
-							<SensitiveInput
-							  placeholder={$i18n.t('Enter Datalab Marker API Key')}
-							  required={false}
-							  bind:value={RAGConfig.DATALAB_MARKER_API_KEY}
-							/>
-						  </div>
-						  <div class="my-0.5 flex gap-2 pr-2 w-full">
-							<div class="flex flex-col w-full">
-								<label class="text-xs font-medium mb-1">
-								{$i18n.t("OCR language(s). Hold Ctrl (Windows) or Cmd (Mac) to select multiple. If no selection defaults to English")}
-								</label>
-								<select
-								class="w-full text-sm bg-transparent border border-gray-300 dark:border-gray-700 rounded-sm p-1 outline-hidden"
-								multiple
-								size="6"
-								bind:value={selectedLanguages}
-								>
-								{#each Object.entries(SUPPORTED_LANGUAGES) as [code, label]}
-									<option value={code}>{label}</option>
-								{/each}
-								</select>
+							<div class="my-0.5 flex gap-2 pr-2">
+								<SensitiveInput
+									placeholder={$i18n.t('Enter Datalab Marker API Key')}
+									required={false}
+									bind:value={RAGConfig.DATALAB_MARKER_API_KEY}
+								/>
 							</div>
-					      </div>
-							<div class="mb-1 flex w-full justify-between">
-							<div class="self-center text-xs font-medium">
-								<Tooltip content={$i18n.t('Significantly improves accuracy by using an LLM to enhance tables, forms, inline math, and layout detection. Will increase latency. Defaults to True.')} placement="top-start">
-								{$i18n.t('Use LLM')}
-								</Tooltip>
+
+							<div class="flex justify-between w-full mt-2">
+								<div class="text-xs font-medium">
+									{$i18n.t('Languages')}
+								</div>
+
+								<input
+									class="text-sm bg-transparent outline-hidden"
+									type="text"
+									bind:value={RAGConfig.DATALAB_MARKER_LANGS}
+									placeholder={$i18n.t('e.g.) en,fr,de')}
+								/>
 							</div>
-							<div class="flex items-center">
-								<Switch bind:state={RAGConfig.DATALAB_MARKER_USE_LLM} />
+
+							<div class="flex justify-between w-full mt-2">
+								<div class="self-center text-xs font-medium">
+									<Tooltip
+										content={$i18n.t(
+											'Significantly improves accuracy by using an LLM to enhance tables, forms, inline math, and layout detection. Will increase latency. Defaults to True.'
+										)}
+										placement="top-start"
+									>
+										{$i18n.t('Use LLM')}
+									</Tooltip>
+								</div>
+								<div class="flex items-center">
+									<Switch bind:state={RAGConfig.DATALAB_MARKER_USE_LLM} />
+								</div>
 							</div>
+							<div class="flex justify-between w-full mt-2">
+								<div class="self-center text-xs font-medium">
+									<Tooltip
+										content={$i18n.t('Skip the cache and re-run the inference. Defaults to False.')}
+										placement="top-start"
+									>
+										{$i18n.t('Skip Cache')}
+									</Tooltip>
+								</div>
+								<div class="flex items-center">
+									<Switch bind:state={RAGConfig.DATALAB_MARKER_SKIP_CACHE} />
+								</div>
 							</div>
-							<div class="mb-1 flex w-full justify-between">
-							<div class="self-center text-xs font-medium">
-								<Tooltip content={$i18n.t('Skip the cache and re-run the inference. Defaults to False.')} placement="top-start">
-								{$i18n.t('Skip Cache')}
-								</Tooltip>
+							<div class="flex justify-between w-full mt-2">
+								<div class="self-center text-xs font-medium">
+									<Tooltip
+										content={$i18n.t(
+											'Force OCR on all pages of the PDF. This can lead to worse results if you have good text in your PDFs. Defaults to False.'
+										)}
+										placement="top-start"
+									>
+										{$i18n.t('Force OCR')}
+									</Tooltip>
+								</div>
+								<div class="flex items-center">
+									<Switch bind:state={RAGConfig.DATALAB_MARKER_FORCE_OCR} />
+								</div>
 							</div>
-							<div class="flex items-center">
-								<Switch bind:state={RAGConfig.DATALAB_MARKER_SKIP_CACHE} />
+							<div class="flex justify-between w-full mt-2">
+								<div class="self-center text-xs font-medium">
+									<Tooltip
+										content={$i18n.t(
+											'Whether to paginate the output. Each page will be separated by a horizontal rule and page number. Defaults to False.'
+										)}
+										placement="top-start"
+									>
+										{$i18n.t('Paginate')}
+									</Tooltip>
+								</div>
+								<div class="flex items-center">
+									<Switch bind:state={RAGConfig.DATALAB_MARKER_PAGINATE} />
+								</div>
 							</div>
+							<div class="flex justify-between w-full mt-2">
+								<div class="self-center text-xs font-medium">
+									<Tooltip
+										content={$i18n.t(
+											'Strip existing OCR text from the PDF and re-run OCR. Ignored if Force OCR is enabled. Defaults to False.'
+										)}
+										placement="top-start"
+									>
+										{$i18n.t('Strip Existing OCR')}
+									</Tooltip>
+								</div>
+								<div class="flex items-center">
+									<Switch bind:state={RAGConfig.DATALAB_MARKER_STRIP_EXISTING_OCR} />
+								</div>
 							</div>
-							<div class="mb-1 flex w-full justify-between">
-							<div class="self-center text-xs font-medium">
-								<Tooltip content={$i18n.t('Force OCR on all pages of the PDF. This can lead to worse results if you have good text in your PDFs. Defaults to False.')} placement="top-start">
-								{$i18n.t('Force OCR')}
-								</Tooltip>
+							<div class="flex justify-between w-full mt-2">
+								<div class="self-center text-xs font-medium">
+									<Tooltip
+										content={$i18n.t(
+											'Disable image extraction from the PDF. If Use LLM is enabled, images will be automatically captioned. Defaults to False.'
+										)}
+										placement="top-start"
+									>
+										{$i18n.t('Disable Image Extraction')}
+									</Tooltip>
+								</div>
+								<div class="flex items-center">
+									<Switch bind:state={RAGConfig.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION} />
+								</div>
 							</div>
-							<div class="flex items-center">
-								<Switch bind:state={RAGConfig.DATALAB_MARKER_FORCE_OCR} />
-							</div>
-							</div>
-							<div class="mb-1 flex w-full justify-between">
-							<div class="self-center text-xs font-medium">
-								<Tooltip content={$i18n.t('Whether to paginate the output. Each page will be separated by a horizontal rule and page number. Defaults to False.')} placement="top-start">
-								{$i18n.t('Paginate')}
-								</Tooltip>
-							</div>
-							<div class="flex items-center">
-								<Switch bind:state={RAGConfig.DATALAB_MARKER_PAGINATE} />
-							</div>
-							</div>
-							<div class="mb-1 flex w-full justify-between">
-							<div class="self-center text-xs font-medium">
-								<Tooltip content={$i18n.t('Strip existing OCR text from the PDF and re-run OCR. Ignored if Force OCR is enabled. Defaults to False.')} placement="top-start">
-								{$i18n.t('Strip Existing OCR')}
-								</Tooltip>
-							</div>
-							<div class="flex items-center">
-								<Switch bind:state={RAGConfig.DATALAB_MARKER_STRIP_EXISTING_OCR} />
-							</div>
-							</div>
-							<div class="mb-1 flex w-full justify-between">
-							<div class="self-center text-xs font-medium">
-								<Tooltip content={$i18n.t('Disable image extraction from the PDF. If Use LLM is enabled, images will be automatically captioned. Defaults to False.')} placement="top-start">
-								{$i18n.t('Disable Image Extraction')}
-								</Tooltip>
-							</div>
-							<div class="flex items-center">
-								<Switch bind:state={RAGConfig.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION} />
-							</div>
-							</div>
-							<div class="mb-1 flex w-full justify-between">
-							<div class="self-center text-xs font-medium">
-								<Tooltip content={$i18n.t("The output format for the text. Can be 'json', 'markdown', or 'html'. Defaults to 'markdown'.")} placement="top-start">
-								{$i18n.t('Output Format')}
-								</Tooltip>
-							</div>
-							<div class="">
-								<select
-									class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
-									bind:value={RAGConfig.DATALAB_MARKER_OUTPUT_FORMAT}
-								>
-									<option value="markdown">{$i18n.t('Markdown')}</option>
-									<option value="json">{$i18n.t('JSON')}</option>
-									<option value="html">{$i18n.t('HTML')}</option>
-								</select>
-							</div>
+							<div class="flex justify-between w-full mt-2">
+								<div class="self-center text-xs font-medium">
+									<Tooltip
+										content={$i18n.t(
+											"The output format for the text. Can be 'json', 'markdown', or 'html'. Defaults to 'markdown'."
+										)}
+										placement="top-start"
+									>
+										{$i18n.t('Output Format')}
+									</Tooltip>
+								</div>
+								<div class="">
+									<select
+										class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+										bind:value={RAGConfig.DATALAB_MARKER_OUTPUT_FORMAT}
+									>
+										<option value="markdown">{$i18n.t('Markdown')}</option>
+										<option value="json">{$i18n.t('JSON')}</option>
+										<option value="html">{$i18n.t('HTML')}</option>
+									</select>
+								</div>
 							</div>
 						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'external'}
 							<div class="my-0.5 flex gap-2 pr-2">

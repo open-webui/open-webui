@@ -1863,43 +1863,44 @@ DATALAB_MARKER_LANGS = PersistentConfig(
 DATALAB_MARKER_USE_LLM = PersistentConfig(
     "DATALAB_MARKER_USE_LLM",
     "rag.DATALAB_MARKER_USE_LLM",
-    os.environ.get("DATALAB_MARKER_USE_LLM", "false") == "true",
+    os.environ.get("DATALAB_MARKER_USE_LLM", "false").lower() == "true",
 )
 
 DATALAB_MARKER_SKIP_CACHE = PersistentConfig(
     "DATALAB_MARKER_SKIP_CACHE",
     "rag.datalab_marker_skip_cache",
-    os.environ.get("DATALAB_MARKER_SKIP_CACHE", "false") == "true",
+    os.environ.get("DATALAB_MARKER_SKIP_CACHE", "false").lower() == "true",
 )
 
 DATALAB_MARKER_FORCE_OCR = PersistentConfig(
     "DATALAB_MARKER_FORCE_OCR",
     "rag.datalab_marker_force_ocr",
-    os.environ.get("DATALAB_MARKER_FORCE_OCR", "false") == "true",
+    os.environ.get("DATALAB_MARKER_FORCE_OCR", "false").lower() == "true",
 )
 
 DATALAB_MARKER_PAGINATE = PersistentConfig(
     "DATALAB_MARKER_PAGINATE",
     "rag.datalab_marker_paginate",
-    os.environ.get("DATALAB_MARKER_PAGINATE", "false") == "true",
+    os.environ.get("DATALAB_MARKER_PAGINATE", "false").lower() == "true",
 )
 
 DATALAB_MARKER_STRIP_EXISTING_OCR = PersistentConfig(
     "DATALAB_MARKER_STRIP_EXISTING_OCR",
     "rag.datalab_marker_strip_existing_ocr",
-    os.environ.get("DATALAB_MARKER_STRIP_EXISTING_OCR", "false") == "true",
+    os.environ.get("DATALAB_MARKER_STRIP_EXISTING_OCR", "false").lower() == "true",
 )
 
 DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION = PersistentConfig(
     "DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION",
     "rag.datalab_marker_disable_image_extraction",
-    os.environ.get("DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION", "false") == "true",
+    os.environ.get("DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION", "false").lower()
+    == "true",
 )
 
 DATALAB_MARKER_OUTPUT_FORMAT = PersistentConfig(
     "DATALAB_MARKER_OUTPUT_FORMAT",
     "rag.datalab_marker_output_format",
-    os.environ.get("DATALAB_MARKER_OUTPUT_FORMAT", ""),
+    os.environ.get("DATALAB_MARKER_OUTPUT_FORMAT", "markdown"),
 )
 
 EXTERNAL_DOCUMENT_LOADER_URL = PersistentConfig(
