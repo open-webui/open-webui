@@ -1,6 +1,4 @@
 <script lang="ts">
-	const LAYOUT_VERSION = 'v3-chat-events-' + Date.now(); // Unique version identifier
-	console.log(`%%%%%%% +layout.svelte SCRIPT TOP LEVEL EXECUTING - VERSION: ${LAYOUT_VERSION} %%%%%%%`);
 	import { toast } from 'svelte-sonner';
 	import { onMount, tick, getContext } from 'svelte';
 	import { openDB, deleteDB, type IDBPDatabase, type IDBPTransaction, type IDBPObjectStore, type DBSchema } from 'idb'; // Added DBSchema
@@ -51,7 +49,6 @@
 	import LocalMcpoInitializer from '$lib/components/layout/LocalMcpoInitializer.svelte';
 	import { localMcpoTools as localMcpoToolsStore, socket as socketStore, localToolResultStore } from '$lib/stores'; // Added localToolResultStore
 	import type { Writable } from 'svelte/store';
-	import type { LocalMcpoToolConfig } from '$lib/types/tools'; // Import LocalMcpoToolConfig
 	import { executeLocalMcpoTool } from '$lib/utils/localMcpoToolExecutor'; // Import the executor
 
 	const i18n = getContext('i18n') as Writable<any>;
@@ -70,223 +67,63 @@
 	let localDBChats: any[] = [];
 	let version: { current: string; latest: string } | any = null; // More specific type for version
 
-	// Define a variable to hold the current handler function.
-	// Its content will be updated by onMount/HMR, but chatEventListenerWrapper's reference remains stable.
-	let currentActualHandler = async (eventData: any, cb?: any) => {
-		console.warn('%%%%%%% execute:tool event received, but currentActualHandler not yet initialized by onMount. Event Data:', eventData, '%%%%%%%');
-		// This basic version of currentActualHandler should ideally not be called if onMount runs correctly first.
-	};
+	// Handler for execute:tool WebSocket event
+	const handleExecuteToolEvent = async (data: { tool_id: string; tool_args: any; chat_id: string; message_id: string }) => {
+		console.log('Received execute:tool event from backend for local tool:', data);
+		toast.info(`Executing local tool: ${data.tool_id}`);
 
-	// This wrapper function's reference remains stable across HMR updates of the Svelte component.
-	// Socket.io listeners will be bound to this stable reference.
-	const chatEventListenerWrapper = (event: any, cb: any) => {
-		// Check if this is an execute:tool event for local MCPO
-		if (event?.data?.type === 'execute:tool' && event?.data?.data?.server?.url?.startsWith('http://localhost:8000')) {
-			console.log(`%%%%%%% APP LAYOUT: Intercepting local MCPO execute:tool from chat-events %%%%%%%`, event.data.data);
-			// Delegate to our handler for local MCPO tools
-			currentActualHandler(event.data.data, cb);
+		// Log the current state of localMcpoToolsStore
+		console.log('Current $localMcpoTools store content:', get(localMcpoToolsStore));
+
+		// Find the tool configuration
+		const localTools = get(localMcpoToolsStore);
+		const toolConfig = localTools.find(t => t.name === data.name); // Use data.name for lookup
+
+		console.log('executeTool: event data:', data, 'Found toolConfig:', toolConfig); // Updated log
+
+		if (toolConfig) {
+			if (!toolConfig.enabled) {
+				const errorMsg = `Local tool "${data.tool_id}" is disabled by the user.`;
+				console.warn(errorMsg);
+				toast.warning(errorMsg);
+				localToolResultStore.set({
+					toolId: data.tool_id,
+					chatId: data.chat_id,
+					assistantMessageId: data.message_id,
+					result: { success: false, error: errorMsg }
+				});
+				return;
+			}
+
+			console.log('Attempting to call executeLocalMcpoTool with payload:', data);
+			const result = await executeLocalMcpoTool(data.tool_id, data.tool_args);
+			localToolResultStore.set({
+				toolId: data.tool_id,
+				chatId: data.chat_id,
+				assistantMessageId: data.message_id,
+				result: result
+			});
+		} else {
+			const errorMsg = `Received execute:tool event for "${data.tool_id}", but it's not a recognized local MCPO tool.`;
+			console.warn(errorMsg);
+			// Optionally inform Chat.svelte about this if needed, or just log
+			// For now, we only set the store if it's a known local tool attempt.
+			// If the backend sends execute:tool for non-local tools by mistake, this will catch it.
 		}
-		// Let other chat events pass through without handling
 	};
-	
-	// This is the function that will contain the actual logic.
-	// It will be reassigned inside onMount to ensure it's the latest version from the module.
-	const assignNewHandleExecuteToolEvent = () => {
-		currentActualHandler = async (eventData: {
-			id: string; 
-			name: string; 
-			params: Record<string, any>; 
-			server?: { url: string; [key: string]: any }; 
-			chat_id?: string; 
-			message_id?: string; 
-			session_id?: string;
-			[key: string]: any; 
-		}, cb?: any) => {
-			console.log(`%%%%%%% APP LAYOUT handleExecuteToolEvent CALLED! VERSION: ${LAYOUT_VERSION} %%%%%%%`, eventData);
-
-			const operationName = eventData.name;
-			const toolArgs = eventData.params;
-			const callEventId = eventData.id; 
-			const chatId = eventData.chat_id; 
-			const messageId = eventData.message_id; 
-
-			toast.info(`Executing local tool: ${operationName} via wrapper.`);
-			console.log('Current $localMcpoTools store content (via wrapper):', get(localMcpoToolsStore));
-
-			const localTools = get(localMcpoToolsStore);
-			let targetToolServerConfig: LocalMcpoToolConfig | undefined = undefined;
-
-			for (const serverCfg of localTools) {
-				if (serverCfg.spec && serverCfg.spec.paths) {
-					for (const pathRoute in serverCfg.spec.paths) {
-						const pathItem = serverCfg.spec.paths[pathRoute];
-						if (typeof pathItem === 'object' && pathItem !== null) {
-							for (const httpMethod in pathItem) {
-								const operation = pathItem[httpMethod];
-								if (typeof operation === 'object' && operation !== null && operation.operationId === operationName) {
-									targetToolServerConfig = serverCfg;
-									break; 
-								}
-							}
-						}
-						if (targetToolServerConfig) break; 
-					}
-				}
-				if (targetToolServerConfig) break; 
-			}
-			
-			console.log(`Wrapped executeTool: Searching for server hosting operation "${operationName}". Found targetToolServerConfig:`, targetToolServerConfig);
-
-			if (targetToolServerConfig) {
-				if (!targetToolServerConfig.enabled) {
-					const errorMsg = `Local MCPO Server "${targetToolServerConfig.name}" (hosting operation "${operationName}") is disabled by the user.`;
-					console.warn(errorMsg);
-					toast.warning(errorMsg);
-					if (chatId && messageId) {
-						localToolResultStore.set({
-							toolId: callEventId,
-							chatId: chatId,
-							assistantMessageId: messageId,
-							result: { success: false, error: errorMsg }
-						});
-					}
-					return;
-				}
-
-				console.log(`Wrapped: Attempting to call executeLocalMcpoTool for operation "${operationName}" on server "${targetToolServerConfig.name}" with args:`, toolArgs);
-				const result = await executeLocalMcpoTool(targetToolServerConfig, operationName, toolArgs);
-				
-				if (chatId && messageId) {
-					localToolResultStore.set({
-						toolId: callEventId,
-						chatId: chatId,
-						assistantMessageId: messageId,
-						result: result
-					});
-				} else {
-					console.warn('Wrapped: chat_id or message_id missing in execute:tool event, cannot set localToolResultStore for UI update.', eventData);
-				}
-				
-				// Call the callback if provided (for chat-events handler)
-				if (cb && typeof cb === 'function') {
-					console.log(`%%%%%%% APP LAYOUT: Calling callback with result %%%%%%%`, result);
-					cb(result);
-				}
-			} else {
-				const errorMsg = `Wrapped: Local MCPO server config not found for operation "${operationName}". The operation is not defined in any discovered server's OpenAPI spec, or the hosting server is not enabled/discovered.`;
-				console.warn(errorMsg, eventData);
-				toast.error(errorMsg);
-				if (chatId && messageId) {
-					localToolResultStore.set({
-						toolId: callEventId,
-						chatId: chatId,
-						assistantMessageId: messageId,
-						result: { success: false, error: errorMsg }
-					});
-				}
-				
-				// Call the callback with error if provided
-				if (cb && typeof cb === 'function') {
-					console.log(`%%%%%%% APP LAYOUT: Calling callback with error %%%%%%%`, errorMsg);
-					cb({ success: false, error: errorMsg });
-				}
-			}
-		};
-		console.log('%%%%%%% LAYOUT.SVELTE: currentActualHandler has been updated to the new version (full logic). %%%%%%%');
-	};
-
 
 	let unsubscribeSocketListener: (() => void) | null = null;
-	let lastBoundSocketId: string | null = null; // Keep track of the socket we bound the wrapper to
 
 	onMount(() => {
-		console.log('%%%%%%% LAYOUT.SVELTE: onMount executing. %%%%%%%');
-		assignNewHandleExecuteToolEvent(); // Ensure currentActualHandler points to the latest logic
-
+		// Setup WebSocket listener
 		unsubscribeSocketListener = socketStore.subscribe(currentSocket => {
-			const socketIdForLog = currentSocket && typeof currentSocket.id !== 'undefined' ? currentSocket.id : 'undefined_or_no_id';
-			console.log(`%%%%%%% LAYOUT.SVELTE: socketStore.subscribe. currentSocket ID: ${socketIdForLog} %%%%%%%`);
-		
-			// Cleanup logic for a previously bound socket ID can be complex here due to HMR and store updates.
-			// The onDestroy (onMount's return function) is the primary place for cleaning up the last known socket.
-			// This subscription block mainly focuses on setting up the listener for the *current* socket from the store.
-
-			if (currentSocket && 
-				typeof currentSocket.on === 'function' && 
-				typeof currentSocket.off === 'function' && 
-				currentSocket.connected) { // Check for connected status
-				
-				const socketId = currentSocket.id || 'unknown';
-				console.log(`%%%%%%% LAYOUT.SVELTE: Valid connected socket instance ${socketId}. Proceeding with listener setup. %%%%%%%`);
-				
-				// Remove any existing chat-events listeners to prevent duplicates
-				console.log(`%%%%%%% LAYOUT.SVELTE: Removing any existing 'chat-events' listeners from socket ${socketId}. %%%%%%%`);
-				currentSocket.off('chat-events', chatEventListenerWrapper);
-				
-				// Now add our listener for chat-events
-				console.log(`%%%%%%% LAYOUT.SVELTE: Binding 'chat-events' to STABLE WRAPPER for socket ${socketId}. %%%%%%%`);
-				currentSocket.on('chat-events', chatEventListenerWrapper);
-				lastBoundSocketId = socketId; // Track the ID of the socket we just bound to
-				
-				console.log(`%%%%%%% LAYOUT.SVELTE: Wrapped chat-events listener attached to socket ${socketId}. %%%%%%%`);
-				
-				// Debug: Check how many listeners are attached
-				if (typeof currentSocket.listenerCount === 'function') {
-					console.log(`%%%%%%% DEBUG: Socket ${socketId} has ${currentSocket.listenerCount('chat-events')} 'chat-events' listeners %%%%%%%`);
-				}
-
-				// Define disconnect handler specific to this currentSocket instance
-				const handleDisconnect = () => {
-					console.log(`%%%%%%% LAYOUT.SVELTE: Socket ${currentSocket.id} disconnected. Removing wrapped listener. %%%%%%%`);
-					// currentSocket here refers to the one from the outer scope of this handleDisconnect definition
-					if (currentSocket && typeof currentSocket.off === 'function') {
-						currentSocket.off('chat-events', chatEventListenerWrapper);
-					}
-					// If the disconnected socket is the one we were tracking, clear lastBoundSocketId
-					if (lastBoundSocketId === currentSocket.id) {
-						lastBoundSocketId = null;
-					}
-				};
-				
-				// Clean up any old disconnect listener for this event name before adding a new one for this specific socket instance
-				currentSocket.off('disconnect', handleDisconnect); // This might not work if handleDisconnect reference changes; better to manage by a flag or a single named handler if issues persist
-				currentSocket.on('disconnect', handleDisconnect);
-
-			} else {
-				console.log(`%%%%%%% LAYOUT.SVELTE: Socket not ready for listener attachment. Current socket:`, currentSocket, `%%%%%%%`);
-				
-				// If socket exists but not connected, set up a one-time listener for when it connects
-				if (currentSocket && typeof currentSocket.on === 'function' && !currentSocket.connected) {
-					console.log(`%%%%%%% LAYOUT.SVELTE: Socket exists but not connected. Setting up one-time connect listener. %%%%%%%`);
-					
-					const onConnect = () => {
-						const socketId = currentSocket.id || 'unknown';
-						console.log(`%%%%%%% LAYOUT.SVELTE: Socket ${socketId} connected! Setting up chat-events listener. %%%%%%%`);
-						
-						// Remove any existing listeners first
-						currentSocket.off('chat-events', chatEventListenerWrapper);
-						
-						// Add our listener
-						currentSocket.on('chat-events', chatEventListenerWrapper);
-						lastBoundSocketId = socketId;
-						
-						console.log(`%%%%%%% LAYOUT.SVELTE: chat-events listener attached after connect for socket ${socketId}. %%%%%%%`);
-						
-						// Debug: Check how many listeners are attached
-						if (typeof currentSocket.listenerCount === 'function') {
-							console.log(`%%%%%%% DEBUG: Socket ${socketId} has ${currentSocket.listenerCount('chat-events')} 'chat-events' listeners %%%%%%%`);
-						}
-					};
-					
-					// Use once to ensure this only fires once
-					currentSocket.once('connect', onConnect);
-				}
-				
-				if (currentSocket === null && lastBoundSocketId !== null) {
-					console.log(`%%%%%%% LAYOUT.SVELTE: Socket store emitted null, but we were previously bound to ${lastBoundSocketId}. %%%%%%%`);
-				} else if (currentSocket === null) {
-					lastBoundSocketId = null;
-				}
+			if (currentSocket) {
+				console.log('layout.svelte: Socket connected, attaching execute:tool listener.');
+				currentSocket.on('execute:tool', handleExecuteToolEvent);
+				currentSocket.on('disconnect', () => {
+					console.log('layout.svelte: Socket disconnected, removing execute:tool listener from this socket instance.');
+					currentSocket.off('execute:tool', handleExecuteToolEvent);
+				});
 			}
 		});
 
@@ -426,17 +263,8 @@
 			}
 			const currentSocket = get(socketStore);
 			if (currentSocket) {
-				console.log('%%%%%%% LAYOUT.SVELTE: Component unmounting. Attempting to remove listener from socket:', lastBoundSocketId, '%%%%%%%');
-				// Try to get the socket instance again, as it might have changed or the store re-emitted.
-				const socketOnUnmount = get(socketStore);
-				if (socketOnUnmount) {
-					socketOnUnmount.off('chat-events', chatEventListenerWrapper);
-				} else if (lastBoundSocketId) {
-					// This is a best-effort if the socketStore is already null but we remember binding to a socket.
-					// However, we don't have the instance to call .off() on.
-					console.warn(`%%%%%%% LAYOUT.SVELTE: Cannot .off() on unmount as socketStore is null, though last bound to ${lastBoundSocketId}. %%%%%%%`);
-				}
-				lastBoundSocketId = null;
+				console.log('layout.svelte: Component unmounting, removing execute:tool listener.');
+				currentSocket.off('execute:tool', handleExecuteToolEvent);
 			}
 		};
 	});

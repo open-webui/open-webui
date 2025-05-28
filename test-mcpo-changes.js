@@ -1,0 +1,20 @@
+// Test script to verify MCPO changes
+console.log('=== MCPO Changes Test ===');
+console.log('');
+console.log('Changes applied:');
+console.log('1. ✅ Fixed URL construction in localMcpoToolExecutor.ts');
+console.log('   - Added path prefix extraction logic');
+console.log('   - URL will now be: http://localhost:8000/mcp_in_memory/hello');
+console.log('');
+console.log('2. ✅ Removed duplicate event handler from root layout');
+console.log('   - Removed executeTool function');
+console.log('   - Updated chatEventHandler to return early for execute:tool');
+console.log('   - Removed unused imports');
+console.log('');
+console.log('Expected behavior:');
+console.log('- Only ONE handler should intercept execute:tool events (app layout)');
+console.log('- Debug log should show correct URL construction');
+console.log('- No more "Local MCPO tool config not found" errors from root layout');
+console.log('- Tool should execute successfully without 404');
+console.log('');
+console.log('Please refresh your browser and try executing the tool again.');
