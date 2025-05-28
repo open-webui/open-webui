@@ -19,8 +19,6 @@
 	import Personalization from './Settings/Personalization.svelte';
 	import Search from '../icons/Search.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
-	// import Connections from './Settings/Connections.svelte';
-	// import Tools from './Settings/Tools.svelte';
 
 	const i18n = getContext('i18n');
 
