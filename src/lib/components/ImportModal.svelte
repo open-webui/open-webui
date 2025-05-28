@@ -33,7 +33,12 @@
 		});
 
 		if (res) {
-			toast.success(successMessage || $i18n.t('Function imported successfully'));
+			if (!successMessage) {
+				successMessage = $i18n.t('Function imported successfully');
+			}
+
+			toast.success(successMessage);
+
 			let func = res;
 			func.id = func.id || func.name.replace(/\s+/g, '_').toLowerCase();
 
@@ -94,10 +99,11 @@
 									class="w-full text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-hidden"
 									type="url"
 									bind:value={url}
-									placeholder={$i18n.t('Enter the URL to import') ||
-										$i18n.t('Enter the URL of the function to import')}
+									placeholder={$i18n.t('Enter the URL to import')}
 									required
 								/>
+
+								<!-- $i18n.t('Enter the URL of the function to import') -->
 							</div>
 						</div>
 					</div>

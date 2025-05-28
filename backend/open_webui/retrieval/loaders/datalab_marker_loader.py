@@ -22,7 +22,7 @@ class DatalabMarkerLoader:
         paginate: bool = False,
         strip_existing_ocr: bool = False,
         disable_image_extraction: bool = False,
-        output_format: str = None
+        output_format: str = None,
     ):
         self.file_path = file_path
         self.api_key = api_key
@@ -38,26 +38,26 @@ class DatalabMarkerLoader:
     def _get_mime_type(self, filename: str) -> str:
         ext = filename.rsplit(".", 1)[-1].lower()
         mime_map = {
-            'pdf': 'application/pdf',
-            'xls': 'application/vnd.ms-excel',
-            'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'ods': 'application/vnd.oasis.opendocument.spreadsheet',
-            'doc': 'application/msword',
-            'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'odt': 'application/vnd.oasis.opendocument.text',
-            'ppt': 'application/vnd.ms-powerpoint',
-            'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-            'odp': 'application/vnd.oasis.opendocument.presentation',
-            'html': 'text/html',
-            'epub': 'application/epub+zip',
-            'png': 'image/png',
-            'jpeg': 'image/jpeg',
-            'jpg': 'image/jpeg',
-            'webp': 'image/webp',
-            'gif': 'image/gif',
-            'tiff': 'image/tiff'
+            "pdf": "application/pdf",
+            "xls": "application/vnd.ms-excel",
+            "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "ods": "application/vnd.oasis.opendocument.spreadsheet",
+            "doc": "application/msword",
+            "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "odt": "application/vnd.oasis.opendocument.text",
+            "ppt": "application/vnd.ms-powerpoint",
+            "pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            "odp": "application/vnd.oasis.opendocument.presentation",
+            "html": "text/html",
+            "epub": "application/epub+zip",
+            "png": "image/png",
+            "jpeg": "image/jpeg",
+            "jpg": "image/jpeg",
+            "webp": "image/webp",
+            "gif": "image/gif",
+            "tiff": "image/tiff",
         }
-        return mime_map.get(ext, 'application/octet-stream')
+        return mime_map.get(ext, "application/octet-stream")
 
     def check_marker_request_status(self, request_id: str) -> dict:
         url = f"https://www.datalab.to/api/v1/marker/{request_id}"
@@ -70,10 +70,15 @@ class DatalabMarkerLoader:
             return result
         except requests.HTTPError as e:
             log.error(f"Error checking Marker request status: {e}")
-            raise HTTPException(status.HTTP_502_BAD_GATEWAY, detail=f"Failed to check Marker request: {e}")
+            raise HTTPException(
+                status.HTTP_502_BAD_GATEWAY,
+                detail=f"Failed to check Marker request: {e}",
+            )
         except ValueError as e:
             log.error(f"Invalid JSON checking Marker request: {e}")
-            raise HTTPException(status.HTTP_502_BAD_GATEWAY, detail=f"Invalid JSON: {e}")
+            raise HTTPException(
+                status.HTTP_502_BAD_GATEWAY, detail=f"Invalid JSON: {e}"
+            )
 
     def load(self) -> List[Document]:
         url = "https://www.datalab.to/api/v1/marker"
@@ -92,30 +97,46 @@ class DatalabMarkerLoader:
             "output_format": self.output_format,
         }
 
-        log.info(f"Datalab Marker POST request parameters: {{'filename': '{filename}', 'mime_type': '{mime_type}', **{form_data}}}")
+        log.info(
+            f"Datalab Marker POST request parameters: {{'filename': '{filename}', 'mime_type': '{mime_type}', **{form_data}}}"
+        )
 
         try:
             with open(self.file_path, "rb") as f:
                 files = {"file": (filename, f, mime_type)}
-                response = requests.post(url, data=form_data, files=files, headers=headers)
+                response = requests.post(
+                    url, data=form_data, files=files, headers=headers
+                )
                 response.raise_for_status()
                 result = response.json()
         except FileNotFoundError:
-            raise HTTPException(status.HTTP_404_NOT_FOUND, detail=f"File not found: {self.file_path}")
+            raise HTTPException(
+                status.HTTP_404_NOT_FOUND, detail=f"File not found: {self.file_path}"
+            )
         except requests.HTTPError as e:
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=f"Datalab Marker request failed: {e}")
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                detail=f"Datalab Marker request failed: {e}",
+            )
         except ValueError as e:
-            raise HTTPException(status.HTTP_502_BAD_GATEWAY, detail=f"Invalid JSON response: {e}")
+            raise HTTPException(
+                status.HTTP_502_BAD_GATEWAY, detail=f"Invalid JSON response: {e}"
+            )
         except Exception as e:
             raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
         if not result.get("success"):
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=f"Datalab Marker request failed: {result.get('error', 'Unknown error')}")
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                detail=f"Datalab Marker request failed: {result.get('error', 'Unknown error')}",
+            )
 
         check_url = result.get("request_check_url")
         request_id = result.get("request_id")
         if not check_url:
-            raise HTTPException(status.HTTP_502_BAD_GATEWAY, detail="No request_check_url returned.")
+            raise HTTPException(
+                status.HTTP_502_BAD_GATEWAY, detail="No request_check_url returned."
+            )
 
         for _ in range(300):  # Up to 10 minutes
             time.sleep(2)
@@ -126,7 +147,9 @@ class DatalabMarkerLoader:
             except (requests.HTTPError, ValueError) as e:
                 raw_body = poll_response.text
                 log.error(f"Polling error: {e}, response body: {raw_body}")
-                raise HTTPException(status.HTTP_502_BAD_GATEWAY, detail=f"Polling failed: {e}")
+                raise HTTPException(
+                    status.HTTP_502_BAD_GATEWAY, detail=f"Polling failed: {e}"
+                )
 
             status_val = poll_result.get("status")
             success_val = poll_result.get("success")
@@ -134,21 +157,43 @@ class DatalabMarkerLoader:
             if status_val == "complete":
                 summary = {
                     k: poll_result.get(k)
-                    for k in ("status", "output_format", "success", "error", "page_count", "total_cost")
+                    for k in (
+                        "status",
+                        "output_format",
+                        "success",
+                        "error",
+                        "page_count",
+                        "total_cost",
+                    )
                 }
-                log.info(f"Marker processing completed successfully: {json.dumps(summary, indent=2)}")
+                log.info(
+                    f"Marker processing completed successfully: {json.dumps(summary, indent=2)}"
+                )
                 break
 
             if status_val == "failed" or success_val is False:
-                log.error(f"Marker poll failed full response: {json.dumps(poll_result, indent=2)}")
-                error_msg = poll_result.get("error") or "Marker returned failure without error message"
-                raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=f"Marker processing failed: {error_msg}")
+                log.error(
+                    f"Marker poll failed full response: {json.dumps(poll_result, indent=2)}"
+                )
+                error_msg = (
+                    poll_result.get("error")
+                    or "Marker returned failure without error message"
+                )
+                raise HTTPException(
+                    status.HTTP_400_BAD_REQUEST,
+                    detail=f"Marker processing failed: {error_msg}",
+                )
         else:
-            raise HTTPException(status.HTTP_504_GATEWAY_TIMEOUT, detail="Marker processing timed out")
+            raise HTTPException(
+                status.HTTP_504_GATEWAY_TIMEOUT, detail="Marker processing timed out"
+            )
 
         if not poll_result.get("success", False):
             error_msg = poll_result.get("error") or "Unknown processing error"
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=f"Final processing failed: {error_msg}")
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                detail=f"Final processing failed: {error_msg}",
+            )
 
         content_key = self.output_format.lower()
         raw_content = poll_result.get(content_key)
@@ -158,10 +203,16 @@ class DatalabMarkerLoader:
         elif content_key in {"markdown", "html"}:
             full_text = str(raw_content).strip()
         else:
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=f"Unsupported output format: {self.output_format}")
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                detail=f"Unsupported output format: {self.output_format}",
+            )
 
         if not full_text:
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Datalab Marker returned empty content")
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                detail="Datalab Marker returned empty content",
+            )
 
         marker_output_dir = os.path.join("/app/backend/data/uploads", "marker_output")
         os.makedirs(marker_output_dir, exist_ok=True)

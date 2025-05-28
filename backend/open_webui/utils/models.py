@@ -49,7 +49,7 @@ async def fetch_ollama_models(request: Request, user: UserModel = None):
         }
         for model in raw_ollama_models["models"]
     ]
-    
+
 
 async def fetch_openai_models(request: Request, user: UserModel = None):
     openai_response = await openai.get_all_models(request, user=user)
