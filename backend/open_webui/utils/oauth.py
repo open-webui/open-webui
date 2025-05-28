@@ -16,6 +16,9 @@ from starlette.responses import RedirectResponse
 from open_webui.models.auths import Auths
 from open_webui.models.users import Users
 from open_webui.models.groups import Groups, GroupModel, GroupUpdateForm
+from open_webui.services.group_sync_service import synchronize_user_groups_from_sql
+from open_webui.internal.db import get_db
+from sqlalchemy.orm import Session
 from open_webui.config import (
     DEFAULT_USER_ROLE,
     ENABLE_OAUTH_SIGNUP,
@@ -408,7 +411,18 @@ class OAuthManager:
             expires_delta=parse_duration(auth_manager_config.JWT_EXPIRES_IN),
         )
 
+        # 先執行 SQL 群組同步
+        with get_db() as db:
+            try:
+                await synchronize_user_groups_from_sql(user=user, db=db)
+                log.info(f"SQL group synchronization completed for OIDC user {user.email}")
+            except Exception as e:
+                log.error(f"SQL group synchronization failed for OIDC user {user.email}: {e}", exc_info=True)
+                # 同步失敗不影響登入流程
+
+        # 如果啟用了 OIDC 群組管理，再執行基於 token claim 的群組更新
         if auth_manager_config.ENABLE_OAUTH_GROUP_MANAGEMENT and user.role != "admin":
+            log.info(f"Starting OIDC token claim group management for user {user.email}")
             self.update_user_groups(
                 user=user,
                 user_data=user_data,
