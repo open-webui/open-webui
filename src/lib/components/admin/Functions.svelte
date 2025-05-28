@@ -13,6 +13,7 @@
 		exportFunctions,
 		getFunctionById,
 		getFunctions,
+		loadFunctionByUrl,
 		toggleFunctionById,
 		toggleGlobalById
 	} from '$lib/apis/functions';
@@ -34,7 +35,7 @@
 	import ChevronRight from '../icons/ChevronRight.svelte';
 	import XMark from '../icons/XMark.svelte';
 	import AddFunctionMenu from './Functions/AddFunctionMenu.svelte';
-	import ImportModal from './Functions/ImportModal.svelte';
+	import ImportModal from '../ImportModal.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -203,6 +204,9 @@
 
 <ImportModal
 	bind:show={showImportModal}
+	loadUrlHandler={async (url) => {
+		return await loadFunctionByUrl(localStorage.token, url);
+	}}
 	onImport={(func) => {
 		sessionStorage.function = JSON.stringify({
 			...func
