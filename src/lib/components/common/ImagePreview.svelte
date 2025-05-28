@@ -104,25 +104,55 @@
 							const blob = new Blob([Uint8Array.from(atob(base64Data), (c) => c.charCodeAt(0))], {
 								type: 'image/png'
 							});
-							saveAs(blob, alt || 'download.png');
+
+							const mimeType = blob.type || 'image/png';
+							// create file name based on the MIME type, alt should be a valid file name with extension
+							const fileName = alt ? `${alt}.${mimeType.split('/')[1]}` : 'download.png';
+
+							// Use FileSaver to save the blob
+							saveAs(blob, fileName);
 							return;
 						} else if (src.startsWith('blob:')) {
 							// Handle blob URLs
 							fetch(src)
 								.then((response) => response.blob())
 								.then((blob) => {
-									saveAs(blob, alt || 'download.png');
+									// detect the MIME type from the blob
+									const mimeType = blob.type || 'image/png';
+
+									// Create a new Blob with the correct MIME type
+									const blobWithType = new Blob([blob], { type: mimeType });
+
+									// create file name based on the MIME type, alt should be a valid file name with extension
+									const fileName = alt ? `${alt}.${mimeType.split('/')[1]}` : 'download.png';
+
+									// Use FileSaver to save the blob
+									saveAs(blobWithType, fileName);
 								})
 								.catch((error) => {
 									console.error('Error downloading blob:', error);
 								});
 							return;
-						} else if (src.startsWith('http://') || src.startsWith('https://')) {
+						} else if (
+							src.startsWith('/') ||
+							src.startsWith('http://') ||
+							src.startsWith('https://')
+						) {
 							// Handle remote URLs
 							fetch(src)
 								.then((response) => response.blob())
 								.then((blob) => {
-									saveAs(blob, alt || 'download.png');
+									// detect the MIME type from the blob
+									const mimeType = blob.type || 'image/png';
+
+									// Create a new Blob with the correct MIME type
+									const blobWithType = new Blob([blob], { type: mimeType });
+
+									// create file name based on the MIME type, alt should be a valid file name with extension
+									const fileName = alt ? `${alt}.${mimeType.split('/')[1]}` : 'download.png';
+
+									// Use FileSaver to save the blob
+									saveAs(blobWithType, fileName);
 								})
 								.catch((error) => {
 									console.error('Error downloading remote image:', error);
