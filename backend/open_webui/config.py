@@ -109,103 +109,142 @@ DEFAULT_CONFIG = {
             # English prompts
             {
                 "title": [
-                    "Help me study",
-                    "vocabulary for a college entrance exam",
+                    "Translate text to French (Canada)",
+                    "conversion of text into French",
                 ],
-                "content": "Help me study vocabulary: write a sentence for me to fill in the blank, and I'll try to pick the correct option.",
+                "content": "Translate the following text in French (Canada): {{Text}}",
                 "lang": "en-GB",
             },
             {
                 "title": [
-                    "Give me ideas",
-                    "for what to do with my kids' art",
+                    "Translate text to English (Canada)",
+                    "conversion of text into English",
                 ],
-                "content": "What are 5 creative things I could do with my kids' art? I don't want to throw them away, but it's also so much clutter.",
+                "content": "Translate the following text in English (Canada): {{Text}}",
                 "lang": "en-GB",
             },
             {
-                "title": ["Tell me a fun fact", "about the Roman Empire"],
-                "content": "Tell me a random fun fact about the Roman Empire",
+                "title": ["Explain a topic", "make it simple for kids"],
+                "content": "Explain {{topic}} like I am a {{five-year-old / 10-year-old}}.",
+                "lang": "en-GB",
+            },
+            {
+                "title": ["Summarize a meeting transcript", "key objectives only"],
+                "content": "Summarize the main objectives of this meeting transcript: {{paste transcript text}}.",
+                "lang": "en-GB",
+            },
+            {
+                "title": ["Write a job description", "draft for agency-specific roles"],
+                "content": "Write a job description for a new position in the {{paste department or agency text}}.",
                 "lang": "en-GB",
             },
             {
                 "title": [
-                    "Show me a code snippet",
-                    "of a website's sticky header",
+                    "Create a presentation outline",
+                    "structured for the public sector",
                 ],
-                "content": "Show me a code snippet of a website's sticky header in CSS and JavaScript.",
+                "content": "Create an outline for a presentation on {{paste topic text}} for a public sector audience.",
+                "lang": "en-GB",
+            },
+            {
+                "title": ["Develop a project plan", "set milestones and deadlines"],
+                "content": "Develop a project plan for this {{paste project description text}} with milestones and deadlines.",
+                "lang": "en-GB",
+            },
+            {
+                "title": ["Generate FAQs", "helpful Q&A for clarity"],
+                "content": "Generate a list of frequently asked questions and answers for this {{paste government program text}}.",
+                "lang": "en-GB",
+            },
+            {
+                "title": ["Prepare a presentation", "use the document as a source"],
+                "content": "Prepare a presentation {{containing # of slides}} based on the information in this {{paste document}}.",
                 "lang": "en-GB",
             },
             {
                 "title": [
-                    "Explain options trading",
-                    "if I'm familiar with buying and selling stocks",
+                    "Create risk list and mitigations",
+                    "risks with actionable solutions",
                 ],
-                "content": "Explain options trading in simple terms if I'm familiar with buying and selling stocks.",
-                "lang": "en-GB",
-            },
-            {
-                "title": ["Overcome procrastination", "give me tips"],
-                "content": "Could you start by asking me about instances when I procrastinate the most and then give me some suggestions to overcome it?",
-                "lang": "en-GB",
-            },
-            {
-                "title": [
-                    "Grammar check",
-                    "rewrite it for better readability ",
-                ],
-                "content": 'Check the following sentence for grammar and clarity: "[sentence]". Rewrite it for better readability while maintaining its original meaning.',
+                "content": "Create a list of potential risks and mitigation strategies for this {{paste project description text}}.",
                 "lang": "en-GB",
             },
             # French prompts
             {
                 "title": [
-                    "Aidez-moi à étudier",
-                    "le vocabulaire pour un examen d'entrée au CÉGEP",
+                    "Traduisez en français (Canada)",
+                    "conversion du texte en français",
                 ],
-                "content": "Aidez-moi à étudier le vocabulaire : écrivez une phrase avec un blanc à remplir, et je vais essayer de choisir la bonne option.",
+                "content": "Traduisez le texte suivant en français (Canada) : {{Texte}}.",
                 "lang": "fr-CA",
             },
             {
                 "title": [
-                    "Donnez-moi des idées",
-                    "pour ce que je peux faire avec les dessins de mes enfants",
+                    "Traduisez en anglais (Canada)",
+                    "conversion du texte en anglais",
                 ],
-                "content": "Quelles sont 5 idées créatives pour utiliser les dessins de mes enfants ? Je ne veux pas les jeter, mais ils prennent beaucoup de place.",
+                "content": "Traduisez le texte suivant en anglais (Canada) : {{Texte}}.",
                 "lang": "fr-CA",
             },
             {
-                "title": ["Dites-moi un fait intéressant", "sur l'Empire romain"],
-                "content": "Dites-moi un fait intéressant et aléatoire sur l'Empire romain.",
+                "title": ["Expliquez un sujet", "simplifiez pour un enfant"],
+                "content": "Expliquez {{le sujet}} comme si j'avais {{cinq ans / dix ans}}.",
                 "lang": "fr-CA",
             },
             {
                 "title": [
-                    "Montrez-moi un extrait de code",
-                    "pour un en-tête fixe sur un site web",
+                    "Résumez une transcription de réunion",
+                    "principaux objectifs uniquement",
                 ],
-                "content": "Montrez-moi un extrait de code pour un en-tête fixe sur un site web en CSS et JavaScript.",
+                "content": "Résumez les principaux objectifs de cette transcription de réunion : {{collez le texte de la transcription}}.",
                 "lang": "fr-CA",
             },
             {
                 "title": [
-                    "Expliquez les options de trading",
-                    "si je connais l'achat et la vente d'actions",
+                    "Rédigez une description de poste",
+                    "rédaction pour des rôles spécifiques",
                 ],
-                "content": "Expliquez les options de trading en termes simples, sachant que je suis familier avec l'achat et la vente d'actions.",
-                "lang": "fr-CA",
-            },
-            {
-                "title": ["Surmonter la procrastination", "donnez-moi des conseils"],
-                "content": "Pourriez-vous commencer par me demander dans quelles situations je procrastine le plus, puis me donner des suggestions pour y remédier ?",
+                "content": "Rédigez une description de poste pour un nouveau poste dans {{collez le texte du département ou de l'agence}}.",
                 "lang": "fr-CA",
             },
             {
                 "title": [
-                    "Vérification grammaticale",
-                    "réécrivez pour une meilleure clarté",
+                    "Créez un plan de présentation",
+                    "structure pour le secteur public",
                 ],
-                "content": 'Vérifiez la grammaire et la clarté de cette phrase : "[phrase]". Réécrivez-la pour une meilleure clarté tout en conservant son sens original.',
+                "content": "Créez un plan de présentation sur {{collez le sujet du texte}} pour un auditoire du secteur public.",
+                "lang": "fr-CA",
+            },
+            {
+                "title": [
+                    "Développez un plan de projet",
+                    "avec étapes clés et échéances",
+                ],
+                "content": "Développez un plan de projet pour ce {{collez la description du projet}} avec des étapes clés et des échéances.",
+                "lang": "fr-CA",
+            },
+            {
+                "title": [
+                    "Générez des questions fréquentes",
+                    "FAQ pour clarifier le programme",
+                ],
+                "content": "Générez une liste de questions fréquemment posées et de réponses pour ce {{collez le texte du programme gouvernemental}}.",
+                "lang": "fr-CA",
+            },
+            {
+                "title": [
+                    "Préparez une présentation",
+                    "basée sur le contenu du document",
+                ],
+                "content": "Préparez une présentation {{contenant le nombre de diapositives}} basée sur les informations contenues dans ce {{collez le document}}.",
+                "lang": "fr-CA",
+            },
+            {
+                "title": [
+                    "Créez une liste des risques et atténuations",
+                    "solutions aux risques identifiés",
+                ],
+                "content": "Créez une liste des risques potentiels et des stratégies d’atténuation pour ce {{collez la description du projet}}.",
                 "lang": "fr-CA",
             },
         ],
@@ -896,87 +935,139 @@ DEFAULT_PROMPT_SUGGESTIONS = PersistentConfig(
     "DEFAULT_PROMPT_SUGGESTIONS",
     "ui.prompt_suggestions",
     [
+        # English prompts
         {
-            "title": ["Help me study", "vocabulary for a college entrance exam"],
-            "content": "Help me study vocabulary: write a sentence for me to fill in the blank, and I'll try to pick the correct option.",
-            "lang": "en-GB",
-        },
-        {
-            "title": ["Give me ideas", "for what to do with my kids' art"],
-            "content": "What are 5 creative things I could do with my kids' art? I don't want to throw them away, but it's also so much clutter.",
-            "lang": "en-GB",
-        },
-        {
-            "title": ["Tell me a fun fact", "about the Roman Empire"],
-            "content": "Tell me a random fun fact about the Roman Empire",
-            "lang": "en-GB",
-        },
-        {
-            "title": ["Show me a code snippet", "of a website's sticky header"],
-            "content": "Show me a code snippet of a website's sticky header in CSS and JavaScript.",
+            "title": [
+                "Translate text to French (Canada)",
+                "conversion of text into French",
+            ],
+            "content": "Translate the following text in French (Canada): {{Text}}",
             "lang": "en-GB",
         },
         {
             "title": [
-                "Explain options trading",
-                "if I'm familiar with buying and selling stocks",
+                "Translate text to English (Canada)",
+                "conversion of text into English",
             ],
-            "content": "Explain options trading in simple terms if I'm familiar with buying and selling stocks.",
+            "content": "Translate the following text in English (Canada): {{Text}}",
             "lang": "en-GB",
         },
         {
-            "title": ["Overcome procrastination", "give me tips"],
-            "content": "Could you start by asking me about instances when I procrastinate the most and then give me some suggestions to overcome it?",
+            "title": ["Explain a topic", "make it simple for kids"],
+            "content": "Explain {{topic}} like I am a {{five-year-old / 10-year-old}}.",
+            "lang": "en-GB",
+        },
+        {
+            "title": ["Summarize a meeting transcript", "key objectives only"],
+            "content": "Summarize the main objectives of this meeting transcript: {{paste transcript text}}.",
+            "lang": "en-GB",
+        },
+        {
+            "title": ["Write a job description", "draft for agency-specific roles"],
+            "content": "Write a job description for a new position in the {{paste department or agency text}}.",
             "lang": "en-GB",
         },
         {
             "title": [
-                "Aidez-moi à étudier",
-                "le vocabulaire pour un examen d'entrée au CÉGEP",
+                "Create a presentation outline",
+                "structured for the public sector",
             ],
-            "content": "Aidez-moi à étudier le vocabulaire : écrivez une phrase avec un blanc à remplir, et je vais essayer de choisir la bonne option.",
+            "content": "Create an outline for a presentation on {{paste topic text}} for a public sector audience.",
+            "lang": "en-GB",
+        },
+        {
+            "title": ["Develop a project plan", "set milestones and deadlines"],
+            "content": "Develop a project plan for this {{paste project description text}} with milestones and deadlines.",
+            "lang": "en-GB",
+        },
+        {
+            "title": ["Generate FAQs", "helpful Q&A for clarity"],
+            "content": "Generate a list of frequently asked questions and answers for this {{paste government program text}}.",
+            "lang": "en-GB",
+        },
+        {
+            "title": ["Prepare a presentation", "use the document as a source"],
+            "content": "Prepare a presentation {{containing # of slides}} based on the information in this {{paste document}}.",
+            "lang": "en-GB",
+        },
+        {
+            "title": [
+                "Create risk list and mitigations",
+                "risks with actionable solutions",
+            ],
+            "content": "Create a list of potential risks and mitigation strategies for this {{paste project description text}}.",
+            "lang": "en-GB",
+        },
+        # French prompts
+        {
+            "title": [
+                "Traduisez en français (Canada)",
+                "conversion du texte en français",
+            ],
+            "content": "Traduisez le texte suivant en français (Canada) : {{Texte}}.",
             "lang": "fr-CA",
         },
         {
             "title": [
-                "Donnez-moi des idées",
-                "pour ce que je peux faire avec les dessins de mes enfants",
+                "Traduisez en anglais (Canada)",
+                "conversion du texte en anglais",
             ],
-            "content": "Quelles sont 5 idées créatives pour utiliser les dessins de mes enfants ? Je ne veux pas les jeter, mais ils prennent beaucoup de place.",
+            "content": "Traduisez le texte suivant en anglais (Canada) : {{Texte}}.",
             "lang": "fr-CA",
         },
         {
-            "title": ["Dites-moi un fait intéressant", "sur l'Empire romain"],
-            "content": "Dites-moi un fait intéressant et aléatoire sur l'Empire romain.",
+            "title": ["Expliquez un sujet", "simplifiez pour un enfant"],
+            "content": "Expliquez {{le sujet}} comme si j'avais {{cinq ans / dix ans}}.",
             "lang": "fr-CA",
         },
         {
             "title": [
-                "Montrez-moi un extrait de code",
-                "pour un en-tête fixe sur un site web",
+                "Résumez une transcription de réunion",
+                "principaux objectifs uniquement",
             ],
-            "content": "Montrez-moi un extrait de code pour un en-tête fixe sur un site web en CSS et JavaScript.",
+            "content": "Résumez les principaux objectifs de cette transcription de réunion : {{collez le texte de la transcription}}.",
             "lang": "fr-CA",
         },
         {
             "title": [
-                "Expliquez les options de trading",
-                "si je connais l'achat et la vente d'actions",
+                "Rédigez une description de poste",
+                "rédaction pour des rôles spécifiques",
             ],
-            "content": "Expliquez les options de trading en termes simples, sachant que je suis familier avec l'achat et la vente d'actions.",
-            "lang": "fr-CA",
-        },
-        {
-            "title": ["Surmonter la procrastination", "donnez-moi des conseils"],
-            "content": "Pourriez-vous commencer par me demander dans quelles situations je procrastine le plus, puis me donner des suggestions pour y remédier ?",
+            "content": "Rédigez une description de poste pour un nouveau poste dans {{collez le texte du département ou de l'agence}}.",
             "lang": "fr-CA",
         },
         {
             "title": [
-                "Vérification grammaticale",
-                "réécrivez pour une meilleure clarté",
+                "Créez un plan de présentation",
+                "structure pour le secteur public",
             ],
-            "content": 'Vérifiez la grammaire et la clarté de cette phrase : "[phrase]". Réécrivez-la pour une meilleure clarté tout en conservant son sens original.',
+            "content": "Créez un plan de présentation sur {{collez le sujet du texte}} pour un auditoire du secteur public.",
+            "lang": "fr-CA",
+        },
+        {
+            "title": ["Développez un plan de projet", "avec étapes clés et échéances"],
+            "content": "Développez un plan de projet pour ce {{collez la description du projet}} avec des étapes clés et des échéances.",
+            "lang": "fr-CA",
+        },
+        {
+            "title": [
+                "Générez des questions fréquentes",
+                "FAQ pour clarifier le programme",
+            ],
+            "content": "Générez une liste de questions fréquemment posées et de réponses pour ce {{collez le texte du programme gouvernemental}}.",
+            "lang": "fr-CA",
+        },
+        {
+            "title": ["Préparez une présentation", "basée sur le contenu du document"],
+            "content": "Préparez une présentation {{contenant le nombre de diapositives}} basée sur les informations contenues dans ce {{collez le document}}.",
+            "lang": "fr-CA",
+        },
+        {
+            "title": [
+                "Créez une liste des risques et atténuations",
+                "solutions aux risques identifiés",
+            ],
+            "content": "Créez une liste des risques potentiels et des stratégies d’atténuation pour ce {{collez la description du projet}}.",
             "lang": "fr-CA",
         },
     ],
