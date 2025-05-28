@@ -52,6 +52,9 @@ ARG USE_RERANKING_MODEL
 ARG UID
 ARG GID
 
+# Skip frontend build in hatch_build.py
+ENV SKIP_FRONTEND_BUILD=1
+
 ## Basis ##
 ENV ENV=prod \
     PORT=8080 \
