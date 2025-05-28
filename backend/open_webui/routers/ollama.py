@@ -9,6 +9,8 @@ import os
 import random
 import re
 import time
+from datetime import datetime
+
 from typing import Optional, Union
 from urllib.parse import urlparse
 import aiohttp
@@ -300,6 +302,22 @@ async def update_config(
     }
 
 
+def merge_ollama_models_lists(model_lists):
+    merged_models = {}
+
+    for idx, model_list in enumerate(model_lists):
+        if model_list is not None:
+            for model in model_list:
+                id = model["model"]
+                if id not in merged_models:
+                    model["urls"] = [idx]
+                    merged_models[id] = model
+                else:
+                    merged_models[id]["urls"].append(idx)
+
+    return list(merged_models.values())
+
+
 @cached(ttl=1)
 async def get_all_models(request: Request, user: UserModel = None):
     log.info("get_all_models()")
@@ -364,29 +382,30 @@ async def get_all_models(request: Request, user: UserModel = None):
                     if connection_type:
                         model["connection_type"] = connection_type
 
-        def merge_models_lists(model_lists):
-            merged_models = {}
-
-            for idx, model_list in enumerate(model_lists):
-                if model_list is not None:
-                    for model in model_list:
-                        id = model["model"]
-                        if id not in merged_models:
-                            model["urls"] = [idx]
-                            merged_models[id] = model
-                        else:
-                            merged_models[id]["urls"].append(idx)
-
-            return list(merged_models.values())
-
         models = {
-            "models": merge_models_lists(
+            "models": merge_ollama_models_lists(
                 map(
                     lambda response: response.get("models", []) if response else None,
                     responses,
                 )
             )
         }
+
+        try:
+            loaded_models = await get_ollama_loaded_models(request, user=user)
+            expires_map = {
+                m["name"]: m["expires_at"]
+                for m in loaded_models["models"]
+                if "expires_at" in m
+            }
+
+            for m in models["models"]:
+                if m["name"] in expires_map:
+                    # Parse ISO8601 datetime with offset, get unix timestamp as int
+                    dt = datetime.fromisoformat(expires_map[m["name"]])
+                    m["expires_at"] = int(dt.timestamp())
+        except Exception as e:
+            log.debug(f"Failed to get loaded models: {e}")
 
     else:
         models = {"models": []}
@@ -468,6 +487,68 @@ async def get_ollama_tags(
     return models
 
 
+@router.get("/api/ps")
+async def get_ollama_loaded_models(request: Request, user=Depends(get_admin_user)):
+    """
+    List models that are currently loaded into Ollama memory, and which node they are loaded on.
+    """
+    if request.app.state.config.ENABLE_OLLAMA_API:
+        request_tasks = []
+        for idx, url in enumerate(request.app.state.config.OLLAMA_BASE_URLS):
+            if (str(idx) not in request.app.state.config.OLLAMA_API_CONFIGS) and (
+                url not in request.app.state.config.OLLAMA_API_CONFIGS  # Legacy support
+            ):
+                request_tasks.append(send_get_request(f"{url}/api/ps", user=user))
+            else:
+                api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
+                    str(idx),
+                    request.app.state.config.OLLAMA_API_CONFIGS.get(
+                        url, {}
+                    ),  # Legacy support
+                )
+
+                enable = api_config.get("enable", True)
+                key = api_config.get("key", None)
+
+                if enable:
+                    request_tasks.append(
+                        send_get_request(f"{url}/api/ps", key, user=user)
+                    )
+                else:
+                    request_tasks.append(asyncio.ensure_future(asyncio.sleep(0, None)))
+
+        responses = await asyncio.gather(*request_tasks)
+
+        for idx, response in enumerate(responses):
+            if response:
+                url = request.app.state.config.OLLAMA_BASE_URLS[idx]
+                api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
+                    str(idx),
+                    request.app.state.config.OLLAMA_API_CONFIGS.get(
+                        url, {}
+                    ),  # Legacy support
+                )
+
+                prefix_id = api_config.get("prefix_id", None)
+
+                for model in response.get("models", []):
+                    if prefix_id:
+                        model["model"] = f"{prefix_id}.{model['model']}"
+
+        models = {
+            "models": merge_ollama_models_lists(
+                map(
+                    lambda response: response.get("models", []) if response else None,
+                    responses,
+                )
+            )
+        }
+    else:
+        models = {"models": []}
+
+    return models
+
+
 @router.get("/api/version")
 @router.get("/api/version/{url_idx}")
 async def get_ollama_versions(request: Request, url_idx: Optional[int] = None):
@@ -541,34 +622,72 @@ async def get_ollama_versions(request: Request, url_idx: Optional[int] = None):
         return {"version": False}
 
 
-@router.get("/api/ps")
-async def get_ollama_loaded_models(request: Request, user=Depends(get_verified_user)):
-    """
-    List models that are currently loaded into Ollama memory, and which node they are loaded on.
-    """
-    if request.app.state.config.ENABLE_OLLAMA_API:
-        request_tasks = [
-            send_get_request(
-                f"{url}/api/ps",
-                request.app.state.config.OLLAMA_API_CONFIGS.get(
-                    str(idx),
-                    request.app.state.config.OLLAMA_API_CONFIGS.get(
-                        url, {}
-                    ),  # Legacy support
-                ).get("key", None),
-                user=user,
-            )
-            for idx, url in enumerate(request.app.state.config.OLLAMA_BASE_URLS)
-        ]
-        responses = await asyncio.gather(*request_tasks)
-
-        return dict(zip(request.app.state.config.OLLAMA_BASE_URLS, responses))
-    else:
-        return {}
-
-
 class ModelNameForm(BaseModel):
     name: str
+
+
+@router.post("/api/unload")
+async def unload_model(
+    request: Request,
+    form_data: ModelNameForm,
+    user=Depends(get_admin_user),
+):
+    model_name = form_data.name
+    if not model_name:
+        raise HTTPException(
+            status_code=400, detail="Missing 'name' of model to unload."
+        )
+
+    # Refresh/load models if needed, get mapping from name to URLs
+    await get_all_models(request, user=user)
+    models = request.app.state.OLLAMA_MODELS
+
+    # Canonicalize model name (if not supplied with version)
+    if ":" not in model_name:
+        model_name = f"{model_name}:latest"
+
+    if model_name not in models:
+        raise HTTPException(
+            status_code=400, detail=ERROR_MESSAGES.MODEL_NOT_FOUND(model_name)
+        )
+    url_indices = models[model_name]["urls"]
+
+    # Send unload to ALL url_indices
+    results = []
+    errors = []
+    for idx in url_indices:
+        url = request.app.state.config.OLLAMA_BASE_URLS[idx]
+        api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
+            str(idx), request.app.state.config.OLLAMA_API_CONFIGS.get(url, {})
+        )
+        key = get_api_key(idx, url, request.app.state.config.OLLAMA_API_CONFIGS)
+
+        prefix_id = api_config.get("prefix_id", None)
+        if prefix_id and model_name.startswith(f"{prefix_id}."):
+            model_name = model_name[len(f"{prefix_id}.") :]
+
+        payload = {"model": model_name, "keep_alive": 0, "prompt": ""}
+
+        try:
+            res = await send_post_request(
+                url=f"{url}/api/generate",
+                payload=json.dumps(payload),
+                stream=False,
+                key=key,
+                user=user,
+            )
+            results.append({"url_idx": idx, "success": True, "response": res})
+        except Exception as e:
+            log.exception(f"Failed to unload model on node {idx}: {e}")
+            errors.append({"url_idx": idx, "success": False, "error": str(e)})
+
+    if len(errors) > 0:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to unload model on {len(errors)} nodes: {errors}",
+        )
+
+    return {"status": True}
 
 
 @router.post("/api/pull")

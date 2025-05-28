@@ -392,11 +392,8 @@ async def chat_action(request: Request, action_id: str, form_data: dict, user: A
         }
     )
 
-    if action_id in request.app.state.FUNCTIONS:
-        function_module = request.app.state.FUNCTIONS[action_id]
-    else:
-        function_module, _, _ = load_function_module_by_id(action_id)
-        request.app.state.FUNCTIONS[action_id] = function_module
+    function_module, _, _ = load_function_module_by_id(action_id)
+    request.app.state.FUNCTIONS[action_id] = function_module
 
     if hasattr(function_module, "valves") and hasattr(function_module, "Valves"):
         valves = Functions.get_function_valves_by_id(action_id)

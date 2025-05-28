@@ -16,7 +16,7 @@
 	import { onMount, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
-	import ArchivedChatsModal from '$lib/components/layout/Sidebar/ArchivedChatsModal.svelte';
+	import ArchivedChatsModal from '$lib/components/layout/ArchivedChatsModal.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -105,7 +105,7 @@
 	};
 </script>
 
-<ArchivedChatsModal bind:show={showArchivedChatsModal} on:change={handleArchivedChatsChange} />
+<ArchivedChatsModal bind:show={showArchivedChatsModal} onUpdate={handleArchivedChatsChange} />
 
 <div class="flex flex-col h-full justify-between space-y-3 text-sm">
 	<div class=" space-y-2 overflow-y-scroll max-h-[28rem] lg:max-h-full">
