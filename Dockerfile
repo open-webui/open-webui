@@ -43,6 +43,9 @@ RUN node --max-old-space-size=4096 ./node_modules/vite/bin/vite.js build
 ######## WebUI backend ########
 FROM python:3.11-slim-bookworm AS base
 
+# install uv
+COPY --from=ghcr.io/astral-sh/uv:0.7.8 /uv /uvx /bin/
+
 # Use args
 ARG USE_CUDA
 ARG USE_OLLAMA
@@ -145,11 +148,8 @@ COPY --chown=$UID:$GID --from=build /app/build /app/build
 # install python dependencies
 COPY --chown=$UID:$GID CHANGELOG.md hatch_build.py LICENSE package.json pyproject.toml README.md uv.lock ./
 
-# install uv
-RUN pip3 install --no-cache-dir uv
-
 # sync uv
-RUN uv sync --no-cache
+RUN uv sync --no-cache-dir --locked
 
 # activate venv
 RUN . .venv/bin/activate
