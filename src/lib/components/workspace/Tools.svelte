@@ -189,6 +189,7 @@
 	loadUrlHandler={async (url) => {
 		return await loadToolByUrl(localStorage.token, url);
 	}}
+	successMessage={$i18n.t('Tool imported successfully')}
 />
 
 {#if loaded}
