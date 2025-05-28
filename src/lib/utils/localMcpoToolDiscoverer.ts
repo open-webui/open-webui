@@ -17,10 +17,38 @@ function parseSubToolPathsFromDescription(description: string): string[] {
 	if (!description) {
 		return [];
 	}
-	// Regex to find paths like /path/to/openapi.json or /path/openapi.json
-	const pathRegex = /(\/[a-zA-Z0-9_-]+(?:[a-zA-Z0-9_-]+\/)*openapi\.json)/g;
-	const matches = description.match(pathRegex);
-	return matches || [];
+
+	const markdownLinkRegex = /\[[^\]]+\]\(([^)]+)\)/g; // Regex to find markdown links and capture the path
+	const openApiPaths: string[] = [];
+	let match;
+
+	// First, try to parse markdown links
+	while ((match = markdownLinkRegex.exec(description)) !== null) {
+		let path = match[1]; // The captured path, e.g., /time/docs
+
+		if (path.endsWith('/docs')) {
+			openApiPaths.push(path.replace(/\/docs$/, '/openapi.json'));
+		} else if (path.endsWith('/openapi.json')) {
+			// If the link directly points to an openapi.json
+			openApiPaths.push(path);
+		} else {
+			// Log paths that don't fit the expected patterns for markdown links
+			console.warn(`Markdown link path does not end in /docs or /openapi.json: ${path}`);
+		}
+	}
+
+	// Second, as a fallback or for non-markdown plain paths, look for direct openapi.json paths
+	// This ensures that if the description contains direct paths not in markdown, they are also found.
+	const directPathRegex = /(\/[a-zA-Z0-9_-]+(?:[a-zA-Z0-9_-]+\/)*openapi\.json)/g;
+	let directMatch;
+	while ((directMatch = directPathRegex.exec(description)) !== null) {
+		// Add only if not already captured through markdown links to avoid duplicates
+		if (!openApiPaths.includes(directMatch[0])) {
+			openApiPaths.push(directMatch[0]);
+		}
+	}
+	
+	return Array.from(new Set(openApiPaths)); // Return unique paths found
 }
 
 /**

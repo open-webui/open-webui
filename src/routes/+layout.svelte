@@ -26,16 +26,13 @@
 		isLastActiveTab,
 		isApp,
 		appInfo,
-		toolServers,
-		localMcpoTools // Added for local MCPO tool handling
+		toolServers
 	} from '$lib/stores';
-	import { get } from 'svelte/store'; // Added for accessing store values
-	import { executeLocalMcpoTool } from '$lib/utils/localMcpoToolExecutor'; // Added for local MCPO execution
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { Toaster, toast } from 'svelte-sonner';
 
-	import { executeToolServer, getBackendConfig } from '$lib/apis';
+	import { getBackendConfig } from '$lib/apis';
 	import { getSessionUser } from '$lib/apis/auths';
 
 	import '../tailwind.css';
@@ -207,82 +204,8 @@
 		};
 	};
 
-	const executeTool = async (data: any, cb: any) => {
-    // data contains: { id: string, name: string, params: any, server: { url: string, ... }, ... }
-    // data.name is the toolCallId (operationId)
-    // data.params are the toolArgs
-
-    // --- BEGIN NEW LOGIC FOR LOCAL MCPO ---
-    const localMcpoServerUrl = 'http://localhost:8000'; // Define the base URL for your local MCPO
-
-    if (data.server?.url && data.server.url.startsWith(localMcpoServerUrl)) {
-        console.log('[+layout.svelte executeTool] Handling as local MCPO tool:', data.name);
-        
-        const localToolsAvailable = get(localMcpoTools);
-        console.log('[+layout.svelte executeTool] Current localMcpoTools store content:', localToolsAvailable); // DEBUGGING LINE
-        const foundToolConfig = localToolsAvailable.find(t => t.operationId === data.name); // Changed to compare with t.operationId
-
-        if (!foundToolConfig) {
-            const errorMsg = `[+layout.svelte executeTool] Local MCPO tool config not found for: ${data.name}. This tool might not be enabled or discovered.`;
-            console.error(errorMsg);
-            if (cb) {
-                cb({ success: false, error: errorMsg }); // Ensure consistent error format
-            }
-            return;
-        }
-        
-        try {
-            // executeLocalMcpoTool will find the toolConfig again using data.name from localMcpoTools store
-            const result = await executeLocalMcpoTool(data.name, data.params);
-            if (cb) {
-                cb(result); // executeLocalMcpoTool returns { success: boolean, data?: any, error?: string }
-            }
-            return; // Local tool handled, exit the function
-            } catch (error: any) {
-                const errorMsg = `[+layout.svelte executeTool] Error executing local MCPO tool ${data.name}: ${error.message}`;
-            console.error(errorMsg);
-            if (cb) {
-                // Ensure the callback receives an object in the expected ExecutionResult format
-                cb({ success: false, error: errorMsg });
-            }
-            return; // Local tool execution failed, exit
-        }
-    }
-    // --- END NEW LOGIC FOR LOCAL MCPO ---
-
-    // Existing logic for remote tools (from $settings.toolServers)
-    // This part will only be reached if data.server.url does not match localMcpoServerUrl
-    const toolServer = $settings?.toolServers?.find((server) => server.url === data.server?.url);
-    const toolServerData = $toolServers?.find((server) => server.url === data.server?.url);
-
-    console.log('[+layout.svelte executeTool] Handling as remote/fallback tool:', data.name, toolServer);
-
-    if (toolServer && toolServerData) { // Added check for toolServerData
-        console.log(toolServer); // Original log
-        const res = await executeToolServer(
-            (toolServer?.auth_type ?? 'bearer') === 'bearer' ? toolServer?.key : localStorage.token,
-            toolServer.url,
-            data?.name,
-            data?.params,
-            toolServerData as any // Cast to any to resolve type mismatch
-        );
-
-        console.log('executeToolServer response:', res); // Original log
-        if (cb) {
-            cb(JSON.parse(JSON.stringify(res)));
-        }
-    } else {
-        if (cb) {
-            cb(
-                JSON.parse(
-                    JSON.stringify({
-                        error: 'Tool Server Not Found' // This error will now only apply to non-local tools not found in $settings.toolServers
-                    })
-                )
-            );
-        }
-    }
-};
+	// Tool execution has been moved to src/routes/(app)/+layout.svelte
+	// to properly handle both local MCPO and remote tools.
 
 	const chatEventHandler = async (event: any, cb: any) => {
 		const chat = $page.url.pathname.includes(`/c/${event.chat_id}`);
@@ -338,8 +261,16 @@
 				console.log('execute:python', data);
 				executePythonAsWorker(data.id, data.code, cb);
 			} else if (type === 'execute:tool') {
-				console.log('execute:tool', data);
-				executeTool(data, cb);
+				// Tool execution is now handled in src/routes/(app)/+layout.svelte
+				// to properly intercept and handle local MCPO tools.
+				// This handler in the root layout should not process it.
+				console.log('[ROOT +layout.svelte] Received execute:tool, but it should be handled by (app)/+layout.svelte. Data:', data);
+				if (cb) {
+					// Optionally, inform the caller that this handler is not processing it,
+					// though the (app) layout should pick it up.
+					// cb({ success: false, error: 'Event should be handled by app-level layout.' });
+				}
+				return; // Explicitly return to avoid any further processing here.
 			} else if (type === 'request:chat:completion') {
 				console.log(data, $socket.id);
 				const { session_id, channel, form_data, model } = data;
