@@ -301,7 +301,8 @@
 							}
 
 							if (event.key === 'Enter') {
-								if (event.shiftKey) {
+								const isCtrlPressed = event.ctrlKey || event.metaKey; // metaKey is for Cmd key on Mac
+								if (event.shiftKey && !isCtrlPressed) {
 									editor.commands.setHardBreak(); // Insert a hard break
 									view.dispatch(view.state.tr.scrollIntoView()); // Move viewport to the cursor
 									event.preventDefault();
