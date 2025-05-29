@@ -242,8 +242,7 @@ async def get_embedding_config(request: Request, user=Depends(get_admin_user)):
         "azure_openai_config": {
             "url": request.app.state.config.RAG_AZURE_OPENAI_BASE_URL,
             "key": request.app.state.config.RAG_AZURE_OPENAI_API_KEY,
-            "deployment": request.app.state.config.RAG_AZURE_OPENAI_DEPLOYMENT,
-            "version": request.app.state.config.RAG_AZURE_OPENAI_VERSION,
+            "version": request.app.state.config.RAG_AZURE_OPENAI_API_VERSION,
         },
     }
 
@@ -261,7 +260,6 @@ class OllamaConfigForm(BaseModel):
 class AzureOpenAIConfigForm(BaseModel):
     url: str
     key: str
-    deployment: str
     version: str
 
 
@@ -285,7 +283,11 @@ async def update_embedding_config(
         request.app.state.config.RAG_EMBEDDING_ENGINE = form_data.embedding_engine
         request.app.state.config.RAG_EMBEDDING_MODEL = form_data.embedding_model
 
-        if request.app.state.config.RAG_EMBEDDING_ENGINE in ["ollama", "openai", "azure_openai"]:
+        if request.app.state.config.RAG_EMBEDDING_ENGINE in [
+            "ollama",
+            "openai",
+            "azure_openai",
+        ]:
             if form_data.openai_config is not None:
                 request.app.state.config.RAG_OPENAI_API_BASE_URL = (
                     form_data.openai_config.url
@@ -309,10 +311,7 @@ async def update_embedding_config(
                 request.app.state.config.RAG_AZURE_OPENAI_API_KEY = (
                     form_data.azure_openai_config.key
                 )
-                request.app.state.config.RAG_AZURE_OPENAI_DEPLOYMENT = (
-                    form_data.azure_openai_config.deployment
-                )
-                request.app.state.config.RAG_AZURE_OPENAI_VERSION = (
+                request.app.state.config.RAG_AZURE_OPENAI_API_VERSION = (
                     form_data.azure_openai_config.version
                 )
 
@@ -348,13 +347,8 @@ async def update_embedding_config(
                 )
             ),
             request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
-            (
-                request.app.state.config.RAG_AZURE_OPENAI_DEPLOYMENT
-                if request.app.state.config.RAG_EMBEDDING_ENGINE == "azure_openai"
-                else None
-            ),
-            (
-                request.app.state.config.RAG_AZURE_OPENAI_VERSION
+            azure_api_version=(
+                request.app.state.config.RAG_AZURE_OPENAI_API_VERSION
                 if request.app.state.config.RAG_EMBEDDING_ENGINE == "azure_openai"
                 else None
             ),
@@ -376,8 +370,7 @@ async def update_embedding_config(
             "azure_openai_config": {
                 "url": request.app.state.config.RAG_AZURE_OPENAI_BASE_URL,
                 "key": request.app.state.config.RAG_AZURE_OPENAI_API_KEY,
-                "deployment": request.app.state.config.RAG_AZURE_OPENAI_DEPLOYMENT,
-                "version": request.app.state.config.RAG_AZURE_OPENAI_VERSION,
+                "version": request.app.state.config.RAG_AZURE_OPENAI_API_VERSION,
             },
         }
     except Exception as e:
@@ -1197,13 +1190,8 @@ def save_docs_to_vector_db(
                 )
             ),
             request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
-            (
-                request.app.state.config.RAG_AZURE_OPENAI_DEPLOYMENT
-                if request.app.state.config.RAG_EMBEDDING_ENGINE == "azure_openai"
-                else None
-            ),
-            (
-                request.app.state.config.RAG_AZURE_OPENAI_VERSION
+            azure_api_version=(
+                request.app.state.config.RAG_AZURE_OPENAI_API_VERSION
                 if request.app.state.config.RAG_EMBEDDING_ENGINE == "azure_openai"
                 else None
             ),
