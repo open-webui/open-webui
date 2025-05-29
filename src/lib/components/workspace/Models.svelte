@@ -292,9 +292,8 @@
 
 	$: console.log(filteredModels, 'filtered Models')
 
-	const bookmarkAssistant = async (id, bookmarkedModel) => {
-		const bookmarked = !bookmarkedModel;
-		const res = await bookmarkModel(localStorage.token, id, bookmarked);
+	const bookmarkAssistant = async (id) => {
+		const res = await bookmarkModel(localStorage.token, id);
 		if (res) {
 			_models.set(await getModels(localStorage.token));
 			models = await getWorkspaceModels(localStorage.token);
@@ -476,8 +475,8 @@
 					>
 						<div class="flex items-start justify-between">
 							<div class="flex items-center">
-								<button on:click={() => bookmarkAssistant(model.id, model.bookmarked)} class="text-lightGray-100 dark:text-customGray-300 mr-1">
-									{#if model?.bookmarked}
+								<button on:click={() => bookmarkAssistant(model.id)} class="text-lightGray-100 dark:text-customGray-300 mr-1">
+									{#if model?.bookmarked_by_user}
 										<BookmarkedIcon/>
 									{:else}
 										<BookmarkIcon/>

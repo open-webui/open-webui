@@ -165,7 +165,7 @@
 							}}
 							class="block w-[4rem] h-[4rem] relative"
 						>
-							{#if model?.bookmarked}
+							{#if model?.bookmarked_by_user}
 								<div
 									class="flex justify-center items-center absolute w-7 h-7 -right-3.5 -top-3.5 rounded-lg bg-lightGray-700 dark:bg-customGray-900 border border-lightGray-300 dark:border-customGray-700"
 								>

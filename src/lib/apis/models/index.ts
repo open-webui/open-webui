@@ -264,7 +264,7 @@ export const deleteAllModels = async (token: string) => {
 	return res;
 };
 
-export const bookmarkModel = async (token: string, modelId: string, bookmarked: boolean) => {
+export const bookmarkModel = async (token: string, modelId: string) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/models/model/${modelId}/bookmark/update`, {
@@ -274,7 +274,7 @@ export const bookmarkModel = async (token: string, modelId: string, bookmarked: 
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({bookmarked})
+		// body: JSON.stringify({bookmarked})
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
