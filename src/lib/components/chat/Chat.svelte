@@ -36,8 +36,14 @@
 		chatTitle,
 		showArtifacts,
 		tools,
-		toolServers
+		toolServers,
+		localToolResultStore, // Import the new store
+		localMcpoTools // Import localMcpoTools store
 	} from '$lib/stores';
+	import {
+		executeLocalMcpoTool // Though not directly called here, its result is handled
+	} from '$lib/utils/localMcpoToolExecutor';
+	import { DEFAULT_MCPO_BASE_URL } from '$lib/utils/localMcpoToolDiscoverer'; // Import DEFAULT_MCPO_BASE_URL
 	import {
 		convertMessagesToHistory,
 		copyToClipboard,
@@ -112,6 +118,7 @@
 	let eventCallback = null;
 
 	let chatIdUnsubscriber: Unsubscriber | undefined;
+	let unsubscribeLocalToolResult: Unsubscriber | undefined; // Declare here
 
 	let selectedModels = [''];
 	let atSelectedModel: Model | undefined;
@@ -401,6 +408,79 @@
 		window.addEventListener('message', onMessageHandler);
 		$socket?.on('chat-events', chatEventHandler);
 
+		// Subscribe to localToolResultStore
+		unsubscribeLocalToolResult = localToolResultStore.subscribe(async (payload) => { // Assign here
+			if (payload && payload.chatId === $chatId) {
+				console.log('Chat.svelte: Received local tool result:', payload);
+				processing = $i18n.t('Processing tool result...'); // Update UI
+
+				const assistantMessage = history.messages[payload.assistantMessageId];
+				if (!assistantMessage) {
+					console.error('Chat.svelte: Assistant message not found for tool result processing.');
+					toast.error('Internal error: assistant message for tool call not found.');
+					localToolResultStore.set(null);
+					processing = '';
+					return;
+				}
+
+				// Ensure assistant message is marked as done if it was a streaming response that just finished with a tool call
+				assistantMessage.done = true; 
+
+				const toolMessageId = uuidv4();
+				const toolMessage = {
+					id: toolMessageId,
+					parentId: payload.assistantMessageId,
+					childrenIds: [],
+					role: 'tool',
+					// Assuming payload.toolId from execute:tool event is the tool_call_id LLM expects.
+					// This might need adjustment if LLM provides a separate internal call_id for each tool_call object.
+					tool_call_id: payload.toolId, 
+					content: payload.result.success ? JSON.stringify(payload.result.data) : JSON.stringify({error: payload.result.error}),
+					timestamp: Math.floor(Date.now() / 1000)
+				};
+
+				history.messages[toolMessageId] = toolMessage;
+				if (!assistantMessage.childrenIds.includes(toolMessageId)) {
+					assistantMessage.childrenIds.push(toolMessageId);
+				}
+				
+				// Create a new assistant message placeholder for the LLM's response after the tool call
+				const finalAssistantResponseId = uuidv4();
+				const finalAssistantMessage = {
+					parentId: toolMessageId,
+					id: finalAssistantResponseId,
+					childrenIds: [],
+					role: 'assistant',
+					content: '',
+					model: assistantMessage.model, // Use the same model as the one that made the tool call
+					modelName: assistantMessage.modelName,
+					modelIdx: assistantMessage.modelIdx,
+					timestamp: Math.floor(Date.now() / 1000),
+					done: false // This will be populated by the LLM
+				};
+				history.messages[finalAssistantResponseId] = finalAssistantMessage;
+				toolMessage.childrenIds.push(finalAssistantResponseId);
+				
+				history.currentId = finalAssistantResponseId; // LLM will populate this message
+
+				await saveChatHandler($chatId, history);
+				await tick();
+				if (autoScroll) scrollToBottom();
+
+				// Call backend with updated history (including tool message) to get next LLM response
+				const modelForContinuation = $models.find(m => m.id === assistantMessage.model);
+				if (modelForContinuation) {
+					await sendPromptSocket(history, modelForContinuation, finalAssistantResponseId, $chatId);
+				} else {
+					toast.error(`Model ${assistantMessage.model} not found for continuing after tool call.`);
+				}
+				
+				localToolResultStore.set(null); // Reset the store
+				processing = ''; // Clear UI
+			}
+		});
+
+		// Original onMount logic continues...
 		if (!$chatId) {
 			chatIdUnsubscriber = chatId.subscribe(async (value) => {
 				if (!value) {
@@ -417,6 +497,7 @@
 		if (localStorage.getItem(`chat-input-${chatIdProp}`)) {
 			try {
 				const input = JSON.parse(localStorage.getItem(`chat-input-${chatIdProp}`));
+
 				prompt = input.prompt;
 				files = input.files;
 				selectedToolIds = input.selectedToolIds;
@@ -461,6 +542,7 @@
 		chatIdUnsubscriber?.();
 		window.removeEventListener('message', onMessageHandler);
 		$socket?.off('chat-events', chatEventHandler);
+		unsubscribeLocalToolResult?.(); // Unsubscribe from localToolResultStore
 	});
 
 	// File upload functions
@@ -1589,7 +1671,16 @@
 
 				files: (files?.length ?? 0) > 0 ? files : undefined,
 				tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
-				tool_servers: $toolServers,
+				tool_servers: [
+					...$toolServers, // Include existing external tool servers
+					// Add local MCPO tool specs if any local tools are enabled
+					...($localMcpoTools.filter(t => t.enabled).length > 0 ? [{ 
+						id: 'local-mcpo-instance', // A unique ID for the local MCPO server instance
+						name: 'Local MCPO',
+						url: DEFAULT_MCPO_BASE_URL,
+						specs: $localMcpoTools.filter(t => t.enabled).map(t => t.spec) // Send only enabled local tool specs
+					}] : [])
+				],
 
 				features: {
 					image_generation:
@@ -1920,8 +2011,7 @@
 	<title>
 		{$chatTitle
 			? `${$chatTitle.length > 30 ? `${$chatTitle.slice(0, 30)}...` : $chatTitle} | ${$WEBUI_NAME}`
-			: `${$WEBUI_NAME}`}
-	</title>
+			: `${$WEBUI_NAME}`}</title>
 </svelte:head>
 
 <audio id="audioElement" src="" style="display: none;" />
