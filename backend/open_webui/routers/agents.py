@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 
 from open_webui.models.agents import Agent as AgentModel
-from open_webui.models.auths import User as UserModel
+from open_webui.models.users import User as UserModel # Changed from .auths to .users
 from open_webui.utils.utils import get_current_user, get_db
 from pydantic import BaseModel, Field
 from datetime import datetime
