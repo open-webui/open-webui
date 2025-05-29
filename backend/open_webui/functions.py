@@ -64,7 +64,7 @@ def get_function_module_by_id(request: Request, pipe_id: str):
     return function_module
 
 
-async def get_function_models(request):
+async def get_function_models(request: Request):
     pipes = Functions.get_functions_by_type("pipe", active_only=True)
     pipe_models = []
 
