@@ -1344,7 +1344,7 @@
 	"What’s New in": "Mitä uutta",
 	"When enabled, the model will respond to each chat message in real-time, generating a response as soon as the user sends a message. This mode is useful for live chat applications, but may impact performance on slower hardware.": "Kun käytössä, malli vastaa jokaiseen chatviestiin reaaliajassa, tuottaen vastauksen heti kun käyttäjä lähettää viestin. Tämä tila on hyödyllinen reaaliaikaisissa chat-sovelluksissa, mutta voi vaikuttaa suorituskykyyn hitaammilla laitteistoilla.",
 	"wherever you are": "missä tahansa oletkin",
-	"Whether to paginate the output. Each page will be separated by a horizontal rule and page number. Defaults to False.": "Sivutetaanko tuloste. Jokainen sivu erotetaan toisistaan ​​vaakasuoralla viivalla ja sivunumerolla. Oletusarvo ei käytössä.",
+	"Whether to paginate the output. Each page will be separated by a horizontal rule and page number. Defaults to False.": "Sivutetaanko tuloste. Jokainen sivu erotetaan toisistaan \u200b\u200bvaakasuoralla viivalla ja sivunumerolla. Oletusarvo ei käytössä.",
 	"Whisper (Local)": "Whisper (paikallinen)",
 	"Why?": "Miksi?",
 	"Widescreen Mode": "Laajakuvatila",
