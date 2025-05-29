@@ -1224,7 +1224,7 @@
 	"Web Search in Chat": "在對話中進行網路搜尋",
 	"Web Search Query Generation": "網頁搜尋查詢生成",
 	"Webhook URL": "Webhook URL",
-	"WebUI Settings": "WebUI 設定",
+	"WebUI Settings": "設定",
 	"WebUI URL": "WebUI URL",
 	"WebUI will make requests to \"{{url}}\"": "WebUI 將向 \"{{url}}\" 發送請求",
 	"WebUI will make requests to \"{{url}}/api/chat\"": "WebUI 將向 \"{{url}}/api/chat\" 傳送請求",
