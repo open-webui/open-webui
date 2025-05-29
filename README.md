@@ -83,7 +83,7 @@ Want to learn more about Open WebUI's features? Check out our [Open WebUI docume
       </a>
     </td>
     <td>
-      Wrap • The intelligent terminal for developers
+      Warp • The intelligent terminal for developers
     </td>
   </tr>
 </table>
