@@ -21,7 +21,11 @@ from langchain_community.document_loaders import (
 )
 from langchain_core.documents import Document
 
+from open_webui.retrieval.loaders.external_document import ExternalDocumentLoader
+
 from open_webui.retrieval.loaders.mistral import MistralLoader
+from open_webui.retrieval.loaders.datalab_marker import DatalabMarkerLoader
+
 
 from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
 
@@ -126,14 +130,12 @@ class TikaLoader:
 
 
 class DoclingLoader:
-    def __init__(
-        self, url, file_path=None, mime_type=None, ocr_engine=None, ocr_lang=None
-    ):
+    def __init__(self, url, file_path=None, mime_type=None, params=None):
         self.url = url.rstrip("/")
         self.file_path = file_path
         self.mime_type = mime_type
-        self.ocr_engine = ocr_engine
-        self.ocr_lang = ocr_lang
+
+        self.params = params or {}
 
     def load(self) -> list[Document]:
         with open(self.file_path, "rb") as f:
@@ -150,11 +152,19 @@ class DoclingLoader:
                 "table_mode": "accurate",
             }
 
-            if self.ocr_engine and self.ocr_lang:
-                params["ocr_engine"] = self.ocr_engine
-                params["ocr_lang"] = [
-                    lang.strip() for lang in self.ocr_lang.split(",") if lang.strip()
-                ]
+            if self.params:
+                if self.params.get("do_picture_classification"):
+                    params["do_picture_classification"] = self.params.get(
+                        "do_picture_classification"
+                    )
+
+                if self.params.get("ocr_engine") and self.params.get("ocr_lang"):
+                    params["ocr_engine"] = self.params.get("ocr_engine")
+                    params["ocr_lang"] = [
+                        lang.strip()
+                        for lang in self.params.get("ocr_lang").split(",")
+                        if lang.strip()
+                    ]
 
             endpoint = f"{self.url}/v1alpha/convert/file"
             r = requests.post(endpoint, files=files, data=params)
@@ -207,7 +217,18 @@ class Loader:
     def _get_loader(self, filename: str, file_content_type: str, file_path: str):
         file_ext = filename.split(".")[-1].lower()
 
-        if self.engine == "tika" and self.kwargs.get("TIKA_SERVER_URL"):
+        if (
+            self.engine == "external"
+            and self.kwargs.get("EXTERNAL_DOCUMENT_LOADER_URL")
+            and self.kwargs.get("EXTERNAL_DOCUMENT_LOADER_API_KEY")
+        ):
+            loader = ExternalDocumentLoader(
+                file_path=file_path,
+                url=self.kwargs.get("EXTERNAL_DOCUMENT_LOADER_URL"),
+                api_key=self.kwargs.get("EXTERNAL_DOCUMENT_LOADER_API_KEY"),
+                mime_type=file_content_type,
+            )
+        elif self.engine == "tika" and self.kwargs.get("TIKA_SERVER_URL"):
             if self._is_text_file(file_ext, file_content_type):
                 loader = TextLoader(file_path, autodetect_encoding=True)
             else:
@@ -217,6 +238,49 @@ class Loader:
                     mime_type=file_content_type,
                     extract_images=self.kwargs.get("PDF_EXTRACT_IMAGES"),
                 )
+        elif (
+            self.engine == "datalab_marker"
+            and self.kwargs.get("DATALAB_MARKER_API_KEY")
+            and file_ext
+            in [
+                "pdf",
+                "xls",
+                "xlsx",
+                "ods",
+                "doc",
+                "docx",
+                "odt",
+                "ppt",
+                "pptx",
+                "odp",
+                "html",
+                "epub",
+                "png",
+                "jpeg",
+                "jpg",
+                "webp",
+                "gif",
+                "tiff",
+            ]
+        ):
+            loader = DatalabMarkerLoader(
+                file_path=file_path,
+                api_key=self.kwargs["DATALAB_MARKER_API_KEY"],
+                langs=self.kwargs.get("DATALAB_MARKER_LANGS"),
+                use_llm=self.kwargs.get("DATALAB_MARKER_USE_LLM", False),
+                skip_cache=self.kwargs.get("DATALAB_MARKER_SKIP_CACHE", False),
+                force_ocr=self.kwargs.get("DATALAB_MARKER_FORCE_OCR", False),
+                paginate=self.kwargs.get("DATALAB_MARKER_PAGINATE", False),
+                strip_existing_ocr=self.kwargs.get(
+                    "DATALAB_MARKER_STRIP_EXISTING_OCR", False
+                ),
+                disable_image_extraction=self.kwargs.get(
+                    "DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION", False
+                ),
+                output_format=self.kwargs.get(
+                    "DATALAB_MARKER_OUTPUT_FORMAT", "markdown"
+                ),
+            )
         elif self.engine == "docling" and self.kwargs.get("DOCLING_SERVER_URL"):
             if self._is_text_file(file_ext, file_content_type):
                 loader = TextLoader(file_path, autodetect_encoding=True)
@@ -225,8 +289,13 @@ class Loader:
                     url=self.kwargs.get("DOCLING_SERVER_URL"),
                     file_path=file_path,
                     mime_type=file_content_type,
-                    ocr_engine=self.kwargs.get("DOCLING_OCR_ENGINE"),
-                    ocr_lang=self.kwargs.get("DOCLING_OCR_LANG"),
+                    params={
+                        "ocr_engine": self.kwargs.get("DOCLING_OCR_ENGINE"),
+                        "ocr_lang": self.kwargs.get("DOCLING_OCR_LANG"),
+                        "do_picture_classification": self.kwargs.get(
+                            "DOCLING_DO_PICTURE_DESCRIPTION"
+                        ),
+                    },
                 )
         elif (
             self.engine == "document_intelligence"
@@ -251,6 +320,15 @@ class Loader:
             )
         elif (
             self.engine == "mistral_ocr"
+            and self.kwargs.get("MISTRAL_OCR_API_KEY") != ""
+            and file_ext
+            in ["pdf"]  # Mistral OCR currently only supports PDF and images
+        ):
+            loader = MistralLoader(
+                api_key=self.kwargs.get("MISTRAL_OCR_API_KEY"), file_path=file_path
+            )
+        elif (
+            self.engine == "external"
             and self.kwargs.get("MISTRAL_OCR_API_KEY") != ""
             and file_ext
             in ["pdf"]  # Mistral OCR currently only supports PDF and images

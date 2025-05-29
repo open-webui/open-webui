@@ -40,7 +40,10 @@ from open_webui.models.functions import Functions
 from open_webui.models.models import Models
 
 
-from open_webui.utils.plugin import load_function_module_by_id
+from open_webui.utils.plugin import (
+    load_function_module_by_id,
+    get_function_module_from_cache,
+)
 from open_webui.utils.models import get_all_models, check_model_access
 from open_webui.utils.payload import convert_payload_openai_to_ollama
 from open_webui.utils.response import (
@@ -309,6 +312,7 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
     metadata = {
         "chat_id": data["chat_id"],
         "message_id": data["id"],
+        "filter_ids": data.get("filter_ids", []),
         "session_id": data["session_id"],
         "user_id": user.id,
     }
@@ -330,7 +334,9 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
     try:
         filter_functions = [
             Functions.get_function_by_id(filter_id)
-            for filter_id in get_sorted_filter_ids(model)
+            for filter_id in get_sorted_filter_ids(
+                request, model, metadata.get("filter_ids", [])
+            )
         ]
 
         result, _ = await process_filter_functions(
@@ -389,11 +395,7 @@ async def chat_action(request: Request, action_id: str, form_data: dict, user: A
         }
     )
 
-    if action_id in request.app.state.FUNCTIONS:
-        function_module = request.app.state.FUNCTIONS[action_id]
-    else:
-        function_module, _, _ = load_function_module_by_id(action_id)
-        request.app.state.FUNCTIONS[action_id] = function_module
+    function_module, _, _ = get_function_module_from_cache(request, action_id)
 
     if hasattr(function_module, "valves") and hasattr(function_module, "Valves"):
         valves = Functions.get_function_valves_by_id(action_id)
