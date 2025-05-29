@@ -2966,3 +2966,13 @@ LDAP_VALIDATE_CERT = PersistentConfig(
 LDAP_CIPHERS = PersistentConfig(
     "LDAP_CIPHERS", "ldap.server.ciphers", os.environ.get("LDAP_CIPHERS", "ALL")
 )
+
+####################################
+# REPLICATE
+####################################
+
+REPLICATE_API_TOKEN = PersistentConfig(
+    "REPLICATE_API_TOKEN",
+    "image_generation.replicate.api_token",
+    os.getenv("REPLICATE_API_TOKEN", ""),
+)

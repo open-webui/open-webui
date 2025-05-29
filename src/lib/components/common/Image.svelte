@@ -12,7 +12,7 @@
 	export let onDismiss = () => {};
 
 	let _src = '';
-	$: _src = src.startsWith('/') ? `${WEBUI_BASE_URL}${src}` : src;
+	$: _src = src && src.startsWith('/') ? `${WEBUI_BASE_URL}${src}` : src;
 
 	let showImagePreview = false;
 </script>
