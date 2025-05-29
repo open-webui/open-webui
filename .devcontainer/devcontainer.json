@@ -1,0 +1,82 @@
+{
+  "name": "Open WebUI Dev",
+  "build": {
+    "dockerfile": "../Dockerfile",
+    "context": "..",
+    "args": {
+      "USE_OLLAMA": "true",
+      "USE_CUDA": "false",
+      // Consider adding other ARGs from your Dockerfile if you
+      // want to set different defaults for the dev container build
+      // e.g., "USE_EMBEDDING_MODEL": "sentence-transformers/all-MiniLM-L6-v2"
+    }
+  },
+  "runArgs": [
+    "--privileged",
+    "--dns=8.8.8.8",
+    "--dns=1.1.1.1"
+  ],  
+  "workspaceFolder": "/app",
+  "forwardPorts": [
+    8080, // Backend
+    5173, // Default Vite frontend dev port
+    3000  // Common alternative frontend port
+  ],
+  "portsAttributes": {
+    "8080": {
+      "label": "Open WebUI Backend"
+    },
+    "5173": {
+      "label": "Vite Dev Server"
+    },
+    "3000": {
+      "label": "Frontend (Alt)"
+    }
+  },
+  // Keep the container alive for interactive use, overriding Dockerfile CMD
+  "overrideCommand": true,
+  "postAttachCommand": "sleep infinity",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "svelte.svelte-vscode",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "ms-azuretools.vscode-docker",
+        "bungcip.better-toml",
+        "GitHub.copilot", // Assuming you use Copilot, remove if not
+        "ms-vscode.powershell" // Useful for .sh scripts on Windows if needed locally
+      ],
+      "settings": {
+        "terminal.integrated.shell.linux": "/bin/bash", // Ensure bash is available, else /bin/sh
+        "python.defaultInterpreterPath": "/usr/local/bin/python", // From python:3.11-slim
+        "files.eol": "\n", // Ensure consistent line endings
+        // Python specific settings
+        "python.linting.pylintEnabled": true,
+        "python.linting.enabled": true,
+        "python.formatting.provider": "black",
+        // Prettier settings
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnSave": true,
+        "[svelte]": {
+          "editor.defaultFormatter": "svelte.svelte-vscode"
+        },
+        "[python]": {
+          "editor.defaultFormatter": "ms-python.black-formatter"
+        }
+      }
+    }
+  },
+  // Run as the vscode user, Dev Containers will handle its creation.
+  "remoteUser": "vscode",
+  "mounts": [
+    "source=open-webui-node-modules,target=/app/node_modules,type=volume",
+    "source=open-webui-pip-cache,target=/home/vscode/.cache,type=volume", // Cache for vscode user
+    "source=open-webui-hf-cache,target=/app/backend/data/cache/embedding/models,type=volume",
+    "source=open-webui-tiktoken-cache,target=/app/backend/data/cache/tiktoken,type=volume",
+    "source=open-webui-whisper-cache,target=/app/backend/data/cache/whisper/models,type=volume",
+    "source=open-webui-chroma-cache,target=/app/backend/data/chroma,type=volume" // If chroma data is stored there
+  ]
+}
