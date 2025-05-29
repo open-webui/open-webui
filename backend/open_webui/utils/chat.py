@@ -40,7 +40,10 @@ from open_webui.models.functions import Functions
 from open_webui.models.models import Models
 
 
-from open_webui.utils.plugin import load_function_module_by_id
+from open_webui.utils.plugin import (
+    load_function_module_by_id,
+    get_function_module_from_cache,
+)
 from open_webui.utils.models import get_all_models, check_model_access
 from open_webui.utils.payload import convert_payload_openai_to_ollama
 from open_webui.utils.response import (
@@ -392,8 +395,7 @@ async def chat_action(request: Request, action_id: str, form_data: dict, user: A
         }
     )
 
-    function_module, _, _ = load_function_module_by_id(action_id)
-    request.app.state.FUNCTIONS[action_id] = function_module
+    function_module, _, _ = get_function_module_from_cache(request, action_id)
 
     if hasattr(function_module, "valves") and hasattr(function_module, "Valves"):
         valves = Functions.get_function_valves_by_id(action_id)

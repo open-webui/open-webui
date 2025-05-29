@@ -301,30 +301,38 @@
 							}
 
 							if (event.key === 'Enter') {
-								// Check if the current selection is inside a structured block (like codeBlock or list)
-								const { state } = view;
-								const { $head } = state.selection;
+								const isCtrlPressed = event.ctrlKey || event.metaKey; // metaKey is for Cmd key on Mac
+								if (event.shiftKey && !isCtrlPressed) {
+									editor.commands.setHardBreak(); // Insert a hard break
+									view.dispatch(view.state.tr.scrollIntoView()); // Move viewport to the cursor
+									event.preventDefault();
+									return true;
+								} else {
+									// Check if the current selection is inside a structured block (like codeBlock or list)
+									const { state } = view;
+									const { $head } = state.selection;
 
-								// Recursive function to check ancestors for specific node types
-								function isInside(nodeTypes: string[]): boolean {
-									let currentNode = $head;
-									while (currentNode) {
-										if (nodeTypes.includes(currentNode.parent.type.name)) {
-											return true;
+									// Recursive function to check ancestors for specific node types
+									function isInside(nodeTypes: string[]): boolean {
+										let currentNode = $head;
+										while (currentNode) {
+											if (nodeTypes.includes(currentNode.parent.type.name)) {
+												return true;
+											}
+											if (!currentNode.depth) break; // Stop if we reach the top
+											currentNode = state.doc.resolve(currentNode.before()); // Move to the parent node
 										}
-										if (!currentNode.depth) break; // Stop if we reach the top
-										currentNode = state.doc.resolve(currentNode.before()); // Move to the parent node
+										return false;
 									}
-									return false;
-								}
 
-								const isInCodeBlock = isInside(['codeBlock']);
-								const isInList = isInside(['listItem', 'bulletList', 'orderedList']);
-								const isInHeading = isInside(['heading']);
+									const isInCodeBlock = isInside(['codeBlock']);
+									const isInList = isInside(['listItem', 'bulletList', 'orderedList']);
+									const isInHeading = isInside(['heading']);
 
-								if (isInCodeBlock || isInList || isInHeading) {
-									// Let ProseMirror handle the normal Enter behavior
-									return false;
+									if (isInCodeBlock || isInList || isInHeading) {
+										// Let ProseMirror handle the normal Enter behavior
+										return false;
+									}
 								}
 							}
 
