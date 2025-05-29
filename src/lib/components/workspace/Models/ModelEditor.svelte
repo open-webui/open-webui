@@ -24,6 +24,7 @@
 
 	export let model = null;
 	export let edit = false;
+	export let clone = false;
 
 	export let preset = true;
 
@@ -85,10 +86,15 @@
 	let filterIds = [];
 	let actionIds = [];
 
-	let accessControl = {
-		read: { group_ids: [], user_ids: [] },
-		write: { group_ids: [], user_ids: [] }
-	};
+	export let accessControl;
+
+	$: if (!edit && !clone && accessControl === undefined) {
+	// New tool: default to private access
+		accessControl = {
+			read: { group_ids: [], user_ids: [] },
+			write: { group_ids: [], user_ids: [] }
+		};
+	}
 
 
 	const addUsage = (base_model_id) => {
