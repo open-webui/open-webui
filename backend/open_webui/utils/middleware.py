@@ -11,7 +11,7 @@ import random
 import json
 import html
 import inspect
-import re # Import re for regex
+import re
 import ast
 
 from uuid import uuid4
@@ -191,71 +191,15 @@ async def chat_completion_tools_handler(
                 try:
                     tool = tools[tool_function_name]
 
-                    spec = tool.get("spec", {}) # spec is the full OpenAPI document for the tool's server
-                    
-                    allowed_params_keys = set()
-                    
-                    # Determine the operation_object from the spec using tool's pathKey and methodKey
-                    # Ensure tool.get("pathKey") and tool.get("methodKey") exist and provide defaults if not
-                    current_path_key = tool.get("pathKey", "")
-                    current_method_key = tool.get("methodKey", "").lower()
-
-                    path_item_object = spec.get("paths", {}).get(current_path_key, {})
-                    operation_object = path_item_object.get(current_method_key, {})
-                    
-                    # Extract allowed parameter keys from requestBody schema
-                    if operation_object and "requestBody" in operation_object:
-                        request_body_content = operation_object.get("requestBody", {}).get("content", {})
-                        # Iterate over supported content types, prioritizing application/json
-                        for content_type, media_type_object in request_body_content.items():
-                            if "application/json" in content_type: # Prioritize json
-                                request_body_schema = media_type_object.get("schema", {})
-                                
-                                # Resolve $ref if present
-                                if "$ref" in request_body_schema:
-                                    ref_path = request_body_schema["$ref"].split('/')
-                                    schema_name = ref_path[-1]
-                                    actual_schema = spec.get("components", {}).get("schemas", {}).get(schema_name, {})
-                                    allowed_params_keys.update(actual_schema.get("properties", {}).keys())
-                                elif "properties" in request_body_schema: # Inline schema
-                                    allowed_params_keys.update(request_body_schema.get("properties", {}).keys())
-                                # break # Found application/json, consider if other content types for params are needed
-                    
-                    # Extract allowed parameter keys from operation-level parameters (query, path, header)
-                    if operation_object and "parameters" in operation_object:
-                        for param_def in operation_object.get("parameters", []):
-                            # Handle $ref for parameters
-                            if isinstance(param_def, dict) and "$ref" in param_def:
-                                ref_path = param_def["$ref"].split('/')
-                                param_name_ref = ref_path[-1]
-                                actual_param_def = spec.get("components", {}).get("parameters", {}).get(param_name_ref, {})
-                                if "name" in actual_param_def:
-                                    allowed_params_keys.add(actual_param_def["name"])
-                            elif isinstance(param_def, dict) and "name" in param_def: # Parameter is defined inline
-                                allowed_params_keys.add(param_def["name"])
-
-                    # Filter the parameters from LLM based on the extracted allowed_params_keys
-                    if not allowed_params_keys:
-                        # If no parameters are defined in the spec for this operation,
-                        # and the original tool_function_params is not empty, it implies LLM hallucinated params.
-                        # If the tool truly takes no arguments, tool_function_params should be empty.
-                        # If LLM provides params but spec says none, strip them.
-                        if tool_function_params: # If LLM provided params but spec doesn't define any
-                             log.warning(f"LLM provided parameters for {tool_function_name} but none are defined in its OpenAPI spec. Stripping params.")
-                        tool_function_params = {}
-                    else:
-                        original_params_from_llm = tool_function_params.copy()
-                        tool_function_params = {
-                            k: v
-                            for k, v in tool_function_params.items()
-                            if k in allowed_params_keys
-                        }
-                        if len(tool_function_params) < len(original_params_from_llm):
-                            stripped_keys = set(original_params_from_llm.keys()) - set(tool_function_params.keys())
-                            log.warning(f"Stripped unexpected parameters for {tool_function_name}: {stripped_keys}")
-                    
-                    log.debug(f"Allowed params for {tool_function_name}: {allowed_params_keys}")
-                    log.debug(f"Filtered tool_function_params to be sent to frontend: {tool_function_params}")
+                    spec = tool.get("spec", {})
+                    allowed_params = (
+                        spec.get("parameters", {}).get("properties", {}).keys()
+                    )
+                    tool_function_params = {
+                        k: v
+                        for k, v in tool_function_params.items()
+                        if k in allowed_params
+                    }
 
                     if tool.get("direct", False):
                         tool_result = await event_caller(
@@ -909,39 +853,12 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         for tool_server in tool_servers:
             tool_specs = tool_server.pop("specs", [])
 
-            for tool_spec in tool_specs: # tool_spec is an OpenAPI document
-                if "paths" in tool_spec:
-                    for path_key, path_item_object in tool_spec["paths"].items():
-                        for method_key, operation_object in path_item_object.items():
-                            # Ensure it's a valid HTTP method and an object
-                            if isinstance(operation_object, dict) and method_key.lower() in ["get", "post", "put", "delete", "patch", "options", "head", "trace"]:
-                                operation_id = operation_object.get("operationId")
-                                
-                                if operation_id:
-                                    tools_dict[operation_id] = { # Key by operationId
-                                        "spec": tool_spec, # The full spec
-                                        "direct": True,
-                                        "server": tool_server,
-                                        "pathKey": path_key, # Store these for frontend execution
-                                        "methodKey": method_key,
-                                        "operationId": operation_id,
-                                    }
-                                else:
-                                    # Fallback if no operationId, create a unique name
-                                    # Use a more robust name derivation
-                                    # Example: "MyServer_hello_post"
-                                    derived_name = f"{tool_spec['info']['title'].replace(' ', '_').replace('-', '_').lower()}_{path_key.replace('/', '_').replace('-', '_').lower()}_{method_key.lower()}"
-                                    # Clean up multiple underscores
-                                    derived_name = re.sub(r'_{2,}', '_', derived_name).strip('_')
-
-                                    tools_dict[derived_name] = {
-                                        "spec": tool_spec,
-                                        "direct": True,
-                                        "server": tool_server,
-                                        "pathKey": path_key,
-                                        "methodKey": method_key,
-                                        "operationId": derived_name, # Use derived name as operationId
-                                    }
+            for tool in tool_specs:
+                tools_dict[tool["name"]] = {
+                    "spec": tool,
+                    "direct": True,
+                    "server": tool_server,
+                }
 
     if tools_dict:
         if metadata.get("function_calling") == "native":

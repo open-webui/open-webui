@@ -1,8 +1,7 @@
 import { APP_NAME } from '$lib/constants';
-import { type Writable, writable, derived } from 'svelte/store';
+import { type Writable, writable } from 'svelte/store';
 import type { ModelConfig } from '$lib/apis';
 import type { Banner } from '$lib/types';
-import type { LocalMcpoToolConfig, Tool, ToolServerConnection } from '$lib/types/tools';
 import type { Socket } from 'socket.io-client';
 
 import emojiShortCodes from '$lib/emoji-shortcodes.json';
@@ -29,7 +28,7 @@ export const USAGE_POOL: Writable<null | string[]> = writable(null);
 export const theme = writable('system');
 
 export const shortCodesToEmojis = writable(
-	Object.entries(emojiShortCodes).reduce((acc: Record<string, string>, [key, value]) => {
+	Object.entries(emojiShortCodes).reduce((acc, [key, value]) => {
 		if (typeof value === 'string') {
 			acc[value] = key;
 		} else {
@@ -39,7 +38,7 @@ export const shortCodesToEmojis = writable(
 		}
 
 		return acc;
-	}, {} as Record<string, string>)
+	}, {})
 );
 
 export const TTSWorker = writable(null);
@@ -56,93 +55,14 @@ export const models: Writable<Model[]> = writable([]);
 
 export const prompts: Writable<null | Prompt[]> = writable(null);
 export const knowledge: Writable<null | Document[]> = writable(null);
-export const tools: Writable<Tool[] | null> = writable(null); // Explicitly type as Tool[] or null
+export const tools = writable(null);
 export const functions = writable(null);
 
-export const toolServers: Writable<ToolServerConnection[]> = writable([]);
-export const localMcpoTools: Writable<LocalMcpoToolConfig[]> = writable([]);
-
-// Store for passing local tool execution results from layout to Chat.svelte
-export const localToolResultStore = writable<null | {
-	toolId: string;
-	chatId: string;
-	assistantMessageId: string;
-	result: { success: boolean; data?: any; error?: string };
-}>(null);
-
-// Derived store to combine all available tools
-export const allAvailableTools = derived(
-	[tools, toolServers, localMcpoTools],
-	([$tools, $toolServers, $localMcpoTools]) => {
-		console.log('[allAvailableTools] Deriving: $localMcpoTools count:', $localMcpoTools.length, '$tools count:', ($tools || []).length, '$toolServers count:', $toolServers.length);
-		const combinedTools: Tool[] = [];
-
-		// Add tools from the 'tools' store (internal Python tools, etc.)
-		if ($tools && Array.isArray($tools)) {
-			// Assuming $tools is an array of Tool-like objects
-			// We might need to adapt them to the Tool interface if they are not already
-			($tools as any[]).forEach((tool) => {
-				combinedTools.push({
-					id: tool.id, // Ensure these properties exist
-					name: tool.name,
-					description: tool.description,
-					spec: tool.spec,
-					type: tool.type || 'python_internal', // Assuming a default or existing type
-					enabled: tool.enabled ?? true, // Default to enabled if not specified
-					metadata: tool.metadata
-				});
-			});
-		}
-
-		// Add tools from 'toolServers'
-		$toolServers.forEach((serverConnection) => {
-			if (serverConnection.tools && serverConnection.enabled) {
-				serverConnection.tools.forEach((tool) => {
-					combinedTools.push({
-						...tool,
-						id: tool.id || `${serverConnection.id}-${tool.name}`, // Ensure unique ID
-						type: tool.type || 'openapi', // Assume openapi if not specified
-						enabled: tool.enabled ?? true,
-						metadata: { ...tool.metadata, serverName: serverConnection.name, serverUrl: serverConnection.url }
-					});
-				});
-			}
-		});
-
-		// Add tools from 'localMcpoTools'
-		$localMcpoTools.forEach((localTool) => {
-			combinedTools.push({
-				id: localTool.id,
-				name: localTool.name,
-				description: localTool.spec.info.description,
-				spec: localTool.spec,
-				type: 'local_mcpo',
-				enabled: localTool.enabled ?? true, // Default to enabled
-				metadata: { baseUrl: localTool.baseUrl, openapiPath: localTool.openapiPath }
-			});
-		});
-
-		// Deduplicate tools by id, preferring local_mcpo if conflicts arise, then others.
-		const uniqueTools = new Map<string, Tool>();
-		combinedTools.forEach(tool => {
-			if (!uniqueTools.has(tool.id) || tool.type === 'local_mcpo') {
-				uniqueTools.set(tool.id, tool);
-			}
-		});
-		
-		const finalTools = Array.from(uniqueTools.values());
-		console.log('[allAvailableTools] Derived tools count:', finalTools.length, 'Enabled count:', finalTools.filter(t => t.enabled).length);
-		// console.log('[allAvailableTools] Derived tools content:', JSON.stringify(finalTools.map(t => ({id: t.id, name: t.name, type: t.type, enabled: t.enabled})), null, 2));
-		return finalTools;
-	}
-);
+export const toolServers = writable([]);
 
 export const banners: Writable<Banner[]> = writable([]);
 
-export const settings: Writable<Settings> = writable({
-	chatDirection: 'auto' // Default value for the required property
-	// Other properties will be undefined by default if optional, or can be added here with defaults
-});
+export const settings: Writable<Settings> = writable({});
 
 export const showSidebar = writable(false);
 export const showSettings = writable(false);
@@ -223,11 +143,6 @@ type Settings = {
 	splitLargeDeltas?: boolean;
 	chatDirection: 'LTR' | 'RTL' | 'auto';
 	ctrlEnterToSend?: boolean;
-	directConnections?: any; // Added for +layout.svelte
-	toolServers?: any[]; // Added for +layout.svelte
-	showChangelog?: boolean; // Added for +layout.svelte
-	version?: string; // Added for +layout.svelte
-	showUpdateToast?: boolean; // Added for +layout.svelte
 
 	system?: string;
 	requestFormat?: string;
@@ -298,7 +213,6 @@ type Config = {
 		enable_admin_chat_access: boolean;
 		enable_community_sharing: boolean;
 		enable_autocomplete_generation: boolean;
-		enable_direct_connections?: boolean; // Added for +layout.svelte
 	};
 	oauth: {
 		providers: {
@@ -318,5 +232,4 @@ type SessionUser = {
 	name: string;
 	role: string;
 	profile_image_url: string;
-	permissions?: any; // Added for +layout.svelte
 };
