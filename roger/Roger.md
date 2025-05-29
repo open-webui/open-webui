@@ -39,6 +39,20 @@ python -m venv venv
 # Install requirements
 pip install -r requirements.txt
 
+### UV
+
+# Create and activate a virtual environment
+uv venv venv
+
+# On Unix/Linux/macOS
+# source venv/bin/activate
+
+# On Windows
+venv\Scripts\activate
+
+# Installing requirements
+uv pip install -r backend/requirements.txt
+
 # Run the backend server (Windows)
 .\start_windows.bat
 ```

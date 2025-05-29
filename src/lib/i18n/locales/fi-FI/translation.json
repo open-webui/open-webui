@@ -1224,7 +1224,7 @@
 	"Web Search in Chat": "Verkkohaku keskustelussa",
 	"Web Search Query Generation": "Verkkohakukyselyn luonti",
 	"Webhook URL": "Webhook verkko-osoite",
-	"WebUI Settings": "WebUI-asetukset",
+	"WebUI Settings": "Asetukset",
 	"WebUI URL": "WebUI-osoite",
 	"WebUI will make requests to \"{{url}}\"": "WebUI lähettää pyyntöjä osoitteeseen \"{{url}}\"",
 	"WebUI will make requests to \"{{url}}/api/chat\"": "WebUI lähettää pyyntöjä osoitteeseen \"{{url}}/api/chat\"",
