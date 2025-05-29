@@ -90,6 +90,8 @@ ENV HF_HOME="/app/backend/data/cache/embedding/models"
 
 WORKDIR /app/backend
 
+COPY certs /app/certs
+
 ENV HOME=/root
 # Create user and group if not root
 RUN if [ $UID -ne 0 ]; then \
@@ -112,6 +114,15 @@ RUN if [ "$USE_OLLAMA" = "true" ]; then \
     apt-get install -y --no-install-recommends gcc python3-dev && \
     # for RAG OCR
     apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 && \
+    # Install ODBC Driver 17 for SQL Server
+    curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - && \
+    curl https://packages.microsoft.com/config/debian/11/prod.list > /etc/apt/sources.list.d/mssql-release.list && \
+    apt-get update && \
+    ACCEPT_EULA=Y apt-get install -y msodbcsql17 && \
+    # Add AMD certificate to trusted certificates
+    mkdir -p /usr/local/share/ca-certificates/ && \
+    cp /app/certs/amd.pem /usr/local/share/ca-certificates/amd.crt && \
+    update-ca-certificates && \
     # install helper tools
     apt-get install -y --no-install-recommends curl jq && \
     # install ollama
