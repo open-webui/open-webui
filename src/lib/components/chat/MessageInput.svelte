@@ -15,11 +15,10 @@
 		models,
 		config,
 		showCallOverlay,
-		tools, // This is the backend tools store
+		tools,
 		user as _user,
 		showControls,
-		TTSWorker,
-		allAvailableTools // Import allAvailableTools
+		TTSWorker
 	} from '$lib/stores';
 
 	import {
@@ -77,13 +76,9 @@
 	export let prompt = '';
 	export let files = [];
 
-	export let toolServers = []; // This prop seems to be from Chat.svelte, might be $toolServers store value
+	export let toolServers = [];
 
-	// This selectedToolIds is bound upwards to Chat.svelte, used for LLM context
-	export let selectedToolIds = []; 
-
-	// New state for controlling IDs passed to ToolServersModal
-	let idsToShowInModal: string[] = [];
+	export let selectedToolIds = [];
 
 	export let imageGenerationEnabled = false;
 	export let webSearchEnabled = false;
@@ -360,7 +355,7 @@
 
 <FilesOverlay show={dragged} />
 
-<ToolServersModal bind:show={showTools} selectedToolIds={idsToShowInModal} />
+<ToolServersModal bind:show={showTools} {selectedToolIds} />
 
 {#if loaded}
 	<div class="w-full font-primary">
@@ -458,7 +453,7 @@
 			</div>
 		</div>
 
-		<div class="{transparentBackground ? 'bg-transparent' : 'bg-white dark:bg-gray-900'}" >
+		<div class="{transparentBackground ? 'bg-transparent' : 'bg-white dark:bg-gray-900'} ">
 			<div
 				class="{($settings?.widescreenMode ?? null)
 					? 'max-w-full'
@@ -1041,7 +1036,6 @@
 
 								<div class=" flex justify-between mt-1 mb-2.5 mx-0.5 max-w-full" dir="ltr">
 									<div class="ml-1 self-end flex items-center flex-1 max-w-[80%] gap-0.5">
-										<!--This selectedToolIds is for LLM context-->
 										<InputMenu
 											bind:selectedToolIds
 											{screenCaptureHandler}
@@ -1086,19 +1080,15 @@
 											}}
 											onClose={async () => {
 												await tick();
+
 												const chatInput = document.getElementById('chat-input');
 												chatInput?.focus();
 											}}
 										>
-											<!-- This button is the "+" icon, it will open ToolServersModal with ALL tools -->
 											<button
 												class="bg-transparent hover:bg-gray-100 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5 outline-hidden focus:outline-hidden"
 												type="button"
 												aria-label="More"
-												on:click={() => {
-													idsToShowInModal = ($allAvailableTools || []).map(t => t.id);
-													showTools = true;
-												}}
 											>
 												<svg
 													xmlns="http://www.w3.org/2000/svg"
@@ -1114,25 +1104,24 @@
 										</InputMenu>
 
 										<div class="flex gap-1 items-center overflow-x-auto scrollbar-none flex-1">
-											<!-- Wrench icon to show enabled tools -->
-											{#if ($allAvailableTools || []).length > 0}
+											{#if toolServers.length + selectedToolIds.length > 0}
 												<Tooltip
-													content={$i18n.t('{{COUNT}} Tools Enabled', {
-														COUNT: ($allAvailableTools || []).filter(t => t.enabled ?? true).length
+													content={$i18n.t('{{COUNT}} Available Tools', {
+														COUNT: toolServers.length + selectedToolIds.length
 													})}
 												>
 													<button
 														class="translate-y-[0.5px] flex gap-1 items-center text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 rounded-lg p-1 self-center transition"
-														aria-label="Enabled Tools"
+														aria-label="Available Tools"
 														type="button"
 														on:click={() => {
-															idsToShowInModal = ($allAvailableTools || []).filter(t => t.enabled ?? true).map(t => t.id);
-															showTools = true;
+															showTools = !showTools;
 														}}
 													>
 														<Wrench className="size-4" strokeWidth="1.75" />
+
 														<span class="text-sm font-medium text-gray-600 dark:text-gray-300">
-															{($allAvailableTools || []).filter(t => t.enabled ?? true).length}
+															{toolServers.length + selectedToolIds.length}
 														</span>
 													</button>
 												</Tooltip>
@@ -1164,8 +1153,8 @@
 															on:click|preventDefault={() =>
 																(imageGenerationEnabled = !imageGenerationEnabled)}
 															type="button"
-															class="px-1.5 @xl:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden border {codeInterpreterEnabled
-																? 'bg-gray-50 dark:bg-gray-400/10 border-gray-100  dark:border-gray-700 text-gray-600 dark:text-gray-400  '
+															class="px-1.5 @xl:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden border {imageGenerationEnabled
+																? 'bg-gray-50 dark:bg-gray-400/10 border-gray-100 dark:border-gray-700 text-gray-600 dark:text-gray-400'
 																: 'bg-transparent border-transparent text-gray-600 dark:text-gray-300  hover:bg-gray-100 dark:hover:bg-gray-800 '}"
 														>
 															<Photo className="size-5" strokeWidth="1.75" />
