@@ -1283,15 +1283,14 @@ async def generate_chat_completion(
         params = model_info.params.model_dump()
 
         if params:
-            if payload.get("options") is None:
-                payload["options"] = {}
+            system = params.pop("system", None)
 
+            # Unlike OpenAI, Ollama does not support params directly in the body
             payload["options"] = apply_model_params_to_body_ollama(
-                params, payload["options"]
+                params, (payload.get("options", {}) or {})
             )
-            payload = apply_model_system_prompt_to_body(
-                params.get("system"), payload, metadata, user
-            )
+
+            payload = apply_model_system_prompt_to_body(system, payload, metadata, user)
 
         # Check if user has access to the model
         if not bypass_filter and user.role == "user":
