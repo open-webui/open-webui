@@ -302,7 +302,7 @@ async def chat_memory_handler(
     results = await query_memory(
         request,
         QueryMemoryForm(
-            **{"content": get_last_user_message(form_data["messages"]), "k": 3}
+            **{"content": get_last_user_message(form_data["messages"]) or "", "k": 3}
         ),
         user,
     )
