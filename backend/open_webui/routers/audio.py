@@ -97,7 +97,7 @@ def is_audio_conversion_required(file_path):
             return True
 
         # If the codec name is in the supported formats
-        if (codec_name in SUPPORTED_FORMATS):
+        if codec_name in SUPPORTED_FORMATS:
             return False
 
         return True
