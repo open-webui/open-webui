@@ -80,9 +80,12 @@
 	const focusTrapListener = async () => {
 		await tick();
 		const wrapper = document.getElementById('chat-controls-container-wrapper');
-		trap = focusTrap.createFocusTrap(wrapper, { clickOutsideDeactivates: true, returnFocusOnDeactivate: true });
+		trap = focusTrap.createFocusTrap(wrapper, {
+			clickOutsideDeactivates: true,
+			returnFocusOnDeactivate: true
+		});
 		trap.activate();
-	}
+	};
 
 	onMount(() => {
 		// listen to resize 1024px
@@ -139,7 +142,7 @@
 		}
 	};
 
-	$: if($showControls){
+	$: if ($showControls) {
 		focusTrapListener();
 	}
 	$: if (!chatId) {

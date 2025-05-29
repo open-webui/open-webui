@@ -125,7 +125,7 @@
 				<button
 					tabindex="0"
 					class="bg-black text-white border border-white rounded-full transition focus:outline-blue-600"
-					aria-label="{$i18n.t('Remove File')}"
+					aria-label={$i18n.t('Remove File')}
 					type="button"
 					on:click|stopPropagation={() => {
 						dispatch('dismiss');

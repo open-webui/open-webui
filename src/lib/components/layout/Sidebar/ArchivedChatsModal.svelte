@@ -183,7 +183,7 @@
 													<div class="flex justify-end w-full">
 														<Tooltip content={$i18n.t('Unarchive Chat')}>
 															<button
-																aria-label="{$i18n.t('Unarchive Chat')}"
+																aria-label={$i18n.t('Unarchive Chat')}
 																class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 																on:click={async () => {
 																	unarchiveChatHandler(chat.id);
@@ -208,7 +208,7 @@
 
 														<Tooltip content={$i18n.t('Delete Chat')}>
 															<button
-																aria-label="{$i18n.t('Delete Chat')}"
+																aria-label={$i18n.t('Delete Chat')}
 																class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 																on:click={async () => {
 																	deleteChatHandler(chat.id);

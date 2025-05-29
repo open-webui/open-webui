@@ -375,11 +375,11 @@
 					editHandler();
 				}}
 			>
-					{#if open}
-						<ChevronDown className=" size-3" strokeWidth="2.5" />
-					{:else}
-						<ChevronRight className=" size-3" strokeWidth="2.5" />
-					{/if}
+				{#if open}
+					<ChevronDown className=" size-3" strokeWidth="2.5" />
+				{:else}
+					<ChevronRight className=" size-3" strokeWidth="2.5" />
+				{/if}
 
 				<h3
 					class="translate-y-[0.5px] flex-1 justify-start text-start line-clamp-1 text-gray-900 dark:text-gray-100 font-semibold"

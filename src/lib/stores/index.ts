@@ -69,7 +69,7 @@ export const showSettings = writable(false);
 export const showArchivedChats = writable(false);
 export const showChangelog = writable(false);
 
-export const returnFocusButtonID = writable("");
+export const returnFocusButtonID = writable('');
 
 export const showControls = writable(false);
 export const showOverview = writable(false);
