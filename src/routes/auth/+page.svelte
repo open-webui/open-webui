@@ -185,7 +185,10 @@
 	}}
 />
 
-<PreLoginNotice visible={showPreLoginNotice && !preLoginAccepted} on:accepted={handlePreLoginAccept} />
+<PreLoginNotice
+	visible={showPreLoginNotice && !preLoginAccepted}
+	on:accepted={handlePreLoginAccept}
+/>
 
 <div class="w-full h-screen max-h-[100dvh] text-white relative">
 	<div class="w-full h-full absolute top-0 left-0 bg-white dark:bg-black"></div>
@@ -380,7 +383,7 @@
 									{/if}
 								</div>
 							</form>
-							
+
 							{#if Object.keys($config?.oauth?.providers ?? {}).length > 0}
 								<div class="inline-flex items-center justify-center w-full">
 									<hr class="w-32 h-px my-4 border-0 dark:bg-gray-100/10 bg-gray-700/10" />
@@ -401,7 +404,11 @@
 												window.location.href = `${WEBUI_BASE_URL}/oauth/google/login`;
 											}}
 										>
-											<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" class="size-6 mr-3">
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												viewBox="0 0 48 48"
+												class="size-6 mr-3"
+											>
 												<path
 													fill="#EA4335"
 													d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"
@@ -426,7 +433,11 @@
 												window.location.href = `${WEBUI_BASE_URL}/oauth/microsoft/login`;
 											}}
 										>
-											<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21 21" class="size-6 mr-3">
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												viewBox="0 0 21 21"
+												class="size-6 mr-3"
+											>
 												<rect x="1" y="1" width="9" height="9" fill="#f25022" /><rect
 													x="1"
 													y="11"
@@ -441,7 +452,8 @@
 													fill="#ffb900"
 												/>
 											</svg>
-											<span>{$i18n.t('Continue with {{provider}}', { provider: 'Microsoft' })}</span>
+											<span>{$i18n.t('Continue with {{provider}}', { provider: 'Microsoft' })}</span
+											>
 										</button>
 									{/if}
 									{#if $config?.oauth?.providers?.github}
@@ -451,7 +463,11 @@
 												window.location.href = `${WEBUI_BASE_URL}/oauth/github/login`;
 											}}
 										>
-											<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="size-6 mr-3">
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												viewBox="0 0 24 24"
+												class="size-6 mr-3"
+											>
 												<path
 													fill="currentColor"
 													d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.92 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57C20.565 21.795 24 17.31 24 12c0-6.63-5.37-12-12-12z"
