@@ -107,26 +107,18 @@ RUN echo -n 00000000-0000-0000-0000-000000000000 > $HOME/.cache/chroma/telemetry
 # Make sure the user has access to the app and root directory
 RUN chown -R $UID:$GID /app $HOME
 
-# Install curl and gnupg for subsequent steps
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl gnupg && \
-    rm -rf /var/lib/apt/lists/*
-
-# Install ODBC Driver 17 for SQL Server
-RUN apt-get update && \
-    curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > /etc/apt/trusted.gpg.d/microsoft.gpg && \
-    echo "deb [arch=amd64,arm64,armhf] https://packages.microsoft.com/debian/12/prod bookworm main" > /etc/apt/sources.list.d/mssql-release.list && \
-    apt-get update && \
-    ACCEPT_EULA=Y apt-get install -y msodbcsql17 && \
-    rm -rf /var/lib/apt/lists/*
-
 RUN if [ "$USE_OLLAMA" = "true" ]; then \
     apt-get update && \
     # Install pandoc and netcat
-    apt-get install -y --no-install-recommends git build-essential pandoc netcat-openbsd unixodbc-dev && \
+    apt-get install -y --no-install-recommends git build-essential pandoc netcat-openbsd curl unixodbc-dev && \
     apt-get install -y --no-install-recommends gcc python3-dev && \
     # for RAG OCR
     apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 && \
+    # Install ODBC Driver 17 for SQL Server
+    curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - && \
+    curl https://packages.microsoft.com/config/debian/11/prod.list > /etc/apt/sources.list.d/mssql-release.list && \
+    apt-get update && \
+    ACCEPT_EULA=Y apt-get install -y msodbcsql17 && \
     # Add AMD certificate to trusted certificates
     mkdir -p /usr/local/share/ca-certificates/ && \
     cp /app/certs/amd.pem /usr/local/share/ca-certificates/amd.crt && \
@@ -140,7 +132,7 @@ RUN if [ "$USE_OLLAMA" = "true" ]; then \
     else \
     apt-get update && \
     # Install pandoc, netcat and gcc
-    apt-get install -y --no-install-recommends git build-essential pandoc gcc netcat-openbsd jq unixodbc-dev && \
+    apt-get install -y --no-install-recommends git build-essential pandoc gcc netcat-openbsd curl jq unixodbc-dev && \
     apt-get install -y --no-install-recommends gcc python3-dev && \
     # for RAG OCR
     apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 && \
