@@ -2258,3 +2258,100 @@ def get_text_overlap(text: str, overlap_size: int) -> str:
         return overlap_text[space_index:].strip()
     
     return overlap_text.strip()
+
+
+def delete_file_from_vector_db(file_id: str) -> bool:
+    """
+    Delete all vector embeddings for a specific file from the vector database.
+    This function works with any vector database (Pinecone, ChromaDB, etc.) and
+    handles the cleanup when a file is deleted from the chat.
+    
+    Args:
+        file_id (str): The ID of the file to delete from vector database
+        
+    Returns:
+        bool: True if deletion was successful, False otherwise
+    """
+    try:
+        # Get the file record to access its hash and collection info
+        file = Files.get_file_by_id(file_id)
+        if not file:
+            return False
+        
+        # Get the file hash for vector deletion
+        file_hash = file.hash
+        if not file_hash:
+            return False
+        
+        # Try to get collection name from file metadata
+        collection_name = None
+        if hasattr(file, 'meta') and file.meta:
+            collection_name = file.meta.get('collection_name')
+        
+        # If no collection name in metadata, try common patterns used by Open WebUI
+        if not collection_name:
+            # Open WebUI typically uses these patterns:
+            possible_collections = [
+                f"open-webui_file-{file_id}",  # Most common pattern
+                f"file-{file_id}",             # Alternative pattern
+                f"open-webui_{file_id}",       # Another possible pattern
+            ]
+            
+            # Try each possible collection name
+            for possible_collection in possible_collections:
+                try:
+                    if VECTOR_DB_CLIENT.has_collection(collection_name=possible_collection):
+                        result = VECTOR_DB_CLIENT.delete(
+                            collection_name=possible_collection,
+                            filter={"hash": file_hash},
+                        )
+                        # Pinecone returns None on successful deletion
+                        return True
+                except Exception as e:
+                    continue
+            
+            # If none of the standard patterns work, try searching through all collections
+            try:
+                deleted_count = 0
+                
+                # Get all collections (this method varies by vector DB implementation)
+                if hasattr(VECTOR_DB_CLIENT, 'list_collections'):
+                    try:
+                        collections = VECTOR_DB_CLIENT.list_collections()
+                        
+                        for collection in collections:
+                            try:
+                                if VECTOR_DB_CLIENT.has_collection(collection_name=collection):
+                                    result = VECTOR_DB_CLIENT.delete(
+                                        collection_name=collection,
+                                        filter={"hash": file_hash},
+                                    )
+                                    # Pinecone returns None on successful deletion, so any non-exception means success
+                                    deleted_count += 1
+                            except Exception as e:
+                                continue
+                    except Exception as e:
+                        pass
+                
+                return deleted_count > 0
+                
+            except Exception as e:
+                return False
+        
+        # Delete from the specific collection found in metadata
+        if collection_name and VECTOR_DB_CLIENT.has_collection(collection_name=collection_name):
+            try:
+                result = VECTOR_DB_CLIENT.delete(
+                    collection_name=collection_name,
+                    filter={"hash": file_hash},
+                )
+                # Pinecone returns None on successful deletion, so we check for no exception
+                # rather than checking the return value
+                return True
+            except Exception as e:
+                return False
+        else:
+            return False
+            
+    except Exception as e:
+        return False
