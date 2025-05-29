@@ -180,15 +180,23 @@ export const getEmbeddingConfig = async (token: string) => {
 };
 
 type OpenAIConfigForm = {
-	key: string;
-	url: string;
+        key: string;
+        url: string;
+};
+
+type AzureOpenAIConfigForm = {
+        key: string;
+        url: string;
+        deployment: string;
+        version: string;
 };
 
 type EmbeddingModelUpdateForm = {
-	openai_config?: OpenAIConfigForm;
-	embedding_engine: string;
-	embedding_model: string;
-	embedding_batch_size?: number;
+        openai_config?: OpenAIConfigForm;
+        azure_openai_config?: AzureOpenAIConfigForm;
+        embedding_engine: string;
+        embedding_model: string;
+        embedding_batch_size?: number;
 };
 
 export const updateEmbeddingConfig = async (token: string, payload: EmbeddingModelUpdateForm) => {
