@@ -1,0 +1,5 @@
+name = "openwebui"
+main = "dist/worker.js"
+account_id = "YOUR_CLOUDFLARE_ACCOUNT_ID"
+workers_dev = true
+compatibility_date = "2024-05-29"
