@@ -171,7 +171,6 @@ exclude = [
     ".gitignore",
     ".webui_secret_key",
     "dev.sh",
-    "requirements.txt",
     "start.sh",
     "start_windows.bat",
     "webui.db",
