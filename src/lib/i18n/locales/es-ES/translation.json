@@ -11,7 +11,7 @@
 	"{{COUNT}} Replies": "{{COUNT}} Respuestas",
 	"{{user}}'s Chats": "Chats de {{user}}",
 	"{{webUIName}} Backend Required": "{{webUIName}} Servidor Requerido",
-	"Prompt node ID(s) are required for image generation": "Los ID de nodo son requeridos para la generación de imágenes",
+	"*Prompt node ID(s) are required for image generation": "Los ID de nodo de indicaciones son requeridos para la generación de imágenes",
 	"A new version (v{{LATEST_VERSION}}) is now available.": "Nueva versión (v{{LATEST_VERSION}}) disponible.",
 	"A task model is used when performing tasks such as generating titles for chats and web search queries": "El modelo de tareas realiza tareas como la generación de títulos para chats y consultas de búsqueda web",
 	"a user": "un usuario",
