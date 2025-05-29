@@ -10,9 +10,8 @@ import json
 
 # inplace function: form_data is modified
 def apply_model_system_prompt_to_body(
-    params: dict, form_data: dict, metadata: Optional[dict] = None, user=None
+    system: Optional[str], form_data: dict, metadata: Optional[dict] = None, user=None
 ) -> dict:
-    system = params.get("system", None)
     if not system:
         return form_data
 
@@ -58,8 +57,33 @@ def apply_model_params_to_body(
     return form_data
 
 
+def remove_open_webui_params(params: dict) -> dict:
+    """
+    Removes OpenWebUI specific parameters from the provided dictionary.
+
+    Args:
+        params (dict): The dictionary containing parameters.
+
+    Returns:
+        dict: The modified dictionary with OpenWebUI parameters removed.
+    """
+    open_webui_params = {
+        "stream_response": bool,
+        "function_calling": str,
+        "system": str,
+    }
+
+    for key in list(params.keys()):
+        if key in open_webui_params:
+            del params[key]
+
+    return params
+
+
 # inplace function: form_data is modified
 def apply_model_params_to_body_openai(params: dict, form_data: dict) -> dict:
+    params = remove_open_webui_params(params)
+
     custom_params = params.pop("custom_params", {})
     if custom_params:
         # If there are custom parameters, we need to apply them first
@@ -82,6 +106,8 @@ def apply_model_params_to_body_openai(params: dict, form_data: dict) -> dict:
 
 
 def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
+    params = remove_open_webui_params(params)
+
     custom_params = params.pop("custom_params", {})
     if custom_params:
         # If there are custom parameters, we need to apply them first

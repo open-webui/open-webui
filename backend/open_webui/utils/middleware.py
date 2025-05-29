@@ -660,6 +660,16 @@ def apply_params_to_form_data(form_data, model):
     params = form_data.pop("params", {})
     custom_params = params.pop("custom_params", {})
 
+    open_webui_params = {
+        "stream_response": bool,
+        "function_calling": str,
+        "system": str,
+    }
+
+    for key in list(params.keys()):
+        if key in open_webui_params:
+            del params[key]
+
     if custom_params:
         # If custom_params are provided, merge them into params
         params = deep_update(params, custom_params)
