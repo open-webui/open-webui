@@ -10,6 +10,7 @@
 
 	export let onSubmit: Function;
 	export let edit = false;
+	export let clone = false;
 	export let prompt = null;
 
 	const i18n = getContext('i18n');
@@ -20,16 +21,21 @@
 	let command = '';
 	let content = '';
 
-	let accessControl = {
-		read: { group_ids: [], user_ids: [] },
-		write: { group_ids: [], user_ids: [] }
-	};
+	export let accessControl;
 
 
 	let showAccessControlModal = false;
 
 	$: if (!edit) {
 		command = title !== '' ? `${title.replace(/\s+/g, '-').toLowerCase()}` : '';
+	}
+
+	$: if (!edit && !clone && accessControl === undefined) {
+	// New tool: default to private access
+		accessControl = {
+			read: { group_ids: [], user_ids: [] },
+			write: { group_ids: [], user_ids: [] }
+		};
 	}
 
 	const submitHandler = async () => {
