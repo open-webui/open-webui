@@ -54,7 +54,7 @@
 	<div class="flex w-full justify-between mb-1">
 		<div class=" self-center text-sm font-semibold">{$i18n.t('Capabilities')}</div>
 	</div>
-	<div class="flex">
+	<div class="flex items-center mt-2 flex-wrap">
 		{#each Object.keys(capabilityLabels) as capability}
 			<div class=" flex items-center gap-2 mr-3">
 				<Checkbox
