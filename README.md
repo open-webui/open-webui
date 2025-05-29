@@ -8,21 +8,30 @@
 
 ----
 
-**Note: This project is a fork of the original Open WebUI, diverging from version v0.6.5.**
+This project is a fork of the Open WebUI user interface, specifically diverging from its v0.6.5 version.
+
+It was forked around April 14, 2025, from the official Open WebUI GitHub repository. We've built upon that solid foundation to MCP tool focus or key improvements [e.g., add specific commercial features, enhance performance, adjust the UI for particular workflows, etc.].
+
+License
+This project continues to be licensed under the BSD 3-Clause License, which was the license for the original Open WebUI v0.6.5. This allows for broad use, modification, and distribution, including for commercial purposes, as long as the original copyright and disclaimer are retained.
+
+For the full terms, please see the LICENSE file in this repository.
+
+Copyright
+Original portions Copyright (c) 2023-2025 Timothy Jaeryang Baek.
+Additional modifications and contributions Copyright (c) 2025 DataR Tech. Co. LTD. (Roger Hsu).
+All rights reserved.
+
+Acknowledgments
+We extend our sincere gratitude to Timothy Jaeryang Baek and all the contributors to the original Open WebUI project for their outstanding work and dedication to the open-source community.
 
 ----
-
 
 **Open WebUI is an [extensible](https://docs.openwebui.com/features/plugin/), feature-rich, and user-friendly self-hosted AI platform designed to operate entirely offline.** It supports various LLM runners like **Ollama** and **OpenAI-compatible APIs**, with **built-in inference engine** for RAG, making it a **powerful AI deployment solution**.
 
 ![Open WebUI Demo](./demo.gif)
 
-> [!TIP]  
-> **Looking for an [Enterprise Plan](https://docs.openwebui.com/enterprise)?** – **[Speak with Our Sales Team Today!](mailto:sales@openwebui.com)**
->
-> Get **enhanced capabilities**, including **custom theming and branding**, **Service Level Agreement (SLA) support**, **Long-Term Support (LTS) versions**, and **more!**
-
-For more information, be sure to check out our [Open WebUI Documentation](https://docs.openwebui.com/).
+For more information, be sure to check out [Open WebUI Documentation](https://docs.openwebui.com/).
 
 ## Key Features of Open WebUI ⭐
 
@@ -64,9 +73,6 @@ For more information, be sure to check out our [Open WebUI Documentation](https:
 
 Want to learn more about Open WebUI's features? Check out our [Open WebUI documentation](https://docs.openwebui.com/features) for a comprehensive overview!
 
-## 🔗 Also Check Out Open WebUI Community!
-
-Don't forget to explore our sibling project, [Open WebUI Community](https://openwebui.com/), where you can discover, download, and explore customized Modelfiles. Open WebUI Community offers a wide range of exciting possibilities for enhancing your chat interactions with Open WebUI! 🚀
 
 ## How to Install 🚀
 
@@ -204,27 +210,26 @@ export HF_HUB_OFFLINE=1
 
 ## What's Next? 🌟
 
-Discover upcoming features on our roadmap in the [Open WebUI Documentation](https://docs.openwebui.com/roadmap/).
+Discover upcoming features on our roadmap in the [issues](https://github.com/Datar-Tech/open-webui/issues).
 
 ## License 📜
 
 This project is licensed under the [BSD-3-Clause License](LICENSE) - see the [LICENSE](LICENSE) file for details. 📄
 
-## Support 💬
 
-If you have any questions, suggestions, or need assistance, please open an issue or join our
-[Open WebUI Discord community](https://discord.gg/5rJgQTnV4s) to connect with us! 🤝
 
-## Star History
-
-<a href="https://star-history.com/#open-webui/open-webui&Date">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=open-webui/open-webui&type=Date&theme=dark" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=open-webui/open-webui&type=Date" />
-    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=open-webui/open-webui&type=Date" />
-  </picture>
-</a>
-
----
-
-Created by [Timothy Jaeryang Baek](https://github.com/tjbck) - Let's make Open WebUI even more amazing together! 💪
+ * Copyright (c) 2023-2025 Timothy Jaeryang Baek
+ * Copyright (c) 2025 DataR Tech. Co. LTD. (Roger Hsu)
+ *
+ * Licensed under the BSD 3-Clause License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://github.com/Datar-Tech/open-webui/blob/main/LICENSE
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ 
