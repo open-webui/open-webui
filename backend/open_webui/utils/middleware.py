@@ -299,13 +299,20 @@ async def chat_completion_tools_handler(
 async def chat_memory_handler(
     request: Request, form_data: dict, extra_params: dict, user
 ):
-    results = await query_memory(
-        request,
-        QueryMemoryForm(
-            **{"content": get_last_user_message(form_data["messages"]) or "", "k": 3}
-        ),
-        user,
-    )
+    try:
+        results = await query_memory(
+            request,
+            QueryMemoryForm(
+                **{
+                    "content": get_last_user_message(form_data["messages"]) or "",
+                    "k": 3,
+                }
+            ),
+            user,
+        )
+    except Exception as e:
+        log.debug(e)
+        results = None
 
     user_context = ""
     if results and hasattr(results, "documents"):
