@@ -1225,6 +1225,9 @@ export const createMessagesList = (history, messageId) => {
 	}
 
 	const message = history.messages[messageId];
+	if (message === undefined) {
+		return [];
+	}
 	if (message?.parentId) {
 		return [...createMessagesList(history, message.parentId), message];
 	} else {
