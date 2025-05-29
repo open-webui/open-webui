@@ -86,6 +86,16 @@ def apply_model_params_to_body_openai(params: dict, form_data: dict) -> dict:
 
     custom_params = params.pop("custom_params", {})
     if custom_params:
+        # Attempt to parse custom_params if they are strings
+        for key, value in custom_params.items():
+            if isinstance(value, str):
+                try:
+                    # Attempt to parse the string as JSON
+                    custom_params[key] = json.loads(value)
+                except json.JSONDecodeError:
+                    # If it fails, keep the original string
+                    pass
+
         # If there are custom parameters, we need to apply them first
         params = deep_update(params, custom_params)
 
@@ -110,6 +120,16 @@ def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
 
     custom_params = params.pop("custom_params", {})
     if custom_params:
+        # Attempt to parse custom_params if they are strings
+        for key, value in custom_params.items():
+            if isinstance(value, str):
+                try:
+                    # Attempt to parse the string as JSON
+                    custom_params[key] = json.loads(value)
+                except json.JSONDecodeError:
+                    # If it fails, keep the original string
+                    pass
+
         # If there are custom parameters, we need to apply them first
         params = deep_update(params, custom_params)
 

@@ -671,6 +671,16 @@ def apply_params_to_form_data(form_data, model):
             del params[key]
 
     if custom_params:
+        # Attempt to parse custom_params if they are strings
+        for key, value in custom_params.items():
+            if isinstance(value, str):
+                try:
+                    # Attempt to parse the string as JSON
+                    custom_params[key] = json.loads(value)
+                except json.JSONDecodeError:
+                    # If it fails, keep the original string
+                    pass
+
         # If custom_params are provided, merge them into params
         params = deep_update(params, custom_params)
 
