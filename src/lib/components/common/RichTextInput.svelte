@@ -1,11 +1,15 @@
 <script lang="ts">
 	import { marked } from 'marked';
 	import TurndownService from 'turndown';
+	import { gfm } from 'turndown-plugin-gfm';
 	const turndownService = new TurndownService({
 		codeBlockStyle: 'fenced',
 		headingStyle: 'atx'
 	});
 	turndownService.escape = (string) => string;
+
+	// Use turndown-plugin-gfm for proper GFM table support
+	turndownService.use(gfm);
 
 	import { onMount, onDestroy } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
@@ -13,32 +17,40 @@
 
 	import { EditorState, Plugin, PluginKey, TextSelection } from 'prosemirror-state';
 	import { Decoration, DecorationSet } from 'prosemirror-view';
-
 	import { Editor } from '@tiptap/core';
 
 	import { AIAutocompletion } from './RichTextInput/AutoCompletion.js';
+	import Table from '@tiptap/extension-table';
+	import TableRow from '@tiptap/extension-table-row';
+	import TableHeader from '@tiptap/extension-table-header';
+	import TableCell from '@tiptap/extension-table-cell';
 
 	import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 	import Placeholder from '@tiptap/extension-placeholder';
+	import { all, createLowlight } from 'lowlight';
+	import StarterKit from '@tiptap/starter-kit';
 	import Highlight from '@tiptap/extension-highlight';
 	import Typography from '@tiptap/extension-typography';
-	import StarterKit from '@tiptap/starter-kit';
-	import { all, createLowlight } from 'lowlight';
 
 	import { PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
 
 	export let oncompositionstart = (e) => {};
 	export let oncompositionend = (e) => {};
+	export let onChange = (e) => {};
 
 	// create a lowlight instance with all languages loaded
 	const lowlight = createLowlight(all);
 
 	export let className = 'input-prose';
 	export let placeholder = 'Type here...';
-	export let value = '';
-	export let id = '';
 
+	export let id = '';
+	export let value = '';
+	export let html = '';
+
+	export let json = false;
 	export let raw = false;
+	export let editable = true;
 
 	export let preserveBreaks = false;
 	export let generateAutoCompletion: Function = async () => null;
@@ -53,6 +65,16 @@
 	const options = {
 		throwOnError: false
 	};
+
+	$: if (editor) {
+		editor.setOptions({
+			editable: editable
+		});
+	}
+
+	$: if (value === null && html !== null && editor) {
+		editor.commands.setContent(html);
+	}
 
 	// Function to find the next template in the document
 	function findNextTemplate(doc, from = 0) {
@@ -128,40 +150,46 @@
 	};
 
 	onMount(async () => {
-		console.log(value);
-
-		if (preserveBreaks) {
-			turndownService.addRule('preserveBreaks', {
-				filter: 'br', // Target <br> elements
-				replacement: function (content) {
-					return '<br/>';
-				}
-			});
-		}
-
 		let content = value;
 
-		if (!raw) {
-			async function tryParse(value, attempts = 3, interval = 100) {
-				try {
-					// Try parsing the value
-					return marked.parse(value.replaceAll(`\n<br/>`, `<br/>`), {
-						breaks: false
-					});
-				} catch (error) {
-					// If no attempts remain, fallback to plain text
-					if (attempts <= 1) {
-						return value;
+		if (!json) {
+			if (preserveBreaks) {
+				turndownService.addRule('preserveBreaks', {
+					filter: 'br', // Target <br> elements
+					replacement: function (content) {
+						return '<br/>';
 					}
-					// Wait for the interval, then retry
-					await new Promise((resolve) => setTimeout(resolve, interval));
-					return tryParse(value, attempts - 1, interval); // Recursive call
-				}
+				});
 			}
 
-			// Usage example
-			content = await tryParse(value);
+			if (!raw) {
+				async function tryParse(value, attempts = 3, interval = 100) {
+					try {
+						// Try parsing the value
+						return marked.parse(value.replaceAll(`\n<br/>`, `<br/>`), {
+							breaks: false
+						});
+					} catch (error) {
+						// If no attempts remain, fallback to plain text
+						if (attempts <= 1) {
+							return value;
+						}
+						// Wait for the interval, then retry
+						await new Promise((resolve) => setTimeout(resolve, interval));
+						return tryParse(value, attempts - 1, interval); // Recursive call
+					}
+				}
+
+				// Usage example
+				content = await tryParse(value);
+			}
+		} else {
+			if (html && !content) {
+				content = html;
+			}
 		}
+
+		console.log('content', content);
 
 		editor = new Editor({
 			element: element,
@@ -173,6 +201,10 @@
 				Highlight,
 				Typography,
 				Placeholder.configure({ placeholder }),
+				Table.configure({ resizable: true }),
+				TableRow,
+				TableHeader,
+				TableCell,
 				...(autocomplete
 					? [
 							AIAutocompletion.configure({
@@ -198,32 +230,44 @@
 				// force re-render so `editor.isActive` works as expected
 				editor = editor;
 
-				if (!raw) {
-					let newValue = turndownService
-						.turndown(
-							editor
-								.getHTML()
-								.replace(/<p><\/p>/g, '<br/>')
-								.replace(/ {2,}/g, (m) => m.replace(/ /g, '\u00a0'))
-						)
-						.replace(/\u00a0/g, ' ');
+				html = editor.getHTML();
 
-					if (!preserveBreaks) {
-						newValue = newValue.replace(/<br\/>/g, '');
-					}
+				onChange({
+					html: editor.getHTML(),
+					json: editor.getJSON(),
+					md: turndownService.turndown(editor.getHTML())
+				});
 
-					if (value !== newValue) {
-						value = newValue;
+				if (json) {
+					value = editor.getJSON();
+				} else {
+					if (!raw) {
+						let newValue = turndownService
+							.turndown(
+								editor
+									.getHTML()
+									.replace(/<p><\/p>/g, '<br/>')
+									.replace(/ {2,}/g, (m) => m.replace(/ /g, '\u00a0'))
+							)
+							.replace(/\u00a0/g, ' ');
 
-						// check if the node is paragraph as well
-						if (editor.isActive('paragraph')) {
-							if (value === '') {
-								editor.commands.clearContent();
+						if (!preserveBreaks) {
+							newValue = newValue.replace(/<br\/>/g, '');
+						}
+
+						if (value !== newValue) {
+							value = newValue;
+
+							// check if the node is paragraph as well
+							if (editor.isActive('paragraph')) {
+								if (value === '') {
+									editor.commands.clearContent();
+								}
 							}
 						}
+					} else {
+						value = editor.getHTML();
 					}
-				} else {
-					value = editor.getHTML();
 				}
 			},
 			editorProps: {
@@ -257,30 +301,38 @@
 							}
 
 							if (event.key === 'Enter') {
-								// Check if the current selection is inside a structured block (like codeBlock or list)
-								const { state } = view;
-								const { $head } = state.selection;
+								const isCtrlPressed = event.ctrlKey || event.metaKey; // metaKey is for Cmd key on Mac
+								if (event.shiftKey && !isCtrlPressed) {
+									editor.commands.setHardBreak(); // Insert a hard break
+									view.dispatch(view.state.tr.scrollIntoView()); // Move viewport to the cursor
+									event.preventDefault();
+									return true;
+								} else {
+									// Check if the current selection is inside a structured block (like codeBlock or list)
+									const { state } = view;
+									const { $head } = state.selection;
 
-								// Recursive function to check ancestors for specific node types
-								function isInside(nodeTypes: string[]): boolean {
-									let currentNode = $head;
-									while (currentNode) {
-										if (nodeTypes.includes(currentNode.parent.type.name)) {
-											return true;
+									// Recursive function to check ancestors for specific node types
+									function isInside(nodeTypes: string[]): boolean {
+										let currentNode = $head;
+										while (currentNode) {
+											if (nodeTypes.includes(currentNode.parent.type.name)) {
+												return true;
+											}
+											if (!currentNode.depth) break; // Stop if we reach the top
+											currentNode = state.doc.resolve(currentNode.before()); // Move to the parent node
 										}
-										if (!currentNode.depth) break; // Stop if we reach the top
-										currentNode = state.doc.resolve(currentNode.before()); // Move to the parent node
+										return false;
 									}
-									return false;
-								}
 
-								const isInCodeBlock = isInside(['codeBlock']);
-								const isInList = isInside(['listItem', 'bulletList', 'orderedList']);
-								const isInHeading = isInside(['heading']);
+									const isInCodeBlock = isInside(['codeBlock']);
+									const isInList = isInside(['listItem', 'bulletList', 'orderedList']);
+									const isInHeading = isInside(['heading']);
 
-								if (isInCodeBlock || isInList || isInHeading) {
-									// Let ProseMirror handle the normal Enter behavior
-									return false;
+									if (isInCodeBlock || isInList || isInHeading) {
+										// Let ProseMirror handle the normal Enter behavior
+										return false;
+									}
 								}
 							}
 
@@ -356,35 +408,49 @@
 		}
 	});
 
-	// Update the editor content if the external `value` changes
-	$: if (
-		editor &&
-		(raw
-			? value !== editor.getHTML()
-			: value !==
-				turndownService
-					.turndown(
-						(preserveBreaks
-							? editor.getHTML().replace(/<p><\/p>/g, '<br/>')
-							: editor.getHTML()
-						).replace(/ {2,}/g, (m) => m.replace(/ /g, '\u00a0'))
-					)
-					.replace(/\u00a0/g, ' '))
-	) {
-		if (raw) {
-			editor.commands.setContent(value);
-		} else {
-			preserveBreaks
-				? editor.commands.setContent(value)
-				: editor.commands.setContent(
-						marked.parse(value.replaceAll(`\n<br/>`, `<br/>`), {
-							breaks: false
-						})
-					); // Update editor content
-		}
-
-		selectTemplate();
+	$: if (value !== null && editor) {
+		onValueChange();
 	}
+
+	const onValueChange = () => {
+		if (!editor) return;
+
+		if (json) {
+			if (JSON.stringify(value) !== JSON.stringify(editor.getJSON())) {
+				editor.commands.setContent(value);
+				selectTemplate();
+			}
+		} else {
+			if (raw) {
+				if (value !== editor.getHTML()) {
+					editor.commands.setContent(value);
+					selectTemplate();
+				}
+			} else {
+				if (
+					value !==
+					turndownService
+						.turndown(
+							(preserveBreaks
+								? editor.getHTML().replace(/<p><\/p>/g, '<br/>')
+								: editor.getHTML()
+							).replace(/ {2,}/g, (m) => m.replace(/ /g, '\u00a0'))
+						)
+						.replace(/\u00a0/g, ' ')
+				) {
+					preserveBreaks
+						? editor.commands.setContent(value)
+						: editor.commands.setContent(
+								marked.parse(value.replaceAll(`\n<br/>`, `<br/>`), {
+									breaks: false
+								})
+							); // Update editor content
+
+					selectTemplate();
+				}
+			}
+		}
+	};
 </script>
 
 <div bind:this={element} class="relative w-full min-w-full h-full min-h-fit {className}" />

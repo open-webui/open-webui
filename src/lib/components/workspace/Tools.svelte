@@ -10,6 +10,7 @@
 	import { goto } from '$app/navigation';
 	import {
 		createNewTool,
+		loadToolByUrl,
 		deleteToolById,
 		exportTools,
 		getToolById,
@@ -31,6 +32,9 @@
 	import ChevronRight from '../icons/ChevronRight.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import { capitalizeFirstLetter } from '$lib/utils';
+	import XMark from '../icons/XMark.svelte';
+	import AddToolMenu from './Tools/AddToolMenu.svelte';
+	import ImportModal from '../ImportModal.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -52,12 +56,18 @@
 	let tools = [];
 	let filteredItems = [];
 
-	$: filteredItems = tools.filter(
-		(t) =>
-			query === '' ||
-			t.name.toLowerCase().includes(query.toLowerCase()) ||
-			t.id.toLowerCase().includes(query.toLowerCase())
-	);
+	let showImportModal = false;
+
+	$: filteredItems = tools.filter((t) => {
+		if (query === '') return true;
+		const lowerQuery = query.toLowerCase();
+		return (
+			(t.name || '').toLowerCase().includes(lowerQuery) ||
+			(t.id || '').toLowerCase().includes(lowerQuery) ||
+			(t.user?.name || '').toLowerCase().includes(lowerQuery) || // Search by user name
+			(t.user?.email || '').toLowerCase().includes(lowerQuery) // Search by user email
+		);
+	});
 
 	const shareHandler = async (tool) => {
 		const item = await getToolById(localStorage.token, tool.id).catch((error) => {
@@ -164,9 +174,23 @@
 
 <svelte:head>
 	<title>
-		{$i18n.t('Tools')} | {$WEBUI_NAME}
+		{$i18n.t('Tools')} • {$WEBUI_NAME}
 	</title>
 </svelte:head>
+
+<ImportModal
+	bind:show={showImportModal}
+	onImport={(tool) => {
+		sessionStorage.tool = JSON.stringify({
+			...tool
+		});
+		goto('/workspace/tools/create');
+	}}
+	loadUrlHandler={async (url) => {
+		return await loadToolByUrl(localStorage.token, url);
+	}}
+	successMessage={$i18n.t('Tool imported successfully')}
+/>
 
 {#if loaded}
 	<div class="flex flex-col gap-1 my-1.5">
@@ -190,15 +214,44 @@
 					bind:value={query}
 					placeholder={$i18n.t('Search Tools')}
 				/>
+				{#if query}
+					<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
+						<button
+							class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+							on:click={() => {
+								query = '';
+							}}
+						>
+							<XMark className="size-3" strokeWidth="2" />
+						</button>
+					</div>
+				{/if}
 			</div>
 
 			<div>
-				<a
-					class=" px-2 py-2 rounded-xl hover:bg-gray-700/10 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition font-medium text-sm flex items-center space-x-1"
-					href="/workspace/tools/create"
-				>
-					<Plus className="size-3.5" />
-				</a>
+				{#if $user?.role === 'admin'}
+					<AddToolMenu
+						createHandler={() => {
+							goto('/workspace/tools/create');
+						}}
+						importFromLinkHandler={() => {
+							showImportModal = true;
+						}}
+					>
+						<div
+							class=" px-2 py-2 rounded-xl hover:bg-gray-700/10 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition font-medium text-sm flex items-center space-x-1"
+						>
+							<Plus className="size-3.5" />
+						</div>
+					</AddToolMenu>
+				{:else}
+					<a
+						class=" px-2 py-2 rounded-xl hover:bg-gray-700/10 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition font-medium text-sm flex items-center space-x-1"
+						href="/workspace/tools/create"
+					>
+						<Plus className="size-3.5" />
+					</a>
+				{/if}
 			</div>
 		</div>
 	</div>
@@ -411,7 +464,9 @@
 							}
 						}}
 					>
-						<div class=" self-center mr-2 font-medium line-clamp-1">{$i18n.t('Export Tools')}</div>
+						<div class=" self-center mr-2 font-medium line-clamp-1">
+							{$i18n.t('Export Tools')} ({tools.length})
+						</div>
 
 						<div class=" self-center">
 							<svg
@@ -503,7 +558,7 @@
 
 				<ul class=" mt-1 list-disc pl-4 text-xs">
 					<li>
-						{$i18n.t('Tools have a function calling system that allows arbitrary code execution')}.
+						{$i18n.t('Tools have a function calling system that allows arbitrary code execution.')}.
 					</li>
 					<li>{$i18n.t('Do not install tools from sources you do not fully trust.')}</li>
 				</ul>

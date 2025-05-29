@@ -13,6 +13,7 @@
 		exportFunctions,
 		getFunctionById,
 		getFunctions,
+		loadFunctionByUrl,
 		toggleFunctionById,
 		toggleGlobalById
 	} from '$lib/apis/functions';
@@ -32,6 +33,9 @@
 	import Search from '../icons/Search.svelte';
 	import Plus from '../icons/Plus.svelte';
 	import ChevronRight from '../icons/ChevronRight.svelte';
+	import XMark from '../icons/XMark.svelte';
+	import AddFunctionMenu from './Functions/AddFunctionMenu.svelte';
+	import ImportModal from '../ImportModal.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -39,6 +43,8 @@
 
 	let functionsImportInputElement: HTMLInputElement;
 	let importFiles;
+
+	let showImportModal = false;
 
 	let showConfirm = false;
 	let query = '';
@@ -192,9 +198,22 @@
 
 <svelte:head>
 	<title>
-		{$i18n.t('Functions')} | {$WEBUI_NAME}
+		{$i18n.t('Functions')} • {$WEBUI_NAME}
 	</title>
 </svelte:head>
+
+<ImportModal
+	bind:show={showImportModal}
+	loadUrlHandler={async (url) => {
+		return await loadFunctionByUrl(localStorage.token, url);
+	}}
+	onImport={(func) => {
+		sessionStorage.function = JSON.stringify({
+			...func
+		});
+		goto('/admin/functions/create');
+	}}
+/>
 
 <div class="flex flex-col gap-1 mt-1.5 mb-2">
 	<div class="flex justify-between items-center">
@@ -215,15 +234,36 @@
 				bind:value={query}
 				placeholder={$i18n.t('Search Functions')}
 			/>
+
+			{#if query}
+				<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
+					<button
+						class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+						on:click={() => {
+							query = '';
+						}}
+					>
+						<XMark className="size-3" strokeWidth="2" />
+					</button>
+				</div>
+			{/if}
 		</div>
 
 		<div>
-			<a
-				class=" px-2 py-2 rounded-xl hover:bg-gray-700/10 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition font-medium text-sm flex items-center space-x-1"
-				href="/admin/functions/create"
+			<AddFunctionMenu
+				createHandler={() => {
+					goto('/admin/functions/create');
+				}}
+				importFromLinkHandler={() => {
+					showImportModal = true;
+				}}
 			>
-				<Plus className="size-3.5" />
-			</a>
+				<div
+					class=" px-2 py-2 rounded-xl hover:bg-gray-700/10 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition font-medium text-sm flex items-center space-x-1"
+				>
+					<Plus className="size-3.5" />
+				</div>
+			</AddFunctionMenu>
 		</div>
 	</div>
 </div>
@@ -447,7 +487,9 @@
 					}
 				}}
 			>
-				<div class=" self-center mr-2 font-medium line-clamp-1">{$i18n.t('Export Functions')}</div>
+				<div class=" self-center mr-2 font-medium line-clamp-1">
+					{$i18n.t('Export Functions')} ({$functions.length})
+				</div>
 
 				<div class=" self-center">
 					<svg

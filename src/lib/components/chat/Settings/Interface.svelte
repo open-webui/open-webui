@@ -1,6 +1,4 @@
 <script lang="ts">
-	import { getBackendConfig } from '$lib/apis';
-	import { setDefaultPromptSuggestions } from '$lib/apis/configs';
 	import { config, models, settings, user } from '$lib/stores';
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
@@ -30,7 +28,11 @@
 	// Interface
 	let defaultModelId = '';
 	let showUsername = false;
+
 	let notificationSound = true;
+	let notificationSoundAlways = false;
+
+	let highContrastMode = false;
 
 	let detectArtifacts = true;
 
@@ -53,6 +55,9 @@
 		width: '',
 		height: ''
 	};
+
+	// chat export
+	let stylizedPdfExport = true;
 
 	// Admin - Show Update Available Toast
 	let showUpdateToast = true;
@@ -80,6 +85,11 @@
 	const toggleSplitLargeChunks = async () => {
 		splitLargeChunks = !splitLargeChunks;
 		saveSettings({ splitLargeChunks: splitLargeChunks });
+	};
+
+	const toggleHighContrastMode = async () => {
+		highContrastMode = !highContrastMode;
+		saveSettings({ highContrastMode: highContrastMode });
 	};
 
 	const togglePromptAutocomplete = async () => {
@@ -117,6 +127,11 @@
 		saveSettings({ notificationSound: notificationSound });
 	};
 
+	const toggleNotificationSoundAlways = async () => {
+		notificationSoundAlways = !notificationSoundAlways;
+		saveSettings({ notificationSoundAlways: notificationSoundAlways });
+	};
+
 	const toggleShowChangelog = async () => {
 		showChangelog = !showChangelog;
 		saveSettings({ showChangelog: showChangelog });
@@ -145,6 +160,11 @@
 	const toggleHapticFeedback = async () => {
 		hapticFeedback = !hapticFeedback;
 		saveSettings({ hapticFeedback: hapticFeedback });
+	};
+
+	const toggleStylizedPdfExport = async () => {
+		stylizedPdfExport = !stylizedPdfExport;
+		saveSettings({ stylizedPdfExport: stylizedPdfExport });
 	};
 
 	const toggleUserLocation = async () => {
@@ -268,6 +288,8 @@
 		titleAutoGenerate = $settings?.title?.auto ?? true;
 		autoTags = $settings.autoTags ?? true;
 
+		highContrastMode = $settings.highContrastMode ?? false;
+
 		detectArtifacts = $settings.detectArtifacts ?? true;
 		responseAutoCopy = $settings.responseAutoCopy ?? false;
 
@@ -294,7 +316,13 @@
 		chatDirection = $settings.chatDirection ?? 'auto';
 		userLocation = $settings.userLocation ?? false;
 
-		notificationSound = $settings.notificationSound ?? true;
+		notificationSound = $settings?.notificationSound ?? true;
+		notificationSoundAlways = $settings?.notificationSoundAlways ?? false;
+
+		iframeSandboxAllowSameOrigin = $settings?.iframeSandboxAllowSameOrigin ?? false;
+		iframeSandboxAllowForms = $settings?.iframeSandboxAllowForms ?? false;
+
+		stylizedPdfExport = $settings?.stylizedPdfExport ?? true;
 
 		hapticFeedback = $settings.hapticFeedback ?? false;
 		ctrlEnterToSend = $settings.ctrlEnterToSend ?? false;
@@ -350,6 +378,28 @@
 	<div class=" space-y-3 overflow-y-scroll max-h-[28rem] lg:max-h-full">
 		<div>
 			<div class=" mb-1.5 text-sm font-medium">{$i18n.t('UI')}</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs">
+						{$i18n.t('High Contrast Mode')} ({$i18n.t('Beta')})
+					</div>
+
+					<button
+						class="p-1 px-3 text-xs flex rounded-sm transition"
+						on:click={() => {
+							toggleHighContrastMode();
+						}}
+						type="button"
+					>
+						{#if highContrastMode === true}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
@@ -476,6 +526,30 @@
 					</button>
 				</div>
 			</div>
+
+			{#if notificationSound}
+				<div>
+					<div class=" py-0.5 flex w-full justify-between">
+						<div class=" self-center text-xs">
+							{$i18n.t('Always Play Notification Sound')}
+						</div>
+
+						<button
+							class="p-1 px-3 text-xs flex rounded-sm transition"
+							on:click={() => {
+								toggleNotificationSoundAlways();
+							}}
+							type="button"
+						>
+							{#if notificationSoundAlways === true}
+								<span class="ml-2 self-center">{$i18n.t('On')}</span>
+							{:else}
+								<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+							{/if}
+						</button>
+					</div>
+				</div>
+			{/if}
 
 			{#if $user?.role === 'admin'}
 				<div>
@@ -855,7 +929,7 @@
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
 					<div class=" self-center text-xs">
-						{$i18n.t('Scroll to bottom when switching between branches')}
+						{$i18n.t('Scroll On Branch Change')}
 					</div>
 
 					<button
@@ -926,6 +1000,28 @@
 						type="button"
 					>
 						{#if iframeSandboxAllowForms === true}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs">
+						{$i18n.t('Stylized PDF Export')}
+					</div>
+
+					<button
+						class="p-1 px-3 text-xs flex rounded-sm transition"
+						on:click={() => {
+							toggleStylizedPdfExport();
+						}}
+						type="button"
+					>
+						{#if stylizedPdfExport === true}
 							<span class="ml-2 self-center">{$i18n.t('On')}</span>
 						{:else}
 							<span class="ml-2 self-center">{$i18n.t('Off')}</span>

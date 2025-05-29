@@ -1,6 +1,6 @@
 <script lang="ts">
 	import DOMPurify from 'dompurify';
-	import { createEventDispatcher, onMount, getContext } from 'svelte';
+	import { onMount, getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
 	import fileSaver from 'file-saver';
@@ -21,8 +21,7 @@
 
 	import Source from './Source.svelte';
 	import { settings } from '$lib/stores';
-
-	const dispatch = createEventDispatcher();
+	import HtmlToken from './HTMLToken.svelte';
 
 	export let id: string;
 	export let tokens: Token[];
@@ -30,6 +29,11 @@
 	export let attributes = {};
 
 	export let save = false;
+	export let preview = false;
+
+	export let onSave: Function = () => {};
+	export let onUpdate: Function = () => {};
+	export let onPreview: Function = () => {};
 
 	export let onTaskClick: Function = () => {};
 	export let onSourceClick: Function = () => {};
@@ -93,16 +97,16 @@
 				code={token?.text ?? ''}
 				{attributes}
 				{save}
-				onCode={(value) => {
-					dispatch('code', value);
-				}}
+				{preview}
 				onSave={(value) => {
-					dispatch('update', {
+					onSave({
 						raw: token.raw,
 						oldContent: token.text,
 						newContent: value
 					});
 				}}
+				{onUpdate}
+				{onPreview}
 			/>
 		{:else}
 			{token.text}
@@ -267,16 +271,7 @@
 			</div>
 		</Collapsible>
 	{:else if token.type === 'html'}
-		{@const html = DOMPurify.sanitize(token.text)}
-		{#if html && html.includes('<video')}
-			{@html html}
-		{:else if token.text.includes(`<iframe src="${WEBUI_BASE_URL}/api/v1/files/`)}
-			{@html `${token.text}`}
-		{:else if token.text.includes(`<source_id`)}
-			<Source {id} {token} onClick={onSourceClick} />
-		{:else}
-			{token.text}
-		{/if}
+		<HtmlToken {id} {token} {onSourceClick} />
 	{:else if token.type === 'iframe'}
 		<iframe
 			src="{WEBUI_BASE_URL}/api/v1/files/{token.fileId}/content"

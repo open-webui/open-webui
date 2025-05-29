@@ -21,7 +21,7 @@ export const createNewChat = async (token: string, chat: object) => {
 		})
 		.catch((err) => {
 			error = err;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -61,7 +61,7 @@ export const importChat = async (
 		})
 		.catch((err) => {
 			error = err;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -97,7 +97,7 @@ export const getChatList = async (token: string = '', page: number | null = null
 		})
 		.catch((err) => {
 			error = err;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -111,10 +111,79 @@ export const getChatList = async (token: string = '', page: number | null = null
 	}));
 };
 
-export const getChatListByUserId = async (token: string = '', userId: string) => {
+export const getChatListByUserId = async (
+	token: string = '',
+	userId: string,
+	page: number = 1,
+	filter?: object
+) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/list/user/${userId}`, {
+	const searchParams = new URLSearchParams();
+
+	searchParams.append('page', `${page}`);
+
+	if (filter) {
+		Object.entries(filter).forEach(([key, value]) => {
+			if (value !== undefined && value !== null) {
+				searchParams.append(key, value.toString());
+			}
+		});
+	}
+
+	const res = await fetch(
+		`${WEBUI_API_BASE_URL}/chats/list/user/${userId}?${searchParams.toString()}`,
+		{
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				...(token && { authorization: `Bearer ${token}` })
+			}
+		}
+	)
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res.map((chat) => ({
+		...chat,
+		time_range: getTimeRange(chat.updated_at)
+	}));
+};
+
+export const getArchivedChatList = async (
+	token: string = '',
+	page: number = 1,
+	filter?: object
+) => {
+	let error = null;
+
+	const searchParams = new URLSearchParams();
+	searchParams.append('page', `${page}`);
+
+	if (filter) {
+		Object.entries(filter).forEach(([key, value]) => {
+			if (value !== undefined && value !== null) {
+				searchParams.append(key, value.toString());
+			}
+		});
+	}
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/archived?${searchParams.toString()}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -131,7 +200,7 @@ export const getChatListByUserId = async (token: string = '', userId: string) =>
 		})
 		.catch((err) => {
 			error = err;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -143,37 +212,6 @@ export const getChatListByUserId = async (token: string = '', userId: string) =>
 		...chat,
 		time_range: getTimeRange(chat.updated_at)
 	}));
-};
-
-export const getArchivedChatList = async (token: string = '') => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/archived`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err;
-			console.log(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
 };
 
 export const getAllChats = async (token: string) => {
@@ -196,7 +234,7 @@ export const getAllChats = async (token: string) => {
 		})
 		.catch((err) => {
 			error = err;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -231,7 +269,7 @@ export const getChatListBySearchText = async (token: string, text: string, page:
 		})
 		.catch((err) => {
 			error = err;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -265,7 +303,7 @@ export const getChatsByFolderId = async (token: string, folderId: string) => {
 		})
 		.catch((err) => {
 			error = err;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -296,7 +334,7 @@ export const getAllArchivedChats = async (token: string) => {
 		})
 		.catch((err) => {
 			error = err;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -327,7 +365,7 @@ export const getAllUserChats = async (token: string) => {
 		})
 		.catch((err) => {
 			error = err;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -358,7 +396,7 @@ export const getAllTags = async (token: string) => {
 		})
 		.catch((err) => {
 			error = err;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -389,7 +427,7 @@ export const getPinnedChatList = async (token: string = '') => {
 		})
 		.catch((err) => {
 			error = err;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -426,7 +464,7 @@ export const getChatListByTagName = async (token: string = '', tagName: string) 
 		})
 		.catch((err) => {
 			error = err;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -461,7 +499,7 @@ export const getChatById = async (token: string, id: string) => {
 		.catch((err) => {
 			error = err.detail;
 
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -493,7 +531,7 @@ export const getChatByShareId = async (token: string, share_id: string) => {
 		.catch((err) => {
 			error = err;
 
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -531,7 +569,7 @@ export const getChatPinnedStatusById = async (token: string, id: string) => {
 				error = err;
 			}
 
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -569,7 +607,7 @@ export const toggleChatPinnedStatusById = async (token: string, id: string) => {
 				error = err;
 			}
 
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -610,7 +648,7 @@ export const cloneChatById = async (token: string, id: string, title?: string) =
 				error = err;
 			}
 
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -648,7 +686,7 @@ export const cloneSharedChatById = async (token: string, id: string) => {
 				error = err;
 			}
 
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -680,7 +718,7 @@ export const shareChatById = async (token: string, id: string) => {
 		.catch((err) => {
 			error = err;
 
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -715,7 +753,7 @@ export const updateChatFolderIdById = async (token: string, id: string, folderId
 		.catch((err) => {
 			error = err;
 
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -747,7 +785,7 @@ export const archiveChatById = async (token: string, id: string) => {
 		.catch((err) => {
 			error = err;
 
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -779,7 +817,7 @@ export const deleteSharedChatById = async (token: string, id: string) => {
 		.catch((err) => {
 			error = err;
 
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -814,7 +852,7 @@ export const updateChatById = async (token: string, id: string, chat: object) =>
 		.catch((err) => {
 			error = err;
 
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -846,7 +884,7 @@ export const deleteChatById = async (token: string, id: string) => {
 		.catch((err) => {
 			error = err.detail;
 
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -878,7 +916,7 @@ export const getTagsById = async (token: string, id: string) => {
 		.catch((err) => {
 			error = err;
 
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -912,7 +950,7 @@ export const addTagById = async (token: string, id: string, tagName: string) => 
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -947,7 +985,7 @@ export const deleteTagById = async (token: string, id: string, tagName: string) 
 		.catch((err) => {
 			error = err;
 
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -978,7 +1016,7 @@ export const deleteTagsById = async (token: string, id: string) => {
 		.catch((err) => {
 			error = err;
 
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -1010,7 +1048,7 @@ export const deleteAllChats = async (token: string) => {
 		.catch((err) => {
 			error = err.detail;
 
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -1042,7 +1080,7 @@ export const archiveAllChats = async (token: string) => {
 		.catch((err) => {
 			error = err.detail;
 
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
