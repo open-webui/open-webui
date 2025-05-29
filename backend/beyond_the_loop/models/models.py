@@ -9,7 +9,9 @@ from beyond_the_loop.models.users import UserResponse, Users
 
 from pydantic import BaseModel, ConfigDict
 
-from sqlalchemy import BigInteger, Column, Text, JSON, Boolean
+from sqlalchemy import BigInteger, Column, Text, JSON, Boolean, Table, ForeignKey
+from sqlalchemy.orm import relationship
+from sqlalchemy import select, delete, insert
 
 
 from open_webui.utils.access_control import has_access
@@ -17,6 +19,13 @@ from open_webui.utils.access_control import has_access
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
+
+bookmarked_assistants = Table(
+    "bookmarked_assistants",
+    Base.metadata,
+    Column("user_id", ForeignKey("user.id", ondelete="CASCADE"), primary_key=True),
+    Column("model_id", ForeignKey("model.id", ondelete="CASCADE"), primary_key=True),
+)
 
 
 ####################
@@ -104,6 +113,12 @@ class Model(Base):
     updated_at = Column(BigInteger)
     created_at = Column(BigInteger)
 
+    users = relationship(
+        "User",
+        secondary="bookmarked_assistants",
+        back_populates="assistants"
+    )
+
 
 class ModelModel(BaseModel):
     id: str
@@ -122,8 +137,6 @@ class ModelModel(BaseModel):
     user_id: Optional[str]
     company_id: str
 
-    bookmarked: Optional[bool] = None
-
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -136,9 +149,8 @@ class ModelResponse(ModelModel):
 
 class ModelUserResponse(ModelModel):
     user: Optional[UserResponse] = None
+    bookmarked_by_user: Optional[bool] = False
 
-class ModelBookmarkForm(BaseModel):
-    bookmarked: bool
 
 class ModelForm(BaseModel):
     id: str
@@ -210,14 +222,26 @@ class ModelsTable:
     def get_models_by_user_and_company(
         self, user_id: str, company_id: str, permission: str = "read"
     ) -> list[ModelUserResponse]:
-        models = self.get_models()
+        with get_db() as db:
+            result = db.execute(
+                select(bookmarked_assistants.c.model_id).where(bookmarked_assistants.c.user_id == user_id)
+            )
+            bookmarked_model_ids = {row.model_id for row in result.fetchall()}
 
-        return [
-            model
-            for model in models
-            if model.user_id == user_id
-            or (model.company_id == company_id and has_access(user_id, permission, model.access_control))
-        ]
+            all_models = self.get_models()
+
+            filtered_models = []
+            for model in all_models:
+                if (
+                    model.user_id == user_id
+                    or (model.company_id == company_id and has_access(user_id, permission, model.access_control))
+                ):
+                    model_dict = model.model_dump()
+                    model_dict["bookmarked_by_user"] = model.id in bookmarked_model_ids
+                    filtered_models.append(ModelUserResponse(**model_dict))
+
+            filtered_models.sort(key=lambda m: not m.bookmarked_by_user)
+            return filtered_models
 
     def get_models_by_company_id(self, company_id: str) -> list[ModelModel]:
         models = self.get_models()
@@ -292,6 +316,39 @@ class ModelsTable:
                 return True
         except Exception:
             return False
+        
+    def toggle_bookmark(self, model_id: str, user_id: str) -> bool:
+        # Check if bookmark exists
+        try:
+            with get_db() as db:
+                exists = db.execute(
+                    select(bookmarked_assistants).where(
+                        (bookmarked_assistants.c.user_id == user_id) &
+                        (bookmarked_assistants.c.model_id == model_id)
+                    )
+                ).fetchone()
+
+                if exists:
+                    db.execute(
+                        delete(bookmarked_assistants).where(
+                            (bookmarked_assistants.c.user_id == user_id) &
+                            (bookmarked_assistants.c.model_id == model_id)
+                        )
+                    )
+                    db.commit()
+                    return False  # Bookmark was removed
+                else:
+                    db.execute(
+                        insert(bookmarked_assistants).values(
+                            user_id=user_id,
+                            model_id=model_id
+                        )
+                    )
+                    db.commit()
+                    return True
+        
+        except Exception:
+            return None
 
 
 Models = ModelsTable()

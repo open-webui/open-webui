@@ -46,6 +46,12 @@ class User(Base):
     company_id = Column(String, ForeignKey("company.id", ondelete="CASCADE"), nullable=False)
     company = relationship("Company", back_populates="users")
 
+    assistants = relationship(
+        "Model",
+        secondary="bookmarked_assistants",
+        back_populates="users"
+    )
+
 
 class UserSettings(BaseModel):
     ui: Optional[dict] = partial(dict)
