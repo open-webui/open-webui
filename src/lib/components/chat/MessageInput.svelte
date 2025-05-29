@@ -18,7 +18,8 @@
 		tools,
 		user as _user,
 		showControls,
-		companyConfig
+		companyConfig,
+		confirmPromptFn
 	} from '$lib/stores';
 
 	import { blobToFile, compressImage, createMessagesList, findWordIndices } from '$lib/utils';
@@ -441,6 +442,12 @@
 			chatInputElement.dispatchEvent(new Event('input'));
 		}
 	};
+
+	onMount(() => {
+		confirmPromptFn.set(confirmPrompt);
+	})
+
+	onDestroy(() => confirmPromptFn.set(null))
 
 	onMount(() => {
 		const stored = localStorage.getItem('selectedPrompt');

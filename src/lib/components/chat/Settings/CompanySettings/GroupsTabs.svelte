@@ -225,39 +225,41 @@
 						</button>
 					</GroupPermissions>
 				</div>
-				{#each users?.filter((user) => group.user_ids?.includes(user.id)) as user (user.id)}
-				<div class="flex items-center justify-between w-full group cursor-pointer mt-2.5">
-                    <div class="flex items-center">
-						<img
-							class=" rounded-full w-3 h-3 object-cover mr-1"
-							src={user.profile_image_url.startsWith(WEBUI_BASE_URL) ||
-							user.profile_image_url.startsWith('https://www.gravatar.com/avatar/') ||
-							user.profile_image_url.startsWith('data:')
-								? user.profile_image_url
-								: `/user.png`}
-							alt="user"
-						/>
-						{#if user?.first_name !== 'INVITED'}
-							<div class="text-xs dark:text-customGray-100 mr-1 whitespace-nowrap">
-								{user.first_name}
-								{user.last_name}
+				<div class="py-2">
+					{#each users?.filter((user) => group.user_ids?.includes(user.id)) as user (user.id)}
+						<div class="flex items-center justify-between w-full group cursor-pointer mt-2.5">
+							<div class="flex items-center">
+								<img
+									class=" rounded-full w-3 h-3 object-cover mr-1"
+									src={user.profile_image_url.startsWith(WEBUI_BASE_URL) ||
+									user.profile_image_url.startsWith('https://www.gravatar.com/avatar/') ||
+									user.profile_image_url.startsWith('data:')
+										? user.profile_image_url
+										: `/user.png`}
+									alt="user"
+								/>
+								{#if user?.first_name !== 'INVITED'}
+									<div class="text-xs dark:text-customGray-100 mr-1 whitespace-nowrap">
+										{user.first_name}
+										{user.last_name}
+									</div>
+								{/if}
+								<div class="text-xs dark:text-customGray-590 mr-1 whitespace-nowrap">{user.email}</div>
 							</div>
-						{/if}
-						<div class="text-xs dark:text-customGray-590 mr-1 whitespace-nowrap">{user.email}</div>
-					</div>
-                    <RemoveFromGroup on:removeFromGroup={() => {
-                        console.log('test')
-                        updateGroupHandler(group.id, {
-							...group,
-							user_ids: [...group.user_ids?.filter(id => id !== user.id)]
-						});
-                    }}>
-                        <button type="button" class="md:invisible group-hover:visible">
-                            <EllipsisHorizontal/>
-                        </button>
-                    </RemoveFromGroup>
-                </div>
-				{/each}
+							<RemoveFromGroup on:removeFromGroup={() => {
+								console.log('test')
+								updateGroupHandler(group.id, {
+									...group,
+									user_ids: [...group.user_ids?.filter(id => id !== user.id)]
+								});
+							}}>
+								<button type="button" class="md:invisible group-hover:visible">
+									<EllipsisHorizontal/>
+								</button>
+							</RemoveFromGroup>
+						</div>
+					{/each}
+				</div>
 			</Accordeon>
 		{/each}
 	</div>

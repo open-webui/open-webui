@@ -215,12 +215,9 @@
 						bind:selectedModels
 						showSetDefault={!history.currentId}
 					/>
-					<div
-						class="flex space-x-[5px] items-center py-[3px] px-[6px]  rounded-md bg-lightGray-800 dark:bg-customGray-800"
-					>
-						<BookIcon />
-						<button class="min-w-fit text-xs text-customGray-600 dark:text-customGray-600 font-medium" on:click={() => showLibrary.set(true)}>{$i18n.t('Library')}</button>
-					</div>
+					<button class="flex space-x-[5px] items-center py-[3px] px-[6px] rounded-md bg-lightGray-800 dark:bg-customGray-800 min-w-fit text-xs text-lightGray-100 dark:text-customGray-100 font-medium" on:click={() => showLibrary.set(true)}>
+						<BookIcon /> <span>{$i18n.t('Library')}</span>
+					</button>
 				</div>
 				<MessageInput
 					{history}

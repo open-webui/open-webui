@@ -2,13 +2,18 @@
 	
 	let open = false;
 	export let id;
+	export let titleClassName = '';
+	export let tagColor = '';
+	let style = tagColor ? `background-color: ${tagColor}` : '';
+	export let hideBorder = false;
+	$:console.log(titleClassName)
 </script>
 
 <div class="mb-1">
 	<div
-		class="flex justify-between items-center w-full text-left py-2 text-xs dark:text-customGray-300 border-b dark:border-customGray-700"
+		class="flex justify-between items-center w-full text-left py-2 text-xs dark:text-customGray-300 {hideBorder ? '' : 'border-b'} dark:border-customGray-700"
 	>
-		<button id={`group-${id}`} class="flex items-center" on:click={() => (open = !open)}>
+		<button style={style} class="flex items-center {titleClassName}" id={`group-${id}`} on:click={() => (open = !open)}>
 			<svg
 				width="4"
 				height="6"
@@ -19,7 +24,7 @@
 			>
 				<path
 					d="M3.52601 3C3.52601 3.13325 3.47691 3.26651 3.37171 3.37171L0.895967 5.84746C0.692577 6.05085 0.355932 6.05085 0.152542 5.84746C-0.0508475 5.64407 -0.0508475 5.30742 0.152542 5.10403L2.25658 3L0.152542 0.895967C-0.0508475 0.692577 -0.0508475 0.355932 0.152542 0.152542C0.355932 -0.050848 0.692577 -0.050848 0.895967 0.152542L3.37171 2.62829C3.47691 2.73349 3.52601 2.86674 3.52601 3Z"
-					fill="#939292"
+					fill="currentColor"
 				/>
 			</svg>
 			<slot name="title" />
@@ -28,8 +33,6 @@
 	</div>
 
 	{#if open}
-		<div class="py-2">
-			<slot />
-		</div>
+		<slot />
 	{/if}
 </div>

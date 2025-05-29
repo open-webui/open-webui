@@ -437,6 +437,41 @@ html.dark .custom-scrollbar::-webkit-scrollbar-thumb {
 	background-color: #181818;
 }
 
+.assistants-scrollbar::-webkit-scrollbar {
+	height: 3px;
+}
+
+html.dark .assistants-scrollbar::-webkit-scrollbar-track {
+	background: #313337; 
+}
+.assistants-scrollbar::-webkit-scrollbar-track {
+	background: #EDEDED; 
+}
+html.dark .assistants-scrollbar::-webkit-scrollbar-thumb {
+	background-color: #494949;
+}
+.assistants-scrollbar::-webkit-scrollbar-thumb {
+	background-color: #D8D8D8;
+}
+
+.prompt-scrollbar::-webkit-scrollbar {
+	width: 4px;
+}
+
+html.dark .prompt-scrollbar::-webkit-scrollbar-track {
+	background: #313337; 
+}
+.prompt-scrollbar::-webkit-scrollbar-track {
+	background: #EDEDED; 
+}
+
+html.dark .prompt-scrollbar::-webkit-scrollbar-thumb {
+	background-color: #494949;
+}
+.prompt-scrollbar::-webkit-scrollbar-thumb {
+	background-color: #D8D8D8;
+}
+
 .user-notice a {
 	text-decoration: underline;
 }
@@ -450,5 +485,6 @@ html.dark #editor .ProseMirror a {
 	color: #D0CECE;	
 	text-decoration: underline;
 }
+
 
 
