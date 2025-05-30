@@ -117,11 +117,16 @@
 
 		if (res) {
 			config = res;
+			if (!config.replicate) {
+				config.replicate = {
+					REPLICATE_API_TOKEN: ''
+				};
+			}
 		}
 
 		if (config.enabled) {
 			backendConfig.set(await getBackendConfig());
-			await getModels();
+			getModels();
 		}
 	};
 
@@ -191,14 +196,8 @@
 				}
 			}
 
-			imageGenerationConfig = await getImageGenerationConfig(localStorage.token).catch((error) => {
-				toast.error(`${error}`);
-				return null;
-			});
-
-			// Load models first, then they'll be available when the UI renders
 			if (config.enabled) {
-				await getModels();
+				getModels();
 			}
 
 			if (config.comfyui.COMFYUI_WORKFLOW) {
@@ -224,6 +223,15 @@
 					node_ids: typeof n.node_ids === 'string' ? n.node_ids : n.node_ids.join(',')
 				};
 			});
+
+			const imageConfigRes = await getImageGenerationConfig(localStorage.token).catch((error) => {
+				toast.error(`${error}`);
+				return null;
+			});
+
+			if (imageConfigRes) {
+				imageGenerationConfig = imageConfigRes;
+			}
 		}
 	});
 </script>
@@ -293,21 +301,18 @@
 					<div class=" self-center text-xs font-medium">{$i18n.t('Image Generation Engine')}</div>
 					<div class="flex items-center relative">
 						<select
-							class=" w-full bg-transparent text-sm transition-all !border-none !outline-none"
+							class=" dark:bg-gray-900 w-fit pr-8 cursor-pointer rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
 							bind:value={config.engine}
+							placeholder={$i18n.t('Select Engine')}
 							on:change={async () => {
-								await updateConfigHandler();
-								// Fetch models when switching to any engine
-								if (config.enabled) {
-									await getModels();
-								}
+								updateConfigHandler();
 							}}
 						>
-							<option value="openai">OpenAI</option>
-							<option value="automatic1111">AUTOMATIC1111</option>
-							<option value="comfyui">ComfyUI</option>
-							<option value="gemini">Gemini</option>
-							<option value="replicate">Replicate</option>
+							<option value="openai">{$i18n.t('Default (Open AI)')}</option>
+							<option value="comfyui">{$i18n.t('ComfyUI')}</option>
+							<option value="automatic1111">{$i18n.t('Automatic1111')}</option>
+							<option value="gemini">{$i18n.t('Gemini')}</option>
+							<option value="replicate">{$i18n.t('Replicate')}</option>
 						</select>
 					</div>
 				</div>
@@ -637,28 +642,15 @@
 							/>
 						</div>
 					</div>
-				{:else if config.engine === 'replicate'}
-					<div class="mb-2.5">
-						<div class=" mb-2 font-medium">{$i18n.t('Replicate Settings')}</div>
-						<div class="flex w-full flex-col space-y-2">
-							<div class="flex w-full flex-col lg:flex-row items-start lg:items-center">
-								<div class="lg:w-4/12 w-full text-sm font-medium">
-									{$i18n.t('Replicate API Token')}
-								</div>
-								<div class="flex-1">
-									<SensitiveInput
-										placeholder="r8_..."
-										bind:value={config.replicate.REPLICATE_API_TOKEN}
-										on:change={async () => {
-											await updateConfigHandler();
-											// Refresh models after API token change
-											if (config.enabled && config.replicate.REPLICATE_API_TOKEN) {
-												await getModels();
-											}
-										}}
-									/>
-								</div>
-							</div>
+				{:else if config?.engine === 'replicate'}
+					<div>
+						<div class=" mb-1.5 text-sm font-medium">{$i18n.t('Replicate API Config')}</div>
+
+						<div class="flex gap-2 mb-1">
+							<SensitiveInput
+								placeholder={$i18n.t('API Key')}
+								bind:value={config.replicate.REPLICATE_API_TOKEN}
+							/>
 						</div>
 					</div>
 				{/if}
@@ -673,17 +665,20 @@
 						<div class="flex-1 mr-2">
 							<div class="flex w-full">
 								<div class="flex-1">
-									<Tooltip content={$i18n.t('Select Model')} placement="top-start">
-										<select
+									<Tooltip content={$i18n.t('Enter Model ID')} placement="top-start">
+										<input
+											list="model-list"
 											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 											bind:value={imageGenerationConfig.MODEL}
+											placeholder="Select a model"
 											required
-										>
-											<option value="" disabled>Select a model</option>
+										/>
+
+										<datalist id="model-list">
 											{#each models ?? [] as model}
-												<option value={model.id}>{model.name || model.id}</option>
+												<option value={model.id}>{model.name}</option>
 											{/each}
-										</select>
+										</datalist>
 									</Tooltip>
 								</div>
 							</div>
