@@ -21,9 +21,11 @@ dependencies = [
     "aiocache",
     "aiofiles",
 
+    "starlette-compress==1.6.0",
+
     "sqlalchemy==2.0.38",
     "alembic==1.14.0",
-    "peewee==3.17.9",
+    "peewee==3.18.1",
     "peewee-migrate==1.12.2",
     "psycopg2-binary==2.9.9",
     "pgvector==0.4.0",

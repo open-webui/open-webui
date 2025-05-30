@@ -89,9 +89,20 @@ body:
           required: true
         - label: I have included the Docker container logs.
           required: true
-        - label: I have listed steps to reproduce the bug in detail.
+        - label: I have **provided every relevant configuration, setting, and environment variable used in my setup.**
           required: true
-
+        - label: I have clearly **listed every relevant configuration, custom setting, environment variable, and command-line option that influences my setup** (such as Docker Compose overrides, .env values, browser settings, authentication configurations, etc).
+          required: true
+        - label: |
+            I have documented **step-by-step reproduction instructions that are precise, sequential, and leave nothing to interpretation**. My steps:
+            - Start with the initial platform/version/OS and dependencies used,
+            - Specify exact install/launch/configure commands,
+            - List URLs visited, user input (incl. example values/emails/passwords if needed),
+            - Describe all options and toggles enabled or changed,
+            - Include any files or environmental changes,
+            - Identify the expected and actual result at each stage,
+            - Ensure any reasonably skilled user can follow and hit the same issue.
+          required: true
   - type: textarea
     id: expected-behavior
     attributes:
@@ -112,15 +123,25 @@ body:
     id: reproduction-steps
     attributes:
       label: Steps to Reproduce
-      description: Providing clear, step-by-step instructions helps us reproduce and fix the issue faster. If we can't reproduce it, we can't fix it.
+      description: |
+        Please provide a **very detailed, step-by-step guide** to reproduce the issue. Your instructions should be so clear and precise that anyone can follow them without guesswork. Include every relevant detail—settings, configuration options, exact commands used, values entered, and any prerequisites or environment variables.  
+        **If full reproduction steps and all relevant settings are not provided, your issue may not be addressed.**
+
       placeholder: |
-        1. Go to '...'
-        2. Click on '...'
-        3. Scroll down to '...'
-        4. See the error message '...'
+        Example (include every detail):
+        1. Start with a clean Ubuntu 22.04 install.
+        2. Install Docker v24.0.5 and start the service.
+        3. Clone the Open WebUI repo (git clone ...).
+        4. Use the Docker Compose file without modifications.
+        5. Open browser Chrome 115.0 in incognito mode.
+        6. Go to http://localhost:8080 and log in with user "test@example.com".
+        7. Set the language to "English" and theme to "Dark".
+        8. Attempt to connect to Ollama at "http://localhost:11434".
+        9. Observe that the error message "Connection refused" appears at the top right.
+
+        Please list each step carefully and include all relevant configuration, settings, and options.
     validations:
       required: true
-
   - type: textarea
     id: logs-screenshots
     attributes:

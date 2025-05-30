@@ -21,9 +21,11 @@ from langchain_community.document_loaders import (
 )
 from langchain_core.documents import Document
 
-
 from open_webui.retrieval.loaders.external_document import ExternalDocumentLoader
+
 from open_webui.retrieval.loaders.mistral import MistralLoader
+from open_webui.retrieval.loaders.datalab_marker import DatalabMarkerLoader
+
 
 from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
 
@@ -226,7 +228,7 @@ class Loader:
                 api_key=self.kwargs.get("EXTERNAL_DOCUMENT_LOADER_API_KEY"),
                 mime_type=file_content_type,
             )
-        if self.engine == "tika" and self.kwargs.get("TIKA_SERVER_URL"):
+        elif self.engine == "tika" and self.kwargs.get("TIKA_SERVER_URL"):
             if self._is_text_file(file_ext, file_content_type):
                 loader = TextLoader(file_path, autodetect_encoding=True)
             else:
@@ -236,6 +238,49 @@ class Loader:
                     mime_type=file_content_type,
                     extract_images=self.kwargs.get("PDF_EXTRACT_IMAGES"),
                 )
+        elif (
+            self.engine == "datalab_marker"
+            and self.kwargs.get("DATALAB_MARKER_API_KEY")
+            and file_ext
+            in [
+                "pdf",
+                "xls",
+                "xlsx",
+                "ods",
+                "doc",
+                "docx",
+                "odt",
+                "ppt",
+                "pptx",
+                "odp",
+                "html",
+                "epub",
+                "png",
+                "jpeg",
+                "jpg",
+                "webp",
+                "gif",
+                "tiff",
+            ]
+        ):
+            loader = DatalabMarkerLoader(
+                file_path=file_path,
+                api_key=self.kwargs["DATALAB_MARKER_API_KEY"],
+                langs=self.kwargs.get("DATALAB_MARKER_LANGS"),
+                use_llm=self.kwargs.get("DATALAB_MARKER_USE_LLM", False),
+                skip_cache=self.kwargs.get("DATALAB_MARKER_SKIP_CACHE", False),
+                force_ocr=self.kwargs.get("DATALAB_MARKER_FORCE_OCR", False),
+                paginate=self.kwargs.get("DATALAB_MARKER_PAGINATE", False),
+                strip_existing_ocr=self.kwargs.get(
+                    "DATALAB_MARKER_STRIP_EXISTING_OCR", False
+                ),
+                disable_image_extraction=self.kwargs.get(
+                    "DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION", False
+                ),
+                output_format=self.kwargs.get(
+                    "DATALAB_MARKER_OUTPUT_FORMAT", "markdown"
+                ),
+            )
         elif self.engine == "docling" and self.kwargs.get("DOCLING_SERVER_URL"):
             if self._is_text_file(file_ext, file_content_type):
                 loader = TextLoader(file_path, autodetect_encoding=True)

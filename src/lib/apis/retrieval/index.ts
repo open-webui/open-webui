@@ -184,8 +184,15 @@ type OpenAIConfigForm = {
 	url: string;
 };
 
+type AzureOpenAIConfigForm = {
+	key: string;
+	url: string;
+	version: string;
+};
+
 type EmbeddingModelUpdateForm = {
 	openai_config?: OpenAIConfigForm;
+	azure_openai_config?: AzureOpenAIConfigForm;
 	embedding_engine: string;
 	embedding_model: string;
 	embedding_batch_size?: number;

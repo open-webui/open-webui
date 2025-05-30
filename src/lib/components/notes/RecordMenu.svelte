@@ -41,7 +41,7 @@
 			transition={(e) => fade(e, { duration: 100 })}
 		>
 			<button
-				class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
 				on:click={async () => {
 					onRecord();
 					show = false;
@@ -54,7 +54,7 @@
 			</button>
 
 			<button
-				class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
 				on:click={() => {
 					onCaptureAudio();
 					show = false;
@@ -67,7 +67,7 @@
 			</button>
 
 			<button
-				class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
 				on:click={() => {
 					onUpload();
 					show = false;

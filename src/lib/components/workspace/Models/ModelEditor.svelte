@@ -119,6 +119,8 @@
 			toast.error('Model Name is required.');
 		}
 
+		info.params = { ...info.params, ...params };
+
 		info.access_control = accessControl;
 		info.meta.capabilities = capabilities;
 
@@ -588,13 +590,7 @@
 
 							{#if showAdvanced}
 								<div class="my-2">
-									<AdvancedParams
-										admin={true}
-										bind:params
-										on:change={(e) => {
-											info.params = { ...info.params, ...params };
-										}}
-									/>
+									<AdvancedParams admin={true} custom={true} bind:params />
 								</div>
 							{/if}
 						</div>

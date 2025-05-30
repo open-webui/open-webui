@@ -84,7 +84,7 @@
 		if (res) {
 			saveHandler();
 		} else {
-			toast.error(i18n.t('Failed to update settings'));
+			toast.error($i18n.t('Failed to update settings'));
 		}
 	};
 

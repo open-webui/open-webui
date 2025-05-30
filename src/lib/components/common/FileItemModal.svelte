@@ -25,7 +25,7 @@
 		(item?.name && item?.name.toLowerCase().endsWith('.pdf'));
 
 	$: isAudio =
-		item?.meta?.content_type.startsWith('audio/') ||
+		(item?.meta?.content_type ?? '').startsWith('audio/') ||
 		(item?.name && item?.name.toLowerCase().endsWith('.mp3')) ||
 		(item?.name && item?.name.toLowerCase().endsWith('.wav')) ||
 		(item?.name && item?.name.toLowerCase().endsWith('.ogg')) ||

@@ -9,7 +9,14 @@
 
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { mobile, showSidebar, knowledge as _knowledge, config, user } from '$lib/stores';
+	import {
+		mobile,
+		showSidebar,
+		knowledge as _knowledge,
+		config,
+		user,
+		settings
+	} from '$lib/stores';
 
 	import {
 		updateFileDataContentById,
@@ -26,10 +33,7 @@
 		updateFileFromKnowledgeById,
 		updateKnowledgeById
 	} from '$lib/apis/knowledge';
-
-	import { transcribeAudio } from '$lib/apis/audio';
 	import { blobToFile } from '$lib/utils';
-	import { processFile } from '$lib/apis/retrieval';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Files from './KnowledgeBase/Files.svelte';
@@ -158,7 +162,18 @@
 		knowledge.files = [...(knowledge.files ?? []), fileItem];
 
 		try {
-			const uploadedFile = await uploadFile(localStorage.token, file).catch((e) => {
+			// If the file is an audio file, provide the language for STT.
+			let metadata = null;
+			if (
+				(file.type.startsWith('audio/') || file.type.startsWith('video/')) &&
+				$settings?.audio?.stt?.language
+			) {
+				metadata = {
+					language: $settings?.audio?.stt?.language
+				};
+			}
+
+			const uploadedFile = await uploadFile(localStorage.token, file, metadata).catch((e) => {
 				toast.error(`${e}`);
 				return null;
 			});

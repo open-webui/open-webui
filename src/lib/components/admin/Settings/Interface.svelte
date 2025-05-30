@@ -1,4 +1,7 @@
 <script lang="ts">
+	import fileSaver from 'file-saver';
+	const { saveAs } = fileSaver;
+
 	import { v4 as uuidv4 } from 'uuid';
 	import { toast } from 'svelte-sonner';
 
@@ -10,13 +13,14 @@
 	import { banners as _banners } from '$lib/stores';
 	import type { Banner } from '$lib/types';
 
+	import { getBaseModels } from '$lib/apis/models';
 	import { getBanners, setBanners } from '$lib/apis/configs';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
-	import { getBaseModels } from '$lib/apis/models';
+	import Banners from './Interface/Banners.svelte';
 
 	const dispatch = createEventDispatcher();
 
@@ -44,6 +48,7 @@
 	const updateInterfaceHandler = async () => {
 		taskConfig = await updateTaskConfig(localStorage.token, taskConfig);
 
+		promptSuggestions = promptSuggestions.filter((p) => p.content !== '');
 		promptSuggestions = await setDefaultPromptSuggestions(localStorage.token, promptSuggestions);
 		await updateBanners();
 
@@ -355,9 +360,9 @@
 
 				<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
-				<div class="  {banners.length > 0 ? ' mb-3' : ''}">
-					<div class="mb-2.5 flex w-full justify-between">
-						<div class=" self-center text-sm font-semibold">
+				<div class="mb-2.5">
+					<div class="flex w-full justify-between">
+						<div class=" self-center text-sm">
 							{$i18n.t('Banners')}
 						</div>
 
@@ -393,69 +398,13 @@
 						</button>
 					</div>
 
-					<div class=" flex flex-col space-y-1">
-						{#each banners as banner, bannerIdx}
-							<div class=" flex justify-between">
-								<div
-									class="flex flex-row flex-1 border rounded-xl border-gray-100 dark:border-gray-850"
-								>
-									<select
-										class="w-fit capitalize rounded-xl py-2 px-4 text-xs bg-transparent outline-hidden"
-										bind:value={banner.type}
-										required
-									>
-										{#if banner.type == ''}
-											<option value="" selected disabled class="text-gray-900"
-												>{$i18n.t('Type')}</option
-											>
-										{/if}
-										<option value="info" class="text-gray-900">{$i18n.t('Info')}</option>
-										<option value="warning" class="text-gray-900">{$i18n.t('Warning')}</option>
-										<option value="error" class="text-gray-900">{$i18n.t('Error')}</option>
-										<option value="success" class="text-gray-900">{$i18n.t('Success')}</option>
-									</select>
-
-									<input
-										class="pr-5 py-1.5 text-xs w-full bg-transparent outline-hidden"
-										placeholder={$i18n.t('Content')}
-										bind:value={banner.content}
-									/>
-
-									<div class="relative top-1.5 -left-2">
-										<Tooltip content={$i18n.t('Dismissible')} className="flex h-fit items-center">
-											<Switch bind:state={banner.dismissible} />
-										</Tooltip>
-									</div>
-								</div>
-
-								<button
-									class="px-2"
-									type="button"
-									on:click={() => {
-										banners.splice(bannerIdx, 1);
-										banners = banners;
-									}}
-								>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 20 20"
-										fill="currentColor"
-										class="w-4 h-4"
-									>
-										<path
-											d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-										/>
-									</svg>
-								</button>
-							</div>
-						{/each}
-					</div>
+					<Banners bind:banners />
 				</div>
 
 				{#if $user?.role === 'admin'}
 					<div class=" space-y-3">
 						<div class="flex w-full justify-between mb-2">
-							<div class=" self-center text-sm font-semibold">
+							<div class=" self-center text-sm">
 								{$i18n.t('Default Prompt Suggestions')}
 							</div>
 
@@ -538,6 +487,111 @@
 								{$i18n.t('Adjusting these settings will apply changes universally to all users.')}
 							</div>
 						{/if}
+
+						<div class="flex items-center justify-end space-x-2 mt-2">
+							<input
+								id="prompt-suggestions-import-input"
+								type="file"
+								accept=".json"
+								hidden
+								on:change={(e) => {
+									const files = e.target.files;
+									if (!files || files.length === 0) {
+										return;
+									}
+
+									console.log(files);
+
+									let reader = new FileReader();
+									reader.onload = async (event) => {
+										try {
+											let suggestions = JSON.parse(event.target.result);
+
+											suggestions = suggestions.map((s) => {
+												if (typeof s.title === 'string') {
+													s.title = [s.title, ''];
+												} else if (!Array.isArray(s.title)) {
+													s.title = ['', ''];
+												}
+
+												return s;
+											});
+
+											promptSuggestions = [...promptSuggestions, ...suggestions];
+										} catch (error) {
+											toast.error($i18n.t('Invalid JSON file'));
+											return;
+										}
+									};
+
+									reader.readAsText(files[0]);
+
+									e.target.value = ''; // Reset the input value
+								}}
+							/>
+
+							<button
+								class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
+								type="button"
+								on:click={() => {
+									const input = document.getElementById('prompt-suggestions-import-input');
+									if (input) {
+										input.click();
+									}
+								}}
+							>
+								<div class=" self-center mr-2 font-medium line-clamp-1">
+									{$i18n.t('Import Prompt Suggestions')}
+								</div>
+
+								<div class=" self-center">
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										viewBox="0 0 16 16"
+										fill="currentColor"
+										class="w-3.5 h-3.5"
+									>
+										<path
+											fill-rule="evenodd"
+											d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 9.5a.75.75 0 0 1-.75-.75V8.06l-.72.72a.75.75 0 0 1-1.06-1.06l2-2a.75.75 0 0 1 1.06 0l2 2a.75.75 0 1 1-1.06 1.06l-.72-.72v2.69a.75.75 0 0 1-.75.75Z"
+											clip-rule="evenodd"
+										/>
+									</svg>
+								</div>
+							</button>
+
+							{#if promptSuggestions.length}
+								<button
+									class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
+									type="button"
+									on:click={async () => {
+										let blob = new Blob([JSON.stringify(promptSuggestions)], {
+											type: 'application/json'
+										});
+										saveAs(blob, `prompt-suggestions-export-${Date.now()}.json`);
+									}}
+								>
+									<div class=" self-center mr-2 font-medium line-clamp-1">
+										{$i18n.t('Export Prompt Suggestions')} ({promptSuggestions.length})
+									</div>
+
+									<div class=" self-center">
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											viewBox="0 0 16 16"
+											fill="currentColor"
+											class="w-3.5 h-3.5"
+										>
+											<path
+												fill-rule="evenodd"
+												d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 3.5a.75.75 0 0 1 .75.75v2.69l.72-.72a.75.75 0 1 1 1.06 1.06l-2 2a.75.75 0 0 1-1.06 0l-2-2a.75.75 0 0 1 1.06-1.06l.72.72V6.25A.75.75 0 0 1 8 5.5Z"
+												clip-rule="evenodd"
+											/>
+										</svg>
+									</div>
+								</button>
+							{/if}
+						</div>
 					</div>
 				{/if}
 			</div>

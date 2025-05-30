@@ -76,17 +76,34 @@ async def delete_all_user_chats(request: Request, user=Depends(get_verified_user
 @router.get("/list/user/{user_id}", response_model=list[ChatTitleIdResponse])
 async def get_user_chat_list_by_user_id(
     user_id: str,
+    page: Optional[int] = None,
+    query: Optional[str] = None,
+    order_by: Optional[str] = None,
+    direction: Optional[str] = None,
     user=Depends(get_admin_user),
-    skip: int = 0,
-    limit: int = 50,
 ):
     if not ENABLE_ADMIN_CHAT_ACCESS:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
+
+    if page is None:
+        page = 1
+
+    limit = 60
+    skip = (page - 1) * limit
+
+    filter = {}
+    if query:
+        filter["query"] = query
+    if order_by:
+        filter["order_by"] = order_by
+    if direction:
+        filter["direction"] = direction
+
     return Chats.get_chat_list_by_user_id(
-        user_id, include_archived=True, skip=skip, limit=limit
+        user_id, include_archived=True, filter=filter, skip=skip, limit=limit
     )
 
 
@@ -194,10 +211,10 @@ async def get_chats_by_folder_id(folder_id: str, user=Depends(get_verified_user)
 ############################
 
 
-@router.get("/pinned", response_model=list[ChatResponse])
+@router.get("/pinned", response_model=list[ChatTitleIdResponse])
 async def get_user_pinned_chats(user=Depends(get_verified_user)):
     return [
-        ChatResponse(**chat.model_dump())
+        ChatTitleIdResponse(**chat.model_dump())
         for chat in Chats.get_pinned_chats_by_user_id(user.id)
     ]
 
@@ -267,9 +284,37 @@ async def get_all_user_chats_in_db(user=Depends(get_admin_user)):
 
 @router.get("/archived", response_model=list[ChatTitleIdResponse])
 async def get_archived_session_user_chat_list(
-    user=Depends(get_verified_user), skip: int = 0, limit: int = 50
+    page: Optional[int] = None,
+    query: Optional[str] = None,
+    order_by: Optional[str] = None,
+    direction: Optional[str] = None,
+    user=Depends(get_verified_user),
 ):
-    return Chats.get_archived_chat_list_by_user_id(user.id, skip, limit)
+    if page is None:
+        page = 1
+
+    limit = 60
+    skip = (page - 1) * limit
+
+    filter = {}
+    if query:
+        filter["query"] = query
+    if order_by:
+        filter["order_by"] = order_by
+    if direction:
+        filter["direction"] = direction
+
+    chat_list = [
+        ChatTitleIdResponse(**chat.model_dump())
+        for chat in Chats.get_archived_chat_list_by_user_id(
+            user.id,
+            filter=filter,
+            skip=skip,
+            limit=limit,
+        )
+    ]
+
+    return chat_list
 
 
 ############################

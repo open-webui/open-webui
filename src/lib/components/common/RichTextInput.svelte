@@ -1,11 +1,15 @@
 <script lang="ts">
 	import { marked } from 'marked';
 	import TurndownService from 'turndown';
+	import { gfm } from 'turndown-plugin-gfm';
 	const turndownService = new TurndownService({
 		codeBlockStyle: 'fenced',
 		headingStyle: 'atx'
 	});
 	turndownService.escape = (string) => string;
+
+	// Use turndown-plugin-gfm for proper GFM table support
+	turndownService.use(gfm);
 
 	import { onMount, onDestroy } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
@@ -13,17 +17,20 @@
 
 	import { EditorState, Plugin, PluginKey, TextSelection } from 'prosemirror-state';
 	import { Decoration, DecorationSet } from 'prosemirror-view';
-
 	import { Editor } from '@tiptap/core';
 
 	import { AIAutocompletion } from './RichTextInput/AutoCompletion.js';
+	import Table from '@tiptap/extension-table';
+	import TableRow from '@tiptap/extension-table-row';
+	import TableHeader from '@tiptap/extension-table-header';
+	import TableCell from '@tiptap/extension-table-cell';
 
 	import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 	import Placeholder from '@tiptap/extension-placeholder';
+	import { all, createLowlight } from 'lowlight';
+	import StarterKit from '@tiptap/starter-kit';
 	import Highlight from '@tiptap/extension-highlight';
 	import Typography from '@tiptap/extension-typography';
-	import StarterKit from '@tiptap/starter-kit';
-	import { all, createLowlight } from 'lowlight';
 
 	import { PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
 
@@ -194,6 +201,10 @@
 				Highlight,
 				Typography,
 				Placeholder.configure({ placeholder }),
+				Table.configure({ resizable: true }),
+				TableRow,
+				TableHeader,
+				TableCell,
 				...(autocomplete
 					? [
 							AIAutocompletion.configure({
@@ -290,30 +301,38 @@
 							}
 
 							if (event.key === 'Enter') {
-								// Check if the current selection is inside a structured block (like codeBlock or list)
-								const { state } = view;
-								const { $head } = state.selection;
+								const isCtrlPressed = event.ctrlKey || event.metaKey; // metaKey is for Cmd key on Mac
+								if (event.shiftKey && !isCtrlPressed) {
+									editor.commands.setHardBreak(); // Insert a hard break
+									view.dispatch(view.state.tr.scrollIntoView()); // Move viewport to the cursor
+									event.preventDefault();
+									return true;
+								} else {
+									// Check if the current selection is inside a structured block (like codeBlock or list)
+									const { state } = view;
+									const { $head } = state.selection;
 
-								// Recursive function to check ancestors for specific node types
-								function isInside(nodeTypes: string[]): boolean {
-									let currentNode = $head;
-									while (currentNode) {
-										if (nodeTypes.includes(currentNode.parent.type.name)) {
-											return true;
+									// Recursive function to check ancestors for specific node types
+									function isInside(nodeTypes: string[]): boolean {
+										let currentNode = $head;
+										while (currentNode) {
+											if (nodeTypes.includes(currentNode.parent.type.name)) {
+												return true;
+											}
+											if (!currentNode.depth) break; // Stop if we reach the top
+											currentNode = state.doc.resolve(currentNode.before()); // Move to the parent node
 										}
-										if (!currentNode.depth) break; // Stop if we reach the top
-										currentNode = state.doc.resolve(currentNode.before()); // Move to the parent node
+										return false;
 									}
-									return false;
-								}
 
-								const isInCodeBlock = isInside(['codeBlock']);
-								const isInList = isInside(['listItem', 'bulletList', 'orderedList']);
-								const isInHeading = isInside(['heading']);
+									const isInCodeBlock = isInside(['codeBlock']);
+									const isInList = isInside(['listItem', 'bulletList', 'orderedList']);
+									const isInHeading = isInside(['heading']);
 
-								if (isInCodeBlock || isInList || isInHeading) {
-									// Let ProseMirror handle the normal Enter behavior
-									return false;
+									if (isInCodeBlock || isInList || isInHeading) {
+										// Let ProseMirror handle the normal Enter behavior
+										return false;
+									}
 								}
 							}
 

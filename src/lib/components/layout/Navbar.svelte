@@ -166,8 +166,9 @@
 
 				{#if $user !== undefined}
 					<UserMenu
-						className="max-w-[200px]"
+						className="max-w-[240px]"
 						role={$user?.role}
+						help={true}
 						on:show={(e) => {
 							if (e.detail === 'archived-chat') {
 								showArchivedChats.set(true);

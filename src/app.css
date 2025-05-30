@@ -103,7 +103,7 @@ li p {
 
 ::-webkit-scrollbar-thumb {
 	--tw-border-opacity: 1;
-	background-color: rgba(236, 236, 236, 0.8);
+	background-color: rgba(215, 215, 215, 0.8);
 	border-color: rgba(255, 255, 255, var(--tw-border-opacity));
 	border-radius: 9999px;
 	border-width: 1px;
@@ -111,12 +111,12 @@ li p {
 
 /* Dark theme scrollbar styles */
 .dark ::-webkit-scrollbar-thumb {
-	background-color: rgba(42, 42, 42, 0.8); /* Darker color for dark theme */
+	background-color: rgba(67, 67, 67, 0.8); /* Darker color for dark theme */
 	border-color: rgba(0, 0, 0, var(--tw-border-opacity));
 }
 
 ::-webkit-scrollbar {
-	height: 0.8rem;
+	height: 0.6rem;
 	width: 0.4rem;
 }
 
@@ -411,4 +411,30 @@ input[type='number'] {
 
 .hljs-strong {
 	font-weight: 700;
+}
+
+/* Table styling for tiptap editors */
+.tiptap table {
+	@apply w-full text-sm text-left text-gray-500 dark:text-gray-400 max-w-full;
+}
+
+.tiptap thead {
+	@apply text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-850 dark:text-gray-400 border-none;
+}
+
+.tiptap th,
+.tiptap td {
+	@apply px-3 py-1.5 border border-gray-100 dark:border-gray-850;
+}
+
+.tiptap th {
+	@apply cursor-pointer text-left text-xs text-gray-700 dark:text-gray-400 font-semibold uppercase bg-gray-50 dark:bg-gray-850;
+}
+
+.tiptap td {
+	@apply text-gray-900 dark:text-white w-max;
+}
+
+.tiptap tr {
+	@apply bg-white dark:bg-gray-900 dark:border-gray-850 text-xs;
 }
