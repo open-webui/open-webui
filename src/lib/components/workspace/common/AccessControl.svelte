@@ -19,6 +19,8 @@
 
 	let selectedGroupId = '';
 	let groups = [];
+	let groupSearch = '';
+	let searchFocused = false;
 
 	$: if (!allowPublic && accessControl === null) {
 		accessControl = {
@@ -80,6 +82,16 @@
 			selectedGroupId = '';
 		}
 	};
+
+	$: filteredGroups =
+		accessControl !== null
+			? groups
+					.filter(
+						(group) =>
+							!accessControl.read.group_ids.includes(group.id) &&
+							group.name.toLowerCase().includes(groupSearch.toLowerCase())
+					)
+			: [];
 </script>
 
 <div class=" rounded-lg flex flex-col gap-2">
@@ -131,6 +143,7 @@
 					on:change={(e) => {
 						if (e.target.value === 'public') {
 							accessControl = null;
+							groupSearch = '';
 						} else {
 							accessControl = {
 								read: {
@@ -175,33 +188,39 @@
 
 				<div class="mb-1">
 					<div class="flex w-full">
-						<div class="flex flex-1 items-center">
-							<div class="w-full px-0.5">
-								<select
-									class="outline-hidden bg-transparent text-sm rounded-lg block w-full pr-10 max-w-full
-									{selectedGroupId ? '' : 'text-gray-500'}
-									dark:placeholder-gray-500"
-									bind:value={selectedGroupId}
-								>
-									<option class=" text-gray-700" value="" disabled selected
-										>{$i18n.t('Select a group')}</option
-									>
-									{#each groups.filter((group) => !accessControl.read.group_ids.includes(group.id)) as group}
-										<option class=" text-gray-700" value={group.id}>{group.name}</option>
-									{/each}
-								</select>
-							</div>
-							<!-- <div>
-								<Tooltip content={$i18n.t('Add Group')}>
-									<button
-										class=" p-1 rounded-xl bg-transparent dark:hover:bg-white/5 hover:bg-black/5 transition font-medium text-sm flex items-center space-x-1"
-										type="button"
-										on:click={() => {}}
-									>
-										<Plus className="size-3.5" />
-									</button>
-								</Tooltip>
-							</div> -->
+						<div class="flex flex-1 flex-col gap-1 w-full px-0.5">
+							<input
+								type="text"
+								placeholder={$i18n.t('Search groups')}
+								bind:value={groupSearch}
+								on:focus={() => (searchFocused = true)}
+								on:blur={() => setTimeout(() => (searchFocused = false), 100)}
+								class="outline-hidden bg-transparent text-sm rounded-lg block w-full pr-10 max-w-full border border-gray-200 dark:border-gray-700 px-2 py-1.5 placeholder-gray-400"
+							/>
+
+							{#if searchFocused}
+								<div class="rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 mt-1 max-h-48 overflow-y-auto shadow-sm z-10">
+									{#if filteredGroups.length > 0}
+										{#each filteredGroups as group}
+											<button
+												type="button"
+												class="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition flex items-center gap-2"
+												on:click={() => {
+													accessControl.read.group_ids = [...accessControl.read.group_ids, group.id];
+													groupSearch = '';
+												}}
+											>
+												<UserCircleSolid className="size-4 shrink-0" />
+												<span>{group.name}</span>
+											</button>
+										{/each}
+									{:else}
+										<div class="text-xs text-gray-500 px-3 py-2">
+											{$i18n.t('No matching groups')}
+										</div>
+									{/if}
+								</div>
+							{/if}
 						</div>
 					</div>
 				</div>
