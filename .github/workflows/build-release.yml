@@ -3,7 +3,8 @@ name: Release
 on:
   push:
     branches:
-      - main # or whatever branch you want to use
+      - next # or whatever branch you want to use
+  workflow_dispatch:
 
 jobs:
   release:
