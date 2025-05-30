@@ -117,6 +117,11 @@
 
 		if (res) {
 			config = res;
+			if (!config.replicate) {
+				config.replicate = {
+					REPLICATE_API_TOKEN: ''
+				};
+			}
 		}
 
 		if (config.enabled) {
@@ -184,6 +189,11 @@
 
 			if (res) {
 				config = res;
+				if (!config.replicate) {
+					config.replicate = {
+						REPLICATE_API_TOKEN: ''
+					};
+				}
 			}
 
 			if (config.enabled) {
@@ -302,6 +312,7 @@
 							<option value="comfyui">{$i18n.t('ComfyUI')}</option>
 							<option value="automatic1111">{$i18n.t('Automatic1111')}</option>
 							<option value="gemini">{$i18n.t('Gemini')}</option>
+							<option value="replicate">{$i18n.t('Replicate')}</option>
 						</select>
 					</div>
 				</div>
@@ -628,6 +639,17 @@
 							<SensitiveInput
 								placeholder={$i18n.t('API Key')}
 								bind:value={config.gemini.GEMINI_API_KEY}
+							/>
+						</div>
+					</div>
+				{:else if config?.engine === 'replicate'}
+					<div>
+						<div class=" mb-1.5 text-sm font-medium">{$i18n.t('Replicate API Config')}</div>
+
+						<div class="flex gap-2 mb-1">
+							<SensitiveInput
+								placeholder={$i18n.t('API Key')}
+								bind:value={config.replicate.REPLICATE_API_TOKEN}
 							/>
 						</div>
 					</div>

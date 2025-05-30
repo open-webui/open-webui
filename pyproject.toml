@@ -134,6 +134,7 @@ dependencies = [
 
     "moto[s3]>=5.0.26",
 
+    "replicate",
 ]
 readme = "README.md"
 requires-python = ">= 3.11, < 3.13.0a1"
