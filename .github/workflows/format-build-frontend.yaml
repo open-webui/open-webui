@@ -22,6 +22,8 @@ jobs:
   build:
     name: 'Format & Build Frontend'
     runs-on: ubuntu-latest
+    env:
+      NODE_OPTIONS: '--max-old-space-size=4096'
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
