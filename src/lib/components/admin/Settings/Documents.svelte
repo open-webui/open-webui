@@ -46,6 +46,10 @@
 	let OpenAIUrl = '';
 	let OpenAIKey = '';
 
+	let AzureOpenAIUrl = '';
+	let AzureOpenAIKey = '';
+	let AzureOpenAIVersion = '';
+
 	let OllamaUrl = '';
 	let OllamaKey = '';
 
@@ -86,7 +90,14 @@
 			return;
 		}
 
-		if ((embeddingEngine === 'openai' && OpenAIKey === '') || OpenAIUrl === '') {
+		if (embeddingEngine === 'openai' && (OpenAIKey === '' || OpenAIUrl === '')) {
+			toast.error($i18n.t('OpenAI URL/Key required.'));
+			return;
+		}
+		if (
+			embeddingEngine === 'azure_openai' &&
+			(AzureOpenAIKey === '' || AzureOpenAIUrl === '' || AzureOpenAIVersion === '')
+		) {
 			toast.error($i18n.t('OpenAI URL/Key required.'));
 			return;
 		}
@@ -105,6 +116,11 @@
 			openai_config: {
 				key: OpenAIKey,
 				url: OpenAIUrl
+			},
+			azure_openai_config: {
+				key: AzureOpenAIKey,
+				url: AzureOpenAIUrl,
+				version: AzureOpenAIVersion
 			}
 		}).catch(async (error) => {
 			toast.error(`${error}`);
@@ -205,6 +221,10 @@
 
 			OllamaKey = embeddingConfig.ollama_config.key;
 			OllamaUrl = embeddingConfig.ollama_config.url;
+
+			AzureOpenAIKey = embeddingConfig.azure_openai_config.key;
+			AzureOpenAIUrl = embeddingConfig.azure_openai_config.url;
+			AzureOpenAIVersion = embeddingConfig.azure_openai_config.version;
 		}
 	};
 	onMount(async () => {
@@ -607,6 +627,8 @@
 												embeddingModel = '';
 											} else if (e.target.value === 'openai') {
 												embeddingModel = 'text-embedding-3-small';
+											} else if (e.target.value === 'azure_openai') {
+												embeddingModel = 'text-embedding-3-small';
 											} else if (e.target.value === '') {
 												embeddingModel = 'sentence-transformers/all-MiniLM-L6-v2';
 											}
@@ -615,6 +637,7 @@
 										<option value="">{$i18n.t('Default (SentenceTransformers)')}</option>
 										<option value="ollama">{$i18n.t('Ollama')}</option>
 										<option value="openai">{$i18n.t('OpenAI')}</option>
+										<option value="azure_openai">Azure OpenAI</option>
 									</select>
 								</div>
 							</div>
@@ -644,6 +667,26 @@
 										bind:value={OllamaKey}
 										required={false}
 									/>
+								</div>
+							{:else if embeddingEngine === 'azure_openai'}
+								<div class="my-0.5 flex flex-col gap-2 pr-2 w-full">
+									<div class="flex gap-2">
+										<input
+											class="flex-1 w-full text-sm bg-transparent outline-hidden"
+											placeholder={$i18n.t('API Base URL')}
+											bind:value={AzureOpenAIUrl}
+											required
+										/>
+										<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={AzureOpenAIKey} />
+									</div>
+									<div class="flex gap-2">
+										<input
+											class="flex-1 w-full text-sm bg-transparent outline-hidden"
+											placeholder="Version"
+											bind:value={AzureOpenAIVersion}
+											required
+										/>
+									</div>
 								</div>
 							{/if}
 						</div>
@@ -741,7 +784,7 @@
 							</div>
 						</div>
 
-						{#if embeddingEngine === 'ollama' || embeddingEngine === 'openai'}
+						{#if embeddingEngine === 'ollama' || embeddingEngine === 'openai' || embeddingEngine === 'azure_openai'}
 							<div class="  mb-2.5 flex w-full justify-between">
 								<div class=" self-center text-xs font-medium">
 									{$i18n.t('Embedding Batch Size')}
