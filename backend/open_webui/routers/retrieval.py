@@ -4,6 +4,8 @@ import mimetypes
 import os
 import shutil
 import asyncio
+import re
+from typing import List as TypingList
 
 
 import uuid
@@ -186,6 +188,297 @@ def get_rf(
                     raise Exception(ERROR_MESSAGES.DEFAULT("CrossEncoder error"))
 
     return rf
+
+
+##########################################
+#
+# Text cleaning and processing functions
+#
+##########################################
+
+
+class TextCleaner:
+    """Modular text cleaning system for document processing and embedding preparation."""
+    
+    @staticmethod
+    def normalize_escape_sequences(text: str) -> str:
+        """Normalize escape sequences from various document formats."""
+        if not text:
+            return ""
+        
+        # Handle double-escaped sequences (common in PPTX)
+        replacements = [
+            ('\\\\n', '\n'),     # Double-escaped newlines
+            ('\\\\t', ' '),      # Double-escaped tabs
+            ('\\\\"', '"'),      # Double-escaped quotes
+            ('\\\\r', ''),       # Double-escaped carriage returns
+            ('\\\\/', '/'),      # Double-escaped slashes
+            ('\\\\', '\\'),      # Convert double backslashes to single
+        ]
+        
+        for old, new in replacements:
+            text = text.replace(old, new)
+        
+        # Handle single-escaped sequences
+        single_replacements = [
+            ('\\n', '\n'),       # Single-escaped newlines
+            ('\\t', ' '),        # Single-escaped tabs
+            ('\\"', '"'),        # Single-escaped quotes
+            ('\\\'', "'"),       # Single-escaped single quotes
+            ('\\r', ''),         # Single-escaped carriage returns
+            ('\\/', '/'),        # Single-escaped slashes
+        ]
+        
+        for old, new in single_replacements:
+            text = text.replace(old, new)
+        
+        # Remove any remaining backslash artifacts
+        text = re.sub(r'\\[a-zA-Z]', '', text)       # Remove \letter patterns
+        text = re.sub(r'\\[0-9]', '', text)          # Remove \number patterns
+        text = re.sub(r'\\[^a-zA-Z0-9\s]', '', text) # Remove \symbol patterns
+        text = re.sub(r'\\+', '', text)              # Remove remaining backslashes
+        
+        return text
+    
+    @staticmethod
+    def normalize_unicode(text: str) -> str:
+        """Convert special Unicode characters to ASCII equivalents."""
+        if not text:
+            return ""
+        
+        unicode_map = {
+            '–': '-',     # En dash
+            '—': '-',     # Em dash
+            ''': "'",     # Smart single quote left
+            ''': "'",     # Smart single quote right
+            '"': '"',     # Smart double quote left
+            '"': '"',     # Smart double quote right
+            '…': '...',   # Ellipsis
+            '™': ' TM',   # Trademark
+            '®': ' R',    # Registered
+            '©': ' C',    # Copyright
+            '°': ' deg',  # Degree symbol
+        }
+        
+        for unicode_char, ascii_char in unicode_map.items():
+            text = text.replace(unicode_char, ascii_char)
+        
+        return text
+    
+    @staticmethod
+    def normalize_quotes(text: str) -> str:
+        """Clean up quote-related artifacts and normalize quote marks."""
+        if not text:
+            return ""
+        
+        # Remove quote artifacts
+        quote_patterns = [
+            (r'\\+"', '"'),           # Multiple backslashes before quotes
+            (r'\\"', '"'),            # Escaped double quotes
+            (r"\\'", "'"),            # Escaped single quotes
+            (r'\\&', '&'),            # Escaped ampersands
+            (r'""', '"'),             # Double quotes
+            (r"''", "'"),             # Double single quotes
+        ]
+        
+        for pattern, replacement in quote_patterns:
+            text = re.sub(pattern, replacement, text)
+        
+        return text
+    
+    @staticmethod
+    def normalize_whitespace(text: str, preserve_paragraphs: bool = True) -> str:
+        """Normalize whitespace while optionally preserving paragraph structure."""
+        if not text:
+            return ""
+        
+        if preserve_paragraphs:
+            # Preserve paragraph breaks (double newlines) but clean up excessive spacing
+            text = re.sub(r'[ \t]+', ' ', text)                    # Multiple spaces/tabs -> single space
+            text = re.sub(r'\n\s*\n\s*\n+', '\n\n', text)        # Multiple empty lines -> double line break
+            text = re.sub(r'^\s+|\s+$', '', text, flags=re.MULTILINE)  # Trim line-level whitespace
+        else:
+            # Flatten all whitespace for embedding
+            text = re.sub(r'\n+', ' ', text)                      # All newlines to spaces
+            text = re.sub(r'\s+', ' ', text)                      # All whitespace to single spaces
+        
+        return text.strip()
+    
+    @staticmethod
+    def remove_artifacts(text: str) -> str:
+        """Remove document format artifacts and orphaned elements."""
+        if not text:
+            return ""
+        
+        # Remove orphaned punctuation
+        text = re.sub(r'^\s*[)\]}]+\s*', '', text)               # Orphaned closing brackets at start
+        text = re.sub(r'\n\s*[)\]}]+\s*\n', '\n\n', text)       # Orphaned closing brackets on own lines
+        
+        # Remove excessive punctuation
+        text = re.sub(r'[.]{3,}', '...', text)                   # Multiple dots to ellipsis
+        text = re.sub(r'[-]{3,}', '---', text)                   # Multiple dashes
+        
+        # Remove empty parentheses and brackets
+        text = re.sub(r'\(\s*\)', '', text)                      # Empty parentheses
+        text = re.sub(r'\[\s*\]', '', text)                      # Empty square brackets
+        text = re.sub(r'\{\s*\}', '', text)                      # Empty curly brackets
+        
+        return text
+    
+    @classmethod
+    def clean_for_chunking(cls, text: str) -> str:
+        """Clean text for semantic chunking - preserves structure but normalizes content."""
+        if not text:
+            return ""
+        
+        # Apply all cleaning steps while preserving paragraph structure
+        text = cls.normalize_escape_sequences(text)
+        text = cls.normalize_unicode(text)
+        text = cls.normalize_quotes(text)
+        text = cls.remove_artifacts(text)
+        text = cls.normalize_whitespace(text, preserve_paragraphs=True)
+        
+        return text
+    
+    @classmethod
+    def clean_for_embedding(cls, text: str) -> str:
+        """Clean text for embedding - flattens structure and optimizes for vector similarity."""
+        if not text:
+            return ""
+        
+        # Start with chunking-level cleaning
+        text = cls.clean_for_chunking(text)
+        
+        # Flatten for embedding
+        text = cls.normalize_whitespace(text, preserve_paragraphs=False)
+        
+        return text
+    
+    @classmethod
+    def clean_for_storage(cls, text: str) -> str:
+        """Clean text for storage - most aggressive cleaning for database storage."""
+        if not text:
+            return ""
+        
+        # Start with embedding-level cleaning
+        text = cls.clean_for_embedding(text)
+        
+        # Additional aggressive cleaning for storage
+        text = re.sub(r'\\([^a-zA-Z0-9\s])', r'\1', text)       # Remove any remaining escape sequences
+        
+        return text
+
+
+def clean_text_content(text: str) -> str:
+    """Legacy function wrapper for backward compatibility."""
+    return TextCleaner.clean_for_chunking(text)
+
+
+def create_semantic_chunks(text: str, max_chunk_size: int, overlap_size: int) -> TypingList[str]:
+    """Create semantically aware chunks that respect document structure"""
+    if not text or len(text) <= max_chunk_size:
+        return [text] if text else []
+    
+    chunks = []
+    
+    # Split by double line breaks (paragraphs) first
+    paragraphs = text.split('\n\n')
+    
+    current_chunk = ""
+    
+    for paragraph in paragraphs:
+        paragraph = paragraph.strip()
+        if not paragraph:
+            continue
+            
+        # If adding this paragraph would exceed chunk size
+        if current_chunk and len(current_chunk) + len(paragraph) + 2 > max_chunk_size:
+            # Try to split the current chunk at sentence boundaries if it's too long
+            if len(current_chunk) > max_chunk_size:
+                sentence_chunks = split_by_sentences(current_chunk, max_chunk_size, overlap_size)
+                chunks.extend(sentence_chunks)
+            else:
+                chunks.append(current_chunk.strip())
+            
+            # Start new chunk with overlap from previous chunk if applicable
+            if chunks and overlap_size > 0:
+                prev_chunk = chunks[-1]
+                overlap_text = get_text_overlap(prev_chunk, overlap_size)
+                current_chunk = overlap_text + "\n\n" + paragraph if overlap_text else paragraph
+            else:
+                current_chunk = paragraph
+        else:
+            # Add paragraph to current chunk
+            if current_chunk:
+                current_chunk += "\n\n" + paragraph
+            else:
+                current_chunk = paragraph
+    
+    # Add the last chunk
+    if current_chunk:
+        if len(current_chunk) > max_chunk_size:
+            sentence_chunks = split_by_sentences(current_chunk, max_chunk_size, overlap_size)
+            chunks.extend(sentence_chunks)
+        else:
+            chunks.append(current_chunk.strip())
+    
+    return [chunk for chunk in chunks if chunk.strip()]
+
+
+def split_by_sentences(text: str, max_chunk_size: int, overlap_size: int) -> TypingList[str]:
+    """Split text by sentences when paragraph-level splitting isn't sufficient"""
+    # Split by sentence endings
+    sentences = re.split(r'(?<=[.!?])\s+', text)
+    
+    chunks = []
+    current_chunk = ""
+    
+    for sentence in sentences:
+        sentence = sentence.strip()
+        if not sentence:
+            continue
+            
+        # If adding this sentence would exceed chunk size
+        if current_chunk and len(current_chunk) + len(sentence) + 1 > max_chunk_size:
+            chunks.append(current_chunk.strip())
+            
+            # Start new chunk with overlap
+            if overlap_size > 0:
+                overlap_text = get_text_overlap(current_chunk, overlap_size)
+                current_chunk = overlap_text + " " + sentence if overlap_text else sentence
+            else:
+                current_chunk = sentence
+        else:
+            # Add sentence to current chunk
+            if current_chunk:
+                current_chunk += " " + sentence
+            else:
+                current_chunk = sentence
+    
+    # Add the last chunk
+    if current_chunk:
+        chunks.append(current_chunk.strip())
+    
+    return [chunk for chunk in chunks if chunk.strip()]
+
+
+def get_text_overlap(text: str, overlap_size: int) -> str:
+    """Get the last overlap_size characters from text, preferring word boundaries"""
+    if not text or overlap_size <= 0:
+        return ""
+    
+    if len(text) <= overlap_size:
+        return text
+    
+    # Try to find a good word boundary within the overlap region
+    overlap_text = text[-overlap_size:]
+    
+    # Find the first space to avoid cutting words
+    space_index = overlap_text.find(' ')
+    if space_index > 0:
+        return overlap_text[space_index:].strip()
+    
+    return overlap_text.strip()
 
 
 ##########################################
@@ -1101,28 +1394,37 @@ def save_docs_to_vector_db(
                 raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
 
     if split:
-        if request.app.state.config.TEXT_SPLITTER in ["", "character"]:
-            text_splitter = RecursiveCharacterTextSplitter(
-                chunk_size=request.app.state.config.CHUNK_SIZE,
-                chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
-                add_start_index=True,
+        # Apply advanced content-aware splitting and text cleaning
+        processed_docs = []
+        
+        for doc in docs:
+            # Clean the text content before chunking
+            if not doc.page_content:
+                continue
+            
+            # Apply text cleaning before chunking using new modular system
+            cleaned_content = TextCleaner.clean_for_chunking(doc.page_content)
+            
+            # Create semantic chunks from cleaned content
+            chunks = create_semantic_chunks(
+                cleaned_content,
+                request.app.state.config.CHUNK_SIZE,
+                request.app.state.config.CHUNK_OVERLAP
             )
-        elif request.app.state.config.TEXT_SPLITTER == "token":
-            log.info(
-                f"Using token text splitter: {request.app.state.config.TIKTOKEN_ENCODING_NAME}"
-            )
-
-            tiktoken.get_encoding(str(request.app.state.config.TIKTOKEN_ENCODING_NAME))
-            text_splitter = TokenTextSplitter(
-                encoding_name=str(request.app.state.config.TIKTOKEN_ENCODING_NAME),
-                chunk_size=request.app.state.config.CHUNK_SIZE,
-                chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
-                add_start_index=True,
-            )
-        else:
-            raise ValueError(ERROR_MESSAGES.DEFAULT("Invalid text splitter"))
-
-        docs = text_splitter.split_documents(docs)
+            
+            # Create new documents for each chunk
+            for i, chunk in enumerate(chunks):
+                chunk_metadata = {
+                    **doc.metadata,
+                    "chunk_index": i,
+                    "total_chunks": len(chunks)
+                }
+                processed_docs.append(Document(
+                    page_content=chunk,
+                    metadata=chunk_metadata
+                ))
+        
+        docs = processed_docs
 
     if len(docs) == 0:
         raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
@@ -1197,21 +1499,27 @@ def save_docs_to_vector_db(
             ),
         )
 
+        # Prepare texts for embedding using the new modular cleaning system
+        cleaned_texts = [TextCleaner.clean_for_embedding(text) for text in texts]
+        
         embeddings = embedding_function(
-            list(map(lambda x: x.replace("\n", " "), texts)),
+            cleaned_texts,
             prefix=RAG_EMBEDDING_CONTENT_PREFIX,
             user=user,
         )
 
-        items = [
-            {
+        # Store the cleaned text using the new modular cleaning system
+        items = []
+        for idx in range(len(texts)):
+            # Apply consistent storage-level cleaning
+            text_to_store = TextCleaner.clean_for_storage(texts[idx])
+            
+            items.append({
                 "id": str(uuid.uuid4()),
-                "text": text,
+                "text": text_to_store,
                 "vector": embeddings[idx],
                 "metadata": metadatas[idx],
-            }
-            for idx, text in enumerate(texts)
-        ]
+            })
 
         VECTOR_DB_CLIENT.insert(
             collection_name=collection_name,
@@ -1257,7 +1565,7 @@ def process_file(
 
             docs = [
                 Document(
-                    page_content=form_data.content.replace("<br/>", "\n"),
+                    page_content=TextCleaner.clean_for_chunking(form_data.content.replace("<br/>", "\n")),
                     metadata={
                         **file.meta,
                         "name": file.filename,
@@ -1280,7 +1588,7 @@ def process_file(
             if result is not None and len(result.ids[0]) > 0:
                 docs = [
                     Document(
-                        page_content=result.documents[0][idx],
+                        page_content=TextCleaner.clean_for_chunking(result.documents[0][idx]),
                         metadata=result.metadatas[0][idx],
                     )
                     for idx, id in enumerate(result.ids[0])
@@ -1288,7 +1596,7 @@ def process_file(
             else:
                 docs = [
                     Document(
-                        page_content=file.data.get("content", ""),
+                        page_content=TextCleaner.clean_for_chunking(file.data.get("content", "")),
                         metadata={
                             **file.meta,
                             "name": file.filename,
@@ -1333,9 +1641,13 @@ def process_file(
                     file.filename, file.meta.get("content_type"), file_path
                 )
 
-                docs = [
-                    Document(
-                        page_content=doc.page_content,
+                # Clean the loaded documents before processing
+                cleaned_docs = []
+                for doc in docs:
+                    cleaned_content = TextCleaner.clean_for_chunking(doc.page_content)
+                    
+                    cleaned_docs.append(Document(
+                        page_content=cleaned_content,
                         metadata={
                             **doc.metadata,
                             "name": file.filename,
@@ -1343,13 +1655,12 @@ def process_file(
                             "file_id": file.id,
                             "source": file.filename,
                         },
-                    )
-                    for doc in docs
-                ]
+                    ))
+                docs = cleaned_docs
             else:
                 docs = [
                     Document(
-                        page_content=file.data.get("content", ""),
+                        page_content=TextCleaner.clean_for_chunking(file.data.get("content", "")),
                         metadata={
                             **file.meta,
                             "name": file.filename,
@@ -1359,7 +1670,11 @@ def process_file(
                         },
                     )
                 ]
-            text_content = " ".join([doc.page_content for doc in docs])
+            text_content = " ".join([doc.page_content for doc in docs if doc.page_content])
+
+        # Ensure text_content is never None or empty for hash calculation
+        if not text_content:
+            text_content = ""
 
         log.debug(f"text_content: {text_content}")
         Files.update_file_data_by_id(
@@ -1367,7 +1682,9 @@ def process_file(
             {"content": text_content},
         )
 
-        hash = calculate_sha256_string(text_content)
+        # Ensure we always pass a valid string to calculate_sha256_string
+        hash_input = text_content if text_content else ""
+        hash = calculate_sha256_string(hash_input)
         Files.update_file_hash_by_id(file.id, hash)
 
         if not request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL:
@@ -1441,7 +1758,7 @@ def process_text(
 
     docs = [
         Document(
-            page_content=form_data.content,
+            page_content=TextCleaner.clean_for_chunking(form_data.content),
             metadata={"name": form_data.name, "created_by": user.id},
         )
     ]
@@ -2132,7 +2449,7 @@ def process_files_batch(
 
             docs: List[Document] = [
                 Document(
-                    page_content=text_content.replace("<br/>", "\n"),
+                    page_content=TextCleaner.clean_for_chunking(text_content.replace("<br/>", "\n")),
                     metadata={
                         **file.meta,
                         "name": file.filename,
@@ -2143,7 +2460,7 @@ def process_files_batch(
                 )
             ]
 
-            hash = calculate_sha256_string(text_content)
+            hash = calculate_sha256_string(text_content or "")
             Files.update_file_hash_by_id(file.id, hash)
             Files.update_file_data_by_id(file.id, {"content": text_content})
 
@@ -2185,3 +2502,100 @@ def process_files_batch(
                 )
 
     return BatchProcessFilesResponse(results=results, errors=errors)
+
+
+def delete_file_from_vector_db(file_id: str) -> bool:
+    """
+    Delete all vector embeddings for a specific file from the vector database.
+    This function works with any vector database (Pinecone, ChromaDB, etc.) and
+    handles the cleanup when a file is deleted from the chat.
+    
+    Args:
+        file_id (str): The ID of the file to delete from vector database
+        
+    Returns:
+        bool: True if deletion was successful, False otherwise
+    """
+    try:
+        # Get the file record to access its hash and collection info
+        file = Files.get_file_by_id(file_id)
+        if not file:
+            return False
+        
+        # Get the file hash for vector deletion
+        file_hash = file.hash
+        if not file_hash:
+            return False
+        
+        # Try to get collection name from file metadata
+        collection_name = None
+        if hasattr(file, 'meta') and file.meta:
+            collection_name = file.meta.get('collection_name')
+        
+        # If no collection name in metadata, try common patterns used by Open WebUI
+        if not collection_name:
+            # Open WebUI typically uses these patterns:
+            possible_collections = [
+                f"open-webui_file-{file_id}",  # Most common pattern
+                f"file-{file_id}",             # Alternative pattern
+                f"open-webui_{file_id}",       # Another possible pattern
+            ]
+            
+            # Try each possible collection name
+            for possible_collection in possible_collections:
+                try:
+                    if VECTOR_DB_CLIENT.has_collection(collection_name=possible_collection):
+                        result = VECTOR_DB_CLIENT.delete(
+                            collection_name=possible_collection,
+                            filter={"hash": file_hash},
+                        )
+                        # Pinecone returns None on successful deletion
+                        return True
+                except Exception as e:
+                    continue
+            
+            # If none of the standard patterns work, try searching through all collections
+            try:
+                deleted_count = 0
+                
+                # Get all collections (this method varies by vector DB implementation)
+                if hasattr(VECTOR_DB_CLIENT, 'list_collections'):
+                    try:
+                        collections = VECTOR_DB_CLIENT.list_collections()
+                        
+                        for collection in collections:
+                            try:
+                                if VECTOR_DB_CLIENT.has_collection(collection_name=collection):
+                                    result = VECTOR_DB_CLIENT.delete(
+                                        collection_name=collection,
+                                        filter={"hash": file_hash},
+                                    )
+                                    # Pinecone returns None on successful deletion, so any non-exception means success
+                                    deleted_count += 1
+                            except Exception as e:
+                                continue
+                    except Exception as e:
+                        pass
+                
+                return deleted_count > 0
+                
+            except Exception as e:
+                return False
+        
+        # Delete from the specific collection found in metadata
+        if collection_name and VECTOR_DB_CLIENT.has_collection(collection_name=collection_name):
+            try:
+                result = VECTOR_DB_CLIENT.delete(
+                    collection_name=collection_name,
+                    filter={"hash": file_hash},
+                )
+                # Pinecone returns None on successful deletion, so we check for no exception
+                # rather than checking the return value
+                return True
+            except Exception as e:
+                return False
+        else:
+            return False
+            
+    except Exception as e:
+        return False
