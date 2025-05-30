@@ -138,7 +138,7 @@
         "
 	data-state={$showLibrary}
 >
-	<div class="flex items-center justify-between pt-6 pr-6 pb-6">
+	<div class="flex items-center justify-between pt-6 pr-6 pb-2">
 		<p class="text-lightGray-100 dark:text-white text-base">{$i18n.t('Assistants')}</p>
 		<button on:click={() => showLibrary.set(!$showLibrary)}><CloseIcon /></button>
 	</div>
@@ -150,39 +150,43 @@
 		<div class="sticky top-0 z-10 pb-3">
 			<div
 				use:dragScroll
-				class="cursor-grab flex gap-5 overflow-x-scroll py-3.5 assistants-scrollbar"
-			>
-				{#each models as model}
-					<Tooltip className="tooltip" placement="bottom" content={isDragging ? '' : model?.name + '. ' + model?.meta?.description}>
-						<button
-							on:click={async () => {
-								selectedChatId = null;
-								await goto(`/?models=${encodeURIComponent(model.id)}`);
-								const newChatButton = document.getElementById('new-chat-button');
-								setTimeout(() => {
-									newChatButton?.click();
-								}, 0);
-							}}
-							class="block w-[4rem] h-[4rem] relative"
-						>
-							{#if model?.bookmarked_by_user}
-								<div
-									class="flex justify-center items-center absolute w-7 h-7 -right-3.5 -top-3.5 rounded-lg bg-lightGray-700 dark:bg-customGray-900 border border-lightGray-300 dark:border-customGray-700"
-								>
-									<BookmarkedIcon />
-								</div>
-							{/if}
-							<img
-								class="rounded-md"
-								src={model?.meta?.profile_image_url
-									? model?.meta?.profile_image_url
-									: $company?.profile_image_url}
-								draggable="false"
-								alt={model?.name}
-							/>
-						</button>
-					</Tooltip>
-				{/each}
+				class="cursor-grab flex gap-5 overflow-x-scroll py-3.5 assistants-scrollbar min-h-[94px]"
+			>	
+				{#if models?.length < 1}
+					<div class="pt-4">{$i18n.t('No assistants added yet')}</div>
+				{:else}
+					{#each models as model}
+						<Tooltip className="tooltip" placement="bottom" content={isDragging ? '' : model?.name + '. ' + model?.meta?.description}>
+							<button
+								on:click={async () => {
+									selectedChatId = null;
+									await goto(`/?models=${encodeURIComponent(model.id)}`);
+									const newChatButton = document.getElementById('new-chat-button');
+									setTimeout(() => {
+										newChatButton?.click();
+									}, 0);
+								}}
+								class="block w-[4rem] h-[4rem] relative"
+							>
+								{#if model?.bookmarked_by_user}
+									<div
+										class="flex justify-center items-center absolute w-7 h-7 -right-3.5 -top-3.5 rounded-lg bg-lightGray-700 dark:bg-customGray-900 border border-lightGray-300 dark:border-customGray-700"
+									>
+										<BookmarkedIcon />
+									</div>
+								{/if}
+								<img
+									class="rounded-md"
+									src={model?.meta?.profile_image_url
+										? model?.meta?.profile_image_url
+										: $company?.profile_image_url}
+									draggable="false"
+									alt={model?.name}
+								/>
+							</button>
+						</Tooltip>
+					{/each}
+				{/if}
 			</div>
 		</div>
 		<p class="text-lightGray-100 dark:text-white text-base mb-3">{$i18n.t('Prompts')}</p>
@@ -190,22 +194,22 @@
 			<div class="flex bg-lightGray-700 dark:bg-customGray-800 rounded-md flex-shrink-0">
 				<button
 					on:click={() => (accessFilter = 'all')}
-					class={`${accessFilter === 'all' ? 'bg-lightGray-400 text-lightGray-100 dark:bg-customGray-900 rounded-md border border-lightGray-250 dark:border-customGray-700' : 'text-lightGray-100/70'} font-medium px-2 md:px-[18px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
+					class={`${accessFilter === 'all' ? 'bg-lightGray-400 text-lightGray-100 dark:bg-customGray-900 rounded-md border border-lightGray-250 dark:border-customGray-700' : 'text-lightGray-100/70'} font-medium px-2 md:px-[12px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
 					>{$i18n.t('All')}</button
 				>
 				<button
 					on:click={() => (accessFilter = 'private')}
-					class={`${accessFilter === 'private' ? 'bg-lightGray-400 text-lightGray-100 dark:bg-customGray-900 rounded-md border border-lightGray-250 dark:border-customGray-700' : 'text-lightGray-100/70'} font-medium px-2 md:px-[18px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
+					class={`${accessFilter === 'private' ? 'bg-lightGray-400 text-lightGray-100 dark:bg-customGray-900 rounded-md border border-lightGray-250 dark:border-customGray-700' : 'text-lightGray-100/70'} font-medium px-2 md:px-[12px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
 					>{$i18n.t('My Prompts')}</button
 				>
 				<button
 					on:click={() => (accessFilter = 'public')}
-					class={`${accessFilter === 'public' ? 'bg-lightGray-400 text-lightGray-100 dark:bg-customGray-900 rounded-md border border-lightGray-250 dark:border-customGray-700' : 'text-lightGray-100/70'} font-medium px-2 md:px-[18px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
+					class={`${accessFilter === 'public' ? 'bg-lightGray-400 text-lightGray-100 dark:bg-customGray-900 rounded-md border border-lightGray-250 dark:border-customGray-700' : 'text-lightGray-100/70'} font-medium px-2 md:px-[12px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
 					>{$i18n.t('Public')}</button
 				>
 				<button
 					on:click={() => (accessFilter = 'pre-built')}
-					class={`${accessFilter === 'pre-built' ? 'bg-lightGray-400 text-lightGray-100 dark:bg-customGray-900 rounded-md border border-lightGray-250 dark:border-customGray-700' : 'text-lightGray-100/70'} font-medium px-2 md:px-[18px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
+					class={`${accessFilter === 'pre-built' ? 'bg-lightGray-400 text-lightGray-100 dark:bg-customGray-900 rounded-md border border-lightGray-250 dark:border-customGray-700' : 'text-lightGray-100/70'} font-medium px-2 md:px-[12px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
 					>{$i18n.t('Pre-built')}</button
 				>
 			</div>
@@ -216,7 +220,7 @@
 				<Search className="size-3.5" />
 			</button>
 		</div>
-		<div class="prompt-scrollbar overflow-y-auto pr-6" style="max-height: calc(100dvh - 17rem);">
+		<div class="prompt-scrollbar overflow-y-auto pr-6" style="max-height: calc(100dvh - 16rem);">
 			<div class="container">
 				{#each Object.keys(taggedPrompts) as tag, i}
 					<Accordeon
