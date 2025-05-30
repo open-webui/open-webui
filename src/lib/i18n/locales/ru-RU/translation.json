@@ -1343,7 +1343,7 @@
 	"What are you working on?": "Над чем вы работаете?",
 	"What’s New in": "Что нового в",
 	"When enabled, the model will respond to each chat message in real-time, generating a response as soon as the user sends a message. This mode is useful for live chat applications, but may impact performance on slower hardware.": "Если эта функция включена, модель будет отвечать на каждое сообщение чата в режиме реального времени, генерируя ответ, как только пользователь отправит сообщение. Этот режим полезен для приложений живого чата, но может повлиять на производительность на более медленном оборудовании.",
-	"wherever you are": "где бы вы не были",
+	"wherever you are": "где бы вы ни были",
 	"Whether to paginate the output. Each page will be separated by a horizontal rule and page number. Defaults to False.": "Следует ли разбивать выходные данные на страницы. Каждая страница будет разделена горизонтальной линией и номером страницы. По умолчанию установлено значение Выкл.",
 	"Whisper (Local)": "Whisper (Локально)",
 	"Why?": "Почему?",
