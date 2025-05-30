@@ -537,8 +537,18 @@ def remove_file_from_knowledge_by_id(
         log.debug(e)
         pass
 
-    # Delete file from database
-    Files.delete_file_by_id(form_data.file_id)
+    # Delete file from database and underlying file store
+    result = Files.delete_file_by_id(id)
+    if result and file.path:
+        try:
+            Storage.delete_file(file.path)
+        except Exception as e:
+            log.exception(e)
+            log.error("Error deleting files")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT("Error deleting files"),
+            )
 
     if knowledge:
         data = knowledge.data or {}

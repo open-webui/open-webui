@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, getContext, tick } from 'svelte';
 	import { models, tools, functions, knowledge as knowledgeCollections, user } from '$lib/stores';
+	import { get } from 'svelte/store';
 
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import Tags from '$lib/components/common/Tags.svelte';
@@ -13,6 +14,8 @@
 	import { getTools } from '$lib/apis/tools';
 	import { getFunctions } from '$lib/apis/functions';
 	import { getKnowledgeBases } from '$lib/apis/knowledge';
+	import { getToolValvesSpecById } from '$lib/apis/tools';
+	import { getFunctionValvesSpecById } from '$lib/apis/functions';
 	import AccessControl from '../common/AccessControl.svelte';
 	import { stringify } from 'postcss';
 	import { toast } from 'svelte-sonner';
@@ -65,7 +68,11 @@
 			profile_image_url: '/static/favicon.png',
 			description: '',
 			suggestion_prompts: null,
-			tags: []
+			tags: [],
+			valves: {
+				functions: {},
+				tools: {}
+			}
 		},
 		params: {
 			system: ''
@@ -89,6 +96,10 @@
 	let toolIds = [];
 	let filterIds = [];
 	let actionIds = [];
+	let toolValvesSpecs = {};
+	let functionValvesSpecs = {};
+	let functionValves = {};
+	let toolValves = {};
 
 	let accessControl = {};
 
@@ -110,6 +121,10 @@
 
 		info.id = id;
 		info.name = name;
+		info.meta.valves = {};
+
+		console.log(`submitting with new toolValves: ${JSON.stringify(toolValves)}`);
+		console.log(`submitting with new functionValves: ${JSON.stringify(functionValves)}`);
 
 		if (id === '') {
 			toast.error('Model ID is required.');
@@ -138,6 +153,7 @@
 			}
 		}
 
+		info.meta.valves.tools = toolValves;
 		if (toolIds.length > 0) {
 			info.meta.toolIds = toolIds;
 		} else {
@@ -146,6 +162,7 @@
 			}
 		}
 
+		info.meta.valves.functions = functionValves;
 		if (filterIds.length > 0) {
 			info.meta.filterIds = filterIds;
 		} else {
@@ -169,6 +186,16 @@
 				delete info.params[key];
 			}
 		});
+		// iterate through all valve settings for both functions and tools, and remove empty settings (aka things that got set back to default)
+		Object.keys(info.meta.valves).forEach((valveType) => {
+			Object.keys(info.meta.valves[valveType]).forEach((functionId) => {
+				Object.keys(info.meta.valves[valveType][functionId]).forEach((key) => {
+					if (info.meta.valves[valveType][functionId][key] === null) {
+						delete info.meta.valves[valveType][functionId][key];
+					}
+				});
+			});
+		});
 
 		await onSubmit(info);
 
@@ -180,6 +207,57 @@
 		await tools.set(await getTools(localStorage.token));
 		await functions.set(await getFunctions(localStorage.token));
 		await knowledgeCollections.set(await getKnowledgeBases(localStorage.token));
+
+		// Populate the tool valve specs
+		try {
+			const currentTools = get(tools) ?? [];
+			const toolValvePromises = currentTools.map((tool) =>
+				getToolValvesSpecById(localStorage.token, tool.id)
+			);
+			const resolvedToolValves = await Promise.all(toolValvePromises);
+			console.log(`resolvedToolValves: ${resolvedToolValves}`);
+
+			// Convert array of results to an object with tool IDs as keys
+			toolValvesSpecs = resolvedToolValves.reduce((acc, spec, index) => {
+				if (spec) {
+					console.log(
+						`setting index ${index} to ${spec} from ${JSON.stringify(currentTools[index])}`
+					);
+					acc[currentTools[index].id] = spec;
+				}
+				return acc;
+			}, {});
+			console.log(`toolValvesSpecs: ${JSON.stringify(toolValvesSpecs)}`);
+
+			// Initialize tool valves with default values from specs for the selected tools
+			toolValves = model?.meta?.valves?.tools ?? {};
+		} catch (error) {
+			console.error('Error loading tool valve specs:', error);
+		}
+
+		// Populate the function valve specs
+		try {
+			// Use get() to access the store's current value in non-reactive context
+			const currentFunctions = get(functions) ?? [];
+			console.log(JSON.stringify(currentFunctions));
+			const functionValvePromises = currentFunctions.map((func) =>
+				getFunctionValvesSpecById(localStorage.token, func.id)
+			);
+			const resolvedFunctionValves = await Promise.all(functionValvePromises);
+			console.log(resolvedFunctionValves);
+
+			// Convert array of results to an object with function IDs as keys
+			functionValvesSpecs = resolvedFunctionValves.reduce((acc, spec, index) => {
+				if (spec) {
+					acc[currentFunctions[index].id] = spec;
+				}
+				return acc;
+			}, {});
+			console.log(`functionValvesSpecs: ${JSON.stringify(functionValvesSpecs)}`);
+			functionValves = model?.meta?.valves?.functions ?? {};
+		} catch (error) {
+			console.error('Error loading function valve specs:', error);
+		}
 
 		// Scroll to top 'workspace-container' element
 		const workspaceContainer = document.getElementById('workspace-container');
@@ -700,11 +778,18 @@
 					</div>
 
 					<div class="my-2">
-						<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools} />
+						<ToolsSelector
+							valvesSpecs={toolValvesSpecs}
+							bind:valves={toolValves}
+							bind:selectedToolIds={toolIds}
+							tools={$tools}
+						/>
 					</div>
 
 					<div class="my-2">
 						<FiltersSelector
+							valvesSpecs={functionValvesSpecs}
+							bind:valves={functionValves}
 							bind:selectedFilterIds={filterIds}
 							filters={$functions.filter((func) => func.type === 'filter')}
 						/>
@@ -712,6 +797,8 @@
 
 					<div class="my-2">
 						<ActionsSelector
+							valvesSpecs={functionValvesSpecs}
+							bind:valves={functionValves}
 							bind:selectedActionIds={actionIds}
 							actions={$functions.filter((func) => func.type === 'action')}
 						/>

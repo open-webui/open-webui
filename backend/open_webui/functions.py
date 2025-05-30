@@ -252,7 +252,10 @@ async def generate_function_chat_completion(
         if model_info.base_model_id:
             form_data["model"] = model_info.base_model_id
 
-        params = model_info.params.model_dump()
+        params = {
+            **model_info.params.model_dump(),
+            **metadata["model"]["info"]["params"],
+        }
 
         if params:
             system = params.pop("system", None)

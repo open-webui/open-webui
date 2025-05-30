@@ -83,6 +83,17 @@ async def process_filter_functions(
         # Apply valves to the function
         if hasattr(function_module, "valves") and hasattr(function_module, "Valves"):
             valves = Functions.get_function_valves_by_id(filter_id)
+            # overwrite global valves with model valves
+            model_valves = (
+                extra_params.get("__model__", {})
+                .get("info", {})
+                .get("meta", {})
+                .get("valves", {})
+                .get("functions", {})
+                .get(filter_id, {})
+            )
+            valves = {**valves, **model_valves}
+
             function_module.valves = function_module.Valves(
                 **(valves if valves else {})
             )

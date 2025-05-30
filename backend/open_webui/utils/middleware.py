@@ -861,7 +861,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         files = list({json.dumps(f, sort_keys=True): f for f in files}.values())
 
     metadata = {
-        **metadata,
+        **form_data.get("metadata", metadata),
         "tool_ids": tool_ids,
         "files": files,
     }
@@ -978,6 +978,27 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 ),
                 form_data["messages"],
             )
+            # reformat last user message to include the context
+            RAG_USER_MESSAGE_TEMPLATE = (
+                "# The user asked:\n{{QUERY}}\n\n# Reference materials:\n{{CONTEXT}}"
+            )
+            for message in reversed(form_data["messages"]):
+                if message["role"] == "user":
+                    if isinstance(message["content"], list):
+                        for item in message["content"]:
+                            if item["type"] == "text":
+                                item["text"] = rag_template(
+                                    RAG_USER_MESSAGE_TEMPLATE,
+                                    context_string,
+                                    item["text"],
+                                )
+                    else:
+                        message["content"] = rag_template(
+                            RAG_USER_MESSAGE_TEMPLATE,
+                            context_string,
+                            message["content"],
+                        )
+                    break
 
     # If there are citations, add them to the data_items
     sources = [
@@ -1048,6 +1069,14 @@ async def process_chat_response(
                 )
 
             if tasks and messages:
+                # make task calls using an admin user
+                admin_email = request.app.state.config.ADMIN_EMAIL
+
+                if admin_email:
+                    admin = Users.get_user_by_email(admin_email)
+                else:
+                    admin = Users.get_first_user()
+
                 if TASKS.TITLE_GENERATION in tasks:
                     if tasks[TASKS.TITLE_GENERATION]:
                         res = await generate_title(
@@ -1057,7 +1086,7 @@ async def process_chat_response(
                                 "messages": messages,
                                 "chat_id": metadata["chat_id"],
                             },
-                            user,
+                            admin,
                         )
 
                         if res and isinstance(res, dict):
@@ -1112,7 +1141,7 @@ async def process_chat_response(
                             "messages": messages,
                             "chat_id": metadata["chat_id"],
                         },
-                        user,
+                        admin,
                     )
 
                     if res and isinstance(res, dict):
