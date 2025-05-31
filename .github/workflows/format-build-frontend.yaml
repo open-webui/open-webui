@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - dev
+      - next
     paths-ignore:
       - 'backend/**'
       - 'pyproject.toml'
@@ -13,6 +14,7 @@ on:
     branches:
       - main
       - dev
+      - next
     paths-ignore:
       - 'backend/**'
       - 'pyproject.toml'
