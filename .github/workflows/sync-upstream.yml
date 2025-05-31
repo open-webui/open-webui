@@ -38,10 +38,7 @@ jobs:
           git config --global user.email "actions@github.com"
           
           git fetch origin main
-          git checkout -b temp-branch origin/main
-          
-          # Use rebase instead of merge
-          git rebase upstream/main || true
+          git fetch origin upstream # ADDED: to ensure local origin/upstream is current for rev-list
           
           # Set default repo for gh commands
           gh repo set-default chrysapp/open-webui
