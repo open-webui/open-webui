@@ -29,14 +29,15 @@ except ImportError:
 class DatabaseType(Enum):
     """
     Enumeration of supported database types and their JSON capabilities.
-    
-    Used by DatabaseAdapter to determine optimal query strategies and 
+
+    Used by DatabaseAdapter to determine optimal query strategies and
     features available for each database backend.
     """
-    SQLITE = "sqlite"                    # SQLite with JSON1 extension
+
+    SQLITE = "sqlite"  # SQLite with JSON1 extension
     POSTGRESQL_JSON = "postgresql_json"  # PostgreSQL with standard JSON
     POSTGRESQL_JSONB = "postgresql_jsonb"  # PostgreSQL with binary JSONB
-    UNSUPPORTED = "unsupported"          # Unsupported database type
+    UNSUPPORTED = "unsupported"  # Unsupported database type
 
 
 class DatabaseAdapter:
@@ -45,7 +46,7 @@ class DatabaseAdapter:
     def __init__(self, db):
         """
         Initialize adapter with database session and setup caching.
-        
+
         Args:
             db: SQLAlchemy database session for introspection and queries
         """
@@ -266,7 +267,7 @@ class Chat(Base):
     # Sharing functionality - UUID for shared public links
     share_id = Column(Text, unique=True, nullable=True)
     # Organization and state flags
-    archived = Column(Boolean, default=False)      # Hidden from main view
+    archived = Column(Boolean, default=False)  # Hidden from main view
     pinned = Column(Boolean, default=False, nullable=True)  # Pinned to top
 
     # Extensible metadata storage (tags, custom fields, etc.)
@@ -291,13 +292,13 @@ class ChatModel(BaseModel):
     updated_at: int  # timestamp in epoch
 
     # Optional fields with defaults
-    share_id: Optional[str] = None    # Public sharing identifier
-    archived: bool = False            # Archive status
-    pinned: Optional[bool] = False    # Pin status (nullable for compatibility)
+    share_id: Optional[str] = None  # Public sharing identifier
+    archived: bool = False  # Archive status
+    pinned: Optional[bool] = False  # Pin status (nullable for compatibility)
 
     # Extensible fields
-    meta: dict = {}                   # Metadata including tags
-    folder_id: Optional[str] = None   # Folder organization
+    meta: dict = {}  # Metadata including tags
+    folder_id: Optional[str] = None  # Folder organization
 
 
 ####################
@@ -308,35 +309,38 @@ class ChatModel(BaseModel):
 class ChatForm(BaseModel):
     """
     Form model for creating new chats with basic data validation.
-    
+
     Used for API endpoints that create new chat conversations.
     Validates that the required chat data structure is present.
     """
+
     chat: dict
 
 
 class ChatImportForm(ChatForm):
     """
     Extended form model for importing chats with additional metadata.
-    
+
     Used for bulk import operations or when creating chats with
     pre-existing metadata, tags, or organizational settings.
-    
+
     Extends ChatForm with optional metadata fields that are not
     required for basic chat creation but useful for import scenarios.
     """
-    meta: Optional[dict] = {}         # Tags and other metadata
-    pinned: Optional[bool] = False    # Pin status
-    folder_id: Optional[str] = None   # Folder assignment
+
+    meta: Optional[dict] = {}  # Tags and other metadata
+    pinned: Optional[bool] = False  # Pin status
+    folder_id: Optional[str] = None  # Folder assignment
 
 
 class ChatTitleMessagesForm(BaseModel):
     """
     Form model for operations that need title and messages separately.
-    
+
     Used by endpoints that work with chat titles and message lists
     independently, such as chat generation or title updates.
     """
+
     title: str
     messages: list[dict]
 
@@ -344,24 +348,26 @@ class ChatTitleMessagesForm(BaseModel):
 class ChatTitleForm(BaseModel):
     """
     Simple form model for chat title updates.
-    
+
     Used by endpoints that only modify the chat title without
     affecting the conversation content or metadata.
     """
+
     title: str
 
 
 class ChatResponse(BaseModel):
     """
     Complete response model for chat API endpoints.
-    
+
     Provides a comprehensive view of chat data for API responses,
     including all fields that clients might need for display,
     organization, and functionality.
-    
+
     Used by endpoints that return full chat information to ensure
     consistent response structure across the API.
     """
+
     # Core chat identification and data
     id: str
     user_id: str
@@ -372,24 +378,25 @@ class ChatResponse(BaseModel):
     created_at: int  # timestamp in epoch
     # Sharing and organization
     share_id: Optional[str] = None  # id of the chat to be shared
-    archived: bool                  # archive status
+    archived: bool  # archive status
     pinned: Optional[bool] = False  # pin status
     # Extensible metadata and organization
-    meta: dict = {}                 # tags and other metadata
-    folder_id: Optional[str] = None # folder assignment
+    meta: dict = {}  # tags and other metadata
+    folder_id: Optional[str] = None  # folder assignment
 
 
 class ChatTitleIdResponse(BaseModel):
     """
     Lightweight response model for chat list operations.
-    
+
     Optimized for chat list views that only need basic identification
     and sorting information. Reduces payload size for better performance
     when displaying large numbers of chats.
-    
+
     Used by endpoints that return chat lists, search results, or
     navigation menus where full chat content is not needed.
     """
+
     id: str
     title: str
     updated_at: int
@@ -400,7 +407,7 @@ class ChatTable:
     def __init__(self):
         """
         Initialize the ChatTable with default configuration.
-        
+
         No initialization parameters required as the class uses
         dependency injection through the get_db() context manager
         for database sessions.
