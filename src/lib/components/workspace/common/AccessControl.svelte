@@ -19,7 +19,7 @@
 
 	let selectedGroupId = '';
 	let groups = [];
-	let groupSearch = '';
+	let groupUserSearch = '';
 	let searchFocused = false;
 
 	$: if (!allowPublic && accessControl === null) {
@@ -75,6 +75,16 @@
 		onSelectGroup();
 	}
 
+	$: filteredGroups =
+		accessControl !== null
+			? groups
+					.filter(
+						(group) =>
+							!accessControl.read.group_ids.includes(group.id) &&
+							group.name.toLowerCase().includes(groupUserSearch.toLowerCase())
+					)
+			: [];
+
 	const onSelectGroup = () => {
 		if (selectedGroupId !== '') {
 			accessControl.read.group_ids = [...accessControl.read.group_ids, selectedGroupId];
@@ -83,15 +93,6 @@
 		}
 	};
 
-	$: filteredGroups =
-		accessControl !== null
-			? groups
-					.filter(
-						(group) =>
-							!accessControl.read.group_ids.includes(group.id) &&
-							group.name.toLowerCase().includes(groupSearch.toLowerCase())
-					)
-			: [];
 </script>
 
 <div class=" rounded-lg flex flex-col gap-2">
@@ -143,7 +144,7 @@
 					on:change={(e) => {
 						if (e.target.value === 'public') {
 							accessControl = null;
-							groupSearch = '';
+							groupUserSearch = '';
 						} else {
 							accessControl = {
 								read: {
@@ -191,8 +192,8 @@
 						<div class="flex flex-1 flex-col gap-1 w-full px-0.5">
 							<input
 								type="text"
-								placeholder={$i18n.t('Search groups')}
-								bind:value={groupSearch}
+								placeholder={$i18n.t('Search group')}
+								bind:value={groupUserSearch}
 								on:focus={() => (searchFocused = true)}
 								on:blur={() => setTimeout(() => (searchFocused = false), 100)}
 								class="outline-hidden bg-transparent text-sm rounded-lg block w-full pr-10 max-w-full border border-gray-200 dark:border-gray-700 px-2 py-1.5 placeholder-gray-400"
@@ -207,7 +208,7 @@
 												class="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition flex items-center gap-2"
 												on:click={() => {
 													accessControl.read.group_ids = [...accessControl.read.group_ids, group.id];
-													groupSearch = '';
+													groupUserSearch = '';
 												}}
 											>
 												<UserCircleSolid className="size-4 shrink-0" />
