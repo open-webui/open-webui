@@ -75,16 +75,86 @@ class VectorSearchRetriever(BaseRetriever):
 
 
 def query_doc(
-    collection_name: str, query_embedding: list[float], k: int, user: UserModel = None
+    collection_name: str,
+    query_embedding: list[float],
+    k: int,
+    user: UserModel = None,
+    expected_count: int = None,
 ):
+    import time
+
     try:
         log.debug(f"query_doc:doc {collection_name}")
-        result = VECTOR_DB_CLIENT.search(
-            collection_name=collection_name,
-            vectors=[query_embedding],
-            limit=k,
-        )
 
+        # Auto-detect web search collections and use intelligent waiting
+        is_web_search = collection_name.startswith("web-search-")
+
+        if is_web_search or (expected_count is not None and expected_count > 0):
+            # For web search collections, use longer timeout and more checking
+            timeout = 15.0 if is_web_search else 10.0
+
+            if wait_for_indexing(collection_name, expected_count or 1, timeout):
+                # Indexing complete, perform search
+                result = VECTOR_DB_CLIENT.search(
+                    collection_name=collection_name,
+                    vectors=[query_embedding],
+                    limit=k,
+                )
+                if result:
+                    doc_count = (
+                        len(result.documents[0]) if result.documents[0] else 0
+                    )
+                    log.info(f"query_doc: Retrieved {doc_count} documents")
+                    log.info(f"query_doc:result {result.ids} {result.metadatas}")
+                return result
+            else:
+                # Timeout - return empty result
+                log.warning(
+                    f"query_doc: Indexing timeout for collection "
+                    f"'{collection_name}'"
+                )
+                return None
+
+        # Fallback: Legacy retry mechanism for non-web-search collections
+        max_retries = 4
+        retry_delay = 2.0  # seconds
+
+        for attempt in range(max_retries):
+            log.info(
+                f"query_doc: Attempt {attempt + 1}/{max_retries} "
+                f"for collection '{collection_name}'"
+            )
+
+            result = VECTOR_DB_CLIENT.search(
+                collection_name=collection_name,
+                vectors=[query_embedding],
+                limit=k,
+            )
+
+            # Check if we got meaningful results
+            if result and result.documents and result.documents[0]:
+                log.info(
+                    f"query_doc: SUCCESS on attempt {attempt + 1} - "
+                    f"Found {len(result.documents[0])} documents"
+                )
+                if result:
+                    log.info(f"query_doc:result {result.ids} {result.metadatas}")
+                return result
+
+            # If this is not the last attempt and we got empty results, wait and retry
+            if attempt < max_retries - 1:
+                log.info(
+                    f"query_doc: Empty results on attempt {attempt + 1}, "
+                    f"retrying in {retry_delay}s..."
+                )
+                time.sleep(retry_delay)
+            else:
+                log.warning(
+                    f"query_doc: All {max_retries} attempts failed "
+                    f"for collection '{collection_name}'"
+                )
+
+        # Log final result if all retries completed
         if result:
             log.info(f"query_doc:result {result.ids} {result.metadatas}")
 
@@ -94,11 +164,192 @@ def query_doc(
         raise e
 
 
-def get_doc(collection_name: str, user: UserModel = None):
+def wait_for_indexing(
+    collection_name: str, expected_count: int, timeout: float = 10.0
+) -> bool:
+    """
+    Wait for vector database indexing to complete by checking for expected
+    document count.
+
+    Args:
+        collection_name: Name of the collection to check
+        expected_count: Number of documents expected to be indexed
+                       (use 1 for "any documents")
+        timeout: Maximum time to wait in seconds
+
+    Returns:
+        True if expected documents are available, False if timeout
+    """
+    import time
+
+    if expected_count == 0:
+        log.info(
+            f"No documents expected for collection '{collection_name}', "
+            "skipping wait"
+        )
+        return True
+
+    start_time = time.time()
+    check_interval = 0.5  # Start with 500ms intervals
+    max_interval = 2.0    # Max 2 second intervals
+    attempt = 1
+
+    # For web search with unknown count, use stabilization approach
+    is_web_search = collection_name.startswith("web-search-")
+    use_stabilization = is_web_search and expected_count == 1
+
+    if use_stabilization:
+        log.info(
+            f"Waiting for document indexing to stabilize in "
+            f"'{collection_name}'"
+        )
+        last_count = 0
+        stable_count = 0
+        stable_threshold = 2  # Need 2 consecutive checks with same count
+    else:
+        log.info(
+            f"Waiting for {expected_count} documents to be indexed in "
+            f"'{collection_name}'"
+        )
+
+    while time.time() - start_time < timeout:
+        try:
+            result = VECTOR_DB_CLIENT.get(collection_name=collection_name)
+
+            if result and result.documents and result.documents[0]:
+                current_count = len(result.documents[0])
+
+                if use_stabilization:
+                    log.info(
+                        f"Stabilization check {attempt}: {current_count} "
+                        "documents available"
+                    )
+
+                    if current_count == last_count and current_count > 0:
+                        stable_count += 1
+                        if stable_count >= stable_threshold:
+                            elapsed = time.time() - start_time
+                            log.info(
+                                f"Indexing stabilized! {current_count} "
+                                f"documents available after {elapsed:.1f}s"
+                            )
+                            return True
+                    else:
+                        stable_count = 0
+                        last_count = current_count
+                else:
+                    log.info(
+                        f"Indexing check {attempt}: {current_count}/"
+                        f"{expected_count} documents available"
+                    )
+
+                    if current_count >= expected_count:
+                        elapsed = time.time() - start_time
+                        log.info(
+                            f"Indexing completed! {current_count} documents "
+                            f"available after {elapsed:.1f}s"
+                        )
+                        return True
+
+            else:
+                if use_stabilization:
+                    log.info(
+                        f"Stabilization check {attempt}: 0 documents available"
+                    )
+                else:
+                    log.info(
+                        f"Indexing check {attempt}: 0/{expected_count} "
+                        "documents available"
+                    )
+
+        except Exception as e:
+            log.warning(f"Error checking indexing status: {e}")
+
+        # Exponential backoff with max interval
+        time.sleep(check_interval)
+        check_interval = min(check_interval * 1.5, max_interval)
+        attempt += 1
+
+    elapsed = time.time() - start_time
+    if use_stabilization:
+        log.warning(f"Indexing stabilization timeout after {elapsed:.1f}s")
+    else:
+        log.warning(
+            f"Indexing timeout after {elapsed:.1f}s - "
+            f"expected {expected_count} documents"
+        )
+    return False
+
+
+def get_doc(
+    collection_name: str, user: UserModel = None, expected_count: int = None
+):
+    import time
+
     try:
         log.debug(f"get_doc:doc {collection_name}")
-        result = VECTOR_DB_CLIENT.get(collection_name=collection_name)
 
+        # Auto-detect web search collections and use intelligent waiting
+        is_web_search = collection_name.startswith("web-search-")
+
+        if is_web_search or (expected_count is not None and expected_count > 0):
+            # For web search collections, use longer timeout and more checking
+            timeout = 15.0 if is_web_search else 10.0
+
+            if wait_for_indexing(collection_name, expected_count or 1, timeout):
+                # Indexing complete, retrieve documents
+                result = VECTOR_DB_CLIENT.get(collection_name=collection_name)
+                if result:
+                    doc_count = (
+                        len(result.documents[0]) if result.documents[0] else 0
+                    )
+                    log.info(f"get_doc: Retrieved {doc_count} documents")
+                    log.info(f"query_doc:result {result.ids} {result.metadatas}")
+                return result
+            else:
+                # Timeout - return empty result
+                log.warning(
+                    f"get_doc: Indexing timeout for collection "
+                    f"'{collection_name}'"
+                )
+                return None
+
+        # Fallback: Legacy retry mechanism for non-web-search collections
+        max_retries = 4
+        retry_delay = 2.0  # seconds
+
+        for attempt in range(max_retries):
+            log.info(
+                f"get_doc: Attempt {attempt + 1}/{max_retries} "
+                f"for collection '{collection_name}'"
+            )
+
+            result = VECTOR_DB_CLIENT.get(collection_name=collection_name)
+
+            # Check if we got meaningful results
+            if result and result.documents and result.documents[0]:
+                log.info(
+                    f"get_doc: SUCCESS on attempt {attempt + 1} - "
+                    f"Found {len(result.documents[0])} documents"
+                )
+                if result:
+                    log.info(f"query_doc:result {result.ids} {result.metadatas}")
+                return result
+
+            # If this is not the last attempt and we got empty results, wait and retry
+            if attempt < max_retries - 1:
+                log.info(
+                    f"get_doc: Empty results on attempt {attempt + 1}, "
+                    f"retrying in {retry_delay}s..."
+                )
+                time.sleep(retry_delay)
+            else:
+                log.warning(
+                    f"get_doc: All {max_retries} attempts failed "
+                    f"for collection '{collection_name}'"
+                )
+
+        # Log final result if all retries completed
         if result:
             log.info(f"query_doc:result {result.ids} {result.metadatas}")
 
@@ -164,7 +415,8 @@ def query_doc_with_hybrid_search(
         documents = [d.page_content for d in result]
         metadatas = [d.metadata for d in result]
 
-        # retrieve only min(k, k_reranker) items, sort and cut by distance if k < k_reranker
+        # retrieve only min(k, k_reranker) items, sort and cut by distance
+        # if k < k_reranker
         if k < k_reranker:
             sorted_items = sorted(
                 zip(distances, metadatas, documents), key=lambda x: x[0], reverse=True
@@ -293,7 +545,8 @@ def query_collection(
     # Generate all query embeddings (in one call)
     query_embeddings = embedding_function(queries, prefix=RAG_EMBEDDING_QUERY_PREFIX)
     log.debug(
-        f"query_collection: processing {len(queries)} queries across {len(collection_names)} collections"
+        f"query_collection: processing {len(queries)} queries across "
+        f"{len(collection_names)} collections"
     )
 
     with ThreadPoolExecutor() as executor:
@@ -336,9 +589,11 @@ def query_collection_with_hybrid_search(
     for collection_name in collection_names:
         try:
             log.debug(
-                f"query_collection_with_hybrid_search:VECTOR_DB_CLIENT.get:collection {collection_name}"
+                f"query_collection_with_hybrid_search:VECTOR_DB_CLIENT.get:"
+                f"collection {collection_name}"
             )
-            collection_results[collection_name] = VECTOR_DB_CLIENT.get(
+            # Use get_doc to benefit from retry mechanism
+            collection_results[collection_name] = get_doc(
                 collection_name=collection_name
             )
         except Exception as e:
@@ -346,7 +601,8 @@ def query_collection_with_hybrid_search(
             collection_results[collection_name] = None
 
     log.info(
-        f"Starting hybrid search for {len(queries)} queries in {len(collection_names)} collections..."
+        f"Starting hybrid search for {len(queries)} queries in "
+        f"{len(collection_names)} collections..."
     )
 
     def process_query(collection_name, query):
@@ -368,7 +624,8 @@ def query_collection_with_hybrid_search(
             return None, e
 
     # Prepare tasks for all collections and queries
-    # Avoid running any tasks for collections that failed to fetch data (have assigned None)
+    # Avoid running any tasks for collections that failed to fetch data
+    # (have assigned None)
     tasks = [
         (cn, q)
         for cn in collection_names
@@ -388,7 +645,8 @@ def query_collection_with_hybrid_search(
 
     if error and not results:
         raise Exception(
-            "Hybrid search failed for all collections. Using Non-hybrid search as fallback."
+            "Hybrid search failed for all collections. "
+            "Using Non-hybrid search as fallback."
         )
 
     return merge_and_sort_query_results(results, k=k)
@@ -455,7 +713,8 @@ def get_sources_from_files(
     full_context=False,
 ):
     log.debug(
-        f"files: {files} {queries} {embedding_function} {reranking_function} {full_context}"
+        f"files: {files} {queries} {embedding_function} "
+        f"{reranking_function} {full_context}"
     )
 
     extracted_collections = []
@@ -480,7 +739,7 @@ def get_sources_from_files(
             file.get("type") != "web_search"
             and request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL
         ):
-            # BYPASS_EMBEDDING_AND_RETRIEVAL
+            # Exclude web_search files from bypass to ensure vector retrieval
             if file.get("type") == "collection":
                 file_ids = file.get("data", {}).get("file_ids", [])
 
@@ -527,48 +786,62 @@ def get_sources_from_files(
                     ],
                 }
         else:
+            # Vector retrieval path for web_search files and non-bypass files
             collection_names = []
-            if file.get("type") == "collection":
-                if file.get("legacy"):
-                    collection_names = file.get("collection_names", [])
-                else:
-                    collection_names.append(file["id"])
-            elif file.get("collection_name"):
-                collection_names.append(file["collection_name"])
-            elif file.get("id"):
-                if file.get("legacy"):
-                    collection_names.append(f"{file['id']}")
-                else:
-                    collection_names.append(f"file-{file['id']}")
+
+            for file in files:
+                if file.get("type") == "collection":
+                    if file.get("legacy"):
+                        collection_names = file.get("collection_names", [])
+                    else:
+                        collection_names.append(file["id"])
+                elif file.get("collection_name"):
+                    collection_names.append(file["collection_name"])
+                elif file.get("id"):
+                    if file.get("legacy"):
+                        collection_names.append(f"{file['id']}")
+                    else:
+                        collection_names.append(f"file-{file['id']}")
 
             collection_names = set(collection_names).difference(extracted_collections)
             if not collection_names:
-                log.debug(f"skipping {file} as it has already been extracted")
                 continue
 
-            if full_context:
-                try:
-                    context = get_all_items_from_collections(collection_names)
-                except Exception as e:
-                    log.exception(e)
+            # Check if any collection is web search - web search always needs query
+            has_web_search = any(
+                name.startswith("web-search-") for name in collection_names
+            )
 
+            # Determine retrieval mode
+            if full_context and not has_web_search:
+                # Only use full context for non-web-search collections
+                # (no relevance needed)
+                doc = get_doc(collection_name=file.get("id"), user=user)
+                result.append(doc)
             else:
+                # Query-based retrieval for web search (always) and other
+                # collections when full_context is False
                 try:
-                    context = None
-                    if file.get("type") == "text":
-                        context = file["content"]
-                    else:
+                    effective_k = k
+                    if has_web_search and file.get("id").startswith("web-search-"):
+                        if full_context:
+                            # For web search with full_context, use very high k
+                            # to return all available documents
+                            effective_k = 1000  # High number to ensure all
+                                               # web search results are returned
+
                         if hybrid_search:
                             try:
                                 context = query_collection_with_hybrid_search(
                                     collection_names=collection_names,
                                     queries=queries,
                                     embedding_function=embedding_function,
-                                    k=k,
+                                    k=effective_k,
                                     reranking_function=reranking_function,
                                     k_reranker=k_reranker,
                                     r=r,
                                     hybrid_bm25_weight=hybrid_bm25_weight,
+                                    user=user,
                                 )
                             except Exception as e:
                                 log.debug(
@@ -581,7 +854,7 @@ def get_sources_from_files(
                                 collection_names=collection_names,
                                 queries=queries,
                                 embedding_function=embedding_function,
-                                k=k,
+                                k=effective_k,
                             )
                 except Exception as e:
                     log.exception(e)
@@ -645,7 +918,8 @@ def get_model_path(model: str, update_model: bool = False):
 
     snapshot_kwargs["repo_id"] = model
 
-    # Attempt to query the huggingface_hub library to determine the local path and/or to update
+    # Attempt to query the huggingface_hub library to determine the local path
+    # and/or to update
     try:
         model_repo_path = snapshot_download(**snapshot_kwargs)
         log.debug(f"model_repo_path: {model_repo_path}")
@@ -711,7 +985,8 @@ def generate_azure_openai_batch_embeddings(
 ) -> Optional[list[list[float]]]:
     try:
         log.debug(
-            f"generate_azure_openai_batch_embeddings:deployment {model} batch size: {len(texts)}"
+            f"generate_azure_openai_batch_embeddings:deployment {model} "
+            f"batch size: {len(texts)}"
         )
         json_data = {"input": texts}
         if isinstance(RAG_EMBEDDING_PREFIX_FIELD_NAME, str) and isinstance(prefix, str):
