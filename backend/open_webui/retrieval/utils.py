@@ -81,41 +81,45 @@ def query_doc(
     user: UserModel = None,
     expected_count: int = None,
 ):
+    """
+    Query vector database with intelligent indexing wait for web search collections.
+
+    Fixes race condition where queries happened before indexing completed.
+    Web search collections get longer timeout and stabilization logic.
+    """
     import time
 
     try:
         log.debug(f"query_doc:doc {collection_name}")
 
-        # Auto-detect web search collections and use intelligent waiting
+        # Auto-detect web search collections for intelligent waiting
         is_web_search = collection_name.startswith("web-search-")
 
         if is_web_search or (expected_count is not None and expected_count > 0):
-            # For web search collections, use longer timeout and more checking
+            # Web search gets 15s timeout vs 10s for others
             timeout = 15.0 if is_web_search else 10.0
 
             if wait_for_indexing(collection_name, expected_count or 1, timeout):
-                # Indexing complete, perform search
+                # Indexing complete, perform search with relevance scores
                 result = VECTOR_DB_CLIENT.search(
                     collection_name=collection_name,
                     vectors=[query_embedding],
                     limit=k,
                 )
                 if result:
-                    doc_count = (
-                        len(result.documents[0]) if result.documents[0] else 0
-                    )
+                    doc_count = len(result.documents[0]) if result.documents[0] else 0
                     log.info(f"query_doc: Retrieved {doc_count} documents")
                     log.info(f"query_doc:result {result.ids} {result.metadatas}")
                 return result
             else:
-                # Timeout - return empty result
+                # Indexing timeout - return empty result
                 log.warning(
                     f"query_doc: Indexing timeout for collection "
                     f"'{collection_name}'"
                 )
                 return None
 
-        # Fallback: Legacy retry mechanism for non-web-search collections
+        # Legacy retry mechanism for non-web-search collections
         max_retries = 4
         retry_delay = 2.0  # seconds
 
@@ -168,17 +172,19 @@ def wait_for_indexing(
     collection_name: str, expected_count: int, timeout: float = 10.0
 ) -> bool:
     """
-    Wait for vector database indexing to complete by checking for expected
-    document count.
+    Intelligent wait for vector database indexing completion.
+
+    Key innovation: Uses stabilization logic for web search collections
+    (waits for 2 consecutive stable document counts) and exponential backoff
+    to avoid race conditions where queries happen before indexing finishes.
 
     Args:
-        collection_name: Name of the collection to check
-        expected_count: Number of documents expected to be indexed
-                       (use 1 for "any documents")
-        timeout: Maximum time to wait in seconds
+        collection_name: Collection to check (auto-detects web search by prefix)
+        expected_count: Expected document count (1 = "any documents")
+        timeout: Max wait time (15s for web search, 10s for others)
 
     Returns:
-        True if expected documents are available, False if timeout
+        True if indexing complete, False if timeout
     """
     import time
 
@@ -191,17 +197,17 @@ def wait_for_indexing(
 
     start_time = time.time()
     check_interval = 0.5  # Start with 500ms intervals
-    max_interval = 2.0    # Max 2 second intervals
+    max_interval = 2.0  # Max 2 second intervals
     attempt = 1
 
-    # For web search with unknown count, use stabilization approach
+    # Web search stabilization: Wait for document count to stabilize
+    # (unknown final count, so wait for 2 consecutive identical counts)
     is_web_search = collection_name.startswith("web-search-")
     use_stabilization = is_web_search and expected_count == 1
 
     if use_stabilization:
         log.info(
-            f"Waiting for document indexing to stabilize in "
-            f"'{collection_name}'"
+            f"Waiting for document indexing to stabilize in " f"'{collection_name}'"
         )
         last_count = 0
         stable_count = 0
@@ -253,9 +259,7 @@ def wait_for_indexing(
 
             else:
                 if use_stabilization:
-                    log.info(
-                        f"Stabilization check {attempt}: 0 documents available"
-                    )
+                    log.info(f"Stabilization check {attempt}: 0 documents available")
                 else:
                     log.info(
                         f"Indexing check {attempt}: 0/{expected_count} "
@@ -281,36 +285,36 @@ def wait_for_indexing(
     return False
 
 
-def get_doc(
-    collection_name: str, user: UserModel = None, expected_count: int = None
-):
+def get_doc(collection_name: str, user: UserModel = None, expected_count: int = None):
+    """
+    Get all documents from collection with intelligent indexing wait.
+
+    Enhanced for web search collections with same race condition fixes as query_doc.
+    """
     import time
 
     try:
         log.debug(f"get_doc:doc {collection_name}")
 
-        # Auto-detect web search collections and use intelligent waiting
+        # Auto-detect web search collections for intelligent waiting
         is_web_search = collection_name.startswith("web-search-")
 
         if is_web_search or (expected_count is not None and expected_count > 0):
-            # For web search collections, use longer timeout and more checking
+            # Web search gets 15s timeout vs 10s for others
             timeout = 15.0 if is_web_search else 10.0
 
             if wait_for_indexing(collection_name, expected_count or 1, timeout):
                 # Indexing complete, retrieve documents
                 result = VECTOR_DB_CLIENT.get(collection_name=collection_name)
                 if result:
-                    doc_count = (
-                        len(result.documents[0]) if result.documents[0] else 0
-                    )
+                    doc_count = len(result.documents[0]) if result.documents[0] else 0
                     log.info(f"get_doc: Retrieved {doc_count} documents")
                     log.info(f"query_doc:result {result.ids} {result.metadatas}")
                 return result
             else:
                 # Timeout - return empty result
                 log.warning(
-                    f"get_doc: Indexing timeout for collection "
-                    f"'{collection_name}'"
+                    f"get_doc: Indexing timeout for collection " f"'{collection_name}'"
                 )
                 return None
 
@@ -786,7 +790,8 @@ def get_sources_from_files(
                     ],
                 }
         else:
-            # Vector retrieval path for web_search files and non-bypass files
+            # Vector retrieval path - FIXED: Web search files now flow through here
+            # Previous bug: Web search files were blocked from vector retrieval
             collection_names = []
 
             for file in files:
@@ -812,52 +817,42 @@ def get_sources_from_files(
                 name.startswith("web-search-") for name in collection_names
             )
 
-            # Determine retrieval mode
-            if full_context and not has_web_search:
-                # Only use full context for non-web-search collections
-                # (no relevance needed)
-                doc = get_doc(collection_name=file.get("id"), user=user)
-                result.append(doc)
-            else:
-                # Query-based retrieval for web search (always) and other
-                # collections when full_context is False
-                try:
-                    effective_k = k
-                    if has_web_search and file.get("id").startswith("web-search-"):
-                        if full_context:
-                            # For web search with full_context, use very high k
-                            # to return all available documents
-                            effective_k = 1000  # High number to ensure all
-                                               # web search results are returned
+            # Key fix: Eliminates inconsistency where web search lost scores
+            # All collections now return results WITH semantic similarity rankings
+            try:
+                effective_k = k
+                if full_context:
+                    # Full context = ALL documents WITH relevance scores (not without!)
+                    effective_k = 1000  # High k ensures all documents returned
 
-                        if hybrid_search:
-                            try:
-                                context = query_collection_with_hybrid_search(
-                                    collection_names=collection_names,
-                                    queries=queries,
-                                    embedding_function=embedding_function,
-                                    k=effective_k,
-                                    reranking_function=reranking_function,
-                                    k_reranker=k_reranker,
-                                    r=r,
-                                    hybrid_bm25_weight=hybrid_bm25_weight,
-                                    user=user,
-                                )
-                            except Exception as e:
-                                log.debug(
-                                    "Error when using hybrid search, using"
-                                    " non hybrid search as fallback."
-                                )
+                if hybrid_search:
+                    try:
+                        context = query_collection_with_hybrid_search(
+                            collection_names=collection_names,
+                            queries=queries,
+                            embedding_function=embedding_function,
+                            k=effective_k,
+                            reranking_function=reranking_function,
+                            k_reranker=k_reranker,
+                            r=r,
+                            hybrid_bm25_weight=hybrid_bm25_weight,
+                        )
+                    except Exception as e:
+                        log.debug(
+                            "Error when using hybrid search, using"
+                            " non hybrid search as fallback."
+                        )
+                        context = None
 
-                        if (not hybrid_search) or (context is None):
-                            context = query_collection(
-                                collection_names=collection_names,
-                                queries=queries,
-                                embedding_function=embedding_function,
-                                k=effective_k,
-                            )
-                except Exception as e:
-                    log.exception(e)
+                if (not hybrid_search) or (context is None):
+                    context = query_collection(
+                        collection_names=collection_names,
+                        queries=queries,
+                        embedding_function=embedding_function,
+                        k=effective_k,
+                    )
+            except Exception as e:
+                log.exception(e)
 
             extracted_collections.extend(collection_names)
 
