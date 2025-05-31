@@ -1558,7 +1558,12 @@ The format for the JSON response is strictly:
     {"name": "toolName1", "parameters": {"key1": "value1"}},
     {"name": "toolName2", "parameters": {"key2": "value2"}}
   ]
-}"""
+}
+
+<context>
+{{CONTEXT}}
+</context>
+"""
 
 
 DEFAULT_EMOJI_GENERATION_PROMPT_TEMPLATE = """Your task is to reflect the speaker's likely facial expression through a fitting emoji. Interpret emotions from the message and reflect their facial expression using fitting, diverse emojis (e.g., 😊, 😢, 😡, 😱).
