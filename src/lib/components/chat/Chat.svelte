@@ -1473,7 +1473,7 @@
 		}
 		history = history;
 
-		// Create new chat if newChat is true and first user message
+		// Create new gift chat if newChat is true and first user message
 		if (newChat && _history.messages[_history.currentId].parentId === null) {
 			_chatId = await initChatHandler(_history);
 		}
@@ -1924,7 +1924,7 @@
 		if (!$temporaryChatEnabled) {
 			chat = await createNewChat(localStorage.token, {
 				id: _chatId,
-				title: $i18n.t('New Chat'),
+				title: $i18n.t('New Gift Chat'),
 				models: selectedModels,
 				system: $settings.system ?? undefined,
 				params: params,
