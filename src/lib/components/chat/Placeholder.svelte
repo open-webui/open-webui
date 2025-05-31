@@ -203,7 +203,7 @@
 					{transparentBackground}
 					{stopResponse}
 					{createMessagePair}
-					placeholder={$i18n.t('How can I help you today?')}
+					placeholder={$i18n.t('I\'m Magicbox, your gift-finding assistant. How can I help you today?')}
 					onChange={(input) => {
 						if (input.prompt !== null) {
 							localStorage.setItem(`chat-input`, JSON.stringify(input));
