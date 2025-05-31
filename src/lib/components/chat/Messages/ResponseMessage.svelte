@@ -518,7 +518,11 @@
 		dir={$settings.chatDirection}
 	>
 		<div class={`flex-shrink-0 ${($settings?.chatDirection ?? 'LTR') === 'LTR' ? 'mr-3' : 'ml-3'}`}>
-			<ProfileImage src={modelIconUrl} />
+			{#if modelIconUrl?.length > 5}
+				<ProfileImage src={modelIconUrl} />
+			{:else}
+				<div class="text-2xl">{modelIconUrl}</div>
+			{/if}
 		</div>
 
 		<div class="flex-auto w-0 pl-1">
