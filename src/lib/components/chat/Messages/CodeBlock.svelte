@@ -5,6 +5,7 @@
 
 	import { getContext, onMount, tick, onDestroy } from 'svelte';
 	import { copyToClipboard } from '$lib/utils';
+	import { page } from '$app/stores';
 
 	import 'highlight.js/styles/github-dark.min.css';
 
@@ -138,7 +139,10 @@
 		executing = true;
 
 		if ($config?.code?.engine === 'jupyter') {
-			const output = await executeCode(localStorage.token, code).catch((error) => {
+			// Get chat ID from the current page parameters
+			const chatId = $page?.params?.id || '';
+
+			const output = await executeCode(localStorage.token, code, chatId).catch((error) => {
 				toast.error(`${error}`);
 				return null;
 			});

@@ -30,6 +30,7 @@ async def get_gravatar(email: str, user=Depends(get_verified_user)):
 
 class CodeForm(BaseModel):
     code: str
+    chat_id: str = ""  # Add chat_id parameter with default empty string
 
 
 @router.post("/code/format")
@@ -62,6 +63,7 @@ async def execute_code(
                 else None
             ),
             request.app.state.config.CODE_EXECUTION_JUPYTER_TIMEOUT,
+            form_data.chat_id  # Pass chat_id to the enhanced function
         )
 
         return output

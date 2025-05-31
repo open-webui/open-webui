@@ -23,7 +23,7 @@ export const getGravatarUrl = async (token: string, email: string) => {
 	return res;
 };
 
-export const executeCode = async (token: string, code: string) => {
+export const executeCode = async (token: string, code: string, chatId: string = '') => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/utils/code/execute`, {
@@ -33,7 +33,8 @@ export const executeCode = async (token: string, code: string) => {
 			Authorization: `Bearer ${token}`
 		},
 		body: JSON.stringify({
-			code: code
+			code: code,
+			chat_id: chatId // Add chat_id to the request
 		})
 	})
 		.then(async (res) => {
