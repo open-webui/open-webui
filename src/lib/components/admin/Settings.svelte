@@ -1,5 +1,7 @@
 <script>
 	import { getContext, tick, onMount } from 'svelte';
+	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 
 	import { config } from '$lib/stores';
@@ -26,6 +28,13 @@
 
 	let selectedTab = 'general';
 
+	// Get current tab from URL pathname, default to 'general'
+	$: {
+		const pathParts = $page.url.pathname.split('/');
+		const tabFromPath = pathParts[pathParts.length - 1];
+		selectedTab = ['general', 'connections', 'models', 'evaluations', 'tools', 'documents', 'web', 'code-execution', 'interface', 'audio', 'images', 'pipelines', 'db'].includes(tabFromPath) ? tabFromPath : 'general';
+	}
+
 	onMount(() => {
 		const containerElement = document.getElementById('admin-settings-tabs-container');
 
@@ -51,7 +60,7 @@
 				? ''
 				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			on:click={() => {
-				selectedTab = 'general';
+				goto('/admin/settings/general');
 			}}
 		>
 			<div class=" self-center mr-2">
@@ -77,7 +86,7 @@
 				? ''
 				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			on:click={() => {
-				selectedTab = 'connections';
+				goto('/admin/settings/connections');
 			}}
 		>
 			<div class=" self-center mr-2">
@@ -101,7 +110,7 @@
 				? ''
 				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			on:click={() => {
-				selectedTab = 'models';
+				goto('/admin/settings/models');
 			}}
 		>
 			<div class=" self-center mr-2">
@@ -127,7 +136,7 @@
 				? ''
 				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			on:click={() => {
-				selectedTab = 'evaluations';
+				goto('/admin/settings/evaluations');
 			}}
 		>
 			<div class=" self-center mr-2">
@@ -142,7 +151,7 @@
 				? ''
 				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			on:click={() => {
-				selectedTab = 'tools';
+				goto('/admin/settings/tools');
 			}}
 		>
 			<div class=" self-center mr-2">
@@ -168,7 +177,7 @@
 				? ''
 				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			on:click={() => {
-				selectedTab = 'documents';
+				goto('/admin/settings/documents');
 			}}
 		>
 			<div class=" self-center mr-2">
@@ -198,7 +207,7 @@
 				? ''
 				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			on:click={() => {
-				selectedTab = 'web';
+				goto('/admin/settings/web');
 			}}
 		>
 			<div class=" self-center mr-2">
@@ -222,7 +231,7 @@
 				? ''
 				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			on:click={() => {
-				selectedTab = 'code-execution';
+				goto('/admin/settings/code-execution');
 			}}
 		>
 			<div class=" self-center mr-2">
@@ -248,7 +257,7 @@
 				? ''
 				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			on:click={() => {
-				selectedTab = 'interface';
+				goto('/admin/settings/interface');
 			}}
 		>
 			<div class=" self-center mr-2">
@@ -274,7 +283,7 @@
 				? ''
 				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			on:click={() => {
-				selectedTab = 'audio';
+				goto('/admin/settings/audio');
 			}}
 		>
 			<div class=" self-center mr-2">
@@ -301,7 +310,7 @@
 				? ''
 				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			on:click={() => {
-				selectedTab = 'images';
+				goto('/admin/settings/images');
 			}}
 		>
 			<div class=" self-center mr-2">
@@ -327,7 +336,7 @@
 				? ''
 				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			on:click={() => {
-				selectedTab = 'pipelines';
+				goto('/admin/settings/pipelines');
 			}}
 		>
 			<div class=" self-center mr-2">
@@ -357,7 +366,7 @@
 				? ''
 				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			on:click={() => {
-				selectedTab = 'db';
+				goto('/admin/settings/db');
 			}}
 		>
 			<div class=" self-center mr-2">
