@@ -47,8 +47,8 @@ jobs:
           gh repo set-default chrysapp/open-webui
           
           # Check if PR already exists or no changes
-          if gh pr list --state open --search "Include Upstream Changes in:title" | grep -q "Include Upstream Changes" || git diff --quiet origin/main; then
-            echo "Either PR already exists or no new changes. Exiting."
+          if gh pr list --state open --base main --head upstream --limit 1 | grep -q . || [ "$(git rev-list --count origin/main..origin/upstream)" -eq 0 ]; then
+            echo "Either an open PR from 'upstream' to 'main' already exists, or no new changes found in upstream. Exiting." # MODIFIED echo text
             exit 0
           fi
           
