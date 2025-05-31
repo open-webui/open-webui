@@ -1,9 +1,9 @@
 name: Release
 
 on:
-  # push:
-  #   branches:
-  #     - main # or whatever branch you want to use
+  push:
+    branches:
+      - next # or whatever branch you want to use
   workflow_dispatch:
 
 jobs:
