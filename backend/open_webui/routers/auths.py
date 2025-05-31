@@ -4,6 +4,7 @@ import time
 import datetime
 import logging
 from aiohttp import ClientSession
+from open_webui.utils.telemetry import setup
 
 from open_webui.models.auths import (
     AddUserForm,
@@ -32,6 +33,7 @@ from open_webui.env import (
     WEBUI_AUTH_SIGNOUT_REDIRECT_URL,
     SRC_LOG_LEVELS,
 )
+from open_webui.utils.telemetry import metrics
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse, Response, JSONResponse
 from open_webui.config import OPENID_PROVIDER_URL, ENABLE_OAUTH_SIGNUP, ENABLE_LDAP
@@ -304,6 +306,9 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
             user = Auths.authenticate_user_by_email(email)
 
             if user:
+                if metrics.telemetry_metrics is not None:
+                    metrics.telemetry_metrics.track_user_login(user.id, user.email)
+
                 expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
                 expires_at = None
                 if expires_delta:
@@ -409,6 +414,8 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
         user = Auths.authenticate_user(form_data.email.lower(), form_data.password)
 
     if user:
+        if metrics.telemetry_metrics is not None:
+            metrics.telemetry_metrics.track_user_login(user.id, user.email)
 
         expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
         expires_at = None
