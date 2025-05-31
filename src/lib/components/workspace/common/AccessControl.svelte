@@ -192,7 +192,7 @@
 						<div class="flex flex-1 flex-col gap-1 w-full px-0.5">
 							<input
 								type="text"
-								placeholder={$i18n.t('Search group')}
+								placeholder={$i18n.t('Search a group')}
 								bind:value={groupUserSearch}
 								on:focus={() => (searchFocused = true)}
 								on:blur={() => setTimeout(() => (searchFocused = false), 100)}
