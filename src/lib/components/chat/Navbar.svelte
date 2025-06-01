@@ -34,6 +34,7 @@
 
 	import PencilSquare from '../icons/PencilSquare.svelte';
 	import Banner from '../common/Banner.svelte';
+	import ProfileImage from '$lib/components/chat/Messages/ProfileImage.svelte';
 
 	const i18n = getContext('i18n');
 

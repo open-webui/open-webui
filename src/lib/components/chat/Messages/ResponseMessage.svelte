@@ -668,7 +668,7 @@
 		<div class="flex-auto w-0 pl-1 relative">
 			<Name>
 				<Tooltip content={model?.name ?? message.model} placement="top-start">
-					<span class="line-clamp-1 text-black dark:text-white">
+					<span class="line-clamp-1 text-black dark:text-white font-primary">
 						{model?.name ?? message.model}
 					</span>
 				</Tooltip>
