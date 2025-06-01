@@ -27,6 +27,7 @@ services:
       - VIRTUAL_HOST=llm.cereinsight.com
       - CERT_NAME=cereinsight.com
       - WEBUI_NAME=Cere LLM WebUI
+      - CUSTOM_NAME=Cere LLM WebUI
     restart: unless-stopped
     extra_hosts:
       - host.docker.internal:host-gateway
