@@ -76,7 +76,7 @@ pandas==2.2.3
 openpyxl==3.1.5
 pyxlsb==1.0.10
 xlrd==2.0.1
-validators==0.34.0
+validators==0.35.0
 psutil
 sentencepiece
 soundfile==0.13.1
