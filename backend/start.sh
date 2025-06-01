@@ -67,4 +67,19 @@ fi
 
 PYTHON_CMD=$(command -v python3 || command -v python)
 
-WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" exec "$PYTHON_CMD" -m uvicorn open_webui.main:app --host "$HOST" --port "$PORT" --forwarded-allow-ips '*' --workers "${UVICORN_WORKERS:-1}"
+ENV_FILE="$SCRIPT_DIR/../.env"
+# Read the .env file and set the environment variables
+while IFS='=' read -r key value
+do
+  if [ "$key" == "WEBUI_SSL" ]; then
+    export WEBUI_SSL=$value
+  fi
+done < "$ENV_FILE"
+
+if [[ "${WEBUI_SSL}" == "true" ]]; then
+  echo "Starting Open WebUI with SSL"
+  WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" exec uvicorn open_webui.main:app --host "$HOST" --port "$PORT" --forwarded-allow-ips '*' --workers "${UVICORN_WORKERS:-1}" --ssl-certfile='/etc/nginx/ssl/magicboxgifts.com.crt' --ssl-keyfile='/etc/nginx/ssl/magicboxgifts.com.key'
+else
+  echo "Starting Open WebUI without SSL"
+  WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" exec uvicorn open_webui.main:app --host "$HOST" --port "$PORT" --forwarded-allow-ips '*' --workers "${UVICORN_WORKERS:-1}"
+fi
