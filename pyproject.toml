@@ -1,8 +1,8 @@
 [project]
-name = "open-webui"
-description = "Open WebUI"
+name = "Magicbox"
+description = "Magicbox - Best Gift Finder"
 authors = [
-    { name = "Timothy Jaeryang Baek", email = "tim@openwebui.com" }
+    { name = "Vivek Tawde", email = "admin@magicboxgifts.com" }
 ]
 license = { file = "LICENSE" }
 dependencies = [
