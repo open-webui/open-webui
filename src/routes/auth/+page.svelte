@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
 	import { toast } from 'svelte-sonner';
 
 	import { onMount, getContext, tick } from 'svelte';
@@ -8,13 +8,15 @@
 	import { getBackendConfig } from '$lib/apis';
 	import { ldapUserSignIn, getSessionUser, userSignIn, userSignUp } from '$lib/apis/auths';
 
-	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
-	import { WEBUI_NAME, config, user, socket } from '$lib/stores';
+	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL, TRIAL_USER_EMAIL, TRIAL_USER_PASSWORD } from '$lib/constants';
+	import { WEBUI_NAME, WEBUI_TAGLINE, config, user, socket } from '$lib/stores';
 
 	import { generateInitialsImage, canvasPixelTest } from '$lib/utils';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import OnBoarding from '$lib/components/OnBoarding.svelte';
+	import Carousel from '$lib/components/common/Carousel.svelte';
+  import { getProductImages } from '$lib/utils/images';
 
 	const i18n = getContext('i18n');
 
@@ -37,7 +39,9 @@
 	const setSessionUser = async (sessionUser) => {
 		if (sessionUser) {
 			console.log(sessionUser);
-			toast.success($i18n.t(`You're now logged in.`));
+			if ($user?.email !== TRIAL_USER_EMAIL) {
+				toast.success($i18n.t(`You're now logged in.`));
+			}
 			if (sessionUser.token) {
 				localStorage.token = sessionUser.token;
 			}
@@ -157,7 +161,7 @@
 
 <svelte:head>
 	<title>
-		{`${$WEBUI_NAME}`}
+		{`${$WEBUI_NAME} - ${$WEBUI_TAGLINE}`}
 	</title>
 </svelte:head>
 
@@ -175,20 +179,6 @@
 	<div class="w-full absolute top-0 left-0 right-0 h-8 drag-region" />
 
 	{#if loaded}
-		<div class="fixed m-10 z-50">
-			<div class="flex space-x-2">
-				<div class=" self-center">
-					<img
-						id="logo"
-						crossorigin="anonymous"
-						src="{WEBUI_BASE_URL}/static/splash.png"
-						class=" w-6 rounded-full"
-						alt=""
-					/>
-				</div>
-			</div>
-		</div>
-
 		<div
 			class="fixed bg-transparent min-h-screen w-full flex justify-center font-primary z-50 text-black dark:text-white"
 		>
@@ -209,6 +199,14 @@
 					</div>
 				{:else}
 					<div class="  my-auto pb-10 w-full dark:text-gray-100">
+						<div class=" flex items-center justify-center pb-10">
+							<img
+								crossorigin="anonymous"
+								src="{WEBUI_BASE_URL}/static/splash.png"
+								class=" w-36 rounded-full"
+								alt="logo"
+							/>
+						</div>
 						<form
 							class=" flex flex-col justify-center"
 							on:submit={(e) => {
@@ -217,20 +215,33 @@
 							}}
 						>
 							<div class="mb-1">
-								<div class=" text-2xl font-medium">
+								<div class=" text-2xl font-medium" style="color: rgb(235, 83, 82)">
 									{#if $config?.onboarding ?? false}
 										{$i18n.t(`Get started with {{WEBUI_NAME}}`, { WEBUI_NAME: $WEBUI_NAME })}
-									{:else if mode === 'ldap'}
-										{$i18n.t(`Sign in to {{WEBUI_NAME}} with LDAP`, { WEBUI_NAME: $WEBUI_NAME })}
-									{:else if mode === 'signin'}
-										{$i18n.t(`Sign in to {{WEBUI_NAME}}`, { WEBUI_NAME: $WEBUI_NAME })}
 									{:else}
-										{$i18n.t(`Sign up to {{WEBUI_NAME}}`, { WEBUI_NAME: $WEBUI_NAME })}
+										{$i18n.t(`{{WEBUI_NAME}}`, { WEBUI_NAME: $WEBUI_NAME })}
 									{/if}
 								</div>
-
+								<div class=" text-lg font-medium font-sans" style="color: rgb(235, 83, 82)">
+									{$i18n.t(`{{WEBUI_TAGLINE}}`, { WEBUI_TAGLINE: $WEBUI_TAGLINE })}
+								</div>
+								<br>
+								<div class=" mt-4 text-sm text-center">
+									<button
+										class="bg-[#EB8486] hover:bg-[#EB5352] text-white/60 hover:text-white transition w-3/4 rounded-full font-medium text-base py-2.5"
+										on:click={() => {
+											email = TRIAL_USER_EMAIL;
+											password = TRIAL_USER_PASSWORD;
+											mode = 'signin';
+											submitHandler();
+										}}
+									>
+										{$i18n.t('Quick Trial: Find Gift Now!')}
+									</button>
+								</div>
+								<hr class="w-full h-px my-4 border-0 dark:bg-gray-100/10 bg-gray-700/10" />
 								{#if $config?.onboarding ?? false}
-									<div class="mt-1 text-xs font-medium text-gray-600 dark:text-gray-500">
+									<div class=" mt-1 text-xs font-medium text-gray-500">
 										ⓘ {$WEBUI_NAME}
 										{$i18n.t(
 											'does not make any external connections, and your data stays securely on your locally hosted server.'
@@ -260,9 +271,7 @@
 
 									{#if mode === 'ldap'}
 										<div class="mb-2">
-											<label for="username" class="text-sm font-medium text-left mb-1 block"
-												>{$i18n.t('Username')}</label
-											>
+											<div class=" text-sm font-medium text-left mb-1">{$i18n.t('Username')}</div>
 											<input
 												bind:value={ldapUsername}
 												type="text"
@@ -486,8 +495,39 @@
 								</button>
 							</div>
 						{/if}
+						<br>
+						<div class="flex flex-row justify-center items-center space-x-2">
+							{#each Array(6).fill(0) as _}
+								<div class="relative items-center justify-center h-[125px] w-[125px]">
+									<Carousel imageUrls={getProductImages('/image_cache/demo_product_images/')} showArrows={false} />
+								</div>
+							{/each}
+						</div>
 					</div>
 				{/if}
+				<div class="flex justify-center items-center text-sm w-full text-left font-light font-sans" style="color: rgb(235, 83, 82)">
+					<span>
+						&#8226;{$i18n.t(' Chat with Magicbox about all your gifting needs.')}<br>
+						&#8226;{$i18n.t(' Get creative ideas & gifts that will be a guaranteed hit.')}<br>
+						&#8226;{$i18n.t(' Gifts from around the web at your fingertips.')}<br>
+					</span>
+				</div>
+				<button
+ 					class="flex justify-center items-center text-xs w-full text-center underline"
+ 					on:click={() => {
+ 						window.open(`https://magicboxgifts.com/terms.html`, '_blank');
+ 					}}
+ 				>
+ 					<span>{$i18n.t('Terms')}</span>
+ 				</button>
+ 				<button
+ 					class="flex justify-center items-center text-xs w-full text-center underline"
+ 					on:click={() => {
+ 						window.open(`https://magicboxgifts.com/privacy.html`, '_blank');
+ 					}}
+ 				>
+ 					<span>{$i18n.t('Privacy')}</span>
+ 				</button>
 			</div>
 		</div>
 	{/if}
