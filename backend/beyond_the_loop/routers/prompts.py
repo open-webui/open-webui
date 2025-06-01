@@ -25,7 +25,9 @@ async def get_prompts(user=Depends(get_verified_user)):
 
 @router.get("/list", response_model=list[PromptUserResponse])
 async def get_prompt_list(user=Depends(get_verified_user)):
-    return Prompts.get_prompts_by_user_and_company(user.id, user.company_id, "read")
+    prompts = Prompts.get_prompts_by_user_and_company(user.id, user.company_id, "read")
+    sorted_prompts = sorted(prompts, key=lambda m: not m.bookmarked_by_user)
+    return sorted_prompts
 
 
 ############################
@@ -82,24 +84,32 @@ async def get_prompt_by_command(command: str, user=Depends(get_verified_user)):
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-@router.post("/command/{command}/bookmark/update", response_model=Optional[PromptModel])
-async def get_prompt_by_command(command: str, form_data: PromptBookmarkForm, user=Depends(get_verified_user)):
-    prompt = Prompts.get_prompt_by_command_and_company(f"/{command}", user.company_id)
+# @router.post("/command/{command}/bookmark/update", response_model=Optional[PromptModel])
+# async def get_prompt_by_command(command: str, form_data: PromptBookmarkForm, user=Depends(get_verified_user)):
+#     prompt = Prompts.get_prompt_by_command_and_company(f"/{command}", user.company_id)
 
-    if prompt:
-        if (
-            prompt.user_id == user.id
-            or has_access(user.id, "read", prompt.access_control)
-        ):
-            prompt.bookmarked = form_data.bookmarked
-            Prompts.update_prompt_by_command_and_company(f"/{command}", prompt, user.company_id)
-            return prompt
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
+#     if prompt:
+#         if (
+#             prompt.user_id == user.id
+#             or has_access(user.id, "read", prompt.access_control)
+#         ):
+#             prompt.bookmarked = form_data.bookmarked
+#             Prompts.update_prompt_by_command_and_company(f"/{command}", prompt, user.company_id)
+#             return prompt
+#     else:
+#         raise HTTPException(
+#             status_code=status.HTTP_401_UNAUTHORIZED,
+#             detail=ERROR_MESSAGES.NOT_FOUND,
+#         )
+@router.post("/command/{command}/bookmark/update")
+async def update_prompt_bookmark(command: str, user=Depends(get_verified_user)):
+    prompt = Prompts.get_prompt_by_command_and_company_or_system(f"/{command}", user.company_id)
 
+    if not prompt:
+        raise HTTPException(status_code=404, detail="Prompt not found")
+
+    bookmarked =Prompts.toggle_bookmark(prompt.command, user.id)
+    return {"prompt_command": prompt.command, "bookmarked_by_user": bookmarked}
 
 ############################
 # UpdatePromptByCommand

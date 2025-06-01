@@ -5,14 +5,21 @@ from open_webui.internal.db import Base, get_db, JSONField
 from beyond_the_loop.models.users import Users, UserResponse
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text, JSON, Boolean
+from sqlalchemy import BigInteger, Column, String, Text, JSON, Boolean, Column, Table, ForeignKey
+from sqlalchemy.orm import relationship
+from sqlalchemy import select, delete, insert
 
 from open_webui.utils.access_control import has_access
 
 ####################
 # Prompts DB Schema
 ####################
-
+bookmarked_prompts = Table(
+    "bookmarked_prompts",
+    Base.metadata,
+    Column("user_id", ForeignKey("user.id", ondelete="CASCADE"), primary_key=True),
+    Column("prompt_command", ForeignKey("prompt.command", ondelete="CASCADE"), primary_key=True),
+)
 
 class Prompt(Base):
     __tablename__ = "prompt"
@@ -48,6 +55,11 @@ class Prompt(Base):
     """
         Holds a JSON encoded blob of metadata, see `PromptMeta`.
     """
+    users = relationship(
+        "User",
+        secondary="bookmarked_prompts",
+        back_populates="prompts"
+    )
 
 
 class PromptMeta(BaseModel):
@@ -70,7 +82,7 @@ class PromptModel(BaseModel):
     meta: Optional[PromptMeta] = None
     description: Optional[str] = None
     prebuilt: Optional[bool] = None
-    bookmarked: Optional[bool] = None
+    # bookmarked: Optional[bool] = None
 
 ####################
 # Forms
@@ -79,6 +91,7 @@ class PromptModel(BaseModel):
 
 class PromptUserResponse(PromptModel):
     user: Optional[UserResponse] = None
+    bookmarked_by_user: Optional[bool] = False
 
 
 class PromptForm(BaseModel):
@@ -126,6 +139,21 @@ class PromptsTable:
                 return PromptModel.model_validate(prompt)
         except Exception:
             return None
+    
+    def get_prompt_by_command_and_company_or_system(self, command: str, company_id: str) -> Optional[PromptModel]:
+        try:
+            with get_db() as db:
+                prompt = (
+                    db.query(Prompt)
+                    .filter(
+                        Prompt.command == command,
+                        (Prompt.company_id == company_id) | (Prompt.company_id == "system")
+                    )
+                    .first()
+                )
+                return PromptModel.model_validate(prompt) if prompt else None
+        except Exception:
+            return None
 
     def get_prompts(self) -> list[PromptUserResponse]:
         with get_db() as db:
@@ -147,15 +175,34 @@ class PromptsTable:
     def get_prompts_by_user_and_company(
         self, user_id: str, company_id: str, permission: str = "write"
     ) -> list[PromptUserResponse]:
-        prompts = self.get_prompts()
+        with get_db() as db:
+            result = db.execute(
+                select(bookmarked_prompts.c.prompt_command).where(bookmarked_prompts.c.user_id == user_id)
+            )
+            bookmarked_prompts_commands = {row.prompt_command for row in result.fetchall()}
+            prompts = self.get_prompts()
 
-        return [
-            prompt
-            for prompt in prompts
-            if prompt.user_id == user_id
-            or prompt.prebuilt
-            or (prompt.company_id == company_id and has_access(user_id, permission, prompt.access_control))
-        ]
+            filtered_prompts = []
+
+            for prompt in prompts:
+                if (
+                    prompt.user_id == user_id
+                    or prompt.prebuilt
+                    or (prompt.company_id == company_id and has_access(user_id, permission, prompt.access_control))
+                ):
+                    prompt_dict = prompt.model_dump()
+                    prompt_dict["bookmarked_by_user"] = prompt.command in bookmarked_prompts_commands
+                    filtered_prompts.append(PromptUserResponse(**prompt_dict))
+
+            return filtered_prompts
+
+            # return [
+            #     prompt
+            #     for prompt in prompts
+            #     if prompt.user_id == user_id
+            #     or prompt.prebuilt
+            #     or (prompt.company_id == company_id and has_access(user_id, permission, prompt.access_control))
+            # ]
 
 
     def update_prompt_by_command_and_company(
@@ -186,5 +233,37 @@ class PromptsTable:
         except Exception:
             return False
 
+    def toggle_bookmark(self, prompt_command: str, user_id: str) -> bool:
+        # Check if bookmark exists
+        try:
+            with get_db() as db:
+                exists = db.execute(
+                    select(bookmarked_prompts).where(
+                        (bookmarked_prompts.c.user_id == user_id) &
+                        (bookmarked_prompts.c.prompt_command == prompt_command)
+                    )
+                ).fetchone()
+
+                if exists:
+                    db.execute(
+                        delete(bookmarked_prompts).where(
+                            (bookmarked_prompts.c.user_id == user_id) &
+                            (bookmarked_prompts.c.prompt_command == prompt_command)
+                        )
+                    )
+                    db.commit()
+                    return False  # Bookmark was removed
+                else:
+                    db.execute(
+                        insert(bookmarked_prompts).values(
+                            user_id=user_id,
+                            prompt_command=prompt_command
+                        )
+                    )
+                    db.commit()
+                    return True
+        
+        except Exception:
+            return None
 
 Prompts = PromptsTable()

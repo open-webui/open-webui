@@ -52,6 +52,12 @@ class User(Base):
         back_populates="users"
     )
 
+    prompts = relationship(
+        "Prompt",
+        secondary="bookmarked_prompts",
+        back_populates="users"
+    )
+
 
 class UserSettings(BaseModel):
     ui: Optional[dict] = partial(dict)
