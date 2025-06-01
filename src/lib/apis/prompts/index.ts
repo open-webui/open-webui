@@ -203,7 +203,7 @@ export const deletePromptByCommand = async (token: string, command: string) => {
 	return res;
 };
 
-export const bookmarkPrompt = async (token: string, command: string, bookmarked: boolean) => {
+export const bookmarkPrompt = async (token: string, command: string) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/command/${command.slice(1)}/bookmark/update`, {
@@ -213,7 +213,7 @@ export const bookmarkPrompt = async (token: string, command: string, bookmarked:
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({bookmarked})
+		// body: JSON.stringify({bookmarked})
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();

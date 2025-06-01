@@ -237,7 +237,7 @@
 						{#each taggedPrompts[tag] as prompt}
 							<div class="flex items-center py-1">
 								<div class="w-4 shrink-0">
-									{#if prompt?.bookmarked}
+									{#if prompt?.bookmarked_by_user}
 										<BookmarkedIcon className="size-3" />
 									{/if}
 								</div>
