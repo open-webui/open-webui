@@ -65,7 +65,7 @@
 		"@tiptap/core": "^2.11.9",
 		"@tiptap/extension-code-block-lowlight": "^2.11.9",
 		"@tiptap/extension-highlight": "^2.10.0",
-		"@tiptap/extension-placeholder": "^2.10.0",
+		"@tiptap/extension-placeholder": "^2.12.0",
 		"@tiptap/extension-table": "^2.12.0",
 		"@tiptap/extension-table-cell": "^2.12.0",
 		"@tiptap/extension-table-header": "^2.12.0",
