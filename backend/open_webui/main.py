@@ -293,6 +293,7 @@ from open_webui.config import (
     # WebUI
     WEBUI_AUTH,
     WEBUI_NAME,
+    WEBUI_TAGLINE,
     WEBUI_BANNERS,
     WEBHOOK_URL,
     ADMIN_EMAIL,
@@ -514,6 +515,7 @@ app.state.config = AppConfig(
 )
 
 app.state.WEBUI_NAME = WEBUI_NAME
+app.state.WEBUI_TAGLINE = WEBUI_TAGLINE
 app.state.LICENSE_METADATA = None
 
 
@@ -1396,6 +1398,7 @@ async def get_app_config(request: Request):
         **({"onboarding": True} if onboarding else {}),
         "status": True,
         "name": app.state.WEBUI_NAME,
+        "tagline": app.state.WEBUI_TAGLINE,
         "version": VERSION,
         "default_locale": str(DEFAULT_LOCALE),
         "oauth": {
@@ -1579,7 +1582,7 @@ async def get_manifest_json():
         return {
             "name": app.state.WEBUI_NAME,
             "short_name": app.state.WEBUI_NAME,
-            "description": "Open WebUI is an open, extensible, user-friendly interface for AI that adapts to your workflow.",
+            "description": app.state.WEBUI_TAGLINE,
             "start_url": "/",
             "display": "standalone",
             "background_color": "#343541",
