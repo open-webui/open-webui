@@ -12,10 +12,12 @@ aiohttp==3.11.11
 async-timeout
 aiocache
 aiofiles
+starlette-compress==1.6.0
+
 
 sqlalchemy==2.0.38
 alembic==1.14.0
-peewee==3.17.9
+peewee==3.18.1
 peewee-migrate==1.12.2
 psycopg2-binary==2.9.9
 pgvector==0.4.0
@@ -37,7 +39,8 @@ asgiref==3.8.1
 # AI libraries
 openai
 anthropic
-google-generativeai==0.8.4
+google-genai==1.15.0
+google-generativeai==0.8.5
 tiktoken
 
 langchain==0.3.24
@@ -98,7 +101,7 @@ pytube==15.0.0
 
 extract_msg
 pydub
-duckduckgo-search~=8.0.0
+duckduckgo-search==8.0.2
 
 ## Google Drive
 google-api-python-client
