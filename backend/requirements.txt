@@ -80,7 +80,7 @@ validators==0.34.0
 psutil
 sentencepiece
 soundfile==0.13.1
-azure-ai-documentintelligence==1.0.0
+azure-ai-documentintelligence==1.0.2
 
 pillow==11.1.0
 opencv-python-headless==4.11.0.86
