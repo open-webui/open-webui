@@ -169,7 +169,8 @@ class PromptsTable:
                 prompt.access_control = form_data.access_control
                 prompt.timestamp = int(time.time())
                 prompt.description = form_data.description
-                prompt.bookmarked = form_data.bookmarked
+                prompt.meta = form_data.meta.model_dump() if form_data.meta else None
+                # prompt.bookmarked = form_data.bookmarked
                 db.commit()
                 return PromptModel.model_validate(prompt)
         except Exception:
