@@ -39,15 +39,16 @@
 	const setSessionUser = async (sessionUser) => {
 		if (sessionUser) {
 			console.log(sessionUser);
-			if ($user?.email !== TRIAL_USER_EMAIL) {
-				toast.success($i18n.t(`You're now logged in.`));
-			}
 			if (sessionUser.token) {
 				localStorage.token = sessionUser.token;
 			}
 			$socket.emit('user-join', { auth: { token: sessionUser.token } });
 			await user.set(sessionUser);
 			await config.set(await getBackendConfig());
+
+			if ($user?.email !== TRIAL_USER_EMAIL) {
+				toast.success($i18n.t(`You're now logged in.`));
+			}
 
 			const redirectPath = querystringValue('redirect') || '/';
 			goto(redirectPath);
