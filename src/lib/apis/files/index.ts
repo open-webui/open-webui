@@ -1,8 +1,12 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
-export const uploadFile = async (token: string, file: File) => {
+export const uploadFile = async (token: string, file: File, metadata?: object | null) => {
 	const data = new FormData();
 	data.append('file', file);
+	if (metadata) {
+		data.append('metadata', JSON.stringify(metadata));
+	}
+
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/files/`, {

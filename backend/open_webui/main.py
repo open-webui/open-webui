@@ -40,6 +40,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
+from starlette_compress import CompressMiddleware
+
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
@@ -196,17 +198,32 @@ from open_webui.config import (
     RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
     RAG_EMBEDDING_ENGINE,
     RAG_EMBEDDING_BATCH_SIZE,
+    RAG_TOP_K,
+    RAG_TOP_K_RERANKER,
     RAG_RELEVANCE_THRESHOLD,
+    RAG_HYBRID_BM25_WEIGHT,
     RAG_ALLOWED_FILE_EXTENSIONS,
     RAG_FILE_MAX_COUNT,
     RAG_FILE_MAX_SIZE,
     RAG_OPENAI_API_BASE_URL,
     RAG_OPENAI_API_KEY,
+    RAG_AZURE_OPENAI_BASE_URL,
+    RAG_AZURE_OPENAI_API_KEY,
+    RAG_AZURE_OPENAI_API_VERSION,
     RAG_OLLAMA_BASE_URL,
     RAG_OLLAMA_API_KEY,
     CHUNK_OVERLAP,
     CHUNK_SIZE,
     CONTENT_EXTRACTION_ENGINE,
+    DATALAB_MARKER_API_KEY,
+    DATALAB_MARKER_LANGS,
+    DATALAB_MARKER_SKIP_CACHE,
+    DATALAB_MARKER_FORCE_OCR,
+    DATALAB_MARKER_PAGINATE,
+    DATALAB_MARKER_STRIP_EXISTING_OCR,
+    DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION,
+    DATALAB_MARKER_OUTPUT_FORMAT,
+    DATALAB_MARKER_USE_LLM,
     EXTERNAL_DOCUMENT_LOADER_URL,
     EXTERNAL_DOCUMENT_LOADER_API_KEY,
     TIKA_SERVER_URL,
@@ -217,8 +234,6 @@ from open_webui.config import (
     DOCUMENT_INTELLIGENCE_ENDPOINT,
     DOCUMENT_INTELLIGENCE_KEY,
     MISTRAL_OCR_API_KEY,
-    RAG_TOP_K,
-    RAG_TOP_K_RERANKER,
     RAG_TEXT_SPLITTER,
     TIKTOKEN_ENCODING_NAME,
     PDF_EXTRACT_IMAGES,
@@ -228,6 +243,7 @@ from open_webui.config import (
     ENABLE_WEB_SEARCH,
     WEB_SEARCH_ENGINE,
     BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL,
+    BYPASS_WEB_SEARCH_WEB_LOADER,
     WEB_SEARCH_RESULT_COUNT,
     WEB_SEARCH_CONCURRENT_REQUESTS,
     WEB_SEARCH_TRUST_ENV,
@@ -633,8 +649,12 @@ app.state.WEBUI_AUTH_SIGNOUT_REDIRECT_URL = WEBUI_AUTH_SIGNOUT_REDIRECT_URL
 app.state.EXTERNAL_PWA_MANIFEST_URL = EXTERNAL_PWA_MANIFEST_URL
 
 app.state.USER_COUNT = None
+
 app.state.TOOLS = {}
+app.state.TOOL_CONTENTS = {}
+
 app.state.FUNCTIONS = {}
+app.state.FUNCTION_CONTENTS = {}
 
 ########################################
 #
@@ -646,6 +666,7 @@ app.state.FUNCTIONS = {}
 app.state.config.TOP_K = RAG_TOP_K
 app.state.config.TOP_K_RERANKER = RAG_TOP_K_RERANKER
 app.state.config.RELEVANCE_THRESHOLD = RAG_RELEVANCE_THRESHOLD
+app.state.config.HYBRID_BM25_WEIGHT = RAG_HYBRID_BM25_WEIGHT
 app.state.config.ALLOWED_FILE_EXTENSIONS = RAG_ALLOWED_FILE_EXTENSIONS
 app.state.config.FILE_MAX_SIZE = RAG_FILE_MAX_SIZE
 app.state.config.FILE_MAX_COUNT = RAG_FILE_MAX_COUNT
@@ -657,6 +678,17 @@ app.state.config.ENABLE_RAG_HYBRID_SEARCH = ENABLE_RAG_HYBRID_SEARCH
 app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION = ENABLE_WEB_LOADER_SSL_VERIFICATION
 
 app.state.config.CONTENT_EXTRACTION_ENGINE = CONTENT_EXTRACTION_ENGINE
+app.state.config.DATALAB_MARKER_API_KEY = DATALAB_MARKER_API_KEY
+app.state.config.DATALAB_MARKER_LANGS = DATALAB_MARKER_LANGS
+app.state.config.DATALAB_MARKER_SKIP_CACHE = DATALAB_MARKER_SKIP_CACHE
+app.state.config.DATALAB_MARKER_FORCE_OCR = DATALAB_MARKER_FORCE_OCR
+app.state.config.DATALAB_MARKER_PAGINATE = DATALAB_MARKER_PAGINATE
+app.state.config.DATALAB_MARKER_STRIP_EXISTING_OCR = DATALAB_MARKER_STRIP_EXISTING_OCR
+app.state.config.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION = (
+    DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION
+)
+app.state.config.DATALAB_MARKER_USE_LLM = DATALAB_MARKER_USE_LLM
+app.state.config.DATALAB_MARKER_OUTPUT_FORMAT = DATALAB_MARKER_OUTPUT_FORMAT
 app.state.config.EXTERNAL_DOCUMENT_LOADER_URL = EXTERNAL_DOCUMENT_LOADER_URL
 app.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY = EXTERNAL_DOCUMENT_LOADER_API_KEY
 app.state.config.TIKA_SERVER_URL = TIKA_SERVER_URL
@@ -688,6 +720,10 @@ app.state.config.RAG_TEMPLATE = RAG_TEMPLATE
 app.state.config.RAG_OPENAI_API_BASE_URL = RAG_OPENAI_API_BASE_URL
 app.state.config.RAG_OPENAI_API_KEY = RAG_OPENAI_API_KEY
 
+app.state.config.RAG_AZURE_OPENAI_BASE_URL = RAG_AZURE_OPENAI_BASE_URL
+app.state.config.RAG_AZURE_OPENAI_API_KEY = RAG_AZURE_OPENAI_API_KEY
+app.state.config.RAG_AZURE_OPENAI_API_VERSION = RAG_AZURE_OPENAI_API_VERSION
+
 app.state.config.RAG_OLLAMA_BASE_URL = RAG_OLLAMA_BASE_URL
 app.state.config.RAG_OLLAMA_API_KEY = RAG_OLLAMA_API_KEY
 
@@ -707,6 +743,7 @@ app.state.config.WEB_SEARCH_TRUST_ENV = WEB_SEARCH_TRUST_ENV
 app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = (
     BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
 )
+app.state.config.BYPASS_WEB_SEARCH_WEB_LOADER = BYPASS_WEB_SEARCH_WEB_LOADER
 
 app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION = ENABLE_GOOGLE_DRIVE_INTEGRATION
 app.state.config.ENABLE_ONEDRIVE_INTEGRATION = ENABLE_ONEDRIVE_INTEGRATION
@@ -781,14 +818,27 @@ app.state.EMBEDDING_FUNCTION = get_embedding_function(
     (
         app.state.config.RAG_OPENAI_API_BASE_URL
         if app.state.config.RAG_EMBEDDING_ENGINE == "openai"
-        else app.state.config.RAG_OLLAMA_BASE_URL
+        else (
+            app.state.config.RAG_OLLAMA_BASE_URL
+            if app.state.config.RAG_EMBEDDING_ENGINE == "ollama"
+            else app.state.config.RAG_AZURE_OPENAI_BASE_URL
+        )
     ),
     (
         app.state.config.RAG_OPENAI_API_KEY
         if app.state.config.RAG_EMBEDDING_ENGINE == "openai"
-        else app.state.config.RAG_OLLAMA_API_KEY
+        else (
+            app.state.config.RAG_OLLAMA_API_KEY
+            if app.state.config.RAG_EMBEDDING_ENGINE == "ollama"
+            else app.state.config.RAG_AZURE_OPENAI_API_KEY
+        )
     ),
     app.state.config.RAG_EMBEDDING_BATCH_SIZE,
+    azure_api_version=(
+        app.state.config.RAG_AZURE_OPENAI_API_VERSION
+        if app.state.config.RAG_EMBEDDING_ENGINE == "azure_openai"
+        else None
+    ),
 )
 
 ########################################
@@ -959,6 +1009,7 @@ class RedirectMiddleware(BaseHTTPMiddleware):
 
 
 # Add the middleware to the app
+app.add_middleware(CompressMiddleware)
 app.add_middleware(RedirectMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 

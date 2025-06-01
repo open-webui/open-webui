@@ -61,9 +61,36 @@ For more information, be sure to check out our [Open WebUI Documentation](https:
 
 Want to learn more about Open WebUI's features? Check out our [Open WebUI documentation](https://docs.openwebui.com/features) for a comprehensive overview!
 
-## 🔗 Also Check Out Cerebrum LLM UI Community!
+## Sponsors 🙌
 
-Don't forget to explore our sibling project, [Cerebrum LLM UI Community](https://openwebui.com/), where you can discover, download, and explore customized Modelfiles. Cerebrum LLM UI Community offers a wide range of exciting possibilities for enhancing your chat interactions with Cerebrum LLM UI! 🚀
+#### Emerald
+
+<table>
+  <tr>
+    <td>
+      <a href="https://n8n.io/" target="_blank">
+        <img src="https://docs.openwebui.com/sponsors/logos/n8n.png" alt="n8n" style="width: 8rem; height: 8rem; border-radius: .75rem;" />
+      </a>
+    </td>
+    <td>
+      N8N • Does your interface have a backend yet?<br>Try <a href="https://n8n.io/">n8n</a>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <a href="https://warp.dev/open-webui" target="_blank">
+        <img src="https://docs.openwebui.com/sponsors/logos/warp.png" alt="n8n" style="width: 8rem; height: 8rem; border-radius: .75rem;" />
+      </a>
+    </td>
+    <td>
+      <a href="https://warp.dev/open-webui">Warp</a> • The intelligent terminal for developers
+    </td>
+  </tr>
+</table>
+
+---
+
+We are incredibly grateful for the generous support of our sponsors. Their contributions help us to maintain and improve our project, ensuring we can continue to deliver quality work to our community. Thank you!
 
 ## How to Install 🚀
 
