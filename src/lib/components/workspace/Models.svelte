@@ -511,7 +511,7 @@
 									{/each}
 								</div>
 							</div>
-							{#if $user?.role === 'admin' || model.user_id === $user?.id || model?.access_control?.write.group_ids?.some( (wg) => group_ids.includes(wg) )}
+							{#if $user?.role === 'admin' || model.user_id === $user?.id || model?.access_control === null || model?.access_control?.write.group_ids?.some( (wg) => group_ids.includes(wg) )}
 								<div
 									class="{hoveredModel === model.id || menuIdOpened === model.id
 										? 'md:visible'
@@ -543,6 +543,7 @@
 										on:closeMenu={() => {
 											menuIdOpened = null;
 										}}
+										{cloneModelHandler}
 									>
 										<button
 											class="self-center w-fit text-sm px-0.5 h-[21px] dark:text-white dark:hover:text-white hover:bg-black/5 rounded-md"
