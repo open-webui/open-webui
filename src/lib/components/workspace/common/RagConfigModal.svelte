@@ -8,7 +8,7 @@
     import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
 
-    import { createNewKnowledge, getKnowledgeBases } from '$lib/apis/knowledge';
+    import { createNewKnowledge, getKnowledgeBases, reindexSpecificKnowledgeFiles} from '$lib/apis/knowledge';
     import { knowledge, user } from '$lib/stores';
 
 	import {
@@ -48,6 +48,8 @@
     let OllamaUrl = RAGConfig.ollama_config?.url || "";
     let OllamaKey = RAGConfig.ollama_config?.key || "";
 
+    let needsReindex = false;
+
     function resetLocalState() {
     if (!RAGConfig) return;
 
@@ -61,6 +63,7 @@
 
     OllamaUrl = RAGConfig.ollama_config?.url || "";
     OllamaKey = RAGConfig.ollama_config?.key || "";
+    needsReindex = false;
 }
 
     // Automatically reset on modal open
@@ -226,6 +229,18 @@
         localRAGConfig.embedding_batch_size = embeddingBatchSize
         localRAGConfig.openai_config = {"key": OpenAIKey, "url": OpenAIUrl}          
         localRAGConfig.ollama_config = {"key": OllamaKey, "url": OllamaUrl}
+
+        if (needsReindex) {
+            // Reindex knowledge files if reranking model changed
+            const reindexResponse = await reindexSpecificKnowledgeFiles(localStorage.token, knowledgeId,
+            );
+
+            if (reindexResponse.status === true) {
+                toast.success($i18n.t('Knowledge files reindexed successfully.'));
+            } else {
+                toast.error($i18n.t('Failed to reindex knowledge files.'));
+            }
+        }
 
         dispatch('update', localRAGConfig)
         loading = false;
@@ -494,6 +509,14 @@
                                             required
                                             on:input={() => {
                                             }}
+                                            on:change={() => {
+                                                if (
+                                                    embeddingModel !== "" &&
+                                                    embeddingModel !== localRAGConfig.RAG_EMBEDDING_MODEL
+                                                ) {
+                                                    needsReindex = true;
+                                                }
+                                            }}
                                         />
                                     </div>
                                 </div>
@@ -577,13 +600,22 @@
                                     class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden p-2 border border-gray-300"
                                     bind:value={embeddingModel}
                                     required
+                                    on:change={() => {
+                                        if (
+                                            embeddingModel !== "" &&
+                                            embeddingModel !== localRAGConfig.RAG_EMBEDDING_MODEL
+                                        ) {
+                                            needsReindex = true;
+                                            console.log('needsReindex set to', needsReindex);
+                                        }
+                                    }}
                                 >
                                     <option value="" disabled selected>{$i18n.t('Select embedding model')}</option>
                                     <!-- Always show the current value first if it's not empty -->
                                     {#if embeddingModel && embeddingModel.trim() !== ''}
                                         <option value={embeddingModel} class="py-1 font-semibold">
                                             {embeddingModel} 
-                                            {#if embeddingEngine && 
+                                            {#if embeddingEngine !== undefined && 
                                                 localRAGConfig.DOWNLOADED_EMBEDDING_MODELS[embeddingEngine] && 
                                                 !localRAGConfig.DOWNLOADED_EMBEDDING_MODELS[embeddingEngine]?.includes(embeddingModel)}
                                                 (custom)
@@ -592,7 +624,7 @@
                                     {/if}
                                     
                                     <!-- Then show all downloaded models from the selected engine -->
-                                    {#if embeddingEngine && localRAGConfig.DOWNLOADED_EMBEDDING_MODELS[embeddingEngine]}
+                                    {#if embeddingEngine !== undefined && localRAGConfig.DOWNLOADED_EMBEDDING_MODELS[embeddingEngine]}
                                         {#each localRAGConfig.DOWNLOADED_EMBEDDING_MODELS[embeddingEngine] as model}
                                             {#if model !== embeddingModel} <!-- Skip the current model as it's already shown -->
                                                 <option value={model} class="py-1">{model}</option>
