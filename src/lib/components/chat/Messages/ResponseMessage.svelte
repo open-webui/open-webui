@@ -49,6 +49,8 @@
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 	import FileItem from '$lib/components/common/FileItem.svelte';
 	import OptionGroup from '$lib/components/common/OptionGroup.svelte';
+	import ProductGrid from '$lib/components/common/ProductGrid.svelte';
+
 
 	interface MessageType {
 		id: string;
@@ -172,12 +174,55 @@
 		return {header_message: header_message, footer_message: footer_message};
 	};
 
-	const parseProductListFromMessage = (message: string): string => {
+	interface Product {
+    product_info: {
+			name: string;
+			display_name: string;
+			description: string;
+			notes: string;
+			price: string;
+			made_by: string;
+			url_id: string;
+			url: string;
+			image_url: string;
+			image_urls: string;
+    };
+    product_tags: {
+			generic_name: string;
+			category: string;
+			age_group: string;
+			gender: string;
+			url_id: string;
+			url: string;
+    };
+    search_score: number;
+    reranker_score: number;
+    thumbnails: string[];
+		experience_info: {
+			name: string;
+			display_name: string;
+			description: string;
+			price: string;
+			rating: string;
+			city: string;
+			state: string;
+			country: string;
+			zipcode: string;
+			phone: string;
+			url: string;
+			image_url: string;
+			image_urls: string;
+		};
+	}
+
+	const parseProductListFromMessage = (message: string): Product[] => {
 		const parsedMessage = JSON.parse(message);
-		return parsedMessage.product_list;
+		const productList: Product[] = JSON.parse(parsedMessage.product_list);
+		return productList;
 	};
 
 	const updateMessage = async (message: MessageType, title: string) => {
+	    console.log('updateMessage', message, title);
 		const parsedMessage = JSON.parse(message.content);
 		// find option that has the same title as the one passed in and update its state = selected. For everything else, set state = disabled
 		const updatedOptions = parsedMessage.options.map((option: { title: string; description: string, state: string }) => {
@@ -917,30 +962,27 @@
 									<!-- always show message contents even if there's an error -->
 									<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
 									<!-- Render Product List -->
-									<ContentRenderer
-										id={message.id}
-										{history}
-										content={parseProductListFromMessage(message.content)}
-										sources={message.sources}
-										floatingButtons={message?.done}
-										save={!readOnly}
-										{model}
-										onTaskClick={async (e) => {
-											console.log(e);
-										}}
+									<ProductGrid products={parseProductListFromMessage(message.content)}
+                                        on:click={(e) => {
+                                            console.log(e);
+                                        }}
 									/>
 									<br>
-									<OptionGroup options={parseOptionsFromMessage(message.content)} option_context={parseContextFromMessage(message.content)}
-										on:click={(e) => {const selectedOption = e.detail;
-										updateMessage(message, selectedOption.title);
-										submitMessage(message.id, `${selectedOption.title}: ${selectedOption.description}`);
-										}}
-									/>
+									{#if message.content.includes("\"options\":")}
+										<!-- Render Options -->
+										<OptionGroup options={parseOptionsFromMessage(message.content)} option_context={parseContextFromMessage(message.content)}
+											on:click={(e) => {const selectedOption = e.detail;
+											updateMessage(message, selectedOption.title);
+											submitMessage(message.id, `${selectedOption.title}: ${selectedOption.description}`);
+											}}
+										/>
+									{/if}
 								{:else if message.content && message.error !== true && message.content.includes("\"options\":")}
 									<OptionGroup options={parseOptionsFromMessage(message.content)} option_context={parseContextFromMessage(message.content)}
-										on:click={(e) => {const selectedOption = e.detail;
-										updateMessage(message, selectedOption.title);
-										submitMessage(message.id, `${selectedOption.title}: ${selectedOption.description}`);
+										on:click={(e) => {
+											const selectedOption = e.detail;
+											updateMessage(message, selectedOption.title);
+											submitMessage(message.id, `${selectedOption.title}: ${selectedOption.description}`);
 										}}
 									/>
 								{/if}
