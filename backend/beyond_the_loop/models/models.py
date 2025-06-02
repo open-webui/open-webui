@@ -20,8 +20,8 @@ from open_webui.utils.access_control import has_access
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
-bookmarked_assistants = Table(
-    "bookmarked_assistants",
+user_model_bookmark = Table(
+    "user_model_bookmark",
     Base.metadata,
     Column("user_id", ForeignKey("user.id", ondelete="CASCADE"), primary_key=True),
     Column("model_id", ForeignKey("model.id", ondelete="CASCADE"), primary_key=True),
@@ -113,10 +113,10 @@ class Model(Base):
     updated_at = Column(BigInteger)
     created_at = Column(BigInteger)
 
-    users = relationship(
+    bookmarking_users = relationship(
         "User",
-        secondary="bookmarked_assistants",
-        back_populates="assistants"
+        secondary="user_model_bookmark",
+        back_populates="model_bookmarks"
     )
 
 
@@ -224,7 +224,7 @@ class ModelsTable:
     ) -> list[ModelUserResponse]:
         with get_db() as db:
             result = db.execute(
-                select(bookmarked_assistants.c.model_id).where(bookmarked_assistants.c.user_id == user_id)
+                select(user_model_bookmark.c.model_id).where(user_model_bookmark.c.user_id == user_id)
             )
             bookmarked_model_ids = {row.model_id for row in result.fetchall()}
 
@@ -322,24 +322,24 @@ class ModelsTable:
         try:
             with get_db() as db:
                 exists = db.execute(
-                    select(bookmarked_assistants).where(
-                        (bookmarked_assistants.c.user_id == user_id) &
-                        (bookmarked_assistants.c.model_id == model_id)
+                    select(user_model_bookmark).where(
+                        (user_model_bookmark.c.user_id == user_id) &
+                        (user_model_bookmark.c.model_id == model_id)
                     )
                 ).fetchone()
 
                 if exists:
                     db.execute(
-                        delete(bookmarked_assistants).where(
-                            (bookmarked_assistants.c.user_id == user_id) &
-                            (bookmarked_assistants.c.model_id == model_id)
+                        delete(user_model_bookmark).where(
+                            (user_model_bookmark.c.user_id == user_id) &
+                            (user_model_bookmark.c.model_id == model_id)
                         )
                     )
                     db.commit()
                     return False  # Bookmark was removed
                 else:
                     db.execute(
-                        insert(bookmarked_assistants).values(
+                        insert(user_model_bookmark).values(
                             user_id=user_id,
                             model_id=model_id
                         )

@@ -14,8 +14,8 @@ from open_webui.utils.access_control import has_access
 ####################
 # Prompts DB Schema
 ####################
-bookmarked_prompts = Table(
-    "bookmarked_prompts",
+user_prompt_bookmark = Table(
+    "user_prompt_bookmark",
     Base.metadata,
     Column("user_id", ForeignKey("user.id", ondelete="CASCADE"), primary_key=True),
     Column("prompt_command", ForeignKey("prompt.command", ondelete="CASCADE"), primary_key=True),
@@ -55,10 +55,10 @@ class Prompt(Base):
     """
         Holds a JSON encoded blob of metadata, see `PromptMeta`.
     """
-    users = relationship(
+    bookmarking_users = relationship(
         "User",
-        secondary="bookmarked_prompts",
-        back_populates="prompts"
+        secondary="user_prompt_bookmark",
+        back_populates="prompt_bookmarks"
     )
 
 
@@ -177,7 +177,7 @@ class PromptsTable:
     ) -> list[PromptUserResponse]:
         with get_db() as db:
             result = db.execute(
-                select(bookmarked_prompts.c.prompt_command).where(bookmarked_prompts.c.user_id == user_id)
+                select(user_prompt_bookmark.c.prompt_command).where(user_prompt_bookmark.c.user_id == user_id)
             )
             bookmarked_prompts_commands = {row.prompt_command for row in result.fetchall()}
             prompts = self.get_prompts()
@@ -238,24 +238,24 @@ class PromptsTable:
         try:
             with get_db() as db:
                 exists = db.execute(
-                    select(bookmarked_prompts).where(
-                        (bookmarked_prompts.c.user_id == user_id) &
-                        (bookmarked_prompts.c.prompt_command == prompt_command)
+                    select(user_prompt_bookmark).where(
+                        (user_prompt_bookmark.c.user_id == user_id) &
+                        (user_prompt_bookmark.c.prompt_command == prompt_command)
                     )
                 ).fetchone()
 
                 if exists:
                     db.execute(
-                        delete(bookmarked_prompts).where(
-                            (bookmarked_prompts.c.user_id == user_id) &
-                            (bookmarked_prompts.c.prompt_command == prompt_command)
+                        delete(user_prompt_bookmark).where(
+                            (user_prompt_bookmark.c.user_id == user_id) &
+                            (user_prompt_bookmark.c.prompt_command == prompt_command)
                         )
                     )
                     db.commit()
                     return False  # Bookmark was removed
                 else:
                     db.execute(
-                        insert(bookmarked_prompts).values(
+                        insert(user_prompt_bookmark).values(
                             user_id=user_id,
                             prompt_command=prompt_command
                         )

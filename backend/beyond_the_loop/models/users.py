@@ -46,16 +46,16 @@ class User(Base):
     company_id = Column(String, ForeignKey("company.id", ondelete="CASCADE"), nullable=False)
     company = relationship("Company", back_populates="users")
 
-    assistants = relationship(
+    model_bookmarks = relationship(
         "Model",
-        secondary="bookmarked_assistants",
-        back_populates="users"
+        secondary="user_model_bookmark",
+        back_populates="bookmarking_users"
     )
 
-    prompts = relationship(
+    prompt_bookmarks = relationship(
         "Prompt",
-        secondary="bookmarked_prompts",
-        back_populates="users"
+        secondary="user_prompt_bookmark",
+        back_populates="bookmarking_users"
     )
 
 
