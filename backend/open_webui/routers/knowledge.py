@@ -246,8 +246,6 @@ async def reindex_specific_knowledge_files(request: Request, id: str, user=Depen
     log.info(f"reindex_specific_knowledge_files called with id={id}")
     knowledge_base = Knowledges.get_knowledge_by_id(id=id)
 
-    log.info(f"Starting reindexing for {knowledge_base.id} knowledge bases")
-
     deleted_knowledge_bases = []
 
     # -- Robust error handling for missing or invalid data
