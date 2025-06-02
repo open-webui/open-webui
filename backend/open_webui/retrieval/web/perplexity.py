@@ -60,7 +60,7 @@ def search_perplexity(
             "stream": False,
             "web_search_options": {
                 "search_context_usage": search_context_usage,
-            }
+            },
         }
 
         headers = {

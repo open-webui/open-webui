@@ -477,7 +477,7 @@
 							<!-- Search context usage selection -->
 							<div class="mb-2.5 flex w-full flex-col">
 								<div class=" self-center text-xs font-medium mb-1">
-									{$i18n.t('Search Context Usage')}
+									{$i18n.t('Perplexity Search Context Usage')}
 								</div>
 								<select
 									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
