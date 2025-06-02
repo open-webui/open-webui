@@ -241,6 +241,72 @@ async def reindex_knowledge_files(request: Request, user=Depends(get_verified_us
     )
     return True
 
+@router.post("/reindex/{id}", response_model=bool)
+async def reindex_specific_knowledge_files(request: Request, id: str, user=Depends(get_verified_user)):
+    log.info(f"reindex_specific_knowledge_files called with id={id}")
+    knowledge_base = Knowledges.get_knowledge_by_id(id=id)
+
+    log.info(f"Starting reindexing for {knowledge_base.id} knowledge bases")
+
+    deleted_knowledge_bases = []
+
+    # -- Robust error handling for missing or invalid data
+    if not knowledge_base.data or not isinstance(knowledge_base.data, dict):
+        log.warning(
+            f"Knowledge base {knowledge_base.id} has no data or invalid data ({knowledge_base.data!r}). Deleting."
+        )
+        try:
+            Knowledges.delete_knowledge_by_id(id=knowledge_base.id)
+            deleted_knowledge_bases.append(knowledge_base.id)
+        except Exception as e:
+            log.error(
+                f"Failed to delete invalid knowledge base {knowledge_base.id}: {e}"
+            )
+
+    try:
+        file_ids = knowledge_base.data.get("file_ids", [])
+        files = Files.get_files_by_ids(file_ids)
+        try:
+            if VECTOR_DB_CLIENT.has_collection(collection_name=knowledge_base.id):
+                VECTOR_DB_CLIENT.delete_collection(
+                    collection_name=knowledge_base.id
+                )
+        except Exception as e:
+            log.error(f"Error deleting collection {knowledge_base.id}: {str(e)}")
+
+        failed_files = []
+        for file in files:
+            try:
+                process_file(
+                    request,
+                    ProcessFileForm(
+                        file_id=file.id, collection_name=knowledge_base.id
+                    ),
+                    user=user,
+                )
+            except Exception as e:
+                log.error(
+                    f"Error processing file {file.filename} (ID: {file.id}): {str(e)}"
+                )
+                failed_files.append({"file_id": file.id, "error": str(e)})
+                continue
+
+    except Exception as e:
+        log.error(f"Error processing knowledge base {knowledge_base.id}: {str(e)}")
+
+
+    if failed_files:
+        log.warning(
+            f"Failed to process {len(failed_files)} files in knowledge base {knowledge_base.id}"
+        )
+        for failed in failed_files:
+            log.warning(f"File ID: {failed['file_id']}, Error: {failed['error']}")
+
+    log.info(
+        f"Reindexing completed. Deleted {len(deleted_knowledge_bases)} invalid knowledge bases: {deleted_knowledge_bases}"
+    )
+    return True
+
 
 ############################
 # GetKnowledgeById
