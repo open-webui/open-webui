@@ -839,6 +839,31 @@ OLLAMA_API_CONFIGS = PersistentConfig(
 )
 
 ####################################
+# MCP (Model Context Protocol)
+####################################
+
+ENABLE_MCP_API = PersistentConfig(
+    "ENABLE_MCP_API",
+    "mcp.enabled",
+    os.environ.get("ENABLE_MCP_API", "False").lower() == "true",
+)
+
+MCP_BASE_URL = os.environ.get("MCP_BASE_URL", "")
+MCP_BASE_URLS = os.environ.get("MCP_BASE_URLS", "")
+MCP_BASE_URLS = MCP_BASE_URLS if MCP_BASE_URLS != "" else MCP_BASE_URL
+
+MCP_BASE_URLS = [url.strip() for url in MCP_BASE_URLS.split(";") if url.strip()]
+MCP_BASE_URLS = PersistentConfig(
+    "MCP_BASE_URLS", "mcp.base_urls", MCP_BASE_URLS
+)
+
+MCP_API_CONFIGS = PersistentConfig(
+    "MCP_API_CONFIGS",
+    "mcp.api_configs",
+    {},
+)
+
+####################################
 # OPENAI_API
 ####################################
 
@@ -1485,7 +1510,29 @@ TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = PersistentConfig(
 )
 
 
-DEFAULT_TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = """Available Tools: {{TOOLS}}\nReturn an empty string if no tools match the query. If a function tool matches, construct and return a JSON object in the format {\"name\": \"functionName\", \"parameters\": {\"requiredFunctionParamKey\": \"requiredFunctionParamValue\"}} using the appropriate tool and its parameters. Only return the object and limit the response to the JSON object without additional text."""
+DEFAULT_TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = """Available Tools: {{TOOLS}}
+
+You must decide whether to use any of these tools based on the user's query. Only use tools when they are directly relevant and necessary to answer the user's question accurately.
+
+Guidelines for tool usage:
+- Use tools when the user explicitly asks for current/real-time information (current time, current weather, latest news, etc.)
+- Use tools when the query requires live data, calculations, or external operations that cannot be answered with general knowledge
+- Do NOT use tools for general knowledge questions that can be answered without real-time data
+- Do NOT use tools for casual conversation, greetings, or simple questions
+- Do NOT use tools for historical facts, definitions, or static information
+- For time zone questions: Only use time tools if the user asks for the "current" time in a location; do not use for general time zone information
+
+Examples:
+- "What time is it?" → Use time tool
+- "What is the current time in Tokyo?" → Use time tool  
+- "What time zone is Japan in?" → Do NOT use tool (general knowledge)
+- "Tell me about time zones" → Do NOT use tool (general knowledge)
+
+If no tools are needed for the query: Return an empty string ""
+
+If a tool is needed: Return a JSON object in the format {\"name\": \"functionName\", \"parameters\": {\"requiredFunctionParamKey\": \"requiredFunctionParamValue\"}}
+
+Only return the JSON object or empty string, no additional text."""
 
 
 DEFAULT_EMOJI_GENERATION_PROMPT_TEMPLATE = """Your task is to reflect the speaker's likely facial expression through a fitting emoji. Interpret emotions from the message and reflect their facial expression using fitting, diverse emojis (e.g., 😊, 😢, 😡, 😱).

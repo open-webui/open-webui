@@ -1,5 +1,6 @@
 from pathlib import Path
 from typing import Optional
+import time
 
 from open_webui.models.tools import (
     ToolForm,
@@ -25,11 +26,45 @@ router = APIRouter()
 
 
 @router.get("/", response_model=list[ToolUserResponse])
-async def get_tools(user=Depends(get_verified_user)):
+async def get_tools(request: Request, user=Depends(get_verified_user)):
     if user.role == "admin":
         tools = Tools.get_tools()
     else:
         tools = Tools.get_tools_by_user_id(user.id, "read")
+    
+    # Add MCP tools if enabled
+    try:
+        if hasattr(request.app.state.config, 'ENABLE_MCP_API') and request.app.state.config.ENABLE_MCP_API:
+            from open_webui.routers.mcp import get_all_mcp_tools
+            from open_webui.models.tools import ToolMeta
+            
+            mcp_tools_response = await get_all_mcp_tools(request)
+            mcp_tools = mcp_tools_response.get("tools", [])
+            
+            for mcp_tool in mcp_tools:
+                # Create a pseudo-tool entry for MCP tools
+                mcp_tool_entry = ToolUserResponse(
+                    id=f"mcp_{mcp_tool['name']}",
+                    user_id="system",  # Use system as user_id for MCP tools
+                    name=f"MCP: {mcp_tool['name']}",
+                    meta=ToolMeta(
+                        description=mcp_tool['description'],
+                        manifest={
+                            "mcp_server_url": mcp_tool.get('mcp_server_url'),
+                            "mcp_server_idx": mcp_tool.get('mcp_server_idx', 0),
+                            "is_mcp_tool": True,
+                            "original_name": mcp_tool['name']
+                        }
+                    ),
+                    access_control=None,  # Public access
+                    updated_at=int(time.time()),
+                    created_at=int(time.time()),
+                    user=None  # No specific user for MCP tools
+                )
+                tools.append(mcp_tool_entry)
+    except Exception as e:
+        print(f"Error loading MCP tools in tools router: {e}")
+    
     return tools
 
 

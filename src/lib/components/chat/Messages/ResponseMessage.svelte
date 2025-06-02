@@ -96,6 +96,7 @@
 	export let chatId = '';
 	export let history;
 	export let messageId;
+	export let selectedToolIds: string[] = [];
 
 	let message: MessageType = JSON.parse(JSON.stringify(history.messages[messageId]));
 	$: if (history.messages) {
@@ -698,7 +699,7 @@
 								{/if}
 
 								{#if (message?.sources || message?.citations) && (model?.info?.meta?.capabilities?.citations ?? true)}
-									<Citations sources={message?.sources ?? message?.citations} />
+									<Citations sources={message?.sources ?? message?.citations} {selectedToolIds} />
 								{/if}
 
 								{#if message.code_executions}

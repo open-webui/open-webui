@@ -13,6 +13,7 @@
 	import Interface from './Settings/Interface.svelte';
 	import Models from './Settings/Models.svelte';
 	import Connections from './Settings/Connections.svelte';
+	import MCP from './Settings/MCP.svelte';
 	import Documents from './Settings/Documents.svelte';
 	import WebSearch from './Settings/WebSearch.svelte';
 	import ChartBar from '../icons/ChartBar.svelte';
@@ -90,6 +91,35 @@
 				</svg>
 			</div>
 			<div class=" self-center">{$i18n.t('Connections')}</div>
+		</button>
+
+		<button
+			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
+			'mcp'
+				? ''
+				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+			on:click={() => {
+				selectedTab = 'mcp';
+			}}
+		>
+			<div class=" self-center mr-2">
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 24 24"
+					fill="currentColor"
+					class="w-4 h-4"
+				>
+					<path
+						d="M8.25 3v1.5c0 .414.336.75.75.75s.75-.336.75-.75V3h3v1.5c0 .414.336.75.75.75s.75-.336.75-.75V3h3a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3h3Z"
+					/>
+					<path
+						fill-rule="evenodd"
+						d="M9 9a.75.75 0 0 1 .75-.75h4.5a.75.75 0 0 1 0 1.5h-4.5A.75.75 0 0 1 9 9Zm0 3a.75.75 0 0 1 .75-.75h4.5a.75.75 0 0 1 0 1.5h-4.5A.75.75 0 0 1 9 12Zm0 3a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 0 1.5h-1.5A.75.75 0 0 1 9 15Z"
+						clip-rule="evenodd"
+					/>
+				</svg>
+			</div>
+			<div class=" self-center">{$i18n.t('MCP')}</div>
 		</button>
 
 		<button
@@ -337,6 +367,12 @@
 			/>
 		{:else if selectedTab === 'connections'}
 			<Connections
+				on:save={() => {
+					toast.success($i18n.t('Settings saved successfully!'));
+				}}
+			/>
+		{:else if selectedTab === 'mcp'}
+			<MCP
 				on:save={() => {
 					toast.success($i18n.t('Settings saved successfully!'));
 				}}

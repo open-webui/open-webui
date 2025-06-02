@@ -7,9 +7,10 @@
 
 	const i18n = getContext('i18n');
 
-	export let sources = [];
+	export let sources: any[] = [];
+	export let selectedToolIds: string[] = [];
 
-	let citations = [];
+	let citations: any[] = [];
 	let showPercentage = false;
 	let showRelevance = true;
 
@@ -42,18 +43,31 @@
 	}
 
 	$: {
-		citations = sources.reduce((acc, source) => {
+		citations = sources.reduce((acc: any[], source: any) => {
 			if (Object.keys(source).length === 0) {
 				return acc;
 			}
 
-			source.document.forEach((document, index) => {
+			source.document.forEach((document: any, index: number) => {
 				const metadata = source.metadata?.[index];
 				const distance = source.distances?.[index];
 
 				// Within the same citation there could be multiple documents
 				const id = metadata?.source ?? 'N/A';
 				let _source = source?.source;
+
+				// Filter out tool citations that are not in selectedToolIds
+				if (id.startsWith('TOOL:')) {
+					// Extract toolkit_id from the source format: TOOL:{toolkit_id}/{tool_function_name}
+					const toolMatch = id.match(/^TOOL:([^/]+)/);
+					if (toolMatch) {
+						const toolkitId = toolMatch[1];
+						// Skip this citation if the toolkit is not in selectedToolIds
+						if (selectedToolIds.length > 0 && !selectedToolIds.includes(toolkitId)) {
+							return;
+						}
+					}
+				}
 
 				if (metadata?.name) {
 					_source = { ..._source, name: metadata.name };

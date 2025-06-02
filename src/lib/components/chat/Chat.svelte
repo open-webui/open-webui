@@ -111,7 +111,7 @@
 	let selectedModelIds = [];
 	$: selectedModelIds = atSelectedModel !== undefined ? [atSelectedModel.id] : selectedModels;
 
-	let selectedToolIds = [];
+	let selectedToolIds: string[] = [];
 	let imageGenerationEnabled = false;
 	let webSearchEnabled = false;
 
@@ -133,29 +133,27 @@
 
 	$: if (chatIdProp) {
 		(async () => {
-			prompt = '';
-			files = [];
-			selectedToolIds = [];
-			webSearchEnabled = false;
-			imageGenerationEnabled = false;
+			// First, try to restore from localStorage before resetting
+			let storedInput = null;
+			const storedData = localStorage.getItem(`chat-input-${chatIdProp}`);
+			if (storedData) {
+				try {
+					storedInput = JSON.parse(storedData);
+				} catch (e) {}
+			}
+
+			// Reset states, but use stored values if available
+			prompt = storedInput?.prompt || '';
+			files = storedInput?.files || [];
+			selectedToolIds = storedInput?.selectedToolIds || [];
+			webSearchEnabled = storedInput?.webSearchEnabled || false;
+			imageGenerationEnabled = storedInput?.imageGenerationEnabled || false;
 
 			loaded = false;
 
 			if (chatIdProp && (await loadChat())) {
 				await tick();
 				loaded = true;
-
-				if (localStorage.getItem(`chat-input-${chatIdProp}`)) {
-					try {
-						const input = JSON.parse(localStorage.getItem(`chat-input-${chatIdProp}`));
-
-						prompt = input.prompt;
-						files = input.files;
-						selectedToolIds = input.selectedToolIds;
-						webSearchEnabled = input.webSearchEnabled;
-						imageGenerationEnabled = input.imageGenerationEnabled;
-					} catch (e) {}
-				}
 
 				window.setTimeout(() => scrollToBottom(), 0);
 				const chatInput = document.getElementById('chat-input');
@@ -396,12 +394,15 @@
 
 		if (localStorage.getItem(`chat-input-${chatIdProp}`)) {
 			try {
-				const input = JSON.parse(localStorage.getItem(`chat-input-${chatIdProp}`));
-				prompt = input.prompt;
-				files = input.files;
-				selectedToolIds = input.selectedToolIds;
-				webSearchEnabled = input.webSearchEnabled;
-				imageGenerationEnabled = input.imageGenerationEnabled;
+				const storedData = localStorage.getItem(`chat-input-${chatIdProp}`);
+				if (storedData) {
+					const input = JSON.parse(storedData);
+					prompt = input.prompt;
+					files = input.files;
+					selectedToolIds = input.selectedToolIds;
+					webSearchEnabled = input.webSearchEnabled;
+					imageGenerationEnabled = input.imageGenerationEnabled;
+				}
 			} catch (e) {
 				prompt = '';
 				files = [];
@@ -1873,6 +1874,7 @@
 									bind:autoScroll
 									bind:prompt
 									{selectedModels}
+									{selectedToolIds}
 									{sendPrompt}
 									{showMessage}
 									{submitMessage}

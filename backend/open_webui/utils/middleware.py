@@ -59,7 +59,7 @@ from open_webui.utils.misc import (
     get_last_assistant_message,
     prepend_to_first_user_message_content,
 )
-from open_webui.utils.tools import get_tools
+from open_webui.utils.tools import get_tools, get_tools_async
 from open_webui.utils.plugin import load_function_module_by_id
 
 
@@ -226,7 +226,7 @@ async def chat_completion_tools_handler(
         request.app.state.config.TASK_MODEL_EXTERNAL,
         models,
     )
-    tools = get_tools(
+    tools = await get_tools_async(
         request,
         tool_ids,
         user,
@@ -264,15 +264,57 @@ async def chat_completion_tools_handler(
         if not content:
             return body, {}
 
-        try:
-            content = content[content.find("{") : content.rfind("}") + 1]
-            if not content:
-                raise Exception("No JSON object found in the response")
+        # Check if the response is an empty string (indicating no tools should be used)
+        content_stripped = content.strip()
+        if content_stripped == '""' or content_stripped == "" or content_stripped.lower() in ["", '""', "no tools needed", "none"]:
+            log.debug("Model indicated no tools should be used")
+            return body, {}
 
-            result = json.loads(content)
+        try:
+            # Look for JSON object in the response
+            json_start = content.find("{")
+            json_end = content.rfind("}") + 1
+            
+            if json_start == -1 or json_end == 0:
+                log.debug("No JSON object found in response, treating as no tool usage")
+                return body, {}
+                
+            json_content = content[json_start:json_end]
+            log.debug(f"Extracted JSON content: {json_content}")
+            
+            # Try to parse the JSON
+            try:
+                result = json.loads(json_content)
+            except json.JSONDecodeError as json_error:
+                log.error(f"JSON parsing failed for content: {json_content}")
+                log.error(f"JSON error: {json_error}")
+                # Try to find a more complete JSON object by looking for balanced braces
+                brace_count = 0
+                json_end_corrected = json_start
+                for i, char in enumerate(content[json_start:], json_start):
+                    if char == '{':
+                        brace_count += 1
+                    elif char == '}':
+                        brace_count -= 1
+                        if brace_count == 0:
+                            json_end_corrected = i + 1
+                            break
+                
+                if json_end_corrected > json_start:
+                    json_content = content[json_start:json_end_corrected]
+                    log.debug(f"Trying corrected JSON content: {json_content}")
+                    try:
+                        result = json.loads(json_content)
+                    except json.JSONDecodeError:
+                        log.error(f"Corrected JSON parsing also failed, treating as no tool usage")
+                        return body, {}
+                else:
+                    log.error(f"Could not find balanced JSON, treating as no tool usage")
+                    return body, {}
 
             tool_function_name = result.get("name", None)
-            if tool_function_name not in tools:
+            if not tool_function_name or tool_function_name not in tools:
+                log.debug(f"Tool function '{tool_function_name}' not found in available tools")
                 return body, {}
 
             tool_function_params = result.get("parameters", {})

@@ -75,6 +75,7 @@ from open_webui.routers import (
     users,
     jira,
     utils,
+    mcp,
 )
 
 from open_webui.routers.retrieval import (
@@ -96,6 +97,10 @@ from open_webui.config import (
     ENABLE_OLLAMA_API,
     OLLAMA_BASE_URLS,
     OLLAMA_API_CONFIGS,
+    # MCP (Model Context Protocol)
+    ENABLE_MCP_API,
+    MCP_BASE_URLS,
+    MCP_API_CONFIGS,
     # OpenAI
     ENABLE_OPENAI_API,
     OPENAI_API_BASE_URLS,
@@ -333,6 +338,9 @@ class SPAStaticFiles(StaticFiles):
             return await super().get_response(path, scope)
         except (HTTPException, StarletteHTTPException) as ex:
             if ex.status_code == 404:
+                # Don't serve index.html for API routes
+                if path.startswith(('api/', 'mcp/', 'ollama/', 'openai/', 'ws/', 'health', 'oauth/')):
+                    raise ex
                 return await super().get_response("index.html", scope)
             else:
                 raise ex
@@ -360,8 +368,27 @@ async def lifespan(app: FastAPI):
     if RESET_CONFIG_ON_START:
         reset_config()
 
+    # Initialize FastMCP manager
+    try:
+        from open_webui.mcp_manager import get_mcp_manager
+        app.state.mcp_manager = get_mcp_manager()
+        log.info("FastMCP manager initialized")
+    except Exception as e:
+        log.error(f"Failed to initialize FastMCP manager: {e}")
+
+    # Start MCP server if enabled
+    # Note: FastMCP server should be started separately with:
+    # python fastmcp_time_server.py --http 8083
+    if app.state.config.ENABLE_MCP_API:
+        log.info("MCP API enabled - FastMCP server should be running on port 8083")
+
     asyncio.create_task(periodic_usage_pool_cleanup())
-    yield
+    
+    try:
+        yield
+    finally:
+        # FastMCP server runs independently, no cleanup needed
+        log.info("FastMCP integration uses external server - no cleanup required")
 
 
 app = FastAPI(
@@ -386,6 +413,18 @@ app.state.config.OLLAMA_BASE_URLS = OLLAMA_BASE_URLS
 app.state.config.OLLAMA_API_CONFIGS = OLLAMA_API_CONFIGS
 
 app.state.OLLAMA_MODELS = {}
+
+########################################
+#
+# MCP (Model Context Protocol)
+#
+########################################
+
+app.state.config.ENABLE_MCP_API = ENABLE_MCP_API
+app.state.config.MCP_BASE_URLS = MCP_BASE_URLS
+app.state.config.MCP_API_CONFIGS = MCP_API_CONFIGS
+
+app.state.MCP_TOOLS = {}
 
 ########################################
 #
@@ -794,6 +833,8 @@ app.mount("/ws", socket_app)
 
 app.include_router(ollama.router, prefix="/ollama", tags=["ollama"])
 app.include_router(openai.router, prefix="/openai", tags=["openai"])
+app.include_router(mcp.router, prefix="/mcp", tags=["mcp"])  # For verification endpoints used by GUI
+app.include_router(mcp.router, prefix="/api/v1/mcp", tags=["mcp"])  # For tools API
 
 
 app.include_router(pipelines.router, prefix="/api/v1/pipelines", tags=["pipelines"])

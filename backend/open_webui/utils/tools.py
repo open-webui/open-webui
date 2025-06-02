@@ -1,6 +1,8 @@
 import inspect
 import logging
 import re
+import json
+import asyncio
 from typing import Any, Awaitable, Callable, get_type_hints
 from functools import update_wrapper, partial
 
@@ -34,12 +36,118 @@ def apply_extra_params_to_tool_function(
     return new_function
 
 
+async def call_mcp_tool(
+    request: Request, tool_name: str, arguments: dict, server_idx: int = None
+) -> str:
+    """Call an MCP tool using the MCP router"""
+    try:
+        # Import here to avoid circular imports
+        from open_webui.routers.mcp import MCPToolCallForm, call_mcp_tool as router_call_mcp_tool
+        
+        # Create the form data for the router
+        form_data = MCPToolCallForm(
+            name=tool_name,
+            arguments=arguments,
+            server_idx=server_idx
+        )
+        
+        # Get the user (this is a simplified version for internal calls)
+        user = getattr(request.state, 'user', None)
+        
+        # Call the router function directly
+        result = await router_call_mcp_tool(request, form_data, user)
+        
+        # Extract the text content from the result
+        content = result.get("content", [])
+        if isinstance(content, list):
+            text_parts = []
+            for item in content:
+                if isinstance(item, dict) and item.get("type") == "text":
+                    text_parts.append(item.get("text", ""))
+                elif isinstance(item, str):
+                    text_parts.append(item)
+            return "\n".join(text_parts)
+        else:
+            return str(content)
+        
+    except Exception as e:
+        log.error(f"Error calling MCP tool {tool_name}: {e}")
+        return f"Error calling MCP tool {tool_name}: {str(e)}"
+
+
+async def get_mcp_tools(request: Request) -> dict:
+    """Get all available MCP tools"""
+    try:
+        # Import here to avoid circular imports
+        from open_webui.routers.mcp import get_all_mcp_tools
+        
+        if not request.app.state.config.ENABLE_MCP_API:
+            return {}
+        
+        mcp_tools_response = await get_all_mcp_tools(request)
+        mcp_tools = mcp_tools_response.get("tools", [])
+        
+        tools_dict = {}
+        
+        for tool in mcp_tools:
+            tool_name = tool.get("name", "")
+            tool_description = tool.get("description", "")
+            tool_input_schema = tool.get("inputSchema", {})
+            server_idx = tool.get("mcp_server_idx", 0)
+            
+            if not tool_name:
+                continue
+            
+            # Create a callable function for this MCP tool with proper closure
+            def make_mcp_tool_wrapper(name, idx):
+                async def mcp_tool_wrapper(**kwargs):
+                    # Remove internal parameters from kwargs
+                    clean_kwargs = {
+                        k: v for k, v in kwargs.items() if not k.startswith("__")
+                    }
+                    return await call_mcp_tool(
+                        request, name, clean_kwargs, idx
+                    )
+                return mcp_tool_wrapper
+            
+            mcp_tool_wrapper = make_mcp_tool_wrapper(tool_name, server_idx)
+            
+            # Set function metadata for documentation
+            mcp_tool_wrapper.__name__ = tool_name
+            mcp_tool_wrapper.__doc__ = tool_description
+            
+            # Convert inputSchema to OpenAI function spec format
+            spec = {
+                "name": tool_name,
+                "description": tool_description,
+                "parameters": tool_input_schema
+            }
+            
+            tool_dict = {
+                "toolkit_id": f"mcp_server_{server_idx}",
+                "callable": mcp_tool_wrapper,
+                "spec": spec,
+                "pydantic_model": None,  # We'll create this dynamically if needed
+                "file_handler": False,
+                "citation": True,  # MCP tools should show citations
+            }
+            
+            tools_dict[tool_name] = tool_dict
+        
+        return tools_dict
+        
+    except Exception as e:
+        log.error(f"Error getting MCP tools: {e}")
+        return {}
+
+
 # Mutation on extra_params
-def get_tools(
+async def get_tools_async(
     request: Request, tool_ids: list[str], user: UserModel, extra_params: dict
 ) -> dict[str, dict]:
     tools_dict = {}
 
+    # Add regular tools
     for tool_id in tool_ids:
         tools = Tools.get_tool_by_id(tool_id)
         if tools is None:
@@ -91,7 +199,43 @@ def get_tools(
             else:
                 tools_dict[function_name] = tool_dict
 
+    # Add MCP tools if enabled
+    try:
+        mcp_tools = await get_mcp_tools(request)
+        for tool_name, tool_dict in mcp_tools.items():
+            if tool_name in tools_dict:
+                log.warning(f"MCP tool {tool_name} already exists in regular tools!")
+                log.warning(f"Prepending 'mcp_' to avoid collision")
+                tool_name = f"mcp_{tool_name}"
+                tool_dict["spec"]["name"] = tool_name
+            
+            tools_dict[tool_name] = tool_dict
+    except Exception as e:
+        log.error(f"Error loading MCP tools: {e}")
+
     return tools_dict
+
+
+# Legacy synchronous wrapper for backward compatibility
+def get_tools(
+    request: Request, tool_ids: list[str], user: UserModel, extra_params: dict
+) -> dict[str, dict]:
+    """Synchronous wrapper for get_tools_async for backward compatibility"""
+    try:
+        # Check if we're already in an async context
+        try:
+            loop = asyncio.get_running_loop()
+            # We're in an async context, create a task
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(asyncio.run, get_tools_async(request, tool_ids, user, extra_params))
+                return future.result()
+        except RuntimeError:
+            # Not in an async context, safe to use asyncio.run
+            return asyncio.run(get_tools_async(request, tool_ids, user, extra_params))
+    except Exception as e:
+        log.error(f"Error in synchronous get_tools wrapper: {e}")
+        return {}
 
 
 def parse_description(docstring: str | None) -> str:

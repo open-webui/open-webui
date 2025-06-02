@@ -28,7 +28,7 @@ from open_webui.models.functions import Functions
 from open_webui.models.models import Models
 
 from open_webui.utils.plugin import load_function_module_by_id
-from open_webui.utils.tools import get_tools
+from open_webui.utils.tools import get_tools, get_tools_async
 from open_webui.utils.access_control import has_access
 
 from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
@@ -232,7 +232,7 @@ async def generate_function_chat_completion(
         "__metadata__": metadata,
         "__request__": request,
     }
-    extra_params["__tools__"] = get_tools(
+    extra_params["__tools__"] = await get_tools_async(
         request,
         tool_ids,
         user,
