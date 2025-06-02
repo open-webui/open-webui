@@ -69,7 +69,7 @@
 	let chatLifetimeDropdownRef;
 
 	const chatLifetimeOptions = [{value: 30, label: '30 days'}, {value: 91, label: '3 months'}, {value: 183, label: '6 months'}, {value: 275, label: '9 months'}, {value: 365, label: '1 year'}, {value: 0, label: "no limit"}];
-	let chatLifetime = chatLifetimeOptions[5];
+	let chatLifetime = chatLifetimeOptions[0];
 
 	let userNotice = '';
 
