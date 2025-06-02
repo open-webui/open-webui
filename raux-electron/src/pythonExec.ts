@@ -253,8 +253,25 @@ class PythonExec {
       const proc = spawn(cmd, args, { ...options, stdio: ['ignore', 'pipe', 'pipe'] });
       let stdout = '';
       let stderr = '';
-      proc.stdout.on('data', (data) => { stdout += data; });
-      proc.stderr.on('data', (data) => { stderr += data; });
+      
+      // Log pip install output in real-time if verbose flag is present
+      const isPipInstall = args.includes('pip') && args.includes('install');
+      const isVerbose = args.includes('--verbose');
+      
+      proc.stdout.on('data', (data) => {
+        stdout += data;
+        if (isPipInstall && isVerbose) {
+          logInfo(`[pip] ${data.toString().trim()}`);
+        }
+      });
+      
+      proc.stderr.on('data', (data) => {
+        stderr += data;
+        if (isPipInstall) {
+          logError(`[pip] ${data.toString().trim()}`);
+        }
+      });
+      
       proc.on('close', (code) => {
         resolve({ code: code ?? -1, stdout, stderr });
       });

@@ -15,10 +15,11 @@ export function getAppInstallDir() {
   // On Windows, use LOCALAPPDATA env var for AppData\Local
   if (process.platform === 'win32') {
     const localAppData = process.env.LOCALAPPDATA || join(os.homedir(), 'AppData', 'Local');
-    return join(localAppData, 'GaiaBeta');
+    // Store RAUX runtime in a subdirectory to avoid conflicts with Squirrel
+    return join(localAppData, 'GaiaBeta', 'runtime');
   }
 
-  return join(app.getPath('appData'), 'GaiaBeta');
+  return join(app.getPath('appData'), 'GaiaBeta', 'runtime');
 }
 
 // Directory for user data (settings, logs, etc.)

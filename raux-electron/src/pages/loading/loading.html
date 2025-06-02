@@ -123,22 +123,22 @@
     .progress-bar {
       width: 100%;
       height: 0.5rem;
-      background: linear-gradient(90deg, #22c55e 0%, #2563eb 100%);
+      background: linear-gradient(90deg, #22c55e 0%, #2563eb 25%, #22c55e 50%, #2563eb 75%, #22c55e 100%);
       border-radius: 4px;
-      animation: progress-indeterminate 2s linear infinite;
+      animation: progress-indeterminate 3s linear infinite;
       background-size: 200% 100%;
-      background-position: 100% 0;
+      background-position: 0% 0;
       border: 2px solid #444;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
     }
 
     @keyframes progress-indeterminate {
       0% {
-        background-position: 100% 0;
+        background-position: 0% 0;
       }
 
       100% {
-        background-position: 0 0;
+        background-position: -200% 0;
       }
     }
 

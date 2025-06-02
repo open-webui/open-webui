@@ -141,30 +141,50 @@ class RauxSetup {
     const tmpDir = join(wheelDir, `tmp-${Date.now()}`);
     mkdirSync(tmpDir, { recursive: true });
     const zipPath = join(tmpDir, 'raux-build-context.zip');
-    await new Promise<void>((resolve, reject) => {
-      fetch(zipUrl)
-        .then(response => {
-          if (response.status !== 200) {
-            logError('Failed to download build context zip: ' + response.status);
-            this.ipcManager.sendToAll(IPCChannels.INSTALLATION_ERROR, { type: 'error', message: 'Failed to download GAIA environment.', step: 'raux-download' });
-            reject(new Error('Failed to download build context zip: ' + response.status));
-            return;
-          }
-          const file = require('fs').createWriteStream(zipPath);
-          response.body.pipe(file);
-          file.on('finish', () => {
-            file.close();
-            logInfo('Build context zip download finished.');
-            this.ipcManager.sendToAll(IPCChannels.INSTALLATION_STATUS, { type: 'success', message: 'GAIA Beta components downloaded.', step: 'raux-download' });
-            resolve();
-          });
-        })
-        .catch(err => {
-          logError(`Build context zip download error: ${err}`);
-          this.ipcManager.sendToAll(IPCChannels.INSTALLATION_ERROR, { type: 'error', message: 'GAIA environment download error.', step: 'raux-download' });
-          reject(err);
+    // Simple retry logic - try up to 3 times
+    const maxAttempts = 3;
+    let lastError: Error | null = null;
+    
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        await new Promise<void>((resolve, reject) => {
+          fetch(zipUrl)
+            .then(response => {
+              if (response.status !== 200) {
+                logError('Failed to download build context zip: ' + response.status);
+                reject(new Error('Failed to download build context zip: ' + response.status));
+                return;
+              }
+              const file = require('fs').createWriteStream(zipPath);
+              response.body.pipe(file);
+              file.on('finish', () => {
+                file.close();
+                logInfo('Build context zip download finished.');
+                this.ipcManager.sendToAll(IPCChannels.INSTALLATION_STATUS, { type: 'success', message: 'GAIA Beta components downloaded.', step: 'raux-download' });
+                resolve();
+              });
+            })
+            .catch(err => {
+              logError(`Build context zip download error: ${err}`);
+              reject(err);
+            });
         });
-    });
+        // Success - exit the retry loop
+        lastError = null;
+        break;
+      } catch (err) {
+        lastError = err as Error;
+        if (attempt < maxAttempts) {
+          logInfo(`Download failed, retrying... (attempt ${attempt + 1}/${maxAttempts})`);
+          await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds before retry
+        }
+      }
+    }
+    
+    if (lastError) {
+      this.ipcManager.sendToAll(IPCChannels.INSTALLATION_ERROR, { type: 'error', message: 'Failed to download GAIA environment.', step: 'raux-download' });
+      throw lastError;
+    }
     logInfo('Extracting build context zip...');
     try {
       await extract(zipPath, { dir: tmpDir });
@@ -193,20 +213,30 @@ class RauxSetup {
     }
 
     this.ipcManager.sendToAll(IPCChannels.INSTALLATION_STATUS, { type: 'info', message: 'Installing components!', step: 'raux-env' });
-    this.ipcManager.sendToAll(IPCChannels.INSTALLATION_STATUS, { type: 'info', message: ' this may take 5 - 10 minutes...', step: 'raux-env' });
+    this.ipcManager.sendToAll(IPCChannels.INSTALLATION_STATUS, { type: 'info', message: 'Install may take 5 to 10 minutes...', step: 'raux-env' });
     
     for (const whlFile of whlFiles) {
       const wheelPath = path.join(extractDir, whlFile);
 
-      const result = await python.runPipCommand(['install', wheelPath, '--verbose', '--no-warn-script-location']);
+      // Use app-specific cache directory to avoid permission issues
+      const pipCacheDir = path.join(getAppInstallDir(), 'python', 'pip-cache');
+      mkdirSync(pipCacheDir, { recursive: true });
+      
+      const result = await python.runPipCommand(['install', wheelPath, '--cache-dir', pipCacheDir, '--verbose', '--no-warn-script-location']);
       
       if (result.code === 0) {
         logInfo(`${whlFile} installed successfully.`);
         this.ipcManager.sendToAll(IPCChannels.INSTALLATION_STATUS, { type: 'success', message: 'GAIA Beta components installed successfully.', step: 'raux-install' });
       } else {
         logError(`Failed to install ${whlFile}. Exit code: ${result.code}`);
+        if (result.stderr) {
+          logError(`pip stderr output:\n${result.stderr}`);
+        }
+        if (result.stdout) {
+          logError(`pip stdout output:\n${result.stdout}`);
+        }
         this.ipcManager.sendToAll(IPCChannels.INSTALLATION_ERROR, { type: 'error', message: 'Failed to install GAIA environment.', step: 'raux-install' });
-        throw new Error(`Failed to install ${whlFile}. Exit code: ${result.code}`);
+        throw new Error(`Failed to install ${whlFile}. Exit code: ${result.code}\nError: ${result.stderr}`);
       }
     }
   }

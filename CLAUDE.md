@@ -102,7 +102,7 @@ npm run cy:open              # Open Cypress GUI for E2E tests
 ```bash
 make install                  # Docker compose up
 make start                    # Start containers
-make stop                     # Stop containers
+make stop                    # Stop containers
 make update                   # Update and rebuild
 ```
 
@@ -196,3 +196,4 @@ RAUX can be installed:
 ## Memories and Guidance
 
 - Remember that "node_modules" folder is not our code; its ok to reference but don't check for errors or lint
+- ElectronJS uses ElectronForge with Squirrel
