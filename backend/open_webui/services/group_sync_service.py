@@ -256,6 +256,7 @@ async def synchronize_user_groups_from_sql(user: UserModel, db: Session):
     Synchronizes a user's group memberships in Open WebUI with data from SQL Server.
 
     - Fetches group names for the user from SQL Server sp_PBA_HC_Movement table based on email
+    - If no groups are found in SQL, assigns the user to an "Unassigned" group (creating it if needed).
     - Compares with the user's current groups in Open WebUI
     - Adds the user to groups they should be in (creating groups if needed)
     - Removes the user from groups they should no longer be in
@@ -278,82 +279,113 @@ async def synchronize_user_groups_from_sql(user: UserModel, db: Session):
         
         if not isinstance(target_group_names_from_sql, list):
             log.error(f"SQL query for user {user.email} did not return a list. Received: {target_group_names_from_sql}")
-            return
+            # Consider if returning here is the best approach or if it should proceed to unassigned
+            return 
         
         log.info(f"Found {len(target_group_names_from_sql)} target groups from SQL for user {user.email}")
-        log.debug(f"Target groups: {target_group_names_from_sql}")
+        log.debug(f"Target groups from SQL: {target_group_names_from_sql}")
 
-        # 2.A. Get user's current Open WebUI group IDs
+        # Initialize set for final target Open WebUI group IDs
+        final_target_ouw_group_ids_set: Set[str] = set()
+        unassigned_group_name = "Unassigned"
+
+        if not target_group_names_from_sql:
+            # SQL query returned no specific groups, assign to "Unassigned"
+            log.info(f"No specific groups found for user {user.email} in SQL. Attempting to assign to '{unassigned_group_name}'.")
+            unassigned_group = groups_table.get_group_by_name(unassigned_group_name)
+            if not unassigned_group:
+                log.info(f"'{unassigned_group_name}' group not found, creating it.")
+                try:
+                    form_data_unassigned = GroupForm(
+                        name=unassigned_group_name,
+                        description="Automatically created unassigned group for users with no specific groups from SQL"
+                    )
+                    # Ensure user_id for group creation is appropriate (e.g., admin or current user)
+                    # Using user.id as per PRD, but consider if a system/admin ID is better for a shared group
+                    unassigned_group = groups_table.insert_new_group(user_id=user.id, form_data=form_data_unassigned)
+                    if unassigned_group:
+                        log.info(f"Successfully created '{unassigned_group_name}' group (ID: {unassigned_group.id}).")
+                    else:
+                        log.error(f"Failed to create '{unassigned_group_name}' group.")
+                except Exception as e_create_unassigned:
+                    log.error(f"Error creating '{unassigned_group_name}' group: {str(e_create_unassigned)}", exc_info=True)
+            
+            if unassigned_group and unassigned_group.id:
+                final_target_ouw_group_ids_set.add(unassigned_group.id)
+                log.debug(f"User {user.email} will be targeted for '{unassigned_group_name}' group (ID: {unassigned_group.id}).")
+            else:
+                log.warning(f"Could not find or create '{unassigned_group_name}' group for user {user.email}. User will not be assigned to it.")
+        else:
+            # Process target group names from SQL as before
+            for group_name_from_sql in target_group_names_from_sql:
+                if not group_name_from_sql or not isinstance(group_name_from_sql, str):
+                    log.warning(f"Invalid group name received from SQL: {group_name_from_sql}. Skipping.")
+                    continue
+
+                group_name_from_sql = group_name_from_sql.strip()
+                if not group_name_from_sql:
+                    log.warning(f"Empty group name after stripping. Skipping.")
+                    continue
+
+                ouw_group = groups_table.get_group_by_name(group_name_from_sql)
+                if ouw_group:
+                    final_target_ouw_group_ids_set.add(ouw_group.id)
+                    log.debug(f"Existing group found: '{group_name_from_sql}' (ID: {ouw_group.id})")
+                else:
+                    log.info(f"Creating new group '{group_name_from_sql}' as it's not found in OpenWebUI.")
+                    try:
+                        form_data_sql_group = GroupForm(
+                            name=group_name_from_sql,
+                            description="Automatically created group from SQL Server sync" # Updated description
+                        )
+                        new_group = groups_table.insert_new_group(user_id=user.id, form_data=form_data_sql_group)
+                        if new_group:
+                            final_target_ouw_group_ids_set.add(new_group.id)
+                            log.info(f"Successfully created new group '{new_group.name}' (ID: {new_group.id})")
+                        else:
+                            log.error(f"Failed to create group '{group_name_from_sql}' from SQL.")
+                    except Exception as e_create_sql_group:
+                        log.error(f"Error creating group '{group_name_from_sql}' from SQL: {str(e_create_sql_group)}", exc_info=True)
+        
+        log.info(f"Final target OpenWebUI group IDs for user {user.email}: {final_target_ouw_group_ids_set}")
+
+        # 2.A. Get user's current Open WebUI group IDs (moved after determining final_target_ouw_group_ids_set)
         current_ouw_groups_models: List[GroupModel] = groups_table.get_groups_by_member_id(user.id)
         current_ouw_group_ids_set: Set[str] = {group.id for group in current_ouw_groups_models}
-        log.info(f"User currently belongs to {len(current_ouw_group_ids_set)} OpenWebUI groups")
-        log.debug(f"Current group IDs: {current_ouw_group_ids_set}")
-
-        # 2.B. Process target group names from SQL and get/create their Open WebUI group IDs
-        final_target_ouw_group_ids_set: Set[str] = set()
-        for group_name_from_sql in target_group_names_from_sql:
-            if not group_name_from_sql or not isinstance(group_name_from_sql, str):
-                log.warning(f"Invalid group name received from SQL: {group_name_from_sql}. Skipping.")
-                continue
-
-            group_name_from_sql = group_name_from_sql.strip()
-            if not group_name_from_sql:
-                log.warning(f"Empty group name after stripping. Skipping.")
-                continue
-
-            ouw_group = groups_table.get_group_by_name(group_name_from_sql)
-            if ouw_group:
-                final_target_ouw_group_ids_set.add(ouw_group.id)
-                log.debug(f"Existing group found: '{group_name_from_sql}' (ID: {ouw_group.id})")
-            else:
-                log.info(f"Creating new group '{group_name_from_sql}'")
-                try:
-                    form_data = GroupForm(
-                        name=group_name_from_sql,
-                        description="Automatically created group from SQL Server",
-                    )
-                    new_group = groups_table.insert_new_group(user_id=user.id, form_data=form_data)
-                    if new_group:
-                        final_target_ouw_group_ids_set.add(new_group.id)
-                        log.info(f"Successfully created new group '{new_group.name}' (ID: {new_group.id})")
-                    else:
-                        log.error(f"Failed to create group '{group_name_from_sql}'")
-                except Exception as e_create:
-                    log.error(f"Error creating group '{group_name_from_sql}': {str(e_create)}", exc_info=True)
-        
-        log.info(f"Processed {len(final_target_ouw_group_ids_set)} target groups from SQL Server")
+        log.info(f"User {user.email} currently belongs to {len(current_ouw_group_ids_set)} OpenWebUI groups.")
+        log.debug(f"Current OpenWebUI group IDs: {current_ouw_group_ids_set}")
 
         # 2.C. Compare and execute sync operations
         groups_to_add_ids = final_target_ouw_group_ids_set - current_ouw_group_ids_set
         groups_to_remove_ids = current_ouw_group_ids_set - final_target_ouw_group_ids_set
 
         if groups_to_add_ids:
-            log.info(f"Adding user to {len(groups_to_add_ids)} new groups")
+            log.info(f"Adding user {user.email} to {len(groups_to_add_ids)} new groups: {groups_to_add_ids}")
             for group_id_to_add in groups_to_add_ids:
                 try:
                     success = groups_table.add_user_to_group(user_id=user.id, group_id=group_id_to_add)
                     if success:
-                        log.info(f"Successfully added user to group ID {group_id_to_add}")
+                        log.info(f"Successfully added user {user.email} to group ID {group_id_to_add}")
                     else:
-                        log.error(f"Failed to add user to group ID {group_id_to_add}")
+                        log.error(f"Failed to add user {user.email} to group ID {group_id_to_add}")
                 except Exception as e_add:
-                    log.error(f"Error adding user to group ID {group_id_to_add}: {str(e_add)}", exc_info=True)
+                    log.error(f"Error adding user {user.email} to group ID {group_id_to_add}: {str(e_add)}", exc_info=True)
         
         if groups_to_remove_ids:
-            log.info(f"Removing user from {len(groups_to_remove_ids)} groups")
+            log.info(f"Removing user {user.email} from {len(groups_to_remove_ids)} groups: {groups_to_remove_ids}")
             for group_id_to_remove in groups_to_remove_ids:
                 try:
                     success = groups_table.remove_user_from_group(user_id=user.id, group_id=group_id_to_remove)
                     if success:
-                        log.info(f"Successfully removed user from group ID {group_id_to_remove}")
+                        log.info(f"Successfully removed user {user.email} from group ID {group_id_to_remove}")
                     else:
-                        log.error(f"Failed to remove user from group ID {group_id_to_remove}")
+                        log.error(f"Failed to remove user {user.email} from group ID {group_id_to_remove}")
                 except Exception as e_remove:
-                    log.error(f"Error removing user from group ID {group_id_to_remove}: {str(e_remove)}", exc_info=True)
+                    log.error(f"Error removing user {user.email} from group ID {group_id_to_remove}: {str(e_remove)}", exc_info=True)
 
         total_time = time.time() - start_time
         log.info(f"Group synchronization completed for user {user.email} in {total_time:.2f} seconds")
-        log.info(f"Summary: Added to {len(groups_to_add_ids)} groups, Removed from {len(groups_to_remove_ids)} groups")
+        log.info(f"Summary for {user.email}: Added to {len(groups_to_add_ids)} groups, Removed from {len(groups_to_remove_ids)} groups.")
 
     except Exception as e:
         log.error(f"Unhandled error during group synchronization for user {user.email}: {str(e)}", exc_info=True)
