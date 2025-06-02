@@ -239,6 +239,8 @@
 	};
 
 	const showMessage = async (message) => {
+		await tick();
+
 		const _chatId = JSON.parse(JSON.stringify($chatId));
 		let _messageId = JSON.parse(JSON.stringify(message.id));
 
