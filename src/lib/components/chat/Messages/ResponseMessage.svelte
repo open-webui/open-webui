@@ -183,8 +183,10 @@
 		const updatedOptions = parsedMessage.options.map((option: { title: string; description: string, state: string }) => {
 			if (option.title === title) {
 				return { ...option, state: 'selected' };
+			} else if (option.state === 'selected') {
+				return { ...option, state: 'selected' };
 			} else {
-				return { ...option, state: 'disabled' };
+				return { ...option, state: 'unselected' };
 			}
 		});
 
