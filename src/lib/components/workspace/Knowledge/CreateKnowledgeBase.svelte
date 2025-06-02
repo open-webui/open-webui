@@ -1,4 +1,4 @@
-<script lang="ts">
+<script>
 	import { goto } from '$app/navigation';
 	import { getContext } from 'svelte';
 	const i18n = getContext('i18n');
@@ -18,11 +18,13 @@
 
 	$: if (!edit && !clone && accessControl === undefined) {
 	// New tool: default to private access
-		accessControl = {
-			read: { group_ids: [], user_ids: [] },
-			write: { group_ids: [], user_ids: [] }
-		};
+	accessControl = {
+		read: { group_ids: [], user_ids: [] },
+		write: { group_ids: [], user_ids: [] }
+	   };
+	} 
 
+		
 	const submitHandler = async () => {
 		loading = true;
 
