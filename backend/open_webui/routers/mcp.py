@@ -38,18 +38,7 @@ async def create_mcp_client(url: str, headers: Optional[Dict] = None):
         )
 
 
-async def call_mcp_tool_with_client(client: Client, tool_name: str, arguments: Dict) -> Any:
-    """Call MCP tool using FastMCP client"""
-    try:
-        async with client:
-            result = await client.call_tool(tool_name, arguments)
-            return result
-    except Exception as e:
-        log.exception(f"MCP tool call error: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"MCP tool call failed: {str(e)}"
-        )
+
 
 
 def get_mcp_api_config(idx: int, url: str, configs: Dict) -> Dict:

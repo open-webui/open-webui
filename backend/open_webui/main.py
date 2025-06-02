@@ -7,7 +7,6 @@ import os
 import shutil
 import sys
 import time
-import random
 
 from contextlib import asynccontextmanager
 from urllib.parse import urlencode, parse_qs, urlparse
@@ -376,19 +375,60 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         log.error(f"Failed to initialize FastMCP manager: {e}")
 
-    # Start MCP server if enabled
-    # Note: FastMCP server should be started separately with:
-    # python fastmcp_time_server.py --http 8083
+    # Start external FastMCP server if enabled
     if app.state.config.ENABLE_MCP_API:
-        log.info("MCP API enabled - FastMCP server should be running on port 8083")
+        try:
+            import subprocess
+            import atexit
+            import os
+            
+            # Get the directory where main.py is located
+            backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            fastmcp_script_path = os.path.join(backend_dir, "fastmcp_time_server.py")
+            
+            # Start the external FastMCP server on port 8083
+            server_process = subprocess.Popen([
+                "python", fastmcp_script_path, "--http", "8083"
+            ], cwd=backend_dir)
+            
+            app.state.fastmcp_server_process = server_process
+            log.info(f"FastMCP external server started on port 8083 (PID: {server_process.pid})")
+            
+            # Register cleanup function
+            def cleanup_fastmcp_server():
+                if hasattr(app.state, 'fastmcp_server_process'):
+                    try:
+                        app.state.fastmcp_server_process.terminate()
+                        app.state.fastmcp_server_process.wait(timeout=5)
+                        log.info("FastMCP external server terminated")
+                    except:
+                        app.state.fastmcp_server_process.kill()
+                        log.info("FastMCP external server killed")
+            
+            atexit.register(cleanup_fastmcp_server)
+            
+        except Exception as e:
+            log.error(f"Failed to start FastMCP external server: {e}")
+            log.info("MCP API enabled but external server startup failed - using built-in manager only")
 
     asyncio.create_task(periodic_usage_pool_cleanup())
     
     try:
         yield
     finally:
-        # FastMCP server runs independently, no cleanup needed
-        log.info("FastMCP integration uses external server - no cleanup required")
+        # Cleanup FastMCP external server
+        if hasattr(app.state, 'fastmcp_server_process'):
+            try:
+                app.state.fastmcp_server_process.terminate()
+                app.state.fastmcp_server_process.wait(timeout=5)
+                log.info("FastMCP external server terminated gracefully")
+            except:
+                try:
+                    app.state.fastmcp_server_process.kill()
+                    log.info("FastMCP external server killed")
+                except:
+                    pass
+        log.info("FastMCP integration cleanup completed")
 
 
 app = FastAPI(

@@ -222,17 +222,7 @@ def get_tools(
 ) -> dict[str, dict]:
     """Synchronous wrapper for get_tools_async for backward compatibility"""
     try:
-        # Check if we're already in an async context
-        try:
-            loop = asyncio.get_running_loop()
-            # We're in an async context, create a task
-            import concurrent.futures
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                future = executor.submit(asyncio.run, get_tools_async(request, tool_ids, user, extra_params))
-                return future.result()
-        except RuntimeError:
-            # Not in an async context, safe to use asyncio.run
-            return asyncio.run(get_tools_async(request, tool_ids, user, extra_params))
+        return asyncio.run(get_tools_async(request, tool_ids, user, extra_params))
     except Exception as e:
         log.error(f"Error in synchronous get_tools wrapper: {e}")
         return {}
