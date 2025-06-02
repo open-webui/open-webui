@@ -86,7 +86,7 @@
 			<Collapsible title={$i18n.t('Advanced Params')} open={true} buttonClassName="w-full">
 				<div class="text-sm mt-1.5" slot="content">
 					<div>
-						<AdvancedParams admin={$user?.role === 'admin'} bind:params />
+						<AdvancedParams admin={$user?.role === 'admin'} custom={true} bind:params />
 					</div>
 				</div>
 			</Collapsible>

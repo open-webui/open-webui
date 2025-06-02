@@ -842,7 +842,7 @@ export const removeAllDetails = (content) => {
 export const processDetails = (content) => {
 	content = removeDetails(content, ['reasoning', 'code_interpreter']);
 
-	// This regex matches <details> tags with type="tool_calls" and captures their attributes to convert them to <tool_calls> tags
+	// This regex matches <details> tags with type="tool_calls" and captures their attributes to convert them to a string
 	const detailsRegex = /<details\s+type="tool_calls"([^>]*)>([\s\S]*?)<\/details>/gis;
 	const matches = content.match(detailsRegex);
 	if (matches) {
@@ -854,10 +854,7 @@ export const processDetails = (content) => {
 				attributes[attributeMatch[1]] = attributeMatch[2];
 			}
 
-			content = content.replace(
-				match,
-				`<tool_calls name="${attributes.name}" result="${attributes.result}"/>`
-			);
+			content = content.replace(match, `"${attributes.result}"`);
 		}
 	}
 
@@ -1225,6 +1222,9 @@ export const createMessagesList = (history, messageId) => {
 	}
 
 	const message = history.messages[messageId];
+	if (message === undefined) {
+		return [];
+	}
 	if (message?.parentId) {
 		return [...createMessagesList(history, message.parentId), message];
 	} else {
