@@ -32,7 +32,6 @@ class Prompt(Base):
     timestamp = Column(BigInteger)
     description = Column(Text)
     prebuilt = Column(Boolean)
-    bookmarked = Column(Boolean, nullable=True)
 
     access_control = Column(JSON, nullable=True)  # Controls data access levels.
     # Defines access control rules for this entry.

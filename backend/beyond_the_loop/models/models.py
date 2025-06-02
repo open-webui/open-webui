@@ -89,8 +89,6 @@ class Model(Base):
 
     company_id = Column(Text, nullable=True)
 
-    bookmarked = Column(Boolean, nullable=False)
-
     access_control = Column(JSON, nullable=True)  # Controls data access levels.
     # Defines access control rules for this entry.
     # - `None`: Public access, available to all users with the "user" role.
