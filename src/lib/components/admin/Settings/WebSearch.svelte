@@ -456,6 +456,38 @@
 									bind:value={webConfig.PERPLEXITY_API_KEY}
 								/>
 							</div>
+
+							<!-- Perplexity model selection -->
+							<div class="mb-2.5 flex w-full flex-col">
+								<div class=" self-center text-xs font-medium mb-1">
+									{$i18n.t('Perplexity Model')}
+								</div>
+								<select
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+									bind:value={webConfig.PERPLEXITY_MODEL}
+								>
+									<option value="sonar">Sonar</option>
+									<option value="sonar-pro">Sonar Pro</option>
+									<option value="sonar-reasoning">Sonar Reasoning</option>
+									<option value="sonar-reasoning-pro">Sonar Reasoning Pro</option>
+									<option value="sonar-deep-research">Sonar Deep Research</option>
+								</select>
+							</div>
+
+							<!-- Search context usage selection -->
+							<div class="mb-2.5 flex w-full flex-col">
+								<div class=" self-center text-xs font-medium mb-1">
+									{$i18n.t('Search Context Usage')}
+								</div>
+								<select
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+									bind:value={webConfig.PERPLEXITY_SEARCH_CONTEXT_USAGE}
+								>
+									<option value="low">Low</option>
+									<option value="medium">Medium</option>
+									<option value="high">High</option>
+								</select>
+							</div>
 						{:else if webConfig.WEB_SEARCH_ENGINE === 'sougou'}
 							<div class="mb-2.5 flex w-full flex-col">
 								<div>
