@@ -339,6 +339,19 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 										entities: updatedEntities
 									};
 									
+									// Update session manager with the new masking state
+									const piiSessionManager = PiiSessionManager.getInstance();
+									const toggledEntity = updatedEntities[entityIndex];
+									if (conversationId) {
+										piiSessionManager.toggleConversationEntityMasking(
+											conversationId,
+											toggledEntity.label,
+											occurrenceIndex
+										);
+									} else {
+										piiSessionManager.toggleEntityMasking(toggledEntity.label, occurrenceIndex);
+									}
+									
 									if (onPiiToggled) {
 										onPiiToggled(updatedEntities);
 									}

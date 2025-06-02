@@ -73,6 +73,7 @@
 	export let piiApiKey = '';
 	export let conversationId = '';
 	export let onPiiDetected: (entities: ExtendedPiiEntity[], maskedText: string) => void = () => {};
+	export let onPiiToggled: (entities: ExtendedPiiEntity[]) => void = () => {};
 
 	let element: HTMLElement;
 	let editor: any;
@@ -245,10 +246,7 @@
 								apiKey: piiApiKey,
 								conversationId: conversationId,
 								onPiiDetected: onPiiDetected,
-								onPiiToggled: (entities) => {
-									// Handle PII toggle events
-									console.log('PII entities toggled:', entities);
-								}
+								onPiiToggled: onPiiToggled
 							})
 						]
 					: []),

@@ -203,6 +203,12 @@
 		maskedPrompt = maskedText;
 	};
 
+	// PII Toggle handler - update current entities when user toggles masking in editor
+	const handlePiiToggled = (entities: ExtendedPiiEntity[]) => {
+		currentPiiEntities = entities;
+		console.log('MessageInput: PII entities toggled, updated currentPiiEntities:', entities.length);
+	};
+
 	// Function to get the prompt to send (masked if PII detected)
 	const getPromptToSend = (): string => {
 		if (!enablePiiDetection || !currentPiiEntities.length) {
@@ -794,6 +800,7 @@
 												{piiApiKey}
 												conversationId={chatId || ''}
 												onPiiDetected={handlePiiDetected}
+												onPiiToggled={handlePiiToggled}
 												generateAutoCompletion={async (text) => {
 													if (selectedModelIds.length === 0 || !selectedModelIds.at(0)) {
 														toast.error($i18n.t('Please select a model first.'));

@@ -1,23 +1,25 @@
 ---
 description: 
 globs: 
-alwaysApply: false
+alwaysApply: true
 ---
 # PII API Integration Guide
 
 ## NENNA.ai API Integration
 
 ### API Configuration
-The PII detection system integrates with NENNA.ai's API for real-time PII detection and masking.
+The PII detection system integrates with NENNA.ai's API for real-time PII detection and masking through two pathways:
+1. **Native ProseMirror Extension**: [PiiDetectionExtension.ts](mdc:src/lib/components/common/RichTextInput/PiiDetectionExtension.ts) - For input fields
+2. **Legacy DOM Processing**: [PiiAwareText.svelte](mdc:src/lib/components/chat/Messages/Markdown/PiiAwareText.svelte) - For display content
 
 #### API Functions ([pii.ts](mdc:src/lib/apis/pii.ts))
 ```javascript
 export const maskPiiText = async (
   apiKey: string,
   texts: string[],
+  knownEntities?: KnownPiiEntity[],  // Support for known entities
   unmask: boolean = false,
-  returnOriginal: boolean = false,
-  knownEntities?: KnownPiiEntity[]  // NEW: Support for known entities
+  returnOriginal: boolean = false
 ) => {
   // Main API call for PII detection and masking
   // knownEntities provides context for consistent labeling
@@ -28,16 +30,16 @@ export const maskPiiTextWithSession = async (
   apiKey: string,
   sessionId: string,
   texts: string[],
-  knownEntities?: KnownPiiEntity[]  // NEW: Support for known entities
+  knownEntities?: KnownPiiEntity[]  // Support for known entities
 ) => {
   // Session-based masking with known entities for consistent labeling
 };
 
-// NEW: Known entities interface for API
+// Known entities interface for API consistency
 interface KnownPiiEntity {
   id: number;
   label: string;
-  name: string;
+  name: string;  // raw_text from entity
 }
 ```
 
@@ -49,26 +51,54 @@ interface PiiApiResponse {
 }
 
 interface PiiEntity {
+  id: number;          // Unique entity ID
   label: string;       // Unique identifier (e.g., "PERSON_1")
   type: string;        // PII type (e.g., "PERSON", "EMAIL")
-  text: string;        // Original text content
-  start: number;       // Start position in text
-  end: number;         // End position in text
+  raw_text: string;    // Original text content
+  occurrences: Array<{
+    start_idx: number; // Start position in text (exclusive end)
+    end_idx: number;   // End position in text (exclusive end)
+  }>;
 }
 ```
 
 ## Session Management
 
 ### PiiSessionManager ([pii.ts](mdc:src/lib/utils/pii.ts))
+Enhanced session manager with conversation-specific state:
+
 ```javascript
 class PiiSessionManager {
   private static instance: PiiSessionManager;
   private entities: ExtendedPiiEntity[] = [];
   private apiKey: string = '';
-  private conversationStates: Map<string, ConversationPiiState> = new Map(); // NEW
+  private conversationStates: Map<string, ConversationPiiState> = new Map();
 
   static getInstance(): PiiSessionManager {
     // Singleton pattern for cross-component state
+  }
+
+  // Conversation-specific methods (NEW - Primary)
+  setConversationEntities(conversationId: string, entities: PiiEntity[], sessionId?: string): void {
+    // Store entities per conversation with intelligent merging
+    // Preserves existing shouldMask states when updating
+  }
+
+  getConversationEntities(conversationId: string): ExtendedPiiEntity[] {
+    // Retrieve entities for specific conversation
+  }
+
+  getKnownEntitiesForApi(conversationId: string): KnownPiiEntity[] {
+    // Convert conversation entities to API format for known_entities parameter
+    // Essential for consistent labeling across API calls
+  }
+
+  loadConversationState(conversationId: string, piiState?: ConversationPiiState): void {
+    // Load PII state from localStorage chat data
+  }
+
+  getConversationStateForStorage(conversationId: string): ConversationPiiState | null {
+    // Get state for saving to localStorage with chat data
   }
 
   // Legacy methods (backward compatibility)
@@ -79,42 +109,16 @@ class PiiSessionManager {
   toggleEntityMasking(label: string, occurrenceIndex: number): void {
     // Toggle shouldMask state for specific entity occurrence
   }
-
-  // NEW: Conversation-specific methods
-  setConversationEntities(conversationId: string, entities: PiiEntity[], sessionId?: string): void {
-    // Store entities per conversation with merging logic
-  }
-
-  getConversationEntities(conversationId: string): ExtendedPiiEntity[] {
-    // Retrieve entities for specific conversation
-  }
-
-  getKnownEntitiesForApi(conversationId: string): KnownPiiEntity[] {
-    // Convert conversation entities to API format for known_entities parameter
-  }
-
-  loadConversationState(conversationId: string, piiState?: ConversationPiiState): void {
-    // Load PII state from localStorage chat data
-  }
-
-  getConversationStateForStorage(conversationId: string): ConversationPiiState | null {
-    // Get state for saving to localStorage with chat data
-  }
 }
 ```
 
 ### Extended Entity Format
 ```typescript
 interface ExtendedPiiEntity extends PiiEntity {
-  shouldMask: boolean;           // Current masking state
-  occurrences: Array<{          // Multiple occurrences in text
-    start: number;
-    end: number;
-    shouldMask: boolean;
-  }>;
+  shouldMask: boolean;           // Current masking state (default: true)
 }
 
-// NEW: Conversation-specific PII state
+// Conversation-specific PII state for persistence
 interface ConversationPiiState {
   entities: ExtendedPiiEntity[];
   sessionId?: string;
@@ -123,41 +127,152 @@ interface ConversationPiiState {
 }
 ```
 
-## Detection Workflow
+## Detection Workflows
 
-### Input Field Detection
+### Native ProseMirror Extension (NEW - Primary)
+[PiiDetectionExtension.ts](mdc:src/lib/components/common/RichTextInput/PiiDetectionExtension.ts) provides real-time detection:
+
+```typescript
+const performPiiDetection = async (plainText: string) => {
+  if (!plainText.trim()) return;
+
+  try {
+    // Get known entities for consistent labeling
+    const knownEntities = conversationId
+      ? piiSessionManager.getKnownEntitiesForApi(conversationId)
+      : [];
+
+    console.log('PiiDetectionExtension: Using known entities:', knownEntities);
+
+    const response = await maskPiiText(apiKey, [plainText], knownEntities, false, false);
+    
+    if (response.pii && response.pii[0] && response.pii[0].length > 0) {
+      // Convert plain text positions to ProseMirror positions
+      const mappedEntities = mapPiiEntitiesToProseMirror(response.pii[0], positionMapping);
+      
+      // Store in session manager with conversation context
+      piiSessionManager.setConversationEntities(conversationId, response.pii[0]);
+
+      // Update plugin state via transaction
+      const tr = view.state.tr.setMeta(piiDetectionPluginKey, {
+        type: 'UPDATE_ENTITIES',
+        entities: mappedEntities
+      });
+      view.dispatch(tr);
+
+      // Notify parent component
+      if (onPiiDetected) {
+        onPiiDetected(mappedEntities, response.text[0]);
+      }
+    }
+  } catch (error) {
+    console.error('PII detection failed:', error);
+  }
+};
+
+// Debounced to prevent excessive API calls
+const debouncedDetection = debounce(performPiiDetection, 500);
+```
+
+### Legacy Input Field Detection (DEPRECATED)
+Previous approach using HTML string manipulation:
 1. **User Input**: Text entered in [RichTextInput.svelte](mdc:src/lib/components/common/RichTextInput.svelte)
-2. **Debounced API Call**: 500ms delay to avoid excessive requests
-3. **Entity Storage**: Results stored in `PiiSessionManager`
-4. **Real-time Highlighting**: TipTap extension applies highlighting
-5. **Interactive Overlay**: Mouse events trigger information display
+2. **HTML Extraction**: Extract plain text from editor HTML
+3. **Debounced API Call**: 500ms delay to avoid excessive requests
+4. **Position Mapping**: Manual mapping between plain text and HTML positions
+5. **Entity Storage**: Results stored in `PiiSessionManager`
 
-### Response Processing
+### Response Processing (Display Components)
+[PiiAwareText.svelte](mdc:src/lib/components/chat/Messages/Markdown/PiiAwareText.svelte) processes AI responses:
+
 1. **AI Response**: Contains masked patterns like `[{PERSON_1}]`
-2. **Pattern Detection**: [PiiAwareText.svelte](mdc:src/lib/components/chat/Messages/Markdown/PiiAwareText.svelte) detects patterns
-3. **Unmasking**: Replaces patterns with original text from session using `unmaskTextWithEntities()` 
+2. **Pattern Detection**: Detects masked patterns in response text
+3. **Unmasking**: Replaces patterns with original text using `unmaskAndHighlightTextForDisplay()`
 4. **Highlighting**: Applies visual highlighting to unmasked entities
-5. **Interaction**: Same overlay system as input field
+5. **Interaction**: Mouse events trigger `PiiHoverOverlay` display
 
-### Unmasking Function ([pii.ts](mdc:src/lib/utils/pii.ts))
+### Enhanced Unmasking Function ([pii.ts](mdc:src/lib/utils/pii.ts))
 ```javascript
-export function unmaskTextWithEntities(text: string, entities: ExtendedPiiEntity[]): string {
-  // FIXED: Correctly extracts base type and ID from entity label
-  // Entity label format: "PERSON_1" -> baseType: "PERSON", labelId: "1"
-  // Supports multiple masking patterns: [{TYPE_ID}], [TYPE_ID], {TYPE_ID}, TYPE_ID
-  // Handles label variations: ORGANIZATION/ORGANISATION/ORGANIZACION
+export function unmaskAndHighlightTextForDisplay(text: string, entities: ExtendedPiiEntity[]): string {
+  if (!entities.length || !text) return text;
+
+  let processedText = text;
+  let replacementsMade = 0;
+
+  // Step 1: Unmask patterns and replace with highlighted spans
+  entities.forEach((entity) => {
+    const { label } = entity;
+    const rawText = entity.raw_text;
+
+    if (!label || !rawText) return;
+
+    // Extract base type and ID correctly: "PERSON_1" → baseType="PERSON", labelId="1"
+    const labelMatch = label.match(/^(.+)_(\d+)$/);
+    if (!labelMatch) return;
+
+    const [, baseType, labelId] = labelMatch;
+    const labelVariations = getLabelVariations(baseType);
+
+    // Create comprehensive patterns for masked text
+    const patterns = [
+      `\\[\\{${labelVariations}_${labelId}\\}\\]`,  // [{TYPE_ID}]
+      `\\[${labelVariations}_${labelId}\\]`,        // [TYPE_ID]
+      `\\{${labelVariations}_${labelId}\\}`,        // {TYPE_ID}
+      `${labelVariations}_${labelId}(?=\\s|$|[^\\w])` // TYPE_ID as word boundary
+    ];
+    
+    const labelRegex = new RegExp(patterns.join('|'), 'gi');
+
+    // Replace with highlighted spans
+    processedText = processedText.replace(labelRegex, (match) => {
+      const shouldMask = entity.shouldMask ?? true;
+      const maskingClass = shouldMask ? 'pii-masked' : 'pii-unmasked';
+      const statusText = shouldMask ? 'Was masked in input' : 'Was NOT masked in input';
+
+      replacementsMade++;
+      return `<span class="pii-highlight ${maskingClass}" title="${entity.label} (${entity.type}) - ${statusText}" data-pii-type="${entity.type}" data-pii-label="${entity.label}">${rawText}</span>`;
+    });
+  });
+
+  // Step 2: If no patterns found, highlight raw text occurrences
+  if (replacementsMade === 0) {
+    // Highlight existing raw text instances
+    entities.forEach((entity) => {
+      if (!entity.raw_text || entity.raw_text.trim() === '') return;
+
+      const escapedText = entity.raw_text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const hasSpecialChars = /[^\w\s]/.test(entity.raw_text);
+      const regex = hasSpecialChars 
+        ? new RegExp(escapedText, 'gi')
+        : new RegExp(`\\b${escapedText}\\b`, 'gi');
+
+      processedText = processedText.replace(regex, (match) => {
+        const shouldMask = entity.shouldMask ?? true;
+        const maskingClass = shouldMask ? 'pii-masked' : 'pii-unmasked';
+        const statusText = shouldMask ? 'Was masked in input' : 'Was NOT masked in input';
+
+        return `<span class="pii-highlight ${maskingClass}" title="${entity.label} (${entity.type}) - ${statusText}" data-pii-type="${entity.type}" data-pii-label="${entity.label}">${match}</span>`;
+      });
+    });
+  }
+
+  return processedText;
 }
 ```
 
-**Critical Fix**: The unmasking regex was previously building incorrect patterns like `{PERSON_1_1}` instead of `{PERSON_1}`. Fixed by extracting the base type and ID correctly from the entity label format.
+**Critical Fixes Applied**:
+- Correct label parsing: `"PERSON_1"` → `baseType: "PERSON"`, `labelId: "1"`
+- Proper pattern construction: `{PERSON_1}` not `{PERSON_1_1}`
+- Comprehensive pattern matching for various masking formats
+- Fallback to raw text highlighting if no patterns found
 
 ## Chat Integration & State Persistence
 
-### Chat Data Storage ([Chat.svelte](mdc:src/lib/components/chat/Chat.svelte))
-PII state now persists automatically with chat data:
+### Automatic State Persistence
+PII state now automatically persists with chat data:
 
 ```javascript
-// Loading chat - restore PII state
+// Chat loading - automatically restores PII state
 const loadChat = async (chatId) => {
   const chatContent = await getChatById(chatId);
   if (chatContent?.piiState) {
@@ -165,58 +280,164 @@ const loadChat = async (chatId) => {
   }
 };
 
-// Saving chat - include PII state
+// Chat saving - automatically includes PII state
 const saveChatHandler = async () => {
   const piiState = PiiSessionManager.getInstance().getConversationStateForStorage(currentChatId);
   await updateChatById(currentChatId, {
     ...chatData,
-    piiState  // Automatically included in localStorage
+    piiState  // Included in localStorage automatically
   });
 };
 ```
 
 ### Per-Conversation Consistency
-- Each chat conversation maintains its own PII entity state
-- Entity labels remain consistent across the conversation (PERSON_1 always refers to the same person)
-- Known entities are sent to API for consistent labeling on new detections
-- State automatically loads/saves with chat data in localStorage
+- **Unique Labeling**: Each conversation maintains consistent entity labels (PERSON_1 always refers to the same person)
+- **Known Entities**: Previously detected entities sent to API for consistent labeling
+- **State Isolation**: Each conversation has independent PII state
+- **Persistence**: State automatically saves/loads with chat data
+
+### Intelligent Entity Merging
+```javascript
+setConversationEntities(conversationId: string, entities: PiiEntity[], sessionId?: string) {
+  const existingState = this.conversationStates.get(conversationId);
+  const existingEntities = existingState?.entities || [];
+  const mergedEntities = [...existingEntities];
+
+  // Merge new entities with existing ones
+  newEntities.forEach((newEntity) => {
+    const existingIndex = mergedEntities.findIndex((e) => e.label === newEntity.label);
+    if (existingIndex >= 0) {
+      // Update existing entity but preserve shouldMask state
+      mergedEntities[existingIndex] = {
+        ...newEntity,
+        shouldMask: mergedEntities[existingIndex].shouldMask
+      };
+    } else {
+      // Add new entity with default masking enabled
+      mergedEntities.push({ ...newEntity, shouldMask: true });
+    }
+  });
+
+  // Store merged result
+  this.conversationStates.set(conversationId, {
+    entities: mergedEntities,
+    sessionId,
+    apiKey: this.apiKey,
+    lastUpdated: Date.now()
+  });
+}
+```
 
 ## Error Handling
 
 ### API Failures
 ```javascript
 try {
-  const response = await maskPiiText(apiKey, [text], false, false);
+  const response = await maskPiiText(apiKey, [text], knownEntities, false, false);
   // Process successful response
 } catch (error) {
   console.error('PII detection failed:', error);
   // Graceful degradation - continue without PII features
-} finally {
-  isDetectingPii = false;
+  // Extension: Plugin state remains unchanged
+  // Display: Show content without highlighting
 }
 ```
 
 ### Missing API Key
 ```javascript
-if (!enablePiiDetection || !piiApiKey || !text.trim()) {
-  console.log('PII detection skipped');
+// Extension initialization
+if (!enabled || !apiKey) {
+  console.log('PiiDetectionExtension: Disabled - missing enabled flag or API key');
+  return []; // Don't add plugin to editor
+}
+
+// Detection function
+if (!apiKey || !text.trim()) {
+  console.log('PII detection skipped - missing API key or empty text');
   return; // Skip processing without errors
 }
 ```
 
-## Performance Considerations
+### Position Mapping Errors (Extension)
+```javascript
+// Validate positions before creating decorations
+if (from >= 0 && to <= doc.content.size && from < to) {
+  decorations.push(Decoration.inline(from, to, attributes));
+} else {
+  console.warn('Invalid position range for PII entity:', { from, to, docSize: doc.content.size });
+}
+```
 
-### Debouncing
-- **Input Detection**: 500ms debounce prevents excessive API calls
-- **Event Handling**: 100-300ms delays prevent UI flickering
-- **DOM Updates**: `setTimeout(0)` ensures proper rendering order
+## Performance Optimization
 
-### Caching Strategy
-- **Session-based**: Entities cached in singleton for conversation duration
-- **Text Patterns**: Masked patterns preserved in message content
-- **State Persistence**: Masking preferences maintained across interactions
+### Debounced API Calls
+```javascript
+// Extension: Configurable debounce
+const debouncedDetection = debounce(performPiiDetection, options.debounceMs || 500);
+
+// Legacy: Fixed 500ms debounce
+const debouncedDetectPii = debounce(detectPii, 500);
+```
+
+### Efficient Position Mapping
+```javascript
+// Extension: Native ProseMirror traversal
+doc.nodesBetween(0, doc.content.size, (node, pos) => {
+  // Direct character-by-character mapping
+});
+
+// Legacy: Manual HTML parsing (slower)
+function countBrTagsBeforePosition(html: string, plainTextPos: number): number {
+  // String-based traversal with regex matching
+}
+```
 
 ### Memory Management
-- **Event Listeners**: Proper cleanup in `onDestroy`
-- **Timeouts**: Clear all timeouts to prevent memory leaks
-- **DOM References**: Remove stored event handlers on cleanup
+- **Extension**: Automatic cleanup via ProseMirror plugin lifecycle
+- **Display Components**: Manual event listener cleanup in `onDestroy`
+- **Session Manager**: Conversation-specific state isolation
+- **API Responses**: Efficient entity merging without duplication
+
+## Testing & Validation
+
+### API Integration Testing
+```javascript
+// Test API connectivity
+const testApiCall = async () => {
+  try {
+    const response = await maskPiiText('your-api-key', ['Test with John Doe'], [], false, false);
+    console.log('API Test Success:', response);
+    return response.pii[0].length > 0; // Check if entities detected
+  } catch (error) {
+    console.error('API Test Failed:', error);
+    return false;
+  }
+};
+
+// Test known entities consistency
+const testKnownEntities = () => {
+  const entities = piiSessionManager.getConversationEntities('test-conversation');
+  const knownEntities = piiSessionManager.getKnownEntitiesForApi('test-conversation');
+  console.log('Entities:', entities.map(e => e.label));
+  console.log('Known Entities:', knownEntities.map(e => e.label));
+};
+```
+
+### Position Mapping Validation
+```javascript
+// Test extension position mapping
+const validatePositionMapping = () => {
+  const doc = editor.view.state.doc;
+  const mapping = buildPositionMapping(doc);
+  
+  // Verify bidirectional mapping
+  for (let i = 0; i < mapping.plainText.length; i++) {
+    const pmPos = mapping.plainTextToProseMirror.get(i);
+    const backToPlain = mapping.proseMirrorToPlainText.get(pmPos);
+    
+    if (backToPlain !== i) {
+      console.error('Position mapping inconsistency:', { plain: i, pm: pmPos, back: backToPlain });
+    }
+  }
+};
+```

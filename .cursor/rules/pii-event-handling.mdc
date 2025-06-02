@@ -1,16 +1,77 @@
 ---
-description:
-globs:
-alwaysApply: false
+description: 
+globs: 
+alwaysApply: true
 ---
 # PII Event Handling Patterns
 
 ## Event System Architecture
 
-### Mouse Event Delegation
-The PII system uses event delegation to handle mouse interactions efficiently:
+### Native ProseMirror Events (NEW - Primary)
+The new `PiiDetectionExtension` uses ProseMirror's native event system for robust event handling:
 
-#### TipTap Extension ([PiiHighlighter.ts](mdc:src/lib/components/common/RichTextInput/PiiHighlighter.ts))
+#### ProseMirror Plugin Events ([PiiDetectionExtension.ts](mdc:src/lib/components/common/RichTextInput/PiiDetectionExtension.ts))
+```typescript
+const plugin = new Plugin<PiiDetectionState>({
+  props: {
+    handleClick(view, pos, event) {
+      const target = event.target as HTMLElement;
+      
+      if (target.classList.contains('pii-highlight')) {
+        console.log('PiiDetectionExtension: PII highlight clicked');
+        const entityIndex = parseInt(target.getAttribute('data-entity-index') || '0');
+        const occurrenceIndex = parseInt(target.getAttribute('data-pii-occurrence') || '0');
+
+        // Toggle entity masking via plugin transaction
+        const tr = view.state.tr.setMeta(piiDetectionPluginKey, {
+          type: 'TOGGLE_ENTITY_MASKING',
+          entityIndex,
+          occurrenceIndex
+        });
+        
+        view.dispatch(tr);
+        event.preventDefault();
+        return true; // Event handled
+      }
+      
+      return false; // Let other handlers process
+    }
+  }
+});
+```
+
+#### Plugin State Management
+```typescript
+apply(tr, prevState): PiiDetectionState {
+  // Handle plugin-specific meta actions
+  const meta = tr.getMeta(piiDetectionPluginKey);
+  if (meta) {
+    switch (meta.type) {
+      case 'TOGGLE_ENTITY_MASKING':
+        const { entityIndex, occurrenceIndex } = meta;
+        const updatedEntities = [...prevState.entities];
+        if (updatedEntities[entityIndex]) {
+          updatedEntities[entityIndex] = {
+            ...updatedEntities[entityIndex],
+            shouldMask: !updatedEntities[entityIndex].shouldMask
+          };
+          
+          // Trigger callback to parent component
+          if (onPiiToggled) {
+            onPiiToggled(updatedEntities);
+          }
+        }
+        break;
+    }
+  }
+  return newState;
+}
+```
+
+### Legacy DOM Event Delegation
+The display components continue using DOM events for backwards compatibility:
+
+#### TipTap Extension Legacy ([PiiHighlighter.ts](mdc:src/lib/components/common/RichTextInput/PiiHighlighter.ts) - DEPRECATED)
 ```javascript
 handleDOMEvents: {
   mouseover: (view, event) => {
@@ -39,11 +100,23 @@ const addPiiEventListeners = () => {
     element.addEventListener('click', handleClick);
   });
 };
+
+const handleMouseEnter = (event) => {
+  const target = event.target;
+  const piiLabel = target.getAttribute('data-pii-label');
+  const piiType = target.getAttribute('data-pii-type');
+  
+  if (piiLabel && piiType) {
+    showOverlay(piiLabel, piiType, target);
+  }
+};
 ```
 
 ## Overlay Lifecycle Management
 
 ### Hover State Machine
+The overlay management remains consistent across both approaches:
+
 1. **Mouse Enter PII Element**: Set `isOverPiiElement = true`, show overlay
 2. **Mouse Leave PII Element**: Set `isOverPiiElement = false`, start close timer
 3. **Mouse Enter Overlay**: Set `isOverOverlay = true`, cancel close timer
@@ -58,9 +131,22 @@ const handleOverlayMouseEnter = () => {
   if (hoverTimeout) clearTimeout(hoverTimeout);
 };
 
+const handleOverlayMouseLeave = () => {
+  isOverOverlay = false;
+  if (!isOverPiiElement) {
+    hoverTimeout = setTimeout(() => {
+      showOverlay = false;
+    }, 300);
+  }
+};
+
 // Child Component (PiiHoverOverlay)
 const handleOverlayMouseEnter = () => {
   dispatch('overlayMouseEnter');
+};
+
+const handleOverlayMouseLeave = () => {
+  dispatch('overlayMouseLeave');
 };
 ```
 
@@ -85,22 +171,31 @@ if (target.classList.contains('pii-highlight')) {
 ```
 
 ### Data Attributes
-Essential attributes for PII elements:
+Essential attributes for PII elements (consistent across both systems):
 - `data-pii-label`: Entity identifier (e.g., "PERSON_1")
+- `data-pii-type`: Entity type (e.g., "PERSON", "EMAIL")
+- `data-pii-text`: Original text content
 - `data-pii-occurrence`: Occurrence index for multiple instances
-- `data-entity-index`: Array index in entities list
+- `data-entity-index`: Array index in entities list (NEW - for extension)
+- `data-should-mask`: Current masking state (NEW - for extension)
 
 ## Timing & Performance
 
 ### Debounced Detection
 ```javascript
-// Input field detection uses 500ms debounce
+// Extension uses configurable debounce (default 500ms)
+const debouncedDetection = debounce(performPiiDetection, options.debounceMs || 500);
+
+// Legacy input field detection uses fixed 500ms debounce
 const debouncedDetectPii = debounce(detectPii, 500);
 ```
 
 ### Event Listener Cleanup
 ```javascript
-// Always clean up listeners to prevent memory leaks
+// Extension: Automatic cleanup via ProseMirror plugin lifecycle
+// No manual cleanup required
+
+// Legacy components: Manual cleanup required
 onDestroy(() => {
   removePiiEventListeners();
   clearTimeout(hoverTimeout);
@@ -109,16 +204,70 @@ onDestroy(() => {
 
 ### DOM Update Timing
 ```javascript
-// Wait for DOM updates before adding listeners
+// Legacy components: Wait for DOM updates before adding listeners
 setTimeout(() => {
   removePiiEventListeners();
   addPiiEventListeners();
 }, 0);
+
+// Extension: Automatic via decorations system
+// Position updates handled by ProseMirror transaction mapping
 ```
 
-## Common Pitfalls
+## Event System Comparison
 
+### ProseMirror Extension Advantages
+- **Type Safety**: Full TypeScript integration with ProseMirror types
+- **Automatic Cleanup**: Plugin lifecycle handles event management
+- **Position Accuracy**: Events tied to actual document positions
+- **Transaction Integration**: State changes via proper ProseMirror transactions
+- **Performance**: Native event handling without DOM traversal
+
+### Legacy DOM Events
+- **Flexibility**: Works with any HTML content (not just ProseMirror)
+- **Debugging**: Standard DOM events easier to debug
+- **Browser Compatibility**: Standard event handling across all browsers
+- **External Integration**: Can work with markdown-rendered content
+
+## Migration Strategy
+
+### Choosing Event System
+- **Use ProseMirror Extension**: For input fields and rich text editing
+- **Use DOM Events**: For display components (UserMessage, ResponseMessage)
+- **Hybrid Approach**: Extension for input, DOM events for output (current implementation)
+
+### Common Pitfalls
+
+#### ProseMirror Extension
+1. **Missing `handleClick` return**: Must return `true` when handling events
+2. **Transaction dispatch**: Must use `view.dispatch(tr)` for state updates
+3. **Meta object structure**: Ensure correct meta object for plugin communication
+
+#### Legacy DOM Events
 1. **Using `mouseenter` instead of `mouseover`**: Mouseover bubbles from child elements
 2. **Not checking `relatedTarget` in mouseout**: Causes flickering between elements
 3. **Missing timeout cleanup**: Memory leaks and conflicting timers
 4. **Immediate overlay closure**: No grace period for mouse movement between elements
+
+## Debug Commands
+
+### Extension Event Debugging
+```javascript
+// Check if extension is handling events
+const view = editor.view;
+const handleClick = view.props.handleClick;
+console.log('Extension handleClick:', handleClick);
+
+// Test click handling manually
+const mockEvent = { target: document.querySelector('.pii-highlight') };
+handleClick(view, 0, mockEvent);
+```
+
+### Legacy Event Debugging
+```javascript
+// Check DOM event listeners
+const highlights = document.querySelectorAll('.pii-highlight');
+highlights.forEach(el => {
+  console.log('Element events:', getEventListeners(el)); // Chrome DevTools only
+});
+```
