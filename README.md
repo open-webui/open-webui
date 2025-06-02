@@ -73,7 +73,7 @@ Want to learn more about Open WebUI's features? Check out our [Open WebUI docume
       </a>
     </td>
     <td>
-      N8N • Does your interface have a backend yet?<br>Try <a href="https://n8n.io/">n8n</a>
+      n8n • Does your interface have a backend yet?<br>Try <a href="https://n8n.io/">n8n</a>
     </td>
   </tr>
   <tr>
