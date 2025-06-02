@@ -974,6 +974,15 @@
 			}
 		}
 
+		// Bring focus on top of the latest response message (instead of the bottom)
+		const messageElement = document.getElementById(`message-${responseMessageId}`);
+		console.info(responseMessageId)
+		if (messageElement) {
+				window.setTimeout(() => {
+					messageElement.scrollIntoView({ behavior: 'smooth' });
+				}, 0);
+		}
+
 		taskIds = null;
 	};
 
