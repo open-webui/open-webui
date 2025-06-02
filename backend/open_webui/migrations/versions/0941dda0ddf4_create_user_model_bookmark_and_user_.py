@@ -1,7 +1,7 @@
 """Create user_model_bookmark and user_prompt_bookmark tables
 
 Revision ID: 0941dda0ddf4
-Revises: c58abeccc1d1
+Revises: a5c7d9e1f2b3
 Create Date: 2025-06-02 17:35:56.174902
 
 """
@@ -14,7 +14,7 @@ import open_webui.internal.db
 
 # revision identifiers, used by Alembic.
 revision: str = '0941dda0ddf4'
-down_revision: Union[str, None] = 'c58abeccc1d1'
+down_revision: Union[str, None] = 'a5c7d9e1f2b3'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
