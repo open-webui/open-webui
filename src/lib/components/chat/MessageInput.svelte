@@ -1,5 +1,6 @@
 <script lang="ts">
 	import DOMPurify from 'dompurify';
+	import { marked } from 'marked';
 
 	import { toast } from 'svelte-sonner';
 
@@ -1526,7 +1527,7 @@
 
 							{#if $config?.license_metadata?.input_footer}
 								<div class=" text-xs text-gray-500 text-center line-clamp-1">
-									{@html DOMPurify.sanitize($config?.license_metadata?.input_footer)}
+									{@html DOMPurify.sanitize(marked($config?.license_metadata?.input_footer))}
 								</div>
 							{:else}
 								<div class="mb-1" />
