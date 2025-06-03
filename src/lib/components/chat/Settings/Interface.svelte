@@ -293,6 +293,7 @@
 	onMount(async () => {
 		titleAutoGenerate = $settings?.title?.auto ?? true;
 		autoTags = $settings.autoTags ?? true;
+		autoFollowUps = $settings.autoFollowUps ?? true;
 
 		highContrastMode = $settings.highContrastMode ?? false;
 
