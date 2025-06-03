@@ -178,7 +178,9 @@
 										<BookmarkedIcon />
 									</div>
 								{/if}
-								{#if !model?.meta?.profile_image_url || model?.meta?.profile_image_url?.length > 5}
+								{#if !model?.meta?.profile_image_url}
+									<div class="text-[3.5rem]">🤖</div>
+								{:else if model?.meta?.profile_image_url?.length > 5}
 									<img
 										class="rounded-md"
 										src={model?.meta?.profile_image_url
