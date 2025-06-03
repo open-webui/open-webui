@@ -302,6 +302,10 @@
 					message.files = data.files;
 				} else if (type === 'chat:message:follow_ups') {
 					message.followUps = data.follow_ups;
+
+					if (autoScroll) {
+						scrollToBottom();
+					}
 				} else if (type === 'chat:title') {
 					chatTitle.set(data);
 					currentChatPage.set(1);
