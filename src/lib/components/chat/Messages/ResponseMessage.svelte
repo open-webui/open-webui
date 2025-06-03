@@ -1432,8 +1432,8 @@
 						<div class="mt-2.5" in:fade={{ duration: 50 }}>
 							<FollowUps
 								followUps={message?.followUps}
-								onClick={() => {
-									console.log('Follow-ups clicked');
+								onClick={(prompt) => {
+									submitMessage(message?.id, prompt);
 								}}
 							/>
 						</div>
