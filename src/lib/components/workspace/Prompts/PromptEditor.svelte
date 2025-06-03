@@ -13,6 +13,7 @@
 	export let onSubmit: Function;
 	export let edit = false;
 	export let prompt = null;
+	export let clone = false;
 
 	const i18n = getContext('i18n');
 
@@ -66,10 +67,18 @@
 
 	onMount(async () => {
 		if (prompt) {
-			title = prompt.title;
-			await tick();
-
-			command = prompt.command.at(0) === '/' ? prompt.command.slice(1) : prompt.command;
+			if (clone) {
+				title = `${prompt.title} (Clone)`;
+				const baseCommand = prompt.command.startsWith('/')
+					? prompt.command.substring(1)
+					: prompt.command;
+				command = slugify(`${baseCommand} clone`);
+				hasManualEdit = true;
+			} else {
+				title = prompt.title;
+				command = prompt.command.at(0) === '/' ? prompt.command.slice(1) : prompt.command;
+				hasManualEdit = true;
+			}
 			content = prompt.content;
 
 			accessControl = prompt?.access_control === undefined ? {} : prompt?.access_control;
