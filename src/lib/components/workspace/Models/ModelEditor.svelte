@@ -33,6 +33,7 @@
 	import DocumentIcon from '$lib/components/icons/DocumentIcon.svelte';
 	import AddKnowledgeModal from '../Knowledge/AddKnowledgeModal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import { modelsInfo, mapModelsToOrganizations } from '../../../../data/modelsInfo';
 	
 
 	const i18n = getContext('i18n');
@@ -365,6 +366,11 @@
 	};
 
 	let showAddKnowledge = false;
+
+	let organizations = mapModelsToOrganizations(modelsInfo);
+	const desiredOrder = Object.values(organizations).flat();
+	const orderMap = new Map(desiredOrder.map((name, index) => [name, index]));
+
 	$: console.log($models)
 </script>
 
@@ -798,7 +804,7 @@
 												>
 													<hr class="border-t border-lightGray-400 dark:border-customGray-700 mb-2 mt-1 mx-0.5" />
 													<div class="px-1">
-														{#each $models?.filter(item => !item.base_model_id)?.filter((m) => (model ? m.id !== model.id : true) && !m?.preset && m?.owned_by !== 'arena') as model}
+														{#each $models?.filter(item => !item.base_model_id)?.filter((m) => (model ? m.id !== model.id : true) && !m?.preset && m?.owned_by !== 'arena')?.sort((a, b) => (orderMap.get(a?.name) ?? Infinity) - (orderMap.get(b?.name) ?? Infinity)) as model}
 															<button
 																class="px-3 py-2 flex items-center gap-2 w-full rounded-xl text-sm hover:bg-lightGray-700 dark:hover:bg-customGray-950 text-lightGray-100 dark:text-customGray-100 cursor-pointer "
 																on:click={() => {

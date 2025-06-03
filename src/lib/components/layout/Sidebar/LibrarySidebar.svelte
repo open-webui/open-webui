@@ -147,16 +147,16 @@
 			<Spinner />
 		</div>
 	{:else}
-		<div class="sticky top-0 z-10 pb-3">
+		<div class="sticky top-0 z-10 pb-3 pr-2">
 			<div
 				use:dragScroll
-				class="cursor-grab flex gap-5 overflow-x-scroll py-3.5 assistants-scrollbar min-h-[94px]"
+				class="cursor-grab flex gap-5 {models?.length < 5 ? 'overflow-visible' : 'overflow-x-scroll'} py-3.5 assistants-scrollbar min-h-[94px]"
 			>	
 				{#if models?.length < 1}
 					<div class="pt-4">{$i18n.t('No assistants added yet')}</div>
 				{:else}
 					{#each models as model}
-						<Tooltip className="tooltip" placement="bottom" content={isDragging ? '' : model?.name + '. ' + model?.meta?.description}>
+						<Tooltip className="tooltip" placement="bottom" content={model?.name}>
 							<button
 								on:click={async () => {
 									selectedChatId = null;
@@ -252,7 +252,7 @@
 									class="line-clamp-1 font-medium text-sm text-lightGray-100 dark:text-customGray-100 cursor-pointer"
 									on:click={() => onPromptClick(prompt)}
 								>
-									{prompt?.title}. {prompt?.description}
+									{prompt?.title} • {prompt?.description}
 								</div>
 							</div>
 						{/each}
