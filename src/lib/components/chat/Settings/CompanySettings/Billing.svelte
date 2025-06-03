@@ -134,7 +134,7 @@
 	}}
 >
 	<div class=" text-sm text-gray-500 flex-1 line-clamp-3">
-		{$i18n.t('You will be charged for')} <span class="  font-semibold">€{(25).toFixed(2)}</span>.
+		{$i18n.t('You will be charged for')} <span class="  font-semibold">€{(20).toFixed(2)}</span>.
 	</div>
 </ConfirmDialog>
 
@@ -272,6 +272,10 @@
 				{:else if $subscription?.plan !== 'free'}
 					<div class="text-xs dark:text-customGray-590">
 						Monthly (renews {dayjs($subscription?.next_billing_date * 1000)?.format('DD.MM.YYYY')})
+					</div>
+				{:else if $subscription?.plan === 'free'}
+					<div class="text-xs dark:text-customGray-590">
+						Trial ends {dayjs($subscription?.trial_end * 1000)?.format('DD.MM.YYYY')}
 					</div>
 				{/if}
 			</div>

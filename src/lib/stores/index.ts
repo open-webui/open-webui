@@ -15,6 +15,7 @@ export const company = writable(null);
 export const companyConfig = writable(null);
 export const subscription = writable(null);
 export const isBlocked = writable(false);
+export const blockedMessage = writable(null);
 
 // Electron App
 export const isApp = writable(false);

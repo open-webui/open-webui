@@ -3,12 +3,12 @@ import math
 import stripe
 from typing import Optional
 from fastapi import HTTPException
+import time
 
 from beyond_the_loop.models.users import Users
-from beyond_the_loop.models.companies import Companies, EIGHTY_PERCENT_CREDIT_LIMIT
+from beyond_the_loop.models.companies import Companies
 from beyond_the_loop.services.email_service import EmailService
 from beyond_the_loop.models.model_costs import ModelCosts
-from beyond_the_loop.routers.payments import FLEX_CREDITS_DEFAULT_PRICE_IN_CENTS
 
 PROFIT_MARGIN_FACTOR = 1.5
 DOLLAR_PER_EUR = 0.9
@@ -32,9 +32,12 @@ class CreditService:
 
         # Get current balance
         current_balance = Companies.get_credit_balance(user.company_id)
-        
+
+        # Get the dynamic credit limit based on subscription
+        eighty_percent_credit_limit = Companies.get_eighty_percent_credit_limit(user.company_id)
+
         # Check 80% threshold
-        if current_balance - credit_cost < EIGHTY_PERCENT_CREDIT_LIMIT:  # If balance is less than 125% of required (which means we're below 80%)
+        if current_balance - credit_cost < eighty_percent_credit_limit:
             should_send_budget_email_80 = True  # Default to sending email
 
             company = Companies.get_company_by_id(user.company_id)
@@ -52,6 +55,8 @@ class CreditService:
                                 customer=company.stripe_customer_id,
                                 type="card"
                             )
+
+                            print("Payment methods", payment_methods)
 
                             if not payment_methods or len(payment_methods.data) == 0:
                                 print(
@@ -201,7 +206,71 @@ class CreditService:
         """
         return Companies.get_credit_balance(company_id)
 
-    def check_for_sufficient_balance(self, user):
+    async def check_for_subscription_and_sufficient_balance_and_seats(self, user):
+        # First check if the user has an active subscription in Stripe
+        company = Companies.get_company_by_id(user.company_id)
+
+        # Get the active subscription to check seat limits
+        from beyond_the_loop.routers.payments import get_subscription
+        from beyond_the_loop.models.users import Users
+
+        # Get subscription details
+        subscription_details = await get_subscription(user)
+
+        # Get current seat count and limit
+        seats_limit = subscription_details.get("seats", 0)
+        seats_taken = subscription_details.get("seats_taken", 0)
+
+        too_many_seats_taken = seats_taken > seats_limit
+
+        if too_many_seats_taken:
+            raise HTTPException(
+                status_code=402,  # 402 Payment Required
+                detail="You have reached the maximum number of seats in your subscription. Please upgrade your plan or remove some users.",
+            )
+        
+        if not company or not company.stripe_customer_id:
+            raise HTTPException(
+                status_code=402,  # 402 Payment Required
+                detail="No active subscription found. Please subscribe to a plan.",
+            )
+        
+        # Check for active subscription in Stripe
+        import stripe
+        subscriptions = stripe.Subscription.list(
+            customer=company.stripe_customer_id,
+            status='active',
+            limit=1
+        )
+
+        trails = stripe.Subscription.list(
+            customer=company.stripe_customer_id,
+            status='trialing',
+            limit=1
+        )
+        
+        # Check for expired trials
+        expired_trials = stripe.Subscription.list(
+            customer=company.stripe_customer_id,
+            status='canceled',
+            limit=10  # Check a few recent subscriptions
+        )
+
+        has_expired_trial = any(sub.get('status') == 'canceled' and sub.get('metadata', {}).get('plan_id', "") == "free" for sub in expired_trials.data)
+
+        if not subscriptions.data and not trails.data:
+            if has_expired_trial:
+                raise HTTPException(
+                    status_code=402,  # 402 Payment Required
+                    detail="Your trial period is over. To continue using the platform, please select a plan.",
+                )
+            else:
+                raise HTTPException(
+                    status_code=402,  # 402 Payment Required
+                    detail="No active subscription found. Please subscribe to a plan.",
+                )
+        
+        # Proceed with credit balance check
         current_balance = Companies.get_credit_balance(user.company_id)
 
         # Check if company has sufficient credits
