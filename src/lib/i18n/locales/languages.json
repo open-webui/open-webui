@@ -206,5 +206,14 @@
 	{
 		"code": "dg-DG",
 		"title": "Doge (🐶)"
-	}
+	},
+  {
+    "code": "uz-Cyrl-UZ",
+    "title": "Uzbek (Cyrillic)"
+  },
+  {
+    "code": "uz-Latn-UZ",
+    "title": "Uzbek (Latin)"
+  }
+
 ]
