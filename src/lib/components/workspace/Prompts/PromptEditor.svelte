@@ -69,6 +69,7 @@
 		if (prompt) {
 			title = prompt.title;
 			await tick();
+
 			command = prompt.command.at(0) === '/' ? prompt.command.slice(1) : prompt.command;
 			content = prompt.content;
 
