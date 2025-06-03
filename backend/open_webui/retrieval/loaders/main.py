@@ -76,7 +76,6 @@ known_source_ext = [
     "swift",
     "vue",
     "svelte",
-    "msg",
     "ex",
     "exs",
     "erl",
