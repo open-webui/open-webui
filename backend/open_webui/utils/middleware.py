@@ -2219,13 +2219,14 @@ async def process_chat_response(
 
                                                 # ensure the path exists
                                                 os.makedirs(
-                                                    os.path.join(CACHE_DIR, "images"),
+                                                    os.path.join(CACHE_DIR, user.id, "images"),
                                                     exist_ok=True,
                                                 )
 
                                                 image_path = os.path.join(
                                                     CACHE_DIR,
-                                                    f"images/{id}.png",
+                                                    user.id,
+                                                    f"images/{id}",
                                                 )
 
                                                 with open(image_path, "wb") as f:
@@ -2236,7 +2237,7 @@ async def process_chat_response(
                                                     )
 
                                                 stdoutLines[idx] = (
-                                                    f"![Output Image {idx}](/cache/images/{id}.png)"
+                                                    f"![Output Image {idx}](/cache/images/{id})"
                                                 )
 
                                         output["stdout"] = "\n".join(stdoutLines)
@@ -2251,12 +2252,13 @@ async def process_chat_response(
 
                                                 # ensure the path exists
                                                 os.makedirs(
-                                                    os.path.join(CACHE_DIR, "images"),
+                                                    os.path.join(CACHE_DIR, user.id, "images"),
                                                     exist_ok=True,
                                                 )
 
                                                 image_path = os.path.join(
                                                     CACHE_DIR,
+                                                    user.id,
                                                     f"images/{id}.png",
                                                 )
 
@@ -2268,7 +2270,7 @@ async def process_chat_response(
                                                     )
 
                                                 resultLines[idx] = (
-                                                    f"![Output Image {idx}](/cache/images/{id}.png)"
+                                                    f"![Output Image {idx}](/cache/images/{id})"
                                                 )
 
                                         output["result"] = "\n".join(resultLines)
