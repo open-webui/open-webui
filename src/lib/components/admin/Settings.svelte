@@ -32,7 +32,23 @@
 	$: {
 		const pathParts = $page.url.pathname.split('/');
 		const tabFromPath = pathParts[pathParts.length - 1];
-		selectedTab = ['general', 'connections', 'models', 'evaluations', 'tools', 'documents', 'web', 'code-execution', 'interface', 'audio', 'images', 'pipelines', 'db'].includes(tabFromPath) ? tabFromPath : 'general';
+		selectedTab = [
+			'general',
+			'connections',
+			'models',
+			'evaluations',
+			'tools',
+			'documents',
+			'web',
+			'code-execution',
+			'interface',
+			'audio',
+			'images',
+			'pipelines',
+			'db'
+		].includes(tabFromPath)
+			? tabFromPath
+			: 'general';
 	}
 
 	onMount(() => {
