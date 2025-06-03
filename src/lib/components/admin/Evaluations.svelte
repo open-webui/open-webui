@@ -6,12 +6,20 @@
 
 	import { getAllFeedbacks } from '$lib/apis/evaluations';
 
-	const i18n = getContext('i18n');
+	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 
-	let selectedTab = 'leaderboard';
+	const i18n = getContext('i18n');
 
 	let loaded = false;
 	let feedbacks = [];
+
+	let selectedTab;
+	$: {
+		const pathParts = $page.url.pathname.split('/');
+		const tabFromPath = pathParts[pathParts.length - 1];
+		selectedTab = ['leaderboard', 'feedbacks'].includes(tabFromPath) ? tabFromPath : 'leaderboard';
+	}
 
 	onMount(async () => {
 		feedbacks = await getAllFeedbacks(localStorage.token);
@@ -42,7 +50,7 @@
 					? ''
 					: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 				on:click={() => {
-					selectedTab = 'leaderboard';
+					goto('/admin/evaluations/leaderboard');
 				}}
 			>
 				<div class=" self-center mr-2">
@@ -68,7 +76,7 @@
 					? ''
 					: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 				on:click={() => {
-					selectedTab = 'feedbacks';
+					goto('/admin/evaluations/feedbacks');
 				}}
 			>
 				<div class=" self-center mr-2">

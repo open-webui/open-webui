@@ -3,6 +3,7 @@
 	import { toast } from 'svelte-sonner';
 
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import { user } from '$lib/stores';
 
 	import UserList from './Users/UserList.svelte';
@@ -10,8 +11,14 @@
 
 	const i18n = getContext('i18n');
 
-	let selectedTab = 'overview';
 	let loaded = false;
+
+	let selectedTab;
+	$: {
+		const pathParts = $page.url.pathname.split('/');
+		const tabFromPath = pathParts[pathParts.length - 1];
+		selectedTab = ['overview', 'groups'].includes(tabFromPath) ? tabFromPath : 'overview';
+	}
 
 	onMount(async () => {
 		if ($user?.role !== 'admin') {
@@ -44,7 +51,7 @@
 				? ''
 				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			on:click={() => {
-				selectedTab = 'overview';
+				goto('/admin/users/overview');
 			}}
 		>
 			<div class=" self-center mr-2">
@@ -68,7 +75,7 @@
 				? ''
 				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			on:click={() => {
-				selectedTab = 'groups';
+				goto('/admin/users/groups');
 			}}
 		>
 			<div class=" self-center mr-2">
