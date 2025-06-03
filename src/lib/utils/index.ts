@@ -1133,3 +1133,7 @@ export function getMonthRange(year: number, month: number) {
 	};
 }
 
+export const emojiToBase64 = (emoji) => {
+	return emoji;
+};
+
