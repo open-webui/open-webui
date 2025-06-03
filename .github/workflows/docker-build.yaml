@@ -313,6 +313,9 @@ jobs:
   merge-main-images:
     runs-on: ubuntu-latest
     needs: [build-main-image]
+    permissions:
+      contents: read
+      packages: write
     steps:
       # GitHub Packages requires the entire repository name to be in lowercase
       # although the repository owner has a lowercase username, this prevents some people from running actions after forking
@@ -367,6 +370,9 @@ jobs:
   merge-cuda-images:
     runs-on: ubuntu-latest
     needs: [build-cuda-image]
+    permissions:
+      contents: read
+      packages: write
     steps:
       # GitHub Packages requires the entire repository name to be in lowercase
       # although the repository owner has a lowercase username, this prevents some people from running actions after forking
@@ -423,6 +429,9 @@ jobs:
   merge-ollama-images:
     runs-on: ubuntu-latest
     needs: [build-ollama-image]
+    permissions:
+      contents: read
+      packages: write
     steps:
       # GitHub Packages requires the entire repository name to be in lowercase
       # although the repository owner has a lowercase username, this prevents some people from running actions after forking
