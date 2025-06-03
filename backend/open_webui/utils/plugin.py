@@ -115,7 +115,7 @@ def load_tool_module_by_id(tool_id, content=None):
         os.unlink(temp_file.name)
 
 
-def load_function_module_by_id(function_id, content=None):
+def load_function_module_by_id(function_id: str, content: str | None = None):
     if content is None:
         function = Functions.get_function_by_id(function_id)
         if not function:
@@ -164,6 +164,62 @@ def load_function_module_by_id(function_id, content=None):
         raise e
     finally:
         os.unlink(temp_file.name)
+
+
+def get_function_module_from_cache(request, function_id, load_from_db=True):
+    if load_from_db:
+        # Always load from the database by default
+        # This is useful for hooks like "inlet" or "outlet" where the content might change
+        # and we want to ensure the latest content is used.
+
+        function = Functions.get_function_by_id(function_id)
+        if not function:
+            raise Exception(f"Function not found: {function_id}")
+        content = function.content
+
+        new_content = replace_imports(content)
+        if new_content != content:
+            content = new_content
+            # Update the function content in the database
+            Functions.update_function_by_id(function_id, {"content": content})
+
+        if (
+            hasattr(request.app.state, "FUNCTION_CONTENTS")
+            and function_id in request.app.state.FUNCTION_CONTENTS
+        ) and (
+            hasattr(request.app.state, "FUNCTIONS")
+            and function_id in request.app.state.FUNCTIONS
+        ):
+            if request.app.state.FUNCTION_CONTENTS[function_id] == content:
+                return request.app.state.FUNCTIONS[function_id], None, None
+
+        function_module, function_type, frontmatter = load_function_module_by_id(
+            function_id, content
+        )
+    else:
+        # Load from cache (e.g. "stream" hook)
+        # This is useful for performance reasons
+
+        if (
+            hasattr(request.app.state, "FUNCTIONS")
+            and function_id in request.app.state.FUNCTIONS
+        ):
+            return request.app.state.FUNCTIONS[function_id], None, None
+
+        function_module, function_type, frontmatter = load_function_module_by_id(
+            function_id
+        )
+
+    if not hasattr(request.app.state, "FUNCTIONS"):
+        request.app.state.FUNCTIONS = {}
+
+    if not hasattr(request.app.state, "FUNCTION_CONTENTS"):
+        request.app.state.FUNCTION_CONTENTS = {}
+
+    request.app.state.FUNCTIONS[function_id] = function_module
+    request.app.state.FUNCTION_CONTENTS[function_id] = content
+
+    return function_module, function_type, frontmatter
 
 
 def install_frontmatter_requirements(requirements: str):
