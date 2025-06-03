@@ -1049,6 +1049,59 @@ async def process_chat_response(
                 )
 
             if tasks and messages:
+                if (
+                    TASKS.FOLLOW_UP_GENERATION in tasks
+                    and tasks[TASKS.FOLLOW_UP_GENERATION]
+                ):
+                    res = await generate_follow_ups(
+                        request,
+                        {
+                            "model": message["model"],
+                            "messages": messages,
+                            "message_id": metadata["message_id"],
+                            "chat_id": metadata["chat_id"],
+                        },
+                        user,
+                    )
+
+                    if res and isinstance(res, dict):
+                        if len(res.get("choices", [])) == 1:
+                            follow_ups_string = (
+                                res.get("choices", [])[0]
+                                .get("message", {})
+                                .get("content", "")
+                            )
+                        else:
+                            follow_ups_string = ""
+
+                        follow_ups_string = follow_ups_string[
+                            follow_ups_string.find("{") : follow_ups_string.rfind("}")
+                            + 1
+                        ]
+
+                        try:
+                            follow_ups = json.loads(follow_ups_string).get(
+                                "follow_ups", []
+                            )
+                            Chats.upsert_message_to_chat_by_id_and_message_id(
+                                metadata["chat_id"],
+                                metadata["message_id"],
+                                {
+                                    "followUps": follow_ups,
+                                },
+                            )
+
+                            await event_emitter(
+                                {
+                                    "type": "chat:message:follow_ups",
+                                    "data": {
+                                        "follow_ups": follow_ups,
+                                    },
+                                }
+                            )
+                        except Exception as e:
+                            pass
+
                 if TASKS.TITLE_GENERATION in tasks:
                     if tasks[TASKS.TITLE_GENERATION]:
                         res = await generate_title(
@@ -1104,59 +1157,6 @@ async def process_chat_response(
                                 "data": message.get("content", "New Chat"),
                             }
                         )
-
-                if (
-                    TASKS.FOLLOW_UP_GENERATION in tasks
-                    and tasks[TASKS.FOLLOW_UP_GENERATION]
-                ):
-                    res = await generate_follow_ups(
-                        request,
-                        {
-                            "model": message["model"],
-                            "messages": messages,
-                            "message_id": metadata["message_id"],
-                            "chat_id": metadata["chat_id"],
-                        },
-                        user,
-                    )
-
-                    if res and isinstance(res, dict):
-                        if len(res.get("choices", [])) == 1:
-                            follow_ups_string = (
-                                res.get("choices", [])[0]
-                                .get("message", {})
-                                .get("content", "")
-                            )
-                        else:
-                            follow_ups_string = ""
-
-                        follow_ups_string = follow_ups_string[
-                            follow_ups_string.find("{") : follow_ups_string.rfind("}")
-                            + 1
-                        ]
-
-                        try:
-                            follow_ups = json.loads(follow_ups_string).get(
-                                "follow_ups", []
-                            )
-                            Chats.upsert_message_to_chat_by_id_and_message_id(
-                                metadata["chat_id"],
-                                metadata["message_id"],
-                                {
-                                    "followUps": follow_ups,
-                                },
-                            )
-
-                            await event_emitter(
-                                {
-                                    "type": "chat:message:follow_ups",
-                                    "data": {
-                                        "follow_ups": follow_ups,
-                                    },
-                                }
-                            )
-                        except Exception as e:
-                            pass
 
                 if TASKS.TAGS_GENERATION in tasks and tasks[TASKS.TAGS_GENERATION]:
                     res = await generate_chat_tags(
