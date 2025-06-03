@@ -87,7 +87,7 @@
 			: gptDefault?.id,
 		name: '',
 		meta: {
-			profile_image_url: '',
+			profile_image_url: '🤖',
 			description: '',
 			suggestion_prompts: [{ content: '' }],
 			tags: []
@@ -384,7 +384,7 @@
 	};
 
 	let showAddKnowledge = false;
-	$: console.log($models);
+	$: console.log(info.meta.profile_image_url);
 </script>
 
 {#if loaded}
@@ -543,8 +543,12 @@
 													/>
 												{/if}
 											{:else}
-												<div class="text-[2.7rem]">
-													{info.meta.profile_image_url}
+												<div
+													class="flex justify-center items-center rounded-lg size-16 shrink-0 bg-customViolet-200 dark:bg-customViolet-300"
+														>
+													<div class="text-[2.7rem]">
+														{info.meta.profile_image_url}
+													</div>
 												</div>
 											{/if}
 										</div>
