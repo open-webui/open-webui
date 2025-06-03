@@ -25,6 +25,7 @@
 	import LoaderIcon from '$lib/components/icons/LoaderIcon.svelte';
 	import LinkEditor from './LinkEditor.svelte';
 	import OnBoarding from '$lib/components/OnBoarding.svelte';
+	import CompanyIcon from '$lib/components/icons/CompanyIcon.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -69,7 +70,7 @@
 	let chatLifetimeDropdownRef;
 
 	const chatLifetimeOptions = [{value: 30, label: '30 days'}, {value: 91, label: '3 months'}, {value: 183, label: '6 months'}, {value: 275, label: '9 months'}, {value: 365, label: '1 year'}, {value: 0, label: "no limit"}];
-	let chatLifetime = chatLifetimeOptions[5];
+	let chatLifetime = chatLifetimeOptions[0];
 
 	let userNotice = '';
 
@@ -149,6 +150,7 @@
 
 		loading = false;
 	}
+
 </script>
 
 <!-- space-y-3 overflow-y-scroll max-h-[28rem] lg:max-h-full -->
@@ -243,12 +245,17 @@
 								profileImageInputElement.click();
 							}}
 						>
-							<img
-								src={profileImageUrl !== '' ? profileImageUrl : generateInitialsImage(companyName)}
-								alt="profile"
-								class=" rounded-lg size-16 object-cover"
-							/>
-
+							{#if !profileImageUrl || profileImageUrl === '/user.png'}
+								<div class="rounded-lg flex justify-center size-16 shrink-0 bg-lightGray-400 dark:bg-customGray-900 text-white dark:text-customGray-600">
+									<CompanyIcon className="self-center size-12"/>
+								</div>
+							{:else}
+								<img
+									src={profileImageUrl !== '' ? profileImageUrl : generateInitialsImage(companyName)}
+									alt="profile"
+									class=" rounded-lg size-16 object-cover"
+								/>
+							{/if}
 							<div
 								class="absolute flex justify-center rounded-full bottom-0 left-0 right-0 top-0 h-full w-full overflow-hidden bg-gray-700 bg-fixed opacity-0 transition duration-300 ease-in-out hover:opacity-50"
 							>
@@ -290,7 +297,7 @@
 						<button
 							class="flex items-center text-xs text-center text-gray-800 text-2xs dark:text-customGray-300 rounded-lg px-2 py-1"
 							on:click={async () => {
-								profileImageUrl = '/user.png';
+								profileImageUrl = '';
 							}}
 							><DeleteIcon className="mr-1 size-4" />
 							{$i18n.t('Remove')}</button

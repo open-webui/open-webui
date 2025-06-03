@@ -123,8 +123,8 @@
 				<div class="text-2xl text-lightGray-100 dark:text-customGray-100 mb-2.5">
 					{analytics?.totalUsers?.total_users}
 				</div>
-				<div class="text-xs text-lightGray-100/50 dark:text-customGray-100/50 mb-1">{$i18n.t('Total Users')}</div>
-				<Tooltip content="">
+				<div class="text-xs text-lightGray-100/50 dark:text-customGray-100/50 mb-1 text-center">{$i18n.t('Total Users')}</div>
+				<Tooltip content={$i18n.t('The total number of users.')}>
 					<div
 						class="ml-1 cursor-pointer group relative flex justify-center items-center w-[18px] h-[18px] rounded-full text-white dark:text-white bg-customBlue-600 dark:bg-customGray-700"
 					>
@@ -136,8 +136,8 @@
 				<div class="text-2xl text-lightGray-100 dark:text-customGray-100 mb-2.5">
 					{analytics?.adoptionRate?.adoption_rate}%
 				</div>
-				<div class="text-xs text-lightGray-100/50 dark:text-customGray-100/50 mb-1">{$i18n.t('Adoption Rate')}</div>
-				<Tooltip content="">
+				<div class="text-xs text-lightGray-100/50 dark:text-customGray-100/50 mb-1 text-center">{$i18n.t('Adoption Rate')}</div>
+				<Tooltip content={$i18n.t('The proportion of users who logged in during the last month.')}>
 					<div
 						class="ml-1 cursor-pointer group relative flex justify-center items-center w-[18px] h-[18px] rounded-full text-white dark:text-white bg-customBlue-600 dark:bg-customGray-700"
 					>
@@ -149,8 +149,8 @@
 				<div class="text-2xl dark:text-customGray-100 mb-2.5">
 					{analytics?.powerUsers?.power_users_count}
 				</div>
-				<div class="text-xs text-lightGray-100/50 dark:text-customGray-100/50 mb-1">{$i18n.t('Power Users')}</div>
-				<Tooltip content="">
+				<div class="text-xs text-lightGray-100/50 dark:text-customGray-100/50 mb-1 text-center">{$i18n.t('Power Users')}</div>
+				<Tooltip content={$i18n.t('Users who sent 400 or more messages in the last month.')}>
 					<div
 						class="ml-1 cursor-pointer group relative flex justify-center items-center w-[18px] h-[18px] rounded-full text-white dark:text-white bg-customBlue-600 dark:bg-customGray-700"
 					>
@@ -163,7 +163,7 @@
 					{analytics?.totalAssistants?.total_assistants}
 				</div>
 				<div class="text-xs text-lightGray-100/50 dark:text-customGray-100/50 mb-1">{$i18n.t('Assistants Created')}</div>
-				<Tooltip content="">
+				<Tooltip content={$i18n.t('The number of assistants created within the company.')}>
 					<div
 						class="ml-1 cursor-pointer group relative flex justify-center items-center w-[18px] h-[18px] rounded-full text-white dark:text-white bg-customBlue-600 dark:bg-customGray-700"
 					>
@@ -187,8 +187,8 @@
 							on:click={() => (showUsersSortDropdown = !showUsersSortDropdown)}
 						>
 							<div class="flex items-center">
-								<div class="text-xs dark:text-customGray-200 max-w-[15rem] text-left">
-									{selectedSortOrder?.label}
+								<div class="text-xs dark:text-customGray-200 max-w-[22rem] text-left whitespace-nowrap">
+									{$i18n.t(selectedSortOrder?.label)}
 								</div>
 								<ChevronDown className="size-2 ml-1" />
 							</div>
@@ -196,7 +196,7 @@
 
 						{#if showUsersSortDropdown}
 							<div
-								class="max-h-60 min-w-40 overflow-y-auto absolute top-6 -right-2 z-50 bg-lightGray-300 dark:bg-customGray-900 border border-lightGray-400 dark:border-customGray-700 rounded-md shadow"
+								class="max-h-60 min-w-[14rem] overflow-y-auto absolute top-6 -right-2 z-50 bg-lightGray-300 dark:bg-customGray-900 border border-lightGray-400 dark:border-customGray-700 rounded-md shadow"
 							>
 								<div class="px-1 py-1">
 									{#each sortOptions?.filter?.((item) => item?.value !== selectedSortOrder?.value) as option}
@@ -216,7 +216,7 @@
 											}}
 											class="flex items-center justify-end w-full cursor-pointer text-xs text-lightGray-100 dark:text-customGray-100 px-2 py-2 hover:bg-lightGray-700 dark:hover:bg-customGray-950 rounded-md"
 										>
-											{option?.label}
+											{$i18n.t(option?.label)}
 										</div>
 									{/each}
 								</div>
@@ -273,7 +273,7 @@
 				class="flex w-full justify-between items-center pb-2.5 border-b border-lightGray-400 dark:border-customGray-700 mb-2.5"
 			>
 				<div class="flex w-full justify-between items-center">
-					<div class="text-xs text-lightGray-100 dark:text-customGray-300 font-medium">{$i18n.t('Top 3 models Used')}</div>
+					<div class="text-xs text-lightGray-100 dark:text-customGray-300 font-medium">{$i18n.t('Top 3 Models Used')}</div>
 				</div>
 				<div use:onClickOutside={() => (showMonthsDropdown = false)}>
 					<div class="relative" bind:this={monthsRef}>
@@ -283,7 +283,7 @@
 							on:click={() => (showMonthsDropdown = !showMonthsDropdown)}
 						>
 							<div class="flex items-center">
-								<div class="text-xs text-lightGray-100 dark:text-customGray-200 max-w-[15rem] text-left">
+								<div class="text-xs text-lightGray-100 dark:text-customGray-200 max-w-[22rem] text-left">
 									{selectedMonth?.label}
 								</div>
 								<ChevronDown className="size-2 ml-1" />
@@ -292,7 +292,7 @@
 
 						{#if showMonthsDropdown}
 							<div
-								class="max-h-60 min-w-40 overflow-y-auto absolute top-6 -right-2 z-50 bg-lightGray-300 dark:bg-customGray-900 border border-gray-300 dark:border-customGray-700 rounded-md shadow"
+								class="max-h-60 min-w-44 overflow-y-auto absolute top-6 -right-2 z-50 bg-lightGray-300 dark:bg-customGray-900 border border-gray-300 dark:border-customGray-700 rounded-md shadow"
 							>
 								<div class="px-1 py-1">
 									{#each monthOptions as option}

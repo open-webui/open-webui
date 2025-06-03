@@ -102,7 +102,7 @@
 
 <div bind:this={root} class="relative w-[1px]" use:onClickOutside={() => (openAccessDropdownId = null)}>
 		<div
-			class="flex flex-col w-[8rem] absolute right-0 md:-left-20 top-4 bg-lightGray-300 border-lightGray-400 dark:bg-customGray-900 px-1 py-2 border-l border-b border-r dark:border-customGray-700 rounded-lg shadow z-10"
+			class="flex flex-col w-[9rem] absolute right-0 md:-left-20 top-4 bg-lightGray-300 border-lightGray-400 dark:bg-customGray-900 px-1 py-2 border-l border-b border-r dark:border-customGray-700 rounded-lg shadow z-10"
 		>
 			<button
 				type="button"
@@ -199,7 +199,7 @@
 					{#if (showSubmenu || showMobileSubmenu)}
 						<button
 							type="button"
-							class="min-w-[8rem] absolute left-[-136px] md:left-[7.8rem] -bottom-2 bg-lightGray-300 dark:bg-customGray-900 border px-1 py-2 border-gray-300 dark:border-customGray-700 rounded-xl shadow z-20 min-w-30"
+							class="min-w-[8rem] absolute left-[-136px] md:left-[8.8rem] -bottom-2 bg-lightGray-300 dark:bg-customGray-900 border px-1 py-2 border-gray-300 dark:border-customGray-700 rounded-xl shadow z-20 min-w-30"
 							
 							on:mouseenter={() => (hoveringSubmenu = true)}
 							on:mouseleave={() => {

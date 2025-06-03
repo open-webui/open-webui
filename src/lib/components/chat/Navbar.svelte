@@ -32,6 +32,7 @@
 	import ShowSidebarIcon from '../icons/ShowSidebarIcon.svelte';
 	import MenuIcon from '../icons/MenuIcon.svelte';
 	import Plus from '../icons/Plus.svelte';
+	import CompanyIcon from '../icons/CompanyIcon.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -104,11 +105,19 @@
 							}}
 						>
 							<div class=" self-center mr-3">
-								<img
-									src={$company?.profile_image_url}
-									class=" max-w-[28px] object-cover rounded-md"
-									alt="User profile"
-								/>
+								{#if !$company?.profile_image_url || $company?.profile_image_url === '/user.png'}
+									<div
+										class="rounded-lg flex justify-center w-[30px] h-[30px] shrink-0 bg-lightGray-400 dark:bg-customGray-900 text-white dark:text-customGray-600"
+									>
+										<CompanyIcon className="self-center size-6" />
+									</div>
+								{:else}
+									<img
+										src={$company?.profile_image_url}
+										class=" max-w-[28px] object-cover rounded-md"
+										alt="User profile"
+									/>
+								{/if}
 							</div>
 							<div class=" self-center font-medium text-sm mr-1 text-lightGray-1300 dark:text-customGray-100">{$company?.name}</div>
 							<ChevronDown className=" size-3" strokeWidth="2.5" />

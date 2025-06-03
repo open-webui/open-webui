@@ -304,9 +304,9 @@
 						> -->
 
 						<button
-							class="flex items-center text-xs text-center text-gray-800 text-2xs dark:text-customGray-300 rounded-lg px-2 py-1"
+							class="flex items-center text-xs text-center text-gray-800 text-2xs dark:text-customGray-300 rounded-lg px-2 py-1 border-none"
 							on:click={async () => {
-								profileImageUrl = '/user.png';
+								profileImageUrl = generateInitialsImage(`${firstName} ${lastName}`);
 							}}
 							><DeleteIcon className="mr-1 size-4" />
 							{$i18n.t('Remove')}</button

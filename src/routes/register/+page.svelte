@@ -72,7 +72,7 @@
 			return;
 		}
 		loading = true;
-		const sessionUser = await completeInvite(firstName, lastName, password, inviteToken, profileImageUrl ? profileImageUrl : generateInitialsImage(firstName)).catch(
+		const sessionUser = await completeInvite(firstName, lastName, password, inviteToken, profileImageUrl ? profileImageUrl : generateInitialsImage(`${firstName} ${lastName}`)).catch(
 			(error) => {
 				toast.error(`${error}`);
 				loading = false;
