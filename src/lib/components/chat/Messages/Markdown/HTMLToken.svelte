@@ -23,7 +23,8 @@
 {#if token.type === 'html'}
 	{#if html && html.includes('<video')}
 		{@const video = html.match(/<video[^>]*>([\s\S]*?)<\/video>/)}
-		{@const videoSrc = video && video[1]}
+		{@const rawVideoSrc = video && video[1]}
+		{@const videoSrc = rawVideoSrc && rawVideoSrc.replaceAll('&amp;', '&')}
 		{#if videoSrc}
 			<!-- svelte-ignore a11y-media-has-caption -->
 			<video
