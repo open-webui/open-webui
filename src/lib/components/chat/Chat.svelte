@@ -300,6 +300,8 @@
 					message.content = data.content;
 				} else if (type === 'chat:message:files' || type === 'files') {
 					message.files = data.files;
+				} else if (type === 'chat:message:follow_ups') {
+					message.followUps = data.follow_ups;
 				} else if (type === 'chat:title') {
 					chatTitle.set(data);
 					currentChatPage.set(1);
@@ -1678,19 +1680,20 @@
 				chat_id: $chatId,
 				id: responseMessageId,
 
-				...(!$temporaryChatEnabled &&
-				(messages.length == 1 ||
-					(messages.length == 2 &&
-						messages.at(0)?.role === 'system' &&
-						messages.at(1)?.role === 'user')) &&
-				(selectedModels[0] === model.id || atSelectedModel !== undefined)
-					? {
-							background_tasks: {
+				background_tasks: {
+					...(!$temporaryChatEnabled &&
+					(messages.length == 1 ||
+						(messages.length == 2 &&
+							messages.at(0)?.role === 'system' &&
+							messages.at(1)?.role === 'user')) &&
+					(selectedModels[0] === model.id || atSelectedModel !== undefined)
+						? {
 								title_generation: $settings?.title?.auto ?? true,
 								tags_generation: $settings?.autoTags ?? true
 							}
-						}
-					: {}),
+						: {}),
+					follow_up_generation: $settings?.autoFollowUps ?? true
+				},
 
 				...(stream && (model.info?.meta?.capabilities?.usage ?? false)
 					? {

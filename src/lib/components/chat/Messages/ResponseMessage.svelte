@@ -48,6 +48,8 @@
 	import ContentRenderer from './ContentRenderer.svelte';
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 	import FileItem from '$lib/components/common/FileItem.svelte';
+	import FollowUps from './ResponseMessage/FollowUps.svelte';
+	import { fade } from 'svelte/transition';
 
 	interface MessageType {
 		id: string;
@@ -606,7 +608,7 @@
 			/>
 		</div>
 
-		<div class="flex-auto w-0 pl-1 relative">
+		<div class="flex-auto w-0 pl-1 relative -translate-y-0.5">
 			<Name>
 				<Tooltip content={model?.name ?? message.model} placement="top-start">
 					<span class="line-clamp-1 text-black dark:text-white">
@@ -1424,6 +1426,17 @@
 								});
 							}}
 						/>
+					{/if}
+
+					{#if isLastMessage && message.done && !readOnly && (message?.followUps ?? []).length > 0}
+						<div class="mt-2.5" in:fade={{ duration: 50 }}>
+							<FollowUps
+								followUps={message?.followUps}
+								onClick={() => {
+									console.log('Follow-ups clicked');
+								}}
+							/>
+						</div>
 					{/if}
 				{/if}
 			</div>

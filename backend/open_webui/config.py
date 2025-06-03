@@ -1419,12 +1419,13 @@ FOLLOW_UP_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
 )
 
 DEFAULT_FOLLOW_UP_GENERATION_PROMPT_TEMPLATE = """### Task:
-Suggest 3-5 relevant follow-up questions or discussion prompts based on the chat history to help continue or deepen the conversation.
+SSuggest 3-5 relevant follow-up questions or prompts that the **user** might naturally ask next in this conversation, based on the chat history, to help continue or deepen the discussion.
 ### Guidelines:
+- Phrase all follow-up questions from the user’s perspective, addressed to the assistant or expert.
 - Make questions concise, clear, and directly related to the discussed topic(s).
-- Only generate follow-ups that make sense given the chat content and do not repeat what was already covered.
-- If the conversation is very short or not specific, suggest more general follow-ups.
-- Use the chat's primary language; default to English if multilingual.
+- Only suggest follow-ups that make sense given the chat content and do not repeat what was already covered.
+- If the conversation is very short or not specific, suggest more general (but relevant) follow-ups the user might ask.
+- Use the conversation's primary language; default to English if multilingual.
 - Response must be a JSON array of strings, no extra text or formatting.
 ### Output:
 JSON format: { "follow_ups": ["Question 1?", "Question 2?", "Question 3?"] }

@@ -17,6 +17,7 @@
 
 	// Addons
 	let titleAutoGenerate = true;
+	let autoFollowUps = true;
 	let autoTags = true;
 
 	let responseAutoCopy = false;
@@ -195,6 +196,11 @@
 				auto: titleAutoGenerate
 			}
 		});
+	};
+
+	const toggleAutoFollowUps = async () => {
+		autoFollowUps = !autoFollowUps;
+		saveSettings({ autoFollowUps });
 	};
 
 	const toggleAutoTags = async () => {
@@ -611,6 +617,26 @@
 						type="button"
 					>
 						{#if titleAutoGenerate === true}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs">{$i18n.t('Follow-Up Auto-Generation')}</div>
+
+					<button
+						class="p-1 px-3 text-xs flex rounded-sm transition"
+						on:click={() => {
+							toggleAutoFollowUps();
+						}}
+						type="button"
+					>
+						{#if autoFollowUps === true}
 							<span class="ml-2 self-center">{$i18n.t('On')}</span>
 						{:else}
 							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
