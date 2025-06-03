@@ -217,58 +217,59 @@ class CreditService:
         # Get subscription details
         subscription_details = await get_subscription(user)
 
-        # Get current seat count and limit
-        seats_limit = subscription_details.get("seats", 0)
-        seats_taken = subscription_details.get("seats_taken", 0)
+        if not company.subscription_not_required:
+            # Get current seat count and limit
+            seats_limit = subscription_details.get("seats", 0)
+            seats_taken = subscription_details.get("seats_taken", 0)
 
-        too_many_seats_taken = seats_taken > seats_limit
+            too_many_seats_taken = seats_taken > seats_limit
 
-        if too_many_seats_taken:
-            raise HTTPException(
-                status_code=402,  # 402 Payment Required
-                detail="You have reached the maximum number of seats in your subscription. Please upgrade your plan or remove some users.",
-            )
-        
-        if not company or not company.stripe_customer_id:
-            raise HTTPException(
-                status_code=402,  # 402 Payment Required
-                detail="No active subscription found. Please subscribe to a plan.",
-            )
-        
-        # Check for active subscription in Stripe
-        import stripe
-        subscriptions = stripe.Subscription.list(
-            customer=company.stripe_customer_id,
-            status='active',
-            limit=1
-        )
-
-        trails = stripe.Subscription.list(
-            customer=company.stripe_customer_id,
-            status='trialing',
-            limit=1
-        )
-        
-        # Check for expired trials
-        expired_trials = stripe.Subscription.list(
-            customer=company.stripe_customer_id,
-            status='canceled',
-            limit=10  # Check a few recent subscriptions
-        )
-
-        has_expired_trial = any(sub.get('status') == 'canceled' and sub.get('metadata', {}).get('plan_id', "") == "free" for sub in expired_trials.data)
-
-        if not subscriptions.data and not trails.data:
-            if has_expired_trial:
+            if too_many_seats_taken:
                 raise HTTPException(
                     status_code=402,  # 402 Payment Required
-                    detail="Your trial period is over. To continue using the platform, please select a plan.",
+                    detail="You have reached the maximum number of seats in your subscription. Please upgrade your plan or remove some users.",
                 )
-            else:
+
+            if not company or not company.stripe_customer_id:
                 raise HTTPException(
                     status_code=402,  # 402 Payment Required
                     detail="No active subscription found. Please subscribe to a plan.",
                 )
+
+            # Check for active subscription in Stripe
+            import stripe
+            subscriptions = stripe.Subscription.list(
+                customer=company.stripe_customer_id,
+                status='active',
+                limit=1
+            )
+
+            trails = stripe.Subscription.list(
+                customer=company.stripe_customer_id,
+                status='trialing',
+                limit=1
+            )
+
+            # Check for expired trials
+            expired_trials = stripe.Subscription.list(
+                customer=company.stripe_customer_id,
+                status='canceled',
+                limit=10  # Check a few recent subscriptions
+            )
+
+            has_expired_trial = any(sub.get('status') == 'canceled' and sub.get('metadata', {}).get('plan_id', "") == "free" for sub in expired_trials.data)
+
+            if not subscriptions.data and not trails.data:
+                if has_expired_trial:
+                    raise HTTPException(
+                        status_code=402,  # 402 Payment Required
+                        detail="Your trial period is over. To continue using the platform, please select a plan.",
+                    )
+                else:
+                    raise HTTPException(
+                        status_code=402,  # 402 Payment Required
+                        detail="No active subscription found. Please subscribe to a plan.",
+                    )
         
         # Proceed with credit balance check
         current_balance = Companies.get_credit_balance(user.company_id)
