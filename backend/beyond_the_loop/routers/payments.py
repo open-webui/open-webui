@@ -182,7 +182,12 @@ async def create_subscription_session(request: CreateSubscriptionRequest, user=D
 
 # Get all available subscription plans
 @router.get("/subscription-plans/")
-async def get_subscription_plans():
+async def get_subscription_plans(user=Depends(get_verified_user)):
+    company = Companies.get_company_by_id(user.company_id)
+
+    if company.subscription_not_required:
+        return []
+
     """Get all available subscription plans"""
     plans = []
     for plan_id, plan_details in SUBSCRIPTION_PLANS.items():
@@ -203,6 +208,14 @@ async def get_subscription(user=Depends(get_verified_user)):
     """Get the current subscription details for the company"""
     try:
         company = Companies.get_company_by_id(user.company_id)
+
+        if company.subscription_not_required:
+            return {
+                "plan": "unlimited",
+                "flex_credits_remaining": company.flex_credit_balance,
+                "seats": "unlimited",
+                "auto_recharge": company.auto_recharge
+            }
 
         if company.stripe_customer_id is None:
             return {
@@ -286,6 +299,10 @@ async def cancel_subscription(user=Depends(get_verified_user)):
     """Cancel the current subscription"""
     try:
         company = Companies.get_company_by_id(user.company_id)
+
+        if company.subscription_not_required:
+            raise HTTPException(status_code=404, detail="No active subscription found")
+
         if not company.stripe_customer_id:
             raise HTTPException(status_code=404, detail="No active subscription found")
             
@@ -675,6 +692,9 @@ def handle_payment_intent_succeeded(data):
 async def customer_billing_page(user=Depends(get_verified_user)):
     try:
         company = Companies.get_company_by_id(user.company_id)
+
+        if company.subscription_not_required:
+            raise HTTPException(status_code=400, detail="No stripe customer method found for company")
         
         if not company.stripe_customer_id:
             raise HTTPException(status_code=400, detail="No stripe customer method found for company")

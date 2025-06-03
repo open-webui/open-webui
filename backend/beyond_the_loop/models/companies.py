@@ -32,6 +32,7 @@ class Company(Base):
     stripe_customer_id = Column(String, nullable=True)
     budget_mail_80_sent = Column(Boolean, nullable=True)
     budget_mail_100_sent = Column(Boolean, nullable=True)
+    subscription_not_required = Column(Boolean, nullable=True)
 
     users = relationship("User", back_populates="company", cascade="all, delete-orphan")
 
@@ -51,6 +52,7 @@ class CompanyModel(BaseModel):
     stripe_customer_id: Optional[str] = None
     budget_mail_80_sent: Optional[bool] = False
     budget_mail_100_sent: Optional[bool] = False
+    subscription_not_required: Optional[bool] = False
 
     model_config = ConfigDict(from_attributes=True)
 
