@@ -297,7 +297,7 @@ class Loader:
                         "picture_description_local": (
                             '{\n'
                             '    "repo_id": "HuggingFaceTB/SmolVLM-256M-Instruct",\n'
-                            '    "prompt": "Describe the image in detail, including objects, actions, and connections. Use a descriptive and informative style."\n'
+                            '    "prompt": "Analyze the image and provide a comprehensive, detailed description. Identify all visible objects, their attributes, actions taking place, spatial relationships, and any contextual or inferred connections. Use clear, structured, and informative language suitable for downstream retrieval or knowledge extraction tasks."\n'
                             '}'
                         )
                     },
