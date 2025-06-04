@@ -886,26 +886,36 @@ async def generate_chat_completion(
                 r.close()
             await session.close()
 
-@router.post("/embeddings")
-async def generate_embeddings(request: Request, user=Depends(get_verified_user)):
+async def embeddings(request: Request, form_data: dict, user):
     """
-    Call embeddings endpoint
+    Calls the embeddings endpoint for OpenAI-compatible providers.
+    
+    Args:
+        request (Request): The FastAPI request context.
+        form_data (dict): OpenAI-compatible embeddings payload.
+        user (UserModel): The authenticated user.
+    
+    Returns:
+        dict: OpenAI-compatible embeddings response.
     """
-
-    body = await request.body()
-
     idx = 0
+    # Prepare payload/body
+    body = json.dumps(form_data)
+    # Find correct backend url/key based on model
+    await get_all_models(request, user=user)
+    model_id = form_data.get("model")
+    models = request.app.state.OPENAI_MODELS
+    if model_id in models:
+        idx = models[model_id]["urlIdx"]
     url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
     key = request.app.state.config.OPENAI_API_KEYS[idx]
-
     r = None
     session = None
     streaming = False
-
     try:
         session = aiohttp.ClientSession(trust_env=True)
         r = await session.request(
-            method=request.method,
+            method="POST",
             url=f"{url}/embeddings",
             data=body,
             headers={
@@ -918,14 +928,11 @@ async def generate_embeddings(request: Request, user=Depends(get_verified_user))
                         "X-OpenWebUI-User-Email": user.email,
                         "X-OpenWebUI-User-Role": user.role,
                     }
-                    if ENABLE_FORWARD_USER_INFO_HEADERS
-                    else {}
+                    if ENABLE_FORWARD_USER_INFO_HEADERS and user else {}
                 ),
             },
         )
         r.raise_for_status()
-
-        # Check if response is SSE
         if "text/event-stream" in r.headers.get("Content-Type", ""):
             streaming = True
             return StreamingResponse(
@@ -939,10 +946,8 @@ async def generate_embeddings(request: Request, user=Depends(get_verified_user))
         else:
             response_data = await r.json()
             return response_data
-
     except Exception as e:
         log.exception(e)
-
         detail = None
         if r is not None:
             try:

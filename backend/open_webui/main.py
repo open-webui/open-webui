@@ -411,6 +411,7 @@ from open_webui.utils.chat import (
     chat_completed as chat_completed_handler,
     chat_action as chat_action_handler,
 )
+from open_webui.utils.embeddings import generate_embeddings
 from open_webui.utils.middleware import process_chat_payload, process_chat_response
 from open_webui.utils.access_control import has_access
 
@@ -1363,11 +1364,6 @@ async def list_tasks_by_chat_id_endpoint(chat_id: str, user=Depends(get_verified
     return {"task_ids": task_ids}
 
 
-@app.post("/api/embeddings")
-async def api_embeddings(request: Request, user=Depends(get_verified_user)):
-    return await openai.generate_embeddings(request=request, user=user)
-
-
 ##################################
 #
 # Config Endpoints
@@ -1543,6 +1539,37 @@ async def get_app_latest_release_version(user=Depends(get_verified_user)):
 @app.get("/api/changelog")
 async def get_app_changelog():
     return {key: CHANGELOG[key] for idx, key in enumerate(CHANGELOG) if idx < 5}
+
+##################################
+# Embeddings
+##################################
+
+@app.post("/api/embeddings")
+async def embeddings_endpoint(
+    request: Request,
+    form_data: dict,
+    user=Depends(get_verified_user)
+):
+    """
+    OpenAI-compatible embeddings endpoint.
+
+    This handler:
+      - Performs user/model checks and dispatches to the correct backend.
+      - Supports OpenAI, Ollama, arena models, pipelines, and any compatible provider.
+
+    Args:
+        request (Request): Request context.
+        form_data (dict): OpenAI-like payload (e.g., {"model": "...", "input": [...]})
+        user (UserModel): Authenticated user.
+
+    Returns:
+        dict: OpenAI-compatible embeddings response.
+    """
+    # Make sure models are loaded in app state
+    if not request.app.state.MODELS:
+        await get_all_models(request, user=user)
+    # Use generic dispatcher in utils.embeddings
+    return await generate_embeddings(request, form_data, user)
 
 
 ############################
