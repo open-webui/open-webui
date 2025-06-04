@@ -214,11 +214,11 @@
 			</div>
 		</div>
 		<div class="rounded-2xl bg-lightGray-300 dark:bg-customGray-900 pt-4 px-4 mb-2.5">
-			<div class="flex items-center justify-between pb-2.5 border-b dark:border-customGray-700">
+			<div class="flex items-center justify-between pb-2.5 {$subscription?.plan !== "unlimited" ?  "border-b" : ""} dark:border-customGray-700">
 				<div class="flex items-center gap-2.5">
 					{#if $subscription?.plan === 'starter' || $subscription?.plan === 'free'}
 						<div
-							class="flex justify-center items-center w-[50px] h-[50px] bg-[#024D15] dark:bg-[#024D15] rounded-mdx text-[#0F8C18]"
+							class="flex justify-center items-center w-[50px] h-[50px] bg-[#024D15] rounded-mdx text-[#0F8C18]"
 						>
 							<StarterPlanIcon className="size-6" />
 						</div>
@@ -234,111 +234,131 @@
 						>
 							<GrowthPlanIcon className="size-6" />
 						</div>
+					{:else if $subscription?.plan === 'unlimited'}
+					<div
+						class="flex justify-center items-center w-[50px] h-[50px] bg-[#A54300] rounded-mdx text-[#FFD8A8]"
+					>
+						<StarterPlanIcon className="size-6" />
+				</div>
 					{/if}
 					<div>
 						<div class="flex items-center gap-2.5">
 							<div class="text-sm text-lightGray-100 dark:text-customGray-100 capitalize">
 								{$i18n.t($subscription?.plan)}
 							</div>
-							<div
-								class="flex justify-center items-center text-xs dark:text-customGray-590 dark:bg-customGray-800 px-2 py-1 rounded-mdx"
-							>
-								{$i18n.t('Monthly')}
-							</div>
+							{#if $subscription?.plan !== "unlimited"}
+								<div
+									class="flex justify-center items-center text-xs dark:text-customGray-590 dark:bg-customGray-800 px-2 py-1 rounded-mdx"
+								>
+									{$i18n.t('Monthly')}
+								</div>
+							{/if}
 						</div>
 						<div class="text-xs text-lightGray-100 dark:text-customGray-100/50">
 							€{currentPlan?.price_monthly ? (currentPlan?.price_monthly / 100).toFixed(2) : '0.00'}/month
 						</div>
 					</div>
 				</div>
-				<button
-					on:click={() => {
-						showUpdateDetails = true
-						const url = new URL(window.location.href);
-						url.searchParams.set('plans', 'open'); 
-						window.history.replaceState({}, '', `${url.pathname}${url.search}`);
-					}}
-					class="flex items-center justify-center rounded-mdx bg-lightGray-300 dark:bg-customGray-900 border-lightGray-400 text-lightGray-100 font-medium hover:bg-lightGray-700 dark:hover:bg-customGray-950 border dark:border-customGray-700 px-4 py-3 text-xs dark:text-customGray-200"
-				>
-					{$i18n.t('Explore Plans')}
-				</button>
-			</div>
-			<div class="flex items-center justify-between pt-2.5 pb-3">
-				<div class="text-xs text-lightGray-100 dark:text-customGray-100">{$i18n.t('Billing details')}</div>
-				{#if $subscription?.cancel_at_period_end}
-					<div class="text-xs dark:text-customGray-590">
-						Active until {dayjs($subscription?.end_date * 1000)?.format('DD.MM.YYYY')}
-					</div>
-				{:else if $subscription?.plan !== 'free'}
-					<div class="text-xs dark:text-customGray-590">
-						Monthly (renews {dayjs($subscription?.next_billing_date * 1000)?.format('DD.MM.YYYY')})
-					</div>
-				{:else if $subscription?.plan === 'free'}
-					<div class="text-xs dark:text-customGray-590">
-						Trial ends {dayjs($subscription?.trial_end * 1000)?.format('DD.MM.YYYY')}
-					</div>
+				{#if $subscription?.plan !== 'unlimited'}
+					<button
+						on:click={() => {
+							showUpdateDetails = true
+							const url = new URL(window.location.href);
+							url.searchParams.set('plans', 'open'); 
+							window.history.replaceState({}, '', `${url.pathname}${url.search}`);
+						}}
+						class="flex items-center justify-center rounded-mdx bg-lightGray-300 dark:bg-customGray-900 border-lightGray-400 text-lightGray-100 font-medium hover:bg-lightGray-700 dark:hover:bg-customGray-950 border dark:border-customGray-700 px-4 py-3 text-xs dark:text-customGray-200"
+					>
+						{$i18n.t('Explore Plans')}
+					</button>
 				{/if}
 			</div>
+			{#if $subscription?.plan !== "unlimited"}
+				<div class="flex items-center justify-between pt-2.5 pb-3">
+					<div class="text-xs text-lightGray-100 dark:text-customGray-100">{$i18n.t('Billing details')}</div>
+					{#if $subscription?.cancel_at_period_end}
+						<div class="text-xs dark:text-customGray-590">
+							Active until {dayjs($subscription?.end_date * 1000)?.format('DD.MM.YYYY')}
+						</div>
+					{:else if $subscription?.plan !== 'free'}
+						<div class="text-xs dark:text-customGray-590">
+							Monthly (renews {dayjs($subscription?.next_billing_date * 1000)?.format('DD.MM.YYYY')})
+						</div>
+					{:else if $subscription?.plan === 'free'}
+						<div class="text-xs dark:text-customGray-590">
+							Trial ends {dayjs($subscription?.trial_end * 1000)?.format('DD.MM.YYYY')}
+						</div>
+					{/if}
+				</div>
+			{/if}
 		</div>
 
 		<div class="rounded-2xl bg-lightGray-300 dark:bg-customGray-900 pt-4 px-4 pb-4 mb-2.5">
-			<div class="flex items-center justify-between pb-3">
+			<div class="flex items-center justify-between {$subscription?.plan !== 'unlimited' ? 'pb-3' : ''}">
 				<div class="text-xs dark:text-customGray-300 font-medium">{$i18n.t('Seats')}</div>
 				<div class="text-xs dark:text-customGray-590">
-					{#if $subscription?.plan !== "free"}
-					<span class="text-xs text-lightGray-100 dark:text-customGray-100">{$subscription?.seats_taken} {$i18n.t('used')}</span><span
-						class="dark:text-customGray-590">/ {$subscription?.seats} {$i18n.t('included')}</span
-					>
+					{#if $subscription?.plan === 'unlimited'}
+						<span
+							class="dark:text-customGray-590 capitalize">{$subscription?.seats} {$i18n.t('included')}</span
+						>
 					{:else}
-					<span class="text-xs text-lightGray-100 dark:text-customGray-100">1 {$i18n.t('used')}</span><span
-						class="dark:text-customGray-590">/ 1 {$i18n.t('included')}</span
-					>
+						<span class="text-xs text-lightGray-100 dark:text-customGray-100">{$subscription?.seats_taken} {$i18n.t('used')}</span><span
+							class="dark:text-customGray-590">/ {$subscription?.seats} {$i18n.t('included')}</span
+						>
+					<!-- {:else}
+						<span class="text-xs text-lightGray-100 dark:text-customGray-100">1 {$i18n.t('used')}</span><span
+							class="dark:text-customGray-590">/ 1 {$i18n.t('included')}</span
+						> -->
 					{/if}
 				</div>
 			</div>
-			<div class="relative w-full h-1 rounded-sm bg-lightGray-700 dark:bg-customGray-800">
-				<div style={`width: ${seatsWidth};`} class="absolute left-0 h-1 rounded-sm bg-[#024D15]/80 dark:bg-[#024D15]"></div>
-			</div>
+			{#if $subscription?.plan !== "unlimited"}
+				<div class="relative w-full h-1 rounded-sm bg-lightGray-700 dark:bg-customGray-800">
+					<div style={`width: ${seatsWidth};`} class="absolute left-0 h-1 rounded-sm bg-[#024D15]/80 dark:bg-[#024D15]"></div>
+				</div>
+			{/if}
 		</div>
-		<div class="rounded-2xl bg-lightGray-300 dark:bg-customGray-900 pt-4 px-4 pb-4 mb-2.5">
-			<div class="flex items-center justify-between pb-2.5 border-b dark:border-customGray-700 mb-5">
-				<div class="text-xs dark:text-customGray-300 font-medium">{$i18n.t('Base credits')}</div>
-				<div class="text-xs dark:text-customGray-590">
-					{#if $subscription?.plan !== 'free'}
-					<span class="text-xs text-lightGray-100 dark:text-customGray-100">€{(currentPlan?.credits_per_month - $subscription?.credits_remaining)?.toFixed(2)} {$i18n.t('used')}</span><span
-						class="dark:text-customGray-590">/ €{(currentPlan?.credits_per_month).toFixed(2)} {$i18n.t('included')}</span
-					>
-					{:else}
-					<span class="text-xs text-lightGray-100 dark:text-customGray-100">€{(5 - $subscription?.credits_remaining)?.toFixed(2)} {$i18n.t('used')}</span><span
-						class="dark:text-customGray-590">/ €{(5).toFixed(2)} {$i18n.t('included')}</span
-					>
-					{/if}
-				</div>
-			</div>
-			<div class="relative w-full h-1 rounded-sm bg-lightGray-700 dark:bg-customGray-800 mb-2.5">
-				<div style={`width: ${creditsWidth};`} class="absolute left-0 h-1 rounded-sm bg-[#024D15]/80 dark:bg-[#024D15]"></div>
-			</div>
-			<div class="flex items-center justify-between pt-2.5">
-				{#if $subscription?.plan !== 'free' && $subscription?.cancel_at_period_end !== true}
+		{#if $subscription?.plan !== 'unlimited'}
+			<div class="rounded-2xl bg-lightGray-300 dark:bg-customGray-900 pt-4 px-4 pb-4 mb-2.5">
+				<div class="flex items-center justify-between pb-2.5 border-b dark:border-customGray-700 mb-5">
+					<div class="text-xs dark:text-customGray-300 font-medium">{$i18n.t('Base credits')}</div>
 					<div class="text-xs dark:text-customGray-590">
-						{$i18n.t('Credits will reset on')} {dayjs($subscription?.next_billing_date * 1000)?.format('DD.MM.YYYY')}
+						{#if $subscription?.plan !== 'free'}
+						<span class="text-xs text-lightGray-100 dark:text-customGray-100">€{(currentPlan?.credits_per_month - $subscription?.credits_remaining)?.toFixed(2)} {$i18n.t('used')}</span><span
+							class="dark:text-customGray-590">/ €{(currentPlan?.credits_per_month).toFixed(2)} {$i18n.t('included')}</span
+						>
+						{:else}
+						<span class="text-xs text-lightGray-100 dark:text-customGray-100">€{(5 - $subscription?.credits_remaining)?.toFixed(2)} {$i18n.t('used')}</span><span
+							class="dark:text-customGray-590">/ €{(5).toFixed(2)} {$i18n.t('included')}</span
+						>
+						{/if}
 					</div>
-				{:else}
-					<div></div>
-				{/if}
-				<button
-					on:click={() => {
-						const url = new URL(window.location.href);
-						url.searchParams.set('modal', 'company-settings');
-						url.searchParams.set('tab', 'analytics');
-						goto(`${url.pathname}${url.search}`, { replaceState: false });
-					}}
-					class="flex items-center justify-center rounded-[10px] bg-lightGray-300 dark:bg-customGray-900 border-lightGray-400 text-lightGray-100 font-medium hover:bg-lightGray-700 dark:hover:bg-customGray-950 border dark:border-customGray-700 px-4 py-2 text-xs dark:text-customGray-200"
-				>
-					{$i18n.t('View usage details')}
-				</button>
+				</div>
+				<div class="relative w-full h-1 rounded-sm bg-lightGray-700 dark:bg-customGray-800 mb-2.5">
+					<div style={`width: ${creditsWidth};`} class="absolute left-0 h-1 rounded-sm bg-[#024D15]/80 dark:bg-[#024D15]"></div>
+				</div>
+				<div class="flex items-center justify-between pt-2.5">
+					{#if $subscription?.plan !== 'free' && $subscription?.cancel_at_period_end !== true}
+						<div class="text-xs dark:text-customGray-590">
+							{$i18n.t('Credits will reset on')} {dayjs($subscription?.next_billing_date * 1000)?.format('DD.MM.YYYY')}
+						</div>
+					{:else}
+						<div></div>
+					{/if}
+					<button
+						on:click={() => {
+							const url = new URL(window.location.href);
+							url.searchParams.set('modal', 'company-settings');
+							url.searchParams.set('tab', 'analytics');
+							goto(`${url.pathname}${url.search}`, { replaceState: false });
+						}}
+						class="flex items-center justify-center rounded-[10px] bg-lightGray-300 dark:bg-customGray-900 border-lightGray-400 text-lightGray-100 font-medium hover:bg-lightGray-700 dark:hover:bg-customGray-950 border dark:border-customGray-700 px-4 py-2 text-xs dark:text-customGray-200"
+					>
+						{$i18n.t('View usage details')}
+					</button>
+				</div>
 			</div>
-		</div>
+		{/if}
 
 		{#if $subscription?.plan !== "free"}
 			<div class="rounded-2xl bg-lightGray-300 dark:bg-customGray-900 pt-4 px-4 pb-4">
@@ -385,7 +405,7 @@
 			</div>
 		{/if}
 
-		{#if $subscription?.plan !== "free"}
+		{#if $subscription?.plan !== "free" && $subscription?.plan !== 'unlimited'}
 			<div
 				class="flex w-full justify-between items-center py-2.5 border-b border-lightGray-400 dark:border-customGray-700 mb-2.5 mt-2.5"
 			>

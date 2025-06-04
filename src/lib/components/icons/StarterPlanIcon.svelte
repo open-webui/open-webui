@@ -5,28 +5,28 @@
 	<g clip-path="url(#clip0_1090_28962)">
 		<path
 			d="M4.29999 14.2002H25.3"
-			stroke="#0F8C18"
+			stroke="currentColor"
 			stroke-width="1.5"
 			stroke-linecap="round"
 			stroke-linejoin="round"
 		/>
 		<path
 			d="M14.8 24.7002V3.7002"
-			stroke="#0F8C18"
+			stroke="currentColor"
 			stroke-width="1.5"
 			stroke-linecap="round"
 			stroke-linejoin="round"
 		/>
 		<path
 			d="M9.54999 8.9502L20.05 19.4502"
-			stroke="#0F8C18"
+			stroke="currentColor"
 			stroke-width="1.5"
 			stroke-linecap="round"
 			stroke-linejoin="round"
 		/>
 		<path
 			d="M9.54999 19.4502L20.05 8.9502"
-			stroke="#0F8C18"
+			stroke="currentColor"
 			stroke-width="1.5"
 			stroke-linecap="round"
 			stroke-linejoin="round"
