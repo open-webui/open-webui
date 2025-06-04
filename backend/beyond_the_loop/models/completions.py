@@ -70,18 +70,21 @@ def calculate_saved_time_in_seconds(last_message, response_message):
 
     writing_speed_per_word = 600 / 500  # 500 words in 600 seconds = 1.2 sec per word
     reading_speed_per_word = 400 / 500  # 500 words in 400 seconds = 0.8 sec per word
-    
-    # Now prompt is a string (the last message), not a list of messages
-    num_words_prompt = len(last_message.split())
-    num_words_output = len(response_message.split())
-    
-    prompt_time = num_words_prompt * writing_speed_per_word
-    writing_time = num_words_output * writing_speed_per_word
-    reading_time = num_words_output * reading_speed_per_word
 
-    total_time = writing_time - (prompt_time + reading_time)
-    total_time = 0 if total_time < 0 else total_time
+    try:
+        # Now prompt is a string (the last message), not a list of messages
+        num_words_prompt = len(last_message.split())
+        num_words_output = len(response_message.split())
 
-    return total_time
+        prompt_time = num_words_prompt * writing_speed_per_word
+        writing_time = num_words_output * writing_speed_per_word
+        reading_time = num_words_output * reading_speed_per_word
+
+        total_time = writing_time - (prompt_time + reading_time)
+        total_time = 0 if total_time < 0 else total_time
+
+        return total_time
+    except:
+        return 0
 
 Completions = CompletionTable()
