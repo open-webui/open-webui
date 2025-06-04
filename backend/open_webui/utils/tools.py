@@ -199,16 +199,23 @@ async def get_tools_async(
             else:
                 tools_dict[function_name] = tool_dict
 
-    # Add MCP tools if enabled
+    # Add MCP tools if enabled and requested
     try:
         mcp_tools = await get_mcp_tools(request)
         for tool_name, tool_dict in mcp_tools.items():
+            # Check if this MCP tool is in the requested tool_ids
+            mcp_tool_id = f"mcp_{tool_name}"
+            if mcp_tool_id not in tool_ids:
+                log.debug(f"Skipping MCP tool {tool_name} (ID: {mcp_tool_id}) - not in selected tool_ids: {tool_ids}")
+                continue
+                
             if tool_name in tools_dict:
                 log.warning(f"MCP tool {tool_name} already exists in regular tools!")
                 log.warning(f"Prepending 'mcp_' to avoid collision")
                 tool_name = f"mcp_{tool_name}"
                 tool_dict["spec"]["name"] = tool_name
             
+            log.debug(f"Adding MCP tool {tool_name} (ID: {mcp_tool_id}) to tools_dict")
             tools_dict[tool_name] = tool_dict
     except Exception as e:
         log.error(f"Error loading MCP tools: {e}")

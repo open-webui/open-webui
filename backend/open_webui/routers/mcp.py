@@ -289,13 +289,28 @@ async def call_mcp_tool(
             server_name = None
             server_names = request.app.state.mcp_manager.get_running_servers()
             
+            # Handle prefixed tool names (e.g., "mcp_server_1/search_news" -> "search_news")
+            clean_tool_name = tool_name
+            if '/' in tool_name:
+                clean_tool_name = tool_name.split('/')[-1]
+            elif '.' in tool_name:
+                clean_tool_name = tool_name.split('.')[-1]
+            
+            log.info(f"Looking for tool '{tool_name}' (clean name: '{clean_tool_name}') across servers: {server_names}")
+            
             for name in server_names:
                 try:
                     # Get tools from this server to check if it has our tool
                     tools = await request.app.state.mcp_manager.get_tools_from_server(name)
                     tool_names = [tool.get('name', '') for tool in tools]
-                    if tool_name in tool_names:
+                    log.info(f"Server '{name}' has tools: {tool_names}")
+                    
+                    # Check both original and clean tool names
+                    if tool_name in tool_names or clean_tool_name in tool_names:
                         server_name = name
+                        # Use the clean tool name for the actual call
+                        tool_name = clean_tool_name
+                        log.info(f"Found tool '{clean_tool_name}' on server '{name}'")
                         break
                 except Exception as e:
                     log.warning(f"Failed to get tools from server {name}: {e}")

@@ -1774,26 +1774,24 @@ CHUNK_OVERLAP = PersistentConfig(
 )
 
 DEFAULT_RAG_TEMPLATE = """### Task:
-Respond to the user query using the provided context, incorporating inline citations in the format [source_id] **only when the <source_id> tag is explicitly provided** in the context.
+Respond to the user query using ONLY the provided context. You must base your response entirely on the information given in the context below.
 
 ### Guidelines:
-- If you don't know the answer, clearly state that.
-- If uncertain, ask the user for clarification.
+- **CRITICAL: Use ONLY the information provided in the context. Do not add information from your own knowledge.**
+- **CRITICAL: If the context contains tool output, present that output directly without modification or reinterpretation.**
+- Include inline citations in the format [source_id] when the <source_id> tag is provided in the context.
+- If you don't know the answer based on the provided context, clearly state that the information is not available in the provided sources.
+- If uncertain about information in the context, ask the user for clarification.
 - Respond in the same language as the user's query.
-- If the context is unreadable or of poor quality, inform the user and provide the best possible answer.
-- If the answer isn't present in the context but you possess the knowledge, explain this to the user and provide the answer using your own understanding.
-- **Only include inline citations using [source_id] when a <source_id> tag is explicitly provided in the context.**  
-- Do not cite if the <source_id> tag is not provided in the context.  
+- If the context is unreadable or of poor quality, inform the user about this issue.
 - Do not use XML tags in your response.
-- Ensure citations are concise and directly related to the information provided.
+- Present information from the context in a clear, organized manner.
 
-### Example of Citation:
-If the user asks about a specific topic and the information is found in "whitepaper.pdf" with a provided <source_id>, the response should include the citation like so:  
-* "According to the study, the proposed method increases efficiency by 20% [whitepaper.pdf]."
-If no <source_id> is present, the response should omit the citation.
+### Important:
+When the context contains structured data (like news articles, search results, etc.), present this information as provided without adding, modifying, or reordering unless explicitly requested by the user.
 
 ### Output:
-Provide a clear and direct response to the user's query, including inline citations in the format [source_id] only when the <source_id> tag is present in the context.
+Provide a response based SOLELY on the provided context, including inline citations in the format [source_id] when source_id tags are present.
 
 <context>
 {{CONTEXT}}
