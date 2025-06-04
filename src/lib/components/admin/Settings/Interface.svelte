@@ -26,9 +26,14 @@
 
 	const i18n = getContext('i18n');
 
-	import { footerText } from '../../../stores';
+	// --- Added --
+	import { footerText, footerDirection } from '../../../stores';
 	import { get } from 'svelte/store';
-  	let footerInput = get(footerText);
+	let footerInput = get(footerText);
+	let dir: 'ltr' | 'rtl' = 'ltr';
+	footerText.subscribe(value => footerInput = value);
+	footerDirection.subscribe(value => dir = value);
+	// --- End --
 
 	let taskConfig = {
 		TASK_MODEL: '',
@@ -359,33 +364,119 @@
 				</div>
 			</div>
 			<div class="mb-4 w-full">
-				<!-- ADDED -->
+				<div class="text-sm font-medium mb-1">
+					{$i18n.t('Footer')}
+				</div>
+
+				<!-- div class="flex gap-2 items-center">
+					<input
+				type="text"
+				bind:value={footerInput}
+				placeholder="Enter footer text"
+				class="flex-1 p-2 border rounded text-sm"
+				/>
+					<input
+						type="text"
+						bind:value={footerInput}
+						placeholder="Enter footer text"
+						class="w-full rounded-lg px-3.5 py-2 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+						style="height: 36px"
+					/>
+
+					Toggle Switch
+					<button
+						type="button"
+						role="switch"
+						aria-checked={isRTL}
+						on:click={() => (isRTL = !isRTL)}
+						class={`flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full px-[3px] mx-[1px] transition outline outline-1 ${
+							isRTL ? 'bg-emerald-600' : 'bg-gray-300'
+						}`}
+					>
+						<span
+							class={`pointer-events-none block size-4 shrink-0 rounded-full bg-white transition-transform ${
+								isRTL ? 'translate-x-3.5' : 'translate-x-0 shadow-mini'
+							}`}
+						></span>
+					</button>
+
+					<button
+						class="p-2 px-4 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+						on:click={saveFooter}
+					>
+						Save
+					</button>
+				</div -->
+				<div class="relative w-full">
+					<!-- טקסטאראה שמתאים את הגובה -->
+					<textarea
+					bind:value={footerInput}
+					placeholder="Enter footer text"
+					rows="1"
+					dir={footerDirection}
+					class="w-full resize-none rounded-lg px-3.5 py-2 pr-45 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none overflow-hidden"
+					style="height: auto; field-sizing: content;"
+					on:input={(e) => {
+						e.target.style.height = 'auto';
+						e.target.style.height = `${e.target.scrollHeight}px`;
+					}}
+			></textarea>
+			
+			<!-- כפתורים צפים בצד ימין, עם עיצוב נקי -->
+			<div class="absolute top-1 right-2 flex items-center gap-2">
+				<select
+					bind:value={$footerDirection}
+					class="text-sm border border-gray-300 rounded px-2 py-1 bg-white dark:bg-gray-800 dark:text-gray-200 w-24"
+					>
+					<option value="ltr">LTR</option>
+					<option value="rtl">RTL</option>
+				</select>
+			
+			<button
+			on:click={() => {
+				footerText.set(footerInput);
+				footerDirection.set($footerDirection); 
+				}}
+			class="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition"
+			>
+			Save
+		</button>
+	</div>
+</div>
+</div> 
+
+			<!-- ADDED -->
+			<!-- <div class="mb-4 w-full">
 				<div class="text-sm font-medium mb-1">
 					{$i18n.t('Footer')}
 				</div>
 				
 				<div class="flex gap-2 items-center">
 					<input
-					type="text"
-					bind:value={footerInput}
-					placeholder="Enter footer text"
-					class="flex-1 p-2 border rounded text-sm"
+						type="text"
+						bind:value={footerInput}
+						placeholder="Enter footer text"
+						class="w-full rounded-lg px-3.5 py-2 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+						style="height: 36px"
 					/>
-					
+					<select bind:value={dir} class="text-sm border rounded p-1">
+					<option value="ltr">LTR</option>
+					<option value="rtl">RTL</option>
+					</select>
 					<button
 					class="p-2 px-4 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition"
 					on:click={() => footerText.set(footerInput)}
 					>
 					Save
-				</button>
-			</div>
-		</div>
-		<!-- END  -->
-		
-		<div class="mb-3.5">
-			<div class=" mb-2.5 text-base font-medium">{$i18n.t('UI')}</div>
-			
-			<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+					</button>
+				</div>
+			</div> -->
+			<!-- END  -->
+
+			<div class="mb-3.5">
+				<div class=" mb-2.5 text-base font-medium">{$i18n.t('UI')}</div>
+
+				<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
 				<div class="mb-2.5">
 					<div class="flex w-full justify-between">

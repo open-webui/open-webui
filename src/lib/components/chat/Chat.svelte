@@ -3,8 +3,9 @@
 	import { toast } from 'svelte-sonner';
 	import mermaid from 'mermaid';
 	import { PaneGroup, Pane, PaneResizer } from 'paneforge';
-
 	import { getContext, onDestroy, onMount, tick } from 'svelte';
+	import { marked } from 'marked';
+	import DOMPurify from 'dompurify';
 	const i18n: Writable<i18nType> = getContext('i18n');
 		
 	import { goto } from '$app/navigation';
@@ -15,7 +16,7 @@
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	
 
- 	import { footerText } from '../../stores'; // -- ADDED --
+ 	import { footerText, footerDirection } from '../../stores'; // -- ADDED --
 
 	import {
 		chatId,
@@ -94,8 +95,7 @@
 	import Spinner from '../common/Spinner.svelte';
 	import { fade } from 'svelte/transition';
 
-	export let chatIdProp = '';
-
+	export let chatIdProp = '';	
 	let loading = true;
 
 	const eventTarget = new EventTarget();
@@ -2127,16 +2127,24 @@
 								/>
 							</div>
 								<!-- ADDED -->
-								<div
+								<!-- <div
 									class="bottom-1 text-sm text-gray-500 text-center line-clamp-1 right-0 left-0"
 								>
-									//{$footerText}	<!-- ADDED -->
-													<div class="flex-1 text-xs text-gray-700 dark:text-white">
-					{@html marked.parse(DOMPurify.sanitize(footerText))}
-				</div>								
-								</div>
-								<!-- END  -->
+									//{$footerText}
+									<div class="flex-1 text-xs text-gray-700 dark:text-white">
+										{@html marked.parse(DOMPurify.sanitize(footerText))}
+										</div>								
+										</div> -->
+										<!-- END  -->
+										<!-- ADDED -->
+										<!-- <div class="bottom-1 text-sm text-gray-500 text-center line-clamp-1 right-0 left-0">
+											</div> -->
+										<div class="bottom-1 text-sm text-gray-500 text-center right-0 left-0" dir={$footerDirection}>
+											{@html marked.parse(DOMPurify.sanitize(get(footerText)))}
+										</div>
 
+
+								<!-- END  -->
 
 						{:else}
 							<div class="overflow-auto w-full h-full flex items-center">

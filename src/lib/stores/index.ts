@@ -44,11 +44,12 @@ export const shortCodesToEmojis = writable(
 export const TTSWorker = writable(null);
 // --- ADDED ---
 const savedFooter = localStorage.getItem('footerText') || 'LLMs can make mistakes. Verify important information';
+const savedDirection = (localStorage.getItem('footerDirection') as 'ltr' | 'rtl') || 'ltr';
 export const footerText = writable(savedFooter);
+export const footerDirection = writable(savedDirection);
 
-footerText.subscribe(value => {
-	localStorage.setItem('footerText', value);
-});
+footerText.subscribe(value => localStorage.setItem('footerText', value));
+footerDirection.subscribe(value => localStorage.setItem('footerDirection', value));
 // --- END ---
 
 export const chatId = writable('');
