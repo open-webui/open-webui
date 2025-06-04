@@ -727,12 +727,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     extra_params = {
         "__event_emitter__": event_emitter,
         "__event_call__": event_call,
-        "__user__": {
-            "id": user.id,
-            "email": user.email,
-            "name": user.name,
-            "role": user.role,
-        },
+        "__user__": user.model_dump() if isinstance(user, UserModel) else {},
         "__metadata__": metadata,
         "__request__": request,
         "__model__": model,
@@ -1327,12 +1322,7 @@ async def process_chat_response(
     extra_params = {
         "__event_emitter__": event_emitter,
         "__event_call__": event_caller,
-        "__user__": {
-            "id": user.id,
-            "email": user.email,
-            "name": user.name,
-            "role": user.role,
-        },
+        "__user__": user.model_dump() if isinstance(user, UserModel) else {},
         "__metadata__": metadata,
         "__request__": request,
         "__model__": model,
