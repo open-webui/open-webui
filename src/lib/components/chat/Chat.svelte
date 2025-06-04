@@ -6,13 +6,16 @@
 
 	import { getContext, onDestroy, onMount, tick } from 'svelte';
 	const i18n: Writable<i18nType> = getContext('i18n');
-
+		
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 
 	import { get, type Unsubscriber, type Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
 	import { WEBUI_BASE_URL } from '$lib/constants';
+	
+
+ 	import { footerText } from '../../stores'; // -- ADDED --
 
 	import {
 		chatId,
@@ -2122,13 +2125,16 @@
 										}
 									}}
 								/>
-
-								<div
-									class="absolute bottom-1 text-xs text-gray-500 text-center line-clamp-1 right-0 left-0"
-								>
-									<!-- {$i18n.t('LLMs can make mistakes. Verify important information.')} -->
-								</div>
 							</div>
+								<!-- ADDED -->
+								<div
+									class="bottom-1 text-sm text-gray-500 text-center line-clamp-1 right-0 left-0"
+								>
+									{$footerText}									
+								</div>
+								<!-- END  -->
+
+
 						{:else}
 							<div class="overflow-auto w-full h-full flex items-center">
 								<Placeholder

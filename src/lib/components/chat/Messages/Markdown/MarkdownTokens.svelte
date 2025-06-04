@@ -188,7 +188,7 @@
 		{/if}
 	{:else if token.type === 'list'}
 		{#if token.ordered}
-			<ol start={token.start || 1} dir="auto">
+			<ol start={token.start || 1} dir="{($settings?.chatDirection ?? 'ltr')}">
 				{#each token.items as item, itemIdx}
 					<li class="text-start">
 						{#if item?.task}
@@ -220,7 +220,7 @@
 				{/each}
 			</ol>
 		{:else}
-			<ul dir="auto">
+			<ul dir="{($settings?.chatDirection ?? 'ltr')}">
 				{#each token.items as item, itemIdx}
 					<li class="text-start">
 						{#if item?.task}
@@ -281,16 +281,18 @@
 			onload="this.style.height=(this.contentWindow.document.body.scrollHeight+20)+'px';"
 		></iframe>
 	{:else if token.type === 'paragraph'}
-		<p dir="auto">
+		<!-- ADDED -- chatDirection -->
+		<p dir="{($settings?.chatDirection ?? 'ltr')}">
 			<MarkdownInlineTokens
-				id={`${id}-${tokenIdx}-p`}
-				tokens={token.tokens ?? []}
-				{onSourceClick}
+			id={`${id}-${tokenIdx}-p`}
+			tokens={token.tokens ?? []}
+			{onSourceClick}
 			/>
 		</p>
-	{:else if token.type === 'text'}
+		{:else if token.type === 'text'}
 		{#if top}
-			<p>
+			<!-- ADDED -- chatDirection -->
+			<p dir="{($settings?.chatDirection ?? 'ltr')}">
 				{#if token.tokens}
 					<MarkdownInlineTokens id={`${id}-${tokenIdx}-t`} tokens={token.tokens} {onSourceClick} />
 				{:else}

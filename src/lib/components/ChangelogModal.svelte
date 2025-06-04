@@ -23,11 +23,11 @@
 </script>
 
 <Modal bind:show size="lg">
-	<div class="px-5 pt-4 dark:text-gray-300 text-gray-700">
+	<div class="px-5 pt-4 dark:text-gray-300 text-gray-700" style="direction: rtl;">
 		<div class="flex justify-between items-start">
 			<div class="text-xl font-semibold">
-				{$i18n.t('What’s New in')}
-				{$WEBUI_NAME}
+				{$i18n.t('מה חדש?')}
+				<!-- {$WEBUI_NAME} -->
 				<Confetti x={[-1, -0.25]} y={[0, 0.5]} />
 			</div>
 			<button
@@ -43,7 +43,7 @@
 					fill="currentColor"
 					class="w-5 h-5"
 				>
-					<p class="sr-only">{$i18n.t('Close')}</p>
+					<p class="sr-only" dir="{($settings?.chatDirection ?? 'ltr')}">{$i18n.t('Close')}</p>
 					<path
 						d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
 					/>
@@ -59,21 +59,21 @@
 		</div>
 	</div>
 
-	<div class=" w-full p-4 px-5 text-gray-700 dark:text-gray-100">
+	<div class=" w-full p-4 px-5 text-gray-700 dark:text-gray-100" dir="rtl">
 		<div class=" overflow-y-scroll max-h-96 scrollbar-hidden">
 			<div class="mb-3">
 				{#if changelog}
 					{#each Object.keys(changelog) as version}
 						<div class=" mb-3 pr-2">
 							<div class="font-semibold text-xl mb-1 dark:text-white">
-								v{version} - {changelog[version].date}
+								{changelog[version].date}
 							</div>
 
 							<hr class="border-gray-100 dark:border-gray-850 my-2" />
 
 							{#each Object.keys(changelog[version]).filter((section) => section !== 'date') as section}
 								<div class="">
-									<div
+									<!-- <div
 										class="font-semibold uppercase text-xs {section === 'added'
 											? 'text-white bg-blue-600'
 											: section === 'fixed'
@@ -85,7 +85,28 @@
 														: ''}  w-fit px-3 rounded-full my-2.5"
 									>
 										{section}
-									</div>
+									</div> -->
+
+									<!-- ADDED -->
+									<div
+									class="font-semibold uppercase text-xs
+									{section === 'added' ? 'text-white bg-blue-600' :
+											section === 'fixed' ? 'text-white bg-green-600' :
+											section === 'changed' ? 'text-white bg-yellow-600' :
+											section === 'removed' ? 'text-white bg-red-600' :
+											section === 'tip' ? 'text-white bg-amber-500' :
+											section === 'note' ? 'text-white bg-purple-600' :
+											section === 'top tip' ? 'text-white bg-orange-500' :
+											section === 'warning' ? 'text-white bg-red-500' :
+											section === 'info' ? 'text-white bg-blue-500' :
+											section === 'feature' ? 'text-white bg-teal-600' :
+											'text-white bg-gray-600'}  
+											w-fit px-3 rounded-full my-2.5"
+											>
+											{section}
+										</div>
+									<!-- END -->
+
 
 									<div class="my-2.5 px-1.5">
 										{#each Object.keys(changelog[version][section]) as item}
@@ -114,7 +135,7 @@
 				}}
 				class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 			>
-				<span class="relative">{$i18n.t("Okay, Let's Go!")}</span>
+				<span class="relative">{$i18n.t("Okay, Let's Go")} 🚀</span>
 			</button>
 		</div>
 	</div>

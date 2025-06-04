@@ -26,6 +26,10 @@
 
 	const i18n = getContext('i18n');
 
+	import { footerText } from '../../../stores';
+	import { get } from 'svelte/store';
+  	let footerInput = get(footerText);
+
 	let taskConfig = {
 		TASK_MODEL: '',
 		TASK_MODEL_EXTERNAL: '',
@@ -354,11 +358,34 @@
 					</Tooltip>
 				</div>
 			</div>
-
-			<div class="mb-3.5">
-				<div class=" mb-2.5 text-base font-medium">{$i18n.t('UI')}</div>
-
-				<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+			<div class="mb-4 w-full">
+				<!-- ADDED -->
+				<div class="text-sm font-medium mb-1">
+					{$i18n.t('Footer')}
+				</div>
+				
+				<div class="flex gap-2 items-center">
+					<input
+					type="text"
+					bind:value={footerInput}
+					placeholder="Enter footer text"
+					class="flex-1 p-2 border rounded text-sm"
+					/>
+					
+					<button
+					class="p-2 px-4 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+					on:click={() => footerText.set(footerInput)}
+					>
+					Save
+				</button>
+			</div>
+		</div>
+		<!-- END  -->
+		
+		<div class="mb-3.5">
+			<div class=" mb-2.5 text-base font-medium">{$i18n.t('UI')}</div>
+			
+			<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
 				<div class="mb-2.5">
 					<div class="flex w-full justify-between">

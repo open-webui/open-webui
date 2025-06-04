@@ -121,6 +121,7 @@
 				const isCtrlPressed = event.ctrlKey || event.metaKey; // metaKey is for Cmd key on Mac
 				// Check if the Shift key is pressed
 				const isShiftPressed = event.shiftKey;
+				const isAltPressed = event.altKey;
 
 				// Check if Ctrl  + K is pressed
 				if (isCtrlPressed && event.key.toLowerCase() === 'k') {
@@ -185,6 +186,24 @@
 					showSettings.set(!$showSettings);
 				}
 
+				
+				// -- ADDED --
+				// Check if Alt + X is pressed
+				console.log(event.code);
+				if (isAltPressed && event.code === 'KeyX') {
+					event.preventDefault();
+					console.log('chatDirection');
+					
+					const currentDirection = $settings?.chatDirection || 'RTL';
+					const nextDirection = currentDirection === 'RTL' ? 'auto' : 'RTL';
+					
+					settings.update(prev => ({
+						...prev,
+						chatDirection: nextDirection
+					}));
+				}
+				// -- END --
+
 				// Check if Ctrl + / is pressed
 				if (isCtrlPressed && event.key === '/') {
 					event.preventDefault();
@@ -210,7 +229,7 @@
 			});
 
 			if ($user?.role === 'admin' && ($settings?.showChangelog ?? true)) {
-				showChangelog.set($settings?.version !== $config.version);
+				showChangelog.set(true);
 			}
 
 			if ($user?.role === 'admin' || ($user?.permissions?.chat?.temporary ?? true)) {

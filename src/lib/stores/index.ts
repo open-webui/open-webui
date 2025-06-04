@@ -42,6 +42,14 @@ export const shortCodesToEmojis = writable(
 );
 
 export const TTSWorker = writable(null);
+// --- ADDED ---
+const savedFooter = localStorage.getItem('footerText') || 'LLMs can make mistakes. Verify important information';
+export const footerText = writable(savedFooter);
+
+footerText.subscribe(value => {
+	localStorage.setItem('footerText', value);
+});
+// --- END ---
 
 export const chatId = writable('');
 export const chatTitle = writable('');
