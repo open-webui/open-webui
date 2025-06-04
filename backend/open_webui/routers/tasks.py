@@ -159,7 +159,6 @@ async def update_task_config(
 async def generate_title(
     request: Request, form_data: dict, user=Depends(get_verified_user)
 ):
-
     if not request.app.state.config.ENABLE_TITLE_GENERATION:
         return JSONResponse(
             status_code=status.HTTP_200_OK,
@@ -330,7 +329,6 @@ async def generate_follow_ups(
 async def generate_chat_tags(
     request: Request, form_data: dict, user=Depends(get_verified_user)
 ):
-
     if not request.app.state.config.ENABLE_TAGS_GENERATION:
         return JSONResponse(
             status_code=status.HTTP_200_OK,
@@ -477,7 +475,6 @@ async def generate_image_prompt(
 async def generate_queries(
     request: Request, form_data: dict, user=Depends(get_verified_user)
 ):
-
     type = form_data.get("type")
     if type == "web_search":
         if not request.app.state.config.ENABLE_SEARCH_QUERY_GENERATION:
@@ -647,7 +644,6 @@ async def generate_autocompletion(
 async def generate_emoji(
     request: Request, form_data: dict, user=Depends(get_verified_user)
 ):
-
     if getattr(request.state, "direct", False) and hasattr(request.state, "model"):
         models = {
             request.state.model["id"]: request.state.model,
@@ -722,7 +718,6 @@ async def generate_emoji(
 async def generate_moa_response(
     request: Request, form_data: dict, user=Depends(get_verified_user)
 ):
-
     if getattr(request.state, "direct", False) and hasattr(request.state, "model"):
         models = {
             request.state.model["id"]: request.state.model,

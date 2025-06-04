@@ -192,20 +192,24 @@ class QdrantClient(VectorDBBase):
 
         if ids:
             for id_value in ids:
-                field_conditions.append(
-                    models.FieldCondition(
-                        key="metadata.id",
-                        match=models.MatchValue(value=id_value),
+                (
+                    field_conditions.append(
+                        models.FieldCondition(
+                            key="metadata.id",
+                            match=models.MatchValue(value=id_value),
+                        ),
                     ),
-                ),
+                )
         elif filter:
             for key, value in filter.items():
-                field_conditions.append(
-                    models.FieldCondition(
-                        key=f"metadata.{key}",
-                        match=models.MatchValue(value=value),
+                (
+                    field_conditions.append(
+                        models.FieldCondition(
+                            key=f"metadata.{key}",
+                            match=models.MatchValue(value=value),
+                        ),
                     ),
-                ),
+                )
 
         return self.client.delete(
             collection_name=f"{self.collection_prefix}_{collection_name}",

@@ -1,5 +1,5 @@
 import logging
-import requests
+from open_webui.utils.http_client import request_session
 from typing import Optional, List, Tuple
 
 from open_webui.env import SRC_LOG_LEVELS
@@ -36,7 +36,7 @@ class ExternalReranker(BaseReranker):
             log.info(f"ExternalReranker:predict:model {self.model}")
             log.info(f"ExternalReranker:predict:query {query}")
 
-            r = requests.post(
+            r = request_session.post(
                 f"{self.url}",
                 headers={
                     "Content-Type": "application/json",

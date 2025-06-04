@@ -1,4 +1,4 @@
-import requests
+from open_webui.utils.http_client import request_session
 import logging
 from typing import Iterator, List, Union
 
@@ -29,7 +29,7 @@ class ExternalWebLoader(BaseLoader):
         for i in range(0, len(self.urls), batch_size):
             urls = self.urls[i : i + batch_size]
             try:
-                response = requests.post(
+                response = request_session.post(
                     self.external_url,
                     headers={
                         "User-Agent": "Open WebUI (https://github.com/open-webui/open-webui) External Web Loader",

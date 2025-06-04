@@ -29,7 +29,6 @@ router = APIRouter()
 
 @router.get("/", response_model=list[NoteUserResponse])
 async def get_notes(request: Request, user=Depends(get_verified_user)):
-
     if user.role != "admin" and not has_permission(
         user.id, "features.notes", request.app.state.config.USER_PERMISSIONS
     ):
@@ -53,7 +52,6 @@ async def get_notes(request: Request, user=Depends(get_verified_user)):
 
 @router.get("/list", response_model=list[NoteUserResponse])
 async def get_note_list(request: Request, user=Depends(get_verified_user)):
-
     if user.role != "admin" and not has_permission(
         user.id, "features.notes", request.app.state.config.USER_PERMISSIONS
     ):
@@ -84,7 +82,6 @@ async def get_note_list(request: Request, user=Depends(get_verified_user)):
 async def create_new_note(
     request: Request, form_data: NoteForm, user=Depends(get_verified_user)
 ):
-
     if user.role != "admin" and not has_permission(
         user.id, "features.notes", request.app.state.config.USER_PERMISSIONS
     ):

@@ -15,7 +15,7 @@ from typing import Optional, Union
 from urllib.parse import urlparse
 import aiohttp
 from aiocache import cached
-import requests
+from open_webui.utils.http_client import request_session
 from open_webui.models.users import UserModel
 
 from open_webui.env import (
@@ -121,7 +121,6 @@ async def send_post_request(
     content_type: Optional[str] = None,
     user: UserModel = None,
 ):
-
     r = None
     try:
         session = aiohttp.ClientSession(
@@ -1525,7 +1524,6 @@ async def get_openai_models(
     url_idx: Optional[int] = None,
     user=Depends(get_verified_user),
 ):
-
     models = []
     if url_idx is None:
         model_list = await get_all_models(request, user=user)
@@ -1651,7 +1649,7 @@ async def download_file_stream(
                     file.seek(0)
 
                     url = f"{ollama_url}/api/blobs/sha256:{hashed}"
-                    response = requests.post(url, data=file)
+                    response = request_session.post(url, data=file)
 
                     if response.ok:
                         res = {
@@ -1750,7 +1748,7 @@ async def upload_model(
             # --- P3: Upload to ollama /api/blobs ---
             with open(file_path, "rb") as f:
                 url = f"{ollama_url}/api/blobs/sha256:{file_hash}"
-                response = requests.post(url, data=f)
+                response = request_session.post(url, data=f)
 
             if response.ok:
                 log.info(f"Uploaded to /api/blobs")  # DEBUG
@@ -1770,7 +1768,7 @@ async def upload_model(
 
                 # Call ollama /api/create
                 # https://github.com/ollama/ollama/blob/main/docs/api.md#create-a-model
-                create_resp = requests.post(
+                create_resp = request_session.post(
                     url=f"{ollama_url}/api/create",
                     headers={"Content-Type": "application/json"},
                     data=json.dumps(create_payload),

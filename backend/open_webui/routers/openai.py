@@ -7,7 +7,7 @@ from typing import Literal, Optional, overload
 
 import aiohttp
 from aiocache import cached
-import requests
+from open_webui.utils.http_client import request_session
 
 
 from fastapi import Depends, FastAPI, HTTPException, Request, APIRouter
@@ -209,7 +209,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
 
         r = None
         try:
-            r = requests.post(
+            r = request_session.post(
                 url=f"{url}/audio/speech",
                 data=body,
                 headers={
@@ -408,7 +408,6 @@ async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
 
         for idx, models in enumerate(model_lists):
             if models is not None and "error" not in models:
-
                 merged_list.extend(
                     [
                         {

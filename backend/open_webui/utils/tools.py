@@ -286,15 +286,15 @@ def convert_function_to_pydantic_model(func: Callable) -> type[BaseModel]:
 
     field_defs = {}
     for name, param in parameters.items():
-
         type_hint = type_hints.get(name, Any)
         default_value = param.default if param.default is not param.empty else ...
 
         param_description = function_param_descriptions.get(name, None)
 
         if param_description:
-            field_defs[name] = type_hint, Field(
-                default_value, description=param_description
+            field_defs[name] = (
+                type_hint,
+                Field(default_value, description=param_description),
             )
         else:
             field_defs[name] = type_hint, default_value

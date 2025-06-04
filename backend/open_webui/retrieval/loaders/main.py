@@ -1,4 +1,4 @@
-import requests
+from open_webui.utils.http_client import request_session
 import logging
 import ftfy
 import sys
@@ -112,7 +112,7 @@ class TikaLoader:
             endpoint += "/"
         endpoint += "tika/text"
 
-        r = requests.put(endpoint, data=data, headers=headers)
+        r = request_session.put(endpoint, data=data, headers=headers)
 
         if r.ok:
             raw_metadata = r.json()
@@ -163,7 +163,7 @@ class DoclingLoader:
                     ]
 
             endpoint = f"{self.url}/v1alpha/convert/file"
-            r = requests.post(endpoint, files=files, data=params)
+            r = request_session.post(endpoint, files=files, data=params)
 
         if r.ok:
             result = r.json()

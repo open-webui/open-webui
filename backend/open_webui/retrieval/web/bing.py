@@ -2,7 +2,7 @@ import logging
 import os
 from pprint import pprint
 from typing import Optional
-import requests
+from open_webui.utils.http_client import request_session
 from open_webui.retrieval.web.main import SearchResult, get_filtered_results
 from open_webui.env import SRC_LOG_LEVELS
 import argparse
@@ -27,7 +27,7 @@ def search_bing(
     headers = {"Ocp-Apim-Subscription-Key": subscription_key}
 
     try:
-        response = requests.get(endpoint, headers=headers, params=params)
+        response = request_session.get(endpoint, headers=headers, params=params)
         response.raise_for_status()
         json_response = response.json()
         results = json_response.get("webPages", {}).get("value", [])

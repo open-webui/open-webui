@@ -2,7 +2,7 @@ import logging
 from typing import Optional, List
 from urllib.parse import urljoin
 
-import requests
+from open_webui.utils.http_client import request_session
 from open_webui.retrieval.web.main import SearchResult, get_filtered_results
 from open_webui.env import SRC_LOG_LEVELS
 
@@ -19,7 +19,7 @@ def search_firecrawl(
 ) -> List[SearchResult]:
     try:
         firecrawl_search_url = urljoin(firecrawl_url, "/v1/search")
-        response = requests.post(
+        response = request_session.post(
             firecrawl_search_url,
             headers={
                 "User-Agent": "Open WebUI (https://github.com/open-webui/open-webui) RAG Bot",

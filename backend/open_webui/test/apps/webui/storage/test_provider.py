@@ -99,7 +99,6 @@ class TestLocalStorageProvider:
 
 @mock_aws
 class TestS3StorageProvider:
-
     def __init__(self):
         self.Storage = provider.S3StorageProvider()
         self.Storage.bucket_name = "my-bucket"
@@ -375,9 +374,7 @@ class TestAzureStorageProvider:
         # Mock upload behavior
         self.Storage.upload_file(io.BytesIO(self.file_content), self.filename)
         # Mock blob download behavior
-        self.Storage.container_client.get_blob_client().download_blob().readall.return_value = (
-            self.file_content
-        )
+        self.Storage.container_client.get_blob_client().download_blob().readall.return_value = self.file_content
 
         file_url = f"https://myaccount.blob.core.windows.net/{self.Storage.container_name}/{self.filename}"
         file_path = self.Storage.get_file(file_url)

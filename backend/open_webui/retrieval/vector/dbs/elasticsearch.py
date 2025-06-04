@@ -279,7 +279,6 @@ class ElasticsearchClient(VectorDBBase):
         ids: Optional[list[str]] = None,
         filter: Optional[dict] = None,
     ):
-
         query = {
             "query": {"bool": {"filter": [{"term": {"collection": collection_name}}]}}
         }

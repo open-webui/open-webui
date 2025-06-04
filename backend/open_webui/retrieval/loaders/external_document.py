@@ -1,4 +1,4 @@
-import requests
+from open_webui.utils.http_client import request_session
 import logging
 from typing import Iterator, List, Union
 
@@ -40,7 +40,7 @@ class ExternalDocumentLoader(BaseLoader):
         if url.endswith("/"):
             url = url[:-1]
 
-        r = requests.put(f"{url}/process", data=data, headers=headers)
+        r = request_session.put(f"{url}/process", data=data, headers=headers)
 
         if r.ok:
             res = r.json()

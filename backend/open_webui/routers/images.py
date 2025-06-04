@@ -8,7 +8,7 @@ import re
 from pathlib import Path
 from typing import Optional
 
-import requests
+from open_webui.utils.http_client import request_session
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
 from open_webui.config import CACHE_DIR
 from open_webui.constants import ERROR_MESSAGES
@@ -195,7 +195,7 @@ def get_automatic1111_api_auth(request: Request):
 async def verify_url(request: Request, user=Depends(get_admin_user)):
     if request.app.state.config.IMAGE_GENERATION_ENGINE == "automatic1111":
         try:
-            r = requests.get(
+            r = request_session.get(
                 url=f"{request.app.state.config.AUTOMATIC1111_BASE_URL}/sdapi/v1/options",
                 headers={"authorization": get_automatic1111_api_auth(request)},
             )
@@ -205,7 +205,6 @@ async def verify_url(request: Request, user=Depends(get_admin_user)):
             request.app.state.config.ENABLE_IMAGE_GENERATION = False
             raise HTTPException(status_code=400, detail=ERROR_MESSAGES.INVALID_URL)
     elif request.app.state.config.IMAGE_GENERATION_ENGINE == "comfyui":
-
         headers = None
         if request.app.state.config.COMFYUI_API_KEY:
             headers = {
@@ -213,7 +212,7 @@ async def verify_url(request: Request, user=Depends(get_admin_user)):
             }
 
         try:
-            r = requests.get(
+            r = request_session.get(
                 url=f"{request.app.state.config.COMFYUI_BASE_URL}/object_info",
                 headers=headers,
             )
@@ -231,14 +230,14 @@ def set_image_model(request: Request, model: str):
     request.app.state.config.IMAGE_GENERATION_MODEL = model
     if request.app.state.config.IMAGE_GENERATION_ENGINE in ["", "automatic1111"]:
         api_auth = get_automatic1111_api_auth(request)
-        r = requests.get(
+        r = request_session.get(
             url=f"{request.app.state.config.AUTOMATIC1111_BASE_URL}/sdapi/v1/options",
             headers={"authorization": api_auth},
         )
         options = r.json()
         if model != options["sd_model_checkpoint"]:
             options["sd_model_checkpoint"] = model
-            r = requests.post(
+            r = request_session.post(
                 url=f"{request.app.state.config.AUTOMATIC1111_BASE_URL}/sdapi/v1/options",
                 json=options,
                 headers={"authorization": api_auth},
@@ -270,7 +269,7 @@ def get_image_model(request):
         or request.app.state.config.IMAGE_GENERATION_ENGINE == ""
     ):
         try:
-            r = requests.get(
+            r = request_session.get(
                 url=f"{request.app.state.config.AUTOMATIC1111_BASE_URL}/sdapi/v1/options",
                 headers={"authorization": get_automatic1111_api_auth(request)},
             )
@@ -344,7 +343,7 @@ def get_models(request: Request, user=Depends(get_verified_user)):
             headers = {
                 "Authorization": f"Bearer {request.app.state.config.COMFYUI_API_KEY}"
             }
-            r = requests.get(
+            r = request_session.get(
                 url=f"{request.app.state.config.COMFYUI_BASE_URL}/object_info",
                 headers=headers,
             )
@@ -392,7 +391,7 @@ def get_models(request: Request, user=Depends(get_verified_user)):
             request.app.state.config.IMAGE_GENERATION_ENGINE == "automatic1111"
             or request.app.state.config.IMAGE_GENERATION_ENGINE == ""
         ):
-            r = requests.get(
+            r = request_session.get(
                 url=f"{request.app.state.config.AUTOMATIC1111_BASE_URL}/sdapi/v1/sd-models",
                 headers={"authorization": get_automatic1111_api_auth(request)},
             )
@@ -434,9 +433,9 @@ def load_b64_image_data(b64_str):
 def load_url_image_data(url, headers=None):
     try:
         if headers:
-            r = requests.get(url, headers=headers)
+            r = request_session.get(url, headers=headers)
         else:
-            r = requests.get(url)
+            r = request_session.get(url)
 
         r.raise_for_status()
         if r.headers["content-type"].split("/")[0] == "image":
@@ -508,9 +507,9 @@ async def image_generations(
                 ),
             }
 
-            # Use asyncio.to_thread for the requests.post call
+            # Use asyncio.to_thread for the request_session.post call
             r = await asyncio.to_thread(
-                requests.post,
+                request_session.post,
                 url=f"{request.app.state.config.IMAGES_OPENAI_API_BASE_URL}/images/generations",
                 json=data,
                 headers=headers,
@@ -545,9 +544,9 @@ async def image_generations(
                 },
             }
 
-            # Use asyncio.to_thread for the requests.post call
+            # Use asyncio.to_thread for the request_session.post call
             r = await asyncio.to_thread(
-                requests.post,
+                request_session.post,
                 url=f"{request.app.state.config.IMAGES_GEMINI_API_BASE_URL}/models/{model}:predict",
                 json=data,
                 headers=headers,
@@ -648,9 +647,9 @@ async def image_generations(
             if request.app.state.config.AUTOMATIC1111_SCHEDULER:
                 data["scheduler"] = request.app.state.config.AUTOMATIC1111_SCHEDULER
 
-            # Use asyncio.to_thread for the requests.post call
+            # Use asyncio.to_thread for the request_session.post call
             r = await asyncio.to_thread(
-                requests.post,
+                request_session.post,
                 url=f"{request.app.state.config.AUTOMATIC1111_BASE_URL}/sdapi/v1/txt2img",
                 json=data,
                 headers={"authorization": get_automatic1111_api_auth(request)},

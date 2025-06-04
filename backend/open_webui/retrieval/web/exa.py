@@ -2,7 +2,7 @@ import logging
 from dataclasses import dataclass
 from typing import Optional
 
-import requests
+from open_webui.utils.http_client import request_session
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.retrieval.web.main import SearchResult
 
@@ -46,7 +46,7 @@ def search_exa(
     }
 
     try:
-        response = requests.post(
+        response = request_session.post(
             f"{EXA_API_BASE}/search", headers=headers, json=payload
         )
         response.raise_for_status()

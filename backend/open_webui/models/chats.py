@@ -383,7 +383,6 @@ class ChatTable:
         skip: int = 0,
         limit: int = 50,
     ) -> list[ChatModel]:
-
         with get_db() as db:
             query = db.query(Chat).filter_by(user_id=user_id, archived=True)
 

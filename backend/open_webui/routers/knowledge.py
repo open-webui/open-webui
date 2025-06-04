@@ -256,13 +256,11 @@ async def get_knowledge_by_id(id: str, user=Depends(get_verified_user)):
     knowledge = Knowledges.get_knowledge_by_id(id=id)
 
     if knowledge:
-
         if (
             user.role == "admin"
             or knowledge.user_id == user.id
             or has_access(user.id, "read", knowledge.access_control)
         ):
-
             file_ids = knowledge.data.get("file_ids", []) if knowledge.data else []
             files = Files.get_file_metadatas_by_ids(file_ids)
 
@@ -434,7 +432,6 @@ def update_file_from_knowledge_by_id(
         and not has_access(user.id, "write", knowledge.access_control)
         and user.role != "admin"
     ):
-
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
