@@ -10,7 +10,9 @@ from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL, BYPASS_MODEL_ACCESS
 
 from open_webui.routers.openai import embeddings as openai_embeddings
 from open_webui.routers.ollama import embeddings as ollama_embeddings
+from open_webui.routers.ollama import GenerateEmbeddingsForm
 from open_webui.routers.pipelines import process_pipeline_inlet_filter
+
 
 from open_webui.utils.payload import convert_embedding_payload_openai_to_ollama
 from open_webui.utils.response import convert_response_ollama_to_openai
@@ -109,9 +111,10 @@ async def generate_embeddings(
     # Ollama backend
     if model.get("owned_by") == "ollama":
         ollama_payload = convert_embedding_payload_openai_to_ollama(form_data)
+        form_obj = GenerateEmbeddingsForm(**ollama_payload)
         response = await ollama_embeddings(
             request=request,
-            form_data=ollama_payload,
+            form_data=form_obj,
             user=user,
         )
         return convert_response_ollama_to_openai(response)

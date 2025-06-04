@@ -336,24 +336,25 @@ def convert_embedding_payload_openai_to_ollama(openai_payload: dict) -> dict:
     Convert an embeddings request payload from OpenAI format to Ollama format.
 
     Args:
-        openai_payload (dict): The original payload designed for OpenAI API usage. 
-            Example: {"model": "...", "input": [str, ...] or str}
+        openai_payload (dict): The original payload designed for OpenAI API usage.
 
     Returns:
         dict: A payload compatible with the Ollama API embeddings endpoint.
-            Example: {"model": "...", "input": [str, ...]}
     """
     ollama_payload = {
         "model": openai_payload.get("model")
     }
     input_value = openai_payload.get("input")
-    # Ollama expects 'input' as a list. If it's a string, wrap it in a list.
+
+    # Ollama expects 'input' as a list, and 'prompt' as a single string.
     if isinstance(input_value, list):
         ollama_payload["input"] = input_value
+        ollama_payload["prompt"] = "\n".join(str(x) for x in input_value)
     else:
         ollama_payload["input"] = [input_value]
+        ollama_payload["prompt"] = str(input_value)
 
-    # Optionally forward 'options', 'truncate', 'keep_alive' if present in OpenAI request
+    # Optionally forward other fields if present
     for optional_key in ("options", "truncate", "keep_alive"):
         if optional_key in openai_payload:
             ollama_payload[optional_key] = openai_payload[optional_key]
