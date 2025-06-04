@@ -37,7 +37,7 @@ from fastapi import (
 from fastapi.openapi.docs import get_swagger_ui_html
 
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from starlette_compress import CompressMiddleware
@@ -1634,7 +1634,20 @@ async def healthcheck_with_db():
 
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
-app.mount("/cache", StaticFiles(directory=CACHE_DIR), name="cache")
+
+
+@app.get("/cache/{path:path}")
+async def serve_cache_file(
+    path: str,
+    user=Depends(get_verified_user),
+):
+    file_path = os.path.abspath(os.path.join(CACHE_DIR, path))
+    # prevent path traversal
+    if not file_path.startswith(os.path.abspath(CACHE_DIR)):
+        raise HTTPException(status_code=404, detail="File not found")
+    if not os.path.isfile(file_path):
+        raise HTTPException(status_code=404, detail="File not found")
+    return FileResponse(file_path)
 
 
 def swagger_ui_html(*args, **kwargs):
