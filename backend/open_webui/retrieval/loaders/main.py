@@ -2,6 +2,7 @@ import requests
 import logging
 import ftfy
 import sys
+import json
 
 from langchain_community.document_loaders import (
     AzureAIDocumentIntelligenceLoader,
@@ -148,8 +149,10 @@ class DoclingLoader:
             }
 
             params = {
-                "image_export_mode": "placeholder",
+                "image_export_mode": "embedded",  # images will be embedded as base64 string in the markdown. "Placeholder" mode will not extract image base64 string.
                 "table_mode": "accurate",
+                "include_images": True,  # extract inner images
+                "to_formats": ["md", "json"],  # return both markdown and json. Image metadata will be in json
             }
 
             if self.params:
@@ -173,6 +176,20 @@ class DoclingLoader:
             result = r.json()
             document_data = result.get("document", {})
             text = document_data.get("md_content", "<No text content found>")
+            # Extract image base64 and image metadata, append to md_content
+            image_meta_data = []
+            for a_pic_dict in document_data["json_content"]["pictures"]:
+                if "prov" not in a_pic_dict or len(a_pic_dict["prov"]) == 0 or "page_no" not in a_pic_dict["prov"][0] or "bbox" not in a_pic_dict["prov"][0]:
+                    continue
+                
+                image_meta_data.append({
+                    "page_no": a_pic_dict["prov"][0]["page_no"],
+                    "bbox": a_pic_dict["prov"][0]["bbox"],  # bbox looks like this: {'l': 89.5, 't': 707.2, 'r': 251.9, 'b': 546.6, 'coord_origin': 'BOTTOMLEFT'}
+                })
+            image_meta_data_json_str = json.dumps(image_meta_data)
+            # Append image_meta_info_list_str to md_content. Using markdown comment to avoid being parsed as markdown
+            image_meta_data_json_str = "\n" + "% |<docling_image_meta_info_begin>| " + image_meta_data_json_str + " |<docling_image_meta_info_end>|" + "\n"
+            text = text + image_meta_data_json_str
 
             metadata = {"Content-Type": self.mime_type} if self.mime_type else {}
 

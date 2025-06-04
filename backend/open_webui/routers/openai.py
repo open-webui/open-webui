@@ -2,8 +2,10 @@ import asyncio
 import hashlib
 import json
 import logging
+import re
+import os
 from pathlib import Path
-from typing import Literal, Optional, overload
+from typing import Literal, Optional, overload, List, Tuple
 
 import aiohttp
 from aiocache import cached
@@ -111,6 +113,132 @@ def openai_o_series_handler(payload):
             payload["messages"][0]["role"] = "user"
         else:
             payload["messages"][0]["role"] = "developer"
+
+    return payload
+
+def extract_base64_images(markdown_content: str) -> Tuple[str, List[str]]:
+    """
+    Extracts base64-encoded images from markdown content and replaces them with placeholders.
+    
+    Args:
+        markdown_content (str): The markdown text to process.
+    
+    Returns:
+        Tuple[str, List[str]]:
+            - The markdown text with image tags replaced by placeholders.
+            - A list of extracted base64 image data URLs.
+    """
+    # Regex pattern: matches markdown image tags where src is an inline base64 image
+    # Example: ![alt text](data:image/png;base64,...)
+    image_tag_pattern = (
+        r'!\[.*?\]'
+        r'\('
+        r'(data:image/(?:png|jpeg|gif|bmp);base64,[^\)]+)'
+        r'\)'
+    )
+    
+    base64_images = []  # To store found base64 image URLs
+
+    def placeholder_replacer(match: re.Match) -> str:
+        """
+        Replaces a base64 image markdown tag with a placeholder.
+        
+        Args:
+            match (re.Match): The regex match object.
+            
+        Returns:
+            str: A placeholder image markdown tag.
+        """
+        base64_images.append(match.group(1))
+        placeholder_idx = len(base64_images)
+        return f'![Image_{placeholder_idx}](image_{placeholder_idx})'
+    
+    # Substitute all base64 image markdown with placeholders,
+    # Collect image data in the process
+    modified_content = re.sub(image_tag_pattern, placeholder_replacer, markdown_content)
+    
+    return modified_content, base64_images
+
+def append_images_and_metadata_to_payload(payload):
+    """
+    Processes a payload by extracting embedded images and their metadata 
+    from the initial system message, and reformats the payload to comply
+    with OpenAI API requirements for images and rich text.
+    
+    The function does the following:
+        - Checks the first message is from the 'system'.
+        - Extracts images and their metadata from the system message's content.
+        - Strips image metadata messages from the system's content.
+        - Rewrites the system message's content as a text block.
+        - If there are images, appends for each:
+            * Metadata about image/page/bboxes as a text chunk.
+            * Image as an image_url block.
+        - Leaves user's last message in place, as the final text chunk.
+        
+    Args:
+        payload (dict): Input payload with "messages" field.
+        
+    Returns:
+        dict: Modified payload with image metadata and image blocks ready for OpenAI API.
+    """
+
+    # Extract content and images from system message
+    sys_content = payload["messages"][0]["content"]
+    sys_text_content, image_base64_list = extract_base64_images(sys_content)
+
+    # ——— Extract image metadata lines from the system message ———
+    metadata_start_tag = "% |<docling_image_meta_info_begin>|"
+    metadata_end_tag = "|<docling_image_meta_info_end>|"
+    
+    image_metadata_list = []
+    content_lines = sys_text_content.split("\n")
+    cleaned_content_lines = []
+    for line in content_lines:
+        is_metadata = (
+            line.startswith(metadata_start_tag) and line.endswith(metadata_end_tag)
+        )
+        if is_metadata:
+            # Parse and add metadata block
+            metadata_json_str = line[len(metadata_start_tag):-len(metadata_end_tag)]
+            image_metadata_list.extend(json.loads(metadata_json_str))
+        else:
+            cleaned_content_lines.append(line)
+            
+    # If no image metadata is found, return the original payload
+    if len(image_metadata_list) == 0:        
+        return payload
+    
+    final_sys_text = "\n".join(cleaned_content_lines)
+    assert len(image_metadata_list) == len(image_base64_list), "Mismatch between images and metadata"
+
+    # ——— Rewrite system message's content as [ {type: text, text: ...} ] ———
+    payload["messages"][0]["content"] = [
+        {
+            "type": "text",
+            "text": final_sys_text,
+        }
+    ]
+
+    # Handle the user's (last) message and insert image info and images if any
+    user_message = payload["messages"][-1]
+    last_user_content = user_message["content"]
+
+    # Add image metadata to payload
+    if image_base64_list:
+        user_message["content"] = []
+
+        for idx, (img_b64, meta) in enumerate(zip(image_base64_list, image_metadata_list)):
+            meta_text = (
+                f"Image_{idx+1} is on page {meta['page_no']}."
+                f" Its bounding box is: left {meta['bbox']['l']}, top {meta['bbox']['t']}, "
+                f"right {meta['bbox']['r']}, bottom {meta['bbox']['b']}."
+                f" The bounding box origin is {meta['bbox']['coord_origin']}."
+            )
+            user_message["content"].append({"type": "text", "text": meta_text})
+            user_message["content"].append({"type": "image_url", "image_url": {"url": img_b64}})
+        
+        # Append original user's last message as a text block
+        user_message["content"].append({"type": "text", "text": last_user_content})
 
     return payload
 
@@ -815,6 +943,10 @@ async def generate_chat_completion(
             else {}
         ),
     }
+    
+    # Process image base64 and image metadata in payload if ENABLE_OPENAI_IMAGE_URL=True
+    if os.environ.get("ENABLE_OPENAI_IMAGE_URL", "false").lower() == "true":
+        payload = append_images_and_metadata_to_payload(payload)
 
     if api_config.get("azure", False):
         request_url, payload = convert_to_azure_payload(url, payload)
