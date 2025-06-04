@@ -21,6 +21,7 @@
 		showSidebar
 	} from '$lib/stores';
 	import {
+		bookmarkModel,
 		createNewModel,
 		deleteModelById,
 		getModels as getWorkspaceModels,
@@ -50,6 +51,10 @@
 	import MenuIcon from '../icons/MenuIcon.svelte';
 	import FilterDropdown from './Models/FilterDropdown.svelte';
 	import BackIcon from '../icons/BackIcon.svelte';
+	import BookIcon from '../icons/BookIcon.svelte';
+	import BookmarkIcon from '../icons/BookmarkIcon.svelte';
+	import BookmarkedIcon from '../icons/BookmarkedIcon.svelte';
+
 
 	let shiftKey = false;
 
@@ -283,6 +288,22 @@
 	}
 	let hoveredModel = null;
 	let menuIdOpened = null;
+
+
+	$: console.log(filteredModels, 'filtered Models')
+
+	let loadingBookmark = null;
+
+	const bookmarkAssistant = async (id) => {
+		loadingBookmark = id;
+		const res = await bookmarkModel(localStorage.token, id);
+		if (res) {
+			_models.set(await getModels(localStorage.token));
+			models = await getWorkspaceModels(localStorage.token);
+		}
+		loadingBookmark = null;
+	}
+
 </script>
 
 <svelte:head>
@@ -464,6 +485,17 @@
 					>
 						<div class="flex items-start justify-between">
 							<div class="flex items-center">
+								{#if loadingBookmark === model.id}
+									<Spinner className="size-3 mr-1"/>
+								{:else}
+									<button on:click={() => bookmarkAssistant(model.id)} class="text-lightGray-100 dark:text-customGray-300 mr-1">
+										{#if model?.bookmarked_by_user}
+											<BookmarkedIcon/>
+										{:else}
+											<BookmarkIcon/>
+										{/if}
+									</button>
+								{/if}
 								<div class="flex items-center gap-1 flex-wrap">
 									{#if model.access_control == null}
 										<div

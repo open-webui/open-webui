@@ -46,6 +46,18 @@ class User(Base):
     company_id = Column(String, ForeignKey("company.id", ondelete="CASCADE"), nullable=False)
     company = relationship("Company", back_populates="users")
 
+    model_bookmarks = relationship(
+        "Model",
+        secondary="user_model_bookmark",
+        back_populates="bookmarking_users"
+    )
+
+    prompt_bookmarks = relationship(
+        "Prompt",
+        secondary="user_prompt_bookmark",
+        back_populates="bookmarking_users"
+    )
+
 
 class UserSettings(BaseModel):
     ui: Optional[dict] = partial(dict)

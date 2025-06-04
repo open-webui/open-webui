@@ -36,7 +36,10 @@
 		chatTitle,
 		showArtifacts,
 		tools,
-		companyConfig
+		companyConfig,
+
+		showLibrary
+
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
@@ -1999,14 +2002,9 @@
 						<div class=" pb-[1rem] max-w-[980px] mx-auto w-full">
 							<div class="px-3 mb-2.5 flex items-center justify-between">
 								<ModelSelector {initNewChatCompleted} bind:selectedModels showSetDefault={!history.currentId} />
-								<div
-									class="flex space-x-[5px] items-center py-[3px] px-[6px] rounded-md bg-lightGray-800 dark:bg-customGray-800"
-								>
-									<BookIcon />
-									<a class="min-w-fit text-xs text-customGray-600 dark:text-customGray-600 font-medium" href="/workspace/prompts"
-										>{$i18n.t('Prompts')}
-									</a>
-								</div>
+									<button class="flex space-x-[5px] items-center py-[3px] px-[6px] rounded-md bg-lightGray-800 dark:bg-customGray-800 min-w-fit text-xs text-lightGray-100 dark:text-customGray-100 font-medium" on:click={() => showLibrary.set(true)}>
+										<BookIcon /> <span>{$i18n.t('Library')}</span>
+									</button>
 							</div>
 							<div class="mb-4">
 								<MessageInput

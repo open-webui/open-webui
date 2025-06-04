@@ -71,6 +71,8 @@ export const showSettings = writable(false);
 export const showCompanySettings = writable(false);
 export const showArchivedChats = writable(false);
 export const showChangelog = writable(false);
+export const showLibrary = writable(false);
+export const confirmPromptFn = writable(null);
 
 export const showControls = writable(false);
 export const showOverview = writable(false);

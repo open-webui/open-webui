@@ -31,6 +31,9 @@
 	import MenuIcon from '../icons/MenuIcon.svelte';
 	import FilterDropdown from './Models/FilterDropdown.svelte';
 	import BackIcon from '../icons/BackIcon.svelte';
+	import BookmarkIcon from '../icons/BookmarkIcon.svelte';
+	import BookmarkedIcon from '../icons/BookmarkedIcon.svelte';
+	import { bookmarkPrompt } from '$lib/apis/prompts';
 
 	const i18n = getContext('i18n');
 	let promptsImportInputElement: HTMLInputElement;
@@ -50,6 +53,8 @@
 	let filteredItems = [];
 	let accessFilter = 'all';
 	let groupsForPrompts = [];
+
+	let loadingBookmark = null;
 
 	$: if (prompts) {
 		tags = Array.from(
@@ -170,6 +175,16 @@
 	}
 	let hoveredPrompt = null;
 	let menuIdOpened = null;
+
+	const bookmarkPromptHandler = async (command) => {
+		loadingBookmark = command;
+		const res = await bookmarkPrompt(localStorage.token, command);
+		if (res) {
+			prompts = await getPromptList(localStorage.token);
+		    _prompts.set(await getPrompts(localStorage.token));
+		}
+		loadingBookmark = null;
+	}
 	
 </script>
 
@@ -349,6 +364,19 @@
 					>
 						<div class="flex items-start justify-between">
 							<div class="flex items-center">
+								{#if loadingBookmark === prompt?.command}
+									<Spinner className="size-3 mr-1"/>
+								{:else}
+									<button on:click={() => bookmarkPromptHandler(prompt.command)} class="text-lightGray-100 dark:text-customGray-300 mr-1">
+										{#if prompt?.bookmarked_by_user}
+											<BookmarkedIcon/>
+										{:else}
+											<BookmarkIcon/>
+										{/if}
+										
+									</button>
+								{/if}
+								
 								<div class="flex items-center gap-1 flex-wrap">
 									{#if prompt.access_control == null && prompt.prebuilt}
 										<div

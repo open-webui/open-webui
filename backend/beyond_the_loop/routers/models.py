@@ -8,7 +8,6 @@ from beyond_the_loop.models.models import (
     ModelUserResponse,
     Models,
 )
-from beyond_the_loop.models.models import ModelBookmarkForm
 from open_webui.constants import ERROR_MESSAGES
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
@@ -25,7 +24,9 @@ router = APIRouter()
 
 @router.get("/", response_model=list[ModelUserResponse])
 async def get_models(user=Depends(get_verified_user)):
-    return Models.get_models_by_user_and_company(user.id, user.company_id)
+    models = Models.get_models_by_user_and_company(user.id, user.company_id)
+    sorted_models = sorted(models, key=lambda m: not m.bookmarked_by_user)
+    return sorted_models
 
 
 ###########################
@@ -132,28 +133,23 @@ async def toggle_model_by_id(id: str, user=Depends(get_verified_user)):
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
+#################################
+# Add and remove from bookmarked
+#################################
+
+@router.post("/model/{model}/bookmark/update")
+async def update_model_bookmark(model: str, user=Depends(get_verified_user)):
+    model = Models.get_model_by_id(model)
+
+    if not model:
+        raise HTTPException(status_code=404, detail="Model not found")
+
+    bookmarked =Models.toggle_bookmark(model.id, user.id)
+    return {"model_id": model.id, "bookmarked_by_user": bookmarked}
 
 ############################
 # UpdateModelById
 ############################
-
-@router.post("/model/{model}/bookmark/update", response_model=Optional[ModelResponse])
-async def update_model_bookmark(model: str, form_data: ModelBookmarkForm, user=Depends(get_verified_user)):
-    model = Models.get_model_by_id(model)
-
-    if model:
-        if (
-            model.user_id == user.id
-            or has_access(user.id, "read", model.access_control)
-        ):
-            model.bookmarked = form_data.bookmarked
-            model = Models.update_model_by_id_and_company(model.id, model, user.company_id)
-            return model
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
 
 @router.post("/model/update", response_model=Optional[ModelModel])
 async def update_model_by_id(
