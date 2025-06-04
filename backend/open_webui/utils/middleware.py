@@ -1070,16 +1070,7 @@ async def process_chat_response(
                             else:
                                 title_string = ""
 
-                            title_string = title_string[
-                                title_string.find("{") : title_string.rfind("}") + 1
-                            ]
-
-                            try:
-                                title = json.loads(title_string).get(
-                                    "title", "New Gift Chat"
-                                )
-                            except Exception as e:
-                                title = ""
+                            title = title_string
 
                             if not title:
                                 title = messages[0].get("content", "New Gift Chat")

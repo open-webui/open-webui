@@ -1211,6 +1211,10 @@ async def chat_completion(
     model_item = form_data.pop("model_item", {})
     tasks = form_data.pop("background_tasks", None)
 
+    # Force title generation to be enabled each time
+    if not tasks or 'title_generation' not in tasks:
+        tasks = {'title_generation': True}
+
     metadata = {}
     try:
         if not model_item.get("direct", False):
