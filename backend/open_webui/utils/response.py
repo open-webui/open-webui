@@ -126,7 +126,7 @@ async def convert_streaming_response_ollama_to_openai(ollama_streaming_response)
 
     yield "data: [DONE]\n\n"
 
-def convert_response_ollama_to_openai(response):
+def convert_embedding_response_ollama_to_openai(response) -> dict:
     """
     Convert the response from Ollama embeddings endpoint to the OpenAI-compatible format.
 

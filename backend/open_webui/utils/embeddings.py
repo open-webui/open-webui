@@ -15,7 +15,7 @@ from open_webui.routers.pipelines import process_pipeline_inlet_filter
 
 
 from open_webui.utils.payload import convert_embedding_payload_openai_to_ollama
-from open_webui.utils.response import convert_response_ollama_to_openai
+from open_webui.utils.response import convert_embedding_response_ollama_to_openai
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -117,7 +117,7 @@ async def generate_embeddings(
             form_data=form_obj,
             user=user,
         )
-        return convert_response_ollama_to_openai(response)
+        return convert_embedding_response_ollama_to_openai(response)
 
     # Default: OpenAI or compatible backend
     return await openai_embeddings(
