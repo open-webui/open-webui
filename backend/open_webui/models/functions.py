@@ -105,8 +105,56 @@ class FunctionsTable:
                 else:
                     return None
         except Exception as e:
-            print(f"Error creating tool: {e}")
+            log.exception(f"Error creating a new function: {e}")
             return None
+
+    def sync_functions(
+        self, user_id: str, functions: list[FunctionModel]
+    ) -> list[FunctionModel]:
+        # Synchronize functions for a user by updating existing ones, inserting new ones, and removing those that are no longer present.
+        try:
+            with get_db() as db:
+                # Get existing functions
+                existing_functions = db.query(Function).all()
+                existing_ids = {func.id for func in existing_functions}
+
+                # Prepare a set of new function IDs
+                new_function_ids = {func.id for func in functions}
+
+                # Update or insert functions
+                for func in functions:
+                    if func.id in existing_ids:
+                        db.query(Function).filter_by(id=func.id).update(
+                            {
+                                **func.model_dump(),
+                                "user_id": user_id,
+                                "updated_at": int(time.time()),
+                            }
+                        )
+                    else:
+                        new_func = Function(
+                            **{
+                                **func.model_dump(),
+                                "user_id": user_id,
+                                "updated_at": int(time.time()),
+                            }
+                        )
+                        db.add(new_func)
+
+                # Remove functions that are no longer present
+                for func in existing_functions:
+                    if func.id not in new_function_ids:
+                        db.delete(func)
+
+                db.commit()
+
+                return [
+                    FunctionModel.model_validate(func)
+                    for func in db.query(Function).all()
+                ]
+        except Exception as e:
+            log.exception(f"Error syncing functions for user {user_id}: {e}")
+            return []
 
     def get_function_by_id(self, id: str) -> Optional[FunctionModel]:
         try:
@@ -170,7 +218,7 @@ class FunctionsTable:
                 function = db.get(Function, id)
                 return function.valves if function.valves else {}
             except Exception as e:
-                print(f"An error occurred: {e}")
+                log.exception(f"Error getting function valves by id {id}: {e}")
                 return None
 
     def update_function_valves_by_id(
@@ -202,7 +250,9 @@ class FunctionsTable:
 
             return user_settings["functions"]["valves"].get(id, {})
         except Exception as e:
-            print(f"An error occurred: {e}")
+            log.exception(
+                f"Error getting user values by id {id} and user id {user_id}: {e}"
+            )
             return None
 
     def update_user_valves_by_id_and_user_id(
@@ -225,7 +275,9 @@ class FunctionsTable:
 
             return user_settings["functions"]["valves"][id]
         except Exception as e:
-            print(f"An error occurred: {e}")
+            log.exception(
+                f"Error updating user valves by id {id} and user_id {user_id}: {e}"
+            )
             return None
 
     def update_function_by_id(self, id: str, updated: dict) -> Optional[FunctionModel]:

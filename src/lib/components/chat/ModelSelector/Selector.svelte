@@ -10,7 +10,7 @@
 	import Check from '$lib/components/icons/Check.svelte';
 	import Search from '$lib/components/icons/Search.svelte';
 
-	import { deleteModel, getOllamaVersion, pullModel } from '$lib/apis/ollama';
+	import { deleteModel, getOllamaVersion, pullModel, unloadModel } from '$lib/apis/ollama';
 
 	import {
 		user,
@@ -29,6 +29,10 @@
 	import Switch from '$lib/components/common/Switch.svelte';
 	import ChatBubbleOval from '$lib/components/icons/ChatBubbleOval.svelte';
 	import { goto } from '$app/navigation';
+	import dayjs from '$lib/dayjs';
+	import relativeTime from 'dayjs/plugin/relativeTime';
+	import ArrowUpTray from '$lib/components/icons/ArrowUpTray.svelte';
+	dayjs.extend(relativeTime);
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -52,14 +56,20 @@
 	export let className = 'w-[32rem]';
 	export let triggerClassName = 'text-lg';
 
+	let tagsContainerElement;
+
 	let show = false;
+	let tags = [];
 
 	let selectedModel = '';
 	$: selectedModel = items.find((item) => item.value === value) ?? '';
 
 	let searchValue = '';
-	let ollamaVersion = null;
 
+	let selectedTag = '';
+	let selectedConnectionType = '';
+
+	let ollamaVersion = null;
 	let selectedModelIdx = 0;
 
 	const fuse = new Fuse(
@@ -67,7 +77,7 @@
 			const _item = {
 				...item,
 				modelName: item.model?.name,
-				tags: item.model?.info?.meta?.tags?.map((tag) => tag.name).join(' '),
+				tags: (item.model?.tags ?? []).map((tag) => tag.name).join(' '),
 				desc: item.model?.info?.meta?.description
 			};
 			return _item;
@@ -78,11 +88,73 @@
 		}
 	);
 
-	$: filteredItems = searchValue
-		? fuse.search(searchValue).map((e) => {
-				return e.item;
-			})
-		: items;
+	$: filteredItems = (
+		searchValue
+			? fuse
+					.search(searchValue)
+					.map((e) => {
+						return e.item;
+					})
+					.filter((item) => {
+						if (selectedTag === '') {
+							return true;
+						}
+						return (item.model?.tags ?? []).map((tag) => tag.name).includes(selectedTag);
+					})
+					.filter((item) => {
+						if (selectedConnectionType === '') {
+							return true;
+						} else if (selectedConnectionType === 'local') {
+							return item.model?.connection_type === 'local';
+						} else if (selectedConnectionType === 'external') {
+							return item.model?.connection_type === 'external';
+						} else if (selectedConnectionType === 'direct') {
+							return item.model?.direct;
+						}
+					})
+			: items
+					.filter((item) => {
+						if (selectedTag === '') {
+							return true;
+						}
+						return (item.model?.tags ?? []).map((tag) => tag.name).includes(selectedTag);
+					})
+					.filter((item) => {
+						if (selectedConnectionType === '') {
+							return true;
+						} else if (selectedConnectionType === 'local') {
+							return item.model?.connection_type === 'local';
+						} else if (selectedConnectionType === 'external') {
+							return item.model?.connection_type === 'external';
+						} else if (selectedConnectionType === 'direct') {
+							return item.model?.direct;
+						}
+					})
+	).filter((item) => !(item.model?.info?.meta?.hidden ?? false));
+
+	$: if (selectedTag || selectedConnectionType) {
+		resetView();
+	} else {
+		resetView();
+	}
+
+	const resetView = async () => {
+		await tick();
+
+		const selectedInFiltered = filteredItems.findIndex((item) => item.value === value);
+
+		if (selectedInFiltered >= 0) {
+			// The selected model is visible in the current filter
+			selectedModelIdx = selectedInFiltered;
+		} else {
+			// The selected model is not visible, default to first item in filtered list
+			selectedModelIdx = 0;
+		}
+
+		await tick();
+		const item = document.querySelector(`[data-arrow-selected="true"]`);
+		item?.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
+	};
 
 	const pullModelHandler = async () => {
 		const sanitizedModelTag = searchValue.trim().replace(/^ollama\s+(run|pull)\s+/, '');
@@ -214,6 +286,16 @@
 
 	onMount(async () => {
 		ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => false);
+
+		if (items) {
+			tags = items
+				.filter((item) => !(item.model?.info?.meta?.hidden ?? false))
+				.flatMap((item) => item.model?.tags ?? [])
+				.map((tag) => tag.name);
+
+			// Remove duplicates and sort
+			tags = Array.from(new Set(tags)).sort((a, b) => a.localeCompare(b));
+		}
 	});
 
 	const cancelModelPullHandler = async (model: string) => {
@@ -231,14 +313,31 @@
 			toast.success(`${model} download has been canceled`);
 		}
 	};
+
+	const unloadModelHandler = async (model: string) => {
+		const res = await unloadModel(localStorage.token, model).catch((error) => {
+			toast.error($i18n.t('Error unloading model: {{error}}', { error }));
+		});
+
+		if (res) {
+			toast.success($i18n.t('Model unloaded successfully'));
+			models.set(
+				await getModels(
+					localStorage.token,
+					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+				)
+			);
+		}
+	};
 </script>
 
 <DropdownMenu.Root
 	bind:open={show}
 	onOpenChange={async () => {
 		searchValue = '';
-		selectedModelIdx = 0;
 		window.setTimeout(() => document.getElementById('model-search-input')?.focus(), 0);
+
+		resetView();
 	}}
 	closeFocus={false}
 >
@@ -247,8 +346,17 @@
 		aria-label={placeholder}
 		id="model-selector-{id}-button"
 	>
-		<div
-			class="flex w-full text-left px-0.5 outline-none bg-transparent truncate {triggerClassName} justify-between font-medium placeholder-gray-400 focus:outline-none"
+		<button
+			class="flex w-full text-left px-0.5 outline-hidden bg-transparent truncate {triggerClassName} justify-between font-medium placeholder-gray-400 focus:outline-hidden"
+			on:mouseenter={async () => {
+				models.set(
+					await getModels(
+						localStorage.token,
+						$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+					)
+				);
+			}}
+			type="button"
 		>
 			{#if selectedModel}
 				{selectedModel.label}
@@ -256,26 +364,26 @@
 				{placeholder}
 			{/if}
 			<ChevronDown className=" self-center ml-2 size-3" strokeWidth="2.5" />
-		</div>
+		</button>
 	</DropdownMenu.Trigger>
 
 	<DropdownMenu.Content
 		class=" z-40 {$mobile
 			? `w-full`
-			: `${className}`} max-w-[calc(100vw-1rem)] justify-start rounded-xl  bg-white dark:bg-gray-850 dark:text-white shadow-lg  outline-none"
+			: `${className}`} max-w-[calc(100vw-1rem)] justify-start rounded-xl  bg-white dark:bg-gray-850 dark:text-white shadow-lg  outline-hidden"
 		transition={flyAndScale}
 		side={$mobile ? 'bottom' : 'bottom-start'}
 		sideOffset={3}
 	>
 		<slot>
 			{#if searchEnabled}
-				<div class="flex items-center gap-2.5 px-5 mt-3.5 mb-3">
+				<div class="flex items-center gap-2.5 px-5 mt-3.5 mb-1.5">
 					<Search className="size-4" strokeWidth="2.5" />
 
 					<input
 						id="model-search-input"
 						bind:value={searchValue}
-						class="w-full text-sm bg-transparent outline-none"
+						class="w-full text-sm bg-transparent outline-hidden"
 						placeholder={searchPlaceholder}
 						autocomplete="off"
 						on:keydown={(e) => {
@@ -297,19 +405,103 @@
 						}}
 					/>
 				</div>
-
-				<hr class="border-gray-50 dark:border-gray-800" />
 			{/if}
 
-			<div class="px-3 my-2 max-h-64 overflow-y-auto scrollbar-hidden group">
+			<div class="px-3 max-h-64 overflow-y-auto scrollbar-hidden group relative">
+				{#if tags && items.filter((item) => !(item.model?.info?.meta?.hidden ?? false)).length > 0}
+					<div
+						class=" flex w-full sticky top-0 z-10 bg-white dark:bg-gray-850 overflow-x-auto scrollbar-none"
+						on:wheel={(e) => {
+							if (e.deltaY !== 0) {
+								e.preventDefault();
+								e.currentTarget.scrollLeft += e.deltaY;
+							}
+						}}
+					>
+						<div
+							class="flex gap-1 w-fit text-center text-sm font-medium rounded-full bg-transparent px-1.5 pb-0.5"
+							bind:this={tagsContainerElement}
+						>
+							{#if (items.find((item) => item.model?.connection_type === 'local') && items.find((item) => item.model?.connection_type === 'external')) || items.find((item) => item.model?.direct) || tags.length > 0}
+								<button
+									class="min-w-fit outline-none p-1.5 {selectedTag === '' &&
+									selectedConnectionType === ''
+										? ''
+										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+									on:click={() => {
+										selectedConnectionType = '';
+										selectedTag = '';
+									}}
+								>
+									{$i18n.t('All')}
+								</button>
+							{/if}
+
+							{#if items.find((item) => item.model?.connection_type === 'local') && items.find((item) => item.model?.connection_type === 'external')}
+								<button
+									class="min-w-fit outline-none p-1.5 {selectedConnectionType === 'local'
+										? ''
+										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+									on:click={() => {
+										selectedTag = '';
+										selectedConnectionType = 'local';
+									}}
+								>
+									{$i18n.t('Local')}
+								</button>
+								<button
+									class="min-w-fit outline-none p-1.5 {selectedConnectionType === 'external'
+										? ''
+										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+									on:click={() => {
+										selectedTag = '';
+										selectedConnectionType = 'external';
+									}}
+								>
+									{$i18n.t('External')}
+								</button>
+							{/if}
+
+							{#if items.find((item) => item.model?.direct)}
+								<button
+									class="min-w-fit outline-none p-1.5 {selectedConnectionType === 'direct'
+										? ''
+										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+									on:click={() => {
+										selectedTag = '';
+										selectedConnectionType = 'direct';
+									}}
+								>
+									{$i18n.t('Direct')}
+								</button>
+							{/if}
+
+							{#each tags as tag}
+								<button
+									class="min-w-fit outline-none p-1.5 {selectedTag === tag
+										? ''
+										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+									on:click={() => {
+										selectedConnectionType = '';
+										selectedTag = tag;
+									}}
+								>
+									{tag}
+								</button>
+							{/each}
+						</div>
+					</div>
+				{/if}
+
 				{#each filteredItems as item, index}
 					<button
 						aria-label="model-item"
-						class="flex w-full text-left font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-none transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer data-[highlighted]:bg-muted {index ===
+						class="flex w-full text-left font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer data-highlighted:bg-muted {index ===
 						selectedModelIdx
 							? 'bg-gray-100 dark:bg-gray-800 group-hover:bg-transparent'
 							: ''}"
 						data-arrow-selected={index === selectedModelIdx}
+						data-value={item.value}
 						on:click={() => {
 							value = item.value;
 							selectedModelIdx = index;
@@ -318,11 +510,11 @@
 						}}
 					>
 						<div class="flex flex-col">
-							{#if $mobile && (item?.model?.info?.meta?.tags ?? []).length > 0}
+							{#if $mobile && (item?.model?.tags ?? []).length > 0}
 								<div class="flex gap-0.5 self-start h-full mb-1.5 -translate-x-1">
-									{#each item.model?.info?.meta.tags as tag}
+									{#each item.model?.tags.sort((a, b) => a.name.localeCompare(b.name)) as tag}
 										<div
-											class=" text-xs font-bold px-1 rounded uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
+											class=" text-xs font-bold px-1 rounded-sm uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
 										>
 											{tag.name}
 										</div>
@@ -342,12 +534,20 @@
 													alt="Model"
 													class="rounded-full size-5 flex items-center mr-2"
 												/>
-												{item.label}
+
+												<div class="flex items-center line-clamp-1">
+													<div class="line-clamp-1">
+														{item.label}
+													</div>
+												</div>
 											</Tooltip>
 										</div>
 									</div>
-									{#if item.model.owned_by === 'ollama' && (item.model.ollama?.details?.parameter_size ?? '') !== ''}
-										<div class="flex ml-1 items-center translate-y-[0.5px]">
+								</div>
+
+								{#if item.model.owned_by === 'ollama'}
+									{#if (item.model.ollama?.details?.parameter_size ?? '') !== ''}
+										<div class="flex items-center translate-y-[0.5px]">
 											<Tooltip
 												content={`${
 													item.model.ollama?.details?.quantization_level
@@ -367,12 +567,31 @@
 											</Tooltip>
 										</div>
 									{/if}
-								</div>
+									{#if item.model.ollama?.expires_at && new Date(item.model.ollama?.expires_at * 1000) > new Date()}
+										<div class="flex items-center translate-y-[0.5px] px-0.5">
+											<Tooltip
+												content={`${$i18n.t('Unloads {{FROM_NOW}}', {
+													FROM_NOW: dayjs(item.model.ollama?.expires_at * 1000).fromNow()
+												})}`}
+												className="self-end"
+											>
+												<div class=" flex items-center">
+													<span class="relative flex size-2">
+														<span
+															class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"
+														/>
+														<span class="relative inline-flex rounded-full size-2 bg-green-500" />
+													</span>
+												</div>
+											</Tooltip>
+										</div>
+									{/if}
+								{/if}
 
 								<!-- {JSON.stringify(item.info)} -->
 
 								{#if item.model?.direct}
-									<Tooltip content={`${'Direct'}`}>
+									<Tooltip content={`${$i18n.t('Direct')}`}>
 										<div class="translate-y-[1px]">
 											<svg
 												xmlns="http://www.w3.org/2000/svg"
@@ -388,8 +607,8 @@
 											</svg>
 										</div>
 									</Tooltip>
-								{:else if item.model.owned_by === 'openai'}
-									<Tooltip content={`${'External'}`}>
+								{:else if item.model.connection_type === 'external'}
+									<Tooltip content={`${$i18n.t('External')}`}>
 										<div class="translate-y-[1px]">
 											<svg
 												xmlns="http://www.w3.org/2000/svg"
@@ -440,12 +659,14 @@
 									</Tooltip>
 								{/if}
 
-								{#if !$mobile && (item?.model?.info?.meta?.tags ?? []).length > 0}
-									<div class="flex gap-0.5 self-center items-center h-full translate-y-[0.5px]">
-										{#each item.model?.info?.meta.tags as tag}
-											<Tooltip content={tag.name}>
+								{#if !$mobile && (item?.model?.tags ?? []).length > 0}
+									<div
+										class="flex gap-0.5 self-center items-center h-full translate-y-[0.5px] overflow-x-auto scrollbar-none"
+									>
+										{#each item.model?.tags.sort((a, b) => a.name.localeCompare(b.name)) as tag}
+											<Tooltip content={tag.name} className="flex-shrink-0">
 												<div
-													class=" text-xs font-bold px-1 rounded uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
+													class=" text-xs font-bold px-1 rounded-sm uppercase bg-gray-500/20 text-gray-700 dark:text-gray-200"
 												>
 													{tag.name}
 												</div>
@@ -456,21 +677,36 @@
 							</div>
 						</div>
 
-						{#if value === item.value}
-							<div class="ml-auto pl-2 pr-2 md:pr-0">
-								<Check />
-							</div>
-						{/if}
+						<div class="ml-auto pl-2 pr-1 flex gap-1.5 items-center">
+							{#if $user?.role === 'admin' && item.model.owned_by === 'ollama' && item.model.ollama?.expires_at && new Date(item.model.ollama?.expires_at * 1000) > new Date()}
+								<Tooltip content={`${$i18n.t('Eject')}`} className="flex-shrink-0">
+									<button
+										class="flex"
+										on:click={() => {
+											unloadModelHandler(item.value);
+										}}
+									>
+										<ArrowUpTray className="size-3" />
+									</button>
+								</Tooltip>
+							{/if}
+
+							{#if value === item.value}
+								<div>
+									<Check className="size-3" />
+								</div>
+							{/if}
+						</div>
 					</button>
 				{:else}
-					<div>
+					<div class="">
 						<div class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-100">
 							{$i18n.t('No results found')}
 						</div>
 					</div>
 				{/each}
 
-				{#if !(searchValue.trim() in $MODEL_DOWNLOAD_POOL) && searchValue && ollamaVersion && $user.role === 'admin'}
+				{#if !(searchValue.trim() in $MODEL_DOWNLOAD_POOL) && searchValue && ollamaVersion && $user?.role === 'admin'}
 					<Tooltip
 						content={$i18n.t(`Pull "{{searchValue}}" from Ollama.com`, {
 							searchValue: searchValue
@@ -478,7 +714,7 @@
 						placement="top-start"
 					>
 						<button
-							class="flex w-full font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-none transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer data-[highlighted]:bg-muted"
+							class="flex w-full font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer data-highlighted:bg-muted"
 							on:click={() => {
 								pullModelHandler();
 							}}
@@ -492,7 +728,7 @@
 
 				{#each Object.keys($MODEL_DOWNLOAD_POOL) as model}
 					<div
-						class="flex w-full justify-between font-medium select-none rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-none transition-all duration-75 rounded-lg cursor-pointer data-[highlighted]:bg-muted"
+						class="flex w-full justify-between font-medium select-none rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 rounded-lg cursor-pointer data-highlighted:bg-muted"
 					>
 						<div class="flex">
 							<div class="-ml-2 mr-2.5 translate-y-0.5">
@@ -527,7 +763,7 @@
 										Downloading "{model}"
 									</div>
 
-									<div class="flex-shrink-0">
+									<div class="shrink-0">
 										{'pullProgress' in $MODEL_DOWNLOAD_POOL[model]
 											? `(${$MODEL_DOWNLOAD_POOL[model].pullProgress}%)`
 											: ''}
@@ -575,11 +811,9 @@
 			</div>
 
 			{#if showTemporaryChatControl}
-				<hr class="border-gray-50 dark:border-gray-800" />
-
-				<div class="flex items-center mx-2 my-2">
+				<div class="flex items-center mx-2 mt-1 mb-2">
 					<button
-						class="flex justify-between w-full font-medium line-clamp-1 select-none items-center rounded-button py-2 px-3 text-sm text-gray-700 dark:text-gray-100 outline-none transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer data-[highlighted]:bg-muted"
+						class="flex justify-between w-full font-medium line-clamp-1 select-none items-center rounded-button py-2 px-3 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer data-highlighted:bg-muted"
 						on:click={async () => {
 							temporaryChatEnabled.set(!$temporaryChatEnabled);
 							await goto('/');
@@ -609,6 +843,8 @@
 						</div>
 					</button>
 				</div>
+			{:else}
+				<div class="mb-3"></div>
 			{/if}
 
 			<div class="hidden w-[42rem]" />

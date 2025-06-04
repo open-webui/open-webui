@@ -21,6 +21,10 @@
 
 	export let boilerplate = '';
 	export let value = '';
+
+	export let onSave = () => {};
+	export let onChange = () => {};
+
 	let _value = '';
 
 	$: if (value) {
@@ -29,19 +33,57 @@
 
 	const updateValue = () => {
 		if (_value !== value) {
+			const changes = findChanges(_value, value);
 			_value = value;
-			if (codeEditor) {
-				codeEditor.dispatch({
-					changes: [{ from: 0, to: codeEditor.state.doc.length, insert: _value }]
-				});
+
+			if (codeEditor && changes.length > 0) {
+				codeEditor.dispatch({ changes });
 			}
 		}
 	};
+
+	/**
+	 * Finds multiple diffs in two strings and generates minimal change edits.
+	 */
+	function findChanges(oldStr, newStr) {
+		let changes = [];
+		let oldIndex = 0,
+			newIndex = 0;
+
+		while (oldIndex < oldStr.length || newIndex < newStr.length) {
+			if (oldStr[oldIndex] !== newStr[newIndex]) {
+				let start = oldIndex;
+
+				// Identify the changed portion
+				while (oldIndex < oldStr.length && oldStr[oldIndex] !== newStr[newIndex]) {
+					oldIndex++;
+				}
+				while (newIndex < newStr.length && newStr[newIndex] !== oldStr[start]) {
+					newIndex++;
+				}
+
+				changes.push({
+					from: start,
+					to: oldIndex, // Replace the differing part
+					insert: newStr.substring(start, newIndex)
+				});
+			} else {
+				oldIndex++;
+				newIndex++;
+			}
+		}
+
+		return changes;
+	}
 
 	export let id = '';
 	export let lang = '';
 
 	let codeEditor;
+
+	export const focus = () => {
+		codeEditor.focus();
+	};
 
 	let isDarkMode = false;
 	let editorTheme = new Compartment();
@@ -56,6 +98,16 @@
 			}
 		})
 	);
+	languages.push(
+		LanguageDescription.of({
+			name: 'Elixir',
+			extensions: ['ex', 'exs'],
+			load() {
+				return import('codemirror-lang-elixir').then((m) => m.elixir());
+			}
+		})
+	);
+
 	const getLang = async () => {
 		const language = languages.find((l) => l.alias.includes(lang));
 		return await language?.load();
@@ -63,7 +115,7 @@
 
 	export const formatPythonCodeHandler = async () => {
 		if (codeEditor) {
-			const res = await formatPythonCode(_value).catch((error) => {
+			const res = await formatPythonCode(localStorage.token, _value).catch((error) => {
 				toast.error(`${error}`);
 				return null;
 			});
@@ -75,7 +127,7 @@
 				});
 
 				_value = formattedCode;
-				dispatch('change', { value: _value });
+				onChange(_value);
 				await tick();
 
 				toast.success($i18n.t('Code formatted successfully'));
@@ -94,7 +146,7 @@
 		EditorView.updateListener.of((e) => {
 			if (e.docChanged) {
 				_value = e.state.doc.toString();
-				dispatch('change', { value: _value });
+				onChange(_value);
 			}
 		}),
 		editorTheme.of([]),
@@ -170,7 +222,8 @@
 		const keydownHandler = async (e) => {
 			if ((e.ctrlKey || e.metaKey) && e.key === 's') {
 				e.preventDefault();
-				dispatch('save');
+
+				onSave();
 			}
 
 			// Format code when Ctrl + Shift + F is pressed
@@ -189,4 +242,4 @@
 	});
 </script>
 
-<div id="code-textarea-{id}" class="h-full w-full" />
+<div id="code-textarea-{id}" class="h-full w-full text-sm" />

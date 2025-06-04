@@ -201,7 +201,7 @@
 		dragged = false;
 	};
 
-	onMount(() => {
+	onMount(async () => {
 		open = folders[folderId].is_expanded;
 		if (folderElement) {
 			folderElement.addEventListener('dragover', onDragOver);
@@ -214,6 +214,13 @@
 			folderElement.addEventListener('drag', onDrag);
 			// Event listener for when dragging ends
 			folderElement.addEventListener('dragend', onDragEnd);
+		}
+
+		if (folders[folderId]?.new) {
+			delete folders[folderId].new;
+
+			await tick();
+			editHandler();
 		}
 	});
 
@@ -245,7 +252,7 @@
 
 	const nameUpdateHandler = async () => {
 		if (name === '') {
-			toast.error($i18n.t('Folder name cannot be empty'));
+			toast.error($i18n.t('Folder name cannot be empty.'));
 			return;
 		}
 
@@ -297,15 +304,15 @@
 		console.log('Edit');
 		await tick();
 		name = folders[folderId].name;
-		edit = true;
 
+		edit = true;
 		await tick();
 
-		// focus on the input
-		setTimeout(() => {
-			const input = document.getElementById(`folder-${folderId}-input`);
+		const input = document.getElementById(`folder-${folderId}-input`);
+
+		if (input) {
 			input.focus();
-		}, 100);
+		}
 	};
 
 	const exportHandler = async () => {
@@ -357,7 +364,7 @@
 <div bind:this={folderElement} class="relative {className}" draggable="true">
 	{#if draggedOver}
 		<div
-			class="absolute top-0 left-0 w-full h-full rounded-sm bg-gray-100/50 dark:bg-gray-700/20 bg-opacity-50 dark:bg-opacity-10 z-50 pointer-events-none touch-none"
+			class="absolute top-0 left-0 w-full h-full rounded-xs bg-gray-100/50 dark:bg-gray-700/20 bg-opacity-50 dark:bg-opacity-10 z-50 pointer-events-none touch-none"
 		></div>
 	{/if}
 
@@ -367,8 +374,8 @@
 		buttonClassName="w-full"
 		hide={(folders[folderId]?.childrenIds ?? []).length === 0 &&
 			(folders[folderId].items?.chats ?? []).length === 0}
-		on:change={(e) => {
-			dispatch('open', e.detail);
+		onChange={(state) => {
+			dispatch('open', state);
 		}}
 	>
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -394,6 +401,9 @@
 							id="folder-{folderId}-input"
 							type="text"
 							bind:value={name}
+							on:focus={(e) => {
+								e.target.select();
+							}}
 							on:blur={() => {
 								nameUpdateHandler();
 								edit = false;
@@ -412,7 +422,7 @@
 									edit = false;
 								}
 							}}
-							class="w-full h-full bg-transparent text-gray-500 dark:text-gray-500 outline-none"
+							class="w-full h-full bg-transparent text-gray-500 dark:text-gray-500 outline-hidden"
 						/>
 					{:else}
 						{folders[folderId].name}
@@ -427,7 +437,10 @@
 				>
 					<FolderMenu
 						on:rename={() => {
-							editHandler();
+							// Requires a timeout to prevent the click event from closing the dropdown
+							setTimeout(() => {
+								editHandler();
+							}, 200);
 						}}
 						on:delete={() => {
 							showDeleteConfirm = true;

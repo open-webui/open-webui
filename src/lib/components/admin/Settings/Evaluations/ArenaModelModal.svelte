@@ -10,6 +10,7 @@
 	import PencilSolid from '$lib/components/icons/PencilSolid.svelte';
 	import { toast } from 'svelte-sonner';
 	import AccessControl from '$lib/components/workspace/common/AccessControl.svelte';
+	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
 	export let show = false;
 	export let edit = false;
@@ -44,6 +45,7 @@
 
 	let imageInputElement;
 	let loading = false;
+	let showDeleteConfirmDialog = false;
 
 	const addModelHandler = () => {
 		if (selectedModelId) {
@@ -114,6 +116,14 @@
 		initModel();
 	});
 </script>
+
+<ConfirmDialog
+	bind:show={showDeleteConfirmDialog}
+	on:confirm={() => {
+		dispatch('delete', model);
+		show = false;
+	}}
+/>
 
 <Modal size="sm" bind:show>
 	<div>
@@ -245,7 +255,7 @@
 
 								<div class="flex-1">
 									<input
-										class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-none"
+										class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
 										type="text"
 										bind:value={name}
 										placeholder={$i18n.t('Model Name')}
@@ -260,7 +270,7 @@
 
 								<div class="flex-1">
 									<input
-										class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-none"
+										class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
 										type="text"
 										bind:value={id}
 										placeholder={$i18n.t('Model ID')}
@@ -277,7 +287,7 @@
 
 							<div class="flex-1">
 								<input
-									class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-none"
+									class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
 									type="text"
 									bind:value={description}
 									placeholder={$i18n.t('Enter description')}
@@ -324,7 +334,7 @@
 											<div class=" text-sm flex-1 py-1 rounded-lg">
 												{$models.find((model) => model.id === modelId)?.name}
 											</div>
-											<div class="flex-shrink-0">
+											<div class="shrink-0">
 												<button
 													type="button"
 													on:click={() => {
@@ -350,7 +360,7 @@
 							<select
 								class="w-full py-1 text-sm rounded-lg bg-transparent {selectedModelId
 									? ''
-									: 'text-gray-500'} placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-none"
+									: 'text-gray-500'} placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
 								bind:value={selectedModelId}
 							>
 								<option value="">{$i18n.t('Select a model')}</option>
@@ -378,8 +388,7 @@
 								class="px-3.5 py-1.5 text-sm font-medium dark:bg-black dark:hover:bg-gray-950 dark:text-white bg-white text-black hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
 								type="button"
 								on:click={() => {
-									dispatch('delete', model);
-									show = false;
+									showDeleteConfirmDialog = true;
 								}}
 							>
 								{$i18n.t('Delete')}

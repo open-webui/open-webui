@@ -1,26 +1,35 @@
 import logging
 import os
-import uuid
 from typing import Optional, Union
 
-import asyncio
 import requests
+import hashlib
+from concurrent.futures import ThreadPoolExecutor
+import time
 
 from huggingface_hub import snapshot_download
 from langchain.retrievers import ContextualCompressionRetriever, EnsembleRetriever
 from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document
 
-
 from open_webui.config import VECTOR_DB
-from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
-from open_webui.utils.misc import get_last_user_message
+from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
+
 from open_webui.models.users import UserModel
+from open_webui.models.files import Files
+
+from open_webui.retrieval.vector.main import GetResult
+
 
 from open_webui.env import (
     SRC_LOG_LEVELS,
     OFFLINE_MODE,
     ENABLE_FORWARD_USER_INFO_HEADERS,
+)
+from open_webui.config import (
+    RAG_EMBEDDING_QUERY_PREFIX,
+    RAG_EMBEDDING_CONTENT_PREFIX,
+    RAG_EMBEDDING_PREFIX_FIELD_NAME,
 )
 
 log = logging.getLogger(__name__)
@@ -46,7 +55,7 @@ class VectorSearchRetriever(BaseRetriever):
     ) -> list[Document]:
         result = VECTOR_DB_CLIENT.search(
             collection_name=self.collection_name,
-            vectors=[self.embedding_function(query)],
+            vectors=[self.embedding_function(query, RAG_EMBEDDING_QUERY_PREFIX)],
             limit=self.top_k,
         )
 
@@ -69,6 +78,7 @@ def query_doc(
     collection_name: str, query_embedding: list[float], k: int, user: UserModel = None
 ):
     try:
+        log.debug(f"query_doc:doc {collection_name}")
         result = VECTOR_DB_CLIENT.search(
             collection_name=collection_name,
             vectors=[query_embedding],
@@ -80,24 +90,40 @@ def query_doc(
 
         return result
     except Exception as e:
-        print(e)
+        log.exception(f"Error querying doc {collection_name} with limit {k}: {e}")
+        raise e
+
+
+def get_doc(collection_name: str, user: UserModel = None):
+    try:
+        log.debug(f"get_doc:doc {collection_name}")
+        result = VECTOR_DB_CLIENT.get(collection_name=collection_name)
+
+        if result:
+            log.info(f"query_doc:result {result.ids} {result.metadatas}")
+
+        return result
+    except Exception as e:
+        log.exception(f"Error getting doc {collection_name}: {e}")
         raise e
 
 
 def query_doc_with_hybrid_search(
     collection_name: str,
+    collection_result: GetResult,
     query: str,
     embedding_function,
     k: int,
     reranking_function,
+    k_reranker: int,
     r: float,
+    hybrid_bm25_weight: float,
 ) -> dict:
     try:
-        result = VECTOR_DB_CLIENT.get(collection_name=collection_name)
-
+        log.debug(f"query_doc_with_hybrid_search:doc {collection_name}")
         bm25_retriever = BM25Retriever.from_texts(
-            texts=result.documents[0],
-            metadatas=result.metadatas[0],
+            texts=collection_result.documents[0],
+            metadatas=collection_result.metadatas[0],
         )
         bm25_retriever.k = k
 
@@ -107,12 +133,23 @@ def query_doc_with_hybrid_search(
             top_k=k,
         )
 
-        ensemble_retriever = EnsembleRetriever(
-            retrievers=[bm25_retriever, vector_search_retriever], weights=[0.5, 0.5]
-        )
+        if hybrid_bm25_weight <= 0:
+            ensemble_retriever = EnsembleRetriever(
+                retrievers=[vector_search_retriever], weights=[1.0]
+            )
+        elif hybrid_bm25_weight >= 1:
+            ensemble_retriever = EnsembleRetriever(
+                retrievers=[bm25_retriever], weights=[1.0]
+            )
+        else:
+            ensemble_retriever = EnsembleRetriever(
+                retrievers=[bm25_retriever, vector_search_retriever],
+                weights=[hybrid_bm25_weight, 1.0 - hybrid_bm25_weight],
+            )
+
         compressor = RerankCompressor(
             embedding_function=embedding_function,
-            top_n=k,
+            top_n=k_reranker,
             reranking_function=reranking_function,
             r_score=r,
         )
@@ -122,10 +159,23 @@ def query_doc_with_hybrid_search(
         )
 
         result = compression_retriever.invoke(query)
+
+        distances = [d.metadata.get("score") for d in result]
+        documents = [d.page_content for d in result]
+        metadatas = [d.metadata for d in result]
+
+        # retrieve only min(k, k_reranker) items, sort and cut by distance if k < k_reranker
+        if k < k_reranker:
+            sorted_items = sorted(
+                zip(distances, metadatas, documents), key=lambda x: x[0], reverse=True
+            )
+            sorted_items = sorted_items[:k]
+            distances, documents, metadatas = map(list, zip(*sorted_items))
+
         result = {
-            "distances": [[d.metadata.get("score") for d in result]],
-            "documents": [[d.page_content for d in result]],
-            "metadatas": [[d.metadata for d in result]],
+            "distances": [distances],
+            "documents": [documents],
+            "metadatas": [metadatas],
         }
 
         log.info(
@@ -134,50 +184,86 @@ def query_doc_with_hybrid_search(
         )
         return result
     except Exception as e:
+        log.exception(f"Error querying doc {collection_name} with hybrid search: {e}")
         raise e
 
 
-def merge_and_sort_query_results(
-    query_results: list[dict], k: int, reverse: bool = False
-) -> list[dict]:
+def merge_get_results(get_results: list[dict]) -> dict:
     # Initialize lists to store combined data
-    combined_distances = []
     combined_documents = []
     combined_metadatas = []
+    combined_ids = []
 
-    for data in query_results:
-        combined_distances.extend(data["distances"][0])
+    for data in get_results:
         combined_documents.extend(data["documents"][0])
         combined_metadatas.extend(data["metadatas"][0])
-
-    # Create a list of tuples (distance, document, metadata)
-    combined = list(zip(combined_distances, combined_documents, combined_metadatas))
-
-    # Sort the list based on distances
-    combined.sort(key=lambda x: x[0], reverse=reverse)
-
-    # We don't have anything :-(
-    if not combined:
-        sorted_distances = []
-        sorted_documents = []
-        sorted_metadatas = []
-    else:
-        # Unzip the sorted list
-        sorted_distances, sorted_documents, sorted_metadatas = zip(*combined)
-
-        # Slicing the lists to include only k elements
-        sorted_distances = list(sorted_distances)[:k]
-        sorted_documents = list(sorted_documents)[:k]
-        sorted_metadatas = list(sorted_metadatas)[:k]
+        combined_ids.extend(data["ids"][0])
 
     # Create the output dictionary
     result = {
-        "distances": [sorted_distances],
-        "documents": [sorted_documents],
-        "metadatas": [sorted_metadatas],
+        "documents": [combined_documents],
+        "metadatas": [combined_metadatas],
+        "ids": [combined_ids],
     }
 
     return result
+
+
+def merge_and_sort_query_results(query_results: list[dict], k: int) -> dict:
+    # Initialize lists to store combined data
+    combined = dict()  # To store documents with unique document hashes
+
+    for data in query_results:
+        distances = data["distances"][0]
+        documents = data["documents"][0]
+        metadatas = data["metadatas"][0]
+
+        for distance, document, metadata in zip(distances, documents, metadatas):
+            if isinstance(document, str):
+                doc_hash = hashlib.sha256(
+                    document.encode()
+                ).hexdigest()  # Compute a hash for uniqueness
+
+                if doc_hash not in combined.keys():
+                    combined[doc_hash] = (distance, document, metadata)
+                    continue  # if doc is new, no further comparison is needed
+
+                # if doc is alredy in, but new distance is better, update
+                if distance > combined[doc_hash][0]:
+                    combined[doc_hash] = (distance, document, metadata)
+
+    combined = list(combined.values())
+    # Sort the list based on distances
+    combined.sort(key=lambda x: x[0], reverse=True)
+
+    # Slice to keep only the top k elements
+    sorted_distances, sorted_documents, sorted_metadatas = (
+        zip(*combined[:k]) if combined else ([], [], [])
+    )
+
+    # Create and return the output dictionary
+    return {
+        "distances": [list(sorted_distances)],
+        "documents": [list(sorted_documents)],
+        "metadatas": [list(sorted_metadatas)],
+    }
+
+
+def get_all_items_from_collections(collection_names: list[str]) -> dict:
+    results = []
+
+    for collection_name in collection_names:
+        if collection_name:
+            try:
+                result = get_doc(collection_name=collection_name)
+                if result is not None:
+                    results.append(result.model_dump())
+            except Exception as e:
+                log.exception(f"Error when querying the collection: {e}")
+        else:
+            pass
+
+    return merge_get_results(results)
 
 
 def query_collection(
@@ -187,29 +273,49 @@ def query_collection(
     k: int,
 ) -> dict:
     results = []
-    for query in queries:
-        query_embedding = embedding_function(query)
-        for collection_name in collection_names:
-            if collection_name:
-                try:
-                    result = query_doc(
-                        collection_name=collection_name,
-                        k=k,
-                        query_embedding=query_embedding,
-                    )
-                    if result is not None:
-                        results.append(result.model_dump())
-                except Exception as e:
-                    log.exception(f"Error when querying the collection: {e}")
-            else:
-                pass
+    error = False
 
-    if VECTOR_DB == "chroma":
-        # Chroma uses unconventional cosine similarity, so we don't need to reverse the results
-        # https://docs.trychroma.com/docs/collections/configure#configuring-chroma-collections
-        return merge_and_sort_query_results(results, k=k, reverse=False)
-    else:
-        return merge_and_sort_query_results(results, k=k, reverse=True)
+    def process_query_collection(collection_name, query_embedding):
+        try:
+            if collection_name:
+                result = query_doc(
+                    collection_name=collection_name,
+                    k=k,
+                    query_embedding=query_embedding,
+                )
+                if result is not None:
+                    return result.model_dump(), None
+            return None, None
+        except Exception as e:
+            log.exception(f"Error when querying the collection: {e}")
+            return None, e
+
+    # Generate all query embeddings (in one call)
+    query_embeddings = embedding_function(queries, prefix=RAG_EMBEDDING_QUERY_PREFIX)
+    log.debug(
+        f"query_collection: processing {len(queries)} queries across {len(collection_names)} collections"
+    )
+
+    with ThreadPoolExecutor() as executor:
+        future_results = []
+        for query_embedding in query_embeddings:
+            for collection_name in collection_names:
+                result = executor.submit(
+                    process_query_collection, collection_name, query_embedding
+                )
+                future_results.append(result)
+        task_results = [future.result() for future in future_results]
+
+    for result, err in task_results:
+        if err is not None:
+            error = True
+        elif result is not None:
+            results.append(result)
+
+    if error and not results:
+        log.warning("All collection queries failed. No results returned.")
+
+    return merge_and_sort_query_results(results, k=k)
 
 
 def query_collection_with_hybrid_search(
@@ -218,39 +324,74 @@ def query_collection_with_hybrid_search(
     embedding_function,
     k: int,
     reranking_function,
+    k_reranker: int,
     r: float,
+    hybrid_bm25_weight: float,
 ) -> dict:
     results = []
     error = False
+    # Fetch collection data once per collection sequentially
+    # Avoid fetching the same data multiple times later
+    collection_results = {}
     for collection_name in collection_names:
         try:
-            for query in queries:
-                result = query_doc_with_hybrid_search(
-                    collection_name=collection_name,
-                    query=query,
-                    embedding_function=embedding_function,
-                    k=k,
-                    reranking_function=reranking_function,
-                    r=r,
-                )
-                results.append(result)
-        except Exception as e:
-            log.exception(
-                "Error when querying the collection with " f"hybrid_search: {e}"
+            log.debug(
+                f"query_collection_with_hybrid_search:VECTOR_DB_CLIENT.get:collection {collection_name}"
             )
-            error = True
+            collection_results[collection_name] = VECTOR_DB_CLIENT.get(
+                collection_name=collection_name
+            )
+        except Exception as e:
+            log.exception(f"Failed to fetch collection {collection_name}: {e}")
+            collection_results[collection_name] = None
 
-    if error:
+    log.info(
+        f"Starting hybrid search for {len(queries)} queries in {len(collection_names)} collections..."
+    )
+
+    def process_query(collection_name, query):
+        try:
+            result = query_doc_with_hybrid_search(
+                collection_name=collection_name,
+                collection_result=collection_results[collection_name],
+                query=query,
+                embedding_function=embedding_function,
+                k=k,
+                reranking_function=reranking_function,
+                k_reranker=k_reranker,
+                r=r,
+                hybrid_bm25_weight=hybrid_bm25_weight,
+            )
+            return result, None
+        except Exception as e:
+            log.exception(f"Error when querying the collection with hybrid_search: {e}")
+            return None, e
+
+    # Prepare tasks for all collections and queries
+    # Avoid running any tasks for collections that failed to fetch data (have assigned None)
+    tasks = [
+        (cn, q)
+        for cn in collection_names
+        if collection_results[cn] is not None
+        for q in queries
+    ]
+
+    with ThreadPoolExecutor() as executor:
+        future_results = [executor.submit(process_query, cn, q) for cn, q in tasks]
+        task_results = [future.result() for future in future_results]
+
+    for result, err in task_results:
+        if err is not None:
+            error = True
+        elif result is not None:
+            results.append(result)
+
+    if error and not results:
         raise Exception(
-            "Hybrid search failed for all collections. Using Non hybrid search as fallback."
+            "Hybrid search failed for all collections. Using Non-hybrid search as fallback."
         )
 
-    if VECTOR_DB == "chroma":
-        # Chroma uses unconventional cosine similarity, so we don't need to reverse the results
-        # https://docs.trychroma.com/docs/collections/configure#configuring-chroma-collections
-        return merge_and_sort_query_results(results, k=k, reverse=False)
-    else:
-        return merge_and_sort_query_results(results, k=k, reverse=True)
+    return merge_and_sort_query_results(results, k=k)
 
 
 def get_embedding_function(
@@ -260,58 +401,132 @@ def get_embedding_function(
     url,
     key,
     embedding_batch_size,
+    azure_api_version=None,
 ):
     if embedding_engine == "":
-        return lambda query, user=None: embedding_function.encode(query).tolist()
-    elif embedding_engine in ["ollama", "openai"]:
-        func = lambda query, user=None: generate_embeddings(
+        return lambda query, prefix=None, user=None: embedding_function.encode(
+            query, **({"prompt": prefix} if prefix else {})
+        ).tolist()
+    elif embedding_engine in ["ollama", "openai", "azure_openai"]:
+        func = lambda query, prefix=None, user=None: generate_embeddings(
             engine=embedding_engine,
             model=embedding_model,
             text=query,
+            prefix=prefix,
             url=url,
             key=key,
             user=user,
+            azure_api_version=azure_api_version,
         )
 
-        def generate_multiple(query, user, func):
+        def generate_multiple(query, prefix, user, func):
             if isinstance(query, list):
                 embeddings = []
                 for i in range(0, len(query), embedding_batch_size):
                     embeddings.extend(
-                        func(query[i : i + embedding_batch_size], user=user)
+                        func(
+                            query[i : i + embedding_batch_size],
+                            prefix=prefix,
+                            user=user,
+                        )
                     )
                 return embeddings
             else:
-                return func(query, user)
+                return func(query, prefix, user)
 
-        return lambda query, user=None: generate_multiple(query, user, func)
+        return lambda query, prefix=None, user=None: generate_multiple(
+            query, prefix, user, func
+        )
     else:
         raise ValueError(f"Unknown embedding engine: {embedding_engine}")
 
 
 def get_sources_from_files(
+    request,
     files,
     queries,
     embedding_function,
     k,
     reranking_function,
+    k_reranker,
     r,
+    hybrid_bm25_weight,
     hybrid_search,
+    full_context=False,
 ):
-    log.debug(f"files: {files} {queries} {embedding_function} {reranking_function}")
+    log.debug(
+        f"files: {files} {queries} {embedding_function} {reranking_function} {full_context}"
+    )
 
     extracted_collections = []
     relevant_contexts = []
 
     for file in files:
-        if file.get("context") == "full":
+
+        context = None
+        if file.get("docs"):
+            # BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
+            context = {
+                "documents": [[doc.get("content") for doc in file.get("docs")]],
+                "metadatas": [[doc.get("metadata") for doc in file.get("docs")]],
+            }
+        elif file.get("context") == "full":
+            # Manual Full Mode Toggle
             context = {
                 "documents": [[file.get("file").get("data", {}).get("content")]],
                 "metadatas": [[{"file_id": file.get("id"), "name": file.get("name")}]],
             }
-        else:
-            context = None
+        elif (
+            file.get("type") != "web_search"
+            and request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL
+        ):
+            # BYPASS_EMBEDDING_AND_RETRIEVAL
+            if file.get("type") == "collection":
+                file_ids = file.get("data", {}).get("file_ids", [])
 
+                documents = []
+                metadatas = []
+                for file_id in file_ids:
+                    file_object = Files.get_file_by_id(file_id)
+
+                    if file_object:
+                        documents.append(file_object.data.get("content", ""))
+                        metadatas.append(
+                            {
+                                "file_id": file_id,
+                                "name": file_object.filename,
+                                "source": file_object.filename,
+                            }
+                        )
+
+                context = {
+                    "documents": [documents],
+                    "metadatas": [metadatas],
+                }
+
+            elif file.get("id"):
+                file_object = Files.get_file_by_id(file.get("id"))
+                if file_object:
+                    context = {
+                        "documents": [[file_object.data.get("content", "")]],
+                        "metadatas": [
+                            [
+                                {
+                                    "file_id": file.get("id"),
+                                    "name": file_object.filename,
+                                    "source": file_object.filename,
+                                }
+                            ]
+                        ],
+                    }
+            elif file.get("file").get("data"):
+                context = {
+                    "documents": [[file.get("file").get("data", {}).get("content")]],
+                    "metadatas": [
+                        [file.get("file").get("data", {}).get("metadata", {})]
+                    ],
+                }
+        else:
             collection_names = []
             if file.get("type") == "collection":
                 if file.get("legacy"):
@@ -331,42 +546,52 @@ def get_sources_from_files(
                 log.debug(f"skipping {file} as it has already been extracted")
                 continue
 
-            try:
-                context = None
-                if file.get("type") == "text":
-                    context = file["content"]
-                else:
-                    if hybrid_search:
-                        try:
-                            context = query_collection_with_hybrid_search(
+            if full_context:
+                try:
+                    context = get_all_items_from_collections(collection_names)
+                except Exception as e:
+                    log.exception(e)
+
+            else:
+                try:
+                    context = None
+                    if file.get("type") == "text":
+                        context = file["content"]
+                    else:
+                        if hybrid_search:
+                            try:
+                                context = query_collection_with_hybrid_search(
+                                    collection_names=collection_names,
+                                    queries=queries,
+                                    embedding_function=embedding_function,
+                                    k=k,
+                                    reranking_function=reranking_function,
+                                    k_reranker=k_reranker,
+                                    r=r,
+                                    hybrid_bm25_weight=hybrid_bm25_weight,
+                                )
+                            except Exception as e:
+                                log.debug(
+                                    "Error when using hybrid search, using"
+                                    " non hybrid search as fallback."
+                                )
+
+                        if (not hybrid_search) or (context is None):
+                            context = query_collection(
                                 collection_names=collection_names,
                                 queries=queries,
                                 embedding_function=embedding_function,
                                 k=k,
-                                reranking_function=reranking_function,
-                                r=r,
                             )
-                        except Exception as e:
-                            log.debug(
-                                "Error when using hybrid search, using"
-                                " non hybrid search as fallback."
-                            )
-
-                    if (not hybrid_search) or (context is None):
-                        context = query_collection(
-                            collection_names=collection_names,
-                            queries=queries,
-                            embedding_function=embedding_function,
-                            k=k,
-                        )
-            except Exception as e:
-                log.exception(e)
+                except Exception as e:
+                    log.exception(e)
 
             extracted_collections.extend(collection_names)
 
         if context:
             if "data" in file:
                 del file["data"]
+
             relevant_contexts.append({**context, "file": file})
 
     sources = []
@@ -435,9 +660,17 @@ def generate_openai_batch_embeddings(
     texts: list[str],
     url: str = "https://api.openai.com/v1",
     key: str = "",
+    prefix: str = None,
     user: UserModel = None,
 ) -> Optional[list[list[float]]]:
     try:
+        log.debug(
+            f"generate_openai_batch_embeddings:model {model} batch size: {len(texts)}"
+        )
+        json_data = {"input": texts, "model": model}
+        if isinstance(RAG_EMBEDDING_PREFIX_FIELD_NAME, str) and isinstance(prefix, str):
+            json_data[RAG_EMBEDDING_PREFIX_FIELD_NAME] = prefix
+
         r = requests.post(
             f"{url}/embeddings",
             headers={
@@ -454,7 +687,7 @@ def generate_openai_batch_embeddings(
                     else {}
                 ),
             },
-            json={"input": texts, "model": model},
+            json=json_data,
         )
         r.raise_for_status()
         data = r.json()
@@ -463,14 +696,80 @@ def generate_openai_batch_embeddings(
         else:
             raise "Something went wrong :/"
     except Exception as e:
-        print(e)
+        log.exception(f"Error generating openai batch embeddings: {e}")
+        return None
+
+
+def generate_azure_openai_batch_embeddings(
+    model: str,
+    texts: list[str],
+    url: str,
+    key: str = "",
+    version: str = "",
+    prefix: str = None,
+    user: UserModel = None,
+) -> Optional[list[list[float]]]:
+    try:
+        log.debug(
+            f"generate_azure_openai_batch_embeddings:deployment {model} batch size: {len(texts)}"
+        )
+        json_data = {"input": texts}
+        if isinstance(RAG_EMBEDDING_PREFIX_FIELD_NAME, str) and isinstance(prefix, str):
+            json_data[RAG_EMBEDDING_PREFIX_FIELD_NAME] = prefix
+
+        url = f"{url}/openai/deployments/{model}/embeddings?api-version={version}"
+
+        for _ in range(5):
+            r = requests.post(
+                url,
+                headers={
+                    "Content-Type": "application/json",
+                    "api-key": key,
+                    **(
+                        {
+                            "X-OpenWebUI-User-Name": user.name,
+                            "X-OpenWebUI-User-Id": user.id,
+                            "X-OpenWebUI-User-Email": user.email,
+                            "X-OpenWebUI-User-Role": user.role,
+                        }
+                        if ENABLE_FORWARD_USER_INFO_HEADERS and user
+                        else {}
+                    ),
+                },
+                json=json_data,
+            )
+            if r.status_code == 429:
+                retry = float(r.headers.get("Retry-After", "1"))
+                time.sleep(retry)
+                continue
+            r.raise_for_status()
+            data = r.json()
+            if "data" in data:
+                return [elem["embedding"] for elem in data["data"]]
+            else:
+                raise Exception("Something went wrong :/")
+        return None
+    except Exception as e:
+        log.exception(f"Error generating azure openai batch embeddings: {e}")
         return None
 
 
 def generate_ollama_batch_embeddings(
-    model: str, texts: list[str], url: str, key: str = "", user: UserModel = None
+    model: str,
+    texts: list[str],
+    url: str,
+    key: str = "",
+    prefix: str = None,
+    user: UserModel = None,
 ) -> Optional[list[list[float]]]:
     try:
+        log.debug(
+            f"generate_ollama_batch_embeddings:model {model} batch size: {len(texts)}"
+        )
+        json_data = {"input": texts, "model": model}
+        if isinstance(RAG_EMBEDDING_PREFIX_FIELD_NAME, str) and isinstance(prefix, str):
+            json_data[RAG_EMBEDDING_PREFIX_FIELD_NAME] = prefix
+
         r = requests.post(
             f"{url}/api/embed",
             headers={
@@ -487,7 +786,7 @@ def generate_ollama_batch_embeddings(
                     else {}
                 ),
             },
-            json={"input": texts, "model": model},
+            json=json_data,
         )
         r.raise_for_status()
         data = r.json()
@@ -497,37 +796,55 @@ def generate_ollama_batch_embeddings(
         else:
             raise "Something went wrong :/"
     except Exception as e:
-        print(e)
+        log.exception(f"Error generating ollama batch embeddings: {e}")
         return None
 
 
-def generate_embeddings(engine: str, model: str, text: Union[str, list[str]], **kwargs):
+def generate_embeddings(
+    engine: str,
+    model: str,
+    text: Union[str, list[str]],
+    prefix: Union[str, None] = None,
+    **kwargs,
+):
     url = kwargs.get("url", "")
     key = kwargs.get("key", "")
     user = kwargs.get("user")
 
-    if engine == "ollama":
+    if prefix is not None and RAG_EMBEDDING_PREFIX_FIELD_NAME is None:
         if isinstance(text, list):
-            embeddings = generate_ollama_batch_embeddings(
-                **{"model": model, "texts": text, "url": url, "key": key, "user": user}
-            )
+            text = [f"{prefix}{text_element}" for text_element in text]
         else:
-            embeddings = generate_ollama_batch_embeddings(
-                **{
-                    "model": model,
-                    "texts": [text],
-                    "url": url,
-                    "key": key,
-                    "user": user,
-                }
-            )
+            text = f"{prefix}{text}"
+
+    if engine == "ollama":
+        embeddings = generate_ollama_batch_embeddings(
+            **{
+                "model": model,
+                "texts": text if isinstance(text, list) else [text],
+                "url": url,
+                "key": key,
+                "prefix": prefix,
+                "user": user,
+            }
+        )
         return embeddings[0] if isinstance(text, str) else embeddings
     elif engine == "openai":
-        if isinstance(text, list):
-            embeddings = generate_openai_batch_embeddings(model, text, url, key, user)
-        else:
-            embeddings = generate_openai_batch_embeddings(model, [text], url, key, user)
-
+        embeddings = generate_openai_batch_embeddings(
+            model, text if isinstance(text, list) else [text], url, key, prefix, user
+        )
+        return embeddings[0] if isinstance(text, str) else embeddings
+    elif engine == "azure_openai":
+        azure_api_version = kwargs.get("azure_api_version", "")
+        embeddings = generate_azure_openai_batch_embeddings(
+            model,
+            text if isinstance(text, list) else [text],
+            url,
+            key,
+            azure_api_version,
+            prefix,
+            user,
+        )
         return embeddings[0] if isinstance(text, str) else embeddings
 
 
@@ -563,13 +880,15 @@ class RerankCompressor(BaseDocumentCompressor):
         else:
             from sentence_transformers import util
 
-            query_embedding = self.embedding_function(query)
+            query_embedding = self.embedding_function(query, RAG_EMBEDDING_QUERY_PREFIX)
             document_embedding = self.embedding_function(
-                [doc.page_content for doc in documents]
+                [doc.page_content for doc in documents], RAG_EMBEDDING_CONTENT_PREFIX
             )
             scores = util.cos_sim(query_embedding, document_embedding)[0]
 
-        docs_with_scores = list(zip(documents, scores.tolist()))
+        docs_with_scores = list(
+            zip(documents, scores.tolist() if not isinstance(scores, list) else scores)
+        )
         if self.r_score:
             docs_with_scores = [
                 (d, s) for d, s in docs_with_scores if s >= self.r_score

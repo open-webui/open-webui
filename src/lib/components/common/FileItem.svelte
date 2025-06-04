@@ -28,6 +28,14 @@
 	import { deleteFileById } from '$lib/apis/files';
 
 	let showModal = false;
+
+	const decodeString = (str: string) => {
+		try {
+			return decodeURIComponent(str);
+		} catch (e) {
+			return str;
+		}
+	};
 </script>
 
 {#if item}
@@ -82,7 +90,7 @@
 	{#if !small}
 		<div class="flex flex-col justify-center -space-y-0.5 px-2.5 w-full">
 			<div class=" dark:text-gray-100 text-sm font-medium line-clamp-1 mb-1">
-				{name}
+				{decodeString(name)}
 			</div>
 
 			<div class=" flex justify-between text-gray-500 text-xs line-clamp-1">
@@ -101,7 +109,7 @@
 			</div>
 		</div>
 	{:else}
-		<Tooltip content={name} className="flex flex-col w-full" placement="top-start">
+		<Tooltip content={decodeString(name)} className="flex flex-col w-full" placement="top-start">
 			<div class="flex flex-col justify-center -space-y-0.5 px-2.5 w-full">
 				<div class=" dark:text-gray-100 text-sm flex justify-between items-center">
 					{#if loading}
@@ -109,7 +117,7 @@
 							<Spinner className="size-4" />
 						</div>
 					{/if}
-					<div class="font-medium line-clamp-1 flex-1">{name}</div>
+					<div class="font-medium line-clamp-1 flex-1">{decodeString(name)}</div>
 					<div class="text-gray-500 text-xs capitalize shrink-0">{formatFileSize(size)}</div>
 				</div>
 			</div>
@@ -119,7 +127,7 @@
 	{#if dismissible}
 		<div class=" absolute -top-1 -right-1">
 			<button
-				class=" bg-white text-black border border-white rounded-full group-hover:visible invisible transition"
+				class=" bg-white text-black border border-gray-50 rounded-full group-hover:visible invisible transition"
 				type="button"
 				on:click|stopPropagation={() => {
 					dispatch('dismiss');

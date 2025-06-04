@@ -99,7 +99,7 @@
 				{/if}
 				{#if codeExecution?.result?.files && codeExecution?.result?.files.length > 0}
 					<div class="flex flex-col w-full">
-						<hr class=" dark:border-gray-850 my-2" />
+						<hr class="border-gray-100 dark:border-gray-850 my-2" />
 						<div class=" text-sm font-medium dark:text-gray-300">
 							{$i18n.t('Files')}
 						</div>

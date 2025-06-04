@@ -1,4 +1,5 @@
 from typing import Optional, List, Dict, Any
+import logging
 from sqlalchemy import (
     cast,
     column,
@@ -21,11 +22,21 @@ from pgvector.sqlalchemy import Vector
 from sqlalchemy.ext.mutable import MutableDict
 from sqlalchemy.exc import NoSuchTableError
 
-from open_webui.retrieval.vector.main import VectorItem, SearchResult, GetResult
+from open_webui.retrieval.vector.main import (
+    VectorDBBase,
+    VectorItem,
+    SearchResult,
+    GetResult,
+)
 from open_webui.config import PGVECTOR_DB_URL, PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH
+
+from open_webui.env import SRC_LOG_LEVELS
 
 VECTOR_LENGTH = PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH
 Base = declarative_base()
+
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
 class DocumentChunk(Base):
@@ -38,7 +49,7 @@ class DocumentChunk(Base):
     vmetadata = Column(MutableDict.as_mutable(JSONB), nullable=True)
 
 
-class PgvectorClient:
+class PgvectorClient(VectorDBBase):
     def __init__(self) -> None:
 
         # if no pgvector uri, use the existing database connection
@@ -82,10 +93,10 @@ class PgvectorClient:
                 )
             )
             self.session.commit()
-            print("Initialization complete.")
+            log.info("Initialization complete.")
         except Exception as e:
             self.session.rollback()
-            print(f"Error during initialization: {e}")
+            log.exception(f"Error during initialization: {e}")
             raise
 
     def check_vector_length(self) -> None:
@@ -130,9 +141,8 @@ class PgvectorClient:
             # Pad the vector with zeros
             vector += [0.0] * (VECTOR_LENGTH - current_length)
         elif current_length > VECTOR_LENGTH:
-            raise Exception(
-                f"Vector length {current_length} not supported. Max length must be <= {VECTOR_LENGTH}"
-            )
+            # Truncate the vector to VECTOR_LENGTH
+            vector = vector[:VECTOR_LENGTH]
         return vector
 
     def insert(self, collection_name: str, items: List[VectorItem]) -> None:
@@ -150,12 +160,12 @@ class PgvectorClient:
                 new_items.append(new_chunk)
             self.session.bulk_save_objects(new_items)
             self.session.commit()
-            print(
+            log.info(
                 f"Inserted {len(new_items)} items into collection '{collection_name}'."
             )
         except Exception as e:
             self.session.rollback()
-            print(f"Error during insert: {e}")
+            log.exception(f"Error during insert: {e}")
             raise
 
     def upsert(self, collection_name: str, items: List[VectorItem]) -> None:
@@ -184,10 +194,12 @@ class PgvectorClient:
                     )
                     self.session.add(new_chunk)
             self.session.commit()
-            print(f"Upserted {len(items)} items into collection '{collection_name}'.")
+            log.info(
+                f"Upserted {len(items)} items into collection '{collection_name}'."
+            )
         except Exception as e:
             self.session.rollback()
-            print(f"Error during upsert: {e}")
+            log.exception(f"Error during upsert: {e}")
             raise
 
     def search(
@@ -270,7 +282,9 @@ class PgvectorClient:
             for row in results:
                 qid = int(row.qid)
                 ids[qid].append(row.id)
-                distances[qid].append(row.distance)
+                # normalize and re-orders pgvec distance from [2, 0] to [0, 1] score range
+                # https://github.com/pgvector/pgvector?tab=readme-ov-file#querying
+                distances[qid].append((2.0 - row.distance) / 2.0)
                 documents[qid].append(row.text)
                 metadatas[qid].append(row.vmetadata)
 
@@ -278,7 +292,7 @@ class PgvectorClient:
                 ids=ids, distances=distances, documents=documents, metadatas=metadatas
             )
         except Exception as e:
-            print(f"Error during search: {e}")
+            log.exception(f"Error during search: {e}")
             return None
 
     def query(
@@ -310,7 +324,7 @@ class PgvectorClient:
                 metadatas=metadatas,
             )
         except Exception as e:
-            print(f"Error during query: {e}")
+            log.exception(f"Error during query: {e}")
             return None
 
     def get(
@@ -334,7 +348,7 @@ class PgvectorClient:
 
             return GetResult(ids=ids, documents=documents, metadatas=metadatas)
         except Exception as e:
-            print(f"Error during get: {e}")
+            log.exception(f"Error during get: {e}")
             return None
 
     def delete(
@@ -356,22 +370,22 @@ class PgvectorClient:
                     )
             deleted = query.delete(synchronize_session=False)
             self.session.commit()
-            print(f"Deleted {deleted} items from collection '{collection_name}'.")
+            log.info(f"Deleted {deleted} items from collection '{collection_name}'.")
         except Exception as e:
             self.session.rollback()
-            print(f"Error during delete: {e}")
+            log.exception(f"Error during delete: {e}")
             raise
 
     def reset(self) -> None:
         try:
             deleted = self.session.query(DocumentChunk).delete()
             self.session.commit()
-            print(
+            log.info(
                 f"Reset complete. Deleted {deleted} items from 'document_chunk' table."
             )
         except Exception as e:
             self.session.rollback()
-            print(f"Error during reset: {e}")
+            log.exception(f"Error during reset: {e}")
             raise
 
     def close(self) -> None:
@@ -387,9 +401,9 @@ class PgvectorClient:
             )
             return exists
         except Exception as e:
-            print(f"Error checking collection existence: {e}")
+            log.exception(f"Error checking collection existence: {e}")
             return False
 
     def delete_collection(self, collection_name: str) -> None:
         self.delete(collection_name)
-        print(f"Collection '{collection_name}' deleted.")
+        log.info(f"Collection '{collection_name}' deleted.")

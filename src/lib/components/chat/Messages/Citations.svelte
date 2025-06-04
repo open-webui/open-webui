@@ -7,6 +7,7 @@
 
 	const i18n = getContext('i18n');
 
+	export let id = '';
 	export let sources = [];
 
 	let citations = [];
@@ -42,6 +43,7 @@
 	}
 
 	$: {
+		console.log('sources', sources);
 		citations = sources.reduce((acc, source) => {
 			if (Object.keys(source).length === 0) {
 				return acc;
@@ -52,7 +54,7 @@
 				const distance = source.distances?.[index];
 
 				// Within the same citation there could be multiple documents
-				const id = metadata?.source ?? 'N/A';
+				const id = metadata?.source ?? source?.source?.id ?? 'N/A';
 				let _source = source?.source;
 
 				if (metadata?.name) {
@@ -81,10 +83,19 @@
 			});
 			return acc;
 		}, []);
+		console.log('citations', citations);
 
 		showRelevance = calculateShowRelevance(citations);
 		showPercentage = shouldShowPercentage(citations);
 	}
+
+	const decodeString = (str: string) => {
+		try {
+			return decodeURIComponent(str);
+		} catch (e) {
+			return str;
+		}
+	};
 </script>
 
 <CitationsModal
@@ -100,8 +111,8 @@
 			<div class="flex text-xs font-medium flex-wrap">
 				{#each citations as citation, idx}
 					<button
-						id={`source-${idx}`}
-						class="no-toggle outline-none flex dark:text-gray-300 p-1 bg-white dark:bg-gray-900 rounded-xl max-w-96"
+						id={`source-${id}-${idx + 1}`}
+						class="no-toggle outline-hidden flex dark:text-gray-300 p-1 bg-white dark:bg-gray-900 rounded-xl max-w-96"
 						on:click={() => {
 							showCitationModal = true;
 							selectedCitation = citation;
@@ -115,14 +126,14 @@
 						<div
 							class="flex-1 mx-1 truncate text-black/60 hover:text-black dark:text-white/60 dark:hover:text-white transition"
 						>
-							{citation.source.name}
+							{decodeString(citation.source.name)}
 						</div>
 					</button>
 				{/each}
 			</div>
 		{:else}
 			<Collapsible
-				id="collapsible-sources"
+				id={`collapsible-${id}`}
 				bind:open={isCollapsibleOpen}
 				className="w-full max-w-full "
 				buttonClassName="w-fit max-w-full"
@@ -133,14 +144,14 @@
 					<div
 						class="flex-1 flex items-center gap-1 overflow-auto scrollbar-none w-full max-w-full"
 					>
-						<span class="whitespace-nowrap hidden sm:inline flex-shrink-0"
+						<span class="whitespace-nowrap hidden sm:inline shrink-0"
 							>{$i18n.t('References from')}</span
 						>
 						<div class="flex items-center overflow-auto scrollbar-none w-full max-w-full flex-1">
 							<div class="flex text-xs font-medium items-center">
 								{#each citations.slice(0, 2) as citation, idx}
 									<button
-										class="no-toggle outline-none flex dark:text-gray-300 p-1 bg-gray-50 hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 transition rounded-xl max-w-96"
+										class="no-toggle outline-hidden flex dark:text-gray-300 p-1 bg-gray-50 hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 transition rounded-xl max-w-96"
 										on:click={() => {
 											showCitationModal = true;
 											selectedCitation = citation;
@@ -155,19 +166,19 @@
 											</div>
 										{/if}
 										<div class="flex-1 mx-1 truncate">
-											{citation.source.name}
+											{decodeString(citation.source.name)}
 										</div>
 									</button>
 								{/each}
 							</div>
 						</div>
-						<div class="flex items-center gap-1 whitespace-nowrap flex-shrink-0">
+						<div class="flex items-center gap-1 whitespace-nowrap shrink-0">
 							<span class="hidden sm:inline">{$i18n.t('and')}</span>
 							{citations.length - 2}
 							<span>{$i18n.t('more')}</span>
 						</div>
 					</div>
-					<div class="flex-shrink-0">
+					<div class="shrink-0">
 						{#if isCollapsibleOpen}
 							<ChevronUp strokeWidth="3.5" className="size-3.5" />
 						{:else}
@@ -179,8 +190,8 @@
 					<div class="flex text-xs font-medium flex-wrap">
 						{#each citations as citation, idx}
 							<button
-								id={`source-${idx}`}
-								class="no-toggle outline-none flex dark:text-gray-300 p-1 bg-gray-50 hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 transition rounded-xl max-w-96"
+								id={`source-${id}-${idx + 1}`}
+								class="no-toggle outline-hidden flex dark:text-gray-300 p-1 bg-gray-50 hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 transition rounded-xl max-w-96"
 								on:click={() => {
 									showCitationModal = true;
 									selectedCitation = citation;
@@ -192,7 +203,7 @@
 									</div>
 								{/if}
 								<div class="flex-1 mx-1 truncate">
-									{citation.source.name}
+									{decodeString(citation.source.name)}
 								</div>
 							</button>
 						{/each}

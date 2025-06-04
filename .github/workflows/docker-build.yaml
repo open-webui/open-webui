@@ -14,7 +14,7 @@ env:
 
 jobs:
   build-main-image:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.platform == 'linux/arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     permissions:
       contents: read
       packages: write
@@ -111,7 +111,7 @@ jobs:
           retention-days: 1
 
   build-cuda-image:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.platform == 'linux/arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     permissions:
       contents: read
       packages: write
@@ -211,7 +211,7 @@ jobs:
           retention-days: 1
 
   build-ollama-image:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.platform == 'linux/arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     permissions:
       contents: read
       packages: write

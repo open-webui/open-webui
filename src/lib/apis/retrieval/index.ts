@@ -15,7 +15,7 @@ export const getRAGConfig = async (token: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -32,9 +32,15 @@ type ChunkConfigForm = {
 	chunk_overlap: number;
 };
 
+type DocumentIntelligenceConfigForm = {
+	key: string;
+	endpoint: string;
+};
+
 type ContentExtractConfigForm = {
 	engine: string;
 	tika_server_url: string | null;
+	document_intelligence_config: DocumentIntelligenceConfigForm | null;
 };
 
 type YoutubeConfigForm = {
@@ -44,8 +50,9 @@ type YoutubeConfigForm = {
 };
 
 type RAGConfigForm = {
-	pdf_extract_images?: boolean;
-	enable_google_drive_integration?: boolean;
+	PDF_EXTRACT_IMAGES?: boolean;
+	ENABLE_GOOGLE_DRIVE_INTEGRATION?: boolean;
+	ENABLE_ONEDRIVE_INTEGRATION?: boolean;
 	chunk?: ChunkConfigForm;
 	content_extraction?: ContentExtractConfigForm;
 	web_loader_ssl_verification?: boolean;
@@ -70,7 +77,7 @@ export const updateRAGConfig = async (token: string, payload: RAGConfigForm) => 
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -80,33 +87,6 @@ export const updateRAGConfig = async (token: string, payload: RAGConfigForm) => 
 	}
 
 	return res;
-};
-
-export const getRAGTemplate = async (token: string) => {
-	let error = null;
-
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/template`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res?.template ?? '';
 };
 
 export const getQuerySettings = async (token: string) => {
@@ -124,7 +104,7 @@ export const getQuerySettings = async (token: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -160,7 +140,7 @@ export const updateQuerySettings = async (token: string, settings: QuerySettings
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -187,7 +167,7 @@ export const getEmbeddingConfig = async (token: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -204,8 +184,15 @@ type OpenAIConfigForm = {
 	url: string;
 };
 
+type AzureOpenAIConfigForm = {
+	key: string;
+	url: string;
+	version: string;
+};
+
 type EmbeddingModelUpdateForm = {
 	openai_config?: OpenAIConfigForm;
+	azure_openai_config?: AzureOpenAIConfigForm;
 	embedding_engine: string;
 	embedding_model: string;
 	embedding_batch_size?: number;
@@ -229,7 +216,7 @@ export const updateEmbeddingConfig = async (token: string, payload: EmbeddingMod
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -256,7 +243,7 @@ export const getRerankingConfig = async (token: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -290,7 +277,7 @@ export const updateRerankingConfig = async (token: string, payload: RerankingMod
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -333,7 +320,7 @@ export const processFile = async (
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -364,7 +351,7 @@ export const processYoutubeVideo = async (token: string, url: string) => {
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -396,7 +383,7 @@ export const processWeb = async (token: string, collection_name: string, url: st
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -430,7 +417,7 @@ export const processWebSearch = async (
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});

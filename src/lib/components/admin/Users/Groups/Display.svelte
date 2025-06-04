@@ -16,7 +16,7 @@
 
 		<div class="flex-1">
 			<input
-				class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-none"
+				class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
 				type="text"
 				bind:value={name}
 				placeholder={$i18n.t('Group Name')}
@@ -36,7 +36,7 @@
 				<div class="text-gray-500">#</div>
 
 				<input
-					class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-none"
+					class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
 					type="text"
 					bind:value={color}
 					placeholder={$i18n.t('Hex Color')}
@@ -52,7 +52,7 @@
 
 	<div class="flex-1">
 		<Textarea
-			className="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-none resize-none"
+			className="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden resize-none"
 			rows={4}
 			bind:value={description}
 			placeholder={$i18n.t('Group Description')}

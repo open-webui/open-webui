@@ -18,7 +18,7 @@
 
 {#if loaded}
 	<div class="absolute w-full h-full flex z-50">
-		<div class="absolute rounded-xl w-full h-full backdrop-blur flex justify-center">
+		<div class="absolute rounded-xl w-full h-full backdrop-blur-sm flex justify-center">
 			<div class="m-auto pb-44 flex flex-col justify-center">
 				<div class="max-w-md">
 					<div class="text-center text-2xl font-medium z-50">

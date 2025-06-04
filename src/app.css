@@ -1,3 +1,5 @@
+@reference "./tailwind.css";
+
 @font-face {
 	font-family: 'Inter';
 	src: url('/assets/fonts/Inter-Variable.ttf');
@@ -19,6 +21,12 @@
 @font-face {
 	font-family: 'InstrumentSerif';
 	src: url('/assets/fonts/InstrumentSerif-Regular.ttf');
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Vazirmatn';
+	src: url('/assets/fonts/Vazirmatn-Variable.ttf');
 	font-display: swap;
 }
 
@@ -44,6 +52,14 @@ math {
 	@apply rounded-lg;
 }
 
+input::placeholder {
+	direction: auto;
+}
+
+textarea::placeholder {
+	direction: auto;
+}
+
 .input-prose {
 	@apply prose dark:prose-invert prose-headings:font-semibold prose-hr:my-4 prose-hr:border-gray-100 prose-hr:dark:border-gray-800 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
 }
@@ -53,11 +69,11 @@ math {
 }
 
 .markdown-prose {
-	@apply prose dark:prose-invert prose-blockquote:border-gray-100 prose-blockquote:dark:border-gray-800 prose-blockquote:border-l-2 prose-blockquote:not-italic prose-blockquote:font-normal  prose-headings:font-semibold prose-hr:my-4 prose-hr:border-gray-100 prose-hr:dark:border-gray-800 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
+	@apply prose dark:prose-invert prose-blockquote:border-s-gray-100 prose-blockquote:dark:border-gray-800 prose-blockquote:border-s-2 prose-blockquote:not-italic prose-blockquote:font-normal  prose-headings:font-semibold prose-hr:my-4 prose-hr:border-gray-100 prose-hr:dark:border-gray-800 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
 }
 
 .markdown-prose-xs {
-	@apply text-xs prose dark:prose-invert prose-blockquote:border-gray-100 prose-blockquote:dark:border-gray-800 prose-blockquote:border-l-2 prose-blockquote:not-italic prose-blockquote:font-normal  prose-headings:font-semibold prose-hr:my-0  prose-hr:border-gray-100 prose-hr:dark:border-gray-800 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
+	@apply text-xs prose dark:prose-invert prose-blockquote:border-s-gray-100 prose-blockquote:dark:border-gray-800 prose-blockquote:border-s-2 prose-blockquote:not-italic prose-blockquote:font-normal  prose-headings:font-semibold prose-hr:my-0  prose-hr:border-gray-100 prose-hr:dark:border-gray-800 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
 }
 
 .markdown a {
@@ -65,7 +81,7 @@ math {
 }
 
 .font-primary {
-	font-family: 'Archivo', sans-serif;
+	font-family: 'Archivo', 'Vazirmatn', sans-serif;
 }
 
 .drag-region {
@@ -81,17 +97,13 @@ math {
 	-webkit-app-region: no-drag;
 }
 
-iframe {
-	@apply rounded-lg;
-}
-
 li p {
 	display: inline;
 }
 
 ::-webkit-scrollbar-thumb {
 	--tw-border-opacity: 1;
-	background-color: rgba(236, 236, 236, 0.8);
+	background-color: rgba(215, 215, 215, 0.8);
 	border-color: rgba(255, 255, 255, var(--tw-border-opacity));
 	border-radius: 9999px;
 	border-width: 1px;
@@ -99,12 +111,12 @@ li p {
 
 /* Dark theme scrollbar styles */
 .dark ::-webkit-scrollbar-thumb {
-	background-color: rgba(33, 33, 33, 0.8); /* Darker color for dark theme */
+	background-color: rgba(67, 67, 67, 0.8); /* Darker color for dark theme */
 	border-color: rgba(0, 0, 0, var(--tw-border-opacity));
 }
 
 ::-webkit-scrollbar {
-	height: 0.4rem;
+	height: 0.6rem;
 	width: 0.4rem;
 }
 
@@ -212,13 +224,45 @@ input[type='number'] {
 	-moz-appearance: textfield; /* Firefox */
 }
 
+.katex-display {
+	@apply overflow-y-hidden overflow-x-auto max-w-full;
+}
+
+.katex-display::-webkit-scrollbar {
+	height: 0.4rem;
+	width: 0.4rem;
+}
+
+.katex-display:active::-webkit-scrollbar-thumb,
+.katex-display:focus::-webkit-scrollbar-thumb,
+.katex-display:hover::-webkit-scrollbar-thumb {
+	visibility: visible;
+}
+.katex-display::-webkit-scrollbar-thumb {
+	visibility: hidden;
+}
+
+.katex-display::-webkit-scrollbar-corner {
+	display: none;
+}
+
 .cm-editor {
 	height: 100%;
 	width: 100%;
 }
 
-.cm-scroller {
-	@apply scrollbar-hidden;
+.cm-scroller:active::-webkit-scrollbar-thumb,
+.cm-scroller:focus::-webkit-scrollbar-thumb,
+.cm-scroller:hover::-webkit-scrollbar-thumb {
+	visibility: visible;
+}
+
+.cm-scroller::-webkit-scrollbar-thumb {
+	visibility: hidden;
+}
+
+.cm-scroller::-webkit-scrollbar-corner {
+	display: none;
 }
 
 .cm-editor.cm-focused {
@@ -270,10 +314,18 @@ input[type='number'] {
 .ProseMirror p.is-editor-empty:first-child::before {
 	content: attr(data-placeholder);
 	float: left;
-	color: #adb5bd;
+	/* Below color is from tailwind, and has the proper contrast
+	text-gray-600 from: https://tailwindcss.com/docs/color */
+	color: #676767;
 	pointer-events: none;
 
 	@apply line-clamp-1 absolute;
+}
+
+@media (prefers-color-scheme: dark) {
+	.ProseMirror p.is-editor-empty:first-child::before {
+		color: #757575;
+	}
 }
 
 .ai-autocompletion::after {
@@ -359,4 +411,30 @@ input[type='number'] {
 
 .hljs-strong {
 	font-weight: 700;
+}
+
+/* Table styling for tiptap editors */
+.tiptap table {
+	@apply w-full text-sm text-left text-gray-500 dark:text-gray-400 max-w-full;
+}
+
+.tiptap thead {
+	@apply text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-850 dark:text-gray-400 border-none;
+}
+
+.tiptap th,
+.tiptap td {
+	@apply px-3 py-1.5 border border-gray-100 dark:border-gray-850;
+}
+
+.tiptap th {
+	@apply cursor-pointer text-left text-xs text-gray-700 dark:text-gray-400 font-semibold uppercase bg-gray-50 dark:bg-gray-850;
+}
+
+.tiptap td {
+	@apply text-gray-900 dark:text-white w-max;
+}
+
+.tiptap tr {
+	@apply bg-white dark:bg-gray-900 dark:border-gray-850 text-xs;
 }

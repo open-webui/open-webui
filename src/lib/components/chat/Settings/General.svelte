@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
-	import { getLanguages } from '$lib/i18n';
+	import { getLanguages, changeLanguage } from '$lib/i18n';
 	const dispatch = createEventDispatcher();
 
 	import { models, settings, theme, user } from '$lib/stores';
@@ -9,6 +9,7 @@
 	const i18n = getContext('i18n');
 
 	import AdvancedParams from './Advanced/AdvancedParams.svelte';
+	import Textarea from '$lib/components/common/Textarea.svelte';
 
 	export let saveSettings: Function;
 	export let getModels: Function;
@@ -40,7 +41,7 @@
 	};
 
 	// Advanced
-	let requestFormat = '';
+	let requestFormat = null;
 	let keepAlive: string | null = null;
 
 	let params = {
@@ -50,7 +51,10 @@
 		seed: null,
 		temperature: null,
 		reasoning_effort: null,
+		logit_bias: null,
 		frequency_penalty: null,
+		presence_penalty: null,
+		repeat_penalty: null,
 		repeat_last_n: null,
 		mirostat: null,
 		mirostat_eta: null,
@@ -67,14 +71,74 @@
 		num_gpu: null
 	};
 
+	const validateJSON = (json) => {
+		try {
+			const obj = JSON.parse(json);
+
+			if (obj && typeof obj === 'object') {
+				return true;
+			}
+		} catch (e) {}
+		return false;
+	};
+
 	const toggleRequestFormat = async () => {
-		if (requestFormat === '') {
+		if (requestFormat === null) {
 			requestFormat = 'json';
 		} else {
-			requestFormat = '';
+			requestFormat = null;
 		}
 
-		saveSettings({ requestFormat: requestFormat !== '' ? requestFormat : undefined });
+		saveSettings({ requestFormat: requestFormat !== null ? requestFormat : undefined });
+	};
+
+	const saveHandler = async () => {
+		if (requestFormat !== null && requestFormat !== 'json') {
+			if (validateJSON(requestFormat) === false) {
+				toast.error($i18n.t('Invalid JSON schema'));
+				return;
+			} else {
+				requestFormat = JSON.parse(requestFormat);
+			}
+		}
+
+		saveSettings({
+			system: system !== '' ? system : undefined,
+			params: {
+				stream_response: params.stream_response !== null ? params.stream_response : undefined,
+				function_calling: params.function_calling !== null ? params.function_calling : undefined,
+				seed: (params.seed !== null ? params.seed : undefined) ?? undefined,
+				stop: params.stop ? params.stop.split(',').filter((e) => e) : undefined,
+				temperature: params.temperature !== null ? params.temperature : undefined,
+				reasoning_effort: params.reasoning_effort !== null ? params.reasoning_effort : undefined,
+				logit_bias: params.logit_bias !== null ? params.logit_bias : undefined,
+				frequency_penalty: params.frequency_penalty !== null ? params.frequency_penalty : undefined,
+				presence_penalty: params.frequency_penalty !== null ? params.frequency_penalty : undefined,
+				repeat_penalty: params.frequency_penalty !== null ? params.frequency_penalty : undefined,
+				repeat_last_n: params.repeat_last_n !== null ? params.repeat_last_n : undefined,
+				mirostat: params.mirostat !== null ? params.mirostat : undefined,
+				mirostat_eta: params.mirostat_eta !== null ? params.mirostat_eta : undefined,
+				mirostat_tau: params.mirostat_tau !== null ? params.mirostat_tau : undefined,
+				top_k: params.top_k !== null ? params.top_k : undefined,
+				top_p: params.top_p !== null ? params.top_p : undefined,
+				min_p: params.min_p !== null ? params.min_p : undefined,
+				tfs_z: params.tfs_z !== null ? params.tfs_z : undefined,
+				num_ctx: params.num_ctx !== null ? params.num_ctx : undefined,
+				num_batch: params.num_batch !== null ? params.num_batch : undefined,
+				num_keep: params.num_keep !== null ? params.num_keep : undefined,
+				max_tokens: params.max_tokens !== null ? params.max_tokens : undefined,
+				use_mmap: params.use_mmap !== null ? params.use_mmap : undefined,
+				use_mlock: params.use_mlock !== null ? params.use_mlock : undefined,
+				num_thread: params.num_thread !== null ? params.num_thread : undefined,
+				num_gpu: params.num_gpu !== null ? params.num_gpu : undefined
+			},
+			keepAlive: keepAlive ? (isNaN(keepAlive) ? keepAlive : parseInt(keepAlive)) : undefined,
+			requestFormat: requestFormat !== null ? requestFormat : undefined
+		});
+		dispatch('save');
+
+		requestFormat =
+			typeof requestFormat === 'object' ? JSON.stringify(requestFormat, null, 2) : requestFormat;
 	};
 
 	onMount(async () => {
@@ -85,7 +149,12 @@
 		notificationEnabled = $settings.notificationEnabled ?? false;
 		system = $settings.system ?? '';
 
-		requestFormat = $settings.requestFormat ?? '';
+		requestFormat = $settings.requestFormat ?? null;
+		if (requestFormat !== null && requestFormat !== 'json') {
+			requestFormat =
+				typeof requestFormat === 'object' ? JSON.stringify(requestFormat, null, 2) : requestFormat;
+		}
+
 		keepAlive = $settings.keepAlive ?? null;
 
 		params = { ...params, ...$settings.params };
@@ -141,12 +210,10 @@
 			}
 		}
 
-		console.log(_theme);
-	};
+		if (typeof window !== 'undefined' && window.applyTheme) {
+			window.applyTheme();
+		}
 
-	const themeChangeHandler = (_theme: string) => {
-		theme.set(_theme);
-		localStorage.setItem('theme', _theme);
 		if (_theme.includes('oled')) {
 			document.documentElement.style.setProperty('--color-gray-800', '#101010');
 			document.documentElement.style.setProperty('--color-gray-850', '#050505');
@@ -154,6 +221,13 @@
 			document.documentElement.style.setProperty('--color-gray-950', '#000000');
 			document.documentElement.classList.add('dark');
 		}
+
+		console.log(_theme);
+	};
+
+	const themeChangeHandler = (_theme: string) => {
+		theme.set(_theme);
+		localStorage.setItem('theme', _theme);
 		applyTheme(_theme);
 	};
 </script>
@@ -167,7 +241,7 @@
 				<div class=" self-center text-xs font-medium">{$i18n.t('Theme')}</div>
 				<div class="flex items-center relative">
 					<select
-						class=" dark:bg-gray-900 w-fit pr-8 rounded py-2 px-2 text-xs bg-transparent outline-none text-right"
+						class=" dark:bg-gray-900 w-fit pr-8 rounded-sm py-2 px-2 text-xs bg-transparent outline-hidden text-right"
 						bind:value={selectedTheme}
 						placeholder="Select a theme"
 						on:change={() => themeChangeHandler(selectedTheme)}
@@ -187,11 +261,11 @@
 				<div class=" self-center text-xs font-medium">{$i18n.t('Language')}</div>
 				<div class="flex items-center relative">
 					<select
-						class=" dark:bg-gray-900 w-fit pr-8 rounded py-2 px-2 text-xs bg-transparent outline-none text-right"
+						class=" dark:bg-gray-900 w-fit pr-8 rounded-sm py-2 px-2 text-xs bg-transparent outline-hidden text-right"
 						bind:value={lang}
 						placeholder="Select a language"
 						on:change={(e) => {
-							$i18n.changeLanguage(lang);
+							changeLanguage(lang);
 						}}
 					>
 						{#each languages as language}
@@ -218,7 +292,7 @@
 					<div class=" self-center text-xs font-medium">{$i18n.t('Notifications')}</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded transition"
+						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleNotification();
 						}}
@@ -234,15 +308,16 @@
 			</div>
 		</div>
 
-		{#if $user.role === 'admin' || $user?.permissions.chat?.controls}
-			<hr class=" dark:border-gray-850 my-3" />
+		{#if $user?.role === 'admin' || $user?.permissions.chat?.controls}
+			<hr class="border-gray-50 dark:border-gray-850 my-3" />
 
 			<div>
 				<div class=" my-2.5 text-sm font-medium">{$i18n.t('System Prompt')}</div>
-				<textarea
+				<Textarea
 					bind:value={system}
-					class="w-full rounded-lg p-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
+					className="w-full text-sm bg-white dark:text-gray-300 dark:bg-gray-900 outline-hidden resize-none"
 					rows="4"
+					placeholder={$i18n.t('Enter system prompt here')}
 				/>
 			</div>
 
@@ -260,14 +335,14 @@
 
 				{#if showAdvanced}
 					<AdvancedParams admin={$user?.role === 'admin'} bind:params />
-					<hr class=" dark:border-gray-850" />
+					<hr class=" border-gray-100 dark:border-gray-850" />
 
-					<div class=" py-1 w-full justify-between">
+					<div class=" w-full justify-between">
 						<div class="flex w-full justify-between">
 							<div class=" self-center text-xs font-medium">{$i18n.t('Keep Alive')}</div>
 
 							<button
-								class="p-1 px-3 text-xs flex rounded transition"
+								class="p-1 px-3 text-xs flex rounded-sm transition"
 								type="button"
 								on:click={() => {
 									keepAlive = keepAlive === null ? '5m' : null;
@@ -284,7 +359,7 @@
 						{#if keepAlive !== null}
 							<div class="flex mt-1 space-x-2">
 								<input
-									class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+									class="w-full text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 									type="text"
 									placeholder={$i18n.t("e.g. '30s','10m'. Valid time units are 's', 'm', 'h'.")}
 									bind:value={keepAlive}
@@ -294,18 +369,18 @@
 					</div>
 
 					<div>
-						<div class=" py-1 flex w-full justify-between">
-							<div class=" self-center text-sm font-medium">{$i18n.t('Request Mode')}</div>
+						<div class=" flex w-full justify-between">
+							<div class=" self-center text-xs font-medium">{$i18n.t('Request Mode')}</div>
 
 							<button
-								class="p-1 px-3 text-xs flex rounded transition"
+								class="p-1 px-3 text-xs flex rounded-sm transition"
 								on:click={() => {
 									toggleRequestFormat();
 								}}
 							>
-								{#if requestFormat === ''}
+								{#if requestFormat === null}
 									<span class="ml-2 self-center"> {$i18n.t('Default')} </span>
-								{:else if requestFormat === 'json'}
+								{:else}
 									<!-- <svg
                             xmlns="http://www.w3.org/2000/svg"
                             viewBox="0 0 20 20"
@@ -320,6 +395,16 @@
 								{/if}
 							</button>
 						</div>
+
+						{#if requestFormat !== null}
+							<div class="flex mt-1 space-x-2">
+								<Textarea
+									className="w-full  text-sm dark:text-gray-300 dark:bg-gray-900 outline-hidden"
+									placeholder={$i18n.t('e.g. "json" or a JSON schema')}
+									bind:value={requestFormat}
+								/>
+							</div>
+						{/if}
 					</div>
 				{/if}
 			</div>
@@ -330,39 +415,7 @@
 		<button
 			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 			on:click={() => {
-				saveSettings({
-					system: system !== '' ? system : undefined,
-					params: {
-						stream_response: params.stream_response !== null ? params.stream_response : undefined,
-						function_calling:
-							params.function_calling !== null ? params.function_calling : undefined,
-						seed: (params.seed !== null ? params.seed : undefined) ?? undefined,
-						stop: params.stop ? params.stop.split(',').filter((e) => e) : undefined,
-						temperature: params.temperature !== null ? params.temperature : undefined,
-						reasoning_effort:
-							params.reasoning_effort !== null ? params.reasoning_effort : undefined,
-						frequency_penalty:
-							params.frequency_penalty !== null ? params.frequency_penalty : undefined,
-						repeat_last_n: params.repeat_last_n !== null ? params.repeat_last_n : undefined,
-						mirostat: params.mirostat !== null ? params.mirostat : undefined,
-						mirostat_eta: params.mirostat_eta !== null ? params.mirostat_eta : undefined,
-						mirostat_tau: params.mirostat_tau !== null ? params.mirostat_tau : undefined,
-						top_k: params.top_k !== null ? params.top_k : undefined,
-						top_p: params.top_p !== null ? params.top_p : undefined,
-						min_p: params.min_p !== null ? params.min_p : undefined,
-						tfs_z: params.tfs_z !== null ? params.tfs_z : undefined,
-						num_ctx: params.num_ctx !== null ? params.num_ctx : undefined,
-						num_batch: params.num_batch !== null ? params.num_batch : undefined,
-						num_keep: params.num_keep !== null ? params.num_keep : undefined,
-						max_tokens: params.max_tokens !== null ? params.max_tokens : undefined,
-						use_mmap: params.use_mmap !== null ? params.use_mmap : undefined,
-						use_mlock: params.use_mlock !== null ? params.use_mlock : undefined,
-						num_thread: params.num_thread !== null ? params.num_thread : undefined,
-						num_gpu: params.num_gpu !== null ? params.num_gpu : undefined
-					},
-					keepAlive: keepAlive ? (isNaN(keepAlive) ? keepAlive : parseInt(keepAlive)) : undefined
-				});
-				dispatch('save');
+				saveHandler();
 			}}
 		>
 			{$i18n.t('Save')}

@@ -1,4 +1,8 @@
 import os
+import re
+
+import logging
+import aiohttp
 from pathlib import Path
 from typing import Optional
 
@@ -8,11 +12,22 @@ from open_webui.models.functions import (
     FunctionResponse,
     Functions,
 )
-from open_webui.utils.plugin import load_function_module_by_id, replace_imports
+from open_webui.utils.plugin import (
+    load_function_module_by_id,
+    replace_imports,
+    get_function_module_from_cache,
+)
 from open_webui.config import CACHE_DIR
 from open_webui.constants import ERROR_MESSAGES
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.env import SRC_LOG_LEVELS
+from pydantic import BaseModel, HttpUrl
+
+
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["MAIN"])
+
 
 router = APIRouter()
 
@@ -34,6 +49,97 @@ async def get_functions(user=Depends(get_verified_user)):
 @router.get("/export", response_model=list[FunctionModel])
 async def get_functions(user=Depends(get_admin_user)):
     return Functions.get_functions()
+
+
+############################
+# LoadFunctionFromLink
+############################
+
+
+class LoadUrlForm(BaseModel):
+    url: HttpUrl
+
+
+def github_url_to_raw_url(url: str) -> str:
+    # Handle 'tree' (folder) URLs (add main.py at the end)
+    m1 = re.match(r"https://github\.com/([^/]+)/([^/]+)/tree/([^/]+)/(.*)", url)
+    if m1:
+        org, repo, branch, path = m1.groups()
+        return f"https://raw.githubusercontent.com/{org}/{repo}/refs/heads/{branch}/{path.rstrip('/')}/main.py"
+
+    # Handle 'blob' (file) URLs
+    m2 = re.match(r"https://github\.com/([^/]+)/([^/]+)/blob/([^/]+)/(.*)", url)
+    if m2:
+        org, repo, branch, path = m2.groups()
+        return (
+            f"https://raw.githubusercontent.com/{org}/{repo}/refs/heads/{branch}/{path}"
+        )
+
+    # No match; return as-is
+    return url
+
+
+@router.post("/load/url", response_model=Optional[dict])
+async def load_function_from_url(
+    request: Request, form_data: LoadUrlForm, user=Depends(get_admin_user)
+):
+    # NOTE: This is NOT a SSRF vulnerability:
+    # This endpoint is admin-only (see get_admin_user), meant for *trusted* internal use,
+    # and does NOT accept untrusted user input. Access is enforced by authentication.
+
+    url = str(form_data.url)
+    if not url:
+        raise HTTPException(status_code=400, detail="Please enter a valid URL")
+
+    url = github_url_to_raw_url(url)
+    url_parts = url.rstrip("/").split("/")
+
+    file_name = url_parts[-1]
+    function_name = (
+        file_name[:-3]
+        if (
+            file_name.endswith(".py")
+            and (not file_name.startswith(("main.py", "index.py", "__init__.py")))
+        )
+        else url_parts[-2] if len(url_parts) > 1 else "function"
+    )
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                url, headers={"Content-Type": "application/json"}
+            ) as resp:
+                if resp.status != 200:
+                    raise HTTPException(
+                        status_code=resp.status, detail="Failed to fetch the function"
+                    )
+                data = await resp.text()
+                if not data:
+                    raise HTTPException(
+                        status_code=400, detail="No data received from the URL"
+                    )
+        return {
+            "name": function_name,
+            "content": data,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error importing function: {e}")
+
+
+############################
+# SyncFunctions
+############################
+
+
+class SyncFunctionsForm(FunctionForm):
+    functions: list[FunctionModel] = []
+
+
+@router.post("/sync", response_model=Optional[FunctionModel])
+async def sync_functions(
+    request: Request, form_data: SyncFunctionsForm, user=Depends(get_admin_user)
+):
+    return Functions.sync_functions(user.id, form_data.functions)
 
 
 ############################
@@ -68,7 +174,7 @@ async def create_new_function(
 
             function = Functions.insert_new_function(user.id, function_type, form_data)
 
-            function_cache_dir = Path(CACHE_DIR) / "functions" / form_data.id
+            function_cache_dir = CACHE_DIR / "functions" / form_data.id
             function_cache_dir.mkdir(parents=True, exist_ok=True)
 
             if function:
@@ -79,7 +185,7 @@ async def create_new_function(
                     detail=ERROR_MESSAGES.DEFAULT("Error creating function"),
                 )
         except Exception as e:
-            print(e)
+            log.exception(f"Failed to create a new function: {e}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ERROR_MESSAGES.DEFAULT(e),
@@ -183,7 +289,7 @@ async def update_function_by_id(
         FUNCTIONS[id] = function_module
 
         updated = {**form_data.model_dump(exclude={"id"}), "type": function_type}
-        print(updated)
+        log.debug(updated)
 
         function = Functions.update_function_by_id(id, updated)
 
@@ -256,11 +362,9 @@ async def get_function_valves_spec_by_id(
 ):
     function = Functions.get_function_by_id(id)
     if function:
-        if id in request.app.state.FUNCTIONS:
-            function_module = request.app.state.FUNCTIONS[id]
-        else:
-            function_module, function_type, frontmatter = load_function_module_by_id(id)
-            request.app.state.FUNCTIONS[id] = function_module
+        function_module, function_type, frontmatter = get_function_module_from_cache(
+            request, id
+        )
 
         if hasattr(function_module, "Valves"):
             Valves = function_module.Valves
@@ -284,11 +388,9 @@ async def update_function_valves_by_id(
 ):
     function = Functions.get_function_by_id(id)
     if function:
-        if id in request.app.state.FUNCTIONS:
-            function_module = request.app.state.FUNCTIONS[id]
-        else:
-            function_module, function_type, frontmatter = load_function_module_by_id(id)
-            request.app.state.FUNCTIONS[id] = function_module
+        function_module, function_type, frontmatter = get_function_module_from_cache(
+            request, id
+        )
 
         if hasattr(function_module, "Valves"):
             Valves = function_module.Valves
@@ -299,7 +401,7 @@ async def update_function_valves_by_id(
                 Functions.update_function_valves_by_id(id, valves.model_dump())
                 return valves.model_dump()
             except Exception as e:
-                print(e)
+                log.exception(f"Error updating function values by id {id}: {e}")
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=ERROR_MESSAGES.DEFAULT(e),
@@ -347,11 +449,9 @@ async def get_function_user_valves_spec_by_id(
 ):
     function = Functions.get_function_by_id(id)
     if function:
-        if id in request.app.state.FUNCTIONS:
-            function_module = request.app.state.FUNCTIONS[id]
-        else:
-            function_module, function_type, frontmatter = load_function_module_by_id(id)
-            request.app.state.FUNCTIONS[id] = function_module
+        function_module, function_type, frontmatter = get_function_module_from_cache(
+            request, id
+        )
 
         if hasattr(function_module, "UserValves"):
             UserValves = function_module.UserValves
@@ -371,11 +471,9 @@ async def update_function_user_valves_by_id(
     function = Functions.get_function_by_id(id)
 
     if function:
-        if id in request.app.state.FUNCTIONS:
-            function_module = request.app.state.FUNCTIONS[id]
-        else:
-            function_module, function_type, frontmatter = load_function_module_by_id(id)
-            request.app.state.FUNCTIONS[id] = function_module
+        function_module, function_type, frontmatter = get_function_module_from_cache(
+            request, id
+        )
 
         if hasattr(function_module, "UserValves"):
             UserValves = function_module.UserValves
@@ -388,7 +486,7 @@ async def update_function_user_valves_by_id(
                 )
                 return user_valves.model_dump()
             except Exception as e:
-                print(e)
+                log.exception(f"Error updating function user valves by id {id}: {e}")
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=ERROR_MESSAGES.DEFAULT(e),

@@ -1,8 +1,7 @@
 <script>
-	import { getContext, createEventDispatcher, onMount, tick } from 'svelte';
+	import { getContext, onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 
-	const dispatch = createEventDispatcher();
 	const i18n = getContext('i18n');
 
 	import CodeEditor from '$lib/components/common/CodeEditor.svelte';
@@ -14,6 +13,8 @@
 	let formElement = null;
 	let loading = false;
 	let showConfirm = false;
+
+	export let onSave = () => {};
 
 	export let edit = false;
 	export let clone = false;
@@ -256,7 +257,7 @@ class Pipe:
 
 	const saveHandler = async () => {
 		loading = true;
-		dispatch('save', {
+		onSave({
 			id,
 			name,
 			meta,
@@ -276,7 +277,7 @@ class Pipe:
 			await tick();
 
 			if (res) {
-				console.log('Code formatted successfully');
+				console.info('Code formatted successfully');
 
 				saveHandler();
 			}
@@ -300,7 +301,7 @@ class Pipe:
 			<div class="flex flex-col flex-1 overflow-auto h-0 rounded-lg">
 				<div class="w-full mb-2 flex flex-col gap-0.5">
 					<div class="flex w-full items-center">
-						<div class=" flex-shrink-0 mr-2">
+						<div class=" shrink-0 mr-2">
 							<Tooltip content={$i18n.t('Back')}>
 								<button
 									class="w-full text-left text-sm py-1.5 px-1 rounded-lg dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-gray-850"
@@ -317,7 +318,7 @@ class Pipe:
 						<div class="flex-1">
 							<Tooltip content={$i18n.t('e.g. My Filter')} placement="top-start">
 								<input
-									class="w-full text-2xl font-medium bg-transparent outline-none font-primary"
+									class="w-full text-2xl font-medium bg-transparent outline-hidden font-primary"
 									type="text"
 									placeholder={$i18n.t('Function Name')}
 									bind:value={name}
@@ -333,13 +334,13 @@ class Pipe:
 
 					<div class=" flex gap-2 px-1 items-center">
 						{#if edit}
-							<div class="text-sm text-gray-500 flex-shrink-0">
+							<div class="text-sm text-gray-500 shrink-0">
 								{id}
 							</div>
 						{:else}
 							<Tooltip className="w-full" content={$i18n.t('e.g. my_filter')} placement="top-start">
 								<input
-									class="w-full text-sm disabled:text-gray-500 bg-transparent outline-none"
+									class="w-full text-sm disabled:text-gray-500 bg-transparent outline-hidden"
 									type="text"
 									placeholder={$i18n.t('Function ID')}
 									bind:value={id}
@@ -355,7 +356,7 @@ class Pipe:
 							placement="top-start"
 						>
 							<input
-								class="w-full text-sm bg-transparent outline-none"
+								class="w-full text-sm bg-transparent outline-hidden"
 								type="text"
 								placeholder={$i18n.t('Function Description')}
 								bind:value={meta.description}
@@ -371,10 +372,10 @@ class Pipe:
 						value={content}
 						lang="python"
 						{boilerplate}
-						on:change={(e) => {
-							_content = e.detail.value;
+						onChange={(e) => {
+							_content = e;
 						}}
-						on:save={async () => {
+						onSave={async () => {
 							if (formElement) {
 								formElement.requestSubmit();
 							}
@@ -386,7 +387,7 @@ class Pipe:
 					<div class="flex-1 pr-3">
 						<div class="text-xs text-gray-500 line-clamp-2">
 							<span class=" font-semibold dark:text-gray-200">{$i18n.t('Warning:')}</span>
-							{$i18n.t('Functions allow arbitrary code execution')} <br />—
+							{$i18n.t('Functions allow arbitrary code execution.')} <br />—
 							<span class=" font-medium dark:text-gray-400"
 								>{$i18n.t(`don't install random functions from sources you don't trust.`)}</span
 							>

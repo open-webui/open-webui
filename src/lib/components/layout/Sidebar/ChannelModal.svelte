@@ -19,7 +19,7 @@
 	export let edit = false;
 
 	let name = '';
-	let accessControl = null;
+	let accessControl = {};
 
 	let loading = false;
 
@@ -112,7 +112,7 @@
 
 						<div class="flex-1">
 							<input
-								class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-none"
+								class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
 								type="text"
 								bind:value={name}
 								placeholder={$i18n.t('new-channel')}

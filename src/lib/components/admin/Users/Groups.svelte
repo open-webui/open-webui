@@ -23,13 +23,18 @@
 	import GroupItem from './Groups/GroupItem.svelte';
 	import AddGroupModal from './Groups/AddGroupModal.svelte';
 	import { createNewGroup, getGroups } from '$lib/apis/groups';
-	import { getUserDefaultPermissions, updateUserDefaultPermissions } from '$lib/apis/users';
+	import {
+		getUserDefaultPermissions,
+		getAllUsers,
+		updateUserDefaultPermissions
+	} from '$lib/apis/users';
 
 	const i18n = getContext('i18n');
 
 	let loaded = false;
 
-	export let users = [];
+	let users = [];
+	let total = 0;
 
 	let groups = [];
 	let filteredGroups;
@@ -52,17 +57,32 @@
 			prompts: false,
 			tools: false
 		},
+		sharing: {
+			public_models: false,
+			public_knowledge: false,
+			public_prompts: false,
+			public_tools: false
+		},
 		chat: {
 			controls: true,
 			file_upload: true,
 			delete: true,
 			edit: true,
-			temporary: true
+			share: true,
+			export: true,
+			stt: true,
+			tts: true,
+			call: true,
+			multiple_models: true,
+			temporary: true,
+			temporary_enforced: false
 		},
 		features: {
+			direct_tool_servers: false,
 			web_search: true,
 			image_generation: true,
-			code_interpreter: true
+			code_interpreter: true,
+			notes: true
 		}
 	};
 
@@ -86,7 +106,7 @@
 	};
 
 	const updateDefaultPermissionsHandler = async (group) => {
-		console.log(group.permissions);
+		console.debug(group.permissions);
 
 		const res = await updateUserDefaultPermissions(localStorage.token, group.permissions).catch(
 			(error) => {
@@ -104,10 +124,22 @@
 	onMount(async () => {
 		if ($user?.role !== 'admin') {
 			await goto('/');
-		} else {
-			await setGroups();
-			defaultPermissions = await getUserDefaultPermissions(localStorage.token);
+			return;
 		}
+
+		const res = await getAllUsers(localStorage.token).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (res) {
+			users = res.users;
+			total = res.total;
+		}
+
+		await setGroups();
+		defaultPermissions = await getUserDefaultPermissions(localStorage.token);
+
 		loaded = true;
 	});
 </script>
@@ -140,7 +172,7 @@
 						</svg>
 					</div>
 					<input
-						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-none bg-transparent"
+						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
 						bind:value={search}
 						placeholder={$i18n.t('Search')}
 					/>
@@ -195,7 +227,7 @@
 					<div class="w-full"></div>
 				</div>
 
-				<hr class="mt-1.5 border-gray-50 dark:border-gray-850" />
+				<hr class="mt-1.5 border-gray-100 dark:border-gray-850" />
 
 				{#each filteredGroups as group}
 					<div class="my-2">
@@ -205,7 +237,7 @@
 			</div>
 		{/if}
 
-		<hr class="mb-2 border-gray-50 dark:border-gray-850" />
+		<hr class="mb-2 border-gray-100 dark:border-gray-850" />
 
 		<GroupModal
 			bind:show={showDefaultPermissionsModal}

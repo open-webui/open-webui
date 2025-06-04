@@ -2,12 +2,18 @@ import hashlib
 import re
 import time
 import uuid
+import logging
 from datetime import timedelta
 from pathlib import Path
 from typing import Callable, Optional
+import json
 
 
 import collections.abc
+from open_webui.env import SRC_LOG_LEVELS
+
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
 def deep_update(d, u):
@@ -28,11 +34,15 @@ def get_message_list(messages, message_id):
     :return: List of ordered messages starting from the root to the given message
     """
 
+    # Handle case where messages is None
+    if not messages:
+        return []  # Return empty list instead of None to prevent iteration errors
+
     # Find the message by its id
     current_message = messages.get(message_id)
 
     if not current_message:
-        return None
+        return []  # Return empty list instead of None to prevent iteration errors
 
     # Reconstruct the chain by following the parentId links
     message_list = []
@@ -41,7 +51,7 @@ def get_message_list(messages, message_id):
         message_list.insert(
             0, current_message
         )  # Insert the message at the beginning of the list
-        parent_id = current_message["parentId"]
+        parent_id = current_message.get("parentId")  # Use .get() for safety
         current_message = messages.get(parent_id) if parent_id else None
 
     return message_list
@@ -64,12 +74,12 @@ def get_last_user_message_item(messages: list[dict]) -> Optional[dict]:
 
 
 def get_content_from_message(message: dict) -> Optional[str]:
-    if isinstance(message["content"], list):
+    if isinstance(message.get("content"), list):
         for item in message["content"]:
             if item["type"] == "text":
                 return item["text"]
     else:
-        return message["content"]
+        return message.get("content")
     return None
 
 
@@ -124,7 +134,9 @@ def prepend_to_first_user_message_content(
     return messages
 
 
-def add_or_update_system_message(content: str, messages: list[dict]):
+def add_or_update_system_message(
+    content: str, messages: list[dict], append: bool = False
+):
     """
     Adds a new system message at the beginning of the messages list
     or updates the existing system message at the beginning.
@@ -135,7 +147,10 @@ def add_or_update_system_message(content: str, messages: list[dict]):
     """
 
     if messages and messages[0].get("role") == "system":
-        messages[0]["content"] = f"{content}\n{messages[0]['content']}"
+        if append:
+            messages[0]["content"] = f"{messages[0]['content']}\n{content}"
+        else:
+            messages[0]["content"] = f"{content}\n{messages[0]['content']}"
     else:
         # Insert at the beginning
         messages.insert(0, {"role": "system", "content": content})
@@ -412,7 +427,7 @@ def parse_ollama_modelfile(model_text):
                 elif param_type is bool:
                     value = value.lower() == "true"
             except Exception as e:
-                print(e)
+                log.exception(f"Failed to parse parameter {param}: {e}")
                 continue
 
             data["params"][param] = value
@@ -445,3 +460,15 @@ def parse_ollama_modelfile(model_text):
         data["params"]["messages"] = messages
 
     return data
+
+
+def convert_logit_bias_input_to_json(user_input):
+    logit_bias_pairs = user_input.split(",")
+    logit_bias_json = {}
+    for pair in logit_bias_pairs:
+        token, bias = pair.split(":")
+        token = str(token.strip())
+        bias = int(bias.strip())
+        bias = 100 if bias > 100 else -100 if bias < -100 else bias
+        logit_bias_json[token] = bias
+    return json.dumps(logit_bias_json)

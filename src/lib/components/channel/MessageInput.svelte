@@ -17,7 +17,6 @@
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import FileItem from '../common/FileItem.svelte';
 	import Image from '../common/Image.svelte';
-	import { transcribeAudio } from '$lib/apis/audio';
 	import FilesOverlay from '../chat/MessageInput/FilesOverlay.svelte';
 
 	export let placeholder = $i18n.t('Send a Message');
@@ -80,7 +79,7 @@
 
 	const inputFilesHandler = async (inputFiles) => {
 		inputFiles.forEach((file) => {
-			console.log('Processing file:', {
+			console.info('Processing file:', {
 				name: file.name,
 				type: file.type,
 				size: file.size,
@@ -91,7 +90,7 @@
 				($config?.file?.max_size ?? null) !== null &&
 				file.size > ($config?.file?.max_size ?? 0) * 1024 * 1024
 			) {
-				console.log('File exceeds max size limit:', {
+				console.error('File exceeds max size limit:', {
 					fileSize: file.size,
 					maxSize: ($config?.file?.max_size ?? 0) * 1024 * 1024
 				});
@@ -103,7 +102,9 @@
 				return;
 			}
 
-			if (['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(file['type'])) {
+			if (
+				['image/gif', 'image/webp', 'image/jpeg', 'image/png', 'image/avif'].includes(file['type'])
+			) {
 				let reader = new FileReader();
 
 				reader.onload = async (event) => {
@@ -155,36 +156,32 @@
 		}
 
 		files = [...files, fileItem];
-		// Check if the file is an audio file and transcribe/convert it to text file
-		if (['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/x-m4a'].includes(file['type'])) {
-			const res = await transcribeAudio(localStorage.token, file).catch((error) => {
-				toast.error(`${error}`);
-				return null;
-			});
-
-			if (res) {
-				console.log(res);
-				const blob = new Blob([res.text], { type: 'text/plain' });
-				file = blobToFile(blob, `${file.name}.txt`);
-
-				fileItem.name = file.name;
-				fileItem.size = file.size;
-			}
-		}
 
 		try {
 			// During the file upload, file content is automatically extracted.
-			const uploadedFile = await uploadFile(localStorage.token, file);
+
+			// If the file is an audio file, provide the language for STT.
+			let metadata = null;
+			if (
+				(file.type.startsWith('audio/') || file.type.startsWith('video/')) &&
+				$settings?.audio?.stt?.language
+			) {
+				metadata = {
+					language: $settings?.audio?.stt?.language
+				};
+			}
+
+			const uploadedFile = await uploadFile(localStorage.token, file, metadata);
 
 			if (uploadedFile) {
-				console.log('File upload completed:', {
+				console.info('File upload completed:', {
 					id: uploadedFile.id,
 					name: fileItem.name,
 					collection: uploadedFile?.meta?.collection_name
 				});
 
 				if (uploadedFile.error) {
-					console.warn('File upload warning:', uploadedFile.error);
+					console.error('File upload warning:', uploadedFile.error);
 					toast.warning(uploadedFile.error);
 				}
 
@@ -207,7 +204,6 @@
 
 	const handleKeyDown = (event: KeyboardEvent) => {
 		if (event.key === 'Escape') {
-			console.log('Escape');
 			draggedOver = false;
 		}
 	};
@@ -229,7 +225,6 @@
 
 	const onDrop = async (e) => {
 		e.preventDefault();
-		console.log(e);
 
 		if (e.dataTransfer?.files) {
 			const inputFiles = Array.from(e.dataTransfer?.files);
@@ -284,7 +279,6 @@
 	});
 
 	onDestroy(() => {
-		console.log('destroy');
 		window.removeEventListener('keydown', handleKeyDown);
 
 		const dropzoneElement = document.getElementById('channel-container');
@@ -371,14 +365,14 @@
 			{#if recording}
 				<VoiceRecording
 					bind:recording
-					on:cancel={async () => {
+					onCancel={async () => {
 						recording = false;
 
 						await tick();
 						document.getElementById(`chat-input-${id}`)?.focus();
 					}}
-					on:confirm={async (e) => {
-						const { text, filename } = e.detail;
+					onConfirm={async (data) => {
+						const { text, filename } = data;
 						content = `${content}${text} `;
 						recording = false;
 
@@ -395,7 +389,7 @@
 				>
 					<div
 						class="flex-1 flex flex-col relative w-full rounded-3xl px-1 bg-gray-600/5 dark:bg-gray-400/5 dark:text-gray-100"
-						dir={$settings?.chatDirection ?? 'LTR'}
+						dir={$settings?.chatDirection ?? 'auto'}
 					>
 						{#if files.length > 0}
 							<div class="mx-2 mt-2.5 -mb-1 flex flex-wrap gap-2">
@@ -455,7 +449,7 @@
 
 						<div class="px-2.5">
 							<div
-								class="scrollbar-hidden font-primary text-left bg-transparent dark:text-gray-100 outline-none w-full pt-3 px-1 rounded-xl resize-none h-fit max-h-80 overflow-auto"
+								class="scrollbar-hidden font-primary text-left bg-transparent dark:text-gray-100 outline-hidden w-full pt-3 px-1 rounded-xl resize-none h-fit max-h-80 overflow-auto"
 							>
 								<RichTextInput
 									bind:value={content}
@@ -493,12 +487,12 @@
 										}
 
 										if (e.key === 'Escape') {
-											console.log('Escape');
+											console.info('Escape');
 										}
 									}}
 									on:paste={async (e) => {
 										e = e.detail.event;
-										console.log(e);
+										console.info(e);
 									}}
 								/>
 							</div>
@@ -513,7 +507,7 @@
 									}}
 								>
 									<button
-										class="bg-transparent hover:bg-white/80 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5 outline-none focus:outline-none"
+										class="bg-transparent hover:bg-white/80 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5 outline-hidden focus:outline-hidden"
 										type="button"
 										aria-label="More"
 									>

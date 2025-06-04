@@ -2,12 +2,14 @@
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
-		<link rel="icon" type="image/png" href="/favicon/favicon-96x96.png" sizes="96x96" />
-		<link rel="icon" type="image/svg+xml" href="/favicon/favicon.svg" />
-		<link rel="shortcut icon" href="/favicon/favicon.ico" />
-		<link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png" />
+		<link rel="icon" type="image/png" href="/static/favicon.png" />
+		<link rel="icon" type="image/png" href="/static/favicon-96x96.png" sizes="96x96" />
+		<link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+		<link rel="shortcut icon" href="/static/favicon.ico" />
+		<link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png" />
 		<meta name="apple-mobile-web-app-title" content="Open WebUI" />
-		<link rel="manifest" href="/favicon/site.webmanifest" />
+
+		<link rel="manifest" href="/manifest.json" crossorigin="use-credentials" />
 		<meta
 			name="viewport"
 			content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"
@@ -21,6 +23,7 @@
 			title="Open WebUI"
 			href="/opensearch.xml"
 		/>
+		<script src="/static/loader.js" defer></script>
 
 		<script>
 			function resizeIframe(obj) {
@@ -73,6 +76,28 @@
 						}
 					}
 				});
+
+				function setSplashImage() {
+					const logo = document.getElementById('logo');
+					const isDarkMode = document.documentElement.classList.contains('dark');
+
+					if (isDarkMode) {
+						const darkImage = new Image();
+						darkImage.src = '/static/splash-dark.png';
+
+						darkImage.onload = () => {
+							logo.src = '/static/splash-dark.png';
+							logo.style.filter = ''; // Ensure no inversion is applied if splash-dark.png exists
+						};
+
+						darkImage.onerror = () => {
+							logo.style.filter = 'invert(1)'; // Invert image if splash-dark.png is missing
+						};
+					}
+				}
+
+				// Runs after classes are assigned
+				window.onload = setSplashImage;
 			})();
 		</script>
 
@@ -173,10 +198,6 @@
 
 	html.dark #splash-screen {
 		background: #000;
-	}
-
-	html.dark #splash-screen img {
-		filter: invert(1);
 	}
 
 	html.her #splash-screen {

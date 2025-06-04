@@ -5,7 +5,7 @@
 	import { createEventDispatcher } from 'svelte';
 	import { onMount, tick, getContext } from 'svelte';
 	import type { Writable } from 'svelte/store';
-	import type { i18n as i18nType } from 'i18next';
+	import type { i18n as i18nType, t } from 'i18next';
 
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
@@ -15,7 +15,7 @@
 	import { getChatById } from '$lib/apis/chats';
 	import { generateTags } from '$lib/apis';
 
-	import { config, models, settings, TTSWorker, user } from '$lib/stores';
+	import { config, models, settings, temporaryChatEnabled, TTSWorker, user } from '$lib/stores';
 	import { synthesizeOpenAISpeech } from '$lib/apis/audio';
 	import { imageGenerations } from '$lib/apis/images';
 	import {
@@ -24,7 +24,9 @@
 		getMessageContentParts,
 		sanitizeResponseContent,
 		createMessagesList,
-		formatDate
+		formatDate,
+		removeDetails,
+		removeAllDetails
 	} from '$lib/utils';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
@@ -37,11 +39,15 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import WebSearchResults from './ResponseMessage/WebSearchResults.svelte';
 	import Sparkles from '$lib/components/icons/Sparkles.svelte';
+
+	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+
 	import Error from './Error.svelte';
 	import Citations from './Citations.svelte';
 	import CodeExecutions from './CodeExecutions.svelte';
 	import ContentRenderer from './ContentRenderer.svelte';
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
+	import FileItem from '$lib/components/common/FileItem.svelte';
 
 	interface MessageType {
 		id: string;
@@ -107,6 +113,7 @@
 
 	export let siblings;
 
+	export let gotoMessage: Function = () => {};
 	export let showPreviousMessage: Function;
 	export let showNextMessage: Function;
 
@@ -126,12 +133,17 @@
 	export let isLastMessage = true;
 	export let readOnly = false;
 
+	let buttonsContainerElement: HTMLDivElement;
+	let showDeleteConfirm = false;
+
 	let model = null;
 	$: model = $models.find((m) => m.id === message.model);
 
 	let edit = false;
 	let editedContent = '';
 	let editTextAreaElement: HTMLTextAreaElement;
+
+	let messageIndexEdit = false;
 
 	let audioParts: Record<number, HTMLAudioElement | null> = {};
 	let speaking = false;
@@ -143,7 +155,13 @@
 	let showRateComment = false;
 
 	const copyToClipboard = async (text) => {
-		const res = await _copyToClipboard(text);
+		text = removeAllDetails(text);
+
+		if (($config?.ui?.response_watermark ?? '').trim() !== '') {
+			text = `${text}\n\n${$config?.ui?.response_watermark}`;
+		}
+
+		const res = await _copyToClipboard(text, $settings?.copyFormatted ?? false);
 		if (res) {
 			toast.success($i18n.t('Copying to clipboard was successful!'));
 		}
@@ -194,6 +212,8 @@
 
 		speaking = true;
 
+		const content = removeAllDetails(message.content);
+
 		if ($config.audio.tts.engine === '') {
 			let voices = [];
 			const getVoicesLoop = setInterval(() => {
@@ -210,7 +230,7 @@
 
 					console.log(voice);
 
-					const speak = new SpeechSynthesisUtterance(message.content);
+					const speak = new SpeechSynthesisUtterance(content);
 					speak.rate = $settings.audio?.tts?.playbackRate ?? 1;
 
 					console.log(speak);
@@ -233,7 +253,7 @@
 			loadingSpeech = true;
 
 			const messageContentParts: string[] = getMessageContentParts(
-				message.content,
+				content,
 				$config?.audio?.tts?.split_on ?? 'punctuation'
 			);
 
@@ -323,9 +343,37 @@
 		}
 	};
 
+	let preprocessedDetailsCache = [];
+
+	function preprocessForEditing(content: string): string {
+		// Replace <details>...</details> with unique ID placeholder
+		const detailsBlocks = [];
+		let i = 0;
+
+		content = content.replace(/<details[\s\S]*?<\/details>/gi, (match) => {
+			detailsBlocks.push(match);
+			return `<details id="__DETAIL_${i++}__"/>`;
+		});
+
+		// Store original blocks in the editedContent or globally (see merging later)
+		preprocessedDetailsCache = detailsBlocks;
+
+		return content;
+	}
+
+	function postprocessAfterEditing(content: string): string {
+		const restoredContent = content.replace(
+			/<details id="__DETAIL_(\d+)__"\/>/g,
+			(_, index) => preprocessedDetailsCache[parseInt(index)] || ''
+		);
+
+		return restoredContent;
+	}
+
 	const editMessageHandler = async () => {
 		edit = true;
-		editedContent = message.content;
+
+		editedContent = preprocessForEditing(message.content);
 
 		await tick();
 
@@ -334,7 +382,8 @@
 	};
 
 	const editMessageConfirmHandler = async () => {
-		editMessage(message.id, editedContent ? editedContent : '', false);
+		const messageContent = postprocessAfterEditing(editedContent ? editedContent : '');
+		editMessage(message.id, { content: messageContent }, false);
 
 		edit = false;
 		editedContent = '';
@@ -343,7 +392,9 @@
 	};
 
 	const saveAsCopyHandler = async () => {
-		editMessage(message.id, editedContent ? editedContent : '');
+		const messageContent = postprocessAfterEditing(editedContent ? editedContent : '');
+
+		editMessage(message.id, { content: messageContent });
 
 		edit = false;
 		editedContent = '';
@@ -513,8 +564,33 @@
 		// console.log('ResponseMessage mounted');
 
 		await tick();
+		if (buttonsContainerElement) {
+			console.log(buttonsContainerElement);
+
+			buttonsContainerElement.addEventListener('wheel', function (event) {
+				if (buttonsContainerElement.scrollWidth <= buttonsContainerElement.clientWidth) {
+					// If the container is not scrollable, horizontal scroll
+					return;
+				} else {
+					event.preventDefault();
+
+					if (event.deltaY !== 0) {
+						// Adjust horizontal scroll position based on vertical scroll
+						buttonsContainerElement.scrollLeft += event.deltaY;
+					}
+				}
+			});
+		}
 	});
 </script>
+
+<DeleteConfirmDialog
+	bind:show={showDeleteConfirm}
+	title={$i18n.t('Delete message?')}
+	on:confirm={() => {
+		deleteMessageHandler();
+	}}
+/>
 
 {#key message.id}
 	<div
@@ -522,7 +598,7 @@
 		id="message-{message.id}"
 		dir={$settings.chatDirection}
 	>
-		<div class={`flex-shrink-0 ${($settings?.chatDirection ?? 'LTR') === 'LTR' ? 'mr-3' : 'ml-3'}`}>
+		<div class={`shrink-0 ltr:mr-3 rtl:ml-3`}>
 			<ProfileImage
 				src={model?.info?.meta?.profile_image_url ??
 					($i18n.language === 'dg-DG' ? `/doge.png` : `${WEBUI_BASE_URL}/static/favicon.png`)}
@@ -530,10 +606,10 @@
 			/>
 		</div>
 
-		<div class="flex-auto w-0 pl-1">
+		<div class="flex-auto w-0 pl-1 relative">
 			<Name>
 				<Tooltip content={model?.name ?? message.model} placement="top-start">
-					<span class="line-clamp-1">
+					<span class="line-clamp-1 text-black dark:text-white">
 						{model?.name ?? message.model}
 					</span>
 				</Tooltip>
@@ -550,18 +626,6 @@
 			</Name>
 
 			<div>
-				{#if message?.files && message.files?.filter((f) => f.type === 'image').length > 0}
-					<div class="my-2.5 w-full flex overflow-x-auto gap-2 flex-wrap">
-						{#each message.files as file}
-							<div>
-								{#if file.type === 'image'}
-									<Image src={file.url} alt={message.content} />
-								{/if}
-							</div>
-						{/each}
-					</div>
-				{/if}
-
 				<div class="chat-{message.role} w-full min-w-full markdown-prose">
 					<div>
 						{#if (message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]).length > 0}
@@ -570,12 +634,6 @@
 							).at(-1)}
 							{#if !status?.hidden}
 								<div class="status-description flex items-center gap-2 py-0.5">
-									{#if status?.done === false}
-										<div class="">
-											<Spinner className="size-4" />
-										</div>
-									{/if}
-
 									{#if status?.action === 'web_search' && status?.urls}
 										<WebSearchResults {status}>
 											<div class="flex flex-col justify-center -space-y-0.5">
@@ -630,6 +688,8 @@
 													{$i18n.t('No search query generated')}
 												{:else if status?.description === 'Generating search query'}
 													{$i18n.t('Generating search query')}
+												{:else if status?.description === 'Searching the web'}
+													{$i18n.t('Searching the web...')}
 												{:else}
 													{status?.description}
 												{/if}
@@ -640,12 +700,33 @@
 							{/if}
 						{/if}
 
+						{#if message?.files && message.files?.filter((f) => f.type === 'image').length > 0}
+							<div class="my-1 w-full flex overflow-x-auto gap-2 flex-wrap">
+								{#each message.files as file}
+									<div>
+										{#if file.type === 'image'}
+											<Image src={file.url} alt={message.content} />
+										{:else}
+											<FileItem
+												item={file}
+												url={file.url}
+												name={file.name}
+												type={file.type}
+												size={file?.size}
+												colorClassName="bg-white dark:bg-gray-850 "
+											/>
+										{/if}
+									</div>
+								{/each}
+							</div>
+						{/if}
+
 						{#if edit === true}
 							<div class="w-full bg-gray-50 dark:bg-gray-800 rounded-3xl px-5 py-3 my-2">
 								<textarea
 									id="message-edit-{message.id}"
 									bind:this={editTextAreaElement}
-									class=" bg-transparent outline-none w-full resize-none"
+									class=" bg-transparent outline-hidden w-full resize-none"
 									bind:value={editedContent}
 									on:input={(e) => {
 										e.target.style.height = '';
@@ -669,7 +750,7 @@
 									<div>
 										<button
 											id="save-new-message-button"
-											class=" px-4 py-2 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border dark:border-gray-700 text-gray-700 dark:text-gray-200 transition rounded-3xl"
+											class=" px-4 py-2 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border border-gray-100 dark:border-gray-700 text-gray-700 dark:text-gray-200 transition rounded-3xl"
 											on:click={() => {
 												saveAsCopyHandler();
 											}}
@@ -703,7 +784,7 @@
 							</div>
 						{:else}
 							<div class="w-full flex flex-col relative" id="response-content-container">
-								{#if message.content === '' && !message.error}
+								{#if message.content === '' && !message.error && (message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]).length === 0}
 									<Skeleton />
 								{:else if message.content && message.error !== true}
 									<!-- always show message contents even if there's an error -->
@@ -713,16 +794,19 @@
 										{history}
 										content={message.content}
 										sources={message.sources}
-										floatingButtons={message?.done}
+										floatingButtons={message?.done && !readOnly}
 										save={!readOnly}
+										preview={!readOnly}
 										{model}
 										onTaskClick={async (e) => {
 											console.log(e);
 										}}
-										onSourceClick={async (e) => {
-											console.log(e);
-											let sourceButton = document.getElementById(`source-${e}`);
-											const sourcesCollapsible = document.getElementById(`collapsible-sources`);
+										onSourceClick={async (id, idx) => {
+											console.log(id, idx);
+											let sourceButton = document.getElementById(`source-${message.id}-${idx}`);
+											const sourcesCollapsible = document.getElementById(
+												`collapsible-${message.id}`
+											);
 
 											if (sourceButton) {
 												sourceButton.click();
@@ -740,34 +824,19 @@
 												});
 
 												// Try clicking the source button again
-												sourceButton = document.getElementById(`source-${e}`);
+												sourceButton = document.getElementById(`source-${message.id}-${idx}`);
 												sourceButton && sourceButton.click();
 											}
 										}}
 										onAddMessages={({ modelId, parentId, messages }) => {
 											addMessages({ modelId, parentId, messages });
 										}}
-										on:update={(e) => {
-											const { raw, oldContent, newContent } = e.detail;
-
+										onSave={({ raw, oldContent, newContent }) => {
 											history.messages[message.id].content = history.messages[
 												message.id
 											].content.replace(raw, raw.replace(oldContent, newContent));
 
 											updateChat();
-										}}
-										on:select={(e) => {
-											const { type, content } = e.detail;
-
-											if (type === 'explain') {
-												submitMessage(
-													message.id,
-													`Explain this section to me in more detail\n\n\`\`\`\n${content}\n\`\`\``
-												);
-											} else if (type === 'ask') {
-												const input = e.detail?.input ?? '';
-												submitMessage(message.id, `\`\`\`\n${content}\n\`\`\`\n${input}`);
-											}
 										}}
 									/>
 								{/if}
@@ -777,7 +846,7 @@
 								{/if}
 
 								{#if (message?.sources || message?.citations) && (model?.info?.meta?.capabilities?.citations ?? true)}
-									<Citations sources={message?.sources ?? message?.citations} />
+									<Citations id={message?.id} sources={message?.sources ?? message?.citations} />
 								{/if}
 
 								{#if message.code_executions}
@@ -789,10 +858,11 @@
 				</div>
 
 				{#if !edit}
-					{#if message.done || siblings.length > 1}
-						<div
-							class=" flex justify-start overflow-x-auto buttons text-gray-600 dark:text-gray-500 mt-0.5"
-						>
+					<div
+						bind:this={buttonsContainerElement}
+						class="flex justify-start overflow-x-auto buttons text-gray-600 dark:text-gray-500 mt-0.5"
+					>
+						{#if message.done || siblings.length > 1}
 							{#if siblings.length > 1}
 								<div class="flex self-center min-w-fit" dir="ltr">
 									<button
@@ -817,11 +887,50 @@
 										</svg>
 									</button>
 
-									<div
-										class="text-sm tracking-widest font-semibold self-center dark:text-gray-100 min-w-fit"
-									>
-										{siblings.indexOf(message.id) + 1}/{siblings.length}
-									</div>
+									{#if messageIndexEdit}
+										<div
+											class="text-sm flex justify-center font-semibold self-center dark:text-gray-100 min-w-fit"
+										>
+											<input
+												id="message-index-input-{message.id}"
+												type="number"
+												value={siblings.indexOf(message.id) + 1}
+												min="1"
+												max={siblings.length}
+												on:focus={(e) => {
+													e.target.select();
+												}}
+												on:blur={(e) => {
+													gotoMessage(message, e.target.value - 1);
+													messageIndexEdit = false;
+												}}
+												on:keydown={(e) => {
+													if (e.key === 'Enter') {
+														gotoMessage(message, e.target.value - 1);
+														messageIndexEdit = false;
+													}
+												}}
+												class="bg-transparent font-semibold self-center dark:text-gray-100 min-w-fit outline-hidden"
+											/>/{siblings.length}
+										</div>
+									{:else}
+										<!-- svelte-ignore a11y-no-static-element-interactions -->
+										<div
+											class="text-sm tracking-widest font-semibold self-center dark:text-gray-100 min-w-fit"
+											on:dblclick={async () => {
+												messageIndexEdit = true;
+
+												await tick();
+												const input = document.getElementById(`message-index-input-${message.id}`);
+												if (input) {
+													input.focus();
+													input.select();
+												}
+											}}
+										>
+											{siblings.indexOf(message.id) + 1}/{siblings.length}
+										</div>
+									{/if}
 
 									<button
 										class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
@@ -849,7 +958,7 @@
 
 							{#if message.done}
 								{#if !readOnly}
-									{#if $user.role === 'user' ? ($user?.permissions?.chat?.edit ?? true) : true}
+									{#if $user?.role === 'user' ? ($user?.permissions?.chat?.edit ?? true) : true}
 										<Tooltip content={$i18n.t('Edit')} placement="bottom">
 											<button
 												class="{isLastMessage
@@ -904,85 +1013,87 @@
 									</button>
 								</Tooltip>
 
-								<Tooltip content={$i18n.t('Read Aloud')} placement="bottom">
-									<button
-										id="speak-button-{message.id}"
-										class="{isLastMessage
-											? 'visible'
-											: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
-										on:click={() => {
-											if (!loadingSpeech) {
-												toggleSpeakMessage();
-											}
-										}}
-									>
-										{#if loadingSpeech}
-											<svg
-												class=" w-4 h-4"
-												fill="currentColor"
-												viewBox="0 0 24 24"
-												xmlns="http://www.w3.org/2000/svg"
-											>
-												<style>
-													.spinner_S1WN {
-														animation: spinner_MGfb 0.8s linear infinite;
-														animation-delay: -0.8s;
-													}
-
-													.spinner_Km9P {
-														animation-delay: -0.65s;
-													}
-
-													.spinner_JApP {
-														animation-delay: -0.5s;
-													}
-
-													@keyframes spinner_MGfb {
-														93.75%,
-														100% {
-															opacity: 0.2;
+								{#if $user?.role === 'admin' || ($user?.permissions?.chat?.tts ?? true)}
+									<Tooltip content={$i18n.t('Read Aloud')} placement="bottom">
+										<button
+											id="speak-button-{message.id}"
+											class="{isLastMessage
+												? 'visible'
+												: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+											on:click={() => {
+												if (!loadingSpeech) {
+													toggleSpeakMessage();
+												}
+											}}
+										>
+											{#if loadingSpeech}
+												<svg
+													class=" w-4 h-4"
+													fill="currentColor"
+													viewBox="0 0 24 24"
+													xmlns="http://www.w3.org/2000/svg"
+												>
+													<style>
+														.spinner_S1WN {
+															animation: spinner_MGfb 0.8s linear infinite;
+															animation-delay: -0.8s;
 														}
-													}
-												</style>
-												<circle class="spinner_S1WN" cx="4" cy="12" r="3" />
-												<circle class="spinner_S1WN spinner_Km9P" cx="12" cy="12" r="3" />
-												<circle class="spinner_S1WN spinner_JApP" cx="20" cy="12" r="3" />
-											</svg>
-										{:else if speaking}
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												fill="none"
-												viewBox="0 0 24 24"
-												stroke-width="2.3"
-												stroke="currentColor"
-												class="w-4 h-4"
-											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													d="M17.25 9.75 19.5 12m0 0 2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6 4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z"
-												/>
-											</svg>
-										{:else}
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												fill="none"
-												viewBox="0 0 24 24"
-												stroke-width="2.3"
-												stroke="currentColor"
-												class="w-4 h-4"
-											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z"
-												/>
-											</svg>
-										{/if}
-									</button>
-								</Tooltip>
 
-								{#if $config?.features.enable_image_generation && ($user.role === 'admin' || $user?.permissions?.features?.image_generation) && !readOnly}
+														.spinner_Km9P {
+															animation-delay: -0.65s;
+														}
+
+														.spinner_JApP {
+															animation-delay: -0.5s;
+														}
+
+														@keyframes spinner_MGfb {
+															93.75%,
+															100% {
+																opacity: 0.2;
+															}
+														}
+													</style>
+													<circle class="spinner_S1WN" cx="4" cy="12" r="3" />
+													<circle class="spinner_S1WN spinner_Km9P" cx="12" cy="12" r="3" />
+													<circle class="spinner_S1WN spinner_JApP" cx="20" cy="12" r="3" />
+												</svg>
+											{:else if speaking}
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													fill="none"
+													viewBox="0 0 24 24"
+													stroke-width="2.3"
+													stroke="currentColor"
+													class="w-4 h-4"
+												>
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														d="M17.25 9.75 19.5 12m0 0 2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6 4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z"
+													/>
+												</svg>
+											{:else}
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													fill="none"
+													viewBox="0 0 24 24"
+													stroke-width="2.3"
+													stroke="currentColor"
+													class="w-4 h-4"
+												>
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z"
+													/>
+												</svg>
+											{/if}
+										</button>
+									</Tooltip>
+								{/if}
+
+								{#if $config?.features.enable_image_generation && ($user?.role === 'admin' || $user?.permissions?.features?.image_generation) && !readOnly}
 									<Tooltip content={$i18n.t('Generate Image')} placement="bottom">
 										<button
 											class="{isLastMessage
@@ -1089,7 +1200,7 @@
 								{/if}
 
 								{#if !readOnly}
-									{#if $config?.features.enable_message_rating ?? true}
+									{#if !$temporaryChatEnabled && ($config?.features.enable_message_rating ?? true)}
 										<Tooltip content={$i18n.t('Good Response')} placement="bottom">
 											<button
 												class="{isLastMessage
@@ -1242,12 +1353,12 @@
 										<Tooltip content={$i18n.t('Delete')} placement="bottom">
 											<button
 												type="button"
-												id="continue-response-button"
+												id="delete-response-button"
 												class="{isLastMessage
 													? 'visible'
 													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition regenerate-response-button"
 												on:click={() => {
-													deleteMessageHandler();
+													showDeleteConfirm = true;
 												}}
 											>
 												<svg
@@ -1280,11 +1391,11 @@
 														actionMessage(action.id, message);
 													}}
 												>
-													{#if action.icon_url}
+													{#if action?.icon}
 														<div class="size-4">
 															<img
-																src={action.icon_url}
-																class="w-4 h-4 {action.icon_url.includes('svg')
+																src={action.icon}
+																class="w-4 h-4 {action.icon.includes('svg')
 																	? 'dark:invert-[80%]'
 																	: ''}"
 																style="fill: currentColor;"
@@ -1300,8 +1411,8 @@
 									{/if}
 								{/if}
 							{/if}
-						</div>
-					{/if}
+						{/if}
+					</div>
 
 					{#if message.done && showRateComment}
 						<RateComment
@@ -1316,6 +1427,12 @@
 					{/if}
 				{/if}
 			</div>
+
+			{#if message?.done}
+				<div aria-live="polite" class="sr-only">
+					{message?.content ?? ''}
+				</div>
+			{/if}
 		</div>
 	</div>
 {/key}

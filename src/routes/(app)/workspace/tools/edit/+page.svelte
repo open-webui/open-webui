@@ -75,8 +75,8 @@
 		meta={tool.meta}
 		content={tool.content}
 		accessControl={tool.access_control}
-		on:save={(e) => {
-			saveHandler(e.detail);
+		onSave={(value) => {
+			saveHandler(value);
 		}}
 	/>
 {:else}

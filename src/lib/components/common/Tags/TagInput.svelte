@@ -27,7 +27,7 @@
 		<div class="flex items-center">
 			<input
 				bind:value={tagName}
-				class=" px-2 cursor-pointer self-center text-xs h-fit bg-transparent outline-none line-clamp-1 w-[6.5rem]"
+				class=" px-2 cursor-pointer self-center text-xs h-fit bg-transparent outline-hidden line-clamp-1 w-[6.5rem]"
 				placeholder={$i18n.t('Add a tag')}
 				list="tagOptions"
 				on:keydown={(event) => {

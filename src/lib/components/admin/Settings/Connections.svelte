@@ -136,7 +136,7 @@
 	};
 
 	onMount(async () => {
-		if ($user.role === 'admin') {
+		if ($user?.role === 'admin') {
 			let ollamaConfig = {};
 			let openaiConfig = {};
 
@@ -234,7 +234,7 @@
 					</div>
 
 					{#if ENABLE_OPENAI_API}
-						<hr class=" border-gray-50 dark:border-gray-850" />
+						<hr class=" border-gray-100 dark:border-gray-850" />
 
 						<div class="">
 							<div class="flex justify-between items-center">
@@ -274,6 +274,7 @@
 												newConfig[newIdx] = OPENAI_API_CONFIGS[newIdx < idx ? newIdx : newIdx + 1];
 											});
 											OPENAI_API_CONFIGS = newConfig;
+											updateOpenAIHandler();
 										}}
 									/>
 								{/each}
@@ -283,7 +284,7 @@
 				</div>
 			</div>
 
-			<hr class=" border-gray-50 dark:border-gray-850" />
+			<hr class=" border-gray-100 dark:border-gray-850" />
 
 			<div class="pr-1.5 my-2">
 				<div class="flex justify-between items-center text-sm mb-2">
@@ -300,7 +301,7 @@
 				</div>
 
 				{#if ENABLE_OLLAMA_API}
-					<hr class=" border-gray-50 dark:border-gray-850 my-2" />
+					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
 					<div class="">
 						<div class="flex justify-between items-center">
@@ -357,7 +358,7 @@
 				{/if}
 			</div>
 
-			<hr class=" border-gray-50 dark:border-gray-850" />
+			<hr class=" border-gray-100 dark:border-gray-850" />
 
 			<div class="pr-1.5 my-2">
 				<div class="flex justify-between items-center text-sm">

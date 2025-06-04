@@ -9,7 +9,7 @@
 	import Modal from '$lib/components/common/Modal.svelte';
 	import RichTextInput from '$lib/components/common/RichTextInput.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
-	import Mic from '$lib/components/icons/Mic.svelte';
+	import MicSolid from '$lib/components/icons/MicSolid.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import VoiceRecording from '$lib/components/chat/MessageInput/VoiceRecording.svelte';
 	export let show = false;
@@ -54,10 +54,10 @@
 		>
 			<div class=" flex-1 w-full h-full flex justify-center overflow-auto px-5 py-4">
 				<div class=" max-w-3xl py-2 md:py-10 w-full flex flex-col gap-2">
-					<div class="flex-shrink-0 w-full flex justify-between items-center">
+					<div class="shrink-0 w-full flex justify-between items-center">
 						<div class="w-full">
 							<input
-								class="w-full text-3xl font-semibold bg-transparent outline-none"
+								class="w-full text-3xl font-semibold bg-transparent outline-hidden"
 								type="text"
 								bind:value={name}
 								placeholder={$i18n.t('Title')}
@@ -77,7 +77,7 @@
 			</div>
 
 			<div
-				class="flex flex-row items-center justify-end text-sm font-medium flex-shrink-0 mt-1 p-4 gap-1.5"
+				class="flex flex-row items-center justify-end text-sm font-medium shrink-0 mt-1 p-4 gap-1.5"
 			>
 				<div class="">
 					{#if voiceInput}
@@ -85,11 +85,11 @@
 							<VoiceRecording
 								bind:recording={voiceInput}
 								className="p-1"
-								on:cancel={() => {
+								onCancel={() => {
 									voiceInput = false;
 								}}
-								on:confirm={(e) => {
-									const { text, filename } = e.detail;
+								onConfirm={(data) => {
+									const { text, filename } = data;
 									content = `${content}${text} `;
 
 									voiceInput = false;
@@ -125,13 +125,13 @@
 									}
 								}}
 							>
-								<Mic className="size-5" />
+								<MicSolid className="size-5" />
 							</button>
 						</Tooltip>
 					{/if}
 				</div>
 
-				<div class=" flex-shrink-0">
+				<div class=" shrink-0">
 					<Tooltip content={$i18n.t('Save')}>
 						<button
 							class=" px-3.5 py-2 bg-black text-white dark:bg-white dark:text-black transition rounded-full"

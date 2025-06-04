@@ -1,25 +1,60 @@
 from typing import Optional
+import logging
+from urllib.parse import urlparse
 
 from qdrant_client import QdrantClient as Qclient
 from qdrant_client.http.models import PointStruct
 from qdrant_client.models import models
 
-from open_webui.retrieval.vector.main import VectorItem, SearchResult, GetResult
-from open_webui.config import QDRANT_URI, QDRANT_API_KEY
+from open_webui.retrieval.vector.main import (
+    VectorDBBase,
+    VectorItem,
+    SearchResult,
+    GetResult,
+)
+from open_webui.config import (
+    QDRANT_URI,
+    QDRANT_API_KEY,
+    QDRANT_ON_DISK,
+    QDRANT_GRPC_PORT,
+    QDRANT_PREFER_GRPC,
+)
+from open_webui.env import SRC_LOG_LEVELS
 
 NO_LIMIT = 999999999
 
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["RAG"])
 
-class QdrantClient:
+
+class QdrantClient(VectorDBBase):
     def __init__(self):
         self.collection_prefix = "open-webui"
         self.QDRANT_URI = QDRANT_URI
         self.QDRANT_API_KEY = QDRANT_API_KEY
-        self.client = (
-            Qclient(url=self.QDRANT_URI, api_key=self.QDRANT_API_KEY)
-            if self.QDRANT_URI
-            else None
-        )
+        self.QDRANT_ON_DISK = QDRANT_ON_DISK
+        self.PREFER_GRPC = QDRANT_PREFER_GRPC
+        self.GRPC_PORT = QDRANT_GRPC_PORT
+
+        if not self.QDRANT_URI:
+            self.client = None
+            return
+
+        # Unified handling for either scheme
+        parsed = urlparse(self.QDRANT_URI)
+        host = parsed.hostname or self.QDRANT_URI
+        http_port = parsed.port or 6333  # default REST port
+
+        if self.PREFER_GRPC:
+            self.client = Qclient(
+                host=host,
+                port=http_port,
+                grpc_port=self.GRPC_PORT,
+                prefer_grpc=self.PREFER_GRPC,
+                api_key=self.QDRANT_API_KEY,
+            )
+        else:
+            self.client = Qclient(url=self.QDRANT_URI, api_key=self.QDRANT_API_KEY)
 
     def _result_to_get_result(self, points) -> GetResult:
         ids = []
@@ -45,11 +80,13 @@ class QdrantClient:
         self.client.create_collection(
             collection_name=collection_name_with_prefix,
             vectors_config=models.VectorParams(
-                size=dimension, distance=models.Distance.COSINE
+                size=dimension,
+                distance=models.Distance.COSINE,
+                on_disk=self.QDRANT_ON_DISK,
             ),
         )
 
-        print(f"collection {collection_name_with_prefix} successfully created!")
+        log.info(f"collection {collection_name_with_prefix} successfully created!")
 
     def _create_collection_if_not_exists(self, collection_name, dimension):
         if not self.has_collection(collection_name=collection_name):
@@ -94,7 +131,8 @@ class QdrantClient:
             ids=get_result.ids,
             documents=get_result.documents,
             metadatas=get_result.metadatas,
-            distances=[[point.score for point in query_response.points]],
+            # qdrant distance is [-1, 1], normalize to [0, 1]
+            distances=[[(point.score + 1.0) / 2.0 for point in query_response.points]],
         )
 
     def query(self, collection_name: str, filter: dict, limit: Optional[int] = None):
@@ -120,7 +158,7 @@ class QdrantClient:
             )
             return self._result_to_get_result(points.points)
         except Exception as e:
-            print(e)
+            log.exception(f"Error querying a collection '{collection_name}': {e}")
             return None
 
     def get(self, collection_name: str) -> Optional[GetResult]:

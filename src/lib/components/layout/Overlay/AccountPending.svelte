@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { getAdminDetails } from '$lib/apis/auths';
 	import { onMount, tick, getContext } from 'svelte';
+	import { config } from '$lib/stores';
 
 	const i18n = getContext('i18n');
 
@@ -14,22 +15,35 @@
 	});
 </script>
 
-<div class="fixed w-full h-full flex z-[999]">
+<div class="fixed w-full h-full flex z-999">
 	<div
 		class="absolute w-full h-full backdrop-blur-lg bg-white/10 dark:bg-gray-900/50 flex justify-center"
 	>
 		<div class="m-auto pb-10 flex flex-col justify-center">
 			<div class="max-w-md">
-				<div class="text-center dark:text-white text-2xl font-medium z-50">
-					{$i18n.t('Account Activation Pending')}<br />
-					{$i18n.t('Contact Admin for WebUI Access')}
+				<div
+					class="text-center dark:text-white text-2xl font-medium z-50"
+					style="white-space: pre-wrap;"
+				>
+					{#if ($config?.ui?.pending_user_overlay_title ?? '').trim() !== ''}
+						{$config.ui.pending_user_overlay_title}
+					{:else}
+						{$i18n.t('Account Activation Pending')}<br />
+						{$i18n.t('Contact Admin for WebUI Access')}
+					{/if}
 				</div>
 
-				<div class=" mt-4 text-center text-sm dark:text-gray-200 w-full">
-					{$i18n.t('Your account status is currently pending activation.')}<br />
-					{$i18n.t(
-						'To access the WebUI, please reach out to the administrator. Admins can manage user statuses from the Admin Panel.'
-					)}
+				<div
+					class=" mt-4 text-center text-sm dark:text-gray-200 w-full"
+					style="white-space: pre-wrap;"
+				>
+					{#if ($config?.ui?.pending_user_overlay_content ?? '').trim() !== ''}
+						{$config.ui.pending_user_overlay_content}
+					{:else}
+						{$i18n.t('Your account status is currently pending activation.')}{'\n'}{$i18n.t(
+							'To access the WebUI, please reach out to the administrator. Admins can manage user statuses from the Admin Panel.'
+						)}
+					{/if}
 				</div>
 
 				{#if adminDetails}

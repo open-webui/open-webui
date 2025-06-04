@@ -16,7 +16,7 @@ export const getUserGroups = async (token: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -43,7 +43,7 @@ export const getUserDefaultPermissions = async (token: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -73,7 +73,7 @@ export const updateUserDefaultPermissions = async (token: string, permissions: o
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -104,7 +104,7 @@ export const updateUserRole = async (token: string, id: string, role: string) =>
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -116,10 +116,33 @@ export const updateUserRole = async (token: string, id: string, role: string) =>
 	return res;
 };
 
-export const getUsers = async (token: string) => {
+export const getUsers = async (
+	token: string,
+	query?: string,
+	orderBy?: string,
+	direction?: string,
+	page = 1
+) => {
 	let error = null;
+	let res = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/users/`, {
+	let searchParams = new URLSearchParams();
+
+	searchParams.set('page', `${page}`);
+
+	if (query) {
+		searchParams.set('query', query);
+	}
+
+	if (orderBy) {
+		searchParams.set('order_by', orderBy);
+	}
+
+	if (direction) {
+		searchParams.set('direction', direction);
+	}
+
+	res = await fetch(`${WEBUI_API_BASE_URL}/users/?${searchParams.toString()}`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -131,7 +154,7 @@ export const getUsers = async (token: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -140,7 +163,35 @@ export const getUsers = async (token: string) => {
 		throw error;
 	}
 
-	return res ? res : [];
+	return res;
+};
+
+export const getAllUsers = async (token: string) => {
+	let error = null;
+	let res = null;
+
+	res = await fetch(`${WEBUI_API_BASE_URL}/users/all`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
 };
 
 export const getUserSettings = async (token: string) => {
@@ -157,7 +208,7 @@ export const getUserSettings = async (token: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -187,7 +238,7 @@ export const updateUserSettings = async (token: string, settings: object) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -214,7 +265,7 @@ export const getUserById = async (token: string, userId: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -240,7 +291,7 @@ export const getUserInfo = async (token: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -270,7 +321,7 @@ export const updateUserInfo = async (token: string, info: object) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -284,14 +335,16 @@ export const updateUserInfo = async (token: string, info: object) => {
 
 export const getAndUpdateUserLocation = async (token: string) => {
 	const location = await getUserPosition().catch((err) => {
-		throw err;
+		console.error(err);
+		return null;
 	});
 
 	if (location) {
 		await updateUserInfo(token, { location: location });
 		return location;
 	} else {
-		throw new Error('Failed to get user location');
+		console.info('Failed to get user location');
+		return null;
 	}
 };
 
@@ -310,7 +363,7 @@ export const deleteUserById = async (token: string, userId: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -350,7 +403,7 @@ export const updateUserById = async (token: string, userId: string, user: UserUp
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});

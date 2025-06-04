@@ -5,10 +5,18 @@ on:
     branches:
       - main
       - dev
+    paths-ignore:
+      - 'backend/**'
+      - 'pyproject.toml'
+      - 'uv.lock'
   pull_request:
     branches:
       - main
       - dev
+    paths-ignore:
+      - 'backend/**'
+      - 'pyproject.toml'
+      - 'uv.lock'
 
 jobs:
   build:
@@ -21,7 +29,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22' # Or specify any other version you want to use
+          node-version: '22'
 
       - name: Install Dependencies
         run: npm install

@@ -153,7 +153,11 @@
 		await tick();
 		const file = blobToFile(audioBlob, 'recording.wav');
 
-		const res = await transcribeAudio(localStorage.token, file).catch((error) => {
+		const res = await transcribeAudio(
+			localStorage.token,
+			file,
+			$settings?.audio?.stt?.language
+		).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});
@@ -231,7 +235,6 @@
 			mediaRecorder.onstart = () => {
 				console.log('Recording started');
 				audioChunks = [];
-				analyseAudio(audioStream);
 			};
 
 			mediaRecorder.ondataavailable = (event) => {
@@ -245,7 +248,7 @@
 				stopRecordingCallback();
 			};
 
-			mediaRecorder.start();
+			analyseAudio(audioStream);
 		}
 	};
 
@@ -321,6 +324,9 @@
 				if (hasSound) {
 					// BIG RED TEXT
 					console.log('%c%s', 'color: red; font-size: 20px;', '🔊 Sound detected');
+					if (mediaRecorder && mediaRecorder.state !== 'recording') {
+						mediaRecorder.start();
+					}
 
 					if (!hasStartedSpeaking) {
 						hasStartedSpeaking = true;

@@ -56,6 +56,7 @@
 		}
 	}
 
+	let system = '';
 	let info = {
 		id: '',
 		base_model_id: null,
@@ -76,8 +77,12 @@
 	};
 	let capabilities = {
 		vision: true,
-		usage: undefined,
-		citations: true
+		file_upload: true,
+		web_search: true,
+		image_generation: true,
+		code_interpreter: true,
+		citations: true,
+		usage: undefined
 	};
 
 	let knowledge = [];
@@ -113,6 +118,8 @@
 		if (name === '') {
 			toast.error('Model Name is required.');
 		}
+
+		info.params = { ...info.params, ...params };
 
 		info.access_control = accessControl;
 		info.meta.capabilities = capabilities;
@@ -155,6 +162,7 @@
 			}
 		}
 
+		info.params.system = system.trim() === '' ? null : system;
 		info.params.stop = params.stop ? params.stop.split(',').filter((s) => s.trim()) : null;
 		Object.keys(info.params).forEach((key) => {
 			if (info.params[key] === '' || info.params[key] === null) {
@@ -180,7 +188,6 @@
 		}
 
 		if (model) {
-			console.log(model);
 			name = model.name;
 			await tick();
 
@@ -201,6 +208,8 @@
 					model.base_model_id = null;
 				}
 			}
+
+			system = model?.params?.system ?? '';
 
 			params = { ...params, ...model?.params };
 			params.stop = params?.stop
@@ -364,10 +373,10 @@
 					submitHandler();
 				}}
 			>
-				<div class="self-center md:self-start flex justify-center my-2 flex-shrink-0">
+				<div class="self-center md:self-start flex justify-center my-2 shrink-0">
 					<div class="self-center">
 						<button
-							class="rounded-xl flex flex-shrink-0 items-center {info.meta.profile_image_url !==
+							class="rounded-xl flex shrink-0 items-center {info.meta.profile_image_url !==
 							'/static/favicon.png'
 								? 'bg-transparent'
 								: 'bg-white'} shadow-xl group relative"
@@ -435,7 +444,7 @@
 						<div class="flex-1">
 							<div>
 								<input
-									class="text-3xl font-semibold w-full bg-transparent outline-none"
+									class="text-3xl font-semibold w-full bg-transparent outline-hidden"
 									placeholder={$i18n.t('Model Name')}
 									bind:value={name}
 									required
@@ -446,7 +455,7 @@
 						<div class="flex-1">
 							<div>
 								<input
-									class="text-xs w-full bg-transparent text-gray-500 outline-none"
+									class="text-xs w-full bg-transparent text-gray-500 outline-hidden"
 									placeholder={$i18n.t('Model ID')}
 									bind:value={id}
 									disabled={edit}
@@ -462,7 +471,7 @@
 
 							<div>
 								<select
-									class="text-sm w-full bg-transparent outline-none"
+									class="text-sm w-full bg-transparent outline-hidden"
 									placeholder="Select a base model (e.g. llama3, gpt-4o)"
 									bind:value={info.base_model_id}
 									on:change={(e) => {
@@ -486,7 +495,7 @@
 							<div class=" self-center text-sm font-semibold">{$i18n.t('Description')}</div>
 
 							<button
-								class="p-1 text-xs flex rounded transition"
+								class="p-1 text-xs flex rounded-sm transition"
 								type="button"
 								on:click={() => {
 									enableDescription = !enableDescription;
@@ -502,7 +511,7 @@
 
 						{#if enableDescription}
 							<Textarea
-								className=" text-sm w-full bg-transparent outline-none resize-none overflow-y-hidden "
+								className=" text-sm w-full bg-transparent outline-hidden resize-none overflow-y-hidden "
 								placeholder={$i18n.t('Add a short description about what this model does')}
 								bind:value={info.meta.description}
 							/>
@@ -531,11 +540,15 @@
 
 					<div class="my-2">
 						<div class="px-3 py-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
-							<AccessControl bind:accessControl accessRoles={['read', 'write']} />
+							<AccessControl
+								bind:accessControl
+								accessRoles={['read', 'write']}
+								allowPublic={$user?.permissions?.sharing?.public_models || $user?.role === 'admin'}
+							/>
 						</div>
 					</div>
 
-					<hr class=" border-gray-50 dark:border-gray-850 my-1.5" />
+					<hr class=" border-gray-100 dark:border-gray-850 my-1.5" />
 
 					<div class="my-2">
 						<div class="flex w-full justify-between">
@@ -547,10 +560,10 @@
 								<div class=" text-xs font-semibold mb-2">{$i18n.t('System Prompt')}</div>
 								<div>
 									<Textarea
-										className=" text-sm w-full bg-transparent outline-none resize-none overflow-y-hidden "
+										className=" text-sm w-full bg-transparent outline-hidden resize-none overflow-y-hidden "
 										placeholder={`Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.`}
 										rows={4}
-										bind:value={info.params.system}
+										bind:value={system}
 									/>
 								</div>
 							</div>
@@ -561,7 +574,7 @@
 								</div>
 
 								<button
-									class="p-1 px-3 text-xs flex rounded transition"
+									class="p-1 px-3 text-xs flex rounded-sm transition"
 									type="button"
 									on:click={() => {
 										showAdvanced = !showAdvanced;
@@ -577,19 +590,13 @@
 
 							{#if showAdvanced}
 								<div class="my-2">
-									<AdvancedParams
-										admin={true}
-										bind:params
-										on:change={(e) => {
-											info.params = { ...info.params, ...params };
-										}}
-									/>
+									<AdvancedParams admin={true} custom={true} bind:params />
 								</div>
 							{/if}
 						</div>
 					</div>
 
-					<hr class=" border-gray-50 dark:border-gray-850 my-1" />
+					<hr class=" border-gray-100 dark:border-gray-850 my-1" />
 
 					<div class="my-2">
 						<div class="flex w-full justify-between items-center">
@@ -599,7 +606,7 @@
 								</div>
 
 								<button
-									class="p-1 text-xs flex rounded transition"
+									class="p-1 text-xs flex rounded-sm transition"
 									type="button"
 									on:click={() => {
 										if ((info?.meta?.suggestion_prompts ?? null) === null) {
@@ -619,7 +626,7 @@
 
 							{#if (info?.meta?.suggestion_prompts ?? null) !== null}
 								<button
-									class="p-1 px-2 text-xs flex rounded transition"
+									class="p-1 px-2 text-xs flex rounded-sm transition"
 									type="button"
 									on:click={() => {
 										if (
@@ -653,7 +660,7 @@
 									{#each info.meta.suggestion_prompts as prompt, promptIdx}
 										<div class=" flex rounded-lg">
 											<input
-												class=" text-sm w-full bg-transparent outline-none border-r border-gray-50 dark:border-gray-850"
+												class=" text-sm w-full bg-transparent outline-hidden border-r border-gray-100 dark:border-gray-850"
 												placeholder={$i18n.t('Write a prompt suggestion (e.g. Who are you?)')}
 												bind:value={prompt.content}
 											/>
@@ -686,7 +693,7 @@
 						{/if}
 					</div>
 
-					<hr class=" border-gray-50 dark:border-gray-850 my-1.5" />
+					<hr class=" border-gray-100 dark:border-gray-850 my-1.5" />
 
 					<div class="my-2">
 						<Knowledge bind:selectedKnowledge={knowledge} collections={$knowledgeCollections} />
@@ -719,7 +726,7 @@
 							<div class=" self-center text-sm font-semibold">{$i18n.t('JSON Preview')}</div>
 
 							<button
-								class="p-1 px-3 text-xs flex rounded transition"
+								class="p-1 px-3 text-xs flex rounded-sm transition"
 								type="button"
 								on:click={() => {
 									showPreview = !showPreview;
@@ -736,7 +743,7 @@
 						{#if showPreview}
 							<div>
 								<textarea
-									class="text-sm w-full bg-transparent outline-none resize-none"
+									class="text-sm w-full bg-transparent outline-hidden resize-none"
 									rows="10"
 									value={JSON.stringify(info, null, 2)}
 									disabled

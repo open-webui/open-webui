@@ -1,5 +1,9 @@
 <script lang="ts">
 	import { onDestroy, onMount } from 'svelte';
+	import panzoom, { type PanZoom } from 'panzoom';
+
+	import fileSaver from 'file-saver';
+	const { saveAs } = fileSaver;
 
 	export let show = false;
 	export let src = '';
@@ -9,20 +13,23 @@
 
 	let previewElement = null;
 
-	const downloadImage = (url, filename, prefixName = '') => {
-		fetch(url)
-			.then((response) => response.blob())
-			.then((blob) => {
-				const objectUrl = window.URL.createObjectURL(blob);
-				const link = document.createElement('a');
-				link.href = objectUrl;
-				link.download = `${prefixName}${filename}`;
-				document.body.appendChild(link);
-				link.click();
-				document.body.removeChild(link);
-				window.URL.revokeObjectURL(objectUrl);
-			})
-			.catch((error) => console.error('Error downloading image:', error));
+	let instance: PanZoom;
+
+	let sceneParentElement: HTMLElement;
+	let sceneElement: HTMLElement;
+
+	$: if (sceneElement) {
+		instance = panzoom(sceneElement, {
+			bounds: true,
+			boundsPadding: 0.1,
+
+			zoomSpeed: 0.065
+		});
+	}
+	const resetPanZoomViewport = () => {
+		instance.moveTo(0, 0);
+		instance.zoomAbs(0, 0, 1);
+		console.log(instance.getTransform());
 	};
 
 	const handleKeyDown = (event: KeyboardEvent) => {
@@ -60,13 +67,18 @@
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	<div
 		bind:this={previewElement}
-		class="modal fixed top-0 right-0 left-0 bottom-0 bg-black text-white w-full min-h-screen h-screen flex justify-center z-[9999] overflow-hidden overscroll-contain"
+		class="modal fixed top-0 right-0 left-0 bottom-0 bg-black text-white w-full min-h-screen h-screen flex justify-center z-9999 overflow-hidden overscroll-contain"
 	>
-		<div class=" absolute left-0 w-full flex justify-between select-none">
+		<div class=" absolute left-0 w-full flex justify-between select-none z-20">
 			<div>
 				<button
 					class=" p-5"
-					on:click={() => {
+					on:pointerdown={(e) => {
+						e.stopImmediatePropagation();
+						e.preventDefault();
+						show = false;
+					}}
+					on:click={(e) => {
 						show = false;
 					}}
 				>
@@ -85,9 +97,74 @@
 
 			<div>
 				<button
-					class=" p-5"
+					class=" p-5 z-999"
 					on:click={() => {
-						downloadImage(src, src.substring(src.lastIndexOf('/') + 1), alt);
+						if (src.startsWith('data:image/')) {
+							const base64Data = src.split(',')[1];
+							const blob = new Blob([Uint8Array.from(atob(base64Data), (c) => c.charCodeAt(0))], {
+								type: 'image/png'
+							});
+
+							const mimeType = blob.type || 'image/png';
+							// create file name based on the MIME type, alt should be a valid file name with extension
+							const fileName = alt
+								? `${alt.replaceAll('.', '')}.${mimeType.split('/')[1]}`
+								: 'download.png';
+
+							// Use FileSaver to save the blob
+							saveAs(blob, fileName);
+							return;
+						} else if (src.startsWith('blob:')) {
+							// Handle blob URLs
+							fetch(src)
+								.then((response) => response.blob())
+								.then((blob) => {
+									// detect the MIME type from the blob
+									const mimeType = blob.type || 'image/png';
+
+									// Create a new Blob with the correct MIME type
+									const blobWithType = new Blob([blob], { type: mimeType });
+
+									// create file name based on the MIME type, alt should be a valid file name with extension
+									const fileName = alt
+										? `${alt.replaceAll('.', '')}.${mimeType.split('/')[1]}`
+										: 'download.png';
+
+									// Use FileSaver to save the blob
+									saveAs(blobWithType, fileName);
+								})
+								.catch((error) => {
+									console.error('Error downloading blob:', error);
+								});
+							return;
+						} else if (
+							src.startsWith('/') ||
+							src.startsWith('http://') ||
+							src.startsWith('https://')
+						) {
+							// Handle remote URLs
+							fetch(src)
+								.then((response) => response.blob())
+								.then((blob) => {
+									// detect the MIME type from the blob
+									const mimeType = blob.type || 'image/png';
+
+									// Create a new Blob with the correct MIME type
+									const blobWithType = new Blob([blob], { type: mimeType });
+
+									// create file name based on the MIME type, alt should be a valid file name with extension
+									const fileName = alt
+										? `${alt.replaceAll('.', '')}.${mimeType.split('/')[1]}`
+										: 'download.png';
+
+									// Use FileSaver to save the blob
+									saveAs(blobWithType, fileName);
+								})
+								.catch((error) => {
+									console.error('Error downloading remote image:', error);
+								});
+							return;
+						}
 					}}
 				>
 					<svg
@@ -106,6 +183,14 @@
 				</button>
 			</div>
 		</div>
-		<img {src} {alt} class=" mx-auto h-full object-scale-down select-none" draggable="false" />
+		<div class="flex h-full max-h-full justify-center items-center z-0">
+			<img
+				bind:this={sceneElement}
+				{src}
+				{alt}
+				class=" mx-auto h-full object-scale-down select-none"
+				draggable="false"
+			/>
+		</div>
 	</div>
 {/if}

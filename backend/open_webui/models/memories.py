@@ -63,14 +63,15 @@ class MemoriesTable:
             else:
                 return None
 
-    def update_memory_by_id(
+    def update_memory_by_id_and_user_id(
         self,
         id: str,
+        user_id: str,
         content: str,
     ) -> Optional[MemoryModel]:
         with get_db() as db:
             try:
-                db.query(Memory).filter_by(id=id).update(
+                db.query(Memory).filter_by(id=id, user_id=user_id).update(
                     {"content": content, "updated_at": int(time.time())}
                 )
                 db.commit()

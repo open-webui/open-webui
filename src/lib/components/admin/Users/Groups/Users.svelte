@@ -64,7 +64,7 @@
 				</svg>
 			</div>
 			<input
-				class=" w-full text-sm pr-4 rounded-r-xl outline-none bg-transparent"
+				class=" w-full text-sm pr-4 rounded-r-xl outline-hidden bg-transparent"
 				bind:value={query}
 				placeholder={$i18n.t('Search')}
 			/>

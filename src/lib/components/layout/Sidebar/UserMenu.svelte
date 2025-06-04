@@ -5,19 +5,28 @@
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { goto } from '$app/navigation';
 	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
-	import { showSettings, activeUserIds, USAGE_POOL, mobile, showSidebar } from '$lib/stores';
+	import { showSettings, activeUserIds, USAGE_POOL, mobile, showSidebar, user } from '$lib/stores';
 	import { fade, slide } from 'svelte/transition';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { userSignOut } from '$lib/apis/auths';
+	import QuestionMarkCircle from '$lib/components/icons/QuestionMarkCircle.svelte';
+	import Map from '$lib/components/icons/Map.svelte';
+	import Keyboard from '$lib/components/icons/Keyboard.svelte';
+	import ShortcutsModal from '$lib/components/chat/ShortcutsModal.svelte';
 
 	const i18n = getContext('i18n');
 
 	export let show = false;
 	export let role = '';
+	export let help = false;
 	export let className = 'max-w-[240px]';
+
+	let showShortcuts = false;
 
 	const dispatch = createEventDispatcher();
 </script>
+
+<ShortcutsModal bind:show={showShortcuts} />
 
 <DropdownMenu.Root
 	bind:open={show}
@@ -32,13 +41,13 @@
 	<slot name="content">
 		<DropdownMenu.Content
 			class="w-full {className} text-sm rounded-xl px-1 py-1.5 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg font-primary"
-			sideOffset={8}
+			sideOffset={4}
 			side="bottom"
 			align="start"
 			transition={(e) => fade(e, { duration: 100 })}
 		>
 			<button
-				class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
 				on:click={async () => {
 					await showSettings.set(true);
 					show = false;
@@ -73,7 +82,7 @@
 			</button>
 
 			<button
-				class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
 				on:click={() => {
 					dispatch('show', 'archived-chat');
 					show = false;
@@ -91,7 +100,7 @@
 
 			{#if role === 'admin'}
 				<a
-					class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+					class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
 					href="/playground"
 					on:click={() => {
 						show = false;
@@ -121,7 +130,7 @@
 				</a>
 
 				<a
-					class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+					class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
 					href="/admin"
 					on:click={() => {
 						show = false;
@@ -151,14 +160,56 @@
 				</a>
 			{/if}
 
-			<hr class=" border-gray-50 dark:border-gray-850 my-1 p-0" />
+			{#if help}
+				<hr class=" border-gray-100 dark:border-gray-800 my-1 p-0" />
+
+				<!-- {$i18n.t('Help')} -->
+				<DropdownMenu.Item
+					class="flex gap-2 items-center py-1.5 px-3 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+					id="chat-share-button"
+					on:click={() => {
+						window.open('https://docs.openwebui.com', '_blank');
+					}}
+				>
+					<QuestionMarkCircle className="size-5" />
+					<div class="flex items-center">{$i18n.t('Documentation')}</div>
+				</DropdownMenu.Item>
+
+				<!-- Releases -->
+				<DropdownMenu.Item
+					class="flex gap-2 items-center py-1.5 px-3 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+					id="menu-item-releases"
+					on:click={() => {
+						window.open('https://github.com/open-webui/open-webui/releases', '_blank');
+					}}
+				>
+					<Map className="size-5" />
+					<div class="flex items-center">{$i18n.t('Releases')}</div>
+				</DropdownMenu.Item>
+
+				<DropdownMenu.Item
+					class="flex gap-2 items-center py-1.5 px-3 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+					id="chat-share-button"
+					on:click={() => {
+						showShortcuts = !showShortcuts;
+						show = false;
+					}}
+				>
+					<Keyboard className="size-5" />
+					<div class="flex items-center">{$i18n.t('Keyboard shortcuts')}</div>
+				</DropdownMenu.Item>
+			{/if}
+
+			<hr class=" border-gray-100 dark:border-gray-800 my-1 p-0" />
 
 			<button
-				class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
 				on:click={async () => {
-					await userSignOut();
+					const res = await userSignOut();
+					user.set(null);
 					localStorage.removeItem('token');
-					location.href = '/auth';
+
+					location.href = res?.redirect_url ?? '/auth';
 					show = false;
 				}}
 			>
@@ -185,14 +236,14 @@
 			</button>
 
 			{#if $activeUserIds?.length > 0}
-				<hr class=" border-gray-50 dark:border-gray-850 my-1 p-0" />
+				<hr class=" border-gray-100 dark:border-gray-800 my-1 p-0" />
 
 				<Tooltip
 					content={$USAGE_POOL && $USAGE_POOL.length > 0
 						? `${$i18n.t('Running')}: ${$USAGE_POOL.join(', ')} ✨`
 						: ''}
 				>
-					<div class="flex rounded-md py-1.5 px-3 text-xs gap-2.5 items-center">
+					<div class="flex rounded-md py-1 px-3 text-xs gap-2.5 items-center">
 						<div class=" flex items-center">
 							<span class="relative flex size-2">
 								<span
@@ -214,7 +265,7 @@
 				</Tooltip>
 			{/if}
 
-			<!-- <DropdownMenu.Item class="flex items-center px-3 py-2 text-sm ">
+			<!-- <DropdownMenu.Item class="flex items-center py-1.5 px-3 text-sm ">
 				<div class="flex items-center">Profile</div>
 			</DropdownMenu.Item> -->
 		</DropdownMenu.Content>

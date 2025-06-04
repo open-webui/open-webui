@@ -9,6 +9,7 @@ from fastapi import (
     status,
     APIRouter,
 )
+import aiohttp
 import os
 import logging
 import shutil
@@ -17,7 +18,7 @@ from pydantic import BaseModel
 from starlette.responses import FileResponse
 from typing import Optional
 
-from open_webui.env import SRC_LOG_LEVELS
+from open_webui.env import SRC_LOG_LEVELS, AIOHTTP_CLIENT_SESSION_SSL
 from open_webui.config import CACHE_DIR
 from open_webui.constants import ERROR_MESSAGES
 
@@ -56,96 +57,111 @@ def get_sorted_filters(model_id, models):
     return sorted_filters
 
 
-def process_pipeline_inlet_filter(request, payload, user, models):
+async def process_pipeline_inlet_filter(request, payload, user, models):
     user = {"id": user.id, "email": user.email, "name": user.name, "role": user.role}
     model_id = payload["model"]
-
     sorted_filters = get_sorted_filters(model_id, models)
     model = models[model_id]
 
     if "pipeline" in model:
         sorted_filters.append(model)
 
-    for filter in sorted_filters:
-        r = None
-        try:
-            urlIdx = filter["urlIdx"]
+    async with aiohttp.ClientSession(trust_env=True) as session:
+        for filter in sorted_filters:
+            urlIdx = filter.get("urlIdx")
+
+            try:
+                urlIdx = int(urlIdx)
+            except:
+                continue
 
             url = request.app.state.config.OPENAI_API_BASE_URLS[urlIdx]
             key = request.app.state.config.OPENAI_API_KEYS[urlIdx]
 
-            if key == "":
+            if not key:
                 continue
 
             headers = {"Authorization": f"Bearer {key}"}
-            r = requests.post(
-                f"{url}/{filter['id']}/filter/inlet",
-                headers=headers,
-                json={
-                    "user": user,
-                    "body": payload,
-                },
-            )
+            request_data = {
+                "user": user,
+                "body": payload,
+            }
 
-            r.raise_for_status()
-            payload = r.json()
-        except Exception as e:
-            # Handle connection error here
-            print(f"Connection error: {e}")
-
-            if r is not None:
-                res = r.json()
+            try:
+                async with session.post(
+                    f"{url}/{filter['id']}/filter/inlet",
+                    headers=headers,
+                    json=request_data,
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                ) as response:
+                    payload = await response.json()
+                    response.raise_for_status()
+            except aiohttp.ClientResponseError as e:
+                res = (
+                    await response.json()
+                    if response.content_type == "application/json"
+                    else {}
+                )
                 if "detail" in res:
-                    raise Exception(r.status_code, res["detail"])
+                    raise Exception(response.status, res["detail"])
+            except Exception as e:
+                log.exception(f"Connection error: {e}")
 
     return payload
 
 
-def process_pipeline_outlet_filter(request, payload, user, models):
+async def process_pipeline_outlet_filter(request, payload, user, models):
     user = {"id": user.id, "email": user.email, "name": user.name, "role": user.role}
     model_id = payload["model"]
-
     sorted_filters = get_sorted_filters(model_id, models)
     model = models[model_id]
 
     if "pipeline" in model:
         sorted_filters = [model] + sorted_filters
 
-    for filter in sorted_filters:
-        r = None
-        try:
-            urlIdx = filter["urlIdx"]
+    async with aiohttp.ClientSession(trust_env=True) as session:
+        for filter in sorted_filters:
+            urlIdx = filter.get("urlIdx")
+
+            try:
+                urlIdx = int(urlIdx)
+            except:
+                continue
 
             url = request.app.state.config.OPENAI_API_BASE_URLS[urlIdx]
             key = request.app.state.config.OPENAI_API_KEYS[urlIdx]
 
-            if key != "":
-                r = requests.post(
+            if not key:
+                continue
+
+            headers = {"Authorization": f"Bearer {key}"}
+            request_data = {
+                "user": user,
+                "body": payload,
+            }
+
+            try:
+                async with session.post(
                     f"{url}/{filter['id']}/filter/outlet",
-                    headers={"Authorization": f"Bearer {key}"},
-                    json={
-                        "user": user,
-                        "body": payload,
-                    },
-                )
-
-                r.raise_for_status()
-                data = r.json()
-                payload = data
-        except Exception as e:
-            # Handle connection error here
-            print(f"Connection error: {e}")
-
-            if r is not None:
+                    headers=headers,
+                    json=request_data,
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                ) as response:
+                    payload = await response.json()
+                    response.raise_for_status()
+            except aiohttp.ClientResponseError as e:
                 try:
-                    res = r.json()
+                    res = (
+                        await response.json()
+                        if "application/json" in response.content_type
+                        else {}
+                    )
                     if "detail" in res:
-                        return Exception(r.status_code, res)
+                        raise Exception(response.status, res)
                 except Exception:
                     pass
-
-            else:
-                pass
+            except Exception as e:
+                log.exception(f"Connection error: {e}")
 
     return payload
 
@@ -161,7 +177,7 @@ router = APIRouter()
 
 @router.get("/list")
 async def get_pipelines_list(request: Request, user=Depends(get_admin_user)):
-    responses = await get_all_models_responses(request)
+    responses = await get_all_models_responses(request, user)
     log.debug(f"get_pipelines_list: get_openai_models_responses returned {responses}")
 
     urlIdxs = [
@@ -188,9 +204,11 @@ async def upload_pipeline(
     file: UploadFile = File(...),
     user=Depends(get_admin_user),
 ):
-    print("upload_pipeline", urlIdx, file.filename)
+    log.info(f"upload_pipeline: urlIdx={urlIdx}, filename={file.filename}")
+    filename = os.path.basename(file.filename)
+
     # Check if the uploaded file is a python file
-    if not (file.filename and file.filename.endswith(".py")):
+    if not (filename and filename.endswith(".py")):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Only Python (.py) files are allowed.",
@@ -198,7 +216,7 @@ async def upload_pipeline(
 
     upload_folder = f"{CACHE_DIR}/pipelines"
     os.makedirs(upload_folder, exist_ok=True)
-    file_path = os.path.join(upload_folder, file.filename)
+    file_path = os.path.join(upload_folder, filename)
 
     r = None
     try:
@@ -223,7 +241,7 @@ async def upload_pipeline(
         return {**data}
     except Exception as e:
         # Handle connection error here
-        print(f"Connection error: {e}")
+        log.exception(f"Connection error: {e}")
 
         detail = None
         status_code = status.HTTP_404_NOT_FOUND
@@ -274,7 +292,7 @@ async def add_pipeline(
         return {**data}
     except Exception as e:
         # Handle connection error here
-        print(f"Connection error: {e}")
+        log.exception(f"Connection error: {e}")
 
         detail = None
         if r is not None:
@@ -319,7 +337,7 @@ async def delete_pipeline(
         return {**data}
     except Exception as e:
         # Handle connection error here
-        print(f"Connection error: {e}")
+        log.exception(f"Connection error: {e}")
 
         detail = None
         if r is not None:
@@ -353,7 +371,7 @@ async def get_pipelines(
         return {**data}
     except Exception as e:
         # Handle connection error here
-        print(f"Connection error: {e}")
+        log.exception(f"Connection error: {e}")
 
         detail = None
         if r is not None:
@@ -392,7 +410,7 @@ async def get_pipeline_valves(
         return {**data}
     except Exception as e:
         # Handle connection error here
-        print(f"Connection error: {e}")
+        log.exception(f"Connection error: {e}")
 
         detail = None
         if r is not None:
@@ -432,7 +450,7 @@ async def get_pipeline_valves_spec(
         return {**data}
     except Exception as e:
         # Handle connection error here
-        print(f"Connection error: {e}")
+        log.exception(f"Connection error: {e}")
 
         detail = None
         if r is not None:
@@ -474,7 +492,7 @@ async def update_pipeline_valves(
         return {**data}
     except Exception as e:
         # Handle connection error here
-        print(f"Connection error: {e}")
+        log.exception(f"Connection error: {e}")
 
         detail = None
 

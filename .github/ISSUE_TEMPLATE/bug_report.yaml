@@ -1,0 +1,167 @@
+name: Bug Report
+description: Create a detailed bug report to help us improve Open WebUI.
+title: 'issue: '
+labels: ['bug', 'triage']
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        # Bug Report
+
+        ## Important Notes
+
+        - **Before submitting a bug report**: Please check the [Issues](https://github.com/open-webui/open-webui/issues) or [Discussions](https://github.com/open-webui/open-webui/discussions) sections to see if a similar issue has already been reported. If unsure, start a discussion first, as this helps us efficiently focus on improving the project.
+
+        - **Respectful collaboration**: Open WebUI is a volunteer-driven project with a single maintainer and contributors who also have full-time jobs. Please be constructive and respectful in your communication.
+
+        - **Contributing**: If you encounter an issue, consider submitting a pull request or forking the project. We prioritize preventing contributor burnout to maintain Open WebUI's quality.
+
+        - **Bug Reproducibility**: If a bug cannot be reproduced using a `:main` or `:dev` Docker setup or with `pip install` on Python 3.11, community assistance may be required. In such cases, we will move it to the "[Issues](https://github.com/open-webui/open-webui/discussions/categories/issues)" Discussions section. Your help is appreciated!
+
+  - type: checkboxes
+    id: issue-check
+    attributes:
+      label: Check Existing Issues
+      description: Confirm that you’ve checked for existing reports before submitting a new one.
+      options:
+        - label: I have searched the existing issues and discussions.
+          required: true
+        - label: I am using the latest version of Open WebUI.
+          required: true
+
+  - type: dropdown
+    id: installation-method
+    attributes:
+      label: Installation Method
+      description: How did you install Open WebUI?
+      options:
+        - Git Clone
+        - Pip Install
+        - Docker
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: open-webui-version
+    attributes:
+      label: Open WebUI Version
+      description: Specify the version (e.g., v0.3.11)
+    validations:
+      required: true
+
+  - type: input
+    id: ollama-version
+    attributes:
+      label: Ollama Version (if applicable)
+      description: Specify the version (e.g., v0.2.0, or v0.1.32-rc1)
+    validations:
+      required: false
+
+  - type: input
+    id: operating-system
+    attributes:
+      label: Operating System
+      description: Specify the OS (e.g., Windows 10, macOS Sonoma, Ubuntu 22.04)
+    validations:
+      required: true
+
+  - type: input
+    id: browser
+    attributes:
+      label: Browser (if applicable)
+      description: Specify the browser/version (e.g., Chrome 100.0, Firefox 98.0)
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: confirmation
+    attributes:
+      label: Confirmation
+      description: Ensure the following prerequisites have been met.
+      options:
+        - label: I have read and followed all instructions in `README.md`.
+          required: true
+        - label: I am using the latest version of **both** Open WebUI and Ollama.
+          required: true
+        - label: I have included the browser console logs.
+          required: true
+        - label: I have included the Docker container logs.
+          required: true
+        - label: I have **provided every relevant configuration, setting, and environment variable used in my setup.**
+          required: true
+        - label: I have clearly **listed every relevant configuration, custom setting, environment variable, and command-line option that influences my setup** (such as Docker Compose overrides, .env values, browser settings, authentication configurations, etc).
+          required: true
+        - label: |
+            I have documented **step-by-step reproduction instructions that are precise, sequential, and leave nothing to interpretation**. My steps:
+            - Start with the initial platform/version/OS and dependencies used,
+            - Specify exact install/launch/configure commands,
+            - List URLs visited, user input (incl. example values/emails/passwords if needed),
+            - Describe all options and toggles enabled or changed,
+            - Include any files or environmental changes,
+            - Identify the expected and actual result at each stage,
+            - Ensure any reasonably skilled user can follow and hit the same issue.
+          required: true
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected Behavior
+      description: Describe what should have happened.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual-behavior
+    attributes:
+      label: Actual Behavior
+      description: Describe what actually happened.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction-steps
+    attributes:
+      label: Steps to Reproduce
+      description: |
+        Please provide a **very detailed, step-by-step guide** to reproduce the issue. Your instructions should be so clear and precise that anyone can follow them without guesswork. Include every relevant detail—settings, configuration options, exact commands used, values entered, and any prerequisites or environment variables.  
+        **If full reproduction steps and all relevant settings are not provided, your issue may not be addressed.**
+
+      placeholder: |
+        Example (include every detail):
+        1. Start with a clean Ubuntu 22.04 install.
+        2. Install Docker v24.0.5 and start the service.
+        3. Clone the Open WebUI repo (git clone ...).
+        4. Use the Docker Compose file without modifications.
+        5. Open browser Chrome 115.0 in incognito mode.
+        6. Go to http://localhost:8080 and log in with user "test@example.com".
+        7. Set the language to "English" and theme to "Dark".
+        8. Attempt to connect to Ollama at "http://localhost:11434".
+        9. Observe that the error message "Connection refused" appears at the top right.
+
+        Please list each step carefully and include all relevant configuration, settings, and options.
+    validations:
+      required: true
+  - type: textarea
+    id: logs-screenshots
+    attributes:
+      label: Logs & Screenshots
+      description: Include relevant logs, errors, or screenshots to help diagnose the issue.
+      placeholder: 'Attach logs from the browser console, Docker logs, or error messages.'
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional-info
+    attributes:
+      label: Additional Information
+      description: Provide any extra details that may assist in understanding the issue.
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ## Note
+        If the bug report is incomplete or does not follow instructions, it may not be addressed. Ensure that you've followed all the **README.md** and **troubleshooting.md** guidelines, and provide all necessary information for us to reproduce the issue.  
+        Thank you for contributing to Open WebUI!

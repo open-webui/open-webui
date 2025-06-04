@@ -1,3 +1,4 @@
+import logging
 import json
 import time
 import uuid
@@ -5,7 +6,7 @@ from typing import Optional
 
 from open_webui.internal.db import Base, get_db
 from open_webui.models.tags import TagModel, Tag, Tags
-
+from open_webui.env import SRC_LOG_LEVELS
 
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON
@@ -15,6 +16,9 @@ from sqlalchemy.sql import exists
 ####################
 # Chat DB Schema
 ####################
+
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 
 class Chat(Base):
@@ -373,22 +377,47 @@ class ChatTable:
             return False
 
     def get_archived_chat_list_by_user_id(
-        self, user_id: str, skip: int = 0, limit: int = 50
+        self,
+        user_id: str,
+        filter: Optional[dict] = None,
+        skip: int = 0,
+        limit: int = 50,
     ) -> list[ChatModel]:
+
         with get_db() as db:
-            all_chats = (
-                db.query(Chat)
-                .filter_by(user_id=user_id, archived=True)
-                .order_by(Chat.updated_at.desc())
-                # .limit(limit).offset(skip)
-                .all()
-            )
+            query = db.query(Chat).filter_by(user_id=user_id, archived=True)
+
+            if filter:
+                query_key = filter.get("query")
+                if query_key:
+                    query = query.filter(Chat.title.ilike(f"%{query_key}%"))
+
+                order_by = filter.get("order_by")
+                direction = filter.get("direction")
+
+                if order_by and direction and getattr(Chat, order_by):
+                    if direction.lower() == "asc":
+                        query = query.order_by(getattr(Chat, order_by).asc())
+                    elif direction.lower() == "desc":
+                        query = query.order_by(getattr(Chat, order_by).desc())
+                    else:
+                        raise ValueError("Invalid direction for ordering")
+            else:
+                query = query.order_by(Chat.updated_at.desc())
+
+            if skip:
+                query = query.offset(skip)
+            if limit:
+                query = query.limit(limit)
+
+            all_chats = query.all()
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
     def get_chat_list_by_user_id(
         self,
         user_id: str,
         include_archived: bool = False,
+        filter: Optional[dict] = None,
         skip: int = 0,
         limit: int = 50,
     ) -> list[ChatModel]:
@@ -397,7 +426,23 @@ class ChatTable:
             if not include_archived:
                 query = query.filter_by(archived=False)
 
-            query = query.order_by(Chat.updated_at.desc())
+            if filter:
+                query_key = filter.get("query")
+                if query_key:
+                    query = query.filter(Chat.title.ilike(f"%{query_key}%"))
+
+                order_by = filter.get("order_by")
+                direction = filter.get("direction")
+
+                if order_by and direction and getattr(Chat, order_by):
+                    if direction.lower() == "asc":
+                        query = query.order_by(getattr(Chat, order_by).asc())
+                    elif direction.lower() == "desc":
+                        query = query.order_by(getattr(Chat, order_by).desc())
+                    else:
+                        raise ValueError("Invalid direction for ordering")
+            else:
+                query = query.order_by(Chat.updated_at.desc())
 
             if skip:
                 query = query.offset(skip)
@@ -432,7 +477,7 @@ class ChatTable:
 
             all_chats = query.all()
 
-            # result has to be destrctured from sqlalchemy `row` and mapped to a dict since the `ChatModel`is not the returned dataclass.
+            # result has to be destructured from sqlalchemy `row` and mapped to a dict since the `ChatModel`is not the returned dataclass.
             return [
                 ChatTitleIdResponse.model_validate(
                     {
@@ -538,7 +583,9 @@ class ChatTable:
         search_text = search_text.lower().strip()
 
         if not search_text:
-            return self.get_chat_list_by_user_id(user_id, include_archived, skip, limit)
+            return self.get_chat_list_by_user_id(
+                user_id, include_archived, filter={}, skip=skip, limit=limit
+            )
 
         search_text_words = search_text.split(" ")
 
@@ -670,7 +717,7 @@ class ChatTable:
             # Perform pagination at the SQL level
             all_chats = query.offset(skip).limit(limit).all()
 
-            print(len(all_chats))
+            log.info(f"The number of chats: {len(all_chats)}")
 
             # Validate and return chats
             return [ChatModel.model_validate(chat) for chat in all_chats]
@@ -731,7 +778,7 @@ class ChatTable:
             query = db.query(Chat).filter_by(user_id=user_id)
             tag_id = tag_name.replace(" ", "_").lower()
 
-            print(db.bind.dialect.name)
+            log.info(f"DB dialect name: {db.bind.dialect.name}")
             if db.bind.dialect.name == "sqlite":
                 # SQLite JSON1 querying for tags within the meta JSON field
                 query = query.filter(
@@ -752,7 +799,7 @@ class ChatTable:
                 )
 
             all_chats = query.all()
-            print("all_chats", all_chats)
+            log.debug(f"all_chats: {all_chats}")
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
     def add_chat_tag_by_id_and_user_id_and_tag_name(
@@ -810,7 +857,7 @@ class ChatTable:
             count = query.count()
 
             # Debugging output for inspection
-            print(f"Count of chats for tag '{tag_name}':", count)
+            log.info(f"Count of chats for tag '{tag_name}': {count}")
 
             return count
 

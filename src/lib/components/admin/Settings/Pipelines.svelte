@@ -104,7 +104,7 @@
 		valves_spec = null;
 
 		if (PIPELINES_LIST.length > 0) {
-			console.log(selectedPipelinesUrlIdx);
+			console.debug(selectedPipelinesUrlIdx);
 			pipelines = await getPipelines(localStorage.token, selectedPipelinesUrlIdx);
 
 			if (pipelines.length > 0) {
@@ -151,7 +151,7 @@
 
 			const res = await uploadPipeline(localStorage.token, file, selectedPipelinesUrlIdx).catch(
 				(error) => {
-					console.log(error);
+					console.error(error);
 					toast.error('Something went wrong :/');
 					return null;
 				}
@@ -234,7 +234,7 @@
 					<div class="flex gap-2">
 						<div class="flex-1">
 							<select
-								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 								bind:value={selectedPipelinesUrlIdx}
 								placeholder={$i18n.t('Select a pipeline url')}
 								on:change={async () => {
@@ -271,7 +271,7 @@
 							/>
 
 							<button
-								class="w-full text-sm font-medium py-2 bg-transparent hover:bg-gray-100 border border-dashed dark:border-gray-800 dark:hover:bg-gray-850 text-center rounded-xl"
+								class="w-full text-sm font-medium py-2 bg-transparent hover:bg-gray-100 border border-dashed dark:border-gray-850 dark:hover:bg-gray-850 text-center rounded-xl"
 								type="button"
 								on:click={() => {
 									document.getElementById('pipelines-upload-input')?.click();
@@ -348,7 +348,7 @@
 					<div class="flex w-full">
 						<div class="flex-1 mr-2">
 							<input
-								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 								placeholder={$i18n.t('Enter Github Raw URL')}
 								bind:value={pipelineDownloadUrl}
 							/>
@@ -418,7 +418,7 @@
 					</div>
 				</div>
 
-				<hr class=" dark:border-gray-800 my-3 w-full" />
+				<hr class="border-gray-100 dark:border-gray-850 my-3 w-full" />
 
 				{#if pipelines !== null}
 					{#if pipelines.length > 0}
@@ -432,7 +432,7 @@
 								<div class="flex gap-2">
 									<div class="flex-1">
 										<select
-											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 											bind:value={selectedPipelineIdx}
 											placeholder={$i18n.t('Select a pipeline')}
 											on:change={async () => {
@@ -482,7 +482,7 @@
 													</div>
 
 													<button
-														class="p-1 px-3 text-xs flex rounded transition"
+														class="p-1 px-3 text-xs flex rounded-sm transition"
 														type="button"
 														on:click={() => {
 															valves[property] = (valves[property] ?? null) === null ? '' : null;
@@ -502,7 +502,7 @@
 														<div class=" flex-1">
 															{#if valves_spec.properties[property]?.enum ?? null}
 																<select
-																	class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+																	class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 																	bind:value={valves[property]}
 																>
 																	{#each valves_spec.properties[property].enum as option}
@@ -523,7 +523,7 @@
 																</div>
 															{:else}
 																<input
-																	class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+																	class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 																	type="text"
 																	placeholder={valves_spec.properties[property].title}
 																	bind:value={valves[property]}

@@ -54,7 +54,7 @@
 	};
 
 	const channelEventHandler = async (event) => {
-		console.log(event);
+		console.debug(event);
 		if (event.channel_id === channel.id) {
 			const type = event?.data?.type ?? null;
 			const data = event?.data?.data ?? null;
@@ -89,7 +89,7 @@
 					}
 				}
 			} else if (type === 'typing' && event.message_id === threadId) {
-				if (event.user.id === $user.id) {
+				if (event.user.id === $user?.id) {
 					return;
 				}
 

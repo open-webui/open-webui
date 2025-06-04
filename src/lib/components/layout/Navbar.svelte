@@ -46,7 +46,7 @@
 
 <div class="sticky top-0 z-30 w-full px-1.5 py-1.5 -mb-8 flex items-center">
 	<div
-		class=" bg-gradient-to-b via-50% from-white via-white to-transparent dark:from-gray-900 dark:via-gray-900 dark:to-transparent pointer-events-none absolute inset-0 -bottom-7 z-[-1] blur"
+		class=" bg-linear-to-b via-50% from-white via-white to-transparent dark:from-gray-900 dark:via-gray-900 dark:to-transparent pointer-events-none absolute inset-0 -bottom-7 z-[-1]"
 	></div>
 
 	<div class=" flex max-w-full w-full mx-auto px-1 pt-0.5 bg-transparent">
@@ -166,8 +166,9 @@
 
 				{#if $user !== undefined}
 					<UserMenu
-						className="max-w-[200px]"
-						role={$user.role}
+						className="max-w-[240px]"
+						role={$user?.role}
+						help={true}
 						on:show={(e) => {
 							if (e.detail === 'archived-chat') {
 								showArchivedChats.set(true);
@@ -180,7 +181,7 @@
 						>
 							<div class=" self-center">
 								<img
-									src={$user.profile_image_url}
+									src={$user?.profile_image_url}
 									class="size-6 object-cover rounded-full"
 									alt="User profile"
 									draggable="false"

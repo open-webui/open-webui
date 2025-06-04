@@ -118,7 +118,7 @@ class FeedbackTable:
                 else:
                     return None
             except Exception as e:
-                print(e)
+                log.exception(f"Error creating a new feedback: {e}")
                 return None
 
     def get_feedback_by_id(self, id: str) -> Optional[FeedbackModel]:
