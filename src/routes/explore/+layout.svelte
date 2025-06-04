@@ -5,21 +5,23 @@
 	import PrivacySlogan from '$lib/IONOS/components/PrivacySlogan.svelte';
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
 	import FilledUserAvatar from '$lib/IONOS/components/icons/FilledUserAvatar.svelte';
-
+	import NotificationManager from '$lib/IONOS/components/notifications/NotificationManager.svelte';
 	import {
 		user,
 		showSidebar
 	} from '$lib/stores';
+	import { notifications } from '$lib/IONOS/stores/notifications';
 </script>
 
-<div class="flex flex-row w-full justify-between bg-gray-100">
+<NotificationManager />
+<div class="flex flex-row w-full justify-between bg-gray-100/50">
 	{#if $user !== undefined}
 		<Sidebar />
 	{/if}
-	<div class="h-[100vh] overflow-scroll">
-		<nav class="fixed z-30 {($user !== undefined) ? ($showSidebar ? 'w-[calc(100%-260px)]' : 'w-[calc(100%-60px)]') : 'w-full' } px-1.5 py-4 -mb-8 pt-10 flex items-center drag-region transition-width duration-200 ease-in-out">
+	<div class="overflow-scroll" style="height: calc(100dvh - {$notifications.length * 60}px);">
+		<nav class="fixed z-30 w-full {($user !== undefined) ? ($showSidebar ? 'max-w-[calc(100%-260px)]' : 'max-w-[calc(100%-60px)]') : 'max-w-full' } px-1.5 py-4 -mb-8 pt-[30px] flex items-center drag-region transition-width duration-200 ease-in-out">
 			<div
-				class=" bg-gradient-to-b from-gray-100 from-30% to-transparent dark:from-gray-900 dark:via-gray-900 dark:to-transparent pointer-events-none absolute inset-0 -bottom-10 -top-6 z-[-1] blur"
+				class="bg-gradient-to-b via-50% from-white via-white to-transparent dark:from-gray-900 dark:via-gray-900 dark:to-transparent pointer-events-none absolute inset-0 -top-10 -bottom-10 z-[-1] blur"
 			></div>
 
 			<div class=" flex w-full mx-auto px-1 pt-0.5 bg-transparent">

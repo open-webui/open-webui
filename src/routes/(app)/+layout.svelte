@@ -39,7 +39,9 @@
 		showChangelog,
 		temporaryChatEnabled
 	} from '$lib/stores';
+	import { notifications } from '$lib/IONOS/stores/notifications';
 
+	import NotificationManager from '$lib/IONOS/components/notifications/NotificationManager.svelte';
 	import SettingsOverlay from '$lib/IONOS/components/settings/Settings.svelte';
 	import ChangelogModal from '$lib/components/ChangelogModal.svelte';
 	import AccountPending from '$lib/IONOS/components/AccountPending.svelte';
@@ -221,6 +223,7 @@
 	};
 </script>
 
+<NotificationManager />
 <KnowledgeManager />
 <SettingsOverlay bind:show={$showSettings} />
 <ChangelogModal bind:show={$showChangelog} />
@@ -239,7 +242,8 @@
 
 <div class="app relative">
 	<div
-		class=" text-gray-700 dark:text-gray-100 bg-white dark:bg-gray-900 h-screen max-h-[100dvh] overflow-auto flex flex-row justify-end"
+		class=" text-gray-700 dark:text-gray-100 bg-white dark:bg-gray-900 overflow-auto flex flex-row justify-end"
+		style="max-height: calc(100dvh - {$notifications.length * 60}px);"
 	>
 		{#if loaded}
 			{#if !['user', 'admin'].includes($user.role)}

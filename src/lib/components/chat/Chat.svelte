@@ -9,6 +9,7 @@
 
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
+	import { notifications } from '$lib/IONOS/stores/notifications';
 
 	import { get, type Unsubscriber, type Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
@@ -1856,10 +1857,11 @@
 />
 
 <div
-	class="h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
+	class="transition-width duration-200 ease-in-out {$showSidebar
 		? '  md:max-w-[calc(100%-260px)]'
 		: ' max-w-[calc(100%-60px)]'} w-full flex flex-col"
 	id="chat-container"
+	style="height: calc(100dvh - {$notifications.length * 60}px);"
 >
 	{#if !chatIdProp || (loaded && chatIdProp)}
 		{#if $settings?.backgroundImageUrl ?? null}

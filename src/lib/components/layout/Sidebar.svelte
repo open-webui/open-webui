@@ -459,16 +459,16 @@
 <div
 	bind:this={navElement}
 	id="sidebar"
-	class="h-screen max-h-[100dvh] min-h-screen select-none {$showSidebar
+	class="select-none {$showSidebar
 		? 'md:relative w-[260px] max-w-[260px]'
 		: 'w-[60px]'} {$isApp
 		? `ml-[4.5rem] md:ml-0 `
-		: 'transition-width duration-200 ease-in-out'}  flex-shrink-0 bg-gray-100 text-blue-800 dark:bg-gray-950 dark:text-gray-200 text-sm z-50 overflow-x-hidden
-        "
+		: 'transition-width duration-200 ease-in-out'}  flex-shrink-0 bg-gray-100 text-blue-800 dark:bg-gray-950 dark:text-gray-200 text-sm z-30 overflow-x-hidden
+		"
 	data-state={$showSidebar}
 >
 	<div
-		class="pt-10 pb-5 my-auto flex flex-col h-screen max-h-[100dvh] overflow-x-hidden z-50 gap-2.5 {$showSidebar
+		class="pt-[30px] pb-5 my-auto flex flex-col overflow-x-hidden z-50 gap-2.5 {$showSidebar
 			? 'justify-between w-[260px]'
 			: 'justify-start w-[60px] px-2.5'}"
 	>
