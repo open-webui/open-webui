@@ -457,6 +457,9 @@ class SPAStaticFiles(StaticFiles):
             else:
                 raise ex
 
+import os  # Ensure the environment variable is set
+PORT = os.getenv("PORT", "8080")
+DISPLAY_HOST = os.getenv("HOST", "localhost")
 
 print(
     rf"""
@@ -472,8 +475,9 @@ v{VERSION} - building the best AI user interface.
 {f"Commit: {WEBUI_BUILD_HASH}" if WEBUI_BUILD_HASH != "dev-build" else ""}
 https://github.com/open-webui/open-webui
 
-Default link to open Webui: http://localhost:8080
+Open Webui in http://{DISPLAY_HOST}:{PORT}
 To stop the server, press Ctrl+C
+
 """
 )
 
