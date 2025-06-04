@@ -1537,12 +1537,25 @@ Examples:
 - "Tell me about time zones" → Do NOT use tool (general knowledge)
 - "Get me the latest Canadian news" → Use news tool with country: "ca"
 - "Show me US sports news" → Use news tool with country: "us" and category: "sports"
+- "Get me the current time and latest headlines" → Use both time and news tools
 
-If no tools are needed for the query: Return an empty string ""
+RESPONSE FORMAT:
+- If no tools are needed: Return an empty string ""
+- If ONE tool is needed: Return a JSON object: {\"name\": \"functionName\", \"parameters\": {\"param\": \"value\"}}
+- If MULTIPLE tools are needed: Return a JSON array: [{\"name\": \"tool1\", \"parameters\": {\"param\": \"value\"}}, {\"name\": \"tool2\", \"parameters\": {\"param\": \"value\"}}]
 
-If a tool is needed: Return a JSON object in the format {\"name\": \"functionName\", \"parameters\": {\"requiredFunctionParamKey\": \"requiredFunctionParamValue\"}}
+MULTIPLE TOOL EXAMPLES:
+- "Get me the current time and latest news" → [{\"name\": \"get_current_time\", \"parameters\": {\"format\": \"human\"}}, {\"name\": \"get_top_headlines\", \"parameters\": {}}]
+- "Show me the time and weather" → [{\"name\": \"get_current_time\", \"parameters\": {\"format\": \"human\"}}, {\"name\": \"get_weather\", \"parameters\": {}}]
+- "Get Canadian news and current time" → [{\"name\": \"get_top_headlines\", \"parameters\": {\"country\": \"ca\"}}, {\"name\": \"get_current_time\", \"parameters\": {\"format\": \"human\"}}]
 
-Only return the JSON object or empty string, no additional text."""
+IMPORTANT PARAMETER RULES:
+- NEVER include parameters with null, None, or empty string values
+- Only include parameters that have actual meaningful values
+- Omit optional parameters if you don't have a specific value for them
+- Do not include {"category": null} or {"country": null} - omit these parameters entirely
+
+Only return the JSON object, JSON array, or empty string. No additional text or explanations."""
 
 
 DEFAULT_EMOJI_GENERATION_PROMPT_TEMPLATE = """Your task is to reflect the speaker's likely facial expression through a fitting emoji. Interpret emotions from the message and reflect their facial expression using fitting, diverse emojis (e.g., 😊, 😢, 😡, 😱).

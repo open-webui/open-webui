@@ -276,6 +276,10 @@ async def chat_completion_tools_handler(
             # Parse multiple JSON objects from the response
             tool_calls = []
             
+            log.info(f"=== PARSING TOOL CALLS ===")
+            log.info(f"Raw content to parse: {repr(content)}")
+            log.info(f"==========================")
+            
             # First, try to parse as a single JSON array
             try:
                 if content.strip().startswith('[') and content.strip().endswith(']'):
@@ -357,6 +361,12 @@ async def chat_completion_tools_handler(
                             log.error(f"Could not find balanced JSON, treating as no tool usage")
                             return body, {}
 
+            log.info(f"=== PARSED TOOL CALLS ===")
+            log.info(f"Total tool calls extracted: {len(tool_calls)}")
+            for i, call in enumerate(tool_calls):
+                log.info(f"Tool call {i}: {call}")
+            log.info(f"=========================")
+
             # Process all tool calls
             for tool_call in tool_calls:
                 tool_function_name = tool_call.get("name", None)
@@ -380,11 +390,11 @@ async def chat_completion_tools_handler(
                     )
                     tool_function = tools[tool_function_name]["callable"]
                     
-                    # Filter to only include parameters that exist in the tool spec
+                    # Filter to only include parameters that exist in the tool spec and are not None/null
                     filtered_params = {
                         k: v
                         for k, v in tool_function_params.items()
-                        if k in all_params
+                        if k in all_params and v is not None and v != "null" and v != ""
                     }
                     log.info(f"Filtered parameters to pass to tool: {filtered_params}")
                     tool_output = await tool_function(**filtered_params)
