@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { decode } from 'html-entities';
+	import { v4 as uuidv4 } from 'uuid';
 
-	import { getContext, createEventDispatcher } from 'svelte';
+	import { getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
 	import dayjs from '$lib/dayjs';
@@ -25,9 +26,6 @@
 	// Assuming $i18n.languages is an array of language codes
 	$: loadLocale($i18n.languages);
 
-	const dispatch = createEventDispatcher();
-	$: dispatch('change', open);
-
 	import { slide } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
 
@@ -36,6 +34,7 @@
 	import Spinner from './Spinner.svelte';
 	import CodeBlock from '../chat/Messages/CodeBlock.svelte';
 	import Markdown from '../chat/Messages/Markdown.svelte';
+	import Image from './Image.svelte';
 
 	export let open = false;
 
@@ -53,19 +52,33 @@
 	export let disabled = false;
 	export let hide = false;
 
-	function formatJSONString(obj) {
+	export let onChange: Function = () => {};
+
+	$: onChange(open);
+
+	const collapsibleId = uuidv4();
+
+	function parseJSONString(str) {
 		try {
-			const parsed = JSON.parse(JSON.parse(obj));
+			return parseJSONString(JSON.parse(str));
+		} catch (e) {
+			return str;
+		}
+	}
+
+	function formatJSONString(str) {
+		try {
+			const parsed = parseJSONString(str);
 			// If parsed is an object/array, then it's valid JSON
 			if (typeof parsed === 'object') {
 				return JSON.stringify(parsed, null, 2);
 			} else {
 				// It's a primitive value like a number, boolean, etc.
-				return String(parsed);
+				return `${JSON.stringify(String(parsed))}`;
 			}
 		} catch (e) {
 			// Not valid JSON, return as-is
-			return obj;
+			return str;
 		}
 	}
 </script>
@@ -119,15 +132,15 @@
 					{:else if attributes?.type === 'tool_calls'}
 						{#if attributes?.done === 'true'}
 							<Markdown
-								id={`tool-calls-${attributes?.id}`}
-								content={$i18n.t('View Result from `{{NAME}}`', {
+								id={`${collapsibleId}-tool-calls-${attributes?.id}`}
+								content={$i18n.t('View Result from **{{NAME}}**', {
 									NAME: attributes.name
 								})}
 							/>
 						{:else}
 							<Markdown
-								id={`tool-calls-${attributes?.id}`}
-								content={$i18n.t('Executing `{{NAME}}`...', {
+								id={`${collapsibleId}-tool-calls-${attributes?.id}-executing`}
+								content={$i18n.t('Executing **{{NAME}}**...', {
 									NAME: attributes.name
 								})}
 							/>
@@ -188,32 +201,55 @@
 		</div>
 	{/if}
 
-	{#if !grow}
-		{#if open && !hide}
-			<div transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}>
-				{#if attributes?.type === 'tool_calls'}
-					{@const args = decode(attributes?.arguments)}
-					{@const result = decode(attributes?.result ?? '')}
+	{#if attributes?.type === 'tool_calls'}
+		{@const args = decode(attributes?.arguments)}
+		{@const result = decode(attributes?.result ?? '')}
+		{@const files = parseJSONString(decode(attributes?.files ?? ''))}
 
-					{#if attributes?.done === 'true'}
-						<Markdown
-							id={`tool-calls-${attributes?.id}-result`}
-							content={`> \`\`\`json
+		{#if !grow}
+			{#if open && !hide}
+				<div transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}>
+					{#if attributes?.type === 'tool_calls'}
+						{#if attributes?.done === 'true'}
+							<Markdown
+								id={`${collapsibleId}-tool-calls-${attributes?.id}-result`}
+								content={`> \`\`\`json
 > ${formatJSONString(args)}
 > ${formatJSONString(result)}
 > \`\`\``}
-						/>
-					{:else}
-						<Markdown
-							id={`tool-calls-${attributes?.id}-result`}
-							content={`> \`\`\`json
+							/>
+						{:else}
+							<Markdown
+								id={`${collapsibleId}-tool-calls-${attributes?.id}-result`}
+								content={`> \`\`\`json
 > ${formatJSONString(args)}
 > \`\`\``}
-						/>
+							/>
+						{/if}
+					{:else}
+						<slot name="content" />
 					{/if}
-				{:else}
-					<slot name="content" />
+				</div>
+			{/if}
+
+			{#if attributes?.done === 'true'}
+				{#if typeof files === 'object'}
+					{#each files ?? [] as file, idx}
+						{#if file.startsWith('data:image/')}
+							<Image
+								id={`${collapsibleId}-tool-calls-${attributes?.id}-result-${idx}`}
+								src={file}
+								alt="Image"
+							/>
+						{/if}
+					{/each}
 				{/if}
+			{/if}
+		{/if}
+	{:else if !grow}
+		{#if open && !hide}
+			<div transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}>
+				<slot name="content" />
 			</div>
 		{/if}
 	{/if}

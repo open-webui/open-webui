@@ -51,7 +51,7 @@
 		{#if !top}
 			<Loader
 				on:visible={(e) => {
-					console.log('visible');
+					console.info('visible');
 					if (!messagesLoading) {
 						loadMoreMessages();
 					}
@@ -132,7 +132,7 @@
 					if (
 						(message?.reactions ?? [])
 							.find((reaction) => reaction.name === name)
-							?.user_ids?.includes($user.id) ??
+							?.user_ids?.includes($user?.id) ??
 						false
 					) {
 						messages = messages.map((m) => {
@@ -140,7 +140,7 @@
 								const reaction = m.reactions.find((reaction) => reaction.name === name);
 
 								if (reaction) {
-									reaction.user_ids = reaction.user_ids.filter((id) => id !== $user.id);
+									reaction.user_ids = reaction.user_ids.filter((id) => id !== $user?.id);
 									reaction.count = reaction.user_ids.length;
 
 									if (reaction.count === 0) {
@@ -167,12 +167,12 @@
 									const reaction = m.reactions.find((reaction) => reaction.name === name);
 
 									if (reaction) {
-										reaction.user_ids.push($user.id);
+										reaction.user_ids.push($user?.id);
 										reaction.count = reaction.user_ids.length;
 									} else {
 										m.reactions.push({
 											name: name,
-											user_ids: [$user.id],
+											user_ids: [$user?.id],
 											count: 1
 										});
 									}

@@ -8,8 +8,12 @@
 		"title": "English (GB)"
 	},
 	{
+		"code": "ar",
+		"title": "Arabic (العربية)"
+	},
+	{
 		"code": "ar-BH",
-		"title": "Arabic (عربي)"
+		"title": "Arabic (Bahrain)"
 	},
 	{
 		"code": "eu-ES",
@@ -18,6 +22,10 @@
 	{
 		"code": "bn-BD",
 		"title": "Bengali (বাংলা)"
+	},
+	{
+		"code": "bo-TB",
+		"title": "Tibetan (བོད)"
 	},
 	{
 		"code": "bg-BG",

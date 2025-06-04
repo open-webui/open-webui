@@ -15,6 +15,11 @@ dayjs.extend(localizedFormat);
 import { WEBUI_BASE_URL } from '$lib/constants';
 import { TTS_RESPONSE_SPLIT } from '$lib/types';
 
+import { marked } from 'marked';
+import markedExtension from '$lib/utils/marked/extension';
+import markedKatexExtension from '$lib/utils/marked/katex-extension';
+import hljs from 'highlight.js';
+
 //////////////////////////
 // Helper functions
 //////////////////////////
@@ -36,8 +41,7 @@ export const replaceTokens = (content, sourceIds, char, user) => {
 		},
 		{
 			regex: /{{HTML_FILE_ID_([a-f0-9-]+)}}/gi,
-			replacement: (_, fileId) =>
-				`<iframe src="${WEBUI_BASE_URL}/api/v1/files/${fileId}/content/html" width="100%" frameborder="0" onload="this.style.height=(this.contentWindow.document.body.scrollHeight+20)+'px';"></iframe>`
+			replacement: (_, fileId) => `<file type="html" id="${fileId}" />`
 		}
 	];
 
@@ -86,8 +90,72 @@ export const sanitizeResponseContent = (content: string) => {
 };
 
 export const processResponseContent = (content: string) => {
+	content = processChineseContent(content);
 	return content.trim();
 };
+
+function isChineseChar(char: string): boolean {
+	return /\p{Script=Han}/u.test(char);
+}
+
+// Tackle "Model output issue not following the standard Markdown/LaTeX format" in Chinese.
+function processChineseContent(content: string): string {
+	// This function is used to process the response content before the response content is rendered.
+	const lines = content.split('\n');
+	const processedLines = lines.map((line) => {
+		if (/[\u4e00-\u9fa5]/.test(line)) {
+			// Problems caused by Chinese parentheses
+			/* Discription:
+			 *   When `*` has Chinese parentheses on the inside, markdown parser ignore bold or italic style.
+			 *   - e.g. `**中文名（English）**中文内容` will be parsed directly,
+			 *          instead of `<strong>中文名（English）</strong>中文内容`.
+			 * Solution:
+			 *   Adding a `space` before and after the bold/italic part can solve the problem.
+			 *   - e.g. `**中文名（English）**中文内容` -> ` **中文名（English）** 中文内容`
+			 * Note:
+			 *   Similar problem was found with English parentheses and other full delimiters,
+			 *   but they are not handled here because they are less likely to appear in LLM output.
+			 *   Change the behavior in future if needed.
+			 */
+			if (line.includes('*')) {
+				// Handle **bold** with Chinese parentheses
+				line = processChineseParentheses(line, '**', '（', '）');
+				// Handle *italic* with Chinese parentheses
+				line = processChineseParentheses(line, '*', '（', '）');
+			}
+		}
+		return line;
+	});
+	content = processedLines.join('\n');
+
+	return content;
+}
+
+// Helper function for `processChineseContent`
+function processChineseParentheses(
+	line: string,
+	symbol: string,
+	leftSymbol: string,
+	rightSymbol: string
+): string {
+	// NOTE: If needed, with a little modification, this function can be applied to more cases.
+	const escapedSymbol = escapeRegExp(symbol);
+	const regex = new RegExp(
+		`(.?)(?<!${escapedSymbol})(${escapedSymbol})([^${escapedSymbol}]+)(${escapedSymbol})(?!${escapedSymbol})(.)`,
+		'g'
+	);
+	return line.replace(regex, (match, l, left, content, right, r) => {
+		const result =
+			(content.startsWith(leftSymbol) && l && l.length > 0 && isChineseChar(l[l.length - 1])) ||
+			(content.endsWith(rightSymbol) && r && r.length > 0 && isChineseChar(r[0]));
+
+		if (result) {
+			return `${l} ${left}${content}${right} ${r}`;
+		} else {
+			return match;
+		}
+	});
+}
 
 export function unescapeHtml(html: string) {
 	const doc = new DOMParser().parseFromString(html, 'text/html');
@@ -309,46 +377,130 @@ export const formatDate = (inputDate) => {
 	}
 };
 
-export const copyToClipboard = async (text) => {
-	let result = false;
-	if (!navigator.clipboard) {
-		const textArea = document.createElement('textarea');
-		textArea.value = text;
+export const copyToClipboard = async (text, formatted = false) => {
+	if (formatted) {
+		const options = {
+			throwOnError: false,
+			highlight: function (code, lang) {
+				const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+				return hljs.highlight(code, { language }).value;
+			}
+		};
+		marked.use(markedKatexExtension(options));
+		marked.use(markedExtension(options));
+		// DEVELOPER NOTE: Go to `$lib/components/chat/Messages/Markdown.svelte` to add extra markdown extensions for rendering.
 
-		// Avoid scrolling to bottom
-		textArea.style.top = '0';
-		textArea.style.left = '0';
-		textArea.style.position = 'fixed';
+		const htmlContent = marked.parse(text);
 
-		document.body.appendChild(textArea);
-		textArea.focus();
-		textArea.select();
+		// Add basic styling to make the content look better when pasted
+		const styledHtml = `
+			<div>
+				<style>
+					pre {
+						background-color: #f6f8fa;
+						border-radius: 6px;
+						padding: 16px;
+						overflow: auto;
+					}
+					code {
+						font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+						font-size: 14px;
+					}
+					.hljs-keyword { color: #d73a49; }
+					.hljs-string { color: #032f62; }
+					.hljs-comment { color: #6a737d; }
+					.hljs-function { color: #6f42c1; }
+					.hljs-number { color: #005cc5; }
+					.hljs-operator { color: #d73a49; }
+					.hljs-class { color: #6f42c1; }
+					.hljs-title { color: #6f42c1; }
+					.hljs-params { color: #24292e; }
+					.hljs-built_in { color: #005cc5; }
+					blockquote {
+						border-left: 4px solid #dfe2e5;
+						padding-left: 16px;
+						color: #6a737d;
+						margin-left: 0;
+						margin-right: 0;
+					}
+					table {
+						border-collapse: collapse;
+						width: 100%;
+						margin-bottom: 16px;
+					}
+					table, th, td {
+						border: 1px solid #dfe2e5;
+					}
+					th, td {
+						padding: 8px 12px;
+					}
+					th {
+						background-color: #f6f8fa;
+					}
+				</style>
+				${htmlContent}
+			</div>
+		`;
+
+		// Create a blob with HTML content
+		const blob = new Blob([styledHtml], { type: 'text/html' });
 
 		try {
-			const successful = document.execCommand('copy');
-			const msg = successful ? 'successful' : 'unsuccessful';
-			console.log('Fallback: Copying text command was ' + msg);
-			result = true;
+			// Create a ClipboardItem with HTML content
+			const data = new ClipboardItem({
+				'text/html': blob,
+				'text/plain': new Blob([text], { type: 'text/plain' })
+			});
+
+			// Write to clipboard
+			await navigator.clipboard.write([data]);
+			return true;
 		} catch (err) {
-			console.error('Fallback: Oops, unable to copy', err);
+			console.error('Error copying formatted content:', err);
+			// Fallback to plain text
+			return await copyToClipboard(text);
+		}
+	} else {
+		let result = false;
+		if (!navigator.clipboard) {
+			const textArea = document.createElement('textarea');
+			textArea.value = text;
+
+			// Avoid scrolling to bottom
+			textArea.style.top = '0';
+			textArea.style.left = '0';
+			textArea.style.position = 'fixed';
+
+			document.body.appendChild(textArea);
+			textArea.focus();
+			textArea.select();
+
+			try {
+				const successful = document.execCommand('copy');
+				const msg = successful ? 'successful' : 'unsuccessful';
+				console.log('Fallback: Copying text command was ' + msg);
+				result = true;
+			} catch (err) {
+				console.error('Fallback: Oops, unable to copy', err);
+			}
+
+			document.body.removeChild(textArea);
+			return result;
 		}
 
-		document.body.removeChild(textArea);
+		result = await navigator.clipboard
+			.writeText(text)
+			.then(() => {
+				console.log('Async: Copying to clipboard was successful!');
+				return true;
+			})
+			.catch((error) => {
+				console.error('Async: Could not copy text: ', error);
+				return false;
+			});
+
 		return result;
 	}
-
-	result = await navigator.clipboard
-		.writeText(text)
-		.then(() => {
-			console.log('Async: Copying to clipboard was successful!');
-			return true;
-		})
-		.catch((error) => {
-			console.error('Async: Could not copy text: ', error);
-			return false;
-		});
-
-	return result;
 };
 
 export const compareVersion = (latest, current) => {
@@ -361,14 +513,14 @@ export const compareVersion = (latest, current) => {
 			}) < 0;
 };
 
-export const findWordIndices = (text) => {
-	const regex = /\[([^\]]+)\]/g;
+export const extractCurlyBraceWords = (text) => {
+	const regex = /\{\{([^}]+)\}\}/g;
 	const matches = [];
 	let match;
 
 	while ((match = regex.exec(text)) !== null) {
 		matches.push({
-			word: match[1],
+			word: match[1].trim(),
 			startIndex: match.index,
 			endIndex: regex.lastIndex - 1
 		});
@@ -663,7 +815,6 @@ export const removeFormattings = (str: string) => {
 
 			// Cleanup
 			.replace(/\[\^[^\]]*\]/g, '') // Footnotes
-			.replace(/[-*_~]/g, '') // Remaining markers
 			.replace(/\n{2,}/g, '\n')
 	); // Multiple newlines
 };
@@ -678,6 +829,33 @@ export const removeDetails = (content, types) => {
 			new RegExp(`<details\\s+type="${type}"[^>]*>.*?<\\/details>`, 'gis'),
 			''
 		);
+	}
+
+	return content;
+};
+
+export const removeAllDetails = (content) => {
+	content = content.replace(/<details[^>]*>.*?<\/details>/gis, '');
+	return content;
+};
+
+export const processDetails = (content) => {
+	content = removeDetails(content, ['reasoning', 'code_interpreter']);
+
+	// This regex matches <details> tags with type="tool_calls" and captures their attributes to convert them to a string
+	const detailsRegex = /<details\s+type="tool_calls"([^>]*)>([\s\S]*?)<\/details>/gis;
+	const matches = content.match(detailsRegex);
+	if (matches) {
+		for (const match of matches) {
+			const attributesRegex = /(\w+)="([^"]*)"/g;
+			const attributes = {};
+			let attributeMatch;
+			while ((attributeMatch = attributesRegex.exec(match)) !== null) {
+				attributes[attributeMatch[1]] = attributeMatch[2];
+			}
+
+			content = content.replace(match, `"${attributes.result}"`);
+		}
 	}
 
 	return content;
@@ -751,11 +929,10 @@ export const extractSentencesForAudio = (text: string) => {
 	}, [] as string[]);
 };
 
-export const getMessageContentParts = (content: string, split_on: string = 'punctuation') => {
-	content = removeDetails(content, ['reasoning', 'code_interpreter', 'tool_calls']);
+export const getMessageContentParts = (content: string, splitOn: string = 'punctuation') => {
 	const messageContentParts: string[] = [];
 
-	switch (split_on) {
+	switch (splitOn) {
 		default:
 		case TTS_RESPONSE_SPLIT.PUNCTUATION:
 			messageContentParts.push(...extractSentencesForAudio(content));
@@ -1045,6 +1222,9 @@ export const createMessagesList = (history, messageId) => {
 	}
 
 	const message = history.messages[messageId];
+	if (message === undefined) {
+		return [];
+	}
 	if (message?.parentId) {
 		return [...createMessagesList(history, message.parentId), message];
 	} else {
@@ -1125,58 +1305,80 @@ export const convertOpenApiToToolPayload = (openApiSpec) => {
 
 	for (const [path, methods] of Object.entries(openApiSpec.paths)) {
 		for (const [method, operation] of Object.entries(methods)) {
-			const tool = {
-				type: 'function',
-				name: operation.operationId,
-				description: operation.summary || 'No description available.',
-				parameters: {
-					type: 'object',
-					properties: {},
-					required: []
-				}
-			};
-
-			// Extract path and query parameters
-			if (operation.parameters) {
-				operation.parameters.forEach((param) => {
-					tool.parameters.properties[param.name] = {
-						type: param.schema.type,
-						description: param.schema.description || ''
-					};
-
-					if (param.required) {
-						tool.parameters.required.push(param.name);
+			if (operation?.operationId) {
+				const tool = {
+					type: 'function',
+					name: operation.operationId,
+					description: operation.description || operation.summary || 'No description available.',
+					parameters: {
+						type: 'object',
+						properties: {},
+						required: []
 					}
-				});
-			}
+				};
 
-			// Extract and recursively resolve requestBody if available
-			if (operation.requestBody) {
-				const content = operation.requestBody.content;
-				if (content && content['application/json']) {
-					const requestSchema = content['application/json'].schema;
-					const resolvedRequestSchema = resolveSchema(requestSchema, openApiSpec.components);
-
-					if (resolvedRequestSchema.properties) {
-						tool.parameters.properties = {
-							...tool.parameters.properties,
-							...resolvedRequestSchema.properties
+				// Extract path and query parameters
+				if (operation.parameters) {
+					operation.parameters.forEach((param) => {
+						let description = param.schema.description || param.description || '';
+						if (param.schema.enum && Array.isArray(param.schema.enum)) {
+							description += `. Possible values: ${param.schema.enum.join(', ')}`;
+						}
+						tool.parameters.properties[param.name] = {
+							type: param.schema.type,
+							description: description
 						};
 
-						if (resolvedRequestSchema.required) {
-							tool.parameters.required = [
-								...new Set([...tool.parameters.required, ...resolvedRequestSchema.required])
-							];
+						if (param.required) {
+							tool.parameters.required.push(param.name);
 						}
-					} else if (resolvedRequestSchema.type === 'array') {
-						tool.parameters = resolvedRequestSchema; // special case when root schema is an array
+					});
+				}
+
+				// Extract and recursively resolve requestBody if available
+				if (operation.requestBody) {
+					const content = operation.requestBody.content;
+					if (content && content['application/json']) {
+						const requestSchema = content['application/json'].schema;
+						const resolvedRequestSchema = resolveSchema(requestSchema, openApiSpec.components);
+
+						if (resolvedRequestSchema.properties) {
+							tool.parameters.properties = {
+								...tool.parameters.properties,
+								...resolvedRequestSchema.properties
+							};
+
+							if (resolvedRequestSchema.required) {
+								tool.parameters.required = [
+									...new Set([...tool.parameters.required, ...resolvedRequestSchema.required])
+								];
+							}
+						} else if (resolvedRequestSchema.type === 'array') {
+							tool.parameters = resolvedRequestSchema; // special case when root schema is an array
+						}
 					}
 				}
-			}
 
-			toolPayload.push(tool);
+				toolPayload.push(tool);
+			}
 		}
 	}
 
 	return toolPayload;
+};
+
+export const slugify = (str: string): string => {
+	return (
+		str
+			// 1. Normalize: separate accented letters into base + combining marks
+			.normalize('NFD')
+			// 2. Remove all combining marks (the accents)
+			.replace(/[\u0300-\u036f]/g, '')
+			// 3. Replace any sequence of whitespace with a single hyphen
+			.replace(/\s+/g, '-')
+			// 4. Remove all characters except alphanumeric characters and hyphens
+			.replace(/[^a-zA-Z0-9-]/g, '')
+			// 5. Convert to lowercase
+			.toLowerCase()
+	);
 };

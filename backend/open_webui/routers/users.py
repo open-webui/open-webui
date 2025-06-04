@@ -6,6 +6,7 @@ from open_webui.models.groups import Groups
 from open_webui.models.chats import Chats
 from open_webui.models.users import (
     UserModel,
+    UserListResponse,
     UserRoleUpdateForm,
     Users,
     UserSettings,
@@ -20,7 +21,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
 
 from open_webui.utils.auth import get_admin_user, get_password_hash, get_verified_user
-from open_webui.utils.access_control import get_permissions
+from open_webui.utils.access_control import get_permissions, has_permission
 
 
 log = logging.getLogger(__name__)
@@ -33,13 +34,38 @@ router = APIRouter()
 ############################
 
 
-@router.get("/", response_model=list[UserModel])
+PAGE_ITEM_COUNT = 30
+
+
+@router.get("/", response_model=UserListResponse)
 async def get_users(
-    skip: Optional[int] = None,
-    limit: Optional[int] = None,
+    query: Optional[str] = None,
+    order_by: Optional[str] = None,
+    direction: Optional[str] = None,
+    page: Optional[int] = 1,
     user=Depends(get_admin_user),
 ):
-    return Users.get_users(skip, limit)
+    limit = PAGE_ITEM_COUNT
+
+    page = max(1, page)
+    skip = (page - 1) * limit
+
+    filter = {}
+    if query:
+        filter["query"] = query
+    if order_by:
+        filter["order_by"] = order_by
+    if direction:
+        filter["direction"] = direction
+
+    return Users.get_users(filter=filter, skip=skip, limit=limit)
+
+
+@router.get("/all", response_model=UserListResponse)
+async def get_all_users(
+    user=Depends(get_admin_user),
+):
+    return Users.get_users()
 
 
 ############################
@@ -88,14 +114,22 @@ class ChatPermissions(BaseModel):
     file_upload: bool = True
     delete: bool = True
     edit: bool = True
+    share: bool = True
+    export: bool = True
+    stt: bool = True
+    tts: bool = True
+    call: bool = True
+    multiple_models: bool = True
     temporary: bool = True
     temporary_enforced: bool = False
 
 
 class FeaturesPermissions(BaseModel):
+    direct_tool_servers: bool = False
     web_search: bool = True
     image_generation: bool = True
     code_interpreter: bool = True
+    notes: bool = True
 
 
 class UserPermissions(BaseModel):
@@ -171,9 +205,22 @@ async def get_user_settings_by_session_user(user=Depends(get_verified_user)):
 
 @router.post("/user/settings/update", response_model=UserSettings)
 async def update_user_settings_by_session_user(
-    form_data: UserSettings, user=Depends(get_verified_user)
+    request: Request, form_data: UserSettings, user=Depends(get_verified_user)
 ):
-    user = Users.update_user_settings_by_id(user.id, form_data.model_dump())
+    updated_user_settings = form_data.model_dump()
+    if (
+        user.role != "admin"
+        and "toolServers" in updated_user_settings.get("ui").keys()
+        and not has_permission(
+            user.id,
+            "features.direct_tool_servers",
+            request.app.state.config.USER_PERMISSIONS,
+        )
+    ):
+        # If the user is not an admin and does not have permission to use tool servers, remove the key
+        updated_user_settings["ui"].pop("toolServers", None)
+
+    user = Users.update_user_settings_by_id(user.id, updated_user_settings)
     if user:
         return user.settings
     else:
@@ -283,6 +330,21 @@ async def update_user_by_id(
     form_data: UserUpdateForm,
     session_user=Depends(get_admin_user),
 ):
+    # Prevent modification of the primary admin user by other admins
+    try:
+        first_user = Users.get_first_user()
+        if first_user and user_id == first_user.id and session_user.id != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=ERROR_MESSAGES.ACTION_PROHIBITED,
+            )
+    except Exception as e:
+        log.error(f"Error checking primary admin status: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not verify primary admin status.",
+        )
+
     user = Users.get_user_by_id(user_id)
 
     if user:
@@ -330,6 +392,21 @@ async def update_user_by_id(
 
 @router.delete("/{user_id}", response_model=bool)
 async def delete_user_by_id(user_id: str, user=Depends(get_admin_user)):
+    # Prevent deletion of the primary admin user
+    try:
+        first_user = Users.get_first_user()
+        if first_user and user_id == first_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=ERROR_MESSAGES.ACTION_PROHIBITED,
+            )
+    except Exception as e:
+        log.error(f"Error checking primary admin status: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not verify primary admin status.",
+        )
+
     if user.id != user_id:
         result = Auths.delete_auth_by_id(user_id)
 
@@ -341,6 +418,7 @@ async def delete_user_by_id(user_id: str, user=Depends(get_admin_user)):
             detail=ERROR_MESSAGES.DELETE_USER_ERROR,
         )
 
+    # Prevent self-deletion
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
         detail=ERROR_MESSAGES.ACTION_PROHIBITED,

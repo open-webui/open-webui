@@ -125,6 +125,8 @@
 	"Current Model": "Häzirki Model",
 	"Current Password": "Häzirki Parol",
 	"Custom": "Özboluşly",
+	"Custom Account Pending Text": "",
+	"Custom Account Pending Title": "",
 	"Customize models for a specific purpose": "Anyk maksat üçin modelleri düzmek",
 	"Dark": "Garaňky",
 	"Database": "Mazada",
@@ -712,5 +714,6 @@
 	"Your username": "Ulanyjy adyňyz",
 	"You're offline.": "Offline.",
 	"You've reached your token limit for the day.": "Günüňize token çägiňize ýetdiňiz.",
+	"Merged Response": "Birleşdirilen jogap",
 	"ZIP Code": "Poçta Kody"
 }

@@ -83,10 +83,19 @@
 			});
 			return acc;
 		}, []);
+		console.log('citations', citations);
 
 		showRelevance = calculateShowRelevance(citations);
 		showPercentage = shouldShowPercentage(citations);
 	}
+
+	const decodeString = (str: string) => {
+		try {
+			return decodeURIComponent(str);
+		} catch (e) {
+			return str;
+		}
+	};
 </script>
 
 <CitationsModal
@@ -117,7 +126,7 @@
 						<div
 							class="flex-1 mx-1 truncate text-black/60 hover:text-black dark:text-white/60 dark:hover:text-white transition"
 						>
-							{decodeURIComponent(citation.source.name)}
+							{decodeString(citation.source.name)}
 						</div>
 					</button>
 				{/each}
@@ -157,7 +166,7 @@
 											</div>
 										{/if}
 										<div class="flex-1 mx-1 truncate">
-											{decodeURIComponent(citation.source.name)}
+											{decodeString(citation.source.name)}
 										</div>
 									</button>
 								{/each}
@@ -194,7 +203,7 @@
 									</div>
 								{/if}
 								<div class="flex-1 mx-1 truncate">
-									{decodeURIComponent(citation.source.name)}
+									{decodeString(citation.source.name)}
 								</div>
 							</button>
 						{/each}

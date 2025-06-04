@@ -6,7 +6,7 @@
 	import AccessControl from './AccessControl.svelte';
 
 	export let show = false;
-	export let accessControl = null;
+	export let accessControl = {};
 	export let accessRoles = ['read'];
 	export let allowPublic = true;
 

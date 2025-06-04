@@ -9,9 +9,8 @@ from open_webui.models.users import Users, UserNameResponse
 from open_webui.models.channels import Channels
 from open_webui.models.chats import Chats
 from open_webui.utils.redis import (
-    parse_redis_sentinel_url,
     get_sentinels_from_env,
-    AsyncRedisSentinelManager,
+    get_sentinel_url_from_env,
 )
 
 from open_webui.env import (
@@ -38,15 +37,10 @@ log.setLevel(SRC_LOG_LEVELS["SOCKET"])
 
 if WEBSOCKET_MANAGER == "redis":
     if WEBSOCKET_SENTINEL_HOSTS:
-        redis_config = parse_redis_sentinel_url(WEBSOCKET_REDIS_URL)
-        mgr = AsyncRedisSentinelManager(
-            WEBSOCKET_SENTINEL_HOSTS.split(","),
-            sentinel_port=int(WEBSOCKET_SENTINEL_PORT),
-            redis_port=redis_config["port"],
-            service=redis_config["service"],
-            db=redis_config["db"],
-            username=redis_config["username"],
-            password=redis_config["password"],
+        mgr = socketio.AsyncRedisManager(
+            get_sentinel_url_from_env(
+                WEBSOCKET_REDIS_URL, WEBSOCKET_SENTINEL_HOSTS, WEBSOCKET_SENTINEL_PORT
+            )
         )
     else:
         mgr = socketio.AsyncRedisManager(WEBSOCKET_REDIS_URL)
@@ -165,18 +159,19 @@ def get_models_in_use():
 
 @sio.on("usage")
 async def usage(sid, data):
-    model_id = data["model"]
-    # Record the timestamp for the last update
-    current_time = int(time.time())
+    if sid in SESSION_POOL:
+        model_id = data["model"]
+        # Record the timestamp for the last update
+        current_time = int(time.time())
 
-    # Store the new usage data and task
-    USAGE_POOL[model_id] = {
-        **(USAGE_POOL[model_id] if model_id in USAGE_POOL else {}),
-        sid: {"updated_at": current_time},
-    }
+        # Store the new usage data and task
+        USAGE_POOL[model_id] = {
+            **(USAGE_POOL[model_id] if model_id in USAGE_POOL else {}),
+            sid: {"updated_at": current_time},
+        }
 
-    # Broadcast the usage data to all clients
-    await sio.emit("usage", {"models": get_models_in_use()})
+        # Broadcast the usage data to all clients
+        await sio.emit("usage", {"models": get_models_in_use()})
 
 
 @sio.event
@@ -284,7 +279,8 @@ async def channel_events(sid, data):
 
 @sio.on("user-list")
 async def user_list(sid):
-    await sio.emit("user-list", {"user_ids": list(USER_POOL.keys())})
+    if sid in SESSION_POOL:
+        await sio.emit("user-list", {"user_ids": list(USER_POOL.keys())})
 
 
 @sio.event
@@ -320,8 +316,8 @@ def get_event_emitter(request_info, update_db=True):
             )
         )
 
-        for session_id in session_ids:
-            await sio.emit(
+        emit_tasks = [
+            sio.emit(
                 "chat-events",
                 {
                     "chat_id": request_info.get("chat_id", None),
@@ -330,6 +326,10 @@ def get_event_emitter(request_info, update_db=True):
                 },
                 to=session_id,
             )
+            for session_id in session_ids
+        ]
+
+        await asyncio.gather(*emit_tasks)
 
         if update_db:
             if "type" in event_data and event_data["type"] == "status":
@@ -345,16 +345,17 @@ def get_event_emitter(request_info, update_db=True):
                     request_info["message_id"],
                 )
 
-                content = message.get("content", "")
-                content += event_data.get("data", {}).get("content", "")
+                if message:
+                    content = message.get("content", "")
+                    content += event_data.get("data", {}).get("content", "")
 
-                Chats.upsert_message_to_chat_by_id_and_message_id(
-                    request_info["chat_id"],
-                    request_info["message_id"],
-                    {
-                        "content": content,
-                    },
-                )
+                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                        request_info["chat_id"],
+                        request_info["message_id"],
+                        {
+                            "content": content,
+                        },
+                    )
 
             if "type" in event_data and event_data["type"] == "replace":
                 content = event_data.get("data", {}).get("content", "")

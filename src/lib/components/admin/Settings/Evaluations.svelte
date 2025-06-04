@@ -77,7 +77,7 @@
 	};
 
 	onMount(async () => {
-		if ($user.role === 'admin') {
+		if ($user?.role === 'admin') {
 			evaluationConfig = await getConfig(localStorage.token).catch((err) => {
 				toast.error(err);
 				return null;

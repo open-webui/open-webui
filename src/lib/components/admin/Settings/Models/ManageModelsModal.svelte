@@ -19,7 +19,7 @@
 	let ollamaConfig = null;
 
 	onMount(async () => {
-		if ($user.role === 'admin') {
+		if ($user?.role === 'admin') {
 			await Promise.all([
 				(async () => {
 					ollamaConfig = await getOllamaConfig(localStorage.token);

@@ -308,15 +308,16 @@
 			</div>
 		</div>
 
-		{#if $user.role === 'admin' || $user?.permissions.chat?.controls}
-			<hr class="border-gray-100 dark:border-gray-850 my-3" />
+		{#if $user?.role === 'admin' || $user?.permissions.chat?.controls}
+			<hr class="border-gray-50 dark:border-gray-850 my-3" />
 
 			<div>
 				<div class=" my-2.5 text-sm font-medium">{$i18n.t('System Prompt')}</div>
-				<textarea
+				<Textarea
 					bind:value={system}
-					class="w-full rounded-lg p-4 text-sm bg-white dark:text-gray-300 dark:bg-gray-850 outline-hidden resize-none"
+					className="w-full text-sm bg-white dark:text-gray-300 dark:bg-gray-900 outline-hidden resize-none"
 					rows="4"
+					placeholder={$i18n.t('Enter system prompt here')}
 				/>
 			</div>
 
@@ -358,7 +359,7 @@
 						{#if keepAlive !== null}
 							<div class="flex mt-1 space-x-2">
 								<input
-									class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+									class="w-full text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 									type="text"
 									placeholder={$i18n.t("e.g. '30s','10m'. Valid time units are 's', 'm', 'h'.")}
 									bind:value={keepAlive}
@@ -398,7 +399,7 @@
 						{#if requestFormat !== null}
 							<div class="flex mt-1 space-x-2">
 								<Textarea
-									className="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+									className="w-full  text-sm dark:text-gray-300 dark:bg-gray-900 outline-hidden"
 									placeholder={$i18n.t('e.g. "json" or a JSON schema')}
 									bind:value={requestFormat}
 								/>

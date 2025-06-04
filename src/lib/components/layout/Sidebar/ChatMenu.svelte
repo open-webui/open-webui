@@ -26,7 +26,7 @@
 		getChatPinnedStatusById,
 		toggleChatPinnedStatusById
 	} from '$lib/apis/chats';
-	import { chats, theme } from '$lib/stores';
+	import { chats, settings, theme, user } from '$lib/stores';
 	import { createMessagesList } from '$lib/utils';
 	import { downloadChatAsPDF } from '$lib/apis/utils';
 	import Download from '$lib/components/icons/Download.svelte';
@@ -81,74 +81,124 @@
 	const downloadPdf = async () => {
 		const chat = await getChatById(localStorage.token, chatId);
 
-		const containerElement = document.getElementById('messages-container');
+		if ($settings?.stylizedPdfExport ?? true) {
+			const containerElement = document.getElementById('messages-container');
 
-		if (containerElement) {
-			try {
-				const isDarkMode = $theme.includes('dark'); // Check theme mode
+			if (containerElement) {
+				try {
+					const isDarkMode = document.documentElement.classList.contains('dark');
+					const virtualWidth = 800; // Fixed width in px
+					const pagePixelHeight = 1200; // Each slice height (adjust to avoid canvas bugs; generally 2–4k is safe)
 
-				// Define a fixed virtual screen size
-				const virtualWidth = 1024; // Fixed width (adjust as needed)
-				const virtualHeight = 1400; // Fixed height (adjust as needed)
+					// Clone & style once
+					const clonedElement = containerElement.cloneNode(true);
+					clonedElement.classList.add('text-black');
+					clonedElement.classList.add('dark:text-white');
+					clonedElement.style.width = `${virtualWidth}px`;
+					clonedElement.style.position = 'absolute';
+					clonedElement.style.left = '-9999px'; // Offscreen
+					clonedElement.style.height = 'auto';
+					document.body.appendChild(clonedElement);
 
-				// Clone the container to avoid layout shifts
-				const clonedElement = containerElement.cloneNode(true);
-				clonedElement.style.width = `${virtualWidth}px`; // Apply fixed width
-				clonedElement.style.height = 'auto'; // Allow content to expand
+					// Get total height after attached to DOM
+					const totalHeight = clonedElement.scrollHeight;
+					let offsetY = 0;
+					let page = 0;
 
-				document.body.appendChild(clonedElement); // Temporarily add to DOM
+					// Prepare PDF
+					const pdf = new jsPDF('p', 'mm', 'a4');
+					const imgWidth = 210; // A4 mm
+					const pageHeight = 297; // A4 mm
 
-				// Render to canvas with predefined width
-				const canvas = await html2canvas(clonedElement, {
-					backgroundColor: isDarkMode ? '#000' : '#fff',
-					useCORS: true,
-					scale: 2, // Keep at 1x to avoid unexpected enlargements
-					width: virtualWidth, // Set fixed virtual screen width
-					windowWidth: virtualWidth, // Ensure consistent rendering
-					windowHeight: virtualHeight
-				});
+					while (offsetY < totalHeight) {
+						// For each slice, adjust scrollTop to show desired part
+						clonedElement.scrollTop = offsetY;
 
-				document.body.removeChild(clonedElement); // Clean up temp element
+						// Optionally: mask/hide overflowing content via CSS if needed
+						clonedElement.style.maxHeight = `${pagePixelHeight}px`;
+						// Only render the visible part
+						const canvas = await html2canvas(clonedElement, {
+							backgroundColor: isDarkMode ? '#000' : '#fff',
+							useCORS: true,
+							scale: 2,
+							width: virtualWidth,
+							height: Math.min(pagePixelHeight, totalHeight - offsetY),
+							// Optionally: y offset for correct region?
+							windowWidth: virtualWidth
+							//windowHeight: pagePixelHeight,
+						});
+						const imgData = canvas.toDataURL('image/png');
+						// Maintain aspect ratio
+						const imgHeight = (canvas.height * imgWidth) / canvas.width;
+						const position = 0; // Always first line, since we've clipped vertically
 
-				const imgData = canvas.toDataURL('image/png');
+						if (page > 0) pdf.addPage();
 
-				// A4 page settings
-				const pdf = new jsPDF('p', 'mm', 'a4');
-				const imgWidth = 210; // A4 width in mm
-				const pageHeight = 297; // A4 height in mm
+						// Set page background for dark mode
+						if (isDarkMode) {
+							pdf.setFillColor(0, 0, 0);
+							pdf.rect(0, 0, imgWidth, pageHeight, 'F'); // black bg
+						}
 
-				// Maintain aspect ratio
-				const imgHeight = (canvas.height * imgWidth) / canvas.width;
-				let heightLeft = imgHeight;
-				let position = 0;
+						pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
 
-				// Set page background for dark mode
-				if (isDarkMode) {
-					pdf.setFillColor(0, 0, 0);
-					pdf.rect(0, 0, imgWidth, pageHeight, 'F'); // Apply black bg
-				}
-
-				pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-				heightLeft -= pageHeight;
-
-				// Handle additional pages
-				while (heightLeft > 0) {
-					position -= pageHeight;
-					pdf.addPage();
-
-					if (isDarkMode) {
-						pdf.setFillColor(0, 0, 0);
-						pdf.rect(0, 0, imgWidth, pageHeight, 'F');
+						offsetY += pagePixelHeight;
+						page++;
 					}
 
-					pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-					heightLeft -= pageHeight;
-				}
+					document.body.removeChild(clonedElement);
 
-				pdf.save(`chat-${chat.chat.title}.pdf`);
-			} catch (error) {
-				console.error('Error generating PDF', error);
+					pdf.save(`chat-${chat.chat.title}.pdf`);
+				} catch (error) {
+					console.error('Error generating PDF', error);
+				}
 			}
+		} else {
+			console.log('Downloading PDF');
+
+			const chatText = await getChatAsText(chat);
+
+			const doc = new jsPDF();
+
+			// Margins
+			const left = 15;
+			const top = 20;
+			const right = 15;
+			const bottom = 20;
+
+			const pageWidth = doc.internal.pageSize.getWidth();
+			const pageHeight = doc.internal.pageSize.getHeight();
+			const usableWidth = pageWidth - left - right;
+			const usableHeight = pageHeight - top - bottom;
+
+			// Font size and line height
+			const fontSize = 8;
+			doc.setFontSize(fontSize);
+			const lineHeight = fontSize * 1; // adjust if needed
+
+			// Split the markdown into lines (handles \n)
+			const paragraphs = chatText.split('\n');
+
+			let y = top;
+
+			for (let paragraph of paragraphs) {
+				// Wrap each paragraph to fit the width
+				const lines = doc.splitTextToSize(paragraph, usableWidth);
+
+				for (let line of lines) {
+					// If the line would overflow the bottom, add a new page
+					if (y + lineHeight > pageHeight - bottom) {
+						doc.addPage();
+						y = top;
+					}
+					doc.text(line, left, y);
+					y += lineHeight;
+				}
+				// Add empty line at paragraph breaks
+				y += lineHeight * 0.5;
+			}
+
+			doc.save(`chat-${chat.chat.title}.pdf`);
 		}
 	};
 
@@ -233,15 +283,17 @@
 				<div class="flex items-center">{$i18n.t('Archive')}</div>
 			</DropdownMenu.Item>
 
-			<DropdownMenu.Item
-				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800  rounded-md"
-				on:click={() => {
-					shareHandler();
-				}}
-			>
-				<Share />
-				<div class="flex items-center">{$i18n.t('Share')}</div>
-			</DropdownMenu.Item>
+			{#if $user?.role === 'admin' || ($user.permissions?.chat?.share ?? true)}
+				<DropdownMenu.Item
+					class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800  rounded-md"
+					on:click={() => {
+						shareHandler();
+					}}
+				>
+					<Share />
+					<div class="flex items-center">{$i18n.t('Share')}</div>
+				</DropdownMenu.Item>
+			{/if}
 
 			<DropdownMenu.Sub>
 				<DropdownMenu.SubTrigger
@@ -256,14 +308,17 @@
 					transition={flyAndScale}
 					sideOffset={8}
 				>
-					<DropdownMenu.Item
-						class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
-						on:click={() => {
-							downloadJSONExport();
-						}}
-					>
-						<div class="flex items-center line-clamp-1">{$i18n.t('Export chat (.json)')}</div>
-					</DropdownMenu.Item>
+					{#if $user?.role === 'admin' || ($user.permissions?.chat?.export ?? true)}
+						<DropdownMenu.Item
+							class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+							on:click={() => {
+								downloadJSONExport();
+							}}
+						>
+							<div class="flex items-center line-clamp-1">{$i18n.t('Export chat (.json)')}</div>
+						</DropdownMenu.Item>
+					{/if}
+
 					<DropdownMenu.Item
 						class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 						on:click={() => {
