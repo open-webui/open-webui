@@ -27,7 +27,7 @@ SUBSCRIPTION_PLANS = {
         "price_monthly": 0,
         "credits_per_month": 5,
         "stripe_price_id": "price_1RSbapBBwyxb4MZjWrs4tTNW",
-        "seats": 1
+        "seats": 5
     },
     "starter": {
         "name": "Starter",
