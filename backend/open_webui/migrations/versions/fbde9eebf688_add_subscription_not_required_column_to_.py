@@ -1,7 +1,7 @@
 """Add subscription_not_required column to company table
 
 Revision ID: fbde9eebf688
-Revises: c58abeccc1d1
+Revises: 0941dda0ddf4
 Create Date: 2025-06-03 20:49:37.175519
 
 """
@@ -14,7 +14,7 @@ import open_webui.internal.db
 
 # revision identifiers, used by Alembic.
 revision: str = 'fbde9eebf688'
-down_revision: Union[str, None] = 'c58abeccc1d1'
+down_revision: Union[str, None] = '0941dda0ddf4'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
