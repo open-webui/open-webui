@@ -148,13 +148,13 @@ class DoclingLoader:
 
             params = {
                 "image_export_mode": "placeholder",
-                "table_mode": "accurate",
+                "table_mode": "accurate"
             }
 
             if self.params:
-                if self.params.get("do_picture_classification"):
-                    params["do_picture_classification"] = self.params.get(
-                        "do_picture_classification"
+                if self.params.get("do_picture_description"):
+                    params["do_picture_description"] = self.params.get(
+                        "do_picture_description"
                     )
 
                 if self.params.get("ocr_engine") and self.params.get("ocr_lang"):
@@ -291,10 +291,10 @@ class Loader:
                     params={
                         "ocr_engine": self.kwargs.get("DOCLING_OCR_ENGINE"),
                         "ocr_lang": self.kwargs.get("DOCLING_OCR_LANG"),
-                        "do_picture_classification": self.kwargs.get(
+                        "do_picture_description": self.kwargs.get(
                             "DOCLING_DO_PICTURE_DESCRIPTION"
-                        ),
-                    },
+                        )
+                    }
                 )
         elif (
             self.engine == "document_intelligence"
