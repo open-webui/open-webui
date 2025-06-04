@@ -294,6 +294,12 @@ class Loader:
                         "do_picture_classification": self.kwargs.get(
                             "DOCLING_DO_PICTURE_DESCRIPTION"
                         ),
+                        "picture_description_local": (
+                            '{\n'
+                            '    "repo_id": "HuggingFaceTB/SmolVLM-256M-Instruct",\n'
+                            '    "prompt": "Describe the image in detail, including objects, actions, and connections. Use a descriptive and informative style."\n'
+                            '}'
+                        )
                     },
                 )
         elif (
