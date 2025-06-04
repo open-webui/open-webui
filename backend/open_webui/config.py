@@ -1419,7 +1419,7 @@ FOLLOW_UP_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
 )
 
 DEFAULT_FOLLOW_UP_GENERATION_PROMPT_TEMPLATE = """### Task:
-SSuggest 3-5 relevant follow-up questions or prompts that the **user** might naturally ask next in this conversation, based on the chat history, to help continue or deepen the discussion.
+Suggest 3-5 relevant follow-up questions or prompts that the **user** might naturally ask next in this conversation, based on the chat history, to help continue or deepen the discussion.
 ### Guidelines:
 - Phrase all follow-up questions from the user’s perspective, addressed to the assistant or expert.
 - Make questions concise, clear, and directly related to the discussed topic(s).
