@@ -583,7 +583,7 @@
                                     {#if embeddingModel && embeddingModel.trim() !== ''}
                                         <option value={embeddingModel} class="py-1 font-semibold">
                                             {embeddingModel} 
-                                            {#if embeddingEngine && 
+                                            {#if embeddingEngine !== undefined && 
                                                 RAGConfig.DOWNLOADED_EMBEDDING_MODELS[embeddingEngine] && 
                                                 !RAGConfig.DOWNLOADED_EMBEDDING_MODELS[embeddingEngine]?.includes(embeddingModel)}
                                                 (custom)
@@ -592,7 +592,7 @@
                                     {/if}
                                     
                                     <!-- Then show all downloaded models from the selected engine -->
-                                    {#if embeddingEngine && RAGConfig.DOWNLOADED_EMBEDDING_MODELS[embeddingEngine]}
+                                    {#if embeddingEngine !== undefined && RAGConfig.DOWNLOADED_EMBEDDING_MODELS[embeddingEngine]}
                                         {#each RAGConfig.DOWNLOADED_EMBEDDING_MODELS[embeddingEngine] as model}
                                             {#if model !== embeddingModel} <!-- Skip the current model as it's already shown -->
                                                 <option value={model} class="py-1">{model}</option>
