@@ -205,9 +205,9 @@
 		if (e.key === 'Enter') {
 			e.preventDefault();
 			setTimeout(() => {
-		                const input = document.getElementById(`chat-title-input-${id}`);
-		                if (input) input.blur();
-		        }, 0);
+				const input = document.getElementById(`chat-title-input-${id}`);
+				if (input) input.blur();
+			}, 0);
 		} else if (e.key === 'Escape') {
 			e.preventDefault();
 			confirmEdit = false;

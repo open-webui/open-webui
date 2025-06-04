@@ -939,6 +939,8 @@
 	"Permission denied when accessing microphone: {{error}}": "Tilgang avslått ved bruk av mikrofonen: {{error}}",
 	"Permissions": "Tillatelser",
 	"Perplexity API Key": "",
+	"Perplexity Model": "",
+	"Perplexity Search Context Usage": "",
 	"Personalization": "Tilpassing",
 	"Pin": "Fest",
 	"Pinned": "Festet",

@@ -939,6 +939,8 @@
 	"Permission denied when accessing microphone: {{error}}": "Gidili ang pagtugot sa dihang nag-access sa mikropono: {{error}}",
 	"Permissions": "",
 	"Perplexity API Key": "",
+	"Perplexity Model": "",
+	"Perplexity Search Context Usage": "",
 	"Personalization": "",
 	"Pin": "",
 	"Pinned": "",

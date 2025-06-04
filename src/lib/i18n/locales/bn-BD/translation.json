@@ -939,6 +939,8 @@
 	"Permission denied when accessing microphone: {{error}}": "মাইক্রোফোন ব্যবহারের অনুমতি পাওয়া যায়নি: {{error}}",
 	"Permissions": "",
 	"Perplexity API Key": "",
+	"Perplexity Model": "",
+	"Perplexity Search Context Usage": "",
 	"Personalization": "ডিজিটাল বাংলা",
 	"Pin": "",
 	"Pinned": "",

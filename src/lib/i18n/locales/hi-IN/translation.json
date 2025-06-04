@@ -939,6 +939,8 @@
 	"Permission denied when accessing microphone: {{error}}": "माइक्रोफ़ोन तक पहुँचने पर अनुमति अस्वीकृत: {{error}}",
 	"Permissions": "",
 	"Perplexity API Key": "",
+	"Perplexity Model": "",
+	"Perplexity Search Context Usage": "",
 	"Personalization": "पेरसनलाइज़मेंट",
 	"Pin": "",
 	"Pinned": "",

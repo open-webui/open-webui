@@ -939,6 +939,8 @@
 	"Permission denied when accessing microphone: {{error}}": "Cead diúltaithe agus tú ag teacht ar mhicreafón: {{error}}",
 	"Permissions": "Ceadanna",
 	"Perplexity API Key": "Eochair API Perplexity",
+	"Perplexity Model": "",
+	"Perplexity Search Context Usage": "",
 	"Personalization": "Pearsantú",
 	"Pin": "Bioráin",
 	"Pinned": "Pinneáilte",

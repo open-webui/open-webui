@@ -146,10 +146,7 @@ class DoclingLoader:
                 )
             }
 
-            params = {
-                "image_export_mode": "placeholder",
-                "table_mode": "accurate"
-            }
+            params = {"image_export_mode": "placeholder", "table_mode": "accurate"}
 
             if self.params:
                 if self.params.get("do_picture_description"):
@@ -293,8 +290,8 @@ class Loader:
                         "ocr_lang": self.kwargs.get("DOCLING_OCR_LANG"),
                         "do_picture_description": self.kwargs.get(
                             "DOCLING_DO_PICTURE_DESCRIPTION"
-                        )
-                    }
+                        ),
+                    },
                 )
         elif (
             self.engine == "document_intelligence"

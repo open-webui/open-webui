@@ -939,6 +939,8 @@
 	"Permission denied when accessing microphone: {{error}}": "การอนุญาตถูกปฏิเสธเมื่อเข้าถึงไมโครโฟน: {{error}}",
 	"Permissions": "",
 	"Perplexity API Key": "",
+	"Perplexity Model": "",
+	"Perplexity Search Context Usage": "",
 	"Personalization": "การปรับแต่ง",
 	"Pin": "ปักหมุด",
 	"Pinned": "ปักหมุดแล้ว",

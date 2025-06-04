@@ -939,6 +939,8 @@
 	"Permission denied when accessing microphone: {{error}}": "Baimena ukatu da mikrofonoa atzitzean: {{error}}",
 	"Permissions": "Baimenak",
 	"Perplexity API Key": "",
+	"Perplexity Model": "",
+	"Perplexity Search Context Usage": "",
 	"Personalization": "Pertsonalizazioa",
 	"Pin": "Ainguratu",
 	"Pinned": "Ainguratuta",

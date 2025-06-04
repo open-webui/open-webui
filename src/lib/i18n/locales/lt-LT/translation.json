@@ -939,6 +939,8 @@
 	"Permission denied when accessing microphone: {{error}}": "Leidimas naudoti mikrofoną atmestas: {{error}}",
 	"Permissions": "",
 	"Perplexity API Key": "",
+	"Perplexity Model": "",
+	"Perplexity Search Context Usage": "",
 	"Personalization": "Personalizacija",
 	"Pin": "Smeigtukas",
 	"Pinned": "Įsmeigta",

@@ -939,6 +939,8 @@
 	"Permission denied when accessing microphone: {{error}}": "Juurdepääs mikrofonile keelatud: {{error}}",
 	"Permissions": "Õigused",
 	"Perplexity API Key": "Perplexity API võti",
+	"Perplexity Model": "",
+	"Perplexity Search Context Usage": "",
 	"Personalization": "Isikupärastamine",
 	"Pin": "Kinnita",
 	"Pinned": "Kinnitatud",

@@ -886,15 +886,16 @@ async def generate_chat_completion(
                 r.close()
             await session.close()
 
+
 async def embeddings(request: Request, form_data: dict, user):
     """
     Calls the embeddings endpoint for OpenAI-compatible providers.
-    
+
     Args:
         request (Request): The FastAPI request context.
         form_data (dict): OpenAI-compatible embeddings payload.
         user (UserModel): The authenticated user.
-    
+
     Returns:
         dict: OpenAI-compatible embeddings response.
     """
@@ -928,7 +929,8 @@ async def embeddings(request: Request, form_data: dict, user):
                         "X-OpenWebUI-User-Email": user.email,
                         "X-OpenWebUI-User-Role": user.role,
                     }
-                    if ENABLE_FORWARD_USER_INFO_HEADERS and user else {}
+                    if ENABLE_FORWARD_USER_INFO_HEADERS and user
+                    else {}
                 ),
             },
         )
@@ -965,6 +967,7 @@ async def embeddings(request: Request, form_data: dict, user):
             if r:
                 r.close()
             await session.close()
+
 
 @router.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
 async def proxy(path: str, request: Request, user=Depends(get_verified_user)):

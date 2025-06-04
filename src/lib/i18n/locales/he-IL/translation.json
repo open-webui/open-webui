@@ -939,6 +939,8 @@
 	"Permission denied when accessing microphone: {{error}}": "ההרשאה נדחתה בעת גישה למיקרופון: {{error}}",
 	"Permissions": "",
 	"Perplexity API Key": "",
+	"Perplexity Model": "",
+	"Perplexity Search Context Usage": "",
 	"Personalization": "תאור",
 	"Pin": "",
 	"Pinned": "",

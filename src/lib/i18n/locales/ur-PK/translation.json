@@ -939,6 +939,8 @@
 	"Permission denied when accessing microphone: {{error}}": "مائیکروفون تک رسائی کے دوران اجازت مسترد: {{error}}",
 	"Permissions": "",
 	"Perplexity API Key": "",
+	"Perplexity Model": "",
+	"Perplexity Search Context Usage": "",
 	"Personalization": "شخصی ترتیبات",
 	"Pin": "پن",
 	"Pinned": "پن کیا گیا",

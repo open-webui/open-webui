@@ -939,6 +939,8 @@
 	"Permission denied when accessing microphone: {{error}}": "마이크 접근 권환이 거부되었습니다: {{error}}",
 	"Permissions": "권한",
 	"Perplexity API Key": "Perplexity API 키",
+	"Perplexity Model": "",
+	"Perplexity Search Context Usage": "",
 	"Personalization": "개인화",
 	"Pin": "고정",
 	"Pinned": "고정됨",

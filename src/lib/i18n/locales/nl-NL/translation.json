@@ -939,6 +939,8 @@
 	"Permission denied when accessing microphone: {{error}}": "Toestemming geweigerd bij toegang tot microfoon: {{error}}",
 	"Permissions": "Toestemmingen",
 	"Perplexity API Key": "Perplexity API-sleutel",
+	"Perplexity Model": "",
+	"Perplexity Search Context Usage": "",
 	"Personalization": "Personalisatie",
 	"Pin": "Zet vast",
 	"Pinned": "Vastgezet",

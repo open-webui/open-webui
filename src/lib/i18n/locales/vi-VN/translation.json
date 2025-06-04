@@ -939,6 +939,8 @@
 	"Permission denied when accessing microphone: {{error}}": "Quyền truy cập micrô bị từ chối: {{error}}",
 	"Permissions": "Quyền",
 	"Perplexity API Key": "Khóa API Perplexity",
+	"Perplexity Model": "",
+	"Perplexity Search Context Usage": "",
 	"Personalization": "Cá nhân hóa",
 	"Pin": "Ghim",
 	"Pinned": "Đã ghim",

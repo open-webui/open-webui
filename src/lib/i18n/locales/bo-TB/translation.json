@@ -939,6 +939,8 @@
 	"Permission denied when accessing microphone: {{error}}": "སྐད་སྒྲ་འཛིན་ཆས་འཛུལ་སྤྱོད་སྐབས་དབང་ཚད་ཁས་མ་བླངས།: {{error}}",
 	"Permissions": "དབང་ཚད།",
 	"Perplexity API Key": "Perplexity API ལྡེ་མིག",
+	"Perplexity Model": "",
+	"Perplexity Search Context Usage": "",
 	"Personalization": "སྒེར་སྤྱོད་ཅན།",
 	"Pin": "གདབ་པ།",
 	"Pinned": "གདབ་ཟིན།",

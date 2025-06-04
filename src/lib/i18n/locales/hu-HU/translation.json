@@ -939,6 +939,8 @@
 	"Permission denied when accessing microphone: {{error}}": "Hozzáférés megtagadva a mikrofonhoz: {{error}}",
 	"Permissions": "Engedélyek",
 	"Perplexity API Key": "Perplexity API kulcs",
+	"Perplexity Model": "",
+	"Perplexity Search Context Usage": "",
 	"Personalization": "Személyre szabás",
 	"Pin": "Rögzítés",
 	"Pinned": "Rögzítve",

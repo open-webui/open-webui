@@ -939,6 +939,8 @@
 	"Permission denied when accessing microphone: {{error}}": "Доступ до мікрофона заборонено: {{error}}",
 	"Permissions": "Дозволи",
 	"Perplexity API Key": "Ключ API для Perplexity",
+	"Perplexity Model": "",
+	"Perplexity Search Context Usage": "",
 	"Personalization": "Персоналізація",
 	"Pin": "Зачепити",
 	"Pinned": "Зачеплено",

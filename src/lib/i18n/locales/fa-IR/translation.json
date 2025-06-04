@@ -939,6 +939,8 @@
 	"Permission denied when accessing microphone: {{error}}": "هنگام دسترسی به میکروفون، اجازه داده نشد: {{error}}",
 	"Permissions": "مجوزها",
 	"Perplexity API Key": "کلید API پرپلکسیتی",
+	"Perplexity Model": "",
+	"Perplexity Search Context Usage": "",
 	"Personalization": "شخصی سازی",
 	"Pin": "پین کردن",
 	"Pinned": "پین شده",

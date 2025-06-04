@@ -341,9 +341,7 @@ def convert_embedding_payload_openai_to_ollama(openai_payload: dict) -> dict:
     Returns:
         dict: A payload compatible with the Ollama API embeddings endpoint.
     """
-    ollama_payload = {
-        "model": openai_payload.get("model")
-    }
+    ollama_payload = {"model": openai_payload.get("model")}
     input_value = openai_payload.get("input")
 
     # Ollama expects 'input' as a list, and 'prompt' as a single string.

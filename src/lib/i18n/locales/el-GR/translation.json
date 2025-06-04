@@ -939,6 +939,8 @@
 	"Permission denied when accessing microphone: {{error}}": "Άρνηση δικαιώματος κατά την πρόσβαση σε μικρόφωνο: {{error}}",
 	"Permissions": "Δικαιώματα",
 	"Perplexity API Key": "",
+	"Perplexity Model": "",
+	"Perplexity Search Context Usage": "",
 	"Personalization": "Προσωποποίηση",
 	"Pin": "Καρφίτσωμα",
 	"Pinned": "Καρφιτσωμένο",

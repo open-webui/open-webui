@@ -939,6 +939,8 @@
 	"Permission denied when accessing microphone: {{error}}": "申请麦克风权限被拒绝：{{error}}",
 	"Permissions": "权限",
 	"Perplexity API Key": "Perplexity API 密钥",
+	"Perplexity Model": "",
+	"Perplexity Search Context Usage": "",
 	"Personalization": "个性化",
 	"Pin": "置顶",
 	"Pinned": "已置顶",

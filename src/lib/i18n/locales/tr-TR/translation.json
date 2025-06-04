@@ -939,6 +939,8 @@
 	"Permission denied when accessing microphone: {{error}}": "Mikrofona erişim izni reddedildi: {{error}}",
 	"Permissions": "İzinler",
 	"Perplexity API Key": "Perplexity API Anahtarı",
+	"Perplexity Model": "",
+	"Perplexity Search Context Usage": "",
 	"Personalization": "Kişiselleştirme",
 	"Pin": "Sabitle",
 	"Pinned": "Sabitlenmiş",

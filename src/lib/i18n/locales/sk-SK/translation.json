@@ -939,6 +939,8 @@
 	"Permission denied when accessing microphone: {{error}}": "Oprávnenie zamietnuté pri prístupe k mikrofónu: {{error}}",
 	"Permissions": "",
 	"Perplexity API Key": "",
+	"Perplexity Model": "",
+	"Perplexity Search Context Usage": "",
 	"Personalization": "Personalizácia",
 	"Pin": "",
 	"Pinned": "",

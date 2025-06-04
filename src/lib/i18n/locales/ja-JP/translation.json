@@ -939,6 +939,8 @@
 	"Permission denied when accessing microphone: {{error}}": "マイクへのアクセス時に権限が拒否されました: {{error}}",
 	"Permissions": "許可",
 	"Perplexity API Key": "Perplexity API キー",
+	"Perplexity Model": "",
+	"Perplexity Search Context Usage": "",
 	"Personalization": "個人化",
 	"Pin": "ピン留め",
 	"Pinned": "ピン留めされています",
