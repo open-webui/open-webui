@@ -209,6 +209,7 @@ type Config = {
 		ionos_registration_url: string|null;
 		ionos_logout_url: string|null;
 		ionos_password_reset_url: string|null;
+		ionos_user_account_deletion_allowed: boolean;
 	};
 	oauth: {
 		providers: {

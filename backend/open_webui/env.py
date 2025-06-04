@@ -424,3 +424,8 @@ if WEBHOOK_TIMEOUT_STR:
 IONOS_REGISTRATION_URL = os.environ.get("IONOS_REGISTRATION_URL", None)
 IONOS_LOGOUT_URL = os.environ.get("IONOS_LOGOUT_URL", None)
 IONOS_PASSWORD_RESET_URL = os.environ.get("IONOS_PASSWORD_RESET_URL", None)
+
+# Allow users to delete their accounts (default: False)
+IONOS_ACCOUNT_DELETION_ALLOWED = os.environ.get("IONOS_ACCOUNT_DELETION_ALLOWED", "false").lower() == "true"
+# Comma separated list of emails (default: empty)
+IONOS_ACCOUNT_DELETE_ALLOW_LIST = os.environ.get("IONOS_ACCOUNT_DELETE_ALLOW_LIST", "")

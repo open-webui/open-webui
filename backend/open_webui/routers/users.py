@@ -12,7 +12,7 @@ from open_webui.models.users import (
 )
 
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import SRC_LOG_LEVELS
+from open_webui.env import SRC_LOG_LEVELS, IONOS_ACCOUNT_DELETION_ALLOWED, IONOS_ACCOUNT_DELETE_ALLOW_LIST
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
 from open_webui.utils.auth import get_admin_user, get_password_hash, get_verified_user, get_current_user
@@ -301,6 +301,26 @@ async def update_user_by_id(
     )
 
 
+def is_user_allowed_to_be_deleted(user):
+    """
+    Return true if user's emails is in the allow list or deletion is
+    allowed altogether.
+    """
+    if IONOS_ACCOUNT_DELETION_ALLOWED:
+        return True
+
+    user_list = IONOS_ACCOUNT_DELETE_ALLOW_LIST.split(",")
+
+    if user.role == "admin":
+        return False
+
+    if user.email in user_list:
+        log.info(f"User is allow-listed for account deletion and will be deleted: {user.id} ({user.email})")
+        return True
+
+    log.error(f"Attempt to delete user's account while not in allow list: {user.id} ({user.email})")
+
+    return False
 
 @router.delete("/user/self", response_model=bool)
 async def delete_self(request: Request, user=Depends(get_current_user)):
@@ -308,6 +328,12 @@ async def delete_self(request: Request, user=Depends(get_current_user)):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admins may not delete their own account",
+        )
+
+    if not is_user_allowed_to_be_deleted(user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Nice try",
         )
 
     Users.update_user_role_by_id(user.id, "pending")

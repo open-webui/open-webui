@@ -282,6 +282,7 @@ from open_webui.env import (
     IONOS_REGISTRATION_URL,
     IONOS_LOGOUT_URL,
     IONOS_PASSWORD_RESET_URL,
+    IONOS_ACCOUNT_DELETION_ALLOWED,
 )
 
 
@@ -996,6 +997,7 @@ async def get_app_config(request: Request):
             "ionos_registration_url": IONOS_REGISTRATION_URL,
             "ionos_logout_url": IONOS_LOGOUT_URL,
             "ionos_password_reset_url": IONOS_PASSWORD_RESET_URL,
+            "ionos_user_account_deletion_allowed": IONOS_ACCOUNT_DELETION_ALLOWED,
             **(
                 {
                     "enable_channels": app.state.config.ENABLE_CHANNELS,
