@@ -75,7 +75,6 @@ def process_file_celery(args):
                 except InvalidPDFError as e:
                     log.exception(f"Erro na tarefa em background: {e}")
                     raise e
-            file_path = Storage.get_file(file_path)
             loader = Loader(
                 engine=engine,
                 TIKA_SERVER_URL=args["tika_server_url"],
