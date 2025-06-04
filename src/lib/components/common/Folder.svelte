@@ -164,7 +164,7 @@
 					>
 						<Tooltip content={onAddLabel}>
 							<button
-								class="p-0.5 text-customGray-900 dark:hover:bg-customGray-900 rounded-md touch-auto"
+								class="p-0.5 text-customGray-900 dark:text-customGray-300 hover:bg-gray-100 dark:hover:bg-customGray-900 rounded-md touch-auto"
 								on:click={(e) => {}}
 							>
 								<AddFolderIcon />	

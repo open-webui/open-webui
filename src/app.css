@@ -433,8 +433,12 @@ html.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
 	background-color: #1E1E1E; 
 }
 
+html.dark .custom-scrollbar::-webkit-scrollbar-track {
+	background: #181818; 
+}
+
 html.dark .custom-scrollbar::-webkit-scrollbar-thumb {
-	background-color: #181818;
+	background-color: #272525;
 }
 
 .assistants-scrollbar::-webkit-scrollbar {

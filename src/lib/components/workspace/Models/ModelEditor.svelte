@@ -1,6 +1,13 @@
 <script lang="ts">
 	import { onMount, getContext, tick } from 'svelte';
-	import { models, tools, functions, knowledge as knowledgeCollections, user, companyConfig } from '$lib/stores';
+	import {
+		models,
+		tools,
+		functions,
+		knowledge as knowledgeCollections,
+		user,
+		companyConfig
+	} from '$lib/stores';
 
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import Tags from '$lib/components/common/Tags.svelte';
@@ -21,8 +28,7 @@
 	import TagSelect from '$lib/components/common/TagSelect.svelte';
 	import AccessSelect from '$lib/components/common/AccessSelect.svelte';
 	import DeleteIcon from '$lib/components/icons/DeleteIcon.svelte';
-	import { onClickOutside } from '$lib/utils';
-	import { getModelIcon } from '$lib/utils';
+	import { onClickOutside, getModelIcon, emojiToBase64 } from '$lib/utils';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import CapabilitiesNew from './CapabilitiesNew.svelte';
 	import { transcribeAudio } from '$lib/apis/audio';
@@ -34,7 +40,8 @@
 	import AddKnowledgeModal from '../Knowledge/AddKnowledgeModal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { modelsInfo, mapModelsToOrganizations } from '../../../../data/modelsInfo';
-	
+	import EmojiMenu from './EmojiMenu.svelte';
+
 
 	const i18n = getContext('i18n');
 
@@ -56,6 +63,7 @@
 	let showPreview = false;
 
 	let loaded = false;
+	let showEmojiMenu = false;
 
 	// ///////////
 	// model
@@ -73,13 +81,15 @@
 		}
 	}
 
-	const gptDefault = $models?.find(item => item.name === 'GPT 4o-mini')
+	const gptDefault = $models?.find((item) => item.name === 'GPT 4o-mini');
 	let info = {
 		id: '',
-		base_model_id: $companyConfig?.config?.models?.DEFAULT_MODELS ? $companyConfig?.config?.models?.DEFAULT_MODELS : gptDefault?.id,
+		base_model_id: $companyConfig?.config?.models?.DEFAULT_MODELS
+			? $companyConfig?.config?.models?.DEFAULT_MODELS
+			: gptDefault?.id,
 		name: '',
 		meta: {
-			profile_image_url: '',
+			profile_image_url: '🤖',
 			description: '',
 			suggestion_prompts: [{ content: '' }],
 			tags: []
@@ -143,7 +153,7 @@
 			loading = false;
 			return;
 		}
-		
+
 		info.access_control = accessControl;
 		info.meta.capabilities = capabilities;
 		info.meta.files = files;
@@ -183,9 +193,16 @@
 		}
 
 		info.params.stop = params.stop ? params.stop.split(',').filter((s) => s.trim()) : null;
-		const baseModel = $models?.find(item => item.id === info.base_model_id);
+		const baseModel = $models?.find((item) => item.id === info.base_model_id);
 		Object.keys(info.params).forEach((key) => {
-			if (info.params[key] === '' || info.params[key] === null || ((baseModel?.name === "GPT o3-mini" || baseModel?.name === "GPT o1" || baseModel?.name === "GPT o1-mini") && key==="temperature")) {
+			if (
+				info.params[key] === '' ||
+				info.params[key] === null ||
+				((baseModel?.name === 'GPT o3-mini' ||
+					baseModel?.name === 'GPT o1' ||
+					baseModel?.name === 'GPT o1-mini') &&
+					key === 'temperature')
+			) {
 				delete info.params[key];
 			}
 		});
@@ -208,8 +225,12 @@
 		}
 
 		if (model) {
-			const baseModel = $models?.find(item => item.id === model.base_model_id);
-			if(baseModel?.name === "GPT o3-mini" || baseModel?.name === "GPT o1" || baseModel?.name === "GPT o1-mini") {
+			const baseModel = $models?.find((item) => item.id === model.base_model_id);
+			if (
+				baseModel?.name === 'GPT o3-mini' ||
+				baseModel?.name === 'GPT o1' ||
+				baseModel?.name === 'GPT o1-mini'
+			) {
 				disableCreativity = true;
 			}
 			console.log(model);
@@ -285,7 +306,6 @@
 			};
 
 			files = model?.meta?.files ? model?.meta?.files : [];
-
 		}
 
 		loaded = true;
@@ -367,11 +387,13 @@
 
 	let showAddKnowledge = false;
 
+
 	let organizations = mapModelsToOrganizations(modelsInfo);
 	const desiredOrder = Object.values(organizations).flat();
 	const orderMap = new Map(desiredOrder.map((name, index) => [name, index]));
 
 	$: console.log($models)
+
 </script>
 
 {#if loaded}
@@ -399,12 +421,18 @@
 			<div class=" self-center text-sm font-medium">{'Back'}</div>
 		</button>
 	{/if} -->
-	<AddKnowledgeModal bind:show={showAddKnowledge} bind:selectedKnowledge={knowledge} collections={$knowledgeCollections}/>
+	<AddKnowledgeModal
+		bind:show={showAddKnowledge}
+		bind:selectedKnowledge={knowledge}
+		collections={$knowledgeCollections}
+	/>
 	<div class="flex flex-col h-screen">
 		<div class="py-[22px] px-[15px] border-b border-lightGray-400 dark:border-customGray-700">
 			<button class="flex items-center gap-1" on:click={() => history.back()}>
 				<BackIcon />
-				<div class="flex items-center text-lightGray-100 dark:text-customGray-100 md:self-center text-sm-plus font-medium leading-none px-0.5">
+				<div
+					class="flex items-center text-lightGray-100 dark:text-customGray-100 md:self-center text-sm-plus font-medium leading-none px-0.5"
+				>
 					{$i18n.t('Create assistant')}
 				</div>
 			</button>
@@ -496,18 +524,55 @@
 										: 'bg-white'} shadow-xl group relative"
 									type="button"
 									on:click={() => {
-										filesInputElement.click();
+										showEmojiMenu = true;
+										// filesInputElement.click();
 									}}
 								>
-									{#if info.meta.profile_image_url}
+									<EmojiMenu
+										bind:open={showEmojiMenu}
+										uploadImage={() => {
+											filesInputElement.click();
+										}}
+										selectEmoji={(emoji) => {
+											info.meta.profile_image_url = emojiToBase64(emoji);
+										}}
+										removeImage={() => (info.meta.profile_image_url = '')}
+									>
+										<div class="">
+											{#if !info.meta.profile_image_url || info.meta.profile_image_url.length > 5}
+												{#if info.meta.profile_image_url}
+													<img
+														src={info.meta.profile_image_url}
+														alt=""
+														class="rounded-lg size-16 object-cover shrink-0"
+													/>
+												{:else}
+													<div
+														class="rounded-lg size-16 shrink-0 bg-customViolet-200 dark:bg-customViolet-300"
+													/>
+												{/if}
+											{:else}
+												<div
+													class="flex justify-center items-center rounded-lg size-16 shrink-0 bg-customViolet-200 dark:bg-customViolet-300"
+														>
+													<div class="text-[2.7rem]">
+														{info.meta.profile_image_url}
+													</div>
+												</div>
+											{/if}
+										</div>
+									</EmojiMenu>
+									<!-- {#if info.meta.profile_image_url}
 										<img
 											src={info.meta.profile_image_url}
 											alt="model profile"
 											class="rounded-lg size-16 object-cover shrink-0"
 										/>
 									{:else}
-										<div class="rounded-lg size-16 shrink-0 bg-customViolet-200 dark:bg-customViolet-300" />
-									{/if}
+										<div
+											class="rounded-lg size-16 shrink-0 bg-customViolet-200 dark:bg-customViolet-300"
+										/>
+									{/if} -->
 
 									<div class="absolute bottom-0 right-0 z-10">
 										<div class="-m-2">
@@ -527,10 +592,14 @@
 								<div class="flex-1 mb-1.5">
 									<div class="relative w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md">
 										{#if name}
-											<div class="text-xs absolute left-2.5 top-1 text-lightGray-100/50 dark:text-customGray-100/50">{$i18n.t('Name')}</div>
+											<div
+												class="text-xs absolute left-2.5 top-1 text-lightGray-100/50 dark:text-customGray-100/50"
+											>
+												{$i18n.t('Name')}
+											</div>
 										{/if}
 										<input
-											class={`px-2.5 text-sm ${name ? "pt-2" : "pt-0"} w-full h-12 bg-transparent text-lightGray-100 dark:text-customGray-100 placeholder:text-lightGray-100 dark:placeholder:text-customGray-100 outline-none`}
+											class={`px-2.5 text-sm ${name ? 'pt-2' : 'pt-0'} w-full h-12 bg-transparent text-lightGray-100 dark:text-customGray-100 placeholder:text-lightGray-100 dark:placeholder:text-customGray-100 outline-none`}
 											placeholder={$i18n.t('Name')}
 											bind:value={name}
 											required
@@ -539,7 +608,7 @@
 											<span
 												class="absolute top-1/2 right-2.5 -translate-y-1/2 text-xs text-lightGray-100/50 dark:text-customGray-100/50 pointer-events-none select-none"
 											>
-												{$i18n.t('E.g. Super Mario')}
+												{$i18n.t('AI-Assistant')}
 											</span>
 										{/if}
 									</div>
@@ -547,10 +616,14 @@
 								<div class="flex-1 mb-1.5">
 									<div class="relative w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md">
 										{#if info.meta.description}
-											<div class="text-xs absolute left-2.5 top-1 text-lightGray-100/50 dark:text-customGray-100/50">{$i18n.t('Description')}</div>
+											<div
+												class="text-xs absolute left-2.5 top-1 text-lightGray-100/50 dark:text-customGray-100/50"
+											>
+												{$i18n.t('Description')}
+											</div>
 										{/if}
 										<input
-											class={`px-2.5 text-sm ${info.meta.description ? "pt-2" : "pt-0"} w-full h-12 bg-transparent text-lightGray-100 dark:text-customGray-100 placeholder:text-lightGray-100 dark:placeholder:text-customGray-100 outline-none`}
+											class={`px-2.5 text-sm ${info.meta.description ? 'pt-2' : 'pt-0'} w-full h-12 bg-transparent text-lightGray-100 dark:text-customGray-100 placeholder:text-lightGray-100 dark:placeholder:text-customGray-100 outline-none`}
 											placeholder={$i18n.t('Description')}
 											bind:value={info.meta.description}
 										/>
@@ -558,7 +631,7 @@
 											<span
 												class="absolute top-1/2 right-2.5 -translate-y-1/2 text-xs text-lightGray-100/50 dark:text-customGray-100/50 pointer-events-none select-none"
 											>
-												{$i18n.t('About what this model does')}
+												{$i18n.t('Brief description of the assistant')}
 											</span>
 										{/if}
 									</div>
@@ -566,10 +639,14 @@
 								<div class="mb-1.5">
 									<div class="relative w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md">
 										{#if info.params.system}
-											<div class="text-xs absolute left-2.5 top-1 text-lightGray-100/50 dark:text-customGray-100/50">{$i18n.t('System Prompt')}</div>
+											<div
+												class="text-xs absolute left-2.5 top-1 text-lightGray-100/50 dark:text-customGray-100/50"
+											>
+												{$i18n.t('System Prompt')}
+											</div>
 										{/if}
 										<Textarea
-											className={`px-2.5 py-2 text-sm ${info.params.system ? "pt-4" : "pt-2"} w-full h-20 bg-transparent text-lightGray-100 dark:text-customGray-100 placeholder:text-lightGray-100 dark:placeholder:text-customGray-100 outline-none`}
+											className={`px-2.5 py-2 text-sm ${info.params.system ? 'pt-4' : 'pt-2'} w-full h-20 bg-transparent text-lightGray-100 dark:text-customGray-100 placeholder:text-lightGray-100 dark:placeholder:text-customGray-100 outline-none`}
 											placeholder={$i18n.t('System Prompt')}
 											rows={4}
 											bind:value={info.params.system}
@@ -578,7 +655,7 @@
 											<span
 												class="absolute top-[26px] w-[180px] text-right right-2.5 -translate-y-1/2 text-xs text-lightGray-100/50 dark:text-customGray-100/50 pointer-events-none select-none"
 											>
-												{$i18n.t('E.g. You are Mario Bros, acting as an assistant')}
+												{$i18n.t('You are a helpful assistant that helps users with tasks.')}
 											</span>
 										{/if}
 									</div>
@@ -588,69 +665,76 @@
 									<div
 										class="flex w-full justify-between items-center py-2.5 border-b border-lightGray-400 dark:border-customGray-700 mb-2"
 									>
-											<div class="flex w-full justify-between items-center">
-												<div class="text-xs text-lightGray-100 dark:text-customGray-300">{$i18n.t('Knowledge')}</div>
-												{#if $knowledgeCollections.length > 0}
+										<div class="flex w-full justify-between items-center">
+											<div class="text-xs text-lightGray-100 dark:text-customGray-300">
+												{$i18n.t('Knowledge')}
+											</div>
+											{#if $knowledgeCollections.length > 0}
 												<button
 													class="shrink-0 text-xs text-lightGray-100 dark:text-customGray-200 flex rounded transition"
 													type="button"
 													on:click={() => {
 														showAddKnowledge = true;
 													}}
-											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													viewBox="0 0 20 20"
-													fill="currentColor"
-													class="w-4 h-4"
 												>
-													<path
-														d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z"
-													/>
-												</svg>
-												{$i18n.t('Add')}
-											</button>
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														viewBox="0 0 20 20"
+														fill="currentColor"
+														class="w-4 h-4"
+													>
+														<path
+															d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z"
+														/>
+													</svg>
+													{$i18n.t('Add')}
+												</button>
 											{:else}
-											<Tooltip content={$i18n.t('You don’t have a knowledge base yet — create one in the “Knowledge” tab or upload a document here.')}>
-												<button
-													class="shrink-0 text-xs dark:text-customGray-200 flex rounded transition"
-													type="button"
-													disabled
-											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													viewBox="0 0 20 20"
-													fill="currentColor"
-													class="w-4 h-4"
+												<Tooltip
+													content={$i18n.t(
+														'You don’t have a knowledge base yet — create one in the “Knowledge” tab or upload a document here.'
+													)}
 												>
-													<path
-														d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z"
-													/>
-												</svg>
-												{$i18n.t('Add')}
-											</button>
-											</Tooltip>
-
+													<button
+														class="shrink-0 text-xs dark:text-customGray-200 flex rounded transition"
+														type="button"
+														disabled
+													>
+														<svg
+															xmlns="http://www.w3.org/2000/svg"
+															viewBox="0 0 20 20"
+															fill="currentColor"
+															class="w-4 h-4"
+														>
+															<path
+																d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z"
+															/>
+														</svg>
+														{$i18n.t('Add')}
+													</button>
+												</Tooltip>
 											{/if}
 										</div>
 									</div>
 									<Dropzone {uploadFileHandler} />
-									{#if  knowledge.length > 0}
+									{#if knowledge.length > 0}
 										{#each knowledge as item}
-										<div class="min-h-10 flex rounded-lg my-2">
-											<div class="relative w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md px-2.5 py-4 text-sm text-lightGray-100 dark:text-white leading-[1.2]">
-												<span>{item.name}</span>
+											<div class="min-h-10 flex rounded-lg my-2">
+												<div
+													class="relative w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md px-2.5 py-4 text-sm text-lightGray-100 dark:text-white leading-[1.2]"
+												>
+													<span>{item.name}</span>
+												</div>
+												<button
+													class="px-2 text-lightGray-100 dark:text-customGray-300 dark:hover:text-white"
+													type="button"
+													on:click={() => {
+														knowledge = knowledge.filter((k) => k.id !== item.id);
+													}}
+												>
+													<DeleteIcon />
+												</button>
 											</div>
-											<button
-												class="px-2 text-lightGray-100 dark:text-customGray-300 dark:hover:text-white"
-												type="button"
-												on:click={() => {
-													knowledge = knowledge.filter((k) => k.id !== item.id);
-												}}
-											>
-												<DeleteIcon />
-											</button>
-										</div>
 										{/each}
 									{/if}
 									{#if files.length}
@@ -719,7 +803,9 @@
 											{#if info.meta.suggestion_prompts.length > 0}
 												{#each info.meta.suggestion_prompts as prompt, promptIdx}
 													<div class=" flex rounded-lg">
-														<div class="relative w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md">
+														<div
+															class="relative w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md"
+														>
 															<input
 																class="px-2.5 text-sm h-12 w-full bg-lightGray-300 dark:bg-customGray-900 text-lightGray-100 dark:text-customGray-100 placeholder:text-lightGray-100 dark:placeholder:text-customGray-100 rounded-md outline-none"
 																placeholder={$i18n.t('Prompt suggestion')}
@@ -754,7 +840,9 @@
 
 								<div>
 									<div class="py-2.5 border-b border-lightGray-400 dark:border-customGray-700">
-										<div class="text-xs text-lightGray-100 dark:text-customGray-300">{$i18n.t('Organization')}</div>
+										<div class="text-xs text-lightGray-100 dark:text-customGray-300">
+											{$i18n.t('Organization')}
+										</div>
 									</div>
 									<div class="py-3">
 										<div class="mb-2">
@@ -766,7 +854,9 @@
 
 								<div>
 									<div class="py-2.5 border-b border-lightGray-400 dark:border-customGray-700 mb-2">
-										<div class="text-xs text-lightGray-100 dark:text-customGray-300">{$i18n.t('Output settings')}</div>
+										<div class="text-xs text-lightGray-100 dark:text-customGray-300">
+											{$i18n.t('Output settings')}
+										</div>
 									</div>
 								</div>
 
@@ -784,7 +874,7 @@
 												<div class="flex items-center gap-2">
 													{#if info.base_model_id}
 														<div
-															class="flex items-center gap-2 text-xs text-lightGray-100/50  dark:text-customGray-100/50"
+															class="flex items-center gap-2 text-xs text-lightGray-100/50 dark:text-customGray-100/50"
 														>
 															<img
 																src={getModelIcon(selectedModel.name)}
@@ -802,20 +892,28 @@
 												<div
 													class="max-h-60 overflow-y-auto custom-scrollbar absolute z-50 w-full -mt-1 bg-lightGray-300 dark:bg-customGray-900 border-l border-r border-b border-lightGray-400 dark:border-customGray-700 rounded-b-md"
 												>
-													<hr class="border-t border-lightGray-400 dark:border-customGray-700 mb-2 mt-1 mx-0.5" />
+													<hr
+														class="border-t border-lightGray-400 dark:border-customGray-700 mb-2 mt-1 mx-0.5"
+													/>
 													<div class="px-1">
+
 														{#each $models?.filter(item => !item.base_model_id)?.filter((m) => (model ? m.id !== model.id : true) && !m?.preset && m?.owned_by !== 'arena')?.sort((a, b) => (orderMap.get(a?.name) ?? Infinity) - (orderMap.get(b?.name) ?? Infinity)) as model}
+
 															<button
-																class="px-3 py-2 flex items-center gap-2 w-full rounded-xl text-sm hover:bg-lightGray-700 dark:hover:bg-customGray-950 text-lightGray-100 dark:text-customGray-100 cursor-pointer "
+																class="px-3 py-2 flex items-center gap-2 w-full rounded-xl text-sm hover:bg-lightGray-700 dark:hover:bg-customGray-950 text-lightGray-100 dark:text-customGray-100 cursor-pointer"
 																on:click={() => {
 																	info.base_model_id = model.id;
-																	if(model.name === "GPT o3-mini" || model?.name === "GPT o1" || model?.name === "GPT o1-mini"){
+																	if (
+																		model.name === 'GPT o3-mini' ||
+																		model?.name === 'GPT o1' ||
+																		model?.name === 'GPT o1-mini'
+																	) {
 																		disableCreativity = true;
-																	}else{
-																		if(disableCreativity) {
+																	} else {
+																		if (disableCreativity) {
 																			disableCreativity = false;
-																			info.params = {...info.params, temperature: 0.5}
-																		}	
+																			info.params = { ...info.params, temperature: 0.5 };
+																		}
 																	}
 																	// addUsage(model.id);
 																	showDropdown = false;
@@ -838,20 +936,22 @@
 											type="button"
 											class={`flex items-center justify-between w-full text-sm h-12 px-3 py-2 ${
 												showTemperatureDropdown ? 'border' : ''
-											} border-lightGray-400 dark:border-customGray-700 rounded-md bg-lightGray-300 ${disableCreativity ? "bg-lightGray-300 dark:bg-customGray-800" : "dark:bg-customGray-900 bg-lightGray-300"}  cursor-pointer`}
+											} border-lightGray-400 dark:border-customGray-700 rounded-md bg-lightGray-300 ${disableCreativity ? 'bg-lightGray-300 dark:bg-customGray-800' : 'dark:bg-customGray-900 bg-lightGray-300'}  cursor-pointer`}
 											on:click={() => {
-												if(disableCreativity) return;
-												showTemperatureDropdown = !showTemperatureDropdown
-												}}
+												if (disableCreativity) return;
+												showTemperatureDropdown = !showTemperatureDropdown;
+											}}
 										>
 											<span class="text-lightGray-100 dark:text-customGray-100"
 												>{$i18n.t('Creativity Scale')}</span
 											>
 											{#if !disableCreativity}
-											<div class="flex items-center gap-2 text-xs text-lightGray-100/50 dark:text-customGray-100/50">
-												{selectedTemperatureLabel}
-												<ChevronDown className="size-3" />
-											</div>
+												<div
+													class="flex items-center gap-2 text-xs text-lightGray-100/50 dark:text-customGray-100/50"
+												>
+													{selectedTemperatureLabel}
+													<ChevronDown className="size-3" />
+												</div>
 											{/if}
 										</button>
 
@@ -859,7 +959,9 @@
 											<div
 												class="max-h-40 overflow-y-auto absolute z-50 w-full -mt-1 bg-lightGray-300 pb-1 dark:bg-customGray-900 border-l border-r border-b border-lightGray-400 dark:border-customGray-700 rounded-b-md"
 											>
-												<hr class="border-t border-lightGray-400 dark:border-customGray-700 mb-2 mt-1 mx-0.5" />
+												<hr
+													class="border-t border-lightGray-400 dark:border-customGray-700 mb-2 mt-1 mx-0.5"
+												/>
 												<div class="px-1">
 													{#each temperatureOptions as option}
 														<button
@@ -879,7 +981,6 @@
 								</div>
 
 								<CapabilitiesNew bind:capabilities />
-
 							</div>
 
 							<div class="my-2 flex justify-end">

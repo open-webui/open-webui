@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from fastapi import Depends, HTTPException, Request, Header, APIRouter
 import os
 from typing import Optional
+import time
 
 from beyond_the_loop.models.users import Users
 from beyond_the_loop.models.companies import Companies
@@ -17,10 +18,17 @@ webhook_secret = os.environ.get('WEBHOOK_SECRET')
 stripe.api_key = os.environ.get('STRIPE_API_KEY')
 
 # Constants
-FLEX_CREDITS_DEFAULT_PRICE_IN_CENTS = 2500 # Amount in cents (25 euro)
+FLEX_CREDITS_DEFAULT_PRICE_IN_CENTS = 2000 # Amount in cents (20 euro)
 
 # Subscription Plans
 SUBSCRIPTION_PLANS = {
+    "free": {
+        "name": "Free",
+        "price_monthly": 0,
+        "credits_per_month": 5,
+        "stripe_price_id": "price_1RSbapBBwyxb4MZjWrs4tTNW",
+        "seats": 1
+    },
     "starter": {
         "name": "Starter",
         "price_monthly": 2500,  # 25€ in cents
@@ -29,7 +37,7 @@ SUBSCRIPTION_PLANS = {
         "seats": 5
     },
     "team": {
-        "name": "Business",
+        "name": "Team",
         "price_monthly": 14900,  # 149€ in cents
         "credits_per_month": 50,
         "stripe_price_id": "price_1RNqAcBBwyxb4MZjAGivhdo7",
@@ -73,7 +81,7 @@ class UpdateSubscriptionRequest(BaseModel):
 @router.post("/create-subscription-session/")
 async def create_subscription_session(request: CreateSubscriptionRequest, user=Depends(get_verified_user)):
     try:
-        if request.plan_id not in SUBSCRIPTION_PLANS:
+        if request.plan_id == "free" or request.plan_id not in SUBSCRIPTION_PLANS:
             raise HTTPException(status_code=400, detail=f"Invalid plan ID: {request.plan_id}")
 
         plan = SUBSCRIPTION_PLANS[request.plan_id]
@@ -85,38 +93,87 @@ async def create_subscription_session(request: CreateSubscriptionRequest, user=D
         company = Companies.get_company_by_id(user.company_id)
         stripe_customer_id = company.stripe_customer_id
 
-        # Get subscription from Stripe
-        subscriptions = stripe.Subscription.list(
-            customer=stripe_customer_id,
-            status='active',
-            limit=1
-        )
+        if not stripe_customer_id:
+            raise HTTPException(status_code=400, detail="No Stripe customer found for this company")
 
-        if company.stripe_customer_id and subscriptions.data:
-            raise HTTPException(status_code=400, detail="Customer has already active subscription")
-
-        print(f"Using price ID: {stripe_price_id} for plan: {request.plan_id}")
+        # Create a new Stripe Checkout session for the new subscription
+        print(f"Creating new subscription with price ID: {stripe_price_id} for plan: {request.plan_id}")
         
-        # Create a Stripe Checkout session for subscription
-        session = stripe.checkout.Session.create(
-            payment_method_types=['card'],
-            line_items=[{
-                'price': stripe_price_id,
-                'quantity': 1,
-            }],
-            mode='subscription',
-            customer=stripe_customer_id if stripe_customer_id else None,
-            customer_email=None if stripe_customer_id else user.email,
-            success_url=os.getenv('BACKEND_ADDRESS') + "?modal=company-settings&tab=billing",
-            cancel_url=os.getenv('BACKEND_ADDRESS'),
-            subscription_data={
-                'metadata': {
-                    'company_id': user.company_id,
-                    'plan_id': request.plan_id,
-                    'user_email': user.email
-                }
-            }
+        # Check for existing subscriptions
+        existing_subscriptions = stripe.Subscription.list(
+            customer=stripe_customer_id,
+            status='all',
+            limit=10
         )
+        
+        # Get current active subscription if any
+        current_subscription = next((sub for sub in existing_subscriptions.data if sub.status in ['active', 'trialing']), None)
+        current_plan_id = current_subscription.metadata.get('plan_id')
+        current_plan = SUBSCRIPTION_PLANS[current_plan_id]
+        new_plan = SUBSCRIPTION_PLANS[request.plan_id]
+
+        if current_plan["name"] == new_plan["name"]:
+            raise HTTPException(status_code=400, detail="You are already subscribed to this plan")
+
+        # Determine if this is an upgrade or downgrade
+        is_downgrade = False
+        if current_subscription:
+            if current_plan_id in SUBSCRIPTION_PLANS:
+                # If new plan price is less than current plan price, it's a downgrade
+                is_downgrade = new_plan["price_monthly"] < current_plan["price_monthly"]
+        
+        # For downgrades, we want to schedule the new subscription to start at the end of the current period
+        if is_downgrade and current_subscription:
+            # For downgrades, we'll create a checkout session with trial_end set to current period end
+            # This ensures the subscription is not active until the current subscription period ends
+            session = stripe.checkout.Session.create(
+                payment_method_types=['card'],
+                line_items=[{
+                    'price': stripe_price_id,
+                    'quantity': 1,
+                }],
+                mode='subscription',
+                customer=stripe_customer_id,
+                success_url=os.getenv('BACKEND_ADDRESS') + "?modal=company-settings&tab=billing",
+                cancel_url=os.getenv('BACKEND_ADDRESS'),
+                subscription_data={
+                    'trial_end': current_subscription.current_period_end,
+                    'metadata': {
+                        'company_id': user.company_id,
+                        'plan_id': request.plan_id,
+                        'user_email': user.email,
+                        'is_downgrade': 'true',
+                        'previous_subscription_id': current_subscription.id,
+                        'start_after_current_period': 'true',
+                        'current_period_end': str(current_subscription.current_period_end)
+                    }
+                }
+            )
+        else:
+            # For upgrades or new subscriptions, proceed as before
+            # Collect IDs of existing subscriptions to cancel after payment
+            subscription_ids_to_cancel = [sub.id for sub in existing_subscriptions.data if sub.status in ['active', 'trialing']]
+            
+            session = stripe.checkout.Session.create(
+                payment_method_types=['card'],
+                line_items=[{
+                    'price': stripe_price_id,
+                    'quantity': 1,
+                }],
+                mode='subscription',
+                customer=stripe_customer_id,
+                success_url=os.getenv('BACKEND_ADDRESS') + "?modal=company-settings&tab=billing",
+                cancel_url=os.getenv('BACKEND_ADDRESS'),
+                subscription_data={
+                    'metadata': {
+                        'company_id': user.company_id,
+                        'plan_id': request.plan_id,
+                        'user_email': user.email,
+                        'is_downgrade': 'false',
+                        'subscriptions_to_cancel': ','.join(subscription_ids_to_cancel) if subscription_ids_to_cancel else ''
+                    }
+                }
+            )
         return {"url": session.url}
     except Exception as e:
         print(f"Error creating subscription session: {e}")
@@ -125,17 +182,23 @@ async def create_subscription_session(request: CreateSubscriptionRequest, user=D
 
 # Get all available subscription plans
 @router.get("/subscription-plans/")
-async def get_subscription_plans():
+async def get_subscription_plans(user=Depends(get_verified_user)):
+    company = Companies.get_company_by_id(user.company_id)
+
+    if company.subscription_not_required:
+        return []
+
     """Get all available subscription plans"""
     plans = []
     for plan_id, plan_details in SUBSCRIPTION_PLANS.items():
-        plans.append(SubscriptionPlanResponse(
-            id=plan_id,
-            name=plan_details["name"],
-            price_monthly=plan_details["price_monthly"],
-            credits_per_month=plan_details["credits_per_month"],
-            seats=plan_details["seats"]
-        ))
+        if (plan_details["name"] != "Free"):
+            plans.append(SubscriptionPlanResponse(
+                id=plan_id,
+                name=plan_details["name"],
+                price_monthly=plan_details["price_monthly"],
+                credits_per_month=plan_details["credits_per_month"],
+                seats=plan_details["seats"]
+            ))
     return plans
 
 
@@ -146,10 +209,22 @@ async def get_subscription(user=Depends(get_verified_user)):
     try:
         company = Companies.get_company_by_id(user.company_id)
 
+        if company.subscription_not_required:
+            return {
+                "plan": "unlimited",
+                "flex_credits_remaining": company.flex_credit_balance,
+                "seats": "unlimited",
+                "auto_recharge": company.auto_recharge
+            }
+
         if company.stripe_customer_id is None:
             return {
-                'credits_remaining': company.credit_balance,
-                'plan': 'free'
+                "plan": "free",
+                "flex_credits_remaining": company.flex_credit_balance,
+                "credits_remaining": company.credit_balance,
+                "seats": 1,
+                "seats_taken": Users.count_users_by_company_id(user.company_id),
+                "auto_recharge": company.auto_recharge
             }
 
         # Get subscription from Stripe
@@ -159,7 +234,34 @@ async def get_subscription(user=Depends(get_verified_user)):
             limit=1
         )
 
-        if subscriptions.data is None:
+        # Check for trial subscriptions
+        trial_subscriptions = stripe.Subscription.list(
+            customer=company.stripe_customer_id,
+            status='trialing',
+            limit=1
+        )
+
+        # If there's an active trial subscription
+        if trial_subscriptions.data and len(trial_subscriptions.data) > 0 and not subscriptions.data:
+            trial_subscription = trial_subscriptions.data[0]
+            
+            # Calculate days remaining in trial
+            current_time = int(time.time())
+            trial_end = trial_subscription.trial_end
+            days_remaining = max(0, int((trial_end - current_time) / (24 * 60 * 60)))
+            
+            return {
+                'credits_remaining': company.credit_balance,
+                'flex_credits_remaining': company.flex_credit_balance,
+                'plan': 'free',
+                'is_trial': True,
+                "seats": 1,
+                "seats_taken": Users.count_users_by_company_id(user.company_id),
+                'trial_end': trial_end,
+                'days_remaining': days_remaining
+            }
+
+        if not subscriptions.data:
             return {
                 'credits_remaining': company.credit_balance,
                 'plan': 'free'
@@ -197,6 +299,10 @@ async def cancel_subscription(user=Depends(get_verified_user)):
     """Cancel the current subscription"""
     try:
         company = Companies.get_company_by_id(user.company_id)
+
+        if company.subscription_not_required:
+            raise HTTPException(status_code=404, detail="No active subscription found")
+
         if not company.stripe_customer_id:
             raise HTTPException(status_code=404, detail="No active subscription found")
             
@@ -355,42 +461,87 @@ def handle_checkout_session_completed(data):
 
 
 def handle_subscription_created(event_data):
+    """
+    Handle the customer.subscription.created event from Stripe.
+    This is triggered when a new subscription is created.
+    """
     try:
-        subscription_id = event_data.get("id")
-        customer_id = event_data.get("customer")
-        metadata = event_data.get("metadata", {})
+        # event_data is already the subscription object from the webhook handler
+        subscription = event_data
+        status = subscription['status']
+        metadata = subscription['metadata']
         
-        company_id = metadata.get("company_id")
-        plan_id = metadata.get("plan_id")
+        # Get the plan ID from metadata
+        plan_id = metadata.get('plan_id')
+        company_id = metadata.get('company_id')
         
-        if not company_id or not plan_id:
-            # Try to find company by customer ID
-            if customer_id:
-                company = Companies.get_company_by_stripe_customer_id(customer_id)
-                if company:
-                    company_id = company.id
+        if not plan_id or not company_id:
+            print("Missing plan_id or company_id in subscription metadata")
+            return
             
-            if not company_id:
-                print(f"Subscription created: Company ID not found for subscription {subscription_id}")
-                return
+        # Check if this is a downgrade
+        is_downgrade = metadata.get('is_downgrade') == 'true'
+        previous_subscription_id = metadata.get('previous_subscription_id')
+        start_after_current_period = metadata.get('start_after_current_period') == 'true'
+        current_period_end = metadata.get('current_period_end')
         
-        # Get plan details
+        # For downgrades, we need to set the previous subscription to cancel at period end
+        # and schedule the new subscription to start after the current period ends
+        if is_downgrade and previous_subscription_id:
+            print(f"Downgrade detected. New subscription {subscription['id']} will start after previous subscription {previous_subscription_id} ends")
+            try:
+                # Update the previous subscription to cancel at period end
+                stripe.Subscription.modify(
+                    previous_subscription_id,
+                    cancel_at_period_end=True
+                )
+                print(f"Set previous subscription {previous_subscription_id} to cancel at period end")
+                
+                # If this subscription should start after the current period ends
+                if start_after_current_period and current_period_end:
+                    # Schedule this subscription to start at the end of the current period
+                    # First, we need to pause the billing until the current period ends
+                    try:
+                        period_end = int(current_period_end)
+                        stripe.Subscription.modify(
+                            subscription['id'],
+                            pause_collection={
+                                'behavior': 'keep_as_draft',
+                                'resumes_at': period_end
+                            },
+                            proration_behavior='none'
+                        )
+                        print(f"Scheduled new subscription {subscription['id']} to start at {period_end}")
+                    except Exception as e:
+                        print(f"Error scheduling new subscription start time: {e}")
+            except Exception as e:
+                print(f"Error updating previous subscription {previous_subscription_id}: {e}")
+        else:
+            # For upgrades or new subscriptions, check if there are subscriptions to cancel
+            subscriptions_to_cancel = metadata.get('subscriptions_to_cancel', '')
+    
+            if subscriptions_to_cancel:
+                subscription_ids = subscriptions_to_cancel.split(',')
+                for sub_id in subscription_ids:
+                    if sub_id and sub_id != subscription['id']:  # Don't cancel the new subscription
+                        try:
+                            stripe.Subscription.delete(sub_id)
+                            print(f"Cancelled old subscription {sub_id} after new subscription {subscription['id']} was created")
+                        except Exception as e:
+                            print(f"Error cancelling subscription {sub_id}: {e}")
+        
+        # Get the company from the database
+        company = Companies.get_company_by_id(company_id)
+        if not company:
+            print(f"Company {company_id} not found")
+            return
+            
+        # For regular subscriptions, handle as before
         if plan_id not in SUBSCRIPTION_PLANS:
-            print(f"Invalid plan ID: {plan_id} for subscription {subscription_id}")
+            print(f"Invalid plan ID: {plan_id} for subscription {subscription['id']}")
             return
             
         plan = SUBSCRIPTION_PLANS[plan_id]
-        
-        # Update company with new credit balance
-        company = Companies.get_company_by_id(company_id)
-        if not company:
-            print(f"Company not found with ID: {company_id}")
-            return
-            
-        # Update company credit balance
-        Companies.update_company_by_id(company_id, {
-            "credit_balance": plan["credits_per_month"]
-        })
         
         print(f"Subscription created for company {company_id} with plan {plan_id}")
         
@@ -400,21 +551,18 @@ def handle_subscription_created(event_data):
 
 def handle_subscription_updated(event_data):
     try:
+        # event_data is already the subscription object
         subscription_id = event_data.get("id")
         customer_id = event_data.get("customer")
         metadata = event_data.get("metadata", {})
+        status = event_data.get("status")
         
         # Get company by customer ID
         company = Companies.get_company_by_stripe_customer_id(customer_id)
+
         if not company:
             print(f"Company not found for customer ID: {customer_id}")
             return
-            
-        # Check if plan was changed
-        plan_id = metadata.get("plan_id")
-        if plan_id and plan_id in SUBSCRIPTION_PLANS:
-            # Plan was changed, update credits on next renewal
-            print(f"Subscription updated for company {company.id} with new plan {plan_id}")
         
     except Exception as e:
         print(f"Error handling subscription.updated: {e}")
@@ -422,6 +570,7 @@ def handle_subscription_updated(event_data):
 
 def handle_subscription_deleted(event_data):
     try:
+        # event_data is already the subscription object
         subscription_id = event_data.get("id")
         customer_id = event_data.get("customer")
         
@@ -440,10 +589,10 @@ def handle_subscription_deleted(event_data):
 
 def handle_invoice_payment_succeeded(event_data):
     try:
-        invoice_id = event_data.get("id")
+        # event_data is already the invoice object
         customer_id = event_data.get("customer")
         subscription_id = event_data.get("subscription")
-        
+
         if not subscription_id:
             # Not a subscription invoice
             return
@@ -456,22 +605,25 @@ def handle_invoice_payment_succeeded(event_data):
             
         # Get subscription details
         subscription = stripe.Subscription.retrieve(subscription_id)
+
         plan_id = subscription.metadata.get("plan_id")
+        is_downgrade = subscription.metadata.get("is_downgrade")
         
         if not plan_id or plan_id not in SUBSCRIPTION_PLANS:
             print(f"Invalid plan ID: {plan_id} for subscription {subscription_id}")
             return
             
         plan = SUBSCRIPTION_PLANS[plan_id]
-        
-        # Reset credit balance for the new billing period
-        Companies.update_company_by_id(company.id, {
-            "credit_balance": plan["credits_per_month"],
-            "budget_mail_80_sent": False,
-            "budget_mail_100_sent": False
-        })
 
-        print(f"Credits renewed for company {company.id} with plan {plan_id}")
+        if is_downgrade != "true":
+            # Reset credit balance for the new billing period
+            Companies.update_company_by_id(company.id, {
+                "credit_balance": plan["credits_per_month"],
+                "budget_mail_80_sent": False,
+                "budget_mail_100_sent": False
+            })
+
+            print(f"Credits renewed for company {company.id} with plan {plan_id}")
         
     except Exception as e:
         print(f"Error handling invoice.payment_succeeded: {e}")
@@ -479,6 +631,7 @@ def handle_invoice_payment_succeeded(event_data):
 
 def handle_payment_intent_succeeded(data):
     try:
+        # event_data is already the payment intent object
         payment_intent_id = data.get("id")
         customer_id = data.get("customer")
         
@@ -530,12 +683,48 @@ def handle_payment_intent_succeeded(data):
             }
 
         StripePaymentHistories.log_payment(payment_data)
-        
-        print(f"Auto-recharge successful for company {company.id}")
-        
+
     except Exception as e:
         print(f"Error handling payment_intent.succeeded: {e}")
 
+
+@router.get("/customer-billing-page/")
+async def customer_billing_page(user=Depends(get_verified_user)):
+    try:
+        company = Companies.get_company_by_id(user.company_id)
+
+        if company.subscription_not_required:
+            raise HTTPException(status_code=400, detail="No stripe customer method found for company")
+        
+        if not company.stripe_customer_id:
+            raise HTTPException(status_code=400, detail="No stripe customer method found for company")
+        
+        # Create a billing portal session
+        session = stripe.billing_portal.Session.create(
+            customer=company.stripe_customer_id,
+            return_url=os.getenv('BACKEND_ADDRESS')
+        )
+        
+        return {"url": session.url}
+    except Exception as e:
+        print(f"Error creating billing portal: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create billing portal")
+
+
+class UpdateAutoRechargeRequest(BaseModel):
+    auto_recharge: bool
+
+@router.post("/update-auto-recharge/")
+async def update_auto_recharge(request: UpdateAutoRechargeRequest, user=Depends(get_verified_user)):
+    try:
+        result = Companies.update_auto_recharge(user.company_id, request.auto_recharge)
+        if result:
+            return {"message": f"Auto-recharge {'enabled' if request.auto_recharge else 'disabled'} successfully"}
+        else:
+            raise HTTPException(status_code=400, detail="Failed to update auto-recharge setting")
+    except Exception as e:
+        print(f"Error updating auto-recharge: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update auto-recharge setting")
 
 @router.post("/recharge-flex-credits/")
 async def recharge_flex_credits(user=Depends(get_verified_user)):
@@ -587,39 +776,3 @@ async def recharge_flex_credits(user=Depends(get_verified_user)):
     except Exception as e:
         print(f"Error recharging credits: {e}")
         raise HTTPException(status_code=500, detail="Failed to recharge credits")
-
-
-@router.get("/customer-billing-page/")
-async def customer_billing_page(user=Depends(get_verified_user)):
-    try:
-        company = Companies.get_company_by_id(user.company_id)
-        
-        if not company.stripe_customer_id:
-            raise HTTPException(status_code=400, detail="No stripe customer method found for company")
-        
-        # Create a billing portal session
-        session = stripe.billing_portal.Session.create(
-            customer=company.stripe_customer_id,
-            return_url=os.getenv('BACKEND_ADDRESS')
-        )
-        
-        return {"url": session.url}
-    except Exception as e:
-        print(f"Error creating billing portal: {e}")
-        raise HTTPException(status_code=500, detail="Failed to create billing portal")
-
-
-class UpdateAutoRechargeRequest(BaseModel):
-    auto_recharge: bool
-
-@router.post("/update-auto-recharge/")
-async def update_auto_recharge(request: UpdateAutoRechargeRequest, user=Depends(get_verified_user)):
-    try:
-        result = Companies.update_auto_recharge(user.company_id, request.auto_recharge)
-        if result:
-            return {"message": f"Auto-recharge {'enabled' if request.auto_recharge else 'disabled'} successfully"}
-        else:
-            raise HTTPException(status_code=400, detail="Failed to update auto-recharge setting")
-    except Exception as e:
-        print(f"Error updating auto-recharge: {e}")
-        raise HTTPException(status_code=500, detail="Failed to update auto-recharge setting")

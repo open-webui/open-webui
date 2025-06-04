@@ -274,7 +274,7 @@
 			window.removeEventListener('resize', updateScrollHeight);
 		};
 	});
-	
+
 	let logoSrc = '/logo_light.png';
 	// onMount(() => {
 	// 	const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -289,6 +289,7 @@
 	let hoveredModel = null;
 	let menuIdOpened = null;
 
+
 	$: console.log(filteredModels, 'filtered Models')
 
 	let loadingBookmark = null;
@@ -302,7 +303,7 @@
 		}
 		loadingBookmark = null;
 	}
-	
+
 </script>
 
 <svelte:head>
@@ -326,10 +327,12 @@
 		<div class="flex justify-between items-center">
 			<div class="flex items-center">
 				<div class="{$showSidebar ? 'md:hidden' : ''} self-center flex flex-none items-center">
-					{#if ($mobile)}
+					{#if $mobile}
 						<button class="flex items-center gap-1" on:click={() => history.back()}>
 							<BackIcon />
-							<div class="flex items-center md:self-center text-base font-medium leading-none px-0.5 text-lightGray-100 dark:text-customGray-100">
+							<div
+								class="flex items-center md:self-center text-base font-medium leading-none px-0.5 text-lightGray-100 dark:text-customGray-100"
+							>
 								{$i18n.t('Assistants')}
 							</div>
 						</button>
@@ -348,8 +351,10 @@
 						</button>
 					{/if}
 				</div>
-				{#if (!$mobile)}
-					<div class="flex items-center md:self-center text-base font-medium leading-none px-0.5 text-lightGray-100 dark:text-customGray-100">
+				{#if !$mobile}
+					<div
+						class="flex items-center md:self-center text-base font-medium leading-none px-0.5 text-lightGray-100 dark:text-customGray-100"
+					>
 						{$i18n.t('Assistants')}
 					</div>
 				{/if}
@@ -400,12 +405,32 @@
 			class="flex items-start justify-between pt-5 pb-3 md:pt-5 md:pb-5 md:pr-[22px] flex-row"
 		>
 			<div class="flex items-center md:items-start space-x-[5px] flex-col sm:flex-row mb-3 sm:mb-0">
-				{#if ($mobile)}
-				<FilterDropdown>
+				{#if $mobile}
+					<FilterDropdown>
+						<div class="flex flex-wrap gap-1">
+							{#each tags as tag}
+								<button
+									class={`flex items-center justify-center rounded-md text-xs leading-none px-[6px] py-[6px] ${selectedTags.has(tag) ? 'bg-customViolet-200 dark:bg-customBlue-800' : 'bg-lightGray-400  dark:bg-customGray-800 '} font-medium text-lightGray-100 dark:text-white`}
+									on:click={() => {
+										selectedTags.has(tag) ? selectedTags.delete(tag) : selectedTags.add(tag);
+										selectedTags = new Set(selectedTags);
+									}}
+								>
+									{tag.charAt(0).toUpperCase() + tag.slice(1)}
+								</button>
+							{/each}
+						</div>
+					</FilterDropdown>
+				{:else}
+					<div
+						class="font-medium text-lightGray-100 dark:text-customGray-300 text-xs whitespace-nowrap h-[22px] flex items-center md:mb-2 sm:mb-0"
+					>
+						{$i18n.t('Filter by category')}
+					</div>
 					<div class="flex flex-wrap gap-1">
 						{#each tags as tag}
 							<button
-								class={`flex items-center justify-center rounded-md text-xs leading-none px-[6px] py-[6px] ${selectedTags.has(tag) ? 'bg-customViolet-200 dark:bg-customBlue-800' : 'bg-lightGray-400  dark:bg-customGray-800 '} font-medium text-lightGray-100 dark:text-white`}
+								class={`flex items-center justify-center rounded-md text-xs leading-none px-[6px] py-[6px] ${selectedTags.has(tag) ? 'bg-customViolet-200 dark:bg-customBlue-800' : 'bg-lightGray-400 hover:bg-customViolet-200 dark:bg-customGray-800 dark:hover:bg-customGray-950'} font-medium text-lightGray-100 dark:text-white`}
 								on:click={() => {
 									selectedTags.has(tag) ? selectedTags.delete(tag) : selectedTags.add(tag);
 									selectedTags = new Set(selectedTags);
@@ -415,26 +440,6 @@
 							</button>
 						{/each}
 					</div>
-				</FilterDropdown>
-				{:else}
-				<div
-					class="font-medium text-lightGray-100 dark:text-customGray-300 text-xs whitespace-nowrap h-[22px] flex items-center md:mb-2 sm:mb-0"
-				>
-					{$i18n.t('Filter by category')}
-				</div>
-				<div class="flex flex-wrap gap-1">
-					{#each tags as tag}
-						<button
-							class={`flex items-center justify-center rounded-md text-xs leading-none px-[6px] py-[6px] ${selectedTags.has(tag) ? 'bg-customViolet-200 dark:bg-customBlue-800' : 'bg-lightGray-400 hover:bg-customViolet-200 dark:bg-customGray-800 dark:hover:bg-customGray-950'} font-medium text-lightGray-100 dark:text-white`}
-							on:click={() => {
-								selectedTags.has(tag) ? selectedTags.delete(tag) : selectedTags.add(tag);
-								selectedTags = new Set(selectedTags);
-							}}
-						>
-							{tag.charAt(0).toUpperCase() + tag.slice(1)}
-						</button>
-					{/each}
-				</div>
 				{/if}
 			</div>
 			<div class="flex bg-lightGray-700 dark:bg-customGray-800 rounded-md flex-shrink-0">
@@ -465,14 +470,16 @@
 		>
 			{#if models?.length < 1}
 				<div class="flex h-[calc(100dvh-200px)] w-full justify-center items-center">
-					<div class="text-sm dark:text-customGray-100/50">{$i18n.t('No assistants added yet')}</div>
+					<div class="text-sm dark:text-customGray-100/50">
+						{$i18n.t('No assistants added yet')}
+					</div>
 				</div>
 			{/if}
 			<div class="mb-2 gap-2 grid lg:grid-cols-2 xl:grid-cols-3" id="model-list">
 				{#each filteredModels as model (model.id)}
 					<div
-						on:mouseenter={() => hoveredModel = model.id}
-						on:mouseleave={() => hoveredModel = null}
+						on:mouseenter={() => (hoveredModel = model.id)}
+						on:mouseleave={() => (hoveredModel = null)}
 						class="flex flex-col gap-y-1 cursor-pointer w-full px-3 py-2 bg-lightGray-550 dark:bg-customGray-800 rounded-2xl transition"
 						id="model-item-{model.id}"
 					>
@@ -492,14 +499,20 @@
 								<div class="flex items-center gap-1 flex-wrap">
 									{#if model.access_control == null}
 										<div
-											class="flex gap-1 items-center {(hoveredModel === model.id || menuIdOpened === model.id) ? 'dark:text-white' : 'text-lightGray-100 dark:text-customGray-300'} text-xs bg-lightGray-400 font-medium dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
+											class="flex gap-1 items-center {hoveredModel === model.id ||
+											menuIdOpened === model.id
+												? 'dark:text-white'
+												: 'text-lightGray-100 dark:text-customGray-300'} text-xs bg-lightGray-400 font-medium dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
 										>
 											<PublicIcon />
 											<span>{$i18n.t('Public')}</span>
 										</div>
 									{:else if getGroupNamesFromAccess(model).length < 1}
 										<div
-											class="flex gap-1 items-center {(hoveredModel === model.id || menuIdOpened === model.id) ? 'dark:text-white' : 'text-lightGray-100 dark:text-customGray-300'} text-xs bg-lightGray-400 font-medium dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
+											class="flex gap-1 items-center {hoveredModel === model.id ||
+											menuIdOpened === model.id
+												? 'dark:text-white'
+												: 'text-lightGray-100 dark:text-customGray-300'} text-xs bg-lightGray-400 font-medium dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
 										>
 											<PrivateIcon />
 											<span>{$i18n.t('Private')}</span>
@@ -507,7 +520,10 @@
 									{:else}
 										{#each getGroupNamesFromAccess(model) as groupName}
 											<div
-												class="flex items-center {(hoveredModel === model.id || menuIdOpened === model.id) ? 'dark:text-white' : 'text-lightGray-100 dark:text-customGray-300'} text-xs bg-lightGray-400 font-medium dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
+												class="flex items-center {hoveredModel === model.id ||
+												menuIdOpened === model.id
+													? 'dark:text-white'
+													: 'text-lightGray-100 dark:text-customGray-300'} text-xs bg-lightGray-400 font-medium dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
 											>
 												<GroupIcon />
 												<span>{groupName}</span>
@@ -517,50 +533,58 @@
 
 									{#each model.meta?.tags as modelTag}
 										<div
-											class="flex items-center {(hoveredModel === model.id || menuIdOpened === model.id) ? 'dark:text-white' : 'text-lightGray-100 dark:text-customGray-100'} text-xs bg-customViolet-200 dark:bg-customBlue-800 px-[6px] py-[3px] rounded-md"
+											class="flex items-center {hoveredModel === model.id ||
+											menuIdOpened === model.id
+												? 'dark:text-white'
+												: 'text-lightGray-100 dark:text-customGray-100'} text-xs bg-customViolet-200 dark:bg-customBlue-800 px-[6px] py-[3px] rounded-md"
 										>
 											{modelTag.name}
 										</div>
 									{/each}
 								</div>
 							</div>
-							{#if $user?.role === 'admin' || model.user_id === $user?.id || model?.access_control?.write.group_ids?.some( (wg) => group_ids.includes(wg) )}
-							<div class="{(hoveredModel === model.id || menuIdOpened === model.id) ? 'md:visible' : 'md:invisible'} ">
-								<ModelMenu
-									user={$user}
-									{model}
-									shareHandler={() => {
-										shareModelHandler(model);
-									}}
-									cloneHandler={() => {
-										cloneModelHandler(model);
-									}}
-									exportHandler={() => {
-										exportModelHandler(model);
-									}}
-									hideHandler={() => {
-										hideModelHandler(model);
-									}}
-									deleteHandler={() => {
-										selectedModel = model;
-										showModelDeleteConfirm = true;
-									}}
-									onClose={() => {}}
-									on:openMenu={() => {
-										menuIdOpened = model.id
-									}}
-									on:closeMenu={() => {
-										menuIdOpened = null
-									}}
+							{#if $user?.role === 'admin' || model.user_id === $user?.id || model?.access_control === null || model?.access_control?.write.group_ids?.some( (wg) => group_ids.includes(wg) )}
+								<div
+									class="{hoveredModel === model.id || menuIdOpened === model.id
+										? 'md:visible'
+										: 'md:invisible'} "
 								>
-									<button
-										class="self-center w-fit text-sm px-0.5 h-[21px] dark:text-white dark:hover:text-white hover:bg-black/5  rounded-md"
-										type="button"
+									<ModelMenu
+										user={$user}
+										{model}
+										shareHandler={() => {
+											shareModelHandler(model);
+										}}
+										cloneHandler={() => {
+											cloneModelHandler(model);
+										}}
+										exportHandler={() => {
+											exportModelHandler(model);
+										}}
+										hideHandler={() => {
+											hideModelHandler(model);
+										}}
+										deleteHandler={() => {
+											selectedModel = model;
+											showModelDeleteConfirm = true;
+										}}
+										onClose={() => {}}
+										on:openMenu={() => {
+											menuIdOpened = model.id;
+										}}
+										on:closeMenu={() => {
+											menuIdOpened = null;
+										}}
+										{cloneModelHandler}
 									>
-										<EllipsisHorizontal className="size-5" />
-									</button>
-								</ModelMenu>
-							</div>
+										<button
+											class="self-center w-fit text-sm px-0.5 h-[21px] dark:text-white dark:hover:text-white hover:bg-black/5 rounded-md"
+											type="button"
+										>
+											<EllipsisHorizontal className="size-5" />
+										</button>
+									</ModelMenu>
+								</div>
 							{/if}
 						</div>
 						<div class="flex gap-4 mb-2.5">
@@ -570,14 +594,18 @@
 										? ''
 										: 'opacity-50 dark:opacity-50'} "
 								>
-									<img
-										src={!model?.meta?.profile_image_url ||
-										model?.meta?.profile_image_url === '/static/favicon.png'
-											? logoSrc
-											: model?.meta?.profile_image_url}
-										alt="modelfile profile"
-										class=" rounded-md w-full h-auto object-cover"
-									/>
+									{#if !model?.meta?.profile_image_url || model?.meta?.profile_image_url.length > 5}
+										<img
+											src={!model?.meta?.profile_image_url ||
+											model?.meta?.profile_image_url === '/static/favicon.png'
+												? logoSrc
+												: model?.meta?.profile_image_url}
+											alt="modelfile profile"
+											class=" rounded-md w-full h-auto object-cover"
+										/>
+									{:else}
+										<div class="text-[2.7rem]">{model?.meta?.profile_image_url}</div>
+									{/if}
 								</div>
 							</div>
 
@@ -586,13 +614,18 @@
 								href={`/?models=${encodeURIComponent(model.id)}`}
 							>
 								<div class=" flex-1 self-center">
-									
-									<div class="text-base {(hoveredModel === model.id || menuIdOpened === model.id) ? 'dark:text-white' : 'text-lightGray-100 dark:text-customGray-100'}  line-clamp-2 leading-[1.2]">
+									<div
+										class="text-base {hoveredModel === model.id || menuIdOpened === model.id
+											? 'dark:text-white'
+											: 'text-lightGray-100 dark:text-customGray-100'}  line-clamp-2 leading-[1.2]"
+									>
 										{model.name}
 									</div>
-								
+
 									<div class="mt-[5px] flex gap-1 text-xs overflow-hidden">
-										<div class="line-clamp-1 text-xs text-lightGray-1200 dark:text-customGray-100/50">
+										<div
+											class="line-clamp-1 text-xs text-lightGray-1200 dark:text-customGray-100/50"
+										>
 											{#if (model?.meta?.description ?? '').trim()}
 												{model?.meta?.description}
 											{/if}
@@ -619,9 +652,9 @@
 										/>
 									{/if}
 									<div class="shrink-0 text-lightGray-1200 dark:text-customGray-100">
-										{#if (model?.user?.first_name && model?.user?.last_name)}
+										{#if model?.user?.first_name && model?.user?.last_name}
 											{model?.user?.first_name} {model?.user?.last_name}
-										{:else if (model?.user?.email)}
+										{:else if model?.user?.email}
 											{model?.user?.email}
 										{:else}
 											{$i18n.t('Deleted User')}

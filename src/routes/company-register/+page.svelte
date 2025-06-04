@@ -72,7 +72,7 @@
 				company_size,
 				company_industry,
 				company_team_function,
-				company_profile_image_url ? company_profile_image_url : generateInitialsImage(company_name)
+				company_profile_image_url ? company_profile_image_url : ''
 			).catch(error => showToast('error', error));
 			console.log(user)
 			if(user) {

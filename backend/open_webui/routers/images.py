@@ -456,7 +456,7 @@ async def image_generations(
     r = None
     try:
         credit_service = CreditService()
-        credit_service.check_for_sufficient_balance(user)
+        await credit_service.check_for_subscription_and_sufficient_balance_and_seats(user)
 
         if request.app.state.config.IMAGE_GENERATION_ENGINE == "openai":
             headers = {}

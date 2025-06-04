@@ -259,7 +259,7 @@
 		<div>
 			{#each Object.keys(organizations) as organization, idx (organization)}
 				<div class="mb-5">
-					<div class="grid grid-cols-[55%_15%_1fr] md:grid-cols-[60%_1fr_1fr] mb-2.5 gap-x-1">
+					<div class="grid grid-cols-[55%_15%_1fr] md:grid-cols-[55%_1fr_1fr] mb-2.5 gap-x-1">
 						<div class="text-sm text-lightGray-100 dark:text-customGray-100 flex items-end justify-start">{organization}</div>
 						{#if idx === 0}
 							<div class="text-2xs md:text-xs text-[#8A8B8D] dark:text-customGray-300 flex items-end justify-center">
@@ -282,7 +282,7 @@
 								return item.toLowerCase()
 							})
 							.includes(m.name.toLowerCase())) as model (model.name)}
-						<div class="grid grid-cols-[55%_15%_1fr] md:grid-cols-[60%_1fr_1fr] border-t last:border-b border-lightGray-400 dark:border-customGray-700">
+						<div class="grid grid-cols-[55%_15%_1fr] md:grid-cols-[55%_1fr_1fr] border-t last:border-b border-lightGray-400 dark:border-customGray-700">
 							<div class="border-l border-r border-lightGray-400 dark:border-customGray-700 py-2 px-2">
 								<div class="flex items-center mb-1">
 									<img class="w-4 h-4 rounded-full" src={getModelIcon(model.name)} alt={model.name} />
@@ -295,8 +295,17 @@
 							</div>
 							<div class="border-r border-lightGray-400 dark:border-customGray-700 flex justify-center items-center dark:text-customGray-100">
 								<div class="text-xs dark:text-white">
-									{#if (modelsInfo[model.name]?.credit_multiple)}
-									    {modelsInfo[model.name]?.credit_multiple}x
+									{#if (modelsInfo[model.name]?.credit_multiple) && (modelsInfo[model.name]?.resarch || modelsInfo[model.name]?.reasoning)}
+									    <div>{$i18n.t('from')}</div>
+										<div class="flex items-center">{modelsInfo[model.name]?.credit_multiple}x
+											<Tooltip content={$i18n?.t('Costs for research and reasoning models are variable. As a result, pricing may fluctuate based on the complexity of the task.')}>
+												<div class="ml-1 cursor-pointer flex justify-center items-center w-[18px] h-[18px] rounded-full text-white dark:text-white bg-customBlue-600 dark:bg-customGray-700">
+													<InfoIcon className="size-6" />
+												</div>
+											</Tooltip>
+										</div>
+									{:else if ((modelsInfo[model.name]?.credit_multiple))}
+										{modelsInfo[model.name]?.credit_multiple}x
 									{:else}
 										N/A
 									{/if}

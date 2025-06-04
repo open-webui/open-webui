@@ -9,7 +9,7 @@
 
 	const dispatch = createEventDispatcher();
 
-	import { config, models, settings, user, company, companyConfig, isBlocked } from '$lib/stores';
+	import { config, models, settings, user, company, companyConfig, isBlocked, blockedMessage } from '$lib/stores';
 	import { synthesizeOpenAISpeech } from '$lib/apis/audio';
 	import { imageGenerations } from '$lib/apis/images';
 	import {
@@ -111,9 +111,9 @@
 		}
 	}
 	$: {
-		if(message?.error?.content?.includes('402: Insufficient credits')){
-			console.log('errr----------------------->')
+		if(message?.error?.content?.includes('402')){
 			isBlocked.set(true);
+			blockedMessage.set(message?.error?.content);
 		}
 	}
 
@@ -518,7 +518,11 @@
 		dir={$settings.chatDirection}
 	>
 		<div class={`flex-shrink-0 ${($settings?.chatDirection ?? 'LTR') === 'LTR' ? 'mr-3' : 'ml-3'}`}>
-			<ProfileImage src={modelIconUrl} />
+			{#if modelIconUrl?.length > 5}
+				<ProfileImage src={modelIconUrl} />
+			{:else}
+				<div class="text-2xl">{modelIconUrl}</div>
+			{/if}
 		</div>
 
 		<div class="flex-auto w-0 pl-1">

@@ -67,6 +67,7 @@
 	import ShowSidebarIcon from '../icons/ShowSidebarIcon.svelte';
 	import AddNewFolderDialog from '../common/ConfirmDialog.svelte';
 	import { sidebarKey } from '$lib/stores';
+	import CompanyIcon from '../icons/CompanyIcon.svelte';
 
 	const BREAKPOINT = 768;
 
@@ -432,10 +433,10 @@
 	let showCreateFolder = false;
 
 	let unsubscribe;
-	
+
 	onMount(() => {
 		unsubscribe = sidebarKey.subscribe(() => {
-		initChatList();
+			initChatList();
 		});
 	});
 
@@ -517,39 +518,51 @@
 			? ''
 			: 'invisible'}"
 	>
-		{#if (!$mobile)}
-		<div
-			class="flex align-center justify-between items-center px-2.5 pb-2 border-b border-lightGray-500 dark:border-customGray-700 mb-2.5"
-		>
-			<div class="flex flex-col font-primary">
-				{#if $user !== undefined}
-					<UserMenu
-						role={$user.role}
-						on:show={(e) => {
-							if (e.detail === 'archived-chat') {
-								showArchivedChats.set(true);
-							}
-						}}
-					>
-						<button
-							class=" flex items-center rounded-xl px-2.5 w-full transition"
-							on:click={() => {
-								showDropdown = !showDropdown;
+		{#if !$mobile}
+			<div
+				class="flex align-center justify-between items-center px-2.5 pb-2 border-b border-lightGray-500 dark:border-customGray-700 mb-2.5"
+			>
+				<div class="flex flex-col font-primary">
+					{#if $user !== undefined}
+						<UserMenu
+							role={$user.role}
+							on:show={(e) => {
+								if (e.detail === 'archived-chat') {
+									showArchivedChats.set(true);
+								}
 							}}
 						>
-							<div class=" self-center mr-3">
-								<img
-									src={$company?.profile_image_url}
-									class=" max-w-[30px] object-cover rounded-md"
-									alt="User profile"
-								/>
-							</div>
-							<div class=" self-center font-medium text-sm mr-1 text-lightGray-1300 dark:text-customGray-100">{$company?.name}</div>
-							<ChevronDown className=" size-3" strokeWidth="2.5" />
-						</button>
-					</UserMenu>
-				{/if}
-			</div>
+							<button
+								class=" flex items-center rounded-xl px-2.5 w-full transition"
+								on:click={() => {
+									showDropdown = !showDropdown;
+								}}
+							>
+								<div class=" self-center mr-3">
+									{#if !$company?.profile_image_url || $company?.profile_image_url === '/user.png'}
+										<div
+											class="rounded-lg flex justify-center w-[30px] h-[30px] shrink-0 bg-lightGray-400 dark:bg-customGray-900 text-white dark:text-customGray-600"
+										>
+											<CompanyIcon className="self-center size-6" />
+										</div>
+									{:else}
+										<img
+											src={$company?.profile_image_url}
+											class=" max-w-[30px] object-cover rounded-md"
+											alt="User profile"
+										/>
+									{/if}
+								</div>
+								<div
+									class=" self-center font-medium text-sm mr-1 text-lightGray-1300 dark:text-customGray-100"
+								>
+									{$company?.name}
+								</div>
+								<ChevronDown className=" size-3" strokeWidth="2.5" />
+							</button>
+						</UserMenu>
+					{/if}
+				</div>
 				<button
 					class=" cursor-pointer flex justify-center items-center w-[25px] h-[25px] rounded-lg hover:bg-lightGray-700 dark:hover:bg-customGray-900 border border-transparent dark:hover:border-customGray-700 transition"
 					on:click={() => {
@@ -559,27 +572,28 @@
 					<div class=" m-auto self-center text-customGray-900 dark:text-customGray-300">
 						<ShowSidebarIcon />
 					</div>
-				</button>		
-		</div>
+				</button>
+			</div>
 		{/if}
 
 		<div class="relative {$temporaryChatEnabled ? 'opacity-20' : ''}">
 			{#if $temporaryChatEnabled}
 				<div class="absolute z-40 w-full h-full flex justify-center"></div>
 			{/if}
-		
+
 			<SearchInput
 				bind:value={search}
 				on:input={searchDebounceHandler}
 				placeholder={$i18n.t('Search')}
 			/>
-		
 		</div>
 
 		<div class="px-2">
 			{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models}
 				<div
-					class="{$page.url.pathname.startsWith('/workspace/models') ? 'dark:bg-customGray-900 bg-lightGray-700' : ''} font-medium flex items-center space-x-[10px] rounded-[5px] px-2 py-1.5 text-lightGray-100 dark:text-customGray-100 dark:hover:text-white hover:bg-lightGray-700 dark:hover:bg-customGray-900 transition"
+					class="{$page.url.pathname.startsWith('/workspace/models')
+						? 'dark:bg-customGray-900 bg-lightGray-700'
+						: ''} font-medium flex items-center space-x-[10px] rounded-[5px] px-2 py-1.5 text-lightGray-100 dark:text-customGray-100 dark:hover:text-white hover:bg-lightGray-700 dark:hover:bg-customGray-900 transition"
 				>
 					<Assistans />
 					<a
@@ -600,7 +614,9 @@
 
 			{#if $user?.role === 'admin' || $user?.permissions?.workspace?.knowledge}
 				<div
-					class="{$page.url.pathname.startsWith('/workspace/knowledge') ? 'dark:bg-customGray-900 bg-lightGray-700' : ''} font-medium flex items-center space-x-[10px] rounded-[5px] px-2 py-1.5 text-lightGray-100 dark:text-customGray-100 dark:hover:text-white hover:bg-lightGray-700 dark:hover:bg-customGray-900 transition"
+					class="{$page.url.pathname.startsWith('/workspace/knowledge')
+						? 'dark:bg-customGray-900 bg-lightGray-700'
+						: ''} font-medium flex items-center space-x-[10px] rounded-[5px] px-2 py-1.5 text-lightGray-100 dark:text-customGray-100 dark:hover:text-white hover:bg-lightGray-700 dark:hover:bg-customGray-900 transition"
 				>
 					<Knowledge />
 					<a
@@ -623,7 +639,9 @@
 
 			{#if $user?.role === 'admin' || $user?.permissions?.workspace?.prompts}
 				<div
-					class="{$page.url.pathname.startsWith('/workspace/prompts') ? 'dark:bg-customGray-900 bg-lightGray-700' : ''} font-medium flex items-center space-x-[10px] rounded-[5px] px-2 py-1.5 text-lightGray-100 dark:text-customGray-100 dark:hover:text-white hover:bg-lightGray-700 dark:hover:bg-customGray-900 transition"
+					class="{$page.url.pathname.startsWith('/workspace/prompts')
+						? 'dark:bg-customGray-900 bg-lightGray-700'
+						: ''} font-medium flex items-center space-x-[10px] rounded-[5px] px-2 py-1.5 text-lightGray-100 dark:text-customGray-100 dark:hover:text-white hover:bg-lightGray-700 dark:hover:bg-customGray-900 transition"
 				>
 					<Prompts />
 					<a
@@ -642,7 +660,7 @@
 				</div>
 			{/if}
 		</div>
-		{#if (!$mobile)}
+		{#if !$mobile}
 			<div
 				class="pl-[14px] pr-[11px] my-2 flex justify-between space-x-1 text-lightGray-100 dark:text-customGray-200"
 			>

@@ -9,7 +9,6 @@ from open_webui.internal.db import get_db, Base
 
 # Constants
 NO_COMPANY = "NO_COMPANY"
-EIGHTY_PERCENT_CREDIT_LIMIT = 1
 
 ####################
 # Company DB Schema
@@ -33,6 +32,7 @@ class Company(Base):
     stripe_customer_id = Column(String, nullable=True)
     budget_mail_80_sent = Column(Boolean, nullable=True)
     budget_mail_100_sent = Column(Boolean, nullable=True)
+    subscription_not_required = Column(Boolean, nullable=True)
 
     users = relationship("User", back_populates="company", cascade="all, delete-orphan")
 
@@ -52,6 +52,7 @@ class CompanyModel(BaseModel):
     stripe_customer_id: Optional[str] = None
     budget_mail_80_sent: Optional[bool] = False
     budget_mail_100_sent: Optional[bool] = False
+    subscription_not_required: Optional[bool] = False
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -273,9 +274,55 @@ class CompanyTable:
         try:
             with get_db() as db:
                 company = db.query(Company).filter_by(stripe_customer_id=stripe_customer_id).first()
-                return CompanyModel.model_validate(company)
+                if company:
+                    return CompanyModel.model_validate(company)
+                return None
         except Exception as e:
             print(f"Error getting company by stripe_customer_id: {e}")
             return None
+
+    def get_eighty_percent_credit_limit(self, company_id: str) -> float:
+        """
+        Calculate the credit limit at which the 80% warning should be triggered,
+        based on the company's subscription plan.
+        
+        For free plans or when no subscription exists, returns a default value of 1.
+        For paid plans, returns 20% of the monthly credit allocation from the subscription.
+        """
+        import stripe
+        try:
+            with get_db() as db:
+                company = db.query(Company).filter_by(id=company_id).first()
+                if not company or not company.stripe_customer_id:
+                    return 1  # Default value for free plan
+                
+                # Get subscription from Stripe
+                subscriptions = stripe.Subscription.list(
+                    customer=company.stripe_customer_id,
+                    status='active',
+                    limit=1
+                )
+                
+                if not subscriptions.data:
+                    return 1  # No active subscription
+                
+                subscription = subscriptions.data[0]
+                plan_id = subscription.metadata.get('plan_id', 'free')
+                
+                # Import here to avoid circular imports
+                from beyond_the_loop.routers.payments import SUBSCRIPTION_PLANS
+                
+                if plan_id not in SUBSCRIPTION_PLANS:
+                    return 1  # Unknown plan
+                
+                # Calculate 20% of the monthly credit allocation
+                # (which means the warning triggers when 80% is used)
+                monthly_credits = SUBSCRIPTION_PLANS[plan_id].get("credits_per_month")
+
+                return monthly_credits * 0.2
+                
+        except Exception as e:
+            print(f"Error calculating credit limit for company {company_id}: {e}")
+            return 1  # Default fallback value
 
 Companies = CompanyTable()

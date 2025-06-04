@@ -1384,7 +1384,7 @@
 												<div class=" flex items-center">
 													<Tooltip content={$i18n.t('Call')}>
 														<button
-															class=" hover:bg-gray-900 dark:bg-transparent text-customGray-900 dark:text-customGray-100 dark:hover:bg-customGray-900 transition rounded-md p-[3px] self-center"
+															class=" dark:hover:bg-gray-900 dark:bg-transparent text-customGray-900 dark:text-customGray-100 dark:hover:bg-customGray-900 transition rounded-md p-[3px] self-center"
 															type="button"
 															on:click={async () => {
 																if (selectedModels.length > 1) {

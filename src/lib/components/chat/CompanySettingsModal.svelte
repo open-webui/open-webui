@@ -297,7 +297,7 @@
 							class="md:px-3 py-5 md:py-2.5 border-b md:border-b-0 border-lightGray-400 dark:border-customGray-700 md:rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
 							'general-settings'
 								? 'bg-lightGray-700 dark:bg-customGray-800'
-								: ' text-lightGray-100 dark:text-customGray-100 hover:bg-lightGray-700 dark:hover:text-white'}"
+								: ' text-lightGray-100 dark:text-customGray-100 hover:bg-lightGray-700 dark:hover:bg-customGray-800 dark:hover:text-white'}"
 							on:click={() => {
 								selectedTab = 'general-settings';
 								updateTabParam(selectedTab);
@@ -315,7 +315,7 @@
 							class="md:px-3 py-5 md:py-2.5 border-b md:border-b-0 border-lightGray-400 dark:border-customGray-700 md:rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
 							'user-management'
 								? 'bg-lightGray-700 dark:bg-customGray-800'
-								: 'text-lightGray-100 dark:text-customGray-100 hover:bg-lightGray-700 dark:hover:text-white'}"
+								: 'text-lightGray-100 dark:text-customGray-100 hover:bg-lightGray-700 dark:hover:bg-customGray-800 dark:hover:text-white'}"
 							on:click={() => {
 								selectedTab = 'user-management';
 								updateTabParam(selectedTab);
@@ -333,7 +333,7 @@
 							class="md:px-3 py-5 md:py-2.5 border-b md:border-b-0 border-lightGray-400 dark:border-customGray-700 md:rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
 							'model-control'
 								? 'bg-lightGray-700 dark:bg-customGray-800'
-								: ' text-lightGray-100 dark:text-customGray-100 hover:bg-lightGray-700 dark:hover:text-white'}"
+								: ' text-lightGray-100 dark:text-customGray-100 hover:bg-lightGray-700 dark:hover:bg-customGray-800 dark:hover:text-white'}"
 							on:click={() => {
 								selectedTab = 'model-control';
 								updateTabParam(selectedTab);
@@ -351,7 +351,7 @@
 							class="md:px-3 py-5 md:py-2.5 border-b md:border-b-0 border-lightGray-400 dark:border-customGray-700 md:rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
 							'analytics'
 								? 'bg-lightGray-700 dark:bg-customGray-800'
-								: ' text-lightGray-100 dark:text-customGray-100 hover:bg-lightGray-700 dark:hover:text-white'}"
+								: ' text-lightGray-100 dark:text-customGray-100 hover:bg-lightGray-700 dark:hover:bg-customGray-800 dark:hover:text-white'}"
 							on:click={() => {
 								selectedTab = 'analytics';
 								updateTabParam(selectedTab);
@@ -369,7 +369,7 @@
 							class="md:px-3 py-5 md:py-2.5 border-b md:border-b-0 border-lightGray-400 dark:border-customGray-700 md:rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
 							'billing'
 								? 'bg-lightGray-700 dark:bg-customGray-800'
-								: ' text-lightGray-100 dark:text-customGray-100 hover:bg-lightGray-700 dark:hover:text-white'}"
+								: ' text-lightGray-100 dark:text-customGray-100 hover:bg-lightGray-700 dark:hover:bg-customGray-800 dark:hover:text-white'}"
 							on:click={() => {
 								selectedTab = 'billing';
 								updateTabParam(selectedTab);

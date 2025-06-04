@@ -576,9 +576,12 @@ async def generate_chat_completion(
 
     payload["model"] = model_name
 
+    if (model_name == "Mistral Large 2"):
+        payload["stream"] = False
+
     if has_chat_id or magic_prompt:
         credit_service = CreditService()
-        credit_service.check_for_sufficient_balance(user)
+        await credit_service.check_for_subscription_and_sufficient_balance_and_seats(user)
 
     params = model_info.params.model_dump()
     payload = apply_model_params_to_body_openai(params, payload)

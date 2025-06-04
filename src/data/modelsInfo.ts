@@ -10,7 +10,8 @@ export const modelsInfo = {
 		multimodal: false,
 		reasoning: false,
 		included: true,
-		credit_multiple: 6
+		credit_multiple: 6,
+		research: false
 	},
 	'Claude 3.5 Sonnet': {
 		organization: 'Anthropic',
@@ -23,7 +24,8 @@ export const modelsInfo = {
 		multimodal: true,
 		reasoning: false,
 		included: true,
-		credit_multiple: 22
+		credit_multiple: 22,
+		research: false
 	},
 	'Claude 3.7 Sonnet': {
 		organization: 'Anthropic',
@@ -36,7 +38,8 @@ export const modelsInfo = {
 		multimodal: true,
 		reasoning: false,
 		included: true,
-		credit_multiple: 22
+		credit_multiple: 22,
+		research: false
 	},
 	'DeepSeek-R1': {
 		organization: 'Deep Seek',
@@ -49,7 +52,8 @@ export const modelsInfo = {
 		multimodal: false,
 		reasoning: true,
 		included: false,
-		credit_multiple: 3
+		credit_multiple: 3,
+		research: false
 	},
 	'DeepSeek-V3': {
 		organization: 'Deep Seek',
@@ -62,7 +66,8 @@ export const modelsInfo = {
 		multimodal: false,
 		reasoning: false,
 		included: false,
-		credit_multiple: 2
+		credit_multiple: 2,
+		research: false
 	},
 	'Gemini 2.0 Flash': {
 		organization: 'Google',
@@ -75,7 +80,8 @@ export const modelsInfo = {
 		multimodal: true,
 		reasoning: false,
 		included: true,
-		credit_multiple: 1
+		credit_multiple: 1,
+		research: false
 	},
 	'Gemini 2.0 Flash Thinking': {
 		organization: 'Google',
@@ -88,7 +94,8 @@ export const modelsInfo = {
 		multimodal: true,
 		reasoning: true,
 		included: true,
-		credit_multiple: 0
+		credit_multiple: 0,
+		research: false
 	},
 	'GPT-4.5': {
 		organization: 'OpenAI',
@@ -101,7 +108,8 @@ export const modelsInfo = {
 		multimodal: true,
 		reasoning: false,
 		included: false,
-		credit_multiple: 245
+		credit_multiple: 245,
+		research: false
 	},
 	'GPT 4o': {
 		organization: 'OpenAI',
@@ -114,7 +122,8 @@ export const modelsInfo = {
 		multimodal: true,
 		reasoning: false,
 		included: true,
-		credit_multiple: 17
+		credit_multiple: 17,
+		research: false
 	},
 	'GPT 4o-mini': {
 		organization: 'OpenAI',
@@ -127,7 +136,8 @@ export const modelsInfo = {
 		multimodal: true,
 		reasoning: false,
 		included: true,
-		credit_multiple: 1
+		credit_multiple: 1,
+		research: false
 	},
 	'Mistral Large 2': {
 		organization: 'Mistral',
@@ -140,7 +150,8 @@ export const modelsInfo = {
 		multimodal: false,
 		reasoning: false,
 		included: true,
-		credit_multiple: 9
+		credit_multiple: 9,
+		research: false
 	},
 	"GPT o1": {
 		organization: 'OpenAI',
@@ -153,7 +164,8 @@ export const modelsInfo = {
 		multimodal: false,
 		reasoning: true,
 		included: true,
-		credit_multiple: 100
+		credit_multiple: 100,
+		research: false
 	},
 	'GPT o1-mini': {
 		organization: 'OpenAI',
@@ -166,7 +178,8 @@ export const modelsInfo = {
 		multimodal: false,
 		reasoning: true,
 		included: true,
-		creditsPerMessage: 20
+		creditsPerMessage: 20,
+		research: false
 	},
 	'GPT o3-mini': {
 		organization: 'OpenAI',
@@ -179,7 +192,8 @@ export const modelsInfo = {
 		multimodal: false,
 		reasoning: true,
 		included: true,
-		credit_multiple: 7
+		credit_multiple: 7,
+		research: false
 	},
 	'Pixtral Large': {
 		organization: 'Mistral',
@@ -192,7 +206,8 @@ export const modelsInfo = {
 		multimodal: true,
 		reasoning: false,
 		included: true,
-		credit_multiple: 9
+		credit_multiple: 9,
+		research: false
 	},
 	'Llama 3.1': {
 		organization: 'Meta',
@@ -205,7 +220,8 @@ export const modelsInfo = {
 		multimodal: false,
 		reasoning: false,
 		included: true,
-		credit_multiple: 25
+		credit_multiple: 25,
+		research: false
 	},
 	'Perplexity Sonar Deep Research': {
 		organization: 'Perplexity',
@@ -218,7 +234,8 @@ export const modelsInfo = {
 		multimodal: false,
 		reasoning: false,
 		included: true,
-		credit_multiple: 12
+		credit_multiple: 12,
+		research: true
 	},
 	'Perplexity Sonar Reasoning Pro': {
 		organization: 'Perplexity',
@@ -231,7 +248,8 @@ export const modelsInfo = {
 		multimodal: false,
 		reasoning: true,
 		included: true,
-		credit_multiple: 12
+		credit_multiple: 12,
+		research: true
 	},
 	'Perplexity Sonar Pro': {
 		organization: 'Perplexity',
@@ -244,7 +262,8 @@ export const modelsInfo = {
 		multimodal: false,
 		reasoning: false,
 		included: true,
-		credit_multiple: 22
+		credit_multiple: 22,
+		research: true
 	},
 	"Perplexity Sonar": {
 		organization: 'Perplexity',
@@ -257,7 +276,8 @@ export const modelsInfo = {
 		multimodal: false,
 		reasoning: false,
 		included: true,
-		credit_multiple: 2
+		credit_multiple: 2,
+		research: true
 	}
 };
 

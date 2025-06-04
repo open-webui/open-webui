@@ -31,6 +31,7 @@
 	import ShowSidebarIcon from '../icons/ShowSidebarIcon.svelte';
 	import MenuIcon from '../icons/MenuIcon.svelte';
 	import Plus from '../icons/Plus.svelte';
+	import CompanyIcon from '../icons/CompanyIcon.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -89,41 +90,45 @@
 			{$showSidebar ? 'ml-1' : ''}
 			"
 			>
-				{#if $mobile}
-					<div class="flex flex-col font-primary">
-						{#if $user !== undefined}
-							<UserMenu
-								role={$user.role}
-								on:show={(e) => {
-									if (e.detail === 'archived-chat') {
-										showArchivedChats.set(true);
-									}
+      {#if ($mobile)}
+				<div class="flex flex-col font-primary">
+					{#if $user !== undefined}
+						<UserMenu
+							role={$user.role}
+							on:show={(e) => {
+								if (e.detail === 'archived-chat') {
+									showArchivedChats.set(true);
+								}
+							}}
+						>
+							<button
+								class=" flex items-center rounded-xl px-2.5 w-full transition"
+								on:click={() => {
+									showDropdown = !showDropdown;
 								}}
 							>
-								<button
-									class=" flex items-center rounded-xl px-2.5 w-full transition"
-									on:click={() => {
-										showDropdown = !showDropdown;
-									}}
-								>
-									<div class=" self-center mr-3">
+								<div class=" self-center mr-3">
+									{#if !$company?.profile_image_url || $company?.profile_image_url === '/user.png'}
+										<div
+											class="rounded-lg flex justify-center w-[30px] h-[30px] shrink-0 bg-lightGray-400 dark:bg-customGray-900 text-white dark:text-customGray-600"
+										>
+											<CompanyIcon className="self-center size-6" />
+										</div>
+									{:else}
 										<img
 											src={$company?.profile_image_url}
 											class=" max-w-[28px] object-cover rounded-md"
 											alt="User profile"
 										/>
-									</div>
-									<div
-										class=" self-center font-medium text-sm mr-1 text-lightGray-1300 dark:text-customGray-100"
-									>
-										{$company?.name}
-									</div>
-									<ChevronDown className=" size-3" strokeWidth="2.5" />
-								</button>
-							</UserMenu>
-						{/if}
-					</div>
-				{/if}
+									{/if}
+								</div>
+								<div class=" self-center font-medium text-sm mr-1 text-lightGray-1300 dark:text-customGray-100">{$company?.name}</div>
+								<ChevronDown className=" size-3" strokeWidth="2.5" />
+							</button>
+						</UserMenu>
+					{/if}
+				</div>
+			{/if}
 
 				<!-- {#if showModelSelector}
 				<ModelSelector bind:selectedModels showSetDefault={!shareEnabled} />
@@ -196,6 +201,7 @@
 					</Tooltip>
 				{/if} -->
 
+
 				<button
 					id="new-chat-button"
 					class="md:hidden cursor-pointer font-medium flex justify-center items-center flex-1 rounded-lg text-xs px-3 py-1 border border-lightGray-400 dark:border-customGray-700 h-[35px] text-right text-lightGray-100 dark:text-customGray-200 dark:hover:text-white bg-lightGray-300 dark:bg-customGray-900 hover:bg-gray-100 dark:hover:bg-customGray-950 transition"
@@ -209,6 +215,7 @@
 					</div>
 					{$i18n.t('New Chat')}
 				</button>
+
 
 				<!-- {#if $user !== undefined}
 					<UserMenu
