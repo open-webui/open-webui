@@ -372,63 +372,35 @@ async def lifespan(app: FastAPI):
         from open_webui.mcp_manager import get_mcp_manager
         app.state.mcp_manager = get_mcp_manager()
         log.info("FastMCP manager initialized")
+        
+        # Initialize default MCP servers if enabled
+        if app.state.config.ENABLE_MCP_API:
+            await app.state.mcp_manager.initialize_default_servers()
+            log.info("Default MCP servers initialized")
+            
+            # Set up default MCP URLs for the frontend to connect to
+            if not app.state.config.MCP_BASE_URLS:
+                app.state.config.MCP_BASE_URLS = [
+                    "http://localhost:8083/sse",  # Time server
+                    "http://localhost:8084/sse"   # News server
+                ]
+                log.info("Default MCP URLs configured for frontend")
+            
     except Exception as e:
         log.error(f"Failed to initialize FastMCP manager: {e}")
-
-    # Start external FastMCP server if enabled
-    if app.state.config.ENABLE_MCP_API:
-        try:
-            import subprocess
-            import atexit
-            import os
-            
-            # Get the directory where main.py is located
-            backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            fastmcp_script_path = os.path.join(backend_dir, "fastmcp_time_server.py")
-            
-            # Start the external FastMCP server on port 8083
-            server_process = subprocess.Popen([
-                "python", fastmcp_script_path, "--http", "8083"
-            ], cwd=backend_dir)
-            
-            app.state.fastmcp_server_process = server_process
-            log.info(f"FastMCP external server started on port 8083 (PID: {server_process.pid})")
-            
-            # Register cleanup function
-            def cleanup_fastmcp_server():
-                if hasattr(app.state, 'fastmcp_server_process'):
-                    try:
-                        app.state.fastmcp_server_process.terminate()
-                        app.state.fastmcp_server_process.wait(timeout=5)
-                        log.info("FastMCP external server terminated")
-                    except:
-                        app.state.fastmcp_server_process.kill()
-                        log.info("FastMCP external server killed")
-            
-            atexit.register(cleanup_fastmcp_server)
-            
-        except Exception as e:
-            log.error(f"Failed to start FastMCP external server: {e}")
-            log.info("MCP API enabled but external server startup failed - using built-in manager only")
 
     asyncio.create_task(periodic_usage_pool_cleanup())
     
     try:
         yield
     finally:
-        # Cleanup FastMCP external server
-        if hasattr(app.state, 'fastmcp_server_process'):
+        # Cleanup MCP manager and all its server processes
+        if hasattr(app.state, 'mcp_manager') and app.state.mcp_manager:
             try:
-                app.state.fastmcp_server_process.terminate()
-                app.state.fastmcp_server_process.wait(timeout=5)
-                log.info("FastMCP external server terminated gracefully")
-            except:
-                try:
-                    app.state.fastmcp_server_process.kill()
-                    log.info("FastMCP external server killed")
-                except:
-                    pass
-        log.info("FastMCP integration cleanup completed")
+                await app.state.mcp_manager.cleanup()
+                log.info("MCP manager cleanup completed")
+            except Exception as e:
+                log.error(f"Error during MCP manager cleanup: {e}")
 
 
 app = FastAPI(

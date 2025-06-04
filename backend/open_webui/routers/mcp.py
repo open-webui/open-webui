@@ -176,16 +176,42 @@ async def get_tools_from_mcp_server(url: str, idx: int, api_config: Dict):
 
 
 async def get_all_mcp_tools(request: Request) -> Dict[str, List]:
-    """Get all tools from built-in FastMCP manager"""
+    """Get all tools from all configured MCP servers"""
     all_tools = []
     
-    # Get tools from built-in FastMCP manager
+    # Get tools from all configured MCP servers
     try:
-        if hasattr(request.app.state, 'mcp_manager') and request.app.state.mcp_manager:
-            fastmcp_tools = await request.app.state.mcp_manager.get_all_tools()
-            all_tools.extend(fastmcp_tools)
+        urls = request.app.state.config.MCP_BASE_URLS
+        api_configs = request.app.state.config.MCP_API_CONFIGS
+        
+        for idx, url in enumerate(urls):
+            if url and url.strip():  # Skip empty URLs
+                try:
+                    api_config = get_mcp_api_config(idx, url, api_configs)
+                    tools = await get_tools_from_mcp_server(url, idx, api_config)
+                    
+                    # Add server info and prefix if configured
+                    prefix_id = api_config.get("prefix_id", None)
+                    for tool in tools:
+                        tool_dict = {
+                            "name": tool.name,
+                            "description": tool.description,
+                            "inputSchema": tool.inputSchema.model_dump() if hasattr(tool.inputSchema, 'model_dump') else tool.inputSchema,
+                            "mcp_server_url": url,
+                            "mcp_server_idx": idx
+                        }
+                        
+                        if prefix_id:
+                            tool_dict["name"] = f"{prefix_id}.{tool_dict['name']}"
+                        
+                        all_tools.append(tool_dict)
+                        
+                except Exception as e:
+                    log.exception(f"Error getting tools from MCP server {url}: {e}")
+                    continue
+                    
     except Exception as e:
-        log.exception(f"Error getting tools from FastMCP manager: {e}")
+        log.exception(f"Error getting all MCP tools: {e}")
     
     return {"tools": all_tools}
 
@@ -259,13 +285,25 @@ async def call_mcp_tool(
     
     try:
         if hasattr(request.app.state, 'mcp_manager') and request.app.state.mcp_manager:
-            # Get all available servers from the manager
-            servers = request.app.state.mcp_manager.servers
-            if not servers:
-                raise HTTPException(status_code=500, detail="No MCP servers available")
+            # Find which server has this tool
+            server_name = None
+            server_names = request.app.state.mcp_manager.get_running_servers()
             
-            # Use the first available server (could be made configurable)
-            server_name = next(iter(servers.keys()))
+            for name in server_names:
+                try:
+                    # Get tools from this server to check if it has our tool
+                    tools = await request.app.state.mcp_manager.get_tools_from_server(name)
+                    tool_names = [tool.get('name', '') for tool in tools]
+                    if tool_name in tool_names:
+                        server_name = name
+                        break
+                except Exception as e:
+                    log.warning(f"Failed to get tools from server {name}: {e}")
+                    continue
+            
+            if not server_name:
+                raise HTTPException(status_code=404, detail=f"Tool '{tool_name}' not found on any available MCP server")
+            
             result = await request.app.state.mcp_manager.call_tool(server_name, tool_name, arguments)
             
             # Handle FastMCP result format

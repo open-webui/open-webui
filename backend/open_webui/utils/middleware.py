@@ -271,102 +271,147 @@ async def chat_completion_tools_handler(
             return body, {}
 
         try:
-            # Look for JSON object in the response
-            json_start = content.find("{")
-            json_end = content.rfind("}") + 1
+            # Parse multiple JSON objects from the response
+            tool_calls = []
             
-            if json_start == -1 or json_end == 0:
-                log.debug("No JSON object found in response, treating as no tool usage")
-                return body, {}
-                
-            json_content = content[json_start:json_end]
-            log.debug(f"Extracted JSON content: {json_content}")
-            
-            # Try to parse the JSON
+            # First, try to parse as a single JSON array
             try:
-                result = json.loads(json_content)
-            except json.JSONDecodeError as json_error:
-                log.error(f"JSON parsing failed for content: {json_content}")
-                log.error(f"JSON error: {json_error}")
-                # Try to find a more complete JSON object by looking for balanced braces
-                brace_count = 0
-                json_end_corrected = json_start
-                for i, char in enumerate(content[json_start:], json_start):
-                    if char == '{':
-                        brace_count += 1
-                    elif char == '}':
-                        brace_count -= 1
-                        if brace_count == 0:
-                            json_end_corrected = i + 1
-                            break
+                if content.strip().startswith('[') and content.strip().endswith(']'):
+                    tool_calls = json.loads(content.strip())
+                    log.debug(f"Parsed tool calls as JSON array: {tool_calls}")
+                else:
+                    raise json.JSONDecodeError("Not a JSON array", content, 0)
+            except json.JSONDecodeError:
+                # If not a JSON array, try to parse multiple JSON objects separated by newlines
+                lines = content.strip().split('\n')
+                for line in lines:
+                    line = line.strip()
+                    if line and line.startswith('{') and line.endswith('}'):
+                        try:
+                            tool_call = json.loads(line)
+                            tool_calls.append(tool_call)
+                            log.debug(f"Parsed individual tool call: {tool_call}")
+                        except json.JSONDecodeError as e:
+                            log.warning(f"Failed to parse line as JSON: {line}, error: {e}")
+                            continue
                 
-                if json_end_corrected > json_start:
-                    json_content = content[json_start:json_end_corrected]
-                    log.debug(f"Trying corrected JSON content: {json_content}")
+                # If no valid tool calls found, try to find all JSON objects in the content
+                if not tool_calls:
+                    import re
+                    # Find all JSON-like objects in the content
+                    json_pattern = r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}'
+                    json_matches = re.findall(json_pattern, content)
+                    
+                    for match in json_matches:
+                        try:
+                            tool_call = json.loads(match)
+                            if 'name' in tool_call:  # Ensure it looks like a tool call
+                                tool_calls.append(tool_call)
+                                log.debug(f"Parsed tool call from regex: {tool_call}")
+                        except json.JSONDecodeError:
+                            continue
+                
+                # If still no valid tool calls found, try the old single JSON approach
+                if not tool_calls:
+                    json_start = content.find("{")
+                    json_end = content.rfind("}") + 1
+                    
+                    if json_start == -1 or json_end == 0:
+                        log.debug("No JSON object found in response, treating as no tool usage")
+                        return body, {}
+                        
+                    json_content = content[json_start:json_end]
+                    log.debug(f"Extracted JSON content: {json_content}")
+                    
                     try:
                         result = json.loads(json_content)
-                    except json.JSONDecodeError:
-                        log.error(f"Corrected JSON parsing also failed, treating as no tool usage")
-                        return body, {}
-                else:
-                    log.error(f"Could not find balanced JSON, treating as no tool usage")
-                    return body, {}
+                        tool_calls = [result]
+                    except json.JSONDecodeError as json_error:
+                        log.error(f"JSON parsing failed for content: {json_content}")
+                        log.error(f"JSON error: {json_error}")
+                        log.error(f"Full response content: {repr(content)}")
+                        # Try to find a more complete JSON object by looking for balanced braces
+                        brace_count = 0
+                        json_end_corrected = json_start
+                        for i, char in enumerate(content[json_start:], json_start):
+                            if char == '{':
+                                brace_count += 1
+                            elif char == '}':
+                                brace_count -= 1
+                                if brace_count == 0:
+                                    json_end_corrected = i + 1
+                                    break
+                        
+                        if json_end_corrected > json_start:
+                            json_content = content[json_start:json_end_corrected]
+                            log.debug(f"Trying corrected JSON content: {json_content}")
+                            try:
+                                result = json.loads(json_content)
+                                tool_calls = [result]
+                            except json.JSONDecodeError:
+                                log.error(f"Corrected JSON parsing also failed, treating as no tool usage")
+                                return body, {}
+                        else:
+                            log.error(f"Could not find balanced JSON, treating as no tool usage")
+                            return body, {}
 
-            tool_function_name = result.get("name", None)
-            if not tool_function_name or tool_function_name not in tools:
-                log.debug(f"Tool function '{tool_function_name}' not found in available tools")
-                return body, {}
+            # Process all tool calls
+            for tool_call in tool_calls:
+                tool_function_name = tool_call.get("name", None)
+                if not tool_function_name or tool_function_name not in tools:
+                    log.debug(f"Tool function '{tool_function_name}' not found in available tools")
+                    continue
 
-            tool_function_params = result.get("parameters", {})
+                tool_function_params = tool_call.get("parameters", {})
 
-            try:
-                required_params = (
-                    tools[tool_function_name]
-                    .get("spec", {})
-                    .get("parameters", {})
-                    .get("required", [])
-                )
-                tool_function = tools[tool_function_name]["callable"]
-                tool_function_params = {
-                    k: v
-                    for k, v in tool_function_params.items()
-                    if k in required_params
-                }
-                tool_output = await tool_function(**tool_function_params)
-
-            except Exception as e:
-                tool_output = str(e)
-
-            if isinstance(tool_output, str):
-                if tools[tool_function_name]["citation"]:
-                    sources.append(
-                        {
-                            "source": {
-                                "name": f"TOOL:{tools[tool_function_name]['toolkit_id']}/{tool_function_name}"
-                            },
-                            "document": [tool_output],
-                            "metadata": [
-                                {
-                                    "source": f"TOOL:{tools[tool_function_name]['toolkit_id']}/{tool_function_name}"
-                                }
-                            ],
-                        }
+                try:
+                    required_params = (
+                        tools[tool_function_name]
+                        .get("spec", {})
+                        .get("parameters", {})
+                        .get("required", [])
                     )
-                else:
-                    sources.append(
-                        {
-                            "source": {},
-                            "document": [tool_output],
-                            "metadata": [
-                                {
-                                    "source": f"TOOL:{tools[tool_function_name]['toolkit_id']}/{tool_function_name}"
-                                }
-                            ],
-                        }
-                    )
+                    tool_function = tools[tool_function_name]["callable"]
+                    tool_function_params = {
+                        k: v
+                        for k, v in tool_function_params.items()
+                        if k in required_params
+                    }
+                    tool_output = await tool_function(**tool_function_params)
 
-                if tools[tool_function_name]["file_handler"]:
-                    skip_files = True
+                except Exception as e:
+                    tool_output = str(e)
+
+                if isinstance(tool_output, str):
+                    if tools[tool_function_name]["citation"]:
+                        sources.append(
+                            {
+                                "source": {
+                                    "name": f"TOOL:{tools[tool_function_name]['toolkit_id']}/{tool_function_name}"
+                                },
+                                "document": [tool_output],
+                                "metadata": [
+                                    {
+                                        "source": f"TOOL:{tools[tool_function_name]['toolkit_id']}/{tool_function_name}"
+                                    }
+                                ],
+                            }
+                        )
+                    else:
+                        sources.append(
+                            {
+                                "source": {},
+                                "document": [tool_output],
+                                "metadata": [
+                                    {
+                                        "source": f"TOOL:{tools[tool_function_name]['toolkit_id']}/{tool_function_name}"
+                                    }
+                                ],
+                            }
+                        )
+
+                    if tools[tool_function_name]["file_handler"]:
+                        skip_files = True
 
         except Exception as e:
             log.exception(f"Error: {e}")
