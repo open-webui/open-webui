@@ -228,7 +228,7 @@
 				}
 			});
 
-			if ($user?.role === 'admin' && ($settings?.showChangelog ?? true)) {
+			if ($settings?.showChangelog ?? true) { // --- ADDED --- 
 				showChangelog.set(true);
 			}
 

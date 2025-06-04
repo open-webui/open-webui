@@ -2130,7 +2130,10 @@
 								<div
 									class="bottom-1 text-sm text-gray-500 text-center line-clamp-1 right-0 left-0"
 								>
-									{$footerText}									
+									//{$footerText}	<!-- ADDED -->
+													<div class="flex-1 text-xs text-gray-700 dark:text-white">
+					{@html marked.parse(DOMPurify.sanitize(footerText))}
+				</div>								
 								</div>
 								<!-- END  -->
 
