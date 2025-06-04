@@ -1522,11 +1522,21 @@ Guidelines for tool usage:
 - Do NOT use tools for historical facts, definitions, or static information
 - For time zone questions: Only use time tools if the user asks for the "current" time in a location; do not use for general time zone information
 
+Country Code Guidelines for News Tools:
+- "Canadian news" or "Canada news" → use country: "ca"
+- "US news" or "American news" → use country: "us"
+- "UK news" or "British news" → use country: "gb"
+- "Australian news" → use country: "au"
+- "Indian news" → use country: "in"
+- Always use 2-letter ISO country codes
+
 Examples:
 - "What time is it?" → Use time tool
 - "What is the current time in Tokyo?" → Use time tool  
 - "What time zone is Japan in?" → Do NOT use tool (general knowledge)
 - "Tell me about time zones" → Do NOT use tool (general knowledge)
+- "Get me the latest Canadian news" → Use news tool with country: "ca"
+- "Show me US sports news" → Use news tool with country: "us" and category: "sports"
 
 If no tools are needed for the query: Return an empty string ""
 

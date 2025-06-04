@@ -259,7 +259,9 @@ async def chat_completion_tools_handler(
         response = await generate_chat_completion(request, form_data=payload, user=user)
         log.debug(f"{response=}")
         content = await get_content_from_response(response)
-        log.debug(f"{content=}")
+        log.info(f"=== FUNCTION CALLING RESPONSE ===")
+        log.info(f"Model response for tool calling: {content}")
+        log.info(f"==================================")
 
         if not content:
             return body, {}
@@ -363,21 +365,29 @@ async def chat_completion_tools_handler(
                     continue
 
                 tool_function_params = tool_call.get("parameters", {})
+                log.info(f"=== TOOL CALL DEBUG ===")
+                log.info(f"Tool: {tool_function_name}")
+                log.info(f"Raw parameters from model: {tool_function_params}")
+                log.info(f"=======================)")
 
                 try:
-                    required_params = (
+                    # Get all parameters from the tool spec, not just required ones
+                    all_params = (
                         tools[tool_function_name]
                         .get("spec", {})
                         .get("parameters", {})
-                        .get("required", [])
+                        .get("properties", {})
                     )
                     tool_function = tools[tool_function_name]["callable"]
-                    tool_function_params = {
+                    
+                    # Filter to only include parameters that exist in the tool spec
+                    filtered_params = {
                         k: v
                         for k, v in tool_function_params.items()
-                        if k in required_params
+                        if k in all_params
                     }
-                    tool_output = await tool_function(**tool_function_params)
+                    log.info(f"Filtered parameters to pass to tool: {filtered_params}")
+                    tool_output = await tool_function(**filtered_params)
 
                 except Exception as e:
                     tool_output = str(e)
