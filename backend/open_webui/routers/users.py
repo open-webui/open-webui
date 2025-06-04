@@ -7,6 +7,7 @@ from typing import Optional
 from beyond_the_loop.models.users import UserInviteForm, UserCreateForm
 from beyond_the_loop.models.auths import Auths
 from beyond_the_loop.models.groups import Groups, GroupForm
+from beyond_the_loop.models.companies import Companies
 from open_webui.models.chats import Chats
 from beyond_the_loop.models.users import (
     UserModel,
@@ -44,24 +45,27 @@ async def invite_user(form_data: UserInviteForm, user=Depends(get_admin_user)):
         # Get the active subscription to check seat limits
         from beyond_the_loop.routers.payments import get_subscription
         from beyond_the_loop.models.users import Users
-        
-        # Get subscription details
-        subscription_details = await get_subscription(user)
-        
-        # Get current seat count and limit
-        seats_limit = subscription_details.get("seats", 0)
-        seats_taken = subscription_details.get("seats_taken", 0)
-        
-        # Calculate how many seats are available
-        available_seats = max(0, seats_limit - seats_taken)
-        
-        # Check if there are enough seats for all invitees
-        if len(form_data.invitees) > available_seats:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Not enough seats available in your subscription. You have {available_seats} seats available but are trying to invite {len(form_data.invitees)} users. Please upgrade your plan or remove some users."
-            )
-        
+
+        company = Companies.get_company_by_id(user.company_id)
+
+        if not company.subscription_not_required:
+            # Get subscription details
+            subscription_details = await get_subscription(user)
+
+            # Get current seat count and limit
+            seats_limit = subscription_details.get("seats", 0)
+            seats_taken = subscription_details.get("seats_taken", 0)
+
+            # Calculate how many seats are available
+            available_seats = max(0, seats_limit - seats_taken)
+
+            # Check if there are enough seats for all invitees
+            if len(form_data.invitees) > available_seats:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Not enough seats available in your subscription. You have {available_seats} seats available but are trying to invite {len(form_data.invitees)} users. Please upgrade your plan or remove some users."
+                )
+
         # Create new groups
         for group_name in form_data.group_names or []:
             try:
