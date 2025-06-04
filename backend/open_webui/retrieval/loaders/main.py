@@ -293,14 +293,8 @@ class Loader:
                         "ocr_lang": self.kwargs.get("DOCLING_OCR_LANG"),
                         "do_picture_description": self.kwargs.get(
                             "DOCLING_DO_PICTURE_DESCRIPTION"
-                        ),
-                        "picture_description_local": (
-                            '{\n'
-                            '    "repo_id": "HuggingFaceTB/SmolVLM-256M-Instruct",\n'
-                            '    "prompt": "Analyze the image and provide a comprehensive, detailed description. Identify all visible objects, their attributes, actions taking place, spatial relationships, and any contextual or inferred connections. Use clear, structured, and informative language suitable for downstream retrieval or knowledge extraction tasks."\n'
-                            '}'
                         )
-                    },
+                    }
                 )
         elif (
             self.engine == "document_intelligence"
