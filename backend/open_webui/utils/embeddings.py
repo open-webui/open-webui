@@ -9,9 +9,10 @@ from open_webui.utils.models import check_model_access
 from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL, BYPASS_MODEL_ACCESS_CONTROL
 
 from open_webui.routers.openai import embeddings as openai_embeddings
-from open_webui.routers.ollama import embeddings as ollama_embeddings
-from open_webui.routers.ollama import GenerateEmbeddingsForm
-from open_webui.routers.pipelines import process_pipeline_inlet_filter
+from open_webui.routers.ollama import (
+    embeddings as ollama_embeddings,
+    GenerateEmbeddingsForm,
+)
 
 
 from open_webui.utils.payload import convert_embedding_payload_openai_to_ollama
@@ -29,7 +30,7 @@ async def generate_embeddings(
     bypass_filter: bool = False,
 ):
     """
-    Dispatch and handle embeddings generation based on the model type (OpenAI, Ollama, Arena, pipeline, etc).
+    Dispatch and handle embeddings generation based on the model type (OpenAI, Ollama).
 
     Args:
         request (Request): The FastAPI request context.
@@ -71,50 +72,12 @@ async def generate_embeddings(
         if not bypass_filter and user.role == "user":
             check_model_access(user, model)
 
-    # Arena "meta-model": select a submodel at random
-    if model.get("owned_by") == "arena":
-        model_ids = model.get("info", {}).get("meta", {}).get("model_ids")
-        filter_mode = model.get("info", {}).get("meta", {}).get("filter_mode")
-        if model_ids and filter_mode == "exclude":
-            model_ids = [
-                m["id"]
-                for m in list(models.values())
-                if m.get("owned_by") != "arena" and m["id"] not in model_ids
-            ]
-        if isinstance(model_ids, list) and model_ids:
-            selected_model_id = random.choice(model_ids)
-        else:
-            model_ids = [
-                m["id"]
-                for m in list(models.values())
-                if m.get("owned_by") != "arena"
-            ]
-            selected_model_id = random.choice(model_ids)
-        inner_form = dict(form_data)
-        inner_form["model"] = selected_model_id
-        response = await generate_embeddings(
-            request, inner_form, user, bypass_filter=True
-        )
-        # Tag which concreted model was chosen
-        if isinstance(response, dict):
-            response = {
-                **response,
-                "selected_model_id": selected_model_id,
-            }
-        return response
-
-    # Pipeline/Function models
-    if model.get("pipe"):
-        # The pipeline handler should provide OpenAI-compatible schema
-        return await process_pipeline_inlet_filter(request, form_data, user, models)
-
     # Ollama backend
     if model.get("owned_by") == "ollama":
         ollama_payload = convert_embedding_payload_openai_to_ollama(form_data)
-        form_obj = GenerateEmbeddingsForm(**ollama_payload)
         response = await ollama_embeddings(
             request=request,
-            form_data=form_obj,
+            form_data=GenerateEmbeddingsForm(**ollama_payload),
             user=user,
         )
         return convert_embedding_response_ollama_to_openai(response)

@@ -1208,6 +1208,37 @@ async def get_base_models(request: Request, user=Depends(get_admin_user)):
     return {"data": models}
 
 
+##################################
+# Embeddings
+##################################
+
+
+@app.post("/api/embeddings")
+async def embeddings(
+    request: Request, form_data: dict, user=Depends(get_verified_user)
+):
+    """
+    OpenAI-compatible embeddings endpoint.
+
+    This handler:
+      - Performs user/model checks and dispatches to the correct backend.
+      - Supports OpenAI, Ollama, arena models, pipelines, and any compatible provider.
+
+    Args:
+        request (Request): Request context.
+        form_data (dict): OpenAI-like payload (e.g., {"model": "...", "input": [...]})
+        user (UserModel): Authenticated user.
+
+    Returns:
+        dict: OpenAI-compatible embeddings response.
+    """
+    # Make sure models are loaded in app state
+    if not request.app.state.MODELS:
+        await get_all_models(request, user=user)
+    # Use generic dispatcher in utils.embeddings
+    return await generate_embeddings(request, form_data, user)
+
+
 @app.post("/api/chat/completions")
 async def chat_completion(
     request: Request,
@@ -1549,37 +1580,6 @@ async def get_app_latest_release_version(user=Depends(get_verified_user)):
 @app.get("/api/changelog")
 async def get_app_changelog():
     return {key: CHANGELOG[key] for idx, key in enumerate(CHANGELOG) if idx < 5}
-
-##################################
-# Embeddings
-##################################
-
-@app.post("/api/embeddings")
-async def embeddings_endpoint(
-    request: Request,
-    form_data: dict,
-    user=Depends(get_verified_user)
-):
-    """
-    OpenAI-compatible embeddings endpoint.
-
-    This handler:
-      - Performs user/model checks and dispatches to the correct backend.
-      - Supports OpenAI, Ollama, arena models, pipelines, and any compatible provider.
-
-    Args:
-        request (Request): Request context.
-        form_data (dict): OpenAI-like payload (e.g., {"model": "...", "input": [...]})
-        user (UserModel): Authenticated user.
-
-    Returns:
-        dict: OpenAI-compatible embeddings response.
-    """
-    # Make sure models are loaded in app state
-    if not request.app.state.MODELS:
-        await get_all_models(request, user=user)
-    # Use generic dispatcher in utils.embeddings
-    return await generate_embeddings(request, form_data, user)
 
 
 ############################
