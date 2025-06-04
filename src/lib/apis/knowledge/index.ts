@@ -139,6 +139,7 @@ type KnowledgeUpdateForm = {
 	description?: string;
 	data?: object;
 	access_control?: null | object;
+	rag_config?: object;
 };
 
 export const updateKnowledgeById = async (token: string, id: string, form: KnowledgeUpdateForm) => {
@@ -155,7 +156,8 @@ export const updateKnowledgeById = async (token: string, id: string, form: Knowl
 			name: form?.name ? form.name : undefined,
 			description: form?.description ? form.description : undefined,
 			data: form?.data ? form.data : undefined,
-			access_control: form.access_control
+			access_control: form.access_control,
+			rag_config: form?.rag_config ? form.rag_config : undefined
 		})
 	})
 		.then(async (res) => {

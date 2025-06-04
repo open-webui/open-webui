@@ -443,7 +443,8 @@
 				...knowledge,
 				name: knowledge.name,
 				description: knowledge.description,
-				access_control: knowledge.access_control
+				access_control: knowledge.access_control,
+				rag_config: knowledge.rag_config
 			}).catch((e) => {
 				toast.error(`${e}`);
 			});
