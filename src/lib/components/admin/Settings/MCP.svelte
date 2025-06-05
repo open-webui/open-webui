@@ -268,7 +268,7 @@
 	<div class="space-y-3 overflow-y-scroll scrollbar-hidden h-full">
 		<div>
 			<div class="mb-2 text-sm font-medium">{$i18n.t('MCP (Model Context Protocol)')}</div>
-			<div class="text-xs text-gray-400 dark:text-gray-500">
+			<div class="text-xs text-gray-600 dark:text-gray-500">
 				{$i18n.t('Configure connections to external MCP servers to extend model capabilities with additional tools and context.')}
 			</div>
 		</div>
@@ -278,7 +278,7 @@
 		<div>
 			<div class="flex justify-between items-center text-sm">
 				<div class="font-medium">{$i18n.t('Enable MCP API')}</div>
-				<Switch bind:state={ENABLE_MCP_API} />
+				<Switch bind:state={ENABLE_MCP_API} ariaLabel="Enable MCP API" />
 			</div>
 		</div>
 
@@ -297,7 +297,7 @@
 					{/if}
 				</div>
 				
-				<div class="text-xs text-gray-400 dark:text-gray-500 mb-3">
+				<div class="text-xs text-gray-600 dark:text-gray-500 mb-3">
 					{$i18n.t('These servers are automatically managed and provide core functionality.')}
 				</div>
 
@@ -326,7 +326,7 @@
 										
 										<div>
 											<div class="font-medium text-sm">{server.display_name}</div>
-											<div class="text-xs text-gray-500">{server.description}</div>
+											<div class="text-xs text-gray-700 dark:text-gray-400">{server.description}</div>
 										</div>
 									</div>
 									
@@ -340,14 +340,14 @@
 										<span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium {server.status === 'running' ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300' : 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300'}">
 											{server.status}
 										</span>
-										
-										<!-- Restart Button -->
-										<Tooltip content="Restart Server">
-											<button
-												class="px-2 py-1 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded text-xs transition"
-												type="button"
-												on:click={() => restartBuiltinServerHandler(server.name)}
-											>
+												<!-- Restart Button -->
+									<Tooltip content="Restart Server">
+										<button
+											class="px-2 py-1 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded text-xs transition"
+											type="button"
+											aria-label="Restart {server.display_name || server.name} server"
+											on:click={() => restartBuiltinServerHandler(server.name)}
+										>
 												<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-3 h-3">
 													<path fill-rule="evenodd" d="M13.836 2.477a.75.75 0 0 1 .75.75v3.182a.75.75 0 0 1-.75.75h-3.182a.75.75 0 0 1 0-1.5h1.37l-.84-.841a4.5 4.5 0 0 0-7.08.932.75.75 0 0 1-1.3-.75 6 6 0 0 1 9.44-1.242l.842.84V3.227a.75.75 0 0 1 .75-.75zm-.911 7.5A.75.75 0 0 1 13.199 11a6 6 0 0 1-9.44 1.241l-.84-.84v1.371a.75.75 0 0 1-1.5 0V9.591a.75.75 0 0 1 .75-.75H5.35a.75.75 0 0 1 0 1.5H3.98l.841.841a4.5 4.5 0 0 0 7.08-.932.75.75 0 0 1 1.025-.273z" clip-rule="evenodd" />
 												</svg>
@@ -359,7 +359,7 @@
 						{/each}
 					</div>
 				{:else}
-					<div class="text-xs text-gray-500 p-3 border border-dashed dark:border-gray-700 rounded-lg text-center">
+					<div class="text-xs text-gray-700 dark:text-gray-400 p-3 border border-dashed dark:border-gray-700 rounded-lg text-center">
 						{$i18n.t('No built-in servers available')}
 					</div>
 				{/if}
@@ -377,7 +377,7 @@
 					{$i18n.t('External MCP Servers')}
 				</div>
 				
-				<div class="text-xs text-gray-400 dark:text-gray-500 mb-3">
+				<div class="text-xs text-gray-600 dark:text-gray-500 mb-3">
 					{$i18n.t('Connect to external MCP servers to add additional tools and capabilities. These require manual configuration and URL management.')}
 				</div>
 
@@ -418,6 +418,7 @@
 									<button
 										class="px-3 py-2 text-gray-300 bg-gray-850 hover:bg-gray-800 rounded-lg transition"
 										type="button"
+										aria-label="Verify MCP server connection"
 										disabled={serverStatuses[url] === 'loading'}
 										on:click={() => {
 											verifyMCPConnectionHandler(url, idx, true);
@@ -443,6 +444,7 @@
 										<button
 											class="px-3 py-2 text-gray-300 bg-gray-850 hover:bg-gray-800 rounded-lg transition"
 											type="button"
+											aria-label="Add new MCP server"
 											on:click={() => {
 												MCP_BASE_URLS = [...MCP_BASE_URLS, ''];
 											}}
@@ -455,6 +457,7 @@
 										<button
 											class="px-3 py-2 text-gray-300 bg-gray-850 hover:bg-gray-800 rounded-lg transition"
 											type="button"
+											aria-label="Remove MCP server"
 											on:click={() => {
 												console.log('Removing server at index:', idx);
 												console.log('Current MCP_BASE_URLS:', MCP_BASE_URLS);
@@ -498,7 +501,7 @@
 						{$i18n.t('Refresh All Connections')}
 					</button>
 					
-					<div class="text-xs text-gray-400 dark:text-gray-500 self-center">
+					<div class="text-xs text-gray-600 dark:text-gray-500 self-center">
 						{$i18n.t('Connections are verified automatically when URLs change and every 30 seconds')}
 					</div>
 				</div>
@@ -518,7 +521,7 @@
 					</svg>
 					{$i18n.t('Add External MCP Server')}
 				</button>
-				<div class="text-xs text-gray-400 dark:text-gray-500 mt-2">
+				<div class="text-xs text-gray-600 dark:text-gray-500 mt-2">
 					{$i18n.t('Connect to external MCP servers for additional tools and capabilities')}
 				</div>
 			</div>
@@ -562,15 +565,15 @@
 									{/if}
 								</div>
 								{#if tool.description}
-									<div class="text-xs text-gray-500 mt-1 ml-6">{tool.description}</div>
+									<div class="text-xs text-gray-700 dark:text-gray-400 mt-1 ml-6">{tool.description}</div>
 								{/if}
 								<!-- Server Source Information -->
 								{#if tool.mcp_server_url}
 									<div class="flex items-center gap-1 mt-2 ml-6">
-										<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-3 h-3 text-gray-400">
+										<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-3 h-3 text-gray-600">
 											<path d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
 										</svg>
-										<span class="text-xs text-gray-400">
+										<span class="text-xs text-gray-600">
 											External Server: {tool.mcp_server_url.length > 25 ? 
 												tool.mcp_server_url.substring(0, 25) + '...' : 
 												tool.mcp_server_url}
@@ -584,21 +587,21 @@
 								{:else}
 									<!-- Built-in server indicator -->
 									<div class="flex items-center gap-1 mt-2 ml-6">
-										<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-3 h-3 text-gray-400">
+										<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-3 h-3 text-gray-600">
 											<path d="M21.731 2.269a2.625 2.625 0 00-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 000-3.712zM19.513 8.199l-3.712-3.712-12.15 12.15a5.25 5.25 0 00-1.32 2.214l-.8 2.685a.75.75 0 00.933.933l2.685-.8a5.25 5.25 0 002.214-1.32L19.513 8.2z" />
 										</svg>
-										<span class="text-xs text-gray-400">Built-in Server Tool</span>
+										<span class="text-xs text-gray-600">Built-in Server Tool</span>
 									</div>
 								{/if}
 								{#if tool.inputSchema}
 									<details class="mt-2 ml-6">
-										<summary class="text-xs cursor-pointer text-gray-400 hover:text-gray-300 flex items-center gap-1">
+										<summary class="text-xs cursor-pointer text-gray-600 hover:text-gray-500 flex items-center gap-1">
 											<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3 h-3">
 												<path d="M10.75 10.818v2.614A3.13 3.13 0 0011.888 13c.482-.315.612-.648.612-.875 0-.227-.13-.56-.612-.875a3.13 3.13 0 00-1.138-.432zM8.33 8.62c.053.055.115.11.184.164.208.16.46.284.736.363V6.603a2.45 2.45 0 00-.35.13c-.14.065-.27.143-.386.233-.377.292-.514.627-.514.909 0 .184.058.39.33.645zM4.867 19.125h10.266c.703 0 1.867-.422 1.867-1.384v-5.468c0-.509-.128-.77-.371-.99a2.06 2.06 0 00-.65-.382c-.59-.33-1.298-.59-2.052-.59s-1.462.26-2.052.59a2.06 2.06 0 00-.65.382c-.243.22-.371.481-.371.99v5.468c0 .962 1.164 1.384 1.867 1.384zM6 7.741V6.741c0-1.036.895-1.741 2-1.741s2 .705 2 1.741v1H6z" />
 											</svg>
 											{$i18n.t('Input Schema')}
 										</summary>
-										<pre class="text-xs mt-1 p-2 bg-gray-900 rounded overflow-x-auto">
+										<pre class="text-xs mt-1 p-2 bg-gray-900 text-gray-300 rounded overflow-x-auto">
 {JSON.stringify(tool.inputSchema, null, 2)}
 										</pre>
 									</details>
@@ -607,7 +610,7 @@
 						{/each}
 					</div>
 				{:else if !mcpToolsLoading}
-					<div class="flex items-center gap-2 text-xs text-gray-400 p-4 border border-dashed dark:border-gray-600 rounded-lg">
+					<div class="flex items-center gap-2 text-xs text-gray-600 p-4 border border-dashed dark:border-gray-600 rounded-lg">
 						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
 							<path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zM10 15a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
 						</svg>
@@ -616,7 +619,7 @@
 				{/if}
 
 				<button
-					class="mt-2 px-3 py-1.5 text-xs bg-gray-850 hover:bg-gray-800 rounded-lg transition"
+					class="mt-2 px-3 py-1.5 text-xs bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition"
 					type="button"
 					on:click={getMCPToolsHandler}
 					disabled={mcpToolsLoading}
