@@ -122,8 +122,7 @@ class FastMCPManager:
                         script_path=script_path,
                         args=args,
                         env=config.get('env'),
-                        cwd=config.get('working_dir'),
-                        keep_alive=True
+                        cwd=config.get('working_dir')
                     )
                     
                     # Store the transport instead of the client for reuse
