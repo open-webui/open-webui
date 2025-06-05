@@ -408,12 +408,13 @@ class SPAStaticFiles(StaticFiles):
 
 print(
     rf"""
- ██████╗ ██████╗ ███████╗███╗   ██╗    ██╗    ██╗███████╗██████╗ ██╗   ██╗██╗
-██╔═══██╗██╔══██╗██╔════╝████╗  ██║    ██║    ██║██╔════╝██╔══██╗██║   ██║██║
-██║   ██║██████╔╝█████╗  ██╔██╗ ██║    ██║ █╗ ██║█████╗  ██████╔╝██║   ██║██║
-██║   ██║██╔═══╝ ██╔══╝  ██║╚██╗██║    ██║███╗██║██╔══╝  ██╔══██╗██║   ██║██║
-╚██████╔╝██║     ███████╗██║ ╚████║    ╚███╔███╔╝███████╗██████╔╝╚██████╔╝██║
- ╚═════╝ ╚═╝     ╚══════╝╚═╝  ╚═══╝     ╚══╝╚══╝ ╚══════╝╚═════╝  ╚═════╝ ╚═╝
+████████╗███████╗ ██████╗██╗  ██╗    ███████╗███████╗███╗   ██╗███████╗███████╗
+╚══██╔══╝██╔════╝██╔════╝██║  ██║    ██╔════╝██╔════╝████╗  ██║██╔════╝██╔════╝
+   ██║   █████╗  ██║     ███████║    ███████╗█████╗  ██╔██╗ ██║███████╗█████╗  
+   ██║   ██╔══╝  ██║     ██╔══██║    ╚════██║██╔══╝  ██║╚██╗██║╚════██║██╔══╝  
+   ██║   ███████╗╚██████╗██║  ██║    ███████║███████╗██║ ╚████║███████║███████╗
+   ╚═╝   ╚══════╝ ╚═════╝╚═╝  ╚═╝    ╚══════╝╚══════╝╚═╝  ╚═══╝╚══════╝╚══════╝
+                                                                               
 
 
 v{VERSION} - building the best open-source AI user interface.
@@ -1379,7 +1380,7 @@ async def get_app_latest_release_version(user=Depends(get_verified_user)):
         timeout = aiohttp.ClientTimeout(total=1)
         async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
             async with session.get(
-                "https://api.github.com/repos/open-webui/open-webui/releases/latest"
+                "https://api.github.com/repos/Datar-Tech/open-webui/releases/latest"
             ) as response:
                 response.raise_for_status()
                 data = await response.json()
