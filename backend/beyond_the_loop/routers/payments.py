@@ -255,7 +255,7 @@ async def get_subscription(user=Depends(get_verified_user)):
                 'flex_credits_remaining': company.flex_credit_balance,
                 'plan': 'free',
                 'is_trial': True,
-                "seats": 1,
+                "seats": 5,
                 "seats_taken": Users.count_users_by_company_id(user.company_id),
                 'trial_end': trial_end,
                 'days_remaining': days_remaining
