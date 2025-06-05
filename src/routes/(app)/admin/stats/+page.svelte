@@ -157,7 +157,7 @@
 </script>
 
 <svelte:head>
-	<title>Statistiques | Albert</title>
+	<title>Statistiques | Assistant IA</title>
 </svelte:head>
 
 <div class="max-w-6xl mx-auto px-4 py-8">
