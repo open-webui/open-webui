@@ -1,6 +1,7 @@
 import black
 import logging
 import markdown
+import json
 
 from open_webui.models.chats import ChatTitleMessagesForm
 from open_webui.config import DATA_DIR, ENABLE_ADMIN_EXPORT
@@ -28,17 +29,30 @@ async def get_gravatar(email: str, user=Depends(get_verified_user)):
     return get_gravatar_url(email)
 
 
-class CodeForm(BaseModel):
-    code: str
+MAX_CODE_SIZE = 256 * 1024  # 256KB
+
+
+async def receive_code(request: Request):
+    code = b""
+    async for chunk in request.stream():
+        code += chunk
+        if len(code) > MAX_CODE_SIZE:
+            raise HTTPException(status_code=413, detail="Code is too large")
+
+    try:
+        return json.loads(code)["code"]
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="Invalid code format")
 
 
 @router.post("/code/format")
-async def format_code(form_data: CodeForm, user=Depends(get_verified_user)):
+async def format_code(request: Request, user=Depends(get_verified_user)):
+    code = await receive_code(request)
     try:
-        formatted_code = black.format_str(form_data.code, mode=black.Mode())
+        formatted_code = black.format_str(code, mode=black.Mode())
         return {"code": formatted_code}
     except black.NothingChanged:
-        return {"code": form_data.code}
+        return {"code": code}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
