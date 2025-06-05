@@ -26,6 +26,8 @@ jobs:
           - linux/arm64
 
     steps:
+      # GitHub Packages requires the entire repository name to be in lowercase
+      # although the repository owner has a lowercase username, this prevents some people from running actions after forking
       - name: Set repository and image name to lowercase
         run: |
           echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
@@ -121,6 +123,8 @@ jobs:
           - linux/arm64
 
     steps:
+      # GitHub Packages requires the entire repository name to be in lowercase
+      # although the repository owner has a lowercase username, this prevents some people from running actions after forking
       - name: Set repository and image name to lowercase
         run: |
           echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
@@ -160,7 +164,7 @@ jobs:
             type=sha,prefix=git-
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=raw,enable=${{ github.ref == 'refs/heads/main' }},value=cuda
+            type=raw,enable=${{ github.ref == 'refs/heads/main' }},prefix=,suffix=,value=cuda
           flavor: |
             latest=${{ github.ref == 'refs/heads/main' }}
             suffix=-cuda,onlatest=true
@@ -219,6 +223,8 @@ jobs:
           - linux/arm64
 
     steps:
+      # GitHub Packages requires the entire repository name to be in lowercase
+      # although the repository owner has a lowercase username, this prevents some people from running actions after forking
       - name: Set repository and image name to lowercase
         run: |
           echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
@@ -258,7 +264,7 @@ jobs:
             type=sha,prefix=git-
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=raw,enable=${{ github.ref == 'refs/heads/main' }},value=ollama
+            type=raw,enable=${{ github.ref == 'refs/heads/main' }},prefix=,suffix=,value=ollama
           flavor: |
             latest=${{ github.ref == 'refs/heads/main' }}
             suffix=-ollama,onlatest=true
@@ -268,7 +274,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.FULL_IMAGE_NAME }}
-          tags:
+          tags: |
             type=ref,event=branch
             ${{ github.ref_type == 'tag' && 'type=raw,value=main' || '' }}
           flavor: |
@@ -306,11 +312,10 @@ jobs:
 
   merge-main-images:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
     needs: [build-main-image]
     steps:
+      # GitHub Packages requires the entire repository name to be in lowercase
+      # although the repository owner has a lowercase username, this prevents some people from running actions after forking
       - name: Set repository and image name to lowercase
         run: |
           echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
@@ -325,16 +330,15 @@ jobs:
           path: /tmp/digests
           merge-multiple: true
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Log in to the Container registry
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-          logout: false
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
 
       - name: Extract metadata for Docker images (default latest tag)
         id: meta
@@ -353,17 +357,19 @@ jobs:
       - name: Create manifest list and push
         working-directory: /tmp/digests
         run: |
-          docker buildx imagetools create \
-            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
             $(printf '${{ env.FULL_IMAGE_NAME }}@sha256:%s ' *)
+
+      - name: Inspect image
+        run: |
+          docker buildx imagetools inspect ${{ env.FULL_IMAGE_NAME }}:${{ steps.meta.outputs.version }}
 
   merge-cuda-images:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
     needs: [build-cuda-image]
     steps:
+      # GitHub Packages requires the entire repository name to be in lowercase
+      # although the repository owner has a lowercase username, this prevents some people from running actions after forking
       - name: Set repository and image name to lowercase
         run: |
           echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
@@ -378,18 +384,17 @@ jobs:
           path: /tmp/digests
           merge-multiple: true
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Log in to the Container registry
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-          logout: false
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Extract metadata for Docker images (cuda tag)
+      - name: Extract metadata for Docker images (default latest tag)
         id: meta
         uses: docker/metadata-action@v5
         with:
@@ -400,7 +405,7 @@ jobs:
             type=sha,prefix=git-
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=raw,enable=${{ github.ref == 'refs/heads/main' }},value=cuda
+            type=raw,enable=${{ github.ref == 'refs/heads/main' }},prefix=,suffix=,value=cuda
           flavor: |
             latest=${{ github.ref == 'refs/heads/main' }}
             suffix=-cuda,onlatest=true
@@ -408,17 +413,19 @@ jobs:
       - name: Create manifest list and push
         working-directory: /tmp/digests
         run: |
-          docker buildx imagetools create \
-            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
             $(printf '${{ env.FULL_IMAGE_NAME }}@sha256:%s ' *)
+
+      - name: Inspect image
+        run: |
+          docker buildx imagetools inspect ${{ env.FULL_IMAGE_NAME }}:${{ steps.meta.outputs.version }}
 
   merge-ollama-images:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
     needs: [build-ollama-image]
     steps:
+      # GitHub Packages requires the entire repository name to be in lowercase
+      # although the repository owner has a lowercase username, this prevents some people from running actions after forking
       - name: Set repository and image name to lowercase
         run: |
           echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
@@ -433,18 +440,17 @@ jobs:
           path: /tmp/digests
           merge-multiple: true
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Log in to the Container registry
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-          logout: false
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Extract metadata for Docker images (ollama tag)
+      - name: Extract metadata for Docker images (default ollama tag)
         id: meta
         uses: docker/metadata-action@v5
         with:
@@ -455,12 +461,20 @@ jobs:
             type=sha,prefix=git-
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=raw,enable=${{ github.ref == 'refs/heads/main' }},value=ollama
+            type=raw,enable=${{ github.ref == 'refs/heads/main' }},prefix=,suffix=,value=ollama
           flavor: |
             latest=${{ github.ref == 'refs/heads/main' }}
             suffix=-ollama,onlatest=true
 
       - name: Create manifest list and push
+        working-directory: /tmp/digests
+        run: |
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ env.FULL_IMAGE_NAME }}@sha256:%s ' *)
+
+      - name: Inspect image
+        run: |
+          docker buildx imagetools inspect ${{ env.FULL_IMAGE_NAME }}:${{ steps.meta.outputs.version }}
         working-directory: /tmp/digests
         run: |
           docker buildx imagetools create \
