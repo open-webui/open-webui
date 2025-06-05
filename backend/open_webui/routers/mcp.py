@@ -46,6 +46,24 @@ def get_mcp_api_config(idx: int, url: str, configs: Dict) -> Dict:
     return configs.get(str(idx), configs.get(url, {}))
 
 
+def get_config_value(request: Request, key: str, default=None):
+    """Helper function to get config values that handles both dict and object formats"""
+    config = request.app.state.config
+    if isinstance(config, dict):
+        return config.get(key, default)
+    else:
+        return getattr(config, key, default)
+
+
+def set_config_value(request: Request, key: str, value):
+    """Helper function to set config values that handles both dict and object formats"""
+    config = request.app.state.config
+    if isinstance(config, dict):
+        config[key] = value
+    else:
+        setattr(config, key, value)
+
+
 ##########################################
 #
 # API routes
@@ -126,10 +144,13 @@ async def verify_connection(
 @router.get("/config")
 async def get_config(request: Request, user=Depends(get_admin_user)):
     """Get MCP configuration"""
+    builtin_info = await get_builtin_servers(request, user)
+    
     return {
-        "ENABLE_MCP_API": request.app.state.config.ENABLE_MCP_API,
-        "MCP_BASE_URLS": request.app.state.config.MCP_BASE_URLS,
-        "MCP_API_CONFIGS": request.app.state.config.MCP_API_CONFIGS,
+        "ENABLE_MCP_API": get_config_value(request, "ENABLE_MCP_API", False),
+        "MCP_BASE_URLS": get_config_value(request, "MCP_BASE_URLS", []),
+        "MCP_API_CONFIGS": get_config_value(request, "MCP_API_CONFIGS", {}),
+        "BUILTIN_SERVERS": builtin_info["servers"]
     }
 
 
@@ -144,22 +165,25 @@ async def update_config(
     request: Request, form_data: MCPConfigForm, user=Depends(get_admin_user)
 ):
     """Update MCP configuration"""
-    request.app.state.config.ENABLE_MCP_API = form_data.ENABLE_MCP_API
-    request.app.state.config.MCP_BASE_URLS = form_data.MCP_BASE_URLS
-    request.app.state.config.MCP_API_CONFIGS = form_data.MCP_API_CONFIGS
+    set_config_value(request, "ENABLE_MCP_API", form_data.ENABLE_MCP_API)
+    set_config_value(request, "MCP_BASE_URLS", form_data.MCP_BASE_URLS)
+    set_config_value(request, "MCP_API_CONFIGS", form_data.MCP_API_CONFIGS)
 
     # Remove the API configs that are not in the API URLS
-    keys = list(map(str, range(len(request.app.state.config.MCP_BASE_URLS))))
-    request.app.state.config.MCP_API_CONFIGS = {
+    base_urls = get_config_value(request, "MCP_BASE_URLS", [])
+    keys = list(map(str, range(len(base_urls))))
+    api_configs = get_config_value(request, "MCP_API_CONFIGS", {})
+    filtered_configs = {
         key: value
-        for key, value in request.app.state.config.MCP_API_CONFIGS.items()
+        for key, value in api_configs.items()
         if key in keys
     }
+    set_config_value(request, "MCP_API_CONFIGS", filtered_configs)
 
     return {
-        "ENABLE_MCP_API": request.app.state.config.ENABLE_MCP_API,
-        "MCP_BASE_URLS": request.app.state.config.MCP_BASE_URLS,
-        "MCP_API_CONFIGS": request.app.state.config.MCP_API_CONFIGS,
+        "ENABLE_MCP_API": get_config_value(request, "ENABLE_MCP_API", False),
+        "MCP_BASE_URLS": get_config_value(request, "MCP_BASE_URLS", []),
+        "MCP_API_CONFIGS": get_config_value(request, "MCP_API_CONFIGS", {}),
     }
 
 
@@ -179,10 +203,25 @@ async def get_all_mcp_tools(request: Request) -> Dict[str, List]:
     """Get all tools from all configured MCP servers"""
     all_tools = []
     
-    # Get tools from all configured MCP servers
+    # First, get tools from FastMCP manager (built-in servers)
     try:
-        urls = request.app.state.config.MCP_BASE_URLS
-        api_configs = request.app.state.config.MCP_API_CONFIGS
+        if hasattr(request.app.state, 'mcp_manager') and request.app.state.mcp_manager:
+            fastmcp_tools = await request.app.state.mcp_manager.get_all_tools()
+            all_tools.extend(fastmcp_tools)
+            log.info(f"Got {len(fastmcp_tools)} tools from FastMCP manager")
+    except Exception as e:
+        log.exception(f"Error getting tools from FastMCP manager: {e}")
+    
+    # Then, get tools from external MCP servers (if any configured)
+    try:
+        # Handle both dict and object config formats
+        config = request.app.state.config
+        if isinstance(config, dict):
+            urls = config.get("MCP_BASE_URLS", []) or []
+            api_configs = config.get("MCP_API_CONFIGS", {}) or {}
+        else:
+            urls = getattr(config, "MCP_BASE_URLS", []) or []
+            api_configs = getattr(config, "MCP_API_CONFIGS", {}) or {}
         
         for idx, url in enumerate(urls):
             if url and url.strip():  # Skip empty URLs
@@ -207,11 +246,11 @@ async def get_all_mcp_tools(request: Request) -> Dict[str, List]:
                         all_tools.append(tool_dict)
                         
                 except Exception as e:
-                    log.exception(f"Error getting tools from MCP server {url}: {e}")
+                    log.exception(f"Error getting tools from external MCP server {url}: {e}")
                     continue
                     
     except Exception as e:
-        log.exception(f"Error getting all MCP tools: {e}")
+        log.exception(f"Error getting external MCP tools: {e}")
     
     return {"tools": all_tools}
 
@@ -224,14 +263,14 @@ async def get_mcp_tools(
 ):
     """Get available tools from MCP servers"""
     if url_idx is not None:
-        # Get tools from specific MCP server
-        if url_idx >= len(request.app.state.config.MCP_BASE_URLS):
-            raise HTTPException(status_code=404, detail="MCP server not found")
+        # For backward compatibility with external MCP servers
+        urls = get_config_value(request, "MCP_BASE_URLS", []) or []
+        if url_idx >= len(urls):
+            raise HTTPException(status_code=404, detail="External MCP server not found")
         
-        url = request.app.state.config.MCP_BASE_URLS[url_idx]
-        api_config = get_mcp_api_config(
-            url_idx, url, request.app.state.config.MCP_API_CONFIGS
-        )
+        url = urls[url_idx]
+        api_configs = get_config_value(request, "MCP_API_CONFIGS", {}) or {}
+        api_config = get_mcp_api_config(url_idx, url, api_configs)
         
         try:
             tools = await get_tools_from_mcp_server(url, url_idx, api_config)
@@ -256,13 +295,13 @@ async def get_mcp_tools(
             return {"tools": tools_list}
         
         except Exception as e:
-            log.exception(f"Error getting tools from MCP server {url}: {e}")
+            log.exception(f"Error getting tools from external MCP server {url}: {e}")
             raise HTTPException(
                 status_code=500,
-                detail=f"Error getting tools from MCP server: {str(e)}"
+                detail=f"Error getting tools from external MCP server: {str(e)}"
             )
     else:
-        # Get tools from all MCP servers
+        # Get tools from all MCP servers (both built-in and external)
         result = await get_all_mcp_tools(request)
         return result
 
@@ -352,7 +391,7 @@ class UrlForm(BaseModel):
 @router.get("/urls")
 async def get_urls(request: Request, user=Depends(get_admin_user)):
     """Get MCP server URLs"""
-    return {"MCP_BASE_URLS": request.app.state.config.MCP_BASE_URLS}
+    return {"MCP_BASE_URLS": get_config_value(request, "MCP_BASE_URLS", [])}
 
 
 @router.post("/urls/update")
@@ -361,6 +400,67 @@ async def update_urls(
 ):
     """Update MCP server URLs"""
     urls = [url.strip() for url in form_data.urls if url.strip()]
-    request.app.state.config.MCP_BASE_URLS = urls
+    set_config_value(request, "MCP_BASE_URLS", urls)
     
-    return {"MCP_BASE_URLS": request.app.state.config.MCP_BASE_URLS}
+    return {"MCP_BASE_URLS": get_config_value(request, "MCP_BASE_URLS", [])}
+
+
+@router.get("/servers/builtin")
+async def get_builtin_servers(request: Request, user=Depends(get_admin_user)):
+    """Get information about built-in MCP servers"""
+    if hasattr(request.app.state, 'mcp_manager') and request.app.state.mcp_manager:
+        server_names = request.app.state.mcp_manager.get_server_names()
+        servers = []
+        
+        for name in server_names:
+            status = request.app.state.mcp_manager.get_server_status(name)
+            config = request.app.state.mcp_manager.server_configs.get(name, {})
+            
+            # Get tools count for this server
+            tools_count = 0
+            try:
+                tools = await request.app.state.mcp_manager.get_tools_from_server(name)
+                tools_count = len(tools)
+            except Exception:
+                pass
+            
+            servers.append({
+                "name": name,
+                "display_name": name.replace('_', ' ').title(),
+                "status": status,
+                "transport": config.get('transport', 'stdio'),
+                "tools_count": tools_count,
+                "description": get_server_description(name)
+            })
+        
+        return {"servers": servers}
+    else:
+        return {"servers": []}
+
+def get_server_description(name: str) -> str:
+    """Get description for built-in servers"""
+    descriptions = {
+        "time_server": "Provides current time and timezone information",
+        "news_server": "Fetches latest news headlines and articles from NewsAPI"
+    }
+    return descriptions.get(name, f"Built-in MCP server: {name}")
+
+@router.post("/servers/builtin/{server_name}/restart")
+async def restart_builtin_server(
+    request: Request, 
+    server_name: str, 
+    user=Depends(get_admin_user)
+):
+    """Restart a built-in MCP server"""
+    if hasattr(request.app.state, 'mcp_manager') and request.app.state.mcp_manager:
+        try:
+            success = await request.app.state.mcp_manager.restart_server(server_name)
+            if success:
+                return {"status": "success", "message": f"Server {server_name} restarted successfully"}
+            else:
+                return {"status": "error", "message": f"Failed to restart server {server_name}"}
+        except Exception as e:
+            log.exception(f"Error restarting server {server_name}: {e}")
+            raise HTTPException(status_code=500, detail=f"Error restarting server: {str(e)}")
+    else:
+        raise HTTPException(status_code=500, detail="MCP manager not available")

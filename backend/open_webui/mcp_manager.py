@@ -8,10 +8,12 @@ It does not define tools directly - tools should exist only in external MCP serv
 import logging
 import subprocess
 import asyncio
+import os
 from typing import Dict, List, Any, Optional
 from pathlib import Path
 
 from fastmcp.client import Client
+from fastmcp.client.transports import PythonStdioTransport
 
 log = logging.getLogger(__name__)
 
@@ -109,27 +111,29 @@ class FastMCPManager:
                 log.info(f"Started HTTP MCP server: {name} on port {port}")
                 return True
             else:
-                # Start stdio server with pipes
-                process = subprocess.Popen(
-                    config['command'],
-                    cwd=config.get('working_dir'),
-                    env=config.get('env'),
-                    stdin=subprocess.PIPE,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True
-                )
-                
-                self.server_processes[name] = process
-                
-                # Create a client connection to the server
-                # For stdio transport, we need to connect to the process
-                client = Client()
-                await client.connect_stdio(process.stdin, process.stdout)
-                self.clients[name] = client
-                
-                log.info(f"Started stdio MCP server: {name}")
-                return True
+                # For stdio servers, use PythonStdioTransport
+                # Extract the script path from the command
+                if len(config['command']) >= 2 and config['command'][0] == 'python':
+                    script_path = config['command'][1]
+                    args = config['command'][2:] if len(config['command']) > 2 else []
+                    
+                    # Create transport
+                    transport = PythonStdioTransport(
+                        script_path=script_path,
+                        args=args,
+                        env=config.get('env'),
+                        cwd=config.get('working_dir'),
+                        keep_alive=True
+                    )
+                    
+                    # Store the transport instead of the client for reuse
+                    self.clients[name] = transport
+                    
+                    log.info(f"Started stdio MCP server: {name}")
+                    return True
+                else:
+                    log.error(f"Invalid command format for stdio server {name}: {config['command']}")
+                    return False
             
         except Exception as e:
             log.exception(f"Failed to start server {name}: {e}")
@@ -148,7 +152,7 @@ class FastMCPManager:
             # Close client connection
             if name in self.clients:
                 try:
-                    # For HTTP clients, we may not need to explicitly close
+                    # For stdio transports, close the client which should handle cleanup
                     if hasattr(self.clients[name], 'close'):
                         await self.clients[name].close()
                 except Exception as e:
@@ -156,7 +160,8 @@ class FastMCPManager:
                 finally:
                     del self.clients[name]
             
-            # Terminate server process
+            # For stdio transports using PythonStdioTransport, the transport handles the subprocess
+            # For HTTP servers, terminate any server processes we started
             if name in self.server_processes:
                 process = self.server_processes[name]
                 process.terminate()
@@ -201,6 +206,16 @@ class FastMCPManager:
         if name not in self.server_configs:
             return 'not_configured'
         
+        config = self.server_configs[name]
+        
+        # For stdio servers using PythonStdioTransport, check if transport exists
+        if config.get('transport') == 'stdio':
+            if name in self.clients:
+                return 'running'
+            else:
+                return 'stopped'
+        
+        # For HTTP servers, check process status
         if name in self.server_processes:
             if self.server_processes[name].poll() is None:
                 return 'running'
@@ -222,6 +237,26 @@ class FastMCPManager:
             if self.get_server_status(name) == 'running':
                 running.append(name)
         return running
+    
+    def list_servers(self) -> List[Dict[str, Any]]:
+        """Get list of all configured servers with their status and information"""
+        servers = []
+        for name in self.server_configs.keys():
+            config = self.server_configs[name]
+            status = self.get_server_status(name)
+            
+            server_info = {
+                'name': name,
+                'status': status,
+                'transport': config.get('transport', 'stdio'),
+                'command': config.get('command', []),
+                'working_dir': config.get('working_dir'),
+                'url': config.get('url'),
+                'is_builtin': name in ['time_server', 'news_server']  # Mark built-in servers
+            }
+            servers.append(server_info)
+        
+        return servers
     
     async def get_all_tools(self) -> List[Dict[str, Any]]:
         """Get all tools from all connected MCP servers"""
@@ -252,20 +287,22 @@ class FastMCPManager:
                                 }
                                 all_tools.append(tool_dict)
                 else:
-                    # For stdio servers, use the stored client connection
+                    # For stdio servers, use the stored transport to create a new client connection
                     if server_name in self.clients:
-                        client = self.clients[server_name]
-                        tools = await client.list_tools()
-                        
-                        for tool in tools:
-                            tool_dict = {
-                                "name": tool.name,
-                                "description": tool.description,
-                                "inputSchema": tool.inputSchema.model_dump() if hasattr(tool.inputSchema, 'model_dump') else tool.inputSchema,
-                                "mcp_server_name": server_name,
-                                "mcp_server_idx": list(self.server_configs.keys()).index(server_name)
-                            }
-                            all_tools.append(tool_dict)
+                        transport = self.clients[server_name]  # This is the transport
+                        client = Client(transport)
+                        async with client:
+                            tools = await client.list_tools()
+                            
+                            for tool in tools:
+                                tool_dict = {
+                                    "name": tool.name,
+                                    "description": tool.description,
+                                    "inputSchema": tool.inputSchema.model_dump() if hasattr(tool.inputSchema, 'model_dump') else tool.inputSchema,
+                                    "mcp_server_name": server_name,
+                                    "mcp_server_idx": list(self.server_configs.keys()).index(server_name)
+                                }
+                                all_tools.append(tool_dict)
             
             except Exception as e:
                 log.exception(f"Error getting tools from server {server_name}: {e}")
@@ -305,53 +342,55 @@ class FastMCPManager:
                     result = await client.call_tool(tool_name, arguments)
                     return result
             else:
-                # For stdio servers, use the stored client connection
+                # For stdio servers, use the stored transport
                 if self.get_server_status(server_name) != 'running':
                     raise ValueError(f"Server {server_name} is not running")
                 
                 if server_name not in self.clients:
-                    raise ValueError(f"No client connection for server {server_name}")
+                    raise ValueError(f"No transport available for server {server_name}")
                 
-                client = self.clients[server_name]
-                result = await client.call_tool(tool_name, arguments)
-                return result
+                transport = self.clients[server_name]
+                client = Client(transport)
+                async with client:
+                    result = await client.call_tool(tool_name, arguments)
+                    return result
                 
         except Exception as e:
             log.exception(f"Error calling tool {tool_name} on server {server_name}: {e}")
             raise
     
     async def initialize_default_servers(self):
-        """Initialize and start default MCP servers with HTTP transport"""
-        # Add configuration for time server (HTTP on port 8083)
+        """Initialize and start default MCP servers with stdio transport"""
+        # Add configuration for time server (stdio)
         backend_dir = Path(__file__).parent.parent
         time_server_path = backend_dir / "fastmcp_time_server.py"
         
         if time_server_path.exists():
             self.add_server_config(
-                name="time_server_http",
-                command=["python", str(time_server_path), "--http", "8083"],
+                name="time_server",
+                command=["python", str(time_server_path)],
                 working_dir=str(backend_dir),
-                transport="http",
-                url="http://localhost:8083/sse"
+                env=dict(os.environ),  # Pass current environment variables
+                transport="stdio"
             )
             
             # Start the time server
-            await self.start_server("time_server_http")
+            await self.start_server("time_server")
         
-        # Add configuration for news server (HTTP on port 8084)
+        # Add configuration for news server (stdio)
         news_server_path = backend_dir / "fastmcp_news_server.py"
         
         if news_server_path.exists():
             self.add_server_config(
-                name="news_server_http",
-                command=["python", str(news_server_path), "--http", "8084"],
+                name="news_server",
+                command=["python", str(news_server_path)],
                 working_dir=str(backend_dir),
-                transport="http",
-                url="http://localhost:8084/sse"
+                env=dict(os.environ),  # Pass current environment variables
+                transport="stdio"
             )
             
             # Start the news server
-            await self.start_server("news_server_http")
+            await self.start_server("news_server")
     
     async def cleanup(self):
         """Clean up all server processes and connections"""
@@ -389,22 +428,24 @@ class FastMCPManager:
                         
                         return tool_list
             else:
-                # For stdio servers, use stored client
+                # For stdio servers, use stored transport to create client
                 if server_name in self.clients:
-                    client = self.clients[server_name]
-                    tools = await client.list_tools()
-                    
-                    tool_list = []
-                    for tool in tools:
-                        tool_dict = {
-                            "name": tool.name,
-                            "description": tool.description,
-                            "inputSchema": tool.inputSchema.model_dump() if hasattr(tool.inputSchema, 'model_dump') else tool.inputSchema,
-                            "mcp_server_name": server_name
-                        }
-                        tool_list.append(tool_dict)
-                    
-                    return tool_list
+                    transport = self.clients[server_name]
+                    client = Client(transport)
+                    async with client:
+                        tools = await client.list_tools()
+                        
+                        tool_list = []
+                        for tool in tools:
+                            tool_dict = {
+                                "name": tool.name,
+                                "description": tool.description,
+                                "inputSchema": tool.inputSchema.model_dump() if hasattr(tool.inputSchema, 'model_dump') else tool.inputSchema,
+                                "mcp_server_name": server_name
+                            }
+                            tool_list.append(tool_dict)
+                        
+                        return tool_list
                     
         except Exception as e:
             log.exception(f"Error getting tools from server {server_name}: {e}")

@@ -202,10 +202,26 @@ async def get_tools_async(
     # Add MCP tools if enabled and requested
     try:
         mcp_tools = await get_mcp_tools(request)
+        log.info(f"=== MCP TOOLS DEBUG ===")
+        log.info(f"Available MCP tools: {list(mcp_tools.keys())}")
+        log.info(f"Requested tool_ids: {tool_ids}")
+        log.info(f"=======================")
+        
         for tool_name, tool_dict in mcp_tools.items():
             # Check if this MCP tool is in the requested tool_ids
+            # Try multiple matching strategies:
+            # 1. Exact match with mcp_ prefix
             mcp_tool_id = f"mcp_{tool_name}"
-            if mcp_tool_id not in tool_ids:
+            # 2. Direct tool name match (for backward compatibility)
+            # 3. Check if any tool_id ends with the tool name (for prefixed cases)
+            
+            is_requested = (
+                mcp_tool_id in tool_ids or  # Exact match with mcp_ prefix
+                tool_name in tool_ids or    # Direct tool name match
+                any(tid.endswith(f"_{tool_name}") or tid.endswith(f".{tool_name}") for tid in tool_ids)  # Suffix match
+            )
+            
+            if not is_requested:
                 log.debug(f"Skipping MCP tool {tool_name} (ID: {mcp_tool_id}) - not in selected tool_ids: {tool_ids}")
                 continue
                 
@@ -215,7 +231,7 @@ async def get_tools_async(
                 tool_name = f"mcp_{tool_name}"
                 tool_dict["spec"]["name"] = tool_name
             
-            log.debug(f"Adding MCP tool {tool_name} (ID: {mcp_tool_id}) to tools_dict")
+            log.info(f"Adding MCP tool {tool_name} (ID: {mcp_tool_id}) to tools_dict")
             tools_dict[tool_name] = tool_dict
     except Exception as e:
         log.error(f"Error loading MCP tools: {e}")

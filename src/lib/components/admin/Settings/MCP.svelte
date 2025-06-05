@@ -4,7 +4,16 @@
 
 	const dispatch = createEventDispatcher();
 
-	import { getMCPConfig, updateMCPConfig, verifyMCPConnection, getMCPURLs, updateMCPURLs, getMCPTools } from '$lib/apis/mcp';
+	import { 
+		getMCPConfig, 
+		updateMCPConfig, 
+		verifyMCPConnection, 
+		getMCPURLs, 
+		updateMCPURLs, 
+		getMCPTools,
+		getBuiltinServers,
+		restartBuiltinServer
+	} from '$lib/apis/mcp';
 	import { getTools } from '$lib/apis/tools';
 
 	import { user, tools } from '$lib/stores';
@@ -24,9 +33,13 @@
 	let mcpToolsLoading = false;
 	let mcpTools: any[] = [];
 	
-	// Server connection status tracking
-	let serverStatuses: { [key: string]: string } = {}; // Track connection status for each server URL
-	let autoVerifyInterval: NodeJS.Timeout | null = null; // For periodic auto-verification
+	// Built-in servers
+	let builtinServers: any[] = [];
+	let builtinServersLoading = false;
+	
+	// Server connection status tracking for external servers
+	let serverStatuses: { [key: string]: string } = {};
+	let autoVerifyInterval: NodeJS.Timeout | null = null;
 
 	// Reactive statement to ensure we always have at least one input field
 	$: {
@@ -101,6 +114,30 @@
 
 		mcpTools = res || [];
 		mcpToolsLoading = false;
+	};
+
+	const getBuiltinServersHandler = async () => {
+		builtinServersLoading = true;
+		const res = await getBuiltinServers(localStorage.token).catch((error) => {
+			console.error('Error fetching built-in servers:', error);
+			return { servers: [] };
+		});
+
+		builtinServers = res.servers || [];
+		builtinServersLoading = false;
+	};
+
+	const restartBuiltinServerHandler = async (serverName: string) => {
+		const res = await restartBuiltinServer(localStorage.token, serverName).catch((error) => {
+			toast.error(`Failed to restart ${serverName}: ${error}`);
+			return null;
+		});
+
+		if (res && res.status === 'success') {
+			toast.success(`${serverName} restarted successfully`);
+			await getBuiltinServersHandler();
+			await getMCPToolsHandler();
+		}
 	};
 
 	const verifyMCPConnectionHandler = async (url: string, idx: number, showToasts: boolean = true) => {
@@ -185,6 +222,13 @@
 			ENABLE_MCP_API = res.ENABLE_MCP_API;
 			MCP_BASE_URLS = res.MCP_BASE_URLS || [''];
 			MCP_API_CONFIGS = res.MCP_API_CONFIGS || {};
+			
+			// Load built-in servers if available
+			if (res.BUILTIN_SERVERS) {
+				builtinServers = res.BUILTIN_SERVERS;
+			} else {
+				await getBuiltinServersHandler();
+			}
 
 			await getMCPToolsHandler();
 			
@@ -241,14 +285,100 @@
 		{#if ENABLE_MCP_API}
 			<hr class="dark:border-gray-700" />
 
+			<!-- Built-in MCP Servers -->
+			<div>
+				<div class="mb-3 text-sm font-medium flex items-center gap-2">
+					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 text-green-500">
+						<path d="M21.731 2.269a2.625 2.625 0 00-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 000-3.712zM19.513 8.199l-3.712-3.712-12.15 12.15a5.25 5.25 0 00-1.32 2.214l-.8 2.685a.75.75 0 00.933.933l2.685-.8a5.25 5.25 0 002.214-1.32L19.513 8.2z" />
+					</svg>
+					{$i18n.t('Built-in MCP Servers')}
+					{#if builtinServersLoading}
+						<Spinner className="size-3" />
+					{/if}
+				</div>
+				
+				<div class="text-xs text-gray-400 dark:text-gray-500 mb-3">
+					{$i18n.t('These servers are automatically managed and provide core functionality.')}
+				</div>
+
+				{#if builtinServers.length > 0}
+					<div class="space-y-2">
+						{#each builtinServers as server}
+							<div class="border dark:border-gray-700 rounded-lg p-3 bg-gray-50 dark:bg-gray-800">
+								<div class="flex items-center justify-between">
+									<div class="flex items-center gap-3">
+										<!-- Server Status Indicator -->
+										<div class="flex items-center gap-2">
+											{#if server.status === 'running'}
+												<Tooltip content="Server is running">
+													<div class="w-2 h-2 rounded-full bg-green-500"></div>
+												</Tooltip>
+											{:else if server.status === 'stopped'}
+												<Tooltip content="Server is stopped">
+													<div class="w-2 h-2 rounded-full bg-red-500"></div>
+												</Tooltip>
+											{:else}
+												<Tooltip content="Server status unknown">
+													<div class="w-2 h-2 rounded-full bg-gray-500"></div>
+												</Tooltip>
+											{/if}
+										</div>
+										
+										<div>
+											<div class="font-medium text-sm">{server.display_name}</div>
+											<div class="text-xs text-gray-500">{server.description}</div>
+										</div>
+									</div>
+									
+									<div class="flex items-center gap-2">
+										<!-- Tools Count Badge -->
+										<span class="inline-flex items-center rounded-full bg-blue-100 dark:bg-blue-900 px-2 py-1 text-xs font-medium text-blue-700 dark:text-blue-300">
+											{server.tools_count} tools
+										</span>
+										
+										<!-- Status Badge -->
+										<span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium {server.status === 'running' ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300' : 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300'}">
+											{server.status}
+										</span>
+										
+										<!-- Restart Button -->
+										<Tooltip content="Restart Server">
+											<button
+												class="px-2 py-1 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded text-xs transition"
+												type="button"
+												on:click={() => restartBuiltinServerHandler(server.name)}
+											>
+												<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-3 h-3">
+													<path fill-rule="evenodd" d="M13.836 2.477a.75.75 0 0 1 .75.75v3.182a.75.75 0 0 1-.75.75h-3.182a.75.75 0 0 1 0-1.5h1.37l-.84-.841a4.5 4.5 0 0 0-7.08.932.75.75 0 0 1-1.3-.75 6 6 0 0 1 9.44-1.242l.842.84V3.227a.75.75 0 0 1 .75-.75zm-.911 7.5A.75.75 0 0 1 13.199 11a6 6 0 0 1-9.44 1.241l-.84-.84v1.371a.75.75 0 0 1-1.5 0V9.591a.75.75 0 0 1 .75-.75H5.35a.75.75 0 0 1 0 1.5H3.98l.841.841a4.5 4.5 0 0 0 7.08-.932.75.75 0 0 1 1.025-.273z" clip-rule="evenodd" />
+												</svg>
+											</button>
+										</Tooltip>
+									</div>
+								</div>
+							</div>
+						{/each}
+					</div>
+				{:else}
+					<div class="text-xs text-gray-500 p-3 border border-dashed dark:border-gray-700 rounded-lg text-center">
+						{$i18n.t('No built-in servers available')}
+					</div>
+				{/if}
+			</div>
+
+			<hr class="dark:border-gray-700" />
+
+			<!-- External MCP Servers -->
+			{#if MCP_BASE_URLS.some(url => url && url.trim() !== '') || MCP_BASE_URLS.length === 1}
 			<div>
 				<div class="mb-2 text-sm font-medium flex items-center gap-2">
-					<!-- MCP Server Icon -->
 					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 text-blue-500">
-						<path d="M8.25 10.875a2.625 2.625 0 115.25 0 2.625 2.625 0 01-5.25 0z" />
-						<path fill-rule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zm-1.125 4.5a4.125 4.125 0 102.338 7.524l2.007 2.006a.75.75 0 101.06-1.06l-2.006-2.007a4.125 4.125 0 00-3.399-6.463z" clip-rule="evenodd" />
+						<path d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
 					</svg>
-					{$i18n.t('MCP Server URLs')}
+					{$i18n.t('External MCP Servers')}
+				</div>
+				
+				<div class="text-xs text-gray-400 dark:text-gray-500 mb-3">
+					{$i18n.t('Connect to external MCP servers to add additional tools and capabilities. These require manual configuration and URL management.')}
 				</div>
 
 				<div class="flex flex-col space-y-2">
@@ -373,6 +503,26 @@
 					</div>
 				</div>
 			</div>
+			{:else}
+			<!-- Add External Server Button when no external servers are configured -->
+			<div class="text-center py-4">
+				<button
+					class="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition flex items-center gap-2 mx-auto"
+					type="button"
+					on:click={() => {
+						MCP_BASE_URLS = [''];
+					}}
+				>
+					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
+						<path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+					</svg>
+					{$i18n.t('Add External MCP Server')}
+				</button>
+				<div class="text-xs text-gray-400 dark:text-gray-500 mt-2">
+					{$i18n.t('Connect to external MCP servers for additional tools and capabilities')}
+				</div>
+			</div>
+			{/if}
 
 			<hr class="dark:border-gray-700" />
 
@@ -398,10 +548,18 @@
 										<path fill-rule="evenodd" d="M8 1a.75.75 0 01.75.75V6h-1.5V2.5L3 7v11h14V7l-4.25-4.5V6h-1.5V1.75A.75.75 0 0112 1h-4z" clip-rule="evenodd" />
 									</svg>
 									<div class="font-medium text-sm">{tool.name}</div>
-									<!-- Tool Status Badge -->
-									<span class="inline-flex items-center rounded-full bg-green-100 dark:bg-green-900 px-2 py-1 text-xs font-medium text-green-700 dark:text-green-300">
-										Available
-									</span>
+									<!-- Tool Source Badge -->
+									{#if tool.mcp_server_url}
+										<!-- External Server Tool -->
+										<span class="inline-flex items-center rounded-full bg-blue-100 dark:bg-blue-900 px-2 py-1 text-xs font-medium text-blue-700 dark:text-blue-300">
+											External
+										</span>
+									{:else}
+										<!-- Built-in Server Tool -->
+										<span class="inline-flex items-center rounded-full bg-green-100 dark:bg-green-900 px-2 py-1 text-xs font-medium text-green-700 dark:text-green-300">
+											Built-in
+										</span>
+									{/if}
 								</div>
 								{#if tool.description}
 									<div class="text-xs text-gray-500 mt-1 ml-6">{tool.description}</div>
@@ -410,12 +568,11 @@
 								{#if tool.mcp_server_url}
 									<div class="flex items-center gap-1 mt-2 ml-6">
 										<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-3 h-3 text-gray-400">
-											<path d="M8.25 10.875a2.625 2.625 0 115.25 0 2.625 2.625 0 01-5.25 0z" />
-											<path fill-rule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zm-1.125 4.5a4.125 4.125 0 102.338 7.524l2.007 2.006a.75.75 0 101.06-1.06l-2.006-2.007a4.125 4.125 0 00-3.399-6.463z" clip-rule="evenodd" />
+											<path d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
 										</svg>
 										<span class="text-xs text-gray-400">
-											Server: {tool.mcp_server_url.length > 30 ? 
-												tool.mcp_server_url.substring(0, 30) + '...' : 
+											External Server: {tool.mcp_server_url.length > 25 ? 
+												tool.mcp_server_url.substring(0, 25) + '...' : 
 												tool.mcp_server_url}
 										</span>
 										{#if tool.mcp_server_idx !== undefined}
@@ -423,6 +580,14 @@
 												#{tool.mcp_server_idx + 1}
 											</span>
 										{/if}
+									</div>
+								{:else}
+									<!-- Built-in server indicator -->
+									<div class="flex items-center gap-1 mt-2 ml-6">
+										<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-3 h-3 text-gray-400">
+											<path d="M21.731 2.269a2.625 2.625 0 00-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 000-3.712zM19.513 8.199l-3.712-3.712-12.15 12.15a5.25 5.25 0 00-1.32 2.214l-.8 2.685a.75.75 0 00.933.933l2.685-.8a5.25 5.25 0 002.214-1.32L19.513 8.2z" />
+										</svg>
+										<span class="text-xs text-gray-400">Built-in Server Tool</span>
 									</div>
 								{/if}
 								{#if tool.inputSchema}

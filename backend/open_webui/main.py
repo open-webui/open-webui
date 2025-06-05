@@ -378,13 +378,8 @@ async def lifespan(app: FastAPI):
             await app.state.mcp_manager.initialize_default_servers()
             log.info("Default MCP servers initialized")
             
-            # Set up default MCP URLs for the frontend to connect to
-            if not app.state.config.MCP_BASE_URLS:
-                app.state.config.MCP_BASE_URLS = [
-                    "http://localhost:8083/sse",  # Time server
-                    "http://localhost:8084/sse"   # News server
-                ]
-                log.info("Default MCP URLs configured for frontend")
+            # Note: Built-in MCP servers use stdio transport and are managed internally
+            # External MCP servers can still be configured via MCP_BASE_URLS if needed
             
     except Exception as e:
         log.error(f"Failed to initialize FastMCP manager: {e}")

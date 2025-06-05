@@ -208,3 +208,57 @@ export const callMCPTool = async (
 
 	return res;
 };
+
+export const getBuiltinServers = async (token: string = '') => {
+	let error = null;
+
+	const res = await fetch(`${MCP_API_BASE_URL}/servers/builtin`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
+			return { servers: [] };
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const restartBuiltinServer = async (token: string = '', serverName: string = '') => {
+	let error = null;
+
+	const res = await fetch(`${MCP_API_BASE_URL}/servers/builtin/${serverName}/restart`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			Authorization: `Bearer ${token}`,
+			'Content-Type': 'application/json'
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};

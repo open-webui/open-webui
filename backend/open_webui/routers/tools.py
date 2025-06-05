@@ -34,7 +34,14 @@ async def get_tools(request: Request, user=Depends(get_verified_user)):
     
     # Add MCP tools if enabled
     try:
-        if hasattr(request.app.state.config, 'ENABLE_MCP_API') and request.app.state.config.ENABLE_MCP_API:
+        # Handle both dict and object config access
+        enable_mcp = False
+        if hasattr(request.app.state.config, 'ENABLE_MCP_API'):
+            enable_mcp = request.app.state.config.ENABLE_MCP_API
+        elif isinstance(request.app.state.config, dict):
+            enable_mcp = request.app.state.config.get('ENABLE_MCP_API', False)
+        
+        if enable_mcp:
             from open_webui.routers.mcp import get_all_mcp_tools
             from open_webui.models.tools import ToolMeta
             

@@ -1512,50 +1512,45 @@ TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = PersistentConfig(
 
 DEFAULT_TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = """Available Tools: {{TOOLS}}
 
-You must decide whether to use any of these tools based on the user's query. Only use tools when they are directly relevant and necessary to answer the user's question accurately.
+You are a function calling assistant. Analyze the user's query and determine if any tools should be used.
 
-Guidelines for tool usage:
-- Use tools when the user explicitly asks for current/real-time information (current time, current weather, latest news, etc.)
-- Use tools when the query requires live data, calculations, or external operations that cannot be answered with general knowledge
-- Do NOT use tools for general knowledge questions that can be answered without real-time data
-- Do NOT use tools for casual conversation, greetings, or simple questions
-- Do NOT use tools for historical facts, definitions, or static information
-- For time zone questions: Only use time tools if the user asks for the "current" time in a location; do not use for general time zone information
+CRITICAL TOOL TRIGGERS:
+- Time queries → ALWAYS use get_current_time tool
+- News queries → ALWAYS use get_top_headlines tool
 
-Country Code Guidelines for News Tools:
-- "Canadian news" or "Canada news" → use country: "ca"
-- "US news" or "American news" → use country: "us"
-- "UK news" or "British news" → use country: "gb"
-- "Australian news" → use country: "au"
-- "Indian news" → use country: "in"
-- Always use 2-letter ISO country codes
-
-Examples:
-- "What time is it?" → Use time tool
-- "What is the current time in Tokyo?" → Use time tool  
-- "What time zone is Japan in?" → Do NOT use tool (general knowledge)
-- "Tell me about time zones" → Do NOT use tool (general knowledge)
-- "Get me the latest Canadian news" → Use news tool with country: "ca"
-- "Show me US sports news" → Use news tool with country: "us" and category: "sports"
-- "Get me the current time and latest headlines" → Use both time and news tools
+Tool Usage Rules:
+- Use tools for current/real-time information (current time, weather, news, etc.)
+- Use tools for live data, calculations, or external operations
+- Do NOT use tools for general knowledge, historical facts, or definitions
+- Do NOT use tools for casual conversation or greetings
 
 RESPONSE FORMAT:
-- If no tools are needed: Return an empty string ""
-- If ONE tool is needed: Return a JSON object: {\"name\": \"functionName\", \"parameters\": {\"param\": \"value\"}}
-- If MULTIPLE tools are needed: Return a JSON array: [{\"name\": \"tool1\", \"parameters\": {\"param\": \"value\"}}, {\"name\": \"tool2\", \"parameters\": {\"param\": \"value\"}}]
+- If no tools needed: []
+- If ONE tool needed: [{\"name\": \"tool_name\", \"parameters\": {\"param\": \"value\"}}]
+- If MULTIPLE tools needed: [{\"name\": \"tool1\", \"parameters\": {}}, {\"name\": \"tool2\", \"parameters\": {}}]
+
+TIME TOOL EXAMPLES:
+- "what time is it" → [{\"name\": \"get_current_time\", \"parameters\": {}}]
+- "current time" → [{\"name\": \"get_current_time\", \"parameters\": {}}]
+- "what time is it in Tokyo" → [{\"name\": \"get_current_time\", \"parameters\": {\"timezone\": \"Asia/Tokyo\"}}]
+
+NEWS TOOL EXAMPLES:
+- "latest news" → [{\"name\": \"get_top_headlines\", \"parameters\": {}}]
+- "tech news" → [{\"name\": \"get_top_headlines\", \"parameters\": {\"category\": \"technology\"}}]
+- "news about AI" → [{\"name\": \"get_top_headlines\", \"parameters\": {\"q\": \"AI\"}}]
+- "business news from UK" → [{\"name\": \"get_top_headlines\", \"parameters\": {\"category\": \"business\", \"country\": \"gb\"}}]
 
 MULTIPLE TOOL EXAMPLES:
-- "Get me the current time and latest news" → [{\"name\": \"get_current_time\", \"parameters\": {\"format\": \"human\"}}, {\"name\": \"get_top_headlines\", \"parameters\": {}}]
-- "Show me the time and weather" → [{\"name\": \"get_current_time\", \"parameters\": {\"format\": \"human\"}}, {\"name\": \"get_weather\", \"parameters\": {}}]
-- "Get Canadian news and current time" → [{\"name\": \"get_top_headlines\", \"parameters\": {\"country\": \"ca\"}}, {\"name\": \"get_current_time\", \"parameters\": {\"format\": \"human\"}}]
+- "what time is it and latest news" → [{\"name\": \"get_current_time\", \"parameters\": {}}, {\"name\": \"get_top_headlines\", \"parameters\": {}}]
+- "current time and tech news" → [{\"name\": \"get_current_time\", \"parameters\": {}}, {\"name\": \"get_top_headlines\", \"parameters\": {\"category\": \"technology\"}}]
 
-IMPORTANT PARAMETER RULES:
-- NEVER include parameters with null, None, or empty string values
-- Only include parameters that have actual meaningful values
-- Omit optional parameters if you don't have a specific value for them
-- Do not include {"category": null} or {"country": null} - omit these parameters entirely
+IMPORTANT:
+- Only include parameters with actual meaningful values
+- Omit parameters that are null, empty, or have default values
+- Return ONLY the JSON array - no explanations or additional text
+- Multiple tools can be called in a single response
 
-Only return the JSON object, JSON array, or empty string. No additional text or explanations."""
+Analyze the user query and return the appropriate tool calls as a JSON array."""
 
 
 DEFAULT_EMOJI_GENERATION_PROMPT_TEMPLATE = """Your task is to reflect the speaker's likely facial expression through a fitting emoji. Interpret emotions from the message and reflect their facial expression using fitting, diverse emojis (e.g., 😊, 😢, 😡, 😱).

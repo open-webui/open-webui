@@ -254,6 +254,12 @@ async def chat_completion_tools_handler(
     payload = get_tools_function_calling_payload(
         body["messages"], task_model_id, tools_function_calling_prompt
     )
+    
+    # Debug: Log the user query
+    user_message = get_last_user_message(body["messages"])
+    log.info(f"=== USER QUERY FOR FUNCTION CALLING ===")
+    log.info(f"User query: {user_message}")
+    log.info(f"======================================")
 
     try:
         response = await generate_chat_completion(request, form_data=payload, user=user)
@@ -283,8 +289,25 @@ async def chat_completion_tools_handler(
             # First, try to parse as a single JSON array
             try:
                 if content.strip().startswith('[') and content.strip().endswith(']'):
-                    tool_calls = json.loads(content.strip())
-                    log.debug(f"Parsed tool calls as JSON array: {tool_calls}")
+                    parsed_array = json.loads(content.strip())
+                    log.debug(f"Parsed tool calls as JSON array: {parsed_array}")
+                    
+                    # Handle case where array elements are JSON strings that need to be parsed again
+                    tool_calls = []
+                    for item in parsed_array:
+                        if isinstance(item, str):
+                            # Try to parse the string as JSON
+                            try:
+                                parsed_item = json.loads(item)
+                                tool_calls.append(parsed_item)
+                                log.debug(f"Parsed JSON string in array: {parsed_item}")
+                            except json.JSONDecodeError:
+                                log.warning(f"Failed to parse array item as JSON: {item}")
+                        elif isinstance(item, dict):
+                            # Already a dictionary, use as-is
+                            tool_calls.append(item)
+                        else:
+                            log.warning(f"Unexpected array item type: {type(item)}, value: {item}")
                 else:
                     raise json.JSONDecodeError("Not a JSON array", content, 0)
             except json.JSONDecodeError:
