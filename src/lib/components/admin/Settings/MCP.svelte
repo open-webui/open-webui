@@ -333,21 +333,20 @@
 									<div class="flex items-center gap-2">
 										<!-- Tools Count Badge -->
 										<span class="inline-flex items-center rounded-full bg-blue-100 dark:bg-blue-900 px-2 py-1 text-xs font-medium text-blue-700 dark:text-blue-300">
-											{server.tools_count} tools
+											{server.tools_count} {server.tools_count === 1 ? 'tool' : 'tools'}
 										</span>
 										
 										<!-- Status Badge -->
 										<span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium {server.status === 'running' ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300' : 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300'}">
 											{server.status}
-										</span>
-												<!-- Restart Button -->
-									<Tooltip content="Restart Server">
-										<button
-											class="px-2 py-1 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded text-xs transition"
-											type="button"
-											aria-label="Restart {server.display_name || server.name} server"
-											on:click={() => restartBuiltinServerHandler(server.name)}
-										>
+										</span>								<!-- Restart Button -->
+							<Tooltip content="Restart Server">
+								<button
+									class="px-2 py-1 text-gray-700 dark:text-gray-200 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded text-xs transition"
+									type="button"
+									aria-label="Restart {server.display_name || server.name} server"
+									on:click={() => restartBuiltinServerHandler(server.name)}
+								>
 												<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-3 h-3">
 													<path fill-rule="evenodd" d="M13.836 2.477a.75.75 0 0 1 .75.75v3.182a.75.75 0 0 1-.75.75h-3.182a.75.75 0 0 1 0-1.5h1.37l-.84-.841a4.5 4.5 0 0 0-7.08.932.75.75 0 0 1-1.3-.75 6 6 0 0 1 9.44-1.242l.842.84V3.227a.75.75 0 0 1 .75-.75zm-.911 7.5A.75.75 0 0 1 13.199 11a6 6 0 0 1-9.44 1.241l-.84-.84v1.371a.75.75 0 0 1-1.5 0V9.591a.75.75 0 0 1 .75-.75H5.35a.75.75 0 0 1 0 1.5H3.98l.841.841a4.5 4.5 0 0 0 7.08-.932.75.75 0 0 1 1.025-.273z" clip-rule="evenodd" />
 												</svg>
@@ -416,7 +415,7 @@
 							<div class="flex gap-1">
 								<Tooltip content="Verify Connection">
 									<button
-										class="px-3 py-2 text-gray-300 bg-gray-850 hover:bg-gray-800 rounded-lg transition"
+										class="px-3 py-2 text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition"
 										type="button"
 										aria-label="Verify MCP server connection"
 										disabled={serverStatuses[url] === 'loading'}
@@ -442,7 +441,7 @@
 								{#if idx === 0}
 									<Tooltip content="Add MCP Server">
 										<button
-											class="px-3 py-2 text-gray-300 bg-gray-850 hover:bg-gray-800 rounded-lg transition"
+											class="px-3 py-2 text-gray-700 dark:text-gray-200 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg transition"
 											type="button"
 											aria-label="Add new MCP server"
 											on:click={() => {
@@ -455,7 +454,7 @@
 								{:else}
 									<Tooltip content="Remove MCP Server">
 										<button
-											class="px-3 py-2 text-gray-300 bg-gray-850 hover:bg-gray-800 rounded-lg transition"
+											class="px-3 py-2 text-gray-700 dark:text-gray-200 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg transition"
 											type="button"
 											aria-label="Remove MCP server"
 											on:click={() => {
@@ -493,7 +492,7 @@
 
 				<div class="mt-3 flex gap-2">
 					<button
-						class="px-3 py-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition"
+						class="px-3.5 py-1.5 text-sm font-medium bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 transition rounded-full"
 						type="button"
 						on:click={autoVerifyAllConnections}
 						disabled={!ENABLE_MCP_API || MCP_BASE_URLS.every(url => !url || url.trim() === '')}
@@ -510,7 +509,7 @@
 			<!-- Add External Server Button when no external servers are configured -->
 			<div class="text-center py-4">
 				<button
-					class="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition flex items-center gap-2 mx-auto"
+					class="px-3.5 py-1.5 text-sm font-medium bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 transition rounded-full flex items-center gap-2 mx-auto"
 					type="button"
 					on:click={() => {
 						MCP_BASE_URLS = [''];
@@ -619,7 +618,7 @@
 				{/if}
 
 				<button
-					class="mt-2 px-3 py-1.5 text-xs bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition"
+					class="mt-2 px-3.5 py-1.5 text-sm font-medium bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 transition rounded-full"
 					type="button"
 					on:click={getMCPToolsHandler}
 					disabled={mcpToolsLoading}
@@ -632,7 +631,7 @@
 
 	<div class="flex justify-end pt-3 text-sm font-medium">
 		<button
-			class="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg"
+			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 			type="submit"
 		>
 			{$i18n.t('Save')}
