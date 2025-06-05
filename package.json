@@ -87,6 +87,7 @@
 		"async": "^3.2.5",
 		"bits-ui": "^0.19.7",
 		"browser-sync": "^3.0.3",
+		"chart.js": "^4.4.9",
 		"codemirror": "^6.0.1",
 		"codemirror-lang-elixir": "^4.0.0",
 		"codemirror-lang-hcl": "^0.0.0-beta.2",
