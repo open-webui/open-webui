@@ -1711,6 +1711,16 @@ CODE_INTERPRETER_JUPYTER_TIMEOUT = PersistentConfig(
     ),
 )
 
+CODE_INTERPRETER_BLACKLISTED_MODULES = PersistentConfig(
+    "CODE_INTERPRETER_BLACKLISTED_MODULES",
+    "code_interpreter.blacklisted_modules",
+    [
+        library.strip()
+        for library in os.environ.get("CODE_INTERPRETER_BLACKLISTED_MODULES", "").split(",")
+        if library.strip()
+    ],
+)
+
 
 DEFAULT_CODE_INTERPRETER_PROMPT = """
 #### Tools Available
