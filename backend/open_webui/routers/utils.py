@@ -61,14 +61,13 @@ async def format_code(request: Request, user=Depends(get_verified_user)):
     async with format_semaphore:
         try:
             code = await receive_code(request)
-            
+
             loop = asyncio.get_event_loop()
             with ThreadPoolExecutor() as executor:
-                formatted_code = await loop.run_in_executor(executor, format_code_sync, code)
+                formatted_code = await loop.run_in_executor(
+                    executor, format_code_sync, code
+                )
                 return {"code": formatted_code}
-
-        except asyncio.TimeoutError:
-            raise HTTPException(status_code=408, detail="Request timeout")
         except black.NothingChanged:
             return {"code": code}
         except Exception as e:
