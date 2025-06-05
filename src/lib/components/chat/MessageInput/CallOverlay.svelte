@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { config, models, settings, showCallOverlay, TTSWorker } from '$lib/stores';
+	import { config, models, settings, showCallOverlay, ttsSentenceQueue, ttsStreaming, TTSWorker } from '$lib/stores';
 	import { onMount, tick, getContext, onDestroy, createEventDispatcher } from 'svelte';
 
 	const dispatch = createEventDispatcher();
@@ -13,6 +13,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import VideoInputMenu from './CallOverlay/VideoInputMenu.svelte';
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
+	import { get } from 'svelte/store';
 
 	const i18n = getContext('i18n');
 
@@ -589,7 +590,46 @@
 			monitorAndPlayAudio(id, audioAbortController.signal);
 		}
 	};
+	async function processTTSQueue() {
+		// Use get() to read the current value of stores outside of component context or .subscribe
+		const isStreaming = get(ttsStreaming);
+		const queue = get(ttsSentenceQueue);
 
+		console.log(`[TTS QUEUE STORE] processTTSQueue called. isStreaming: ${isStreaming}, queue length: ${queue.length}`);
+
+		if (isStreaming || queue.length === 0) {
+			return;
+		}
+
+		ttsStreaming.set(true); // Mark TTS as busy
+
+		let taskToProcess;
+		// Update the store to remove the first item (dequeue)
+		ttsSentenceQueue.update(currentQueue => {
+			taskToProcess = currentQueue[0]; // Get the first item
+			return currentQueue.slice(1);     // Return a new array without the first item
+		});
+
+		if (!taskToProcess) { // Should only happen if queue became empty concurrently (unlikely here)
+			ttsStreaming.set(false);
+			return;
+		}
+
+		console.log(`[TTS QUEUE STORE] Dequeued task for message ${taskToProcess.id}: "${taskToProcess.content}"`);
+
+		try {
+			await fetchAudio(taskToProcess.content); // fetchAudio still needs to await streamAudio
+			console.log(`[TTS QUEUE STORE] Successfully streamed audio for: "${taskToProcess.content}"`);
+		} catch (error) {
+			console.error(`[TTS QUEUE STORE] Error fetching/streaming audio for "${taskToProcess.content}":`, error);
+		} finally {
+			ttsStreaming.set(false);
+			console.log('[TTS QUEUE STORE] TTS is now free.');
+			// Call processTTSQueue again to check if there are more items
+			// This is crucial to continue processing if items were added while this one was busy.
+			processTTSQueue();
+		}
+	}
 	const chatEventHandler = async (e) => {
 		const { id, content } = e.detail;
 		// "id" here is message id
@@ -609,7 +649,14 @@
 
 				console.log(content);
 
-				fetchAudio(content);
+				processTTSQueue();
+				// while (true) { 
+				// 	const isStreaming = get(ttsStreaming)
+				// 	if (!isStreaming) {
+				// 		fetchAudio(content);
+				// 	}
+				// }
+
 			} catch (error) {
 				console.error('Failed to fetch or play audio:', error);
 			}

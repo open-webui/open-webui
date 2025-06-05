@@ -60,6 +60,9 @@ export const tools = writable(null);
 export const functions = writable(null);
 export const characters: Writable<CharacterPrompt[]> = writable([]);
 
+export const ttsSentenceQueue: Writable<any[]> = writable([]);
+export const ttsStreaming: Writable<boolean> = writable(false);
+
 export const banners: Writable<Banner[]> = writable([]);
 
 export const settings: Writable<Settings> = writable({});

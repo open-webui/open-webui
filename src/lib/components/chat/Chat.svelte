@@ -36,7 +36,8 @@
 		chatTitle,
 		showArtifacts,
 		tools,
-		chatSysPrompt
+		chatSysPrompt,
+		ttsSentenceQueue
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
@@ -1131,6 +1132,8 @@
 					const trimmedPart = partToDispatch.trim(); // Use the trimmed version
 					console.log(`Dispatching new complete part at index ${i}: "${trimmedPart}"`);
 
+					ttsSentenceQueue.update(queue => [...queue, { id: message.id, content: trimmedPart }]);
+
 					eventTarget.dispatchEvent(
 						new CustomEvent('chat', {
 							detail: {
@@ -1188,6 +1191,8 @@
 				) ?? '';
 			if (lastMessageContentPart) {
 				console.log('!!lastMessageContentPart', lastMessageContentPart)
+				ttsSentenceQueue.update(queue => [...queue, { id: message.id, content: lastMessageContentPart }]);
+
 				eventTarget.dispatchEvent(
 					new CustomEvent('chat', {
 						detail: { id: message.id, content: lastMessageContentPart }

@@ -1,4 +1,5 @@
 import { AUDIO_API_BASE_URL } from '$lib/constants';
+import { ttsStreaming } from '$lib/stores';
 
 export const getAudioConfig = async (token: string) => {
 	let error = null;
@@ -94,13 +95,11 @@ export const transcribeAudio = async (token: string, file: File) => {
 	return res;
 };
 
-export const streamAudio = async (reader: any) => {		
+export const streamAudio = async (reader: any) => {	
 	const ctx = new AudioContext({sampleRate: 24000}) 
 
 	let time = ctx.currentTime
 
-	const queue: any[] = []
-	let isPlaying = false;
 
 	function playChunk(pcm: any) {
 		const samples = new Int16Array(pcm);
@@ -117,46 +116,32 @@ export const streamAudio = async (reader: any) => {
 		source.connect(ctx.destination)
 		source.start(time)
 		time += buffer.duration
-		// source.onended = () => playNext();
-	}
-
-	function playNext() {
-		if (queue.length == 0) {
-			isPlaying = false;
-			return;
-		}
-		isPlaying = true;
-		// playChunk()
 	}
 
 	while (true) { 
 		const { done, value } = await reader.read()
-		console.log('!!ctx.currentTime', ctx.currentTime)
-		console.log('!!time', time)
-		if (time < ctx.currentTime) {
-			time = ctx.currentTime + 0.25
+		if (done) {
+			ttsStreaming.set(false)
+			break;
 		}
-		if (done) break;
 		playChunk(value.buffer)
-		// queue.push(value.buffer);
-		// if (!isPlaying) playNext()
 	}
 }
 
 export const synthesizeStreamingSpeech = async (
 	text: string = '',
 ) => {
+	ttsStreaming.set(true)
+	console.log('!!hitting tts endpoint with text', text)
 	const response = await fetch('http://localhost:8002/tts?text=' + encodeURIComponent(text));
 
 	if (!response.ok || !response.body) {
-		console.log('!!response not ok')
+		console.log('!!response not ok', text)
 		return
 	} 
 	
 	const reader = response.body.getReader();
 
-	
-	
 	console.log('!!returning reader')
 
 	return reader
