@@ -163,10 +163,10 @@
 <div class="max-w-6xl mx-auto px-4 py-8">
 	<div class="mb-8">
 		<h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-			Statistiques d'usage d'Albert
+			{#if $i18n}{$i18n.t('stats.title')}{/if}
 		</h1>
 		<p class="text-gray-600 dark:text-gray-400">
-			Tableau de bord des indicateurs d'usage de l'Assistant IA
+			{#if $i18n}{$i18n.t('stats.subtitle')}{/if}
 		</p>
 	</div>
 
