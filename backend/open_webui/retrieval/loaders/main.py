@@ -3,6 +3,7 @@ import logging
 import ftfy
 import sys
 import json
+import os
 
 from langchain_community.document_loaders import (
     AzureAIDocumentIntelligenceLoader,
@@ -148,12 +149,18 @@ class DoclingLoader:
                 )
             }
 
-            params = {
-                "image_export_mode": "embedded",  # images will be embedded as base64 string in the markdown. "Placeholder" mode will not extract image base64 string.
-                "table_mode": "accurate",
-                "include_images": True,  # extract inner images
-                "to_formats": ["md", "json"],  # return both markdown and json. Image metadata will be in json
-            }
+            if os.environ.get("ENABLE_OPENAI_IMAGE_URL", "false").lower() == "true":
+                params = {
+                    "image_export_mode": "embedded",  # images will be embedded as base64 string in the markdown. "Placeholder" mode will not extract image base64 string.
+                    "table_mode": "accurate",
+                    "include_images": True,  # extract inner images
+                    "to_formats": ["md", "json"],  # return both markdown and json. Image metadata will be in json
+                }
+            else:
+                params = {
+                    "image_export_mode": "placeholder",
+                    "table_mode": "accurate",
+                }
 
             if self.params:
                 if self.params.get("do_picture_classification"):
