@@ -73,3 +73,5 @@ The backend server will start on http://localhost:8080.
 - docker build --build-arg BUILD_HASH=v1.3.4 -t tech-sense .
 - docker tag tech-sense deliah/tech-sense:v1.3.4
 - docker push deliah/tech-sense:v1.3.4
+- docker tag tech-sense deliah/tech-sense:latest
+- docker push deliah/tech-sense:latest
