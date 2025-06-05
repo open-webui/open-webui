@@ -222,7 +222,7 @@ async def get_subscription(user=Depends(get_verified_user)):
                 "plan": "free",
                 "flex_credits_remaining": company.flex_credit_balance,
                 "credits_remaining": company.credit_balance,
-                "seats": 1,
+                "seats": 5,
                 "seats_taken": Users.count_users_by_company_id(user.company_id),
                 "auto_recharge": company.auto_recharge
             }
