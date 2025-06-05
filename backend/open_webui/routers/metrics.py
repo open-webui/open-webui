@@ -43,6 +43,28 @@ async def get_total_prompts(domain: str = None, user=Depends(get_metrics_user)):
 
 
 ############################
+# GetDomains
+############################
+
+
+@router.get("/domains")
+async def get_domains(user=Depends(get_metrics_user)):
+    if not user.role in ["admin", "analyst", "global_analyst"]:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    # If user is analyst, only return their domain
+    if user.role == "analyst":
+        return {"domains": [user.domain] if user.domain else []}
+
+    # For admins and global_analysts, return all domains
+    domains = MessageMetrics.get_domains() or []
+    return {"domains": domains}
+
+
+############################
 # GetDailyUsers
 ############################
 
@@ -240,6 +262,35 @@ async def get_model_historical_prompts(
     historical_data = MessageMetrics.get_historical_messages_data(days, domain, model)
 
     return {"historical_prompts": historical_data}
+
+
+############################
+# GetHistoricalDailyUsers
+############################
+
+
+@router.get("/historical/users/daily")
+async def get_historical_daily_users(
+    days: int = 7,
+    model: str = None,
+    domain: str = None,
+    user=Depends(get_metrics_user),
+):
+    if user.role in ["admin", "global_analyst"]:
+        domain_to_use = domain if domain != "" else None
+    elif user.role == "analyst":
+        domain_to_use = user.domain
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    historical_daily_data = MessageMetrics.get_historical_daily_users(
+        days, domain_to_use, model
+    )
+
+    return {"historical_daily_users": historical_daily_data}
 
 
 ############################

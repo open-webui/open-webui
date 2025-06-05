@@ -431,27 +431,3 @@ async def get_users_enrollment_historical(
 
     historical_data = Users.get_historical_users_data(days, domain_to_use)
     return {"historical_users": historical_data}
-
-
-############################
-# GetHistoricalDailyUsers
-############################
-
-
-@router.get("/daily/historical")
-async def get_historical_daily_users(
-    days: int = 7, domain: str = None, user=Depends(get_verified_user)
-):
-    if user.role in ["admin", "global_analyst"]:
-        domain_to_use = domain if domain != "" else None
-    elif user.role == "analyst":
-        domain_to_use = user.domain
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
-
-    historical_daily_data = Users.get_historical_daily_users_data(days, domain_to_use)
-
-    return {"historical_daily_users": historical_daily_data}
