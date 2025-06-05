@@ -1,14 +1,20 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
-export const getStatsData = async (token: string) => {
+export const getStatsData = async (token?: string) => {
 	let error = null;
+
+	const headers: Record<string, string> = {
+		'Content-Type': 'application/json'
+	};
+
+	// Only add authorization header if token is provided
+	if (token) {
+		headers.Authorization = `Bearer ${token}`;
+	}
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/stats/`, {
 		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
+		headers,
 		credentials: 'include'
 	})
 		.then(async (res) => {

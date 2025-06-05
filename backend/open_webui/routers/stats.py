@@ -9,8 +9,6 @@ from open_webui.models.messages import MessageTable
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
-from open_webui.utils.auth import get_admin_user
-from open_webui.socket.main import get_active_status_by_user_id
 from open_webui.internal.db import get_db
 from sqlalchemy import func, text
 
@@ -37,8 +35,8 @@ class StatsResponse(BaseModel):
     evolution_stats: EvolutionStats
 
 @router.get("/", response_model=StatsResponse)
-async def get_stats(user=Depends(get_admin_user)):
-    """Get comprehensive statistics for the platform"""
+async def get_stats():
+    """Get comprehensive statistics for the platform - publicly accessible"""
     
     # Global indicators
     total_users = Users.get_num_users()

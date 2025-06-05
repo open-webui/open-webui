@@ -277,7 +277,7 @@
 	"Default": "Padrão",
 	"Default (Open AI)": "Padrão (Open AI)",
 	"Default (SentenceTransformers)": "Padrão (SentenceTransformers)",
-	"Default mode works with a wider range of models by calling tools once before execution. Native mode leverages the model’s built-in tool-calling capabilities, but requires the model to inherently support this feature.": "",
+	"Default mode works with a wider range of models by calling tools once before execution. Native mode leverages the model's built-in tool-calling capabilities, but requires the model to inherently support this feature.": "",
 	"Default Model": "Modelo Padrão",
 	"Default model updated": "Modelo padrão atualizado",
 	"Default Models": "",
@@ -1086,7 +1086,7 @@
 	"Thinking...": "Pensando...",
 	"This action cannot be undone. Do you wish to continue?": "Esta ação não pode ser desfeita. Você deseja continuar?",
 	"This channel was created on {{createdAt}}. This is the very beginning of the {{channelName}} channel.": "",
-	"This chat won’t appear in history and your messages will not be saved.": "",
+	"This chat won't appear in history and your messages will not be saved.": "",
 	"This ensures that your valuable conversations are securely saved to your backend database. Thank you!": "Isso garante que suas conversas valiosas sejam salvas com segurança no banco de dados do backend. Obrigado!",
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "Esta é uma funcionalidade experimental, pode não funcionar como esperado e está sujeita a alterações a qualquer momento.",
 	"This option controls how many tokens are preserved when refreshing the context. For example, if set to 2, the last 2 tokens of the conversation context will be retained. Preserving context can help maintain the continuity of a conversation, but it may reduce the ability to respond to new topics.": "",
@@ -1231,7 +1231,7 @@
 	"WebUI will make requests to \"{{url}}/chat/completions\"": "A WebUI fará requisições para \"{{url}}/chat/completions\".",
 	"What are you trying to achieve?": "O que está tentando alcançar?",
 	"What are you working on?": "No que está trabalhando?",
-	"What’s New in": "O que há de novo em",
+	"What's New in": "O que há de novo em",
 	"When enabled, the model will respond to each chat message in real-time, generating a response as soon as the user sends a message. This mode is useful for live chat applications, but may impact performance on slower hardware.": "Quando habilitado, o modelo responderá a cada mensagem de chat em tempo real, gerando uma resposta assim que o usuário enviar uma mensagem. Este modo é útil para aplicativos de chat ao vivo, mas pode impactar o desempenho em hardware mais lento.",
 	"wherever you are": "onde quer que você esteja.",
 	"Whisper (Local)": "Whisper (Local)",
@@ -1262,5 +1262,8 @@
 	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "Toda a sua contribuição irá diretamente para o desenvolvedor do plugin; o Open WebUI não retém nenhuma porcentagem. No entanto, a plataforma de financiamento escolhida pode ter suas próprias taxas.",
 	"Youtube": "Youtube",
 	"Youtube Language": "",
-	"Youtube Proxy URL": ""
+	"Youtube Proxy URL": "",
+	"stats.back_to_assistant": "Voltar ao Assistente",
+	"stats.title": "Estatísticas de uso do Albert",
+	"stats.subtitle": "Painel público de indicadores de uso do Assistente IA"
 }

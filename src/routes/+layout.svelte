@@ -624,7 +624,8 @@
 					if (
 						(trimedPathname !== '/auth') &&
 						(trimedPathname !== '/logadmin') &&
-						(trimedPathname !== '/version')
+						(trimedPathname !== '/version') &&
+						(trimedPathname !== '/stats')
 					) {
 						await goto('/auth');
 					}

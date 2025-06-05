@@ -277,7 +277,7 @@
 	"Default": "",
 	"Default (Open AI)": "",
 	"Default (SentenceTransformers)": "",
-	"Default mode works with a wider range of models by calling tools once before execution. Native mode leverages the model’s built-in tool-calling capabilities, but requires the model to inherently support this feature.": "",
+	"Default mode works with a wider range of models by calling tools once before execution. Native mode leverages the model's built-in tool-calling capabilities, but requires the model to inherently support this feature.": "",
 	"Default Model": "",
 	"Default model updated": "",
 	"Default Models": "",
@@ -1086,7 +1086,7 @@
 	"Thinking...": "",
 	"This action cannot be undone. Do you wish to continue?": "",
 	"This channel was created on {{createdAt}}. This is the very beginning of the {{channelName}} channel.": "",
-	"This chat won’t appear in history and your messages will not be saved.": "",
+	"This chat won't appear in history and your messages will not be saved.": "",
 	"This ensures that your valuable conversations are securely saved to your backend database. Thank you!": "",
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "",
 	"This option controls how many tokens are preserved when refreshing the context. For example, if set to 2, the last 2 tokens of the conversation context will be retained. Preserving context can help maintain the continuity of a conversation, but it may reduce the ability to respond to new topics.": "",
@@ -1232,7 +1232,7 @@
 	"WebUI will make requests to \"{{url}}/chat/completions\"": "",
 	"What are you trying to achieve?": "",
 	"What are you working on?": "",
-	"What’s New in": "",
+	"What's New in": "",
 	"When enabled, the model will respond to each chat message in real-time, generating a response as soon as the user sends a message. This mode is useful for live chat applications, but may impact performance on slower hardware.": "",
 	"wherever you are": "",
 	"Whisper (Local)": "",
@@ -1280,5 +1280,8 @@
 	"Assistant IA can use the internet to answer your questions.": "",
 	"ai_for_public_services": "AI for\npublic services",
 	"What is ProConnect ?": "",
-	"What is ProConnect ? - New window": ""
+	"What is ProConnect ? - New window": "",
+	"stats.back_to_assistant": "Back to Assistant",
+	"stats.title": "Albert Usage Statistics",
+	"stats.subtitle": "Public dashboard of AI Assistant usage indicators"
 }

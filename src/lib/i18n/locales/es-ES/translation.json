@@ -1,8 +1,7 @@
 {
 	"-1 for no limit, or a positive integer for a specific limit": "-1 para ilimitado, o un número entero positivo para un límite específico.",
 	"'s', 'm', 'h', 'd', 'w' or '-1' for no expiration.": "'s', 'm', 'h', 'd', 'w' o '-1' para evitar expiración.",
-	"(e.g. `sh webui.sh --api --api-auth username_password`)": "(p.ej. `sh webui.sh --api --api-auth username_password`)",
-	"(e.g. `sh webui.sh --api`)": "(p.ej. `sh webui.sh --api`)",
+	"(e.g. `sh webui.sh --api --api-auth username_password`)": "(p.ej. `sh webui.sh --api --api-auth username_password)")","(e.g. `sh webui.sh --api`)": "(p.ej. `sh webui.sh --api`)",
 	"(latest)": "(último)",
 	"(Ollama)": "(Ollama)",
 	"{{ models }}": "{{ models }}",
@@ -277,7 +276,7 @@
 	"Default": "Predeterminado",
 	"Default (Open AI)": "Predeterminado (Open AI)",
 	"Default (SentenceTransformers)": "Predeterminado (SentenceTransformers)",
-	"Default mode works with a wider range of models by calling tools once before execution. Native mode leverages the model’s built-in tool-calling capabilities, but requires the model to inherently support this feature.": "El modo Predeterminado funciona con una amplia gama de modelos llamando a las herramientas antes de la ejecución. El modo Nativo aprovecha la capacidad de llamada a herramientas integrada en el modelo, pero requiere que el modelo soporte esta función de manera inherente.",
+	"Default mode works with a wider range of models by calling tools once before execution. Native mode leverages the model's built-in tool-calling capabilities, but requires the model to inherently support this feature.": "El modo Predeterminado funciona con una amplia gama de modelos llamando a las herramientas antes de la ejecución. El modo Nativo aprovecha la capacidad de llamada a herramientas integrada en el modelo, pero requiere que el modelo soporte esta función de manera inherente.",
 	"Default Model": "Modelo Predeterminado",
 	"Default model updated": "El modelo Predeterminado ha sido actualizado",
 	"Default Models": "Modelos Predeterminados",
@@ -1086,7 +1085,7 @@
 	"Thinking...": "Pensando...",
 	"This action cannot be undone. Do you wish to continue?": "Esta acción no se puede deshacer. ¿Desea continuar?",
 	"This channel was created on {{createdAt}}. This is the very beginning of the {{channelName}} channel.": "Este canal fue creado el {{createdAt}}. Este es el comienzo del canal {{channelName}}.",
-	"This chat won’t appear in history and your messages will not be saved.": "Este chat no aparecerá en el historial y los mensajes no se guardarán.",
+	"This chat won't appear in history and your messages will not be saved.": "Este chat no aparecerá en el historial y los mensajes no se guardarán.",
 	"This ensures that your valuable conversations are securely saved to your backend database. Thank you!": "Esto garantiza que sus valiosas conversaciones se guardan de forma segura en tu base de datos del servidor trasero (backend). ¡Gracias!",
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "Esta es una característica experimental, por lo que puede no funcionar como se esperaba y está sujeta a cambios en cualquier momento.",
 	"This option controls how many tokens are preserved when refreshing the context. For example, if set to 2, the last 2 tokens of the conversation context will be retained. Preserving context can help maintain the continuity of a conversation, but it may reduce the ability to respond to new topics.": "Esta opción controla cuántos tokens se conservan cuando se actualiza el contexto. Por ejemplo, si se establece en 2, se conservarán los primeros 2 tokens del contexto de la conversación. Conservar el contexto puede ayudar a mantener la continuidad de una conversación, pero puede reducir la habilidad para responder a nuevos temas.",
@@ -1231,7 +1230,7 @@
 	"WebUI will make requests to \"{{url}}/chat/completions\"": "WebUI hará solicitudes a \"{{url}}/chat/completions\"",
 	"What are you trying to achieve?": "¿Qué estás tratando de conseguir?",
 	"What are you working on?": "¿En qué estás trabajando?",
-	"What’s New in": "Que hay de Nuevo en",
+	"What's New in": "Que hay de Nuevo en",
 	"When enabled, the model will respond to each chat message in real-time, generating a response as soon as the user sends a message. This mode is useful for live chat applications, but may impact performance on slower hardware.": "Cuando está habilitado, el modelo responderá a cada mensaje de chat en tiempo real, generando una respuesta tan pronto como se envíe un mensaje. Este modo es útil para aplicaciones de chat en vivo, pero puede afectar al rendimiento en equipos más lentos.",
 	"wherever you are": "dondequiera que estés",
 	"Whisper (Local)": "Whisper (Local)",
@@ -1279,5 +1278,8 @@
 	"Assistant IA can use the internet to answer your questions.": "Assistant IA puede usar Internet para responder a tus preguntas.",
 	"ai_for_public_services": "IA\npara\nservicios públicos",
 	"What is ProConnect ?": "¿Qué es ProConnect?",
-	"What is ProConnect ? - New window": "¿Qué es ProConnect? - Nueva ventana"
+	"What is ProConnect ? - New window": "¿Qué es ProConnect? - Nueva ventana",
+	"stats.back_to_assistant": "Volver al Asistente",
+	"stats.title": "Estadísticas de uso del Asistente IA",
+	"stats.subtitle": "Panel público de indicadores de uso del Asistente IA"
 }
