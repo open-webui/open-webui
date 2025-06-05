@@ -481,23 +481,23 @@
 							</div>
 						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'docling'}
 							<div class="flex w-full mt-1">							
-									<input
-										class="flex-1 w-full text-sm bg-transparent outline-hidden"
-										placeholder={$i18n.t('Enter Docling Server URL')}
-										bind:value={RAGConfig.DOCLING_SERVER_URL}
-									/>						
+								<input
+									class="flex-1 w-full text-sm bg-transparent outline-hidden"
+									placeholder={$i18n.t('Enter Docling Server URL')}
+									bind:value={RAGConfig.DOCLING_SERVER_URL}
+								/>						
 							</div>
 							<div class="flex w-full mt-2">
-									<input
-										class="flex-1 w-full text-sm bg-transparent outline-hidden"
-										placeholder={$i18n.t('Enter Docling OCR Engine')}
-										bind:value={RAGConfig.DOCLING_OCR_ENGINE}
-									/>
-									<input
-										class="flex-1 w-full text-sm bg-transparent outline-hidden"
-										placeholder={$i18n.t('Enter Docling OCR Language(s)')}
-										bind:value={RAGConfig.DOCLING_OCR_LANG}
-									/>
+								<input
+									class="flex-1 w-full text-sm bg-transparent outline-hidden"
+									placeholder={$i18n.t('Enter Docling OCR Engine')}
+									bind:value={RAGConfig.DOCLING_OCR_ENGINE}
+								/>
+								<input
+									class="flex-1 w-full text-sm bg-transparent outline-hidden"
+									placeholder={$i18n.t('Enter Docling OCR Language(s)')}
+									bind:value={RAGConfig.DOCLING_OCR_LANG}
+								/>
 							</div>
 
 							<div class="flex w-full mt-2">
