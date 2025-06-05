@@ -184,17 +184,24 @@ Open WebUI 功能說明：使用者、群組與工具管理
             *   在 `group_sync_service.py` 內部，使用 Python 資料庫連接庫 (例如 `pyodbc`) 直接連接到 SQL Server 並執行此查詢，傳遞使用者 Email 作為參數。
             *   處理預期的查詢結果：一個群組名稱的列表 (`target_group_names_from_sql`)。
         *   **處理 SQL 查詢結果並同步群組成員資格**：
-            *   **A. 獲取使用者在 Open WebUI 中的現有群組ID集合**：
-                *   實例化 `GroupsTable(db)`。
+            *   **A. 判斷 SQL 查詢結果並準備目標群組列表**：
+                *   初始化一個空集合 `final_target_ouw_group_ids_set`。
+                *   定義未分配群組的名稱，例如 `unassigned_group_name = "Unassigned"`。
+                *   如果 `target_group_names_from_sql` 為空（即 SQL 中未找到該使用者的特定群組指派）：
+                    *   記錄此情況，並準備將使用者加入 `"Unassigned"` 群組。
+                    *   呼叫 `groups_table.get_group_by_name(unassigned_group_name)` 查找 `"Unassigned"` 群組。
+                    *   如果群組不存在，則使用 `groups_table.insert_new_group(user_id=user.id, form_data=GroupForm(name=unassigned_group_name, description="由系統指派，SQL中無特定群組的使用者"))` 建立新群組。*(群組建立者 `user_id` 可考慮使用一個系統帳號 ID，或首次建立該群組的使用者 ID。此處暫定為 `user.id`)*。記錄建立日誌及處理建立失敗的情況。
+                    *   將獲取到或新建的 `"Unassigned"` 群組 ID 加入 `final_target_ouw_group_ids_set`。
+                *   如果 `target_group_names_from_sql` 不為空：
+                    *   對於 `target_group_names_from_sql` 中的每一個 `group_name_from_sql`：
+                        *   調用 `groups_table.get_group_by_name(group_name_from_sql)` 查找群組。
+                        *   如果群組不存在，則使用 `groups_table.insert_new_group(user_id=user.id, form_data=GroupForm(name=group_name_from_sql, description="由系統根據 SQL Server 資料自動建立/同步"))` 建立新群組。記錄建立日誌及處理建立失敗的情況。
+                        *   將獲取到或新建的群組 ID 加入 `final_target_ouw_group_ids_set`。
+            *   **B. 獲取使用者在 Open WebUI 中的現有群組ID集合**：
+                *   實例化 `GroupsTable(db)` (如果尚未實例化)。
                 *   調用 `groups_table.get_groups_by_user_id(user.id)`。
                 *   從結果中提取群組 ID，形成一個集合 `current_ouw_group_ids_set`。
-            *   **B. 處理從 SQL 獲取的目標群組名稱列表，並獲取其在 Open WebUI 中的群組ID集合**：
-                *   初始化一個空集合 `final_target_ouw_group_ids_set`。
-                *   對於 `target_group_names_from_sql` 中的每一個 `group_name_from_sql`：
-                    *   調用 `groups_table.get_group_by_name(group_name_from_sql)` 查找群組。
-                    *   如果群組不存在，則使用 `groups_table.insert_new_group(user_id=user.id, form_data=GroupForm(name=group_name_from_sql, description="由系統根據 SQL Server 資料自動建立/同步"))` 建立新群組。*(群組建立者 `user_id` 可考慮使用一個系統帳號 ID，或首次建立該群組的使用者 ID。此處暫定為 `user.id`)*。記錄建立日誌及處理建立失敗的情況。
-                    *   將獲取到或新建的群組 ID 加入 `final_target_ouw_group_ids_set`。
-            *   **C. 比較並執行同步操作**：
+            *   **C. 比較並執行同步操作 (基於 `final_target_ouw_group_ids_set` 和 `current_ouw_group_ids_set`)**：
                 *   **要加入的群組** (`groups_to_add_ids = final_target_ouw_group_ids_set - current_ouw_group_ids_set`)：對於每個 ID，調用 `groups_table.add_user_to_group(user_id=user.id, group_id=group_id_to_add)`。記錄結果。
                 *   **要移除的群組** (`groups_to_remove_ids = current_ouw_group_ids_set - final_target_ouw_group_ids_set`)：對於每個 ID，調用 `groups_table.remove_user_from_group(user_id=user.id, group_id=group_id_to_remove)`。記錄結果。
     *   **錯誤處理與日誌**：函式內部應包含完整的 `try-except` 結構，詳細記錄操作和錯誤，確保任何同步失敗都不會影響核心登入/註冊流程（即不應向上拋出未處理的異常給呼叫它的 `auths.py` 中的函式）。

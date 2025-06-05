@@ -1,5 +1,93 @@
 # 群組同步功能開發日誌
 
+## 2025-06-02 14:23
+
+### 功能更新：加入 "Unassigned" 群組自動指派
+
+#### 1. 功能概述
+```
+版本：v1.0.4
+類型：功能增強
+日期：2025-06-02
+重要性：中
+```
+
+**更新內容**：
+- 新增自動將「SQL無群組指派」的使用者加入 "Unassigned" 群組的功能
+- 增強群組同步服務的錯誤處理和日誌記錄
+- 改進使用者群組同步的追蹤能力
+
+**實作說明**：
+1. 修改 `services/group_sync_service.py` 中的 `synchronize_user_groups_from_sql` 函式：
+   ```python
+   # 新增 "Unassigned" 群組處理邏輯
+   if not target_group_names_from_sql:
+       # SQL query returned no specific groups, assign to "Unassigned"
+       log.info(f"No specific groups found for user {user.email} in SQL. " +
+               f"Attempting to assign to '{unassigned_group_name}'.")
+       
+       # 檢查或建立 "Unassigned" 群組
+       unassigned_group = groups_table.get_group_by_name(unassigned_group_name)
+       if not unassigned_group:
+           try:
+               form_data_unassigned = GroupForm(
+                   name=unassigned_group_name,
+                   description="由系統指派，SQL中無特定群組的使用者"
+               )
+               unassigned_group = groups_table.insert_new_group(
+                   user_id=user.id, 
+                   form_data=form_data_unassigned
+               )
+           except Exception as e:
+               log.error(f"Error creating '{unassigned_group_name}' group: {e}")
+   ```
+
+2. 增強錯誤處理與日誌：
+   - 改進了所有主要操作的錯誤處理機制
+   - 新增更詳細的日誌記錄，包含使用者 email 和操作結果
+   - 確保同步過程中的錯誤不會影響主要的登入流程
+
+3. 流程優化：
+   - 重組了同步邏輯，使其更清晰且易於維護
+   - 改進了 SQL 查詢結果的處理方式
+   - 加強了群組操作的追蹤能力
+
+**使用情境**：
+1. 新使用者首次登入
+   - 系統查詢 SQL Server 中的群組指派
+   - 若無指派群組，自動建立並加入 "Unassigned" 群組
+   
+2. 現有使用者群組更新
+   - 當 SQL Server 中的群組指派被移除
+   - 系統自動將使用者移至 "Unassigned" 群組
+
+3. 系統維護
+   - 管理者可透過 "Unassigned" 群組快速識別需要群組指派的使用者
+   - 便於追蹤和管理群組分配狀態
+
+**注意事項**：
+1. 建議管理者定期檢查 "Unassigned" 群組成員
+2. 監控系統日誌中的群組同步相關訊息
+3. 確保資料庫連線設定正確
+
+**後續規劃**：
+1. 近期優化
+   - [ ] 考慮新增 "Unassigned" 群組的自動通知機制
+   - [ ] 開發管理介面以便查看和管理 "Unassigned" 群組成員
+   - [ ] 加強群組同步狀態的監控能力
+
+2. 中期規劃
+   - [ ] 評估是否需要多層次的 "Unassigned" 群組機制
+   - [ ] 研究自動化的群組指派建議系統
+   - [ ] 改進群組同步的效能和擴展性
+
+3. 長期展望
+   - [ ] 發展更完善的群組管理策略
+   - [ ] 整合進階的群組分析工具
+   - [ ] 實作更彈性的群組政策配置系統
+
+# 2025-05-26 13:48
+
 ## 2025-05-26 13:48
 
 ### 版本發布 v1.0.3
