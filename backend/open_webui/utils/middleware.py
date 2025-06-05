@@ -1808,19 +1808,19 @@ async def process_chat_response(
 
                                     if delta_tool_calls:
                                         for delta_tool_call in delta_tool_calls:
-                                            tool_call_index = delta_tool_call.get(
-                                                "index"
+                                            tool_call_id = delta_tool_call.get(
+                                                "id"
                                             )
 
-                                            if tool_call_index is not None:
+                                            if tool_call_id is not None:
                                                 # Check if the tool call already exists
                                                 current_response_tool_call = None
                                                 for (
                                                     response_tool_call
                                                 ) in response_tool_calls:
                                                     if (
-                                                        response_tool_call.get("index")
-                                                        == tool_call_index
+                                                        response_tool_call.get("id")
+                                                        == tool_call_id
                                                     ):
                                                         current_response_tool_call = (
                                                             response_tool_call
