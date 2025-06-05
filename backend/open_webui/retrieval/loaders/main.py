@@ -28,6 +28,7 @@ from open_webui.retrieval.loaders.datalab_marker import DatalabMarkerLoader
 
 
 from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
+import json
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -153,6 +154,41 @@ class DoclingLoader:
                     params["do_picture_description"] = self.params.get(
                         "do_picture_description"
                     )
+
+                    picture_description_mode = self.params.get("picture_description_mode", "").lower()
+
+                    if picture_description_mode == "local":
+
+                        params["picture_description_local"] = json.dumps({
+                            "repo_id": self.params.get(
+                                "picture_description_local_repo_id", "HuggingFaceTB/SmolVLM-256M-Instruct"
+                            ),
+                            "generation_config": {
+                                "max_new_tokens": self.params.get(
+                                    "picture_description_local_max_tokens", 200
+                                )
+                            },
+                            "prompt": self.params.get(
+                                "picture_description_local_prompt", "Describe this image in a few sentences."
+                            )
+                        })
+
+                    elif picture_description_mode == "api":
+                            
+                        params["picture_description_api"] = json.dumps({
+                            "url": self.params.get(
+                                "picture_description_api_url", ""
+                            ),
+                            "params": {
+                                "model": self.params.get(
+                                    "picture_description_api_model", ""
+                                )
+                            },
+                            "timeout": 30,
+                            "prompt": self.params.get(
+                                "picture_description_api_prompt", "Describe this image in a few sentences."
+                            )
+                        })
 
                 if self.params.get("ocr_engine") and self.params.get("ocr_lang"):
                     params["ocr_engine"] = self.params.get("ocr_engine")
@@ -281,17 +317,25 @@ class Loader:
             if self._is_text_file(file_ext, file_content_type):
                 loader = TextLoader(file_path, autodetect_encoding=True)
             else:
+                # Build params for DoclingLoader
+                params = {
+                    "ocr_engine": self.kwargs.get("DOCLING_OCR_ENGINE"),
+                    "ocr_lang": self.kwargs.get("DOCLING_OCR_LANG"),
+                    "do_picture_description": self.kwargs.get("DOCLING_DO_PICTURE_DESCRIPTION"),
+                    "picture_description_mode": self.kwargs.get("DOCLING_PICTURE_DESCRIPTION_MODE"),
+                    "picture_description_local_repo_id": self.kwargs.get("DOCLING_PICTURE_DESCRIPTION_LOCAL_REPO_ID"),
+                    "picture_description_local_max_tokens": self.kwargs.get("DOCLING_PICTURE_DESCRIPTION_LOCAL_MAX_TOKENS"),
+                    "picture_description_local_prompt": self.kwargs.get("DOCLING_PICTURE_DESCRIPTION_LOCAL_PROMPT"),
+                    "picture_description_api_url": self.kwargs.get("DOCLING_PICTURE_DESCRIPTION_API_URL"),
+                    "picture_description_api_model": self.kwargs.get("DOCLING_PICTURE_DESCRIPTION_API_MODEL"),
+                    "picture_description_api_prompt": self.kwargs.get("DOCLING_PICTURE_DESCRIPTION_API_PROMPT")
+                }
+
                 loader = DoclingLoader(
                     url=self.kwargs.get("DOCLING_SERVER_URL"),
                     file_path=file_path,
                     mime_type=file_content_type,
-                    params={
-                        "ocr_engine": self.kwargs.get("DOCLING_OCR_ENGINE"),
-                        "ocr_lang": self.kwargs.get("DOCLING_OCR_LANG"),
-                        "do_picture_description": self.kwargs.get(
-                            "DOCLING_DO_PICTURE_DESCRIPTION"
-                        ),
-                    },
+                    params=params
                 )
         elif (
             self.engine == "document_intelligence"

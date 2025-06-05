@@ -1972,6 +1972,54 @@ DOCLING_DO_PICTURE_DESCRIPTION = PersistentConfig(
     os.getenv("DOCLING_DO_PICTURE_DESCRIPTION", "False").lower() == "true",
 )
 
+DOCLING_PICTURE_DESCRIPTION_MODE = PersistentConfig(
+    "DOCLING_PICTURE_DESCRIPTION_MODE",
+    "rag.docling_picture_description_mode",
+    os.getenv("DOCLING_PICTURE_DESCRIPTION_MODE", ""),
+)
+
+DOCLING_PICTURE_DESCRIPTION_LOCAL_REPO_ID = PersistentConfig(
+    "DOCLING_PICTURE_DESCRIPTION_LOCAL_REPO_ID",
+    "rag.docling_picture_description_local_repo_id",
+    os.getenv("DOCLING_PICTURE_DESCRIPTION_LOCAL_REPO_ID", "HuggingFaceTB/SmolVLM-256M-Instruct"),
+)
+
+DOCLING_PICTURE_DESCRIPTION_LOCAL_MAX_TOKENS = PersistentConfig(
+    "DOCLING_PICTURE_DESCRIPTION_LOCAL_MAX_TOKENS",
+    "rag.docling_picture_description_local_max_tokens",
+    int(os.getenv("DOCLING_PICTURE_DESCRIPTION_LOCAL_MAX_TOKENS", 200)),
+)
+
+DOCLING_PICTURE_DESCRIPTION_LOCAL_PROMPT = PersistentConfig(
+    "DOCLING_PICTURE_DESCRIPTION_LOCAL_PROMPT",
+    "rag.docling_picture_description_local_prompt",
+    os.getenv(
+        "DOCLING_PICTURE_DESCRIPTION_LOCAL_PROMPT",
+        "Describe this image in a few sentences.",
+    )
+)
+
+DOCLING_PICTURE_DESCRIPTION_API_URL = PersistentConfig(
+    "DOCLING_PICTURE_DESCRIPTION_API_URL",
+    "rag.docling_picture_description_api_url",
+    os.getenv("DOCLING_PICTURE_DESCRIPTION_API_URL", ""),
+)
+
+DOCLING_PICTURE_DESCRIPTION_API_MODEL = PersistentConfig(   
+    "DOCLING_PICTURE_DESCRIPTION_API_MODEL",
+    "rag.docling_picture_description_api_model",
+    os.getenv("DOCLING_PICTURE_DESCRIPTION_API_MODEL", ""),
+)
+
+DOCLING_PICTURE_DESCRIPTION_API_PROMPT = PersistentConfig(
+    "DOCLING_PICTURE_DESCRIPTION_API_PROMPT",
+    "rag.docling_picture_description_api_prompt",
+    os.getenv(
+        "DOCLING_PICTURE_DESCRIPTION_API_PROMPT",
+        "Describe this image in a few sentences.",
+    )
+)
+
 DOCUMENT_INTELLIGENCE_ENDPOINT = PersistentConfig(
     "DOCUMENT_INTELLIGENCE_ENDPOINT",
     "rag.document_intelligence_endpoint",
