@@ -3,6 +3,7 @@ import { logInfo, logError } from './logger';
 import { getAppInstallDir, checkAndHandleAutoLaunchPrevention, isInstallationComplete } from './envUtils';
 import { handleSquirrelEvent } from './squirrelEvents';
 import { rauxProcessManager } from './rauxProcessManager';
+import { lemonadeProcessManager } from './lemonadeProcessManager';
 import { setTimeout } from 'timers';
 import { python } from './pythonExec';
 import { raux } from './rauxSetup';
@@ -17,6 +18,51 @@ declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
 declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
 
 const RAUX_URL = 'http://localhost:8080';
+
+// Check if we're in hybrid mode (with Lemonade integration)
+const isHybridMode = (): boolean => {
+  // Check if GAIA_MODE environment variable is set to HYBRID
+  const gaiaMode = process.env.GAIA_MODE;
+  if (gaiaMode === 'HYBRID') {
+    return true;
+  }
+  
+  // If no explicit mode set, check if Lemonade is available
+  // This logic matches the one in rauxSetup.ts
+  return false; // We'll do runtime detection in startServices
+};
+
+// Start both RAUX and Lemonade services if needed
+const startServices = async (): Promise<void> => {
+  try {
+    // Check if we should start Lemonade (hybrid mode)
+    const shouldStartLemonade = isHybridMode() || await lemonadeProcessManager.isLemonadeAvailable();
+    
+    if (shouldStartLemonade) {
+      logInfo('Hybrid mode detected - starting Lemonade server...');
+      ipcManager.sendToAll(IPCChannels.INSTALLATION_STATUS, { type: 'info', message: 'Starting Lemonade Server...' });
+      
+      const lemonadeStarted = await lemonadeProcessManager.startLemonade();
+      if (lemonadeStarted) {
+        logInfo('Lemonade server started successfully');
+        ipcManager.sendToAll(IPCChannels.INSTALLATION_STATUS, { type: 'success', message: 'Lemonade Server ready.' });
+      } else {
+        logInfo('Failed to start Lemonade server, continuing with RAUX only');
+        ipcManager.sendToAll(IPCChannels.INSTALLATION_STATUS, { type: 'warning', message: 'Lemonade unavailable.' });
+      }
+    } else {
+      logInfo('Generic mode - skipping Lemonade startup');
+    }
+
+    // Start RAUX backend
+    ipcManager.sendToAll(IPCChannels.INSTALLATION_STATUS, { type: 'info', message: 'Starting GAIA Beta services...' });
+    await rauxProcessManager.startRaux();
+    
+  } catch (err) {
+    logError(`Error starting services: ${err && err.toString ? err.toString() : String(err)}`);
+    throw err;
+  }
+};
 
 app.setAppUserModelId("com.squirrel.GaiaBeta.GaiaBeta");
 
@@ -85,9 +131,8 @@ const runStartupFlow = async (): Promise<void> => {
     }
     
     ipcManager.sendToAll(IPCChannels.INSTALLATION_STATUS, { type: 'success', message: 'Environment ready.' });
-    ipcManager.sendToAll(IPCChannels.INSTALLATION_STATUS, { type: 'info', message: 'Starting GAIA Beta services...' });
 
-    rauxProcessManager.startRaux();
+    await startServices();
 
     ipcManager.sendToAll(IPCChannels.INSTALLATION_STATUS, { type: 'info', message: 'Connecting to GAIA Beta...' });
     pollBackend();
@@ -113,7 +158,7 @@ const runInstallationFlow = async (): Promise<void> => {
     ipcManager.sendToAll(IPCChannels.INSTALLATION_STATUS, { type: 'success', message: 'Installation completed successfully!' });
     ipcManager.sendToAll(IPCChannels.INSTALLATION_STATUS, { type: 'info', message: 'Starting GAIA Beta for the first time...' });
 
-    rauxProcessManager.startRaux();
+    await startServices();
 
     ipcManager.sendToAll(IPCChannels.INSTALLATION_STATUS, { type: 'info', message: 'Initializing GAIA Beta...' });
     pollBackend();
@@ -148,10 +193,35 @@ app.on('ready', createWindow);
 // Quit when all windows are closed, except on macOS. There, it's common
 // for applications and their menu bar to stay active until the user quits
 // explicitly with Cmd + Q.
-app.on('window-all-closed', () => {
+app.on('window-all-closed', async () => {
   if (process.platform !== 'darwin') {
+    // Stop services before quitting when window is closed
+    logInfo('All windows closed - window-all-closed event');
+    await stopServices();
     app.quit();
   }
+});
+
+// Track if we've already stopped services to avoid double cleanup
+let servicesStopped = false;
+
+const stopServices = async () => {
+  if (servicesStopped) return;
+  
+  logInfo('Stopping services...');
+  servicesStopped = true;
+  
+  // Stop both services
+  rauxProcessManager.stopRaux();
+  await lemonadeProcessManager.stopLemonade();
+  
+  logInfo('Services stopped');
+};
+
+// Handle app quit to gracefully shutdown services
+app.on('before-quit', async () => {
+  logInfo('Application shutting down - before-quit event');
+  await stopServices();
 });
 
 app.on('activate', () => {

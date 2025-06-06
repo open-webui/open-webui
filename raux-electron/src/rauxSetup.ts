@@ -7,6 +7,7 @@ import { getAppInstallDir } from './envUtils';
 import { logInfo, logError } from './logger';
 import { IPCManager } from './ipc/ipcManager';
 import { IPCChannels } from './ipc/ipcChannels';
+import { lemonadeDetector } from './lemonadeDetector';
 
 class RauxSetup {
   private static instance: RauxSetup;
@@ -262,11 +263,22 @@ class RauxSetup {
         }
       } else {
         this.ipcManager.sendToAll(IPCChannels.INSTALLATION_STATUS, { type: 'info', message: 'Setting GAIA mode ...', step: 'raux-env' });
-        const pathEnv = process.env.PATH || '';
-        const userProfile = process.env.USERPROFILE || '';
-        const hasLemonade = pathEnv.includes('lemonade_server') || userProfile.includes('lemonade_server');
-        envFileName = hasLemonade ? RauxSetup.RAUX_HYBRID_ENV : RauxSetup.RAUX_GENERIC_ENV;
-        this.ipcManager.sendToAll(IPCChannels.INSTALLATION_STATUS, { type: 'info', message: `GAIA mode set to ${envFileName}.`, step: 'raux-env' });
+        const lemonadeInfo = await lemonadeDetector.checkLemonade();
+        envFileName = lemonadeInfo.isAvailable ? RauxSetup.RAUX_HYBRID_ENV : RauxSetup.RAUX_GENERIC_ENV;
+        
+        if (lemonadeInfo.isAvailable && lemonadeInfo.version) {
+          this.ipcManager.sendToAll(IPCChannels.INSTALLATION_STATUS, { 
+            type: 'info', 
+            message: `Lemonade detected (v${lemonadeInfo.version.full}). Using hybrid mode.`, 
+            step: 'raux-env' 
+          });
+        } else {
+          this.ipcManager.sendToAll(IPCChannels.INSTALLATION_STATUS, { 
+            type: 'info', 
+            message: 'Lemonade not detected. Using generic mode.', 
+            step: 'raux-env' 
+          });
+        }
       }
 
       const srcEnv = join(extractDir, envFileName);

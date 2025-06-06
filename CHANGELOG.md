@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **📝 Release Automation**: Integrated GitHub Actions workflow for automated builds and releases
 - **🔄 Version Sync**: Synchronized versioning between web and desktop applications
 - **📋 Changelog Integration**: Automated changelog extraction for release notes
+- **🍋 Lemonade Control**: RAUX will now control Lemonade as a sub-process if its not already running
 
 
 ## [0.6.5+raux.0.1.0] - 2025-04-20

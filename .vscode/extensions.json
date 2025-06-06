@@ -1,5 +1,29 @@
 {
     "recommendations": [
-        "anthropic.claude-code"
-    ]
+        "ms-python.black-formatter",
+        "streetsidesoftware.code-spell-checker",
+        "idleberg.electron-builder",
+        "dbaeumer.vscode-eslint",
+        "tamasfe.even-better-toml",
+        "donjayamanne.githistory",
+        "github.vscode-github-actions",
+        "GitHub.copilot",
+        "GitHub.vscode-pull-request-github",
+        "ms-python.isort",
+        "bierner.markdown-mermaid",
+        "ms-playwright.playwright",
+        "esbenp.prettier-vscode",
+        "svelte.svelte-vscode",
+        "ardenivanov.svelte-intellisense",
+        "bradlc.vscode-tailwindcss",
+        "Gruntfuggly.todo-tree",
+        "redhat.vscode-yaml",
+        "mblode.pretty-formatter",
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-python.debugpy",
+        "ms-python.flake8",
+        "anthropic.claude-code",
+    ],
+    "unwantedRecommendations": []
 }
