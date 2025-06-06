@@ -446,15 +446,54 @@
 								</div>
 							</div>
 						{:else if webConfig.WEB_SEARCH_ENGINE === 'perplexity'}
-							<div>
-								<div class=" self-center text-xs font-medium mb-1">
-									{$i18n.t('Perplexity API Key')}
-								</div>
+							<div class="mb-2.5 flex w-full flex-col">
+								<div>
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('Perplexity API Key')}
+									</div>
 
-								<SensitiveInput
-									placeholder={$i18n.t('Enter Perplexity API Key')}
-									bind:value={webConfig.PERPLEXITY_API_KEY}
-								/>
+									<SensitiveInput
+										placeholder={$i18n.t('Enter Perplexity API Key')}
+										bind:value={webConfig.PERPLEXITY_API_KEY}
+									/>
+								</div>
+							</div>
+
+							<div class="mb-2.5 flex w-full flex-col">
+								<div>
+									<div class="self-center text-xs font-medium mb-1">
+										{$i18n.t('Perplexity Model')}
+									</div>
+									<input
+										list="perplexity-model-list"
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										bind:value={webConfig.PERPLEXITY_MODEL}
+									/>
+
+									<datalist id="perplexity-model-list">
+										<option value="sonar">Sonar</option>
+										<option value="sonar-pro">Sonar Pro</option>
+										<option value="sonar-reasoning">Sonar Reasoning</option>
+										<option value="sonar-reasoning-pro">Sonar Reasoning Pro</option>
+										<option value="sonar-deep-research">Sonar Deep Research</option>
+									</datalist>
+								</div>
+							</div>
+
+							<div class="mb-2.5 flex w-full flex-col">
+								<div>
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('Perplexity Search Context Usage')}
+									</div>
+									<select
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										bind:value={webConfig.PERPLEXITY_SEARCH_CONTEXT_USAGE}
+									>
+										<option value="low">Low</option>
+										<option value="medium">Medium</option>
+										<option value="high">High</option>
+									</select>
+								</div>
 							</div>
 						{:else if webConfig.WEB_SEARCH_ENGINE === 'sougou'}
 							<div class="mb-2.5 flex w-full flex-col">
@@ -609,6 +648,19 @@
 										)}
 							>
 								<Switch bind:state={webConfig.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL} />
+							</Tooltip>
+						</div>
+					</div>
+
+					<div class="  mb-2.5 flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">
+							<Tooltip content={$i18n.t('Bypass Web Loader')} placement="top-start">
+								{$i18n.t('Bypass Web Loader')}
+							</Tooltip>
+						</div>
+						<div class="flex items-center relative">
+							<Tooltip content={''}>
+								<Switch bind:state={webConfig.BYPASS_WEB_SEARCH_WEB_LOADER} />
 							</Tooltip>
 						</div>
 					</div>

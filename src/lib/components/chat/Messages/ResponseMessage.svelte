@@ -48,6 +48,9 @@
 	import ContentRenderer from './ContentRenderer.svelte';
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 	import FileItem from '$lib/components/common/FileItem.svelte';
+	import FollowUps from './ResponseMessage/FollowUps.svelte';
+	import { fade } from 'svelte/transition';
+	import { flyAndScale } from '$lib/utils/transitions';
 
 	interface MessageType {
 		id: string;
@@ -212,6 +215,8 @@
 
 		speaking = true;
 
+		const content = removeAllDetails(message.content);
+
 		if ($config.audio.tts.engine === '') {
 			let voices = [];
 			const getVoicesLoop = setInterval(() => {
@@ -228,7 +233,7 @@
 
 					console.log(voice);
 
-					const speak = new SpeechSynthesisUtterance(message.content);
+					const speak = new SpeechSynthesisUtterance(content);
 					speak.rate = $settings.audio?.tts?.playbackRate ?? 1;
 
 					console.log(speak);
@@ -251,7 +256,7 @@
 			loadingSpeech = true;
 
 			const messageContentParts: string[] = getMessageContentParts(
-				message.content,
+				content,
 				$config?.audio?.tts?.split_on ?? 'punctuation'
 			);
 
@@ -580,14 +585,6 @@
 			});
 		}
 	});
-
-	let screenReaderDiv: HTMLDivElement;
-
-	$: if (message.done) {
-		if (screenReaderDiv) {
-			screenReaderDiv.textContent = message.content;
-		}
-	}
 </script>
 
 <DeleteConfirmDialog
@@ -597,10 +594,6 @@
 		deleteMessageHandler();
 	}}
 />
-
-<div bind:this={screenReaderDiv} aria-live="polite" class="sr-only">
-	{message.done ? message.content : ''}
-</div>
 
 {#key message.id}
 	<div
@@ -616,7 +609,7 @@
 			/>
 		</div>
 
-		<div class="flex-auto w-0 pl-1">
+		<div class="flex-auto w-0 pl-1 relative -translate-y-0.5">
 			<Name>
 				<Tooltip content={model?.name ?? message.model} placement="top-start">
 					<span class="line-clamp-1 text-black dark:text-white">
@@ -1435,8 +1428,25 @@
 							}}
 						/>
 					{/if}
+
+					{#if isLastMessage && message.done && !readOnly && (message?.followUps ?? []).length > 0}
+						<div class="mt-2.5" in:fade={{ duration: 100 }}>
+							<FollowUps
+								followUps={message?.followUps}
+								onClick={(prompt) => {
+									submitMessage(message?.id, prompt);
+								}}
+							/>
+						</div>
+					{/if}
 				{/if}
 			</div>
+
+			{#if message?.done}
+				<div aria-live="polite" class="sr-only">
+					{message?.content ?? ''}
+				</div>
+			{/if}
 		</div>
 	</div>
 {/key}

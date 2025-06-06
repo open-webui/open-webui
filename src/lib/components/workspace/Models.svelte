@@ -33,8 +33,10 @@
 	import ChevronRight from '../icons/ChevronRight.svelte';
 	import Switch from '../common/Switch.svelte';
 	import Spinner from '../common/Spinner.svelte';
-	import { capitalizeFirstLetter } from '$lib/utils';
+	import { capitalizeFirstLetter, copyToClipboard } from '$lib/utils';
 	import XMark from '../icons/XMark.svelte';
+	import EyeSlash from '../icons/EyeSlash.svelte';
+	import Eye from '../icons/Eye.svelte';
 
 	let shiftKey = false;
 
@@ -112,33 +114,20 @@
 	};
 
 	const hideModelHandler = async (model) => {
-		let info = model.info;
-
-		if (!info) {
-			info = {
-				id: model.id,
-				name: model.name,
-				meta: {
-					suggestion_prompts: null
-				},
-				params: {}
-			};
-		}
-
-		info.meta = {
-			...info.meta,
-			hidden: !(info?.meta?.hidden ?? false)
+		model.meta = {
+			...model.meta,
+			hidden: !(model?.meta?.hidden ?? false)
 		};
 
-		console.log(info);
+		console.log(model);
 
-		const res = await updateModelById(localStorage.token, info.id, info);
+		const res = await updateModelById(localStorage.token, model.id, model);
 
 		if (res) {
 			toast.success(
 				$i18n.t(`Model {{name}} is now {{status}}`, {
-					name: info.id,
-					status: info.meta.hidden ? 'hidden' : 'visible'
+					name: model.id,
+					status: model.meta.hidden ? 'hidden' : 'visible'
 				})
 			);
 		}
@@ -150,6 +139,17 @@
 			)
 		);
 		models = await getWorkspaceModels(localStorage.token);
+	};
+
+	const copyLinkHandler = async (model) => {
+		const baseUrl = window.location.origin;
+		const res = await copyToClipboard(`${baseUrl}/?model=${encodeURIComponent(model.id)}`);
+
+		if (res) {
+			toast.success($i18n.t('Copied link to clipboard'));
+		} else {
+			toast.error($i18n.t('Failed to copy link'));
+		}
 	};
 
 	const downloadModels = async (models) => {
@@ -268,7 +268,7 @@
 				class=" flex flex-col cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition"
 				id="model-item-{model.id}"
 			>
-				<div class="flex gap-4 mt-0.5 mb-0.5">
+				<div class="flex gap-4 mt-1 mb-0.5">
 					<div class=" w-[44px]">
 						<div
 							class=" rounded-full object-cover {model.is_active
@@ -309,7 +309,7 @@
 					</a>
 				</div>
 
-				<div class="flex justify-between items-center -mb-0.5 px-0.5">
+				<div class="flex justify-between items-center -mb-0.5 px-0.5 mt-1.5">
 					<div class=" text-xs mt-0.5">
 						<Tooltip
 							content={model?.user?.email ?? $i18n.t('Deleted User')}
@@ -328,6 +328,22 @@
 
 					<div class="flex flex-row gap-0.5 items-center">
 						{#if shiftKey}
+							<Tooltip content={model?.meta?.hidden ? $i18n.t('Show') : $i18n.t('Hide')}>
+								<button
+									class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+									type="button"
+									on:click={() => {
+										hideModelHandler(model);
+									}}
+								>
+									{#if model?.meta?.hidden}
+										<EyeSlash />
+									{:else}
+										<Eye />
+									{/if}
+								</button>
+							</Tooltip>
+
 							<Tooltip content={$i18n.t('Delete')}>
 								<button
 									class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
@@ -377,6 +393,9 @@
 								}}
 								hideHandler={() => {
 									hideModelHandler(model);
+								}}
+								copyLinkHandler={() => {
+									copyLinkHandler(model);
 								}}
 								deleteHandler={() => {
 									selectedModel = model;

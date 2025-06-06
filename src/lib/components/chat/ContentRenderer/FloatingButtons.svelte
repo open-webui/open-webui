@@ -44,7 +44,13 @@
 			toast.error('Model not selected');
 			return;
 		}
-		prompt = `${floatingInputValue}\n\`\`\`\n${selectedText}\n\`\`\``;
+		prompt = [
+			// Blockquote each line of the selected text
+			...selectedText.split('\n').map((line) => `> ${line}`),
+			'',
+			// Then your question
+			floatingInputValue
+		].join('\n');
 		floatingInputValue = '';
 
 		responseContent = '';
@@ -121,8 +127,11 @@
 			toast.error('Model not selected');
 			return;
 		}
-		const explainText = $i18n.t('Explain this section to me in more detail');
-		prompt = `${explainText}\n\n\`\`\`\n${selectedText}\n\`\`\``;
+		const quotedText = selectedText
+			.split('\n')
+			.map((line) => `> ${line}`)
+			.join('\n');
+		prompt = `${quotedText}\n\nExplain`;
 
 		responseContent = '';
 		const [res, controller] = await chatCompletion(localStorage.token, {

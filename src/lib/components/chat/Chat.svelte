@@ -49,7 +49,8 @@
 		sleep,
 		removeDetails,
 		getPromptVariables,
-		processDetails
+		processDetails,
+		removeAllDetails
 	} from '$lib/utils';
 
 	import { generateChatCompletion } from '$lib/apis/ollama';
@@ -194,15 +195,27 @@
 		console.log('saveSessionSelectedModels', selectedModels, sessionStorage.selectedModels);
 	};
 
-	$: if (selectedModels) {
-		setToolIds();
-		setFilterIds();
+	let oldSelectedModelIds = [''];
+	$: if (JSON.stringify(selectedModelIds) !== JSON.stringify(oldSelectedModelIds)) {
+		onSelectedModelIdsChange();
 	}
 
-	$: if (atSelectedModel || selectedModels) {
+	const onSelectedModelIdsChange = () => {
+		if (oldSelectedModelIds.filter((id) => id).length > 0) {
+			resetInput();
+		}
+		oldSelectedModelIds = selectedModelIds;
+	};
+
+	const resetInput = () => {
+		console.debug('resetInput');
 		setToolIds();
-		setFilterIds();
-	}
+
+		selectedFilterIds = [];
+		webSearchEnabled = false;
+		imageGenerationEnabled = false;
+		codeInterpreterEnabled = false;
+	};
 
 	const setToolIds = async () => {
 		if (!$tools) {
@@ -214,24 +227,20 @@
 		}
 
 		const model = atSelectedModel ?? $models.find((m) => m.id === selectedModels[0]);
-		if (model) {
+		if (model && model?.info?.meta?.toolIds) {
 			selectedToolIds = [
 				...new Set(
-					[...selectedToolIds, ...(model?.info?.meta?.toolIds ?? [])].filter((id) =>
-						$tools.find((t) => t.id === id)
-					)
+					[...(model?.info?.meta?.toolIds ?? [])].filter((id) => $tools.find((t) => t.id === id))
 				)
 			];
-		}
-	};
-
-	const setFilterIds = async () => {
-		if (selectedModels.length !== 1 && !atSelectedModel) {
-			selectedFilterIds = [];
+		} else {
+			selectedToolIds = [];
 		}
 	};
 
 	const showMessage = async (message) => {
+		await tick();
+
 		const _chatId = JSON.parse(JSON.stringify($chatId));
 		let _messageId = JSON.parse(JSON.stringify(message.id));
 
@@ -291,6 +300,12 @@
 					message.content = data.content;
 				} else if (type === 'chat:message:files' || type === 'files') {
 					message.files = data.files;
+				} else if (type === 'chat:message:follow_ups') {
+					message.followUps = data.follow_ups;
+
+					if (autoScroll) {
+						scrollToBottom('smooth');
+					}
 				} else if (type === 'chat:title') {
 					chatTitle.set(data);
 					currentChatPage.set(1);
@@ -584,9 +599,20 @@
 				throw new Error('Created file is empty');
 			}
 
+			// If the file is an audio file, provide the language for STT.
+			let metadata = null;
+			if (
+				(file.type.startsWith('audio/') || file.type.startsWith('video/')) &&
+				$settings?.audio?.stt?.language
+			) {
+				metadata = {
+					language: $settings?.audio?.stt?.language
+				};
+			}
+
 			// Upload file to server
 			console.log('Uploading file to server...');
-			const uploadedFile = await uploadFile(localStorage.token, file);
+			const uploadedFile = await uploadFile(localStorage.token, file, metadata);
 
 			if (!uploadedFile) {
 				throw new Error('Server returned null response for file upload');
@@ -756,6 +782,7 @@
 
 		autoScroll = true;
 
+		resetInput();
 		await chatId.set('');
 		await chatTitle.set('');
 
@@ -845,6 +872,8 @@
 					(chatContent?.models ?? undefined) !== undefined
 						? chatContent.models
 						: [chatContent.models ?? ''];
+				oldSelectedModelIds = selectedModels;
+
 				history =
 					(chatContent?.history ?? undefined) !== undefined
 						? chatContent.history
@@ -891,10 +920,13 @@
 		}
 	};
 
-	const scrollToBottom = async () => {
+	const scrollToBottom = async (behavior = 'auto') => {
 		await tick();
 		if (messagesContainerElement) {
-			messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
+			messagesContainerElement.scrollTo({
+				top: messagesContainerElement.scrollHeight,
+				behavior
+			});
 		}
 	};
 	const chatCompletedHandler = async (chatId, modelId, responseMessageId, messages) => {
@@ -1172,7 +1204,7 @@
 
 					// Emit chat event for TTS
 					const messageContentParts = getMessageContentParts(
-						message.content,
+						removeAllDetails(message.content),
 						$config?.audio?.tts?.split_on ?? 'punctuation'
 					);
 					messageContentParts.pop();
@@ -1206,7 +1238,7 @@
 
 			// Emit chat event for TTS
 			const messageContentParts = getMessageContentParts(
-				message.content,
+				removeAllDetails(message.content),
 				$config?.audio?.tts?.split_on ?? 'punctuation'
 			);
 			messageContentParts.pop();
@@ -1253,9 +1285,10 @@
 
 			// Emit chat event for TTS
 			let lastMessageContentPart =
-				getMessageContentParts(message.content, $config?.audio?.tts?.split_on ?? 'punctuation')?.at(
-					-1
-				) ?? '';
+				getMessageContentParts(
+					removeAllDetails(message.content),
+					$config?.audio?.tts?.split_on ?? 'punctuation'
+				)?.at(-1) ?? '';
 			if (lastMessageContentPart) {
 				eventTarget.dispatchEvent(
 					new CustomEvent('chat', {
@@ -1431,7 +1464,6 @@
 					model: model.id,
 					modelName: model.name ?? model.id,
 					modelIdx: modelIdx ? modelIdx : _modelIdx,
-					userContext: null,
 					timestamp: Math.floor(Date.now() / 1000) // Unix epoch
 				};
 
@@ -1486,32 +1518,6 @@
 
 					let responseMessageId =
 						responseMessageIds[`${modelId}-${modelIdx ? modelIdx : _modelIdx}`];
-					let responseMessage = _history.messages[responseMessageId];
-
-					let userContext = null;
-					if ($settings?.memory ?? false) {
-						if (userContext === null) {
-							const res = await queryMemory(localStorage.token, prompt).catch((error) => {
-								toast.error(`${error}`);
-								return null;
-							});
-							if (res) {
-								if (res.documents[0].length > 0) {
-									userContext = res.documents[0].reduce((acc, doc, index) => {
-										const createdAtTimestamp = res.metadatas[0][index].created_at;
-										const createdAtDate = new Date(createdAtTimestamp * 1000)
-											.toISOString()
-											.split('T')[0];
-										return `${acc}${index + 1}. [${createdAtDate}]. ${doc}\n`;
-									}, '');
-								}
-
-								console.log(userContext);
-							}
-						}
-					}
-					responseMessage.userContext = userContext;
-
 					const chatEventEmitter = await getChatEventEmitter(model.id, _chatId);
 
 					scrollToBottom();
@@ -1573,7 +1579,7 @@
 			true;
 
 		let messages = [
-			params?.system || $settings.system || (responseMessage?.userContext ?? null)
+			params?.system || $settings.system
 				? {
 						role: 'system',
 						content: `${promptTemplate(
@@ -1585,11 +1591,7 @@
 										return undefined;
 									})
 								: undefined
-						)}${
-							(responseMessage?.userContext ?? null)
-								? `\n\nUser Context:\n${responseMessage?.userContext ?? ''}`
-								: ''
-						}`
+						)}`
 					}
 				: undefined,
 			...createMessagesList(_history, responseMessageId).map((message) => ({
@@ -1666,7 +1668,8 @@
 						$config?.features?.enable_web_search &&
 						($user?.role === 'admin' || $user?.permissions?.features?.web_search)
 							? webSearchEnabled || ($settings?.webSearch ?? false) === 'always'
-							: false
+							: false,
+					memory: $settings?.memory ?? false
 				},
 				variables: {
 					...getPromptVariables(
@@ -1685,19 +1688,20 @@
 				chat_id: $chatId,
 				id: responseMessageId,
 
-				...(!$temporaryChatEnabled &&
-				(messages.length == 1 ||
-					(messages.length == 2 &&
-						messages.at(0)?.role === 'system' &&
-						messages.at(1)?.role === 'user')) &&
-				(selectedModels[0] === model.id || atSelectedModel !== undefined)
-					? {
-							background_tasks: {
+				background_tasks: {
+					...(!$temporaryChatEnabled &&
+					(messages.length == 1 ||
+						(messages.length == 2 &&
+							messages.at(0)?.role === 'system' &&
+							messages.at(1)?.role === 'user')) &&
+					(selectedModels[0] === model.id || atSelectedModel !== undefined)
+						? {
 								title_generation: $settings?.title?.auto ?? true,
 								tags_generation: $settings?.autoTags ?? true
 							}
-						}
-					: {}),
+						: {}),
+					follow_up_generation: $settings?.autoFollowUps ?? true
+				},
 
 				...(stream && (model.info?.meta?.capabilities?.usage ?? false)
 					? {
@@ -2081,7 +2085,7 @@
 								</div>
 							</div>
 
-							<div class=" pb-[1rem]">
+							<div class=" pb-2">
 								<MessageInput
 									{history}
 									{taskIds}

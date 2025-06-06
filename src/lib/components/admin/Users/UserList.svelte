@@ -52,27 +52,6 @@
 
 	let showUserChatsModal = false;
 	let showEditUserModal = false;
-	let showUpdateRoleModal = false;
-
-	const onUpdateRole = (user) => {
-		if (user.role === 'user') {
-			updateRoleHandler(user.id, 'admin');
-		} else if (user.role === 'pending') {
-			updateRoleHandler(user.id, 'user');
-		} else {
-			updateRoleHandler(user.id, 'pending');
-		}
-	};
-	const updateRoleHandler = async (id, role) => {
-		const res = await updateUserRole(localStorage.token, id, role).catch((error) => {
-			toast.error(`${error}`);
-			return null;
-		});
-
-		if (res) {
-			getUserList();
-		}
-	};
 
 	const deleteUserHandler = async (id) => {
 		const res = await deleteUserById(localStorage.token, id).catch((error) => {
@@ -133,21 +112,6 @@
 	}}
 />
 
-<RoleUpdateConfirmDialog
-	bind:show={showUpdateRoleModal}
-	on:confirm={() => {
-		onUpdateRole(selectedUser);
-	}}
-	message={$i18n.t(`Are you sure you want to update this user\'s role to **{{ROLE}}**?`, {
-		ROLE:
-			selectedUser?.role === 'user'
-				? 'admin'
-				: selectedUser?.role === 'pending'
-					? 'user'
-					: 'pending'
-	})}
-/>
-
 {#key selectedUser}
 	<EditUserModal
 		bind:show={showEditUserModal}
@@ -165,7 +129,10 @@
 		getUserList();
 	}}
 />
-<UserChatsModal bind:show={showUserChatsModal} user={selectedUser} />
+
+{#if selectedUser}
+	<UserChatsModal bind:show={showUserChatsModal} user={selectedUser} />
+{/if}
 
 {#if ($config?.license_metadata?.seats ?? null) !== null && total && total > $config?.license_metadata?.seats}
 	<div class=" mt-1 mb-2 text-xs text-red-500">
@@ -412,7 +379,7 @@
 								class=" translate-y-0.5"
 								on:click={() => {
 									selectedUser = user;
-									showUpdateRoleModal = true;
+									showEditUserModal = !showEditUserModal;
 								}}
 							>
 								<Badge

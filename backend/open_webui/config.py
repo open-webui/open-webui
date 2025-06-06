@@ -901,9 +901,7 @@ TOOL_SERVER_CONNECTIONS = PersistentConfig(
 ####################################
 
 
-WEBUI_URL = PersistentConfig(
-    "WEBUI_URL", "webui.url", os.environ.get("WEBUI_URL", "http://localhost:3000")
-)
+WEBUI_URL = PersistentConfig("WEBUI_URL", "webui.url", os.environ.get("WEBUI_URL", ""))
 
 
 ENABLE_SIGNUP = PersistentConfig(
@@ -1413,6 +1411,35 @@ Strictly return in JSON format:
 {{MESSAGES:END:6}}
 </chat_history>"""
 
+
+FOLLOW_UP_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
+    "FOLLOW_UP_GENERATION_PROMPT_TEMPLATE",
+    "task.follow_up.prompt_template",
+    os.environ.get("FOLLOW_UP_GENERATION_PROMPT_TEMPLATE", ""),
+)
+
+DEFAULT_FOLLOW_UP_GENERATION_PROMPT_TEMPLATE = """### Task:
+Suggest 3-5 relevant follow-up questions or prompts that the user might naturally ask next in this conversation as a **user**, based on the chat history, to help continue or deepen the discussion.
+### Guidelines:
+- Write all follow-up questions from the user’s point of view, directed to the assistant.
+- Make questions concise, clear, and directly related to the discussed topic(s).
+- Only suggest follow-ups that make sense given the chat content and do not repeat what was already covered.
+- If the conversation is very short or not specific, suggest more general (but relevant) follow-ups the user might ask.
+- Use the conversation's primary language; default to English if multilingual.
+- Response must be a JSON array of strings, no extra text or formatting.
+### Output:
+JSON format: { "follow_ups": ["Question 1?", "Question 2?", "Question 3?"] }
+### Chat History:
+<chat_history>
+{{MESSAGES:END:6}}
+</chat_history>"""
+
+ENABLE_FOLLOW_UP_GENERATION = PersistentConfig(
+    "ENABLE_FOLLOW_UP_GENERATION",
+    "task.follow_up.enable",
+    os.environ.get("ENABLE_FOLLOW_UP_GENERATION", "True").lower() == "true",
+)
+
 ENABLE_TAGS_GENERATION = PersistentConfig(
     "ENABLE_TAGS_GENERATION",
     "task.tags.enable",
@@ -1848,6 +1875,61 @@ CONTENT_EXTRACTION_ENGINE = PersistentConfig(
     os.environ.get("CONTENT_EXTRACTION_ENGINE", "").lower(),
 )
 
+DATALAB_MARKER_API_KEY = PersistentConfig(
+    "DATALAB_MARKER_API_KEY",
+    "rag.datalab_marker_api_key",
+    os.environ.get("DATALAB_MARKER_API_KEY", ""),
+)
+
+DATALAB_MARKER_LANGS = PersistentConfig(
+    "DATALAB_MARKER_LANGS",
+    "rag.datalab_marker_langs",
+    os.environ.get("DATALAB_MARKER_LANGS", ""),
+)
+
+DATALAB_MARKER_USE_LLM = PersistentConfig(
+    "DATALAB_MARKER_USE_LLM",
+    "rag.DATALAB_MARKER_USE_LLM",
+    os.environ.get("DATALAB_MARKER_USE_LLM", "false").lower() == "true",
+)
+
+DATALAB_MARKER_SKIP_CACHE = PersistentConfig(
+    "DATALAB_MARKER_SKIP_CACHE",
+    "rag.datalab_marker_skip_cache",
+    os.environ.get("DATALAB_MARKER_SKIP_CACHE", "false").lower() == "true",
+)
+
+DATALAB_MARKER_FORCE_OCR = PersistentConfig(
+    "DATALAB_MARKER_FORCE_OCR",
+    "rag.datalab_marker_force_ocr",
+    os.environ.get("DATALAB_MARKER_FORCE_OCR", "false").lower() == "true",
+)
+
+DATALAB_MARKER_PAGINATE = PersistentConfig(
+    "DATALAB_MARKER_PAGINATE",
+    "rag.datalab_marker_paginate",
+    os.environ.get("DATALAB_MARKER_PAGINATE", "false").lower() == "true",
+)
+
+DATALAB_MARKER_STRIP_EXISTING_OCR = PersistentConfig(
+    "DATALAB_MARKER_STRIP_EXISTING_OCR",
+    "rag.datalab_marker_strip_existing_ocr",
+    os.environ.get("DATALAB_MARKER_STRIP_EXISTING_OCR", "false").lower() == "true",
+)
+
+DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION = PersistentConfig(
+    "DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION",
+    "rag.datalab_marker_disable_image_extraction",
+    os.environ.get("DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION", "false").lower()
+    == "true",
+)
+
+DATALAB_MARKER_OUTPUT_FORMAT = PersistentConfig(
+    "DATALAB_MARKER_OUTPUT_FORMAT",
+    "rag.datalab_marker_output_format",
+    os.environ.get("DATALAB_MARKER_OUTPUT_FORMAT", "markdown"),
+)
+
 EXTERNAL_DOCUMENT_LOADER_URL = PersistentConfig(
     "EXTERNAL_DOCUMENT_LOADER_URL",
     "rag.external_document_loader_url",
@@ -1927,6 +2009,11 @@ RAG_RELEVANCE_THRESHOLD = PersistentConfig(
     "RAG_RELEVANCE_THRESHOLD",
     "rag.relevance_threshold",
     float(os.environ.get("RAG_RELEVANCE_THRESHOLD", "0.0")),
+)
+RAG_HYBRID_BM25_WEIGHT = PersistentConfig(
+    "RAG_HYBRID_BM25_WEIGHT",
+    "rag.hybrid_bm25_weight",
+    float(os.environ.get("RAG_HYBRID_BM25_WEIGHT", "0.5")),
 )
 
 ENABLE_RAG_HYBRID_SEARCH = PersistentConfig(
@@ -2124,6 +2211,22 @@ RAG_OPENAI_API_KEY = PersistentConfig(
     os.getenv("RAG_OPENAI_API_KEY", OPENAI_API_KEY),
 )
 
+RAG_AZURE_OPENAI_BASE_URL = PersistentConfig(
+    "RAG_AZURE_OPENAI_BASE_URL",
+    "rag.azure_openai.base_url",
+    os.getenv("RAG_AZURE_OPENAI_BASE_URL", ""),
+)
+RAG_AZURE_OPENAI_API_KEY = PersistentConfig(
+    "RAG_AZURE_OPENAI_API_KEY",
+    "rag.azure_openai.api_key",
+    os.getenv("RAG_AZURE_OPENAI_API_KEY", ""),
+)
+RAG_AZURE_OPENAI_API_VERSION = PersistentConfig(
+    "RAG_AZURE_OPENAI_API_VERSION",
+    "rag.azure_openai.api_version",
+    os.getenv("RAG_AZURE_OPENAI_API_VERSION", ""),
+)
+
 RAG_OLLAMA_BASE_URL = PersistentConfig(
     "RAG_OLLAMA_BASE_URL",
     "rag.ollama.url",
@@ -2213,6 +2316,12 @@ BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = PersistentConfig(
 )
 
 
+BYPASS_WEB_SEARCH_WEB_LOADER = PersistentConfig(
+    "BYPASS_WEB_SEARCH_WEB_LOADER",
+    "rag.web.search.bypass_web_loader",
+    os.getenv("BYPASS_WEB_SEARCH_WEB_LOADER", "False").lower() == "true",
+)
+
 WEB_SEARCH_RESULT_COUNT = PersistentConfig(
     "WEB_SEARCH_RESULT_COUNT",
     "rag.web.search.result_count",
@@ -2237,6 +2346,7 @@ WEB_SEARCH_CONCURRENT_REQUESTS = PersistentConfig(
     "rag.web.search.concurrent_requests",
     int(os.getenv("WEB_SEARCH_CONCURRENT_REQUESTS", "10")),
 )
+
 
 WEB_LOADER_ENGINE = PersistentConfig(
     "WEB_LOADER_ENGINE",
@@ -2395,6 +2505,18 @@ PERPLEXITY_API_KEY = PersistentConfig(
     "PERPLEXITY_API_KEY",
     "rag.web.search.perplexity_api_key",
     os.getenv("PERPLEXITY_API_KEY", ""),
+)
+
+PERPLEXITY_MODEL = PersistentConfig(
+    "PERPLEXITY_MODEL",
+    "rag.web.search.perplexity_model",
+    os.getenv("PERPLEXITY_MODEL", "sonar"),
+)
+
+PERPLEXITY_SEARCH_CONTEXT_USAGE = PersistentConfig(
+    "PERPLEXITY_SEARCH_CONTEXT_USAGE",
+    "rag.web.search.perplexity_search_context_usage",
+    os.getenv("PERPLEXITY_SEARCH_CONTEXT_USAGE", "medium"),
 )
 
 SOUGOU_API_SID = PersistentConfig(

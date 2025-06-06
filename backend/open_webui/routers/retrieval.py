@@ -254,6 +254,11 @@ async def get_embedding_config(request: Request, collectionForm: Optional[Collec
             "url": request.app.state.config.RAG_OLLAMA_BASE_URL,
             "key": request.app.state.config.RAG_OLLAMA_API_KEY,
         }),
+        "azure_openai_config": rag_config.get("azure_openai_config", {
+            "url": request.app.state.config.RAG_AZURE_OPENAI_BASE_URL,
+            "key": request.app.state.config.RAG_AZURE_OPENAI_API_KEY,
+            "version": request.app.state.config.RAG_AZURE_OPENAI_API_VERSION,
+        }),
     }
 
 
@@ -267,9 +272,16 @@ class OllamaConfigForm(BaseModel):
     key: str
 
 
+class AzureOpenAIConfigForm(BaseModel):
+    url: str
+    key: str
+    version: str
+
+
 class EmbeddingModelUpdateForm(BaseModel):
     openai_config: Optional[OpenAIConfigForm] = None
     ollama_config: Optional[OllamaConfigForm] = None
+    azure_openai_config: Optional[AzureOpenAIConfigForm] = None
     embedding_engine: str
     embedding_model: str
     embedding_batch_size: Optional[int] = 1
@@ -405,14 +417,18 @@ async def update_embedding_config(
                 gc.collect()
                 torch.cuda.empty_cache()
 
-            if request.app.state.config.RAG_EMBEDDING_ENGINE in ["ollama", "openai"]:
-                if form_data.openai_config is not None:
-                    request.app.state.config.RAG_OPENAI_API_BASE_URL = (
-                        form_data.openai_config.url
-                    )
-                    request.app.state.config.RAG_OPENAI_API_KEY = (
-                        form_data.openai_config.key
-                    )
+        if request.app.state.config.RAG_EMBEDDING_ENGINE in [
+            "ollama",
+            "openai",
+            "azure_openai",
+        ]:
+            if form_data.openai_config is not None:
+                request.app.state.config.RAG_OPENAI_API_BASE_URL = (
+                    form_data.openai_config.url
+                )
+                request.app.state.config.RAG_OPENAI_API_KEY = (
+                    form_data.openai_config.key
+                )
 
                 if form_data.ollama_config is not None:
                     request.app.state.config.RAG_OLLAMA_BASE_URL = (
@@ -421,6 +437,61 @@ async def update_embedding_config(
                     request.app.state.config.RAG_OLLAMA_API_KEY = (
                         form_data.ollama_config.key
                     )
+
+            if form_data.azure_openai_config is not None:
+                request.app.state.config.RAG_AZURE_OPENAI_BASE_URL = (
+                    form_data.azure_openai_config.url
+                )
+                request.app.state.config.RAG_AZURE_OPENAI_API_KEY = (
+                    form_data.azure_openai_config.key
+                )
+                request.app.state.config.RAG_AZURE_OPENAI_API_VERSION = (
+                    form_data.azure_openai_config.version
+                )
+
+            if form_data.azure_openai_config is not None:
+                request.app.state.config.RAG_AZURE_OPENAI_BASE_URL = (
+                    form_data.azure_openai_config.url
+                )
+                request.app.state.config.RAG_AZURE_OPENAI_API_KEY = (
+                    form_data.azure_openai_config.key
+                )
+                request.app.state.config.RAG_AZURE_OPENAI_API_VERSION = (
+                    form_data.azure_openai_config.version
+                )
+
+            if form_data.azure_openai_config is not None:
+                request.app.state.config.RAG_AZURE_OPENAI_BASE_URL = (
+                    form_data.azure_openai_config.url
+                )
+                request.app.state.config.RAG_AZURE_OPENAI_API_KEY = (
+                    form_data.azure_openai_config.key
+                )
+                request.app.state.config.RAG_AZURE_OPENAI_API_VERSION = (
+                    form_data.azure_openai_config.version
+                )
+
+            if form_data.azure_openai_config is not None:
+                request.app.state.config.RAG_AZURE_OPENAI_BASE_URL = (
+                    form_data.azure_openai_config.url
+                )
+                request.app.state.config.RAG_AZURE_OPENAI_API_KEY = (
+                    form_data.azure_openai_config.key
+                )
+                request.app.state.config.RAG_AZURE_OPENAI_API_VERSION = (
+                    form_data.azure_openai_config.version
+                )
+
+            if form_data.azure_openai_config is not None:
+                request.app.state.config.RAG_AZURE_OPENAI_BASE_URL = (
+                    form_data.azure_openai_config.url
+                )
+                request.app.state.config.RAG_AZURE_OPENAI_API_KEY = (
+                    form_data.azure_openai_config.key
+                )
+                request.app.state.config.RAG_AZURE_OPENAI_API_VERSION = (
+                    form_data.azure_openai_config.version
+                )
 
                 request.app.state.config.RAG_EMBEDDING_BATCH_SIZE = (
                     form_data.embedding_batch_size
@@ -440,14 +511,27 @@ async def update_embedding_config(
                     (
                         request.app.state.config.RAG_OPENAI_API_BASE_URL
                         if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
-                        else request.app.state.config.RAG_OLLAMA_BASE_URL
+                        else (
+                            request.app.state.config.RAG_OLLAMA_BASE_URL
+                            if request.app.state.config.RAG_EMBEDDING_ENGINE == "ollama"
+                            else request.app.state.config.RAG_AZURE_OPENAI_BASE_URL
+                        )
                     ),
                     (
                         request.app.state.config.RAG_OPENAI_API_KEY
                         if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
-                        else request.app.state.config.RAG_OLLAMA_API_KEY
+                        else (
+                            request.app.state.config.RAG_OLLAMA_API_KEY
+                            if request.app.state.config.RAG_EMBEDDING_ENGINE == "ollama"
+                            else request.app.state.config.RAG_AZURE_OPENAI_API_KEY
+                        )
                     ),
                     request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
+                    azure_api_version=(
+                        request.app.state.config.RAG_AZURE_OPENAI_API_VERSION
+                        if request.app.state.config.RAG_EMBEDDING_ENGINE == "azure_openai"
+                        else None
+                    ),
                 )
                 # add model to state for reloading on startup
                 request.app.state.config.LOADED_EMBEDDING_MODELS[request.app.state.config.RAG_EMBEDDING_ENGINE].append(request.app.state.config.RAG_EMBEDDING_MODEL)
@@ -470,9 +554,13 @@ async def update_embedding_config(
                     "url": request.app.state.config.RAG_OLLAMA_BASE_URL,
                     "key": request.app.state.config.RAG_OLLAMA_API_KEY,
                 },
+            "azure_openai_config": {
+                "url": request.app.state.config.RAG_AZURE_OPENAI_BASE_URL,
+                "key": request.app.state.config.RAG_AZURE_OPENAI_API_KEY,
+                "version": request.app.state.config.RAG_AZURE_OPENAI_API_VERSION,
+            },
                 "LOADED_EMBEDDING_MODELS": request.app.state.config.LOADED_EMBEDDING_MODELS,
                 "DOWNLOADED_EMBEDDING_MODELS": request.app.state.config.DOWNLOADED_EMBEDDING_MODELS,
-                "message": "Embedding configuration updated globally.",
             }
     except Exception as e:
         log.exception(f"Problem updating embedding model: {e}")
@@ -508,9 +596,19 @@ async def get_rag_config(request: Request, collectionForm: CollectionForm, user=
         "ENABLE_RAG_HYBRID_SEARCH": rag_config.get("ENABLE_RAG_HYBRID_SEARCH", request.app.state.config.ENABLE_RAG_HYBRID_SEARCH),
         "TOP_K_RERANKER": rag_config.get("TOP_K_RERANKER", request.app.state.config.TOP_K_RERANKER),
         "RELEVANCE_THRESHOLD": rag_config.get("RELEVANCE_THRESHOLD", request.app.state.config.RELEVANCE_THRESHOLD),
+        "HYBRID_BM25_WEIGHT": rag_config.get("HYBRID_BM25_WEIGHT", request.app.state.config.HYBRID_BM25_WEIGHT),
         # Content extraction settings
         "CONTENT_EXTRACTION_ENGINE": rag_config.get("CONTENT_EXTRACTION_ENGINE", request.app.state.config.CONTENT_EXTRACTION_ENGINE),
         "PDF_EXTRACT_IMAGES": rag_config.get("PDF_EXTRACT_IMAGES", request.app.state.config.PDF_EXTRACT_IMAGES),
+        "DATALAB_MARKER_API_KEY": rag_config.get("DATALAB_MARKER_API_KEY", request.app.state.config.DATALAB_MARKER_API_KEY),
+        "DATALAB_MARKER_LANGS": rag_config.get("DATALAB_MARKER_LANGS", request.app.state.config.DATALAB_MARKER_LANGS),
+        "DATALAB_MARKER_SKIP_CACHE": rag_config.get("DATALAB_MARKER_SKIP_CACHE", request.app.state.config.DATALAB_MARKER_SKIP_CACHE),
+        "DATALAB_MARKER_FORCE_OCR": rag_config.get("DATALAB_MARKER_FORCE_OCR", request.app.state.config.DATALAB_MARKER_FORCE_OCR),
+        "DATALAB_MARKER_PAGINATE": rag_config.get("DATALAB_MARKER_PAGINATE", request.app.state.config.DATALAB_MARKER_PAGINATE),
+        "DATALAB_MARKER_STRIP_EXISTING_OCR": rag_config.get("DATALAB_MARKER_STRIP_EXISTING_OCR", request.app.state.config.DATALAB_MARKER_STRIP_EXISTING_OCR),
+        "DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION": rag_config.get("DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION", request.app.state.config.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION),
+        "DATALAB_MARKER_USE_LLM": rag_config.get("DATALAB_MARKER_USE_LLM", request.app.state.config.DATALAB_MARKER_USE_LLM),
+        "DATALAB_MARKER_OUTPUT_FORMAT": rag_config.get("DATALAB_MARKER_OUTPUT_FORMAT", request.app.state.config.DATALAB_MARKER_OUTPUT_FORMAT),
         "EXTERNAL_DOCUMENT_LOADER_URL": rag_config.get("EXTERNAL_DOCUMENT_LOADER_URL", request.app.state.config.EXTERNAL_DOCUMENT_LOADER_URL),
         "EXTERNAL_DOCUMENT_LOADER_API_KEY": rag_config.get("EXTERNAL_DOCUMENT_LOADER_API_KEY", request.app.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY),
         "TIKA_SERVER_URL": rag_config.get("TIKA_SERVER_URL", request.app.state.config.TIKA_SERVER_URL),
@@ -546,6 +644,7 @@ async def get_rag_config(request: Request, collectionForm: CollectionForm, user=
             "WEB_SEARCH_CONCURRENT_REQUESTS": web_config.get("WEB_SEARCH_CONCURRENT_REQUESTS", request.app.state.config.WEB_SEARCH_CONCURRENT_REQUESTS),
             "WEB_SEARCH_DOMAIN_FILTER_LIST": web_config.get("WEB_SEARCH_DOMAIN_FILTER_LIST", request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST),
             "BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL": web_config.get("BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL", request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL),
+            "BYPASS_WEB_SEARCH_WEB_LOADER":  web_config.get("BYPASS_WEB_SEARCH_WEB_LOADER", request.app.state.config.BYPASS_WEB_SEARCH_WEB_LOADER),
             "SEARXNG_QUERY_URL": web_config.get("SEARXNG_QUERY_URL", request.app.state.config.SEARXNG_QUERY_URL),
             "YACY_QUERY_URL": web_config.get("YACY_QUERY_URL", request.app.state.config.YACY_QUERY_URL),
             "YACY_USERNAME": web_config.get("YACY_QUERY_USERNAME",request.app.state.config.YACY_USERNAME),
@@ -570,6 +669,8 @@ async def get_rag_config(request: Request, collectionForm: CollectionForm, user=
             "BING_SEARCH_V7_SUBSCRIPTION_KEY": web_config.get("BING_SEARCH_V7_SUBSCRIPTION_KEY", request.app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY),
             "EXA_API_KEY": web_config.get("EXA_API_KEY", request.app.state.config.EXA_API_KEY),
             "PERPLEXITY_API_KEY": web_config.get("PERPLEXITY_API_KEY", request.app.state.config.PERPLEXITY_API_KEY),
+            "PERPLEXITY_MODEL": web_config.get("PERPLEXITY_MODEL", request.app.state.config.PERPLEXITY_MODEL),
+            "PERPLEXITY_SEARCH_CONTEXT_USAGE": web_config.get("PERPLEXITY_SEARCH_CONTEXT_USAGE", request.app.state.config.PERPLEXITY_SEARCH_CONTEXT_USAGE),
             "SOUGOU_API_SID": web_config.get("SOUGOU_API_SID", request.app.state.config.SOUGOU_API_SID),
             "SOUGOU_API_SK": web_config.get("SOUGOU_API_SK", request.app.state.config.SOUGOU_API_SK),
             "WEB_LOADER_ENGINE": web_config.get("WEB_LOADER_ENGINE", request.app.state.config.WEB_LOADER_ENGINE),
@@ -603,6 +704,7 @@ class WebConfig(BaseModel):
     WEB_SEARCH_CONCURRENT_REQUESTS: Optional[int] = None
     WEB_SEARCH_DOMAIN_FILTER_LIST: Optional[List[str]] = []
     BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL: Optional[bool] = None
+    BYPASS_WEB_SEARCH_WEB_LOADER: Optional[bool] = None
     SEARXNG_QUERY_URL: Optional[str] = None
     YACY_QUERY_URL: Optional[str] = None
     YACY_USERNAME: Optional[str] = None
@@ -627,6 +729,8 @@ class WebConfig(BaseModel):
     BING_SEARCH_V7_SUBSCRIPTION_KEY: Optional[str] = None
     EXA_API_KEY: Optional[str] = None
     PERPLEXITY_API_KEY: Optional[str] = None
+    PERPLEXITY_MODEL: Optional[str] = None
+    PERPLEXITY_SEARCH_CONTEXT_USAGE: Optional[str] = None
     SOUGOU_API_SID: Optional[str] = None
     SOUGOU_API_SK: Optional[str] = None
     WEB_LOADER_ENGINE: Optional[str] = None
@@ -656,10 +760,20 @@ class ConfigForm(BaseModel):
     ENABLE_RAG_HYBRID_SEARCH: Optional[bool] = None
     TOP_K_RERANKER: Optional[int] = None
     RELEVANCE_THRESHOLD: Optional[float] = None
+    HYBRID_BM25_WEIGHT: Optional[float] = None
 
     # Content extraction settings
     CONTENT_EXTRACTION_ENGINE: Optional[str] = None
     PDF_EXTRACT_IMAGES: Optional[bool] = None
+    DATALAB_MARKER_API_KEY: Optional[str] = None
+    DATALAB_MARKER_LANGS: Optional[str] = None
+    DATALAB_MARKER_SKIP_CACHE: Optional[bool] = None
+    DATALAB_MARKER_FORCE_OCR: Optional[bool] = None
+    DATALAB_MARKER_PAGINATE: Optional[bool] = None
+    DATALAB_MARKER_STRIP_EXISTING_OCR: Optional[bool] = None
+    DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION: Optional[bool] = None
+    DATALAB_MARKER_USE_LLM: Optional[bool] = None
+    DATALAB_MARKER_OUTPUT_FORMAT: Optional[str] = None
     EXTERNAL_DOCUMENT_LOADER_URL: Optional[str] = None
     EXTERNAL_DOCUMENT_LOADER_API_KEY: Optional[str] = None
 
@@ -853,6 +967,11 @@ async def update_rag_config(
             if form_data.RELEVANCE_THRESHOLD is not None
             else request.app.state.config.RELEVANCE_THRESHOLD
         )
+        request.app.state.config.HYBRID_BM25_WEIGHT = (
+            form_data.HYBRID_BM25_WEIGHT
+            if form_data.HYBRID_BM25_WEIGHT is not None
+            else request.app.state.config.HYBRID_BM25_WEIGHT
+        )
 
         # Content extraction settings
         request.app.state.config.CONTENT_EXTRACTION_ENGINE = (
@@ -864,6 +983,51 @@ async def update_rag_config(
             form_data.PDF_EXTRACT_IMAGES
             if form_data.PDF_EXTRACT_IMAGES is not None
             else request.app.state.config.PDF_EXTRACT_IMAGES
+        )
+        request.app.state.config.DATALAB_MARKER_API_KEY = (
+        form_data.DATALAB_MARKER_API_KEY
+        if form_data.DATALAB_MARKER_API_KEY is not None
+        else request.app.state.config.DATALAB_MARKER_API_KEY
+        )
+        request.app.state.config.DATALAB_MARKER_LANGS = (
+            form_data.DATALAB_MARKER_LANGS
+            if form_data.DATALAB_MARKER_LANGS is not None
+            else request.app.state.config.DATALAB_MARKER_LANGS
+        )
+        request.app.state.config.DATALAB_MARKER_SKIP_CACHE = (
+            form_data.DATALAB_MARKER_SKIP_CACHE
+            if form_data.DATALAB_MARKER_SKIP_CACHE is not None
+            else request.app.state.config.DATALAB_MARKER_SKIP_CACHE
+        )
+        request.app.state.config.DATALAB_MARKER_FORCE_OCR = (
+            form_data.DATALAB_MARKER_FORCE_OCR
+            if form_data.DATALAB_MARKER_FORCE_OCR is not None
+            else request.app.state.config.DATALAB_MARKER_FORCE_OCR
+        )
+        request.app.state.config.DATALAB_MARKER_PAGINATE = (
+            form_data.DATALAB_MARKER_PAGINATE
+            if form_data.DATALAB_MARKER_PAGINATE is not None
+            else request.app.state.config.DATALAB_MARKER_PAGINATE
+        )
+        request.app.state.config.DATALAB_MARKER_STRIP_EXISTING_OCR = (
+            form_data.DATALAB_MARKER_STRIP_EXISTING_OCR
+            if form_data.DATALAB_MARKER_STRIP_EXISTING_OCR is not None
+            else request.app.state.config.DATALAB_MARKER_STRIP_EXISTING_OCR
+        )
+        request.app.state.config.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION = (
+            form_data.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION
+            if form_data.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION is not None
+            else request.app.state.config.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION
+        )
+        request.app.state.config.DATALAB_MARKER_OUTPUT_FORMAT = (
+            form_data.DATALAB_MARKER_OUTPUT_FORMAT
+            if form_data.DATALAB_MARKER_OUTPUT_FORMAT is not None
+            else request.app.state.config.DATALAB_MARKER_OUTPUT_FORMAT
+        )
+        request.app.state.config.DATALAB_MARKER_USE_LLM = (
+            form_data.DATALAB_MARKER_USE_LLM
+            if form_data.DATALAB_MARKER_USE_LLM is not None
+            else request.app.state.config.DATALAB_MARKER_USE_LLM
         )
         request.app.state.config.EXTERNAL_DOCUMENT_LOADER_URL = (
             form_data.EXTERNAL_DOCUMENT_LOADER_URL
@@ -1046,6 +1210,9 @@ async def update_rag_config(
             request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = (
                 form_data.web.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
             )
+            request.app.state.config.BYPASS_WEB_SEARCH_WEB_LOADER = (
+            form_data.web.BYPASS_WEB_SEARCH_WEB_LOADER
+            )
             request.app.state.config.SEARXNG_QUERY_URL = form_data.web.SEARXNG_QUERY_URL
             request.app.state.config.YACY_QUERY_URL = form_data.web.YACY_QUERY_URL
             request.app.state.config.YACY_USERNAME = form_data.web.YACY_USERNAME
@@ -1082,6 +1249,10 @@ async def update_rag_config(
             )
             request.app.state.config.EXA_API_KEY = form_data.web.EXA_API_KEY
             request.app.state.config.PERPLEXITY_API_KEY = form_data.web.PERPLEXITY_API_KEY
+            request.app.state.config.PERPLEXITY_MODEL = form_data.web.PERPLEXITY_MODEL
+            request.app.state.config.PERPLEXITY_SEARCH_CONTEXT_USAGE = (
+                form_data.web.PERPLEXITY_SEARCH_CONTEXT_USAGE
+            )
             request.app.state.config.SOUGOU_API_SID = form_data.web.SOUGOU_API_SID
             request.app.state.config.SOUGOU_API_SK = form_data.web.SOUGOU_API_SK
 
@@ -1132,9 +1303,19 @@ async def update_rag_config(
             "ENABLE_RAG_HYBRID_SEARCH": request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
             "TOP_K_RERANKER": request.app.state.config.TOP_K_RERANKER,
             "RELEVANCE_THRESHOLD": request.app.state.config.RELEVANCE_THRESHOLD,
-            # Content extraction settings
+            "HYBRID_BM25_WEIGHT": request.app.state.config.HYBRID_BM25_WEIGHT,
+        # Content extraction settings
             "CONTENT_EXTRACTION_ENGINE": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
             "PDF_EXTRACT_IMAGES": request.app.state.config.PDF_EXTRACT_IMAGES,
+            "DATALAB_MARKER_API_KEY": request.app.state.config.DATALAB_MARKER_API_KEY,
+            "DATALAB_MARKER_LANGS": request.app.state.config.DATALAB_MARKER_LANGS,
+            "DATALAB_MARKER_SKIP_CACHE": request.app.state.config.DATALAB_MARKER_SKIP_CACHE,
+            "DATALAB_MARKER_FORCE_OCR": request.app.state.config.DATALAB_MARKER_FORCE_OCR,
+            "DATALAB_MARKER_PAGINATE": request.app.state.config.DATALAB_MARKER_PAGINATE,
+            "DATALAB_MARKER_STRIP_EXISTING_OCR": request.app.state.config.DATALAB_MARKER_STRIP_EXISTING_OCR,
+            "DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION": request.app.state.config.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION,
+            "DATALAB_MARKER_USE_LLM": request.app.state.config.DATALAB_MARKER_USE_LLM,
+            "DATALAB_MARKER_OUTPUT_FORMAT": request.app.state.config.DATALAB_MARKER_OUTPUT_FORMAT,
             "EXTERNAL_DOCUMENT_LOADER_URL": request.app.state.config.EXTERNAL_DOCUMENT_LOADER_URL,
             "EXTERNAL_DOCUMENT_LOADER_API_KEY": request.app.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY,
             "TIKA_SERVER_URL": request.app.state.config.TIKA_SERVER_URL,
@@ -1170,6 +1351,7 @@ async def update_rag_config(
                 "WEB_SEARCH_CONCURRENT_REQUESTS": request.app.state.config.WEB_SEARCH_CONCURRENT_REQUESTS,
                 "WEB_SEARCH_DOMAIN_FILTER_LIST": request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
                 "BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL": request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL,
+                "BYPASS_WEB_SEARCH_WEB_LOADER": request.app.state.config.BYPASS_WEB_SEARCH_WEB_LOADER,
                 "SEARXNG_QUERY_URL": request.app.state.config.SEARXNG_QUERY_URL,
                 "YACY_QUERY_URL": request.app.state.config.YACY_QUERY_URL,
                 "YACY_USERNAME": request.app.state.config.YACY_USERNAME,
@@ -1194,6 +1376,8 @@ async def update_rag_config(
                 "BING_SEARCH_V7_SUBSCRIPTION_KEY": request.app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY,
                 "EXA_API_KEY": request.app.state.config.EXA_API_KEY,
                 "PERPLEXITY_API_KEY": request.app.state.config.PERPLEXITY_API_KEY,
+                "PERPLEXITY_MODEL": request.app.state.config.PERPLEXITY_MODEL,
+                "PERPLEXITY_SEARCH_CONTEXT_USAGE": request.app.state.config.PERPLEXITY_SEARCH_CONTEXT_USAGE,
                 "SOUGOU_API_SID": request.app.state.config.SOUGOU_API_SID,
                 "SOUGOU_API_SK": request.app.state.config.SOUGOU_API_SK,
                 "WEB_LOADER_ENGINE": request.app.state.config.WEB_LOADER_ENGINE,
@@ -1268,11 +1452,14 @@ def save_docs_to_vector_db(
     embedding_engine = rag_config.get("embedding_engine", request.app.state.config.RAG_EMBEDDING_ENGINE)
     embedding_model = rag_config.get("embedding_model", request.app.state.config.RAG_EMBEDDING_MODEL)
     embedding_batch_size = rag_config.get("embedding_batch_size", request.app.state.config.RAG_EMBEDDING_BATCH_SIZE)
-    openai_api_base_url = rag_config.get("openai_api_base_url", request.app.state.config.RAG_OPENAI_API_BASE_URL)
-    openai_api_key = rag_config.get("openai_api_key", request.app.state.config.RAG_OPENAI_API_KEY)
-    ollama_base_url = rag_config.get("ollama", {}).get("url", request.app.state.config.RAG_OLLAMA_BASE_URL)
-    ollama_api_key = rag_config.get("ollama", {}).get("key", request.app.state.config.RAG_OLLAMA_API_KEY)
-    
+    openai_api_base_url = rag_config.get("openai_config", {}).get("url", request.app.state.config.RAG_OPENAI_API_BASE_URL)
+    openai_api_key = rag_config.get("openai_config", {}).get("url", request.app.state.config.RAG_OPENAI_API_KEY)
+    ollama_base_url = rag_config.get("ollama_config", {}).get("url", request.app.state.config.RAG_OLLAMA_BASE_URL)
+    ollama_api_key = rag_config.get("ollama_config", {}).get("key", request.app.state.config.RAG_OLLAMA_API_KEY)
+    azure_openai_url = rag_config.get("azure_openai", {}).get("url", request.app.state.config.RAG_AZURE_OPENAI_BASE_URL)
+    azure_openai_key = rag_config.get("azure_openai", {}).get("key", request.app.state.config.RAG_AZURE_OPENAI_BASE_URL)
+    azure_openai_version = rag_config.get("azure_openai", {}).get("version", request.app.state.config.RAG_AZURE_OPENAI_BASE_URL)
+
     # Check if entries with the same hash (metadata.hash) already exist
     if metadata and "hash" in metadata:
         result = VECTOR_DB_CLIENT.query(
@@ -1354,20 +1541,29 @@ def save_docs_to_vector_db(
 
         log.info(f"adding to collection {collection_name}")
         embedding_function = get_embedding_function(
-            embedding_engine,
-            embedding_model,
-            request.app.state.ef.get(embedding_model, request.app.state.config.RAG_EMBEDDING_MODEL),
+            request.app.state.config.RAG_EMBEDDING_ENGINE,
+            request.app.state.config.RAG_EMBEDDING_MODEL,
+            request.app.state.ef,
             (
                 openai_api_base_url
                 if embedding_engine == "openai"
-                else ollama_base_url
+                else (
+                    ollama_base_url
+                    if embedding_engine == "ollama"
+                    else azure_openai_url
+                )
             ),
             (
-                openai_api_key
-                if embedding_engine == "openai"
-                else ollama_api_key
+                request.app.state.config.RAG_OPENAI_API_KEY
+                if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
+                else request.app.state.config.RAG_OLLAMA_API_KEY
             ),
             embedding_batch_size,
+            azure_api_version=(
+                azure_openai_version
+                if embedding_engine == "azure_openai"
+                else None
+            ),
         )
 
         embeddings = embedding_function(
@@ -1439,6 +1635,33 @@ def process_file(
         content_extraction_engine = rag_config.get(
             "CONTENT_EXTRACTION_ENGINE", request.app.state.config.CONTENT_EXTRACTION_ENGINE
         )
+        datalab_marker_api_key=rag_config.get(
+            "DATALAB_MARKER_API_KEY", request.app.state.config.DATALAB_MARKER_API_KEY
+            )
+        datalab_marker_langs=rag_config.get(
+            "DATALAB_MARKER_LANGS", request.app.state.config.DATALAB_MARKER_LANGS
+            )
+        datalab_marker_skip_cache=rag_config.get(
+            "DATALAB_MARKER_SKIP_CACHE", request.app.state.config.DATALAB_MARKER_SKIP_CACHE
+            )
+        datalab_marker_force_ocr=rag_config.get(
+            "DATALAB_MARKER_FORCE_OCR", request.app.state.config.DATALAB_MARKER_FORCE_OCR
+            )
+        datalab_marker_paginate=rag_config.get(
+            "DATALAB_MARKER_PAGINATE", request.app.state.config.DATALAB_MARKER_PAGINATE
+            )
+        datalab_marker_strip_existing_ocr=rag_config.get(
+            "DATALAB_MARKER_STRIP_EXISTING_OCR", request.app.state.config.DATALAB_MARKER_STRIP_EXISTING_OCR
+            )
+        datalab_marker_disable_image_extraction=rag_config.get(
+            "DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION", request.app.state.config.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION
+            )
+        datalab_marker_use_llm=rag_config.get(
+            "DATALAB_MARKER_USE_LLM", request.app.state.config.DATALAB_MARKER_USE_LLM
+            )
+        datalab_marker_output_format=rag_config.get(
+            "DATALAB_MARKER_OUTPUT_FORMAT", request.app.state.config.DATALAB_MARKER_OUTPUT_FORMAT
+            )
         external_document_loader_url = rag_config.get(
             "EXTERNAL_DOCUMENT_LOADER_URL", request.app.state.config.EXTERNAL_DOCUMENT_LOADER_URL
         )
@@ -1537,6 +1760,15 @@ def process_file(
                 file_path = Storage.get_file(file_path)
                 loader = Loader(
                     engine=content_extraction_engine,
+                    DATALAB_MARKER_API_KEY=datalab_marker_api_key,
+                    DATALAB_MARKER_LANGS=datalab_marker_langs,
+                    DATALAB_MARKER_SKIP_CACHE=datalab_marker_skip_cache,
+                    DATALAB_MARKER_FORCE_OCR=datalab_marker_force_ocr,
+                    DATALAB_MARKER_PAGINATE=datalab_marker_paginate,
+                    DATALAB_MARKER_STRIP_EXISTING_OCR=datalab_marker_strip_existing_ocr,
+                    DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION=datalab_marker_disable_image_extraction,
+                    DATALAB_MARKER_USE_LLM=datalab_marker_use_llm,
+                    DATALAB_MARKER_OUTPUT_FORMAT=datalab_marker_output_format,
                     EXTERNAL_DOCUMENT_LOADER_URL=external_document_loader_url,
                     EXTERNAL_DOCUMENT_LOADER_API_KEY=external_document_loader_api_key,
                     TIKA_SERVER_URL=tika_server_url,
@@ -1961,19 +2193,14 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
             request.app.state.config.WEB_SEARCH_RESULT_COUNT,
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
         )
-    elif engine == "exa":
-        return search_exa(
-            request.app.state.config.EXA_API_KEY,
-            query,
-            request.app.state.config.WEB_SEARCH_RESULT_COUNT,
-            request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
-        )
     elif engine == "perplexity":
         return search_perplexity(
             request.app.state.config.PERPLEXITY_API_KEY,
             query,
             request.app.state.config.WEB_SEARCH_RESULT_COUNT,
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            model=request.app.state.config.PERPLEXITY_MODEL,
+            search_context_usage=request.app.state.config.PERPLEXITY_SEARCH_CONTEXT_USAGE,
         )
     elif engine == "sougou":
         if (
@@ -2052,13 +2279,29 @@ async def process_web_search(
         )
 
     try:
-        loader = get_web_loader(
-            urls,
-            verify_ssl=request.app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION,
-            requests_per_second=request.app.state.config.WEB_SEARCH_CONCURRENT_REQUESTS,
-            trust_env=request.app.state.config.WEB_SEARCH_TRUST_ENV,
-        )
-        docs = await loader.aload()
+        if request.app.state.config.BYPASS_WEB_SEARCH_WEB_LOADER:
+            docs = [
+                Document(
+                    page_content=result.snippet,
+                    metadata={
+                        "source": result.link,
+                        "title": result.title,
+                        "snippet": result.snippet,
+                        "link": result.link,
+                    },
+                )
+                for result in search_results
+                if hasattr(result, "snippet")
+            ]
+        else:
+            loader = get_web_loader(
+                urls,
+                verify_ssl=request.app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION,
+                requests_per_second=request.app.state.config.WEB_SEARCH_CONCURRENT_REQUESTS,
+                trust_env=request.app.state.config.WEB_SEARCH_TRUST_ENV,
+            )
+            docs = await loader.aload()
+
         urls = [
             doc.metadata.get("source") for doc in docs if doc.metadata.get("source")
         ]  # only keep the urls returned by the loader
@@ -2148,6 +2391,11 @@ def query_doc_handler(
                     if form_data.r
                     else request.app.state.config.RELEVANCE_THRESHOLD
                 ),
+                hybrid_bm25_weight=(
+                    form_data.hybrid_bm25_weight
+                    if form_data.hybrid_bm25_weight
+                    else request.app.state.config.HYBRID_BM25_WEIGHT
+                ),
                 user=user,
             )
         else:
@@ -2174,6 +2422,7 @@ class QueryCollectionsForm(BaseModel):
     k_reranker: Optional[int] = None
     r: Optional[float] = None
     hybrid: Optional[bool] = None
+    hybrid_bm25_weight: Optional[float] = None
 
 
 @router.post("/query/collection")
@@ -2198,6 +2447,11 @@ def query_collection_handler(
                     form_data.r
                     if form_data.r
                     else request.app.state.config.RELEVANCE_THRESHOLD
+                ),
+                hybrid_bm25_weight=(
+                    form_data.hybrid_bm25_weight
+                    if form_data.hybrid_bm25_weight
+                    else request.app.state.config.HYBRID_BM25_WEIGHT
                 ),
             )
         else:
