@@ -875,6 +875,7 @@
 										}}
 									>
 										<svg
+											aria-hidden="true"
 											xmlns="http://www.w3.org/2000/svg"
 											fill="none"
 											viewBox="0 0 24 24"
@@ -944,6 +945,7 @@
 										<svg
 											xmlns="http://www.w3.org/2000/svg"
 											fill="none"
+											aria-hidden="true"
 											viewBox="0 0 24 24"
 											stroke="currentColor"
 											stroke-width="2.5"
@@ -976,6 +978,7 @@
 													fill="none"
 													viewBox="0 0 24 24"
 													stroke-width="2.3"
+													aria-hidden="true"
 													stroke="currentColor"
 													class="w-4 h-4"
 												>
@@ -1002,6 +1005,7 @@
 										<svg
 											xmlns="http://www.w3.org/2000/svg"
 											fill="none"
+											aria-hidden="true"
 											viewBox="0 0 24 24"
 											stroke-width="2.3"
 											stroke="currentColor"
@@ -1034,6 +1038,7 @@
 													class=" w-4 h-4"
 													fill="currentColor"
 													viewBox="0 0 24 24"
+													aria-hidden="true"
 													xmlns="http://www.w3.org/2000/svg"
 												>
 													<style>
@@ -1066,6 +1071,7 @@
 													xmlns="http://www.w3.org/2000/svg"
 													fill="none"
 													viewBox="0 0 24 24"
+													aria-hidden="true"
 													stroke-width="2.3"
 													stroke="currentColor"
 													class="w-4 h-4"
@@ -1081,6 +1087,7 @@
 													xmlns="http://www.w3.org/2000/svg"
 													fill="none"
 													viewBox="0 0 24 24"
+													aria-hidden="true"
 													stroke-width="2.3"
 													stroke="currentColor"
 													class="w-4 h-4"
@@ -1110,6 +1117,7 @@
 										>
 											{#if generatingImage}
 												<svg
+													aria-hidden="true"
 													class=" w-4 h-4"
 													fill="currentColor"
 													viewBox="0 0 24 24"
@@ -1144,6 +1152,7 @@
 												<svg
 													xmlns="http://www.w3.org/2000/svg"
 													fill="none"
+													aria-hidden="true"
 													viewBox="0 0 24 24"
 													stroke-width="2.3"
 													stroke="currentColor"
@@ -1185,6 +1194,7 @@
 											id="info-{message.id}"
 										>
 											<svg
+												aria-hidden="true"
 												xmlns="http://www.w3.org/2000/svg"
 												fill="none"
 												viewBox="0 0 24 24"
@@ -1224,6 +1234,7 @@
 												}}
 											>
 												<svg
+													aria-hidden="true"
 													stroke="currentColor"
 													fill="none"
 													stroke-width="2.3"
@@ -1260,6 +1271,7 @@
 												}}
 											>
 												<svg
+													aria-hidden="true"
 													stroke="currentColor"
 													fill="none"
 													stroke-width="2.3"
@@ -1290,6 +1302,7 @@
 												}}
 											>
 												<svg
+													aria-hidden="true"
 													xmlns="http://www.w3.org/2000/svg"
 													fill="none"
 													viewBox="0 0 24 24"
@@ -1340,6 +1353,7 @@
 												fill="none"
 												viewBox="0 0 24 24"
 												stroke-width="2.3"
+												aria-hidden="true"
 												stroke="currentColor"
 												class="w-4 h-4"
 											>
@@ -1370,6 +1384,7 @@
 													viewBox="0 0 24 24"
 													stroke-width="2"
 													stroke="currentColor"
+													aria-hidden="true"
 													class="w-4 h-4"
 												>
 													<path
