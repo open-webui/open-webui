@@ -1,6 +1,8 @@
 import black
 import logging
 import markdown
+import json
+import asyncio
 
 from open_webui.models.chats import ChatTitleMessagesForm
 from open_webui.config import DATA_DIR, ENABLE_ADMIN_EXPORT
@@ -8,6 +10,7 @@ from open_webui.constants import ERROR_MESSAGES
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel
 from starlette.responses import FileResponse
+from concurrent.futures import ThreadPoolExecutor
 
 
 from open_webui.utils.misc import get_gravatar_url
@@ -32,15 +35,43 @@ class CodeForm(BaseModel):
     code: str
 
 
-@router.post("/code/format")
-async def format_code(form_data: CodeForm, user=Depends(get_verified_user)):
+MAX_CODE_SIZE = 256 * 1024  # 256KB
+format_semaphore = asyncio.Semaphore(5)
+
+
+async def receive_code(request: Request):
+    code = b""
+    async for chunk in request.stream():
+        code += chunk
+        if len(code) > MAX_CODE_SIZE:
+            raise HTTPException(status_code=413, detail="Code is too large")
+
     try:
-        formatted_code = black.format_str(form_data.code, mode=black.Mode())
-        return {"code": formatted_code}
-    except black.NothingChanged:
-        return {"code": form_data.code}
+        return json.loads(code)["code"]
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail="Invalid code format")
+
+
+def format_code_sync(code: str) -> str:
+    return black.format_str(code, mode=black.Mode())
+
+
+@router.post("/code/format")
+async def format_code(request: Request, user=Depends(get_verified_user)):
+    async with format_semaphore:
+        try:
+            code = await receive_code(request)
+
+            loop = asyncio.get_event_loop()
+            with ThreadPoolExecutor() as executor:
+                formatted_code = await loop.run_in_executor(
+                    executor, format_code_sync, code
+                )
+                return {"code": formatted_code}
+        except black.NothingChanged:
+            return {"code": code}
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.post("/code/execute")
