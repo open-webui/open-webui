@@ -13,6 +13,7 @@
 	import Switch from '$lib/components/common/Switch.svelte';
 	import GlobeAltSolid from '$lib/components/icons/GlobeAltSolid.svelte';
 	import WrenchSolid from '$lib/components/icons/WrenchSolid.svelte';
+	import Cog6Solid from '$lib/components/icons/Cog6Solid.svelte';
 	import CameraSolid from '$lib/components/icons/CameraSolid.svelte';
 	import PhotoSolid from '$lib/components/icons/PhotoSolid.svelte';
 
@@ -57,7 +58,9 @@
 			a[tool.id] = {
 				name: tool.name,
 				description: tool.meta.description,
-				enabled: selectedToolIds.includes(tool.id)
+				enabled: selectedToolIds.includes(tool.id),
+				isMcp: tool.meta?.manifest?.is_mcp_tool || false,
+				mcpServerName: tool.meta?.manifest?.mcp_server_name || ''
 			};
 			return a;
 		}, {});
@@ -102,15 +105,28 @@
 						>
 							<div class="flex-1 truncate">
 								<Tooltip
-									content={tools[toolId]?.description ?? ''}
+									content={tools[toolId].isMcp 
+										? `${tools[toolId]?.description ?? ''} (MCP Server: ${tools[toolId].mcpServerName})`
+										: tools[toolId]?.description ?? ''}
 									placement="top-start"
 									className="flex flex-1 gap-2 items-center"
 								>
 									<div class="flex-shrink-0">
-										<WrenchSolid />
+										{#if tools[toolId].isMcp}
+											<Cog6Solid />
+										{:else}
+											<WrenchSolid />
+										{/if}
 									</div>
 
-									<div class=" truncate">{tools[toolId].name}</div>
+									<div class="flex flex-col items-start truncate">
+										<div class="truncate">{tools[toolId].name}</div>
+										{#if tools[toolId].isMcp && tools[toolId].mcpServerName}
+											<div class="text-xs text-gray-500 dark:text-gray-400 truncate">
+												{tools[toolId].mcpServerName}
+											</div>
+										{/if}
+									</div>
 								</Tooltip>
 							</div>
 

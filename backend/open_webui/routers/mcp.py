@@ -6,6 +6,7 @@ It follows the same patterns as the Ollama and OpenAI routers for consistency.
 """
 
 import logging
+import json
 from typing import Optional, Dict, List, Any
 
 from fastmcp.client import Client
@@ -14,10 +15,11 @@ from pydantic import BaseModel
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.mcp_manager import mcp_manager
+from open_webui.models.mcp_servers import MCPServers
 
 log = logging.getLogger(__name__)
 
-##########################################
+########################################
 #
 # Utility functions
 #
@@ -412,7 +414,13 @@ async def get_builtin_servers(request: Request, user=Depends(get_admin_user)):
         server_names = request.app.state.mcp_manager.get_server_names()
         servers = []
         
+        # Only include actual built-in servers
+        builtin_server_names = ['time_server']
+        
         for name in server_names:
+            if name not in builtin_server_names:
+                continue  # Skip non-built-in servers
+                
             status = request.app.state.mcp_manager.get_server_status(name)
             config = request.app.state.mcp_manager.server_configs.get(name, {})
             
@@ -440,27 +448,406 @@ async def get_builtin_servers(request: Request, user=Depends(get_admin_user)):
 def get_server_description(name: str) -> str:
     """Get description for built-in servers"""
     descriptions = {
-        "time_server": "Provides current time and timezone information",
-        "news_server": "Fetches latest news headlines and articles from NewsAPI"
+        "time_server": "Provides current time and timezone information"
     }
     return descriptions.get(name, f"Built-in MCP server: {name}")
 
-@router.post("/servers/builtin/{server_name}/restart")
-async def restart_builtin_server(
+# Pydantic models for external server management
+class MCPServerForm(BaseModel):
+    name: str
+    description: Optional[str] = None
+    command: str
+    args: Optional[List[str]] = []
+    env: Optional[Dict[str, str]] = {}
+    transport: str = "stdio"  # "stdio" or "http"
+    url: Optional[str] = None
+    port: Optional[int] = None
+    is_active: Optional[bool] = True
+
+class MCPServerUpdateForm(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    command: Optional[str] = None
+    args: Optional[List[str]] = None
+    env: Optional[Dict[str, str]] = None
+    transport: Optional[str] = None
+    url: Optional[str] = None
+    port: Optional[int] = None
+    is_active: Optional[bool] = None
+
+##########################################
+#
+# External MCP Server Management
+#
+##########################################
+
+@router.get("/servers/external")
+async def get_external_servers(request: Request, user=Depends(get_admin_user)):
+    """Get all external (user-created) MCP servers"""
+    try:
+        servers = MCPServers.get_user_created_servers()
+        
+        # Convert to dictionaries and enrich with runtime status from MCP manager
+        server_dicts = []
+        for server in servers:
+            # Convert Pydantic model to dict
+            server_dict = server.model_dump()
+            
+            if hasattr(request.app.state, 'mcp_manager') and request.app.state.mcp_manager:
+                status = request.app.state.mcp_manager.get_server_status(server.name)
+                server_dict['runtime_status'] = status
+                
+                # Get tools count if server is running
+                if status == 'running':
+                    try:
+                        tools = await request.app.state.mcp_manager.get_tools_from_server(server.name)
+                        server_dict['tools_count'] = len(tools)
+                    except Exception:
+                        server_dict['tools_count'] = 0
+                else:
+                    server_dict['tools_count'] = 0
+            else:
+                server_dict['runtime_status'] = 'unknown'
+                server_dict['tools_count'] = 0
+            
+            server_dicts.append(server_dict)
+        
+        return {"servers": server_dicts}
+    except Exception as e:
+        log.exception(f"Error getting external MCP servers: {e}")
+        raise HTTPException(status_code=500, detail=f"Error getting external servers: {str(e)}")
+
+@router.post("/servers/external")
+async def create_external_server(
     request: Request, 
-    server_name: str, 
+    form_data: MCPServerForm, 
     user=Depends(get_admin_user)
 ):
-    """Restart a built-in MCP server"""
-    if hasattr(request.app.state, 'mcp_manager') and request.app.state.mcp_manager:
-        try:
-            success = await request.app.state.mcp_manager.restart_server(server_name)
-            if success:
-                return {"status": "success", "message": f"Server {server_name} restarted successfully"}
-            else:
-                return {"status": "error", "message": f"Failed to restart server {server_name}"}
-        except Exception as e:
-            log.exception(f"Error restarting server {server_name}: {e}")
-            raise HTTPException(status_code=500, detail=f"Error restarting server: {str(e)}")
-    else:
-        raise HTTPException(status_code=500, detail="MCP manager not available")
+    """Create a new external MCP server"""
+    try:
+        # Check if server name already exists
+        existing_server = MCPServers.get_server_by_name(form_data.name)
+        if existing_server:
+            raise HTTPException(status_code=400, detail=f"Server with name '{form_data.name}' already exists")
+        
+        # Validate transport-specific fields
+        if form_data.transport == "http" and not form_data.url and not form_data.port:
+            raise HTTPException(status_code=400, detail="HTTP transport requires either URL or port")
+        
+        # Create server in database
+        server_data = {
+            "name": form_data.name,
+            "description": form_data.description,
+            "user_id": user.id,
+            "server_type": "user_created",
+            "command": form_data.command,
+            "args": form_data.args or [],
+            "env": form_data.env or {},
+            "transport": form_data.transport,
+            "url": form_data.url,
+            "port": form_data.port,
+            "is_active": form_data.is_active,
+            "is_deletable": True,
+        }
+        
+        server = MCPServers.insert_new_server(**server_data)
+        if not server:
+            raise HTTPException(status_code=500, detail="Failed to create server in database")
+        
+        # Add server configuration to MCP manager
+        if hasattr(request.app.state, 'mcp_manager') and request.app.state.mcp_manager:
+            try:
+                # Build command list
+                command_list = [form_data.command] + (form_data.args or [])
+                
+                # Build URL for HTTP transport
+                server_url = form_data.url
+                if form_data.transport == "http" and form_data.port and not server_url:
+                    server_url = f"http://localhost:{form_data.port}/sse"
+                
+                request.app.state.mcp_manager.add_server_config(
+                    name=form_data.name,
+                    command=command_list,
+                    env=form_data.env,
+                    transport=form_data.transport,
+                    url=server_url
+                )
+                
+                # Start server if it should be active
+                if form_data.is_active:
+                    success = await request.app.state.mcp_manager.start_server(form_data.name)
+                    if not success:
+                        log.warning(f"Failed to start server {form_data.name} after creation")
+                
+            except Exception as e:
+                log.exception(f"Error adding server to MCP manager: {e}")
+                # Don't fail the entire operation, just log the warning
+        
+        return {"server": server, "message": "External MCP server created successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.exception(f"Error creating external MCP server: {e}")
+        raise HTTPException(status_code=500, detail=f"Error creating external server: {str(e)}")
+
+@router.get("/servers/external/{server_id}")
+async def get_external_server(server_id: str, user=Depends(get_admin_user)):
+    """Get a specific external MCP server by ID"""
+    try:
+        server = MCPServers.get_server_by_id(server_id)
+        if not server:
+            raise HTTPException(status_code=404, detail="Server not found")
+        
+        if server.server_type != 'user_created':
+            raise HTTPException(status_code=400, detail="Server is not an external server")
+        
+        # Convert to dict for response
+        server_dict = server.model_dump()
+        return {"server": server_dict}
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.exception(f"Error getting external MCP server: {e}")
+        raise HTTPException(status_code=500, detail=f"Error getting external server: {str(e)}")
+
+@router.put("/servers/external/{server_id}")
+async def update_external_server(
+    request: Request,
+    server_id: str, 
+    form_data: MCPServerUpdateForm, 
+    user=Depends(get_admin_user)
+):
+    """Update an external MCP server"""
+    try:
+        # Get existing server
+        existing_server = MCPServers.get_server_by_id(server_id)
+        if not existing_server:
+            raise HTTPException(status_code=404, detail="Server not found")
+        
+        if existing_server.server_type != 'user_created':
+            raise HTTPException(status_code=400, detail="Cannot update built-in server")
+        
+        # Check if new name conflicts with existing servers
+        if form_data.name and form_data.name != existing_server.name:
+            existing_with_name = MCPServers.get_server_by_name(form_data.name)
+            if existing_with_name:
+                raise HTTPException(status_code=400, detail=f"Server with name '{form_data.name}' already exists")
+        
+        # Build update data (only include non-None values)
+        update_data = {}
+        for field, value in form_data.model_dump().items():
+            if value is not None:
+                update_data[field] = value
+        
+        # Update server in database
+        server = MCPServers.update_server_by_id(server_id, update_data)
+        if not server:
+            raise HTTPException(status_code=500, detail="Failed to update server")
+        
+        # Update MCP manager configuration if server name or config changed
+        if hasattr(request.app.state, 'mcp_manager') and request.app.state.mcp_manager:
+            try:
+                old_name = existing_server.name
+                new_name = server.name
+                
+                # If name changed, we need to remove old config and add new one
+                if old_name != new_name:
+                    await request.app.state.mcp_manager.stop_server(old_name)
+                    # Remove old configuration
+                    if old_name in request.app.state.mcp_manager.server_configs:
+                        del request.app.state.mcp_manager.server_configs[old_name]
+                
+                # Add/update server configuration
+                command_list = [server.command] + (server.args or [])
+                server_url = server.url
+                if server.transport == "http" and server.port and not server_url:
+                    server_url = f"http://localhost:{server.port}/sse"
+                
+                request.app.state.mcp_manager.add_server_config(
+                    name=new_name,
+                    command=command_list,
+                    env=server.env or {},
+                    transport=server.transport,
+                    url=server_url
+                )
+                
+                # Restart server if it should be active
+                if server.is_active:
+                    success = await request.app.state.mcp_manager.start_server(new_name)
+                    if not success:
+                        log.warning(f"Failed to start server {new_name} after update")
+                else:
+                    await request.app.state.mcp_manager.stop_server(new_name)
+                
+            except Exception as e:
+                log.exception(f"Error updating server in MCP manager: {e}")
+        
+        return {"server": server, "message": "External MCP server updated successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.exception(f"Error updating external MCP server: {e}")
+        raise HTTPException(status_code=500, detail=f"Error updating external server: {str(e)}")
+
+@router.delete("/servers/external/{server_id}")
+async def delete_external_server(
+    request: Request,
+    server_id: str, 
+    user=Depends(get_admin_user)
+):
+    """Delete an external MCP server"""
+    try:
+        # Get existing server
+        server = MCPServers.get_server_by_id(server_id)
+        if not server:
+            raise HTTPException(status_code=404, detail="Server not found")
+        
+        if server.server_type != 'user_created':
+            raise HTTPException(status_code=400, detail="Cannot delete built-in server")
+        
+        if not server.is_deletable:
+            raise HTTPException(status_code=400, detail="Server is not deletable")
+        
+        # Stop and remove from MCP manager first
+        if hasattr(request.app.state, 'mcp_manager') and request.app.state.mcp_manager:
+            try:
+                await request.app.state.mcp_manager.stop_server(server.name)
+                # Remove configuration
+                if server.name in request.app.state.mcp_manager.server_configs:
+                    del request.app.state.mcp_manager.server_configs[server.name]
+            except Exception as e:
+                log.exception(f"Error removing server from MCP manager: {e}")
+        
+        # Delete from database
+        success = MCPServers.delete_server_by_id(server_id)
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to delete server from database")
+        
+        return {"message": "External MCP server deleted successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.exception(f"Error deleting external MCP server: {e}")
+        raise HTTPException(status_code=500, detail=f"Error deleting external server: {str(e)}")
+
+@router.post("/servers/external/{server_id}/start")
+async def start_external_server(
+    request: Request,
+    server_id: str, 
+    user=Depends(get_admin_user)
+):
+    """Start an external MCP server"""
+    try:
+        # Get server from database
+        server = MCPServers.get_server_by_id(server_id)
+        if not server:
+            raise HTTPException(status_code=404, detail="Server not found")
+        
+        if server.server_type != 'user_created':
+            raise HTTPException(status_code=400, detail="Cannot start built-in server this way")
+        
+        if not hasattr(request.app.state, 'mcp_manager') or not request.app.state.mcp_manager:
+            raise HTTPException(status_code=500, detail="MCP manager not available")
+        
+        # Ensure server configuration is in MCP manager
+        command_list = [server.command] + (server.args or [])
+        server_url = server.url
+        if server.transport == "http" and server.port and not server_url:
+            server_url = f"http://localhost:{server.port}/sse"
+        
+        request.app.state.mcp_manager.add_server_config(
+            name=server.name,
+            command=command_list,
+            env=server.env or {},
+            transport=server.transport,
+            url=server_url
+        )
+        
+        # Start the server
+        success = await request.app.state.mcp_manager.start_server(server.name)
+        if not success:
+            raise HTTPException(status_code=500, detail=f"Failed to start server {server.name}")
+        
+        # Update server status in database
+        MCPServers.update_server_status(server_id, True)
+        
+        return {"message": f"Server {server.name} started successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.exception(f"Error starting external MCP server: {e}")
+        raise HTTPException(status_code=500, detail=f"Error starting external server: {str(e)}")
+
+@router.post("/servers/external/{server_id}/stop")
+async def stop_external_server(
+    request: Request,
+    server_id: str, 
+    user=Depends(get_admin_user)
+):
+    """Stop an external MCP server"""
+    try:
+        # Get server from database
+        server = MCPServers.get_server_by_id(server_id)
+        if not server:
+            raise HTTPException(status_code=404, detail="Server not found")
+        
+        if server.server_type != 'user_created':
+            raise HTTPException(status_code=400, detail="Cannot stop built-in server this way")
+        
+        if not hasattr(request.app.state, 'mcp_manager') or not request.app.state.mcp_manager:
+            raise HTTPException(status_code=500, detail="MCP manager not available")
+        
+        # Stop the server
+        success = await request.app.state.mcp_manager.stop_server(server.name)
+        if not success:
+            raise HTTPException(status_code=500, detail=f"Failed to stop server {server.name}")
+        
+        # Update server status in database
+        MCPServers.update_server_status(server_id, False)
+        
+        return {"message": f"Server {server.name} stopped successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.exception(f"Error stopping external MCP server: {e}")
+        raise HTTPException(status_code=500, detail=f"Error stopping external server: {str(e)}")
+
+@router.post("/servers/external/{server_id}/restart")
+async def restart_external_server(
+    request: Request,
+    server_id: str, 
+    user=Depends(get_admin_user)
+):
+    """Restart an external MCP server"""
+    try:
+        # Get server from database
+        server = MCPServers.get_server_by_id(server_id)
+        if not server:
+            raise HTTPException(status_code=404, detail="Server not found")
+        
+        if server.server_type != 'user_created':
+            raise HTTPException(status_code=400, detail="Cannot restart built-in server this way")
+        
+        if not hasattr(request.app.state, 'mcp_manager') or not request.app.state.mcp_manager:
+            raise HTTPException(status_code=500, detail="MCP manager not available")
+        
+        # Restart the server
+        success = await request.app.state.mcp_manager.restart_server(server.name)
+        if not success:
+            raise HTTPException(status_code=500, detail=f"Failed to restart server {server.name}")
+        
+        # Update server status in database
+        MCPServers.update_server_status(server_id, True)
+        
+        return {"message": f"Server {server.name} restarted successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.exception(f"Error restarting external MCP server: {e}")
+        raise HTTPException(status_code=500, detail=f"Error restarting external server: {str(e)}")

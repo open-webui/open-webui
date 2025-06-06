@@ -373,13 +373,13 @@ async def lifespan(app: FastAPI):
         app.state.mcp_manager = get_mcp_manager()
         log.info("FastMCP manager initialized")
         
-        # Initialize default MCP servers if enabled
+        # Initialize all MCP servers (built-in and external) if enabled
         if app.state.config.ENABLE_MCP_API:
-            await app.state.mcp_manager.initialize_default_servers()
-            log.info("Default MCP servers initialized")
+            await app.state.mcp_manager.initialize_all_servers()
+            log.info("All MCP servers initialized")
             
             # Note: Built-in MCP servers use stdio transport and are managed internally
-            # External MCP servers can still be configured via MCP_BASE_URLS if needed
+            # External MCP servers are loaded from database and managed via API
             
     except Exception as e:
         log.error(f"Failed to initialize FastMCP manager: {e}")

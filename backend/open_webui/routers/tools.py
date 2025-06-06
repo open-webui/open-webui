@@ -32,35 +32,58 @@ async def get_tools(request: Request, user=Depends(get_verified_user)):
     else:
         tools = Tools.get_tools_by_user_id(user.id, "read")
     
-    # Add MCP tools if enabled
+    # Add MCP tools if available (check both enabled flag and manager existence)
     try:
         # Handle both dict and object config access
-        enable_mcp = False
+        enable_mcp = True  # Default to enabled to check if MCP manager exists
         if hasattr(request.app.state.config, 'ENABLE_MCP_API'):
             enable_mcp = request.app.state.config.ENABLE_MCP_API
         elif isinstance(request.app.state.config, dict):
-            enable_mcp = request.app.state.config.get('ENABLE_MCP_API', False)
+            enable_mcp = request.app.state.config.get('ENABLE_MCP_API', True)  # Default to True
         
-        if enable_mcp:
+        # Also check if MCP manager exists (built-in servers)
+        has_mcp_manager = hasattr(request.app.state, 'mcp_manager') and request.app.state.mcp_manager
+        
+        if enable_mcp or has_mcp_manager:
             from open_webui.routers.mcp import get_all_mcp_tools
             from open_webui.models.tools import ToolMeta
             
             mcp_tools_response = await get_all_mcp_tools(request)
             mcp_tools = mcp_tools_response.get("tools", [])
             
+            print(f"DEBUG: Found {len(mcp_tools)} MCP tools from get_all_mcp_tools")
+            
             for mcp_tool in mcp_tools:
                 # Create a pseudo-tool entry for MCP tools
+                tool_name = mcp_tool.get('name', '')
+                if not tool_name:
+                    continue
+                
+                # Create unique ID and name to avoid conflicts with regular tools
+                tool_id = f"mcp_{tool_name}"
+                display_name = f"MCP: {tool_name}"  # Prefix to distinguish from regular tools
+                
+                # Check if we already have a tool with this ID and make it unique
+                existing_ids = [t.id for t in tools]
+                original_id = tool_id
+                counter = 1
+                while tool_id in existing_ids:
+                    tool_id = f"{original_id}_{counter}"
+                    display_name = f"MCP: {tool_name} ({counter})"
+                    counter += 1
+                    
                 mcp_tool_entry = ToolUserResponse(
-                    id=f"mcp_{mcp_tool['name']}",
+                    id=tool_id,
                     user_id="system",  # Use system as user_id for MCP tools
-                    name=f"MCP: {mcp_tool['name']}",
+                    name=display_name,  # Use prefixed name to distinguish
                     meta=ToolMeta(
-                        description=mcp_tool['description'],
+                        description=mcp_tool.get('description', ''),
                         manifest={
                             "mcp_server_url": mcp_tool.get('mcp_server_url'),
                             "mcp_server_idx": mcp_tool.get('mcp_server_idx', 0),
+                            "mcp_server_name": mcp_tool.get('mcp_server_name'),
                             "is_mcp_tool": True,
-                            "original_name": mcp_tool['name']
+                            "original_name": tool_name
                         }
                     ),
                     access_control=None,  # Public access
@@ -69,8 +92,11 @@ async def get_tools(request: Request, user=Depends(get_verified_user)):
                     user=None  # No specific user for MCP tools
                 )
                 tools.append(mcp_tool_entry)
+                print(f"DEBUG: Added MCP tool: {display_name} with ID: {tool_id}")
     except Exception as e:
         print(f"Error loading MCP tools in tools router: {e}")
+        import traceback
+        traceback.print_exc()
     
     return tools
 

@@ -277,12 +277,15 @@ class FastMCPManager:
                             tools = await client.list_tools()
                             
                             for tool in tools:
+                                # Mark if this is a built-in server
+                                is_builtin = server_name in ['time_server', 'news_server']
                                 tool_dict = {
                                     "name": tool.name,
                                     "description": tool.description,
                                     "inputSchema": tool.inputSchema.model_dump() if hasattr(tool.inputSchema, 'model_dump') else tool.inputSchema,
                                     "mcp_server_name": server_name,
-                                    "mcp_server_idx": list(self.server_configs.keys()).index(server_name)
+                                    "mcp_server_idx": list(self.server_configs.keys()).index(server_name),
+                                    "is_builtin": is_builtin
                                 }
                                 all_tools.append(tool_dict)
                 else:
@@ -294,12 +297,15 @@ class FastMCPManager:
                             tools = await client.list_tools()
                             
                             for tool in tools:
+                                # Mark if this is a built-in server
+                                is_builtin = server_name in ['time_server', 'news_server']
                                 tool_dict = {
                                     "name": tool.name,
                                     "description": tool.description,
                                     "inputSchema": tool.inputSchema.model_dump() if hasattr(tool.inputSchema, 'model_dump') else tool.inputSchema,
                                     "mcp_server_name": server_name,
-                                    "mcp_server_idx": list(self.server_configs.keys()).index(server_name)
+                                    "mcp_server_idx": list(self.server_configs.keys()).index(server_name),
+                                    "is_builtin": is_builtin
                                 }
                                 all_tools.append(tool_dict)
             
@@ -375,21 +381,55 @@ class FastMCPManager:
             
             # Start the time server
             await self.start_server("time_server")
-        
-        # Add configuration for news server (stdio)
-        news_server_path = backend_dir / "fastmcp_news_server.py"
-        
-        if news_server_path.exists():
-            self.add_server_config(
-                name="news_server",
-                command=["python", str(news_server_path)],
-                working_dir=str(backend_dir),
-                env=dict(os.environ),  # Pass current environment variables
-                transport="stdio"
-            )
+    
+    async def initialize_external_servers(self):
+        """Initialize external MCP servers from database"""
+        try:
+            # Import here to avoid circular imports
+            from open_webui.models.mcp_servers import MCPServers
             
-            # Start the news server
-            await self.start_server("news_server")
+            # Get all active external servers from database
+            servers = MCPServers.get_user_created_servers()
+            
+            for server in servers:
+                if not server.is_active:
+                    continue
+                
+                try:
+                    # Build command list
+                    command_list = [server.command] + (server.args or [])
+                    
+                    # Build URL for HTTP transport
+                    server_url = server.url
+                    if server.transport == "http" and server.port and not server_url:
+                        server_url = f"http://localhost:{server.port}/sse"
+                    
+                    # Add server configuration
+                    self.add_server_config(
+                        name=server.name,
+                        command=command_list,
+                        env=server.env or {},
+                        transport=server.transport,
+                        url=server_url
+                    )
+                    
+                    # Start the server
+                    success = await self.start_server(server.name)
+                    if success:
+                        log.info(f"Successfully started external server: {server.name}")
+                    else:
+                        log.warning(f"Failed to start external server: {server.name}")
+                        
+                except Exception as e:
+                    log.exception(f"Error initializing external server {server.name}: {e}")
+                    
+        except Exception as e:
+            log.exception(f"Error loading external servers from database: {e}")
+    
+    async def initialize_all_servers(self):
+        """Initialize both built-in and external servers"""
+        await self.initialize_default_servers()
+        await self.initialize_external_servers()
     
     async def cleanup(self):
         """Clean up all server processes and connections"""
@@ -417,11 +457,14 @@ class FastMCPManager:
                         
                         tool_list = []
                         for tool in tools:
+                            # Mark if this is a built-in server
+                            is_builtin = server_name in ['time_server', 'news_server']
                             tool_dict = {
                                 "name": tool.name,
                                 "description": tool.description,
                                 "inputSchema": tool.inputSchema.model_dump() if hasattr(tool.inputSchema, 'model_dump') else tool.inputSchema,
-                                "mcp_server_name": server_name
+                                "mcp_server_name": server_name,
+                                "is_builtin": is_builtin
                             }
                             tool_list.append(tool_dict)
                         
@@ -436,11 +479,14 @@ class FastMCPManager:
                         
                         tool_list = []
                         for tool in tools:
+                            # Mark if this is a built-in server
+                            is_builtin = server_name in ['time_server', 'news_server']
                             tool_dict = {
                                 "name": tool.name,
                                 "description": tool.description,
                                 "inputSchema": tool.inputSchema.model_dump() if hasattr(tool.inputSchema, 'model_dump') else tool.inputSchema,
-                                "mcp_server_name": server_name
+                                "mcp_server_name": server_name,
+                                "is_builtin": is_builtin
                             }
                             tool_list.append(tool_dict)
                         
