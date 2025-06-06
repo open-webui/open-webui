@@ -368,19 +368,25 @@
 	}}
 >
 	<div class="space-y-3 overflow-y-scroll scrollbar-hidden h-full">
-		<div>
-			<div class="mb-2 text-sm font-medium">{$i18n.t('MCP (Model Context Protocol)')}</div>
+		<div class="flex flex-col gap-1 mt-1.5 mb-2">
+			<div class="flex justify-between items-center">
+				<div class="flex items-center md:self-center text-xl font-medium px-0.5">
+					{$i18n.t('MCP Servers')}
+					<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
+					<span class="text-lg font-medium text-gray-500 dark:text-gray-300"
+						>{(builtinServers?.length || 0) + (externalServers?.length || 0)}</span
+					>
+				</div>
+
+				<div class="flex items-center gap-1.5">
+					<Tooltip content={$i18n.t('Enable MCP API')}>
+						<Switch bind:state={ENABLE_MCP_API} ariaLabel="Enable MCP API" />
+					</Tooltip>
+				</div>
+			</div>
+
 			<div class="text-xs text-gray-600 dark:text-gray-500">
 				{$i18n.t('Configure connections to external MCP servers to extend model capabilities with additional tools and context.')}
-			</div>
-		</div>
-
-		<hr class="dark:border-gray-700" />
-
-		<div>
-			<div class="flex justify-between items-center text-sm">
-				<div class="font-medium">{$i18n.t('Enable MCP API')}</div>
-				<Switch bind:state={ENABLE_MCP_API} ariaLabel="Enable MCP API" />
 			</div>
 		</div>
 
@@ -451,7 +457,7 @@
 												aria-label="Restart {server.display_name || server.name} server"
 												on:click={() => restartBuiltinServerHandler(server.name)}
 											>
-												<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-3 h-3">
+												<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-3 h-3" aria-hidden="true">
 													<path fill-rule="evenodd" d="M13.836 2.477a.75.75 0 0 1 .75.75v3.182a.75.75 0 0 1-.75.75h-3.182a.75.75 0 0 1 0-1.5h1.37l-.84-.841a4.5 4.5 0 0 0-7.08.932.75.75 0 0 1-1.3-.75 6 6 0 0 1 9.44-1.242l.842.84V3.227a.75.75 0 0 1 .75-.75zm-.911 7.5A.75.75 0 0 1 13.199 11a6 6 0 0 1-9.44 1.241l-.84-.84v1.371a.75.75 0 0 1-1.5 0V9.591a.75.75 0 0 1 .75-.75H5.35a.75.75 0 0 1 0 1.5H3.98l.841.841a4.5 4.5 0 0 0 7.08-.932.75.75 0 0 1 1.025-.273z" clip-rule="evenodd" />
 												</svg>
 											</button>
@@ -484,6 +490,7 @@
 					<button
 						class="ml-auto px-2 py-1 text-purple-700 dark:text-purple-300 bg-purple-100 hover:bg-purple-200 dark:bg-purple-900 dark:hover:bg-purple-800 rounded text-xs transition"
 						type="button"
+						aria-label="{$i18n.t('Add Server')}"
 						on:click={() => openServerModal()}
 					>
 						<Plus className="w-3 h-3 inline mr-1" />
@@ -545,9 +552,10 @@
 													<button
 														class="px-2 py-1 text-red-700 dark:text-red-300 bg-red-100 hover:bg-red-200 dark:bg-red-900 dark:hover:bg-red-800 rounded text-xs transition"
 														type="button"
+														aria-label="Stop {server.name} server"
 														on:click={() => stopServerHandler(server.id, server.name)}
 													>
-														<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-3 h-3">
+														<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-3 h-3" aria-hidden="true">
 															<path d="M5.5 3.5A1.5 1.5 0 0 1 7 2h2a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 9 14H7a1.5 1.5 0 0 1-1.5-1.5v-9Z" />
 														</svg>
 													</button>
@@ -556,9 +564,10 @@
 													<button
 														class="px-2 py-1 text-gray-700 dark:text-gray-200 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded text-xs transition"
 														type="button"
+														aria-label="Restart {server.name} server"
 														on:click={() => restartExternalServerHandler(server.id, server.name)}
 													>
-														<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-3 h-3">
+														<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-3 h-3" aria-hidden="true">
 															<path fill-rule="evenodd" d="M13.836 2.477a.75.75 0 0 1 .75.75v3.182a.75.75 0 0 1-.75.75h-3.182a.75.75 0 0 1 0-1.5h1.37l-.84-.841a4.5 4.5 0 0 0-7.08.932.75.75 0 0 1-1.3-.75 6 6 0 0 1 9.44-1.242l.842.84V3.227a.75.75 0 0 1 .75-.75zm-.911 7.5A.75.75 0 0 1 13.199 11a6 6 0 0 1-9.44 1.241l-.84-.84v1.371a.75.75 0 0 1-1.5 0V9.591a.75.75 0 0 1 .75-.75H5.35a.75.75 0 0 1 0 1.5H3.98l.841.841a4.5 4.5 0 0 0 7.08-.932.75.75 0 0 1 1.025-.273z" clip-rule="evenodd" />
 														</svg>
 													</button>
@@ -568,9 +577,10 @@
 													<button
 														class="px-2 py-1 text-green-700 dark:text-green-300 bg-green-100 hover:bg-green-200 dark:bg-green-900 dark:hover:bg-green-800 rounded text-xs transition"
 														type="button"
+														aria-label="Start {server.name} server"
 														on:click={() => startServerHandler(server.id, server.name)}
 													>
-														<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-3 h-3">
+														<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-3 h-3" aria-hidden="true">
 															<path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393Z" />
 														</svg>
 													</button>
@@ -580,9 +590,10 @@
 												<button
 													class="px-2 py-1 text-blue-700 dark:text-blue-300 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900 dark:hover:bg-blue-800 rounded text-xs transition"
 													type="button"
+													aria-label="Edit {server.name} server"
 													on:click={() => openServerModal(server)}
 												>
-													<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-3 h-3">
+													<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-3 h-3" aria-hidden="true">
 														<path d="M13.488 2.513a1.75 1.75 0 0 0-2.475 0L6.75 6.774a2.75 2.75 0 0 0-.596.892l-.848 2.047a.75.75 0 0 0 .98.98l2.047-.848a2.75 2.75 0 0 0 .892-.596l4.261-4.262a1.75 1.75 0 0 0 0-2.474Z" />
 														<path d="M4.75 3.5c-.69 0-1.25.56-1.25 1.25v6.5c0 .69.56 1.25 1.25 1.25h6.5c.69 0 1.25-.56 1.25-1.25V9A.75.75 0 0 1 14 9v2.25A2.75 2.75 0 0 1 11.25 14h-6.5A2.75 2.75 0 0 1 2 11.25v-6.5A2.75 2.75 0 0 1 4.75 2H7a.75.75 0 0 1 0 1.5H4.75Z" />
 													</svg>
@@ -592,9 +603,10 @@
 												<button
 													class="px-2 py-1 text-red-700 dark:text-red-300 bg-red-100 hover:bg-red-200 dark:bg-red-900 dark:hover:bg-red-800 rounded text-xs transition"
 													type="button"
+													aria-label="Delete {server.name} server"
 													on:click={() => deleteServerHandler(server.id, server.name)}
 												>
-													<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-3 h-3">
+													<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-3 h-3" aria-hidden="true">
 														<path fill-rule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.713l.275 5.5a.75.75 0 0 1-1.498.075l-.275-5.5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .712.787l-.275 5.5a.75.75 0 0 1-1.498-.075l.275-5.5a.75.75 0 0 1 .786-.712Z" clip-rule="evenodd" />
 													</svg>
 												</button>
