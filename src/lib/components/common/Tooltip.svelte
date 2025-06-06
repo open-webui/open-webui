@@ -2,10 +2,8 @@
 	import DOMPurify from 'dompurify';
 
 	import { onDestroy } from 'svelte';
-	import { marked } from 'marked';
 
 	import tippy from 'tippy.js';
-	import { roundArrow } from 'tippy.js';
 
 	export let placement = 'top';
 	export let content = `I'm a tooltip!`;
@@ -47,6 +45,6 @@
 	});
 </script>
 
-<div bind:this={tooltipElement} aria-label={DOMPurify.sanitize(content)} class={className}>
+<div bind:this={tooltipElement} class={className}>
 	<slot />
 </div>
