@@ -945,7 +945,7 @@
 										aria-label={$i18n.t('Next message')}
 									>
 										<svg
-										xmlns="http://www.w3.org/2000/svg"
+											xmlns="http://www.w3.org/2000/svg"
 											fill="none"
 											aria-hidden="true"
 											viewBox="0 0 24 24"
