@@ -12,7 +12,8 @@
 		deleteAllModels,
 		getBaseModels,
 		toggleModelById,
-		updateModelById
+		updateModelById,
+		getModelById
 	} from '$lib/apis/models';
 
 	import { getModels } from '$lib/apis';
@@ -35,6 +36,9 @@
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
 	import Eye from '$lib/components/icons/Eye.svelte';
 	import { copyToClipboard } from '$lib/utils';
+
+	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
 
 	let shiftKey = false;
 
@@ -66,6 +70,24 @@
 	}
 
 	let searchValue = '';
+
+	$: {
+		if ($page.url.pathname === '/admin/settings/models/edit') {
+			const modelIdFromUrl = $page.url.searchParams.get('id');
+			if (modelIdFromUrl && models) {
+				const modelExists = models.some((m) => m.id === modelIdFromUrl);
+				if (modelExists) {
+					selectedModelId = modelIdFromUrl;
+				} else {
+					goto('/admin/settings/models', { replaceState: true });
+				}
+			} else if (!modelIdFromUrl) {
+				goto('/admin/settings/models', { replaceState: true });
+			}
+		} else if ($page.url.pathname === '/admin/settings/models' && selectedModelId !== null) {
+			selectedModelId = null;
+		}
+	}
 
 	const downloadModels = async (models) => {
 		let blob = new Blob([JSON.stringify(models)], {
@@ -314,7 +336,7 @@
 							class=" flex flex-1 text-left space-x-3.5 cursor-pointer w-full"
 							type="button"
 							on:click={() => {
-								selectedModelId = model.id;
+								goto(`/admin/settings/models/edit?id=${model.id}`);
 							}}
 						>
 							<div class=" self-center w-8">
@@ -378,7 +400,7 @@
 									class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 									type="button"
 									on:click={() => {
-										selectedModelId = model.id;
+										goto(`/admin/settings/models/edit?id=${model.id}`);
 									}}
 								>
 									<svg
@@ -552,10 +574,10 @@
 			onSubmit={(model) => {
 				console.log(model);
 				upsertModelHandler(model);
-				selectedModelId = null;
+				goto('/admin/settings/models');
 			}}
 			onBack={() => {
-				selectedModelId = null;
+				goto('/admin/settings/models');
 			}}
 		/>
 	{/if}
