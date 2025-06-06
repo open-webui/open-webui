@@ -95,56 +95,106 @@ export const transcribeAudio = async (token: string, file: File) => {
 	return res;
 };
 
-export const streamAudio = async (reader: any) => {	
-	const ctx = new AudioContext({sampleRate: 24000}) 
+const DEFAULT_SAMPLE_RATE = 24000;
+const START_FADE_S = 0.03; // 30ms fade-in for the very start of a stream
+const END_FADE_S = 0.03;   // 30ms fade-out for the very end of a stream
+const GRACE_MS = 50;
+const VERY_LOW_GAIN = 0.00001; // Closer to zero for exponential ramp
+const DC_OFFSET_THRESHOLD = 0.005;
 
-	let time = ctx.currentTime
+export const streamAudio = async (reader) => { // Removed isFirstSentenceInSequence, as each call is a "new stream"
+    const ctx = new AudioContext({ sampleRate: DEFAULT_SAMPLE_RATE });
+    // Start scheduling slightly in the future to give context and gain ramp time
+    let nextPlayTime = ctx.currentTime + 0.01; // Start scheduling 10ms into the future
+    let firstChunkProcessed = false;
+    let lastGainNode = null;
+    let lastChunkEndTime = 0;
 
+    console.log(`[streamAudio] New Stream START. Initial ctx.currentTime: ${ctx.currentTime.toFixed(3)}, Scheduling starts at: ${nextPlayTime.toFixed(3)}`);
 
-	function playChunk(pcm: any) {
-		const samples = new Int16Array(pcm);
-		const float32 = new Float32Array(samples.length)
-		for (let i = 0; i < samples.length; i++) {
-			float32[i] = samples[i] / 32768; // normalise 16 bit signed pcm samples into -1 to 1
-		}
+    // Pre-set the destination gain to 0 if we anticipate a fade-in.
+    // This helps ensure silence before the first sound if there's any scheduling delay.
+    // However, gain nodes are per-source, so the main thing is the first source's gain.
 
-		const buffer = ctx.createBuffer(1, float32.length, 24000)
-		buffer.getChannelData(0).set(float32)
+    try {
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
 
-		const source = ctx.createBufferSource()
-		source.buffer = buffer
-		source.connect(ctx.destination)
-		const scheduledTime = Math.max(time, ctx.currentTime);
-		source.start(scheduledTime)
-		// time += buffer.duration
-		time = scheduledTime + buffer.duration;
-	}
+            const pcmData = value.buffer;
+            let samples = new Int16Array(pcmData);
+            let float32 = new Float32Array(samples.length);
+            let sum = 0;
+            for (let i = 0; i < samples.length; i++) {
+                float32[i] = samples[i] / 32768;
+                sum += float32[i];
+            }
 
-	try {
-		while (true) { 
-			const { done, value } = await reader.read()
-			if (done) {
-				break;
-			}
-			playChunk(value.buffer)
-		}
-	} catch (error) {
-		console.error("[streamAudio] Error during streaming:", error);
-	} finally {
-		// Important: Wait for the scheduled audio to finish playing
-		// before closing the context and allowing the next sentence.
-		// 'time' now holds the approximate end time of the last scheduled chunk.
-		const timeToWait = (time - ctx.currentTime) * 1000; // Convert to milliseconds
+            const dcOffset = sum / float32.length;
+            if (Math.abs(dcOffset) > DC_OFFSET_THRESHOLD) {
+                for (let i = 0; i < float32.length; i++) float32[i] -= dcOffset;
+            }
 
-		if (timeToWait > 0) {
-			console.log(`[streamAudio] Waiting ${timeToWait.toFixed(0)}ms for audio to finish playing.`);
-			await new Promise(resolve => setTimeout(resolve, Math.max(0, timeToWait)));
-		}
+            const audioBuffer = ctx.createBuffer(1, float32.length, DEFAULT_SAMPLE_RATE);
+            audioBuffer.getChannelData(0).set(float32);
 
-		await ctx.close(); // Close the context to free up resources
-		console.log('[streamAudio] AudioContext closed for sentence.');
-	}
-}
+            const sourceNode = ctx.createBufferSource();
+            sourceNode.buffer = audioBuffer;
+            const gainNode = ctx.createGain();
+            sourceNode.connect(gainNode);
+            gainNode.connect(ctx.destination);
+
+            // 'scheduleTime' is when this specific chunk will start playing
+            const scheduleTime = Math.max(nextPlayTime, ctx.currentTime); // Ensure not in past
+
+            if (!firstChunkProcessed) {
+                // **CRITICAL FADE-IN FOR THE VERY FIRST CHUNK OF THE STREAM**
+                gainNode.gain.setValueAtTime(VERY_LOW_GAIN, ctx.currentTime); // Ensure gain is low NOW
+                gainNode.gain.setValueAtTime(VERY_LOW_GAIN, scheduleTime);    // Explicitly set to VERY_LOW_GAIN at scheduled start
+                gainNode.gain.exponentialRampToValueAtTime(1, scheduleTime + START_FADE_S);
+                console.log(`[streamAudio] FIRST CHUNK FADE-IN: Scheduled at ${scheduleTime.toFixed(3)}, Ramp ends ${(scheduleTime + START_FADE_S).toFixed(3)}`);
+                firstChunkProcessed = true;
+            } else {
+                gainNode.gain.setValueAtTime(1, scheduleTime); // Full gain for subsequent chunks
+            }
+
+            sourceNode.start(scheduleTime);
+            nextPlayTime = scheduleTime + audioBuffer.duration;
+            lastGainNode = gainNode;
+            lastChunkEndTime = nextPlayTime;
+        }
+
+        // After loop: if we processed any chunks, apply fade-OUT to the last one
+        if (lastGainNode) {
+            const fadeOutStartTime = lastChunkEndTime - END_FADE_S;
+            const now = ctx.currentTime;
+            const effectiveRampStartTime = Math.max(now, fadeOutStartTime);
+            const effectiveRampEndTime = effectiveRampStartTime + END_FADE_S;
+
+            // Ensure gain is 1 before ramp starts
+            lastGainNode.gain.setValueAtTime(1, effectiveRampStartTime);
+            lastGainNode.gain.exponentialRampToValueAtTime(VERY_LOW_GAIN, effectiveRampEndTime);
+            console.log(`[streamAudio] LAST CHUNK FADE-OUT: Ramp starts ${effectiveRampStartTime.toFixed(3)}, Ramp ends ${effectiveRampEndTime.toFixed(3)}`);
+            nextPlayTime = Math.max(nextPlayTime, effectiveRampEndTime);
+        }
+
+    } catch (error) {
+        console.error("[streamAudio] Error:", error);
+    } finally {
+        const timeToWaitMs = (nextPlayTime - ctx.currentTime) * 1000;
+        if (timeToWaitMs > 0) {
+            console.log(`[streamAudio] Waiting ${timeToWaitMs.toFixed(0)}ms for audio to complete.`);
+            await new Promise(resolve => setTimeout(resolve, Math.max(0, timeToWaitMs)));
+        }
+        if (GRACE_MS > 0) {
+             console.log(`[streamAudio] Grace period: ${GRACE_MS}ms.`);
+            await new Promise(resolve => setTimeout(resolve, GRACE_MS));
+        }
+        await ctx.close();
+        console.log(`[streamAudio] Stream END. Context closed. Final scheduled time: ${nextPlayTime.toFixed(3)}`);
+    }
+};
+
 
 export const synthesizeStreamingSpeech = async (
 	text: string = '',
