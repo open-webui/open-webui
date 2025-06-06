@@ -219,7 +219,7 @@
 						bind:selectedModels
 						showSetDefault={!history.currentId}
 					/>
-					<button class="flex space-x-[5px] items-center py-[3px] px-[6px] rounded-md bg-lightGray-800 dark:bg-customGray-800 min-w-fit text-xs text-lightGray-100 dark:text-customGray-100 font-medium" on:click={() => showLibrary.set(true)}>
+					<button class="flex space-x-[5px] items-center py-[3px] px-[6px] rounded-md bg-lightGray-800 dark:bg-customGray-800 min-w-fit text-xs text-lightGray-100 dark:text-customGray-100 font-medium" on:click={() => showLibrary.set(!$showLibrary)}>
 						<BookIcon /> <span>{$i18n.t('Library')}</span>
 					</button>
 				</div>

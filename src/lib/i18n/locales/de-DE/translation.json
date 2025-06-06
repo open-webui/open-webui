@@ -48,6 +48,7 @@
 	"admin": "Administrator",
 	"Admin": "Administrator",
 	"Admin Panel": "Administrationsbereich",
+	"Admin Only": "Nur Admin",
 	"Admin Settings": "Administrationsbereich",
 	"Admins have access to all tools at all times; users need tools assigned per model in the workspace.": "Administratoren haben jederzeit Zugriff auf alle Werkzeuge. Benutzer können im Arbeitsbereich zugewiesen.",
 	"Adoption Rate": "Akzeptanzrate",
