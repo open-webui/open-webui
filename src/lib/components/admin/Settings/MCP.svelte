@@ -310,15 +310,15 @@
 										<!-- Server Status Indicator -->
 										<div class="flex items-center gap-2">
 											{#if server.status === 'running'}
-												<Tooltip content="Server is running">
+												<Tooltip content={$i18n.t('Server is running')}>
 													<div class="w-2 h-2 rounded-full bg-green-500"></div>
 												</Tooltip>
 											{:else if server.status === 'stopped'}
-												<Tooltip content="Server is stopped">
+												<Tooltip content={$i18n.t('Server is stopped')}>
 													<div class="w-2 h-2 rounded-full bg-red-500"></div>
 												</Tooltip>
 											{:else}
-												<Tooltip content="Server status unknown">
+												<Tooltip content={$i18n.t('Server status unknown')}>
 													<div class="w-2 h-2 rounded-full bg-gray-500"></div>
 												</Tooltip>
 											{/if}
@@ -333,14 +333,14 @@
 									<div class="flex items-center gap-2">
 										<!-- Tools Count Badge -->
 										<span class="inline-flex items-center rounded-full bg-blue-100 dark:bg-blue-900 px-2 py-1 text-xs font-medium text-blue-700 dark:text-blue-300">
-											{server.tools_count} {server.tools_count === 1 ? 'tool' : 'tools'}
+											{server.tools_count} {server.tools_count === 1 ? $i18n.t('tool') : $i18n.t('tools')}
 										</span>
 										
 										<!-- Status Badge -->
 										<span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium {server.status === 'running' ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300' : 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300'}">
-											{server.status}
+											{$i18n.t(server.status)}
 										</span>								<!-- Restart Button -->
-							<Tooltip content="Restart Server">
+							<Tooltip content={$i18n.t('Restart Server')}>
 								<button
 									class="px-2 py-1 text-gray-700 dark:text-gray-200 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded text-xs transition"
 									type="button"
@@ -559,7 +559,7 @@
 									{:else}
 										<!-- Built-in Server Tool -->
 										<span class="inline-flex items-center rounded-full bg-green-100 dark:bg-green-900 px-2 py-1 text-xs font-medium text-green-700 dark:text-green-300">
-											Built-in
+											{$i18n.t('Built-in')}
 										</span>
 									{/if}
 								</div>
@@ -589,7 +589,7 @@
 										<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-3 h-3 text-gray-600">
 											<path d="M21.731 2.269a2.625 2.625 0 00-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 000-3.712zM19.513 8.199l-3.712-3.712-12.15 12.15a5.25 5.25 0 00-1.32 2.214l-.8 2.685a.75.75 0 00.933.933l2.685-.8a5.25 5.25 0 002.214-1.32L19.513 8.2z" />
 										</svg>
-										<span class="text-xs text-gray-600">Built-in Server Tool</span>
+										<span class="text-xs text-gray-600">{$i18n.t('Built-in Server Tool')}</span>
 									</div>
 								{/if}
 								{#if tool.inputSchema}
