@@ -288,17 +288,16 @@ async def reindex_specific_knowledge_files(request: Request, id: str, user=Depen
                 )
                 failed_files.append({"file_id": file.id, "error": str(e)})
                 continue
+            
+        if failed_files:
+            log.warning(
+                f"Failed to process {len(failed_files)} files in knowledge base {knowledge_base.id}"
+            )
+            for failed in failed_files:
+                log.warning(f"File ID: {failed['file_id']}, Error: {failed['error']}")
 
     except Exception as e:
         log.error(f"Error processing knowledge base {knowledge_base.id}: {str(e)}")
-
-
-    if failed_files:
-        log.warning(
-            f"Failed to process {len(failed_files)} files in knowledge base {knowledge_base.id}"
-        )
-        for failed in failed_files:
-            log.warning(f"File ID: {failed['file_id']}, Error: {failed['error']}")
 
     log.info(
         f"Reindexing completed. Deleted {len(deleted_knowledge_bases)} invalid knowledge bases: {deleted_knowledge_bases}"
