@@ -9,13 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **⚡ Electron Integration**: Added Electron integration for desktop application support, enabling native desktop experience with RAUX
-- **📦 Desktop Installer**: Created Windows installer (.exe) for easy desktop deployment
-- **📝 Release Automation**: Integrated GitHub Actions workflow for automated builds and releases
-- **🔄 Version Sync**: Synchronized versioning between web and desktop applications
-- **📋 Changelog Integration**: Automated changelog extraction for release notes
-- **🍋 Lemonade Control**: RAUX will now control Lemonade as a sub-process if its not already running
-
+- **⚡ Electron Integration**: Complete Electron integration for desktop application support, enabling native desktop experience with RAUX through ElectronJS and Electron Forge with Squirrel installer
+- **📦 Desktop Installer**: Created Windows installer (.exe) for easy desktop deployment with automated build and packaging processes
+- **📝 Release Automation**: Integrated comprehensive GitHub Actions workflow for automated builds, releases, and artifact management with separate generic and hybrid build configurations
+- **🔄 Version Sync**: Synchronized versioning between web and desktop applications with dual versioning scheme (production + RAUX versions)
+- **📋 Changelog Integration**: Automated changelog extraction for release notes with GitHub releases integration
+- **🍋 Lemonade Server Management**: RAUX now intelligently manages Lemonade as a sub-process with proper detection, startup, and shutdown handling
+- **🎯 Smart Lemonade Detection**: Implemented robust CLI-based detection using `lemonade-server --version` command instead of simple PATH checking
+- **🔧 Process Management Framework**: Added BaseCliRunner framework for generic CLI command execution and LemonadeClient for Lemonade-specific operations
+- **🛠️ Installation Loading Screen**: Interactive loading screen with real-time status updates during RAUX installation and startup process
+- **📡 IPC Communication**: Comprehensive inter-process communication system for status updates between main and renderer processes
+- **🏗️ Centralized Setup Architecture**: Refactored Python and RAUX setup into centralized modules for improved maintainability and error handling
+- **🌍 GAIA Beta Branding**: Updated application branding to "GAIA BETA" with consistent naming across all components
+- **📦 Wheel-Based Installation**: Streamlined installation process using Python wheel distribution with build context packaging
+- **⚙️ Environment Configuration**: Enhanced environment file handling with separate generic and hybrid configurations
+- **🔍 Installation Validation**: Added comprehensive installation completeness checks for improved startup reliability
+- **📊 Enhanced Progress Feedback**: Real-time progress indicators and detailed status messaging throughout installation process
+- **🛡️ Pip Cache Management**: App-specific pip cache directory to avoid permission errors during installation
+- **🔄 Retry Logic**: Implemented retry strategy for downloading wheel context with network resilience
 
 ## [0.6.5+raux.0.1.0] - 2025-04-20
 

@@ -197,3 +197,4 @@ RAUX can be installed:
 
 - Remember that "node_modules" folder is not our code; its ok to reference but don't check for errors or lint
 - ElectronJS uses ElectronForge with Squirrel
+- Utilize the available tools you have access to. For example, use the IDE integration rather than using CLI. For Github querying or manipulation, use the gh CLI tools or the GitHub API.
