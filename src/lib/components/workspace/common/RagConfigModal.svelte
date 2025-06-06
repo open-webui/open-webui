@@ -45,6 +45,10 @@
     let OpenAIUrl = RAGConfig.openai_config?.url || "";
     let OpenAIKey = RAGConfig.openai_config?.key || "";
 
+	let AzureOpenAIUrl = RAGConfig.azure_openai_config?.url || "";
+	let AzureOpenAIKey = RAGConfig.azure_openai_config?.key || "";
+	let AzureOpenAIVersion = RAGConfig.azure_openai_config?.version || "";
+
     let OllamaUrl = RAGConfig.ollama_config?.url || "";
     let OllamaKey = RAGConfig.ollama_config?.key || "";
 
@@ -60,6 +64,10 @@
 
     OpenAIUrl = RAGConfig.openai_config?.url || "";
     OpenAIKey = RAGConfig.openai_config?.key || "";
+
+    AzureOpenAIUrl = RAGConfig.azure_openai_config?.url || "";
+    AzureOpenAIKey = RAGConfig.azure_openai_config?.key || "";
+    AzureOpenAIVersion = RAGConfig.azure_openai_config?.version || "";
 
     OllamaUrl = RAGConfig.ollama_config?.url || "";
     OllamaKey = RAGConfig.ollama_config?.key || "";
@@ -101,10 +109,17 @@
             return;
         }
 
-        if ((embeddingEngine === 'openai' && OpenAIKey === '') || OpenAIUrl === '') {
-            toast.error($i18n.t('OpenAI URL/Key required.'));
-            return;
-        }
+		if (embeddingEngine === 'openai' && (OpenAIKey === '' || OpenAIUrl === '')) {
+			toast.error($i18n.t('OpenAI URL/Key required.'));
+			return;
+		}
+		if (
+			embeddingEngine === 'azure_openai' &&
+			(AzureOpenAIKey === '' || AzureOpenAIUrl === '' || AzureOpenAIVersion === '')
+		) {
+			toast.error($i18n.t('OpenAI URL/Key required.'));
+			return;
+		}
 
         console.log('Update embedding model attempt:', embeddingModel);
 
@@ -120,6 +135,11 @@
             openai_config: {
                 key: OpenAIKey,
                 url: OpenAIUrl
+            },
+            azure_openai_config: {
+				key: AzureOpenAIKey,
+				url: AzureOpenAIUrl,
+				version: AzureOpenAIVersion
             },
             knowledge_id: knowledgeId,
         }).catch(async (error) => {
@@ -151,6 +171,10 @@
             OpenAIKey = embeddingConfig.openai_config.key;
             OpenAIUrl = embeddingConfig.openai_config.url;
 
+			AzureOpenAIKey = embeddingConfig.azure_openai_config.key;
+			AzureOpenAIUrl = embeddingConfig.azure_openai_config.url;
+			AzureOpenAIVersion = embeddingConfig.azure_openai_config.version;
+
             OllamaKey = embeddingConfig.ollama_config.key;
             OllamaUrl = embeddingConfig.ollama_config.url;
         }
@@ -174,7 +198,7 @@
 			toast.error($i18n.t('Docling Server URL required.'));
 			return;
 		}
-		if (
+        if (
 			localRAGConfig.CONTENT_EXTRACTION_ENGINE === 'docling' &&
 			((localRAGConfig.DOCLING_OCR_ENGINE === '' && localRAGConfig.DOCLING_OCR_LANG !== '') ||
 				(localRAGConfig.DOCLING_OCR_ENGINE !== '' && localRAGConfig.DOCLING_OCR_LANG === ''))
@@ -182,6 +206,13 @@
 			toast.error(
 				$i18n.t('Both Docling OCR Engine and Language(s) must be provided or both left empty.')
 			);
+			return;
+		}
+		if (
+			localRAGConfig.CONTENT_EXTRACTION_ENGINE === 'datalab_marker' &&
+			!localRAGConfig.DATALAB_MARKER_API_KEY
+		) {
+			toast.error($i18n.t('Datalab Marker API Key required.'));
 			return;
 		}
 
@@ -207,7 +238,8 @@
             embedding_model, 
             embedding_batch_size, 
             openai_config, 
-            ollama_config, 
+            ollama_config,
+            azure_openai_config,
             LOADED_EMBEDDING_MODELS,
             DOWNLOADED_EMBEDDING_MODELS,
             LOADED_RERANKING_MODELS,
@@ -229,16 +261,15 @@
         localRAGConfig.embedding_batch_size = embeddingBatchSize
         localRAGConfig.openai_config = {"key": OpenAIKey, "url": OpenAIUrl}          
         localRAGConfig.ollama_config = {"key": OllamaKey, "url": OllamaUrl}
-
+        localRAGConfig.azure_openai_config = {"key": AzureOpenAIKey, "url": AzureOpenAIUrl, "version": AzureOpenAIVersion}
+        
         if (needsReindex) {
             // Reindex knowledge files if reranking model changed
             const reindexResponse = await reindexSpecificKnowledgeFiles(localStorage.token, knowledgeId,
             );
 
-            if (reindexResponse.status === true) {
+            if (reindexResponse) {
                 toast.success($i18n.t('Knowledge files reindexed successfully.'));
-            } else {
-                toast.error($i18n.t('Failed to reindex knowledge files.'));
             }
         }
 
@@ -290,6 +321,7 @@
                     <option value="external">{$i18n.t('External')}</option>
                     <option value="tika">{$i18n.t('Tika')}</option>
                     <option value="docling">{$i18n.t('Docling')}</option>
+                    <option value="datalab_marker">{$i18n.t('Datalab Marker API')}</option>
                     <option value="document_intelligence">{$i18n.t('Document Intelligence')}</option>
                     <option value="mistral_ocr">{$i18n.t('Mistral OCR')}</option>
                 </select>
@@ -307,7 +339,139 @@
                         </div>
                     </div>
                 </div>
-            {:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'external'}
+            {:else if localRAGConfig.CONTENT_EXTRACTION_ENGINE === 'datalab_marker'}
+                <div class="my-0.5 flex gap-2 pr-2">
+                    <SensitiveInput
+                        placeholder={$i18n.t('Enter Datalab Marker API Key')}
+                        required={false}
+                        bind:value={localRAGConfig.DATALAB_MARKER_API_KEY}
+                    />
+                </div>
+
+                <div class="flex justify-between w-full mt-2">
+                    <div class="text-xs font-medium">
+                        {$i18n.t('Languages')}
+                    </div>
+
+                    <input
+                        class="text-sm bg-transparent outline-hidden"
+                        type="text"
+                        bind:value={localRAGConfig.DATALAB_MARKER_LANGS}
+                        placeholder={$i18n.t('e.g.) en,fr,de')}
+                    />
+                </div>
+
+                <div class="flex justify-between w-full mt-2">
+                    <div class="self-center text-xs font-medium">
+                        <Tooltip
+                            content={$i18n.t(
+                                'Significantly improves accuracy by using an LLM to enhance tables, forms, inline math, and layout detection. Will increase latency. Defaults to True.'
+                            )}
+                            placement="top-start"
+                        >
+                            {$i18n.t('Use LLM')}
+                        </Tooltip>
+                    </div>
+                    <div class="flex items-center">
+                        <Switch bind:state={localRAGConfig.DATALAB_MARKER_USE_LLM} />
+                    </div>
+                </div>
+                <div class="flex justify-between w-full mt-2">
+                    <div class="self-center text-xs font-medium">
+                        <Tooltip
+                            content={$i18n.t('Skip the cache and re-run the inference. Defaults to False.')}
+                            placement="top-start"
+                        >
+                            {$i18n.t('Skip Cache')}
+                        </Tooltip>
+                    </div>
+                    <div class="flex items-center">
+                        <Switch bind:state={localRAGConfig.DATALAB_MARKER_SKIP_CACHE} />
+                    </div>
+                </div>
+                <div class="flex justify-between w-full mt-2">
+                    <div class="self-center text-xs font-medium">
+                        <Tooltip
+                            content={$i18n.t(
+                                'Force OCR on all pages of the PDF. This can lead to worse results if you have good text in your PDFs. Defaults to False.'
+                            )}
+                            placement="top-start"
+                        >
+                            {$i18n.t('Force OCR')}
+                        </Tooltip>
+                    </div>
+                    <div class="flex items-center">
+                        <Switch bind:state={localRAGConfig.DATALAB_MARKER_FORCE_OCR} />
+                    </div>
+                </div>
+                <div class="flex justify-between w-full mt-2">
+                    <div class="self-center text-xs font-medium">
+                        <Tooltip
+                            content={$i18n.t(
+                                'Whether to paginate the output. Each page will be separated by a horizontal rule and page number. Defaults to False.'
+                            )}
+                            placement="top-start"
+                        >
+                            {$i18n.t('Paginate')}
+                        </Tooltip>
+                    </div>
+                    <div class="flex items-center">
+                        <Switch bind:state={localRAGConfig.DATALAB_MARKER_PAGINATE} />
+                    </div>
+                </div>
+                <div class="flex justify-between w-full mt-2">
+                    <div class="self-center text-xs font-medium">
+                        <Tooltip
+                            content={$i18n.t(
+                                'Strip existing OCR text from the PDF and re-run OCR. Ignored if Force OCR is enabled. Defaults to False.'
+                            )}
+                            placement="top-start"
+                        >
+                            {$i18n.t('Strip Existing OCR')}
+                        </Tooltip>
+                    </div>
+                    <div class="flex items-center">
+                        <Switch bind:state={localRAGConfig.DATALAB_MARKER_STRIP_EXISTING_OCR} />
+                    </div>
+                </div>
+                <div class="flex justify-between w-full mt-2">
+                    <div class="self-center text-xs font-medium">
+                        <Tooltip
+                            content={$i18n.t(
+                                'Disable image extraction from the PDF. If Use LLM is enabled, images will be automatically captioned. Defaults to False.'
+                            )}
+                            placement="top-start"
+                        >
+                            {$i18n.t('Disable Image Extraction')}
+                        </Tooltip>
+                    </div>
+                    <div class="flex items-center">
+                        <Switch bind:state={localRAGConfig.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION} />
+                    </div>
+                </div>
+                <div class="flex justify-between w-full mt-2">
+                    <div class="self-center text-xs font-medium">
+                        <Tooltip
+                            content={$i18n.t(
+                                "The output format for the text. Can be 'json', 'markdown', or 'html'. Defaults to 'markdown'."
+                            )}
+                            placement="top-start"
+                        >
+                            {$i18n.t('Output Format')}
+                        </Tooltip>
+                    </div>
+                    <div class="">
+                        <select
+                            class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+                            bind:value={localRAGConfig.DATALAB_MARKER_OUTPUT_FORMAT}
+                        >
+                            <option value="markdown">{$i18n.t('Markdown')}</option>
+                            <option value="json">{$i18n.t('JSON')}</option>
+                            <option value="html">{$i18n.t('HTML')}</option>
+                        </select>
+                    </div>
+                </div>
+            {:else if localRAGConfig.CONTENT_EXTRACTION_ENGINE === 'external'}
                 <div class="my-0.5 flex gap-2 pr-2">
                     <input
                         class="flex-1 w-full text-sm bg-transparent outline-hidden"
@@ -454,6 +618,8 @@
                                     embeddingModel = '';
                                 } else if (e.target.value === 'openai') {
                                     embeddingModel = 'text-embedding-3-small';
+                                } else if (e.target.value === 'azure_openai') {
+                                    embeddingModel = 'text-embedding-3-small';
                                 } else if (e.target.value === '') {
                                     embeddingModel = 'sentence-transformers/all-MiniLM-L6-v2';
                                 }
@@ -462,6 +628,7 @@
                             <option value="">{$i18n.t('Default (SentenceTransformers)')}</option>
                             <option value="ollama">{$i18n.t('Ollama')}</option>
                             <option value="openai">{$i18n.t('OpenAI')}</option>
+                            <option value="azure_openai">Azure OpenAI</option>
                         </select>
                     </div>
                 </div>
@@ -491,6 +658,26 @@
                             bind:value={OllamaKey}
                             required={false}
                         />
+                    </div>
+                {:else if embeddingEngine === 'azure_openai'}
+                    <div class="my-0.5 flex flex-col gap-2 pr-2 w-full">
+                        <div class="flex gap-2">
+                            <input
+                                class="flex-1 w-full text-sm bg-transparent outline-hidden"
+                                placeholder={$i18n.t('API Base URL')}
+                                bind:value={AzureOpenAIUrl}
+                                required
+                            />
+                            <SensitiveInput placeholder={$i18n.t('API Key')} bind:value={AzureOpenAIKey} />
+                        </div>
+                        <div class="flex gap-2">
+                            <input
+                                class="flex-1 w-full text-sm bg-transparent outline-hidden"
+                                placeholder="Version"
+                                bind:value={AzureOpenAIVersion}
+                                required
+                            />
+                        </div>
                     </div>
                 {/if}
             </div>
@@ -643,7 +830,7 @@
                 </div>
 
 
-            {#if embeddingEngine === 'ollama' || embeddingEngine === 'openai'}
+            {#if embeddingEngine === 'ollama' || embeddingEngine === 'openai'|| embeddingEngine === 'azure_openai'}
                 <div class="  mb-2.5 flex w-full justify-between">
                     <div class=" self-center text-xs font-medium">
                         {$i18n.t('Embedding Batch Size')}
@@ -851,6 +1038,25 @@
                             {$i18n.t(
                                 'Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score.'
                             )}
+                        </div>
+                    </div>
+                {/if}
+                {#if localRAGConfig.ENABLE_RAG_HYBRID_SEARCH === true}
+                    <div class="mb-2.5 flex w-full justify-between">
+                        <div class="self-center text-xs font-medium">
+                            {$i18n.t('Weight of BM25 Retrieval')}
+                        </div>
+                        <div class="flex items-center relative">
+                            <input
+                                class="flex-1 w-full text-sm bg-transparent outline-hidden"
+                                type="number"
+                                step="0.01"
+                                placeholder={$i18n.t('Enter BM25 Weight')}
+                                bind:value={localRAGConfig.HYBRID_BM25_WEIGHT}
+                                autocomplete="off"
+                                min="0.0"
+                                max="1.0"
+                            />
                         </div>
                     </div>
                 {/if}
