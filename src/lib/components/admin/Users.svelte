@@ -4,13 +4,32 @@
 
 	import { goto } from '$app/navigation';
 	import { user } from '$lib/stores';
+	import { page } from '$app/stores';
 
 	import UserList from './Users/UserList.svelte';
 	import Groups from './Users/Groups.svelte';
 
 	const i18n = getContext('i18n');
 
-	let selectedTab = 'overview';
+	let selectedTab;
+	$: {
+		const pathParts = $page.url.pathname.split('/');
+		const tabFromPath = pathParts[pathParts.length - 1];
+		selectedTab = ['overview', 'groups'].includes(tabFromPath) ? tabFromPath : 'overview';
+	}
+
+	$: if (selectedTab) {
+		// scroll to selectedTab
+		scrollToTab(selectedTab);
+	}
+
+	const scrollToTab = (tabId) => {
+		const tabElement = document.getElementById(tabId);
+		if (tabElement) {
+			tabElement.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+		}
+	};
+
 	let loaded = false;
 
 	onMount(async () => {
@@ -30,6 +49,9 @@
 				}
 			});
 		}
+
+		// Scroll to the selected tab on mount
+		scrollToTab(selectedTab);
 	});
 </script>
 
@@ -39,12 +61,13 @@
 		class=" flex flex-row overflow-x-auto gap-2.5 max-w-full lg:gap-1 lg:flex-col lg:flex-none lg:w-40 dark:text-gray-200 text-sm font-medium text-left scrollbar-none"
 	>
 		<button
+			id="overview"
 			class="px-0.5 py-1 min-w-fit rounded-lg lg:flex-none flex text-right transition {selectedTab ===
 			'overview'
 				? ''
 				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			on:click={() => {
-				selectedTab = 'overview';
+				goto('/admin/users/overview');
 			}}
 		>
 			<div class=" self-center mr-2">
@@ -63,12 +86,13 @@
 		</button>
 
 		<button
+			id="groups"
 			class="px-0.5 py-1 min-w-fit rounded-lg lg:flex-none flex text-right transition {selectedTab ===
 			'groups'
 				? ''
 				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			on:click={() => {
-				selectedTab = 'groups';
+				goto('/admin/users/groups');
 			}}
 		>
 			<div class=" self-center mr-2">

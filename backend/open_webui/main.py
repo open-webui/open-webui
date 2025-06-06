@@ -37,7 +37,7 @@ from fastapi import (
 from fastapi.openapi.docs import get_swagger_ui_html
 
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from starlette_compress import CompressMiddleware
@@ -268,6 +268,8 @@ from open_webui.config import (
     BRAVE_SEARCH_API_KEY,
     EXA_API_KEY,
     PERPLEXITY_API_KEY,
+    PERPLEXITY_MODEL,
+    PERPLEXITY_SEARCH_CONTEXT_USAGE,
     SOUGOU_API_SID,
     SOUGOU_API_SK,
     KAGI_SEARCH_API_KEY,
@@ -359,10 +361,12 @@ from open_webui.config import (
     TASK_MODEL_EXTERNAL,
     ENABLE_TAGS_GENERATION,
     ENABLE_TITLE_GENERATION,
+    ENABLE_FOLLOW_UP_GENERATION,
     ENABLE_SEARCH_QUERY_GENERATION,
     ENABLE_RETRIEVAL_QUERY_GENERATION,
     ENABLE_AUTOCOMPLETE_GENERATION,
     TITLE_GENERATION_PROMPT_TEMPLATE,
+    FOLLOW_UP_GENERATION_PROMPT_TEMPLATE,
     TAGS_GENERATION_PROMPT_TEMPLATE,
     IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE,
     TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
@@ -411,6 +415,7 @@ from open_webui.utils.chat import (
     chat_completed as chat_completed_handler,
     chat_action as chat_action_handler,
 )
+from open_webui.utils.embeddings import generate_embeddings
 from open_webui.utils.middleware import process_chat_payload, process_chat_response
 from open_webui.utils.access_control import has_access
 
@@ -771,6 +776,8 @@ app.state.config.BING_SEARCH_V7_ENDPOINT = BING_SEARCH_V7_ENDPOINT
 app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY = BING_SEARCH_V7_SUBSCRIPTION_KEY
 app.state.config.EXA_API_KEY = EXA_API_KEY
 app.state.config.PERPLEXITY_API_KEY = PERPLEXITY_API_KEY
+app.state.config.PERPLEXITY_MODEL = PERPLEXITY_MODEL
+app.state.config.PERPLEXITY_SEARCH_CONTEXT_USAGE = PERPLEXITY_SEARCH_CONTEXT_USAGE
 app.state.config.SOUGOU_API_SID = SOUGOU_API_SID
 app.state.config.SOUGOU_API_SK = SOUGOU_API_SK
 app.state.config.EXTERNAL_WEB_SEARCH_URL = EXTERNAL_WEB_SEARCH_URL
@@ -959,12 +966,16 @@ app.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION = ENABLE_RETRIEVAL_QUERY_GENE
 app.state.config.ENABLE_AUTOCOMPLETE_GENERATION = ENABLE_AUTOCOMPLETE_GENERATION
 app.state.config.ENABLE_TAGS_GENERATION = ENABLE_TAGS_GENERATION
 app.state.config.ENABLE_TITLE_GENERATION = ENABLE_TITLE_GENERATION
+app.state.config.ENABLE_FOLLOW_UP_GENERATION = ENABLE_FOLLOW_UP_GENERATION
 
 
 app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE = TITLE_GENERATION_PROMPT_TEMPLATE
 app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE = TAGS_GENERATION_PROMPT_TEMPLATE
 app.state.config.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE = (
     IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE
+)
+app.state.config.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE = (
+    FOLLOW_UP_GENERATION_PROMPT_TEMPLATE
 )
 
 app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = (
@@ -1195,6 +1206,37 @@ async def get_models(request: Request, user=Depends(get_verified_user)):
 async def get_base_models(request: Request, user=Depends(get_admin_user)):
     models = await get_all_base_models(request, user=user)
     return {"data": models}
+
+
+##################################
+# Embeddings
+##################################
+
+
+@app.post("/api/embeddings")
+async def embeddings(
+    request: Request, form_data: dict, user=Depends(get_verified_user)
+):
+    """
+    OpenAI-compatible embeddings endpoint.
+
+    This handler:
+      - Performs user/model checks and dispatches to the correct backend.
+      - Supports OpenAI, Ollama, arena models, pipelines, and any compatible provider.
+
+    Args:
+        request (Request): Request context.
+        form_data (dict): OpenAI-like payload (e.g., {"model": "...", "input": [...]})
+        user (UserModel): Authenticated user.
+
+    Returns:
+        dict: OpenAI-compatible embeddings response.
+    """
+    # Make sure models are loaded in app state
+    if not request.app.state.MODELS:
+        await get_all_models(request, user=user)
+    # Use generic dispatcher in utils.embeddings
+    return await generate_embeddings(request, form_data, user)
 
 
 @app.post("/api/chat/completions")
@@ -1628,7 +1670,20 @@ async def healthcheck_with_db():
 
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
-app.mount("/cache", StaticFiles(directory=CACHE_DIR), name="cache")
+
+
+@app.get("/cache/{path:path}")
+async def serve_cache_file(
+    path: str,
+    user=Depends(get_verified_user),
+):
+    file_path = os.path.abspath(os.path.join(CACHE_DIR, path))
+    # prevent path traversal
+    if not file_path.startswith(os.path.abspath(CACHE_DIR)):
+        raise HTTPException(status_code=404, detail="File not found")
+    if not os.path.isfile(file_path):
+        raise HTTPException(status_code=404, detail="File not found")
+    return FileResponse(file_path)
 
 
 def swagger_ui_html(*args, **kwargs):

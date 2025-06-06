@@ -95,6 +95,7 @@ class UserRoleUpdateForm(BaseModel):
 
 
 class UserUpdateForm(BaseModel):
+    role: str
     name: str
     email: str
     profile_image_url: str

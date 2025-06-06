@@ -467,6 +467,8 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             "BING_SEARCH_V7_SUBSCRIPTION_KEY": request.app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY,
             "EXA_API_KEY": request.app.state.config.EXA_API_KEY,
             "PERPLEXITY_API_KEY": request.app.state.config.PERPLEXITY_API_KEY,
+            "PERPLEXITY_MODEL": request.app.state.config.PERPLEXITY_MODEL,
+            "PERPLEXITY_SEARCH_CONTEXT_USAGE": request.app.state.config.PERPLEXITY_SEARCH_CONTEXT_USAGE,
             "SOUGOU_API_SID": request.app.state.config.SOUGOU_API_SID,
             "SOUGOU_API_SK": request.app.state.config.SOUGOU_API_SK,
             "WEB_LOADER_ENGINE": request.app.state.config.WEB_LOADER_ENGINE,
@@ -520,6 +522,8 @@ class WebConfig(BaseModel):
     BING_SEARCH_V7_SUBSCRIPTION_KEY: Optional[str] = None
     EXA_API_KEY: Optional[str] = None
     PERPLEXITY_API_KEY: Optional[str] = None
+    PERPLEXITY_MODEL: Optional[str] = None
+    PERPLEXITY_SEARCH_CONTEXT_USAGE: Optional[str] = None
     SOUGOU_API_SID: Optional[str] = None
     SOUGOU_API_SK: Optional[str] = None
     WEB_LOADER_ENGINE: Optional[str] = None
@@ -907,6 +911,10 @@ async def update_rag_config(
         )
         request.app.state.config.EXA_API_KEY = form_data.web.EXA_API_KEY
         request.app.state.config.PERPLEXITY_API_KEY = form_data.web.PERPLEXITY_API_KEY
+        request.app.state.config.PERPLEXITY_MODEL = form_data.web.PERPLEXITY_MODEL
+        request.app.state.config.PERPLEXITY_SEARCH_CONTEXT_USAGE = (
+            form_data.web.PERPLEXITY_SEARCH_CONTEXT_USAGE
+        )
         request.app.state.config.SOUGOU_API_SID = form_data.web.SOUGOU_API_SID
         request.app.state.config.SOUGOU_API_SK = form_data.web.SOUGOU_API_SK
 
@@ -1030,6 +1038,8 @@ async def update_rag_config(
             "BING_SEARCH_V7_SUBSCRIPTION_KEY": request.app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY,
             "EXA_API_KEY": request.app.state.config.EXA_API_KEY,
             "PERPLEXITY_API_KEY": request.app.state.config.PERPLEXITY_API_KEY,
+            "PERPLEXITY_MODEL": request.app.state.config.PERPLEXITY_MODEL,
+            "PERPLEXITY_SEARCH_CONTEXT_USAGE": request.app.state.config.PERPLEXITY_SEARCH_CONTEXT_USAGE,
             "SOUGOU_API_SID": request.app.state.config.SOUGOU_API_SID,
             "SOUGOU_API_SK": request.app.state.config.SOUGOU_API_SK,
             "WEB_LOADER_ENGINE": request.app.state.config.WEB_LOADER_ENGINE,
@@ -1740,19 +1750,14 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
             request.app.state.config.WEB_SEARCH_RESULT_COUNT,
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
         )
-    elif engine == "exa":
-        return search_exa(
-            request.app.state.config.EXA_API_KEY,
-            query,
-            request.app.state.config.WEB_SEARCH_RESULT_COUNT,
-            request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
-        )
     elif engine == "perplexity":
         return search_perplexity(
             request.app.state.config.PERPLEXITY_API_KEY,
             query,
             request.app.state.config.WEB_SEARCH_RESULT_COUNT,
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            model=request.app.state.config.PERPLEXITY_MODEL,
+            search_context_usage=request.app.state.config.PERPLEXITY_SEARCH_CONTEXT_USAGE,
         )
     elif engine == "sougou":
         if (

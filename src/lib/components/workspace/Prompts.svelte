@@ -22,7 +22,7 @@
 	import ChevronRight from '../icons/ChevronRight.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
-	import { capitalizeFirstLetter } from '$lib/utils';
+	import { capitalizeFirstLetter, slugify } from '$lib/utils';
 	import XMark from '../icons/XMark.svelte';
 
 	const i18n = getContext('i18n');
@@ -68,7 +68,15 @@
 	};
 
 	const cloneHandler = async (prompt) => {
-		sessionStorage.prompt = JSON.stringify(prompt);
+		const clonedPrompt = { ...prompt };
+
+		clonedPrompt.title = `${clonedPrompt.title} (Clone)`;
+		const baseCommand = clonedPrompt.command.startsWith('/')
+			? clonedPrompt.command.substring(1)
+			: clonedPrompt.command;
+		clonedPrompt.command = slugify(`${baseCommand} clone`);
+
+		sessionStorage.prompt = JSON.stringify(clonedPrompt);
 		goto('/workspace/prompts/create');
 	};
 

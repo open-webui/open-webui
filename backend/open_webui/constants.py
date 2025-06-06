@@ -111,6 +111,7 @@ class TASKS(str, Enum):
 
     DEFAULT = lambda task="": f"{task if task else 'generation'}"
     TITLE_GENERATION = "title_generation"
+    FOLLOW_UP_GENERATION = "follow_up_generation"
     TAGS_GENERATION = "tags_generation"
     EMOJI_GENERATION = "emoji_generation"
     QUERY_GENERATION = "query_generation"

@@ -49,6 +49,9 @@
 	let loading = false;
 
 	const verifyOllamaHandler = async () => {
+		// remove trailing slash from url
+		url = url.replace(/\/$/, '');
+
 		const res = await verifyOllamaConnection(localStorage.token, {
 			url,
 			key
@@ -62,6 +65,9 @@
 	};
 
 	const verifyOpenAIHandler = async () => {
+		// remove trailing slash from url
+		url = url.replace(/\/$/, '');
+
 		const res = await verifyOpenAIConnection(
 			localStorage.token,
 			{
