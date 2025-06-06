@@ -644,7 +644,8 @@ async def chat_completion_files_handler(
             reranking_model = rag_config.get("RAG_RERANKING_MODEL", request.app.state.config.RAG_RERANKING_MODEL)
             reranking_function=request.app.state.rf[reranking_model] if reranking_model else None
             k_reranker=rag_config.get("TOP_K_RERANKER", request.app.state.config.TOP_K_RERANKER)
-            r=rag_config.get("RELEVANCE THRESHOLD", request.app.state.config.RELEVANCE_THRESHOLD)
+            r=rag_config.get("RELEVANCE_THRESHOLD", request.app.state.config.RELEVANCE_THRESHOLD)
+            hybrid_bm25_weight=rag_config.get("HYBRID_BM25_WEIGHT", request.app.state.config.HYBRID_BM25_WEIGHT),
             hybrid_search=rag_config.get("ENABLE_RAG_HYBRID_SEARCH", request.app.state.config.ENABLE_RAG_HYBRID_SEARCH)
             full_context=rag_config.get("RAG_FULL_CONTEXT", request.app.state.config.RAG_FULL_CONTEXT)
             embedding_model = rag_config.get("RAG_EMBEDDING_MODEL", request.app.state.config.RAG_EMBEDDING_MODEL)
@@ -658,16 +659,16 @@ async def chat_completion_files_handler(
                         request=request,
                         files=files,
                         queries=queries,
-                        embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION[embedding_model](
-                            query, prefix=prefix, user=user
-                        ),
+                        user=user,
+                        ef=request.app.state.EMBEDDING_FUNCTION,
                         k=k,
                         reranking_function=reranking_function,
                         k_reranker=k_reranker,
                         r=r,
-                        hybrid_bm25_weight=request.app.state.config.HYBRID_BM25_WEIGHT,
+                        hybrid_bm25_weight=hybrid_bm25_weight,
                         hybrid_search=hybrid_search,
                         full_context=full_context,
+                        embedding_model=embedding_model,
                     ),
                 )
         except Exception as e:
