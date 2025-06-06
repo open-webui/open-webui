@@ -580,10 +580,16 @@
 					{#each visibleTabs as tabId (tabId)}
 						{#if tabId === 'general'}
 							<button
-								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
-								'general'
-									? ''
-									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+								class={`px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition
+								${
+									selectedTab === 'general'
+										? ($settings.highContrastMode ?? false)
+											? 'dark:bg-gray-800 bg-gray-200'
+											: ''
+										: ($settings.highContrastMode ?? false)
+											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
+											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
+								}`}
 								on:click={() => {
 									selectedTab = 'general';
 								}}
@@ -606,10 +612,16 @@
 							</button>
 						{:else if tabId === 'interface'}
 							<button
-								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
-								'interface'
-									? ''
-									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+								class={`px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition
+								${
+									selectedTab === 'interface'
+										? ($settings.highContrastMode ?? false)
+											? 'dark:bg-gray-800 bg-gray-200'
+											: ''
+										: ($settings.highContrastMode ?? false)
+											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
+											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
+								}`}
 								on:click={() => {
 									selectedTab = 'interface';
 								}}
@@ -633,10 +645,16 @@
 						{:else if tabId === 'connections'}
 							{#if $user?.role === 'admin' || ($user?.role === 'user' && $config?.features?.enable_direct_connections)}
 								<button
-									class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
-									'connections'
-										? ''
-										: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+									class={`px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition
+								${
+									selectedTab === 'connections'
+										? ($settings.highContrastMode ?? false)
+											? 'dark:bg-gray-800 bg-gray-200'
+											: ''
+										: ($settings.highContrastMode ?? false)
+											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
+											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
+								}`}
 									on:click={() => {
 										selectedTab = 'connections';
 									}}
@@ -659,10 +677,16 @@
 						{:else if tabId === 'tools'}
 							{#if $user?.role === 'admin' || ($user?.role === 'user' && $user?.permissions?.features?.direct_tool_servers)}
 								<button
-									class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
-									'tools'
-										? ''
-										: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+									class={`px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition
+								${
+									selectedTab === 'tools'
+										? ($settings.highContrastMode ?? false)
+											? 'dark:bg-gray-800 bg-gray-200'
+											: ''
+										: ($settings.highContrastMode ?? false)
+											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
+											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
+								}`}
 									on:click={() => {
 										selectedTab = 'tools';
 									}}
@@ -686,10 +710,16 @@
 							{/if}
 						{:else if tabId === 'personalization'}
 							<button
-								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
-								'personalization'
-									? ''
-									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+								class={`px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition
+								${
+									selectedTab === 'personalization'
+										? ($settings.highContrastMode ?? false)
+											? 'dark:bg-gray-800 bg-gray-200'
+											: ''
+										: ($settings.highContrastMode ?? false)
+											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
+											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
+								}`}
 								on:click={() => {
 									selectedTab = 'personalization';
 								}}
@@ -701,10 +731,16 @@
 							</button>
 						{:else if tabId === 'audio'}
 							<button
-								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
-								'audio'
-									? ''
-									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+								class={`px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition
+								${
+									selectedTab === 'audio'
+										? ($settings.highContrastMode ?? false)
+											? 'dark:bg-gray-800 bg-gray-200'
+											: ''
+										: ($settings.highContrastMode ?? false)
+											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
+											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
+								}`}
 								on:click={() => {
 									selectedTab = 'audio';
 								}}
@@ -728,10 +764,16 @@
 							</button>
 						{:else if tabId === 'chats'}
 							<button
-								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
-								'chats'
-									? ''
-									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+								class={`px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition
+								${
+									selectedTab === 'chats'
+										? ($settings.highContrastMode ?? false)
+											? 'dark:bg-gray-800 bg-gray-200'
+											: ''
+										: ($settings.highContrastMode ?? false)
+											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
+											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
+								}`}
 								on:click={() => {
 									selectedTab = 'chats';
 								}}
@@ -754,10 +796,16 @@
 							</button>
 						{:else if tabId === 'account'}
 							<button
-								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
-								'account'
-									? ''
-									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+								class={`px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition
+								${
+									selectedTab === 'account'
+										? ($settings.highContrastMode ?? false)
+											? 'dark:bg-gray-800 bg-gray-200'
+											: ''
+										: ($settings.highContrastMode ?? false)
+											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
+											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
+								}`}
 								on:click={() => {
 									selectedTab = 'account';
 								}}
@@ -780,10 +828,16 @@
 							</button>
 						{:else if tabId === 'about'}
 							<button
-								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
-								'about'
-									? ''
-									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+								class={`px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition
+								${
+									selectedTab === 'about'
+										? ($settings.highContrastMode ?? false)
+											? 'dark:bg-gray-800 bg-gray-200'
+											: ''
+										: ($settings.highContrastMode ?? false)
+											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
+											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
+								}`}
 								on:click={() => {
 									selectedTab = 'about';
 								}}
@@ -814,7 +868,9 @@
 
 				{#if $user?.role === 'admin'}
 					<button
-						class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white mt-auto"
+						class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {$settings.highContrastMode
+							? 'hover:bg-gray-200 dark:hover:bg-gray-800'
+							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 						on:click={async () => {
 							await goto('/admin/settings');
 							show = false;
