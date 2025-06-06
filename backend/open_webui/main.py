@@ -353,6 +353,7 @@ from open_webui.config import (
     OAUTH_PROVIDERS,
     WEBUI_URL,
     RESPONSE_WATERMARK,
+    USE_GREETING_MESSAGE,
     # Admin
     ENABLE_ADMIN_CHAT_ACCESS,
     ENABLE_ADMIN_EXPORT,
@@ -607,6 +608,7 @@ app.state.config.PENDING_USER_OVERLAY_CONTENT = PENDING_USER_OVERLAY_CONTENT
 app.state.config.PENDING_USER_OVERLAY_TITLE = PENDING_USER_OVERLAY_TITLE
 
 app.state.config.RESPONSE_WATERMARK = RESPONSE_WATERMARK
+app.state.config.USE_GREETING_MESSAGE = USE_GREETING_MESSAGE
 
 app.state.config.USER_PERMISSIONS = USER_PERMISSIONS
 app.state.config.WEBHOOK_URL = WEBHOOK_URL
@@ -1512,6 +1514,7 @@ async def get_app_config(request: Request):
                     "pending_user_overlay_title": app.state.config.PENDING_USER_OVERLAY_TITLE,
                     "pending_user_overlay_content": app.state.config.PENDING_USER_OVERLAY_CONTENT,
                     "response_watermark": app.state.config.RESPONSE_WATERMARK,
+                    "use_greeting_message": app.state.config.USE_GREETING_MESSAGE,
                 },
                 "license_metadata": app.state.LICENSE_METADATA,
                 **(

@@ -2,28 +2,23 @@ import json
 import logging
 import os
 import shutil
-import base64
-import redis
-
 from datetime import datetime
 from pathlib import Path
 from typing import Generic, Optional, TypeVar
 from urllib.parse import urlparse
 
+import redis
 import requests
-from pydantic import BaseModel
-from sqlalchemy import JSON, Column, DateTime, Integer, func
-
 from open_webui.env import (
     DATA_DIR,
     DATABASE_URL,
     ENV,
-    REDIS_URL,
-    REDIS_SENTINEL_HOSTS,
-    REDIS_SENTINEL_PORT,
     FRONTEND_BUILD_DIR,
     OFFLINE_MODE,
     OPEN_WEBUI_DIR,
+    REDIS_SENTINEL_HOSTS,
+    REDIS_SENTINEL_PORT,
+    REDIS_URL,
     WEBUI_AUTH,
     WEBUI_FAVICON_URL,
     WEBUI_NAME,
@@ -31,6 +26,8 @@ from open_webui.env import (
 )
 from open_webui.internal.db import Base, get_db
 from open_webui.utils.redis import get_redis_connection
+from pydantic import BaseModel
+from sqlalchemy import JSON, Column, DateTime, Integer, func
 
 
 class EndpointFilter(logging.Filter):
@@ -999,13 +996,17 @@ PENDING_USER_OVERLAY_CONTENT = PersistentConfig(
     os.environ.get("PENDING_USER_OVERLAY_CONTENT", ""),
 )
 
-
 RESPONSE_WATERMARK = PersistentConfig(
     "RESPONSE_WATERMARK",
     "ui.watermark",
     os.environ.get("RESPONSE_WATERMARK", ""),
 )
 
+USE_GREETING_MESSAGE = PersistentConfig(
+    "USE_GREETING_MESSAGE",
+    "ui.use_greeting_message",
+    os.environ.get("USE_GREETING_MESSAGE", "False").lower() == "true",
+)
 
 USER_PERMISSIONS_WORKSPACE_MODELS_ACCESS = (
     os.environ.get("USER_PERMISSIONS_WORKSPACE_MODELS_ACCESS", "False").lower()

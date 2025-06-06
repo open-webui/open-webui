@@ -6,6 +6,7 @@
 	import { toast } from 'svelte-sonner';
 
 	import { getBackendConfig, getModels, getTaskConfig, updateTaskConfig } from '$lib/apis';
+	import { getAdminConfig, updateAdminConfig } from '$lib/apis/auths';
 	import { setDefaultPromptSuggestions } from '$lib/apis/configs';
 	import { config, settings, user } from '$lib/stores';
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
@@ -47,6 +48,8 @@
 	let promptSuggestions = [];
 	let banners: Banner[] = [];
 
+	let adminConfig = null;
+
 	const updateInterfaceHandler = async () => {
 		taskConfig = await updateTaskConfig(localStorage.token, taskConfig);
 
@@ -55,6 +58,8 @@
 		await updateBanners();
 
 		await config.set(await getBackendConfig());
+
+		await updateAdminConfig(localStorage.token, adminConfig);
 	};
 
 	onMount(async () => {
@@ -63,6 +68,8 @@
 
 		promptSuggestions = $config?.default_prompt_suggestions ?? [];
 		banners = await getBanners(localStorage.token);
+
+		adminConfig = await getAdminConfig(localStorage.token);
 	});
 
 	const updateBanners = async () => {
@@ -101,7 +108,7 @@
 	};
 </script>
 
-{#if models !== null && taskConfig}
+{#if models !== null && taskConfig && adminConfig !== null}
 	<form
 		class="flex flex-col h-full justify-between space-y-3 text-sm"
 		on:submit|preventDefault={() => {
@@ -387,6 +394,13 @@
 				<div class=" mb-2.5 text-base font-medium">{$i18n.t('UI')}</div>
 
 				<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+
+				<div class="mb-2.5 flex w-full items-center justify-between">
+					<div class=" self-center text-xs font-medium">
+						{$i18n.t('Show Greeting Page instead of Model Name')}
+					</div>
+					<Switch bind:state={adminConfig.USE_GREETING_MESSAGE} />
+				</div>
 
 				<div class="mb-2.5">
 					<div class="flex w-full justify-between">

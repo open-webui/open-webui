@@ -87,6 +87,8 @@
 
 	$: models = selectedModels.map((id) => $_models.find((m) => m.id === id));
 
+	$: USE_GREETING_MESSAGE = $config?.ui?.use_greeting_message ?? true;
+
 	onMount(() => {});
 </script>
 
@@ -137,9 +139,10 @@
 						{/each}
 					</div>
 				</div>
-
-				<div class=" text-3xl @sm:text-3xl line-clamp-1" in:fade={{ duration: 100 }}>
-					{#if models[selectedModelIdx]?.name}
+				<div class=" text-3xl @sm:text-3xl capitalize line-clamp-1" in:fade={{ duration: 200 }}>
+					{#if USE_GREETING_MESSAGE}
+						{$i18n.t('Hello, {{name}}', { name: $user?.name })}
+					{:else if models[selectedModelIdx]?.name}
 						{models[selectedModelIdx]?.name}
 					{:else}
 						{$i18n.t('Hello, {{name}}', { name: $user?.name })}
