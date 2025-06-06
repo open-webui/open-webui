@@ -17,7 +17,7 @@ router = APIRouter()
 
 @router.get("/ef")
 async def get_embeddings(request: Request):
-    return {"result": request.app.state.EMBEDDING_FUNCTION("hello world")}
+    return {"result": request.app.state.EMBEDDING_FUNCTION[request.app.state.config.RAG_EMBEDDING_MODEL]("hello world")}
 
 
 ############################
@@ -57,7 +57,7 @@ async def add_memory(
             {
                 "id": memory.id,
                 "text": memory.content,
-                "vector": request.app.state.EMBEDDING_FUNCTION(
+                "vector": request.app.state.EMBEDDING_FUNCTION[request.app.state.config.RAG_EMBEDDING_MODEL](
                     memory.content, user=user
                 ),
                 "metadata": {"created_at": memory.created_at},
@@ -84,7 +84,7 @@ async def query_memory(
 ):
     results = VECTOR_DB_CLIENT.search(
         collection_name=f"user-memory-{user.id}",
-        vectors=[request.app.state.EMBEDDING_FUNCTION(form_data.content, user=user)],
+        vectors=[request.app.state.EMBEDDING_FUNCTION[request.app.state.config.RAG_EMBEDDING_MODEL](form_data.content, user=user)],
         limit=form_data.k,
     )
 
@@ -107,7 +107,7 @@ async def reset_memory_from_vector_db(
             {
                 "id": memory.id,
                 "text": memory.content,
-                "vector": request.app.state.EMBEDDING_FUNCTION(
+                "vector": request.app.state.EMBEDDING_FUNCTION[request.app.state.config.RAG_EMBEDDING_MODEL](
                     memory.content, user=user
                 ),
                 "metadata": {
@@ -166,7 +166,7 @@ async def update_memory_by_id(
                 {
                     "id": memory.id,
                     "text": memory.content,
-                    "vector": request.app.state.EMBEDDING_FUNCTION(
+                    "vector": request.app.state.EMBEDDING_FUNCTION[request.app.state.config.RAG_EMBEDDING_MODEL](
                         memory.content, user=user
                     ),
                     "metadata": {
