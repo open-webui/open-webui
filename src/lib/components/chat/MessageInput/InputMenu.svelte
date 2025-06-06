@@ -37,6 +37,13 @@
 	let tools = {};
 	let show = false;
 	let showAllTools = false;
+	let showUploadWarning = false;
+	let dontShowAgain = false;
+
+	// פונקציה לבדוק אם המשתמש כבר ביקש לא להציג שוב
+	const shouldShowWarning = () => {
+		return localStorage.getItem('hideUploadWarning') !== 'true';
+	};
 
 	$: if (show) {
 		init();
@@ -73,6 +80,38 @@
 			console.log(inputFiles);
 			inputFilesHandler(inputFiles);
 		}
+	}
+
+	function handleUploadClick() {
+		if (fileUploadEnabled) {
+			// בדוק אם צריך להציג אזהרה
+			if (shouldShowWarning()) {
+				showUploadWarning = true;
+			} else {
+				// אם המשתמש ביקש לא להציג שוב, פתח את העלאת הקבצים ישירות
+				uploadFilesHandler();
+			}
+		}
+	}
+
+	function proceedWithUpload() {
+		// אם המשתמש סימן "אל תציג שוב", שמור ב-localStorage
+		if (dontShowAgain) {
+			localStorage.setItem('hideUploadWarning', 'true');
+		}
+
+		showUploadWarning = false;
+		uploadFilesHandler();
+	}
+
+	function closeWarning() {
+		// אם המשתמש סימן "אל תציג שוב", שמור ב-localStorage גם בביטול
+		if (dontShowAgain) {
+			localStorage.setItem('hideUploadWarning', 'true');
+		}
+
+		showUploadWarning = false;
+		dontShowAgain = false; // איפוס הסימון
 	}
 </script>
 
@@ -216,11 +255,7 @@
 					class="flex gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl {!fileUploadEnabled
 						? 'opacity-50'
 						: ''}"
-					on:click={() => {
-						if (fileUploadEnabled) {
-							uploadFilesHandler();
-						}
-					}}
+					on:click={handleUploadClick}
 				>
 					<DocumentArrowUpSolid />
 					<div class="line-clamp-1">{$i18n.t('Upload Files')}</div>
@@ -389,3 +424,89 @@
 		</DropdownMenu.Content>
 	</div>
 </Dropdown>
+
+<!-- Added-->
+{#if showUploadWarning}
+	<div
+		class="fixed inset-0 bg-gray-900 bg-opacity-20 backdrop-blur-sm flex items-center justify-center z-50"
+		style="
+    background-color: color-mix(in oklab, var(--color-black) 60%, transparent);
+"
+	>
+		<div
+			class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md mx-4 shadow-xl"
+			style="direction: rtl;"
+		>
+			<h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
+				לפני העלאת קבצים - חשוב לדעת
+			</h3>
+
+			<div class="space-y-3 mb-6">
+				<div class="flex items-start gap-2">
+					<svg class="w-5 h-5 text-yellow-500 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+						<path
+							fill-rule="evenodd"
+							d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z"
+							clip-rule="evenodd"
+						/>
+					</svg>
+					<p class="text-sm text-gray-700 dark:text-gray-300">
+						הקבצים שלך נשלחים לשרת ועלולים להישמר לתקופה מסוימת
+					</p>
+				</div>
+
+				<div class="flex items-start gap-2">
+					<svg class="w-5 h-5 text-blue-500 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+						<path
+							fill-rule="evenodd"
+							d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z"
+							clip-rule="evenodd"
+						/>
+					</svg>
+					<p class="text-sm text-gray-700 dark:text-gray-300">
+						נתמכים: PDF, Word, Excel, תמונות (עד 10MB)
+					</p>
+				</div>
+
+				<div class="flex items-start gap-2">
+					<svg class="w-5 h-5 text-red-500 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+						<path
+							fill-rule="evenodd"
+							d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z"
+							clip-rule="evenodd"
+						/>
+					</svg>
+					<p class="text-sm text-gray-700 dark:text-gray-300">אל תעלה מידע רגיש או סודי</p>
+				</div>
+			</div>
+
+			<!-- Checkbox "אל תציג שוב" -->
+			<div class="flex items-center gap-2 mb-6">
+				<input
+					type="checkbox"
+					id="dontShowAgain"
+					bind:checked={dontShowAgain}
+					class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+				/>
+				<label for="dontShowAgain" class="text-sm text-gray-700 dark:text-gray-300">
+					אל תציג הודעה זו שוב
+				</label>
+			</div>
+
+			<div class="flex gap-3 justify-end">
+				<button
+					class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+					on:click={closeWarning}
+				>
+					ביטול
+				</button>
+				<button
+					class="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded"
+					on:click={proceedWithUpload}
+				>
+					המשך להעלאה
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}
