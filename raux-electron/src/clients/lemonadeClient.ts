@@ -2,6 +2,7 @@ import { BaseCliRunner, CliCommandResult, CliCommandOptions } from './baseCliRun
 import { spawn, ChildProcessWithoutNullStreams } from 'child_process';
 import { createServer } from 'net';
 import { logInfo, logError } from '../logger';
+import { LemonadeHealthCheck } from '../ipc/ipcTypes';
 
 export interface LemonadeVersion {
   full: string;
@@ -56,6 +57,77 @@ export class LemonadeClient extends BaseCliRunner {
       return result.success && !!result.version;
     } catch {
       return false;
+    }
+  }
+
+  /**
+   * Check Lemonade server health using the Health API
+   */
+  public async checkHealth(timeoutMs: number = 5000): Promise<LemonadeHealthCheck> {
+    const startTime = Date.now();
+    
+    try {
+      const config = this.getLemonadeServerConfig();
+      const healthUrl = `http://localhost:${config.port}/api/v0/health`;
+      
+      // Use fetch with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+      
+      const response = await fetch(healthUrl, {
+        method: 'GET',
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json',
+        },
+      });
+      
+      clearTimeout(timeoutId);
+      const responseTime = Date.now() - startTime;
+      
+      if (response.ok) {
+        return {
+          isHealthy: true,
+          responseTime,
+          timestamp: Date.now(),
+        };
+      }
+
+      return {
+        isHealthy: false,
+        responseTime,
+        error: `HTTP ${response.status}: ${response.statusText}`,
+        timestamp: Date.now(),
+      };
+      
+    } catch (error) {
+      const responseTime = Date.now() - startTime;
+      
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          return {
+            isHealthy: false,
+            responseTime,
+            error: `Health check timeout after ${timeoutMs}ms`,
+            timestamp: Date.now(),
+          };
+        }
+        
+        return {
+          isHealthy: false,
+          responseTime,
+          error: error.message,
+          timestamp: Date.now(),
+        };
+      
+      }
+
+      return {
+        isHealthy: false,
+        responseTime,
+        error: 'Unknown error during health check',
+        timestamp: Date.now(),
+      };
     }
   }
 

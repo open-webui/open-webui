@@ -2,6 +2,7 @@ import { BrowserWindow, app } from 'electron';
 import { join } from 'path';
 import { IPCManager } from './ipc/ipcManager';
 import { getRendererPath } from './envUtils';
+import { LemonadeStatus } from './ipc/ipcTypes';
 
 const RAUX_URL = 'http://localhost:8080';
 const LOADING_PAGE = getRendererPath('pages', 'loading', 'loading.html');
@@ -11,6 +12,7 @@ export class WindowManager {
   private static instance: WindowManager;
   private mainWindow: BrowserWindow | null = null;
   private ipcManager = IPCManager.getInstance();
+  private baseTitle = 'RAUX';
 
   private constructor() {}
 
@@ -69,5 +71,52 @@ export class WindowManager {
     this.ipcManager.unregisterRenderer(this.mainWindow?.webContents.id);
     this.ipcManager.unregisterAllRenderers();
     this.mainWindow = null;
+  }
+
+  /**
+   * Update window title with Lemonade status
+   */
+  public updateLemonadeStatus(status: LemonadeStatus): void {
+    if (!this.mainWindow) {
+      return;
+    }
+
+    const statusText = this.formatStatusForTitle(status);
+    const newTitle = `${this.baseTitle} • ${statusText}`;
+    
+    this.mainWindow.setTitle(newTitle);
+  }
+
+  /**
+   * Clear Lemonade status from title (show just base title)
+   */
+  public clearLemonadeStatus(): void {
+    if (!this.mainWindow) {
+      return;
+    }
+
+    this.mainWindow.setTitle(this.baseTitle);
+  }
+
+  /**
+   * Format status for display in window title
+   */
+  private formatStatusForTitle(status: LemonadeStatus): string {
+    const { status: state, isHealthy } = status;
+    
+    switch (state) {
+      case 'running':
+        return isHealthy ? '🟢 Lemonade Running' : '🟡 Lemonade Issues';
+      case 'starting':
+        return '🟡 Lemonade Starting';
+      case 'stopped':
+        return '🔴 Lemonade Stopped';
+      case 'crashed':
+        return '🔴 Lemonade Crashed';
+      case 'unavailable':
+        return '⚫ Lemonade Unavailable';
+      default:
+        return '❓ Lemonade Unknown';
+    }
   }
 } 
