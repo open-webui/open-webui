@@ -1125,6 +1125,7 @@
 	"Show \"What's New\" modal on login": "Показати модальне вікно \"Що нового\" під час входу",
 	"Show Admin Details in Account Pending Overlay": "Відобразити дані адміна у вікні очікування облікового запису",
 	"Show All": "",
+	"Show Greeting Message instead of Model Name": "",
 	"Show Less": "",
 	"Show Model": "Показати модель",
 	"Show shortcuts": "Показати клавіатурні скорочення",

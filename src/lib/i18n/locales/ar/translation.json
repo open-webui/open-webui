@@ -1125,6 +1125,7 @@
 	"Show \"What's New\" modal on login": "عرض نافذة \"ما الجديد\" عند تسجيل الدخول",
 	"Show Admin Details in Account Pending Overlay": "عرض تفاصيل المشرف في نافذة \"الحساب قيد الانتظار\"",
 	"Show All": "",
+	"Show Greeting Message instead of Model Name": "",
 	"Show Less": "",
 	"Show Model": "",
 	"Show shortcuts": "إظهار الاختصارات",

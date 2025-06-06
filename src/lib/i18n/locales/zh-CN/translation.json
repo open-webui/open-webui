@@ -1125,6 +1125,7 @@
 	"Show \"What's New\" modal on login": "在登录时显示“更新内容”弹窗",
 	"Show Admin Details in Account Pending Overlay": "在用户待激活界面中显示管理员邮箱等详细信息",
 	"Show All": "显示全部",
+	"Show Greeting Message instead of Model Name": "",
 	"Show Less": "收起",
 	"Show Model": "显示模型",
 	"Show shortcuts": "显示快捷方式",

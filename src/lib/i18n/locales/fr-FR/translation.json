@@ -1125,6 +1125,7 @@
 	"Show \"What's New\" modal on login": "Afficher la fenêtre modale \"Quoi de neuf\" lors de la connexion",
 	"Show Admin Details in Account Pending Overlay": "Afficher les coordonnées de l'administrateur aux comptes en attente",
 	"Show All": "",
+	"Show Greeting Message instead of Model Name": "",
 	"Show Less": "",
 	"Show Model": "Afficher le model",
 	"Show shortcuts": "Afficher les raccourcis",

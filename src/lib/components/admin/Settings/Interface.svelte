@@ -397,7 +397,7 @@
 
 				<div class="mb-2.5 flex w-full items-center justify-between">
 					<div class=" self-center text-xs font-medium">
-						{$i18n.t('Show Greeting Page instead of Model Name')}
+						{$i18n.t('Show Greeting Message instead of Model Name')}
 					</div>
 					<Switch bind:state={adminConfig.USE_GREETING_MESSAGE} />
 				</div>

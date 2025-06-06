@@ -1125,6 +1125,7 @@
 	"Show \"What's New\" modal on login": "Näytä \"Mitä uutta\" -modaali kirjautumisen yhteydessä",
 	"Show Admin Details in Account Pending Overlay": "Näytä ylläpitäjän tiedot odottavan tilin päällä",
 	"Show All": "Näytä kaikki",
+	"Show Greeting Message instead of Model Name": "",
 	"Show Less": "Näytä vähemmän",
 	"Show Model": "Näytä malli",
 	"Show shortcuts": "Näytä pikanäppäimet",

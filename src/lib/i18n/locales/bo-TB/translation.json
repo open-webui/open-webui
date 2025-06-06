@@ -1125,6 +1125,7 @@
 	"Show \"What's New\" modal on login": "ནང་འཛུལ་སྐབས་ \"གསར་པ་ཅི་ཡོད\" modal སྟོན་པ།",
 	"Show Admin Details in Account Pending Overlay": "རྩིས་ཁྲ་སྒུག་བཞིན་པའི་གཏོགས་ངོས་སུ་དོ་དམ་པའི་ཞིབ་ཕྲ་སྟོན་པ།",
 	"Show All": "",
+	"Show Greeting Message instead of Model Name": "",
 	"Show Less": "",
 	"Show Model": "དཔེ་དབྱིབས་སྟོན་པ།",
 	"Show shortcuts": "མྱུར་ལམ་སྟོན་པ།",

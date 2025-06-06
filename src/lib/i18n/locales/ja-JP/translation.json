@@ -1125,6 +1125,7 @@
 	"Show \"What's New\" modal on login": "ログイン時に「新しいこと」モーダルを表示",
 	"Show Admin Details in Account Pending Overlay": "アカウント保留中の管理者詳細を表示",
 	"Show All": "すべて表示",
+	"Show Greeting Message instead of Model Name": "",
 	"Show Less": "表示を減らす",
 	"Show Model": "モデルを表示",
 	"Show shortcuts": "ショートカットを表示",

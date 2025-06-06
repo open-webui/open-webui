@@ -1125,6 +1125,7 @@
 	"Show \"What's New\" modal on login": "\"Was gibt's Neues\"-Modal beim Anmelden anzeigen",
 	"Show Admin Details in Account Pending Overlay": "Admin-Details im Account-Pending-Overlay anzeigen",
 	"Show All": "Alle anzeigen",
+	"Show Greeting Message instead of Model Name": "",
 	"Show Less": "Weniger anzeigen",
 	"Show Model": "Modell anzeigen",
 	"Show shortcuts": "Verknüpfungen anzeigen",

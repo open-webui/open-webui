@@ -1125,6 +1125,7 @@
 	"Show \"What's New\" modal on login": "登入時顯示「新功能」對話框",
 	"Show Admin Details in Account Pending Overlay": "在帳號待審覆蓋層中顯示管理員詳細資訊",
 	"Show All": "顯示全部",
+	"Show Greeting Message instead of Model Name": "",
 	"Show Less": "顯示較少",
 	"Show Model": "顯示模型",
 	"Show shortcuts": "顯示快捷鍵",
