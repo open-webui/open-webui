@@ -96,12 +96,9 @@ def is_audio_conversion_required(file_path):
             # File is AAC/mp4a audio, recommend mp3 conversion
             return True
 
-        # If the codec name or file extension is in the supported formats
-        if (
-            codec_name in SUPPORTED_FORMATS
-            or os.path.splitext(file_path)[1][1:].lower() in SUPPORTED_FORMATS
-        ):
-            return False  # Already supported
+        # If the codec name is in the supported formats
+        if codec_name in SUPPORTED_FORMATS:
+            return False
 
         return True
     except Exception as e:

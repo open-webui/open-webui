@@ -4,13 +4,15 @@
 	const i18n = getContext('i18n');
 
 	import Modal from '$lib/components/common/Modal.svelte';
-	import { loadFunctionByUrl } from '$lib/apis/functions';
 	import { extractFrontmatter } from '$lib/utils';
 
 	export let show = false;
 
 	export let onImport = (e) => {};
 	export let onClose = () => {};
+
+	export let loadUrlHandler: Function = () => {};
+	export let successMessage: string = '';
 
 	let loading = false;
 	let url = '';
@@ -24,14 +26,19 @@
 			return;
 		}
 
-		const res = await loadFunctionByUrl(localStorage.token, url).catch((err) => {
+		const res = await loadUrlHandler(url).catch((err) => {
 			toast.error(`${err}`);
-
+			loading = false;
 			return null;
 		});
 
 		if (res) {
-			toast.success($i18n.t('Function loaded successfully'));
+			if (!successMessage) {
+				successMessage = $i18n.t('Function imported successfully');
+			}
+
+			toast.success(successMessage);
+
 			let func = res;
 			func.id = func.id || func.name.replace(/\s+/g, '_').toLowerCase();
 
@@ -92,9 +99,11 @@
 									class="w-full text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-hidden"
 									type="url"
 									bind:value={url}
-									placeholder={$i18n.t('Enter the URL of the function to import')}
+									placeholder={$i18n.t('Enter the URL to import')}
 									required
 								/>
+
+								<!-- $i18n.t('Enter the URL of the function to import') -->
 							</div>
 						</div>
 					</div>

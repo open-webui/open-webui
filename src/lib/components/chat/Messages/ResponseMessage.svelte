@@ -233,7 +233,7 @@
 
 		speaking = true;
 
-		const content = removeAllDetails(content);
+		const content = removeAllDetails(message.content);
 
 		if ($config.audio.tts.engine === '') {
 			let voices = [];
@@ -642,14 +642,6 @@
 			});
 		}
 	});
-
-	let screenReaderDiv: HTMLDivElement;
-
-	$: if (message.done) {
-		if (screenReaderDiv) {
-			screenReaderDiv.textContent = message.content;
-		}
-	}
 </script>
 
 <DeleteConfirmDialog
@@ -659,10 +651,6 @@
 		deleteMessageHandler();
 	}}
 />
-
-<div bind:this={screenReaderDiv} aria-live="polite" class="sr-only">
-	{message.done ? message.content : ''}
-</div>
 
 {#key message.id}
 	<div
@@ -678,7 +666,7 @@
 			/>
 		</div>
 
-		<div class="flex-auto w-0 pl-1">
+		<div class="flex-auto w-0 pl-1 relative">
 			<Name>
 				<Tooltip content={model?.name ?? message.model} placement="top-start">
 					<span class="line-clamp-1 text-black dark:text-white">
@@ -1499,6 +1487,12 @@
 					{/if}
 				{/if}
 			</div>
+
+			{#if message?.done}
+				<div aria-live="polite" class="sr-only">
+					{message?.content ?? ''}
+				</div>
+			{/if}
 		</div>
 	</div>
 {/key}

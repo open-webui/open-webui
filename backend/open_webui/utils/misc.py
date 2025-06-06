@@ -74,12 +74,12 @@ def get_last_user_message_item(messages: list[dict]) -> Optional[dict]:
 
 
 def get_content_from_message(message: dict) -> Optional[str]:
-    if isinstance(message["content"], list):
+    if isinstance(message.get("content"), list):
         for item in message["content"]:
             if item["type"] == "text":
                 return item["text"]
     else:
-        return message["content"]
+        return message.get("content")
     return None
 
 
