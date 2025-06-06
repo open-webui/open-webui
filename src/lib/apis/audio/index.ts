@@ -114,17 +114,35 @@ export const streamAudio = async (reader: any) => {
 		const source = ctx.createBufferSource()
 		source.buffer = buffer
 		source.connect(ctx.destination)
-		source.start(time)
-		time += buffer.duration
+		const scheduledTime = Math.max(time, ctx.currentTime);
+		source.start(scheduledTime)
+		// time += buffer.duration
+		time = scheduledTime + buffer.duration;
 	}
 
-	while (true) { 
-		const { done, value } = await reader.read()
-		if (done) {
-			ttsStreaming.set(false)
-			break;
+	try {
+		while (true) { 
+			const { done, value } = await reader.read()
+			if (done) {
+				break;
+			}
+			playChunk(value.buffer)
 		}
-		playChunk(value.buffer)
+	} catch (error) {
+		console.error("[streamAudio] Error during streaming:", error);
+	} finally {
+		// Important: Wait for the scheduled audio to finish playing
+		// before closing the context and allowing the next sentence.
+		// 'time' now holds the approximate end time of the last scheduled chunk.
+		const timeToWait = (time - ctx.currentTime) * 1000; // Convert to milliseconds
+
+		if (timeToWait > 0) {
+			console.log(`[streamAudio] Waiting ${timeToWait.toFixed(0)}ms for audio to finish playing.`);
+			await new Promise(resolve => setTimeout(resolve, Math.max(0, timeToWait)));
+		}
+
+		await ctx.close(); // Close the context to free up resources
+		console.log('[streamAudio] AudioContext closed for sentence.');
 	}
 }
 

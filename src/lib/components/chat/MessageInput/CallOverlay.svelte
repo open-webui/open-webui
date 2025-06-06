@@ -636,7 +636,7 @@
 		// if "id" is not the same as "currentMessageId" then do not process
 		// "content" here is a sentence from the assistant,
 		// there will be many sentences for the same "id"
-
+		console.log('hitting chatEventHandler with', content)
 		if (currentMessageId === id) {
 			console.log(`!![chateventhandler] Received chat event for message ID ${id}: ${content}`);
 
@@ -647,7 +647,7 @@
 					messages[id].push(content);
 				}
 
-				console.log(content);
+				console.log('processing tts queue:', content);
 
 				processTTSQueue();
 				// while (true) { 
