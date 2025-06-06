@@ -813,6 +813,11 @@ try:
     # Load all embedding models that are currently in use
     for engine, model_list in app.state.config.LOADED_EMBEDDING_MODELS.items():
         for model in model_list:
+            if engine == "azure_openai":
+                # For Azure OpenAI, model is a dict: {model_name: version}
+                model_name, azure_openai_api_version = next(iter(model.items()))
+                model = model_name
+
             app.state.ef[model] = get_ef(
                 engine,
                 model,
@@ -835,7 +840,7 @@ try:
                 app.state.config.RAG_EMBEDDING_BATCH_SIZE,
                 azure_api_version=(
                     app.state.config.RAG_AZURE_OPENAI_API_VERSION
-                    if app.state.config.RAG_EMBEDDING_ENGINE == "azure_openai"
+                    if engine == "azure_openai"
                     else None
                 ),
             )

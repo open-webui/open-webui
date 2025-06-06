@@ -2267,7 +2267,8 @@ DOWNLOADED_EMBEDDING_MODELS = PersistentConfig(
     "rag.downloaded_embedding_models",
     os.getenv("DOWNLOADED_EMBEDDING_MODELS", {"":["sentence-transformers/all-MiniLM-L6-v2"],
                                               "openai":["text-embedding-3-small"],
-                                              "ollama":[]})
+                                              "ollama":[],
+                                              "azure_openai_config": []})
 )
 
 DOWNLOADED_RERANKING_MODELS = PersistentConfig(
@@ -2282,7 +2283,8 @@ LOADED_EMBEDDING_MODELS = PersistentConfig(
     "rag.loaded_embedding_models",
     os.getenv("LOADED_EMBEDDING_MODELS", {"":["sentence-transformers/all-MiniLM-L6-v2"],
                                           "openai":[],
-                                          "ollama":[]})
+                                          "ollama":[],
+                                          "azure_openai_config": []})
 )
 
 LOADED_RERANKING_MODELS = PersistentConfig(
