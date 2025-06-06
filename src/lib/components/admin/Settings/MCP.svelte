@@ -391,65 +391,45 @@
 		</div>
 
 		{#if ENABLE_MCP_API}
-			<hr class="dark:border-gray-700" />
+			<div class="my-2 mb-5">
+				<!-- Built-in MCP Servers -->
+				<div class="mb-6">
+					<div class="mb-3 text-sm font-medium flex items-center gap-2">
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 text-green-500">
+							<path d="M21.731 2.269a2.625 2.625 0 00-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 000-3.712zM19.513 8.199l-3.712-3.712-12.15 12.15a5.25 5.25 0 00-1.32 2.214l-.8 2.685a.75.75 0 00.933.933l2.685-.8a5.25 5.25 0 002.214-1.32L19.513 8.2z" />
+						</svg>
+						{$i18n.t('Built-in MCP Servers')}
+						{#if builtinServersLoading}
+							<Spinner className="size-3" />
+						{/if}
+					</div>
 
-			<!-- Built-in MCP Servers -->
-			<div>
-				<div class="mb-3 text-sm font-medium flex items-center gap-2">
-					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 text-green-500">
-						<path d="M21.731 2.269a2.625 2.625 0 00-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 000-3.712zM19.513 8.199l-3.712-3.712-12.15 12.15a5.25 5.25 0 00-1.32 2.214l-.8 2.685a.75.75 0 00.933.933l2.685-.8a5.25 5.25 0 002.214-1.32L19.513 8.2z" />
-					</svg>
-					{$i18n.t('Built-in MCP Servers')}
-					{#if builtinServersLoading}
-						<Spinner className="size-3" />
-					{/if}
-				</div>
-				
-				<div class="text-xs text-gray-600 dark:text-gray-500 mb-3">
-					{$i18n.t('These servers are automatically managed and provide core functionality.')}
-				</div>
-
-				{#if builtinServers.length > 0}
-					<div class="space-y-2">
+					{#if builtinServers.length > 0}
 						{#each builtinServers as server}
-							<div class="border dark:border-gray-700 rounded-lg p-3 bg-gray-50 dark:bg-gray-800">
-								<div class="flex items-center justify-between">
-									<div class="flex items-center gap-3">
-										<!-- Server Status Indicator -->
-										<div class="flex items-center gap-2">
-											{#if server.status === 'running'}
-												<Tooltip content={$i18n.t('Server is running')}>
-													<div class="w-2 h-2 rounded-full bg-green-500"></div>
-												</Tooltip>
-											{:else if server.status === 'stopped'}
-												<Tooltip content={$i18n.t('Server is stopped')}>
-													<div class="w-2 h-2 rounded-full bg-red-500"></div>
-												</Tooltip>
-											{:else}
-												<Tooltip content={$i18n.t('Server status unknown')}>
-													<div class="w-2 h-2 rounded-full bg-gray-500"></div>
-												</Tooltip>
-											{/if}
-										</div>
-										
-										<div>
-											<div class="font-medium text-sm">{server.display_name}</div>
-											<div class="text-xs text-gray-700 dark:text-gray-400">{server.description}</div>
+							<div class="flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-lg transition">
+								<div class="flex flex-1 text-left space-x-3.5 w-full">
+									<div class="self-center w-8">
+										<div class="rounded-full object-cover {server.status === 'running' ? '' : 'opacity-50 dark:opacity-50'}">
+											<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6 text-green-500">
+												<path d="M21.731 2.269a2.625 2.625 0 00-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 000-3.712zM19.513 8.199l-3.712-3.712-12.15 12.15a5.25 5.25 0 00-1.32 2.214l-.8 2.685a.75.75 0 00.933.933l2.685-.8a5.25 5.25 0 002.214-1.32L19.513 8.2z" />
+											</svg>
 										</div>
 									</div>
-									
+
+									<div class="flex-1 self-center">
+										<div class="font-medium text-sm">{server.display_name}</div>
+										<div class="text-xs text-gray-700 dark:text-gray-400 line-clamp-1">
+											{server.description} • {server.tools_count} {server.tools_count === 1 ? $i18n.t('tool') : $i18n.t('tools')}
+										</div>
+									</div>
+								</div>
+
+								<div class="flex self-center space-x-2">
 									<div class="flex items-center gap-2">
-										<!-- Tools Count Badge -->
-										<span class="inline-flex items-center rounded-full bg-blue-100 dark:bg-blue-900 px-2 py-1 text-xs font-medium text-blue-700 dark:text-blue-300">
-											{server.tools_count} {server.tools_count === 1 ? $i18n.t('tool') : $i18n.t('tools')}
-										</span>
-										
-										<!-- Status Badge -->
 										<span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium {server.status === 'running' ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300' : 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300'}">
 											{$i18n.t(server.status)}
 										</span>
 										
-										<!-- Restart Button -->
 										<Tooltip content={$i18n.t('Restart Server')}>
 											<button
 												class="px-2 py-1 text-gray-700 dark:text-gray-200 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded text-xs transition"
@@ -466,81 +446,58 @@
 								</div>
 							</div>
 						{/each}
-					</div>
-				{:else}
-					<div class="text-xs text-gray-700 dark:text-gray-400 p-3 border border-dashed dark:border-gray-700 rounded-lg text-center">
-						{$i18n.t('No built-in servers available')}
-					</div>
-				{/if}
-			</div>
-
-			<hr class="dark:border-gray-700" />
-
-			<!-- External MCP Servers -->
-			<div>
-				<div class="mb-3 text-sm font-medium flex items-center gap-2">
-					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 text-purple-500">
-						<path d="M6.75 6a.75.75 0 0 1 .75-.75h9a.75.75 0 0 1 .75.75v6a.75.75 0 0 1-.75.75h-9A.75.75 0 0 1 6.75 12V6Z" />
-						<path d="M6.75 17.25a.75.75 0 0 1 .75-.75h9a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-.75.75h-9a.75.75 0 0 1-.75-.75v-1.5Z" />
-					</svg>
-					{$i18n.t('External MCP Servers')}
-					{#if externalServersLoading}
-						<Spinner className="size-3" />
+					{:else}
+						<div class="text-xs text-gray-700 dark:text-gray-400 p-3 border border-dashed dark:border-gray-700 rounded-lg text-center">
+							{$i18n.t('No built-in servers available')}
+						</div>
 					{/if}
-					<button
-						class="ml-auto px-2 py-1 text-purple-700 dark:text-purple-300 bg-purple-100 hover:bg-purple-200 dark:bg-purple-900 dark:hover:bg-purple-800 rounded text-xs transition"
-						type="button"
-						aria-label="{$i18n.t('Add Server')}"
-						on:click={() => openServerModal()}
-					>
-						<Plus className="w-3 h-3 inline mr-1" />
-						{$i18n.t('Add Server')}
-					</button>
-				</div>
-				
-				<div class="text-xs text-gray-600 dark:text-gray-500 mb-3">
-					{$i18n.t('Create and manage custom MCP servers with full configuration control.')}
 				</div>
 
-				{#if externalServers.length > 0}
-					<div class="space-y-2">
+				<!-- External MCP Servers -->
+				<div>
+					<div class="mb-3 text-sm font-medium flex items-center gap-2">
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 text-purple-500">
+							<path d="M6.75 6a.75.75 0 0 1 .75-.75h9a.75.75 0 0 1 .75.75v6a.75.75 0 0 1-.75.75h-9A.75.75 0 0 1 6.75 12V6Z" />
+							<path d="M6.75 17.25a.75.75 0 0 1 .75-.75h9a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-.75.75h-9a.75.75 0 0 1-.75-.75v-1.5Z" />
+						</svg>
+						{$i18n.t('External MCP Servers')}
+						{#if externalServersLoading}
+							<Spinner className="size-3" />
+						{/if}
+						<button
+							class="ml-auto px-2 py-1 text-purple-700 dark:text-purple-300 bg-purple-100 hover:bg-purple-200 dark:bg-purple-900 dark:hover:bg-purple-800 rounded text-xs transition"
+							type="button"
+							aria-label="{$i18n.t('Add Server')}"
+							on:click={() => openServerModal()}
+						>
+							<Plus className="w-3 h-3 inline mr-1" />
+							{$i18n.t('Add Server')}
+						</button>
+					</div>
+
+					{#if externalServers.length > 0}
 						{#each externalServers as server}
-							<div class="border dark:border-gray-700 rounded-lg p-3 bg-gray-50 dark:bg-gray-800">
-								<div class="flex items-center justify-between">
-									<div class="flex items-center gap-3">
-										<!-- Server Status Indicator -->
-										<div class="flex items-center gap-2">
-											{#if server.runtime_status === 'running'}
-												<Tooltip content={$i18n.t('Server is running')}>
-													<div class="w-2 h-2 rounded-full bg-green-500"></div>
-												</Tooltip>
-											{:else if server.runtime_status === 'stopped'}
-												<Tooltip content={$i18n.t('Server is stopped')}>
-													<div class="w-2 h-2 rounded-full bg-red-500"></div>
-												</Tooltip>
-											{:else}
-												<Tooltip content={$i18n.t('Server status unknown')}>
-													<div class="w-2 h-2 rounded-full bg-gray-500"></div>
-												</Tooltip>
-											{/if}
-										</div>
-										
-										<div>
-											<div class="font-medium text-sm">{server.name}</div>
-											<div class="text-xs text-gray-700 dark:text-gray-400">{server.description || 'External MCP Server'}</div>
-											<div class="text-xs text-gray-600 dark:text-gray-500 mt-1">
-												{server.transport} • {server.command}
-											</div>
+							<div class="flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-lg transition">
+								<div class="flex flex-1 text-left space-x-3.5 w-full">
+									<div class="self-center w-8">
+										<div class="rounded-full object-cover {server.runtime_status === 'running' ? '' : 'opacity-50 dark:opacity-50'}">
+											<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6 text-purple-500">
+												<path d="M6.75 6a.75.75 0 0 1 .75-.75h9a.75.75 0 0 1 .75.75v6a.75.75 0 0 1-.75.75h-9A.75.75 0 0 1 6.75 12V6Z" />
+												<path d="M6.75 17.25a.75.75 0 0 1 .75-.75h9a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-.75.75h-9a.75.75 0 0 1-.75-.75v-1.5Z" />
+											</svg>
 										</div>
 									</div>
-									
+
+									<div class="flex-1 self-center">
+										<div class="font-medium text-sm">{server.name}</div>
+										<div class="text-xs text-gray-700 dark:text-gray-400 line-clamp-1">
+											{server.description || 'External MCP Server'} • {server.tools_count || 0} {(server.tools_count || 0) === 1 ? $i18n.t('tool') : $i18n.t('tools')}
+										</div>
+									</div>
+								</div>
+
+								<div class="flex self-center space-x-2">
 									<div class="flex items-center gap-2">
-										<!-- Tools Count Badge -->
-										<span class="inline-flex items-center rounded-full bg-purple-100 dark:bg-purple-900 px-2 py-1 text-xs font-medium text-purple-700 dark:text-purple-300">
-											{server.tools_count || 0} {(server.tools_count || 0) === 1 ? $i18n.t('tool') : $i18n.t('tools')}
-										</span>
-										
-										<!-- Status Badge -->
 										<span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium {server.runtime_status === 'running' ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300' : 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300'}">
 											{$i18n.t(server.runtime_status || 'unknown')}
 										</span>
@@ -616,12 +573,12 @@
 								</div>
 							</div>
 						{/each}
-					</div>
-				{:else}
-					<div class="text-xs text-gray-700 dark:text-gray-400 p-3 border border-dashed dark:border-gray-700 rounded-lg text-center">
-						{$i18n.t('No external servers configured. Click "Add Server" to create your first external MCP server.')}
-					</div>
-				{/if}
+					{:else}
+						<div class="text-xs text-gray-700 dark:text-gray-400 p-3 border border-dashed dark:border-gray-700 rounded-lg text-center">
+							{$i18n.t('No external servers configured. Click "Add Server" to create your first external MCP server.')}
+						</div>
+					{/if}
+				</div>
 			</div>
 
 			<hr class="dark:border-gray-700" />
