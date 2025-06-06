@@ -466,6 +466,8 @@
 	let search = '';
 	let visibleTabs = searchData.map((tab) => tab.id);
 	let searchDebounceTimeout;
+	let collapsed = false;
+	let searchInput: HTMLInputElement;
 
 	const searchSettings = (query: string): string[] => {
 		const lowerCaseQuery = query.toLowerCase().trim();
@@ -503,6 +505,7 @@
 	};
 
 	let selectedTab = 'general';
+	let isExpanded = false;
 
 	// Function to handle sideways scrolling
 	const scrollHandler = (event) => {
@@ -536,51 +539,135 @@
 	}
 </script>
 
-<Modal size="xl" bind:show>
-	<div class="text-gray-700 dark:text-gray-100">
-		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-1">
-			<div class=" text-lg font-medium self-center">{$i18n.t('Settings')}</div>
-			<button
-				class="self-center"
-				on:click={() => {
-					show = false;
-				}}
-			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 20 20"
-					fill="currentColor"
-					class="w-5 h-5"
+<Modal size={isExpanded ? 'max' : 'xl'} bind:show>
+	<div class="text-gray-700 dark:text-gray-100 flex flex-col h-full">
+		<div class=" flex items-center justify-between dark:text-gray-300 px-4 pt-4 pb-1 flex-shrink-0">
+			<div class="flex items-center">
+				<button
+					class="p-1 min-w-fit rounded-lg flex text-left transition hover:bg-gray-100 dark:hover:bg-gray-700"
+					on:click={() => (collapsed = !collapsed)}
 				>
-					<path
-						d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-					/>
-				</svg>
-			</button>
+					<div class="self-center">
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 24 24"
+							fill="currentColor"
+							class="w-5 h-5 text-gray-400 dark:text-gray-500"
+						>
+							<path
+								fill-rule="evenodd"
+								d="M3 6.75A.75.75 0 013.75 6h16.5a.75.75 0 010 1.5H3.75A.75.75 0 013 6.75zM3 12a.75.75 0 01.75-.75h16.5a.75.75 0 010 1.5H3.75A.75.75 0 013 12zm0 5.25a.75.75 0 01.75-.75h16.5a.75.75 0 010 1.5H3.75a.75.75 0 01-.75-.75z"
+								clip-rule="evenodd"
+							/>
+						</svg>
+					</div>
+				</button>
+				<div class=" text-lg font-medium self-center ml-2">{$i18n.t('Settings')}</div>
+			</div>
+
+			<div class="flex items-center space-x-1.5">
+				<button
+					class="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+					on:click={() => {
+						isExpanded = !isExpanded;
+					}}
+				>
+					{#if isExpanded}
+						<!-- Minimize Icon (arrows pointing inwards, from Lucide) -->
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							class="w-3.5 h-4 text-gray-400 dark:text-gray-500"
+						>
+							<polyline points="4 14 10 14 10 20"></polyline>
+							<polyline points="20 10 14 10 14 4"></polyline>
+							<line x1="14" y1="10" x2="21" y2="3"></line>
+							<line x1="3" y1="21" x2="10" y2="14"></line>
+						</svg>
+					{:else}
+						<!-- Expand Icon (arrows pointing outwards, from Lucide) -->
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							class="w-3.5 h-4 text-gray-400 dark:text-gray-500"
+						>
+							<polyline points="15 3 21 3 21 9"></polyline>
+							<polyline points="9 21 3 21 3 15"></polyline>
+							<line x1="21" y1="3" x2="14" y2="10"></line>
+							<line x1="3" y1="21" x2="10" y2="14"></line>
+						</svg>
+					{/if}
+				</button>
+				<button
+					class="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+					on:click={() => {
+						show = false;
+					}}
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 20 20"
+						fill="currentColor"
+						class="w-5 h-5 text-gray-400 dark:text-gray-500"
+					>
+						<path
+							d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
+						/>
+					</svg>
+				</button>
+			</div>
 		</div>
 
-		<div class="flex flex-col md:flex-row w-full px-4 pt-1 pb-4 md:space-x-4">
+		<!-- Main content area, flex-grow to fill available space -->
+		<div
+			class="flex flex-col md:flex-row w-full px-4 pt-1 pb-4 {collapsed
+				? 'md:space-x-0'
+				: 'md:space-x-4'} flex-grow overflow-hidden"
+		>
 			<div
 				id="settings-tabs-container"
-				class="tabs flex flex-row overflow-x-auto gap-2.5 md:gap-1 md:flex-col flex-1 md:flex-none md:w-40 md:min-h-[32rem] md:max-h-[32rem] dark:text-gray-200 text-sm font-medium text-left mb-1 md:mb-0 -translate-y-1"
+				class="tabs flex flex-row overflow-x-auto gap-2.5 md:gap-1 md:flex-col flex-1 md:flex-none dark:text-gray-200 text-sm font-medium text-left mb-1 md:mb-0 -translate-y-1
+				{isExpanded ? 'md:h-full md:overflow-y-auto' : 'md:min-h-[32rem] md:max-h-[32rem]'}
+				{collapsed ? 'md:w-7' : 'md:w-40'}"
 			>
-				<div class="hidden md:flex w-full rounded-xl -mb-1 px-0.5 gap-2" id="settings-search">
-					<div class="self-center rounded-l-xl bg-transparent">
-						<Search className="size-3.5" />
+				<button
+					class="px-0.5 py-1 h-7 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white"
+					on:click={() => {
+						collapsed = false; // Expand sidebar if collapsed
+						tick().then(() => {
+							if (searchInput) searchInput.focus(); // Focus the search input after DOM updates
+						});
+					}}
+				>
+					<div class="self-center {collapsed ? '' : 'mr-2'}">
+						<Search className="w-4 h-4" />
 					</div>
 					<input
-						class="w-full py-1.5 text-sm bg-transparent dark:text-gray-300 outline-hidden"
+						class="w-full py-1.5 text-sm bg-transparent dark:text-gray-300 outline-hidden {collapsed
+							? 'hidden'
+							: ''}"
+						bind:this={searchInput}
 						bind:value={search}
 						on:input={searchDebounceHandler}
 						placeholder={$i18n.t('Search')}
 					/>
-				</div>
+				</button>
 
 				{#if visibleTabs.length > 0}
 					{#each visibleTabs as tabId (tabId)}
 						{#if tabId === 'general'}
 							<button
-								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
+								class="px-0.5 py-1 h-7 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 								'general'
 									? ''
 									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
@@ -588,7 +675,7 @@
 									selectedTab = 'general';
 								}}
 							>
-								<div class=" self-center mr-2">
+								<div class=" self-center {collapsed ? '' : 'mr-2'}">
 									<svg
 										xmlns="http://www.w3.org/2000/svg"
 										viewBox="0 0 20 20"
@@ -602,11 +689,11 @@
 										/>
 									</svg>
 								</div>
-								<div class=" self-center">{$i18n.t('General')}</div>
+								<div class=" self-center {collapsed ? 'md:hidden' : ''}">{$i18n.t('General')}</div>
 							</button>
 						{:else if tabId === 'interface'}
 							<button
-								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
+								class="px-0.5 py-1 h-7 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 								'interface'
 									? ''
 									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
@@ -614,7 +701,7 @@
 									selectedTab = 'interface';
 								}}
 							>
-								<div class=" self-center mr-2">
+								<div class=" self-center {collapsed ? '' : 'mr-2'}">
 									<svg
 										xmlns="http://www.w3.org/2000/svg"
 										viewBox="0 0 16 16"
@@ -628,12 +715,14 @@
 										/>
 									</svg>
 								</div>
-								<div class=" self-center">{$i18n.t('Interface')}</div>
+								<div class=" self-center {collapsed ? 'md:hidden' : ''}">
+									{$i18n.t('Interface')}
+								</div>
 							</button>
 						{:else if tabId === 'connections'}
 							{#if $user?.role === 'admin' || ($user?.role === 'user' && $config?.features?.enable_direct_connections)}
 								<button
-									class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
+									class="px-0.5 py-1 h-7 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 									'connections'
 										? ''
 										: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
@@ -641,7 +730,7 @@
 										selectedTab = 'connections';
 									}}
 								>
-									<div class=" self-center mr-2">
+									<div class=" self-center {collapsed ? '' : 'mr-2'}">
 										<svg
 											xmlns="http://www.w3.org/2000/svg"
 											viewBox="0 0 16 16"
@@ -653,13 +742,15 @@
 											/>
 										</svg>
 									</div>
-									<div class=" self-center">{$i18n.t('Connections')}</div>
+									<div class=" self-center {collapsed ? 'md:hidden' : ''}">
+										{$i18n.t('Connections')}
+									</div>
 								</button>
 							{/if}
 						{:else if tabId === 'tools'}
 							{#if $user?.role === 'admin' || ($user?.role === 'user' && $user?.permissions?.features?.direct_tool_servers)}
 								<button
-									class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
+									class="px-0.5 py-1 h-7 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 									'tools'
 										? ''
 										: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
@@ -667,7 +758,7 @@
 										selectedTab = 'tools';
 									}}
 								>
-									<div class=" self-center mr-2">
+									<div class=" self-center {collapsed ? '' : 'mr-2'}">
 										<svg
 											xmlns="http://www.w3.org/2000/svg"
 											viewBox="0 0 24 24"
@@ -681,12 +772,12 @@
 											/>
 										</svg>
 									</div>
-									<div class=" self-center">{$i18n.t('Tools')}</div>
+									<div class=" self-center {collapsed ? 'md:hidden' : ''}">{$i18n.t('Tools')}</div>
 								</button>
 							{/if}
 						{:else if tabId === 'personalization'}
 							<button
-								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
+								class="px-0.5 py-1 h-7 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 								'personalization'
 									? ''
 									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
@@ -694,14 +785,16 @@
 									selectedTab = 'personalization';
 								}}
 							>
-								<div class=" self-center mr-2">
+								<div class=" self-center {collapsed ? '' : 'mr-2'}">
 									<User />
 								</div>
-								<div class=" self-center">{$i18n.t('Personalization')}</div>
+								<div class=" self-center {collapsed ? 'md:hidden' : ''}">
+									{$i18n.t('Personalization')}
+								</div>
 							</button>
 						{:else if tabId === 'audio'}
 							<button
-								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
+								class="px-0.5 py-1 h-7 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 								'audio'
 									? ''
 									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
@@ -709,7 +802,7 @@
 									selectedTab = 'audio';
 								}}
 							>
-								<div class=" self-center mr-2">
+								<div class=" self-center {collapsed ? '' : 'mr-2'}">
 									<svg
 										xmlns="http://www.w3.org/2000/svg"
 										viewBox="0 0 16 16"
@@ -724,11 +817,11 @@
 										/>
 									</svg>
 								</div>
-								<div class=" self-center">{$i18n.t('Audio')}</div>
+								<div class=" self-center {collapsed ? 'md:hidden' : ''}">{$i18n.t('Audio')}</div>
 							</button>
 						{:else if tabId === 'chats'}
 							<button
-								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
+								class="px-0.5 py-1 h-7 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 								'chats'
 									? ''
 									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
@@ -736,7 +829,7 @@
 									selectedTab = 'chats';
 								}}
 							>
-								<div class=" self-center mr-2">
+								<div class=" self-center {collapsed ? '' : 'mr-2'}">
 									<svg
 										xmlns="http://www.w3.org/2000/svg"
 										viewBox="0 0 16 16"
@@ -750,11 +843,11 @@
 										/>
 									</svg>
 								</div>
-								<div class=" self-center">{$i18n.t('Chats')}</div>
+								<div class=" self-center {collapsed ? 'md:hidden' : ''}">{$i18n.t('Chats')}</div>
 							</button>
 						{:else if tabId === 'account'}
 							<button
-								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
+								class="px-0.5 py-1 h-7 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 								'account'
 									? ''
 									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
@@ -762,7 +855,7 @@
 									selectedTab = 'account';
 								}}
 							>
-								<div class=" self-center mr-2">
+								<div class=" self-center {collapsed ? '' : 'mr-2'}">
 									<svg
 										xmlns="http://www.w3.org/2000/svg"
 										viewBox="0 0 16 16"
@@ -776,11 +869,11 @@
 										/>
 									</svg>
 								</div>
-								<div class=" self-center">{$i18n.t('Account')}</div>
+								<div class=" self-center {collapsed ? 'md:hidden' : ''}">{$i18n.t('Account')}</div>
 							</button>
 						{:else if tabId === 'about'}
 							<button
-								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
+								class="px-0.5 py-1 h-7 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 								'about'
 									? ''
 									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
@@ -788,7 +881,7 @@
 									selectedTab = 'about';
 								}}
 							>
-								<div class=" self-center mr-2">
+								<div class=" self-center {collapsed ? '' : 'mr-2'}">
 									<svg
 										xmlns="http://www.w3.org/2000/svg"
 										viewBox="0 0 20 20"
@@ -802,25 +895,25 @@
 										/>
 									</svg>
 								</div>
-								<div class=" self-center">{$i18n.t('About')}</div>
+								<div class=" self-center {collapsed ? 'md:hidden' : ''}">{$i18n.t('About')}</div>
 							</button>
 						{/if}
 					{/each}
 				{:else}
-					<div class="text-center text-gray-500 mt-4">
+					<div class="text-center text-gray-500 mt-4 {collapsed ? 'md:hidden' : ''}">
 						{$i18n.t('No results found')}
 					</div>
 				{/if}
 
 				{#if $user?.role === 'admin'}
 					<button
-						class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white mt-auto"
+						class="px-0.5 py-1 h-7 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white mt-auto"
 						on:click={async () => {
 							await goto('/admin/settings');
 							show = false;
 						}}
 					>
-						<div class=" self-center mr-2">
+						<div class=" self-center {collapsed ? '' : 'mr-2'}">
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
 								viewBox="0 0 24 24"
@@ -834,11 +927,17 @@
 								/>
 							</svg>
 						</div>
-						<div class=" self-center">{$i18n.t('Admin Settings')}</div>
+						<div class=" self-center {collapsed ? 'md:hidden' : ''}">
+							{$i18n.t('Admin Settings')}
+						</div>
 					</button>
 				{/if}
 			</div>
-			<div class="flex-1 md:min-h-[32rem] max-h-[32rem]">
+			<div
+				class="flex-1 {isExpanded
+					? 'md:h-full md:overflow-y-auto'
+					: 'md:min-h-[32rem] max-h-[32rem]'}"
+			>
 				{#if selectedTab === 'general'}
 					<General
 						{getModels}

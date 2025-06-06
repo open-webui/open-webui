@@ -5,7 +5,7 @@
 	import { flyAndScale } from '$lib/utils/transitions';
 	import * as FocusTrap from 'focus-trap';
 	export let show = true;
-	export let size = 'md';
+	export let size: 'xs' | 'sm' | 'md' | 'xl' | 'full' | 'max' = 'md';
 	export let containerClassName = 'p-3';
 	export let className = 'bg-white dark:bg-gray-900 rounded-2xl';
 
@@ -16,19 +16,20 @@
 	// https://www.w3.org/WAI/WCAG21/Understanding/keyboard.html
 	let focusTrap: FocusTrap.FocusTrap | null = null;
 
-	const sizeToWidth = (size) => {
-		if (size === 'full') {
+	const sizeToWidth = (modalSize: typeof size) => {
+		if (modalSize === 'full') {
 			return 'w-full';
 		}
-		if (size === 'xs') {
+		if (modalSize === 'xs') {
 			return 'w-[16rem]';
-		} else if (size === 'sm') {
+		} else if (modalSize === 'sm') {
 			return 'w-[30rem]';
-		} else if (size === 'md') {
+		} else if (modalSize === 'md') {
 			return 'w-[42rem]';
-		} else {
+		} else if (modalSize === 'xl') {
 			return 'w-[56rem]';
 		}
+		return '';
 	};
 
 	const handleKeyDown = (event: KeyboardEvent) => {
@@ -74,6 +75,7 @@
 {#if show}
 	<!-- svelte-ignore a11y-click-events-have-key-events -->
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
+	<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
 	<div
 		bind:this={modalElement}
 		aria-modal="true"
@@ -85,9 +87,10 @@
 		}}
 	>
 		<div
-			class="m-auto max-w-full {sizeToWidth(size)} {size !== 'full'
-				? 'mx-2'
-				: ''} shadow-3xl min-h-fit scrollbar-hidden {className}"
+			class="m-auto shadow-3xl min-h-fit scrollbar-hidden {className}
+				{size === 'max'
+				? 'w-[calc(100vw-4rem)] h-[calc(100vh-4rem)] max-w-none max-h-none'
+				: `max-w-full ${sizeToWidth(size)} ${size !== 'full' ? 'mx-2' : ''}`}"
 			in:flyAndScale
 			on:mousedown={(e) => {
 				e.stopPropagation();
