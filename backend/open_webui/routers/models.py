@@ -6,9 +6,13 @@ from open_webui.models.models import (
     ModelResponse,
     ModelUserResponse,
     Models,
+    Model,
+    ModelModel,
 )
 from open_webui.constants import ERROR_MESSAGES
+from open_webui.internal.db import get_db
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+import logging
 
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
@@ -16,6 +20,7 @@ from open_webui.utils.access_control import has_access, has_permission
 
 
 router = APIRouter()
+log = logging.getLogger(__name__)
 
 
 ###########################
@@ -39,6 +44,48 @@ async def get_models(id: Optional[str] = None, user=Depends(get_verified_user)):
 @router.get("/base", response_model=list[ModelResponse])
 async def get_base_models(user=Depends(get_admin_user)):
     return Models.get_base_models()
+
+
+###########################
+# GetPinnedModels
+###########################
+
+
+@router.get("/pinned", response_model=list[ModelResponse])
+async def get_pinned_models(user=Depends(get_verified_user)):
+    log.debug(f"Request for pinned models from user ID: {user.id}, Role: {user.role}")
+
+    db_pinned_models_sqla = []
+    try:
+        with get_db() as db:
+            db_pinned_models_sqla = db.query(Model).filter(Model.pinned_to_sidebar == True).all()
+    except Exception as e:
+        log.error(f"Error during DB query for pinned models: {e}", exc_info=True)
+
+    models_to_filter = [ModelModel.model_validate(m) for m in db_pinned_models_sqla]
+
+    # Filter for active status
+    active_models = [m for m in models_to_filter if m.is_active]
+
+    # Filter for hidden status
+    visible_models = []
+    for m_model in active_models:
+        hidden = False
+        if m_model.meta:
+            hidden = m_model.meta.model_dump().get("hidden", False)
+
+        if not hidden:
+            visible_models.append(m_model)
+
+    # Filter for permission
+    final_permitted_models = []
+    for model_obj in visible_models:
+        if user.role == "admin":
+            final_permitted_models.append(model_obj)
+        elif has_access(user.id, "read", model_obj.access_control):
+            final_permitted_models.append(model_obj)
+
+    return final_permitted_models
 
 
 ############################

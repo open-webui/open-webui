@@ -13,6 +13,10 @@
 	import DocumentDuplicate from '$lib/components/icons/DocumentDuplicate.svelte';
 	import ArrowDownTray from '$lib/components/icons/ArrowDownTray.svelte';
 	import ArrowUpCircle from '$lib/components/icons/ArrowUpCircle.svelte';
+	import Bookmark from '$lib/components/icons/Bookmark.svelte';
+	import BookmarkSlash from '$lib/components/icons/BookmarkSlash.svelte';
+	import { toast } from 'svelte-sonner';
+	import { updateModelById } from '$lib/apis/models';
 
 	import { config } from '$lib/stores';
 	import Link from '$lib/components/icons/Link.svelte';
@@ -29,6 +33,38 @@
 	export let onClose: Function;
 
 	let show = false;
+
+	const togglePinStatus = async () => {
+		if (!model || !model.id || !model.name) {
+			console.error('Model data is incomplete in togglePinStatus (Admin)');
+			toast.error($i18n.t('An unexpected error occurred. Model data is incomplete.'));
+			onClose();
+			return;
+		}
+
+		try {
+			const newPinnedStatus = !(model.pinned_to_sidebar ?? false);
+			await updateModelById(localStorage.token, model.id, {
+				id: model.id,
+				name: model.name,
+				meta: model.meta ?? {},
+				params: model.params ?? {},
+				pinned_to_sidebar: newPinnedStatus
+			});
+
+			model.pinned_to_sidebar = newPinnedStatus;
+
+			toast.success(
+				newPinnedStatus
+					? $i18n.t('Model pinned to sidebar.')
+					: $i18n.t('Model unpinned from sidebar.')
+			);
+		} catch (error) {
+			console.error('Failed to update model pin status:', error);
+			toast.error($i18n.t('Failed to update model pin status.'));
+		}
+		onClose();
+	};
 </script>
 
 <Dropdown
@@ -124,6 +160,23 @@
 
 				<div class="flex items-center">{$i18n.t('Export')}</div>
 			</DropdownMenu.Item>
+
+			<hr class="border-gray-100 dark:border-gray-850 my-1" />
+
+			{#if model && model.id}
+			<DropdownMenu.Item
+				class="flex gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				on:click={togglePinStatus}
+			>
+				{#if model.pinned_to_sidebar}
+					<BookmarkSlash class="size-4" />
+					<div class="flex items-center">{$i18n.t('Unpin from sidebar')}</div>
+				{:else}
+					<Bookmark class="size-4" />
+					<div class="flex items-center">{$i18n.t('Pin to sidebar')}</div>
+				{/if}
+			</DropdownMenu.Item>
+			{/if}
 		</DropdownMenu.Content>
 	</div>
 </Dropdown>

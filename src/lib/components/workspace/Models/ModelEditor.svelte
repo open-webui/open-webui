@@ -14,6 +14,7 @@
 	import { getFunctions } from '$lib/apis/functions';
 	import { getKnowledgeBases } from '$lib/apis/knowledge';
 	import AccessControl from '../common/AccessControl.svelte';
+	import Checkbox from '$lib/components/common/Checkbox.svelte';
 	import { stringify } from 'postcss';
 	import { toast } from 'svelte-sonner';
 
@@ -265,6 +266,11 @@
 			};
 
 			console.log(model);
+			info.pinned_to_sidebar = model?.pinned_to_sidebar ?? model?.meta?.pinned_to_sidebar ?? false;
+
+			if (info.meta && typeof info.meta.pinned_to_sidebar !== 'undefined') {
+				delete info.meta.pinned_to_sidebar;
+			}
 		}
 
 		loaded = true;
@@ -546,6 +552,24 @@
 								allowPublic={$user?.permissions?.sharing?.public_models || $user?.role === 'admin'}
 							/>
 						</div>
+					</div>
+
+					<div class="my-2 flex items-center gap-2">
+						<Checkbox
+							state={info.pinned_to_sidebar ? 'checked' : 'unchecked'}
+							on:change={(e) => {
+								info.pinned_to_sidebar = e.detail === 'checked';
+							}}
+						/>
+						<label
+							class="text-sm text-gray-700 dark:text-gray-300 cursor-pointer"
+							on:click={() => {
+								info.pinned_to_sidebar = !info.pinned_to_sidebar;
+							}}
+							on:keypress
+						>
+							{$i18n.t('Pin model to sidebar')}
+						</label>
 					</div>
 
 					<hr class=" border-gray-100 dark:border-gray-850 my-1.5" />
