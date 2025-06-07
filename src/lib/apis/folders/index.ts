@@ -237,7 +237,7 @@ export const updateFolderItemsById = async (token: string, id: string, items: Fo
 	return res;
 };
 
-export const deleteFolderById = async (token: string, id: string) => {
+export const deleteFolderById = async (token: string, id: string, deleteChats: boolean) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/folders/${id}`, {
@@ -246,7 +246,10 @@ export const deleteFolderById = async (token: string, id: string) => {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
-		}
+		},
+		body: JSON.stringify({
+			delete_chats: deleteChats
+		})
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();

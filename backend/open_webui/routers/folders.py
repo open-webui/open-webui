@@ -233,6 +233,9 @@ async def update_folder_is_expanded_by_id(
 async def delete_folder_by_id(
     request: Request, id: str, user=Depends(get_verified_user)
 ):
+    body = await request.json()
+    # print(await request.json())
+    delete_chats = body["delete_chats"]
     chat_delete_permission = has_permission(
         user.id, "chat.delete", request.app.state.config.USER_PERMISSIONS
     )
@@ -246,7 +249,7 @@ async def delete_folder_by_id(
     folder = Folders.get_folder_by_id_and_user_id(id, user.id)
     if folder:
         try:
-            result = Folders.delete_folder_by_id_and_user_id(id, user.id)
+            result = Folders.delete_folder_by_id_and_user_id(id, user.id, delete_chats=delete_chats)
             if result:
                 return result
             else:

@@ -764,6 +764,12 @@ class ChatTable:
                 return ChatModel.model_validate(chat)
         except Exception:
             return None
+    
+    def get_chats_by_folder_id(self, folder_id: str) -> list[ChatModel]:
+        with get_db() as db:
+            chats = db.query(Chat).filter_by(folder_id=folder_id).all()
+            return [ChatModel.model_validate(chat) for chat in chats]
+    
 
     def get_chat_tags_by_id_and_user_id(self, id: str, user_id: str) -> list[TagModel]:
         with get_db() as db:
