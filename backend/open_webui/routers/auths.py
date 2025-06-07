@@ -723,7 +723,7 @@ async def get_admin_config(request: Request, user=Depends(get_admin_user)):
         "PENDING_USER_OVERLAY_TITLE": request.app.state.config.PENDING_USER_OVERLAY_TITLE,
         "PENDING_USER_OVERLAY_CONTENT": request.app.state.config.PENDING_USER_OVERLAY_CONTENT,
         "RESPONSE_WATERMARK": request.app.state.config.RESPONSE_WATERMARK,
-        "USE_GREETING_MESSAGE": request.app.state.config.USE_GREETING_MESSAGE
+        "USE_GREETING_MESSAGE": request.app.state.config.USE_GREETING_MESSAGE,
     }
 
 
@@ -810,7 +810,7 @@ async def update_admin_config(
         "PENDING_USER_OVERLAY_TITLE": request.app.state.config.PENDING_USER_OVERLAY_TITLE,
         "PENDING_USER_OVERLAY_CONTENT": request.app.state.config.PENDING_USER_OVERLAY_CONTENT,
         "RESPONSE_WATERMARK": request.app.state.config.RESPONSE_WATERMARK,
-        "USE_GREETING_MESSAGE": request.app.state.config.USE_GREETING_MESSAGE
+        "USE_GREETING_MESSAGE": request.app.state.config.USE_GREETING_MESSAGE,
     }
 
 
