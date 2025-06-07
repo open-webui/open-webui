@@ -764,7 +764,7 @@ class ChatTable:
                 return ChatModel.model_validate(chat)
         except Exception:
             return None
- 
+
     def get_chats_by_folder_id(self, folder_id: str) -> list[ChatModel]:
         with get_db() as db:
             chats = db.query(Chat).filter_by(folder_id=folder_id).all()

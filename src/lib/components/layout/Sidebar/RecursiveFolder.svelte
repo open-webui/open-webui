@@ -350,7 +350,7 @@
 			)}
 		</div>
 
-		<label 
+		<label
 			class="inline-flex flex-col items-start gap-0.5 text-xs text-gray-600 dark:text-gray-400"
 		>
 			<span class="inline-flex items-center gap-2">
