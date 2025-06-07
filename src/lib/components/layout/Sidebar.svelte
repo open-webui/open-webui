@@ -61,6 +61,8 @@
 	import Home from '../icons/Home.svelte';
 	import MagnifyingGlass from '../icons/MagnifyingGlass.svelte';
 	import SearchModal from './SearchModal.svelte';
+	import ChevronDown from '../icons/ChevronDown.svelte';
+	import ChevronRight from '../icons/ChevronRight.svelte';
 
 	const BREAKPOINT = 768;
 
@@ -72,6 +74,8 @@
 	let showPinnedChat = true;
 
 	let showCreateChannel = false;
+
+	let pinnedModelsCollapsed = false;
 
 	// Pagination variables
 	let chatListLoading = false;
@@ -674,33 +678,46 @@
 	<!-- Pinned Models Section -->
 	{#if pinnedSystemModels.length > 0}
 		<div class="px-1.5 mt-2">
-			<div class="text-xs font-semibold text-gray-500 dark:text-gray-400 px-2 py-1">
-				{$i18n.t('Pinned Models')}
-			</div>
-			<ul class="space-y-1">
-				{#each pinnedSystemModels as model (model.id)}
-					<li>
-						<button
-							on:click={() => {
-								goto(`/?model=${encodeURIComponent(model.id)}`);
-								if ($mobile) {
-									showSidebar.set(false);
-								}
-							}}
-							class="w-full flex items-center space-x-2 px-2 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition text-left"
-						>
-							<img
-								src={model.meta?.profile_image_url || `${WEBUI_BASE_URL}/static/favicon.png`}
-								alt="{model.name} logo"
-								class="w-5 h-5 rounded-full object-cover shrink-0"
-							/>
-							<span class="text-sm truncate flex-1 text-gray-700 dark:text-gray-300">
-								{model.name}
-							</span>
-						</button>
-					</li>
-				{/each}
-			</ul>
+			<button
+				class="w-full flex items-center gap-1.5 text-xs font-medium text-gray-500 dark:text-gray-500 py-1.5 px-2 hover:bg-gray-100 dark:hover:bg-gray-900 rounded-md transition"
+				on:click={() => (pinnedModelsCollapsed = !pinnedModelsCollapsed)}
+			>
+				<div class="text-gray-300 dark:text-gray-600">
+					{#if pinnedModelsCollapsed}
+						<ChevronRight className="size-3" strokeWidth="2.5" />
+					{:else}
+						<ChevronDown className="size-3" strokeWidth="2.5" />
+					{/if}
+				</div>
+				<span class="translate-y-[0.5px]">{$i18n.t('Pinned Models')}</span>
+			</button>
+
+			{#if !pinnedModelsCollapsed}
+				<ul class="space-y-1 mt-1">
+					{#each pinnedSystemModels as model (model.id)}
+						<li>
+							<button
+								on:click={() => {
+									goto(`/?model=${encodeURIComponent(model.id)}`);
+									if ($mobile) {
+										showSidebar.set(false);
+									}
+								}}
+								class="w-full flex items-center space-x-2 px-2 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition text-left"
+							>
+								<img
+									src={model.meta?.profile_image_url || `${WEBUI_BASE_URL}/static/favicon.png`}
+									alt="{model.name} logo"
+									class="w-5 h-5 rounded-full object-cover shrink-0"
+								/>
+								<span class="text-sm truncate flex-1 text-gray-700 dark:text-gray-300">
+									{model.name}
+								</span>
+							</button>
+						</li>
+					{/each}
+				</ul>
+			{/if}
 		</div>
 	{/if}
 
