@@ -832,9 +832,6 @@
 								<div class="flex items-center relative">
 									<Switch
 										bind:state={RAGConfig.ENABLE_RAG_HYBRID_SEARCH}
-										on:change={() => {
-											submitHandler();
-										}}
 									/>
 								</div>
 							</div>
