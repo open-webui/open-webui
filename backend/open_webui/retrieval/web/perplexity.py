@@ -1,9 +1,9 @@
 import logging
 from typing import Optional, Literal
-import requests
 
-from open_webui.retrieval.web.main import SearchResult, get_filtered_results
 from open_webui.env import SRC_LOG_LEVELS
+from open_webui.retrieval.web.main import SearchResult, get_filtered_results
+from open_webui.utils.http_client import request_session
 
 MODELS = Literal[
     "sonar",
@@ -69,7 +69,7 @@ def search_perplexity(
         }
 
         # Make the API request
-        response = requests.request("POST", url, json=payload, headers=headers)
+        response = request_session.request("POST", url, json=payload, headers=headers)
 
         # Parse the JSON response
         json_response = response.json()
@@ -90,7 +90,6 @@ def search_perplexity(
             results.append(result)
 
         if filter_list:
-
             results = get_filtered_results(results, filter_list)
 
         return [

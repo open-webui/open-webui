@@ -1,7 +1,7 @@
 import logging
 from typing import Optional
 
-import requests
+from open_webui.utils.http_client import request_session
 from open_webui.retrieval.web.main import SearchResult, get_filtered_results
 from open_webui.env import SRC_LOG_LEVELS
 
@@ -64,7 +64,7 @@ def search_searxng(
 
     log.debug(f"searching {query_url}")
 
-    response = requests.get(
+    response = request_session.get(
         query_url,
         headers={
             "User-Agent": "Open WebUI (https://github.com/open-webui/open-webui) RAG Bot",

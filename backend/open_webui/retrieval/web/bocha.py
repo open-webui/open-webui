@@ -1,7 +1,7 @@
 import logging
 from typing import Optional
 
-import requests
+from open_webui.utils.http_client import request_session
 import json
 from open_webui.retrieval.web.main import SearchResult, get_filtered_results
 from open_webui.env import SRC_LOG_LEVELS
@@ -50,7 +50,7 @@ def search_bocha(
         {"query": query, "summary": True, "freshness": "noLimit", "count": count}
     )
 
-    response = requests.post(url, headers=headers, data=payload, timeout=5)
+    response = request_session.post(url, headers=headers, data=payload, timeout=5)
     response.raise_for_status()
     results = _parse_response(response.json())
     print(results)

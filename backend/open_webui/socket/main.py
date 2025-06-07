@@ -197,7 +197,6 @@ async def connect(sid, environ, auth):
 
 @sio.on("user-join")
 async def user_join(sid, data):
-
     auth = data["auth"] if "auth" in data else None
     if not auth or "token" not in auth:
         return

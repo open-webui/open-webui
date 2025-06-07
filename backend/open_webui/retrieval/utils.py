@@ -2,7 +2,7 @@ import logging
 import os
 from typing import Optional, Union
 
-import requests
+from open_webui.utils.http_client import request_session
 import hashlib
 from concurrent.futures import ThreadPoolExecutor
 import time
@@ -462,7 +462,6 @@ def get_sources_from_files(
     relevant_contexts = []
 
     for file in files:
-
         context = None
         if file.get("docs"):
             # BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
@@ -671,7 +670,7 @@ def generate_openai_batch_embeddings(
         if isinstance(RAG_EMBEDDING_PREFIX_FIELD_NAME, str) and isinstance(prefix, str):
             json_data[RAG_EMBEDDING_PREFIX_FIELD_NAME] = prefix
 
-        r = requests.post(
+        r = request_session.post(
             f"{url}/embeddings",
             headers={
                 "Content-Type": "application/json",
@@ -720,7 +719,7 @@ def generate_azure_openai_batch_embeddings(
         url = f"{url}/openai/deployments/{model}/embeddings?api-version={version}"
 
         for _ in range(5):
-            r = requests.post(
+            r = request_session.post(
                 url,
                 headers={
                     "Content-Type": "application/json",
@@ -770,7 +769,7 @@ def generate_ollama_batch_embeddings(
         if isinstance(RAG_EMBEDDING_PREFIX_FIELD_NAME, str) and isinstance(prefix, str):
             json_data[RAG_EMBEDDING_PREFIX_FIELD_NAME] = prefix
 
-        r = requests.post(
+        r = request_session.post(
             f"{url}/api/embed",
             headers={
                 "Content-Type": "application/json",

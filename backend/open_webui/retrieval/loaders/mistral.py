@@ -10,6 +10,7 @@ from contextlib import asynccontextmanager
 
 from langchain_core.documents import Document
 from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
+from open_webui.utils.http_client import request_session
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -251,7 +252,7 @@ class MistralLoader:
 
                 # NOTE: stream=False is required for this endpoint
                 # The Mistral API doesn't support chunked uploads for this endpoint
-                response = requests.post(
+                response = request_session.post(
                     url,
                     headers=self.headers,
                     files=files,
@@ -326,7 +327,7 @@ class MistralLoader:
         signed_url_headers = {**self.headers, "Accept": "application/json"}
 
         def url_request():
-            response = requests.get(
+            response = request_session.get(
                 url, headers=signed_url_headers, params=params, timeout=self.url_timeout
             )
             return self._handle_response(response)
@@ -389,7 +390,7 @@ class MistralLoader:
         }
 
         def ocr_request():
-            response = requests.post(
+            response = request_session.post(
                 url, headers=ocr_headers, json=payload, timeout=self.ocr_timeout
             )
             return self._handle_response(response)
@@ -449,7 +450,7 @@ class MistralLoader:
         url = f"{self.BASE_API_URL}/files/{file_id}"
 
         try:
-            response = requests.delete(
+            response = request_session.delete(
                 url, headers=self.headers, timeout=self.cleanup_timeout
             )
             delete_response = self._handle_response(response)

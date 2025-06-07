@@ -1,7 +1,7 @@
 import logging
 from typing import Optional, List
 
-import requests
+from open_webui.utils.http_client import request_session
 from open_webui.retrieval.web.main import SearchResult, get_filtered_results
 from open_webui.env import SRC_LOG_LEVELS
 
@@ -17,7 +17,7 @@ def search_external(
     filter_list: Optional[List[str]] = None,
 ) -> List[SearchResult]:
     try:
-        response = requests.post(
+        response = request_session.post(
             external_url,
             headers={
                 "User-Agent": "Open WebUI (https://github.com/open-webui/open-webui) RAG Bot",

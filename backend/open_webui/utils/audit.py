@@ -75,7 +75,6 @@ class AuditLogger:
         log_level: str = "INFO",
         extra: Optional[dict] = None,
     ):
-
         entry = asdict(audit_entry)
 
         if extra:

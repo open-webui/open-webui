@@ -4,7 +4,6 @@ from open_webui.config import VECTOR_DB, ENABLE_QDRANT_MULTITENANCY_MODE
 
 
 class Vector:
-
     @staticmethod
     def get_vector(vector_type: str) -> VectorDBBase:
         """

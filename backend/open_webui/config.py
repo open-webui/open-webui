@@ -10,8 +10,8 @@ from pathlib import Path
 from typing import Generic, Optional, TypeVar
 from urllib.parse import urlparse
 
-import requests
 from pydantic import BaseModel
+import requests
 from sqlalchemy import JSON, Column, DateTime, Integer, func
 
 from open_webui.env import (
@@ -40,6 +40,7 @@ class EndpointFilter(logging.Filter):
 
 # Filter out /endpoint
 logging.getLogger("uvicorn.access").addFilter(EndpointFilter())
+
 
 ####################################
 # Config helpers
@@ -282,6 +283,40 @@ API_KEY_ALLOWED_ENDPOINTS = PersistentConfig(
 
 JWT_EXPIRES_IN = PersistentConfig(
     "JWT_EXPIRES_IN", "auth.jwt_expiry", os.environ.get("JWT_EXPIRES_IN", "-1")
+)
+
+####################################
+# Http Client config
+####################################
+
+HTTP_CLIENT_TIMEOUT = PersistentConfig(
+    "HTTP_CLIENT_TIMEOUT",
+    "http_client.timeout",
+    int(os.environ.get("HTTP_CLIENT_TIMEOUT", "10")),
+)
+
+HTTP_CLIENT_CLIENT_CERT = PersistentConfig(
+    "HTTP_CLIENT_CLIENT_CERT",
+    "http_client.client_cert",
+    os.environ.get("HTTP_CLIENT_CLIENT_CERT", None),
+)
+
+HTTP_CLIENT_CLIENT_KEY = PersistentConfig(
+    "HTTP_CLIENT_CLIENT_KEY",
+    "http_client.client_key",
+    os.environ.get("HTTP_CLIENT_CLIENT_KEY", None),
+)
+
+HTTP_CLIENT_CLIENT_KEY_PASSWORD = PersistentConfig(
+    "HTTP_CLIENT_CLIENT_KEY_PASSWORD",
+    "http_client.client_key_password",
+    os.environ.get("HTTP_CLIENT_CLIENT_KEY_PASSWORD", None),
+)
+
+HTTP_CLIENT_CA_CERT = PersistentConfig(
+    "HTTP_CLIENT_CA_CERT",
+    "http_client.ca_cert",
+    os.environ.get("HTTP_CLIENT_CA_CERT", None),
 )
 
 ####################################
@@ -586,6 +621,15 @@ def load_oauth_providers():
             client_kwargs = {
                 "scope": OAUTH_SCOPES.value,
             }
+
+            if HTTP_CLIENT_CLIENT_CERT.value and HTTP_CLIENT_CLIENT_KEY.value:
+                cert_tuple = (
+                    HTTP_CLIENT_CLIENT_CERT.value,
+                    HTTP_CLIENT_CLIENT_KEY.value,
+                )
+                if HTTP_CLIENT_CLIENT_KEY_PASSWORD.value:
+                    cert_tuple += (HTTP_CLIENT_CLIENT_KEY_PASSWORD.value,)
+                client_kwargs["cert"] = cert_tuple
 
             if (
                 OAUTH_CODE_CHALLENGE_METHOD.value

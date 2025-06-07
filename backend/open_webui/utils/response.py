@@ -31,7 +31,7 @@ def convert_ollama_usage_to_openai(data: dict) -> dict:
                 (
                     (
                         data.get("eval_count", 0)
-                        / ((data.get("eval_duration", 0) / 10_000_000))
+                        / (data.get("eval_duration", 0) / 10_000_000)
                     )
                     * 100
                 ),
@@ -45,7 +45,7 @@ def convert_ollama_usage_to_openai(data: dict) -> dict:
                 (
                     (
                         data.get("prompt_eval_count", 0)
-                        / ((data.get("prompt_eval_duration", 0) / 10_000_000))
+                        / (data.get("prompt_eval_duration", 0) / 10_000_000)
                     )
                     * 100
                 ),

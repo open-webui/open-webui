@@ -18,8 +18,7 @@ from typing import Optional
 from aiocache import cached
 import aiohttp
 import anyio.to_thread
-import requests
-
+from open_webui.utils.http_client import get_aiohttp_session, request_session
 
 from fastapi import (
     Depends,
@@ -499,8 +498,10 @@ async def lifespan(app: FastAPI):
         limiter.total_tokens = THREAD_POOL_SIZE
 
     asyncio.create_task(periodic_usage_pool_cleanup())
+    app.state.aiohttp_session = await get_aiohttp_session()
 
     yield
+    await app.state.aiohttp_session.close()
 
 
 app = FastAPI(
@@ -1562,16 +1563,16 @@ async def get_app_latest_release_version(user=Depends(get_verified_user)):
         return {"current": VERSION, "latest": VERSION}
     try:
         timeout = aiohttp.ClientTimeout(total=1)
-        async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
-            async with session.get(
-                "https://api.github.com/repos/open-webui/open-webui/releases/latest",
-                ssl=AIOHTTP_CLIENT_SESSION_SSL,
-            ) as response:
-                response.raise_for_status()
-                data = await response.json()
-                latest_version = data["tag_name"]
+        session = await get_aiohttp_session()
+        async with session.get(
+            "https://api.github.com/repos/open-webui/open-webui/releases/latest",
+            timeout=timeout,
+        ) as response:
+            response.raise_for_status()
+            data = await response.json()
+            latest_version = data["tag_name"]
 
-                return {"current": VERSION, "latest": latest_version[1:]}
+            return {"current": VERSION, "latest": latest_version[1:]}
     except Exception as e:
         log.debug(e)
         return {"current": VERSION, "latest": VERSION}
@@ -1616,7 +1617,7 @@ async def oauth_callback(provider: str, request: Request, response: Response):
 @app.get("/manifest.json")
 async def get_manifest_json():
     if app.state.EXTERNAL_PWA_MANIFEST_URL:
-        return requests.get(app.state.EXTERNAL_PWA_MANIFEST_URL).json()
+        return request_session.get(app.state.EXTERNAL_PWA_MANIFEST_URL).json()
     else:
         return {
             "name": app.state.WEBUI_NAME,

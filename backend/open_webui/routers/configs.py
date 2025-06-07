@@ -121,7 +121,6 @@ async def verify_tool_servers_config(
     Verify the connection to the tool server.
     """
     try:
-
         token = None
         if form_data.auth_type == "bearer":
             token = form_data.key
@@ -183,7 +182,6 @@ async def get_code_execution_config(request: Request, user=Depends(get_admin_use
 async def set_code_execution_config(
     request: Request, form_data: CodeInterpreterConfigForm, user=Depends(get_admin_user)
 ):
-
     request.app.state.config.ENABLE_CODE_EXECUTION = form_data.ENABLE_CODE_EXECUTION
 
     request.app.state.config.CODE_EXECUTION_ENGINE = form_data.CODE_EXECUTION_ENGINE

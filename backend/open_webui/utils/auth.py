@@ -4,7 +4,7 @@ import jwt
 import base64
 import hmac
 import hashlib
-import requests
+from open_webui.utils.http_client import request_session
 import os
 
 
@@ -75,7 +75,7 @@ def override_static(path: str, content: str):
 def get_license_data(app, key):
     if key:
         try:
-            res = requests.post(
+            res = request_session.post(
                 "https://api.openwebui.com/api/v1/license/",
                 json={"key": key, "version": "1"},
                 timeout=5,

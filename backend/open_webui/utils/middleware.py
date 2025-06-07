@@ -644,7 +644,8 @@ async def chat_completion_files_handler(
                         request=request,
                         files=files,
                         queries=queries,
-                        embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
+                        embedding_function=lambda query,
+                        prefix: request.app.state.EMBEDDING_FUNCTION(
                             query, prefix=prefix, user=user
                         ),
                         k=request.app.state.config.TOP_K,
@@ -804,7 +805,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         raise e
 
     try:
-
         filter_functions = [
             Functions.get_function_by_id(filter_id)
             for filter_id in get_sorted_filter_ids(
@@ -1233,7 +1233,6 @@ async def process_chat_response(
                 content = response["choices"][0]["message"]["content"]
 
                 if content:
-
                     await event_emitter(
                         {
                             "type": "chat:completion",
@@ -1376,10 +1375,8 @@ async def process_chat_response(
                         results = block.get("results", [])
 
                         if results:
-
                             tool_calls_display_content = ""
                             for tool_call in tool_calls:
-
                                 tool_call_id = tool_call.get("id", "")
                                 tool_name = tool_call.get("function", {}).get(
                                     "name", ""
@@ -1622,7 +1619,6 @@ async def process_chat_response(
                             # Reset the content_blocks by appending a new text block
                             if content_type != "code_interpreter":
                                 if leftover_content:
-
                                     content_blocks.append(
                                         {
                                             "type": "text",
@@ -1684,7 +1680,9 @@ async def process_chat_response(
             content = (
                 message.get("content", "")
                 if message
-                else last_assistant_message if last_assistant_message else ""
+                else last_assistant_message
+                if last_assistant_message
+                else ""
             )
 
             content_blocks = [

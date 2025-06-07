@@ -38,7 +38,6 @@ router = APIRouter()
 
 @router.get("/", response_model=list[ToolUserResponse])
 async def get_tools(request: Request, user=Depends(get_verified_user)):
-
     if not request.app.state.TOOL_SERVERS:
         # If the tool servers are not set, we need to set them
         # This is done only once when the server starts
@@ -149,7 +148,9 @@ async def load_tool_from_url(
             file_name.endswith(".py")
             and (not file_name.startswith(("main.py", "index.py", "__init__.py")))
         )
-        else url_parts[-2] if len(url_parts) > 1 else "function"
+        else url_parts[-2]
+        if len(url_parts) > 1
+        else "function"
     )
 
     try:

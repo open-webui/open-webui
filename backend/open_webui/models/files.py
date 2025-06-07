@@ -198,7 +198,6 @@ class FilesTable:
                 db.commit()
                 return FileModel.model_validate(file)
             except Exception as e:
-
                 return None
 
     def update_file_metadata_by_id(self, id: str, meta: dict) -> Optional[FileModel]:
