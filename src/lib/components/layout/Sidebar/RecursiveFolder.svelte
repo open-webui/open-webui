@@ -350,13 +350,15 @@
 			)}
 		</div>
 
-		<label class="inline-flex flex-col items-start gap-0.5 text-xs text-gray-600 dark:text-gray-400">
+		<label 
+			class="inline-flex flex-col items-start gap-0.5 text-xs text-gray-600 dark:text-gray-400"
+		>
 			<span class="inline-flex items-center gap-2">
 				<input type="checkbox" bind:checked={deleteChats} />
 				<span>{$i18n.t('Delete chats in this folder')}</span>
 			</span>
 			<span class="ml-6 text-[0.7rem] text-gray-500 dark:text-gray-500">
-				{$i18n.t('Uncheck to keep chats – they’ll be moved to back to the default folder.')}
+				{$i18n.t('Uncheck to keep chats - they’ll be moved to back to the default folder.')}
 			</span>
 		</label>
 	</div>
