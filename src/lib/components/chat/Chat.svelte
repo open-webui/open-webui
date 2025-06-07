@@ -120,6 +120,35 @@
 	let selectedModelIds = [];
 	$: selectedModelIds = atSelectedModel !== undefined ? [atSelectedModel.id] : selectedModels;
 
+	let currentModelIdFromUrl = '';
+
+	$: {
+		if ($page.url.searchParams) {
+			const modelIdFromQuery = $page.url.searchParams.get('model');
+
+			if (modelIdFromQuery && modelIdFromQuery !== currentModelIdFromUrl) {
+				currentModelIdFromUrl = modelIdFromQuery;
+
+				const modelExists = $models.find((m) => m.id === modelIdFromQuery);
+				if (modelExists) {
+					selectedModels = [modelIdFromQuery];
+					atSelectedModel = undefined;
+					sessionStorage.selectedModels = JSON.stringify(selectedModels);
+
+					if (!$chatId && !$temporaryChatEnabled) {
+						prompt = '';
+						files = [];
+						resetInput();
+					}
+				} else {
+					console.warn(`[Chat.svelte] Model ID ${modelIdFromQuery} from URL not found in available models.`);
+				}
+			} else if (!modelIdFromQuery && currentModelIdFromUrl !== '') {
+				currentModelIdFromUrl = '';
+			}
+		}
+	}
+
 	let selectedToolIds = [];
 	let selectedFilterIds = [];
 	let imageGenerationEnabled = false;

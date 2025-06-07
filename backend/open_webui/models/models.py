@@ -96,6 +96,7 @@ class Model(Base):
     #   }
 
     is_active = Column(Boolean, default=True)
+    pinned_to_sidebar = Column(Boolean, default=False, nullable=False)
 
     updated_at = Column(BigInteger)
     created_at = Column(BigInteger)
@@ -113,6 +114,7 @@ class ModelModel(BaseModel):
     access_control: Optional[dict] = None
 
     is_active: bool
+    pinned_to_sidebar: bool = False
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
 
@@ -140,20 +142,24 @@ class ModelForm(BaseModel):
     params: ModelParams
     access_control: Optional[dict] = None
     is_active: bool = True
+    pinned_to_sidebar: Optional[bool] = False
 
 
 class ModelsTable:
     def insert_new_model(
         self, form_data: ModelForm, user_id: str
     ) -> Optional[ModelModel]:
-        model = ModelModel(
-            **{
-                **form_data.model_dump(),
-                "user_id": user_id,
-                "created_at": int(time.time()),
-                "updated_at": int(time.time()),
-            }
-        )
+        model_data = {
+            **form_data.model_dump(exclude_unset=True),  # Use exclude_unset to handle optional fields
+            "user_id": user_id,
+            "created_at": int(time.time()),
+            "updated_at": int(time.time()),
+        }
+        # Ensure pinned_to_sidebar defaults to False if not provided
+        if "pinned_to_sidebar" not in model_data:
+            model_data["pinned_to_sidebar"] = False
+
+        model = ModelModel(**model_data)
         try:
             with get_db() as db:
                 result = Model(**model.model_dump())
@@ -235,10 +241,13 @@ class ModelsTable:
         try:
             with get_db() as db:
                 # update only the fields that are present in the model
+                update_data = model.model_dump(exclude_unset=True, exclude={"id"})
+                update_data["updated_at"] = int(time.time())
+
                 result = (
                     db.query(Model)
                     .filter_by(id=id)
-                    .update(model.model_dump(exclude={"id"}))
+                    .update(update_data)
                 )
                 db.commit()
 

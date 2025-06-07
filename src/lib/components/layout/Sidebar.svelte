@@ -54,6 +54,7 @@
 	import Tooltip from '../common/Tooltip.svelte';
 	import Folders from './Sidebar/Folders.svelte';
 	import { getChannels, createNewChannel } from '$lib/apis/channels';
+	import { getPinnedModels } from '$lib/apis/models';
 	import ChannelModal from './Sidebar/ChannelModal.svelte';
 	import ChannelItem from './Sidebar/ChannelItem.svelte';
 	import PencilSquare from '../icons/PencilSquare.svelte';
@@ -78,6 +79,23 @@
 
 	let folders = {};
 	let newFolderId = null;
+
+	let pinnedSystemModels = [];
+
+	const initPinnedModels = async () => {
+		if ($user?.token) {
+			try {
+				const models = await getPinnedModels(localStorage.token);
+				pinnedSystemModels = models;
+			} catch (error) {
+				console.error('Failed to fetch pinned models:', error);
+				toast.error($i18n.t('Failed to load pinned models.'));
+				pinnedSystemModels = [];
+			}
+		} else {
+			pinnedSystemModels = [];
+		}
+	};
 
 	const initFolders = async () => {
 		const folderList = await getFolders(localStorage.token).catch((error) => {
@@ -358,6 +376,15 @@
 
 		await initChannels();
 		await initChatList();
+		await initPinnedModels();
+
+		user.subscribe(async (_user) => {
+			if (_user?.token) {
+				await initPinnedModels();
+			} else {
+				pinnedSystemModels = [];
+			}
+		});
 
 		window.addEventListener('keydown', onKeyDown);
 		window.addEventListener('keyup', onKeyUp);
@@ -643,6 +670,39 @@
 				</a>
 			</div>
 		{/if}
+
+	<!-- Pinned Models Section -->
+	{#if pinnedSystemModels.length > 0}
+		<div class="px-1.5 mt-2">
+			<div class="text-xs font-semibold text-gray-500 dark:text-gray-400 px-2 py-1">
+				{$i18n.t('Pinned Models')}
+			</div>
+			<ul class="space-y-1">
+				{#each pinnedSystemModels as model (model.id)}
+					<li>
+						<button
+							on:click={() => {
+								goto(`/?model=${encodeURIComponent(model.id)}`);
+								if ($mobile) {
+									showSidebar.set(false);
+								}
+							}}
+							class="w-full flex items-center space-x-2 px-2 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition text-left"
+						>
+							<img
+								src={model.meta?.profile_image_url || `${WEBUI_BASE_URL}/static/favicon.png`}
+								alt="{model.name} logo"
+								class="w-5 h-5 rounded-full object-cover shrink-0"
+							/>
+							<span class="text-sm truncate flex-1 text-gray-700 dark:text-gray-300">
+								{model.name}
+							</span>
+						</button>
+					</li>
+				{/each}
+			</ul>
+		</div>
+	{/if}
 
 		<div
 			class="relative flex flex-col flex-1 overflow-y-auto overflow-x-hidden {$temporaryChatEnabled
