@@ -272,7 +272,7 @@ class FolderTable:
                                 folder_child.id
                             )
                             for chat in chats_in_folder:
-                                # Move chat to default folder, None is the default folder id 
+                                # Move chat to default folder, None is the default folder id
                                 Chats.update_chat_folder_id_by_id_and_user_id(
                                     chat.id, user_id, None
                                 )
