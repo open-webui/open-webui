@@ -332,7 +332,7 @@ GOOGLE_REDIRECT_URI = PersistentConfig(
 MICROSOFT_CLOUD = PersistentConfig(
     "MICROSOFT_CLOUD",
     "oauth.microsoft.cloud",
-    os.environ.get("MICROSOFT_CLOUD", "com"),
+    os.environ.get("MICROSOFT_CLOUD", "global").lower(),
 )
 
 MICROSOFT_CLIENT_ID = PersistentConfig(
@@ -543,12 +543,19 @@ def load_oauth_providers():
         and MICROSOFT_CLIENT_TENANT_ID.value
     ):
 
+        if MICROSOFT_CLOUD.value == "azureusgovernmentcloud":
+            domain = "microsoftonline.us"
+        elif MICROSOFT_CLOUD.value == "azurechinacloud":
+            domain = "chinacloudapi.cn"
+        else:
+            domain = "microsoftonline.com"
+
         def microsoft_oauth_register(client):
             client.register(
                 name="microsoft",
                 client_id=MICROSOFT_CLIENT_ID.value,
                 client_secret=MICROSOFT_CLIENT_SECRET.value,
-                server_metadata_url=f"https://login.microsoftonline.{MICROSOFT_CLOUD.value}/{MICROSOFT_CLIENT_TENANT_ID.value}/v2.0/.well-known/openid-configuration?appid={MICROSOFT_CLIENT_ID.value}",
+                server_metadata_url=f"https://login.{domain}/{MICROSOFT_CLIENT_TENANT_ID.value}/v2.0/.well-known/openid-configuration?appid={MICROSOFT_CLIENT_ID.value}",
                 client_kwargs={
                     "scope": MICROSOFT_OAUTH_SCOPE.value,
                 },
@@ -557,7 +564,7 @@ def load_oauth_providers():
 
         OAUTH_PROVIDERS["microsoft"] = {
             "redirect_uri": MICROSOFT_REDIRECT_URI.value,
-            "picture_url": f"https://graph.microsoft.{MICROSOFT_CLOUD.value}/v1.0/me/photo/$value",
+            "picture_url": f"https://graph.{domain}/v1.0/me/photo/$value",
             "register": microsoft_oauth_register,
         }
 
