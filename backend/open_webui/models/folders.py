@@ -244,6 +244,7 @@ class FolderTable:
                 folder = db.query(Folder).filter_by(id=id, user_id=user_id).first()
                 if not folder:
                     return False
+
                 if delete_chats:
                     # Delete all chats in the folder
                     Chats.delete_chats_by_user_id_and_folder_id(user_id, folder.id)
@@ -253,6 +254,7 @@ class FolderTable:
                     for chat in chats_in_folder:
                         Chats.update_chat_folder_id_by_id_and_user_id(chat.id, user_id, None)
 
+                # Delete all children folders
                 def delete_children(folder):
                     folder_children = self.get_folders_by_parent_id_and_user_id(
                         folder.id, user_id
@@ -268,16 +270,12 @@ class FolderTable:
                             for chat in chats_in_folder:
                                 # Move chat to default folder, None is the default folder id 
                                 Chats.update_chat_folder_id_by_id_and_user_id(chat.id, user_id, None)
-                        
 
                         delete_children(folder_child)
 
                         folder = db.query(Folder).filter_by(id=folder_child.id).first()
                         db.delete(folder)
                         db.commit()
-
-
-                # Delete all children folders
 
                 delete_children(folder)
                 db.delete(folder)

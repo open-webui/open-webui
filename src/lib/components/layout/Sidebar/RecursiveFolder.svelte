@@ -362,8 +362,6 @@
 	</div>
 </DeleteConfirmDialog>
 
-
-
 {#if dragged && x && y}
 	<DragGhost {x} {y}>
 		<div class=" bg-black/80 backdrop-blur-2xl px-2 py-1 rounded-lg w-fit max-w-40">
