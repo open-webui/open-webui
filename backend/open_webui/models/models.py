@@ -149,16 +149,17 @@ class ModelsTable:
     def insert_new_model(
         self, form_data: ModelForm, user_id: str
     ) -> Optional[ModelModel]:
+        model_data_dump = form_data.model_dump(exclude_unset=True)
+        model_data_dump['is_active'] = form_data.is_active
+        model_data_dump['pinned_to_sidebar'] = form_data.pinned_to_sidebar
+
         model_data = {
-            **form_data.model_dump(exclude_unset=True),  # Use exclude_unset to handle optional fields
+            **model_data_dump,
             "user_id": user_id,
             "created_at": int(time.time()),
             "updated_at": int(time.time()),
         }
-        # Ensure pinned_to_sidebar defaults to False if not provided
-        if "pinned_to_sidebar" not in model_data:
-            model_data["pinned_to_sidebar"] = False
-
+        
         model = ModelModel(**model_data)
         try:
             with get_db() as db:
