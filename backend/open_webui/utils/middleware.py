@@ -32,6 +32,7 @@ from open_webui.socket.main import (
 from open_webui.routers.tasks import (
     generate_queries,
     generate_title,
+    generate_follow_ups,
     generate_image_prompt,
     generate_chat_tags,
 )
@@ -726,12 +727,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     extra_params = {
         "__event_emitter__": event_emitter,
         "__event_call__": event_call,
-        "__user__": {
-            "id": user.id,
-            "email": user.email,
-            "name": user.name,
-            "role": user.role,
-        },
+        "__user__": user.model_dump() if isinstance(user, UserModel) else {},
         "__metadata__": metadata,
         "__request__": request,
         "__model__": model,
@@ -1048,6 +1044,59 @@ async def process_chat_response(
                 )
 
             if tasks and messages:
+                if (
+                    TASKS.FOLLOW_UP_GENERATION in tasks
+                    and tasks[TASKS.FOLLOW_UP_GENERATION]
+                ):
+                    res = await generate_follow_ups(
+                        request,
+                        {
+                            "model": message["model"],
+                            "messages": messages,
+                            "message_id": metadata["message_id"],
+                            "chat_id": metadata["chat_id"],
+                        },
+                        user,
+                    )
+
+                    if res and isinstance(res, dict):
+                        if len(res.get("choices", [])) == 1:
+                            follow_ups_string = (
+                                res.get("choices", [])[0]
+                                .get("message", {})
+                                .get("content", "")
+                            )
+                        else:
+                            follow_ups_string = ""
+
+                        follow_ups_string = follow_ups_string[
+                            follow_ups_string.find("{") : follow_ups_string.rfind("}")
+                            + 1
+                        ]
+
+                        try:
+                            follow_ups = json.loads(follow_ups_string).get(
+                                "follow_ups", []
+                            )
+                            Chats.upsert_message_to_chat_by_id_and_message_id(
+                                metadata["chat_id"],
+                                metadata["message_id"],
+                                {
+                                    "followUps": follow_ups,
+                                },
+                            )
+
+                            await event_emitter(
+                                {
+                                    "type": "chat:message:follow_ups",
+                                    "data": {
+                                        "follow_ups": follow_ups,
+                                    },
+                                }
+                            )
+                        except Exception as e:
+                            pass
+
                 if TASKS.TITLE_GENERATION in tasks:
                     if tasks[TASKS.TITLE_GENERATION]:
                         res = await generate_title(
@@ -1273,12 +1322,7 @@ async def process_chat_response(
     extra_params = {
         "__event_emitter__": event_emitter,
         "__event_call__": event_caller,
-        "__user__": {
-            "id": user.id,
-            "email": user.email,
-            "name": user.name,
-            "role": user.role,
-        },
+        "__user__": user.model_dump() if isinstance(user, UserModel) else {},
         "__metadata__": metadata,
         "__request__": request,
         "__model__": model,

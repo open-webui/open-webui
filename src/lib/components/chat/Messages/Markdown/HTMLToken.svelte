@@ -28,7 +28,7 @@
 			<!-- svelte-ignore a11y-media-has-caption -->
 			<video
 				class="w-full my-2"
-				src={videoSrc}
+				src={videoSrc.replaceAll('&amp;', '&')}
 				title="Video player"
 				frameborder="0"
 				referrerpolicy="strict-origin-when-cross-origin"

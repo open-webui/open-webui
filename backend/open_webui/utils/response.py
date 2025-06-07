@@ -125,3 +125,64 @@ async def convert_streaming_response_ollama_to_openai(ollama_streaming_response)
         yield line
 
     yield "data: [DONE]\n\n"
+
+
+def convert_embedding_response_ollama_to_openai(response) -> dict:
+    """
+    Convert the response from Ollama embeddings endpoint to the OpenAI-compatible format.
+
+    Args:
+        response (dict): The response from the Ollama API,
+            e.g. {"embedding": [...], "model": "..."}
+            or {"embeddings": [{"embedding": [...], "index": 0}, ...], "model": "..."}
+
+    Returns:
+        dict: Response adapted to OpenAI's embeddings API format.
+            e.g. {
+                "object": "list",
+                "data": [
+                    {"object": "embedding", "embedding": [...], "index": 0},
+                    ...
+                ],
+                "model": "...",
+            }
+    """
+    # Ollama batch-style output
+    if isinstance(response, dict) and "embeddings" in response:
+        openai_data = []
+        for i, emb in enumerate(response["embeddings"]):
+            openai_data.append(
+                {
+                    "object": "embedding",
+                    "embedding": emb.get("embedding"),
+                    "index": emb.get("index", i),
+                }
+            )
+        return {
+            "object": "list",
+            "data": openai_data,
+            "model": response.get("model"),
+        }
+    # Ollama single output
+    elif isinstance(response, dict) and "embedding" in response:
+        return {
+            "object": "list",
+            "data": [
+                {
+                    "object": "embedding",
+                    "embedding": response["embedding"],
+                    "index": 0,
+                }
+            ],
+            "model": response.get("model"),
+        }
+    # Already OpenAI-compatible?
+    elif (
+        isinstance(response, dict)
+        and "data" in response
+        and isinstance(response["data"], list)
+    ):
+        return response
+
+    # Fallback: return as is if unrecognized
+    return response
