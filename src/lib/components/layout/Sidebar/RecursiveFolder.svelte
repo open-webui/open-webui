@@ -48,6 +48,8 @@
 	let draggedOver = false;
 	let dragged = false;
 
+	let deleteChats = true;
+
 	let name = '';
 
 	const onDragOver = (e) => {
@@ -239,7 +241,7 @@
 	let showDeleteConfirm = false;
 
 	const deleteHandler = async () => {
-		const res = await deleteFolderById(localStorage.token, folderId).catch((error) => {
+		const res = await deleteFolderById(localStorage.token, folderId, deleteChats).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});
@@ -339,14 +341,28 @@
 		deleteHandler();
 	}}
 >
-	<div class=" text-sm text-gray-700 dark:text-gray-300 flex-1 line-clamp-3">
-		{@html DOMPurify.sanitize(
-			$i18n.t('This will delete <strong>{{NAME}}</strong> and <strong>all its contents</strong>.', {
-				NAME: folders[folderId].name
-			})
-		)}
+	<div class="text-sm text-gray-700 dark:text-gray-300 flex flex-col gap-2">
+		<div class="line-clamp-3">
+			{@html DOMPurify.sanitize(
+				$i18n.t('You’re about to delete the folder <strong>{{NAME}}</strong>.', {
+					NAME: folders[folderId].name
+				})
+			)}
+		</div>
+
+		<label class="inline-flex flex-col items-start gap-0.5 text-xs text-gray-600 dark:text-gray-400">
+			<span class="inline-flex items-center gap-2">
+				<input type="checkbox" bind:checked={deleteChats} />
+				<span>{$i18n.t('Delete chats in this folder')}</span>
+			</span>
+			<span class="ml-6 text-[0.7rem] text-gray-500 dark:text-gray-500">
+				{$i18n.t('Uncheck to keep chats – they’ll be moved to back to the default folder.')}
+			</span>
+		</label>
 	</div>
 </DeleteConfirmDialog>
+
+
 
 {#if dragged && x && y}
 	<DragGhost {x} {y}>
