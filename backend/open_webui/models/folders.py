@@ -247,9 +247,7 @@ class FolderTable:
 
                 if delete_chats:
                     # Delete all chats in the folder
-                    Chats.delete_chats_by_user_id_and_folder_id(
-                        id, user_id, folder.id
-                    )
+                    Chats.delete_chats_by_user_id_and_folder_id(id, user_id, folder.id)
                 else:
                     # Move chats to default folder
                     chats_in_folder = Chats.get_chats_by_folder_id(folder.id)
@@ -270,10 +268,14 @@ class FolderTable:
                             )
                         else:
                             # Move chats to default folder
-                            chats_in_folder = Chats.get_chats_by_folder_id(folder_child.id)
+                            chats_in_folder = Chats.get_chats_by_folder_id(
+                                folder_child.id
+                            )
                             for chat in chats_in_folder:
                                 # Move chat to default folder, None is the default folder id 
-                                Chats.update_chat_folder_id_by_id_and_user_id(chat.id, user_id, None)
+                                Chats.update_chat_folder_id_by_id_and_user_id(
+                                    chat.id, user_id, None
+                                )
 
                         delete_children(folder_child)
 
