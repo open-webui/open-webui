@@ -249,7 +249,9 @@ async def delete_folder_by_id(
     folder = Folders.get_folder_by_id_and_user_id(id, user.id)
     if folder:
         try:
-            result = Folders.delete_folder_by_id_and_user_id(id, user.id, delete_chats=delete_chats)
+            result = Folders.delete_folder_by_id_and_user_id(
+                id, user.id, delete_chats=delete_chats
+            )
             if result:
                 return result
             else:

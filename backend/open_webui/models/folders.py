@@ -247,12 +247,16 @@ class FolderTable:
 
                 if delete_chats:
                     # Delete all chats in the folder
-                    Chats.delete_chats_by_user_id_and_folder_id(user_id, folder.id)
+                    Chats.delete_chats_by_user_id_and_folder_id(
+                        id, user_id, folder.id
+                    )
                 else:
                     # Move chats to default folder
                     chats_in_folder = Chats.get_chats_by_folder_id(folder.id)
                     for chat in chats_in_folder:
-                        Chats.update_chat_folder_id_by_id_and_user_id(chat.id, user_id, None)
+                        Chats.update_chat_folder_id_by_id_and_user_id(
+                            chat.id, user_id, None
+                        )
 
                 # Delete all children folders
                 def delete_children(folder):
