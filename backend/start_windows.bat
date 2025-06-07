@@ -18,6 +18,10 @@ IF /I "%WEB_LOADER_ENGINE%" == "playwright" (
 )
 
 SET "KEY_FILE=.webui_secret_key"
+IF NOT "%WEBUI_SECRET_KEY_FILE%" == "" (
+    SET "KEY_FILE=%WEBUI_SECRET_KEY_FILE%"
+)
+
 IF "%PORT%"=="" SET PORT=8080
 IF "%HOST%"=="" SET HOST=0.0.0.0
 SET "WEBUI_SECRET_KEY=%WEBUI_SECRET_KEY%"
