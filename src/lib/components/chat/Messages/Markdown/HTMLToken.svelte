@@ -38,6 +38,20 @@
 		{:else}
 			{token.text}
 		{/if}
+	{:else if html && html.includes('<audio')}
+		{@const audio = html.match(/<audio[^>]*>([\s\S]*?)<\/audio>/)}
+		{@const audioSrc = audio && audio[1]}
+		{#if audioSrc}
+			<!-- svelte-ignore a11y-media-has-caption -->
+			<audio
+				class="w-full my-2"
+				src={audioSrc.replaceAll('&amp;', '&')}
+				title="Audio player"
+				controls
+			></audio>
+		{:else}
+			{token.text}
+		{/if}
 	{:else if token.text && token.text.match(/<iframe\s+[^>]*src="https:\/\/www\.youtube\.com\/embed\/([a-zA-Z0-9_-]{11})(?:\?[^"]*)?"[^>]*><\/iframe>/)}
 		{@const match = token.text.match(
 			/<iframe\s+[^>]*src="https:\/\/www\.youtube\.com\/embed\/([a-zA-Z0-9_-]{11})(?:\?[^"]*)?"[^>]*><\/iframe>/
