@@ -14,6 +14,7 @@
 	import { getToolServerData } from '$lib/apis';
 	import { verifyToolServerConnection } from '$lib/apis/configs';
 	import AccessControl from './workspace/common/AccessControl.svelte';
+	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	export let onSubmit: Function = () => {};
 	export let onDelete: Function = () => {};
@@ -28,7 +29,11 @@
 	let path = 'openapi.json';
 
 	let auth_type = 'bearer';
+	let oAuthProviders: string[] = [];
+	let oAuthProvider = '';
 	let key = '';
+
+	let popup: WindowProxy | null = null;
 
 	let accessControl = {};
 
@@ -39,7 +44,23 @@
 
 	let loading = false;
 
+	const startOAuthFlow = async () => {
+		// Idea: Pass the server_url and do whole OAuth login + Verify Connection flow?
+		const loginUrl = `${WEBUI_BASE_URL}/toolserver/${oAuthProvider}/login`;
+
+		popup = window.open(
+			loginUrl,
+			'oauthPopup',
+			'width=500,height=600'
+		);
+	};
+
 	const verifyHandler = async () => {
+		if (auth_type === 'oauth' && key === '') {
+			toast.error($i18n.t('Please Sign In to your selected provider, or manually enter an access token.'));
+			return;
+		}
+
 		if (url === '') {
 			toast.error($i18n.t('Please enter a valid URL'));
 			return;
@@ -51,6 +72,8 @@
 		}
 
 		if (direct) {
+			// TODO: Add support for OAuth verification
+			// This could potentially work out of the box if we wire up the backend correctly
 			const res = await getToolServerData(
 				auth_type === 'bearer' ? key : localStorage.token,
 				path.includes('://') ? path : `${url}${path.startsWith('/') ? '' : '/'}${path}`
