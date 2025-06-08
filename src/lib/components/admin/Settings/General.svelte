@@ -311,7 +311,6 @@
 							{$i18n.t('Pending User Overlay Title')}
 						</div>
 						<Textarea
-							rows={2}
 							placeholder={$i18n.t(
 								'Enter a title for the pending user info overlay. Leave empty for default.'
 							)}
