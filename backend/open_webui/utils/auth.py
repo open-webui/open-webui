@@ -158,6 +158,7 @@ def get_http_authorization_cred(auth_header: Optional[str]):
 
 def get_current_user(
     request: Request,
+    response: Response,
     background_tasks: BackgroundTasks,
     auth_token: HTTPAuthorizationCredentials = Depends(bearer_security),
 ):
@@ -229,6 +230,11 @@ def get_current_user(
             if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
                 trusted_email = request.headers.get(WEBUI_AUTH_TRUSTED_EMAIL_HEADER)
                 if trusted_email and user.email != trusted_email:
+                    # Delete the token cookie
+                    response.delete_cookie("token")
+                    # Delete OAuth token if present
+                    if request.cookies.get("oauth_id_token"):
+                        response.delete_cookie("oauth_id_token")
                     raise HTTPException(
                         status_code=status.HTTP_401_UNAUTHORIZED,
                         detail="User mismatch. Please sign in again.",
