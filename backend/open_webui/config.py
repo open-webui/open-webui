@@ -635,6 +635,12 @@ TOOL_GOOGLE_REDIRECT_URI = PersistentConfig(
     os.environ.get("TOOL_GOOGLE_REDIRECT_URI", ""),
 )
 
+TOOL_GOOGLE_SCOPE = PersistentConfig(
+    "TOOL_GOOGLE_SCOPE",
+    "toolserver.google.scope",
+    os.environ.get("TOOL_GOOGLE_SCOPE", ""),
+)
+
 TOOL_ATLASSIAN_CLIENT_ID = PersistentConfig(
     "TOOL_ATLASSIAN_CLIENT_ID",
     "toolserver.atlassian.client_id",
@@ -653,6 +659,12 @@ TOOL_ATLASSIAN_REDIRECT_URI = PersistentConfig(
     os.environ.get("TOOL_ATLASSIAN_REDIRECT_URI", ""),
 )
 
+TOOL_ATLASSIAN_SCOPE = PersistentConfig(
+    "TOOL_ATLASSIAN_SCOPE",
+    "toolserver.atlassian.scope",
+    os.environ.get("TOOL_ATLASSIAN_SCOPE", ""),
+)
+
 def load_tool_server_oauth_providers():
     providers = {}
     
@@ -663,7 +675,7 @@ def load_tool_server_oauth_providers():
                 client_id=TOOL_GOOGLE_CLIENT_ID.value,
                 client_secret=TOOL_GOOGLE_CLIENT_SECRET.value,
                 server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
-                client_kwargs={"scope": "openid email profile"},
+                client_kwargs={"scope": TOOL_GOOGLE_SCOPE.value},
                 redirect_uri=TOOL_GOOGLE_REDIRECT_URI.value,
             )
         
@@ -681,9 +693,9 @@ def load_tool_server_oauth_providers():
                 authorize_url="https://auth.atlassian.com/authorize",
                 access_token_url="https://auth.atlassian.com/oauth/token",
                 api_base_url="https://mcp.atlassian.com",
-                # userinfo_endpoint="https://api.atlassian.com/me",
+                userinfo_endpoint="https://api.atlassian.com/me",
                 client_kwargs={
-                    "scope": "read:me read:account read:jira-user",
+                    "scope": TOOL_ATLASSIAN_SCOPE.value,
                     "audience": "mcp.atlassian.com",
                     "prompt": "consent",
                 },
