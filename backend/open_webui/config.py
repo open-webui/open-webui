@@ -901,9 +901,7 @@ TOOL_SERVER_CONNECTIONS = PersistentConfig(
 ####################################
 
 
-WEBUI_URL = PersistentConfig(
-    "WEBUI_URL", "webui.url", os.environ.get("WEBUI_URL", "http://localhost:3000")
-)
+WEBUI_URL = PersistentConfig("WEBUI_URL", "webui.url", os.environ.get("WEBUI_URL", ""))
 
 
 ENABLE_SIGNUP = PersistentConfig(
@@ -1247,12 +1245,6 @@ if THREAD_POOL_SIZE is not None and isinstance(THREAD_POOL_SIZE, str):
         THREAD_POOL_SIZE = None
 
 
-def validate_cors_origins(origins):
-    for origin in origins:
-        if origin != "*":
-            validate_cors_origin(origin)
-
-
 def validate_cors_origin(origin):
     parsed_url = urlparse(origin)
 
@@ -1272,16 +1264,17 @@ def validate_cors_origin(origin):
 # To test CORS_ALLOW_ORIGIN locally, you can set something like
 # CORS_ALLOW_ORIGIN=http://localhost:5173;http://localhost:8080
 # in your .env file depending on your frontend port, 5173 in this case.
-CORS_ALLOW_ORIGIN = os.environ.get(
-    "CORS_ALLOW_ORIGIN", "*;http://localhost:5173;http://localhost:8080"
-).split(";")
+CORS_ALLOW_ORIGIN = os.environ.get("CORS_ALLOW_ORIGIN", "*").split(";")
 
-if "*" in CORS_ALLOW_ORIGIN:
+if CORS_ALLOW_ORIGIN == ["*"]:
     log.warning(
         "\n\nWARNING: CORS_ALLOW_ORIGIN IS SET TO '*' - NOT RECOMMENDED FOR PRODUCTION DEPLOYMENTS.\n"
     )
-
-validate_cors_origins(CORS_ALLOW_ORIGIN)
+else:
+    # You have to pick between a single wildcard or a list of origins.
+    # Doing both will result in CORS errors in the browser.
+    for origin in CORS_ALLOW_ORIGIN:
+        validate_cors_origin(origin)
 
 
 class BannerModel(BaseModel):
@@ -1412,6 +1405,35 @@ Strictly return in JSON format:
 <chat_history>
 {{MESSAGES:END:6}}
 </chat_history>"""
+
+
+FOLLOW_UP_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
+    "FOLLOW_UP_GENERATION_PROMPT_TEMPLATE",
+    "task.follow_up.prompt_template",
+    os.environ.get("FOLLOW_UP_GENERATION_PROMPT_TEMPLATE", ""),
+)
+
+DEFAULT_FOLLOW_UP_GENERATION_PROMPT_TEMPLATE = """### Task:
+Suggest 3-5 relevant follow-up questions or prompts that the user might naturally ask next in this conversation as a **user**, based on the chat history, to help continue or deepen the discussion.
+### Guidelines:
+- Write all follow-up questions from the user’s point of view, directed to the assistant.
+- Make questions concise, clear, and directly related to the discussed topic(s).
+- Only suggest follow-ups that make sense given the chat content and do not repeat what was already covered.
+- If the conversation is very short or not specific, suggest more general (but relevant) follow-ups the user might ask.
+- Use the conversation's primary language; default to English if multilingual.
+- Response must be a JSON array of strings, no extra text or formatting.
+### Output:
+JSON format: { "follow_ups": ["Question 1?", "Question 2?", "Question 3?"] }
+### Chat History:
+<chat_history>
+{{MESSAGES:END:6}}
+</chat_history>"""
+
+ENABLE_FOLLOW_UP_GENERATION = PersistentConfig(
+    "ENABLE_FOLLOW_UP_GENERATION",
+    "task.follow_up.enable",
+    os.environ.get("ENABLE_FOLLOW_UP_GENERATION", "True").lower() == "true",
+)
 
 ENABLE_TAGS_GENERATION = PersistentConfig(
     "ENABLE_TAGS_GENERATION",
@@ -1945,6 +1967,40 @@ DOCLING_DO_PICTURE_DESCRIPTION = PersistentConfig(
     os.getenv("DOCLING_DO_PICTURE_DESCRIPTION", "False").lower() == "true",
 )
 
+DOCLING_PICTURE_DESCRIPTION_MODE = PersistentConfig(
+    "DOCLING_PICTURE_DESCRIPTION_MODE",
+    "rag.docling_picture_description_mode",
+    os.getenv("DOCLING_PICTURE_DESCRIPTION_MODE", ""),
+)
+
+
+docling_picture_description_local = os.getenv("DOCLING_PICTURE_DESCRIPTION_LOCAL", "")
+try:
+    docling_picture_description_local = json.loads(docling_picture_description_local)
+except json.JSONDecodeError:
+    docling_picture_description_local = {}
+
+
+DOCLING_PICTURE_DESCRIPTION_LOCAL = PersistentConfig(
+    "DOCLING_PICTURE_DESCRIPTION_LOCAL",
+    "rag.docling_picture_description_local",
+    docling_picture_description_local,
+)
+
+doclign_picture_description_api = os.getenv("DOCLING_PICTURE_DESCRIPTION_API", "")
+try:
+    doclign_picture_description_api = json.loads(doclign_picture_description_api)
+except json.JSONDecodeError:
+    doclign_picture_description_api = {}
+
+
+DOCLING_PICTURE_DESCRIPTION_API = PersistentConfig(
+    "DOCLING_PICTURE_DESCRIPTION_API",
+    "rag.docling_picture_description_api",
+    doclign_picture_description_api,
+)
+
+
 DOCUMENT_INTELLIGENCE_ENDPOINT = PersistentConfig(
     "DOCUMENT_INTELLIGENCE_ENDPOINT",
     "rag.document_intelligence_endpoint",
@@ -2442,6 +2498,18 @@ PERPLEXITY_API_KEY = PersistentConfig(
     "PERPLEXITY_API_KEY",
     "rag.web.search.perplexity_api_key",
     os.getenv("PERPLEXITY_API_KEY", ""),
+)
+
+PERPLEXITY_MODEL = PersistentConfig(
+    "PERPLEXITY_MODEL",
+    "rag.web.search.perplexity_model",
+    os.getenv("PERPLEXITY_MODEL", "sonar"),
+)
+
+PERPLEXITY_SEARCH_CONTEXT_USAGE = PersistentConfig(
+    "PERPLEXITY_SEARCH_CONTEXT_USAGE",
+    "rag.web.search.perplexity_search_context_usage",
+    os.getenv("PERPLEXITY_SEARCH_CONTEXT_USAGE", "medium"),
 )
 
 SOUGOU_API_SID = PersistentConfig(

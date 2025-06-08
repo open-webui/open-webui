@@ -79,7 +79,7 @@ Want to learn more about Open WebUI's features? Check out our [Open WebUI docume
   <tr>
     <td>
       <a href="https://warp.dev/open-webui" target="_blank">
-        <img src="https://docs.openwebui.com/sponsors/logos/warp.png" alt="n8n" style="width: 8rem; height: 8rem; border-radius: .75rem;" />
+        <img src="https://docs.openwebui.com/sponsors/logos/warp.png" alt="Warp" style="width: 8rem; height: 8rem; border-radius: .75rem;" />
       </a>
     </td>
     <td>
@@ -180,6 +180,8 @@ After installation, you can access Open WebUI at [http://localhost:3000](http://
 ### Other Installation Methods
 
 We offer various installation alternatives, including non-Docker native installation methods, Docker Compose, Kustomize, and Helm. Visit our [Open WebUI Documentation](https://docs.openwebui.com/getting-started/) or join our [Discord community](https://discord.gg/5rJgQTnV4s) for comprehensive guidance.
+
+Look at the [Local Development Guide](https://docs.openwebui.com/getting-started/advanced-topics/development) for instructions on setting up a local development environment.
 
 ### Troubleshooting
 

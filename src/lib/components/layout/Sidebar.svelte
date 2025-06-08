@@ -785,7 +785,7 @@
 							<div
 								class="ml-3 pl-1 mt-[1px] flex flex-col overflow-y-auto scrollbar-hidden border-s border-gray-100 dark:border-gray-900"
 							>
-								{#each $pinnedChats as chat, idx}
+								{#each $pinnedChats as chat, idx (`pinned-chat-${chat?.id ?? idx}`)}
 									<ChatItem
 										className=""
 										id={chat.id}
@@ -831,7 +831,7 @@
 				<div class=" flex-1 flex flex-col overflow-y-auto scrollbar-hidden">
 					<div class="pt-1.5">
 						{#if $chats}
-							{#each $chats as chat, idx}
+							{#each $chats as chat, idx (`chat-${chat?.id ?? idx}`)}
 								{#if idx === 0 || (idx > 0 && chat.time_range !== $chats[idx - 1].time_range)}
 									<div
 										class="w-full pl-2.5 text-xs text-gray-500 dark:text-gray-500 font-medium {idx ===
