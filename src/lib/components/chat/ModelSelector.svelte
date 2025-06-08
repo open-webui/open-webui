@@ -34,11 +34,6 @@
 			pinnedModels = [...new Set([...pinnedModels, modelId])];
 		}
 
-		if (pinnedModels.length > 5) {
-			toast.error($i18n.t('You can only pin up to 5 models.'));
-			return;
-		}
-
 		settings.set({ ...$settings, pinnedModels: pinnedModels });
 		await updateUserSettings(localStorage.token, { ui: $settings });
 	};
