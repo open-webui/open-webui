@@ -374,6 +374,12 @@ export const getToolServersData = async (i18n, servers: object[]) => {
 	).filter((server) => server);
 };
 
+export const getToolServerOAuthProviders = async () => {
+	const res = await fetch(`${WEBUI_BASE_URL}/toolserver/providers`);
+	if (!res.ok) throw await res.json();
+	return res.json();
+};
+
 export const executeToolServer = async (
 	token: string,
 	url: string,

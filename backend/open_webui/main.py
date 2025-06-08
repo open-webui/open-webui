@@ -1549,7 +1549,7 @@ async def get_app_changelog():
 ############################
 
 # SessionMiddleware is used by authlib for oauth
-if len(OAUTH_PROVIDERS) > 0:
+if len(OAUTH_PROVIDERS) > 0 or len(TOOL_SERVER_OAUTH_PROVIDERS) > 0:
     app.add_middleware(
         SessionMiddleware,
         secret_key=WEBUI_SECRET_KEY,
@@ -1573,6 +1573,11 @@ async def oauth_login(provider: str, request: Request):
 @app.get("/oauth/{provider}/callback")
 async def oauth_callback(provider: str, request: Request, response: Response):
     return await oauth_manager.handle_callback(request, provider, response)
+
+
+@app.get("/toolserver/providers")
+async def fetch_toolserver_providers(request: Request):
+    return list(TOOL_SERVER_OAUTH_PROVIDERS.keys())
 
 
 @app.get("/toolserver/{provider}/login")
