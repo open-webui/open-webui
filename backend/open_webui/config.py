@@ -653,6 +653,51 @@ TOOL_ATLASSIAN_REDIRECT_URI = PersistentConfig(
     os.environ.get("TOOL_ATLASSIAN_REDIRECT_URI", ""),
 )
 
+def load_tool_server_oauth_providers():
+    providers = {}
+    
+    if TOOL_GOOGLE_CLIENT_ID.value and TOOL_GOOGLE_CLIENT_SECRET.value:
+        def google_oauth_register(oauth):
+            oauth.register(
+                name="google",
+                client_id=TOOL_GOOGLE_CLIENT_ID.value,
+                client_secret=TOOL_GOOGLE_CLIENT_SECRET.value,
+                server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+                client_kwargs={"scope": "openid email profile"},
+                redirect_uri=TOOL_GOOGLE_REDIRECT_URI.value,
+            )
+        
+        providers["google"] = {
+            "redirect_uri": TOOL_GOOGLE_REDIRECT_URI.value,
+            "register": google_oauth_register,
+        }
+
+    if TOOL_ATLASSIAN_CLIENT_ID.value and TOOL_ATLASSIAN_CLIENT_SECRET.value:
+        def atlassian_oauth_register(oauth):
+            oauth.register(
+                name="atlassian",
+                client_id=TOOL_ATLASSIAN_CLIENT_ID.value,
+                client_secret=TOOL_ATLASSIAN_CLIENT_SECRET.value,
+                authorize_url="https://auth.atlassian.com/authorize",
+                access_token_url="https://auth.atlassian.com/oauth/token",
+                api_base_url="https://mcp.atlassian.com",
+                # userinfo_endpoint="https://api.atlassian.com/me",
+                client_kwargs={
+                    "scope": "read:me read:account read:jira-user",
+                    "audience": "mcp.atlassian.com",
+                    "prompt": "consent",
+                },
+                redirect_uri=TOOL_ATLASSIAN_REDIRECT_URI.value,
+            )
+        
+        providers["atlassian"] = {
+            "redirect_uri": TOOL_ATLASSIAN_REDIRECT_URI.value,
+            "register": atlassian_oauth_register,
+        }
+    return providers
+
+TOOL_SERVER_OAUTH_PROVIDERS = load_tool_server_oauth_providers()
+
 ####################################
 # Static DIR
 ####################################
