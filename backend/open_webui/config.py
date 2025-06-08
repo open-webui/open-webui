@@ -635,6 +635,23 @@ TOOL_GOOGLE_REDIRECT_URI = PersistentConfig(
     os.environ.get("TOOL_GOOGLE_REDIRECT_URI", ""),
 )
 
+TOOL_ATLASSIAN_CLIENT_ID = PersistentConfig(
+    "TOOL_ATLASSIAN_CLIENT_ID",
+    "toolserver.atlassian.client_id",
+    os.environ.get("TOOL_ATLASSIAN_CLIENT_ID", ""),
+)
+
+TOOL_ATLASSIAN_CLIENT_SECRET = PersistentConfig(
+    "TOOL_ATLASSIAN_CLIENT_SECRET",
+    "toolserver.atlassian.client_secret",
+    os.environ.get("TOOL_ATLASSIAN_CLIENT_SECRET", ""),
+)
+
+TOOL_ATLASSIAN_REDIRECT_URI = PersistentConfig(
+    "TOOL_ATLASSIAN_REDIRECT_URI",
+    "toolserver.atlassian.redirect_uri",
+    os.environ.get("TOOL_ATLASSIAN_REDIRECT_URI", ""),
+)
 
 ####################################
 # Static DIR
