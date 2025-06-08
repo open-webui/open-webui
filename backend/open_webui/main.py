@@ -37,7 +37,7 @@ from fastapi import (
 from fastapi.openapi.docs import get_swagger_ui_html
 
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
 from starlette_compress import CompressMiddleware
@@ -369,6 +369,7 @@ from open_webui.config import (
     QUERY_GENERATION_PROMPT_TEMPLATE,
     AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE,
     AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH,
+    TOOL_SERVER_OAUTH_PROVIDERS,
     AppConfig,
     reset_config,
 )
@@ -423,6 +424,7 @@ from open_webui.utils.auth import (
 )
 from open_webui.utils.plugin import install_tool_and_function_dependencies
 from open_webui.utils.oauth import OAuthManager
+from open_webui.utils.oauth import ToolServerOAuthManager
 from open_webui.utils.security_headers import SecurityHeadersMiddleware
 
 from open_webui.tasks import (
@@ -507,6 +509,8 @@ app = FastAPI(
 )
 
 oauth_manager = OAuthManager(app)
+
+toolserver_oauth_manager = ToolServerOAuthManager(app)
 
 app.state.config = AppConfig(
     redis_url=REDIS_URL,

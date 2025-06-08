@@ -38,6 +38,7 @@ from open_webui.config import (
     WEBHOOK_URL,
     JWT_EXPIRES_IN,
     AppConfig,
+    TOOL_SERVER_OAUTH_PROVIDERS,
 )
 from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
 from open_webui.env import (
