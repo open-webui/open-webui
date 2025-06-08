@@ -1245,12 +1245,6 @@ if THREAD_POOL_SIZE is not None and isinstance(THREAD_POOL_SIZE, str):
         THREAD_POOL_SIZE = None
 
 
-def validate_cors_origins(origins):
-    for origin in origins:
-        if origin != "*":
-            validate_cors_origin(origin)
-
-
 def validate_cors_origin(origin):
     parsed_url = urlparse(origin)
 
@@ -1271,16 +1265,18 @@ def validate_cors_origin(origin):
 # CORS_ALLOW_ORIGIN=http://localhost:5173;http://localhost:8080
 # in your .env file depending on your frontend port, 5173 in this case.
 CORS_ALLOW_ORIGIN = os.environ.get(
-    "CORS_ALLOW_ORIGIN", "*;http://localhost:5173;http://localhost:8080"
+    "CORS_ALLOW_ORIGIN", "*"
 ).split(";")
 
-if "*" in CORS_ALLOW_ORIGIN:
+if CORS_ALLOW_ORIGIN == ["*"]:
     log.warning(
         "\n\nWARNING: CORS_ALLOW_ORIGIN IS SET TO '*' - NOT RECOMMENDED FOR PRODUCTION DEPLOYMENTS.\n"
     )
-
-validate_cors_origins(CORS_ALLOW_ORIGIN)
-
+else:
+    # You have to pick between a single wildcard or a list of origins.
+    # Doing both will result in CORS errors in the browser.
+    for origin in CORS_ALLOW_ORIGIN:
+        validate_cors_origin(origin)
 
 class BannerModel(BaseModel):
     id: str
