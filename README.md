@@ -1,3 +1,6 @@
+# TPAI-specific
+Check the docs/README.md for TPAI-specific information, such as building the project.
+
 # Open WebUI 👋
 
 ![GitHub stars](https://img.shields.io/github/stars/open-webui/open-webui?style=social)
