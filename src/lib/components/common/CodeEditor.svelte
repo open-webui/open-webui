@@ -11,7 +11,7 @@
 
 	import { oneDark } from '@codemirror/theme-one-dark';
 
-	import { onMount, createEventDispatcher, getContext, tick } from 'svelte';
+	import { onMount, createEventDispatcher, getContext, tick, onDestroy } from 'svelte';
 
 	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
 
@@ -311,6 +311,12 @@ print(black.format_str("""${code.replace(/\\/g, '\\\\').replace(/`/g, '\\`').rep
 			observer.disconnect();
 			document.removeEventListener('keydown', keydownHandler);
 		};
+	});
+
+	onDestroy(() => {
+		if (pyodideWorkerInstance) {
+			pyodideWorkerInstance.terminate();
+		}
 	});
 </script>
 
