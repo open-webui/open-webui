@@ -1575,6 +1575,20 @@ async def oauth_callback(provider: str, request: Request, response: Response):
     return await oauth_manager.handle_callback(request, provider, response)
 
 
+@app.get("/toolserver/{provider}/login")
+async def toolserver_oauth_login(
+    provider: str,
+    request: Request
+):
+    # Idea: Pass the server_url and do whole OAuth login + Verify Connection flow?
+    # server_url = request.query_params['server_url']
+    # if not server_url:
+    #     raise HTTPException(400, detail="Missing server URL")
+
+    return await toolserver_oauth_manager.handle_toolserver_login(
+        request, provider
+    )
+
 @app.get("/manifest.json")
 async def get_manifest_json():
     if app.state.EXTERNAL_PWA_MANIFEST_URL:
