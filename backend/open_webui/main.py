@@ -10,6 +10,7 @@ import time
 import random
 from uuid import uuid4
 
+
 from contextlib import asynccontextmanager
 from urllib.parse import urlencode, parse_qs, urlparse
 from pydantic import BaseModel
@@ -20,6 +21,7 @@ from aiocache import cached
 import aiohttp
 import anyio.to_thread
 import requests
+from redis import Redis
 
 
 from fastapi import (
@@ -436,6 +438,7 @@ from open_webui.utils.security_headers import SecurityHeadersMiddleware
 from open_webui.utils.redis import get_redis_connection
 
 from open_webui.tasks import (
+    redis_task_command_listener,
     list_task_ids_by_chat_id,
     stop_task,
     list_tasks,
@@ -508,6 +511,11 @@ async def lifespan(app: FastAPI):
         ),
     )
 
+    if isinstance(app.state.redis, Redis):
+        app.state.redis_task_command_listener = asyncio.create_task(
+            redis_task_command_listener(app)
+        )
+
     if THREAD_POOL_SIZE and THREAD_POOL_SIZE > 0:
         limiter = anyio.to_thread.current_default_thread_limiter()
         limiter.total_tokens = THREAD_POOL_SIZE
@@ -515,6 +523,9 @@ async def lifespan(app: FastAPI):
     asyncio.create_task(periodic_usage_pool_cleanup())
 
     yield
+
+    if hasattr(app.state, "redis_task_command_listener"):
+        app.state.redis_task_command_listener.cancel()
 
 
 app = FastAPI(
