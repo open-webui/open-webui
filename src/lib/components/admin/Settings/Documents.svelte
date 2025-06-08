@@ -560,7 +560,7 @@
 												>
 													<Textarea
 														bind:value={RAGConfig.DOCLING_PICTURE_DESCRIPTION_LOCAL}
-														placeholder={$i18n.t('Enter Options in JSON format')}
+														placeholder={$i18n.t('Enter Config in JSON format')}
 													/>
 												</Tooltip>
 											</div>
@@ -582,7 +582,7 @@
 												>
 													<Textarea
 														bind:value={RAGConfig.DOCLING_PICTURE_DESCRIPTION_API}
-														placeholder={$i18n.t('Enter Options in JSON format')}
+														placeholder={$i18n.t('Enter Config in JSON format')}
 													/>
 												</Tooltip>
 											</div>
