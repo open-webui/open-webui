@@ -667,7 +667,7 @@
 								<img
 									crossorigin="anonymous"
 									src={model?.info?.meta?.profile_image_url ?? '/static/favicon.png'}
-									class=" size-5 rounded-full"
+									class=" size-5 rounded-full -translate-x-[0.5px]"
 									alt="logo"
 								/>
 							</div>
