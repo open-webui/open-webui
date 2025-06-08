@@ -510,6 +510,140 @@
 									</div>
 								</div>
 							</div>
+							{#if RAGConfig.DOCLING_DO_PICTURE_DESCRIPTION}
+								<div class="flex w-full mt-2">
+									<div class="flex-1 flex items-center gap-4">
+										<label class="flex items-center gap-1 text-xs font-medium">
+											<Tooltip
+												content={$i18n.t('Use a model locally executed by Docling for picture description.')}
+												placement="top-start"
+											>
+												<input
+													type="radio"
+													name="picture-description-mode"
+													value="local"
+													bind:group={RAGConfig.DOCLING_PICTURE_DESCRIPTION_MODE}
+													checked={RAGConfig.DOCLING_PICTURE_DESCRIPTION_MODE === 'local'}
+												/>
+												<span style="padding-left: 0.5em">{$i18n.t('Local Description')}</span>
+											</Tooltip>
+										</label>
+										<label class="flex items-center gap-1 text-xs font-medium">
+											<Tooltip
+												content={$i18n.t('Use a remote API for picture description.')}
+												placement="top-start"
+											>
+												<input
+													type="radio"
+													name="picture-description-mode"
+													value="api"
+													bind:group={RAGConfig.DOCLING_PICTURE_DESCRIPTION_MODE}
+													checked={RAGConfig.DOCLING_PICTURE_DESCRIPTION_MODE === 'api'}
+												/>
+												<span style="padding-left: 0.5em">{$i18n.t('Remote Description')}</span>
+											</Tooltip>
+										</label>
+									</div>
+								</div>
+
+								{#if RAGConfig.DOCLING_PICTURE_DESCRIPTION_MODE === 'local'}
+									<div class="flex flex-col gap-2 mt-2 ml-4">
+										<div class="flex items-center gap-2">
+											<div class="min-w-fit text-xs font-medium">
+												<Tooltip
+													content={$i18n.t('The HuggingFace repo ID for the local vision-language model.')}
+													placement="top-start"
+												>
+													{$i18n.t('Repo ID')}
+												</Tooltip>
+											</div>
+											<input
+												class=" w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+												placeholder={$i18n.t('HuggingFaceTB/SmolVLM-256M-Instruct')}
+												bind:value={RAGConfig.DOCLING_PICTURE_DESCRIPTION_LOCAL_REPO_ID}
+											/>
+										</div>
+										<div class="flex items-center gap-2">
+											<div class="min-w-fit text-xs font-medium">
+												<Tooltip
+													content={$i18n.t('Maximum number of tokens for the generated description.')}
+													placement="top-start"
+												>
+													{$i18n.t('Max Tokens')}
+												</Tooltip>
+											</div>
+											<input
+												class=" w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+												placeholder={$i18n.t('200')}
+												bind:value={RAGConfig.DOCLING_PICTURE_DESCRIPTION_LOCAL_MAX_TOKENS}
+											/>
+										</div>
+										<div class="flex items-center gap-2">
+											<div class="min-w-fit text-xs font-medium">
+												<Tooltip
+													content={$i18n.t('Prompt to use for describing the image.')}
+													placement="top-start"
+												>
+													{$i18n.t('Prompt')}
+												</Tooltip>
+											</div>
+											<input
+												class=" w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+												placeholder={$i18n.t('Describe this image in a few sentences.')}
+												bind:value={RAGConfig.DOCLING_PICTURE_DESCRIPTION_LOCAL_PROMPT}
+											/>
+										</div>
+									</div>
+								{:else if RAGConfig.DOCLING_PICTURE_DESCRIPTION_MODE === 'api'}
+									<div class="flex flex-col gap-2 mt-2 ml-4">
+										<div class="flex items-center gap-2">
+											<div class="min-w-fit text-xs font-medium">
+												<Tooltip
+													content={$i18n.t('The remote API endpoint for picture description.')}
+													placement="top-start"
+												>
+													{$i18n.t('URL')}
+												</Tooltip>
+											</div>
+											<input
+												class=" w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+												placeholder={$i18n.t('Enter Remote API URL')}
+												bind:value={RAGConfig.DOCLING_PICTURE_DESCRIPTION_API_URL}
+											/>
+										</div>
+										<div class="flex items-center gap-2">
+											<div class="min-w-fit text-xs font-medium">
+												<Tooltip
+													content={$i18n.t('The model name to use for remote picture description.')}
+													placement="top-start"
+												>
+													{$i18n.t('Model')}
+												</Tooltip>
+											</div>
+											<input
+												class=" w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+												placeholder={$i18n.t('Enter Model Name')}
+												bind:value={RAGConfig.DOCLING_PICTURE_DESCRIPTION_API_MODEL}
+											/>
+										</div>
+										<div class="flex items-center gap-2">
+											<div class="min-w-fit text-xs font-medium">
+												<Tooltip
+													content={$i18n.t('Prompt to use for describing the image via remote API.')}
+													placement="top-start"
+												>
+													{$i18n.t('Prompt')}
+												</Tooltip>
+											</div>
+											<input
+												class=" w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+												placeholder={$i18n.t('Describe this image in a few sentences.')}
+												bind:value={RAGConfig.DOCLING_PICTURE_DESCRIPTION_API_PROMPT}
+											/>
+										</div>
+									</div>
+								{/if}
+							{/if}
 						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'document_intelligence'}
 							<div class="my-0.5 flex gap-2 pr-2">
 								<input
