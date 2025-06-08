@@ -1987,17 +1987,17 @@ DOCLING_PICTURE_DESCRIPTION_LOCAL = PersistentConfig(
     docling_picture_description_local,
 )
 
-doclign_picture_description_api = os.getenv("DOCLING_PICTURE_DESCRIPTION_API", "")
+docling_picture_description_api = os.getenv("DOCLING_PICTURE_DESCRIPTION_API", "")
 try:
-    doclign_picture_description_api = json.loads(doclign_picture_description_api)
+    docling_picture_description_api = json.loads(docling_picture_description_api)
 except json.JSONDecodeError:
-    doclign_picture_description_api = {}
+    docling_picture_description_api = {}
 
 
 DOCLING_PICTURE_DESCRIPTION_API = PersistentConfig(
     "DOCLING_PICTURE_DESCRIPTION_API",
     "rag.docling_picture_description_api",
-    doclign_picture_description_api,
+    docling_picture_description_api,
 )
 
 
