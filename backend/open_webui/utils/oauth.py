@@ -553,3 +553,34 @@ class ToolServerOAuthManager:
         for provider, config in TOOL_SERVER_OAUTH_PROVIDERS.items():
             config["register"](self.oauth)
 
+    async def handle_toolserver_login(self, request, provider):
+        client = self.oauth.create_client(provider)
+        if not client:
+            raise HTTPException(404, detail=f"Provider {provider} not found")
+
+        # Server URL can be passed through state if needed
+        state = base64.urlsafe_b64encode(
+            json.dumps({
+                "nonce": str(uuid.uuid4()),
+            }).encode()
+        ).decode()
+
+        redirect_uri = request.url_for("toolserver_oauth_callback", provider=provider)
+        return await client.authorize_redirect(request, redirect_uri, state=state)
+
+    async def handle_toolserver_callback(self, request, provider):
+        client = self.oauth.create_client(provider)
+        token = await client.authorize_access_token(request)
+
+        try:
+            state = json.loads(base64.urlsafe_b64decode(request.query_params["state"]))
+        except (KeyError, ValueError, TypeError):
+            raise HTTPException(400, detail="Invalid state parameter")
+
+        return {
+            "access_token": token["access_token"],
+            "id_token": token.get("id_token"),
+            "refresh_token": token.get("refresh_token"),
+            "expires_at": token.get("expires_at", 0),
+            "provider": provider,
+        }
