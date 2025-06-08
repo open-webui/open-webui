@@ -136,9 +136,11 @@ class YoutubeLoader:
 
                 transcript_text = " ".join(
                     map(
-                        lambda transcript_piece: transcript_piece.text.strip(" ")
-                        if hasattr(transcript_piece, "text")
-                        else "",
+                        lambda transcript_piece: (
+                            transcript_piece.text.strip(" ")
+                            if hasattr(transcript_piece, "text")
+                            else ""
+                        ),
                         transcript_pieces,
                     )
                 )
