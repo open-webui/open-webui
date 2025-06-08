@@ -93,7 +93,7 @@
 		{#if webConfig}
 			<div class="">
 				<div class="mb-3">
-					<div class=" mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
+					<div class=" mb-2.5 text-base font-medium">{$i18n.t('Web Search')}</div>
 
 					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
@@ -248,7 +248,6 @@
 										bind:value={webConfig.KAGI_SEARCH_API_KEY}
 									/>
 								</div>
-								.
 							</div>
 						{:else if webConfig.WEB_SEARCH_ENGINE === 'mojeek'}
 							<div class="mb-2.5 flex w-full flex-col">
@@ -684,7 +683,7 @@
 				</div>
 
 				<div class="mb-3">
-					<div class=" mb-2.5 text-base font-medium">{$i18n.t('Loader')}</div>
+					<div class=" mb-2.5 text-base font-medium">{$i18n.t('Web Loader')}</div>
 
 					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 

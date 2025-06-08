@@ -362,7 +362,7 @@
 
 			<div class="pr-1.5 my-2">
 				<div class="flex justify-between items-center text-sm">
-					<div class="  font-medium">{$i18n.t('Direct Connections')}</div>
+					<div class="  font-medium">{$i18n.t('Manage Direct Connections')}</div>
 
 					<div class="flex items-center">
 						<div class="">

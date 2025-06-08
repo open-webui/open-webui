@@ -126,7 +126,7 @@ export const getUsers = async (
 	let error = null;
 	let res = null;
 
-	let searchParams = new URLSearchParams();
+	const searchParams = new URLSearchParams();
 
 	searchParams.set('page', `${page}`);
 
@@ -376,6 +376,7 @@ export const deleteUserById = async (token: string, userId: string) => {
 };
 
 type UserUpdateForm = {
+	role: string;
 	profile_image_url: string;
 	email: string;
 	name: string;

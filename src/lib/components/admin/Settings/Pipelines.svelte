@@ -223,11 +223,13 @@
 >
 	<div class="overflow-y-scroll scrollbar-hidden h-full">
 		{#if PIPELINES_LIST !== null}
-			<div class="flex w-full justify-between mb-2">
-				<div class=" self-center text-sm font-semibold">
-					{$i18n.t('Manage Pipelines')}
+			<div class="">
+				<div class="mb-3">
+					<div class=" mb-2.5 text-base font-medium">{$i18n.t('Pipelines')}</div>
 				</div>
 			</div>
+
+			<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
 			{#if PIPELINES_LIST.length > 0}
 				<div class="space-y-1">

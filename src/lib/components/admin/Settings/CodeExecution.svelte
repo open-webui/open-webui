@@ -40,8 +40,10 @@
 	<div class=" space-y-3 overflow-y-scroll scrollbar-hidden h-full">
 		{#if config}
 			<div>
-				<div class="mb-3.5">
-					<div class=" mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
+				<div class="">
+					<div class="mb-3">
+						<div class=" mb-2.5 text-base font-medium">{$i18n.t('Code Execution')}</div>
+					</div>
 
 					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 

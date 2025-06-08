@@ -184,14 +184,3 @@
 		</div>
 	</div>
 </div>
-
-<style>
-	.scrollbar-hidden::-webkit-scrollbar {
-		display: none; /* for Chrome, Safari and Opera */
-	}
-
-	.scrollbar-hidden {
-		-ms-overflow-style: none; /* IE and Edge */
-		scrollbar-width: none; /* Firefox */
-	}
-</style>

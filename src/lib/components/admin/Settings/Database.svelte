@@ -33,7 +33,13 @@
 >
 	<div class=" space-y-3 overflow-y-scroll scrollbar-hidden h-full">
 		<div>
-			<div class=" mb-2 text-sm font-medium">{$i18n.t('Database')}</div>
+			<div class="">
+				<div class="mb-3">
+					<div class=" mb-2.5 text-base font-medium">{$i18n.t('Database')}</div>
+				</div>
+			</div>
+
+			<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
 			<input
 				id="config-json-input"

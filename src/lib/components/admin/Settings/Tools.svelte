@@ -59,7 +59,7 @@
 		{#if servers !== null}
 			<div class="">
 				<div class="mb-3">
-					<div class=" mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
+					<div class=" mb-2.5 text-base font-medium">{$i18n.t('Tool Servers')}</div>
 
 					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 

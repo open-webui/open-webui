@@ -235,7 +235,13 @@
 	<div class=" space-y-3 overflow-y-scroll scrollbar-hidden pr-2">
 		{#if config && imageGenerationConfig}
 			<div>
-				<div class=" mb-1 text-sm font-medium">{$i18n.t('Image Settings')}</div>
+				<div class="">
+					<div class="mb-3">
+						<div class=" mb-2.5 text-base font-medium">{$i18n.t('Images')}</div>
+					</div>
+				</div>
+
+				<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
 				<div>
 					<div class=" py-1 flex w-full justify-between">
@@ -590,7 +596,7 @@
 								{/each}
 							</div>
 
-							<div class="mt-2 text-xs text-right text-gray-400 dark:text-gray-500">
+							<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
 								{$i18n.t('*Prompt node ID(s) are required for image generation')}
 							</div>
 						</div>
