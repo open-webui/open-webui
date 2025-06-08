@@ -136,16 +136,17 @@
 		</button>
 	</div>
 
-	<div class="w-full flex justify-center">
-		<div class=" relative w-fit">
-			<div class="mt-1.5 w-fit flex gap-1 pb-5">
-				<!-- 1-10 scale -->
+	<!-- 1-10 scale -->
+	<div class="w-full flex flex-col items-center">
+		<div class="w-full overflow-x-auto pb-2">
+			<div class="flex gap-1 justify-center min-w-max">
 				{#each Array.from({ length: 10 }).map((_, i) => i + 1) as rating}
 					<button
-						class="size-7 text-sm border border-gray-100 dark:border-gray-850 hover:bg-gray-50 dark:hover:bg-gray-850 {detailedRating ===
-						rating
-							? 'bg-gray-100 dark:bg-gray-800'
-							: ''} transition rounded-full disabled:cursor-not-allowed disabled:text-gray-500 disabled:bg-white dark:disabled:bg-gray-900"
+						class="w-7 h-7 min-w-0 text-xs border border-gray-100 dark:border-gray-850
+							hover:bg-gray-50 dark:hover:bg-gray-850
+							{detailedRating === rating ? 'bg-gray-100 dark:bg-gray-800' : ''} 
+							transition rounded-full disabled:cursor-not-allowed disabled:text-gray-500
+							disabled:bg-white dark:disabled:bg-gray-900 flex items-center justify-center"
 						on:click={() => {
 							detailedRating = rating;
 						}}
@@ -155,16 +156,11 @@
 					</button>
 				{/each}
 			</div>
+		</div>
 
-			<div class="absolute bottom-0 left-0 right-0 flex justify-between text-xs">
-				<div>
-					1 - {$i18n.t('Awful')}
-				</div>
-
-				<div>
-					10 - {$i18n.t('Amazing')}
-				</div>
-			</div>
+		<div class="w-full flex justify-between text-xs px-1 mt-1">
+			<div>1 - {$i18n.t('Awful')}</div>
+			<div>10 - {$i18n.t('Amazing')}</div>
 		</div>
 	</div>
 
