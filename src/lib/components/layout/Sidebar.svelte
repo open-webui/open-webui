@@ -674,7 +674,7 @@
 							</div>
 
 							<div class="flex self-center translate-y-[0.5px]">
-								<div class=" self-center font-medium text-sm font-primary">
+								<div class=" self-center font-medium text-sm font-primary line-clamp-1">
 									{model?.name ?? modelId}
 								</div>
 							</div>
