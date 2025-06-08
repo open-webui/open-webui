@@ -2,13 +2,15 @@
 import asyncio
 from typing import Dict
 from uuid import uuid4
+import json
+from redis import Redis
 
 # A dictionary to keep track of active tasks
 tasks: Dict[str, asyncio.Task] = {}
 chat_tasks = {}
 
 
-def cleanup_task(task_id: str, id=None):
+def cleanup_task(request, task_id: str, id=None):
     """
     Remove a completed or canceled task from the global `tasks` dictionary.
     """
@@ -21,7 +23,7 @@ def cleanup_task(task_id: str, id=None):
             chat_tasks.pop(id, None)
 
 
-def create_task(coroutine, id=None):
+def create_task(request, coroutine, id=None):
     """
     Create a new asyncio task and add it to the global task dictionary.
     """
@@ -29,7 +31,7 @@ def create_task(coroutine, id=None):
     task = asyncio.create_task(coroutine)  # Create the task
 
     # Add a done callback for cleanup
-    task.add_done_callback(lambda t: cleanup_task(task_id, id))
+    task.add_done_callback(lambda t: cleanup_task(request, task_id, id))
     tasks[task_id] = task
 
     # If an ID is provided, associate the task with that ID
@@ -41,28 +43,21 @@ def create_task(coroutine, id=None):
     return task_id, task
 
 
-def get_task(task_id: str):
-    """
-    Retrieve a task by its task ID.
-    """
-    return tasks.get(task_id)
-
-
-def list_tasks():
+def list_tasks(request):
     """
     List all currently active task IDs.
     """
     return list(tasks.keys())
 
 
-def list_task_ids_by_chat_id(id):
+def list_task_ids_by_chat_id(request, id):
     """
     List all tasks associated with a specific ID.
     """
     return chat_tasks.get(id, [])
 
 
-async def stop_task(task_id: str):
+async def stop_task(request, task_id: str):
     """
     Cancel a running task and remove it from the global task list.
     """

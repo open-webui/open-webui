@@ -8,6 +8,7 @@ import shutil
 import sys
 import time
 import random
+from uuid import uuid4
 
 from contextlib import asynccontextmanager
 from urllib.parse import urlencode, parse_qs, urlparse
@@ -432,6 +433,7 @@ from open_webui.utils.auth import (
 from open_webui.utils.plugin import install_tool_and_function_dependencies
 from open_webui.utils.oauth import OAuthManager
 from open_webui.utils.security_headers import SecurityHeadersMiddleware
+from open_webui.utils.redis import get_redis_connection
 
 from open_webui.tasks import (
     list_task_ids_by_chat_id,
@@ -485,7 +487,9 @@ https://github.com/open-webui/open-webui
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    app.state.instance_id = os.environ.get("INSTANCE_ID", str(uuid4()))
     start_logger()
+
     if RESET_CONFIG_ON_START:
         reset_config()
 
@@ -496,6 +500,13 @@ async def lifespan(app: FastAPI):
     # when the first user lands on the / route.
     log.info("Installing external dependencies of functions and tools...")
     install_tool_and_function_dependencies()
+
+    app.state.redis = get_redis_connection(
+        redis_url=REDIS_URL,
+        redis_sentinels=get_sentinels_from_env(
+            REDIS_SENTINEL_HOSTS, REDIS_SENTINEL_PORT
+        ),
+    )
 
     if THREAD_POOL_SIZE and THREAD_POOL_SIZE > 0:
         limiter = anyio.to_thread.current_default_thread_limiter()
@@ -516,10 +527,12 @@ app = FastAPI(
 
 oauth_manager = OAuthManager(app)
 
+app.state.instance_id = None
 app.state.config = AppConfig(
     redis_url=REDIS_URL,
     redis_sentinels=get_sentinels_from_env(REDIS_SENTINEL_HOSTS, REDIS_SENTINEL_PORT),
 )
+app.state.redis = None
 
 app.state.WEBUI_NAME = WEBUI_NAME
 app.state.LICENSE_METADATA = None
@@ -1386,26 +1399,30 @@ async def chat_action(
 
 
 @app.post("/api/tasks/stop/{task_id}")
-async def stop_task_endpoint(task_id: str, user=Depends(get_verified_user)):
+async def stop_task_endpoint(
+    request: Request, task_id: str, user=Depends(get_verified_user)
+):
     try:
-        result = await stop_task(task_id)
+        result = await stop_task(request, task_id)
         return result
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
 @app.get("/api/tasks")
-async def list_tasks_endpoint(user=Depends(get_verified_user)):
-    return {"tasks": list_tasks()}
+async def list_tasks_endpoint(request: Request, user=Depends(get_verified_user)):
+    return {"tasks": list_tasks(request)}
 
 
 @app.get("/api/tasks/chat/{chat_id}")
-async def list_tasks_by_chat_id_endpoint(chat_id: str, user=Depends(get_verified_user)):
+async def list_tasks_by_chat_id_endpoint(
+    request: Request, chat_id: str, user=Depends(get_verified_user)
+):
     chat = Chats.get_chat_by_id(chat_id)
     if chat is None or chat.user_id != user.id:
         return {"task_ids": []}
 
-    task_ids = list_task_ids_by_chat_id(chat_id)
+    task_ids = list_task_ids_by_chat_id(request, chat_id)
 
     print(f"Task IDs for chat {chat_id}: {task_ids}")
     return {"task_ids": task_ids}

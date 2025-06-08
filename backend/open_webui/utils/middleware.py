@@ -2266,7 +2266,9 @@ async def process_chat_response(
                                             if "data:image/png;base64" in line:
                                                 image_url = ""
                                                 # Extract base64 image data from the line
-                                                image_data, content_type = load_b64_image_data(line)
+                                                image_data, content_type = (
+                                                    load_b64_image_data(line)
+                                                )
                                                 if image_data is not None:
                                                     image_url = upload_image(
                                                         request,
@@ -2412,7 +2414,7 @@ async def process_chat_response(
 
         # background_tasks.add_task(post_response_handler, response, events)
         task_id, _ = create_task(
-            post_response_handler(response, events), id=metadata["chat_id"]
+            request, post_response_handler(response, events), id=metadata["chat_id"]
         )
         return {"status": True, "task_id": task_id}
 
