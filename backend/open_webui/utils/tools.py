@@ -644,5 +644,5 @@ async def execute_tool_server(
 
     except Exception as err:
         error = str(err)
-        log.exception("API Request Error:", error)
+        log.exception(f"API Request Error: {error}")
         return {"error": error}
