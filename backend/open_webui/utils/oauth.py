@@ -543,3 +543,13 @@ class OAuthManager:
         redirect_url = f"{redirect_base_url}/auth#token={jwt_token}"
 
         return RedirectResponse(url=redirect_url, headers=response.headers)
+
+
+class ToolServerOAuthManager:
+    def __init__(self, app):
+        self.oauth = OAuth()
+        self.app = app
+
+        for provider, config in TOOL_SERVER_OAUTH_PROVIDERS.items():
+            config["register"](self.oauth)
+
