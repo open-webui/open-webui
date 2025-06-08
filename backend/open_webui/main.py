@@ -394,6 +394,7 @@ from open_webui.env import (
     SAFE_MODE,
     SRC_LOG_LEVELS,
     VERSION,
+    INSTANCE_ID,
     WEBUI_BUILD_HASH,
     WEBUI_SECRET_KEY,
     WEBUI_SESSION_COOKIE_SAME_SITE,
@@ -490,7 +491,7 @@ https://github.com/open-webui/open-webui
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    app.state.instance_id = os.environ.get("INSTANCE_ID", str(uuid4()))
+    app.state.instance_id = INSTANCE_ID
     start_logger()
 
     if RESET_CONFIG_ON_START:
