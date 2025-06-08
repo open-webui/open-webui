@@ -38,15 +38,16 @@
 	</DropdownMenu.Trigger>
 
 	<DropdownMenu.Content
+		strategy="fixed"
 		class="w-full max-w-[180px] text-sm rounded-xl px-1 py-1.5 z-[9999999] bg-white dark:bg-gray-850 dark:text-white shadow-lg"
 		sideOffset={-2}
 		side="bottom"
-		align="start"
+		align="end"
 		transition={flyAndScale}
 	>
 		<DropdownMenu.Item
 			class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2"
-			on:click={() => {
+			on:click={(e) => {
 				toggleSidebarHandler();
 			}}
 		>

@@ -237,7 +237,11 @@
 			bind:show={showMenu}
 			model={item.model}
 			toggleSidebarHandler={() => {
-				pinnedModels.set([...new Set([...$pinnedModels, item.model.id])]);
+				if ($pinnedModels.includes(item.model.id)) {
+					pinnedModels.set($pinnedModels.filter((id) => id !== item.model.id));
+				} else {
+					pinnedModels.set([...new Set([...$pinnedModels, item.model.id])]);
+				}
 			}}
 			copyLinkHandler={() => {
 				copyLinkHandler(item.model);
