@@ -146,6 +146,23 @@
 	}
 
 	onMount(() => {
+		window.addEventListener('message', (event) => {
+			if (event.origin !== WEBUI_BASE_URL) return;
+
+			const data = event.data;
+
+			try {
+				if (data.toolserverAuthSuccess) {
+					key = data.accessToken;
+					toast.success($i18n.t(`Authentication successful! Access token was set.`));
+					if (popup) popup.close();
+				} else {
+					toast.error($i18n.t(`Failed to authenticate to ${data.provider}`));
+				}
+			} catch (e: any) {
+				toast.error($i18n.t(`Failed to process authentication response: ${e.message}`));
+			}
+		});
 		init();
 	});
 </script>
