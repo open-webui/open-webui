@@ -22,7 +22,6 @@
 		socket,
 		config,
 		isApp,
-		pinnedModels,
 		models
 	} from '$lib/stores';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
@@ -646,9 +645,9 @@
 			</div>
 		{/if}
 
-		{#if ($pinnedModels ?? []).length > 0}
+		{#if ($settings?.pinnedModels ?? []).length > 0}
 			<div class="pt-1.5">
-				{#each $pinnedModels as modelId (modelId)}
+				{#each $settings.pinnedModels as modelId (modelId)}
 					{@const model = $models.find((model) => model.id === modelId)}
 					<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
 						<a

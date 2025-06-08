@@ -4,7 +4,7 @@
 	import { getContext, tick } from 'svelte';
 	import dayjs from '$lib/dayjs';
 
-	import { mobile, pinnedModels, user } from '$lib/stores';
+	import { mobile, settings, user } from '$lib/stores';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { copyToClipboard, sanitizeResponseContent } from '$lib/utils';
@@ -22,6 +22,8 @@
 	export let value: string = '';
 
 	export let unloadModelHandler: (modelValue: string) => void = () => {};
+	export let pinModelHandler: (modelValue: string) => void = () => {};
+
 	export let onClick: () => void = () => {};
 
 	const copyLinkHandler = async (model) => {
@@ -236,13 +238,7 @@
 		<ModelItemMenu
 			bind:show={showMenu}
 			model={item.model}
-			toggleSidebarHandler={() => {
-				if ($pinnedModels.includes(item.model.id)) {
-					pinnedModels.set($pinnedModels.filter((id) => id !== item.model.id));
-				} else {
-					pinnedModels.set([...new Set([...$pinnedModels, item.model.id])]);
-				}
-			}}
+			{pinModelHandler}
 			copyLinkHandler={() => {
 				copyLinkHandler(item.model);
 			}}

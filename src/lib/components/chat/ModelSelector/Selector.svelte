@@ -57,6 +57,8 @@
 	export let className = 'w-[32rem]';
 	export let triggerClassName = 'text-lg';
 
+	export let pinModelHandler: (modelId: string) => void = () => {};
+
 	let tagsContainerElement;
 
 	let show = false;
@@ -500,6 +502,7 @@
 						{item}
 						{index}
 						{value}
+						{pinModelHandler}
 						{unloadModelHandler}
 						onClick={() => {
 							value = item.value;

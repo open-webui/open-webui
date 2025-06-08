@@ -8,14 +8,14 @@
 	import Link from '$lib/components/icons/Link.svelte';
 	import Eye from '$lib/components/icons/Eye.svelte';
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
-	import { pinnedModels } from '$lib/stores';
+	import { settings } from '$lib/stores';
 
 	const i18n = getContext('i18n');
 
 	export let show = false;
 	export let model;
 
-	export let toggleSidebarHandler: Function = () => {};
+	export let pinModelHandler: (modelId: string) => void = () => {};
 	export let copyLinkHandler: Function = () => {};
 
 	export let onClose: Function = () => {};
@@ -52,18 +52,18 @@
 				e.stopPropagation();
 				e.preventDefault();
 
-				toggleSidebarHandler();
+				pinModelHandler(model?.id);
 				show = false;
 			}}
 		>
-			{#if ($pinnedModels ?? []).includes(model?.id)}
+			{#if ($settings?.pinnedModels ?? []).includes(model?.id)}
 				<EyeSlash />
 			{:else}
 				<Eye />
 			{/if}
 
 			<div class="flex items-center">
-				{#if ($pinnedModels ?? []).includes(model?.id)}
+				{#if ($settings?.pinnedModels ?? []).includes(model?.id)}
 					{$i18n.t('Hide from Sidebar')}
 				{:else}
 					{$i18n.t('Keep in Sidebar')}
