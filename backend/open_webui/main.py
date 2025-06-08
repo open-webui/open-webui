@@ -1589,6 +1589,37 @@ async def toolserver_oauth_login(
         request, provider
     )
 
+@app.get("/toolserver/{provider}/callback")
+async def toolserver_oauth_callback(
+    provider: str, 
+    request: Request,
+    response: Response
+):
+    token_data = await toolserver_oauth_manager.handle_toolserver_callback(request, provider)
+    print(f"toolserver_oauth_callback - {token_data}")
+
+    import json
+    payload = json.dumps({
+        "toolserverAuthSuccess": True,
+        "accessToken": token_data["access_token"],
+        "refreshToken": token_data["refresh_token"],
+        "expiresAt": token_data["expires_at"],
+        "idToken": token_data["id_token"],
+        "provider": token_data["provider"],
+    })
+
+    html = f"""
+    <html><body>
+      <script>
+        window.opener.postMessage({payload}, "http://localhost:5173");
+        window.close();
+      </script>
+      <p>Authentication successful! You can close this window if you're not redirected.</p>
+    </body></html>
+    """
+    return HTMLResponse(html)
+
+
 @app.get("/manifest.json")
 async def get_manifest_json():
     if app.state.EXTERNAL_PWA_MANIFEST_URL:
