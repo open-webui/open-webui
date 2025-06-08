@@ -22,7 +22,7 @@
 	export let value: string = '';
 
 	export let unloadModelHandler: (modelValue: string) => void = () => {};
-	export let pinModelHandler: (modelValue: string) => void = () => {};
+	export let pinModelHandler: (modelId: string) => void = () => {};
 
 	export let onClick: () => void = () => {};
 
