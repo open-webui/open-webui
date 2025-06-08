@@ -616,6 +616,26 @@ def load_oauth_providers():
 
 load_oauth_providers()
 
+
+TOOL_GOOGLE_CLIENT_ID = PersistentConfig(
+    "TOOL_GOOGLE_CLIENT_ID",
+    "toolserver.google.client_id",
+    os.environ.get("TOOL_GOOGLE_CLIENT_ID", ""),
+)
+
+TOOL_GOOGLE_CLIENT_SECRET = PersistentConfig(
+    "TOOL_GOOGLE_CLIENT_SECRET",
+    "toolserver.google.client_secret",
+    os.environ.get("TOOL_GOOGLE_CLIENT_SECRET", ""),
+)
+
+TOOL_GOOGLE_REDIRECT_URI = PersistentConfig(
+    "TOOL_GOOGLE_REDIRECT_URI",
+    "toolserver.google.redirect_uri",
+    os.environ.get("TOOL_GOOGLE_REDIRECT_URI", ""),
+)
+
+
 ####################################
 # Static DIR
 ####################################
