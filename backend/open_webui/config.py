@@ -1264,9 +1264,7 @@ def validate_cors_origin(origin):
 # To test CORS_ALLOW_ORIGIN locally, you can set something like
 # CORS_ALLOW_ORIGIN=http://localhost:5173;http://localhost:8080
 # in your .env file depending on your frontend port, 5173 in this case.
-CORS_ALLOW_ORIGIN = os.environ.get(
-    "CORS_ALLOW_ORIGIN", "*"
-).split(";")
+CORS_ALLOW_ORIGIN = os.environ.get("CORS_ALLOW_ORIGIN", "*").split(";")
 
 if CORS_ALLOW_ORIGIN == ["*"]:
     log.warning(
@@ -1277,6 +1275,7 @@ else:
     # Doing both will result in CORS errors in the browser.
     for origin in CORS_ALLOW_ORIGIN:
         validate_cors_origin(origin)
+
 
 class BannerModel(BaseModel):
     id: str
@@ -1974,47 +1973,33 @@ DOCLING_PICTURE_DESCRIPTION_MODE = PersistentConfig(
     os.getenv("DOCLING_PICTURE_DESCRIPTION_MODE", ""),
 )
 
-DOCLING_PICTURE_DESCRIPTION_LOCAL_REPO_ID = PersistentConfig(
-    "DOCLING_PICTURE_DESCRIPTION_LOCAL_REPO_ID",
-    "rag.docling_picture_description_local_repo_id",
-    os.getenv("DOCLING_PICTURE_DESCRIPTION_LOCAL_REPO_ID", "HuggingFaceTB/SmolVLM-256M-Instruct"),
+
+docling_picture_description_local = os.getenv("DOCLING_PICTURE_DESCRIPTION_LOCAL", "")
+try:
+    docling_picture_description_local = json.loads(docling_picture_description_local)
+except json.JSONDecodeError:
+    docling_picture_description_local = {}
+
+
+DOCLING_PICTURE_DESCRIPTION_LOCAL = PersistentConfig(
+    "DOCLING_PICTURE_DESCRIPTION_LOCAL",
+    "rag.docling_picture_description_local",
+    docling_picture_description_local,
 )
 
-DOCLING_PICTURE_DESCRIPTION_LOCAL_MAX_TOKENS = PersistentConfig(
-    "DOCLING_PICTURE_DESCRIPTION_LOCAL_MAX_TOKENS",
-    "rag.docling_picture_description_local_max_tokens",
-    int(os.getenv("DOCLING_PICTURE_DESCRIPTION_LOCAL_MAX_TOKENS", 200)),
+doclign_picture_description_api = os.getenv("DOCLING_PICTURE_DESCRIPTION_API", "")
+try:
+    doclign_picture_description_api = json.loads(doclign_picture_description_api)
+except json.JSONDecodeError:
+    doclign_picture_description_api = {}
+
+
+DOCLING_PICTURE_DESCRIPTION_API = PersistentConfig(
+    "DOCLING_PICTURE_DESCRIPTION_API",
+    "rag.docling_picture_description_api",
+    doclign_picture_description_api,
 )
 
-DOCLING_PICTURE_DESCRIPTION_LOCAL_PROMPT = PersistentConfig(
-    "DOCLING_PICTURE_DESCRIPTION_LOCAL_PROMPT",
-    "rag.docling_picture_description_local_prompt",
-    os.getenv(
-        "DOCLING_PICTURE_DESCRIPTION_LOCAL_PROMPT",
-        "Describe this image in a few sentences.",
-    )
-)
-
-DOCLING_PICTURE_DESCRIPTION_API_URL = PersistentConfig(
-    "DOCLING_PICTURE_DESCRIPTION_API_URL",
-    "rag.docling_picture_description_api_url",
-    os.getenv("DOCLING_PICTURE_DESCRIPTION_API_URL", ""),
-)
-
-DOCLING_PICTURE_DESCRIPTION_API_MODEL = PersistentConfig(   
-    "DOCLING_PICTURE_DESCRIPTION_API_MODEL",
-    "rag.docling_picture_description_api_model",
-    os.getenv("DOCLING_PICTURE_DESCRIPTION_API_MODEL", ""),
-)
-
-DOCLING_PICTURE_DESCRIPTION_API_PROMPT = PersistentConfig(
-    "DOCLING_PICTURE_DESCRIPTION_API_PROMPT",
-    "rag.docling_picture_description_api_prompt",
-    os.getenv(
-        "DOCLING_PICTURE_DESCRIPTION_API_PROMPT",
-        "Describe this image in a few sentences.",
-    )
-)
 
 DOCUMENT_INTELLIGENCE_ENDPOINT = PersistentConfig(
     "DOCUMENT_INTELLIGENCE_ENDPOINT",

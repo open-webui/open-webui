@@ -415,12 +415,8 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "DOCLING_OCR_LANG": request.app.state.config.DOCLING_OCR_LANG,
         "DOCLING_DO_PICTURE_DESCRIPTION": request.app.state.config.DOCLING_DO_PICTURE_DESCRIPTION,
         "DOCLING_PICTURE_DESCRIPTION_MODE": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_MODE,
-        "DOCLING_PICTURE_DESCRIPTION_LOCAL_REPO_ID": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL_REPO_ID,
-        "DOCLING_PICTURE_DESCRIPTION_LOCAL_MAX_TOKENS": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL_MAX_TOKENS,
-        "DOCLING_PICTURE_DESCRIPTION_LOCAL_PROMPT": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL_PROMPT,
-        "DOCLING_PICTURE_DESCRIPTION_API_URL": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API_URL,
-        "DOCLING_PICTURE_DESCRIPTION_API_MODEL": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API_MODEL,
-        "DOCLING_PICTURE_DESCRIPTION_API_PROMPT": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API_PROMPT,
+        "DOCLING_PICTURE_DESCRIPTION_LOCAL": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL,
+        "DOCLING_PICTURE_DESCRIPTION_API": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API,
         "DOCUMENT_INTELLIGENCE_ENDPOINT": request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
         "DOCUMENT_INTELLIGENCE_KEY": request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
         "MISTRAL_OCR_API_KEY": request.app.state.config.MISTRAL_OCR_API_KEY,
@@ -583,12 +579,8 @@ class ConfigForm(BaseModel):
     DOCLING_OCR_LANG: Optional[str] = None
     DOCLING_DO_PICTURE_DESCRIPTION: Optional[bool] = None
     DOCLING_PICTURE_DESCRIPTION_MODE: Optional[str] = None
-    DOCLING_PICTURE_DESCRIPTION_LOCAL_REPO_ID: Optional[str] = None
-    DOCLING_PICTURE_DESCRIPTION_LOCAL_MAX_TOKENS: Optional[int] = None
-    DOCLING_PICTURE_DESCRIPTION_LOCAL_PROMPT: Optional[str] = None
-    DOCLING_PICTURE_DESCRIPTION_API_URL: Optional[str] = None
-    DOCLING_PICTURE_DESCRIPTION_API_MODEL: Optional[str] = None
-    DOCLING_PICTURE_DESCRIPTION_API_PROMPT: Optional[str] = None
+    DOCLING_PICTURE_DESCRIPTION_LOCAL: Optional[dict] = None
+    DOCLING_PICTURE_DESCRIPTION_API: Optional[dict] = None
     DOCUMENT_INTELLIGENCE_ENDPOINT: Optional[str] = None
     DOCUMENT_INTELLIGENCE_KEY: Optional[str] = None
     MISTRAL_OCR_API_KEY: Optional[str] = None
@@ -767,35 +759,15 @@ async def update_rag_config(
         if form_data.DOCLING_PICTURE_DESCRIPTION_MODE is not None
         else request.app.state.config.DOCLING_PICTURE_DESCRIPTION_MODE
     )
-    request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL_REPO_ID = (
-        form_data.DOCLING_PICTURE_DESCRIPTION_LOCAL_REPO_ID
-        if form_data.DOCLING_PICTURE_DESCRIPTION_LOCAL_REPO_ID is not None
-        else request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL_REPO_ID
+    request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL = (
+        form_data.DOCLING_PICTURE_DESCRIPTION_LOCAL
+        if form_data.DOCLING_PICTURE_DESCRIPTION_LOCAL is not None
+        else request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL
     )
-    request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL_MAX_TOKENS = (
-        form_data.DOCLING_PICTURE_DESCRIPTION_LOCAL_MAX_TOKENS
-        if form_data.DOCLING_PICTURE_DESCRIPTION_LOCAL_MAX_TOKENS is not None
-        else request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL_MAX_TOKENS
-    )
-    request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL_PROMPT = (
-        form_data.DOCLING_PICTURE_DESCRIPTION_LOCAL_PROMPT
-        if form_data.DOCLING_PICTURE_DESCRIPTION_LOCAL_PROMPT is not None
-        else request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL_PROMPT
-    )
-    request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API_URL = (
-        form_data.DOCLING_PICTURE_DESCRIPTION_API_URL
-        if form_data.DOCLING_PICTURE_DESCRIPTION_API_URL is not None
-        else request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API_URL
-    )
-    request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API_MODEL = (
-        form_data.DOCLING_PICTURE_DESCRIPTION_API_MODEL
-        if form_data.DOCLING_PICTURE_DESCRIPTION_API_MODEL is not None
-        else request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API_MODEL
-    )
-    request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API_PROMPT = (
-        form_data.DOCLING_PICTURE_DESCRIPTION_API_PROMPT
-        if form_data.DOCLING_PICTURE_DESCRIPTION_API_PROMPT is not None
-        else request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API_PROMPT
+    request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API = (
+        form_data.DOCLING_PICTURE_DESCRIPTION_API
+        if form_data.DOCLING_PICTURE_DESCRIPTION_API is not None
+        else request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API
     )
 
     request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT = (
@@ -1036,12 +1008,8 @@ async def update_rag_config(
         "DOCLING_OCR_LANG": request.app.state.config.DOCLING_OCR_LANG,
         "DOCLING_DO_PICTURE_DESCRIPTION": request.app.state.config.DOCLING_DO_PICTURE_DESCRIPTION,
         "DOCLING_PICTURE_DESCRIPTION_MODE": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_MODE,
-        "DOCLING_PICTURE_DESCRIPTION_LOCAL_REPO_ID": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL_REPO_ID,
-        "DOCLING_PICTURE_DESCRIPTION_LOCAL_MAX_TOKENS": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL_MAX_TOKENS,
-        "DOCLING_PICTURE_DESCRIPTION_LOCAL_PROMPT": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL_PROMPT,
-        "DOCLING_PICTURE_DESCRIPTION_API_URL": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API_URL,
-        "DOCLING_PICTURE_DESCRIPTION_API_MODEL": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API_MODEL,
-        "DOCLING_PICTURE_DESCRIPTION_API_PROMPT": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API_PROMPT,
+        "DOCLING_PICTURE_DESCRIPTION_LOCAL": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL,
+        "DOCLING_PICTURE_DESCRIPTION_API": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API,
         "DOCUMENT_INTELLIGENCE_ENDPOINT": request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
         "DOCUMENT_INTELLIGENCE_KEY": request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
         "MISTRAL_OCR_API_KEY": request.app.state.config.MISTRAL_OCR_API_KEY,
@@ -1388,16 +1356,14 @@ def process_file(
                     EXTERNAL_DOCUMENT_LOADER_API_KEY=request.app.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY,
                     TIKA_SERVER_URL=request.app.state.config.TIKA_SERVER_URL,
                     DOCLING_SERVER_URL=request.app.state.config.DOCLING_SERVER_URL,
-                    DOCLING_OCR_ENGINE=request.app.state.config.DOCLING_OCR_ENGINE,
-                    DOCLING_OCR_LANG=request.app.state.config.DOCLING_OCR_LANG,
-                    DOCLING_DO_PICTURE_DESCRIPTION=request.app.state.config.DOCLING_DO_PICTURE_DESCRIPTION,
-                    DOCLING_PICTURE_DESCRIPTION_MODE=request.app.state.config.DOCLING_PICTURE_DESCRIPTION_MODE,
-                    DOCLING_PICTURE_DESCRIPTION_LOCAL_REPO_ID=request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL_REPO_ID,
-                    DOCLING_PICTURE_DESCRIPTION_LOCAL_MAX_TOKENS=request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL_MAX_TOKENS,
-                    DOCLING_PICTURE_DESCRIPTION_LOCAL_PROMPT=request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL_PROMPT,
-                    DOCLING_PICTURE_DESCRIPTION_API_URL=request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API_URL,
-                    DOCLING_PICTURE_DESCRIPTION_API_MODEL=request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API_MODEL,
-                    DOCLING_PICTURE_DESCRIPTION_API_PROMPT=request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API_PROMPT,
+                    DOCLING_PARAMS={
+                        "ocr_engine": request.app.state.config.DOCLING_OCR_ENGINE,
+                        "ocr_lang": request.app.state.config.DOCLING_OCR_LANG,
+                        "do_picture_description": request.app.state.config.DOCLING_DO_PICTURE_DESCRIPTION,
+                        "picture_description_mode": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_MODE,
+                        "picture_description_local": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL,
+                        "picture_description_api": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API,
+                    },
                     PDF_EXTRACT_IMAGES=request.app.state.config.PDF_EXTRACT_IMAGES,
                     DOCUMENT_INTELLIGENCE_ENDPOINT=request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
                     DOCUMENT_INTELLIGENCE_KEY=request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
