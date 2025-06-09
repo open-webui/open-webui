@@ -9,7 +9,7 @@ from open_webui.models.groups import Groups
 
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text
+from sqlalchemy import BigInteger, Column, Integer, String, Text, UniqueConstraint
 from sqlalchemy import or_
 
 
@@ -36,6 +36,19 @@ class User(Base):
     info = Column(JSONField, nullable=True)
 
     oauth_sub = Column(Text, unique=True)
+
+
+class UserHistoricalEvents(Base):
+    __tablename__ = "user_historical_events"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String, nullable=False)
+    user_email = Column(String, nullable=False)
+    user_name = Column(String, nullable=True)
+    active_at_hr = Column(BigInteger, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "active_at_hr", name="uq_events_user_id_active_at_hr"),
+    )
 
 
 class UserSettings(BaseModel):
@@ -298,9 +311,9 @@ class UsersTable:
     def update_user_last_active_by_id(self, id: str) -> Optional[UserModel]:
         try:
             with get_db() as db:
-                db.query(User).filter_by(id=id).update(
-                    {"last_active_at": int(time.time())}
-                )
+                # Update last_active_at to current timestamp
+                user = db.query(User).filter_by(id=id).first()
+                user.last_active_at = int(time.time())
                 db.commit()
 
                 user = db.query(User).filter_by(id=id).first()
