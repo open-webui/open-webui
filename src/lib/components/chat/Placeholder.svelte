@@ -104,7 +104,7 @@
 	{/if}
 
 	<div
-		class="w-full text-3xl text-gray-800 dark:text-gray-100 text-center flex items-center gap-4 font-primary"
+		class="w-full text-3xl text-gray-800 dark:text-gray-100 text-left flex items-center gap-4 font-primary"
 	>
 		<div class="w-full flex flex-col justify-center items-center">
 			<div class="flex flex-row justify-center gap-3 @sm:gap-3.5 w-fit px-5">

@@ -1968,6 +1968,15 @@
 			}
 		}
 	};
+
+	let footerMarkdown = '';
+
+	onMount(async () => {
+	const res = await fetch('/FOOTER.md');
+	if (res.ok) {
+		footerMarkdown = await res.text();
+	}
+});
 </script>
 
 <svelte:head>
@@ -2140,7 +2149,7 @@
 										<!-- <div class="bottom-1 text-sm text-gray-500 text-center line-clamp-1 right-0 left-0">
 											</div> -->
 										<div class="bottom-1 text-sm text-gray-500 text-center right-0 left-0" dir={$footerDirection}>
-											{@html marked.parse(DOMPurify.sanitize(get(footerText)))}
+											{@html marked.parse(DOMPurify.sanitize(footerMarkdown))}
 										</div>
 
 
@@ -2200,23 +2209,4 @@
 					modelId={selectedModelIds?.at(0) ?? null}
 					models={selectedModelIds.reduce((a, e, i, arr) => {
 						const model = $models.find((m) => m.id === e);
-						if (model) {
-							return [...a, model];
-						}
-						return a;
-					}, [])}
-					{submitPrompt}
-					{stopResponse}
-					{showMessage}
-					{eventTarget}
-				/>
-			</PaneGroup>
-		</div>
-	{:else if loading}
-		<div class=" flex items-center justify-center h-full w-full">
-			<div class="m-auto">
-				<Spinner />
-			</div>
-		</div>
-	{/if}
-</div>
+						if
