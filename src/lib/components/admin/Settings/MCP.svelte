@@ -70,6 +70,15 @@
 	
 	// Server connection status tracking for external servers
 
+	// Status translation keys (for i18n parser)
+	// These ensure the status values are available in translation files
+	$: statusTranslations = {
+		running: $i18n.t('running'),
+		stopped: $i18n.t('stopped'),
+		not_configured: $i18n.t('not_configured'),
+		unknown: $i18n.t('unknown')
+	};
+
 	// Helper function to format server names for display
 	const formatServerName = (serverName: string) => {
 		return serverName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
@@ -448,7 +457,7 @@
 								<div class="flex self-center space-x-2">
 									<div class="flex items-center gap-2">
 										<span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium {server.status === 'running' ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300' : 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300'}">
-											{$i18n.t(server.status)}
+											{statusTranslations[server.status] || $i18n.t('unknown')}
 										</span>
 										
 										<Tooltip content={$i18n.t('Restart Server')}>
@@ -520,7 +529,7 @@
 								<div class="flex self-center space-x-2">
 									<div class="flex items-center gap-2">
 										<span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium {server.runtime_status === 'running' ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300' : 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300'}">
-											{$i18n.t(server.runtime_status || 'unknown')}
+											{statusTranslations[server.runtime_status] || $i18n.t('unknown')}
 										</span>
 										
 										<!-- Action Buttons -->
