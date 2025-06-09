@@ -682,6 +682,8 @@
 	"No model IDs": "Keine Modell-IDs",
 	"No models found": "Keine Modelle gefunden",
 	"No models selected": "",
+	"No prompts created yet" : "Noch keine Prompts erstellt",
+	"No prompts match the selected filters": "Keine Prompts stimmen mit den ausgewählten Filtern überein",
 	"No results found": "Keine Ergebnisse gefunden",
 	"No search query generated": "Keine Suchanfrage generiert",
 	"No source available": "Keine Quelle verfügbar",
