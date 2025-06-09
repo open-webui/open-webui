@@ -1825,6 +1825,13 @@ PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH = int(
     os.environ.get("PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH", "1536")
 )
 
+PGVECTOR_PGCRYPTO = os.getenv("PGVECTOR_PGCRYPTO", "false").lower() == "true"
+PGVECTOR_PGCRYPTO_KEY = os.getenv("PGVECTOR_PGCRYPTO_KEY", None)
+if PGVECTOR_PGCRYPTO and not PGVECTOR_PGCRYPTO_KEY:
+    raise ValueError(
+        "PGVECTOR_PGCRYPTO is enabled but PGVECTOR_PGCRYPTO_KEY is not set. Please provide a valid key."
+    )
+
 # Pinecone
 PINECONE_API_KEY = os.environ.get("PINECONE_API_KEY", None)
 PINECONE_ENVIRONMENT = os.environ.get("PINECONE_ENVIRONMENT", None)
