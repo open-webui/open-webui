@@ -510,6 +510,7 @@ async def lifespan(app: FastAPI):
         redis_sentinels=get_sentinels_from_env(
             REDIS_SENTINEL_HOSTS, REDIS_SENTINEL_PORT
         ),
+        async_mode=True,
     )
 
     if isinstance(app.state.redis, Redis):
