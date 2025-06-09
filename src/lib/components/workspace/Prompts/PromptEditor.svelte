@@ -11,6 +11,7 @@
 	import BackIcon from '$lib/components/icons/BackIcon.svelte';
 	import TagSelect from '$lib/components/common/TagSelect.svelte';
 	import AccessSelect from '$lib/components/common/AccessSelect.svelte';
+	import { getUserTagsForPrompts } from '$lib/apis/prompts'
 
 	export let onSubmit: Function;
 	export let edit = false;
@@ -19,6 +20,15 @@
 	const i18n = getContext('i18n');
 
 	let loading = false;
+
+	let userTags = [];
+	const getTags = async () => {
+		userTags = await getUserTagsForPrompts(localStorage.token);
+	}
+
+	onMount(async () => {
+		await getTags();
+	})
 
 	let title = '';
 	let command = '';
@@ -143,7 +153,7 @@
 			</div>
 				
 			<div class="mb-1.5">
-				<TagSelect bind:selected={meta.tags} placeholder="Add category..." />
+				<TagSelect bind:selected={meta.tags} {userTags} placeholder="Add category..." />
 			</div>
 
 			<div class="mb-1.5">

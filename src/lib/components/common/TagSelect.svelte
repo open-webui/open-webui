@@ -8,6 +8,7 @@
 
 	export let selected = [];
 	export let placeholder = 'Add category...';
+	export let userTags = [];
 
 	let input = '';
 	let showDropdown = false;
@@ -28,11 +29,15 @@
 		}
 		return tagColorMap.get(tagName);
 	}
+	$: console.log(userTags)
 
-	$: available = $tags.filter(
-		(tag) =>
-			!selected.some((s) => s.name === tag.name) &&
-			tag.name.toLowerCase().includes(input.toLowerCase())
+	$: available = userTags?.filter(
+		(tag) => {
+		const tagName = tag.is_system ? $i18n.t(tag.name) : tag.name;
+
+		return !selected.some((s) => s.name === tagName) &&
+			tagName.toLowerCase().includes(input.toLowerCase())
+		}
 	);
 
 	function addTag(tagName: string) {
@@ -84,7 +89,7 @@
 					style="background-color: {getTagColor(tag.name)}"
 					class="px-2 py-1 rounded-lg text-sm leading-none text-white dark:text-customGray-100 flex items-center"
 				>
-					{tag.name}
+					{$i18n.t(tag.name)}
 					<button
 						type="button"
 						class="ml-1 hover:text-white"
@@ -130,11 +135,11 @@
 					style="background-color: {getTagColor(tag.name)}"
 					on:click={() => addTag(tag.name)}
 				>
-					{tag.name}
+					{$i18n.t(tag.name)}
 				</div>
 			{/each}
 
-			{#if input && !$tags.find((t) => t.name.toLowerCase() === input.toLowerCase())}
+			{#if input && !userTags?.find((t) => t.name.toLowerCase() === input.toLowerCase())}
 				<button
 					class="px-3 py-2 text-sm text-lightGray-100 dark:text-customGray-100 cursor-pointer hover:bg-gray-100 dark:hover:bg-customGray-800"
 					on:click={() => addTag(input)}
