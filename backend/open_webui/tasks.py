@@ -28,7 +28,6 @@ async def redis_task_command_listener(app):
     await pubsub.subscribe(REDIS_PUBSUB_CHANNEL)
 
     async for message in pubsub.listen():
-        print(f"Received message: {message}")
         if message["type"] != "message":
             continue
         try:
