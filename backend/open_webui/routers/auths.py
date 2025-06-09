@@ -19,35 +19,41 @@ from open_webui.models.auths import (
     UserResponse,
 )
 from open_webui.models.users import Users
+from open_webui.models.groups import Groups
 
 from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
 from open_webui.env import (
     WEBUI_AUTH,
     WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
     WEBUI_AUTH_TRUSTED_NAME_HEADER,
+    WEBUI_AUTH_TRUSTED_GROUPS_HEADER,
     WEBUI_AUTH_COOKIE_SAME_SITE,
     WEBUI_AUTH_COOKIE_SECURE,
+    WEBUI_AUTH_SIGNOUT_REDIRECT_URL,
     SRC_LOG_LEVELS,
 )
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from fastapi.responses import RedirectResponse, Response
+from fastapi.responses import RedirectResponse, Response, JSONResponse
 from open_webui.config import OPENID_PROVIDER_URL, ENABLE_OAUTH_SIGNUP, ENABLE_LDAP
 from pydantic import BaseModel
+
 from open_webui.utils.misc import parse_duration, validate_email_format
 from open_webui.utils.auth import (
+    decode_token,
     create_api_key,
     create_token,
     get_admin_user,
     get_verified_user,
     get_current_user,
     get_password_hash,
+    get_http_authorization_cred,
 )
 from open_webui.utils.webhook import post_webhook
 from open_webui.utils.access_control import get_permissions
 
 from typing import Optional, List
 
-from ssl import CERT_REQUIRED, PROTOCOL_TLS
+from ssl import CERT_NONE, CERT_REQUIRED, PROTOCOL_TLS
 
 if ENABLE_LDAP.value:
     from ldap3 import Server, Connection, NONE, Tls
@@ -72,31 +78,36 @@ class SessionUserResponse(Token, UserResponse):
 async def get_session_user(
     request: Request, response: Response, user=Depends(get_current_user)
 ):
-    expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
+
+    auth_header = request.headers.get("Authorization")
+    auth_token = get_http_authorization_cred(auth_header)
+    token = auth_token.credentials
+    data = decode_token(token)
+
     expires_at = None
-    if expires_delta:
-        expires_at = int(time.time()) + int(expires_delta.total_seconds())
 
-    token = create_token(
-        data={"id": user.id},
-        expires_delta=expires_delta,
-    )
+    if data:
+        expires_at = data.get("exp")
 
-    datetime_expires_at = (
-        datetime.datetime.fromtimestamp(expires_at, datetime.timezone.utc)
-        if expires_at
-        else None
-    )
+        if (expires_at is not None) and int(time.time()) > expires_at:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ERROR_MESSAGES.INVALID_TOKEN,
+            )
 
-    # Set the cookie token
-    response.set_cookie(
-        key="token",
-        value=token,
-        expires=datetime_expires_at,
-        httponly=True,  # Ensures the cookie is not accessible via JavaScript
-        samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
-        secure=WEBUI_AUTH_COOKIE_SECURE,
-    )
+        # Set the cookie token
+        response.set_cookie(
+            key="token",
+            value=token,
+            expires=(
+                datetime.datetime.fromtimestamp(expires_at, datetime.timezone.utc)
+                if expires_at
+                else None
+            ),
+            httponly=True,  # Ensures the cookie is not accessible via JavaScript
+            samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
+            secure=WEBUI_AUTH_COOKIE_SECURE,
+        )
 
     user_permissions = get_permissions(
         user.id, request.app.state.config.USER_PERMISSIONS
@@ -177,6 +188,9 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
     LDAP_APP_PASSWORD = request.app.state.config.LDAP_APP_PASSWORD
     LDAP_USE_TLS = request.app.state.config.LDAP_USE_TLS
     LDAP_CA_CERT_FILE = request.app.state.config.LDAP_CA_CERT_FILE
+    LDAP_VALIDATE_CERT = (
+        CERT_REQUIRED if request.app.state.config.LDAP_VALIDATE_CERT else CERT_NONE
+    )
     LDAP_CIPHERS = (
         request.app.state.config.LDAP_CIPHERS
         if request.app.state.config.LDAP_CIPHERS
@@ -188,7 +202,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
 
     try:
         tls = Tls(
-            validate=CERT_REQUIRED,
+            validate=LDAP_VALIDATE_CERT,
             version=PROTOCOL_TLS,
             ca_certs_file=LDAP_CA_CERT_FILE,
             ciphers=LDAP_CIPHERS,
@@ -225,12 +239,14 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
             ],
         )
 
-        if not search_success:
+        if not search_success or not connection_app.entries:
             raise HTTPException(400, detail="User not found in the LDAP server")
 
         entry = connection_app.entries[0]
         username = str(entry[f"{LDAP_ATTRIBUTE_FOR_USERNAME}"]).lower()
-        email = entry[f"{LDAP_ATTRIBUTE_FOR_MAIL}"].value  # retrive the Attribute value
+        email = entry[
+            f"{LDAP_ATTRIBUTE_FOR_MAIL}"
+        ].value  # retrieve the Attribute value
         if not email:
             raise HTTPException(400, "User does not have a valid email address.")
         elif isinstance(email, str):
@@ -285,21 +301,33 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                         500, detail="Internal error occurred during LDAP user creation."
                     )
 
-            user = Auths.authenticate_user_by_trusted_header(email)
+            user = Auths.authenticate_user_by_email(email)
 
             if user:
+                expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
+                expires_at = None
+                if expires_delta:
+                    expires_at = int(time.time()) + int(expires_delta.total_seconds())
+
                 token = create_token(
                     data={"id": user.id},
-                    expires_delta=parse_duration(
-                        request.app.state.config.JWT_EXPIRES_IN
-                    ),
+                    expires_delta=expires_delta,
                 )
 
                 # Set the cookie token
                 response.set_cookie(
                     key="token",
                     value=token,
+                    expires=(
+                        datetime.datetime.fromtimestamp(
+                            expires_at, datetime.timezone.utc
+                        )
+                        if expires_at
+                        else None
+                    ),
                     httponly=True,  # Ensures the cookie is not accessible via JavaScript
+                    samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
+                    secure=WEBUI_AUTH_COOKIE_SECURE,
                 )
 
                 user_permissions = get_permissions(
@@ -309,6 +337,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                 return {
                     "token": token,
                     "token_type": "Bearer",
+                    "expires_at": expires_at,
                     "id": user.id,
                     "email": user.email,
                     "name": user.name,
@@ -336,21 +365,29 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
         if WEBUI_AUTH_TRUSTED_EMAIL_HEADER not in request.headers:
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_TRUSTED_HEADER)
 
-        trusted_email = request.headers[WEBUI_AUTH_TRUSTED_EMAIL_HEADER].lower()
-        trusted_name = trusted_email
+        email = request.headers[WEBUI_AUTH_TRUSTED_EMAIL_HEADER].lower()
+        name = email
+
         if WEBUI_AUTH_TRUSTED_NAME_HEADER:
-            trusted_name = request.headers.get(
-                WEBUI_AUTH_TRUSTED_NAME_HEADER, trusted_email
-            )
-        if not Users.get_user_by_email(trusted_email.lower()):
+            name = request.headers.get(WEBUI_AUTH_TRUSTED_NAME_HEADER, email)
+
+        if not Users.get_user_by_email(email.lower()):
             await signup(
                 request,
                 response,
-                SignupForm(
-                    email=trusted_email, password=str(uuid.uuid4()), name=trusted_name
-                ),
+                SignupForm(email=email, password=str(uuid.uuid4()), name=name),
             )
-        user = Auths.authenticate_user_by_trusted_header(trusted_email)
+
+        user = Auths.authenticate_user_by_email(email)
+        if WEBUI_AUTH_TRUSTED_GROUPS_HEADER and user and user.role != "admin":
+            group_names = request.headers.get(
+                WEBUI_AUTH_TRUSTED_GROUPS_HEADER, ""
+            ).split(",")
+            group_names = [name.strip() for name in group_names if name.strip()]
+
+            if group_names:
+                Groups.sync_user_groups_by_group_names(user.id, group_names)
+
     elif WEBUI_AUTH == False:
         admin_email = "admin@localhost"
         admin_password = "admin"
@@ -454,10 +491,6 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
             "admin" if user_count == 0 else request.app.state.config.DEFAULT_USER_ROLE
         )
 
-        if user_count == 0:
-            # Disable signup after the first user is created
-            request.app.state.config.ENABLE_SIGNUP = False
-
         # The password passed to bcrypt must be 72 bytes or fewer. If it is longer, it will be truncated before hashing.
         if len(form_data.password.encode("utf-8")) > 72:
             raise HTTPException(
@@ -517,6 +550,10 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                 user.id, request.app.state.config.USER_PERMISSIONS
             )
 
+            if user_count == 0:
+                # Disable signup after the first user is created
+                request.app.state.config.ENABLE_SIGNUP = False
+
             return {
                 "token": token,
                 "token_type": "Bearer",
@@ -536,29 +573,55 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
 
 
 @router.get("/signout")
-async def signout(request: Request):
-    home_url = request.url_for("home")
-    response = RedirectResponse(url=home_url, status_code=302)
+async def signout(request: Request, response: Response):
     response.delete_cookie("token")
+
     if ENABLE_OAUTH_SIGNUP.value:
         oauth_id_token = request.cookies.get("oauth_id_token")
         if oauth_id_token:
-            discovery_url = f"{OPENID_PROVIDER_URL.value.rstrip('/')}/.well-known/openid-configuration"
-            async with ClientSession() as session:
-                resp = await session.get(discovery_url)
-                if resp.status != 200:
-                    raise HTTPException(status_code=502, detail="Failed to fetch OpenID configuration")
-                data = await resp.json()
-            logout_url = data.get("end_session_endpoint")
-            if not logout_url:
-                raise HTTPException(status_code=500, detail="OP can not find end_session_endpoint")
-            params = {
-                "id_token_hint": oauth_id_token,
-                "post_logout_redirect_uri": str(home_url),
-            }
-            response.delete_cookie("oauth_id_token")
-            return RedirectResponse(url=f"{logout_url}?{urlencode(params)}", status_code=302)
-    return response
+            try:
+                async with ClientSession() as session:
+                    async with session.get(OPENID_PROVIDER_URL.value) as resp:
+                        if resp.status == 200:
+                            openid_data = await resp.json()
+                            logout_url = openid_data.get("end_session_endpoint")
+                            if logout_url:
+                                response.delete_cookie("oauth_id_token")
+
+                                return JSONResponse(
+                                    status_code=200,
+                                    content={
+                                        "status": True,
+                                        "redirect_url": f"{logout_url}?id_token_hint={oauth_id_token}",
+                                    },
+                                    headers=response.headers,
+                                )
+                        else:
+                            raise HTTPException(
+                                status_code=resp.status,
+                                detail="Failed to fetch OpenID configuration",
+                            )
+            except Exception as e:
+                log.error(f"OpenID signout error: {str(e)}")
+                raise HTTPException(
+                    status_code=500,
+                    detail="Failed to sign out from the OpenID provider.",
+                )
+
+    if WEBUI_AUTH_SIGNOUT_REDIRECT_URL:
+        return JSONResponse(
+            status_code=200,
+            content={
+                "status": True,
+                "redirect_url": WEBUI_AUTH_SIGNOUT_REDIRECT_URL,
+            },
+            headers=response.headers,
+        )
+
+    return JSONResponse(
+        status_code=200, content={"status": True}, headers=response.headers
+    )
+
 
 ############################
 # AddUser
@@ -655,7 +718,11 @@ async def get_admin_config(request: Request, user=Depends(get_admin_user)):
         "ENABLE_COMMUNITY_SHARING": request.app.state.config.ENABLE_COMMUNITY_SHARING,
         "ENABLE_MESSAGE_RATING": request.app.state.config.ENABLE_MESSAGE_RATING,
         "ENABLE_CHANNELS": request.app.state.config.ENABLE_CHANNELS,
+        "ENABLE_NOTES": request.app.state.config.ENABLE_NOTES,
         "ENABLE_USER_WEBHOOKS": request.app.state.config.ENABLE_USER_WEBHOOKS,
+        "PENDING_USER_OVERLAY_TITLE": request.app.state.config.PENDING_USER_OVERLAY_TITLE,
+        "PENDING_USER_OVERLAY_CONTENT": request.app.state.config.PENDING_USER_OVERLAY_CONTENT,
+        "RESPONSE_WATERMARK": request.app.state.config.RESPONSE_WATERMARK,
     }
 
 
@@ -671,7 +738,11 @@ class AdminConfig(BaseModel):
     ENABLE_COMMUNITY_SHARING: bool
     ENABLE_MESSAGE_RATING: bool
     ENABLE_CHANNELS: bool
+    ENABLE_NOTES: bool
     ENABLE_USER_WEBHOOKS: bool
+    PENDING_USER_OVERLAY_TITLE: Optional[str] = None
+    PENDING_USER_OVERLAY_CONTENT: Optional[str] = None
+    RESPONSE_WATERMARK: Optional[str] = None
 
 
 @router.post("/admin/config")
@@ -691,6 +762,7 @@ async def update_admin_config(
     )
 
     request.app.state.config.ENABLE_CHANNELS = form_data.ENABLE_CHANNELS
+    request.app.state.config.ENABLE_NOTES = form_data.ENABLE_NOTES
 
     if form_data.DEFAULT_USER_ROLE in ["pending", "user", "admin"]:
         request.app.state.config.DEFAULT_USER_ROLE = form_data.DEFAULT_USER_ROLE
@@ -708,6 +780,15 @@ async def update_admin_config(
 
     request.app.state.config.ENABLE_USER_WEBHOOKS = form_data.ENABLE_USER_WEBHOOKS
 
+    request.app.state.config.PENDING_USER_OVERLAY_TITLE = (
+        form_data.PENDING_USER_OVERLAY_TITLE
+    )
+    request.app.state.config.PENDING_USER_OVERLAY_CONTENT = (
+        form_data.PENDING_USER_OVERLAY_CONTENT
+    )
+
+    request.app.state.config.RESPONSE_WATERMARK = form_data.RESPONSE_WATERMARK
+
     return {
         "SHOW_ADMIN_DETAILS": request.app.state.config.SHOW_ADMIN_DETAILS,
         "WEBUI_URL": request.app.state.config.WEBUI_URL,
@@ -715,12 +796,16 @@ async def update_admin_config(
         "ENABLE_API_KEY": request.app.state.config.ENABLE_API_KEY,
         "ENABLE_API_KEY_ENDPOINT_RESTRICTIONS": request.app.state.config.ENABLE_API_KEY_ENDPOINT_RESTRICTIONS,
         "API_KEY_ALLOWED_ENDPOINTS": request.app.state.config.API_KEY_ALLOWED_ENDPOINTS,
-        "ENABLE_CHANNELS": request.app.state.config.ENABLE_CHANNELS,
         "DEFAULT_USER_ROLE": request.app.state.config.DEFAULT_USER_ROLE,
         "JWT_EXPIRES_IN": request.app.state.config.JWT_EXPIRES_IN,
         "ENABLE_COMMUNITY_SHARING": request.app.state.config.ENABLE_COMMUNITY_SHARING,
         "ENABLE_MESSAGE_RATING": request.app.state.config.ENABLE_MESSAGE_RATING,
+        "ENABLE_CHANNELS": request.app.state.config.ENABLE_CHANNELS,
+        "ENABLE_NOTES": request.app.state.config.ENABLE_NOTES,
         "ENABLE_USER_WEBHOOKS": request.app.state.config.ENABLE_USER_WEBHOOKS,
+        "PENDING_USER_OVERLAY_TITLE": request.app.state.config.PENDING_USER_OVERLAY_TITLE,
+        "PENDING_USER_OVERLAY_CONTENT": request.app.state.config.PENDING_USER_OVERLAY_CONTENT,
+        "RESPONSE_WATERMARK": request.app.state.config.RESPONSE_WATERMARK,
     }
 
 
@@ -736,6 +821,7 @@ class LdapServerConfig(BaseModel):
     search_filters: str = ""
     use_tls: bool = True
     certificate_path: Optional[str] = None
+    validate_cert: bool = True
     ciphers: Optional[str] = "ALL"
 
 
@@ -753,6 +839,7 @@ async def get_ldap_server(request: Request, user=Depends(get_admin_user)):
         "search_filters": request.app.state.config.LDAP_SEARCH_FILTERS,
         "use_tls": request.app.state.config.LDAP_USE_TLS,
         "certificate_path": request.app.state.config.LDAP_CA_CERT_FILE,
+        "validate_cert": request.app.state.config.LDAP_VALIDATE_CERT,
         "ciphers": request.app.state.config.LDAP_CIPHERS,
     }
 
@@ -788,6 +875,7 @@ async def update_ldap_server(
     request.app.state.config.LDAP_SEARCH_FILTERS = form_data.search_filters
     request.app.state.config.LDAP_USE_TLS = form_data.use_tls
     request.app.state.config.LDAP_CA_CERT_FILE = form_data.certificate_path
+    request.app.state.config.LDAP_VALIDATE_CERT = form_data.validate_cert
     request.app.state.config.LDAP_CIPHERS = form_data.ciphers
 
     return {
@@ -802,6 +890,7 @@ async def update_ldap_server(
         "search_filters": request.app.state.config.LDAP_SEARCH_FILTERS,
         "use_tls": request.app.state.config.LDAP_USE_TLS,
         "certificate_path": request.app.state.config.LDAP_CA_CERT_FILE,
+        "validate_cert": request.app.state.config.LDAP_VALIDATE_CERT,
         "ciphers": request.app.state.config.LDAP_CIPHERS,
     }
 
