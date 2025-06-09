@@ -347,6 +347,24 @@ MICROSOFT_CLIENT_TENANT_ID = PersistentConfig(
     os.environ.get("MICROSOFT_CLIENT_TENANT_ID", ""),
 )
 
+MICROSOFT_CLIENT_LOGIN_BASE_URL = PersistentConfig(
+    "MICROSOFT_CLIENT_LOGIN_BASE_URL",
+    "oauth.microsoft.login_base_url",
+    os.environ.get(
+        "MICROSOFT_CLIENT_LOGIN_BASE_URL", "https://login.microsoftonline.com"
+    ),
+)
+
+MICROSOFT_CLIENT_PICTURE_URL = PersistentConfig(
+    "MICROSOFT_CLIENT_PICTURE_URL",
+    "oauth.microsoft.picture_url",
+    os.environ.get(
+        "MICROSOFT_CLIENT_PICTURE_URL",
+        "https://graph.microsoft.com/v1.0/me/photo/$value",
+    ),
+)
+
+
 MICROSOFT_OAUTH_SCOPE = PersistentConfig(
     "MICROSOFT_OAUTH_SCOPE",
     "oauth.microsoft.scope",
@@ -542,7 +560,7 @@ def load_oauth_providers():
                 name="microsoft",
                 client_id=MICROSOFT_CLIENT_ID.value,
                 client_secret=MICROSOFT_CLIENT_SECRET.value,
-                server_metadata_url=f"https://login.microsoftonline.com/{MICROSOFT_CLIENT_TENANT_ID.value}/v2.0/.well-known/openid-configuration?appid={MICROSOFT_CLIENT_ID.value}",
+                server_metadata_url=f"{MICROSOFT_CLIENT_LOGIN_BASE_URL.value}/{MICROSOFT_CLIENT_TENANT_ID.value}/v2.0/.well-known/openid-configuration?appid={MICROSOFT_CLIENT_ID.value}",
                 client_kwargs={
                     "scope": MICROSOFT_OAUTH_SCOPE.value,
                 },
@@ -551,7 +569,7 @@ def load_oauth_providers():
 
         OAUTH_PROVIDERS["microsoft"] = {
             "redirect_uri": MICROSOFT_REDIRECT_URI.value,
-            "picture_url": "https://graph.microsoft.com/v1.0/me/photo/$value",
+            "picture_url": MICROSOFT_CLIENT_PICTURE_URL.value,
             "register": microsoft_oauth_register,
         }
 
@@ -1245,12 +1263,6 @@ if THREAD_POOL_SIZE is not None and isinstance(THREAD_POOL_SIZE, str):
         THREAD_POOL_SIZE = None
 
 
-def validate_cors_origins(origins):
-    for origin in origins:
-        if origin != "*":
-            validate_cors_origin(origin)
-
-
 def validate_cors_origin(origin):
     parsed_url = urlparse(origin)
 
@@ -1270,16 +1282,17 @@ def validate_cors_origin(origin):
 # To test CORS_ALLOW_ORIGIN locally, you can set something like
 # CORS_ALLOW_ORIGIN=http://localhost:5173;http://localhost:8080
 # in your .env file depending on your frontend port, 5173 in this case.
-CORS_ALLOW_ORIGIN = os.environ.get(
-    "CORS_ALLOW_ORIGIN", "*;http://localhost:5173;http://localhost:8080"
-).split(";")
+CORS_ALLOW_ORIGIN = os.environ.get("CORS_ALLOW_ORIGIN", "*").split(";")
 
-if "*" in CORS_ALLOW_ORIGIN:
+if CORS_ALLOW_ORIGIN == ["*"]:
     log.warning(
         "\n\nWARNING: CORS_ALLOW_ORIGIN IS SET TO '*' - NOT RECOMMENDED FOR PRODUCTION DEPLOYMENTS.\n"
     )
-
-validate_cors_origins(CORS_ALLOW_ORIGIN)
+else:
+    # You have to pick between a single wildcard or a list of origins.
+    # Doing both will result in CORS errors in the browser.
+    for origin in CORS_ALLOW_ORIGIN:
+        validate_cors_origin(origin)
 
 
 class BannerModel(BaseModel):
@@ -1812,6 +1825,13 @@ PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH = int(
     os.environ.get("PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH", "1536")
 )
 
+PGVECTOR_PGCRYPTO = os.getenv("PGVECTOR_PGCRYPTO", "false").lower() == "true"
+PGVECTOR_PGCRYPTO_KEY = os.getenv("PGVECTOR_PGCRYPTO_KEY", None)
+if PGVECTOR_PGCRYPTO and not PGVECTOR_PGCRYPTO_KEY:
+    raise ValueError(
+        "PGVECTOR_PGCRYPTO is enabled but PGVECTOR_PGCRYPTO_KEY is not set. Please provide a valid key."
+    )
+
 # Pinecone
 PINECONE_API_KEY = os.environ.get("PINECONE_API_KEY", None)
 PINECONE_ENVIRONMENT = os.environ.get("PINECONE_ENVIRONMENT", None)
@@ -1971,6 +1991,40 @@ DOCLING_DO_PICTURE_DESCRIPTION = PersistentConfig(
     "rag.docling_do_picture_description",
     os.getenv("DOCLING_DO_PICTURE_DESCRIPTION", "False").lower() == "true",
 )
+
+DOCLING_PICTURE_DESCRIPTION_MODE = PersistentConfig(
+    "DOCLING_PICTURE_DESCRIPTION_MODE",
+    "rag.docling_picture_description_mode",
+    os.getenv("DOCLING_PICTURE_DESCRIPTION_MODE", ""),
+)
+
+
+docling_picture_description_local = os.getenv("DOCLING_PICTURE_DESCRIPTION_LOCAL", "")
+try:
+    docling_picture_description_local = json.loads(docling_picture_description_local)
+except json.JSONDecodeError:
+    docling_picture_description_local = {}
+
+
+DOCLING_PICTURE_DESCRIPTION_LOCAL = PersistentConfig(
+    "DOCLING_PICTURE_DESCRIPTION_LOCAL",
+    "rag.docling_picture_description_local",
+    docling_picture_description_local,
+)
+
+docling_picture_description_api = os.getenv("DOCLING_PICTURE_DESCRIPTION_API", "")
+try:
+    docling_picture_description_api = json.loads(docling_picture_description_api)
+except json.JSONDecodeError:
+    docling_picture_description_api = {}
+
+
+DOCLING_PICTURE_DESCRIPTION_API = PersistentConfig(
+    "DOCLING_PICTURE_DESCRIPTION_API",
+    "rag.docling_picture_description_api",
+    docling_picture_description_api,
+)
+
 
 DOCUMENT_INTELLIGENCE_ENDPOINT = PersistentConfig(
     "DOCUMENT_INTELLIGENCE_ENDPOINT",
@@ -2268,7 +2322,7 @@ DOWNLOADED_EMBEDDING_MODELS = PersistentConfig(
     os.getenv("DOWNLOADED_EMBEDDING_MODELS", {"":["sentence-transformers/all-MiniLM-L6-v2"],
                                               "openai":["text-embedding-3-small"],
                                               "ollama":[],
-                                              "azure_openai_config": []})
+                                              "azure_openai": []})
 )
 
 DOWNLOADED_RERANKING_MODELS = PersistentConfig(
@@ -2284,7 +2338,7 @@ LOADED_EMBEDDING_MODELS = PersistentConfig(
     os.getenv("LOADED_EMBEDDING_MODELS", {"":["sentence-transformers/all-MiniLM-L6-v2"],
                                           "openai":[],
                                           "ollama":[],
-                                          "azure_openai_config": []})
+                                          "azure_openai": []})
 )
 
 LOADED_RERANKING_MODELS = PersistentConfig(
