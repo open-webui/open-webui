@@ -582,6 +582,18 @@
 
 		if (res) {
 			knowledge = res;
+			knowledge.rag_config.ALLOWED_FILE_EXTENSIONS = (config?.ALLOWED_FILE_EXTENSIONS ?? []).join(', ');
+
+			knowledge.rag_config.DOCLING_PICTURE_DESCRIPTION_LOCAL = JSON.stringify(
+				config.DOCLING_PICTURE_DESCRIPTION_LOCAL ?? {},
+				null,
+				2
+			);
+			knowledge.rag_config.DOCLING_PICTURE_DESCRIPTION_API = JSON.stringify(
+				config.DOCLING_PICTURE_DESCRIPTION_API ?? {},
+				null,
+				2
+			);
 		} else {
 			goto('/workspace/knowledge');
 		}

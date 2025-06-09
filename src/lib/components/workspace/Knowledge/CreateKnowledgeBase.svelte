@@ -256,7 +256,21 @@
                     // update ragconfig to load reranker
                     const backendRAGConfig = { ...filteredRAGConfig, knowledge_id: res.id };
 
-                    await updateRAGConfig(localStorage.token, backendRAGConfig);
+                    await updateRAGConfig(localStorage.token, {
+                        ...backendRAGConfig,
+                        ALLOWED_FILE_EXTENSIONS: backendRAGConfig.ALLOWED_FILE_EXTENSIONS.split(',')
+                            .map((ext) => ext.trim())
+                            .filter((ext) => ext !== ''),
+                        DATALAB_MARKER_LANGS: backendRAGConfig.DATALAB_MARKER_LANGS.split(',')
+                            .map((code) => code.trim())
+                            .filter((code) => code !== '')
+                            .join(', '),
+                        DOCLING_PICTURE_DESCRIPTION_LOCAL: JSON.parse(
+                            backendRAGConfig.DOCLING_PICTURE_DESCRIPTION_LOCAL || '{}'
+                        ),
+                        DOCLING_PICTURE_DESCRIPTION_API: JSON.parse(backendRAGConfig.DOCLING_PICTURE_DESCRIPTION_API || '{}')
+                    }
+                    );
 				}
 			}
         }
@@ -547,13 +561,101 @@
                         </div>
                     </div>
                 {:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'docling'}
-                    <div class="flex w-full mt-1">
-                        <input
-                            class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
-                            placeholder={$i18n.t('Enter Docling Server URL')}
-                            bind:value={RAGConfig.DOCLING_SERVER_URL}
-                        />
-                    </div>
+                        <div class="flex w-full mt-1">
+                            <input
+                                class="flex-1 w-full text-sm bg-transparent outline-hidden"
+                                placeholder={$i18n.t('Enter Docling Server URL')}
+                                bind:value={RAGConfig.DOCLING_SERVER_URL}
+                            />
+                        </div>
+                        <div class="flex w-full mt-2">
+                            <input
+                                class="flex-1 w-full text-sm bg-transparent outline-hidden"
+                                placeholder={$i18n.t('Enter Docling OCR Engine')}
+                                bind:value={RAGConfig.DOCLING_OCR_ENGINE}
+                            />
+                            <input
+                                class="flex-1 w-full text-sm bg-transparent outline-hidden"
+                                placeholder={$i18n.t('Enter Docling OCR Language(s)')}
+                                bind:value={RAGConfig.DOCLING_OCR_LANG}
+                            />
+                        </div>
+
+                        <div class="flex w-full mt-2">
+                            <div class="flex-1 flex justify-between">
+                                <div class=" self-center text-xs font-medium">
+                                    {$i18n.t('Describe Pictures in Documents')}
+                                </div>
+                                <div class="flex items-center relative">
+                                    <Switch bind:state={RAGConfig.DOCLING_DO_PICTURE_DESCRIPTION} />
+                                </div>
+                            </div>
+                        </div>
+                        {#if RAGConfig.DOCLING_DO_PICTURE_DESCRIPTION}
+                            <div class="flex justify-between w-full mt-2">
+                                <div class="self-center text-xs font-medium">
+                                    <Tooltip content={''} placement="top-start">
+                                        {$i18n.t('Picture Description Mode')}
+                                    </Tooltip>
+                                </div>
+                                <div class="">
+                                    <select
+                                        class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+                                        bind:value={RAGConfig.DOCLING_PICTURE_DESCRIPTION_MODE}
+                                    >
+                                        <option value="">{$i18n.t('Default')}</option>
+                                        <option value="local">{$i18n.t('Local')}</option>
+                                        <option value="api">{$i18n.t('API')}</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {#if RAGConfig.DOCLING_PICTURE_DESCRIPTION_MODE === 'local'}
+                                <div class="flex flex-col gap-2 mt-2">
+                                    <div class=" flex flex-col w-full justify-between">
+                                        <div class=" mb-1 text-xs font-medium">
+                                            {$i18n.t('Picture Description Local Config')}
+                                        </div>
+                                        <div class="flex w-full items-center relative">
+                                            <Tooltip
+                                                content={$i18n.t(
+                                                    'Options for running a local vision-language model in the picture description. The parameters refer to a model hosted on Hugging Face. This parameter is mutually exclusive with picture_description_api.'
+                                                )}
+                                                placement="top-start"
+                                                className="w-full"
+                                            >
+                                                <Textarea
+                                                    bind:value={RAGConfig.DOCLING_PICTURE_DESCRIPTION_LOCAL}
+                                                    placeholder={$i18n.t('Enter Config in JSON format')}
+                                                />
+                                            </Tooltip>
+                                        </div>
+                                    </div>
+                                </div>
+                            {:else if RAGConfig.DOCLING_PICTURE_DESCRIPTION_MODE === 'api'}
+                                <div class="flex flex-col gap-2 mt-2">
+                                    <div class=" flex flex-col w-full justify-between">
+                                        <div class=" mb-1 text-xs font-medium">
+                                            {$i18n.t('Picture Description API Config')}
+                                        </div>
+                                        <div class="flex w-full items-center relative">
+                                            <Tooltip
+                                                content={$i18n.t(
+                                                    'API details for using a vision-language model in the picture description. This parameter is mutually exclusive with picture_description_local.'
+                                                )}
+                                                placement="top-start"
+                                                className="w-full"
+                                            >
+                                                <Textarea
+                                                    bind:value={RAGConfig.DOCLING_PICTURE_DESCRIPTION_API}
+                                                    placeholder={$i18n.t('Enter Config in JSON format')}
+                                                />
+                                            </Tooltip>
+                                        </div>
+                                    </div>
+                                </div>
+                            {/if}
+                        {/if}
                 {:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'document_intelligence'}
                     <div class="my-0.5 flex gap-2 pr-2">
                         <input
@@ -850,11 +952,6 @@
                         <div class="flex items-center relative">
                             <Switch
                                 bind:state={RAGConfig.ENABLE_RAG_HYBRID_SEARCH}
-                                on:change={() => {
-                                    if (!RAGConfig.ENABLE_RAG_HYBRID_SEARCH) {
-                                        RAGConfig.RAG_RERANKING_MODEL = "";
-                                    }
-                                }}
                             />
                         </div>
                     </div>
