@@ -4,7 +4,7 @@ import mimetypes
 import os
 import shutil
 import asyncio
-
+import base64
 
 import uuid
 from datetime import datetime
@@ -1366,6 +1366,15 @@ def process_file(
             file.id,
             {"content": text_content},
         )
+        
+        # Store PDF base64 for OpenAI API
+        with open(file_path, "rb") as f:
+            upload_file_bytes = f.read()
+        uploaded_file_base64_string = base64.b64encode(upload_file_bytes).decode("utf-8")
+        Files.update_file_data_by_id(
+            file.id,
+            {"uploaded_file_base64_string": uploaded_file_base64_string},
+        )
 
         hash = calculate_sha256_string(text_content)
         Files.update_file_hash_by_id(file.id, hash)
@@ -1407,6 +1416,7 @@ def process_file(
                 "collection_name": None,
                 "filename": file.filename,
                 "content": text_content,
+                "uploaded_file_base64_string": uploaded_file_base64_string,
             }
 
     except Exception as e:
