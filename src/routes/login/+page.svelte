@@ -142,7 +142,7 @@
             <div>
                 <img crossorigin="anonymous" src={logoSrc} class=" w-10 mb-5" alt="logo" />
             </div>
-            <div class="font-medium mb-2.5 text-lightGray-100 dark:text-customGray-100">{$i18n.t('Welcome to')} {$WEBUI_NAME}</div>
+            <div class="font-medium mb-2.5 text-lightGray-100 dark:text-customGray-100">{$i18n.t('Welcome to')} Beyond Chat</div>
             <div class="font-medium text-center text-xs text-[#8A8B8D] dark:text-customGray-300">{$i18n.t('Sign in to continue')}</div>
         </div>
 		<div class="flex-1 mb-2.5">
