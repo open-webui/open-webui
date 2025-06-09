@@ -97,6 +97,7 @@ from open_webui.models.functions import Functions
 from open_webui.models.models import Models
 from open_webui.models.users import UserModel, Users
 from open_webui.models.chats import Chats
+from open_webui.utils.event_listener import register_user_event_listener
 
 from open_webui.config import (
     LICENSE_KEY,
@@ -1744,3 +1745,6 @@ else:
     log.warning(
         f"Frontend build directory not found at '{FRONTEND_BUILD_DIR}'. Serving API only."
     )
+
+# Register event listeners during application initialization
+register_user_event_listener()
