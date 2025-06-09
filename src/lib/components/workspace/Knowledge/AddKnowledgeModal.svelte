@@ -43,7 +43,7 @@
 		<div>
 			<ul>
 				{#each collections as knowledge}
-					<li class="grid grid-cols-[40px_80px_340px_1fr_1fr] gap-4 py-2.5 border-b border-lightGray-400 dark:border-customGray-700">
+					<li class="grid grid-cols-[40px_100px_300px_150px_1fr] gap-4 py-2.5 border-b border-lightGray-400 dark:border-customGray-700">
 						<div class="flex items-start justify-center">
 							<Checkbox
 								state={selectedKnowledge.find((k) => k.id === knowledge.id)
@@ -118,7 +118,7 @@
 						</div>
 
 						<div class="flex items-center text-xs text-lightGray-1200 line-clamp-1 dark:text-customGray-100">
-							{dayjs(knowledge.updated_at * 1000).fromNow()}
+							{dayjs(knowledge.updated_at * 1000).format('DD.MM.YYYY')}
 						</div>
 					</li>
 				{/each}
