@@ -646,7 +646,7 @@
 		{/if}
 
 		{#if ($models ?? []).length > 0 && ($settings?.pinnedModels ?? []).length > 0}
-			<div class="pt-1.5">
+			<div class="py-1">
 				{#each $settings.pinnedModels as modelId (modelId)}
 					{@const model = $models.find((model) => model.id === modelId)}
 					{#if model}
