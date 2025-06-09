@@ -169,7 +169,7 @@
 			return null;
 		});
 
-		if (res && res.status === 'success') {
+		if (res && res.message) {
 			toast.success(`${serverName} restarted successfully`);
 			await getBuiltinServersHandler();
 			await getMCPToolsHandler();

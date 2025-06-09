@@ -452,6 +452,35 @@ def get_server_description(name: str) -> str:
     }
     return descriptions.get(name, f"Built-in MCP server: {name}")
 
+@router.post("/servers/builtin/{server_name}/restart")
+async def restart_builtin_server(
+    request: Request,
+    server_name: str, 
+    user=Depends(get_admin_user)
+):
+    """Restart a built-in MCP server"""
+    try:
+        # Check if this is a valid built-in server
+        builtin_server_names = ['time_server']
+        if server_name not in builtin_server_names:
+            raise HTTPException(status_code=404, detail=f"Built-in server '{server_name}' not found")
+        
+        if not hasattr(request.app.state, 'mcp_manager') or not request.app.state.mcp_manager:
+            raise HTTPException(status_code=500, detail="MCP manager not available")
+        
+        # Restart the server
+        success = await request.app.state.mcp_manager.restart_server(server_name)
+        if not success:
+            raise HTTPException(status_code=500, detail=f"Failed to restart server {server_name}")
+        
+        return {"message": f"Built-in server {server_name} restarted successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.exception(f"Error restarting built-in MCP server: {e}")
+        raise HTTPException(status_code=500, detail=f"Error restarting built-in server: {str(e)}")
+
 # Pydantic models for external server management
 class MCPServerForm(BaseModel):
     name: str
