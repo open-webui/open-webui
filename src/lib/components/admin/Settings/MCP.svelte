@@ -495,10 +495,10 @@
 							<Spinner className="size-3" />
 						{/if}
 						<button
-							class="ml-auto px-3.5 py-1.5 text-sm font-medium bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 transition rounded-full"
+							class="ml-auto px-3.5 py-1.5 text-sm font-medium bg-gray-300 dark:bg-gray-800 text-gray-500 dark:text-gray-500 cursor-not-allowed rounded-full"
 							type="button"
 							aria-label="{$i18n.t('Add Server')}"
-							on:click={() => openServerModal()}
+							disabled
 						>
 							<Plus className="w-3 h-3 inline mr-1" />
 							{$i18n.t('Add Server')}
@@ -605,7 +605,12 @@
 						{/each}
 					{:else}
 						<div class="text-xs text-gray-700 dark:text-gray-400 p-3 border border-dashed dark:border-gray-700 rounded-lg text-center">
-							{$i18n.t('No external servers configured. Click "Add Server" to create your first external MCP server.')}
+							<div class="mb-2">
+								{$i18n.t('External MCP servers are still in development.')}
+							</div>
+							<div class="text-gray-600 dark:text-gray-400">
+								{$i18n.t('This feature will be available in a future update.')}
+							</div>
 						</div>
 					{/if}
 				</div>
