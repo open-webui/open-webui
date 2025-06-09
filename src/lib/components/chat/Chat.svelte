@@ -1627,8 +1627,10 @@
 			},
 			`${WEBUI_BASE_URL}/api`
 		).catch((error) => {
-			toast.error(`${error}`);
-
+			if(!error?.includes('402')) {
+				toast.error(`${error}`);
+			}
+			
 			responseMessage.error = {
 				content: error
 			};
