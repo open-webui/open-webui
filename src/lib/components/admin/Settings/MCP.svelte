@@ -904,7 +904,7 @@
 					{$i18n.t('Cancel')}
 				</button>
 				<button
-					class="px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-600 rounded-lg transition"
+					class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 					type="button"
 					on:click={saveServerHandler}
 				>
