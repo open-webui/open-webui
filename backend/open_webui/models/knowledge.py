@@ -245,8 +245,9 @@ class KnowledgeTable:
             from sqlalchemy import func
             with get_db() as db:
                 if db.bind.dialect.name == "sqlite":
-                    func.json_extract(Knowledge.rag_config, f'$.{model_type}') == model,
-                
+                    query = db.query(Knowledge).filter(
+                        func.json_extract(Knowledge.rag_config, f'$.{model_type}') == model
+                    )
                 elif db.bind.dialect.name == "postgresql":
                     query = db.query(Knowledge).filter(
                     Knowledge.rag_config.op("->>")(model_type) == model,

@@ -21,7 +21,8 @@
 		channels,
 		socket,
 		config,
-		isApp
+		isApp,
+		models
 	} from '$lib/stores';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 
@@ -641,6 +642,46 @@
 						<div class=" self-center font-medium text-sm font-primary">{$i18n.t('Workspace')}</div>
 					</div>
 				</a>
+			</div>
+		{/if}
+
+		{#if ($models ?? []).length > 0 && ($settings?.pinnedModels ?? []).length > 0}
+			<div class="py-1">
+				{#each $settings.pinnedModels as modelId (modelId)}
+					{@const model = $models.find((model) => model.id === modelId)}
+					{#if model}
+						<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
+							<a
+								class="grow flex items-center space-x-2.5 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+								href="/?model={modelId}"
+								on:click={() => {
+									selectedChatId = null;
+									chatId.set('');
+
+									if ($mobile) {
+										showSidebar.set(false);
+									}
+								}}
+								draggable="false"
+							>
+								<div class="self-center">
+									<img
+										crossorigin="anonymous"
+										src={model?.info?.meta?.profile_image_url ?? '/static/favicon.png'}
+										class=" size-5 rounded-full -translate-x-[0.5px]"
+										alt="logo"
+									/>
+								</div>
+
+								<div class="flex self-center translate-y-[0.5px]">
+									<div class=" self-center font-medium text-sm font-primary line-clamp-1">
+										{model?.name ?? modelId}
+									</div>
+								</div>
+							</a>
+						</div>
+					{/if}
+				{/each}
 			</div>
 		{/if}
 

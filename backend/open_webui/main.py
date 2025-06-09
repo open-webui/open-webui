@@ -8,6 +8,8 @@ import shutil
 import sys
 import time
 import random
+from uuid import uuid4
+
 
 from contextlib import asynccontextmanager
 from urllib.parse import urlencode, parse_qs, urlparse
@@ -19,6 +21,7 @@ from aiocache import cached
 import aiohttp
 import anyio.to_thread
 import requests
+from redis import Redis
 
 
 from fastapi import (
@@ -231,6 +234,9 @@ from open_webui.config import (
     DOCLING_OCR_ENGINE,
     DOCLING_OCR_LANG,
     DOCLING_DO_PICTURE_DESCRIPTION,
+    DOCLING_PICTURE_DESCRIPTION_MODE,
+    DOCLING_PICTURE_DESCRIPTION_LOCAL,
+    DOCLING_PICTURE_DESCRIPTION_API,
     DOCUMENT_INTELLIGENCE_ENDPOINT,
     DOCUMENT_INTELLIGENCE_KEY,
     MISTRAL_OCR_API_KEY,
@@ -393,6 +399,7 @@ from open_webui.env import (
     SAFE_MODE,
     SRC_LOG_LEVELS,
     VERSION,
+    INSTANCE_ID,
     WEBUI_BUILD_HASH,
     WEBUI_SECRET_KEY,
     WEBUI_SESSION_COOKIE_SAME_SITE,
@@ -434,8 +441,10 @@ from open_webui.utils.auth import (
 from open_webui.utils.plugin import install_tool_and_function_dependencies
 from open_webui.utils.oauth import OAuthManager
 from open_webui.utils.security_headers import SecurityHeadersMiddleware
+from open_webui.utils.redis import get_redis_connection
 
 from open_webui.tasks import (
+    redis_task_command_listener,
     list_task_ids_by_chat_id,
     stop_task,
     list_tasks,
@@ -487,7 +496,9 @@ https://github.com/open-webui/open-webui
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    app.state.instance_id = INSTANCE_ID
     start_logger()
+
     if RESET_CONFIG_ON_START:
         reset_config()
 
@@ -499,6 +510,19 @@ async def lifespan(app: FastAPI):
     log.info("Installing external dependencies of functions and tools...")
     install_tool_and_function_dependencies()
 
+    app.state.redis = get_redis_connection(
+        redis_url=REDIS_URL,
+        redis_sentinels=get_sentinels_from_env(
+            REDIS_SENTINEL_HOSTS, REDIS_SENTINEL_PORT
+        ),
+        async_mode=True,
+    )
+
+    if app.state.redis is not None:
+        app.state.redis_task_command_listener = asyncio.create_task(
+            redis_task_command_listener(app)
+        )
+
     if THREAD_POOL_SIZE and THREAD_POOL_SIZE > 0:
         limiter = anyio.to_thread.current_default_thread_limiter()
         limiter.total_tokens = THREAD_POOL_SIZE
@@ -506,6 +530,9 @@ async def lifespan(app: FastAPI):
     asyncio.create_task(periodic_usage_pool_cleanup())
 
     yield
+
+    if hasattr(app.state, "redis_task_command_listener"):
+        app.state.redis_task_command_listener.cancel()
 
 
 app = FastAPI(
@@ -518,10 +545,12 @@ app = FastAPI(
 
 oauth_manager = OAuthManager(app)
 
+app.state.instance_id = None
 app.state.config = AppConfig(
     redis_url=REDIS_URL,
     redis_sentinels=get_sentinels_from_env(REDIS_SENTINEL_HOSTS, REDIS_SENTINEL_PORT),
 )
+app.state.redis = None
 
 app.state.WEBUI_NAME = WEBUI_NAME
 app.state.LICENSE_METADATA = None
@@ -706,6 +735,9 @@ app.state.config.DOCLING_SERVER_URL = DOCLING_SERVER_URL
 app.state.config.DOCLING_OCR_ENGINE = DOCLING_OCR_ENGINE
 app.state.config.DOCLING_OCR_LANG = DOCLING_OCR_LANG
 app.state.config.DOCLING_DO_PICTURE_DESCRIPTION = DOCLING_DO_PICTURE_DESCRIPTION
+app.state.config.DOCLING_PICTURE_DESCRIPTION_MODE = DOCLING_PICTURE_DESCRIPTION_MODE
+app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL = DOCLING_PICTURE_DESCRIPTION_LOCAL
+app.state.config.DOCLING_PICTURE_DESCRIPTION_API = DOCLING_PICTURE_DESCRIPTION_API
 app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT = DOCUMENT_INTELLIGENCE_ENDPOINT
 app.state.config.DOCUMENT_INTELLIGENCE_KEY = DOCUMENT_INTELLIGENCE_KEY
 app.state.config.MISTRAL_OCR_API_KEY = MISTRAL_OCR_API_KEY
@@ -1389,26 +1421,30 @@ async def chat_action(
 
 
 @app.post("/api/tasks/stop/{task_id}")
-async def stop_task_endpoint(task_id: str, user=Depends(get_verified_user)):
+async def stop_task_endpoint(
+    request: Request, task_id: str, user=Depends(get_verified_user)
+):
     try:
-        result = await stop_task(task_id)
+        result = await stop_task(request, task_id)
         return result
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
 @app.get("/api/tasks")
-async def list_tasks_endpoint(user=Depends(get_verified_user)):
-    return {"tasks": list_tasks()}
+async def list_tasks_endpoint(request: Request, user=Depends(get_verified_user)):
+    return {"tasks": await list_tasks(request)}
 
 
 @app.get("/api/tasks/chat/{chat_id}")
-async def list_tasks_by_chat_id_endpoint(chat_id: str, user=Depends(get_verified_user)):
+async def list_tasks_by_chat_id_endpoint(
+    request: Request, chat_id: str, user=Depends(get_verified_user)
+):
     chat = Chats.get_chat_by_id(chat_id)
     if chat is None or chat.user_id != user.id:
         return {"task_ids": []}
 
-    task_ids = list_task_ids_by_chat_id(chat_id)
+    task_ids = await list_task_ids_by_chat_id(request, chat_id)
 
     print(f"Task IDs for chat {chat_id}: {task_ids}")
     return {"task_ids": task_ids}

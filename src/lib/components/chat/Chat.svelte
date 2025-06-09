@@ -438,6 +438,12 @@
 		window.addEventListener('message', onMessageHandler);
 		$socket?.on('chat-events', chatEventHandler);
 
+		page.subscribe((page) => {
+			if (page.url.pathname === '/') {
+				initNewChat();
+			}
+		});
+
 		if (!$chatId) {
 			chatIdUnsubscriber = chatId.subscribe(async (value) => {
 				if (!value) {

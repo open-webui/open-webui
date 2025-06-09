@@ -600,6 +600,9 @@ async def get_rag_config(request: Request, collectionForm: CollectionForm, user=
         "DOCLING_OCR_ENGINE": rag_config.get("DOCLING_OCR_ENGINE", request.app.state.config.DOCLING_OCR_ENGINE),
         "DOCLING_OCR_LANG": rag_config.get("DOCLING_OCR_LANG", request.app.state.config.DOCLING_OCR_LANG),
         "DOCLING_DO_PICTURE_DESCRIPTION": rag_config.get("DOCLING_DO_PICTURE_DESCRIPTION", request.app.state.config.DOCLING_DO_PICTURE_DESCRIPTION),
+        "DOCLING_PICTURE_DESCRIPTION_MODE": rag_config.get("DOCLING_PICTURE_DESCRIPTION_MODE", request.app.state.config.DOCLING_PICTURE_DESCRIPTION_MODE),
+        "DOCLING_PICTURE_DESCRIPTION_LOCAL": rag_config.get("DOCLING_PICTURE_DESCRIPTION_LOCAL", request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL),
+        "DOCLING_PICTURE_DESCRIPTION_API": rag_config.get("DOCLING_PICTURE_DESCRIPTION_API", request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API),
         "DOCUMENT_INTELLIGENCE_ENDPOINT": rag_config.get("DOCUMENT_INTELLIGENCE_ENDPOINT", request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT),
         "DOCUMENT_INTELLIGENCE_KEY": rag_config.get("DOCUMENT_INTELLIGENCE_KEY", request.app.state.config.DOCUMENT_INTELLIGENCE_KEY),
         "MISTRAL_OCR_API_KEY": rag_config.get("MISTRAL_OCR_API_KEY", request.app.state.config.MISTRAL_OCR_API_KEY),
@@ -766,6 +769,9 @@ class ConfigForm(BaseModel):
     DOCLING_OCR_ENGINE: Optional[str] = None
     DOCLING_OCR_LANG: Optional[str] = None
     DOCLING_DO_PICTURE_DESCRIPTION: Optional[bool] = None
+    DOCLING_PICTURE_DESCRIPTION_MODE: Optional[str] = None
+    DOCLING_PICTURE_DESCRIPTION_LOCAL: Optional[dict] = None
+    DOCLING_PICTURE_DESCRIPTION_API: Optional[dict] = None
     DOCUMENT_INTELLIGENCE_ENDPOINT: Optional[str] = None
     DOCUMENT_INTELLIGENCE_KEY: Optional[str] = None
     MISTRAL_OCR_API_KEY: Optional[str] = None
@@ -1050,6 +1056,22 @@ async def update_rag_config(
             else request.app.state.config.DOCLING_DO_PICTURE_DESCRIPTION
         )
 
+        request.app.state.config.DOCLING_PICTURE_DESCRIPTION_MODE = (
+            form_data.DOCLING_PICTURE_DESCRIPTION_MODE
+            if form_data.DOCLING_PICTURE_DESCRIPTION_MODE is not None
+            else request.app.state.config.DOCLING_PICTURE_DESCRIPTION_MODE
+        )
+        request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL = (
+            form_data.DOCLING_PICTURE_DESCRIPTION_LOCAL
+            if form_data.DOCLING_PICTURE_DESCRIPTION_LOCAL is not None
+            else request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL
+        )
+        request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API = (
+            form_data.DOCLING_PICTURE_DESCRIPTION_API
+            if form_data.DOCLING_PICTURE_DESCRIPTION_API is not None
+            else request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API
+        )
+
         request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT = (
             form_data.DOCUMENT_INTELLIGENCE_ENDPOINT
             if form_data.DOCUMENT_INTELLIGENCE_ENDPOINT is not None
@@ -1307,6 +1329,9 @@ async def update_rag_config(
             "DOCLING_OCR_ENGINE": request.app.state.config.DOCLING_OCR_ENGINE,
             "DOCLING_OCR_LANG": request.app.state.config.DOCLING_OCR_LANG,
             "DOCLING_DO_PICTURE_DESCRIPTION": request.app.state.config.DOCLING_DO_PICTURE_DESCRIPTION,
+            "DOCLING_PICTURE_DESCRIPTION_MODE": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_MODE,
+            "DOCLING_PICTURE_DESCRIPTION_LOCAL": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL,
+            "DOCLING_PICTURE_DESCRIPTION_API": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API,
             "DOCUMENT_INTELLIGENCE_ENDPOINT": request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
             "DOCUMENT_INTELLIGENCE_KEY": request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
             "MISTRAL_OCR_API_KEY": request.app.state.config.MISTRAL_OCR_API_KEY,
@@ -1667,6 +1692,15 @@ def process_file(
         docling_do_picture_description=rag_config.get(
             "DOCLING_DO_PICTURE_DESCRIPTION", request.app.state.config.DOCLING_DO_PICTURE_DESCRIPTION
         )
+        picture_description_mode = rag_config.get(
+            "PICTURE_DESCRIPTION_MODE", request.app.state.config.DOCLING_PICTURE_DESCRIPTION_MODE
+        )
+        picture_description_local = rag_config.get(
+            "PICTURE_DESCRIPTION_MODE", request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL
+        )
+        picture_description_api = rag_config.get(
+            "PICTURE_DESCRIPTION_API", request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API
+        )
         pdf_extract_images = rag_config.get(
             "PDF_EXTRACT_IMAGES", request.app.state.config.PDF_EXTRACT_IMAGES
         )
@@ -1757,9 +1791,14 @@ def process_file(
                     EXTERNAL_DOCUMENT_LOADER_API_KEY=external_document_loader_api_key,
                     TIKA_SERVER_URL=tika_server_url,
                     DOCLING_SERVER_URL=docling_server_url,
-                    DOCLING_OCR_ENGINE=docling_ocr_engine,
-                    DOCLING_OCR_LANG=docling_ocr_lang,
-                    DOCLING_DO_PICTURE_DESCRIPTION=docling_do_picture_description,
+                    DOCLING_PARAMS={
+                        "ocr_engine": docling_ocr_engine,
+                        "ocr_lang": docling_ocr_lang,
+                        "do_picture_description": docling_do_picture_description,
+                        "picture_description_mode": picture_description_mode,
+                        "picture_description_local": picture_description_local,
+                        "picture_description_api": picture_description_api,
+                    },
                     PDF_EXTRACT_IMAGES=pdf_extract_images,
                     DOCUMENT_INTELLIGENCE_ENDPOINT=document_intelligence_endpoint,
                     DOCUMENT_INTELLIGENCE_KEY=document_intelligence_key,
