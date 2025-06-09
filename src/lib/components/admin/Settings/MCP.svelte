@@ -70,6 +70,11 @@
 	
 	// Server connection status tracking for external servers
 
+	// Helper function to format server names for display
+	const formatServerName = (serverName: string) => {
+		return serverName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+	};
+
 	// Reactive statement to ensure we always have at least one input field
 	$: {
 		if (MCP_BASE_URLS.length === 0) {
@@ -220,6 +225,22 @@
 
 	const saveServerHandler = async () => {
 		try {
+			// Validate required fields
+			if (!serverForm.name.trim()) {
+				toast.error($i18n.t('Server name is required'));
+				return;
+			}
+			
+			if (serverForm.transport === 'stdio' && !serverForm.command.trim()) {
+				toast.error($i18n.t('Command is required for stdio transport'));
+				return;
+			}
+			
+			if (serverForm.transport === 'sse' && !serverForm.url.trim()) {
+				toast.error($i18n.t('URL is required for SSE transport'));
+				return;
+			}
+			
 			// Parse args from text
 			const args = serverFormArgsText.trim() ? serverFormArgsText.split('\n').map(arg => arg.trim()).filter(arg => arg) : [];
 			
@@ -229,7 +250,7 @@
 				try {
 					env = JSON.parse(serverFormEnvText);
 				} catch (e) {
-					toast.error('Invalid JSON in environment variables');
+					toast.error($i18n.t('Invalid JSON in environment variables'));
 					return;
 				}
 			}
@@ -256,7 +277,7 @@
 			}
 
 			if (res) {
-				toast.success(editingServer ? 'Server updated successfully' : 'Server created successfully');
+				toast.success(editingServer ? $i18n.t('Server updated successfully') : $i18n.t('Server created successfully'));
 				closeServerModal();
 				await getExternalServersHandler();
 				await getMCPToolsHandler();
@@ -270,7 +291,7 @@
 				}
 			}
 		} catch (error) {
-			toast.error(`Failed to save server: ${error}`);
+			toast.error($i18n.t('Failed to save server: {{error}}', { error }));
 		}
 	};
 
@@ -380,7 +401,7 @@
 
 				<div class="flex items-center gap-1.5">
 					<Tooltip content={$i18n.t('Enable MCP API')}>
-						<Switch bind:state={ENABLE_MCP_API} ariaLabel="Enable MCP API" />
+						<Switch bind:state={ENABLE_MCP_API} ariaLabel={$i18n.t('Enable MCP API')} />
 					</Tooltip>
 				</div>
 			</div>
@@ -419,7 +440,7 @@
 									<div class="flex-1 self-center">
 										<div class="font-medium text-sm">{server.display_name}</div>
 										<div class="text-xs text-gray-700 dark:text-gray-400 line-clamp-1">
-											{server.description} • {server.tools_count} {server.tools_count === 1 ? $i18n.t('tool') : $i18n.t('tools')}
+											{server.tools_count} {server.tools_count === 1 ? $i18n.t('tool') : $i18n.t('tools')}
 										</div>
 									</div>
 								</div>
@@ -465,7 +486,7 @@
 							<Spinner className="size-3" />
 						{/if}
 						<button
-							class="ml-auto px-2 py-1 text-purple-700 dark:text-purple-300 bg-purple-100 hover:bg-purple-200 dark:bg-purple-900 dark:hover:bg-purple-800 rounded text-xs transition"
+							class="ml-auto px-3.5 py-1.5 text-sm font-medium bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 transition rounded-full"
 							type="button"
 							aria-label="{$i18n.t('Add Server')}"
 							on:click={() => openServerModal()}
@@ -491,7 +512,7 @@
 									<div class="flex-1 self-center">
 										<div class="font-medium text-sm">{server.name}</div>
 										<div class="text-xs text-gray-700 dark:text-gray-400 line-clamp-1">
-											{server.description || 'External MCP Server'} • {server.tools_count || 0} {(server.tools_count || 0) === 1 ? $i18n.t('tool') : $i18n.t('tools')}
+											{server.tools_count || 0} {(server.tools_count || 0) === 1 ? $i18n.t('tool') : $i18n.t('tools')}
 										</div>
 									</div>
 								</div>
@@ -619,13 +640,10 @@
 									{:else}
 										<!-- External MCP Server Tool -->
 										<span class="inline-flex items-center rounded-full bg-purple-100 dark:bg-purple-900 px-2 py-1 text-xs font-medium text-purple-700 dark:text-purple-300">
-											External
+											{$i18n.t('External')}
 										</span>
 									{/if}
 								</div>
-								{#if tool.description}
-									<div class="text-xs text-gray-700 dark:text-gray-400 mt-1 ml-6">{tool.description}</div>
-								{/if}
 								<!-- Server Source Information -->
 								{#if tool.mcp_server_url}
 									<div class="flex items-center gap-1 mt-2 ml-6">
@@ -644,7 +662,7 @@
 										<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-3 h-3 text-gray-600">
 											<path d="M21.731 2.269a2.625 2.625 0 00-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 000-3.712zM19.513 8.199l-3.712-3.712-12.15 12.15a5.25 5.25 0 00-1.32 2.214l-.8 2.685a.75.75 0 00.933.933l2.685-.8a5.25 5.25 0 002.214-1.32L19.513 8.2z" />
 										</svg>
-										<span class="text-xs text-gray-600">{$i18n.t('Built-in Server Tool')}</span>
+										<span class="text-xs text-gray-600">{$i18n.t('Built-in Server')}: {tool.mcp_server_name ? formatServerName(tool.mcp_server_name) : $i18n.t('Unknown')}</span>
 									</div>
 								{:else if tool.mcp_server_name}
 									<!-- External server indicator -->
@@ -652,7 +670,7 @@
 										<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-3 h-3 text-gray-600">
 											<path d="M6.75 6a.75.75 0 0 1 .75-.75h9a.75.75 0 0 1 .75.75v6a.75.75 0 0 1-.75.75h-9A.75.75 0 0 1 6.75 12V6Z" />
 										</svg>
-										<span class="text-xs text-gray-600">External Server: {tool.mcp_server_name}</span>
+										<span class="text-xs text-gray-600">{$i18n.t('External Server')}: {tool.mcp_server_name}</span>
 									</div>
 								{/if}
 								{#if tool.inputSchema}
@@ -809,7 +827,7 @@
 										id="server-url"
 										type="url"
 										class="w-full rounded-lg py-2 px-3 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none border border-gray-300 dark:border-gray-600 focus:border-purple-500 dark:focus:border-purple-400"
-										placeholder={$i18n.t('http://localhost:3000')}
+										placeholder={`e.g.) "http://localhost:3000"`}
 										bind:value={serverForm.url}
 										required
 									/>
@@ -825,7 +843,7 @@
 										min="1"
 										max="65535"
 										class="w-full rounded-lg py-2 px-3 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none border border-gray-300 dark:border-gray-600 focus:border-purple-500 dark:focus:border-purple-400"
-										placeholder={$i18n.t('3000')}
+										placeholder="'3000'"
 										bind:value={serverForm.port}
 									/>
 								</div>
@@ -861,7 +879,7 @@
 								<div class="text-sm font-medium text-gray-700 dark:text-gray-300">{$i18n.t('Start server automatically')}</div>
 								<div class="text-xs text-gray-500">{$i18n.t('Start this server when the application starts')}</div>
 							</div>
-							<Switch bind:state={serverForm.is_active} ariaLabel="Auto-start server" />
+							<Switch bind:state={serverForm.is_active} ariaLabel={$i18n.t('Auto-start server')} />
 						</div>
 					</div>
 				</form>
