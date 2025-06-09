@@ -544,18 +544,16 @@ def load_oauth_providers():
     ):
 
         if MICROSOFT_CLOUD.value == "azureusgovernmentcloud":
-            domain = "microsoftonline.us"
-        elif MICROSOFT_CLOUD.value == "azurechinacloud":
-            domain = "chinacloudapi.cn"
+            domain = "us"
         else:
-            domain = "microsoftonline.com"
+            domain = "com"
 
         def microsoft_oauth_register(client):
             client.register(
                 name="microsoft",
                 client_id=MICROSOFT_CLIENT_ID.value,
                 client_secret=MICROSOFT_CLIENT_SECRET.value,
-                server_metadata_url=f"https://login.{domain}/{MICROSOFT_CLIENT_TENANT_ID.value}/v2.0/.well-known/openid-configuration?appid={MICROSOFT_CLIENT_ID.value}",
+                server_metadata_url=f"https://login.microsoftonline.{domain}/{MICROSOFT_CLIENT_TENANT_ID.value}/v2.0/.well-known/openid-configuration?appid={MICROSOFT_CLIENT_ID.value}",
                 client_kwargs={
                     "scope": MICROSOFT_OAUTH_SCOPE.value,
                 },
@@ -564,7 +562,7 @@ def load_oauth_providers():
 
         OAUTH_PROVIDERS["microsoft"] = {
             "redirect_uri": MICROSOFT_REDIRECT_URI.value,
-            "picture_url": f"https://graph.{domain}/v1.0/me/photo/$value",
+            "picture_url": f"https://graph.microsoft.{domain}/v1.0/me/photo/$value",
             "register": microsoft_oauth_register,
         }
 
