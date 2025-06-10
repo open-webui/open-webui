@@ -410,10 +410,10 @@
 				</div>
 			{/if}
 
-			<div class="px-3 max-h-64 overflow-y-auto group relative">
+			<div class="px-3">
 				{#if tags && items.filter((item) => !(item.model?.info?.meta?.hidden ?? false)).length > 0}
 					<div
-						class=" flex w-full sticky top-0 z-10 bg-white dark:bg-gray-850 overflow-x-auto scrollbar-none"
+						class=" flex w-full bg-white dark:bg-gray-850 overflow-x-auto scrollbar-none"
 						on:wheel={(e) => {
 							if (e.deltaY !== 0) {
 								e.preventDefault();
@@ -495,7 +495,9 @@
 						</div>
 					</div>
 				{/if}
+			</div>
 
+			<div class="px-3 max-h-64 overflow-y-auto group relative">
 				{#each filteredItems as item, index}
 					<ModelItem
 						{selectedModelIdx}
