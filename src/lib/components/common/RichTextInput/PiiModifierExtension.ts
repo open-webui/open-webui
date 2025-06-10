@@ -1,9 +1,8 @@
 import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey } from 'prosemirror-state';
-import { Decoration, DecorationSet } from 'prosemirror-view';
 import type { Node as ProseMirrorNode } from 'prosemirror-model';
 
-// Types for the NENNA API modifiers
+// Types for the Shield API modifiers
 export type ModifierType = 'ignore' | 'mask';
 
 export interface PiiModifier {
@@ -86,35 +85,7 @@ function findWordAt(doc: ProseMirrorNode, pos: number): { from: number; to: numb
 	return null;
 }
 
-// Create decorations for modifiers
-function createModifierDecorations(modifiers: PiiModifier[], doc: ProseMirrorNode): Decoration[] {
-	const decorations: Decoration[] = [];
 
-	modifiers.forEach((modifier) => {
-		const { from, to, type, label, id } = modifier;
-
-		// Ensure positions are valid for the current document
-		if (from >= 0 && to <= doc.content.size && from < to) {
-			const className = type === 'ignore' ? 'pii-modifier-ignore' : 'pii-modifier-mask';
-			const title = type === 'ignore' 
-				? `Ignored: "${modifier.entity}"` 
-				: `Masked as ${label}: "${modifier.entity}"`;
-
-			decorations.push(
-				Decoration.inline(from, to, {
-					class: `pii-modifier ${className}`,
-					'data-modifier-type': type,
-					'data-modifier-label': label || '',
-					'data-modifier-entity': modifier.entity,
-					'data-modifier-id': id,
-					title: title
-				})
-			);
-		}
-	});
-
-	return decorations;
-}
 
 // Create hover menu element
 function createHoverMenu(
@@ -374,33 +345,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 			},
 
 			props: {
-				decorations(state) {
-					const pluginState = piiModifierExtensionKey.getState(state);
-					if (!pluginState?.modifiers.length) {
-						return DecorationSet.empty;
-					}
-
-					const decorations = createModifierDecorations(pluginState.modifiers, state.doc);
-					return DecorationSet.create(state.doc, decorations);
-				},
-
 				handleClick(view, pos, event) {
-					const target = event.target as HTMLElement;
-
-					// Handle clicks on modifier decorations to remove them
-					if (target.classList.contains('pii-modifier')) {
-						const modifierId = target.getAttribute('data-modifier-id');
-						if (modifierId) {
-							const tr = view.state.tr.setMeta(piiModifierExtensionKey, {
-								type: 'REMOVE_MODIFIER',
-								modifierId
-							});
-							view.dispatch(tr);
-							event.preventDefault();
-							return true;
-						}
-					}
-
 					// Hide hover menu on click
 					if (hoverMenuElement) {
 						hoverMenuElement.remove();
@@ -437,20 +382,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 								return;
 							}
 
-							// Check if this word already has a modifier
-							const pluginState = piiModifierExtensionKey.getState(view.state);
-							const existingModifier = pluginState?.modifiers.find(m => 
-								m.from <= wordInfo.from && m.to >= wordInfo.to
-							);
-
-							if (existingModifier) {
-								// Don't show menu for words that already have modifiers
-								if (hoverMenuElement) {
-									hoverMenuElement.remove();
-									hoverMenuElement = null;
-								}
-								return;
-							}
+							// Note: Allow multiple modifiers for the same word since we don't show visual indicators
 
 							// Check if word is currently highlighted as PII (by PII detection)
 							const isPiiHighlighted = document.querySelector(`[data-pii-text="${wordInfo.text}"]`) !== null;
@@ -573,7 +505,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 				return true;
 			},
 
-			// Export modifiers in NENNA API format
+			// Export modifiers in Shield API format
 			exportModifiersForApi: () => ({ state }: any) => {
 				const pluginState = piiModifierExtensionKey.getState(state);
 				if (!pluginState?.modifiers.length) {
@@ -590,7 +522,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 	}
 });
 
-// Utility function to add CSS styles for the plugin
+// Utility function to add CSS styles for the hover menu only
 export function addPiiModifierStyles() {
 	const styleId = 'pii-modifier-styles';
 	
@@ -602,43 +534,6 @@ export function addPiiModifierStyles() {
 	const styleElement = document.createElement('style');
 	styleElement.id = styleId;
 	styleElement.textContent = `
-		.pii-modifier {
-			border-radius: 2px;
-			padding: 1px 2px;
-			cursor: pointer;
-			position: relative;
-		}
-
-		.pii-modifier-ignore {
-			background-color: rgba(255, 107, 107, 0.2);
-			border: 1px solid rgba(255, 107, 107, 0.4);
-		}
-
-		.pii-modifier-mask {
-			background-color: rgba(78, 205, 196, 0.2);
-			border: 1px solid rgba(78, 205, 196, 0.4);
-		}
-
-		.pii-modifier:hover {
-			opacity: 0.8;
-		}
-
-		.pii-modifier:hover::after {
-			content: '×';
-			position: absolute;
-			right: -8px;
-			top: -8px;
-			background: #ff4757;
-			color: white;
-			border-radius: 50%;
-			width: 16px;
-			height: 16px;
-			font-size: 12px;
-			line-height: 16px;
-			text-align: center;
-			cursor: pointer;
-		}
-
 		.pii-modifier-hover-menu {
 			animation: fadeIn 0.2s ease-in-out;
 			pointer-events: auto;
