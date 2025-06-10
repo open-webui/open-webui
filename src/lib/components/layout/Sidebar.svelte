@@ -664,7 +664,7 @@
 								}}
 								draggable="false"
 							>
-								<div class="self-center">
+								<div class="self-center shrink-0">
 									<img
 										crossorigin="anonymous"
 										src={model?.info?.meta?.profile_image_url ?? '/static/favicon.png'}
