@@ -420,7 +420,7 @@ def load_b64_image_data(b64_str):
     try:
         if "," in b64_str:
             header, encoded = b64_str.split(",", 1)
-            mime_type = header.split(";")[0]
+            mime_type = header.split(";")[0].lstrip("data:")
             img_data = base64.b64decode(encoded)
         else:
             mime_type = "image/png"
@@ -428,7 +428,7 @@ def load_b64_image_data(b64_str):
         return img_data, mime_type
     except Exception as e:
         log.exception(f"Error loading image data: {e}")
-        return None
+        return None, None
 
 
 def load_url_image_data(url, headers=None):
