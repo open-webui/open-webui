@@ -86,10 +86,10 @@ async def create_subscription_session(request: CreateSubscriptionRequest, user=D
 
         plan = SUBSCRIPTION_PLANS[request.plan_id]
         stripe_price_id = plan["stripe_price_id"]
-        
+
         if not stripe_price_id:
             raise HTTPException(status_code=400, detail=f"Stripe price ID not configured for plan: {request.plan_id}")
-            
+
         company = Companies.get_company_by_id(user.company_id)
         stripe_customer_id = company.stripe_customer_id
 
@@ -111,16 +111,42 @@ async def create_subscription_session(request: CreateSubscriptionRequest, user=D
 
         # Create a new Stripe Checkout session for the new subscription
         print(f"Creating new subscription with price ID: {stripe_price_id} for plan: {request.plan_id}")
-        
+
         # Check for existing subscriptions
         existing_subscriptions = stripe.Subscription.list(
             customer=stripe_customer_id,
             status='all',
             limit=10
         )
-        
+
         # Get current active subscription if any
         current_subscription = next((sub for sub in existing_subscriptions.data if sub.status in ['active', 'trialing']), None)
+
+        # Handle case where user has no active subscription
+        if current_subscription is None:
+            # For new subscriptions with no existing plan
+            session = stripe.checkout.Session.create(
+                payment_method_types=['card'],
+                line_items=[{
+                    'price': stripe_price_id,
+                    'quantity': 1,
+                }],
+                mode='subscription',
+                customer=stripe_customer_id,
+                success_url=os.getenv('BACKEND_ADDRESS') + "?modal=company-settings&tab=billing",
+                cancel_url=os.getenv('BACKEND_ADDRESS'),
+                subscription_data={
+                    'metadata': {
+                        'company_id': user.company_id,
+                        'plan_id': request.plan_id,
+                        'user_email': user.email,
+                        'is_downgrade': 'false'
+                    }
+                }
+            )
+            return {"url": session.url}
+
+        # If we have a current subscription, proceed with upgrade/downgrade logic
         current_plan_id = current_subscription.metadata.get('plan_id')
         current_plan = SUBSCRIPTION_PLANS[current_plan_id]
         new_plan = SUBSCRIPTION_PLANS[request.plan_id]
