@@ -28,7 +28,7 @@
 			tags: []
 		};
 
-	let accessControl = null;
+	let accessControl = {};
 
 	let showAccessControlModal = false;
 

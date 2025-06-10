@@ -72,7 +72,7 @@
 				};
 			}
 		}).sort((a, b) => (orderMap.get(a?.name) ?? Infinity) - (orderMap.get(b?.name) ?? Infinity));
-		storeModels.set(baseModels);
+		// storeModels.set(baseModels);
 	};
 
 	const defaultInit = async () => {
@@ -282,7 +282,7 @@
 								return item.toLowerCase()
 							})
 							.includes(m.name.toLowerCase())) as model (model.name)}
-						<div class="grid grid-cols-[55%_15%_1fr] md:grid-cols-[55%_1fr_1fr] border-t last:border-b border-lightGray-400 dark:border-customGray-700">
+						<div class="grid grid-cols-[55%_15%_1fr] md:grid-cols-[54%_1fr_1fr] border-t last:border-b border-lightGray-400 dark:border-customGray-700">
 							<div class="border-l border-r border-lightGray-400 dark:border-customGray-700 py-2 px-2">
 								<div class="flex items-center mb-1">
 									<img class="w-4 h-4 rounded-full" src={getModelIcon(model.name)} alt={model.name} />
@@ -320,21 +320,21 @@
 									>
 										{#if model.access_control === null}
 											<div
-												class="cursor-pointer flex items-center gap-1 text-xs dark:text-customGray-100/50 leading-none"
+												class="cursor-pointer flex items-center gap-1 text-xs dark:text-customGray-100/50 leading-none whitespace-nowrap"
 											>
 												<PublicIcon className="size-3" />{$i18n.t('Public')}
 											</div>
 										{:else if [...(model?.access_control?.read?.group_ids ?? []), ...(model?.access_control?.write?.group_ids ?? [])].length > 0}
 											<div
-												class="cursor-pointer flex items-center gap-1 text-xs dark:text-customGray-100/50 leading-none"
+												class="cursor-pointer flex items-center gap-1 text-xs dark:text-customGray-100/50 leading-none whitespace-nowrap"
 											>
 												<GroupIcon className="size-3" />{$i18n.t('Group')}
 											</div>
 										{:else}
 											<div
-												class="cursor-pointer flex items-center gap-1 text-xs dark:text-customGray-100/50 leading-none"
+												class="cursor-pointer flex items-center gap-1 text-xs dark:text-customGray-100/50 leading-none whitespace-nowrap"
 											>
-												<PrivateIcon className="size-3" />{$i18n.t('Private')}
+												<PrivateIcon className="size-3" />{$i18n.t('Admin Only')}
 											</div>
 										{/if}
 									</div>

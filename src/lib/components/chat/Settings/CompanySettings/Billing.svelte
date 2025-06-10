@@ -148,19 +148,19 @@
 					<div class="bg-lightGray-300 dark:bg-customGray-900 rounded-lg p-5 flex flex-col items-center">
 						{#if plan.id === 'starter'}
 							<div
-								class="mb-2.5 flex justify-center items-center w-[50px] h-[50px] bg-[#024D15] rounded-mdx text-[#0F8C18]"
+								class="mb-2.5 flex justify-center items-center w-[50px] h-[50px] bg-[#2EA937] dark:bg-[#024D15] rounded-mdx text-[#AAE0AE] dark:text-[#0F8C18]"
 							>
 								<StarterPlanIcon className="size-6" />
 							</div>
 						{:else if plan.id === 'team'}
 							<div
-								class="mb-2.5 flex justify-center items-center w-[50px] h-[50px] bg-[#4621A5] rounded-mdx text-[#A588EF]"
+								class="mb-2.5 flex justify-center items-center w-[50px] h-[50px] bg-[#A588EF] dark:bg-[#4621A5] rounded-mdx text-[#E7E1F7] dark:text-[#A588EF]"
 							>
 								<BusinessPlanIcon className="size-6" />
 							</div>
 						{:else if plan.id === 'growth'}
 							<div
-								class="mb-2.5 flex justify-center items-center w-[50px] h-[50px] bg-[#840E70] rounded-mdx text-[#F294E2]"
+								class="mb-2.5 flex justify-center items-center w-[50px] h-[50px] bg-[#E767D2] dark:bg-[#840E70] rounded-mdx text-[#FCEBF9] dark:text-[#F294E2]"
 							>
 								<GrowthPlanIcon className="size-6" />
 							</div>
@@ -218,25 +218,25 @@
 				<div class="flex items-center gap-2.5">
 					{#if $subscription?.plan === 'starter' || $subscription?.plan === 'free'}
 						<div
-							class="flex justify-center items-center w-[50px] h-[50px] bg-[#024D15] rounded-mdx text-[#0F8C18]"
+							class="flex justify-center items-center w-[50px] h-[50px] bg-[#2EA937] dark:bg-[#024D15] rounded-mdx text-[#AAE0AE] dark:text-[#0F8C18]"
 						>
 							<StarterPlanIcon className="size-6" />
 						</div>
 					{:else if $subscription?.plan === 'team'}
 						<div
-							class="flex justify-center items-center w-[50px] h-[50px] bg-[#4621A5] rounded-mdx text-[#A588EF]"
+							class="flex justify-center items-center w-[50px] h-[50px] bg-[#A588EF] dark:bg-[#4621A5] rounded-mdx text-[#E7E1F7] dark:text-[#A588EF]"
 						>
 							<BusinessPlanIcon className="size-6" />
 						</div>
 					{:else if $subscription?.plan === 'growth'}
 						<div
-							class="flex justify-center items-center w-[50px] h-[50px] bg-[#840E70] rounded-mdx text-[#F294E2]"
+							class="flex justify-center items-center w-[50px] h-[50px] bg-[#E767D2] dark:bg-[#840E70] rounded-mdx text-[#FCEBF9] dark:text-[#F294E2]"
 						>
 							<GrowthPlanIcon className="size-6" />
 						</div>
 					{:else if $subscription?.plan === 'unlimited'}
 					<div
-						class="flex justify-center items-center w-[50px] h-[50px] bg-[#A54300] rounded-mdx text-[#FFD8A8]"
+						class="flex justify-center items-center w-[50px] h-[50px] bg-[#DA702C] dark:bg-[#A54300] rounded-mdx text-[#FFD6A8] dark:text-[#FFD8A8]"
 					>
 						<StarterPlanIcon className="size-6" />
 				</div>

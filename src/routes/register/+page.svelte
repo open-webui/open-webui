@@ -128,7 +128,7 @@
 		<div>
 			<img crossorigin="anonymous" src={logoSrc} class=" w-10 mb-5" alt="logo" />
 		</div>
-		<div>{$i18n.t('Welcome to')} {$WEBUI_NAME}</div>
+		<div>{$i18n.t('Welcome to')} Beyond Chat</div>
 	</div>
 	<form
 		class="flex flex-col self-center bg-lightGray-800 dark:bg-customGray-800 rounded-2xl w-full md:w-[31rem] px-5 py-5 md:pt-8 md:px-24 md:pb-16"
