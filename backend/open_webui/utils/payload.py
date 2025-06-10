@@ -332,6 +332,8 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
             ollama_payload["system"] = ollama_options["system"]
             del ollama_options["system"]
 
+        ollama_payload["options"] = ollama_options
+
     # If there is the "stop" parameter in the openai_payload, remap it to the ollama_payload.options
     if "stop" in openai_payload:
         ollama_options = ollama_payload.get("options", {})
