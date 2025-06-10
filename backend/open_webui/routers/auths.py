@@ -65,6 +65,7 @@ log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
 class SessionUserResponse(Token, UserResponse):
+    created_at: int
     expires_at: Optional[int] = None
     permissions: Optional[dict] = None
 
@@ -111,6 +112,7 @@ async def get_session_user(
         "email": user.email,
         "name": user.name,
         "role": user.role,
+        "created_at": user.created_at,
         "profile_image_url": user.profile_image_url,
         "permissions": user_permissions,
     }
