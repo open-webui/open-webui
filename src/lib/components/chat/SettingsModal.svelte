@@ -571,10 +571,12 @@
 							strokeWidth={($settings.highContrastMode ?? false) ? '3' : '1.5'}
 						/>
 					</div>
+					<label class="sr-only" for="search-input-settings-modal">{$i18n.t('Search')}</label>
 					<input
 						class={`w-full py-1.5 text-sm bg-transparent dark:text-gray-300 outline-hidden
 								${($settings.highContrastMode ?? false) ? 'placeholder-gray-800' : ''}`}
 						bind:value={search}
+						id="search-input-settings-modal"
 						on:input={searchDebounceHandler}
 						placeholder={$i18n.t('Search')}
 					/>
