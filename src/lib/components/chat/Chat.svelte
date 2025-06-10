@@ -793,7 +793,6 @@
 
 		const webUrl = $page.url.searchParams.get('web_url');
 		if (webUrl) {
-			// Assuming isValidHttpUrl is implicitly handled by uploadWeb or not strictly needed for this pass
 			await uploadWeb(webUrl);
 		}
 
