@@ -66,18 +66,24 @@ jobs:
     steps:
       - name: Trigger dev deployment
         run: |
+          COMMIT_TITLE="${{ needs.build-and-push.outputs.commit_title }}"
+          VERSION="${{ needs.build-and-push.outputs.version }}"
+          REPO_NAME="${{ github.event.repository.name }}"
+          
           RESPONSE="$(curl --request POST \
-            --form token=${{ secrets.GITLAB_CI_TOKEN }} \
+            --form token="$GITLAB_CI_TOKEN" \
             --form ref=main \
-            --form 'variables[pipeline_name]=${{ github.event.repository.name }} - ${{ needs.build-and-push.outputs.commit_title }}' \
-            --form 'variables[docker_image_tag]=${{ needs.build-and-push.outputs.version }}' \
-            --form 'variables[application_to_deploy]=${{ github.event.repository.name }}' \
-            --form 'variables[deployment_environment]=dev' \
+            --form "variables[pipeline_name]=$REPO_NAME - $COMMIT_TITLE" \
+            --form "variables[docker_image_tag]=$VERSION" \
+            --form "variables[application_to_deploy]=$REPO_NAME" \
+            --form "variables[deployment_environment]=dev" \
             'https://gitlab.com/api/v4/projects/58117805/trigger/pipeline')"
 
           if echo "$RESPONSE" | grep -q '"status":"created"'; then
-            echo $RESPONSE
+            echo "$RESPONSE"
           else
-            echo $RESPONSE
+            echo "Failed to trigger pipeline: $RESPONSE"
             exit 1
           fi
+        env:
+          GITLAB_CI_TOKEN: ${{ secrets.GITLAB_CI_TOKEN }}
