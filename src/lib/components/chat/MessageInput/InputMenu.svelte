@@ -426,75 +426,83 @@
 </Dropdown>
 
 <!-- Added-->
-<!-- Added--> 
-{#if showUploadWarning} 
-	<div 
-		class="fixed top-0 left-0 w-full h-full bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center"
+<!-- Added-->
+{#if showUploadWarning}
+	<div
+		class="fixed top-0 left-0 w-full h-full backdrop-blur-sm flex items-center justify-center"
 		style="z-index: 99999; position: fixed !important;"
-	> 
-		<div 
+		on:outroend={() => {
+			document.body.classList.remove('popup-active');
+		}}
+		on:introstart={() => {
+			document.body.classList.add('popup-active');
+		}}
+	>
+		<div
 			class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md mx-4 shadow-2xl border border-gray-200 dark:border-gray-700 relative"
-			style="direction: rtl; z-index: 100000;" 
-		> 
-			<h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white"> 
-				לפני העלאת קבצים - חשוב לדעת 
-			</h3> 
- 
-			<div class="space-y-3 mb-6"> 
-				<div class="flex items-start gap-2"> 
-					<span class="text-lg">⏱️</span>
-					<p class="text-sm text-gray-700 dark:text-gray-300"> 
-						קבצים גדולים דורשים זמן עיבוד ארוך יותר 
-					</p> 
-				</div> 
- 
-				<div class="flex items-start gap-2"> 
+			style="direction: rtl; z-index: 100000;"
+		>
+			<h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white" dir="rtl">
+				לפני העלאת קבצים - חשוב לדעת
+			</h3>
+			<div class="space-y-3 mb-6">
+				
+				<div class="flex items-start gap-2">
 					<span class="text-lg">✅</span>
-					<p class="text-sm text-gray-700 dark:text-gray-300"> 
-						וודאו שהקבצים תקינים (PDF, Word, Excel ועד 10MB)
-					</p> 
-				</div> 
- 
-				<div class="flex items-start gap-2"> 
+					<p class="text-sm text-gray-700 dark:text-gray-300">וודאו שהקבצים תקינים </p>
+				</div>
+				
+				<div class="flex items-start gap-2">
 					<span class="text-lg">🎯</span>
-					<p class="text-sm text-gray-700 dark:text-gray-300"> 
-						היו ספציפיים בשאלותיכם 
-					</p> 
-				</div> 
- 
-				<div class="flex items-start gap-2"> 
-					<span class="text-lg">🔒</span>
-					<p class="text-sm text-gray-700 dark:text-gray-300">אל תעלה מידע רגיש או סודי</p> 
-				</div> 
-			</div> 
- 
-			<!-- Checkbox "אל תציג שוב" --> 
-			<div class="flex items-center gap-2 mb-6"> 
-				<input 
-					type="checkbox" 
-					id="dontShowAgain" 
-					bind:checked={dontShowAgain} 
-					class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" 
-				/> 
-				<label for="dontShowAgain" class="text-sm text-gray-700 dark:text-gray-300"> 
-					אל תציג הודעה זו שוב 
-				</label> 
-			</div> 
- 
-			<div class="flex gap-3 justify-end"> 
-				<button 
-					class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors" 
-					on:click={closeWarning} 
-				> 
-					ביטול 
-				</button> 
-				<button 
-					class="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded transition-colors" 
-					on:click={proceedWithUpload} 
-				> 
-					המשך להעלאה 
-				</button> 
-			</div> 
-		</div> 
-	</div> 
+					<p class="text-sm text-gray-700 dark:text-gray-300">היו ספציפיים בשאלותיכם</p>
+				</div>
+				
+				<div class="flex items-start gap-2">
+					<span class="text-lg">☎</span>
+					<p class="text-sm text-gray-700 dark:text-gray-300">דווחו לנו על כל תקלה ונחקור</p>
+				</div>
+				<div class="flex items-start gap-2">
+					<span class="text-lg">⏱️</span>
+					<p class="text-sm text-gray-700 dark:text-gray-300">
+					התאזרו בסבלנות - קבצים גדולים דורשים זמן עיבוד ארוך יותר
+					</p>
+				</div>
+			</div>
+			
+			<!-- Checkbox "אל תציג שוב" -->
+			<div class="flex items-center gap-2 mb-6">
+				<input
+				type="checkbox"
+				id="dontShowAgain"
+				bind:checked={dontShowAgain}
+					class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+				/>
+				<label for="dontShowAgain" class="text-sm text-gray-700 dark:text-gray-300">
+					אל תציג הודעה זו שוב
+				</label>
+			</div>
+			
+			<div class="flex gap-3 justify-end">
+				<button
+					class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+					on:click={closeWarning}
+				>
+					ביטול
+				</button>
+				<button
+					class="px-4 py-2 bg-gray-700 text-white hover:bg-gray-800 rounded transition-colors"
+					on:click={proceedWithUpload}
+				>
+					המשך להעלאה
+				</button>
+
+			</div>
+		</div>
+	</div>
 {/if}
+
+<style>
+	:global(body.popup-active) {
+		background-color: color-mix(in oklab, var(--color-black) 5%, transparent);
+	}
+</style>

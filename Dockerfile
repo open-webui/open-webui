@@ -116,7 +116,7 @@ RUN if [ "$USE_OLLAMA" = "true" ]; then \
     # for RAG OCR
     apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 && \
     # install helper tools
-    apt-get install -y --no-install-recommends curl jq && \
+    apt-get install -y --no-install-recommends curl jq Libreoffice-common && \
     # install ollama
     curl -fsSL https://ollama.com/install.sh | sh && \
     # cleanup
@@ -134,7 +134,9 @@ RUN if [ "$USE_OLLAMA" = "true" ]; then \
 
 # install python dependencies
 COPY --chown=$UID:$GID ./backend/requirements.txt ./requirements.txt
-
+RUN pip3 install nltk && \
+    python -c "import nltk; nltk.download('punkt'); nltk.download('punkt_tab'); nltk.download('averaged_perceptron_tagger'); nltk.download('averaged_perceptron_tagger_eng')"
+    
 RUN pip3 install --no-cache-dir uv && \
     if [ "$USE_CUDA" = "true" ]; then \
     # If you use CUDA the whisper and embedding model will be downloaded on first use
@@ -151,7 +153,6 @@ RUN pip3 install --no-cache-dir uv && \
     python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])"; \
     fi; \
     chown -R $UID:$GID /app/backend/data/
-
 
 
 # copy embedding weight from build
