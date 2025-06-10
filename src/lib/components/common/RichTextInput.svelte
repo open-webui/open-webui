@@ -37,6 +37,7 @@
 	// PII Detection imports
 	import { type ExtendedPiiEntity } from '$lib/utils/pii';
 	import { PiiDetectionExtension } from './RichTextInput/PiiDetectionExtension';
+	import { PiiModifierExtension, addPiiModifierStyles, type PiiModifier } from './RichTextInput/PiiModifierExtension';
 	import {
 		debounce,
 		createPiiHighlightStyles,
@@ -74,6 +75,11 @@
 	export let conversationId = '';
 	export let onPiiDetected: (entities: ExtendedPiiEntity[], maskedText: string) => void = () => {};
 	export let onPiiToggled: (entities: ExtendedPiiEntity[]) => void = () => {};
+
+	// PII Modifier props
+	export let enablePiiModifiers = false;
+	export let onPiiModifiersChanged: (modifiers: PiiModifier[]) => void = () => {};
+	export let piiModifierLabels: string[] = [];
 
 	let element: HTMLElement;
 	let editor: any;
@@ -181,6 +187,11 @@
 			document.head.appendChild(styleElement);
 		}
 
+		// Add PII modifier styles
+		if (enablePiiModifiers && enablePiiDetection) {
+			addPiiModifierStyles();
+		}
+
 		let content = value;
 
 		if (!json) {
@@ -224,9 +235,11 @@
 
 		console.log('RichTextInput: Initializing editor with PII detection:', {
 			enablePiiDetection,
+			enablePiiModifiers,
 			hasApiKey: !!piiApiKey,
 			conversationId,
-			apiKeyLength: piiApiKey?.length || 0
+			apiKeyLength: piiApiKey?.length || 0,
+			modifierLabels: piiModifierLabels
 		});
 
 		editor = new Editor({
@@ -247,6 +260,17 @@
 								conversationId: conversationId,
 								onPiiDetected: onPiiDetected,
 								onPiiToggled: onPiiToggled
+							})
+						]
+					: []),
+				...(enablePiiModifiers && enablePiiDetection
+					? [
+							PiiModifierExtension.configure({
+								enabled: true,
+								onModifiersChanged: onPiiModifiersChanged,
+								availableLabels: piiModifierLabels.length > 0 
+									? piiModifierLabels 
+									: undefined // Use default labels
 							})
 						]
 					: []),
