@@ -308,15 +308,16 @@
 			</div>
 		</div>
 
-		{#if $user?.role === 'admin' || $user?.permissions.chat?.controls}
+		{#if $user?.role === 'admin' || ($user?.permissions.chat?.allow_custom_system_prompt)}
 			<hr class="border-gray-50 dark:border-gray-850 my-3" />
 
 			<div>
 				<div class=" my-2.5 text-sm font-medium">{$i18n.t('System Prompt')}</div>
 				<Textarea
 					bind:value={system}
-					className="w-full text-sm bg-white dark:text-gray-300 dark:bg-gray-900 outline-hidden resize-none"
-					rows="4"
+					className="bg-transparent w-full text-sm rounded-xl p-3 outline outline-1 outline-gray-100 dark:outline-gray-800"
+					rows="6"
+					style="resize: vertical;"
 					placeholder={$i18n.t('Enter system prompt here')}
 				/>
 			</div>

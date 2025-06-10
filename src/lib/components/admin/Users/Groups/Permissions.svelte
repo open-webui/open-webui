@@ -31,7 +31,8 @@
 			call: true,
 			multiple_models: true,
 			temporary: true,
-			temporary_enforced: false
+			temporary_enforced: false,
+			allow_custom_system_prompt: true
 		},
 		features: {
 			direct_tool_servers: false,
@@ -261,6 +262,14 @@
 			</div>
 
 			<Switch bind:state={permissions.chat.controls} />
+		</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Allow Custom System Prompt')}
+			</div>
+
+			<Switch bind:state={permissions.chat.allow_custom_system_prompt} />
 		</div>
 
 		<div class="  flex w-full justify-between my-2 pr-2">

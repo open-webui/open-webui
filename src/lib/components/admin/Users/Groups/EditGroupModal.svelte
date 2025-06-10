@@ -49,7 +49,8 @@
 			file_upload: true,
 			delete: true,
 			edit: true,
-			temporary: true
+			temporary: true,
+			allow_custom_system_prompt: true
 		},
 		features: {
 			direct_tool_servers: false,
