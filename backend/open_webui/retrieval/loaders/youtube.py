@@ -40,11 +40,13 @@ def _parse_video_id(url: str) -> Optional[str]:
             video_id = ids if isinstance(ids, str) else ids[0]
         else:
             return None
+    elif parsed_url.netloc == "youtu.be":
+        video_id = parsed_url.path.lstrip("/").split("?")[0]
     else:
         path = parsed_url.path.lstrip("/")
-        video_id = path.split("/")[-1]
+        video_id = path.split("/")[-1].split("?")[0]
 
-    if len(video_id) != 11:  # Video IDs are 11 characters long
+    if len(video_id) != 11:
         return None
 
     return video_id
@@ -109,19 +111,19 @@ class YoutubeLoader:
         # Try each language in order of priority
         for lang in self.language:
             try:
-                transcript = transcript_list.find_transcript([lang])
-                if transcript.is_generated:
-                    log.debug(f"Found generated transcript for language '{lang}'")
-                    try:
-                        transcript = transcript_list.find_manually_created_transcript(
-                            [lang]
-                        )
-                        log.debug(f"Found manual transcript for language '{lang}'")
-                    except NoTranscriptFound:
-                        log.debug(
-                            f"No manual transcript found for language '{lang}', using generated"
-                        )
-                        pass
+                try:
+                    transcript = transcript_list.find_manually_created_transcript([lang])
+                    log.debug(f"Found manual transcript for language '{lang}'")
+                except NoTranscriptFound:
+                    transcript = transcript_list.find_generated_transcript([lang])
+                    log.debug(f"Found auto-generated transcript for language '{lang}'")
+        
+                log.debug(f"Found transcript for language '{lang}'")
+                try:
+                    transcript_pieces: List[Dict[str, Any]] = transcript.fetch()
+                except ParseError:
+                    log.debug(f"Empty or invalid transcript for language '{lang}'")
+                    continue
 
                 log.debug(f"Found transcript for language '{lang}'")
                 try:
