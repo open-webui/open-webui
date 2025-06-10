@@ -873,11 +873,13 @@
 				{/if}
 
 				{#if $user?.role === 'admin'}
-					<button
+					<a
+						href="/admin/settings"
 						class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none md:mt-auto flex text-left transition {$settings?.highContrastMode
 							? 'hover:bg-gray-200 dark:hover:bg-gray-800'
 							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
-						on:click={async () => {
+						on:click={async (e) => {
+							e.preventDefault();
 							await goto('/admin/settings');
 							show = false;
 						}}
@@ -887,6 +889,7 @@
 								xmlns="http://www.w3.org/2000/svg"
 								viewBox="0 0 24 24"
 								fill="currentColor"
+								aria-hidden="true"
 								class="size-4"
 							>
 								<path
@@ -897,7 +900,7 @@
 							</svg>
 						</div>
 						<div class=" self-center">{$i18n.t('Admin Settings')}</div>
-					</button>
+					</a>
 				{/if}
 			</div>
 			<div class="flex-1 md:min-h-[32rem] max-h-[32rem]">
