@@ -566,10 +566,14 @@
 			>
 				<div class="hidden md:flex w-full rounded-xl -mb-1 px-0.5 gap-2" id="settings-search">
 					<div class="self-center rounded-l-xl bg-transparent">
-						<Search className="size-3.5" />
+						<Search
+							className="size-3.5"
+							strokeWidth={($settings.highContrastMode ?? false) ? '3' : '1.5'}
+						/>
 					</div>
 					<input
-						class="w-full py-1.5 text-sm bg-transparent dark:text-gray-300 outline-hidden"
+						class={`w-full py-1.5 text-sm bg-transparent dark:text-gray-300 outline-hidden
+								${($settings.highContrastMode ?? false) ? 'placeholder-gray-800' : ''}`}
 						bind:value={search}
 						on:input={searchDebounceHandler}
 						placeholder={$i18n.t('Search')}
