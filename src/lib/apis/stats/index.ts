@@ -12,24 +12,23 @@ export const getStatsData = async (token?: string) => {
 		headers.Authorization = `Bearer ${token}`;
 	}
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/stats/`, {
-		method: 'GET',
-		headers,
-		credentials: 'include'
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
+	let res;
+	try {
+		const response = await fetch(`${WEBUI_API_BASE_URL}/stats/`, {
+			method: 'GET',
+			headers,
+			credentials: 'include'
 		});
-
-	if (error) {
-		throw error;
+		const data = await response.json();
+		if (!response.ok) {
+			throw data;
+		}
+		res = data;
+		
+	} catch (err: unknown) {
+		console.log(err);
+		error = err instanceof Error ? err.message : 'An unknown error occurred while fetching stats';
+		res = null;
 	}
-
-	return res;
-}; 
+	return { error, ...res };
+};
