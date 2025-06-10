@@ -92,6 +92,15 @@ class PgvectorClient(VectorDBBase):
             # Ensure the pgvector extension is available
             self.session.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
 
+            if PGVECTOR_PGCRYPTO:
+                # Ensure the pgcrypto extension is available for encryption
+                self.session.execute(text("CREATE EXTENSION IF NOT EXISTS pgcrypto;"))
+
+                if not PGVECTOR_PGCRYPTO_KEY:
+                    raise ValueError(
+                        "PGVECTOR_PGCRYPTO_KEY must be set when PGVECTOR_PGCRYPTO is enabled."
+                    )
+
             # Check vector length consistency
             self.check_vector_length()
 
