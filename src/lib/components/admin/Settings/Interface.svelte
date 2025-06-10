@@ -1,4 +1,7 @@
 <script lang="ts">
+	import fileSaver from 'file-saver';
+	const { saveAs } = fileSaver;
+
 	import { v4 as uuidv4 } from 'uuid';
 	import { toast } from 'svelte-sonner';
 
@@ -28,6 +31,8 @@
 		TASK_MODEL_EXTERNAL: '',
 		ENABLE_TITLE_GENERATION: true,
 		TITLE_GENERATION_PROMPT_TEMPLATE: '',
+		ENABLE_FOLLOW_UP_GENERATION: true,
+		FOLLOW_UP_GENERATION_PROMPT_TEMPLATE: '',
 		IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE: '',
 		ENABLE_AUTOCOMPLETE_GENERATION: true,
 		AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH: -1,
@@ -224,6 +229,32 @@
 						>
 							<Textarea
 								bind:value={taskConfig.TITLE_GENERATION_PROMPT_TEMPLATE}
+								placeholder={$i18n.t(
+									'Leave empty to use the default prompt, or enter a custom prompt'
+								)}
+							/>
+						</Tooltip>
+					</div>
+				{/if}
+
+				<div class="mb-2.5 flex w-full items-center justify-between">
+					<div class=" self-center text-xs font-medium">
+						{$i18n.t('Follow Up Generation')}
+					</div>
+
+					<Switch bind:state={taskConfig.ENABLE_FOLLOW_UP_GENERATION} />
+				</div>
+
+				{#if taskConfig.ENABLE_FOLLOW_UP_GENERATION}
+					<div class="mb-2.5">
+						<div class=" mb-1 text-xs font-medium">{$i18n.t('Follow Up Generation Prompt')}</div>
+
+						<Tooltip
+							content={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
+							placement="top-start"
+						>
+							<Textarea
+								bind:value={taskConfig.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE}
 								placeholder={$i18n.t(
 									'Leave empty to use the default prompt, or enter a custom prompt'
 								)}
@@ -484,6 +515,111 @@
 								{$i18n.t('Adjusting these settings will apply changes universally to all users.')}
 							</div>
 						{/if}
+
+						<div class="flex items-center justify-end space-x-2 mt-2">
+							<input
+								id="prompt-suggestions-import-input"
+								type="file"
+								accept=".json"
+								hidden
+								on:change={(e) => {
+									const files = e.target.files;
+									if (!files || files.length === 0) {
+										return;
+									}
+
+									console.log(files);
+
+									let reader = new FileReader();
+									reader.onload = async (event) => {
+										try {
+											let suggestions = JSON.parse(event.target.result);
+
+											suggestions = suggestions.map((s) => {
+												if (typeof s.title === 'string') {
+													s.title = [s.title, ''];
+												} else if (!Array.isArray(s.title)) {
+													s.title = ['', ''];
+												}
+
+												return s;
+											});
+
+											promptSuggestions = [...promptSuggestions, ...suggestions];
+										} catch (error) {
+											toast.error($i18n.t('Invalid JSON file'));
+											return;
+										}
+									};
+
+									reader.readAsText(files[0]);
+
+									e.target.value = ''; // Reset the input value
+								}}
+							/>
+
+							<button
+								class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
+								type="button"
+								on:click={() => {
+									const input = document.getElementById('prompt-suggestions-import-input');
+									if (input) {
+										input.click();
+									}
+								}}
+							>
+								<div class=" self-center mr-2 font-medium line-clamp-1">
+									{$i18n.t('Import Prompt Suggestions')}
+								</div>
+
+								<div class=" self-center">
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										viewBox="0 0 16 16"
+										fill="currentColor"
+										class="w-3.5 h-3.5"
+									>
+										<path
+											fill-rule="evenodd"
+											d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 9.5a.75.75 0 0 1-.75-.75V8.06l-.72.72a.75.75 0 0 1-1.06-1.06l2-2a.75.75 0 0 1 1.06 0l2 2a.75.75 0 1 1-1.06 1.06l-.72-.72v2.69a.75.75 0 0 1-.75.75Z"
+											clip-rule="evenodd"
+										/>
+									</svg>
+								</div>
+							</button>
+
+							{#if promptSuggestions.length}
+								<button
+									class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
+									type="button"
+									on:click={async () => {
+										let blob = new Blob([JSON.stringify(promptSuggestions)], {
+											type: 'application/json'
+										});
+										saveAs(blob, `prompt-suggestions-export-${Date.now()}.json`);
+									}}
+								>
+									<div class=" self-center mr-2 font-medium line-clamp-1">
+										{$i18n.t('Export Prompt Suggestions')} ({promptSuggestions.length})
+									</div>
+
+									<div class=" self-center">
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											viewBox="0 0 16 16"
+											fill="currentColor"
+											class="w-3.5 h-3.5"
+										>
+											<path
+												fill-rule="evenodd"
+												d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 3.5a.75.75 0 0 1 .75.75v2.69l.72-.72a.75.75 0 1 1 1.06 1.06l-2 2a.75.75 0 0 1-1.06 0l-2-2a.75.75 0 0 1 1.06-1.06l.72.72V6.25A.75.75 0 0 1 8 5.5Z"
+												clip-rule="evenodd"
+											/>
+										</svg>
+									</div>
+								</button>
+							{/if}
+						</div>
 					</div>
 				{/if}
 			</div>

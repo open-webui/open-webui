@@ -21,6 +21,8 @@ dependencies = [
     "aiocache",
     "aiofiles",
 
+    "starlette-compress==1.6.0",
+
     "sqlalchemy==2.0.38",
     "alembic==1.14.0",
     "peewee==3.18.1",

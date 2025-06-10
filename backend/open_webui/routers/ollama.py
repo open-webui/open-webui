@@ -391,18 +391,21 @@ async def get_all_models(request: Request, user: UserModel = None):
             )
         }
 
-        loaded_models = await get_ollama_loaded_models(request, user=user)
-        expires_map = {
-            m["name"]: m["expires_at"]
-            for m in loaded_models["models"]
-            if "expires_at" in m
-        }
+        try:
+            loaded_models = await get_ollama_loaded_models(request, user=user)
+            expires_map = {
+                m["name"]: m["expires_at"]
+                for m in loaded_models["models"]
+                if "expires_at" in m
+            }
 
-        for m in models["models"]:
-            if m["name"] in expires_map:
-                # Parse ISO8601 datetime with offset, get unix timestamp as int
-                dt = datetime.fromisoformat(expires_map[m["name"]])
-                m["expires_at"] = int(dt.timestamp())
+            for m in models["models"]:
+                if m["name"] in expires_map:
+                    # Parse ISO8601 datetime with offset, get unix timestamp as int
+                    dt = datetime.fromisoformat(expires_map[m["name"]])
+                    m["expires_at"] = int(dt.timestamp())
+        except Exception as e:
+            log.debug(f"Failed to get loaded models: {e}")
 
     else:
         models = {"models": []}
@@ -1229,6 +1232,9 @@ class GenerateChatCompletionForm(BaseModel):
     stream: Optional[bool] = True
     keep_alive: Optional[Union[int, str]] = None
     tools: Optional[list[dict]] = None
+    model_config = ConfigDict(
+        extra="allow",
+    )
 
 
 async def get_ollama_url(request: Request, model: str, url_idx: Optional[int] = None):
@@ -1266,7 +1272,9 @@ async def generate_chat_completion(
             detail=str(e),
         )
 
-    payload = {**form_data.model_dump(exclude_none=True)}
+    if isinstance(form_data, BaseModel):
+        payload = {**form_data.model_dump(exclude_none=True)}
+
     if "metadata" in payload:
         del payload["metadata"]
 
@@ -1280,13 +1288,14 @@ async def generate_chat_completion(
         params = model_info.params.model_dump()
 
         if params:
-            if payload.get("options") is None:
-                payload["options"] = {}
+            system = params.pop("system", None)
 
+            # Unlike OpenAI, Ollama does not support params directly in the body
             payload["options"] = apply_model_params_to_body_ollama(
-                params, payload["options"]
+                params, (payload.get("options", {}) or {})
             )
-            payload = apply_model_system_prompt_to_body(params, payload, metadata, user)
+
+            payload = apply_model_system_prompt_to_body(system, payload, metadata, user)
 
         # Check if user has access to the model
         if not bypass_filter and user.role == "user":
@@ -1319,7 +1328,7 @@ async def generate_chat_completion(
     prefix_id = api_config.get("prefix_id", None)
     if prefix_id:
         payload["model"] = payload["model"].replace(f"{prefix_id}.", "")
-    # payload["keep_alive"] = -1 # keep alive forever
+
     return await send_post_request(
         url=f"{url}/api/chat",
         payload=json.dumps(payload),
@@ -1468,8 +1477,10 @@ async def generate_openai_chat_completion(
         params = model_info.params.model_dump()
 
         if params:
+            system = params.pop("system", None)
+
             payload = apply_model_params_to_body_openai(params, payload)
-            payload = apply_model_system_prompt_to_body(params, payload, metadata, user)
+            payload = apply_model_system_prompt_to_body(system, payload, metadata, user)
 
         # Check if user has access to the model
         if user.role == "user":

@@ -1,5 +1,9 @@
 <script lang="ts">
+	import DOMPurify from 'dompurify';
+	import { marked } from 'marked';
+
 	import { toast } from 'svelte-sonner';
+
 	import { v4 as uuidv4 } from 'uuid';
 	import { createPicker, getAuthToken } from '$lib/utils/google-drive-picker';
 	import { pickAndDownloadFile } from '$lib/utils/onedrive-file-picker';
@@ -109,7 +113,9 @@
 	let commandsElement;
 
 	let inputFiles;
+
 	let dragged = false;
+	let shiftKey = false;
 
 	let user = null;
 	export let placeholder = '';
@@ -352,13 +358,6 @@
 		});
 	};
 
-	const handleKeyDown = (event: KeyboardEvent) => {
-		if (event.key === 'Escape') {
-			console.log('Escape');
-			dragged = false;
-		}
-	};
-
 	const onDragOver = (e) => {
 		e.preventDefault();
 
@@ -389,6 +388,29 @@
 		dragged = false;
 	};
 
+	const onKeyDown = (e) => {
+		if (e.key === 'Shift') {
+			shiftKey = true;
+		}
+
+		if (e.key === 'Escape') {
+			console.log('Escape');
+			dragged = false;
+		}
+	};
+
+	const onKeyUp = (e) => {
+		if (e.key === 'Shift') {
+			shiftKey = false;
+		}
+	};
+
+	const onFocus = () => {};
+
+	const onBlur = () => {
+		shiftKey = false;
+	};
+
 	onMount(async () => {
 		loaded = true;
 
@@ -397,7 +419,11 @@
 			chatInput?.focus();
 		}, 0);
 
-		window.addEventListener('keydown', handleKeyDown);
+		window.addEventListener('keydown', onKeyDown);
+		window.addEventListener('keyup', onKeyUp);
+
+		window.addEventListener('focus', onFocus);
+		window.addEventListener('blur', onBlur);
 
 		await tick();
 
@@ -410,7 +436,11 @@
 
 	onDestroy(() => {
 		console.log('destroy');
-		window.removeEventListener('keydown', handleKeyDown);
+		window.removeEventListener('keydown', onKeyDown);
+		window.removeEventListener('keyup', onKeyUp);
+
+		window.removeEventListener('focus', onFocus);
+		window.removeEventListener('blur', onBlur);
 
 		const dropzoneElement = document.getElementById('chat-container');
 
@@ -569,7 +599,7 @@
 						/>
 					{:else}
 						<form
-							class="w-full flex gap-1.5"
+							class="w-full flex flex-col gap-1.5"
 							on:submit|preventDefault={() => {
 								// check if selectedModels support image input
 								dispatch('submit', prompt);
@@ -675,7 +705,7 @@
 								<div class="px-2.5">
 									{#if $settings?.richTextInput ?? true}
 										<div
-											class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-gray-100 outline-hidden w-full pt-2.5 pb-1 px-1 resize-none h-fit max-h-80 overflow-auto"
+											class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-gray-100 outline-hidden w-full pt-2.5 pb-[5px] px-1 resize-none h-fit max-h-80 overflow-auto"
 											id="chat-input-container"
 										>
 											<RichTextInput
@@ -692,7 +722,7 @@
 															navigator.msMaxTouchPoints > 0
 														))}
 												placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
-												largeTextAsFile={$settings?.largeTextAsFile ?? false}
+												largeTextAsFile={($settings?.largeTextAsFile ?? false) && !shiftKey}
 												autocomplete={$config?.features?.enable_autocomplete_generation &&
 													($settings?.promptAutocomplete ?? false)}
 												generateAutoCompletion={async (text) => {
@@ -874,7 +904,7 @@
 
 																reader.readAsDataURL(blob);
 															} else if (item.type === 'text/plain') {
-																if ($settings?.largeTextAsFile ?? false) {
+																if (($settings?.largeTextAsFile ?? false) && !shiftKey) {
 																	const text = clipboardData.getData('text/plain');
 
 																	if (text.length > PASTED_TEXT_CHARACTER_LIMIT) {
@@ -1105,7 +1135,7 @@
 
 															reader.readAsDataURL(blob);
 														} else if (item.type === 'text/plain') {
-															if ($settings?.largeTextAsFile ?? false) {
+															if (($settings?.largeTextAsFile ?? false) && !shiftKey) {
 																const text = clipboardData.getData('text/plain');
 
 																if (text.length > PASTED_TEXT_CHARACTER_LIMIT) {
@@ -1495,6 +1525,14 @@
 									</div>
 								</div>
 							</div>
+
+							{#if $config?.license_metadata?.input_footer}
+								<div class=" text-xs text-gray-500 text-center line-clamp-1 marked">
+									{@html DOMPurify.sanitize(marked($config?.license_metadata?.input_footer))}
+								</div>
+							{:else}
+								<div class="mb-1" />
+							{/if}
 						</form>
 					{/if}
 				</div>

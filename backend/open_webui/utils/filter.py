@@ -1,7 +1,10 @@
 import inspect
 import logging
 
-from open_webui.utils.plugin import load_function_module_by_id
+from open_webui.utils.plugin import (
+    load_function_module_by_id,
+    get_function_module_from_cache,
+)
 from open_webui.models.functions import Functions
 from open_webui.env import SRC_LOG_LEVELS
 
@@ -9,14 +12,13 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
-def get_function_module(request, function_id):
+def get_function_module(request, function_id, load_from_db=True):
     """
     Get the function module by its ID.
     """
-
-    function_module, _, _ = load_function_module_by_id(function_id)
-    request.app.state.FUNCTIONS[function_id] = function_module
-
+    function_module, _, _ = get_function_module_from_cache(
+        request, function_id, load_from_db
+    )
     return function_module
 
 
@@ -37,14 +39,17 @@ def get_sorted_filter_ids(request, model: dict, enabled_filter_ids: list = None)
         for function in Functions.get_functions_by_type("filter", active_only=True)
     ]
 
-    for filter_id in active_filter_ids:
+    def get_active_status(filter_id):
         function_module = get_function_module(request, filter_id)
 
-        if getattr(function_module, "toggle", None) and (
-            filter_id not in enabled_filter_ids
-        ):
-            active_filter_ids.remove(filter_id)
-            continue
+        if getattr(function_module, "toggle", None):
+            return filter_id in (enabled_filter_ids or [])
+
+        return True
+
+    active_filter_ids = [
+        filter_id for filter_id in active_filter_ids if get_active_status(filter_id)
+    ]
 
     filter_ids = [fid for fid in filter_ids if fid in active_filter_ids]
     filter_ids.sort(key=get_priority)
@@ -63,7 +68,9 @@ async def process_filter_functions(
         if not filter:
             continue
 
-        function_module = get_function_module(request, filter_id)
+        function_module = get_function_module(
+            request, filter_id, load_from_db=(filter_type != "stream")
+        )
         # Prepare handler function
         handler = getattr(function_module, filter_type, None)
         if not handler:

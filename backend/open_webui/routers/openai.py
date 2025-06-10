@@ -715,8 +715,12 @@ async def generate_chat_completion(
             model_id = model_info.base_model_id
 
         params = model_info.params.model_dump()
-        payload = apply_model_params_to_body_openai(params, payload)
-        payload = apply_model_system_prompt_to_body(params, payload, metadata, user)
+
+        if params:
+            system = params.pop("system", None)
+
+            payload = apply_model_params_to_body_openai(params, payload)
+            payload = apply_model_system_prompt_to_body(system, payload, metadata, user)
 
         # Check if user has access to the model
         if not bypass_filter and user.role == "user":
@@ -872,6 +876,88 @@ async def generate_chat_completion(
         elif isinstance(response, str):
             detail = response
 
+        raise HTTPException(
+            status_code=r.status if r else 500,
+            detail=detail if detail else "Open WebUI: Server Connection Error",
+        )
+    finally:
+        if not streaming and session:
+            if r:
+                r.close()
+            await session.close()
+
+
+async def embeddings(request: Request, form_data: dict, user):
+    """
+    Calls the embeddings endpoint for OpenAI-compatible providers.
+
+    Args:
+        request (Request): The FastAPI request context.
+        form_data (dict): OpenAI-compatible embeddings payload.
+        user (UserModel): The authenticated user.
+
+    Returns:
+        dict: OpenAI-compatible embeddings response.
+    """
+    idx = 0
+    # Prepare payload/body
+    body = json.dumps(form_data)
+    # Find correct backend url/key based on model
+    await get_all_models(request, user=user)
+    model_id = form_data.get("model")
+    models = request.app.state.OPENAI_MODELS
+    if model_id in models:
+        idx = models[model_id]["urlIdx"]
+    url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
+    key = request.app.state.config.OPENAI_API_KEYS[idx]
+    r = None
+    session = None
+    streaming = False
+    try:
+        session = aiohttp.ClientSession(trust_env=True)
+        r = await session.request(
+            method="POST",
+            url=f"{url}/embeddings",
+            data=body,
+            headers={
+                "Authorization": f"Bearer {key}",
+                "Content-Type": "application/json",
+                **(
+                    {
+                        "X-OpenWebUI-User-Name": user.name,
+                        "X-OpenWebUI-User-Id": user.id,
+                        "X-OpenWebUI-User-Email": user.email,
+                        "X-OpenWebUI-User-Role": user.role,
+                    }
+                    if ENABLE_FORWARD_USER_INFO_HEADERS and user
+                    else {}
+                ),
+            },
+        )
+        r.raise_for_status()
+        if "text/event-stream" in r.headers.get("Content-Type", ""):
+            streaming = True
+            return StreamingResponse(
+                r.content,
+                status_code=r.status,
+                headers=dict(r.headers),
+                background=BackgroundTask(
+                    cleanup_response, response=r, session=session
+                ),
+            )
+        else:
+            response_data = await r.json()
+            return response_data
+    except Exception as e:
+        log.exception(e)
+        detail = None
+        if r is not None:
+            try:
+                res = await r.json()
+                if "error" in res:
+                    detail = f"External: {res['error']['message'] if 'message' in res['error'] else res['error']}"
+            except Exception:
+                detail = f"External: {e}"
         raise HTTPException(
             status_code=r.status if r else 500,
             detail=detail if detail else "Open WebUI: Server Connection Error",
