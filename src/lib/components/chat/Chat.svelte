@@ -7,16 +7,13 @@
 	import { marked } from 'marked';
 	import DOMPurify from 'dompurify';
 	const i18n: Writable<i18nType> = getContext('i18n');
-		
+
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 
 	import { get, type Unsubscriber, type Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
 	import { WEBUI_BASE_URL } from '$lib/constants';
-	
-
- 	import { footerText, footerDirection } from '../../stores'; // -- ADDED --
 
 	import {
 		chatId,
@@ -95,7 +92,7 @@
 	import Spinner from '../common/Spinner.svelte';
 	import { fade } from 'svelte/transition';
 
-	export let chatIdProp = '';	
+	export let chatIdProp = '';
 	let loading = true;
 
 	const eventTarget = new EventTarget();
@@ -1984,15 +1981,22 @@
 			}
 		}
 	};
+	//  --- Added ---
+	// 	import { env } from '$env/dynamic/public';
 
-	let footerMarkdown = '';
+	// 	let footerMarkdown = '
+	//   <span>Rchat יכול לטעות, אנא וודאו מידע חשוב;</span>
+	//   <span class="separator">•</span>
+	//   <span>לחצו ALT + X לתצוגה נכונה של עברית;</span>
+	//   <span class="separator">•</span>
+	//   <a href="https://karamaldocs/docs/rchat/" class="footer-link">הדרכה</a>
+	//   <span class="separator">•</span>
+	//   <a href="https://karamaldocs/docs/rchat/contact" class="footer-link">תמיכה</a>
+	// ';
+	let footerMarkdown =
+		"<div dir='rtl'><span>Rchat יכול לטעות, אנא וודאו מידע חשוב</span>  •  <span>לחצו ALT + X לתצוגה נכונה של עברית</span>  •  <a href='https://karamaldocs/docs/rchat/' class='footer-link' target='_blank'>הדרכה</a>  •  <a href='https://karamaldocs/docs/rchat/contact' class='footer-link' target='_blank'>תמיכה</a></div>";
 
-	onMount(async () => {
-	const res = await fetch('/FOOTER.md');
-	if (res.ok) {
-		footerMarkdown = await res.text();
-	}
-});
+	// --- End ---
 </script>
 
 <svelte:head>
@@ -2151,26 +2155,35 @@
 									}}
 								/>
 							</div>
-								<!-- ADDED -->
-								<!-- <div
-									class="bottom-1 text-sm text-gray-500 text-center line-clamp-1 right-0 left-0"
-								>
-									//{$footerText}
-									<div class="flex-1 text-xs text-gray-700 dark:text-white">
-										{@html marked.parse(DOMPurify.sanitize(footerText))}
-										</div>								
-										</div> -->
-										<!-- END  -->
-										<!-- ADDED -->
-										<!-- <div class="bottom-1 text-sm text-gray-500 text-center line-clamp-1 right-0 left-0">
-											</div> -->
-										<div class="bottom-1 text-sm text-gray-500 text-center right-0 left-0" dir={$footerDirection}>
-											{@html marked.parse(DOMPurify.sanitize(footerMarkdown))}
-										</div>
+							<!-- ADDED -->
+							<div
+								class="bottom-1 text-sm text-gray-500 text-center right-0 left-0"
+								dir="rtl"
+								style="padding-bottom: 10px;"
+							>
+								{@html marked.parse(DOMPurify.sanitize(footerMarkdown))}
+							</div>
+							<style>
+								.footer {
+									font-size: 0.9rem;
+									color: #555;
+									display: flex;
+									gap: 0.5rem;
+									align-items: center;
+									flex-wrap: wrap;
+								}
 
+								.separator {
+									font-weight: bold;
+									color: #888;
+								}
 
-								<!-- END  -->
-
+								.footer-link {
+									text-decoration: underline;
+									color: #003366;
+								}
+							</style>
+							<!-- END  -->
 						{:else}
 							<div class="overflow-auto w-full h-full flex items-center">
 								<Placeholder
@@ -2225,4 +2238,23 @@
 					modelId={selectedModelIds?.at(0) ?? null}
 					models={selectedModelIds.reduce((a, e, i, arr) => {
 						const model = $models.find((m) => m.id === e);
-						if
+						if (model) {
+							return [...a, model];
+						}
+						return a;
+					}, [])}
+					{submitPrompt}
+					{stopResponse}
+					{showMessage}
+					{eventTarget}
+				/>
+			</PaneGroup>
+		</div>
+	{:else if loading}
+		<div class=" flex items-center justify-center h-full w-full">
+			<div class="m-auto">
+				<Spinner />
+			</div>
+		</div>
+	{/if}
+</div>

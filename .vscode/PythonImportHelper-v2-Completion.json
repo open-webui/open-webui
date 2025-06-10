@@ -217,6 +217,30 @@
         "documentation": {}
     },
     {
+        "label": "*",
+        "importPath": "peewee",
+        "description": "peewee",
+        "isExtraImport": true,
+        "detail": "peewee",
+        "documentation": {}
+    },
+    {
+        "label": "print_",
+        "importPath": "peewee",
+        "description": "peewee",
+        "isExtraImport": true,
+        "detail": "peewee",
+        "documentation": {}
+    },
+    {
+        "label": "__version__",
+        "importPath": "peewee",
+        "description": "peewee",
+        "isExtraImport": true,
+        "detail": "peewee",
+        "documentation": {}
+    },
+    {
         "label": "Migrator",
         "importPath": "peewee_migrate",
         "description": "peewee_migrate",
@@ -13238,6 +13262,14 @@
         "documentation": {}
     },
     {
+        "label": "pformat",
+        "importPath": "pprint",
+        "description": "pprint",
+        "isExtraImport": true,
+        "detail": "pprint",
+        "documentation": {}
+    },
+    {
         "label": "SearchResult",
         "importPath": "open_webui.retrieval.web.main",
         "description": "open_webui.retrieval.web.main",
@@ -13647,6 +13679,15 @@
         "importPath": "urllib.request",
         "description": "urllib.request",
         "detail": "urllib.request",
+        "documentation": {}
+    },
+    {
+        "label": "collections",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "collections",
+        "description": "collections",
+        "detail": "collections",
         "documentation": {}
     },
     {
@@ -17862,6 +17903,265 @@
         "description": "redis.asyncio",
         "isExtraImport": true,
         "detail": "redis.asyncio",
+        "documentation": {}
+    },
+    {
+        "label": "current_target",
+        "importPath": "pyscript.magic_js",
+        "description": "pyscript.magic_js",
+        "isExtraImport": true,
+        "detail": "pyscript.magic_js",
+        "documentation": {}
+    },
+    {
+        "label": "document",
+        "importPath": "pyscript.magic_js",
+        "description": "pyscript.magic_js",
+        "isExtraImport": true,
+        "detail": "pyscript.magic_js",
+        "documentation": {}
+    },
+    {
+        "label": "window",
+        "importPath": "pyscript.magic_js",
+        "description": "pyscript.magic_js",
+        "isExtraImport": true,
+        "detail": "pyscript.magic_js",
+        "documentation": {}
+    },
+    {
+        "label": "document",
+        "importPath": "pyscript.magic_js",
+        "description": "pyscript.magic_js",
+        "isExtraImport": true,
+        "detail": "pyscript.magic_js",
+        "documentation": {}
+    },
+    {
+        "label": "js",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "js",
+        "description": "js",
+        "detail": "js",
+        "documentation": {}
+    },
+    {
+        "label": "as_bytearray",
+        "importPath": "pyscript.util",
+        "description": "pyscript.util",
+        "isExtraImport": true,
+        "detail": "pyscript.util",
+        "documentation": {}
+    },
+    {
+        "label": "NotSupported",
+        "importPath": "pyscript.util",
+        "description": "pyscript.util",
+        "isExtraImport": true,
+        "detail": "pyscript.util",
+        "documentation": {}
+    },
+    {
+        "label": "as_bytearray",
+        "importPath": "pyscript.util",
+        "description": "pyscript.util",
+        "isExtraImport": true,
+        "detail": "pyscript.util",
+        "documentation": {}
+    },
+    {
+        "label": "config",
+        "importPath": "polyscript",
+        "description": "polyscript",
+        "isExtraImport": true,
+        "detail": "polyscript",
+        "documentation": {}
+    },
+    {
+        "label": "js_modules",
+        "importPath": "polyscript",
+        "description": "polyscript",
+        "isExtraImport": true,
+        "detail": "polyscript",
+        "documentation": {}
+    },
+    {
+        "label": "to_js",
+        "importPath": "pyodide.ffi",
+        "description": "pyodide.ffi",
+        "isExtraImport": true,
+        "detail": "pyodide.ffi",
+        "documentation": {}
+    },
+    {
+        "label": "window",
+        "importPath": "pyscript",
+        "description": "pyscript",
+        "isExtraImport": true,
+        "detail": "pyscript",
+        "documentation": {}
+    },
+    {
+        "label": "display",
+        "importPath": "pyscript",
+        "description": "pyscript",
+        "isExtraImport": true,
+        "detail": "pyscript",
+        "documentation": {}
+    },
+    {
+        "label": "document",
+        "importPath": "pyscript",
+        "description": "pyscript",
+        "isExtraImport": true,
+        "detail": "pyscript",
+        "documentation": {}
+    },
+    {
+        "label": "window",
+        "importPath": "pyscript",
+        "description": "pyscript",
+        "isExtraImport": true,
+        "detail": "pyscript",
+        "documentation": {}
+    },
+    {
+        "label": "stringify",
+        "importPath": "flatted",
+        "description": "flatted",
+        "isExtraImport": true,
+        "detail": "flatted",
+        "documentation": {}
+    },
+    {
+        "label": "parse",
+        "importPath": "flatted",
+        "description": "flatted",
+        "isExtraImport": true,
+        "detail": "flatted",
+        "documentation": {}
+    },
+    {
+        "label": "TTFont",
+        "importPath": "fontTools.ttLib",
+        "description": "fontTools.ttLib",
+        "isExtraImport": true,
+        "detail": "fontTools.ttLib",
+        "documentation": {}
+    },
+    {
+        "label": "sfnt",
+        "importPath": "fontTools.ttLib",
+        "description": "fontTools.ttLib",
+        "isExtraImport": true,
+        "detail": "fontTools.ttLib",
+        "documentation": {}
+    },
+    {
+        "label": "TTFont",
+        "importPath": "fontTools.ttLib",
+        "description": "fontTools.ttLib",
+        "isExtraImport": true,
+        "detail": "fontTools.ttLib",
+        "documentation": {}
+    },
+    {
+        "label": "timestampNow",
+        "importPath": "fontTools.misc.timeTools",
+        "description": "fontTools.misc.timeTools",
+        "isExtraImport": true,
+        "detail": "fontTools.misc.timeTools",
+        "documentation": {}
+    },
+    {
+        "label": "parse_tfm",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "parse_tfm",
+        "description": "parse_tfm",
+        "detail": "parse_tfm",
+        "documentation": {}
+    },
+    {
+        "label": "StringIO",
+        "importPath": "uio",
+        "description": "uio",
+        "isExtraImport": true,
+        "detail": "uio",
+        "documentation": {}
+    },
+    {
+        "label": "jmespath",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "jmespath",
+        "description": "jmespath",
+        "detail": "jmespath",
+        "documentation": {}
+    },
+    {
+        "label": "exceptions",
+        "importPath": "jmespath",
+        "description": "jmespath",
+        "isExtraImport": true,
+        "detail": "jmespath",
+        "documentation": {}
+    },
+    {
+        "label": "getpass",
+        "importPath": "getpass",
+        "description": "getpass",
+        "isExtraImport": true,
+        "detail": "getpass",
+        "documentation": {}
+    },
+    {
+        "label": "OptionParser",
+        "importPath": "optparse",
+        "description": "optparse",
+        "isExtraImport": true,
+        "detail": "optparse",
+        "documentation": {}
+    },
+    {
+        "label": "CockroachDatabase",
+        "importPath": "playhouse.cockroachdb",
+        "description": "playhouse.cockroachdb",
+        "isExtraImport": true,
+        "detail": "playhouse.cockroachdb",
+        "documentation": {}
+    },
+    {
+        "label": "*",
+        "importPath": "playhouse.reflection",
+        "description": "playhouse.reflection",
+        "isExtraImport": true,
+        "detail": "playhouse.reflection",
+        "documentation": {}
+    },
+    {
+        "label": "print_function",
+        "importPath": "__future__",
+        "description": "__future__",
+        "isExtraImport": true,
+        "detail": "__future__",
+        "documentation": {}
+    },
+    {
+        "label": "BadZipFile",
+        "importPath": "zipfile",
+        "description": "zipfile",
+        "isExtraImport": true,
+        "detail": "zipfile",
+        "documentation": {}
+    },
+    {
+        "label": "ZipFile",
+        "importPath": "zipfile",
+        "description": "zipfile",
+        "isExtraImport": true,
+        "detail": "zipfile",
         "documentation": {}
     },
     {
@@ -32594,6 +32894,987 @@
         "description": "backend.open_webui.tasks",
         "peekOfCode": "REDIS_PUBSUB_CHANNEL = \"open-webui:tasks:commands\"\ndef is_redis(request: Request) -> bool:\n    # Called everywhere a request is available to check Redis\n    return hasattr(request.app.state, \"redis\") and (request.app.state.redis is not None)\nasync def redis_task_command_listener(app):\n    redis: Redis = app.state.redis\n    pubsub = redis.pubsub()\n    await pubsub.subscribe(REDIS_PUBSUB_CHANNEL)\n    async for message in pubsub.listen():\n        if message[\"type\"] != \"message\":",
         "detail": "backend.open_webui.tasks",
+        "documentation": {}
+    },
+    {
+        "label": "HTML",
+        "kind": 6,
+        "importPath": "node_modules.@pyscript.core.src.stdlib.pyscript.display",
+        "description": "node_modules.@pyscript.core.src.stdlib.pyscript.display",
+        "peekOfCode": "class HTML:\n    \"\"\"\n    Wrap a string so that display() can render it as plain HTML\n    \"\"\"\n    def __init__(self, html):\n        self._html = html\n    def _repr_html_(self):\n        return self._html\ndef _eval_formatter(obj, print_method):\n    \"\"\"",
+        "detail": "node_modules.@pyscript.core.src.stdlib.pyscript.display",
+        "documentation": {}
+    },
+    {
+        "label": "display",
+        "kind": 2,
+        "importPath": "node_modules.@pyscript.core.src.stdlib.pyscript.display",
+        "description": "node_modules.@pyscript.core.src.stdlib.pyscript.display",
+        "peekOfCode": "def display(*values, target=None, append=True):\n    if target is None:\n        target = current_target()\n    elif not isinstance(target, str):\n        raise TypeError(f\"target must be str or None, not {target.__class__.__name__}\")\n    elif target == \"\":\n        raise ValueError(\"Cannot have an empty target\")\n    elif target.startswith(\"#\"):\n        # note: here target is str and not None!\n        # align with @when behavior",
+        "detail": "node_modules.@pyscript.core.src.stdlib.pyscript.display",
+        "documentation": {}
+    },
+    {
+        "label": "_MIME_METHODS",
+        "kind": 5,
+        "importPath": "node_modules.@pyscript.core.src.stdlib.pyscript.display",
+        "description": "node_modules.@pyscript.core.src.stdlib.pyscript.display",
+        "peekOfCode": "_MIME_METHODS = {\n    \"savefig\": \"image/png\",\n    \"_repr_javascript_\": \"application/javascript\",\n    \"_repr_json_\": \"application/json\",\n    \"_repr_latex\": \"text/latex\",\n    \"_repr_png_\": \"image/png\",\n    \"_repr_jpeg_\": \"image/jpeg\",\n    \"_repr_pdf_\": \"application/pdf\",\n    \"_repr_svg_\": \"image/svg+xml\",\n    \"_repr_markdown_\": \"text/markdown\",",
+        "detail": "node_modules.@pyscript.core.src.stdlib.pyscript.display",
+        "documentation": {}
+    },
+    {
+        "label": "_MIME_RENDERERS",
+        "kind": 5,
+        "importPath": "node_modules.@pyscript.core.src.stdlib.pyscript.display",
+        "description": "node_modules.@pyscript.core.src.stdlib.pyscript.display",
+        "peekOfCode": "_MIME_RENDERERS = {\n    \"text/plain\": html.escape,\n    \"text/html\": _identity,\n    \"image/png\": lambda value, meta: _render_image(\"image/png\", value, meta),\n    \"image/jpeg\": lambda value, meta: _render_image(\"image/jpeg\", value, meta),\n    \"image/svg+xml\": _identity,\n    \"application/json\": _identity,\n    \"application/javascript\": lambda value, meta: f\"<script>{value}<\\\\/script>\",\n}\nclass HTML:",
+        "detail": "node_modules.@pyscript.core.src.stdlib.pyscript.display",
+        "documentation": {}
+    },
+    {
+        "label": "when",
+        "kind": 2,
+        "importPath": "node_modules.@pyscript.core.src.stdlib.pyscript.event_handling",
+        "description": "node_modules.@pyscript.core.src.stdlib.pyscript.event_handling",
+        "peekOfCode": "def when(event_type=None, selector=None):\n    \"\"\"\n    Decorates a function and passes py-* events to the decorated function\n    The events might or not be an argument of the decorated function\n    \"\"\"\n    def decorator(func):\n        if isinstance(selector, str):\n            elements = document.querySelectorAll(selector)\n        else:\n            # TODO: This is a hack that will be removed when pyscript becomes a package",
+        "detail": "node_modules.@pyscript.core.src.stdlib.pyscript.event_handling",
+        "documentation": {}
+    },
+    {
+        "label": "_Response",
+        "kind": 6,
+        "importPath": "node_modules.@pyscript.core.src.stdlib.pyscript.fetch",
+        "description": "node_modules.@pyscript.core.src.stdlib.pyscript.fetch",
+        "peekOfCode": "class _Response:\n    def __init__(self, response):\n        self._response = response\n    # grant access to response.ok and other fields\n    def __getattr__(self, attr):\n        return getattr(self._response, attr)\n    # exposed methods with Pythonic results\n    async def arrayBuffer(self):\n        buffer = await self._response.arrayBuffer()\n        # works in Pyodide",
+        "detail": "node_modules.@pyscript.core.src.stdlib.pyscript.fetch",
+        "documentation": {}
+    },
+    {
+        "label": "_DirectResponse",
+        "kind": 6,
+        "importPath": "node_modules.@pyscript.core.src.stdlib.pyscript.fetch",
+        "description": "node_modules.@pyscript.core.src.stdlib.pyscript.fetch",
+        "peekOfCode": "class _DirectResponse:\n    @staticmethod\n    def setup(promise, response):\n        promise._response = _Response(response)\n        return promise._response\n    def __init__(self, promise):\n        self._promise = promise\n        promise._response = None\n        promise.arrayBuffer = self.arrayBuffer\n        promise.blob = self.blob",
+        "detail": "node_modules.@pyscript.core.src.stdlib.pyscript.fetch",
+        "documentation": {}
+    },
+    {
+        "label": "fetch",
+        "kind": 2,
+        "importPath": "node_modules.@pyscript.core.src.stdlib.pyscript.fetch",
+        "description": "node_modules.@pyscript.core.src.stdlib.pyscript.fetch",
+        "peekOfCode": "def fetch(url, **kw):\n    # workaround Pyodide / MicroPython dict <-> js conversion\n    options = js.JSON.parse(json.dumps(kw))\n    awaited = lambda response, *args: _DirectResponse.setup(promise, response)\n    promise = js.fetch(url, options).then(awaited)\n    _DirectResponse(promise)\n    return promise",
+        "detail": "node_modules.@pyscript.core.src.stdlib.pyscript.fetch",
+        "documentation": {}
+    },
+    {
+        "label": "create_proxy",
+        "kind": 5,
+        "importPath": "node_modules.@pyscript.core.src.stdlib.pyscript.ffi",
+        "description": "node_modules.@pyscript.core.src.stdlib.pyscript.ffi",
+        "peekOfCode": "create_proxy = _cp\nto_js = _tjs",
+        "detail": "node_modules.@pyscript.core.src.stdlib.pyscript.ffi",
+        "documentation": {}
+    },
+    {
+        "label": "to_js",
+        "kind": 5,
+        "importPath": "node_modules.@pyscript.core.src.stdlib.pyscript.ffi",
+        "description": "node_modules.@pyscript.core.src.stdlib.pyscript.ffi",
+        "peekOfCode": "to_js = _tjs",
+        "detail": "node_modules.@pyscript.core.src.stdlib.pyscript.ffi",
+        "documentation": {}
+    },
+    {
+        "label": "JSModule",
+        "kind": 6,
+        "importPath": "node_modules.@pyscript.core.src.stdlib.pyscript.magic_js",
+        "description": "node_modules.@pyscript.core.src.stdlib.pyscript.magic_js",
+        "peekOfCode": "class JSModule:\n    def __init__(self, name):\n        self.name = name\n    def __getattr__(self, field):\n        # avoid pyodide looking for non existent fields\n        if not field.startswith(\"_\"):\n            return getattr(getattr(js_modules, self.name), field)\n# generate N modules in the system that will proxy the real value\nfor name in globalThis.Reflect.ownKeys(js_modules):\n    sys.modules[f\"pyscript.js_modules.{name}\"] = JSModule(name)",
+        "detail": "node_modules.@pyscript.core.src.stdlib.pyscript.magic_js",
+        "documentation": {}
+    },
+    {
+        "label": "RUNNING_IN_WORKER",
+        "kind": 5,
+        "importPath": "node_modules.@pyscript.core.src.stdlib.pyscript.magic_js",
+        "description": "node_modules.@pyscript.core.src.stdlib.pyscript.magic_js",
+        "peekOfCode": "RUNNING_IN_WORKER = not hasattr(globalThis, \"document\")\nconfig = json.loads(globalThis.JSON.stringify(_config))\n# allow `from pyscript.js_modules.xxx import yyy`\nclass JSModule:\n    def __init__(self, name):\n        self.name = name\n    def __getattr__(self, field):\n        # avoid pyodide looking for non existent fields\n        if not field.startswith(\"_\"):\n            return getattr(getattr(js_modules, self.name), field)",
+        "detail": "node_modules.@pyscript.core.src.stdlib.pyscript.magic_js",
+        "documentation": {}
+    },
+    {
+        "label": "config",
+        "kind": 5,
+        "importPath": "node_modules.@pyscript.core.src.stdlib.pyscript.magic_js",
+        "description": "node_modules.@pyscript.core.src.stdlib.pyscript.magic_js",
+        "peekOfCode": "config = json.loads(globalThis.JSON.stringify(_config))\n# allow `from pyscript.js_modules.xxx import yyy`\nclass JSModule:\n    def __init__(self, name):\n        self.name = name\n    def __getattr__(self, field):\n        # avoid pyodide looking for non existent fields\n        if not field.startswith(\"_\"):\n            return getattr(getattr(js_modules, self.name), field)\n# generate N modules in the system that will proxy the real value",
+        "detail": "node_modules.@pyscript.core.src.stdlib.pyscript.magic_js",
+        "documentation": {}
+    },
+    {
+        "label": "sys.modules[\"pyscript.js_modules\"]",
+        "kind": 5,
+        "importPath": "node_modules.@pyscript.core.src.stdlib.pyscript.magic_js",
+        "description": "node_modules.@pyscript.core.src.stdlib.pyscript.magic_js",
+        "peekOfCode": "sys.modules[\"pyscript.js_modules\"] = js_modules\nif RUNNING_IN_WORKER:\n    import polyscript\n    PyWorker = NotSupported(\n        \"pyscript.PyWorker\",\n        \"pyscript.PyWorker works only when running in the main thread\",\n    )\n    try:\n        globalThis.SharedArrayBuffer.new(4)\n        import js",
+        "detail": "node_modules.@pyscript.core.src.stdlib.pyscript.magic_js",
+        "documentation": {}
+    },
+    {
+        "label": "NotSupported",
+        "kind": 6,
+        "importPath": "node_modules.@pyscript.core.src.stdlib.pyscript.util",
+        "description": "node_modules.@pyscript.core.src.stdlib.pyscript.util",
+        "peekOfCode": "class NotSupported:\n    \"\"\"\n    Small helper that raises exceptions if you try to get/set any attribute on\n    it.\n    \"\"\"\n    def __init__(self, name, error):\n        object.__setattr__(self, \"name\", name)\n        object.__setattr__(self, \"error\", error)\n    def __repr__(self):\n        return f\"<NotSupported {self.name} [{self.error}]>\"",
+        "detail": "node_modules.@pyscript.core.src.stdlib.pyscript.util",
+        "documentation": {}
+    },
+    {
+        "label": "as_bytearray",
+        "kind": 2,
+        "importPath": "node_modules.@pyscript.core.src.stdlib.pyscript.util",
+        "description": "node_modules.@pyscript.core.src.stdlib.pyscript.util",
+        "peekOfCode": "def as_bytearray(buffer):\n    ui8a = js.Uint8Array.new(buffer)\n    size = ui8a.length\n    ba = bytearray(size)\n    for i in range(0, size):\n        ba[i] = ui8a[i]\n    return ba\nclass NotSupported:\n    \"\"\"\n    Small helper that raises exceptions if you try to get/set any attribute on",
+        "detail": "node_modules.@pyscript.core.src.stdlib.pyscript.util",
+        "documentation": {}
+    },
+    {
+        "label": "EventMessage",
+        "kind": 6,
+        "importPath": "node_modules.@pyscript.core.src.stdlib.pyscript.websocket",
+        "description": "node_modules.@pyscript.core.src.stdlib.pyscript.websocket",
+        "peekOfCode": "class EventMessage:\n    def __init__(self, event):\n        self._event = event\n    def __getattr__(self, attr):\n        value = getattr(self._event, attr)\n        if attr == \"data\" and not isinstance(value, str):\n            if hasattr(value, \"to_py\"):\n                return value.to_py()\n            # shims in MicroPython\n            return memoryview(as_bytearray(value))",
+        "detail": "node_modules.@pyscript.core.src.stdlib.pyscript.websocket",
+        "documentation": {}
+    },
+    {
+        "label": "WebSocket",
+        "kind": 6,
+        "importPath": "node_modules.@pyscript.core.src.stdlib.pyscript.websocket",
+        "description": "node_modules.@pyscript.core.src.stdlib.pyscript.websocket",
+        "peekOfCode": "class WebSocket(object):\n    CONNECTING = 0\n    OPEN = 1\n    CLOSING = 2\n    CLOSED = 3\n    def __init__(self, **kw):\n        url = kw[\"url\"]\n        if protocols in kw:\n            socket = js.WebSocket.new(url, kw[protocols])\n        else:",
+        "detail": "node_modules.@pyscript.core.src.stdlib.pyscript.websocket",
+        "documentation": {}
+    },
+    {
+        "label": "code",
+        "kind": 5,
+        "importPath": "node_modules.@pyscript.core.src.stdlib.pyscript.websocket",
+        "description": "node_modules.@pyscript.core.src.stdlib.pyscript.websocket",
+        "peekOfCode": "code = \"code\"\nprotocols = \"protocols\"\nreason = \"reason\"\nclass EventMessage:\n    def __init__(self, event):\n        self._event = event\n    def __getattr__(self, attr):\n        value = getattr(self._event, attr)\n        if attr == \"data\" and not isinstance(value, str):\n            if hasattr(value, \"to_py\"):",
+        "detail": "node_modules.@pyscript.core.src.stdlib.pyscript.websocket",
+        "documentation": {}
+    },
+    {
+        "label": "protocols",
+        "kind": 5,
+        "importPath": "node_modules.@pyscript.core.src.stdlib.pyscript.websocket",
+        "description": "node_modules.@pyscript.core.src.stdlib.pyscript.websocket",
+        "peekOfCode": "protocols = \"protocols\"\nreason = \"reason\"\nclass EventMessage:\n    def __init__(self, event):\n        self._event = event\n    def __getattr__(self, attr):\n        value = getattr(self._event, attr)\n        if attr == \"data\" and not isinstance(value, str):\n            if hasattr(value, \"to_py\"):\n                return value.to_py()",
+        "detail": "node_modules.@pyscript.core.src.stdlib.pyscript.websocket",
+        "documentation": {}
+    },
+    {
+        "label": "reason",
+        "kind": 5,
+        "importPath": "node_modules.@pyscript.core.src.stdlib.pyscript.websocket",
+        "description": "node_modules.@pyscript.core.src.stdlib.pyscript.websocket",
+        "peekOfCode": "reason = \"reason\"\nclass EventMessage:\n    def __init__(self, event):\n        self._event = event\n    def __getattr__(self, attr):\n        value = getattr(self._event, attr)\n        if attr == \"data\" and not isinstance(value, str):\n            if hasattr(value, \"to_py\"):\n                return value.to_py()\n            # shims in MicroPython",
+        "detail": "node_modules.@pyscript.core.src.stdlib.pyscript.websocket",
+        "documentation": {}
+    },
+    {
+        "label": "Device",
+        "kind": 6,
+        "importPath": "node_modules.@pyscript.core.src.stdlib.pyweb.media",
+        "description": "node_modules.@pyscript.core.src.stdlib.pyweb.media",
+        "peekOfCode": "class Device:\n    \"\"\"Device represents a media input or output device, such as a microphone,\n    camera, or headset.\n    \"\"\"\n    def __init__(self, device):\n        self._js = device\n    @property\n    def id(self):\n        return self._js.deviceId\n    @property",
+        "detail": "node_modules.@pyscript.core.src.stdlib.pyweb.media",
+        "documentation": {}
+    },
+    {
+        "label": "BaseElement",
+        "kind": 6,
+        "importPath": "node_modules.@pyscript.core.src.stdlib.pyweb.pydom",
+        "description": "node_modules.@pyscript.core.src.stdlib.pyweb.pydom",
+        "peekOfCode": "class BaseElement:\n    def __init__(self, js_element):\n        self._js = js_element\n        self._parent = None\n        self.style = StyleProxy(self)\n        self._proxies = {}\n    def __eq__(self, obj):\n        \"\"\"Check if the element is the same as the other element by comparing\n        the underlying JS element\"\"\"\n        return isinstance(obj, BaseElement) and obj._js == self._js",
+        "detail": "node_modules.@pyscript.core.src.stdlib.pyweb.pydom",
+        "documentation": {}
+    },
+    {
+        "label": "Element",
+        "kind": 6,
+        "importPath": "node_modules.@pyscript.core.src.stdlib.pyweb.pydom",
+        "description": "node_modules.@pyscript.core.src.stdlib.pyweb.pydom",
+        "peekOfCode": "class Element(BaseElement):\n    @property\n    def children(self):\n        return [self.__class__(el) for el in self._js.children]\n    def append(self, child):\n        # TODO: this is Pyodide specific for now!!!!!!\n        # if we get passed a JSProxy Element directly we just map it to the\n        # higher level Python element\n        if isinstance(child, JsProxy):\n            return self.append(Element(child))",
+        "detail": "node_modules.@pyscript.core.src.stdlib.pyweb.pydom",
+        "documentation": {}
+    },
+    {
+        "label": "OptionsProxy",
+        "kind": 6,
+        "importPath": "node_modules.@pyscript.core.src.stdlib.pyweb.pydom",
+        "description": "node_modules.@pyscript.core.src.stdlib.pyweb.pydom",
+        "peekOfCode": "class OptionsProxy:\n    \"\"\"This class represents the options of a select element. It\n    allows to access to add and remove options by using the `add` and `remove` methods.\n    \"\"\"\n    def __init__(self, element: Element) -> None:\n        self._element = element\n        if self._element._js.tagName.lower() != \"select\":\n            raise AttributeError(\n                f\"Element {self._element._js.tagName} has no options attribute.\"\n            )",
+        "detail": "node_modules.@pyscript.core.src.stdlib.pyweb.pydom",
+        "documentation": {}
+    },
+    {
+        "label": "StyleProxy",
+        "kind": 6,
+        "importPath": "node_modules.@pyscript.core.src.stdlib.pyweb.pydom",
+        "description": "node_modules.@pyscript.core.src.stdlib.pyweb.pydom",
+        "peekOfCode": "class StyleProxy:  # (dict):\n    def __init__(self, element: Element) -> None:\n        self._element = element\n    @cached_property\n    def _style(self):\n        return self._element._js.style\n    def __getitem__(self, key):\n        return self._style.getPropertyValue(key)\n    def __setitem__(self, key, value):\n        self._style.setProperty(key, value)",
+        "detail": "node_modules.@pyscript.core.src.stdlib.pyweb.pydom",
+        "documentation": {}
+    },
+    {
+        "label": "StyleCollection",
+        "kind": 6,
+        "importPath": "node_modules.@pyscript.core.src.stdlib.pyweb.pydom",
+        "description": "node_modules.@pyscript.core.src.stdlib.pyweb.pydom",
+        "peekOfCode": "class StyleCollection:\n    def __init__(self, collection: \"ElementCollection\") -> None:\n        self._collection = collection\n    def __get__(self, obj, objtype=None):\n        return obj._get_attribute(\"style\")\n    def __getitem__(self, key):\n        return self._collection._get_attribute(\"style\")[key]\n    def __setitem__(self, key, value):\n        for element in self._collection._elements:\n            element.style[key] = value",
+        "detail": "node_modules.@pyscript.core.src.stdlib.pyweb.pydom",
+        "documentation": {}
+    },
+    {
+        "label": "ElementCollection",
+        "kind": 6,
+        "importPath": "node_modules.@pyscript.core.src.stdlib.pyweb.pydom",
+        "description": "node_modules.@pyscript.core.src.stdlib.pyweb.pydom",
+        "peekOfCode": "class ElementCollection:\n    def __init__(self, elements: [Element]) -> None:\n        self._elements = elements\n        self.style = StyleCollection(self)\n    def __getitem__(self, key):\n        # If it's an integer we use it to access the elements in the collection\n        if isinstance(key, int):\n            return self._elements[key]\n        # If it's a slice we use it to support slice operations over the elements\n        # in the collection",
+        "detail": "node_modules.@pyscript.core.src.stdlib.pyweb.pydom",
+        "documentation": {}
+    },
+    {
+        "label": "DomScope",
+        "kind": 6,
+        "importPath": "node_modules.@pyscript.core.src.stdlib.pyweb.pydom",
+        "description": "node_modules.@pyscript.core.src.stdlib.pyweb.pydom",
+        "peekOfCode": "class DomScope:\n    def __getattr__(self, __name: str):\n        element = document[f\"#{__name}\"]\n        if element:\n            return element[0]\nclass PyDom(BaseElement):\n    # Add objects we want to expose to the DOM namespace since this class instance is being\n    # remapped as \"the module\" itself\n    BaseElement = BaseElement\n    Element = Element",
+        "detail": "node_modules.@pyscript.core.src.stdlib.pyweb.pydom",
+        "documentation": {}
+    },
+    {
+        "label": "PyDom",
+        "kind": 6,
+        "importPath": "node_modules.@pyscript.core.src.stdlib.pyweb.pydom",
+        "description": "node_modules.@pyscript.core.src.stdlib.pyweb.pydom",
+        "peekOfCode": "class PyDom(BaseElement):\n    # Add objects we want to expose to the DOM namespace since this class instance is being\n    # remapped as \"the module\" itself\n    BaseElement = BaseElement\n    Element = Element\n    ElementCollection = ElementCollection\n    def __init__(self):\n        # PyDom is a special case of BaseElement where we don't want to create a new JS element\n        # and it really doesn't have a need for styleproxy or parent to to call to __init__\n        # (which actually fails in MP for some reason)",
+        "detail": "node_modules.@pyscript.core.src.stdlib.pyweb.pydom",
+        "documentation": {}
+    },
+    {
+        "label": "alert",
+        "kind": 5,
+        "importPath": "node_modules.@pyscript.core.src.stdlib.pyweb.pydom",
+        "description": "node_modules.@pyscript.core.src.stdlib.pyweb.pydom",
+        "peekOfCode": "alert = window.alert\nclass BaseElement:\n    def __init__(self, js_element):\n        self._js = js_element\n        self._parent = None\n        self.style = StyleProxy(self)\n        self._proxies = {}\n    def __eq__(self, obj):\n        \"\"\"Check if the element is the same as the other element by comparing\n        the underlying JS element\"\"\"",
+        "detail": "node_modules.@pyscript.core.src.stdlib.pyweb.pydom",
+        "documentation": {}
+    },
+    {
+        "label": "dom",
+        "kind": 5,
+        "importPath": "node_modules.@pyscript.core.src.stdlib.pyweb.pydom",
+        "description": "node_modules.@pyscript.core.src.stdlib.pyweb.pydom",
+        "peekOfCode": "dom = PyDom()",
+        "detail": "node_modules.@pyscript.core.src.stdlib.pyweb.pydom",
+        "documentation": {}
+    },
+    {
+        "label": "_Known",
+        "kind": 6,
+        "importPath": "node_modules.flatted.python.flatted",
+        "description": "node_modules.flatted.python.flatted",
+        "peekOfCode": "class _Known:\n    def __init__(self):\n        self.key = []\n        self.value = []\nclass _String:\n    def __init__(self, value):\n        self.value = value\ndef _array_keys(value):\n    keys = []\n    i = 0",
+        "detail": "node_modules.flatted.python.flatted",
+        "documentation": {}
+    },
+    {
+        "label": "_String",
+        "kind": 6,
+        "importPath": "node_modules.flatted.python.flatted",
+        "description": "node_modules.flatted.python.flatted",
+        "peekOfCode": "class _String:\n    def __init__(self, value):\n        self.value = value\ndef _array_keys(value):\n    keys = []\n    i = 0\n    for _ in value:\n        keys.append(i)\n        i += 1\n    return keys",
+        "detail": "node_modules.flatted.python.flatted",
+        "documentation": {}
+    },
+    {
+        "label": "parse",
+        "kind": 2,
+        "importPath": "node_modules.flatted.python.flatted",
+        "description": "node_modules.flatted.python.flatted",
+        "peekOfCode": "def parse(value, *args, **kwargs):\n    json = _json.loads(value, *args, **kwargs)\n    wrapped = []\n    for value in json:\n        wrapped.append(_wrap(value))\n    input = []\n    for value in wrapped:\n        if isinstance(value, _String):\n            input.append(value.value)\n        else:",
+        "detail": "node_modules.flatted.python.flatted",
+        "documentation": {}
+    },
+    {
+        "label": "stringify",
+        "kind": 2,
+        "importPath": "node_modules.flatted.python.flatted",
+        "description": "node_modules.flatted.python.flatted",
+        "peekOfCode": "def stringify(value, *args, **kwargs):\n    known = _Known()\n    input = []\n    output = []\n    i = int(_index(known, input, value))\n    while i < len(input):\n        output.append(_transform(known, input, input[i]))\n        i += 1\n    return _json.dumps(output, *args, **kwargs)",
+        "detail": "node_modules.flatted.python.flatted",
+        "documentation": {}
+    },
+    {
+        "label": "stringify",
+        "kind": 2,
+        "importPath": "node_modules.flatted.python.test",
+        "description": "node_modules.flatted.python.test",
+        "peekOfCode": "def stringify(value):\n    return _stringify(value, separators=(',', ':'))\nassert stringify([None, None]) == '[[null,null]]'\na = []\no = {}\nassert stringify(a) == '[[]]'\nassert stringify(o) == '[{}]'\na.append(a)\no['o'] = o\nassert stringify(a) == '[[\"0\"]]'",
+        "detail": "node_modules.flatted.python.test",
+        "documentation": {}
+    },
+    {
+        "label": "a",
+        "kind": 5,
+        "importPath": "node_modules.flatted.python.test",
+        "description": "node_modules.flatted.python.test",
+        "peekOfCode": "a = []\no = {}\nassert stringify(a) == '[[]]'\nassert stringify(o) == '[{}]'\na.append(a)\no['o'] = o\nassert stringify(a) == '[[\"0\"]]'\nassert stringify(o) == '[{\"o\":\"0\"}]'\nb = parse(stringify(a))\nassert isinstance(b, list) and b[0] == b",
+        "detail": "node_modules.flatted.python.test",
+        "documentation": {}
+    },
+    {
+        "label": "o",
+        "kind": 5,
+        "importPath": "node_modules.flatted.python.test",
+        "description": "node_modules.flatted.python.test",
+        "peekOfCode": "o = {}\nassert stringify(a) == '[[]]'\nassert stringify(o) == '[{}]'\na.append(a)\no['o'] = o\nassert stringify(a) == '[[\"0\"]]'\nassert stringify(o) == '[{\"o\":\"0\"}]'\nb = parse(stringify(a))\nassert isinstance(b, list) and b[0] == b\na.append(1)",
+        "detail": "node_modules.flatted.python.test",
+        "documentation": {}
+    },
+    {
+        "label": "o['o']",
+        "kind": 5,
+        "importPath": "node_modules.flatted.python.test",
+        "description": "node_modules.flatted.python.test",
+        "peekOfCode": "o['o'] = o\nassert stringify(a) == '[[\"0\"]]'\nassert stringify(o) == '[{\"o\":\"0\"}]'\nb = parse(stringify(a))\nassert isinstance(b, list) and b[0] == b\na.append(1)\na.append('two')\na.append(True)\no['one'] = 1\no['two'] = 'two'",
+        "detail": "node_modules.flatted.python.test",
+        "documentation": {}
+    },
+    {
+        "label": "b",
+        "kind": 5,
+        "importPath": "node_modules.flatted.python.test",
+        "description": "node_modules.flatted.python.test",
+        "peekOfCode": "b = parse(stringify(a))\nassert isinstance(b, list) and b[0] == b\na.append(1)\na.append('two')\na.append(True)\no['one'] = 1\no['two'] = 'two'\no['three'] = True\nassert stringify(a) == '[[\"0\",1,\"1\",true],\"two\"]'\nassert stringify(o) == '[{\"o\":\"0\",\"one\":1,\"two\":\"1\",\"three\":true},\"two\"]'",
+        "detail": "node_modules.flatted.python.test",
+        "documentation": {}
+    },
+    {
+        "label": "o['one']",
+        "kind": 5,
+        "importPath": "node_modules.flatted.python.test",
+        "description": "node_modules.flatted.python.test",
+        "peekOfCode": "o['one'] = 1\no['two'] = 'two'\no['three'] = True\nassert stringify(a) == '[[\"0\",1,\"1\",true],\"two\"]'\nassert stringify(o) == '[{\"o\":\"0\",\"one\":1,\"two\":\"1\",\"three\":true},\"two\"]'\na.append(o)\no['a'] = a\nassert stringify(a) == '[[\"0\",1,\"1\",true,\"2\"],\"two\",{\"o\":\"2\",\"one\":1,\"two\":\"1\",\"three\":true,\"a\":\"0\"}]'\nassert stringify(o) == '[{\"o\":\"0\",\"one\":1,\"two\":\"1\",\"three\":true,\"a\":\"2\"},\"two\",[\"2\",1,\"1\",true,\"0\"]]'\na.append({'test': 'OK'})",
+        "detail": "node_modules.flatted.python.test",
+        "documentation": {}
+    },
+    {
+        "label": "o['two']",
+        "kind": 5,
+        "importPath": "node_modules.flatted.python.test",
+        "description": "node_modules.flatted.python.test",
+        "peekOfCode": "o['two'] = 'two'\no['three'] = True\nassert stringify(a) == '[[\"0\",1,\"1\",true],\"two\"]'\nassert stringify(o) == '[{\"o\":\"0\",\"one\":1,\"two\":\"1\",\"three\":true},\"two\"]'\na.append(o)\no['a'] = a\nassert stringify(a) == '[[\"0\",1,\"1\",true,\"2\"],\"two\",{\"o\":\"2\",\"one\":1,\"two\":\"1\",\"three\":true,\"a\":\"0\"}]'\nassert stringify(o) == '[{\"o\":\"0\",\"one\":1,\"two\":\"1\",\"three\":true,\"a\":\"2\"},\"two\",[\"2\",1,\"1\",true,\"0\"]]'\na.append({'test': 'OK'})\na.append([1, 2, 3])",
+        "detail": "node_modules.flatted.python.test",
+        "documentation": {}
+    },
+    {
+        "label": "o['three']",
+        "kind": 5,
+        "importPath": "node_modules.flatted.python.test",
+        "description": "node_modules.flatted.python.test",
+        "peekOfCode": "o['three'] = True\nassert stringify(a) == '[[\"0\",1,\"1\",true],\"two\"]'\nassert stringify(o) == '[{\"o\":\"0\",\"one\":1,\"two\":\"1\",\"three\":true},\"two\"]'\na.append(o)\no['a'] = a\nassert stringify(a) == '[[\"0\",1,\"1\",true,\"2\"],\"two\",{\"o\":\"2\",\"one\":1,\"two\":\"1\",\"three\":true,\"a\":\"0\"}]'\nassert stringify(o) == '[{\"o\":\"0\",\"one\":1,\"two\":\"1\",\"three\":true,\"a\":\"2\"},\"two\",[\"2\",1,\"1\",true,\"0\"]]'\na.append({'test': 'OK'})\na.append([1, 2, 3])\no['test'] = {'test': 'OK'}",
+        "detail": "node_modules.flatted.python.test",
+        "documentation": {}
+    },
+    {
+        "label": "o['a']",
+        "kind": 5,
+        "importPath": "node_modules.flatted.python.test",
+        "description": "node_modules.flatted.python.test",
+        "peekOfCode": "o['a'] = a\nassert stringify(a) == '[[\"0\",1,\"1\",true,\"2\"],\"two\",{\"o\":\"2\",\"one\":1,\"two\":\"1\",\"three\":true,\"a\":\"0\"}]'\nassert stringify(o) == '[{\"o\":\"0\",\"one\":1,\"two\":\"1\",\"three\":true,\"a\":\"2\"},\"two\",[\"2\",1,\"1\",true,\"0\"]]'\na.append({'test': 'OK'})\na.append([1, 2, 3])\no['test'] = {'test': 'OK'}\no['array'] = [1, 2, 3]\nassert stringify(a) == '[[\"0\",1,\"1\",true,\"2\",\"3\",\"4\"],\"two\",{\"o\":\"2\",\"one\":1,\"two\":\"1\",\"three\":true,\"a\":\"0\",\"test\":\"3\",\"array\":\"4\"},{\"test\":\"5\"},[1,2,3],\"OK\"]'\nassert stringify(o) == '[{\"o\":\"0\",\"one\":1,\"two\":\"1\",\"three\":true,\"a\":\"2\",\"test\":\"3\",\"array\":\"4\"},\"two\",[\"2\",1,\"1\",true,\"0\",\"3\",\"4\"],{\"test\":\"5\"},[1,2,3],\"OK\"]'\na2 = parse(stringify(a));",
+        "detail": "node_modules.flatted.python.test",
+        "documentation": {}
+    },
+    {
+        "label": "o['test']",
+        "kind": 5,
+        "importPath": "node_modules.flatted.python.test",
+        "description": "node_modules.flatted.python.test",
+        "peekOfCode": "o['test'] = {'test': 'OK'}\no['array'] = [1, 2, 3]\nassert stringify(a) == '[[\"0\",1,\"1\",true,\"2\",\"3\",\"4\"],\"two\",{\"o\":\"2\",\"one\":1,\"two\":\"1\",\"three\":true,\"a\":\"0\",\"test\":\"3\",\"array\":\"4\"},{\"test\":\"5\"},[1,2,3],\"OK\"]'\nassert stringify(o) == '[{\"o\":\"0\",\"one\":1,\"two\":\"1\",\"three\":true,\"a\":\"2\",\"test\":\"3\",\"array\":\"4\"},\"two\",[\"2\",1,\"1\",true,\"0\",\"3\",\"4\"],{\"test\":\"5\"},[1,2,3],\"OK\"]'\na2 = parse(stringify(a));\no2 = parse(stringify(o));\nassert a2[0] == a2\nassert o2['o'] == o2\nassert a2[1] == 1 and a2[2] == 'two' and a2[3] == True and isinstance(a2[4], dict)\nassert a2[4] == a2[4]['o'] and a2 == a2[4]['o']['a']",
+        "detail": "node_modules.flatted.python.test",
+        "documentation": {}
+    },
+    {
+        "label": "o['array']",
+        "kind": 5,
+        "importPath": "node_modules.flatted.python.test",
+        "description": "node_modules.flatted.python.test",
+        "peekOfCode": "o['array'] = [1, 2, 3]\nassert stringify(a) == '[[\"0\",1,\"1\",true,\"2\",\"3\",\"4\"],\"two\",{\"o\":\"2\",\"one\":1,\"two\":\"1\",\"three\":true,\"a\":\"0\",\"test\":\"3\",\"array\":\"4\"},{\"test\":\"5\"},[1,2,3],\"OK\"]'\nassert stringify(o) == '[{\"o\":\"0\",\"one\":1,\"two\":\"1\",\"three\":true,\"a\":\"2\",\"test\":\"3\",\"array\":\"4\"},\"two\",[\"2\",1,\"1\",true,\"0\",\"3\",\"4\"],{\"test\":\"5\"},[1,2,3],\"OK\"]'\na2 = parse(stringify(a));\no2 = parse(stringify(o));\nassert a2[0] == a2\nassert o2['o'] == o2\nassert a2[1] == 1 and a2[2] == 'two' and a2[3] == True and isinstance(a2[4], dict)\nassert a2[4] == a2[4]['o'] and a2 == a2[4]['o']['a']\nstr = parse('[{\"prop\":\"1\",\"a\":\"2\",\"b\":\"3\"},{\"value\":123},[\"4\",\"5\"],{\"e\":\"6\",\"t\":\"7\",\"p\":4},{},{\"b\":\"8\"},\"f\",{\"a\":\"9\"},[\"10\"],\"sup\",{\"a\":1,\"d\":2,\"c\":\"7\",\"z\":\"11\",\"h\":1},{\"g\":2,\"a\":\"7\",\"b\":\"12\",\"f\":6},{\"r\":4,\"u\":\"7\",\"c\":5}]')",
+        "detail": "node_modules.flatted.python.test",
+        "documentation": {}
+    },
+    {
+        "label": "a2",
+        "kind": 5,
+        "importPath": "node_modules.flatted.python.test",
+        "description": "node_modules.flatted.python.test",
+        "peekOfCode": "a2 = parse(stringify(a));\no2 = parse(stringify(o));\nassert a2[0] == a2\nassert o2['o'] == o2\nassert a2[1] == 1 and a2[2] == 'two' and a2[3] == True and isinstance(a2[4], dict)\nassert a2[4] == a2[4]['o'] and a2 == a2[4]['o']['a']\nstr = parse('[{\"prop\":\"1\",\"a\":\"2\",\"b\":\"3\"},{\"value\":123},[\"4\",\"5\"],{\"e\":\"6\",\"t\":\"7\",\"p\":4},{},{\"b\":\"8\"},\"f\",{\"a\":\"9\"},[\"10\"],\"sup\",{\"a\":1,\"d\":2,\"c\":\"7\",\"z\":\"11\",\"h\":1},{\"g\":2,\"a\":\"7\",\"b\":\"12\",\"f\":6},{\"r\":4,\"u\":\"7\",\"c\":5}]')\nassert str['b']['t']['a'] == 'sup' and str['a'][1]['b'][0]['c'] == str['b']['t']\noo = parse('[{\"a\":\"1\",\"b\":\"0\",\"c\":\"2\"},{\"aa\":\"3\"},{\"ca\":\"4\",\"cb\":\"5\",\"cc\":\"6\",\"cd\":\"7\",\"ce\":\"8\",\"cf\":\"9\"},{\"aaa\":\"10\"},{\"caa\":\"4\"},{\"cba\":\"5\"},{\"cca\":\"2\"},{\"cda\":\"4\"},\"value2\",\"value3\",\"value1\"]');\nassert oo['a']['aa']['aaa'] == 'value1' and oo == oo['b'] and oo['c']['ca']['caa'] == oo['c']['ca']",
+        "detail": "node_modules.flatted.python.test",
+        "documentation": {}
+    },
+    {
+        "label": "o2",
+        "kind": 5,
+        "importPath": "node_modules.flatted.python.test",
+        "description": "node_modules.flatted.python.test",
+        "peekOfCode": "o2 = parse(stringify(o));\nassert a2[0] == a2\nassert o2['o'] == o2\nassert a2[1] == 1 and a2[2] == 'two' and a2[3] == True and isinstance(a2[4], dict)\nassert a2[4] == a2[4]['o'] and a2 == a2[4]['o']['a']\nstr = parse('[{\"prop\":\"1\",\"a\":\"2\",\"b\":\"3\"},{\"value\":123},[\"4\",\"5\"],{\"e\":\"6\",\"t\":\"7\",\"p\":4},{},{\"b\":\"8\"},\"f\",{\"a\":\"9\"},[\"10\"],\"sup\",{\"a\":1,\"d\":2,\"c\":\"7\",\"z\":\"11\",\"h\":1},{\"g\":2,\"a\":\"7\",\"b\":\"12\",\"f\":6},{\"r\":4,\"u\":\"7\",\"c\":5}]')\nassert str['b']['t']['a'] == 'sup' and str['a'][1]['b'][0]['c'] == str['b']['t']\noo = parse('[{\"a\":\"1\",\"b\":\"0\",\"c\":\"2\"},{\"aa\":\"3\"},{\"ca\":\"4\",\"cb\":\"5\",\"cc\":\"6\",\"cd\":\"7\",\"ce\":\"8\",\"cf\":\"9\"},{\"aaa\":\"10\"},{\"caa\":\"4\"},{\"cba\":\"5\"},{\"cca\":\"2\"},{\"cda\":\"4\"},\"value2\",\"value3\",\"value1\"]');\nassert oo['a']['aa']['aaa'] == 'value1' and oo == oo['b'] and oo['c']['ca']['caa'] == oo['c']['ca']\nprint('OK')",
+        "detail": "node_modules.flatted.python.test",
+        "documentation": {}
+    },
+    {
+        "label": "str",
+        "kind": 5,
+        "importPath": "node_modules.flatted.python.test",
+        "description": "node_modules.flatted.python.test",
+        "peekOfCode": "str = parse('[{\"prop\":\"1\",\"a\":\"2\",\"b\":\"3\"},{\"value\":123},[\"4\",\"5\"],{\"e\":\"6\",\"t\":\"7\",\"p\":4},{},{\"b\":\"8\"},\"f\",{\"a\":\"9\"},[\"10\"],\"sup\",{\"a\":1,\"d\":2,\"c\":\"7\",\"z\":\"11\",\"h\":1},{\"g\":2,\"a\":\"7\",\"b\":\"12\",\"f\":6},{\"r\":4,\"u\":\"7\",\"c\":5}]')\nassert str['b']['t']['a'] == 'sup' and str['a'][1]['b'][0]['c'] == str['b']['t']\noo = parse('[{\"a\":\"1\",\"b\":\"0\",\"c\":\"2\"},{\"aa\":\"3\"},{\"ca\":\"4\",\"cb\":\"5\",\"cc\":\"6\",\"cd\":\"7\",\"ce\":\"8\",\"cf\":\"9\"},{\"aaa\":\"10\"},{\"caa\":\"4\"},{\"cba\":\"5\"},{\"cca\":\"2\"},{\"cda\":\"4\"},\"value2\",\"value3\",\"value1\"]');\nassert oo['a']['aa']['aaa'] == 'value1' and oo == oo['b'] and oo['c']['ca']['caa'] == oo['c']['ca']\nprint('OK')",
+        "detail": "node_modules.flatted.python.test",
+        "documentation": {}
+    },
+    {
+        "label": "oo",
+        "kind": 5,
+        "importPath": "node_modules.flatted.python.test",
+        "description": "node_modules.flatted.python.test",
+        "peekOfCode": "oo = parse('[{\"a\":\"1\",\"b\":\"0\",\"c\":\"2\"},{\"aa\":\"3\"},{\"ca\":\"4\",\"cb\":\"5\",\"cc\":\"6\",\"cd\":\"7\",\"ce\":\"8\",\"cf\":\"9\"},{\"aaa\":\"10\"},{\"caa\":\"4\"},{\"cba\":\"5\"},{\"cca\":\"2\"},{\"cda\":\"4\"},\"value2\",\"value3\",\"value1\"]');\nassert oo['a']['aa']['aaa'] == 'value1' and oo == oo['b'] and oo['c']['ca']['caa'] == oo['c']['ca']\nprint('OK')",
+        "detail": "node_modules.flatted.python.test",
+        "documentation": {}
+    },
+    {
+        "label": "sfnt.USE_ZOPFLI",
+        "kind": 5,
+        "importPath": "node_modules.katex.src.fonts.generate_fonts",
+        "description": "node_modules.katex.src.fonts.generate_fonts",
+        "peekOfCode": "sfnt.USE_ZOPFLI = True\nif len(sys.argv) < 2:\n    print(\"Usage: %s <font file>\" % sys.argv[0])\n    sys.exit(1)\nfont_file = sys.argv[1]\nfont_name = os.path.splitext(os.path.basename(font_file))[0]\nfont = TTFont(font_file, recalcBBoxes=False, recalcTimestamp=False)\n# fix timestamp to the epoch\nfont['head'].created = 0\nfont['head'].modified = 0",
+        "detail": "node_modules.katex.src.fonts.generate_fonts",
+        "documentation": {}
+    },
+    {
+        "label": "font_file",
+        "kind": 5,
+        "importPath": "node_modules.katex.src.fonts.generate_fonts",
+        "description": "node_modules.katex.src.fonts.generate_fonts",
+        "peekOfCode": "font_file = sys.argv[1]\nfont_name = os.path.splitext(os.path.basename(font_file))[0]\nfont = TTFont(font_file, recalcBBoxes=False, recalcTimestamp=False)\n# fix timestamp to the epoch\nfont['head'].created = 0\nfont['head'].modified = 0\n# remove fontforge timestamps\nif 'FFTM' in font:\n    del font['FFTM']\n# remove redundant GDEF table",
+        "detail": "node_modules.katex.src.fonts.generate_fonts",
+        "documentation": {}
+    },
+    {
+        "label": "font_name",
+        "kind": 5,
+        "importPath": "node_modules.katex.src.fonts.generate_fonts",
+        "description": "node_modules.katex.src.fonts.generate_fonts",
+        "peekOfCode": "font_name = os.path.splitext(os.path.basename(font_file))[0]\nfont = TTFont(font_file, recalcBBoxes=False, recalcTimestamp=False)\n# fix timestamp to the epoch\nfont['head'].created = 0\nfont['head'].modified = 0\n# remove fontforge timestamps\nif 'FFTM' in font:\n    del font['FFTM']\n# remove redundant GDEF table\nif 'GDEF' in font:",
+        "detail": "node_modules.katex.src.fonts.generate_fonts",
+        "documentation": {}
+    },
+    {
+        "label": "font",
+        "kind": 5,
+        "importPath": "node_modules.katex.src.fonts.generate_fonts",
+        "description": "node_modules.katex.src.fonts.generate_fonts",
+        "peekOfCode": "font = TTFont(font_file, recalcBBoxes=False, recalcTimestamp=False)\n# fix timestamp to the epoch\nfont['head'].created = 0\nfont['head'].modified = 0\n# remove fontforge timestamps\nif 'FFTM' in font:\n    del font['FFTM']\n# remove redundant GDEF table\nif 'GDEF' in font:\n    del font['GDEF']",
+        "detail": "node_modules.katex.src.fonts.generate_fonts",
+        "documentation": {}
+    },
+    {
+        "label": "font['head'].created",
+        "kind": 5,
+        "importPath": "node_modules.katex.src.fonts.generate_fonts",
+        "description": "node_modules.katex.src.fonts.generate_fonts",
+        "peekOfCode": "font['head'].created = 0\nfont['head'].modified = 0\n# remove fontforge timestamps\nif 'FFTM' in font:\n    del font['FFTM']\n# remove redundant GDEF table\nif 'GDEF' in font:\n    del font['GDEF']\n# remove Macintosh table\n# https://developer.apple.com/fonts/TrueType-Reference-Manual/RM06/Chap6cmap.html",
+        "detail": "node_modules.katex.src.fonts.generate_fonts",
+        "documentation": {}
+    },
+    {
+        "label": "font['head'].modified",
+        "kind": 5,
+        "importPath": "node_modules.katex.src.fonts.generate_fonts",
+        "description": "node_modules.katex.src.fonts.generate_fonts",
+        "peekOfCode": "font['head'].modified = 0\n# remove fontforge timestamps\nif 'FFTM' in font:\n    del font['FFTM']\n# remove redundant GDEF table\nif 'GDEF' in font:\n    del font['GDEF']\n# remove Macintosh table\n# https://developer.apple.com/fonts/TrueType-Reference-Manual/RM06/Chap6cmap.html\nfont['name'].names = [record for record in font['name'].names if record.platformID != 1]",
+        "detail": "node_modules.katex.src.fonts.generate_fonts",
+        "documentation": {}
+    },
+    {
+        "label": "font['name'].names",
+        "kind": 5,
+        "importPath": "node_modules.katex.src.fonts.generate_fonts",
+        "description": "node_modules.katex.src.fonts.generate_fonts",
+        "peekOfCode": "font['name'].names = [record for record in font['name'].names if record.platformID != 1]\nfont['cmap'].tables = [table for table in font['cmap'].tables if table.platformID != 1]\n# fix OS/2 and hhea metrics\nglyf = font['glyf']\nascent = int(max(glyf[c].yMax for c in font.getGlyphOrder() if hasattr(glyf[c], \"yMax\")))\ndescent = -int(min(glyf[c].yMin for c in font.getGlyphOrder() if hasattr(glyf[c], \"yMin\")))\nfont['OS/2'].usWinAscent = ascent\nfont['OS/2'].usWinDescent = descent\nfont['hhea'].ascent = ascent\nfont['hhea'].descent = -descent",
+        "detail": "node_modules.katex.src.fonts.generate_fonts",
+        "documentation": {}
+    },
+    {
+        "label": "font['cmap'].tables",
+        "kind": 5,
+        "importPath": "node_modules.katex.src.fonts.generate_fonts",
+        "description": "node_modules.katex.src.fonts.generate_fonts",
+        "peekOfCode": "font['cmap'].tables = [table for table in font['cmap'].tables if table.platformID != 1]\n# fix OS/2 and hhea metrics\nglyf = font['glyf']\nascent = int(max(glyf[c].yMax for c in font.getGlyphOrder() if hasattr(glyf[c], \"yMax\")))\ndescent = -int(min(glyf[c].yMin for c in font.getGlyphOrder() if hasattr(glyf[c], \"yMin\")))\nfont['OS/2'].usWinAscent = ascent\nfont['OS/2'].usWinDescent = descent\nfont['hhea'].ascent = ascent\nfont['hhea'].descent = -descent\n# save TTF",
+        "detail": "node_modules.katex.src.fonts.generate_fonts",
+        "documentation": {}
+    },
+    {
+        "label": "glyf",
+        "kind": 5,
+        "importPath": "node_modules.katex.src.fonts.generate_fonts",
+        "description": "node_modules.katex.src.fonts.generate_fonts",
+        "peekOfCode": "glyf = font['glyf']\nascent = int(max(glyf[c].yMax for c in font.getGlyphOrder() if hasattr(glyf[c], \"yMax\")))\ndescent = -int(min(glyf[c].yMin for c in font.getGlyphOrder() if hasattr(glyf[c], \"yMin\")))\nfont['OS/2'].usWinAscent = ascent\nfont['OS/2'].usWinDescent = descent\nfont['hhea'].ascent = ascent\nfont['hhea'].descent = -descent\n# save TTF\nfont.save(font_file, reorderTables=None)\n# save WOFF",
+        "detail": "node_modules.katex.src.fonts.generate_fonts",
+        "documentation": {}
+    },
+    {
+        "label": "ascent",
+        "kind": 5,
+        "importPath": "node_modules.katex.src.fonts.generate_fonts",
+        "description": "node_modules.katex.src.fonts.generate_fonts",
+        "peekOfCode": "ascent = int(max(glyf[c].yMax for c in font.getGlyphOrder() if hasattr(glyf[c], \"yMax\")))\ndescent = -int(min(glyf[c].yMin for c in font.getGlyphOrder() if hasattr(glyf[c], \"yMin\")))\nfont['OS/2'].usWinAscent = ascent\nfont['OS/2'].usWinDescent = descent\nfont['hhea'].ascent = ascent\nfont['hhea'].descent = -descent\n# save TTF\nfont.save(font_file, reorderTables=None)\n# save WOFF\nfont.flavor = 'woff'",
+        "detail": "node_modules.katex.src.fonts.generate_fonts",
+        "documentation": {}
+    },
+    {
+        "label": "descent",
+        "kind": 5,
+        "importPath": "node_modules.katex.src.fonts.generate_fonts",
+        "description": "node_modules.katex.src.fonts.generate_fonts",
+        "peekOfCode": "descent = -int(min(glyf[c].yMin for c in font.getGlyphOrder() if hasattr(glyf[c], \"yMin\")))\nfont['OS/2'].usWinAscent = ascent\nfont['OS/2'].usWinDescent = descent\nfont['hhea'].ascent = ascent\nfont['hhea'].descent = -descent\n# save TTF\nfont.save(font_file, reorderTables=None)\n# save WOFF\nfont.flavor = 'woff'\nfont.save(os.path.join('woff', font_name + '.woff'), reorderTables=None)",
+        "detail": "node_modules.katex.src.fonts.generate_fonts",
+        "documentation": {}
+    },
+    {
+        "label": "font['OS/2'].usWinAscent",
+        "kind": 5,
+        "importPath": "node_modules.katex.src.fonts.generate_fonts",
+        "description": "node_modules.katex.src.fonts.generate_fonts",
+        "peekOfCode": "font['OS/2'].usWinAscent = ascent\nfont['OS/2'].usWinDescent = descent\nfont['hhea'].ascent = ascent\nfont['hhea'].descent = -descent\n# save TTF\nfont.save(font_file, reorderTables=None)\n# save WOFF\nfont.flavor = 'woff'\nfont.save(os.path.join('woff', font_name + '.woff'), reorderTables=None)\n# save WOFF2",
+        "detail": "node_modules.katex.src.fonts.generate_fonts",
+        "documentation": {}
+    },
+    {
+        "label": "font['OS/2'].usWinDescent",
+        "kind": 5,
+        "importPath": "node_modules.katex.src.fonts.generate_fonts",
+        "description": "node_modules.katex.src.fonts.generate_fonts",
+        "peekOfCode": "font['OS/2'].usWinDescent = descent\nfont['hhea'].ascent = ascent\nfont['hhea'].descent = -descent\n# save TTF\nfont.save(font_file, reorderTables=None)\n# save WOFF\nfont.flavor = 'woff'\nfont.save(os.path.join('woff', font_name + '.woff'), reorderTables=None)\n# save WOFF2\nfont.flavor = 'woff2'",
+        "detail": "node_modules.katex.src.fonts.generate_fonts",
+        "documentation": {}
+    },
+    {
+        "label": "font['hhea'].ascent",
+        "kind": 5,
+        "importPath": "node_modules.katex.src.fonts.generate_fonts",
+        "description": "node_modules.katex.src.fonts.generate_fonts",
+        "peekOfCode": "font['hhea'].ascent = ascent\nfont['hhea'].descent = -descent\n# save TTF\nfont.save(font_file, reorderTables=None)\n# save WOFF\nfont.flavor = 'woff'\nfont.save(os.path.join('woff', font_name + '.woff'), reorderTables=None)\n# save WOFF2\nfont.flavor = 'woff2'\nfont.save(os.path.join('woff2', font_name + '.woff2'), reorderTables=None)",
+        "detail": "node_modules.katex.src.fonts.generate_fonts",
+        "documentation": {}
+    },
+    {
+        "label": "font['hhea'].descent",
+        "kind": 5,
+        "importPath": "node_modules.katex.src.fonts.generate_fonts",
+        "description": "node_modules.katex.src.fonts.generate_fonts",
+        "peekOfCode": "font['hhea'].descent = -descent\n# save TTF\nfont.save(font_file, reorderTables=None)\n# save WOFF\nfont.flavor = 'woff'\nfont.save(os.path.join('woff', font_name + '.woff'), reorderTables=None)\n# save WOFF2\nfont.flavor = 'woff2'\nfont.save(os.path.join('woff2', font_name + '.woff2'), reorderTables=None)",
+        "detail": "node_modules.katex.src.fonts.generate_fonts",
+        "documentation": {}
+    },
+    {
+        "label": "font.flavor",
+        "kind": 5,
+        "importPath": "node_modules.katex.src.fonts.generate_fonts",
+        "description": "node_modules.katex.src.fonts.generate_fonts",
+        "peekOfCode": "font.flavor = 'woff'\nfont.save(os.path.join('woff', font_name + '.woff'), reorderTables=None)\n# save WOFF2\nfont.flavor = 'woff2'\nfont.save(os.path.join('woff2', font_name + '.woff2'), reorderTables=None)",
+        "detail": "node_modules.katex.src.fonts.generate_fonts",
+        "documentation": {}
+    },
+    {
+        "label": "font.flavor",
+        "kind": 5,
+        "importPath": "node_modules.katex.src.fonts.generate_fonts",
+        "description": "node_modules.katex.src.fonts.generate_fonts",
+        "peekOfCode": "font.flavor = 'woff2'\nfont.save(os.path.join('woff2', font_name + '.woff2'), reorderTables=None)",
+        "detail": "node_modules.katex.src.fonts.generate_fonts",
+        "documentation": {}
+    },
+    {
+        "label": "find_font_path",
+        "kind": 2,
+        "importPath": "node_modules.katex.src.metrics.extract_tfms",
+        "description": "node_modules.katex.src.metrics.extract_tfms",
+        "peekOfCode": "def find_font_path(font_name):\n    try:\n        font_path = subprocess.check_output(['kpsewhich', font_name])\n    except OSError:\n        raise RuntimeError(\"Couldn't find kpsewhich program, make sure you\" +\n                           \" have TeX installed\")\n    except subprocess.CalledProcessError:\n        raise RuntimeError(\"Couldn't find font metrics: '%s'\" % font_name)\n    return font_path.strip()\ndef main():",
+        "detail": "node_modules.katex.src.metrics.extract_tfms",
+        "documentation": {}
+    },
+    {
+        "label": "main",
+        "kind": 2,
+        "importPath": "node_modules.katex.src.metrics.extract_tfms",
+        "description": "node_modules.katex.src.metrics.extract_tfms",
+        "peekOfCode": "def main():\n    mapping = json.load(sys.stdin)\n    fonts = [\n        'cmbsy10.tfm',\n        'cmbx10.tfm',\n        'cmbxti10.tfm',\n        'cmex10.tfm',\n        'cmmi10.tfm',\n        'cmmib10.tfm',\n        'cmr10.tfm',",
+        "detail": "node_modules.katex.src.metrics.extract_tfms",
+        "documentation": {}
+    },
+    {
+        "label": "main",
+        "kind": 2,
+        "importPath": "node_modules.katex.src.metrics.extract_ttfs",
+        "description": "node_modules.katex.src.metrics.extract_ttfs",
+        "peekOfCode": "def main():\n    start_json = json.load(sys.stdin)\n    for font in start_json:\n        fontInfo = TTFont(\"../../fonts/KaTeX_\" + font + \".ttf\")\n        glyf = fontInfo[\"glyf\"]\n        widths = fontInfo.getGlyphSet()\n        unitsPerEm = float(fontInfo[\"head\"].unitsPerEm)\n        # We keep ALL Unicode cmaps, not just fontInfo[\"cmap\"].getcmap(3, 1).\n        # This is playing it extra safe, since it reports inconsistencies.\n        # Platform 0 is Unicode, platform 3 is Windows. For platform 3,",
+        "detail": "node_modules.katex.src.metrics.extract_ttfs",
+        "documentation": {}
+    },
+    {
+        "label": "metrics_to_extract",
+        "kind": 5,
+        "importPath": "node_modules.katex.src.metrics.extract_ttfs",
+        "description": "node_modules.katex.src.metrics.extract_ttfs",
+        "peekOfCode": "metrics_to_extract = {\n    # Font name\n    \"AMS-Regular\": {\n        u\"\\u21e2\": None,  # \\dashrightarrow\n        u\"\\u21e0\": None,  # \\dashleftarrow\n    },\n    \"Main-Regular\": {\n        # Skew and italic metrics can't be easily parsed from the TTF. Instead,\n        # we map each character to a \"base character\", which is a character\n        # from the same font with correct italic and skew metrics. A character",
+        "detail": "node_modules.katex.src.metrics.extract_ttfs",
+        "documentation": {}
+    },
+    {
+        "label": "props",
+        "kind": 5,
+        "importPath": "node_modules.katex.src.metrics.format_json",
+        "description": "node_modules.katex.src.metrics.format_json",
+        "peekOfCode": "props = ['depth', 'height', 'italic', 'skew']\nif len(sys.argv) > 1:\n    if sys.argv[1] == '--width':\n        props.append('width')\ndata = json.load(sys.stdin)\nsys.stdout.write(\n  \"// This file is GENERATED by buildMetrics.sh. DO NOT MODIFY.\\n\")\nsep = \"export default {\\n    \"\nfor font in sorted(data):\n    sys.stdout.write(sep + json.dumps(font))",
+        "detail": "node_modules.katex.src.metrics.format_json",
+        "documentation": {}
+    },
+    {
+        "label": "data",
+        "kind": 5,
+        "importPath": "node_modules.katex.src.metrics.format_json",
+        "description": "node_modules.katex.src.metrics.format_json",
+        "peekOfCode": "data = json.load(sys.stdin)\nsys.stdout.write(\n  \"// This file is GENERATED by buildMetrics.sh. DO NOT MODIFY.\\n\")\nsep = \"export default {\\n    \"\nfor font in sorted(data):\n    sys.stdout.write(sep + json.dumps(font))\n    sep = \": {\\n        \"\n    for glyph in sorted(data[font], key=int):\n        sys.stdout.write(sep + json.dumps(glyph) + \": \")\n        values = [value if value != 0.0 else 0 for value in",
+        "detail": "node_modules.katex.src.metrics.format_json",
+        "documentation": {}
+    },
+    {
+        "label": "sep",
+        "kind": 5,
+        "importPath": "node_modules.katex.src.metrics.format_json",
+        "description": "node_modules.katex.src.metrics.format_json",
+        "peekOfCode": "sep = \"export default {\\n    \"\nfor font in sorted(data):\n    sys.stdout.write(sep + json.dumps(font))\n    sep = \": {\\n        \"\n    for glyph in sorted(data[font], key=int):\n        sys.stdout.write(sep + json.dumps(glyph) + \": \")\n        values = [value if value != 0.0 else 0 for value in\n                  [data[font][glyph][key] for key in props]]\n        sys.stdout.write(json.dumps(values))\n        sep = \",\\n        \"",
+        "detail": "node_modules.katex.src.metrics.format_json",
+        "documentation": {}
+    },
+    {
+        "label": "CharInfoWord",
+        "kind": 6,
+        "importPath": "node_modules.katex.src.metrics.parse_tfm",
+        "description": "node_modules.katex.src.metrics.parse_tfm",
+        "peekOfCode": "class CharInfoWord(object):\n    def __init__(self, word):\n        b1, b2, b3, b4 = (word >> 24,\n                          (word & 0xff0000) >> 16,\n                          (word & 0xff00) >> 8,\n                          word & 0xff)\n        self.width_index = b1\n        self.height_index = b2 >> 4\n        self.depth_index = b2 & 0x0f\n        self.italic_index = (b3 & 0b11111100) >> 2",
+        "detail": "node_modules.katex.src.metrics.parse_tfm",
+        "documentation": {}
+    },
+    {
+        "label": "LigKernProgram",
+        "kind": 6,
+        "importPath": "node_modules.katex.src.metrics.parse_tfm",
+        "description": "node_modules.katex.src.metrics.parse_tfm",
+        "peekOfCode": "class LigKernProgram(object):\n    def __init__(self, program):\n        self.program = program\n    def execute(self, start, next_char):\n        curr_instruction = start\n        while True:\n            instruction = self.program[curr_instruction]\n            (skip, inst_next_char, op, remainder) = instruction\n            if inst_next_char == next_char:\n                if op < 128:",
+        "detail": "node_modules.katex.src.metrics.parse_tfm",
+        "documentation": {}
+    },
+    {
+        "label": "TfmCharMetrics",
+        "kind": 6,
+        "importPath": "node_modules.katex.src.metrics.parse_tfm",
+        "description": "node_modules.katex.src.metrics.parse_tfm",
+        "peekOfCode": "class TfmCharMetrics(object):\n    def __init__(self, width, height, depth, italic, kern_table):\n        self.width = width\n        self.height = height\n        self.depth = depth\n        self.italic_correction = italic\n        self.kern_table = kern_table\nclass TfmFile(object):\n    def __init__(self, start_char, end_char, char_info, width_table,\n                 height_table, depth_table, italic_table, ligkern_table,",
+        "detail": "node_modules.katex.src.metrics.parse_tfm",
+        "documentation": {}
+    },
+    {
+        "label": "TfmFile",
+        "kind": 6,
+        "importPath": "node_modules.katex.src.metrics.parse_tfm",
+        "description": "node_modules.katex.src.metrics.parse_tfm",
+        "peekOfCode": "class TfmFile(object):\n    def __init__(self, start_char, end_char, char_info, width_table,\n                 height_table, depth_table, italic_table, ligkern_table,\n                 kern_table):\n        self.start_char = start_char\n        self.end_char = end_char\n        self.char_info = char_info\n        self.width_table = width_table\n        self.height_table = height_table\n        self.depth_table = depth_table",
+        "detail": "node_modules.katex.src.metrics.parse_tfm",
+        "documentation": {}
+    },
+    {
+        "label": "TfmReader",
+        "kind": 6,
+        "importPath": "node_modules.katex.src.metrics.parse_tfm",
+        "description": "node_modules.katex.src.metrics.parse_tfm",
+        "peekOfCode": "class TfmReader(object):\n    def __init__(self, f):\n        self.f = f\n    def read_byte(self):\n        return ord(self.f.read(1))\n    def read_halfword(self):\n        b1 = self.read_byte()\n        b2 = self.read_byte()\n        return (b1 << 8) | b2\n    def read_word(self):",
+        "detail": "node_modules.katex.src.metrics.parse_tfm",
+        "documentation": {}
+    },
+    {
+        "label": "read_tfm_file",
+        "kind": 2,
+        "importPath": "node_modules.katex.src.metrics.parse_tfm",
+        "description": "node_modules.katex.src.metrics.parse_tfm",
+        "peekOfCode": "def read_tfm_file(file_name):\n    with open(file_name, 'rb') as f:\n        reader = TfmReader(f)\n        # file_size\n        reader.read_halfword()\n        header_size = reader.read_halfword()\n        start_char = reader.read_halfword()\n        end_char = reader.read_halfword()\n        width_table_size = reader.read_halfword()\n        height_table_size = reader.read_halfword()",
+        "detail": "node_modules.katex.src.metrics.parse_tfm",
+        "documentation": {}
+    },
+    {
+        "label": "Response",
+        "kind": 6,
+        "importPath": "node_modules.polyscript.python.mip",
+        "description": "node_modules.polyscript.python.mip",
+        "peekOfCode": "class Response:\n    def __init__(self, f):\n        self.raw = f\n        self.encoding = \"utf-8\"\n        self._cached = None\n    def close(self):\n        if self.raw:\n            self.raw.close()\n            self.raw = None\n        self._cached = None",
+        "detail": "node_modules.polyscript.python.mip",
+        "documentation": {}
+    },
+    {
+        "label": "request",
+        "kind": 2,
+        "importPath": "node_modules.polyscript.python.mip",
+        "description": "node_modules.polyscript.python.mip",
+        "peekOfCode": "def request(\n    method,\n    url,\n    data=None,\n    json=None,\n    headers={},\n    stream=None,\n    auth=None,\n    timeout=None,\n    parse_headers=True,",
+        "detail": "node_modules.polyscript.python.mip",
+        "documentation": {}
+    },
+    {
+        "label": "get",
+        "kind": 2,
+        "importPath": "node_modules.polyscript.python.mip",
+        "description": "node_modules.polyscript.python.mip",
+        "peekOfCode": "def get(url, **kw):\n    return request(\"GET\", url, **kw)\n# Content below this line is from the Micropython MIP package and is covered\n# by the applicable MIT license:\n# \n# THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, \n# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER \n# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING ",
+        "detail": "node_modules.polyscript.python.mip",
+        "documentation": {}
+    },
+    {
+        "label": "install",
+        "kind": 2,
+        "importPath": "node_modules.polyscript.python.mip",
+        "description": "node_modules.polyscript.python.mip",
+        "peekOfCode": "def install(package, index=None, target=None, version=None, mpy=True):\n    if not target:\n        for p in sys.path:\n            if p.endswith(\"/lib\"):\n                target = p\n                break\n        else:\n            print(\"Unable to find lib dir in sys.path\")\n            return\n    if not index:",
+        "detail": "node_modules.polyscript.python.mip",
+        "documentation": {}
+    },
+    {
+        "label": "HEADERS_TO_IGNORE",
+        "kind": 5,
+        "importPath": "node_modules.polyscript.python.mip",
+        "description": "node_modules.polyscript.python.mip",
+        "peekOfCode": "HEADERS_TO_IGNORE = (\"user-agent\",)\ntry:\n    import js\nexcept Exception as err:\n    raise OSError(\"This version of urequests can only be used in the browser\")\n# TODO try to support streaming xhr requests, a-la pyodide-http\nHEADERS_TO_IGNORE = (\"user-agent\",)\ndef request(\n    method,\n    url,",
+        "detail": "node_modules.polyscript.python.mip",
+        "documentation": {}
+    },
+    {
+        "label": "HEADERS_TO_IGNORE",
+        "kind": 5,
+        "importPath": "node_modules.polyscript.python.mip",
+        "description": "node_modules.polyscript.python.mip",
+        "peekOfCode": "HEADERS_TO_IGNORE = (\"user-agent\",)\ndef request(\n    method,\n    url,\n    data=None,\n    json=None,\n    headers={},\n    stream=None,\n    auth=None,\n    timeout=None,",
+        "detail": "node_modules.polyscript.python.mip",
+        "documentation": {}
+    },
+    {
+        "label": "_PACKAGE_INDEX",
+        "kind": 5,
+        "importPath": "node_modules.polyscript.python.mip",
+        "description": "node_modules.polyscript.python.mip",
+        "peekOfCode": "_PACKAGE_INDEX = const(\"https://micropython.org/pi/v2\")\n_CHUNK_SIZE = 128\n# This implements os.makedirs(os.dirname(path))\ndef _ensure_path_exists(path):\n    import os\n    split = path.split(\"/\")\n    # Handle paths starting with \"/\".\n    if not split[0]:\n        split.pop(0)\n        split[0] = \"/\" + split[0]",
+        "detail": "node_modules.polyscript.python.mip",
+        "documentation": {}
+    },
+    {
+        "label": "_CHUNK_SIZE",
+        "kind": 5,
+        "importPath": "node_modules.polyscript.python.mip",
+        "description": "node_modules.polyscript.python.mip",
+        "peekOfCode": "_CHUNK_SIZE = 128\n# This implements os.makedirs(os.dirname(path))\ndef _ensure_path_exists(path):\n    import os\n    split = path.split(\"/\")\n    # Handle paths starting with \"/\".\n    if not split[0]:\n        split.pop(0)\n        split[0] = \"/\" + split[0]\n    prefix = \"\"",
+        "detail": "node_modules.polyscript.python.mip",
+        "documentation": {}
+    },
+    {
+        "label": "main",
+        "kind": 2,
+        "importPath": "venv.bin.jp",
+        "description": "venv.bin.jp",
+        "peekOfCode": "def main():\n    parser = argparse.ArgumentParser()\n    parser.add_argument('expression')\n    parser.add_argument('-f', '--filename',\n                        help=('The filename containing the input data.  '\n                              'If a filename is not given then data is '\n                              'read from stdin.'))\n    parser.add_argument('--ast', action='store_true',\n                        help=('Pretty print the AST, do not search the data.'))\n    args = parser.parse_args()",
+        "detail": "venv.bin.jp",
+        "documentation": {}
+    },
+    {
+        "label": "BaseModel",
+        "kind": 6,
+        "importPath": "venv.bin.pwiz",
+        "description": "venv.bin.pwiz",
+        "peekOfCode": "class BaseModel(Model):\n    class Meta:\n        database = database\n\"\"\"\nUNKNOWN_FIELD = \"\"\"\\\nclass UnknownField(object):\n    def __init__(self, *_, **__): pass\n\"\"\"\nDATABASE_ALIASES = {\n    CockroachDatabase: ['cockroach', 'cockroachdb', 'crdb'],",
+        "detail": "venv.bin.pwiz",
+        "documentation": {}
+    },
+    {
+        "label": "UnknownField",
+        "kind": 6,
+        "importPath": "venv.bin.pwiz",
+        "description": "venv.bin.pwiz",
+        "peekOfCode": "class UnknownField(object):\n    def __init__(self, *_, **__): pass\n\"\"\"\nDATABASE_ALIASES = {\n    CockroachDatabase: ['cockroach', 'cockroachdb', 'crdb'],\n    MySQLDatabase: ['mysql', 'mysqldb'],\n    PostgresqlDatabase: ['postgres', 'postgresql'],\n    SqliteDatabase: ['sqlite', 'sqlite3'],\n}\nDATABASE_MAP = dict((value, key)",
+        "detail": "venv.bin.pwiz",
+        "documentation": {}
+    },
+    {
+        "label": "make_introspector",
+        "kind": 2,
+        "importPath": "venv.bin.pwiz",
+        "description": "venv.bin.pwiz",
+        "peekOfCode": "def make_introspector(database_type, database_name, **kwargs):\n    if database_type not in DATABASE_MAP:\n        err('Unrecognized database, must be one of: %s' %\n            ', '.join(DATABASE_MAP.keys()))\n        sys.exit(1)\n    schema = kwargs.pop('schema', None)\n    DatabaseClass = DATABASE_MAP[database_type]\n    db = DatabaseClass(database_name, **kwargs)\n    return Introspector.from_database(db, schema=schema)\ndef print_models(introspector, tables=None, preserve_order=False,",
+        "detail": "venv.bin.pwiz",
+        "documentation": {}
+    },
+    {
+        "label": "print_models",
+        "kind": 2,
+        "importPath": "venv.bin.pwiz",
+        "description": "venv.bin.pwiz",
+        "peekOfCode": "def print_models(introspector, tables=None, preserve_order=False,\n                 include_views=False, ignore_unknown=False, snake_case=True):\n    database = introspector.introspect(table_names=tables,\n                                       include_views=include_views,\n                                       snake_case=snake_case)\n    db_kwargs = introspector.get_database_kwargs()\n    header = HEADER % (\n        introspector.get_additional_imports(),\n        introspector.get_database_class().__name__,\n        introspector.get_database_name(),",
+        "detail": "venv.bin.pwiz",
+        "documentation": {}
+    },
+    {
+        "label": "print_header",
+        "kind": 2,
+        "importPath": "venv.bin.pwiz",
+        "description": "venv.bin.pwiz",
+        "peekOfCode": "def print_header(cmd_line, introspector):\n    timestamp = datetime.datetime.now()\n    print_('# Code generated by:')\n    print_('# python -m pwiz %s' % cmd_line)\n    print_('# Date: %s' % timestamp.strftime('%B %d, %Y %I:%M%p'))\n    print_('# Database: %s' % introspector.get_database_name())\n    print_('# Peewee version: %s' % peewee_version)\n    print_('')\ndef err(msg):\n    sys.stderr.write('\\033[91m%s\\033[0m\\n' % msg)",
+        "detail": "venv.bin.pwiz",
+        "documentation": {}
+    },
+    {
+        "label": "err",
+        "kind": 2,
+        "importPath": "venv.bin.pwiz",
+        "description": "venv.bin.pwiz",
+        "peekOfCode": "def err(msg):\n    sys.stderr.write('\\033[91m%s\\033[0m\\n' % msg)\n    sys.stderr.flush()\ndef get_option_parser():\n    parser = OptionParser(usage='usage: %prog [options] database_name')\n    ao = parser.add_option\n    ao('-H', '--host', dest='host')\n    ao('-p', '--port', dest='port', type='int')\n    ao('-u', '--user', dest='user')\n    ao('-P', '--password', dest='password', action='store_true')",
+        "detail": "venv.bin.pwiz",
+        "documentation": {}
+    },
+    {
+        "label": "get_option_parser",
+        "kind": 2,
+        "importPath": "venv.bin.pwiz",
+        "description": "venv.bin.pwiz",
+        "peekOfCode": "def get_option_parser():\n    parser = OptionParser(usage='usage: %prog [options] database_name')\n    ao = parser.add_option\n    ao('-H', '--host', dest='host')\n    ao('-p', '--port', dest='port', type='int')\n    ao('-u', '--user', dest='user')\n    ao('-P', '--password', dest='password', action='store_true')\n    engines = sorted(DATABASE_MAP)\n    ao('-e', '--engine', dest='engine', choices=engines,\n       help=('Database type, e.g. sqlite, mysql, postgresql or cockroachdb. '",
+        "detail": "venv.bin.pwiz",
+        "documentation": {}
+    },
+    {
+        "label": "get_connect_kwargs",
+        "kind": 2,
+        "importPath": "venv.bin.pwiz",
+        "description": "venv.bin.pwiz",
+        "peekOfCode": "def get_connect_kwargs(options):\n    ops = ('host', 'port', 'user', 'schema')\n    kwargs = dict((o, getattr(options, o)) for o in ops if getattr(options, o))\n    if options.password:\n        kwargs['password'] = getpass()\n    return kwargs\nif __name__ == '__main__':\n    raw_argv = sys.argv\n    parser = get_option_parser()\n    options, args = parser.parse_args()",
+        "detail": "venv.bin.pwiz",
+        "documentation": {}
+    },
+    {
+        "label": "HEADER",
+        "kind": 5,
+        "importPath": "venv.bin.pwiz",
+        "description": "venv.bin.pwiz",
+        "peekOfCode": "HEADER = \"\"\"from peewee import *%s\ndatabase = %s('%s'%s)\n\"\"\"\nBASE_MODEL = \"\"\"\\\nclass BaseModel(Model):\n    class Meta:\n        database = database\n\"\"\"\nUNKNOWN_FIELD = \"\"\"\\\nclass UnknownField(object):",
+        "detail": "venv.bin.pwiz",
+        "documentation": {}
+    },
+    {
+        "label": "database",
+        "kind": 5,
+        "importPath": "venv.bin.pwiz",
+        "description": "venv.bin.pwiz",
+        "peekOfCode": "database = %s('%s'%s)\n\"\"\"\nBASE_MODEL = \"\"\"\\\nclass BaseModel(Model):\n    class Meta:\n        database = database\n\"\"\"\nUNKNOWN_FIELD = \"\"\"\\\nclass UnknownField(object):\n    def __init__(self, *_, **__): pass",
+        "detail": "venv.bin.pwiz",
+        "documentation": {}
+    },
+    {
+        "label": "BASE_MODEL",
+        "kind": 5,
+        "importPath": "venv.bin.pwiz",
+        "description": "venv.bin.pwiz",
+        "peekOfCode": "BASE_MODEL = \"\"\"\\\nclass BaseModel(Model):\n    class Meta:\n        database = database\n\"\"\"\nUNKNOWN_FIELD = \"\"\"\\\nclass UnknownField(object):\n    def __init__(self, *_, **__): pass\n\"\"\"\nDATABASE_ALIASES = {",
+        "detail": "venv.bin.pwiz",
+        "documentation": {}
+    },
+    {
+        "label": "UNKNOWN_FIELD",
+        "kind": 5,
+        "importPath": "venv.bin.pwiz",
+        "description": "venv.bin.pwiz",
+        "peekOfCode": "UNKNOWN_FIELD = \"\"\"\\\nclass UnknownField(object):\n    def __init__(self, *_, **__): pass\n\"\"\"\nDATABASE_ALIASES = {\n    CockroachDatabase: ['cockroach', 'cockroachdb', 'crdb'],\n    MySQLDatabase: ['mysql', 'mysqldb'],\n    PostgresqlDatabase: ['postgres', 'postgresql'],\n    SqliteDatabase: ['sqlite', 'sqlite3'],\n}",
+        "detail": "venv.bin.pwiz",
+        "documentation": {}
+    },
+    {
+        "label": "DATABASE_ALIASES",
+        "kind": 5,
+        "importPath": "venv.bin.pwiz",
+        "description": "venv.bin.pwiz",
+        "peekOfCode": "DATABASE_ALIASES = {\n    CockroachDatabase: ['cockroach', 'cockroachdb', 'crdb'],\n    MySQLDatabase: ['mysql', 'mysqldb'],\n    PostgresqlDatabase: ['postgres', 'postgresql'],\n    SqliteDatabase: ['sqlite', 'sqlite3'],\n}\nDATABASE_MAP = dict((value, key)\n                    for key in DATABASE_ALIASES\n                    for value in DATABASE_ALIASES[key])\ndef make_introspector(database_type, database_name, **kwargs):",
+        "detail": "venv.bin.pwiz",
+        "documentation": {}
+    },
+    {
+        "label": "DATABASE_MAP",
+        "kind": 5,
+        "importPath": "venv.bin.pwiz",
+        "description": "venv.bin.pwiz",
+        "peekOfCode": "DATABASE_MAP = dict((value, key)\n                    for key in DATABASE_ALIASES\n                    for value in DATABASE_ALIASES[key])\ndef make_introspector(database_type, database_name, **kwargs):\n    if database_type not in DATABASE_MAP:\n        err('Unrecognized database, must be one of: %s' %\n            ', '.join(DATABASE_MAP.keys()))\n        sys.exit(1)\n    schema = kwargs.pop('schema', None)\n    DatabaseClass = DATABASE_MAP[database_type]",
+        "detail": "venv.bin.pwiz",
+        "documentation": {}
+    },
+    {
+        "label": "cmd_doc",
+        "kind": 5,
+        "importPath": "venv.bin.runxlrd",
+        "description": "venv.bin.runxlrd",
+        "peekOfCode": "cmd_doc = \"\"\"\nCommands:\n2rows           Print the contents of first and last row in each sheet\n3rows           Print the contents of first, second and last row in each sheet\nbench           Same as \"show\", but doesn't print -- for profiling\nbiff_count[1]   Print a count of each type of BIFF record in the file\nbiff_dump[1]    Print a dump (char and hex) of the BIFF records in the file\nfonts           hdr + print a dump of all font objects\nhdr             Mini-overview of file (no per-sheet information)\nhotshot         Do a hotshot profile run e.g. ... -f1 hotshot bench bigfile*.xls",
+        "detail": "venv.bin.runxlrd",
+        "documentation": {}
+    },
+    {
+        "label": "options",
+        "kind": 5,
+        "importPath": "venv.bin.runxlrd",
+        "description": "venv.bin.runxlrd",
+        "peekOfCode": "options = None\nif __name__ == \"__main__\":\n    import xlrd\n    import sys\n    import time\n    import glob\n    import traceback\n    import gc\n    from xlrd.timemachine import xrange, REPR\n    class LogHandler(object):",
+        "detail": "venv.bin.runxlrd",
+        "documentation": {}
+    },
+    {
+        "label": "extract_file",
+        "kind": 2,
+        "importPath": "venv.bin.vba_extract",
+        "description": "venv.bin.vba_extract",
+        "peekOfCode": "def extract_file(xlsm_zip, filename):\n    # Extract a single file from an Excel xlsm macro file.\n    data = xlsm_zip.read(\"xl/\" + filename)\n    # Write the data to a local file.\n    file = open(filename, \"wb\")\n    file.write(data)\n    file.close()\n# The VBA project file and project signature file we want to extract.\nvba_filename = \"vbaProject.bin\"\nvba_signature_filename = \"vbaProjectSignature.bin\"",
+        "detail": "venv.bin.vba_extract",
+        "documentation": {}
+    },
+    {
+        "label": "vba_filename",
+        "kind": 5,
+        "importPath": "venv.bin.vba_extract",
+        "description": "venv.bin.vba_extract",
+        "peekOfCode": "vba_filename = \"vbaProject.bin\"\nvba_signature_filename = \"vbaProjectSignature.bin\"\n# Get the xlsm file name from the commandline.\nif len(sys.argv) > 1:\n    xlsm_file = sys.argv[1]\nelse:\n    print(\n        \"\\nUtility to extract a vbaProject.bin binary from an Excel 2007+ \"\n        \"xlsm macro file for insertion into an XlsxWriter file.\\n\"\n        \"If the macros are digitally signed, extracts also a vbaProjectSignature.bin \"",
+        "detail": "venv.bin.vba_extract",
+        "documentation": {}
+    },
+    {
+        "label": "vba_signature_filename",
+        "kind": 5,
+        "importPath": "venv.bin.vba_extract",
+        "description": "venv.bin.vba_extract",
+        "peekOfCode": "vba_signature_filename = \"vbaProjectSignature.bin\"\n# Get the xlsm file name from the commandline.\nif len(sys.argv) > 1:\n    xlsm_file = sys.argv[1]\nelse:\n    print(\n        \"\\nUtility to extract a vbaProject.bin binary from an Excel 2007+ \"\n        \"xlsm macro file for insertion into an XlsxWriter file.\\n\"\n        \"If the macros are digitally signed, extracts also a vbaProjectSignature.bin \"\n        \"file.\\n\"",
+        "detail": "venv.bin.vba_extract",
         "documentation": {}
     },
     {

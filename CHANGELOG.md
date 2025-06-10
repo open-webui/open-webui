@@ -1,14 +1,11 @@
 # Changelog
 
-All important updates to OpenWebUI will be listed here.  
-This file follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format,  
-and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-## [0.6.13] - 1-06-2025
+All notable changes to this project will be documented in this file.
 
-### תודה שאתם משתמשים בצ'אט 💬  
-- צוותים אלף ובית מתרגשים להשיק את הגרסה החדשה של הצ׳אט.  
-- אם יש לכם שאלות או בעיות, אל תהססו לפנות אלינו:
-- alef@gmail.com
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.6.13] - 2025-05-30
 
 ### Added
 - 📄 **העלאת מסמכים:**  
