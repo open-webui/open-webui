@@ -369,7 +369,7 @@ class UsersTable:
         except Exception:
             return False
 
-    def update_user_api_key_by_id(self, id: str, api_key: str) -> str:
+    def update_user_api_key_by_id(self, id: str, api_key: str) -> bool:
         try:
             with get_db() as db:
                 result = db.query(User).filter_by(id=id).update({"api_key": api_key})
