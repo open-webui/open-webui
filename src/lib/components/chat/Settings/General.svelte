@@ -270,9 +270,11 @@
 				<div class=" my-2.5 text-sm font-medium">{$i18n.t('System Prompt')}</div>
 				<Textarea
 					bind:value={system}
-					className="w-full text-sm bg-white dark:text-gray-300 dark:bg-gray-900 outline-hidden resize-none"
+					className="w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-850 text-gray-900 dark:text-gray-100 outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+					enableResize={true}
 					rows="4"
 					placeholder={$i18n.t('Enter system prompt here')}
+					style="min-height: 6rem;"
 				/>
 			</div>
 

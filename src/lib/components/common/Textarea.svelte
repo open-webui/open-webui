@@ -8,6 +8,8 @@
 	export let required = false;
 	export let className =
 		'w-full rounded-lg px-3.5 py-2 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden  h-full';
+	export let style = ''; // New prop for additional inline styles
+	export let enableResize = false; // New prop to control resizing
 
 	let textareaElement;
 
@@ -42,7 +44,7 @@
 	bind:value
 	{placeholder}
 	class={className}
-	style="field-sizing: content;"
+	style="field-sizing: content; {style}; {enableResize ? 'resize: vertical;' : 'resize: none;'}"
 	{rows}
 	{required}
 	on:input={(e) => {

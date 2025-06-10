@@ -15,6 +15,12 @@
 	export let params = {};
 
 	let showValves = false;
+
+	function autoGrow(element) {
+		if (!element) return;
+		element.style.height = 'auto';
+		element.style.height = element.scrollHeight + 'px';
+	}
 </script>
 
 <div class=" dark:text-white">
@@ -71,12 +77,14 @@
 			<hr class="my-2 border-gray-50 dark:border-gray-700/10" />
 
 			<Collapsible title={$i18n.t('System Prompt')} open={true} buttonClassName="w-full">
-				<div class="" slot="content">
+				<div class="mt-1.5" slot="content">
 					<textarea
 						bind:value={params.system}
-						class="w-full text-xs py-1.5 bg-transparent outline-hidden resize-none"
+						class="w-full text-sm p-2.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-transparent dark:bg-gray-800 text-gray-900 dark:text-gray-100 outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
 						rows="4"
 						placeholder={$i18n.t('Enter system prompt')}
+						style="resize: vertical;"
+						on:input={(e) => autoGrow(e.target)}
 					/>
 				</div>
 			</Collapsible>
