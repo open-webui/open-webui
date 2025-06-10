@@ -1510,47 +1510,7 @@ TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = PersistentConfig(
 )
 
 
-DEFAULT_TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = """Available Tools: {{TOOLS}}
-
-You are a function calling assistant. Analyze the user's query and determine if any tools should be used.
-
-CRITICAL TOOL TRIGGERS:
-- Time queries → ALWAYS use get_current_time tool
-- News queries → ALWAYS use get_top_headlines tool
-
-Tool Usage Rules:
-- Use tools for current/real-time information (current time, weather, news, etc.)
-- Use tools for live data, calculations, or external operations
-- Do NOT use tools for general knowledge, historical facts, or definitions
-- Do NOT use tools for casual conversation or greetings
-
-RESPONSE FORMAT:
-- If no tools needed: []
-- If ONE tool needed: [{\"name\": \"tool_name\", \"parameters\": {\"param\": \"value\"}}]
-- If MULTIPLE tools needed: [{\"name\": \"tool1\", \"parameters\": {}}, {\"name\": \"tool2\", \"parameters\": {}}]
-
-TIME TOOL EXAMPLES:
-- "what time is it" → [{\"name\": \"get_current_time\", \"parameters\": {}}]
-- "current time" → [{\"name\": \"get_current_time\", \"parameters\": {}}]
-- "what time is it in Tokyo" → [{\"name\": \"get_current_time\", \"parameters\": {\"timezone\": \"Asia/Tokyo\"}}]
-
-NEWS TOOL EXAMPLES:
-- "latest news" → [{\"name\": \"get_top_headlines\", \"parameters\": {}}]
-- "tech news" → [{\"name\": \"get_top_headlines\", \"parameters\": {\"category\": \"technology\"}}]
-- "news about AI" → [{\"name\": \"get_top_headlines\", \"parameters\": {\"q\": \"AI\"}}]
-- "business news from UK" → [{\"name\": \"get_top_headlines\", \"parameters\": {\"category\": \"business\", \"country\": \"gb\"}}]
-
-MULTIPLE TOOL EXAMPLES:
-- "what time is it and latest news" → [{\"name\": \"get_current_time\", \"parameters\": {}}, {\"name\": \"get_top_headlines\", \"parameters\": {}}]
-- "current time and tech news" → [{\"name\": \"get_current_time\", \"parameters\": {}}, {\"name\": \"get_top_headlines\", \"parameters\": {\"category\": \"technology\"}}]
-
-IMPORTANT:
-- Only include parameters with actual meaningful values
-- Omit parameters that are null, empty, or have default values
-- Return ONLY the JSON array - no explanations or additional text
-- Multiple tools can be called in a single response
-
-Analyze the user query and return the appropriate tool calls as a JSON array."""
+DEFAULT_TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = """Available Tools: {{TOOLS}}\nReturn an empty string if no tools match the query. If a function tool matches, construct and return a JSON object in the format {\"name\": \"functionName\", \"parameters\": {\"requiredFunctionParamKey\": \"requiredFunctionParamValue\"}} using the appropriate tool and its parameters. Only return the object and limit the response to the JSON object without additional text."""
 
 
 DEFAULT_EMOJI_GENERATION_PROMPT_TEMPLATE = """Your task is to reflect the speaker's likely facial expression through a fitting emoji. Interpret emotions from the message and reflect their facial expression using fitting, diverse emojis (e.g., 😊, 😢, 😡, 😱).
@@ -1792,24 +1752,26 @@ CHUNK_OVERLAP = PersistentConfig(
 )
 
 DEFAULT_RAG_TEMPLATE = """### Task:
-Respond to the user query using ONLY the provided context. You must base your response entirely on the information given in the context below.
+Respond to the user query using the provided context, incorporating inline citations in the format [source_id] **only when the <source_id> tag is explicitly provided** in the context.
 
 ### Guidelines:
-- **CRITICAL: Use ONLY the information provided in the context. Do not add information from your own knowledge.**
-- **CRITICAL: If the context contains tool output, present that output directly without modification or reinterpretation.**
-- Include inline citations in the format [source_id] when the <source_id> tag is provided in the context.
-- If you don't know the answer based on the provided context, clearly state that the information is not available in the provided sources.
-- If uncertain about information in the context, ask the user for clarification.
+- If you don't know the answer, clearly state that.
+- If uncertain, ask the user for clarification.
 - Respond in the same language as the user's query.
-- If the context is unreadable or of poor quality, inform the user about this issue.
+- If the context is unreadable or of poor quality, inform the user and provide the best possible answer.
+- If the answer isn't present in the context but you possess the knowledge, explain this to the user and provide the answer using your own understanding.
+- **Only include inline citations using [source_id] when a <source_id> tag is explicitly provided in the context.**  
+- Do not cite if the <source_id> tag is not provided in the context.  
 - Do not use XML tags in your response.
-- Present information from the context in a clear, organized manner.
+- Ensure citations are concise and directly related to the information provided.
 
-### Important:
-When the context contains structured data (like news articles, search results, etc.), present this information as provided without adding, modifying, or reordering unless explicitly requested by the user.
+### Example of Citation:
+If the user asks about a specific topic and the information is found in "whitepaper.pdf" with a provided <source_id>, the response should include the citation like so:  
+* "According to the study, the proposed method increases efficiency by 20% [whitepaper.pdf]."
+If no <source_id> is present, the response should omit the citation.
 
 ### Output:
-Provide a response based SOLELY on the provided context, including inline citations in the format [source_id] when source_id tags are present.
+Provide a clear and direct response to the user's query, including inline citations in the format [source_id] only when the <source_id> tag is present in the context.
 
 <context>
 {{CONTEXT}}
