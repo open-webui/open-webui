@@ -292,36 +292,36 @@
 
 	onMount(async () => {
 		titleAutoGenerate = $settings?.title?.auto ?? true;
-		autoTags = $settings.autoTags ?? true;
-		autoFollowUps = $settings.autoFollowUps ?? true;
+		autoTags = $settings?.autoTags ?? true;
+		autoFollowUps = $settings?.autoFollowUps ?? true;
 
-		highContrastMode = $settings.highContrastMode ?? false;
+		highContrastMode = $settings?.highContrastMode ?? false;
 
-		detectArtifacts = $settings.detectArtifacts ?? true;
-		responseAutoCopy = $settings.responseAutoCopy ?? false;
+		detectArtifacts = $settings?.detectArtifacts ?? true;
+		responseAutoCopy = $settings?.responseAutoCopy ?? false;
 
-		showUsername = $settings.showUsername ?? false;
-		showUpdateToast = $settings.showUpdateToast ?? true;
-		showChangelog = $settings.showChangelog ?? true;
+		showUsername = $settings?.showUsername ?? false;
+		showUpdateToast = $settings?.showUpdateToast ?? true;
+		showChangelog = $settings?.showChangelog ?? true;
 
-		showEmojiInCall = $settings.showEmojiInCall ?? false;
-		voiceInterruption = $settings.voiceInterruption ?? false;
+		showEmojiInCall = $settings?.showEmojiInCall ?? false;
+		voiceInterruption = $settings?.voiceInterruption ?? false;
 
-		richTextInput = $settings.richTextInput ?? true;
-		promptAutocomplete = $settings.promptAutocomplete ?? false;
-		largeTextAsFile = $settings.largeTextAsFile ?? false;
-		copyFormatted = $settings.copyFormatted ?? false;
+		richTextInput = $settings?.richTextInput ?? true;
+		promptAutocomplete = $settings?.promptAutocomplete ?? false;
+		largeTextAsFile = $settings?.largeTextAsFile ?? false;
+		copyFormatted = $settings?.copyFormatted ?? false;
 
-		collapseCodeBlocks = $settings.collapseCodeBlocks ?? false;
-		expandDetails = $settings.expandDetails ?? false;
+		collapseCodeBlocks = $settings?.collapseCodeBlocks ?? false;
+		expandDetails = $settings?.expandDetails ?? false;
 
-		landingPageMode = $settings.landingPageMode ?? '';
-		chatBubble = $settings.chatBubble ?? true;
-		widescreenMode = $settings.widescreenMode ?? false;
-		splitLargeChunks = $settings.splitLargeChunks ?? false;
-		scrollOnBranchChange = $settings.scrollOnBranchChange ?? true;
-		chatDirection = $settings.chatDirection ?? 'auto';
-		userLocation = $settings.userLocation ?? false;
+		landingPageMode = $settings?.landingPageMode ?? '';
+		chatBubble = $settings?.chatBubble ?? true;
+		widescreenMode = $settings?.widescreenMode ?? false;
+		splitLargeChunks = $settings?.splitLargeChunks ?? false;
+		scrollOnBranchChange = $settings?.scrollOnBranchChange ?? true;
+		chatDirection = $settings?.chatDirection ?? 'auto';
+		userLocation = $settings?.userLocation ?? false;
 
 		notificationSound = $settings?.notificationSound ?? true;
 		notificationSoundAlways = $settings?.notificationSoundAlways ?? false;
@@ -331,19 +331,19 @@
 
 		stylizedPdfExport = $settings?.stylizedPdfExport ?? true;
 
-		hapticFeedback = $settings.hapticFeedback ?? false;
-		ctrlEnterToSend = $settings.ctrlEnterToSend ?? false;
+		hapticFeedback = $settings?.hapticFeedback ?? false;
+		ctrlEnterToSend = $settings?.ctrlEnterToSend ?? false;
 
-		imageCompression = $settings.imageCompression ?? false;
-		imageCompressionSize = $settings.imageCompressionSize ?? { width: '', height: '' };
+		imageCompression = $settings?.imageCompression ?? false;
+		imageCompressionSize = $settings?.imageCompressionSize ?? { width: '', height: '' };
 
 		defaultModelId = $settings?.models?.at(0) ?? '';
 		if ($config?.default_models) {
 			defaultModelId = $config.default_models.split(',')[0];
 		}
 
-		backgroundImageUrl = $settings.backgroundImageUrl ?? null;
-		webSearch = $settings.webSearch ?? null;
+		backgroundImageUrl = $settings?.backgroundImageUrl ?? null;
+		webSearch = $settings?.webSearch ?? null;
 	});
 </script>
 
