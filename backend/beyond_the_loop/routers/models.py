@@ -236,11 +236,11 @@ async def delete_model_by_id(id: str, user=Depends(get_verified_user)):
     return result
 
 ############################
-# GetUserTags
+# GetTags
 ############################
 
-@router.get("/user-tags", response_model=list[TagResponse])
-async def get_user_tags(user=Depends(get_verified_user)):
+@router.get("/tags", response_model=list[TagResponse])
+async def get_tags(user=Depends(get_verified_user)):
     tags = Models.get_system_and_user_tags(user.id)
     if not tags:
         raise HTTPException(

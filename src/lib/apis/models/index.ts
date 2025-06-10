@@ -300,7 +300,7 @@ export const bookmarkModel = async (token: string, modelId: string) => {
 export const getUserTagsForModels = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/models/user-tags`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/models/tags`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',

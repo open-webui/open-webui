@@ -192,11 +192,11 @@ async def delete_prompt_by_command(command: str, user=Depends(get_verified_user)
     return result
 
 ############################
-# GetUserTags
+# GetTags
 ############################
 
-@router.get("/user-tags", response_model=list[TagResponse])
-async def get_user_tags(user=Depends(get_verified_user)):
+@router.get("/tags", response_model=list[TagResponse])
+async def get_tags(user=Depends(get_verified_user)):
     tags = Prompts.get_system_and_user_tags(user.id)
     if not tags:
         raise HTTPException(

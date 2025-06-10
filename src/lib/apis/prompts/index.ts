@@ -239,7 +239,7 @@ export const bookmarkPrompt = async (token: string, command: string) => {
 export const getUserTagsForPrompts = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/user-tags`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/tags`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
