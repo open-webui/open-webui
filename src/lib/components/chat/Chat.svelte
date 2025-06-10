@@ -1642,9 +1642,6 @@
 				params: {
 					...$settings?.params,
 					...params,
-
-					format: $settings.requestFormat ?? undefined,
-					keep_alive: $settings.keepAlive ?? undefined,
 					stop:
 						(params?.stop ?? $settings?.params?.stop ?? undefined)
 							? (params?.stop.split(',').map((token) => token.trim()) ?? $settings.params.stop).map(

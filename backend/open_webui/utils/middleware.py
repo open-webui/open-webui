@@ -698,13 +698,8 @@ def apply_params_to_form_data(form_data, model):
         params = deep_update(params, custom_params)
 
     if model.get("ollama"):
+        # Ollama specific parameters
         form_data["options"] = params
-
-        if "format" in params:
-            form_data["format"] = params["format"]
-
-        if "keep_alive" in params:
-            form_data["keep_alive"] = params["keep_alive"]
     else:
         if isinstance(params, dict):
             for key, value in params.items():
