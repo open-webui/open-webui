@@ -568,13 +568,13 @@
 					<div class="self-center rounded-l-xl bg-transparent">
 						<Search
 							className="size-3.5"
-							strokeWidth={($settings.highContrastMode ?? false) ? '3' : '1.5'}
+							strokeWidth={($settings?.highContrastMode ?? false) ? '3' : '1.5'}
 						/>
 					</div>
 					<label class="sr-only" for="search-input-settings-modal">{$i18n.t('Search')}</label>
 					<input
 						class={`w-full py-1.5 text-sm bg-transparent dark:text-gray-300 outline-hidden
-								${($settings.highContrastMode ?? false) ? 'placeholder-gray-800' : ''}`}
+								${($settings?.highContrastMode ?? false) ? 'placeholder-gray-800' : ''}`}
 						bind:value={search}
 						id="search-input-settings-modal"
 						on:input={searchDebounceHandler}
