@@ -101,7 +101,7 @@
 
 								<div class="flex-1">
 									<select
-										class="w-full rounded-sm text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-hidden"
+										class="w-full dark:bg-gray-900 rounded-sm text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-hidden"
 										bind:value={_user.role}
 										disabled={_user.id == sessionUser.id}
 										required
