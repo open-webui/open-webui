@@ -34,7 +34,7 @@
 
 				{#if adminDetails}
 					<div class="mt-4 text-sm font-medium text-center">
-						<div>{$i18n.t('Admin')}: {adminDetails.name} ({adminDetails.email})</div>
+						<div>{$i18n.t('Admin')}: ({`contact-albert@numerique.gouv.fr`})</div>
 					</div>
 				{/if}
 
