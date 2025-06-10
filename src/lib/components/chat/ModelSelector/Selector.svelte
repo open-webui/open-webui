@@ -410,7 +410,7 @@
 				</div>
 			{/if}
 
-			<div class="px-3 max-h-64 overflow-y-auto scrollbar-hidden group relative">
+			<div class="px-3 max-h-64 overflow-y-auto group relative">
 				{#if tags && items.filter((item) => !(item.model?.info?.meta?.hidden ?? false)).length > 0}
 					<div
 						class=" flex w-full sticky top-0 z-10 bg-white dark:bg-gray-850 overflow-x-auto scrollbar-none"
