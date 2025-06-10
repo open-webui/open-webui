@@ -11,7 +11,8 @@
 		createNewPrompt,
 		deletePromptByCommand,
 		getPrompts,
-		getPromptList
+		getPromptList,
+		getUserTagsForPrompts
 	} from '$lib/apis/prompts';
 
 	import PromptMenu from './Prompts/PromptMenu.svelte';
@@ -56,11 +57,11 @@
 
 	let loadingBookmark = null;
 
-	$: if (prompts) {
-		tags = Array.from(
-			new Set(prompts.flatMap((p) => p.meta?.tags?.map((t) => t.name.toLowerCase()) || []))
-		);
-	}
+	// $: if (prompts) {
+	// 	tags = Array.from(
+	// 		new Set(prompts.flatMap((p) => p.meta?.tags?.map((t) => t.name) || []))
+	// 	);
+	// }
 
 	onMount(async () => {
 		groupsForPrompts = await getGroups(localStorage.token);
@@ -74,10 +75,10 @@
 			const isPrivate = p?.user_id === $user?.id;
 			const isPrebuilt = p.prebuilt;
 
-			const modelTags = p.meta?.tags?.map((t) => t.name.toLowerCase()) || [];
+			const promptTags = p.meta?.tags?.map((t) => t.name.toLowerCase()) || [];
 
 			const tagsMatch =
-				selectedTags.size === 0 || Array.from(selectedTags).some((tag) => modelTags.includes(tag));
+				selectedTags.size === 0 || Array.from(selectedTags)?.map(tag => tag?.toLowerCase())?.some((tag) => promptTags.includes(tag));
 
 			const accessMatch =
 				accessFilter === 'all' ||
@@ -130,8 +131,14 @@
 		await _prompts.set(await getPrompts(localStorage.token));
 	};
 
+	const getTags = async () => {
+		const res = await getUserTagsForPrompts(localStorage.token);
+		tags = res.filter(tag => tag.is_system).map(tag => tag.name);
+	}
+
 	onMount(async () => {
 		await init();
+		await getTags();
 		loaded = true;
 	});
 
@@ -296,7 +303,7 @@
 										selectedTags = new Set(selectedTags);
 									}}
 								>
-									{tag.charAt(0).toUpperCase() + tag.slice(1)}
+									{$i18n.t(tag)}
 								</button>
 							{/each}
 						</div>
@@ -316,7 +323,7 @@
 									selectedTags = new Set(selectedTags);
 								}}
 							>
-								{tag.charAt(0).toUpperCase() + tag.slice(1)}
+								{$i18n.t(tag)}
 							</button>
 						{/each}
 					</div>
@@ -424,7 +431,7 @@
 											<div
 												class="flex items-center {(hoveredPrompt === prompt.command || menuIdOpened === prompt.command) ? 'dark:text-white' : 'dark:text-customGray-100'} text-xs text-lightGray-100 font-medium bg-customViolet-200 dark:bg-customBlue-800 px-[6px] py-[3px] rounded-md"
 											>
-												{promptTag.name}
+												{$i18n.t(promptTag.name)}
 											</div>
 										{/each}
 									{/if}

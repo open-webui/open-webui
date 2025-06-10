@@ -7,6 +7,7 @@ from beyond_the_loop.models.models import (
     ModelResponse,
     ModelUserResponse,
     Models,
+    TagResponse
 )
 from open_webui.constants import ERROR_MESSAGES
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -233,3 +234,17 @@ async def delete_model_by_id(id: str, user=Depends(get_verified_user)):
 
     result = Models.delete_model_by_id_and_company(id, user.company_id)
     return result
+
+############################
+# GetTags
+############################
+
+@router.get("/tags", response_model=list[TagResponse])
+async def get_tags(user=Depends(get_verified_user)):
+    tags = Models.get_system_and_user_tags(user.id)
+    if not tags:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+    return tags

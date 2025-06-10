@@ -5,6 +5,7 @@ from beyond_the_loop.models.prompts import (
     PromptUserResponse,
     PromptModel,
     Prompts, PromptBookmarkForm,
+    TagResponse
 )
 from open_webui.constants import ERROR_MESSAGES
 from fastapi import APIRouter, Depends, HTTPException, status, Request
@@ -189,3 +190,17 @@ async def delete_prompt_by_command(command: str, user=Depends(get_verified_user)
 
     result = Prompts.delete_prompt_by_command_and_company(f"/{command}", user.company_id)
     return result
+
+############################
+# GetTags
+############################
+
+@router.get("/tags", response_model=list[TagResponse])
+async def get_tags(user=Depends(get_verified_user)):
+    tags = Prompts.get_system_and_user_tags(user.id)
+    if not tags:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+    return tags

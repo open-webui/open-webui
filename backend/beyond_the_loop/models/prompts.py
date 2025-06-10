@@ -5,9 +5,11 @@ from open_webui.internal.db import Base, get_db, JSONField
 from beyond_the_loop.models.users import Users, UserResponse
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text, JSON, Boolean, Column, Table, ForeignKey
+from sqlalchemy import BigInteger, Column, String, Text, JSON, Boolean, Column, Table, ForeignKey, or_
 from sqlalchemy.orm import relationship
 from sqlalchemy import select, delete, insert
+
+import json
 
 from open_webui.utils.access_control import has_access
 
@@ -104,6 +106,10 @@ class PromptForm(BaseModel):
 
 class PromptBookmarkForm(BaseModel):
     bookmarked: bool
+
+class TagResponse(BaseModel):
+    name: str
+    is_system: bool  
 
 class PromptsTable:
     def insert_new_prompt(
@@ -264,5 +270,39 @@ class PromptsTable:
         
         except Exception:
             return None
+        
+    def get_system_and_user_tags(self, user_id: str) -> list[TagResponse]:
+        try:
+            with get_db() as db:
+                prompts = (
+                    db.query(Prompt)
+                    .filter(or_(
+                        Prompt.user_id == "system",
+                        Prompt.user_id == user_id
+                    ))
+                    .all()
+                )
 
+                tag_map = {}
+
+                for prompt in prompts:
+                    meta = prompt.meta
+
+                    tags = meta.get("tags", [])
+                    is_system = prompt.user_id == "system"
+
+                    for tag in tags:
+                        name = tag.get("name")
+                        if not name:
+                            continue
+
+                        if name not in tag_map:
+                            tag_map[name] = {"name": name, "is_system": is_system}
+                        else:
+                            if tag_map[name]["is_system"] is False and is_system:
+                                tag_map[name]["is_system"] = True
+                return list(tag_map.values())
+        except Exception as e:
+            print("Error in get_system_and_user_tags:", e)
+            return []
 Prompts = PromptsTable()

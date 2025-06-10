@@ -24,6 +24,7 @@
 		bookmarkModel,
 		createNewModel,
 		deleteModelById,
+		getUserTagsForModels,
 		getModels as getWorkspaceModels,
 		toggleModelById,
 		updateModelById
@@ -76,11 +77,20 @@
 	let accessFilter = 'all';
 	let groupsForModels;
 
-	$: if (models) {
-		tags = Array.from(
-			new Set(models.flatMap((m) => m.meta?.tags?.map((t) => t.name.toLowerCase()) || []))
-		);
+	const getTags = async () => {
+		const res = await getUserTagsForModels(localStorage.token);
+		tags = res.filter(tag => tag.is_system).map(tag => tag.name);
 	}
+
+	onMount(async() => {
+		await getTags();
+	})
+
+	// $: if (models) {
+	// 	tags = Array.from(
+	// 		new Set(models.flatMap((m) => m.meta?.tags?.map((t) => t.name.toLowerCase()) || []))
+	// 	);
+	// }
 
 	$: if (models) {
 		filteredModels = models.filter((m) => {
@@ -90,7 +100,7 @@
 			const modelTags = m.meta?.tags?.map((t) => t.name.toLowerCase()) || [];
 
 			const tagsMatch =
-				selectedTags.size === 0 || Array.from(selectedTags).some((tag) => modelTags.includes(tag));
+				selectedTags.size === 0 || Array.from(selectedTags)?.map(tag => tag?.toLowerCase())?.some((tag) => modelTags.includes(tag));
 
 			const isPublic = m.access_control === null;
 			// const isPrivate = m.access_control !== null;
@@ -290,8 +300,6 @@
 	let menuIdOpened = null;
 
 
-	$: console.log(filteredModels, 'filtered Models')
-
 	let loadingBookmark = null;
 
 	const bookmarkAssistant = async (id) => {
@@ -416,7 +424,7 @@
 										selectedTags = new Set(selectedTags);
 									}}
 								>
-									{tag.charAt(0).toUpperCase() + tag.slice(1)}
+									{$i18n.t(tag)}
 								</button>
 							{/each}
 						</div>
@@ -436,7 +444,7 @@
 									selectedTags = new Set(selectedTags);
 								}}
 							>
-								{tag.charAt(0).toUpperCase() + tag.slice(1)}
+								{$i18n.t(tag)}
 							</button>
 						{/each}
 					</div>
@@ -538,7 +546,7 @@
 												? 'dark:text-white'
 												: 'text-lightGray-100 dark:text-customGray-100'} text-xs bg-customViolet-200 dark:bg-customBlue-800 px-[6px] py-[3px] rounded-md"
 										>
-											{modelTag.name}
+											{$i18n.t(modelTag.name)}
 										</div>
 									{/each}
 								</div>
