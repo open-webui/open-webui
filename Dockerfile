@@ -119,51 +119,46 @@ RUN echo -n 00000000-0000-0000-0000-000000000000 > $HOME/.cache/chroma/telemetry
 RUN chown -R $UID:$GID /app $HOME
 
 RUN if [ "$USE_OLLAMA" = "true" ]; then \
-    apt-get update && \
-    # Install pandoc and netcat
-    apt-get install -y --no-install-recommends git build-essential pandoc netcat-openbsd curl && \
-    apt-get install -y --no-install-recommends gcc python3-dev && \
-    # for RAG OCR
-    apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 tesseract-ocr tesseract-ocr-eng && \
-    # install helper tools
-    apt-get install -y --no-install-recommends curl jq && \
-    # install ollama
-    curl -fsSL https://ollama.com/install.sh | sh && \
-    # cleanup
-    rm -rf /var/lib/apt/lists/*; \
+        apt-get update && \
+        # Install pandoc and netcat
+        apt-get install -y --no-install-recommends git build-essential pandoc netcat-openbsd curl && \
+        apt-get install -y --no-install-recommends gcc python3-dev && \
+        # for RAG OCR
+        apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 tesseract-ocr tesseract-ocr-eng && \
+        # install helper tools
+        apt-get install -y --no-install-recommends curl jq && \
+        # install ollama
+        curl -fsSL https://ollama.com/install.sh | sh && \
+        # cleanup
+        rm -rf /var/lib/apt/lists/*; \
     else \
-    apt-get update && \
-    # Install pandoc, netcat and gcc
-    apt-get install -y --no-install-recommends git build-essential pandoc gcc netcat-openbsd curl jq && \
-    apt-get install -y --no-install-recommends gcc python3-dev && \
-    # for RAG OCR
-    apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 tesseract-ocr tesseract-ocr-eng && \
-    # cleanup
-    rm -rf /var/lib/apt/lists/*; \
+        apt-get update && \
+        # Install pandoc, netcat and gcc
+        apt-get install -y --no-install-recommends git build-essential pandoc gcc netcat-openbsd curl jq && \
+        apt-get install -y --no-install-recommends gcc python3-dev && \
+        # for RAG OCR
+        apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 tesseract-ocr tesseract-ocr-eng && \
+        # cleanup
+        rm -rf /var/lib/apt/lists/*; \
     fi
 
-    # copy built frontend files
+# copy built frontend files
 COPY --chown=$UID:$GID --from=build /app/build /app/build
 
 # install python dependencies
 COPY --chown=$UID:$GID CHANGELOG.md hatch_build.py LICENSE package.json pyproject.toml README.md uv.lock ./
 
-# sync uv
-RUN uv sync --no-cache-dir --locked
-
-# activate venv
-RUN . .venv/bin/activate
-
 # # Set PyTorch index URL based on CUDA flag
 ARG PYTORCH_INDEX_URL
+
+# install python dependencies
 RUN if [ "$USE_CUDA" = "true" ]; then \
         export PYTORCH_INDEX_URL="https://download.pytorch.org/whl/$USE_CUDA_DOCKER_VER"; \
     else \
         export PYTORCH_INDEX_URL="https://download.pytorch.org/whl/cpu"; \
-    fi
-
-# install python dependencies
-RUN uv add --no-cache-dir --index https://pypi.org/simple --default-index $PYTORCH_INDEX_URL torch torchvision torchaudio && \
+    fi && \
+    uv sync --no-cache-dir --locked && \
+    uv add --no-cache-dir --index https://pypi.org/simple --default-index $PYTORCH_INDEX_URL torch torchvision torchaudio && \
     uv run python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ['RAG_EMBEDDING_MODEL'], device='cpu')" && \
     uv run python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])" && \
     uv run python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])" && \
