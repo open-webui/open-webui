@@ -61,13 +61,15 @@
 			<hr class="my-2 border-gray-50 dark:border-gray-700/10" />
 		{/if}
 
-		<Collapsible bind:open={showValves} title={$i18n.t('Valves')} buttonClassName="w-full">
-			<div class="text-sm" slot="content">
-				<Valves show={showValves} />
-			</div>
-		</Collapsible>
-
 		{#if $user?.role === 'admin' || $user?.permissions.chat?.controls}
+			<Collapsible bind:open={showValves} title={$i18n.t('Valves')} buttonClassName="w-full">
+				<div class="text-sm" slot="content">
+					<Valves show={showValves} />
+				</div>
+			</Collapsible>
+		{/if}
+
+		{#if $user?.role === 'admin' || $user?.permissions.chat?.allow_custom_system_prompt}
 			<hr class="my-2 border-gray-50 dark:border-gray-700/10" />
 
 			<Collapsible title={$i18n.t('System Prompt')} open={true} buttonClassName="w-full">
