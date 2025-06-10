@@ -1307,7 +1307,7 @@
         "documentation": {}
     },
     {
-        "label": "List",
+        "label": "Literal",
         "importPath": "typing",
         "description": "typing",
         "isExtraImport": true,
@@ -2043,6 +2043,14 @@
         "documentation": {}
     },
     {
+        "label": "Optional",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
         "label": "Dict",
         "importPath": "typing",
         "description": "typing",
@@ -2212,6 +2220,30 @@
     },
     {
         "label": "Dict",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
+        "label": "Dict",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
+        "label": "List",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
+        "label": "Optional",
         "importPath": "typing",
         "description": "typing",
         "isExtraImport": true,
@@ -3299,6 +3331,14 @@
         "documentation": {}
     },
     {
+        "label": "WEBUI_AUTH_TRUSTED_EMAIL_HEADER",
+        "importPath": "open_webui.env",
+        "description": "open_webui.env",
+        "isExtraImport": true,
+        "detail": "open_webui.env",
+        "documentation": {}
+    },
+    {
         "label": "SRC_LOG_LEVELS",
         "importPath": "open_webui.env",
         "description": "open_webui.env",
@@ -3324,6 +3364,30 @@
     },
     {
         "label": "SRC_LOG_LEVELS",
+        "importPath": "open_webui.env",
+        "description": "open_webui.env",
+        "isExtraImport": true,
+        "detail": "open_webui.env",
+        "documentation": {}
+    },
+    {
+        "label": "SRC_LOG_LEVELS",
+        "importPath": "open_webui.env",
+        "description": "open_webui.env",
+        "isExtraImport": true,
+        "detail": "open_webui.env",
+        "documentation": {}
+    },
+    {
+        "label": "GLOBAL_LOG_LEVEL",
+        "importPath": "open_webui.env",
+        "description": "open_webui.env",
+        "isExtraImport": true,
+        "detail": "open_webui.env",
+        "documentation": {}
+    },
+    {
+        "label": "BYPASS_MODEL_ACCESS_CONTROL",
         "importPath": "open_webui.env",
         "description": "open_webui.env",
         "isExtraImport": true,
@@ -3764,6 +3828,14 @@
     },
     {
         "label": "VERSION",
+        "importPath": "open_webui.env",
+        "description": "open_webui.env",
+        "isExtraImport": true,
+        "detail": "open_webui.env",
+        "documentation": {}
+    },
+    {
+        "label": "INSTANCE_ID",
         "importPath": "open_webui.env",
         "description": "open_webui.env",
         "isExtraImport": true,
@@ -4868,6 +4940,22 @@
         "documentation": {}
     },
     {
+        "label": "func",
+        "importPath": "sqlalchemy",
+        "description": "sqlalchemy",
+        "isExtraImport": true,
+        "detail": "sqlalchemy",
+        "documentation": {}
+    },
+    {
+        "label": "literal",
+        "importPath": "sqlalchemy",
+        "description": "sqlalchemy",
+        "isExtraImport": true,
+        "detail": "sqlalchemy",
+        "documentation": {}
+    },
+    {
         "label": "cast",
         "importPath": "sqlalchemy",
         "description": "sqlalchemy",
@@ -4909,6 +4997,14 @@
     },
     {
         "label": "MetaData",
+        "importPath": "sqlalchemy",
+        "description": "sqlalchemy",
+        "isExtraImport": true,
+        "detail": "sqlalchemy",
+        "documentation": {}
+    },
+    {
+        "label": "LargeBinary",
         "importPath": "sqlalchemy",
         "description": "sqlalchemy",
         "isExtraImport": true,
@@ -6006,6 +6102,22 @@
         "documentation": {}
     },
     {
+        "label": "uuid4",
+        "importPath": "uuid",
+        "description": "uuid",
+        "isExtraImport": true,
+        "detail": "uuid",
+        "documentation": {}
+    },
+    {
+        "label": "uuid4",
+        "importPath": "uuid",
+        "description": "uuid",
+        "isExtraImport": true,
+        "detail": "uuid",
+        "documentation": {}
+    },
+    {
         "label": "UserModel",
         "importPath": "open_webui.models.users",
         "description": "open_webui.models.users",
@@ -6310,6 +6422,14 @@
         "documentation": {}
     },
     {
+        "label": "UserModel",
+        "importPath": "open_webui.models.users",
+        "description": "open_webui.models.users",
+        "isExtraImport": true,
+        "detail": "open_webui.models.users",
+        "documentation": {}
+    },
+    {
         "label": "Users",
         "importPath": "open_webui.models.users",
         "description": "open_webui.models.users",
@@ -6335,6 +6455,14 @@
     },
     {
         "label": "Users",
+        "importPath": "open_webui.models.users",
+        "description": "open_webui.models.users",
+        "isExtraImport": true,
+        "detail": "open_webui.models.users",
+        "documentation": {}
+    },
+    {
+        "label": "UserModel",
         "importPath": "open_webui.models.users",
         "description": "open_webui.models.users",
         "isExtraImport": true,
@@ -9449,6 +9577,14 @@
         "documentation": {}
     },
     {
+        "label": "Request",
+        "importPath": "fastapi",
+        "description": "fastapi",
+        "isExtraImport": true,
+        "detail": "fastapi",
+        "documentation": {}
+    },
+    {
         "label": "HTTPException",
         "importPath": "fastapi",
         "description": "fastapi",
@@ -9634,6 +9770,14 @@
     },
     {
         "label": "BackgroundTasks",
+        "importPath": "fastapi",
+        "description": "fastapi",
+        "isExtraImport": true,
+        "detail": "fastapi",
+        "documentation": {}
+    },
+    {
+        "label": "Request",
         "importPath": "fastapi",
         "description": "fastapi",
         "isExtraImport": true,
@@ -9890,6 +10034,14 @@
         "importPath": "asyncio",
         "description": "asyncio",
         "detail": "asyncio",
+        "documentation": {}
+    },
+    {
+        "label": "ParseError",
+        "importPath": "xml.etree.ElementTree",
+        "description": "xml.etree.ElementTree",
+        "isExtraImport": true,
+        "detail": "xml.etree.ElementTree",
         "documentation": {}
     },
     {
@@ -10681,6 +10833,22 @@
         "documentation": {}
     },
     {
+        "label": "PGVECTOR_PGCRYPTO",
+        "importPath": "open_webui.config",
+        "description": "open_webui.config",
+        "isExtraImport": true,
+        "detail": "open_webui.config",
+        "documentation": {}
+    },
+    {
+        "label": "PGVECTOR_PGCRYPTO_KEY",
+        "importPath": "open_webui.config",
+        "description": "open_webui.config",
+        "isExtraImport": true,
+        "detail": "open_webui.config",
+        "documentation": {}
+    },
+    {
         "label": "PINECONE_API_KEY",
         "importPath": "open_webui.config",
         "description": "open_webui.config",
@@ -11194,6 +11362,14 @@
     },
     {
         "label": "DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE",
+        "importPath": "open_webui.config",
+        "description": "open_webui.config",
+        "isExtraImport": true,
+        "detail": "open_webui.config",
+        "documentation": {}
+    },
+    {
+        "label": "DEFAULT_FOLLOW_UP_GENERATION_PROMPT_TEMPLATE",
         "importPath": "open_webui.config",
         "description": "open_webui.config",
         "isExtraImport": true,
@@ -12625,6 +12801,30 @@
         "documentation": {}
     },
     {
+        "label": "DOCLING_PICTURE_DESCRIPTION_MODE",
+        "importPath": "open_webui.config",
+        "description": "open_webui.config",
+        "isExtraImport": true,
+        "detail": "open_webui.config",
+        "documentation": {}
+    },
+    {
+        "label": "DOCLING_PICTURE_DESCRIPTION_LOCAL",
+        "importPath": "open_webui.config",
+        "description": "open_webui.config",
+        "isExtraImport": true,
+        "detail": "open_webui.config",
+        "documentation": {}
+    },
+    {
+        "label": "DOCLING_PICTURE_DESCRIPTION_API",
+        "importPath": "open_webui.config",
+        "description": "open_webui.config",
+        "isExtraImport": true,
+        "detail": "open_webui.config",
+        "documentation": {}
+    },
+    {
         "label": "DOCUMENT_INTELLIGENCE_ENDPOINT",
         "importPath": "open_webui.config",
         "description": "open_webui.config",
@@ -12921,6 +13121,15 @@
         "description": "concurrent.futures",
         "isExtraImport": true,
         "detail": "concurrent.futures",
+        "documentation": {}
+    },
+    {
+        "label": "random",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "random",
+        "description": "random",
+        "detail": "random",
         "documentation": {}
     },
     {
@@ -14239,6 +14448,14 @@
         "documentation": {}
     },
     {
+        "label": "FileResponse",
+        "importPath": "fastapi.responses",
+        "description": "fastapi.responses",
+        "isExtraImport": true,
+        "detail": "fastapi.responses",
+        "documentation": {}
+    },
+    {
         "label": "JSONResponse",
         "importPath": "fastapi.responses",
         "description": "fastapi.responses",
@@ -15179,6 +15396,14 @@
         "documentation": {}
     },
     {
+        "label": "Models",
+        "importPath": "open_webui.models.models",
+        "description": "open_webui.models.models",
+        "isExtraImport": true,
+        "detail": "open_webui.models.models",
+        "documentation": {}
+    },
+    {
         "label": "Memories",
         "importPath": "open_webui.models.memories",
         "description": "open_webui.models.memories",
@@ -15224,15 +15449,6 @@
         "description": "open_webui.models.notes",
         "isExtraImport": true,
         "detail": "open_webui.models.notes",
-        "documentation": {}
-    },
-    {
-        "label": "random",
-        "kind": 6,
-        "isExtraImport": true,
-        "importPath": "random",
-        "description": "random",
-        "detail": "random",
         "documentation": {}
     },
     {
@@ -15341,6 +15557,14 @@
     },
     {
         "label": "convert_payload_openai_to_ollama",
+        "importPath": "open_webui.utils.payload",
+        "description": "open_webui.utils.payload",
+        "isExtraImport": true,
+        "detail": "open_webui.utils.payload",
+        "documentation": {}
+    },
+    {
+        "label": "convert_embedding_payload_openai_to_ollama",
         "importPath": "open_webui.utils.payload",
         "description": "open_webui.utils.payload",
         "isExtraImport": true,
@@ -15469,6 +15693,14 @@
     },
     {
         "label": "generate_chat_completion",
+        "importPath": "open_webui.routers.openai",
+        "description": "open_webui.routers.openai",
+        "isExtraImport": true,
+        "detail": "open_webui.routers.openai",
+        "documentation": {}
+    },
+    {
+        "label": "embeddings",
         "importPath": "open_webui.routers.openai",
         "description": "open_webui.routers.openai",
         "isExtraImport": true,
@@ -15837,6 +16069,14 @@
         "documentation": {}
     },
     {
+        "label": "follow_up_generation_template",
+        "importPath": "open_webui.utils.task",
+        "description": "open_webui.utils.task",
+        "isExtraImport": true,
+        "detail": "open_webui.utils.task",
+        "documentation": {}
+    },
+    {
         "label": "query_generation_template",
         "importPath": "open_webui.utils.task",
         "description": "open_webui.utils.task",
@@ -16113,7 +16353,7 @@
         "documentation": {}
     },
     {
-        "label": "asyncio",
+        "label": "Redis",
         "importPath": "redis",
         "description": "redis",
         "isExtraImport": true,
@@ -16130,6 +16370,14 @@
     },
     {
         "label": "get_sentinel_url_from_env",
+        "importPath": "open_webui.utils.redis",
+        "description": "open_webui.utils.redis",
+        "isExtraImport": true,
+        "detail": "open_webui.utils.redis",
+        "documentation": {}
+    },
+    {
+        "label": "get_redis_connection",
         "importPath": "open_webui.utils.redis",
         "description": "open_webui.utils.redis",
         "isExtraImport": true,
@@ -16835,7 +17083,31 @@
         "documentation": {}
     },
     {
+        "label": "embeddings",
+        "importPath": "open_webui.routers.ollama",
+        "description": "open_webui.routers.ollama",
+        "isExtraImport": true,
+        "detail": "open_webui.routers.ollama",
+        "documentation": {}
+    },
+    {
+        "label": "GenerateEmbeddingsForm",
+        "importPath": "open_webui.routers.ollama",
+        "description": "open_webui.routers.ollama",
+        "isExtraImport": true,
+        "detail": "open_webui.routers.ollama",
+        "documentation": {}
+    },
+    {
         "label": "get_all_models",
+        "importPath": "open_webui.utils.models",
+        "description": "open_webui.utils.models",
+        "isExtraImport": true,
+        "detail": "open_webui.utils.models",
+        "documentation": {}
+    },
+    {
+        "label": "check_model_access",
         "importPath": "open_webui.utils.models",
         "description": "open_webui.utils.models",
         "isExtraImport": true,
@@ -16884,6 +17156,14 @@
     },
     {
         "label": "convert_streaming_response_ollama_to_openai",
+        "importPath": "open_webui.utils.response",
+        "description": "open_webui.utils.response",
+        "isExtraImport": true,
+        "detail": "open_webui.utils.response",
+        "documentation": {}
+    },
+    {
+        "label": "convert_embedding_response_ollama_to_openai",
         "importPath": "open_webui.utils.response",
         "description": "open_webui.utils.response",
         "isExtraImport": true,
@@ -16974,6 +17254,14 @@
         "documentation": {}
     },
     {
+        "label": "generate_follow_ups",
+        "importPath": "open_webui.routers.tasks",
+        "description": "open_webui.routers.tasks",
+        "isExtraImport": true,
+        "detail": "open_webui.routers.tasks",
+        "documentation": {}
+    },
+    {
         "label": "generate_image_prompt",
         "importPath": "open_webui.routers.tasks",
         "description": "open_webui.routers.tasks",
@@ -16990,6 +17278,14 @@
         "documentation": {}
     },
     {
+        "label": "load_b64_image_data",
+        "importPath": "open_webui.routers.images",
+        "description": "open_webui.routers.images",
+        "isExtraImport": true,
+        "detail": "open_webui.routers.images",
+        "documentation": {}
+    },
+    {
         "label": "image_generations",
         "importPath": "open_webui.routers.images",
         "description": "open_webui.routers.images",
@@ -16999,6 +17295,14 @@
     },
     {
         "label": "GenerateImageForm",
+        "importPath": "open_webui.routers.images",
+        "description": "open_webui.routers.images",
+        "isExtraImport": true,
+        "detail": "open_webui.routers.images",
+        "documentation": {}
+    },
+    {
+        "label": "upload_image",
         "importPath": "open_webui.routers.images",
         "description": "open_webui.routers.images",
         "isExtraImport": true,
@@ -17023,6 +17327,14 @@
     },
     {
         "label": "create_task",
+        "importPath": "open_webui.tasks",
+        "description": "open_webui.tasks",
+        "isExtraImport": true,
+        "detail": "open_webui.tasks",
+        "documentation": {}
+    },
+    {
+        "label": "redis_task_command_listener",
         "importPath": "open_webui.tasks",
         "description": "open_webui.tasks",
         "isExtraImport": true,
@@ -17505,6 +17817,14 @@
         "documentation": {}
     },
     {
+        "label": "generate_embeddings",
+        "importPath": "open_webui.utils.embeddings",
+        "description": "open_webui.utils.embeddings",
+        "isExtraImport": true,
+        "detail": "open_webui.utils.embeddings",
+        "documentation": {}
+    },
+    {
         "label": "process_chat_payload",
         "importPath": "open_webui.utils.middleware",
         "description": "open_webui.utils.middleware",
@@ -17534,6 +17854,14 @@
         "description": "open_webui.utils.security_headers",
         "isExtraImport": true,
         "detail": "open_webui.utils.security_headers",
+        "documentation": {}
+    },
+    {
+        "label": "Redis",
+        "importPath": "redis.asyncio",
+        "description": "redis.asyncio",
+        "isExtraImport": true,
+        "detail": "redis.asyncio",
         "documentation": {}
     },
     {
@@ -20186,7 +20514,7 @@
         "kind": 6,
         "importPath": "backend.open_webui.models.users",
         "description": "backend.open_webui.models.users",
-        "peekOfCode": "class UserNameResponse(BaseModel):\n    id: str\n    name: str\n    role: str\n    profile_image_url: str\nclass UserRoleUpdateForm(BaseModel):\n    id: str\n    role: str\nclass UserUpdateForm(BaseModel):\n    name: str",
+        "peekOfCode": "class UserNameResponse(BaseModel):\n    id: str\n    name: str\n    role: str\n    profile_image_url: str\nclass UserRoleUpdateForm(BaseModel):\n    id: str\n    role: str\nclass UserUpdateForm(BaseModel):\n    role: str",
         "detail": "backend.open_webui.models.users",
         "documentation": {}
     },
@@ -20195,7 +20523,7 @@
         "kind": 6,
         "importPath": "backend.open_webui.models.users",
         "description": "backend.open_webui.models.users",
-        "peekOfCode": "class UserRoleUpdateForm(BaseModel):\n    id: str\n    role: str\nclass UserUpdateForm(BaseModel):\n    name: str\n    email: str\n    profile_image_url: str\n    password: Optional[str] = None\nclass UsersTable:\n    def insert_new_user(",
+        "peekOfCode": "class UserRoleUpdateForm(BaseModel):\n    id: str\n    role: str\nclass UserUpdateForm(BaseModel):\n    role: str\n    name: str\n    email: str\n    profile_image_url: str\n    password: Optional[str] = None\nclass UsersTable:",
         "detail": "backend.open_webui.models.users",
         "documentation": {}
     },
@@ -20204,7 +20532,7 @@
         "kind": 6,
         "importPath": "backend.open_webui.models.users",
         "description": "backend.open_webui.models.users",
-        "peekOfCode": "class UserUpdateForm(BaseModel):\n    name: str\n    email: str\n    profile_image_url: str\n    password: Optional[str] = None\nclass UsersTable:\n    def insert_new_user(\n        self,\n        id: str,\n        name: str,",
+        "peekOfCode": "class UserUpdateForm(BaseModel):\n    role: str\n    name: str\n    email: str\n    profile_image_url: str\n    password: Optional[str] = None\nclass UsersTable:\n    def insert_new_user(\n        self,\n        id: str,",
         "detail": "backend.open_webui.models.users",
         "documentation": {}
     },
@@ -20330,7 +20658,7 @@
         "kind": 6,
         "importPath": "backend.open_webui.retrieval.loaders.mistral",
         "description": "backend.open_webui.retrieval.loaders.mistral",
-        "peekOfCode": "class MistralLoader:\n    \"\"\"\n    Enhanced Mistral OCR loader with both sync and async support.\n    Loads documents by processing them through the Mistral OCR API.\n    \"\"\"\n    BASE_API_URL = \"https://api.mistral.ai/v1\"\n    def __init__(\n        self,\n        api_key: str,\n        file_path: str,",
+        "peekOfCode": "class MistralLoader:\n    \"\"\"\n    Enhanced Mistral OCR loader with both sync and async support.\n    Loads documents by processing them through the Mistral OCR API.\n    Performance Optimizations:\n    - Differentiated timeouts for different operations\n    - Intelligent retry logic with exponential backoff\n    - Memory-efficient file streaming for large files\n    - Connection pooling and keepalive optimization\n    - Semaphore-based concurrency control for batch processing",
         "detail": "backend.open_webui.retrieval.loaders.mistral",
         "documentation": {}
     },
@@ -20339,7 +20667,7 @@
         "kind": 5,
         "importPath": "backend.open_webui.retrieval.loaders.mistral",
         "description": "backend.open_webui.retrieval.loaders.mistral",
-        "peekOfCode": "log = logging.getLogger(__name__)\nlog.setLevel(SRC_LOG_LEVELS[\"RAG\"])\nclass MistralLoader:\n    \"\"\"\n    Enhanced Mistral OCR loader with both sync and async support.\n    Loads documents by processing them through the Mistral OCR API.\n    \"\"\"\n    BASE_API_URL = \"https://api.mistral.ai/v1\"\n    def __init__(\n        self,",
+        "peekOfCode": "log = logging.getLogger(__name__)\nlog.setLevel(SRC_LOG_LEVELS[\"RAG\"])\nclass MistralLoader:\n    \"\"\"\n    Enhanced Mistral OCR loader with both sync and async support.\n    Loads documents by processing them through the Mistral OCR API.\n    Performance Optimizations:\n    - Differentiated timeouts for different operations\n    - Intelligent retry logic with exponential backoff\n    - Memory-efficient file streaming for large files",
         "detail": "backend.open_webui.retrieval.loaders.mistral",
         "documentation": {}
     },
@@ -20501,7 +20829,7 @@
         "kind": 6,
         "importPath": "backend.open_webui.retrieval.vector.dbs.pgvector",
         "description": "backend.open_webui.retrieval.vector.dbs.pgvector",
-        "peekOfCode": "class DocumentChunk(Base):\n    __tablename__ = \"document_chunk\"\n    id = Column(Text, primary_key=True)\n    vector = Column(Vector(dim=VECTOR_LENGTH), nullable=True)\n    collection_name = Column(Text, nullable=False)\n    text = Column(Text, nullable=True)\n    vmetadata = Column(MutableDict.as_mutable(JSONB), nullable=True)\nclass PgvectorClient(VectorDBBase):\n    def __init__(self) -> None:\n        # if no pgvector uri, use the existing database connection",
+        "peekOfCode": "class DocumentChunk(Base):\n    __tablename__ = \"document_chunk\"\n    id = Column(Text, primary_key=True)\n    vector = Column(Vector(dim=VECTOR_LENGTH), nullable=True)\n    collection_name = Column(Text, nullable=False)\n    if PGVECTOR_PGCRYPTO:\n        text = Column(LargeBinary, nullable=True)\n        vmetadata = Column(LargeBinary, nullable=True)\n    else:\n        text = Column(Text, nullable=True)",
         "detail": "backend.open_webui.retrieval.vector.dbs.pgvector",
         "documentation": {}
     },
@@ -20515,11 +20843,29 @@
         "documentation": {}
     },
     {
+        "label": "pgcrypto_encrypt",
+        "kind": 2,
+        "importPath": "backend.open_webui.retrieval.vector.dbs.pgvector",
+        "description": "backend.open_webui.retrieval.vector.dbs.pgvector",
+        "peekOfCode": "def pgcrypto_encrypt(val, key):\n    return func.pgp_sym_encrypt(val, literal(key))\ndef pgcrypto_decrypt(col, key, outtype=\"text\"):\n    return func.cast(func.pgp_sym_decrypt(col, literal(key)), outtype)\nclass DocumentChunk(Base):\n    __tablename__ = \"document_chunk\"\n    id = Column(Text, primary_key=True)\n    vector = Column(Vector(dim=VECTOR_LENGTH), nullable=True)\n    collection_name = Column(Text, nullable=False)\n    if PGVECTOR_PGCRYPTO:",
+        "detail": "backend.open_webui.retrieval.vector.dbs.pgvector",
+        "documentation": {}
+    },
+    {
+        "label": "pgcrypto_decrypt",
+        "kind": 2,
+        "importPath": "backend.open_webui.retrieval.vector.dbs.pgvector",
+        "description": "backend.open_webui.retrieval.vector.dbs.pgvector",
+        "peekOfCode": "def pgcrypto_decrypt(col, key, outtype=\"text\"):\n    return func.cast(func.pgp_sym_decrypt(col, literal(key)), outtype)\nclass DocumentChunk(Base):\n    __tablename__ = \"document_chunk\"\n    id = Column(Text, primary_key=True)\n    vector = Column(Vector(dim=VECTOR_LENGTH), nullable=True)\n    collection_name = Column(Text, nullable=False)\n    if PGVECTOR_PGCRYPTO:\n        text = Column(LargeBinary, nullable=True)\n        vmetadata = Column(LargeBinary, nullable=True)",
+        "detail": "backend.open_webui.retrieval.vector.dbs.pgvector",
+        "documentation": {}
+    },
+    {
         "label": "VECTOR_LENGTH",
         "kind": 5,
         "importPath": "backend.open_webui.retrieval.vector.dbs.pgvector",
         "description": "backend.open_webui.retrieval.vector.dbs.pgvector",
-        "peekOfCode": "VECTOR_LENGTH = PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH\nBase = declarative_base()\nlog = logging.getLogger(__name__)\nlog.setLevel(SRC_LOG_LEVELS[\"RAG\"])\nclass DocumentChunk(Base):\n    __tablename__ = \"document_chunk\"\n    id = Column(Text, primary_key=True)\n    vector = Column(Vector(dim=VECTOR_LENGTH), nullable=True)\n    collection_name = Column(Text, nullable=False)\n    text = Column(Text, nullable=True)",
+        "peekOfCode": "VECTOR_LENGTH = PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH\nBase = declarative_base()\nlog = logging.getLogger(__name__)\nlog.setLevel(SRC_LOG_LEVELS[\"RAG\"])\ndef pgcrypto_encrypt(val, key):\n    return func.pgp_sym_encrypt(val, literal(key))\ndef pgcrypto_decrypt(col, key, outtype=\"text\"):\n    return func.cast(func.pgp_sym_decrypt(col, literal(key)), outtype)\nclass DocumentChunk(Base):\n    __tablename__ = \"document_chunk\"",
         "detail": "backend.open_webui.retrieval.vector.dbs.pgvector",
         "documentation": {}
     },
@@ -20528,7 +20874,7 @@
         "kind": 5,
         "importPath": "backend.open_webui.retrieval.vector.dbs.pgvector",
         "description": "backend.open_webui.retrieval.vector.dbs.pgvector",
-        "peekOfCode": "Base = declarative_base()\nlog = logging.getLogger(__name__)\nlog.setLevel(SRC_LOG_LEVELS[\"RAG\"])\nclass DocumentChunk(Base):\n    __tablename__ = \"document_chunk\"\n    id = Column(Text, primary_key=True)\n    vector = Column(Vector(dim=VECTOR_LENGTH), nullable=True)\n    collection_name = Column(Text, nullable=False)\n    text = Column(Text, nullable=True)\n    vmetadata = Column(MutableDict.as_mutable(JSONB), nullable=True)",
+        "peekOfCode": "Base = declarative_base()\nlog = logging.getLogger(__name__)\nlog.setLevel(SRC_LOG_LEVELS[\"RAG\"])\ndef pgcrypto_encrypt(val, key):\n    return func.pgp_sym_encrypt(val, literal(key))\ndef pgcrypto_decrypt(col, key, outtype=\"text\"):\n    return func.cast(func.pgp_sym_decrypt(col, literal(key)), outtype)\nclass DocumentChunk(Base):\n    __tablename__ = \"document_chunk\"\n    id = Column(Text, primary_key=True)",
         "detail": "backend.open_webui.retrieval.vector.dbs.pgvector",
         "documentation": {}
     },
@@ -20537,7 +20883,7 @@
         "kind": 5,
         "importPath": "backend.open_webui.retrieval.vector.dbs.pgvector",
         "description": "backend.open_webui.retrieval.vector.dbs.pgvector",
-        "peekOfCode": "log = logging.getLogger(__name__)\nlog.setLevel(SRC_LOG_LEVELS[\"RAG\"])\nclass DocumentChunk(Base):\n    __tablename__ = \"document_chunk\"\n    id = Column(Text, primary_key=True)\n    vector = Column(Vector(dim=VECTOR_LENGTH), nullable=True)\n    collection_name = Column(Text, nullable=False)\n    text = Column(Text, nullable=True)\n    vmetadata = Column(MutableDict.as_mutable(JSONB), nullable=True)\nclass PgvectorClient(VectorDBBase):",
+        "peekOfCode": "log = logging.getLogger(__name__)\nlog.setLevel(SRC_LOG_LEVELS[\"RAG\"])\ndef pgcrypto_encrypt(val, key):\n    return func.pgp_sym_encrypt(val, literal(key))\ndef pgcrypto_decrypt(col, key, outtype=\"text\"):\n    return func.cast(func.pgp_sym_decrypt(col, literal(key)), outtype)\nclass DocumentChunk(Base):\n    __tablename__ = \"document_chunk\"\n    id = Column(Text, primary_key=True)\n    vector = Column(Vector(dim=VECTOR_LENGTH), nullable=True)",
         "detail": "backend.open_webui.retrieval.vector.dbs.pgvector",
         "documentation": {}
     },
@@ -20942,7 +21288,25 @@
         "kind": 2,
         "importPath": "backend.open_webui.retrieval.web.perplexity",
         "description": "backend.open_webui.retrieval.web.perplexity",
-        "peekOfCode": "def search_perplexity(\n    api_key: str,\n    query: str,\n    count: int,\n    filter_list: Optional[list[str]] = None,\n) -> list[SearchResult]:\n    \"\"\"Search using Perplexity API and return the results as a list of SearchResult objects.\n    Args:\n      api_key (str): A Perplexity API key\n      query (str): The query to search for",
+        "peekOfCode": "def search_perplexity(\n    api_key: str,\n    query: str,\n    count: int,\n    filter_list: Optional[list[str]] = None,\n    model: MODELS = \"sonar\",\n    search_context_usage: SEARCH_CONTEXT_USAGE_LEVELS = \"medium\",\n) -> list[SearchResult]:\n    \"\"\"Search using Perplexity API and return the results as a list of SearchResult objects.\n    Args:",
+        "detail": "backend.open_webui.retrieval.web.perplexity",
+        "documentation": {}
+    },
+    {
+        "label": "MODELS",
+        "kind": 5,
+        "importPath": "backend.open_webui.retrieval.web.perplexity",
+        "description": "backend.open_webui.retrieval.web.perplexity",
+        "peekOfCode": "MODELS = Literal[\n    \"sonar\",\n    \"sonar-pro\",\n    \"sonar-reasoning\",\n    \"sonar-reasoning-pro\",\n    \"sonar-deep-research\",\n]\nSEARCH_CONTEXT_USAGE_LEVELS = Literal[\"low\", \"medium\", \"high\"]\nlog = logging.getLogger(__name__)\nlog.setLevel(SRC_LOG_LEVELS[\"RAG\"])",
+        "detail": "backend.open_webui.retrieval.web.perplexity",
+        "documentation": {}
+    },
+    {
+        "label": "SEARCH_CONTEXT_USAGE_LEVELS",
+        "kind": 5,
+        "importPath": "backend.open_webui.retrieval.web.perplexity",
+        "description": "backend.open_webui.retrieval.web.perplexity",
+        "peekOfCode": "SEARCH_CONTEXT_USAGE_LEVELS = Literal[\"low\", \"medium\", \"high\"]\nlog = logging.getLogger(__name__)\nlog.setLevel(SRC_LOG_LEVELS[\"RAG\"])\ndef search_perplexity(\n    api_key: str,\n    query: str,\n    count: int,\n    filter_list: Optional[list[str]] = None,\n    model: MODELS = \"sonar\",\n    search_context_usage: SEARCH_CONTEXT_USAGE_LEVELS = \"medium\",",
         "detail": "backend.open_webui.retrieval.web.perplexity",
         "documentation": {}
     },
@@ -20951,7 +21315,7 @@
         "kind": 5,
         "importPath": "backend.open_webui.retrieval.web.perplexity",
         "description": "backend.open_webui.retrieval.web.perplexity",
-        "peekOfCode": "log = logging.getLogger(__name__)\nlog.setLevel(SRC_LOG_LEVELS[\"RAG\"])\ndef search_perplexity(\n    api_key: str,\n    query: str,\n    count: int,\n    filter_list: Optional[list[str]] = None,\n) -> list[SearchResult]:\n    \"\"\"Search using Perplexity API and return the results as a list of SearchResult objects.\n    Args:",
+        "peekOfCode": "log = logging.getLogger(__name__)\nlog.setLevel(SRC_LOG_LEVELS[\"RAG\"])\ndef search_perplexity(\n    api_key: str,\n    query: str,\n    count: int,\n    filter_list: Optional[list[str]] = None,\n    model: MODELS = \"sonar\",\n    search_context_usage: SEARCH_CONTEXT_USAGE_LEVELS = \"medium\",\n) -> list[SearchResult]:",
         "detail": "backend.open_webui.retrieval.web.perplexity",
         "documentation": {}
     },
@@ -22139,7 +22503,7 @@
         "kind": 2,
         "importPath": "backend.open_webui.routers.images",
         "description": "backend.open_webui.routers.images",
-        "peekOfCode": "def load_b64_image_data(b64_str):\n    try:\n        if \",\" in b64_str:\n            header, encoded = b64_str.split(\",\", 1)\n            mime_type = header.split(\";\")[0]\n            img_data = base64.b64decode(encoded)\n        else:\n            mime_type = \"image/png\"\n            img_data = base64.b64decode(b64_str)\n        return img_data, mime_type",
+        "peekOfCode": "def load_b64_image_data(b64_str):\n    try:\n        if \",\" in b64_str:\n            header, encoded = b64_str.split(\",\", 1)\n            mime_type = header.split(\";\")[0].lstrip(\"data:\")\n            img_data = base64.b64decode(encoded)\n        else:\n            mime_type = \"image/png\"\n            img_data = base64.b64decode(b64_str)\n        return img_data, mime_type",
         "detail": "backend.open_webui.routers.images",
         "documentation": {}
     },
@@ -22427,7 +22791,7 @@
         "kind": 6,
         "importPath": "backend.open_webui.routers.ollama",
         "description": "backend.open_webui.routers.ollama",
-        "peekOfCode": "class GenerateChatCompletionForm(BaseModel):\n    model: str\n    messages: list[ChatMessage]\n    format: Optional[Union[dict, str]] = None\n    options: Optional[dict] = None\n    template: Optional[str] = None\n    stream: Optional[bool] = True\n    keep_alive: Optional[Union[int, str]] = None\n    tools: Optional[list[dict]] = None\nasync def get_ollama_url(request: Request, model: str, url_idx: Optional[int] = None):",
+        "peekOfCode": "class GenerateChatCompletionForm(BaseModel):\n    model: str\n    messages: list[ChatMessage]\n    format: Optional[Union[dict, str]] = None\n    options: Optional[dict] = None\n    template: Optional[str] = None\n    stream: Optional[bool] = True\n    keep_alive: Optional[Union[int, str]] = None\n    tools: Optional[list[dict]] = None\n    model_config = ConfigDict(",
         "detail": "backend.open_webui.routers.ollama",
         "documentation": {}
     },
@@ -22940,7 +23304,7 @@
         "kind": 6,
         "importPath": "backend.open_webui.routers.tasks",
         "description": "backend.open_webui.routers.tasks",
-        "peekOfCode": "class TaskConfigForm(BaseModel):\n    TASK_MODEL: Optional[str]\n    TASK_MODEL_EXTERNAL: Optional[str]\n    ENABLE_TITLE_GENERATION: bool\n    TITLE_GENERATION_PROMPT_TEMPLATE: str\n    IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE: str\n    ENABLE_AUTOCOMPLETE_GENERATION: bool\n    AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH: int\n    TAGS_GENERATION_PROMPT_TEMPLATE: str\n    ENABLE_TAGS_GENERATION: bool",
+        "peekOfCode": "class TaskConfigForm(BaseModel):\n    TASK_MODEL: Optional[str]\n    TASK_MODEL_EXTERNAL: Optional[str]\n    ENABLE_TITLE_GENERATION: bool\n    TITLE_GENERATION_PROMPT_TEMPLATE: str\n    IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE: str\n    ENABLE_AUTOCOMPLETE_GENERATION: bool\n    AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH: int\n    TAGS_GENERATION_PROMPT_TEMPLATE: str\n    FOLLOW_UP_GENERATION_PROMPT_TEMPLATE: str",
         "detail": "backend.open_webui.routers.tasks",
         "documentation": {}
     },
@@ -23084,7 +23448,7 @@
         "kind": 6,
         "importPath": "backend.open_webui.routers.utils",
         "description": "backend.open_webui.routers.utils",
-        "peekOfCode": "class CodeForm(BaseModel):\n    code: str\n@router.post(\"/code/format\")\nasync def format_code(form_data: CodeForm, user=Depends(get_verified_user)):\n    try:\n        formatted_code = black.format_str(form_data.code, mode=black.Mode())\n        return {\"code\": formatted_code}\n    except black.NothingChanged:\n        return {\"code\": form_data.code}\n    except Exception as e:",
+        "peekOfCode": "class CodeForm(BaseModel):\n    code: str\n@router.post(\"/code/format\")\nasync def format_code(form_data: CodeForm, user=Depends(get_admin_user)):\n    try:\n        formatted_code = black.format_str(form_data.code, mode=black.Mode())\n        return {\"code\": formatted_code}\n    except black.NothingChanged:\n        return {\"code\": form_data.code}\n    except Exception as e:",
         "detail": "backend.open_webui.routers.utils",
         "documentation": {}
     },
@@ -23111,7 +23475,7 @@
         "kind": 5,
         "importPath": "backend.open_webui.routers.utils",
         "description": "backend.open_webui.routers.utils",
-        "peekOfCode": "log = logging.getLogger(__name__)\nlog.setLevel(SRC_LOG_LEVELS[\"MAIN\"])\nrouter = APIRouter()\n@router.get(\"/gravatar\")\nasync def get_gravatar(email: str, user=Depends(get_verified_user)):\n    return get_gravatar_url(email)\nclass CodeForm(BaseModel):\n    code: str\n@router.post(\"/code/format\")\nasync def format_code(form_data: CodeForm, user=Depends(get_verified_user)):",
+        "peekOfCode": "log = logging.getLogger(__name__)\nlog.setLevel(SRC_LOG_LEVELS[\"MAIN\"])\nrouter = APIRouter()\n@router.get(\"/gravatar\")\nasync def get_gravatar(email: str, user=Depends(get_verified_user)):\n    return get_gravatar_url(email)\nclass CodeForm(BaseModel):\n    code: str\n@router.post(\"/code/format\")\nasync def format_code(form_data: CodeForm, user=Depends(get_admin_user)):",
         "detail": "backend.open_webui.routers.utils",
         "documentation": {}
     },
@@ -23120,7 +23484,7 @@
         "kind": 5,
         "importPath": "backend.open_webui.routers.utils",
         "description": "backend.open_webui.routers.utils",
-        "peekOfCode": "router = APIRouter()\n@router.get(\"/gravatar\")\nasync def get_gravatar(email: str, user=Depends(get_verified_user)):\n    return get_gravatar_url(email)\nclass CodeForm(BaseModel):\n    code: str\n@router.post(\"/code/format\")\nasync def format_code(form_data: CodeForm, user=Depends(get_verified_user)):\n    try:\n        formatted_code = black.format_str(form_data.code, mode=black.Mode())",
+        "peekOfCode": "router = APIRouter()\n@router.get(\"/gravatar\")\nasync def get_gravatar(email: str, user=Depends(get_verified_user)):\n    return get_gravatar_url(email)\nclass CodeForm(BaseModel):\n    code: str\n@router.post(\"/code/format\")\nasync def format_code(form_data: CodeForm, user=Depends(get_admin_user)):\n    try:\n        formatted_code = black.format_str(form_data.code, mode=black.Mode())",
         "detail": "backend.open_webui.routers.utils",
         "documentation": {}
     },
@@ -23912,7 +24276,7 @@
         "kind": 2,
         "importPath": "backend.open_webui.utils.auth",
         "description": "backend.open_webui.utils.auth",
-        "peekOfCode": "def get_current_user(\n    request: Request,\n    background_tasks: BackgroundTasks,\n    auth_token: HTTPAuthorizationCredentials = Depends(bearer_security),\n):\n    token = None\n    if auth_token is not None:\n        token = auth_token.credentials\n    if token is None and \"token\" in request.cookies:\n        token = request.cookies.get(\"token\")",
+        "peekOfCode": "def get_current_user(\n    request: Request,\n    response: Response,\n    background_tasks: BackgroundTasks,\n    auth_token: HTTPAuthorizationCredentials = Depends(bearer_security),\n):\n    token = None\n    if auth_token is not None:\n        token = auth_token.credentials\n    if token is None and \"token\" in request.cookies:",
         "detail": "backend.open_webui.utils.auth",
         "documentation": {}
     },
@@ -24031,6 +24395,15 @@
         "description": "backend.open_webui.utils.code_interpreter",
         "peekOfCode": "logger = logging.getLogger(__name__)\nlogger.setLevel(SRC_LOG_LEVELS[\"MAIN\"])\nclass ResultModel(BaseModel):\n    \"\"\"\n    Execute Code Result Model\n    \"\"\"\n    stdout: Optional[str] = \"\"\n    stderr: Optional[str] = \"\"\n    result: Optional[str] = \"\"\nclass JupyterCodeExecuter:",
         "detail": "backend.open_webui.utils.code_interpreter",
+        "documentation": {}
+    },
+    {
+        "label": "log",
+        "kind": 5,
+        "importPath": "backend.open_webui.utils.embeddings",
+        "description": "backend.open_webui.utils.embeddings",
+        "peekOfCode": "log = logging.getLogger(__name__)\nlog.setLevel(SRC_LOG_LEVELS[\"MAIN\"])\nasync def generate_embeddings(\n    request: Request,\n    form_data: dict,\n    user: UserModel,\n    bypass_filter: bool = False,\n):\n    \"\"\"\n    Dispatch and handle embeddings generation based on the model type (OpenAI, Ollama).",
+        "detail": "backend.open_webui.utils.embeddings",
         "documentation": {}
     },
     {
@@ -24263,7 +24636,7 @@
         "kind": 2,
         "importPath": "backend.open_webui.utils.misc",
         "description": "backend.open_webui.utils.misc",
-        "peekOfCode": "def openai_chat_chunk_message_template(\n    model: str,\n    content: Optional[str] = None,\n    tool_calls: Optional[list[dict]] = None,\n    usage: Optional[dict] = None,\n) -> dict:\n    template = openai_chat_message_template(model)\n    template[\"object\"] = \"chat.completion.chunk\"\n    template[\"choices\"][0][\"index\"] = 0\n    template[\"choices\"][0][\"delta\"] = {}",
+        "peekOfCode": "def openai_chat_chunk_message_template(\n    model: str,\n    content: Optional[str] = None,\n    reasoning_content: Optional[str] = None,\n    tool_calls: Optional[list[dict]] = None,\n    usage: Optional[dict] = None,\n) -> dict:\n    template = openai_chat_message_template(model)\n    template[\"object\"] = \"chat.completion.chunk\"\n    template[\"choices\"][0][\"index\"] = 0",
         "detail": "backend.open_webui.utils.misc",
         "documentation": {}
     },
@@ -24272,7 +24645,7 @@
         "kind": 2,
         "importPath": "backend.open_webui.utils.misc",
         "description": "backend.open_webui.utils.misc",
-        "peekOfCode": "def openai_chat_completion_message_template(\n    model: str,\n    message: Optional[str] = None,\n    tool_calls: Optional[list[dict]] = None,\n    usage: Optional[dict] = None,\n) -> dict:\n    template = openai_chat_message_template(model)\n    template[\"object\"] = \"chat.completion\"\n    if message is not None:\n        template[\"choices\"][0][\"message\"] = {",
+        "peekOfCode": "def openai_chat_completion_message_template(\n    model: str,\n    message: Optional[str] = None,\n    reasoning_content: Optional[str] = None,\n    tool_calls: Optional[list[dict]] = None,\n    usage: Optional[dict] = None,\n) -> dict:\n    template = openai_chat_message_template(model)\n    template[\"object\"] = \"chat.completion\"\n    if message is not None:",
         "detail": "backend.open_webui.utils.misc",
         "documentation": {}
     },
@@ -24637,6 +25010,15 @@
         "documentation": {}
     },
     {
+        "label": "convert_embedding_payload_openai_to_ollama",
+        "kind": 2,
+        "importPath": "backend.open_webui.utils.payload",
+        "description": "backend.open_webui.utils.payload",
+        "peekOfCode": "def convert_embedding_payload_openai_to_ollama(openai_payload: dict) -> dict:\n    \"\"\"\n    Convert an embeddings request payload from OpenAI format to Ollama format.\n    Args:\n        openai_payload (dict): The original payload designed for OpenAI API usage.\n    Returns:\n        dict: A payload compatible with the Ollama API embeddings endpoint.\n    \"\"\"\n    ollama_payload = {\"model\": openai_payload.get(\"model\")}\n    input_value = openai_payload.get(\"input\")",
+        "detail": "backend.open_webui.utils.payload",
+        "documentation": {}
+    },
+    {
         "label": "PDFGenerator",
         "kind": 6,
         "importPath": "backend.open_webui.utils.pdf_generator",
@@ -24731,7 +25113,7 @@
         "kind": 2,
         "importPath": "backend.open_webui.utils.redis",
         "description": "backend.open_webui.utils.redis",
-        "peekOfCode": "def get_redis_connection(redis_url, redis_sentinels, decode_responses=True):\n    if redis_sentinels:\n        redis_config = parse_redis_service_url(redis_url)\n        sentinel = redis.sentinel.Sentinel(\n            redis_sentinels,\n            port=redis_config[\"port\"],\n            db=redis_config[\"db\"],\n            username=redis_config[\"username\"],\n            password=redis_config[\"password\"],\n            decode_responses=decode_responses,",
+        "peekOfCode": "def get_redis_connection(\n    redis_url, redis_sentinels, async_mode=False, decode_responses=True\n):\n    if async_mode:\n        import redis.asyncio as redis\n        # If using sentinel in async mode\n        if redis_sentinels:\n            redis_config = parse_redis_service_url(redis_url)\n            sentinel = redis.sentinel.Sentinel(\n                redis_sentinels,",
         "detail": "backend.open_webui.utils.redis",
         "documentation": {}
     },
@@ -24776,7 +25158,16 @@
         "kind": 2,
         "importPath": "backend.open_webui.utils.response",
         "description": "backend.open_webui.utils.response",
-        "peekOfCode": "def convert_response_ollama_to_openai(ollama_response: dict) -> dict:\n    model = ollama_response.get(\"model\", \"ollama\")\n    message_content = ollama_response.get(\"message\", {}).get(\"content\", \"\")\n    tool_calls = ollama_response.get(\"message\", {}).get(\"tool_calls\", None)\n    openai_tool_calls = None\n    if tool_calls:\n        openai_tool_calls = convert_ollama_tool_call_to_openai(tool_calls)\n    data = ollama_response\n    usage = convert_ollama_usage_to_openai(data)\n    response = openai_chat_completion_message_template(",
+        "peekOfCode": "def convert_response_ollama_to_openai(ollama_response: dict) -> dict:\n    model = ollama_response.get(\"model\", \"ollama\")\n    message_content = ollama_response.get(\"message\", {}).get(\"content\", \"\")\n    reasoning_content = ollama_response.get(\"message\", {}).get(\"thinking\", None)\n    tool_calls = ollama_response.get(\"message\", {}).get(\"tool_calls\", None)\n    openai_tool_calls = None\n    if tool_calls:\n        openai_tool_calls = convert_ollama_tool_call_to_openai(tool_calls)\n    data = ollama_response\n    usage = convert_ollama_usage_to_openai(data)",
+        "detail": "backend.open_webui.utils.response",
+        "documentation": {}
+    },
+    {
+        "label": "convert_embedding_response_ollama_to_openai",
+        "kind": 2,
+        "importPath": "backend.open_webui.utils.response",
+        "description": "backend.open_webui.utils.response",
+        "peekOfCode": "def convert_embedding_response_ollama_to_openai(response) -> dict:\n    \"\"\"\n    Convert the response from Ollama embeddings endpoint to the OpenAI-compatible format.\n    Args:\n        response (dict): The response from the Ollama API,\n            e.g. {\"embedding\": [...], \"model\": \"...\"}\n            or {\"embeddings\": [{\"embedding\": [...], \"index\": 0}, ...], \"model\": \"...\"}\n    Returns:\n        dict: Response adapted to OpenAI's embeddings API format.\n            e.g. {",
         "detail": "backend.open_webui.utils.response",
         "documentation": {}
     },
@@ -24939,6 +25330,15 @@
         "importPath": "backend.open_webui.utils.task",
         "description": "backend.open_webui.utils.task",
         "peekOfCode": "def title_generation_template(\n    template: str, messages: list[dict], user: Optional[dict] = None\n) -> str:\n    prompt = get_last_user_message(messages)\n    template = replace_prompt_variable(template, prompt)\n    template = replace_messages_variable(template, messages)\n    template = prompt_template(\n        template,\n        **(\n            {\"user_name\": user.get(\"name\"), \"user_location\": user.get(\"location\")}",
+        "detail": "backend.open_webui.utils.task",
+        "documentation": {}
+    },
+    {
+        "label": "follow_up_generation_template",
+        "kind": 2,
+        "importPath": "backend.open_webui.utils.task",
+        "description": "backend.open_webui.utils.task",
+        "peekOfCode": "def follow_up_generation_template(\n    template: str, messages: list[dict], user: Optional[dict] = None\n) -> str:\n    prompt = get_last_user_message(messages)\n    template = replace_prompt_variable(template, prompt)\n    template = replace_messages_variable(template, messages)\n    template = prompt_template(\n        template,\n        **(\n            {\"user_name\": user.get(\"name\"), \"user_location\": user.get(\"location\")}",
         "detail": "backend.open_webui.utils.task",
         "documentation": {}
     },
@@ -25240,15 +25640,6 @@
         "documentation": {}
     },
     {
-        "label": "validate_cors_origins",
-        "kind": 2,
-        "importPath": "backend.open_webui.config",
-        "description": "backend.open_webui.config",
-        "peekOfCode": "def validate_cors_origins(origins):\n    for origin in origins:\n        if origin != \"*\":\n            validate_cors_origin(origin)\ndef validate_cors_origin(origin):\n    parsed_url = urlparse(origin)\n    # Check if the scheme is either http or https\n    if parsed_url.scheme not in [\"http\", \"https\"]:\n        raise ValueError(\n            f\"Invalid scheme in CORS_ALLOW_ORIGIN: '{origin}'. Only 'http' and 'https' are allowed.\"",
-        "detail": "backend.open_webui.config",
-        "documentation": {}
-    },
-    {
         "label": "validate_cors_origin",
         "kind": 2,
         "importPath": "backend.open_webui.config",
@@ -25424,7 +25815,25 @@
         "kind": 5,
         "importPath": "backend.open_webui.config",
         "description": "backend.open_webui.config",
-        "peekOfCode": "MICROSOFT_CLIENT_TENANT_ID = PersistentConfig(\n    \"MICROSOFT_CLIENT_TENANT_ID\",\n    \"oauth.microsoft.tenant_id\",\n    os.environ.get(\"MICROSOFT_CLIENT_TENANT_ID\", \"\"),\n)\nMICROSOFT_OAUTH_SCOPE = PersistentConfig(\n    \"MICROSOFT_OAUTH_SCOPE\",\n    \"oauth.microsoft.scope\",\n    os.environ.get(\"MICROSOFT_OAUTH_SCOPE\", \"openid email profile\"),\n)",
+        "peekOfCode": "MICROSOFT_CLIENT_TENANT_ID = PersistentConfig(\n    \"MICROSOFT_CLIENT_TENANT_ID\",\n    \"oauth.microsoft.tenant_id\",\n    os.environ.get(\"MICROSOFT_CLIENT_TENANT_ID\", \"\"),\n)\nMICROSOFT_CLIENT_LOGIN_BASE_URL = PersistentConfig(\n    \"MICROSOFT_CLIENT_LOGIN_BASE_URL\",\n    \"oauth.microsoft.login_base_url\",\n    os.environ.get(\n        \"MICROSOFT_CLIENT_LOGIN_BASE_URL\", \"https://login.microsoftonline.com\"",
+        "detail": "backend.open_webui.config",
+        "documentation": {}
+    },
+    {
+        "label": "MICROSOFT_CLIENT_LOGIN_BASE_URL",
+        "kind": 5,
+        "importPath": "backend.open_webui.config",
+        "description": "backend.open_webui.config",
+        "peekOfCode": "MICROSOFT_CLIENT_LOGIN_BASE_URL = PersistentConfig(\n    \"MICROSOFT_CLIENT_LOGIN_BASE_URL\",\n    \"oauth.microsoft.login_base_url\",\n    os.environ.get(\n        \"MICROSOFT_CLIENT_LOGIN_BASE_URL\", \"https://login.microsoftonline.com\"\n    ),\n)\nMICROSOFT_CLIENT_PICTURE_URL = PersistentConfig(\n    \"MICROSOFT_CLIENT_PICTURE_URL\",\n    \"oauth.microsoft.picture_url\",",
+        "detail": "backend.open_webui.config",
+        "documentation": {}
+    },
+    {
+        "label": "MICROSOFT_CLIENT_PICTURE_URL",
+        "kind": 5,
+        "importPath": "backend.open_webui.config",
+        "description": "backend.open_webui.config",
+        "peekOfCode": "MICROSOFT_CLIENT_PICTURE_URL = PersistentConfig(\n    \"MICROSOFT_CLIENT_PICTURE_URL\",\n    \"oauth.microsoft.picture_url\",\n    os.environ.get(\n        \"MICROSOFT_CLIENT_PICTURE_URL\",\n        \"https://graph.microsoft.com/v1.0/me/photo/$value\",\n    ),\n)\nMICROSOFT_OAUTH_SCOPE = PersistentConfig(\n    \"MICROSOFT_OAUTH_SCOPE\",",
         "detail": "backend.open_webui.config",
         "documentation": {}
     },
@@ -26117,7 +26526,7 @@
         "kind": 5,
         "importPath": "backend.open_webui.config",
         "description": "backend.open_webui.config",
-        "peekOfCode": "TOOL_SERVER_CONNECTIONS = PersistentConfig(\n    \"TOOL_SERVER_CONNECTIONS\",\n    \"tool_server.connections\",\n    tool_server_connections,\n)\n####################################\n# WEBUI\n####################################\nWEBUI_URL = PersistentConfig(\n    \"WEBUI_URL\", \"webui.url\", os.environ.get(\"WEBUI_URL\", \"http://localhost:3000\")",
+        "peekOfCode": "TOOL_SERVER_CONNECTIONS = PersistentConfig(\n    \"TOOL_SERVER_CONNECTIONS\",\n    \"tool_server.connections\",\n    tool_server_connections,\n)\n####################################\n# WEBUI\n####################################\nWEBUI_URL = PersistentConfig(\"WEBUI_URL\", \"webui.url\", os.environ.get(\"WEBUI_URL\", \"\"))\nENABLE_SIGNUP = PersistentConfig(",
         "detail": "backend.open_webui.config",
         "documentation": {}
     },
@@ -26126,7 +26535,7 @@
         "kind": 5,
         "importPath": "backend.open_webui.config",
         "description": "backend.open_webui.config",
-        "peekOfCode": "WEBUI_URL = PersistentConfig(\n    \"WEBUI_URL\", \"webui.url\", os.environ.get(\"WEBUI_URL\", \"http://localhost:3000\")\n)\nENABLE_SIGNUP = PersistentConfig(\n    \"ENABLE_SIGNUP\",\n    \"ui.enable_signup\",\n    (\n        False\n        if not WEBUI_AUTH\n        else os.environ.get(\"ENABLE_SIGNUP\", \"True\").lower() == \"true\"",
+        "peekOfCode": "WEBUI_URL = PersistentConfig(\"WEBUI_URL\", \"webui.url\", os.environ.get(\"WEBUI_URL\", \"\"))\nENABLE_SIGNUP = PersistentConfig(\n    \"ENABLE_SIGNUP\",\n    \"ui.enable_signup\",\n    (\n        False\n        if not WEBUI_AUTH\n        else os.environ.get(\"ENABLE_SIGNUP\", \"True\").lower() == \"true\"\n    ),\n)",
         "detail": "backend.open_webui.config",
         "documentation": {}
     },
@@ -26567,7 +26976,7 @@
         "kind": 5,
         "importPath": "backend.open_webui.config",
         "description": "backend.open_webui.config",
-        "peekOfCode": "THREAD_POOL_SIZE = os.getenv(\"THREAD_POOL_SIZE\", None)\nif THREAD_POOL_SIZE is not None and isinstance(THREAD_POOL_SIZE, str):\n    try:\n        THREAD_POOL_SIZE = int(THREAD_POOL_SIZE)\n    except ValueError:\n        log.warning(\n            f\"THREAD_POOL_SIZE is not a valid integer: {THREAD_POOL_SIZE}. Defaulting to None.\"\n        )\n        THREAD_POOL_SIZE = None\ndef validate_cors_origins(origins):",
+        "peekOfCode": "THREAD_POOL_SIZE = os.getenv(\"THREAD_POOL_SIZE\", None)\nif THREAD_POOL_SIZE is not None and isinstance(THREAD_POOL_SIZE, str):\n    try:\n        THREAD_POOL_SIZE = int(THREAD_POOL_SIZE)\n    except ValueError:\n        log.warning(\n            f\"THREAD_POOL_SIZE is not a valid integer: {THREAD_POOL_SIZE}. Defaulting to None.\"\n        )\n        THREAD_POOL_SIZE = None\ndef validate_cors_origin(origin):",
         "detail": "backend.open_webui.config",
         "documentation": {}
     },
@@ -26576,7 +26985,7 @@
         "kind": 5,
         "importPath": "backend.open_webui.config",
         "description": "backend.open_webui.config",
-        "peekOfCode": "CORS_ALLOW_ORIGIN = os.environ.get(\n    \"CORS_ALLOW_ORIGIN\", \"*;http://localhost:5173;http://localhost:8080\"\n).split(\";\")\nif \"*\" in CORS_ALLOW_ORIGIN:\n    log.warning(\n        \"\\n\\nWARNING: CORS_ALLOW_ORIGIN IS SET TO '*' - NOT RECOMMENDED FOR PRODUCTION DEPLOYMENTS.\\n\"\n    )\nvalidate_cors_origins(CORS_ALLOW_ORIGIN)\nclass BannerModel(BaseModel):\n    id: str",
+        "peekOfCode": "CORS_ALLOW_ORIGIN = os.environ.get(\"CORS_ALLOW_ORIGIN\", \"*\").split(\";\")\nif CORS_ALLOW_ORIGIN == [\"*\"]:\n    log.warning(\n        \"\\n\\nWARNING: CORS_ALLOW_ORIGIN IS SET TO '*' - NOT RECOMMENDED FOR PRODUCTION DEPLOYMENTS.\\n\"\n    )\nelse:\n    # You have to pick between a single wildcard or a list of origins.\n    # Doing both will result in CORS errors in the browser.\n    for origin in CORS_ALLOW_ORIGIN:\n        validate_cors_origin(origin)",
         "detail": "backend.open_webui.config",
         "documentation": {}
     },
@@ -26676,6 +27085,33 @@
         "importPath": "backend.open_webui.config",
         "description": "backend.open_webui.config",
         "peekOfCode": "DEFAULT_IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE = \"\"\"### Task:\nGenerate a detailed prompt for am image generation task based on the given language and context. Describe the image as if you were explaining it to someone who cannot see it. Include relevant details, colors, shapes, and any other important elements.\n### Guidelines:\n- Be descriptive and detailed, focusing on the most important aspects of the image.\n- Avoid making assumptions or adding information not present in the image.\n- Use the chat's primary language; default to English if multilingual.\n- If the image is too complex, focus on the most prominent elements.\n### Output:\nStrictly return in JSON format:\n{",
+        "detail": "backend.open_webui.config",
+        "documentation": {}
+    },
+    {
+        "label": "FOLLOW_UP_GENERATION_PROMPT_TEMPLATE",
+        "kind": 5,
+        "importPath": "backend.open_webui.config",
+        "description": "backend.open_webui.config",
+        "peekOfCode": "FOLLOW_UP_GENERATION_PROMPT_TEMPLATE = PersistentConfig(\n    \"FOLLOW_UP_GENERATION_PROMPT_TEMPLATE\",\n    \"task.follow_up.prompt_template\",\n    os.environ.get(\"FOLLOW_UP_GENERATION_PROMPT_TEMPLATE\", \"\"),\n)\nDEFAULT_FOLLOW_UP_GENERATION_PROMPT_TEMPLATE = \"\"\"### Task:\nSuggest 3-5 relevant follow-up questions or prompts that the user might naturally ask next in this conversation as a **user**, based on the chat history, to help continue or deepen the discussion.\n### Guidelines:\n- Write all follow-up questions from the user’s point of view, directed to the assistant.\n- Make questions concise, clear, and directly related to the discussed topic(s).",
+        "detail": "backend.open_webui.config",
+        "documentation": {}
+    },
+    {
+        "label": "DEFAULT_FOLLOW_UP_GENERATION_PROMPT_TEMPLATE",
+        "kind": 5,
+        "importPath": "backend.open_webui.config",
+        "description": "backend.open_webui.config",
+        "peekOfCode": "DEFAULT_FOLLOW_UP_GENERATION_PROMPT_TEMPLATE = \"\"\"### Task:\nSuggest 3-5 relevant follow-up questions or prompts that the user might naturally ask next in this conversation as a **user**, based on the chat history, to help continue or deepen the discussion.\n### Guidelines:\n- Write all follow-up questions from the user’s point of view, directed to the assistant.\n- Make questions concise, clear, and directly related to the discussed topic(s).\n- Only suggest follow-ups that make sense given the chat content and do not repeat what was already covered.\n- If the conversation is very short or not specific, suggest more general (but relevant) follow-ups the user might ask.\n- Use the conversation's primary language; default to English if multilingual.\n- Response must be a JSON array of strings, no extra text or formatting.\n### Output:",
+        "detail": "backend.open_webui.config",
+        "documentation": {}
+    },
+    {
+        "label": "ENABLE_FOLLOW_UP_GENERATION",
+        "kind": 5,
+        "importPath": "backend.open_webui.config",
+        "description": "backend.open_webui.config",
+        "peekOfCode": "ENABLE_FOLLOW_UP_GENERATION = PersistentConfig(\n    \"ENABLE_FOLLOW_UP_GENERATION\",\n    \"task.follow_up.enable\",\n    os.environ.get(\"ENABLE_FOLLOW_UP_GENERATION\", \"True\").lower() == \"true\",\n)\nENABLE_TAGS_GENERATION = PersistentConfig(\n    \"ENABLE_TAGS_GENERATION\",\n    \"task.tags.enable\",\n    os.environ.get(\"ENABLE_TAGS_GENERATION\", \"True\").lower() == \"true\",\n)",
         "detail": "backend.open_webui.config",
         "documentation": {}
     },
@@ -27215,7 +27651,7 @@
         "kind": 5,
         "importPath": "backend.open_webui.config",
         "description": "backend.open_webui.config",
-        "peekOfCode": "PGVECTOR_DB_URL = os.environ.get(\"PGVECTOR_DB_URL\", DATABASE_URL)\nif VECTOR_DB == \"pgvector\" and not PGVECTOR_DB_URL.startswith(\"postgres\"):\n    raise ValueError(\n        \"Pgvector requires setting PGVECTOR_DB_URL or using Postgres with vector extension as the primary database.\"\n    )\nPGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH = int(\n    os.environ.get(\"PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH\", \"1536\")\n)\n# Pinecone\nPINECONE_API_KEY = os.environ.get(\"PINECONE_API_KEY\", None)",
+        "peekOfCode": "PGVECTOR_DB_URL = os.environ.get(\"PGVECTOR_DB_URL\", DATABASE_URL)\nif VECTOR_DB == \"pgvector\" and not PGVECTOR_DB_URL.startswith(\"postgres\"):\n    raise ValueError(\n        \"Pgvector requires setting PGVECTOR_DB_URL or using Postgres with vector extension as the primary database.\"\n    )\nPGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH = int(\n    os.environ.get(\"PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH\", \"1536\")\n)\nPGVECTOR_PGCRYPTO = os.getenv(\"PGVECTOR_PGCRYPTO\", \"false\").lower() == \"true\"\nPGVECTOR_PGCRYPTO_KEY = os.getenv(\"PGVECTOR_PGCRYPTO_KEY\", None)",
         "detail": "backend.open_webui.config",
         "documentation": {}
     },
@@ -27224,7 +27660,25 @@
         "kind": 5,
         "importPath": "backend.open_webui.config",
         "description": "backend.open_webui.config",
-        "peekOfCode": "PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH = int(\n    os.environ.get(\"PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH\", \"1536\")\n)\n# Pinecone\nPINECONE_API_KEY = os.environ.get(\"PINECONE_API_KEY\", None)\nPINECONE_ENVIRONMENT = os.environ.get(\"PINECONE_ENVIRONMENT\", None)\nPINECONE_INDEX_NAME = os.getenv(\"PINECONE_INDEX_NAME\", \"open-webui-index\")\nPINECONE_DIMENSION = int(os.getenv(\"PINECONE_DIMENSION\", 1536))  # or 3072, 1024, 768\nPINECONE_METRIC = os.getenv(\"PINECONE_METRIC\", \"cosine\")\nPINECONE_CLOUD = os.getenv(\"PINECONE_CLOUD\", \"aws\")  # or \"gcp\" or \"azure\"",
+        "peekOfCode": "PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH = int(\n    os.environ.get(\"PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH\", \"1536\")\n)\nPGVECTOR_PGCRYPTO = os.getenv(\"PGVECTOR_PGCRYPTO\", \"false\").lower() == \"true\"\nPGVECTOR_PGCRYPTO_KEY = os.getenv(\"PGVECTOR_PGCRYPTO_KEY\", None)\nif PGVECTOR_PGCRYPTO and not PGVECTOR_PGCRYPTO_KEY:\n    raise ValueError(\n        \"PGVECTOR_PGCRYPTO is enabled but PGVECTOR_PGCRYPTO_KEY is not set. Please provide a valid key.\"\n    )\n# Pinecone",
+        "detail": "backend.open_webui.config",
+        "documentation": {}
+    },
+    {
+        "label": "PGVECTOR_PGCRYPTO",
+        "kind": 5,
+        "importPath": "backend.open_webui.config",
+        "description": "backend.open_webui.config",
+        "peekOfCode": "PGVECTOR_PGCRYPTO = os.getenv(\"PGVECTOR_PGCRYPTO\", \"false\").lower() == \"true\"\nPGVECTOR_PGCRYPTO_KEY = os.getenv(\"PGVECTOR_PGCRYPTO_KEY\", None)\nif PGVECTOR_PGCRYPTO and not PGVECTOR_PGCRYPTO_KEY:\n    raise ValueError(\n        \"PGVECTOR_PGCRYPTO is enabled but PGVECTOR_PGCRYPTO_KEY is not set. Please provide a valid key.\"\n    )\n# Pinecone\nPINECONE_API_KEY = os.environ.get(\"PINECONE_API_KEY\", None)\nPINECONE_ENVIRONMENT = os.environ.get(\"PINECONE_ENVIRONMENT\", None)\nPINECONE_INDEX_NAME = os.getenv(\"PINECONE_INDEX_NAME\", \"open-webui-index\")",
+        "detail": "backend.open_webui.config",
+        "documentation": {}
+    },
+    {
+        "label": "PGVECTOR_PGCRYPTO_KEY",
+        "kind": 5,
+        "importPath": "backend.open_webui.config",
+        "description": "backend.open_webui.config",
+        "peekOfCode": "PGVECTOR_PGCRYPTO_KEY = os.getenv(\"PGVECTOR_PGCRYPTO_KEY\", None)\nif PGVECTOR_PGCRYPTO and not PGVECTOR_PGCRYPTO_KEY:\n    raise ValueError(\n        \"PGVECTOR_PGCRYPTO is enabled but PGVECTOR_PGCRYPTO_KEY is not set. Please provide a valid key.\"\n    )\n# Pinecone\nPINECONE_API_KEY = os.environ.get(\"PINECONE_API_KEY\", None)\nPINECONE_ENVIRONMENT = os.environ.get(\"PINECONE_ENVIRONMENT\", None)\nPINECONE_INDEX_NAME = os.getenv(\"PINECONE_INDEX_NAME\", \"open-webui-index\")\nPINECONE_DIMENSION = int(os.getenv(\"PINECONE_DIMENSION\", 1536))  # or 3072, 1024, 768",
         "detail": "backend.open_webui.config",
         "documentation": {}
     },
@@ -27494,7 +27948,52 @@
         "kind": 5,
         "importPath": "backend.open_webui.config",
         "description": "backend.open_webui.config",
-        "peekOfCode": "DOCLING_DO_PICTURE_DESCRIPTION = PersistentConfig(\n    \"DOCLING_DO_PICTURE_DESCRIPTION\",\n    \"rag.docling_do_picture_description\",\n    os.getenv(\"DOCLING_DO_PICTURE_DESCRIPTION\", \"False\").lower() == \"true\",\n)\nDOCUMENT_INTELLIGENCE_ENDPOINT = PersistentConfig(\n    \"DOCUMENT_INTELLIGENCE_ENDPOINT\",\n    \"rag.document_intelligence_endpoint\",\n    os.getenv(\"DOCUMENT_INTELLIGENCE_ENDPOINT\", \"\"),\n)",
+        "peekOfCode": "DOCLING_DO_PICTURE_DESCRIPTION = PersistentConfig(\n    \"DOCLING_DO_PICTURE_DESCRIPTION\",\n    \"rag.docling_do_picture_description\",\n    os.getenv(\"DOCLING_DO_PICTURE_DESCRIPTION\", \"False\").lower() == \"true\",\n)\nDOCLING_PICTURE_DESCRIPTION_MODE = PersistentConfig(\n    \"DOCLING_PICTURE_DESCRIPTION_MODE\",\n    \"rag.docling_picture_description_mode\",\n    os.getenv(\"DOCLING_PICTURE_DESCRIPTION_MODE\", \"\"),\n)",
+        "detail": "backend.open_webui.config",
+        "documentation": {}
+    },
+    {
+        "label": "DOCLING_PICTURE_DESCRIPTION_MODE",
+        "kind": 5,
+        "importPath": "backend.open_webui.config",
+        "description": "backend.open_webui.config",
+        "peekOfCode": "DOCLING_PICTURE_DESCRIPTION_MODE = PersistentConfig(\n    \"DOCLING_PICTURE_DESCRIPTION_MODE\",\n    \"rag.docling_picture_description_mode\",\n    os.getenv(\"DOCLING_PICTURE_DESCRIPTION_MODE\", \"\"),\n)\ndocling_picture_description_local = os.getenv(\"DOCLING_PICTURE_DESCRIPTION_LOCAL\", \"\")\ntry:\n    docling_picture_description_local = json.loads(docling_picture_description_local)\nexcept json.JSONDecodeError:\n    docling_picture_description_local = {}",
+        "detail": "backend.open_webui.config",
+        "documentation": {}
+    },
+    {
+        "label": "docling_picture_description_local",
+        "kind": 5,
+        "importPath": "backend.open_webui.config",
+        "description": "backend.open_webui.config",
+        "peekOfCode": "docling_picture_description_local = os.getenv(\"DOCLING_PICTURE_DESCRIPTION_LOCAL\", \"\")\ntry:\n    docling_picture_description_local = json.loads(docling_picture_description_local)\nexcept json.JSONDecodeError:\n    docling_picture_description_local = {}\nDOCLING_PICTURE_DESCRIPTION_LOCAL = PersistentConfig(\n    \"DOCLING_PICTURE_DESCRIPTION_LOCAL\",\n    \"rag.docling_picture_description_local\",\n    docling_picture_description_local,\n)",
+        "detail": "backend.open_webui.config",
+        "documentation": {}
+    },
+    {
+        "label": "DOCLING_PICTURE_DESCRIPTION_LOCAL",
+        "kind": 5,
+        "importPath": "backend.open_webui.config",
+        "description": "backend.open_webui.config",
+        "peekOfCode": "DOCLING_PICTURE_DESCRIPTION_LOCAL = PersistentConfig(\n    \"DOCLING_PICTURE_DESCRIPTION_LOCAL\",\n    \"rag.docling_picture_description_local\",\n    docling_picture_description_local,\n)\ndocling_picture_description_api = os.getenv(\"DOCLING_PICTURE_DESCRIPTION_API\", \"\")\ntry:\n    docling_picture_description_api = json.loads(docling_picture_description_api)\nexcept json.JSONDecodeError:\n    docling_picture_description_api = {}",
+        "detail": "backend.open_webui.config",
+        "documentation": {}
+    },
+    {
+        "label": "docling_picture_description_api",
+        "kind": 5,
+        "importPath": "backend.open_webui.config",
+        "description": "backend.open_webui.config",
+        "peekOfCode": "docling_picture_description_api = os.getenv(\"DOCLING_PICTURE_DESCRIPTION_API\", \"\")\ntry:\n    docling_picture_description_api = json.loads(docling_picture_description_api)\nexcept json.JSONDecodeError:\n    docling_picture_description_api = {}\nDOCLING_PICTURE_DESCRIPTION_API = PersistentConfig(\n    \"DOCLING_PICTURE_DESCRIPTION_API\",\n    \"rag.docling_picture_description_api\",\n    docling_picture_description_api,\n)",
+        "detail": "backend.open_webui.config",
+        "documentation": {}
+    },
+    {
+        "label": "DOCLING_PICTURE_DESCRIPTION_API",
+        "kind": 5,
+        "importPath": "backend.open_webui.config",
+        "description": "backend.open_webui.config",
+        "peekOfCode": "DOCLING_PICTURE_DESCRIPTION_API = PersistentConfig(\n    \"DOCLING_PICTURE_DESCRIPTION_API\",\n    \"rag.docling_picture_description_api\",\n    docling_picture_description_api,\n)\nDOCUMENT_INTELLIGENCE_ENDPOINT = PersistentConfig(\n    \"DOCUMENT_INTELLIGENCE_ENDPOINT\",\n    \"rag.document_intelligence_endpoint\",\n    os.getenv(\"DOCUMENT_INTELLIGENCE_ENDPOINT\", \"\"),\n)",
         "detail": "backend.open_webui.config",
         "documentation": {}
     },
@@ -28196,7 +28695,25 @@
         "kind": 5,
         "importPath": "backend.open_webui.config",
         "description": "backend.open_webui.config",
-        "peekOfCode": "PERPLEXITY_API_KEY = PersistentConfig(\n    \"PERPLEXITY_API_KEY\",\n    \"rag.web.search.perplexity_api_key\",\n    os.getenv(\"PERPLEXITY_API_KEY\", \"\"),\n)\nSOUGOU_API_SID = PersistentConfig(\n    \"SOUGOU_API_SID\",\n    \"rag.web.search.sougou_api_sid\",\n    os.getenv(\"SOUGOU_API_SID\", \"\"),\n)",
+        "peekOfCode": "PERPLEXITY_API_KEY = PersistentConfig(\n    \"PERPLEXITY_API_KEY\",\n    \"rag.web.search.perplexity_api_key\",\n    os.getenv(\"PERPLEXITY_API_KEY\", \"\"),\n)\nPERPLEXITY_MODEL = PersistentConfig(\n    \"PERPLEXITY_MODEL\",\n    \"rag.web.search.perplexity_model\",\n    os.getenv(\"PERPLEXITY_MODEL\", \"sonar\"),\n)",
+        "detail": "backend.open_webui.config",
+        "documentation": {}
+    },
+    {
+        "label": "PERPLEXITY_MODEL",
+        "kind": 5,
+        "importPath": "backend.open_webui.config",
+        "description": "backend.open_webui.config",
+        "peekOfCode": "PERPLEXITY_MODEL = PersistentConfig(\n    \"PERPLEXITY_MODEL\",\n    \"rag.web.search.perplexity_model\",\n    os.getenv(\"PERPLEXITY_MODEL\", \"sonar\"),\n)\nPERPLEXITY_SEARCH_CONTEXT_USAGE = PersistentConfig(\n    \"PERPLEXITY_SEARCH_CONTEXT_USAGE\",\n    \"rag.web.search.perplexity_search_context_usage\",\n    os.getenv(\"PERPLEXITY_SEARCH_CONTEXT_USAGE\", \"medium\"),\n)",
+        "detail": "backend.open_webui.config",
+        "documentation": {}
+    },
+    {
+        "label": "PERPLEXITY_SEARCH_CONTEXT_USAGE",
+        "kind": 5,
+        "importPath": "backend.open_webui.config",
+        "description": "backend.open_webui.config",
+        "peekOfCode": "PERPLEXITY_SEARCH_CONTEXT_USAGE = PersistentConfig(\n    \"PERPLEXITY_SEARCH_CONTEXT_USAGE\",\n    \"rag.web.search.perplexity_search_context_usage\",\n    os.getenv(\"PERPLEXITY_SEARCH_CONTEXT_USAGE\", \"medium\"),\n)\nSOUGOU_API_SID = PersistentConfig(\n    \"SOUGOU_API_SID\",\n    \"rag.web.search.sougou_api_sid\",\n    os.getenv(\"SOUGOU_API_SID\", \"\"),\n)",
         "detail": "backend.open_webui.config",
         "documentation": {}
     },
@@ -28871,7 +29388,7 @@
         "kind": 6,
         "importPath": "backend.open_webui.constants",
         "description": "backend.open_webui.constants",
-        "peekOfCode": "class TASKS(str, Enum):\n    def __str__(self) -> str:\n        return super().__str__()\n    DEFAULT = lambda task=\"\": f\"{task if task else 'generation'}\"\n    TITLE_GENERATION = \"title_generation\"\n    TAGS_GENERATION = \"tags_generation\"\n    EMOJI_GENERATION = \"emoji_generation\"\n    QUERY_GENERATION = \"query_generation\"\n    IMAGE_PROMPT_GENERATION = \"image_prompt_generation\"\n    AUTOCOMPLETE_GENERATION = \"autocomplete_generation\"",
+        "peekOfCode": "class TASKS(str, Enum):\n    def __str__(self) -> str:\n        return super().__str__()\n    DEFAULT = lambda task=\"\": f\"{task if task else 'generation'}\"\n    TITLE_GENERATION = \"title_generation\"\n    FOLLOW_UP_GENERATION = \"follow_up_generation\"\n    TAGS_GENERATION = \"tags_generation\"\n    EMOJI_GENERATION = \"emoji_generation\"\n    QUERY_GENERATION = \"query_generation\"\n    IMAGE_PROMPT_GENERATION = \"image_prompt_generation\"",
         "detail": "backend.open_webui.constants",
         "documentation": {}
     },
@@ -29006,7 +29523,7 @@
         "kind": 5,
         "importPath": "backend.open_webui.env",
         "description": "backend.open_webui.env",
-        "peekOfCode": "FROM_INIT_PY = os.environ.get(\"FROM_INIT_PY\", \"False\").lower() == \"true\"\nif FROM_INIT_PY:\n    PACKAGE_DATA = {\"version\": importlib.metadata.version(\"open-webui\")}\nelse:\n    try:\n        PACKAGE_DATA = json.loads((BASE_DIR / \"package.json\").read_text())\n    except Exception:\n        PACKAGE_DATA = {\"version\": \"0.0.0\"}\nVERSION = PACKAGE_DATA[\"version\"]\n# Function to parse each section",
+        "peekOfCode": "FROM_INIT_PY = os.environ.get(\"FROM_INIT_PY\", \"False\").lower() == \"true\"\nif FROM_INIT_PY:\n    PACKAGE_DATA = {\"version\": importlib.metadata.version(\"open-webui\")}\nelse:\n    try:\n        PACKAGE_DATA = json.loads((BASE_DIR / \"package.json\").read_text())\n    except Exception:\n        PACKAGE_DATA = {\"version\": \"0.0.0\"}\nVERSION = PACKAGE_DATA[\"version\"]\nINSTANCE_ID = os.environ.get(\"INSTANCE_ID\", str(uuid4()))",
         "detail": "backend.open_webui.env",
         "documentation": {}
     },
@@ -29015,7 +29532,16 @@
         "kind": 5,
         "importPath": "backend.open_webui.env",
         "description": "backend.open_webui.env",
-        "peekOfCode": "VERSION = PACKAGE_DATA[\"version\"]\n# Function to parse each section\ndef parse_section(section):\n    items = []\n    for li in section.find_all(\"li\"):\n        # Extract raw HTML string\n        raw_html = str(li)\n        # Extract text without HTML tags\n        text = li.get_text(separator=\" \", strip=True)\n        # Split into title and content",
+        "peekOfCode": "VERSION = PACKAGE_DATA[\"version\"]\nINSTANCE_ID = os.environ.get(\"INSTANCE_ID\", str(uuid4()))\n# Function to parse each section\ndef parse_section(section):\n    items = []\n    for li in section.find_all(\"li\"):\n        # Extract raw HTML string\n        raw_html = str(li)\n        # Extract text without HTML tags\n        text = li.get_text(separator=\" \", strip=True)",
+        "detail": "backend.open_webui.env",
+        "documentation": {}
+    },
+    {
+        "label": "INSTANCE_ID",
+        "kind": 5,
+        "importPath": "backend.open_webui.env",
+        "description": "backend.open_webui.env",
+        "peekOfCode": "INSTANCE_ID = os.environ.get(\"INSTANCE_ID\", str(uuid4()))\n# Function to parse each section\ndef parse_section(section):\n    items = []\n    for li in section.find_all(\"li\"):\n        # Extract raw HTML string\n        raw_html = str(li)\n        # Extract text without HTML tags\n        text = li.get_text(separator=\" \", strip=True)\n        # Split into title and content",
         "detail": "backend.open_webui.env",
         "documentation": {}
     },
@@ -29663,7 +30189,7 @@
         "kind": 5,
         "importPath": "backend.open_webui.main",
         "description": "backend.open_webui.main",
-        "peekOfCode": "app = FastAPI(\n    title=\"Open WebUI\",\n    docs_url=\"/docs\" if ENV == \"dev\" else None,\n    openapi_url=\"/openapi.json\" if ENV == \"dev\" else None,\n    redoc_url=None,\n    lifespan=lifespan,\n)\noauth_manager = OAuthManager(app)\napp.state.config = AppConfig(\n    redis_url=REDIS_URL,",
+        "peekOfCode": "app = FastAPI(\n    title=\"Open WebUI\",\n    docs_url=\"/docs\" if ENV == \"dev\" else None,\n    openapi_url=\"/openapi.json\" if ENV == \"dev\" else None,\n    redoc_url=None,\n    lifespan=lifespan,\n)\noauth_manager = OAuthManager(app)\napp.state.instance_id = None\napp.state.config = AppConfig(",
         "detail": "backend.open_webui.main",
         "documentation": {}
     },
@@ -29672,7 +30198,16 @@
         "kind": 5,
         "importPath": "backend.open_webui.main",
         "description": "backend.open_webui.main",
-        "peekOfCode": "oauth_manager = OAuthManager(app)\napp.state.config = AppConfig(\n    redis_url=REDIS_URL,\n    redis_sentinels=get_sentinels_from_env(REDIS_SENTINEL_HOSTS, REDIS_SENTINEL_PORT),\n)\napp.state.WEBUI_NAME = WEBUI_NAME\napp.state.LICENSE_METADATA = None\n########################################\n#\n# OPENTELEMETRY",
+        "peekOfCode": "oauth_manager = OAuthManager(app)\napp.state.instance_id = None\napp.state.config = AppConfig(\n    redis_url=REDIS_URL,\n    redis_sentinels=get_sentinels_from_env(REDIS_SENTINEL_HOSTS, REDIS_SENTINEL_PORT),\n)\napp.state.redis = None\napp.state.WEBUI_NAME = WEBUI_NAME\napp.state.LICENSE_METADATA = None\n########################################",
+        "detail": "backend.open_webui.main",
+        "documentation": {}
+    },
+    {
+        "label": "app.state.instance_id",
+        "kind": 5,
+        "importPath": "backend.open_webui.main",
+        "description": "backend.open_webui.main",
+        "peekOfCode": "app.state.instance_id = None\napp.state.config = AppConfig(\n    redis_url=REDIS_URL,\n    redis_sentinels=get_sentinels_from_env(REDIS_SENTINEL_HOSTS, REDIS_SENTINEL_PORT),\n)\napp.state.redis = None\napp.state.WEBUI_NAME = WEBUI_NAME\napp.state.LICENSE_METADATA = None\n########################################\n#",
         "detail": "backend.open_webui.main",
         "documentation": {}
     },
@@ -29681,7 +30216,16 @@
         "kind": 5,
         "importPath": "backend.open_webui.main",
         "description": "backend.open_webui.main",
-        "peekOfCode": "app.state.config = AppConfig(\n    redis_url=REDIS_URL,\n    redis_sentinels=get_sentinels_from_env(REDIS_SENTINEL_HOSTS, REDIS_SENTINEL_PORT),\n)\napp.state.WEBUI_NAME = WEBUI_NAME\napp.state.LICENSE_METADATA = None\n########################################\n#\n# OPENTELEMETRY\n#",
+        "peekOfCode": "app.state.config = AppConfig(\n    redis_url=REDIS_URL,\n    redis_sentinels=get_sentinels_from_env(REDIS_SENTINEL_HOSTS, REDIS_SENTINEL_PORT),\n)\napp.state.redis = None\napp.state.WEBUI_NAME = WEBUI_NAME\napp.state.LICENSE_METADATA = None\n########################################\n#\n# OPENTELEMETRY",
+        "detail": "backend.open_webui.main",
+        "documentation": {}
+    },
+    {
+        "label": "app.state.redis",
+        "kind": 5,
+        "importPath": "backend.open_webui.main",
+        "description": "backend.open_webui.main",
+        "peekOfCode": "app.state.redis = None\napp.state.WEBUI_NAME = WEBUI_NAME\napp.state.LICENSE_METADATA = None\n########################################\n#\n# OPENTELEMETRY\n#\n########################################\nif ENABLE_OTEL:\n    from open_webui.utils.telemetry.setup import setup as setup_opentelemetry",
         "detail": "backend.open_webui.main",
         "documentation": {}
     },
@@ -30491,7 +31035,7 @@
         "kind": 5,
         "importPath": "backend.open_webui.main",
         "description": "backend.open_webui.main",
-        "peekOfCode": "app.state.config.DATALAB_MARKER_USE_LLM = DATALAB_MARKER_USE_LLM\napp.state.config.DATALAB_MARKER_OUTPUT_FORMAT = DATALAB_MARKER_OUTPUT_FORMAT\napp.state.config.EXTERNAL_DOCUMENT_LOADER_URL = EXTERNAL_DOCUMENT_LOADER_URL\napp.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY = EXTERNAL_DOCUMENT_LOADER_API_KEY\napp.state.config.TIKA_SERVER_URL = TIKA_SERVER_URL\napp.state.config.DOCLING_SERVER_URL = DOCLING_SERVER_URL\napp.state.config.DOCLING_OCR_ENGINE = DOCLING_OCR_ENGINE\napp.state.config.DOCLING_OCR_LANG = DOCLING_OCR_LANG\napp.state.config.DOCLING_DO_PICTURE_DESCRIPTION = DOCLING_DO_PICTURE_DESCRIPTION\napp.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT = DOCUMENT_INTELLIGENCE_ENDPOINT",
+        "peekOfCode": "app.state.config.DATALAB_MARKER_USE_LLM = DATALAB_MARKER_USE_LLM\napp.state.config.DATALAB_MARKER_OUTPUT_FORMAT = DATALAB_MARKER_OUTPUT_FORMAT\napp.state.config.EXTERNAL_DOCUMENT_LOADER_URL = EXTERNAL_DOCUMENT_LOADER_URL\napp.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY = EXTERNAL_DOCUMENT_LOADER_API_KEY\napp.state.config.TIKA_SERVER_URL = TIKA_SERVER_URL\napp.state.config.DOCLING_SERVER_URL = DOCLING_SERVER_URL\napp.state.config.DOCLING_OCR_ENGINE = DOCLING_OCR_ENGINE\napp.state.config.DOCLING_OCR_LANG = DOCLING_OCR_LANG\napp.state.config.DOCLING_DO_PICTURE_DESCRIPTION = DOCLING_DO_PICTURE_DESCRIPTION\napp.state.config.DOCLING_PICTURE_DESCRIPTION_MODE = DOCLING_PICTURE_DESCRIPTION_MODE",
         "detail": "backend.open_webui.main",
         "documentation": {}
     },
@@ -30500,7 +31044,7 @@
         "kind": 5,
         "importPath": "backend.open_webui.main",
         "description": "backend.open_webui.main",
-        "peekOfCode": "app.state.config.DATALAB_MARKER_OUTPUT_FORMAT = DATALAB_MARKER_OUTPUT_FORMAT\napp.state.config.EXTERNAL_DOCUMENT_LOADER_URL = EXTERNAL_DOCUMENT_LOADER_URL\napp.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY = EXTERNAL_DOCUMENT_LOADER_API_KEY\napp.state.config.TIKA_SERVER_URL = TIKA_SERVER_URL\napp.state.config.DOCLING_SERVER_URL = DOCLING_SERVER_URL\napp.state.config.DOCLING_OCR_ENGINE = DOCLING_OCR_ENGINE\napp.state.config.DOCLING_OCR_LANG = DOCLING_OCR_LANG\napp.state.config.DOCLING_DO_PICTURE_DESCRIPTION = DOCLING_DO_PICTURE_DESCRIPTION\napp.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT = DOCUMENT_INTELLIGENCE_ENDPOINT\napp.state.config.DOCUMENT_INTELLIGENCE_KEY = DOCUMENT_INTELLIGENCE_KEY",
+        "peekOfCode": "app.state.config.DATALAB_MARKER_OUTPUT_FORMAT = DATALAB_MARKER_OUTPUT_FORMAT\napp.state.config.EXTERNAL_DOCUMENT_LOADER_URL = EXTERNAL_DOCUMENT_LOADER_URL\napp.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY = EXTERNAL_DOCUMENT_LOADER_API_KEY\napp.state.config.TIKA_SERVER_URL = TIKA_SERVER_URL\napp.state.config.DOCLING_SERVER_URL = DOCLING_SERVER_URL\napp.state.config.DOCLING_OCR_ENGINE = DOCLING_OCR_ENGINE\napp.state.config.DOCLING_OCR_LANG = DOCLING_OCR_LANG\napp.state.config.DOCLING_DO_PICTURE_DESCRIPTION = DOCLING_DO_PICTURE_DESCRIPTION\napp.state.config.DOCLING_PICTURE_DESCRIPTION_MODE = DOCLING_PICTURE_DESCRIPTION_MODE\napp.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL = DOCLING_PICTURE_DESCRIPTION_LOCAL",
         "detail": "backend.open_webui.main",
         "documentation": {}
     },
@@ -30509,7 +31053,7 @@
         "kind": 5,
         "importPath": "backend.open_webui.main",
         "description": "backend.open_webui.main",
-        "peekOfCode": "app.state.config.EXTERNAL_DOCUMENT_LOADER_URL = EXTERNAL_DOCUMENT_LOADER_URL\napp.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY = EXTERNAL_DOCUMENT_LOADER_API_KEY\napp.state.config.TIKA_SERVER_URL = TIKA_SERVER_URL\napp.state.config.DOCLING_SERVER_URL = DOCLING_SERVER_URL\napp.state.config.DOCLING_OCR_ENGINE = DOCLING_OCR_ENGINE\napp.state.config.DOCLING_OCR_LANG = DOCLING_OCR_LANG\napp.state.config.DOCLING_DO_PICTURE_DESCRIPTION = DOCLING_DO_PICTURE_DESCRIPTION\napp.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT = DOCUMENT_INTELLIGENCE_ENDPOINT\napp.state.config.DOCUMENT_INTELLIGENCE_KEY = DOCUMENT_INTELLIGENCE_KEY\napp.state.config.MISTRAL_OCR_API_KEY = MISTRAL_OCR_API_KEY",
+        "peekOfCode": "app.state.config.EXTERNAL_DOCUMENT_LOADER_URL = EXTERNAL_DOCUMENT_LOADER_URL\napp.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY = EXTERNAL_DOCUMENT_LOADER_API_KEY\napp.state.config.TIKA_SERVER_URL = TIKA_SERVER_URL\napp.state.config.DOCLING_SERVER_URL = DOCLING_SERVER_URL\napp.state.config.DOCLING_OCR_ENGINE = DOCLING_OCR_ENGINE\napp.state.config.DOCLING_OCR_LANG = DOCLING_OCR_LANG\napp.state.config.DOCLING_DO_PICTURE_DESCRIPTION = DOCLING_DO_PICTURE_DESCRIPTION\napp.state.config.DOCLING_PICTURE_DESCRIPTION_MODE = DOCLING_PICTURE_DESCRIPTION_MODE\napp.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL = DOCLING_PICTURE_DESCRIPTION_LOCAL\napp.state.config.DOCLING_PICTURE_DESCRIPTION_API = DOCLING_PICTURE_DESCRIPTION_API",
         "detail": "backend.open_webui.main",
         "documentation": {}
     },
@@ -30518,7 +31062,7 @@
         "kind": 5,
         "importPath": "backend.open_webui.main",
         "description": "backend.open_webui.main",
-        "peekOfCode": "app.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY = EXTERNAL_DOCUMENT_LOADER_API_KEY\napp.state.config.TIKA_SERVER_URL = TIKA_SERVER_URL\napp.state.config.DOCLING_SERVER_URL = DOCLING_SERVER_URL\napp.state.config.DOCLING_OCR_ENGINE = DOCLING_OCR_ENGINE\napp.state.config.DOCLING_OCR_LANG = DOCLING_OCR_LANG\napp.state.config.DOCLING_DO_PICTURE_DESCRIPTION = DOCLING_DO_PICTURE_DESCRIPTION\napp.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT = DOCUMENT_INTELLIGENCE_ENDPOINT\napp.state.config.DOCUMENT_INTELLIGENCE_KEY = DOCUMENT_INTELLIGENCE_KEY\napp.state.config.MISTRAL_OCR_API_KEY = MISTRAL_OCR_API_KEY\napp.state.config.TEXT_SPLITTER = RAG_TEXT_SPLITTER",
+        "peekOfCode": "app.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY = EXTERNAL_DOCUMENT_LOADER_API_KEY\napp.state.config.TIKA_SERVER_URL = TIKA_SERVER_URL\napp.state.config.DOCLING_SERVER_URL = DOCLING_SERVER_URL\napp.state.config.DOCLING_OCR_ENGINE = DOCLING_OCR_ENGINE\napp.state.config.DOCLING_OCR_LANG = DOCLING_OCR_LANG\napp.state.config.DOCLING_DO_PICTURE_DESCRIPTION = DOCLING_DO_PICTURE_DESCRIPTION\napp.state.config.DOCLING_PICTURE_DESCRIPTION_MODE = DOCLING_PICTURE_DESCRIPTION_MODE\napp.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL = DOCLING_PICTURE_DESCRIPTION_LOCAL\napp.state.config.DOCLING_PICTURE_DESCRIPTION_API = DOCLING_PICTURE_DESCRIPTION_API\napp.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT = DOCUMENT_INTELLIGENCE_ENDPOINT",
         "detail": "backend.open_webui.main",
         "documentation": {}
     },
@@ -30527,7 +31071,7 @@
         "kind": 5,
         "importPath": "backend.open_webui.main",
         "description": "backend.open_webui.main",
-        "peekOfCode": "app.state.config.TIKA_SERVER_URL = TIKA_SERVER_URL\napp.state.config.DOCLING_SERVER_URL = DOCLING_SERVER_URL\napp.state.config.DOCLING_OCR_ENGINE = DOCLING_OCR_ENGINE\napp.state.config.DOCLING_OCR_LANG = DOCLING_OCR_LANG\napp.state.config.DOCLING_DO_PICTURE_DESCRIPTION = DOCLING_DO_PICTURE_DESCRIPTION\napp.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT = DOCUMENT_INTELLIGENCE_ENDPOINT\napp.state.config.DOCUMENT_INTELLIGENCE_KEY = DOCUMENT_INTELLIGENCE_KEY\napp.state.config.MISTRAL_OCR_API_KEY = MISTRAL_OCR_API_KEY\napp.state.config.TEXT_SPLITTER = RAG_TEXT_SPLITTER\napp.state.config.TIKTOKEN_ENCODING_NAME = TIKTOKEN_ENCODING_NAME",
+        "peekOfCode": "app.state.config.TIKA_SERVER_URL = TIKA_SERVER_URL\napp.state.config.DOCLING_SERVER_URL = DOCLING_SERVER_URL\napp.state.config.DOCLING_OCR_ENGINE = DOCLING_OCR_ENGINE\napp.state.config.DOCLING_OCR_LANG = DOCLING_OCR_LANG\napp.state.config.DOCLING_DO_PICTURE_DESCRIPTION = DOCLING_DO_PICTURE_DESCRIPTION\napp.state.config.DOCLING_PICTURE_DESCRIPTION_MODE = DOCLING_PICTURE_DESCRIPTION_MODE\napp.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL = DOCLING_PICTURE_DESCRIPTION_LOCAL\napp.state.config.DOCLING_PICTURE_DESCRIPTION_API = DOCLING_PICTURE_DESCRIPTION_API\napp.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT = DOCUMENT_INTELLIGENCE_ENDPOINT\napp.state.config.DOCUMENT_INTELLIGENCE_KEY = DOCUMENT_INTELLIGENCE_KEY",
         "detail": "backend.open_webui.main",
         "documentation": {}
     },
@@ -30536,7 +31080,7 @@
         "kind": 5,
         "importPath": "backend.open_webui.main",
         "description": "backend.open_webui.main",
-        "peekOfCode": "app.state.config.DOCLING_SERVER_URL = DOCLING_SERVER_URL\napp.state.config.DOCLING_OCR_ENGINE = DOCLING_OCR_ENGINE\napp.state.config.DOCLING_OCR_LANG = DOCLING_OCR_LANG\napp.state.config.DOCLING_DO_PICTURE_DESCRIPTION = DOCLING_DO_PICTURE_DESCRIPTION\napp.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT = DOCUMENT_INTELLIGENCE_ENDPOINT\napp.state.config.DOCUMENT_INTELLIGENCE_KEY = DOCUMENT_INTELLIGENCE_KEY\napp.state.config.MISTRAL_OCR_API_KEY = MISTRAL_OCR_API_KEY\napp.state.config.TEXT_SPLITTER = RAG_TEXT_SPLITTER\napp.state.config.TIKTOKEN_ENCODING_NAME = TIKTOKEN_ENCODING_NAME\napp.state.config.CHUNK_SIZE = CHUNK_SIZE",
+        "peekOfCode": "app.state.config.DOCLING_SERVER_URL = DOCLING_SERVER_URL\napp.state.config.DOCLING_OCR_ENGINE = DOCLING_OCR_ENGINE\napp.state.config.DOCLING_OCR_LANG = DOCLING_OCR_LANG\napp.state.config.DOCLING_DO_PICTURE_DESCRIPTION = DOCLING_DO_PICTURE_DESCRIPTION\napp.state.config.DOCLING_PICTURE_DESCRIPTION_MODE = DOCLING_PICTURE_DESCRIPTION_MODE\napp.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL = DOCLING_PICTURE_DESCRIPTION_LOCAL\napp.state.config.DOCLING_PICTURE_DESCRIPTION_API = DOCLING_PICTURE_DESCRIPTION_API\napp.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT = DOCUMENT_INTELLIGENCE_ENDPOINT\napp.state.config.DOCUMENT_INTELLIGENCE_KEY = DOCUMENT_INTELLIGENCE_KEY\napp.state.config.MISTRAL_OCR_API_KEY = MISTRAL_OCR_API_KEY",
         "detail": "backend.open_webui.main",
         "documentation": {}
     },
@@ -30545,7 +31089,7 @@
         "kind": 5,
         "importPath": "backend.open_webui.main",
         "description": "backend.open_webui.main",
-        "peekOfCode": "app.state.config.DOCLING_OCR_ENGINE = DOCLING_OCR_ENGINE\napp.state.config.DOCLING_OCR_LANG = DOCLING_OCR_LANG\napp.state.config.DOCLING_DO_PICTURE_DESCRIPTION = DOCLING_DO_PICTURE_DESCRIPTION\napp.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT = DOCUMENT_INTELLIGENCE_ENDPOINT\napp.state.config.DOCUMENT_INTELLIGENCE_KEY = DOCUMENT_INTELLIGENCE_KEY\napp.state.config.MISTRAL_OCR_API_KEY = MISTRAL_OCR_API_KEY\napp.state.config.TEXT_SPLITTER = RAG_TEXT_SPLITTER\napp.state.config.TIKTOKEN_ENCODING_NAME = TIKTOKEN_ENCODING_NAME\napp.state.config.CHUNK_SIZE = CHUNK_SIZE\napp.state.config.CHUNK_OVERLAP = CHUNK_OVERLAP",
+        "peekOfCode": "app.state.config.DOCLING_OCR_ENGINE = DOCLING_OCR_ENGINE\napp.state.config.DOCLING_OCR_LANG = DOCLING_OCR_LANG\napp.state.config.DOCLING_DO_PICTURE_DESCRIPTION = DOCLING_DO_PICTURE_DESCRIPTION\napp.state.config.DOCLING_PICTURE_DESCRIPTION_MODE = DOCLING_PICTURE_DESCRIPTION_MODE\napp.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL = DOCLING_PICTURE_DESCRIPTION_LOCAL\napp.state.config.DOCLING_PICTURE_DESCRIPTION_API = DOCLING_PICTURE_DESCRIPTION_API\napp.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT = DOCUMENT_INTELLIGENCE_ENDPOINT\napp.state.config.DOCUMENT_INTELLIGENCE_KEY = DOCUMENT_INTELLIGENCE_KEY\napp.state.config.MISTRAL_OCR_API_KEY = MISTRAL_OCR_API_KEY\napp.state.config.TEXT_SPLITTER = RAG_TEXT_SPLITTER",
         "detail": "backend.open_webui.main",
         "documentation": {}
     },
@@ -30554,7 +31098,7 @@
         "kind": 5,
         "importPath": "backend.open_webui.main",
         "description": "backend.open_webui.main",
-        "peekOfCode": "app.state.config.DOCLING_OCR_LANG = DOCLING_OCR_LANG\napp.state.config.DOCLING_DO_PICTURE_DESCRIPTION = DOCLING_DO_PICTURE_DESCRIPTION\napp.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT = DOCUMENT_INTELLIGENCE_ENDPOINT\napp.state.config.DOCUMENT_INTELLIGENCE_KEY = DOCUMENT_INTELLIGENCE_KEY\napp.state.config.MISTRAL_OCR_API_KEY = MISTRAL_OCR_API_KEY\napp.state.config.TEXT_SPLITTER = RAG_TEXT_SPLITTER\napp.state.config.TIKTOKEN_ENCODING_NAME = TIKTOKEN_ENCODING_NAME\napp.state.config.CHUNK_SIZE = CHUNK_SIZE\napp.state.config.CHUNK_OVERLAP = CHUNK_OVERLAP\napp.state.config.RAG_EMBEDDING_ENGINE = RAG_EMBEDDING_ENGINE",
+        "peekOfCode": "app.state.config.DOCLING_OCR_LANG = DOCLING_OCR_LANG\napp.state.config.DOCLING_DO_PICTURE_DESCRIPTION = DOCLING_DO_PICTURE_DESCRIPTION\napp.state.config.DOCLING_PICTURE_DESCRIPTION_MODE = DOCLING_PICTURE_DESCRIPTION_MODE\napp.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL = DOCLING_PICTURE_DESCRIPTION_LOCAL\napp.state.config.DOCLING_PICTURE_DESCRIPTION_API = DOCLING_PICTURE_DESCRIPTION_API\napp.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT = DOCUMENT_INTELLIGENCE_ENDPOINT\napp.state.config.DOCUMENT_INTELLIGENCE_KEY = DOCUMENT_INTELLIGENCE_KEY\napp.state.config.MISTRAL_OCR_API_KEY = MISTRAL_OCR_API_KEY\napp.state.config.TEXT_SPLITTER = RAG_TEXT_SPLITTER\napp.state.config.TIKTOKEN_ENCODING_NAME = TIKTOKEN_ENCODING_NAME",
         "detail": "backend.open_webui.main",
         "documentation": {}
     },
@@ -30563,7 +31107,34 @@
         "kind": 5,
         "importPath": "backend.open_webui.main",
         "description": "backend.open_webui.main",
-        "peekOfCode": "app.state.config.DOCLING_DO_PICTURE_DESCRIPTION = DOCLING_DO_PICTURE_DESCRIPTION\napp.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT = DOCUMENT_INTELLIGENCE_ENDPOINT\napp.state.config.DOCUMENT_INTELLIGENCE_KEY = DOCUMENT_INTELLIGENCE_KEY\napp.state.config.MISTRAL_OCR_API_KEY = MISTRAL_OCR_API_KEY\napp.state.config.TEXT_SPLITTER = RAG_TEXT_SPLITTER\napp.state.config.TIKTOKEN_ENCODING_NAME = TIKTOKEN_ENCODING_NAME\napp.state.config.CHUNK_SIZE = CHUNK_SIZE\napp.state.config.CHUNK_OVERLAP = CHUNK_OVERLAP\napp.state.config.RAG_EMBEDDING_ENGINE = RAG_EMBEDDING_ENGINE\napp.state.config.RAG_EMBEDDING_MODEL = RAG_EMBEDDING_MODEL",
+        "peekOfCode": "app.state.config.DOCLING_DO_PICTURE_DESCRIPTION = DOCLING_DO_PICTURE_DESCRIPTION\napp.state.config.DOCLING_PICTURE_DESCRIPTION_MODE = DOCLING_PICTURE_DESCRIPTION_MODE\napp.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL = DOCLING_PICTURE_DESCRIPTION_LOCAL\napp.state.config.DOCLING_PICTURE_DESCRIPTION_API = DOCLING_PICTURE_DESCRIPTION_API\napp.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT = DOCUMENT_INTELLIGENCE_ENDPOINT\napp.state.config.DOCUMENT_INTELLIGENCE_KEY = DOCUMENT_INTELLIGENCE_KEY\napp.state.config.MISTRAL_OCR_API_KEY = MISTRAL_OCR_API_KEY\napp.state.config.TEXT_SPLITTER = RAG_TEXT_SPLITTER\napp.state.config.TIKTOKEN_ENCODING_NAME = TIKTOKEN_ENCODING_NAME\napp.state.config.CHUNK_SIZE = CHUNK_SIZE",
+        "detail": "backend.open_webui.main",
+        "documentation": {}
+    },
+    {
+        "label": "app.state.config.DOCLING_PICTURE_DESCRIPTION_MODE",
+        "kind": 5,
+        "importPath": "backend.open_webui.main",
+        "description": "backend.open_webui.main",
+        "peekOfCode": "app.state.config.DOCLING_PICTURE_DESCRIPTION_MODE = DOCLING_PICTURE_DESCRIPTION_MODE\napp.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL = DOCLING_PICTURE_DESCRIPTION_LOCAL\napp.state.config.DOCLING_PICTURE_DESCRIPTION_API = DOCLING_PICTURE_DESCRIPTION_API\napp.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT = DOCUMENT_INTELLIGENCE_ENDPOINT\napp.state.config.DOCUMENT_INTELLIGENCE_KEY = DOCUMENT_INTELLIGENCE_KEY\napp.state.config.MISTRAL_OCR_API_KEY = MISTRAL_OCR_API_KEY\napp.state.config.TEXT_SPLITTER = RAG_TEXT_SPLITTER\napp.state.config.TIKTOKEN_ENCODING_NAME = TIKTOKEN_ENCODING_NAME\napp.state.config.CHUNK_SIZE = CHUNK_SIZE\napp.state.config.CHUNK_OVERLAP = CHUNK_OVERLAP",
+        "detail": "backend.open_webui.main",
+        "documentation": {}
+    },
+    {
+        "label": "app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL",
+        "kind": 5,
+        "importPath": "backend.open_webui.main",
+        "description": "backend.open_webui.main",
+        "peekOfCode": "app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL = DOCLING_PICTURE_DESCRIPTION_LOCAL\napp.state.config.DOCLING_PICTURE_DESCRIPTION_API = DOCLING_PICTURE_DESCRIPTION_API\napp.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT = DOCUMENT_INTELLIGENCE_ENDPOINT\napp.state.config.DOCUMENT_INTELLIGENCE_KEY = DOCUMENT_INTELLIGENCE_KEY\napp.state.config.MISTRAL_OCR_API_KEY = MISTRAL_OCR_API_KEY\napp.state.config.TEXT_SPLITTER = RAG_TEXT_SPLITTER\napp.state.config.TIKTOKEN_ENCODING_NAME = TIKTOKEN_ENCODING_NAME\napp.state.config.CHUNK_SIZE = CHUNK_SIZE\napp.state.config.CHUNK_OVERLAP = CHUNK_OVERLAP\napp.state.config.RAG_EMBEDDING_ENGINE = RAG_EMBEDDING_ENGINE",
+        "detail": "backend.open_webui.main",
+        "documentation": {}
+    },
+    {
+        "label": "app.state.config.DOCLING_PICTURE_DESCRIPTION_API",
+        "kind": 5,
+        "importPath": "backend.open_webui.main",
+        "description": "backend.open_webui.main",
+        "peekOfCode": "app.state.config.DOCLING_PICTURE_DESCRIPTION_API = DOCLING_PICTURE_DESCRIPTION_API\napp.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT = DOCUMENT_INTELLIGENCE_ENDPOINT\napp.state.config.DOCUMENT_INTELLIGENCE_KEY = DOCUMENT_INTELLIGENCE_KEY\napp.state.config.MISTRAL_OCR_API_KEY = MISTRAL_OCR_API_KEY\napp.state.config.TEXT_SPLITTER = RAG_TEXT_SPLITTER\napp.state.config.TIKTOKEN_ENCODING_NAME = TIKTOKEN_ENCODING_NAME\napp.state.config.CHUNK_SIZE = CHUNK_SIZE\napp.state.config.CHUNK_OVERLAP = CHUNK_OVERLAP\napp.state.config.RAG_EMBEDDING_ENGINE = RAG_EMBEDDING_ENGINE\napp.state.config.RAG_EMBEDDING_MODEL = RAG_EMBEDDING_MODEL",
         "detail": "backend.open_webui.main",
         "documentation": {}
     },
@@ -31031,7 +31602,7 @@
         "kind": 5,
         "importPath": "backend.open_webui.main",
         "description": "backend.open_webui.main",
-        "peekOfCode": "app.state.config.SEARCHAPI_API_KEY = SEARCHAPI_API_KEY\napp.state.config.SEARCHAPI_ENGINE = SEARCHAPI_ENGINE\napp.state.config.SERPAPI_API_KEY = SERPAPI_API_KEY\napp.state.config.SERPAPI_ENGINE = SERPAPI_ENGINE\napp.state.config.JINA_API_KEY = JINA_API_KEY\napp.state.config.BING_SEARCH_V7_ENDPOINT = BING_SEARCH_V7_ENDPOINT\napp.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY = BING_SEARCH_V7_SUBSCRIPTION_KEY\napp.state.config.EXA_API_KEY = EXA_API_KEY\napp.state.config.PERPLEXITY_API_KEY = PERPLEXITY_API_KEY\napp.state.config.SOUGOU_API_SID = SOUGOU_API_SID",
+        "peekOfCode": "app.state.config.SEARCHAPI_API_KEY = SEARCHAPI_API_KEY\napp.state.config.SEARCHAPI_ENGINE = SEARCHAPI_ENGINE\napp.state.config.SERPAPI_API_KEY = SERPAPI_API_KEY\napp.state.config.SERPAPI_ENGINE = SERPAPI_ENGINE\napp.state.config.JINA_API_KEY = JINA_API_KEY\napp.state.config.BING_SEARCH_V7_ENDPOINT = BING_SEARCH_V7_ENDPOINT\napp.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY = BING_SEARCH_V7_SUBSCRIPTION_KEY\napp.state.config.EXA_API_KEY = EXA_API_KEY\napp.state.config.PERPLEXITY_API_KEY = PERPLEXITY_API_KEY\napp.state.config.PERPLEXITY_MODEL = PERPLEXITY_MODEL",
         "detail": "backend.open_webui.main",
         "documentation": {}
     },
@@ -31040,7 +31611,7 @@
         "kind": 5,
         "importPath": "backend.open_webui.main",
         "description": "backend.open_webui.main",
-        "peekOfCode": "app.state.config.SEARCHAPI_ENGINE = SEARCHAPI_ENGINE\napp.state.config.SERPAPI_API_KEY = SERPAPI_API_KEY\napp.state.config.SERPAPI_ENGINE = SERPAPI_ENGINE\napp.state.config.JINA_API_KEY = JINA_API_KEY\napp.state.config.BING_SEARCH_V7_ENDPOINT = BING_SEARCH_V7_ENDPOINT\napp.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY = BING_SEARCH_V7_SUBSCRIPTION_KEY\napp.state.config.EXA_API_KEY = EXA_API_KEY\napp.state.config.PERPLEXITY_API_KEY = PERPLEXITY_API_KEY\napp.state.config.SOUGOU_API_SID = SOUGOU_API_SID\napp.state.config.SOUGOU_API_SK = SOUGOU_API_SK",
+        "peekOfCode": "app.state.config.SEARCHAPI_ENGINE = SEARCHAPI_ENGINE\napp.state.config.SERPAPI_API_KEY = SERPAPI_API_KEY\napp.state.config.SERPAPI_ENGINE = SERPAPI_ENGINE\napp.state.config.JINA_API_KEY = JINA_API_KEY\napp.state.config.BING_SEARCH_V7_ENDPOINT = BING_SEARCH_V7_ENDPOINT\napp.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY = BING_SEARCH_V7_SUBSCRIPTION_KEY\napp.state.config.EXA_API_KEY = EXA_API_KEY\napp.state.config.PERPLEXITY_API_KEY = PERPLEXITY_API_KEY\napp.state.config.PERPLEXITY_MODEL = PERPLEXITY_MODEL\napp.state.config.PERPLEXITY_SEARCH_CONTEXT_USAGE = PERPLEXITY_SEARCH_CONTEXT_USAGE",
         "detail": "backend.open_webui.main",
         "documentation": {}
     },
@@ -31049,7 +31620,7 @@
         "kind": 5,
         "importPath": "backend.open_webui.main",
         "description": "backend.open_webui.main",
-        "peekOfCode": "app.state.config.SERPAPI_API_KEY = SERPAPI_API_KEY\napp.state.config.SERPAPI_ENGINE = SERPAPI_ENGINE\napp.state.config.JINA_API_KEY = JINA_API_KEY\napp.state.config.BING_SEARCH_V7_ENDPOINT = BING_SEARCH_V7_ENDPOINT\napp.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY = BING_SEARCH_V7_SUBSCRIPTION_KEY\napp.state.config.EXA_API_KEY = EXA_API_KEY\napp.state.config.PERPLEXITY_API_KEY = PERPLEXITY_API_KEY\napp.state.config.SOUGOU_API_SID = SOUGOU_API_SID\napp.state.config.SOUGOU_API_SK = SOUGOU_API_SK\napp.state.config.EXTERNAL_WEB_SEARCH_URL = EXTERNAL_WEB_SEARCH_URL",
+        "peekOfCode": "app.state.config.SERPAPI_API_KEY = SERPAPI_API_KEY\napp.state.config.SERPAPI_ENGINE = SERPAPI_ENGINE\napp.state.config.JINA_API_KEY = JINA_API_KEY\napp.state.config.BING_SEARCH_V7_ENDPOINT = BING_SEARCH_V7_ENDPOINT\napp.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY = BING_SEARCH_V7_SUBSCRIPTION_KEY\napp.state.config.EXA_API_KEY = EXA_API_KEY\napp.state.config.PERPLEXITY_API_KEY = PERPLEXITY_API_KEY\napp.state.config.PERPLEXITY_MODEL = PERPLEXITY_MODEL\napp.state.config.PERPLEXITY_SEARCH_CONTEXT_USAGE = PERPLEXITY_SEARCH_CONTEXT_USAGE\napp.state.config.SOUGOU_API_SID = SOUGOU_API_SID",
         "detail": "backend.open_webui.main",
         "documentation": {}
     },
@@ -31058,7 +31629,7 @@
         "kind": 5,
         "importPath": "backend.open_webui.main",
         "description": "backend.open_webui.main",
-        "peekOfCode": "app.state.config.SERPAPI_ENGINE = SERPAPI_ENGINE\napp.state.config.JINA_API_KEY = JINA_API_KEY\napp.state.config.BING_SEARCH_V7_ENDPOINT = BING_SEARCH_V7_ENDPOINT\napp.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY = BING_SEARCH_V7_SUBSCRIPTION_KEY\napp.state.config.EXA_API_KEY = EXA_API_KEY\napp.state.config.PERPLEXITY_API_KEY = PERPLEXITY_API_KEY\napp.state.config.SOUGOU_API_SID = SOUGOU_API_SID\napp.state.config.SOUGOU_API_SK = SOUGOU_API_SK\napp.state.config.EXTERNAL_WEB_SEARCH_URL = EXTERNAL_WEB_SEARCH_URL\napp.state.config.EXTERNAL_WEB_SEARCH_API_KEY = EXTERNAL_WEB_SEARCH_API_KEY",
+        "peekOfCode": "app.state.config.SERPAPI_ENGINE = SERPAPI_ENGINE\napp.state.config.JINA_API_KEY = JINA_API_KEY\napp.state.config.BING_SEARCH_V7_ENDPOINT = BING_SEARCH_V7_ENDPOINT\napp.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY = BING_SEARCH_V7_SUBSCRIPTION_KEY\napp.state.config.EXA_API_KEY = EXA_API_KEY\napp.state.config.PERPLEXITY_API_KEY = PERPLEXITY_API_KEY\napp.state.config.PERPLEXITY_MODEL = PERPLEXITY_MODEL\napp.state.config.PERPLEXITY_SEARCH_CONTEXT_USAGE = PERPLEXITY_SEARCH_CONTEXT_USAGE\napp.state.config.SOUGOU_API_SID = SOUGOU_API_SID\napp.state.config.SOUGOU_API_SK = SOUGOU_API_SK",
         "detail": "backend.open_webui.main",
         "documentation": {}
     },
@@ -31067,7 +31638,7 @@
         "kind": 5,
         "importPath": "backend.open_webui.main",
         "description": "backend.open_webui.main",
-        "peekOfCode": "app.state.config.JINA_API_KEY = JINA_API_KEY\napp.state.config.BING_SEARCH_V7_ENDPOINT = BING_SEARCH_V7_ENDPOINT\napp.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY = BING_SEARCH_V7_SUBSCRIPTION_KEY\napp.state.config.EXA_API_KEY = EXA_API_KEY\napp.state.config.PERPLEXITY_API_KEY = PERPLEXITY_API_KEY\napp.state.config.SOUGOU_API_SID = SOUGOU_API_SID\napp.state.config.SOUGOU_API_SK = SOUGOU_API_SK\napp.state.config.EXTERNAL_WEB_SEARCH_URL = EXTERNAL_WEB_SEARCH_URL\napp.state.config.EXTERNAL_WEB_SEARCH_API_KEY = EXTERNAL_WEB_SEARCH_API_KEY\napp.state.config.EXTERNAL_WEB_LOADER_URL = EXTERNAL_WEB_LOADER_URL",
+        "peekOfCode": "app.state.config.JINA_API_KEY = JINA_API_KEY\napp.state.config.BING_SEARCH_V7_ENDPOINT = BING_SEARCH_V7_ENDPOINT\napp.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY = BING_SEARCH_V7_SUBSCRIPTION_KEY\napp.state.config.EXA_API_KEY = EXA_API_KEY\napp.state.config.PERPLEXITY_API_KEY = PERPLEXITY_API_KEY\napp.state.config.PERPLEXITY_MODEL = PERPLEXITY_MODEL\napp.state.config.PERPLEXITY_SEARCH_CONTEXT_USAGE = PERPLEXITY_SEARCH_CONTEXT_USAGE\napp.state.config.SOUGOU_API_SID = SOUGOU_API_SID\napp.state.config.SOUGOU_API_SK = SOUGOU_API_SK\napp.state.config.EXTERNAL_WEB_SEARCH_URL = EXTERNAL_WEB_SEARCH_URL",
         "detail": "backend.open_webui.main",
         "documentation": {}
     },
@@ -31076,7 +31647,7 @@
         "kind": 5,
         "importPath": "backend.open_webui.main",
         "description": "backend.open_webui.main",
-        "peekOfCode": "app.state.config.BING_SEARCH_V7_ENDPOINT = BING_SEARCH_V7_ENDPOINT\napp.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY = BING_SEARCH_V7_SUBSCRIPTION_KEY\napp.state.config.EXA_API_KEY = EXA_API_KEY\napp.state.config.PERPLEXITY_API_KEY = PERPLEXITY_API_KEY\napp.state.config.SOUGOU_API_SID = SOUGOU_API_SID\napp.state.config.SOUGOU_API_SK = SOUGOU_API_SK\napp.state.config.EXTERNAL_WEB_SEARCH_URL = EXTERNAL_WEB_SEARCH_URL\napp.state.config.EXTERNAL_WEB_SEARCH_API_KEY = EXTERNAL_WEB_SEARCH_API_KEY\napp.state.config.EXTERNAL_WEB_LOADER_URL = EXTERNAL_WEB_LOADER_URL\napp.state.config.EXTERNAL_WEB_LOADER_API_KEY = EXTERNAL_WEB_LOADER_API_KEY",
+        "peekOfCode": "app.state.config.BING_SEARCH_V7_ENDPOINT = BING_SEARCH_V7_ENDPOINT\napp.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY = BING_SEARCH_V7_SUBSCRIPTION_KEY\napp.state.config.EXA_API_KEY = EXA_API_KEY\napp.state.config.PERPLEXITY_API_KEY = PERPLEXITY_API_KEY\napp.state.config.PERPLEXITY_MODEL = PERPLEXITY_MODEL\napp.state.config.PERPLEXITY_SEARCH_CONTEXT_USAGE = PERPLEXITY_SEARCH_CONTEXT_USAGE\napp.state.config.SOUGOU_API_SID = SOUGOU_API_SID\napp.state.config.SOUGOU_API_SK = SOUGOU_API_SK\napp.state.config.EXTERNAL_WEB_SEARCH_URL = EXTERNAL_WEB_SEARCH_URL\napp.state.config.EXTERNAL_WEB_SEARCH_API_KEY = EXTERNAL_WEB_SEARCH_API_KEY",
         "detail": "backend.open_webui.main",
         "documentation": {}
     },
@@ -31085,7 +31656,7 @@
         "kind": 5,
         "importPath": "backend.open_webui.main",
         "description": "backend.open_webui.main",
-        "peekOfCode": "app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY = BING_SEARCH_V7_SUBSCRIPTION_KEY\napp.state.config.EXA_API_KEY = EXA_API_KEY\napp.state.config.PERPLEXITY_API_KEY = PERPLEXITY_API_KEY\napp.state.config.SOUGOU_API_SID = SOUGOU_API_SID\napp.state.config.SOUGOU_API_SK = SOUGOU_API_SK\napp.state.config.EXTERNAL_WEB_SEARCH_URL = EXTERNAL_WEB_SEARCH_URL\napp.state.config.EXTERNAL_WEB_SEARCH_API_KEY = EXTERNAL_WEB_SEARCH_API_KEY\napp.state.config.EXTERNAL_WEB_LOADER_URL = EXTERNAL_WEB_LOADER_URL\napp.state.config.EXTERNAL_WEB_LOADER_API_KEY = EXTERNAL_WEB_LOADER_API_KEY\napp.state.config.PLAYWRIGHT_WS_URL = PLAYWRIGHT_WS_URL",
+        "peekOfCode": "app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY = BING_SEARCH_V7_SUBSCRIPTION_KEY\napp.state.config.EXA_API_KEY = EXA_API_KEY\napp.state.config.PERPLEXITY_API_KEY = PERPLEXITY_API_KEY\napp.state.config.PERPLEXITY_MODEL = PERPLEXITY_MODEL\napp.state.config.PERPLEXITY_SEARCH_CONTEXT_USAGE = PERPLEXITY_SEARCH_CONTEXT_USAGE\napp.state.config.SOUGOU_API_SID = SOUGOU_API_SID\napp.state.config.SOUGOU_API_SK = SOUGOU_API_SK\napp.state.config.EXTERNAL_WEB_SEARCH_URL = EXTERNAL_WEB_SEARCH_URL\napp.state.config.EXTERNAL_WEB_SEARCH_API_KEY = EXTERNAL_WEB_SEARCH_API_KEY\napp.state.config.EXTERNAL_WEB_LOADER_URL = EXTERNAL_WEB_LOADER_URL",
         "detail": "backend.open_webui.main",
         "documentation": {}
     },
@@ -31094,7 +31665,7 @@
         "kind": 5,
         "importPath": "backend.open_webui.main",
         "description": "backend.open_webui.main",
-        "peekOfCode": "app.state.config.EXA_API_KEY = EXA_API_KEY\napp.state.config.PERPLEXITY_API_KEY = PERPLEXITY_API_KEY\napp.state.config.SOUGOU_API_SID = SOUGOU_API_SID\napp.state.config.SOUGOU_API_SK = SOUGOU_API_SK\napp.state.config.EXTERNAL_WEB_SEARCH_URL = EXTERNAL_WEB_SEARCH_URL\napp.state.config.EXTERNAL_WEB_SEARCH_API_KEY = EXTERNAL_WEB_SEARCH_API_KEY\napp.state.config.EXTERNAL_WEB_LOADER_URL = EXTERNAL_WEB_LOADER_URL\napp.state.config.EXTERNAL_WEB_LOADER_API_KEY = EXTERNAL_WEB_LOADER_API_KEY\napp.state.config.PLAYWRIGHT_WS_URL = PLAYWRIGHT_WS_URL\napp.state.config.PLAYWRIGHT_TIMEOUT = PLAYWRIGHT_TIMEOUT",
+        "peekOfCode": "app.state.config.EXA_API_KEY = EXA_API_KEY\napp.state.config.PERPLEXITY_API_KEY = PERPLEXITY_API_KEY\napp.state.config.PERPLEXITY_MODEL = PERPLEXITY_MODEL\napp.state.config.PERPLEXITY_SEARCH_CONTEXT_USAGE = PERPLEXITY_SEARCH_CONTEXT_USAGE\napp.state.config.SOUGOU_API_SID = SOUGOU_API_SID\napp.state.config.SOUGOU_API_SK = SOUGOU_API_SK\napp.state.config.EXTERNAL_WEB_SEARCH_URL = EXTERNAL_WEB_SEARCH_URL\napp.state.config.EXTERNAL_WEB_SEARCH_API_KEY = EXTERNAL_WEB_SEARCH_API_KEY\napp.state.config.EXTERNAL_WEB_LOADER_URL = EXTERNAL_WEB_LOADER_URL\napp.state.config.EXTERNAL_WEB_LOADER_API_KEY = EXTERNAL_WEB_LOADER_API_KEY",
         "detail": "backend.open_webui.main",
         "documentation": {}
     },
@@ -31103,7 +31674,25 @@
         "kind": 5,
         "importPath": "backend.open_webui.main",
         "description": "backend.open_webui.main",
-        "peekOfCode": "app.state.config.PERPLEXITY_API_KEY = PERPLEXITY_API_KEY\napp.state.config.SOUGOU_API_SID = SOUGOU_API_SID\napp.state.config.SOUGOU_API_SK = SOUGOU_API_SK\napp.state.config.EXTERNAL_WEB_SEARCH_URL = EXTERNAL_WEB_SEARCH_URL\napp.state.config.EXTERNAL_WEB_SEARCH_API_KEY = EXTERNAL_WEB_SEARCH_API_KEY\napp.state.config.EXTERNAL_WEB_LOADER_URL = EXTERNAL_WEB_LOADER_URL\napp.state.config.EXTERNAL_WEB_LOADER_API_KEY = EXTERNAL_WEB_LOADER_API_KEY\napp.state.config.PLAYWRIGHT_WS_URL = PLAYWRIGHT_WS_URL\napp.state.config.PLAYWRIGHT_TIMEOUT = PLAYWRIGHT_TIMEOUT\napp.state.config.FIRECRAWL_API_BASE_URL = FIRECRAWL_API_BASE_URL",
+        "peekOfCode": "app.state.config.PERPLEXITY_API_KEY = PERPLEXITY_API_KEY\napp.state.config.PERPLEXITY_MODEL = PERPLEXITY_MODEL\napp.state.config.PERPLEXITY_SEARCH_CONTEXT_USAGE = PERPLEXITY_SEARCH_CONTEXT_USAGE\napp.state.config.SOUGOU_API_SID = SOUGOU_API_SID\napp.state.config.SOUGOU_API_SK = SOUGOU_API_SK\napp.state.config.EXTERNAL_WEB_SEARCH_URL = EXTERNAL_WEB_SEARCH_URL\napp.state.config.EXTERNAL_WEB_SEARCH_API_KEY = EXTERNAL_WEB_SEARCH_API_KEY\napp.state.config.EXTERNAL_WEB_LOADER_URL = EXTERNAL_WEB_LOADER_URL\napp.state.config.EXTERNAL_WEB_LOADER_API_KEY = EXTERNAL_WEB_LOADER_API_KEY\napp.state.config.PLAYWRIGHT_WS_URL = PLAYWRIGHT_WS_URL",
+        "detail": "backend.open_webui.main",
+        "documentation": {}
+    },
+    {
+        "label": "app.state.config.PERPLEXITY_MODEL",
+        "kind": 5,
+        "importPath": "backend.open_webui.main",
+        "description": "backend.open_webui.main",
+        "peekOfCode": "app.state.config.PERPLEXITY_MODEL = PERPLEXITY_MODEL\napp.state.config.PERPLEXITY_SEARCH_CONTEXT_USAGE = PERPLEXITY_SEARCH_CONTEXT_USAGE\napp.state.config.SOUGOU_API_SID = SOUGOU_API_SID\napp.state.config.SOUGOU_API_SK = SOUGOU_API_SK\napp.state.config.EXTERNAL_WEB_SEARCH_URL = EXTERNAL_WEB_SEARCH_URL\napp.state.config.EXTERNAL_WEB_SEARCH_API_KEY = EXTERNAL_WEB_SEARCH_API_KEY\napp.state.config.EXTERNAL_WEB_LOADER_URL = EXTERNAL_WEB_LOADER_URL\napp.state.config.EXTERNAL_WEB_LOADER_API_KEY = EXTERNAL_WEB_LOADER_API_KEY\napp.state.config.PLAYWRIGHT_WS_URL = PLAYWRIGHT_WS_URL\napp.state.config.PLAYWRIGHT_TIMEOUT = PLAYWRIGHT_TIMEOUT",
+        "detail": "backend.open_webui.main",
+        "documentation": {}
+    },
+    {
+        "label": "app.state.config.PERPLEXITY_SEARCH_CONTEXT_USAGE",
+        "kind": 5,
+        "importPath": "backend.open_webui.main",
+        "description": "backend.open_webui.main",
+        "peekOfCode": "app.state.config.PERPLEXITY_SEARCH_CONTEXT_USAGE = PERPLEXITY_SEARCH_CONTEXT_USAGE\napp.state.config.SOUGOU_API_SID = SOUGOU_API_SID\napp.state.config.SOUGOU_API_SK = SOUGOU_API_SK\napp.state.config.EXTERNAL_WEB_SEARCH_URL = EXTERNAL_WEB_SEARCH_URL\napp.state.config.EXTERNAL_WEB_SEARCH_API_KEY = EXTERNAL_WEB_SEARCH_API_KEY\napp.state.config.EXTERNAL_WEB_LOADER_URL = EXTERNAL_WEB_LOADER_URL\napp.state.config.EXTERNAL_WEB_LOADER_API_KEY = EXTERNAL_WEB_LOADER_API_KEY\napp.state.config.PLAYWRIGHT_WS_URL = PLAYWRIGHT_WS_URL\napp.state.config.PLAYWRIGHT_TIMEOUT = PLAYWRIGHT_TIMEOUT\napp.state.config.FIRECRAWL_API_BASE_URL = FIRECRAWL_API_BASE_URL",
         "detail": "backend.open_webui.main",
         "documentation": {}
     },
@@ -31787,7 +32376,7 @@
         "kind": 5,
         "importPath": "backend.open_webui.main",
         "description": "backend.open_webui.main",
-        "peekOfCode": "app.state.config.TASK_MODEL = TASK_MODEL\napp.state.config.TASK_MODEL_EXTERNAL = TASK_MODEL_EXTERNAL\napp.state.config.ENABLE_SEARCH_QUERY_GENERATION = ENABLE_SEARCH_QUERY_GENERATION\napp.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION = ENABLE_RETRIEVAL_QUERY_GENERATION\napp.state.config.ENABLE_AUTOCOMPLETE_GENERATION = ENABLE_AUTOCOMPLETE_GENERATION\napp.state.config.ENABLE_TAGS_GENERATION = ENABLE_TAGS_GENERATION\napp.state.config.ENABLE_TITLE_GENERATION = ENABLE_TITLE_GENERATION\napp.state.config.TITLE_GENERATION_PROMPT_TEMPLATE = TITLE_GENERATION_PROMPT_TEMPLATE\napp.state.config.TAGS_GENERATION_PROMPT_TEMPLATE = TAGS_GENERATION_PROMPT_TEMPLATE\napp.state.config.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE = (",
+        "peekOfCode": "app.state.config.TASK_MODEL = TASK_MODEL\napp.state.config.TASK_MODEL_EXTERNAL = TASK_MODEL_EXTERNAL\napp.state.config.ENABLE_SEARCH_QUERY_GENERATION = ENABLE_SEARCH_QUERY_GENERATION\napp.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION = ENABLE_RETRIEVAL_QUERY_GENERATION\napp.state.config.ENABLE_AUTOCOMPLETE_GENERATION = ENABLE_AUTOCOMPLETE_GENERATION\napp.state.config.ENABLE_TAGS_GENERATION = ENABLE_TAGS_GENERATION\napp.state.config.ENABLE_TITLE_GENERATION = ENABLE_TITLE_GENERATION\napp.state.config.ENABLE_FOLLOW_UP_GENERATION = ENABLE_FOLLOW_UP_GENERATION\napp.state.config.TITLE_GENERATION_PROMPT_TEMPLATE = TITLE_GENERATION_PROMPT_TEMPLATE\napp.state.config.TAGS_GENERATION_PROMPT_TEMPLATE = TAGS_GENERATION_PROMPT_TEMPLATE",
         "detail": "backend.open_webui.main",
         "documentation": {}
     },
@@ -31796,7 +32385,7 @@
         "kind": 5,
         "importPath": "backend.open_webui.main",
         "description": "backend.open_webui.main",
-        "peekOfCode": "app.state.config.TASK_MODEL_EXTERNAL = TASK_MODEL_EXTERNAL\napp.state.config.ENABLE_SEARCH_QUERY_GENERATION = ENABLE_SEARCH_QUERY_GENERATION\napp.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION = ENABLE_RETRIEVAL_QUERY_GENERATION\napp.state.config.ENABLE_AUTOCOMPLETE_GENERATION = ENABLE_AUTOCOMPLETE_GENERATION\napp.state.config.ENABLE_TAGS_GENERATION = ENABLE_TAGS_GENERATION\napp.state.config.ENABLE_TITLE_GENERATION = ENABLE_TITLE_GENERATION\napp.state.config.TITLE_GENERATION_PROMPT_TEMPLATE = TITLE_GENERATION_PROMPT_TEMPLATE\napp.state.config.TAGS_GENERATION_PROMPT_TEMPLATE = TAGS_GENERATION_PROMPT_TEMPLATE\napp.state.config.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE = (\n    IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE",
+        "peekOfCode": "app.state.config.TASK_MODEL_EXTERNAL = TASK_MODEL_EXTERNAL\napp.state.config.ENABLE_SEARCH_QUERY_GENERATION = ENABLE_SEARCH_QUERY_GENERATION\napp.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION = ENABLE_RETRIEVAL_QUERY_GENERATION\napp.state.config.ENABLE_AUTOCOMPLETE_GENERATION = ENABLE_AUTOCOMPLETE_GENERATION\napp.state.config.ENABLE_TAGS_GENERATION = ENABLE_TAGS_GENERATION\napp.state.config.ENABLE_TITLE_GENERATION = ENABLE_TITLE_GENERATION\napp.state.config.ENABLE_FOLLOW_UP_GENERATION = ENABLE_FOLLOW_UP_GENERATION\napp.state.config.TITLE_GENERATION_PROMPT_TEMPLATE = TITLE_GENERATION_PROMPT_TEMPLATE\napp.state.config.TAGS_GENERATION_PROMPT_TEMPLATE = TAGS_GENERATION_PROMPT_TEMPLATE\napp.state.config.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE = (",
         "detail": "backend.open_webui.main",
         "documentation": {}
     },
@@ -31805,7 +32394,7 @@
         "kind": 5,
         "importPath": "backend.open_webui.main",
         "description": "backend.open_webui.main",
-        "peekOfCode": "app.state.config.ENABLE_SEARCH_QUERY_GENERATION = ENABLE_SEARCH_QUERY_GENERATION\napp.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION = ENABLE_RETRIEVAL_QUERY_GENERATION\napp.state.config.ENABLE_AUTOCOMPLETE_GENERATION = ENABLE_AUTOCOMPLETE_GENERATION\napp.state.config.ENABLE_TAGS_GENERATION = ENABLE_TAGS_GENERATION\napp.state.config.ENABLE_TITLE_GENERATION = ENABLE_TITLE_GENERATION\napp.state.config.TITLE_GENERATION_PROMPT_TEMPLATE = TITLE_GENERATION_PROMPT_TEMPLATE\napp.state.config.TAGS_GENERATION_PROMPT_TEMPLATE = TAGS_GENERATION_PROMPT_TEMPLATE\napp.state.config.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE = (\n    IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE\n)",
+        "peekOfCode": "app.state.config.ENABLE_SEARCH_QUERY_GENERATION = ENABLE_SEARCH_QUERY_GENERATION\napp.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION = ENABLE_RETRIEVAL_QUERY_GENERATION\napp.state.config.ENABLE_AUTOCOMPLETE_GENERATION = ENABLE_AUTOCOMPLETE_GENERATION\napp.state.config.ENABLE_TAGS_GENERATION = ENABLE_TAGS_GENERATION\napp.state.config.ENABLE_TITLE_GENERATION = ENABLE_TITLE_GENERATION\napp.state.config.ENABLE_FOLLOW_UP_GENERATION = ENABLE_FOLLOW_UP_GENERATION\napp.state.config.TITLE_GENERATION_PROMPT_TEMPLATE = TITLE_GENERATION_PROMPT_TEMPLATE\napp.state.config.TAGS_GENERATION_PROMPT_TEMPLATE = TAGS_GENERATION_PROMPT_TEMPLATE\napp.state.config.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE = (\n    IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE",
         "detail": "backend.open_webui.main",
         "documentation": {}
     },
@@ -31814,7 +32403,7 @@
         "kind": 5,
         "importPath": "backend.open_webui.main",
         "description": "backend.open_webui.main",
-        "peekOfCode": "app.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION = ENABLE_RETRIEVAL_QUERY_GENERATION\napp.state.config.ENABLE_AUTOCOMPLETE_GENERATION = ENABLE_AUTOCOMPLETE_GENERATION\napp.state.config.ENABLE_TAGS_GENERATION = ENABLE_TAGS_GENERATION\napp.state.config.ENABLE_TITLE_GENERATION = ENABLE_TITLE_GENERATION\napp.state.config.TITLE_GENERATION_PROMPT_TEMPLATE = TITLE_GENERATION_PROMPT_TEMPLATE\napp.state.config.TAGS_GENERATION_PROMPT_TEMPLATE = TAGS_GENERATION_PROMPT_TEMPLATE\napp.state.config.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE = (\n    IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE\n)\napp.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = (",
+        "peekOfCode": "app.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION = ENABLE_RETRIEVAL_QUERY_GENERATION\napp.state.config.ENABLE_AUTOCOMPLETE_GENERATION = ENABLE_AUTOCOMPLETE_GENERATION\napp.state.config.ENABLE_TAGS_GENERATION = ENABLE_TAGS_GENERATION\napp.state.config.ENABLE_TITLE_GENERATION = ENABLE_TITLE_GENERATION\napp.state.config.ENABLE_FOLLOW_UP_GENERATION = ENABLE_FOLLOW_UP_GENERATION\napp.state.config.TITLE_GENERATION_PROMPT_TEMPLATE = TITLE_GENERATION_PROMPT_TEMPLATE\napp.state.config.TAGS_GENERATION_PROMPT_TEMPLATE = TAGS_GENERATION_PROMPT_TEMPLATE\napp.state.config.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE = (\n    IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE\n)",
         "detail": "backend.open_webui.main",
         "documentation": {}
     },
@@ -31823,7 +32412,7 @@
         "kind": 5,
         "importPath": "backend.open_webui.main",
         "description": "backend.open_webui.main",
-        "peekOfCode": "app.state.config.ENABLE_AUTOCOMPLETE_GENERATION = ENABLE_AUTOCOMPLETE_GENERATION\napp.state.config.ENABLE_TAGS_GENERATION = ENABLE_TAGS_GENERATION\napp.state.config.ENABLE_TITLE_GENERATION = ENABLE_TITLE_GENERATION\napp.state.config.TITLE_GENERATION_PROMPT_TEMPLATE = TITLE_GENERATION_PROMPT_TEMPLATE\napp.state.config.TAGS_GENERATION_PROMPT_TEMPLATE = TAGS_GENERATION_PROMPT_TEMPLATE\napp.state.config.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE = (\n    IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE\n)\napp.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = (\n    TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE",
+        "peekOfCode": "app.state.config.ENABLE_AUTOCOMPLETE_GENERATION = ENABLE_AUTOCOMPLETE_GENERATION\napp.state.config.ENABLE_TAGS_GENERATION = ENABLE_TAGS_GENERATION\napp.state.config.ENABLE_TITLE_GENERATION = ENABLE_TITLE_GENERATION\napp.state.config.ENABLE_FOLLOW_UP_GENERATION = ENABLE_FOLLOW_UP_GENERATION\napp.state.config.TITLE_GENERATION_PROMPT_TEMPLATE = TITLE_GENERATION_PROMPT_TEMPLATE\napp.state.config.TAGS_GENERATION_PROMPT_TEMPLATE = TAGS_GENERATION_PROMPT_TEMPLATE\napp.state.config.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE = (\n    IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE\n)\napp.state.config.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE = (",
         "detail": "backend.open_webui.main",
         "documentation": {}
     },
@@ -31832,7 +32421,7 @@
         "kind": 5,
         "importPath": "backend.open_webui.main",
         "description": "backend.open_webui.main",
-        "peekOfCode": "app.state.config.ENABLE_TAGS_GENERATION = ENABLE_TAGS_GENERATION\napp.state.config.ENABLE_TITLE_GENERATION = ENABLE_TITLE_GENERATION\napp.state.config.TITLE_GENERATION_PROMPT_TEMPLATE = TITLE_GENERATION_PROMPT_TEMPLATE\napp.state.config.TAGS_GENERATION_PROMPT_TEMPLATE = TAGS_GENERATION_PROMPT_TEMPLATE\napp.state.config.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE = (\n    IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE\n)\napp.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = (\n    TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE\n)",
+        "peekOfCode": "app.state.config.ENABLE_TAGS_GENERATION = ENABLE_TAGS_GENERATION\napp.state.config.ENABLE_TITLE_GENERATION = ENABLE_TITLE_GENERATION\napp.state.config.ENABLE_FOLLOW_UP_GENERATION = ENABLE_FOLLOW_UP_GENERATION\napp.state.config.TITLE_GENERATION_PROMPT_TEMPLATE = TITLE_GENERATION_PROMPT_TEMPLATE\napp.state.config.TAGS_GENERATION_PROMPT_TEMPLATE = TAGS_GENERATION_PROMPT_TEMPLATE\napp.state.config.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE = (\n    IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE\n)\napp.state.config.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE = (\n    FOLLOW_UP_GENERATION_PROMPT_TEMPLATE",
         "detail": "backend.open_webui.main",
         "documentation": {}
     },
@@ -31841,7 +32430,16 @@
         "kind": 5,
         "importPath": "backend.open_webui.main",
         "description": "backend.open_webui.main",
-        "peekOfCode": "app.state.config.ENABLE_TITLE_GENERATION = ENABLE_TITLE_GENERATION\napp.state.config.TITLE_GENERATION_PROMPT_TEMPLATE = TITLE_GENERATION_PROMPT_TEMPLATE\napp.state.config.TAGS_GENERATION_PROMPT_TEMPLATE = TAGS_GENERATION_PROMPT_TEMPLATE\napp.state.config.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE = (\n    IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE\n)\napp.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = (\n    TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE\n)\napp.state.config.QUERY_GENERATION_PROMPT_TEMPLATE = QUERY_GENERATION_PROMPT_TEMPLATE",
+        "peekOfCode": "app.state.config.ENABLE_TITLE_GENERATION = ENABLE_TITLE_GENERATION\napp.state.config.ENABLE_FOLLOW_UP_GENERATION = ENABLE_FOLLOW_UP_GENERATION\napp.state.config.TITLE_GENERATION_PROMPT_TEMPLATE = TITLE_GENERATION_PROMPT_TEMPLATE\napp.state.config.TAGS_GENERATION_PROMPT_TEMPLATE = TAGS_GENERATION_PROMPT_TEMPLATE\napp.state.config.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE = (\n    IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE\n)\napp.state.config.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE = (\n    FOLLOW_UP_GENERATION_PROMPT_TEMPLATE\n)",
+        "detail": "backend.open_webui.main",
+        "documentation": {}
+    },
+    {
+        "label": "app.state.config.ENABLE_FOLLOW_UP_GENERATION",
+        "kind": 5,
+        "importPath": "backend.open_webui.main",
+        "description": "backend.open_webui.main",
+        "peekOfCode": "app.state.config.ENABLE_FOLLOW_UP_GENERATION = ENABLE_FOLLOW_UP_GENERATION\napp.state.config.TITLE_GENERATION_PROMPT_TEMPLATE = TITLE_GENERATION_PROMPT_TEMPLATE\napp.state.config.TAGS_GENERATION_PROMPT_TEMPLATE = TAGS_GENERATION_PROMPT_TEMPLATE\napp.state.config.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE = (\n    IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE\n)\napp.state.config.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE = (\n    FOLLOW_UP_GENERATION_PROMPT_TEMPLATE\n)\napp.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = (",
         "detail": "backend.open_webui.main",
         "documentation": {}
     },
@@ -31850,7 +32448,7 @@
         "kind": 5,
         "importPath": "backend.open_webui.main",
         "description": "backend.open_webui.main",
-        "peekOfCode": "app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE = TITLE_GENERATION_PROMPT_TEMPLATE\napp.state.config.TAGS_GENERATION_PROMPT_TEMPLATE = TAGS_GENERATION_PROMPT_TEMPLATE\napp.state.config.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE = (\n    IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE\n)\napp.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = (\n    TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE\n)\napp.state.config.QUERY_GENERATION_PROMPT_TEMPLATE = QUERY_GENERATION_PROMPT_TEMPLATE\napp.state.config.AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE = (",
+        "peekOfCode": "app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE = TITLE_GENERATION_PROMPT_TEMPLATE\napp.state.config.TAGS_GENERATION_PROMPT_TEMPLATE = TAGS_GENERATION_PROMPT_TEMPLATE\napp.state.config.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE = (\n    IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE\n)\napp.state.config.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE = (\n    FOLLOW_UP_GENERATION_PROMPT_TEMPLATE\n)\napp.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = (\n    TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE",
         "detail": "backend.open_webui.main",
         "documentation": {}
     },
@@ -31859,7 +32457,7 @@
         "kind": 5,
         "importPath": "backend.open_webui.main",
         "description": "backend.open_webui.main",
-        "peekOfCode": "app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE = TAGS_GENERATION_PROMPT_TEMPLATE\napp.state.config.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE = (\n    IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE\n)\napp.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = (\n    TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE\n)\napp.state.config.QUERY_GENERATION_PROMPT_TEMPLATE = QUERY_GENERATION_PROMPT_TEMPLATE\napp.state.config.AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE = (\n    AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE",
+        "peekOfCode": "app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE = TAGS_GENERATION_PROMPT_TEMPLATE\napp.state.config.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE = (\n    IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE\n)\napp.state.config.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE = (\n    FOLLOW_UP_GENERATION_PROMPT_TEMPLATE\n)\napp.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = (\n    TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE\n)",
         "detail": "backend.open_webui.main",
         "documentation": {}
     },
@@ -31868,7 +32466,16 @@
         "kind": 5,
         "importPath": "backend.open_webui.main",
         "description": "backend.open_webui.main",
-        "peekOfCode": "app.state.config.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE = (\n    IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE\n)\napp.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = (\n    TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE\n)\napp.state.config.QUERY_GENERATION_PROMPT_TEMPLATE = QUERY_GENERATION_PROMPT_TEMPLATE\napp.state.config.AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE = (\n    AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE\n)",
+        "peekOfCode": "app.state.config.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE = (\n    IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE\n)\napp.state.config.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE = (\n    FOLLOW_UP_GENERATION_PROMPT_TEMPLATE\n)\napp.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = (\n    TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE\n)\napp.state.config.QUERY_GENERATION_PROMPT_TEMPLATE = QUERY_GENERATION_PROMPT_TEMPLATE",
+        "detail": "backend.open_webui.main",
+        "documentation": {}
+    },
+    {
+        "label": "app.state.config.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE",
+        "kind": 5,
+        "importPath": "backend.open_webui.main",
+        "description": "backend.open_webui.main",
+        "peekOfCode": "app.state.config.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE = (\n    FOLLOW_UP_GENERATION_PROMPT_TEMPLATE\n)\napp.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = (\n    TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE\n)\napp.state.config.QUERY_GENERATION_PROMPT_TEMPLATE = QUERY_GENERATION_PROMPT_TEMPLATE\napp.state.config.AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE = (\n    AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE\n)",
         "detail": "backend.open_webui.main",
         "documentation": {}
     },
@@ -31945,47 +32552,11 @@
         "documentation": {}
     },
     {
-        "label": "cleanup_task",
+        "label": "is_redis",
         "kind": 2,
         "importPath": "backend.open_webui.tasks",
         "description": "backend.open_webui.tasks",
-        "peekOfCode": "def cleanup_task(task_id: str, id=None):\n    \"\"\"\n    Remove a completed or canceled task from the global `tasks` dictionary.\n    \"\"\"\n    tasks.pop(task_id, None)  # Remove the task if it exists\n    # If an ID is provided, remove the task from the chat_tasks dictionary\n    if id and task_id in chat_tasks.get(id, []):\n        chat_tasks[id].remove(task_id)\n        if not chat_tasks[id]:  # If no tasks left for this ID, remove the entry\n            chat_tasks.pop(id, None)",
-        "detail": "backend.open_webui.tasks",
-        "documentation": {}
-    },
-    {
-        "label": "create_task",
-        "kind": 2,
-        "importPath": "backend.open_webui.tasks",
-        "description": "backend.open_webui.tasks",
-        "peekOfCode": "def create_task(coroutine, id=None):\n    \"\"\"\n    Create a new asyncio task and add it to the global task dictionary.\n    \"\"\"\n    task_id = str(uuid4())  # Generate a unique ID for the task\n    task = asyncio.create_task(coroutine)  # Create the task\n    # Add a done callback for cleanup\n    task.add_done_callback(lambda t: cleanup_task(task_id, id))\n    tasks[task_id] = task\n    # If an ID is provided, associate the task with that ID",
-        "detail": "backend.open_webui.tasks",
-        "documentation": {}
-    },
-    {
-        "label": "get_task",
-        "kind": 2,
-        "importPath": "backend.open_webui.tasks",
-        "description": "backend.open_webui.tasks",
-        "peekOfCode": "def get_task(task_id: str):\n    \"\"\"\n    Retrieve a task by its task ID.\n    \"\"\"\n    return tasks.get(task_id)\ndef list_tasks():\n    \"\"\"\n    List all currently active task IDs.\n    \"\"\"\n    return list(tasks.keys())",
-        "detail": "backend.open_webui.tasks",
-        "documentation": {}
-    },
-    {
-        "label": "list_tasks",
-        "kind": 2,
-        "importPath": "backend.open_webui.tasks",
-        "description": "backend.open_webui.tasks",
-        "peekOfCode": "def list_tasks():\n    \"\"\"\n    List all currently active task IDs.\n    \"\"\"\n    return list(tasks.keys())\ndef list_task_ids_by_chat_id(id):\n    \"\"\"\n    List all tasks associated with a specific ID.\n    \"\"\"\n    return chat_tasks.get(id, [])",
-        "detail": "backend.open_webui.tasks",
-        "documentation": {}
-    },
-    {
-        "label": "list_task_ids_by_chat_id",
-        "kind": 2,
-        "importPath": "backend.open_webui.tasks",
-        "description": "backend.open_webui.tasks",
-        "peekOfCode": "def list_task_ids_by_chat_id(id):\n    \"\"\"\n    List all tasks associated with a specific ID.\n    \"\"\"\n    return chat_tasks.get(id, [])\nasync def stop_task(task_id: str):\n    \"\"\"\n    Cancel a running task and remove it from the global task list.\n    \"\"\"\n    task = tasks.get(task_id)",
+        "peekOfCode": "def is_redis(request: Request) -> bool:\n    # Called everywhere a request is available to check Redis\n    return hasattr(request.app.state, \"redis\") and (request.app.state.redis is not None)\nasync def redis_task_command_listener(app):\n    redis: Redis = app.state.redis\n    pubsub = redis.pubsub()\n    await pubsub.subscribe(REDIS_PUBSUB_CHANNEL)\n    async for message in pubsub.listen():\n        if message[\"type\"] != \"message\":\n            continue",
         "detail": "backend.open_webui.tasks",
         "documentation": {}
     },
@@ -31994,7 +32565,34 @@
         "kind": 5,
         "importPath": "backend.open_webui.tasks",
         "description": "backend.open_webui.tasks",
-        "peekOfCode": "chat_tasks = {}\ndef cleanup_task(task_id: str, id=None):\n    \"\"\"\n    Remove a completed or canceled task from the global `tasks` dictionary.\n    \"\"\"\n    tasks.pop(task_id, None)  # Remove the task if it exists\n    # If an ID is provided, remove the task from the chat_tasks dictionary\n    if id and task_id in chat_tasks.get(id, []):\n        chat_tasks[id].remove(task_id)\n        if not chat_tasks[id]:  # If no tasks left for this ID, remove the entry",
+        "peekOfCode": "chat_tasks = {}\nREDIS_TASKS_KEY = \"open-webui:tasks\"\nREDIS_CHAT_TASKS_KEY = \"open-webui:tasks:chat\"\nREDIS_PUBSUB_CHANNEL = \"open-webui:tasks:commands\"\ndef is_redis(request: Request) -> bool:\n    # Called everywhere a request is available to check Redis\n    return hasattr(request.app.state, \"redis\") and (request.app.state.redis is not None)\nasync def redis_task_command_listener(app):\n    redis: Redis = app.state.redis\n    pubsub = redis.pubsub()",
+        "detail": "backend.open_webui.tasks",
+        "documentation": {}
+    },
+    {
+        "label": "REDIS_TASKS_KEY",
+        "kind": 5,
+        "importPath": "backend.open_webui.tasks",
+        "description": "backend.open_webui.tasks",
+        "peekOfCode": "REDIS_TASKS_KEY = \"open-webui:tasks\"\nREDIS_CHAT_TASKS_KEY = \"open-webui:tasks:chat\"\nREDIS_PUBSUB_CHANNEL = \"open-webui:tasks:commands\"\ndef is_redis(request: Request) -> bool:\n    # Called everywhere a request is available to check Redis\n    return hasattr(request.app.state, \"redis\") and (request.app.state.redis is not None)\nasync def redis_task_command_listener(app):\n    redis: Redis = app.state.redis\n    pubsub = redis.pubsub()\n    await pubsub.subscribe(REDIS_PUBSUB_CHANNEL)",
+        "detail": "backend.open_webui.tasks",
+        "documentation": {}
+    },
+    {
+        "label": "REDIS_CHAT_TASKS_KEY",
+        "kind": 5,
+        "importPath": "backend.open_webui.tasks",
+        "description": "backend.open_webui.tasks",
+        "peekOfCode": "REDIS_CHAT_TASKS_KEY = \"open-webui:tasks:chat\"\nREDIS_PUBSUB_CHANNEL = \"open-webui:tasks:commands\"\ndef is_redis(request: Request) -> bool:\n    # Called everywhere a request is available to check Redis\n    return hasattr(request.app.state, \"redis\") and (request.app.state.redis is not None)\nasync def redis_task_command_listener(app):\n    redis: Redis = app.state.redis\n    pubsub = redis.pubsub()\n    await pubsub.subscribe(REDIS_PUBSUB_CHANNEL)\n    async for message in pubsub.listen():",
+        "detail": "backend.open_webui.tasks",
+        "documentation": {}
+    },
+    {
+        "label": "REDIS_PUBSUB_CHANNEL",
+        "kind": 5,
+        "importPath": "backend.open_webui.tasks",
+        "description": "backend.open_webui.tasks",
+        "peekOfCode": "REDIS_PUBSUB_CHANNEL = \"open-webui:tasks:commands\"\ndef is_redis(request: Request) -> bool:\n    # Called everywhere a request is available to check Redis\n    return hasattr(request.app.state, \"redis\") and (request.app.state.redis is not None)\nasync def redis_task_command_listener(app):\n    redis: Redis = app.state.redis\n    pubsub = redis.pubsub()\n    await pubsub.subscribe(REDIS_PUBSUB_CHANNEL)\n    async for message in pubsub.listen():\n        if message[\"type\"] != \"message\":",
         "detail": "backend.open_webui.tasks",
         "documentation": {}
     },
