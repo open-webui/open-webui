@@ -424,7 +424,7 @@
 										selectedTags = new Set(selectedTags);
 									}}
 								>
-									{tag.charAt(0).toUpperCase() + tag.slice(1)}
+									{$i18n.t(tag)}
 								</button>
 							{/each}
 						</div>
@@ -444,7 +444,7 @@
 									selectedTags = new Set(selectedTags);
 								}}
 							>
-								{tag.charAt(0).toUpperCase() + tag.slice(1)}
+								{$i18n.t(tag)}
 							</button>
 						{/each}
 					</div>
@@ -546,7 +546,7 @@
 												? 'dark:text-white'
 												: 'text-lightGray-100 dark:text-customGray-100'} text-xs bg-customViolet-200 dark:bg-customBlue-800 px-[6px] py-[3px] rounded-md"
 										>
-											{modelTag.name}
+											{$i18n.t(modelTag.name)}
 										</div>
 									{/each}
 								</div>
