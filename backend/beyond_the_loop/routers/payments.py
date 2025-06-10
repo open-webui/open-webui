@@ -26,7 +26,7 @@ SUBSCRIPTION_PLANS = {
         "name": "Free",
         "price_monthly": 0,
         "credits_per_month": 5,
-        "stripe_price_id": "price_1RSbapBBwyxb4MZjWrs4tTNW",
+        "stripe_price_id": "price_1RSIfGBBwyxb4MZjoc5Oz8zJ",
         "seats": 5
     },
     "starter": {
@@ -93,8 +93,21 @@ async def create_subscription_session(request: CreateSubscriptionRequest, user=D
         company = Companies.get_company_by_id(user.company_id)
         stripe_customer_id = company.stripe_customer_id
 
+        # If the company doesn't have a Stripe customer ID, create a new one
+        # This should only happen for companies that registered before we implemented the free trail period for new customers
+        # On creation of the free trail period for new customers, the Stripe customer ID will be created
         if not stripe_customer_id:
-            raise HTTPException(status_code=400, detail="No Stripe customer found for this company")
+            print(f"Creating Stripe customer for company {user.company_id}")
+            stripe_customer = stripe.Customer.create(
+                email=user.email,
+                name=user.name,
+                metadata={
+                    "company_id": user.company_id,
+                    "user_id": user.id
+                }
+            )
+            stripe_customer_id = stripe_customer.id
+            Companies.update_company_by_id(user.company_id, {"stripe_customer_id": stripe_customer_id})
 
         # Create a new Stripe Checkout session for the new subscription
         print(f"Creating new subscription with price ID: {stripe_price_id} for plan: {request.plan_id}")
