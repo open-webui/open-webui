@@ -813,6 +813,10 @@
 			imageGenerationEnabled = true;
 		}
 
+		if ($page.url.searchParams.get('code-interpreter') === 'true') {
+			codeInterpreterEnabled = true;
+		}
+
 		if ($page.url.searchParams.get('tools')) {
 			selectedToolIds = $page.url.searchParams
 				.get('tools')
