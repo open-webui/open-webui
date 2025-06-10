@@ -64,6 +64,7 @@ einops==0.8.1
 
 ftfy==6.2.3
 pypdf==4.3.1
+pymupdf>=1.26.0          # JBIG2 bug-fix landed in this release
 fpdf2==2.8.2
 pymdown-extensions==10.14.2
 docx2txt==0.8
