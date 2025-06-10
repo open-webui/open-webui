@@ -448,6 +448,13 @@
 
 									<div class="flex-1 self-center">
 										<div class="font-medium text-sm">{server.display_name}</div>
+										<div class="text-xs text-gray-700 dark:text-gray-400 line-clamp-1 mb-1">
+											{#if server.name === 'time_server'}
+												{$i18n.t('Provides current time and timezone information')}
+											{:else}
+												{$i18n.t('Built-in MCP server')}
+											{/if}
+										</div>
 										<div class="text-xs text-gray-700 dark:text-gray-400 line-clamp-1">
 											{server.tools_count} {server.tools_count === 1 ? $i18n.t('tool') : $i18n.t('tools')}
 										</div>
