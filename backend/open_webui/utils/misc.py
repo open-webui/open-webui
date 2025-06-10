@@ -222,7 +222,7 @@ def openai_chat_chunk_message_template(
         template["choices"][0]["delta"]["content"] = content
 
     if reasoning_content:
-        template["choices"][0]["delta"]["reasonsing_content"] = reasoning_content
+        template["choices"][0]["delta"]["reasoning_content"] = reasoning_content
 
     if tool_calls:
         template["choices"][0]["delta"]["tool_calls"] = tool_calls
