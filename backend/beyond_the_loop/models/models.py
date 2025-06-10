@@ -6,6 +6,7 @@ from open_webui.internal.db import Base, JSONField, get_db
 from open_webui.env import SRC_LOG_LEVELS
 
 from beyond_the_loop.models.users import UserResponse, Users
+from beyond_the_loop.models.prompts import Prompt
 
 from pydantic import BaseModel, ConfigDict
 
@@ -159,6 +160,9 @@ class ModelForm(BaseModel):
     access_control: Optional[dict] = None
     is_active: bool = True
 
+class TagResponse(BaseModel):
+    name: str
+    is_system: bool 
 
 class ModelsTable:
     def insert_new_model(
@@ -347,6 +351,51 @@ class ModelsTable:
         
         except Exception:
             return None
+    
+    def get_system_and_user_tags(self, user_id: str) -> list[TagResponse]:
+        try:
+            with get_db() as db:
+                prompts = (
+                    db.query(Prompt)
+                    .filter(
+                        Prompt.user_id == "system")
+                    .all()
+                )
 
+                models = (
+                    db.query(Model)
+                    .filter(Model.user_id == user_id)
+                    .all()
+                )
+
+                tag_map = {}
+
+                for prompt in prompts:
+                    meta = prompt.meta
+
+                    tags = meta.get("tags", [])
+
+                    for tag in tags:
+                        name = tag.get("name")
+                        if not name:
+                            continue
+
+                        if name not in tag_map:
+                            tag_map[name] = {"name": name, "is_system": True}
+
+                for model in models:
+                    meta = model.meta
+                    tags = meta.get("tags", [])
+
+                    for tag in tags:
+                        name = tag.get("name")
+                        if not name:
+                            continue
+                        if name not in tag_map:
+                            tag_map[name] = {"name": name, "is_system": False}
+                return list(tag_map.values())
+        except Exception as e:
+            print("Error in get_system_and_user_tags:", e)
+            return []
 
 Models = ModelsTable()
