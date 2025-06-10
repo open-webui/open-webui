@@ -428,14 +428,14 @@ def ensure_tool_created_by_column():
 
     engine = create_engine(DATABASE_URL)
     with engine.begin() as conn: 
-        conn.execute(text('DELETE FROM "tool";'))
-        conn.execute(text('DELETE FROM "prompt";'))
-        conn.execute(text('DELETE FROM "function";'))
-        conn.execute(text('DELETE FROM "group";'))
-        conn.execute(text('DELETE FROM "model";'))
-        conn.execute(text('DELETE FROM "file";'))
-        conn.execute(text('DELETE FROM "config";'))
-        conn.execute(text('DELETE FROM "knowledge";'))
+        # conn.execute(text('DELETE FROM "tool";'))
+        # conn.execute(text('DELETE FROM "prompt";'))
+        # conn.execute(text('DELETE FROM "function";'))
+        # conn.execute(text('DELETE FROM "group";'))
+        # conn.execute(text('DELETE FROM "model";'))
+        # conn.execute(text('DELETE FROM "file";'))
+        # conn.execute(text('DELETE FROM "config";'))
+        # conn.execute(text('DELETE FROM "knowledge";'))
     # with engine.connect() as conn:
         inspector = inspect(conn)
         columns = [col["name"] for col in inspector.get_columns("tool")]

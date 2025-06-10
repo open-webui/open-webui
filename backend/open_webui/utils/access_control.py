@@ -113,7 +113,10 @@ def has_access(
     access_control: Optional[dict] = None,
 ) -> bool:
     if access_control is None:
-        return type == "read"
+        user = Users.get_user_by_id(user_id)
+        if user.role == "user":
+            return type == "read"
+        return False
 
     user_groups = Groups.get_groups_by_member_id(user_id)
     user_group_ids = [group.id for group in user_groups]
