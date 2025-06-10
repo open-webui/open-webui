@@ -96,6 +96,7 @@
 				use_mlock: params.use_mlock !== null ? params.use_mlock : undefined,
 				num_thread: params.num_thread !== null ? params.num_thread : undefined,
 				num_gpu: params.num_gpu !== null ? params.num_gpu : undefined,
+				think: params.think !== null ? params.think : undefined,
 				keep_alive: params.keep_alive !== null ? params.keep_alive : undefined,
 				format: params.format !== null ? params.format : undefined
 			}

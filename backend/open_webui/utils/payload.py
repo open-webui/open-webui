@@ -196,7 +196,11 @@ def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
             form_data[key] = value(param)
             del params[key]
 
-    return apply_model_params_to_body(params, form_data, mappings)
+    # Unlike OpenAI, Ollama does not support params directly in the body
+    form_data["options"] = apply_model_params_to_body(
+        params, (form_data.get("options", {}) or {}), mappings
+    )
+    return form_data
 
 
 def convert_messages_openai_to_ollama(messages: list[dict]) -> list[dict]:
