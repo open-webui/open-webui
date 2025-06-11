@@ -1,10 +1,9 @@
 <script lang="ts">
+	import type { Tag } from '$lib/apis';
 	import { models, settings } from '$lib/stores';
 	import { updateUserSettings } from '$lib/apis/users';
 	import AgentIcon from './AgentIcon.svelte';
 	import Button, { ButtonType } from '$lib/IONOS/components/common/Button.svelte'
-
-	type Tag = { name: string };
 
 	export let selectedModels = [''];
 

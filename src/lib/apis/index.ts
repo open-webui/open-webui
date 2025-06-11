@@ -1114,9 +1114,14 @@ export interface ModelConfig {
 	params: ModelParams;
 }
 
+export type Tag = {
+	name: string;
+}
+
 export interface ModelMeta {
 	description?: string;
 	capabilities?: object;
+	tags: Tag[];
 	profile_image_url?: string;
 }
 
