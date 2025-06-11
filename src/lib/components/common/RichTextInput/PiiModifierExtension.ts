@@ -614,11 +614,11 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 							// Check if word is currently highlighted as PII (by PII detection)
 							const isPiiHighlighted = document.querySelector(`[data-pii-text="${wordInfo.text}"]`) !== null;
 
-							// Find existing modifiers for this word (check position overlap)
+							// Find existing modifiers for this word (check entity text match)
 							const pluginState = piiModifierExtensionKey.getState(view.state);
 							const existingModifiers = pluginState?.modifiers.filter(modifier => {
-								// Check if modifier overlaps with the current word
-								return (modifier.from <= wordInfo.to && modifier.to >= wordInfo.from);
+								// Check if modifier's entity text matches the current word (case-insensitive)
+								return modifier.entity.toLowerCase() === wordInfo.text.toLowerCase();
 							}) || [];
 
 							// Show hover menu
