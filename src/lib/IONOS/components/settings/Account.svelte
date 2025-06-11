@@ -33,7 +33,7 @@
 			{$i18n.t('Email', { ns: 'ionos' })}
 		</div>
 		<div>
-			{$user.email}
+			{$user?.email}
 		</div>
 	</div>
 	<div class="flex flex-row items-center h-10">
