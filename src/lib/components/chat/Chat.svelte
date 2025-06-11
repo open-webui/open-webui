@@ -1580,10 +1580,9 @@
 						})
 			}))
 			.filter((message) => message?.role === 'user' || message?.content?.trim());
-							console.log("CONFIG, ", $config?.features?.enable_web_search)
+		console.log('CONFIG, ', $config?.features?.enable_web_search);
 
 		const res = await generateOpenAIChatCompletion(
-			
 			localStorage.token,
 			{
 				stream: stream,
@@ -2128,7 +2127,6 @@
 									}
 								}}
 							/>
-							<Footer />
 						</div>
 					{/if}
 				</div>
