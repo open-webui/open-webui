@@ -70,6 +70,7 @@
 <AddConnectionModal direct bind:show={showConnectionModal} onSubmit={addConnectionHandler} />
 
 <form
+	id="tab-connections"
 	class="flex flex-col h-full justify-between text-sm"
 	on:submit|preventDefault={() => {
 		updateHandler();

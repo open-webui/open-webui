@@ -42,6 +42,7 @@
 <AddServerModal bind:show={showConnectionModal} onSubmit={addConnectionHandler} direct />
 
 <form
+	id="tab-tools"
 	class="flex flex-col h-full justify-between text-sm"
 	on:submit|preventDefault={() => {
 		updateHandler();

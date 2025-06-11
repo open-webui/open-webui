@@ -580,6 +580,7 @@
 						{#if tabId === 'general'}
 							<button
 								role="tab"
+								aria-controls="tab-general"
 								aria-selected={selectedTab === 'general'}
 								class={`px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition
 								${
@@ -614,6 +615,7 @@
 						{:else if tabId === 'interface'}
 							<button
 								role="tab"
+								aria-controls="tab-interface"
 								aria-selected={selectedTab === 'interface'}
 								class={`px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition
 								${
@@ -649,6 +651,7 @@
 							{#if $user?.role === 'admin' || ($user?.role === 'user' && $config?.features?.enable_direct_connections)}
 								<button
 									role="tab"
+									aria-controls="tab-connections"
 									aria-selected={selectedTab === 'connections'}
 									class={`px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition
 								${
@@ -683,6 +686,7 @@
 							{#if $user?.role === 'admin' || ($user?.role === 'user' && $user?.permissions?.features?.direct_tool_servers)}
 								<button
 									role="tab"
+									aria-controls="tab-tools"
 									aria-selected={selectedTab === 'tools'}
 									class={`px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition
 								${
@@ -718,6 +722,7 @@
 						{:else if tabId === 'personalization'}
 							<button
 								role="tab"
+								aria-controls="tab-personalization"
 								aria-selected={selectedTab === 'personalization'}
 								class={`px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition
 								${
@@ -741,6 +746,7 @@
 						{:else if tabId === 'audio'}
 							<button
 								role="tab"
+								aria-controls="tab-audio"
 								aria-selected={selectedTab === 'audio'}
 								class={`px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition
 								${
@@ -776,6 +782,7 @@
 						{:else if tabId === 'chats'}
 							<button
 								role="tab"
+								aria-controls="tab-chats"
 								aria-selected={selectedTab === 'chats'}
 								class={`px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition
 								${
@@ -810,6 +817,7 @@
 						{:else if tabId === 'account'}
 							<button
 								role="tab"
+								aria-controls="tab-account"
 								aria-selected={selectedTab === 'account'}
 								class={`px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition
 								${
@@ -844,6 +852,7 @@
 						{:else if tabId === 'about'}
 							<button
 								role="tab"
+								aria-controls="tab-about"
 								aria-selected={selectedTab === 'about'}
 								class={`px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition
 								${
