@@ -181,7 +181,7 @@
 					<img
 						id="logo"
 						crossorigin="anonymous"
-						src="{WEBUI_BASE_URL}/static/splash.png"
+						src="{WEBUI_BASE_URL}/static/logo.png"
 						class=" w-6 rounded-full"
 						alt=""
 					/>
