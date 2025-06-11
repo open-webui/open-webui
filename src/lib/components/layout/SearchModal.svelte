@@ -19,6 +19,13 @@
 	let query = '';
 	let page = 1;
 
+	let parsedQuery = {
+		text: '',
+		tags: [],
+		before: null,
+		after: null
+	};
+
 	let chatList = null;
 
 	let chatListLoading = false;
@@ -28,6 +35,42 @@
 
 	let selectedIdx = 0;
 
+	const parseSearchQuery = (queryStr: string) => {
+		const parts = queryStr.trim().split(' ');
+		const tags: string[] = [];
+		let before: string | null = null;
+		let after: string | null = null;
+		const textParts: string[] = [];
+
+		for (const part of parts) {
+			if (part.startsWith('tag:')) {
+				const tagValue = part.substring(4);
+				if (tagValue) {
+					tags.push(tagValue);
+				}
+			} else if (part.startsWith('before:')) {
+				const dateValue = part.substring(7);
+				if (dateValue) {
+					before = dateValue;
+				}
+			} else if (part.startsWith('after:')) {
+				const dateValue = part.substring(6);
+				if (dateValue) {
+					after = dateValue;
+				}
+			} else {
+				textParts.push(part);
+			}
+		}
+
+		return {
+			text: textParts.join(' '),
+			tags,
+			before,
+			after
+		};
+	};
+
 	const searchHandler = async () => {
 		if (searchDebounceTimeout) {
 			clearTimeout(searchDebounceTimeout);
@@ -35,11 +78,13 @@
 
 		page = 1;
 		chatList = null;
-		if (query === '') {
+		parsedQuery = parseSearchQuery(query);
+
+		if (query.trim() === '') {
 			chatList = await getChatList(localStorage.token, page);
 		} else {
 			searchDebounceTimeout = setTimeout(async () => {
-				chatList = await getChatListBySearchText(localStorage.token, query, page);
+				chatList = await getChatListBySearchText(localStorage.token, parsedQuery, page);
 			}, 500);
 		}
 
@@ -55,9 +100,12 @@
 		page += 1;
 
 		let newChatList = [];
+		// parsedQuery should already be set by searchHandler or a previous loadMoreChats
+		// No need to parse again unless query string itself could change independently,
+		// but it's bound to SearchInput, which triggers searchHandler on input.
 
-		if (query) {
-			newChatList = await getChatListBySearchText(localStorage.token, query, page);
+		if (query.trim()) {
+			newChatList = await getChatListBySearchText(localStorage.token, parsedQuery, page);
 		} else {
 			newChatList = await getChatList(localStorage.token, page);
 		}
@@ -72,13 +120,14 @@
 		chatListLoading = false;
 	};
 
-	const init = () => {
-		searchHandler();
-	};
+	// Remove init and onMount, searchHandler is called on input
+	// const init = () => {
+	// 	searchHandler();
+	// };
 
-	onMount(() => {
-		init();
-	});
+	// onMount(() => {
+	// 	init();
+	// });
 </script>
 
 <Modal size="md" bind:show>

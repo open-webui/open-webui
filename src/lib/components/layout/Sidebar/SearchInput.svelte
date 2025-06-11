@@ -22,15 +22,25 @@
 		{
 			name: 'tag:',
 			description: $i18n.t('search for tags')
+		},
+		{
+			name: 'before:',
+			description: $i18n.t('Search for chats updated before a date (YYYY-MM-DD)')
+		},
+		{
+			name: 'after:',
+			description: $i18n.t('Search for chats updated after a date (YYYY-MM-DD)')
 		}
 	];
 	let focused = false;
 	let loading = false;
 
 	let filteredOptions = options;
-	$: filteredOptions = options.filter((option) => {
-		return option.name.startsWith(lastWord);
-	});
+	$: filteredOptions = lastWord.includes(':')
+		? []
+		: options.filter((option) => {
+				return option.name.startsWith(lastWord);
+			});
 
 	let filteredTags = [];
 	$: filteredTags = lastWord.startsWith('tag:')
@@ -55,6 +65,22 @@
 				}
 			})
 		: [];
+
+	let filteredDateSuggestions = [];
+	$: {
+		if (lastWord.startsWith('before:') || lastWord.startsWith('after:')) {
+			const dateQuery = lastWord.split(':')[1];
+			if (dateQuery === '' || /^\d{4}(-\d{0,2}(-\d{0,2})?)?$/.test(dateQuery)) {
+				filteredDateSuggestions = [
+					{ id: 'format', name: 'YYYY-MM-DD', description: $i18n.t('Enter date as YYYY-MM-DD') }
+				];
+			} else {
+				filteredDateSuggestions = [];
+			}
+		} else {
+			filteredDateSuggestions = [];
+		}
+	}
 
 	const initTags = async () => {
 		loading = true;
@@ -120,13 +146,17 @@
 				if (e.key === 'Enter') {
 					if (filteredTags.length > 0) {
 						const tagElement = document.getElementById(`search-tag-${selectedIdx}`);
-						tagElement.click();
+				tagElement?.click();
 						return;
-					}
-
-					if (filteredOptions.length > 0) {
-						const optionElement = document.getElementById(`search-option-${selectedIdx}`);
-						optionElement.click();
+			} else if (filteredDateSuggestions.length > 0 && selectedIdx < filteredDateSuggestions.length) {
+				const dateSuggestionElement = document.getElementById(`search-date-${selectedIdx}`);
+				dateSuggestionElement?.click();
+				return;
+			} else if (filteredOptions.length > 0) {
+				const optionElement = document.getElementById(
+					`search-option-${selectedIdx - filteredDateSuggestions.length}`
+				);
+				optionElement?.click();
 						return;
 					}
 				}
@@ -136,12 +166,9 @@
 					selectedIdx = Math.max(0, selectedIdx - 1);
 				} else if (e.key === 'ArrowDown') {
 					e.preventDefault();
-
-					if (filteredTags.length > 0) {
-						selectedIdx = Math.min(selectedIdx + 1, filteredTags.length - 1);
-					} else {
-						selectedIdx = Math.min(selectedIdx + 1, filteredOptions.length - 1);
-					}
+			const totalSuggestions =
+				filteredOptions.length + filteredTags.length + filteredDateSuggestions.length;
+			selectedIdx = Math.min(selectedIdx + 1, totalSuggestions - 1);
 				} else {
 					// if the user types something, reset to the top selection.
 					selectedIdx = 0;
@@ -165,7 +192,7 @@
 		{/if}
 	</div>
 
-	{#if focused && (filteredOptions.length > 0 || filteredTags.length > 0)}
+	{#if focused && (filteredOptions.length > 0 || filteredTags.length > 0 || filteredDateSuggestions.length > 0)}
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
 		<div
 			class="absolute top-0 mt-8 left-0 right-1 border border-gray-100 dark:border-gray-900 bg-gray-50 dark:bg-gray-950 rounded-lg z-10 shadow-lg"
@@ -181,7 +208,6 @@
 			<div class="px-2 py-2 text-xs group">
 				{#if filteredTags.length > 0}
 					<div class="px-1 font-medium dark:text-gray-300 text-gray-700 mb-1">Tags</div>
-
 					<div class="max-h-60 overflow-auto">
 						{#each filteredTags as tag, tagIdx}
 							<button
@@ -192,21 +218,57 @@
 								id="search-tag-{tagIdx}"
 								on:click|stopPropagation={async () => {
 									const words = value.split(' ');
-
 									words.pop();
 									words.push(`tag:${tag.id} `);
-
 									value = words.join(' ');
-
 									dispatch('input');
+									await tick();
+									focused = false;
 								}}
 							>
 								<div class="dark:text-gray-300 text-gray-700 font-medium line-clamp-1 shrink-0">
 									{tag.name}
 								</div>
-
 								<div class=" text-gray-500 line-clamp-1">
 									{tag.id}
+								</div>
+							</button>
+						{/each}
+					</div>
+				{:else if filteredDateSuggestions.length > 0}
+					<div class="px-1 font-medium dark:text-gray-300 text-gray-700 mb-1">
+						{$i18n.t('Date Format')}
+					</div>
+					<div class="max-h-60 overflow-auto">
+						{#each filteredDateSuggestions as suggestion, dateIdx}
+							<button
+								class=" px-1.5 py-0.5 flex gap-1 hover:bg-gray-100 dark:hover:bg-gray-900 w-full rounded {selectedIdx ===
+								dateIdx
+									? 'bg-gray-100 dark:bg-gray-900'
+									: ''}"
+								id="search-date-{dateIdx}"
+								on:click|stopPropagation={async () => {
+									const words = value.split(' ');
+									let currentParam = words.pop();
+									// Ensure the parameter itself (e.g., "before:") is fully present and add a space
+									if (!currentParam.endsWith(':')) {
+										currentParam += ':';
+									}
+									words.push(`${currentParam} `);
+									value = words.join(' ');
+									dispatch('input');
+									await tick();
+									// Keep focus to allow user to type the date
+									const inputElement = document.querySelector<HTMLInputElement>('#chat-search input');
+									inputElement?.focus();
+									// focused = true; // Re-ensure focused state if needed
+								}}
+							>
+								<div class="dark:text-gray-300 text-gray-700 font-medium">
+									{suggestion.name}
+								</div>
+								<div class=" text-gray-500 line-clamp-1">
+									{suggestion.description}
 								</div>
 							</button>
 						{/each}
@@ -215,8 +277,7 @@
 					<div class="px-1 font-medium dark:text-gray-300 text-gray-700 mb-1">
 						{$i18n.t('Search options')}
 					</div>
-
-					<div class=" max-h-60 overflow-auto">
+					<div class="max-h-60 overflow-auto">
 						{#each filteredOptions as option, optionIdx}
 							<button
 								class=" px-1.5 py-0.5 flex gap-1 hover:bg-gray-100 dark:hover:bg-gray-900 w-full rounded {selectedIdx ===
@@ -226,17 +287,20 @@
 								id="search-option-{optionIdx}"
 								on:click|stopPropagation={async () => {
 									const words = value.split(' ');
-
 									words.pop();
-									words.push('tag:');
-
+									words.push(option.name); // Keep the colon, e.g., "after:"
 									value = words.join(' ');
-
 									dispatch('input');
+									await tick();
+									// Ensure input remains focused to trigger next suggestions if applicable
+									const inputElement = document.querySelector<HTMLInputElement>('#chat-search input');
+									inputElement?.focus();
+									focused = true;
 								}}
 							>
-								<div class="dark:text-gray-300 text-gray-700 font-medium">{option.name}</div>
-
+								<div class="dark:text-gray-300 text-gray-700 font-medium">
+									{option.name}
+								</div>
 								<div class=" text-gray-500 line-clamp-1">
 									{option.description}
 								</div>

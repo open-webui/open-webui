@@ -2,7 +2,9 @@ import logging
 import json
 import time
 import uuid
-from typing import Optional
+from typing import Optional, List
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from open_webui.internal.db import Base, get_db
 from open_webui.models.tags import TagModel, Tag, Tags
@@ -572,54 +574,27 @@ class ChatTable:
     def get_chats_by_user_id_and_search_text(
         self,
         user_id: str,
-        search_text: str,
+        search_text: Optional[str],
+        tags: Optional[List[str]],
+        before_date_str: Optional[str],
+        after_date_str: Optional[str],
         include_archived: bool = False,
         skip: int = 0,
         limit: int = 60,
     ) -> list[ChatModel]:
-        """
-        Filters chats based on a search query using Python, allowing pagination using skip and limit.
-        """
-        search_text = search_text.lower().strip()
-
-        if not search_text:
-            return self.get_chat_list_by_user_id(
-                user_id, include_archived, filter={}, skip=skip, limit=limit
-            )
-
-        search_text_words = search_text.split(" ")
-
-        # search_text might contain 'tag:tag_name' format so we need to extract the tag_name, split the search_text and remove the tags
-        tag_ids = [
-            word.replace("tag:", "").replace(" ", "_").lower()
-            for word in search_text_words
-            if word.startswith("tag:")
-        ]
-
-        search_text_words = [
-            word for word in search_text_words if not word.startswith("tag:")
-        ]
-
-        search_text = " ".join(search_text_words)
-
         with get_db() as db:
             query = db.query(Chat).filter(Chat.user_id == user_id)
 
             if not include_archived:
                 query = query.filter(Chat.archived == False)
 
-            query = query.order_by(Chat.updated_at.desc())
-
-            # Check if the database dialect is either 'sqlite' or 'postgresql'
-            dialect_name = db.bind.dialect.name
-            if dialect_name == "sqlite":
-                # SQLite case: using JSON1 extension for JSON searching
-                query = query.filter(
-                    (
-                        Chat.title.ilike(
-                            f"%{search_text}%"
-                        )  # Case-insensitive search in title
-                        | text(
+            # Text search (if search_text is provided)
+            if search_text:
+                search_text = search_text.lower().strip()
+                if search_text:  # Ensure not empty after strip
+                    dialect_name = db.bind.dialect.name
+                    if dialect_name == "sqlite":
+                        text_filter = Chat.title.ilike(f"%{search_text}%") | text(
                             """
                             EXISTS (
                                 SELECT 1 
@@ -627,48 +602,9 @@ class ChatTable:
                                 WHERE LOWER(message.value->>'content') LIKE '%' || :search_text || '%'
                             )
                             """
-                        )
-                    ).params(search_text=search_text)
-                )
-
-                # Check if there are any tags to filter, it should have all the tags
-                if "none" in tag_ids:
-                    query = query.filter(
-                        text(
-                            """
-                            NOT EXISTS (
-                                SELECT 1
-                                FROM json_each(Chat.meta, '$.tags') AS tag
-                            )
-                            """
-                        )
-                    )
-                elif tag_ids:
-                    query = query.filter(
-                        and_(
-                            *[
-                                text(
-                                    f"""
-                                    EXISTS (
-                                        SELECT 1
-                                        FROM json_each(Chat.meta, '$.tags') AS tag
-                                        WHERE tag.value = :tag_id_{tag_idx}
-                                    )
-                                    """
-                                ).params(**{f"tag_id_{tag_idx}": tag_id})
-                                for tag_idx, tag_id in enumerate(tag_ids)
-                            ]
-                        )
-                    )
-
-            elif dialect_name == "postgresql":
-                # PostgreSQL relies on proper JSON query for search
-                query = query.filter(
-                    (
-                        Chat.title.ilike(
-                            f"%{search_text}%"
-                        )  # Case-insensitive search in title
-                        | text(
+                        ).params(search_text=search_text)
+                    elif dialect_name == "postgresql":
+                        text_filter = Chat.title.ilike(f"%{search_text}%") | text(
                             """
                             EXISTS (
                                 SELECT 1
@@ -676,50 +612,74 @@ class ChatTable:
                                 WHERE LOWER(message->>'content') LIKE '%' || :search_text || '%'
                             )
                             """
-                        )
-                    ).params(search_text=search_text)
-                )
+                        ).params(search_text=search_text)
+                    else:
+                        raise NotImplementedError(f"Unsupported dialect: {dialect_name}")
+                    query = query.filter(text_filter)
 
-                # Check if there are any tags to filter, it should have all the tags
-                if "none" in tag_ids:
-                    query = query.filter(
-                        text(
-                            """
-                            NOT EXISTS (
-                                SELECT 1
-                                FROM json_array_elements_text(Chat.meta->'tags') AS tag
-                            )
-                            """
-                        )
-                    )
-                elif tag_ids:
-                    query = query.filter(
-                        and_(
-                            *[
-                                text(
-                                    f"""
-                                    EXISTS (
-                                        SELECT 1
-                                        FROM json_array_elements_text(Chat.meta->'tags') AS tag
-                                        WHERE tag = :tag_id_{tag_idx}
-                                    )
-                                    """
-                                ).params(**{f"tag_id_{tag_idx}": tag_id})
-                                for tag_idx, tag_id in enumerate(tag_ids)
-                            ]
-                        )
-                    )
-            else:
-                raise NotImplementedError(
-                    f"Unsupported dialect: {db.bind.dialect.name}"
-                )
+            # Tags filtering (if tags list is provided)
+            # This replaces the old logic of parsing tags from search_text
+            if tags:
+                # Normalize provided tags for comparison (assuming stored tags are lowercase and underscore-separated)
+                normalized_tags = [tag.replace(" ", "_").lower() for tag in tags]
+                dialect_name = db.bind.dialect.name
+
+                if "none" in normalized_tags:
+                    # Filter for chats with no tags
+                    if dialect_name == "sqlite":
+                        tag_filter = text("json_extract(Chat.meta, '$.tags') IS NULL OR json_array_length(json_extract(Chat.meta, '$.tags')) = 0")
+                    elif dialect_name == "postgresql":
+                        tag_filter = text("(Chat.meta->'tags') IS NULL OR json_array_length(Chat.meta->'tags') = 0")
+                    else:
+                        raise NotImplementedError(f"Unsupported dialect for 'none' tag: {dialect_name}")
+                    query = query.filter(tag_filter)
+                else:
+                    # Filter for chats that contain ALL specified tags
+                    tag_conditions = []
+                    for i, tag_id in enumerate(normalized_tags):
+                        param_name = f"tag_id_{i}"
+                        if dialect_name == "sqlite":
+                            condition = text(
+                                f"EXISTS (SELECT 1 FROM json_each(Chat.meta, '$.tags') AS tag WHERE tag.value = :{param_name})"
+                            ).params(**{param_name: tag_id})
+                        elif dialect_name == "postgresql":
+                            condition = text(
+                                f"EXISTS (SELECT 1 FROM json_array_elements_text(Chat.meta->'tags') AS tag WHERE tag = :{param_name})"
+                            ).params(**{param_name: tag_id})
+                        else:
+                            raise NotImplementedError(f"Unsupported dialect for tag filtering: {dialect_name}")
+                        tag_conditions.append(condition)
+
+                    if tag_conditions:
+                        query = query.filter(and_(*tag_conditions))
+
+            # Date filtering
+            if after_date_str:
+                try:
+                    # Start of the day in UTC
+                    dt_after = datetime.strptime(after_date_str, "%Y-%m-%d")
+                    utc_dt_after = datetime(dt_after.year, dt_after.month, dt_after.day, 0, 0, 0, tzinfo=ZoneInfo("UTC"))
+                    after_timestamp = int(utc_dt_after.timestamp())
+                    query = query.filter(Chat.updated_at >= after_timestamp)
+                except ValueError:
+                    log.warning(f"Invalid after_date format: {after_date_str}. Expected YYYY-MM-DD.")
+
+            if before_date_str:
+                try:
+                    # End of the day in UTC
+                    dt_before = datetime.strptime(before_date_str, "%Y-%m-%d")
+                    utc_dt_before = datetime(dt_before.year, dt_before.month, dt_before.day, 23, 59, 59, 999999, tzinfo=ZoneInfo("UTC"))
+                    before_timestamp = int(utc_dt_before.timestamp())
+                    query = query.filter(Chat.updated_at <= before_timestamp)
+                except ValueError:
+                    log.warning(f"Invalid before_date format: {before_date_str}. Expected YYYY-MM-DD.")
+
+            query = query.order_by(Chat.updated_at.desc())
 
             # Perform pagination at the SQL level
             all_chats = query.offset(skip).limit(limit).all()
 
-            log.info(f"The number of chats: {len(all_chats)}")
-
-            # Validate and return chats
+            log.info(f"Search found {len(all_chats)} chats.")
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
     def get_chats_by_folder_id_and_user_id(

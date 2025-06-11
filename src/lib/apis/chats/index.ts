@@ -245,12 +245,31 @@ export const getAllChats = async (token: string) => {
 	return res;
 };
 
-export const getChatListBySearchText = async (token: string, text: string, page: number = 1) => {
+export const getChatListBySearchText = async (
+	token: string,
+	searchParamsObj: {
+		text: string;
+		tags?: string[];
+		before?: string;
+		after?: string;
+	},
+	page: number = 1
+) => {
 	let error = null;
 
 	const searchParams = new URLSearchParams();
-	searchParams.append('text', text);
+	searchParams.append('text', searchParamsObj.text);
 	searchParams.append('page', `${page}`);
+
+	if (searchParamsObj.tags && searchParamsObj.tags.length > 0) {
+		searchParams.append('tags', searchParamsObj.tags.join(','));
+	}
+	if (searchParamsObj.before) {
+		searchParams.append('before_date', searchParamsObj.before);
+	}
+	if (searchParamsObj.after) {
+		searchParams.append('after_date', searchParamsObj.after);
+	}
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/search?${searchParams.toString()}`, {
 		method: 'GET',

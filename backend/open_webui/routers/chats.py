@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Optional
+from typing import Optional, List
 
 
 from open_webui.socket.main import get_event_emitter
@@ -17,7 +17,7 @@ from open_webui.models.folders import Folders
 from open_webui.config import ENABLE_ADMIN_CHAT_ACCESS, ENABLE_ADMIN_EXPORT
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status, Query
 from pydantic import BaseModel
 
 
@@ -159,29 +159,48 @@ async def import_chat(form_data: ChatImportForm, user=Depends(get_verified_user)
 
 @router.get("/search", response_model=list[ChatTitleIdResponse])
 async def search_user_chats(
-    text: str, page: Optional[int] = None, user=Depends(get_verified_user)
+    text: Optional[str] = Query(None),
+    page: Optional[int] = Query(1),
+    user=Depends(get_verified_user),
+    tags: Optional[List[str]] = Query(None),
+    before_date: Optional[str] = Query(None),
+    after_date: Optional[str] = Query(None),
 ):
-    if page is None:
-        page = 1
+    # Ensure page is at least 1 if provided, FastAPI Query(1) handles default
+    page = page if page is not None and page >= 1 else 1
 
-    limit = 60
+    CHAT_PAGE_SIZE = 60  # Assuming this constant is defined elsewhere or define it here
+    limit = CHAT_PAGE_SIZE
     skip = (page - 1) * limit
 
     chat_list = [
         ChatTitleIdResponse(**chat.model_dump())
         for chat in Chats.get_chats_by_user_id_and_search_text(
-            user.id, text, skip=skip, limit=limit
+            user.id,
+            search_text=text,
+            tags=tags,
+            before_date_str=before_date,
+            after_date_str=after_date,
+            skip=skip,
+            limit=limit,
         )
     ]
 
-    # Delete tag if no chat is found
-    words = text.strip().split(" ")
-    if page == 1 and len(words) == 1 and words[0].startswith("tag:"):
-        tag_id = words[0].replace("tag:", "")
-        if len(chat_list) == 0:
-            if Tags.get_tag_by_name_and_user_id(tag_id, user.id):
-                log.debug(f"deleting tag: {tag_id}")
-                Tags.delete_tag_by_name_and_user_id(tag_id, user.id)
+    # Re-evaluate tag deletion logic.
+    # This logic was originally tied to text-based tag search.
+    # If 'tags' list is provided explicitly, this might not be the desired behavior,
+    # or it should only apply if 'text' contained the tag and not the 'tags' param.
+    # For now, keeping it similar but checking if text is the source of the tag.
+    if text:
+        words = text.strip().split(" ")
+        if page == 1 and len(words) == 1 and words[0].startswith("tag:"):
+            tag_id_from_text = words[0].replace("tag:", "")
+            # Only delete if this tag was the *only* search criteria via text,
+            # and not part of the explicit tags list (or if tags list is empty).
+            if len(chat_list) == 0 and (not tags or tag_id_from_text not in tags):
+                if Tags.get_tag_by_name_and_user_id(tag_id_from_text, user.id):
+                    log.debug(f"deleting tag (from text search): {tag_id_from_text}")
+                    Tags.delete_tag_by_name_and_user_id(tag_id_from_text, user.id)
 
     return chat_list
 
