@@ -1,6 +1,7 @@
 // scripts/sync-translations.cjs
 // Ensures all translation.json files have the same set of keys as the MASTER_LOCALE (en-US),
 // preserving existing translations and removing keys not present in the master.
+// Also ensures consistent sorting of all keys, including nested ones, with lowercase before uppercase.
 
 const fs = require('fs');
 const path = require('path');
@@ -36,6 +37,7 @@ function recursiveMergeAddMissing(target, source, masterSource) {
                     changed = true;
                 }
                 // Recurse into the nested object
+                // Pass the corresponding part of masterSource for default values
                 if (recursiveMergeAddMissing(target[key], sourceValue, masterValue)) {
                     changed = true;
                 }
@@ -89,6 +91,34 @@ function pruneOrphanedKeys(targetNode, canonicalNode, localeName, currentPath = 
     return nodeChanged;
 }
 
+/**
+ * Recursively sorts the keys of an object alphabetically using a custom localeCompare for desired case order.
+ * @param {object} obj - The object whose keys need to be sorted.
+ * @returns {object} A new object with keys sorted recursively.
+ */
+function sortObjectKeysAlphabetically(obj) {
+    if (typeof obj !== 'object' || obj === null || Array.isArray(obj)) {
+        return obj; // Not an object, return as is
+    }
+
+    // Custom comparison function for sorting keys
+    // 'en' is a common locale. You can make this configurable if needed.
+    // sensitivity: 'case' ensures case differences are considered.
+    // caseFirst: 'lower' ensures lowercase letters come before uppercase when other criteria are equal.
+    const customKeySort = (keyA, keyB) => {
+        return keyA.localeCompare(keyB, 'en', { sensitivity: 'case', caseFirst: 'lower' });
+    };
+
+    const sortedKeys = Object.keys(obj).sort(customKeySort);
+    const newObj = {};
+
+    sortedKeys.forEach(key => {
+        newObj[key] = sortObjectKeysAlphabetically(obj[key]); // Recursively sort nested objects
+    });
+
+    return newObj;
+}
+
 
 function syncTranslations() {
     console.log('Starting translation synchronization...');
@@ -118,7 +148,8 @@ function syncTranslations() {
     }
 
     // The canonical structure is now strictly derived from the master locale
-    const canonicalStructure = masterLocaleData;
+    // We'll sort the master data immediately so it dictates the order for others
+    const canonicalStructure = sortObjectKeysAlphabetically(masterLocaleData);
 
     // Count keys in canonical structure for logging (optional, but good for feedback)
     const countKeys = (obj) => {
@@ -135,7 +166,7 @@ function syncTranslations() {
         return count;
     };
     const totalCanonicalKeys = countKeys(canonicalStructure);
-    console.log(`Master locale has ${totalCanonicalKeys} keys. All other files will be synced to this.`);
+    console.log(`Master locale has ${totalCanonicalKeys} keys. All other files will be synced to this structure and order.`);
 
     // Phase 2: Iterate through each locale and synchronize it with the canonical structure
     for (const dirName of localeDirs) {
@@ -172,17 +203,22 @@ function syncTranslations() {
             fileChangesMade = true;
         }
 
-        if (fileChangesMade) {
-            // Sort top-level keys for consistent output, then write
-            const sortedLocaleResult = {};
-            Object.keys(currentFileData).sort().forEach(key => {
-                sortedLocaleResult[key] = currentFileData[key];
-            });
+        // After all merges and prunes, re-sort the entire object to ensure consistent order
+        // This is always applied regardless of `fileChangesMade` because existing files
+        // might have incorrect sorting even if no keys were added/removed.
+        const sortedData = sortObjectKeysAlphabetically(currentFileData);
 
-            fs.writeFileSync(filePath, JSON.stringify(sortedLocaleResult, null, 2), 'utf8');
+        // To determine if a write is truly necessary, compare the stringified version
+        // of the current data with the sorted data. This avoids unnecessary file writes
+        // if only the in-memory representation was changed (e.g. by sorting an already sorted file).
+        const currentContentFormatted = JSON.stringify(currentFileData, null, 2);
+        const newContentFormatted = JSON.stringify(sortedData, null, 2);
+
+        if (fileChangesMade || currentContentFormatted !== newContentFormatted) {
+            fs.writeFileSync(filePath, newContentFormatted, 'utf8');
             console.log(`Updated ${dirName}/translation.json.`);
         } else {
-            console.log(`${dirName}/translation.json is already in sync.`);
+            console.log(`${dirName}/translation.json is already in sync (keys and order).`);
         }
     }
 
