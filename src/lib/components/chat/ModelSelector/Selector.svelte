@@ -349,13 +349,13 @@
 				</div>
 			{/if}
 
-			<div class="px-[3px] my-2 max-h-64 overflow-y-auto custom-scrollbar group">
+			<div class="px-[3px] my-2 max-h-64 overflow-y-auto custom-scrollbar">
 				{#each filteredItems as item, index}
 					<button
 						aria-label="model-item"
-						class="flex w-full text-left line-clamp-1 select-none items-center rounded-button py-[5px] px-2 text-sm text-lightGray-100 dark:text-customGray-100 outline-none transition-all duration-75 hover:bg-lightGray-700 dark:hover:bg-customGray-950 dark:hover:text-white rounded-lg cursor-pointer data-[highlighted]:bg-muted {index ===
-						selectedModelIdx
-							? 'bg-lightGray-700 dark:bg-customGray-900 group-hover:bg-transparent'
+						class="flex w-full text-left line-clamp-1 select-none items-center rounded-button py-[5px] px-2 text-sm text-lightGray-100 dark:text-customGray-100 outline-none transition-all duration-75 hover:bg-lightGray-700 dark:hover:bg-customGray-950 dark:hover:text-white rounded-lg cursor-pointer {value ===
+						item.value
+							? 'bg-lightGray-700 dark:bg-customGray-950'
 							: ''}"
 						data-arrow-selected={index === selectedModelIdx}
 						on:mouseenter={() => (hoveredItem = item)}
@@ -395,9 +395,9 @@
 											<span class="text-xs">{item.label}</span>
 											<!-- </Tooltip> -->
 										</div>
-										<div class="text-2xs ml-7 text-[#808080] leading-normal">
+										<!-- <div class="text-2xs ml-7 text-[#808080] leading-normal">
 											{modelsInfo?.[item.label]?.description}
-										</div>
+										</div> -->
 									</div>
 									<!-- {#if item.model.owned_by === 'ollama' && (item.model.ollama?.details?.parameter_size ?? '') !== ''}
 										<div class="flex ml-1 items-center translate-y-[0.5px]">
@@ -520,6 +520,11 @@
 					<div
 						class="absolute px-3 py-1 left-full ml-1 top-0 w-52 p-2 rounded-xl border border-lightGray-400 bg-lightGray-550 dark:border-customGray-700 dark:bg-customGray-900 text-sm text-gray-800 dark:text-white z-50"
 					>
+						<div class="py-1.5 border-b dark:border-customGray-700 last:border-b-0">
+							<p class="text-xs dark:text-customGray-100">
+								{modelsInfo?.[hoveredItem?.label]?.description}
+							</p>
+						</div>
 						{#if modelsInfo?.[hoveredItem?.label]?.organization}
 							<div class="py-1.5 border-b dark:border-customGray-700 last:border-b-0">
 								<p class="text-xs dark:text-customGray-100">
