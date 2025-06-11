@@ -1,4 +1,6 @@
 <script lang="ts">
+	import type { Readable } from 'svelte/store';
+	import type { I18Next } from '$lib/IONOS/i18next.d.ts';
 	import { createEventDispatcher, getContext } from 'svelte';
 	import { formatFileSize } from '$lib/utils';
 
@@ -7,7 +9,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import XMark from '$lib/IONOS/components/icons/XMark.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<Readable<I18Next>>('i18n');
 	const dispatch = createEventDispatcher();
 
 	export let className = 'w-60';
