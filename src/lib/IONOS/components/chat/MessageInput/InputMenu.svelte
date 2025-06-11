@@ -1,4 +1,7 @@
 <script lang="ts">
+	import type { Readable } from 'svelte/store';
+	import type { I18Next } from '$lib/IONOS/i18next.d.ts';
+
 	import { DropdownMenu } from 'bits-ui';
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { getContext, tick, createEventDispatcher } from 'svelte';
@@ -13,7 +16,7 @@
 	import Stacks from '$lib/IONOS/components/icons/Stacks.svelte';
 	import Upload from '$lib/IONOS/components/icons/Upload.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<Readable<I18Next>>('i18n');
 	const dispatch = createEventDispatcher();
 
 	export let uploadFilesHandler: () => void;
