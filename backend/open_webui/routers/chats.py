@@ -186,11 +186,6 @@ async def search_user_chats(
         )
     ]
 
-    # Re-evaluate tag deletion logic.
-    # This logic was originally tied to text-based tag search.
-    # If 'tags' list is provided explicitly, this might not be the desired behavior,
-    # or it should only apply if 'text' contained the tag and not the 'tags' param.
-    # For now, keeping it similar but checking if text is the source of the tag.
     if text:
         words = text.strip().split(" ")
         if page == 1 and len(words) == 1 and words[0].startswith("tag:"):
