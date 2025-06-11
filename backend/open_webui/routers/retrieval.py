@@ -359,7 +359,7 @@ async def update_embedding_config(
                     rag_config["embedding_model"],
                 )
             
-                request.app.state.EMBEDDING_FUNCTION["embedding_model"] = get_embedding_function(
+                request.app.state.EMBEDDING_FUNCTION[rag_config["embedding_model"]] = get_embedding_function(
                     rag_config["embedding_engine"],
                     rag_config["embedding_model"],
                     request.app.state.ef[rag_config["embedding_model"]],
