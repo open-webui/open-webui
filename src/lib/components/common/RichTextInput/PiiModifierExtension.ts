@@ -90,6 +90,31 @@ function findWordAt(doc: ProseMirrorNode, pos: number): { from: number; to: numb
 
 
 
+// Predefined PII labels for autocompletion (from SPACY_LABEL_MAPPINGS values)
+const PREDEFINED_LABELS = [
+	'ADDRESS', 'BANK_ACCOUNT_NUMBER', 'ID_NUMBER', 'HEALTH_DATA', 'LOCATION', 
+	'NUMBER', 'TAX_NUMBER', 'CREDIT_CARD', 'DATE', 'SIGNATURE', 'EMAIL', 
+	'IBAN', 'HEALTH_ID', 'IPv4v6', 'PHONENUMBER', 'LICENSE_PLATE', 'CURRENCY', 
+	'ORGANISATION', 'PASSPORT', 'PERSON', 'SSN'
+];
+
+// Find best matching label for inline completion
+function findBestMatch(input: string, labels: string[]): string | null {
+	if (!input) return null;
+	
+	const upperInput = input.toUpperCase();
+	
+	// Find exact prefix match first
+	const exactMatch = labels.find(label => label.startsWith(upperInput));
+	if (exactMatch) return exactMatch;
+	
+	// Find partial match
+	const partialMatch = labels.find(label => label.includes(upperInput));
+	if (partialMatch) return partialMatch;
+	
+	return null;
+}
+
 // Create hover menu element
 function createHoverMenu(
 	wordInfo: { word: string; from: number; to: number; x: number; y: number },
@@ -158,7 +183,11 @@ function createHoverMenu(
 			font-size: 12px;
 			color: #c53030;
 		`;
-		ignoreBtn.addEventListener('click', onIgnore);
+		ignoreBtn.addEventListener('click', (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			onIgnore();
+		});
 		menu.appendChild(ignoreBtn);
 	}
 
@@ -168,11 +197,12 @@ function createHoverMenu(
 		display: flex;
 		flex-direction: column;
 		gap: 6px;
+		position: relative;
 	`;
 
 	const labelInput = document.createElement('input');
 	labelInput.type = 'text';
-	labelInput.placeholder = 'Enter custom label (e.g., CASENUMBER)';
+	labelInput.value = 'CUSTOM';
 	labelInput.style.cssText = `
 		width: 100%;
 		padding: 6px 8px;
@@ -180,7 +210,52 @@ function createHoverMenu(
 		border-radius: 4px;
 		font-size: 12px;
 		box-sizing: border-box;
+		color: #999;
 	`;
+
+	let isDefaultValue = true;
+
+	// Handle focus/click - clear default value
+	const handleInputFocus = (e: Event) => {
+		e.stopPropagation(); // Prevent click from bubbling up and closing menu
+		if (isDefaultValue) {
+			labelInput.value = '';
+			labelInput.style.color = '#333';
+			isDefaultValue = false;
+		}
+	};
+
+	labelInput.addEventListener('focus', handleInputFocus);
+	labelInput.addEventListener('click', handleInputFocus);
+
+	// Handle blur - restore default if empty
+	labelInput.addEventListener('blur', () => {
+		if (labelInput.value.trim() === '') {
+			labelInput.value = 'CUSTOM';
+			labelInput.style.color = '#999';
+			isDefaultValue = true;
+		}
+	});
+
+	// Handle input for inline autocompletion
+	labelInput.addEventListener('input', (e) => {
+		e.stopPropagation();
+		const inputValue = labelInput.value;
+		
+		// Only autocomplete if not default value and user has typed something
+		if (!isDefaultValue && inputValue) {
+			const bestMatch = findBestMatch(inputValue, PREDEFINED_LABELS);
+			
+			if (bestMatch && bestMatch !== inputValue.toUpperCase()) {
+				// Complete the text inline
+				const cursorPos = labelInput.selectionStart || 0;
+				labelInput.value = bestMatch;
+				
+				// Select the completed portion
+				labelInput.setSelectionRange(cursorPos, bestMatch.length);
+			}
+		}
+	});
 
 	const maskBtn = document.createElement('button');
 	maskBtn.textContent = 'Mark as PII';
@@ -207,8 +282,10 @@ function createHoverMenu(
 	});
 
 	// Handle mask button click
-	maskBtn.addEventListener('click', () => {
-		const label = labelInput.value.trim().toUpperCase();
+	maskBtn.addEventListener('click', (e) => {
+		e.preventDefault();
+		e.stopPropagation();
+		const label = isDefaultValue ? 'CUSTOM' : labelInput.value.trim().toUpperCase();
 		if (label) {
 			onMask(label);
 		} else {
@@ -223,11 +300,18 @@ function createHoverMenu(
 
 	// Handle Enter key in input
 	labelInput.addEventListener('keydown', (e) => {
+		e.stopPropagation(); // Prevent keydown from bubbling up
 		if (e.key === 'Enter') {
-			const label = labelInput.value.trim().toUpperCase();
+			e.preventDefault();
+			const label = isDefaultValue ? 'CUSTOM' : labelInput.value.trim().toUpperCase();
 			if (label) {
 				onMask(label);
 			}
+		} else if (e.key === 'Tab') {
+			// Accept the current autocompletion on Tab
+			e.preventDefault();
+			// The text is already completed, just move cursor to end
+			labelInput.setSelectionRange(labelInput.value.length, labelInput.value.length);
 		}
 	});
 
@@ -235,8 +319,8 @@ function createHoverMenu(
 	labelSection.appendChild(maskBtn);
 	menu.appendChild(labelSection);
 
-	// Auto-focus input
-	setTimeout(() => labelInput.focus(), 100);
+	// Don't auto-focus to allow users to see the "CUSTOM" placeholder first
+	// Users can click to focus when ready
 
 	// Add hover protection to keep menu open
 	menu.addEventListener('mouseenter', () => {
@@ -244,11 +328,25 @@ function createHoverMenu(
 		console.log('PiiModifierExtension: Mouse entered menu, keeping it open');
 	});
 
-	menu.addEventListener('mouseleave', () => {
-		// Hide menu when mouse leaves it
+	menu.addEventListener('mouseleave', (e) => {
+		// Only hide menu if not moving to a child element (like the dropdown)
+		const relatedTarget = e.relatedTarget as HTMLElement;
+		if (relatedTarget && menu.contains(relatedTarget)) {
+			return; // Don't hide if moving to a child element
+		}
+		
+		// Hide menu when mouse leaves it with a longer delay
 		setTimeout(() => {
-			menu.remove();
-		}, 200); // Small delay to allow moving back to menu
+			// Double-check the menu still exists and isn't being interacted with
+			if (menu && document.body.contains(menu)) {
+				const activeElement = document.activeElement;
+				const isInputFocused = activeElement && menu.contains(activeElement);
+				
+				if (!isInputFocused) {
+					menu.remove();
+				}
+			}
+		}, 500); // Longer delay to allow interaction
 	});
 
 	return menu;
@@ -376,10 +474,15 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 
 			props: {
 				handleClick(view, pos, event) {
-					// Hide hover menu on click
+					// Only hide hover menu if clicking outside of it
 					if (hoverMenuElement) {
-						hoverMenuElement.remove();
-						hoverMenuElement = null;
+						const target = event.target as HTMLElement;
+						const isClickInsideMenu = hoverMenuElement.contains(target);
+						
+						if (!isClickInsideMenu) {
+							hoverMenuElement.remove();
+							hoverMenuElement = null;
+						}
 					}
 
 					return false;
@@ -387,8 +490,13 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 
 				handleDOMEvents: {
 					mousemove: (view, event) => {
-						// Don't show menu if hovering over existing menu
+						// Don't show menu if hovering over existing menu or if menu is being interacted with
 						if (hoverMenuElement && hoverMenuElement.contains(event.target as Node)) {
+							// Clear any pending timeout to keep menu stable
+							if (hoverTimeout) {
+								clearTimeout(hoverTimeout);
+								hoverTimeout = null;
+							}
 							return;
 						}
 
