@@ -30,7 +30,7 @@
 		height: var(--spinner-size);
 		border-radius: 50%;
 		background: radial-gradient(farthest-side, #1474c4 calc(100% - var(--component-size)), #0000) top/var(--component-size) var(--component-size) no-repeat, conic-gradient(#0000 30%, #1474c4);
-		-webkit-mask: radial-gradient(farthest-side, #0000 calc(100% - var(--component-size)), #000 0);
+		mask: radial-gradient(farthest-side, #0000 calc(100% - var(--component-size)), #000 0);
 		animation: spinner-c7wet2 1s infinite linear;
 	}
 
