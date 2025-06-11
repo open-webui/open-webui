@@ -490,6 +490,8 @@
 				draggable="false"
 				on:click={async () => {
 					selectedChatId = null;
+
+					await temporaryChatEnabled.set(false);
 					await goto('/');
 					const newChatButton = document.getElementById('new-chat-button');
 					setTimeout(() => {

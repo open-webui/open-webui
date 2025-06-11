@@ -432,30 +432,19 @@
 		}
 	};
 
+	let pageSubscribe = null;
 	onMount(async () => {
 		loading = true;
 		console.log('mounted');
 		window.addEventListener('message', onMessageHandler);
 		$socket?.on('chat-events', chatEventHandler);
 
-		page.subscribe((page) => {
-			if (page.url.pathname === '/') {
+		pageSubscribe = page.subscribe(async (p) => {
+			if (p.url.pathname === '/') {
+				await tick();
 				initNewChat();
 			}
 		});
-
-		if (!$chatId) {
-			chatIdUnsubscriber = chatId.subscribe(async (value) => {
-				if (!value) {
-					await tick(); // Wait for DOM updates
-					await initNewChat();
-				}
-			});
-		} else {
-			if ($temporaryChatEnabled) {
-				await goto('/');
-			}
-		}
 
 		if (localStorage.getItem(`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`)) {
 			prompt = '';
@@ -515,6 +504,7 @@
 	});
 
 	onDestroy(() => {
+		pageSubscribe();
 		chatIdUnsubscriber?.();
 		window.removeEventListener('message', onMessageHandler);
 		$socket?.off('chat-events', chatEventHandler);
