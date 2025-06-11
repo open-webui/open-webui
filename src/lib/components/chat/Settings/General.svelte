@@ -404,9 +404,9 @@
 				</div>
 			</div>
 
-			<div class="flex gap-x-2.5">
+			<div class="flex gap-x-2.5 min-h-[90px]">
 				<div on:click={() => themeChangeHandler('system')} class="relative rounded-lg {selectedTheme === "system" ? "border-2 border-[#305BE4]" : ""}">
-					<img class="rounded-lg max-w-full" src="/system.png" alt="system theme"/>
+					<img class="rounded-lg max-w-full h-full" src="/system.png" alt="system theme"/>
 					<div class="flex items-center pl-2.5 absolute bottom-[0.625rem] text-customGray-550 text-xs">
 						<SystemIcon className="size-3.5 mr-1"/>
 						{#if ($mobile)}
@@ -418,14 +418,14 @@
 					</div>
 				</div>
 				<div on:click={() => themeChangeHandler('light')}  class="relative rounded-lg {selectedTheme === "light" ? "border-2 border-[#305BE4]" : ""}">
-					<img class="rounded-lg max-w-full" src="/light.png" alt="light theme"/>
+					<img class="rounded-lg max-w-full h-full" src="/light.png" alt="light theme"/>
 					<div class="flex items-center pl-2.5 absolute bottom-[0.625rem] text-customGray-550 text-xs">
 						<LightIcon className="size-3.5 mr-1"/>
 						{$i18n.t('Light')}
 					</div>
 				</div>
 				<div on:click={() => themeChangeHandler('dark')} class="relative rounded-lg {selectedTheme === "dark" ? "border-2 border-[#305BE4]" : ""}">
-					<img class="rounded-lg max-w-full" src="/dark.png" alt="dark theme"/>
+					<img class="rounded-lg max-w-full h-full" src="/dark.png" alt="dark theme"/>
 					<div class="flex items-center pl-2.5 absolute bottom-[0.625rem] text-customGray-550 text-xs">
 						<DarkIcon className="size-3.5 mr-1"/>
 						{$i18n.t('Dark')}
