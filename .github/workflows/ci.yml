@@ -1,0 +1,24 @@
+name: Node.js CI (TechSci AI Hub)
+
+on: [push, pull_request]
+
+jobs:
+  build_and_lint:
+    name: Build and Lint
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+    - name: Use Node.js 20
+      uses: actions/setup-node@v3
+      with:
+        node-version: '20'
+        cache: 'pnpm'
+    - name: Install pnpm
+      run: npm install -g pnpm # Ensures pnpm is available
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile
+    - name: Lint project
+      run: pnpm lint
+    - name: Build project
+      run: pnpm build # Assumes a build script exists in package.json

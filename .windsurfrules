@@ -1,0 +1,13 @@
+container:
+  image: node:20-alpine
+scripts:
+  lint: |
+    pnpm install --frozen-lockfile
+    pnpm lint
+  test: |
+    pnpm test
+  dev: |
+    pnpm dev
+protectedBranches:
+  - main
+  - rebrand/**

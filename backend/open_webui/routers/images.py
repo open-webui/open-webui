@@ -483,10 +483,10 @@ async def image_generations(
             headers["Content-Type"] = "application/json"
 
             if ENABLE_FORWARD_USER_INFO_HEADERS:
-                headers["X-TechSecAI-Hub-User-Name"] = user.name
-                headers["X-TechSecAI-Hub-User-Id"] = user.id
-                headers["X-TechSecAI-Hub-User-Email"] = user.email
-                headers["X-TechSecAI-Hub-User-Role"] = user.role
+                headers["X-TechSci-AI-Hub-User-Name"] = user.name
+                headers["X-TechSci-AI-Hub-User-Id"] = user.id
+                headers["X-TechSci-AI-Hub-User-Email"] = user.email
+                headers["X-TechSci-AI-Hub-User-Role"] = user.role
 
             data = {
                 "model": (
@@ -679,3 +679,5 @@ async def image_generations(
             if "error" in data:
                 error = data["error"]["message"]
         raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT(error))
+
+[end of backend/open_webui/routers/images.py]

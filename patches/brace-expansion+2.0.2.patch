@@ -1,0 +1,11 @@
+# This is a placeholder for the brace-expansion@2.0.2 ReDoS hot-patch.
+# The actual diff content needs to be sourced from the security advisory
+# or generated after manually fixing the vulnerability in node_modules.
+# Example structure (actual diff will vary):
+#
+# diff --git a/node_modules/brace-expansion/index.js b/node_modules/brace-expansion/index.js
+# index XXXXXXX..YYYYYYY 100644
+# --- a/node_modules/brace-expansion/index.js
+# +++ b/node_modules/brace_expansion/index.js
+# @@ -L,C +L,C @@
+#  actual code changes here

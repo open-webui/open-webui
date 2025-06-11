@@ -11,7 +11,7 @@ def _assert_user(data, id, **kwargs):
     assert user is not None
     comparison_data = {
         "name": f"user {id}",
-        "email": f"user{id}@techsecaihub.com",
+        "email": f"user{id}@techsciaihub.com",
         "profile_image_url": f"/user{id}.png",
         "role": "user",
         **kwargs,
@@ -34,14 +34,14 @@ class TestUsers(AbstractPostgresTest):
         self.users.insert_new_user(
             id="1",
             name="user 1",
-            email="user1@techsecaihub.com",
+            email="user1@techsciaihub.com",
             profile_image_url="/user1.png",
             role="user",
         )
         self.users.insert_new_user(
             id="2",
             name="user 2",
-            email="user2@techsecaihub.com",
+            email="user2@techsciaihub.com",
             profile_image_url="/user2.png",
             role="user",
         )
@@ -131,7 +131,7 @@ class TestUsers(AbstractPostgresTest):
                 self.create_url("/2/update"),
                 json={
                     "name": "user 2 updated",
-                    "email": "user2-updated@techsecaihub.com",
+                    "email": "user2-updated@techsciaihub.com",
                     "profile_image_url": "/user2-updated.png",
                 },
             )
@@ -149,7 +149,7 @@ class TestUsers(AbstractPostgresTest):
             "2",
             role="admin",
             name="user 2 updated",
-            email="user2-updated@techsecaihub.com",
+            email="user2-updated@techsciaihub.com",
             profile_image_url="/user2-updated.png",
         )
 
