@@ -100,9 +100,6 @@
 		page += 1;
 
 		let newChatList = [];
-		// parsedQuery should already be set by searchHandler or a previous loadMoreChats
-		// No need to parse again unless query string itself could change independently,
-		// but it's bound to SearchInput, which triggers searchHandler on input.
 
 		if (query.trim()) {
 			newChatList = await getChatListBySearchText(localStorage.token, parsedQuery, page);
@@ -119,15 +116,6 @@
 
 		chatListLoading = false;
 	};
-
-	// Remove init and onMount, searchHandler is called on input
-	// const init = () => {
-	// 	searchHandler();
-	// };
-
-	// onMount(() => {
-	// 	init();
-	// });
 </script>
 
 <Modal size="md" bind:show>
