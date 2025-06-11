@@ -158,23 +158,23 @@
 				.pii-highlight.pii-masked {
 					color: #15803d;
 					background-color: rgba(34, 197, 94, 0.2);
-					border-bottom: 1px dashed #15803d;
+					border-bottom: 2px dashed #15803d;
 				}
 				
 				.pii-highlight.pii-masked:hover {
 					background-color: rgba(34, 197, 94, 0.3);
-					border-bottom: 2px dashed #15803d;
+					border-bottom: 3px dashed #15803d;
 				}
 				
-				/* Unmasked entities - red background, dashed red underline */
+				/* Unmasked entities - red background, solid red underline */
 				.pii-highlight.pii-unmasked {
 					background-color: rgba(239, 68, 68, 0.2);
-					border-bottom: 1px dashed #dc2626;
+					border-bottom: 1px solid #dc2626;
 				}
 				
 				.pii-highlight.pii-unmasked:hover {
 					background-color: rgba(239, 68, 68, 0.3);
-					border-bottom: 2px dashed #dc2626;
+					border-bottom: 2px solid #dc2626;
 				}
 				
 				/* Modifier-affected text - yellow font, keeps other formatting */
