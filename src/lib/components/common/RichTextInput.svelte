@@ -86,6 +86,25 @@
 	let currentModifiers: PiiModifier[] = [];
 	let previousModifiersLength = 0;
 
+	// Generate a content-based hash for modifiers to detect actual changes
+	// This is much smarter than just checking array length because it detects:
+	// - Changes in modifier type (ignore ↔ mask)
+	// - Changes in entity text
+	// - Changes in labels
+	// - Changes in positions (from/to)
+	// - Addition/removal of specific modifiers
+	const getModifiersHash = (modifiers: PiiModifier[]): string => {
+		if (modifiers.length === 0) return '';
+		
+		// Create a hash based on modifier content, not just length
+		// Sort by ID to ensure consistent ordering regardless of array order
+		const sortedModifiers = [...modifiers].sort((a, b) => a.id.localeCompare(b.id));
+		
+		return sortedModifiers
+			.map(m => `${m.type}:${m.entity}:${m.label || ''}:${m.from}:${m.to}`)
+			.join('|');
+	};
+
 	// PII Session Manager for conversation state
 	let piiSessionManager = PiiSessionManager.getInstance();
 
@@ -527,14 +546,13 @@
 		}
 	};
 
-	// Reactive statement to trigger PII detection when modifiers change
-	$: if (editor && enablePiiDetection && enablePiiModifiers) {
-		// Only trigger if modifiers actually changed (not just on every render)
+	// Reactive statement to trigger PII detection when modifiers change  
+	$: if (editor && editor.view && enablePiiDetection && enablePiiModifiers) {
+		// TEMPORARY: Revert to original length-based approach to debug API issue
 		if (currentModifiers.length !== previousModifiersLength && currentModifiers.length > 0) {
-			console.log('RichTextInput: Modifiers changed, triggering PII detection', {
-				currentLength: currentModifiers.length,
+			console.log('RichTextInput: Modifiers changed (length-based), triggering PII detection', {
 				previousLength: previousModifiersLength,
-				modifiers: currentModifiers
+				currentLength: currentModifiers.length
 			});
 			previousModifiersLength = currentModifiers.length;
 			editor.commands.triggerDetectionForModifiers();
@@ -547,13 +565,14 @@
 		currentModifiers = modifiers;
 		onPiiModifiersChanged(modifiers);
 		
-		// If we went from no modifiers to having modifiers, or modifiers changed, trigger detection
+		// TEMPORARY: Revert to original length-based logic to debug API issue
 		if ((wasEmpty && modifiers.length > 0) || modifiers.length !== previousModifiersLength) {
 			console.log('RichTextInput: Modifier change detected in handler', {
+				wasEmpty,
 				previousLength: previousModifiersLength,
-				newLength: modifiers.length,
-				wasEmpty
+				newLength: modifiers.length
 			});
+			
 			// Update the tracking variable
 			previousModifiersLength = modifiers.length;
 			
