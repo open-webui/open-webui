@@ -39,5 +39,29 @@ export default defineConfig({
 	},
 	worker: {
 		format: 'es'
+	},
+	server: {
+		host: '0.0.0.0',
+		port: 5173,
+		watch: {
+			usePolling: true,
+			interval: 1000
+		},
+		hmr: {
+			port: 5173,
+			host: '0.0.0.0'
+		},
+		proxy: {
+			'/api': {
+				target: 'http://localhost:3100',
+				changeOrigin: true,
+				secure: false
+			},
+			'/ws': {
+				target: 'ws://localhost:3100',
+				ws: true,
+				changeOrigin: true
+			}
+		}
 	}
 });
