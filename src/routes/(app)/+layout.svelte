@@ -1,4 +1,5 @@
 <script lang="ts">
+	import '$lib/utils/polyfill';
 	import { toast } from 'svelte-sonner';
 	import { onMount, tick, getContext } from 'svelte';
 	import { openDB, deleteDB } from 'idb';

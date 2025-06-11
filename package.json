@@ -22,6 +22,8 @@
 		"pyodide:fetch": "node scripts/prepare-pyodide.js"
 	},
 	"devDependencies": {
+		"@csstools/postcss-color-mix-function": "^3.0.10",
+		"@csstools/postcss-oklab-function": "^4.0.10",
 		"@sveltejs/adapter-auto": "3.2.2",
 		"@sveltejs/adapter-static": "^3.0.2",
 		"@sveltejs/kit": "^2.5.20",
@@ -31,6 +33,7 @@
 		"@tailwindcss/typography": "^0.5.13",
 		"@typescript-eslint/eslint-plugin": "^8.31.1",
 		"@typescript-eslint/parser": "^8.31.1",
+		"autoprefixer": "^10.4.21",
 		"cypress": "^13.15.0",
 		"eslint": "^8.56.0",
 		"eslint-config-prettier": "^9.1.0",
@@ -38,6 +41,10 @@
 		"eslint-plugin-svelte": "^2.43.0",
 		"i18next-parser": "^9.0.1",
 		"postcss": "^8.4.31",
+		"postcss-media-minmax": "^5.0.0",
+		"postcss-nesting": "^13.0.2",
+		"postcss-relative-opacity": "^0.1.0",
+		"postcss-value-parser": "^4.2.0",
 		"prettier": "^3.3.3",
 		"prettier-plugin-svelte": "^3.2.6",
 		"sass-embedded": "^1.81.0",
