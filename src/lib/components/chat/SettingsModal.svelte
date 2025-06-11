@@ -599,6 +599,7 @@
 								<div class=" self-center mr-2">
 									<svg
 										xmlns="http://www.w3.org/2000/svg"
+										aria-hidden="true"
 										viewBox="0 0 20 20"
 										fill="currentColor"
 										class="w-4 h-4"
@@ -634,6 +635,7 @@
 								<div class=" self-center mr-2">
 									<svg
 										xmlns="http://www.w3.org/2000/svg"
+										aria-hidden="true"
 										viewBox="0 0 16 16"
 										fill="currentColor"
 										class="w-4 h-4"
@@ -670,6 +672,7 @@
 									<div class=" self-center mr-2">
 										<svg
 											xmlns="http://www.w3.org/2000/svg"
+											aria-hidden="true"
 											viewBox="0 0 16 16"
 											fill="currentColor"
 											class="w-4 h-4"
@@ -705,6 +708,7 @@
 									<div class=" self-center mr-2">
 										<svg
 											xmlns="http://www.w3.org/2000/svg"
+											aria-hidden="true"
 											viewBox="0 0 24 24"
 											fill="currentColor"
 											class="size-4"
@@ -765,6 +769,7 @@
 								<div class=" self-center mr-2">
 									<svg
 										xmlns="http://www.w3.org/2000/svg"
+										aria-hidden="true"
 										viewBox="0 0 16 16"
 										fill="currentColor"
 										class="w-4 h-4"
@@ -801,6 +806,7 @@
 								<div class=" self-center mr-2">
 									<svg
 										xmlns="http://www.w3.org/2000/svg"
+										aria-hidden="true"
 										viewBox="0 0 16 16"
 										fill="currentColor"
 										class="w-4 h-4"
@@ -836,6 +842,7 @@
 								<div class=" self-center mr-2">
 									<svg
 										xmlns="http://www.w3.org/2000/svg"
+										aria-hidden="true"
 										viewBox="0 0 16 16"
 										fill="currentColor"
 										class="w-4 h-4"
@@ -871,6 +878,7 @@
 								<div class=" self-center mr-2">
 									<svg
 										xmlns="http://www.w3.org/2000/svg"
+										aria-hidden="true"
 										viewBox="0 0 20 20"
 										fill="currentColor"
 										class="w-4 h-4"
@@ -906,9 +914,9 @@
 						<div class=" self-center mr-2">
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
+								aria-hidden="true"
 								viewBox="0 0 24 24"
 								fill="currentColor"
-								aria-hidden="true"
 								class="size-4"
 							>
 								<path
