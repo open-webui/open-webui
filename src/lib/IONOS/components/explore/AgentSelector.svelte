@@ -13,11 +13,9 @@
 <div class="flex flex-row gap-4 items-center justify-center flex-wrap">
 	{#each $agents as { id, name, subtitle, description }}
 		<div class="min-h-96 flex items-center">
-			<div
+			<button
 				class="flex-0 group w-56 hover:pb-0 duration-[500ms] transition-[padding] pb-4 mx-6 bg-white text-blue-800 text-left rounded-2xl shadow-xl transition group cursor-pointer"
 				data-id={id}
-				tabindex="0"
-				role="button"
 				on:click={() => dispatch('select', id)}
 			>
 				<div class="overflow-hidden transition-[width,height] duration-[500ms] h-36 rounded-t-2xl">
@@ -40,8 +38,8 @@
 						</p>
 						<div class="mt-4 text-center">
 							<Button
+								interactive={false}
 								name={id}
-								on:click={() => dispatch('select', id)}
 								className="px-4 py-1"
 								type={ButtonType.special}
 							>
@@ -53,7 +51,7 @@
 						</div>
 					</div>
 				</div>
-			</div>
+			</button>
 		</div>
 	{/each}
 </div>
