@@ -1,5 +1,4 @@
-#!/bin/zsh
-
+#!/bin/bash
 
 # Determine o diretório do script atual
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
@@ -31,19 +30,18 @@ if [ -z "$VECTOR_DB" ] || [ -z "$S3_ENDPOINT_URL" ]; then
 fi
 
 
-PORT="${PORT:-3030}" # This line can stay, or PORT could also be in config.env
-uvicorn open_webui.main:app --port $PORT --host 0.0.0.0 --log-level=info --forwarded-allow-ips '*' --reload &
-FASTAPI_PID=$!
+
+# PORT="${PORT:-3030}"
+# uvicorn open_webui.main:app --port $PORT --host 0.0.0.0 --log-level=info --forwarded-allow-ips '*' --reload  &
+# FASTAPI_PID=$!
 
 # sleep 10
-# export CELERY_BROKER_URL=amqp://guest:guest@localhost:5672//
-# echo "Iniciando o Celery worker..."
-# celery -A open_webui.celery_worker worker --loglevel=INFO --concurrency=10 &
-# CELERY_PID=$!
+export DATA_DIR="$SCRIPT_DIR/data"
 
-trap "echo 'Stopping FastAPI server...'; kill $FASTAPI_PID" SIGINT SIGTERM
-# If you uncomment the Celery part, you'll want to trap its PID too:
-# trap "echo 'Stopping servers...'; kill $FASTAPI_PID $CELERY_PID" SIGINT SIGTERM
 
-wait $FASTAPI_PID
-# wait $CELERY_PID # If Celery is used
+echo "Iniciando o Celery worker..."
+celery -A open_webui.celery_worker worker --loglevel=INFO --concurrency=10 &
+CELERY_PID=$!
+
+trap "kill $CELERY_PID" SIGINT SIGTERM
+wait

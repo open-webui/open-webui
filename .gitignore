@@ -310,3 +310,7 @@ cypress/screenshots
 
 # Composes folder
 composes/
+
+# Develop openweb paths
+backend/data-celery
+backend/data
