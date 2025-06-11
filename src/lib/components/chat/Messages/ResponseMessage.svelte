@@ -594,30 +594,34 @@
 					padding: 1px 2px;
 					position: relative;
 					transition: all 0.2s ease;
-					border: 1px solid transparent;
+					cursor: pointer;
 				}
 				
 				.pii-highlight:hover {
-					border: 1px solid #333;
 					box-shadow: 0 1px 3px rgba(0,0,0,0.2);
 				}
 				
-				/* Masked entities - green background */
+				/* Masked entities - dark green font, green background, green dashed underline */
 				.pii-highlight.pii-masked {
+					color: #15803d;
 					background-color: rgba(34, 197, 94, 0.2);
+					border-bottom: 1px dashed #15803d;
 				}
 				
 				.pii-highlight.pii-masked:hover {
 					background-color: rgba(34, 197, 94, 0.3);
+					border-bottom: 2px dashed #15803d;
 				}
 				
-				/* Unmasked entities - red background */
+				/* Unmasked entities - red background, dashed red underline */
 				.pii-highlight.pii-unmasked {
 					background-color: rgba(239, 68, 68, 0.2);
+					border-bottom: 1px dashed #dc2626;
 				}
 				
 				.pii-highlight.pii-unmasked:hover {
 					background-color: rgba(239, 68, 68, 0.3);
+					border-bottom: 2px dashed #dc2626;
 				}
 			`;
 			document.head.appendChild(styleElement);

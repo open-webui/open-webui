@@ -133,10 +133,36 @@
 	:global(.pii-highlight) {
 		cursor: pointer;
 		transition: all 0.2s ease;
+		border-radius: 3px;
+		padding: 1px 2px;
+		position: relative;
 	}
 
 	:global(.pii-highlight:hover) {
 		transform: translateY(-1px);
 		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+	}
+
+	/* Masked entities - dark green font, green background, green dashed underline */
+	:global(.pii-highlight.pii-masked) {
+		color: #15803d;
+		background-color: rgba(34, 197, 94, 0.2);
+		border-bottom: 1px dashed #15803d;
+	}
+
+	:global(.pii-highlight.pii-masked:hover) {
+		background-color: rgba(34, 197, 94, 0.3);
+		border-bottom: 2px dashed #15803d;
+	}
+
+	/* Unmasked entities - red background, dashed red underline */
+	:global(.pii-highlight.pii-unmasked) {
+		background-color: rgba(239, 68, 68, 0.2);
+		border-bottom: 1px dashed #dc2626;
+	}
+
+	:global(.pii-highlight.pii-unmasked:hover) {
+		background-color: rgba(239, 68, 68, 0.3);
+		border-bottom: 2px dashed #dc2626;
 	}
 </style>
