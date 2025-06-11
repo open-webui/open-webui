@@ -114,10 +114,11 @@ function mapPiiEntitiesToProseMirror(
 	}));
 }
 
-// Create decorations for PII entities
-function createPiiDecorations(entities: ExtendedPiiEntity[], doc: ProseMirrorNode): Decoration[] {
+// Create decorations for PII entities and modifier-affected text
+function createPiiDecorations(entities: ExtendedPiiEntity[], modifiers: PiiModifier[], doc: ProseMirrorNode): Decoration[] {
 	const decorations: Decoration[] = [];
 
+	// Add PII entity decorations
 	entities.forEach((entity, entityIndex) => {
 		entity.occurrences.forEach((occurrence: any, occurrenceIndex) => {
 			const { start_idx: from, end_idx: to } = occurrence;
@@ -141,6 +142,61 @@ function createPiiDecorations(entities: ExtendedPiiEntity[], doc: ProseMirrorNod
 			}
 		});
 	});
+
+	// Add modifier decorations (find ALL occurrences of modifier-affected words)
+	if (modifiers.length > 0) {
+		// Group modifiers by entity text for efficient processing
+		const modifiersByEntity = new Map<string, PiiModifier[]>();
+		modifiers.forEach(modifier => {
+			const entityText = modifier.entity.toLowerCase();
+			if (!modifiersByEntity.has(entityText)) {
+				modifiersByEntity.set(entityText, []);
+			}
+			modifiersByEntity.get(entityText)!.push(modifier);
+		});
+
+		// Search for all occurrences of each modifier-affected word
+		modifiersByEntity.forEach((entityModifiers, entityText) => {
+			// Find all occurrences of this word in the document
+			doc.nodesBetween(0, doc.content.size, (node, pos) => {
+				if (node.isText && node.text) {
+					const text = node.text.toLowerCase();
+					const originalText = node.text;
+					
+					// Create regex for word boundaries to match whole words only
+					const regex = new RegExp(`\\b${entityText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
+					let match;
+					
+					while ((match = regex.exec(originalText)) !== null) {
+						const matchStart = pos + match.index;
+						const matchEnd = matchStart + match[0].length;
+						
+						// Ensure positions are valid
+						if (matchStart >= 0 && matchEnd <= doc.content.size && matchStart < matchEnd) {
+							// Determine the decoration class based on modifier types
+							const hasIgnoreModifier = entityModifiers.some(m => m.type === 'ignore');
+							const hasMaskModifier = entityModifiers.some(m => m.type === 'mask');
+							
+							let decorationClass = 'pii-modifier-highlight';
+							if (hasMaskModifier) {
+								// Mask modifiers get yellow font + green styling
+								decorationClass = 'pii-modifier-highlight pii-modifier-mask';
+							}
+							
+							decorations.push(
+								Decoration.inline(matchStart, matchEnd, {
+									class: decorationClass,
+									'data-modifier-entity': entityModifiers[0].entity,
+									'data-modifier-types': entityModifiers.map(m => m.type).join(','),
+									'data-modifier-labels': entityModifiers.filter(m => m.label).map(m => m.label).join(',')
+								})
+							);
+						}
+					}
+				}
+			});
+		});
+	}
 
 	return decorations;
 }
@@ -410,10 +466,18 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 				decorations(state) {
 					const pluginState = piiDetectionPluginKey.getState(state);
 					if (!pluginState?.entities.length) {
-						return DecorationSet.empty;
+						// Check if we have modifiers even without PII entities
+						const modifierState = piiModifierExtensionKey.getState(state);
+						if (!modifierState?.modifiers.length) {
+							return DecorationSet.empty;
+						}
 					}
 					
-					const decorations = createPiiDecorations(pluginState.entities, state.doc);
+					// Get modifiers from the PiiModifierExtension state
+					const modifierState = piiModifierExtensionKey.getState(state);
+					const modifiers = modifierState?.modifiers || [];
+					
+					const decorations = createPiiDecorations(pluginState?.entities || [], modifiers, state.doc);
 					console.log('PiiDetectionExtension: Creating', decorations.length, 'decorations');
 					return DecorationSet.create(state.doc, decorations);
 				},

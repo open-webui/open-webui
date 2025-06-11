@@ -623,6 +623,32 @@
 					background-color: rgba(239, 68, 68, 0.3);
 					border-bottom: 2px dashed #dc2626;
 				}
+				
+				/* Modifier-affected text - yellow font (base styling) */
+				.pii-modifier-highlight {
+					color: #ca8a04;
+					cursor: pointer;
+					transition: all 0.2s ease;
+				}
+				
+				.pii-modifier-highlight:hover {
+					color: #a16207;
+				}
+				
+				/* Mask modifier - yellow font, green background, green dashed underline */
+				.pii-modifier-highlight.pii-modifier-mask {
+					color: #ca8a04;
+					background-color: rgba(34, 197, 94, 0.2);
+					border-bottom: 1px dashed #15803d;
+					border-radius: 3px;
+					padding: 1px 2px;
+				}
+				
+				.pii-modifier-highlight.pii-modifier-mask:hover {
+					color: #a16207;
+					background-color: rgba(34, 197, 94, 0.3);
+					border-bottom: 2px dashed #15803d;
+				}
 			`;
 			document.head.appendChild(styleElement);
 		}
