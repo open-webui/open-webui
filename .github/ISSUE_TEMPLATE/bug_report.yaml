@@ -1,5 +1,5 @@
 name: Bug Report
-description: Create a detailed bug report to help us improve Open WebUI.
+description: Create a detailed bug report to help us improve TechSecAI Hub.
 title: 'issue: '
 labels: ['bug', 'triage']
 assignees: []
@@ -11,13 +11,13 @@ body:
 
         ## Important Notes
 
-        - **Before submitting a bug report**: Please check the [Issues](https://github.com/open-webui/open-webui/issues) or [Discussions](https://github.com/open-webui/open-webui/discussions) sections to see if a similar issue has already been reported. If unsure, start a discussion first, as this helps us efficiently focus on improving the project.
+        - **Before submitting a bug report**: Please check the [Issues](https://github.com/TechSecAI-Hub/TechSecAI-Hub/issues) or [Discussions](https://github.com/TechSecAI-Hub/TechSecAI-Hub/discussions) sections to see if a similar issue has already been reported. If unsure, start a discussion first, as this helps us efficiently focus on improving the project.
 
-        - **Respectful collaboration**: Open WebUI is a volunteer-driven project with a single maintainer and contributors who also have full-time jobs. Please be constructive and respectful in your communication.
+        - **Respectful collaboration**: TechSecAI Hub is a volunteer-driven project with a single maintainer and contributors who also have full-time jobs. Please be constructive and respectful in your communication.
 
-        - **Contributing**: If you encounter an issue, consider submitting a pull request or forking the project. We prioritize preventing contributor burnout to maintain Open WebUI's quality.
+        - **Contributing**: If you encounter an issue, consider submitting a pull request or forking the project. We prioritize preventing contributor burnout to maintain TechSecAI Hub's quality.
 
-        - **Bug Reproducibility**: If a bug cannot be reproduced using a `:main` or `:dev` Docker setup or with `pip install` on Python 3.11, community assistance may be required. In such cases, we will move it to the "[Issues](https://github.com/open-webui/open-webui/discussions/categories/issues)" Discussions section. Your help is appreciated!
+        - **Bug Reproducibility**: If a bug cannot be reproduced using a `:main` or `:dev` Docker setup or with `pip install` on Python 3.11, community assistance may be required. In such cases, we will move it to the "[Issues](https://github.com/TechSecAI-Hub/TechSecAI-Hub/discussions/categories/issues)" Discussions section. Your help is appreciated!
 
   - type: checkboxes
     id: issue-check
@@ -27,14 +27,14 @@ body:
       options:
         - label: I have searched the existing issues and discussions.
           required: true
-        - label: I am using the latest version of Open WebUI.
+        - label: I am using the latest version of TechSecAI Hub.
           required: true
 
   - type: dropdown
     id: installation-method
     attributes:
       label: Installation Method
-      description: How did you install Open WebUI?
+      description: How did you install TechSecAI Hub?
       options:
         - Git Clone
         - Pip Install
@@ -44,9 +44,9 @@ body:
       required: true
 
   - type: input
-    id: open-webui-version
+    id: techsecai-hub-version
     attributes:
-      label: Open WebUI Version
+      label: TechSecAI Hub Version
       description: Specify the version (e.g., v0.3.11)
     validations:
       required: true
@@ -83,7 +83,7 @@ body:
       options:
         - label: I have read and followed all instructions in `README.md`.
           required: true
-        - label: I am using the latest version of **both** Open WebUI and Ollama.
+        - label: I am using the latest version of **both** TechSecAI Hub and Ollama.
           required: true
         - label: I have included the browser console logs.
           required: true
@@ -131,7 +131,7 @@ body:
         Example (include every detail):
         1. Start with a clean Ubuntu 22.04 install.
         2. Install Docker v24.0.5 and start the service.
-        3. Clone the Open WebUI repo (git clone ...).
+        3. Clone the TechSecAI Hub repo (git clone ...).
         4. Use the Docker Compose file without modifications.
         5. Open browser Chrome 115.0 in incognito mode.
         6. Go to http://localhost:8080 and log in with user "test@example.com".
@@ -164,4 +164,4 @@ body:
       value: |
         ## Note
         If the bug report is incomplete or does not follow instructions, it may not be addressed. Ensure that you've followed all the **README.md** and **troubleshooting.md** guidelines, and provide all necessary information for us to reproduce the issue.  
-        Thank you for contributing to Open WebUI!
+        Thank you for contributing to TechSecAI Hub!

@@ -16,10 +16,10 @@ from open_webui.constants import ERROR_MESSAGES
 # Load .env file
 ####################################
 
-OPEN_WEBUI_DIR = Path(__file__).parent  # the path containing this file
-print(OPEN_WEBUI_DIR)
+TECHSECAI_HUB_DIR = Path(__file__).parent  # the path containing this file
+print(TECHSECAI_HUB_DIR)
 
-BACKEND_DIR = OPEN_WEBUI_DIR.parent  # the path containing this file
+BACKEND_DIR = TECHSECAI_HUB_DIR.parent  # the path containing this file
 BASE_DIR = BACKEND_DIR.parent  # the path containing the backend/
 
 print(BACKEND_DIR)
@@ -106,11 +106,15 @@ for source in log_sources:
 
 log.setLevel(SRC_LOG_LEVELS["CONFIG"])
 
-WEBUI_NAME = os.environ.get("WEBUI_NAME", "Open WebUI")
-if WEBUI_NAME != "Open WebUI":
-    WEBUI_NAME += " (Open WebUI)"
+WEBUI_NAME = os.environ.get("WEBUI_NAME", "TechSecAI Hub")
+# TODO: Rebrand [TechSecAI Hub]: Review this logic. If WEBUI_NAME is customized, should it still append the base brand name?
+if WEBUI_NAME != "TechSecAI Hub":
+    WEBUI_NAME += " (TechSecAI Hub)"
 
-WEBUI_FAVICON_URL = "https://openwebui.com/favicon.png"
+# TODO: Rebrand [TechSecAI Hub]: Original item was default URL 'https://openwebui.com/favicon.png' - Requires rewrite. (Point to new asset if self-hosted, or remove if external)
+WEBUI_FAVICON_URL = os.environ.get(
+    "WEBUI_FAVICON_URL", "https://openwebui.com/favicon.png"
+)
 
 TRUSTED_SIGNATURE_KEY = os.environ.get("TRUSTED_SIGNATURE_KEY", "")
 
@@ -123,7 +127,7 @@ ENV = os.environ.get("ENV", "dev")
 FROM_INIT_PY = os.environ.get("FROM_INIT_PY", "False").lower() == "true"
 
 if FROM_INIT_PY:
-    PACKAGE_DATA = {"version": importlib.metadata.version("open-webui")}
+    PACKAGE_DATA = {"version": importlib.metadata.version("techsecai-hub")}
 else:
     try:
         PACKAGE_DATA = json.loads((BASE_DIR / "package.json").read_text())
@@ -159,7 +163,7 @@ try:
         changelog_content = file.read()
 
 except Exception:
-    changelog_content = (pkgutil.get_data("open_webui", "CHANGELOG.md") or b"").decode()
+    changelog_content = (pkgutil.get_data("techsecai_hub", "CHANGELOG.md") or b"").decode()
 
 # Convert markdown content to HTML
 html_content = markdown.markdown(changelog_content)
@@ -220,7 +224,7 @@ WEBUI_BUILD_HASH = os.environ.get("WEBUI_BUILD_HASH", "dev-build")
 DATA_DIR = Path(os.getenv("DATA_DIR", BACKEND_DIR / "data")).resolve()
 
 if FROM_INIT_PY:
-    NEW_DATA_DIR = Path(os.getenv("DATA_DIR", OPEN_WEBUI_DIR / "data")).resolve()
+    NEW_DATA_DIR = Path(os.getenv("DATA_DIR", TECHSECAI_HUB_DIR / "data")).resolve()
     NEW_DATA_DIR.mkdir(parents=True, exist_ok=True)
 
     # Check if the data directory exists in the package directory
@@ -234,22 +238,23 @@ if FROM_INIT_PY:
                 shutil.copy2(item, dest)
 
         # Zip the data directory
-        shutil.make_archive(DATA_DIR.parent / "open_webui_data", "zip", DATA_DIR)
+        # TODO: Rebrand [TechSecAI Hub]: Original item was zip name 'open_webui_data' - Requires rewrite if this functionality is kept.
+        shutil.make_archive(DATA_DIR.parent / "techsecai_hub_data", "zip", DATA_DIR)
 
         # Remove the old data directory
         shutil.rmtree(DATA_DIR)
 
-    DATA_DIR = Path(os.getenv("DATA_DIR", OPEN_WEBUI_DIR / "data"))
+    DATA_DIR = Path(os.getenv("DATA_DIR", TECHSECAI_HUB_DIR / "data"))
 
-STATIC_DIR = Path(os.getenv("STATIC_DIR", OPEN_WEBUI_DIR / "static"))
+STATIC_DIR = Path(os.getenv("STATIC_DIR", TECHSECAI_HUB_DIR / "static"))
 
-FONTS_DIR = Path(os.getenv("FONTS_DIR", OPEN_WEBUI_DIR / "static" / "fonts"))
+FONTS_DIR = Path(os.getenv("FONTS_DIR", TECHSECAI_HUB_DIR / "static" / "fonts"))
 
 FRONTEND_BUILD_DIR = Path(os.getenv("FRONTEND_BUILD_DIR", BASE_DIR / "build")).resolve()
 
 if FROM_INIT_PY:
     FRONTEND_BUILD_DIR = Path(
-        os.getenv("FRONTEND_BUILD_DIR", OPEN_WEBUI_DIR / "frontend")
+        os.getenv("FRONTEND_BUILD_DIR", TECHSECAI_HUB_DIR / "frontend")
     ).resolve()
 
 ####################################
@@ -542,7 +547,7 @@ ENABLE_OTEL = os.environ.get("ENABLE_OTEL", "False").lower() == "true"
 OTEL_EXPORTER_OTLP_ENDPOINT = os.environ.get(
     "OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317"
 )
-OTEL_SERVICE_NAME = os.environ.get("OTEL_SERVICE_NAME", "open-webui")
+OTEL_SERVICE_NAME = os.environ.get("OTEL_SERVICE_NAME", "techsecai-hub")
 OTEL_RESOURCE_ATTRIBUTES = os.environ.get(
     "OTEL_RESOURCE_ATTRIBUTES", ""
 )  # e.g. key1=val1,key2=val2

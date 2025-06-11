@@ -1,13 +1,13 @@
 # Pull Request Checklist
 
-### Note to first-time contributors: Please open a discussion post in [Discussions](https://github.com/open-webui/open-webui/discussions) and describe your changes before submitting a pull request.
+### Note to first-time contributors: Please open a discussion post in [Discussions](https://github.com/TechSecAI-Hub/TechSecAI-Hub/discussions) and describe your changes before submitting a pull request.
 
 **Before submitting, make sure you've checked the following:**
 
 - [ ] **Target branch:** Please verify that the pull request targets the `dev` branch.
 - [ ] **Description:** Provide a concise description of the changes made in this pull request.
 - [ ] **Changelog:** Ensure a changelog entry following the format of [Keep a Changelog](https://keepachangelog.com/) is added at the bottom of the PR description.
-- [ ] **Documentation:** Have you updated relevant documentation [Open WebUI Docs](https://github.com/open-webui/docs), or other documentation sources?
+- [ ] **Documentation:** Have you updated relevant documentation [TechSecAI Hub Docs](https://github.com/TechSecAI-Hub/docs), or other documentation sources?
 - [ ] **Dependencies:** Are there any new dependencies? Have you updated the dependency versions in the documentation?
 - [ ] **Testing:** Have you written and run sufficient tests to validate the changes?
 - [ ] **Code review:** Have you performed a self-review of your code, addressing any coding standard issues and ensuring adherence to the project's coding standards?

@@ -51,14 +51,14 @@ from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import Response, StreamingResponse
 
 
-from open_webui.utils import logger
-from open_webui.utils.audit import AuditLevel, AuditLoggingMiddleware
-from open_webui.utils.logger import start_logger
-from open_webui.socket.main import (
+from techsecai_hub.utils import logger
+from techsecai_hub.utils.audit import AuditLevel, AuditLoggingMiddleware
+from techsecai_hub.utils.logger import start_logger
+from techsecai_hub.socket.main import (
     app as socket_app,
     periodic_usage_pool_cleanup,
 )
-from open_webui.routers import (
+from techsecai_hub.routers import (
     audio,
     images,
     ollama,
@@ -85,20 +85,20 @@ from open_webui.routers import (
     utils,
 )
 
-from open_webui.routers.retrieval import (
+from techsecai_hub.routers.retrieval import (
     get_embedding_function,
     get_ef,
     get_rf,
 )
 
-from open_webui.internal.db import Session, engine
+from techsecai_hub.internal.db import Session, engine
 
-from open_webui.models.functions import Functions
-from open_webui.models.models import Models
-from open_webui.models.users import UserModel, Users
-from open_webui.models.chats import Chats
+from techsecai_hub.models.functions import Functions
+from techsecai_hub.models.models import Models
+from techsecai_hub.models.users import UserModel, Users
+from techsecai_hub.models.chats import Chats
 
-from open_webui.config import (
+from techsecai_hub.config import (
     LICENSE_KEY,
     # Ollama
     ENABLE_OLLAMA_API,
@@ -382,7 +382,7 @@ from open_webui.config import (
     AppConfig,
     reset_config,
 )
-from open_webui.env import (
+from techsecai_hub.env import (
     AUDIT_EXCLUDED_PATHS,
     AUDIT_LOG_LEVEL,
     CHANGELOG,
@@ -412,40 +412,40 @@ from open_webui.env import (
 )
 
 
-from open_webui.utils.models import (
+from techsecai_hub.utils.models import (
     get_all_models,
     get_all_base_models,
     check_model_access,
 )
-from open_webui.utils.chat import (
+from techsecai_hub.utils.chat import (
     generate_chat_completion as chat_completion_handler,
     chat_completed as chat_completed_handler,
     chat_action as chat_action_handler,
 )
-from open_webui.utils.embeddings import generate_embeddings
-from open_webui.utils.middleware import process_chat_payload, process_chat_response
-from open_webui.utils.access_control import has_access
+from techsecai_hub.utils.embeddings import generate_embeddings
+from techsecai_hub.utils.middleware import process_chat_payload, process_chat_response
+from techsecai_hub.utils.access_control import has_access
 
-from open_webui.utils.auth import (
+from techsecai_hub.utils.auth import (
     get_license_data,
     get_http_authorization_cred,
     decode_token,
     get_admin_user,
     get_verified_user,
 )
-from open_webui.utils.plugin import install_tool_and_function_dependencies
-from open_webui.utils.oauth import OAuthManager
-from open_webui.utils.security_headers import SecurityHeadersMiddleware
-from open_webui.utils.redis import get_redis_connection
+from techsecai_hub.utils.plugin import install_tool_and_function_dependencies
+from techsecai_hub.utils.oauth import OAuthManager
+from techsecai_hub.utils.security_headers import SecurityHeadersMiddleware
+from techsecai_hub.utils.redis import get_redis_connection
 
-from open_webui.tasks import (
+from techsecai_hub.tasks import (
     redis_task_command_listener,
     list_task_ids_by_chat_id,
     stop_task,
     list_tasks,
 )  # Import from tasks.py
 
-from open_webui.utils.redis import get_sentinels_from_env
+from techsecai_hub.utils.redis import get_sentinels_from_env
 
 
 if SAFE_MODE:
@@ -474,17 +474,17 @@ class SPAStaticFiles(StaticFiles):
 
 print(
     rf"""
- ██████╗ ██████╗ ███████╗███╗   ██╗    ██╗    ██╗███████╗██████╗ ██╗   ██╗██╗
-██╔═══██╗██╔══██╗██╔════╝████╗  ██║    ██║    ██║██╔════╝██╔══██╗██║   ██║██║
-██║   ██║██████╔╝█████╗  ██╔██╗ ██║    ██║ █╗ ██║█████╗  ██████╔╝██║   ██║██║
-██║   ██║██╔═══╝ ██╔══╝  ██║╚██╗██║    ██║███╗██║██╔══╝  ██╔══██╗██║   ██║██║
-╚██████╔╝██║     ███████╗██║ ╚████║    ╚███╔███╔╝███████╗██████╔╝╚██████╔╝██║
- ╚═════╝ ╚═╝     ╚══════╝╚═╝  ╚═══╝     ╚══╝╚══╝ ╚══════╝╚═════╝  ╚═════╝ ╚═╝
+████████╗███████╗ ██████╗████████╗███████╗ ██████╗██╗  ██╗██╗   ██╗██████╗ ██╗   ██╗
+╚══██╔══╝██╔════╝██╔════╝╚══██╔══╝██╔════╝██╔════╝██║  ██║██║   ██║██╔══██╗██▄▄ ██▄▄
+   ██║   █████╗  ██║        ██║   █████╗  ██║     ███████║██║   ██║██████╔╝▀▀▀██╔══▀
+   ██║   ██╔══╝  ██║        ██║   ██╔══╝  ██║     ██╔══██║██║   ██║██╔══██╗  ███████╗
+   ██║   ███████╗╚██████╗   ██║   ███████╗╚██████╗██║  ██║╚██████╔╝██║  ██║  ╚██████╔╝
+   ╚═╝   ╚══════╝ ╚═════╝   ╚═╝   ╚══════╝ ╚═════╝╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝   ╚═════╝
 
 
 v{VERSION} - building the best AI user interface.
 {f"Commit: {WEBUI_BUILD_HASH}" if WEBUI_BUILD_HASH != "dev-build" else ""}
-https://github.com/open-webui/open-webui
+https://github.com/techsecai-hub/techsecai-hub
 """
 )
 
@@ -531,11 +531,26 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Open WebUI",
+    title="TechSecAI Hub",
+    # TODO: Rebrand [TechSecAI Hub]: Review description.
+    description="An open-source WebUI for LLMs.",
     docs_url="/docs" if ENV == "dev" else None,
     openapi_url="/openapi.json" if ENV == "dev" else None,
     redoc_url=None,
     lifespan=lifespan,
+    # TODO: Rebrand [TechSecAI Hub]: Verify official license name.
+    license_info={
+        "name": "TechSecAI Hub License",
+        # TODO: Rebrand [TechSecAI Hub]: Original item was 'License URL (https://docs.openwebui.com/license/)' - Requires rewrite. (Point to new license doc)
+        "url": "https://docs.example.com/license/", # Placeholder
+    },
+    contact={
+        "name": "TechSecAI Hub",
+        # TODO: Rebrand [TechSecAI Hub]: Original item was contact URL 'https://github.com/open-webui/open-webui' - Requires rewrite. (Point to new GH repo or general site)
+        "url": "https://github.com/TechSecAI-Hub/TechSecAI-Hub", # Placeholder, ideally new org/repo
+        # TODO: Rebrand [TechSecAI Hub]: Original item was contact email 'contact@openwebui.com' - Requires rewrite. (Update email)
+        "email": "contact@example.com", # Placeholder email
+    },
 )
 
 oauth_manager = OAuthManager(app)
@@ -558,7 +573,7 @@ app.state.LICENSE_METADATA = None
 ########################################
 
 if ENABLE_OTEL:
-    from open_webui.utils.telemetry.setup import setup as setup_opentelemetry
+    from techsecai_hub.utils.telemetry.setup import setup as setup_opentelemetry
 
     setup_opentelemetry(app=app, db_engine=engine)
 
@@ -1600,7 +1615,7 @@ async def get_app_latest_release_version(user=Depends(get_verified_user)):
         timeout = aiohttp.ClientTimeout(total=1)
         async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
             async with session.get(
-                "https://api.github.com/repos/open-webui/open-webui/releases/latest",
+                "https://api.github.com/repos/TechSecAI-Hub/TechSecAI-Hub/releases/latest",
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as response:
                 response.raise_for_status()
@@ -1657,7 +1672,8 @@ async def get_manifest_json():
         return {
             "name": app.state.WEBUI_NAME,
             "short_name": app.state.WEBUI_NAME,
-            "description": "Open WebUI is an open, extensible, user-friendly interface for AI that adapts to your workflow.",
+            # TODO: Rebrand [TechSecAI Hub]: Review description for manifest.json.
+            "description": "TechSecAI Hub is an open, extensible, user-friendly interface for AI that adapts to your workflow.",
             "start_url": "/",
             "display": "standalone",
             "background_color": "#343541",

@@ -32,7 +32,7 @@ class ExternalWebLoader(BaseLoader):
                 response = requests.post(
                     self.external_url,
                     headers={
-                        "User-Agent": "Open WebUI (https://github.com/open-webui/open-webui) External Web Loader",
+                        "User-Agent": "TechSecAI Hub Agent (https://github.com/TechSecAI-Hub/TechSecAI-Hub) External Web Loader",
                         "Authorization": f"Bearer {self.external_api_key}",
                     },
                     json={

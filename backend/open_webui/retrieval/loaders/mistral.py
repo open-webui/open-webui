@@ -85,7 +85,7 @@ class MistralLoader:
         # ENHANCEMENT: Added User-Agent for better API tracking and debugging
         self.headers = {
             "Authorization": f"Bearer {self.api_key}",
-            "User-Agent": "OpenWebUI-MistralLoader/2.0",  # Helps API provider track usage
+            "User-Agent": "TechSecAIHub-MistralLoader/2.0",  # Helps API provider track usage
         }
 
     def _debug_log(self, message: str, *args) -> None:
@@ -505,7 +505,7 @@ class MistralLoader:
         async with aiohttp.ClientSession(
             connector=connector,
             timeout=timeout,
-            headers={"User-Agent": "OpenWebUI-MistralLoader/2.0"},
+            headers={"User-Agent": "TechSecAIHub-MistralLoader/2.0"},
             raise_for_status=False,  # We handle status codes manually
         ) as session:
             yield session

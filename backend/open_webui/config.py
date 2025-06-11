@@ -14,7 +14,7 @@ import requests
 from pydantic import BaseModel
 from sqlalchemy import JSON, Column, DateTime, Integer, func
 
-from open_webui.env import (
+from techsecai_hub.env import (
     DATA_DIR,
     DATABASE_URL,
     ENV,
@@ -23,14 +23,14 @@ from open_webui.env import (
     REDIS_SENTINEL_PORT,
     FRONTEND_BUILD_DIR,
     OFFLINE_MODE,
-    OPEN_WEBUI_DIR,
+    TECHSECAI_HUB_DIR, # Assuming this was renamed in env.py
     WEBUI_AUTH,
     WEBUI_FAVICON_URL,
     WEBUI_NAME,
     log,
 )
-from open_webui.internal.db import Base, get_db
-from open_webui.utils.redis import get_redis_connection
+from techsecai_hub.internal.db import Base, get_db
+from techsecai_hub.utils.redis import get_redis_connection
 
 
 class EndpointFilter(logging.Filter):
@@ -53,10 +53,10 @@ def run_migrations():
         from alembic import command
         from alembic.config import Config
 
-        alembic_cfg = Config(OPEN_WEBUI_DIR / "alembic.ini")
+        alembic_cfg = Config(TECHSECAI_HUB_DIR / "alembic.ini")
 
         # Set the script location dynamically
-        migrations_path = OPEN_WEBUI_DIR / "migrations"
+        migrations_path = TECHSECAI_HUB_DIR / "migrations"
         alembic_cfg.set_main_option("script_location", str(migrations_path))
 
         command.upgrade(alembic_cfg, "head")
@@ -230,7 +230,7 @@ class AppConfig:
             self._state[key].save()
 
             if self._redis:
-                redis_key = f"open-webui:config:{key}"
+            redis_key = f"techsecai-hub:config:{key}"
                 self._redis.set(redis_key, json.dumps(self._state[key].value))
 
     def __getattr__(self, key):
@@ -239,7 +239,7 @@ class AppConfig:
 
         # If Redis is available, check for an updated value
         if self._redis:
-            redis_key = f"open-webui:config:{key}"
+            redis_key = f"techsecai-hub:config:{key}" # Already techsecai-hub
             redis_value = self._redis.get(redis_key)
 
             if redis_value is not None:
@@ -638,7 +638,7 @@ load_oauth_providers()
 # Static DIR
 ####################################
 
-STATIC_DIR = Path(os.getenv("STATIC_DIR", OPEN_WEBUI_DIR / "static")).resolve()
+STATIC_DIR = Path(os.getenv("STATIC_DIR", TECHSECAI_HUB_DIR / "static")).resolve()
 
 for file_path in (FRONTEND_BUILD_DIR / "static").glob("**/*"):
     if file_path.is_file():
@@ -684,11 +684,13 @@ CUSTOM_NAME = os.environ.get("CUSTOM_NAME", "")
 
 if CUSTOM_NAME:
     try:
+        # TODO: Rebrand [TechSecAI Hub]: Original item was API URL 'https://api.openwebui.com/api/v1/custom/...' - Requires rewrite. (Update API endpoint and logic for custom branding)
         r = requests.get(f"https://api.openwebui.com/api/v1/custom/{CUSTOM_NAME}")
         data = r.json()
         if r.ok:
             if "logo" in data:
                 WEBUI_FAVICON_URL = url = (
+                    # TODO: Rebrand [TechSecAI Hub]: Original item was API URL for logo 'https://api.openwebui.com{data['logo']}' - Requires rewrite.
                     f"https://api.openwebui.com{data['logo']}"
                     if data["logo"][0] == "/"
                     else data["logo"]
@@ -702,6 +704,7 @@ if CUSTOM_NAME:
 
             if "splash" in data:
                 url = (
+                    # TODO: Rebrand [TechSecAI Hub]: Original item was API URL for splash 'https://api.openwebui.com{data['splash']}' - Requires rewrite.
                     f"https://api.openwebui.com{data['splash']}"
                     if data["splash"][0] == "/"
                     else data["splash"]
@@ -819,7 +822,7 @@ if ENV == "prod":
         else:
             OLLAMA_BASE_URL = "http://host.docker.internal:11434"
     elif K8S_FLAG:
-        OLLAMA_BASE_URL = "http://ollama-service.open-webui.svc.cluster.local:11434"
+        OLLAMA_BASE_URL = "http://ollama-service.techsecai-hub.svc.cluster.local:11434"
 
 
 OLLAMA_BASE_URLS = os.environ.get("OLLAMA_BASE_URLS", "")
@@ -1813,7 +1816,7 @@ ELASTICSEARCH_PASSWORD = os.environ.get("ELASTICSEARCH_PASSWORD", None)
 ELASTICSEARCH_CLOUD_ID = os.environ.get("ELASTICSEARCH_CLOUD_ID", None)
 SSL_ASSERT_FINGERPRINT = os.environ.get("SSL_ASSERT_FINGERPRINT", None)
 ELASTICSEARCH_INDEX_PREFIX = os.environ.get(
-    "ELASTICSEARCH_INDEX_PREFIX", "open_webui_collections"
+    "ELASTICSEARCH_INDEX_PREFIX", "techsecai_hub_collections"
 )
 # Pgvector
 PGVECTOR_DB_URL = os.environ.get("PGVECTOR_DB_URL", DATABASE_URL)
@@ -1835,7 +1838,7 @@ if PGVECTOR_PGCRYPTO and not PGVECTOR_PGCRYPTO_KEY:
 # Pinecone
 PINECONE_API_KEY = os.environ.get("PINECONE_API_KEY", None)
 PINECONE_ENVIRONMENT = os.environ.get("PINECONE_ENVIRONMENT", None)
-PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME", "open-webui-index")
+PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME", "techsecai-hub-index")
 PINECONE_DIMENSION = int(os.getenv("PINECONE_DIMENSION", 1536))  # or 3072, 1024, 768
 PINECONE_METRIC = os.getenv("PINECONE_METRIC", "cosine")
 PINECONE_CLOUD = os.getenv("PINECONE_CLOUD", "aws")  # or "gcp" or "azure"
@@ -3075,3 +3078,5 @@ LDAP_VALIDATE_CERT = PersistentConfig(
 LDAP_CIPHERS = PersistentConfig(
     "LDAP_CIPHERS", "ldap.server.ciphers", os.environ.get("LDAP_CIPHERS", "ALL")
 )
+
+[end of backend/open_webui/config.py]

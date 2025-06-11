@@ -85,10 +85,10 @@ async def send_get_request(url, key=None, user: UserModel = None):
                     **({"Authorization": f"Bearer {key}"} if key else {}),
                     **(
                         {
-                            "X-OpenWebUI-User-Name": user.name,
-                            "X-OpenWebUI-User-Id": user.id,
-                            "X-OpenWebUI-User-Email": user.email,
-                            "X-OpenWebUI-User-Role": user.role,
+                            "X-TechSecAI-Hub-User-Name": user.name,
+                            "X-TechSecAI-Hub-User-Id": user.id,
+                            "X-TechSecAI-Hub-User-Email": user.email,
+                            "X-TechSecAI-Hub-User-Role": user.role,
                         }
                         if ENABLE_FORWARD_USER_INFO_HEADERS and user
                         else {}
@@ -136,10 +136,10 @@ async def send_post_request(
                 **({"Authorization": f"Bearer {key}"} if key else {}),
                 **(
                     {
-                        "X-OpenWebUI-User-Name": user.name,
-                        "X-OpenWebUI-User-Id": user.id,
-                        "X-OpenWebUI-User-Email": user.email,
-                        "X-OpenWebUI-User-Role": user.role,
+                        "X-TechSecAI-Hub-User-Name": user.name,
+                        "X-TechSecAI-Hub-User-Id": user.id,
+                        "X-TechSecAI-Hub-User-Email": user.email,
+                        "X-TechSecAI-Hub-User-Role": user.role,
                     }
                     if ENABLE_FORWARD_USER_INFO_HEADERS and user
                     else {}
@@ -181,7 +181,7 @@ async def send_post_request(
 
         raise HTTPException(
             status_code=r.status if r else 500,
-            detail=detail if detail else "Open WebUI: Server Connection Error",
+            detail=detail if detail else "TechSecAI Hub: Server Connection Error",
         )
 
 
@@ -231,10 +231,10 @@ async def verify_connection(
                     **({"Authorization": f"Bearer {key}"} if key else {}),
                     **(
                         {
-                            "X-OpenWebUI-User-Name": user.name,
-                            "X-OpenWebUI-User-Id": user.id,
-                            "X-OpenWebUI-User-Email": user.email,
-                            "X-OpenWebUI-User-Role": user.role,
+                            "X-TechSecAI-Hub-User-Name": user.name,
+                            "X-TechSecAI-Hub-User-Id": user.id,
+                            "X-TechSecAI-Hub-User-Email": user.email,
+                            "X-TechSecAI-Hub-User-Role": user.role,
                         }
                         if ENABLE_FORWARD_USER_INFO_HEADERS and user
                         else {}
@@ -255,7 +255,7 @@ async def verify_connection(
         except aiohttp.ClientError as e:
             log.exception(f"Client error: {str(e)}")
             raise HTTPException(
-                status_code=500, detail="Open WebUI: Server Connection Error"
+                status_code=500, detail="TechSecAI Hub: Server Connection Error"
             )
         except Exception as e:
             log.exception(f"Unexpected error: {e}")
@@ -451,10 +451,10 @@ async def get_ollama_tags(
                     **({"Authorization": f"Bearer {key}"} if key else {}),
                     **(
                         {
-                            "X-OpenWebUI-User-Name": user.name,
-                            "X-OpenWebUI-User-Id": user.id,
-                            "X-OpenWebUI-User-Email": user.email,
-                            "X-OpenWebUI-User-Role": user.role,
+                            "X-TechSecAI-Hub-User-Name": user.name,
+                            "X-TechSecAI-Hub-User-Id": user.id,
+                            "X-TechSecAI-Hub-User-Email": user.email,
+                            "X-TechSecAI-Hub-User-Role": user.role,
                         }
                         if ENABLE_FORWARD_USER_INFO_HEADERS and user
                         else {}
@@ -478,7 +478,7 @@ async def get_ollama_tags(
 
             raise HTTPException(
                 status_code=r.status_code if r else 500,
-                detail=detail if detail else "Open WebUI: Server Connection Error",
+                detail=detail if detail else "TechSecAI Hub: Server Connection Error",
             )
 
     if user.role == "user" and not BYPASS_MODEL_ACCESS_CONTROL:
@@ -616,7 +616,7 @@ async def get_ollama_versions(request: Request, url_idx: Optional[int] = None):
 
                 raise HTTPException(
                     status_code=r.status_code if r else 500,
-                    detail=detail if detail else "Open WebUI: Server Connection Error",
+                    detail=detail if detail else "TechSecAI Hub: Server Connection Error",
                 )
     else:
         return {"version": False}
@@ -813,10 +813,10 @@ async def copy_model(
                 **({"Authorization": f"Bearer {key}"} if key else {}),
                 **(
                     {
-                        "X-OpenWebUI-User-Name": user.name,
-                        "X-OpenWebUI-User-Id": user.id,
-                        "X-OpenWebUI-User-Email": user.email,
-                        "X-OpenWebUI-User-Role": user.role,
+                        "X-TechSecAI-Hub-User-Name": user.name,
+                        "X-TechSecAI-Hub-User-Id": user.id,
+                        "X-TechSecAI-Hub-User-Email": user.email,
+                        "X-TechSecAI-Hub-User-Role": user.role,
                     }
                     if ENABLE_FORWARD_USER_INFO_HEADERS and user
                     else {}
@@ -842,7 +842,7 @@ async def copy_model(
 
         raise HTTPException(
             status_code=r.status_code if r else 500,
-            detail=detail if detail else "Open WebUI: Server Connection Error",
+            detail=detail if detail else "TechSecAI Hub: Server Connection Error",
         )
 
 
@@ -879,10 +879,10 @@ async def delete_model(
                 **({"Authorization": f"Bearer {key}"} if key else {}),
                 **(
                     {
-                        "X-OpenWebUI-User-Name": user.name,
-                        "X-OpenWebUI-User-Id": user.id,
-                        "X-OpenWebUI-User-Email": user.email,
-                        "X-OpenWebUI-User-Role": user.role,
+                        "X-TechSecAI-Hub-User-Name": user.name,
+                        "X-TechSecAI-Hub-User-Id": user.id,
+                        "X-TechSecAI-Hub-User-Email": user.email,
+                        "X-TechSecAI-Hub-User-Role": user.role,
                     }
                     if ENABLE_FORWARD_USER_INFO_HEADERS and user
                     else {}
@@ -907,7 +907,7 @@ async def delete_model(
 
         raise HTTPException(
             status_code=r.status_code if r else 500,
-            detail=detail if detail else "Open WebUI: Server Connection Error",
+            detail=detail if detail else "TechSecAI Hub: Server Connection Error",
         )
 
 
@@ -938,10 +938,10 @@ async def show_model_info(
                 **({"Authorization": f"Bearer {key}"} if key else {}),
                 **(
                     {
-                        "X-OpenWebUI-User-Name": user.name,
-                        "X-OpenWebUI-User-Id": user.id,
-                        "X-OpenWebUI-User-Email": user.email,
-                        "X-OpenWebUI-User-Role": user.role,
+                        "X-TechSecAI-Hub-User-Name": user.name,
+                        "X-TechSecAI-Hub-User-Id": user.id,
+                        "X-TechSecAI-Hub-User-Email": user.email,
+                        "X-TechSecAI-Hub-User-Role": user.role,
                     }
                     if ENABLE_FORWARD_USER_INFO_HEADERS and user
                     else {}
@@ -966,7 +966,7 @@ async def show_model_info(
 
         raise HTTPException(
             status_code=r.status_code if r else 500,
-            detail=detail if detail else "Open WebUI: Server Connection Error",
+            detail=detail if detail else "TechSecAI Hub: Server Connection Error",
         )
 
 
@@ -1025,10 +1025,10 @@ async def embed(
                 **({"Authorization": f"Bearer {key}"} if key else {}),
                 **(
                     {
-                        "X-OpenWebUI-User-Name": user.name,
-                        "X-OpenWebUI-User-Id": user.id,
-                        "X-OpenWebUI-User-Email": user.email,
-                        "X-OpenWebUI-User-Role": user.role,
+                        "X-TechSecAI-Hub-User-Name": user.name,
+                        "X-TechSecAI-Hub-User-Id": user.id,
+                        "X-TechSecAI-Hub-User-Email": user.email,
+                        "X-TechSecAI-Hub-User-Role": user.role,
                     }
                     if ENABLE_FORWARD_USER_INFO_HEADERS and user
                     else {}
@@ -1054,7 +1054,7 @@ async def embed(
 
         raise HTTPException(
             status_code=r.status_code if r else 500,
-            detail=detail if detail else "Open WebUI: Server Connection Error",
+            detail=detail if detail else "TechSecAI Hub: Server Connection Error",
         )
 
 
@@ -1112,10 +1112,10 @@ async def embeddings(
                 **({"Authorization": f"Bearer {key}"} if key else {}),
                 **(
                     {
-                        "X-OpenWebUI-User-Name": user.name,
-                        "X-OpenWebUI-User-Id": user.id,
-                        "X-OpenWebUI-User-Email": user.email,
-                        "X-OpenWebUI-User-Role": user.role,
+                        "X-TechSecAI-Hub-User-Name": user.name,
+                        "X-TechSecAI-Hub-User-Id": user.id,
+                        "X-TechSecAI-Hub-User-Email": user.email,
+                        "X-TechSecAI-Hub-User-Role": user.role,
                     }
                     if ENABLE_FORWARD_USER_INFO_HEADERS and user
                     else {}
@@ -1141,7 +1141,9 @@ async def embeddings(
 
         raise HTTPException(
             status_code=r.status_code if r else 500,
-            detail=detail if detail else "Open WebUI: Server Connection Error",
+                detail=detail if detail else "TechSecAI Hub: Server Connection Error",
+                detail=detail if detail else "TechSecAI Hub: Server Connection Error",
+                detail=detail if detail else "TechSecAI Hub: Server Connection Error",
         )
 
 
@@ -1559,7 +1561,7 @@ async def get_openai_models(
             ]
         except Exception as e:
             log.exception(e)
-            error_detail = "Open WebUI: Server Connection Error"
+            error_detail = "TechSecAI Hub: Server Connection Error"
             if r is not None:
                 try:
                     res = r.json()

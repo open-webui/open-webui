@@ -678,10 +678,10 @@ def generate_openai_batch_embeddings(
                 "Authorization": f"Bearer {key}",
                 **(
                     {
-                        "X-OpenWebUI-User-Name": user.name,
-                        "X-OpenWebUI-User-Id": user.id,
-                        "X-OpenWebUI-User-Email": user.email,
-                        "X-OpenWebUI-User-Role": user.role,
+                        "X-TechSecAI-Hub-User-Name": user.name,
+                        "X-TechSecAI-Hub-User-Id": user.id,
+                        "X-TechSecAI-Hub-User-Email": user.email,
+                        "X-TechSecAI-Hub-User-Role": user.role,
                     }
                     if ENABLE_FORWARD_USER_INFO_HEADERS and user
                     else {}
@@ -727,10 +727,10 @@ def generate_azure_openai_batch_embeddings(
                     "api-key": key,
                     **(
                         {
-                            "X-OpenWebUI-User-Name": user.name,
-                            "X-OpenWebUI-User-Id": user.id,
-                            "X-OpenWebUI-User-Email": user.email,
-                            "X-OpenWebUI-User-Role": user.role,
+                            "X-TechSecAI-Hub-User-Name": user.name,
+                            "X-TechSecAI-Hub-User-Id": user.id,
+                            "X-TechSecAI-Hub-User-Email": user.email,
+                            "X-TechSecAI-Hub-User-Role": user.role,
                         }
                         if ENABLE_FORWARD_USER_INFO_HEADERS and user
                         else {}
@@ -777,10 +777,10 @@ def generate_ollama_batch_embeddings(
                 "Authorization": f"Bearer {key}",
                 **(
                     {
-                        "X-OpenWebUI-User-Name": user.name,
-                        "X-OpenWebUI-User-Id": user.id,
-                        "X-OpenWebUI-User-Email": user.email,
-                        "X-OpenWebUI-User-Role": user.role,
+                        "X-TechSecAI-Hub-User-Name": user.name,
+                        "X-TechSecAI-Hub-User-Id": user.id,
+                        "X-TechSecAI-Hub-User-Email": user.email,
+                        "X-TechSecAI-Hub-User-Role": user.role,
                     }
                     if ENABLE_FORWARD_USER_INFO_HEADERS
                     else {}

@@ -1,4 +1,4 @@
-name: Deploy to HuggingFace Spaces
+name: Deploy TechSecAI Hub to HuggingFace Spaces
 
 on:
   push:
@@ -37,7 +37,7 @@ jobs:
       - name: Prepend YAML front matter to README.md
         run: |
           echo "---" > temp_readme.md
-          echo "title: Open WebUI" >> temp_readme.md
+          echo "title: TechSecAI Hub" >> temp_readme.md
           echo "emoji: 🐳" >> temp_readme.md
           echo "colorFrom: purple" >> temp_readme.md
           echo "colorTo: gray" >> temp_readme.md
@@ -60,4 +60,4 @@ jobs:
           rm demo.gif
           git add .
           git commit -m "GitHub deploy: ${{ github.sha }}"
-          git push --force https://open-webui:${HF_TOKEN}@huggingface.co/spaces/open-webui/open-webui main
+          git push --force https://techsecai-hub:${HF_TOKEN}@huggingface.co/spaces/TechSecAI-Hub/TechSecAI-Hub main

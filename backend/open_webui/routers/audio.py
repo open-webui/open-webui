@@ -334,10 +334,10 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                         "Authorization": f"Bearer {request.app.state.config.TTS_OPENAI_API_KEY}",
                         **(
                             {
-                                "X-OpenWebUI-User-Name": user.name,
-                                "X-OpenWebUI-User-Id": user.id,
-                                "X-OpenWebUI-User-Email": user.email,
-                                "X-OpenWebUI-User-Role": user.role,
+                                "X-TechSecAI-Hub-User-Name": user.name,
+                                "X-TechSecAI-Hub-User-Id": user.id,
+                                "X-TechSecAI-Hub-User-Email": user.email,
+                                "X-TechSecAI-Hub-User-Role": user.role,
                             }
                             if ENABLE_FORWARD_USER_INFO_HEADERS
                             else {}

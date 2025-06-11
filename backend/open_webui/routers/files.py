@@ -129,10 +129,10 @@ def upload_file(
         name = filename
         filename = f"{id}_{filename}"
         tags = {
-            "OpenWebUI-User-Email": user.email,
-            "OpenWebUI-User-Id": user.id,
-            "OpenWebUI-User-Name": user.name,
-            "OpenWebUI-File-Id": id,
+            "TechSecAI-Hub-User-Email": user.email,
+            "TechSecAI-Hub-User-Id": user.id,
+            "TechSecAI-Hub-User-Name": user.name,
+            "TechSecAI-Hub-File-Id": id,
         }
         contents, file_path = Storage.upload_file(file.file, filename, tags)
 
