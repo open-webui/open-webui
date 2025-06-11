@@ -213,7 +213,7 @@
 </script>
 
 <Modal size="md-plus" bind:show className="dark:bg-customGray-800 rounded-2xl" containerClassName="bg-lightGray-250/50 dark:bg-[#1D1A1A]/50 backdrop-blur-[7.44px]">
-	<div class="text-lightGray-100 dark:text-gray-100 bg-lightGray-550 dark:bg-customGray-800 rounded-xl min-h-[calc(100dvh-24px)] md:h-auto">
+	<div class="text-lightGray-100 dark:text-gray-100 bg-lightGray-550 dark:bg-customGray-800 rounded-xl md:h-auto">
 		<div class="px-7">
 			<div class=" flex justify-between items-center dark:text-white pt-5 pb-4 border-b dark:border-customGray-700">
 				{#if selectedTab && $mobile}
