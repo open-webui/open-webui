@@ -80,11 +80,73 @@
 		}
 	});
 
+	// Add debug variable to track form validity
+	let formValid = false;
+
+	// Function to check if form is valid (all required fields are filled)
+	function isFormValid(): boolean {
+		// Check if rating is selected
+		const hasRating = message?.annotation?.rating !== undefined;
+
+		// Check if detailed rating is selected
+		const hasDetailedRating = detailedRating !== null;
+
+		// Check if reason is selected
+		const hasReason = selectedReason !== null && selectedReason !== '';
+
+		// Check if comment is provided
+		const hasComment = comment !== null && comment.trim() !== '';
+
+		// All fields must be filled
+		return hasRating && hasDetailedRating && hasReason && hasComment;
+	}
+
+	// Call this whenever any relevant form field changes
+	function updateFormValidity() {
+		formValid = isFormValid();
+	}
+
+	// Check validity on component initialization and when fields change
+	$: {
+		updateFormValidity();
+	}
+
+	// Update form validity whenever any relevant value changes
+	$: message?.annotation?.rating, updateFormValidity();
+	$: detailedRating, updateFormValidity();
+	$: selectedReason, updateFormValidity();
+	$: comment, updateFormValidity();
+
+	function handleDetailedRatingClick(rating) {
+		detailedRating = rating;
+		updateFormValidity();
+	}
+
+	function handleReasonSelect(reason) {
+		selectedReason = reason;
+		updateFormValidity();
+	}
+
+	function handleCommentInput(event) {
+		comment = event.target.value;
+		updateFormValidity();
+	}
+
 	const saveHandler = () => {
-		// if (!selectedReason) {
-		// 	toast.error($i18n.t('Please select a reason'));
-		// 	return;
-		// }
+		// Just for debugging - you can remove this later
+		console.log('Form validity state:', {
+			hasRating: message?.annotation?.rating !== undefined,
+			hasDetailedRating: detailedRating !== null,
+			hasReason: selectedReason !== null && selectedReason !== '',
+			hasComment: comment !== null && comment.trim() !== '',
+			overallValid: formValid
+		});
+
+		// Validate form before saving
+		if (!formValid) {
+			toast.error($i18n.t('Please fill in rating, reason and comment'));
+			return;
+		}
 
 		dispatch('save', {
 			reason: selectedReason,
@@ -145,9 +207,7 @@
 						rating
 							? 'bg-gray-100 dark:bg-gray-800'
 							: ''} transition rounded-full disabled:cursor-not-allowed disabled:text-gray-500 disabled:bg-white disabled:dark:bg-gray-900"
-						on:click={() => {
-							detailedRating = rating;
-						}}
+						on:click={() => handleDetailedRatingClick(rating)}
 						disabled={message?.annotation?.rating === -1 ? rating > 5 : rating < 6}
 					>
 						{rating}
@@ -169,7 +229,9 @@
 
 	<div>
 		{#if reasons.length > 0}
-			<div class="text-sm mt-1.5 font-medium">{$i18n.t('Why?')}</div>
+			<div class="text-sm mt-1.5 font-medium">
+				{$i18n.t('Why?')} <span class="text-red-500">*</span>
+			</div>
 
 			<div class="flex flex-wrap gap-1.5 text-sm mt-1.5">
 				{#each reasons as reason}
@@ -178,9 +240,7 @@
 						reason
 							? 'bg-gray-100 dark:bg-gray-800'
 							: ''} transition rounded-xl"
-						on:click={() => {
-							selectedReason = reason;
-						}}
+						on:click={() => handleReasonSelect(reason)}
 					>
 						{#if reason === 'accurate_information'}
 							{$i18n.t('Accurate information')}
@@ -220,9 +280,13 @@
 	</div>
 
 	<div class="mt-2">
+		<div class="text-sm mb-1 font-medium">
+			{$i18n.t('Comment')} <span class="text-red-500">*</span>
+		</div>
 		<textarea
 			bind:value={comment}
-			class="w-full text-sm px-1 py-2 bg-transparent outline-none resize-none rounded-xl"
+			on:input={handleCommentInput}
+			class="w-full text-sm px-1 py-2 bg-transparent outline-none resize-none rounded-xl border border-gray-100 dark:border-gray-800"
 			placeholder={$i18n.t('Feel free to add specific details')}
 			rows="3"
 		/>
@@ -246,10 +310,9 @@
 		</div>
 
 		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
-			on:click={() => {
-				saveHandler();
-			}}
+			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full disabled:opacity-50 disabled:cursor-not-allowed"
+			on:click={saveHandler}
+			disabled={!formValid}
 		>
 			{$i18n.t('Save')}
 		</button>

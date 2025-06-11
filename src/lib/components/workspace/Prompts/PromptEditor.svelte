@@ -77,7 +77,7 @@
 
 	// Initialize with group access control for non-admin users
 	onMount(async () => {
-		if (!edit && $user?.role === 'user') {
+		if (!edit && ($user?.role === 'user' || $user?.role === 'analyst')) {
 			// Initialize empty access control without any group
 			// this makes user 'private' by default in Prompts edit/create
 			accessControl = {

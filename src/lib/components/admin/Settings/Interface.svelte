@@ -275,7 +275,8 @@
 										title: '',
 										content: '',
 										dismissible: true,
-										timestamp: Math.floor(Date.now() / 1000)
+										timestamp: Math.floor(Date.now() / 1000),
+										lang: ''
 									}
 								];
 							}
@@ -313,8 +314,25 @@
 									<option value="success" class="text-gray-900">{$i18n.t('Success')}</option>
 								</select>
 
+								<select
+									class="w-fit capitalize rounded-xl py-2 px-4 text-xs bg-transparent outline-none"
+									bind:value={banner.lang}
+									required
+								>
+									{#if banner.lang == ''}
+										<option value="" selected disabled class="text-gray-900"
+											>{$i18n.t('Language')}</option
+										>
+									{/if}
+									{#each languages as language}
+										<option value={language.code} class="text-gray-900">
+											{$i18n.t(language.code)}
+										</option>
+									{/each}
+								</select>
+
 								<input
-									class="pr-5 py-1.5 text-xs w-full bg-transparent outline-none"
+									class="px-5 py-1.5 text-xs w-full bg-transparent outline-none"
 									placeholder={$i18n.t('Content')}
 									bind:value={banner.content}
 								/>

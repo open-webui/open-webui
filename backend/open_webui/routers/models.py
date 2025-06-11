@@ -25,6 +25,8 @@ router = APIRouter()
 
 @router.get("/", response_model=list[ModelUserResponse])
 async def get_models(id: Optional[str] = None, user=Depends(get_verified_user)):
+    # Only admin role gets access to all models
+    # Both analyst and global_analyst should get the same models as regular users
     if user.role == "admin":
         return Models.get_models()
     else:

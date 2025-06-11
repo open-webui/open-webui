@@ -6,6 +6,7 @@ export type Banner = {
 	url?: string;
 	dismissible?: boolean;
 	timestamp: number;
+	lang: string;
 };
 
 export enum TTS_RESPONSE_SPLIT {
