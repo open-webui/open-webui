@@ -3075,3 +3075,23 @@ LDAP_VALIDATE_CERT = PersistentConfig(
 LDAP_CIPHERS = PersistentConfig(
     "LDAP_CIPHERS", "ldap.server.ciphers", os.environ.get("LDAP_CIPHERS", "ALL")
 )
+
+# For LDAP Group Management
+ENABLE_LDAP_GROUP_MANAGEMENT = PersistentConfig(
+    "ENABLE_LDAP_GROUP_MANAGEMENT",
+    "ldap.group.enable_management",
+    os.environ.get("ENABLE_LDAP_GROUP_MANAGEMENT", "False").lower() == "true",
+)
+
+ENABLE_LDAP_GROUP_CREATION = PersistentConfig(
+    "ENABLE_LDAP_GROUP_CREATION",
+    "ldap.group.enable_creation",
+    os.environ.get("ENABLE_LDAP_GROUP_CREATION", "False").lower() == "true",
+)
+
+LDAP_ATTRIBUTE_FOR_GROUPS = PersistentConfig(
+    "LDAP_ATTRIBUTE_FOR_GROUPS",
+    "ldap.server.attribute_for_groups",
+    os.environ.get("LDAP_ATTRIBUTE_FOR_GROUPS", "memberOf"),
+)
+
