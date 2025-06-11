@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { DropdownMenu } from 'bits-ui';
 	import { flyAndScale } from '$lib/utils/transitions';
-	import { getContext, onMount, tick } from 'svelte';
+	import { getContext, onMount } from 'svelte';
 
 	import { config, user, tools as _tools, mobile } from '$lib/stores';
 	import { getTools } from '$lib/apis/tools';

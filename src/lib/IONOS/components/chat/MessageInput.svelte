@@ -594,7 +594,6 @@
 									<div class="ml-1 self-end mb-1.5 flex space-x-1">
 										<InputMenu
 											bind:webSearchEnabled
-											bind:selectedToolIds
 											uploadFilesHandler={() => {
 												filesInputElement.click();
 											}}
