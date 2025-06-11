@@ -133,7 +133,7 @@
 				ⓘ {$i18n.t("Use '#' in the prompt input to load and include your knowledge.", { ns: 'ionos' })}
 			</div>
 		{:else}
-			<LoadingCover size="20" />
+			<LoadingCover />
 		{/if}
 	</div>
 </Dialog>
