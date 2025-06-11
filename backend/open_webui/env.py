@@ -429,3 +429,5 @@ IONOS_PASSWORD_RESET_URL = os.environ.get("IONOS_PASSWORD_RESET_URL", None)
 IONOS_ACCOUNT_DELETION_ALLOWED = os.environ.get("IONOS_ACCOUNT_DELETION_ALLOWED", "false").lower() == "true"
 # Comma separated list of emails (default: empty)
 IONOS_ACCOUNT_DELETE_ALLOW_LIST = os.environ.get("IONOS_ACCOUNT_DELETE_ALLOW_LIST", "")
+
+IONOS_SURVEY_NEW_USERS_URL = os.environ.get("IONOS_SURVEY_NEW_USERS_URL", None)
