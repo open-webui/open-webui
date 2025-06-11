@@ -120,7 +120,9 @@ function createHoverMenu(
 	wordInfo: { word: string; from: number; to: number; x: number; y: number },
 	onIgnore: () => void,
 	onMask: (label: string) => void,
-	showIgnoreButton: boolean = false
+	showIgnoreButton: boolean = false,
+	existingModifiers: PiiModifier[] = [],
+	onRemoveModifier?: (modifierId: string) => void
 ): HTMLElement {
 	const menu = document.createElement('div');
 	menu.className = 'pii-modifier-hover-menu';
@@ -167,6 +169,93 @@ function createHoverMenu(
 	header.appendChild(icon);
 	header.appendChild(textNode);
 	menu.appendChild(header);
+
+	// Show existing modifiers if any
+	if (existingModifiers.length > 0) {
+		const modifiersSection = document.createElement('div');
+		modifiersSection.style.cssText = `
+			margin-bottom: 12px;
+			padding: 8px;
+			background: #f8f9fa;
+			border-radius: 4px;
+			border: 1px solid #e9ecef;
+		`;
+
+		const modifiersHeader = document.createElement('div');
+		modifiersHeader.textContent = 'Current Modifiers:';
+		modifiersHeader.style.cssText = `
+			font-weight: 600;
+			font-size: 11px;
+			color: #495057;
+			margin-bottom: 6px;
+		`;
+		modifiersSection.appendChild(modifiersHeader);
+
+		existingModifiers.forEach((modifier) => {
+			const modifierItem = document.createElement('div');
+			modifierItem.style.cssText = `
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				padding: 4px 6px;
+				margin-bottom: 4px;
+				background: white;
+				border-radius: 3px;
+				border: 1px solid #dee2e6;
+				font-size: 11px;
+			`;
+
+			const modifierInfo = document.createElement('span');
+			const typeIcon = modifier.type === 'ignore' ? '🚫' : '🏷️';
+			const typeText = modifier.type === 'ignore' ? 'Ignore' : `Mask as ${modifier.label}`;
+			modifierInfo.textContent = `${typeIcon} ${typeText}`;
+			modifierInfo.style.cssText = `
+				color: #495057;
+				flex: 1;
+			`;
+
+			const removeBtn = document.createElement('button');
+			removeBtn.textContent = '✕';
+			removeBtn.title = 'Remove modifier';
+			removeBtn.style.cssText = `
+				background: #dc3545;
+				color: white;
+				border: none;
+				border-radius: 2px;
+				width: 18px;
+				height: 18px;
+				cursor: pointer;
+				font-size: 10px;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				flex-shrink: 0;
+				margin-left: 6px;
+			`;
+
+			removeBtn.addEventListener('click', (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				if (onRemoveModifier) {
+					onRemoveModifier(modifier.id);
+				}
+			});
+
+			removeBtn.addEventListener('mouseenter', () => {
+				removeBtn.style.backgroundColor = '#c82333';
+			});
+
+			removeBtn.addEventListener('mouseleave', () => {
+				removeBtn.style.backgroundColor = '#dc3545';
+			});
+
+			modifierItem.appendChild(modifierInfo);
+			modifierItem.appendChild(removeBtn);
+			modifiersSection.appendChild(modifierItem);
+		});
+
+		menu.appendChild(modifiersSection);
+	}
 
 	// Ignore button (only show if word is detected as PII)
 	if (showIgnoreButton) {
@@ -525,6 +614,13 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 							// Check if word is currently highlighted as PII (by PII detection)
 							const isPiiHighlighted = document.querySelector(`[data-pii-text="${wordInfo.text}"]`) !== null;
 
+							// Find existing modifiers for this word (check position overlap)
+							const pluginState = piiModifierExtensionKey.getState(view.state);
+							const existingModifiers = pluginState?.modifiers.filter(modifier => {
+								// Check if modifier overlaps with the current word
+								return (modifier.from <= wordInfo.to && modifier.to >= wordInfo.from);
+							}) || [];
+
 							// Show hover menu
 							if (hoverMenuElement) {
 								hoverMenuElement.remove();
@@ -563,6 +659,19 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 								}
 							};
 
+							const onRemoveModifier = (modifierId: string) => {
+								const tr = view.state.tr.setMeta(piiModifierExtensionKey, {
+									type: 'REMOVE_MODIFIER',
+									modifierId
+								});
+								view.dispatch(tr);
+
+								if (hoverMenuElement) {
+									hoverMenuElement.remove();
+									hoverMenuElement = null;
+								}
+							};
+
 							hoverMenuElement = createHoverMenu(
 								{
 									word: wordInfo.text,
@@ -573,7 +682,9 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 								},
 								onIgnore,
 								onMask,
-								isPiiHighlighted // Show ignore button only if already detected as PII
+								isPiiHighlighted, // Show ignore button only if already detected as PII
+								existingModifiers, // Pass existing modifiers
+								onRemoveModifier // Pass removal callback
 							);
 
 							document.body.appendChild(hoverMenuElement);
