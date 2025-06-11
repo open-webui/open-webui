@@ -162,7 +162,7 @@ RUN if [ "$USE_CUDA" = "true" ]; then \
     uv run python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ['RAG_EMBEDDING_MODEL'], device='cpu')" && \
     uv run python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])" && \
     uv run python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])" && \
-    chown -R $UID:$GID /app/backend/data/ && \
+    chown -R $UID:$GID /app/ && \
     chown -R $UID:$GID /root/.cache/;
 
 # copy embedding weight from build
