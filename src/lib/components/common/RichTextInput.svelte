@@ -83,6 +83,8 @@
 
 	let element: HTMLElement;
 	let editor: any;
+	let currentModifiers: PiiModifier[] = [];
+	let previousModifiersLength = 0;
 
 	// PII Session Manager for conversation state
 	let piiSessionManager = PiiSessionManager.getInstance();
@@ -267,7 +269,7 @@
 					? [
 							PiiModifierExtension.configure({
 								enabled: true,
-								onModifiersChanged: onPiiModifiersChanged,
+								onModifiersChanged: handleModifiersChanged,
 								availableLabels: piiModifierLabels.length > 0 
 									? piiModifierLabels 
 									: undefined // Use default labels
@@ -521,6 +523,45 @@
 
 					selectTemplate();
 				}
+			}
+		}
+	};
+
+	// Reactive statement to trigger PII detection when modifiers change
+	$: if (editor && enablePiiDetection && enablePiiModifiers) {
+		// Only trigger if modifiers actually changed (not just on every render)
+		if (currentModifiers.length !== previousModifiersLength && currentModifiers.length > 0) {
+			console.log('RichTextInput: Modifiers changed, triggering PII detection', {
+				currentLength: currentModifiers.length,
+				previousLength: previousModifiersLength,
+				modifiers: currentModifiers
+			});
+			previousModifiersLength = currentModifiers.length;
+			editor.commands.triggerDetectionForModifiers();
+		}
+	}
+
+	// Handle modifier changes
+	const handleModifiersChanged = (modifiers: PiiModifier[]) => {
+		const wasEmpty = currentModifiers.length === 0;
+		currentModifiers = modifiers;
+		onPiiModifiersChanged(modifiers);
+		
+		// If we went from no modifiers to having modifiers, or modifiers changed, trigger detection
+		if ((wasEmpty && modifiers.length > 0) || modifiers.length !== previousModifiersLength) {
+			console.log('RichTextInput: Modifier change detected in handler', {
+				previousLength: previousModifiersLength,
+				newLength: modifiers.length,
+				wasEmpty
+			});
+			// Update the tracking variable
+			previousModifiersLength = modifiers.length;
+			
+			// Trigger detection if we have an editor and text
+			if (editor && editor.view && editor.view.state.doc.textContent.trim()) {
+				setTimeout(() => {
+					editor.commands.triggerDetectionForModifiers();
+				}, 100);
 			}
 		}
 	};

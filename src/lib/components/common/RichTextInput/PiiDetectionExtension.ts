@@ -4,8 +4,10 @@ import { Decoration, DecorationSet } from 'prosemirror-view';
 import type { Node as ProseMirrorNode } from 'prosemirror-model';
 import type { ExtendedPiiEntity } from '$lib/utils/pii';
 import type { PiiEntity } from '$lib/apis/pii';
-import { maskPiiText, type KnownPiiEntity } from '$lib/apis/pii';
+import { maskPiiText, type KnownPiiEntity, type ShieldApiModifier } from '$lib/apis/pii';
 import { debounce, PiiSessionManager } from '$lib/utils/pii';
+import type { PiiModifier } from './PiiModifierExtension';
+import { piiModifierExtensionKey } from './PiiModifierExtension';
 
 interface PositionMapping {
 	plainTextToProseMirror: Map<number, number>;
@@ -145,6 +147,15 @@ function createPiiDecorations(entities: ExtendedPiiEntity[], doc: ProseMirrorNod
 
 const piiDetectionPluginKey = new PluginKey<PiiDetectionState>('piiDetection');
 
+// Convert PiiModifier objects to ShieldApiModifier format
+function convertModifiersToApiFormat(modifiers: PiiModifier[]): ShieldApiModifier[] {
+	return modifiers.map(modifier => ({
+		type: modifier.type,
+		entity: modifier.entity,
+		...(modifier.label && { label: modifier.label })
+	}));
+}
+
 export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 	name: 'piiDetection',
 
@@ -198,13 +209,35 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 
 				console.log('PiiDetectionExtension: Using known entities:', knownEntities);
 
-				const response = await maskPiiText(apiKey, [plainText], knownEntities, false, false);
+				// Get current modifiers from PiiModifierExtension state (read-only)
+				const view = this.editor?.view;
+				let modifiers: ShieldApiModifier[] = [];
+				if (view) {
+					const modifierState = piiModifierExtensionKey.getState(view.state);
+					if (modifierState?.modifiers && modifierState.modifiers.length > 0) {
+						modifiers = convertModifiersToApiFormat(modifierState.modifiers);
+						console.log('PiiDetectionExtension: Found', modifiers.length, 'modifiers:', modifiers);
+					} else {
+						console.log('PiiDetectionExtension: No modifiers found in editor state');
+					}
+				} else {
+					console.log('PiiDetectionExtension: No editor view available for reading modifiers');
+				}
+
+				const response = await maskPiiText(apiKey, [plainText], knownEntities, modifiers, false, false);
+				
+				console.log('PiiDetectionExtension: API request details:', {
+					textLength: plainText.length,
+					knownEntitiesCount: knownEntities.length,
+					modifiersCount: modifiers.length,
+					modifiers: modifiers,
+					hasApiKey: !!apiKey
+				});
 				
 				console.log('PiiDetectionExtension: API response:', response);
 
 				if (response.pii && response.pii[0] && response.pii[0].length > 0) {
 					// Get the editor view through the stored editor reference
-					const view = this.editor?.view;
 					if (!view) {
 						console.log('PiiDetectionExtension: No editor view available');
 						return;
@@ -228,7 +261,7 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 						piiSessionManager.setEntities(response.pii[0]);
 					}
 
-					// Update plugin state with new entities
+					// Update plugin state with new entities (don't touch modifiers - they're managed by PiiModifierExtension)
 					const tr = view.state.tr.setMeta(piiDetectionPluginKey, {
 						type: 'UPDATE_ENTITIES',
 						entities: mappedEntities
@@ -326,6 +359,15 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 									entities: meta.entities
 								};
 								break;
+							case 'TRIGGER_DETECTION_WITH_MODIFIERS':
+								// Trigger detection when modifiers change
+								if (newState.positionMapping?.plainText.trim()) {
+									console.log('PiiDetectionExtension: Triggering detection due to modifier change');
+									debouncedDetection(newState.positionMapping.plainText);
+								} else {
+									console.log('PiiDetectionExtension: Skipping detection - no text content');
+								}
+								break;
 							case 'TOGGLE_ENTITY_MASKING':
 								const { entityIndex, occurrenceIndex } = meta;
 								const updatedEntities = [...newState.entities];
@@ -419,6 +461,18 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 					return true;
 				}
 				
+				return false;
+			},
+
+			// Command to trigger PII detection when modifiers change
+			triggerDetectionForModifiers: () => ({ state, dispatch }: { state: any; dispatch: any }) => {
+				if (dispatch) {
+					const tr = state.tr.setMeta(piiDetectionPluginKey, {
+						type: 'TRIGGER_DETECTION_WITH_MODIFIERS'
+					});
+					dispatch(tr);
+					return true;
+				}
 				return false;
 			},
 

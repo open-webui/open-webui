@@ -35,6 +35,9 @@ interface PiiModifierState {
 
 const piiModifierExtensionKey = new PluginKey<PiiModifierState>('piiModifier');
 
+// Export the plugin key so other extensions can access the state
+export { piiModifierExtensionKey };
+
 // Generate unique ID for modifiers
 function generateModifierId(): string {
 	return `modifier_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
