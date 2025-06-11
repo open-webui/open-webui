@@ -1,5 +1,6 @@
 <script>
 	import { getContext } from 'svelte';
+	import UploadIcon from './icons/UploadIcon.svelte';
 
 	export let title = '';
 	export let content = '';
@@ -7,8 +8,10 @@
 </script>
 
 <div class="px-3">
-	<div class="text-center text-6xl mb-3">📄</div>
-	<div class="text-center dark:text-white text-xl font-semibold z-50">
+	<div class="flex justify-center mb-3 text-lightGray-100 dark:text-customGray-100">
+		<UploadIcon className="size-8"/>
+	</div>
+	<div class="text-center text-lightGray-100 dark:text-customGray-100 font-medium text-xl z-50">
 		{#if title}
 			{title}
 		{:else}
@@ -17,7 +20,7 @@
 	</div>
 
 	<slot
-		><div class="px-2 mt-2 text-center text-sm dark:text-gray-200 w-full">
+		><div class="px-2 mt-2 text-center text-sm text-lightGray-100 dark:text-customGray-100 w-full">
 			{#if content}
 				{content}
 			{:else}
