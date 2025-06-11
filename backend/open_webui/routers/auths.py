@@ -55,9 +55,8 @@ from typing import Optional, List
 
 from ssl import CERT_NONE, CERT_REQUIRED, PROTOCOL_TLS
 
-if ENABLE_LDAP.value:
-    from ldap3 import Server, Connection, NONE, Tls
-    from ldap3.utils.conv import escape_filter_chars
+from ldap3 import Server, Connection, NONE, Tls
+from ldap3.utils.conv import escape_filter_chars
 
 router = APIRouter()
 
