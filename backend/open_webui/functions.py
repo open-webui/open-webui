@@ -25,6 +25,7 @@ from open_webui.socket.main import (
 )
 
 
+from open_webui.models.users import UserModel
 from open_webui.models.functions import Functions
 from open_webui.models.models import Models
 
@@ -227,12 +228,7 @@ async def generate_function_chat_completion(
         "__task__": __task__,
         "__task_body__": __task_body__,
         "__files__": files,
-        "__user__": {
-            "id": user.id,
-            "email": user.email,
-            "name": user.name,
-            "role": user.role,
-        },
+        "__user__": user.model_dump() if isinstance(user, UserModel) else {},
         "__metadata__": metadata,
         "__request__": request,
     }

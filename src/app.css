@@ -44,6 +44,10 @@ code {
 	font-family: 'InstrumentSerif', sans-serif;
 }
 
+.marked a {
+	@apply underline;
+}
+
 math {
 	margin-top: 1rem;
 }

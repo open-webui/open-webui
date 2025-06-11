@@ -393,6 +393,7 @@ export const updateUserById = async (token: string, userId: string, user: UserUp
 		},
 		body: JSON.stringify({
 			profile_image_url: user.profile_image_url,
+			role: user.role,
 			email: user.email,
 			name: user.name,
 			password: user.password !== '' ? user.password : undefined

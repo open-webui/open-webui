@@ -14,7 +14,11 @@ if [[ "${WEB_LOADER_ENGINE,,}" == "playwright" ]]; then
     python -c "import nltk; nltk.download('punkt_tab')"
 fi
 
-KEY_FILE=.webui_secret_key
+if [ -n "${WEBUI_SECRET_KEY_FILE}" ]; then
+    KEY_FILE="${WEBUI_SECRET_KEY_FILE}"
+else
+    KEY_FILE=".webui_secret_key"
+fi
 
 PORT="${PORT:-8080}"
 HOST="${HOST:-0.0.0.0}"

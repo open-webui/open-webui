@@ -1,6 +1,6 @@
 {
 	"name": "open-webui",
-	"version": "0.6.13",
+	"version": "0.6.14",
 	"private": true,
 	"scripts": {
 		"dev": "npm run pyodide:fetch && vite dev --host",
@@ -75,7 +75,7 @@
 		"@tiptap/starter-kit": "^2.10.0",
 		"@xyflow/svelte": "^0.1.19",
 		"async": "^3.2.5",
-		"bits-ui": "^0.19.7",
+		"bits-ui": "^0.21.15",
 		"codemirror": "^6.0.1",
 		"codemirror-lang-elixir": "^4.0.0",
 		"codemirror-lang-hcl": "^0.1.0",
@@ -95,7 +95,7 @@
 		"idb": "^7.1.1",
 		"js-sha256": "^0.10.1",
 		"jspdf": "^3.0.0",
-		"katex": "^0.16.21",
+		"katex": "^0.16.22",
 		"kokoro-js": "^1.1.1",
 		"marked": "^9.1.0",
 		"mermaid": "^11.6.0",

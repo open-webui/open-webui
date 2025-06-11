@@ -1,5 +1,5 @@
 fastapi==0.115.7
-uvicorn[standard]==0.34.0
+uvicorn[standard]==0.34.2
 pydantic==2.10.6
 python-multipart==0.0.20
 
@@ -7,13 +7,12 @@ python-socketio==5.13.0
 python-jose==3.4.0
 passlib[bcrypt]==1.7.4
 
-requests==2.32.3
+requests==2.32.4
 aiohttp==3.11.11
 async-timeout
 aiocache
 aiofiles
 starlette-compress==1.6.0
-
 
 sqlalchemy==2.0.38
 alembic==1.14.0
@@ -76,13 +75,13 @@ pandas==2.2.3
 openpyxl==3.1.5
 pyxlsb==1.0.10
 xlrd==2.0.1
-validators==0.34.0
+validators==0.35.0
 psutil
 sentencepiece
 soundfile==0.13.1
-azure-ai-documentintelligence==1.0.0
+azure-ai-documentintelligence==1.0.2
 
-pillow==11.1.0
+pillow==11.2.1
 opencv-python-headless==4.11.0.86
 rapidocr-onnxruntime==1.4.4
 rank-bm25==0.2.2

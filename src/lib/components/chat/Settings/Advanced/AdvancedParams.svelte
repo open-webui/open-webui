@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Switch from '$lib/components/common/Switch.svelte';
+	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import { getContext } from 'svelte';
@@ -34,6 +35,9 @@
 		repeat_penalty: null,
 		use_mmap: null,
 		use_mlock: null,
+		think: null,
+		format: null,
+		keep_alive: null,
 		num_keep: null,
 		num_ctx: null,
 		num_batch: null,
@@ -1095,6 +1099,74 @@
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip
 			content={$i18n.t(
+				'This option enables or disables the use of the reasoning feature in Ollama, which allows the model to think before generating a response. When enabled, the model can take a moment to process the conversation context and generate a more thoughtful response.'
+			)}
+			placement="top-start"
+			className="inline-tooltip"
+		>
+			<div class=" py-0.5 flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">
+					{'think'} ({$i18n.t('Ollama')})
+				</div>
+				<button
+					class="p-1 px-3 text-xs flex rounded-sm transition"
+					on:click={() => {
+						params.think = (params?.think ?? null) === null ? true : params.think ? false : null;
+					}}
+					type="button"
+				>
+					{#if params.think === true}
+						<span class="ml-2 self-center">{$i18n.t('On')}</span>
+					{:else if params.think === false}
+						<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+					{:else}
+						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+					{/if}
+				</button>
+			</div>
+		</Tooltip>
+	</div>
+
+	<div class=" py-0.5 w-full justify-between">
+		<Tooltip
+			content={$i18n.t('The format to return a response in. Format can be json or a JSON schema.')}
+			placement="top-start"
+			className="inline-tooltip"
+		>
+			<div class=" py-0.5 flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">
+					{'format'} ({$i18n.t('Ollama')})
+				</div>
+				<button
+					class="p-1 px-3 text-xs flex rounded-sm transition"
+					on:click={() => {
+						params.format = (params?.format ?? null) === null ? 'json' : null;
+					}}
+					type="button"
+				>
+					{#if (params?.format ?? null) === null}
+						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+					{:else}
+						<span class="ml-2 self-center">{$i18n.t('JSON')}</span>
+					{/if}
+				</button>
+			</div>
+		</Tooltip>
+
+		{#if (params?.format ?? null) !== null}
+			<div class="flex mt-0.5 space-x-2">
+				<Textarea
+					className="w-full  text-sm bg-transparent outline-hidden"
+					placeholder={$i18n.t('e.g. "json" or a JSON schema')}
+					bind:value={params.format}
+				/>
+			</div>
+		{/if}
+	</div>
+
+	<div class=" py-0.5 w-full justify-between">
+		<Tooltip
+			content={$i18n.t(
 				'This option controls how many tokens are preserved when refreshing the context. For example, if set to 2, the last 2 tokens of the conversation context will be retained. Preserving context can help maintain the continuity of a conversation, but it may reduce the ability to respond to new topics.'
 			)}
 			placement="top-start"
@@ -1364,6 +1436,46 @@
 							step="1"
 						/>
 					</div>
+				</div>
+			{/if}
+		</div>
+
+		<div class=" py-0.5 w-full justify-between">
+			<Tooltip
+				content={$i18n.t(
+					'This option controls how long the model will stay loaded into memory following the request (default: 5m)'
+				)}
+				placement="top-start"
+				className="inline-tooltip"
+			>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs font-medium">
+						{'keep_alive'} ({$i18n.t('Ollama')})
+					</div>
+					<button
+						class="p-1 px-3 text-xs flex rounded-sm transition"
+						on:click={() => {
+							params.keep_alive = (params?.keep_alive ?? null) === null ? '5m' : null;
+						}}
+						type="button"
+					>
+						{#if (params?.keep_alive ?? null) === null}
+							<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
+						{/if}
+					</button>
+				</div>
+			</Tooltip>
+
+			{#if (params?.keep_alive ?? null) !== null}
+				<div class="flex mt-0.5 space-x-2">
+					<input
+						class="w-full text-sm bg-transparent outline-hidden"
+						type="text"
+						placeholder={$i18n.t("e.g. '30s','10m'. Valid time units are 's', 'm', 'h'.")}
+						bind:value={params.keep_alive}
+					/>
 				</div>
 			{/if}
 		</div>

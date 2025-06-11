@@ -5,6 +5,7 @@ import os
 import pkgutil
 import sys
 import shutil
+from uuid import uuid4
 from pathlib import Path
 
 import markdown
@@ -130,6 +131,7 @@ else:
         PACKAGE_DATA = {"version": "0.0.0"}
 
 VERSION = PACKAGE_DATA["version"]
+INSTANCE_ID = os.environ.get("INSTANCE_ID", str(uuid4()))
 
 
 # Function to parse each section

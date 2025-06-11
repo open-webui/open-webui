@@ -1,7 +1,6 @@
 import socketio
-import redis
-from redis import asyncio as aioredis
 from urllib.parse import urlparse
+from typing import Optional
 
 
 def parse_redis_service_url(redis_url):
@@ -18,23 +17,46 @@ def parse_redis_service_url(redis_url):
     }
 
 
-def get_redis_connection(redis_url, redis_sentinels, decode_responses=True):
-    if redis_sentinels:
-        redis_config = parse_redis_service_url(redis_url)
-        sentinel = redis.sentinel.Sentinel(
-            redis_sentinels,
-            port=redis_config["port"],
-            db=redis_config["db"],
-            username=redis_config["username"],
-            password=redis_config["password"],
-            decode_responses=decode_responses,
-        )
+def get_redis_connection(
+    redis_url, redis_sentinels, async_mode=False, decode_responses=True
+):
+    if async_mode:
+        import redis.asyncio as redis
 
-        # Get a master connection from Sentinel
-        return sentinel.master_for(redis_config["service"])
+        # If using sentinel in async mode
+        if redis_sentinels:
+            redis_config = parse_redis_service_url(redis_url)
+            sentinel = redis.sentinel.Sentinel(
+                redis_sentinels,
+                port=redis_config["port"],
+                db=redis_config["db"],
+                username=redis_config["username"],
+                password=redis_config["password"],
+                decode_responses=decode_responses,
+            )
+            return sentinel.master_for(redis_config["service"])
+        elif redis_url:
+            return redis.from_url(redis_url, decode_responses=decode_responses)
+        else:
+            return None
     else:
-        # Standard Redis connection
-        return redis.Redis.from_url(redis_url, decode_responses=decode_responses)
+        import redis
+
+        if redis_sentinels:
+            redis_config = parse_redis_service_url(redis_url)
+            sentinel = redis.sentinel.Sentinel(
+                redis_sentinels,
+                port=redis_config["port"],
+                db=redis_config["db"],
+                username=redis_config["username"],
+                password=redis_config["password"],
+                decode_responses=decode_responses,
+            )
+            return sentinel.master_for(redis_config["service"])
+        elif redis_url:
+            return redis.Redis.from_url(redis_url, decode_responses=decode_responses)
+        else:
+            return None
 
 
 def get_sentinels_from_env(sentinel_hosts_env, sentinel_port_env):

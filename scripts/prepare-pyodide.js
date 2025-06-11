@@ -12,7 +12,8 @@ const packages = [
 	'sympy',
 	'tiktoken',
 	'seaborn',
-	'pytz'
+	'pytz',
+	'black'
 ];
 
 import { loadPyodide } from 'pyodide';
