@@ -115,15 +115,32 @@ function createHoverMenu(
 		max-width: 300px;
 	`;
 
-	// Header
+	// Header with icon
 	const header = document.createElement('div');
 	header.style.cssText = `
+		display: flex;
+		align-items: center;
+		gap: 8px;
 		font-weight: 600;
 		color: #333;
 		margin-bottom: 8px;
 		font-size: 12px;
 	`;
-	header.textContent = `"${wordInfo.word}"`;
+	
+	// Add NENNA icon
+	const icon = document.createElement('img');
+	icon.src = '/static/icon-purple-32.png';
+	icon.style.cssText = `
+		width: 16px;
+		height: 16px;
+		flex-shrink: 0;
+	`;
+	
+	const textNode = document.createElement('span');
+	textNode.textContent = `"${wordInfo.word}"`;
+	
+	header.appendChild(icon);
+	header.appendChild(textNode);
 	menu.appendChild(header);
 
 	// Ignore button (only show if word is detected as PII)
@@ -166,18 +183,28 @@ function createHoverMenu(
 	`;
 
 	const maskBtn = document.createElement('button');
-	maskBtn.textContent = '🎭 Mark as PII';
+	maskBtn.textContent = 'Mark as PII';
 	maskBtn.style.cssText = `
 		width: 100%;
 		padding: 6px 10px;
-		border: 1px solid #4ecdc4;
-		background: #f0fdfa;
+		border: 1px solid #6b46c1;
+		background: #6b46c1;
 		border-radius: 4px;
 		cursor: pointer;
 		font-size: 12px;
-		color: #0d9488;
+		color: white;
 		font-weight: 500;
+		transition: background-color 0.2s ease;
 	`;
+
+	// Add hover effects for the button
+	maskBtn.addEventListener('mouseenter', () => {
+		maskBtn.style.backgroundColor = '#553c9a';
+	});
+	
+	maskBtn.addEventListener('mouseleave', () => {
+		maskBtn.style.backgroundColor = '#6b46c1';
+	});
 
 	// Handle mask button click
 	maskBtn.addEventListener('click', () => {
