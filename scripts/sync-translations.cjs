@@ -1,7 +1,8 @@
 // scripts/sync-translations.cjs
 // Ensures all translation.json files have the same set of keys as the MASTER_LOCALE (en-US),
 // preserving existing translations and removing keys not present in the master.
-// Also ensures consistent sorting of all keys, including nested ones, with lowercase before uppercase.
+// Also ensures consistent sorting of all keys, including nested ones.
+// AUTOMATICALLY CREATES MISSING translation.json FILES FOR NEW LOCALES.
 
 const fs = require('fs');
 const path = require('path');
@@ -168,26 +169,25 @@ function syncTranslations() {
     const totalCanonicalKeys = countKeys(canonicalStructure);
     console.log(`Master locale has ${totalCanonicalKeys} keys. All other files will be synced to this structure and order.`);
 
-    // Phase 2: Iterate through each locale and synchronize it with the canonical structure
+    // Phase 2: Iterate through each locale (including potential new ones) and synchronize it with the canonical structure
     for (const dirName of localeDirs) {
         const filePath = path.join(BASE_DIR, dirName, 'translation.json');
-        let currentFileData;
+        let currentFileData; // This will hold the data for the current locale being processed
 
-        // Load current locale's data, or start with an empty object if file is missing
+        // Load current locale's data, or initialize an empty object if file is missing
         try {
             if (fs.existsSync(filePath)) {
                 const fileContent = fs.readFileSync(filePath, 'utf8');
                 currentFileData = JSON.parse(fileContent);
+                console.log(`Loaded existing ${dirName}/translation.json.`);
             } else {
-                console.warn(`Translation file for ${dirName} is missing, creating an empty one.`);
-                currentFileData = {};
+                console.warn(`Translation file for ${dirName} is missing, creating an empty one and populating keys.`);
+                currentFileData = {}; // Start with an empty object for new files
             }
         } catch (error) {
             console.error(`Error loading or parsing ${filePath}: ${error.message}. Starting with an empty object for this locale.`);
-            currentFileData = {};
+            currentFileData = {}; // Fallback to empty if parsing fails
         }
-
-        console.log(`Processing ${dirName}/translation.json...`);
 
         let fileChangesMade = false;
 
