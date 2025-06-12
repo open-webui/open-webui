@@ -203,6 +203,7 @@
 			</h1>
 			<button
 				class="self-center"
+				aria-label={$i18n.t('Close modal')}
 				on:click={() => {
 					show = false;
 				}}
