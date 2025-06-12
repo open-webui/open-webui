@@ -827,7 +827,8 @@ async def generate_chat_completion(
         headers["Authorization"] = f"Bearer {key}"
 
     # append PDF base64
-    if "files" in form_data['metadata'] and form_data['metadata']['files'] is not None and len(form_data['metadata']['files']) >= 1:
+    if len(payload["messages"]) >= 2 and \
+        "files" in form_data['metadata'] and form_data['metadata']['files'] is not None and len(form_data['metadata']['files']) >= 1:
         new_content = []
         for a_file in  form_data['metadata']['files']:
             if a_file['type'] != "file":
@@ -844,7 +845,7 @@ async def generate_chat_completion(
                     "file_data": f"data:application/pdf;base64,{uploaded_file_base64_string}",
                 }
             })
-        old_content = payload['messages'][-1]['content']
+        old_content = payload['messages'][1]['content']
         if isinstance(old_content, str):
             new_content.append({
                     "type": "text",
@@ -853,7 +854,7 @@ async def generate_chat_completion(
         else:
             assert isinstance(old_content, list)
             new_content += old_content
-        payload['messages'][-1]['content'] = new_content
+        payload['messages'][1]['content'] = new_content
     
     payload = json.dumps(payload)
 
