@@ -586,7 +586,19 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 									to: meta.to
 								};
 
-								const updatedModifiers = [...newState.modifiers, newModifier];
+								let updatedModifiers;
+								
+								if (meta.modifierType === 'mask') {
+									// For mask modifiers, replace any existing mask modifiers for the same entity
+									updatedModifiers = newState.modifiers.filter(modifier => 
+										!(modifier.type === 'mask' && modifier.entity.toLowerCase() === meta.entity.toLowerCase())
+									);
+									updatedModifiers.push(newModifier);
+								} else {
+									// For ignore modifiers, just add normally (ignore can coexist with masks)
+									updatedModifiers = [...newState.modifiers, newModifier];
+								}
+
 								newState = {
 									...newState,
 									modifiers: updatedModifiers
