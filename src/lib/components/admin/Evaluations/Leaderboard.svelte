@@ -281,6 +281,28 @@
 	onMount(async () => {
 		rankHandler();
 	});
+
+	$: sortedModels = [...rankedModels].sort((a, b) => {
+		let aVal, bVal;
+		if (orderBy === 'name') {
+			aVal = a.name;
+			bVal = b.name;
+			return direction === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+		} else if (orderBy === 'rating') {
+			aVal = a.rating === '-' ? -Infinity : a.rating;
+			bVal = b.rating === '-' ? -Infinity : b.rating;
+			return direction === 'asc' ? aVal - bVal : bVal - aVal;
+		} else if (orderBy === 'won') {
+			aVal = a.stats.won === '-' ? -Infinity : Number(a.stats.won);
+			bVal = b.stats.won === '-' ? -Infinity : Number(b.stats.won);
+			return direction === 'asc' ? aVal - bVal : bVal - aVal;
+		} else if (orderBy === 'lost') {
+			aVal = a.stats.lost === '-' ? -Infinity : Number(a.stats.lost);
+			bVal = b.stats.lost === '-' ? -Infinity : Number(b.stats.lost);
+			return direction === 'asc' ? aVal - bVal : bVal - aVal;
+		}
+		return 0;
+	});
 </script>
 
 <div class="mt-0.5 mb-2 gap-1 flex flex-col md:flex-row justify-between">
@@ -452,27 +474,7 @@
 				</tr>
 			</thead>
 			<tbody class="">
-				{#each [...rankedModels].sort((a, b) => {
-					let aVal, bVal;
-					if (orderBy === 'name') {
-						aVal = a.name;
-						bVal = b.name;
-						return direction === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-					} else if (orderBy === 'rating') {
-						aVal = a.rating === '-' ? -Infinity : a.rating;
-						bVal = b.rating === '-' ? -Infinity : b.rating;
-						return direction === 'asc' ? aVal - bVal : bVal - aVal;
-					} else if (orderBy === 'won') {
-						aVal = a.stats.won === '-' ? -Infinity : Number(a.stats.won);
-						bVal = b.stats.won === '-' ? -Infinity : Number(b.stats.won);
-						return direction === 'asc' ? aVal - bVal : bVal - aVal;
-					} else if (orderBy === 'lost') {
-						aVal = a.stats.lost === '-' ? -Infinity : Number(a.stats.lost);
-						bVal = b.stats.lost === '-' ? -Infinity : Number(b.stats.lost);
-						return direction === 'asc' ? aVal - bVal : bVal - aVal;
-					}
-					return 0;
-				}) as model, modelIdx (model.id)}
+				{#each sortedModels as model, modelIdx (model.id)}
 					<tr class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs group">
 						<td class="px-3 py-1.5 text-left font-medium text-gray-900 dark:text-white w-fit">
 							<div class=" line-clamp-1">
