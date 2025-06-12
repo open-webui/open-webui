@@ -82,7 +82,7 @@ function findWordAt(doc: ProseMirrorNode, pos: number): { from: number; to: numb
 		}
 	});
 
-	if (text && text.length > 2) {
+	if (text && text.length >= 2) {
 		return { from, to, text };
 	}
 	return null;
