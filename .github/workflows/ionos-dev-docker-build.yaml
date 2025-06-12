@@ -155,7 +155,7 @@ jobs:
             echo "Image is pushed to the Harbor Registry with TAG '${{ github.run_id }}' and '${ADDITIONAL_TAG//\//_}'"
           else
             echo "Job ${{ env.JOB_NAME }} failed. Status JSON:"
-            kubectl get job --namespace=arc-runners ${{ env.JOB_NAME }} -o yaml
+            kubectl get job --namespace=arc-runners ${{ env.JOB_NAME }} -o "jsonpath='{.status}'"
             exit 1
           fi
         env:
