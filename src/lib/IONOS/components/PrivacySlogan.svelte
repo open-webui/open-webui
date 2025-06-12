@@ -8,9 +8,15 @@
 </script>
 
 <div class="flex flex-row mx-10 items-center">
-	<Shield className={"h-6 w-6 inline-block mr-2 fill-purple-700"} />
+	<a
+		href="https://www.ionos.de/ionos-gpt-datenschutz-manifest#digitale-loesungen"
+		target="_blank"
 
-	<span class="text-purple-700">
-		{$i18n.t('Privacy by Design!', { ns: 'ionos' })}
-	</span>
+	>
+		<Shield className={"h-6 w-6 inline-block mr-2 fill-purple-700"} />
+
+		<span class="text-purple-700">
+			{$i18n.t('Privacy by Design!', { ns: 'ionos' })}
+		</span>
+	</a>
 </div>
