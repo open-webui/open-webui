@@ -40,9 +40,14 @@
 	let showUploadWarning = false;
 	let dontShowAgain = false;
 
-	// פונקציה לבדוק אם המשתמש כבר ביקש לא להציג שוב
+	const WARNING_KEY = 'upload_warning_dismissed_until';
+
 	const shouldShowWarning = () => {
-		return localStorage.getItem('hideUploadWarning') !== 'true';
+		const dismissedUntil = localStorage.getItem(WARNING_KEY);
+		if (!dismissedUntil) return true;
+
+		const now = new Date().getTime();
+		return now > parseInt(dismissedUntil);
 	};
 
 	$: if (show) {
@@ -95,9 +100,10 @@
 	}
 
 	function proceedWithUpload() {
-		// אם המשתמש סימן "אל תציג שוב", שמור ב-localStorage
 		if (dontShowAgain) {
-			localStorage.setItem('hideUploadWarning', 'true');
+			// Set 24 hour dismissal
+			const dismissUntil = new Date().getTime() + 24 * 60 * 60 * 1000;
+			localStorage.setItem(WARNING_KEY, dismissUntil.toString());
 		}
 
 		showUploadWarning = false;
@@ -105,13 +111,13 @@
 	}
 
 	function closeWarning() {
-		// אם המשתמש סימן "אל תציג שוב", שמור ב-localStorage גם בביטול
 		if (dontShowAgain) {
-			localStorage.setItem('hideUploadWarning', 'true');
+			const dismissUntil = new Date().getTime() + 24 * 60 * 60 * 1000;
+			localStorage.setItem(WARNING_KEY, dismissUntil.toString());
 		}
 
 		showUploadWarning = false;
-		dontShowAgain = false; // איפוס הסימון
+		dontShowAgain = false;
 	}
 </script>
 
@@ -442,60 +448,67 @@
 			class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md mx-4 shadow-2xl border border-gray-200 dark:border-gray-700 relative"
 			style="direction: rtl; z-index: 100000;"
 		>
-			<h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white" dir="rtl">
-				לפני העלאת קבצים - חשוב לדעת
+			<h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
+				{$i18n.t('Before Uploading Files - Important Information')}
 			</h3>
 			<div class="space-y-3 mb-6">
-				
 				<div class="flex items-start gap-2">
-					<span class="text-lg">✅</span>
-					<p class="text-sm text-gray-700 dark:text-gray-300">וודאו שהקבצים תקינים </p>
-				</div>
-				
-				<div class="flex items-start gap-2">
-					<span class="text-lg">🎯</span>
-					<p class="text-sm text-gray-700 dark:text-gray-300">היו ספציפיים בשאלותיכם</p>
-				</div>
-				
-				<div class="flex items-start gap-2">
-					<span class="text-lg">☎</span>
-					<p class="text-sm text-gray-700 dark:text-gray-300">דווחו לנו על כל תקלה ונחקור</p>
-				</div>
-				<div class="flex items-start gap-2">
-					<span class="text-lg">⏱️</span>
+					<span class="text-lg">⚠️</span>
 					<p class="text-sm text-gray-700 dark:text-gray-300">
-					התאזרו בסבלנות - קבצים גדולים דורשים זמן עיבוד ארוך יותר
+						{$i18n.t(
+							'Files will be processed and may take some time depending on size and complexity'
+						)}
+					</p>
+				</div>
+
+				<div class="flex items-start gap-2">
+					<span class="text-lg">📝</span>
+					<p class="text-sm text-gray-700 dark:text-gray-300">
+						{$i18n.t('File content will be analyzed and may be used for responses')}
+					</p>
+				</div>
+
+				<div class="flex items-start gap-2">
+					<span class="text-lg">🔒</span>
+					<p class="text-sm text-gray-700 dark:text-gray-300">
+						{$i18n.t('Do not upload sensitive or confidential information unless authorized')}
+					</p>
+				</div>
+
+				<div class="flex items-start gap-2">
+					<span class="text-lg">💡</span>
+					<p class="text-sm text-gray-700 dark:text-gray-300">
+						התאזרו בסבלנות - קבצים גדולים דורשים זמן עיבוד ארוך יותר
 					</p>
 				</div>
 			</div>
-			
+
 			<!-- Checkbox "אל תציג שוב" -->
 			<div class="flex items-center gap-2 mb-6">
 				<input
-				type="checkbox"
-				id="dontShowAgain"
-				bind:checked={dontShowAgain}
+					type="checkbox"
+					id="dontShowAgain"
+					bind:checked={dontShowAgain}
 					class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
 				/>
 				<label for="dontShowAgain" class="text-sm text-gray-700 dark:text-gray-300">
 					אל תציג הודעה זו שוב
 				</label>
 			</div>
-			
+
 			<div class="flex gap-3 justify-end">
 				<button
 					class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
 					on:click={closeWarning}
 				>
-					ביטול
+					{$i18n.t('Cancel')}
 				</button>
 				<button
 					class="px-4 py-2 bg-gray-700 text-white hover:bg-gray-800 rounded transition-colors"
 					on:click={proceedWithUpload}
 				>
-					המשך להעלאה
+					{$i18n.t('Continue')}
 				</button>
-
 			</div>
 		</div>
 	</div>
