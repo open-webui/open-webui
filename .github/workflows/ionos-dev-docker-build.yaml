@@ -152,12 +152,14 @@ jobs:
           JOB_EXIT_CODE=$( kubectl get pod ${POD_NAME} -o jsonpath='{.status.containerStatuses[0].state.terminated.exitCode}' | tr -d "'" )
           if [[ "$JOB_EXIT_CODE" == "0" ]]; then
             echo "Job ${{ env.JOB_NAME }} is complete."
-            echo "Image is pushed to the Harbor Registry with TAG '${{ github.run_id }}'"
+            echo "Image is pushed to the Harbor Registry with TAG '${{ github.run_id }}' and '${ADDITIONAL_TAG//\//_}'"
           else
             echo "Job ${{ env.JOB_NAME }} failed. Status JSON:"
             kubectl get job --namespace=arc-runners ${{ env.JOB_NAME }} -o yaml
             exit 1
           fi
+        env:
+          ADDITIONAL_TAG: ${{ github.ref_name || github.sha }}
             
       - name: Delete Kaniko Job
         run: |
