@@ -6,8 +6,8 @@ on:
   #   branches:
   #     - main
   #     - dev
-  #   tags:
-  #     - v*
+    tags:
+      - v*
 
 env:
   REGISTRY: ghcr.io
