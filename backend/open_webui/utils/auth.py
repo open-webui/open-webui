@@ -229,7 +229,7 @@ def get_current_user(
         else:
             if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
                 trusted_email = request.headers.get(WEBUI_AUTH_TRUSTED_EMAIL_HEADER)
-                if trusted_email and user.email != trusted_email:
+                if trusted_email and user.email.lower() != trusted_email.lower():
                     # Delete the token cookie
                     response.delete_cookie("token")
                     # Delete OAuth token if present
