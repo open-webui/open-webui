@@ -39,7 +39,7 @@
     {/if}
     {#each options as option}
         <div class="max-w-[max-content] flex items-center">
-            <button class="{(_optionSelected && selectedTitle === option.title) || (option.state === 'selected')  ? 'pill-button selected' : (_optionSelected && option.state === 'disabled') ? 'pill-button disabled' : 'pill-button'} rounded-3xl px-5 py-0 flex items-center text-left"
+            <button class="{(_optionSelected && selectedTitle === option.title) || (option.state === 'selected')  ? 'pill-button selected' : (_optionSelected && option.state === 'disabled') ? 'pill-button disabled' : 'pill-button'} flex items-center text-left"
                 on:click={() => handleClick(option)}
             >
                 {option.title}

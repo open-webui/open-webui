@@ -83,11 +83,11 @@
                 <!-- Buy now button -->
                 <div class="grid-item-footer w-full flex justify-center py-1">
                     {#if product.product_info}
-                        <button class="pill-button rounded-3xl px-3" on:click={() => window.open(product.product_info.url, '_blank')}>
+                        <button class="pill-button " on:click={() => window.open(product.product_info.url, '_blank')}>
                             {'Buy Now'}
                         </button>
                     {:else if product.experience_info}
-                        <button class="pill-button rounded-3xl px-3" on:click={() => window.open(product.experience_info.url, '_blank')}>
+                        <button class="pill-button " on:click={() => window.open(product.experience_info.url, '_blank')}>
                             {'Book Now'}
                         </button>
                     {/if}

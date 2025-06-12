@@ -4,6 +4,8 @@
     color: white;
     scale: 95%;
     cursor: pointer;
+    padding: 0 0.75rem;
+    border-radius: 1.5rem;
 }
 .pill-button:hover {
     background-color: #EB5352;

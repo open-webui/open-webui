@@ -113,7 +113,7 @@
 								{/if}
 							</span>
 							<button
-								class="pill-button transition w-max rounded-full font-medium text-sm py-1 px-4"
+								class="pill-button transition w-max font-medium text-base"
 								on:click={async () => {
 									await userSignOut();
 									user.set(null);
@@ -124,9 +124,6 @@
 							>
 								{$i18n.t('Sign up')}
 							</button>
-							<!--					<span class="px-1">-->
-							<!--						{$i18n.t('It\'s free!')}<br>-->
-							<!--					</span>-->
 						</div>
 					{:else if (history.messages && Object.keys(history.messages).length > 0)}
 						<div class="flex flex-row justify-center items-center gap-1" in:fade={{ duration: 100 }}>
