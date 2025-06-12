@@ -342,7 +342,7 @@
 							{model?.model}
 						</div>
 					</div>
-					<div class="text-xs dark:text-customGray-590">{model?.usage_count}</div>
+					<div class="text-xs dark:text-customGray-590">€{(model?.credits_used).toFixed(2)}</div>
 				</div>
 			{/each}
 		</div>
