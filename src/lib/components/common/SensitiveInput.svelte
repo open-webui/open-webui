@@ -1,13 +1,13 @@
 <script lang="ts">
 	const i18n = getContext('i18n');
 	import { getContext } from 'svelte';
+	import { settings } from '$lib/stores';
 	export let value: string = '';
 	export let placeholder = '';
 	export let required = true;
 	export let readOnly = false;
 	export let outerClassName = 'flex flex-1 bg-transparent';
-	export let inputClassName =
-		'w-full text-sm py-0.5 placeholder:text-gray-300 dark:placeholder:text-gray-700 bg-transparent outline-hidden';
+	export let inputClassName = `w-full text-sm py-0.5 placeholder:text-gray-300 dark:placeholder:text-gray-700 bg-transparent ${(settings?.highContrastMode ?? false) ? '' : ' outline-hidden'}`;
 	export let showButtonClassName = 'pl-1.5  transition bg-transparent';
 
 	let show = false;
