@@ -75,6 +75,8 @@
 	};
 
 	const init = async () => {
+		models = null;
+
 		workspaceModels = await getBaseModels(localStorage.token);
 		baseModels = await getModels(localStorage.token, null, true);
 
@@ -126,6 +128,7 @@
 				toast.success($i18n.t('Model updated successfully'));
 			}
 		}
+		await init();
 
 		_models.set(
 			await getModels(
@@ -133,7 +136,6 @@
 				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
 			)
 		);
-		await init();
 	};
 
 	const toggleModelHandler = async (model) => {
