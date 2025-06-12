@@ -134,7 +134,7 @@
 
 				<div class="mt-6 flex justify-end gap-7 font-medium">
 					<button
-						class="text-gray-800 w-fit text-xs dark:text-customGray-200 py-2.5 rounded-lg transition"
+						class="text-lightGray-100 w-fit text-xs dark:text-customGray-200 py-2.5 rounded-lg transition"
 						on:click={() => {
 							show = false;
 							dispatch('cancel');

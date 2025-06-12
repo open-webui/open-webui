@@ -195,7 +195,7 @@
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
-				class="font-medium flex gap-2 items-center px-2 py-1.5 text-sm text-lightGray-100 darK:text-customGray-100  cursor-pointer hover:bg-lightGray-700 dark:hover:bg-customGray-950 dark:hover:text-white  rounded-md"
+				class="font-medium flex gap-2 items-center px-2 py-1.5 text-sm text-lightGray-100 dark:text-customGray-100  cursor-pointer hover:bg-lightGray-700 dark:hover:bg-customGray-950 dark:hover:text-white  rounded-md"
 				on:click={() => {
 					shareHandler();
 				}}

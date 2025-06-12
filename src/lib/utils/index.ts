@@ -1133,6 +1133,33 @@ export function getMonthRange(year: number, month: number) {
 	};
 }
 
+export function getPeriodRange(period) {
+	const end = dayjs();
+	let start;
+
+	switch (period) {
+		case 'last_30_days':
+			start = end.subtract(30, 'day');
+			break;
+		case 'last_3_months':
+			start = end.subtract(3, 'month');
+			break;
+		case 'last_6_months':
+			start = end.subtract(6, 'month');
+			break;
+		case 'last_year':
+			start = end.subtract(1, 'year');
+			break;
+		default:
+			throw new Error(`Unsupported period: ${period}`);
+	}
+
+	return {
+		start: start.format('YYYY-MM-DD'),
+		end: end.format('YYYY-MM-DD')
+	};
+}
+
 export const emojiToBase64 = (emoji) => {
 	return emoji;
 };

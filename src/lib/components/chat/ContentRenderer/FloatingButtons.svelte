@@ -227,7 +227,7 @@
 	{#if responseContent === null}
 		{#if !floatingInput}
 			<div
-				class="flex flex-row gap-0.5 shrink-0 p-1 bg-white dark:bg-gray-850 dark:text-gray-100 text-medium rounded-lg shadow-xl"
+				class="flex flex-row gap-0.5 shrink-0 p-1 bg-lightGray-300 dark:bg-customGray-800 dark:text-customGray-100 text-medium rounded-lg shadow-xl"
 			>
 				<button
 					class="px-1 hover:bg-gray-50 dark:hover:bg-gray-800 rounded flex items-center gap-1 min-w-fit"
@@ -262,7 +262,7 @@
 			</div>
 		{:else}
 			<div
-				class="py-1 flex dark:text-gray-100 bg-gray-50 dark:bg-gray-800 border dark:border-gray-800 w-72 rounded-full shadow-xl"
+				class="py-1 flex text-lightGray-100 dark:text-customGray-100 bg-lightGray-800 dark:bg-customGray-800 dark:border-gray-800 w-72 rounded-full shadow-xl"
 			>
 				<input
 					type="text"
@@ -281,7 +281,7 @@
 					<button
 						class="{floatingInputValue !== ''
 							? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
-							: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 m-0.5 self-center"
+							: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1 m-0.5 self-center"
 						on:click={() => {
 							askHandler();
 						}}
@@ -290,7 +290,7 @@
 							xmlns="http://www.w3.org/2000/svg"
 							viewBox="0 0 16 16"
 							fill="currentColor"
-							class="size-4"
+							class="size-3"
 						>
 							<path
 								fill-rule="evenodd"
@@ -303,9 +303,9 @@
 			</div>
 		{/if}
 	{:else}
-		<div class="bg-white dark:bg-gray-850 dark:text-gray-100 rounded-xl shadow-xl w-80 max-w-full">
+		<div class="bg-lightGray-300 dark:bg-customGray-800 text-lightGray-100 dark:text-customGray-100 rounded-xl shadow-xl w-80 max-w-full">
 			<div
-				class="bg-gray-50/50 dark:bg-gray-800 dark:text-gray-100 text-medium rounded-xl px-3.5 py-3 w-full"
+				class="bg-lightGray-300 dark:bg-customGray-700 text-lightGray-100 dark:text-customGray-100 text-medium rounded-xl px-3.5 py-3 w-full"
 			>
 				<div class="font-medium">
 					<Markdown id={`${id}-float-prompt`} content={prompt} />
@@ -313,7 +313,7 @@
 			</div>
 
 			<div
-				class="bg-white dark:bg-gray-850 dark:text-gray-100 text-medium rounded-xl px-3.5 py-3 w-full"
+				class="bg-lightGray-300 dark:bg-customGray-800 text-lightGray-100 dark:text-customGray-100 text-medium rounded-xl px-3.5 py-3 w-full"
 			>
 				<div class=" max-h-80 overflow-y-auto w-full markdown-prose-xs" id="response-container">
 					{#if responseContent.trim() === ''}
@@ -325,7 +325,7 @@
 					{#if responseDone}
 						<div class="flex justify-end pt-3 text-sm font-medium">
 							<button
-								class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+								class="bg-lightGray-300 border-lighGray-400 hover:bg-lightGray-700 text-lightGray-100 text-xs dark:bg-customGray-900 border dark:border-customGray-700 dark:hover:bg-customGray-950 dark:text-customGray-200 py-2.5 px-4 rounded-lg transition"
 								on:click={addHandler}
 							>
 								{$i18n.t('Add')}

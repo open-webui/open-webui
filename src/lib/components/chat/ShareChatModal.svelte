@@ -148,7 +148,7 @@
 							{/if} -->
 
 							<button
-								class="self-center flex items-center gap-1 px-3.5 py-2 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+								class="flex gap-x-2 bg-lightGray-300 border-lighGray-400 hover:bg-lightGray-700 text-lightGray-100 text-xs dark:bg-customGray-900 border dark:border-customGray-700 dark:hover:bg-customGray-950 dark:text-customGray-200 py-2.5 px-4 rounded-lg transition"
 								type="button"
 								id="copy-and-share-chat-button"
 								on:click={async () => {

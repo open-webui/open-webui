@@ -31,8 +31,9 @@
 		<script>
 			// Set logo image sources before the app hydrates
 			window.addEventListener('DOMContentLoaded', () => {
+				const isDarkLS = localStorage.getItem('theme') === 'dark';
 				const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-				const logoSrc = isDark ? '/logo_dark.png' : '/logo_light.png';
+				const logoSrc = (isDarkLS || isDark) ? '/logo_dark_transparent.png' : '/logo_light_transparent.png';
 
 				const logo = document.getElementById('logo');
 				const logoHer = document.getElementById('logo-her');
@@ -113,7 +114,7 @@
 				style="
 					position: absolute;
 					width: auto;
-					height: 6rem;
+					height: 4rem;
 					top: 44%;
 					left: 50%;
 					transform: translateX(-50%);
@@ -189,9 +190,9 @@
 		background: #000;
 	}
 
-	html.dark #splash-screen img {
+	/* html.dark #splash-screen img {
 		filter: invert(1);
-	}
+	} */
 
 	html.her #splash-screen {
 		background: #983724;

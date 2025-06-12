@@ -11,7 +11,7 @@
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import dayjs from 'dayjs';
 	import { getTopModels } from '$lib/apis/analytics';
-	import { getMonthRange } from '$lib/utils';
+	import { getMonthRange, getPeriodRange } from '$lib/utils';
 
 	const i18n = getContext('i18n');
 	export let analytics = {};
@@ -31,19 +31,26 @@
 	let showMonthsDropdown = false;
 	let monthsRef;
 
-	const monthsBack = 12;
-	const monthOptions = Array.from({ length: monthsBack }, (_, i) => {
-		const date = dayjs().subtract(i, 'month');
-		return {
-			label: date.format('MMMM YYYY'),
-			value: {
-				year: date.year(),
-				month: date.month() + 1
-			}
-		};
-	});
+	const periodOptions = [
+		{
+			label: 'Last 30 Days',
+			value: 'last_30_days'
+		},
+		{
+			label: 'Last 3 Months',
+			value: 'last_3_months'
+		},
+		{
+			label: 'Last 6 Months',
+			value: 'last_6_months'
+		},
+		{
+			label: 'Last Year',
+			value: 'last_year'
+		}
+	]
 
-	let selectedMonth = monthOptions[0];
+	let selectedPeriod = periodOptions[0];
 	let chartMessagesData = null;
 	let chartChatsData = null;
 
@@ -284,7 +291,7 @@
 						>
 							<div class="flex items-center">
 								<div class="text-xs text-lightGray-100 dark:text-customGray-200 max-w-[22rem] text-left">
-									{selectedMonth?.label}
+									{selectedPeriod?.label}
 								</div>
 								<ChevronDown className="size-2 ml-1" />
 							</div>
@@ -295,15 +302,14 @@
 								class="max-h-60 min-w-44 overflow-y-auto absolute top-6 -right-2 z-50 bg-lightGray-300 dark:bg-customGray-900 border border-gray-300 dark:border-customGray-700 rounded-md shadow"
 							>
 								<div class="px-1 py-1">
-									{#each monthOptions as option}
+									{#each periodOptions as option}
 										<div
 											role="button"
 											tabindex="0"
 											on:click={async () => {
-												selectedMonth = option;
-												const { start, end } = getMonthRange(
-													selectedMonth.value.year,
-													selectedMonth.value.month
+												selectedPeriod = option;
+												const { start, end } = getPeriodRange(
+													selectedPeriod.value
 												);
 												const res = await getTopModels(localStorage.token, start, end);
 												analytics = {

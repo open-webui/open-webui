@@ -151,7 +151,7 @@
 			{/if}
 
 			{#if edit === true}
-				<div class=" w-full bg-gray-50 dark:bg-gray-800 rounded-3xl px-5 py-3 mb-2">
+				<div class=" w-full bg-lightGray-800 dark:bg-customGray-800 rounded-3xl px-5 py-3 mb-2">
 					<div class="max-h-96 overflow-auto">
 						<textarea
 							id="message-edit-{message.id}"
@@ -191,10 +191,10 @@
 							</button>
 						</div> -->
 
-						<div class="flex space-x-1.5">
+						<div class="flex space-x-3">
 							<button
 								id="close-edit-message-button"
-								class="px-4 py-2 bg-white dark:bg-gray-900 hover:bg-gray-100 text-gray-800 dark:text-gray-100 transition rounded-3xl"
+								class="shrink-0 text-lightGray-100 w-fit text-xs dark:text-customGray-200 py-2.5 rounded-lg transition"
 								on:click={() => {
 									cancelEditMessage();
 								}}
@@ -204,7 +204,7 @@
 
 							<button
 								id="confirm-edit-message-button"
-								class=" px-4 py-2 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-3xl"
+								class="shrink-0 bg-lightGray-300 border-lighGray-400 hover:bg-lightGray-700 text-lightGray-100 text-xs dark:bg-customGray-900 border dark:border-customGray-700 dark:hover:bg-customGray-950 dark:text-customGray-200 py-2.5 px-4 rounded-lg transition"
 								on:click={() => {
 									editMessageConfirmHandler();
 								}}
