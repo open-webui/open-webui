@@ -57,6 +57,11 @@
 		selectedFeedback = feedback;
 	};
 
+	const closeFeedbackModal = () => {
+		showFeedbackModal = false;
+		selectedFeedback = null;
+	};
+
 	//////////////////////
 	//
 	// CRUD operations
@@ -115,7 +120,7 @@
 	};
 </script>
 
-<FeedbackModal bind:show={showFeedbackModal} {selectedFeedback} />
+<FeedbackModal bind:show={showFeedbackModal} {selectedFeedback} onClose={closeFeedbackModal} />
 
 <div class="mt-0.5 mb-2 gap-1 flex flex-row justify-between">
 	<div class="flex md:self-center text-lg font-medium px-0.5">

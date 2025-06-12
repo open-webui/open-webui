@@ -1,15 +1,16 @@
 <script lang="ts">
 	import Modal from '$lib/components/common/Modal.svelte';
-	import { getContext, createEventDispatcher } from 'svelte';
+	import { getContext } from 'svelte';
 	const i18n = getContext('i18n');
-	const dispatch = createEventDispatcher();
 
 	export let show = false;
 	export let selectedFeedback = null;
 
+	export let onClose: () => void = () => {};
+
 	const close = () => {
 		show = false;
-		dispatch('close');
+		onClose();
 	};
 </script>
 
@@ -38,17 +39,17 @@
 				<div class="flex flex-col w-full">
 					<div class="mb-2">
 						<strong>{$i18n.t('Rating')}:</strong>
-						<span>{selectedFeedback.data.details?.rating ?? '-'}</span>
+						<span>{selectedFeedback?.data?.details?.rating ?? '-'}</span>
 					</div>
 					<div class="mb-2">
 						<strong>{$i18n.t('Reason')}:</strong>
-						<span>{selectedFeedback.data.reason || '-'}</span>
+						<span>{selectedFeedback?.data?.reason || '-'}</span>
 					</div>
 					<div class="mb-2">
 						<strong>{$i18n.t('Tags')}:</strong>
-						{#if selectedFeedback.data.tags && selectedFeedback.data.tags.length}
+						{#if selectedFeedback?.data?.tags && selectedFeedback?.data?.tags.length}
 							<div class="flex flex-wrap gap-1 mt-1">
-								{#each selectedFeedback.data.tags as tag}
+								{#each selectedFeedback?.data?.tags as tag}
 									<span class="px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-xs">{tag}</span
 									>
 								{/each}
