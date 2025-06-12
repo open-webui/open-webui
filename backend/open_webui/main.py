@@ -75,6 +75,7 @@ from open_webui.routers import (
     jira,
     utils,
     mcp,
+    crew_mcp,
 )
 
 from open_webui.routers.retrieval import (
@@ -842,6 +843,7 @@ app.include_router(ollama.router, prefix="/ollama", tags=["ollama"])
 app.include_router(openai.router, prefix="/openai", tags=["openai"])
 app.include_router(mcp.router, prefix="/mcp", tags=["mcp"])  # For verification endpoints used by GUI
 app.include_router(mcp.router, prefix="/api/v1/mcp", tags=["mcp"])  # For tools API
+app.include_router(crew_mcp.router, prefix="/api/v1/crew-mcp", tags=["crew-mcp"])  # CrewAI MCP integration
 
 
 app.include_router(pipelines.router, prefix="/api/v1/pipelines", tags=["pipelines"])
@@ -875,6 +877,7 @@ app.include_router(
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
 app.include_router(jira.router, prefix="/api/v1/jira", tags=["jira"])
 app.include_router(metrics.router, prefix="/api/v1/metrics", tags=["metrics"])
+app.include_router(crew_mcp.router, prefix="/api/v1/crew-mcp", tags=["crew-mcp"])
 
 
 ##################################

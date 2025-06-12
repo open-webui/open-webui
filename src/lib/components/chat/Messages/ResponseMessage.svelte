@@ -476,8 +476,13 @@
 		<div class="flex-auto w-0 pl-1">
 			<Name>
 				<Tooltip content={model?.name ?? message.model} placement="top-start">
-					<span class="line-clamp-1">
+					<span class="line-clamp-1 flex items-center gap-1">
 						{model?.name ?? message.model}
+						{#if message.crewAI}
+							<span class="px-1.5 py-0.5 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-full font-medium">
+								CrewAI
+							</span>
+						{/if}
 					</span>
 				</Tooltip>
 

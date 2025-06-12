@@ -110,3 +110,6 @@ ldap3==2.9.1
 ## MCP (Model Context Protocol)
 fastmcp==2.5.2
 pytz==2025.2
+
+## CrewAI MCP Integration
+crewai-tools[mcp]==0.47.0
