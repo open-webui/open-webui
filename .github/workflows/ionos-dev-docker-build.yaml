@@ -148,7 +148,8 @@ jobs:
           kubectl logs --namespace=arc-runners ${POD_NAME} --follow
           echo "=== END: Logs for pod ${POD_NAME} ==="
 
-          JOB_EXIT_CODE=$( kubectl get pod ${POD_NAME} -o jsonpath='{.status.containerStatuses[0].state.terminated.exitCode}' )
+          # tr -d is used to remove quotes from the returned _numerical_ value
+          JOB_EXIT_CODE=$( kubectl get pod ${POD_NAME} -o jsonpath='{.status.containerStatuses[0].state.terminated.exitCode}' | tr -d "'" )
           if [[ "$JOB_EXIT_CODE" == "0" ]]; then
             echo "Job ${{ env.JOB_NAME }} is complete."
             echo "Image is pushed to the Harbor Registry with TAG '${{ github.run_id }}'"
