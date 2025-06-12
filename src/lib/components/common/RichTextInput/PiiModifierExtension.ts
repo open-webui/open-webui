@@ -122,7 +122,8 @@ function createHoverMenu(
 	onMask: (label: string) => void,
 	showIgnoreButton: boolean = false,
 	existingModifiers: PiiModifier[] = [],
-	onRemoveModifier?: (modifierId: string) => void
+	onRemoveModifier?: (modifierId: string) => void,
+	timeoutManager?: { clearAll: () => void; setFallback: (callback: () => void, delay: number) => void }
 ): HTMLElement {
 	const menu = document.createElement('div');
 	menu.className = 'pii-modifier-hover-menu';
@@ -415,6 +416,9 @@ function createHoverMenu(
 	menu.addEventListener('mouseenter', () => {
 		// Cancel any pending hide timeout when hovering over menu
 		console.log('PiiModifierExtension: Mouse entered menu, keeping it open');
+		if (timeoutManager) {
+			timeoutManager.clearAll();
+		}
 	});
 
 	menu.addEventListener('mouseleave', (e) => {
@@ -425,17 +429,19 @@ function createHoverMenu(
 		}
 		
 		// Hide menu when mouse leaves it with a longer delay
-		setTimeout(() => {
-			// Double-check the menu still exists and isn't being interacted with
-			if (menu && document.body.contains(menu)) {
-				const activeElement = document.activeElement;
-				const isInputFocused = activeElement && menu.contains(activeElement);
-				
-				if (!isInputFocused) {
-					menu.remove();
+		if (timeoutManager) {
+			timeoutManager.setFallback(() => {
+				// Double-check the menu still exists and isn't being interacted with
+				if (menu && document.body.contains(menu)) {
+					const activeElement = document.activeElement;
+					const isInputFocused = activeElement && menu.contains(activeElement);
+					
+					if (!isInputFocused) {
+						menu.remove();
+					}
 				}
-			}
-		}, 500); // Longer delay to allow interaction
+			}, 500);
+		}
 	});
 
 	return menu;
@@ -477,6 +483,8 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 
 		let hoverMenuElement: HTMLElement | null = null;
 		let hoverTimeout: number | null = null;
+		let menuCloseTimeout: ReturnType<typeof setTimeout> | null = null;
+		let isMouseOverMenu = false;
 
 		const plugin = new Plugin<PiiModifierState>({
 			key: piiModifierExtensionKey,
@@ -579,14 +587,32 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 
 				handleDOMEvents: {
 					mousemove: (view, event) => {
-						// Don't show menu if hovering over existing menu or if menu is being interacted with
-						if (hoverMenuElement && hoverMenuElement.contains(event.target as Node)) {
-							// Clear any pending timeout to keep menu stable
+						// Check if mouse is over existing menu
+						const isOverMenu = hoverMenuElement && hoverMenuElement.contains(event.target as Node);
+						
+						if (isOverMenu) {
+							// Update mouse over menu state
+							if (!isMouseOverMenu) {
+								isMouseOverMenu = true;
+								console.log('PiiModifierExtension: Mouse entered menu area');
+							}
+							
+							// Clear any pending timeouts to keep menu stable
 							if (hoverTimeout) {
 								clearTimeout(hoverTimeout);
 								hoverTimeout = null;
 							}
+							if (menuCloseTimeout) {
+								clearTimeout(menuCloseTimeout);
+								menuCloseTimeout = null;
+							}
 							return;
+						} else {
+							// Mouse left menu area
+							if (isMouseOverMenu) {
+								isMouseOverMenu = false;
+								console.log('PiiModifierExtension: Mouse left menu area');
+							}
 						}
 
 						// Clear existing timeout
@@ -626,6 +652,26 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 								hoverMenuElement.remove();
 							}
 
+							// Create timeout manager
+							const timeoutManager = {
+								clearAll: () => {
+									if (hoverTimeout) {
+										clearTimeout(hoverTimeout);
+										hoverTimeout = null;
+									}
+									if (menuCloseTimeout) {
+										clearTimeout(menuCloseTimeout);
+										menuCloseTimeout = null;
+									}
+								},
+								setFallback: (callback: () => void, delay: number) => {
+									if (menuCloseTimeout) {
+										clearTimeout(menuCloseTimeout);
+									}
+									menuCloseTimeout = setTimeout(callback, delay);
+								}
+							};
+
 							const onIgnore = () => {
 								const tr = view.state.tr.setMeta(piiModifierExtensionKey, {
 									type: 'ADD_MODIFIER',
@@ -640,6 +686,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 									hoverMenuElement.remove();
 									hoverMenuElement = null;
 								}
+								timeoutManager.clearAll();
 							};
 
 							const onMask = (label: string) => {
@@ -657,6 +704,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 									hoverMenuElement.remove();
 									hoverMenuElement = null;
 								}
+								timeoutManager.clearAll();
 							};
 
 							const onRemoveModifier = (modifierId: string) => {
@@ -670,6 +718,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 									hoverMenuElement.remove();
 									hoverMenuElement = null;
 								}
+								timeoutManager.clearAll();
 							};
 
 							hoverMenuElement = createHoverMenu(
@@ -684,13 +733,14 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 								onMask,
 								isPiiHighlighted, // Show ignore button only if already detected as PII
 								existingModifiers, // Pass existing modifiers
-								onRemoveModifier // Pass removal callback
+								onRemoveModifier, // Pass removal callback
+								timeoutManager // Pass timeout manager
 							);
 
 							document.body.appendChild(hoverMenuElement);
 
-							// Keep menu open longer for interaction (10 seconds)
-							setTimeout(() => {
+							// Set a fallback timeout to close menu after 10 seconds of inactivity
+							timeoutManager.setFallback(() => {
 								if (hoverMenuElement) {
 									hoverMenuElement.remove();
 									hoverMenuElement = null;
@@ -718,6 +768,11 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 						}
 						if (hoverTimeout) {
 							clearTimeout(hoverTimeout);
+							hoverTimeout = null;
+						}
+						if (menuCloseTimeout) {
+							clearTimeout(menuCloseTimeout);
+							menuCloseTimeout = null;
 						}
 					}
 				};
