@@ -134,8 +134,39 @@ type OllamaModelDetails = {
 };
 
 type Settings = {
-	collapseCodeBlocks: boolean;
-	expandDetails: boolean;
+	toolServers?: never[];
+	autoTags?: boolean;
+	autoFollowUps?: boolean;
+	responseAutoCopy?: boolean;
+	showUpdateToast?: boolean;
+	showChangelog?: boolean;
+	showEmojiInCall?: boolean;
+	voiceInterruption?: boolean;
+	richTextInput?: boolean;
+	promptAutocomplete?: boolean;
+	largeTextAsFile?: boolean;
+	landingPageMode?: string;
+	splitLargeChunks?: boolean;
+	userLocation?: boolean;
+	notificationSound?: boolean;
+	notificationSoundAlways?: boolean;
+	stylizedPdfExport?: boolean;
+	hapticFeedback?: boolean;
+	imageCompression?: boolean;
+	imageCompressionSize?: { width: string; height: string; };
+	backgroundImageUrl?: null;
+	webSearch?: null;
+	params?: { stream_response: null; function_calling: null; seed: null; temperature: null; reasoning_effort: null; logit_bias: null; frequency_penalty: null; presence_penalty: null; repeat_penalty: null; repeat_last_n: null; mirostat: null; mirostat_eta: null; mirostat_tau: null; top_k: null; top_p: null; min_p: null; stop: null; tfs_z: null; num_ctx: null; num_batch: null; num_keep: null; max_tokens: null; num_gpu: null; };
+	notifications?: any;
+	directConnections?: null;
+	pinnedModels?: never[];
+	chatBubble?: boolean;
+	copyFormatted?: boolean;
+	widescreenMode?: null;
+	scrollOnBranchChange?: boolean;
+	detectArtifacts?: boolean;
+	collapseCodeBlocks?: boolean;
+	expandDetails?: boolean;
 	iframeSandboxAllowForms?: boolean;
 	iframeSandboxAllowSameOrigin?: boolean;
 	models?: string[];
@@ -168,6 +199,7 @@ type ModelOptions = {
 };
 
 type AudioSettings = {
+	tts: any;
 	STTEngine?: string;
 	TTSEngine?: string;
 	speaker?: string;
@@ -237,6 +269,7 @@ type PromptSuggestion = {
 };
 
 type SessionUser = {
+	permissions: any;
 	id: string;
 	email: string;
 	name: string;
