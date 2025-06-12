@@ -134,6 +134,8 @@ type OllamaModelDetails = {
 };
 
 type Settings = {
+	collapseCodeBlocks: boolean;
+	expandDetails: boolean;
 	iframeSandboxAllowForms?: boolean;
 	iframeSandboxAllowSameOrigin?: boolean;
 	models?: string[];
