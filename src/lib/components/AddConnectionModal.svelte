@@ -194,15 +194,16 @@
 <Modal size="sm" bind:show>
 	<div>
 		<div class=" flex justify-between dark:text-gray-100 px-5 pt-4 pb-1.5">
-			<div class=" text-lg font-medium self-center font-primary">
+			<h1 class="text-lg font-medium self-center font-primary">
 				{#if edit}
 					{$i18n.t('Edit Connection')}
 				{:else}
 					{$i18n.t('Add Connection')}
 				{/if}
-			</div>
+			</h1>
 			<button
 				class="self-center"
+				aria-label={$i18n.t('Close modal')}
 				on:click={() => {
 					show = false;
 				}}
@@ -211,6 +212,7 @@
 					xmlns="http://www.w3.org/2000/svg"
 					viewBox="0 0 20 20"
 					fill="currentColor"
+					aria-hidden="true"
 					class="w-5 h-5"
 				>
 					<path
