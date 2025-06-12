@@ -304,10 +304,18 @@ function createHoverMenu(
 	`;
 
 	let isDefaultValue = true;
+	let skipAutocompletion = false;
 
 	// Handle focus/click - clear default value
 	const handleInputFocus = (e: Event) => {
 		e.stopPropagation(); // Prevent click from bubbling up and closing menu
+		console.log('PiiModifierExtension: Input field focused');
+		
+		// Notify timeout manager that input is focused
+		if (timeoutManager) {
+			(timeoutManager as any).setInputFocused(true);
+		}
+		
 		if (isDefaultValue) {
 			labelInput.value = '';
 			labelInput.style.color = '#333';
@@ -320,6 +328,12 @@ function createHoverMenu(
 
 	// Handle blur - restore default if empty
 	labelInput.addEventListener('blur', () => {
+		
+		// Notify timeout manager that input is no longer focused
+		if (timeoutManager) {
+			(timeoutManager as any).setInputFocused(false);
+		}
+		
 		if (labelInput.value.trim() === '') {
 			labelInput.value = 'CUSTOM';
 			labelInput.style.color = '#999';
@@ -330,6 +344,13 @@ function createHoverMenu(
 	// Handle input for inline autocompletion
 	labelInput.addEventListener('input', (e) => {
 		e.stopPropagation();
+		
+		// Skip autocompletion if we're handling a backspace
+		if (skipAutocompletion) {
+			skipAutocompletion = false;
+			return;
+		}
+		
 		const inputValue = labelInput.value;
 		
 		// Only autocomplete if not default value and user has typed something
@@ -346,6 +367,42 @@ function createHoverMenu(
 			}
 		}
 	});
+
+	// Prevent ProseMirror from intercepting keyboard events when input is focused
+	labelInput.addEventListener('keydown', (e) => {
+		// Stop propagation for all keyboard events to prevent ProseMirror interference
+		e.stopPropagation();
+		
+		// Handle specific keys
+		if (e.key === 'Enter') {
+			e.preventDefault();
+			const label = isDefaultValue ? 'CUSTOM' : labelInput.value.trim().toUpperCase();
+			if (label) {
+				onMask(label);
+			}
+		} else if (e.key === 'Tab') {
+			// Accept the current autocompletion on Tab
+			e.preventDefault();
+			// The text is already completed, just move cursor to end
+			labelInput.setSelectionRange(labelInput.value.length, labelInput.value.length);
+		} else if (e.key === 'Escape') {
+			// Close menu on Escape
+			e.preventDefault();
+			menu.remove();
+		} else if (e.key === 'Backspace') {
+			// Just set flag to skip autocompletion and let browser handle backspace naturally
+			skipAutocompletion = true;
+			// Don't prevent default - let browser handle backspace naturally
+		}
+		// For all other keys, let the input handle them naturally
+	});
+
+	// Also prevent keyup events from bubbling to ProseMirror
+	labelInput.addEventListener('keyup', (e) => {
+		e.stopPropagation();
+	});
+
+
 
 	const maskBtn = document.createElement('button');
 	maskBtn.textContent = 'Mark as PII';
@@ -388,22 +445,7 @@ function createHoverMenu(
 		}
 	});
 
-	// Handle Enter key in input
-	labelInput.addEventListener('keydown', (e) => {
-		e.stopPropagation(); // Prevent keydown from bubbling up
-		if (e.key === 'Enter') {
-			e.preventDefault();
-			const label = isDefaultValue ? 'CUSTOM' : labelInput.value.trim().toUpperCase();
-			if (label) {
-				onMask(label);
-			}
-		} else if (e.key === 'Tab') {
-			// Accept the current autocompletion on Tab
-			e.preventDefault();
-			// The text is already completed, just move cursor to end
-			labelInput.setSelectionRange(labelInput.value.length, labelInput.value.length);
-		}
-	});
+
 
 	labelSection.appendChild(labelInput);
 	labelSection.appendChild(maskBtn);
@@ -485,6 +527,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 		let hoverTimeout: number | null = null;
 		let menuCloseTimeout: ReturnType<typeof setTimeout> | null = null;
 		let isMouseOverMenu = false;
+		let isInputFocused = false;
 
 		const plugin = new Plugin<PiiModifierState>({
 			key: piiModifierExtensionKey,
@@ -579,9 +622,18 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 						if (!isClickInsideMenu) {
 							hoverMenuElement.remove();
 							hoverMenuElement = null;
+							isInputFocused = false;
 						}
 					}
 
+					return false;
+				},
+
+				handleKeyDown(view, event) {
+					// If input in menu is focused, don't let ProseMirror handle keyboard events
+					if (isInputFocused) {
+						return true; // This tells ProseMirror we handled the event
+					}
 					return false;
 				},
 
@@ -594,7 +646,6 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 							// Update mouse over menu state
 							if (!isMouseOverMenu) {
 								isMouseOverMenu = true;
-								console.log('PiiModifierExtension: Mouse entered menu area');
 							}
 							
 							// Clear any pending timeouts to keep menu stable
@@ -611,7 +662,6 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 							// Mouse left menu area
 							if (isMouseOverMenu) {
 								isMouseOverMenu = false;
-								console.log('PiiModifierExtension: Mouse left menu area');
 							}
 						}
 
@@ -669,6 +719,9 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 										clearTimeout(menuCloseTimeout);
 									}
 									menuCloseTimeout = setTimeout(callback, delay);
+								},
+								setInputFocused: (focused: boolean) => {
+									isInputFocused = focused;
 								}
 							};
 
