@@ -123,7 +123,8 @@ function createHoverMenu(
 	showIgnoreButton: boolean = false,
 	existingModifiers: PiiModifier[] = [],
 	onRemoveModifier?: (modifierId: string) => void,
-	timeoutManager?: { clearAll: () => void; setFallback: (callback: () => void, delay: number) => void }
+	timeoutManager?: { clearAll: () => void; setFallback: (callback: () => void, delay: number) => void },
+	showTextField: boolean = true
 ): HTMLElement {
 	const menu = document.createElement('div');
 	menu.className = 'pii-modifier-hover-menu';
@@ -281,14 +282,15 @@ function createHoverMenu(
 		menu.appendChild(ignoreBtn);
 	}
 
-	// Label input section
-	const labelSection = document.createElement('div');
-	labelSection.style.cssText = `
-		display: flex;
-		flex-direction: column;
-		gap: 6px;
-		position: relative;
-	`;
+	// Label input section (only show if showTextField is true)
+	if (showTextField) {
+		const labelSection = document.createElement('div');
+		labelSection.style.cssText = `
+			display: flex;
+			flex-direction: column;
+			gap: 6px;
+			position: relative;
+		`;
 
 	const labelInput = document.createElement('input');
 	labelInput.type = 'text';
@@ -447,9 +449,10 @@ function createHoverMenu(
 
 
 
-	labelSection.appendChild(labelInput);
-	labelSection.appendChild(maskBtn);
-	menu.appendChild(labelSection);
+		labelSection.appendChild(labelInput);
+		labelSection.appendChild(maskBtn);
+		menu.appendChild(labelSection);
+	}
 
 	// Don't auto-focus to allow users to see the "CUSTOM" placeholder first
 	// Users can click to focus when ready
@@ -697,6 +700,11 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 								return modifier.entity.toLowerCase() === wordInfo.text.toLowerCase();
 							}) || [];
 
+							// Check if there are any mask modifiers for this word
+							const hasMaskModifier = existingModifiers.some(modifier => modifier.type === 'mask');
+							// Check if there are any ignore modifiers for this word
+							const hasIgnoreModifier = existingModifiers.some(modifier => modifier.type === 'ignore');
+
 							// Show hover menu
 							if (hoverMenuElement) {
 								hoverMenuElement.remove();
@@ -784,10 +792,11 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 								},
 								onIgnore,
 								onMask,
-								isPiiHighlighted, // Show ignore button only if already detected as PII
+								isPiiHighlighted && !hasMaskModifier, // Show ignore button only if detected as PII AND no mask modifier exists
 								existingModifiers, // Pass existing modifiers
 								onRemoveModifier, // Pass removal callback
-								timeoutManager // Pass timeout manager
+								timeoutManager, // Pass timeout manager
+								!hasIgnoreModifier // Show text field only if no ignore modifier exists
 							);
 
 							document.body.appendChild(hoverMenuElement);
