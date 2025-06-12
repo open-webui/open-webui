@@ -104,14 +104,11 @@ function findBestMatch(input: string, labels: string[]): string | null {
 	
 	const upperInput = input.toUpperCase();
 	
-	// Find exact prefix match first
+	// Only find exact prefix matches - autocomplete should only suggest words that start with the input
 	const exactMatch = labels.find(label => label.startsWith(upperInput));
 	if (exactMatch) return exactMatch;
 	
-	// Find partial match
-	const partialMatch = labels.find(label => label.includes(upperInput));
-	if (partialMatch) return partialMatch;
-	
+	// No partial/substring matching - let user type what they want
 	return null;
 }
 
