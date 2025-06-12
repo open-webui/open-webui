@@ -14,9 +14,11 @@
 </script>
 
 <div class={outerClassName}>
+	<label class="sr-only" for="password-input">{$i18n.t('Password')}</label>
 	<input
 		class={`${inputClassName} ${show ? '' : 'password'}`}
 		{placeholder}
+		id="password-input"
 		bind:value
 		required={required && !readOnly}
 		disabled={readOnly}
