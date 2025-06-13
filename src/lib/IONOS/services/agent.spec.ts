@@ -127,6 +127,7 @@ describe('agent', () => {
 				role: 'user',
 				profile_image_url: '',
 				created_at: 0,
+				pseudonymized_user_id: 'pseudonymized-user-id-47',
 			});
 			await selectAgent(mockValue);
 			expect(mocks.navigation.goto).toHaveBeenCalledWith('/');

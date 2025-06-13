@@ -231,4 +231,5 @@ export type SessionUser = {
 	role: string;
 	profile_image_url: string;
 	created_at: number;
+	pseudonymized_user_id: string;
 };

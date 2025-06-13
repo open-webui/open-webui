@@ -54,6 +54,8 @@ from ssl import CERT_REQUIRED, PROTOCOL_TLS
 from ldap3 import Server, Connection, NONE, Tls
 from ldap3.utils.conv import escape_filter_chars
 
+from open_webui.services.ionos import pseudonymized_user_id
+
 router = APIRouter()
 
 log = logging.getLogger(__name__)
@@ -66,6 +68,7 @@ log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 class SessionUserResponse(Token, UserResponse):
     created_at: Optional[int] = None
+    pseudonymized_user_id: Optional[str] = None
     expires_at: Optional[int] = None
     permissions: Optional[dict] = None
 
@@ -113,6 +116,7 @@ async def get_session_user(
         "name": user.name,
         "role": user.role,
         "created_at": user.created_at,
+        "pseudonymized_user_id": pseudonymized_user_id(user),
         "profile_image_url": user.profile_image_url,
         "permissions": user_permissions,
     }
