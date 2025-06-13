@@ -23,16 +23,18 @@ logger = logging.getLogger(__name__)
 class AzureConfig(BaseModel):
     """Azure OpenAI configuration from environment variables"""
 
-    api_key: str = os.getenv("AZURE_OPENAI_API_KEY", "")
-    endpoint: str = os.getenv("AZURE_OPENAI_ENDPOINT", "")
-    deployment: str = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "o3-mini")
-    api_version: str = os.getenv("AZURE_OPENAI_API_VERSION", "2024-12-01-preview")
+    api_key: str = os.getenv("CREWAI_AZURE_OPENAI_API_KEY", "")
+    endpoint: str = os.getenv("CREWAI_AZURE_OPENAI_ENDPOINT", "")
+    deployment: str = os.getenv("CREWAI_AZURE_OPENAI_DEPLOYMENT_NAME", "o3-mini")
+    api_version: str = os.getenv(
+        "CREWAI_AZURE_OPENAI_API_VERSION", "2024-12-01-preview"
+    )
 
     def validate_config(self) -> bool:
         """Validate that required Azure configuration is present"""
         if not self.api_key or not self.endpoint:
             logger.error(
-                "Missing required Azure OpenAI configuration. Please set AZURE_OPENAI_API_KEY and AZURE_OPENAI_ENDPOINT environment variables."
+                "Missing required Azure OpenAI configuration. Please set CREWAI_AZURE_OPENAI_API_KEY and CREWAI_AZURE_OPENAI_ENDPOINT environment variables."
             )
             return False
         return True
