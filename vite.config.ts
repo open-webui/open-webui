@@ -41,6 +41,6 @@ export default defineConfig({
 		format: 'es'
 	},
 	esbuild: {
-		pure: ['console.log'],
-	},
+		pure: ['console.log', 'console.debug']
+	}
 });
