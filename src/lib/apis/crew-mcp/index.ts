@@ -84,26 +84,3 @@ export const queryCrewMCP = async (token: string = '', query: string, model: str
 
 	return res;
 };
-
-// Function to check if user has selected MCP tools that should use CrewAI
-export function shouldUseCrewMCP(selectedToolIds: string[], tools: any[]): boolean {
-	console.log('Checking if user selected MCP tools for CrewAI:', selectedToolIds);
-	
-	if (!selectedToolIds || selectedToolIds.length === 0) {
-		return false;
-	}
-	
-	// Check if any selected tool is an MCP tool
-	const hasMCPTools = selectedToolIds.some(toolId => {
-		const tool = tools?.find(t => t.id === toolId);
-		const isMCP = tool?.meta?.manifest?.is_mcp_tool || 
-					  tool?.name?.includes('get_current_time') || 
-					  tool?.id?.includes('mcp_') ||
-					  tool?.description?.toLowerCase().includes('mcp');
-		console.log(`Tool ${toolId}: isMCP = ${isMCP}`, tool);
-		return isMCP;
-	});
-	
-	console.log('Has MCP tools selected:', hasMCPTools);
-	return hasMCPTools;
-}

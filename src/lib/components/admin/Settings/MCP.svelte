@@ -7,7 +7,6 @@
 	import { 
 		getMCPConfig, 
 		updateMCPConfig, 
-		verifyMCPConnection, 
 		getMCPURLs, 
 		updateMCPURLs, 
 		getMCPTools,

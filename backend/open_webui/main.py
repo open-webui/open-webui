@@ -16,7 +16,6 @@ from sqlalchemy import text
 from typing import Optional
 from aiocache import cached
 import aiohttp
-import requests
 
 
 from fastapi import (
