@@ -1,5 +1,6 @@
 <script lang="ts">
 	const i18n = getContext('i18n');
+	import { settings } from '$lib/stores';
 	import { getContext } from 'svelte';
 	export let value: string = '';
 	export let placeholder = '';
@@ -7,7 +8,7 @@
 	export let readOnly = false;
 	export let outerClassName = 'flex flex-1 bg-transparent';
 	export let inputClassName =
-		'w-full text-sm py-0.5 placeholder:text-gray-300 dark:placeholder:text-gray-700 bg-transparent outline-hidden';
+		'w-full text-sm py-0.5 placeholder:text-gray-300 dark:placeholder:text-gray-700 bg-transparent';
 	export let showButtonClassName = 'pl-1.5  transition bg-transparent';
 
 	let show = false;
@@ -16,7 +17,7 @@
 <div class={outerClassName}>
 	<label class="sr-only" for="password-input">{placeholder || $i18n.t('Password')}</label>
 	<input
-		class={`${inputClassName} ${show ? '' : 'password'}`}
+		class={`${inputClassName} ${show ? '' : 'password'} ${($settings?.highContrastMode ?? false) ? '' : ' outline-hidden'}`}
 		{placeholder}
 		id="password-input"
 		bind:value
