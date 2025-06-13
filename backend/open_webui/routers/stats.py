@@ -1,16 +1,14 @@
 import logging
-from datetime import datetime, timedelta
-from typing import Optional
+from datetime import datetime
 
 from open_webui.models.users import Users
-from open_webui.models.chats import Chats
-from open_webui.models.messages import MessageTable
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 from pydantic import BaseModel
 
 from open_webui.internal.db import get_db
-from sqlalchemy import func, text
+from sqlalchemy import text
+from open_webui.env import DATABASE_URL
 
 log = logging.getLogger(__name__)
 
@@ -34,6 +32,60 @@ class StatsResponse(BaseModel):
     current_stats: CurrentStats
     evolution_stats: EvolutionStats
 
+DB_URL = DATABASE_URL.lower()
+IS_SQLITE = DB_URL.startswith("sqlite")
+IS_POSTGRES = DB_URL.startswith("postgresql") or DB_URL.startswith("postgres")
+
+def get_json_count_query():
+    """Return the SQL query to count messages in all chats, depending on the DB."""
+    if IS_SQLITE:
+        return (
+            """
+            SELECT COUNT(*)
+            FROM chat, json_each(json_extract(chat, '$.history.messages'))
+            WHERE json_valid(chat) = 1
+            """
+        )
+    elif IS_POSTGRES:
+        return (
+            """
+            SELECT COUNT(*)
+            FROM chat, LATERAL jsonb_array_elements(chat->'history'->'messages') AS msg
+            """
+        )
+    else:
+        return None
+
+def get_model_usage_query():
+    """Return the SQL query to count model usage, depending on the DB."""
+    if IS_SQLITE:
+        return (
+            """
+            SELECT 
+                json_extract(value, '$.model') as model,
+                COUNT(*) as count
+            FROM chat, json_each(json_extract(chat, '$.history.messages'))
+            WHERE json_extract(value, '$.role') = 'assistant' 
+            AND json_extract(value, '$.model') IS NOT NULL
+            GROUP BY json_extract(value, '$.model')
+            ORDER BY count DESC
+            """
+        )
+    elif IS_POSTGRES:
+        return (
+            """
+            SELECT 
+                msg->>'model' as model,
+                COUNT(*) as count
+            FROM chat, LATERAL jsonb_array_elements(chat->'history'->'messages') AS msg
+            WHERE msg->>'role' = 'assistant' AND msg ? 'model'
+            GROUP BY msg->>'model'
+            ORDER BY count DESC
+            """
+        )
+    else:
+        return None
+
 @router.get("/", response_model=StatsResponse)
 async def get_stats():
     """Get comprehensive statistics for the platform - publicly accessible"""
@@ -46,13 +98,11 @@ async def get_stats():
         total_conversations = db.execute(text("SELECT COUNT(*) FROM chat")).scalar()
         
         # Get total messages by counting all messages in all chats
-        # Messages are stored as JSON in the chat.chat column
-        total_messages_result = db.execute(text("""
-            SELECT COUNT(*)
-            FROM chat, json_each(json_extract(chat, '$.history.messages'))
-            WHERE json_valid(chat) = 1
-        """)).scalar()
-        
+        count_query = get_json_count_query()
+        if count_query:
+            total_messages_result = db.execute(text(count_query)).scalar()
+        else:
+            total_messages_result = 0
         total_messages = total_messages_result or 0
     
     # Current active users (users active in last 24 hours)
@@ -67,16 +117,11 @@ async def get_stats():
     
     # Model usage stats - extract from actual chat data
     with get_db() as db:
-        model_usage_result = db.execute(text("""
-            SELECT 
-                json_extract(value, '$.model') as model,
-                COUNT(*) as count
-            FROM chat, json_each(json_extract(chat, '$.history.messages'))
-            WHERE json_extract(value, '$.role') = 'assistant' 
-            AND json_extract(value, '$.model') IS NOT NULL
-            GROUP BY json_extract(value, '$.model')
-            ORDER BY count DESC
-        """)).fetchall()
+        model_usage_query = get_model_usage_query()
+        if model_usage_query:
+            model_usage_result = db.execute(text(model_usage_query)).fetchall()
+        else:
+            model_usage_result = []
     
     # Convert to dictionary format
     model_usage = {}
