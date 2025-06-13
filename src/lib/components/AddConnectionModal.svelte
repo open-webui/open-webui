@@ -425,9 +425,9 @@
 							</div>
 
 							{#if modelIds.length > 0}
-								<div class="flex flex-col">
+								<ul class="flex flex-col">
 									{#each modelIds as modelId, modelIdx}
-										<div class=" flex gap-2 w-full justify-between items-center">
+										<li class=" flex gap-2 w-full justify-between items-center">
 											<div class=" text-sm flex-1 py-1 rounded-lg">
 												{modelId}
 											</div>
@@ -444,9 +444,9 @@
 													<Minus strokeWidth="2" className="size-3.5" />
 												</button>
 											</div>
-										</div>
+										</li>
 									{/each}
-								</div>
+								</ul>
 							{:else}
 								<div
 									class={`text-gray-500 text-xs text-center py-2 px-10
