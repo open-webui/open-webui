@@ -26,10 +26,12 @@ except ImportError as e:
 log = logging.getLogger(__name__)
 router = APIRouter()
 
+
 # Request/Response models
 class CrewMCPQuery(BaseModel):
     query: str
     llm_config: Optional[Dict[str, Any]] = None
+
 
 class CrewMCPResponse(BaseModel):
     result: str
@@ -37,9 +39,11 @@ class CrewMCPResponse(BaseModel):
     success: bool
     error: Optional[str] = None
 
+
 class MCPToolsResponse(BaseModel):
     tools: list
     count: int
+
 
 # Global manager instance
 crew_mcp_manager = None
@@ -49,15 +53,16 @@ if CrewMCPManager:
     except Exception as e:
         logging.error(f"Failed to initialize CrewMCPManager: {e}")
 
+
 @router.get("/tools")
 async def get_mcp_tools(user=Depends(get_verified_user)) -> MCPToolsResponse:
     """Get available MCP tools"""
     if not crew_mcp_manager:
         raise HTTPException(
-            status_code=503, 
-            detail="CrewAI MCP integration not available. Check dependencies."
+            status_code=503,
+            detail="CrewAI MCP integration not available. Check dependencies.",
         )
-    
+
     try:
         tools = crew_mcp_manager.get_available_tools()
         return MCPToolsResponse(tools=tools, count=len(tools))
@@ -65,10 +70,10 @@ async def get_mcp_tools(user=Depends(get_verified_user)) -> MCPToolsResponse:
         log.exception(f"Error getting MCP tools: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @router.post("/query")
 async def run_crew_query(
-    request: CrewMCPQuery, 
-    user=Depends(get_verified_user)
+    request: CrewMCPQuery, user=Depends(get_verified_user)
 ) -> CrewMCPResponse:
     """Run a CrewAI query with MCP tools"""
     if not crew_mcp_manager:
@@ -76,37 +81,31 @@ async def run_crew_query(
             result="",
             tools_used=[],
             success=False,
-            error="CrewAI MCP integration not available"
+            error="CrewAI MCP integration not available",
         )
-    
+
     try:
         log.info(f"Running CrewAI query for user {user.id}: {request.query}")
-        
+
         # Get available tools first
         tools = crew_mcp_manager.get_available_tools()
         if not tools:
             raise HTTPException(
-                status_code=503, 
-                detail="No MCP tools available. Check MCP server configuration."
+                status_code=503,
+                detail="No MCP tools available. Check MCP server configuration.",
             )
-        
+
         # Run the crew
         result = crew_mcp_manager.run_time_crew(request.query)
-        
+
         return CrewMCPResponse(
-            result=result,
-            tools_used=[tool["name"] for tool in tools],
-            success=True
+            result=result, tools_used=[tool["name"] for tool in tools], success=True
         )
-        
+
     except Exception as e:
         log.exception(f"Error running CrewAI query: {e}")
-        return CrewMCPResponse(
-            result="",
-            tools_used=[],
-            success=False,
-            error=str(e)
-        )
+        return CrewMCPResponse(result="", tools_used=[], success=False, error=str(e))
+
 
 @router.get("/status")
 async def get_crew_mcp_status(user=Depends(get_verified_user)) -> dict:
@@ -117,16 +116,16 @@ async def get_crew_mcp_status(user=Depends(get_verified_user)) -> dict:
             "error": "CrewAI MCP integration not available",
             "tools_count": 0,
             "mcp_server_available": False,
-            "azure_config_present": False
+            "azure_config_present": False,
         }
-    
+
     try:
         tools = crew_mcp_manager.get_available_tools()
         return {
             "status": "active" if tools else "inactive",
             "tools_count": len(tools),
             "mcp_server_available": crew_mcp_manager.time_server_path.exists(),
-            "azure_config_present": bool(crew_mcp_manager.azure_config.api_key)
+            "azure_config_present": bool(crew_mcp_manager.azure_config.api_key),
         }
     except Exception as e:
         log.exception(f"Error getting CrewAI MCP status: {e}")
@@ -135,5 +134,5 @@ async def get_crew_mcp_status(user=Depends(get_verified_user)) -> dict:
             "error": str(e),
             "tools_count": 0,
             "mcp_server_available": False,
-            "azure_config_present": False
+            "azure_config_present": False,
         }

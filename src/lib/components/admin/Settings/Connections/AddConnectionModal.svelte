@@ -99,7 +99,7 @@
 			toast.error('URL and Key are required');
 			return;
 		}
-		
+
 		if (mcp && !url) {
 			loading = false;
 			toast.error('URL is required');
@@ -153,14 +153,12 @@
 			<div class=" text-lg font-medium self-center font-primary">
 				{#if edit}
 					{$i18n.t('Edit Connection')}
+				{:else if ollama}
+					{$i18n.t('Add Ollama Connection')}
+				{:else if mcp}
+					{$i18n.t('Add MCP Connection')}
 				{:else}
-					{#if ollama}
-						{$i18n.t('Add Ollama Connection')}
-					{:else if mcp}
-						{$i18n.t('Add MCP Connection')}
-					{:else}
-						{$i18n.t('Add OpenAI Connection')}
-					{/if}
+					{$i18n.t('Add OpenAI Connection')}
 				{/if}
 			</div>
 			<button

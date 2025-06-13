@@ -1399,7 +1399,7 @@
 						// Use CrewAI when user has selected any tools
 						try {
 							console.log('Routing to CrewAI based on selected tools:', selectedToolIds);
-							
+
 							// Update response message to show it's using CrewAI
 							responseMessage.content = $i18n.t('Consulting CrewAI agents...');
 							history.messages[responseMessageId] = responseMessage;
@@ -1407,13 +1407,13 @@
 							scrollToBottom();
 
 							const crewResponse = await queryCrewMCP(localStorage.token, prompt, model.id);
-							
+
 							if (crewResponse && crewResponse.result) {
 								// Update message content with CrewAI response
 								responseMessage.content = crewResponse.result;
 								responseMessage.done = true;
 								responseMessage.crewAI = true; // Mark as CrewAI response
-								
+
 								// Add metadata about which agents/tools were used
 								if (crewResponse.metadata) {
 									responseMessage.crewMetadata = crewResponse.metadata;
@@ -1432,7 +1432,9 @@
 								);
 
 								// Don't call chatCompletedHandler for CrewAI responses to avoid 400 error
-								console.log('CrewAI response completed successfully, skipping regular completion handler');
+								console.log(
+									'CrewAI response completed successfully, skipping regular completion handler'
+								);
 								return; // Return early for successful CrewAI response
 							} else {
 								throw new Error('CrewAI returned no result');
@@ -1440,7 +1442,7 @@
 						} catch (error) {
 							console.error('CrewAI Error:', error);
 							toast.error(`CrewAI Error: ${(error as Error).message || error}`);
-							
+
 							// Fall back to regular chat completion - reset message state
 							responseMessage.content = '';
 							responseMessage.done = false;
@@ -1577,46 +1579,46 @@
 					web_search: webSearchEnabled
 				},
 
-					session_id: $socket?.id,
-					chat_id: $chatId,
-					id: responseMessageId,
+				session_id: $socket?.id,
+				chat_id: $chatId,
+				id: responseMessageId,
 
-					...(!$temporaryChatEnabled &&
-					(messages.length == 1 ||
-						(messages.length == 2 &&
-							messages.at(0)?.role === 'system' &&
-							messages.at(1)?.role === 'user')) &&
-					selectedModels[0] === model.id
-						? {
-								background_tasks: {
-									title_generation: $settings?.title?.auto ?? true,
-									tags_generation: $settings?.autoTags ?? true
-								}
+				...(!$temporaryChatEnabled &&
+				(messages.length == 1 ||
+					(messages.length == 2 &&
+						messages.at(0)?.role === 'system' &&
+						messages.at(1)?.role === 'user')) &&
+				selectedModels[0] === model.id
+					? {
+							background_tasks: {
+								title_generation: $settings?.title?.auto ?? true,
+								tags_generation: $settings?.autoTags ?? true
 							}
-						: {}),
+						}
+					: {}),
 
-					...(stream && (model.info?.meta?.capabilities?.usage ?? false)
-						? {
-								stream_options: {
-									include_usage: true
-								}
+				...(stream && (model.info?.meta?.capabilities?.usage ?? false)
+					? {
+							stream_options: {
+								include_usage: true
 							}
-						: {})
-				},
-				`${WEBUI_BASE_URL}/api`
-			).catch((error) => {
-				console.log(error);
-				responseMessage.error = {
-					content: error
-				};
-				responseMessage.done = true;
-				history.messages[responseMessageId] = responseMessage;
-				return null;
-			});
+						}
+					: {})
+			},
+			`${WEBUI_BASE_URL}/api`
+		).catch((error) => {
+			console.log(error);
+			responseMessage.error = {
+				content: error
+			};
+			responseMessage.done = true;
+			history.messages[responseMessageId] = responseMessage;
+			return null;
+		});
 
-			if (res) {
-				taskId = res.task_id;
-			}
+		if (res) {
+			taskId = res.task_id;
+		}
 
 		await tick();
 		scrollToBottom();

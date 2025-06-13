@@ -42,21 +42,22 @@ async def call_mcp_tool(
     """Call an MCP tool using the MCP router"""
     try:
         # Import here to avoid circular imports
-        from open_webui.routers.mcp import MCPToolCallForm, call_mcp_tool as router_call_mcp_tool
-        
+        from open_webui.routers.mcp import (
+            MCPToolCallForm,
+            call_mcp_tool as router_call_mcp_tool,
+        )
+
         # Create the form data for the router
         form_data = MCPToolCallForm(
-            name=tool_name,
-            arguments=arguments,
-            server_idx=server_idx
+            name=tool_name, arguments=arguments, server_idx=server_idx
         )
-        
+
         # Get the user (this is a simplified version for internal calls)
-        user = getattr(request.state, 'user', None)
-        
+        user = getattr(request.state, "user", None)
+
         # Call the router function directly
         result = await router_call_mcp_tool(request, form_data, user)
-        
+
         # Extract the text content from the result
         content = result.get("content", [])
         if isinstance(content, list):
@@ -69,7 +70,7 @@ async def call_mcp_tool(
             return "\n".join(text_parts)
         else:
             return str(content)
-        
+
     except Exception as e:
         log.error(f"Error calling MCP tool {tool_name}: {e}")
         return f"Error calling MCP tool {tool_name}: {str(e)}"
@@ -80,24 +81,24 @@ async def get_mcp_tools(request: Request) -> dict:
     try:
         # Import here to avoid circular imports
         from open_webui.routers.mcp import get_all_mcp_tools
-        
+
         if not request.app.state.config.ENABLE_MCP_API:
             return {}
-        
+
         mcp_tools_response = await get_all_mcp_tools(request)
         mcp_tools = mcp_tools_response.get("tools", [])
-        
+
         tools_dict = {}
-        
+
         for tool in mcp_tools:
             tool_name = tool.get("name", "")
             tool_description = tool.get("description", "")
             tool_input_schema = tool.get("inputSchema", {})
             server_idx = tool.get("mcp_server_idx", 0)
-            
+
             if not tool_name:
                 continue
-            
+
             # Create a callable function for this MCP tool with proper closure
             def make_mcp_tool_wrapper(name, idx):
                 async def mcp_tool_wrapper(**kwargs):
@@ -105,24 +106,23 @@ async def get_mcp_tools(request: Request) -> dict:
                     clean_kwargs = {
                         k: v for k, v in kwargs.items() if not k.startswith("__")
                     }
-                    return await call_mcp_tool(
-                        request, name, clean_kwargs, idx
-                    )
+                    return await call_mcp_tool(request, name, clean_kwargs, idx)
+
                 return mcp_tool_wrapper
-            
+
             mcp_tool_wrapper = make_mcp_tool_wrapper(tool_name, server_idx)
-            
+
             # Set function metadata for documentation
             mcp_tool_wrapper.__name__ = tool_name
             mcp_tool_wrapper.__doc__ = tool_description
-            
+
             # Convert inputSchema to OpenAI function spec format
             spec = {
                 "name": tool_name,
                 "description": tool_description,
-                "parameters": tool_input_schema
+                "parameters": tool_input_schema,
             }
-            
+
             tool_dict = {
                 "toolkit_id": f"mcp_server_{server_idx}",
                 "callable": mcp_tool_wrapper,
@@ -131,11 +131,11 @@ async def get_mcp_tools(request: Request) -> dict:
                 "file_handler": False,
                 "citation": True,  # MCP tools should show citations
             }
-            
+
             tools_dict[tool_name] = tool_dict
-        
+
         return tools_dict
-        
+
     except Exception as e:
         log.error(f"Error getting MCP tools: {e}")
         return {}
@@ -206,7 +206,7 @@ async def get_tools_async(
         log.info(f"Available MCP tools: {list(mcp_tools.keys())}")
         log.info(f"Requested tool_ids: {tool_ids}")
         log.info(f"=======================")
-        
+
         for tool_name, tool_dict in mcp_tools.items():
             # Check if this MCP tool is in the requested tool_ids
             # Try multiple matching strategies:
@@ -214,23 +214,28 @@ async def get_tools_async(
             mcp_tool_id = f"mcp_{tool_name}"
             # 2. Direct tool name match (for backward compatibility)
             # 3. Check if any tool_id ends with the tool name (for prefixed cases)
-            
+
             is_requested = (
-                mcp_tool_id in tool_ids or  # Exact match with mcp_ prefix
-                tool_name in tool_ids or    # Direct tool name match
-                any(tid.endswith(f"_{tool_name}") or tid.endswith(f".{tool_name}") for tid in tool_ids)  # Suffix match
+                mcp_tool_id in tool_ids  # Exact match with mcp_ prefix
+                or tool_name in tool_ids  # Direct tool name match
+                or any(
+                    tid.endswith(f"_{tool_name}") or tid.endswith(f".{tool_name}")
+                    for tid in tool_ids
+                )  # Suffix match
             )
-            
+
             if not is_requested:
-                log.debug(f"Skipping MCP tool {tool_name} (ID: {mcp_tool_id}) - not in selected tool_ids: {tool_ids}")
+                log.debug(
+                    f"Skipping MCP tool {tool_name} (ID: {mcp_tool_id}) - not in selected tool_ids: {tool_ids}"
+                )
                 continue
-                
+
             if tool_name in tools_dict:
                 log.warning(f"MCP tool {tool_name} already exists in regular tools!")
                 log.warning(f"Prepending 'mcp_' to avoid collision")
                 tool_name = f"mcp_{tool_name}"
                 tool_dict["spec"]["name"] = tool_name
-            
+
             log.info(f"Adding MCP tool {tool_name} (ID: {mcp_tool_id}) to tools_dict")
             tools_dict[tool_name] = tool_dict
     except Exception as e:

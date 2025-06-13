@@ -105,9 +105,9 @@
 						>
 							<div class="flex-1 truncate">
 								<Tooltip
-									content={tools[toolId].isMcp 
+									content={tools[toolId].isMcp
 										? `${tools[toolId]?.description ?? ''} (MCP Server: ${tools[toolId].mcpServerName})`
-										: tools[toolId]?.description ?? ''}
+										: (tools[toolId]?.description ?? '')}
 									placement="top-start"
 									className="flex flex-1 gap-2 items-center"
 								>

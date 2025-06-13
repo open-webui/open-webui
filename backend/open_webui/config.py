@@ -853,9 +853,7 @@ MCP_BASE_URLS = os.environ.get("MCP_BASE_URLS", "")
 MCP_BASE_URLS = MCP_BASE_URLS if MCP_BASE_URLS != "" else MCP_BASE_URL
 
 MCP_BASE_URLS = [url.strip() for url in MCP_BASE_URLS.split(";") if url.strip()]
-MCP_BASE_URLS = PersistentConfig(
-    "MCP_BASE_URLS", "mcp.base_urls", MCP_BASE_URLS
-)
+MCP_BASE_URLS = PersistentConfig("MCP_BASE_URLS", "mcp.base_urls", MCP_BASE_URLS)
 
 MCP_API_CONFIGS = PersistentConfig(
     "MCP_API_CONFIGS",

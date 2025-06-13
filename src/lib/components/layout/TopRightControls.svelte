@@ -113,7 +113,9 @@
 				}}
 			>
 				<Tooltip content={$i18n.t('Help')} placement="bottom">
-					<div class="group flex cursor-pointer p-2 rounded-xl bg-white dark:bg-gray-900 transition hover:bg-gray-100 dark:hover:bg-gray-800">
+					<div
+						class="group flex cursor-pointer p-2 rounded-xl bg-white dark:bg-gray-900 transition hover:bg-gray-100 dark:hover:bg-gray-800"
+					>
 						<div class="flex items-center justify-center text-gray-900 dark:text-white">
 							<QuestionMarkCircle className="size-5" strokeWidth="2" />
 						</div>

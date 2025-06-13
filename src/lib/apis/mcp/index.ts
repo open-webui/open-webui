@@ -347,7 +347,11 @@ export const getExternalServer = async (token: string = '', serverId: string = '
 	return res;
 };
 
-export const updateExternalServer = async (token: string = '', serverId: string = '', serverData: object) => {
+export const updateExternalServer = async (
+	token: string = '',
+	serverId: string = '',
+	serverData: object
+) => {
 	let error = null;
 
 	const res = await fetch(`${MCP_API_BASE_URL}/servers/external/${serverId}`, {

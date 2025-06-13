@@ -254,7 +254,7 @@ async def chat_completion_tools_handler(
     payload = get_tools_function_calling_payload(
         body["messages"], task_model_id, tools_function_calling_prompt
     )
-    
+
     # Debug: Log the user query
     user_message = get_last_user_message(body["messages"])
     log.info(f"=== USER QUERY FOR FUNCTION CALLING ===")
@@ -274,24 +274,28 @@ async def chat_completion_tools_handler(
 
         # Check if the response is an empty string (indicating no tools should be used)
         content_stripped = content.strip()
-        if content_stripped == '""' or content_stripped == "" or content_stripped.lower() in ["", '""', "no tools needed", "none"]:
+        if (
+            content_stripped == '""'
+            or content_stripped == ""
+            or content_stripped.lower() in ["", '""', "no tools needed", "none"]
+        ):
             log.debug("Model indicated no tools should be used")
             return body, {}
 
         try:
             # Parse multiple JSON objects from the response
             tool_calls = []
-            
+
             log.info(f"=== PARSING TOOL CALLS ===")
             log.info(f"Raw content to parse: {repr(content)}")
             log.info(f"==========================")
-            
+
             # First, try to parse as a single JSON array
             try:
-                if content.strip().startswith('[') and content.strip().endswith(']'):
+                if content.strip().startswith("[") and content.strip().endswith("]"):
                     parsed_array = json.loads(content.strip())
                     log.debug(f"Parsed tool calls as JSON array: {parsed_array}")
-                    
+
                     # Handle case where array elements are JSON strings that need to be parsed again
                     tool_calls = []
                     for item in parsed_array:
@@ -302,56 +306,65 @@ async def chat_completion_tools_handler(
                                 tool_calls.append(parsed_item)
                                 log.debug(f"Parsed JSON string in array: {parsed_item}")
                             except json.JSONDecodeError:
-                                log.warning(f"Failed to parse array item as JSON: {item}")
+                                log.warning(
+                                    f"Failed to parse array item as JSON: {item}"
+                                )
                         elif isinstance(item, dict):
                             # Already a dictionary, use as-is
                             tool_calls.append(item)
                         else:
-                            log.warning(f"Unexpected array item type: {type(item)}, value: {item}")
+                            log.warning(
+                                f"Unexpected array item type: {type(item)}, value: {item}"
+                            )
                 else:
                     raise json.JSONDecodeError("Not a JSON array", content, 0)
             except json.JSONDecodeError:
                 # If not a JSON array, try to parse multiple JSON objects separated by newlines
-                lines = content.strip().split('\n')
+                lines = content.strip().split("\n")
                 for line in lines:
                     line = line.strip()
-                    if line and line.startswith('{') and line.endswith('}'):
+                    if line and line.startswith("{") and line.endswith("}"):
                         try:
                             tool_call = json.loads(line)
                             tool_calls.append(tool_call)
                             log.debug(f"Parsed individual tool call: {tool_call}")
                         except json.JSONDecodeError as e:
-                            log.warning(f"Failed to parse line as JSON: {line}, error: {e}")
+                            log.warning(
+                                f"Failed to parse line as JSON: {line}, error: {e}"
+                            )
                             continue
-                
+
                 # If no valid tool calls found, try to find all JSON objects in the content
                 if not tool_calls:
                     import re
+
                     # Find all JSON-like objects in the content
-                    json_pattern = r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}'
+                    json_pattern = r"\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}"
                     json_matches = re.findall(json_pattern, content)
-                    
+
                     for match in json_matches:
                         try:
                             tool_call = json.loads(match)
-                            if 'name' in tool_call:  # Ensure it looks like a tool call
+                            if "name" in tool_call:  # Ensure it looks like a tool call
                                 tool_calls.append(tool_call)
                                 log.debug(f"Parsed tool call from regex: {tool_call}")
                         except json.JSONDecodeError:
                             continue
-                
+
                 # If still no valid tool calls found, try the old single JSON approach
                 if not tool_calls:
                     json_start = content.find("{")
                     json_end = content.rfind("}") + 1
-                    
+
                     if json_start == -1 or json_end == 0:
-                        log.debug("No JSON object found in response, treating as no tool usage")
+                        log.debug(
+                            "No JSON object found in response, treating as no tool usage"
+                        )
                         return body, {}
-                        
+
                     json_content = content[json_start:json_end]
                     log.debug(f"Extracted JSON content: {json_content}")
-                    
+
                     try:
                         result = json.loads(json_content)
                         tool_calls = [result]
@@ -363,14 +376,14 @@ async def chat_completion_tools_handler(
                         brace_count = 0
                         json_end_corrected = json_start
                         for i, char in enumerate(content[json_start:], json_start):
-                            if char == '{':
+                            if char == "{":
                                 brace_count += 1
-                            elif char == '}':
+                            elif char == "}":
                                 brace_count -= 1
                                 if brace_count == 0:
                                     json_end_corrected = i + 1
                                     break
-                        
+
                         if json_end_corrected > json_start:
                             json_content = content[json_start:json_end_corrected]
                             log.debug(f"Trying corrected JSON content: {json_content}")
@@ -378,10 +391,14 @@ async def chat_completion_tools_handler(
                                 result = json.loads(json_content)
                                 tool_calls = [result]
                             except json.JSONDecodeError:
-                                log.error(f"Corrected JSON parsing also failed, treating as no tool usage")
+                                log.error(
+                                    f"Corrected JSON parsing also failed, treating as no tool usage"
+                                )
                                 return body, {}
                         else:
-                            log.error(f"Could not find balanced JSON, treating as no tool usage")
+                            log.error(
+                                f"Could not find balanced JSON, treating as no tool usage"
+                            )
                             return body, {}
 
             log.info(f"=== PARSED TOOL CALLS ===")
@@ -394,7 +411,9 @@ async def chat_completion_tools_handler(
             for tool_call in tool_calls:
                 tool_function_name = tool_call.get("name", None)
                 if not tool_function_name or tool_function_name not in tools:
-                    log.debug(f"Tool function '{tool_function_name}' not found in available tools")
+                    log.debug(
+                        f"Tool function '{tool_function_name}' not found in available tools"
+                    )
                     continue
 
                 tool_function_params = tool_call.get("parameters", {})
@@ -412,7 +431,7 @@ async def chat_completion_tools_handler(
                         .get("properties", {})
                     )
                     tool_function = tools[tool_function_name]["callable"]
-                    
+
                     # Filter to only include parameters that exist in the tool spec and are not None/null
                     filtered_params = {
                         k: v
@@ -426,7 +445,9 @@ async def chat_completion_tools_handler(
                     tool_output = str(e)
 
                 if isinstance(tool_output, str):
-                    log.info(f"Tool {tool_function_name} output: {tool_output[:200]}...")  # Log first 200 chars
+                    log.info(
+                        f"Tool {tool_function_name} output: {tool_output[:200]}..."
+                    )  # Log first 200 chars
                     if tools[tool_function_name]["citation"]:
                         source_entry = {
                             "source": {
@@ -440,7 +461,9 @@ async def chat_completion_tools_handler(
                             ],
                         }
                         sources.append(source_entry)
-                        log.info(f"Added source entry for {tool_function_name}: {source_entry['source']['name']}")
+                        log.info(
+                            f"Added source entry for {tool_function_name}: {source_entry['source']['name']}"
+                        )
                     else:
                         sources.append(
                             {
@@ -940,14 +963,18 @@ async def process_chat_payload(request, form_data, metadata, user, model):
 
         context_string = context_string.strip()
         log.info(f"Generated context string length: {len(context_string)}")
-        log.info(f"Context string preview: {context_string[:500]}...")  # Log first 500 chars
-        
+        log.info(
+            f"Context string preview: {context_string[:500]}..."
+        )  # Log first 500 chars
+
         # Debug: Log the complete context structure for tools
-        if any("TOOL:" in source.get("source", {}).get("name", "") for source in sources):
+        if any(
+            "TOOL:" in source.get("source", {}).get("name", "") for source in sources
+        ):
             log.info("=== COMPLETE TOOL CONTEXT DEBUG ===")
             log.info(f"Full context string: {context_string}")
             log.info("=== END COMPLETE TOOL CONTEXT DEBUG ===")
-        
+
         prompt = get_last_user_message(form_data["messages"])
 
         if prompt is None:
@@ -967,7 +994,7 @@ async def process_chat_payload(request, form_data, metadata, user, model):
         )
         log.info(f"RAG template content length: {len(rag_content)}")
         log.info(f"RAG template preview: {rag_content[:500]}...")
-        
+
         if model["owned_by"] == "ollama":
             form_data["messages"] = prepend_to_first_user_message_content(
                 rag_content,
@@ -978,11 +1005,13 @@ async def process_chat_payload(request, form_data, metadata, user, model):
                 rag_content,
                 form_data["messages"],
             )
-        
+
         # Log the final messages to see what gets sent to the model
         log.info(f"Final messages count: {len(form_data['messages'])}")
         for idx, msg in enumerate(form_data["messages"]):
-            log.info(f"Message {idx} ({msg['role']}): {msg['content'][:300]}...")  # Log first 300 chars
+            log.info(
+                f"Message {idx} ({msg['role']}): {msg['content'][:300]}..."
+            )  # Log first 300 chars
 
     # If there are citations, add them to the data_items
     sources = [source for source in sources if source.get("source", {}).get("name", "")]
@@ -1223,13 +1252,13 @@ async def process_chat_response(
                 # Separate sources events from other events
                 sources_events = []
                 other_events = []
-                
+
                 for event in events:
                     if "sources" in event:
                         sources_events.append(event)
                     else:
                         other_events.append(event)
-                
+
                 # Process non-sources events first
                 for event in other_events:
                     await event_emitter(
@@ -1485,7 +1514,7 @@ async def process_chat_response(
             # Separate sources events from other events
             sources_events = []
             other_events = []
-            
+
             for event in events:
                 if "sources" in event:
                     sources_events.append(event)

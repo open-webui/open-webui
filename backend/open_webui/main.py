@@ -338,7 +338,9 @@ class SPAStaticFiles(StaticFiles):
         except (HTTPException, StarletteHTTPException) as ex:
             if ex.status_code == 404:
                 # Don't serve index.html for API routes
-                if path.startswith(('api/', 'mcp/', 'ollama/', 'openai/', 'ws/', 'health', 'oauth/')):
+                if path.startswith(
+                    ("api/", "mcp/", "ollama/", "openai/", "ws/", "health", "oauth/")
+                ):
                     raise ex
                 return await super().get_response("index.html", scope)
             else:
@@ -370,27 +372,28 @@ async def lifespan(app: FastAPI):
     # Initialize FastMCP manager
     try:
         from open_webui.mcp_manager import get_mcp_manager
+
         app.state.mcp_manager = get_mcp_manager()
         log.info("FastMCP manager initialized")
-        
+
         # Initialize all MCP servers (built-in and external) if enabled
         if app.state.config.ENABLE_MCP_API:
             await app.state.mcp_manager.initialize_all_servers()
             log.info("All MCP servers initialized")
-            
+
             # Note: Built-in MCP servers use stdio transport and are managed internally
             # External MCP servers are loaded from database and managed via API
-            
+
     except Exception as e:
         log.error(f"Failed to initialize FastMCP manager: {e}")
 
     asyncio.create_task(periodic_usage_pool_cleanup())
-    
+
     try:
         yield
     finally:
         # Cleanup MCP manager and all its server processes
-        if hasattr(app.state, 'mcp_manager') and app.state.mcp_manager:
+        if hasattr(app.state, "mcp_manager") and app.state.mcp_manager:
             try:
                 await app.state.mcp_manager.cleanup()
                 log.info("MCP manager cleanup completed")
@@ -840,9 +843,13 @@ app.mount("/ws", socket_app)
 
 app.include_router(ollama.router, prefix="/ollama", tags=["ollama"])
 app.include_router(openai.router, prefix="/openai", tags=["openai"])
-app.include_router(mcp.router, prefix="/mcp", tags=["mcp"])  # For verification endpoints used by GUI
+app.include_router(
+    mcp.router, prefix="/mcp", tags=["mcp"]
+)  # For verification endpoints used by GUI
 app.include_router(mcp.router, prefix="/api/v1/mcp", tags=["mcp"])  # For tools API
-app.include_router(crew_mcp.router, prefix="/api/v1/crew-mcp", tags=["crew-mcp"])  # CrewAI MCP integration
+app.include_router(
+    crew_mcp.router, prefix="/api/v1/crew-mcp", tags=["crew-mcp"]
+)  # CrewAI MCP integration
 
 
 app.include_router(pipelines.router, prefix="/api/v1/pipelines", tags=["pipelines"])

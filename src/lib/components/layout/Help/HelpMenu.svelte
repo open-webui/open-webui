@@ -23,7 +23,7 @@
 </script>
 
 <Dropdown
-	ariaLabel={ariaLabel}
+	{ariaLabel}
 	on:change={(e) => {
 		if (e.detail === false) {
 			onClose();

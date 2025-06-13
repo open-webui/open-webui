@@ -109,7 +109,7 @@ class MCPServerTable:
             tools = []
 
         server_id = str(uuid.uuid4())
-        
+
         try:
             with get_db() as db:
                 server = MCPServerModel(
@@ -134,12 +134,12 @@ class MCPServerTable:
                         "updated_at": int(time.time()),
                     }
                 )
-                
+
                 result = MCPServer(**server.model_dump())
                 db.add(result)
                 db.commit()
                 db.refresh(result)
-                
+
                 if result:
                     return MCPServerModel.model_validate(result)
                 else:
@@ -172,9 +172,13 @@ class MCPServerTable:
                 query = db.query(MCPServer)
                 if user_id:
                     # If user_id is provided, get user's servers plus global servers (user_id is null)
-                    query = query.filter((MCPServer.user_id == user_id) | (MCPServer.user_id.is_(None)))
-                
-                servers = [MCPServerModel.model_validate(server) for server in query.all()]
+                    query = query.filter(
+                        (MCPServer.user_id == user_id) | (MCPServer.user_id.is_(None))
+                    )
+
+                servers = [
+                    MCPServerModel.model_validate(server) for server in query.all()
+                ]
                 return servers
         except Exception as e:
             print(f"Error getting MCP servers: {e}")
@@ -186,9 +190,13 @@ class MCPServerTable:
             with get_db() as db:
                 query = db.query(MCPServer).filter_by(server_type="user_created")
                 if user_id:
-                    query = query.filter((MCPServer.user_id == user_id) | (MCPServer.user_id.is_(None)))
-                
-                servers = [MCPServerModel.model_validate(server) for server in query.all()]
+                    query = query.filter(
+                        (MCPServer.user_id == user_id) | (MCPServer.user_id.is_(None))
+                    )
+
+                servers = [
+                    MCPServerModel.model_validate(server) for server in query.all()
+                ]
                 return servers
         except Exception as e:
             print(f"Error getting user-created MCP servers: {e}")
@@ -200,16 +208,16 @@ class MCPServerTable:
                 server = db.query(MCPServer).filter_by(id=id).first()
                 if not server:
                     return None
-                
+
                 # Update fields
                 for key, value in updated.items():
                     if hasattr(server, key):
                         setattr(server, key, value)
-                
+
                 server.updated_at = int(time.time())
                 db.commit()
                 db.refresh(server)
-                
+
                 return MCPServerModel.model_validate(server)
         except Exception as e:
             print(f"Error updating MCP server: {e}")
@@ -224,7 +232,7 @@ class MCPServerTable:
                     return False
                 if not server.is_deletable:
                     return False
-                
+
                 db.delete(server)
                 db.commit()
                 return True
@@ -236,11 +244,15 @@ class MCPServerTable:
         """Update the tools list for a server"""
         return self.update_server_by_id(id, {"tools": tools})
 
-    def update_server_capabilities(self, id: str, capabilities: dict) -> Optional[MCPServerModel]:
+    def update_server_capabilities(
+        self, id: str, capabilities: dict
+    ) -> Optional[MCPServerModel]:
         """Update the capabilities for a server"""
         return self.update_server_by_id(id, {"capabilities": capabilities})
 
-    def update_server_status(self, id: str, is_active: bool) -> Optional[MCPServerModel]:
+    def update_server_status(
+        self, id: str, is_active: bool
+    ) -> Optional[MCPServerModel]:
         """Update the active status of a server"""
         return self.update_server_by_id(id, {"is_active": is_active})
 
