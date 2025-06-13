@@ -433,6 +433,9 @@
 											</div>
 											<div class="shrink-0">
 												<button
+													aria-label={$i18n.t(`Remove {{MODELID}} from list.`, {
+														MODELID: modelId
+													})}
 													type="button"
 													on:click={() => {
 														modelIds = modelIds.filter((_, idx) => idx !== modelIdx);
