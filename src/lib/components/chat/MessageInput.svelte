@@ -1,5 +1,9 @@
 <script lang="ts">
+	import DOMPurify from 'dompurify';
+	import { marked } from 'marked';
+
 	import { toast } from 'svelte-sonner';
+
 	import { v4 as uuidv4 } from 'uuid';
 	import { createPicker, getAuthToken } from '$lib/utils/google-drive-picker';
 	import { pickAndDownloadFile } from '$lib/utils/onedrive-file-picker';
@@ -670,7 +674,7 @@
 						/>
 					{:else}
 						<form
-							class="w-full flex gap-1.5"
+							class="w-full flex flex-col gap-1.5"
 							on:submit|preventDefault={() => {
 								// check if selectedModels support image input
 								dispatch('submit', getPromptToSend());
@@ -1602,6 +1606,14 @@
 									</div>
 								</div>
 							</div>
+
+							{#if $config?.license_metadata?.input_footer}
+								<div class=" text-xs text-gray-500 text-center line-clamp-1 marked">
+									{@html DOMPurify.sanitize(marked($config?.license_metadata?.input_footer))}
+								</div>
+							{:else}
+								<div class="mb-1" />
+							{/if}
 						</form>
 					{/if}
 				</div>
