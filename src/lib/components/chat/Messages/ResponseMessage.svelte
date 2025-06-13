@@ -338,6 +338,8 @@
 
 	let feedbackLoading = false;
 
+	let tagGenerationInProgress = false;
+
 	const feedbackHandler = async (rating: number | null = null, details: object | null = null) => {
 		feedbackLoading = true;
 		const updatedMessage = {
@@ -362,18 +364,22 @@
 			type: 'rating',
 			data: {
 				...(updatedMessage?.annotation ? updatedMessage.annotation : {}),
-				model_id: message?.selectedModelId ?? message.model,
+				model_id: message?.crewAI ? 'azure/o3-mini' : (message?.selectedModelId ?? message.model),
 				...(history.messages[message.parentId].childrenIds.length > 1
 					? {
 							sibling_model_ids: history.messages[message.parentId].childrenIds
 								.filter((id) => id !== message.id)
-								.map((id) => history.messages[id]?.selectedModelId ?? history.messages[id].model)
+								.map((id) =>
+									history.messages[id]?.crewAI
+										? 'azure/o3-mini'
+										: (history.messages[id]?.selectedModelId ?? history.messages[id].model)
+								)
 						}
 					: {})
 			},
 			meta: {
 				arena: message ? message.arena : false,
-				model_id: message.model,
+				model_id: message?.crewAI ? 'azure/o3-mini' : message.model,
 				message_id: message.id,
 				message_index: messages.length,
 				chat_id: chatId
@@ -397,6 +403,19 @@
 			return acc;
 		}, {});
 		feedbackItem.meta.base_models = baseModels;
+
+		// If this is a detailed feedback submission, wait for any ongoing tag generation to complete
+		if (details && tagGenerationInProgress) {
+			// Wait for tag generation to complete before proceeding
+			while (tagGenerationInProgress) {
+				await new Promise((resolve) => setTimeout(resolve, 100));
+			}
+			// Refresh the message to get the latest tags
+			const latestMessage = history.messages[message.id];
+			if (latestMessage?.annotation?.tags) {
+				updatedMessage.annotation.tags = latestMessage.annotation.tags;
+			}
+		}
 
 		let feedback = null;
 		if (message?.feedbackId) {
@@ -425,6 +444,7 @@
 			showRateComment = true;
 
 			if (!updatedMessage.annotation?.tags) {
+				tagGenerationInProgress = true;
 				// attempt to generate tags
 				const tags = await generateTags(localStorage.token, message.model, messages, chatId).catch(
 					(error) => {
@@ -446,19 +466,36 @@
 						toast.error(`${error}`);
 					});
 				}
+				tagGenerationInProgress = false;
 			}
 		}
 
 		feedbackLoading = false;
 	};
 
-	$: if (!edit) {
-		(async () => {
-			await tick();
-		})();
-	}
-
 	onMount(async () => {
+		// If message has feedbackId but no annotation, fetch feedback data
+		if (message?.feedbackId && !message?.annotation?.rating) {
+			try {
+				const feedback = await getFeedbackById(localStorage.token, message.feedbackId);
+				if (feedback && feedback.data) {
+					// Update message annotation with feedback data
+					const updatedMessage = {
+						...message,
+						annotation: {
+							...(message?.annotation ?? {}),
+							rating: feedback.data.rating,
+							reason: feedback.data.reason,
+							comment: feedback.data.comment
+						}
+					};
+					saveMessage(message.id, updatedMessage);
+				}
+			} catch (error) {
+				console.warn('Failed to fetch feedback data:', error);
+			}
+		}
+
 		await tick();
 	});
 </script>
@@ -1203,12 +1240,38 @@
 						<RateComment
 							bind:message
 							bind:show={showRateComment}
+							disabled={tagGenerationInProgress}
 							on:save={async (e) => {
 								await feedbackHandler(null, {
 									...e.detail
 								});
 							}}
 						/>
+						{#if tagGenerationInProgress}
+							<div class="text-xs text-gray-500 mt-2 flex items-center">
+								<svg
+									class="animate-spin -ml-1 mr-2 h-3 w-3 text-gray-500"
+									xmlns="http://www.w3.org/2000/svg"
+									fill="none"
+									viewBox="0 0 24 24"
+								>
+									<circle
+										class="opacity-25"
+										cx="12"
+										cy="12"
+										r="10"
+										stroke="currentColor"
+										stroke-width="4"
+									></circle>
+									<path
+										class="opacity-75"
+										fill="currentColor"
+										d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+									></path>
+								</svg>
+								{$i18n.t('Generating tags...')}
+							</div>
+						{/if}
 					{/if}
 				{/if}
 			</div>
