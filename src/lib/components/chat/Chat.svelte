@@ -1431,10 +1431,24 @@
 									})
 								);
 
+								// Save the chat with CrewAI response
+								await tick();
+								if ($chatId && !$temporaryChatEnabled) {
+									const messages = createMessagesList(responseMessageId);
+
+									chat = await updateChatById(localStorage.token, $chatId, {
+										models: selectedModels,
+										messages: messages,
+										history: history,
+										params: params,
+										files: chatFiles
+									});
+
+									currentChatPage.set(1);
+									await chats.set(await getChatList(localStorage.token, $currentChatPage));
+								}
+
 								// Don't call chatCompletedHandler for CrewAI responses to avoid 400 error
-								console.log(
-									'CrewAI response completed successfully, skipping regular completion handler'
-								);
 								return; // Return early for successful CrewAI response
 							} else {
 								throw new Error('CrewAI returned no result');

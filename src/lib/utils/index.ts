@@ -126,12 +126,22 @@ export const convertMessagesToHistory = (messages) => {
 			];
 		}
 
-		history.messages[messageId] = {
+		// Ensure message has proper done flag - if content exists and no error, mark as done
+		const processedMessage = {
 			...message,
 			id: messageId,
 			parentId: parentMessageId,
-			childrenIds: []
+			childrenIds: [],
+			// Fix for skeleton bug: ensure done is properly set for completed messages
+			// CrewAI responses should always be marked as done if they have content
+			done:
+				message.done !== undefined
+					? message.done
+					: (message.content && message.content.trim() !== '' && !message.error) ||
+						(message.crewAI && message.content && message.content.trim() !== '')
 		};
+
+		history.messages[messageId] = processedMessage;
 
 		parentMessageId = messageId;
 	}
