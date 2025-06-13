@@ -3,7 +3,7 @@
 	import { getContext, onMount } from 'svelte';
 	const i18n = getContext('i18n');
 
-	import { models } from '$lib/stores';
+	import { settings } from '$lib/stores';
 	import { verifyOpenAIConnection } from '$lib/apis/openai';
 	import { verifyOllamaConnection } from '$lib/apis/ollama';
 
@@ -258,7 +258,12 @@
 
 						<div class="flex gap-2 mt-1.5">
 							<div class="flex flex-col w-full">
-								<label for="url-input" class=" mb-0.5 text-xs text-gray-500">{$i18n.t('URL')}</label>
+								<label
+									for="url-input"
+									class={`mb-0.5 text-xs text-gray-500
+								${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
+									>{$i18n.t('URL')}</label
+								>
 
 								<div class="flex-1">
 									<input
@@ -310,7 +315,11 @@
 
 						<div class="flex gap-2 mt-2">
 							<div class="flex flex-col w-full">
-								<div class=" mb-0.5 text-xs text-gray-500">{$i18n.t('Key')}</div>
+								<label
+									class={`mb-0.5 text-xs text-gray-500
+								${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
+									>{$i18n.t('Key')}</label
+								>
 
 								<div class="flex-1">
 									<SensitiveInput
@@ -323,7 +332,12 @@
 							</div>
 
 							<div class="flex flex-col w-full">
-								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Prefix ID')}</div>
+								<label
+									for="prefix-id-input"
+									class={`mb-0.5 text-xs text-gray-500
+								${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
+									>{$i18n.t('Prefix ID')}</label
+								>
 
 								<div class="flex-1">
 									<Tooltip
@@ -334,6 +348,7 @@
 										<input
 											class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
 											type="text"
+											id="prefix-id-input"
 											bind:value={prefixId}
 											placeholder={$i18n.t('Prefix ID')}
 											autocomplete="off"
@@ -346,10 +361,16 @@
 						{#if azure}
 							<div class="flex gap-2 mt-2">
 								<div class="flex flex-col w-full">
-									<div class=" mb-1 text-xs text-gray-500">{$i18n.t('API Version')}</div>
+									<label
+										for="api-version-input"
+										class={`mb-0.5 text-xs text-gray-500
+								${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
+										>{$i18n.t('API Version')}</label
+									>
 
 									<div class="flex-1">
 										<input
+											id="api-version-input"
 											class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
 											type="text"
 											bind:value={apiVersion}
@@ -364,7 +385,12 @@
 
 						<div class="flex gap-2 mt-2">
 							<div class="flex flex-col w-full">
-								<div class=" mb-1.5 text-xs text-gray-500">{$i18n.t('Tags')}</div>
+								<div
+									class={`mb-0.5 text-xs text-gray-500
+								${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
+								>
+									{$i18n.t('Tags')}
+								</div>
 
 								<div class="flex-1">
 									<Tags
@@ -389,7 +415,12 @@
 
 						<div class="flex flex-col w-full">
 							<div class="mb-1 flex justify-between">
-								<div class="text-xs text-gray-500">{$i18n.t('Model IDs')}</div>
+								<div
+									class={`mb-0.5 text-xs text-gray-500
+								${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
+								>
+									{$i18n.t('Model IDs')}
+								</div>
 							</div>
 
 							{#if modelIds.length > 0}
@@ -413,7 +444,10 @@
 									{/each}
 								</div>
 							{:else}
-								<div class="text-gray-500 text-xs text-center py-2 px-10">
+								<div
+									class={`text-gray-500 text-xs text-center py-2 px-10
+								${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
+								>
 									{#if ollama}
 										{$i18n.t('Leave empty to include all models from "{{url}}/api/tags" endpoint', {
 											url: url
@@ -438,7 +472,9 @@
 							<input
 								class="w-full py-1 text-sm rounded-lg bg-transparent {modelId
 									? ''
-									: 'text-gray-500'} placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
+									: 'text-gray-500'} {($settings?.highContrastMode ?? false)
+									? 'dark:placeholder:text-gray-100 placeholder:text-gray-700'
+									: 'placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden'}"
 								bind:value={modelId}
 								placeholder={$i18n.t('Add a model ID')}
 							/>
