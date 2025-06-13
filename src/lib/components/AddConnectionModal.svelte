@@ -279,6 +279,7 @@
 										verifyHandler();
 									}}
 									type="button"
+									aria-label={$i18n.t('Verify Connection')}
 								>
 									<svg
 										xmlns="http://www.w3.org/2000/svg"
