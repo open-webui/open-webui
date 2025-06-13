@@ -910,6 +910,7 @@
 	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "ვაი! იყენებთ მხარდაუჭერელ მეთოდს (მხოლოდ წინაბოლო). შედით WebUI-ზე უკანაბოლოდან.",
 	"Open file": "ფაილის გახსნა",
 	"Open in full screen": "მთელ ეკრანზე გახსნა",
+	"Open modal to configure connection": "",
 	"Open new chat": "ახალი ჩატის გახსნა",
 	"Open WebUI can use tools provided by any OpenAPI server.": "",
 	"Open WebUI uses faster-whisper internally.": "",

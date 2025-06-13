@@ -910,6 +910,7 @@
 	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Jejda! Používate nepodporovanú metódu (iba frontend). Prosím, spustite WebUI zo serverovej časti (backendu).",
 	"Open file": "Otvoriť súbor",
 	"Open in full screen": "Otvoriť na celú obrazovku",
+	"Open modal to configure connection": "",
 	"Open new chat": "Otvoriť nový chat",
 	"Open WebUI can use tools provided by any OpenAPI server.": "",
 	"Open WebUI uses faster-whisper internally.": "Open WebUI interne používa faster-whisper.",

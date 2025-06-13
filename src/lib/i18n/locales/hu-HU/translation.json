@@ -910,6 +910,7 @@
 	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Hoppá! Nem támogatott módszert használ (csak frontend). Kérjük, szolgálja ki a WebUI-t a backend-ről.",
 	"Open file": "Fájl megnyitása",
 	"Open in full screen": "Megnyitás teljes képernyőn",
+	"Open modal to configure connection": "",
 	"Open new chat": "Új beszélgetés megnyitása",
 	"Open WebUI can use tools provided by any OpenAPI server.": "Az Open WebUI bármely OpenAPI szerver által biztosított eszközöket használhat.",
 	"Open WebUI uses faster-whisper internally.": "Az Open WebUI belsőleg a faster-whispert használja.",

@@ -910,6 +910,7 @@
 	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Hop! Desteklenmeyen bir yöntem kullanıyorsunuz (yalnızca önyüz). Lütfen WebUI'yi arkayüzden sunun.",
 	"Open file": "Dosyayı aç",
 	"Open in full screen": "Tam ekranda aç",
+	"Open modal to configure connection": "",
 	"Open new chat": "Yeni sohbet aç",
 	"Open WebUI can use tools provided by any OpenAPI server.": "Open WebUI OpenAPI tarafından sağlanan araçları kullanabilir",
 	"Open WebUI uses faster-whisper internally.": "Open WebUI, dahili olarak daha hızlı-fısıltı kullanır.",

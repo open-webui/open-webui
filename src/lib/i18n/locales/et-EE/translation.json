@@ -910,6 +910,7 @@
 	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Oih! Kasutate toetamatut meetodit (ainult kasutajaliides). Palun serveerige WebUI tagarakendusest.",
 	"Open file": "Ava fail",
 	"Open in full screen": "Ava täisekraanil",
+	"Open modal to configure connection": "",
 	"Open new chat": "Ava uus vestlus",
 	"Open WebUI can use tools provided by any OpenAPI server.": "",
 	"Open WebUI uses faster-whisper internally.": "Open WebUI kasutab sisemiselt faster-whisper'it.",

@@ -910,6 +910,7 @@
 	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "你正在使用不被支持的方法（仅运行前端服务）。需要后端提供 WebUI 服务。",
 	"Open file": "打开文件",
 	"Open in full screen": "全屏打开",
+	"Open modal to configure connection": "",
 	"Open new chat": "打开新对话",
 	"Open WebUI can use tools provided by any OpenAPI server.": "Open WebUI 可使用任何 OpenAPI 服务器提供的工具。",
 	"Open WebUI uses faster-whisper internally.": "Open WebUI 使用内置 faster-whisper",
