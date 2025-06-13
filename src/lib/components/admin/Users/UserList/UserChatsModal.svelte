@@ -45,8 +45,8 @@
 			...(query ? { query } : {}),
 			...(orderBy ? { order_by: orderBy } : {}),
 			...(direction ? { direction } : {}),
-			...(startDate ? { start_date: startDate } : {}),
-			...(endDate ? { end_date: endDate } : {})
+			...(startDate ? { start_date: new Date(startDate).getTime() / 1000 } : {}),
+			...(endDate ? { end_date: new Date(endDate).getTime() / 1000 + 24 * 3600 } : {})
 		};
 
 		if (filter !== null) {

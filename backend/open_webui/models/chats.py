@@ -445,24 +445,14 @@ class ChatTable:
 
                 start_date = filter.get("start_date")
                 if start_date:
-                    start_date = datetime.strptime(start_date, "%Y-%m-%d")
-
-                    start_epoch = int(start_date.timestamp())
-
                     query = query.filter(
-                        Chat.updated_at >= start_epoch,
+                        Chat.updated_at >= start_date,
                     )
 
                 end_date = filter.get("end_date")
                 if end_date:
-                    end_date = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(
-                        days=1
-                    )
-
-                    end_epoch = int(end_date.timestamp())
-
                     query = query.filter(
-                        Chat.updated_at < end_epoch,
+                        Chat.updated_at < end_date,
                     )
             else:
                 query = query.order_by(Chat.updated_at.desc())

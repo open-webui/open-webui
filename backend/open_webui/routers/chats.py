@@ -80,8 +80,8 @@ async def get_user_chat_list_by_user_id(
     query: Optional[str] = None,
     order_by: Optional[str] = None,
     direction: Optional[str] = None,
-    start_date: Optional[str] = None,
-    end_date: Optional[str] = None,
+    start_date: Optional[int] = None,
+    end_date: Optional[int] = None,
     user=Depends(get_admin_user),
 ):
     if not ENABLE_ADMIN_CHAT_ACCESS:
