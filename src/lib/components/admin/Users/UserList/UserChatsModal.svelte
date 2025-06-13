@@ -25,16 +25,33 @@
 	let query = '';
 	let orderBy = 'updated_at';
 	let direction = 'desc';
+	let startDate = '',
+		endDate = '';
 
 	let filter = {};
-	$: filter = {
-		...(query ? { query } : {}),
-		...(orderBy ? { order_by: orderBy } : {}),
-		...(direction ? { direction } : {})
-	};
 
-	$: if (filter !== null) {
-		searchHandler();
+	$: {
+		// Check if the end date is before the start date
+		if (startDate && endDate) {
+			const sDate = new Date(startDate);
+			const eDate = new Date(endDate);
+
+			if (eDate < sDate) {
+				endDate = startDate;
+			}
+		}
+
+		filter = {
+			...(query ? { query } : {}),
+			...(orderBy ? { order_by: orderBy } : {}),
+			...(direction ? { direction } : {}),
+			...(startDate ? { start_date: startDate } : {}),
+			...(endDate ? { end_date: endDate } : {})
+		};
+
+		if (filter !== null) {
+			searchHandler();
+		}
 	}
 
 	let allChatsLoaded = false;
@@ -103,6 +120,8 @@
 	bind:query
 	bind:orderBy
 	bind:direction
+	bind:startDate
+	bind:endDate
 	title={$i18n.t("{{user}}'s Chats", { user: user.name })}
 	emptyPlaceholder={$i18n.t('No chats found for this user.')}
 	shareUrl={true}

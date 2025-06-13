@@ -28,6 +28,8 @@
 	export let shareUrl = false;
 
 	export let query = '';
+	export let startDate: string | undefined = undefined;
+	export let endDate: string | undefined = undefined;
 
 	export let orderBy = 'updated_at';
 	export let direction = 'desc'; // 'asc' or 'desc'
@@ -101,39 +103,67 @@
 		<div class="flex flex-col w-full px-5 pb-4 dark:text-gray-200">
 			<div class=" flex w-full space-x-2 mb-0.5">
 				<div class="flex flex-1">
-					<div class=" self-center ml-1 mr-3">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 20 20"
-							fill="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
-								clip-rule="evenodd"
+					<div class="flex items-center w-full gap-6 p-2 bg-gray-800 rounded-lg">
+						<div class="flex-grow flex items-center bg-gray-700 rounded-md">
+							<div class=" self-center ml-1 mr-3">
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 20 20"
+									fill="currentColor"
+									class="w-4 h-4"
+								>
+									<path
+										fill-rule="evenodd"
+										d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
+										clip-rule="evenodd"
+									/>
+								</svg>
+							</div>
+							<input
+								class="w-full text-sm py-2 bg-transparent text-white placeholder-gray-400 focus:outline-none"
+								bind:value={query}
+								placeholder={$i18n.t('Search Chats')}
 							/>
-						</svg>
-					</div>
-					<input
-						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
-						bind:value={query}
-						placeholder={$i18n.t('Search Chats')}
-					/>
-
-					{#if query}
-						<div class="self-center pl-1.5 pr-1 translate-y-[0.5px] rounded-l-xl bg-transparent">
-							<button
-								class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-								on:click={() => {
-									query = '';
-									selectedIdx = 0;
-								}}
-							>
-								<XMark className="size-3" strokeWidth="2" />
-							</button>
 						</div>
-					{/if}
+
+						<div class="flex items-center gap-2">
+							<label for="startdate" class="text-sm text-gray-400 font-medium"
+								>{$i18n.t('From')}</label
+							>
+							<input
+								id="startdate"
+								type="date"
+								class="w-auto text-sm bg-gray-700 text-white rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+								bind:value={startDate}
+							/>
+						</div>
+
+						<div class="flex items-center gap-2">
+							<label for="enddate" class="text-sm text-gray-400 font-medium">{$i18n.t('To')}</label>
+							<input
+								id="enddate"
+								type="date"
+								class="w-auto text-sm bg-gray-700 text-white rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+								bind:value={endDate}
+							/>
+						</div>
+
+						{#if query || startDate || endDate}
+							<div class="self-center pl-1.5 pr-1 translate-y-[0.5px] rounded-l-xl bg-transparent">
+								<button
+									class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+									on:click={() => {
+										query = '';
+										startDate = '';
+										endDate = '';
+										selectedIdx = 0;
+									}}
+								>
+									<XMark className="size-3" strokeWidth="2" />
+								</button>
+							</div>
+						{/if}
+					</div>
 				</div>
 			</div>
 
