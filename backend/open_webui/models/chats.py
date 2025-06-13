@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON
 from sqlalchemy import or_, func, select, and_, text
 from sqlalchemy.sql import exists
+from sqlalchemy.sql.expression import bindparam
 
 ####################
 # Chat DB Schema
@@ -231,6 +232,10 @@ class ChatTable:
         chat = self.get_chat_by_id(id)
         if chat is None:
             return None
+
+        # Sanitize message content for null characters before upserting
+        if isinstance(message.get("content"), str):
+            message["content"] = message["content"].replace("\x00", "")
 
         chat = chat.chat
         history = chat.get("history", {})
@@ -580,7 +585,7 @@ class ChatTable:
         """
         Filters chats based on a search query using Python, allowing pagination using skip and limit.
         """
-        search_text = search_text.lower().strip()
+        search_text = search_text.replace("\u0000", "").lower().strip()
 
         if not search_text:
             return self.get_chat_list_by_user_id(
@@ -614,24 +619,22 @@ class ChatTable:
             dialect_name = db.bind.dialect.name
             if dialect_name == "sqlite":
                 # SQLite case: using JSON1 extension for JSON searching
+                sqlite_content_sql = (
+                    "EXISTS ("
+                    "    SELECT 1 "
+                    "    FROM json_each(Chat.chat, '$.messages') AS message "
+                    "    WHERE LOWER(message.value->>'content') LIKE '%' || :content_key || '%'"
+                    ")"
+                )
+                sqlite_content_clause = text(sqlite_content_sql)
                 query = query.filter(
-                    (
-                        Chat.title.ilike(
-                            f"%{search_text}%"
-                        )  # Case-insensitive search in title
-                        | text(
-                            """
-                            EXISTS (
-                                SELECT 1 
-                                FROM json_each(Chat.chat, '$.messages') AS message 
-                                WHERE LOWER(message.value->>'content') LIKE '%' || :search_text || '%'
-                            )
-                            """
-                        )
-                    ).params(search_text=search_text)
+                    or_(
+                        Chat.title.ilike(bindparam('title_key')),
+                        sqlite_content_clause
+                    ).params(title_key=f"%{search_text}%", content_key=search_text)
                 )
 
-                # Check if there are any tags to filter, it should have all the tags
+                # Tag filtering
                 if "none" in tag_ids:
                     query = query.filter(
                         text(
@@ -648,13 +651,7 @@ class ChatTable:
                         and_(
                             *[
                                 text(
-                                    f"""
-                                    EXISTS (
-                                        SELECT 1
-                                        FROM json_each(Chat.meta, '$.tags') AS tag
-                                        WHERE tag.value = :tag_id_{tag_idx}
-                                    )
-                                    """
+                                    f"EXISTS (SELECT 1 FROM json_each(Chat.meta, '$.tags') AS tag WHERE tag.value = :tag_id_{tag_idx})"
                                 ).params(**{f"tag_id_{tag_idx}": tag_id})
                                 for tag_idx, tag_id in enumerate(tag_ids)
                             ]
@@ -663,24 +660,22 @@ class ChatTable:
 
             elif dialect_name == "postgresql":
                 # PostgreSQL relies on proper JSON query for search
+                postgres_content_sql = (
+                    "EXISTS ("
+                    "    SELECT 1 "
+                    "    FROM json_array_elements(Chat.chat->'messages') AS message "
+                    "    WHERE LOWER(message->>'content') LIKE '%' || :content_key || '%'"
+                    ")"
+                )
+                postgres_content_clause = text(postgres_content_sql)
                 query = query.filter(
-                    (
-                        Chat.title.ilike(
-                            f"%{search_text}%"
-                        )  # Case-insensitive search in title
-                        | text(
-                            """
-                            EXISTS (
-                                SELECT 1
-                                FROM json_array_elements(Chat.chat->'messages') AS message
-                                WHERE LOWER(message->>'content') LIKE '%' || :search_text || '%'
-                            )
-                            """
-                        )
-                    ).params(search_text=search_text)
+                    or_(
+                        Chat.title.ilike(bindparam('title_key')),
+                        postgres_content_clause
+                    ).params(title_key=f"%{search_text}%", content_key=search_text)
                 )
 
-                # Check if there are any tags to filter, it should have all the tags
+                # Tag filtering
                 if "none" in tag_ids:
                     query = query.filter(
                         text(
@@ -697,13 +692,7 @@ class ChatTable:
                         and_(
                             *[
                                 text(
-                                    f"""
-                                    EXISTS (
-                                        SELECT 1
-                                        FROM json_array_elements_text(Chat.meta->'tags') AS tag
-                                        WHERE tag = :tag_id_{tag_idx}
-                                    )
-                                    """
+                                    f"EXISTS (SELECT 1 FROM json_array_elements_text(Chat.meta->'tags') AS tag WHERE tag = :tag_id_{tag_idx})"
                                 ).params(**{f"tag_id_{tag_idx}": tag_id})
                                 for tag_idx, tag_id in enumerate(tag_ids)
                             ]
