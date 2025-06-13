@@ -14,7 +14,7 @@
 </script>
 
 <div class={outerClassName}>
-	<label class="sr-only" for="password-input">{$i18n.t('Password')}</label>
+	<label class="sr-only" for="password-input">{placeholder || $i18n.t('Password')}</label>
 	<input
 		class={`${inputClassName} ${show ? '' : 'password'}`}
 		{placeholder}
