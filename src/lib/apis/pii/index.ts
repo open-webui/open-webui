@@ -66,11 +66,19 @@ export const createPiiSession = async (
 	return response.json();
 };
 
+// Interface for Shield API modifiers
+export interface ShieldApiModifier {
+	type: 'ignore' | 'mask';
+	entity: string;
+	label?: string;
+}
+
 // Mask PII in text (ephemeral - without session)
 export const maskPiiText = async (
 	apiKey: string,
 	text: string[],
 	knownEntities: KnownPiiEntity[] = [],
+	modifiers: ShieldApiModifier[] = [],
 	createSession: boolean = false,
 	quiet: boolean = false
 ): Promise<PiiMaskResponse> => {
@@ -89,6 +97,16 @@ export const maskPiiText = async (
 	if (knownEntities.length > 0) {
 		requestBody.known_entities = knownEntities;
 	}
+
+	// Add modifiers if provided
+	if (modifiers.length > 0) {
+		requestBody.modifiers = modifiers;
+		console.log('PII API: Including modifiers in request:', modifiers);
+	} else {
+		console.log('PII API: No modifiers to include');
+	}
+
+	console.log('PII API: Final request body:', requestBody);
 
 	const response = await fetch(url.toString(), {
 		method: 'POST',
@@ -137,6 +155,7 @@ export const maskPiiTextWithSession = async (
 	sessionId: string,
 	text: string[],
 	knownEntities: KnownPiiEntity[] = [],
+	modifiers: ShieldApiModifier[] = [],
 	quiet: boolean = false
 ): Promise<PiiMaskResponse> => {
 	const url = new URL(`${NENNA_API_BASE_URL}/sessions/${sessionId}/text/mask`);
@@ -153,6 +172,16 @@ export const maskPiiTextWithSession = async (
 	if (knownEntities.length > 0) {
 		requestBody.known_entities = knownEntities;
 	}
+
+	// Add modifiers if provided
+	if (modifiers.length > 0) {
+		requestBody.modifiers = modifiers;
+		console.log('PII API: Including modifiers in request:', modifiers);
+	} else {
+		console.log('PII API: No modifiers to include');
+	}
+
+	console.log('PII API: Final request body:', requestBody);
 
 	const response = await fetch(url.toString(), {
 		method: 'POST',

@@ -37,6 +37,7 @@
 	// PII Detection imports
 	import { type ExtendedPiiEntity } from '$lib/utils/pii';
 	import { PiiDetectionExtension } from './RichTextInput/PiiDetectionExtension';
+	import { PiiModifierExtension, addPiiModifierStyles, type PiiModifier } from './RichTextInput/PiiModifierExtension';
 	import {
 		debounce,
 		createPiiHighlightStyles,
@@ -75,8 +76,34 @@
 	export let onPiiDetected: (entities: ExtendedPiiEntity[], maskedText: string) => void = () => {};
 	export let onPiiToggled: (entities: ExtendedPiiEntity[]) => void = () => {};
 
+	// PII Modifier props
+	export let enablePiiModifiers = false;
+	export let onPiiModifiersChanged: (modifiers: PiiModifier[]) => void = () => {};
+	export let piiModifierLabels: string[] = [];
+
 	let element: HTMLElement;
 	let editor: any;
+	let currentModifiers: PiiModifier[] = [];
+	let previousModifiersLength = 0;
+
+	// Generate a content-based hash for modifiers to detect actual changes
+	// This is much smarter than just checking array length because it detects:
+	// - Changes in modifier type (ignore ↔ mask)
+	// - Changes in entity text
+	// - Changes in labels
+	// - Changes in positions (from/to)
+	// - Addition/removal of specific modifiers
+	const getModifiersHash = (modifiers: PiiModifier[]): string => {
+		if (modifiers.length === 0) return '';
+		
+		// Create a hash based on modifier content, not just length
+		// Sort by ID to ensure consistent ordering regardless of array order
+		const sortedModifiers = [...modifiers].sort((a, b) => a.id.localeCompare(b.id));
+		
+		return sortedModifiers
+			.map(m => `${m.type}:${m.entity}:${m.label || ''}:${m.from}:${m.to}`)
+			.join('|');
+	};
 
 	// PII Session Manager for conversation state
 	let piiSessionManager = PiiSessionManager.getInstance();
@@ -181,6 +208,11 @@
 			document.head.appendChild(styleElement);
 		}
 
+		// Add PII modifier styles
+		if (enablePiiModifiers && enablePiiDetection) {
+			addPiiModifierStyles();
+		}
+
 		let content = value;
 
 		if (!json) {
@@ -224,9 +256,11 @@
 
 		console.log('RichTextInput: Initializing editor with PII detection:', {
 			enablePiiDetection,
+			enablePiiModifiers,
 			hasApiKey: !!piiApiKey,
 			conversationId,
-			apiKeyLength: piiApiKey?.length || 0
+			apiKeyLength: piiApiKey?.length || 0,
+			modifierLabels: piiModifierLabels
 		});
 
 		editor = new Editor({
@@ -247,6 +281,17 @@
 								conversationId: conversationId,
 								onPiiDetected: onPiiDetected,
 								onPiiToggled: onPiiToggled
+							})
+						]
+					: []),
+				...(enablePiiModifiers && enablePiiDetection
+					? [
+							PiiModifierExtension.configure({
+								enabled: true,
+								onModifiersChanged: handleModifiersChanged,
+								availableLabels: piiModifierLabels.length > 0 
+									? piiModifierLabels 
+									: undefined // Use default labels
 							})
 						]
 					: []),
@@ -497,6 +542,45 @@
 
 					selectTemplate();
 				}
+			}
+		}
+	};
+
+	// Reactive statement to trigger PII detection when modifiers change  
+	$: if (editor && editor.view && enablePiiDetection && enablePiiModifiers) {
+		// TEMPORARY: Revert to original length-based approach to debug API issue
+		if (currentModifiers.length !== previousModifiersLength && currentModifiers.length > 0) {
+			console.log('RichTextInput: Modifiers changed (length-based), triggering PII detection', {
+				previousLength: previousModifiersLength,
+				currentLength: currentModifiers.length
+			});
+			previousModifiersLength = currentModifiers.length;
+			editor.commands.triggerDetectionForModifiers();
+		}
+	}
+
+	// Handle modifier changes
+	const handleModifiersChanged = (modifiers: PiiModifier[]) => {
+		const wasEmpty = currentModifiers.length === 0;
+		currentModifiers = modifiers;
+		onPiiModifiersChanged(modifiers);
+		
+		// TEMPORARY: Revert to original length-based logic to debug API issue
+		if ((wasEmpty && modifiers.length > 0) || modifiers.length !== previousModifiersLength) {
+			console.log('RichTextInput: Modifier change detected in handler', {
+				wasEmpty,
+				previousLength: previousModifiersLength,
+				newLength: modifiers.length
+			});
+			
+			// Update the tracking variable
+			previousModifiersLength = modifiers.length;
+			
+			// Trigger detection if we have an editor and text
+			if (editor && editor.view && editor.view.state.doc.textContent.trim()) {
+				setTimeout(() => {
+					editor.commands.triggerDetectionForModifiers();
+				}, 100);
 			}
 		}
 	};
