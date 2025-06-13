@@ -432,24 +432,19 @@
 		}
 	};
 
+	let pageSubscribe = null;
 	onMount(async () => {
 		loading = true;
 		console.log('mounted');
 		window.addEventListener('message', onMessageHandler);
 		$socket?.on('chat-events', chatEventHandler);
 
-		if (!$chatId) {
-			chatIdUnsubscriber = chatId.subscribe(async (value) => {
-				if (!value) {
-					await tick(); // Wait for DOM updates
-					await initNewChat();
-				}
-			});
-		} else {
-			if ($temporaryChatEnabled) {
-				await goto('/');
+		pageSubscribe = page.subscribe(async (p) => {
+			if (p.url.pathname === '/') {
+				await tick();
+				initNewChat();
 			}
-		}
+		});
 
 		if (localStorage.getItem(`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`)) {
 			prompt = '';
@@ -509,6 +504,7 @@
 	});
 
 	onDestroy(() => {
+		pageSubscribe();
 		chatIdUnsubscriber?.();
 		window.removeEventListener('message', onMessageHandler);
 		$socket?.off('chat-events', chatEventHandler);
@@ -1636,9 +1632,6 @@
 				params: {
 					...$settings?.params,
 					...params,
-
-					format: $settings.requestFormat ?? undefined,
-					keep_alive: $settings.keepAlive ?? undefined,
 					stop:
 						(params?.stop ?? $settings?.params?.stop ?? undefined)
 							? (params?.stop.split(',').map((token) => token.trim()) ?? $settings.params.stop).map(
