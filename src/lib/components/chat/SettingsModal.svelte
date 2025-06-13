@@ -199,7 +199,7 @@
 				'masking',
 				'nenna',
 				'nennaai',
-				'sensitivedata'
+				'sensitivedata',
 				'widescreen mode',
 				'widescreenmode',
 				'whatsnew',
