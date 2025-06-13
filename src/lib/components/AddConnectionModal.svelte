@@ -470,6 +470,7 @@
 						<hr class=" border-gray-100 dark:border-gray-700/10 my-1.5 w-full" />
 
 						<div class="flex items-center">
+							<label class="sr-only" for="add-model-id-input">{$i18n.t('Add a model ID')}</label>
 							<input
 								class="w-full py-1 text-sm rounded-lg bg-transparent {modelId
 									? ''
@@ -477,6 +478,7 @@
 									? 'dark:placeholder:text-gray-100 placeholder:text-gray-700'
 									: 'placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden'}"
 								bind:value={modelId}
+								id="add-model-id-input"
 								placeholder={$i18n.t('Add a model ID')}
 							/>
 
