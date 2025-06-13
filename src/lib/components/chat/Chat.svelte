@@ -1182,149 +1182,30 @@
 	};
 
 	const chatCompletionEventHandler = async (data, message, chatId) => {
-		const { id, done, choices, content, sources, selected_model_id, error, usage } = data;
+    try {
+        if (data) {
+            // Extract text content, handling different response formats
+            const content = typeof data === 'string' 
+                ? data 
+                : data.text || data.message || JSON.stringify(data);
 
-		if (error) {
-			await handleOpenAIError(error, message);
-		}
+            message.content = content;
+            message.done = true;
 
-		if (sources) {
-			message.sources = sources;
-		}
+            // Update specific message in history
+            const messageIndex = history.messages.findIndex(m => m.id === message.id);
+            if (messageIndex !== -1) {
+                history.messages[messageIndex] = message;
+            }
 
-		if (choices) {
-			if (choices[0]?.message?.content) {
-				// Non-stream response
-				message.content += choices[0]?.message?.content;
-			} else {
-				// Stream response
-				let value = choices[0]?.delta?.content ?? '';
-				if (message.content == '' && value == '\n') {
-					console.log('Empty response');
-				} else {
-					message.content += value;
-
-					if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
-						navigator.vibrate(5);
-					}
-
-					// Emit chat event for TTS
-					const messageContentParts = getMessageContentParts(
-						removeAllDetails(message.content),
-						$config?.audio?.tts?.split_on ?? 'punctuation'
-					);
-					messageContentParts.pop();
-
-					// dispatch only last sentence and make sure it hasn't been dispatched before
-					if (
-						messageContentParts.length > 0 &&
-						messageContentParts[messageContentParts.length - 1] !== message.lastSentence
-					) {
-						message.lastSentence = messageContentParts[messageContentParts.length - 1];
-						eventTarget.dispatchEvent(
-							new CustomEvent('chat', {
-								detail: {
-									id: message.id,
-									content: messageContentParts[messageContentParts.length - 1]
-								}
-							})
-						);
-					}
-				}
-			}
-		}
-
-		if (content) {
-			// REALTIME_CHAT_SAVE is disabled
-			message.content = content;
-
-			if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
-				navigator.vibrate(5);
-			}
-
-			// Emit chat event for TTS
-			const messageContentParts = getMessageContentParts(
-				removeAllDetails(message.content),
-				$config?.audio?.tts?.split_on ?? 'punctuation'
-			);
-			messageContentParts.pop();
-
-			// dispatch only last sentence and make sure it hasn't been dispatched before
-			if (
-				messageContentParts.length > 0 &&
-				messageContentParts[messageContentParts.length - 1] !== message.lastSentence
-			) {
-				message.lastSentence = messageContentParts[messageContentParts.length - 1];
-				eventTarget.dispatchEvent(
-					new CustomEvent('chat', {
-						detail: {
-							id: message.id,
-							content: messageContentParts[messageContentParts.length - 1]
-						}
-					})
-				);
-			}
-		}
-
-		if (selected_model_id) {
-			message.selectedModelId = selected_model_id;
-			message.arena = true;
-		}
-
-		if (usage) {
-			message.usage = usage;
-		}
-
-		history.messages[message.id] = message;
-
-		if (done) {
-			message.done = true;
-
-			if ($settings.responseAutoCopy) {
-				copyToClipboard(message.content);
-			}
-
-			if ($settings.responseAutoPlayback && !$showCallOverlay) {
-				await tick();
-				document.getElementById(`speak-button-${message.id}`)?.click();
-			}
-
-			// Emit chat event for TTS
-			let lastMessageContentPart =
-				getMessageContentParts(
-					removeAllDetails(message.content),
-					$config?.audio?.tts?.split_on ?? 'punctuation'
-				)?.at(-1) ?? '';
-			if (lastMessageContentPart) {
-				eventTarget.dispatchEvent(
-					new CustomEvent('chat', {
-						detail: { id: message.id, content: lastMessageContentPart }
-					})
-				);
-			}
-			eventTarget.dispatchEvent(
-				new CustomEvent('chat:finish', {
-					detail: {
-						id: message.id,
-						content: message.content
-					}
-				})
-			);
-
-			history.messages[message.id] = message;
-			await chatCompletedHandler(
-				chatId,
-				message.model,
-				message.id,
-				createMessagesList(history, message.id)
-			);
-		}
-
-		console.log(data);
-		if (autoScroll) {
-			scrollToBottom();
-		}
-	};
+            if (autoScroll) {
+                scrollToBottom();
+            }
+        }
+    } catch (error) {
+        console.error('Event handler error:', error);
+    }
+};
 
 	//////////////////////////
 	// Chat functions
@@ -1539,210 +1420,148 @@
 		currentChatPage.set(1);
 		chats.set(await getChatList(localStorage.token, $currentChatPage));
 	};
+	const custombody = {
+	message:
+		"recette de tarte citron et couscous if you're getting the information from the chunks ,you **must ** Indicate in which chunk you found each piece of information in terms of order, and give the result in the format information §text n§\nfor example:\nL'évolution en 2019 montre une augmentation de 157% par rapport à 2018, avec un chiffre de 385 869 §text 2§\nL'évolution en 2020 montre une augmentation de xx par rapport à xx , avec un chiffre de xx §text 1§\nif you're getting the information from the images ,you **must ** Indicate in which image you found each piece of information using the filename associated with each image, and give the result in the format \" information §image filename§\"\nfor example:\nL'évolution en 2019 montre une augmentation de 157% par rapport à 2018, avec un chiffre de 385 869 §image 123123b231_148_sub_image_1.png§\nL'évolution en 2020 montre une augmentation de xx par rapport à xx , avec un chiffre de xx §image 1252a3b1123_195_sub_image_2.png§",
 
-	const sendPromptSocket = async (_history, model, responseMessageId, _chatId) => {
-		const chatMessages = createMessagesList(history, history.currentId);
-		const responseMessage = _history.messages[responseMessageId];
-		const userMessage = _history.messages[responseMessage.parentId];
+	mode: 'DocQuery',
+	instruction:
+		'You are a helpful assistant that follows the guided instructions,\nTu dois toujours répondre uniquement à partir du contexte extrait via les recherches.\nTu dois toujours répondre en utilisant la langue dans laquelle a été exprimée la question de l\'utilisateur.\n***INSTRUCTIONS :\nINSTRUCTIONS GÉNÉRALES :\n1. Adoptez systématiquement une approche de raisonnement étape par étape.\n2. Utilisez un langage clair, précis et professionnel.\n3. Assurez-vous que vos réponses sont complètes, bien structurées et exemptes d\'ambiguïtés.\nPROCESSUS DE RÉPONSE :\n1. Analyse de la requête :\n   - Tu dois toujours décomposer la question posée en étapes logiques selon une approche de raisonnement Step-by-Step\n2. Processus de recherche :\n2.1. Tu dois toujours et obligatoirement exécuter une première recherche via l\'outil de recherche sur les données client en UTILISANT la requête d\'origine sans reformulation.\n- Tu dois toujours générer 4 requêtes reformulées au minimum, tu ne dois pas dépasser 6 requêtes\n-Tu ne dois pas afficher les requêtes. \n2.2. Tu dois ensuite toujours lancer obligatoirement plusieurs les recherches granulaires via l\'outil de recherche en générant 4 requêtes reformulées au minimum  (keyword based decomposition optimized for Embedding search) couvrant toutes les notions et termes spécifiés dans la question de l\'utilisateur en suivant l\'exemple de reformulation ci-dessous :\n** Exemple de reformulation *****\nUser Query : "classification des paiements en espèces pour la partie intérêts du passif locatif dans l\'état des flux de trésorerie selon IAS 7"\nRequête 1 : for the reformulated query n°1, you have to use the original given user Query \nRequête 2 : "intérêts versés passif locatif selon IAS 7"" \nRequête 3 : "état de flux de trésorerie pour intérêts versés IFRS 16 relatif au passif locatif"\nRequête 4 : "paiements en espèces pour intérêts du passif locatif"\n- Tu dois toujours lancer les recherches associées aux requêtes reformulées, aucune réponse ne peut être générée sans recherche.\n\nif you\'re getting  the information from the chunks ,you **must ** Indicate in which chunk you found each piece of information in terms of order,and give its respective page number present in the markup <page> and give the result in the format " information §text n,page k§" \nfor example:\nL\'évolution en 2019 montre une augmentation de 157% par rapport à 2018, avec un chiffre de 385 869 §text 2, page 3§\nL\'évolution en 2020 montre une augmentation de xx par rapport à xx , avec un chiffre de xx §text 1,page 4§\nif you\'re getting  the information from the images ,you **must ** Indicate in which image you found each piece of information using the filename associated with each image, and give the result in the format " information §image filename§" \nfor example:\nL\'évolution en 2019 montre une augmentation de 157% par rapport à 2018, avec un chiffre de 385 869 §image 123123b231_148_sub_image_1.png§\nL\'évolution en 2020 montre une augmentation de xx par rapport à xx , avec un chiffre de xx §image 1252a3b1123_195_sub_image_2.png§\nThe response and the query to the tool must be in \'French\' language\nThe the query to the tool must be done using key words instead of a synthesized question\n\npour les recherches web:\n**Citation des sources\nTu dois TOUJOURS indiquer l\'URL source utilisée pour chaque recherche en utilisant le format suivant:\n🔎 <a href="[URL_COMPLETE]" target="_blank" rel="noopener">[TITRE_DESCRIPTIF]</a>\nBonnes pratiques pour les liens:\n*Utiliser un titre descriptif et pertinent pour le lien\n*Inclure target="_blank" pour ouvrir dans un nouvel onglet\n*Inclure rel="noopener" pour la sécurité\n*Placer la source immédiatement après l\'information citée\n*Si plusieurs sources sont utilisées, les grouper à la fin de la réponse',
+	brain_ids: ['67fe6bf1807b8b18fb034d60'],
+	questionId: '5a4a273a400ebe84mbte9buc',
+	search_web: 'off',
+	rag_type: 'AdvancedRag',
+	isCache: '',
+	metadata: {
+		user_id: '67079e3c211644a5bcad854c',
+		message_id: '38301db71da5b4f2mbte9buc',
+		conversation_id: '683da9d06f477e987d37803d',
+		mode: 'DocQuery',
+		app_source: 'chat',
+		username: 'Emna  Belhaj|ebelhaj@yellowsys.fr'
+	},
+	conversation_id: '683da9d06f477e987d37803d',
+	vectorstore_name: 'vectorstoredev',
+	chatbot_name: 'gpt-4o-mini',
+	generate_standalone_question: 'no_history',
+	enable_multilingual: false,
+	mode_expert: false,
+	retryCount: 0,
+	chat_mode: 'streaming',
+	graphml_path: '',
+	languages: ['fr', 'fr'],
+	synonym_list: [],
+	max_tokens: 4000,
+	temperature: 0,
+	max_retries: 0,
+	top_k: 4,
+	score_seuil: 0,
+	retrieval_qa_prompt:
+		'\n\nContexte:\n**************\n{context}\n**************\n\nQuestion: {question}\nRéponse:',
+	user_instruction: '',
+	enable_rag_fusion: false,
+	number_of_question: 2,
+	rewording_prompt:
+		'you have to decompose the following user query \n\n{question}\n\n into multi-step query optimized to be used as rag query in order to facilitate the construction of a reasoning chain.'
+};
 
-		const chatMessageFiles = chatMessages
-			.filter((message) => message.files)
-			.flatMap((message) => message.files);
+const sendPromptSocket = async (_history, model, responseMessageId, _chatId) => {
+    const chatMessages = createMessagesList(history, history.currentId);
+    const responseMessage = _history.messages[responseMessageId];
+    const userMessage = _history.messages[responseMessage.parentId];
 
-		// Filter chatFiles to only include files that are in the chatMessageFiles
-		chatFiles = chatFiles.filter((item) => {
-			const fileExists = chatMessageFiles.some((messageFile) => messageFile.id === item.id);
-			return fileExists;
-		});
+    // Include existing context like files and other metadata
+    const chatMessageFiles = chatMessages
+        .filter((message) => message.files)
+        .flatMap((message) => message.files);
 
-		let files = JSON.parse(JSON.stringify(chatFiles));
-		files.push(
-			...(userMessage?.files ?? []).filter((item) =>
-				['doc', 'file', 'collection'].includes(item.type)
-			),
-			...(responseMessage?.files ?? []).filter((item) => ['web_search_results'].includes(item.type))
-		);
-		// Remove duplicates
-		files = files.filter(
-			(item, index, array) =>
-				array.findIndex((i) => JSON.stringify(i) === JSON.stringify(item)) === index
-		);
+    // Filter chatFiles to only include files that are in the chatMessageFiles
+    chatFiles = chatFiles.filter((item) => {
+        const fileExists = chatMessageFiles.some((messageFile) => messageFile.id === item.id);
+        return fileExists;
+    });
 
-		scrollToBottom();
-		eventTarget.dispatchEvent(
-			new CustomEvent('chat:start', {
-				detail: {
-					id: responseMessageId
-				}
-			})
-		);
-		await tick();
+    let files = JSON.parse(JSON.stringify(chatFiles));
+    files.push(
+        ...(userMessage?.files ?? []).filter((item) =>
+            ['doc', 'file', 'collection'].includes(item.type)
+        ),
+        ...(responseMessage?.files ?? []).filter((item) => ['web_search_results'].includes(item.type))
+    );
+    // Remove duplicates
+    files = files.filter(
+        (item, index, array) =>
+            array.findIndex((i) => JSON.stringify(i) === JSON.stringify(item)) === index
+    );
 
-		const stream =
-			model?.info?.params?.stream_response ??
-			$settings?.params?.stream_response ??
-			params?.stream_response ??
-			true;
+    // Prepare messages with processed content
+    let messages = [
+        params?.system || $settings.system
+            ? {
+                    role: 'system',
+                    content: `${promptTemplate(
+                        params?.system ?? $settings?.system ?? '',
+                        $user?.name,
+                        $settings?.userLocation
+                            ? await getAndUpdateUserLocation(localStorage.token).catch((err) => {
+                                    console.error(err);
+                                    return undefined;
+                                })
+                            : undefined
+                    )}`
+                }
+            : undefined,
+        ...createMessagesList(_history, responseMessageId).map((message) => ({
+            ...message,
+            content: processDetails(message.content)
+        }))
+    ].filter((message) => message);
 
-		let messages = [
-			params?.system || $settings.system
-				? {
-						role: 'system',
-						content: `${promptTemplate(
-							params?.system ?? $settings?.system ?? '',
-							$user?.name,
-							$settings?.userLocation
-								? await getAndUpdateUserLocation(localStorage.token).catch((err) => {
-										console.error(err);
-										return undefined;
-									})
-								: undefined
-						)}`
-					}
-				: undefined,
-			...createMessagesList(_history, responseMessageId).map((message) => ({
-				...message,
-				content: processDetails(message.content)
-			}))
-		].filter((message) => message);
+    // Additional context preparation
+    const body = {
+        stream: true,
+        model: model.id,
+        messages: messages,
+        chat_id: _chatId,
+        params: {
+            ...$settings?.params,
+            ...params
+        },
+        files: files.length > 0 ? files : undefined,
+        features: {
+            web_search: webSearchEnabled,
+            image_generation: imageGenerationEnabled,
+            code_interpreter: codeInterpreterEnabled
+        }
+    };
 
-		messages = messages
-			.map((message, idx, arr) => ({
-				role: message.role,
-				...((message.files?.filter((file) => file.type === 'image').length > 0 ?? false) &&
-				message.role === 'user'
-					? {
-							content: [
-								{
-									type: 'text',
-									text: message?.merged?.content ?? message.content
-								},
-								...message.files
-									.filter((file) => file.type === 'image')
-									.map((file) => ({
-										type: 'image_url',
-										image_url: {
-											url: file.url
-										}
-									}))
-							]
-						}
-					: {
-							content: message?.merged?.content ?? message.content
-						})
-			}))
-			.filter((message) => message?.role === 'user' || message?.content?.trim());
+    try {
+        const response = await generateOpenAIChatCompletion(
+            localStorage.token, 
+            body, 
+            custombody
+        );
 
-		const res = await generateOpenAIChatCompletion(
-			localStorage.token,
-			{
-				stream: stream,
-				model: model.id,
-				messages: messages,
-				params: {
-					...$settings?.params,
-					...params,
-					stop:
-						(params?.stop ?? $settings?.params?.stop ?? undefined)
-							? (params?.stop.split(',').map((token) => token.trim()) ?? $settings.params.stop).map(
-									(str) => decodeURIComponent(JSON.parse('"' + str.replace(/\"/g, '\\"') + '"'))
-								)
-							: undefined
-				},
+        if (response) {
+            responseMessage.content = typeof response === 'string' 
+                ? response 
+                : response.text || JSON.stringify(response);
+            responseMessage.done = true;
+            
+            history.messages[responseMessageId] = responseMessage;
 
-				files: (files?.length ?? 0) > 0 ? files : undefined,
-
-				filter_ids: selectedFilterIds.length > 0 ? selectedFilterIds : undefined,
-				tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
-				tool_servers: $toolServers,
-
-				features: {
-					image_generation:
-						$config?.features?.enable_image_generation &&
-						($user?.role === 'admin' || $user?.permissions?.features?.image_generation)
-							? imageGenerationEnabled
-							: false,
-					code_interpreter:
-						$config?.features?.enable_code_interpreter &&
-						($user?.role === 'admin' || $user?.permissions?.features?.code_interpreter)
-							? codeInterpreterEnabled
-							: false,
-					web_search:
-						$config?.features?.enable_web_search &&
-						($user?.role === 'admin' || $user?.permissions?.features?.web_search)
-							? webSearchEnabled || ($settings?.webSearch ?? false) === 'always'
-							: false,
-					memory: $settings?.memory ?? false
-				},
-				variables: {
-					...getPromptVariables(
-						$user?.name,
-						$settings?.userLocation
-							? await getAndUpdateUserLocation(localStorage.token).catch((err) => {
-									console.error(err);
-									return undefined;
-								})
-							: undefined
-					)
-				},
-				model_item: $models.find((m) => m.id === model.id),
-
-				session_id: $socket?.id,
-				chat_id: $chatId,
-				id: responseMessageId,
-
-				background_tasks: {
-					...(!$temporaryChatEnabled &&
-					(messages.length == 1 ||
-						(messages.length == 2 &&
-							messages.at(0)?.role === 'system' &&
-							messages.at(1)?.role === 'user')) &&
-					(selectedModels[0] === model.id || atSelectedModel !== undefined)
-						? {
-								title_generation: $settings?.title?.auto ?? true,
-								tags_generation: $settings?.autoTags ?? true
-							}
-						: {}),
-					follow_up_generation: $settings?.autoFollowUps ?? true
-				},
-
-				...(stream && (model.info?.meta?.capabilities?.usage ?? false)
-					? {
-							stream_options: {
-								include_usage: true
-							}
-						}
-					: {})
-			},
-			`${WEBUI_BASE_URL}/api`
-		).catch(async (error) => {
-			toast.error(`${error}`);
-
-			responseMessage.error = {
-				content: error
-			};
-			responseMessage.done = true;
-
-			history.messages[responseMessageId] = responseMessage;
-			history.currentId = responseMessageId;
-			return null;
-		});
-
-		if (res) {
-			if (res.error) {
-				await handleOpenAIError(res.error, responseMessage);
-			} else {
-				if (taskIds) {
-					taskIds.push(res.task_id);
-				} else {
-					taskIds = [res.task_id];
-				}
-			}
-		}
-
-		await tick();
-		scrollToBottom();
-	};
+            if (autoScroll) {
+                scrollToBottom();
+            }
+        }
+    } catch (error) {
+        console.error('Chat completion error:', error);
+        responseMessage.error = { content: error.message };
+        responseMessage.done = true;
+        history.messages[responseMessageId] = responseMessage;
+        toast.error('Failed to get response');
+    }
+};
 
 	const handleOpenAIError = async (error, responseMessage) => {
 		let errorMessage = '';
@@ -1833,8 +1652,7 @@
 
 		history.messages[userMessageId] = userMessage;
 		history.currentId = userMessageId;
-
-		await tick();
+											await tick();
 
 		if (autoScroll) {
 			scrollToBottom();
@@ -1880,7 +1698,6 @@
 			const model = $models
 				.filter((m) => m.id === (responseMessage?.selectedModelId ?? responseMessage.model))
 				.at(0);
-
 			if (model) {
 				await sendPromptSocket(history, model, responseMessage.id, _chatId);
 			}

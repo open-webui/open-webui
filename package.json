@@ -115,6 +115,7 @@
 		"pyodide": "^0.27.3",
 		"socket.io-client": "^4.2.0",
 		"sortablejs": "^1.15.2",
+		"svelte-markdown": "^0.4.1",
 		"svelte-sonner": "^0.3.19",
 		"tippy.js": "^6.3.7",
 		"turndown": "^7.2.0",
