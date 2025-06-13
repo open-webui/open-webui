@@ -296,8 +296,11 @@
 							</Tooltip>
 
 							<div class="flex flex-col shrink-0 self-end">
+								<label class="sr-only" for="toggle-connection"
+									>{$i18n.t('Toggle whether current connection is active.')}</label
+								>
 								<Tooltip content={enable ? $i18n.t('Enabled') : $i18n.t('Disabled')}>
-									<Switch bind:state={enable} />
+									<Switch id="toggle-connection" bind:state={enable} />
 								</Tooltip>
 							</div>
 						</div>
