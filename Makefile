@@ -1,3 +1,7 @@
+BRANCH_NAME := $(shell git rev-parse --abbrev-ref HEAD | sed 's|/|-|g' | tr A-Z a-z)
+DOCKER_IMAGE := docker-unj-repo.softplan.com.br/unj/inovacao/openwebui-iara:$(BRANCH_NAME)
+print-branch:
+	@echo "Current branch: $(BRANCH_NAME)"
 
 ifneq ($(shell which docker-compose 2>/dev/null),)
     DOCKER_COMPOSE := docker-compose
@@ -38,22 +42,22 @@ update:
 
 docker-build:
 	@echo "--> Docker build"
-	@docker build -t docker-unj-repo.softplan.com.br/unj/inovacao/openwebui-iara:0.5.16-2 .
+	@docker build -t $(DOCKER_IMAGE) .
 
 create-buildx:
 	@docker buildx create --use
 
 buildx:
-	@docker buildx build  --platform linux/arm64,linux/amd64 -t docker-unj-repo.softplan.com.br/unj/inovacao/openwebui-iara:weaviate.0.5.16 --push .
+	@docker buildx build  --platform linux/arm64,linux/amd64 -t $(DOCKER_IMAGE) --push .
 
 buildx-arm:
-	@docker buildx build  --platform linux/arm64 -t docker-unj-repo.softplan.com.br/unj/inovacao/openwebui-iara:0.5.16 --push .
+	@docker buildx build  --platform linux/arm64 -t $(DOCKER_IMAGE) --push .
 
 buildx-amd:
-	@docker buildx build  --platform linux/amd64 -t docker-unj-repo.softplan.com.br/unj/inovacao/openwebui-iara:0.5.16 --push .
+	@docker buildx build  --platform linux/amd64 -t $(DOCKER_IMAGE) --push .
 
 run:
-	@docker run -p 3000:8080 --env WEB_CONCURRENCY=1 -add-host=host.docker.internal:host-gateway -v "/app/backend/data:/app/backend/data" --name docker-unj-repo.softplan.com.br/unj/inovacao/openwebui-iara:0.5.16 --restart always
+	@docker run -p 3000:8080 --env WEB_CONCURRENCY=1 -add-host=host.docker.internal:host-gateway -v "/app/backend/data:/app/backend/data" --name $(DOCKER_IMAGE) --restart always
 
 run-litellm:
 	@docker run -d -v $(pwd)/litellm_config.yaml:/app/config.yaml \ 
