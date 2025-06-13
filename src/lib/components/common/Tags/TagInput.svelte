@@ -74,6 +74,7 @@
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
 				viewBox="0 0 16 16"
+				aria-hidden="true"
 				fill="currentColor"
 				class="w-3 h-3 {showTagInput ? 'rotate-45' : ''} transition-all transform"
 			>
