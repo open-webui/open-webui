@@ -258,10 +258,11 @@
 
 						<div class="flex gap-2 mt-1.5">
 							<div class="flex flex-col w-full">
-								<div class=" mb-0.5 text-xs text-gray-500">{$i18n.t('URL')}</div>
+								<label for="url-input" class=" mb-0.5 text-xs text-gray-500">{$i18n.t('URL')}</label>
 
 								<div class="flex-1">
 									<input
+										id="url-input"
 										class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
 										type="text"
 										bind:value={url}
