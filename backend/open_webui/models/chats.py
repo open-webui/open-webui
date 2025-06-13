@@ -3,6 +3,7 @@ import json
 import time
 import uuid
 from typing import Optional
+from datetime import datetime, timedelta
 
 from open_webui.internal.db import Base, get_db
 from open_webui.models.tags import TagModel, Tag, Tags
@@ -441,6 +442,28 @@ class ChatTable:
                         query = query.order_by(getattr(Chat, order_by).desc())
                     else:
                         raise ValueError("Invalid direction for ordering")
+
+                start_date = filter.get("start_date")
+                if start_date:
+                    start_date = datetime.strptime(start_date, "%Y-%m-%d")
+
+                    start_epoch = int(start_date.timestamp())
+
+                    query = query.filter(
+                        Chat.updated_at >= start_epoch,
+                    )
+
+                end_date = filter.get("end_date")
+                if end_date:
+                    end_date = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(
+                        days=1
+                    )
+
+                    end_epoch = int(end_date.timestamp())
+
+                    query = query.filter(
+                        Chat.updated_at < end_epoch,
+                    )
             else:
                 query = query.order_by(Chat.updated_at.desc())
 

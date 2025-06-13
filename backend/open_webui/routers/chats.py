@@ -80,6 +80,8 @@ async def get_user_chat_list_by_user_id(
     query: Optional[str] = None,
     order_by: Optional[str] = None,
     direction: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
     user=Depends(get_admin_user),
 ):
     if not ENABLE_ADMIN_CHAT_ACCESS:
@@ -101,6 +103,10 @@ async def get_user_chat_list_by_user_id(
         filter["order_by"] = order_by
     if direction:
         filter["direction"] = direction
+    if start_date:
+        filter["start_date"] = start_date
+    if end_date:
+        filter["end_date"] = end_date
 
     return Chats.get_chat_list_by_user_id(
         user_id, include_archived=True, filter=filter, skip=skip, limit=limit
