@@ -483,6 +483,7 @@
 							<div>
 								<button
 									type="button"
+									aria-label={$i18n.t('Add')}
 									on:click={() => {
 										addModelHandler();
 									}}
