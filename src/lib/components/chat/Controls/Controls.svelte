@@ -67,7 +67,8 @@
 			</div>
 		</Collapsible>
 
-		{#if $user?.role === 'admin' || $user?.permissions.chat?.controls}
+		{#if $user?.role === 'admin' || $user?.permissions.chat?.allow_custom_system_prompt}
+
 			<hr class="my-2 border-gray-50 dark:border-gray-700/10" />
 
 			<Collapsible title={$i18n.t('System Prompt')} open={true} buttonClassName="w-full">
@@ -80,6 +81,9 @@
 					/>
 				</div>
 			</Collapsible>
+		{/if}
+
+		{#if $user?.role === 'admin' || $user?.permissions.chat?.controls}
 
 			<hr class="my-2 border-gray-50 dark:border-gray-700/10" />
 

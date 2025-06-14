@@ -122,6 +122,7 @@ class ChatPermissions(BaseModel):
     multiple_models: bool = True
     temporary: bool = True
     temporary_enforced: bool = False
+    allow_custom_system_prompt: bool = True
 
 
 class FeaturesPermissions(BaseModel):
