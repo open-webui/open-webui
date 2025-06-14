@@ -162,15 +162,15 @@ class DoclingLoader:
                     if picture_description_mode == "local" and self.params.get(
                         "picture_description_local", {}
                     ):
-                        params["picture_description_local"] = self.params.get(
-                            "picture_description_local", {}
+                        params["picture_description_local"] = json.dumps(
+                            self.params.get("picture_description_local", {})
                         )
 
                     elif picture_description_mode == "api" and self.params.get(
                         "picture_description_api", {}
                     ):
-                        params["picture_description_api"] = self.params.get(
-                            "picture_description_api", {}
+                        params["picture_description_api"] = json.dumps(
+                            self.params.get("picture_description_api", {})
                         )
 
                 if self.params.get("ocr_engine") and self.params.get("ocr_lang"):
