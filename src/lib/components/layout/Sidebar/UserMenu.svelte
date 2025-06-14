@@ -99,10 +99,10 @@
 			</button>
 
 			{#if role === 'admin'}
-				<a
+				<button
 					class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
-					href="/playground"
 					on:click={() => {
+						goto('/playground');
 						show = false;
 
 						if ($mobile) {
@@ -127,12 +127,12 @@
 						</svg>
 					</div>
 					<div class=" self-center truncate">{$i18n.t('Playground')}</div>
-				</a>
+				</button>
 
-				<a
+				<button
 					class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
-					href="/admin"
 					on:click={() => {
+						goto('/admin');
 						show = false;
 
 						if ($mobile) {
@@ -157,7 +157,7 @@
 						</svg>
 					</div>
 					<div class=" self-center truncate">{$i18n.t('Admin Panel')}</div>
-				</a>
+				</button>
 			{/if}
 
 			{#if help}
