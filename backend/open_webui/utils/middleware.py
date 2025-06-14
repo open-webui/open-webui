@@ -2053,27 +2053,37 @@ async def process_chat_response(
                     tools = metadata.get("tools", {})
 
                     results = []
+
                     for tool_call in response_tool_calls:
                         tool_call_id = tool_call.get("id", "")
                         tool_name = tool_call.get("function", {}).get("name", "")
+                        tool_call_args = tool_call.get("function", {}).get("arguments", "{}")
 
                         tool_function_params = {}
                         try:
                             # json.loads cannot be used because some models do not produce valid JSON
                             tool_function_params = ast.literal_eval(
-                                tool_call.get("function", {}).get("arguments", "{}")
+                                tool_call_args
                             )
                         except Exception as e:
                             log.debug(e)
                             # Fallback to JSON parsing
                             try:
                                 tool_function_params = json.loads(
-                                    tool_call.get("function", {}).get("arguments", "{}")
+                                    tool_call_args
                                 )
                             except Exception as e:
-                                log.debug(
-                                    f"Error parsing tool call arguments: {tool_call.get('function', {}).get('arguments', '{}')}"
+                                log.error(
+                                    f"Error parsing tool call arguments: {tool_call_args}"
                                 )
+
+                        # Mutate the original tool call response params as they are passed back to the passed
+                        # back to the LLM via the content blocks. If they are in a json block and are invalid json, 
+                        # this can cause downstream LLM integrations to fail (e.g. bedrock gateway) where response
+                        # params are not valid json.
+                        # Main case so far is no args = "" = invalid json.
+                        log.debug(f"Parsed args from {tool_call_args} to {tool_function_params}")
+                        tool_call.setdefault("function", {})["arguments"] = json.dumps(tool_function_params)
 
                         tool_result = None
 
