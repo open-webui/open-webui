@@ -39,6 +39,7 @@
 	let STT_OPENAI_API_KEY = '';
 	let STT_ENGINE = '';
 	let STT_MODEL = '';
+	let STT_TYPES = '';
 	let STT_WHISPER_MODEL = '';
 	let STT_AZURE_API_KEY = '';
 	let STT_AZURE_REGION = '';
@@ -114,6 +115,7 @@
 				OPENAI_API_KEY: STT_OPENAI_API_KEY,
 				ENGINE: STT_ENGINE,
 				MODEL: STT_MODEL,
+				TYPES: STT_TYPES,
 				WHISPER_MODEL: STT_WHISPER_MODEL,
 				DEEPGRAM_API_KEY: STT_DEEPGRAM_API_KEY,
 				AZURE_API_KEY: STT_AZURE_API_KEY,
@@ -160,6 +162,7 @@
 
 			STT_ENGINE = res.stt.ENGINE;
 			STT_MODEL = res.stt.MODEL;
+			STT_TYPES = res.stt.TYPES;
 			STT_WHISPER_MODEL = res.stt.WHISPER_MODEL;
 			STT_AZURE_API_KEY = res.stt.AZURE_API_KEY;
 			STT_AZURE_REGION = res.stt.AZURE_REGION;
@@ -184,7 +187,7 @@
 	<div class=" space-y-3 overflow-y-scroll scrollbar-hidden h-full">
 		<div class="flex flex-col gap-3">
 			<div>
-				<div class=" mb-1 text-sm font-medium">{$i18n.t('STT Settings')}</div>
+				<div class=" mb-1 text-base font-medium">{$i18n.t('STT Settings')}</div>
 
 				<div class=" py-0.5 flex w-full justify-between">
 					<div class=" self-center text-xs font-medium">{$i18n.t('Speech-to-Text Engine')}</div>
@@ -414,12 +417,23 @@
 						</div>
 					</div>
 				{/if}
+
+				<div class=" mb-1.5 text-sm font-medium">{$i18n.t('STT Transcription MIME Types')}</div>
+				<div class="flex w-full">
+					<div class="flex-1">
+						<input
+							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+							bind:value={STT_TYPES}
+							placeholder={$i18n.t('e.g., audio/*,video/webm (leave blank for defaults)')}
+						/>
+					</div>
+				</div>
 			</div>
 
 			<hr class="border-gray-100 dark:border-gray-850" />
 
 			<div>
-				<div class=" mb-1 text-sm font-medium">{$i18n.t('TTS Settings')}</div>
+				<div class=" mb-1 text-base font-medium">{$i18n.t('TTS Settings')}</div>
 
 				<div class=" py-0.5 flex w-full justify-between">
 					<div class=" self-center text-xs font-medium">{$i18n.t('Text-to-Speech Engine')}</div>
