@@ -4,7 +4,8 @@ export const createNewKnowledge = async (
 	token: string,
 	name: string,
 	description: string,
-	accessControl: null | object
+	accessControl: null | object,
+	rag_config: null | object
 ) => {
 	let error = null;
 
@@ -18,7 +19,8 @@ export const createNewKnowledge = async (
 		body: JSON.stringify({
 			name: name,
 			description: description,
-			access_control: accessControl
+			access_control: accessControl,
+			rag_config: rag_config
 		})
 	})
 		.then(async (res) => {
@@ -137,6 +139,7 @@ type KnowledgeUpdateForm = {
 	description?: string;
 	data?: object;
 	access_control?: null | object;
+	rag_config?: object;
 };
 
 export const updateKnowledgeById = async (token: string, id: string, form: KnowledgeUpdateForm) => {
@@ -153,7 +156,8 @@ export const updateKnowledgeById = async (token: string, id: string, form: Knowl
 			name: form?.name ? form.name : undefined,
 			description: form?.description ? form.description : undefined,
 			data: form?.data ? form.data : undefined,
-			access_control: form.access_control
+			access_control: form.access_control,
+			rag_config: form?.rag_config ? form.rag_config : undefined
 		})
 	})
 		.then(async (res) => {
@@ -350,6 +354,34 @@ export const reindexKnowledgeFiles = async (token: string) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/reindex`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const reindexSpecificKnowledgeFiles = async (token: string, id: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/reindex/${id}`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
