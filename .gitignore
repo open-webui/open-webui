@@ -309,4 +309,4 @@ cypress/screenshots
 .vscode/settings.json
 
 # Claude Code guidance file (temporary)
-Claude.md
+CLAUDE.md
