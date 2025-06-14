@@ -1069,15 +1069,31 @@ async def process_chat_response(
                         else:
                             follow_ups_string = ""
 
-                        follow_ups_string = follow_ups_string[
-                            follow_ups_string.find("{") : follow_ups_string.rfind("}")
-                            + 1
-                        ]
+                        if '{' in follow_ups_string and '}' in follow_ups_string:
+                            follow_ups_string = follow_ups_string[
+                                follow_ups_string.find("{") : follow_ups_string.rfind("}")
+                                + 1
+                            ]
+                        elif '[' in follow_ups_string and ']' in follow_ups_string:
+                            follow_ups_string = follow_ups_string[
+                                follow_ups_string.find("[") : follow_ups_string.rfind("]")
+                                + 1
+                            ]
+                        elif '1.' in follow_ups_string:
+                            lines = follow_ups_string.split('\n')
+                            follow_ups_list = [
+                                line[2:].strip()
+                                for line in lines
+                                if len(line) > 2 and line[0].isdigit() and line[1] == '.'
+                            ]
+                            follow_ups_string = json.dumps(follow_ups_list)
 
                         try:
-                            follow_ups = json.loads(follow_ups_string).get(
-                                "follow_ups", []
-                            )
+                            follow_ups = json.loads(follow_ups_string)
+                            if isinstance(follow_ups, dict):
+                                follow_ups = follow_ups.get(
+                                    "follow_ups", []
+                                )
                             Chats.upsert_message_to_chat_by_id_and_message_id(
                                 metadata["chat_id"],
                                 metadata["message_id"],
