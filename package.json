@@ -129,5 +129,10 @@
 	"engines": {
 		"node": ">=18.13.0 <=22.x.x",
 		"npm": ">=6.0.0"
+	},
+	"pnpm": {
+		"patchedDependencies": {
+			"brace-expansion@2.0.2": "TODO_UPDATE_WITH_ACTUAL_HASH_AFTER_PNPM_INSTALL"
+		}
 	}
 }

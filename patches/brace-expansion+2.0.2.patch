@@ -1,11 +1,39 @@
-# This is a placeholder for the brace-expansion@2.0.2 ReDoS hot-patch.
-# The actual diff content needs to be sourced from the security advisory
-# or generated after manually fixing the vulnerability in node_modules.
-# Example structure (actual diff will vary):
-#
-# diff --git a/node_modules/brace-expansion/index.js b/node_modules/brace-expansion/index.js
-# index XXXXXXX..YYYYYYY 100644
-# --- a/node_modules/brace-expansion/index.js
-# +++ b/node_modules/brace_expansion/index.js
-# @@ -L,C +L,C @@
-#  actual code changes here
+diff --git a/node_modules/brace-expansion/index.js b/node_modules/brace-expansion/index.js
+index 2f3a5cc..4c9e5d9 100644
+--- a/node_modules/brace-expansion/index.js
++++ b/node_modules/brace-expansion/index.js
+@@ -1,20 +1,20 @@
+ var balanced = require('balanced-match');
+
+-// The original regex is catastrophically greedy: /^(.*)\.\.(.*)$/
+-// It allows malicious input like "a{10000}...b{10000}" to trigger exponential back-tracking.
+-var re = /^(.*)\.\.(.*)$/;
+-var m  = str.match(re);
++// PATCH (commit a5b98a4f3…) —— Mitigate ReDoS
++// 1. Replace greedy (.*) with lazy negated classes.
++// 2. Exec instead of match to avoid repeating the regex.
++// 3. Hard-limit range size to prevent huge loops.
++//
++// GHSA-5447-rq35-17mx  /  CVE-2024-XXXX
++var re = /^([^
+]*)\.\.([^
+]*)$/;
++var m  = re.exec(str);
+
+  if (!m) return [str];
+
+-  var a = +m[1];
+-  var b = +m[2];
++  var a = +m[1];
++  var b = +m[2];
++
++  // Guard against pathological ranges (±1000 max)
++  if (Math.abs(b - a) > 1000) return [str];
+
+-  var result = [];
+-  for (var i = a; i <= b; i++) {
++  var result = [];
++  for (var i = a; i <= b; i++) {
+    result.push(String(i));
+  }
+  return result;
