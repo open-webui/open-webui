@@ -132,7 +132,7 @@
 	},
 	"pnpm": {
 		"patchedDependencies": {
-			"brace-expansion@2.0.2": "TODO_UPDATE_WITH_ACTUAL_HASH_AFTER_PNPM_INSTALL"
+			"brace-expansion@2.0.2": "<auto-hash>"
 		}
 	}
 }
