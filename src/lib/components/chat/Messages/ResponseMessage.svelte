@@ -53,10 +53,22 @@
 	import { flyAndScale } from '$lib/utils/transitions';
 
 	interface MessageType {
+		selectedModelId: string;
+		parentId: any;
+		arena: any;
+		feedbackId: any;
+		citations: string[] | undefined;
+		usage: any;
+		followUps: never[];
 		id: string;
 		model: string;
 		content: string;
-		files?: { type: string; url: string }[];
+		files?: {
+			name: string;
+			size: number;
+			type: string;
+			url: string;
+		}[];
 		timestamp: number;
 		role: string;
 		statusHistory?: {
