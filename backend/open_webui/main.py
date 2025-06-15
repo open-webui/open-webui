@@ -63,6 +63,7 @@ from open_webui.routers import (
     images,
     ollama,
     openai,
+    docker_model_runner,
     retrieval,
     pipelines,
     tasks,
@@ -112,6 +113,11 @@ from open_webui.config import (
     OPENAI_API_BASE_URLS,
     OPENAI_API_KEYS,
     OPENAI_API_CONFIGS,
+    # Docker Model Runner
+    ENABLE_DMR_API,
+    DMR_BASE_URLS,
+    DMR_API_KEYS,
+    DMR_API_CONFIGS,
     # Direct Connections
     ENABLE_DIRECT_CONNECTIONS,
     # Thread pool size for FastAPI/AnyIO
@@ -588,6 +594,19 @@ app.state.config.OPENAI_API_KEYS = OPENAI_API_KEYS
 app.state.config.OPENAI_API_CONFIGS = OPENAI_API_CONFIGS
 
 app.state.OPENAI_MODELS = {}
+
+########################################
+#
+# DOCKER MODEL RUNNER
+#
+########################################
+
+app.state.config.ENABLE_DMR_API = ENABLE_DMR_API
+app.state.config.DMR_BASE_URLS = DMR_BASE_URLS
+app.state.config.DMR_API_KEYS = DMR_API_KEYS
+app.state.config.DMR_API_CONFIGS = DMR_API_CONFIGS
+
+app.state.DMR_MODELS = {}
 
 ########################################
 #
@@ -1111,6 +1130,7 @@ app.mount("/ws", socket_app)
 
 app.include_router(ollama.router, prefix="/ollama", tags=["ollama"])
 app.include_router(openai.router, prefix="/openai", tags=["openai"])
+app.include_router(docker_model_runner.router, prefix="/dmr", tags=["dmr"])
 
 
 app.include_router(pipelines.router, prefix="/api/v1/pipelines", tags=["pipelines"])

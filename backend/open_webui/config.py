@@ -896,6 +896,36 @@ except Exception:
 OPENAI_API_BASE_URL = "https://api.openai.com/v1"
 
 ####################################
+# DOCKER MODEL RUNNER
+####################################
+
+ENABLE_DMR_API = PersistentConfig(
+    "ENABLE_DMR_API",
+    "dmr.enable",
+    os.environ.get("ENABLE_DMR_API", "True").lower() == "true",
+)
+
+DMR_API_KEYS = [k.strip() for k in os.environ.get("DMR_API_KEYS", "").split(";")]
+DMR_API_KEYS = PersistentConfig("DMR_API_KEYS", "dmr.api_keys", DMR_API_KEYS)
+
+DMR_BASE_URL = os.environ.get("DMR_BASE_URL", "")
+if DMR_BASE_URL:
+    DMR_BASE_URL = DMR_BASE_URL[:-1] if DMR_BASE_URL.endswith("/") else DMR_BASE_URL
+
+DMR_BASE_URLS = os.environ.get("DMR_BASE_URLS", "")
+DMR_BASE_URLS = DMR_BASE_URLS if DMR_BASE_URLS != "" else DMR_BASE_URL or "http://localhost:12434"
+DMR_BASE_URLS = [url.strip() for url in DMR_BASE_URLS.split(";")]
+DMR_BASE_URLS = PersistentConfig(
+    "DMR_BASE_URLS", "dmr.base_urls", DMR_BASE_URLS
+)
+
+DMR_API_CONFIGS = PersistentConfig(
+    "DMR_API_CONFIGS",
+    "dmr.api_configs",
+    {},
+)
+
+####################################
 # TOOL_SERVERS
 ####################################
 

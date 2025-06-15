@@ -6,7 +6,7 @@ import sys
 from aiocache import cached
 from fastapi import Request
 
-from open_webui.routers import openai, ollama
+from open_webui.routers import openai, ollama, docker_model_runner
 from open_webui.functions import get_function_models
 
 
@@ -56,6 +56,11 @@ async def fetch_openai_models(request: Request, user: UserModel = None):
     return openai_response["data"]
 
 
+async def fetch_docker_models(request: Request, user: UserModel = None):
+    dmr_response = await docker_model_runner.get_all_models(request, user=user)
+    return dmr_response["data"]
+
+
 async def get_all_base_models(request: Request, user: UserModel = None):
     openai_task = (
         fetch_openai_models(request, user)
@@ -67,13 +72,18 @@ async def get_all_base_models(request: Request, user: UserModel = None):
         if request.app.state.config.ENABLE_OLLAMA_API
         else asyncio.sleep(0, result=[])
     )
+    dmr_task = (
+        fetch_docker_models(request, user)
+        if request.app.state.config.ENABLE_DMR_API
+        else asyncio.sleep(0, result=[])
+    )
     function_task = get_function_models(request)
 
-    openai_models, ollama_models, function_models = await asyncio.gather(
-        openai_task, ollama_task, function_task
+    openai_models, ollama_models, function_models, dmr_models = await asyncio.gather(
+        openai_task, ollama_task, function_task, dmr_task
     )
 
-    return function_models + openai_models + ollama_models
+    return function_models + openai_models + ollama_models + dmr_models
 
 
 async def get_all_models(request, user: UserModel = None):
