@@ -169,9 +169,19 @@ This will start the Open WebUI server, which you can access at [http://localhost
 
 Enable Docker Model Runner in Docker Desktop and set the `DMR_BASE_URL` environment variable to the exposed API endpoint:
 
-```bash
-docker run -d -p 3000:8080 -e DMR_BASE_URL=http://localhost:12434 -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
-```
+- **When running Open WebUI in Docker** (container-to-container communication):
+
+  ```bash
+  docker run -d -p 3000:8080 -e DMR_BASE_URL=http://model-runner.docker.internal:12434 -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
+  ```
+
+- **When running Open WebUI directly on the host** (host process accessing Docker Model Runner):
+
+  ```bash
+  docker run -d -p 3000:8080 -e DMR_BASE_URL=http://localhost:12434 -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
+  ```
+
+**Note**: The default configuration uses `http://model-runner.docker.internal:12434` which works for Docker deployments. If you're running Open WebUI as a host process, make sure to set `DMR_BASE_URL=http://localhost:12434`.
 
 ### Installing Open WebUI with Bundled Ollama Support
 

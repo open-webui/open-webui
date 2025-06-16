@@ -904,7 +904,7 @@ ENABLE_DMR_API = PersistentConfig(
     "dmr.enable",
     os.environ.get("ENABLE_DMR_API", "True").lower() == "true",
 )
-DMR_BASE_URL = os.environ.get("DMR_BASE_URL", "http://localhost:12434")
+DMR_BASE_URL = os.environ.get("DMR_BASE_URL", "http://model-runner.docker.internal:12434")
 # Remove trailing slash
 DMR_BASE_URL = DMR_BASE_URL[:-1] if DMR_BASE_URL.endswith("/") else DMR_BASE_URL
 
