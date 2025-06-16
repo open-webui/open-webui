@@ -16,7 +16,7 @@ from urllib.parse import urlparse
 import aiohttp
 from aiocache import cached
 import requests
-from urilib.parse import quote
+from urllib.parse import quote
 
 from open_webui.models.chats import Chats
 from open_webui.models.users import UserModel
