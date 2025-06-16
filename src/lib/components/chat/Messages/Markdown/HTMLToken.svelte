@@ -78,7 +78,7 @@
 				src={`${WEBUI_BASE_URL}/api/v1/files/${fileId}/content/html`}
 				title="Content"
 				frameborder="0"
-				sandbox="allow-scripts{($settings?.iframeSandboxAllowForms ?? false)
+				sandbox="allow-scripts allow-downloads{($settings?.iframeSandboxAllowForms ?? false)
 					? ' allow-forms'
 					: ''}{($settings?.iframeSandboxAllowSameOrigin ?? false) ? ' allow-same-origin' : ''}"
 				referrerpolicy="strict-origin-when-cross-origin"
