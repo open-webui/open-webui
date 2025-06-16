@@ -16,7 +16,7 @@ certificatesResolvers:
     acme:
       email: thore@beyondtheloop.ai
       storage: /letsencrypt/acme.json
-      tlsChallenge: true
+      tlsChallenge: {}
 
 log:
   level: INFO
