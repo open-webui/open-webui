@@ -8,7 +8,6 @@ from pydantic import BaseModel
 
 from open_webui.internal.db import get_db
 from sqlalchemy import text
-from open_webui.env import DATABASE_URL
 
 log = logging.getLogger(__name__)
 
@@ -32,59 +31,55 @@ class StatsResponse(BaseModel):
     current_stats: CurrentStats
     evolution_stats: EvolutionStats
 
-DB_URL = DATABASE_URL.lower()
-IS_SQLITE = DB_URL.startswith("sqlite")
-IS_POSTGRES = DB_URL.startswith("postgresql") or DB_URL.startswith("postgres")
-
 def get_json_count_query():
-    """Return the SQL query to count messages in all chats, depending on the DB."""
-    if IS_SQLITE:
-        return (
-            """
-            SELECT COUNT(*)
-            FROM chat, json_each(json_extract(chat, '$.history.messages'))
-            WHERE json_valid(chat) = 1
-            """
-        )
-    elif IS_POSTGRES:
-        return (
-            """
-            SELECT COUNT(*)
-            FROM chat, LATERAL jsonb_array_elements(chat->'history'->'messages') AS msg
-            """
-        )
-    else:
-        return None
+    """Return the SQL query to count messages in all chats for PostgreSQL."""
+    return """
+        SELECT COUNT(*)
+        FROM chat, LATERAL jsonb_array_elements(chat::jsonb->'history'->'messages') AS msg
+        WHERE chat::jsonb ? 'history' 
+        AND chat::jsonb->'history' ? 'messages'
+        AND jsonb_typeof(chat::jsonb->'history'->'messages') = 'array'
+    """
 
 def get_model_usage_query():
-    """Return the SQL query to count model usage, depending on the DB."""
-    if IS_SQLITE:
-        return (
-            """
-            SELECT 
-                json_extract(value, '$.model') as model,
-                COUNT(*) as count
-            FROM chat, json_each(json_extract(chat, '$.history.messages'))
-            WHERE json_extract(value, '$.role') = 'assistant' 
-            AND json_extract(value, '$.model') IS NOT NULL
-            GROUP BY json_extract(value, '$.model')
-            ORDER BY count DESC
-            """
-        )
-    elif IS_POSTGRES:
-        return (
-            """
-            SELECT 
-                msg->>'model' as model,
-                COUNT(*) as count
-            FROM chat, LATERAL jsonb_array_elements(chat->'history'->'messages') AS msg
-            WHERE msg->>'role' = 'assistant' AND msg ? 'model'
-            GROUP BY msg->>'model'
-            ORDER BY count DESC
-            """
-        )
-    else:
-        return None
+    """Return the SQL query to count model usage for PostgreSQL."""
+    return """
+        SELECT 
+            msg->>'model' as model,
+            COUNT(*) as count
+        FROM chat, LATERAL jsonb_array_elements(chat::jsonb->'history'->'messages') AS msg
+        WHERE chat::jsonb ? 'history' 
+        AND chat::jsonb->'history' ? 'messages'
+        AND jsonb_typeof(chat::jsonb->'history'->'messages') = 'array'
+        AND msg->>'role' = 'assistant' 
+        AND msg ? 'model'
+        GROUP BY msg->>'model'
+        ORDER BY count DESC
+    """
+
+def get_users_evolution_query():
+    """Return the SQL query for users evolution for PostgreSQL."""
+    return """
+        SELECT 
+            DATE(to_timestamp(created_at)) as date,
+            COUNT(*) as count
+        FROM "user" 
+        WHERE created_at > :threshold
+        GROUP BY DATE(to_timestamp(created_at))
+        ORDER BY date
+    """
+
+def get_conversations_evolution_query():
+    """Return the SQL query for conversations evolution for PostgreSQL."""
+    return """
+        SELECT 
+            DATE(to_timestamp(created_at)) as date,
+            COUNT(*) as count
+        FROM chat 
+        WHERE created_at > :threshold
+        GROUP BY DATE(to_timestamp(created_at))
+        ORDER BY date
+    """
 
 @router.get("/", response_model=StatsResponse)
 async def get_stats():
@@ -98,10 +93,10 @@ async def get_stats():
         total_conversations = db.execute(text("SELECT COUNT(*) FROM chat")).scalar()
         
         # Get total messages by counting all messages in all chats
-        count_query = get_json_count_query()
-        if count_query:
-            total_messages_result = db.execute(text(count_query)).scalar()
-        else:
+        try:
+            total_messages_result = db.execute(text(get_json_count_query())).scalar()
+        except Exception as e:
+            log.error(f"Error counting messages: {e}")
             total_messages_result = 0
         total_messages = total_messages_result or 0
     
@@ -110,17 +105,22 @@ async def get_stats():
     active_threshold = current_time - (24 * 60 * 60)  # 24 hours ago
     
     with get_db() as db:
-        active_users = db.execute(text("""
-            SELECT COUNT(*) FROM user 
-            WHERE last_active_at > :threshold
-        """), {"threshold": active_threshold}).scalar()
+        try:
+            active_users_query = '''
+                SELECT COUNT(*) FROM "user" 
+                WHERE last_active_at > :threshold
+            '''
+            active_users = db.execute(text(active_users_query), {"threshold": active_threshold}).scalar()
+        except Exception as e:
+            log.error(f"Error counting active users: {e}")
+            active_users = 0
     
     # Model usage stats - extract from actual chat data
     with get_db() as db:
-        model_usage_query = get_model_usage_query()
-        if model_usage_query:
-            model_usage_result = db.execute(text(model_usage_query)).fetchall()
-        else:
+        try:
+            model_usage_result = db.execute(text(get_model_usage_query())).fetchall()
+        except Exception as e:
+            log.error(f"Error getting model usage: {e}")
             model_usage_result = []
     
     # Convert to dictionary format
@@ -135,25 +135,17 @@ async def get_stats():
     ninety_days_ago = current_time - (90 * 24 * 60 * 60)
     
     with get_db() as db:
-        users_evolution = db.execute(text("""
-            SELECT 
-                DATE(datetime(created_at, 'unixepoch')) as date,
-                COUNT(*) as count
-            FROM user 
-            WHERE created_at > :threshold
-            GROUP BY DATE(datetime(created_at, 'unixepoch'))
-            ORDER BY date
-        """), {"threshold": ninety_days_ago}).fetchall()
-        
-        conversations_evolution = db.execute(text("""
-            SELECT 
-                DATE(datetime(created_at, 'unixepoch')) as date,
-                COUNT(*) as count
-            FROM chat 
-            WHERE created_at > :threshold
-            GROUP BY DATE(datetime(created_at, 'unixepoch'))
-            ORDER BY date
-        """), {"threshold": ninety_days_ago}).fetchall()
+        try:
+            users_evolution = db.execute(text(get_users_evolution_query()), {"threshold": ninety_days_ago}).fetchall()
+        except Exception as e:
+            log.error(f"Error getting users evolution: {e}")
+            users_evolution = []
+            
+        try:
+            conversations_evolution = db.execute(text(get_conversations_evolution_query()), {"threshold": ninety_days_ago}).fetchall()
+        except Exception as e:
+            log.error(f"Error getting conversations evolution: {e}")
+            conversations_evolution = []
     
     users_over_time = [{"date": row[0], "count": row[1]} for row in users_evolution]
     conversations_over_time = [{"date": row[0], "count": row[1]} for row in conversations_evolution]

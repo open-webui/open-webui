@@ -23,6 +23,8 @@ services:
       - 'NODE_OPTIONS=--max-old-space-size=8192'
       - 'FRONTEND_URL=${FRONTEND_URL}'
       - 'BACKEND_URL=${BACKEND_URL}'
+      # Database
+      - 'DATABASE_URL=postgresql://postgres:postgres@albert-postgres:5432/assistant-ia-db'
       # ProConnect
       - 'PROCONNECT_CLIENT_ID=${PROCONNECT_CLIENT_ID}'
       - 'PROCONNECT_CLIENT_SECRET=${PROCONNECT_CLIENT_SECRET}'
@@ -34,6 +36,7 @@ services:
       - 'REDIS_PASSWORD=${REDIS_PASSWORD}'
     depends_on:
       - redis
+      - postgres
     networks:
       - albert-network
     extra_hosts:
@@ -52,9 +55,25 @@ services:
       - albert-network
     restart: unless-stopped
 
+  postgres:
+    image: postgres:16-alpine
+    container_name: albert-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=assistant-ia-db
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - albert-network
+    restart: unless-stopped
+
 volumes:
   albert-conversation: {}
   redis-data: {}
+  postgres-data: {}
 
 networks:
   albert-network:
