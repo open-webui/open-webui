@@ -13,6 +13,7 @@
 	import GlobeAltSolid from '$lib/components/icons/GlobeAltSolid.svelte';
 	import WrenchSolid from '$lib/components/icons/WrenchSolid.svelte';
 	import CameraSolid from '$lib/components/icons/CameraSolid.svelte';
+	import WarningModal from '$lib/components/WarningModal.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -28,6 +29,27 @@
 	}
 
 	const init = async () => {};
+
+	let showWarningModal = false;
+	let fileInput: HTMLInputElement;
+
+	function handleFileButtonClick() {
+		const hideUntil = localStorage.getItem('hideUploadWarning');
+		const now = Date.now();
+
+		if (hideUntil && parseInt(hideUntil) > now) {
+			// Warning is suppressed, directly trigger file input
+			fileInput.click();
+		} else {
+			// Show warning first
+			showWarningModal = true;
+		}
+	}
+
+	function handleWarningConfirm() {
+		showWarningModal = false;
+		fileInput.click();
+	}
 </script>
 
 <Dropdown
@@ -65,9 +87,7 @@
 
 			<DropdownMenu.Item
 				class="flex gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
-				on:click={() => {
-					uploadFilesHandler();
-				}}
+				on:click={handleFileButtonClick}
 			>
 				<DocumentArrowUpSolid />
 				<div class="line-clamp-1">{$i18n.t('Upload Files')}</div>
@@ -75,3 +95,22 @@
 		</DropdownMenu.Content>
 	</div>
 </Dropdown>
+
+<WarningModal
+	bind:show={showWarningModal}
+	on:confirm={handleWarningConfirm}
+/>
+
+<button
+	on:click={handleFileButtonClick}
+	class="...existing classes..."
+>
+	<input
+		bind:this={fileInput}
+		type="file"
+		accept=".pdf,.txt,.doc,.docx"
+		class="hidden"
+		on:change={handleFileChange}
+	/>
+	<!-- ...existing button content... -->
+</button>
