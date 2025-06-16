@@ -904,12 +904,13 @@ ENABLE_DMR_API = PersistentConfig(
     "dmr.enable",
     os.environ.get("ENABLE_DMR_API", "True").lower() == "true",
 )
-
-DMR_API_KEYS = [k.strip() for k in os.environ.get("DMR_API_KEYS", "").split(";")]
-DMR_API_KEYS = PersistentConfig("DMR_API_KEYS", "dmr.api_keys", DMR_API_KEYS)
+DMR_API_BASE_URL = os.environ.get(
+    "DMR_API_BASE_URL", "http://localhost:12434"
+)
 
 DMR_BASE_URL = os.environ.get("DMR_BASE_URL", "")
 if DMR_BASE_URL:
+    # Remove trailing slash
     DMR_BASE_URL = DMR_BASE_URL[:-1] if DMR_BASE_URL.endswith("/") else DMR_BASE_URL
 
 DMR_BASE_URLS = os.environ.get("DMR_BASE_URLS", "")
@@ -1464,7 +1465,7 @@ FOLLOW_UP_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
 DEFAULT_FOLLOW_UP_GENERATION_PROMPT_TEMPLATE = """### Task:
 Suggest 3-5 relevant follow-up questions or prompts that the user might naturally ask next in this conversation as a **user**, based on the chat history, to help continue or deepen the discussion.
 ### Guidelines:
-- Write all follow-up questions from the user’s point of view, directed to the assistant.
+- Write all follow-up questions from the user's point of view, directed to the assistant.
 - Make questions concise, clear, and directly related to the discussed topic(s).
 - Only suggest follow-ups that make sense given the chat content and do not repeat what was already covered.
 - If the conversation is very short or not specific, suggest more general (but relevant) follow-ups the user might ask.

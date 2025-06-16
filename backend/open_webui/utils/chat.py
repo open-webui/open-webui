@@ -31,6 +31,10 @@ from open_webui.routers.ollama import (
     generate_chat_completion as generate_ollama_chat_completion,
 )
 
+from open_webui.routers.docker_model_runner import (
+    generate_chat_completion as generate_docker_chat_completion,
+)
+
 from open_webui.routers.pipelines import (
     process_pipeline_inlet_filter,
     process_pipeline_outlet_filter,
@@ -274,6 +278,13 @@ async def generate_chat_completion(
                 )
             else:
                 return convert_response_ollama_to_openai(response)
+        if model.get("owned_by") == "docker":
+            # Using DMR endpoints
+            return await generate_docker_chat_completion(
+                request=request,
+                form_data=form_data,
+                user=user,
+            )
         else:
             return await generate_openai_chat_completion(
                 request=request,

@@ -25,6 +25,8 @@ services:
     environment:
       - 'OLLAMA_BASE_URL=http://ollama:11434'
       - 'WEBUI_SECRET_KEY='
+      - 'DMR_BASE_URL=${DMR_BASE_URL:-http://model-runner.docker.internal:12434}'
+      - 'ENABLE_DMR_API=${ENABLE_DMR_API:-false}'
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped

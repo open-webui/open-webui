@@ -116,7 +116,6 @@ from open_webui.config import (
     # Docker Model Runner
     ENABLE_DMR_API,
     DMR_BASE_URLS,
-    DMR_API_KEYS,
     DMR_API_CONFIGS,
     # Direct Connections
     ENABLE_DIRECT_CONNECTIONS,
@@ -603,7 +602,6 @@ app.state.OPENAI_MODELS = {}
 
 app.state.config.ENABLE_DMR_API = ENABLE_DMR_API
 app.state.config.DMR_BASE_URLS = DMR_BASE_URLS
-app.state.config.DMR_API_KEYS = DMR_API_KEYS
 app.state.config.DMR_API_CONFIGS = DMR_API_CONFIGS
 
 app.state.DMR_MODELS = {}
