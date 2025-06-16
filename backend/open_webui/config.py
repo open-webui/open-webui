@@ -904,20 +904,12 @@ ENABLE_DMR_API = PersistentConfig(
     "dmr.enable",
     os.environ.get("ENABLE_DMR_API", "True").lower() == "true",
 )
-DMR_API_BASE_URL = os.environ.get(
-    "DMR_API_BASE_URL", "http://localhost:12434"
-)
+DMR_BASE_URL = os.environ.get("DMR_BASE_URL", "http://localhost:12434")
+# Remove trailing slash
+DMR_BASE_URL = DMR_BASE_URL[:-1] if DMR_BASE_URL.endswith("/") else DMR_BASE_URL
 
-DMR_BASE_URL = os.environ.get("DMR_BASE_URL", "")
-if DMR_BASE_URL:
-    # Remove trailing slash
-    DMR_BASE_URL = DMR_BASE_URL[:-1] if DMR_BASE_URL.endswith("/") else DMR_BASE_URL
-
-DMR_BASE_URLS = os.environ.get("DMR_BASE_URLS", "")
-DMR_BASE_URLS = DMR_BASE_URLS if DMR_BASE_URLS != "" else DMR_BASE_URL or "http://localhost:12434"
-DMR_BASE_URLS = [url.strip() for url in DMR_BASE_URLS.split(";")]
-DMR_BASE_URLS = PersistentConfig(
-    "DMR_BASE_URLS", "dmr.base_urls", DMR_BASE_URLS
+DMR_BASE_URL = PersistentConfig(
+    "DMR_BASE_URL", "dmr.base_url", DMR_BASE_URL
 )
 
 DMR_API_CONFIGS = PersistentConfig(
