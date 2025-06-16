@@ -1373,6 +1373,17 @@ async def chat_completion(
             request, response, form_data, user, metadata, model, events, tasks
         )
     except Exception as e:
+        log.debug(f"Error in chat completion: {e}")
+        if metadata.get("chat_id") and metadata.get("message_id"):
+            # Update the chat message with the error
+            Chats.upsert_message_to_chat_by_id_and_message_id(
+                metadata["chat_id"],
+                metadata["message_id"],
+                {
+                    "error": {"content": str(e)},
+                },
+            )
+
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
