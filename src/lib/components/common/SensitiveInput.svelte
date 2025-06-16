@@ -1,6 +1,7 @@
 <script lang="ts">
 	const i18n = getContext('i18n');
 	import { getContext } from 'svelte';
+	import { settings } from '$lib/stores';
 	export let value: string = '';
 	export let placeholder = '';
 	export let required = true;
@@ -16,7 +17,7 @@
 <div class={outerClassName}>
 	<label class="sr-only" for="password-input">{placeholder || $i18n.t('Password')}</label>
 	<input
-		class={`${inputClassName} ${show ? '' : 'password'}`}
+		class={`${inputClassName} ${show ? '' : 'password'} ${($settings?.highContrastMode ?? false) ? '' : ' outline-hidden'}`}
 		{placeholder}
 		id="password-input"
 		bind:value
