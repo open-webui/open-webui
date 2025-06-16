@@ -40,7 +40,7 @@ class ExternalDocumentLoader(BaseLoader):
             headers["X-Filename"] = os.path.basename(self.file_path)
         except:
             pass
-        
+
         url = self.url
         if url.endswith("/"):
             url = url[:-1]
@@ -52,7 +52,7 @@ class ExternalDocumentLoader(BaseLoader):
             raise Exception(f"Error connecting to endpoint: {e}")
 
         if response.ok:
-            
+
             response_data = response.json()
             if response_data:
                 if isinstance(response_data, dict):
@@ -65,15 +65,19 @@ class ExternalDocumentLoader(BaseLoader):
                 elif isinstance(response_data, list):
                     documents = []
                     for document in response_data:
-                        documents.append(Document(
-                            page_content=document.get("page_content"),
-                            metadata=document.get("metadata"),
-                        ))
-                    return documents 
+                        documents.append(
+                            Document(
+                                page_content=document.get("page_content"),
+                                metadata=document.get("metadata"),
+                            )
+                        )
+                    return documents
                 else:
                     raise Exception("Error loading document: Unable to parse content")
-            
+
             else:
                 raise Exception("Error loading document: No content returned")
         else:
-            raise Exception(f"Error loading document: {response.status_code} {response.text}")
+            raise Exception(
+                f"Error loading document: {response.status_code} {response.text}"
+            )

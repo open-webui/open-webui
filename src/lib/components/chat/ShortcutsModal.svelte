@@ -310,7 +310,7 @@
 			)}
 		</div>
 		<div class=" flex justify-between dark:text-gray-300 px-5">
-			<div class=" text-lg font-medium self-center">{$i18n.t('Chat Input commands')}</div>
+			<div class=" text-lg font-medium self-center">{$i18n.t('Input commands')}</div>
 		</div>
 
 		<div class="flex flex-col md:flex-row w-full p-5 md:space-x-4 dark:text-gray-200">

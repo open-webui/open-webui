@@ -93,7 +93,7 @@
 				return 0;
 		}
 	});
-  
+
 	let showFeedbackModal = false;
 	let selectedFeedback = null;
 
