@@ -66,7 +66,7 @@ pypdf==4.3.1
 fpdf2==2.8.2
 pymdown-extensions==10.14.2
 docx2txt==0.8
-python-pptx==1.0.0
+python-pptx==1.0.2
 unstructured==0.16.17
 nltk==3.9.1
 Markdown==3.7
@@ -95,7 +95,7 @@ authlib==1.4.1
 
 black==25.1.0
 langfuse==2.44.0
-youtube-transcript-api==1.0.3
+youtube-transcript-api==1.1.0
 pytube==15.0.0
 
 extract_msg
