@@ -9,8 +9,26 @@
 	export let show = false;
 	export let variables: string[] = [];
 	export let subtitle: string = '';
+	export let promptRawContent = '';
 
 	let variableValues: { [key: string]: string } = {};
+
+	$: formattedPromptDisplay = (() => {
+		if (!promptRawContent) {
+			return '';
+		}
+
+		// Escape HTML tags in promptRawContent
+		let escapedPrompt = promptRawContent.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+		if (variables && variables.length > 0) {
+			variables.forEach((variable) => {
+				const regex = new RegExp(`{{\\s*${variable}\\s*}}`, 'g');
+				escapedPrompt = escapedPrompt.replace(regex, `<strong>{{${variable}}}</strong>`);
+			});
+		}
+		return escapedPrompt;
+	})();
 
 	$: {
 		const newValues = {};
@@ -62,6 +80,16 @@
 			<p class="text-sm text-gray-600 dark:text-gray-400 mt-1 px-5">{@html subtitle}</p>
 		{/if}
 
+		{#if promptRawContent}
+			<div
+				class="max-h-56 overflow-y-auto bg-gray-50 dark:bg-gray-800 p-2 rounded-md my-3 text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words mx-5"
+			>
+				{@html formattedPromptDisplay}
+			</div>
+		{/if}
+
+		<p class="text-sm text-gray-600 dark:text-gray-400 mt-3 px-5">{$i18n.t('You may replace the placeholder variables with values below. Note that if you do not enter a value, the placeholder will be removed from the text.')}</p>
+
 		<div class="p-5 max-h-[60vh] overflow-y-auto">
 			{#each variables as variable (variable)}
 				<div class="flex flex-col mb-4">
@@ -70,7 +98,7 @@
 					</div>
 					<Textarea
 						id="variable-{variable}"
-						className="w-full bg-gray-50 dark:bg-gray-800 border-gray-300 dark:border-gray-700 rounded-md p-2 text-sm dark:text-gray-100 focus:ring-blue-500 focus:border-blue-500 mt-1"
+						class="w-full bg-gray-50 dark:bg-gray-800 border-gray-300 dark:border-gray-700 rounded-md p-2 text-sm dark:text-gray-100 focus:ring-blue-500 focus:border-blue-500 mt-1"
 						placeholder={$i18n.t('Enter value here')}
 						bind:value={variableValues[variable]}
 						rows={2}

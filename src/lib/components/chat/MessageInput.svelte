@@ -468,7 +468,7 @@
 		return [...new Set(matches)].filter(v => !RESERVED_VARIABLES.includes(v.toUpperCase()));
 	};
 
-	const variableModalSubtitle = $i18n.t('Your prompt uses variables as placeholders. You may replace individual variables with values here:');
+	const variableModalSubtitle = $i18n.t('Your prompt uses the highlighted variables as placeholders');
 
 	onMount(async () => {
 		loaded = true;
@@ -516,6 +516,7 @@
 <VariableInputModal
 	bind:show={showVariableInputModal}
 	variables={activePromptVariables}
+	promptRawContent={prompt}
 	subtitle={variableModalSubtitle}
 	on:submit={(e) => {
 		const submittedValues = e.detail;
