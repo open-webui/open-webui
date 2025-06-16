@@ -76,7 +76,7 @@
 					<Tooltip content={$i18n.t('Enter system prompt')} placement="top-start">
 						<textarea
 							bind:value={params.system}
-							class="w-full text-sm py-1.5 bg-transparent focus:outline-1 focus:outline-black dark:focus:outline-white resize-none placeholder-[#5C6B8B]"
+							class="w-full text-xs py-1.5 bg-transparent outline-none resize-none"
 							rows="4"
 							placeholder={$i18n.t('Enter system prompt')}
 						/>

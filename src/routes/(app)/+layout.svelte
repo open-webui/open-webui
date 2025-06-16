@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { toast } from '$lib/utils/toast';
+	import { toast } from 'svelte-sonner';
 	import { onMount, tick, getContext } from 'svelte';
 	import { openDB, deleteDB } from 'idb';
 	import fileSaver from 'file-saver';

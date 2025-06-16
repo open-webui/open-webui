@@ -3,14 +3,14 @@
 	import { fade } from 'svelte/transition';
 	import { flyAndScale } from '$lib/utils/transitions';
 	import * as focusTrap from 'focus-trap';
-	import { toast } from '$lib/utils/toast';
+	import { toast } from 'svelte-sonner';
 
 	const i18n = getContext('i18n');
 
 	export let show = true;
 	export let size = 'md';
 	export let containerClassName = 'p-3';
-	export let className = 'bg-white dark:bg-gray-900 rounded-2xl';
+	export let className = 'bg-gray-50 dark:bg-gray-900 rounded-2xl';
 	export let disableClose = false;
 	export let title = '';
 

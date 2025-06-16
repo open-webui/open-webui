@@ -29,10 +29,6 @@
 
 	export let onClose: Function;
 
-	export let buttonClass = '';
-	export let ariaLabel = '';
-	export let buttonID = '';
-
 	let tools = {};
 	let show = false;
 
@@ -75,11 +71,16 @@
 			onClose();
 		}
 	}}
-	{buttonClass}
-	{ariaLabel}
-	{buttonID}
 >
-	<slot />
+	<Tooltip content={$i18n.t('More')}>
+		<div
+			aria-label="More"
+			role="button"
+			class="flex bg-transparent hover:bg-white/80 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-2 outline-none"
+		>
+			<slot />
+		</div>
+	</Tooltip>
 
 	<div slot="content">
 		<DropdownMenu.Content

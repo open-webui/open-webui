@@ -7,7 +7,7 @@
 	import DOMPurify from 'dompurify';
 	import DocumentDuplicate from '../icons/DocumentDuplicate.svelte';
 	import { copyToClipboard } from '$lib/utils';
-	import { toast } from '$lib/utils/toast';
+	import { toast } from 'svelte-sonner';
 	import Tooltip from './Tooltip.svelte';
 	import Clipboard from '../icons/Clipboard.svelte';
 	import Reset from '../icons/Reset.svelte';

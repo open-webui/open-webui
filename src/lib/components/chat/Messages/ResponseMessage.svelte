@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { toast } from '$lib/utils/toast';
+	import { toast } from 'svelte-sonner';
 	import dayjs from 'dayjs';
 
 	import { createEventDispatcher } from 'svelte';
@@ -485,7 +485,7 @@
 
 				{#if message.timestamp}
 					<div
-						class=" self-center text-xs text-gray-400 font-medium first-letter:capitalize ml-0.5 translate-y-[1px]"
+						class=" self-center text-xs invisible group-hover:visible text-gray-400 font-medium first-letter:capitalize ml-0.5 translate-y-[1px]"
 					>
 						<Tooltip content={dayjs(message.timestamp * 1000).format('dddd, DD MMMM YYYY HH:mm')}>
 							<span class="line-clamp-1">{formatDate(message.timestamp * 1000)}</span>
@@ -590,7 +590,7 @@
 								<textarea
 									id="message-edit-{message.id}"
 									bind:this={editTextAreaElement}
-									class=" bg-transparent focus:outline-dark dark:focus:outline-white w-full resize-none"
+									class=" bg-transparent outline-none w-full resize-none"
 									bind:value={editedContent}
 									on:input={(e) => {
 										e.target.style.height = '';
@@ -807,7 +807,9 @@
 								<Tooltip content={$i18n.t('Copy')} placement="bottom">
 									<button
 										aria-label={$i18n.t('Copy')}
-										class=" p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition copy-response-button"
+										class="{isLastMessage
+											? 'visible'
+											: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition copy-response-button"
 										on:click={() => {
 											copyToClipboard(message.content);
 										}}
@@ -833,7 +835,9 @@
 									<button
 										id="speak-button-{message.id}"
 										aria-label={$i18n.t('Read Aloud')}
-										class=" p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+										class="{isLastMessage
+											? 'visible'
+											: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
 										on:click={() => {
 											if (!loadingSpeech) {
 												toggleSpeakMessage();
@@ -1013,7 +1017,9 @@
 									{#if $config?.features.enable_message_rating ?? true}
 										<Tooltip content={$i18n.t('Good Response')} placement="bottom">
 											<button
-												class="p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg {(
+												class="{isLastMessage
+													? 'visible'
+													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg {(
 													message?.annotation?.rating ?? ''
 												).toString() === '1'
 													? 'bg-gray-100 dark:bg-gray-800'
@@ -1047,7 +1053,9 @@
 
 										<Tooltip content={$i18n.t('Bad Response')} placement="bottom">
 											<button
-												class=" p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg {(
+												class="{isLastMessage
+													? 'visible'
+													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg {(
 													message?.annotation?.rating ?? ''
 												).toString() === '-1'
 													? 'bg-gray-100 dark:bg-gray-800'
@@ -1086,7 +1094,9 @@
 												type="button"
 												aria-label={$i18n.t('Continue Response')}
 												id="continue-response-button"
-												class=" p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition regenerate-response-button"
+												class="{isLastMessage
+													? 'visible'
+													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition regenerate-response-button"
 												on:click={() => {
 													continueResponse();
 												}}
@@ -1117,8 +1127,9 @@
 									<Tooltip content={$i18n.t('Regenerate')} placement="bottom">
 										<button
 											type="button"
-											aria-label={$i18n.t('Regenerate')}
-											class="p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition regenerate-response-button"
+											class="{isLastMessage
+												? 'visible'
+												: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition regenerate-response-button"
 											on:click={() => {
 												showRateComment = false;
 												regenerateResponse(message);

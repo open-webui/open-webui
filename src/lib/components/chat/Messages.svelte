@@ -4,7 +4,7 @@
 	import { tick, getContext, onMount, createEventDispatcher } from 'svelte';
 	const dispatch = createEventDispatcher();
 
-	import { toast } from '$lib/utils/toast';
+	import { toast } from 'svelte-sonner';
 	import { getChatList, updateChatById } from '$lib/apis/chats';
 	import { copyToClipboard, findWordIndices } from '$lib/utils';
 

@@ -3,7 +3,7 @@
 	import Modal from './Modal.svelte';
 	import { user } from '$lib/stores';
 	import { createIssue } from '$lib/apis/issues';
-	import { toast } from '$lib/utils/toast';
+	import { toast } from 'svelte-sonner';
 
 	export let show = false;
 

@@ -2,7 +2,7 @@
 	import { getContext, onMount } from 'svelte';
 	import { models, config, returnFocusButtonID } from '$lib/stores';
 
-	import { toast } from '$lib/utils/toast';
+	import { toast } from 'svelte-sonner';
 	import { deleteSharedChatById, getChatById, shareChatById } from '$lib/apis/chats';
 	import { copyToClipboard } from '$lib/utils';
 

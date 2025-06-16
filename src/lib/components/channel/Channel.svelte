@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { toast } from '$lib/utils/toast';
+	import { toast } from 'svelte-sonner';
 	import { Pane, PaneGroup, PaneResizer } from 'paneforge';
 
 	import { onDestroy, onMount, tick } from 'svelte';

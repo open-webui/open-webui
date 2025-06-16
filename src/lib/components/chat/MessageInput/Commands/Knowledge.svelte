@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { toast } from '$lib/utils/toast';
+	import { toast } from 'svelte-sonner';
 	import Fuse from 'fuse.js';
 
 	import dayjs from 'dayjs';

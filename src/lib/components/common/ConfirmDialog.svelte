@@ -6,7 +6,7 @@
 	import { fade } from 'svelte/transition';
 	import { flyAndScale } from '$lib/utils/transitions';
 	import * as focusTrap from 'focus-trap';
-	import { toast } from '$lib/utils/toast';
+	import { toast } from 'svelte-sonner';
 
 	export let title = '';
 	export let message = '';
@@ -120,7 +120,7 @@
 				</div>
 
 				<slot>
-					<div class=" text-sm text-gray-800 dark:text-gray-200 flex-1">
+					<div class=" text-sm text-gray-500 flex-1">
 						{#if message !== ''}
 							{message}
 						{:else}
@@ -141,7 +141,7 @@
 
 				<div class="mt-6 flex justify-between gap-1.5">
 					<button
-						class="bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white font-medium w-full py-2.5 rounded-lg transition focus:outline-2 focus:outline-blue-600"
+						class="bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white font-medium w-full py-2.5 rounded-lg transition"
 						on:click={() => {
 							show = false;
 							dispatch('cancel');
@@ -151,7 +151,7 @@
 						{cancelLabel}
 					</button>
 					<button
-						class="bg-gray-900 hover:bg-gray-850 text-gray-100 dark:bg-gray-100 dark:hover:bg-white dark:text-gray-800 font-medium w-full py-2.5 rounded-lg transition focus:outline-2 focus:outline-blue-600"
+						class="bg-gray-900 hover:bg-gray-850 text-gray-100 dark:bg-gray-100 dark:hover:bg-white dark:text-gray-800 font-medium w-full py-2.5 rounded-lg transition"
 						on:click={() => {
 							confirmHandler();
 						}}

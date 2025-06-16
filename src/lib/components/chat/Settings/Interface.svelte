@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { config, settings, user } from '$lib/stores';
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
-	import { toast } from '$lib/utils/toast';
+	import { toast } from 'svelte-sonner';
 	import { updateUserInfo } from '$lib/apis/users';
 	import { getUserPosition } from '$lib/utils';
 	const dispatch = createEventDispatcher();
@@ -626,14 +626,14 @@
 							<input
 								bind:value={imageCompressionSize.width}
 								type="number"
-								class="w-20 bg-transparent focus:outline-1 focus:outline-black dark:focus:outline-white text-center"
+								class="w-20 bg-transparent outline-none text-center"
 								min="0"
 								placeholder="Width"
 							/>x
 							<input
 								bind:value={imageCompressionSize.height}
 								type="number"
-								class="w-20 bg-transparent focus:outline-1 focus:outline-black dark:focus:outline-white text-center"
+								class="w-20 bg-transparent outline-none text-center"
 								min="0"
 								placeholder="Height"
 							/>
@@ -646,7 +646,7 @@
 
 	<div class="flex justify-end text-sm font-medium">
 		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full focus:outline-2 focus:outline-blue-600"
+			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 			type="submit"
 		>
 			{$i18n.t('Save')}

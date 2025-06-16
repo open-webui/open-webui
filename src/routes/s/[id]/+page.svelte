@@ -15,7 +15,7 @@
 
 	import { getUserById } from '$lib/apis/users';
 	import { getModels } from '$lib/apis';
-	import { toast } from '$lib/utils/toast';
+	import { toast } from 'svelte-sonner';
 
 	const i18n = getContext('i18n');
 
@@ -32,7 +32,7 @@
 	let chat = null;
 	let user = null;
 
-	let title = 'EVA Chat';
+	let title = '';
 	let files = [];
 
 	let messages = [];

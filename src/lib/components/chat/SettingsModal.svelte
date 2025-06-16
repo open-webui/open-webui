@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getContext, tick } from 'svelte';
-	import { toast } from '$lib/utils/toast';
+	import { toast } from 'svelte-sonner';
 	import { models, settings, user, returnFocusButtonID } from '$lib/stores';
 	import { updateUserSettings } from '$lib/apis/users';
 	import { getModels as _getModels } from '$lib/apis';

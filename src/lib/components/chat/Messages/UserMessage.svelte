@@ -1,6 +1,6 @@
 <script lang="ts">
 	import dayjs from 'dayjs';
-	import { toast } from '$lib/utils/toast';
+	import { toast } from 'svelte-sonner';
 	import { tick, getContext, onMount } from 'svelte';
 
 	import { models, settings } from '$lib/stores';
@@ -104,9 +104,7 @@
 				<Name>
 					{#if message.user}
 						{$i18n.t('You')}
-						<span class=" text-gray-600 dark:text-gray-300 text-sm font-medium"
-							>{message?.user ?? ''}</span
-						>
+						<span class=" text-gray-500 text-sm font-medium">{message?.user ?? ''}</span>
 					{:else if $settings.showUsername || $_user.name !== user.name}
 						{user.name}
 					{:else}
@@ -115,7 +113,7 @@
 
 					{#if message.timestamp}
 						<div
-							class=" self-center text-xs text-gray-400 font-medium first-letter:capitalize ml-0.5 translate-y-[1px]"
+							class=" self-center text-xs invisible group-hover:visible text-gray-400 font-medium first-letter:capitalize ml-0.5 translate-y-[1px]"
 						>
 							<Tooltip content={dayjs(message.timestamp * 1000).format('dddd, DD MMMM YYYY HH:mm')}>
 								<span class="line-clamp-1">{formatDate(message.timestamp * 1000)}</span>
@@ -149,12 +147,12 @@
 			{/if}
 
 			{#if edit === true}
-				<div class=" w-full bg-gray-50 dark:bg-gray-800 rounded-3xl">
-					<div class="max-h-96 overflow-auto px-5 py-3 mb-2">
+				<div class=" w-full bg-gray-50 dark:bg-gray-800 rounded-3xl px-5 py-3 mb-2">
+					<div class="max-h-96 overflow-auto">
 						<textarea
 							id="message-edit-{message.id}"
 							bind:this={messageEditTextAreaElement}
-							class=" bg-transparent focus:outline-dark dark:focus:outline-white w-full resize-none"
+							class=" bg-transparent outline-none w-full resize-none"
 							bind:value={editedContent}
 							on:input={(e) => {
 								e.target.style.height = '';
@@ -179,7 +177,7 @@
 						<div>
 							<button
 								id="save-edit-message-button"
-								class=" px-4 py-2 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border dark:border-gray-700 text-gray-700 dark:text-gray-200 transition rounded-3xl focus:outline-2 focus:outline-black dark:focus:outline-white"
+								class=" px-4 py-2 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border dark:border-gray-700 text-gray-700 dark:text-gray-200 transition rounded-3xl"
 								on:click={() => {
 									editMessageConfirmHandler(false);
 								}}
@@ -191,7 +189,7 @@
 						<div class="flex space-x-1.5">
 							<button
 								id="close-edit-message-button"
-								class="px-4 py-2 bg-white dark:bg-gray-900 hover:bg-gray-100 text-gray-800 dark:text-gray-100 transition rounded-3xl focus:outline-2 focus:outline-black dark:focus:outline-white"
+								class="px-4 py-2 bg-white dark:bg-gray-900 hover:bg-gray-100 text-gray-800 dark:text-gray-100 transition rounded-3xl"
 								on:click={() => {
 									cancelEditMessage();
 								}}
@@ -201,7 +199,7 @@
 
 							<button
 								id="confirm-edit-message-button"
-								class=" px-4 py-2 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-3xl focus:outline-2 focus:outline-blue-600"
+								class=" px-4 py-2 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-3xl"
 								on:click={() => {
 									editMessageConfirmHandler();
 								}}
@@ -258,7 +256,7 @@
 									</button>
 
 									<div class="text-sm tracking-widest font-semibold self-center dark:text-gray-100">
-										{siblings.indexOf(message.id) + 1} of {siblings.length}
+										{siblings.indexOf(message.id) + 1}/{siblings.length}
 									</div>
 
 									<button
@@ -288,7 +286,7 @@
 						{#if !readOnly}
 							<Tooltip content={$i18n.t('Edit')} placement="bottom">
 								<button
-									class="p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition edit-user-message-button"
+									class="invisible group-hover:visible p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition edit-user-message-button"
 									on:click={() => {
 										editMessageHandler();
 									}}
@@ -314,7 +312,7 @@
 						<Tooltip content={$i18n.t('Copy')} placement="bottom">
 							<button
 								aria-label={$i18n.t('Copy')}
-								class=" p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+								class="invisible group-hover:visible p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
 								on:click={() => {
 									copyToClipboard(message.content);
 								}}
@@ -340,7 +338,7 @@
 							<Tooltip content={$i18n.t('Delete')} placement="bottom">
 								<button
 									aria-label={$i18n.t('Delete')}
-									class=" p-1 rounded dark:hover:text-white hover:text-black transition"
+									class="invisible group-hover:visible p-1 rounded dark:hover:text-white hover:text-black transition"
 									on:click={() => {
 										deleteMessageHandler();
 									}}
@@ -392,7 +390,7 @@
 									</Tooltip>
 
 									<div class="text-sm tracking-widest font-semibold self-center dark:text-gray-100">
-										{siblings.indexOf(message.id) + 1} of {siblings.length}
+										{siblings.indexOf(message.id) + 1}/{siblings.length}
 									</div>
 									<Tooltip content={$i18n.t('Next Response')} placement="bottom">
 										<button

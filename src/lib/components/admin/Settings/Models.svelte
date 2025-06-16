@@ -21,7 +21,7 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 
 	import ModelEditor from '$lib/components/workspace/Models/ModelEditor.svelte';
-	import { toast } from '$lib/utils/toast';
+	import { toast } from 'svelte-sonner';
 	import Cog6 from '$lib/components/icons/Cog6.svelte';
 	import ConfigureModelsModal from './Models/ConfigureModelsModal.svelte';
 	import ArrowDownTray from '$lib/components/icons/ArrowDownTray.svelte';

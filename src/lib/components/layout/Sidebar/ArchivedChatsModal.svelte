@@ -1,7 +1,7 @@
 <script lang="ts">
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
-	import { toast } from '$lib/utils/toast';
+	import { toast } from 'svelte-sonner';
 	import dayjs from 'dayjs';
 	import { getContext, createEventDispatcher } from 'svelte';
 
@@ -131,7 +131,7 @@
 						</div>
 
 						<input
-							class=" w-full text-sm pr-4 py-1 rounded-r-xl focus:outline-1 focus:outline-black dark:focus:outline-white bg-transparent placeholder-[#5C6B8B]"
+							class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-none bg-transparent"
 							bind:value={searchValue}
 							on:input={toast.announce(filteredChatList.length + $i18n.t(' archived chat found'))}
 							placeholder={$i18n.t('Search Chats')}
@@ -241,7 +241,7 @@
 
 						<div class="flex flex-wrap text-sm font-medium gap-1.5 mt-2 m-1 justify-end w-full">
 							<button
-								class=" px-3.5 py-1.5 font-medium hover:bg-black/5 dark:hover:bg-white/5 outline outline-1 outline-gray-300 dark:outline-gray-800 rounded-3xl focus:outline-2 focus:outline-black dark:focus:outline-white"
+								class=" px-3.5 py-1.5 font-medium hover:bg-black/5 dark:hover:bg-white/5 outline outline-1 outline-gray-300 dark:outline-gray-800 rounded-3xl"
 								on:click={() => {
 									showUnarchiveAllConfirmDialog = true;
 								}}

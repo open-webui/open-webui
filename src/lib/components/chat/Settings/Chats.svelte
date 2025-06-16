@@ -4,7 +4,7 @@
 	import { archiveAllChats, deleteAllChats, getChatList } from '$lib/apis/chats';
 	import { getContext } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { toast } from '$lib/utils/toast';
+	import { toast } from 'svelte-sonner';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
 	const i18n = getContext('i18n');

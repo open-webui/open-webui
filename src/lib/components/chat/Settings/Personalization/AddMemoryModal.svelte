@@ -3,7 +3,7 @@
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import { addNewMemory, updateMemoryById } from '$lib/apis/memories';
-	import { toast } from '$lib/utils/toast';
+	import { toast } from 'svelte-sonner';
 
 	const dispatch = createEventDispatcher();
 

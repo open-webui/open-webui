@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { v4 as uuidv4 } from 'uuid';
 
-	import { toast } from '$lib/utils/toast';
+	import { toast } from 'svelte-sonner';
 	import { models } from '$lib/stores';
 	import { getContext, onMount, tick } from 'svelte';
 	import type { Writable } from 'svelte/store';
