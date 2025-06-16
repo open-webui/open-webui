@@ -537,8 +537,8 @@ class OAuthManager:
             )
         # Redirect back to the frontend with the JWT token
 
-        redirect_base_url = request.app.state.config.WEBUI_URL or request.base_url
-        if isinstance(redirect_base_url, str) and redirect_base_url.endswith("/"):
+        redirect_base_url = str(request.app.state.config.WEBUI_URL or request.base_url)
+        if redirect_base_url.endswith("/"):
             redirect_base_url = redirect_base_url[:-1]
         redirect_url = f"{redirect_base_url}/auth#token={jwt_token}"
 

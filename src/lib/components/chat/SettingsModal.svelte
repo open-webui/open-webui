@@ -211,7 +211,9 @@
 			: []),
 
 		...($user?.role === 'admin' ||
-		($user?.role === 'user' && $user?.permissions?.features?.direct_tool_servers)
+		($user?.role === 'user' &&
+			$user?.permissions?.features?.direct_tool_servers &&
+			$config?.features?.direct_tool_servers)
 			? [
 					{
 						id: 'tools',
@@ -554,6 +556,7 @@
 
 		<div class="flex flex-col md:flex-row w-full px-4 pt-1 pb-4 md:space-x-4">
 			<div
+				role="tablist"
 				id="settings-tabs-container"
 				class="tabs flex flex-row overflow-x-auto gap-2.5 md:gap-1 md:flex-col flex-1 md:flex-none md:w-40 md:min-h-[32rem] md:max-h-[32rem] dark:text-gray-200 text-sm font-medium text-left mb-1 md:mb-0 -translate-y-1"
 			>
@@ -574,11 +577,13 @@
 						placeholder={$i18n.t('Search')}
 					/>
 				</div>
-
 				{#if visibleTabs.length > 0}
 					{#each visibleTabs as tabId (tabId)}
 						{#if tabId === 'general'}
 							<button
+								role="tab"
+								aria-controls="tab-general"
+								aria-selected={selectedTab === 'general'}
 								class={`px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition
 								${
 									selectedTab === 'general'
@@ -596,6 +601,7 @@
 								<div class=" self-center mr-2">
 									<svg
 										xmlns="http://www.w3.org/2000/svg"
+										aria-hidden="true"
 										viewBox="0 0 20 20"
 										fill="currentColor"
 										class="w-4 h-4"
@@ -611,6 +617,9 @@
 							</button>
 						{:else if tabId === 'interface'}
 							<button
+								role="tab"
+								aria-controls="tab-interface"
+								aria-selected={selectedTab === 'interface'}
 								class={`px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition
 								${
 									selectedTab === 'interface'
@@ -628,6 +637,7 @@
 								<div class=" self-center mr-2">
 									<svg
 										xmlns="http://www.w3.org/2000/svg"
+										aria-hidden="true"
 										viewBox="0 0 16 16"
 										fill="currentColor"
 										class="w-4 h-4"
@@ -644,6 +654,9 @@
 						{:else if tabId === 'connections'}
 							{#if $user?.role === 'admin' || ($user?.role === 'user' && $config?.features?.enable_direct_connections)}
 								<button
+									role="tab"
+									aria-controls="tab-connections"
+									aria-selected={selectedTab === 'connections'}
 									class={`px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition
 								${
 									selectedTab === 'connections'
@@ -661,6 +674,7 @@
 									<div class=" self-center mr-2">
 										<svg
 											xmlns="http://www.w3.org/2000/svg"
+											aria-hidden="true"
 											viewBox="0 0 16 16"
 											fill="currentColor"
 											class="w-4 h-4"
@@ -674,8 +688,11 @@
 								</button>
 							{/if}
 						{:else if tabId === 'tools'}
-							{#if $user?.role === 'admin' || ($user?.role === 'user' && $user?.permissions?.features?.direct_tool_servers)}
+							{#if $user?.role === 'admin' || ($user?.role === 'user' && $user?.permissions?.features?.direct_tool_servers && $config?.features?.direct_tool_servers)}
 								<button
+									role="tab"
+									aria-controls="tab-tools"
+									aria-selected={selectedTab === 'tools'}
 									class={`px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition
 								${
 									selectedTab === 'tools'
@@ -693,6 +710,7 @@
 									<div class=" self-center mr-2">
 										<svg
 											xmlns="http://www.w3.org/2000/svg"
+											aria-hidden="true"
 											viewBox="0 0 24 24"
 											fill="currentColor"
 											class="size-4"
@@ -709,6 +727,9 @@
 							{/if}
 						{:else if tabId === 'personalization'}
 							<button
+								role="tab"
+								aria-controls="tab-personalization"
+								aria-selected={selectedTab === 'personalization'}
 								class={`px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition
 								${
 									selectedTab === 'personalization'
@@ -730,6 +751,9 @@
 							</button>
 						{:else if tabId === 'audio'}
 							<button
+								role="tab"
+								aria-controls="tab-audio"
+								aria-selected={selectedTab === 'audio'}
 								class={`px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition
 								${
 									selectedTab === 'audio'
@@ -747,6 +771,7 @@
 								<div class=" self-center mr-2">
 									<svg
 										xmlns="http://www.w3.org/2000/svg"
+										aria-hidden="true"
 										viewBox="0 0 16 16"
 										fill="currentColor"
 										class="w-4 h-4"
@@ -763,6 +788,9 @@
 							</button>
 						{:else if tabId === 'chats'}
 							<button
+								role="tab"
+								aria-controls="tab-chats"
+								aria-selected={selectedTab === 'chats'}
 								class={`px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition
 								${
 									selectedTab === 'chats'
@@ -780,6 +808,7 @@
 								<div class=" self-center mr-2">
 									<svg
 										xmlns="http://www.w3.org/2000/svg"
+										aria-hidden="true"
 										viewBox="0 0 16 16"
 										fill="currentColor"
 										class="w-4 h-4"
@@ -795,6 +824,9 @@
 							</button>
 						{:else if tabId === 'account'}
 							<button
+								role="tab"
+								aria-controls="tab-account"
+								aria-selected={selectedTab === 'account'}
 								class={`px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition
 								${
 									selectedTab === 'account'
@@ -812,6 +844,7 @@
 								<div class=" self-center mr-2">
 									<svg
 										xmlns="http://www.w3.org/2000/svg"
+										aria-hidden="true"
 										viewBox="0 0 16 16"
 										fill="currentColor"
 										class="w-4 h-4"
@@ -827,6 +860,9 @@
 							</button>
 						{:else if tabId === 'about'}
 							<button
+								role="tab"
+								aria-controls="tab-about"
+								aria-selected={selectedTab === 'about'}
 								class={`px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition
 								${
 									selectedTab === 'about'
@@ -844,6 +880,7 @@
 								<div class=" self-center mr-2">
 									<svg
 										xmlns="http://www.w3.org/2000/svg"
+										aria-hidden="true"
 										viewBox="0 0 20 20"
 										fill="currentColor"
 										class="w-4 h-4"
@@ -864,7 +901,6 @@
 						{$i18n.t('No results found')}
 					</div>
 				{/if}
-
 				{#if $user?.role === 'admin'}
 					<a
 						href="/admin/settings"
@@ -880,9 +916,9 @@
 						<div class=" self-center mr-2">
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
+								aria-hidden="true"
 								viewBox="0 0 24 24"
 								fill="currentColor"
-								aria-hidden="true"
 								class="size-4"
 							>
 								<path
