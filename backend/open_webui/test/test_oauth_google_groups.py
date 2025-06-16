@@ -19,14 +19,14 @@ class TestOAuthGoogleGroups:
         mock_response_data = {
             "memberships": [
                 {
-                    "group": {
-                        "groupKey": {"id": "admin@company.com"}
-                    }
+                    "groupKey": {"id": "admin@company.com"},
+                    "group": "groups/123",
+                    "displayName": "Admin Group"
                 },
                 {
-                    "group": {
-                        "groupKey": {"id": "users@company.com"}
-                    }
+                    "groupKey": {"id": "users@company.com"},
+                    "group": "groups/456", 
+                    "displayName": "Users Group"
                 }
             ]
         }
@@ -63,9 +63,9 @@ class TestOAuthGoogleGroups:
         mock_session.get.assert_called_once()
         call_args = mock_session.get.call_args
         
-        # Check the URL contains the user email
+        # Check the URL contains the user email (URL encoded)
         url_arg = call_args[0][0]  # First positional argument
-        assert "user@company.com" in url_arg
+        assert "user%40company.com" in url_arg  # @ is encoded as %40
         assert "searchTransitiveGroups" in url_arg
         
         # Check headers contain the bearer token
