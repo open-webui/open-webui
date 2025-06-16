@@ -191,6 +191,21 @@
 
 				<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
+				{#if STT_ENGINE !== 'web'}
+					<div class="mb-2">
+						<div class=" mb-1.5 text-xs font-medium">{$i18n.t('Supported MIME Types')}</div>
+						<div class="flex w-full">
+							<div class="flex-1">
+								<input
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+									bind:value={STT_SUPPORTED_CONTENT_TYPES}
+									placeholder={$i18n.t('e.g., audio/wav,audio/mpeg (leave blank for defaults)')}
+								/>
+							</div>
+						</div>
+					</div>
+				{/if}
+
 				<div class="mb-2 py-0.5 flex w-full justify-between">
 					<div class=" self-center text-xs font-medium">{$i18n.t('Speech-to-Text Engine')}</div>
 					<div class="flex items-center relative">
@@ -205,19 +220,6 @@
 							<option value="deepgram">Deepgram</option>
 							<option value="azure">Azure AI Speech</option>
 						</select>
-					</div>
-				</div>
-
-				<div class="mb-2">
-					<div class=" mb-1.5 text-xs font-medium">{$i18n.t('Supported MIME Types')}</div>
-					<div class="flex w-full">
-						<div class="flex-1">
-							<input
-								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-								bind:value={STT_SUPPORTED_CONTENT_TYPES}
-								placeholder={$i18n.t('e.g., audio/wav,audio/mpeg (leave blank for defaults)')}
-							/>
-						</div>
 					</div>
 				</div>
 
