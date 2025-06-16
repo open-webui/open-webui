@@ -795,6 +795,11 @@
 				`https://www.youtube.com/watch?v=${$page.url.searchParams.get('youtube')}`
 			);
 		}
+
+		if ($page.url.searchParams.get('load-url')) {
+			await uploadWeb($page.url.searchParams.get('load-url'));
+		}
+
 		if ($page.url.searchParams.get('web-search') === 'true') {
 			webSearchEnabled = true;
 		}
