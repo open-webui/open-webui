@@ -42,6 +42,7 @@
 	import FilesOverlay from './MessageInput/FilesOverlay.svelte';
 	import Commands from './MessageInput/Commands.svelte';
 	import ToolServersModal from './ToolServersModal.svelte';
+	import VariableInputModal from './VariableInputModal.svelte';
 
 	import RichTextInput from '../common/RichTextInput.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
@@ -88,6 +89,10 @@
 	export let imageGenerationEnabled = false;
 	export let webSearchEnabled = false;
 	export let codeInterpreterEnabled = false;
+
+	let showVariableInputModal = false;
+	let activePromptVariables = [];
+	const RESERVED_VARIABLES = ['CLIPBOARD', 'USER_LOCATION', 'USER_NAME', 'USER_LANGUAGE', 'CURRENT_DATE', 'CURRENT_TIME', 'CURRENT_DATETIME', 'CURRENT_TIMEZONE', 'CURRENT_WEEKDAY'];
 
 	$: onChange({
 		prompt,
@@ -453,6 +458,18 @@
 		shiftKey = false;
 	};
 
+	const extractCustomVariables = (text: string): string[] => {
+		const regex = /{{\s*(.*?)\s*}}/g;
+		const matches = [];
+		let match;
+		while ((match = regex.exec(text)) !== null) {
+			matches.push(match[1]);
+		}
+		return [...new Set(matches)].filter(v => !RESERVED_VARIABLES.includes(v.toUpperCase()));
+	};
+
+	const variableModalSubtitle = $i18n.t('Your prompt uses variables as placeholders. You may replace individual variables with values here:');
+
 	onMount(async () => {
 		loaded = true;
 
@@ -496,6 +513,30 @@
 
 <FilesOverlay show={dragged} />
 <ToolServersModal bind:show={showTools} {selectedToolIds} />
+<VariableInputModal
+	bind:show={showVariableInputModal}
+	variables={activePromptVariables}
+	subtitle={variableModalSubtitle}
+	on:submit={(e) => {
+		const submittedValues = e.detail;
+		let currentPrompt = prompt;
+		for (const variable in submittedValues) {
+			const value = submittedValues[variable];
+			const regex = new RegExp(`{{\\s*${variable}\\s*}}`, 'g');
+			currentPrompt = currentPrompt.replace(regex, value);
+		}
+		prompt = currentPrompt;
+		showVariableInputModal = false;
+		activePromptVariables = [];
+
+		tick().then(() => {
+			const chatInput = document.getElementById('chat-input');
+			if (chatInput) {
+				chatInput.focus();
+			}
+		});
+	}}
+/>
 
 {#if loaded}
 	<div class="w-full font-primary">
@@ -583,6 +624,15 @@
 								atSelectedModel = data.data;
 							}
 
+							const chatInputElement = document.getElementById('chat-input');
+							chatInputElement?.focus();
+						}}
+						on:promptselectionprocessed={(e) => {
+							const customVars = extractCustomVariables(prompt);
+							if (customVars.length > 0) {
+								activePromptVariables = customVars;
+								showVariableInputModal = true;
+							}
 							const chatInputElement = document.getElementById('chat-input');
 							chatInputElement?.focus();
 						}}
