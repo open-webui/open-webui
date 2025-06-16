@@ -2,6 +2,7 @@
 	import { getContext, tick } from 'svelte';
 	const i18n = getContext('i18n');
 
+	import { settings } from '$lib/stores';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import Cog6 from '$lib/components/icons/Cog6.svelte';
@@ -65,7 +66,7 @@
 		<div class="flex w-full gap-2">
 			<div class="flex-1 relative">
 				<input
-					class=" outline-hidden w-full bg-transparent {pipeline ? 'pr-8' : ''}"
+					class={`w-full bg-transparent ${($settings?.highContrastMode ?? false) ? '' : 'outline-hidden'} ${pipeline ? 'pr-8' : ''}`}
 					placeholder={$i18n.t('API Base URL')}
 					bind:value={url}
 					autocomplete="off"
