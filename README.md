@@ -47,7 +47,7 @@ For more information, be sure to check out our [Open WebUI Documentation](https:
 
 - 🌐 **Web Browsing Capability**: Seamlessly integrate websites into your chat experience using the `#` command followed by a URL. This feature allows you to incorporate web content directly into your conversations, enhancing the richness and depth of your interactions.
 
-- 🎨 **Image Generation Integration**: Seamlessly incorporate image generation capabilities using options such as AUTOMATIC1111 API or ComfyUI (local), and OpenAI's DALL-E (external), enriching your chat experience with dynamic visual content.
+- **🎨 AI-Powered Design Generation:** Effortlessly create and refine a variety of visual designs—such as posters, logos, and social media graphics—directly through chat. Simply describe your desired design, and Open WebUI will generate visuals using its integrated image generation capabilities. Iteratively perfect your designs with follow-up messages, making design creation intuitive and conversational.
 
 - ⚙️ **Many Models Conversations**: Effortlessly engage with various models simultaneously, harnessing their unique strengths for optimal responses. Enhance your experience by leveraging a diverse set of models in parallel.
 
