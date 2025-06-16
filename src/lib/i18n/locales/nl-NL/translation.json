@@ -910,6 +910,7 @@
 	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Oeps! Je gebruikt een niet-ondersteunde methode (alleen frontend). Serveer de WebUI vanuit de backend.",
 	"Open file": "Open bestand",
 	"Open in full screen": "Open in volledig scherm",
+	"Open modal to configure connection": "",
 	"Open new chat": "Open nieuwe chat",
 	"Open WebUI can use tools provided by any OpenAPI server.": "",
 	"Open WebUI uses faster-whisper internally.": "Open WebUI gebruikt faster-whisper intern",

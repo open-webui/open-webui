@@ -910,6 +910,7 @@
 	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Ups! Tá modh gan tacaíocht á úsáid agat (tosaigh amháin). Freastal ar an WebUI ón gcúltaca le do thoil.",
 	"Open file": "Oscail comhad",
 	"Open in full screen": "Oscail i scáileán iomlán",
+	"Open modal to configure connection": "",
 	"Open new chat": "Oscail comhrá nua",
 	"Open WebUI can use tools provided by any OpenAPI server.": "Is féidir le WebUI Oscailte uirlisí a úsáid a sholáthraíonn aon fhreastalaí OpenAPI.",
 	"Open WebUI uses faster-whisper internally.": "Úsáideann Open WebUI cogar níos tapúla go hinmheánach.",

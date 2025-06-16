@@ -7,6 +7,8 @@
 	import { onMount, getContext } from 'svelte';
 	import { models } from '$lib/stores';
 
+	import ModelModal from './LeaderboardModal.svelte';
+
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import MagnifyingGlass from '$lib/components/icons/MagnifyingGlass.svelte';
@@ -65,6 +67,25 @@
 			direction = key === 'name' ? 'asc' : 'desc';
 		}
 	}
+
+	//////////////////////
+	//
+	// Aggregate Level Modal
+	//
+	//////////////////////
+
+	let showLeaderboardModal = false;
+	let selectedModel = null;
+
+	const openFeedbackModal = (model) => {
+		showLeaderboardModal = true;
+		selectedModel = model;
+	};
+
+	const closeLeaderboardModal = () => {
+		showLeaderboardModal = false;
+		selectedModel = null;
+	};
 
 	//////////////////////
 	//
@@ -305,6 +326,13 @@
 	});
 </script>
 
+<ModelModal
+	bind:show={showLeaderboardModal}
+	model={selectedModel}
+	{feedbacks}
+	onClose={closeLeaderboardModal}
+/>
+
 <div class="mt-0.5 mb-2 gap-1 flex flex-col md:flex-row justify-between">
 	<div class="flex md:self-center text-lg font-medium px-0.5 shrink-0 items-center">
 		<div class=" gap-1">
@@ -475,7 +503,10 @@
 			</thead>
 			<tbody class="">
 				{#each sortedModels as model, modelIdx (model.id)}
-					<tr class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs group">
+					<tr
+						class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs group cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+						on:click={() => openFeedbackModal(model)}
+					>
 						<td class="px-3 py-1.5 text-left font-medium text-gray-900 dark:text-white w-fit">
 							<div class=" line-clamp-1">
 								{model?.rating !== '-' ? modelIdx + 1 : '-'}

@@ -910,6 +910,7 @@
 	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "ཨོའོ། ཁྱེད་ཀྱིས་རྒྱབ་སྐྱོར་མེད་པའི་ཐབས་ལམ་ཞིག་ (མདུན་ངོས་ཁོ་ན།) བེད་སྤྱོད་གཏོང་བཞིན་འདུག རྒྱབ་སྣེ་ནས་ WebUI མཁོ་སྤྲོད་བྱེད་རོགས།",
 	"Open file": "ཡིག་ཆ་ཁ་ཕྱེ་བ།",
 	"Open in full screen": "ཡོངས་གནས་ངོས་སུ་ཁ་ཕྱེ་བ།",
+	"Open modal to configure connection": "",
 	"Open new chat": "ཁ་བརྡ་གསར་པ་ཁ་ཕྱེ་བ།",
 	"Open WebUI can use tools provided by any OpenAPI server.": "",
 	"Open WebUI uses faster-whisper internally.": "Open WebUI ཡིས་ནང་ཁུལ་དུ་ faster-whisper བེད་སྤྱོད་བྱེད།",

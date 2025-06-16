@@ -910,6 +910,7 @@
 	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Ωχ! Χρησιμοποιείτε μια μη υποστηριζόμενη μέθοδο (μόνο frontend). Παρακαλώ σερβίρετε το WebUI από το backend.",
 	"Open file": "Άνοιγμα αρχείου",
 	"Open in full screen": "Άνοιγμα σε πλήρη οθόνη",
+	"Open modal to configure connection": "",
 	"Open new chat": "Άνοιγμα νέας συνομιλίας",
 	"Open WebUI can use tools provided by any OpenAPI server.": "",
 	"Open WebUI uses faster-whisper internally.": "Το Open WebUI χρησιμοποιεί το faster-whisper εσωτερικά.",

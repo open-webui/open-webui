@@ -18,6 +18,7 @@
 	import CloudArrowUp from '$lib/components/icons/CloudArrowUp.svelte';
 	import Pagination from '$lib/components/common/Pagination.svelte';
 	import FeedbackMenu from './FeedbackMenu.svelte';
+	import FeedbackModal from './FeedbackModal.svelte';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 
 	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
@@ -92,6 +93,19 @@
 				return 0;
 		}
 	});
+  
+	let showFeedbackModal = false;
+	let selectedFeedback = null;
+
+	const openFeedbackModal = (feedback) => {
+		showFeedbackModal = true;
+		selectedFeedback = feedback;
+	};
+
+	const closeFeedbackModal = () => {
+		showFeedbackModal = false;
+		selectedFeedback = null;
+	};
 
 	//////////////////////
 	//
@@ -150,6 +164,8 @@
 		}
 	};
 </script>
+
+<FeedbackModal bind:show={showFeedbackModal} {selectedFeedback} onClose={closeFeedbackModal} />
 
 <div class="mt-0.5 mb-2 gap-1 flex flex-row justify-between">
 	<div class="flex md:self-center text-lg font-medium px-0.5">
@@ -288,7 +304,10 @@
 			</thead>
 			<tbody class="">
 				{#each paginatedFeedbacks as feedback (feedback.id)}
-					<tr class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs">
+					<tr
+						class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+						on:click={() => openFeedbackModal(feedback)}
+					>
 						<td class=" py-0.5 text-right font-semibold">
 							<div class="flex justify-center">
 								<Tooltip content={feedback?.user?.name}>
