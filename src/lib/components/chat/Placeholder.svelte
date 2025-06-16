@@ -216,10 +216,12 @@
 					{createMessagePair}
 					placeholder={$i18n.t('How can I help you today?')}
 					onChange={(input) => {
-						if (input.prompt !== null) {
-							localStorage.setItem(`chat-input`, JSON.stringify(input));
-						} else {
-							localStorage.removeItem(`chat-input`);
+						if (!$temporaryChatEnabled) {
+							if (input.prompt !== null) {
+								localStorage.setItem(`chat-input`, JSON.stringify(input));
+							} else {
+								localStorage.removeItem(`chat-input`);
+							}
 						}
 					}}
 					on:upload={(e) => {

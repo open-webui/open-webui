@@ -2121,13 +2121,15 @@
 									{stopResponse}
 									{createMessagePair}
 									onChange={(input) => {
-										if (input.prompt !== null) {
-											localStorage.setItem(
-												`chat-input${$chatId ? `-${$chatId}` : ''}`,
-												JSON.stringify(input)
-											);
-										} else {
-											localStorage.removeItem(`chat-input${$chatId ? `-${$chatId}` : ''}`);
+										if (!$temporaryChatEnabled) {
+											if (input.prompt !== null) {
+												localStorage.setItem(
+													`chat-input${$chatId ? `-${$chatId}` : ''}`,
+													JSON.stringify(input)
+												);
+											} else {
+												localStorage.removeItem(`chat-input${$chatId ? `-${$chatId}` : ''}`);
+											}
 										}
 									}}
 									on:upload={async (e) => {
