@@ -22,6 +22,23 @@
 
 	let mounted = false;
 
+	$: processedContent = banner.content ? banner.content.split('\\n').join('\n') : '';
+
+	let finalHtml = '';
+	$: {
+		if (processedContent) {
+			const lines = processedContent.split('\n');
+			const htmlFromLines = lines.map(line => {
+				const contentToParse = line.trim() === '' ? '&nbsp;' : line;
+				const parsedMarkdown = marked.parse(contentToParse);
+				return `<div>${parsedMarkdown}</div>`;
+			}).join('');
+			finalHtml = DOMPurify.sanitize(htmlFromLines);
+		} else {
+			finalHtml = '';
+		}
+	}
+
 	const classNames: Record<string, string> = {
 		info: 'bg-blue-500/20 text-blue-700 dark:text-blue-200 ',
 		success: 'bg-green-500/20 text-green-700 dark:text-green-200',
@@ -83,8 +100,8 @@
 					{/if}
 				</div>
 
-				<div class="flex-1 text-xs text-gray-700 dark:text-white max-h-20 overflow-y-auto">
-					{@html marked.parse(DOMPurify.sanitize(banner.content))}
+				<div class="flex-1 text-xs text-gray-700 dark:text-white">
+					{@html finalHtml}
 				</div>
 			</div>
 
