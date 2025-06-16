@@ -235,7 +235,7 @@
 				<div class=" self-center truncate">{$i18n.t('Sign Out')}</div>
 			</button>
 
-			{#if $activeUserIds?.length > 0}
+			{#if $activeUserIds?.length > 0 && $user?.role === 'admin'}
 				<hr class=" border-gray-100 dark:border-gray-800 my-1 p-0" />
 
 				<Tooltip
