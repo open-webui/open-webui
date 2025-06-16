@@ -24,6 +24,16 @@
 
 	let showAdvanced = false;
 
+	let currentTextareaClassName: string;
+	$: {
+		const base = "w-full text-sm outline-hidden resize-none";
+		if ($settings.highContrastMode) {
+			currentTextareaClassName = `${base} p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-850 text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 overflow-y-hidden`;
+		} else {
+			currentTextareaClassName = `${base} bg-white dark:text-gray-300 dark:bg-gray-900`; // Original simpler style
+		}
+	}
+
 	const toggleNotification = async () => {
 		const permission = await Notification.requestPermission();
 
@@ -187,7 +197,7 @@
 	};
 </script>
 
-<div class="flex flex-col h-full justify-between text-sm" id="tab-general">
+<div class="flex flex-col h-full justify-between text-sm">
 	<div class="  overflow-y-scroll max-h-[28rem] lg:max-h-full">
 		<div class="">
 			<div class=" mb-1 text-sm font-medium">{$i18n.t('WebUI Settings')}</div>
@@ -196,9 +206,7 @@
 				<div class=" self-center text-xs font-medium">{$i18n.t('Theme')}</div>
 				<div class="flex items-center relative">
 					<select
-						class="dark:bg-gray-900 w-fit pr-8 rounded-sm py-2 px-2 text-xs bg-transparent text-right {$settings.highContrastMode
-							? ''
-							: 'outline-hidden'}"
+						class=" dark:bg-gray-900 w-fit pr-8 rounded-sm py-2 px-2 text-xs bg-transparent outline-hidden text-right"
 						bind:value={selectedTheme}
 						placeholder="Select a theme"
 						on:change={() => themeChangeHandler(selectedTheme)}
@@ -218,9 +226,7 @@
 				<div class=" self-center text-xs font-medium">{$i18n.t('Language')}</div>
 				<div class="flex items-center relative">
 					<select
-						class="dark:bg-gray-900 w-fit pr-8 rounded-sm py-2 px-2 text-xs bg-transparent text-right {$settings.highContrastMode
-							? ''
-							: 'outline-hidden'}"
+						class=" dark:bg-gray-900 w-fit pr-8 rounded-sm py-2 px-2 text-xs bg-transparent outline-hidden text-right"
 						bind:value={lang}
 						placeholder="Select a language"
 						on:change={(e) => {
@@ -267,21 +273,19 @@
 			</div>
 		</div>
 
-		{#if $user?.role === 'admin' || ($user?.permissions.chat?.system_prompt ?? true)}
+		{#if $user?.role === 'admin' || $user?.permissions.chat?.controls}
 			<hr class="border-gray-50 dark:border-gray-850 my-3" />
 
 			<div>
 				<div class=" my-2.5 text-sm font-medium">{$i18n.t('System Prompt')}</div>
 				<Textarea
 					bind:value={system}
-					className="w-full text-sm bg-white dark:text-gray-300 dark:bg-gray-900 outline-hidden resize-none"
+					className={currentTextareaClassName}
 					rows="4"
 					placeholder={$i18n.t('Enter system prompt here')}
 				/>
 			</div>
-		{/if}
 
-		{#if $user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true)}
 			<div class="mt-2 space-y-3 pr-1.5">
 				<div class="flex justify-between items-center text-sm">
 					<div class="  font-medium">{$i18n.t('Advanced Parameters')}</div>
