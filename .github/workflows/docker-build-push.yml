@@ -196,6 +196,37 @@ jobs:
           target: "~/beyond-the-loop"
           overwrite: true
 
+      - name: Ensure traefik folder exists on remote
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.STAGING_EC2_HOST }}
+          username: ${{ secrets.STAGING_EC2_USERNAME }}
+          key: ${{ secrets.STAGING_EC2_SSH_KEY }}
+          script: |
+            mkdir -p ~/beyond-the-loop/traefik
+
+      - name: Create empty acme.json if not exists
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.STAGING_EC2_HOST }}
+          username: ${{ secrets.STAGING_EC2_USERNAME }}
+          key: ${{ secrets.STAGING_EC2_SSH_KEY }}
+          script: |
+            if [ ! -f ~/beyond-the-loop/traefik/acme.json ]; then
+              touch ~/beyond-the-loop/traefik/acme.json
+              chmod 600 ~/beyond-the-loop/traefik/acme.json
+            fi
+
+      - name: Copy traefik.yml file to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.STAGING_EC2_HOST }}
+          username: ${{ secrets.STAGING_EC2_USERNAME }}
+          key: ${{ secrets.STAGING_EC2_SSH_KEY }}
+          source: "traefik/traefik.yml"
+          target: "~/beyond-the-loop"
+          overwrite: true
+
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
