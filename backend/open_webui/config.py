@@ -2107,6 +2107,27 @@ RAG_FILE_MAX_SIZE = PersistentConfig(
     ),
 )
 
+FILE_IMAGE_COMPRESSION_WIDTH = PersistentConfig(
+    "FILE_IMAGE_COMPRESSION_WIDTH",
+    "file.image_compression_width",
+    (
+        int(os.environ.get("FILE_IMAGE_COMPRESSION_WIDTH"))
+        if os.environ.get("FILE_IMAGE_COMPRESSION_WIDTH")
+        else None
+    ),
+)
+
+FILE_IMAGE_COMPRESSION_HEIGHT = PersistentConfig(
+    "FILE_IMAGE_COMPRESSION_HEIGHT",
+    "file.image_compression_height",
+    (
+        int(os.environ.get("FILE_IMAGE_COMPRESSION_HEIGHT"))
+        if os.environ.get("FILE_IMAGE_COMPRESSION_HEIGHT")
+        else None
+    ),
+)
+
+
 RAG_ALLOWED_FILE_EXTENSIONS = PersistentConfig(
     "RAG_ALLOWED_FILE_EXTENSIONS",
     "rag.file.allowed_extensions",
@@ -2909,7 +2930,13 @@ AUDIO_STT_MODEL = PersistentConfig(
 AUDIO_STT_SUPPORTED_CONTENT_TYPES = PersistentConfig(
     "AUDIO_STT_SUPPORTED_CONTENT_TYPES",
     "audio.stt.supported_content_types",
-    os.getenv("AUDIO_STT_SUPPORTED_CONTENT_TYPES", "").split(","),
+    [
+        content_type.strip()
+        for content_type in os.environ.get(
+            "AUDIO_STT_SUPPORTED_CONTENT_TYPES", ""
+        ).split(",")
+        if content_type.strip()
+    ],
 )
 
 AUDIO_STT_AZURE_API_KEY = PersistentConfig(

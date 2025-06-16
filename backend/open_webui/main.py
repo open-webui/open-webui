@@ -211,6 +211,8 @@ from open_webui.config import (
     RAG_ALLOWED_FILE_EXTENSIONS,
     RAG_FILE_MAX_COUNT,
     RAG_FILE_MAX_SIZE,
+    FILE_IMAGE_COMPRESSION_WIDTH,
+    FILE_IMAGE_COMPRESSION_HEIGHT,
     RAG_OPENAI_API_BASE_URL,
     RAG_OPENAI_API_KEY,
     RAG_AZURE_OPENAI_BASE_URL,
@@ -713,9 +715,13 @@ app.state.config.TOP_K = RAG_TOP_K
 app.state.config.TOP_K_RERANKER = RAG_TOP_K_RERANKER
 app.state.config.RELEVANCE_THRESHOLD = RAG_RELEVANCE_THRESHOLD
 app.state.config.HYBRID_BM25_WEIGHT = RAG_HYBRID_BM25_WEIGHT
+
+
 app.state.config.ALLOWED_FILE_EXTENSIONS = RAG_ALLOWED_FILE_EXTENSIONS
 app.state.config.FILE_MAX_SIZE = RAG_FILE_MAX_SIZE
 app.state.config.FILE_MAX_COUNT = RAG_FILE_MAX_COUNT
+app.state.config.FILE_IMAGE_COMPRESSION_WIDTH = FILE_IMAGE_COMPRESSION_WIDTH
+app.state.config.FILE_IMAGE_COMPRESSION_HEIGHT = FILE_IMAGE_COMPRESSION_HEIGHT
 
 
 app.state.config.RAG_FULL_CONTEXT = RAG_FULL_CONTEXT
@@ -1558,6 +1564,10 @@ async def get_app_config(request: Request):
                 "file": {
                     "max_size": app.state.config.FILE_MAX_SIZE,
                     "max_count": app.state.config.FILE_MAX_COUNT,
+                    "image_compression": {
+                        "width": app.state.config.FILE_IMAGE_COMPRESSION_WIDTH,
+                        "height": app.state.config.FILE_IMAGE_COMPRESSION_HEIGHT,
+                    },
                 },
                 "permissions": {**app.state.config.USER_PERMISSIONS},
                 "google_drive": {
