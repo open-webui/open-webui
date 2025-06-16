@@ -34,6 +34,7 @@
 				xmlns="http://www.w3.org/2000/svg"
 				viewBox="0 0 16 16"
 				fill="currentColor"
+				aria-hidden="true"
 				class="size-4"
 			>
 				<path
@@ -51,6 +52,7 @@
 				viewBox="0 0 16 16"
 				fill="currentColor"
 				class="size-4"
+				aria-hidden="true"
 			>
 				<path d="M8 9.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z" />
 				<path
