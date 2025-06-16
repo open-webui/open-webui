@@ -1815,7 +1815,8 @@
 			childrenIds: [],
 			role: 'user',
 			content: userPrompt,
-			models: selectedModels
+			models: selectedModels,
+			timestamp: Math.floor(Date.now() / 1000) // Unix epoch
 		};
 
 		if (parentId !== null) {
