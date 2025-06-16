@@ -15,13 +15,14 @@ from open_webui.constants import ERROR_MESSAGES
 ####################################
 # Load .env file
 ####################################
-
 OPEN_WEBUI_DIR = Path(__file__).parent  # the path containing this file
 print(OPEN_WEBUI_DIR)
 
 BACKEND_DIR = OPEN_WEBUI_DIR.parent  # the path containing this file
 BASE_DIR = BACKEND_DIR.parent  # the path containing the backend/
 
+PARSER_TIKA_TOGGLE: bool = os.environ.get("PARSER_TIKA_TOGGLE", "false")  # --- Added --- 
+print(f" in env.py: ---------- {PARSER_TIKA_TOGGLE} ------")
 print(BACKEND_DIR)
 print(BASE_DIR)
 

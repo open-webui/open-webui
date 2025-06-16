@@ -1,3 +1,4 @@
+import os
 import requests
 import logging
 import ftfy
@@ -28,7 +29,7 @@ from open_webui.retrieval.loaders.mistral import MistralLoader
 from open_webui.retrieval.loaders.datalab_marker import DatalabMarkerLoader
 
 
-from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
+from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL, PARSER_TIKA_TOGGLE
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -231,12 +232,25 @@ class Loader:
 
     def _get_loader(self, filename: str, file_content_type: str, file_path: str):
         file_ext = filename.split(".")[-1].lower()
-
+        # --- Added ---
+        use_tika: bool= os.environ.get('PARSER_TIKA_TOGGLE', PARSER_TIKA_TOGGLE)
+        print(f"@@@@@@@@@@@@@@@@@ {use_tika} @@@@@@@@@@@@@@@@@@@@")
+        print(self.engine)
+        
+        if use_tika == "true":
+            self.engine = "tika" 
+        else: 
+            self.engine = "docling"
+            
+        print(self.engine)
+        #  --- End ---
         if (
             self.engine == "external"
             and self.kwargs.get("EXTERNAL_DOCUMENT_LOADER_URL")
             and self.kwargs.get("EXTERNAL_DOCUMENT_LOADER_API_KEY")
         ):
+            
+            print(f"here ! {self.engine}")
             loader = ExternalDocumentLoader(
                 file_path=file_path,
                 url=self.kwargs.get("EXTERNAL_DOCUMENT_LOADER_URL"),
@@ -244,6 +258,7 @@ class Loader:
                 mime_type=file_content_type,
             )
         elif self.engine == "tika" and self.kwargs.get("TIKA_SERVER_URL"):
+            print(f"here 2 ! {self.engine}")
             if self._is_text_file(file_ext, file_content_type):
                 loader = TextLoader(file_path, autodetect_encoding=True)
             else:
@@ -278,6 +293,7 @@ class Loader:
                 "tiff",
             ]
         ):
+            print(f"here 3 ! {self.engine}")
             loader = DatalabMarkerLoader(
                 file_path=file_path,
                 api_key=self.kwargs["DATALAB_MARKER_API_KEY"],
@@ -297,6 +313,7 @@ class Loader:
                 ),
             )
         elif self.engine == "docling" and self.kwargs.get("DOCLING_SERVER_URL"):
+            print(f"here 4 ! {self.engine}")
             if self._is_text_file(file_ext, file_content_type):
                 loader = TextLoader(file_path, autodetect_encoding=True)
             else:
@@ -331,6 +348,7 @@ class Loader:
                 ]
             )
         ):
+            print(f"here 5 ! {self.engine}")
             loader = AzureAIDocumentIntelligenceLoader(
                 file_path=file_path,
                 api_endpoint=self.kwargs.get("DOCUMENT_INTELLIGENCE_ENDPOINT"),

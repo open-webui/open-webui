@@ -1989,12 +1989,12 @@
 	//   <span class="separator">•</span>
 	//   <span>לחצו ALT + X לתצוגה נכונה של עברית;</span>
 	//   <span class="separator">•</span>
-	//   <a href="https://karamaldocs/docs/rchat/" class="footer-link">הדרכה</a>
+	//   <a href="https://karameldocs/docs/rchat/" class="footer-link">הדרכה</a>
 	//   <span class="separator">•</span>
-	//   <a href="https://karamaldocs/docs/rchat/contact" class="footer-link">תמיכה</a>
+	//   <a href="https://karameldocs/docs/rchat/contact" class="footer-link">תמיכה</a>
 	// ';
 	let footerMarkdown =
-		"<div dir='rtl'><span>Rchat יכול לטעות, אנא וודאו מידע חשוב</span>  •  <span>לחצו ALT + X לתצוגה נכונה של עברית</span>  •  <a href='https://karamaldocs/docs/rchat/' class='footer-link' target='_blank'>הדרכה</a>  •  <a href='https://karamaldocs/docs/rchat/contact' class='footer-link' target='_blank'>תמיכה</a></div>";
+		"<div dir='rtl'><span>Rchat יכול לטעות, אנא וודאו מידע חשוב</span>  •  <span>לחצו ALT + X לתצוגה נכונה של עברית</span>  •  <a href='https://karameldocs/docs/rchat/' class='footer-link' target='_blank'>הדרכה</a>  •  <a href='https://karameldocs/docs/rchat/contact' class='footer-link' target='_blank'>תמיכה</a></div>";
 
 	// --- End ---
 </script>

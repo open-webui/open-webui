@@ -464,9 +464,17 @@
 				<div class="flex items-start gap-2">
 					<span class="text-lg">⏱️</span>
 					<p class="text-sm text-gray-700 dark:text-gray-300">
-					התאזרו בסבלנות - קבצים גדולים דורשים זמן עיבוד ארוך יותר
+					התאזרו בסבלנות - קבצים גדולים דורשים יותר זמן עיבוד
 					</p>
 				</div>
+				<div class="flex items-start gap-2">
+					<span class="text-lg">🎓</span>
+					<p class="text-sm text-gray-700 dark:text-gray-300">
+						<a href="https://karamaeldocs/docs/rchat/files" class="underline text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200" target="_blank" rel="noopener noreferrer">
+							לחצו כאן לצפייה בהדרכה
+						</a>
+					</p>
+				</div>			
 			</div>
 			
 			<!-- Checkbox "אל תציג שוב" -->
