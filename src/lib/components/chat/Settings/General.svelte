@@ -270,7 +270,7 @@
 				<div class=" my-2.5 text-sm font-medium">{$i18n.t('System Prompt')}</div>
 				<Textarea
 					bind:value={system}
-					className="w-full text-sm bg-white dark:text-gray-300 dark:bg-gray-900 outline-hidden resize-none"
+					className="w-full text-sm bg-white dark:text-gray-300 dark:bg-gray-900 outline-hidden resize-vertical"
 					rows="4"
 					placeholder={$i18n.t('Enter system prompt here')}
 				/>
