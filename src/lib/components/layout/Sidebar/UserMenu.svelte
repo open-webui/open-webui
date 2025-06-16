@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { DropdownMenu } from 'bits-ui';
 	import { createEventDispatcher, getContext, onMount, tick } from 'svelte';
-	import { toast } from '$lib/utils/toast';
+	import { toast } from 'svelte-sonner';
 
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { goto } from '$app/navigation';

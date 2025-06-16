@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { toast } from '$lib/utils/toast';
+	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 

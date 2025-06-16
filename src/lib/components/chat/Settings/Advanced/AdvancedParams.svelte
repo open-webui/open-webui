@@ -2,7 +2,7 @@
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { getContext, createEventDispatcher } from 'svelte';
-	import { toast } from '$lib/utils/toast';
+	import { toast } from 'svelte-sonner';
 
 	const dispatch = createEventDispatcher();
 

@@ -28,7 +28,7 @@
 	} from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { toast } from '$lib/utils/toast';
+	import { toast } from 'svelte-sonner';
 
 	import { getBackendConfig } from '$lib/apis';
 	import { getSessionUser } from '$lib/apis/auths';
