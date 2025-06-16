@@ -193,6 +193,12 @@
 		</div>
 	</div>
 
+	{#if $temporaryChatEnabled && $chatId === 'local'}
+		<div class=" w-full z-30 text-center">
+			<div class="text-xs text-gray-500">Temporary Chat</div>
+		</div>
+	{/if}
+
 	{#if !history.currentId && !$chatId && ($banners.length > 0 || ($config?.license_metadata?.type ?? null) === 'trial' || (($config?.license_metadata?.seats ?? null) !== null && $config?.user_count > $config?.license_metadata?.seats))}
 		<div class=" w-full z-30 mt-5">
 			<div class=" flex flex-col gap-1 w-full">

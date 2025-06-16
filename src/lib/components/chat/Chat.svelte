@@ -858,6 +858,11 @@
 
 	const loadChat = async () => {
 		chatId.set(chatIdProp);
+
+		if ($temporaryChatEnabled) {
+			temporaryChatEnabled.set(false);
+		}
+
 		chat = await getChatById(localStorage.token, $chatId).catch(async (error) => {
 			await goto('/');
 			return null;
