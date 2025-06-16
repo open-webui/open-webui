@@ -1078,6 +1078,7 @@ async def process_chat_response(
                             follow_ups = json.loads(follow_ups_string).get(
                                 "follow_ups", []
                             )
+
                             Chats.upsert_message_to_chat_by_id_and_message_id(
                                 metadata["chat_id"],
                                 metadata["message_id"],
@@ -1098,7 +1099,12 @@ async def process_chat_response(
                             pass
 
                 if TASKS.TITLE_GENERATION in tasks:
+                    user_message = get_last_user_message(messages)
+                    if user_message and len(user_message) > 100:
+                        user_message = user_message[:100] + "..."
+
                     if tasks[TASKS.TITLE_GENERATION]:
+
                         res = await generate_title(
                             request,
                             {
@@ -1114,7 +1120,9 @@ async def process_chat_response(
                                 title_string = (
                                     res.get("choices", [])[0]
                                     .get("message", {})
-                                    .get("content", message.get("content", "New Chat"))
+                                    .get(
+                                        "content", message.get("content", user_message)
+                                    )
                                 )
                             else:
                                 title_string = ""
@@ -1125,13 +1133,13 @@ async def process_chat_response(
 
                             try:
                                 title = json.loads(title_string).get(
-                                    "title", "New Chat"
+                                    "title", user_message
                                 )
                             except Exception as e:
                                 title = ""
 
                             if not title:
-                                title = messages[0].get("content", "New Chat")
+                                title = messages[0].get("content", user_message)
 
                             Chats.update_chat_title_by_id(metadata["chat_id"], title)
 
@@ -1142,14 +1150,14 @@ async def process_chat_response(
                                 }
                             )
                     elif len(messages) == 2:
-                        title = messages[0].get("content", "New Chat")
+                        title = messages[0].get("content", user_message)
 
                         Chats.update_chat_title_by_id(metadata["chat_id"], title)
 
                         await event_emitter(
                             {
                                 "type": "chat:title",
-                                "data": message.get("content", "New Chat"),
+                                "data": message.get("content", user_message),
                             }
                         )
 
