@@ -872,6 +872,11 @@
 					(chatContent?.models ?? undefined) !== undefined
 						? chatContent.models
 						: [chatContent.models ?? ''];
+
+				if (!($user?.role === 'admin' || ($user?.permissions?.chat?.multiple_models ?? true))) {
+					selectedModels = selectedModels.length > 0 ? [selectedModels[0]] : [''];
+				}
+
 				oldSelectedModelIds = selectedModels;
 
 				history =
