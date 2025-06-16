@@ -35,7 +35,6 @@
 		<div class="flex justify-between dark:text-gray-300 px-5 pt-4 pb-2">
 			<div class="text-lg font-medium self-center">
 				{model.name}
-				{$i18n.t('Details')}
 			</div>
 			<button class="self-center" on:click={close} aria-label="Close">
 				<svg
@@ -52,7 +51,6 @@
 		</div>
 		<div class="px-5 pb-4 dark:text-gray-200">
 			<div class="mb-2">
-				<strong>{$i18n.t('Top Tags')}:</strong>
 				{#if topTags.length}
 					<div class="flex flex-wrap gap-1 mt-1">
 						{#each topTags as tagInfo}

@@ -37,16 +37,22 @@
 
 			<div class="flex flex-col md:flex-row w-full px-5 pb-4 md:space-x-4 dark:text-gray-200">
 				<div class="flex flex-col w-full">
-					<div class="mb-2">
-						<strong>{$i18n.t('Rating')}:</strong>
-						<span>{selectedFeedback?.data?.details?.rating ?? '-'}</span>
+					<div class="flex flex-col w-full mb-2">
+						<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Rating')}</div>
+
+						<div class="flex-1">
+							<span>{selectedFeedback?.data?.details?.rating ?? '-'}</span>
+						</div>
 					</div>
-					<div class="mb-2">
-						<strong>{$i18n.t('Reason')}:</strong>
-						<span>{selectedFeedback?.data?.reason || '-'}</span>
+					<div class="flex flex-col w-full mb-2">
+						<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Reason')}</div>
+
+						<div class="flex-1">
+							<span>{selectedFeedback?.data?.reason || '-'}</span>
+						</div>
 					</div>
+
 					<div class="mb-2">
-						<strong>{$i18n.t('Tags')}:</strong>
 						{#if selectedFeedback?.data?.tags && selectedFeedback?.data?.tags.length}
 							<div class="flex flex-wrap gap-1 mt-1">
 								{#each selectedFeedback?.data?.tags as tag}
