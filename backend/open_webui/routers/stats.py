@@ -35,25 +35,25 @@ def get_json_count_query():
     """Return the SQL query to count messages in all chats for PostgreSQL."""
     return """
         SELECT COUNT(*)
-        FROM chat, LATERAL jsonb_array_elements(chat::jsonb->'history'->'messages') AS msg
-        WHERE chat::jsonb ? 'history' 
-        AND chat::jsonb->'history' ? 'messages'
-        AND jsonb_typeof(chat::jsonb->'history'->'messages') = 'array'
+        FROM chat, LATERAL json_each(chat.chat->'history'->'messages') AS msg
+        WHERE json_extract_path(chat.chat, 'history') IS NOT NULL
+        AND json_extract_path(chat.chat, 'history', 'messages') IS NOT NULL
+        AND json_typeof(chat.chat->'history'->'messages') = 'object'
     """
 
 def get_model_usage_query():
     """Return the SQL query to count model usage for PostgreSQL."""
     return """
         SELECT 
-            msg->>'model' as model,
+            msg.value->>'model' as model,
             COUNT(*) as count
-        FROM chat, LATERAL jsonb_array_elements(chat::jsonb->'history'->'messages') AS msg
-        WHERE chat::jsonb ? 'history' 
-        AND chat::jsonb->'history' ? 'messages'
-        AND jsonb_typeof(chat::jsonb->'history'->'messages') = 'array'
-        AND msg->>'role' = 'assistant' 
-        AND msg ? 'model'
-        GROUP BY msg->>'model'
+        FROM chat, LATERAL json_each(chat.chat->'history'->'messages') AS msg
+        WHERE json_extract_path(chat.chat, 'history') IS NOT NULL
+        AND json_extract_path(chat.chat, 'history', 'messages') IS NOT NULL
+        AND json_typeof(chat.chat->'history'->'messages') = 'object'
+        AND msg.value->>'role' = 'assistant' 
+        AND json_extract_path(msg.value, 'model') IS NOT NULL
+        GROUP BY msg.value->>'model'
         ORDER BY count DESC
     """
 
