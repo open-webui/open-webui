@@ -607,7 +607,7 @@
 								showSidebar.set(false);
 							}
 						}}
-						draggable="false">{$i18n.t('Models')}</a
+						draggable="false">{$i18n.t('Assistants')}</a
 					>
 				</div>
 			{/if}
