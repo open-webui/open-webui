@@ -1077,6 +1077,10 @@ USER_PERMISSIONS_CHAT_CONTROLS = (
     os.environ.get("USER_PERMISSIONS_CHAT_CONTROLS", "True").lower() == "true"
 )
 
+USER_PERMISSIONS_CHAT_SYSTEM_PROMPT = (
+    os.environ.get("USER_PERMISSIONS_CHAT_SYSTEM_PROMPT", "True").lower() == "true"
+)
+
 USER_PERMISSIONS_CHAT_FILE_UPLOAD = (
     os.environ.get("USER_PERMISSIONS_CHAT_FILE_UPLOAD", "True").lower() == "true"
 )
@@ -1162,6 +1166,7 @@ DEFAULT_USER_PERMISSIONS = {
     },
     "chat": {
         "controls": USER_PERMISSIONS_CHAT_CONTROLS,
+        "system_prompt": USER_PERMISSIONS_CHAT_SYSTEM_PROMPT,
         "file_upload": USER_PERMISSIONS_CHAT_FILE_UPLOAD,
         "delete": USER_PERMISSIONS_CHAT_DELETE,
         "edit": USER_PERMISSIONS_CHAT_EDIT,
@@ -2102,6 +2107,27 @@ RAG_FILE_MAX_SIZE = PersistentConfig(
     ),
 )
 
+FILE_IMAGE_COMPRESSION_WIDTH = PersistentConfig(
+    "FILE_IMAGE_COMPRESSION_WIDTH",
+    "file.image_compression_width",
+    (
+        int(os.environ.get("FILE_IMAGE_COMPRESSION_WIDTH"))
+        if os.environ.get("FILE_IMAGE_COMPRESSION_WIDTH")
+        else None
+    ),
+)
+
+FILE_IMAGE_COMPRESSION_HEIGHT = PersistentConfig(
+    "FILE_IMAGE_COMPRESSION_HEIGHT",
+    "file.image_compression_height",
+    (
+        int(os.environ.get("FILE_IMAGE_COMPRESSION_HEIGHT"))
+        if os.environ.get("FILE_IMAGE_COMPRESSION_HEIGHT")
+        else None
+    ),
+)
+
+
 RAG_ALLOWED_FILE_EXTENSIONS = PersistentConfig(
     "RAG_ALLOWED_FILE_EXTENSIONS",
     "rag.file.allowed_extensions",
@@ -2901,6 +2927,18 @@ AUDIO_STT_MODEL = PersistentConfig(
     os.getenv("AUDIO_STT_MODEL", ""),
 )
 
+AUDIO_STT_SUPPORTED_CONTENT_TYPES = PersistentConfig(
+    "AUDIO_STT_SUPPORTED_CONTENT_TYPES",
+    "audio.stt.supported_content_types",
+    [
+        content_type.strip()
+        for content_type in os.environ.get(
+            "AUDIO_STT_SUPPORTED_CONTENT_TYPES", ""
+        ).split(",")
+        if content_type.strip()
+    ],
+)
+
 AUDIO_STT_AZURE_API_KEY = PersistentConfig(
     "AUDIO_STT_AZURE_API_KEY",
     "audio.stt.azure.api_key",
@@ -3074,4 +3112,23 @@ LDAP_VALIDATE_CERT = PersistentConfig(
 
 LDAP_CIPHERS = PersistentConfig(
     "LDAP_CIPHERS", "ldap.server.ciphers", os.environ.get("LDAP_CIPHERS", "ALL")
+)
+
+# For LDAP Group Management
+ENABLE_LDAP_GROUP_MANAGEMENT = PersistentConfig(
+    "ENABLE_LDAP_GROUP_MANAGEMENT",
+    "ldap.group.enable_management",
+    os.environ.get("ENABLE_LDAP_GROUP_MANAGEMENT", "False").lower() == "true",
+)
+
+ENABLE_LDAP_GROUP_CREATION = PersistentConfig(
+    "ENABLE_LDAP_GROUP_CREATION",
+    "ldap.group.enable_creation",
+    os.environ.get("ENABLE_LDAP_GROUP_CREATION", "False").lower() == "true",
+)
+
+LDAP_ATTRIBUTE_FOR_GROUPS = PersistentConfig(
+    "LDAP_ATTRIBUTE_FOR_GROUPS",
+    "ldap.server.attribute_for_groups",
+    os.environ.get("LDAP_ATTRIBUTE_FOR_GROUPS", "memberOf"),
 )
