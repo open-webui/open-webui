@@ -2906,6 +2906,12 @@ AUDIO_STT_MODEL = PersistentConfig(
     os.getenv("AUDIO_STT_MODEL", ""),
 )
 
+AUDIO_STT_SUPPORTED_CONTENT_TYPES = PersistentConfig(
+    "AUDIO_STT_SUPPORTED_CONTENT_TYPES",
+    "audio.stt.supported_content_types",
+    os.getenv("AUDIO_STT_SUPPORTED_CONTENT_TYPES", "").split(","),
+)
+
 AUDIO_STT_AZURE_API_KEY = PersistentConfig(
     "AUDIO_STT_AZURE_API_KEY",
     "audio.stt.azure.api_key",
