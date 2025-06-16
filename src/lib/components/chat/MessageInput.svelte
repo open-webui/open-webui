@@ -91,7 +91,15 @@
 
 	$: onChange({
 		prompt,
-		files: files.filter((file) => file.type !== 'image'),
+		files: files
+			.filter((file) => file.type !== 'image')
+			.map((file) => {
+				return {
+					...file,
+					user: undefined,
+					access_control: undefined
+				};
+			}),
 		selectedToolIds,
 		selectedFilterIds,
 		imageGenerationEnabled,
