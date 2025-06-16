@@ -65,7 +65,7 @@ log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
 class SessionUserResponse(Token, UserResponse):
-    created_at: int
+    created_at: Optional[int] = None
     expires_at: Optional[int] = None
     permissions: Optional[dict] = None
 
