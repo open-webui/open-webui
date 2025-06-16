@@ -119,7 +119,7 @@
 					? ($models.find((m) => m.id === message.user)?.info?.meta?.profile_image_url ??
 						'/user.png')
 					: (user?.profile_image_url ?? '/user.png')}
-				className={'size-8'}
+				className={'size-8 user-message-profile-image'}
 			/>
 		</div>
 	{/if}
