@@ -66,6 +66,7 @@
 		chat: {
 			controls: true,
 			system_prompt: true,
+			enable_image_capture: true,
 			file_upload: true,
 			delete: true,
 			edit: true,
