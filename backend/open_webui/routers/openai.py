@@ -8,7 +8,7 @@ from typing import Literal, Optional, overload
 import aiohttp
 from aiocache import cached
 import requests
-
+from urllib.parse import quote
 
 from fastapi import Depends, FastAPI, HTTPException, Request, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
@@ -66,10 +66,10 @@ async def send_get_request(url, key=None, user: UserModel = None):
                     **({"Authorization": f"Bearer {key}"} if key else {}),
                     **(
                         {
-                            "X-OpenWebUI-User-Name": user.name,
-                            "X-OpenWebUI-User-Id": user.id,
-                            "X-OpenWebUI-User-Email": user.email,
-                            "X-OpenWebUI-User-Role": user.role,
+                            "X-OpenWebUI-User-Name": quote(user.name),
+                            "X-OpenWebUI-User-Id": quote(user.id),
+                            "X-OpenWebUI-User-Email": quote(user.email),
+                            "X-OpenWebUI-User-Role": quote(user.role),
                         }
                         if ENABLE_FORWARD_USER_INFO_HEADERS and user
                         else {}
@@ -225,10 +225,10 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                     ),
                     **(
                         {
-                            "X-OpenWebUI-User-Name": user.name,
-                            "X-OpenWebUI-User-Id": user.id,
-                            "X-OpenWebUI-User-Email": user.email,
-                            "X-OpenWebUI-User-Role": user.role,
+                            "X-OpenWebUI-User-Name": quote(user.name),
+                            "X-OpenWebUI-User-Id": quote(user.id),
+                            "X-OpenWebUI-User-Email": quote(user.email),
+                            "X-OpenWebUI-User-Role": quote(user.role),
                         }
                         if ENABLE_FORWARD_USER_INFO_HEADERS
                         else {}
@@ -478,10 +478,10 @@ async def get_models(
                     "Content-Type": "application/json",
                     **(
                         {
-                            "X-OpenWebUI-User-Name": user.name,
-                            "X-OpenWebUI-User-Id": user.id,
-                            "X-OpenWebUI-User-Email": user.email,
-                            "X-OpenWebUI-User-Role": user.role,
+                            "X-OpenWebUI-User-Name": quote(user.name),
+                            "X-OpenWebUI-User-Id": quote(user.id),
+                            "X-OpenWebUI-User-Email": quote(user.email),
+                            "X-OpenWebUI-User-Role": quote(user.role),
                         }
                         if ENABLE_FORWARD_USER_INFO_HEADERS
                         else {}
@@ -573,10 +573,10 @@ async def verify_connection(
                 "Content-Type": "application/json",
                 **(
                     {
-                        "X-OpenWebUI-User-Name": user.name,
-                        "X-OpenWebUI-User-Id": user.id,
-                        "X-OpenWebUI-User-Email": user.email,
-                        "X-OpenWebUI-User-Role": user.role,
+                        "X-OpenWebUI-User-Name": quote(user.name),
+                        "X-OpenWebUI-User-Id": quote(user.id),
+                        "X-OpenWebUI-User-Email": quote(user.email),
+                        "X-OpenWebUI-User-Role": quote(user.role),
                     }
                     if ENABLE_FORWARD_USER_INFO_HEADERS
                     else {}
@@ -806,10 +806,10 @@ async def generate_chat_completion(
         ),
         **(
             {
-                "X-OpenWebUI-User-Name": user.name,
-                "X-OpenWebUI-User-Id": user.id,
-                "X-OpenWebUI-User-Email": user.email,
-                "X-OpenWebUI-User-Role": user.role,
+                "X-OpenWebUI-User-Name": quote(user.name),
+                "X-OpenWebUI-User-Id": quote(user.id),
+                "X-OpenWebUI-User-Email": quote(user.email),
+                "X-OpenWebUI-User-Role": quote(user.role),
             }
             if ENABLE_FORWARD_USER_INFO_HEADERS
             else {}
@@ -924,10 +924,10 @@ async def embeddings(request: Request, form_data: dict, user):
                 "Content-Type": "application/json",
                 **(
                     {
-                        "X-OpenWebUI-User-Name": user.name,
-                        "X-OpenWebUI-User-Id": user.id,
-                        "X-OpenWebUI-User-Email": user.email,
-                        "X-OpenWebUI-User-Role": user.role,
+                        "X-OpenWebUI-User-Name": quote(user.name),
+                        "X-OpenWebUI-User-Id": quote(user.id),
+                        "X-OpenWebUI-User-Email": quote(user.email),
+                        "X-OpenWebUI-User-Role": quote(user.role),
                     }
                     if ENABLE_FORWARD_USER_INFO_HEADERS and user
                     else {}
@@ -996,10 +996,10 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
             "Content-Type": "application/json",
             **(
                 {
-                    "X-OpenWebUI-User-Name": user.name,
-                    "X-OpenWebUI-User-Id": user.id,
-                    "X-OpenWebUI-User-Email": user.email,
-                    "X-OpenWebUI-User-Role": user.role,
+                    "X-OpenWebUI-User-Name": quote(user.name),
+                    "X-OpenWebUI-User-Id": quote(user.id),
+                    "X-OpenWebUI-User-Email": quote(user.email),
+                    "X-OpenWebUI-User-Role": quote(user.role),
                 }
                 if ENABLE_FORWARD_USER_INFO_HEADERS
                 else {}
