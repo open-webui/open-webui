@@ -256,6 +256,8 @@ async def update_audio_config(
         request.app.state.faster_whisper_model = set_faster_whisper_model(
             form_data.stt.WHISPER_MODEL, WHISPER_MODEL_AUTO_UPDATE
         )
+    else:
+        request.app.state.faster_whisper_model = None
 
     return {
         "tts": {
