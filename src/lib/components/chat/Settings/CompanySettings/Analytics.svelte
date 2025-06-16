@@ -33,20 +33,20 @@
 
 	const periodOptions = [
 		{
-			label: 'Last 30 Days',
-			value: 'last_30_days'
+			label: 'This Month',
+			value: 'this_month'
 		},
 		{
-			label: 'Last 3 Months',
-			value: 'last_3_months'
+			label: 'Past 30 Days',
+			value: 'past_30_days'
 		},
 		{
-			label: 'Last 6 Months',
-			value: 'last_6_months'
+			label: 'Past 3 Months',
+			value: 'past_3_months'
 		},
 		{
-			label: 'Last Year',
-			value: 'last_year'
+			label: 'Past Year',
+			value: 'past_year'
 		}
 	]
 
@@ -184,7 +184,7 @@
 				class="flex w-full justify-between items-center pb-2.5 border-b border-lightGray-400 dark:border-customGray-700 mb-2.5"
 			>
 				<div class="flex w-full justify-between items-center">
-					<div class="text-xs text-lightGray-100 dark:text-customGray-300 font-medium">{$i18n.t('Top Users')}</div>
+					<div class="text-xs text-lightGray-100 dark:text-customGray-300 font-medium">{$i18n.t('Top Users')} ({$i18n.t('this month')})</div>
 				</div>
 				<div use:onClickOutside={() => (showUsersSortDropdown = false)}>
 					<div class="relative" bind:this={usersSortRef}>
@@ -291,7 +291,7 @@
 						>
 							<div class="flex items-center">
 								<div class="text-xs text-lightGray-100 dark:text-customGray-200 max-w-[22rem] text-left">
-									{selectedPeriod?.label}
+									{$i18n.t(selectedPeriod?.label)}
 								</div>
 								<ChevronDown className="size-2 ml-1" />
 							</div>
@@ -311,6 +311,7 @@
 												const { start, end } = getPeriodRange(
 													selectedPeriod.value
 												);
+												console.log(start, end)
 												const res = await getTopModels(localStorage.token, start, end);
 												analytics = {
 													...analytics,
@@ -320,7 +321,7 @@
 											}}
 											class="flex items-center justify-end w-full cursor-pointer text-xs dark:text-customGray-100 px-2 py-2 hover:bg-lightGray-700 dark:hover:bg-customGray-950 rounded-md"
 										>
-											{option?.label}
+											{$i18n.t(option?.label)}
 										</div>
 									{/each}
 								</div>
