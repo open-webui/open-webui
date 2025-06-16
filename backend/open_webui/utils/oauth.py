@@ -4,6 +4,7 @@ import mimetypes
 import sys
 import uuid
 import json
+from urllib.parse import quote
 
 import aiohttp
 from authlib.integrations.starlette_client import OAuth
@@ -194,7 +195,11 @@ class OAuthManager:
             List of group email addresses the user belongs to
         """
         groups = []
-        url = f"https://cloudidentity.googleapis.com/v1/groups/-/memberships:searchTransitiveGroups?query=member_key_id=='{user_email}'"
+        base_url = "https://content-cloudidentity.googleapis.com/v1/groups/-/memberships:searchTransitiveGroups"
+        
+        # Create the query string with proper URL encoding
+        query_string = f"member_key_id == '{user_email}' && 'cloudidentity.googleapis.com/groups.security' in labels"
+        encoded_query = quote(query_string)
 
         headers = {
             "Authorization": f"Bearer {access_token}",
@@ -206,26 +211,27 @@ class OAuthManager:
         try:
             async with aiohttp.ClientSession(trust_env=True) as session:
                 while True:
+                    # Build URL with query parameter
+                    url = f"{base_url}?query={encoded_query}"
+                    
                     # Add page token to URL if present
-                    current_url = url
                     if page_token:
-                        current_url += f"&pageToken={page_token}"
+                        url += f"&pageToken={quote(page_token)}"
 
-                    log.debug(f"Fetching Google groups from: {current_url}")
+                    log.debug("Fetching Google groups via Cloud Identity API")
 
                     async with session.get(
-                        current_url, headers=headers, ssl=AIOHTTP_CLIENT_SESSION_SSL
+                        url, headers=headers, ssl=AIOHTTP_CLIENT_SESSION_SSL
                     ) as resp:
                         if resp.status == 200:
                             data = await resp.json()
 
                             # Extract group emails from memberships
                             memberships = data.get("memberships", [])
+                            log.debug(f"Found {len(memberships)} memberships")
                             for membership in memberships:
-                                group_info = membership.get("group", {})
-                                group_email = group_info.get("groupKey", {}).get(
-                                    "id", ""
-                                )
+                                group_key = membership.get("groupKey", {})
+                                group_email = group_key.get("id", "")
                                 if group_email:
                                     groups.append(group_email)
                                     log.debug(f"Found group membership: {group_email}")
@@ -236,9 +242,16 @@ class OAuthManager:
                                 break
                         else:
                             error_text = await resp.text()
-                            log.warning(
-                                f"Failed to fetch Google groups (status {resp.status}): {error_text}"
+                            log.error(
+                                f"Failed to fetch Google groups (status {resp.status})"
                             )
+                            # Log error details without sensitive information
+                            try:
+                                error_json = json.loads(error_text)
+                                if "error" in error_json:
+                                    log.error(f"API error: {error_json['error'].get('message', 'Unknown error')}")
+                            except json.JSONDecodeError:
+                                log.error("Error response contains non-JSON data")
                             break
 
         except Exception as e:
