@@ -492,10 +492,7 @@
 					selectedChatId = null;
 
 					await temporaryChatEnabled.set(false);
-					await goto('/');
-					const newChatButton = document.getElementById('new-chat-button');
 					setTimeout(() => {
-						newChatButton?.click();
 						if ($mobile) {
 							showSidebar.set(false);
 						}
