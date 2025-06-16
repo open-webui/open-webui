@@ -6,6 +6,7 @@
 	import { config, user, tools as _tools, mobile } from '$lib/stores';
 	import { createPicker } from '$lib/utils/google-drive-picker';
 	import { getTools } from '$lib/apis/tools';
+	import { getToolTooltipContent, getMCPToolName } from '$lib/utils/mcp-tools';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -18,6 +19,18 @@
 	import PhotoSolid from '$lib/components/icons/PhotoSolid.svelte';
 
 	const i18n = getContext('i18n');
+
+	// Static references for i18next-parser - DO NOT REMOVE
+	// These ensure the parser finds the dynamic translation keys
+	const _ensureTranslationKeys = () => {
+		// Time tool translations (using actual English text as keys)
+		$i18n.t('MCP: Current Time');
+		$i18n.t('Get current date and time in any timezone');
+
+		// News tool translations
+		$i18n.t('MCP: News Headlines');
+		$i18n.t('Get latest news headlines from around the world');
+	};
 
 	export let screenCaptureHandler: Function;
 	export let uploadFilesHandler: Function;
@@ -57,10 +70,10 @@
 		tools = $_tools.reduce((a, tool, i, arr) => {
 			a[tool.id] = {
 				name: tool.name,
-				description: tool.meta.description,
+				originalDescription: tool.meta.description, // Keep original
 				enabled: selectedToolIds.includes(tool.id),
 				isMcp: tool.meta?.manifest?.is_mcp_tool || false,
-				mcpServerName: tool.meta?.manifest?.mcp_server_name || ''
+				originalName: tool.meta?.manifest?.original_name || tool.name // Get the actual tool function name
 			};
 			return a;
 		}, {});
@@ -87,7 +100,7 @@
 
 	<div slot="content">
 		<DropdownMenu.Content
-			class="w-full max-w-[220px] rounded-xl px-1 py-1  border-gray-300/30 dark:border-gray-700/50 z-50 bg-white dark:bg-gray-850 dark:text-white shadow"
+			class="w-full max-w-[280px] rounded-xl px-1 py-1  border-gray-300/30 dark:border-gray-700/50 z-50 bg-white dark:bg-gray-850 dark:text-white shadow"
 			sideOffset={15}
 			alignOffset={-8}
 			side="top"
@@ -103,11 +116,9 @@
 								tools[toolId].enabled = !tools[toolId].enabled;
 							}}
 						>
-							<div class="flex-1 truncate">
+							<div class="flex-1">
 								<Tooltip
-									content={tools[toolId].isMcp
-										? `${tools[toolId]?.description ?? ''} (MCP Server: ${tools[toolId].mcpServerName})`
-										: (tools[toolId]?.description ?? '')}
+									content={getToolTooltipContent(tools[toolId], $i18n)}
 									placement="top-start"
 									className="flex flex-1 gap-2 items-center"
 								>
@@ -119,13 +130,17 @@
 										{/if}
 									</div>
 
-									<div class="flex flex-col items-start truncate">
-										<div class="truncate">{tools[toolId].name}</div>
-										{#if tools[toolId].isMcp && tools[toolId].mcpServerName}
-											<div class="text-xs text-gray-500 dark:text-gray-400 truncate">
-												{tools[toolId].mcpServerName}
-											</div>
-										{/if}
+									<div class="flex flex-col items-start min-w-0 flex-1">
+										<div class="text-sm font-medium leading-tight">
+											{#if tools[toolId].isMcp}
+												{getMCPToolName(
+													tools[toolId].meta?.manifest?.original_name || tools[toolId].name,
+													$i18n
+												)}
+											{:else}
+												{tools[toolId].name}
+											{/if}
+										</div>
 									</div>
 								</Tooltip>
 							</div>
