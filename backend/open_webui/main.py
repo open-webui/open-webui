@@ -57,6 +57,8 @@ from open_webui.utils.logger import start_logger
 from open_webui.socket.main import (
     app as socket_app,
     periodic_usage_pool_cleanup,
+    get_models_in_use,
+    get_active_user_ids,
 )
 from open_webui.routers import (
     audio,
@@ -1625,6 +1627,19 @@ async def get_app_latest_release_version(user=Depends(get_verified_user)):
 @app.get("/api/changelog")
 async def get_app_changelog():
     return {key: CHANGELOG[key] for idx, key in enumerate(CHANGELOG) if idx < 5}
+
+
+@app.get("/api/usage")
+async def get_current_usage(user=Depends(get_verified_user)):
+    """
+    Get current usage statistics for Open WebUI.
+    This is an experimental endpoint and subject to change.
+    """
+    try:
+        return {"model_ids": get_models_in_use(), "user_ids": get_active_user_ids()}
+    except Exception as e:
+        log.error(f"Error getting usage statistics: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
 ############################

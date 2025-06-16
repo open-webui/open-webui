@@ -4,10 +4,14 @@
 
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { goto } from '$app/navigation';
-	import { showSettings, activeUserIds, USAGE_POOL, mobile, showSidebar, user } from '$lib/stores';
 	import { fade, slide } from 'svelte/transition';
-	import Tooltip from '$lib/components/common/Tooltip.svelte';
+
+	import { getUsage } from '$lib/apis';
 	import { userSignOut } from '$lib/apis/auths';
+
+	import { showSettings, mobile, showSidebar, user } from '$lib/stores';
+
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
 	import QuestionMarkCircle from '$lib/components/icons/QuestionMarkCircle.svelte';
 	import Map from '$lib/components/icons/Map.svelte';
@@ -28,10 +32,28 @@
 	let showShortcuts = false;
 
 	const dispatch = createEventDispatcher();
+
+	let usage = null;
+	const getUsageInfo = async () => {
+		const res = await getUsage(localStorage.token).catch((error) => {
+			console.error('Error fetching usage info:', error);
+		});
+
+		if (res) {
+			usage = res;
+		} else {
+			usage = null;
+		}
+	};
+
+	$: if (show) {
+		getUsageInfo();
+	}
 </script>
 
 <ShortcutsModal bind:show={showShortcuts} />
 
+<!-- svelte-ignore a11y-no-static-element-interactions -->
 <DropdownMenu.Root
 	bind:open={show}
 	onOpenChange={(state) => {
@@ -181,34 +203,41 @@
 				<div class=" self-center truncate">{$i18n.t('Sign Out')}</div>
 			</button>
 
-			{#if $activeUserIds?.length > 0}
-				<hr class=" border-gray-100 dark:border-gray-800 my-1 p-0" />
+			{#if usage}
+				{#if usage?.user_ids?.length > 0}
+					<hr class=" border-gray-100 dark:border-gray-800 my-1 p-0" />
 
-				<Tooltip
-					content={$USAGE_POOL && $USAGE_POOL.length > 0
-						? `${$i18n.t('Running')}: ${$USAGE_POOL.join(', ')} ✨`
-						: ''}
-				>
-					<div class="flex rounded-md py-1 px-3 text-xs gap-2.5 items-center">
-						<div class=" flex items-center">
-							<span class="relative flex size-2">
-								<span
-									class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"
-								/>
-								<span class="relative inline-flex rounded-full size-2 bg-green-500" />
-							</span>
-						</div>
+					<Tooltip
+						content={usage?.model_ids && usage?.model_ids.length > 0
+							? `${$i18n.t('Running')}: ${usage.model_ids.join(', ')} ✨`
+							: ''}
+					>
+						<div
+							class="flex rounded-md py-1 px-3 text-xs gap-2.5 items-center"
+							on:mouseenter={() => {
+								getUsageInfo();
+							}}
+						>
+							<div class=" flex items-center">
+								<span class="relative flex size-2">
+									<span
+										class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"
+									/>
+									<span class="relative inline-flex rounded-full size-2 bg-green-500" />
+								</span>
+							</div>
 
-						<div class=" ">
-							<span class="">
-								{$i18n.t('Active Users')}:
-							</span>
-							<span class=" font-semibold">
-								{$activeUserIds?.length}
-							</span>
+							<div class=" ">
+								<span class="">
+									{$i18n.t('Active Users')}:
+								</span>
+								<span class=" font-semibold">
+									{usage?.user_ids?.length}
+								</span>
+							</div>
 						</div>
-					</div>
-				</Tooltip>
+					</Tooltip>
+				{/if}
 			{/if}
 
 			<!-- <DropdownMenu.Item class="flex items-center py-1.5 px-3 text-sm ">
