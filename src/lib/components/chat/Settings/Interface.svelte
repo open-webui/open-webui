@@ -1160,9 +1160,10 @@
 			{#if imageCompression}
 				<div>
 					<div class=" py-0.5 flex w-full justify-between text-xs">
-						<div class=" self-center text-xs">{$i18n.t('Image Max Compression Size')}</div>
+						<div id="image-compression-size-label" class=" self-center text-xs">{$i18n.t('Image Max Compression Size')}</div>
 
 						<div>
+							<label class="sr-only" for="image-comp-width">{$i18n.t('Image Max Compression Size width')}</label>
 							<input
 								bind:value={imageCompressionSize.width}
 								type="number"
@@ -1170,6 +1171,7 @@
 								min="0"
 								placeholder="Width"
 							/>x
+							<label class="sr-only" for="image-comp-height">{$i18n.t('Image Max Compression Size height')}</label>
 							<input
 								bind:value={imageCompressionSize.height}
 								type="number"
