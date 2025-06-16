@@ -1464,10 +1464,6 @@
 				? [atSelectedModel.id]
 				: selectedModels;
 
-		if (selectedModelIds.filter((id) => id !== '').length === 0) {
-			return;
-		}
-
 		// Create response messages for each selected model
 		for (const [_modelIdx, modelId] of selectedModelIds.entries()) {
 			const model = $models.filter((m) => m.id === modelId).at(0);
