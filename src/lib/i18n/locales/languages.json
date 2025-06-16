@@ -72,6 +72,10 @@
 		"title": "French (France)"
 	},
 	{
+		"code": "gl-ES",
+		"title": "Galician (Galego)"
+	},
+	{
 		"code": "ka-GE",
 		"title": "Georgian (ქართული)"
 	},
@@ -180,7 +184,7 @@
 		"title": "Turkish (Türkçe)"
 	},
 	{
-		"code": "tk-TW",
+		"code": "tk-TM",
 		"title": "Turkmen (Türkmençe)"
 	},
 	{
@@ -190,6 +194,14 @@
 	{
 		"code": "ur-PK",
 		"title": "Urdu (اردو)"
+	},
+	{
+		"code": "uz-Cyrl-UZ",
+		"title": "Uzbek (Cyrillic)"
+	},
+	{
+		"code": "uz-Latn-UZ",
+		"title": "Uzbek (Latin)"
 	},
 	{
 		"code": "vi-VN",
@@ -206,13 +218,5 @@
 	{
 		"code": "dg-DG",
 		"title": "Doge (🐶)"
-	},
-	{
-		"code": "uz-Cyrl-UZ",
-		"title": "Uzbek (Cyrillic)"
-	},
-	{
-		"code": "uz-Latn-UZ",
-		"title": "Uzbek (Latin)"
 	}
 ]
