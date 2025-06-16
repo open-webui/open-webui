@@ -1,4 +1,6 @@
 <script lang="ts">
+	const i18n = getContext('i18n');
+	import { getContext } from 'svelte';
 	export let value: string = '';
 	export let placeholder = '';
 	export let required = true;
@@ -24,6 +26,7 @@
 	<button
 		class={showButtonClassName}
 		type="button"
+		aria-label={$i18n.t('Make password visible in the user interface')}
 		on:click={(e) => {
 			e.preventDefault();
 			show = !show;
