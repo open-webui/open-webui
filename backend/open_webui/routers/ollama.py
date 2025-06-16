@@ -16,6 +16,8 @@ from urllib.parse import urlparse
 import aiohttp
 from aiocache import cached
 import requests
+
+from open_webui.models.chats import Chats
 from open_webui.models.users import UserModel
 
 from open_webui.env import (
@@ -151,8 +153,8 @@ async def send_post_request(
         if r.ok is False:
             try:
                 res = await r.json()
+                await cleanup_response(r, session)
                 if "error" in res:
-                    log.error(f"Error from server: {res['error']}")
                     raise HTTPException(status_code=r.status, detail=res["error"])
             except HTTPException as e:
                 raise e  # Re-raise HTTPException to be handled by FastAPI

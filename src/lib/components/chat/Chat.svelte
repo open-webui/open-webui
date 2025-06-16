@@ -1738,6 +1738,7 @@
 
 			history.messages[responseMessageId] = responseMessage;
 			history.currentId = responseMessageId;
+
 			return null;
 		});
 
