@@ -697,7 +697,7 @@ def apply_params_to_form_data(form_data, model):
         # If custom_params are provided, merge them into params
         params = deep_update(params, custom_params)
 
-    if model.get("ollama"):
+    if model.get("owned_by") == "ollama":
         # Ollama specific parameters
         form_data["options"] = params
     else:
