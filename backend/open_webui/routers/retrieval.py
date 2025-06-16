@@ -1867,6 +1867,10 @@ async def process_web_search(
 
     try:
         if request.app.state.config.BYPASS_WEB_SEARCH_WEB_LOADER:
+            search_results = [
+                item for result in search_results for item in result if result
+            ]
+
             docs = [
                 Document(
                     page_content=result.snippet,
