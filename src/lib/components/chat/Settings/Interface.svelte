@@ -394,7 +394,7 @@
 					</div>
 
 					<button
-					aria-labelledby="high-contrast-mode-label"
+						aria-labelledby="high-contrast-mode-label"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleHighContrastMode();
@@ -412,10 +412,12 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div id="landing-page-mode-label" class=" self-center text-xs">{$i18n.t('Landing Page Mode')}</div>
+					<div id="landing-page-mode-label" class=" self-center text-xs">
+						{$i18n.t('Landing Page Mode')}
+					</div>
 
 					<button
-					aria-labelledby="landing-page-mode-label"
+						aria-labelledby="landing-page-mode-label"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleLandingPageMode();
@@ -433,10 +435,12 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div id="chat-bubble-ui-label" class=" self-center text-xs">{$i18n.t('Chat Bubble UI')}</div>
+					<div id="chat-bubble-ui-label" class=" self-center text-xs">
+						{$i18n.t('Chat Bubble UI')}
+					</div>
 
 					<button
-					aria-labelledby="chat-bubble-ui-label"
+						aria-labelledby="chat-bubble-ui-label"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleChatBubble();
@@ -460,7 +464,7 @@
 						</div>
 
 						<button
-					aria-labelledby="chat-bubble-username-label"
+							aria-labelledby="chat-bubble-username-label"
 							class="p-1 px-3 text-xs flex rounded-sm transition"
 							on:click={() => {
 								toggleShowUsername();
@@ -479,14 +483,16 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div id="widescreen-mode-label" class=" self-center text-xs">{$i18n.t('Widescreen Mode')}</div>
+					<div id="widescreen-mode-label" class=" self-center text-xs">
+						{$i18n.t('Widescreen Mode')}
+					</div>
 
 					<button
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleWidescreenMode();
 						}}
-					aria-labelledby="widescreen-mode-label"
+						aria-labelledby="widescreen-mode-label"
 						type="button"
 					>
 						{#if widescreenMode === true}
@@ -500,10 +506,12 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div id="chat-direction-label" class=" self-center text-xs">{$i18n.t('Chat direction')}</div>
+					<div id="chat-direction-label" class=" self-center text-xs">
+						{$i18n.t('Chat direction')}
+					</div>
 
 					<button
-					aria-labelledby="chat-direction-label"
+						aria-labelledby="chat-direction-label"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={toggleChangeChatDirection}
 						type="button"
@@ -521,12 +529,12 @@
 
 			<div>
 				<div class="py-0.5 flex w-full justify-between">
-					<div id=""notification-sound-label"" class=" self-center text-xs">
+					<div id="notification-sound-label" class=" self-center text-xs">
 						{$i18n.t('Notification Sound')}
 					</div>
 
 					<button
-					aria-labelledby="notification-sound-label"
+						aria-labelledby="notification-sound-label"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleNotificationSound();
@@ -550,7 +558,7 @@
 						</div>
 
 						<button
-					aria-labelledby="play-notification-sound-label"
+							aria-labelledby="play-notification-sound-label"
 							class="p-1 px-3 text-xs flex rounded-sm transition"
 							on:click={() => {
 								toggleNotificationSoundAlways();
@@ -619,10 +627,12 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div id="auto-generation-label" class=" self-center text-xs">{$i18n.t('Title Auto-Generation')}</div>
+					<div id="auto-generation-label" class=" self-center text-xs">
+						{$i18n.t('Title Auto-Generation')}
+					</div>
 
 					<button
-							aria-labelledby="auto-generation-label"
+						aria-labelledby="auto-generation-label"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleTitleAutoGenerate();
@@ -643,7 +653,7 @@
 					<div class=" self-center text-xs">{$i18n.t('Follow-Up Auto-Generation')}</div>
 
 					<button
-							aria-labelledby="auto-generation-label"
+						aria-labelledby="auto-generation-label"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleAutoFollowUps();
@@ -661,10 +671,12 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div id="chat-tags-label" class=" self-center text-xs">{$i18n.t('Chat Tags Auto-Generation')}</div>
+					<div id="chat-tags-label" class=" self-center text-xs">
+						{$i18n.t('Chat Tags Auto-Generation')}
+					</div>
 
 					<button
-							aria-labelledby="chat-tags-label"
+						aria-labelledby="chat-tags-label"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleAutoTags();
@@ -687,8 +699,7 @@
 					</div>
 
 					<button
-							aria-labelledby="detect-artifacts-label"
-					
+						aria-labelledby="detect-artifacts-label"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleDetectArtifacts();
@@ -711,7 +722,7 @@
 					</div>
 
 					<button
-					aria-labelledby="auto-copy-label"
+						aria-labelledby="auto-copy-label"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleResponseAutoCopy();
@@ -734,7 +745,7 @@
 					</div>
 
 					<button
-					aria-labelledby="rich-input-label"
+						aria-labelledby="rich-input-label"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleRichTextInput();
@@ -758,7 +769,7 @@
 						</div>
 
 						<button
-					aria-labelledby="prompt-autocompletion-label"
+							aria-labelledby="prompt-autocompletion-label"
 							class="p-1 px-3 text-xs flex rounded-sm transition"
 							on:click={() => {
 								togglePromptAutocomplete();
@@ -782,7 +793,7 @@
 					</div>
 
 					<button
-					aria-labelledby="paste-large-label"
+						aria-labelledby="paste-large-label"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleLargeTextAsFile();
@@ -805,7 +816,7 @@
 					</div>
 
 					<button
-					aria-labelledby="copy-formatted-label"
+						aria-labelledby="copy-formatted-label"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleCopyFormatted();
@@ -823,10 +834,12 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div id="always-collapse-label" class=" self-center text-xs">{$i18n.t('Always Collapse Code Blocks')}</div>
+					<div id="always-collapse-label" class=" self-center text-xs">
+						{$i18n.t('Always Collapse Code Blocks')}
+					</div>
 
 					<button
-					aria-labelledby="always-collapse-label"
+						aria-labelledby="always-collapse-label"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleCollapseCodeBlocks();
@@ -844,10 +857,12 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div id="always-expand-label" class=" self-center text-xs">{$i18n.t('Always Expand Details')}</div>
+					<div id="always-expand-label" class=" self-center text-xs">
+						{$i18n.t('Always Expand Details')}
+					</div>
 
 					<button
-					aria-labelledby="always-expand-label"
+						aria-labelledby="always-expand-label"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleExpandDetails();
@@ -870,7 +885,7 @@
 					</div>
 
 					<button
-					aria-labelledby="chat-background-label"
+						aria-labelledby="chat-background-label"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							if (backgroundImageUrl !== null) {
@@ -896,7 +911,7 @@
 					<div class=" self-center text-xs">{$i18n.t('Allow User Location')}</div>
 
 					<button
-					aria-labelledby="allow-user-location-label"
+						aria-labelledby="allow-user-location-label"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleUserLocation();
@@ -919,7 +934,7 @@
 					</div>
 
 					<button
-					aria-labelledby="haptic-feedback-label"
+						aria-labelledby="haptic-feedback-label"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleHapticFeedback();
@@ -965,7 +980,7 @@
 					</div>
 
 					<button
-					aria-labelledby="enter-key-behavior-label"
+						aria-labelledby="enter-key-behavior-label"
 						class="p-1 px-3 text-xs flex rounded transition"
 						on:click={() => {
 							togglectrlEnterToSend();
@@ -988,7 +1003,7 @@
 					</div>
 
 					<button
-					aria-labelledby="scroll-on-branch-change-label"
+						aria-labelledby="scroll-on-branch-change-label"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							togglesScrollOnBranchChange();
@@ -1006,10 +1021,12 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div id="web-search-in-chat-label" class=" self-center text-xs">{$i18n.t('Web Search in Chat')}</div>
+					<div id="web-search-in-chat-label" class=" self-center text-xs">
+						{$i18n.t('Web Search in Chat')}
+					</div>
 
 					<button
-					aria-labelledby="web-search-in-chat-label"
+						aria-labelledby="web-search-in-chat-label"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleWebSearch();
@@ -1027,10 +1044,12 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div id="iframe-sandbox-allow-same-origin-label" class=" self-center text-xs">{$i18n.t('iframe Sandbox Allow Same Origin')}</div>
+					<div id="iframe-sandbox-allow-same-origin-label" class=" self-center text-xs">
+						{$i18n.t('iframe Sandbox Allow Same Origin')}
+					</div>
 
 					<button
-					aria-labelledby="iframe-sandbox-allow-same-origin-label"
+						aria-labelledby="iframe-sandbox-allow-same-origin-label"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleIframeSandboxAllowSameOrigin();
@@ -1048,10 +1067,12 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div id="iframe-sandbox-allow-forms-label" class=" self-center text-xs">{$i18n.t('iframe Sandbox Allow Forms')}</div>
+					<div id="iframe-sandbox-allow-forms-label" class=" self-center text-xs">
+						{$i18n.t('iframe Sandbox Allow Forms')}
+					</div>
 
 					<button
-					aria-labelledby="iframe-sandbox-allow-forms-label"
+						aria-labelledby="iframe-sandbox-allow-forms-label"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleIframeSandboxAllowForms();
@@ -1074,7 +1095,7 @@
 					</div>
 
 					<button
-					aria-labelledby="stylized-pdf-export-label"
+						aria-labelledby="stylized-pdf-export-label"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleStylizedPdfExport();
@@ -1097,7 +1118,7 @@
 					<div class=" self-center text-xs">{$i18n.t('Allow Voice Interruption in Call')}</div>
 
 					<button
-					aria-labelledby="allow-voice-interruption-label"
+						aria-labelledby="allow-voice-interruption-label"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleVoiceInterruption();
@@ -1115,10 +1136,12 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div id="display-emoji-label" class=" self-center text-xs">{$i18n.t('Display Emoji in Call')}</div>
+					<div id="display-emoji-label" class=" self-center text-xs">
+						{$i18n.t('Display Emoji in Call')}
+					</div>
 
 					<button
-					aria-labelledby="display-emoji-label"
+						aria-labelledby="display-emoji-label"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleEmojiInCall();
@@ -1138,10 +1161,12 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div id="image-compression-label" class=" self-center text-xs">{$i18n.t('Image Compression')}</div>
+					<div id="image-compression-label" class=" self-center text-xs">
+						{$i18n.t('Image Compression')}
+					</div>
 
 					<button
-					aria-labelledby="image-compression-label"
+						aria-labelledby="image-compression-label"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleImageCompression();
@@ -1160,10 +1185,14 @@
 			{#if imageCompression}
 				<div>
 					<div class=" py-0.5 flex w-full justify-between text-xs">
-						<div id="image-compression-size-label" class=" self-center text-xs">{$i18n.t('Image Max Compression Size')}</div>
+						<div id="image-compression-size-label" class=" self-center text-xs">
+							{$i18n.t('Image Max Compression Size')}
+						</div>
 
 						<div>
-							<label class="sr-only" for="image-comp-width">{$i18n.t('Image Max Compression Size width')}</label>
+							<label class="sr-only" for="image-comp-width"
+								>{$i18n.t('Image Max Compression Size width')}</label
+							>
 							<input
 								bind:value={imageCompressionSize.width}
 								type="number"
@@ -1171,7 +1200,9 @@
 								min="0"
 								placeholder="Width"
 							/>x
-							<label class="sr-only" for="image-comp-height">{$i18n.t('Image Max Compression Size height')}</label>
+							<label class="sr-only" for="image-comp-height"
+								>{$i18n.t('Image Max Compression Size height')}</label
+							>
 							<input
 								bind:value={imageCompressionSize.height}
 								type="number"
