@@ -119,6 +119,39 @@
 		showUploadWarning = false;
 		dontShowAgain = false;
 	}
+
+	let isDeepParserEnabled = false;
+	const PARSER_TOGGLE_KEY = 'parser_toggle_state';
+
+	onMount(() => {
+		// Load the toggle state from localStorage
+		const savedState = localStorage.getItem(PARSER_TOGGLE_KEY);
+		if (savedState !== null) {
+			isDeepParserEnabled = savedState === 'true';
+			handleParserToggle(isDeepParserEnabled);
+		}
+	});
+
+	async function handleParserToggle(enabled: boolean) {
+		try {
+			const response = await fetch('/api/v1/retrieval/process/parser?toggle=' + enabled, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					Accept: 'application/json'
+				}
+			});
+			if (response.ok) {
+				isDeepParserEnabled = enabled;
+				// Save the toggle state to localStorage
+				localStorage.setItem(PARSER_TOGGLE_KEY, enabled.toString());
+			} else {
+				console.error('Failed to update parser settings');
+			}
+		} catch (error) {
+			console.error('Error updating parser settings:', error);
+		}
+	}
 </script>
 
 <!-- Hidden file input used to open the camera on mobile -->
@@ -267,6 +300,20 @@
 					<div class="line-clamp-1">{$i18n.t('Upload Files')}</div>
 				</DropdownMenu.Item>
 			</Tooltip>
+
+			<hr class="border-black/5 dark:border-white/5 my-1" />
+
+			<div class="flex gap-2 items-center px-3 py-2 text-sm font-medium">
+				<div class="flex-1">
+					<Tooltip content="Enable deep parsing using Tika parser">
+						<div class="flex items-center gap-2">
+							<CommandLineSolid />
+							<span>{$i18n.t('Deep Parser')}</span>
+						</div>
+					</Tooltip>
+				</div>
+				<Switch state={isDeepParserEnabled} on:change={(e) => handleParserToggle(e.detail)} />
+			</div>
 
 			{#if fileUploadEnabled}
 				{#if $config?.features?.enable_google_drive_integration}
@@ -478,17 +525,22 @@
 				<div class="flex items-start gap-2">
 					<span class="text-lg">💡</span>
 					<p class="text-sm text-gray-700 dark:text-gray-300">
-					התאזרו בסבלנות - קבצים גדולים דורשים יותר זמן עיבוד
+						התאזרו בסבלנות - קבצים גדולים דורשים יותר זמן עיבוד
 					</p>
 				</div>
 				<div class="flex items-start gap-2">
 					<span class="text-lg">🎓</span>
 					<p class="text-sm text-gray-700 dark:text-gray-300">
-						<a href="https://karamaeldocs/docs/rchat/files" class="underline text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200" target="_blank" rel="noopener noreferrer">
+						<a
+							href="https://karamaeldocs/docs/rchat/files"
+							class="underline text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200"
+							target="_blank"
+							rel="noopener noreferrer"
+						>
 							לחצו כאן לצפייה בהדרכה
 						</a>
 					</p>
-				</div>			
+				</div>
 			</div>
 
 			<!-- Checkbox "אל תציג שוב" -->
