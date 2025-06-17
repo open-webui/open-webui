@@ -1232,7 +1232,6 @@
 	"This action cannot be undone. Do you wish to continue?": "Denne handling kan ikke fortrydes. Vil du fortsætte?",
 	"This channel was created on {{createdAt}}. This is the very beginning of the {{channelName}} channel.": "Denne kanal blev oprettet den {{createdAt}}. Dette er det helt første i kanalen {{channelName}}.",
 	"This chat won't appear in history and your messages will not be saved.": "Denne chat vil ikke vises i historikken, og dine beskeder vil ikke blive gemt.",
-	"This chat won’t appear in history and your messages will not be saved.": "",
 	"This ensures that your valuable conversations are securely saved to your backend database. Thank you!": "Dette sikrer, at dine værdifulde samtaler gemmes sikkert i din backend-database. Tak!",
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "Dette er en eksperimentel funktion, den fungerer muligvis ikke som forventet og kan ændres når som helst.",
 	"This model is not publicly available. Please select another model.": "",

@@ -1232,7 +1232,6 @@
 	"This action cannot be undone. Do you wish to continue?": "Esta acción no se puede deshacer. ¿Desea continuar?",
 	"This channel was created on {{createdAt}}. This is the very beginning of the {{channelName}} channel.": "Este canal fue creado el {{createdAt}}. Este es el comienzo del canal {{channelName}}.",
 	"This chat won't appear in history and your messages will not be saved.": "Este chat no aparecerá en el historial y los mensajes no se guardarán.",
-	"This chat won’t appear in history and your messages will not be saved.": "Este chat no aparecerá en el historial y los mensajes no se guardarán.",
 	"This ensures that your valuable conversations are securely saved to your backend database. Thank you!": "Esto garantiza que sus valiosas conversaciones se guardan de forma segura en tu base de datos del servidor trasero (backend). ¡Gracias!",
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "Esta es una característica experimental, por lo que puede no funcionar como se esperaba y está sujeta a cambios en cualquier momento.",
 	"This model is not publicly available. Please select another model.": "Este modelo no está disponible publicamente. Por favor, selecciona otro modelo.",
