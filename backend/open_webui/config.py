@@ -1337,6 +1337,12 @@ ADMIN_EMAIL = PersistentConfig(
 ####################################
 
 
+TASK_MESSAGE_TRUNCATION_LENGTH = PersistentConfig(
+    "TASK_MESSAGE_TRUNCATION_LENGTH",
+    "task.message_truncation_length",
+    int(os.environ.get("TASK_MESSAGE_TRUNCATION_LENGTH", "-1")),
+)
+
 TASK_MODEL = PersistentConfig(
     "TASK_MODEL",
     "task.model.default",
