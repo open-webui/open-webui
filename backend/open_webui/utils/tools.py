@@ -479,7 +479,7 @@ async def get_tool_server_data(token: str, url: str) -> Dict[str, Any]:
         "specs": convert_openapi_to_tool_payload(res),
     }
 
-    log.info("Fetched data:", data)
+    log.info(f"Fetched data: {data}")
     return data
 
 
@@ -644,5 +644,5 @@ async def execute_tool_server(
 
     except Exception as err:
         error = str(err)
-        log.exception("API Request Error:", error)
+        log.exception(f"API Request Error: {error}")
         return {"error": error}

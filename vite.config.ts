@@ -40,6 +40,9 @@ export default defineConfig({
 	worker: {
 		format: 'es'
 	},
+	esbuild: {
+		pure: ['console.log', 'console.debug']
+	},
 	server: {
 		host: '0.0.0.0',
 		port: 5173,
