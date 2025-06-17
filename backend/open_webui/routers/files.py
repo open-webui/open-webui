@@ -155,9 +155,18 @@ def upload_file(
         if process:
             try:
                 if file.content_type:
-                    if file.content_type.startswith("audio/") or file.content_type in {
-                        "video/webm"
-                    }:
+                    stt_supported_content_types = (
+                        request.app.state.config.STT_SUPPORTED_CONTENT_TYPES
+                        or [
+                            "audio/*",
+                            "video/webm",
+                        ]
+                    )
+
+                    if any(
+                        fnmatch(file.content_type, content_type)
+                        for content_type in stt_supported_content_types
+                    ):
                         file_path = Storage.get_file(file_path)
                         result = transcribe(request, file_path, file_metadata)
 

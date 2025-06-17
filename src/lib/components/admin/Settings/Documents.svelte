@@ -1144,6 +1144,50 @@
 							</Tooltip>
 						</div>
 					</div>
+
+					<div class="  mb-2.5 flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">{$i18n.t('Image Compression Width')}</div>
+						<div class="flex items-center relative">
+							<Tooltip
+								content={$i18n.t(
+									'The width in pixels to compress images to. Leave empty for no compression.'
+								)}
+								placement="top-start"
+							>
+								<input
+									class="flex-1 w-full text-sm bg-transparent outline-hidden"
+									type="number"
+									placeholder={$i18n.t('Leave empty for no compression')}
+									bind:value={RAGConfig.FILE_IMAGE_COMPRESSION_WIDTH}
+									autocomplete="off"
+									min="0"
+								/>
+							</Tooltip>
+						</div>
+					</div>
+
+					<div class="  mb-2.5 flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">
+							{$i18n.t('Image Compression Height')}
+						</div>
+						<div class="flex items-center relative">
+							<Tooltip
+								content={$i18n.t(
+									'The height in pixels to compress images to. Leave empty for no compression.'
+								)}
+								placement="top-start"
+							>
+								<input
+									class="flex-1 w-full text-sm bg-transparent outline-hidden"
+									type="number"
+									placeholder={$i18n.t('Leave empty for no compression')}
+									bind:value={RAGConfig.FILE_IMAGE_COMPRESSION_HEIGHT}
+									autocomplete="off"
+									min="0"
+								/>
+							</Tooltip>
+						</div>
+					</div>
 				</div>
 
 				<div class="mb-3">
