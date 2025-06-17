@@ -1,5 +1,8 @@
 <script lang="ts">
+	import { getContext } from 'svelte';
 	import SuccessIcon from '../icons/SuccessIcon.svelte';
+
+	const i18n = getContext('i18n');
 	export let step = 1;
 
 	const steps = [
@@ -42,7 +45,7 @@
 				{:else}
 					{index + 1}
 				{/if}
-				{s}
+				{$i18n.t(s)}
 			</div>
 		</div>
 	{/each}
