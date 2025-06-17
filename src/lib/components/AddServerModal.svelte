@@ -194,11 +194,12 @@
 						<div class="flex gap-2">
 							<div class="flex flex-col w-full">
 								<div class="flex justify-between mb-0.5">
-									<div class=" text-xs text-gray-500">{$i18n.t('URL')}</div>
+									<label for="api-base-url" class=" text-xs text-gray-500">{$i18n.t('URL')}</label>
 								</div>
 
 								<div class="flex flex-1 items-center">
 									<input
+										id="api-base-url"
 										class="w-full flex-1 text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
 										type="text"
 										bind:value={url}
@@ -239,9 +240,13 @@
 								</div>
 
 								<div class="flex-1 flex items-center">
+									<label for="url-or-path" class="sr-only"
+										>{$i18n.t('openapi.json URL or Path')}</label
+									>
 									<input
 										class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
 										type="text"
+										id="url-or-path"
 										bind:value={path}
 										placeholder={$i18n.t('openapi.json URL or Path')}
 										autocomplete="off"
@@ -259,11 +264,14 @@
 
 						<div class="flex gap-2 mt-2">
 							<div class="flex flex-col w-full">
-								<div class="  text-xs text-gray-500">{$i18n.t('Auth')}</div>
+								<label for="select-bearer-or-session" class="text-xs text-gray-500"
+									>{$i18n.t('Auth')}</label
+								>
 
 								<div class="flex gap-2">
 									<div class="flex-shrink-0 self-start">
 										<select
+											id="select-bearer-or-session"
 											class="w-full text-sm bg-transparent dark:bg-gray-900 placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden pr-5"
 											bind:value={auth_type}
 										>
@@ -295,10 +303,13 @@
 
 							<div class="flex gap-2">
 								<div class="flex flex-col w-full">
-									<div class=" mb-0.5 text-xs text-gray-500">{$i18n.t('Name')}</div>
+									<label for="enter-name" class=" mb-0.5 text-xs text-gray-500"
+										>{$i18n.t('Name')}</label
+									>
 
 									<div class="flex-1">
 										<input
+											id="enter-name"
 											class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
 											type="text"
 											bind:value={name}
@@ -311,10 +322,13 @@
 							</div>
 
 							<div class="flex flex-col w-full mt-2">
-								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Description')}</div>
+								<label for="description" class=" mb-1 text-xs text-gray-500"
+									>{$i18n.t('Description')}</label
+								>
 
 								<div class="flex-1">
 									<input
+										id="description"
 										class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
 										type="text"
 										bind:value={description}
