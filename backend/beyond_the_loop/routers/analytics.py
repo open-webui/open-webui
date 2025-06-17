@@ -52,13 +52,16 @@ async def get_top_models(
             raise HTTPException(status_code=400, detail="Start date must be before end date.")
 
         with get_db() as db:
+            company_user_ids = db.query(User.id).filter_by(company_id=user.company_id).all()
+            company_user_ids = [u.id for u in company_user_ids]
+    
             top_models = db.query(
                 Completion.model,
                 func.sum(Completion.credits_used).label("credits_used")
             ).filter(
                 Completion.created_at >= start_timestamp,
                 Completion.created_at <= end_timestamp,
-                Completion.user_id == user.id
+                Completion.user_id.in_(company_user_ids)
             ).group_by(
                 Completion.model
             ).order_by(
