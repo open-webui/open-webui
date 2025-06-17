@@ -224,6 +224,7 @@
 												viewBox="0 0 20 20"
 												fill="currentColor"
 												class="w-4 h-4"
+												aria-hidden="true"
 											>
 												<path
 													fill-rule="evenodd"
@@ -374,6 +375,7 @@
 							{#if loading}
 								<div class="ml-2 self-center">
 									<svg
+										aria-hidden="true"
 										class=" w-4 h-4"
 										viewBox="0 0 24 24"
 										fill="currentColor"
