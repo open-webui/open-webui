@@ -307,3 +307,4 @@ dist
 cypress/videos
 cypress/screenshots
 .vscode/settings.json
+.webui_secret_key
