@@ -68,6 +68,7 @@ async def get_task_config(request: Request, user=Depends(get_verified_user)):
         "ENABLE_RETRIEVAL_QUERY_GENERATION": request.app.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION,
         "QUERY_GENERATION_PROMPT_TEMPLATE": request.app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE,
         "TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE": request.app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
+        "TASK_MESSAGE_TRUNCATION_LENGTH": request.app.state.config.TASK_MESSAGE_TRUNCATION_LENGTH,
     }
 
 
@@ -87,6 +88,7 @@ class TaskConfigForm(BaseModel):
     ENABLE_RETRIEVAL_QUERY_GENERATION: bool
     QUERY_GENERATION_PROMPT_TEMPLATE: str
     TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE: str
+    TASK_MESSAGE_TRUNCATION_LENGTH: int
 
 
 @router.post("/config/update")
@@ -135,6 +137,7 @@ async def update_task_config(
     request.app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = (
         form_data.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE
     )
+    request.app.state.config.TASK_MESSAGE_TRUNCATION_LENGTH = form_data.TASK_MESSAGE_TRUNCATION_LENGTH
 
     return {
         "TASK_MODEL": request.app.state.config.TASK_MODEL,
@@ -152,6 +155,7 @@ async def update_task_config(
         "ENABLE_RETRIEVAL_QUERY_GENERATION": request.app.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION,
         "QUERY_GENERATION_PROMPT_TEMPLATE": request.app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE,
         "TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE": request.app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
+        "TASK_MESSAGE_TRUNCATION_LENGTH": request.app.state.config.TASK_MESSAGE_TRUNCATION_LENGTH,
     }
 
 
