@@ -33,7 +33,7 @@
 
 		const url = new URL(surveyUrl);
 		url.searchParams.append('urlVar01', 'DE'); // Country code
-		url.searchParams.append('urlVar02', ''); // User ID
+		url.searchParams.append('urlVar02', $user.pseudonymized_user_id);
 		url.searchParams.append('urlVar03', 'Product'); // Channels
 		const surveyNotification: Notification = {
 			type: NotificationType.FEEDBACK,
