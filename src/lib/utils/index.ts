@@ -1098,7 +1098,7 @@ export function getModelIcon(label: string): string {
 			return '/ollama-light.svg';
 		}	
 	} else {
-		return '/static/favicon.png';
+		return '/favicon-icon.png';
 	}
 }
 
