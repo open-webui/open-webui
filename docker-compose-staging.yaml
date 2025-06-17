@@ -1,6 +1,15 @@
-version: '3.8'
-
 services:
+  traefik:
+    image: traefik:v2.11
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "./traefik/traefik.yml:/traefik.yml:ro"
+      - "./traefik/acme.json:/letsencrypt/acme.json"
+    restart: always
+
   litellm:
     container_name: litellm
     image: ghcr.io/berriai/litellm:main-v1.61.7
@@ -17,6 +26,12 @@ services:
 
   beyond-the-loop:
     image: ghcr.io/beyond-the-loop/beyond-the-loop:staging
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.btl.rule=Host(`staging.v2.beyondtheloop.ai`)"
+      - "traefik.http.routers.btl.entrypoints=websecure"
+      - "traefik.http.routers.btl.tls.certresolver=myresolver"
+      - "traefik.http.services.btl.loadbalancer.server.port=8080"
     pull_policy: always
     container_name: beyond-the-loop
     env_file:
@@ -24,13 +39,11 @@ services:
     environment:
       - OPENAI_API_BASE_URL=http://litellm:4000/v1
       - DATABASE_URL=sqlite:////app/backend/data/database.sqlite
-      - BACKEND_ADDRESS=http://35.198.146.59:8080
+      - BACKEND_ADDRESS=https://staging.v2.beyondtheloop.ai
     volumes:
       - ./backend/data:/app/backend/data
     depends_on:
       - litellm
-    ports:
-      - "8080:8080"
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped
