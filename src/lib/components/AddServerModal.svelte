@@ -217,6 +217,7 @@
 											on:click={() => {
 												verifyHandler();
 											}}
+											aria-label={$i18n.t('Verify Connection')}
 											type="button"
 										>
 											<svg
