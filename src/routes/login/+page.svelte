@@ -7,11 +7,22 @@
 
 	import { getBackendConfig } from '$lib/apis';
 	import { completeInvite } from '$lib/apis/auths';
-    
+
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
-	import { WEBUI_NAME, config, user, socket, toastVisible, toastMessage, toastType, showToast, company, companyConfig } from '$lib/stores';
-    import { getSessionUser, userSignIn, getCompanyDetails, getCompanyConfig } from '$lib/apis/auths';
+	import {
+		WEBUI_NAME,
+		config,
+		user,
+		socket,
+		toastVisible,
+		toastMessage,
+		toastType,
+		showToast,
+		company,
+		companyConfig
+	} from '$lib/stores';
+	import { getSessionUser, userSignIn, getCompanyDetails, getCompanyConfig } from '$lib/apis/auths';
 
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import UserIcon from '$lib/components/icons/UserIcon.svelte';
@@ -24,13 +35,11 @@
 
 	let email = '';
 	let password = '';
-    let showPassword = false;
-	
+	let showPassword = false;
+
 	let loading = false;
 
-	onMount(() => {
-		
-	})
+	onMount(() => {});
 
 	const setSessionUser = async (sessionUser) => {
 		if (sessionUser) {
@@ -48,16 +57,16 @@
 	};
 
 	const signInHandler = async () => {
-        loading = true;
+		loading = true;
 		const sessionUser = await userSignIn(email, password).catch((error) => {
 			// toast.error(`${error}`);
-            showToast('error',error)
+			showToast('error', error);
 			loading = false;
 			return null;
 		});
 
 		await setSessionUser(sessionUser);
-		
+
 		const [companyInfo, companyConfigInfo] = await Promise.all([
 			getCompanyDetails(sessionUser.token).catch((error) => {
 				toast.error(`${error}`);
@@ -77,10 +86,10 @@
 			console.log(companyConfigInfo);
 			companyConfig.set(companyConfigInfo);
 		}
-        loading = false;
+		loading = false;
 	};
 
-    const checkOauthCallback = async () => {
+	const checkOauthCallback = async () => {
 		if (!$page.url.hash) {
 			return;
 		}
@@ -105,11 +114,11 @@
 	};
 
 	onMount(async () => {
-        if ($user !== undefined) {
+		if ($user !== undefined) {
 			await goto('/');
 		}
 		await checkOauthCallback();
-    });
+	});
 	let logoSrc = '/logo_dark_transparent.png';
 
 	onMount(() => {
@@ -130,25 +139,31 @@
 <div
 	class="flex flex-col justify-between w-full h-screen max-h-[100dvh] px-4 text-white relative bg-lightGray-300 dark:bg-customGray-900"
 >
-    <div></div>
+	<div></div>
 	<form
 		class="flex flex-col self-center bg-lightGray-800 dark:bg-customGray-800 rounded-2xl w-full md:w-[31rem] py-5 px-5 md:py-7 md:px-24"
 		on:submit={(e) => {
 			e.preventDefault();
 			signInHandler();
 		}}
-	>	
-        <div class="self-center flex flex-col items-center mb-5">
-            <div>
-                <img crossorigin="anonymous" src={logoSrc} class=" w-10 mb-5" alt="logo" />
-            </div>
-            <div class="font-medium mb-2.5 text-lightGray-100 dark:text-customGray-100">{$i18n.t('Welcome to')} Beyond Chat</div>
-            <div class="font-medium text-center text-xs text-[#8A8B8D] dark:text-customGray-300">{$i18n.t('Sign in to continue')}</div>
-        </div>
+	>
+		<div class="self-center flex flex-col items-center mb-5">
+			<div>
+				<img crossorigin="anonymous" src={logoSrc} class=" w-10 mb-5" alt="logo" />
+			</div>
+			<div class="font-medium mb-2.5 text-lightGray-100 dark:text-customGray-100">
+				{$i18n.t('Welcome to')} Beyond Chat
+			</div>
+			<div class="font-medium text-center text-xs text-[#8A8B8D] dark:text-customGray-300">
+				{$i18n.t('Sign in to continue')}
+			</div>
+		</div>
 		<div class="flex-1 mb-2.5">
 			<div class="relative w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md">
 				{#if email}
-					<div class="text-xs absolute left-2.5 top-1 text-lightGray-100/50 dark:text-customGray-100/50">
+					<div
+						class="text-xs absolute left-2.5 top-1 text-lightGray-100/50 dark:text-customGray-100/50"
+					>
 						{$i18n.t('Email address')}
 					</div>
 				{/if}
@@ -156,18 +171,20 @@
 					class={`px-2.5 text-sm ${email ? 'pt-2' : 'pt-0'} w-full h-12 bg-transparent text-lightGray-100 dark:text-white placeholder:text-lightGray-100 dark:placeholder:text-customGray-100 outline-none`}
 					placeholder={$i18n.t('Email address')}
 					bind:value={email}
-                    type="email"
-                    autocomplete="email"
+					type="email"
+					autocomplete="email"
 					name="email"
 					required
 				/>
 			</div>
 		</div>
-	
+
 		<div class="flex flex-col w-full mb-1">
 			<div class="relative w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md">
 				{#if password}
-					<div class="text-xs absolute left-2.5 top-1 text-lightGray-100/50 dark:text-customGray-100/50">
+					<div
+						class="text-xs absolute left-2.5 top-1 text-lightGray-100/50 dark:text-customGray-100/50"
+					>
 						{$i18n.t('Password')}
 					</div>
 				{/if}
@@ -178,7 +195,7 @@
 						bind:value={password}
 						placeholder={$i18n.t('Password')}
 						autocomplete="current-password"
-                        name="password"
+						name="password"
 						required
 					/>
 				{:else}
@@ -188,7 +205,7 @@
 						bind:value={password}
 						placeholder={$i18n.t('Password')}
 						autocomplete="current-password"
-                        name="current-password"
+						name="current-password"
 						required
 					/>
 				{/if}
@@ -199,18 +216,20 @@
 					on:click={() => (showPassword = !showPassword)}
 					tabindex="-1"
 				>
-				{#if showPassword}
-					<HidePassIcon/>
-				{:else}
-					<ShowPassIcon/>
-				{/if}
+					{#if showPassword}
+						<HidePassIcon />
+					{:else}
+						<ShowPassIcon />
+					{/if}
 				</button>
 			</div>
 		</div>
-        <div class="flex justify-end mb-2.5">
-            <a href="/reset-password" class="font-medium text-customBlue-500 text-xs">{$i18n.t('Forgot password?')}</a>
-        </div>
-        <button
+		<div class="flex justify-end mb-2.5">
+			<a href="/reset-password" class="font-medium text-customBlue-500 text-xs"
+				>{$i18n.t('Forgot password?')}</a
+			>
+		</div>
+		<button
 			class="font-medium text-xs w-full h-10 px-3 py-2 transition rounded-lg {loading
 				? ' cursor-not-allowed bg-lightGray-300 hover:bg-lightGray-700 text-lightGray-100 dark:bg-customGray-950 dark:hover:bg-customGray-950 dark:text-white border border-lightGray-400 dark:border-customGray-700'
 				: 'bg-lightGray-300 hover:bg-lightGray-700 text-lightGray-100 dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border border-lightGray-400 dark:border-customGray-700'} flex justify-center items-center"
@@ -220,15 +239,17 @@
 			{$i18n.t('Login')}
 			{#if loading}
 				<div class="ml-1.5 self-center">
-					<LoaderIcon/>
+					<LoaderIcon />
 				</div>
 			{/if}
 		</button>
 		<div class="mt-5 text-xs text-lightGray-100 dark:text-customGray-300">
 			{$i18n.t(`Don't have an account?`)}
-			<a href="/company-register" class="font-medium text-customBlue-500">{$i18n.t('Register now')}</a>
+			<a href="/company-register" class="font-medium text-customBlue-500"
+				>{$i18n.t('Register now')}</a
+			>
 		</div>
-        <!-- <hr class=" border-gray-50 dark:border-customGray-700 mb-2 mt-6" />
+		<!-- <hr class=" border-gray-50 dark:border-customGray-700 mb-2 mt-6" />
         <div class="text-xs dark:text-customGray-300 text-center font-medium mb-2.5">Or</div>
         <div class="flex flex-col space-y-2">
             {#if $config?.oauth?.providers?.google}
@@ -283,6 +304,14 @@
             {/if}
 		</div> -->
 	</form>
-    
-    <div class="self-center text-xs text-customGray-300 dark:text-customGray-100 pb-5 text-center">By using this service, you agree to our <a href="/">Terms</a> and <a href="/">Conditions</a>.</div>
+
+	<div class="self-center text-xs text-customGray-300 dark:text-customGray-100 pb-5 text-center">
+		{$i18n.t('By using this service, you agree to our')}
+		<a
+			href="https://drive.google.com/file/d/1--HSBhHR8JSkz6q-qDgjJZWXvHWa6sh-/view?usp=sharing"
+			target="_blank"
+			rel="noopener noreferrer"
+			class="underline">{$i18n.t('Terms and Conditions')}</a
+		>.
+	</div>
 </div>
