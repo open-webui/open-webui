@@ -224,8 +224,8 @@
 				</div>
 			{/if}
 		</button>
-		<div class="mt-5 text-xs dark:text-customGray-300">
-			{$i18n.t(`Don’t have an account?`)}
+		<div class="mt-5 text-xs text-lightGray-100 dark:text-customGray-300">
+			{$i18n.t(`Don't have an account?`)}
 			<a href="/company-register" class="font-medium text-customBlue-500">{$i18n.t('Register now')}</a>
 		</div>
         <!-- <hr class=" border-gray-50 dark:border-customGray-700 mb-2 mt-6" />
