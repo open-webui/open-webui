@@ -15,7 +15,7 @@ dependencies = [
     "Flask-Cors==5.0.0",
 
     "python-socketio==5.11.3",
-    "python-jose==3.3.0",
+    "python-jose>=3.4.0",
     "passlib[bcrypt]==1.7.4",
 
     "requests==2.32.3",
