@@ -108,7 +108,6 @@
 	};
 
 	const saveSettings = async (updated) => {
-		console.log(updated);
 		await settings.set({ ...$settings, ...updated });
 		await models.set(await getModels());
 		await updateUserSettings(localStorage.token, { ui: $settings });
@@ -163,7 +162,6 @@
 	const year = now.getFullYear();
 	const month = now.getMonth() + 1;
 	const { start, end } = getMonthRange(year, month);
-	console.log(start, end)
 	try {
 		analyticsLoading = true;
 		const [
@@ -202,7 +200,6 @@
 			totalChats: totalChats?.status === 'fulfilled' ? totalChats?.value : {},
 			totalAssistants: totalAssistants?.status === 'fulfilled' ? totalAssistants?.value : {},
 		}
-		console.log(analytics)
 		} catch (error) {
 			console.error('Error fetching analytics:', error);
 		} finally {
@@ -238,7 +235,6 @@
 		fetchAnalytics();
 		const tabParam = $page.url.searchParams.get('tab');
 		const resetTabs = $page.url.searchParams.get('resetTabs');
-		console.log(resetTabs, 'if statement')
 		if(resetTabs) {
 			selectedTab = null;
 		} else {

@@ -311,7 +311,6 @@
 												const { start, end } = getPeriodRange(
 													selectedPeriod.value
 												);
-												console.log(start, end)
 												const res = await getTopModels(localStorage.token, start, end);
 												analytics = {
 													...analytics,

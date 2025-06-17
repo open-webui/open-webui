@@ -56,8 +56,6 @@
 		await copyToClipboard(link);
 		toast.success($i18n.t('Copied'));
 	}
-
-	$: console.log(showDropdown, 'show dropdown')
 </script>
 
 <div>
