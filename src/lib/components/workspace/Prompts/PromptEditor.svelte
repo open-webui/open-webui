@@ -192,21 +192,14 @@
 			</div>
 			<div class="mb-2.5">
 				<div class="text-xs text-lightGray-100/50 dark:text-white/50">
-					ⓘ {$i18n.t('Format your variables using brackets like this:')}&nbsp;<span
+					ⓘ {$i18n.t('Format your variables with curly braces, like this:')}&nbsp;<span
 						class=" text-lightGray-100/50 dark:text-white/50 font-medium"
-						>{'['}{$i18n.t('variable')}{']'}</span
+						>{'{{'}{$i18n.t('Variable')}{'}}'}</span
 					>.
-					{$i18n.t('Make sure to enclose them with')}
-					<span class=" text-lightGray-100/50 dark:text-white/50 font-medium">{"'['"}</span>
+					{$i18n.t('Enclose variables with')}
+					<span class=" text-lightGray-100/50 dark:text-white/50 font-medium">{"'{{'"}</span>
 					{$i18n.t('and')}
-					<span class=" text-lightGray-100/50 dark:text-white/50 font-medium">{"']'"}</span>.
-				</div>
-
-				<div class="text-xs text-lightGray-100/50 dark:text-white/50">
-					{$i18n.t('Utilize')}<span class=" text-lightGray-100/50 dark:text-white/50 font-medium">
-						{` {{CLIPBOARD}}`}</span
-					>
-					{$i18n.t('variable to have them replaced with clipboard content.')}
+					<span class=" text-lightGray-100/50 dark:text-white/50 font-medium">{"'}}'"}</span>.
 				</div>
 			</div>
 

@@ -184,7 +184,7 @@
 				<span slot="title"
 					>{group.name}
                     {#if users?.filter((user) => group.user_ids?.includes(user.id))?.length > 0}
-					{users?.filter((user) => group.user_ids?.includes(user.id))?.length} ({$i18n.t(
+					({users?.filter((user) => group.user_ids?.includes(user.id))?.length} {$i18n.t(
 						'Users'
 					)})
                     {/if}

@@ -18,7 +18,8 @@
 		models as _models,
 		settings,
 		user,
-		showSidebar
+		showSidebar,
+		theme
 	} from '$lib/stores';
 	import {
 		bookmarkModel,
@@ -43,7 +44,7 @@
 	import ChevronRight from '../icons/ChevronRight.svelte';
 	import Switch from '../common/Switch.svelte';
 	import Spinner from '../common/Spinner.svelte';
-	import { capitalizeFirstLetter } from '$lib/utils';
+	import { capitalizeFirstLetter, tagColorsLight } from '$lib/utils';
 	import ShowSidebarIcon from '../icons/ShowSidebarIcon.svelte';
 	import GroupIcon from '../icons/GroupIcon.svelte';
 	import PublicIcon from '../icons/PublicIcon.svelte';
@@ -55,7 +56,6 @@
 	import BookIcon from '../icons/BookIcon.svelte';
 	import BookmarkIcon from '../icons/BookmarkIcon.svelte';
 	import BookmarkedIcon from '../icons/BookmarkedIcon.svelte';
-
 
 	let shiftKey = false;
 
@@ -79,12 +79,12 @@
 
 	const getTags = async () => {
 		const res = await getUserTagsForModels(localStorage.token);
-		tags = res.filter(tag => tag.is_system).map(tag => tag.name);
-	}
+		tags = res.filter((tag) => tag.is_system).map((tag) => tag.name);
+	};
 
-	onMount(async() => {
+	onMount(async () => {
 		await getTags();
-	})
+	});
 
 	// $: if (models) {
 	// 	tags = Array.from(
@@ -100,7 +100,10 @@
 			const modelTags = m.meta?.tags?.map((t) => t.name.toLowerCase()) || [];
 
 			const tagsMatch =
-				selectedTags.size === 0 || Array.from(selectedTags)?.map(tag => tag?.toLowerCase())?.some((tag) => modelTags.includes(tag));
+				selectedTags.size === 0 ||
+				Array.from(selectedTags)
+					?.map((tag) => tag?.toLowerCase())
+					?.some((tag) => modelTags.includes(tag));
 
 			const isPublic = m.access_control === null;
 			// const isPrivate = m.access_control !== null;
@@ -299,7 +302,6 @@
 	let hoveredModel = null;
 	let menuIdOpened = null;
 
-
 	let loadingBookmark = null;
 
 	const bookmarkAssistant = async (id) => {
@@ -310,8 +312,7 @@
 			models = await getWorkspaceModels(localStorage.token);
 		}
 		loadingBookmark = null;
-	}
-
+	};
 </script>
 
 <svelte:head>
@@ -416,8 +417,11 @@
 				{#if $mobile}
 					<FilterDropdown>
 						<div class="flex flex-wrap gap-1">
-							{#each tags as tag}
+							{#each tags as tag, i}
 								<button
+									style={`background-color: ${
+										$theme === 'light' ? tagColorsLight[i % tagColorsLight.length] : ''
+									}`}
 									class={`flex items-center justify-center rounded-md text-xs leading-none px-[6px] py-[6px] ${selectedTags.has(tag) ? 'bg-customViolet-200 dark:bg-customBlue-800' : 'bg-lightGray-400  dark:bg-customGray-800 '} font-medium text-lightGray-100 dark:text-white`}
 									on:click={() => {
 										selectedTags.has(tag) ? selectedTags.delete(tag) : selectedTags.add(tag);
@@ -436,8 +440,11 @@
 						{$i18n.t('Filter by category')}
 					</div>
 					<div class="flex flex-wrap gap-1">
-						{#each tags as tag}
+						{#each tags as tag, i}
 							<button
+								style={`background-color: ${
+									$theme === 'light' ? tagColorsLight[i % tagColorsLight.length] : ''
+								}`}
 								class={`flex items-center justify-center rounded-md text-xs leading-none px-[6px] py-[6px] ${selectedTags.has(tag) ? 'bg-customViolet-200 dark:bg-customBlue-800' : 'bg-lightGray-400 hover:bg-customViolet-200 dark:bg-customGray-800 dark:hover:bg-customGray-950'} font-medium text-lightGray-100 dark:text-white`}
 								on:click={() => {
 									selectedTags.has(tag) ? selectedTags.delete(tag) : selectedTags.add(tag);
@@ -494,13 +501,16 @@
 						<div class="flex items-start justify-between">
 							<div class="flex items-center">
 								{#if loadingBookmark === model.id}
-									<Spinner className="size-3 mr-1"/>
+									<Spinner className="size-3 mr-1" />
 								{:else}
-									<button on:click={() => bookmarkAssistant(model.id)} class="text-lightGray-100 dark:text-customGray-300 mr-1">
+									<button
+										on:click={() => bookmarkAssistant(model.id)}
+										class="text-lightGray-100 dark:text-customGray-300 mr-1"
+									>
 										{#if model?.bookmarked_by_user}
-											<BookmarkedIcon/>
+											<BookmarkedIcon />
 										{:else}
-											<BookmarkIcon/>
+											<BookmarkIcon />
 										{/if}
 									</button>
 								{/if}
