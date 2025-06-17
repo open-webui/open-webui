@@ -914,7 +914,7 @@
 	"Only alphanumeric characters and hyphens are allowed in the command string.": "Només es permeten caràcters alfanumèrics i guions en la comanda.",
 	"Only collections can be edited, create a new knowledge base to edit/add documents.": "Només es poden editar col·leccions, crea una nova base de coneixement per editar/afegir documents.",
 	"Only markdown files are allowed": "Només es permeten arxius markdown",
-	"Only select users and groups with permission can access": "Només hi poden accedir usuaris i grups seleccionats amb permís",
+	"Only selected users and groups with permission can access": "Només hi poden accedir usuaris i grups seleccionats amb permís",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "Ui! Sembla que l'URL no és vàlida. Si us plau, revisa-la i torna-ho a provar.",
 	"Oops! There are files still uploading. Please wait for the upload to complete.": "Ui! Encara hi ha fitxers pujant-se. Si us plau, espera que finalitzi la càrrega.",
 	"Oops! There was an error in the previous response.": "Ui! Hi ha hagut un error a la resposta anterior.",

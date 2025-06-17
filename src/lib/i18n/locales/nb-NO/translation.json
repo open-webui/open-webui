@@ -914,7 +914,7 @@
 	"Only alphanumeric characters and hyphens are allowed in the command string.": "Bare alfanumeriske tegn og bindestreker er tillatt i kommandostrengen.",
 	"Only collections can be edited, create a new knowledge base to edit/add documents.": "Bare samlinger kan redigeres, eller lag en ny kunnskapsbase for å kunne redigere / legge til dokumenter.",
 	"Only markdown files are allowed": "",
-	"Only select users and groups with permission can access": "Bare utvalgte brukere og grupper med tillatelse kan få tilgang",
+	"Only selected users and groups with permission can access": "Bare utvalgte brukere og grupper med tillatelse kan få tilgang",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "Oi! Det ser ut som URL-en er ugyldig. Dobbeltsjekk, og prøv på nytt.",
 	"Oops! There are files still uploading. Please wait for the upload to complete.": "Oi! Det er fortsatt filer som lastes opp. Vent til opplastingen er ferdig.",
 	"Oops! There was an error in the previous response.": "Oi! Det er en feil i det forrige svaret.",

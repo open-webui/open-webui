@@ -914,7 +914,7 @@
 	"Only alphanumeric characters and hyphens are allowed in the command string.": "Буйруқлар қаторида фақат ҳарф-рақамли белгилар ва дефисларга рухсат берилади.",
 	"Only collections can be edited, create a new knowledge base to edit/add documents.": "Фақат тўпламларни таҳрирлаш мумкин, ҳужжатларни таҳрирлаш/қўшиш учун янги билимлар базасини яратинг.",
 	"Only markdown files are allowed": "Фақат маркдоwн файлларига рухсат берилади",
-	"Only select users and groups with permission can access": "Фақат рухсати бор танланган фойдаланувчилар ва гуруҳларга кириш мумкин",
+	"Only selected users and groups with permission can access": "Фақат рухсати бор танланган фойдаланувчилар ва гуруҳларга кириш мумкин",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "Вой! УРЛ нотўғри кўринади. Илтимос, икки марта текширинг ва қайта уриниб кўринг.",
 	"Oops! There are files still uploading. Please wait for the upload to complete.": "Вой! Ҳали ҳам файллар юкланмоқда. Илтимос, юклаш тугашини кутинг.",
 	"Oops! There was an error in the previous response.": "Вой! Аввалги жавобда хатолик юз берди.",

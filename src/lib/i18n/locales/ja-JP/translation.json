@@ -914,7 +914,7 @@
 	"Only alphanumeric characters and hyphens are allowed in the command string.": "コマンド文字列には英数字とハイフンのみが許可されています。",
 	"Only collections can be edited, create a new knowledge base to edit/add documents.": "コレクションのみ編集できます。新しいナレッジベースを作成してドキュメントを編集/追加してください。",
 	"Only markdown files are allowed": "マークダウンファイルのみが許可されています",
-	"Only select users and groups with permission can access": "許可されたユーザーとグループのみがアクセスできます",
+	"Only selected users and groups with permission can access": "許可されたユーザーとグループのみがアクセスできます",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "おっと！ URL が無効なようです。もう一度確認してやり直してください。",
 	"Oops! There are files still uploading. Please wait for the upload to complete.": "おっと！ アップロードが完了するまで待ってください。",
 	"Oops! There was an error in the previous response.": "おっと！ 前の応答にエラーがありました。",

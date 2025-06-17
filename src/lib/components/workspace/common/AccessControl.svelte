@@ -153,7 +153,7 @@
 
 				<div class=" text-xs text-gray-400 font-medium">
 					{#if accessControl !== null}
-						{$i18n.t('Only select users and groups with permission can access')}
+						{$i18n.t('Only selected users and groups with permission can access')}
 					{:else}
 						{$i18n.t('Accessible to all users')}
 					{/if}

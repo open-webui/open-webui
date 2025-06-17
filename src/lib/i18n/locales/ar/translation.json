@@ -914,7 +914,7 @@
 	"Only alphanumeric characters and hyphens are allowed in the command string.": "يُسمح فقط بالأحرف الأبجدية الرقمية والواصلات في سلسلة الأمر.",
 	"Only collections can be edited, create a new knowledge base to edit/add documents.": "يمكن تعديل المجموعات فقط، أنشئ قاعدة معرفة جديدة لتعديل أو إضافة مستندات.",
 	"Only markdown files are allowed": "",
-	"Only select users and groups with permission can access": "يمكن الوصول فقط من قبل المستخدمين والمجموعات المصرح لهم",
+	"Only selected users and groups with permission can access": "يمكن الوصول فقط من قبل المستخدمين والمجموعات المصرح لهم",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "خطاء! يبدو أن عنوان URL غير صالح. يرجى التحقق مرة أخرى والمحاولة مرة أخرى.",
 	"Oops! There are files still uploading. Please wait for the upload to complete.": "عذرًا! لا تزال بعض الملفات قيد الرفع. يرجى الانتظار حتى يكتمل الرفع.",
 	"Oops! There was an error in the previous response.": "عذرًا! حدث خطأ في الرد السابق.",

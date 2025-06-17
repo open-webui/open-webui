@@ -914,7 +914,7 @@
 	"Only alphanumeric characters and hyphens are allowed in the command string.": "명령어 문자열에는 영문자, 숫자 및 하이픈(-)만 허용됩니다.",
 	"Only collections can be edited, create a new knowledge base to edit/add documents.": "가지고 있는 컬렉션만 수정 가능합니다, 새 지식 기반을 생성하여 문서를 수정 혹은 추가하십시오.",
 	"Only markdown files are allowed": "마크다운 파일만 허용됩니다",
-	"Only select users and groups with permission can access": "권한이 있는 사용자와 그룹만 접근 가능합니다.",
+	"Only selected users and groups with permission can access": "권한이 있는 사용자와 그룹만 접근 가능합니다.",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "이런! URL이 잘못된 것 같습니다. 다시 한번 확인하고 다시 시도해주세요.",
 	"Oops! There are files still uploading. Please wait for the upload to complete.": "이런! 파일이 계속 업로드중 입니다. 업로드가 완료될 때까지 잠시만 기다려주세요.",
 	"Oops! There was an error in the previous response.": "이런! 이전 응답에 에러가 있었던 것 같습니다.",

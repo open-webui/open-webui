@@ -914,7 +914,7 @@
 	"Only alphanumeric characters and hyphens are allowed in the command string.": "Chỉ ký tự số và gạch nối được phép trong chuỗi lệnh.",
 	"Only collections can be edited, create a new knowledge base to edit/add documents.": "Chỉ có thể chỉnh sửa bộ sưu tập, tạo cơ sở kiến thức mới để chỉnh sửa/thêm tài liệu.",
 	"Only markdown files are allowed": "",
-	"Only select users and groups with permission can access": "Chỉ người dùng và nhóm được chọn có quyền mới có thể truy cập",
+	"Only selected users and groups with permission can access": "Chỉ người dùng và nhóm được chọn có quyền mới có thể truy cập",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "Rất tiếc! URL dường như không hợp lệ. Vui lòng kiểm tra lại và thử lại.",
 	"Oops! There are files still uploading. Please wait for the upload to complete.": "Ối! Vẫn còn tệp đang tải lên. Vui lòng đợi quá trình tải lên hoàn tất.",
 	"Oops! There was an error in the previous response.": "Ối! Đã xảy ra lỗi trong phản hồi trước đó.",

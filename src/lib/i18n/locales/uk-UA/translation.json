@@ -914,7 +914,7 @@
 	"Only alphanumeric characters and hyphens are allowed in the command string.": "У рядку команди дозволено використовувати лише алфавітно-цифрові символи та дефіси.",
 	"Only collections can be edited, create a new knowledge base to edit/add documents.": "Редагувати можна лише колекції, створіть нову базу знань, щоб редагувати або додавати документи.",
 	"Only markdown files are allowed": "",
-	"Only select users and groups with permission can access": "Тільки вибрані користувачі та групи з дозволом можуть отримати доступ",
+	"Only selected users and groups with permission can access": "Тільки вибрані користувачі та групи з дозволом можуть отримати доступ",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "Упс! Схоже, що URL-адреса невірна. Будь ласка, перевірте ще раз та спробуйте ще раз.",
 	"Oops! There are files still uploading. Please wait for the upload to complete.": "Упс! Деякі файли все ще завантажуються. Будь ласка, зачекайте, поки завантаження завершиться.",
 	"Oops! There was an error in the previous response.": "Упс! Сталася помилка в попередній відповіді.",

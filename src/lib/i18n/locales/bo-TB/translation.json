@@ -914,7 +914,7 @@
 	"Only alphanumeric characters and hyphens are allowed in the command string.": "བཀའ་བརྡའི་ཡིག་ཕྲེང་ནང་ཨང་ཀི་དང་དབྱིན་ཡིག་གི་ཡིག་འབྲུ་དང་སྦྲེལ་རྟགས་ཁོ་ན་ཆོག་པ།",
 	"Only collections can be edited, create a new knowledge base to edit/add documents.": "བསྡུ་གསོག་ཁོ་ན་ཞུ་དག་བྱེད་ཐུབ། ཡིག་ཆ་ཞུ་དག་/སྣོན་པར་ཤེས་བྱའི་རྟེན་གཞི་གསར་པ་ཞིག་བཟོ་བ།",
 	"Only markdown files are allowed": "",
-	"Only select users and groups with permission can access": "དབང་ཚད་ཡོད་པའི་བེད་སྤྱོད་མཁན་དང་ཚོགས་པ་གདམ་ག་བྱས་པ་ཁོ་ན་འཛུལ་སྤྱོད་ཐུབ།",
+	"Only selected users and groups with permission can access": "དབང་ཚད་ཡོད་པའི་བེད་སྤྱོད་མཁན་དང་ཚོགས་པ་གདམ་ག་བྱས་པ་ཁོ་ན་འཛུལ་སྤྱོད་ཐུབ།",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "ཨོའོ། URL དེ་ནུས་མེད་ཡིན་པ་འདྲ། ཡང་བསྐྱར་ཞིབ་དཔྱད་བྱས་ནས་ཚོད་ལྟ་བྱེད་རོགས།",
 	"Oops! There are files still uploading. Please wait for the upload to complete.": "ཨོའོ། ད་དུང་སྤར་བཞིན་པའི་ཡིག་ཆ་ཡོད། སྤར་ཚར་བར་སྒུག་རོགས།",
 	"Oops! There was an error in the previous response.": "ཨོའོ། ལན་སྔ་མར་ནོར་འཁྲུལ་ཞིག་བྱུང་སོང་།",

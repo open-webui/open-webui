@@ -914,7 +914,7 @@
 	"Only alphanumeric characters and hyphens are allowed in the command string.": "Komut dizisinde yalnızca alfasayısal karakterler ve tireler kabul edilir.",
 	"Only collections can be edited, create a new knowledge base to edit/add documents.": "Yalnızca koleksiyonlar düzenlenebilir, belgeleri düzenlemek/eklemek için yeni bir bilgi tabanı oluşturun.",
 	"Only markdown files are allowed": "Yalnızca markdown biçimli dosyalar kullanılabilir",
-	"Only select users and groups with permission can access": "İzinli kullanıcılar ve gruplar yalnızca erişebilir",
+	"Only selected users and groups with permission can access": "İzinli kullanıcılar ve gruplar yalnızca erişebilir",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "Hop! URL geçersiz gibi görünüyor. Lütfen tekrar kontrol edin ve yeniden deneyin.",
 	"Oops! There are files still uploading. Please wait for the upload to complete.": "Hop! Hala yüklenen dosyalar var. Yüklemenin tamamlanmasını bekleyin.",
 	"Oops! There was an error in the previous response.": "Hop! Önceki yanıtta bir hata oluştu.",

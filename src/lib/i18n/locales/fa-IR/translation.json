@@ -914,7 +914,7 @@
 	"Only alphanumeric characters and hyphens are allowed in the command string.": "فقط کاراکترهای الفبایی و خط فاصله در رشته فرمان مجاز هستند.",
 	"Only collections can be edited, create a new knowledge base to edit/add documents.": "فقط مجموعه\u200cها قابل ویرایش هستند، برای ویرایش/افزودن اسناد یک پایگاه دانش جدید ایجاد کنید.",
 	"Only markdown files are allowed": "",
-	"Only select users and groups with permission can access": "فقط کاربران و گروه\u200cهای دارای مجوز می\u200cتوانند دسترسی داشته باشند",
+	"Only selected users and groups with permission can access": "فقط کاربران و گروه\u200cهای دارای مجوز می\u200cتوانند دسترسی داشته باشند",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "اوه! به نظر می رسد URL نامعتبر است. لطفاً دوباره بررسی کنید و دوباره امتحان کنید.",
 	"Oops! There are files still uploading. Please wait for the upload to complete.": "اوه! هنوز فایل\u200cهایی در حال آپلود هستند. لطفاً منتظر تکمیل آپلود بمانید.",
 	"Oops! There was an error in the previous response.": "اوه! در پاسخ قبلی خطایی رخ داد.",

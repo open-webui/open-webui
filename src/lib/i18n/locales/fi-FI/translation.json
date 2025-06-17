@@ -914,7 +914,7 @@
 	"Only alphanumeric characters and hyphens are allowed in the command string.": "Vain kirjaimet, numerot ja väliviivat ovat sallittuja komentosarjassa.",
 	"Only collections can be edited, create a new knowledge base to edit/add documents.": "Vain kokoelmia voi muokata, luo uusi tietokanta muokataksesi/lisätäksesi asiakirjoja.",
 	"Only markdown files are allowed": "Vain markdown tiedostot ovat sallittuja",
-	"Only select users and groups with permission can access": "Vain valitut käyttäjät ja ryhmät, joilla on käyttöoikeus, pääsevät käyttämään",
+	"Only selected users and groups with permission can access": "Vain valitut käyttäjät ja ryhmät, joilla on käyttöoikeus, pääsevät käyttämään",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "Hups! Näyttää siltä, että verkko-osoite on virheellinen. Tarkista se ja yritä uudelleen.",
 	"Oops! There are files still uploading. Please wait for the upload to complete.": "Hups! Tiedostoja on vielä ladattavana. Odota, että lataus on valmis.",
 	"Oops! There was an error in the previous response.": "Hups! Edellisessä vastauksessa oli virhe.",

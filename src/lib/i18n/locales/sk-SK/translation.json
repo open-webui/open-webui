@@ -914,7 +914,7 @@
 	"Only alphanumeric characters and hyphens are allowed in the command string.": "Príkazový reťazec môže obsahovať iba alfanumerické znaky a pomlčky.",
 	"Only collections can be edited, create a new knowledge base to edit/add documents.": "Iba kolekcie môžu byť upravované, na úpravu/pridanie dokumentov vytvorte novú znalostnú databázu.",
 	"Only markdown files are allowed": "",
-	"Only select users and groups with permission can access": "",
+	"Only selected users and groups with permission can access": "",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "Jejda! Vyzerá to, že URL adresa je neplatná. Prosím, skontrolujte ju a skúste to znova.",
 	"Oops! There are files still uploading. Please wait for the upload to complete.": "Jejda! Niektoré súbory sa stále nahrávajú. Prosím, počkajte, kým sa nahrávanie dokončí.",
 	"Oops! There was an error in the previous response.": "Jejda! V predchádzajúcej odpovedi došlo k chybe.",

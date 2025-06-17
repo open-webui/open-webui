@@ -914,7 +914,7 @@
 	"Only alphanumeric characters and hyphens are allowed in the command string.": "Επιτρέπονται μόνο αλφαριθμητικοί χαρακτήρες και παύλες στο string της εντολής.",
 	"Only collections can be edited, create a new knowledge base to edit/add documents.": "Μόνο συλλογές μπορούν να επεξεργαστούν, δημιουργήστε μια νέα βάση γνώσης για επεξεργασία/προσθήκη εγγράφων.",
 	"Only markdown files are allowed": "",
-	"Only select users and groups with permission can access": "Μόνο επιλεγμένοι χρήστες και ομάδες με άδεια μπορούν να έχουν πρόσβαση",
+	"Only selected users and groups with permission can access": "Μόνο επιλεγμένοι χρήστες και ομάδες με άδεια μπορούν να έχουν πρόσβαση",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "Ωχ! Φαίνεται ότι το URL είναι μη έγκυρο. Παρακαλώ ελέγξτε ξανά και δοκιμάστε.",
 	"Oops! There are files still uploading. Please wait for the upload to complete.": "Ωχ! Υπάρχουν αρχεία που εξακολουθούν να ανεβαίνουν. Παρακαλώ περιμένετε να ολοκληρωθεί η μεταφόρτωση.",
 	"Oops! There was an error in the previous response.": "Ωχ! Υπήρξε σφάλμα στην προηγούμενη απάντηση.",

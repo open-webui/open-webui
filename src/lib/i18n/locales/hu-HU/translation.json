@@ -914,7 +914,7 @@
 	"Only alphanumeric characters and hyphens are allowed in the command string.": "Csak alfanumerikus karakterek és kötőjelek engedélyezettek a parancssorban.",
 	"Only collections can be edited, create a new knowledge base to edit/add documents.": "Csak gyűjtemények szerkeszthetők, hozzon létre új tudásbázist dokumentumok szerkesztéséhez/hozzáadásához.",
 	"Only markdown files are allowed": "",
-	"Only select users and groups with permission can access": "Csak a kiválasztott, engedéllyel rendelkező felhasználók és csoportok férhetnek hozzá",
+	"Only selected users and groups with permission can access": "Csak a kiválasztott, engedéllyel rendelkező felhasználók és csoportok férhetnek hozzá",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "Hoppá! Úgy tűnik, az URL érvénytelen. Kérjük, ellenőrizze és próbálja újra.",
 	"Oops! There are files still uploading. Please wait for the upload to complete.": "Hoppá! Még vannak feltöltés alatt álló fájlok. Kérjük, várja meg a feltöltés befejezését.",
 	"Oops! There was an error in the previous response.": "Hoppá! Hiba történt az előző válaszban.",

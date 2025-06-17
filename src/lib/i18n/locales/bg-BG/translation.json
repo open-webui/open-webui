@@ -914,7 +914,7 @@
 	"Only alphanumeric characters and hyphens are allowed in the command string.": "Само алфанумерични знаци и тире са разрешени в командния низ.",
 	"Only collections can be edited, create a new knowledge base to edit/add documents.": "Само колекциите могат да бъдат редактирани, създайте нова база от знания, за да редактирате/добавяте документи.",
 	"Only markdown files are allowed": "",
-	"Only select users and groups with permission can access": "Само избрани потребители и групи с разрешение могат да имат достъп",
+	"Only selected users and groups with permission can access": "Само избрани потребители и групи с разрешение могат да имат достъп",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "Упс! Изглежда URL адресът е невалиден. Моля, проверете отново и опитайте пак.",
 	"Oops! There are files still uploading. Please wait for the upload to complete.": "Упс! Все още има файлове, които се качват. Моля, изчакайте качването да приключи.",
 	"Oops! There was an error in the previous response.": "Упс! Имаше грешка в предишния отговор.",

@@ -914,7 +914,7 @@
 	"Only alphanumeric characters and hyphens are allowed in the command string.": "Sólo se permiten caracteres alfanuméricos y guiones en a cadena de comando.",
 	"Only collections can be edited, create a new knowledge base to edit/add documents.": "Solo se pueden editar as coleccions, xerar unha nova base de coñecementos para editar / añadir documentos",
 	"Only markdown files are allowed": "",
-	"Only select users and groups with permission can access": "Solo os usuarios y grupos con permiso pueden acceder",
+	"Only selected users and groups with permission can access": "Solo os usuarios y grupos con permiso pueden acceder",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "¡Ups! Parece que a URL no es válida. Vuelva a verificar e inténtelo novamente.",
 	"Oops! There are files still uploading. Please wait for the upload to complete.": "¡Ups! Todavía hay arquivos subiendo. Por favor, espere a que a subida se complete.",
 	"Oops! There was an error in the previous response.": "¡Ups! Hubo un error en a resposta anterior.",

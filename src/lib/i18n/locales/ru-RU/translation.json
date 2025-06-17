@@ -914,7 +914,7 @@
 	"Only alphanumeric characters and hyphens are allowed in the command string.": "В строке команды разрешено использовать только буквенно-цифровые символы и дефисы.",
 	"Only collections can be edited, create a new knowledge base to edit/add documents.": "Редактировать можно только коллекции, создайте новую базу знаний для редактирования/добавления документов.",
 	"Only markdown files are allowed": "Разрешены только файлы markdown",
-	"Only select users and groups with permission can access": "Доступ имеют только избранные пользователи и группы, имеющие разрешение.",
+	"Only selected users and groups with permission can access": "Доступ имеют только избранные пользователи и группы, имеющие разрешение.",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "Упс! Похоже, что URL-адрес недействителен. Пожалуйста, перепроверьте и попробуйте еще раз.",
 	"Oops! There are files still uploading. Please wait for the upload to complete.": "Упс! Есть файлы, которые все еще загружаются. Пожалуйста, дождитесь завершения загрузки.",
 	"Oops! There was an error in the previous response.": "Упс! В предыдущем ответе была ошибка.",

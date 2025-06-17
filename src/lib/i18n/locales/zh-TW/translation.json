@@ -914,7 +914,7 @@
 	"Only alphanumeric characters and hyphens are allowed in the command string.": "命令字串中只允許使用英文字母、數字和連字號。",
 	"Only collections can be edited, create a new knowledge base to edit/add documents.": "只能編輯集合，請建立新的知識以編輯或新增檔案。",
 	"Only markdown files are allowed": "僅允許 Markdown 檔案",
-	"Only select users and groups with permission can access": "只有具有權限的選定使用者和群組可以存取",
+	"Only selected users and groups with permission can access": "只有具有權限的選定使用者和群組可以存取",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "哎呀！這個 URL 似乎無效。請仔細檢查並再試一次。",
 	"Oops! There are files still uploading. Please wait for the upload to complete.": "哎呀！還有檔案正在上傳。請等候上傳完畢。",
 	"Oops! There was an error in the previous response.": "哎呀！之前的回應有一處錯誤。",
