@@ -41,7 +41,8 @@
 		ENABLE_SEARCH_QUERY_GENERATION: true,
 		ENABLE_RETRIEVAL_QUERY_GENERATION: true,
 		QUERY_GENERATION_PROMPT_TEMPLATE: '',
-		TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE: ''
+		TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE: '',
+		TASK_MESSAGE_TRUNCATION_LENGTH: 1000
 	};
 
 	let promptSuggestions = [];
@@ -209,6 +210,26 @@
 							{/each}
 						</select>
 					</div>
+				</div>
+
+				<!-- Add this new section for Task Message Truncation Length -->
+				<div class="mb-2.5">
+					<div class=" mb-1 text-xs font-medium">{$i18n.t('Task Message Truncation Length')}</div>
+					<Tooltip
+						content={$i18n.t(
+							'Max characters per message in task prompts (e.g., for titles, follow-ups). 0 or -1 to disable. Default: 1000'
+						)}
+						placement="top-start"
+					>
+						<input
+							class="w-full outline-hidden bg-transparent"
+							type="number"
+							min="-1"
+							step="1"
+							bind:value={taskConfig.TASK_MESSAGE_TRUNCATION_LENGTH}
+							placeholder={$i18n.t('e.g., 1000 (0 or -1 to disable)')}
+						/>
+					</Tooltip>
 				</div>
 
 				<div class="mb-2.5 flex w-full items-center justify-between">
