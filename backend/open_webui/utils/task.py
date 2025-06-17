@@ -9,7 +9,7 @@ import uuid
 from open_webui.utils.misc import get_last_user_message, get_messages_content
 
 from open_webui.env import SRC_LOG_LEVELS
-from open_webui.config import DEFAULT_RAG_TEMPLATE
+from open_webui.config import DEFAULT_RAG_TEMPLATE, TASK_MESSAGE_TRUNCATION_LENGTH
 
 
 log = logging.getLogger(__name__)
@@ -107,34 +107,55 @@ def replace_messages_variable(
     template: str, messages: Optional[list[dict]] = None
 ) -> str:
     def replacement_function(match):
-        full_match = match.group(0)
-        start_length = match.group(1)
-        end_length = match.group(2)
-        middle_length = match.group(3)
-        # If messages is None, handle it as an empty list
-        if messages is None:
-            return ""
+       full_match = match.group(0)
+       start_digits_match = match.group(1) # Corresponds to MESSAGES:START:(\d+)
+       end_digits_match = match.group(2)   # Corresponds to MESSAGES:END:(\d+)
+       middle_digits_match = match.group(3) # Corresponds to MESSAGES:MIDDLETRUNCATE:(\d+)
 
-        # Process messages based on the number of messages required
-        if full_match == "{{MESSAGES}}":
-            return get_messages_content(messages)
-        elif start_length is not None:
-            return get_messages_content(messages[: int(start_length)])
-        elif end_length is not None:
-            return get_messages_content(messages[-int(end_length) :])
-        elif middle_length is not None:
-            mid = int(middle_length)
+       if messages is None:
+           return ""
 
-            if len(messages) <= mid:
-                return get_messages_content(messages)
-            # Handle middle truncation: split to get start and end portions of the messages list
-            half = mid // 2
-            start_msgs = messages[:half]
-            end_msgs = messages[-half:] if mid % 2 == 0 else messages[-(half + 1) :]
-            formatted_start = get_messages_content(start_msgs)
-            formatted_end = get_messages_content(end_msgs)
-            return f"{formatted_start}\n{formatted_end}"
-        return ""
+       selected_messages = []
+       if full_match == "{{MESSAGES}}":
+           selected_messages = messages
+       elif start_digits_match is not None:
+           count = int(start_digits_match)
+           selected_messages = messages[:count]
+       elif end_digits_match is not None:
+           count = int(end_digits_match)
+           selected_messages = messages[-count:]
+       elif middle_digits_match is not None:
+           count = int(middle_digits_match)
+           if len(messages) <= count:
+               selected_messages = messages
+           else:
+               half = count // 2
+               start_part = messages[:half]
+               end_part_count = count - half # Number of messages to take from the end
+               end_part = messages[-end_part_count:]
+               selected_messages = start_part + end_part
+       else:
+           # This case should not be reached if regex matches as expected
+           return ""
+
+       processed_messages_for_formatting = []
+       truncate_limit = TASK_MESSAGE_TRUNCATION_LENGTH.value
+
+       for message_dict in selected_messages:
+           message_copy = message_dict.copy()
+           content = message_copy.get("content")
+           original_content = "" if content is None else str(content)
+
+           if truncate_limit > 0 and len(original_content) > truncate_limit:
+               # Ensure we don't get a negative index for slicing if truncate_limit is very small
+               slice_end_index = max(0, truncate_limit - 3)
+               message_copy["content"] = original_content[:slice_end_index] + "..."
+           else:
+               message_copy["content"] = original_content
+
+           processed_messages_for_formatting.append(message_copy)
+
+       return get_messages_content(processed_messages_for_formatting)
 
     template = re.sub(
         r"{{MESSAGES}}|{{MESSAGES:START:(\d+)}}|{{MESSAGES:END:(\d+)}}|{{MESSAGES:MIDDLETRUNCATE:(\d+)}}",
