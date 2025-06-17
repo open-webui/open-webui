@@ -212,17 +212,16 @@
 					</div>
 				</div>
 
-				<!-- Add this new section for Task Message Truncation Length -->
 				<div class="mb-2.5">
 					<div class=" mb-1 text-xs font-medium">{$i18n.t('Task Message Truncation Length')}</div>
 					<Tooltip
 						content={$i18n.t(
-							'Max characters per message in task prompts (e.g., for titles, follow-ups). 0 or -1 to disable. Default: 1000'
+							'Max characters per message element in task prompts. -1 for unlimited.'
 						)}
 						placement="top-start"
 					>
 						<input
-							class="w-full outline-hidden bg-transparent"
+							class=" w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 							type="number"
 							min="-1"
 							step="1"
