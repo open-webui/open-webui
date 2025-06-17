@@ -1,5 +1,5 @@
 import requests
-import logging
+import logging, os
 from typing import Iterator, List, Union
 
 from langchain_core.document_loaders import BaseLoader
@@ -25,7 +25,7 @@ class ExternalDocumentLoader(BaseLoader):
         self.file_path = file_path
         self.mime_type = mime_type
 
-    def load(self) -> list[Document]:
+    def load(self) -> List[Document]:
         with open(self.file_path, "rb") as f:
             data = f.read()
 
@@ -36,23 +36,48 @@ class ExternalDocumentLoader(BaseLoader):
         if self.api_key is not None:
             headers["Authorization"] = f"Bearer {self.api_key}"
 
+        try:
+            headers["X-Filename"] = os.path.basename(self.file_path)
+        except:
+            pass
+
         url = self.url
         if url.endswith("/"):
             url = url[:-1]
 
-        r = requests.put(f"{url}/process", data=data, headers=headers)
+        try:
+            response = requests.put(f"{url}/process", data=data, headers=headers)
+        except Exception as e:
+            log.error(f"Error connecting to endpoint: {e}")
+            raise Exception(f"Error connecting to endpoint: {e}")
 
-        if r.ok:
-            res = r.json()
+        if response.ok:
 
-            if res:
-                return [
-                    Document(
-                        page_content=res.get("page_content"),
-                        metadata=res.get("metadata"),
-                    )
-                ]
+            response_data = response.json()
+            if response_data:
+                if isinstance(response_data, dict):
+                    return [
+                        Document(
+                            page_content=response_data.get("page_content"),
+                            metadata=response_data.get("metadata"),
+                        )
+                    ]
+                elif isinstance(response_data, list):
+                    documents = []
+                    for document in response_data:
+                        documents.append(
+                            Document(
+                                page_content=document.get("page_content"),
+                                metadata=document.get("metadata"),
+                            )
+                        )
+                    return documents
+                else:
+                    raise Exception("Error loading document: Unable to parse content")
+
             else:
                 raise Exception("Error loading document: No content returned")
         else:
-            raise Exception(f"Error loading document: {r.status_code} {r.text}")
+            raise Exception(
+                f"Error loading document: {response.status_code} {response.text}"
+            )

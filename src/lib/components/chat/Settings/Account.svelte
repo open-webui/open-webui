@@ -86,7 +86,7 @@
 	});
 </script>
 
-<div class="flex flex-col h-full justify-between text-sm">
+<div id="tab-account" class="flex flex-col h-full justify-between text-sm">
 	<div class=" overflow-y-scroll max-h-[28rem] lg:max-h-full">
 		<input
 			id="profile-image-input"

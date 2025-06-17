@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.6.13] - 2025-05-30
+## [0.6.15] - 2025-05-16
 
 ### Added
 - 📄 **העלאת מסמכים:**  
@@ -24,6 +24,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - 🖼️ **כלי יצירת תמונות:**  
   ניתן ליצור תמונות באמצעות AI ישירות בתוך הצ׳אט!
+
+- 🕰️ **תצוגת זמן שליחה של הודעה בצ'אט:**  
+  בעת ריחוף עם העכבר על בועת הודעה – יוצג מתי היא נשלחה.  
 
 ### Fixed
 - 🈹 **טקסט מעורב בעברית ואנגלית?:**  
