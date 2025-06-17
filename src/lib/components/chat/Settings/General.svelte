@@ -26,11 +26,11 @@
 
 	let currentTextareaClassName: string;
 	$: {
-		const base = "w-full text-sm outline-hidden resize-none";
+		const base = "w-full text-sm outline-hidden resize-vertical";
 		if ($settings.highContrastMode) {
 			currentTextareaClassName = `${base} p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-850 text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 overflow-y-hidden`;
 		} else {
-			currentTextareaClassName = `${base} bg-white dark:text-gray-300 dark:bg-gray-900`; // Original simpler style
+			currentTextareaClassName = `${base} bg-white dark:text-gray-300 dark:bg-gray-900`;
 		}
 	}
 
