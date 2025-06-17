@@ -265,6 +265,14 @@
 
 		<div class="  flex w-full justify-between my-2 pr-2">
 			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Allow Chat System Prompt')}
+			</div>
+
+			<Switch bind:state={permissions.chat.system_prompt} />
+		</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
 				{$i18n.t('Allow Chat Delete')}
 			</div>
 

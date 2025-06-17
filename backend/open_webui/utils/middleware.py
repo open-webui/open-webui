@@ -697,7 +697,7 @@ def apply_params_to_form_data(form_data, model):
         # If custom_params are provided, merge them into params
         params = deep_update(params, custom_params)
 
-    if model.get("ollama"):
+    if model.get("owned_by") == "ollama":
         # Ollama specific parameters
         form_data["options"] = params
     else:
@@ -1078,6 +1078,7 @@ async def process_chat_response(
                             follow_ups = json.loads(follow_ups_string).get(
                                 "follow_ups", []
                             )
+
                             Chats.upsert_message_to_chat_by_id_and_message_id(
                                 metadata["chat_id"],
                                 metadata["message_id"],
@@ -1098,7 +1099,12 @@ async def process_chat_response(
                             pass
 
                 if TASKS.TITLE_GENERATION in tasks:
+                    user_message = get_last_user_message(messages)
+                    if user_message and len(user_message) > 100:
+                        user_message = user_message[:100] + "..."
+
                     if tasks[TASKS.TITLE_GENERATION]:
+
                         res = await generate_title(
                             request,
                             {
@@ -1114,7 +1120,9 @@ async def process_chat_response(
                                 title_string = (
                                     res.get("choices", [])[0]
                                     .get("message", {})
-                                    .get("content", message.get("content", "New Chat"))
+                                    .get(
+                                        "content", message.get("content", user_message)
+                                    )
                                 )
                             else:
                                 title_string = ""
@@ -1125,13 +1133,13 @@ async def process_chat_response(
 
                             try:
                                 title = json.loads(title_string).get(
-                                    "title", "New Chat"
+                                    "title", user_message
                                 )
                             except Exception as e:
                                 title = ""
 
                             if not title:
-                                title = messages[0].get("content", "New Chat")
+                                title = messages[0].get("content", user_message)
 
                             Chats.update_chat_title_by_id(metadata["chat_id"], title)
 
@@ -1142,14 +1150,14 @@ async def process_chat_response(
                                 }
                             )
                     elif len(messages) == 2:
-                        title = messages[0].get("content", "New Chat")
+                        title = messages[0].get("content", user_message)
 
                         Chats.update_chat_title_by_id(metadata["chat_id"], title)
 
                         await event_emitter(
                             {
                                 "type": "chat:title",
-                                "data": message.get("content", "New Chat"),
+                                "data": message.get("content", user_message),
                             }
                         )
 
@@ -2053,27 +2061,37 @@ async def process_chat_response(
                     tools = metadata.get("tools", {})
 
                     results = []
+
                     for tool_call in response_tool_calls:
                         tool_call_id = tool_call.get("id", "")
                         tool_name = tool_call.get("function", {}).get("name", "")
+                        tool_args = tool_call.get("function", {}).get("arguments", "{}")
 
                         tool_function_params = {}
                         try:
                             # json.loads cannot be used because some models do not produce valid JSON
-                            tool_function_params = ast.literal_eval(
-                                tool_call.get("function", {}).get("arguments", "{}")
-                            )
+                            tool_function_params = ast.literal_eval(tool_args)
                         except Exception as e:
                             log.debug(e)
                             # Fallback to JSON parsing
                             try:
-                                tool_function_params = json.loads(
-                                    tool_call.get("function", {}).get("arguments", "{}")
-                                )
+                                tool_function_params = json.loads(tool_args)
                             except Exception as e:
-                                log.debug(
-                                    f"Error parsing tool call arguments: {tool_call.get('function', {}).get('arguments', '{}')}"
+                                log.error(
+                                    f"Error parsing tool call arguments: {tool_args}"
                                 )
+
+                        # Mutate the original tool call response params as they are passed back to the passed
+                        # back to the LLM via the content blocks. If they are in a json block and are invalid json,
+                        # this can cause downstream LLM integrations to fail (e.g. bedrock gateway) where response
+                        # params are not valid json.
+                        # Main case so far is no args = "" = invalid json.
+                        log.debug(
+                            f"Parsed args from {tool_args} to {tool_function_params}"
+                        )
+                        tool_call.setdefault("function", {})["arguments"] = json.dumps(
+                            tool_function_params
+                        )
 
                         tool_result = None
 

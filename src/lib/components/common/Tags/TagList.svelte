@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
+	import { getContext } from 'svelte';
+	const i18n = getContext('i18n');
 	import Tooltip from '../Tooltip.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import Badge from '../Badge.svelte';
@@ -10,7 +12,7 @@
 
 {#each tags as tag}
 	<Tooltip content={tag.name}>
-		<div
+		<li
 			class="relative group/tags px-1.5 py-[0.2px] gap-0.5 flex justify-between h-fit max-h-fit w-fit items-center rounded-full bg-gray-500/20 text-gray-700 dark:text-gray-200 transition cursor-pointer"
 		>
 			<div class=" text-[0.7rem] font-medium self-center line-clamp-1 w-fit">
@@ -23,10 +25,11 @@
 						dispatch('delete', tag.name);
 					}}
 					type="button"
+					aria-label={$i18n.t('Remove this tag from list')}
 				>
 					<XMark className="size-3" strokeWidth="2.5" />
 				</button>
 			</div>
-		</div>
+		</li>
 	</Tooltip>
 {/each}

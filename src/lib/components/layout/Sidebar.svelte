@@ -490,10 +490,9 @@
 				draggable="false"
 				on:click={async () => {
 					selectedChatId = null;
-					await goto('/');
-					const newChatButton = document.getElementById('new-chat-button');
+
+					await temporaryChatEnabled.set(false);
 					setTimeout(() => {
-						newChatButton?.click();
 						if ($mobile) {
 							showSidebar.set(false);
 						}
@@ -505,7 +504,7 @@
 						<img
 							crossorigin="anonymous"
 							src="{WEBUI_BASE_URL}/static/favicon.png"
-							class=" size-5 -translate-x-1.5 rounded-full"
+							class="sidebar-new-chat-icon size-5 -translate-x-1.5 rounded-full"
 							alt="logo"
 						/>
 					</div>
@@ -645,11 +644,7 @@
 			</div>
 		{/if}
 
-		<div
-			class="relative flex flex-col flex-1 overflow-y-auto overflow-x-hidden {$temporaryChatEnabled
-				? 'opacity-20'
-				: ''}"
-		>
+		<div class="relative flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
 			{#if ($models ?? []).length > 0 && ($settings?.pinnedModels ?? []).length > 0}
 				<div class="mt-0.5">
 					{#each $settings.pinnedModels as modelId (modelId)}
@@ -773,10 +768,6 @@
 					}
 				}}
 			>
-				{#if $temporaryChatEnabled}
-					<div class="absolute z-40 w-full h-full flex justify-center"></div>
-				{/if}
-
 				{#if $pinnedChats.length > 0}
 					<div class="flex flex-col space-y-1 rounded-xl">
 						<Folder
