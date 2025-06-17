@@ -1289,7 +1289,7 @@
 													</Tooltip>
 												{/if}
 
-												{#if ($_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter) && (customModel?.meta?.capabilities?.code_interpreter ?? true)}
+												<!-- {#if ($_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter) && (customModel?.meta?.capabilities?.code_interpreter ?? true)}
 													<Tooltip content={$i18n.t('Execute code for analysis')} placement="top">
 														<button
 															on:click|preventDefault={() => {
@@ -1311,7 +1311,7 @@
 															{/if}
 														</button>
 													</Tooltip>
-												{/if}
+												{/if} -->
 											{/if}
 										</div>
 									</div>
