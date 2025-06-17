@@ -35,6 +35,7 @@
 		repeat_penalty: null,
 		use_mmap: null,
 		use_mlock: null,
+		keep_reasoning: null,
 		think: null,
 		format: null,
 		keep_alive: null,
@@ -1095,6 +1096,48 @@
 			{/if}
 		</div>
 	{/if}
+
+	<div class=" py-0.5 w-full justify-between">
+		<Tooltip
+			content={$i18n.t(
+				'Keep reasoning tokens visible in the response. When disabled, reasoning tokens (like <think> blocks) will be detected and hidden from the final output to provide cleaner responses.'
+			)}
+			placement="top-start"
+			className="inline-tooltip"
+		>
+			<div class="flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">
+					{'keep_reasoning'}
+				</div>
+
+				<button
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
+					type="button"
+					on:click={() => {
+						params.keep_reasoning = (params?.keep_reasoning ?? null) === null ? false : null;
+					}}
+				>
+					{#if (params?.keep_reasoning ?? null) === null}
+						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+					{:else}
+						<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
+					{/if}
+				</button>
+			</div>
+		</Tooltip>
+
+		{#if (params?.keep_reasoning ?? null) !== null}
+			<div class="flex justify-between items-center mt-1">
+				<div class="text-xs text-gray-500">
+					{params.keep_reasoning ? 'Enabled' : 'Disabled'}
+				</div>
+
+				<div class=" pr-2">
+					<Switch bind:state={params.keep_reasoning} />
+				</div>
+			</div>
+		{/if}
+	</div>
 
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip

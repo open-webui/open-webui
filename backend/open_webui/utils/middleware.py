@@ -1702,8 +1702,8 @@ async def process_chat_response(
                 }
             ]
 
-            # We might want to disable this by default
-            DETECT_REASONING = True
+            DETECT_REASONING = not form_data.get("keep_reasoning", False)
+            
             DETECT_SOLUTION = True
             DETECT_CODE_INTERPRETER = metadata.get("features", {}).get(
                 "code_interpreter", False
