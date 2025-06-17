@@ -1138,16 +1138,16 @@ export function getPeriodRange(period) {
 	let start;
 
 	switch (period) {
-		case 'last_30_days':
+		case 'this_month':
+			start = end.startOf('month');
+			break;
+		case 'past_30_days':
 			start = end.subtract(30, 'day');
 			break;
-		case 'last_3_months':
+		case 'past_3_months':
 			start = end.subtract(3, 'month');
 			break;
-		case 'last_6_months':
-			start = end.subtract(6, 'month');
-			break;
-		case 'last_year':
+		case 'past_year':
 			start = end.subtract(1, 'year');
 			break;
 		default:

@@ -18,14 +18,10 @@
 
 	const i18n = getContext('i18n');
 
-	$: console.log(WEBUI_BASE_URL);
-
 	export let users = [];
 	export let getUsersHandler: Function;
 	export let getSubscription: Function;
 	let page = 1;
-
-	$: console.log(users, 'users');
 
 	let invitedEmails: string[] = [];
 

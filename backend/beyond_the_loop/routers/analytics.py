@@ -3,7 +3,6 @@ from datetime import datetime, timedelta
 from fastapi import HTTPException, Depends
 from fastapi.params import Query
 
-from beyond_the_loop.models.users import Users
 from beyond_the_loop.models.users import get_users_by_company, get_active_users_by_company
 from open_webui.internal.db import get_db
 from beyond_the_loop.models.completions import Completion
@@ -53,22 +52,26 @@ async def get_top_models(
             raise HTTPException(status_code=400, detail="Start date must be before end date.")
 
         with get_db() as db:
-            query = db.query(
+            company_user_ids = db.query(User.id).filter_by(company_id=user.company_id).all()
+            company_user_ids = [u.id for u in company_user_ids]
+    
+            top_models = db.query(
                 Completion.model,
-                func.count(Completion.id).label("usage_count")
+                func.sum(Completion.credits_used).label("credits_used")
             ).filter(
                 Completion.created_at >= start_timestamp,
-                Completion.created_at <= end_timestamp
-            )
-
-            query = query.filter(Completion.user_id == user.id)
-
-            top_models = query.group_by(Completion.model).order_by(func.count(Completion.id).desc()).limit(3).all()
+                Completion.created_at <= end_timestamp,
+                Completion.user_id.in_(company_user_ids)
+            ).group_by(
+                Completion.model
+            ).order_by(
+                func.sum(Completion.credits_used).desc()
+            ).limit(3).all()
 
         if not top_models:
             return {"message": "No data found for the given parameters."}
 
-        return [{"model": model, "usage_count": count} for model, count in top_models]
+        return [{"model": model, "credits_used": credit_sum} for model, credit_sum in top_models]
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD.")
     except Exception as e:

@@ -28,7 +28,6 @@
 	let showUpdateDetails = false;
 	let showBuyFlexCredits = false;
 
-	$: console.log(showUpdateDetails)
 	let mounted = false;
 	export let plans = [];
 	onMount(() => {
@@ -105,9 +104,8 @@
 		await pollForCreditChange($subscription?.flex_credits_remaining, 2000, 20000);
 		
 	}
-	$: console.log($subscription);
+	
 	$: currentPlan = plans?.find((item) => item.id === $subscription?.plan);
-	$: console.log(currentPlan, 'current plan');
 
 	$: seatsWidth = $subscription?.seats ? $subscription?.seats_taken > $subscription?.seats ? '100%' : `${($subscription?.seats_taken/$subscription?.seats*100)}%` : '100%';
 	$: creditsWidth = $subscription?.credits_remaining ? `${(((currentPlan?.credits_per_month - $subscription?.credits_remaining)/currentPlan?.credits_per_month) * 100)}%` : '100%';
