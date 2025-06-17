@@ -27,8 +27,13 @@
 
 	let modalElement = null;
 	let mounted = false;
+	let internalInputValue = '';
 
 	let focusTrap: FocusTrap.FocusTrap | null = null;
+
+	$: if (show) {
+		internalInputValue = inputValue || '';
+	}
 
 	const handleKeyDown = (event: KeyboardEvent) => {
 		if (event.key === 'Escape') {
@@ -45,7 +50,7 @@
 	const confirmHandler = async () => {
 		show = false;
 		await onConfirm();
-		dispatch('confirm', inputValue);
+		dispatch('confirm', internalInputValue);
 	};
 
 	onMount(() => {
@@ -119,7 +124,7 @@
 
 						{#if input}
 							<textarea
-								bind:value={inputValue}
+								bind:value={internalInputValue}
 								placeholder={inputPlaceholder ? inputPlaceholder : $i18n.t('Enter your message')}
 								class="w-full mt-2 rounded-lg px-4 py-2 text-sm dark:text-gray-300 dark:bg-gray-900 outline-hidden resize-none"
 								rows="3"
