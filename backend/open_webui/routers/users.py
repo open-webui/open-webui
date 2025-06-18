@@ -14,7 +14,11 @@ from open_webui.models.users import (
 )
 
 
-from open_webui.socket.main import get_active_status_by_user_id
+from open_webui.socket.main import (
+    get_active_status_by_user_id,
+    get_active_user_ids,
+    get_user_active_status,
+)
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -28,6 +32,24 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 router = APIRouter()
+
+
+############################
+# GetActiveUsers
+############################
+
+
+@router.get("/active")
+async def get_active_users(
+    user=Depends(get_verified_user),
+):
+    """
+    Get a list of active users.
+    """
+    return {
+        "user_ids": get_active_user_ids(),
+    }
+
 
 ############################
 # GetUsers
@@ -111,6 +133,7 @@ class SharingPermissions(BaseModel):
 
 class ChatPermissions(BaseModel):
     controls: bool = True
+    system_prompt: bool = True
     file_upload: bool = True
     delete: bool = True
     edit: bool = True
@@ -301,6 +324,18 @@ async def get_user_by_id(user_id: str, user=Depends(get_verified_user)):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.USER_NOT_FOUND,
         )
+
+
+############################
+# GetUserActiveStatusById
+############################
+
+
+@router.get("/{user_id}/active", response_model=dict)
+async def get_user_active_status_by_id(user_id: str, user=Depends(get_verified_user)):
+    return {
+        "active": get_user_active_status(user_id),
+    }
 
 
 ############################

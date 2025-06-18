@@ -67,20 +67,22 @@
 			</div>
 		</Collapsible>
 
-		{#if $user?.role === 'admin' || $user?.permissions.chat?.controls}
+		{#if $user?.role === 'admin' || ($user?.permissions.chat?.system_prompt ?? true)}
 			<hr class="my-2 border-gray-50 dark:border-gray-700/10" />
 
 			<Collapsible title={$i18n.t('System Prompt')} open={true} buttonClassName="w-full">
 				<div class="" slot="content">
 					<textarea
 						bind:value={params.system}
-						class="w-full text-xs py-1.5 bg-transparent outline-hidden resize-none"
+						class="w-full text-xs py-1.5 bg-transparent outline-hidden resize-vertical"
 						rows="4"
 						placeholder={$i18n.t('Enter system prompt')}
 					/>
 				</div>
 			</Collapsible>
+		{/if}
 
+		{#if $user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true)}
 			<hr class="my-2 border-gray-50 dark:border-gray-700/10" />
 
 			<Collapsible title={$i18n.t('Advanced Params')} open={true} buttonClassName="w-full">

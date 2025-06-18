@@ -410,10 +410,10 @@
 				</div>
 			{/if}
 
-			<div class="px-3 max-h-64 overflow-y-auto scrollbar-hidden group relative">
+			<div class="px-3">
 				{#if tags && items.filter((item) => !(item.model?.info?.meta?.hidden ?? false)).length > 0}
 					<div
-						class=" flex w-full sticky top-0 z-10 bg-white dark:bg-gray-850 overflow-x-auto scrollbar-none"
+						class=" flex w-full bg-white dark:bg-gray-850 overflow-x-auto scrollbar-none"
 						on:wheel={(e) => {
 							if (e.deltaY !== 0) {
 								e.preventDefault();
@@ -425,7 +425,7 @@
 							class="flex gap-1 w-fit text-center text-sm font-medium rounded-full bg-transparent px-1.5 pb-0.5"
 							bind:this={tagsContainerElement}
 						>
-							{#if (items.find((item) => item.model?.connection_type === 'local') && items.find((item) => item.model?.connection_type === 'external')) || items.find((item) => item.model?.direct) || tags.length > 0}
+							{#if items.find((item) => item.model?.connection_type === 'local') || items.find((item) => item.model?.connection_type === 'external') || items.find((item) => item.model?.direct) || tags.length > 0}
 								<button
 									class="min-w-fit outline-none p-1.5 {selectedTag === '' &&
 									selectedConnectionType === ''
@@ -440,7 +440,7 @@
 								</button>
 							{/if}
 
-							{#if items.find((item) => item.model?.connection_type === 'local') && items.find((item) => item.model?.connection_type === 'external')}
+							{#if items.find((item) => item.model?.connection_type === 'local')}
 								<button
 									class="min-w-fit outline-none p-1.5 {selectedConnectionType === 'local'
 										? ''
@@ -452,6 +452,9 @@
 								>
 									{$i18n.t('Local')}
 								</button>
+							{/if}
+
+							{#if items.find((item) => item.model?.connection_type === 'external')}
 								<button
 									class="min-w-fit outline-none p-1.5 {selectedConnectionType === 'external'
 										? ''
@@ -495,7 +498,9 @@
 						</div>
 					</div>
 				{/if}
+			</div>
 
+			<div class="px-3 max-h-64 overflow-y-auto group relative">
 				{#each filteredItems as item, index}
 					<ModelItem
 						{selectedModelIdx}

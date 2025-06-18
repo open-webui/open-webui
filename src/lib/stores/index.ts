@@ -135,6 +135,42 @@ type OllamaModelDetails = {
 };
 
 type Settings = {
+	pinnedModels?: never[];
+	toolServers?: never[];
+	detectArtifacts?: boolean;
+	showUpdateToast?: boolean;
+	showChangelog?: boolean;
+	showEmojiInCall?: boolean;
+	voiceInterruption?: boolean;
+	collapseCodeBlocks?: boolean;
+	expandDetails?: boolean;
+	notificationSound?: boolean;
+	notificationSoundAlways?: boolean;
+	stylizedPdfExport?: boolean;
+	notifications?: any;
+	imageCompression?: boolean;
+	imageCompressionSize?: any;
+	widescreenMode?: null;
+	largeTextAsFile?: boolean;
+	promptAutocomplete?: boolean;
+	hapticFeedback?: boolean;
+	responseAutoCopy?: any;
+	richTextInput?: boolean;
+	params?: any;
+	userLocation?: any;
+	webSearch?: boolean;
+	memory?: boolean;
+	autoTags?: boolean;
+	autoFollowUps?: boolean;
+	splitLargeChunks?(body: any, splitLargeChunks: any): unknown;
+	backgroundImageUrl?: null;
+	landingPageMode?: string;
+	iframeSandboxAllowForms?: boolean;
+	iframeSandboxAllowSameOrigin?: boolean;
+	scrollOnBranchChange?: boolean;
+	directConnections?: null;
+	chatBubble?: boolean;
+	copyFormatted?: boolean;
 	models?: string[];
 	conversationMode?: boolean;
 	speechAutoSend?: boolean;
@@ -142,14 +178,13 @@ type Settings = {
 	audio?: AudioSettings;
 	showUsername?: boolean;
 	notificationEnabled?: boolean;
+	highContrastMode?: boolean;
 	title?: TitleSettings;
 	splitLargeDeltas?: boolean;
-	chatDirection: 'LTR' | 'RTL' | 'auto';
+	chatDirection?: 'LTR' | 'RTL' | 'auto';
 	ctrlEnterToSend?: boolean;
 
 	system?: string;
-	requestFormat?: string;
-	keepAlive?: string;
 	seed?: number;
 	temperature?: string;
 	repeat_penalty?: string;
@@ -166,6 +201,8 @@ type ModelOptions = {
 };
 
 type AudioSettings = {
+	stt: any;
+	tts: any;
 	STTEngine?: string;
 	TTSEngine?: string;
 	speaker?: string;
@@ -196,6 +233,7 @@ type Document = {
 };
 
 type Config = {
+	license_metadata: any;
 	status: boolean;
 	name: string;
 	version: string;
@@ -235,6 +273,7 @@ type PromptSuggestion = {
 };
 
 type SessionUser = {
+	permissions: any;
 	id: string;
 	email: string;
 	name: string;

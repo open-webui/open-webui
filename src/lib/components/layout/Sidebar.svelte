@@ -490,10 +490,9 @@
 				draggable="false"
 				on:click={async () => {
 					selectedChatId = null;
-					await goto('/');
-					const newChatButton = document.getElementById('new-chat-button');
+
+					await temporaryChatEnabled.set(false);
 					setTimeout(() => {
-						newChatButton?.click();
 						if ($mobile) {
 							showSidebar.set(false);
 						}
@@ -505,7 +504,7 @@
 						<img
 							crossorigin="anonymous"
 							src="{WEBUI_BASE_URL}/static/favicon.png"
-							class=" size-5 -translate-x-1.5 rounded-full"
+							class="sidebar-new-chat-icon size-5 -translate-x-1.5 rounded-full"
 							alt="logo"
 						/>
 					</div>
@@ -645,51 +644,47 @@
 			</div>
 		{/if}
 
-		{#if ($models ?? []).length > 0 && ($settings?.pinnedModels ?? []).length > 0}
-			<div class="py-1">
-				{#each $settings.pinnedModels as modelId (modelId)}
-					{@const model = $models.find((model) => model.id === modelId)}
-					{#if model}
-						<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
-							<a
-								class="grow flex items-center space-x-2.5 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-								href="/?model={modelId}"
-								on:click={() => {
-									selectedChatId = null;
-									chatId.set('');
+		<div class="relative flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
+			{#if ($models ?? []).length > 0 && ($settings?.pinnedModels ?? []).length > 0}
+				<div class="mt-0.5">
+					{#each $settings.pinnedModels as modelId (modelId)}
+						{@const model = $models.find((model) => model.id === modelId)}
+						{#if model}
+							<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
+								<a
+									class="grow flex items-center space-x-2.5 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+									href="/?model={modelId}"
+									on:click={() => {
+										selectedChatId = null;
+										chatId.set('');
 
-									if ($mobile) {
-										showSidebar.set(false);
-									}
-								}}
-								draggable="false"
-							>
-								<div class="self-center">
-									<img
-										crossorigin="anonymous"
-										src={model?.info?.meta?.profile_image_url ?? '/static/favicon.png'}
-										class=" size-5 rounded-full -translate-x-[0.5px]"
-										alt="logo"
-									/>
-								</div>
-
-								<div class="flex self-center translate-y-[0.5px]">
-									<div class=" self-center font-medium text-sm font-primary line-clamp-1">
-										{model?.name ?? modelId}
+										if ($mobile) {
+											showSidebar.set(false);
+										}
+									}}
+									draggable="false"
+								>
+									<div class="self-center shrink-0">
+										<img
+											crossorigin="anonymous"
+											src={model?.info?.meta?.profile_image_url ?? '/static/favicon.png'}
+											class=" size-5 rounded-full -translate-x-[0.5px]"
+											alt="logo"
+										/>
 									</div>
-								</div>
-							</a>
-						</div>
-					{/if}
-				{/each}
-			</div>
-		{/if}
 
-		<div
-			class="relative flex flex-col flex-1 overflow-y-auto overflow-x-hidden {$temporaryChatEnabled
-				? 'opacity-20'
-				: ''}"
-		>
+									<div class="flex self-center translate-y-[0.5px]">
+										<div class=" self-center font-medium text-sm font-primary line-clamp-1">
+											{model?.name ?? modelId}
+										</div>
+									</div>
+								</a>
+							</div>
+						{/if}
+					{/each}
+				</div>
+			{/if}
+
 			{#if $config?.features?.enable_channels && ($user?.role === 'admin' || $channels.length > 0)}
 				<Folder
 					className="px-2 mt-0.5"
@@ -773,10 +768,6 @@
 					}
 				}}
 			>
-				{#if $temporaryChatEnabled}
-					<div class="absolute z-40 w-full h-full flex justify-center"></div>
-				{/if}
-
 				{#if $pinnedChats.length > 0}
 					<div class="flex flex-col space-y-1 rounded-xl">
 						<Folder
