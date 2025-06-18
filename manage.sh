@@ -35,12 +35,12 @@ case "$1" in
     "pipelines"|"pipes")
         echo "🔧 Available Pipelines:"
         echo ""
-        curl -s http://localhost:9099/info | jq . 2>/dev/null || echo "❌ Pipelines not running or jq not installed"
+        curl -s -H "Authorization: Bearer 0p3n-w3bu!" http://localhost:9099/models | jq . 2>/dev/null || echo "❌ Pipelines not running or jq not installed"
         ;;
     "test-pipeline"|"tp")
         echo "🧪 Testing pipeline connection..."
         echo ""
-        response=$(curl -s -w "\nHTTP_CODE:%{http_code}" \
+        response=$(curl -s \
                    -H "Authorization: Bearer 0p3n-w3bu!" \
                    -H "Content-Type: application/json" \
                    -d '{
@@ -48,10 +48,11 @@ case "$1" in
                      "messages": [{"role": "user", "content": "Hello pipeline!"}],
                      "stream": false
                    }' \
+                   -w "HTTP_CODE:%{http_code}" \
                    http://localhost:9099/v1/chat/completions)
         
-        http_code=$(echo "$response" | tail -n1 | cut -d':' -f2)
-        body=$(echo "$response" | head -n -1)
+        http_code=$(echo "$response" | grep -o "HTTP_CODE:[0-9]*" | cut -d':' -f2)
+        body=$(echo "$response" | sed 's/HTTP_CODE:[0-9]*$//')
         
         if [ "$http_code" = "200" ]; then
             echo "✅ Pipeline connection successful!"
@@ -59,6 +60,8 @@ case "$1" in
         else
             echo "❌ Pipeline connection failed (HTTP $http_code)"
             echo "Response: $body"
+            echo ""
+            echo "💡 Try: curl -s http://localhost:9099/ to check if pipelines is running"
         fi
         ;;
     "install-pipeline"|"ip")
@@ -68,14 +71,15 @@ case "$1" in
         else
             echo "📦 Installing pipeline from: $2"
             echo ""
-            response=$(curl -s -w "\nHTTP_CODE:%{http_code}" \
+            response=$(curl -s \
                        -H "Authorization: Bearer 0p3n-w3bu!" \
                        -H "Content-Type: application/json" \
                        -d "{\"url\": \"$2\"}" \
+                       -w "HTTP_CODE:%{http_code}" \
                        http://localhost:9099/admin/pipelines/install)
             
-            http_code=$(echo "$response" | tail -n1 | cut -d':' -f2)
-            body=$(echo "$response" | head -n -1)
+            http_code=$(echo "$response" | grep -o "HTTP_CODE:[0-9]*" | cut -d':' -f2)
+            body=$(echo "$response" | sed 's/HTTP_CODE:[0-9]*$//')
             
             if [ "$http_code" = "200" ]; then
                 echo "✅ Pipeline installed successfully!"
@@ -83,6 +87,9 @@ case "$1" in
             else
                 echo "❌ Pipeline installation failed (HTTP $http_code)"
                 echo "Response: $body"
+                echo ""
+                echo "💡 Note: Some pipelines need to be installed via PIPELINES_URLS environment variable"
+                echo "💡 Try restarting containers: ./manage.sh restart"
             fi
         fi
         ;;

@@ -54,6 +54,7 @@ services:
       - pipelines:/app/pipelines
     environment:
       - PIPELINES_API_KEY=0p3n-w3bu!
+      - PIPELINES_URLS=https://github.com/open-webui/pipelines/blob/main/examples/filters/function_calling_filter_pipeline.py
     restart: unless-stopped
     networks:
       - open-webui-network
