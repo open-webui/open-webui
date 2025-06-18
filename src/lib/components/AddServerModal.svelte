@@ -3,6 +3,7 @@
 	import { getContext, onMount } from 'svelte';
 	const i18n = getContext('i18n');
 
+	import { settings } from '$lib/stores';
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import Minus from '$lib/components/icons/Minus.svelte';
@@ -153,15 +154,16 @@
 <Modal size="sm" bind:show>
 	<div>
 		<div class=" flex justify-between dark:text-gray-100 px-5 pt-4 pb-2">
-			<div class=" text-lg font-medium self-center font-primary">
+			<h1 class=" text-lg font-medium self-center font-primary">
 				{#if edit}
 					{$i18n.t('Edit Connection')}
 				{:else}
 					{$i18n.t('Add Connection')}
 				{/if}
-			</div>
+			</h1>
 			<button
 				class="self-center"
+				aria-label={$i18n.t('Close Configure Connection Modal')}
 				on:click={() => {
 					show = false;
 				}}
@@ -170,6 +172,7 @@
 					xmlns="http://www.w3.org/2000/svg"
 					viewBox="0 0 20 20"
 					fill="currentColor"
+					aria-hidden="true"
 					class="w-5 h-5"
 				>
 					<path
@@ -192,12 +195,17 @@
 						<div class="flex gap-2">
 							<div class="flex flex-col w-full">
 								<div class="flex justify-between mb-0.5">
-									<div class=" text-xs text-gray-500">{$i18n.t('URL')}</div>
+									<label
+										for="api-base-url"
+										class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+										>{$i18n.t('URL')}</label
+									>
 								</div>
 
 								<div class="flex flex-1 items-center">
 									<input
-										class="w-full flex-1 text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
+										id="api-base-url"
+										class={`w-full flex-1 text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
 										type="text"
 										bind:value={url}
 										placeholder={$i18n.t('API Base URL')}
@@ -214,6 +222,7 @@
 											on:click={() => {
 												verifyHandler();
 											}}
+											aria-label={$i18n.t('Verify Connection')}
 											type="button"
 										>
 											<svg
@@ -221,6 +230,7 @@
 												viewBox="0 0 20 20"
 												fill="currentColor"
 												class="w-4 h-4"
+												aria-hidden="true"
 											>
 												<path
 													fill-rule="evenodd"
@@ -237,9 +247,13 @@
 								</div>
 
 								<div class="flex-1 flex items-center">
+									<label for="url-or-path" class="sr-only"
+										>{$i18n.t('openapi.json URL or Path')}</label
+									>
 									<input
-										class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
+										class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
 										type="text"
+										id="url-or-path"
 										bind:value={path}
 										placeholder={$i18n.t('openapi.json URL or Path')}
 										autocomplete="off"
@@ -249,7 +263,9 @@
 							</div>
 						</div>
 
-						<div class="text-xs text-gray-500 mt-1">
+						<div
+							class={`text-xs mt-1 ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+						>
 							{$i18n.t(`WebUI will make requests to "{{url}}"`, {
 								url: path.includes('://') ? path : `${url}${path.startsWith('/') ? '' : '/'}${path}`
 							})}
@@ -257,12 +273,17 @@
 
 						<div class="flex gap-2 mt-2">
 							<div class="flex flex-col w-full">
-								<div class="  text-xs text-gray-500">{$i18n.t('Auth')}</div>
+								<label
+									for="select-bearer-or-session"
+									class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+									>{$i18n.t('Auth')}</label
+								>
 
 								<div class="flex gap-2">
 									<div class="flex-shrink-0 self-start">
 										<select
-											class="w-full text-sm bg-transparent dark:bg-gray-900 placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden pr-5"
+											id="select-bearer-or-session"
+											class={`w-full text-sm bg-transparent pr-5 ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
 											bind:value={auth_type}
 										>
 											<option value="bearer">Bearer</option>
@@ -273,13 +294,14 @@
 									<div class="flex flex-1 items-center">
 										{#if auth_type === 'bearer'}
 											<SensitiveInput
-												className="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
 												bind:value={key}
 												placeholder={$i18n.t('API Key')}
 												required={false}
 											/>
 										{:else if auth_type === 'session'}
-											<div class="text-xs text-gray-500 self-center translate-y-[1px]">
+											<div
+												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+											>
 												{$i18n.t('Forwards system user session credentials to authenticate')}
 											</div>
 										{/if}
@@ -293,11 +315,16 @@
 
 							<div class="flex gap-2">
 								<div class="flex flex-col w-full">
-									<div class=" mb-0.5 text-xs text-gray-500">{$i18n.t('Name')}</div>
+									<label
+										for="enter-name"
+										class={`mb-0.5 text-xs" ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+										>{$i18n.t('Name')}</label
+									>
 
 									<div class="flex-1">
 										<input
-											class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
+											id="enter-name"
+											class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
 											type="text"
 											bind:value={name}
 											placeholder={$i18n.t('Enter name')}
@@ -309,11 +336,16 @@
 							</div>
 
 							<div class="flex flex-col w-full mt-2">
-								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Description')}</div>
+								<label
+									for="description"
+									class={`mb-1 text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100 placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 text-gray-500'}`}
+									>{$i18n.t('Description')}</label
+								>
 
 								<div class="flex-1">
 									<input
-										class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
+										id="description"
+										class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
 										type="text"
 										bind:value={description}
 										placeholder={$i18n.t('Enter description')}
@@ -358,6 +390,7 @@
 							{#if loading}
 								<div class="ml-2 self-center">
 									<svg
+										aria-hidden="true"
 										class=" w-4 h-4"
 										viewBox="0 0 24 24"
 										fill="currentColor"

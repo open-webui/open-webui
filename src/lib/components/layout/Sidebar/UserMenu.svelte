@@ -107,39 +107,41 @@
 			</button>
 
 			{#if role === 'admin'}
-				<button
-					class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+				<a
+					href="/playground"
+					class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition select-none"
 					on:click={() => {
-						goto('/playground');
 						show = false;
-
 						if ($mobile) {
 							showSidebar.set(false);
 						}
 					}}
+					rel="noopener noreferrer"
+					draggable="false"
 				>
 					<div class=" self-center mr-3">
 						<Code className="size-5" strokeWidth="1.5" />
 					</div>
 					<div class=" self-center truncate">{$i18n.t('Playground')}</div>
-				</button>
+				</a>
 
-				<button
-					class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+				<a
+					href="/admin"
+					class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition select-none"
 					on:click={() => {
-						goto('/admin');
 						show = false;
-
 						if ($mobile) {
 							showSidebar.set(false);
 						}
 					}}
+					rel="noopener noreferrer"
+					draggable="false"
 				>
 					<div class=" self-center mr-3">
 						<UserGroup className="w-5 h-5" strokeWidth="1.5" />
 					</div>
 					<div class=" self-center truncate">{$i18n.t('Admin Panel')}</div>
-				</button>
+				</a>
 			{/if}
 
 			{#if help}
