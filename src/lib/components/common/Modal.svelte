@@ -3,7 +3,7 @@
 	import { fade } from 'svelte/transition';
 	import { flyAndScale } from '$lib/utils/transitions';
 	import * as focusTrap from 'focus-trap';
-	import { toast } from 'svelte-sonner';
+	import { ariaMessage } from '$lib/stores';
 
 	const i18n = getContext('i18n');
 
@@ -50,12 +50,12 @@
 		document.body.appendChild(modalElement);
 		window.addEventListener('keydown', handleKeyDown);
 		document.body.style.overflow = 'hidden';
-		toast.announce($i18n.t('modalOpened', { title: title }));
+		ariaMessage.set($i18n.t('modalOpened', { title: title }));
 	} else if (modalElement) {
 		window.removeEventListener('keydown', handleKeyDown);
 		document.body.removeChild(modalElement);
 		document.body.style.overflow = 'unset';
-		toast.announce($i18n.t('modalClosed', { title: title }));
+		ariaMessage.set($i18n.t('modalClosed', { title: title }));
 	}
 
 	// Set up the focus trap using custom selectors if provided.

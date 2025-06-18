@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { config, settings, user } from '$lib/stores';
+	import { ariaMessage, config, settings, user } from '$lib/stores';
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { updateUserInfo } from '$lib/apis/users';
@@ -254,7 +254,7 @@
 						class="p-1 px-3 text-xs flex rounded transition"
 						on:click={() => {
 							toggleChatBubble();
-							toast.announce(
+							ariaMessage.set(
 								chatBubble
 									? $i18n.t('Display username option hidden below')
 									: $i18n.t('Display username option visible below')

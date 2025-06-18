@@ -1,12 +1,10 @@
 <script lang="ts">
 	import { getContext, tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import { models, settings, user, returnFocusButtonID } from '$lib/stores';
+	import { ariaMessage, models, settings, user } from '$lib/stores';
 	import { updateUserSettings } from '$lib/apis/users';
 	import { getModels as _getModels } from '$lib/apis';
 	import { goto } from '$app/navigation';
-	// Removed focus-trap import and related code
-	// import * as focusTrap from 'focus-trap';
 
 	import Modal from '../common/Modal.svelte';
 	import Account from './Settings/Account.svelte';
@@ -18,7 +16,6 @@
 	import User from '../icons/User.svelte';
 	import Personalization from './Settings/Personalization.svelte';
 	import Search from '../icons/Search.svelte';
-	import Tooltip from '../common/Tooltip.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -293,7 +290,7 @@
 		clearTimeout(searchDebounceTimeout);
 		searchDebounceTimeout = setTimeout(() => {
 			visibleTabs = searchSettings(search);
-			toast.announce(visibleTabs.length + ' visible tabs found');
+			ariaMessage.set(visibleTabs.length + $i18n.t('vibile tabs found'));
 			if (visibleTabs.length > 0 && !visibleTabs.includes(selectedTab)) {
 				selectedTab = visibleTabs[0];
 			}
@@ -336,33 +333,18 @@
 			settingsTabsContainer.removeEventListener('wheel', scrollHandler);
 		}
 	};
-	const announceSelectedTab = async () => {
-		const title = $i18n.t(selectedTab);
-		toast.announce($i18n.t('settingsTab', { title }));
-	};
 
 	$: if (show) {
 		addScrollListener();
-		setTimeout(() => {
-			announceSelectedTab();
-		}, 100);
 	} else {
 		removeScrollListener();
 	}
-	$: if (selectedTab) {
-		announceSelectedTab();
-	}
 </script>
 
-<Modal
-	size="xl"
-	bind:show
-	title={$i18n.t('Settings')}
-	returnFocusSelector={$returnFocusButtonID ? '#' + $returnFocusButtonID : ''}
->
-	<div id="settings-modal-wrapper" class="text-gray-700 dark:text-gray-100">
+<Modal size="xl" bind:show>
+	<div class="text-gray-700 dark:text-gray-100">
 		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-1">
-			<h2 class=" text-lg font-medium self-center">{$i18n.t('Settings')}</h2>
+			<div class=" text-lg font-medium self-center">{$i18n.t('Settings')}</div>
 			<button
 				class="self-center"
 				on:click={() => {
@@ -391,14 +373,12 @@
 					<div class="self-center rounded-l-xl bg-transparent">
 						<Search className="size-3.5" />
 					</div>
-					<Tooltip placement="top-start" content={$i18n.t('Search')}>
-						<input
-							class="w-full py-1.5 mt-1 text-sm bg-transparent placeholder-[#5C6B8B] dark:text-gray-300 focus:outline-1 focus:outline-black dark:focus:outline-white"
-							bind:value={search}
-							on:input={searchDebounceHandler}
-							placeholder={$i18n.t('Search')}
-						/>
-					</Tooltip>
+					<input
+						class="w-full py-1.5 text-sm bg-transparent dark:text-gray-300 outline-none"
+						bind:value={search}
+						on:input={searchDebounceHandler}
+						placeholder={$i18n.t('Search')}
+					/>
 				</div>
 
 				{#if visibleTabs.length > 0}
@@ -407,12 +387,10 @@
 							<button
 								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 								'general'
-									? 'bg-gray-200 dark:bg-gray-800	'
-									: 'hover:bg-gray-100 dark:hover:bg-gray-850'}"
-								on:click={async () => {
+									? ''
+									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+								on:click={() => {
 									selectedTab = 'general';
-									await tick();
-									document.getElementById('theme-selection')?.focus();
 								}}
 							>
 								<div class=" self-center mr-2">
@@ -435,12 +413,10 @@
 							<button
 								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 								'interface'
-									? 'bg-gray-200 dark:bg-gray-800	'
-									: 'hover:bg-gray-100 dark:hover:bg-gray-850'}"
-								on:click={async () => {
+									? ''
+									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+								on:click={() => {
 									selectedTab = 'interface';
-									await tick();
-									document.getElementById('landing-page-mode-button')?.focus();
 								}}
 							>
 								<div class=" self-center mr-2">
@@ -478,12 +454,10 @@
 							<button
 								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 								'audio'
-									? 'bg-gray-200 dark:bg-gray-800	'
-									: 'hover:bg-gray-100 dark:hover:bg-gray-850'}"
-								on:click={async () => {
+									? ''
+									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+								on:click={() => {
 									selectedTab = 'audio';
-									await tick();
-									document.getElementById('stt-engine')?.focus();
 								}}
 							>
 								<div class=" self-center mr-2">
@@ -507,12 +481,10 @@
 							<button
 								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 								'chats'
-									? 'bg-gray-200 dark:bg-gray-800	'
-									: 'hover:bg-gray-100 dark:hover:bg-gray-850'}"
-								on:click={async () => {
+									? ''
+									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+								on:click={() => {
 									selectedTab = 'chats';
-									await tick();
-									document.getElementById('archive-all-chats')?.focus();
 								}}
 							>
 								<div class=" self-center mr-2">
@@ -535,12 +507,10 @@
 							<button
 								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 								'account'
-									? 'bg-gray-200 dark:bg-gray-800	'
-									: 'hover:bg-gray-100 dark:hover:bg-gray-850'}"
-								on:click={async () => {
+									? ''
+									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+								on:click={() => {
 									selectedTab = 'account';
-									await tick();
-									document.getElementById('profile-image')?.focus();
 								}}
 							>
 								<div class=" self-center mr-2">
@@ -563,12 +533,10 @@
 							<button
 								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 								'about'
-									? 'bg-gray-200 dark:bg-gray-800	'
-									: 'hover:bg-gray-100 dark:hover:bg-gray-850'}"
-								on:click={async () => {
+									? ''
+									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+								on:click={() => {
 									selectedTab = 'about';
-									await tick();
-									document.getElementById('about-link')?.focus();
 								}}
 							>
 								<div class=" self-center mr-2">
@@ -592,8 +560,8 @@
 								<button
 									class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 									'admin'
-										? 'bg-gray-200 dark:bg-gray-800	'
-										: 'hover:bg-gray-100 dark:hover:bg-gray-850'}"
+										? ''
+										: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 									on:click={async () => {
 										await goto('/admin/settings');
 										show = false;

@@ -1,7 +1,5 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
-	import { toast } from 'svelte-sonner';
-
 	import {
 		WEBUI_NAME,
 		chatId,
@@ -12,7 +10,9 @@
 		showSidebar,
 		temporaryChatEnabled,
 		user,
-		suggestionCycle
+		suggestionCycle,
+		ariaMessage
+
 	} from '$lib/stores';
 
 	import { slide } from 'svelte/transition';
@@ -72,7 +72,7 @@
 						class="m-auto self-center cursor-pointer px-2 py-2 flex rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
 						on:click={async () => {
 							showSidebar.set(!$showSidebar);
-							toast.announce($i18n.t('Sidebar expanded.'));
+							ariaMessage.set($i18n.t('Sidebar expanded.'));
 							await changeFocus('hide-sidebar-button');
 						}}
 						aria-label="Show Sidebar"

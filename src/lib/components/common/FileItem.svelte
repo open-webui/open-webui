@@ -6,7 +6,6 @@
 	import GarbageBin from '../icons/GarbageBin.svelte';
 	import Spinner from './Spinner.svelte';
 	import Tooltip from './Tooltip.svelte';
-	import { toast } from 'svelte-sonner';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -27,6 +26,7 @@
 	export let size: number;
 
 	import { deleteFileById } from '$lib/apis/files';
+	import { ariaMessage } from '$lib/stores';
 
 	let showModal = false;
 </script>
@@ -129,7 +129,7 @@
 					type="button"
 					on:click|stopPropagation={() => {
 						dispatch('dismiss');
-						toast.announce($i18n.t('File removed'));
+						ariaMessage.set($i18n.t('File removed'));
 					}}
 				>
 					<svg

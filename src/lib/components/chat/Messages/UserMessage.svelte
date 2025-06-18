@@ -3,7 +3,7 @@
 	import { toast } from 'svelte-sonner';
 	import { tick, getContext, onMount } from 'svelte';
 
-	import { models, settings } from '$lib/stores';
+	import { ariaMessage, models, settings } from '$lib/stores';
 	import { user as _user } from '$lib/stores';
 	import { copyToClipboard as _copyToClipboard, formatDate } from '$lib/utils';
 
@@ -60,7 +60,7 @@
 		messageEditTextAreaElement.style.height = `${messageEditTextAreaElement.scrollHeight}px`;
 
 		messageEditTextAreaElement?.focus();
-		toast.announce($i18n.t('Message editing started.'));
+		ariaMessage.set($i18n.t('Message editing started.'));
 	};
 
 	const editMessageConfirmHandler = async (submit = true) => {
@@ -71,14 +71,14 @@
 		if (submit) {
 			toast.success($i18n.t('Message editing confirmed.'));
 		} else {
-			toast.announce($i18n.t('Message saved.'));
+			ariaMessage.set($i18n.t('Message saved.'));
 		}
 	};
 
 	const cancelEditMessage = () => {
 		edit = false;
 		editedContent = '';
-		toast.announce($i18n.t('Message editing cancelled.'));
+		ariaMessage.set($i18n.t('Message editing cancelled.'));
 	};
 
 	const deleteMessageHandler = async () => {

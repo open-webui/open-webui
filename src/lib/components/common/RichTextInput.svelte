@@ -172,11 +172,7 @@
 				}),
 				Highlight,
 				Typography,
-				Placeholder.configure({
-					placeholder,
-					emptyEditorClass:
-						'before:content-[attr(data-placeholder)] before:float-left before:text-[#5C6B8B] before:h-0 before:pointer-events-none'
-				}),
+				Placeholder.configure({ placeholder: placeholderText }),
 				...(autocomplete
 					? [
 							AIAutocompletion.configure({
@@ -234,7 +230,9 @@
 			editorProps: {
 				attributes: {
 					id,
-					'aria-label': $i18n.t('Message Input')
+					'aria-label': ariaLabel,
+					title: title,
+					role: 'textbox'
 				},
 				handleDOMEvents: {
 					focus: (view, event) => {
@@ -396,10 +394,10 @@
 </script>
 
 <div
-	role="textbox"
 	bind:this={element}
-	class="relative w-full min-w-full {focusFlag
-		? 'outline-1 outline-black focus:outline-white'
-		: ''} h-full min-h-fit mb-1 {className}"
-	aria-label={$i18n.t('Message Input')}
+	class="relative w-full min-w-full h-full min-h-fit {className}"
+	data-placeholder={placeholderText}
+	aria-label={ariaLabel}
+	{title}
+	role="textbox"
 />

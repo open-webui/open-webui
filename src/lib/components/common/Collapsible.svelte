@@ -32,7 +32,7 @@
 	import ChevronUp from '../icons/ChevronUp.svelte';
 	import ChevronDown from '../icons/ChevronDown.svelte';
 	import Spinner from './Spinner.svelte';
-	import { toast } from 'svelte-sonner';
+	import { ariaMessage } from '$lib/stores';
 
 	export let open = false;
 	export let className = '';
@@ -50,9 +50,9 @@
 
 	const announceAction = (open: boolean) => {
 		if (open) {
-			toast.announce($i18n.t('expanded'));
+			ariaMessage.set($i18n.t('expanded'));
 		} else {
-			toast.announce($i18n.t('collapsed'));
+			ariaMessage.set($i18n.t('collapsed'));
 		}
 	};
 </script>

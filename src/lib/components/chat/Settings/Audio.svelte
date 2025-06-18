@@ -164,7 +164,7 @@
 
 				<div class="flex items-center relative">
 					<select
-						class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden focus:outline-2 focus:outline-black dark:focus:outline-white"
+						class="dark:bg-gray-900 w-fit pr-8 rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
 						bind:value={playbackRate}
 					>
 						{#each speedOptions as option}
@@ -183,7 +183,7 @@
 				<div class="flex w-full">
 					<div class="flex-1">
 						<select
-							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none focus:outline-2 focus:outline-black dark:focus:outline-white"
+							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 							bind:value={voice}
 						>
 							<option value="" selected={voice !== ''}>{$i18n.t('Default')}</option>
@@ -198,7 +198,7 @@
 					</div>
 				</div>
 				<div class="flex items-center justify-between my-1.5">
-					<div class="text-xs text-gray-800">
+					<div class="text-xs">
 						{$i18n.t('Allow non-local voices')}
 					</div>
 
@@ -232,7 +232,7 @@
 
 	<div class="flex justify-end text-sm font-medium">
 		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full focus:outline-2 focus:outline-blue-600"
+			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 			type="submit"
 		>
 			{$i18n.t('Save')}

@@ -4,7 +4,7 @@
 	import { getLanguages } from '$lib/i18n';
 	const dispatch = createEventDispatcher();
 
-	import { models, settings, theme, user } from '$lib/stores';
+	import { ariaMessage, models, settings, theme, user } from '$lib/stores';
 
 	const i18n = getContext('i18n');
 
@@ -201,7 +201,7 @@
 						type="button"
 						on:click={() => {
 							showAdvanced = !showAdvanced;
-							toast.announce(
+							ariaMessage.set(
 								showAdvanced
 									? $i18n.t('Showing advanced parameters below')
 									: $i18n.t('Hiding advanced parameters')

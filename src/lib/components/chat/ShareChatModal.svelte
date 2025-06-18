@@ -149,7 +149,7 @@
 							{/if}
 
 							<button
-								class="self-center flex items-center gap-1 px-3.5 py-2 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full focus:outline-2 focus:outline-blue-600"
+								class="self-center flex items-center gap-1 px-3.5 py-2 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 								type="button"
 								id="copy-and-share-chat-button"
 								on:click={async () => {

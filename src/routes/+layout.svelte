@@ -6,8 +6,9 @@
 		stiffness: 0.05
 	});
 
-	import { onMount, tick, setContext } from 'svelte';
+	import { onMount, tick, setContext, onDestroy } from 'svelte';
 	import {
+		ariaMessage,
 		config,
 		user,
 		settings,
@@ -51,6 +52,16 @@
 	const bc = new BroadcastChannel('active-tab-channel');
 
 	let loaded = false;
+	
+	let message = '';
+	
+	const unsubscribe = ariaMessage.subscribe((value) => {
+        message = value;
+    });
+	
+    onDestroy(() => {
+        unsubscribe();
+    });
 
 	const BREAKPOINT = 768;
 
@@ -403,3 +414,6 @@
 		}
 	}}
 />
+
+<!-- ARIA live region for screen readers -->
+<div aria-live="assertive" class="sr-only" role="status">{message}</div>

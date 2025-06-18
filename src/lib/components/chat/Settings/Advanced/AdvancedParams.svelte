@@ -1,8 +1,8 @@
 <script lang="ts">
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import { ariaMessage } from '$lib/stores';
 	import { getContext, createEventDispatcher } from 'svelte';
-	import { toast } from 'svelte-sonner';
 
 	const dispatch = createEventDispatcher();
 
@@ -41,14 +41,14 @@
 	let customFieldValue = '';
 
 	const announceCustomField = (value: any) => {
-		toast.announce(
+		ariaMessage.set(
 			(value ?? null) === null
 				? $i18n.t('Default mode enabled. Custom Input field removed')
 				: $i18n.t('Custom mode enabled. Custom Input field available')
 		);
 	};
 	const announceCustomFieldAndSlider = (value: any) => {
-		toast.announce(
+		ariaMessage.set(
 			(value ?? null) === null
 				? $i18n.t('Default mode enabled. Custom Input field removed')
 				: $i18n.t('Custom mode enabled. Slider and Input field removed')

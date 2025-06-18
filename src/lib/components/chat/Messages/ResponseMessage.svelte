@@ -9,7 +9,7 @@
 
 	const dispatch = createEventDispatcher();
 
-	import { config, models, settings, user } from '$lib/stores';
+	import { ariaMessage, config, models, settings, user } from '$lib/stores';
 	import { synthesizeOpenAISpeech } from '$lib/apis/audio';
 	import { imageGenerations } from '$lib/apis/images';
 	import {
@@ -285,7 +285,7 @@
 		editedContent = message.content;
 
 		await tick();
-		toast.announce($i18n.t('Message editing started.'));
+		ariaMessage.set($i18n.t('Message editing started.'));
 		editTextAreaElement.style.height = '';
 		editTextAreaElement.style.height = `${editTextAreaElement.scrollHeight}px`;
 	};
@@ -307,14 +307,14 @@
 		editedContent = '';
 
 		await tick();
-		toast.announce($i18n.t('Message saved as copy. You are now in copied message chain.'));
+		ariaMessage.set($i18n.t('Message saved as copy. You are now in copied message chain.'));
 	};
 
 	const cancelEditMessage = async () => {
 		edit = false;
 		editedContent = '';
 		await tick();
-		toast.announce($i18n.t('Message editing cancelled.'));
+		ariaMessage.set($i18n.t('Message editing cancelled.'));
 	};
 
 	const generateImage = async (message: MessageType) => {
@@ -615,7 +615,7 @@
 										<button
 											id="save-new-message-button"
 											aria-label={$i18n.t('Save as Copy')}
-											class=" px-4 py-2 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border dark:border-gray-700 text-gray-700 dark:text-gray-200 transition rounded-3xl focus:outline-2 focus:outline-black dark:focus:outline-white"
+											class=" px-4 py-2 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border dark:border-gray-700 text-gray-700 dark:text-gray-200 transition rounded-3xl"
 											on:click={() => {
 												saveAsCopyHandler();
 											}}
@@ -627,7 +627,7 @@
 									<div class="flex space-x-1.5">
 										<button
 											id="close-edit-message-button"
-											class="px-4 py-2 bg-white dark:bg-gray-900 hover:bg-gray-100 text-gray-800 dark:text-gray-100 transition rounded-3xl focus:outline-2 focus:outline-black dark:focus:outline-white"
+											class="px-4 py-2 bg-white dark:bg-gray-900 hover:bg-gray-100 text-gray-800 dark:text-gray-100 transition rounded-3xl"
 											on:click={() => {
 												cancelEditMessage();
 											}}
@@ -637,7 +637,7 @@
 
 										<button
 											id="confirm-edit-message-button"
-											class=" px-4 py-2 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-3xl focus:outline-2 focus:outline-blue-600"
+											class=" px-4 py-2 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-3xl"
 											on:click={() => {
 												editMessageConfirmHandler();
 											}}
@@ -648,7 +648,7 @@
 								</div>
 							</div>
 						{:else}
-							<div class="w-full flex flex-col relative">
+							<div class="w-full flex flex-col relative" id="response-content-container">
 								{#if message.content === '' && !message.error}
 									<Skeleton />
 								{:else if message.content && message.error !== true}
@@ -748,7 +748,7 @@
 									<div
 										class="text-sm tracking-widest font-semibold self-center dark:text-gray-100 min-w-fit"
 									>
-										{siblings.indexOf(message.id) + 1} of {siblings.length}
+										{siblings.indexOf(message.id) + 1}/{siblings.length}
 									</div>
 
 									<button
@@ -780,7 +780,9 @@
 									{#if $user.role === 'user' ? ($user?.permissions?.chat?.edit ?? true) : true}
 										<Tooltip content={$i18n.t('Edit')} placement="bottom">
 											<button
-												class="p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+												class="{isLastMessage
+													? 'visible'
+													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
 												on:click={() => {
 													editMessageHandler();
 												}}

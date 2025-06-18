@@ -15,7 +15,9 @@
 		showCallOverlay,
 		tools,
 		user as _user,
-		showControls
+		showControls,
+		ariaMessage
+
 	} from '$lib/stores';
 
 	import { blobToFile, compressImage, createMessagesList, findWordIndices } from '$lib/utils';
@@ -522,14 +524,14 @@
 
 								await tick();
 								document.getElementById('chat-input')?.focus();
-								toast.announce($i18n.t('Voice recording cancelled'));
+								ariaMessage.set($i18n.t('Voice recording cancelled'));
 							}}
 							on:confirm={async (e) => {
 								const { text, filename } = e.detail;
 								prompt = `${prompt}${text} `;
 
 								recording = false;
-								toast.announce($i18n.t('Voice recording transcription completed'));
+								ariaMessage.set($i18n.t('Voice recording transcription completed'));
 
 								await tick();
 								document.getElementById('chat-input')?.focus();
@@ -1097,7 +1099,7 @@
 
 															if (stream) {
 																recording = true;
-																toast.announce($i18n.t('Voice recording started'));
+																ariaMessage.set($i18n.t('Voice recording started'));
 																const tracks = stream.getTracks();
 																tracks.forEach((track) => track.stop());
 															}

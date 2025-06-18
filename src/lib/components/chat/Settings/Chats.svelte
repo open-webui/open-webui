@@ -55,10 +55,6 @@
 		confirmMessage = $i18n.t('Are you sure you want to delete all chats?');
 		onConfirm = deleteAllChatsHandler;
 	};
-
-	const announceConfirmation = () => {
-		toast.announce($i18n.t('Are you sure? Please confirm or cancel'));
-	};
 </script>
 
 <ConfirmDialog

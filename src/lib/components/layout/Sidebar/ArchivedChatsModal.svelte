@@ -9,7 +9,7 @@
 
 	import { archiveChatById, deleteChatById, getArchivedChatList } from '$lib/apis/chats';
 
-	import { returnFocusButtonID } from '$lib/stores';
+	import { ariaMessage, returnFocusButtonID } from '$lib/stores';
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -133,7 +133,7 @@
 						<input
 							class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-none bg-transparent"
 							bind:value={searchValue}
-							on:input={toast.announce(filteredChatList.length + $i18n.t(' archived chat found'))}
+							on:input={() => ariaMessage.set(filteredChatList.length + $i18n.t(' archived chat found'))}
 							placeholder={$i18n.t('Search Chats')}
 						/>
 					</div>
