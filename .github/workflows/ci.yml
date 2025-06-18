@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 jobs:
   build_and_lint:
-    name: Build and Lint
+    name: Build, Lint, and Test # Updated job name for clarity
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repository
@@ -22,3 +22,5 @@ jobs:
       run: pnpm lint
     - name: Build project
       run: pnpm build # Assumes a build script exists in package.json
+    - name: Run tests # New step
+      run: pnpm test # Assumes a test script exists in package.json
