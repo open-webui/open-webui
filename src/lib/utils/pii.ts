@@ -399,9 +399,16 @@ export class PiiSessionManager {
 
 		console.log(`PiiSessionManager: Transferred ${this.entities.length} entities and ${this.globalModifiers.length} modifiers to conversation ${conversationId}`);
 
+		// Save the conversation state to localStorage first
+		this.saveConversationToLocalStorage(conversationId);
+
 		// Clear global state since we now have a conversation ID
 		this.globalModifiers = [];
 		// Keep entities as they might be needed for display
+
+		// Clear global localStorage keys after successful transfer
+		this.clearGlobalLocalStorage();
+		console.log(`PiiSessionManager: Cleared global localStorage keys after transfer to conversation ${conversationId}`);
 	}
 
 	// Get modifiers for API (works for both global and conversation state)
