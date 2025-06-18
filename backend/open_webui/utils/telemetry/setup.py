@@ -38,7 +38,7 @@ def setup(app: FastAPI, db_engine: Engine):
 
     # otlp export
     if USE_OTEL_HTTP_EXPORTER:
-        exporter = OTLPSpanExporter(
+        exporter = HttpOTLPSpanExporter(
             endpoint=OTEL_EXPORTER_OTLP_ENDPOINT,
             insecure=OTEL_EXPORTER_OTLP_INSECURE,
             headers=headers,
