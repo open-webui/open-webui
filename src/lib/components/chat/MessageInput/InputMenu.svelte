@@ -2,8 +2,9 @@
 	import { DropdownMenu } from 'bits-ui';
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { getContext, onMount, tick } from 'svelte';
-
 	import { config, user, tools as _tools, mobile } from '$lib/stores';
+	import { getRAGConfig } from '$lib/apis/retrieval';
+
 	import { createPicker } from '$lib/utils/google-drive-picker';
 
 	import { getTools } from '$lib/apis/tools';
@@ -39,6 +40,7 @@
 	let showAllTools = false;
 	let showUploadWarning = false;
 	let dontShowAgain = false;
+	let contentExtractionEngine = '';
 
 	const WARNING_KEY = 'upload_warning_dismissed_until';
 
@@ -125,11 +127,18 @@
 	let pendingState = null; // משתנה לשמירת הסטייט הרצוי
 	const PARSER_TOGGLE_KEY = 'parser_toggle_state';
 
-	onMount(() => {
+	onMount(async () => {
 		// Load the toggle state from localStorage
 		const savedState = localStorage.getItem(PARSER_TOGGLE_KEY);
 		if (savedState !== null) {
 			isDeepParserEnabled = savedState === 'true';
+		}
+
+		try {
+			const ragConfig = await getRAGConfig(localStorage.token);
+			contentExtractionEngine = ragConfig.CONTENT_EXTRACTION_ENGINE;
+		} catch (error) {
+			console.error('Failed to get RAG config:', error);
 		}
 	});
 
@@ -139,15 +148,15 @@
 			pendingState = enabled;
 			return;
 		}
-		
+
 		isToggling = true;
 		let currentState = enabled;
-		
+
 		try {
 			// לולאה שתטפל גם בסטייט ממתין
 			do {
 				pendingState = null; // איפוס הסטייט הממתין
-				
+
 				const response = await fetch('/api/v1/retrieval/process/parser?toggle=' + currentState, {
 					method: 'POST',
 					headers: {
@@ -155,7 +164,7 @@
 						Accept: 'application/json'
 					}
 				});
-				
+
 				if (response.ok) {
 					isDeepParserEnabled = currentState;
 					localStorage.setItem(PARSER_TOGGLE_KEY, currentState.toString());
@@ -164,16 +173,14 @@
 					// אם נכשל, אל תעדכן את הסטייט
 					break;
 				}
-				
+
 				// בדוק אם יש סטייט חדש שממתין
 				if (pendingState !== null && pendingState !== currentState) {
 					currentState = pendingState;
 				} else {
 					break; // אין יותר שינויים ממתינים
 				}
-				
 			} while (true);
-			
 		} catch (error) {
 			console.error('Error updating parser settings:', error);
 		} finally {
@@ -332,22 +339,24 @@
 
 			<hr class="border-black/5 dark:border-white/5 my-1" />
 
-			<div class="flex gap-2 items-center px-3 py-2 text-sm font-medium">
-				<div class="flex-1">
-					<Tooltip content="Enable deep parsing using Tika parser">
-						<div class="flex items-center gap-2">
-							<CommandLineSolid />
-							<span>{$i18n.t('Deep Parser')}</span>
-						</div>
-					</Tooltip>
+			{#if contentExtractionEngine === 'mix_tika_docling'}
+				<div class="flex gap-2 items-center px-3 py-2 text-sm font-medium">
+					<div class="flex-1">
+						<Tooltip content="Enable deep parsing using Tika parser">
+							<div class="flex items-center gap-2">
+								<CommandLineSolid />
+								<span>{$i18n.t('Deep Parser')}</span>
+							</div>
+						</Tooltip>
+					</div>
+					<Switch
+						state={isDeepParserEnabled}
+						on:change={(e) => {
+							handleParserToggle(e.detail);
+						}}
+					/>
 				</div>
-				<Switch 
-					state={isDeepParserEnabled} 
-					on:change={(e) => {
-						handleParserToggle(e.detail);
-					}} 
-				/>
-			</div>
+			{/if}
 
 			{#if fileUploadEnabled}
 				{#if $config?.features?.enable_google_drive_integration}

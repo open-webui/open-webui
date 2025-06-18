@@ -234,16 +234,15 @@ class Loader:
         file_ext = filename.split(".")[-1].lower()
         # --- Added ---
         use_tika: bool= os.environ.get('PARSER_TIKA_TOGGLE', PARSER_TIKA_TOGGLE)
-        print(f"@@@@@@@@@@@@@@@@@ {use_tika} @@@@@@@@@@@@@@@@@@@@")
-        print(self.engine)
-        
-        if use_tika == "true":
-            self.engine = "tika" 
-        else: 
-            self.engine = "docling"
-            
-        print(self.engine)
-        #  --- End ---
+        print(f"@@@@@@@@@@ use_tika: {use_tika} @@@@@@@@@@@@@@@@@@@@")
+        if self.engine == 'Mix Tika & Docling':
+            print(f"??????????????? before self.engine: {self.engine} ???????????")
+            if use_tika == "true":
+                self.engine = "tika" 
+            else: 
+                self.engine = "docling"
+            print(f"!!!!!!!!!!!! after self.engine: {self.engine} !!!!!!!!!!")
+                    #  --- End ---
         if (
             self.engine == "external"
             and self.kwargs.get("EXTERNAL_DOCUMENT_LOADER_URL")
