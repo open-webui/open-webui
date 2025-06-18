@@ -131,7 +131,7 @@
 
 				<a
 					class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
-					href="/admin"
+					href="/admin/users/overview"
 					on:click={() => {
 						show = false;
 
