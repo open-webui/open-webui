@@ -574,7 +574,7 @@ class ToolServerOAuthManager:
         token = await client.authorize_access_token(request)
 
         try:
-            state = json.loads(base64.urlsafe_b64decode(request.query_params["state"]))
+            _ = json.loads(base64.urlsafe_b64decode(request.query_params["state"]))
         except (KeyError, ValueError, TypeError):
             raise HTTPException(400, detail="Invalid state parameter")
 
