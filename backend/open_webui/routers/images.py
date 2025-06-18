@@ -8,6 +8,7 @@ import re
 from pathlib import Path
 from typing import Optional
 
+from urllib.parse import quote
 import requests
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
 from open_webui.config import CACHE_DIR
@@ -483,10 +484,10 @@ async def image_generations(
             headers["Content-Type"] = "application/json"
 
             if ENABLE_FORWARD_USER_INFO_HEADERS:
-                headers["X-OpenWebUI-User-Name"] = user.name
-                headers["X-OpenWebUI-User-Id"] = user.id
-                headers["X-OpenWebUI-User-Email"] = user.email
-                headers["X-OpenWebUI-User-Role"] = user.role
+                headers["X-OpenWebUI-User-Name"] = quote(user.name)
+                headers["X-OpenWebUI-User-Id"] = quote(user.id)
+                headers["X-OpenWebUI-User-Email"] = quote(user.email)
+                headers["X-OpenWebUI-User-Role"] = quote(user.role)
 
             data = {
                 "model": (

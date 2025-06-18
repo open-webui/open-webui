@@ -57,6 +57,8 @@ from open_webui.utils.logger import start_logger
 from open_webui.socket.main import (
     app as socket_app,
     periodic_usage_pool_cleanup,
+    get_models_in_use,
+    get_active_user_ids,
 )
 from open_webui.routers import (
     audio,
@@ -157,6 +159,7 @@ from open_webui.config import (
     # Audio
     AUDIO_STT_ENGINE,
     AUDIO_STT_MODEL,
+    AUDIO_STT_SUPPORTED_CONTENT_TYPES,
     AUDIO_STT_OPENAI_API_BASE_URL,
     AUDIO_STT_OPENAI_API_KEY,
     AUDIO_STT_AZURE_API_KEY,
@@ -208,6 +211,8 @@ from open_webui.config import (
     RAG_ALLOWED_FILE_EXTENSIONS,
     RAG_FILE_MAX_COUNT,
     RAG_FILE_MAX_SIZE,
+    FILE_IMAGE_COMPRESSION_WIDTH,
+    FILE_IMAGE_COMPRESSION_HEIGHT,
     RAG_OPENAI_API_BASE_URL,
     RAG_OPENAI_API_KEY,
     RAG_AZURE_OPENAI_BASE_URL,
@@ -710,9 +715,13 @@ app.state.config.TOP_K = RAG_TOP_K
 app.state.config.TOP_K_RERANKER = RAG_TOP_K_RERANKER
 app.state.config.RELEVANCE_THRESHOLD = RAG_RELEVANCE_THRESHOLD
 app.state.config.HYBRID_BM25_WEIGHT = RAG_HYBRID_BM25_WEIGHT
+
+
 app.state.config.ALLOWED_FILE_EXTENSIONS = RAG_ALLOWED_FILE_EXTENSIONS
 app.state.config.FILE_MAX_SIZE = RAG_FILE_MAX_SIZE
 app.state.config.FILE_MAX_COUNT = RAG_FILE_MAX_COUNT
+app.state.config.FILE_IMAGE_COMPRESSION_WIDTH = FILE_IMAGE_COMPRESSION_WIDTH
+app.state.config.FILE_IMAGE_COMPRESSION_HEIGHT = FILE_IMAGE_COMPRESSION_HEIGHT
 
 
 app.state.config.RAG_FULL_CONTEXT = RAG_FULL_CONTEXT
@@ -957,10 +966,12 @@ app.state.config.IMAGE_STEPS = IMAGE_STEPS
 #
 ########################################
 
-app.state.config.STT_OPENAI_API_BASE_URL = AUDIO_STT_OPENAI_API_BASE_URL
-app.state.config.STT_OPENAI_API_KEY = AUDIO_STT_OPENAI_API_KEY
 app.state.config.STT_ENGINE = AUDIO_STT_ENGINE
 app.state.config.STT_MODEL = AUDIO_STT_MODEL
+app.state.config.STT_SUPPORTED_CONTENT_TYPES = AUDIO_STT_SUPPORTED_CONTENT_TYPES
+
+app.state.config.STT_OPENAI_API_BASE_URL = AUDIO_STT_OPENAI_API_BASE_URL
+app.state.config.STT_OPENAI_API_KEY = AUDIO_STT_OPENAI_API_KEY
 
 app.state.config.WHISPER_MODEL = WHISPER_MODEL
 app.state.config.WHISPER_VAD_FILTER = WHISPER_VAD_FILTER
@@ -1371,6 +1382,17 @@ async def chat_completion(
             request, response, form_data, user, metadata, model, events, tasks
         )
     except Exception as e:
+        log.debug(f"Error in chat completion: {e}")
+        if metadata.get("chat_id") and metadata.get("message_id"):
+            # Update the chat message with the error
+            Chats.upsert_message_to_chat_by_id_and_message_id(
+                metadata["chat_id"],
+                metadata["message_id"],
+                {
+                    "error": {"content": str(e)},
+                },
+            )
+
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
@@ -1542,6 +1564,10 @@ async def get_app_config(request: Request):
                 "file": {
                     "max_size": app.state.config.FILE_MAX_SIZE,
                     "max_count": app.state.config.FILE_MAX_COUNT,
+                    "image_compression": {
+                        "width": app.state.config.FILE_IMAGE_COMPRESSION_WIDTH,
+                        "height": app.state.config.FILE_IMAGE_COMPRESSION_HEIGHT,
+                    },
                 },
                 "permissions": {**app.state.config.USER_PERMISSIONS},
                 "google_drive": {
@@ -1625,6 +1651,19 @@ async def get_app_latest_release_version(user=Depends(get_verified_user)):
 @app.get("/api/changelog")
 async def get_app_changelog():
     return {key: CHANGELOG[key] for idx, key in enumerate(CHANGELOG) if idx < 5}
+
+
+@app.get("/api/usage")
+async def get_current_usage(user=Depends(get_verified_user)):
+    """
+    Get current usage statistics for Open WebUI.
+    This is an experimental endpoint and subject to change.
+    """
+    try:
+        return {"model_ids": get_models_in_use(), "user_ids": get_active_user_ids()}
+    except Exception as e:
+        log.error(f"Error getting usage statistics: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
 ############################

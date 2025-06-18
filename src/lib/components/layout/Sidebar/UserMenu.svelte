@@ -34,6 +34,7 @@
 	const dispatch = createEventDispatcher();
 
 	let usage: { user_ids: string[]; model_ids: string[] } | null = null;
+
 	const getUsageInfo = async () => {
 		const res = await getUsage(localStorage.token).catch((error) => {
 			console.error('Error fetching usage info:', error);
@@ -116,11 +117,12 @@
 					rel="noopener noreferrer"
 					on:click={() => {
 						show = false;
-
 						if ($mobile) {
 							showSidebar.set(false);
 						}
 					}}
+					rel="noopener noreferrer"
+					draggable="false"
 				>
 					<div class=" self-center mr-3">
 						<Code className="size-5" strokeWidth="1.5" />
@@ -135,11 +137,12 @@
 					rel="noopener noreferrer"
 					on:click={() => {
 						show = false;
-
 						if ($mobile) {
 							showSidebar.set(false);
 						}
 					}}
+					rel="noopener noreferrer"
+					draggable="false"
 				>
 					<div class=" self-center mr-3">
 						<UserGroup className="w-5 h-5" strokeWidth="1.5" />
