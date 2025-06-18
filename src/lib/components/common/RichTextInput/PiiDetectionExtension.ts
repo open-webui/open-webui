@@ -118,53 +118,53 @@ function mapPiiEntitiesToProseMirror(
 function createPiiDecorations(entities: ExtendedPiiEntity[], modifiers: PiiModifier[], doc: ProseMirrorNode): Decoration[] {
 	const decorations: Decoration[] = [];
 
-	// Add PII entity decorations
+	// Group modifiers by entity text for efficient lookup
+	const modifiersByEntity = new Map<string, PiiModifier>();
+	modifiers.forEach(modifier => {
+		modifiersByEntity.set(modifier.entity.toLowerCase(), modifier);
+	});
+
+	// Add PII entity decorations first (lower priority)
 	entities.forEach((entity, entityIndex) => {
 		entity.occurrences.forEach((occurrence: any, occurrenceIndex) => {
 			const { start_idx: from, end_idx: to } = occurrence;
 			
 			// Ensure positions are valid for the current document
 			if (from >= 0 && to <= doc.content.size && from < to) {
-				const shouldMask = entity.shouldMask ?? true;
-				const maskingClass = shouldMask ? 'pii-masked' : 'pii-unmasked';
+				// Check if this entity has a modifier (modifier takes precedence)
+				const hasModifier = modifiersByEntity.has(entity.raw_text.toLowerCase());
 				
-				decorations.push(
-					Decoration.inline(from, to, {
-						class: `pii-highlight ${maskingClass}`,
-						'data-pii-type': entity.type,
-						'data-pii-label': entity.label,
-						'data-pii-text': entity.raw_text,
-						'data-pii-occurrence': occurrenceIndex.toString(),
-						'data-should-mask': shouldMask.toString(),
-						'data-entity-index': entityIndex.toString()
-					})
-				);
+				if (!hasModifier) {
+					const shouldMask = entity.shouldMask ?? true;
+					const maskingClass = shouldMask ? 'pii-masked' : 'pii-unmasked';
+					
+					decorations.push(
+						Decoration.inline(from, to, {
+							class: `pii-highlight ${maskingClass}`,
+							'data-pii-type': entity.type,
+							'data-pii-label': entity.label,
+							'data-pii-text': entity.raw_text,
+							'data-pii-occurrence': occurrenceIndex.toString(),
+							'data-should-mask': shouldMask.toString(),
+							'data-entity-index': entityIndex.toString()
+						})
+					);
+				}
 			}
 		});
 	});
 
-	// Add modifier decorations (find ALL occurrences of modifier-affected words)
+	// Add modifier decorations (higher priority - these take precedence)
 	if (modifiers.length > 0) {
-		// Group modifiers by entity text for efficient processing
-		const modifiersByEntity = new Map<string, PiiModifier[]>();
 		modifiers.forEach(modifier => {
-			const entityText = modifier.entity.toLowerCase();
-			if (!modifiersByEntity.has(entityText)) {
-				modifiersByEntity.set(entityText, []);
-			}
-			modifiersByEntity.get(entityText)!.push(modifier);
-		});
-
-		// Search for all occurrences of each modifier-affected word
-		modifiersByEntity.forEach((entityModifiers, entityText) => {
-			// Find all occurrences of this word in the document
+			// Find all occurrences of this modifier's entity in the document
 			doc.nodesBetween(0, doc.content.size, (node, pos) => {
 				if (node.isText && node.text) {
-					const text = node.text.toLowerCase();
 					const originalText = node.text;
 					
 					// Create regex for word boundaries to match whole words only
-					const regex = new RegExp(`\\b${entityText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
+					const entityText = modifier.entity.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+					const regex = new RegExp(`\\b${entityText}\\b`, 'gi');
 					let match;
 					
 					while ((match = regex.exec(originalText)) !== null) {
@@ -173,22 +173,23 @@ function createPiiDecorations(entities: ExtendedPiiEntity[], modifiers: PiiModif
 						
 						// Ensure positions are valid
 						if (matchStart >= 0 && matchEnd <= doc.content.size && matchStart < matchEnd) {
-							// Determine the decoration class based on modifier types
-							const hasIgnoreModifier = entityModifiers.some(m => m.type === 'ignore');
-							const hasMaskModifier = entityModifiers.some(m => m.type === 'mask');
-							
+							// Determine the decoration class based on modifier action
 							let decorationClass = 'pii-modifier-highlight';
-							if (hasMaskModifier) {
-								// Mask modifiers get yellow font + green styling
+							if (modifier.action === 'mask') {
 								decorationClass = 'pii-modifier-highlight pii-modifier-mask';
+							} else if (modifier.action === 'ignore') {
+								decorationClass = 'pii-modifier-highlight pii-modifier-ignore';
 							}
 							
 							decorations.push(
 								Decoration.inline(matchStart, matchEnd, {
 									class: decorationClass,
-									'data-modifier-entity': entityModifiers[0].entity,
-									'data-modifier-types': entityModifiers.map(m => m.type).join(','),
-									'data-modifier-labels': entityModifiers.filter(m => m.label).map(m => m.label).join(',')
+									'data-modifier-entity': modifier.entity,
+									'data-modifier-action': modifier.action,
+									'data-modifier-type': modifier.type || '',
+									'data-modifier-id': modifier.id,
+									// Add higher z-index to ensure precedence
+									style: 'z-index: 10; position: relative;'
 								})
 							);
 						}
@@ -206,9 +207,9 @@ const piiDetectionPluginKey = new PluginKey<PiiDetectionState>('piiDetection');
 // Convert PiiModifier objects to ShieldApiModifier format
 function convertModifiersToApiFormat(modifiers: PiiModifier[]): ShieldApiModifier[] {
 	return modifiers.map(modifier => ({
-		type: modifier.type,
+		action: modifier.action,
 		entity: modifier.entity,
-		...(modifier.label && { label: modifier.label })
+		...(modifier.type && { type: modifier.type })
 	}));
 }
 

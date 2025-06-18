@@ -68,9 +68,9 @@ export const createPiiSession = async (
 
 // Interface for Shield API modifiers
 export interface ShieldApiModifier {
-	type: 'ignore' | 'mask';
+	action: 'ignore' | 'mask';
 	entity: string;
-	label?: string;
+	type?: string;
 }
 
 // Mask PII in text (ephemeral - without session)

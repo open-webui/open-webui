@@ -101,7 +101,7 @@
 		const sortedModifiers = [...modifiers].sort((a, b) => a.id.localeCompare(b.id));
 		
 		return sortedModifiers
-			.map(m => `${m.type}:${m.entity}:${m.label || ''}:${m.from}:${m.to}`)
+			.map(m => `${m.action}:${m.entity}:${m.type || ''}:${m.from}:${m.to}`)
 			.join('|');
 	};
 
@@ -546,35 +546,40 @@
 		}
 	};
 
+	let currentModifiersHash = '';
+
 	// Reactive statement to trigger PII detection when modifiers change  
 	$: if (editor && editor.view && enablePiiDetection && enablePiiModifiers) {
-		// TEMPORARY: Revert to original length-based approach to debug API issue
-		if (currentModifiers.length !== previousModifiersLength && currentModifiers.length > 0) {
-			console.log('RichTextInput: Modifiers changed (length-based), triggering PII detection', {
-				previousLength: previousModifiersLength,
-				currentLength: currentModifiers.length
+		const newHash = getModifiersHash(currentModifiers);
+		if (newHash !== currentModifiersHash && newHash !== '') {
+			console.log('RichTextInput: Modifiers changed (content-based), triggering PII detection', {
+				previousHash: currentModifiersHash.substring(0, 50),
+				currentHash: newHash.substring(0, 50),
+				modifierCount: currentModifiers.length
 			});
-			previousModifiersLength = currentModifiers.length;
+			currentModifiersHash = newHash;
 			editor.commands.triggerDetectionForModifiers();
 		}
 	}
 
 	// Handle modifier changes
 	const handleModifiersChanged = (modifiers: PiiModifier[]) => {
-		const wasEmpty = currentModifiers.length === 0;
+		const oldHash = getModifiersHash(currentModifiers);
+		const newHash = getModifiersHash(modifiers);
+		
 		currentModifiers = modifiers;
 		onPiiModifiersChanged(modifiers);
 		
-		// TEMPORARY: Revert to original length-based logic to debug API issue
-		if ((wasEmpty && modifiers.length > 0) || modifiers.length !== previousModifiersLength) {
+		// Use content-based comparison for more reliable change detection
+		if (newHash !== oldHash) {
 			console.log('RichTextInput: Modifier change detected in handler', {
-				wasEmpty,
-				previousLength: previousModifiersLength,
-				newLength: modifiers.length
+				oldHash: oldHash.substring(0, 50),
+				newHash: newHash.substring(0, 50),
+				modifierCount: modifiers.length
 			});
 			
-			// Update the tracking variable
-			previousModifiersLength = modifiers.length;
+			// Update the tracking hash
+			currentModifiersHash = newHash;
 			
 			// Trigger detection if we have an editor and text
 			if (editor && editor.view && editor.view.state.doc.textContent.trim()) {

@@ -3,12 +3,12 @@ import { Plugin, PluginKey } from 'prosemirror-state';
 import type { Node as ProseMirrorNode } from 'prosemirror-model';
 
 // Types for the Shield API modifiers
-export type ModifierType = 'ignore' | 'mask';
+export type ModifierAction = 'ignore' | 'mask';
 
 export interface PiiModifier {
-	type: ModifierType;
+	action: ModifierAction;
 	entity: string;
-	label?: string; // Required for 'mask' type
+	type?: string; // PII type - required for 'mask' action
 	id: string; // Unique identifier for this modifier
 	from: number; // ProseMirror position start
 	to: number; // ProseMirror position end
@@ -31,6 +31,14 @@ interface PiiModifierState {
 		x: number;
 		y: number;
 	} | null;
+	selectedTextInfo: {
+		selectedText: string;
+		tokenizedWords: Array<{ word: string; from: number; to: number; }>;
+		from: number;
+		to: number;
+		x: number;
+		y: number;
+	} | null;
 }
 
 const piiModifierExtensionKey = new PluginKey<PiiModifierState>('piiModifier');
@@ -42,6 +50,9 @@ export { piiModifierExtensionKey };
 function generateModifierId(): string {
 	return `modifier_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
+
+// Tokenizer pattern for broader context word detection
+const WORD_TOKENIZER_PATTERN = /[\w'-äöüÄÖÜß]+/g;
 
 // Find word boundaries at a given position
 function findWordAt(doc: ProseMirrorNode, pos: number): { from: number; to: number; text: string } | null {
@@ -61,13 +72,13 @@ function findWordAt(doc: ProseMirrorNode, pos: number): { from: number; to: numb
 
 				// Find word start
 				let wordStart = relativePos;
-				while (wordStart > 0 && /\w/.test(nodeText[wordStart - 1])) {
+				while (wordStart > 0 && /[\w'-äöüÄÖÜß]/.test(nodeText[wordStart - 1])) {
 					wordStart--;
 				}
 
 				// Find word end
 				let wordEnd = relativePos;
-				while (wordEnd < nodeText.length && /\w/.test(nodeText[wordEnd])) {
+				while (wordEnd < nodeText.length && /[\w'-äöüÄÖÜß]/.test(nodeText[wordEnd])) {
 					wordEnd++;
 				}
 
@@ -88,7 +99,77 @@ function findWordAt(doc: ProseMirrorNode, pos: number): { from: number; to: numb
 	return null;
 }
 
+// Find all tokenized words touched by a text selection with broader context
+function findTokenizedWords(doc: ProseMirrorNode, selectionFrom: number, selectionTo: number): Array<{ word: string; from: number; to: number; }> {
+	const words: Array<{ word: string; from: number; to: number; }> = [];
+	
+	// Expand context to include words that might be partially selected
+	const contextStart = Math.max(0, selectionFrom - 100); // 100 chars before
+	const contextEnd = Math.min(doc.content.size, selectionTo + 100); // 100 chars after
+	
+	let contextText = '';
+	let contextOffset = contextStart;
+	
+	// Build context text with position mapping
+	const positionMap: number[] = []; // Maps context text index to document position
+	
+	doc.nodesBetween(contextStart, contextEnd, (node, nodePos) => {
+		if (node.isText && node.text) {
+			const nodeStart = nodePos;
+			const nodeEnd = nodePos + node.text.length;
+			const effectiveStart = Math.max(nodeStart, contextStart);
+			const effectiveEnd = Math.min(nodeEnd, contextEnd);
+			
+			if (effectiveStart < effectiveEnd) {
+				const startOffset = effectiveStart - nodeStart;
+				const endOffset = effectiveEnd - nodeStart;
+				const textSlice = node.text.substring(startOffset, endOffset);
+				
+				// Map each character position
+				for (let i = 0; i < textSlice.length; i++) {
+					positionMap.push(effectiveStart + i);
+				}
+				
+				contextText += textSlice;
+			}
+		}
+	});
+	
+	// Find all words using tokenizer
+	let match;
+	WORD_TOKENIZER_PATTERN.lastIndex = 0; // Reset regex
+	
+	while ((match = WORD_TOKENIZER_PATTERN.exec(contextText)) !== null) {
+		const wordStart = match.index;
+		const wordEnd = match.index + match[0].length;
+		
+		// Map back to document positions
+		const docStart = positionMap[wordStart];
+		const docEnd = positionMap[wordEnd - 1] + 1; // +1 because we want end position
+		
+		// Check if this word is "touched" by the selection (overlaps with selection range)
+		if (docEnd > selectionFrom && docStart < selectionTo) {
+			words.push({
+				word: match[0],
+				from: docStart,
+				to: docEnd
+			});
+		}
+	}
+	
+	// Remove duplicates and sort by position
+	const uniqueWords = words.filter((word, index, arr) => 
+		arr.findIndex(w => w.from === word.from && w.to === word.to) === index
+	).sort((a, b) => a.from - b.from);
+	
+	return uniqueWords;
+}
 
+// Check if text has an existing PII detection
+function isPiiDetected(text: string): boolean {
+	// Check for existing PII highlights in the DOM
+	return document.querySelector(`[data-pii-text="${text}"]`) !== null;
+}
 
 // Predefined PII labels for autocompletion (from SPACY_LABEL_MAPPINGS values)
 const PREDEFINED_LABELS = [
@@ -112,7 +193,7 @@ function findBestMatch(input: string, labels: string[]): string | null {
 	return null;
 }
 
-// Create hover menu element
+// Create hover menu element for PII entities
 function createHoverMenu(
 	wordInfo: { word: string; from: number; to: number; x: number; y: number },
 	onIgnore: () => void,
@@ -205,8 +286,8 @@ function createHoverMenu(
 			`;
 
 			const modifierInfo = document.createElement('span');
-			const typeIcon = modifier.type === 'ignore' ? '🚫' : '🏷️';
-			const typeText = modifier.type === 'ignore' ? 'Ignore' : `Mask as ${modifier.label}`;
+			const typeIcon = modifier.action === 'ignore' ? '🚫' : '🏷️';
+			const typeText = modifier.action === 'ignore' ? 'Ignore' : `Mask as ${modifier.type}`;
 			modifierInfo.textContent = `${typeIcon} ${typeText}`;
 			modifierInfo.style.cssText = `
 				color: #495057;
@@ -431,9 +512,9 @@ function createHoverMenu(
 	maskBtn.addEventListener('click', (e) => {
 		e.preventDefault();
 		e.stopPropagation();
-		const label = isDefaultValue ? 'CUSTOM' : labelInput.value.trim().toUpperCase();
-		if (label) {
-			onMask(label);
+		const piiType = isDefaultValue ? 'CUSTOM' : labelInput.value.trim().toUpperCase();
+		if (piiType) {
+			onMask(piiType);
 		} else {
 			// Highlight input if empty
 			labelInput.style.borderColor = '#ff6b6b';
@@ -489,6 +570,329 @@ function createHoverMenu(
 	return menu;
 }
 
+// Create text selection menu element
+function createSelectionMenu(
+	selectionInfo: { 
+		selectedText: string; 
+		tokenizedWords: Array<{ word: string; from: number; to: number; }>; 
+		from: number; 
+		to: number; 
+		x: number; 
+		y: number; 
+	},
+	onMaskSelection: (text: string, label: string, from: number, to: number) => void,
+	timeoutManager?: { clearAll: () => void; setFallback: (callback: () => void, delay: number) => void }
+): HTMLElement {
+	const menu = document.createElement('div');
+	menu.className = 'pii-modifier-selection-menu';
+	menu.style.cssText = `
+		position: fixed;
+		left: ${Math.min(selectionInfo.x, window.innerWidth - 300)}px;
+		top: ${selectionInfo.y - 120}px;
+		background: white;
+		border: 1px solid #ddd;
+		border-radius: 8px;
+		box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+		padding: 16px;
+		z-index: 1000;
+		font-family: system-ui, -apple-system, sans-serif;
+		font-size: 13px;
+		min-width: 280px;
+		max-width: 400px;
+		max-height: 300px;
+		overflow-y: auto;
+	`;
+
+	// Header
+	const header = document.createElement('div');
+	header.style.cssText = `
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		font-weight: 600;
+		color: #333;
+		margin-bottom: 12px;
+		font-size: 12px;
+	`;
+	
+	const icon = document.createElement('img');
+	icon.src = '/static/icon-purple-32.png';
+	icon.style.cssText = `width: 16px; height: 16px; flex-shrink: 0;`;
+	
+	const headerText = document.createElement('span');
+	headerText.textContent = 'Mark text as PII';
+	
+	header.appendChild(icon);
+	header.appendChild(headerText);
+	menu.appendChild(header);
+
+	// Selection options
+	const optionsContainer = document.createElement('div');
+	optionsContainer.style.cssText = `margin-bottom: 12px;`;
+
+	// Tokenized words option (default)
+	const tokenizedOption = document.createElement('div');
+	tokenizedOption.style.cssText = `margin-bottom: 8px;`;
+
+	const tokenizedRadio = document.createElement('input');
+	tokenizedRadio.type = 'radio';
+	tokenizedRadio.name = 'selection-type';
+	tokenizedRadio.value = 'tokenized';
+	tokenizedRadio.checked = true;
+	tokenizedRadio.id = 'tokenized-option';
+
+	const tokenizedLabel = document.createElement('label');
+	tokenizedLabel.htmlFor = 'tokenized-option';
+	tokenizedLabel.style.cssText = `
+		margin-left: 6px;
+		font-weight: 500;
+		cursor: pointer;
+	`;
+	tokenizedLabel.textContent = 'Tokenized words: ';
+
+	const tokenizedWords = document.createElement('span');
+	tokenizedWords.style.cssText = `
+		background: #f0f9ff;
+		color: #0369a1;
+		padding: 2px 6px;
+		border-radius: 4px;
+		font-size: 11px;
+		margin-left: 4px;
+	`;
+	tokenizedWords.textContent = selectionInfo.tokenizedWords.map(w => w.word).join(', ');
+
+	tokenizedOption.appendChild(tokenizedRadio);
+	tokenizedOption.appendChild(tokenizedLabel);
+	tokenizedOption.appendChild(tokenizedWords);
+
+	// Exact selection option
+	const exactOption = document.createElement('div');
+	exactOption.style.cssText = `margin-bottom: 8px;`;
+
+	const exactRadio = document.createElement('input');
+	exactRadio.type = 'radio';
+	exactRadio.name = 'selection-type';
+	exactRadio.value = 'exact';
+	exactRadio.id = 'exact-option';
+
+	const exactLabel = document.createElement('label');
+	exactLabel.htmlFor = 'exact-option';
+	exactLabel.style.cssText = `
+		margin-left: 6px;
+		font-weight: 500;
+		cursor: pointer;
+	`;
+	exactLabel.textContent = 'Exact selection: ';
+
+	const exactText = document.createElement('span');
+	exactText.style.cssText = `
+		background: #fef3c7;
+		color: #92400e;
+		padding: 2px 6px;
+		border-radius: 4px;
+		font-size: 11px;
+		margin-left: 4px;
+	`;
+	exactText.textContent = `"${selectionInfo.selectedText}"`;
+
+	exactOption.appendChild(exactRadio);
+	exactOption.appendChild(exactLabel);
+	exactOption.appendChild(exactText);
+
+	optionsContainer.appendChild(tokenizedOption);
+	optionsContainer.appendChild(exactOption);
+	menu.appendChild(optionsContainer);
+
+	// Label input section
+	const labelSection = document.createElement('div');
+	labelSection.style.cssText = `
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	`;
+
+	const labelInput = document.createElement('input');
+	labelInput.type = 'text';
+	labelInput.value = 'CUSTOM';
+	labelInput.placeholder = 'Enter PII label type';
+	labelInput.style.cssText = `
+		width: 100%;
+		padding: 8px 10px;
+		border: 1px solid #ddd;
+		border-radius: 4px;
+		font-size: 12px;
+		box-sizing: border-box;
+		color: #999;
+	`;
+
+	let isDefaultValue = true;
+	let skipAutocompletion = false;
+
+	// Handle input focus
+	const handleInputFocus = (e: Event) => {
+		e.stopPropagation();
+		
+		if (timeoutManager) {
+			(timeoutManager as any).setInputFocused(true);
+		}
+		
+		if (isDefaultValue) {
+			labelInput.value = '';
+			labelInput.style.color = '#333';
+			isDefaultValue = false;
+		}
+	};
+
+	labelInput.addEventListener('focus', handleInputFocus);
+	labelInput.addEventListener('click', handleInputFocus);
+
+	labelInput.addEventListener('blur', () => {
+		if (timeoutManager) {
+			(timeoutManager as any).setInputFocused(false);
+		}
+		
+		if (labelInput.value.trim() === '') {
+			labelInput.value = 'CUSTOM';
+			labelInput.style.color = '#999';
+			isDefaultValue = true;
+		}
+	});
+
+	// Handle autocompletion
+	labelInput.addEventListener('input', (e) => {
+		e.stopPropagation();
+		
+		if (skipAutocompletion) {
+			skipAutocompletion = false;
+			return;
+		}
+		
+		const inputValue = labelInput.value;
+		
+		if (!isDefaultValue && inputValue) {
+			const bestMatch = findBestMatch(inputValue, PREDEFINED_LABELS);
+			
+			if (bestMatch && bestMatch !== inputValue.toUpperCase()) {
+				const cursorPos = labelInput.selectionStart || 0;
+				labelInput.value = bestMatch;
+				labelInput.setSelectionRange(cursorPos, bestMatch.length);
+			}
+		}
+	});
+
+	// Handle keyboard events
+	labelInput.addEventListener('keydown', (e) => {
+		e.stopPropagation();
+		
+		if (e.key === 'Enter') {
+			e.preventDefault();
+			markSelectedText();
+		} else if (e.key === 'Tab') {
+			e.preventDefault();
+			labelInput.setSelectionRange(labelInput.value.length, labelInput.value.length);
+		} else if (e.key === 'Escape') {
+			e.preventDefault();
+			menu.remove();
+		} else if (e.key === 'Backspace') {
+			skipAutocompletion = true;
+		}
+	});
+
+	labelInput.addEventListener('keyup', (e) => {
+		e.stopPropagation();
+	});
+
+	// Mark button
+	const markBtn = document.createElement('button');
+	markBtn.textContent = 'Mark as PII';
+	markBtn.style.cssText = `
+		width: 100%;
+		padding: 8px 12px;
+		border: 1px solid #6b46c1;
+		background: #6b46c1;
+		border-radius: 4px;
+		cursor: pointer;
+		font-size: 12px;
+		color: white;
+		font-weight: 500;
+		transition: background-color 0.2s ease;
+	`;
+
+	markBtn.addEventListener('mouseenter', () => {
+		markBtn.style.backgroundColor = '#553c9a';
+	});
+	
+	markBtn.addEventListener('mouseleave', () => {
+		markBtn.style.backgroundColor = '#6b46c1';
+	});
+
+			// Mark selected text function
+		const markSelectedText = () => {
+			const piiType = isDefaultValue ? 'CUSTOM' : labelInput.value.trim().toUpperCase();
+			if (!piiType) {
+				labelInput.style.borderColor = '#ff6b6b';
+				labelInput.focus();
+				setTimeout(() => {
+					labelInput.style.borderColor = '#ddd';
+				}, 1000);
+				return;
+			}
+
+			const isTokenized = tokenizedRadio.checked;
+			
+			if (isTokenized) {
+				// Mark each tokenized word separately
+				selectionInfo.tokenizedWords.forEach(word => {
+					onMaskSelection(word.word, piiType, word.from, word.to);
+				});
+			} else {
+				// Mark exact selection
+				onMaskSelection(selectionInfo.selectedText, piiType, selectionInfo.from, selectionInfo.to);
+			}
+
+			menu.remove();
+		};
+
+	markBtn.addEventListener('click', (e) => {
+		e.preventDefault();
+		e.stopPropagation();
+		markSelectedText();
+	});
+
+	labelSection.appendChild(labelInput);
+	labelSection.appendChild(markBtn);
+	menu.appendChild(labelSection);
+
+	// Hover protection
+	menu.addEventListener('mouseenter', () => {
+		if (timeoutManager) {
+			timeoutManager.clearAll();
+		}
+	});
+
+	menu.addEventListener('mouseleave', (e) => {
+		const relatedTarget = e.relatedTarget as HTMLElement;
+		if (relatedTarget && menu.contains(relatedTarget)) {
+			return;
+		}
+		
+		if (timeoutManager) {
+			timeoutManager.setFallback(() => {
+				if (menu && document.body.contains(menu)) {
+					const activeElement = document.activeElement;
+					const isInputFocused = activeElement && menu.contains(activeElement);
+					
+					if (!isInputFocused) {
+						menu.remove();
+					}
+				}
+			}, 500);
+		}
+	});
+
+	return menu;
+}
+
 export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 	name: 'piiModifier',
 
@@ -524,6 +928,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 		}
 
 		let hoverMenuElement: HTMLElement | null = null;
+		let selectionMenuElement: HTMLElement | null = null;
 		let hoverTimeout: number | null = null;
 		let menuCloseTimeout: ReturnType<typeof setTimeout> | null = null;
 		let isMouseOverMenu = false;
@@ -537,7 +942,8 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 					console.log('PiiModifierExtension: Initializing extension state');
 					return {
 						modifiers: [],
-						hoveredWordInfo: null
+						hoveredWordInfo: null,
+						selectedTextInfo: null
 					};
 				},
 
@@ -576,25 +982,19 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 							case 'ADD_MODIFIER':
 								const newModifier: PiiModifier = {
 									id: generateModifierId(),
-									type: meta.modifierType,
+									action: meta.modifierAction,
 									entity: meta.entity,
-									label: meta.label,
+									type: meta.piiType,
 									from: meta.from,
 									to: meta.to
 								};
 
-								let updatedModifiers;
+								// Replace any existing modifier for the same entity text (case-insensitive)
+								const filteredModifiers = newState.modifiers.filter(modifier => 
+									modifier.entity.toLowerCase() !== meta.entity.toLowerCase()
+								);
 								
-								if (meta.modifierType === 'mask') {
-									// For mask modifiers, replace any existing mask modifiers for the same entity
-									updatedModifiers = newState.modifiers.filter(modifier => 
-										!(modifier.type === 'mask' && modifier.entity.toLowerCase() === meta.entity.toLowerCase())
-									);
-									updatedModifiers.push(newModifier);
-								} else {
-									// For ignore modifiers, just add normally (ignore can coexist with masks)
-									updatedModifiers = [...newState.modifiers, newModifier];
-								}
+								const updatedModifiers = [...filteredModifiers, newModifier];
 
 								newState = {
 									...newState,
@@ -607,14 +1007,25 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 								break;
 
 							case 'REMOVE_MODIFIER':
-								const filteredModifiers = newState.modifiers.filter(m => m.id !== meta.modifierId);
+								const remainingModifiers = newState.modifiers.filter(m => m.id !== meta.modifierId);
 								newState = {
 									...newState,
-									modifiers: filteredModifiers
+									modifiers: remainingModifiers
 								};
 
 								if (onModifiersChanged) {
-									onModifiersChanged(filteredModifiers);
+									onModifiersChanged(remainingModifiers);
+								}
+								break;
+								
+							case 'CLEAR_MODIFIERS':
+								newState = {
+									...newState,
+									modifiers: []
+								};
+
+								if (onModifiersChanged) {
+									onModifiersChanged([]);
 								}
 								break;
 						}
@@ -626,16 +1037,31 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 
 			props: {
 				handleClick(view, pos, event) {
-					// Only hide hover menu if clicking outside of it
+					const target = event.target as HTMLElement;
+					
+					// Close hover menu if clicking outside of it
 					if (hoverMenuElement) {
-						const target = event.target as HTMLElement;
-						const isClickInsideMenu = hoverMenuElement.contains(target);
+						const isClickInsideHoverMenu = hoverMenuElement.contains(target);
 						
-						if (!isClickInsideMenu) {
+						if (!isClickInsideHoverMenu) {
 							hoverMenuElement.remove();
 							hoverMenuElement = null;
-							isInputFocused = false;
 						}
+					}
+					
+					// Close selection menu if clicking outside of it
+					if (selectionMenuElement) {
+						const isClickInsideSelectionMenu = selectionMenuElement.contains(target);
+						
+						if (!isClickInsideSelectionMenu) {
+							selectionMenuElement.remove();
+							selectionMenuElement = null;
+						}
+					}
+					
+					// Reset input focus state if clicking outside menus
+					if (!hoverMenuElement && !selectionMenuElement) {
+						isInputFocused = false;
 					}
 
 					return false;
@@ -651,10 +1077,11 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 
 				handleDOMEvents: {
 					mousemove: (view, event) => {
-						// Check if mouse is over existing menu
-						const isOverMenu = hoverMenuElement && hoverMenuElement.contains(event.target as Node);
+						// Check if mouse is over existing menus
+						const isOverHoverMenu = hoverMenuElement && hoverMenuElement.contains(event.target as Node);
+						const isOverSelectionMenu = selectionMenuElement && selectionMenuElement.contains(event.target as Node);
 						
-						if (isOverMenu) {
+						if (isOverHoverMenu || isOverSelectionMenu) {
 							// Update mouse over menu state
 							if (!isMouseOverMenu) {
 								isMouseOverMenu = true;
@@ -677,6 +1104,11 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 							}
 						}
 
+						// Don't show hover menu if selection menu is active
+						if (selectionMenuElement) {
+							return;
+						}
+
 						// Clear existing timeout
 						if (hoverTimeout) {
 							clearTimeout(hoverTimeout);
@@ -697,10 +1129,8 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 								return;
 							}
 
-							// Note: Allow multiple modifiers for the same word since we don't show visual indicators
-
 							// Check if word is currently highlighted as PII (by PII detection)
-							const isPiiHighlighted = document.querySelector(`[data-pii-text="${wordInfo.text}"]`) !== null;
+							const isPiiHighlighted = isPiiDetected(wordInfo.text);
 
 							// Find existing modifiers for this word (check entity text match)
 							const pluginState = piiModifierExtensionKey.getState(view.state);
@@ -709,10 +1139,14 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 								return modifier.entity.toLowerCase() === wordInfo.text.toLowerCase();
 							}) || [];
 
-							// Check if there are any mask modifiers for this word
-							const hasMaskModifier = existingModifiers.some(modifier => modifier.type === 'mask');
-							// Check if there are any ignore modifiers for this word
-							const hasIgnoreModifier = existingModifiers.some(modifier => modifier.type === 'ignore');
+							// Only show hover menu if there's a PII detection or existing modifiers
+							if (!isPiiHighlighted && existingModifiers.length === 0) {
+								if (hoverMenuElement) {
+									hoverMenuElement.remove();
+									hoverMenuElement = null;
+								}
+								return;
+							}
 
 							// Show hover menu
 							if (hoverMenuElement) {
@@ -745,7 +1179,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 							const onIgnore = () => {
 								const tr = view.state.tr.setMeta(piiModifierExtensionKey, {
 									type: 'ADD_MODIFIER',
-									modifierType: 'ignore' as ModifierType,
+									modifierAction: 'ignore' as ModifierAction,
 									entity: wordInfo.text,
 									from: wordInfo.from,
 									to: wordInfo.to
@@ -759,12 +1193,12 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 								timeoutManager.clearAll();
 							};
 
-							const onMask = (label: string) => {
+							const onMask = (piiType: string) => {
 								const tr = view.state.tr.setMeta(piiModifierExtensionKey, {
 									type: 'ADD_MODIFIER',
-									modifierType: 'mask' as ModifierType,
+									modifierAction: 'mask' as ModifierAction,
 									entity: wordInfo.text,
-									label,
+									piiType,
 									from: wordInfo.from,
 									to: wordInfo.to
 								});
@@ -801,11 +1235,11 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 								},
 								onIgnore,
 								onMask,
-								isPiiHighlighted && !hasMaskModifier, // Show ignore button only if detected as PII AND no mask modifier exists
+								isPiiHighlighted, // Show ignore button if detected as PII
 								existingModifiers, // Pass existing modifiers
 								onRemoveModifier, // Pass removal callback
 								timeoutManager, // Pass timeout manager
-								!hasIgnoreModifier // Show text field only if no ignore modifier exists
+								existingModifiers.length === 0 || existingModifiers.some(m => m.type === 'mask') // Show text field if no modifiers or has mask modifiers
 							);
 
 							document.body.appendChild(hoverMenuElement);
@@ -818,11 +1252,118 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 								}
 							}, 10000);
 
-						}, 300); // Reduced hover delay to 300ms
+						}, 300);
+					},
+
+					mouseup: (view, event) => {
+						// Handle text selection for selection menu
+						const selection = view.state.selection;
+						
+						// Only show selection menu if there's actual text selected
+						if (selection.empty || selection.from === selection.to) {
+							// Close selection menu if no selection
+							if (selectionMenuElement) {
+								selectionMenuElement.remove();
+								selectionMenuElement = null;
+							}
+							return;
+						}
+
+						// Get selected text
+						const selectedText = view.state.doc.textBetween(selection.from, selection.to);
+						
+						// Don't show menu for very short selections
+						if (selectedText.length < 2) {
+							return;
+						}
+
+						// Find tokenized words touched by the selection
+						const tokenizedWords = findTokenizedWords(view.state.doc, selection.from, selection.to);
+						
+						// Don't show menu if no words found
+						if (tokenizedWords.length === 0) {
+							return;
+						}
+
+						// Close hover menu if it exists
+						if (hoverMenuElement) {
+							hoverMenuElement.remove();
+							hoverMenuElement = null;
+						}
+
+						// Close existing selection menu
+						if (selectionMenuElement) {
+							selectionMenuElement.remove();
+						}
+
+						// Create timeout manager for selection menu
+						const timeoutManager = {
+							clearAll: () => {
+								if (hoverTimeout) {
+									clearTimeout(hoverTimeout);
+									hoverTimeout = null;
+								}
+								if (menuCloseTimeout) {
+									clearTimeout(menuCloseTimeout);
+									menuCloseTimeout = null;
+								}
+							},
+							setFallback: (callback: () => void, delay: number) => {
+								if (menuCloseTimeout) {
+									clearTimeout(menuCloseTimeout);
+								}
+								menuCloseTimeout = setTimeout(callback, delay);
+							},
+							setInputFocused: (focused: boolean) => {
+								isInputFocused = focused;
+							}
+						};
+
+						const onMaskSelection = (text: string, piiType: string, from: number, to: number) => {
+							const tr = view.state.tr.setMeta(piiModifierExtensionKey, {
+								type: 'ADD_MODIFIER',
+								modifierAction: 'mask' as ModifierAction,
+								entity: text,
+								piiType,
+								from,
+								to
+							});
+							view.dispatch(tr);
+
+							if (selectionMenuElement) {
+								selectionMenuElement.remove();
+								selectionMenuElement = null;
+							}
+							timeoutManager.clearAll();
+						};
+
+						// Create selection menu
+						selectionMenuElement = createSelectionMenu(
+							{
+								selectedText,
+								tokenizedWords,
+								from: selection.from,
+								to: selection.to,
+								x: event.clientX,
+								y: event.clientY
+							},
+							onMaskSelection,
+							timeoutManager
+						);
+
+						document.body.appendChild(selectionMenuElement);
+
+						// Set a fallback timeout to close menu after 15 seconds
+						timeoutManager.setFallback(() => {
+							if (selectionMenuElement) {
+								selectionMenuElement.remove();
+								selectionMenuElement = null;
+							}
+						}, 15000);
 					},
 
 					mouseleave: () => {
-						// Clear timeout when leaving editor, but keep menu if it exists
+						// Clear timeout when leaving editor, but keep menus if they exist
 						if (hoverTimeout) {
 							clearTimeout(hoverTimeout);
 						}
@@ -836,6 +1377,10 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 						if (hoverMenuElement) {
 							hoverMenuElement.remove();
 							hoverMenuElement = null;
+						}
+						if (selectionMenuElement) {
+							selectionMenuElement.remove();
+							selectionMenuElement = null;
 						}
 						if (hoverTimeout) {
 							clearTimeout(hoverTimeout);
@@ -868,9 +1413,40 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 					return false;
 				}
 
-				// Clear all modifiers
 				const tr = state.tr.setMeta(piiModifierExtensionKey, {
 					type: 'CLEAR_MODIFIERS'
+				});
+
+				if (dispatch) {
+					dispatch(tr);
+				}
+
+				return true;
+			},
+
+			// Add a modifier programmatically
+			addModifier: (options: { action: ModifierAction; entity: string; type?: string; from: number; to: number; }) => ({ state, dispatch }: any) => {
+				const tr = state.tr.setMeta(piiModifierExtensionKey, {
+					type: 'ADD_MODIFIER',
+					modifierAction: options.action,
+					entity: options.entity,
+					piiType: options.type,
+					from: options.from,
+					to: options.to
+				});
+
+				if (dispatch) {
+					dispatch(tr);
+				}
+
+				return true;
+			},
+
+			// Remove a modifier by ID
+			removeModifier: (modifierId: string) => ({ state, dispatch }: any) => {
+				const tr = state.tr.setMeta(piiModifierExtensionKey, {
+					type: 'REMOVE_MODIFIER',
+					modifierId
 				});
 
 				if (dispatch) {
@@ -888,16 +1464,28 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 				}
 
 				return pluginState.modifiers.map(modifier => ({
-					type: modifier.type,
+					action: modifier.action,
 					entity: modifier.entity,
-					...(modifier.label && { label: modifier.label })
+					...(modifier.type && { type: modifier.type })
 				}));
+			},
+
+			// Get modifiers for a specific entity text
+			getModifiersForEntity: (entityText: string) => ({ state }: any) => {
+				const pluginState = piiModifierExtensionKey.getState(state);
+				if (!pluginState?.modifiers.length) {
+					return [];
+				}
+
+				return pluginState.modifiers.filter(modifier => 
+					modifier.entity.toLowerCase() === entityText.toLowerCase()
+				);
 			}
 		} as any;
 	}
 });
 
-// Utility function to add CSS styles for the hover menu only
+// Utility function to add CSS styles for modifier system
 export function addPiiModifierStyles() {
 	const styleId = 'pii-modifier-styles';
 	
@@ -909,7 +1497,9 @@ export function addPiiModifierStyles() {
 	const styleElement = document.createElement('style');
 	styleElement.id = styleId;
 	styleElement.textContent = `
-		.pii-modifier-hover-menu {
+		/* Menu animations and interactions */
+		.pii-modifier-hover-menu,
+		.pii-modifier-selection-menu {
 			animation: fadeIn 0.2s ease-in-out;
 			pointer-events: auto;
 		}
@@ -919,16 +1509,76 @@ export function addPiiModifierStyles() {
 			to { opacity: 1; transform: translateY(0); }
 		}
 
-		.pii-modifier-hover-menu button:hover {
+		.pii-modifier-hover-menu button:hover,
+		.pii-modifier-selection-menu button:hover {
 			transform: scale(1.02);
 			transition: transform 0.1s ease;
 			box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 		}
 
-		.pii-modifier-hover-menu input:focus {
+		.pii-modifier-hover-menu input:focus,
+		.pii-modifier-selection-menu input:focus {
 			outline: none;
 			border-color: #4ecdc4;
 			box-shadow: 0 0 0 2px rgba(78, 205, 196, 0.2);
+		}
+
+		/* Modifier highlighting - takes precedence over PII detection */
+		.pii-modifier-highlight {
+			position: relative;
+			border-radius: 3px;
+			padding: 1px 2px;
+			cursor: pointer;
+			transition: all 0.2s ease;
+			z-index: 10; /* Higher than PII highlights */
+		}
+
+		.pii-modifier-highlight:hover {
+			box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+		}
+
+		/* Mask modifier styling - orange text with green background/border */
+		.pii-modifier-highlight.pii-modifier-mask {
+			color: #ca8a04 !important; /* Orange text - takes precedence */
+			background-color: rgba(34, 197, 94, 0.2) !important; /* Green background */
+			border-bottom: 1px dashed #15803d !important; /* Green dashed underline */
+		}
+
+		.pii-modifier-highlight.pii-modifier-mask:hover {
+			color: #a16207 !important;
+			background-color: rgba(34, 197, 94, 0.3) !important;
+			border-bottom: 2px dashed #15803d !important;
+		}
+
+		/* Ignore modifier styling - orange text, no background */
+		.pii-modifier-highlight.pii-modifier-ignore {
+			color: #ca8a04 !important; /* Orange text - takes precedence */
+			text-decoration: line-through !important; /* Strike through */
+			opacity: 0.7 !important;
+		}
+
+		.pii-modifier-highlight.pii-modifier-ignore:hover {
+			color: #a16207 !important;
+			opacity: 0.9 !important;
+		}
+
+		/* Ensure modifier styles take precedence over PII styles */
+		.pii-highlight.pii-modifier-highlight {
+			color: #ca8a04 !important;
+		}
+
+		.pii-highlight.pii-modifier-highlight.pii-modifier-mask {
+			color: #ca8a04 !important;
+			background-color: rgba(34, 197, 94, 0.2) !important;
+			border-bottom: 1px dashed #15803d !important;
+		}
+
+		.pii-highlight.pii-modifier-highlight.pii-modifier-ignore {
+			color: #ca8a04 !important;
+			background-color: transparent !important;
+			border-bottom: none !important;
+			text-decoration: line-through !important;
+			opacity: 0.7 !important;
 		}
 	`;
 
