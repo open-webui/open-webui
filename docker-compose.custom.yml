@@ -33,7 +33,8 @@ services:
       - open-webui:/app/backend/data
     environment:
       - OLLAMA_BASE_URL=http://ollama:11434
-      - SEARXNG_QUERY_URL=http://searxng:8080/search
+      - SEARXNG_QUERY_URL=http://host.docker.internal:8080/search?q=<query>
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
     extra_hosts:
       - host.docker.internal:host-gateway
     depends_on:
