@@ -40,6 +40,21 @@ services:
     depends_on:
       - ollama
       - searxng
+      - pipelines
+    restart: unless-stopped
+    networks:
+      - open-webui-network
+
+  pipelines:
+    image: ghcr.io/open-webui/pipelines:main
+    container_name: pipelines
+    ports:
+      - "9099:9099"
+    volumes:
+      - pipelines:/app/pipelines
+    environment:
+      - PIPELINES_API_KEY=0p3n-w3bu!
+      - PIPELINES_URLS=https://github.com/open-webui/pipelines/blob/main/examples/filters/function_calling_filter_pipeline.py
     restart: unless-stopped
     networks:
       - open-webui-network
@@ -47,6 +62,7 @@ services:
 volumes:
   open-webui:
   ollama:
+  pipelines:
 
 networks:
   open-webui-network:

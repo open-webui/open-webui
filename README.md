@@ -1,10 +1,16 @@
 # 🚀 Quick Setup Guide (Custom Docker Configuration)
 
-This repo includes a **custom Docker setup** with **Open WebUI + SearXNG + Ollama** containers plus easy management scripts.
+This repo includes a **custom Docker setup** with **Open WebUI + SearXNG + Ollama + Pipelines** containers plus easy management scripts.
 
 ## Prerequisites
 - Docker and Docker Compose installed
-- OpenAI API key (optional)
+- OpenAI API key (optional, for additional models)
+
+## 🎯 What You Get Out of the Box
+- **Open WebUI**: Web interface for chatting with AI models
+- **Ollama**: Local AI models (llama2, mistral, etc.)
+- **SearXNG**: Private web search engine
+- **Pipelines**: Function calling (calculator, weather, time) + extensibility framework
 
 ## Quick Start
 1. **Set up environment** (optional):
@@ -32,23 +38,181 @@ This repo includes a **custom Docker setup** with **Open WebUI + SearXNG + Ollam
 - `./manage.sh status` - Check container status
 - `./manage.sh models` - List downloaded models
 - `./manage.sh pull <model>` - Download new models
+- `./manage.sh pipelines` - List installed pipelines
+- `./manage.sh test-pipeline` - Test pipeline connection
+- `./manage.sh pipeline-logs` - View pipeline container logs
 
 ## What's Running
 - **Open WebUI**: http://localhost:3000 (main interface)
 - **SearXNG**: http://localhost:8080 (web search)
 - **Ollama**: http://localhost:11434 (AI models API)
+- **Pipelines**: http://localhost:9099 (function calling & extensions)
 
-## First Time Setup
-1. Start containers with `./start.sh`
-2. Go to http://localhost:3000 and create admin account
-3. In Admin Settings → Web Search → set engine to "SearXNG" 
-4. Set SearXNG URL to: `http://host.docker.internal:8080/search?q=<query>`
-5. Download models and start chatting!
+## 🛠️ Complete First Time Setup
 
-## Files
+### 1. Start Containers
+```bash
+./start.sh
+```
+Wait for all containers to start (about 30 seconds).
+
+### 2. Create Admin Account
+1. Go to http://localhost:3000
+2. Create your admin account
+
+### 3. Connect Pipelines (IMPORTANT!)
+1. Go to **Settings → Connections → OpenAI API**
+2. Click **"+ Add Connection"**
+3. Configure:
+   - **API Base URL**: `http://host.docker.internal:9099`
+   - **API Key**: `0p3n-w3bu!`
+4. **Save** - you should see a green checkmark and "Pipelines" label
+
+### 4. Configure Web Search (Optional)
+1. Go to **Admin Settings → Web Search**
+2. Set engine to **"SearXNG"**
+3. Set URL to: `http://host.docker.internal:8080/search?q=<query>`
+
+### 5. Download Models
+```bash
+./manage.sh pull llama2        # Basic model
+./manage.sh pull llama3.2      # Better model
+./manage.sh pull mistral       # Fast model
+```
+
+### 6. Test Everything!
+Try these in Open WebUI chat:
+- `"What time is it?"` ⏰ (function calling)
+- `"Calculate 123 * 456"` 🧮 (function calling)
+- `"What's the weather in New York?"` 🌤️ (needs OpenWeatherMap API key)
+
+## 🔧 Pipeline Features (The Cool Stuff!)
+
+**Pipelines** add superpowers to your AI chats:
+
+### 🎯 Function Calling (Pre-installed)
+- **Calculator**: Real math instead of AI guessing
+- **Time**: Actual current time
+- **Weather**: Live weather data (configure API key in Admin Panel → Pipelines)
+
+### 🚀 What Pipelines Enable
+- **RAG Systems**: Upload documents, get AI to reference them
+- **Web Search Integration**: AI can search the internet for current info
+- **Custom APIs**: Connect to databases, services, internal tools
+- **Safety Filters**: Block inappropriate content, rate limiting
+- **Monitoring**: Track usage, log conversations
+- **Custom Functions**: Add any Python functionality
+
+### 🧪 Testing Pipeline Functions
+
+**Built-in Functions** (work immediately):
+```
+"What time is it?"
+"Calculate 15 * 23 + 45"
+"What's 2 to the power of 10?"
+"What's the tip for a $85 bill at 18%?"
+```
+
+**Weather** (configure OpenWeatherMap API key first):
+```
+"What's the weather in New York?"
+"How's the weather in London?"
+"What's the temperature in Tokyo?"
+```
+
+### ⚙️ Configure Weather Function
+1. Get free API key: https://openweathermap.org/api
+2. Go to **Admin Panel → Pipelines → My Tools Pipeline**
+3. Add your API key to "Weather API Key" field
+4. Save
+
+## 📁 Files Structure
 - `docker-compose.custom.yml` - Container configuration
 - `searxng_settings.yml` - SearXNG search engine settings
 - `.env` - Environment variables (create this file)
+- `start.sh` - Startup script
+- `stop.sh` - Shutdown script  
+- `manage.sh` - Management commands
+
+## 🔧 Troubleshooting
+
+### Pipelines Not Detected
+**Problem**: Admin Panel → Pipelines shows "Pipelines not detected"
+**Solution**: 
+1. Check connection in Settings → Connections
+2. API URL must be: `http://host.docker.internal:9099`
+3. API Key must be: `0p3n-w3bu!`
+4. Look for green checkmark and "Pipelines" label
+
+### Function Calling Not Working
+**Problem**: AI ignores calculator/time requests
+**Solution**:
+1. Verify pipelines connection (above)
+2. Check pipeline logs: `./manage.sh pipeline-logs`
+3. In Admin Panel → Pipelines, configure "Task Model" (try `gpt-3.5-turbo`)
+
+### Container Connection Issues
+**Problem**: Containers can't reach each other
+**Solution**:
+1. Use `host.docker.internal` instead of `localhost` in URLs
+2. Check container status: `./manage.sh status`
+3. Restart everything: `./manage.sh restart`
+
+### Weather API Not Working
+**Problem**: Weather queries fail
+**Solution**:
+1. Get free OpenWeatherMap API key
+2. Configure in Admin Panel → Pipelines → My Tools Pipeline
+3. Wait 10-15 minutes for API key activation
+
+## 🚀 Advanced Usage
+
+### Add More Pipelines
+```bash
+# Wikipedia integration
+./manage.sh install-pipeline https://github.com/open-webui/pipelines/blob/main/examples/pipelines/integrations/wikipedia_pipeline.py
+
+# Web search pipeline
+./manage.sh install-pipeline https://github.com/open-webui/pipelines/blob/main/examples/filters/web_search_filter_pipeline.py
+```
+
+### Monitor Activity
+```bash
+# View all logs
+./manage.sh logs
+
+# View just pipeline activity
+./manage.sh pipeline-logs
+
+# Check what's running
+./manage.sh status
+```
+
+### Clean Restart
+```bash
+# Stop everything and remove containers
+./stop.sh --hard
+
+# Start fresh
+./start.sh
+```
+
+## ❓ Common Questions
+
+**Q: What's the difference between this and regular Open WebUI?**
+A: This adds pipelines for function calling (calculator, weather, time) plus SearXNG for private web search.
+
+**Q: Do I need OpenAI API key?**
+A: No! Works with local Ollama models. OpenAI key is optional for additional models.
+
+**Q: Can I add custom functions?**
+A: Yes! Pipelines framework lets you add any Python functionality.
+
+**Q: Is this secure?**
+A: Yes, everything runs locally. SearXNG doesn't track you, Ollama is local, pipelines are sandboxed.
+
+**Q: What if I break something?**
+A: Run `./stop.sh --clean` to reset everything, then `./start.sh` to start fresh.
 
 ---
 
@@ -253,7 +417,7 @@ Encountering connection issues? Our [Open WebUI Documentation](https://docs.open
 
 #### Open WebUI: Server Connection Error
 
-If you're experiencing connection issues, it’s often due to the WebUI docker container not being able to reach the Ollama server at 127.0.0.1:11434 (host.docker.internal:11434) inside the container . Use the `--network=host` flag in your docker command to resolve this. Note that the port changes from 3000 to 8080, resulting in the link: `http://localhost:8080`.
+If you're experiencing connection issues, it's often due to the WebUI docker container not being able to reach the Ollama server at 127.0.0.1:11434 (host.docker.internal:11434) inside the container. Use the `--network=host` flag in your docker command to resolve this. Note that the port changes from 3000 to 8080, resulting in the link: `http://localhost:8080`.
 
 **Example Docker Command**:
 
