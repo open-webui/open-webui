@@ -233,14 +233,14 @@ class Loader:
     def _get_loader(self, filename: str, file_content_type: str, file_path: str):
         file_ext = filename.split(".")[-1].lower()
         # --- Added ---
-        # use_tika: bool= os.environ.get('PARSER_TIKA_TOGGLE', PARSER_TIKA_TOGGLE)
-        # print(f"@@@@@@@@@@@@@@@@@ {use_tika} @@@@@@@@@@@@@@@@@@@@")
-        # print(self.engine)
+        use_tika: bool= os.environ.get('PARSER_TIKA_TOGGLE', PARSER_TIKA_TOGGLE)
+        print(f"@@@@@@@@@@@@@@@@@ {use_tika} @@@@@@@@@@@@@@@@@@@@")
+        print(self.engine)
         
-        # if use_tika == "true":
-        #     self.engine = "tika" 
-        # else: 
-        #     self.engine = "docling"
+        if use_tika == "true":
+            self.engine = "tika" 
+        else: 
+            self.engine = "docling"
             
         print(self.engine)
         #  --- End ---

@@ -121,6 +121,8 @@
 	}
 
 	let isDeepParserEnabled = false;
+	let isToggling = false; // משתנה למניעת קריאות מרובות
+	let pendingState = null; // משתנה לשמירת הסטייט הרצוי
 	const PARSER_TOGGLE_KEY = 'parser_toggle_state';
 
 	onMount(() => {
@@ -128,28 +130,55 @@
 		const savedState = localStorage.getItem(PARSER_TOGGLE_KEY);
 		if (savedState !== null) {
 			isDeepParserEnabled = savedState === 'true';
-			handleParserToggle(isDeepParserEnabled);
 		}
 	});
 
 	async function handleParserToggle(enabled: boolean) {
+		// אם כבר רץ תהליך, שמור את הסטייט הרצוי ואל תשלח קריאה נוספת
+		if (isToggling) {
+			pendingState = enabled;
+			return;
+		}
+		
+		isToggling = true;
+		let currentState = enabled;
+		
 		try {
-			const response = await fetch('/api/v1/retrieval/process/parser?toggle=' + enabled, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					Accept: 'application/json'
+			// לולאה שתטפל גם בסטייט ממתין
+			do {
+				pendingState = null; // איפוס הסטייט הממתין
+				
+				const response = await fetch('/api/v1/retrieval/process/parser?toggle=' + currentState, {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						Accept: 'application/json'
+					}
+				});
+				
+				if (response.ok) {
+					isDeepParserEnabled = currentState;
+					localStorage.setItem(PARSER_TOGGLE_KEY, currentState.toString());
+				} else {
+					console.error('Failed to update parser settings');
+					// אם נכשל, אל תעדכן את הסטייט
+					break;
 				}
-			});
-			if (response.ok) {
-				isDeepParserEnabled = enabled;
-				// Save the toggle state to localStorage
-				localStorage.setItem(PARSER_TOGGLE_KEY, enabled.toString());
-			} else {
-				console.error('Failed to update parser settings');
-			}
+				
+				// בדוק אם יש סטייט חדש שממתין
+				if (pendingState !== null && pendingState !== currentState) {
+					currentState = pendingState;
+				} else {
+					break; // אין יותר שינויים ממתינים
+				}
+				
+			} while (true);
+			
 		} catch (error) {
 			console.error('Error updating parser settings:', error);
+		} finally {
+			isToggling = false;
+			pendingState = null;
 		}
 	}
 </script>
@@ -312,7 +341,12 @@
 						</div>
 					</Tooltip>
 				</div>
-				<Switch state={isDeepParserEnabled} on:change={(e) => handleParserToggle(e.detail)} />
+				<Switch 
+					state={isDeepParserEnabled} 
+					on:change={(e) => {
+						handleParserToggle(e.detail);
+					}} 
+				/>
 			</div>
 
 			{#if fileUploadEnabled}

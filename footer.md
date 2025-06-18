@@ -6,4 +6,6 @@
   <a> לחצו ALT + X  לתצוגה נכונה של עברית</a>
   <a> | </a>
   <a href="https://karameldocs/docs/contact" target="_blank" > תמיכה </a>
+  <a> | </a>
+  <a href="https://karameldocs/docs/contact" target="_blank" > קרמל 🎁 </a>
 </div>

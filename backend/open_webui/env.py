@@ -15,6 +15,9 @@ from open_webui.constants import ERROR_MESSAGES
 ####################################
 # Load .env file
 ####################################
+PARSER_TIKA_TOGGLE: bool = os.environ.get("PARSER_TIKA_TOGGLE", "false")  # --- Added --- 
+print(f" in env.py: ---------- {PARSER_TIKA_TOGGLE} ------")
+
 OPEN_WEBUI_DIR = Path(__file__).parent  # the path containing this file
 print(OPEN_WEBUI_DIR)
 

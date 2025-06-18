@@ -99,7 +99,7 @@ from open_webui.env import (
     SENTENCE_TRANSFORMERS_MODEL_KWARGS,
     SENTENCE_TRANSFORMERS_CROSS_ENCODER_BACKEND,
     SENTENCE_TRANSFORMERS_CROSS_ENCODER_MODEL_KWARGS,
-    # PARSER_TIKA_TOGGLE,  # --- Added ---
+    PARSER_TIKA_TOGGLE,  # --- Added ---
 )
 from open_webui.constants import ERROR_MESSAGES
 
@@ -1269,18 +1269,18 @@ class ProcessFileForm(BaseModel):
     collection_name: Optional[str] = None
 
 #  --- Added --
-# @router.post("/process/parser")
-# def process_parser_toggle(toggle: bool, user=Depends(get_admin_user)):
-#     """
-#     Set the PARSER_TIKA_TOGGLE environment variable to the given boolean value.
-#     """
-#     current_value = os.environ.get('PARSER_TIKA_TOGGLE', PARSER_TIKA_TOGGLE)
-#     print(f"-------- Processing parser toggle... {current_value}")
-#     new_value = str(toggle).lower()
-#     print(f"^^^^^ new_value {new_value}")
-#     os.environ["PARSER_TIKA_TOGGLE"] = "true" if toggle else "false"
-#     print(f"+++++++++ Setting PARSER_TIKA_TOGGLE to {os.environ["PARSER_TIKA_TOGGLE"]}")
-#     return {"status": True, "PARSER_TIKA_TOGGLE": os.environ["PARSER_TIKA_TOGGLE"]}
+@router.post("/process/parser")
+def process_parser_toggle(toggle: bool, user=Depends(get_verified_user)):
+    """
+    Set the PARSER_TIKA_TOGGLE environment variable to the given boolean value.
+    """
+    current_value = os.environ.get('PARSER_TIKA_TOGGLE', PARSER_TIKA_TOGGLE)
+    print(f"-------- Processing parser toggle... {current_value}")
+    new_value = str(toggle).lower()
+    print(f"^^^^^ new_value {new_value}")
+    os.environ["PARSER_TIKA_TOGGLE"] = "true" if toggle else "false"
+    print(f"+++++++++ Setting PARSER_TIKA_TOGGLE to {os.environ["PARSER_TIKA_TOGGLE"]}")
+    return {"status": True, "PARSER_TIKA_TOGGLE": os.environ["PARSER_TIKA_TOGGLE"]}
 #  --- End --
 
 @router.post("/process/file")
