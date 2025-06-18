@@ -4,12 +4,14 @@ import sys
 from typing import TYPE_CHECKING
 
 from loguru import logger
+from opentelemetry import trace
 
 from open_webui.env import (
     AUDIT_LOG_FILE_ROTATION_SIZE,
     AUDIT_LOG_LEVEL,
     AUDIT_LOGS_FILE_PATH,
     GLOBAL_LOG_LEVEL,
+    ENABLE_OTEL,
 )
 
 
@@ -58,9 +60,17 @@ class InterceptHandler(logging.Handler):
             frame = frame.f_back
             depth += 1
 
-        logger.opt(depth=depth, exception=record.exc_info).log(
+        logger.opt(depth=depth, exception=record.exc_info).bind(**self._get_extras()).log(
             level, record.getMessage()
         )
+
+    def _get_extras(self):
+        extras = {}
+        if ENABLE_OTEL:
+            context = trace.get_current_span().get_span_context()
+            extras["trace_id"] = trace.format_trace_id(context.trace_id)
+            extras["span_id"] = trace.format_span_id(context.span_id)
+        return extras
 
 
 def file_format(record: "Record"):
