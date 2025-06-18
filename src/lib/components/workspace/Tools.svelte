@@ -64,8 +64,8 @@
 		return (
 			(t.name || '').toLowerCase().includes(lowerQuery) ||
 			(t.id || '').toLowerCase().includes(lowerQuery) ||
-			(t.user?.name || '').toLowerCase().includes(lowerQuery) || // Search by user name
-			(t.user?.email || '').toLowerCase().includes(lowerQuery) // Search by user email
+			(t.user?.name || '').toLowerCase().includes(lowerQuery) ||
+			(t.user?.email || '').toLowerCase().includes(lowerQuery)
 		);
 	});
 
@@ -238,16 +238,20 @@
 							showImportModal = true;
 						}}
 					>
-						<div
+						<a
 							class=" px-2 py-2 rounded-xl hover:bg-gray-700/10 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition font-medium text-sm flex items-center space-x-1"
+							href="/workspace/tools/create"
+							draggable="false"
+							on:click|preventDefault={() => {}}
 						>
 							<Plus className="size-3.5" />
-						</div>
+						</a>
 					</AddToolMenu>
 				{:else}
 					<a
 						class=" px-2 py-2 rounded-xl hover:bg-gray-700/10 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition font-medium text-sm flex items-center space-x-1"
 						href="/workspace/tools/create"
+						draggable="false"
 					>
 						<Plus className="size-3.5" />
 					</a>
@@ -260,10 +264,13 @@
 		{#each filteredItems as tool}
 			<div
 				class=" flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition"
+				draggable="false"
+				onselectstart="return false;"
 			>
 				<a
 					class=" flex flex-1 space-x-3.5 cursor-pointer w-full"
 					href={`/workspace/tools/edit?id=${encodeURIComponent(tool.id)}`}
+					draggable="false"
 				>
 					<div class="flex items-center text-left">
 						<div class=" flex-1 self-center">
@@ -498,6 +505,7 @@
 				class=" flex cursor-pointer items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-850 w-full mb-2 px-3.5 py-1.5 rounded-xl transition"
 				href="https://openwebui.com/#open-webui-community"
 				target="_blank"
+				draggable="false"
 			>
 				<div class=" self-center">
 					<div class=" font-semibold line-clamp-1">{$i18n.t('Discover a tool')}</div>

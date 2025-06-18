@@ -83,7 +83,9 @@
 								)
 									? ''
 									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
-								href="/workspace/models">{$i18n.t('Models')}</a
+								href="/workspace/models"
+								draggable="false"
+								onselectstart="return false;">{$i18n.t('Models')}</a
 							>
 						{/if}
 
@@ -95,6 +97,8 @@
 									? ''
 									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
 								href="/workspace/knowledge"
+								draggable="false"
+								onselectstart="return false;"
 							>
 								{$i18n.t('Knowledge')}
 							</a>
@@ -107,7 +111,9 @@
 								)
 									? ''
 									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
-								href="/workspace/prompts">{$i18n.t('Prompts')}</a
+								href="/workspace/prompts"
+								draggable="false"
+								onselectstart="return false;">{$i18n.t('Prompts')}</a
 							>
 						{/if}
 
@@ -117,6 +123,8 @@
 									? ''
 									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
 								href="/workspace/tools"
+								draggable="false"
+								onselectstart="return false;"
 							>
 								{$i18n.t('Tools')}
 							</a>

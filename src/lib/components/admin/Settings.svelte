@@ -85,15 +85,14 @@
 		id="admin-settings-tabs-container"
 		class="tabs flex flex-row overflow-x-auto gap-2.5 max-w-full lg:gap-1 lg:flex-col lg:flex-none lg:w-40 dark:text-gray-200 text-sm font-medium text-left scrollbar-none"
 	>
-		<button
+		<a
 			id="general"
-			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 lg:flex-none flex text-right transition {selectedTab ===
+			href="/admin/settings/general"
+			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 lg:flex-none flex text-left transition {selectedTab ===
 			'general'
 				? ''
-				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
-			on:click={() => {
-				goto('/admin/settings/general');
-			}}
+				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} select-none"
+			draggable="false"
 		>
 			<div class=" self-center mr-2">
 				<svg
@@ -110,17 +109,16 @@
 				</svg>
 			</div>
 			<div class=" self-center">{$i18n.t('General')}</div>
-		</button>
+		</a>
 
-		<button
+		<a
 			id="connections"
+			href="/admin/settings/connections"
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 			'connections'
 				? ''
-				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
-			on:click={() => {
-				goto('/admin/settings/connections');
-			}}
+				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} select-none"
+			draggable="false"
 		>
 			<div class=" self-center mr-2">
 				<svg
@@ -135,17 +133,16 @@
 				</svg>
 			</div>
 			<div class=" self-center">{$i18n.t('Connections')}</div>
-		</button>
+		</a>
 
-		<button
+		<a
 			id="models"
+			href="/admin/settings/models"
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 			'models'
 				? ''
-				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
-			on:click={() => {
-				goto('/admin/settings/models');
-			}}
+				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} select-none"
+			draggable="false"
 		>
 			<div class=" self-center mr-2">
 				<svg
@@ -162,33 +159,31 @@
 				</svg>
 			</div>
 			<div class=" self-center">{$i18n.t('Models')}</div>
-		</button>
+		</a>
 
-		<button
+		<a
 			id="evaluations"
+			href="/admin/settings/evaluations"
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 			'evaluations'
 				? ''
-				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
-			on:click={() => {
-				goto('/admin/settings/evaluations');
-			}}
+				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} select-none"
+			draggable="false"
 		>
 			<div class=" self-center mr-2">
 				<DocumentChartBar />
 			</div>
 			<div class=" self-center">{$i18n.t('Evaluations')}</div>
-		</button>
+		</a>
 
-		<button
+		<a
 			id="tools"
+			href="/admin/settings/tools"
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 			'tools'
 				? ''
-				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
-			on:click={() => {
-				goto('/admin/settings/tools');
-			}}
+				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} select-none"
+			draggable="false"
 		>
 			<div class=" self-center mr-2">
 				<svg
@@ -205,17 +200,16 @@
 				</svg>
 			</div>
 			<div class=" self-center">{$i18n.t('Tools')}</div>
-		</button>
+		</a>
 
-		<button
+		<a
 			id="documents"
+			href="/admin/settings/documents"
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 			'documents'
 				? ''
-				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
-			on:click={() => {
-				goto('/admin/settings/documents');
-			}}
+				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} select-none"
+			draggable="false"
 		>
 			<div class=" self-center mr-2">
 				<svg
@@ -236,17 +230,16 @@
 				</svg>
 			</div>
 			<div class=" self-center">{$i18n.t('Documents')}</div>
-		</button>
+		</a>
 
-		<button
+		<a
 			id="web"
+			href="/admin/settings/web"
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 			'web'
 				? ''
-				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
-			on:click={() => {
-				goto('/admin/settings/web');
-			}}
+				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} select-none"
+			draggable="false"
 		>
 			<div class=" self-center mr-2">
 				<svg
@@ -261,17 +254,16 @@
 				</svg>
 			</div>
 			<div class=" self-center">{$i18n.t('Web Search')}</div>
-		</button>
+		</a>
 
-		<button
+		<a
 			id="code-execution"
+			href="/admin/settings/code-execution"
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 			'code-execution'
 				? ''
-				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
-			on:click={() => {
-				goto('/admin/settings/code-execution');
-			}}
+				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} select-none"
+			draggable="false"
 		>
 			<div class=" self-center mr-2">
 				<svg
@@ -288,17 +280,16 @@
 				</svg>
 			</div>
 			<div class=" self-center">{$i18n.t('Code Execution')}</div>
-		</button>
+		</a>
 
-		<button
+		<a
 			id="interface"
+			href="/admin/settings/interface"
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 			'interface'
 				? ''
-				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
-			on:click={() => {
-				goto('/admin/settings/interface');
-			}}
+				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} select-none"
+			draggable="false"
 		>
 			<div class=" self-center mr-2">
 				<svg
@@ -315,17 +306,16 @@
 				</svg>
 			</div>
 			<div class=" self-center">{$i18n.t('Interface')}</div>
-		</button>
+		</a>
 
-		<button
+		<a
 			id="audio"
+			href="/admin/settings/audio"
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 			'audio'
 				? ''
-				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
-			on:click={() => {
-				goto('/admin/settings/audio');
-			}}
+				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} select-none"
+			draggable="false"
 		>
 			<div class=" self-center mr-2">
 				<svg
@@ -343,17 +333,16 @@
 				</svg>
 			</div>
 			<div class=" self-center">{$i18n.t('Audio')}</div>
-		</button>
+		</a>
 
-		<button
+		<a
 			id="images"
+			href="/admin/settings/images"
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 			'images'
 				? ''
-				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
-			on:click={() => {
-				goto('/admin/settings/images');
-			}}
+				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} select-none"
+			draggable="false"
 		>
 			<div class=" self-center mr-2">
 				<svg
@@ -370,17 +359,16 @@
 				</svg>
 			</div>
 			<div class=" self-center">{$i18n.t('Images')}</div>
-		</button>
+		</a>
 
-		<button
+		<a
 			id="pipelines"
+			href="/admin/settings/pipelines"
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 			'pipelines'
 				? ''
-				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
-			on:click={() => {
-				goto('/admin/settings/pipelines');
-			}}
+				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} select-none"
+			draggable="false"
 		>
 			<div class=" self-center mr-2">
 				<svg
@@ -401,17 +389,16 @@
 				</svg>
 			</div>
 			<div class=" self-center">{$i18n.t('Pipelines')}</div>
-		</button>
+		</a>
 
-		<button
+		<a
 			id="db"
+			href="/admin/settings/db"
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 			'db'
 				? ''
-				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
-			on:click={() => {
-				goto('/admin/settings/db');
-			}}
+				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} select-none"
+			draggable="false"
 		>
 			<div class=" self-center mr-2">
 				<svg
@@ -430,7 +417,7 @@
 				</svg>
 			</div>
 			<div class=" self-center">{$i18n.t('Database')}</div>
-		</button>
+		</a>
 	</div>
 
 	<div class="flex-1 mt-3 lg:mt-0 overflow-y-scroll pr-1 scrollbar-hidden">

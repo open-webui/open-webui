@@ -242,6 +242,7 @@
 						on:click={() => {
 							query = '';
 						}}
+						draggable="false"
 					>
 						<XMark className="size-3" strokeWidth="2" />
 					</button>
@@ -258,11 +259,13 @@
 					showImportModal = true;
 				}}
 			>
-				<div
+				<a
 					class=" px-2 py-2 rounded-xl hover:bg-gray-700/10 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition font-medium text-sm flex items-center space-x-1"
+					href="/admin/functions/create"
+					draggable="false"
 				>
 					<Plus className="size-3.5" />
-				</div>
+				</a>
 			</AddFunctionMenu>
 		</div>
 	</div>
@@ -276,6 +279,7 @@
 			<a
 				class=" flex flex-1 space-x-3.5 cursor-pointer w-full"
 				href={`/admin/functions/edit?id=${encodeURIComponent(func.id)}`}
+				draggable="false"
 			>
 				<div class="flex items-center text-left">
 					<div class=" flex-1 self-center pl-1">
@@ -318,6 +322,7 @@
 							on:click={() => {
 								deleteHandler(func);
 							}}
+							draggable="false"
 						>
 							<GarbageBin />
 						</button>
@@ -332,6 +337,7 @@
 									selectedFunction = func;
 									showManifestModal = true;
 								}}
+								draggable="false"
 							>
 								<Heart />
 							</button>
@@ -346,6 +352,7 @@
 								selectedFunction = func;
 								showValvesModal = true;
 							}}
+							draggable="false"
 						>
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
@@ -397,6 +404,7 @@
 						<button
 							class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 							type="button"
+							draggable="false"
 						>
 							<EllipsisHorizontal className="size-5" />
 						</button>
@@ -417,6 +425,7 @@
 									)
 								);
 							}}
+							draggable="false"
 						/>
 					</Tooltip>
 				</div>
@@ -444,6 +453,7 @@
 				console.log(importFiles);
 				showConfirm = true;
 			}}
+			draggable="false"
 		/>
 
 		<button
@@ -451,6 +461,7 @@
 			on:click={() => {
 				functionsImportInputElement.click();
 			}}
+			draggable="false"
 		>
 			<div class=" self-center mr-2 font-medium line-clamp-1">{$i18n.t('Import Functions')}</div>
 
@@ -486,6 +497,7 @@
 						saveAs(blob, `functions-export-${Date.now()}.json`);
 					}
 				}}
+				draggable="false"
 			>
 				<div class=" self-center mr-2 font-medium line-clamp-1">
 					{$i18n.t('Export Functions')} ({$functions.length})
@@ -520,6 +532,7 @@
 			class=" flex cursor-pointer items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-850 w-full mb-2 px-3.5 py-1.5 rounded-xl transition"
 			href="https://openwebui.com/#open-webui-community"
 			target="_blank"
+			draggable="false"
 		>
 			<div class=" self-center">
 				<div class=" font-semibold line-clamp-1">{$i18n.t('Discover a function')}</div>

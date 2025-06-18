@@ -40,19 +40,12 @@
 	let filteredItems = [];
 
 	$: if (knowledgeBases.length > 0) {
-		// Added a check for non-empty array, good practice
 		fuse = new Fuse(knowledgeBases, {
-			keys: [
-				'name',
-				'description',
-				'user.name', // Ensures Fuse looks into item.user.name
-				'user.email' // Ensures Fuse looks into item.user.email
-			],
-			threshold: 0.0 // You might want to adjust this. Lower is more strict. Default is 0.6.
-			// 0.0 is exact match.
+			keys: ['name', 'description', 'user.name', 'user.email'],
+			threshold: 0.0
 		});
 	} else {
-		fuse = null; // Reset fuse if knowledgeBases is empty
+		fuse = null;
 	}
 
 	$: if (fuse) {
@@ -131,34 +124,24 @@
 			</div>
 
 			<div>
-				<button
+				<a
 					class=" px-2 py-2 rounded-xl hover:bg-gray-700/10 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition font-medium text-sm flex items-center space-x-1"
 					aria-label={$i18n.t('Create Knowledge')}
-					on:click={() => {
-						goto('/workspace/knowledge/create');
-					}}
+					href="/workspace/knowledge/create"
+					draggable="false"
 				>
 					<Plus className="size-3.5" />
-				</button>
+				</a>
 			</div>
 		</div>
 	</div>
 
 	<div class="mb-5 grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-2">
 		{#each filteredItems as item}
-			<button
-				class=" flex space-x-4 cursor-pointer text-left w-full px-3 py-2 hover:bg-black/5 dark:hover:bg-white/5 transition rounded-xl"
-				on:click={() => {
-					if (item?.meta?.document) {
-						toast.error(
-							$i18n.t(
-								'Only collections can be edited, create a new knowledge base to edit/add documents.'
-							)
-						);
-					} else {
-						goto(`/workspace/knowledge/${item.id}`);
-					}
-				}}
+			<div
+				class=" flex space-x-4 cursor-pointer text-left w-full px-3 py-2 hover:bg-black/5 dark:hover:bg-white/5 transition rounded-xl select-none"
+				draggable="false"
+				onselectstart="return false;"
 			>
 				<div class=" w-full">
 					<div class="flex items-center justify-between -mt-1">
@@ -178,35 +161,52 @@
 						</div>
 					</div>
 
-					<div class=" self-center flex-1 px-1 mb-1">
-						<div class=" font-semibold line-clamp-1 h-fit">{item.name}</div>
+					<!-- The clickable area for navigation -->
+					<a
+						href={item?.meta?.document ? null : `/workspace/knowledge/${item.id}`}
+						class="block w-full"
+						on:click={(e) => {
+							if (item?.meta?.document) {
+								e.preventDefault();
+								toast.error(
+									$i18n.t(
+										'Only collections can be edited, create a new knowledge base to edit/add documents.'
+									)
+								);
+							}
+						}}
+						draggable="false"
+					>
+						<div class=" self-center flex-1 px-1 mb-1">
+							<div class=" font-semibold line-clamp-1 h-fit">{item.name}</div>
 
-						<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1">
-							{item.description}
-						</div>
+							<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1">
+								{item.description}
+							</div>
 
-						<div class="mt-3 flex justify-between">
-							<div class="text-xs text-gray-500">
-								<Tooltip
-									content={item?.user?.email ?? $i18n.t('Deleted User')}
-									className="flex shrink-0"
-									placement="top-start"
-								>
-									{$i18n.t('By {{name}}', {
-										name: capitalizeFirstLetter(
-											item?.user?.name ?? item?.user?.email ?? $i18n.t('Deleted User')
-										)
-									})}
-								</Tooltip>
-							</div>
-							<div class=" text-xs text-gray-500 line-clamp-1">
-								{$i18n.t('Updated')}
-								{dayjs(item.updated_at * 1000).fromNow()}
+							<div class="mt-3 flex justify-between">
+								<div class="text-xs text-gray-500">
+									<Tooltip
+										content={item?.user?.email ?? $i18n.t('Deleted User')}
+										className="flex shrink-0"
+										placement="top-start"
+									>
+										{$i18n.t('By {{name}}', {
+											name: capitalizeFirstLetter(
+												item?.user?.name ?? item?.user?.email ?? $i18n.t('Deleted User')
+											)
+										})}
+									</Tooltip>
+								</div>
+								<div class=" text-xs text-gray-500 line-clamp-1">
+									{$i18n.t('Updated')}
+									{dayjs(item.updated_at * 1000).fromNow()}
+								</div>
 							</div>
 						</div>
-					</div>
+					</a>
 				</div>
-			</button>
+			</div>
 		{/each}
 	</div>
 

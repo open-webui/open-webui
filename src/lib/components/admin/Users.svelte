@@ -60,15 +60,14 @@
 		id="users-tabs-container"
 		class=" flex flex-row overflow-x-auto gap-2.5 max-w-full lg:gap-1 lg:flex-col lg:flex-none lg:w-40 dark:text-gray-200 text-sm font-medium text-left scrollbar-none"
 	>
-		<button
+		<a
 			id="overview"
+			href="/admin/users/overview"
 			class="px-0.5 py-1 min-w-fit rounded-lg lg:flex-none flex text-right transition {selectedTab ===
 			'overview'
 				? ''
-				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
-			on:click={() => {
-				goto('/admin/users/overview');
-			}}
+				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} select-none"
+			draggable="false"
 		>
 			<div class=" self-center mr-2">
 				<svg
@@ -83,17 +82,16 @@
 				</svg>
 			</div>
 			<div class=" self-center">{$i18n.t('Overview')}</div>
-		</button>
+		</a>
 
-		<button
+		<a
 			id="groups"
+			href="/admin/users/groups"
 			class="px-0.5 py-1 min-w-fit rounded-lg lg:flex-none flex text-right transition {selectedTab ===
 			'groups'
 				? ''
-				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
-			on:click={() => {
-				goto('/admin/users/groups');
-			}}
+				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} select-none"
+			draggable="false"
 		>
 			<div class=" self-center mr-2">
 				<svg
@@ -108,7 +106,7 @@
 				</svg>
 			</div>
 			<div class=" self-center">{$i18n.t('Groups')}</div>
-		</button>
+		</a>
 	</div>
 
 	<div class="flex-1 mt-1 lg:mt-0 overflow-y-scroll">

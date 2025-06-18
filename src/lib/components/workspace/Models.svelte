@@ -59,8 +59,8 @@
 			const lowerQuery = query.toLowerCase();
 			return (
 				(m.name || '').toLowerCase().includes(lowerQuery) ||
-				(m.user?.name || '').toLowerCase().includes(lowerQuery) || // Search by user name
-				(m.user?.email || '').toLowerCase().includes(lowerQuery) // Search by user email
+				(m.user?.name || '').toLowerCase().includes(lowerQuery) ||
+				(m.user?.email || '').toLowerCase().includes(lowerQuery)
 			);
 		});
 	}
@@ -255,6 +255,7 @@
 				<a
 					class=" px-2 py-2 rounded-xl hover:bg-gray-700/10 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition font-medium text-sm flex items-center space-x-1"
 					href="/workspace/models/create"
+					draggable="false"
 				>
 					<Plus className="size-3.5" />
 				</a>
@@ -265,8 +266,10 @@
 	<div class=" my-2 mb-5 gap-2 grid lg:grid-cols-2 xl:grid-cols-3" id="model-list">
 		{#each filteredModels as model (model.id)}
 			<div
-				class=" flex flex-col cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition"
+				class=" flex flex-col cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition select-none"
 				id="model-item-{model.id}"
+				draggable="false"
+				onselectstart="return false;"
 			>
 				<div class="flex gap-4 mt-1 mb-0.5">
 					<div class=" w-[44px]">
@@ -279,13 +282,15 @@
 								src={model?.meta?.profile_image_url ?? '/static/favicon.png'}
 								alt="modelfile profile"
 								class=" rounded-full w-full h-auto object-cover"
+								draggable="false"
 							/>
 						</div>
 					</div>
 
 					<a
-						class=" flex flex-1 cursor-pointer w-full"
+						class=" flex flex-1 cursor-pointer w-full select-none"
 						href={`/?models=${encodeURIComponent(model.id)}`}
+						draggable="false"
 					>
 						<div class=" flex-1 self-center {model.is_active ? '' : 'text-gray-500'}">
 							<Tooltip
@@ -361,6 +366,7 @@
 									class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 									type="button"
 									href={`/workspace/models/edit?id=${encodeURIComponent(model.id)}`}
+									draggable="false"
 								>
 									<svg
 										xmlns="http://www.w3.org/2000/svg"
@@ -551,9 +557,10 @@
 			</div>
 
 			<a
-				class=" flex cursor-pointer items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-850 w-full mb-2 px-3.5 py-1.5 rounded-xl transition"
+				class=" flex cursor-pointer items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-850 w-full mb-2 px-3.5 py-1.5 rounded-xl transition select-none"
 				href="https://openwebui.com/#open-webui-community"
 				target="_blank"
+				draggable="false"
 			>
 				<div class=" self-center">
 					<div class=" font-semibold line-clamp-1">{$i18n.t('Discover a model')}</div>
