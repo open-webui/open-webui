@@ -1,29 +1,25 @@
 import logging
-from pathlib import Path
-from typing import Optional
-import time
 import re
-import aiohttp
-from pydantic import BaseModel, HttpUrl
+import time
+from typing import Optional
 
+import aiohttp
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from open_webui.config import CACHE_DIR
+from open_webui.constants import ERROR_MESSAGES
+from open_webui.env import SRC_LOG_LEVELS
 from open_webui.models.tools import (
     ToolForm,
     ToolModel,
     ToolResponse,
-    ToolUserResponse,
     Tools,
+    ToolUserResponse,
 )
-from open_webui.utils.plugin import load_tool_module_by_id, replace_imports
-from open_webui.config import CACHE_DIR
-from open_webui.constants import ERROR_MESSAGES
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-from open_webui.utils.tools import get_tool_specs
-from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access, has_permission
-from open_webui.env import SRC_LOG_LEVELS
-
-from open_webui.utils.tools import get_tool_servers_data
-
+from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.plugin import load_tool_module_by_id, replace_imports
+from open_webui.utils.tools import get_tool_servers_data, get_tool_specs
+from pydantic import BaseModel, HttpUrl
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
@@ -53,21 +49,25 @@ async def get_tools(request: Request, user=Depends(get_verified_user)):
         tools.append(
             ToolUserResponse(
                 **{
-                    "id": f"server:{server['idx']}",
-                    "user_id": f"server:{server['idx']}",
-                    "name": server.get("openapi", {})
-                    .get("info", {})
-                    .get("title", "Tool Server"),
-                    "meta": {
-                        "description": server.get("openapi", {})
+                    "id": f"server:{server['hash']}",
+                    "user_id": f"server:{server['hash']}",
+                    "name": (
+                        server.get("openapi", {})
                         .get("info", {})
-                        .get("description", ""),
+                        .get("title", "Tool Server")
+                    ),
+                    "meta": {
+                        "description": (
+                            server.get("openapi", {})
+                            .get("info", {})
+                            .get("description", "")
+                        ),
                     },
-                    "access_control": request.app.state.config.TOOL_SERVER_CONNECTIONS[
-                        server["idx"]
-                    ]
-                    .get("config", {})
-                    .get("access_control", None),
+                    "access_control": (
+                        request.app.state.config.TOOL_SERVER_CONNECTIONS[server["idx"]]
+                        .get("config", {})
+                        .get("access_control", None)
+                    ),
                     "updated_at": int(time.time()),
                     "created_at": int(time.time()),
                 }
