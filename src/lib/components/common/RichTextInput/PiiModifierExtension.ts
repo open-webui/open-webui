@@ -1,6 +1,7 @@
 import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey } from 'prosemirror-state';
 import type { Node as ProseMirrorNode } from 'prosemirror-model';
+import { PiiSessionManager } from '$lib/utils/pii';
 
 // Types for the Shield API modifiers
 export type ModifierAction = 'ignore' | 'mask';
@@ -17,6 +18,7 @@ export interface PiiModifier {
 // Options for the extension
 export interface PiiModifierOptions {
 	enabled: boolean;
+	conversationId?: string; // Add conversation ID for proper state management
 	onModifiersChanged?: (modifiers: PiiModifier[]) => void;
 	availableLabels?: string[]; // List of available PII labels for mask type
 }
@@ -899,6 +901,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 	addOptions() {
 		return {
 			enabled: false,
+			conversationId: '',
 			onModifiersChanged: undefined,
 			availableLabels: [
 				'PERSON', 'EMAIL', 'PHONE_NUMBER', 'ADDRESS', 'SSN', 
@@ -914,10 +917,11 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 
 	addProseMirrorPlugins() {
 		const options = this.options;
-		const { enabled, onModifiersChanged, availableLabels } = options;
+		const { enabled, conversationId, onModifiersChanged, availableLabels } = options;
 
 		console.log('PiiModifierExtension: Adding ProseMirror plugins', {
 			enabled,
+			conversationId,
 			hasCallback: !!onModifiersChanged,
 			labelsCount: availableLabels?.length || 0
 		});
@@ -940,8 +944,26 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 			state: {
 				init(): PiiModifierState {
 					console.log('PiiModifierExtension: Initializing extension state');
+					
+					// Load modifiers from session manager if available
+					const piiSessionManager = PiiSessionManager.getInstance();
+					
+					// First ensure localStorage is loaded
+					piiSessionManager.initializeFromLocalStorage();
+					
+					// Load conversation state if we have a conversationId
+					if (conversationId) {
+						piiSessionManager.loadConversationState(conversationId);
+					}
+					
+					const loadedModifiers = conversationId 
+						? piiSessionManager.getConversationModifiers(conversationId)
+						: piiSessionManager.getGlobalModifiers();
+					
+					console.log(`PiiModifierExtension: Loaded ${loadedModifiers.length} modifiers from session manager (${conversationId ? 'conversation' : 'global'})`);
+					
 					return {
-						modifiers: [],
+						modifiers: loadedModifiers,
 						hoveredWordInfo: null,
 						selectedTextInfo: null
 					};
@@ -1001,6 +1023,14 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 									modifiers: updatedModifiers
 								};
 
+								// Store in session manager
+								const piiSessionManager = PiiSessionManager.getInstance();
+								if (conversationId) {
+									piiSessionManager.setConversationModifiers(conversationId, updatedModifiers);
+								} else {
+									piiSessionManager.setGlobalModifiers(updatedModifiers);
+								}
+
 								if (onModifiersChanged) {
 									onModifiersChanged(updatedModifiers);
 								}
@@ -1013,6 +1043,14 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 									modifiers: remainingModifiers
 								};
 
+								// Store in session manager
+								const piiSessionManagerRemove = PiiSessionManager.getInstance();
+								if (conversationId) {
+									piiSessionManagerRemove.setConversationModifiers(conversationId, remainingModifiers);
+								} else {
+									piiSessionManagerRemove.setGlobalModifiers(remainingModifiers);
+								}
+
 								if (onModifiersChanged) {
 									onModifiersChanged(remainingModifiers);
 								}
@@ -1023,6 +1061,14 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 									...newState,
 									modifiers: []
 								};
+
+								// Store in session manager
+								const piiSessionManagerClear = PiiSessionManager.getInstance();
+								if (conversationId) {
+									piiSessionManagerClear.setConversationModifiers(conversationId, []);
+								} else {
+									piiSessionManagerClear.setGlobalModifiers([]);
+								}
 
 								if (onModifiersChanged) {
 									onModifiersChanged([]);

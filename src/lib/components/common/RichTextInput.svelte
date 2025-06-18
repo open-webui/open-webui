@@ -107,6 +107,7 @@
 
 	// PII Session Manager for conversation state
 	let piiSessionManager = PiiSessionManager.getInstance();
+	let previousConversationId = '';
 
 	const options = {
 		throwOnError: false
@@ -196,9 +197,19 @@
 	};
 
 	onMount(async () => {
-		// Initialize PII session manager
+		// Initialize PII session manager with localStorage
 		if (enablePiiDetection && piiApiKey) {
 			piiSessionManager.setApiKey(piiApiKey);
+		}
+		
+		// Initialize from localStorage
+		if (enablePiiDetection) {
+			piiSessionManager.initializeFromLocalStorage();
+			
+			// If we have a conversation ID, load conversation-specific state
+			if (conversationId) {
+				piiSessionManager.loadConversationState(conversationId);
+			}
 		}
 
 		// Add PII highlighting styles
@@ -288,6 +299,7 @@
 					? [
 							PiiModifierExtension.configure({
 								enabled: true,
+								conversationId: conversationId,
 								onModifiersChanged: handleModifiersChanged,
 								availableLabels: piiModifierLabels.length > 0 
 									? piiModifierLabels 
@@ -547,6 +559,65 @@
 	};
 
 	let currentModifiersHash = '';
+
+	// Reactive statement to handle conversation ID changes and transfer global state
+	$: if (conversationId && conversationId !== previousConversationId && enablePiiDetection) {
+		console.log('RichTextInput: Conversation ID changed from', previousConversationId, 'to', conversationId);
+		
+		// If we're going from empty to a real conversation ID, transfer global state
+		if (!previousConversationId && conversationId) {
+			console.log('RichTextInput: Transferring global state to conversation state');
+			piiSessionManager.transferGlobalToConversation(conversationId);
+			
+			// Save the transferred state to localStorage immediately
+			const transferredState = piiSessionManager.getConversationState(conversationId);
+			if (transferredState) {
+				console.log('RichTextInput: Saving transferred state to localStorage');
+			}
+			
+			// Update editor extensions with new conversation ID
+			if (editor) {
+				// Recreate extensions with proper conversation ID
+				const extensions = [
+					...(enablePiiDetection
+						? [
+								PiiDetectionExtension.configure({
+									enabled: true,
+									apiKey: piiApiKey,
+									conversationId: conversationId,
+									onPiiDetected: onPiiDetected,
+									onPiiToggled: onPiiToggled
+								})
+							]
+						: []),
+					...(enablePiiModifiers && enablePiiDetection
+						? [
+								PiiModifierExtension.configure({
+									enabled: true,
+									conversationId: conversationId,
+									onModifiersChanged: handleModifiersChanged,
+									availableLabels: piiModifierLabels.length > 0 
+										? piiModifierLabels 
+										: undefined
+								})
+							]
+						: [])
+				];
+				
+				// Note: TipTap doesn't support hot-swapping extensions, so we log this
+				// The conversation ID will be used properly on next editor initialization
+				console.log('RichTextInput: Would update extensions with new conversation ID (requires editor restart)');
+			}
+		}
+		
+		// If switching between different conversation IDs, load the new conversation state
+		if (previousConversationId && conversationId && previousConversationId !== conversationId) {
+			console.log(`RichTextInput: Switching from conversation ${previousConversationId} to ${conversationId}`);
+			piiSessionManager.loadConversationState(conversationId);
+		}
+		
+		previousConversationId = conversationId;
+	}
 
 	// Reactive statement to trigger PII detection when modifiers change  
 	$: if (editor && editor.view && enablePiiDetection && enablePiiModifiers) {

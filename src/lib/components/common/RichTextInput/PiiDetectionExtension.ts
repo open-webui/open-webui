@@ -259,33 +259,39 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 			console.log('PiiDetectionExtension: Starting PII detection for text:', plainText.substring(0, 100));
 
 			try {
-				// Get known entities from conversation state
+				// Ensure localStorage state is loaded before API call
+				piiSessionManager.initializeFromLocalStorage();
+				
+				// Load conversation state if we have a conversationId
+				if (conversationId) {
+					piiSessionManager.loadConversationState(conversationId);
+				}
+				
+				// Get known entities from conversation or global state
 				const knownEntities = conversationId
 					? piiSessionManager.getKnownEntitiesForApi(conversationId)
-					: [];
+					: piiSessionManager.getGlobalKnownEntitiesForApi();
 
-				console.log('PiiDetectionExtension: Using known entities:', knownEntities);
+				console.log('PiiDetectionExtension: Using known entities:', {
+					source: conversationId ? `conversation(${conversationId})` : 'global',
+					entities: knownEntities,
+					count: knownEntities.length
+				});
 
-				// Get current modifiers from PiiModifierExtension state (read-only)
-				const view = this.editor?.view;
-				let modifiers: ShieldApiModifier[] = [];
-				if (view) {
-					const modifierState = piiModifierExtensionKey.getState(view.state);
-					if (modifierState?.modifiers && modifierState.modifiers.length > 0) {
-						modifiers = convertModifiersToApiFormat(modifierState.modifiers);
-						console.log('PiiDetectionExtension: Found', modifiers.length, 'modifiers:', modifiers);
-					} else {
-						console.log('PiiDetectionExtension: No modifiers found in editor state');
-					}
-				} else {
-					console.log('PiiDetectionExtension: No editor view available for reading modifiers');
-				}
+				// Get current modifiers from session manager (not ProseMirror extension state)
+				const modifiers = piiSessionManager.getModifiersForApi(conversationId);
+				console.log('PiiDetectionExtension: Using modifiers:', {
+					source: conversationId ? `conversation(${conversationId})` : 'global',
+					modifiers: modifiers,
+					count: modifiers.length
+				});
 
 				const response = await maskPiiText(apiKey, [plainText], knownEntities, modifiers, false, false);
 				
 				console.log('PiiDetectionExtension: API request details:', {
 					textLength: plainText.length,
 					knownEntitiesCount: knownEntities.length,
+					knownEntities: knownEntities,
 					modifiersCount: modifiers.length,
 					modifiers: modifiers,
 					hasApiKey: !!apiKey
@@ -295,12 +301,13 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 
 				if (response.pii && response.pii[0] && response.pii[0].length > 0) {
 					// Get the editor view through the stored editor reference
-					if (!view) {
+					const editorView = this.editor?.view;
+					if (!editorView) {
 						console.log('PiiDetectionExtension: No editor view available');
 						return;
 					}
 
-					const state = piiDetectionPluginKey.getState(view.state);
+					const state = piiDetectionPluginKey.getState(editorView.state);
 					if (!state?.positionMapping) {
 						console.log('PiiDetectionExtension: No position mapping available');
 						return;
@@ -311,20 +318,22 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 					
 					console.log('PiiDetectionExtension: Mapped entities:', mappedEntities);
 
-					// Store entities in session manager
+					// Store entities in session manager (using append to preserve existing + add modifier-created entities)
 					if (conversationId) {
-						piiSessionManager.setConversationEntities(conversationId, response.pii[0]);
+						console.log(`PiiDetectionExtension: Storing ${response.pii[0].length} entities to conversation ${conversationId}`);
+						piiSessionManager.appendConversationEntities(conversationId, response.pii[0]);
 					} else {
-						piiSessionManager.setEntities(response.pii[0]);
+						console.log(`PiiDetectionExtension: Storing ${response.pii[0].length} entities to global state`);
+						piiSessionManager.appendGlobalEntities(response.pii[0]);
 					}
 
 					// Update plugin state with new entities (don't touch modifiers - they're managed by PiiModifierExtension)
-					const tr = view.state.tr.setMeta(piiDetectionPluginKey, {
+					const tr = editorView.state.tr.setMeta(piiDetectionPluginKey, {
 						type: 'UPDATE_ENTITIES',
 						entities: mappedEntities
 					});
 					
-					view.dispatch(tr);
+					editorView.dispatch(tr);
 
 					// Notify parent component
 					if (onPiiDetected) {
@@ -466,17 +475,16 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 			props: {
 				decorations(state) {
 					const pluginState = piiDetectionPluginKey.getState(state);
-					if (!pluginState?.entities.length) {
-						// Check if we have modifiers even without PII entities
-						const modifierState = piiModifierExtensionKey.getState(state);
-						if (!modifierState?.modifiers.length) {
-							return DecorationSet.empty;
-						}
-					}
 					
-					// Get modifiers from the PiiModifierExtension state
-					const modifierState = piiModifierExtensionKey.getState(state);
-					const modifiers = modifierState?.modifiers || [];
+					// Get modifiers from session manager (not ProseMirror extension state)
+					const piiSessionManager = PiiSessionManager.getInstance();
+					const modifiers = conversationId 
+						? piiSessionManager.getConversationModifiers(conversationId)
+						: piiSessionManager.getGlobalModifiers();
+					
+					if (!pluginState?.entities.length && !modifiers.length) {
+						return DecorationSet.empty;
+					}
 					
 					const decorations = createPiiDecorations(pluginState?.entities || [], modifiers, state.doc);
 					console.log('PiiDetectionExtension: Creating', decorations.length, 'decorations');
