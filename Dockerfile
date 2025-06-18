@@ -121,6 +121,10 @@ RUN if [ "$USE_OLLAMA" = "true" ]; then \
     curl -fsSL https://ollama.com/install.sh | sh && \
     # cleanup
     rm -rf /var/lib/apt/lists/*; \
+    # We make python smaller
+    find /usr/local/ -name "*.pyc"  -delete \
+    find /usr/local/ -name "*.so" -exec strip {} + \
+    find /usr/local/ -type d \( -name test -o -name tests -o -name __pycache__ -o -name include \) -exec rm -rf '{}' + \
     else \
     apt-get update && \
     # Install pandoc, netcat and gcc
@@ -130,6 +134,10 @@ RUN if [ "$USE_OLLAMA" = "true" ]; then \
     apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 && \
     # cleanup
     rm -rf /var/lib/apt/lists/*; \
+    # We make python smaller
+    find /usr/local/ -name "*.pyc"  -delete \
+    find /usr/local/ -name "*.so" -exec strip {} + \
+    find /usr/local/ -type d \( -name test -o -name tests -o -name __pycache__ -o -name include \) -exec rm -rf '{}' + \
     fi
 
 # install python dependencies
