@@ -1587,12 +1587,13 @@ export interface ModelConfig {
 }
 
 export interface ModelMeta {
+	toolIds: never[];
 	description?: string;
 	capabilities?: object;
 	profile_image_url?: string;
 }
 
-export interface ModelParams {}
+export interface ModelParams { }
 
 export type GlobalModelConfig = ModelConfig[];
 
