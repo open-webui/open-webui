@@ -77,7 +77,7 @@
 		"codemirror-lang-hcl": "^0.0.0-beta.2",
 		"crc-32": "^1.2.2",
 		"dayjs": "^1.11.10",
-		"dompurify": "^3.1.6",
+		"dompurify": "^3.2.4",
 		"emoji-picker-element": "^1.26.3",
 		"eventsource-parser": "^1.1.2",
 		"file-saver": "^2.0.5",
