@@ -920,14 +920,18 @@ def transcription(
 ):
     log.info(f"file.content_type: {file.content_type}")
 
-    supported_content_types = request.app.state.config.STT_SUPPORTED_CONTENT_TYPES or [
-        "audio/*",
-        "video/webm",
-    ]
+    stt_supported_content_types = getattr(
+        request.app.state.config, "STT_SUPPORTED_CONTENT_TYPES", []
+    )
 
     if not any(
         fnmatch(file.content_type, content_type)
-        for content_type in supported_content_types
+        for content_type in (
+            stt_supported_content_types
+            if stt_supported_content_types
+            and any(t.strip() for t in stt_supported_content_types)
+            else ["audio/*", "video/webm"]
+        )
     ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
