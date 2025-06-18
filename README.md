@@ -1,3 +1,57 @@
+# 🚀 Quick Setup Guide (Custom Docker Configuration)
+
+This repo includes a **custom Docker setup** with **Open WebUI + SearXNG + Ollama** containers plus easy management scripts.
+
+## Prerequisites
+- Docker and Docker Compose installed
+- OpenAI API key (optional)
+
+## Quick Start
+1. **Set up environment** (optional):
+   ```bash
+   echo "OPENAI_API_KEY=your_actual_api_key_here" > .env
+   ```
+
+2. **Start everything**:
+   ```bash
+   ./start.sh
+   ```
+
+3. **Download AI models**:
+   ```bash
+   ./manage.sh pull llama2        # or llama3.2, mistral, etc.
+   ```
+
+4. **Access the app**: http://localhost:3000
+
+## Management Scripts
+- `./start.sh` - Start all containers
+- `./stop.sh` - Stop containers (options: `--hard`, `--clean`)
+- `./manage.sh restart` - Restart everything
+- `./manage.sh logs` - View live logs
+- `./manage.sh status` - Check container status
+- `./manage.sh models` - List downloaded models
+- `./manage.sh pull <model>` - Download new models
+
+## What's Running
+- **Open WebUI**: http://localhost:3000 (main interface)
+- **SearXNG**: http://localhost:8080 (web search)
+- **Ollama**: http://localhost:11434 (AI models API)
+
+## First Time Setup
+1. Start containers with `./start.sh`
+2. Go to http://localhost:3000 and create admin account
+3. In Admin Settings → Web Search → set engine to "SearXNG" 
+4. Set SearXNG URL to: `http://host.docker.internal:8080/search?q=<query>`
+5. Download models and start chatting!
+
+## Files
+- `docker-compose.custom.yml` - Container configuration
+- `searxng_settings.yml` - SearXNG search engine settings
+- `.env` - Environment variables (create this file)
+
+---
+
 # Open WebUI 👋
 
 ![GitHub stars](https://img.shields.io/github/stars/open-webui/open-webui?style=social)

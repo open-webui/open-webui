@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    volumes:
+      - ollama:/root/.ollama
+    ports:
+      - "11434:11434"
+    tty: true
+    restart: unless-stopped
+    networks:
+      - open-webui-network
+
+  searxng:
+    image: searxng/searxng:latest
+    container_name: searxng
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./searxng_settings.yml:/etc/searxng/settings.yml:ro
+    restart: unless-stopped
+    networks:
+      - open-webui-network
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: open-webui
+    ports:
+      - "3000:8080"
+    volumes:
+      - open-webui:/app/backend/data
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - SEARXNG_QUERY_URL=http://searxng:8080/search
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    depends_on:
+      - ollama
+      - searxng
+    restart: unless-stopped
+    networks:
+      - open-webui-network
+
+volumes:
+  open-webui:
+  ollama:
+
+networks:
+  open-webui-network:
+    driver: bridge 
