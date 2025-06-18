@@ -1,6 +1,6 @@
 # 🚀 Quick Setup Guide (Custom Docker Configuration)
 
-This repo includes a **custom Docker setup** with **Open WebUI + SearXNG + Ollama** containers plus easy management scripts.
+This repo includes a **custom Docker setup** with **Open WebUI + SearXNG + Ollama + Pipelines** containers plus easy management scripts.
 
 ## Prerequisites
 - Docker and Docker Compose installed
@@ -32,18 +32,44 @@ This repo includes a **custom Docker setup** with **Open WebUI + SearXNG + Ollam
 - `./manage.sh status` - Check container status
 - `./manage.sh models` - List downloaded models
 - `./manage.sh pull <model>` - Download new models
+- `./manage.sh test-pipeline` - Test pipeline connection
+- `./manage.sh install-pipeline <url>` - Install pipeline from GitHub URL
 
 ## What's Running
 - **Open WebUI**: http://localhost:3000 (main interface)
 - **SearXNG**: http://localhost:8080 (web search)
 - **Ollama**: http://localhost:11434 (AI models API)
+- **Pipelines**: http://localhost:9099 (plugins/extensions)
 
 ## First Time Setup
 1. Start containers with `./start.sh`
 2. Go to http://localhost:3000 and create admin account
 3. In Admin Settings → Web Search → set engine to "SearXNG" 
 4. Set SearXNG URL to: `http://host.docker.internal:8080/search?q=<query>`
-5. Download models and start chatting!
+5. **Connect Pipelines**: Go to Settings → Connections → OpenAI API
+   - Set API URL to: `http://localhost:9099`
+   - Set API Key to: `0p3n-w3bu!`
+6. Download models and start chatting!
+
+## Pipeline Features 🔧
+Pipelines extend Open WebUI with custom functionality:
+- **Function Calling**: Calculator, weather, time, web tools
+- **RAG Systems**: Custom document retrieval and processing
+- **Message Filtering**: Safety, toxicity detection, rate limiting
+- **Custom Integrations**: Add any Python library or API
+- **Monitoring**: Track usage with Langfuse, logging systems
+
+### Testing Pipeline Functionality
+```bash
+# Test pipeline connection
+./manage.sh test-pipeline
+
+# Install a function calling pipeline (calculator, weather, time)
+./manage.sh install-pipeline https://github.com/open-webui/pipelines/blob/main/examples/filters/function_calling_filter_pipeline.py
+
+# View pipeline logs
+./manage.sh pipeline-logs
+```
 
 ## Files
 - `docker-compose.custom.yml` - Container configuration
@@ -253,7 +279,7 @@ Encountering connection issues? Our [Open WebUI Documentation](https://docs.open
 
 #### Open WebUI: Server Connection Error
 
-If you're experiencing connection issues, it’s often due to the WebUI docker container not being able to reach the Ollama server at 127.0.0.1:11434 (host.docker.internal:11434) inside the container . Use the `--network=host` flag in your docker command to resolve this. Note that the port changes from 3000 to 8080, resulting in the link: `http://localhost:8080`.
+If you're experiencing connection issues, it's often due to the WebUI docker container not being able to reach the Ollama server at 127.0.0.1:11434 (host.docker.internal:11434) inside the container. Use the `--network=host` flag in your docker command to resolve this. Note that the port changes from 3000 to 8080, resulting in the link: `http://localhost:8080`.
 
 **Example Docker Command**:
 
