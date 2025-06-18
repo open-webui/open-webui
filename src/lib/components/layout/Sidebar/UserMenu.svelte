@@ -121,8 +121,6 @@
 							showSidebar.set(false);
 						}
 					}}
-					rel="noopener noreferrer"
-					draggable="false"
 				>
 					<div class=" self-center mr-3">
 						<Code className="size-5" strokeWidth="1.5" />
@@ -132,7 +130,7 @@
 
 				<a
 					class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition select-none"
-					href="/admin"
+					href="/admin/users/overview"
 					draggable="false"
 					rel="noopener noreferrer"
 					on:click={() => {
@@ -141,8 +139,6 @@
 							showSidebar.set(false);
 						}
 					}}
-					rel="noopener noreferrer"
-					draggable="false"
 				>
 					<div class=" self-center mr-3">
 						<UserGroup className="w-5 h-5" strokeWidth="1.5" />
@@ -154,33 +150,37 @@
 			{#if help}
 				<hr class=" border-gray-100 dark:border-gray-800 my-1 p-0" />
 
-				<!-- {$i18n.t('Help')} -->
-				<DropdownMenu.Item
+				<a
 					class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition"
 					id="chat-share-button"
+					href="https://docs.openwebui.com"
+					target="_blank"
+					rel="noopener noreferrer"
+					draggable="false"
 					on:click={() => {
-						window.open('https://docs.openwebui.com', '_blank');
 						show = false;
 						if ($mobile) showSidebar.set(false);
 					}}
 				>
 					<QuestionMarkCircle className="size-5" />
 					<div class="flex items-center">{$i18n.t('Documentation')}</div>
-				</DropdownMenu.Item>
+				</a>
 
-				<!-- Releases -->
-				<DropdownMenu.Item
+				<a
 					class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition"
 					id="menu-item-releases"
+					href="https://github.com/open-webui/open-webui/releases"
+					target="_blank"
+					rel="noopener noreferrer"
+					draggable="false"
 					on:click={() => {
-						window.open('https://github.com/open-webui/open-webui/releases', '_blank');
 						show = false;
 						if ($mobile) showSidebar.set(false);
 					}}
 				>
 					<Map className="size-5" />
 					<div class="flex items-center">{$i18n.t('Releases')}</div>
-				</DropdownMenu.Item>
+				</a>
 
 				<DropdownMenu.Item
 					class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition"
@@ -252,9 +252,6 @@
 					</Tooltip>
 				{/if}
 			{/if}
-			<!-- <DropdownMenu.Item class="flex items-center py-1.5 px-3 text-sm ">
-				<div class="flex items-center">Profile</div>
-			</DropdownMenu.Item> -->
 		</DropdownMenu.Content>
 	</slot>
 </DropdownMenu.Root>
