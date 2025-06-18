@@ -47,7 +47,8 @@
 			transition={(e) => fade(e, { duration: 100 })}
 		>
 			<button
-				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition select-none"
+				draggable="false"
 				on:click={async () => {
 					await showSettings.set(true);
 					show = false;
@@ -82,7 +83,8 @@
 			</button>
 
 			<button
-				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition select-none"
+				draggable="false"
 				on:click={() => {
 					dispatch('show', 'archived-chat');
 					show = false;
@@ -100,8 +102,9 @@
 
 			{#if role === 'admin'}
 				<a
-					class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+					class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition select-none"
 					href="/playground"
+					draggable="false"
 					on:click={() => {
 						show = false;
 
@@ -130,8 +133,9 @@
 				</a>
 
 				<a
-					class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+					class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition select-none"
 					href="/admin/users/overview"
+					draggable="false"
 					on:click={() => {
 						show = false;
 
@@ -165,31 +169,50 @@
 
 				<!-- {$i18n.t('Help')} -->
 				<DropdownMenu.Item
-					class="flex gap-2 items-center py-1.5 px-3 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+					asChild
 					id="chat-share-button"
 					on:click={() => {
-						window.open('https://docs.openwebui.com', '_blank');
+						show = false;
+						if ($mobile) showSidebar.set(false);
 					}}
 				>
-					<QuestionMarkCircle className="size-5" />
-					<div class="flex items-center">{$i18n.t('Documentation')}</div>
+					<a
+						href="https://docs.openwebui.com"
+						target="_blank"
+						rel="noopener noreferrer"
+						draggable="false"
+						class="flex gap-2 items-center py-1.5 px-3 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md select-none"
+					>
+						<QuestionMarkCircle className="size-5" />
+						<div class="flex items-center">{$i18n.t('Documentation')}</div>
+					</a>
 				</DropdownMenu.Item>
 
 				<!-- Releases -->
 				<DropdownMenu.Item
-					class="flex gap-2 items-center py-1.5 px-3 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+					asChild
 					id="menu-item-releases"
 					on:click={() => {
-						window.open('https://github.com/open-webui/open-webui/releases', '_blank');
+						show = false;
+						if ($mobile) showSidebar.set(false);
 					}}
 				>
-					<Map className="size-5" />
-					<div class="flex items-center">{$i18n.t('Releases')}</div>
+					<a
+						href="https://github.com/open-webui/open-webui/releases"
+						target="_blank"
+						rel="noopener noreferrer"
+						draggable="false"
+						class="flex gap-2 items-center py-1.5 px-3 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md select-none"
+					>
+						<Map className="size-5" />
+						<div class="flex items-center">{$i18n.t('Releases')}</div>
+					</a>
 				</DropdownMenu.Item>
 
 				<DropdownMenu.Item
-					class="flex gap-2 items-center py-1.5 px-3 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+					class="flex gap-2 items-center py-1.5 px-3 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md select-none"
 					id="chat-share-button"
+					draggable="false"
 					on:click={() => {
 						showShortcuts = !showShortcuts;
 						show = false;
@@ -203,7 +226,8 @@
 			<hr class=" border-gray-100 dark:border-gray-800 my-1 p-0" />
 
 			<button
-				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition select-none"
+				draggable="false"
 				on:click={async () => {
 					const res = await userSignOut();
 					user.set(null);
@@ -243,7 +267,7 @@
 						? `${$i18n.t('Running')}: ${$USAGE_POOL.join(', ')} ✨`
 						: ''}
 				>
-					<div class="flex rounded-md py-1 px-3 text-xs gap-2.5 items-center">
+					<div class="flex rounded-md py-1 px-3 text-xs gap-2.5 items-center select-none">
 						<div class=" flex items-center">
 							<span class="relative flex size-2">
 								<span
