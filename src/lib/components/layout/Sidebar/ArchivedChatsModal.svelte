@@ -133,7 +133,8 @@
 						<input
 							class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-none bg-transparent"
 							bind:value={searchValue}
-							on:input={() => ariaMessage.set(filteredChatList.length + $i18n.t(' archived chat found'))}
+							on:input={() =>
+								ariaMessage.set(filteredChatList.length + $i18n.t(' archived chat found'))}
 							placeholder={$i18n.t('Search Chats')}
 						/>
 					</div>

@@ -12,7 +12,6 @@
 		user,
 		suggestionCycle,
 		ariaMessage
-
 	} from '$lib/stores';
 
 	import { slide } from 'svelte/transition';

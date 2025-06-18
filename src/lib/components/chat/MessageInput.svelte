@@ -17,7 +17,6 @@
 		user as _user,
 		showControls,
 		ariaMessage
-
 	} from '$lib/stores';
 
 	import { blobToFile, compressImage, createMessagesList, findWordIndices } from '$lib/utils';

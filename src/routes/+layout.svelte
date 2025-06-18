@@ -52,16 +52,16 @@
 	const bc = new BroadcastChannel('active-tab-channel');
 
 	let loaded = false;
-	
+
 	let message = '';
-	
+
 	const unsubscribe = ariaMessage.subscribe((value) => {
-        message = value;
-    });
-	
-    onDestroy(() => {
-        unsubscribe();
-    });
+		message = value;
+	});
+
+	onDestroy(() => {
+		unsubscribe();
+	});
 
 	const BREAKPOINT = 768;
 
