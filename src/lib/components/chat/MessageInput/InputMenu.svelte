@@ -143,7 +143,7 @@
 	});
 
 	async function handleParserToggle(enabled: boolean) {
-		// אם כבר רץ תהליך, שמור את הסטייט הרצוי ואל תשלח קריאה נוספת
+
 		if (isToggling) {
 			pendingState = enabled;
 			return;

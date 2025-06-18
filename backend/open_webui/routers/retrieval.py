@@ -1275,11 +1275,13 @@ def process_parser_toggle(toggle: bool, user=Depends(get_verified_user)):
     Set the PARSER_TIKA_TOGGLE environment variable to the given boolean value.
     """
     current_value = os.environ.get('PARSER_TIKA_TOGGLE', PARSER_TIKA_TOGGLE)
-    print(f"-------- Processing parser toggle... {current_value}")
+    # print(f"-------- Processing parser toggle... {current_value}")
     new_value = str(toggle).lower()
-    print(f"^^^^^ new_value {new_value}")
+    # print(f"^^^^^ new_value {new_value}")
     os.environ["PARSER_TIKA_TOGGLE"] = "true" if toggle else "false"
-    print(f"+++++++++ Setting PARSER_TIKA_TOGGLE to {os.environ["PARSER_TIKA_TOGGLE"]}")
+    # print(f"+++++++++ Setting PARSER_TIKA_TOGGLE to {os.environ["PARSER_TIKA_TOGGLE"]}")
+
+    log.info("Set tika toggle from: %s to: %s", current_value ,os.environ["PARSER_TIKA_TOGGLE"])
     return {"status": True, "PARSER_TIKA_TOGGLE": os.environ["PARSER_TIKA_TOGGLE"]}
 #  --- End --
 
