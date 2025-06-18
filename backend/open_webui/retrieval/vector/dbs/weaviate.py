@@ -39,6 +39,18 @@ def _convert_uuids_to_strings(obj: Any) -> Any:
     else:
         return obj
 
+def _sanitize_property_key(key: str) -> str:
+    """
+    Convert metadata property key into a Weaviate-valid property name.
+    - Removes non-alphanumeric/underscore chars (replaces with underscore)
+    - Ensures the key starts with a letter
+    """
+    key = re.sub(r'[^a-zA-Z0-9_]', '_', key)
+    key = key.strip('_')
+    if key and not key[0].isalpha():
+        key = 'f_' + key
+    return key
+
 
 class WeaviateClient(VectorDBBase):
     def __init__(self):
@@ -118,8 +130,10 @@ class WeaviateClient(VectorDBBase):
                 if item["metadata"]:
                     # Convert any UUID objects in metadata to strings
                     clean_metadata = _convert_uuids_to_strings(item["metadata"])
-                    properties.update(clean_metadata)
-                
+                    # Sanitize keys to ensure Weaviate compatibility
+                    sanitized_metadata = {_sanitize_property_key(k): v for k, v in clean_metadata.items()}
+                    properties.update(sanitized_metadata)
+
                 batch.add_object(
                     properties=properties,
                     uuid=item_uuid,
@@ -149,8 +163,10 @@ class WeaviateClient(VectorDBBase):
                 if item["metadata"]:
                     # Convert any UUID objects in metadata to strings
                     clean_metadata = _convert_uuids_to_strings(item["metadata"])
-                    properties.update(clean_metadata)
-                
+                    # Sanitize keys to ensure Weaviate compatibility
+                    sanitized_metadata = {_sanitize_property_key(k): v for k, v in clean_metadata.items()}
+                    properties.update(sanitized_metadata)
+
                 batch.add_object(
                     properties=properties,
                     uuid=item_uuid,  # None means Weaviate will auto-generate
@@ -194,7 +210,7 @@ class WeaviateClient(VectorDBBase):
                 batch_ids.append(str(obj.uuid))
                 
                 current_properties = dict(obj.properties) if obj.properties else {}
-                doc_text = current_properties.pop("text", "") 
+                doc_text = current_properties.pop("text", "")
                 batch_documents.append(doc_text)
                 # Convert any UUID objects in metadata to strings
                 clean_properties = _convert_uuids_to_strings(current_properties)
