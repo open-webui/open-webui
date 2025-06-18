@@ -1,0 +1,476 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Event Handling Patterns for Interactive UI
+
+## Overview
+Event handling patterns learned from implementing interactive PII menus and user interfaces. Focus on responsiveness, proper cleanup, and user experience.
+
+## Menu Event Handling
+
+### Hover State Management
+Implement robust hover state management with grace periods:
+```typescript
+// Menu state tracking
+let isOverPiiElement = false;
+let isOverOverlay = false;
+let hoverTimeout: NodeJS.Timeout | null = null;
+
+const handleMouseEnter = (event: MouseEvent) => {
+  const target = event.target as HTMLElement;
+  
+  if (target.classList.contains('pii-highlight')) {
+    isOverPiiElement = true;
+    
+    // Cancel any pending hide
+    if (hoverTimeout) {
+      clearTimeout(hoverTimeout);
+      hoverTimeout = null;
+    }
+    
+    // Show overlay
+    showOverlay(target);
+  }
+};
+
+const handleMouseLeave = (event: MouseEvent) => {
+  isOverPiiElement = false;
+  
+  // Only hide if not over overlay
+  if (!isOverOverlay) {
+    hoverTimeout = setTimeout(() => {
+      hideOverlay();
+    }, 300); // Grace period for mouse movement
+  }
+};
+```
+
+### Overlay Event Coordination
+Coordinate events between main elements and overlays:
+```typescript
+// Overlay component event handlers
+const handleOverlayMouseEnter = () => {
+  isOverOverlay = true;
+  if (hoverTimeout) {
+    clearTimeout(hoverTimeout);
+    hoverTimeout = null;
+  }
+};
+
+const handleOverlayMouseLeave = () => {
+  isOverOverlay = false;
+  if (!isOverPiiElement) {
+    hoverTimeout = setTimeout(() => {
+      hideOverlay();
+    }, 300);
+  }
+};
+
+// Parent component passes these handlers
+<PiiHoverOverlay 
+  on:overlayMouseEnter={handleOverlayMouseEnter}
+  on:overlayMouseLeave={handleOverlayMouseLeave}
+/>
+```
+
+### Event Listener Lifecycle Management
+Properly manage event listener lifecycle:
+```typescript
+// Add listeners after DOM updates
+const addPiiEventListeners = () => {
+  const piiElements = document.querySelectorAll('.pii-highlight');
+  
+  piiElements.forEach((element) => {
+    element.addEventListener('mouseenter', handleMouseEnter);
+    element.addEventListener('mouseleave', handleMouseLeave);
+    element.addEventListener('click', handleClick);
+  });
+};
+
+const removePiiEventListeners = () => {
+  const piiElements = document.querySelectorAll('.pii-highlight');
+  
+  piiElements.forEach((element) => {
+    element.removeEventListener('mouseenter', handleMouseEnter);
+    element.removeEventListener('mouseleave', handleMouseLeave);
+    element.removeEventListener('click', handleClick);
+  });
+};
+
+// Component lifecycle integration
+onMount(() => {
+  addPiiEventListeners();
+});
+
+onDestroy(() => {
+  removePiiEventListeners();
+  if (hoverTimeout) clearTimeout(hoverTimeout);
+});
+
+// Update listeners when content changes
+$: {
+  if (processedContent) {
+    // Wait for DOM update
+    setTimeout(() => {
+      removePiiEventListeners();
+      addPiiEventListeners();
+    }, 0);
+  }
+}
+```
+
+## Text Selection Events
+
+### Selection Detection Pattern
+Detect text selection in ProseMirror extensions:
+```typescript
+const handleSelectionChange = (view: EditorView) => {
+  const { from, to } = view.state.selection;
+  
+  if (from !== to) {
+    const selectedText = view.state.doc.textBetween(from, to);
+    
+    if (selectedText.trim()) {
+      // Calculate menu position
+      const coords = view.coordsAtPos(from);
+      const menuPosition = {
+        x: coords.left,
+        y: coords.bottom + 5
+      };
+      
+      // Show selection menu
+      showSelectionMenu(selectedText, { from, to }, menuPosition);
+    }
+  } else {
+    // Hide selection menu when no selection
+    hideSelectionMenu();
+  }
+};
+
+// Plugin integration
+const plugin = new Plugin({
+  view(editorView) {
+    const handleUpdate = () => handleSelectionChange(editorView);
+    
+    return {
+      update: handleUpdate,
+      destroy() {
+        // Cleanup handled automatically by ProseMirror
+      }
+    };
+  }
+});
+```
+
+### Tokenization for Selection
+Implement broader context tokenization:
+```typescript
+const WORD_BOUNDARY_REGEX = /[\w'-äöüÄÖÜß]/;
+
+const tokenizeSelection = (
+  fullText: string, 
+  selectionStart: number, 
+  selectionEnd: number
+): string[] => {
+  const tokens: string[] = [];
+  
+  // Find start of first word
+  let start = selectionStart;
+  while (start > 0 && WORD_BOUNDARY_REGEX.test(fullText[start - 1])) {
+    start--;
+  }
+  
+  // Find end of last word
+  let end = selectionEnd;
+  while (end < fullText.length && WORD_BOUNDARY_REGEX.test(fullText[end])) {
+    end++;
+  }
+  
+  // Extract words in expanded range
+  const expandedText = fullText.substring(start, end);
+  const words = expandedText.match(/[\w'-äöüÄÖÜß]+/g) || [];
+  
+  // Filter to words that intersect with original selection
+  const originalSelection = fullText.substring(selectionStart, selectionEnd);
+  return words.filter(word => originalSelection.includes(word));
+};
+```
+
+## DOM Event Patterns
+
+### Event Delegation
+Use event delegation for dynamic content:
+```typescript
+// Single listener on container instead of individual elements
+const container = document.querySelector('.message-content');
+
+container?.addEventListener('mouseenter', (event) => {
+  const target = event.target as HTMLElement;
+  
+  if (target.classList.contains('pii-highlight')) {
+    handlePiiMouseEnter(target, event);
+  }
+}, true); // Use capture phase for better control
+```
+
+### Click Event Handling
+Handle clicks with proper event management:
+```typescript
+const handleClick = (event: MouseEvent) => {
+  const target = event.target as HTMLElement;
+  
+  if (target.classList.contains('pii-highlight')) {
+    // Extract entity data
+    const piiLabel = target.getAttribute('data-pii-label');
+    const piiType = target.getAttribute('data-pii-type');
+    
+    if (piiLabel && piiType) {
+      // Handle click action
+      handlePiiClick(piiLabel, piiType, target);
+      
+      // Prevent event bubbling
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  }
+};
+```
+
+## Timeout Management
+
+### Multiple Timer Coordination
+Manage multiple timers without conflicts:
+```typescript
+interface TimerState {
+  hoverTimeout: NodeJS.Timeout | null;
+  selectionTimeout: NodeJS.Timeout | null;
+  cleanupTimeout: NodeJS.Timeout | null;
+}
+
+let timers: TimerState = {
+  hoverTimeout: null,
+  selectionTimeout: null,
+  cleanupTimeout: null
+};
+
+const clearTimer = (timerName: keyof TimerState) => {
+  if (timers[timerName]) {
+    clearTimeout(timers[timerName]!);
+    timers[timerName] = null;
+  }
+};
+
+const setTimer = (timerName: keyof TimerState, callback: () => void, delay: number) => {
+  clearTimer(timerName);
+  timers[timerName] = setTimeout(() => {
+    callback();
+    timers[timerName] = null;
+  }, delay);
+};
+
+// Usage
+const scheduleMenuHide = () => {
+  setTimer('hoverTimeout', hideMenu, 300);
+};
+
+const scheduleCleanup = () => {
+  setTimer('cleanupTimeout', performCleanup, 1000);
+};
+
+// Cleanup all timers
+const clearAllTimers = () => {
+  Object.keys(timers).forEach(key => {
+    clearTimer(key as keyof TimerState);
+  });
+};
+```
+
+## Menu Position Calculation
+
+### Dynamic Positioning
+Calculate menu positions to avoid viewport overflow:
+```typescript
+const calculateMenuPosition = (
+  targetElement: HTMLElement,
+  menuWidth: number,
+  menuHeight: number
+): { x: number; y: number } => {
+  const rect = targetElement.getBoundingClientRect();
+  const viewport = {
+    width: window.innerWidth,
+    height: window.innerHeight
+  };
+  
+  let x = rect.left;
+  let y = rect.bottom + 5;
+  
+  // Adjust horizontal position if menu would overflow
+  if (x + menuWidth > viewport.width) {
+    x = viewport.width - menuWidth - 10;
+  }
+  
+  // Adjust vertical position if menu would overflow
+  if (y + menuHeight > viewport.height) {
+    y = rect.top - menuHeight - 5;
+  }
+  
+  // Ensure minimum margins
+  x = Math.max(10, x);
+  y = Math.max(10, y);
+  
+  return { x, y };
+};
+```
+
+### ProseMirror Coordinate Conversion
+Convert ProseMirror positions to screen coordinates:
+```typescript
+const getScreenCoordinatesFromPosition = (
+  view: EditorView, 
+  pos: number
+): { x: number; y: number } => {
+  try {
+    const coords = view.coordsAtPos(pos);
+    
+    return {
+      x: coords.left,
+      y: coords.bottom
+    };
+  } catch (error) {
+    console.warn('Failed to get coordinates for position:', pos);
+    
+    // Fallback to editor bounds
+    const editorRect = view.dom.getBoundingClientRect();
+    return {
+      x: editorRect.left,
+      y: editorRect.bottom
+    };
+  }
+};
+```
+
+## Error Recovery Patterns
+
+### Graceful Event Handler Failures
+Handle event handler errors without breaking UI:
+```typescript
+const safeEventHandler = (handler: (event: Event) => void) => {
+  return (event: Event) => {
+    try {
+      handler(event);
+    } catch (error) {
+      console.error('Event handler error:', error);
+      // Don't rethrow - keep UI functional
+    }
+  };
+};
+
+// Usage
+element.addEventListener('click', safeEventHandler(handleClick));
+```
+
+### Event Handler Validation
+Validate event targets before processing:
+```typescript
+const validateEventTarget = (
+  event: Event, 
+  expectedClasses: string[]
+): HTMLElement | null => {
+  const target = event.target as HTMLElement;
+  
+  if (!target || !target.classList) {
+    return null;
+  }
+  
+  const hasExpectedClass = expectedClasses.some(className => 
+    target.classList.contains(className)
+  );
+  
+  return hasExpectedClass ? target : null;
+};
+
+// Usage
+const handleMouseEnter = (event: MouseEvent) => {
+  const target = validateEventTarget(event, ['pii-highlight', 'pii-modifier']);
+  
+  if (target) {
+    // Safe to process
+    processHoverEvent(target);
+  }
+};
+```
+
+## Performance Optimization
+
+### Event Throttling
+Throttle high-frequency events:
+```typescript
+const throttle = <T extends any[]>(
+  func: (...args: T) => void, 
+  limit: number
+) => {
+  let inThrottle: boolean;
+  
+  return (...args: T) => {
+    if (!inThrottle) {
+      func.apply(this, args);
+      inThrottle = true;
+      setTimeout(() => inThrottle = false, limit);
+    }
+  };
+};
+
+// Usage for mouse move events
+const throttledMouseMove = throttle(handleMouseMove, 100);
+element.addEventListener('mousemove', throttledMouseMove);
+```
+
+### Event Listener Optimization
+Optimize event listener management:
+```typescript
+// Use WeakMap for element-specific state
+const elementStates = new WeakMap<HTMLElement, ElementState>();
+
+const getElementState = (element: HTMLElement): ElementState => {
+  if (!elementStates.has(element)) {
+    elementStates.set(element, createInitialState());
+  }
+  return elementStates.get(element)!;
+};
+
+// Passive listeners for better performance
+element.addEventListener('scroll', handleScroll, { passive: true });
+```
+
+## Accessibility Considerations
+
+### Keyboard Event Handling
+Support keyboard navigation:
+```typescript
+const handleKeyDown = (event: KeyboardEvent) => {
+  switch (event.key) {
+    case 'Escape':
+      hideAllMenus();
+      event.preventDefault();
+      break;
+      
+    case 'Enter':
+    case ' ':
+      if (event.target instanceof HTMLElement && 
+          event.target.classList.contains('pii-highlight')) {
+        triggerPiiAction(event.target);
+        event.preventDefault();
+      }
+      break;
+  }
+};
+
+// Add keyboard support to PII elements
+const makePiiElementAccessible = (element: HTMLElement) => {
+  element.setAttribute('tabindex', '0');
+  element.setAttribute('role', 'button');
+  element.addEventListener('keydown', handleKeyDown);
+};
+```
