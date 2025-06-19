@@ -60,14 +60,18 @@ async def generate_title_and_tags_background(request_data, request: CrewMCPQuery
         # Set up event emitter for real-time updates (if possible)
         event_emitter = None
         try:
+            log.info(f"Setting up event emitter for chat {request.chat_id} with session_id: {request.session_id}")
             event_emitter = get_event_emitter({
                 "chat_id": request.chat_id,
                 "user_id": user.id,
                 "message_id": f"crew_msg_{request.chat_id}",  # Provide a synthetic message_id
                 "session_id": request.session_id  # Use session_id from request
             })
+            log.info(f"Successfully set up event emitter for chat {request.chat_id}")
         except Exception as ee_error:
-            log.warning(f"Could not set up event emitter for chat {request.chat_id}: {ee_error}")
+            log.error(f"Could not set up event emitter for chat {request.chat_id}: {ee_error}")
+            import traceback
+            log.error(f"Event emitter setup traceback: {traceback.format_exc()}")
             event_emitter = None
         
         messages = [
@@ -130,12 +134,18 @@ Respond with just the title, no quotes or formatting."""
                         # Emit title update event for real-time frontend update
                         if event_emitter:
                             try:
+                                log.info(f"Emitting title event for chat {request.chat_id}: {title}")
                                 await event_emitter({
                                     "type": "chat:title",
                                     "data": title,
                                 })
+                                log.info(f"Successfully emitted title event for chat {request.chat_id}")
                             except Exception as event_error:
-                                log.warning(f"Failed to emit title event for chat {request.chat_id}: {event_error}")
+                                log.error(f"Failed to emit title event for chat {request.chat_id}: {event_error}")
+                                import traceback
+                                log.error(f"Title event error traceback: {traceback.format_exc()}")
+                        else:
+                            log.warning(f"No event emitter available for title update for chat {request.chat_id}")
                     else:
                         log.warning(f"Empty title generated for chat {request.chat_id}")
                 else:
@@ -226,12 +236,18 @@ Assistant: {result[:1000]}...
                                     # Emit tags update event for real-time frontend update
                                     if event_emitter:
                                         try:
+                                            log.info(f"Emitting tags event for chat {request.chat_id}: {tags}")
                                             await event_emitter({
                                                 "type": "chat:tags",
                                                 "data": tags,
                                             })
+                                            log.info(f"Successfully emitted tags event for chat {request.chat_id}")
                                         except Exception as event_error:
-                                            log.warning(f"Failed to emit tags event for chat {request.chat_id}: {event_error}")
+                                            log.error(f"Failed to emit tags event for chat {request.chat_id}: {event_error}")
+                                            import traceback
+                                            log.error(f"Tags event error traceback: {traceback.format_exc()}")
+                                    else:
+                                        log.warning(f"No event emitter available for tags update for chat {request.chat_id}")
                                 else:
                                     log.warning(f"Invalid tags format for chat {request.chat_id}: {tags}")
                             else:
