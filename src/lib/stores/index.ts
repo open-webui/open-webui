@@ -187,7 +187,7 @@ type Document = {
 	title: string;
 };
 
-type Config = {
+export type Config = {
 	status: boolean;
 	name: string;
 	version: string;
