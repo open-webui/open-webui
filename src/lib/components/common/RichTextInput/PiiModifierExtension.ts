@@ -167,61 +167,102 @@ function findTokenizedWords(doc: ProseMirrorNode, selectionFrom: number, selecti
 	return uniqueWords;
 }
 
-// Find the complete PII entity that contains the hovered word
-function findPiiEntityAtPosition(view: any, pos: number): { text: string; from: number; to: number } | null {
-	if (!view || !view.dom) {
-		return null;
-	}
-	
-	// Get the word at the current position first
-	const wordAtPos = findWordAt(view.state.doc, pos);
-	if (!wordAtPos) {
-		return null;
-	}
-	
-	// Check if this word is part of any PII highlight
-	const piiElements = view.dom.querySelectorAll('.pii-highlight');
-	
-	for (const element of piiElements) {
-		const elementText = element.textContent;
-		if (elementText) {
-			// Check if the hovered word is part of this PII entity
-			const words = elementText.toLowerCase().split(/\s+/);
-			if (words.includes(wordAtPos.text.toLowerCase())) {
-				// Found the PII entity! Now we need to find its position in the document
-				// Search for the complete PII text in the document
-				let foundPos = -1;
-				let searchStart = 0;
+// Find existing PII or modifier element under mouse cursor using DOM element detection
+function findExistingEntityAtPosition(view: any, clientX: number, clientY: number): { from: number; to: number; text: string; type: 'pii' | 'modifier' } | null {
+	const target = document.elementFromPoint(clientX, clientY) as HTMLElement;
+	if (!target) return null;
+
+	// Check if we're hovering over a PII highlight
+	const piiElement = target.closest('.pii-highlight');
+	if (piiElement) {
+		const piiText = piiElement.getAttribute('data-pii-text') || piiElement.textContent || '';
+		const piiLabel = piiElement.getAttribute('data-pii-label') || '';
+		if (piiText.length >= 2) {
+			// Try to find the exact position using PII plugin state
+			try {
+				// We need to import the PII detection plugin key to access its state
+				const piiDetectionPluginKey = new PluginKey('piiDetection');
+				const piiState = piiDetectionPluginKey.getState(view.state);
 				
-				while (searchStart < view.state.doc.content.size) {
-					const slice = view.state.doc.textBetween(searchStart, Math.min(searchStart + elementText.length * 2, view.state.doc.content.size));
-					const index = slice.toLowerCase().indexOf(elementText.toLowerCase());
-					
-					if (index >= 0) {
-						foundPos = searchStart + index;
-						// Verify this position range contains our hover position
-						if (pos >= foundPos && pos <= foundPos + elementText.length) {
-							return {
-								text: elementText,
-								from: foundPos,
-								to: foundPos + elementText.length
-							};
-						}
+				if (piiState?.entities) {
+					// Find the entity that matches this label
+					const matchingEntity = piiState.entities.find((entity: any) => entity.label === piiLabel);
+					if (matchingEntity && matchingEntity.occurrences.length > 0) {
+						const occurrence = matchingEntity.occurrences[0]; // Use first occurrence
+						return {
+							from: occurrence.start_idx,
+							to: occurrence.end_idx,
+							text: piiText,
+							type: 'pii'
+						};
 					}
-					
-					searchStart += Math.max(1, elementText.length);
-					if (searchStart >= view.state.doc.content.size) break;
 				}
+			} catch (error) {
+				console.log('PiiModifierExtension: Could not access PII state:', error);
+			}
+			
+			// Fallback: get position from mouse and estimate range
+			const pos = view.posAtCoords({ left: clientX, top: clientY });
+			if (pos) {
+				const textLength = piiText.length;
+				return {
+					from: Math.max(0, pos.pos - Math.floor(textLength / 2)),
+					to: Math.min(view.state.doc.content.size, pos.pos + Math.ceil(textLength / 2)),
+					text: piiText,
+					type: 'pii'
+				};
 			}
 		}
 	}
-	
+
+	// Check if we're hovering over a modifier highlight
+	const modifierElement = target.closest('.pii-modifier-highlight');
+	if (modifierElement) {
+		const modifierText = modifierElement.getAttribute('data-modifier-entity') || modifierElement.textContent || '';
+		if (modifierText.length >= 2) {
+			// Try to find the exact position using modifier plugin state
+			try {
+				const modifierState = piiModifierExtensionKey.getState(view.state);
+				if (modifierState?.modifiers) {
+					// Find the modifier that matches this entity text
+					const matchingModifier = modifierState.modifiers.find((modifier: any) => 
+						modifier.entity.toLowerCase() === modifierText.toLowerCase()
+					);
+					if (matchingModifier) {
+						return {
+							from: matchingModifier.from,
+							to: matchingModifier.to,
+							text: modifierText,
+							type: 'modifier'
+						};
+					}
+				}
+			} catch (error) {
+				console.log('PiiModifierExtension: Could not access modifier state:', error);
+			}
+			
+			// Fallback: get position from mouse and estimate range
+			const pos = view.posAtCoords({ left: clientX, top: clientY });
+			if (pos) {
+				const textLength = modifierText.length;
+				return {
+					from: Math.max(0, pos.pos - Math.floor(textLength / 2)),
+					to: Math.min(view.state.doc.content.size, pos.pos + Math.ceil(textLength / 2)),
+					text: modifierText,
+					type: 'modifier'
+				};
+			}
+		}
+	}
+
 	return null;
 }
 
-// Check if the hovered position is within a PII entity
+// Check if the hovered position is within a PII entity (legacy function - now using DOM-based detection)
 function isPiiDetected(text: string, view?: any, conversationId?: string): boolean {
-	return findPiiEntityAtPosition(view, 0) !== null; // Will be updated with actual position
+	// This function is now primarily used for backwards compatibility
+	// The actual detection is done via DOM elements in findExistingEntityAtPosition
+	return false;
 }
 
 // Predefined PII labels for autocompletion (from SPACY_LABEL_MAPPINGS values)
@@ -1213,57 +1254,62 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 
 						// Set new timeout for hover
 						hoverTimeout = window.setTimeout(() => {
-							const pos = view.posAtCoords({ left: event.clientX, top: event.clientY });
-							if (!pos) return;
-
-							// First check if we're hovering over a PII entity
-							const piiEntityInfo = findPiiEntityAtPosition(view, pos.pos);
+							// Use DOM-based entity detection instead of position-based
+							const existingEntity = findExistingEntityAtPosition(view, event.clientX, event.clientY);
 							
-							let targetInfo;
-							let isPiiHighlighted = false;
-							
-							if (piiEntityInfo) {
-								// We're hovering over a PII entity - use the complete entity
-								targetInfo = {
-									word: piiEntityInfo.text,
-									from: piiEntityInfo.from,
-									to: piiEntityInfo.to
-								};
-								isPiiHighlighted = true;
-								console.log('PiiModifierExtension: Found PII entity at hover position:', piiEntityInfo.text);
-							} else {
-								// Not over PII, check if we're over a regular word
-								const wordInfo = findWordAt(view.state.doc, pos.pos);
-								if (!wordInfo) {
-									// Hide menu if no word found
-									if (hoverMenuElement) {
-										hoverMenuElement.remove();
-										hoverMenuElement = null;
-									}
-									return;
-								}
-								
-								targetInfo = wordInfo;
-								isPiiHighlighted = false;
-								console.log('PiiModifierExtension: Found regular word at hover position:', wordInfo.text);
-							}
-
-							// Find existing modifiers for this entity (check entity text match)
-							const pluginState = piiModifierExtensionKey.getState(view.state);
-							const targetText = 'word' in targetInfo ? targetInfo.word : targetInfo.text;
-							const existingModifiers = pluginState?.modifiers.filter(modifier => {
-								// Check if modifier's entity text matches the target text (case-insensitive)
-								return modifier.entity.toLowerCase() === targetText.toLowerCase();
-							}) || [];
-
-							// Only show hover menu if there's a PII detection or existing modifiers
-							if (!isPiiHighlighted && existingModifiers.length === 0) {
+							if (!existingEntity) {
+								// Hide menu if no entity found
 								if (hoverMenuElement) {
 									hoverMenuElement.remove();
 									hoverMenuElement = null;
 								}
 								return;
 							}
+
+							// We found an existing PII or modifier entity
+							let targetInfo = {
+								word: existingEntity.text,
+								from: existingEntity.from,
+								to: existingEntity.to
+							};
+							const isPiiHighlighted = existingEntity.type === 'pii';
+							
+							console.log('PiiModifierExtension: Found existing entity at hover position:', {
+								text: existingEntity.text,
+								type: existingEntity.type
+							});
+
+							// Find existing modifiers for this entity (check entity text match)
+							const pluginState = piiModifierExtensionKey.getState(view.state);
+							const targetText = targetInfo.word;
+							
+							// Check if the hovered entity is part of any modifier entity
+							let existingModifiers = pluginState?.modifiers.filter(modifier => {
+								// Check if modifier's entity text matches the target text (case-insensitive)
+								return modifier.entity.toLowerCase() === targetText.toLowerCase();
+							}) || [];
+							
+							// If no exact match, check if the hovered text is part of any multi-word modifier
+							if (existingModifiers.length === 0) {
+								for (const modifier of pluginState?.modifiers || []) {
+									const modifierWords = modifier.entity.toLowerCase().split(/\s+/);
+									if (modifierWords.includes(targetText.toLowerCase())) {
+										existingModifiers = [modifier];
+										// Update targetInfo to use the complete modifier entity
+										targetInfo = {
+											word: modifier.entity,
+											from: modifier.from,
+											to: modifier.to
+										};
+										break;
+									}
+								}
+							}
+
+							// Use the final target text
+							const finalTargetText = targetInfo.word;
+
+							// We already found an existing entity (PII or modifier), so show the menu
 
 							// Show hover menu
 							if (hoverMenuElement) {
@@ -1297,7 +1343,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 								const tr = view.state.tr.setMeta(piiModifierExtensionKey, {
 									type: 'ADD_MODIFIER',
 									modifierAction: 'ignore' as ModifierAction,
-									entity: targetText,
+									entity: finalTargetText,
 									from: targetInfo.from,
 									to: targetInfo.to
 								});
@@ -1314,7 +1360,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 								const tr = view.state.tr.setMeta(piiModifierExtensionKey, {
 									type: 'ADD_MODIFIER',
 									modifierAction: 'mask' as ModifierAction,
-									entity: targetText,
+									entity: finalTargetText,
 									piiType,
 									from: targetInfo.from,
 									to: targetInfo.to
@@ -1344,7 +1390,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 
 							hoverMenuElement = createHoverMenu(
 								{
-									word: targetText,
+									word: finalTargetText,
 									from: targetInfo.from,
 									to: targetInfo.to,
 									x: event.clientX,
