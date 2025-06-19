@@ -401,37 +401,18 @@ Be decisive and specific. Only route to specialists that are actually needed."""
                     logger.error(f"Error from NEWS specialist: {e}")
                     responses.append("Unable to retrieve news information at this moment.")
             
-            # If no routing was determined or no responses, make a smart fallback decision
+            # If no routing was determined or no responses, use simple fallback
             if not responses:
-                logger.info("No responses from routing decision, making intelligent fallback...")
-                # Analyze the query content to make a smart guess
-                query_lower = query.lower()
-                
-                # Check for time-related content
-                time_indicators = ['time', 'date', 'when', 'now', 'today', 'tomorrow', 'clock', 'timezone', 'hour', 'minute', 'second', 'current time']
-                news_indicators = ['news', 'headline', 'breaking', 'article', 'current events', 'happening', 'latest', 'today news', 'update']
-                
-                has_time_indicators = any(indicator in query_lower for indicator in time_indicators)
-                has_news_indicators = any(indicator in query_lower for indicator in news_indicators)
-                
-                if has_time_indicators and "TIME" in available_specialists:
-                    logger.info("Fallback: routing to TIME specialist based on query analysis")
+                logger.info("No responses from routing decision, using simple fallback...")
+                # Default to first available specialist
+                if "TIME" in available_specialists:
+                    logger.info("Fallback: defaulting to TIME specialist")
                     time_response = self.run_time_crew(query)
                     responses.append(time_response)
-                elif has_news_indicators and "NEWS" in available_specialists:
-                    logger.info("Fallback: routing to NEWS specialist based on query analysis")
+                elif "NEWS" in available_specialists:
+                    logger.info("Fallback: defaulting to NEWS specialist")
                     news_response = self.run_news_crew(query)
                     responses.append(news_response)
-                else:
-                    # Default to first available specialist
-                    if "TIME" in available_specialists:
-                        logger.info("Fallback: defaulting to TIME specialist")
-                        time_response = self.run_time_crew(query)
-                        responses.append(time_response)
-                    elif "NEWS" in available_specialists:
-                        logger.info("Fallback: defaulting to NEWS specialist")
-                        news_response = self.run_news_crew(query)
-                        responses.append(news_response)
             
             # Return the response(s)
             if len(responses) == 1:
@@ -439,15 +420,17 @@ Be decisive and specific. Only route to specialists that are actually needed."""
                 return responses[0]
             elif len(responses) > 1:
                 logger.info("Combining multiple specialist responses")
-                # Multiple responses - combine them intelligently
-                return "\n\n".join(responses)
+                # Multiple responses - combine them intelligently with proper structure
+                # Create a unified response that maintains Open WebUI compatibility
+                combined_response = self._combine_specialist_responses(responses, query)
+                return combined_response
             else:
                 logger.warning("No responses generated")
                 return "I apologize, but I was unable to process your request at this time."
                 
         except Exception as e:
             logger.error(f"Error in intelligent routing: {e}")
-            # Emergency fallback - route to most appropriate specialist
+            # Emergency fallback - route based on selected tools only
             logger.info("Using emergency fallback routing...")
             
             if selected_tools:
@@ -462,26 +445,42 @@ Be decisive and specific. Only route to specialists that are actually needed."""
                     logger.info("Emergency fallback: NEWS only")
                     return self.run_news_crew(query)
                 elif has_time and has_news:
-                    # Both selected - route to most appropriate based on query content
-                    query_lower = query.lower()
-                    if any(word in query_lower for word in ['news', 'headline', 'breaking', 'article']):
-                        logger.info("Emergency fallback: NEWS (both selected, news priority)")
-                        return self.run_news_crew(query)
-                    else:
-                        logger.info("Emergency fallback: TIME (both selected, time priority)")
-                        return self.run_time_crew(query)
+                    # Both selected - default to time (or could be news, doesn't matter)
+                    logger.info("Emergency fallback: TIME (both selected)")
+                    return self.run_time_crew(query)
                 else:
                     logger.info("Emergency fallback: TIME (default)")
                     return self.run_time_crew(query)
             else:
-                # No tools selected - analyze query content
-                query_lower = query.lower()
-                if any(word in query_lower for word in ['news', 'headline', 'breaking', 'article', 'current events']):
-                    logger.info("Emergency fallback: NEWS (query analysis)")
-                    return self.run_news_crew(query)
-                else:
-                    logger.info("Emergency fallback: TIME (default)")
-                    return self.run_time_crew(query)
+                # No tools selected - default to time
+                logger.info("Emergency fallback: TIME (no tools selected)")
+                return self.run_time_crew(query)
+
+    def _combine_specialist_responses(self, responses: list, original_query: str) -> str:
+        """
+        Combine multiple specialist responses in a structured way that maintains 
+        compatibility with Open WebUI's chat naming and tagging systems.
+        """
+        logger.info(f"Combining {len(responses)} specialist responses")
+        
+        # For now, use a simple structured combination that preserves key information
+        # This should work better with Open WebUI's automated analysis systems
+        
+        if len(responses) == 1:
+            return responses[0]
+        
+        # Create a structured combination with clear sections
+        combined_parts = []
+        
+        for i, response in enumerate(responses):
+            # Add each response with minimal formatting
+            if i == 0:
+                combined_parts.append(response.strip())
+            else:
+                combined_parts.append(f"\n{response.strip()}")
+        
+        # Join with double line breaks for clear separation
+        return "\n\n".join(combined_parts)
 
     def get_available_servers(self) -> dict:
         """Get all available MCP servers dynamically"""
