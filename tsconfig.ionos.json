@@ -1,6 +1,7 @@
 {
 	"extends": "./tsconfig.json",
 	"include": [
+		"src/ambient.d.ts",
 		"src/lib/IONOS/**/*"
 	],
 	"exclude": [
