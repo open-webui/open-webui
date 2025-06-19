@@ -167,10 +167,61 @@ function findTokenizedWords(doc: ProseMirrorNode, selectionFrom: number, selecti
 	return uniqueWords;
 }
 
-// Check if text has an existing PII detection
-function isPiiDetected(text: string): boolean {
-	// Check for existing PII highlights in the DOM
-	return document.querySelector(`[data-pii-text="${text}"]`) !== null;
+// Find the complete PII entity that contains the hovered word
+function findPiiEntityAtPosition(view: any, pos: number): { text: string; from: number; to: number } | null {
+	if (!view || !view.dom) {
+		return null;
+	}
+	
+	// Get the word at the current position first
+	const wordAtPos = findWordAt(view.state.doc, pos);
+	if (!wordAtPos) {
+		return null;
+	}
+	
+	// Check if this word is part of any PII highlight
+	const piiElements = view.dom.querySelectorAll('.pii-highlight');
+	
+	for (const element of piiElements) {
+		const elementText = element.textContent;
+		if (elementText) {
+			// Check if the hovered word is part of this PII entity
+			const words = elementText.toLowerCase().split(/\s+/);
+			if (words.includes(wordAtPos.text.toLowerCase())) {
+				// Found the PII entity! Now we need to find its position in the document
+				// Search for the complete PII text in the document
+				let foundPos = -1;
+				let searchStart = 0;
+				
+				while (searchStart < view.state.doc.content.size) {
+					const slice = view.state.doc.textBetween(searchStart, Math.min(searchStart + elementText.length * 2, view.state.doc.content.size));
+					const index = slice.toLowerCase().indexOf(elementText.toLowerCase());
+					
+					if (index >= 0) {
+						foundPos = searchStart + index;
+						// Verify this position range contains our hover position
+						if (pos >= foundPos && pos <= foundPos + elementText.length) {
+							return {
+								text: elementText,
+								from: foundPos,
+								to: foundPos + elementText.length
+							};
+						}
+					}
+					
+					searchStart += Math.max(1, elementText.length);
+					if (searchStart >= view.state.doc.content.size) break;
+				}
+			}
+		}
+	}
+	
+	return null;
+}
+
+// Check if the hovered position is within a PII entity
+function isPiiDetected(text: string, view?: any, conversationId?: string): boolean {
+	return findPiiEntityAtPosition(view, 0) !== null; // Will be updated with actual position
 }
 
 // Predefined PII labels for autocompletion (from SPACY_LABEL_MAPPINGS values)
@@ -1165,24 +1216,44 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 							const pos = view.posAtCoords({ left: event.clientX, top: event.clientY });
 							if (!pos) return;
 
-							const wordInfo = findWordAt(view.state.doc, pos.pos);
-							if (!wordInfo) {
-								// Hide menu if no word found
-								if (hoverMenuElement) {
-									hoverMenuElement.remove();
-									hoverMenuElement = null;
+							// First check if we're hovering over a PII entity
+							const piiEntityInfo = findPiiEntityAtPosition(view, pos.pos);
+							
+							let targetInfo;
+							let isPiiHighlighted = false;
+							
+							if (piiEntityInfo) {
+								// We're hovering over a PII entity - use the complete entity
+								targetInfo = {
+									word: piiEntityInfo.text,
+									from: piiEntityInfo.from,
+									to: piiEntityInfo.to
+								};
+								isPiiHighlighted = true;
+								console.log('PiiModifierExtension: Found PII entity at hover position:', piiEntityInfo.text);
+							} else {
+								// Not over PII, check if we're over a regular word
+								const wordInfo = findWordAt(view.state.doc, pos.pos);
+								if (!wordInfo) {
+									// Hide menu if no word found
+									if (hoverMenuElement) {
+										hoverMenuElement.remove();
+										hoverMenuElement = null;
+									}
+									return;
 								}
-								return;
+								
+								targetInfo = wordInfo;
+								isPiiHighlighted = false;
+								console.log('PiiModifierExtension: Found regular word at hover position:', wordInfo.text);
 							}
 
-							// Check if word is currently highlighted as PII (by PII detection)
-							const isPiiHighlighted = isPiiDetected(wordInfo.text);
-
-							// Find existing modifiers for this word (check entity text match)
+							// Find existing modifiers for this entity (check entity text match)
 							const pluginState = piiModifierExtensionKey.getState(view.state);
+							const targetText = 'word' in targetInfo ? targetInfo.word : targetInfo.text;
 							const existingModifiers = pluginState?.modifiers.filter(modifier => {
-								// Check if modifier's entity text matches the current word (case-insensitive)
-								return modifier.entity.toLowerCase() === wordInfo.text.toLowerCase();
+								// Check if modifier's entity text matches the target text (case-insensitive)
+								return modifier.entity.toLowerCase() === targetText.toLowerCase();
 							}) || [];
 
 							// Only show hover menu if there's a PII detection or existing modifiers
@@ -1226,9 +1297,9 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 								const tr = view.state.tr.setMeta(piiModifierExtensionKey, {
 									type: 'ADD_MODIFIER',
 									modifierAction: 'ignore' as ModifierAction,
-									entity: wordInfo.text,
-									from: wordInfo.from,
-									to: wordInfo.to
+									entity: targetText,
+									from: targetInfo.from,
+									to: targetInfo.to
 								});
 								view.dispatch(tr);
 
@@ -1243,10 +1314,10 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 								const tr = view.state.tr.setMeta(piiModifierExtensionKey, {
 									type: 'ADD_MODIFIER',
 									modifierAction: 'mask' as ModifierAction,
-									entity: wordInfo.text,
+									entity: targetText,
 									piiType,
-									from: wordInfo.from,
-									to: wordInfo.to
+									from: targetInfo.from,
+									to: targetInfo.to
 								});
 								view.dispatch(tr);
 
@@ -1273,9 +1344,9 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 
 							hoverMenuElement = createHoverMenu(
 								{
-									word: wordInfo.text,
-									from: wordInfo.from,
-									to: wordInfo.to,
+									word: targetText,
+									from: targetInfo.from,
+									to: targetInfo.to,
 									x: event.clientX,
 									y: event.clientY
 								},
