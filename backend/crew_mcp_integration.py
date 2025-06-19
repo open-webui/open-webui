@@ -10,6 +10,9 @@ from pathlib import Path
 from typing import Optional, Dict, Any
 from pydantic import BaseModel
 
+# Disable CrewAI telemetry to avoid connection timeout errors
+os.environ["OTEL_SDK_DISABLED"] = "true"
+
 from crewai import Agent, Task, Crew, Process, LLM
 from crewai_tools import MCPServerAdapter
 from mcp import StdioServerParameters
