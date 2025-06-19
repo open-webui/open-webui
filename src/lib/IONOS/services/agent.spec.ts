@@ -126,6 +126,7 @@ describe('agent', () => {
 				name: 'foo',
 				role: 'user',
 				profile_image_url: '',
+				created_at: 0,
 			});
 			await selectAgent(mockValue);
 			expect(mocks.navigation.goto).toHaveBeenCalledWith('/');
