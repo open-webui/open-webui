@@ -27,6 +27,10 @@
 	});
 
 	const addSurveyNotification = () => {
+		if (surveyUrl === null) {
+			return;
+		}
+
 		const url = new URL(surveyUrl);
 		url.searchParams.append('urlVar01', 'DE'); // Country code
 		url.searchParams.append('urlVar02', ''); // User ID
