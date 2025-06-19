@@ -62,6 +62,10 @@ def handle_peewee_migration(DATABASE_URL):
 
     except Exception as e:
         log.error(f"Failed to initialize the database connection: {e}")
+        log.warning(
+            "Hint: If your database password contains special characters, "
+            "please ensure they are properly URL-encoded."
+        )
         raise
     finally:
         # Properly closing the database connection
