@@ -1,9 +1,29 @@
 from logging.config import fileConfig
 
 from alembic import context
-from open_webui.models.auths import Auth
+from open_webui.internal.db import Base  # Import Base
 from open_webui.env import DATABASE_URL
 from sqlalchemy import engine_from_config, pool
+
+# Import all models here to ensure they are registered with Base.metadata
+from open_webui.models.auths import Auth
+from open_webui.models.users import User
+from open_webui.models.chats import Chat
+from open_webui.models.feedbacks import Feedback
+from open_webui.models.files import File
+from open_webui.models.folders import Folder
+from open_webui.models.functions import Function
+from open_webui.models.groups import Group
+from open_webui.models.knowledge import KnowledgeBase, KnowledgeBaseFile
+from open_webui.models.memories import Memory
+from open_webui.models.messages import Message
+from open_webui.models.models import Model
+from open_webui.models.notes import Note
+from open_webui.models.prompts import Prompt
+from open_webui.models.tags import Tag
+from open_webui.models.tools import Tool
+from open_webui.models.rag_files import ProcessedFile, FileChunk
+# Add other model imports as necessary
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -18,7 +38,7 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-target_metadata = Auth.metadata
+target_metadata = Base.metadata  # Use Base.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:

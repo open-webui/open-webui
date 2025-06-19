@@ -46,7 +46,7 @@ langchain==0.3.24
 langchain-community==0.3.23
 
 fake-useragent==2.1.0
-chromadb==0.6.3
+chromadb==0.4.24
 pymilvus==2.5.0
 qdrant-client~=1.12.0
 opensearch-py==2.8.0
@@ -55,7 +55,7 @@ elasticsearch==9.0.1
 pinecone==6.0.2
 
 transformers
-sentence-transformers==4.1.0
+sentence-transformers==2.7.0
 accelerate
 colbert-ai==0.2.21
 einops==0.8.1
@@ -70,6 +70,7 @@ python-pptx==1.0.2
 unstructured==0.16.17
 nltk==3.9.1
 Markdown==3.7
+markdown2==2.4.11
 pypandoc==1.15
 pandas==2.2.3
 openpyxl==3.1.5
@@ -80,8 +81,8 @@ psutil
 sentencepiece
 soundfile==0.13.1
 azure-ai-documentintelligence==1.0.2
-
-pillow==11.2.1
+pypdf2==3.0.1
+Pillow==10.3.0
 opencv-python-headless==4.11.0.86
 rapidocr-onnxruntime==1.4.4
 rank-bm25==0.2.2
