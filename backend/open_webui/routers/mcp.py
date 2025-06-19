@@ -423,7 +423,7 @@ async def get_builtin_servers(request: Request, user=Depends(get_admin_user)):
         servers = []
 
         # Only include actual built-in servers
-        builtin_server_names = ["time_server"]
+        builtin_server_names = ["time_server", "news_server"]
 
         for name in server_names:
             if name not in builtin_server_names:
@@ -458,7 +458,10 @@ async def get_builtin_servers(request: Request, user=Depends(get_admin_user)):
 
 def get_server_description(name: str) -> str:
     """Get description for built-in servers"""
-    descriptions = {"time_server": "Provides current time and timezone information"}
+    descriptions = {
+        "time_server": "Provides current time and timezone information",
+        "news_server": "Provides latest news headlines from NewsDesk"
+    }
     return descriptions.get(name, f"Built-in MCP server: {name}")
 
 
@@ -469,7 +472,7 @@ async def restart_builtin_server(
     """Restart a built-in MCP server"""
     try:
         # Check if this is a valid built-in server
-        builtin_server_names = ["time_server"]
+        builtin_server_names = ["time_server", "news_server"]
         if server_name not in builtin_server_names:
             raise HTTPException(
                 status_code=404, detail=f"Built-in server '{server_name}' not found"

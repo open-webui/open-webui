@@ -826,6 +826,7 @@
 	"Prompts Access": "Accès aux invites",
 	"Prompts processed by this model in the last 24 hours": "Invites traitées par ce modèle au cours des dernières 24 heures",
 	"Provides current time and timezone information": "Fournit des informations sur l'heure actuelle et le fuseau horaire",
+	"Provides latest news headlines from NewsDesk": "Fournit les derniers titres de presse de NewsDesk",
 	"Proxy URL": "URL du proxy",
 	"Public": "Publique",
 	"Pull \"{{searchValue}}\" from Ollama.com": "Récupérer « {{searchValue}} » depuis Ollama.com",

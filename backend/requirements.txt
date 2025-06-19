@@ -114,3 +114,6 @@ pytz==2025.2
 ## CrewAI MCP Integration
 crewai==0.126.0
 crewai-tools[mcp]==0.47.0
+
+# Azure Storage for NewsDesk integration
+azure-storage-blob==12.25.1

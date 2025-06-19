@@ -826,6 +826,7 @@
 	"Prompts Access": "",
 	"Prompts processed by this model in the last 24 hours": "",
 	"Provides current time and timezone information": "",
+	"Provides latest news headlines from NewsDesk": "",
 	"Proxy URL": "",
 	"Public": "",
 	"Pull \"{{searchValue}}\" from Ollama.com": "",

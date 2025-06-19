@@ -408,6 +408,21 @@ class FastMCPManager:
             # Start the time server
             await self.start_server("time_server")
 
+        # Add configuration for news server (stdio)
+        news_server_path = backend_dir / "fastmcp_news_server.py"
+
+        if news_server_path.exists():
+            self.add_server_config(
+                name="news_server",
+                command=["python", str(news_server_path)],
+                working_dir=str(backend_dir),
+                env=dict(os.environ),  # Pass current environment variables
+                transport="stdio",
+            )
+
+            # Start the news server
+            await self.start_server("news_server")
+
     async def initialize_external_servers(self):
         """Initialize external MCP servers from database"""
         try:

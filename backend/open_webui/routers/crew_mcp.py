@@ -95,15 +95,73 @@ async def run_crew_query(
                 detail="No MCP tools available. Check MCP server configuration.",
             )
 
-        # Run the crew
-        result = crew_mcp_manager.run_time_crew(request.query)
+        # Intelligently route to appropriate crew based on query content
+        query_lower = request.query.lower()
+        news_keywords = ["news", "headlines", "article", "breaking", "latest news", "current events", "newsdesk"]
+        time_keywords = ["time", "clock", "timezone", "date", "hour", "minute", "when is"]
+        multi_keywords = ["and", "also", "both", "together", "combine", "plus"]
+        
+        # Check if query mentions both domains or asks for combined information
+        is_news_query = any(keyword in query_lower for keyword in news_keywords)
+        is_time_query = any(keyword in query_lower for keyword in time_keywords)
+        is_multi_query = any(keyword in query_lower for keyword in multi_keywords)
+        
+        # Use multi-server crew if query involves multiple domains or explicitly requests combined info
+        if (is_news_query and is_time_query) or (is_multi_query and (is_news_query or is_time_query)):
+            log.info("Routing to multi-server crew for comprehensive query")
+            result = crew_mcp_manager.run_multi_server_crew(request.query)
+            used_tools = [tool["name"] for tool in tools]  # All tools potentially used
+        elif is_news_query and not is_time_query:
+            log.info("Routing to news crew based on query content")
+            result = crew_mcp_manager.run_news_crew(request.query)
+            used_tools = [tool["name"] for tool in tools if tool.get("server") == "news_server"]
+        else:
+            log.info("Routing to time crew based on query content")
+            result = crew_mcp_manager.run_time_crew(request.query)
+            used_tools = [tool["name"] for tool in tools if tool.get("server") == "time_server"]
+
+        return CrewMCPResponse(
+            result=result, tools_used=used_tools, success=True
+        )
+
+    except Exception as e:
+        log.exception(f"Error running CrewAI query: {e}")
+        return CrewMCPResponse(result="", tools_used=[], success=False, error=str(e))
+
+
+@router.post("/multi")
+async def run_multi_server_crew_query(
+    request: CrewMCPQuery, user=Depends(get_verified_user)
+) -> CrewMCPResponse:
+    """Run a CrewAI query using ALL available MCP servers and tools simultaneously"""
+    if not crew_mcp_manager:
+        return CrewMCPResponse(
+            result="",
+            tools_used=[],
+            success=False,
+            error="CrewAI MCP integration not available",
+        )
+
+    try:
+        log.info(f"Running CrewAI multi-server query for user {user.id}: {request.query}")
+
+        # Get available tools first
+        tools = crew_mcp_manager.get_available_tools()
+        if not tools:
+            raise HTTPException(
+                status_code=503,
+                detail="No MCP tools available. Check MCP server configuration.",
+            )
+
+        # Run the multi-server crew that can use ALL available tools
+        result = crew_mcp_manager.run_multi_server_crew(request.query)
 
         return CrewMCPResponse(
             result=result, tools_used=[tool["name"] for tool in tools], success=True
         )
 
     except Exception as e:
-        log.exception(f"Error running CrewAI query: {e}")
+        log.exception(f"Error running CrewAI multi-server query: {e}")
         return CrewMCPResponse(result="", tools_used=[], success=False, error=str(e))
 
 
@@ -115,17 +173,31 @@ async def get_crew_mcp_status(user=Depends(get_verified_user)) -> dict:
             "status": "unavailable",
             "error": "CrewAI MCP integration not available",
             "tools_count": 0,
-            "mcp_server_available": False,
+            "servers": {},
             "azure_config_present": False,
         }
 
     try:
         tools = crew_mcp_manager.get_available_tools()
+        available_servers = crew_mcp_manager.get_available_servers()
+        
+        # Get server details
+        server_details = {}
+        for server_name, server_path in available_servers.items():
+            server_tools = [tool for tool in tools if tool.get("server") == server_name]
+            server_details[server_name] = {
+                "available": True,
+                "path": str(server_path),
+                "tool_count": len(server_tools),
+                "tools": [tool["name"] for tool in server_tools]
+            }
+        
         return {
             "status": "active" if tools else "inactive",
             "tools_count": len(tools),
-            "mcp_server_available": crew_mcp_manager.time_server_path.exists(),
+            "servers": server_details,
             "azure_config_present": bool(crew_mcp_manager.azure_config.api_key),
+            "multi_server_support": True,
         }
     except Exception as e:
         log.exception(f"Error getting CrewAI MCP status: {e}")
@@ -133,6 +205,6 @@ async def get_crew_mcp_status(user=Depends(get_verified_user)) -> dict:
             "status": "error",
             "error": str(e),
             "tools_count": 0,
-            "mcp_server_available": False,
+            "servers": {},
             "azure_config_present": False,
         }
