@@ -49,13 +49,22 @@ describe('suvey', () => {
 			});
 		});
 
-		it('should build a survey URL with the pseudynimized user ID', async () => {
+		it('should build a survey URL with the pseudonymized user ID', async () => {
 			expect(buildSurveyUrl(user)).toBe(`${surveyUrl}?urlVar01=DE&urlVar02=${userId}&urlVar03=Product`);
 		});
 
 		it('should return null if the survey URL is null', async () => {
 			surveyUrl = null;
 			expect(buildSurveyUrl(user)).toBe(null);
+		});
+
+		it('should return null if the pseudonymized user ID is null', async () => {
+			const badUser: SessionUser = {
+				...user,
+				pseudonymized_user_id: null,
+			};
+
+			expect(buildSurveyUrl(badUser)).toBe(null);
 		});
 	});
 });

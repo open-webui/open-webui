@@ -9,6 +9,10 @@ export const buildSurveyUrl = (user: SessionUser): string|null => {
 		return null;
 	}
 
+	if (!user.pseudonymized_user_id) {
+		return null;
+	}
+
 	const url = new URL(surveyUrl);
 	url.searchParams.append('urlVar01', 'DE'); // Country code
 	url.searchParams.append('urlVar02', user.pseudonymized_user_id);
