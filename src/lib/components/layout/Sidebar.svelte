@@ -20,21 +20,20 @@
 		channels,
 		socket,
 		config,
-		isApp
+		isApp,
+		ariaMessage
+
 	} from '$lib/stores';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 
 	const i18n = getContext('i18n');
 
 	import {
-		deleteChatById,
 		getChatList,
 		getAllTags,
 		getChatListBySearchText,
-		createNewChat,
 		getPinnedChatList,
 		toggleChatPinnedStatusById,
-		getChatPinnedStatusById,
 		getChatById,
 		updateChatFolderIdById,
 		importChat
@@ -228,7 +227,7 @@
 					.join(' ');
 
 				await chats.set(await getChatListBySearchText(localStorage.token, normalizedSearch));
-				toast.announce($chats.length + $i18n.t(' chat found'));
+				ariaMessage.set($chats.length + $i18n.t(' chat found'));
 				if ($chats.length === 0) {
 					tags.set(await getAllTags(localStorage.token));
 				}
@@ -492,28 +491,28 @@
 			<Tooltip content={$i18n.t('Hide Sidebar')}>
 				<button
 					class=" cursor-pointer p-[7px] flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-					on:click={async () => {
+						on:click={async () => {
 						showSidebar.set(!$showSidebar);
-						toast.announce($i18n.t('Sidebar collapsed.'));
-						await changeFocus('sidebar-toggle-button');
+							toast.announce($i18n.t('Sidebar collapsed.'));
+							await changeFocus('sidebar-toggle-button');
 					}}
-					id="hide-sidebar-button"
-					aria-label={$i18n.t('Hide Sidebar')}
+						id="hide-sidebar-button"
+						aria-label={$i18n.t('Hide Sidebar')}
 				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke-width="2"
-						stroke="currentColor"
-						class="size-5 m-auto self-center"
-					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12"
-						/>
-					</svg>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke-width="2"
+							stroke="currentColor"
+							class="size-5 m-auto self-center"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12"
+							/>
+						</svg>
 				</button>
 			</Tooltip>
 
@@ -532,7 +531,7 @@
 							showSidebar.set(false);
 						}
 					}, 0);
-					toast.announce($i18n.t('You are now in the new chat.'));
+					ariaMessage.set($i18n.t('You are now in the new chat.'));
 				}}
 			>
 				<div class="flex items-center">
@@ -773,6 +772,22 @@
 					</div>
 				{/if}
 
+				{#if !search && folders}
+					<Folders
+						{folders}
+						on:import={(e) => {
+							const { folderId, items } = e.detail;
+							importChatHandler(items, false, folderId);
+						}}
+						on:update={async (e) => {
+							initChatList();
+						}}
+						on:change={async () => {
+							initChatList();
+						}}
+					/>
+				{/if}
+
 				<div class=" flex-1 flex flex-col overflow-y-auto scrollbar-hidden">
 					<div class="pt-1.5">
 						{#if $chats}
@@ -865,26 +880,26 @@
 					<Tooltip
 						content={$user.name ? $user.name + ' ' + $i18n.t('User Menu') : $i18n.t('User Menu')}
 					>
-						<UserMenu
+					<UserMenu
 							ariaLabel={$user.name
 								? $user.name + ' ' + $i18n.t('User Menu')
 								: $i18n.t('User Menu')}
 							role={$user?.role}
 							buttonID="sidebar-user-menu"
 							buttonClass="self-center font-medium select-none flex items-center rounded-xl py-2.5 px-2.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-							on:show={(e) => {
-								if (e.detail === 'archived-chat') {
-									showArchivedChats.set(true);
-								}
-							}}
-						>
-							<img
+						on:show={(e) => {
+							if (e.detail === 'archived-chat') {
+								showArchivedChats.set(true);
+							}
+						}}
+					>
+								<img
 								src={$user?.profile_image_url}
 								class=" max-w-[30px] object-cover rounded-full self-center mr-3"
-								alt="User profile"
-							/>
+									alt="User profile"
+								/>
 							{$user?.name}
-						</UserMenu>
+					</UserMenu>
 					</Tooltip>
 				{/if}
 			</div>

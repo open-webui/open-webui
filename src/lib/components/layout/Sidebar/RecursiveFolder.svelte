@@ -321,7 +321,6 @@
 
 <DeleteConfirmDialog
 	bind:show={showDeleteConfirm}
-	returnFocusSelector={'#' + buttonID}
 	title={$i18n.t('Delete folder?')}
 	on:confirm={() => {
 		deleteHandler();
@@ -375,14 +374,14 @@
 					editHandler();
 				}}
 			>
-				{#if open}
-					<ChevronDown className=" size-3" strokeWidth="2.5" />
-				{:else}
-					<ChevronRight className=" size-3" strokeWidth="2.5" />
-				{/if}
+					{#if open}
+						<ChevronDown className=" size-3" strokeWidth="2.5" />
+					{:else}
+						<ChevronRight className=" size-3" strokeWidth="2.5" />
+					{/if}
 
 				<h3
-					class="translate-y-[0.5px] flex-1 justify-start text-start line-clamp-1 text-gray-900 dark:text-gray-100 font-semibold"
+					class="translate-y-[0.5px] flex-1 justify-start text-start line-clamp-1 text-gray-900 dark:text-gray-100"
 				>
 					{#if edit}
 						<input
@@ -415,7 +414,7 @@
 				</h3>
 			</button>
 			<div
-				class="absolute top-1/2 -translate-y-1/2 z-10 right-2 self-center flex items-center dark:text-gray-300"
+				class="absolute top-1/2 -translate-y-1/2 z-10 right-2 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
 			>
 				<Tooltip content={$i18n.t('Folder Menu')}>
 					<FolderMenu
