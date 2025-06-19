@@ -163,7 +163,7 @@
 </script>
 
 <svelte:head>
-	<title>Statistiques | Albert</title>
+	<title>Statistiques | Assistant IA</title>
 </svelte:head>
 
 <div class="bg-gray-50 dark:bg-gray-900 min-h-screen w-full overflow-y-auto">
