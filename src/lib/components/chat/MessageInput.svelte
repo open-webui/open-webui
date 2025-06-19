@@ -803,7 +803,7 @@
 												piiModifierLabels={['PERSON', 'EMAIL', 'PHONE_NUMBER', 'ADDRESS', 'SSN', 'CREDIT_CARD', 'DATE_TIME', 'IP_ADDRESS', 'URL', 'IBAN', 'MEDICAL_LICENSE', 'US_PASSPORT', 'US_DRIVER_LICENSE']}
 												{enablePiiDetection}
 												{piiApiKey}
-												conversationId={chatId || ''}
+												conversationId={chatId || undefined}
 												onPiiDetected={handlePiiDetected}
 												onPiiToggled={handlePiiToggled}
 												generateAutoCompletion={async (text) => {

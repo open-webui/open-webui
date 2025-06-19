@@ -72,7 +72,7 @@
 	// PII Detection props
 	export let enablePiiDetection = false;
 	export let piiApiKey = '';
-	export let conversationId = '';
+	export let conversationId: string | undefined = undefined;
 	export let onPiiDetected: (entities: ExtendedPiiEntity[], maskedText: string) => void = () => {};
 	export let onPiiToggled: (entities: ExtendedPiiEntity[]) => void = () => {};
 
@@ -107,10 +107,37 @@
 
 	// PII Session Manager for conversation state
 	let piiSessionManager = PiiSessionManager.getInstance();
-	let previousConversationId = '';
+	let previousConversationId: string | undefined = undefined;
+	let conversationActivated = false; // Track if conversation has been activated
 
 	const options = {
 		throwOnError: false
+	};
+
+	// Ensure conversation is activated (load modifiers into working state)
+	const ensureConversationActivated = () => {
+		if (enablePiiDetection && enablePiiModifiers && conversationId && !conversationActivated) {
+			console.log('RichTextInput: Ensuring conversation is activated on first interaction');
+			
+			// Set flag immediately to prevent multiple simultaneous calls
+			conversationActivated = true;
+			
+			try {
+				piiSessionManager.activateConversation(conversationId);
+				
+				// Reload modifiers in the extension (only if editor exists and has the command)
+				if (editor && editor.commands && typeof editor.commands.reloadConversationModifiers === 'function') {
+					console.log('RichTextInput: Reloading modifiers in extension on first interaction');
+					editor.commands.reloadConversationModifiers(conversationId);
+				} else {
+					console.log('RichTextInput: Editor or reloadConversationModifiers command not available');
+				}
+			} catch (error) {
+				console.error('RichTextInput: Error during conversation activation:', error);
+				// Reset flag on error so it can be retried
+				conversationActivated = false;
+			}
+		}
 	};
 
 	$: if (editor) {
@@ -388,6 +415,7 @@
 						return false;
 					},
 					focus: (view, event) => {
+						ensureConversationActivated(); // Ensure conversation is activated on focus
 						eventDispatch('focus', { event });
 						return false;
 					},
@@ -396,6 +424,8 @@
 						return false;
 					},
 					keydown: (view, event) => {
+						ensureConversationActivated(); // Ensure conversation is activated on first keystroke
+						
 						if (messageInput) {
 							// Handle Tab Key
 							if (event.key === 'Tab') {
@@ -562,58 +592,44 @@
 
 	// Reactive statement to handle conversation ID changes and transfer global state
 	$: if (conversationId && conversationId !== previousConversationId && enablePiiDetection) {
-		console.log('RichTextInput: Conversation ID changed from', previousConversationId, 'to', conversationId);
+		console.log(`RichTextInput: Conversation changed from ${previousConversationId} to ${conversationId}`);
 		
-		// If we're going from empty to a real conversation ID, transfer global state
+		// Reset conversation activated flag when conversation changes
+		conversationActivated = false;
+		
+		// Transfer global state to new conversation
 		if (!previousConversationId && conversationId) {
-			console.log('RichTextInput: Transferring global state to conversation state');
+			console.log('RichTextInput: Transferring global state to conversation');
 			piiSessionManager.transferGlobalToConversation(conversationId);
 			
-			// Save the transferred state to localStorage immediately
-			const transferredState = piiSessionManager.getConversationState(conversationId);
-			if (transferredState) {
-				console.log('RichTextInput: Saving transferred state to localStorage');
-			}
-			
-			// Update editor extensions with new conversation ID
-			if (editor) {
-				// Recreate extensions with proper conversation ID
-				const extensions = [
-					...(enablePiiDetection
-						? [
-								PiiDetectionExtension.configure({
-									enabled: true,
-									apiKey: piiApiKey,
-									conversationId: conversationId,
-									onPiiDetected: onPiiDetected,
-									onPiiToggled: onPiiToggled
-								})
-							]
-						: []),
-					...(enablePiiModifiers && enablePiiDetection
-						? [
-								PiiModifierExtension.configure({
-									enabled: true,
-									conversationId: conversationId,
-									onModifiersChanged: handleModifiersChanged,
-									availableLabels: piiModifierLabels.length > 0 
-										? piiModifierLabels 
-										: undefined
-								})
-							]
-						: [])
-				];
-				
-				// Note: TipTap doesn't support hot-swapping extensions, so we log this
-				// The conversation ID will be used properly on next editor initialization
-				console.log('RichTextInput: Would update extensions with new conversation ID (requires editor restart)');
+			// Reload modifiers in extension after transfer
+			if (editor && enablePiiModifiers) {
+				editor.commands.reloadConversationModifiers(conversationId);
+				conversationActivated = true;
 			}
 		}
 		
-		// If switching between different conversation IDs, load the new conversation state
+		// Switch between existing conversations
 		if (previousConversationId && conversationId && previousConversationId !== conversationId) {
-			console.log(`RichTextInput: Switching from conversation ${previousConversationId} to ${conversationId}`);
+			console.log(`RichTextInput: Switching conversations`);
 			piiSessionManager.loadConversationState(conversationId);
+			
+			// Activate the new conversation and reload modifiers
+			if (editor && enablePiiModifiers) {
+				piiSessionManager.activateConversation(conversationId);
+				editor.commands.reloadConversationModifiers(conversationId);
+				conversationActivated = true;
+			}
+		}
+		
+		// Update extensions with new conversation ID
+		if (editor && enablePiiDetection) {
+			// Update PiiDetectionExtension
+			if (editor.extensionManager.extensions.find((ext: any) => ext.name === 'piiDetection')) {
+				if (editor.commands.reloadConversationState) {
+					editor.commands.reloadConversationState(conversationId);
+				}
+			}
 		}
 		
 		previousConversationId = conversationId;

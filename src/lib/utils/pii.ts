@@ -193,6 +193,9 @@ export class PiiSessionManager {
 	private globalModifiers: PiiModifier[] = [];
 	// Conversation-specific storage
 	private conversationStates: Map<string, ConversationPiiState> = new Map();
+	// Initialization guards
+	private localStorageInitialized = false;
+	private loadingConversations = new Set<string>(); // Track conversations currently being loaded
 
 	static getInstance(): PiiSessionManager {
 		if (!PiiSessionManager.instance) {
@@ -298,23 +301,82 @@ export class PiiSessionManager {
 
 	// Load conversation state from localStorage (chat data)
 	loadConversationState(conversationId: string, piiState?: ConversationPiiState) {
-		let stateToLoad = piiState;
-		
-		// If no piiState provided, try loading from localStorage
-		if (!stateToLoad) {
-			stateToLoad = this.loadConversationFromLocalStorage(conversationId) || undefined;
+		// Prevent loading the same conversation multiple times simultaneously
+		if (this.loadingConversations.has(conversationId)) {
+			console.log(`PiiSessionManager: Already loading conversation ${conversationId}, skipping`);
+			return;
 		}
 		
-		if (stateToLoad) {
-			this.conversationStates.set(conversationId, stateToLoad);
-			// Set as current global state
-			this.entities = stateToLoad.entities;
-			this.sessionId = (stateToLoad.sessionId as string) || null;
-			this.apiKey = stateToLoad.apiKey || this.apiKey;
-			console.log(`PiiSessionManager: Loaded conversation ${conversationId} state - ${stateToLoad.entities.length} entities, ${stateToLoad.modifiers.length} modifiers`);
-		} else {
-			console.log(`PiiSessionManager: No state found for conversation ${conversationId}`);
+		// Check if conversation is already loaded
+		if (this.conversationStates.has(conversationId) && !piiState) {
+			console.log(`PiiSessionManager: Conversation ${conversationId} already loaded, skipping`);
+			return;
 		}
+		
+		this.loadingConversations.add(conversationId);
+		
+		try {
+			let stateToLoad = piiState;
+			
+			// If no piiState provided, try loading from localStorage
+			if (!stateToLoad) {
+				stateToLoad = this.loadConversationFromLocalStorage(conversationId) || undefined;
+			}
+			
+			if (stateToLoad) {
+				this.conversationStates.set(conversationId, stateToLoad);
+				// Set as current global state
+				this.entities = stateToLoad.entities;
+				this.sessionId = (stateToLoad.sessionId as string) || null;
+				this.apiKey = stateToLoad.apiKey || this.apiKey;
+				console.log(`PiiSessionManager: Loaded conversation ${conversationId} state - ${stateToLoad.entities.length} entities, ${stateToLoad.modifiers.length} modifiers`);
+			} else {
+				console.log(`PiiSessionManager: No state found for conversation ${conversationId}`);
+			}
+		} finally {
+			this.loadingConversations.delete(conversationId);
+		}
+	}
+
+	// Activate conversation - loads conversation-specific modifiers and entities into working state
+	activateConversation(conversationId: string): boolean {
+		console.log(`PiiSessionManager: Activating conversation ${conversationId}`);
+		
+		// First ensure the conversation state is loaded
+		this.loadConversationState(conversationId);
+		
+		const conversationState = this.conversationStates.get(conversationId);
+		if (!conversationState) {
+			console.log(`PiiSessionManager: No state available for conversation ${conversationId}`);
+			return false;
+		}
+		
+		// Load conversation's entities and modifiers into working state
+		this.entities = [...conversationState.entities]; // Copy to avoid reference issues
+		
+		// Clear global modifiers and set conversation modifiers as active
+		// This ensures extensions work with the correct conversation-specific modifiers
+		this.globalModifiers = []; // Clear global modifiers
+		
+		console.log(`PiiSessionManager: Activated conversation ${conversationId} - ${conversationState.entities.length} entities, ${conversationState.modifiers.length} modifiers loaded into working state`);
+		
+		return true;
+	}
+
+	// Get active modifiers (for extensions to use)
+	// This should be used by extensions instead of getGlobalModifiers/getConversationModifiers
+	getActiveModifiers(conversationId?: string): PiiModifier[] {
+		if (conversationId) {
+			const conversationState = this.conversationStates.get(conversationId);
+			if (conversationState) {
+				console.log(`PiiSessionManager: Retrieved ${conversationState.modifiers.length} active modifiers for conversation ${conversationId}`);
+				return conversationState.modifiers;
+			}
+		}
+		
+		// Fallback to global modifiers
+		console.log(`PiiSessionManager: Retrieved ${this.globalModifiers.length} global modifiers as fallback`);
+		return this.globalModifiers;
 	}
 
 	// Get state for saving to localStorage (chat data)
@@ -411,22 +473,45 @@ export class PiiSessionManager {
 		console.log(`PiiSessionManager: Cleared global localStorage keys after transfer to conversation ${conversationId}`);
 	}
 
+	// Ensure conversation state is loaded (synchronous)
+	private ensureConversationLoaded(conversationId: string): boolean {
+		if (this.conversationStates.has(conversationId)) {
+			return true;
+		}
+		
+		console.log(`PiiSessionManager: Loading conversation ${conversationId} from localStorage`);
+		
+		// Try to load from localStorage
+		const stateFromStorage = this.loadConversationFromLocalStorage(conversationId);
+		if (stateFromStorage) {
+			this.conversationStates.set(conversationId, stateFromStorage);
+			return true;
+		}
+		
+		console.warn(`PiiSessionManager: No state found for conversation ${conversationId}`);
+		return false;
+	}
+
 	// Get modifiers for API (works for both global and conversation state)
 	getModifiersForApi(conversationId?: string): any[] {
 		if (conversationId) {
-			const modifiers = this.getConversationModifiers(conversationId);
-			console.log(`PiiSessionManager: Getting ${modifiers.length} modifiers for API (conversation: ${conversationId})`);
-			return modifiers.map(modifier => ({
-				action: modifier.action,
-				entity: modifier.entity,
-				...(modifier.type && { type: modifier.type })
+			// Ensure conversation is loaded
+			this.ensureConversationLoaded(conversationId);
+			
+			const conversationModifiers = this.getConversationModifiers(conversationId);
+			console.log(`PiiSessionManager: Retrieved ${conversationModifiers.length} conversation modifiers for ${conversationId}`);
+			return conversationModifiers.map(m => ({
+				entity: m.entity,
+				action: m.action,
+				type: m.type || undefined
 			}));
 		} else {
-			console.log(`PiiSessionManager: Getting ${this.globalModifiers.length} global modifiers for API`);
-			return this.globalModifiers.map(modifier => ({
-				action: modifier.action,
-				entity: modifier.entity,
-				...(modifier.type && { type: modifier.type })
+			const globalModifiers = this.getGlobalModifiers();
+			console.log(`PiiSessionManager: Retrieved ${globalModifiers.length} global modifiers`);
+			return globalModifiers.map(m => ({
+				entity: m.entity,
+				action: m.action,
+				type: m.type || undefined
 			}));
 		}
 	}
@@ -683,11 +768,20 @@ export class PiiSessionManager {
 			const entitiesStored = localStorage.getItem(`pii-known-entities-${conversationId}`);
 			const modifiersStored = localStorage.getItem(`pii-modifiers-${conversationId}`);
 			
+			console.log(`PiiSessionManager: Loading conversation ${conversationId} from localStorage`);
+			console.log(`PiiSessionManager: Entities localStorage key exists:`, !!entitiesStored);
+			console.log(`PiiSessionManager: Modifiers localStorage key exists:`, !!modifiersStored);
+			
+			if (modifiersStored) {
+				console.log(`PiiSessionManager: Raw modifiers from localStorage:`, modifiersStored);
+			}
+			
 			if (entitiesStored || modifiersStored) {
 				const entities: ExtendedPiiEntity[] = entitiesStored ? JSON.parse(entitiesStored) : [];
 				const modifiers: PiiModifier[] = modifiersStored ? JSON.parse(modifiersStored) : [];
 				
 				console.log(`PiiSessionManager: Loaded conversation ${conversationId} from localStorage - ${entities.length} entities, ${modifiers.length} modifiers`);
+				console.log(`PiiSessionManager: Loaded modifiers:`, modifiers);
 				
 				return {
 					entities,
@@ -701,6 +795,7 @@ export class PiiSessionManager {
 			console.error(`PiiSessionManager: Failed to load conversation ${conversationId} from localStorage:`, error);
 		}
 		
+		console.log(`PiiSessionManager: No localStorage data found for conversation ${conversationId}`);
 		return null;
 	}
 
@@ -734,9 +829,15 @@ export class PiiSessionManager {
 	 * Initialize localStorage state - call this on app startup
 	 */
 	initializeFromLocalStorage(): void {
+		if (this.localStorageInitialized) {
+			console.log('PiiSessionManager: localStorage already initialized, skipping');
+			return;
+		}
+		
 		console.log('PiiSessionManager: Initializing from localStorage');
 		this.loadGlobalEntitiesFromLocalStorage();
 		this.loadGlobalModifiersFromLocalStorage();
+		this.localStorageInitialized = true;
 	}
 
 	/**
@@ -832,6 +933,47 @@ export class PiiSessionManager {
 		}
 		
 		console.log('=== End Debug ===');
+	}
+
+	/**
+	 * Test method to verify the full transfer flow
+	 */
+	testTransferFlow(conversationId: string): void {
+		console.log(`=== Testing Transfer Flow for ${conversationId} ===`);
+		
+		// Step 1: Check initial global state
+		console.log('Step 1 - Initial global state:');
+		console.log('- Global modifiers:', this.globalModifiers.length);
+		console.log('- Global entities:', this.entities.length);
+		
+		// Step 2: Transfer to conversation
+		console.log('Step 2 - Transferring to conversation...');
+		this.transferGlobalToConversation(conversationId);
+		
+		// Step 3: Check conversation state in memory
+		console.log('Step 3 - Conversation state in memory:');
+		const memoryState = this.conversationStates.get(conversationId);
+		console.log('- Memory state exists:', !!memoryState);
+		if (memoryState) {
+			console.log('- Memory modifiers:', memoryState.modifiers.length);
+			console.log('- Memory entities:', memoryState.entities.length);
+		}
+		
+		// Step 4: Check localStorage
+		console.log('Step 4 - localStorage state:');
+		const storageState = this.loadConversationFromLocalStorage(conversationId);
+		console.log('- Storage state exists:', !!storageState);
+		if (storageState) {
+			console.log('- Storage modifiers:', storageState.modifiers.length);
+			console.log('- Storage entities:', storageState.entities.length);
+		}
+		
+		// Step 5: Test API access
+		console.log('Step 5 - API access test:');
+		const apiModifiers = this.getModifiersForApi(conversationId);
+		console.log('- API modifiers returned:', apiModifiers.length);
+		
+		console.log('=== End Transfer Flow Test ===');
 	}
 }
 

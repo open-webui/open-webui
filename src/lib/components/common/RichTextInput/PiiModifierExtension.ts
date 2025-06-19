@@ -1040,17 +1040,17 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 					// Load modifiers from session manager if available
 					const piiSessionManager = PiiSessionManager.getInstance();
 					
-					// First ensure localStorage is loaded
+					// First ensure localStorage is loaded (only if not already loaded)
 					piiSessionManager.initializeFromLocalStorage();
 					
-					// Load conversation state if we have a conversationId
+					// Load conversation state if we have a conversationId (but don't repeatedly activate)
 					if (conversationId) {
+						console.log(`PiiModifierExtension: Loading conversation state for ${conversationId}`);
 						piiSessionManager.loadConversationState(conversationId);
 					}
 					
-					const loadedModifiers = conversationId 
-						? piiSessionManager.getConversationModifiers(conversationId)
-						: piiSessionManager.getGlobalModifiers();
+					// Use the new getActiveModifiers method (this doesn't trigger activation, just gets current state)
+					const loadedModifiers = piiSessionManager.getActiveModifiers(conversationId);
 					
 					console.log(`PiiModifierExtension: Loaded ${loadedModifiers.length} modifiers from session manager (${conversationId ? 'conversation' : 'global'})`);
 					
@@ -1093,6 +1093,29 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 					if (meta) {
 						console.log('PiiModifierExtension: Handling meta action:', meta.type);
 						switch (meta.type) {
+							case 'RELOAD_CONVERSATION_MODIFIERS':
+								// Reload modifiers for a conversation
+								const piiSessionManagerReload = PiiSessionManager.getInstance();
+								const reloadConversationId = meta.conversationId;
+								
+								if (reloadConversationId) {
+									console.log(`PiiModifierExtension: Reloading modifiers for conversation ${reloadConversationId}`);
+									piiSessionManagerReload.activateConversation(reloadConversationId);
+									const reloadedModifiers = piiSessionManagerReload.getActiveModifiers(reloadConversationId);
+									
+									newState = {
+										...newState,
+										modifiers: reloadedModifiers
+									};
+
+									if (onModifiersChanged) {
+										onModifiersChanged(reloadedModifiers);
+									}
+									
+									console.log(`PiiModifierExtension: Reloaded ${reloadedModifiers.length} modifiers for conversation ${reloadConversationId}`);
+								}
+								break;
+								
 							case 'ADD_MODIFIER':
 								const newModifier: PiiModifier = {
 									id: generateModifierId(),
@@ -1567,6 +1590,22 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 			getModifiers: () => ({ state }: any) => {
 				const pluginState = piiModifierExtensionKey.getState(state);
 				return pluginState?.modifiers || [];
+			},
+
+			// Reload modifiers for a conversation (called when conversation changes)
+			reloadConversationModifiers: (conversationId: string) => ({ state, dispatch }: any) => {
+				console.log(`PiiModifierExtension: Command to reload modifiers for conversation ${conversationId}`);
+				
+				const tr = state.tr.setMeta(piiModifierExtensionKey, {
+					type: 'RELOAD_CONVERSATION_MODIFIERS',
+					conversationId
+				});
+
+				if (dispatch) {
+					dispatch(tr);
+				}
+
+				return true;
 			},
 
 			// Clear all modifiers
