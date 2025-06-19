@@ -6,7 +6,7 @@ from open_webui.internal.db import Base, JSONField, get_db
 from open_webui.models.users import Users
 from open_webui.env import SRC_LOG_LEVELS
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Boolean, Column, String, Text
+from sqlalchemy import BigInteger, Boolean, Column, String, Text, Index
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -30,6 +30,10 @@ class Function(Base):
     is_global = Column(Boolean)
     updated_at = Column(BigInteger)
     created_at = Column(BigInteger)
+
+    __table_args__ = (
+        Index('is_global_idx', 'is_global'),
+    )
 
 
 class FunctionMeta(BaseModel):
