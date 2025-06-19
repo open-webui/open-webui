@@ -3,8 +3,8 @@ import { get } from 'svelte/store';
 import { settings } from '$lib/stores';
 import { updateUserSettings } from '$lib/apis/users';
 
-export interface IonosSettings extends Settings {
-	ionosProvidedFeedback: boolean;
+export type IonosSettings = Settings & {
+	ionosProvidedFeedback?: boolean;
 };
 
 export const updateSettings = async (newSettings: Partial<IonosSettings>): Promise<void> => {

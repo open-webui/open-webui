@@ -24,7 +24,7 @@ export const getFiles = async (dataTransfer: DataTransfer): Promise<File[]> => {
 			.map((item) => item.webkitGetAsEntry())
 			.filter((entry) => entry?.isFile);
 
-	const files = [];
+	const files: File[] = [];
 
 	for (const entry of entries) {
 		files.push(await getFileFromEntry(entry));

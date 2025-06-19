@@ -15,18 +15,18 @@ export type NotificationActionBase = {
 /**
  * Handle notification action clicks as click event handler
  */
-export type NotificationActionClickHandler = NotificationActionBase & {
-	handler: (e: Event) => void;
+export type NotificationActionClickHandler = {
+	handler?: (e: Event) => void;
 };
 
 /**
  * Handle notification action clicks as href
  */
-export type NotificationActionHref = NotificationActionBase & {
-	href: string;
+export type NotificationActionHref = {
+	href?: string;
 };
 
-export type NotificationAction = NotificationActionHandler | NotificationActionHref;
+export type NotificationAction = NotificationActionBase & NotificationActionClickHandler & NotificationActionHref;
 
 export type Notification = {
 	type: NotificationType;
