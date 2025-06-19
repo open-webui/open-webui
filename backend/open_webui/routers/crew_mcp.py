@@ -31,6 +31,7 @@ router = APIRouter()
 class CrewMCPQuery(BaseModel):
     query: str
     llm_config: Optional[Dict[str, Any]] = None
+    selected_tools: Optional[list] = None  # List of selected tool IDs from frontend
 
 
 class CrewMCPResponse(BaseModel):
@@ -95,30 +96,15 @@ async def run_crew_query(
                 detail="No MCP tools available. Check MCP server configuration.",
             )
 
-        # Intelligently route to appropriate crew based on query content
-        query_lower = request.query.lower()
-        news_keywords = ["news", "headlines", "article", "breaking", "latest news", "current events", "newsdesk"]
-        time_keywords = ["time", "clock", "timezone", "date", "hour", "minute", "when is"]
-        multi_keywords = ["and", "also", "both", "together", "combine", "plus"]
+        # Use intelligent crew approach with manager agent
+        selected_tools = request.selected_tools or []
         
-        # Check if query mentions both domains or asks for combined information
-        is_news_query = any(keyword in query_lower for keyword in news_keywords)
-        is_time_query = any(keyword in query_lower for keyword in time_keywords)
-        is_multi_query = any(keyword in query_lower for keyword in multi_keywords)
+        log.info(f"Selected tools: {selected_tools}")
+        log.info(f"Using intelligent crew with manager agent for routing")
         
-        # Use multi-server crew if query involves multiple domains or explicitly requests combined info
-        if (is_news_query and is_time_query) or (is_multi_query and (is_news_query or is_time_query)):
-            log.info("Routing to multi-server crew for comprehensive query")
-            result = crew_mcp_manager.run_multi_server_crew(request.query)
-            used_tools = [tool["name"] for tool in tools]  # All tools potentially used
-        elif is_news_query and not is_time_query:
-            log.info("Routing to news crew based on query content")
-            result = crew_mcp_manager.run_news_crew(request.query)
-            used_tools = [tool["name"] for tool in tools if tool.get("server") == "news_server"]
-        else:
-            log.info("Routing to time crew based on query content")
-            result = crew_mcp_manager.run_time_crew(request.query)
-            used_tools = [tool["name"] for tool in tools if tool.get("server") == "time_server"]
+        # Always use the intelligent crew - it will handle routing internally
+        result = crew_mcp_manager.run_intelligent_crew(request.query, selected_tools)
+        used_tools = [tool["name"] for tool in tools]  # All tools potentially available
 
         return CrewMCPResponse(
             result=result, tools_used=used_tools, success=True
@@ -153,8 +139,9 @@ async def run_multi_server_crew_query(
                 detail="No MCP tools available. Check MCP server configuration.",
             )
 
-        # Run the multi-server crew that can use ALL available tools
-        result = crew_mcp_manager.run_multi_server_crew(request.query)
+        # Run the intelligent crew (same as regular query, since manager handles everything)
+        selected_tools = request.selected_tools or []
+        result = crew_mcp_manager.run_intelligent_crew(request.query, selected_tools)
 
         return CrewMCPResponse(
             result=result, tools_used=[tool["name"] for tool in tools], success=True

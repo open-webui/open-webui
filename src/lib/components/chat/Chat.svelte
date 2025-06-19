@@ -1406,7 +1406,7 @@
 							await tick();
 							scrollToBottom();
 
-							const crewResponse = await queryCrewMCP(localStorage.token, prompt, model.id);
+							const crewResponse = await queryCrewMCP(localStorage.token, prompt, model.id, selectedToolIds);
 
 							if (crewResponse && crewResponse.result) {
 								// Update message content with CrewAI response
