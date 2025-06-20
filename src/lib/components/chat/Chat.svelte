@@ -1754,11 +1754,103 @@
 			params?.stream_response ??
 			true;
 
+		// 获取当前选中的personal
+		const selectedPersonalId = localStorage.getItem('selectedPersonalId');
+		let personalPrefix = '';
+		let personalInfo = null;
+		if (selectedPersonalId) {
+			const personals = JSON.parse(localStorage.getItem('personals') || '[]');
+			const currentPersonal = personals.find(p => p.id === selectedPersonalId);
+			if (currentPersonal) {
+				personalPrefix = currentPersonal.prefix;
+				personalInfo = currentPersonal;
+			}
+		}
+
+		// 构建system message，包含personal前缀
+		let systemMessage = '';
+		if (params?.system || $settings.system) {
+			systemMessage = promptTemplate(
+				params?.system ?? $settings?.system ?? '',
+				$user?.name,
+				$settings?.userLocation
+					? await getAndUpdateUserLocation(localStorage.token).catch((err) => {
+							console.error(err);
+							return undefined;
+						})
+					: undefined
+			);
+		}
+		
+		// 如果有personal信息，添加到system message
+		if (personalInfo) {
+			// 根据头像emoji和名字分析角色类型
+			const avatar = personalInfo.avatar;
+			const name = personalInfo.name.toLowerCase();
+			
+			// 角色类型特定的指导
+			let characterSpecificGuidance = '';
+			
+			if (avatar === '🐱' || name.includes('cat') || name.includes('kitty')) {
+				characterSpecificGuidance = 'You are a cute, playful cat. Use cat-like expressions, be affectionate, and show curiosity. You might mention things cats love like toys, sunbeams, or treats.';
+			} else if (avatar === '🐶' || name.includes('dog') || name.includes('puppy')) {
+				characterSpecificGuidance = 'You are a friendly, loyal dog. Be enthusiastic, protective, and loving. You might mention things dogs love like walks, treats, or playing fetch.';
+			} else if (avatar === '🦄' || name.includes('unicorn') || name.includes('magic')) {
+				characterSpecificGuidance = 'You are a magical unicorn. Be mystical, graceful, and kind. You might mention magic, rainbows, sparkles, and helping others with your magical powers.';
+			} else if (avatar === '🐼' || name.includes('panda')) {
+				characterSpecificGuidance = 'You are a gentle, peaceful panda. Be calm, wise, and love bamboo. You might mention eating bamboo, being peaceful, or taking naps.';
+			} else if (avatar === '🦁' || name.includes('lion')) {
+				characterSpecificGuidance = 'You are a brave, strong lion. Be courageous, protective, and a natural leader. You might mention protecting your friends, being brave, or leading others.';
+			} else if (avatar === '🐯' || name.includes('tiger')) {
+				characterSpecificGuidance = 'You are a powerful, fierce tiger. Be strong, confident, and protective. You might mention your strength, stripes, or protecting others.';
+			} else if (avatar === '🐸' || name.includes('frog')) {
+				characterSpecificGuidance = 'You are a friendly frog. Be cheerful, love water, and enjoy jumping around. You might mention ponds, jumping, or making friends with other animals.';
+			} else if (avatar === '🌟' || name.includes('star')) {
+				characterSpecificGuidance = 'You are a bright, shining star. Be positive, inspiring, and bring light to others. You might mention twinkling, making wishes come true, or brightening the night sky.';
+			} else if (avatar === '🌈' || name.includes('rainbow')) {
+				characterSpecificGuidance = 'You are a colorful rainbow. Be joyful, bring happiness, and represent diversity. You might mention colors, bringing joy, or appearing after rain.';
+			} else if (avatar === '🚀' || name.includes('rocket') || name.includes('space')) {
+				characterSpecificGuidance = 'You are an adventurous rocket. Be excited about space exploration, be fast, and love adventure. You might mention space, planets, stars, or going on exciting missions.';
+			} else if (avatar === '🏰' || name.includes('castle') || name.includes('prince') || name.includes('princess')) {
+				characterSpecificGuidance = 'You are a noble castle resident. Be dignified, kind, and protective of your kingdom. You might mention your castle, helping people, or being noble and kind.';
+			} else if (avatar === '🎮' || name.includes('game')) {
+				characterSpecificGuidance = 'You are a fun gaming character. Be energetic, love games, and be excited about adventures. You might mention games, levels, achievements, or having fun.';
+			} else {
+				characterSpecificGuidance = 'Be friendly, helpful, and match your character\'s personality based on your name and avatar.';
+			}
+			
+			const characterPrompt = `You are ${personalInfo.name}${personalInfo.avatar ? ` (${personalInfo.avatar})` : ''}. 
+
+IMPORTANT: You are NOT talking about this character - you ARE this character. Respond as if you are actually ${personalInfo.name} speaking directly to the child.
+
+Your signature greeting is "${personalInfo.prefix}". You should use this when it feels natural, like at the start of a conversation, but **do not repeat it in every single response**.
+
+${personalInfo.description ? `Character traits: ${personalInfo.description}` : ''}
+
+${characterSpecificGuidance}
+
+Key guidelines:
+- **Helpful Core**: Your primary goal is to be a helpful assistant. You MUST answer the user's questions factually, even if the topic is outside your character's world (like math, history, or science). Deliver the correct answer first, then add your character's personality.
+- **Never Refuse**: Do not use your character as an excuse to avoid answering a question (e.g., "As a Pokemon, I don't know about politics").
+- Always respond in first person as ${personalInfo.name}.
+- Use your signature greeting "${personalInfo.prefix}" appropriately, and **avoid repeating it in every message**.
+- Match your personality to your avatar emoji and name.
+- Be consistent with your character's voice and mannerisms.
+- Never break character or explain that you're role-playing.
+- Respond as if you're really ${personalInfo.name} talking to a child.`;
+			
+			if (systemMessage) {
+				systemMessage += `\n\n${characterPrompt}`;
+			} else {
+				systemMessage = characterPrompt;
+			}
+		}
+
 		let messages = [
-			params?.system || $settings.system
+			systemMessage
 				? {
 						role: 'system',
-						content: `${params?.system ?? $settings?.system ?? ''}`
+						content: systemMessage
 					}
 				: undefined,
 			..._messages.map((message) => ({
@@ -1951,7 +2043,7 @@
 			);
 		}
 
-		history.messages[responseMessage.id] = responseMessage;
+		history.messages[responseMessageId] = responseMessage;
 	};
 
 	const stopResponse = async () => {
@@ -2476,6 +2568,8 @@
 											await uploadWeb(data);
 										} else if (type === 'youtube') {
 											await uploadYoutubeTranscription(data);
+										} else if (type === 'google-drive') {
+											await uploadGoogleDriveFile(data);
 										}
 									}}
 									on:submit={async (e) => {
