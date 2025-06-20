@@ -6,6 +6,7 @@
 	import { models } from '$lib/stores';
 	import { verifyOpenAIConnection } from '$lib/apis/openai';
 	import { verifyOllamaConnection } from '$lib/apis/ollama';
+	import { verifyDMRConnection } from '$lib/apis/dmr';
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
@@ -23,6 +24,7 @@
 	export let edit = false;
 
 	export let ollama = false;
+	export let dmr = false;
 	export let direct = false;
 
 	export let connection = null;
@@ -64,6 +66,22 @@
 		}
 	};
 
+	const verifyDMRHandler = async () => {
+		// remove trailing slash from url
+		url = url.replace(/\/$/, '');
+
+		const res = await verifyDMRConnection(localStorage.token, {
+			url,
+			key
+		}).catch((error) => {
+			toast.error(`${error}`);
+		});
+
+		if (res) {
+			toast.success($i18n.t('Server connection verified'));
+		}
+	};
+
 	const verifyOpenAIHandler = async () => {
 		// remove trailing slash from url
 		url = url.replace(/\/$/, '');
@@ -91,6 +109,8 @@
 	const verifyHandler = () => {
 		if (ollama) {
 			verifyOllamaHandler();
+		} else if (dmr) {
+			verifyDMRHandler();
 		} else {
 			verifyOpenAIHandler();
 		}
@@ -172,7 +192,7 @@
 			prefixId = connection.config?.prefix_id ?? '';
 			modelIds = connection.config?.model_ids ?? [];
 
-			if (ollama) {
+			if (ollama || dmr) {
 				connectionType = connection.config?.connection_type ?? 'local';
 			} else {
 				connectionType = connection.config?.connection_type ?? 'external';

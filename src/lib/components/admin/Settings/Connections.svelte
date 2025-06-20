@@ -6,6 +6,7 @@
 
 	import { getOllamaConfig, updateOllamaConfig } from '$lib/apis/ollama';
 	import { getOpenAIConfig, updateOpenAIConfig, getOpenAIModels } from '$lib/apis/openai';
+	import { getDMRConfig, updateDMRConfig } from '$lib/apis/dmr';
 	import { getModels as _getModels } from '$lib/apis';
 	import { getDirectConnectionsConfig, setDirectConnectionsConfig } from '$lib/apis/configs';
 
@@ -19,6 +20,7 @@
 	import OpenAIConnection from './Connections/OpenAIConnection.svelte';
 	import AddConnectionModal from '$lib/components/AddConnectionModal.svelte';
 	import OllamaConnection from './Connections/OllamaConnection.svelte';
+	import DMRConnection from './Connections/DMRConnection.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -38,14 +40,19 @@
 	let OPENAI_API_BASE_URLS = [''];
 	let OPENAI_API_CONFIGS = {};
 
+	let DMR_BASE_URL = '';
+	let DMR_API_CONFIG = {};
+
 	let ENABLE_OPENAI_API: null | boolean = null;
 	let ENABLE_OLLAMA_API: null | boolean = null;
+	let ENABLE_DMR_API: null | boolean = null;
 
 	let directConnectionsConfig = null;
 
 	let pipelineUrls = {};
 	let showAddOpenAIConnectionModal = false;
 	let showAddOllamaConnectionModal = false;
+	let showAddDMRConnectionModal = false;
 
 	const updateOpenAIHandler = async () => {
 		if (ENABLE_OPENAI_API !== null) {
@@ -104,6 +111,26 @@
 		}
 	};
 
+	const updateDMRHandler = async () => {
+		if (ENABLE_DMR_API !== null) {
+			// Remove trailing slash
+			DMR_BASE_URL = DMR_BASE_URL.replace(/\/$/, '');
+
+			const res = await updateDMRConfig(localStorage.token, {
+				ENABLE_DMR_API: ENABLE_DMR_API,
+				DMR_BASE_URL: DMR_BASE_URL,
+				DMR_API_CONFIG: DMR_API_CONFIG
+			}).catch((error) => {
+				toast.error(`${error}`);
+			});
+
+			if (res) {
+				toast.success($i18n.t('DMR API settings updated'));
+				await models.set(await getModels());
+			}
+		}
+	};
+
 	const updateDirectConnectionsHandler = async () => {
 		const res = await setDirectConnectionsConfig(localStorage.token, directConnectionsConfig).catch(
 			(error) => {
@@ -135,10 +162,21 @@
 		await updateOllamaHandler();
 	};
 
+	const addDMRConnectionHandler = async (connection) => {
+		DMR_BASE_URL = connection.url;
+		DMR_API_CONFIG = {
+			...connection.config,
+			key: connection.key
+		};
+
+		await updateDMRHandler();
+	};
+
 	onMount(async () => {
 		if ($user?.role === 'admin') {
 			let ollamaConfig = {};
 			let openaiConfig = {};
+			let dmrConfig = {};
 
 			await Promise.all([
 				(async () => {
@@ -148,12 +186,16 @@
 					openaiConfig = await getOpenAIConfig(localStorage.token);
 				})(),
 				(async () => {
+					dmrConfig = await getDMRConfig(localStorage.token);
+				})(),
+				(async () => {
 					directConnectionsConfig = await getDirectConnectionsConfig(localStorage.token);
 				})()
 			]);
 
 			ENABLE_OPENAI_API = openaiConfig.ENABLE_OPENAI_API;
 			ENABLE_OLLAMA_API = ollamaConfig.ENABLE_OLLAMA_API;
+			ENABLE_DMR_API = dmrConfig.ENABLE_DMR_API;
 
 			OPENAI_API_BASE_URLS = openaiConfig.OPENAI_API_BASE_URLS;
 			OPENAI_API_KEYS = openaiConfig.OPENAI_API_KEYS;
@@ -161,6 +203,9 @@
 
 			OLLAMA_BASE_URLS = ollamaConfig.OLLAMA_BASE_URLS;
 			OLLAMA_API_CONFIGS = ollamaConfig.OLLAMA_API_CONFIGS;
+
+			DMR_BASE_URL = dmrConfig.DMR_BASE_URL;
+			DMR_API_CONFIG = dmrConfig.DMR_API_CONFIG;
 
 			if (ENABLE_OPENAI_API) {
 				// get url and idx
@@ -196,6 +241,7 @@
 	const submitHandler = async () => {
 		updateOpenAIHandler();
 		updateOllamaHandler();
+		updateDMRHandler();
 		updateDirectConnectionsHandler();
 
 		dispatch('save');
@@ -213,9 +259,15 @@
 	onSubmit={addOllamaConnectionHandler}
 />
 
+<AddConnectionModal
+	dmr
+	bind:show={showAddDMRConnectionModal}
+	onSubmit={addDMRConnectionHandler}
+/>
+
 <form class="flex flex-col h-full justify-between text-sm" on:submit|preventDefault={submitHandler}>
 	<div class=" overflow-y-scroll scrollbar-hidden h-full">
-		{#if ENABLE_OPENAI_API !== null && ENABLE_OLLAMA_API !== null && directConnectionsConfig !== null}
+		{#if ENABLE_OPENAI_API !== null && ENABLE_OLLAMA_API !== null && ENABLE_DMR_API !== null && directConnectionsConfig !== null}
 			<div class="my-2">
 				<div class="mt-2 space-y-2 pr-1.5">
 					<div class="flex justify-between items-center text-sm">
@@ -353,6 +405,50 @@
 							>
 								{$i18n.t('Click here for help.')}
 							</a>
+						</div>
+					</div>
+				{/if}
+			</div>
+
+			<hr class=" border-gray-100 dark:border-gray-850" />
+
+			<div class="pr-1.5 my-2">
+				<div class="flex justify-between items-center text-sm mb-2">
+					<div class="  font-medium">{$i18n.t('Docker Model Runner API')}</div>
+
+					<div class="mt-1">
+						<Switch
+							bind:state={ENABLE_DMR_API}
+							on:change={async () => {
+								updateDMRHandler();
+							}}
+						/>
+					</div>
+				</div>
+
+				{#if ENABLE_DMR_API}
+					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+
+					<div class="">
+						<div class="flex justify-between items-center">
+							<div class="font-medium">{$i18n.t('Docker Model Runner Connection')}</div>
+						</div>
+
+						<div class="flex w-full gap-1.5">
+							<div class="flex-1 flex flex-col gap-1.5 mt-1.5">
+								<DMRConnection
+									bind:url={DMR_BASE_URL}
+									bind:config={DMR_API_CONFIG}
+									onSubmit={() => {
+										updateDMRHandler();
+									}}
+									onDelete={() => {
+										DMR_BASE_URL = '';
+										DMR_API_CONFIG = {};
+										updateDMRHandler();
+									}}
+								/>
+							</div>
 						</div>
 					</div>
 				{/if}
