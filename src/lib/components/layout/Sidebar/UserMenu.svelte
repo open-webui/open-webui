@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { DropdownMenu } from 'bits-ui';
 	import { createEventDispatcher, getContext, onMount } from 'svelte';
-	import { showSettings, mobile, showSidebar, config, user } from '$lib/stores';
+	import { showSettings, mobile, showSidebar, user } from '$lib/stores';
 	import { page } from '$app/state'
 	import { fade } from 'svelte/transition';
 	import { showKnowlegeManager } from '$lib/IONOS/stores/dialogs';

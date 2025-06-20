@@ -18,7 +18,7 @@
 	const unsubscribeChats = chats.subscribe(async (chats: Chat[]) => {
 		const userSettings = await getUserSettings(localStorage.token);
 		const userCreatedAt = new Date($user!.created_at * 1000);
-		if (chats.length >= 2 || (new Date().getTime() - userCreatedAt.getTime()) < (14 * DAYS)) {
+		if (chats.length >= 2 || (new Date().getTime() - userCreatedAt.getTime()) > (14 * DAYS)) {
 			if (!userSettings.ui?.ionosProvidedFeedback) {
 				addSurveyNotification();
 			}
