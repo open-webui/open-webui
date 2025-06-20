@@ -105,6 +105,10 @@
 	let processing = '';
 	let messagesContainerElement: HTMLDivElement;
 
+	let minMessagesForSearch = 20; // Track minimum messages needed for search
+
+	let scrollToBottomElement: HTMLDivElement;
+
 	let navbarElement;
 
 	let showEventConfirmation = false;
@@ -2097,6 +2101,7 @@
 										{chatActionHandler}
 										{addMessages}
 										bottomPadding={files.length > 0}
+										minMessagesCount={minMessagesForSearch}
 									/>
 								</div>
 							</div>
@@ -2240,6 +2245,12 @@
 		{history}
 		on:close={() => {
 			showChatSearch.set(false);
+		}}
+		on:ensureMessagesLoaded={(e) => {
+			const { requiredCount } = e.detail;
+			if (requiredCount > minMessagesForSearch) {
+				minMessagesForSearch = requiredCount;
+			}
 		}}
 	/>
 </div>

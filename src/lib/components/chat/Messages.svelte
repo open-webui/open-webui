@@ -50,9 +50,15 @@
 
 	export let bottomPadding = false;
 	export let autoScroll;
+	export let minMessagesCount = 20;
 
 	let messagesCount = 20;
 	let messagesLoading = false;
+
+	// Ensure messagesCount is at least minMessagesCount
+	$: if (minMessagesCount > messagesCount) {
+		messagesCount = minMessagesCount;
+	}
 
 	const loadMoreMessages = async () => {
 		// scroll slightly down to disable continuous loading
