@@ -19,6 +19,7 @@
 	let matchingMessageIds: string[] = [];
 	let currentIndex = 0;
 	let isNavigating = false; // Visual feedback for navigation
+	let currentSearchTerm = ''; // Track current highlighted term
 
 	// Computed values
 	$: totalResults = matchingMessageIds.length;
@@ -53,17 +54,23 @@
 	};
 
 	const closeSearch = () => {
+		clearHighlights();
 		searchQuery = '';
 		matchingMessageIds = [];
 		currentIndex = 0;
 		isNavigating = false;
+		currentSearchTerm = '';
 		dispatch('close');
 	};
 
 	const performSearch = (query: string) => {
+		// Clear previous highlights
+		clearHighlights();
+		
 		if (!query.trim() || !history?.messages) {
 			matchingMessageIds = [];
 			currentIndex = 0;
+			currentSearchTerm = '';
 			return;
 		}
 
@@ -81,11 +88,99 @@
 
 		matchingMessageIds = messageIds;
 		currentIndex = messageIds.length > 0 ? 0 : 0;
+		currentSearchTerm = searchTerm;
 		
-		// Auto-navigate to first result when search finds matches
+		// Apply highlights and auto-navigate to first result
 		if (messageIds.length > 0) {
+			highlightMatches(searchTerm);
 			scrollToCurrentResult();
 		}
+	};
+
+	const highlightMatches = (searchTerm: string) => {
+		if (!searchTerm.trim()) return;
+		
+		matchingMessageIds.forEach(messageId => {
+			const messageElement = document.getElementById(`message-${messageId}`);
+			if (messageElement) {
+				highlightInElement(messageElement, searchTerm);
+			}
+		});
+	};
+
+	const highlightInElement = (element: Element, searchTerm: string) => {
+		const walker = document.createTreeWalker(
+			element,
+			NodeFilter.SHOW_TEXT,
+			{
+				acceptNode: (node) => {
+					// Skip if parent already has highlight class or is a script/style tag
+					const parent = node.parentElement;
+					if (!parent || parent.classList.contains('search-highlight') || 
+						parent.tagName === 'SCRIPT' || parent.tagName === 'STYLE') {
+						return NodeFilter.FILTER_REJECT;
+					}
+					return NodeFilter.FILTER_ACCEPT;
+				}
+			}
+		);
+
+		const textNodes: Text[] = [];
+		let node;
+		while (node = walker.nextNode()) {
+			textNodes.push(node as Text);
+		}
+
+		textNodes.forEach(textNode => {
+			const text = textNode.textContent || '';
+			const lowerText = text.toLowerCase();
+			const lowerSearchTerm = searchTerm.toLowerCase();
+			
+			if (lowerText.includes(lowerSearchTerm)) {
+				const parent = textNode.parentNode;
+				if (!parent) return;
+
+				// Create document fragment with highlighted content
+				const fragment = document.createDocumentFragment();
+				let lastIndex = 0;
+				let match;
+				
+				while ((match = lowerText.indexOf(lowerSearchTerm, lastIndex)) !== -1) {
+					// Add text before match
+					if (match > lastIndex) {
+						fragment.appendChild(document.createTextNode(text.slice(lastIndex, match)));
+					}
+					
+					// Add highlighted match
+					const highlight = document.createElement('span');
+					highlight.className = 'search-highlight bg-yellow-200 dark:bg-yellow-600 px-0.5 rounded';
+					highlight.textContent = text.slice(match, match + searchTerm.length);
+					fragment.appendChild(highlight);
+					
+					lastIndex = match + searchTerm.length;
+				}
+				
+				// Add remaining text
+				if (lastIndex < text.length) {
+					fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
+				}
+				
+				// Replace the text node with highlighted content
+				parent.replaceChild(fragment, textNode);
+			}
+		});
+	};
+
+	const clearHighlights = () => {
+		// Remove all existing highlights
+		const highlights = document.querySelectorAll('.search-highlight');
+		highlights.forEach(highlight => {
+			const parent = highlight.parentNode;
+			if (parent) {
+				parent.replaceChild(document.createTextNode(highlight.textContent || ''), highlight);
+				parent.normalize(); // Merge adjacent text nodes
+			}
+		});
 	};
 
 	const handleInput = () => {
@@ -131,15 +226,29 @@
 					inline: 'nearest'
 				});
 				
-				// Add subtle visual feedback to the message
+				// Turn all highlights blue during navigation
+				setHighlightColor('blue');
+				
+				// Add message background flash
 				messageElement.style.transition = 'background-color 0.3s ease';
-				messageElement.style.backgroundColor = 'rgba(59, 130, 246, 0.1)'; // Light blue highlight
+				messageElement.style.backgroundColor = 'rgba(59, 130, 246, 0.1)'; // More visible blue
 				
 				setTimeout(() => {
 					messageElement.style.backgroundColor = '';
 				}, 1000);
 			}
 		}
+	};
+
+	const setHighlightColor = (color: 'yellow' | 'blue') => {
+		const allHighlights = document.querySelectorAll('.search-highlight');
+		const colorClass = color === 'blue' 
+			? 'search-highlight bg-blue-200 dark:bg-blue-600 px-0.5 rounded'
+			: 'search-highlight bg-yellow-200 dark:bg-yellow-600 px-0.5 rounded';
+		
+		allHighlights.forEach(highlight => {
+			highlight.className = colorClass;
+		});
 	};
 
 	// Click outside handler
@@ -154,6 +263,7 @@
 	});
 
 	onDestroy(() => {
+		clearHighlights(); // Clean up highlights when component is destroyed
 		document.removeEventListener('click', handleClickOutside);
 	});
 </script>
@@ -183,7 +293,7 @@
 			<!-- Results Counter with enhanced styling -->
 			{#if totalResults > 0}
 				<div class="text-xs font-medium text-blue-600 dark:text-blue-400 whitespace-nowrap">
-					{currentResult} of {totalResults}
+					{currentResult} of {totalResults} {totalResults === 1 ? 'message' : 'messages'}
 				</div>
 			{:else if searchQuery.trim()}
 				<div class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
@@ -234,8 +344,12 @@
 			</div>
 		{:else if totalResults > 1}
 			<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
-				Navigate with <kbd class="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">Enter</kbd> / 
+				Navigate between messages with <kbd class="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">Enter</kbd> / 
 				<kbd class="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">Shift+Enter</kbd>
+			</div>
+		{:else if totalResults === 1}
+			<div class="mt-2 text-xs text-green-600 dark:text-green-400">
+				Found in 1 message with highlights
 			</div>
 		{/if}
 	</div>
