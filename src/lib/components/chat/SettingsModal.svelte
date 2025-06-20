@@ -333,11 +333,18 @@
 			settingsTabsContainer.removeEventListener('wheel', scrollHandler);
 		}
 	};
+	const announceSelectedTab = async () => {
+		const title = $i18n.t(selectedTab);
+		ariaMessage.set($i18n.t('settingsTab', { title }));
+	};
 
 	$: if (show) {
 		addScrollListener();
 	} else {
 		removeScrollListener();
+	}
+	$: if (selectedTab) {
+		announceSelectedTab();
 	}
 </script>
 
