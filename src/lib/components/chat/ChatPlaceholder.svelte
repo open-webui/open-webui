@@ -46,7 +46,9 @@
 					>
 						<Tooltip
 							content={marked.parse(
-								sanitizeResponseContent(models[selectedModelIdx]?.info?.meta?.description ?? '').replaceAll('\n', '<br>')
+								sanitizeResponseContent(
+									models[selectedModelIdx]?.info?.meta?.description ?? ''
+								).replaceAll('\n', '<br>')
 							)}
 							placement="right"
 						>
@@ -96,7 +98,9 @@
 							class="mt-0.5 text-base font-normal text-gray-500 dark:text-gray-400 line-clamp-3 markdown"
 						>
 							{@html marked.parse(
-								sanitizeResponseContent(models[selectedModelIdx]?.info?.meta?.description).replaceAll('\n', '<br>')
+								sanitizeResponseContent(
+									models[selectedModelIdx]?.info?.meta?.description
+								).replaceAll('\n', '<br>')
 							)}
 						</div>
 						{#if models[selectedModelIdx]?.info?.meta?.user}
