@@ -52,227 +52,134 @@ class MCPToolsResponse(BaseModel):
     count: int
 
 
-async def generate_title_and_tags_background(request_data, request: CrewMCPQuery, result: str, user):
-    """Background task to generate title and tags without blocking the main response"""
+async def _setup_event_emitter(request: CrewMCPQuery, user):
+    """Setup event emitter for WebSocket notifications"""
     try:
-        log.info(f"Starting background title/tag generation for chat {request.chat_id}")
-        
-        # Set up event emitter for real-time updates (if possible)
-        event_emitter = None
-        try:
-            log.info(f"Setting up event emitter for chat {request.chat_id} with session_id: {request.session_id}")
-            event_emitter = get_event_emitter({
-                "chat_id": request.chat_id,
-                "user_id": user.id,
-                "message_id": f"crew_msg_{request.chat_id}",  # Provide a synthetic message_id
-                "session_id": request.session_id  # Use session_id from request
-            })
-            log.info(f"Successfully set up event emitter for chat {request.chat_id}")
-        except Exception as ee_error:
-            log.error(f"Could not set up event emitter for chat {request.chat_id}: {ee_error}")
-            import traceback
-            log.error(f"Event emitter setup traceback: {traceback.format_exc()}")
-            event_emitter = None
-        
-        messages = [
-            {"role": "user", "content": request.query, "id": f"msg_user_{request.chat_id}"},
-            {"role": "assistant", "content": result, "id": f"msg_assistant_{request.chat_id}"}
-        ]
-        
-        model_to_use = request.model or "mistral:7b"
-        
-        # Generate proper title using the same logic as standard chats
-        try:
-            # Create a simpler title generation call
-            from open_webui.utils.chat import generate_chat_completion
-            from open_webui.utils.task import get_task_model_id
-            from open_webui.config import DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE
-            
-            # Get the task model
-            models = request_data.app.state.MODELS
-            task_model_id = get_task_model_id(
-                model_to_use,
-                request_data.app.state.config.TASK_MODEL,
-                request_data.app.state.config.TASK_MODEL_EXTERNAL,
-                models,
-            )
-            
-            # Create a simple title prompt
-            title_prompt = f"""Create a concise, 3-5 word title with an emoji for this conversation:
+        return get_event_emitter({
+            "chat_id": request.chat_id,
+            "user_id": user.id,
+            "message_id": f"crew_msg_{request.chat_id}",
+            "session_id": request.session_id
+        })
+    except Exception as e:
+        log.warning(f"Could not set up event emitter for chat {request.chat_id}: {e}")
+        return None
+
+
+async def _generate_title(request_data, request: CrewMCPQuery, result: str, user, task_model_id):
+    """Generate and update chat title"""
+    from open_webui.utils.chat import generate_chat_completion
+    
+    title_prompt = f"""Create a concise, 3-5 word title with an emoji for this conversation:
 
 User: {request.query}
 Assistant: {result[:500]}...
 
 Respond with just the title, no quotes or formatting."""
-            
-            title_payload = {
-                "model": task_model_id,
-                "messages": [{"role": "user", "content": title_prompt}],
-                "stream": False,
-                "max_tokens": 50,
-                "metadata": {
-                    "task": "title_generation",
-                    "chat_id": request.chat_id,
-                },
-            }
-            
-            title_res = await generate_chat_completion(request_data, form_data=title_payload, user=user)
-            
-            if title_res and isinstance(title_res, dict):
-                if len(title_res.get("choices", [])) == 1:
-                    title = (
-                        title_res.get("choices", [])[0]
-                        .get("message", {})
-                        .get("content", "")
-                        .strip()
-                    )
-                    
-                    if title:
-                        Chats.update_chat_title_by_id(request.chat_id, title)
-                        log.info(f"Generated and updated title for chat {request.chat_id}: {title}")
-                        
-                        # Emit title update event for real-time frontend update
-                        if event_emitter:
-                            try:
-                                log.info(f"Emitting title event for chat {request.chat_id}: {title}")
-                                await event_emitter({
-                                    "type": "chat:title",
-                                    "data": title,
-                                })
-                                log.info(f"Successfully emitted title event for chat {request.chat_id}")
-                            except Exception as event_error:
-                                log.error(f"Failed to emit title event for chat {request.chat_id}: {event_error}")
-                                import traceback
-                                log.error(f"Title event error traceback: {traceback.format_exc()}")
-                        else:
-                            log.warning(f"No event emitter available for title update for chat {request.chat_id}")
-                    else:
-                        log.warning(f"Empty title generated for chat {request.chat_id}")
-                else:
-                    log.warning(f"No choices in title response for chat {request.chat_id}")
-            else:
-                log.warning(f"Invalid title response format for chat {request.chat_id}")
-        except Exception as title_error:
-            log.error(f"Failed to generate title for chat {request.chat_id}: {title_error}")
-            
-        # Generate tags using direct approach to avoid message format issues
-        try:
-            # Create a simple tags generation call
-            tags_prompt = f"""Generate 1-3 broad tags categorizing the main themes of this conversation, along with 1-3 more specific subtopic tags.
+    
+    title_payload = {
+        "model": task_model_id,
+        "messages": [{"role": "user", "content": title_prompt}],
+        "stream": False,
+        "max_tokens": 50,
+        "metadata": {"task": "title_generation", "chat_id": request.chat_id},
+    }
+    
+    title_res = await generate_chat_completion(request_data, form_data=title_payload, user=user)
+    
+    if title_res and len(title_res.get("choices", [])) == 1:
+        title = title_res["choices"][0]["message"]["content"].strip()
+        if title:
+            Chats.update_chat_title_by_id(request.chat_id, title)
+            log.info(f"Generated title for chat {request.chat_id}: {title}")
+            return title
+    
+    log.warning(f"Failed to generate valid title for chat {request.chat_id}")
+    return None
 
-Guidelines:
-- Start with high-level domains (e.g. Science, Technology, Philosophy, Arts, Politics, Business, Health, Sports, Entertainment, Education)
-- Consider including relevant subfields/subdomains if they are strongly represented
-- Use the conversation's primary language; default to English if multilingual
-- Prioritize accuracy over specificity
 
-Output format: Return ONLY a single JSON object with this exact structure:
-{{"tags": ["broad_tag1", "broad_tag2", "specific_tag1", "specific_tag2"]}}
-
-Do not include any other text, explanations, or multiple JSON objects.
+async def _generate_tags(request_data, request: CrewMCPQuery, result: str, user, task_model_id):
+    """Generate and update chat tags"""
+    from open_webui.utils.chat import generate_chat_completion
+    import json
+    import re
+    
+    tags_prompt = f"""Generate 3-6 tags for this conversation. Return ONLY a JSON object:
+{{"tags": ["tag1", "tag2", "tag3"]}}
 
 Conversation:
 User: {request.query}
-Assistant: {result[:1000]}...
-"""
-            
-            tags_payload = {
-                "model": task_model_id,
-                "messages": [{"role": "user", "content": tags_prompt}],
-                "stream": False,
-                "metadata": {
-                    "task": "tags_generation",
-                    "chat_id": request.chat_id,
-                },
-            }
-            
-            tags_res = await generate_chat_completion(request_data, form_data=tags_payload, user=user)
-            
-            if tags_res and isinstance(tags_res, dict):
-                if len(tags_res.get("choices", [])) == 1:
-                    tags_string = (
-                        tags_res.get("choices", [])[0]
-                        .get("message", {})
-                        .get("content", "")
-                    )
-                    
-                    # Extract JSON from the response (same logic as middleware)
-                    tags_string = tags_string[
-                        tags_string.find("{") : tags_string.rfind("}") + 1
-                    ]
-                    
-                    if tags_string:
-                        import json
-                        import re
-                        try:
-                            # First try to extract the first complete JSON object
-                            first_json_match = re.search(r'\{[^}]*\}', tags_string)
-                            if first_json_match:
-                                first_json_str = first_json_match.group()
-                                tags_json = json.loads(first_json_str)
-                                
-                                if isinstance(tags_json, dict) and "tags" in tags_json:
-                                    tags = tags_json["tags"]
-                                else:
-                                    # If first JSON doesn't have tags, try to find all JSON objects and combine
-                                    all_json_matches = re.findall(r'\{[^}]*\}', tags_string)
-                                    all_tags = []
-                                    for json_str in all_json_matches:
-                                        try:
-                                            json_obj = json.loads(json_str)
-                                            if isinstance(json_obj, dict):
-                                                # Extract tags from any key that contains tag-like data
-                                                for key, value in json_obj.items():
-                                                    if isinstance(value, list) and len(value) > 0:
-                                                        all_tags.extend(value)
-                                        except:
-                                            continue
-                                    tags = all_tags
-                                
-                                if isinstance(tags, list) and len(tags) > 0:
-                                    Chats.update_chat_tags_by_id(request.chat_id, tags, user)
-                                    log.info(f"Generated and updated tags for chat {request.chat_id}: {tags}")
-                                    
-                                    # Emit tags update event for real-time frontend update
-                                    if event_emitter:
-                                        try:
-                                            log.info(f"Emitting tags event for chat {request.chat_id}: {tags}")
-                                            await event_emitter({
-                                                "type": "chat:tags",
-                                                "data": tags,
-                                            })
-                                            log.info(f"Successfully emitted tags event for chat {request.chat_id}")
-                                        except Exception as event_error:
-                                            log.error(f"Failed to emit tags event for chat {request.chat_id}: {event_error}")
-                                            import traceback
-                                            log.error(f"Tags event error traceback: {traceback.format_exc()}")
-                                    else:
-                                        log.warning(f"No event emitter available for tags update for chat {request.chat_id}")
-                                else:
-                                    log.warning(f"Invalid tags format for chat {request.chat_id}: {tags}")
-                            else:
-                                log.warning(f"No JSON found in tags response for chat {request.chat_id}")
-                        except json.JSONDecodeError as json_error:
-                            log.error(f"Failed to parse tags JSON for chat {request.chat_id}: {json_error}")
-                            log.error(f"Tags string was: {tags_string}")
-                        except Exception as parse_error:
-                            log.error(f"Unexpected error parsing tags for chat {request.chat_id}: {parse_error}")
-                            log.error(f"Tags string was: {tags_string}")
-                    else:
-                        log.warning(f"Empty tags string for chat {request.chat_id}")
-                else:
-                    log.warning(f"No choices in tags response for chat {request.chat_id}")
-            else:
-                log.warning(f"Invalid tags response format for chat {request.chat_id}")
-        except Exception as tags_error:
-            log.error(f"Failed to generate tags for chat {request.chat_id}: {tags_error}")
-            import traceback
-            log.error(f"Tags generation traceback: {traceback.format_exc()}")
+Assistant: {result[:1000]}..."""
+    
+    tags_payload = {
+        "model": task_model_id,
+        "messages": [{"role": "user", "content": tags_prompt}],
+        "stream": False,
+        "metadata": {"task": "tags_generation", "chat_id": request.chat_id},
+    }
+    
+    tags_res = await generate_chat_completion(request_data, form_data=tags_payload, user=user)
+    
+    if tags_res and len(tags_res.get("choices", [])) == 1:
+        content = tags_res["choices"][0]["message"]["content"]
+        
+        # Extract and parse JSON
+        json_match = re.search(r'\{[^}]*\}', content)
+        if json_match:
+            try:
+                tags_json = json.loads(json_match.group())
+                tags = tags_json.get("tags", [])
+                if isinstance(tags, list) and tags:
+                    Chats.update_chat_tags_by_id(request.chat_id, tags, user)
+                    log.info(f"Generated tags for chat {request.chat_id}: {tags}")
+                    return tags
+            except json.JSONDecodeError as e:
+                log.error(f"JSON parse error for chat {request.chat_id}: {e}")
+    
+    log.warning(f"Failed to generate valid tags for chat {request.chat_id}")
+    return None
+
+
+async def _emit_event(event_emitter, event_type: str, data, chat_id: str):
+    """Safely emit WebSocket event"""
+    if not event_emitter:
+        return
+    
+    try:
+        await event_emitter({"type": event_type, "data": data})
+        log.info(f"Emitted {event_type} event for chat {chat_id}")
+    except Exception as e:
+        log.error(f"Failed to emit {event_type} event for chat {chat_id}: {e}")
+
+
+async def generate_title_and_tags_background(request_data, request: CrewMCPQuery, result: str, user):
+    """Background task to generate title and tags without blocking the main response"""
+    try:
+        log.info(f"Starting background title/tag generation for chat {request.chat_id}")
+        
+        # Setup
+        event_emitter = await _setup_event_emitter(request, user)
+        
+        from open_webui.utils.task import get_task_model_id
+        models = request_data.app.state.MODELS
+        task_model_id = get_task_model_id(
+            request.model or "mistral:7b",
+            request_data.app.state.config.TASK_MODEL,
+            request_data.app.state.config.TASK_MODEL_EXTERNAL,
+            models,
+        )
+        
+        # Generate title and tags
+        title = await _generate_title(request_data, request, result, user, task_model_id)
+        if title:
+            await _emit_event(event_emitter, "chat:title", title, request.chat_id)
+        
+        tags = await _generate_tags(request_data, request, result, user, task_model_id)
+        if tags:
+            await _emit_event(event_emitter, "chat:tags", tags, request.chat_id)
             
     except Exception as e:
         log.error(f"Error in background title/tag generation for chat {request.chat_id}: {e}")
-        import traceback
-        log.error(f"Full background traceback: {traceback.format_exc()}")
 
 
 # Global manager instance
