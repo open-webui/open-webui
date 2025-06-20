@@ -238,7 +238,7 @@ async def generate_function_chat_completion(
         "__metadata__": metadata,
         "__request__": request,
     }
-    extra_params["__tools__"] = get_tools(
+    raw_tools_dict = get_tools(
         request,
         tool_ids,
         user,
@@ -249,6 +249,8 @@ async def generate_function_chat_completion(
             "__files__": files,
         },
     )
+    # Convert the dictionary of tool objects into a list of their specs
+    extra_params["__tools__"] = [tool_data["spec"] for tool_data in raw_tools_dict.values()]
 
     if model_info:
         if model_info.base_model_id:
