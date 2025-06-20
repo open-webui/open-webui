@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { createEventDispatcher, onMount, onDestroy } from 'svelte';
+	import { createEventDispatcher, onMount, onDestroy, tick } from 'svelte';
 	import { fly } from 'svelte/transition';
 	
 	// Import existing icon components
@@ -11,7 +11,7 @@
 	const dispatch = createEventDispatcher();
 
 	export let show = false;
-	export let history = { messages: {}, currentId: null };
+	export let history: { messages: Record<string, any>, currentId: string | null } = { messages: {}, currentId: null };
 	
 	let searchInput: HTMLInputElement;
 	let searchContainer: HTMLDivElement;
@@ -20,12 +20,16 @@
 	let currentIndex = 0;
 	let isNavigating = false;
 
+	// Simplified performance optimizations
+	let searchDebounceTimer: ReturnType<typeof setTimeout>;
+	let lastSearchTerm = '';
+	let messageElementCache = new Map<string, HTMLElement>();
+
 	$: totalResults = matchingMessageIds.length;
 	$: currentResult = totalResults > 0 ? currentIndex + 1 : 0;
 	$: if (show && searchInput) searchInput.focus();
 
-	const HIGHLIGHT_CLASS = 'search-highlight bg-yellow-200 dark:bg-yellow-600 px-0.5 rounded underline';
-	const HIGHLIGHT_BLUE_CLASS = 'search-highlight bg-blue-200 dark:bg-blue-600 px-0.5 rounded underline';
+	const HIGHLIGHT_CLASS = 'search-highlight bg-yellow-300 dark:bg-yellow-500 px-1 py-0.5 rounded-md font-semibold border border-yellow-400 dark:border-yellow-600 shadow-sm';
 
 	const handleKeydown = (e: KeyboardEvent) => {
 		if (e.key === 'Escape') {
@@ -41,26 +45,57 @@
 	};
 
 	const closeSearch = () => {
+		clearTimeout(searchDebounceTimer);
 		clearHighlights();
 		searchQuery = '';
 		matchingMessageIds = [];
 		currentIndex = 0;
 		isNavigating = false;
+		lastSearchTerm = '';
+		messageElementCache.clear();
 		dispatch('close');
 	};
 
+	// Get cached DOM element or fetch and cache it
+	const getMessageElement = (messageId: string): HTMLElement | null => {
+		let element = messageElementCache.get(messageId) || null;
+		if (!element) {
+			element = document.getElementById(`message-${messageId}`);
+			if (element) {
+				messageElementCache.set(messageId, element);
+			}
+		}
+		return element;
+	};
+
+	const debouncedSearch = (query: string) => {
+		clearTimeout(searchDebounceTimer);
+		searchDebounceTimer = setTimeout(() => {
+			performSearch(query);
+		}, 150);
+	};
+
 	const performSearch = (query: string) => {
-		clearHighlights();
+		const trimmedQuery = query.trim();
 		
-		if (!query.trim() || !history?.messages) {
+		if (!trimmedQuery || !history?.messages) {
 			matchingMessageIds = [];
 			currentIndex = 0;
+			clearHighlights();
+			lastSearchTerm = '';
 			return;
 		}
 
-		const searchTerm = query.toLowerCase().trim();
+		const searchTerm = trimmedQuery.toLowerCase();
+		
+		// Skip if same search
+		if (searchTerm === lastSearchTerm) return;
+		
+		lastSearchTerm = searchTerm;
+		clearHighlights();
+		
+		// Find matching messages
 		const messageResults: Array<{id: string, timestamp: number}> = [];
-
 		Object.values(history.messages).forEach((message: any) => {
 			if (message?.content && typeof message.content === 'string') {
 				if (message.content.toLowerCase().includes(searchTerm)) {
@@ -76,15 +111,60 @@
 		matchingMessageIds = messageResults.map(result => result.id);
 		currentIndex = 0;
 		
+		// Auto-navigate to first result
 		if (matchingMessageIds.length > 0) {
-			highlightMatches(searchTerm);
-			scrollToCurrentResult();
+			setTimeout(() => navigateToCurrentResult(), 50);
 		}
+	};
+
+	const calculateMessageDepth = (targetMessageId: string): number => {
+		if (!history.currentId || !history.messages?.[targetMessageId]) return 100;
+		
+		let depth = 0;
+		let messageId: string | null = history.currentId;
+		
+		// Walk backwards to find target
+		while (messageId && depth < 500) {
+			if (messageId === targetMessageId) return depth;
+			const message: any = history.messages[messageId];
+			if (!message?.parentId) break;
+			messageId = message.parentId;
+			depth++;
+		}
+		
+		// Estimate from target to root
+		depth = 0;
+		messageId = targetMessageId;
+		while (messageId && depth < 500) {
+			const message: any = history.messages[messageId];
+			if (!message?.parentId) break;
+			messageId = message.parentId;
+			depth++;
+		}
+		
+		return depth + 20;
+	};
+
+	const navigateToCurrentResult = async () => {
+		if (totalResults === 0) return;
+		
+		const targetMessageId = matchingMessageIds[currentIndex];
+		const messageDepth = calculateMessageDepth(targetMessageId);
+		const requiredCount = Math.max(messageDepth, 60);
+		
+		dispatch('ensureMessagesLoaded', { 
+			messageId: targetMessageId, 
+			requiredCount 
+		});
+		
+		await tick();
+		await new Promise(resolve => setTimeout(resolve, 300));
+		await scrollToCurrentResult();
 	};
 
 	const highlightMatches = (searchTerm: string) => {
 		matchingMessageIds.forEach(messageId => {
-			const messageElement = document.getElementById(`message-${messageId}`);
+			const messageElement = getMessageElement(messageId);
 			if (messageElement) {
 				highlightInElement(messageElement, searchTerm);
 			}
@@ -113,10 +193,10 @@
 			textNodes.push(node as Text);
 		}
 
+		const lowerSearchTerm = searchTerm.toLowerCase();
 		textNodes.forEach(textNode => {
 			const text = textNode.textContent || '';
 			const lowerText = text.toLowerCase();
-			const lowerSearchTerm = searchTerm.toLowerCase();
 			
 			if (lowerText.includes(lowerSearchTerm)) {
 				const parent = textNode.parentNode;
@@ -161,58 +241,54 @@
 
 	const navigateToNext = () => {
 		if (totalResults === 0) return;
-		const nextIndex = (currentIndex + 1) % totalResults;
-		navigateToIndex(nextIndex);
+		currentIndex = (currentIndex + 1) % totalResults;
+		navigateToCurrentResult();
 	};
 
 	const navigateToPrevious = () => {
 		if (totalResults === 0) return;
-		const prevIndex = currentIndex === 0 ? totalResults - 1 : currentIndex - 1;
-		navigateToIndex(prevIndex);
+		currentIndex = currentIndex === 0 ? totalResults - 1 : currentIndex - 1;
+		navigateToCurrentResult();
 	};
 
-	const navigateToIndex = (newIndex: number) => {
-		currentIndex = newIndex;
-		scrollToCurrentResult();
-		
-		isNavigating = true;
-		setTimeout(() => {
-			isNavigating = false;
-		}, 300);
-	};
-
-	const scrollToCurrentResult = () => {
+	const scrollToCurrentResult = async () => {
 		const messageId = matchingMessageIds[currentIndex];
-		const messageElement = document.getElementById(`message-${messageId}`);
-		if (!messageElement) return;
+		let messageElement = getMessageElement(messageId);
+		
+		// Wait for element if not available
+		if (!messageElement) {
+			await new Promise(resolve => setTimeout(resolve, 200));
+			messageElement = getMessageElement(messageId);
+			if (!messageElement) return;
+		}
 
+		// Highlight matches
+		clearHighlights();
+		if (lastSearchTerm) {
+			highlightMatches(lastSearchTerm);
+		}
+		
+		// Scroll and flash
 		messageElement.scrollIntoView({ 
 			behavior: 'smooth', 
 			block: 'center',
 			inline: 'nearest'
 		});
 		
-		setHighlightColor('blue');
-		
+		isNavigating = true;
 		messageElement.style.transition = 'background-color 0.3s ease';
-		messageElement.style.backgroundColor = 'rgba(59, 130, 246, 0.1)';
+		messageElement.style.backgroundColor = 'rgba(0, 0, 0, 0.1)';
 		
 		setTimeout(() => {
-			messageElement.style.backgroundColor = '';
+			if (messageElement) {
+				messageElement.style.backgroundColor = '';
+			}
+			isNavigating = false;
 		}, 1000);
 	};
 
-	const setHighlightColor = (color: 'yellow' | 'blue') => {
-		const allHighlights = document.querySelectorAll('.search-highlight');
-		const colorClass = color === 'blue' ? HIGHLIGHT_BLUE_CLASS : HIGHLIGHT_CLASS;
-		
-		allHighlights.forEach(highlight => {
-			highlight.className = colorClass;
-		});
-	};
-
 	const handleInput = () => {
-		performSearch(searchQuery);
+		debouncedSearch(searchQuery);
 	};
 
 	const handleClickOutside = (e: MouseEvent) => {
@@ -223,6 +299,7 @@
 
 	onMount(() => document.addEventListener('click', handleClickOutside));
 	onDestroy(() => {
+		clearTimeout(searchDebounceTimer);
 		clearHighlights();
 		document.removeEventListener('click', handleClickOutside);
 	});
@@ -250,9 +327,8 @@
 				class="flex-1 min-w-0 bg-transparent border-none outline-none text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
 			/>
 
-			<!-- Results Counter with enhanced styling -->
 			{#if totalResults > 0}
-				<div class="text-xs font-medium text-blue-600 dark:text-blue-400 whitespace-nowrap flex-shrink-0">
+				<div class="text-xs font-medium text-black dark:text-white whitespace-nowrap flex-shrink-0">
 					{currentResult} of {totalResults} {totalResults === 1 ? 'message' : 'messages'}
 				</div>
 			{:else if searchQuery.trim()}
@@ -261,13 +337,12 @@
 				</div>
 			{/if}
 
-			<!-- Navigation Buttons with enhanced states -->
 			<div class="flex items-center gap-0.5 flex-shrink-0">
 				<button
 					class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-					class:bg-blue-50={isNavigating}
+					class:bg-gray-200={isNavigating}
 					disabled={totalResults === 0}
-					title="Previous (Shift+Enter or Cmd+↑)"
+					title="Previous (Shift+Enter)"
 					aria-label="Previous result"
 					on:click={navigateToPrevious}
 				>
@@ -276,9 +351,9 @@
 				
 				<button
 					class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-					class:bg-blue-50={isNavigating}
+					class:bg-gray-200={isNavigating}
 					disabled={totalResults === 0}
-					title="Next (Enter or Cmd+↓)"
+					title="Next (Enter)"
 					aria-label="Next result"
 					on:click={navigateToNext}
 				>
@@ -296,7 +371,6 @@
 			</button>
 		</div>
 
-		<!-- Enhanced Search Tips -->
 		{#if searchQuery === ''}
 			<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
 				<kbd class="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">Enter</kbd> next • 
@@ -309,7 +383,7 @@
 			</div>
 		{:else if totalResults === 1}
 			<div class="mt-2 text-xs text-green-600 dark:text-green-400">
-				Found in 1 message with highlights
+				Found in 1 message
 			</div>
 		{/if}
 	</div>
