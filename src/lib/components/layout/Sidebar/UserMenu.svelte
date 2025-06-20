@@ -1,11 +1,12 @@
 <script lang="ts">
 	import { DropdownMenu } from 'bits-ui';
 	import { createEventDispatcher, getContext, onMount } from 'svelte';
-	import { showSettings, mobile, showSidebar, config } from '$lib/stores';
+	import { showSettings, mobile, showSidebar, config, user } from '$lib/stores';
 	import { page } from '$app/state'
 	import { fade } from 'svelte/transition';
 	import { showKnowlegeManager } from '$lib/IONOS/stores/dialogs';
 	import { signout } from '$lib/services/auths';
+	import { buildSurveyUrl } from '$lib/IONOS/services/survey';
 	import StacksIcon from '$lib/IONOS/components/icons/Stacks.svelte';
 	import Gear from '$lib/IONOS/components/icons/Gear.svelte';
 	import Logout from '$lib/IONOS/components/icons/Logout.svelte';
@@ -20,10 +21,7 @@
 
 	const dispatch = createEventDispatcher();
 
-	const surveyUrl = new URL($config?.features?.ionos_survey_new_users_url ?? null);
-	surveyUrl.searchParams.append('urlVar01', 'DE'); // Country code
-	surveyUrl.searchParams.append('urlVar02', ''); // User ID
-	surveyUrl.searchParams.append('urlVar03', 'Product'); // Channels
+	const surveyUrl = buildSurveyUrl($user!);
 </script>
 
 <DropdownMenu.Root
@@ -148,13 +146,15 @@
 				<div class=" self-center truncate">{$i18n.t('Help & FAQ', { ns: 'ionos' })}</div>
 			</a>
 
-			<button
-				class="flex rounded-md p-2.5 w-full text-blue-800 hover:bg-gray-200 dark:hover:bg-gray-800 transition" on:click={() => {window.open(surveyUrl.toString(), '_blank', "noopener=yes,noreferrer=yes")}}>
-				<div class=" self-center mr-3">
-					<LightbulbShining />
-				</div>
-				<div class=" self-center truncate">{$i18n.t('Feedback', { ns: 'ionos' })}</div>
-			</button>
+			{#if surveyUrl}
+				<button
+					class="flex rounded-md p-2.5 w-full text-blue-800 hover:bg-gray-200 dark:hover:bg-gray-800 transition" on:click={() => {window.open(surveyUrl, '_blank', "noopener=yes,noreferrer=yes");}}>
+					<div class=" self-center mr-3">
+						<LightbulbShining />
+					</div>
+					<div class=" self-center truncate">{$i18n.t('Feedback', { ns: 'ionos' })}</div>
+				</button>
+			{/if}
 
 			<button
 				class="flex rounded-md p-2.5 w-full text-blue-800 hover:bg-gray-200 dark:hover:bg-gray-800 transition"
