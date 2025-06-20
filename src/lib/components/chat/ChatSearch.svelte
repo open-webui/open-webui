@@ -18,6 +18,7 @@
 	let searchQuery = '';
 	let matchingMessageIds: string[] = [];
 	let currentIndex = 0;
+	let isNavigating = false; // Visual feedback for navigation
 
 	// Computed values
 	$: totalResults = matchingMessageIds.length;
@@ -33,11 +34,21 @@
 			closeSearch();
 		} else if (e.key === 'Enter') {
 			e.preventDefault();
+			if (totalResults === 0) return; // No results to navigate
+			
 			if (e.shiftKey) {
 				navigateToPrevious();
 			} else {
 				navigateToNext();
 			}
+		} else if (e.key === 'ArrowUp' && (e.metaKey || e.ctrlKey)) {
+			// Cmd/Ctrl + Arrow Up for previous (alternative shortcut)
+			e.preventDefault();
+			if (totalResults > 0) navigateToPrevious();
+		} else if (e.key === 'ArrowDown' && (e.metaKey || e.ctrlKey)) {
+			// Cmd/Ctrl + Arrow Down for next (alternative shortcut)
+			e.preventDefault();
+			if (totalResults > 0) navigateToNext();
 		}
 	};
 
@@ -45,6 +56,7 @@
 		searchQuery = '';
 		matchingMessageIds = [];
 		currentIndex = 0;
+		isNavigating = false;
 		dispatch('close');
 	};
 
@@ -69,6 +81,11 @@
 
 		matchingMessageIds = messageIds;
 		currentIndex = messageIds.length > 0 ? 0 : 0;
+		
+		// Auto-navigate to first result when search finds matches
+		if (messageIds.length > 0) {
+			scrollToCurrentResult();
+		}
 	};
 
 	const handleInput = () => {
@@ -76,17 +93,30 @@
 	};
 
 	const navigateToNext = () => {
-		if (totalResults > 0) {
-			currentIndex = (currentIndex + 1) % totalResults;
-			scrollToCurrentResult();
-		}
+		if (totalResults === 0) return;
+		
+		const nextIndex = (currentIndex + 1) % totalResults;
+		navigateToResult(nextIndex);
 	};
 
 	const navigateToPrevious = () => {
-		if (totalResults > 0) {
-			currentIndex = currentIndex === 0 ? totalResults - 1 : currentIndex - 1;
-			scrollToCurrentResult();
-		}
+		if (totalResults === 0) return;
+		
+		const prevIndex = currentIndex === 0 ? totalResults - 1 : currentIndex - 1;
+		navigateToResult(prevIndex);
+	};
+
+	const navigateToResult = (newIndex: number) => {
+		if (newIndex < 0 || newIndex >= matchingMessageIds.length) return;
+		
+		currentIndex = newIndex;
+		scrollToCurrentResult();
+		
+		// Visual feedback for navigation
+		isNavigating = true;
+		setTimeout(() => {
+			isNavigating = false;
+		}, 300);
 	};
 
 	const scrollToCurrentResult = () => {
@@ -94,8 +124,20 @@
 			const messageId = matchingMessageIds[currentIndex];
 			const messageElement = document.getElementById(`message-${messageId}`);
 			if (messageElement) {
-				// Use same scroll pattern as Chat.svelte
-				messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+				// Enhanced scroll with better positioning
+				messageElement.scrollIntoView({ 
+					behavior: 'smooth', 
+					block: 'center',
+					inline: 'nearest'
+				});
+				
+				// Add subtle visual feedback to the message
+				messageElement.style.transition = 'background-color 0.3s ease';
+				messageElement.style.backgroundColor = 'rgba(59, 130, 246, 0.1)'; // Light blue highlight
+				
+				setTimeout(() => {
+					messageElement.style.backgroundColor = '';
+				}, 1000);
 			}
 		}
 	};
@@ -120,6 +162,7 @@
 	<div 
 		bind:this={searchContainer}
 		class="fixed top-4 right-4 z-50 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-3 min-w-80"
+		class:animate-pulse={isNavigating}
 		transition:fly={{ y: -20, duration: 200 }}
 		on:keydown={handleKeydown}
 		role="dialog"
@@ -137,9 +180,9 @@
 				class="flex-1 bg-transparent border-none outline-none text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
 			/>
 
-			<!-- Results Counter -->
+			<!-- Results Counter with enhanced styling -->
 			{#if totalResults > 0}
-				<div class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+				<div class="text-xs font-medium text-blue-600 dark:text-blue-400 whitespace-nowrap">
 					{currentResult} of {totalResults}
 				</div>
 			{:else if searchQuery.trim()}
@@ -148,12 +191,13 @@
 				</div>
 			{/if}
 
-			<!-- Navigation Buttons -->
+			<!-- Navigation Buttons with enhanced states -->
 			<div class="flex items-center gap-1">
 				<button
-					class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors disabled:opacity-50"
+					class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+					class:bg-blue-50={isNavigating}
 					disabled={totalResults === 0}
-					title="Previous (Shift+Enter)"
+					title="Previous (Shift+Enter or Cmd+↑)"
 					aria-label="Previous result"
 					on:click={navigateToPrevious}
 				>
@@ -161,9 +205,10 @@
 				</button>
 				
 				<button
-					class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors disabled:opacity-50"
+					class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+					class:bg-blue-50={isNavigating}
 					disabled={totalResults === 0}
-					title="Next (Enter)"
+					title="Next (Enter or Cmd+↓)"
 					aria-label="Next result"
 					on:click={navigateToNext}
 				>
@@ -181,10 +226,16 @@
 			</button>
 		</div>
 
-		<!-- Search Tips -->
+		<!-- Enhanced Search Tips -->
 		{#if searchQuery === ''}
 			<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
-				Press <kbd class="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">Enter</kbd> to navigate results
+				<kbd class="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">Enter</kbd> next • 
+				<kbd class="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">Shift+Enter</kbd> previous
+			</div>
+		{:else if totalResults > 1}
+			<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+				Navigate with <kbd class="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">Enter</kbd> / 
+				<kbd class="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">Shift+Enter</kbd>
 			</div>
 		{/if}
 	</div>
