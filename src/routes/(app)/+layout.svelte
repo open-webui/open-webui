@@ -37,7 +37,8 @@
 		showChangelog,
 		temporaryChatEnabled,
 		toolServers,
-		showSearch
+		showSearch,
+		showChatSearch
 	} from '$lib/stores';
 
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
@@ -127,6 +128,16 @@
 					event.preventDefault();
 					console.log('search');
 					showSearch.set(!$showSearch);
+				}
+
+				// Check if Ctrl + F is pressed (Chat Search)
+				if (isCtrlPressed && event.key.toLowerCase() === 'f') {
+					// Only trigger in chat pages, not globally
+					if (window.location.pathname.startsWith('/c/') || window.location.pathname === '/') {
+						event.preventDefault();
+						console.log('chatSearch');
+						showChatSearch.set(!$showChatSearch);
+					}
 				}
 
 				// Check if Ctrl + Shift + O is pressed

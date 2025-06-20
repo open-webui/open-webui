@@ -36,7 +36,8 @@
 		chatTitle,
 		showArtifacts,
 		tools,
-		toolServers
+		toolServers,
+		showChatSearch
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
@@ -89,6 +90,7 @@
 	import Placeholder from './Placeholder.svelte';
 	import NotificationToast from '../NotificationToast.svelte';
 	import Spinner from '../common/Spinner.svelte';
+	import ChatSearch from './ChatSearch.svelte';
 	import { fade } from 'svelte/transition';
 
 	export let chatIdProp = '';
@@ -2231,4 +2233,12 @@
 			</div>
 		</div>
 	{/if}
+
+	<!-- Chat Search Overlay -->
+	<ChatSearch 
+		show={$showChatSearch}
+		on:close={() => {
+			showChatSearch.set(false);
+		}}
+	/>
 </div>
