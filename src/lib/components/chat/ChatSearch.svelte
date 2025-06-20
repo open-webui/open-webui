@@ -308,7 +308,7 @@
 {#if show}
 	<div 
 		bind:this={searchContainer}
-		class="fixed top-4 right-4 z-50 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-3 w-80"
+		class="fixed top-4 right-4 z-50 bg-white dark:bg-gray-900 rounded-lg shadow-2xl border border-gray-300 dark:border-gray-600 p-3 w-80 backdrop-blur-sm"
 		class:animate-pulse={isNavigating}
 		transition:fly={{ y: -20, duration: 200 }}
 		on:keydown={handleKeydown}
