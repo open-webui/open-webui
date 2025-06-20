@@ -15,6 +15,7 @@ def get_mock_user(**kwargs) -> User:
         "last_active_at": 1627351200,
         "updated_at": 1627351200,
         "created_at": 162735120,
+        "oauth_sub": None,
         **kwargs,
     }
 
@@ -38,11 +39,28 @@ class TestIonos:
         salt = "somesalt"
         monkeypatch.setattr(open_webui.services.ionos, "IONOS_USER_ID_PSEUDONYMIZATION_SALT", salt, raising = True)
 
-        user_id = "SOMEUUID"
+        oauth_sub = "oidc@SOMEUUID"
 
         expected_hash = "3c810acae41ee75abfae48d53abbcee5"
 
-        assert pseudonymized_user_id(get_mock_user(id = user_id)) == expected_hash
+        assert pseudonymized_user_id(get_mock_user(oauth_sub = oauth_sub)) == expected_hash
 
     def test_pseudonymized_user_id_salt_undefined(self, monkeypatch):
-        assert pseudonymized_user_id(get_mock_user(id = "dont-care")) == None
+        assert pseudonymized_user_id(get_mock_user(oauth_sub = "dont-care")) == None
+
+    def test_pseudonymized_user_id_oauth_sub_undefined(self, monkeypatch):
+        monkeypatch.setattr(open_webui.services.ionos, "IONOS_USER_ID_PSEUDONYMIZATION_SALT", "dont-care", raising = True)
+
+        assert pseudonymized_user_id(get_mock_user()) == None
+
+    def test_pseudonymized_user_id_oauth_sub_malformed(self, monkeypatch):
+        monkeypatch.setattr(open_webui.services.ionos, "IONOS_USER_ID_PSEUDONYMIZATION_SALT", "dont-care", raising = True)
+
+        with pytest.raises(Exception):
+            pseudonymized_user_id(get_mock_user(oauth_sub = 'oidc'))
+
+    def test_pseudonymized_user_id_oauth_sub_missing_sub(self, monkeypatch):
+        monkeypatch.setattr(open_webui.services.ionos, "IONOS_USER_ID_PSEUDONYMIZATION_SALT", "dont-care", raising = True)
+
+        with pytest.raises(Exception):
+            pseudonymized_user_id(get_mock_user(oauth_sub = 'oidc@'))
