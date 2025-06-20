@@ -29,25 +29,26 @@
     }
 
     function mapExperienceToProduct(experience: any) {
-        return {
-            name: experience.name,
-            display_name: experience.name,
-            description: 'description' in experience ? experience.description : null,
-            price: 'price' in experience ? experience.price : null,
-            rating: 'rating' in experience ? experience.rating : null,
-            city: 'location' in experience ? experience.location.city : null,
-            state: 'location' in experience ? experience.location.state : null,
-            country: 'location' in experience ? experience.location.country : null,
-            zipcode: 'location' in experience ? experience.location.zip_code : null,
-            phone: 'phone' in experience ? experience.phone : null,
-            image_urls: experience.image_url,
-            image_url: experience.image_url,
-            url: experience.url,
+        return {experience_info: {
+                name: experience.name,
+                display_name: experience.name,
+                description: 'description' in experience ? experience.description : null,
+                price: 'price' in experience ? experience.price : null,
+                rating: 'rating' in experience ? experience.rating : null,
+                city: 'location' in experience ? experience.location.city : null,
+                state: 'location' in experience ? experience.location.state : null,
+                country: 'location' in experience ? experience.location.country : null,
+                zipcode: 'location' in experience ? experience.location.zip_code : null,
+                phone: 'phone' in experience ? experience.phone : null,
+                image_urls: experience.image_url,
+                image_url: experience.image_url,
+                url: experience.url
+            },
             thumbnails: experience.thumbnails
         };
     }
 
-    async function fetchGiftRequestFile(chat_id: string, gift_idea_id: { id: string }) {
+    async function buldProductListFromGiftRequestFile(chat_id: string, gift_idea_id: { id: string }) {
         const response = await fetch(`/api/gift_requests/${chat_id}`);
         if (!response.ok) {
           console.error("File not found");
@@ -85,7 +86,7 @@
         }
     }
 
-    fetchGiftRequestFile(chat_id, gift_idea_id);
+    buldProductListFromGiftRequestFile(chat_id, gift_idea_id);
 
 </script>
 
