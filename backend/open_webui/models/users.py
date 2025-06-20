@@ -9,7 +9,8 @@ from open_webui.models.groups import Groups
 
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text
+from sqlalchemy import BigInteger, Column, String, Text, Table, ForeignKey, Index
+from sqlalchemy.orm import relationship
 from sqlalchemy import or_
 
 
@@ -17,6 +18,14 @@ from sqlalchemy import or_
 # User DB Schema
 ####################
 
+shared_file_owner = Table(
+    "shared_file_owner",
+    Base.metadata,
+    Column("user_id", ForeignKey("user.id"), primary_key=True),
+    Column("file_id", ForeignKey("file.id"), primary_key=True),
+    Index("idx_shared_file_owner_user_id", "user_id"),
+    Index("idx_shared_file_owner_file_id", "file_id"),
+)
 
 class User(Base):
     __tablename__ = "user"
@@ -36,6 +45,8 @@ class User(Base):
     info = Column(JSONField, nullable=True)
 
     oauth_sub = Column(Text, unique=True)
+
+    files = relationship("File", secondary=shared_file_owner, back_populates="users")
 
 
 class UserSettings(BaseModel):
