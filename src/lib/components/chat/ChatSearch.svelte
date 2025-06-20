@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { createEventDispatcher, onMount, onDestroy } from 'svelte';
-	import { fade, fly } from 'svelte/transition';
+	import { fly } from 'svelte/transition';
 	
 	// Import existing icon components
 	import Search from '../icons/Search.svelte';
@@ -11,12 +11,17 @@
 	const dispatch = createEventDispatcher();
 
 	export let show = false;
+	export let history = { messages: {}, currentId: null };
 	
 	let searchInput: HTMLInputElement;
 	let searchContainer: HTMLDivElement;
 	let searchQuery = '';
-	let totalResults = 0;
-	let currentResult = 0;
+	let matchingMessageIds: string[] = [];
+	let currentIndex = 0;
+
+	// Computed values
+	$: totalResults = matchingMessageIds.length;
+	$: currentResult = totalResults > 0 ? currentIndex + 1 : 0;
 
 	// Auto-focus when search opens
 	$: if (show && searchInput) {
@@ -29,28 +34,69 @@
 		} else if (e.key === 'Enter') {
 			e.preventDefault();
 			if (e.shiftKey) {
-				// Previous result (Shift+Enter)
-				console.log('Previous result');
+				navigateToPrevious();
 			} else {
-				// Next result (Enter)
-				console.log('Next result');
+				navigateToNext();
 			}
 		}
 	};
 
 	const closeSearch = () => {
 		searchQuery = '';
+		matchingMessageIds = [];
+		currentIndex = 0;
 		dispatch('close');
 	};
 
+	const performSearch = (query: string) => {
+		if (!query.trim() || !history?.messages) {
+			matchingMessageIds = [];
+			currentIndex = 0;
+			return;
+		}
+
+		const searchTerm = query.toLowerCase().trim();
+		const messageIds: string[] = [];
+
+		// Search through all messages
+		Object.values(history.messages).forEach((message: any) => {
+			if (message?.content && typeof message.content === 'string') {
+				if (message.content.toLowerCase().includes(searchTerm)) {
+					messageIds.push(message.id);
+				}
+			}
+		});
+
+		matchingMessageIds = messageIds;
+		currentIndex = messageIds.length > 0 ? 0 : 0;
+	};
+
 	const handleInput = () => {
-		// For now, just simulate some results
-		if (searchQuery.trim()) {
-			totalResults = 3; // Placeholder
-			currentResult = 1; // Placeholder
-		} else {
-			totalResults = 0;
-			currentResult = 0;
+		performSearch(searchQuery);
+	};
+
+	const navigateToNext = () => {
+		if (totalResults > 0) {
+			currentIndex = (currentIndex + 1) % totalResults;
+			scrollToCurrentResult();
+		}
+	};
+
+	const navigateToPrevious = () => {
+		if (totalResults > 0) {
+			currentIndex = currentIndex === 0 ? totalResults - 1 : currentIndex - 1;
+			scrollToCurrentResult();
+		}
+	};
+
+	const scrollToCurrentResult = () => {
+		if (matchingMessageIds.length > 0 && currentIndex < matchingMessageIds.length) {
+			const messageId = matchingMessageIds[currentIndex];
+			const messageElement = document.getElementById(`message-${messageId}`);
+			if (messageElement) {
+				// Use same scroll pattern as Chat.svelte
+				messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+			}
 		}
 	};
 
@@ -71,7 +117,6 @@
 </script>
 
 {#if show}
-	<!-- Search Overlay -->
 	<div 
 		bind:this={searchContainer}
 		class="fixed top-4 right-4 z-50 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-3 min-w-80"
@@ -81,10 +126,8 @@
 		aria-label="Chat search"
 	>
 		<div class="flex items-center gap-2">
-			<!-- Search Icon -->
 			<Search className="w-4 h-4 text-gray-500 dark:text-gray-400" />
 
-			<!-- Search Input -->
 			<input
 				bind:this={searchInput}
 				bind:value={searchQuery}
@@ -99,6 +142,10 @@
 				<div class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
 					{currentResult} of {totalResults}
 				</div>
+			{:else if searchQuery.trim()}
+				<div class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+					No results
+				</div>
 			{/if}
 
 			<!-- Navigation Buttons -->
@@ -108,6 +155,7 @@
 					disabled={totalResults === 0}
 					title="Previous (Shift+Enter)"
 					aria-label="Previous result"
+					on:click={navigateToPrevious}
 				>
 					<ChevronUp className="w-3 h-3" />
 				</button>
@@ -117,12 +165,12 @@
 					disabled={totalResults === 0}
 					title="Next (Enter)"
 					aria-label="Next result"
+					on:click={navigateToNext}
 				>
 					<ChevronDown className="w-3 h-3" />
 				</button>
 			</div>
 
-			<!-- Close Button -->
 			<button
 				on:click={closeSearch}
 				class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"

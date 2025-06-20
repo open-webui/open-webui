@@ -2237,6 +2237,7 @@
 	<!-- Chat Search Overlay -->
 	<ChatSearch 
 		show={$showChatSearch}
+		{history}
 		on:close={() => {
 			showChatSearch.set(false);
 		}}
