@@ -210,7 +210,6 @@
 
 <DeleteConfirmDialog
 	bind:show={showDeleteConfirm}
-	returnFocusSelector={'#' + buttonID}
 	title={$i18n.t('Delete chat?')}
 	on:confirm={() => {
 		deleteChatHandler(id);
@@ -234,10 +233,11 @@
 	</DragGhost>
 {/if}
 
-<div bind:this={itemElement} class="w-full {className} pr-1 relative group" {draggable}>
+<div bind:this={itemElement} class=" w-full {className} relative group" {draggable}>
 	{#if confirmEdit}
 		<div
-			class="w-full flex justify-between rounded-lg px-2 py-2 {id === $chatId || confirmEdit
+			class=" w-full flex justify-between rounded-lg px-[11px] py-[6px] {id === $chatId ||
+			confirmEdit
 				? 'bg-gray-200 dark:bg-gray-900'
 				: selected
 					? 'bg-gray-100 dark:bg-gray-950'
@@ -247,7 +247,7 @@
 				use:focusEdit
 				bind:value={chatTitle}
 				id="chat-title-input-{id}"
-				class="bg-transparent w-full outline-none mr-6 text-sm"
+				class="bg-transparent w-full outline-none mr-10"
 				on:keydown={(e) => {
 					if (e.key === 'Enter') {
 						editChatTitle(id, chatTitle);
@@ -273,7 +273,8 @@
 			}}
 		>
 			<a
-				class="w-full flex justify-between rounded-lg px-2 py-2 {id === $chatId || confirmEdit
+				class=" w-full flex justify-between rounded-lg px-[11px] py-[6px] {id === $chatId ||
+				confirmEdit
 					? 'bg-gray-200 dark:bg-gray-900'
 					: selected
 						? 'bg-gray-100 dark:bg-gray-950'
@@ -298,14 +299,10 @@
 				on:focus={(e) => {}}
 				draggable="false"
 			>
-				<div class="flex item-center flex-1 w-full">
-					<h4
-						dir="auto"
-						class="text-left self-center overflow-hidden h-[20px] text-sm"
-						style="max-width: calc(100% - 40px)"
-					>
+				<div class=" flex self-center flex-1 w-full">
+					<div class=" text-left self-center overflow-hidden w-full h-[20px]">
 						{title}
-					</h4>
+					</div>
 				</div>
 			</a>
 		</Tooltip>
@@ -313,8 +310,17 @@
 
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	<div
-		class="absolute right-[8px] top-0 bottom-0 flex items-center pr-2 pl-3 bg-gradient-to-l from-80% to-transparent"
-		style="height: 100%;"
+		class="
+        {id === $chatId || confirmEdit
+			? 'from-gray-200 dark:from-gray-900'
+			: selected
+				? 'from-gray-100 dark:from-gray-950'
+				: 'invisible group-hover:visible from-gray-100 dark:from-gray-950'}
+            absolute {className === 'pr-2'
+			? 'right-[8px]'
+			: 'right-0'}  top-[4px] py-1 pr-0.5 mr-1.5 pl-5 bg-gradient-to-l from-80%
+
+              to-transparent"
 		on:mouseenter={(e) => {
 			mouseOver = true;
 		}}
@@ -324,7 +330,7 @@
 	>
 		{#if confirmEdit}
 			<div
-				class="flex self-center items-center space-x-1 z-10 translate-y-[0.5px] -translate-x-[0.5px]"
+				class="flex self-center items-center space-x-1.5 z-10 translate-y-[0.5px] -translate-x-[0.5px]"
 			>
 				<Tooltip content={$i18n.t('Confirm')}>
 					<button
@@ -354,7 +360,7 @@
 				</Tooltip>
 			</div>
 		{:else if shiftKey && mouseOver}
-			<div class=" flex items-center space-x-1">
+			<div class=" flex items-center self-center space-x-1.5">
 				<Tooltip content={$i18n.t('Archive')} className="flex items-center">
 					<button
 						class=" self-center dark:hover:text-white transition"
@@ -380,7 +386,7 @@
 				</Tooltip>
 			</div>
 		{:else}
-			<div class="flex item-center space-x-1 z-10">
+			<div class="flex self-center space-x-1 z-10">
 				<Tooltip content={$i18n.t('Chat Menu')}>
 					<ChatMenu
 						ariaLabel={$i18n.t('Chat Menu')}
@@ -426,7 +432,7 @@
 							xmlns="http://www.w3.org/2000/svg"
 							viewBox="0 0 16 16"
 							fill="currentColor"
-							class="w-6 h-6 self-center dark:hover:text-white transition"
+							class="w-4 h-4"
 						>
 							<path
 								d="M2 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM6.5 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM12.5 6.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"
