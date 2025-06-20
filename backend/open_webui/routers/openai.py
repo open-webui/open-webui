@@ -662,16 +662,19 @@ def get_azure_allowed_params(api_version: str) -> set[str]:
         "seed",
         "max_completion_tokens",
     }
-    if api_version >= "2024-09-01-preview":
-        allowed_params.add("stream_options")
+
+    try:
+        if api_version >= "2024-09-01-preview":
+            allowed_params.add("stream_options")
+    except ValueError:
+        log.debug(
+            f"Invalid API version {api_version} for Azure OpenAI. Defaulting to allowed parameters."
+        )
+
     return allowed_params
 
 
-def convert_to_azure_payload(
-    url,
-    payload: dict,
-    api_version: str
-):
+def convert_to_azure_payload(url, payload: dict, api_version: str):
     model = payload.get("model", "")
 
     # Filter allowed parameters based on Azure OpenAI API
