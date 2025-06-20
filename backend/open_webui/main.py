@@ -37,7 +37,7 @@ from fastapi import (
 from fastapi.openapi.docs import get_swagger_ui_html
 
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from starlette_compress import CompressMiddleware
@@ -286,6 +286,7 @@ from open_webui.config import (
     ENABLE_GOOGLE_DRIVE_INTEGRATION,
     ENABLE_ONEDRIVE_INTEGRATION,
     UPLOAD_DIR,
+    GIFT_REQUESTS_DIR,
     EXTERNAL_WEB_SEARCH_URL,
     EXTERNAL_WEB_SEARCH_API_KEY,
     EXTERNAL_WEB_LOADER_URL,
@@ -1636,6 +1637,13 @@ async def healthcheck_with_db():
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 app.mount("/cache", StaticFiles(directory=CACHE_DIR), name="cache")
+
+@app.get("/api/gift_requests/{chat_id}")
+async def get_gift_request_file(chat_id: str):
+    file_path = os.path.join(GIFT_REQUESTS_DIR, chat_id + ".json")
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="File not found")
+    return FileResponse(file_path)
 
 
 def swagger_ui_html(*args, **kwargs):

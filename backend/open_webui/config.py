@@ -750,6 +750,12 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 CACHE_DIR = DATA_DIR / "cache"
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
+####################################
+# gift_requests DIR
+####################################
+
+GIFT_REQUESTS_DIR = DATA_DIR / "gift_requests"
+GIFT_REQUESTS_DIR.mkdir(parents=True, exist_ok=True)
 
 ####################################
 # DIRECT CONNECTIONS

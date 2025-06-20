@@ -8,8 +8,9 @@
     const dispatch = createEventDispatcher();
 
 
-
     export let products = [];
+    export let chat_id = '';
+    export let gift_idea_id = {id: ''};
 
     export let product_context = { header_message: '', footer_message: '' };
     export let productSelected = null;
@@ -26,6 +27,66 @@
         showProductDetailsModal = false;
         productSelected = null;
     }
+
+    function mapExperienceToProduct(experience: any) {
+        return {
+            name: experience.name,
+            display_name: experience.name,
+            description: 'description' in experience ? experience.description : null,
+            price: 'price' in experience ? experience.price : null,
+            rating: 'rating' in experience ? experience.rating : null,
+            city: 'location' in experience ? experience.location.city : null,
+            state: 'location' in experience ? experience.location.state : null,
+            country: 'location' in experience ? experience.location.country : null,
+            zipcode: 'location' in experience ? experience.location.zip_code : null,
+            phone: 'phone' in experience ? experience.phone : null,
+            image_urls: experience.image_url,
+            image_url: experience.image_url,
+            url: experience.url,
+            thumbnails: experience.thumbnails
+        };
+    }
+
+    async function fetchGiftRequestFile(chat_id: string, gift_idea_id: { id: string }) {
+        const response = await fetch(`/api/gift_requests/${chat_id}`);
+        if (!response.ok) {
+          console.error("File not found");
+          return;
+        }
+        const giftIdeaId = gift_idea_id.id;
+        const giftRequestContent = await response.text();
+        const currentGiftRequest = JSON.parse(giftRequestContent)[0].current_gift_idea;
+        // Check if the gift idea ID matches currentGiftRequest.hash_id
+        if (currentGiftRequest.hash_id == giftIdeaId) {
+            const gift_type = currentGiftRequest.type;
+            if (gift_type === 'product') {
+                products = currentGiftRequest.matched_products;
+            } else if (gift_type === 'experience') {
+                products = currentGiftRequest.matched_experiences.map(mapExperienceToProduct);
+            } else {
+                console.error("Unknown gift type:", gift_type);
+            }
+        } else {
+            // iterate thought previous gift ideas to find the matching one
+            const previousGiftIdeas = JSON.parse(giftRequestContent)[0].previous_gift_ideas;
+            const matchingGiftIdea = previousGiftIdeas.find(idea => idea.hash_id === giftIdeaId);
+            if (matchingGiftIdea) {
+                const gift_type = matchingGiftIdea.type;
+                if (gift_type === 'product') {
+                    products = matchingGiftIdea.matched_products;
+                } else if (gift_type === 'experience') {
+                    products = matchingGiftIdea.matched_experiences.map(mapExperienceToProduct);
+                } else {
+                    console.error("Unknown gift type:", gift_type);
+                }
+            } else {
+                console.error("No matching gift idea found for ID:", giftIdeaId);
+            }
+        }
+    }
+
+    fetchGiftRequestFile(chat_id, gift_idea_id);
+
 </script>
 
 {#if showProductDetailsModal}
@@ -220,24 +281,6 @@
       align-items: center;
       z-index: 1000;
     }
-
-  .carousel-container {
-      position: relative;
-      padding: 1rem;
-      border-radius: 8px;
-      max-width: 90%;
-      max-height: 90%;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-  }
-
-  .carousel-image {
-      max-width: 100%;
-      max-height: 80vh;
-      margin-bottom: 1rem;
-  }
 
   .close-button {
       position:absolute;
