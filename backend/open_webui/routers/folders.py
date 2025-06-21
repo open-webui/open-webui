@@ -105,33 +105,33 @@ async def get_folder_by_id(id: str, user=Depends(get_verified_user)):
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-
 ############################
-# Update Folder Name By Id
+# Update Folder Details By Id
 ############################
 
 
 @router.post("/{id}/update")
-async def update_folder_name_by_id(
+async def update_folder_by_id(
     id: str, form_data: FolderForm, user=Depends(get_verified_user)
 ):
     folder = Folders.get_folder_by_id_and_user_id(id, user.id)
     if folder:
-        existing_folder = Folders.get_folder_by_parent_id_and_user_id_and_name(
-            folder.parent_id, user.id, form_data.name
-        )
-        if existing_folder:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT("Folder already exists"),
-            )
-
         try:
-            folder = Folders.update_folder_name_by_id_and_user_id(
-                id, user.id, form_data.name
+            updated_folder = Folders.update_folder_details_by_id_and_user_id(
+                id=id,
+                user_id=user.id,
+                name=form_data.name,
+                system_prompt=form_data.system_prompt,
             )
-
-            return folder
+            if updated_folder:
+                return updated_folder
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=ERROR_MESSAGES.DEFAULT(
+                        "Could not update folder. It might be due to a name conflict or invalid data."
+                    ),
+                )
         except Exception as e:
             log.exception(e)
             log.error(f"Error updating folder: {id}")
