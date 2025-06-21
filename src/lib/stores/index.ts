@@ -46,6 +46,11 @@ export const TTSWorker = writable(null);
 export const chatId = writable('');
 export const chatTitle = writable('');
 
+export const refreshSidebar = writable(() => {});
+export const pendingFolderId = writable(null);
+export const pendingFolderName = writable(null);
+export const folders = writable({});
+
 export const channels = writable([]);
 export const chats = writable(null);
 export const pinnedChats = writable([]);
