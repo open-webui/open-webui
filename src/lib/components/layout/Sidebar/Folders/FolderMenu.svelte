@@ -13,6 +13,10 @@
 	import Download from '$lib/components/icons/Download.svelte';
 
 	let show = false;
+
+	const handleMenuTrigger = (event) => {
+		event.stopPropagation();
+	};
 </script>
 
 <Dropdown
@@ -23,9 +27,11 @@
 		}
 	}}
 >
-	<Tooltip content={$i18n.t('More')}>
-		<slot />
-	</Tooltip>
+	<div on:click={handleMenuTrigger} on:pointerup={handleMenuTrigger}>
+		<Tooltip content={$i18n.t('More')}>
+			<slot />
+		</Tooltip>
+	</div>
 
 	<div slot="content">
 		<DropdownMenu.Content
