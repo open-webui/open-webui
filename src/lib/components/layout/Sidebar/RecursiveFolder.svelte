@@ -47,7 +47,6 @@
 	export let parentDragged = false;
 
 	let folderElement;
-	let folderMenuShow = false;
 
 	let draggedOver = false;
 	let dragged = false;
@@ -374,17 +373,8 @@
 					    exportHandler();
 					}}
 				    >
-					<button 
-						class="p-0.5 dark:hover:bg-gray-850 hover:bg-gray-200 rounded-lg touch-auto"
-						on:click={(e) => {
-        						e.stopPropagation();
-        						folderMenuShow = !folderMenuShow;
-						}}
-						on:pointerup={(e) => {
-        						e.stopPropagation();
-						}}
-					>
-						<EllipsisHorizontal className="size-4" strokeWidth="2.5" />
+					<button class="p-0.5 dark:hover:bg-gray-850 hover:bg-gray-200 rounded-lg touch-auto" on:click={(e) => {}}>
+					    <EllipsisHorizontal className="size-4" strokeWidth="2.5" />
 					</button>
 				    </FolderMenu>
 				</div>
