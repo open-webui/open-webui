@@ -89,6 +89,9 @@
 	export let webSearchEnabled = false;
 	export let codeInterpreterEnabled = false;
 
+	// Add thinking mode state
+	export let thinkingEnabled = false;
+
 	$: onChange({
 		prompt,
 		files: files
@@ -104,7 +107,8 @@
 		selectedFilterIds,
 		imageGenerationEnabled,
 		webSearchEnabled,
-		codeInterpreterEnabled
+		codeInterpreterEnabled,
+		thinkingEnabled
 	});
 
 	let showTools = false;
@@ -159,6 +163,15 @@
 			$models.find((m) => m.id === model)?.info?.meta?.capabilities?.code_interpreter ?? true
 	);
 
+	// Add thinking capable models check
+	let thinkingCapableModels = [];
+	$: thinkingCapableModels = (atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).filter(
+		(model) => {
+			const modelName = $models.find((m) => m.id === model)?.name?.toLowerCase() || model.toLowerCase();
+			return modelName.includes('deepseek-r1') || modelName.includes('qwen3') || modelName.includes('magistral');
+		}
+	);
+
 	let toggleFilters = [];
 	$: toggleFilters = (atSelectedModel?.id ? [atSelectedModel.id] : selectedModels)
 		.map((id) => ($models.find((model) => model.id === id) || {})?.filters ?? [])
@@ -187,6 +200,12 @@
 			codeInterpreterCapableModels.length &&
 		$config?.features?.enable_code_interpreter &&
 		($_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter);
+
+	let showThinkingButton = false;
+	$: showThinkingButton =
+		(atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).length ===
+			thinkingCapableModels.length &&
+		thinkingCapableModels.length > 0; // Only show if at least one model supports thinking
 
 	const scrollToBottom = () => {
 		const element = document.getElementById('messages-container');
@@ -744,6 +763,28 @@
 									</div>
 								{/if}
 
+								{#if thinkingEnabled && showThinkingButton}
+									<div class="mx-2.5 mt-2 -mb-1">
+										<div class="flex items-center gap-2 px-2.5 py-1.5 bg-sky-50 dark:bg-sky-200/5 border border-sky-200 dark:border-sky-800 rounded-lg text-sky-600 dark:text-sky-300">
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												viewBox="0 0 24 24"
+												fill="none"
+												stroke="currentColor"
+												stroke-width="1.75"
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												class="size-4 animate-pulse"
+											>
+												<path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z" />
+												<path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z" />
+												<path d="M2 12h20" />
+											</svg>
+											<span class="text-sm font-medium">{$i18n.t('Thinking mode enabled - Model may take longer but respond better')}</span>
+										</div>
+									</div>
+								{/if}
+
 								<div class="px-2.5">
 									{#if $settings?.richTextInput ?? true}
 										<div
@@ -1268,7 +1309,7 @@
 											</button>
 										</InputMenu>
 
-										{#if $_user && (showToolsButton || (toggleFilters && toggleFilters.length > 0) || showWebSearchButton || showImageGenerationButton || showCodeInterpreterButton)}
+																					{#if $_user && (showToolsButton || (toggleFilters && toggleFilters.length > 0) || showWebSearchButton || showImageGenerationButton || showCodeInterpreterButton || showThinkingButton)}
 											<div
 												class="flex self-center w-[1px] h-4 mx-1.5 bg-gray-50 dark:bg-gray-800"
 											/>
@@ -1390,6 +1431,38 @@
 															<span
 																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
 																>{$i18n.t('Code Interpreter')}</span
+															>
+														</button>
+													</Tooltip>
+												{/if}
+
+												{#if showThinkingButton}
+													<Tooltip content={$i18n.t('Enable thinking mode - Model may take longer but respond better')} placement="top">
+														<button
+															on:click|preventDefault={() => (thinkingEnabled = !thinkingEnabled)}
+															type="button"
+															class="px-2 @xl:px-2.5 py-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {thinkingEnabled
+																? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
+																: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
+														>
+															<!-- Brain/Thinking icon -->
+															<svg
+																xmlns="http://www.w3.org/2000/svg"
+																viewBox="0 0 24 24"
+																fill="none"
+																stroke="currentColor"
+																stroke-width="1.75"
+																stroke-linecap="round"
+																stroke-linejoin="round"
+																class="size-4"
+															>
+																<path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z" />
+																<path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z" />
+																<path d="M2 12h20" />
+															</svg>
+															<span
+																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
+																>{$i18n.t('Thinking')}</span
 															>
 														</button>
 													</Tooltip>

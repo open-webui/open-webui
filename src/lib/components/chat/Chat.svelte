@@ -125,6 +125,7 @@
 	let imageGenerationEnabled = false;
 	let webSearchEnabled = false;
 	let codeInterpreterEnabled = false;
+	let thinkingEnabled = false;
 
 	let chat = null;
 	let tags = [];
@@ -152,6 +153,8 @@
 			selectedFilterIds = [];
 			webSearchEnabled = false;
 			imageGenerationEnabled = false;
+			codeInterpreterEnabled = false;
+			thinkingEnabled = false;
 
 			if (sessionStorage.getItem(`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`)) {
 				try {
@@ -167,6 +170,7 @@
 						webSearchEnabled = input.webSearchEnabled;
 						imageGenerationEnabled = input.imageGenerationEnabled;
 						codeInterpreterEnabled = input.codeInterpreterEnabled;
+						thinkingEnabled = input.thinkingEnabled;
 					}
 				} catch (e) {}
 			}
@@ -215,6 +219,7 @@
 		webSearchEnabled = false;
 		imageGenerationEnabled = false;
 		codeInterpreterEnabled = false;
+		thinkingEnabled = false;
 	};
 
 	const setToolIds = async () => {
@@ -454,6 +459,7 @@
 			webSearchEnabled = false;
 			imageGenerationEnabled = false;
 			codeInterpreterEnabled = false;
+			thinkingEnabled = false;
 
 			try {
 				const input = JSON.parse(
@@ -468,6 +474,7 @@
 					webSearchEnabled = input.webSearchEnabled;
 					imageGenerationEnabled = input.imageGenerationEnabled;
 					codeInterpreterEnabled = input.codeInterpreterEnabled;
+					thinkingEnabled = input.thinkingEnabled;
 				}
 			} catch (e) {}
 		}
@@ -1659,6 +1666,19 @@
 							: undefined
 				},
 
+				// Add thinking mode option for compatible models
+				...(thinkingEnabled && (model.owned_by === 'ollama' || model?.info?.meta?.owned_by === 'ollama') && 
+					(() => {
+						const modelName = model?.name?.toLowerCase() || model.id.toLowerCase();
+						return modelName.includes('deepseek-r1') || modelName.includes('qwen3') || modelName.includes('magistral');
+					})()
+					? {
+						options: {
+							thinking: true
+						}
+					}
+					: {}),
+
 				files: (files?.length ?? 0) > 0 ? files : undefined,
 
 				filter_ids: selectedFilterIds.length > 0 ? selectedFilterIds : undefined,
@@ -2112,6 +2132,7 @@
 									bind:imageGenerationEnabled
 									bind:codeInterpreterEnabled
 									bind:webSearchEnabled
+									bind:thinkingEnabled
 									bind:atSelectedModel
 									toolServers={$toolServers}
 									transparentBackground={$settings?.backgroundImageUrl ?? false}
@@ -2171,6 +2192,7 @@
 									bind:imageGenerationEnabled
 									bind:codeInterpreterEnabled
 									bind:webSearchEnabled
+									bind:thinkingEnabled
 									bind:atSelectedModel
 									transparentBackground={$settings?.backgroundImageUrl ?? false}
 									toolServers={$toolServers}
