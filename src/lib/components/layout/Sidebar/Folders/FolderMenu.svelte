@@ -38,11 +38,11 @@
 			<DropdownMenu.Item
 				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 				on:click={() => {
-					dispatch('rename');
+					dispatch('editFolder');
 				}}
 			>
 				<Pencil strokeWidth="2" />
-				<div class="flex items-center">{$i18n.t('Rename')}</div>
+				<div class="flex items-center">{$i18n.t('Edit Folder')}</div>
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
