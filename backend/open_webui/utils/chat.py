@@ -15,6 +15,8 @@ from starlette.responses import Response, StreamingResponse, JSONResponse
 
 
 from open_webui.models.users import UserModel
+from open_webui.models.chats import Chats
+from open_webui.models.folders import Folders
 
 from open_webui.socket.main import (
     sio,
@@ -165,6 +167,29 @@ async def generate_chat_completion(
     bypass_filter: bool = False,
 ):
     log.debug(f"generate_chat_completion: {form_data}")
+    metadata = form_data.get("metadata", {})
+    if hasattr(request.state, "metadata"):
+        metadata.update(request.state.metadata)
+    form_data["metadata"] = metadata
+    
+    chat_id = metadata.get("chat_id")
+    if chat_id and user:
+        chat = Chats.get_chat_by_id(chat_id)
+        if chat and chat.folder_id:
+            folder = Folders.get_folder_by_id_and_user_id(chat.folder_id, user.id)
+            if folder and folder.system_prompt:
+                folder_system_message = {
+                    "role": "system",
+                    "content": folder.system_prompt,
+                }
+                # Ensure messages list exists
+                if "messages" not in form_data:
+                    form_data["messages"] = []
+                
+                form_data["messages"] = [folder_system_message] + form_data["messages"]
+                log.debug(
+                    f"Prepended system prompt from folder {folder.id} to chat {chat_id}"
+                )
     if BYPASS_MODEL_ACCESS_CONTROL:
         bypass_filter = True
 
