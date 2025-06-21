@@ -13,6 +13,7 @@ from open_webui.env import (
     DATABASE_POOL_RECYCLE,
     DATABASE_POOL_SIZE,
     DATABASE_POOL_TIMEOUT,
+    DB_MIGRATIONS,
 )
 from peewee_migrate import Router
 from sqlalchemy import Dialect, create_engine, MetaData, types
@@ -51,6 +52,10 @@ class JSONField(types.TypeDecorator):
 # Workaround to handle the peewee migration
 # This is required to ensure the peewee migration is handled before the alembic migration
 def handle_peewee_migration(DATABASE_URL):
+    if not DB_MIGRATIONS:
+        log.info("Database migrations are disabled via DB_MIGRATIONS environment variable")
+        return
+        
     # db = None
     try:
         # Replace the postgresql:// with postgres:// to handle the peewee migration

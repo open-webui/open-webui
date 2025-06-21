@@ -315,6 +315,12 @@ RESET_CONFIG_ON_START = (
     os.environ.get("RESET_CONFIG_ON_START", "False").lower() == "true"
 )
 
+####################################
+# DATABASE MIGRATIONS
+####################################
+
+DB_MIGRATIONS = os.environ.get("DB_MIGRATIONS", "True").lower() == "true"
+
 ENABLE_REALTIME_CHAT_SAVE = (
     os.environ.get("ENABLE_REALTIME_CHAT_SAVE", "False").lower() == "true"
 )

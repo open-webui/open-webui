@@ -27,6 +27,7 @@ from open_webui.env import (
     WEBUI_AUTH,
     WEBUI_FAVICON_URL,
     WEBUI_NAME,
+    DB_MIGRATIONS,
     log,
 )
 from open_webui.internal.db import Base, get_db
@@ -48,6 +49,10 @@ logging.getLogger("uvicorn.access").addFilter(EndpointFilter())
 
 # Function to run the alembic migrations
 def run_migrations():
+    if not DB_MIGRATIONS:
+        log.info("Database migrations are disabled via DB_MIGRATIONS environment variable")
+        return
+        
     log.info("Running migrations")
     try:
         from alembic import command
