@@ -176,8 +176,6 @@
 		if ($mobile) {
 			showSidebar.set(false);
 		}
-
-		toast.success($i18n.t('Folder selected for next chat'));
 	};
 
 	const initChannels = async () => {
