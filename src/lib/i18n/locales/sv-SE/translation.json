@@ -1233,7 +1233,6 @@
 	"This action cannot be undone. Do you wish to continue?": "Denna åtgärd kan inte ångras. Vill du fortsätta?",
 	"This channel was created on {{createdAt}}. This is the very beginning of the {{channelName}} channel.": "Den här kanalen skapades den {{createdAt}}. Detta är den allra första början av kanalen {{channelName}}.",
 	"This chat won't appear in history and your messages will not be saved.": "Den här chatten visas inte i historiken och dina meddelanden sparas inte.",
-	"This chat won’t appear in history and your messages will not be saved.": "Den här chatten visas inte i historiken och dina meddelanden sparas inte.",
 	"This ensures that your valuable conversations are securely saved to your backend database. Thank you!": "Detta säkerställer att dina värdefulla samtal sparas säkert till din backend-databas. Tack!",
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "Detta är en experimentell funktion som kanske inte fungerar som förväntat och som kan komma att ändras när som helst.",
 	"This model is not publicly available. Please select another model.": "Den här modellen är inte tillgänglig för allmänheten. Välj en annan modell.",

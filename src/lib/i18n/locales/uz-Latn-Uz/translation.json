@@ -1233,7 +1233,6 @@
 	"This action cannot be undone. Do you wish to continue?": "Bu amalni ortga qaytarib bo‘lmaydi. Davom etishni xohlaysizmi?",
 	"This channel was created on {{createdAt}}. This is the very beginning of the {{channelName}} channel.": "Bu kanal {{createdAt}} da yaratilgan. Bu {{channelName}} kanalining boshlanishi.",
 	"This chat won't appear in history and your messages will not be saved.": "",
-	"This chat won’t appear in history and your messages will not be saved.": "Bu chat tarixda ko‘rinmaydi va xabarlaringiz saqlanmaydi.",
 	"This ensures that your valuable conversations are securely saved to your backend database. Thank you!": "Bu sizning qimmatli suhbatlaringiz ma'lumotlar bazasiga xavfsiz tarzda saqlanishini ta'minlaydi. Rahmat!",
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "Bu eksperimental xususiyat bo'lib, u kutilganidek ishlamasligi va istalgan vaqtda o'zgarishi mumkin.",
 	"This model is not publicly available. Please select another model.": "Ushbu model hamma uchun ochiq emas. Iltimos, boshqa modelni tanlang.",
