@@ -11,6 +11,8 @@ from open_webui.models.chats import (
     Chats,
     ChatTitleIdResponse,
 )
+from open_webui.models.shared_file_owner import SharedFileOwner
+
 from open_webui.models.tags import TagModel, Tags
 from open_webui.models.folders import Folders
 
@@ -19,6 +21,7 @@ from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
+
 
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
@@ -610,6 +613,8 @@ async def clone_chat_by_id(
         }
 
         chat = Chats.insert_new_chat(user.id, ChatForm(**{"chat": updated_chat}))
+        SharedFileOwner.add_shared_file_owner(user.id, chat.chat)
+
         return ChatResponse(**chat.model_dump())
     else:
         raise HTTPException(
