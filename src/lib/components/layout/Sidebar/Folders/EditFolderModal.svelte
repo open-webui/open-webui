@@ -95,7 +95,7 @@
 							id="systemPrompt"
 							bind:value={currentSystemPrompt}
 							placeholder={$i18n.t('Enter a system prompt for all chats in this folder...')}
-							className="w-full text-sm bg-transparent placeholder:text-gray-400 dark:placeholder:text-gray-600 outline-none border border-gray-300 dark:border-gray-700 rounded-lg p-2 focus:ring-1 focus:ring-blue-500 min-h-[120px] resize-y"
+							className="w-full text-sm bg-transparent placeholder:text-gray-400 dark:placeholder:text-gray-600 outline-none border border-gray-300 dark:border-gray-700 rounded-lg p-2 focus:ring-1 focus:ring-blue-500 min-h-[120px] max-h-[600px] overflow-y-auto resize-none"
 							rows={5}
 						/>
 					</div>
