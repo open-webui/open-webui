@@ -47,7 +47,6 @@
 	export let parentDragged = false;
 
 	let folderElement;
-	let folderMenuShow = false;
 
 	let draggedOver = false;
 	let dragged = false;
