@@ -94,9 +94,13 @@ else:
             pool_pre_ping=True,
             poolclass=QueuePool,
         )
-    else:
+    elif DATABASE_POOL_SIZE == 0:
         engine = create_engine(
             SQLALCHEMY_DATABASE_URL, pool_pre_ping=True, poolclass=NullPool
+        )
+    else:
+        engine = create_engine(
+            SQLALCHEMY_DATABASE_URL, pool_pre_ping=True
         )
 
 
