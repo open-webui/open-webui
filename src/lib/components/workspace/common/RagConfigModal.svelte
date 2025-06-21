@@ -507,24 +507,24 @@
                         />
                     </div>
                 </div>
-            {:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'docling'}
+            {:else if localRAGConfig.CONTENT_EXTRACTION_ENGINE === 'docling'}
                 <div class="flex w-full mt-1">
                     <input
                         class="flex-1 w-full text-sm bg-transparent outline-hidden"
                         placeholder={$i18n.t('Enter Docling Server URL')}
-                        bind:value={RAGConfig.DOCLING_SERVER_URL}
+                        bind:value={localRAGConfig.DOCLING_SERVER_URL}
                     />
                 </div>
                 <div class="flex w-full mt-2">
                     <input
                         class="flex-1 w-full text-sm bg-transparent outline-hidden"
                         placeholder={$i18n.t('Enter Docling OCR Engine')}
-                        bind:value={RAGConfig.DOCLING_OCR_ENGINE}
+                        bind:value={localRAGConfig.DOCLING_OCR_ENGINE}
                     />
                     <input
                         class="flex-1 w-full text-sm bg-transparent outline-hidden"
                         placeholder={$i18n.t('Enter Docling OCR Language(s)')}
-                        bind:value={RAGConfig.DOCLING_OCR_LANG}
+                        bind:value={localRAGConfig.DOCLING_OCR_LANG}
                     />
                 </div>
 
@@ -534,11 +534,11 @@
                             {$i18n.t('Describe Pictures in Documents')}
                         </div>
                         <div class="flex items-center relative">
-                            <Switch bind:state={RAGConfig.DOCLING_DO_PICTURE_DESCRIPTION} />
+                            <Switch bind:state={localRAGConfig.DOCLING_DO_PICTURE_DESCRIPTION} />
                         </div>
                     </div>
                 </div>
-                {#if RAGConfig.DOCLING_DO_PICTURE_DESCRIPTION}
+                {#if localRAGConfig.DOCLING_DO_PICTURE_DESCRIPTION}
                     <div class="flex justify-between w-full mt-2">
                         <div class="self-center text-xs font-medium">
                             <Tooltip content={''} placement="top-start">
@@ -548,7 +548,7 @@
                         <div class="">
                             <select
                                 class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
-                                bind:value={RAGConfig.DOCLING_PICTURE_DESCRIPTION_MODE}
+                                bind:value={localRAGConfig.DOCLING_PICTURE_DESCRIPTION_MODE}
                             >
                                 <option value="">{$i18n.t('Default')}</option>
                                 <option value="local">{$i18n.t('Local')}</option>
@@ -557,7 +557,7 @@
                         </div>
                     </div>
 
-                    {#if RAGConfig.DOCLING_PICTURE_DESCRIPTION_MODE === 'local'}
+                    {#if localRAGConfig.DOCLING_PICTURE_DESCRIPTION_MODE === 'local'}
                         <div class="flex flex-col gap-2 mt-2">
                             <div class=" flex flex-col w-full justify-between">
                                 <div class=" mb-1 text-xs font-medium">
@@ -572,14 +572,14 @@
                                         className="w-full"
                                     >
                                         <Textarea
-                                            bind:value={RAGConfig.DOCLING_PICTURE_DESCRIPTION_LOCAL}
+                                            bind:value={localRAGConfig.DOCLING_PICTURE_DESCRIPTION_LOCAL}
                                             placeholder={$i18n.t('Enter Config in JSON format')}
                                         />
                                     </Tooltip>
                                 </div>
                             </div>
                         </div>
-                    {:else if RAGConfig.DOCLING_PICTURE_DESCRIPTION_MODE === 'api'}
+                    {:else if localRAGConfig.DOCLING_PICTURE_DESCRIPTION_MODE === 'api'}
                         <div class="flex flex-col gap-2 mt-2">
                             <div class=" flex flex-col w-full justify-between">
                                 <div class=" mb-1 text-xs font-medium">
@@ -594,7 +594,7 @@
                                         className="w-full"
                                     >
                                         <Textarea
-                                            bind:value={RAGConfig.DOCLING_PICTURE_DESCRIPTION_API}
+                                            bind:value={localRAGConfig.DOCLING_PICTURE_DESCRIPTION_API}
                                             placeholder={$i18n.t('Enter Config in JSON format')}
                                         />
                                     </Tooltip>
