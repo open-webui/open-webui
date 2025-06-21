@@ -16,6 +16,7 @@
 	const eventDispatch = createEventDispatcher();
 
 	import { EditorState, Plugin, PluginKey, TextSelection } from 'prosemirror-state';
+	import { Fragment } from 'prosemirror-model';
 	import { Decoration, DecorationSet } from 'prosemirror-view';
 	import { Editor } from '@tiptap/core';
 
@@ -351,46 +352,72 @@
 					},
 					paste: (view, event) => {
 						if (event.clipboardData) {
-							// Extract plain text from clipboard and paste it without formatting
 							const plainText = event.clipboardData.getData('text/plain');
 							if (plainText) {
-								if (largeTextAsFile) {
-									if (plainText.length > PASTED_TEXT_CHARACTER_LIMIT) {
-										// Dispatch paste event to parent component
-										eventDispatch('paste', { event });
-										event.preventDefault();
-										return true;
-									}
+								if (largeTextAsFile && plainText.length > PASTED_TEXT_CHARACTER_LIMIT) {
+									// Delegate handling of large text pastes to the parent component.
+									eventDispatch('paste', { event });
+									event.preventDefault();
+									return true;
 								}
+
+								// Workaround for mobile WebViews that strip line breaks when pasting from
+								// clipboard suggestions (e.g., Gboard clipboard history).
+								const isMobile = /Android|iPhone|iPad|iPod|Windows Phone/i.test(
+									navigator.userAgent
+								);
+								const isWebView =
+									typeof window !== 'undefined' &&
+									(/wv/i.test(navigator.userAgent) || // Standard Android WebView flag
+										(navigator.userAgent.includes('Android') &&
+											!navigator.userAgent.includes('Chrome')) || // Other generic Android WebViews
+										(navigator.userAgent.includes('Safari') &&
+											!navigator.userAgent.includes('Version'))); // iOS WebView (in-app browsers)
+
+								if (isMobile && isWebView && plainText.includes('\n')) {
+									// Manually deconstruct the pasted text and insert it with hard breaks
+									// to preserve the multi-line formatting.
+									const { state, dispatch } = view;
+									const { from, to } = state.selection;
+
+									const lines = plainText.split('\n');
+									const nodes = [];
+
+									lines.forEach((line, index) => {
+										if (index > 0) {
+											nodes.push(state.schema.nodes.hardBreak.create());
+										}
+										if (line.length > 0) {
+											nodes.push(state.schema.text(line));
+										}
+									});
+
+									const fragment = Fragment.fromArray(nodes);
+									const tr = state.tr.replaceWith(from, to, fragment);
+									dispatch(tr.scrollIntoView());
+									event.preventDefault();
+									return true;
+								}
+								// Let ProseMirror handle normal text paste in non-problematic environments.
 								return false;
 							}
 
-							// Check if the pasted content contains image files
+							// Delegate image paste handling to the parent component.
 							const hasImageFile = Array.from(event.clipboardData.files).some((file) =>
 								file.type.startsWith('image/')
 							);
-
-							// Check for image in dataTransfer items (for cases where files are not available)
+							// Fallback for cases where an image is in dataTransfer.items but not clipboardData.files.
 							const hasImageItem = Array.from(event.clipboardData.items).some((item) =>
 								item.type.startsWith('image/')
 							);
-							if (hasImageFile) {
-								// If there's an image, dispatch the event to the parent
-								eventDispatch('paste', { event });
-								event.preventDefault();
-								return true;
-							}
-
-							if (hasImageItem) {
-								// If there's an image item, dispatch the event to the parent
+							if (hasImageFile || hasImageItem) {
 								eventDispatch('paste', { event });
 								event.preventDefault();
 								return true;
 							}
 						}
-
-						// For all other cases (text, formatted text, etc.), let ProseMirror handle it
-						view.dispatch(view.state.tr.scrollIntoView()); // Move viewport to the cursor after pasting
+						// For all other cases, let ProseMirror perform its default paste behavior.
+						view.dispatch(view.state.tr.scrollIntoView());
 						return false;
 					}
 				}
