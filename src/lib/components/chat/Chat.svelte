@@ -36,7 +36,11 @@
 		chatTitle,
 		showArtifacts,
 		tools,
-		toolServers
+		toolServers,
+		pendingFolderId,
+		pendingFolderName,
+		folders,
+		refreshSidebar
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
@@ -65,6 +69,7 @@
 		getTagsById,
 		updateChatById
 	} from '$lib/apis/chats';
+	import { getFolders } from '$lib/apis/folders';
 	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
 	import { processWeb, processWebSearch, processYoutubeVideo } from '$lib/apis/retrieval';
 	import { createOpenAITextStream } from '$lib/apis/streaming';
@@ -308,11 +313,9 @@
 					}
 				} else if (type === 'chat:title') {
 					chatTitle.set(data);
-					currentChatPage.set(1);
-					await chats.set(await getChatList(localStorage.token, $currentChatPage));
+					await $refreshSidebar();
 				} else if (type === 'chat:tags') {
-					chat = await getChatById(localStorage.token, $chatId);
-					allTags.set(await getAllTags(localStorage.token));
+					await $refreshSidebar();
 				} else if (type === 'source' || type === 'citation') {
 					if (data?.type === 'code_execution') {
 						// Code execution; update existing code execution by ID, or add new one.
@@ -708,7 +711,8 @@
 	//////////////////////////
 
 	const initNewChat = async () => {
-		const availableModels = $models
+	
+	    const availableModels = $models
 			.filter((m) => !(m?.info?.meta?.hidden ?? false))
 			.map((m) => m.id);
 
@@ -1958,14 +1962,17 @@
 				history: history,
 				messages: createMessagesList(history, history.currentId),
 				tags: [],
+				folder_id: $pendingFolderId,
 				timestamp: Date.now()
 			});
 
 			_chatId = chat.id;
 			await chatId.set(_chatId);
-
-			await chats.set(await getChatList(localStorage.token, $currentChatPage));
-			currentChatPage.set(1);
+	
+			// Clear the pending folder after creating the chat
+			$refreshSidebar();
+			pendingFolderId.set(null);
+			pendingFolderName.set(null);
 
 			window.history.replaceState(history.state, '', `/c/${_chatId}`);
 		} else {
