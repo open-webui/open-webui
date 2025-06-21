@@ -156,6 +156,7 @@
 						bind:value={content}
 						rows={6}
 						required
+						preserveBreaks={true} 
 					/>
 				</div>
 
