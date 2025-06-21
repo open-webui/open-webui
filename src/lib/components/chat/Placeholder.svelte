@@ -7,7 +7,7 @@
 
 	const dispatch = createEventDispatcher();
 
-	import { config, user, models as _models, temporaryChatEnabled } from '$lib/stores';
+	import { config, user, models as _models, temporaryChatEnabled, pendingFolderId, pendingFolderName } from '$lib/stores';
 	import { sanitizeResponseContent, extractCurlyBraceWords } from '$lib/utils';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
@@ -15,6 +15,9 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
 	import MessageInput from './MessageInput.svelte';
+
+	import FolderOpen from '$lib/components/icons/FolderOpen.svelte';
+	import XMark from '$lib/components/icons/XMark.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -101,6 +104,27 @@
 				<EyeSlash strokeWidth="2.5" className="size-5" />{$i18n.t('Temporary Chat')}
 			</div>
 		</Tooltip>
+	{/if}
+
+	{#if $pendingFolderName}
+	    <div class="mb-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg mx-auto max-w-xl">
+	        <div class="flex items-center gap-2 text-blue-700 dark:text-blue-300">
+	            <FolderOpen className="size-4" />
+	            <span class="text-sm font-medium">
+	                {$i18n.t('Next chat will be created in folder:')} 
+	                <strong>{$pendingFolderName}</strong>
+	            </span>
+	            <button 
+	                class="ml-auto text-blue-500 hover:text-blue-700"
+	                on:click={() => {
+	                    pendingFolderId.set(null);
+	                    pendingFolderName.set(null);
+	                }}
+	            >
+	                <XMark className="size-4" />
+	            </button>
+	        </div>
+	    </div>
 	{/if}
 
 	<div
