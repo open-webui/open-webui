@@ -193,6 +193,48 @@ for version in soup.find_all("h2"):
 
 CHANGELOG = changelog_json
 
+#  --- Added Changelog 
+try:
+    warning_path = BASE_DIR / "WARNING.md"
+    with open(str(warning_path.absolute()), "r", encoding="utf8") as file:
+        warning_content = file.read()
+
+except Exception:
+    warning_content = (pkgutil.get_data("open_webui", "WARNING.md") or b"").decode()
+
+# Convert markdown content to HTML
+html_content = markdown.markdown(warning_content)
+
+# Parse the HTML content
+soup = BeautifulSoup(html_content, "html.parser")
+
+# Initialize JSON structure
+warning_json = {}
+
+# Iterate over each version
+for version in soup.find_all("h2"):
+    print(version.get_text())
+    version_number = version.get_text().strip().split(" - ")[0][1:-1]  # Remove brackets
+    date = version.get_text().strip().split(" - ")[1]
+
+    version_data = {"date": date}
+
+    # Find the next sibling that is a h3 tag (section title)
+    current = version.find_next_sibling()
+
+    while current and current.name != "h2":
+        if current.name == "h3":
+            section_title = current.get_text().lower()  # e.g., "added", "fixed"
+            section_items = parse_section(current.find_next_sibling("ul"))
+            version_data[section_title] = section_items
+
+        # Move to the next element
+        current = current.find_next_sibling()
+
+    warning_json[version_number] = version_data
+
+WARNING = warning_json
+
 ####################################
 # SAFE_MODE
 ####################################
