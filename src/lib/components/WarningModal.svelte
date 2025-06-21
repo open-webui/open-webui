@@ -28,10 +28,24 @@
 <Modal bind:show size="sm" style="max-width: 420px;">
 	<div class="px-5 pt-4 dark:text-gray-300 text-gray-700" style="direction: rtl;">
 		<div class="flex justify-between items-start">
-			<div class="text-xl font-semibold">
-				{$i18n.t("לפני העלאת מסמך - שימו ❤")}
-				<!-- {$WEBUI_NAME} -->
-				<Confetti x={[-1, -0.25]} y={[0, 0.5]} />
+			<div class="text-xl font-semibold flex items-center gap-2 relative z-20">
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					class="w-7 h-7 text-yellow-500"
+					fill="none"
+					viewBox="0 0 24 24"
+					stroke="currentColor"
+				>
+					<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="#FEF3C7" />
+					<path
+						stroke="#F59E42"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						d="M12 8v4m0 4h.01"
+					/>
+				</svg>
+				{$i18n.t('לפני העלאת מסמך - שימו ❤')}
 			</div>
 			<button
 				class="self-center"
