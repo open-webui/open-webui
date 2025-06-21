@@ -16,6 +16,7 @@
 
 	const handleMenuTrigger = (event) => {
 		event.stopPropagation();
+		show = !show;
 	};
 </script>
 
