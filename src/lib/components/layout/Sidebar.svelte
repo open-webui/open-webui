@@ -22,7 +22,11 @@
 		socket,
 		config,
 		isApp,
-		models
+		models,
+		pendingFolderId,
+		pendingFolderName,
+		folders,
+		refreshSidebar
 	} from '$lib/stores';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 
@@ -77,7 +81,6 @@
 	let chatListLoading = false;
 	let allChatsLoaded = false;
 
-	let folders = {};
 	let newFolderId = null;
 
 	const initFolders = async () => {
@@ -86,15 +89,15 @@
 			return [];
 		});
 
-		folders = {};
+		let newFolders = {};
 
 		// First pass: Initialize all folder entries
 		for (const folder of folderList) {
 			// Ensure folder is added to folders with its data
-			folders[folder.id] = { ...(folders[folder.id] || {}), ...folder };
+			newFolders[folder.id] = { ...(newFolders[folder.id] || {}), ...folder };
 
 			if (newFolderId && folder.id === newFolderId) {
-				folders[folder.id].new = true;
+				newFolders[folder.id].new = true;
 				newFolderId = null;
 			}
 		}
@@ -103,30 +106,31 @@
 		for (const folder of folderList) {
 			if (folder.parent_id) {
 				// Ensure the parent folder is initialized if it doesn't exist
-				if (!folders[folder.parent_id]) {
-					folders[folder.parent_id] = {}; // Create a placeholder if not already present
+				if (!newFolders[folder.parent_id]) {
+					newFolders[folder.parent_id] = {}; // Create a placeholder if not already present
 				}
 
 				// Initialize childrenIds array if it doesn't exist and add the current folder id
-				folders[folder.parent_id].childrenIds = folders[folder.parent_id].childrenIds
-					? [...folders[folder.parent_id].childrenIds, folder.id]
+				newFolders[folder.parent_id].childrenIds = newFolders[folder.parent_id].childrenIds
+					? [...newFolders[folder.parent_id].childrenIds, folder.id]
 					: [folder.id];
 
 				// Sort the children by updated_at field
-				folders[folder.parent_id].childrenIds.sort((a, b) => {
-					return folders[b].updated_at - folders[a].updated_at;
+				newFolders[folder.parent_id].childrenIds.sort((a, b) => {
+					return newFolders[b].updated_at - newFolders[a].updated_at;
 				});
 			}
 		}
+		folders.set(newFolders);
 	};
 
-	const createFolder = async (name = 'Untitled') => {
+	const createFolder = async (name = '📁 Untitled Folder') => {
 		if (name === '') {
 			toast.error($i18n.t('Folder name cannot be empty.'));
 			return;
 		}
 
-		const rootFolders = Object.values(folders).filter((folder) => folder.parent_id === null);
+		const rootFolders = Object.values($folders).filter((folder) => folder.parent_id === null);
 		if (rootFolders.find((folder) => folder.name.toLowerCase() === name.toLowerCase())) {
 			// If a folder with the same name already exists, append a number to the name
 			let i = 1;
@@ -138,18 +142,17 @@
 
 			name = `${name} ${i}`;
 		}
-
 		// Add a dummy folder to the list to show the user that the folder is being created
 		const tempId = uuidv4();
-		folders = {
-			...folders,
+		folders.set({
+			...$folders,
 			tempId: {
 				id: tempId,
 				name: name,
 				created_at: Date.now(),
 				updated_at: Date.now()
 			}
-		};
+		});
 
 		const res = await createNewFolder(localStorage.token, name).catch((error) => {
 			toast.error(`${error}`);
@@ -160,6 +163,21 @@
 			newFolderId = res.id;
 			await initFolders();
 		}
+	};
+
+	const createChatInFolderHandler = async (event) => {
+		const { folderId } = event.detail;
+
+		pendingFolderId.set(folderId);
+		pendingFolderName.set($folders[folderId].name);
+
+		await goto('/');
+
+		if ($mobile) {
+			showSidebar.set(false);
+		}
+
+		toast.success($i18n.t('Folder selected for next chat'));
 	};
 
 	const initChannels = async () => {
@@ -180,6 +198,8 @@
 		// Enable pagination
 		scrollPaginationEnabled.set(true);
 	};
+
+	refreshSidebar.set(initChatList);
 
 	const loadMoreChats = async () => {
 		chatListLoading = true;
@@ -751,7 +771,7 @@
 							initChatList();
 						}
 					} else if (type === 'folder') {
-						if (folders[id].parent_id === null) {
+						if ($folders[id].parent_id === null) {
 							return;
 						}
 
@@ -763,7 +783,7 @@
 						);
 
 						if (res) {
-							await initFolders();
+							initChatList();
 						}
 					}
 				}}
@@ -844,9 +864,9 @@
 					</div>
 				{/if}
 
-				{#if folders}
+				{#if $folders}
 					<Folders
-						{folders}
+						folders={$folders}
 						on:import={(e) => {
 							const { folderId, items } = e.detail;
 							importChatHandler(items, false, folderId);
@@ -857,6 +877,7 @@
 						on:change={async () => {
 							initChatList();
 						}}
+						on:createChatInFolder={createChatInFolderHandler}
 					/>
 				{/if}
 
