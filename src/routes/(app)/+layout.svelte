@@ -78,9 +78,7 @@
 				// IndexedDB Not Found
 			}
 
-			const chatInputKeys = Object.keys(localStorage).filter((key) =>
-				key.startsWith('chat-input-')
-			);
+			const chatInputKeys = Object.keys(localStorage).filter((key) => key.startsWith('chat-input'));
 			if (chatInputKeys.length > 0) {
 				chatInputKeys.forEach((key) => {
 					localStorage.removeItem(key);
