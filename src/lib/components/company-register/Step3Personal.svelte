@@ -95,7 +95,7 @@
         <div>
             <img crossorigin="anonymous" src={logoSrc} class=" w-10 mb-5" alt="logo" />
         </div>
-        <div class="text-lightGray-100 dark:text-customGray-100 font-medium">{$i18n.t('Add personal information')}</div>
+        <div class="text-center text-lightGray-100 dark:text-customGray-100 font-medium">{$i18n.t('Add personal information')}</div>
     </div>
     <input
 			id="profile-image-input"
@@ -238,7 +238,7 @@
 					class={`px-2.5 text-sm ${password ? 'pt-2' : 'pt-0'} text-lightGray-100 placeholder:text-lightGray-100 w-full h-12 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none pr-10`}
 					type="text"
 					bind:value={password}
-					placeholder={$i18n.t('Create Password')}
+					placeholder={$i18n.t('Create password')}
 					autocomplete="new-password"
 					required
 				/>
@@ -247,7 +247,7 @@
 					class={`px-2.5 text-sm ${password ? 'pt-2' : 'pt-0'} text-lightGray-100 placeholder:text-lightGray-100 w-full h-12 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none pr-10`}
 					type="password"
 					bind:value={password}
-					placeholder={$i18n.t('Create Password')}
+					placeholder={$i18n.t('Create password')}
 					autocomplete="new-password"
 					required
 				/>
@@ -267,7 +267,7 @@
 			</button>
 		</div>
         <Tooltip className="absolute -right-6 top-3 cursor-pointer" content={$i18n.t('Password must be 8+ characters, with a number, capital letter, and symbol.')}>
-            <div class="flex justify-center items-center w-[18px] h-[18px] rounded-full dark:bg-customGray-700">
+            <div class="flex justify-center items-center w-[18px] h-[18px] rounded-full bg-customBlue-600 text-white dark:text-customGray-100 dark:bg-customGray-700">
                 <InfoIcon className="size-6"/>
             </div>
         </Tooltip>       
