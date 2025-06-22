@@ -2,10 +2,17 @@
 	import dayjs from 'dayjs';
 	import { toast } from 'svelte-sonner';
 	import { tick, getContext, onMount } from 'svelte';
+	import { v4 as uuidv4 } from 'uuid';
 
-	import { models, settings } from '$lib/stores';
-	import { user as _user } from '$lib/stores';
-	import { copyToClipboard as _copyToClipboard, formatDate } from '$lib/utils';
+	import { models, settings, config, user as _user } from '$lib/stores';
+	import {
+		copyToClipboard as _copyToClipboard,
+		formatDate,
+		compressImage,
+		blobToFile
+	} from '$lib/utils';
+	import { uploadFile } from '$lib/apis/files';
+	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	import Name from './Name.svelte';
 	import ProfileImage from './ProfileImage.svelte';
@@ -14,6 +21,7 @@
 	import Markdown from './Markdown.svelte';
 	import Image from '$lib/components/common/Image.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import InputMenu from '../MessageInput/InputMenu.svelte';
 
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
 
@@ -46,6 +54,8 @@
 	let editedFiles = [];
 
 	let messageEditTextAreaElement: HTMLTextAreaElement;
+	let filesInputElement: HTMLInputElement;
+	let selectedToolIds = [];
 
 	let message = JSON.parse(JSON.stringify(history.messages[messageId]));
 	$: if (history.messages) {
@@ -94,6 +104,178 @@
 		deleteMessage(message.id);
 	};
 
+	const uploadFileHandler = async (file, fullContext: boolean = false) => {
+		if ($_user?.role !== 'admin' && !($_user?.permissions?.chat?.file_upload ?? true)) {
+			toast.error($i18n.t('You do not have permission to upload files.'));
+			return null;
+		}
+
+		const tempItemId = uuidv4();
+		const fileItem = {
+			type: 'file',
+			file: '',
+			id: null,
+			url: '',
+			name: file.name,
+			collection_name: '',
+			status: 'uploading',
+			size: file.size,
+			error: '',
+			itemId: tempItemId,
+			...(fullContext ? { context: 'full' } : {})
+		};
+
+		if (fileItem.size == 0) {
+			toast.error($i18n.t('You cannot upload an empty file.'));
+			return null;
+		}
+
+		editedFiles = [...editedFiles, fileItem];
+
+		try {
+			let metadata = null;
+			if (
+				(file.type.startsWith('audio/') || file.type.startsWith('video/')) &&
+				$settings?.audio?.stt?.language
+			) {
+				metadata = {
+					language: $settings?.audio?.stt?.language
+				};
+			}
+
+			const uploadedFile = await uploadFile(localStorage.token, file, metadata);
+
+			if (uploadedFile) {
+				if (uploadedFile.error) {
+					toast.warning(uploadedFile.error);
+				}
+
+				fileItem.status = 'uploaded';
+				fileItem.file = uploadedFile;
+				fileItem.id = uploadedFile.id;
+				fileItem.collection_name =
+					uploadedFile?.meta?.collection_name || uploadedFile?.collection_name;
+				fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
+
+				editedFiles = editedFiles;
+			} else {
+				editedFiles = editedFiles.filter((item) => item?.itemId !== tempItemId);
+			}
+		} catch (e) {
+			toast.error(`${e}`);
+			editedFiles = editedFiles.filter((item) => item?.itemId !== tempItemId);
+		}
+	};
+
+	const inputFilesHandler = async (inputFiles) => {
+		if (
+			($config?.file?.max_count ?? null) !== null &&
+			editedFiles.length + inputFiles.length > $config?.file?.max_count
+		) {
+			toast.error(
+				$i18n.t(`You can only chat with a maximum of {{maxCount}} file(s) at a time.`, {
+					maxCount: $config?.file?.max_count
+				})
+			);
+			return;
+		}
+
+		inputFiles.forEach((file) => {
+			if (
+				($config?.file?.max_size ?? null) !== null &&
+				file.size > ($config?.file?.max_size ?? 0) * 1024 * 1024
+			) {
+				toast.error(
+					$i18n.t(`File size should not exceed {{maxSize}} MB.`, {
+						maxSize: $config?.file?.max_size
+					})
+				);
+				return;
+			}
+
+			if (
+				['image/gif', 'image/webp', 'image/jpeg', 'image/png', 'image/avif'].includes(file['type'])
+			) {
+				let reader = new FileReader();
+				reader.onload = async (event) => {
+					let imageUrl = event.target.result;
+
+					if (
+						($settings?.imageCompression ?? false) ||
+						($config?.file?.image_compression?.width ?? null) ||
+						($config?.file?.image_compression?.height ?? null)
+					) {
+						let width = null;
+						let height = null;
+
+						if ($settings?.imageCompression ?? false) {
+							width = $settings?.imageCompressionSize?.width ?? null;
+							height = $settings?.imageCompressionSize?.height ?? null;
+						}
+
+						if (
+							($config?.file?.image_compression?.width ?? null) ||
+							($config?.file?.image_compression?.height ?? null)
+						) {
+							if (width > ($config?.file?.image_compression?.width ?? null)) {
+								width = $config?.file?.image_compression?.width ?? null;
+							}
+							if (height > ($config?.file?.image_compression?.height ?? null)) {
+								height = $config?.file?.image_compression?.height ?? null;
+							}
+						}
+
+						if (width || height) {
+							imageUrl = await compressImage(imageUrl, width, height);
+						}
+					}
+
+					editedFiles = [
+						...editedFiles,
+						{
+							type: 'image',
+							url: `${imageUrl}`
+						}
+					];
+				};
+				reader.readAsDataURL(file);
+			} else {
+				uploadFileHandler(file);
+			}
+		});
+	};
+
+	const screenCaptureHandler = async () => {
+		try {
+			const mediaStream = await navigator.mediaDevices.getDisplayMedia({
+				video: { cursor: 'never' },
+				audio: false
+			});
+			const video = document.createElement('video');
+			video.srcObject = mediaStream;
+			await video.play();
+			const canvas = document.createElement('canvas');
+			canvas.width = video.videoWidth;
+			canvas.height = video.videoHeight;
+			const context = canvas.getContext('2d');
+			context.drawImage(video, 0, 0, canvas.width, canvas.height);
+			mediaStream.getTracks().forEach((track) => track.stop());
+			window.focus();
+			const imageUrl = canvas.toDataURL('image/png');
+			editedFiles = [...editedFiles, { type: 'image', url: imageUrl }];
+			video.srcObject = null;
+		} catch (error) {
+			console.error('Error capturing screen:', error);
+		}
+	};
+
+	const handleFileChange = (event) => {
+		const inputFiles = Array.from(event.target?.files);
+		if (inputFiles && inputFiles.length > 0) {
+			inputFilesHandler(inputFiles);
+		}
+	};
+
 	onMount(() => {
 		// console.log('UserMessage mounted');
 	});
@@ -105,6 +287,16 @@
 	on:confirm={() => {
 		deleteMessageHandler();
 	}}
+/>
+
+<!-- Hidden file input for edit mode -->
+<input
+	bind:this={filesInputElement}
+	type="file"
+	multiple
+	accept="*/*"
+	on:change={handleFileChange}
+	style="display: none;"
 />
 
 <div
@@ -186,6 +378,52 @@
 			{#if message.content !== ''}
 				{#if edit === true}
 					<div class=" w-full bg-gray-50 dark:bg-gray-800 rounded-3xl px-5 py-3 mb-2">
+						<!-- File Upload Section -->
+						<div class="flex items-center flex-wrap mb-2">
+							<span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+								{$i18n.t('Files')} ({(editedFiles ?? []).length})
+							</span>
+							<InputMenu
+								bind:selectedToolIds
+								selectedModels={[]}
+								fileUploadCapableModels={[]}
+								{screenCaptureHandler}
+								{inputFilesHandler}
+								uploadFilesHandler={() => {
+									filesInputElement.click();
+								}}
+								uploadGoogleDriveHandler={async () => {
+									// Could be implemented later
+								}}
+								uploadOneDriveHandler={async () => {
+									// Could be implemented later
+								}}
+								onClose={async () => {
+									await tick();
+									messageEditTextAreaElement?.focus();
+								}}
+							>
+								<Tooltip content={$i18n.t('Add Files')}>
+									<button
+										class="bg-transparent hover:bg-gray-100 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5 outline-hidden focus:outline-hidden"
+										type="button"
+										aria-label="Add Files"
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											viewBox="0 0 20 20"
+											fill="currentColor"
+											class="size-5"
+										>
+											<path
+												d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"
+											/>
+										</svg>
+									</button>
+								</Tooltip>
+							</InputMenu>
+						</div>
+
 						{#if (editedFiles ?? []).length > 0}
 							<div class="flex items-center flex-wrap gap-2 -mx-2 mb-1">
 								{#each editedFiles as file, fileIdx}
