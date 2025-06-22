@@ -2,6 +2,7 @@
 	import { createEventDispatcher, tick } from 'svelte';
 	import { Switch } from 'bits-ui';
 	export let state = true;
+	export let id = '';
 
 	const dispatch = createEventDispatcher();
 
@@ -10,6 +11,7 @@
 
 <Switch.Root
 	bind:checked={state}
+	{id}
 	class="flex h-5 min-h-5 w-9 shrink-0 cursor-pointer items-center rounded-full px-[3px] mx-[1px] transition  {state
 		? ' bg-emerald-600'
 		: 'bg-gray-200 dark:bg-transparent'} outline outline-1 outline-gray-100 dark:outline-gray-800"
