@@ -202,7 +202,7 @@
 		for (const item of items) {
 			console.log(item);
 			if (item.chat) {
-				await importChat(localStorage.token, item.chat, item?.meta ?? {}, pinned, folderId);
+				await importChat(localStorage.token, item.chat, item?.meta ?? {}, pinned, folderId, item.created_at, item.updated_at);
 			}
 		}
 
