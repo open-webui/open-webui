@@ -81,7 +81,10 @@ from open_webui.utils.filter import (
     get_sorted_filter_ids,
     process_filter_functions,
 )
-from open_webui.utils.code_interpreter import execute_code_jupyter, generate_dynamic_code_interpreter_prompt
+from open_webui.utils.code_interpreter import (
+    execute_code_jupyter,
+    generate_dynamic_code_interpreter_prompt,
+)
 
 from open_webui.tasks import create_task
 
@@ -846,17 +849,17 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 if request.app.state.config.CODE_INTERPRETER_PROMPT_TEMPLATE != ""
                 else DEFAULT_CODE_INTERPRETER_PROMPT
             )
-            
+
             # Get attached files from metadata
             attached_files = metadata.get("files", [])
-            
+
             # Generate enhanced prompt with file information
             enhanced_prompt = generate_dynamic_code_interpreter_prompt(
                 base_prompt=base_prompt,
                 attached_files=attached_files,
-                chat_id=metadata.get("chat_id", "")
+                chat_id=metadata.get("chat_id", ""),
             )
-            
+
             form_data["messages"] = add_or_update_user_message(
                 enhanced_prompt,
                 form_data["messages"],
@@ -2278,7 +2281,7 @@ async def process_chat_response(
                                         ),
                                         request.app.state.config.CODE_INTERPRETER_JUPYTER_TIMEOUT,
                                         chat_id=metadata.get("chat_id", ""),
-                                        data_dir="data"
+                                        data_dir="data",
                                     )
                                 else:
                                     output = {
