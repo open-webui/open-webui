@@ -305,7 +305,7 @@
 			<tbody class="">
 				{#each paginatedFeedbacks as feedback (feedback.id)}
 					<tr
-						class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+						class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-850/50 transition"
 						on:click={() => openFeedbackModal(feedback)}
 					>
 						<td class=" py-0.5 text-right font-semibold">
