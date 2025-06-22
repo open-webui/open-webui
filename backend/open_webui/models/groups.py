@@ -207,9 +207,39 @@ class GroupTable:
             except Exception:
                 return False
 
-    def sync_user_groups_by_group_names(
+    def create_groups_by_group_names(
         self, user_id: str, group_names: list[str]
-    ) -> bool:
+    ) -> list[GroupModel]:
+
+        # check for existing groups
+        existing_groups = self.get_groups()
+        existing_group_names = {group.name for group in existing_groups}
+
+        new_groups = []
+
+        with get_db() as db:
+            for group_name in group_names:
+                if group_name not in existing_group_names:
+                    new_group = GroupModel(
+                        id=str(uuid.uuid4()),
+                        user_id=user_id,
+                        name=group_name,
+                        description="",
+                        created_at=int(time.time()),
+                        updated_at=int(time.time()),
+                    )
+                    try:
+                        result = Group(**new_group.model_dump())
+                        db.add(result)
+                        db.commit()
+                        db.refresh(result)
+                        new_groups.append(GroupModel.model_validate(result))
+                    except Exception as e:
+                        log.exception(e)
+                        continue
+            return new_groups
+
+    def sync_groups_by_group_names(self, user_id: str, group_names: list[str]) -> bool:
         with get_db() as db:
             try:
                 groups = db.query(Group).filter(Group.name.in_(group_names)).all()

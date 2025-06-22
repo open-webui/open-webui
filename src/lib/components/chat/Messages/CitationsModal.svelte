@@ -109,7 +109,7 @@
 									>
 										{decodeString(document?.metadata?.name ?? document.source.name)}
 									</a>
-									{#if document?.metadata?.page}
+									{#if Number.isInteger(document?.metadata?.page)}
 										<span class="text-xs text-gray-500 dark:text-gray-400">
 											({$i18n.t('page')}
 											{document.metadata.page + 1})
