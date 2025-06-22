@@ -303,8 +303,14 @@ async def update_image_config(
 ):
     set_image_model(request, form_data.MODEL)
 
+    if (form_data.IMAGE_SIZE == "auto" and form_data.MODEL != 'gpt-image-1'):
+        raise HTTPException(
+            status_code=400,
+            detail=ERROR_MESSAGES.INCORRECT_FORMAT("  (auto is only allowed with gpt-image-1).")
+        )
+
     pattern = r"^\d+x\d+$"
-    if re.match(pattern, form_data.IMAGE_SIZE):
+    if form_data.IMAGE_SIZE == "auto" or re.match(pattern, form_data.IMAGE_SIZE):
         request.app.state.config.IMAGE_SIZE = form_data.IMAGE_SIZE
     else:
         raise HTTPException(
@@ -472,7 +478,14 @@ async def image_generations(
     form_data: GenerateImageForm,
     user=Depends(get_verified_user),
 ):
-    width, height = tuple(map(int, request.app.state.config.IMAGE_SIZE.split("x")))
+    # if IMAGE_SIZE = 'auto', default WidthxHeight to the 512x512 default
+    # This is only relevant when the user has set IMAGE_SIZE to 'auto' with an
+    # image model other than gpt-image-1, which is warned about on settings save
+    width, height = (
+        tuple(map(int, request.app.state.config.IMAGE_SIZE.split("x")))
+        if 'x' in request.app.state.config.IMAGE_SIZE
+        else (512, 512)
+    )
 
     r = None
     try:
