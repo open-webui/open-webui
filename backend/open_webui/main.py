@@ -1645,6 +1645,13 @@ async def get_gift_request_file(chat_id: str):
         raise HTTPException(status_code=404, detail="File not found")
     return FileResponse(file_path)
 
+@app.post("/api/log")
+async def log_message(form_data: dict):
+    message = form_data.get("log_message")
+    if not message:
+        raise HTTPException(status_code=400, detail="Missing log_message")
+    log.info(message)
+    return {"status": "logged"}
 
 def swagger_ui_html(*args, **kwargs):
     return get_swagger_ui_html(

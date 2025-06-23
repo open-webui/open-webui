@@ -88,6 +88,15 @@
 
     buldProductListFromGiftRequestFile(chat_id, gift_idea_id);
 
+    function handleExperienceBuyNowClick(url: string, chat_id: string) {
+        console.log('Buy Now clicked', url, chat_id);
+        fetch('/api/log', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ log_message: `Buy Now clicked: ${url}, chat_id: ${chat_id}` })
+        });
+        window.open(url, '_blank');
+    }
 </script>
 
 {#if showProductDetailsModal}
@@ -145,11 +154,11 @@
                 <!-- Buy now button -->
                 <div class="grid-item-footer w-full flex justify-center py-1">
                     {#if product.product_info}
-                        <button class="pill-button " on:click={() => window.open(product.product_info.url, '_blank')}>
+                        <button class="pill-button " on:click={() => handleExperienceBuyNowClick(product.product_info.url, chat_id)}>
                             {'Buy Now'}
                         </button>
                     {:else if product.experience_info}
-                        <button class="pill-button " on:click={() => window.open(product.experience_info.url, '_blank')}>
+                        <button class="pill-button " on:click={() => handleExperienceBuyNowClick(product.experience_info.url, chat_id)}>
                             {'Book Now'}
                         </button>
                     {/if}
