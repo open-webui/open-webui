@@ -12,7 +12,7 @@ dependencies = [
     "python-multipart==0.0.18",
 
     "Flask==3.1.1",
-    "Flask-Cors==6.0.0",
+    "flask-cors>=6.0.0",
 
     "python-socketio==5.11.3",
     "python-jose>=3.4.0",
