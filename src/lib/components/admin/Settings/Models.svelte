@@ -218,7 +218,7 @@
 										: 'opacity-50 dark:opacity-50'} "
 								>
 									<img
-										src={model?.meta?.profile_image_url ?? '/static/favicon.png'}
+										src={model?.meta?.profile_image_url ?? '/favicon-icon.png'}
 										alt="modelfile profile"
 										class=" rounded-full w-full h-auto object-cover"
 									/>

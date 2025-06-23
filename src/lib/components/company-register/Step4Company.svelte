@@ -189,7 +189,7 @@
             </button>
         </div>
     </div>
-    <div class="text-xs dark:text-customGray-100/50 mb-2.5 mt-5">{$i18n.t('We only support PNGs, JPEGs and GIFs under 10MB')}</div>
+    <div class="text-xs text-lightGray-100/50 dark:text-customGray-100/50 mb-2.5 mt-5">{$i18n.t('We only support PNGs, JPEGs and GIFs under 10MB')}</div>
 
 	<div class="flex-1 mb-2.5">
 		<div class="relative w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md">
