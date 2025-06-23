@@ -42,7 +42,7 @@
 	});
 </script>
 
-<div class="flex flex-col h-full justify-between space-y-3 text-sm mb-6">
+<div id="tab-about" class="flex flex-col h-full justify-between space-y-3 text-sm mb-6">
 	<div class=" space-y-3 overflow-y-scroll max-h-[28rem] lg:max-h-full">
 		<div>
 			<div class=" mb-2.5 text-sm font-medium flex space-x-2 items-center">

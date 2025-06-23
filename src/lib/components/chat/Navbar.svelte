@@ -47,6 +47,15 @@
 
 <ShareChatModal bind:show={showShareChatModal} chatId={$chatId} />
 
+<button
+	id="new-chat-button"
+	class="hidden"
+	on:click={() => {
+		initNewChat();
+	}}
+	aria-label="New Chat"
+/>
+
 <nav class="sticky top-0 z-30 w-full py-1 -mb-8 flex flex-col items-center drag-region">
 	<div class="flex items-center w-full pl-1.5 pr-1">
 		<div
@@ -72,6 +81,24 @@
 							<MenuLines />
 						</div>
 					</button>
+
+					{#if !$mobile}
+						<Tooltip content={$i18n.t('New Chat')}>
+							<button
+								class=" flex {$showSidebar
+									? 'md:hidden'
+									: ''} cursor-pointer px-2 py-2 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+								on:click={() => {
+									initNewChat();
+								}}
+								aria-label="New Chat"
+							>
+								<div class=" m-auto self-center">
+									<PencilSquare className=" size-5" strokeWidth="2" />
+								</div>
+							</button>
+						</Tooltip>
+					{/if}
 				</div>
 
 				<div
@@ -135,23 +162,6 @@
 						</button>
 					</Tooltip>
 
-					<Tooltip content={$i18n.t('New Chat')}>
-						<button
-							id="new-chat-button"
-							class=" flex {$showSidebar
-								? 'md:hidden'
-								: ''} cursor-pointer px-2 py-2 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-							on:click={() => {
-								initNewChat();
-							}}
-							aria-label="New Chat"
-						>
-							<div class=" m-auto self-center">
-								<PencilSquare className=" size-5" strokeWidth="2" />
-							</div>
-						</button>
-					</Tooltip>
-
 					{#if $user !== undefined && $user !== null}
 						<UserMenu
 							className="max-w-[240px]"
@@ -182,6 +192,12 @@
 			</div>
 		</div>
 	</div>
+
+	{#if $temporaryChatEnabled && $chatId === 'local'}
+		<div class=" w-full z-30 text-center">
+			<div class="text-xs text-gray-500">{$i18n.t('Temporary Chat')}</div>
+		</div>
+	{/if}
 
 	{#if !history.currentId && !$chatId && ($banners.length > 0 || ($config?.license_metadata?.type ?? null) === 'trial' || (($config?.license_metadata?.seats ?? null) !== null && $config?.user_count > $config?.license_metadata?.seats))}
 		<div class=" w-full z-30 mt-5">
