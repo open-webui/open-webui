@@ -302,8 +302,8 @@
 											id="password"
 											class="my-0.5 w-full text-sm outline-hidden bg-transparent"
 											placeholder={$i18n.t('Enter Your Password')}
-											autocomplete="current-password"
-											name="current-password"
+											autocomplete={mode === 'signup' ? 'new-password' : 'current-password'}
+											name="password"
 											required
 										/>
 									</div>
