@@ -44,9 +44,12 @@
 
 	const tagColors = ['#115A1A', '#32472D', '#476956', '#5D4D0D', '#633B14', '#556111', '#112550', '#12595A', '#114558', '#340E56', '#4D123D', '#591626'];
 	const tagColorsLight = ['#D6F1D9', '#DCFFCA', '#D1FCE4', '#FDF2C8', '#FDE3C8', '#F5FDC8', '#E4ECFD', '#CFF6F2', '#CFEBF6', '#E4CFF6', '#F6CFEB', '#F6CFD8'];
+	let showInput = false;
+	let query = '';
 	$: {
 		if (prompts) {
 			filteredItems = prompts?.filter((p) => {
+				const nameMatch = query === '' || p.title?.toLowerCase()?.includes(query?.toLowerCase()) || p.description?.toLowerCase()?.includes(query?.toLowerCase());
 				const isPublic = p.access_control === null && !p.prebuilt;
 				const isPrivate = p?.user_id === $user?.id;
 				const isPrebuilt = p.prebuilt;
@@ -57,7 +60,7 @@
 					(accessFilter === 'private' && isPrivate) ||
 					(accessFilter === 'pre-built' && isPrebuilt);
 
-				return accessMatch;
+				return accessMatch && nameMatch;
 			});
 		}
 	}
@@ -198,7 +201,35 @@
 				{/if}
 			</div>
 		</div>
-		<p class="text-lightGray-100 dark:text-white text-base mb-3">{$i18n.t('Prompts')}</p>
+		<div class="flex justify-between items-center mb-3">
+			<p class="text-lightGray-100 dark:text-white text-base">{$i18n.t('Prompts')}</p>
+			<div
+				class="flex items-center p-2.5 rounded-lg mr-1 border border-lightGray-400 dark:border-customGray-700 hover:bg-lightGray-700 dark:hover:bg-customGray-950 dark:hover:text-white transition"
+			>
+				<button
+					class=""
+					on:click={() => {
+						showInput = !showInput;
+						if (!showInput) query = '';
+					}}
+					aria-label="Toggle Search"
+				>
+					<Search className="size-3.5" />
+				</button>
+				<!-- </div> -->
+				{#if showInput}
+					<input
+						class="w-[5rem] md:w-full text-xs outline-none text-lightGray-100 dark:text-customGray-100 bg-transparent leading-none pl-2"
+						bind:value={query}
+						placeholder={$i18n.t('Search Prompts')}
+						autofocus
+						on:blur={() => {
+							if (query.trim() === '') showInput = false;
+						}}
+					/>
+				{/if}
+			</div>
+		</div>
 		<div class="flex justify-between items-center mb-4">
 			<div class="flex bg-lightGray-700 dark:bg-customGray-800 rounded-md flex-shrink-0">
 				<button
@@ -222,12 +253,6 @@
 					>{$i18n.t('Pre-built')}</button
 				>
 			</div>
-			<button
-				class="flex justify-center items-center w-[42px] h-[32px] rounded-lg mr-1 border border-lightGray-400 dark:border-customGray-700 hover:bg-lightGray-700 dark:hover:bg-customGray-950 dark:hover:text-white transition"
-				type="button"
-			>
-				<Search className="size-3.5" />
-			</button>
 		</div>
 		<div class="prompt-scrollbar overflow-y-auto pr-6" style="max-height: calc(100dvh - 16rem);">
 			<div class="container">
@@ -256,10 +281,10 @@
 									<div class="shrink-0 mr-[6px]"><PrivateIcon className="size-3" /></div>
 								{/if}
 								<div
-									class="line-clamp-1 font-medium text-sm text-lightGray-100 dark:text-customGray-100 cursor-pointer"
+									class="font-medium text-sm text-lightGray-100 dark:text-customGray-100 cursor-pointer"
 									on:click={() => onPromptClick(prompt)}
 								>
-									{prompt?.title} • {prompt?.description}
+									<Tooltip className="w-full line-clamp-1" content={prompt?.description}>{prompt?.title} • {prompt?.description}</Tooltip>
 								</div>
 							</div>
 						{/each}

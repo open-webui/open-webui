@@ -8,7 +8,18 @@
 	import { getBackendConfig } from '$lib/apis';
 	import { completeInvite, getCompanyDetails, getCompanyConfig } from '$lib/apis/auths';
 
-	import { WEBUI_NAME, config, user, socket, toastVisible, toastMessage, toastType, showToast, company, companyConfig } from '$lib/stores';
+	import {
+		WEBUI_NAME,
+		config,
+		user,
+		socket,
+		toastVisible,
+		toastMessage,
+		toastType,
+		showToast,
+		company,
+		companyConfig
+	} from '$lib/stores';
 
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import UserIcon from '$lib/components/icons/UserIcon.svelte';
@@ -39,11 +50,11 @@
 
 	onMount(() => {
 		if ($page.url.searchParams.get('inviteToken')) {
-			inviteToken = $page.url.searchParams.get('inviteToken')
-		}else{
-			goto('/company-register')
+			inviteToken = $page.url.searchParams.get('inviteToken');
+		} else {
+			goto('/company-register');
 		}
-	})
+	});
 
 	const setSessionUser = async (sessionUser) => {
 		if (sessionUser) {
@@ -62,25 +73,36 @@
 
 	const completeInviteHandler = async () => {
 		if (password !== confirmPassword) {
-			showToast('error', `The passwords you entered don't quite match. Please double-check and try again.`);
+			showToast(
+				'error',
+				`The passwords you entered don't quite match. Please double-check and try again.`
+			);
 			return;
 		}
-		const strongPasswordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
+		const strongPasswordRegex =
+			/^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
 
 		if (!strongPasswordRegex.test(password)) {
-			showToast('error', "Password must be 8+ characters, with a number, capital letter, and symbol.");
+			showToast(
+				'error',
+				'Password must be 8+ characters, with a number, capital letter, and symbol.'
+			);
 			return;
 		}
 		loading = true;
-		const sessionUser = await completeInvite(firstName, lastName, password, inviteToken, profileImageUrl ? profileImageUrl : generateInitialsImage(`${firstName} ${lastName}`)).catch(
-			(error) => {
-				toast.error(`${error}`);
-				loading = false;
-				return null;
-			}
-		);
+		const sessionUser = await completeInvite(
+			firstName,
+			lastName,
+			password,
+			inviteToken,
+			profileImageUrl ? profileImageUrl : generateInitialsImage(`${firstName} ${lastName}`)
+		).catch((error) => {
+			toast.error(`${error}`);
+			loading = false;
+			return null;
+		});
 		await setSessionUser(sessionUser);
-		
+
 		const [companyInfo, companyConfigInfo] = await Promise.all([
 			getCompanyDetails(sessionUser.token).catch((error) => {
 				toast.error(`${error}`);
@@ -101,7 +123,7 @@
 			companyConfig.set(companyConfigInfo);
 		}
 		loading = false;
-	}
+	};
 
 	onMount(async () => {});
 	let logoSrc = '/logo_light.png';
@@ -214,8 +236,10 @@
 							class="rounded-lg size-16 object-cover shrink-0"
 						/>
 					{:else}
-						<div class="rounded-lg size-16 shrink-0 bg-lightGray-400 text-white dark:bg-customGray-900 dark:text-customGray-800">
-							<UserIcon className="size-16"/>
+						<div
+							class="rounded-lg size-16 shrink-0 bg-lightGray-400 text-white dark:bg-customGray-900 dark:text-customGray-800"
+						>
+							<UserIcon className="size-16" />
 						</div>
 					{/if}
 
@@ -227,16 +251,24 @@
 								<Plus className="size-3" />
 							</div>
 						</div>
-						<div class="text-xs -top-1 left-5 text-[#8A8B8D] font-medium dark:text-customGray-200 absolute whitespace-nowrap">{$i18n.t('Add a photo')}</div>
+						<div
+							class="text-xs -top-1 left-5 text-[#8A8B8D] font-medium dark:text-customGray-200 absolute whitespace-nowrap"
+						>
+							{$i18n.t('Add a photo')}
+						</div>
 					</div>
 				</button>
 			</div>
 		</div>
-		<div class="text-xs text-[#8A8B8D] font-medium dark:text-customGray-100/50 mb-2.5 mt-5">{$i18n.t('We only support PNGs, JPEGs and GIFs under 10MB')}</div>
+		<div class="text-xs text-[#8A8B8D] font-medium dark:text-customGray-100/50 mb-2.5 mt-5">
+			{$i18n.t('We only support PNGs, JPEGs and GIFs under 10MB')}
+		</div>
 		<div class="flex-1 mb-2.5">
 			<div class="relative w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md">
 				{#if firstName}
-					<div class="text-xs absolute left-2.5 top-1 text-lightGray-100/50 dark:text-customGray-100/50">
+					<div
+						class="text-xs absolute left-2.5 top-1 text-lightGray-100/50 dark:text-customGray-100/50"
+					>
 						{$i18n.t('First Name')}
 					</div>
 				{/if}
@@ -251,7 +283,9 @@
 		<div class="flex-1 mb-2.5">
 			<div class="relative w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md">
 				{#if lastName}
-					<div class="text-xs absolute left-2.5 top-1 text-lightGray-100/50 dark:text-customGray-100/50">
+					<div
+						class="text-xs absolute left-2.5 top-1 text-lightGray-100/50 dark:text-customGray-100/50"
+					>
 						{$i18n.t('Last Name')}
 					</div>
 				{/if}
@@ -266,7 +300,9 @@
 		<div class="relative flex flex-col w-full mb-2.5">
 			<div class="relative w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md">
 				{#if password}
-					<div class="text-xs absolute left-2.5 top-1 text-lightGray-100/50 dark:text-customGray-100/50">
+					<div
+						class="text-xs absolute left-2.5 top-1 text-lightGray-100/50 dark:text-customGray-100/50"
+					>
 						{$i18n.t('Create Password')}
 					</div>
 				{/if}
@@ -295,22 +331,31 @@
 					class="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-500 dark:text-white"
 					on:click={() => (showPassword = !showPassword)}
 					tabindex="-1"
-				>	
+				>
 					{#if showPassword}
-						<HidePassIcon/>
+						<HidePassIcon />
 					{:else}
-						<ShowPassIcon/>
+						<ShowPassIcon />
 					{/if}
 				</button>
 			</div>
-			<Tooltip className="absolute -right-5 md:-right-6 top-3 cursor-pointer" content={$i18n.t('Password must be 8+ characters, with a number, capital letter, and symbol.')}>
-				<div class="flex justify-center items-center w-[18px] h-[18px] rounded-full bg-customBlue-600 text-white dark:text-customGray-100 dark:bg-customGray-700">
-					<InfoIcon className="size-6"/>
+			<Tooltip
+				className="absolute -right-5 md:-right-6 top-3 cursor-pointer"
+				content={$i18n.t(
+					'Password must be 8+ characters, with a number, capital letter, and symbol.'
+				)}
+			>
+				<div
+					class="flex justify-center items-center w-[18px] h-[18px] rounded-full bg-customBlue-600 text-white dark:text-customGray-100 dark:bg-customGray-700"
+				>
+					<InfoIcon className="size-6" />
 				</div>
-			</Tooltip> 
+			</Tooltip>
 		</div>
 		<div class="flex flex-col w-full mb-2.5">
-			<div class="relative w-full text-lightGray-100/50 bg-lightGray-300 dark:bg-customGray-900 rounded-md">
+			<div
+				class="relative w-full text-lightGray-100/50 bg-lightGray-300 dark:bg-customGray-900 rounded-md"
+			>
 				{#if confirmPassword}
 					<div class="text-xs absolute left-2.5 top-1 dark:text-customGray-100/50">
 						{$i18n.t('Confirm password')}
@@ -342,11 +387,11 @@
 					on:click={() => (showConfirmPassword = !showConfirmPassword)}
 					tabindex="-1"
 				>
-				{#if showConfirmPassword}
-					<HidePassIcon/>
-				{:else}
-					<ShowPassIcon/>
-				{/if}
+					{#if showConfirmPassword}
+						<HidePassIcon />
+					{:else}
+						<ShowPassIcon />
+					{/if}
 				</button>
 			</div>
 		</div>
@@ -360,10 +405,18 @@
 			{$i18n.t('Register')}
 			{#if loading}
 				<div class="ml-1.5 self-center">
-					<LoaderIcon/>
+					<LoaderIcon />
 				</div>
 			{/if}
 		</button>
 	</form>
-    <div class="self-center text-xs text-customGray-300 dark:text-customGray-100 pb-5 text-center">By using this service, you agree to our <a href="/">Terms</a> and <a href="/">Conditions</a>.</div>
+	<div class="self-center text-xs text-customGray-300 dark:text-customGray-100 pb-5 text-center">
+		{$i18n.t('By using this service, you agree to our')}
+		<a
+			href="https://drive.google.com/file/d/1--HSBhHR8JSkz6q-qDgjJZWXvHWa6sh-/view?usp=sharing"
+			target="_blank"
+			rel="noopener noreferrer"
+			class="underline">{$i18n.t('Terms and Conditions')}</a
+		>.
+	</div>
 </div>
