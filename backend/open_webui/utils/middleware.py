@@ -804,7 +804,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         raise e
 
     try:
-
         filter_functions = [
             Functions.get_function_by_id(filter_id)
             for filter_id in get_sorted_filter_ids(
@@ -1741,7 +1740,7 @@ async def process_chat_response(
                         },
                     )
 
-                async def stream_body_handler(response):
+                async def stream_body_handler(response, form_data):
                     nonlocal content
                     nonlocal content_blocks
 
@@ -1770,7 +1769,7 @@ async def process_chat_response(
                                 filter_functions=filter_functions,
                                 filter_type="stream",
                                 form_data=data,
-                                extra_params=extra_params,
+                                extra_params={"__body__": form_data, **extra_params},
                             )
 
                             if data:
@@ -2032,7 +2031,7 @@ async def process_chat_response(
                     if response.background:
                         await response.background()
 
-                await stream_body_handler(response)
+                await stream_body_handler(response, form_data)
 
                 MAX_TOOL_CALL_RETRIES = 10
                 tool_call_retries = 0
@@ -2181,22 +2180,24 @@ async def process_chat_response(
                     )
 
                     try:
+                        new_form_data = {
+                            "model": model_id,
+                            "stream": True,
+                            "tools": form_data["tools"],
+                            "messages": [
+                                *form_data["messages"],
+                                *convert_content_blocks_to_messages(content_blocks),
+                            ],
+                        }
+
                         res = await generate_chat_completion(
                             request,
-                            {
-                                "model": model_id,
-                                "stream": True,
-                                "tools": form_data["tools"],
-                                "messages": [
-                                    *form_data["messages"],
-                                    *convert_content_blocks_to_messages(content_blocks),
-                                ],
-                            },
+                            new_form_data,
                             user,
                         )
 
                         if isinstance(res, StreamingResponse):
-                            await stream_body_handler(res)
+                            await stream_body_handler(res, new_form_data)
                         else:
                             break
                     except Exception as e:
