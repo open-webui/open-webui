@@ -552,7 +552,7 @@
 	"Example: sAMAccountName or uid or userPrincipalName": "Örnek: sAMAccountName or uid or userPrincipalName",
 	"Exceeded the number of seats in your license. Please contact support to increase the number of seats.": "",
 	"Exclude": "Hariç tut",
-	"Execute code for analysis": "",
+	"Execute code for analysis": "Kodu analiz etmek için çalıştır",
 	"Executing **{{NAME}}**...": "",
 	"Expand": "Genişlet",
 	"Experimental": "Deneysel",
