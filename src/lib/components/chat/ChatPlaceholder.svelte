@@ -46,7 +46,9 @@
 					>
 						<Tooltip
 							content={marked.parse(
-								sanitizeResponseContent(models[selectedModelIdx]?.info?.meta?.description ?? '').replaceAll('\n', '<br>')
+								sanitizeResponseContent(
+									models[selectedModelIdx]?.info?.meta?.description ?? ''
+								).replaceAll('\n', '<br>')
 							)}
 							placement="right"
 						>
@@ -68,7 +70,7 @@
 
 		{#if $temporaryChatEnabled}
 			<Tooltip
-				content={$i18n.t('This chat won’t appear in history and your messages will not be saved.')}
+				content={$i18n.t("This chat won't appear in history and your messages will not be saved.")}
 				className="w-full flex justify-start mb-0.5"
 				placement="top"
 			>
@@ -96,7 +98,9 @@
 							class="mt-0.5 text-base font-normal text-gray-500 dark:text-gray-400 line-clamp-3 markdown"
 						>
 							{@html marked.parse(
-								sanitizeResponseContent(models[selectedModelIdx]?.info?.meta?.description).replaceAll('\n', '<br>')
+								sanitizeResponseContent(
+									models[selectedModelIdx]?.info?.meta?.description
+								).replaceAll('\n', '<br>')
 							)}
 						</div>
 						{#if models[selectedModelIdx]?.info?.meta?.user}
