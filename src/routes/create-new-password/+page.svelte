@@ -8,7 +8,16 @@
 	import { getBackendConfig } from '$lib/apis';
 	import { completeInvite, confirmPasswordReset } from '$lib/apis/auths';
 
-	import { WEBUI_NAME, config, user, socket, toastVisible, toastMessage, toastType, showToast } from '$lib/stores';
+	import {
+		WEBUI_NAME,
+		config,
+		user,
+		socket,
+		toastVisible,
+		toastMessage,
+		toastType,
+		showToast
+	} from '$lib/stores';
 
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import UserIcon from '$lib/components/icons/UserIcon.svelte';
@@ -19,7 +28,7 @@
 
 	const i18n = getContext('i18n');
 
-    let password = '';
+	let password = '';
 	let showPassword = false;
 	let confirmPassword = '';
 	let showConfirmPassword = false;
@@ -39,13 +48,13 @@
 			inviteToken = $page.url.searchParams.get('inviteToken');
 			isInvite = true;
 		}
-		
+
 		// Check for password reset token
 		if ($page.url.searchParams.get('token')) {
 			resetToken = $page.url.searchParams.get('token');
 			isPasswordReset = true;
 		}
-		
+
 		// Validate token presence
 		if (!inviteToken && !resetToken) {
 			tokenValid = false;
@@ -55,29 +64,39 @@
 
 	const validatePassword = (password: string): boolean => {
 		// Same regex as used in backend
-		const strongPasswordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':\"\\|,.<>\/?]).{8,}$/;
+		const strongPasswordRegex =
+			/^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':\"\\|,.<>\/?]).{8,}$/;
 		return strongPasswordRegex.test(password);
 	};
 
 	const changePassword = async () => {
 		if (password !== confirmPassword) {
-			showToast('error', `The passwords you entered don't quite match. Please double-check and try again.`);
+			showToast(
+				'error',
+				`The passwords you entered don't quite match. Please double-check and try again.`
+			);
 			return;
 		}
-		
+
 		if (!validatePassword(password)) {
-			showToast('error', "Password must be 8+ characters, with a number, capital letter, and symbol.");
+			showToast(
+				'error',
+				'Password must be 8+ characters, with a number, capital letter, and symbol.'
+			);
 			return;
 		}
-		
+
 		loading = true;
-		
+
 		try {
 			if (isPasswordReset) {
 				// Handle password reset
 				await confirmPasswordReset(resetToken, password);
 				resetComplete = true;
-				showToast('success', 'Password has been reset successfully. You can now log in with your new password.');
+				showToast(
+					'success',
+					'Password has been reset successfully. You can now log in with your new password.'
+				);
 			} else if (isInvite) {
 				// Handle invite completion
 				// This is the existing functionality
@@ -85,9 +104,12 @@
 			}
 		} catch (error) {
 			console.error('Error processing request:', error);
-			showToast('error', isPasswordReset 
-				? 'Failed to reset password. The link may be invalid or expired.' 
-				: 'Failed to complete invitation. Please try again.');
+			showToast(
+				'error',
+				isPasswordReset
+					? 'Failed to reset password. The link may be invalid or expired.'
+					: 'Failed to complete invitation. Please try again.'
+			);
 		} finally {
 			loading = false;
 		}
@@ -97,7 +119,7 @@
 				goto('/login');
 			}, 3000);
 		}
-	}
+	};
 
 	let logoSrc = '/logo_light.png';
 
@@ -117,10 +139,12 @@
 <div
 	class="flex flex-col justify-between w-full h-screen max-h-[100dvh] px-4 bg-lightGray-300 text-white relative dark:bg-customGray-900"
 >
-    <div></div>
-	
+	<div></div>
+
 	{#if !tokenValid}
-		<div class="flex flex-col self-center bg-lightGray-800 dark:bg-customGray-800 rounded-2xl w-full md:w-[31rem] px-5 py-5 md:pt-7 md:px-24 md:pb-4">
+		<div
+			class="flex flex-col self-center bg-lightGray-800 dark:bg-customGray-800 rounded-2xl w-full md:w-[31rem] px-5 py-5 md:pt-7 md:px-24 md:pb-4"
+		>
 			<div class="self-center flex flex-col items-center mb-5">
 				<div>
 					<img crossorigin="anonymous" src={logoSrc} class="w-10 mb-5" alt="logo" />
@@ -138,12 +162,16 @@
 			</button>
 		</div>
 	{:else if resetComplete}
-		<div class="flex flex-col self-center bg-lightGray-800 dark:bg-customGray-800 rounded-2xl w-full md:w-[31rem] px-5 py-5 md:pt-7 md:px-24 md:pb-4">
+		<div
+			class="flex flex-col self-center bg-lightGray-800 dark:bg-customGray-800 rounded-2xl w-full md:w-[31rem] px-5 py-5 md:pt-7 md:px-24 md:pb-4"
+		>
 			<div class="self-center flex flex-col items-center mb-5">
 				<div>
 					<img crossorigin="anonymous" src={logoSrc} class="w-10 mb-5" alt="logo" />
 				</div>
-				<div class="mb-2.5 font-medium text-lightGray-100 dark:text-customGray-100">{$i18n.t('Password Reset Complete')}</div>
+				<div class="mb-2.5 font-medium text-lightGray-100 dark:text-customGray-100">
+					{$i18n.t('Password Reset Complete')}
+				</div>
 				<div class="font-medium text-center text-xs text-[#8A8B8D] dark:text-customGray-300">
 					{$i18n.t('Your password has been reset successfully.')}
 				</div>
@@ -171,13 +199,17 @@
 					{isPasswordReset ? $i18n.t('Reset Your Password') : $i18n.t('Create new password')}
 				</div>
 				<div class="text-center text-xs font-medium text-[#8A8B8D] dark:text-customGray-300">
-					{isPasswordReset ? $i18n.t('Please enter your new password') : $i18n.t('Please, create new password')}
+					{isPasswordReset
+						? $i18n.t('Please enter your new password')
+						: $i18n.t('Please, create new password')}
 				</div>
 			</div>
 			<div class="flex flex-col w-full mb-2.5">
 				<div class="relative w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md">
 					{#if password}
-						<div class="text-xs absolute left-2.5 top-1 text-lightGray-100/50 dark:text-customGray-100/50">
+						<div
+							class="text-xs absolute left-2.5 top-1 text-lightGray-100/50 dark:text-customGray-100/50"
+						>
 							{isPasswordReset ? $i18n.t('New Password') : $i18n.t('Create Password')}
 						</div>
 					{/if}
@@ -207,18 +239,20 @@
 						on:click={() => (showPassword = !showPassword)}
 						tabindex="-1"
 					>
-					{#if showPassword}
-						<HidePassIcon/>
-					{:else}
-						<ShowPassIcon/>
-					{/if}
+						{#if showPassword}
+							<HidePassIcon />
+						{:else}
+							<ShowPassIcon />
+						{/if}
 					</button>
 				</div>
 			</div>
 			<div class="flex flex-col w-full mb-2.5">
 				<div class="relative w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md">
 					{#if confirmPassword}
-						<div class="text-xs absolute left-2.5 top-1 text-lightGray-100/50 dark:text-customGray-100/50">
+						<div
+							class="text-xs absolute left-2.5 top-1 text-lightGray-100/50 dark:text-customGray-100/50"
+						>
 							{$i18n.t('Confirm password')}
 						</div>
 					{/if}
@@ -248,19 +282,21 @@
 						on:click={() => (showConfirmPassword = !showConfirmPassword)}
 						tabindex="-1"
 					>
-					{#if showConfirmPassword}
-						<HidePassIcon/>
-					{:else}
-						<ShowPassIcon/>
-					{/if}
+						{#if showConfirmPassword}
+							<HidePassIcon />
+						{:else}
+							<ShowPassIcon />
+						{/if}
 					</button>
 				</div>
 			</div>
-			
+
 			<div class="text-xs text-[#8A8B8D] dark:text-customGray-300 mb-4">
-				{$i18n.t('Password must be at least 8 characters with a number, capital letter, and symbol.')}
+				{$i18n.t(
+					'Password must be at least 8 characters with a number, capital letter, and symbol.'
+				)}
 			</div>
-			
+
 			<button
 				class=" text-xs w-full h-10 font-medium px-3 py-2 transition rounded-lg {loading
 					? ' cursor-not-allowed bg-lightGray-300 hover:bg-lightGray-700 hover:bg-gray-900 text-lightGray-100 border-lightGray-400 dark:bg-customGray-950 dark:hover:bg-customGray-950 dark:text-white border dark:border-customGray-700'
@@ -271,11 +307,19 @@
 				{isPasswordReset ? $i18n.t('Reset Password') : $i18n.t('Done')}
 				{#if loading}
 					<div class="ml-1.5 self-center">
-						<LoaderIcon/>
+						<LoaderIcon />
 					</div>
 				{/if}
 			</button>
 		</form>
 	{/if}
-    <div class="self-center text-xs text-customGray-300 dark:text-customGray-100 pb-5 text-center">By using this service, you agree to our <a href="/">Terms</a> and <a href="/">Conditions</a>.</div>
+	<div class="self-center text-xs text-customGray-300 dark:text-customGray-100 pb-5 text-center">
+		{$i18n.t('By using this service, you agree to our')}
+		<a
+			href="https://drive.google.com/file/d/1--HSBhHR8JSkz6q-qDgjJZWXvHWa6sh-/view?usp=sharing"
+			target="_blank"
+			rel="noopener noreferrer"
+			class="underline">{$i18n.t('Terms and Conditions')}</a
+		>.
+	</div>
 </div>
