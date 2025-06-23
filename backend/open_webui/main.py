@@ -310,6 +310,8 @@ from open_webui.utils.security_headers import SecurityHeadersMiddleware
 
 from open_webui.tasks import stop_task, list_tasks  # Import from tasks.py
 
+from open_webui.middleware import PreventCachingMiddleware, MatchType
+
 if SAFE_MODE:
     print("SAFE MODE ENABLED")
     Functions.deactivate_all_functions()
@@ -1209,3 +1211,12 @@ else:
     log.warning(
         f"Frontend build directory not found at '{FRONTEND_BUILD_DIR}'. Serving API only."
     )
+
+# Add cache headers to the application to prevent browsers
+# from caching the SPA's index file
+app.add_middleware(PreventCachingMiddleware, paths = [
+    ("/", MatchType.exact),
+    ("/explore", MatchType.exact),
+    ("/auth", MatchType.exact),
+    ("/c/", MatchType.prefix),
+])
