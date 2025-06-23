@@ -27,7 +27,7 @@
         <ErrorIcon />
       {/if}
   
-      <div class="text-sm dark:text-white text-center">
+      <div class="text-sm text-lightGray-100 dark:text-white text-center">
         {message}
       </div>
     </div>

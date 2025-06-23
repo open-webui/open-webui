@@ -603,7 +603,7 @@
 												?.profile_image_url ??
 												($i18n.language === 'dg-DG'
 													? `/doge.png`
-													: `${WEBUI_BASE_URL}/static/favicon.png`)}
+													: `${WEBUI_BASE_URL}/favicon-icon.png`)}
 										/>
 										<div class="translate-y-[0.5px]">
 											Talking to <span class=" font-medium">{atSelectedModel.name}</span>
@@ -1289,7 +1289,7 @@
 													</Tooltip>
 												{/if}
 
-												{#if ($_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter) && (customModel?.meta?.capabilities?.code_interpreter ?? true)}
+												<!-- {#if ($_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter) && (customModel?.meta?.capabilities?.code_interpreter ?? true)}
 													<Tooltip content={$i18n.t('Execute code for analysis')} placement="top">
 														<button
 															on:click|preventDefault={() => {
@@ -1311,7 +1311,7 @@
 															{/if}
 														</button>
 													</Tooltip>
-												{/if}
+												{/if} -->
 											{/if}
 										</div>
 									</div>
