@@ -7,6 +7,45 @@
 
 	export let valvesSpec = null;
 	export let valves = {};
+
+	function isHexColor(value) {
+		return typeof value === 'string' && /^#([0-9A-F]{3}){1,2}$/i.test(value);
+	}
+
+	function validateHexColor(value) {
+		let cleaned = value.replace(/[^0-9A-Fa-f]/gi, '');
+		cleaned = cleaned.slice(0, 6);
+		// If we have 3 or 6 valid hex chars, it's a valid color
+		if (cleaned.length === 3 || cleaned.length === 6) {
+			return '#' + cleaned.toUpperCase();
+		}
+		// For incomplete values, still prefix with # but don't validate fully
+		if (cleaned.length > 0) {
+			return '#' + cleaned.toUpperCase();
+		}
+		return '#000000';
+	}
+
+	// Function to expand shorthand hex colors (#RGB to #RRGGBB)
+	function expandHexColor(hex) {
+		if (hex && hex.length === 4 && hex.startsWith('#')) {
+			return '#' +
+				hex[1] + hex[1] +
+				hex[2] + hex[2] +
+				hex[3] + hex[3];
+		}
+		return hex;
+	}
+
+	// Function to ensure proper format for color picker
+	function getColorPickerValue(hexColor) {
+		// Color picker needs 6-digit hex
+		if (isHexColor(hexColor)) {
+			const expanded = expandHexColor(hexColor);
+			return expanded.toLowerCase(); // HTML color inputs expect lowercase
+		}
+		return '#000000';
+	}
 </script>
 
 {#if valvesSpec && Object.keys(valvesSpec?.properties ?? {}).length}
@@ -79,6 +118,46 @@
 										}}
 									/>
 								</div>
+							</div>
+						{:else if isHexColor(valvesSpec.properties[property]?.default)}
+							<div class="flex items-center space-x-2">
+								<div class="relative w-8 h-8">
+									<input
+										type="color"
+										class="w-8 h-8 rounded cursor-pointer border border-gray-200 dark:border-gray-700 {!isHexColor(valves[property]) ? 'opacity-70' : ''}"
+										value={getColorPickerValue(isHexColor(valves[property]) ? valves[property] : '#000000')}
+										on:input={(e) => {
+											// Convert the color value to uppercase immediately
+											valves[property] = e.target.value.toUpperCase();
+											dispatch('change');
+										}}
+									/>
+
+									{#if !isHexColor(valves[property])}
+										<div class="absolute top-0 right-0 w-3 h-3 bg-yellow-500 rounded-full flex items-center justify-center"
+											 title="Current value is not a valid hex color">
+											<span class="text-white text-[8px]">!</span>
+										</div>
+									{/if}
+								</div>
+
+								<input
+									type="text"
+									class="flex-1 rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100 dark:border-gray-850 {!isHexColor(valves[property]) ? 'border-yellow-500' : ''}"
+									placeholder="Enter hex color (e.g. #FF0000)"
+									value={valves[property]}
+									on:input={(e) => {
+										// Only update if value changed to avoid cursor jumping
+										const newValue = e.target.value.startsWith('#')
+											? e.target.value
+											: '#' + e.target.value.replace('#', '');
+										valves[property] = newValue;
+									}}
+									on:blur={() => {
+										valves[property] = validateHexColor(valves[property]);
+										dispatch('change');
+									}}
+								/>
 							</div>
 						{:else if (valvesSpec.properties[property]?.type ?? null) !== 'string'}
 							<input
