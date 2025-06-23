@@ -5,6 +5,7 @@ import { updateUserSettings } from '$lib/apis/users';
 
 export type IonosSettings = Settings & {
 	ionosProvidedFeedback?: boolean;
+	ionosAgreedToTerms?: boolean;
 };
 
 export const updateSettings = async (newSettings: Partial<IonosSettings>): Promise<void> => {
