@@ -24,7 +24,7 @@
 	"devDependencies": {
 		"@sveltejs/adapter-auto": "3.2.2",
 		"@sveltejs/adapter-static": "^3.0.2",
-		"@sveltejs/kit": "^2.5.20",
+		"@sveltejs/kit": "^2.21.1",
 		"@sveltejs/vite-plugin-svelte": "^3.1.1",
 		"@tailwindcss/container-queries": "^0.1.1",
 		"@tailwindcss/typography": "^0.5.13",
@@ -36,7 +36,7 @@
 		"eslint-config-prettier": "^9.1.0",
 		"eslint-plugin-cypress": "^3.4.0",
 		"eslint-plugin-svelte": "^2.43.0",
-		"i18next-parser": "^9.0.1",
+		"i18next-parser": "^9.0.2",
 		"postcss": "^8.4.31",
 		"prettier": "^3.3.3",
 		"prettier-plugin-svelte": "^3.2.6",
@@ -47,9 +47,8 @@
 		"tailwindcss": "^3.3.3",
 		"tslib": "^2.4.1",
 		"typescript": "^5.5.4",
-		"vite": "^5.4.14",
+		"vite": "^5.4.19",
 		"vitest": "^1.6.1"
-
 	},
 	"type": "module",
 	"dependencies": {
@@ -84,9 +83,9 @@
 		"file-saver": "^2.0.5",
 		"fuse.js": "^7.0.0",
 		"highlight.js": "^11.9.0",
-		"i18next": "^23.10.0",
-		"i18next-browser-languagedetector": "^7.2.0",
-		"i18next-resources-to-backend": "^1.2.0",
+		"i18next": "^23.15.0",
+		"i18next-browser-languagedetector": "^8.0.0",
+		"i18next-resources-to-backend": "^1.2.1",
 		"idb": "^7.1.1",
 		"js-sha256": "^0.10.1",
 		"katex": "^0.16.21",
@@ -115,5 +114,8 @@
 	"engines": {
 		"node": ">=18.13.0 <=22.x.x",
 		"npm": ">=6.0.0"
+	},
+	"overrides": {
+		"brace-expansion": "2.0.2"
 	}
 }

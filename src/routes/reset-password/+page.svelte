@@ -84,14 +84,11 @@
 	>
 		<div class="self-center flex flex-col items-center mb-5">
 			<div>
-				<img
-					crossorigin="anonymous"
-					src={logoSrc}
-					class=" w-10 mb-5"
-					alt="logo"
-				/>
+				<img crossorigin="anonymous" src={logoSrc} class=" w-10 mb-5" alt="logo" />
 			</div>
-			<div class="mb-2.5 font-medium text-lightGray-100 dark:text-customGray-100">{$i18n.t('Reset password')}</div>
+			<div class="mb-2.5 font-medium text-lightGray-100 dark:text-customGray-100">
+				{$i18n.t('Reset password')}
+			</div>
 			<div class="font-medium text-center text-xs text-[#8A8B8D] dark:text-customGray-300">
 				{$i18n.t('Enter your email to get a reset link')}
 			</div>
@@ -99,7 +96,9 @@
 		<div class="flex-1 mb-2.5">
 			<div class="relative w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md">
 				{#if email}
-					<div class="text-xs absolute left-2.5 top-1 text-lightGray-100/50 dark:text-customGray-100/50">
+					<div
+						class="text-xs absolute left-2.5 top-1 text-lightGray-100/50 dark:text-customGray-100/50"
+					>
 						{$i18n.t('Email address')}
 					</div>
 				{/if}
@@ -131,6 +130,12 @@
 	</form>
 
 	<div class="self-center text-xs text-customGray-300 dark:text-customGray-100 pb-5 text-center">
-		By using this service, you agree to our <a href="/">Terms</a> and <a href="/">Conditions</a>.
+		{$i18n.t('By using this service, you agree to our')}
+		<a
+			href="https://drive.google.com/file/d/1--HSBhHR8JSkz6q-qDgjJZWXvHWa6sh-/view?usp=sharing"
+			target="_blank"
+			rel="noopener noreferrer"
+			class="underline">{$i18n.t('Terms and Conditions')}</a
+		>.
 	</div>
 </div>
