@@ -262,12 +262,10 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 			});
 
 			try {
-				// Ensure localStorage state is loaded
-				piiSessionManager.initializeFromLocalStorage();
-				
-				// Load conversation state if we have a conversationId
+				// Ensure conversation state is loaded (Note: localStorage deprecated, using SQLite via Chat.svelte)
+				// State should already be loaded from chat data in Chat.svelte
 				if (options.conversationId) {
-					piiSessionManager.loadConversationState(options.conversationId);
+					console.log('PiiDetectionExtension: Using conversation state from SQLite:', options.conversationId);
 				}
 				
 				// Get known entities and modifiers from appropriate source
@@ -298,9 +296,9 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 					// Map PII entities to ProseMirror positions
 					const mappedEntities = mapPiiEntitiesToProseMirror(response.pii[0], state.positionMapping);
 					
-					// Store entities in session manager
+					// Store entities in session manager (will trigger SQLite save automatically)
 					if (options.conversationId) {
-						piiSessionManager.appendConversationEntities(options.conversationId, response.pii[0]);
+						piiSessionManager.setConversationState(options.conversationId, response.pii[0]);
 					} else {
 						piiSessionManager.appendGlobalEntities(response.pii[0]);
 					}
@@ -403,11 +401,10 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 								// Update the conversation ID
 								options.conversationId = meta.conversationId;
 								
-								// Load the conversation state
+								// Load the conversation state (Note: State should already be loaded from SQLite via Chat.svelte)
 								const piiSessionManager = PiiSessionManager.getInstance();
 								if (meta.conversationId) {
-									piiSessionManager.loadConversationState(meta.conversationId);
-									console.log(`PiiDetectionExtension: Conversation state loaded for ${meta.conversationId}`);
+									console.log(`PiiDetectionExtension: Using conversation state from SQLite for ${meta.conversationId}`);
 								}
 								
 								// Trigger detection with the new conversation context

@@ -224,19 +224,15 @@
 	};
 
 	onMount(async () => {
-		// Initialize PII session manager with localStorage
+		// Initialize PII session manager (SQLite-based)
 		if (enablePiiDetection && piiApiKey) {
 			piiSessionManager.setApiKey(piiApiKey);
 		}
 		
-		// Initialize from localStorage
-		if (enablePiiDetection) {
-			piiSessionManager.initializeFromLocalStorage();
-			
-			// If we have a conversation ID, load conversation-specific state
-			if (conversationId) {
-				piiSessionManager.loadConversationState(conversationId);
-			}
+		// Note: PII state is now loaded from SQLite via Chat.svelte
+		// No localStorage initialization needed - deprecated
+		if (enablePiiDetection && conversationId) {
+			console.log('RichTextInput: Using PII state from SQLite for conversation:', conversationId);
 		}
 
 		// Add PII highlighting styles

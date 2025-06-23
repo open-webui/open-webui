@@ -189,13 +189,15 @@ export class PiiSessionManager {
 	private sessionId: string | null = null;
 	private entities: ExtendedPiiEntity[] = [];
 	private apiKey: string | null = null;
-	// Global state for before conversation ID exists
+	// Global state for before conversation ID exists (memory only)
 	private globalModifiers: PiiModifier[] = [];
 	// Conversation-specific storage
 	private conversationStates: Map<string, ConversationPiiState> = new Map();
-	// Initialization guards
-	private localStorageInitialized = false;
-	private loadingConversations = new Set<string>(); // Track conversations currently being loaded
+	// Error recovery backup for failed saves
+	private errorBackup: Map<string, ConversationPiiState> = new Map();
+	private pendingSaves: Set<string> = new Set();
+	// Track conversations currently being loaded
+	private loadingConversations = new Set<string>();
 
 	static getInstance(): PiiSessionManager {
 		if (!PiiSessionManager.instance) {
@@ -227,8 +229,7 @@ export class PiiSessionManager {
 			...entity,
 			shouldMask: true // Default to masking enabled
 		}));
-		// Save to localStorage
-		this.saveGlobalEntitiesToLocalStorage();
+		// Note: Global entities are only kept in memory, not persisted
 	}
 
 	// Get entities for the current global session (backwards compatibility)
@@ -236,58 +237,92 @@ export class PiiSessionManager {
 		return this.entities;
 	}
 
-	// Conversation-specific methods
-	setConversationEntities(conversationId: string, entities: PiiEntity[], sessionId?: string) {
+	// NEW: Main method for setting conversation state (entities + modifiers)
+	setConversationState(
+		conversationId: string, 
+		entities: PiiEntity[], 
+		modifiers: PiiModifier[] = [],
+		sessionId?: string
+	): void {
 		const newExtendedEntities = entities.map((entity) => ({
 			...entity,
-			shouldMask: true // Default to masking enabled
+			shouldMask: true
 		}));
 
-		// Get existing entities for this conversation
+		// Get existing state to preserve shouldMask states
 		const existingState = this.conversationStates.get(conversationId);
 		const existingEntities = existingState?.entities || [];
-
-		// Merge new entities with existing ones, avoiding duplicates by label
+		
+		// Merge entities (preserve shouldMask)
 		const mergedEntities = [...existingEntities];
-
-		console.log(
-			`PiiSessionManager: Merging ${newExtendedEntities.length} new entities with ${existingEntities.length} existing entities for conversation: ${conversationId}`
-		);
-
 		newExtendedEntities.forEach((newEntity) => {
 			const existingIndex = mergedEntities.findIndex((e) => e.label === newEntity.label);
 			if (existingIndex >= 0) {
-				// Update existing entity (preserve shouldMask state)
-				console.log(`PiiSessionManager: Updating existing entity: ${newEntity.label}`);
 				mergedEntities[existingIndex] = {
 					...newEntity,
 					shouldMask: mergedEntities[existingIndex].shouldMask
 				};
 			} else {
-				// Add new entity
-				console.log(`PiiSessionManager: Adding new entity: ${newEntity.label}`);
 				mergedEntities.push(newEntity);
 			}
 		});
 
-		console.log(`PiiSessionManager: Final merged entities count: ${mergedEntities.length}`);
-
-		this.conversationStates.set(conversationId, {
+		const newState: ConversationPiiState = {
 			entities: mergedEntities,
-			modifiers: existingState?.modifiers || [],
+			modifiers: modifiers,
 			sessionId: sessionId || existingState?.sessionId,
 			apiKey: this.apiKey || existingState?.apiKey,
 			lastUpdated: Date.now()
-		});
+		};
 
-		// Also update global state for current conversation
+		// Update memory state
+		this.conversationStates.set(conversationId, newState);
 		this.entities = mergedEntities;
-		if (sessionId) {
-			this.sessionId = sessionId;
+
+		// Create backup for error recovery
+		this.errorBackup.set(conversationId, { ...newState });
+
+		// Trigger immediate SQLite save
+		this.triggerChatSave(conversationId);
+	}
+
+	// Legacy method for backwards compatibility
+	setConversationEntities(conversationId: string, entities: PiiEntity[], sessionId?: string) {
+		const existingState = this.conversationStates.get(conversationId);
+		this.setConversationState(conversationId, entities, existingState?.modifiers || [], sessionId);
+	}
+
+	// NEW: Trigger chat save method
+	private async triggerChatSave(conversationId: string): Promise<void> {
+		if (this.pendingSaves.has(conversationId)) {
+			return; // Already saving
 		}
+
+		this.pendingSaves.add(conversationId);
 		
-		// Save to localStorage
-		this.saveConversationToLocalStorage(conversationId);
+		try {
+			// Trigger the chat save handler 
+			if ((window as any).triggerPiiChatSave) {
+				await (window as any).triggerPiiChatSave(conversationId);
+			}
+			
+			// Success - remove backup
+			this.errorBackup.delete(conversationId);
+		} catch (error) {
+			console.error('PII chat save failed, keeping backup:', error);
+			// Keep backup for retry
+		} finally {
+			this.pendingSaves.delete(conversationId);
+		}
+	}
+
+	// NEW: Load from chat data (replaces localStorage loading)
+	loadFromChatData(conversationId: string, piiState: ConversationPiiState): void {
+		if (piiState) {
+			this.conversationStates.set(conversationId, piiState);
+			this.entities = piiState.entities;
+			console.log(`PiiSessionManager: Loaded from chat data - ${piiState.entities.length} entities, ${piiState.modifiers.length} modifiers`);
+		}
 	}
 
 	getConversationEntities(conversationId: string): ExtendedPiiEntity[] {
@@ -299,7 +334,7 @@ export class PiiSessionManager {
 		return this.conversationStates.get(conversationId) || null;
 	}
 
-	// Load conversation state from localStorage (chat data)
+	// Load conversation state (now called from loadFromChatData)
 	loadConversationState(conversationId: string, piiState?: ConversationPiiState) {
 		// Prevent loading the same conversation multiple times simultaneously
 		if (this.loadingConversations.has(conversationId)) {
@@ -316,22 +351,15 @@ export class PiiSessionManager {
 		this.loadingConversations.add(conversationId);
 		
 		try {
-			let stateToLoad = piiState;
-			
-			// If no piiState provided, try loading from localStorage
-			if (!stateToLoad) {
-				stateToLoad = this.loadConversationFromLocalStorage(conversationId) || undefined;
-			}
-			
-			if (stateToLoad) {
-				this.conversationStates.set(conversationId, stateToLoad);
+			if (piiState) {
+				this.conversationStates.set(conversationId, piiState);
 				// Set as current global state
-				this.entities = stateToLoad.entities;
-				this.sessionId = (stateToLoad.sessionId as string) || null;
-				this.apiKey = stateToLoad.apiKey || this.apiKey;
-				console.log(`PiiSessionManager: Loaded conversation ${conversationId} state - ${stateToLoad.entities.length} entities, ${stateToLoad.modifiers.length} modifiers`);
+				this.entities = piiState.entities;
+				this.sessionId = (piiState.sessionId as string) || null;
+				this.apiKey = piiState.apiKey || this.apiKey;
+				console.log(`PiiSessionManager: Loaded conversation ${conversationId} state - ${piiState.entities.length} entities, ${piiState.modifiers.length} modifiers`);
 			} else {
-				console.log(`PiiSessionManager: No state found for conversation ${conversationId}`);
+				console.log(`PiiSessionManager: No state provided for conversation ${conversationId}`);
 			}
 		} finally {
 			this.loadingConversations.delete(conversationId);
@@ -426,24 +454,27 @@ export class PiiSessionManager {
 	// Set conversation modifiers
 	setConversationModifiers(conversationId: string, modifiers: PiiModifier[]) {
 		const existingState = this.conversationStates.get(conversationId);
-		this.conversationStates.set(conversationId, {
+		const newState: ConversationPiiState = {
 			entities: existingState?.entities || [],
 			modifiers: modifiers,
 			sessionId: existingState?.sessionId,
 			apiKey: existingState?.apiKey || this.apiKey || undefined,
 			lastUpdated: Date.now()
-		});
+		};
+		
+		this.conversationStates.set(conversationId, newState);
 		console.log(`PiiSessionManager: Set ${modifiers.length} modifiers for conversation ${conversationId}`);
-		// Save to localStorage
-		this.saveConversationToLocalStorage(conversationId);
+		
+		// Create backup and trigger save
+		this.errorBackup.set(conversationId, { ...newState });
+		this.triggerChatSave(conversationId);
 	}
 
 	// Set global modifiers (before conversation ID exists)
 	setGlobalModifiers(modifiers: PiiModifier[]) {
 		this.globalModifiers = modifiers;
 		console.log(`PiiSessionManager: Set ${modifiers.length} global modifiers`);
-		// Save to localStorage
-		this.saveGlobalModifiersToLocalStorage();
+		// Note: Global modifiers are only kept in memory
 	}
 
 	// Transfer global state to conversation state when conversation ID becomes available
@@ -461,15 +492,9 @@ export class PiiSessionManager {
 
 		console.log(`PiiSessionManager: Transferred ${this.entities.length} entities and ${this.globalModifiers.length} modifiers to conversation ${conversationId}`);
 
-		// Save the conversation state to localStorage first
-		this.saveConversationToLocalStorage(conversationId);
-
-		// Clear global state since we now have a conversation ID
+		// Global state will now be replaced with conversation-specific state
 		this.globalModifiers = [];
 		// Keep entities as they might be needed for display
-
-		// Clear global localStorage keys after successful transfer
-		this.clearGlobalLocalStorage();
 		console.log(`PiiSessionManager: Cleared global localStorage keys after transfer to conversation ${conversationId}`);
 	}
 
@@ -481,12 +506,8 @@ export class PiiSessionManager {
 		
 		console.log(`PiiSessionManager: Loading conversation ${conversationId} from localStorage`);
 		
-		// Try to load from localStorage
-		const stateFromStorage = this.loadConversationFromLocalStorage(conversationId);
-		if (stateFromStorage) {
-			this.conversationStates.set(conversationId, stateFromStorage);
-			return true;
-		}
+		// Note: No localStorage loading - using SQLite only
+		// State should be loaded via loadFromChatData() method
 		
 		console.warn(`PiiSessionManager: No state found for conversation ${conversationId}`);
 		return false;
@@ -616,8 +637,7 @@ export class PiiSessionManager {
 		});
 
 		this.entities = mergedEntities;
-		// Save to localStorage
-		this.saveGlobalEntitiesToLocalStorage();
+		// Note: Global entities are only kept in memory
 	}
 
 	// Toggle entity masking for specific conversation
@@ -639,9 +659,8 @@ export class PiiSessionManager {
 					globalEntity.shouldMask = entity.shouldMask;
 				}
 				
-				// Save to localStorage
-				this.saveConversationToLocalStorage(conversationId);
-				this.saveGlobalEntitiesToLocalStorage();
+				// Trigger SQLite save
+				this.triggerChatSave(conversationId);
 			}
 		}
 	}
@@ -651,8 +670,7 @@ export class PiiSessionManager {
 		const entity = this.entities.find((e) => e.label === entityId);
 		if (entity && entity.occurrences[occurrenceIndex]) {
 			entity.shouldMask = !entity.shouldMask;
-			// Save to localStorage
-			this.saveGlobalEntitiesToLocalStorage();
+			// Note: Global entities are only kept in memory
 		}
 	}
 
@@ -676,263 +694,38 @@ export class PiiSessionManager {
 		this.conversationStates.clear();
 	}
 
-	// ==== LOCALSTORAGE PERSISTENCE METHODS ====
+	// ==== DEPRECATED LOCALSTORAGE METHODS (REMOVED - Using SQLite only) ====
 
 	/**
-	 * Save global entities to localStorage
-	 */
-	private saveGlobalEntitiesToLocalStorage(): void {
-		try {
-			localStorage.setItem('pii-known-entities', JSON.stringify(this.entities));
-			console.log(`PiiSessionManager: Saved ${this.entities.length} global entities to localStorage`);
-		} catch (error) {
-			console.error('PiiSessionManager: Failed to save global entities to localStorage:', error);
-		}
-	}
-
-	/**
-	 * Load global entities from localStorage
-	 */
-	private loadGlobalEntitiesFromLocalStorage(): void {
-		try {
-			const stored = localStorage.getItem('pii-known-entities');
-			if (stored) {
-				this.entities = JSON.parse(stored);
-				console.log(`PiiSessionManager: Loaded ${this.entities.length} global entities from localStorage`);
-			}
-		} catch (error) {
-			console.error('PiiSessionManager: Failed to load global entities from localStorage:', error);
-			this.entities = [];
-		}
-	}
-
-	/**
-	 * Save global modifiers to localStorage
-	 */
-	private saveGlobalModifiersToLocalStorage(): void {
-		try {
-			localStorage.setItem('pii-modifiers', JSON.stringify(this.globalModifiers));
-			console.log(`PiiSessionManager: Saved ${this.globalModifiers.length} global modifiers to localStorage`);
-		} catch (error) {
-			console.error('PiiSessionManager: Failed to save global modifiers to localStorage:', error);
-		}
-	}
-
-	/**
-	 * Load global modifiers from localStorage
-	 */
-	private loadGlobalModifiersFromLocalStorage(): void {
-		try {
-			const stored = localStorage.getItem('pii-modifiers');
-			if (stored) {
-				this.globalModifiers = JSON.parse(stored);
-				console.log(`PiiSessionManager: Loaded ${this.globalModifiers.length} global modifiers from localStorage`);
-			}
-		} catch (error) {
-			console.error('PiiSessionManager: Failed to load global modifiers from localStorage:', error);
-			this.globalModifiers = [];
-		}
-	}
-
-	/**
-	 * Save conversation-specific state to localStorage
-	 */
-	private saveConversationToLocalStorage(conversationId: string): void {
-		const state = this.conversationStates.get(conversationId);
-		if (!state) return;
-
-		try {
-			// Save entities
-			localStorage.setItem(
-				`pii-known-entities-${conversationId}`, 
-				JSON.stringify(state.entities)
-			);
-			
-			// Save modifiers
-			localStorage.setItem(
-				`pii-modifiers-${conversationId}`, 
-				JSON.stringify(state.modifiers)
-			);
-			
-			console.log(`PiiSessionManager: Saved conversation ${conversationId} to localStorage - ${state.entities.length} entities, ${state.modifiers.length} modifiers`);
-		} catch (error) {
-			console.error(`PiiSessionManager: Failed to save conversation ${conversationId} to localStorage:`, error);
-		}
-	}
-
-	/**
-	 * Load conversation-specific state from localStorage
-	 */
-	private loadConversationFromLocalStorage(conversationId: string): ConversationPiiState | null {
-		try {
-			const entitiesStored = localStorage.getItem(`pii-known-entities-${conversationId}`);
-			const modifiersStored = localStorage.getItem(`pii-modifiers-${conversationId}`);
-			
-			console.log(`PiiSessionManager: Loading conversation ${conversationId} from localStorage`);
-			console.log(`PiiSessionManager: Entities localStorage key exists:`, !!entitiesStored);
-			console.log(`PiiSessionManager: Modifiers localStorage key exists:`, !!modifiersStored);
-			
-			if (modifiersStored) {
-				console.log(`PiiSessionManager: Raw modifiers from localStorage:`, modifiersStored);
-			}
-			
-			if (entitiesStored || modifiersStored) {
-				const entities: ExtendedPiiEntity[] = entitiesStored ? JSON.parse(entitiesStored) : [];
-				const modifiers: PiiModifier[] = modifiersStored ? JSON.parse(modifiersStored) : [];
-				
-				console.log(`PiiSessionManager: Loaded conversation ${conversationId} from localStorage - ${entities.length} entities, ${modifiers.length} modifiers`);
-				console.log(`PiiSessionManager: Loaded modifiers:`, modifiers);
-				
-				return {
-					entities,
-					modifiers,
-					sessionId: this.sessionId ?? undefined,
-					apiKey: this.apiKey ?? undefined,
-					lastUpdated: Date.now()
-				};
-			}
-		} catch (error) {
-			console.error(`PiiSessionManager: Failed to load conversation ${conversationId} from localStorage:`, error);
-		}
-		
-		console.log(`PiiSessionManager: No localStorage data found for conversation ${conversationId}`);
-		return null;
-	}
-
-	/**
-	 * Clear localStorage for specific conversation
-	 */
-	clearConversationLocalStorage(conversationId: string): void {
-		try {
-			localStorage.removeItem(`pii-known-entities-${conversationId}`);
-			localStorage.removeItem(`pii-modifiers-${conversationId}`);
-			console.log(`PiiSessionManager: Cleared localStorage for conversation ${conversationId}`);
-		} catch (error) {
-			console.error(`PiiSessionManager: Failed to clear localStorage for conversation ${conversationId}:`, error);
-		}
-	}
-
-	/**
-	 * Clear global localStorage
-	 */
-	clearGlobalLocalStorage(): void {
-		try {
-			localStorage.removeItem('pii-known-entities');
-			localStorage.removeItem('pii-modifiers');
-			console.log('PiiSessionManager: Cleared global localStorage');
-		} catch (error) {
-			console.error('PiiSessionManager: Failed to clear global localStorage:', error);
-		}
-	}
-
-	/**
-	 * Initialize localStorage state - call this on app startup
+	 * DEPRECATED: All localStorage methods removed - using SQLite storage only
 	 */
 	initializeFromLocalStorage(): void {
-		if (this.localStorageInitialized) {
-			console.log('PiiSessionManager: localStorage already initialized, skipping');
-			return;
-		}
-		
-		console.log('PiiSessionManager: Initializing from localStorage');
-		this.loadGlobalEntitiesFromLocalStorage();
-		this.loadGlobalModifiersFromLocalStorage();
-		this.localStorageInitialized = true;
+		console.log('PiiSessionManager: initializeFromLocalStorage DEPRECATED - using SQLite storage only');
 	}
 
-	/**
-	 * Force sync conversation state from localStorage
-	 */
-	syncConversationFromLocalStorage(conversationId: string): void {
-		console.log(`PiiSessionManager: Force syncing conversation ${conversationId} from localStorage`);
-		const state = this.loadConversationFromLocalStorage(conversationId);
-		if (state) {
-			this.conversationStates.set(conversationId, state);
-			// Update global state to match
-			this.entities = state.entities;
-			console.log(`PiiSessionManager: Synced conversation ${conversationId} - ${state.entities.length} entities, ${state.modifiers.length} modifiers`);
-		} else {
-			console.log(`PiiSessionManager: No localStorage data found for conversation ${conversationId}`);
-		}
-	}
-
-	/**
-	 * Initialize conversation-specific localStorage keys (mirrors chat-input pattern)
-	 * Call this when conversation ID becomes available to create the localStorage keys
-	 */
-	initializeConversationLocalStorage(conversationId: string): void {
-		console.log(`PiiSessionManager: Initializing localStorage keys for conversation ${conversationId}`);
-		
-		// Check if conversation-specific keys already exist
-		const existingEntities = localStorage.getItem(`pii-known-entities-${conversationId}`);
-		const existingModifiers = localStorage.getItem(`pii-modifiers-${conversationId}`);
-		
-		if (!existingEntities && !existingModifiers) {
-			// No conversation-specific data exists, transfer global state
-			console.log(`PiiSessionManager: Creating new localStorage keys for conversation ${conversationId}`);
-			
-			// Transfer global state to conversation state 
-			this.transferGlobalToConversation(conversationId);
-			
-			// Ensure the localStorage keys are created (even if empty)
-			this.saveConversationToLocalStorage(conversationId);
-		} else {
-			// Conversation data exists, load it
-			console.log(`PiiSessionManager: Loading existing localStorage data for conversation ${conversationId}`);
-			this.loadConversationState(conversationId);
-		}
-		
-		console.log(`PiiSessionManager: Conversation ${conversationId} localStorage keys initialized`);
-	}
-
-	/**
-	 * Verify that conversation localStorage keys exist (useful for testing)
-	 */
-	verifyConversationKeys(conversationId: string): { entities: boolean; modifiers: boolean } {
-		const entitiesExist = localStorage.getItem(`pii-known-entities-${conversationId}`) !== null;
-		const modifiersExist = localStorage.getItem(`pii-modifiers-${conversationId}`) !== null;
-		
-		console.log(`PiiSessionManager: Conversation ${conversationId} localStorage keys:`, {
-			entities: entitiesExist ? '✅' : '❌',
-			modifiers: modifiersExist ? '✅' : '❌'
-		});
-		
-		return { entities: entitiesExist, modifiers: modifiersExist };
-	}
-
-	/**
-	 * Debug method to check localStorage contents
-	 */
 	debugLocalStorage(conversationId?: string): void {
-		console.log('=== PII localStorage Debug ===');
-		
-		// Global state
-		const globalEntities = localStorage.getItem('pii-known-entities');
-		const globalModifiers = localStorage.getItem('pii-modifiers');
-		
-		console.log('Global entities in localStorage:', globalEntities ? JSON.parse(globalEntities).length : 0);
-		console.log('Global modifiers in localStorage:', globalModifiers ? JSON.parse(globalModifiers).length : 0);
-		
-		// Memory state
-		console.log('Entities in memory:', this.entities.length);
-		console.log('Global modifiers in memory:', this.globalModifiers.length);
-		
-		// Conversation-specific state
-		if (conversationId) {
-			const convEntities = localStorage.getItem(`pii-known-entities-${conversationId}`);
-			const convModifiers = localStorage.getItem(`pii-modifiers-${conversationId}`);
-			
-			console.log(`Conversation ${conversationId} entities in localStorage:`, convEntities ? JSON.parse(convEntities).length : 0);
-			console.log(`Conversation ${conversationId} modifiers in localStorage:`, convModifiers ? JSON.parse(convModifiers).length : 0);
-			
-			const convState = this.conversationStates.get(conversationId);
-			console.log(`Conversation ${conversationId} state in memory:`, convState ? {
-				entities: convState.entities.length,
-				modifiers: convState.modifiers.length
-			} : 'not loaded');
-		}
-		
-		console.log('=== End Debug ===');
+		console.log('PiiSessionManager: debugLocalStorage DEPRECATED - using SQLite storage only');
+	}
+
+	clearConversationLocalStorage(conversationId: string): void {
+		console.log('PiiSessionManager: clearConversationLocalStorage DEPRECATED - using SQLite storage only');
+	}
+
+	clearGlobalLocalStorage(): void {
+		console.log('PiiSessionManager: clearGlobalLocalStorage DEPRECATED - using SQLite storage only');
+	}
+
+	syncConversationFromLocalStorage(conversationId: string): void {
+		console.log('PiiSessionManager: syncConversationFromLocalStorage DEPRECATED - using SQLite storage only');
+	}
+
+	initializeConversationLocalStorage(conversationId: string): void {
+		console.log('PiiSessionManager: initializeConversationLocalStorage DEPRECATED - using SQLite storage only');
+	}
+
+	verifyConversationKeys(conversationId: string): { entities: boolean; modifiers: boolean } {
+		console.log('PiiSessionManager: verifyConversationKeys DEPRECATED - using SQLite storage only');
+		return { entities: false, modifiers: false };
 	}
 
 	/**
@@ -959,13 +752,13 @@ export class PiiSessionManager {
 			console.log('- Memory entities:', memoryState.entities.length);
 		}
 		
-		// Step 4: Check localStorage
-		console.log('Step 4 - localStorage state:');
-		const storageState = this.loadConversationFromLocalStorage(conversationId);
-		console.log('- Storage state exists:', !!storageState);
-		if (storageState) {
-			console.log('- Storage modifiers:', storageState.modifiers.length);
-			console.log('- Storage entities:', storageState.entities.length);
+		// Step 4: Check SQLite state (Note: localStorage deprecated)
+		console.log('Step 4 - SQLite state:');
+		const memoryConversationState = this.conversationStates.get(conversationId);
+		console.log('- Memory conversation state exists:', !!memoryConversationState);
+		if (memoryConversationState) {
+			console.log('- Conversation modifiers:', memoryConversationState.modifiers.length);
+			console.log('- Conversation entities:', memoryConversationState.entities.length);
 		}
 		
 		// Step 5: Test API access
