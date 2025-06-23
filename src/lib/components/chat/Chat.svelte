@@ -84,8 +84,10 @@
 	import Placeholder from '$lib/IONOS/components/chat/Placeholder.svelte';
 	import NotificationToast from '../NotificationToast.svelte';
 	import { startup as ionosGptStartup } from '$lib/IONOS/services/startup';
+	import { updateSettings } from '$lib/IONOS/services/settings';
 
 	import Footer from '$lib/IONOS/components/Footer.svelte';
+	import TermsHint from '$lib/IONOS/components/TermsHint.svelte';
 
 	export let chatIdProp = '';
 
@@ -142,6 +144,7 @@
 	let params = {};
 
 	let ionosGptStartupPrompt = '';
+	let userSettings = null;
 
 	$: if (chatIdProp) {
 		(async () => {
@@ -1277,6 +1280,13 @@
 			return;
 		}
 
+		userSettings = await getUserSettings(localStorage.token);
+		if (!userSettings.ui?.ionosAgreedToTerms) {
+			updateSettings({
+				ionosAgreedToTerms: true
+			})
+		}
+
 		prompt = '';
 		await tick();
 
@@ -1955,7 +1965,12 @@
 							</div>
 						</div>
 
-						<div class=" pb-[1rem]">
+						<div class="flex flex-col gap-5 md:gap-10 pb-[1rem]">
+							{#if $chats.length < 1 && !userSettings.ui?.ionosAgreedToTerms !== true}
+								<div class="md:max-w-3xl w-full px-2.5 lg:px-0 mx-auto">
+									<TermsHint />
+								</div>
+							{/if}
 							<MessageInput
 								{history}
 								{selectedModels}

@@ -7,10 +7,13 @@
 	import {
 		type Model,
 		models as modelsStore,
+		chats
 	} from '$lib/stores';
+	import { getUserSettings } from '$lib/apis/users';
 
 	import MessageInput from '$lib/IONOS/components/chat/MessageInput.svelte';
 	import SmallAgentSelector from '$lib/IONOS/components/SmallAgentSelector.svelte';
+	import TermsHint from '$lib/IONOS/components/TermsHint.svelte';
 
 	const i18n = getContext<Readable<I18Next>>('i18n');
 
@@ -48,13 +51,15 @@
 	$: models = selectedModels.map((id) => $modelsStore.find((m) => m.id === id));
 	$: agentName = models[selectedModelIdx]?.name ?? '';
 	$: placeholder = $i18n.t('Message {{agentName}}', { agentName: agentName, ns: 'ionos' });
+
+	let userSettings = getUserSettings(localStorage.token);
 </script>
 
 <div class="m-auto w-full max-w-6xl px-2 xl:px-20 translate-y-6 py-24 text-center">
 	<div class="w-full text-3xl text-gray-800 dark:text-gray-100 font-medium text-center flex items-center gap-4 font-primary">
-		<div class="w-full flex flex-col justify-center items-center">
+		<div class="w-full flex flex-col justify-center items-center gap-5 md:gap-10">
 			<div class="flex flex-row justify-center gap-3 sm:gap-3.5 w-fit px-5">
-				<div class="mb-32 text-3xl sm:text-5xl leading-[56px] font-overpass text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-purple-700">
+				<div class="pb-[50px] md:pb-[100px] text-3xl sm:text-5xl leading-[56px] font-overpass text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-purple-700">
 					{#if agentName}
 							{$i18n.t("I'm {{agentName}},", { agentName, ns: 'ionos' })}
 							<br>
@@ -62,7 +67,11 @@
 					{/if}
 				</div>
 			</div>
-
+			{#if $chats.length < 1 && !userSettings.ui?.ionosAgreedToTerms}
+				<div class="xl:translate-x-6 md:max-w-3xl w-full px-2.5">
+					<TermsHint />
+				</div>
+			{/if}
 			<div
 				class="text-base font-normal xl:translate-x-6 md:max-w-3xl w-full py-3 {atSelectedModel
 					? 'mt-2'
