@@ -42,7 +42,10 @@
                 phone: 'phone' in experience ? experience.phone : null,
                 image_urls: experience.image_url,
                 image_url: experience.image_url,
-                url: experience.url
+                url: ('attributes' in experience && 'business_url' in experience.attributes)
+                    ? experience.attributes.business_url
+                    : ('url' in experience ? experience.url : null),
+                // url: experience.url
             },
             thumbnails: experience.thumbnails
         };
