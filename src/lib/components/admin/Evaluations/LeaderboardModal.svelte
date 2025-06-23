@@ -1,8 +1,9 @@
 <script lang="ts">
 	import Modal from '$lib/components/common/Modal.svelte';
-	import { getContext } from 'svelte';
+	import { getContext, onMount, afterUpdate } from 'svelte';
 	export let show = false;
 	export let model = null;
+	export let modelRatingHistory = new Map();
 	export let feedbacks = [];
 	export let onClose: () => void = () => {};
 	const i18n = getContext('i18n');
@@ -28,6 +29,50 @@
 			.slice(0, topN)
 			.map(([tag, count]) => ({ tag, count }));
 	};
+
+	let chartCanvas;
+	let chart;
+
+	$: chartData =
+		model && modelRatingHistory && modelRatingHistory.has(model.id)
+			? modelRatingHistory.get(model.id)
+			: [];
+
+	async function renderChart() {
+		if (!chartCanvas || !chartData || chartData.length < 2) return;
+		const { Chart, registerables } = await import('chart.js');
+		Chart.register(...registerables);
+		if (chart) chart.destroy();
+		chart = new Chart(chartCanvas, {
+			type: 'line',
+			data: {
+				labels: chartData.map((d) => new Date(d.timestamp * 1000).toLocaleDateString()),
+				datasets: [
+					{
+						label: 'Rating',
+						data: chartData.map((d) => d.rating),
+						borderColor: 'rgba(75,192,192,1)',
+						backgroundColor: 'rgba(75,192,192,0.1)',
+						tension: 0.2,
+						pointRadius: 2,
+						fill: false
+					}
+				]
+			},
+			options: {
+				scales: {
+					y: { beginAtZero: false, title: { display: true, text: 'Elo Rating' } },
+					x: { title: { display: true, text: 'Date' } }
+				},
+				plugins: { legend: { display: false } },
+				responsive: true,
+				maintainAspectRatio: false
+			}
+		});
+	}
+
+	onMount(renderChart);
+	afterUpdate(renderChart);
 </script>
 
 <Modal size="sm" bind:show>
@@ -63,13 +108,26 @@
 					<span>-</span>
 				{/if}
 			</div>
+
+			<div class="my-4" style="height:150px;">
+				{#if chartData.length > 1}
+					<canvas bind:this={chartCanvas}></canvas>
+				{:else}
+					<div class="text-xs text-gray-400 text-center py-10">
+						{i18n && i18n.t
+							? i18n.t('Not enough data for rating history')
+							: 'Not enough data for rating history'}
+					</div>
+				{/if}
+			</div>
+
 			<div class="flex justify-end pt-2">
 				<button
 					class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 					type="button"
 					on:click={close}
 				>
-					{$i18n.t('Close')}
+					{i18n && i18n.t ? i18n.t('Close') : 'Close'}
 				</button>
 			</div>
 		</div>
