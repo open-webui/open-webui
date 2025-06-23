@@ -108,6 +108,6 @@ google-cloud-storage==2.19.0
 ## LDAP
 ldap3==2.9.1
 
-jinja2==3.1.3
+jinja2>=3.1.6
 sib-api-v3-sdk==7.6.0
 stripe==11.1.1
