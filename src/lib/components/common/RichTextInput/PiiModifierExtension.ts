@@ -24,6 +24,7 @@ export interface PiiModifierOptions {
 // Extension state
 interface PiiModifierState {
 	modifiers: PiiModifier[];
+	currentConversationId?: string; // Track the current conversation ID
 	hoveredWordInfo: {
 		word: string;
 		from: number;
@@ -294,7 +295,6 @@ function createHoverMenu(
 	header.appendChild(textNode);
 	menu.appendChild(header);
 
-	console.log('existingModifiers', existingModifiers);
 	// Show existing modifiers if any
 	if (existingModifiers.length > 0) {
 		const modifiersSection = document.createElement('div');
@@ -991,19 +991,23 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 					// Load modifiers from session manager if available
 					const piiSessionManager = PiiSessionManager.getInstance();
 					
-					// Load conversation state if we have a conversationId (but don't repeatedly activate) - RESTORED
+					// Load conversation state if we have a conversationId
 					if (conversationId) {
 						console.log(`PiiModifierExtension: Loading conversation state for ${conversationId}`);
 						piiSessionManager.loadConversationState(conversationId);
 					}
 					
-					// Use the getActiveModifiers method - RESTORED
+					// Use the getActiveModifiers method consistently
 					const loadedModifiers = piiSessionManager.getActiveModifiers(conversationId);
 					
-					console.log(`PiiModifierExtension: Loaded ${loadedModifiers.length} modifiers from session manager (${conversationId ? 'conversation' : 'global'})`);
+					console.log(`PiiModifierExtension: Loaded ${loadedModifiers.length} modifiers from session manager`, {
+						conversationId: conversationId || 'global',
+						modifiers: loadedModifiers.map(m => ({ entity: m.entity, action: m.action, type: m.type }))
+					});
 					
 					return {
 						modifiers: loadedModifiers,
+						currentConversationId: conversationId, // Store the conversation ID in state
 						hoveredWordInfo: null,
 						selectedTextInfo: null
 					};
@@ -1025,22 +1029,30 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 								const piiSessionManagerReload = PiiSessionManager.getInstance();
 								const reloadConversationId = meta.conversationId;
 								
+								console.log(`PiiModifierExtension: Reloading modifiers for conversation ${reloadConversationId || 'global'}`);
+								
+								// Load conversation state first if we have a conversationId
 								if (reloadConversationId) {
-									console.log(`PiiModifierExtension: Reloading modifiers for conversation ${reloadConversationId}`);
-									piiSessionManagerReload.activateConversation(reloadConversationId);
-									const reloadedModifiers = piiSessionManagerReload.getActiveModifiers(reloadConversationId);
-									
-									newState = {
-										...newState,
-										modifiers: reloadedModifiers
-									};
-
-									if (onModifiersChanged) {
-										onModifiersChanged(reloadedModifiers);
-									}
-									
-									console.log(`PiiModifierExtension: Reloaded ${reloadedModifiers.length} modifiers for conversation ${reloadConversationId}`);
+									piiSessionManagerReload.loadConversationState(reloadConversationId);
 								}
+								
+								// Use getActiveModifiers consistently
+								const reloadedModifiers = piiSessionManagerReload.getActiveModifiers(reloadConversationId);
+								
+								newState = {
+									...newState,
+									modifiers: reloadedModifiers,
+									currentConversationId: reloadConversationId // Update the conversation ID in state
+								};
+
+								if (onModifiersChanged) {
+									onModifiersChanged(reloadedModifiers);
+								}
+								
+								console.log(`PiiModifierExtension: Reloaded ${reloadedModifiers.length} modifiers`, {
+									conversationId: reloadConversationId || 'global',
+									modifiers: reloadedModifiers.map(m => ({ entity: m.entity, action: m.action, type: m.type }))
+								});
 								break;
 								
 							case 'ADD_MODIFIER':
@@ -1063,12 +1075,15 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 									modifiers: updatedModifiers
 								};
 
-								// Store in session manager
+								// Store in session manager using consistent approach
 								const piiSessionManager = PiiSessionManager.getInstance();
-								if (conversationId) {
-									piiSessionManager.setConversationModifiers(conversationId, updatedModifiers);
+								const addConversationId = newState.currentConversationId;
+								if (addConversationId) {
+									piiSessionManager.setConversationModifiers(addConversationId, updatedModifiers);
+									console.log(`PiiModifierExtension: Stored ${updatedModifiers.length} modifiers for conversation ${addConversationId}`);
 								} else {
 									piiSessionManager.setGlobalModifiers(updatedModifiers);
+									console.log(`PiiModifierExtension: Stored ${updatedModifiers.length} global modifiers`);
 								}
 
 								if (onModifiersChanged) {
@@ -1083,12 +1098,15 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 									modifiers: remainingModifiers
 								};
 
-								// Store in session manager
+								// Store in session manager using consistent approach
 								const piiSessionManagerRemove = PiiSessionManager.getInstance();
-								if (conversationId) {
-									piiSessionManagerRemove.setConversationModifiers(conversationId, remainingModifiers);
+								const removeConversationId = newState.currentConversationId;
+								if (removeConversationId) {
+									piiSessionManagerRemove.setConversationModifiers(removeConversationId, remainingModifiers);
+									console.log(`PiiModifierExtension: Removed modifier, ${remainingModifiers.length} remaining for conversation ${removeConversationId}`);
 								} else {
 									piiSessionManagerRemove.setGlobalModifiers(remainingModifiers);
+									console.log(`PiiModifierExtension: Removed modifier, ${remainingModifiers.length} global modifiers remaining`);
 								}
 
 								if (onModifiersChanged) {
@@ -1102,12 +1120,15 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 									modifiers: []
 								};
 
-								// Store in session manager
+								// Store in session manager using consistent approach
 								const piiSessionManagerClear = PiiSessionManager.getInstance();
-								if (conversationId) {
-									piiSessionManagerClear.setConversationModifiers(conversationId, []);
+								const clearConversationId = newState.currentConversationId;
+								if (clearConversationId) {
+									piiSessionManagerClear.setConversationModifiers(clearConversationId, []);
+									console.log(`PiiModifierExtension: Cleared all modifiers for conversation ${clearConversationId}`);
 								} else {
 									piiSessionManagerClear.setGlobalModifiers([]);
+									console.log(`PiiModifierExtension: Cleared all global modifiers`);
 								}
 
 								if (onModifiersChanged) {
@@ -1227,11 +1248,25 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 								type: existingEntity.type
 							});
 
-							// Find existing modifiers for this entity (use session manager like highlighting does)
+							// Get current conversation ID from plugin state (not options)
+							const pluginState = piiModifierExtensionKey.getState(view.state);
+							const currentConversationId = pluginState?.currentConversationId;
+							
+							// Find existing modifiers for this entity using getActiveModifiers consistently
 							const piiSessionManager = PiiSessionManager.getInstance();
-							const sessionModifiers = conversationId 
-								? piiSessionManager.getConversationModifiers(conversationId)
-								: piiSessionManager.getGlobalModifiers();
+							
+							// Ensure conversation state is loaded if we have a conversationId
+							if (currentConversationId) {
+								piiSessionManager.loadConversationState(currentConversationId);
+							}
+							
+							const sessionModifiers = piiSessionManager.getActiveModifiers(currentConversationId);
+
+							console.log('PiiModifierExtension: Session modifiers for hover', {
+								conversationId: currentConversationId || 'global',
+								modifierCount: sessionModifiers.length,
+								modifiers: sessionModifiers.map(m => ({ entity: m.entity, action: m.action, type: m.type }))
+							});
 							
 							const targetText = targetInfo.word;
 							
@@ -1519,7 +1554,10 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 
 			// Reload modifiers for a conversation (called when conversation changes)
 			reloadConversationModifiers: (conversationId: string) => ({ state, dispatch }: any) => {
-				console.log(`PiiModifierExtension: Command to reload modifiers for conversation ${conversationId}`);
+				console.log(`PiiModifierExtension: Command to reload modifiers for conversation`, {
+					newConversationId: conversationId,
+					hasDispatch: !!dispatch
+				});
 				
 				const tr = state.tr.setMeta(piiModifierExtensionKey, {
 					type: 'RELOAD_CONVERSATION_MODIFIERS',
@@ -1528,6 +1566,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 
 				if (dispatch) {
 					dispatch(tr);
+					console.log(`PiiModifierExtension: Dispatched reload transaction for conversation ${conversationId}`);
 				}
 
 				return true;
