@@ -120,96 +120,51 @@ function findTokenizedWords(doc: ProseMirrorNode, selectionFrom: number, selecti
 	return uniqueWords;
 }
 
-// Find existing PII or modifier element under mouse cursor using DOM element detection
+// Find existing PII or modifier element under mouse cursor
 function findExistingEntityAtPosition(view: any, clientX: number, clientY: number): { from: number; to: number; text: string; type: 'pii' | 'modifier' } | null {
 	const target = document.elementFromPoint(clientX, clientY) as HTMLElement;
 	if (!target) return null;
 
-	// Check if we're hovering over a PII highlight
+	const getPositionFromCoords = (text: string) => {
+		const pos = view.posAtCoords({ left: clientX, top: clientY });
+		if (!pos) return null;
+		const textLength = text.length;
+		return {
+			from: Math.max(0, pos.pos - Math.floor(textLength / 2)),
+			to: Math.min(view.state.doc.content.size, pos.pos + Math.ceil(textLength / 2))
+		};
+	};
+
+	// Check PII element
 	const piiElement = target.closest('.pii-highlight');
 	if (piiElement) {
 		const piiText = piiElement.getAttribute('data-pii-text') || piiElement.textContent || '';
 		const piiLabel = piiElement.getAttribute('data-pii-label') || '';
 		if (piiText.length >= 2) {
-			// Try to find the exact position using PII plugin state
 			try {
-				// We need to import the PII detection plugin key to access its state
 				const piiDetectionPluginKey = new PluginKey('piiDetection');
 				const piiState = piiDetectionPluginKey.getState(view.state);
-				
-				if (piiState?.entities) {
-					// Find the entity that matches this label
-					const matchingEntity = piiState.entities.find((entity: any) => entity.label === piiLabel);
-					if (matchingEntity && matchingEntity.occurrences.length > 0) {
-						const occurrence = matchingEntity.occurrences[0]; // Use first occurrence
-						return {
-							from: occurrence.start_idx,
-							to: occurrence.end_idx,
-							text: piiText,
-							type: 'pii'
-						};
-					}
+				const matchingEntity = piiState?.entities?.find((entity: any) => entity.label === piiLabel);
+				if (matchingEntity?.occurrences?.length > 0) {
+					const occurrence = matchingEntity.occurrences[0];
+					return { from: occurrence.start_idx, to: occurrence.end_idx, text: piiText, type: 'pii' };
 				}
 			} catch (error) {
-				console.log('PiiModifierExtension: Could not access PII state:', error);
+				// Fall through to position-based approach
 			}
 			
-			// Fallback: get position from mouse and estimate range
-			const pos = view.posAtCoords({ left: clientX, top: clientY });
-			if (pos) {
-				const textLength = piiText.length;
-				return {
-					from: Math.max(0, pos.pos - Math.floor(textLength / 2)),
-					to: Math.min(view.state.doc.content.size, pos.pos + Math.ceil(textLength / 2)),
-					text: piiText,
-					type: 'pii'
-				};
-			}
+			const position = getPositionFromCoords(piiText);
+			if (position) return { ...position, text: piiText, type: 'pii' };
 		}
 	}
 
-	// Check if we're hovering over a modifier highlight
+	// Check modifier element
 	const modifierElement = target.closest('.pii-modifier-highlight');
 	if (modifierElement) {
 		const modifierText = modifierElement.getAttribute('data-modifier-entity') || modifierElement.textContent || '';
 		if (modifierText.length >= 2) {
-			// Try to find the exact position using modifier plugin state
-			try {
-				const modifierState = piiModifierExtensionKey.getState(view.state);
-				if (modifierState?.modifiers) {
-					// Find the modifier that matches this entity text
-					const matchingModifier = modifierState.modifiers.find((modifier: any) => 
-						modifier.entity.toLowerCase() === modifierText.toLowerCase()
-					);
-					if (matchingModifier) {
-						// Find actual position of this modifier entity in the document
-						const pos = view.posAtCoords({ left: clientX, top: clientY });
-						if (pos) {
-							const textLength = modifierText.length;
-							return {
-								from: Math.max(0, pos.pos - Math.floor(textLength / 2)),
-								to: Math.min(view.state.doc.content.size, pos.pos + Math.ceil(textLength / 2)),
-								text: modifierText,
-								type: 'modifier'
-							};
-						}
-					}
-				}
-			} catch (error) {
-				console.log('PiiModifierExtension: Could not access modifier state:', error);
-			}
-			
-			// Fallback: get position from mouse and estimate range
-			const pos = view.posAtCoords({ left: clientX, top: clientY });
-			if (pos) {
-				const textLength = modifierText.length;
-				return {
-					from: Math.max(0, pos.pos - Math.floor(textLength / 2)),
-					to: Math.min(view.state.doc.content.size, pos.pos + Math.ceil(textLength / 2)),
-					text: modifierText,
-					type: 'modifier'
-				};
-			}
+			const position = getPositionFromCoords(modifierText);
+			if (position) return { ...position, text: modifierText, type: 'modifier' };
 		}
 	}
 
@@ -433,10 +388,8 @@ function createHoverMenu(
 
 	// Handle focus/click - clear default value
 	const handleInputFocus = (e: Event) => {
-		e.stopPropagation(); // Prevent click from bubbling up and closing menu
-		console.log('PiiModifierExtension: Input field focused');
+		e.stopPropagation();
 		
-		// Notify timeout manager that input is focused
 		if (timeoutManager) {
 			(timeoutManager as any).setInputFocused(true);
 		}
@@ -577,29 +530,23 @@ function createHoverMenu(
 		menu.appendChild(labelSection);
 	}
 
-	// Don't auto-focus to allow users to see the "CUSTOM" placeholder first
-	// Users can click to focus when ready
+
 
 	// Add hover protection to keep menu open
 	menu.addEventListener('mouseenter', () => {
-		// Cancel any pending hide timeout when hovering over menu
-		console.log('PiiModifierExtension: Mouse entered menu, keeping it open');
 		if (timeoutManager) {
 			timeoutManager.clearAll();
 		}
 	});
 
 	menu.addEventListener('mouseleave', (e) => {
-		// Only hide menu if not moving to a child element (like the dropdown)
 		const relatedTarget = e.relatedTarget as HTMLElement;
 		if (relatedTarget && menu.contains(relatedTarget)) {
-			return; // Don't hide if moving to a child element
+			return;
 		}
 		
-		// Hide menu when mouse leaves it with a longer delay
 		if (timeoutManager) {
 			timeoutManager.setFallback(() => {
-				// Double-check the menu still exists and isn't being interacted with
 				if (menu && document.body.contains(menu)) {
 					const activeElement = document.activeElement;
 					const isInputFocused = activeElement && menu.contains(activeElement);
@@ -704,7 +651,7 @@ function createSelectionMenu(
 		font-size: 11px;
 		margin-left: 4px;
 	`;
-	tokenizedWords.textContent = `"${selectionInfo.tokenizedWords.map(w => w.word).join(' ')}"`;  // Show as single combined phrase
+	tokenizedWords.textContent = `"${selectionInfo.tokenizedWords.map(w => w.word).join(' ')}"`;
 
 	tokenizedOption.appendChild(tokenizedRadio);
 	tokenizedOption.appendChild(tokenizedLabel);
@@ -871,7 +818,6 @@ function createSelectionMenu(
 		markBtn.style.backgroundColor = '#6b46c1';
 	});
 
-			// Mark selected text function
 		const markSelectedText = () => {
 			const piiType = isDefaultValue ? 'CUSTOM' : labelInput.value.trim().toUpperCase();
 			if (!piiType) {
@@ -885,19 +831,15 @@ function createSelectionMenu(
 
 			const isTokenized = tokenizedRadio.checked;
 			
-			if (isTokenized) {
-				// Combine all tokenized words into a single PII entity
+						if (isTokenized) {
 				if (selectionInfo.tokenizedWords.length > 0) {
-					// Get the full range from first word start to last word end
 					const firstWord = selectionInfo.tokenizedWords[0];
 					const lastWord = selectionInfo.tokenizedWords[selectionInfo.tokenizedWords.length - 1];
 					const combinedText = selectionInfo.tokenizedWords.map(w => w.word).join(' ');
 					
-					// Create one modifier spanning the full tokenized range
 					onMaskSelection(combinedText, piiType, firstWord.from, lastWord.to);
 				}
 			} else {
-				// Mark exact selection
 				onMaskSelection(selectionInfo.selectedText, piiType, selectionInfo.from, selectionInfo.to);
 			}
 
@@ -944,6 +886,8 @@ function createSelectionMenu(
 	return menu;
 }
 
+
+
 export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 	name: 'piiModifier',
 
@@ -961,22 +905,14 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 	},
 
 	onCreate() {
-		console.log('PiiModifierExtension: Extension created successfully');
+		// Extension initialization
 	},
 
 	addProseMirrorPlugins() {
 		const options = this.options;
 		const { enabled, conversationId, onModifiersChanged, availableLabels } = options;
 
-		console.log('PiiModifierExtension: Adding ProseMirror plugins', {
-			enabled,
-			conversationId,
-			hasCallback: !!onModifiersChanged,
-			labelsCount: availableLabels?.length || 0
-		});
-
 		if (!enabled) {
-			console.log('PiiModifierExtension: Disabled - not adding plugins');
 			return [];
 		}
 
@@ -992,28 +928,17 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 
 			state: {
 				init(): PiiModifierState {
-					console.log('PiiModifierExtension: Initializing extension state');
-					
-					// Load modifiers from session manager if available
 					const piiSessionManager = PiiSessionManager.getInstance();
 					
-					// Load conversation state if we have a conversationId
 					if (conversationId) {
-						console.log(`PiiModifierExtension: Loading conversation state for ${conversationId}`);
 						piiSessionManager.loadConversationState(conversationId);
 					}
 					
-					// Use the getActiveModifiers method consistently
 					const loadedModifiers = piiSessionManager.getActiveModifiers(conversationId);
-					
-					console.log(`PiiModifierExtension: Loaded ${loadedModifiers.length} modifiers from session manager`, {
-						conversationId: conversationId || 'global',
-						modifiers: loadedModifiers.map(m => ({ entity: m.entity, action: m.action, type: m.type }))
-					});
 					
 					return {
 						modifiers: loadedModifiers,
-						currentConversationId: conversationId, // Store the conversation ID in state
+						currentConversationId: conversationId,
 						hoveredWordInfo: null,
 						selectedTextInfo: null
 					};
@@ -1022,43 +947,28 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 				apply(tr, prevState): PiiModifierState {
 					let newState = { ...prevState };
 
-					// Document changes don't affect modifiers since we search for entity text dynamically
-					// No position tracking needed
-
-					// Handle plugin-specific meta actions
 					const meta = tr.getMeta(piiModifierExtensionKey);
 					if (meta) {
-						console.log('PiiModifierExtension: Handling meta action:', meta.type);
 						switch (meta.type) {
 							case 'RELOAD_CONVERSATION_MODIFIERS':
-								// Reload modifiers for a conversation
 								const piiSessionManagerReload = PiiSessionManager.getInstance();
 								const reloadConversationId = meta.conversationId;
 								
-								console.log(`PiiModifierExtension: Reloading modifiers for conversation ${reloadConversationId || 'global'}`);
-								
-								// Load conversation state first if we have a conversationId
 								if (reloadConversationId) {
 									piiSessionManagerReload.loadConversationState(reloadConversationId);
 								}
 								
-								// Use getActiveModifiers consistently
 								const reloadedModifiers = piiSessionManagerReload.getActiveModifiers(reloadConversationId);
 								
 								newState = {
 									...newState,
 									modifiers: reloadedModifiers,
-									currentConversationId: reloadConversationId // Update the conversation ID in state
+									currentConversationId: reloadConversationId
 								};
 
 								if (onModifiersChanged) {
 									onModifiersChanged(reloadedModifiers);
 								}
-								
-								console.log(`PiiModifierExtension: Reloaded ${reloadedModifiers.length} modifiers`, {
-									conversationId: reloadConversationId || 'global',
-									modifiers: reloadedModifiers.map(m => ({ entity: m.entity, action: m.action, type: m.type }))
-								});
 								break;
 								
 							case 'ADD_MODIFIER':
@@ -1081,15 +991,12 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 									modifiers: updatedModifiers
 								};
 
-								// Store in session manager using consistent approach
 								const piiSessionManager = PiiSessionManager.getInstance();
 								const addConversationId = newState.currentConversationId;
 								if (addConversationId) {
 									piiSessionManager.setConversationModifiers(addConversationId, updatedModifiers);
-									console.log(`PiiModifierExtension: Stored ${updatedModifiers.length} modifiers for conversation ${addConversationId}`);
 								} else {
 									piiSessionManager.setGlobalModifiers(updatedModifiers);
-									console.log(`PiiModifierExtension: Stored ${updatedModifiers.length} global modifiers`);
 								}
 
 								if (onModifiersChanged) {
@@ -1104,15 +1011,12 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 									modifiers: remainingModifiers
 								};
 
-								// Store in session manager using consistent approach
 								const piiSessionManagerRemove = PiiSessionManager.getInstance();
 								const removeConversationId = newState.currentConversationId;
 								if (removeConversationId) {
 									piiSessionManagerRemove.setConversationModifiers(removeConversationId, remainingModifiers);
-									console.log(`PiiModifierExtension: Removed modifier, ${remainingModifiers.length} remaining for conversation ${removeConversationId}`);
 								} else {
 									piiSessionManagerRemove.setGlobalModifiers(remainingModifiers);
-									console.log(`PiiModifierExtension: Removed modifier, ${remainingModifiers.length} global modifiers remaining`);
 								}
 
 								if (onModifiersChanged) {
@@ -1126,15 +1030,12 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 									modifiers: []
 								};
 
-								// Store in session manager using consistent approach
 								const piiSessionManagerClear = PiiSessionManager.getInstance();
 								const clearConversationId = newState.currentConversationId;
 								if (clearConversationId) {
 									piiSessionManagerClear.setConversationModifiers(clearConversationId, []);
-									console.log(`PiiModifierExtension: Cleared all modifiers for conversation ${clearConversationId}`);
 								} else {
 									piiSessionManagerClear.setGlobalModifiers([]);
-									console.log(`PiiModifierExtension: Cleared all global modifiers`);
 								}
 
 								if (onModifiersChanged) {
@@ -1248,11 +1149,6 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 								to: existingEntity.to
 							};
 							const isPiiHighlighted = existingEntity.type === 'pii';
-							
-							console.log('PiiModifierExtension: Found existing entity at hover position:', {
-								text: existingEntity.text,
-								type: existingEntity.type
-							});
 
 							// Get current conversation ID from plugin state (not options)
 							const pluginState = piiModifierExtensionKey.getState(view.state);
@@ -1267,12 +1163,6 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 							}
 							
 							const sessionModifiers = piiSessionManager.getActiveModifiers(currentConversationId);
-
-							console.log('PiiModifierExtension: Session modifiers for hover', {
-								conversationId: currentConversationId || 'global',
-								modifierCount: sessionModifiers.length,
-								modifiers: sessionModifiers.map(m => ({ entity: m.entity, action: m.action, type: m.type }))
-							});
 							
 							const targetText = targetInfo.word;
 							
@@ -1560,11 +1450,6 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 
 			// Reload modifiers for a conversation (called when conversation changes)
 			reloadConversationModifiers: (conversationId: string) => ({ state, dispatch }: any) => {
-				console.log(`PiiModifierExtension: Command to reload modifiers for conversation`, {
-					newConversationId: conversationId,
-					hasDispatch: !!dispatch
-				});
-				
 				const tr = state.tr.setMeta(piiModifierExtensionKey, {
 					type: 'RELOAD_CONVERSATION_MODIFIERS',
 					conversationId
@@ -1572,7 +1457,6 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 
 				if (dispatch) {
 					dispatch(tr);
-					console.log(`PiiModifierExtension: Dispatched reload transaction for conversation ${conversationId}`);
 				}
 
 				return true;
