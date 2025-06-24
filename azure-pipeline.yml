@@ -1,0 +1,51 @@
+trigger:
+  branches:
+    include:
+      - main
+
+pool:
+  name: sandbox
+  demands: agent.name -equals vm-devops-runner-sandbox
+
+# Parameters for manual selection
+parameters:
+  - name: environment
+    displayName: 'Target Environment'
+    type: string
+    default: 'sandbox'
+    values:
+      - sandbox
+      - test
+      - stage
+      - prod
+
+variables:
+  - group: acr_secret_sandbox
+
+  - ${{ if eq(parameters.environment, 'test') }}:
+      - group: acr_secret_test
+  - ${{ if eq(parameters.environment, 'stage') }}:
+      - group: acr_secret_stg
+  - ${{ if eq(parameters.environment, 'prod') }}:
+      - group: acr_secret_prod
+
+  - name: sourceImageName
+    value: 'govgpt'
+
+
+steps:
+# Login to Azure Container Registry manually using username and password
+- script: |
+    echo $(dockerRegistryPassword) | docker login $(dockerRegistryUrl) -u $(dockerRegistryUsername) --password-stdin
+  displayName: 'Authenticate to ACR'
+
+# Build Docker Image
+- script: |
+    docker build -t $(dockerRegistryUrl)/$(sourceImageName):latest -t $(dockerRegistryUrl)/$(sourceImageName):$(Build.BuildId) -f Dockerfile .
+  displayName: 'Build Docker Image'
+
+# Push Docker Image to ACR
+- script: |
+    docker push $(dockerRegistryUrl)/$(sourceImageName):latest
+    docker push $(dockerRegistryUrl)/$(sourceImageName):$(Build.BuildId)
+  displayName: 'Push Docker Image to ACR'
