@@ -25,7 +25,7 @@ This repo includes a **custom Docker setup** with **Open WebUI + SearXNG + Ollam
 
 3. **Download AI models**:
    ```bash
-   ./manage.sh pull llama2        # or llama3.2, mistral, etc.
+   ./manage.sh pull llama2 # or llama3.2, mistral, etc.
    ```
 
 4. **Access the app**: http://localhost:3000

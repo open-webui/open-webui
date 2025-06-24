@@ -1,0 +1,105 @@
+name: Deploy Application to Docker Swarm
+on:
+    push:
+        branches:
+            - develop
+            - main
+            - sandbox  
+    workflow_dispatch:
+jobs:
+    build-and-push:
+        runs-on: ubuntu-24.04        
+        environment: ${{ github.ref == 'refs/heads/main' && 'production' || (github.ref == 'refs/heads/sandbox' && 'sandbox' || 'development') }}
+        steps:
+            - name: Set deployment variables
+              id: vars
+              run: |
+                  if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+                    echo "::notice::🔴 DEPLOYING TO PRODUCTION ENVIRONMENT 🔴"
+                    echo "ssh_key<<EOF" >> $GITHUB_OUTPUT
+                    echo "${{ secrets.SSH_KEY_DSWARM_PROD }}" >> $GITHUB_OUTPUT
+                    echo "EOF" >> $GITHUB_OUTPUT
+                    echo "swarm_host=${{ secrets.SWARM_MANAGER_IP_PROD }}" >> $GITHUB_OUTPUT
+                    echo "ssh_user=${{ secrets.SSH_USER_DSWARM_PROD }}" >> $GITHUB_OUTPUT
+                    echo "ssh_port=${{ secrets.SWARM_MANAGER_PORT_PROD }}" >> $GITHUB_OUTPUT
+                    echo "stack_env=production" >> $GITHUB_OUTPUT
+                    echo "primary_tag=production" >> $GITHUB_OUTPUT
+                  elif [[ "${{ github.ref }}" == "refs/heads/sandbox" ]]; then
+                    echo "::notice::🟠 DEPLOYING TO SANDBOX ENVIRONMENT 🟠"
+                    echo "ssh_key<<EOF" >> $GITHUB_OUTPUT
+                    echo "${{ secrets.SSH_KEY_DSWARM_SANDBOX }}" >> $GITHUB_OUTPUT
+                    echo "EOF" >> $GITHUB_OUTPUT
+                    echo "swarm_host=${{ secrets.SWARM_MANAGER_IP_SANDBOX }}" >> $GITHUB_OUTPUT
+                    echo "ssh_user=${{ secrets.SSH_USER_DSWARM_SANDBOX }}" >> $GITHUB_OUTPUT
+                    echo "ssh_port=${{ secrets.SWARM_MANAGER_PORT_SANDBOX }}" >> $GITHUB_OUTPUT
+                    echo "stack_env=sandbox" >> $GITHUB_OUTPUT
+                    echo "primary_tag=sandbox" >> $GITHUB_OUTPUT
+                  else
+                    echo "::notice::🟢 DEPLOYING TO DEVELOPMENT ENVIRONMENT 🟢"
+                    echo "ssh_key<<EOF" >> $GITHUB_OUTPUT
+                    echo "${{ secrets.SSH_KEY_DSWARM_DEV }}" >> $GITHUB_OUTPUT
+                    echo "EOF" >> $GITHUB_OUTPUT
+                    echo "swarm_host=${{ secrets.SWARM_MANAGER_IP_DEV }}" >> $GITHUB_OUTPUT
+                    echo "ssh_user=${{ secrets.SSH_USER_DSWARM_DEV }}" >> $GITHUB_OUTPUT
+                    echo "ssh_port=${{ secrets.SWARM_MANAGER_PORT_DEV }}" >> $GITHUB_OUTPUT
+                    echo "stack_env=development" >> $GITHUB_OUTPUT
+                    echo "primary_tag=latest" >> $GITHUB_OUTPUT
+                  fi                  
+                  echo "build_number=${{ github.run_number }}" >> $GITHUB_OUTPUT
+                  echo "image_tag=${{ github.run_number }}" >> $GITHUB_OUTPUT
+
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Login to Azure
+              uses: azure/login@v2
+              with:
+                  creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+            - name: Login to Azure Container Registry (ACR)
+              run: |
+                  az acr login --name agiapi.azurecr.io
+
+            # We will create two tags in the repository: one with "develop" or "production",
+            # and one with our passed in image tag (the build number). This one makes it obvious
+            # which version is running in our cluster, as well as forcing another pull
+            # when it deploys
+            - name: Build and tag Docker image
+              run: |
+                  cd agi-gpt-api
+                  docker build -t agi-gpt-api .
+                  # Tag with the specific build number
+                  docker tag agi-gpt-api agiapi.azurecr.io/agi-gpt-api:${{ steps.vars.outputs.image_tag }}
+                  # Tag with either 'latest' or 'production'
+                  docker tag agi-gpt-api agiapi.azurecr.io/agi-gpt-api:${{ steps.vars.outputs.primary_tag }}
+
+            # Build Ollama image with llama3.2:3b baked in and push it
+            - name: Build and push Ollama image (llama3.2:3b)
+              run: |
+                  docker build -t ollama-llama32 ./ollama
+                  docker tag ollama-llama32 agiapi.azurecr.io/ollama-llama32:${{ steps.vars.outputs.image_tag }}
+                  docker tag ollama-llama32 agiapi.azurecr.io/ollama-llama32:${{ steps.vars.outputs.primary_tag }}
+                  docker push agiapi.azurecr.io/ollama-llama32:${{ steps.vars.outputs.image_tag }}
+                  docker push agiapi.azurecr.io/ollama-llama32:${{ steps.vars.outputs.primary_tag }}
+
+            - name: Push Docker image to Container Registry
+              run: |
+                  # Push both tags
+                  docker push agiapi.azurecr.io/agi-gpt-api:${{ steps.vars.outputs.image_tag }}
+                  docker push agiapi.azurecr.io/agi-gpt-api:${{ steps.vars.outputs.primary_tag }}
+
+            - name: Deploy to Docker Swarm
+              uses: Applied-General-Intelligence-Inc/docker-swarm-deploy-action@main
+              with:
+                  ssh_key: ${{ steps.vars.outputs.ssh_key }}
+                  swarm_host: ${{ steps.vars.outputs.swarm_host }}
+                  ssh_user: ${{ steps.vars.outputs.ssh_user }}
+                  ssh_port: ${{ steps.vars.outputs.ssh_port }}
+                  compose_file: agi-gpt-api/docker-compose.yml
+                  stack_name: agi-gpt-api
+                  version: '${{ steps.vars.outputs.build_number }}'
+                  secrets_files: 'agi-gpt-api/agi-gpt-api_appsettings.json'
+                  image_tag: '${{ steps.vars.outputs.image_tag }}'
+                  var_substitute: |
+                      OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+                      DOMAIN_NAME=${{ vars.DOMAIN_NAME }}

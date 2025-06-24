@@ -2,7 +2,9 @@ version: '3.8'
 
 services:
   ollama:
-    image: ollama/ollama:latest
+    build:
+      context: ./ollama
+    image: agiapi.azurecr.io/ollama-llama32:${OLLAMA_DOCKER_TAG:-latest}
     container_name: ollama
     volumes:
       - ollama:/root/.ollama
@@ -10,6 +12,12 @@ services:
       - "11434:11434"
     tty: true
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 4G
     networks:
       - open-webui-network
 
@@ -24,26 +32,45 @@ services:
     networks:
       - open-webui-network
 
-  open-webui:
-    image: ghcr.io/open-webui/open-webui:main
-    container_name: open-webui
-    ports:
-      - "3000:8080"
+  open-webui-dev:
+    image: ghcr.io/open-webui/open-webui:${WEBUI_DOCKER_TAG:-main}
+    container_name: open-webui-dev
     volumes:
-      - open-webui:/app/backend/data
+      - type: bind
+        source: /sharefs/services/open-webui-dev # <- pick any path you like
+        target: /app/backend/data
     environment:
-      - OLLAMA_BASE_URL=http://ollama:11434
-      - SEARXNG_QUERY_URL=http://host.docker.internal:8080/search?q=<query>
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-    extra_hosts:
-      - host.docker.internal:host-gateway
-    depends_on:
-      - ollama
-      - searxng
-      - pipelines
-    restart: unless-stopped
+      - OPENAI_API_BASE_URL=http://api.agidev.us/v1
+      - OPENAI_API_KEY=[REDACTED]
+      - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY:-}
+      - WEBUI_NAME=${WEBUI_NAME:-Open WebUI Dev}
+      - DEFAULT_LOCALE=${DEFAULT_LOCALE:-en-US}
+      - DEFAULT_MODELS=arx-1
+      - ENABLE_OLLAMA_API=false # disable Ollama endpoint
     networks:
       - open-webui-network
+      - proxy # ← external Traefik network
+    restart: unless-stopped
+
+    # ── Traefik wiring ──────────────────────────────────────────
+    labels:
+      - "traefik.enable=true"
+
+      # HTTPS router
+      - "traefik.http.routers.open-webui-dev.rule=Host(`open-webui-dev.agidev.us`)"
+      - "traefik.http.routers.open-webui-dev.entrypoints=websecure"
+      - "traefik.http.routers.open-webui-dev.tls=true"
+      - "traefik.http.routers.open-webui-dev.tls.certresolver=letsencrypt"
+
+      # HTTP router
+      - "traefik.http.routers.open-webui-dev-http.rule=Host(`open-webui-dev.agidev.us`)"
+      - "traefik.http.routers.open-webui-dev-http.entrypoints=web"
+      - "traefik.http.routers.open-webui-dev-http.middlewares=redirect-to-https"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+
+      # Middleware
+      - "traefik.http.services.open-webui-dev.loadbalancer.server.port=8080"
+      - "traefik.http.services.open-webui-dev.loadbalancer.passHostHeader=true"
 
   pipelines:
     image: ghcr.io/open-webui/pipelines:main
@@ -65,5 +92,9 @@ volumes:
   pipelines:
 
 networks:
+  # Internal network for the app services
   open-webui-network:
-    driver: bridge 
+    driver: bridge
+  # For Traefik
+  proxy:
+    external: true
