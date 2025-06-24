@@ -101,12 +101,7 @@ export const maskPiiText = async (
 	// Add modifiers if provided
 	if (modifiers.length > 0) {
 		requestBody.modifiers = modifiers;
-		console.log('PII API: Including modifiers in request:', modifiers);
-	} else {
-		console.log('PII API: No modifiers to include');
 	}
-
-	console.log('PII API: Final request body:', requestBody);
 
 	const response = await fetch(url.toString(), {
 		method: 'POST',
@@ -176,12 +171,8 @@ export const maskPiiTextWithSession = async (
 	// Add modifiers if provided
 	if (modifiers.length > 0) {
 		requestBody.modifiers = modifiers;
-		console.log('PII API: Including modifiers in request:', modifiers);
-	} else {
-		console.log('PII API: No modifiers to include');
 	}
 
-	console.log('PII API: Final request body:', requestBody);
 
 	const response = await fetch(url.toString(), {
 		method: 'POST',
