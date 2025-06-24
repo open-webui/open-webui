@@ -704,47 +704,6 @@ export class PiiSessionManager {
 	clearAllConversationStates() {
 		this.conversationStates.clear();
 	}
-
-	/**
-	 * Test method to verify the full transfer flow
-	 */
-	testTransferFlow(conversationId: string): void {
-		console.log(`=== Testing Transfer Flow for ${conversationId} ===`);
-		
-		// Step 1: Check initial global state
-		console.log('Step 1 - Initial global state:');
-		console.log('- Global modifiers:', this.globalModifiers.length);
-		console.log('- Global entities:', this.entities.length);
-		
-		// Step 2: Transfer to conversation
-		console.log('Step 2 - Transferring to conversation...');
-		this.transferGlobalToConversation(conversationId);
-		
-		// Step 3: Check conversation state in memory
-		console.log('Step 3 - Conversation state in memory:');
-		const memoryState = this.conversationStates.get(conversationId);
-		console.log('- Memory state exists:', !!memoryState);
-		if (memoryState) {
-			console.log('- Memory modifiers:', memoryState.modifiers.length);
-			console.log('- Memory entities:', memoryState.entities.length);
-		}
-		
-		// Step 4: Check SQLite state (Note: localStorage deprecated)
-		console.log('Step 4 - SQLite state:');
-		const memoryConversationState = this.conversationStates.get(conversationId);
-		console.log('- Memory conversation state exists:', !!memoryConversationState);
-		if (memoryConversationState) {
-			console.log('- Conversation modifiers:', memoryConversationState.modifiers.length);
-			console.log('- Conversation entities:', memoryConversationState.entities.length);
-		}
-		
-		// Step 5: Test API access
-		console.log('Step 5 - API access test:');
-		const apiModifiers = this.getModifiersForApi(conversationId);
-		console.log('- API modifiers returned:', apiModifiers.length);
-		
-		console.log('=== End Transfer Flow Test ===');
-	}
 }
 
 // Get label variations to handle different spellings
