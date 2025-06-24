@@ -53,7 +53,7 @@ function generateModifierId(): string {
 }
 
 // Tokenizer pattern for broader context word detection
-const WORD_TOKENIZER_PATTERN = /[\w'-äöüÄÖÜß]+/g;
+const WORD_TOKENIZER_PATTERN = /[\w'-äöüÄÖÜß]+(?=\b|[^.])/g;
 
 // Find all tokenized words touched by a text selection with broader context
 function findTokenizedWords(doc: ProseMirrorNode, selectionFrom: number, selectionTo: number): Array<{ word: string; from: number; to: number; }> {
@@ -693,7 +693,7 @@ function createSelectionMenu(
 		font-weight: 500;
 		cursor: pointer;
 	`;
-	tokenizedLabel.textContent = 'Tokenized words: ';
+	tokenizedLabel.textContent = 'Combined tokenized: ';
 
 	const tokenizedWords = document.createElement('span');
 	tokenizedWords.style.cssText = `
@@ -704,7 +704,7 @@ function createSelectionMenu(
 		font-size: 11px;
 		margin-left: 4px;
 	`;
-	tokenizedWords.textContent = selectionInfo.tokenizedWords.map(w => w.word).join(', ');
+	tokenizedWords.textContent = `"${selectionInfo.tokenizedWords.map(w => w.word).join(' ')}"`;  // Show as single combined phrase
 
 	tokenizedOption.appendChild(tokenizedRadio);
 	tokenizedOption.appendChild(tokenizedLabel);
@@ -886,10 +886,16 @@ function createSelectionMenu(
 			const isTokenized = tokenizedRadio.checked;
 			
 			if (isTokenized) {
-				// Mark each tokenized word separately
-				selectionInfo.tokenizedWords.forEach(word => {
-					onMaskSelection(word.word, piiType, word.from, word.to);
-				});
+				// Combine all tokenized words into a single PII entity
+				if (selectionInfo.tokenizedWords.length > 0) {
+					// Get the full range from first word start to last word end
+					const firstWord = selectionInfo.tokenizedWords[0];
+					const lastWord = selectionInfo.tokenizedWords[selectionInfo.tokenizedWords.length - 1];
+					const combinedText = selectionInfo.tokenizedWords.map(w => w.word).join(' ');
+					
+					// Create one modifier spanning the full tokenized range
+					onMaskSelection(combinedText, piiType, firstWord.from, lastWord.to);
+				}
 			} else {
 				// Mark exact selection
 				onMaskSelection(selectionInfo.selectedText, piiType, selectionInfo.from, selectionInfo.to);
