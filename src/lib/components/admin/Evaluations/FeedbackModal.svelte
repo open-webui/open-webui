@@ -37,26 +37,12 @@
 
 			<div class="flex flex-col md:flex-row w-full px-5 pb-4 md:space-x-4 dark:text-gray-200">
 				<div class="flex flex-col w-full">
-					<div class="flex flex-col w-full mb-2">
-						<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Rating')}</div>
-
-						<div class="flex-1">
-							<span>{selectedFeedback?.data?.details?.rating ?? '-'}</span>
-						</div>
-					</div>
-					<div class="flex flex-col w-full mb-2">
-						<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Reason')}</div>
-
-						<div class="flex-1">
-							<span>{selectedFeedback?.data?.reason || '-'}</span>
-						</div>
-					</div>
-
-					<div class="mb-2">
+					<div class="mb-2 -mx-1">
 						{#if selectedFeedback?.data?.tags && selectedFeedback?.data?.tags.length}
 							<div class="flex flex-wrap gap-1 mt-1">
 								{#each selectedFeedback?.data?.tags as tag}
-									<span class="px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-xs">{tag}</span
+									<span class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-850 text-xs"
+										>{tag}</span
 									>
 								{/each}
 							</div>
@@ -64,7 +50,23 @@
 							<span>-</span>
 						{/if}
 					</div>
-					<div class="flex justify-end pt-3">
+
+					<div class="flex flex-col w-full mb-2">
+						<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Rating')}</div>
+
+						<div class="flex-1 text-xs">
+							<span>{selectedFeedback?.data?.details?.rating ?? '-'}</span>
+						</div>
+					</div>
+					<div class="flex flex-col w-full mb-2">
+						<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Reason')}</div>
+
+						<div class="flex-1 text-xs">
+							<span>{selectedFeedback?.data?.reason || '-'}</span>
+						</div>
+					</div>
+
+					<div class="flex justify-end pt-2">
 						<button
 							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 							type="button"

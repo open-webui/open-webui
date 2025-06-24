@@ -153,10 +153,10 @@
 			webSearchEnabled = false;
 			imageGenerationEnabled = false;
 
-			if (localStorage.getItem(`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`)) {
+			if (sessionStorage.getItem(`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`)) {
 				try {
 					const input = JSON.parse(
-						localStorage.getItem(`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`)
+						sessionStorage.getItem(`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`)
 					);
 
 					if (!$temporaryChatEnabled) {
@@ -446,7 +446,7 @@
 			}
 		});
 
-		if (localStorage.getItem(`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`)) {
+		if (sessionStorage.getItem(`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`)) {
 			prompt = '';
 			files = [];
 			selectedToolIds = [];
@@ -457,7 +457,7 @@
 
 			try {
 				const input = JSON.parse(
-					localStorage.getItem(`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`)
+					sessionStorage.getItem(`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`)
 				);
 
 				if (!$temporaryChatEnabled) {
@@ -2120,12 +2120,12 @@
 									onChange={(input) => {
 										if (!$temporaryChatEnabled) {
 											if (input.prompt !== null) {
-												localStorage.setItem(
+												sessionStorage.setItem(
 													`chat-input${$chatId ? `-${$chatId}` : ''}`,
 													JSON.stringify(input)
 												);
 											} else {
-												localStorage.removeItem(`chat-input${$chatId ? `-${$chatId}` : ''}`);
+												sessionStorage.removeItem(`chat-input${$chatId ? `-${$chatId}` : ''}`);
 											}
 										}
 									}}

@@ -52,10 +52,10 @@
 		<div class="px-5 pb-4 dark:text-gray-200">
 			<div class="mb-2">
 				{#if topTags.length}
-					<div class="flex flex-wrap gap-1 mt-1">
+					<div class="flex flex-wrap gap-1 mt-1 -mx-1">
 						{#each topTags as tagInfo}
-							<span class="px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-xs">
-								{tagInfo.tag} <span class="text-gray-500">({tagInfo.count})</span>
+							<span class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-850 text-xs">
+								{tagInfo.tag} <span class="text-gray-500 font-medium">{tagInfo.count}</span>
 							</span>
 						{/each}
 					</div>
@@ -63,7 +63,7 @@
 					<span>-</span>
 				{/if}
 			</div>
-			<div class="flex justify-end pt-3">
+			<div class="flex justify-end pt-2">
 				<button
 					class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 					type="button"
