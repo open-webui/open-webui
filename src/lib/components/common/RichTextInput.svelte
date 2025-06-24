@@ -219,7 +219,7 @@
 	};
 
 	onMount(async () => {
-		// Initialize PII session manager (SQLite-based)
+		// Initialize PII session manager (Backend-based)
 		if (enablePiiDetection && piiApiKey) {
 			piiSessionManager.setApiKey(piiApiKey);
 		}
