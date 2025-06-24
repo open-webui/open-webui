@@ -17,7 +17,7 @@ import { viteStaticCopy } from 'vite-plugin-static-copy';
 // 	}
 // };
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
 	plugins: [
 		sveltekit(),
 		viteStaticCopy({
@@ -41,6 +41,7 @@ export default defineConfig({
 		format: 'es'
 	},
 	esbuild: {
-		pure: ['console.log', 'console.debug']
+		// Only purge console.log when not in dev mode
+		pure: mode === 'dev' ? [] : ['console.log', 'console.debug']
 	}
-});
+}));
