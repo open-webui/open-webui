@@ -1391,7 +1391,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 								existingModifiers, // Pass existing modifiers
 								onRemoveModifier, // Pass removal callback
 								timeoutManager, // Pass timeout manager
-								existingModifiers.length === 0 || existingModifiers.some(m => m.type === 'mask') // Show text field if no modifiers or has mask modifiers
+								existingModifiers.length === 0 || existingModifiers.some(m => m.action === 'mask') // Show text field if no modifiers or has mask modifiers
 							);
 
 							document.body.appendChild(hoverMenuElement);
