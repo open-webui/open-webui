@@ -53,7 +53,7 @@ function generateModifierId(): string {
 }
 
 // Tokenizer pattern for broader context word detection
-const WORD_TOKENIZER_PATTERN = /[\w'-äöüÄÖÜß]+(?=\b|[^.])/g;
+const WORD_TOKENIZER_PATTERN = /[\w'-äöüÄÖÜß]+(?=\b|\.)/g;
 
 // Find all tokenized words touched by a text selection with broader context
 function findTokenizedWords(doc: ProseMirrorNode, selectionFrom: number, selectionTo: number): Array<{ word: string; from: number; to: number; }> {
@@ -332,7 +332,7 @@ function createHoverMenu(
 
 			const modifierInfo = document.createElement('span');
 			const typeIcon = modifier.action === 'ignore' ? '🚫' : '🏷️';
-			const typeText = modifier.action === 'ignore' ? 'Ignore' : `Mask as ${modifier.type}`;
+			const typeText = modifier.action === 'ignore' ? 'Ignore' : `${modifier.type}`;
 			modifierInfo.textContent = `${typeIcon} ${typeText}`;
 			modifierInfo.style.cssText = `
 				color: #495057;
@@ -385,7 +385,7 @@ function createHoverMenu(
 	// Ignore button (only show if word is detected as PII)
 	if (showIgnoreButton) {
 		const ignoreBtn = document.createElement('button');
-		ignoreBtn.textContent = '🚫 Ignore this PII';
+		ignoreBtn.textContent = '🚫 Ignore';
 		ignoreBtn.style.cssText = `
 			width: 100%;
 			padding: 6px 10px;
@@ -530,7 +530,7 @@ function createHoverMenu(
 
 
 	const maskBtn = document.createElement('button');
-	maskBtn.textContent = 'Mark as PII';
+	maskBtn.textContent = 'Change Label';
 	maskBtn.style.cssText = `
 		width: 100%;
 		padding: 6px 10px;
@@ -693,7 +693,7 @@ function createSelectionMenu(
 		font-weight: 500;
 		cursor: pointer;
 	`;
-	tokenizedLabel.textContent = 'Combined tokenized: ';
+	tokenizedLabel.textContent = 'Words: ';
 
 	const tokenizedWords = document.createElement('span');
 	tokenizedWords.style.cssText = `
@@ -727,7 +727,7 @@ function createSelectionMenu(
 		font-weight: 500;
 		cursor: pointer;
 	`;
-	exactLabel.textContent = 'Exact selection: ';
+	exactLabel.textContent = 'Exact: ';
 
 	const exactText = document.createElement('span');
 	exactText.style.cssText = `
@@ -849,7 +849,7 @@ function createSelectionMenu(
 
 	// Mark button
 	const markBtn = document.createElement('button');
-	markBtn.textContent = 'Mark as PII';
+	markBtn.textContent = 'Mask';
 	markBtn.style.cssText = `
 		width: 100%;
 		padding: 8px 12px;
