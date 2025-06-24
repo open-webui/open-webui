@@ -404,6 +404,8 @@ async def chat_web_search_handler(
         )
         return
 
+    all_results = []
+
     searchQuery = queries[0]
 
     await event_emitter(
@@ -419,7 +421,6 @@ async def chat_web_search_handler(
     )
 
     try:
-
         results = await process_web_search(
             request,
             SearchForm(
@@ -431,28 +432,28 @@ async def chat_web_search_handler(
         )
 
         if results:
-            await event_emitter(
-                {
-                    "type": "status",
-                    "data": {
-                        "action": "web_search",
-                        "description": "Searched {{count}} sites",
-                        "query": searchQuery,
-                        "urls": results["filenames"],
-                        "done": True,
-                    },
-                }
-            )
-
+            all_results.append(results)
             files = form_data.get("files", [])
-            files.append(
-                {
-                    "collection_name": results["collection_name"],
-                    "name": searchQuery,
-                    "type": "web_search_results",
-                    "urls": results["filenames"],
-                }
-            )
+
+            if results.get("collection_name"):
+                files.append(
+                    {
+                        "collection_name": results["collection_name"],
+                        "name": searchQuery,
+                        "type": "web_search",
+                        "urls": results["filenames"],
+                    }
+                )
+            elif results.get("docs"):
+                files.append(
+                    {
+                        # "context": "full",
+                        "docs": results.get("docs", []),
+                        "name": searchQuery,
+                        "type": "web_search",
+                        "urls": results["filenames"],
+                    }
+                )
             form_data["files"] = files
         else:
             await event_emitter(
@@ -476,6 +477,36 @@ async def chat_web_search_handler(
                     "action": "web_search",
                     "description": 'Error searching "{{searchQuery}}"',
                     "query": searchQuery,
+                    "done": True,
+                    "error": True,
+                },
+            }
+        )
+
+    if all_results:
+        urls = []
+        for results in all_results:
+            if "filenames" in results:
+                urls.extend(results["filenames"])
+
+        await event_emitter(
+            {
+                "type": "status",
+                "data": {
+                    "action": "web_search",
+                    "description": "Searched {{count}} sites",
+                    "urls": urls,
+                    "done": True,
+                },
+            }
+        )
+    else:
+        await event_emitter(
+            {
+                "type": "status",
+                "data": {
+                    "action": "web_search",
+                    "description": "No search results found",
                     "done": True,
                     "error": True,
                 },
@@ -623,6 +654,7 @@ async def chat_completion_files_handler(
                 sources = await loop.run_in_executor(
                     executor,
                     lambda: get_sources_from_files(
+                        request=request,
                         files=files,
                         queries=queries,
                         embedding_function=request.app.state.EMBEDDING_FUNCTION,
