@@ -199,6 +199,7 @@ CHANGELOG = changelog_json
 
 SAFE_MODE = os.environ.get("SAFE_MODE", "false").lower() == "true"
 
+
 ####################################
 # ENABLE_FORWARD_USER_INFO_HEADERS
 ####################################
@@ -272,15 +273,13 @@ if "postgres://" in DATABASE_URL:
 
 DATABASE_SCHEMA = os.environ.get("DATABASE_SCHEMA", None)
 
-DATABASE_POOL_SIZE = os.environ.get("DATABASE_POOL_SIZE", 0)
+DATABASE_POOL_SIZE = os.environ.get("DATABASE_POOL_SIZE", None)
 
-if DATABASE_POOL_SIZE == "":
-    DATABASE_POOL_SIZE = 0
-else:
+if DATABASE_POOL_SIZE != None:
     try:
         DATABASE_POOL_SIZE = int(DATABASE_POOL_SIZE)
     except Exception:
-        DATABASE_POOL_SIZE = 0
+        DATABASE_POOL_SIZE = None
 
 DATABASE_POOL_MAX_OVERFLOW = os.environ.get("DATABASE_POOL_MAX_OVERFLOW", 0)
 
@@ -395,6 +394,10 @@ WEBUI_AUTH_COOKIE_SECURE = (
 
 if WEBUI_AUTH and WEBUI_SECRET_KEY == "":
     raise ValueError(ERROR_MESSAGES.ENV_VAR_NOT_FOUND)
+
+ENABLE_COMPRESSION_MIDDLEWARE = (
+    os.environ.get("ENABLE_COMPRESSION_MIDDLEWARE", "True").lower() == "true"
+)
 
 ENABLE_WEBSOCKET_SUPPORT = (
     os.environ.get("ENABLE_WEBSOCKET_SUPPORT", "True").lower() == "true"
