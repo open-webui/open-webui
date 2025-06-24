@@ -135,8 +135,6 @@
 	};
 
 	onMount(() => {
-		// console.log('UserMessage mounted');
-
 		// Add PII highlighting styles if not already present
 		if (!document.getElementById('pii-user-styles')) {
 			const styleElement = document.createElement('style');

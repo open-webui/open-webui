@@ -15,30 +15,17 @@
 
 	$: entities = piiSessionManager.getEntities();
 	$: {
-		console.log('PiiAwareText debug:', {
-			id,
-			text: text.substring(0, 50) + '...',
-			entitiesCount: entities.length,
-			entities: entities.map((e) => ({ label: e.label, text: e.raw_text })),
-			hasContainer: !!containerElement
-		});
+
 	}
 	$: processedText = (() => {
 		if (!entities.length) {
-			console.log('PiiAwareText: No entities, returning original text');
 			return text;
 		}
 
 		// Check if text has already been processed (contains PII highlight spans)
 		if (text.includes('<span class="pii-highlight')) {
-			console.log('PiiAwareText: Text already contains PII highlights, skipping processing');
 			return text;
 		}
-
-		console.log('PiiAwareText processing:', {
-			entitiesCount: entities.length,
-			textSample: text.substring(0, 100)
-		});
 
 		// Use the combined function that handles both unmasking and highlighting
 		// This prevents double processing and position-based issues
@@ -54,12 +41,10 @@
 	// Add event listeners for PII highlights
 	const addPiiEventListeners = () => {
 		if (!containerElement) {
-			console.log('PiiAwareText: No container element for adding event listeners');
 			return;
 		}
 
 		const piiElements = containerElement.querySelectorAll('.pii-highlight');
-		console.log('PiiAwareText: Adding event listeners to', piiElements.length, 'PII elements');
 
 		piiElements.forEach((element) => {
 			const htmlElement = element as HTMLElement;

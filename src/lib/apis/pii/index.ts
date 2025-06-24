@@ -68,9 +68,9 @@ export const createPiiSession = async (
 
 // Interface for Shield API modifiers
 export interface ShieldApiModifier {
-	type: 'ignore' | 'mask';
+	action: 'ignore' | 'mask';
 	entity: string;
-	label?: string;
+	type?: string;
 }
 
 // Mask PII in text (ephemeral - without session)
@@ -101,12 +101,7 @@ export const maskPiiText = async (
 	// Add modifiers if provided
 	if (modifiers.length > 0) {
 		requestBody.modifiers = modifiers;
-		console.log('PII API: Including modifiers in request:', modifiers);
-	} else {
-		console.log('PII API: No modifiers to include');
 	}
-
-	console.log('PII API: Final request body:', requestBody);
 
 	const response = await fetch(url.toString(), {
 		method: 'POST',
@@ -176,12 +171,8 @@ export const maskPiiTextWithSession = async (
 	// Add modifiers if provided
 	if (modifiers.length > 0) {
 		requestBody.modifiers = modifiers;
-		console.log('PII API: Including modifiers in request:', modifiers);
-	} else {
-		console.log('PII API: No modifiers to include');
 	}
 
-	console.log('PII API: Final request body:', requestBody);
 
 	const response = await fetch(url.toString(), {
 		method: 'POST',

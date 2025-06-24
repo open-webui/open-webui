@@ -585,8 +585,6 @@
 	}
 
 	onMount(async () => {
-		// console.log('ResponseMessage mounted');
-
 		// Add PII highlighting styles if not already present
 		if (!document.getElementById('pii-response-styles')) {
 			const styleElement = document.createElement('style');

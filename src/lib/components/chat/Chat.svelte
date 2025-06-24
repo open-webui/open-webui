@@ -1996,6 +1996,15 @@
 			}
 		}
 	};
+
+	// Expose saveChatHandler for PiiSessionManager to trigger saves
+	if (typeof window !== 'undefined') {
+		(window as any).triggerPiiChatSave = async (conversationId: string) => {
+			if (conversationId === $chatId) {
+				await saveChatHandler(conversationId, history);
+			}
+		};
+	}
 </script>
 
 <svelte:head>

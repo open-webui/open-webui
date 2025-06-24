@@ -72,7 +72,7 @@
 	// PII Detection props
 	export let enablePiiDetection = false;
 	export let piiApiKey = '';
-	export let conversationId = '';
+	export let conversationId: string | undefined = undefined;
 	export let onPiiDetected: (entities: ExtendedPiiEntity[], maskedText: string) => void = () => {};
 	export let onPiiToggled: (entities: ExtendedPiiEntity[]) => void = () => {};
 
@@ -101,15 +101,38 @@
 		const sortedModifiers = [...modifiers].sort((a, b) => a.id.localeCompare(b.id));
 		
 		return sortedModifiers
-			.map(m => `${m.type}:${m.entity}:${m.label || ''}:${m.from}:${m.to}`)
+			.map(m => `${m.action}:${m.entity}:${m.type || ''}:${m.from}:${m.to}`)
 			.join('|');
 	};
 
 	// PII Session Manager for conversation state
 	let piiSessionManager = PiiSessionManager.getInstance();
+	let previousConversationId: string | undefined = undefined;
+	let conversationActivated = false; // Track if conversation has been activated
 
 	const options = {
 		throwOnError: false
+	};
+
+	// Ensure conversation is activated (load modifiers into working state)
+	const ensureConversationActivated = () => {
+		if (enablePiiDetection && enablePiiModifiers && conversationId && !conversationActivated) {			
+			// Set flag immediately to prevent multiple simultaneous calls
+			conversationActivated = true;
+			
+			try {
+				piiSessionManager.activateConversation(conversationId);
+				
+				// Reload modifiers in the extension (only if editor exists and has the command)
+				if (editor && editor.commands && typeof editor.commands.reloadConversationModifiers === 'function') {
+					editor.commands.reloadConversationModifiers(conversationId);
+				}
+			} catch (error) {
+				console.error('RichTextInput: Error during conversation activation:', error);
+				// Reset flag on error so it can be retried
+				conversationActivated = false;
+			}
+		}
 	};
 
 	$: if (editor) {
@@ -196,7 +219,7 @@
 	};
 
 	onMount(async () => {
-		// Initialize PII session manager
+		// Initialize PII session manager (Backend-based)
 		if (enablePiiDetection && piiApiKey) {
 			piiSessionManager.setApiKey(piiApiKey);
 		}
@@ -254,15 +277,6 @@
 
 		console.log('content', content);
 
-		console.log('RichTextInput: Initializing editor with PII detection:', {
-			enablePiiDetection,
-			enablePiiModifiers,
-			hasApiKey: !!piiApiKey,
-			conversationId,
-			apiKeyLength: piiApiKey?.length || 0,
-			modifierLabels: piiModifierLabels
-		});
-
 		editor = new Editor({
 			element: element,
 			extensions: [
@@ -288,6 +302,7 @@
 					? [
 							PiiModifierExtension.configure({
 								enabled: true,
+								conversationId: conversationId,
 								onModifiersChanged: handleModifiersChanged,
 								availableLabels: piiModifierLabels.length > 0 
 									? piiModifierLabels 
@@ -376,6 +391,7 @@
 						return false;
 					},
 					focus: (view, event) => {
+						ensureConversationActivated(); // Ensure conversation is activated on focus
 						eventDispatch('focus', { event });
 						return false;
 					},
@@ -384,6 +400,8 @@
 						return false;
 					},
 					keydown: (view, event) => {
+						ensureConversationActivated(); // Ensure conversation is activated on first keystroke
+						
 						if (messageInput) {
 							// Handle Tab Key
 							if (event.key === 'Tab') {
@@ -546,35 +564,82 @@
 		}
 	};
 
+	let currentModifiersHash = '';
+
+	// Reactive statement to handle conversation ID changes and transfer global state
+	$: if (conversationId && conversationId !== previousConversationId && enablePiiDetection) {		
+		// Reset conversation activated flag when conversation changes
+		conversationActivated = false;
+		
+		// Transfer global state to new conversation (only if conversation doesn't already have state)
+		if (!previousConversationId && conversationId) {
+			// Check if conversation already has state (loaded from SQLite)
+			const existingState = piiSessionManager.getConversationState(conversationId);
+			
+			if (!existingState) {
+				// Only transfer if conversation has no existing state (new conversation)
+				piiSessionManager.transferGlobalToConversation(conversationId);
+				
+				// Reload modifiers in extension after transfer
+				if (editor && enablePiiModifiers) {
+					editor.commands.reloadConversationModifiers(conversationId);
+					conversationActivated = true;
+				}
+			} else {				
+				// Just reload modifiers in extension to use existing state
+				if (editor && enablePiiModifiers) {
+					editor.commands.reloadConversationModifiers(conversationId);
+					conversationActivated = true;
+				}
+			}
+		}
+		
+		// Switch between existing conversations
+		if (previousConversationId && conversationId && previousConversationId !== conversationId) {
+			piiSessionManager.loadConversationState(conversationId);
+			
+			// Activate the new conversation and reload modifiers
+			if (editor && enablePiiModifiers) {
+				piiSessionManager.activateConversation(conversationId);
+				editor.commands.reloadConversationModifiers(conversationId);
+				conversationActivated = true;
+			}
+		}
+		
+		// Update extensions with new conversation ID
+		if (editor && enablePiiDetection) {
+			// Update PiiDetectionExtension
+			if (editor.extensionManager.extensions.find((ext: any) => ext.name === 'piiDetection')) {
+				if (editor.commands.reloadConversationState) {
+					editor.commands.reloadConversationState(conversationId);
+				}
+			}
+		}
+		
+		previousConversationId = conversationId;
+	}
+
 	// Reactive statement to trigger PII detection when modifiers change  
 	$: if (editor && editor.view && enablePiiDetection && enablePiiModifiers) {
-		// TEMPORARY: Revert to original length-based approach to debug API issue
-		if (currentModifiers.length !== previousModifiersLength && currentModifiers.length > 0) {
-			console.log('RichTextInput: Modifiers changed (length-based), triggering PII detection', {
-				previousLength: previousModifiersLength,
-				currentLength: currentModifiers.length
-			});
-			previousModifiersLength = currentModifiers.length;
+		const newHash = getModifiersHash(currentModifiers);
+		if (newHash !== currentModifiersHash && newHash !== '') {
+			currentModifiersHash = newHash;
 			editor.commands.triggerDetectionForModifiers();
 		}
 	}
 
 	// Handle modifier changes
 	const handleModifiersChanged = (modifiers: PiiModifier[]) => {
-		const wasEmpty = currentModifiers.length === 0;
+		const oldHash = getModifiersHash(currentModifiers);
+		const newHash = getModifiersHash(modifiers);
+		
 		currentModifiers = modifiers;
 		onPiiModifiersChanged(modifiers);
 		
-		// TEMPORARY: Revert to original length-based logic to debug API issue
-		if ((wasEmpty && modifiers.length > 0) || modifiers.length !== previousModifiersLength) {
-			console.log('RichTextInput: Modifier change detected in handler', {
-				wasEmpty,
-				previousLength: previousModifiersLength,
-				newLength: modifiers.length
-			});
-			
-			// Update the tracking variable
-			previousModifiersLength = modifiers.length;
+		// Use content-based comparison for more reliable change detection
+		if (newHash !== oldHash) {			
+			// Update the tracking hash
+			currentModifiersHash = newHash;
 			
 			// Trigger detection if we have an editor and text
 			if (editor && editor.view && editor.view.state.doc.textContent.trim()) {

@@ -25,7 +25,7 @@ interface PiiDetectionState {
 export interface PiiDetectionOptions {
 	enabled: boolean;
 	apiKey: string;
-	conversationId: string;
+	conversationId?: string | undefined;
 	onPiiDetected?: (entities: ExtendedPiiEntity[], maskedText: string) => void;
 	onPiiToggled?: (entities: ExtendedPiiEntity[]) => void;
 	debounceMs?: number;
@@ -64,11 +64,7 @@ function buildPositionMapping(doc: ProseMirrorNode): PositionMapping {
 		return true; // Continue traversing
 	});
 
-	console.log('PiiDetectionExtension: Built position mapping:', {
-		plainTextLength: plainText.length,
-		plainTextPreview: plainText.substring(0, 200),
-		mappingSize: plainTextToProseMirror.size
-	});
+
 
 	return {
 		plainTextToProseMirror,
@@ -89,26 +85,13 @@ function mapPiiEntitiesToProseMirror(
 			const plainTextStart = occurrence.start_idx;
 			const plainTextEnd = occurrence.end_idx;
 			
-			// Get ProseMirror positions (with fallback)
 			const proseMirrorStart = mapping.plainTextToProseMirror.get(plainTextStart) ?? plainTextStart + 1;
-			// For end position, ensure we include the last character (PII API uses exclusive end, ProseMirror uses inclusive)
 			const proseMirrorEnd = mapping.plainTextToProseMirror.get(plainTextEnd - 1) ?? (plainTextEnd - 1 + 1);
-			
-			// Extract the actual text for verification
-			const originalText = mapping.plainText.substring(plainTextStart, plainTextEnd);
-			
-			console.log('PiiDetectionExtension: Mapping entity position:', {
-				entity: entity.label,
-				plainText: { start: plainTextStart, end: plainTextEnd },
-				proseMirror: { start: proseMirrorStart, end: proseMirrorEnd + 1 }, // +1 for inclusive end
-				originalText,
-				expectedText: entity.raw_text
-			});
 			
 			return {
 				...occurrence,
 				start_idx: proseMirrorStart,
-				end_idx: proseMirrorEnd + 1 // Make end position inclusive for ProseMirror
+				end_idx: proseMirrorEnd + 1
 			};
 		})
 	}));
@@ -117,86 +100,72 @@ function mapPiiEntitiesToProseMirror(
 // Create decorations for PII entities and modifier-affected text
 function createPiiDecorations(entities: ExtendedPiiEntity[], modifiers: PiiModifier[], doc: ProseMirrorNode): Decoration[] {
 	const decorations: Decoration[] = [];
+	const modifiersByEntity = new Map<string, PiiModifier>();
+	
+	modifiers.forEach(modifier => {
+		modifiersByEntity.set(modifier.entity.toLowerCase(), modifier);
+	});
 
-	// Add PII entity decorations
+	// Add PII entity decorations (lower priority)
 	entities.forEach((entity, entityIndex) => {
 		entity.occurrences.forEach((occurrence: any, occurrenceIndex) => {
 			const { start_idx: from, end_idx: to } = occurrence;
 			
-			// Ensure positions are valid for the current document
 			if (from >= 0 && to <= doc.content.size && from < to) {
-				const shouldMask = entity.shouldMask ?? true;
-				const maskingClass = shouldMask ? 'pii-masked' : 'pii-unmasked';
+				const hasModifier = modifiersByEntity.has(entity.raw_text.toLowerCase());
 				
-				decorations.push(
-					Decoration.inline(from, to, {
-						class: `pii-highlight ${maskingClass}`,
-						'data-pii-type': entity.type,
-						'data-pii-label': entity.label,
-						'data-pii-text': entity.raw_text,
-						'data-pii-occurrence': occurrenceIndex.toString(),
-						'data-should-mask': shouldMask.toString(),
-						'data-entity-index': entityIndex.toString()
-					})
-				);
+				if (!hasModifier) {
+					const shouldMask = entity.shouldMask ?? true;
+					const maskingClass = shouldMask ? 'pii-masked' : 'pii-unmasked';
+					
+					decorations.push(
+						Decoration.inline(from, to, {
+							class: `pii-highlight ${maskingClass}`,
+							'data-pii-type': entity.type,
+							'data-pii-label': entity.label,
+							'data-pii-text': entity.raw_text,
+							'data-pii-occurrence': occurrenceIndex.toString(),
+							'data-should-mask': shouldMask.toString(),
+							'data-entity-index': entityIndex.toString()
+						})
+					);
+				}
 			}
 		});
 	});
 
-	// Add modifier decorations (find ALL occurrences of modifier-affected words)
-	if (modifiers.length > 0) {
-		// Group modifiers by entity text for efficient processing
-		const modifiersByEntity = new Map<string, PiiModifier[]>();
-		modifiers.forEach(modifier => {
-			const entityText = modifier.entity.toLowerCase();
-			if (!modifiersByEntity.has(entityText)) {
-				modifiersByEntity.set(entityText, []);
-			}
-			modifiersByEntity.get(entityText)!.push(modifier);
-		});
-
-		// Search for all occurrences of each modifier-affected word
-		modifiersByEntity.forEach((entityModifiers, entityText) => {
-			// Find all occurrences of this word in the document
-			doc.nodesBetween(0, doc.content.size, (node, pos) => {
-				if (node.isText && node.text) {
-					const text = node.text.toLowerCase();
-					const originalText = node.text;
+	// Add modifier decorations (higher priority)
+	modifiers.forEach(modifier => {
+		doc.nodesBetween(0, doc.content.size, (node, pos) => {
+			if (node.isText && node.text) {
+				const entityText = modifier.entity.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+				const regex = new RegExp(`\\b${entityText}\\b`, 'gi');
+				let match;
+				
+				while ((match = regex.exec(node.text)) !== null) {
+					const matchStart = pos + match.index;
+					const matchEnd = matchStart + match[0].length;
 					
-					// Create regex for word boundaries to match whole words only
-					const regex = new RegExp(`\\b${entityText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
-					let match;
-					
-					while ((match = regex.exec(originalText)) !== null) {
-						const matchStart = pos + match.index;
-						const matchEnd = matchStart + match[0].length;
+					if (matchStart >= 0 && matchEnd <= doc.content.size && matchStart < matchEnd) {
+						const decorationClass = modifier.action === 'mask' 
+							? 'pii-modifier-highlight pii-modifier-mask'
+							: 'pii-modifier-highlight pii-modifier-ignore';
 						
-						// Ensure positions are valid
-						if (matchStart >= 0 && matchEnd <= doc.content.size && matchStart < matchEnd) {
-							// Determine the decoration class based on modifier types
-							const hasIgnoreModifier = entityModifiers.some(m => m.type === 'ignore');
-							const hasMaskModifier = entityModifiers.some(m => m.type === 'mask');
-							
-							let decorationClass = 'pii-modifier-highlight';
-							if (hasMaskModifier) {
-								// Mask modifiers get yellow font + green styling
-								decorationClass = 'pii-modifier-highlight pii-modifier-mask';
-							}
-							
-							decorations.push(
-								Decoration.inline(matchStart, matchEnd, {
-									class: decorationClass,
-									'data-modifier-entity': entityModifiers[0].entity,
-									'data-modifier-types': entityModifiers.map(m => m.type).join(','),
-									'data-modifier-labels': entityModifiers.filter(m => m.label).map(m => m.label).join(',')
-								})
-							);
-						}
+						decorations.push(
+							Decoration.inline(matchStart, matchEnd, {
+								class: decorationClass,
+								'data-modifier-entity': modifier.entity,
+								'data-modifier-action': modifier.action,
+								'data-modifier-type': modifier.type || '',
+								'data-modifier-id': modifier.id,
+								style: 'z-index: 10; position: relative;'
+							})
+						);
 					}
 				}
-			});
+			}
 		});
-	}
+	});
 
 	return decorations;
 }
@@ -206,9 +175,9 @@ const piiDetectionPluginKey = new PluginKey<PiiDetectionState>('piiDetection');
 // Convert PiiModifier objects to ShieldApiModifier format
 function convertModifiersToApiFormat(modifiers: PiiModifier[]): ShieldApiModifier[] {
 	return modifiers.map(modifier => ({
-		type: modifier.type,
+		action: modifier.action,
 		entity: modifier.entity,
-		...(modifier.label && { label: modifier.label })
+		...(modifier.type && { type: modifier.type })
 	}));
 }
 
@@ -228,109 +197,55 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 
 	addProseMirrorPlugins() {
 		const options = this.options;
-		const { enabled, apiKey, conversationId, onPiiDetected, onPiiToggled, debounceMs } = options;
-
-		console.log('PiiDetectionExtension: Initializing with options:', {
-			enabled,
-			hasApiKey: !!apiKey,
-			conversationId,
-			debounceMs
-		});
+		const { enabled, apiKey, onPiiDetected, onPiiToggled, debounceMs } = options;
 
 		if (!enabled || !apiKey) {
-			console.log('PiiDetectionExtension: Disabled - missing enabled flag or API key');
 			return [];
 		}
 
 		const piiSessionManager = PiiSessionManager.getInstance();
 		piiSessionManager.setApiKey(apiKey);
 
-		// Store reference to plugin for accessing view
-		let pluginInstance: any = null;
-
-		// Create a PII detection function with proper scope
 		const performPiiDetection = async (plainText: string) => {
 			if (!plainText.trim()) {
-				console.log('PiiDetectionExtension: Skipping detection - empty text');
 				return;
 			}
 
-			console.log('PiiDetectionExtension: Starting PII detection for text:', plainText.substring(0, 100));
-
 			try {
-				// Get known entities from conversation state
-				const knownEntities = conversationId
-					? piiSessionManager.getKnownEntitiesForApi(conversationId)
-					: [];
+				const knownEntities = options.conversationId
+					? piiSessionManager.getKnownEntitiesForApi(options.conversationId)
+					: piiSessionManager.getGlobalKnownEntitiesForApi();
 
-				console.log('PiiDetectionExtension: Using known entities:', knownEntities);
-
-				// Get current modifiers from PiiModifierExtension state (read-only)
-				const view = this.editor?.view;
-				let modifiers: ShieldApiModifier[] = [];
-				if (view) {
-					const modifierState = piiModifierExtensionKey.getState(view.state);
-					if (modifierState?.modifiers && modifierState.modifiers.length > 0) {
-						modifiers = convertModifiersToApiFormat(modifierState.modifiers);
-						console.log('PiiDetectionExtension: Found', modifiers.length, 'modifiers:', modifiers);
-					} else {
-						console.log('PiiDetectionExtension: No modifiers found in editor state');
-					}
-				} else {
-					console.log('PiiDetectionExtension: No editor view available for reading modifiers');
-				}
-
+				const modifiers = piiSessionManager.getModifiersForApi(options.conversationId);
 				const response = await maskPiiText(apiKey, [plainText], knownEntities, modifiers, false, false);
 				
-				console.log('PiiDetectionExtension: API request details:', {
-					textLength: plainText.length,
-					knownEntitiesCount: knownEntities.length,
-					modifiersCount: modifiers.length,
-					modifiers: modifiers,
-					hasApiKey: !!apiKey
-				});
-				
-				console.log('PiiDetectionExtension: API response:', response);
-
 				if (response.pii && response.pii[0] && response.pii[0].length > 0) {
-					// Get the editor view through the stored editor reference
-					if (!view) {
-						console.log('PiiDetectionExtension: No editor view available');
+					const editorView = this.editor?.view;
+					const state = piiDetectionPluginKey.getState(editorView?.state);
+					
+					if (!editorView || !state?.positionMapping) {
+						console.warn('PiiDetectionExtension: No editor view or position mapping available');
 						return;
 					}
 
-					const state = piiDetectionPluginKey.getState(view.state);
-					if (!state?.positionMapping) {
-						console.log('PiiDetectionExtension: No position mapping available');
-						return;
-					}
-
-					// Map PII entities to ProseMirror positions
 					const mappedEntities = mapPiiEntitiesToProseMirror(response.pii[0], state.positionMapping);
 					
-					console.log('PiiDetectionExtension: Mapped entities:', mappedEntities);
-
-					// Store entities in session manager
-					if (conversationId) {
-						piiSessionManager.setConversationEntities(conversationId, response.pii[0]);
+					if (options.conversationId) {
+						piiSessionManager.setConversationEntitiesPreservingModifiers(options.conversationId, response.pii[0]);
 					} else {
-						piiSessionManager.setEntities(response.pii[0]);
+						piiSessionManager.appendGlobalEntities(response.pii[0]);
 					}
 
-					// Update plugin state with new entities (don't touch modifiers - they're managed by PiiModifierExtension)
-					const tr = view.state.tr.setMeta(piiDetectionPluginKey, {
+					const tr = editorView.state.tr.setMeta(piiDetectionPluginKey, {
 						type: 'UPDATE_ENTITIES',
 						entities: mappedEntities
 					});
 					
-					view.dispatch(tr);
+					editorView.dispatch(tr);
 
-					// Notify parent component
 					if (onPiiDetected) {
 						onPiiDetected(mappedEntities, response.text[0]);
 					}
-				} else {
-					console.log('PiiDetectionExtension: No PII entities found in response');
 				}
 			} catch (error) {
 				console.error('PiiDetectionExtension: PII detection failed:', error);
@@ -340,12 +255,11 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 		// Debounced version
 		const debouncedDetection = debounce(performPiiDetection, debounceMs || 500);
 
-		pluginInstance = new Plugin<PiiDetectionState>({
+		const plugin = new Plugin<PiiDetectionState>({
 			key: piiDetectionPluginKey,
 			
 			state: {
 				init(): PiiDetectionState {
-					console.log('PiiDetectionExtension: Initializing plugin state');
 					return {
 						entities: [],
 						positionMapping: null,
@@ -355,109 +269,74 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 				},
 				
 				apply(tr, prevState): PiiDetectionState {
-					let newState = prevState;
-
-					// Handle document changes
-					if (tr.docChanged) {
-						// Rebuild position mapping
-						const newMapping = buildPositionMapping(tr.doc);
-						newState = {
-							...newState,
-							positionMapping: newMapping
-						};
-
-						console.log('PiiDetectionExtension: Document changed, new text:', newMapping.plainText.substring(0, 100));
-
-						// Trigger PII detection if text changed significantly
-						if (newMapping.plainText !== prevState.lastText && newMapping.plainText.trim()) {
-							newState = {
-								...newState,
-								lastText: newMapping.plainText
-							};
-
-							console.log('PiiDetectionExtension: Triggering PII detection for text change');
-							
-							// Trigger debounced detection - the editor reference will be available when it executes
-							debouncedDetection(newMapping.plainText);
-						}
-
-						// Map existing entities through the document change
-						if (prevState.entities.length > 0) {
-							const mappedEntities = prevState.entities.map(entity => ({
-								...entity,
-								occurrences: entity.occurrences.map((occurrence: any) => {
-									// Use ProseMirror's mapping to update positions
-									const newStart = tr.mapping.map(occurrence.start_idx);
-									const newEnd = tr.mapping.map(occurrence.end_idx);
-									return {
-										...occurrence,
-										start_idx: newStart,
-										end_idx: newEnd
-									};
-								})
-							}));
-							
-							newState = {
-								...newState,
-								entities: mappedEntities
-							};
-						}
-					}
-
-					// Handle plugin-specific meta actions
+					let newState = { ...prevState };
+					
 					const meta = tr.getMeta(piiDetectionPluginKey);
 					if (meta) {
-						console.log('PiiDetectionExtension: Handling meta action:', meta.type);
 						switch (meta.type) {
 							case 'UPDATE_ENTITIES':
-								newState = {
-									...newState,
-									entities: meta.entities
-								};
+								newState.entities = meta.entities || [];
 								break;
-							case 'TRIGGER_DETECTION_WITH_MODIFIERS':
-								// Trigger detection when modifiers change
-								if (newState.positionMapping?.plainText.trim()) {
-									console.log('PiiDetectionExtension: Triggering detection due to modifier change');
-									debouncedDetection(newState.positionMapping.plainText);
-								} else {
-									console.log('PiiDetectionExtension: Skipping detection - no text content');
-								}
-								break;
+								
 							case 'TOGGLE_ENTITY_MASKING':
 								const { entityIndex, occurrenceIndex } = meta;
-								const updatedEntities = [...newState.entities];
-								if (updatedEntities[entityIndex]) {
-									updatedEntities[entityIndex] = {
-										...updatedEntities[entityIndex],
-										shouldMask: !updatedEntities[entityIndex].shouldMask
-									};
-									newState = {
-										...newState,
-										entities: updatedEntities
-									};
+								if (newState.entities[entityIndex]) {
+									const entity = { ...newState.entities[entityIndex] };
+									entity.shouldMask = !entity.shouldMask;
+									newState.entities = [...newState.entities];
+									newState.entities[entityIndex] = entity;
 									
-									// Update session manager with the new masking state
 									const piiSessionManager = PiiSessionManager.getInstance();
-									const toggledEntity = updatedEntities[entityIndex];
-									if (conversationId) {
+									if (options.conversationId) {
 										piiSessionManager.toggleConversationEntityMasking(
-											conversationId,
-											toggledEntity.label,
+											options.conversationId,
+											entity.label,
 											occurrenceIndex
 										);
 									} else {
-										piiSessionManager.toggleEntityMasking(toggledEntity.label, occurrenceIndex);
+										piiSessionManager.toggleEntityMasking(entity.label, occurrenceIndex);
 									}
 									
-									if (onPiiToggled) {
-										onPiiToggled(updatedEntities);
+									if (options.onPiiToggled) {
+										options.onPiiToggled(newState.entities);
 									}
+								}
+								break;
+								
+							case 'TRIGGER_DETECTION':
+							case 'TRIGGER_DETECTION_WITH_MODIFIERS':
+								const currentMapping = buildPositionMapping(tr.doc);
+								newState.positionMapping = currentMapping;
+								
+								if (currentMapping.plainText.trim()) {
+									performPiiDetection(currentMapping.plainText);
+								}
+								break;
+								
+							case 'RELOAD_CONVERSATION_STATE':
+								options.conversationId = meta.conversationId;
+								
+								const newMapping = buildPositionMapping(tr.doc);
+								newState.positionMapping = newMapping;
+								
+								if (newMapping.plainText.trim()) {
+									performPiiDetection(newMapping.plainText);
 								}
 								break;
 						}
 					}
-
+					
+					if (tr.docChanged) {
+						newState.positionMapping = buildPositionMapping(tr.doc);
+						
+						if (!newState.isDetecting && newState.positionMapping.plainText !== newState.lastText) {
+							newState.lastText = newState.positionMapping.plainText;
+							if (newState.positionMapping.plainText.trim()) {
+								debouncedDetection(newState.positionMapping.plainText);
+							}
+						}
+					}
+					
 					return newState;
 				}
 			},
@@ -465,20 +344,18 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 			props: {
 				decorations(state) {
 					const pluginState = piiDetectionPluginKey.getState(state);
-					if (!pluginState?.entities.length) {
-						// Check if we have modifiers even without PII entities
-						const modifierState = piiModifierExtensionKey.getState(state);
-						if (!modifierState?.modifiers.length) {
-							return DecorationSet.empty;
-						}
+					
+					// Get modifiers from session manager (not ProseMirror extension state)
+					const piiSessionManager = PiiSessionManager.getInstance();
+					const modifiers = options.conversationId 
+						? piiSessionManager.getConversationModifiers(options.conversationId)
+						: piiSessionManager.getGlobalModifiers();
+					
+					if (!pluginState?.entities.length && !modifiers.length) {
+						return DecorationSet.empty;
 					}
 					
-					// Get modifiers from the PiiModifierExtension state
-					const modifierState = piiModifierExtensionKey.getState(state);
-					const modifiers = modifierState?.modifiers || [];
-					
 					const decorations = createPiiDecorations(pluginState?.entities || [], modifiers, state.doc);
-					console.log('PiiDetectionExtension: Creating', decorations.length, 'decorations');
 					return DecorationSet.create(state.doc, decorations);
 				},
 
@@ -486,11 +363,9 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 					const target = event.target as HTMLElement;
 					
 					if (target.classList.contains('pii-highlight')) {
-						console.log('PiiDetectionExtension: PII highlight clicked');
 						const entityIndex = parseInt(target.getAttribute('data-entity-index') || '0');
 						const occurrenceIndex = parseInt(target.getAttribute('data-pii-occurrence') || '0');
 
-						// Toggle entity masking
 						const tr = view.state.tr.setMeta(piiDetectionPluginKey, {
 							type: 'TOGGLE_ENTITY_MASKING',
 							entityIndex,
@@ -507,29 +382,23 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 			}
 		});
 
-		return [pluginInstance];
+		return [plugin];
 	},
 
 	addCommands() {
 		return {
-			// Command to manually trigger PII detection
-			detectPii: () => ({ state, dispatch }: { state: any; dispatch: any }) => {
-				const pluginState = piiDetectionPluginKey.getState(state);
-				
-				if (pluginState?.positionMapping && dispatch) {
+			triggerDetection: () => ({ state, dispatch }: any) => {
+				if (dispatch) {
 					const tr = state.tr.setMeta(piiDetectionPluginKey, {
-						type: 'TRIGGER_DETECTION',
-						text: pluginState.positionMapping.plainText
+						type: 'TRIGGER_DETECTION'
 					});
 					dispatch(tr);
 					return true;
 				}
-				
 				return false;
 			},
 
-			// Command to trigger PII detection when modifiers change
-			triggerDetectionForModifiers: () => ({ state, dispatch }: { state: any; dispatch: any }) => {
+			triggerDetectionForModifiers: () => ({ state, dispatch }: any) => {
 				if (dispatch) {
 					const tr = state.tr.setMeta(piiDetectionPluginKey, {
 						type: 'TRIGGER_DETECTION_WITH_MODIFIERS'
@@ -540,22 +409,16 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 				return false;
 			},
 
-			// Command to update PII entities (for external updates)
-			updatePiiEntities: (entities: ExtendedPiiEntity[]) => ({ state, dispatch }: { state: any; dispatch: any }) => {
+			reloadConversationState: (newConversationId: string) => ({ state, dispatch }: any) => {
 				if (dispatch) {
 					const tr = state.tr.setMeta(piiDetectionPluginKey, {
-						type: 'UPDATE_ENTITIES',
-						entities
+						type: 'RELOAD_CONVERSATION_STATE',
+						conversationId: newConversationId
 					});
 					dispatch(tr);
 					return true;
 				}
 				return false;
-			},
-
-			// Command to get current PII state
-			getPiiState: () => ({ state }: { state: any }) => {
-				return piiDetectionPluginKey.getState(state);
 			}
 		} as any;
 	}
