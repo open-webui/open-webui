@@ -54,51 +54,6 @@ function generateModifierId(): string {
 // Tokenizer pattern for broader context word detection
 const WORD_TOKENIZER_PATTERN = /[\w'-äöüÄÖÜß]+/g;
 
-// Find word boundaries at a given position
-function findWordAt(doc: ProseMirrorNode, pos: number): { from: number; to: number; text: string } | null {
-	let from = pos;
-	let to = pos;
-	let text = '';
-
-	// Find word boundaries by traversing text nodes
-	doc.nodesBetween(0, doc.content.size, (node, nodePos) => {
-		if (node.isText && node.text) {
-			const nodeStart = nodePos;
-			const nodeEnd = nodePos + node.text.length;
-
-			if (pos >= nodeStart && pos <= nodeEnd) {
-				const relativePos = pos - nodeStart;
-				const nodeText = node.text;
-
-				// Find word start
-				let wordStart = relativePos;
-				while (wordStart > 0 && /[\w'-äöüÄÖÜß]/.test(nodeText[wordStart - 1])) {
-					wordStart--;
-				}
-
-				// Find word end
-				let wordEnd = relativePos;
-				while (wordEnd < nodeText.length && /[\w'-äöüÄÖÜß]/.test(nodeText[wordEnd])) {
-					wordEnd++;
-				}
-
-				// Only proceed if we're actually within a word
-				if (wordStart < wordEnd && relativePos >= wordStart && relativePos <= wordEnd) {
-					from = nodeStart + wordStart;
-					to = nodeStart + wordEnd;
-					text = nodeText.substring(wordStart, wordEnd);
-				}
-				return false; // Stop searching
-			}
-		}
-	});
-
-	if (text && text.length >= 2) {
-		return { from, to, text };
-	}
-	return null;
-}
-
 // Find all tokenized words touched by a text selection with broader context
 function findTokenizedWords(doc: ProseMirrorNode, selectionFrom: number, selectionTo: number): Array<{ word: string; from: number; to: number; }> {
 	const words: Array<{ word: string; from: number; to: number; }> = [];
@@ -108,7 +63,6 @@ function findTokenizedWords(doc: ProseMirrorNode, selectionFrom: number, selecti
 	const contextEnd = Math.min(doc.content.size, selectionTo + 100); // 100 chars after
 	
 	let contextText = '';
-	let contextOffset = contextStart;
 	
 	// Build context text with position mapping
 	const positionMap: number[] = []; // Maps context text index to document position
@@ -261,13 +215,6 @@ function findExistingEntityAtPosition(view: any, clientX: number, clientY: numbe
 	return null;
 }
 
-// Check if the hovered position is within a PII entity (legacy function - now using DOM-based detection)
-function isPiiDetected(text: string, view?: any, conversationId?: string): boolean {
-	// This function is now primarily used for backwards compatibility
-	// The actual detection is done via DOM elements in findExistingEntityAtPosition
-	return false;
-}
-
 // Predefined PII labels for autocompletion (from SPACY_LABEL_MAPPINGS values)
 const PREDEFINED_LABELS = [
 	'ADDRESS', 'BANK_ACCOUNT_NUMBER', 'ID_NUMBER', 'HEALTH_DATA', 'LOCATION', 
@@ -347,6 +294,7 @@ function createHoverMenu(
 	header.appendChild(textNode);
 	menu.appendChild(header);
 
+	console.log('existingModifiers', existingModifiers);
 	// Show existing modifiers if any
 	if (existingModifiers.length > 0) {
 		const modifiersSection = document.createElement('div');
@@ -1042,9 +990,6 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 					
 					// Load modifiers from session manager if available
 					const piiSessionManager = PiiSessionManager.getInstance();
-					
-					// First ensure localStorage is loaded (only if not already loaded) - RESTORED
-					piiSessionManager.initializeFromLocalStorage();
 					
 					// Load conversation state if we have a conversationId (but don't repeatedly activate) - RESTORED
 					if (conversationId) {

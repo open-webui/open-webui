@@ -705,40 +705,6 @@ export class PiiSessionManager {
 		this.conversationStates.clear();
 	}
 
-	// ==== DEPRECATED LOCALSTORAGE METHODS (REMOVED - Using SQLite only) ====
-
-	/**
-	 * DEPRECATED: All localStorage methods removed - using SQLite storage only
-	 */
-	initializeFromLocalStorage(): void {
-		console.log('PiiSessionManager: initializeFromLocalStorage DEPRECATED - using SQLite storage only');
-	}
-
-	debugLocalStorage(conversationId?: string): void {
-		console.log('PiiSessionManager: debugLocalStorage DEPRECATED - using SQLite storage only');
-	}
-
-	clearConversationLocalStorage(conversationId: string): void {
-		console.log('PiiSessionManager: clearConversationLocalStorage DEPRECATED - using SQLite storage only');
-	}
-
-	clearGlobalLocalStorage(): void {
-		console.log('PiiSessionManager: clearGlobalLocalStorage DEPRECATED - using SQLite storage only');
-	}
-
-	syncConversationFromLocalStorage(conversationId: string): void {
-		console.log('PiiSessionManager: syncConversationFromLocalStorage DEPRECATED - using SQLite storage only');
-	}
-
-	initializeConversationLocalStorage(conversationId: string): void {
-		console.log('PiiSessionManager: initializeConversationLocalStorage DEPRECATED - using SQLite storage only');
-	}
-
-	verifyConversationKeys(conversationId: string): { entities: boolean; modifiers: boolean } {
-		console.log('PiiSessionManager: verifyConversationKeys DEPRECATED - using SQLite storage only');
-		return { entities: false, modifiers: false };
-	}
-
 	/**
 	 * Test method to verify the full transfer flow
 	 */

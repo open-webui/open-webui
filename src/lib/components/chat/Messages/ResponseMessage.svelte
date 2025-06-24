@@ -585,20 +585,6 @@
 	}
 
 	onMount(async () => {
-		// console.log('ResponseMessage mounted');
-
-		// Initialize PII localStorage for this conversation (mirrors chat-input pattern)
-		const conversationId = chatId || '';
-		if (conversationId) {
-			console.log(`ResponseMessage: Initializing PII localStorage for conversation ${conversationId}`);
-			
-			// Ensure global localStorage is loaded first
-			piiSessionManager.initializeFromLocalStorage();
-			
-			// Initialize conversation-specific localStorage keys
-			piiSessionManager.initializeConversationLocalStorage(conversationId);
-		}
-
 		// Add PII highlighting styles if not already present
 		if (!document.getElementById('pii-response-styles')) {
 			const styleElement = document.createElement('style');

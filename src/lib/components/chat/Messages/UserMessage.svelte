@@ -135,20 +135,6 @@
 	};
 
 	onMount(() => {
-		// console.log('UserMessage mounted');
-
-		// Initialize PII localStorage for this conversation (mirrors chat-input pattern)
-		const conversationId = history?.id || '';
-		if (conversationId) {
-			console.log(`UserMessage: Initializing PII localStorage for conversation ${conversationId}`);
-			
-			// Ensure global localStorage is loaded first
-			piiSessionManager.initializeFromLocalStorage();
-			
-			// Initialize conversation-specific localStorage keys
-			piiSessionManager.initializeConversationLocalStorage(conversationId);
-		}
-
 		// Add PII highlighting styles if not already present
 		if (!document.getElementById('pii-user-styles')) {
 			const styleElement = document.createElement('style');
