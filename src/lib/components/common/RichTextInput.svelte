@@ -101,7 +101,7 @@
 		const sortedModifiers = [...modifiers].sort((a, b) => a.id.localeCompare(b.id));
 		
 		return sortedModifiers
-			.map(m => `${m.action}:${m.entity}:${m.type || ''}:${m.from}:${m.to}`)
+			.map(m => `${m.action}:${m.entity}:${m.type || ''}:${m.id}`)
 			.join('|');
 	};
 
@@ -195,8 +195,40 @@
 
 		if (template) {
 			if (dispatch) {
-				const tr = state.tr.setSelection(TextSelection.create(doc, template.from, template.to));
-				dispatch(tr);
+				try {
+					// Validate template positions before creating selection
+					if (template.from >= 0 && template.to <= doc.content.size && template.from < template.to) {
+						const fromResolved = doc.resolve(template.from);
+						const toResolved = doc.resolve(template.to);
+						
+						// Ensure both positions are in nodes with inline content
+						if (fromResolved.parent.inlineContent && toResolved.parent.inlineContent) {
+							try {
+								// Test if we can actually create the selection before dispatching
+								const testSelection = TextSelection.create(doc, template.from, template.to);
+								if (testSelection) {
+									const tr = state.tr.setSelection(testSelection);
+									dispatch(tr);
+								} else {
+									console.warn('RichTextInput: Could not create template selection:', template);
+									return false;
+								}
+							} catch (selectionError) {
+								console.warn('RichTextInput: Template selection creation failed:', selectionError, template);
+								return false;
+							}
+						} else {
+							console.warn('RichTextInput: Template positions not in inline content:', template);
+							return false;
+						}
+					} else {
+						console.warn('RichTextInput: Invalid template positions:', template, 'doc size:', doc.content.size);
+						return false;
+					}
+				} catch (error) {
+					console.warn('RichTextInput: Failed to create template selection:', error, template);
+					return false;
+				}
 			}
 			return true;
 		}
@@ -214,10 +246,94 @@
 				const templateFound = selectNextTemplate(editor.view.state, editor.view.dispatch);
 				if (!templateFound) {
 					// If no template found, set cursor at the end
-					const endPos = editor.view.state.doc.content.size;
-					editor.view.dispatch(
-						editor.view.state.tr.setSelection(TextSelection.create(editor.view.state.doc, endPos))
-					);
+					try {
+						const doc = editor.view.state.doc;
+						const endPos = doc.content.size;
+						
+						// Validate that endPos is a valid position for text selection
+						if (endPos > 0) {
+							// Try to resolve the position to ensure it's valid
+							const resolvedPos = doc.resolve(endPos);
+							let selectionSet = false;
+							
+							if (resolvedPos.parent.inlineContent) {
+								// Test if we can actually create the selection before dispatching
+								try {
+									const testSelection = TextSelection.create(doc, endPos);
+									if (testSelection) {
+										editor.view.dispatch(
+											editor.view.state.tr.setSelection(testSelection)
+										);
+										selectionSet = true;
+									}
+								} catch (endPosError) {
+									console.warn('RichTextInput: Could not create selection at endPos:', endPosError);
+								}
+							}
+							
+							if (!selectionSet) {
+								// Find the last valid text position
+								let validPos = endPos;
+								while (validPos > 1) { // Start from 1, not 0
+									try {
+										const testPos = validPos - 1;
+										const resolved = doc.resolve(testPos);
+										if (resolved.parent.inlineContent) {
+											// Double-check that we can actually create a selection at this position
+											const testSelection = TextSelection.create(doc, testPos);
+											if (testSelection) {
+												editor.view.dispatch(
+													editor.view.state.tr.setSelection(testSelection)
+												);
+												selectionSet = true;
+												break;
+											}
+										}
+									} catch (posError) {
+										// This position is invalid, try the next one
+									}
+									validPos--;
+								}
+								// If we couldn't find any valid position, don't set selection
+								if (!selectionSet) {
+									console.warn('RichTextInput: Could not find any valid text position for cursor');
+								}
+							}
+						}
+					} catch (error) {
+						console.warn('RichTextInput: Failed to set selection at document end:', error);
+						// Fallback: try to find any valid text position
+						try {
+							const doc = editor.view.state.doc;
+							let foundValidPosition = false;
+							
+							// Try positions 1, 2, 3... until we find a valid one
+							for (let pos = 1; pos <= Math.min(10, doc.content.size); pos++) {
+								try {
+									const resolved = doc.resolve(pos);
+									if (resolved.parent.inlineContent) {
+										const testSelection = TextSelection.create(doc, pos);
+										if (testSelection) {
+											editor.view.dispatch(
+												editor.view.state.tr.setSelection(testSelection)
+											);
+											foundValidPosition = true;
+											break;
+										}
+									}
+								} catch (posError) {
+									// This position is invalid, try the next one
+									continue;
+								}
+							}
+							
+							if (!foundValidPosition) {
+								console.warn('RichTextInput: Could not find any valid text position for fallback cursor');
+							}
+						} catch (fallbackError) {
+							console.warn('RichTextInput: Fallback selection logic failed entirely:', fallbackError);
+						}
+					}
 				}
 			}, 0);
 		}
@@ -300,7 +416,9 @@
 		editor = new Editor({
 			element: element,
 			extensions: [
-				StarterKit,
+				StarterKit.configure({
+					codeBlock: false // Disable the default CodeBlock extension
+				}),
 				CodeBlockLowlight.configure({
 					lowlight
 				}),
