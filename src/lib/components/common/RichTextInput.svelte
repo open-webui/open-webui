@@ -593,15 +593,30 @@
 		// Reset conversation activated flag when conversation changes
 		conversationActivated = false;
 		
-		// Transfer global state to new conversation
+		// Transfer global state to new conversation (only if conversation doesn't already have state)
 		if (!previousConversationId && conversationId) {
-			console.log('RichTextInput: Transferring global state to conversation');
-			piiSessionManager.transferGlobalToConversation(conversationId);
+			// Check if conversation already has state (loaded from SQLite)
+			const existingState = piiSessionManager.getConversationState(conversationId);
 			
-			// Reload modifiers in extension after transfer
-			if (editor && enablePiiModifiers) {
-				editor.commands.reloadConversationModifiers(conversationId);
-				conversationActivated = true;
+			if (!existingState) {
+				// Only transfer if conversation has no existing state (new conversation)
+				console.log('RichTextInput: Transferring global state to NEW conversation');
+				piiSessionManager.transferGlobalToConversation(conversationId);
+				
+				// Reload modifiers in extension after transfer
+				if (editor && enablePiiModifiers) {
+					editor.commands.reloadConversationModifiers(conversationId);
+					conversationActivated = true;
+				}
+			} else {
+				// Conversation already has state from SQLite - don't overwrite!
+				console.log(`RichTextInput: Conversation already has state from SQLite (${existingState.entities.length} entities, ${existingState.modifiers.length} modifiers), skipping transfer`);
+				
+				// Just reload modifiers in extension to use existing state
+				if (editor && enablePiiModifiers) {
+					editor.commands.reloadConversationModifiers(conversationId);
+					conversationActivated = true;
+				}
 			}
 		}
 		
