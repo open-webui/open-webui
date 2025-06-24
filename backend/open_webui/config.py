@@ -1529,7 +1529,20 @@ MILVUS_DB = os.environ.get("MILVUS_DB", "default")
 
 # Qdrant
 QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY", None)
-QDRANT_URL = os.environ.get("QDRANT_URL", "http://localhost:6333")
+# Quantize vectors and keep quantized data in memory to reduce memory usage
+# Docs: https://qdrant.tech/documentation/guides/optimize/
+QDRANT_ENABLE_QUANTIZATION = (
+    os.environ.get("QDRANT_ENABLE_QUANTIZATION", "False").lower() == "true"
+)
+QDRANT_ON_DISK_HNSW = os.environ.get("QDRANT_ON_DISK_HNSW", "False").lower() == "true"
+QDRANT_ON_DISK_PAYLOAD = (
+    os.environ.get("QDRANT_ON_DISK_PAYLOAD", "False").lower() == "true"
+)
+QDRANT_ON_DISK_VECTOR = (
+    os.environ.get("QDRANT_ON_DISK_VECTOR", "False").lower() == "true"
+)
+QDRANT_PREFER_GRPC = os.environ.get("QDRANT_PREFER_GRPC", "False").lower() == "true"
+QDRANT_URL = os.environ.get("QDRANT_URL", "http://localhost")
 QDRANT_TIMEOUT_SECONDS = os.environ.get("QDRANT_TIMEOUT_SECONDS", 5)
 
 # OpenSearch
