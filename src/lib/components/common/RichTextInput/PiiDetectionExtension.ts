@@ -298,7 +298,8 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 					
 					// Store entities in session manager (will trigger SQLite save automatically)
 					if (options.conversationId) {
-						piiSessionManager.setConversationState(options.conversationId, response.pii[0]);
+						// Use new method to preserve existing modifiers
+						piiSessionManager.setConversationEntitiesPreservingModifiers(options.conversationId, response.pii[0]);
 					} else {
 						piiSessionManager.appendGlobalEntities(response.pii[0]);
 					}

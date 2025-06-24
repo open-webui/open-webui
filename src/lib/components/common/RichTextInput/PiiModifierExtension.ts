@@ -11,8 +11,6 @@ export interface PiiModifier {
 	entity: string;
 	type?: string; // PII type - required for 'mask' action
 	id: string; // Unique identifier for this modifier
-	from: number; // ProseMirror position start
-	to: number; // ProseMirror position end
 }
 
 // Options for the extension
@@ -229,12 +227,17 @@ function findExistingEntityAtPosition(view: any, clientX: number, clientY: numbe
 						modifier.entity.toLowerCase() === modifierText.toLowerCase()
 					);
 					if (matchingModifier) {
-						return {
-							from: matchingModifier.from,
-							to: matchingModifier.to,
-							text: modifierText,
-							type: 'modifier'
-						};
+						// Find actual position of this modifier entity in the document
+						const pos = view.posAtCoords({ left: clientX, top: clientY });
+						if (pos) {
+							const textLength = modifierText.length;
+							return {
+								from: Math.max(0, pos.pos - Math.floor(textLength / 2)),
+								to: Math.min(view.state.doc.content.size, pos.pos + Math.ceil(textLength / 2)),
+								text: modifierText,
+								type: 'modifier'
+							};
+						}
 					}
 				}
 			} catch (error) {
@@ -1040,16 +1043,16 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 					// Load modifiers from session manager if available
 					const piiSessionManager = PiiSessionManager.getInstance();
 					
-					// First ensure localStorage is loaded (only if not already loaded)
+					// First ensure localStorage is loaded (only if not already loaded) - RESTORED
 					piiSessionManager.initializeFromLocalStorage();
 					
-					// Load conversation state if we have a conversationId (but don't repeatedly activate)
+					// Load conversation state if we have a conversationId (but don't repeatedly activate) - RESTORED
 					if (conversationId) {
 						console.log(`PiiModifierExtension: Loading conversation state for ${conversationId}`);
 						piiSessionManager.loadConversationState(conversationId);
 					}
 					
-					// Use the new getActiveModifiers method (this doesn't trigger activation, just gets current state)
+					// Use the getActiveModifiers method - RESTORED
 					const loadedModifiers = piiSessionManager.getActiveModifiers(conversationId);
 					
 					console.log(`PiiModifierExtension: Loaded ${loadedModifiers.length} modifiers from session manager (${conversationId ? 'conversation' : 'global'})`);
@@ -1064,29 +1067,8 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 				apply(tr, prevState): PiiModifierState {
 					let newState = { ...prevState };
 
-					// Handle document changes - update positions
-					if (tr.docChanged) {
-						const updatedModifiers = prevState.modifiers.map(modifier => ({
-							...modifier,
-							from: tr.mapping.map(modifier.from),
-							to: tr.mapping.map(modifier.to)
-						})).filter(modifier => 
-							// Remove modifiers that are no longer valid
-							modifier.from < modifier.to && 
-							modifier.from >= 0 && 
-							modifier.to <= tr.doc.content.size
-						);
-
-						newState = {
-							...newState,
-							modifiers: updatedModifiers
-						};
-
-						// Notify of changes if modifiers were removed
-						if (updatedModifiers.length !== prevState.modifiers.length && onModifiersChanged) {
-							onModifiersChanged(updatedModifiers);
-						}
-					}
+					// Document changes don't affect modifiers since we search for entity text dynamically
+					// No position tracking needed
 
 					// Handle plugin-specific meta actions
 					const meta = tr.getMeta(piiModifierExtensionKey);
@@ -1122,8 +1104,6 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 									action: meta.modifierAction,
 									entity: meta.entity,
 									type: meta.piiType,
-									from: meta.from,
-									to: meta.to
 								};
 
 								// Replace any existing modifier for the same entity text (case-insensitive)
@@ -1302,28 +1282,28 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 								type: existingEntity.type
 							});
 
-							// Find existing modifiers for this entity (check entity text match)
-							const pluginState = piiModifierExtensionKey.getState(view.state);
+							// Find existing modifiers for this entity (use session manager like highlighting does)
+							const piiSessionManager = PiiSessionManager.getInstance();
+							const sessionModifiers = conversationId 
+								? piiSessionManager.getConversationModifiers(conversationId)
+								: piiSessionManager.getGlobalModifiers();
+							
 							const targetText = targetInfo.word;
 							
 							// Check if the hovered entity is part of any modifier entity
-							let existingModifiers = pluginState?.modifiers.filter(modifier => {
+							let existingModifiers = sessionModifiers.filter(modifier => {
 								// Check if modifier's entity text matches the target text (case-insensitive)
 								return modifier.entity.toLowerCase() === targetText.toLowerCase();
 							}) || [];
 							
 							// If no exact match, check if the hovered text is part of any multi-word modifier
 							if (existingModifiers.length === 0) {
-								for (const modifier of pluginState?.modifiers || []) {
+								for (const modifier of sessionModifiers || []) {
 									const modifierWords = modifier.entity.toLowerCase().split(/\s+/);
 									if (modifierWords.includes(targetText.toLowerCase())) {
 										existingModifiers = [modifier];
-										// Update targetInfo to use the complete modifier entity
-										targetInfo = {
-											word: modifier.entity,
-											from: modifier.from,
-											to: modifier.to
-										};
+										// Use the complete modifier entity text
+										targetInfo.word = modifier.entity;
 										break;
 									}
 								}

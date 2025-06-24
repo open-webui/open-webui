@@ -470,6 +470,17 @@ export class PiiSessionManager {
 		this.triggerChatSave(conversationId);
 	}
 
+	// NEW: Set conversation entities while preserving existing modifiers
+	setConversationEntitiesPreservingModifiers(conversationId: string, entities: PiiEntity[], sessionId?: string) {
+		const existingState = this.conversationStates.get(conversationId);
+		const existingModifiers = existingState?.modifiers || [];
+		
+		console.log(`PiiSessionManager: Setting entities while preserving ${existingModifiers.length} existing modifiers for conversation ${conversationId}`);
+		
+		// Use the main setConversationState method which properly merges entities and preserves modifiers
+		this.setConversationState(conversationId, entities, existingModifiers, sessionId);
+	}
+
 	// Set global modifiers (before conversation ID exists)
 	setGlobalModifiers(modifiers: PiiModifier[]) {
 		this.globalModifiers = modifiers;
