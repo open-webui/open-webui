@@ -445,18 +445,23 @@
 <div
 	bind:this={navElement}
 	id="sidebar"
-	class="h-screen max-h-[100dvh] min-h-screen select-none {$showSidebar
-		? 'md:relative w-[260px] max-w-[260px]'
-		: '-translate-x-[260px] w-[0px]'} {$isApp
+	class="h-screen max-h-[100dvh] min-h-screen p-4 select-none {$showSidebar
+		? 'md:relative w-[300px] max-w-[300px]'
+		: '-translate-x-[300px] w-[0px]'} {$isApp
 		? `ml-[4.5rem] md:ml-0 `
-		: 'transition-width duration-200 ease-in-out'}  shrink-0 bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-200 text-sm fixed z-50 top-0 left-0 overflow-x-hidden
+		: 'transition-width duration-200 ease-in-out'}  shrink-0 bg-surface text-gray-900 dark:bg-gray-950 dark:text-gray-200 text-sm fixed z-50 top-0 left-0 overflow-x-hidden
         "
 	data-state={$showSidebar}
 >
 	<div
-		class="py-2 my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[260px] overflow-x-hidden z-50 {$showSidebar
+		class="py-2 my-auto flex flex-col justify-between h-[calc(100vh-2rem)] max-h-[100dvh] w-[calc(300px-2rem)] overflow-x-hidden z-50 bg-white {$showSidebar
 			? ''
 			: 'invisible'}"
+			style="
+    border-radius: 20px;
+    background: var(--Schemes-Surface, #FFF);
+    box-shadow: 0px 0px 16px -8px rgba(28, 27, 27, 0.04);
+  "
 	>
 		<div class="px-1.5 flex justify-between space-x-1 text-gray-600 dark:text-gray-400">
 			<button
@@ -503,7 +508,7 @@
 					<div class="self-center mx-1.5">
 						<img
 							crossorigin="anonymous"
-							src="{WEBUI_BASE_URL}/static/favicon.png"
+							src="/static/favicon.png"
 							class="sidebar-new-chat-icon size-5 -translate-x-1.5 rounded-full"
 							alt="logo"
 						/>

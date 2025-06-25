@@ -8,6 +8,7 @@ export default {
 	theme: {
 		extend: {
 			colors: {
+				surface: '#F9F9FF',
 				gray: {
 					50: 'var(--color-gray-50, #f9f9f9)',
 					100: 'var(--color-gray-100, #ececec)',

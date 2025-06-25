@@ -27,7 +27,7 @@
 {#if loaded}
 	<div
 		class=" flex flex-col w-full h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
-			? 'md:max-w-[calc(100%-260px)]'
+			? 'md:max-w-[calc(100%-300px)]'
 			: ''} max-w-full"
 	>
 		<nav class="   px-2.5 pt-1 backdrop-blur-xl drag-region">

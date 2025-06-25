@@ -857,7 +857,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 
 <div
 	class="absolute z-20 bottom-0 right-0 p-5 max-w-full {$showSidebar
-		? 'md:max-w-[calc(100%-260px)]'
+		? 'md:max-w-[calc(100%-300px)]'
 		: ''} w-full flex justify-end"
 >
 	<div class="flex gap-1 justify-between w-full max-w-full">
