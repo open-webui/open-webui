@@ -1392,5 +1392,16 @@
 	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "Ihr gesamter Beitrag geht direkt an den Plugin-Entwickler; Open WebUI behält keinen Prozentsatz ein. Die gewählte Finanzierungsplattform kann jedoch eigene Gebühren haben.",
 	"Youtube": "YouTube",
 	"Youtube Language": "YouTube Sprache",
-	"Youtube Proxy URL": "YouTube Proxy URL"
+	"Youtube Proxy URL": "YouTube Proxy URL",
+	"PII Modifier: Ignore": "🚫 Ignorieren",
+	"PII Modifier: Change Label": "Label Ändern",
+	"PII Modifier: Current Modifiers": "Aktuelle Modifikatoren:",
+	"PII Modifier: Remove modifier": "Modifikator entfernen",
+	"PII Modifier: Mark text as PII": "Text als PII markieren",
+	"PII Modifier: Words": "Wörter:",
+	"PII Modifier: Exact": "Exakt:",
+	"PII Modifier: Mask": "Maskieren",
+	"PII Modifier: Enter PII label type": "PII-Label-Typ eingeben",
+	"PII Modifier: Was masked in input": "Wurde in der Eingabe maskiert",
+	"PII Modifier: Was NOT masked in input": "Wurde NICHT in der Eingabe maskiert"
 }

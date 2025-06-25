@@ -2,6 +2,7 @@ import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey } from 'prosemirror-state';
 import type { Node as ProseMirrorNode } from 'prosemirror-model';
 import { PiiSessionManager } from '$lib/utils/pii';
+import i18next from 'i18next';
 
 // Types for the Shield API modifiers
 export type ModifierAction = 'ignore' | 'mask';
@@ -262,7 +263,7 @@ function createHoverMenu(
 		`;
 
 		const modifiersHeader = document.createElement('div');
-		modifiersHeader.textContent = 'Current Modifiers:';
+		modifiersHeader.textContent = i18next.t('PII Modifier: Current Modifiers');
 		modifiersHeader.style.cssText = `
 			font-weight: 600;
 			font-size: 11px;
@@ -296,7 +297,7 @@ function createHoverMenu(
 
 			const removeBtn = document.createElement('button');
 			removeBtn.textContent = '✕';
-			removeBtn.title = 'Remove modifier';
+			removeBtn.title = i18next.t('PII Modifier: Remove modifier');
 			removeBtn.style.cssText = `
 				background: #dc3545;
 				color: white;
@@ -340,7 +341,7 @@ function createHoverMenu(
 	// Ignore button (only show if word is detected as PII)
 	if (showIgnoreButton) {
 		const ignoreBtn = document.createElement('button');
-		ignoreBtn.textContent = '🚫 Ignore';
+		ignoreBtn.textContent = i18next.t('PII Modifier: Ignore');
 		ignoreBtn.style.cssText = `
 			width: 100%;
 			padding: 6px 10px;
@@ -483,7 +484,7 @@ function createHoverMenu(
 
 
 	const maskBtn = document.createElement('button');
-	maskBtn.textContent = 'Change Label';
+	maskBtn.textContent = i18next.t('PII Modifier: Change Label');
 	maskBtn.style.cssText = `
 		width: 100%;
 		padding: 6px 10px;
@@ -612,7 +613,7 @@ function createSelectionMenu(
 	icon.style.cssText = `width: 16px; height: 16px; flex-shrink: 0;`;
 	
 	const headerText = document.createElement('span');
-	headerText.textContent = 'Mark text as PII';
+	headerText.textContent = i18next.t('PII Modifier: Mark text as PII');
 	
 	header.appendChild(icon);
 	header.appendChild(headerText);
@@ -640,7 +641,7 @@ function createSelectionMenu(
 		font-weight: 500;
 		cursor: pointer;
 	`;
-	tokenizedLabel.textContent = 'Words: ';
+	tokenizedLabel.textContent = i18next.t('PII Modifier: Words') + ' ';
 
 	const tokenizedWords = document.createElement('span');
 	tokenizedWords.style.cssText = `
@@ -674,7 +675,7 @@ function createSelectionMenu(
 		font-weight: 500;
 		cursor: pointer;
 	`;
-	exactLabel.textContent = 'Exact: ';
+	exactLabel.textContent = i18next.t('PII Modifier: Exact') + ' ';
 
 	const exactText = document.createElement('span');
 	exactText.style.cssText = `
@@ -706,7 +707,7 @@ function createSelectionMenu(
 	const labelInput = document.createElement('input');
 	labelInput.type = 'text';
 	labelInput.value = 'CUSTOM';
-	labelInput.placeholder = 'Enter PII label type';
+	labelInput.placeholder = i18next.t('PII Modifier: Enter PII label type');
 	labelInput.style.cssText = `
 		width: 100%;
 		padding: 8px 10px;
@@ -796,7 +797,7 @@ function createSelectionMenu(
 
 	// Mark button
 	const markBtn = document.createElement('button');
-	markBtn.textContent = 'Mask';
+	markBtn.textContent = i18next.t('PII Modifier: Mask');
 	markBtn.style.cssText = `
 		width: 100%;
 		padding: 8px 12px;
