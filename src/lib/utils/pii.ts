@@ -745,7 +745,7 @@ export function highlightUnmaskedEntities(text: string, entities: ExtendedPiiEnt
 				i18next.t('PII Modifier: Was masked in input') : 
 				i18next.t('PII Modifier: Was NOT masked in input');
 
-			return `<span class="pii-highlight ${maskingClass}" title="${entity.label} (${entity.type}) - ${statusText}" data-pii-type="${entity.type}" data-pii-label="${entity.label}">${match}</span>`;
+			return `<span class="pii-highlight ${maskingClass}" title="${entity.label} - ${statusText}" data-pii-type="${entity.type}" data-pii-label="${entity.label}">${match}</span>`;
 		});
 	});
 
@@ -841,7 +841,7 @@ export function unmaskAndHighlightTextForDisplay(text: string, entities: Extende
 				i18next.t('PII Modifier: Was NOT masked in input');
 
 			replacementsMade++;
-			return `<span class="pii-highlight ${maskingClass}" title="${entity.label} (${entity.type}) - ${statusText}" data-pii-type="${entity.type}" data-pii-label="${entity.label}">${rawText}</span>`;
+			return `<span class="pii-highlight ${maskingClass}" title="${entity.label} - ${statusText}" data-pii-type="${entity.type}" data-pii-label="${entity.label}">${rawText}</span>`;
 		});
 	});
 
@@ -871,7 +871,7 @@ export function unmaskAndHighlightTextForDisplay(text: string, entities: Extende
 					i18next.t('PII Modifier: Was NOT masked in input');
 
 				replacementsMade++;
-				return `<span class="pii-highlight ${maskingClass}" title="${entity.label} (${entity.type}) - ${statusText}" data-pii-type="${entity.type}" data-pii-label="${entity.label}">${match}</span>`;
+				return `<span class="pii-highlight ${maskingClass}" title="${entity.label} - ${statusText}" data-pii-type="${entity.type}" data-pii-label="${entity.label}">${match}</span>`;
 			});
 		});
 	}
