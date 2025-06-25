@@ -3,7 +3,8 @@
         export let webPaymentUrl = 'https://www.aibrary.dev/chat/payment?chat=true';
         let loading = false;
 
-        const GOOGLE_PLAY_BILLING_ENABLED = GOOGLE_PLAY_BILLING === 'yes';
+       // Disable Google Play billing for now
+       const GOOGLE_PLAY_BILLING_ENABLED = false;
 
         async function initiatePayment() {
                 try {
