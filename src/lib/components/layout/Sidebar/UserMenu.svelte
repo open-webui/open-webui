@@ -239,7 +239,7 @@
 							{/if}
 							{#if usage?.requests_per_model}
 								<span class="">
-									{$i18n.t('Active Requests')}:
+									{$i18n.t('Running Requests')}:
 								</span>
 								<span class=" font-semibold">
 									{Object.values(usage?.requests_per_model).reduce((a, b) => a + b, 0)}
