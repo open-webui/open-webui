@@ -497,6 +497,10 @@
 							<button
 								class="p-1 text-xs flex rounded-sm transition"
 								type="button"
+								aria-pressed={enableDescription ? 'true' : 'false'}
+								aria-label={enableDescription
+									? $i18n.t('Custom description enabled')
+									: $i18n.t('Default description enabled')}
 								on:click={() => {
 									enableDescription = !enableDescription;
 								}}
