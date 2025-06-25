@@ -211,8 +211,8 @@ function createHoverMenu(
 		position: fixed;
 		left: ${Math.min(wordInfo.x, window.innerWidth - 250)}px;
 		top: ${wordInfo.y - 80}px;
-		background: #6b46c1;
-		border: 1px solid #553c9a;
+		background: #3f3d8a;
+		border: 1px solid #312e81;
 		border-radius: 8px;
 		box-shadow: 0 4px 20px rgba(0,0,0,0.15);
 		padding: 12px;
@@ -462,8 +462,8 @@ function createHoverMenu(
 	maskBtn.style.cssText = `
 		width: 100%;
 		padding: 6px 10px;
-		border: 1px solid #ca8a04;
-		background: #ca8a04;
+		border: 1px solid #f8b76b;
+		background: #f8b76b;
 		border-radius: 4px;
 		cursor: pointer;
 		font-size: 12px;
@@ -477,11 +477,11 @@ function createHoverMenu(
 
 	// Add hover effects for the button
 	maskBtn.addEventListener('mouseenter', () => {
-		maskBtn.style.backgroundColor = '#a16207';
+		maskBtn.style.backgroundColor = '#f59e0b';
 	});
 	
 	maskBtn.addEventListener('mouseleave', () => {
-		maskBtn.style.backgroundColor = '#ca8a04';
+		maskBtn.style.backgroundColor = '#f8b76b';
 	});
 
 	// Handle mask button click
@@ -560,8 +560,8 @@ function createSelectionMenu(
 		position: fixed;
 		left: ${Math.min(selectionInfo.x, window.innerWidth - 300)}px;
 		top: ${selectionInfo.y - 120}px;
-		background: #6b46c1;
-		border: 1px solid #553c9a;
+		background: #3f3d8a;
+		border: 1px solid #312e81;
 		border-radius: 8px;
 		box-shadow: 0 4px 20px rgba(0,0,0,0.15);
 		padding: 16px;
@@ -804,8 +804,8 @@ function createSelectionMenu(
 	markBtn.style.cssText = `
 		width: 100%;
 		padding: 8px 12px;
-		border: 1px solid #ca8a04;
-		background: #ca8a04;
+		border: 1px solid #f8b76b;
+		background: #f8b76b;
 		border-radius: 4px;
 		cursor: pointer;
 		font-size: 12px;
@@ -818,11 +818,11 @@ function createSelectionMenu(
 	`;
 
 	markBtn.addEventListener('mouseenter', () => {
-		markBtn.style.backgroundColor = '#a16207';
+		markBtn.style.backgroundColor = '#f59e0b';
 	});
 	
 	markBtn.addEventListener('mouseleave', () => {
-		markBtn.style.backgroundColor = '#ca8a04';
+		markBtn.style.backgroundColor = '#f8b76b';
 	});
 
 	const markSelectedText = () => {
