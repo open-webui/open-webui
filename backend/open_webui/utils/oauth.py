@@ -85,6 +85,34 @@ def set_aak_groups(user_data):
     so we cannot rely on Open WebUI's claims mapping. Parses the relevant AAK claims and adds them
     to the "groups" list. This enables us to rely on Open WebUI's role management for user role assignment.
 
+    To ensure unique group names, they are constructed as "<aak_department_name> (<aak_department_id>)".
+
+    Example claims:
+
+    "companyname": [
+        "Aarhus Kommune"
+    ],
+    "division": [
+        "Kultur og Borgerservice"
+    ],
+    "department": [
+        "Borgerservice og Biblioteker"
+    ],
+    "extensionAttribute12": [
+        "ITK"
+    ],
+    "Office": [
+        "ITK Development"
+    ],
+    "extensionAttribute7": [
+        "1001;1004;1012;1103;6530"
+    ]
+
+    The ID's for the departments are given sequentially in "extensionAttribute7". Users in management postitions will
+    not have five levels of AAK groups. This will show in the length of "extensionAttribute7" but will not show in the
+    other claims. In the above example a manager will still have the "Office" claim, but it will repeat the value from
+    "extensionAttribute12" and "extensionAttribute7 will only contain "1001;1004;1012;1103"
+
     Note: ENABLE_OAUTH_GROUP_MANAGEMENT and ENABLE_OAUTH_GROUP_CREATION must be set to 'true'
 
     Args:
@@ -93,22 +121,24 @@ def set_aak_groups(user_data):
     Returns:
         The decoded OIDC token with the AAK group names added to the "groups" list.
     """
+
     log.debug("Running AAK Group management")
     log.debug(user_data)
 
     user_data['groups'] = []
 
     dept_ids = user_data.get("extensionAttribute7", "").split(";")
+    dept_depth = len(dept_ids)
 
-    if "companyname" in user_data:
+    if "companyname" in user_data and dept_depth >= 1:
         user_data['groups'].append(user_data.get("companyname", "") + " (" + dept_ids[0] + ")")
-    if "division" in user_data:
+    if "division" in user_data and dept_depth >= 2:
         user_data['groups'].append(user_data.get("division", "") + " (" + dept_ids[1] + ")")
-    if "department" in user_data:
+    if "department" in user_data and dept_depth >= 3:
         user_data['groups'].append(user_data.get("department", "") + " (" + dept_ids[2] + ")")
-    if "extensionAttribute12" in user_data:
+    if "extensionAttribute12" in user_data and dept_depth >= 4:
         user_data['groups'].append(user_data.get("extensionAttribute12", "") + " (" + dept_ids[3] + ")")
-    if "Office" in user_data:
+    if "Office" in user_data and dept_depth >= 5:
         user_data['groups'].append(user_data.get("Office", "") + " (" + dept_ids[4] + ")")
 
     log.debug(f"Using groups {user_data.get('groups', '')}.")
