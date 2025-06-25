@@ -159,8 +159,6 @@ type Settings = {
 	num_keep?: string;
 	options?: ModelOptions;
 
-	// PII Detection settings
-	piiDetection?: PiiDetectionSettings;
 };
 
 type ModelOptions = {
@@ -182,10 +180,7 @@ type TitleSettings = {
 	prompt?: string;
 };
 
-type PiiDetectionSettings = {
-	enabled?: boolean;
-	apiKey?: string;
-};
+
 
 type Prompt = {
 	command: string;
@@ -224,6 +219,7 @@ type Config = {
 		enable_community_sharing: boolean;
 		enable_autocomplete_generation: boolean;
 		enable_direct_connections: boolean;
+		enable_pii_detection?: boolean;
 	};
 	oauth: {
 		providers: {
@@ -233,6 +229,11 @@ type Config = {
 	ui?: {
 		pending_user_overlay_title?: string;
 		pending_user_overlay_description?: string;
+	};
+	pii?: {
+		enabled: boolean;
+		api_key: string;
+		api_base_url: string;
 	};
 };
 

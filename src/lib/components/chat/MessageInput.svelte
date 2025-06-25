@@ -129,9 +129,9 @@
 	let currentPiiEntities: ExtendedPiiEntity[] = [];
 	let maskedPrompt = '';
 
-	// Get PII settings from store
-	$: enablePiiDetection = $settings?.piiDetection?.enabled ?? false;
-	$: piiApiKey = $settings?.piiDetection?.apiKey ?? '';
+	// Get PII settings from config
+	$: enablePiiDetection = $config?.features?.enable_pii_detection ?? false;
+	$: piiApiKey = $config?.pii?.api_key ?? '';
 
 	let visionCapableModels = [];
 	$: visionCapableModels = (atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).filter(
