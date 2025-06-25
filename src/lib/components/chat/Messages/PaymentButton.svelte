@@ -4,6 +4,8 @@
         let loading = false;
 
        // Disable Google Play billing for now
+       // const GOOGLE_PLAY_BILLING_ENABLED = GOOGLE_PLAY_BILLING === 'yes';
+
        const GOOGLE_PLAY_BILLING_ENABLED = false;
 
         async function initiatePayment() {
