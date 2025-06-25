@@ -576,84 +576,121 @@ function createSelectionMenu(
 
 
 
-	// Selection options
-	const optionsContainer = document.createElement('div');
-	optionsContainer.style.cssText = `margin-bottom: 12px;`;
+	// Check if there's a meaningful difference between tokenized words and exact selection
+	const tokenizedText = selectionInfo.tokenizedWords.map(w => w.word).join(' ');
+	const exactText = selectionInfo.selectedText;
+	const showSelectionOptions = tokenizedText !== exactText;
 
-	// Tokenized words option (default)
-	const tokenizedOption = document.createElement('div');
-	tokenizedOption.style.cssText = `margin-bottom: 8px;`;
+	// Selection options (only show if there's a difference)
+	let tokenizedRadio: HTMLInputElement;
+	let exactRadio: HTMLInputElement;
+	
+	if (showSelectionOptions) {
+		const optionsContainer = document.createElement('div');
+		optionsContainer.style.cssText = `margin-bottom: 12px;`;
 
-	const tokenizedRadio = document.createElement('input');
-	tokenizedRadio.type = 'radio';
-	tokenizedRadio.name = 'selection-type';
-	tokenizedRadio.value = 'tokenized';
-	tokenizedRadio.checked = true;
-	tokenizedRadio.id = 'tokenized-option';
+		// Tokenized words option (default)
+		const tokenizedOption = document.createElement('div');
+		tokenizedOption.style.cssText = `margin-bottom: 8px;`;
 
-	const tokenizedLabel = document.createElement('label');
-	tokenizedLabel.htmlFor = 'tokenized-option';
-	tokenizedLabel.style.cssText = `
-		margin-left: 6px;
-		font-weight: 500;
-		cursor: pointer;
-		color: white;
-	`;
-	tokenizedLabel.textContent = i18next.t('PII Modifier: Words') + ' ';
+		tokenizedRadio = document.createElement('input');
+		tokenizedRadio.type = 'radio';
+		tokenizedRadio.name = 'selection-type';
+		tokenizedRadio.value = 'tokenized';
+		tokenizedRadio.checked = true;
+		tokenizedRadio.id = 'tokenized-option';
 
-	const tokenizedWords = document.createElement('span');
-	tokenizedWords.style.cssText = `
-		background: #f0f9ff;
-		color: #0369a1;
-		padding: 2px 6px;
-		border-radius: 4px;
-		font-size: 11px;
-		margin-left: 4px;
-	`;
-	tokenizedWords.textContent = `"${selectionInfo.tokenizedWords.map(w => w.word).join(' ')}"`;
+		const tokenizedLabel = document.createElement('label');
+		tokenizedLabel.htmlFor = 'tokenized-option';
+		tokenizedLabel.style.cssText = `
+			margin-left: 6px;
+			font-weight: 500;
+			cursor: pointer;
+			color: white;
+		`;
+		tokenizedLabel.textContent = i18next.t('PII Modifier: Words') + ' ';
 
-	tokenizedOption.appendChild(tokenizedRadio);
-	tokenizedOption.appendChild(tokenizedLabel);
-	tokenizedOption.appendChild(tokenizedWords);
+		const tokenizedWords = document.createElement('span');
+		tokenizedWords.style.cssText = `
+			background: #f0f9ff;
+			color: #0369a1;
+			padding: 2px 6px;
+			border-radius: 4px;
+			font-size: 11px;
+			margin-left: 4px;
+		`;
+		tokenizedWords.textContent = `"${tokenizedText}"`;
 
-	// Exact selection option
-	const exactOption = document.createElement('div');
-	exactOption.style.cssText = `margin-bottom: 8px;`;
+		tokenizedOption.appendChild(tokenizedRadio);
+		tokenizedOption.appendChild(tokenizedLabel);
+		tokenizedOption.appendChild(tokenizedWords);
 
-	const exactRadio = document.createElement('input');
-	exactRadio.type = 'radio';
-	exactRadio.name = 'selection-type';
-	exactRadio.value = 'exact';
-	exactRadio.id = 'exact-option';
+		// Exact selection option
+		const exactOption = document.createElement('div');
+		exactOption.style.cssText = `margin-bottom: 8px;`;
 
-	const exactLabel = document.createElement('label');
-	exactLabel.htmlFor = 'exact-option';
-	exactLabel.style.cssText = `
-		margin-left: 6px;
-		font-weight: 500;
-		cursor: pointer;
-		color: white;
-	`;
-	exactLabel.textContent = i18next.t('PII Modifier: Exact') + ' ';
+		exactRadio = document.createElement('input');
+		exactRadio.type = 'radio';
+		exactRadio.name = 'selection-type';
+		exactRadio.value = 'exact';
+		exactRadio.id = 'exact-option';
 
-	const exactText = document.createElement('span');
-	exactText.style.cssText = `
-		background: #fef3c7;
-		color: #92400e;
-		padding: 2px 6px;
-		border-radius: 4px;
-		font-size: 11px;
-		margin-left: 4px;
-	`;
-	exactText.textContent = `"${selectionInfo.selectedText}"`;
+		const exactLabel = document.createElement('label');
+		exactLabel.htmlFor = 'exact-option';
+		exactLabel.style.cssText = `
+			margin-left: 6px;
+			font-weight: 500;
+			cursor: pointer;
+			color: white;
+		`;
+		exactLabel.textContent = i18next.t('PII Modifier: Exact') + ' ';
 
-	exactOption.appendChild(exactRadio);
-	exactOption.appendChild(exactLabel);
-	exactOption.appendChild(exactText);
+		const exactTextSpan = document.createElement('span');
+		exactTextSpan.style.cssText = `
+			background: #fef3c7;
+			color: #92400e;
+			padding: 2px 6px;
+			border-radius: 4px;
+			font-size: 11px;
+			margin-left: 4px;
+		`;
+		exactTextSpan.textContent = `"${exactText}"`;
 
-	optionsContainer.appendChild(tokenizedOption);
-	optionsContainer.appendChild(exactOption);
-	menu.appendChild(optionsContainer);
+		exactOption.appendChild(exactRadio);
+		exactOption.appendChild(exactLabel);
+		exactOption.appendChild(exactTextSpan);
+
+		optionsContainer.appendChild(tokenizedOption);
+		optionsContainer.appendChild(exactOption);
+		menu.appendChild(optionsContainer);
+	} else {
+		// Show preview when no selection options are displayed
+		const previewContainer = document.createElement('div');
+		previewContainer.style.cssText = `margin-bottom: 12px;`;
+
+		const previewLabel = document.createElement('div');
+		previewLabel.style.cssText = `
+			font-weight: 500;
+			color: white;
+			margin-bottom: 6px;
+			font-size: 12px;
+		`;
+		const previewText = document.createElement('span');
+		previewText.style.cssText = `
+			background: #f0f9ff;
+			color: #0369a1;
+			padding: 4px 8px;
+			border-radius: 4px;
+			font-size: 12px;
+			display: inline-block;
+			border: 1px solid #bfdbfe;
+		`;
+		previewText.textContent = `"${tokenizedText}"`;
+
+		previewContainer.appendChild(previewLabel);
+		previewContainer.appendChild(previewText);
+		menu.appendChild(previewContainer);
+	}
 
 	// Label input section (only show if advanced menu is enabled)
 	const labelSection = document.createElement('div');
@@ -803,7 +840,8 @@ function createSelectionMenu(
 			return;
 		}
 
-		const isTokenized = tokenizedRadio.checked;
+		// If selection options are shown, check which is selected; otherwise default to tokenized
+		const isTokenized = showSelectionOptions ? tokenizedRadio.checked : true;
 		
 		if (isTokenized) {
 			if (selectionInfo.tokenizedWords.length > 0) {
