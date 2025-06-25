@@ -79,6 +79,48 @@ auth_manager_config.JWT_EXPIRES_IN = JWT_EXPIRES_IN
 auth_manager_config.OAUTH_UPDATE_PICTURE_ON_LOGIN = OAUTH_UPDATE_PICTURE_ON_LOGIN
 
 
+def set_aak_role(user_data):
+    log.debug("Running AAK Role management")
+    log.debug(user_data)
+
+    claims_role = user_data.get("role", "")
+
+    if claims_role == "admin":
+        user_role = 'admin'
+    else:
+        user_role = 'user'
+
+    user_data['role'] = user_role
+
+    log.debug(f"Using role {user_role}.")
+
+    return user_data
+
+
+def set_aak_groups(user_data):
+    log.debug("Running AAK Group management")
+    log.debug(user_data)
+
+    user_data['groups'] = []
+
+    dept_ids = user_data.get("extensionAttribute7", "").split(";")
+
+    if "companyname" in user_data:
+        user_data['groups'].append(user_data.get("companyname", "") + " (" + dept_ids[0] + ")")
+    if "division" in user_data:
+        user_data['groups'].append(user_data.get("division", "") + " (" + dept_ids[1] + ")")
+    if "department" in user_data:
+        user_data['groups'].append(user_data.get("department", "") + " (" + dept_ids[2] + ")")
+    if "extensionAttribute12" in user_data:
+        user_data['groups'].append(user_data.get("extensionAttribute12", "") + " (" + dept_ids[3] + ")")
+    if "Office" in user_data:
+        user_data['groups'].append(user_data.get("Office", "") + " (" + dept_ids[4] + ")")
+
+    log.debug(f"Using groups {user_data.get('groups', '')}.")
+
+    return user_data
+
+
 class OAuthManager:
     def __init__(self, app):
         self.oauth = OAuth()
@@ -369,6 +411,10 @@ class OAuthManager:
             log.warning(f"OAuth callback failed, user data is missing: {token}")
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
+        # Set AAK role and groups
+        user_data = set_aak_groups(user_data=user_data)
+        user_data = set_aak_role(user_data=user_data)
+
         if auth_manager_config.OAUTH_SUB_CLAIM:
             sub = user_data.get(auth_manager_config.OAUTH_SUB_CLAIM)
         else:
@@ -559,4 +605,12 @@ class OAuthManager:
                 samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
                 secure=WEBUI_AUTH_COOKIE_SECURE,
             )
-        return response
+
+        # Redirect back to the frontend with the JWT token
+
+        redirect_base_url = str(request.app.state.config.WEBUI_URL or request.base_url)
+        if redirect_base_url.endswith("/"):
+            redirect_base_url = redirect_base_url[:-1]
+        redirect_url = f"{redirect_base_url}/auth"
+
+        return RedirectResponse(url=redirect_url, headers=response.headers)
