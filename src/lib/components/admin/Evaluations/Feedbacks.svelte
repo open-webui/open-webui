@@ -97,9 +97,15 @@
 	let showFeedbackModal = false;
 	let selectedFeedback = null;
 
-	const openFeedbackModal = (feedback) => {
+	const openFeedbackModal = async (feedback) => {
+		const all = await exportAllFeedbacks(localStorage.token).catch((err) => {
+			toast.error(err);
+			return null;
+		});
+
+		const full = all.find((f) => f.id === feedback.id);
 		showFeedbackModal = true;
-		selectedFeedback = feedback;
+		selectedFeedback = full || feedback;
 	};
 
 	const closeFeedbackModal = () => {

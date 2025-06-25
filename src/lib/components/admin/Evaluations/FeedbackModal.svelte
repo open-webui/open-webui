@@ -12,6 +12,24 @@
 		show = false;
 		onClose();
 	};
+
+	$: prompt = (() => {
+		const messages = selectedFeedback?.snapshot?.chat?.chat?.history?.messages;
+		const messageId = selectedFeedback?.meta?.message_id;
+		if (!messages || !messageId) return '';
+		const assistantMsg = messages[messageId];
+		if (!assistantMsg) return '';
+		const userMsg = assistantMsg.parentId ? messages[assistantMsg.parentId] : null;
+		return userMsg?.content ?? '';
+	})();
+
+	$: response = (() => {
+		const messages = selectedFeedback?.snapshot?.chat?.chat?.history?.messages;
+		const messageId = selectedFeedback?.meta?.message_id;
+		if (!messages || !messageId) return '';
+		const assistantMsg = messages[messageId];
+		return assistantMsg?.content ?? '';
+	})();
 </script>
 
 <Modal size="sm" bind:show>
@@ -63,6 +81,30 @@
 
 						<div class="flex-1 text-xs">
 							<span>{selectedFeedback?.data?.reason || '-'}</span>
+						</div>
+					</div>
+					<div class="flex flex-col w-full mb-2">
+						<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Comment')}</div>
+
+						<div class="flex-1 text-xs">
+							<span>{selectedFeedback?.data?.comment || '-'}</span>
+						</div>
+					</div>
+
+					<div class="flex flex-col w-full mb-2">
+						<div class="mb-1 text-xs text-gray-500">{$i18n.t('Prompt')}</div>
+						<div
+							class="flex-1 text-xs whitespace-pre-line break-words bg-gray-50 dark:bg-gray-900 rounded px-2 py-1"
+						>
+							<span>{prompt || '-'}</span>
+						</div>
+					</div>
+					<div class="flex flex-col w-full mb-2">
+						<div class="mb-1 text-xs text-gray-500">{$i18n.t('Response')}</div>
+						<div
+							class="flex-1 text-xs whitespace-pre-line break-words bg-gray-50 dark:bg-gray-900 rounded px-2 py-1"
+						>
+							<span>{response || '-'}</span>
 						</div>
 					</div>
 
