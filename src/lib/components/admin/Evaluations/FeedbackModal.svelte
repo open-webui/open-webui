@@ -2,7 +2,7 @@
 	import Modal from '$lib/components/common/Modal.svelte';
 	import { getContext } from 'svelte';
 	const i18n = getContext('i18n');
-	import XMark from '$lib/components/icons/XMark.svelte'; // Import the icon
+	import XMark from '$lib/components/icons/XMark.svelte';
 
 	export let show = false;
 	export let selectedFeedback = null;
