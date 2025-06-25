@@ -160,7 +160,7 @@
 			<div class=" flex w-full space-x-2">
 				<div class="flex flex-1">
 					<div class=" self-center ml-1 mr-3">
-						<Search class="w-5 h-5" />
+						<Search />
 					</div>
 					<input
 						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"

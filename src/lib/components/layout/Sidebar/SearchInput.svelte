@@ -92,7 +92,7 @@
 <div class="px-1 mb-1 flex justify-center space-x-2 relative z-10" id="search-container">
 	<div class="flex w-full rounded-xl" id="chat-search">
 		<div class="self-center py-2 rounded-l-xl bg-transparent dark:text-gray-300">
-			<Search class="w-5 h-5" />
+			<Search />
 		</div>
 
 		<input

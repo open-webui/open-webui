@@ -51,7 +51,7 @@
 	<div class="flex w-full">
 		<div class="flex flex-1">
 			<div class=" self-center mr-3">
-				<Search class="w-5 h-5" />
+				<Search />
 			</div>
 			<input
 				class=" w-full text-sm pr-4 rounded-r-xl outline-hidden bg-transparent"
