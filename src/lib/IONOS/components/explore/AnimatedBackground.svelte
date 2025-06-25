@@ -79,15 +79,15 @@ offsets to create a "beating" effect.
 	@keyframes rotate {
 		0% {
 			transform: rotate(calc(0deg + var(--blob-rotation-offset)));
-			height: 700px;
+			height: min(60vw, 700px);
 		}
 		50% {
 			transform: rotate(calc(180deg + var(--blob-rotation-offset)));
-			height: 500px;
+			height: min(50vw, 500px);
 		}
 		100% {
 			transform: rotate(calc(360deg + var(--blob-rotation-offset)));
-			height: 700px;
+			height: min(60vw, 700px);
 		}
 	}
 </style>
