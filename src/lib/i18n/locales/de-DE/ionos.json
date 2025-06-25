@@ -56,7 +56,7 @@
   "IONOS GPT can make mistakes.": "IONOS GPT kann Fehler machen.",
   "IONOS GPT is based on the [modelHubInfoLink], which provides the Llama model. By using it, you agree to the [modelLicenseLink] and [modelUsePolicyLink]": "IONOS GPT basiert auf dem [modelLicenseLink], der das Llama-Modell bereitstellt. Durch die Nutzung stimmen Sie der [modelLicenseLink] und den [modelUsePolicyLink] zu.",
   "IONOS GPT is based on the IONOS AI Model Hub, which provides the Llama model. By using it, you agree to the [modelLicenseLink] and [modelUsePolicyLink]": "IONOS GPT basiert auf dem IONOS AI Model Hub, der das Llama-Modell bereitstellt. Durch die Nutzung stimmen Sie der [modelLicenseLink] und den [modelUsePolicyLink] zu.",
-  "IONOS GPT is based on the IONOS AI Model Hub. By using it, you agree to the [modelLicenseLink], the [modelUsePolicyLink], the [bflTermsLinkUrl] and the [bflUsePolicyLinkUrl].": "IONOS GPT basiert auf dem IONOS AI Model Hub. Durch die Nutzung stimmen Sie der [modelLicenseLink], den [modelUsePolicyLink], den [bflTermsLinkUrl] und den[bflUsePolicyLinkUrl] zu.",
+  "IONOS GPT is based on the [modelHubInfoLink]. By using it, you agree to the [modelLicenseLink], the [modelUsePolicyLink], the [bflTermsLinkUrl] and the [bflUsePolicyLinkUrl].": "IONOS GPT basiert auf dem [modelHubInfoLink]. Durch die Nutzung stimmen Sie der [modelLicenseLink], den [modelUsePolicyLink], den [bflTermsLinkUrl] und den[bflUsePolicyLinkUrl] zu.",
   "Knowledge": "Wissendatenbank",
   "Knowledge created successfully.": "Wissendatenbank erfolgreich erstellt",
   "Knowledge Management": "Meine Wissensdatenbank",

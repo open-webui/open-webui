@@ -18,6 +18,14 @@
 
 	let links: {label: string, url: string}[] = [
 		{
+			label: $i18n.t('bflUsePolicyLinkText', { ns: 'ionos' }),
+			url: $i18n.t('bflUsePolicyLinkUrl', { ns: 'ionos' })
+		},
+		{
+			label: $i18n.t('bflTermsLinkText', { ns: 'ionos' }),
+			url: $i18n.t('bflTermsLinkUrl', { ns: 'ionos' })
+		},
+		{
 			label: $i18n.t('modelLicenseLinkText', { ns: 'ionos' }),
 			url: $i18n.t('modelLicenseLinkUrl', { ns: 'ionos' })
 		},
