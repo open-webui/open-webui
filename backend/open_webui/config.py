@@ -3135,6 +3135,7 @@ PII_API_BASE_URL = PersistentConfig(
     "PII_API_BASE_URL",
     "pii.api_base_url",
     os.environ.get("PII_API_BASE_URL", "https://api.nenna.ai/latest"),
+)
 
 # For LDAP Group Management
 ENABLE_LDAP_GROUP_MANAGEMENT = PersistentConfig(
@@ -3153,5 +3154,4 @@ LDAP_ATTRIBUTE_FOR_GROUPS = PersistentConfig(
     "LDAP_ATTRIBUTE_FOR_GROUPS",
     "ldap.server.attribute_for_groups",
     os.environ.get("LDAP_ATTRIBUTE_FOR_GROUPS", "memberOf"),
-
 )
