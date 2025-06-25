@@ -152,6 +152,11 @@ def get_models_in_use():
     return models_in_use
 
 
+def get_active_users_count():
+    """Get the number of active users."""
+    return len(USER_POOL)
+
+
 def get_active_user_ids():
     """Get the list of active user IDs."""
     return list(USER_POOL.keys())

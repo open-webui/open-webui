@@ -58,7 +58,7 @@ from open_webui.socket.main import (
     app as socket_app,
     periodic_usage_pool_cleanup,
     get_models_in_use,
-    get_active_user_ids,
+    get_active_users_count,
 )
 from open_webui.routers import (
     audio,
@@ -1663,7 +1663,7 @@ async def get_current_usage(user=Depends(get_verified_user)):
     This is an experimental endpoint and subject to change.
     """
     try:
-        return {"model_ids": get_models_in_use(), "user_ids": get_active_user_ids()}
+        return {"model_ids": get_models_in_use(), "users_count": get_active_users_count()}
     except Exception as e:
         log.error(f"Error getting usage statistics: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
