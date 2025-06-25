@@ -1,4 +1,4 @@
-<script lang="ts">
+<script>
 	import { io } from 'socket.io-client';
 	import { spring } from 'svelte/motion';
 	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
@@ -32,7 +32,7 @@
 	import { page } from '$app/stores';
 	import { Toaster, toast } from 'svelte-sonner';
 
-	import { getBackendConfig } from '$lib/apis';
+	import { executeToolServer, getBackendConfig } from '$lib/apis';
 	import { getSessionUser } from '$lib/apis/auths';
 
 	import '../tailwind.css';
@@ -56,8 +56,8 @@
 
 	const BREAKPOINT = 768;
 
-	const setupSocket = async (enableWebsocket: any) => {
-		const _socket = io(`${WEBUI_BASE_URL ?? ''}`, {
+	const setupSocket = async (enableWebsocket) => {
+		const _socket = io(`${WEBUI_BASE_URL}` || undefined, {
 			reconnection: true,
 			reconnectionDelay: 1000,
 			reconnectionDelayMax: 5000,
@@ -103,10 +103,10 @@
 		});
 	};
 
-	const executePythonAsWorker = async (id: any, code: any, cb: any) => {
-		let result: any = null;
-		let stdout: any = null;
-		let stderr: any = null;
+	const executePythonAsWorker = async (id, code, cb) => {
+		let result = null;
+		let stdout = null;
+		let stderr = null;
 
 		let executing = true;
 		let packages = [
@@ -204,10 +204,40 @@
 		};
 	};
 
-	// Tool execution has been moved to src/routes/(app)/+layout.svelte
-	// to properly handle both local MCPO and remote tools.
+	const executeTool = async (data, cb) => {
+		const toolServer = $settings?.toolServers?.find((server) => server.url === data.server?.url);
+		const toolServerData = $toolServers?.find((server) => server.url === data.server?.url);
 
-	const chatEventHandler = async (event: any, cb: any) => {
+		console.log('executeTool', data, toolServer);
+
+		if (toolServer) {
+			console.log(toolServer);
+			const res = await executeToolServer(
+				(toolServer?.auth_type ?? 'bearer') === 'bearer' ? toolServer?.key : localStorage.token,
+				toolServer.url,
+				data?.name,
+				data?.params,
+				toolServerData
+			);
+
+			console.log('executeToolServer', res);
+			if (cb) {
+				cb(JSON.parse(JSON.stringify(res)));
+			}
+		} else {
+			if (cb) {
+				cb(
+					JSON.parse(
+						JSON.stringify({
+							error: 'Tool Server Not Found'
+						})
+					)
+				);
+			}
+		}
+	};
+
+	const chatEventHandler = async (event, cb) => {
 		const chat = $page.url.pathname.includes(`/c/${event.chat_id}`);
 
 		let isFocused = document.visibilityState !== 'visible';
@@ -261,16 +291,8 @@
 				console.log('execute:python', data);
 				executePythonAsWorker(data.id, data.code, cb);
 			} else if (type === 'execute:tool') {
-				// Tool execution is now handled in src/routes/(app)/+layout.svelte
-				// to properly intercept and handle local MCPO tools.
-				// This handler in the root layout should not process it.
-				console.log('[ROOT +layout.svelte] Received execute:tool, but it should be handled by (app)/+layout.svelte. Data:', data);
-				if (cb) {
-					// Optionally, inform the caller that this handler is not processing it,
-					// though the (app) layout should pick it up.
-					// cb({ success: false, error: 'Event should be handled by app-level layout.' });
-				}
-				return; // Explicitly return to avoid any further processing here.
+				console.log('execute:tool', data);
+				executeTool(data, cb);
 			} else if (type === 'request:chat:completion') {
 				console.log(data, $socket.id);
 				const { session_id, channel, form_data, model } = data;
@@ -310,39 +332,32 @@
 									console.log({ status: true });
 
 									// res will either be SSE or JSON
-									const reader = res.body?.getReader();
-									
-									if (reader) { // Added check for reader
-										const decoder = new TextDecoder();
-										const processStream = async () => {
-											while (true) {
-												// Read data chunks from the response stream
-												const { done, value } = await reader.read();
-												if (done) {
-													break;
-												}
+									const reader = res.body.getReader();
+									const decoder = new TextDecoder();
 
-												// Decode the received chunk
-												const chunk = decoder.decode(value, { stream: true });
-
-												// Process lines within the chunk
-												const lines = chunk.split('\n').filter((line) => line.trim() !== '');
-
-												for (const line of lines) {
-													console.log(line);
-													$socket?.emit(channel, line);
-												}
+									const processStream = async () => {
+										while (true) {
+											// Read data chunks from the response stream
+											const { done, value } = await reader.read();
+											if (done) {
+												break;
 											}
-										};
-										// Process the stream in the background
-										await processStream();
-									} else {
-										console.error('[+layout.svelte chatEventHandler] Response body or reader is null in stream for request:chat:completion.');
-										if (cb) {
-											// Propagate an error back if the stream cannot be read
-											cb({ success: false, error: 'Failed to read response stream from chat completion.' });
+
+											// Decode the received chunk
+											const chunk = decoder.decode(value, { stream: true });
+
+											// Process lines within the chunk
+											const lines = chunk.split('\n').filter((line) => line.trim() !== '');
+
+											for (const line of lines) {
+												console.log(line);
+												$socket?.emit(channel, line);
+											}
 										}
-									}
+									};
+
+									// Process the stream in the background
+									await processStream();
 								} else {
 									const data = await res.json();
 									cb(data);
@@ -350,16 +365,16 @@
 							} else {
 								throw new Error('An error occurred while fetching the completion');
 							}
-						} catch (error: any) {
+						} catch (error) {
 							console.error('chatCompletion', error);
 							cb(error);
 						}
 					}
-				} catch (error: any) {
+				} catch (error) {
 					console.error('chatCompletion', error);
 					cb(error);
 				} finally {
-					$socket?.emit(channel, {
+					$socket.emit(channel, {
 						done: true
 					});
 				}
@@ -369,7 +384,7 @@
 		}
 	};
 
-	const channelEventHandler = async (event: any) => {
+	const channelEventHandler = async (event) => {
 		if (event.data?.type === 'typing') {
 			return;
 		}
@@ -436,7 +451,7 @@
 				});
 
 				if (data) {
-					// appData.set(data); // Commenting out for now as appData is not defined/imported
+					appData.set(data);
 				}
 			}
 		}
@@ -503,7 +518,7 @@
 			const languages = await getLanguages();
 			const browserLanguages = navigator.languages
 				? navigator.languages
-				: [navigator.language];
+				: [navigator.language || navigator.userLanguage];
 			const lang = backendConfig.default_locale
 				? backendConfig.default_locale
 				: bestMatchingLanguage(languages, browserLanguages, 'en-US');
@@ -516,7 +531,7 @@
 			await WEBUI_NAME.set(backendConfig.name);
 
 			if ($config) {
-				await setupSocket(($config.features as any)?.enable_websocket ?? true);
+				await setupSocket($config.features?.enable_websocket ?? true);
 
 				const currentUrl = `${window.location.pathname}${window.location.search}`;
 				const encodedUrl = encodeURIComponent(currentUrl);
@@ -530,7 +545,7 @@
 
 					if (sessionUser) {
 						// Save Session User to Store
-						$socket?.emit('user-join', { auth: { token: sessionUser.token } });
+						$socket.emit('user-join', { auth: { token: sessionUser.token } });
 
 						await user.set(sessionUser);
 						await config.set(await getBackendConfig());

@@ -238,7 +238,7 @@ async def generate_function_chat_completion(
         "__metadata__": metadata,
         "__request__": request,
     }
-    raw_tools_dict = get_tools(
+    extra_params["__tools__"] = get_tools(
         request,
         tool_ids,
         user,
@@ -249,8 +249,6 @@ async def generate_function_chat_completion(
             "__files__": files,
         },
     )
-    # Convert the dictionary of tool objects into a list of their specs
-    extra_params["__tools__"] = [tool_data["spec"] for tool_data in raw_tools_dict.values()]
 
     if model_info:
         if model_info.base_model_id:
@@ -271,7 +269,6 @@ async def generate_function_chat_completion(
         async def stream_content():
             try:
                 res = await execute_pipe(pipe, params)
-                log.debug(f"LLM raw response (streaming): {res}") # ADD THIS LINE
 
                 # Directly return if the response is a StreamingResponse
                 if isinstance(res, StreamingResponse):
@@ -311,7 +308,6 @@ async def generate_function_chat_completion(
     else:
         try:
             res = await execute_pipe(pipe, params)
-            log.debug(f"LLM raw response (non-streaming): {res}") # ADD THIS LINE
 
         except Exception as e:
             log.error(f"Error: {e}")
@@ -323,5 +319,4 @@ async def generate_function_chat_completion(
             return res.model_dump()
 
         message = await get_message_content(res)
-        log.debug(f"LLM message content: {message}") # ADD THIS LINE
         return openai_chat_completion_message_template(form_data["model"], message)
