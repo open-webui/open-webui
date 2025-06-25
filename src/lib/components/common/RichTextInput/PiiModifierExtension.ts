@@ -1086,6 +1086,21 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 							return;
 						}
 
+						// Only show hover menu if SHIFT key is pressed
+						if (!event.shiftKey) {
+							// If SHIFT is not pressed, hide any existing hover menu
+							if (hoverMenuElement) {
+								hoverMenuElement.remove();
+								hoverMenuElement = null;
+							}
+							// Clear any pending timeout
+							if (hoverTimeout) {
+								clearTimeout(hoverTimeout);
+								hoverTimeout = null;
+							}
+							return;
+						}
+
 						// Clear existing timeout
 						if (hoverTimeout) {
 							clearTimeout(hoverTimeout);
