@@ -117,22 +117,22 @@ async def periodic_usage_pool_cleanup():
 
             now = int(time.time())
             send_usage = False
-            for model_id, connections in list(USAGE_POOL.items()):
-                # Creating a list of sids to remove if they have timed out
-                expired_sids = [
-                    sid
-                    for sid, details in connections.items()
+            for model_id, messages in list(USAGE_POOL.items()):
+                # Creating a list of messages to remove if they have timed out
+                expired_messages = [
+                    message_id
+                    for message_id, details in messages.items()
                     if now - details["updated_at"] > TIMEOUT_DURATION
                 ]
 
-                for sid in expired_sids:
-                    del connections[sid]
+                for message_id in expired_messages:
+                    del messages[message_id]
 
-                if not connections:
+                if not messages:
                     log.debug(f"Cleaning up model {model_id} from usage pool")
                     del USAGE_POOL[model_id]
                 else:
-                    USAGE_POOL[model_id] = connections
+                    USAGE_POOL[model_id] = messages
 
                 send_usage = True
             await asyncio.sleep(TIMEOUT_DURATION)
@@ -197,14 +197,15 @@ def get_active_status_by_user_id(user_id):
 @sio.on("usage")
 async def usage(sid, data):
     if sid in SESSION_POOL:
-        model_id = data["model"]
+        model_id = data["model_id"]
+        message_id = data["message_id"]
         # Record the timestamp for the last update
         current_time = int(time.time())
 
         # Store the new usage data and task
         USAGE_POOL[model_id] = {
             **(USAGE_POOL[model_id] if model_id in USAGE_POOL else {}),
-            sid: {"updated_at": current_time},
+            message_id: {"updated_at": current_time},
         }
 
 

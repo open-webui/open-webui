@@ -1057,13 +1057,18 @@
 		}
 	};
 
-	const getChatEventEmitter = async (modelId: string, chatId: string = '') => {
+        const socketEmitUsage = (modelId: string, messageId: string = '') => {
+		$socket?.emit('usage', {
+			action: 'chat',
+			model_id: modelId,
+			message_id: messageId
+		});
+	};
+
+	const getChatEventEmitter = async (modelId: string, messageId: string = '') => {
+		socketEmitUsage(modelId, messageId);
 		return setInterval(() => {
-			$socket?.emit('usage', {
-				action: 'chat',
-				model: modelId,
-				chat_id: chatId
-			});
+			socketEmitUsage(modelId, messageId);
 		}, 1000);
 	};
 
@@ -1533,7 +1538,7 @@
 
 					let responseMessageId =
 						responseMessageIds[`${modelId}-${modelIdx ? modelIdx : _modelIdx}`];
-					const chatEventEmitter = await getChatEventEmitter(model.id, _chatId);
+					const chatEventEmitter = await getChatEventEmitter(model.id, responseMessageId);
 
 					scrollToBottom();
 					await sendPromptSocket(_history, model, responseMessageId, _chatId);
