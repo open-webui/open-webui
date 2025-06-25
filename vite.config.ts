@@ -40,6 +40,7 @@ export default defineConfig({
 	worker: {
 		format: 'es'
 	},
+
 	// Development optimizations
 	server: {
 		fs: {
@@ -62,6 +63,7 @@ export default defineConfig({
 	},
 	// Enable esbuild for faster builds in development
 	esbuild: {
-		target: 'es2022'
+		target: 'es2022',
+		pure: ['console.log', 'console.debug']
 	}
 });
