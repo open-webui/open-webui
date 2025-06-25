@@ -93,7 +93,6 @@ def set_aak_groups(user_data):
     Returns:
         The decoded OIDC token with the AAK group names added to the "groups" list.
     """
-
     log.debug("Running AAK Group management")
     log.debug(user_data)
 
