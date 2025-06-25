@@ -1,4 +1,5 @@
 import type { PiiEntity } from '$lib/apis/pii';
+import i18next from 'i18next';
 
 // Extended PII entity with masking state
 export interface ExtendedPiiEntity extends PiiEntity {
@@ -740,7 +741,9 @@ export function highlightUnmaskedEntities(text: string, entities: ExtendedPiiEnt
 		highlightedText = highlightedText.replace(regex, (match) => {
 			const shouldMask = entity.shouldMask ?? true;
 			const maskingClass = shouldMask ? 'pii-masked' : 'pii-unmasked';
-			const statusText = shouldMask ? 'Was masked in input' : 'Was NOT masked in input';
+			const statusText = shouldMask ? 
+				i18next.t('PII Modifier: Was masked in input') : 
+				i18next.t('PII Modifier: Was NOT masked in input');
 
 			return `<span class="pii-highlight ${maskingClass}" title="${entity.label} (${entity.type}) - ${statusText}" data-pii-type="${entity.type}" data-pii-label="${entity.label}">${match}</span>`;
 		});
@@ -833,7 +836,9 @@ export function unmaskAndHighlightTextForDisplay(text: string, entities: Extende
 		processedText = processedText.replace(labelRegex, (match) => {
 			const shouldMask = entity.shouldMask ?? true;
 			const maskingClass = shouldMask ? 'pii-masked' : 'pii-unmasked';
-			const statusText = shouldMask ? 'Was masked in input' : 'Was NOT masked in input';
+			const statusText = shouldMask ? 
+				i18next.t('PII Modifier: Was masked in input') : 
+				i18next.t('PII Modifier: Was NOT masked in input');
 
 			replacementsMade++;
 			return `<span class="pii-highlight ${maskingClass}" title="${entity.label} (${entity.type}) - ${statusText}" data-pii-type="${entity.type}" data-pii-label="${entity.label}">${rawText}</span>`;
@@ -861,7 +866,9 @@ export function unmaskAndHighlightTextForDisplay(text: string, entities: Extende
 			processedText = processedText.replace(regex, (match) => {
 				const shouldMask = entity.shouldMask ?? true;
 				const maskingClass = shouldMask ? 'pii-masked' : 'pii-unmasked';
-				const statusText = shouldMask ? 'Was masked in input' : 'Was NOT masked in input';
+				const statusText = shouldMask ? 
+					i18next.t('PII Modifier: Was masked in input') : 
+					i18next.t('PII Modifier: Was NOT masked in input');
 
 				replacementsMade++;
 				return `<span class="pii-highlight ${maskingClass}" title="${entity.label} (${entity.type}) - ${statusText}" data-pii-type="${entity.type}" data-pii-label="${entity.label}">${match}</span>`;

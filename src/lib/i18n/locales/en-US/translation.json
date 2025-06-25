@@ -1395,13 +1395,12 @@
 	"Youtube Proxy URL": "",
 	"PII Modifier: Ignore": "🚫 Ignore",
 	"PII Modifier: Change Label": "Change Label",
-	"PII Modifier: Current Modifiers": "Current Modifiers:",
-	"PII Modifier: Remove modifier": "Remove modifier",
-	"PII Modifier: Mark text as PII": "Mark text as PII",
+	"PII Modifier: Current Modifiers": "Current Label:",
+	"PII Modifier: Remove modifier": "Unmask",
 	"PII Modifier: Words": "Words:",
 	"PII Modifier: Exact": "Exact:",
 	"PII Modifier: Mask": "Mask",
-	"PII Modifier: Enter PII label type": "Enter PII label type",
-	"PII Modifier: Was masked in input": "Was masked in input",
-	"PII Modifier: Was NOT masked in input": "Was NOT masked in input"
+	"PII Modifier: Enter PII label type": "Enter PII label",
+	"PII Modifier: Was masked in input": "Was masked",
+	"PII Modifier: Was NOT masked in input": "Was NOT"
 }
