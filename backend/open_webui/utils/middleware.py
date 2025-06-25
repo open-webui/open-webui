@@ -718,6 +718,10 @@ def apply_params_to_form_data(form_data, model):
 
 
 async def process_chat_payload(request, form_data, user, metadata, model):
+    # Pipeline Inlet -> Filter Inlet -> Chat Memory -> Chat Web Search -> Chat Image Generation
+    # -> Chat Code Interpreter (Form Data Update) -> (Default) Chat Tools Function Calling
+    # -> Chat Files
+
     form_data = apply_params_to_form_data(form_data, model)
     log.debug(f"form_data: {form_data}")
 
@@ -911,7 +915,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     request, form_data, extra_params, user, models, tools_dict
                 )
                 sources.extend(flags.get("sources", []))
-
             except Exception as e:
                 log.exception(e)
 
@@ -924,24 +927,27 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # If context is not empty, insert it into the messages
     if len(sources) > 0:
         context_string = ""
-        citation_idx = {}
+        citation_idx_map = {}
+
         for source in sources:
             if "document" in source:
-                for doc_context, doc_meta in zip(
+                for document_text, document_metadata in zip(
                     source["document"], source["metadata"]
                 ):
                     source_name = source.get("source", {}).get("name", None)
-                    citation_id = (
-                        doc_meta.get("source", None)
+                    source_id = (
+                        document_metadata.get("source", None)
                         or source.get("source", {}).get("id", None)
                         or "N/A"
                     )
-                    if citation_id not in citation_idx:
-                        citation_idx[citation_id] = len(citation_idx) + 1
+
+                    if source_id not in citation_idx_map:
+                        citation_idx_map[source_id] = len(citation_idx_map) + 1
+
                     context_string += (
-                        f'<source id="{citation_idx[citation_id]}"'
+                        f'<source id="{citation_idx_map[source_id]}"'
                         + (f' name="{source_name}"' if source_name else "")
-                        + f">{doc_context}</source>\n"
+                        + f">{document_text}</source>\n"
                     )
 
         context_string = context_string.strip()
