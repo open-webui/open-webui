@@ -2,6 +2,7 @@ import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey } from 'prosemirror-state';
 import type { Node as ProseMirrorNode } from 'prosemirror-model';
 import { PiiSessionManager } from '$lib/utils/pii';
+import i18next from 'i18next';
 
 // Types for the Shield API modifiers
 export type ModifierAction = 'ignore' | 'mask';
@@ -210,8 +211,8 @@ function createHoverMenu(
 		position: fixed;
 		left: ${Math.min(wordInfo.x, window.innerWidth - 250)}px;
 		top: ${wordInfo.y - 80}px;
-		background: white;
-		border: 1px solid #ddd;
+		background: #3f3d8a;
+		border: 1px solid #312e81;
 		border-radius: 8px;
 		box-shadow: 0 4px 20px rgba(0,0,0,0.15);
 		padding: 12px;
@@ -222,33 +223,7 @@ function createHoverMenu(
 		max-width: 300px;
 	`;
 
-	// Header with icon
-	const header = document.createElement('div');
-	header.style.cssText = `
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		font-weight: 600;
-		color: #333;
-		margin-bottom: 8px;
-		font-size: 12px;
-	`;
-	
-	// Add NENNA icon
-	const icon = document.createElement('img');
-	icon.src = '/static/icon-purple-32.png';
-	icon.style.cssText = `
-		width: 16px;
-		height: 16px;
-		flex-shrink: 0;
-	`;
-	
-	const textNode = document.createElement('span');
-	textNode.textContent = `"${wordInfo.word}"`;
-	
-	header.appendChild(icon);
-	header.appendChild(textNode);
-	menu.appendChild(header);
+
 
 	// Show existing modifiers if any
 	if (existingModifiers.length > 0) {
@@ -262,11 +237,11 @@ function createHoverMenu(
 		`;
 
 		const modifiersHeader = document.createElement('div');
-		modifiersHeader.textContent = 'Current Modifiers:';
+		modifiersHeader.textContent = i18next.t('PII Modifier: Current Modifiers');
 		modifiersHeader.style.cssText = `
 			font-weight: 600;
 			font-size: 11px;
-			color: #495057;
+			color: white;
 			margin-bottom: 6px;
 		`;
 		modifiersSection.appendChild(modifiersHeader);
@@ -296,7 +271,7 @@ function createHoverMenu(
 
 			const removeBtn = document.createElement('button');
 			removeBtn.textContent = '✕';
-			removeBtn.title = 'Remove modifier';
+			removeBtn.title = i18next.t('PII Modifier: Remove modifier');
 			removeBtn.style.cssText = `
 				background: #dc3545;
 				color: white;
@@ -340,7 +315,7 @@ function createHoverMenu(
 	// Ignore button (only show if word is detected as PII)
 	if (showIgnoreButton) {
 		const ignoreBtn = document.createElement('button');
-		ignoreBtn.textContent = '🚫 Ignore';
+		ignoreBtn.textContent = i18next.t('PII Modifier: Ignore');
 		ignoreBtn.style.cssText = `
 			width: 100%;
 			padding: 6px 10px;
@@ -483,27 +458,30 @@ function createHoverMenu(
 
 
 	const maskBtn = document.createElement('button');
-	maskBtn.textContent = 'Change Label';
+	maskBtn.innerHTML = `<img src="/static/icon-purple-32.png" style="width: 14px; height: 14px; margin-right: 6px; vertical-align: middle;">${i18next.t('PII Modifier: Change Label')}`;
 	maskBtn.style.cssText = `
 		width: 100%;
 		padding: 6px 10px;
-		border: 1px solid #6b46c1;
-		background: #6b46c1;
+		border: 1px solid #f8b76b;
+		background: #f8b76b;
 		border-radius: 4px;
 		cursor: pointer;
 		font-size: 12px;
 		color: white;
 		font-weight: 500;
 		transition: background-color 0.2s ease;
+		display: flex;
+		align-items: center;
+		justify-content: center;
 	`;
 
 	// Add hover effects for the button
 	maskBtn.addEventListener('mouseenter', () => {
-		maskBtn.style.backgroundColor = '#553c9a';
+		maskBtn.style.backgroundColor = '#f59e0b';
 	});
 	
 	maskBtn.addEventListener('mouseleave', () => {
-		maskBtn.style.backgroundColor = '#6b46c1';
+		maskBtn.style.backgroundColor = '#f8b76b';
 	});
 
 	// Handle mask button click
@@ -573,7 +551,8 @@ function createSelectionMenu(
 		y: number; 
 	},
 	onMaskSelection: (text: string, label: string, from: number, to: number) => void,
-	timeoutManager?: { clearAll: () => void; setFallback: (callback: () => void, delay: number) => void }
+	timeoutManager?: { clearAll: () => void; setFallback: (callback: () => void, delay: number) => void },
+	showAdvancedMenu: boolean = true
 ): HTMLElement {
 	const menu = document.createElement('div');
 	menu.className = 'pii-modifier-selection-menu';
@@ -581,8 +560,8 @@ function createSelectionMenu(
 		position: fixed;
 		left: ${Math.min(selectionInfo.x, window.innerWidth - 300)}px;
 		top: ${selectionInfo.y - 120}px;
-		background: white;
-		border: 1px solid #ddd;
+		background: #3f3d8a;
+		border: 1px solid #312e81;
 		border-radius: 8px;
 		box-shadow: 0 4px 20px rgba(0,0,0,0.15);
 		padding: 16px;
@@ -595,107 +574,125 @@ function createSelectionMenu(
 		overflow-y: auto;
 	`;
 
-	// Header
-	const header = document.createElement('div');
-	header.style.cssText = `
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		font-weight: 600;
-		color: #333;
-		margin-bottom: 12px;
-		font-size: 12px;
-	`;
+
+
+	// Check if there's a meaningful difference between tokenized words and exact selection
+	const tokenizedText = selectionInfo.tokenizedWords.map(w => w.word).join(' ');
+	const exactText = selectionInfo.selectedText;
+	const showSelectionOptions = tokenizedText !== exactText;
+
+	// Selection options (only show if there's a difference)
+	let tokenizedRadio: HTMLInputElement;
+	let exactRadio: HTMLInputElement;
 	
-	const icon = document.createElement('img');
-	icon.src = '/static/icon-purple-32.png';
-	icon.style.cssText = `width: 16px; height: 16px; flex-shrink: 0;`;
-	
-	const headerText = document.createElement('span');
-	headerText.textContent = 'Mark text as PII';
-	
-	header.appendChild(icon);
-	header.appendChild(headerText);
-	menu.appendChild(header);
+	if (showSelectionOptions) {
+		const optionsContainer = document.createElement('div');
+		optionsContainer.style.cssText = `margin-bottom: 12px;`;
 
-	// Selection options
-	const optionsContainer = document.createElement('div');
-	optionsContainer.style.cssText = `margin-bottom: 12px;`;
+		// Tokenized words option (default)
+		const tokenizedOption = document.createElement('div');
+		tokenizedOption.style.cssText = `margin-bottom: 8px;`;
 
-	// Tokenized words option (default)
-	const tokenizedOption = document.createElement('div');
-	tokenizedOption.style.cssText = `margin-bottom: 8px;`;
+		tokenizedRadio = document.createElement('input');
+		tokenizedRadio.type = 'radio';
+		tokenizedRadio.name = 'selection-type';
+		tokenizedRadio.value = 'tokenized';
+		tokenizedRadio.checked = true;
+		tokenizedRadio.id = 'tokenized-option';
 
-	const tokenizedRadio = document.createElement('input');
-	tokenizedRadio.type = 'radio';
-	tokenizedRadio.name = 'selection-type';
-	tokenizedRadio.value = 'tokenized';
-	tokenizedRadio.checked = true;
-	tokenizedRadio.id = 'tokenized-option';
+		const tokenizedLabel = document.createElement('label');
+		tokenizedLabel.htmlFor = 'tokenized-option';
+		tokenizedLabel.style.cssText = `
+			margin-left: 6px;
+			font-weight: 500;
+			cursor: pointer;
+			color: white;
+		`;
+		tokenizedLabel.textContent = i18next.t('PII Modifier: Words') + ' ';
 
-	const tokenizedLabel = document.createElement('label');
-	tokenizedLabel.htmlFor = 'tokenized-option';
-	tokenizedLabel.style.cssText = `
-		margin-left: 6px;
-		font-weight: 500;
-		cursor: pointer;
-	`;
-	tokenizedLabel.textContent = 'Words: ';
+		const tokenizedWords = document.createElement('span');
+		tokenizedWords.style.cssText = `
+			background: #f0f9ff;
+			color: #0369a1;
+			padding: 2px 6px;
+			border-radius: 4px;
+			font-size: 11px;
+			margin-left: 4px;
+		`;
+		tokenizedWords.textContent = `"${tokenizedText}"`;
 
-	const tokenizedWords = document.createElement('span');
-	tokenizedWords.style.cssText = `
-		background: #f0f9ff;
-		color: #0369a1;
-		padding: 2px 6px;
-		border-radius: 4px;
-		font-size: 11px;
-		margin-left: 4px;
-	`;
-	tokenizedWords.textContent = `"${selectionInfo.tokenizedWords.map(w => w.word).join(' ')}"`;
+		tokenizedOption.appendChild(tokenizedRadio);
+		tokenizedOption.appendChild(tokenizedLabel);
+		tokenizedOption.appendChild(tokenizedWords);
 
-	tokenizedOption.appendChild(tokenizedRadio);
-	tokenizedOption.appendChild(tokenizedLabel);
-	tokenizedOption.appendChild(tokenizedWords);
+		// Exact selection option
+		const exactOption = document.createElement('div');
+		exactOption.style.cssText = `margin-bottom: 8px;`;
 
-	// Exact selection option
-	const exactOption = document.createElement('div');
-	exactOption.style.cssText = `margin-bottom: 8px;`;
+		exactRadio = document.createElement('input');
+		exactRadio.type = 'radio';
+		exactRadio.name = 'selection-type';
+		exactRadio.value = 'exact';
+		exactRadio.id = 'exact-option';
 
-	const exactRadio = document.createElement('input');
-	exactRadio.type = 'radio';
-	exactRadio.name = 'selection-type';
-	exactRadio.value = 'exact';
-	exactRadio.id = 'exact-option';
+		const exactLabel = document.createElement('label');
+		exactLabel.htmlFor = 'exact-option';
+		exactLabel.style.cssText = `
+			margin-left: 6px;
+			font-weight: 500;
+			cursor: pointer;
+			color: white;
+		`;
+		exactLabel.textContent = i18next.t('PII Modifier: Exact') + ' ';
 
-	const exactLabel = document.createElement('label');
-	exactLabel.htmlFor = 'exact-option';
-	exactLabel.style.cssText = `
-		margin-left: 6px;
-		font-weight: 500;
-		cursor: pointer;
-	`;
-	exactLabel.textContent = 'Exact: ';
+		const exactTextSpan = document.createElement('span');
+		exactTextSpan.style.cssText = `
+			background: #fef3c7;
+			color: #92400e;
+			padding: 2px 6px;
+			border-radius: 4px;
+			font-size: 11px;
+			margin-left: 4px;
+		`;
+		exactTextSpan.textContent = `"${exactText}"`;
 
-	const exactText = document.createElement('span');
-	exactText.style.cssText = `
-		background: #fef3c7;
-		color: #92400e;
-		padding: 2px 6px;
-		border-radius: 4px;
-		font-size: 11px;
-		margin-left: 4px;
-	`;
-	exactText.textContent = `"${selectionInfo.selectedText}"`;
+		exactOption.appendChild(exactRadio);
+		exactOption.appendChild(exactLabel);
+		exactOption.appendChild(exactTextSpan);
 
-	exactOption.appendChild(exactRadio);
-	exactOption.appendChild(exactLabel);
-	exactOption.appendChild(exactText);
+		optionsContainer.appendChild(tokenizedOption);
+		optionsContainer.appendChild(exactOption);
+		menu.appendChild(optionsContainer);
+	} else {
+		// Show preview when no selection options are displayed
+		const previewContainer = document.createElement('div');
+		previewContainer.style.cssText = `margin-bottom: 12px;`;
 
-	optionsContainer.appendChild(tokenizedOption);
-	optionsContainer.appendChild(exactOption);
-	menu.appendChild(optionsContainer);
+		const previewLabel = document.createElement('div');
+		previewLabel.style.cssText = `
+			font-weight: 500;
+			color: white;
+			margin-bottom: 6px;
+			font-size: 12px;
+		`;
+		const previewText = document.createElement('span');
+		previewText.style.cssText = `
+			background: #f0f9ff;
+			color: #0369a1;
+			padding: 4px 8px;
+			border-radius: 4px;
+			font-size: 12px;
+			display: inline-block;
+			border: 1px solid #bfdbfe;
+		`;
+		previewText.textContent = `"${tokenizedText}"`;
 
-	// Label input section
+		previewContainer.appendChild(previewLabel);
+		previewContainer.appendChild(previewText);
+		menu.appendChild(previewContainer);
+	}
+
+	// Label input section (only show if advanced menu is enabled)
 	const labelSection = document.createElement('div');
 	labelSection.style.cssText = `
 		display: flex;
@@ -703,148 +700,163 @@ function createSelectionMenu(
 		gap: 8px;
 	`;
 
-	const labelInput = document.createElement('input');
-	labelInput.type = 'text';
-	labelInput.value = 'CUSTOM';
-	labelInput.placeholder = 'Enter PII label type';
-	labelInput.style.cssText = `
-		width: 100%;
-		padding: 8px 10px;
-		border: 1px solid #ddd;
-		border-radius: 4px;
-		font-size: 12px;
-		box-sizing: border-box;
-		color: #999;
-	`;
-
+	let labelInput: HTMLInputElement;
 	let isDefaultValue = true;
 	let skipAutocompletion = false;
 
-	// Handle input focus
-	const handleInputFocus = (e: Event) => {
-		e.stopPropagation();
-		
-		if (timeoutManager) {
-			(timeoutManager as any).setInputFocused(true);
-		}
-		
-		if (isDefaultValue) {
-			labelInput.value = '';
-			labelInput.style.color = '#333';
-			isDefaultValue = false;
-		}
-	};
+	// Only create input field if advanced menu is enabled
+	if (showAdvancedMenu) {
+		labelInput = document.createElement('input');
+		labelInput.type = 'text';
+		labelInput.value = 'CUSTOM';
+		labelInput.placeholder = i18next.t('PII Modifier: Enter PII label type');
+		labelInput.style.cssText = `
+			width: 100%;
+			padding: 8px 10px;
+			border: 1px solid #ddd;
+			border-radius: 4px;
+			font-size: 12px;
+			box-sizing: border-box;
+			color: #333;
+			background: white;
+		`;
 
-	labelInput.addEventListener('focus', handleInputFocus);
-	labelInput.addEventListener('click', handleInputFocus);
-
-	labelInput.addEventListener('blur', () => {
-		if (timeoutManager) {
-			(timeoutManager as any).setInputFocused(false);
-		}
-		
-		if (labelInput.value.trim() === '') {
-			labelInput.value = 'CUSTOM';
-			labelInput.style.color = '#999';
-			isDefaultValue = true;
-		}
-	});
-
-	// Handle autocompletion
-	labelInput.addEventListener('input', (e) => {
-		e.stopPropagation();
-		
-		if (skipAutocompletion) {
-			skipAutocompletion = false;
-			return;
-		}
-		
-		const inputValue = labelInput.value;
-		
-		if (!isDefaultValue && inputValue) {
-			const bestMatch = findBestMatch(inputValue, PREDEFINED_LABELS);
+		// Handle input focus
+		const handleInputFocus = (e: Event) => {
+			e.stopPropagation();
 			
-			if (bestMatch && bestMatch !== inputValue.toUpperCase()) {
-				const cursorPos = labelInput.selectionStart || 0;
-				labelInput.value = bestMatch;
-				labelInput.setSelectionRange(cursorPos, bestMatch.length);
+			if (timeoutManager) {
+				(timeoutManager as any).setInputFocused(true);
 			}
-		}
-	});
+			
+			if (isDefaultValue) {
+				labelInput.value = '';
+				labelInput.style.color = '#333';
+				isDefaultValue = false;
+			}
+		};
 
-	// Handle keyboard events
-	labelInput.addEventListener('keydown', (e) => {
-		e.stopPropagation();
-		
-		if (e.key === 'Enter') {
-			e.preventDefault();
-			markSelectedText();
-		} else if (e.key === 'Tab') {
-			e.preventDefault();
-			labelInput.setSelectionRange(labelInput.value.length, labelInput.value.length);
-		} else if (e.key === 'Escape') {
-			e.preventDefault();
-			menu.remove();
-		} else if (e.key === 'Backspace') {
-			skipAutocompletion = true;
-		}
-	});
+		labelInput.addEventListener('focus', handleInputFocus);
+		labelInput.addEventListener('click', handleInputFocus);
 
-	labelInput.addEventListener('keyup', (e) => {
-		e.stopPropagation();
-	});
+		labelInput.addEventListener('blur', () => {
+			if (timeoutManager) {
+				(timeoutManager as any).setInputFocused(false);
+			}
+			
+			if (labelInput.value.trim() === '') {
+				labelInput.value = 'CUSTOM';
+				labelInput.style.color = '#999';
+				isDefaultValue = true;
+			}
+		});
+
+		// Handle autocompletion
+		labelInput.addEventListener('input', (e) => {
+			e.stopPropagation();
+			
+			if (skipAutocompletion) {
+				skipAutocompletion = false;
+				return;
+			}
+			
+			const inputValue = labelInput.value;
+			
+			if (!isDefaultValue && inputValue) {
+				const bestMatch = findBestMatch(inputValue, PREDEFINED_LABELS);
+				
+				if (bestMatch && bestMatch !== inputValue.toUpperCase()) {
+					const cursorPos = labelInput.selectionStart || 0;
+					labelInput.value = bestMatch;
+					labelInput.setSelectionRange(cursorPos, bestMatch.length);
+				}
+			}
+		});
+
+		// Handle keyboard events
+		labelInput.addEventListener('keydown', (e) => {
+			e.stopPropagation();
+			
+			if (e.key === 'Enter') {
+				e.preventDefault();
+				markSelectedText();
+			} else if (e.key === 'Tab') {
+				e.preventDefault();
+				labelInput.setSelectionRange(labelInput.value.length, labelInput.value.length);
+			} else if (e.key === 'Escape') {
+				e.preventDefault();
+				menu.remove();
+			} else if (e.key === 'Backspace') {
+				skipAutocompletion = true;
+			}
+		});
+
+		labelInput.addEventListener('keyup', (e) => {
+			e.stopPropagation();
+		});
+
+		labelSection.appendChild(labelInput);
+	}
 
 	// Mark button
 	const markBtn = document.createElement('button');
-	markBtn.textContent = 'Mask';
+	markBtn.innerHTML = `<img src="/static/icon-purple-32.png" style="width: 14px; height: 14px; margin-right: 6px; vertical-align: middle;">${i18next.t('PII Modifier: Mask')}`;
 	markBtn.style.cssText = `
 		width: 100%;
 		padding: 8px 12px;
-		border: 1px solid #6b46c1;
-		background: #6b46c1;
+		border: 1px solid #f8b76b;
+		background: #f8b76b;
 		border-radius: 4px;
 		cursor: pointer;
 		font-size: 12px;
 		color: white;
 		font-weight: 500;
 		transition: background-color 0.2s ease;
+		display: flex;
+		align-items: center;
+		justify-content: center;
 	`;
 
 	markBtn.addEventListener('mouseenter', () => {
-		markBtn.style.backgroundColor = '#553c9a';
+		markBtn.style.backgroundColor = '#f59e0b';
 	});
 	
 	markBtn.addEventListener('mouseleave', () => {
-		markBtn.style.backgroundColor = '#6b46c1';
+		markBtn.style.backgroundColor = '#f8b76b';
 	});
 
-		const markSelectedText = () => {
-			const piiType = isDefaultValue ? 'CUSTOM' : labelInput.value.trim().toUpperCase();
-			if (!piiType) {
-				labelInput.style.borderColor = '#ff6b6b';
-				labelInput.focus();
-				setTimeout(() => {
-					labelInput.style.borderColor = '#ddd';
-				}, 1000);
-				return;
-			}
-
-			const isTokenized = tokenizedRadio.checked;
+	const markSelectedText = () => {
+		// In advanced mode, use input value; in simple mode, use default "CUSTOM"
+		const piiType = showAdvancedMenu ? 
+			(isDefaultValue ? 'CUSTOM' : labelInput.value.trim().toUpperCase()) : 
+			'CUSTOM';
 			
-						if (isTokenized) {
-				if (selectionInfo.tokenizedWords.length > 0) {
-					const firstWord = selectionInfo.tokenizedWords[0];
-					const lastWord = selectionInfo.tokenizedWords[selectionInfo.tokenizedWords.length - 1];
-					const combinedText = selectionInfo.tokenizedWords.map(w => w.word).join(' ');
-					
-					onMaskSelection(combinedText, piiType, firstWord.from, lastWord.to);
-				}
-			} else {
-				onMaskSelection(selectionInfo.selectedText, piiType, selectionInfo.from, selectionInfo.to);
-			}
+		if (showAdvancedMenu && !piiType) {
+			labelInput.style.borderColor = '#ff6b6b';
+			labelInput.focus();
+			setTimeout(() => {
+				labelInput.style.borderColor = '#ddd';
+			}, 1000);
+			return;
+		}
 
-			menu.remove();
-		};
+		// If selection options are shown, check which is selected; otherwise default to tokenized
+		const isTokenized = showSelectionOptions ? tokenizedRadio.checked : true;
+		
+		if (isTokenized) {
+			if (selectionInfo.tokenizedWords.length > 0) {
+				const firstWord = selectionInfo.tokenizedWords[0];
+				const lastWord = selectionInfo.tokenizedWords[selectionInfo.tokenizedWords.length - 1];
+				const combinedText = selectionInfo.tokenizedWords.map(w => w.word).join(' ');
+				
+				onMaskSelection(combinedText, piiType, firstWord.from, lastWord.to);
+			}
+		} else {
+			onMaskSelection(selectionInfo.selectedText, piiType, selectionInfo.from, selectionInfo.to);
+		}
+
+		menu.remove();
+	};
 
 	markBtn.addEventListener('click', (e) => {
 		e.preventDefault();
@@ -852,7 +864,6 @@ function createSelectionMenu(
 		markSelectedText();
 	});
 
-	labelSection.appendChild(labelInput);
 	labelSection.appendChild(markBtn);
 	menu.appendChild(labelSection);
 
@@ -922,6 +933,121 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 		let menuCloseTimeout: ReturnType<typeof setTimeout> | null = null;
 		let isMouseOverMenu = false;
 		let isInputFocused = false;
+		let globalMouseUpListener: ((event: MouseEvent) => void) | null = null;
+
+		// Shared function to handle text selection for both editor and global mouseup
+		const handleTextSelection = (event: MouseEvent, view: any) => {
+			// Handle text selection for selection menu
+			const selection = view.state.selection;
+			
+			// Only show selection menu if there's actual text selected
+			if (selection.empty || selection.from === selection.to) {
+				// Close selection menu if no selection
+				if (selectionMenuElement) {
+					selectionMenuElement.remove();
+					selectionMenuElement = null;
+				}
+				return false;
+			}
+
+			// Get selected text
+			const selectedText = view.state.doc.textBetween(selection.from, selection.to);
+			
+			// Don't show menu for very short selections or selections longer than 100 characters
+			if (selectedText.length < 2 || selectedText.length > 100) {
+				return false;
+			}
+
+			// Find tokenized words touched by the selection
+			const tokenizedWords = findTokenizedWords(view.state.doc, selection.from, selection.to);
+			
+			// Don't show menu if no words found
+			if (tokenizedWords.length === 0) {
+				return false;
+			}
+
+			// Check if SHIFT key is pressed to determine menu type
+			const showAdvancedMenu = event.shiftKey;
+
+			// Close hover menu if it exists
+			if (hoverMenuElement) {
+				hoverMenuElement.remove();
+				hoverMenuElement = null;
+			}
+
+			// Close existing selection menu
+			if (selectionMenuElement) {
+				selectionMenuElement.remove();
+			}
+
+			// Create timeout manager for selection menu
+			const timeoutManager = {
+				clearAll: () => {
+					if (hoverTimeout) {
+						clearTimeout(hoverTimeout);
+						hoverTimeout = null;
+					}
+					if (menuCloseTimeout) {
+						clearTimeout(menuCloseTimeout);
+						menuCloseTimeout = null;
+					}
+				},
+				setFallback: (callback: () => void, delay: number) => {
+					if (menuCloseTimeout) {
+						clearTimeout(menuCloseTimeout);
+					}
+					menuCloseTimeout = setTimeout(callback, delay);
+				},
+				setInputFocused: (focused: boolean) => {
+					isInputFocused = focused;
+				}
+			};
+
+			const onMaskSelection = (text: string, piiType: string, from: number, to: number) => {
+				const tr = view.state.tr.setMeta(piiModifierExtensionKey, {
+					type: 'ADD_MODIFIER',
+					modifierAction: 'mask' as ModifierAction,
+					entity: text,
+					piiType,
+					from,
+					to
+				});
+				view.dispatch(tr);
+
+				if (selectionMenuElement) {
+					selectionMenuElement.remove();
+					selectionMenuElement = null;
+				}
+				timeoutManager.clearAll();
+			};
+
+			// Create selection menu (advanced if SHIFT, simplified otherwise)
+			selectionMenuElement = createSelectionMenu(
+				{
+					selectedText,
+					tokenizedWords,
+					from: selection.from,
+					to: selection.to,
+					x: event.clientX,
+					y: event.clientY
+				},
+				onMaskSelection,
+				timeoutManager,
+				showAdvancedMenu
+			);
+
+			document.body.appendChild(selectionMenuElement);
+
+			// Set a fallback timeout to close menu after 15 seconds
+			timeoutManager.setFallback(() => {
+				if (selectionMenuElement) {
+					selectionMenuElement.remove();
+					selectionMenuElement = null;
+				}
+			}, 15000);
+
+			return true;
+		};
 
 		const plugin = new Plugin<PiiModifierState>({
 			key: piiModifierExtensionKey,
@@ -1053,6 +1179,43 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 				handleClick(view, pos, event) {
 					const target = event.target as HTMLElement;
 					
+					// Check if clicking on a text element with a mask modifier
+					const existingEntity = findExistingEntityAtPosition(view, event.clientX, event.clientY);
+					
+					if (existingEntity) {
+						// Get current conversation ID from plugin state
+						const pluginState = piiModifierExtensionKey.getState(view.state);
+						const currentConversationId = pluginState?.currentConversationId;
+						
+						// Get session modifiers
+						const piiSessionManager = PiiSessionManager.getInstance();
+						if (currentConversationId) {
+							piiSessionManager.loadConversationState(currentConversationId);
+						}
+						
+						const sessionModifiers = piiSessionManager.getActiveModifiers(currentConversationId);
+						const entityText = existingEntity.text;
+						
+						// Find mask modifier for this entity
+						const maskModifier = sessionModifiers.find(modifier => 
+							modifier.action === 'mask' && 
+							modifier.entity.toLowerCase() === entityText.toLowerCase()
+						);
+						
+						if (maskModifier) {
+							// Remove the mask modifier directly
+							const tr = view.state.tr.setMeta(piiModifierExtensionKey, {
+								type: 'REMOVE_MODIFIER',
+								modifierId: maskModifier.id
+							});
+							view.dispatch(tr);
+							
+							// Prevent further event handling
+							event.preventDefault();
+							return true;
+						}
+					}
+					
 					// Close hover menu if clicking outside of it
 					if (hoverMenuElement) {
 						const isClickInsideHoverMenu = hoverMenuElement.contains(target);
@@ -1120,6 +1283,21 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 
 						// Don't show hover menu if selection menu is active
 						if (selectionMenuElement) {
+							return;
+						}
+
+						// Only show hover menu if SHIFT key is pressed
+						if (!event.shiftKey) {
+							// If SHIFT is not pressed, hide any existing hover menu
+							if (hoverMenuElement) {
+								hoverMenuElement.remove();
+								hoverMenuElement = null;
+							}
+							// Clear any pending timeout
+							if (hoverTimeout) {
+								clearTimeout(hoverTimeout);
+								hoverTimeout = null;
+							}
 							return;
 						}
 
@@ -1298,110 +1476,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 					},
 
 					mouseup: (view, event) => {
-						// Handle text selection for selection menu
-						const selection = view.state.selection;
-						
-						// Only show selection menu if there's actual text selected
-						if (selection.empty || selection.from === selection.to) {
-							// Close selection menu if no selection
-							if (selectionMenuElement) {
-								selectionMenuElement.remove();
-								selectionMenuElement = null;
-							}
-							return;
-						}
-
-						// Get selected text
-						const selectedText = view.state.doc.textBetween(selection.from, selection.to);
-						
-						// Don't show menu for very short selections
-						if (selectedText.length < 2) {
-							return;
-						}
-
-						// Find tokenized words touched by the selection
-						const tokenizedWords = findTokenizedWords(view.state.doc, selection.from, selection.to);
-						
-						// Don't show menu if no words found
-						if (tokenizedWords.length === 0) {
-							return;
-						}
-
-						// Close hover menu if it exists
-						if (hoverMenuElement) {
-							hoverMenuElement.remove();
-							hoverMenuElement = null;
-						}
-
-						// Close existing selection menu
-						if (selectionMenuElement) {
-							selectionMenuElement.remove();
-						}
-
-						// Create timeout manager for selection menu
-						const timeoutManager = {
-							clearAll: () => {
-								if (hoverTimeout) {
-									clearTimeout(hoverTimeout);
-									hoverTimeout = null;
-								}
-								if (menuCloseTimeout) {
-									clearTimeout(menuCloseTimeout);
-									menuCloseTimeout = null;
-								}
-							},
-							setFallback: (callback: () => void, delay: number) => {
-								if (menuCloseTimeout) {
-									clearTimeout(menuCloseTimeout);
-								}
-								menuCloseTimeout = setTimeout(callback, delay);
-							},
-							setInputFocused: (focused: boolean) => {
-								isInputFocused = focused;
-							}
-						};
-
-						const onMaskSelection = (text: string, piiType: string, from: number, to: number) => {
-							const tr = view.state.tr.setMeta(piiModifierExtensionKey, {
-								type: 'ADD_MODIFIER',
-								modifierAction: 'mask' as ModifierAction,
-								entity: text,
-								piiType,
-								from,
-								to
-							});
-							view.dispatch(tr);
-
-							if (selectionMenuElement) {
-								selectionMenuElement.remove();
-								selectionMenuElement = null;
-							}
-							timeoutManager.clearAll();
-						};
-
-						// Create selection menu
-						selectionMenuElement = createSelectionMenu(
-							{
-								selectedText,
-								tokenizedWords,
-								from: selection.from,
-								to: selection.to,
-								x: event.clientX,
-								y: event.clientY
-							},
-							onMaskSelection,
-							timeoutManager
-						);
-
-						document.body.appendChild(selectionMenuElement);
-
-						// Set a fallback timeout to close menu after 15 seconds
-						timeoutManager.setFallback(() => {
-							if (selectionMenuElement) {
-								selectionMenuElement.remove();
-								selectionMenuElement = null;
-							}
-						}, 15000);
+						handleTextSelection(event, view);
 					},
 
 					mouseleave: () => {
@@ -1413,9 +1488,28 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 				}
 			},
 
-			view() {
+			view(editorView) {
+				// Set up global mouseup listener to catch selections that end outside the editor
+				globalMouseUpListener = (event: MouseEvent) => {
+					// Only handle if the selection is in our editor
+					if (editorView.hasFocus() || document.activeElement === editorView.dom) {
+						// Small delay to ensure selection state is updated
+						setTimeout(() => {
+							handleTextSelection(event, editorView);
+						}, 10);
+					}
+				};
+				
+				document.addEventListener('mouseup', globalMouseUpListener, true);
+
 				return {
 					destroy: () => {
+						// Clean up global listener
+						if (globalMouseUpListener) {
+							document.removeEventListener('mouseup', globalMouseUpListener, true);
+							globalMouseUpListener = null;
+						}
+						
 						if (hoverMenuElement) {
 							hoverMenuElement.remove();
 							hoverMenuElement = null;
