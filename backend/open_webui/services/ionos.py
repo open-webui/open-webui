@@ -2,7 +2,8 @@ from typing import Optional
 import hashlib
 from open_webui.models.users import User
 from open_webui.env import (
-    IONOS_USER_ID_PSEUDONYMIZATION_SALT,
+    IONOS_USER_ID_PSEUDONYMIZATION_SALT_PREFIX,
+    IONOS_USER_ID_PSEUDONYMIZATION_SALT_SUFFIX,
 )
 
 def get_oauth_sub(user: User) -> str:
@@ -32,7 +33,7 @@ def pseudonymized_user_id(user: User) -> Optional[str]:
     Generate pseudonymized user ID for aggregation in surveys
     """
 
-    if not IONOS_USER_ID_PSEUDONYMIZATION_SALT:
+    if not IONOS_USER_ID_PSEUDONYMIZATION_SALT_PREFIX or not IONOS_USER_ID_PSEUDONYMIZATION_SALT_SUFFIX:
         return None
 
     if not user.oauth_sub:
@@ -40,5 +41,5 @@ def pseudonymized_user_id(user: User) -> Optional[str]:
 
     sub = get_oauth_sub(user)
 
-    salted = f"{sub}{IONOS_USER_ID_PSEUDONYMIZATION_SALT}"
+    salted = f"{IONOS_USER_ID_PSEUDONYMIZATION_SALT_PREFIX}{sub}{IONOS_USER_ID_PSEUDONYMIZATION_SALT_SUFFIX}"
     return hashlib.md5(salted.encode("ascii")).hexdigest()
