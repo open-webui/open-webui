@@ -211,8 +211,8 @@ function createHoverMenu(
 		position: fixed;
 		left: ${Math.min(wordInfo.x, window.innerWidth - 250)}px;
 		top: ${wordInfo.y - 80}px;
-		background: white;
-		border: 1px solid #ddd;
+		background: #6b46c1;
+		border: 1px solid #553c9a;
 		border-radius: 8px;
 		box-shadow: 0 4px 20px rgba(0,0,0,0.15);
 		padding: 12px;
@@ -223,33 +223,7 @@ function createHoverMenu(
 		max-width: 300px;
 	`;
 
-	// Header with icon
-	const header = document.createElement('div');
-	header.style.cssText = `
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		font-weight: 600;
-		color: #333;
-		margin-bottom: 8px;
-		font-size: 12px;
-	`;
-	
-	// Add NENNA icon
-	const icon = document.createElement('img');
-	icon.src = '/static/icon-purple-32.png';
-	icon.style.cssText = `
-		width: 16px;
-		height: 16px;
-		flex-shrink: 0;
-	`;
-	
-	const textNode = document.createElement('span');
-	textNode.textContent = `"${wordInfo.word}"`;
-	
-	header.appendChild(icon);
-	header.appendChild(textNode);
-	menu.appendChild(header);
+
 
 	// Show existing modifiers if any
 	if (existingModifiers.length > 0) {
@@ -267,7 +241,7 @@ function createHoverMenu(
 		modifiersHeader.style.cssText = `
 			font-weight: 600;
 			font-size: 11px;
-			color: #495057;
+			color: white;
 			margin-bottom: 6px;
 		`;
 		modifiersSection.appendChild(modifiersHeader);
@@ -484,27 +458,30 @@ function createHoverMenu(
 
 
 	const maskBtn = document.createElement('button');
-	maskBtn.textContent = i18next.t('PII Modifier: Change Label');
+	maskBtn.innerHTML = `<img src="/static/icon-purple-32.png" style="width: 14px; height: 14px; margin-right: 6px; vertical-align: middle;">${i18next.t('PII Modifier: Change Label')}`;
 	maskBtn.style.cssText = `
 		width: 100%;
 		padding: 6px 10px;
-		border: 1px solid #6b46c1;
-		background: #6b46c1;
+		border: 1px solid #ca8a04;
+		background: #ca8a04;
 		border-radius: 4px;
 		cursor: pointer;
 		font-size: 12px;
 		color: white;
 		font-weight: 500;
 		transition: background-color 0.2s ease;
+		display: flex;
+		align-items: center;
+		justify-content: center;
 	`;
 
 	// Add hover effects for the button
 	maskBtn.addEventListener('mouseenter', () => {
-		maskBtn.style.backgroundColor = '#553c9a';
+		maskBtn.style.backgroundColor = '#a16207';
 	});
 	
 	maskBtn.addEventListener('mouseleave', () => {
-		maskBtn.style.backgroundColor = '#6b46c1';
+		maskBtn.style.backgroundColor = '#ca8a04';
 	});
 
 	// Handle mask button click
@@ -582,8 +559,8 @@ function createSelectionMenu(
 		position: fixed;
 		left: ${Math.min(selectionInfo.x, window.innerWidth - 300)}px;
 		top: ${selectionInfo.y - 120}px;
-		background: white;
-		border: 1px solid #ddd;
+		background: #6b46c1;
+		border: 1px solid #553c9a;
 		border-radius: 8px;
 		box-shadow: 0 4px 20px rgba(0,0,0,0.15);
 		padding: 16px;
@@ -596,28 +573,7 @@ function createSelectionMenu(
 		overflow-y: auto;
 	`;
 
-	// Header
-	const header = document.createElement('div');
-	header.style.cssText = `
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		font-weight: 600;
-		color: #333;
-		margin-bottom: 12px;
-		font-size: 12px;
-	`;
-	
-	const icon = document.createElement('img');
-	icon.src = '/static/icon-purple-32.png';
-	icon.style.cssText = `width: 16px; height: 16px; flex-shrink: 0;`;
-	
-	const headerText = document.createElement('span');
-	headerText.textContent = i18next.t('PII Modifier: Mark text as PII');
-	
-	header.appendChild(icon);
-	header.appendChild(headerText);
-	menu.appendChild(header);
+
 
 	// Selection options
 	const optionsContainer = document.createElement('div');
@@ -640,6 +596,7 @@ function createSelectionMenu(
 		margin-left: 6px;
 		font-weight: 500;
 		cursor: pointer;
+		color: white;
 	`;
 	tokenizedLabel.textContent = i18next.t('PII Modifier: Words') + ' ';
 
@@ -674,6 +631,7 @@ function createSelectionMenu(
 		margin-left: 6px;
 		font-weight: 500;
 		cursor: pointer;
+		color: white;
 	`;
 	exactLabel.textContent = i18next.t('PII Modifier: Exact') + ' ';
 
@@ -715,7 +673,8 @@ function createSelectionMenu(
 		border-radius: 4px;
 		font-size: 12px;
 		box-sizing: border-box;
-		color: #999;
+		color: #333;
+		background: white;
 	`;
 
 	let isDefaultValue = true;
@@ -797,26 +756,29 @@ function createSelectionMenu(
 
 	// Mark button
 	const markBtn = document.createElement('button');
-	markBtn.textContent = i18next.t('PII Modifier: Mask');
+	markBtn.innerHTML = `<img src="/static/icon-purple-32.png" style="width: 14px; height: 14px; margin-right: 6px; vertical-align: middle;">${i18next.t('PII Modifier: Mask')}`;
 	markBtn.style.cssText = `
 		width: 100%;
 		padding: 8px 12px;
-		border: 1px solid #6b46c1;
-		background: #6b46c1;
+		border: 1px solid #ca8a04;
+		background: #ca8a04;
 		border-radius: 4px;
 		cursor: pointer;
 		font-size: 12px;
 		color: white;
 		font-weight: 500;
 		transition: background-color 0.2s ease;
+		display: flex;
+		align-items: center;
+		justify-content: center;
 	`;
 
 	markBtn.addEventListener('mouseenter', () => {
-		markBtn.style.backgroundColor = '#553c9a';
+		markBtn.style.backgroundColor = '#a16207';
 	});
 	
 	markBtn.addEventListener('mouseleave', () => {
-		markBtn.style.backgroundColor = '#6b46c1';
+		markBtn.style.backgroundColor = '#ca8a04';
 	});
 
 		const markSelectedText = () => {
