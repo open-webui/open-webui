@@ -933,6 +933,121 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 		let menuCloseTimeout: ReturnType<typeof setTimeout> | null = null;
 		let isMouseOverMenu = false;
 		let isInputFocused = false;
+		let globalMouseUpListener: ((event: MouseEvent) => void) | null = null;
+
+		// Shared function to handle text selection for both editor and global mouseup
+		const handleTextSelection = (event: MouseEvent, view: any) => {
+			// Handle text selection for selection menu
+			const selection = view.state.selection;
+			
+			// Only show selection menu if there's actual text selected
+			if (selection.empty || selection.from === selection.to) {
+				// Close selection menu if no selection
+				if (selectionMenuElement) {
+					selectionMenuElement.remove();
+					selectionMenuElement = null;
+				}
+				return false;
+			}
+
+			// Get selected text
+			const selectedText = view.state.doc.textBetween(selection.from, selection.to);
+			
+			// Don't show menu for very short selections or selections longer than 100 characters
+			if (selectedText.length < 2 || selectedText.length > 100) {
+				return false;
+			}
+
+			// Find tokenized words touched by the selection
+			const tokenizedWords = findTokenizedWords(view.state.doc, selection.from, selection.to);
+			
+			// Don't show menu if no words found
+			if (tokenizedWords.length === 0) {
+				return false;
+			}
+
+			// Check if SHIFT key is pressed to determine menu type
+			const showAdvancedMenu = event.shiftKey;
+
+			// Close hover menu if it exists
+			if (hoverMenuElement) {
+				hoverMenuElement.remove();
+				hoverMenuElement = null;
+			}
+
+			// Close existing selection menu
+			if (selectionMenuElement) {
+				selectionMenuElement.remove();
+			}
+
+			// Create timeout manager for selection menu
+			const timeoutManager = {
+				clearAll: () => {
+					if (hoverTimeout) {
+						clearTimeout(hoverTimeout);
+						hoverTimeout = null;
+					}
+					if (menuCloseTimeout) {
+						clearTimeout(menuCloseTimeout);
+						menuCloseTimeout = null;
+					}
+				},
+				setFallback: (callback: () => void, delay: number) => {
+					if (menuCloseTimeout) {
+						clearTimeout(menuCloseTimeout);
+					}
+					menuCloseTimeout = setTimeout(callback, delay);
+				},
+				setInputFocused: (focused: boolean) => {
+					isInputFocused = focused;
+				}
+			};
+
+			const onMaskSelection = (text: string, piiType: string, from: number, to: number) => {
+				const tr = view.state.tr.setMeta(piiModifierExtensionKey, {
+					type: 'ADD_MODIFIER',
+					modifierAction: 'mask' as ModifierAction,
+					entity: text,
+					piiType,
+					from,
+					to
+				});
+				view.dispatch(tr);
+
+				if (selectionMenuElement) {
+					selectionMenuElement.remove();
+					selectionMenuElement = null;
+				}
+				timeoutManager.clearAll();
+			};
+
+			// Create selection menu (advanced if SHIFT, simplified otherwise)
+			selectionMenuElement = createSelectionMenu(
+				{
+					selectedText,
+					tokenizedWords,
+					from: selection.from,
+					to: selection.to,
+					x: event.clientX,
+					y: event.clientY
+				},
+				onMaskSelection,
+				timeoutManager,
+				showAdvancedMenu
+			);
+
+			document.body.appendChild(selectionMenuElement);
+
+			// Set a fallback timeout to close menu after 15 seconds
+			timeoutManager.setFallback(() => {
+				if (selectionMenuElement) {
+					selectionMenuElement.remove();
+					selectionMenuElement = null;
+				}
+			}, 15000);
+
+			return true;
+		};
 
 		const plugin = new Plugin<PiiModifierState>({
 			key: piiModifierExtensionKey,
@@ -1361,114 +1476,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 					},
 
 					mouseup: (view, event) => {
-						// Handle text selection for selection menu
-						const selection = view.state.selection;
-						
-						// Only show selection menu if there's actual text selected
-						if (selection.empty || selection.from === selection.to) {
-							// Close selection menu if no selection
-							if (selectionMenuElement) {
-								selectionMenuElement.remove();
-								selectionMenuElement = null;
-							}
-							return;
-						}
-
-						// Get selected text
-						const selectedText = view.state.doc.textBetween(selection.from, selection.to);
-						
-						// Don't show menu for very short selections or selections longer than 100 characters
-						if (selectedText.length < 2 || selectedText.length > 100) {
-							return;
-						}
-
-						// Find tokenized words touched by the selection
-						const tokenizedWords = findTokenizedWords(view.state.doc, selection.from, selection.to);
-						
-						// Don't show menu if no words found
-						if (tokenizedWords.length === 0) {
-							return;
-						}
-
-						// Check if SHIFT key is pressed to determine menu type
-						const showAdvancedMenu = event.shiftKey;
-
-						// Close hover menu if it exists
-						if (hoverMenuElement) {
-							hoverMenuElement.remove();
-							hoverMenuElement = null;
-						}
-
-						// Close existing selection menu
-						if (selectionMenuElement) {
-							selectionMenuElement.remove();
-						}
-
-						// Create timeout manager for selection menu
-						const timeoutManager = {
-							clearAll: () => {
-								if (hoverTimeout) {
-									clearTimeout(hoverTimeout);
-									hoverTimeout = null;
-								}
-								if (menuCloseTimeout) {
-									clearTimeout(menuCloseTimeout);
-									menuCloseTimeout = null;
-								}
-							},
-							setFallback: (callback: () => void, delay: number) => {
-								if (menuCloseTimeout) {
-									clearTimeout(menuCloseTimeout);
-								}
-								menuCloseTimeout = setTimeout(callback, delay);
-							},
-							setInputFocused: (focused: boolean) => {
-								isInputFocused = focused;
-							}
-						};
-
-						const onMaskSelection = (text: string, piiType: string, from: number, to: number) => {
-							const tr = view.state.tr.setMeta(piiModifierExtensionKey, {
-								type: 'ADD_MODIFIER',
-								modifierAction: 'mask' as ModifierAction,
-								entity: text,
-								piiType,
-								from,
-								to
-							});
-							view.dispatch(tr);
-
-							if (selectionMenuElement) {
-								selectionMenuElement.remove();
-								selectionMenuElement = null;
-							}
-							timeoutManager.clearAll();
-						};
-
-						// Create selection menu (advanced if SHIFT, simplified otherwise)
-						selectionMenuElement = createSelectionMenu(
-							{
-								selectedText,
-								tokenizedWords,
-								from: selection.from,
-								to: selection.to,
-								x: event.clientX,
-								y: event.clientY
-							},
-							onMaskSelection,
-							timeoutManager,
-							showAdvancedMenu
-						);
-
-						document.body.appendChild(selectionMenuElement);
-
-						// Set a fallback timeout to close menu after 15 seconds
-						timeoutManager.setFallback(() => {
-							if (selectionMenuElement) {
-								selectionMenuElement.remove();
-								selectionMenuElement = null;
-							}
-						}, 15000);
+						handleTextSelection(event, view);
 					},
 
 					mouseleave: () => {
@@ -1480,9 +1488,28 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 				}
 			},
 
-			view() {
+			view(editorView) {
+				// Set up global mouseup listener to catch selections that end outside the editor
+				globalMouseUpListener = (event: MouseEvent) => {
+					// Only handle if the selection is in our editor
+					if (editorView.hasFocus() || document.activeElement === editorView.dom) {
+						// Small delay to ensure selection state is updated
+						setTimeout(() => {
+							handleTextSelection(event, editorView);
+						}, 10);
+					}
+				};
+				
+				document.addEventListener('mouseup', globalMouseUpListener, true);
+
 				return {
 					destroy: () => {
+						// Clean up global listener
+						if (globalMouseUpListener) {
+							document.removeEventListener('mouseup', globalMouseUpListener, true);
+							globalMouseUpListener = null;
+						}
+						
 						if (hoverMenuElement) {
 							hoverMenuElement.remove();
 							hoverMenuElement = null;
