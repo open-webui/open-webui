@@ -248,6 +248,7 @@ async def chat_completion_tools_handler(
                         if tool_id
                         else f"{tool_function_name}"
                     )
+
                     if tool.get("metadata", {}).get("citation", False) or tool.get(
                         "direct", False
                     ):
@@ -1375,7 +1376,7 @@ async def process_chat_response(
             return len(backtick_segments) > 1 and len(backtick_segments) % 2 == 0
 
         # Handle as a background task
-        async def post_response_handler(response, events):
+        async def response_handler(response, events):
             def serialize_content_blocks(content_blocks, raw=False):
                 content = ""
 
@@ -2434,9 +2435,9 @@ async def process_chat_response(
             if response.background is not None:
                 await response.background()
 
-        # background_tasks.add_task(post_response_handler, response, events)
+        # background_tasks.add_task(response_handler, response, events)
         task_id, _ = await create_task(
-            request, post_response_handler(response, events), id=metadata["chat_id"]
+            request, response_handler(response, events), id=metadata["chat_id"]
         )
         return {"status": True, "task_id": task_id}
 
