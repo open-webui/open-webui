@@ -121,7 +121,6 @@ def set_aak_groups(user_data):
     Returns:
         The decoded OIDC token with the AAK group names added to the "groups" list.
     """
-
     log.debug("Running AAK Group management")
     log.debug(user_data)
 
@@ -668,3 +667,4 @@ class OAuthManager:
         redirect_url = f"{redirect_base_url}/auth"
 
         return RedirectResponse(url=redirect_url, headers=response.headers)
+
