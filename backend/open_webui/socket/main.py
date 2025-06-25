@@ -146,10 +146,13 @@ app = socketio.ASGIApp(
 )
 
 
-def get_models_in_use():
-    # List models that are currently in use
-    models_in_use = list(USAGE_POOL.keys())
-    return models_in_use
+def get_requests_count_per_model():
+    """Get currently used models and their current request count"""
+    active_models = list(USAGE_POOL.keys())
+    requests_count_per_model = {}
+    for model in active_models:
+        requests_count_per_model[model] = len(USAGE_POOL[model].keys())
+    return requests_count_per_model
 
 
 def get_active_users_count():

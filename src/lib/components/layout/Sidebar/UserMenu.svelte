@@ -209,8 +209,8 @@
 				<hr class=" border-gray-100 dark:border-gray-800 my-1 p-0" />
 
 				<Tooltip
-					content={usage?.model_ids && usage?.model_ids.length > 0
-						? `${$i18n.t('Running')}: ${usage.model_ids.join(', ')} ✨`
+					content={usage?.requests_per_model && Object.keys(usage?.requests_per_model).length > 0
+						? `${$i18n.t('Running')}: ${Object.entries(usage?.requests_per_model).reduce((a, b) => a + b[0] + ' (' + b[1] + '), ', '')} ✨`
 						: ''}
 				>
 					<div
@@ -228,16 +228,24 @@
 							</span>
 						</div>
 
-						{#if usage?.users_count}
-							<div class=" ">
+						<div class=" ">
+							{#if usage?.users_count}
 								<span class="">
 									{$i18n.t('Active Users')}:
 								</span>
 								<span class=" font-semibold">
-									{usage?.users_count}
+									{usage?.users_count}<br>
 								</span>
-							</div>
-						{/if}
+							{/if}
+							{#if usage?.requests_per_model}
+								<span class="">
+									{$i18n.t('Active Requests')}:
+								</span>
+								<span class=" font-semibold">
+									{Object.values(usage?.requests_per_model).reduce((a, b) => a + b, 0)}
+								</span>
+							{/if}
+						</div>
 					</div>
 				</Tooltip>
 			{/if}
