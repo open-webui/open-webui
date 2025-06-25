@@ -16,6 +16,7 @@
 	import UsersSolid from '$lib/components/icons/UsersSolid.svelte';
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
+	import Search from '$lib/components/icons/Search.svelte';
 	import User from '$lib/components/icons/User.svelte';
 	import UserCircleSolid from '$lib/components/icons/UserCircleSolid.svelte';
 	import GroupModal from './Groups/EditGroupModal.svelte';
@@ -159,18 +160,7 @@
 			<div class=" flex w-full space-x-2">
 				<div class="flex flex-1">
 					<div class=" self-center ml-1 mr-3">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 20 20"
-							fill="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
-								clip-rule="evenodd"
-							/>
-						</svg>
+						<Search class="w-5 h-5" />
 					</div>
 					<input
 						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"

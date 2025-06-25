@@ -59,7 +59,7 @@
 	import ChannelItem from './Sidebar/ChannelItem.svelte';
 	import PencilSquare from '../icons/PencilSquare.svelte';
 	import Home from '../icons/Home.svelte';
-	import MagnifyingGlass from '../icons/MagnifyingGlass.svelte';
+	import Search from '../icons/Search.svelte';
 	import SearchModal from './SearchModal.svelte';
 
 	const BREAKPOINT = 768;
@@ -554,7 +554,7 @@
 				draggable="false"
 			>
 				<div class="self-center">
-					<MagnifyingGlass strokeWidth="2" className="size-[1.1rem]" />
+					<Search strokeWidth="2" className="size-[1.1rem]" />
 				</div>
 
 				<div class="flex self-center translate-y-[0.5px]">
