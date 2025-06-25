@@ -30,10 +30,11 @@ export default defineConfig({
 			]
 		})
 	],
-	define: {
-		APP_VERSION: JSON.stringify(process.env.npm_package_version),
-		APP_BUILD_HASH: JSON.stringify(process.env.APP_BUILD_HASH || 'dev-build')
-	},
+        define: {
+                APP_VERSION: JSON.stringify(process.env.npm_package_version),
+                APP_BUILD_HASH: JSON.stringify(process.env.APP_BUILD_HASH || 'dev-build'),
+                GOOGLE_PLAY_BILLING: JSON.stringify(process.env.GOOGLE_PLAY_BILLING || 'no')
+        },
 	build: {
 		sourcemap: true
 	},

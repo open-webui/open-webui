@@ -1,14 +1,16 @@
 <script lang="ts">
-	export let label = 'Charge your account';
-	export let webPaymentUrl = 'https://www.aibrary.dev/chat/payment?chat=true';
-	let loading = false;
+        export let label = 'Charge your account';
+        export let webPaymentUrl = 'https://www.aibrary.dev/chat/payment?chat=true';
+        let loading = false;
+
+        const GOOGLE_PLAY_BILLING_ENABLED = GOOGLE_PLAY_BILLING === 'yes';
 
 	async function initiatePayment() {
 		try {
 			loading = true;
 
 			// Check if Digital Goods API is available
-			if (navigator.digitalGoods && navigator.digitalGoods.getService) {
+                        if (GOOGLE_PLAY_BILLING_ENABLED && navigator.digitalGoods && navigator.digitalGoods.getService) {
 				const digitalGoods = await navigator.digitalGoods.getService('play');
 
 				const sku = 'credit_5usd';
