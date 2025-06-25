@@ -108,7 +108,7 @@
 	>
 		<div class="w-full flex flex-col justify-center items-center">
 			<div class="flex flex-row justify-center gap-3 @sm:gap-3.5 w-fit px-5 max-w-xl">
-				<div class="flex shrink-0 justify-center">
+				<!-- <div class="flex shrink-0 justify-center">
 					<div class="flex -space-x-4 mb-0.5" in:fade={{ duration: 100 }}>
 						{#each models as model, modelIdx}
 							<Tooltip
@@ -127,7 +127,7 @@
 										src={model?.info?.meta?.profile_image_url ??
 											($i18n.language === 'dg-DG'
 												? `/doge.png`
-												: `${WEBUI_BASE_URL}/static/favicon.png`)}
+												: `/static/favicon.png`)}
 										class=" size-9 @sm:size-10 rounded-full border-[1px] border-gray-100 dark:border-none"
 										alt="logo"
 										draggable="false"
@@ -136,9 +136,9 @@
 							</Tooltip>
 						{/each}
 					</div>
-				</div>
+				</div> -->
 
-				<div
+				<!-- <div
 					class=" text-3xl @sm:text-3xl line-clamp-1 flex items-center"
 					in:fade={{ duration: 100 }}
 				>
@@ -149,13 +149,34 @@
 							className=" flex items-center "
 						>
 							<span class="line-clamp-1">
-								{models[selectedModelIdx]?.name}
+							{models[selectedModelIdx]?.name}
 							</span>
 						</Tooltip>
 					{:else}
 						{$i18n.t('Hello, {{name}}', { name: $user?.name })}
 					{/if}
+				</div> -->
+
+				<div class="text-center my-6" in:fade={{ duration: 100 }}>
+					{#if models[selectedModelIdx]?.name}
+						<Tooltip
+							content={models[selectedModelIdx]?.name}
+							placement="top"
+							className="flex items-center justify-center"
+						>
+							<h1 class="text-4xl font-bold text-gray-900">
+								Welcome to {models[selectedModelIdx].name}
+							</h1>
+						</Tooltip>
+					{/if}
+
+					{#if $user?.name}
+						<p class="text-xl text-gray-500 mt-4">
+							Hi {$user.name}, how can I help today?
+						</p>
+					{/if}
 				</div>
+
 			</div>
 
 			<div class="flex mt-1 mb-2">

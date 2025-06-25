@@ -64,12 +64,12 @@
 	}
 </script>
 
-<div class="mb-1 flex gap-1 text-xs font-medium items-center text-gray-600 dark:text-gray-400">
+<!-- <div class="mb-1 flex gap-1 text-xs font-medium items-center text-gray-600 dark:text-gray-400">
 	{#if filteredPrompts.length > 0}
 		<Bolt />
 		{$i18n.t('Suggested')}
 	{:else}
-		<!-- Keine Vorschläge -->
+		
 
 		<div
 			class="flex w-full {$settings?.landingPageMode === 'chat'
@@ -79,11 +79,34 @@
 			{$WEBUI_NAME} ‧ v{WEBUI_VERSION}
 		</div>
 	{/if}
-</div>
+</div> -->
 
 <div class="h-40 w-full">
 	{#if filteredPrompts.length > 0}
-		<div class="max-h-40 overflow-auto scrollbar-none items-start {className}">
+
+		<div class="flex flex-wrap gap-3 mt-4 justify-center items-center">
+			{#each filteredPrompts as prompt, idx (prompt.id || prompt.content)}
+				<button
+					class="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-gray-800 transition hover:bg-gray-50 dark:text-gray-100 dark:hover:bg-white/10"
+					style="
+						background: var(--Schemes-Surface, #FFF);
+						box-shadow: 0px 0px 16px -8px rgba(28, 27, 27, 0.04);
+						animation-delay: {idx * 60}ms;
+					"
+					on:click={() => dispatch('select', prompt.content)}
+				>
+					{#if prompt.icon}
+						<span class="text-purple-600 text-lg">{@html prompt.icon}</span>
+					{:else}
+						<span class="text-purple-600 text-lg">✨</span>
+					{/if}
+					<span class="whitespace-nowrap">{prompt.title?.[0] ?? prompt.content}</span>
+				</button>
+			{/each}
+		</div>
+
+
+		<!-- <div class="max-h-40 overflow-auto scrollbar-none items-start {className}">
 			{#each filteredPrompts as prompt, idx (prompt.id || prompt.content)}
 				<button
 					class="waterfall flex flex-col flex-1 shrink-0 w-full justify-between
@@ -115,7 +138,7 @@
 					</div>
 				</button>
 			{/each}
-		</div>
+		</div> -->
 	{/if}
 </div>
 
