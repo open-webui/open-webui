@@ -74,27 +74,35 @@ function buildPositionMapping(doc: ProseMirrorNode): PositionMapping {
 }
 
 // Convert PII entity positions from plain text to ProseMirror positions
+// Preserves existing shouldMask state from current entities
 function mapPiiEntitiesToProseMirror(
 	entities: PiiEntity[],
-	mapping: PositionMapping
+	mapping: PositionMapping,
+	existingEntities: ExtendedPiiEntity[] = []
 ): ExtendedPiiEntity[] {
-	return entities.map(entity => ({
-		...entity,
-		shouldMask: true,
-		occurrences: entity.occurrences.map((occurrence: any) => {
-			const plainTextStart = occurrence.start_idx;
-			const plainTextEnd = occurrence.end_idx;
-			
-			const proseMirrorStart = mapping.plainTextToProseMirror.get(plainTextStart) ?? plainTextStart + 1;
-			const proseMirrorEnd = mapping.plainTextToProseMirror.get(plainTextEnd - 1) ?? (plainTextEnd - 1 + 1);
-			
-			return {
-				...occurrence,
-				start_idx: proseMirrorStart,
-				end_idx: proseMirrorEnd + 1
-			};
-		})
-	}));
+	return entities.map(entity => {
+		// Find existing entity with same label to preserve shouldMask state
+		const existingEntity = existingEntities.find(existing => existing.label === entity.label);
+		const shouldMask = existingEntity?.shouldMask ?? true; // Default to true if not found
+		
+		return {
+			...entity,
+			shouldMask,
+			occurrences: entity.occurrences.map((occurrence: any) => {
+				const plainTextStart = occurrence.start_idx;
+				const plainTextEnd = occurrence.end_idx;
+				
+				const proseMirrorStart = mapping.plainTextToProseMirror.get(plainTextStart) ?? plainTextStart + 1;
+				const proseMirrorEnd = mapping.plainTextToProseMirror.get(plainTextEnd - 1) ?? (plainTextEnd - 1 + 1);
+				
+				return {
+					...occurrence,
+					start_idx: proseMirrorStart,
+					end_idx: proseMirrorEnd + 1
+				};
+			})
+		};
+	});
 }
 
 // Create decorations for PII entities and modifier-affected text
@@ -228,7 +236,8 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 						return;
 					}
 
-					const mappedEntities = mapPiiEntitiesToProseMirror(response.pii[0], state.positionMapping);
+					// Pass existing entities to preserve shouldMask state
+					const mappedEntities = mapPiiEntitiesToProseMirror(response.pii[0], state.positionMapping, state.entities);
 					
 					if (options.conversationId) {
 						piiSessionManager.setConversationEntitiesPreservingModifiers(options.conversationId, response.pii[0]);
