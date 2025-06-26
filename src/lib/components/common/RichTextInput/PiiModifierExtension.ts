@@ -231,7 +231,7 @@ function createHoverMenu(
 		modifiersSection.style.cssText = `
 			margin-bottom: 12px;
 			padding: 8px;
-			background: #f8f9fa;
+			background: #5d5ba6;
 			border-radius: 4px;
 			border: 1px solid #e9ecef;
 		`;
@@ -355,7 +355,8 @@ function createHoverMenu(
 		border-radius: 4px;
 		font-size: 12px;
 		box-sizing: border-box;
-		color: #999;
+		color: #333;
+		background: white;
 	`;
 
 	let isDefaultValue = true;
@@ -467,7 +468,7 @@ function createHoverMenu(
 		border-radius: 4px;
 		cursor: pointer;
 		font-size: 12px;
-		color: white;
+		color: #3f3d8a;
 		font-weight: 500;
 		transition: background-color 0.2s ease;
 		display: flex;
@@ -608,18 +609,18 @@ function createSelectionMenu(
 			cursor: pointer;
 			color: white;
 		`;
-		tokenizedLabel.textContent = i18next.t('PII Modifier: Words') + ' ';
+		tokenizedLabel.textContent = i18next.t('PII Modifier: Words') + '\t';
 
 		const tokenizedWords = document.createElement('span');
 		tokenizedWords.style.cssText = `
-			background: #f0f9ff;
-			color: #0369a1;
+			background: #f8b76b;
+			color: #3f3d8a;
 			padding: 2px 6px;
 			border-radius: 4px;
 			font-size: 11px;
 			margin-left: 4px;
 		`;
-		tokenizedWords.textContent = `"${tokenizedText}"`;
+		tokenizedWords.textContent = `${tokenizedText}`;
 
 		tokenizedOption.appendChild(tokenizedRadio);
 		tokenizedOption.appendChild(tokenizedLabel);
@@ -643,18 +644,18 @@ function createSelectionMenu(
 			cursor: pointer;
 			color: white;
 		`;
-		exactLabel.textContent = i18next.t('PII Modifier: Exact') + ' ';
+		exactLabel.textContent = i18next.t('PII Modifier: Exact') + '\t';
 
 		const exactTextSpan = document.createElement('span');
 		exactTextSpan.style.cssText = `
-			background: #fef3c7;
-			color: #92400e;
+			background: #f8b76b;
+			color: #3f3d8a;
 			padding: 2px 6px;
 			border-radius: 4px;
 			font-size: 11px;
 			margin-left: 4px;
 		`;
-		exactTextSpan.textContent = `"${exactText}"`;
+		exactTextSpan.textContent = `${exactText}`;
 
 		exactOption.appendChild(exactRadio);
 		exactOption.appendChild(exactLabel);
@@ -809,7 +810,7 @@ function createSelectionMenu(
 		border-radius: 4px;
 		cursor: pointer;
 		font-size: 12px;
-		color: white;
+		color: #3f3d8a;
 		font-weight: 500;
 		transition: background-color 0.2s ease;
 		display: flex;
