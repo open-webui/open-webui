@@ -34,6 +34,10 @@
 			url: $i18n.t('modelUsePolicyLinkUrl', { ns: 'ionos' })
 		},
 		{
+			label: $i18n.t('modelHubInfoLinkText', { ns: 'ionos' }),
+			url: $i18n.t('modelHubInfoLinkUrl', { ns: 'ionos' })
+		},
+		{
 			label: $i18n.t('Imprint', { ns: 'ionos' }),
 			url: URLS.imprint
 		},
