@@ -374,6 +374,64 @@
 				</div>
 			</div>
 		</div>
+
+		<div class=" flex justify-between dark:text-gray-300 px-5">
+			<div class=" text-lg font-medium self-center">{$i18n.t('NENNA.AI PII detection')}</div>
+		</div>
+
+		<div class="flex flex-col md:flex-row w-full p-5 md:space-x-4 dark:text-gray-200">
+			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
+				<div class="flex flex-col space-y-3 w-full self-start">
+					<div class="w-full flex justify-between items-center">
+						<div class=" text-sm">
+							{$i18n.t('Unmask all PIIs and clear mask modifiers')}
+						</div>
+
+						<div class="flex space-x-1 text-xs">
+							<div
+								class=" h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
+							>
+								Ctrl/⌘
+							</div>
+							<div
+								class=" h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
+							>
+								Shift
+							</div>
+							<div
+								class=" h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
+							>
+								L
+							</div>
+						</div>
+					</div>
+
+					<div class="w-full flex justify-between items-center">
+						<div class=" text-sm">
+							{$i18n.t('Mask all PIIs')}
+						</div>
+
+						<div class="flex space-x-1 text-xs">
+							<div
+								class=" h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
+							>
+								Ctrl/⌘
+							</div>
+							<div
+								class=" h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
+							>
+								Shift
+							</div>
+							<div
+								class=" h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
+							>
+								O
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
 	</div>
 </Modal>
 

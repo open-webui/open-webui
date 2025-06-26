@@ -1428,5 +1428,8 @@
 	"PII Modifier: Mask": "Maskieren",
 	"PII Modifier: Enter PII label type": "Label",
 	"PII Modifier: Was masked in input": "Wurde maskiert",
-	"PII Modifier: Was NOT masked in input": "Wurde NICHT maskiert"
+	"PII Modifier: Was NOT masked in input": "Wurde NICHT maskiert",
+	"NENNA.AI PII detection": "NENNA.AI PII Erkennung",
+	"Unmask all PIIs and clear mask modifiers": "Alle PIIs entmaskieren und eigene löschen",
+	"Mask all PIIs": "Alle PIIs maskieren"
 }
