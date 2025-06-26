@@ -148,6 +148,20 @@ jobs:
           kubectl logs --namespace=arc-runners ${POD_NAME} --follow
           echo "=== END: Logs for pod ${POD_NAME} ==="
 
+          echo "Wait for the container to stop running ..."
+          for n in $( seq 1 10 ); do
+            sleep 10
+
+            # This would either yield an object (truthy for is running) or nothing if not running anymore
+            running_state="$( kubectl get pod ${POD_NAME} -o jsonpath='{.status.containerStatuses[0].state.running}' )"
+
+            if [ -z "${running_state}" ]; then
+              break
+            else
+              echo "Container still running after $(( n * 10 ))s. Waiting 10s more ..."
+            fi
+          done
+
           # tr -d is used to remove quotes from the returned _numerical_ value
           JOB_EXIT_CODE=$( kubectl get pod ${POD_NAME} -o jsonpath='{.status.containerStatuses[0].state.terminated.exitCode}' | tr -d "'" )
           if [[ "$JOB_EXIT_CODE" == "0" ]]; then
