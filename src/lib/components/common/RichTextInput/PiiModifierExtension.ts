@@ -1722,6 +1722,30 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 				return pluginState.modifiers.filter(modifier => 
 					modifier.entity.toLowerCase() === entityText.toLowerCase()
 				);
+			},
+
+			// Clear only mask modifiers (keep ignore modifiers)
+			clearMaskModifiers: () => ({ state, dispatch }: any) => {
+				const pluginState = piiModifierExtensionKey.getState(state);
+				const maskModifiers = pluginState?.modifiers.filter(m => m.action === 'mask') || [];
+				
+				if (maskModifiers.length === 0) {
+					return false; // No mask modifiers to clear
+				}
+
+				// Remove each mask modifier individually
+				maskModifiers.forEach(modifier => {
+					const tr = state.tr.setMeta(piiModifierExtensionKey, {
+						type: 'REMOVE_MODIFIER',
+						modifierId: modifier.id
+					});
+					
+					if (dispatch) {
+						dispatch(tr);
+					}
+				});
+
+				return true;
 			}
 		} as any;
 	}
