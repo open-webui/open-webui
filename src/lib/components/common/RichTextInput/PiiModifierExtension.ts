@@ -223,6 +223,51 @@ function createHoverMenu(
 		max-width: 300px;
 	`;
 
+	// Add help icon in top right corner
+	const helpIcon = document.createElement('a');
+	helpIcon.href = 'https://help.nenna.ai/';
+	helpIcon.target = '_blank';
+	helpIcon.rel = 'noopener noreferrer';
+	helpIcon.innerHTML = '?';
+	helpIcon.title = 'Help & Documentation';
+	helpIcon.style.cssText = `
+		position: absolute;
+		top: 8px;
+		right: 8px;
+		width: 18px;
+		height: 18px;
+		background: #f8b76b;
+		color: #3f3d8a;
+		border-radius: 50%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 12px;
+		font-weight: bold;
+		text-decoration: none;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		z-index: 10;
+	`;
+	
+	// Add hover effects for help icon
+	helpIcon.addEventListener('mouseenter', () => {
+		helpIcon.style.backgroundColor = '#f59e0b';
+		helpIcon.style.transform = 'scale(1.1)';
+	});
+	
+	helpIcon.addEventListener('mouseleave', () => {
+		helpIcon.style.backgroundColor = '#f8b76b';
+		helpIcon.style.transform = 'scale(1)';
+	});
+	
+	// Prevent help icon click from closing menu
+	helpIcon.addEventListener('click', (e) => {
+		e.stopPropagation();
+	});
+	
+	menu.appendChild(helpIcon);
+
 
 
 	// Show existing modifiers if any
@@ -319,6 +364,7 @@ function createHoverMenu(
 		ignoreBtn.style.cssText = `
 			width: 100%;
 			padding: 6px 10px;
+			margin-top: 20px;
 			margin-bottom: 8px;
 			border: 1px solid #ff6b6b;
 			background: #fff5f5;
@@ -574,6 +620,51 @@ function createSelectionMenu(
 		max-height: 300px;
 		overflow-y: auto;
 	`;
+
+	// Add help icon in top right corner
+	const helpIcon = document.createElement('a');
+	helpIcon.href = 'https://help.nenna.ai/';
+	helpIcon.target = '_blank';
+	helpIcon.rel = 'noopener noreferrer';
+	helpIcon.innerHTML = '?';
+	helpIcon.title = 'Help & Documentation';
+	helpIcon.style.cssText = `
+		position: absolute;
+		top: 8px;
+		right: 8px;
+		width: 18px;
+		height: 18px;
+		background: #f8b76b;
+		color: #3f3d8a;
+		border-radius: 50%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 12px;
+		font-weight: bold;
+		text-decoration: none;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		z-index: 10;
+	`;
+	
+	// Add hover effects for help icon
+	helpIcon.addEventListener('mouseenter', () => {
+		helpIcon.style.backgroundColor = '#f59e0b';
+		helpIcon.style.transform = 'scale(1.1)';
+	});
+	
+	helpIcon.addEventListener('mouseleave', () => {
+		helpIcon.style.backgroundColor = '#f8b76b';
+		helpIcon.style.transform = 'scale(1)';
+	});
+	
+	// Prevent help icon click from closing menu
+	helpIcon.addEventListener('click', (e) => {
+		e.stopPropagation();
+	});
+	
+	menu.appendChild(helpIcon);
 
 
 
