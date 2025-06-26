@@ -1825,7 +1825,7 @@ ENABLE_RAG_WEB_SEARCH = PersistentConfig(
 
 BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = PersistentConfig(
     "BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL",
-    "rag.web.search.enable",
+    "rag.web.search.bypass_embedding_and_retrieval",
     os.getenv("BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL", "False").lower() == "true",
 )
 
