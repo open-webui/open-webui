@@ -490,6 +490,68 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 				}
 
 				return true;
+			},
+
+			// Mask all PII entities
+			maskAllEntities: () => ({ state, dispatch }: any) => {
+				const pluginState = piiDetectionPluginKey.getState(state);
+				if (!pluginState?.entities.length) {
+					return false; // No entities to mask
+				}
+
+				// Access extension options
+				const extensionOptions = this.options;
+
+				// Create new array with all entities masked
+				const maskedEntities = pluginState.entities.map(entity => ({
+					...entity,
+					shouldMask: true
+				}));
+
+				// Update session manager directly
+				const piiSessionManager = PiiSessionManager.getInstance();
+				
+				if (extensionOptions.conversationId) {
+					// Get current entities from session manager
+					const currentEntities = piiSessionManager.getConversationEntities(extensionOptions.conversationId);
+					
+					// Update all entities to shouldMask: true
+					const updatedEntities = currentEntities.map(entity => ({
+						...entity,
+						shouldMask: true
+					}));
+					
+					// Set the updated entities back to session manager
+					piiSessionManager.setConversationEntities(extensionOptions.conversationId, updatedEntities);
+				} else {
+					// Get current global entities from session manager
+					const currentEntities = piiSessionManager.getEntities();
+					
+					// Update all entities to shouldMask: true
+					const updatedEntities = currentEntities.map(entity => ({
+						...entity,
+						shouldMask: true
+					}));
+					
+					// Set the updated entities back to session manager
+					piiSessionManager.setEntities(updatedEntities);
+				}
+
+				// Update plugin state
+				if (dispatch) {
+					const tr = state.tr.setMeta(piiDetectionPluginKey, {
+						type: 'UPDATE_ENTITIES',
+						entities: maskedEntities
+					});
+					dispatch(tr);
+
+					// Trigger onPiiToggled callback
+					if (extensionOptions.onPiiToggled) {
+						extensionOptions.onPiiToggled(maskedEntities);
+					}
+				}
+
+				return true;
 			}
 		} as any;
 	}

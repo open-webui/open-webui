@@ -421,6 +421,20 @@
 							}
 						}
 						
+						// Handle CTRL+SHIFT+O to mask all PIIs again
+						if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'o') {
+							if (enablePiiDetection && editor) {
+								event.preventDefault();
+								
+								// Mask all PII entities
+								if (editor.commands?.maskAllEntities) {
+									editor.commands.maskAllEntities();
+								}
+								
+								return true;
+							}
+						}
+						
 						if (messageInput) {
 							// Handle Tab Key
 							if (event.key === 'Tab') {
