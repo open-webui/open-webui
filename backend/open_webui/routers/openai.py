@@ -49,6 +49,29 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["OPENAI"])
 
 
+NON_CHAT_MODEL_SUBSTRINGS = [
+    # Legacy
+    "babbage",
+    "davinci",
+
+    # Image Gen
+    "dall-e",
+    "flux",
+    "sdxl",
+
+    # Embeddings / Rerankers
+    "embedding",
+    "bge-",
+    "e5-",
+    "reranker",
+
+    # Speech
+    "tts",
+    "stt",
+    "whisper",
+]
+
+
 ##########################################
 #
 # Utility functions
@@ -426,14 +449,7 @@ async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
                             not in request.app.state.config.OPENAI_API_BASE_URLS[idx]
                             or not any(
                                 name in model["id"]
-                                for name in [
-                                    "babbage",
-                                    "dall-e",
-                                    "davinci",
-                                    "embedding",
-                                    "tts",
-                                    "whisper",
-                                ]
+                                for name in NON_CHAT_MODEL_SUBSTRINGS
                             )
                         )
                     ]
@@ -519,14 +535,7 @@ async def get_models(
                                 for model in response_data.get("data", [])
                                 if not any(
                                     name in model["id"]
-                                    for name in [
-                                        "babbage",
-                                        "dall-e",
-                                        "davinci",
-                                        "embedding",
-                                        "tts",
-                                        "whisper",
-                                    ]
+                                    for name in NON_CHAT_MODEL_SUBSTRINGS
                                 )
                             ]
 
