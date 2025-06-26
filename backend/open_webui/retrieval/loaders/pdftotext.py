@@ -109,7 +109,7 @@ class PdftotextLoaderAsync:
         elapsed_time = 0
         while True:
             status_response = self.check_status(task_id)
-            if status_response and status_response.get("status") == "SUCCESS":
+            if status_response and status_response.get("status") == "completed":
                 return status_response.get("result").get('result')
             # Avoids CPU overload by waiting before rechecking
             time.sleep(time_to_sleep)
