@@ -20,6 +20,7 @@
 		config,
 		type Model,
 		models,
+		model,
 		tags as allTags,
 		settings,
 		showSidebar,
@@ -119,6 +120,11 @@
 	let atSelectedModel: Model | undefined;
 	let selectedModelIds = [];
 	$: selectedModelIds = atSelectedModel !== undefined ? [atSelectedModel.id] : selectedModels;
+
+	// Sync the first selected model with the global model store
+	$: if (selectedModels.length > 0 && selectedModels[0] !== '') {
+		model.set(selectedModels[0]);
+	}
 
 	let selectedToolIds = [];
 	let selectedFilterIds = [];

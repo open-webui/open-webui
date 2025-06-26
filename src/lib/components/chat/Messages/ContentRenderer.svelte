@@ -10,7 +10,8 @@
 		settings,
 		showArtifacts,
 		showControls,
-		showOverview
+		showOverview,
+		model as selectedModel
 	} from '$lib/stores';
 	import FloatingButtons from '../ContentRenderer/FloatingButtons.svelte';
 	import { createMessagesList } from '$lib/utils';
@@ -192,7 +193,7 @@
 	<FloatingButtons
 		bind:this={floatingButtonsElement}
 		{id}
-		model={model?.id}
+		model={$selectedModel}
 		messages={createMessagesList(history, id)}
 		onAdd={({ modelId, parentId, messages }) => {
 			console.log(modelId, parentId, messages);
