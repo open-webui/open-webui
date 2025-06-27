@@ -36,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - 🔑 **Dedicated Permission for System Prompts**: System prompt access is now controlled by its own specific permission instead of being grouped with general chat controls, empowering admins with finer-grained management over who can view or modify system prompts for enhanced security and workflow customization.
 - 🛠️ **YouTube Transcript API and python-pptx Updated**: Enjoy better performance, reliability, and broader compatibility thanks to underlying library upgrades—less friction with media-rich and presentation workflows.
+- 🐳 **Dockerfile Refactored for Better Maintainability**: Streamlined the Dockerfile with improved documentation, consolidated dependencies, and simplified build logic—resulting in cleaner builds, better organization, and easier maintenance for deployment and development workflows.
 
 ### Removed
 
