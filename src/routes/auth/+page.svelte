@@ -203,7 +203,7 @@
 							</div>
 
 							<div>
-								<Spinner />
+								<Spinner className="size-5" />
 							</div>
 						</div>
 					</div>

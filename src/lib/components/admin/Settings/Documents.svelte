@@ -1246,7 +1246,7 @@
 		</div>
 	{:else}
 		<div class="flex items-center justify-center h-full">
-			<Spinner />
+			<Spinner className="size-5" />
 		</div>
 	{/if}
 </form>

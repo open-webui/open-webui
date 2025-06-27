@@ -333,7 +333,7 @@
 				<slot />
 			{:else}
 				<div class="w-full flex-1 h-full flex items-center justify-center">
-					<Spinner />
+					<Spinner className="size-5" />
 				</div>
 			{/if}
 		</div>

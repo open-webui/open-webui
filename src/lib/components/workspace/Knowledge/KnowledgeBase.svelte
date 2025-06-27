@@ -921,6 +921,6 @@
 			</div>
 		</div>
 	{:else}
-		<Spinner />
+		<Spinner className="size-5" />
 	{/if}
 </div>

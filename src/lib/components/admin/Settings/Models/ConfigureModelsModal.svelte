@@ -278,7 +278,7 @@
 					</form>
 				{:else}
 					<div>
-						<Spinner />
+						<Spinner className="size-5" />
 					</div>
 				{/if}
 			</div>

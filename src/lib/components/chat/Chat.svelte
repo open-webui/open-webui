@@ -2227,7 +2227,7 @@
 	{:else if loading}
 		<div class=" flex items-center justify-center h-full w-full">
 			<div class="m-auto">
-				<Spinner />
+				<Spinner className="size-5" />
 			</div>
 		</div>
 	{/if}
