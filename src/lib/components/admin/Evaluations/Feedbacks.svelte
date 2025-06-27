@@ -307,6 +307,14 @@
 					<tr
 						class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-850/50 transition"
 						on:click={() => openFeedbackModal(feedback)}
+						role="button"
+						tabindex="0"
+						on:keydown={(e) => {
+							if (e.key === 'Enter' || e.key === ' ') {
+								e.preventDefault();
+								openFeedbackModal(feedback);
+							}
+						}}
 					>
 						<td class=" py-0.5 text-right font-semibold">
 							<div class="flex justify-center">
@@ -370,17 +378,30 @@
 						</td>
 
 						<td class=" px-3 py-1 text-right font-semibold">
-							<FeedbackMenu
-								on:delete={(e) => {
-									deleteFeedbackHandler(feedback.id);
+							<div
+								on:click|stopPropagation
+								role="button"
+								tabindex="0"
+								on:keydown={(e) => {
+									if (e.key === 'Enter' || e.key === ' ') {
+										e.preventDefault();
+										e.currentTarget.querySelector('button')?.click();
+									}
 								}}
 							>
-								<button
-									class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+								<FeedbackMenu
+									on:delete={(e) => {
+										deleteFeedbackHandler(feedback.id);
+									}}
 								>
-									<EllipsisHorizontal />
-								</button>
-							</FeedbackMenu>
+									<button
+										class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+										type="button"
+									>
+										<EllipsisHorizontal />
+									</button>
+								</FeedbackMenu>
+							</div>
 						</td>
 					</tr>
 				{/each}
