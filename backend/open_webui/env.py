@@ -403,6 +403,16 @@ ENABLE_WEBSOCKET_SUPPORT = (
     os.environ.get("ENABLE_WEBSOCKET_SUPPORT", "True").lower() == "true"
 )
 
+MODEL_LIST_CACHE_TTL = os.environ.get("MODEL_LIST_CACHE_TTL", "1")
+if MODEL_LIST_CACHE_TTL == "":
+    MODEL_LIST_CACHE_TTL = None
+else:
+    try:
+        MODEL_LIST_CACHE_TTL = int(MODEL_LIST_CACHE_TTL)
+    except Exception:
+        MODEL_LIST_CACHE_TTL = 1
+
+
 WEBSOCKET_MANAGER = os.environ.get("WEBSOCKET_MANAGER", "")
 
 WEBSOCKET_REDIS_URL = os.environ.get("WEBSOCKET_REDIS_URL", REDIS_URL)
