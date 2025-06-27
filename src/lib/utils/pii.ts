@@ -7,7 +7,7 @@ export interface ExtendedPiiEntity extends PiiEntity {
 }
 
 // Debounce function for PII detection
-export function debounce<T extends (...args: unknown[]) => unknown>(
+export function debounce<T extends (...args: any[]) => any>(
 	func: T,
 	wait: number
 ): (...args: Parameters<T>) => void {
@@ -590,7 +590,7 @@ export class PiiSessionManager {
 	}
 
 	// Get modifiers for API (works for both global and conversation state)
-	getModifiersForApi(conversationId?: string): Array<{ entity: string; action: string; type?: string }> {
+	getModifiersForApi(conversationId?: string): Array<{ entity: string; action: 'mask' | 'ignore'; type?: string }> {
 		if (conversationId) {
 			// Ensure conversation is loaded
 			this.ensureConversationLoaded(conversationId);
@@ -598,14 +598,14 @@ export class PiiSessionManager {
 			const conversationModifiers = this.getConversationModifiers(conversationId);
 			return conversationModifiers.map(m => ({
 				entity: m.entity,
-				action: m.action,
+				action: m.action as 'mask' | 'ignore',
 				type: m.type || undefined
 			}));
 		} else {
 			const globalModifiers = this.getGlobalModifiers();
 			return globalModifiers.map(m => ({
 				entity: m.entity,
-				action: m.action,
+				action: m.action as 'mask' | 'ignore',
 				type: m.type || undefined
 			}));
 		}
@@ -754,6 +754,15 @@ export class PiiSessionManager {
 			// Clear working entities since they're now persistent
 			this.clearConversationWorkingEntities(conversationId);
 		}
+	}
+
+	setConversationWorkingEntitiesWithMaskStates(conversationId: string, extendedEntities: ExtendedPiiEntity[]) {
+		// Store the extended entities directly without recalculating shouldMask states
+		// This preserves shouldMask states that were already calculated from plugin state
+		this.workingEntitiesForConversations.set(conversationId, extendedEntities);
+		
+		// Also update global working state for display
+		this.entities = extendedEntities;
 	}
 }
 

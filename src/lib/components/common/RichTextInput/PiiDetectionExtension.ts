@@ -138,9 +138,11 @@ function remapEntitiesForCurrentDocument(
 	mapping: PositionMapping,
 	doc: ProseMirrorNode
 ): ExtendedPiiEntity[] {
-	if (!entities.length || !mapping.plainText) return [];
+	if (!entities.length || !mapping.plainText) {
+		return [];
+	}
 	
-	return entities.map(entity => {
+	const remappedEntities = entities.map(entity => {
 		const entityText = entity.raw_text;
 		const searchText = entityText.toLowerCase();
 		const plainText = mapping.plainText.toLowerCase();
@@ -149,9 +151,26 @@ function remapEntitiesForCurrentDocument(
 		const newOccurrences = [];
 		let searchIndex = 0;
 		
+		// Use word boundary matching for better accuracy
+		const entityWords = entityText.split(/\s+/);
+		const isMultiWord = entityWords.length > 1;
+		
 		while (searchIndex < plainText.length) {
 			const foundIndex = plainText.indexOf(searchText, searchIndex);
 			if (foundIndex === -1) break;
+			
+			// Check word boundaries for single words to avoid partial matches
+			if (!isMultiWord) {
+				const beforeChar = foundIndex > 0 ? plainText[foundIndex - 1] : ' ';
+				const afterChar = foundIndex + searchText.length < plainText.length 
+					? plainText[foundIndex + searchText.length] : ' ';
+				
+				// Skip if not at word boundary (unless it's punctuation)
+				if (/\w/.test(beforeChar) || /\w/.test(afterChar)) {
+					searchIndex = foundIndex + 1;
+					continue;
+				}
+			}
 			
 			const plainTextStart = foundIndex;
 			const plainTextEnd = foundIndex + entityText.length;
@@ -181,7 +200,9 @@ function remapEntitiesForCurrentDocument(
 			...entity,
 			occurrences: newOccurrences
 		};
-	}).filter(entity => entity.occurrences.length > 0); // Remove entities with no valid occurrences
+	});
+	
+	return remappedEntities.filter(entity => entity.occurrences.length > 0);
 }
 
 // Sync plugin state with session manager
@@ -199,7 +220,12 @@ function syncWithSessionManager(
 	
 	// If session manager has fewer entities, some were removed
 	if (sessionEntities.length < currentEntities.length) {
-		console.log('PiiDetectionExtension: Entities removed from session manager, syncing...');
+		// CRITICAL FIX: Don't filter entities if session manager is completely empty
+		// This happens in new chat windows where session manager hasn't stored entities yet
+		if (sessionEntities.length === 0) {
+			// For new chats, just validate current entities without filtering
+			return validateAndFilterEntities(currentEntities, doc, mapping);
+		}
 		
 		// Filter current entities to only include those still in session manager
 		const filteredEntities = currentEntities.filter(currentEntity => 
@@ -349,9 +375,9 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 					
 					
 					if (options.conversationId) {
-						// Existing chat - store in working state (for display), keep persistent entities unchanged
-						// This ensures known_entities for API calls remain consistent during typing session
-						piiSessionManager.setConversationWorkingEntities(options.conversationId, response.pii[0]);
+						// CRITICAL FIX: Use mappedEntities instead of raw response.pii[0] 
+						// This preserves shouldMask states that were calculated from plugin state
+						piiSessionManager.setConversationWorkingEntities(options.conversationId, mappedEntities);
 					} else {
 						// New chat - replace temporary state with latest detection
 						if (!piiSessionManager.isTemporaryStateActive()) {
@@ -510,6 +536,7 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 						// Trigger detection if text changed significantly
 						if (!newState.isDetecting && newMapping.plainText !== newState.lastText) {
 							newState.lastText = newMapping.plainText;
+							
 							if (newMapping.plainText.trim()) {
 								debouncedDetection(newMapping.plainText);
 							} else {
