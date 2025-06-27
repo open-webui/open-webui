@@ -369,7 +369,7 @@
 							{dayjs(feedback.updated_at * 1000).fromNow()}
 						</td>
 
-						<td class=" px-3 py-1 text-right font-semibold">
+						<td class="px-3 py-1 text-right font-semibold" on:click|stopPropagation>
 							<FeedbackMenu
 								on:delete={(e) => {
 									deleteFeedbackHandler(feedback.id);
