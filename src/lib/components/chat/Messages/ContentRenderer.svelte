@@ -18,6 +18,8 @@
 	export let id;
 	export let content;
 	export let history;
+	export let selectedModels = [];
+
 	export let model = null;
 	export let sources = null;
 
@@ -25,11 +27,10 @@
 	export let preview = false;
 	export let floatingButtons = true;
 
-	export let onSave = () => {};
-	export let onSourceClick = () => {};
-	export let onTaskClick = () => {};
-
-	export let onAddMessages = () => {};
+	export let onSave = (e) => {};
+	export let onSourceClick = (e) => {};
+	export let onTaskClick = (e) => {};
+	export let onAddMessages = (e) => {};
 
 	let contentContainerElement;
 
@@ -125,6 +126,11 @@
 	});
 </script>
 
+{(selectedModels ?? []).includes(model?.id)
+	? model?.id
+	: (selectedModels ?? []).length > 0
+		? selectedModels.at(0)
+		: model?.id}
 <div bind:this={contentContainerElement}>
 	<Markdown
 		{id}
@@ -192,7 +198,11 @@
 	<FloatingButtons
 		bind:this={floatingButtonsElement}
 		{id}
-		model={model?.id}
+		model={(selectedModels ?? []).includes(model?.id)
+			? model?.id
+			: (selectedModels ?? []).length > 0
+				? selectedModels.at(0)
+				: model?.id}
 		messages={createMessagesList(history, id)}
 		onAdd={({ modelId, parentId, messages }) => {
 			console.log(modelId, parentId, messages);

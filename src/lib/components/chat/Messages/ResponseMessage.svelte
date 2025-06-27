@@ -106,6 +106,7 @@
 	export let chatId = '';
 	export let history;
 	export let messageId;
+	export let selectedModels = [];
 
 	let message: MessageType = JSON.parse(JSON.stringify(history.messages[messageId]));
 	$: if (history.messages) {
@@ -795,6 +796,7 @@
 									<ContentRenderer
 										id={message.id}
 										{history}
+										{selectedModels}
 										content={message.content}
 										sources={message.sources}
 										floatingButtons={message?.done && !readOnly}
