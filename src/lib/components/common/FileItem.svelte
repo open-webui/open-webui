@@ -134,7 +134,7 @@
 					dispatch('dismiss');
 				}}
 			>
-				<XMark />
+				<XMark className={'size-4'} />
 			</button>
 
 			<!-- <button

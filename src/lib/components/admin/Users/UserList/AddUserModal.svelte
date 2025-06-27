@@ -134,7 +134,7 @@
 					show = false;
 				}}
 			>
-				<XMark />
+				<XMark className={'size-5'} />
 			</button>
 		</div>
 

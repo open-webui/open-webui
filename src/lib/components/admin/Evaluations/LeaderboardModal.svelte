@@ -38,7 +38,7 @@
 				{model.name}
 			</div>
 			<button class="self-center" on:click={close} aria-label="Close">
-				<XMark />
+				<XMark className={'size-5'} />
 			</button>
 		</div>
 		<div class="px-5 pb-4 dark:text-gray-200">

@@ -407,7 +407,7 @@
 				onCancel();
 			}}
 		>
-			<XMark />
+			<XMark className={'size-4'} />
 		</button>
 	</div>
 

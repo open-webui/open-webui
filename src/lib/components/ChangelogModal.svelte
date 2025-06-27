@@ -39,7 +39,7 @@
 				}}
 				aria-label={$i18n.t('Close')}
 			>
-				<XMark>
+				<XMark className={'size-5'}>
 					<p class="sr-only">{$i18n.t('Close')}</p>
 				</XMark>
 			</button>

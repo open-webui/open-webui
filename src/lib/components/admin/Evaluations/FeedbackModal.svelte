@@ -23,7 +23,7 @@
 					{$i18n.t('Feedback Details')}
 				</div>
 				<button class="self-center" on:click={close} aria-label="Close">
-					<XMark />
+					<XMark className={'size-5'} />
 				</button>
 			</div>
 

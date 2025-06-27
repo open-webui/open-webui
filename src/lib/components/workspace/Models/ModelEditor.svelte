@@ -679,7 +679,7 @@
 													info.meta.suggestion_prompts = info.meta.suggestion_prompts;
 												}}
 											>
-												<XMark />
+												<XMark className={'size-4'} />
 											</button>
 										</div>
 									{/each}
