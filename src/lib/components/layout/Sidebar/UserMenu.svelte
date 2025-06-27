@@ -210,7 +210,7 @@
 
 				<Tooltip
 					content={usage?.requests_per_model && Object.keys(usage?.requests_per_model).length > 0
-						? `${$i18n.t('Running')}: ${Object.entries(usage?.requests_per_model).reduce((a, b) => a + b[0] + ' (' + b[1] + '), ', '')} ✨`
+						? `${$i18n.t('Running')}: ${Object.entries(usage?.requests_per_model).reduce((a, b) => a + b[0] + ' (' + b[1] + '), ', '').slice(0, -2)} ✨`
 						: ''}
 				>
 					<div
