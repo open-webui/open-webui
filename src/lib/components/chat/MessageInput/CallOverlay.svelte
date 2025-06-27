@@ -637,30 +637,30 @@
 		// "content" here is a sentence from the assistant,
 		// there will be many sentences for the same "id"
 		console.log('hitting chatEventHandler with', content)
-		if (currentMessageId === id) {
-			console.log(`!![chateventhandler] Received chat event for message ID ${id}: ${content}`);
+		// if (currentMessageId === id) {
+		console.log(`!![chateventhandler] Received chat event for message ID ${id}: ${content}`);
 
-			try {
-				if (messages[id] === undefined) {
-					messages[id] = [content];
-				} else {
-					messages[id].push(content);
-				}
-
-				console.log('processing tts queue:', content);
-
-				processTTSQueue();
-				// while (true) { 
-				// 	const isStreaming = get(ttsStreaming)
-				// 	if (!isStreaming) {
-				// 		fetchAudio(content);
-				// 	}
-				// }
-
-			} catch (error) {
-				console.error('Failed to fetch or play audio:', error);
+		try {
+			if (messages[id] === undefined) {
+				messages[id] = [content];
+			} else {
+				messages[id].push(content);
 			}
+
+			console.log('processing tts queue:', content);
+
+			processTTSQueue();
+			// while (true) { 
+			// 	const isStreaming = get(ttsStreaming)
+			// 	if (!isStreaming) {
+			// 		fetchAudio(content);
+			// 	}
+			// }
+
+		} catch (error) {
+			console.error('Failed to fetch or play audio:', error);
 		}
+		// }
 	};
 
 	const chatFinishHandler = async (e) => {

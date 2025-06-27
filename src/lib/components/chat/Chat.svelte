@@ -37,7 +37,10 @@
 		showArtifacts,
 		tools,
 		chatSysPrompt,
-		ttsSentenceQueue
+		ttsSentenceQueue,
+
+		ttsStreaming
+
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
@@ -87,6 +90,7 @@
 	import Placeholder from './Placeholder.svelte';
 	import NotificationToast from '../NotificationToast.svelte';
 	import Spinner from '../common/Spinner.svelte';
+	import { streamAudio, synthesizeStreamingSpeech } from '$lib/apis/audio';
 
 	export let chatIdProp = '';
 
@@ -1395,6 +1399,18 @@
 		// Save chat after all messages have been created
 		await saveChatHandler(_chatId, _history);
 
+		const speechArr = ['Oh wow look at you!', 'Oh brilliant chucklefucks!', 'Doodly doodly doo!', 'Um, well, let me think.']
+
+		let i = Math.floor(Math.random() * speechArr.length);
+		let preprogrammedSpeech = speechArr[i];
+		ttsSentenceQueue.update(queue => [...queue, { id: uuidv4(), content: preprogrammedSpeech }]);
+
+		eventTarget.dispatchEvent(
+			new CustomEvent('chat', {
+				detail: { id: uuidv4(), content: preprogrammedSpeech }
+			})
+		);
+
 		await Promise.all(
 			selectedModelIds.map(async (modelId, _modelIdx) => {
 				console.log('modelId', modelId);
@@ -1446,6 +1462,8 @@
 					const chatEventEmitter = await getChatEventEmitter(model.id, _chatId);
 
 					scrollToBottom();
+
+
 					await sendPromptSocket(_history, model, responseMessageId, _chatId);
 
 					if (chatEventEmitter) clearInterval(chatEventEmitter);
@@ -1625,7 +1643,8 @@
 					: {})
 			},
 			`${WEBUI_BASE_URL}/api`
-		).catch((error) => {
+		)
+		.catch((error) => {
 			toast.error(`${error}`);
 
 			responseMessage.error = {
