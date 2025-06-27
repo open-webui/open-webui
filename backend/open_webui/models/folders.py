@@ -30,6 +30,7 @@ class Folder(Base):
     items = Column(JSON, nullable=True)
     meta = Column(JSON, nullable=True)
     is_expanded = Column(Boolean, default=False)
+    system_prompt = Column(Text, nullable=True)
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)
 
@@ -42,6 +43,7 @@ class FolderModel(BaseModel):
     items: Optional[dict] = None
     meta: Optional[dict] = None
     is_expanded: bool = False
+    system_prompt: Optional[str] = None
     created_at: int
     updated_at: int
 
@@ -55,6 +57,7 @@ class FolderModel(BaseModel):
 
 class FolderForm(BaseModel):
     name: str
+    system_prompt: Optional[str] = None
     model_config = ConfigDict(extra="allow")
 
 
@@ -70,6 +73,7 @@ class FolderTable:
                     "user_id": user_id,
                     "name": name,
                     "parent_id": parent_id,
+                    "system_prompt": None,
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
                 }
@@ -235,6 +239,49 @@ class FolderTable:
         except Exception as e:
             log.error(f"update_folder: {e}")
             return
+
+    def update_folder_details_by_id_and_user_id(
+        self,
+        id: str,
+        user_id: str,
+        name: str,
+        system_prompt: Optional[str],
+    ) -> Optional[FolderModel]:
+        try:
+            with get_db() as db:
+                folder = db.query(Folder).filter_by(id=id, user_id=user_id).first()
+                if not folder:
+                    return None
+
+                # Check if a folder with the new name already exists at the same parent level
+                # Exclude the current folder being renamed from the check
+                if name != folder.name:
+                    existing_folder = (
+                        db.query(Folder)
+                        .filter(
+                            Folder.name == name,
+                            Folder.parent_id == folder.parent_id,
+                            Folder.user_id == user_id,
+                            Folder.id != id,
+                        )
+                        .first()
+                    )
+                    if existing_folder:
+                        log.warning(
+                            f"Folder with name '{name}' already exists for user_id '{user_id}' at parent_id '{folder.parent_id}'"
+                        )
+                        return None
+
+                folder.name = name
+                folder.system_prompt = system_prompt
+                folder.updated_at = int(time.time())
+                db.commit()
+                db.refresh(folder)
+                return FolderModel.model_validate(folder)
+        except Exception as e:
+            log.error(f"Error updating folder details: {e}")
+            db.rollback()
+            return None
 
     def delete_folder_by_id_and_user_id(
         self, id: str, user_id: str, delete_chats=True

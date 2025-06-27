@@ -66,6 +66,7 @@ class ChatModel(BaseModel):
 
 class ChatForm(BaseModel):
     chat: dict
+    folder_id: Optional[str] = None
 
 
 class ChatImportForm(ChatForm):
@@ -118,6 +119,7 @@ class ChatTable:
                         else "New Chat"
                     ),
                     "chat": form_data.chat,
+                    "folder_id": form_data.folder_id,
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
                 }
