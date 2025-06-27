@@ -20,6 +20,7 @@
 	export let id: string;
 	export let tokens: Token[];
 	export let onSourceClick: Function = () => {};
+	export let conversationId: string = '';
 </script>
 
 {#each tokens as token}
@@ -68,6 +69,6 @@
 			onload="this.style.height=(this.contentWindow.document.body.scrollHeight+20)+'px';"
 		></iframe>
 	{:else if token.type === 'text'}
-		<PiiAwareText text={token.raw} id={`${id}-text-${token.type}`} />
+		<PiiAwareText text={token.raw} id={`${id}-text-${token.type}`} conversationId={conversationId} />
 	{/if}
 {/each}

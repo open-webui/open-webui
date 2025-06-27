@@ -880,15 +880,16 @@
 								{:else if message.content && message.error !== true}
 									<!-- always show message contents even if there's an error -->
 									<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
-									<ContentRenderer
-										id={message.id}
-										{history}
-										content={processResponseContent(message.content)}
-										sources={message.sources}
-										floatingButtons={message?.done && !readOnly}
-										save={!readOnly}
-										preview={!readOnly}
-										{model}
+																	<ContentRenderer
+									id={message.id}
+									{history}
+									content={processResponseContent(message.content)}
+									sources={message.sources}
+									floatingButtons={message?.done && !readOnly}
+									save={!readOnly}
+									preview={!readOnly}
+									{model}
+									conversationId={chatId}
 										onTaskClick={async (e) => {
 											console.log(e);
 										}}

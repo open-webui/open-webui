@@ -9,14 +9,14 @@
 
 	export let text: string;
 	export let id: string = '';
+	export let conversationId: string = '';
 
 	let containerElement: HTMLElement;
 	let piiSessionManager = PiiSessionManager.getInstance();
 
-	$: entities = piiSessionManager.getEntities();
-	$: {
-
-	}
+	// Use the new method that handles temporary state automatically
+	$: entities = piiSessionManager.getEntitiesForDisplay(conversationId);
+	
 	$: processedText = (() => {
 		if (!entities.length) {
 			return text;
@@ -54,7 +54,12 @@
 				const entityLabel = target.getAttribute('data-pii-label');
 
 				if (entityLabel) {
-					piiSessionManager.toggleEntityMasking(entityLabel, 0);
+					// Use conversation-specific or global entity toggling based on conversationId
+					if (conversationId) {
+						piiSessionManager.toggleConversationEntityMasking(conversationId, entityLabel, 0);
+					} else {
+						piiSessionManager.toggleEntityMasking(entityLabel, 0);
+					}
 					handleOverlayToggle();
 					event.preventDefault();
 				}

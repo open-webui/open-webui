@@ -239,10 +239,17 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 					// Pass existing entities to preserve shouldMask state
 					const mappedEntities = mapPiiEntitiesToProseMirror(response.pii[0], state.positionMapping, state.entities);
 					
+					
 					if (options.conversationId) {
-						piiSessionManager.setConversationEntitiesPreservingModifiers(options.conversationId, response.pii[0]);
+						// Existing chat - store in working state (for display), keep persistent entities unchanged
+						// This ensures known_entities for API calls remain consistent during typing session
+						piiSessionManager.setConversationWorkingEntities(options.conversationId, response.pii[0]);
 					} else {
-						piiSessionManager.appendGlobalEntities(response.pii[0]);
+						// New chat - replace temporary state with latest detection
+						if (!piiSessionManager.isTemporaryStateActive()) {
+							piiSessionManager.activateTemporaryState();
+						}
+						piiSessionManager.setTemporaryStateEntities(response.pii[0]);
 					}
 
 					const tr = editorView.state.tr.setMeta(piiDetectionPluginKey, {
@@ -278,7 +285,7 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 				},
 				
 				apply(tr, prevState): PiiDetectionState {
-					let newState = { ...prevState };
+					const newState = { ...prevState };
 					
 					const meta = tr.getMeta(piiDetectionPluginKey);
 					if (meta) {

@@ -20,6 +20,7 @@
 	export let history;
 	export let model = null;
 	export let sources = null;
+	export let conversationId = '';
 
 	export let save = false;
 	export let preview = false;
@@ -132,6 +133,7 @@
 		{model}
 		{save}
 		{preview}
+		{conversationId}
 		sourceIds={(sources ?? []).reduce((acc, s) => {
 			let ids = [];
 			s.document.forEach((document, index) => {
