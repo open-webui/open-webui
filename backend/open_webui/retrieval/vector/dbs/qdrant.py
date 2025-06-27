@@ -18,6 +18,7 @@ from open_webui.config import (
     QDRANT_ON_DISK,
     QDRANT_GRPC_PORT,
     QDRANT_PREFER_GRPC,
+    QDRANT_COLLECTION_PREFIX,
 )
 from open_webui.env import SRC_LOG_LEVELS
 
@@ -29,7 +30,7 @@ log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 class QdrantClient(VectorDBBase):
     def __init__(self):
-        self.collection_prefix = "open-webui"
+        self.collection_prefix = QDRANT_COLLECTION_PREFIX
         self.QDRANT_URI = QDRANT_URI
         self.QDRANT_API_KEY = QDRANT_API_KEY
         self.QDRANT_ON_DISK = QDRANT_ON_DISK
