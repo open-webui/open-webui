@@ -600,35 +600,18 @@
 	let currentModifiersHash = '';
 
 	// Reactive statement to handle conversation ID changes and transfer global state
-	$: if (conversationId && conversationId !== previousConversationId && enablePiiDetection) {		
+	$: if (conversationId !== previousConversationId && enablePiiDetection) {		
 		// Reset conversation activated flag when conversation changes
 		conversationActivated = false;
 		
-		// Transfer global state to new conversation (only if conversation doesn't already have state)
+		// Handle conversation ID transitions
 		if (!previousConversationId && conversationId) {
-			// Check if conversation already has state (loaded from SQLite)
-			const existingState = piiSessionManager.getConversationState(conversationId);
-			
-			if (!existingState) {
-				// Only transfer if conversation has no existing state (new conversation)
-				piiSessionManager.transferGlobalToConversation(conversationId);
-				
-				// Reload modifiers in extension after transfer
-				if (editor && enablePiiModifiers) {
-					editor.commands.reloadConversationModifiers(conversationId);
-					conversationActivated = true;
-				}
-			} else {				
-				// Just reload modifiers in extension to use existing state
-				if (editor && enablePiiModifiers) {
-					editor.commands.reloadConversationModifiers(conversationId);
-					conversationActivated = true;
-				}
-			}
-		}
-		
-		// Switch between existing conversations
-		if (previousConversationId && conversationId && previousConversationId !== conversationId) {
+			// Transition from no ID (new chat) to having ID (after first message sent)
+			// The Chat.svelte component handles the temporary state transfer
+			console.log('RichTextInput: Transition from new chat to existing chat:', conversationId);
+		} else if (previousConversationId && conversationId && previousConversationId !== conversationId) {
+			// Switch between existing conversations
+			console.log('RichTextInput: Switching between conversations:', previousConversationId, '→', conversationId);
 			piiSessionManager.loadConversationState(conversationId);
 			
 			// Activate the new conversation and reload modifiers
@@ -637,6 +620,10 @@
 				editor.commands.reloadConversationModifiers(conversationId);
 				conversationActivated = true;
 			}
+		} else if (previousConversationId && !conversationId) {
+			// Switch from existing conversation to new chat
+			console.log('RichTextInput: Switching from existing chat to new chat');
+			// The Chat.svelte component should have activated temporary state already
 		}
 		
 		// Update extensions with new conversation ID

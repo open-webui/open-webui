@@ -712,6 +712,12 @@
 			.filter((m) => !(m?.info?.meta?.hidden ?? false))
 			.map((m) => m.id);
 
+		
+		const { PiiSessionManager } = await import('$lib/utils/pii');
+		const piiManager = PiiSessionManager.getInstance();
+		piiManager.clearTemporaryState();
+		piiManager.activateTemporaryState();
+
 		if ($page.url.searchParams.get('models') || $page.url.searchParams.get('model')) {
 			const urlModels = (
 				$page.url.searchParams.get('models') ||
@@ -770,7 +776,6 @@
 		await showControls.set(false);
 		await showCallOverlay.set(false);
 		await showOverview.set(false);
-		await showArtifacts.set(false);
 
 		if ($page.url.pathname.includes('/c/')) {
 			window.history.replaceState(history.state, '', `/`);
@@ -863,6 +868,16 @@
 			temporaryChatEnabled.set(false);
 		}
 
+		
+		const { PiiSessionManager } = await import('$lib/utils/pii');
+		const piiManager = PiiSessionManager.getInstance();
+		piiManager.clearTemporaryState();
+		
+		// Clear working entities for the conversation we're loading (if any)
+		if ($chatId) {
+			piiManager.clearConversationWorkingEntities($chatId);
+		}
+
 		chat = await getChatById(localStorage.token, $chatId).catch(async (error) => {
 			await goto('/');
 			return null;
@@ -898,8 +913,6 @@
 
 				// Load PII state for this conversation if available
 				if (chatContent?.piiState && $chatId) {
-					const { PiiSessionManager } = await import('$lib/utils/pii');
-					const piiManager = PiiSessionManager.getInstance();
 					piiManager.loadConversationState($chatId, chatContent.piiState);
 				}
 
@@ -1955,6 +1968,10 @@
 	const initChatHandler = async (history) => {
 		let _chatId = $chatId;
 
+		
+		const { PiiSessionManager } = await import('$lib/utils/pii');
+		const piiManager = PiiSessionManager.getInstance();
+
 		if (!$temporaryChatEnabled) {
 			chat = await createNewChat(localStorage.token, {
 				id: _chatId,
@@ -1970,6 +1987,16 @@
 
 			_chatId = chat.id;
 			await chatId.set(_chatId);
+
+			
+			if (piiManager.isTemporaryStateActive()) {
+				piiManager.transferTemporaryToConversation(_chatId);
+			}
+
+			
+			if (_chatId && _chatId !== 'local') {
+				piiManager.commitConversationWorkingEntities(_chatId);
+			}
 
 			await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			currentChatPage.set(1);

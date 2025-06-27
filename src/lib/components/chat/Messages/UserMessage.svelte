@@ -71,33 +71,10 @@
 		}
 	};
 
-	// PII processing function for user messages - ensure entities are synchronized for markdown components
+	// PII processing function for user messages - just return content for display
 	const processUserMessageContent = (content: string): string => {
-		// Get conversation-specific entities if we have a history object with conversationId
-		const conversationId = history?.id || '';
-		const entities = conversationId 
-			? piiSessionManager.getConversationEntities(conversationId)
-			: piiSessionManager.getEntities();
-
-		if (!entities.length) {
-			return content;
-		}
-
-		// Ensure global entities are synchronized with conversation entities for PiiAwareText components
-		if (conversationId && entities.length > 0) {
-			// Temporarily set global entities to match conversation entities
-			// This ensures PiiAwareText components (which use global entities) work correctly
-			piiSessionManager.setEntities(entities);
-			console.log('UserMessage: Synchronized global entities with conversation entities', {
-				conversationId,
-				entitiesCount: entities.length
-			});
-		}
-
-		console.log('UserMessage: Entity synchronization complete, letting PiiAwareText handle processing for conversation:', conversationId);
-		
-		// Return content as-is - let PiiAwareText components handle the actual processing
-		// This prevents double processing while ensuring entities are available
+		// UserMessage should only display content, not modify PII state
+		// PiiAwareText components will handle conversation-aware entity processing
 		return content;
 	};
 
@@ -434,7 +411,7 @@
 									: ' w-full'}"
 							>
 								{#if message.content}
-									<Markdown id={message.id} content={processUserMessageContent(message.content)} />
+									<Markdown id={message.id} content={processUserMessageContent(message.content)} conversationId={history?.id || ''} />
 								{/if}
 							</div>
 						</div>

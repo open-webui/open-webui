@@ -31,7 +31,7 @@ The PII detection system integrates NENNA.ai API to identify, mask, and highligh
 // OLD: Fragile HTML string manipulation with br tag counting
 function mapPlainTextPositionToProseMirror(plainTextPos: number, editorHtml: string): number
 
-// NEW: Native ProseMirror document traversal
+
 function buildPositionMapping(doc: ProseMirrorNode): PositionMapping {
   doc.nodesBetween(0, doc.content.size, (node, pos) => {
     // Direct mapping between plain text and ProseMirror positions
