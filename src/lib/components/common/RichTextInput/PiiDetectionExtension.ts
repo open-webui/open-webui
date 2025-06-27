@@ -213,34 +213,74 @@ function syncWithSessionManager(
 	mapping: PositionMapping,
 	doc: ProseMirrorNode
 ): ExtendedPiiEntity[] {
-	// Get current entities from session manager
-	const sessionEntities = conversationId 
+	// CRITICAL FIX: Get entities from both persistent and working state
+	// This prevents newly detected entities from being filtered out during periodic syncs
+	const persistentEntities = conversationId 
 		? piiSessionManager.getConversationEntities(conversationId)
 		: piiSessionManager.getEntities();
 	
+	const workingEntities = conversationId
+		? piiSessionManager.getConversationEntitiesForDisplay(conversationId)
+		: piiSessionManager.getEntitiesForDisplay();
+	
+	// Merge persistent + working entities (working takes precedence for same labels)
+	const allSessionEntities = [...persistentEntities];
+	workingEntities.forEach(workingEntity => {
+		if (!persistentEntities.find(p => p.label === workingEntity.label)) {
+			allSessionEntities.push(workingEntity);
+		}
+	});
+	
+	console.log('PiiDetectionExtension: Sync check:', {
+		currentEntities: currentEntities.length,
+		persistentEntities: persistentEntities.length,
+		workingEntities: workingEntities.length,
+		allSessionEntities: allSessionEntities.length
+	});
+	
 	// If session manager has fewer entities, some were removed
-	if (sessionEntities.length < currentEntities.length) {
+	if (allSessionEntities.length < currentEntities.length) {
 		// CRITICAL FIX: Don't filter entities if session manager is completely empty
 		// This happens in new chat windows where session manager hasn't stored entities yet
-		if (sessionEntities.length === 0) {
+		if (allSessionEntities.length === 0) {
 			// For new chats, just validate current entities without filtering
 			return validateAndFilterEntities(currentEntities, doc, mapping);
 		}
 		
-		// Filter current entities to only include those still in session manager
+		// Filter current entities to only include those still in session manager (persistent OR working)
 		const filteredEntities = currentEntities.filter(currentEntity => 
-			sessionEntities.find((sessionEntity: ExtendedPiiEntity) => sessionEntity.label === currentEntity.label)
+			allSessionEntities.find((sessionEntity: ExtendedPiiEntity) => sessionEntity.label === currentEntity.label)
 		);
+		
+		console.log('PiiDetectionExtension: Filtered entities:', {
+			before: currentEntities.length,
+			after: filteredEntities.length,
+			removed: currentEntities.filter(c => !filteredEntities.find(f => f.label === c.label)).map(e => e.label)
+		});
 		
 		// Validate positions for remaining entities
 		return validateAndFilterEntities(filteredEntities, doc, mapping);
 	}
 	
-	// If session manager has different shouldMask states, update them
+	// CRITICAL FIX: Always prioritize plugin state shouldMask over session manager state
+	// This ensures user interactions in the editor take precedence
 	const updatedEntities = currentEntities.map(currentEntity => {
-		const sessionEntity = sessionEntities.find((e: ExtendedPiiEntity) => e.label === currentEntity.label);
-		if (sessionEntity && sessionEntity.shouldMask !== currentEntity.shouldMask) {
-			return { ...currentEntity, shouldMask: sessionEntity.shouldMask };
+		const sessionEntity = allSessionEntities.find((e: ExtendedPiiEntity) => e.label === currentEntity.label);
+		if (sessionEntity) {
+			// CRITICAL FIX: Update session manager to match plugin state, not the other way around
+			// This preserves user's toggle actions made in the editor
+			if (sessionEntity.shouldMask !== currentEntity.shouldMask) {
+				console.log(`PiiDetectionExtension: Syncing shouldMask state for ${currentEntity.label}: ${sessionEntity.shouldMask} → ${currentEntity.shouldMask}`);
+				
+				// Update session manager to match plugin state
+				if (conversationId) {
+					piiSessionManager.setEntityMaskingState(conversationId, currentEntity.label, currentEntity.shouldMask ?? true);
+				} else {
+					piiSessionManager.setGlobalEntityMaskingState(currentEntity.label, currentEntity.shouldMask ?? true);
+				}
+			}
+			// Return current entity (plugin state takes precedence)
+			return currentEntity;
 		}
 		return currentEntity;
 	});
@@ -370,20 +410,45 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 						return;
 					}
 
-					// Pass existing entities to preserve shouldMask state
-					const mappedEntities = mapPiiEntitiesToProseMirror(response.pii[0], state.positionMapping, state.entities);
+					// CRITICAL FIX: Load conversation entities for cross-message shouldMask persistence
+					// This ensures that entities unmasked in previous messages stay unmasked in new messages
+					const conversationEntities = options.conversationId
+						? piiSessionManager.getConversationEntities(options.conversationId)
+						: [];
 					
+					// CRITICAL FIX: Merge plugin state + conversation state for complete context
+					// Plugin state takes precedence (for same-message interactions)
+					// Conversation state provides fallback (for cross-message persistence)
+					const pluginEntities = state.entities || [];
+					const existingEntitiesForMapping = [...pluginEntities];
 					
+					// Add conversation entities that aren't already in plugin state
+					conversationEntities.forEach(convEntity => {
+						if (!pluginEntities.find(pluginEntity => pluginEntity.label === convEntity.label)) {
+							existingEntitiesForMapping.push(convEntity);
+						}
+					});
+					
+					console.log('PiiDetectionExtension: Using existing entities for mapping:', {
+						pluginEntities: pluginEntities.length,
+						conversationEntities: conversationEntities.length,
+						totalForMapping: existingEntitiesForMapping.length,
+						labels: existingEntitiesForMapping.map(e => `${e.label}:${e.shouldMask}`)
+					});
+					
+					// Pass merged entities to preserve shouldMask state across messages
+					const mappedEntities = mapPiiEntitiesToProseMirror(response.pii[0], state.positionMapping, existingEntitiesForMapping);
+					
+					// CRITICAL FIX: Sync the mapped entities back to session manager
+					// This ensures session manager has the correct shouldMask states from plugin
 					if (options.conversationId) {
-						// CRITICAL FIX: Use mappedEntities instead of raw response.pii[0] 
-						// This preserves shouldMask states that were calculated from plugin state
-						piiSessionManager.setConversationWorkingEntities(options.conversationId, mappedEntities);
+						piiSessionManager.setConversationWorkingEntitiesWithMaskStates(options.conversationId, mappedEntities);
 					} else {
-						// New chat - replace temporary state with latest detection
+						// For new chats, use temporary state
 						if (!piiSessionManager.isTemporaryStateActive()) {
 							piiSessionManager.activateTemporaryState();
 						}
-						piiSessionManager.setTemporaryStateEntities(response.pii[0]);
+						piiSessionManager.setTemporaryStateEntitiesWithMaskStates(mappedEntities);
 					}
 
 					const tr = editorView.state.tr.setMeta(piiDetectionPluginKey, {
@@ -520,7 +585,7 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 							);
 						}
 						
-						// CRITICAL FIX: If we need to sync after toggle, do it now
+						// CRITICAL FIX: If we need to sync after toggle, do it now BEFORE detection
 						// This ensures shouldMask state is consistent before next detection
 						if (newState.needsSync) {
 							newState.entities = syncWithSessionManager(

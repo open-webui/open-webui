@@ -14,8 +14,16 @@
 	let containerElement: HTMLElement;
 	let piiSessionManager = PiiSessionManager.getInstance();
 
-	// Use the new method that handles temporary state automatically
-	$: entities = piiSessionManager.getEntitiesForDisplay(conversationId);
+	// CRITICAL FIX: Ensure conversation state is loaded for this conversationId
+	// This ensures cross-message consistency
+	$: if (conversationId && conversationId !== '') {
+		piiSessionManager.loadConversationState(conversationId);
+	}
+
+	// CRITICAL FIX: Use conversation-specific entities for consistent display
+	$: entities = conversationId && conversationId !== '' 
+		? piiSessionManager.getConversationEntities(conversationId)
+		: piiSessionManager.getEntitiesForDisplay();
 	
 	$: processedText = (() => {
 		if (!entities.length) {
@@ -34,8 +42,16 @@
 	$: hasHighlighting = processedText !== text;
 
 	const handleOverlayToggle = () => {
-		// Refresh the highlighting when an entity is toggled
-		// The reactive statement will automatically update processedText
+		// CRITICAL FIX: Trigger reactivity by reassigning entities 
+		// This ensures the display updates immediately after toggle
+		if (conversationId && conversationId !== '') {
+			entities = piiSessionManager.getConversationEntities(conversationId);
+		} else {
+			entities = piiSessionManager.getEntitiesForDisplay();
+		}
+		
+		// Trigger reactive update of processedText
+		// The reactive statement will automatically recalculate processedText
 	};
 
 	// Add event listeners for PII highlights

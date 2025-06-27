@@ -253,6 +253,18 @@ export class PiiSessionManager {
 	}
 
 	
+	setTemporaryStateEntitiesWithMaskStates(entities: ExtendedPiiEntity[]) {
+		if (!this.temporaryState.isActive) {
+			console.warn('PiiSessionManager: Attempted to set temporary state when not active');
+			return;
+		}
+		
+		// Store the extended entities directly without recalculating shouldMask states
+		// This preserves shouldMask states that were already calculated from plugin state
+		this.temporaryState.entities = entities;
+	}
+
+	
 	getTemporaryEntities(): ExtendedPiiEntity[] {
 		return [...this.temporaryState.entities];
 	}
@@ -704,16 +716,37 @@ export class PiiSessionManager {
 
 	
 	setConversationWorkingEntities(conversationId: string, entities: PiiEntity[]) {
-		// Get persistent entities to preserve shouldMask preferences from them
+		// CRITICAL FIX: Check both persistent and existing working entities to preserve shouldMask state
 		const persistentEntities = this.getConversationEntities(conversationId);
+		const existingWorkingEntities = this.workingEntitiesForConversations.get(conversationId) || [];
 		
-		// Convert new entities to extended format, preserving shouldMask state for entities with same labels
+		// Convert new entities to extended format, preserving shouldMask state with priority:
+		// 1. Existing working entities (highest priority - most recent user interactions)
+		// 2. Persistent entities (medium priority - saved state)
+		// 3. Default to masked (lowest priority - for completely new entities)
 		const newExtendedEntities = entities.map(entity => {
-			// Check if this entity exists in persistent state and preserve its shouldMask state
+			// First check working entities (current typing session)
+			const existingWorkingEntity = existingWorkingEntities.find(e => e.label === entity.label);
+			if (existingWorkingEntity) {
+				return {
+					...entity,
+					shouldMask: existingWorkingEntity.shouldMask
+				};
+			}
+			
+			// Then check persistent entities (saved conversation state)
 			const persistentEntity = persistentEntities.find(e => e.label === entity.label);
+			if (persistentEntity) {
+				return {
+					...entity,
+					shouldMask: persistentEntity.shouldMask
+				};
+			}
+			
+			// Default to masked for completely new entities
 			return {
 				...entity,
-				shouldMask: persistentEntity ? persistentEntity.shouldMask : true // Default to masked for new entities
+				shouldMask: true
 			};
 		});
 
@@ -763,6 +796,41 @@ export class PiiSessionManager {
 		
 		// Also update global working state for display
 		this.entities = extendedEntities;
+	}
+
+	setEntityMaskingState(conversationId: string, entityId: string, shouldMask: boolean) {
+		// Update conversation state
+		const state = this.conversationStates.get(conversationId);
+		if (state) {
+			const entity = state.entities.find((e) => e.label === entityId);
+			if (entity) {
+				entity.shouldMask = shouldMask;
+				state.lastUpdated = Date.now();
+				this.triggerChatSave(conversationId);
+			}
+		}
+		
+		// Update global state if this is the current conversation
+		const globalEntity = this.entities.find((e) => e.label === entityId);
+		if (globalEntity) {
+			globalEntity.shouldMask = shouldMask;
+		}
+		
+		// Update working entities if they exist
+		const workingEntities = this.workingEntitiesForConversations.get(conversationId);
+		if (workingEntities) {
+			const workingEntity = workingEntities.find((e) => e.label === entityId);
+			if (workingEntity) {
+				workingEntity.shouldMask = shouldMask;
+			}
+		}
+	}
+
+	setGlobalEntityMaskingState(entityId: string, shouldMask: boolean) {
+		const entity = this.entities.find((e) => e.label === entityId);
+		if (entity) {
+			entity.shouldMask = shouldMask;
+		}
 	}
 }
 
