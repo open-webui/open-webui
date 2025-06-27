@@ -126,11 +126,6 @@
 	});
 </script>
 
-{(selectedModels ?? []).includes(model?.id)
-	? model?.id
-	: (selectedModels ?? []).length > 0
-		? selectedModels.at(0)
-		: model?.id}
 <div bind:this={contentContainerElement}>
 	<Markdown
 		{id}
