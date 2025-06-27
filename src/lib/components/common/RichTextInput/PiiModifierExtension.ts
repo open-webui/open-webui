@@ -611,7 +611,7 @@ function createSelectionMenu(
 		border: 1px solid #312e81;
 		border-radius: 8px;
 		box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-		padding: 16px;
+		padding: 30px 16px 16px 16px;
 		z-index: 1000;
 		font-family: system-ui, -apple-system, sans-serif;
 		font-size: 13px;
@@ -671,9 +671,12 @@ function createSelectionMenu(
 	// Check if there's a meaningful difference between tokenized words and exact selection
 	const tokenizedText = selectionInfo.tokenizedWords.map(w => w.word).join(' ');
 	const exactText = selectionInfo.selectedText;
-	const showSelectionOptions = tokenizedText !== exactText;
+	
+	// In normal mode (showAdvancedMenu = false), never show selection options
+	// In expert mode (showAdvancedMenu = true), show selection options if there's a difference
+	const showSelectionOptions = showAdvancedMenu && (tokenizedText !== exactText);
 
-	// Selection options (only show if there's a difference)
+	// Selection options (only show in expert mode if there's a difference)
 	let tokenizedRadio: HTMLInputElement;
 	let exactRadio: HTMLInputElement;
 	
@@ -755,8 +758,8 @@ function createSelectionMenu(
 		optionsContainer.appendChild(tokenizedOption);
 		optionsContainer.appendChild(exactOption);
 		menu.appendChild(optionsContainer);
-	} else {
-		// Show preview when no selection options are displayed
+	} else if (showAdvancedMenu) {
+		// Show preview only in expert mode when no selection options are displayed
 		const previewContainer = document.createElement('div');
 		previewContainer.style.cssText = `margin-bottom: 12px;`;
 
@@ -769,15 +772,15 @@ function createSelectionMenu(
 		`;
 		const previewText = document.createElement('span');
 		previewText.style.cssText = `
-			background: #f0f9ff;
-			color: #0369a1;
+			background: #f8b76b;
+			color: #3f3d8a;
 			padding: 4px 8px;
 			border-radius: 4px;
 			font-size: 12px;
 			display: inline-block;
 			border: 1px solid #bfdbfe;
 		`;
-		previewText.textContent = `"${tokenizedText}"`;
+		previewText.textContent = `${tokenizedText}`;
 
 		previewContainer.appendChild(previewLabel);
 		previewContainer.appendChild(previewText);
@@ -932,19 +935,27 @@ function createSelectionMenu(
 			return;
 		}
 
-		// If selection options are shown, check which is selected; otherwise default to tokenized
-		const isTokenized = showSelectionOptions ? tokenizedRadio.checked : true;
-		
-		if (isTokenized) {
-			if (selectionInfo.tokenizedWords.length > 0) {
-				const firstWord = selectionInfo.tokenizedWords[0];
-				const lastWord = selectionInfo.tokenizedWords[selectionInfo.tokenizedWords.length - 1];
-				const combinedText = selectionInfo.tokenizedWords.map(w => w.word).join(' ');
-				
-				onMaskSelection(combinedText, piiType, firstWord.from, lastWord.to);
-			}
+		// In normal mode, always use exact text (trimmed)
+		// In expert mode, check selection options or default to tokenized
+		if (!showAdvancedMenu) {
+			// Normal mode: always use exact selection text (trimmed)
+			const trimmedText = selectionInfo.selectedText.trim();
+			onMaskSelection(trimmedText, piiType, selectionInfo.from, selectionInfo.to);
 		} else {
-			onMaskSelection(selectionInfo.selectedText, piiType, selectionInfo.from, selectionInfo.to);
+			// Expert mode: use radio button selection or default to tokenized
+			const isTokenized = showSelectionOptions ? tokenizedRadio.checked : true;
+			
+			if (isTokenized) {
+				if (selectionInfo.tokenizedWords.length > 0) {
+					const firstWord = selectionInfo.tokenizedWords[0];
+					const lastWord = selectionInfo.tokenizedWords[selectionInfo.tokenizedWords.length - 1];
+					const combinedText = selectionInfo.tokenizedWords.map(w => w.word).join(' ');
+					
+					onMaskSelection(combinedText, piiType, firstWord.from, lastWord.to);
+				}
+			} else {
+				onMaskSelection(selectionInfo.selectedText, piiType, selectionInfo.from, selectionInfo.to);
+			}
 		}
 
 		menu.remove();
