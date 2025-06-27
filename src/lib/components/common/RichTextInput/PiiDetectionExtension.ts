@@ -19,6 +19,7 @@ interface PiiDetectionState {
 	positionMapping: PositionMapping | null;
 	isDetecting: boolean;
 	lastText: string;
+	needsSync: boolean;
 }
 
 export interface PiiDetectionOptions {
@@ -387,7 +388,8 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 						entities: [],
 						positionMapping: null,
 						isDetecting: false,
-						lastText: ''
+						lastText: '',
+						needsSync: false
 					};
 				},
 				
@@ -433,6 +435,10 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 									} else {
 										piiSessionManager.toggleEntityMasking(entity.label, occurrenceIndex);
 									}
+									
+									// CRITICAL FIX: Mark that we need to sync with session manager on next transaction
+									// This ensures that subsequent detections use the correct shouldMask state
+									newState.needsSync = true;
 									
 									if (options.onPiiToggled) {
 										options.onPiiToggled(newState.entities);
@@ -486,6 +492,19 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 								newMapping,
 								tr.doc
 							);
+						}
+						
+						// CRITICAL FIX: If we need to sync after toggle, do it now
+						// This ensures shouldMask state is consistent before next detection
+						if (newState.needsSync) {
+							newState.entities = syncWithSessionManager(
+								options.conversationId,
+								piiSessionManager,
+								newState.entities,
+								newMapping,
+								tr.doc
+							);
+							newState.needsSync = false;
 						}
 						
 						// Trigger detection if text changed significantly

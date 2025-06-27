@@ -7,7 +7,7 @@ export interface ExtendedPiiEntity extends PiiEntity {
 }
 
 // Debounce function for PII detection
-export function debounce<T extends (...args: any[]) => any>(
+export function debounce<T extends (...args: unknown[]) => unknown>(
 	func: T,
 	wait: number
 ): (...args: Parameters<T>) => void {
@@ -96,7 +96,7 @@ export function mapPlainTextPositionToProseMirror(
 }
 
 // Convert masked text back to editor format
-export function convertMaskedTextToEditor(maskedText: string, originalHtml: string): string {
+export function convertMaskedTextToEditor(maskedText: string): string {
 	// For now, return the masked text as-is
 	// In the future, this could preserve formatting while masking content
 	return maskedText;
@@ -393,8 +393,9 @@ export class PiiSessionManager {
 		
 		try {
 			// Trigger the chat save handler 
-			if ((window as any).triggerPiiChatSave) {
-				await (window as any).triggerPiiChatSave(conversationId);
+			const windowWithTrigger = window as Window & { triggerPiiChatSave?: (id: string) => Promise<void> };
+			if (windowWithTrigger.triggerPiiChatSave) {
+				await windowWithTrigger.triggerPiiChatSave(conversationId);
 			}
 			
 			// Success - remove backup
@@ -589,7 +590,7 @@ export class PiiSessionManager {
 	}
 
 	// Get modifiers for API (works for both global and conversation state)
-	getModifiersForApi(conversationId?: string): any[] {
+	getModifiersForApi(conversationId?: string): Array<{ entity: string; action: string; type?: string }> {
 		if (conversationId) {
 			// Ensure conversation is loaded
 			this.ensureConversationLoaded(conversationId);
@@ -896,7 +897,7 @@ export function adjustPiiEntityPositionsForDisplay(
 }
 
 // Enhanced function to unmask and highlight text with modifier awareness for display
-export function unmaskAndHighlightTextForDisplay(text: string, entities: ExtendedPiiEntity[], modifiers?: any[]): string {
+export function unmaskAndHighlightTextForDisplay(text: string, entities: ExtendedPiiEntity[]): string {
 	if (!entities.length || !text) return text;
 
 	// Check if text is already processed to prevent double processing
@@ -932,7 +933,7 @@ export function unmaskAndHighlightTextForDisplay(text: string, entities: Extende
 		const labelRegex = new RegExp(patterns.join('|'), 'gi');
 
 		// Replace masked patterns with highlighted spans containing the original text
-		processedText = processedText.replace(labelRegex, (match) => {
+		processedText = processedText.replace(labelRegex, () => {
 			const shouldMask = entity.shouldMask ?? true;
 			const maskingClass = shouldMask ? 'pii-masked' : 'pii-unmasked';
 			const statusText = shouldMask ? 
