@@ -1,13 +1,12 @@
 import { Extension } from '@tiptap/core';
-import { Plugin, PluginKey, TextSelection } from 'prosemirror-state';
+import { Plugin, PluginKey } from 'prosemirror-state';
 import { Decoration, DecorationSet } from 'prosemirror-view';
 import type { Node as ProseMirrorNode } from 'prosemirror-model';
 import type { ExtendedPiiEntity } from '$lib/utils/pii';
 import type { PiiEntity } from '$lib/apis/pii';
-import { maskPiiText, type KnownPiiEntity, type ShieldApiModifier } from '$lib/apis/pii';
+import { maskPiiText } from '$lib/apis/pii';
 import { debounce, PiiSessionManager } from '$lib/utils/pii';
 import type { PiiModifier } from './PiiModifierExtension';
-import { piiModifierExtensionKey } from './PiiModifierExtension';
 
 interface PositionMapping {
 	plainTextToProseMirror: Map<number, number>;
@@ -20,6 +19,7 @@ interface PiiDetectionState {
 	positionMapping: PositionMapping | null;
 	isDetecting: boolean;
 	lastText: string;
+	needsSync: boolean;
 }
 
 export interface PiiDetectionOptions {
@@ -64,8 +64,6 @@ function buildPositionMapping(doc: ProseMirrorNode): PositionMapping {
 		return true; // Continue traversing
 	});
 
-
-
 	return {
 		plainTextToProseMirror,
 		proseMirrorToPlainText,
@@ -103,6 +101,191 @@ function mapPiiEntitiesToProseMirror(
 			})
 		};
 	});
+}
+
+// Validate entity positions and remove invalid ones
+function validateAndFilterEntities(entities: ExtendedPiiEntity[], doc: ProseMirrorNode, mapping: PositionMapping): ExtendedPiiEntity[] {
+	return entities.filter(entity => {
+		// Check if entity still exists in the current text
+		const entityText = entity.raw_text.toLowerCase();
+		const currentText = mapping.plainText.toLowerCase();
+		
+		if (!currentText.includes(entityText)) {
+			console.log(`PiiDetectionExtension: Entity "${entity.label}" no longer exists in text, removing`);
+			return false;
+		}
+		
+		// Validate all occurrences have valid positions
+		const validOccurrences = entity.occurrences.filter((occurrence: any) => {
+			const { start_idx: from, end_idx: to } = occurrence;
+			return from >= 0 && to <= doc.content.size && from < to;
+		});
+		
+		if (validOccurrences.length === 0) {
+			console.log(`PiiDetectionExtension: Entity "${entity.label}" has no valid positions, removing`);
+			return false;
+		}
+		
+		// Update entity with only valid occurrences
+		entity.occurrences = validOccurrences;
+		return true;
+	});
+}
+
+// Remap existing entities to current document positions
+function remapEntitiesForCurrentDocument(
+	entities: ExtendedPiiEntity[], 
+	mapping: PositionMapping,
+	doc: ProseMirrorNode
+): ExtendedPiiEntity[] {
+	if (!entities.length || !mapping.plainText) {
+		return [];
+	}
+	
+	const remappedEntities = entities.map(entity => {
+		const entityText = entity.raw_text;
+		const searchText = entityText.toLowerCase();
+		const plainText = mapping.plainText.toLowerCase();
+		
+		// Find all occurrences of this entity in the current text
+		const newOccurrences = [];
+		let searchIndex = 0;
+		
+		// Use word boundary matching for better accuracy
+		const entityWords = entityText.split(/\s+/);
+		const isMultiWord = entityWords.length > 1;
+		
+		while (searchIndex < plainText.length) {
+			const foundIndex = plainText.indexOf(searchText, searchIndex);
+			if (foundIndex === -1) break;
+			
+			// Check word boundaries for single words to avoid partial matches
+			if (!isMultiWord) {
+				const beforeChar = foundIndex > 0 ? plainText[foundIndex - 1] : ' ';
+				const afterChar = foundIndex + searchText.length < plainText.length 
+					? plainText[foundIndex + searchText.length] : ' ';
+				
+				// Skip if not at word boundary (unless it's punctuation)
+				if (/\w/.test(beforeChar) || /\w/.test(afterChar)) {
+					searchIndex = foundIndex + 1;
+					continue;
+				}
+			}
+			
+			const plainTextStart = foundIndex;
+			const plainTextEnd = foundIndex + entityText.length;
+			
+			// Convert to ProseMirror positions
+			const proseMirrorStart = mapping.plainTextToProseMirror.get(plainTextStart);
+			const proseMirrorEnd = mapping.plainTextToProseMirror.get(plainTextEnd - 1);
+			
+			if (proseMirrorStart !== undefined && proseMirrorEnd !== undefined) {
+				const from = proseMirrorStart;
+				const to = proseMirrorEnd + 1;
+				
+				// Validate the range
+				if (from >= 0 && to <= doc.content.size && from < to) {
+					newOccurrences.push({
+						start_idx: from,
+						end_idx: to
+					});
+				}
+			}
+			
+			searchIndex = foundIndex + 1;
+		}
+		
+		// Return entity with new occurrences, or mark for removal if none found
+		return {
+			...entity,
+			occurrences: newOccurrences
+		};
+	});
+	
+	return remappedEntities.filter(entity => entity.occurrences.length > 0);
+}
+
+// Sync plugin state with session manager
+function syncWithSessionManager(
+	conversationId: string | undefined,
+	piiSessionManager: typeof PiiSessionManager.prototype,
+	currentEntities: ExtendedPiiEntity[],
+	mapping: PositionMapping,
+	doc: ProseMirrorNode
+): ExtendedPiiEntity[] {
+	// CRITICAL FIX: Get entities from both persistent and working state
+	// This prevents newly detected entities from being filtered out during periodic syncs
+	const persistentEntities = conversationId 
+		? piiSessionManager.getConversationEntities(conversationId)
+		: piiSessionManager.getEntities();
+	
+	const workingEntities = conversationId
+		? piiSessionManager.getConversationEntitiesForDisplay(conversationId)
+		: piiSessionManager.getEntitiesForDisplay();
+	
+	// Merge persistent + working entities (working takes precedence for same labels)
+	const allSessionEntities = [...persistentEntities];
+	workingEntities.forEach(workingEntity => {
+		if (!persistentEntities.find(p => p.label === workingEntity.label)) {
+			allSessionEntities.push(workingEntity);
+		}
+	});
+	
+	console.log('PiiDetectionExtension: Sync check:', {
+		currentEntities: currentEntities.length,
+		persistentEntities: persistentEntities.length,
+		workingEntities: workingEntities.length,
+		allSessionEntities: allSessionEntities.length
+	});
+	
+	// If session manager has fewer entities, some were removed
+	if (allSessionEntities.length < currentEntities.length) {
+		// CRITICAL FIX: Don't filter entities if session manager is completely empty
+		// This happens in new chat windows where session manager hasn't stored entities yet
+		if (allSessionEntities.length === 0) {
+			// For new chats, just validate current entities without filtering
+			return validateAndFilterEntities(currentEntities, doc, mapping);
+		}
+		
+		// Filter current entities to only include those still in session manager (persistent OR working)
+		const filteredEntities = currentEntities.filter(currentEntity => 
+			allSessionEntities.find((sessionEntity: ExtendedPiiEntity) => sessionEntity.label === currentEntity.label)
+		);
+		
+		console.log('PiiDetectionExtension: Filtered entities:', {
+			before: currentEntities.length,
+			after: filteredEntities.length,
+			removed: currentEntities.filter(c => !filteredEntities.find(f => f.label === c.label)).map(e => e.label)
+		});
+		
+		// Validate positions for remaining entities
+		return validateAndFilterEntities(filteredEntities, doc, mapping);
+	}
+	
+	// CRITICAL FIX: Always prioritize plugin state shouldMask over session manager state
+	// This ensures user interactions in the editor take precedence
+	const updatedEntities = currentEntities.map(currentEntity => {
+		const sessionEntity = allSessionEntities.find((e: ExtendedPiiEntity) => e.label === currentEntity.label);
+		if (sessionEntity) {
+			// CRITICAL FIX: Update session manager to match plugin state, not the other way around
+			// This preserves user's toggle actions made in the editor
+			if (sessionEntity.shouldMask !== currentEntity.shouldMask) {
+				console.log(`PiiDetectionExtension: Syncing shouldMask state for ${currentEntity.label}: ${sessionEntity.shouldMask} → ${currentEntity.shouldMask}`);
+				
+				// Update session manager to match plugin state
+				if (conversationId) {
+					piiSessionManager.setEntityMaskingState(conversationId, currentEntity.label, currentEntity.shouldMask ?? true);
+				} else {
+					piiSessionManager.setGlobalEntityMaskingState(currentEntity.label, currentEntity.shouldMask ?? true);
+				}
+			}
+			// Return current entity (plugin state takes precedence)
+			return currentEntity;
+		}
+		return currentEntity;
+	});
+	
+	return validateAndFilterEntities(updatedEntities, doc, mapping);
 }
 
 // Create decorations for PII entities and modifier-affected text
@@ -180,15 +363,6 @@ function createPiiDecorations(entities: ExtendedPiiEntity[], modifiers: PiiModif
 
 const piiDetectionPluginKey = new PluginKey<PiiDetectionState>('piiDetection');
 
-// Convert PiiModifier objects to ShieldApiModifier format
-function convertModifiersToApiFormat(modifiers: PiiModifier[]): ShieldApiModifier[] {
-	return modifiers.map(modifier => ({
-		action: modifier.action,
-		entity: modifier.entity,
-		...(modifier.type && { type: modifier.type })
-	}));
-}
-
 export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 	name: 'piiDetection',
 
@@ -236,20 +410,45 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 						return;
 					}
 
-					// Pass existing entities to preserve shouldMask state
-					const mappedEntities = mapPiiEntitiesToProseMirror(response.pii[0], state.positionMapping, state.entities);
+					// CRITICAL FIX: Load conversation entities for cross-message shouldMask persistence
+					// This ensures that entities unmasked in previous messages stay unmasked in new messages
+					const conversationEntities = options.conversationId
+						? piiSessionManager.getConversationEntities(options.conversationId)
+						: [];
 					
+					// CRITICAL FIX: Merge plugin state + conversation state for complete context
+					// Plugin state takes precedence (for same-message interactions)
+					// Conversation state provides fallback (for cross-message persistence)
+					const pluginEntities = state.entities || [];
+					const existingEntitiesForMapping = [...pluginEntities];
 					
+					// Add conversation entities that aren't already in plugin state
+					conversationEntities.forEach(convEntity => {
+						if (!pluginEntities.find(pluginEntity => pluginEntity.label === convEntity.label)) {
+							existingEntitiesForMapping.push(convEntity);
+						}
+					});
+					
+					console.log('PiiDetectionExtension: Using existing entities for mapping:', {
+						pluginEntities: pluginEntities.length,
+						conversationEntities: conversationEntities.length,
+						totalForMapping: existingEntitiesForMapping.length,
+						labels: existingEntitiesForMapping.map(e => `${e.label}:${e.shouldMask}`)
+					});
+					
+					// Pass merged entities to preserve shouldMask state across messages
+					const mappedEntities = mapPiiEntitiesToProseMirror(response.pii[0], state.positionMapping, existingEntitiesForMapping);
+					
+					// CRITICAL FIX: Sync the mapped entities back to session manager
+					// This ensures session manager has the correct shouldMask states from plugin
 					if (options.conversationId) {
-						// Existing chat - store in working state (for display), keep persistent entities unchanged
-						// This ensures known_entities for API calls remain consistent during typing session
-						piiSessionManager.setConversationWorkingEntities(options.conversationId, response.pii[0]);
+						piiSessionManager.setConversationWorkingEntitiesWithMaskStates(options.conversationId, mappedEntities);
 					} else {
-						// New chat - replace temporary state with latest detection
+						// For new chats, use temporary state
 						if (!piiSessionManager.isTemporaryStateActive()) {
 							piiSessionManager.activateTemporaryState();
 						}
-						piiSessionManager.setTemporaryStateEntities(response.pii[0]);
+						piiSessionManager.setTemporaryStateEntitiesWithMaskStates(mappedEntities);
 					}
 
 					const tr = editorView.state.tr.setMeta(piiDetectionPluginKey, {
@@ -280,7 +479,8 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 						entities: [],
 						positionMapping: null,
 						isDetecting: false,
-						lastText: ''
+						lastText: '',
+						needsSync: false
 					};
 				},
 				
@@ -293,6 +493,20 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 							case 'UPDATE_ENTITIES':
 								newState.entities = meta.entities || [];
 								break;
+								
+							case 'SYNC_WITH_SESSION_MANAGER': {
+								// Sync plugin state with session manager
+								if (newState.positionMapping) {
+									newState.entities = syncWithSessionManager(
+										options.conversationId,
+										piiSessionManager,
+										newState.entities,
+										newState.positionMapping,
+										tr.doc
+									);
+								}
+								break;
+							}
 								
 							case 'TOGGLE_ENTITY_MASKING':
 								const { entityIndex, occurrenceIndex } = meta;
@@ -313,6 +527,10 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 										piiSessionManager.toggleEntityMasking(entity.label, occurrenceIndex);
 									}
 									
+									// CRITICAL FIX: Mark that we need to sync with session manager on next transaction
+									// This ensures that subsequent detections use the correct shouldMask state
+									newState.needsSync = true;
+									
 									if (options.onPiiToggled) {
 										options.onPiiToggled(newState.entities);
 									}
@@ -320,7 +538,7 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 								break;
 								
 							case 'TRIGGER_DETECTION':
-							case 'TRIGGER_DETECTION_WITH_MODIFIERS':
+							case 'TRIGGER_DETECTION_WITH_MODIFIERS': {
 								const currentMapping = buildPositionMapping(tr.doc);
 								newState.positionMapping = currentMapping;
 								
@@ -328,8 +546,9 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 									performPiiDetection(currentMapping.plainText);
 								}
 								break;
+							}
 								
-							case 'RELOAD_CONVERSATION_STATE':
+							case 'RELOAD_CONVERSATION_STATE': {
 								options.conversationId = meta.conversationId;
 								
 								const newMapping = buildPositionMapping(tr.doc);
@@ -339,16 +558,55 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 									performPiiDetection(newMapping.plainText);
 								}
 								break;
+							}
 						}
 					}
 					
 					if (tr.docChanged) {
-						newState.positionMapping = buildPositionMapping(tr.doc);
+						const newMapping = buildPositionMapping(tr.doc);
+						newState.positionMapping = newMapping;
 						
-						if (!newState.isDetecting && newState.positionMapping.plainText !== newState.lastText) {
-							newState.lastText = newState.positionMapping.plainText;
-							if (newState.positionMapping.plainText.trim()) {
-								debouncedDetection(newState.positionMapping.plainText);
+						// Remap existing entities to current document positions immediately
+						if (newState.entities.length > 0) {
+							// First, try to remap entities to current positions
+							const remappedEntities = remapEntitiesForCurrentDocument(
+								newState.entities,
+								newMapping,
+								tr.doc
+							);
+							
+							// Then sync with session manager for external changes
+							newState.entities = syncWithSessionManager(
+								options.conversationId,
+								piiSessionManager,
+								remappedEntities,
+								newMapping,
+								tr.doc
+							);
+						}
+						
+						// CRITICAL FIX: If we need to sync after toggle, do it now BEFORE detection
+						// This ensures shouldMask state is consistent before next detection
+						if (newState.needsSync) {
+							newState.entities = syncWithSessionManager(
+								options.conversationId,
+								piiSessionManager,
+								newState.entities,
+								newMapping,
+								tr.doc
+							);
+							newState.needsSync = false;
+						}
+						
+						// Trigger detection if text changed significantly
+						if (!newState.isDetecting && newMapping.plainText !== newState.lastText) {
+							newState.lastText = newMapping.plainText;
+							
+							if (newMapping.plainText.trim()) {
+								debouncedDetection(newMapping.plainText);
+							} else {
+								// If text is empty, clear entities
+								newState.entities = [];
 							}
 						}
 					}
@@ -423,6 +681,45 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 					return true;
 				}
 				return false;
+			},
+
+			syncWithSessionManager: () => ({ state, dispatch }: any) => {
+				if (dispatch) {
+					const tr = state.tr.setMeta(piiDetectionPluginKey, {
+						type: 'SYNC_WITH_SESSION_MANAGER'
+					});
+					dispatch(tr);
+					return true;
+				}
+				return false;
+			},
+
+			// Force immediate entity remapping and decoration update
+			forceEntityRemapping: () => ({ state, dispatch }: any) => {
+				const pluginState = piiDetectionPluginKey.getState(state);
+				
+				if (!pluginState?.entities.length || !dispatch) {
+					return false;
+				}
+				
+				// Build current position mapping
+				const mapping = buildPositionMapping(state.doc);
+				
+				// Remap entities to current positions
+				const remappedEntities = remapEntitiesForCurrentDocument(
+					pluginState.entities,
+					mapping,
+					state.doc
+				);
+				
+				// Update plugin state with remapped entities
+				const tr = state.tr.setMeta(piiDetectionPluginKey, {
+					type: 'UPDATE_ENTITIES',
+					entities: remappedEntities
+				});
+				
+				dispatch(tr);
+				return true;
 			},
 
 			reloadConversationState: (newConversationId: string) => ({ state, dispatch }: any) => {

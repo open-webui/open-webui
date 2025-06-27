@@ -397,6 +397,23 @@
 					},
 					keyup: (view, event) => {
 						eventDispatch('keyup', { event });
+						
+						// Force entity remapping on keyup for immediate highlight updates
+						if (enablePiiDetection && editor && editor.commands.forceEntityRemapping) {
+							setTimeout(() => {
+								editor.commands.forceEntityRemapping();
+							}, 10);
+						}
+						
+						return false;
+					},
+					input: (view, event) => {
+						// Force entity remapping on input for immediate highlight updates
+						if (enablePiiDetection && editor && editor.commands.forceEntityRemapping) {
+							setTimeout(() => {
+								editor.commands.forceEntityRemapping();
+							}, 10);
+						}
 						return false;
 					},
 					keydown: (view, event) => {
@@ -634,6 +651,13 @@
 					editor.commands.reloadConversationState(conversationId);
 				}
 			}
+			
+			// Sync with session manager to ensure consistency
+			if (editor.commands.syncWithSessionManager) {
+				setTimeout(() => {
+					editor.commands.syncWithSessionManager();
+				}, 100);
+			}
 		}
 		
 		previousConversationId = conversationId;
@@ -645,6 +669,13 @@
 		if (newHash !== currentModifiersHash && newHash !== '') {
 			currentModifiersHash = newHash;
 			editor.commands.triggerDetectionForModifiers();
+			
+			// Also sync with session manager after modifier changes
+			setTimeout(() => {
+				if (editor.commands.syncWithSessionManager) {
+					editor.commands.syncWithSessionManager();
+				}
+			}, 200);
 		}
 	}
 
@@ -665,10 +696,44 @@
 			if (editor && editor.view && editor.view.state.doc.textContent.trim()) {
 				setTimeout(() => {
 					editor.commands.triggerDetectionForModifiers();
+					
+					// Sync with session manager after modifier changes
+					if (editor.commands.syncWithSessionManager) {
+						setTimeout(() => {
+							editor.commands.syncWithSessionManager();
+						}, 100);
+					}
 				}, 100);
 			}
 		}
 	};
+
+	// Periodic sync with session manager to handle external entity changes
+	let syncInterval: NodeJS.Timeout | null = null;
+	
+	$: if (editor && enablePiiDetection && conversationActivated) {
+		// Clear any existing interval
+		if (syncInterval) {
+			clearInterval(syncInterval);
+		}
+		
+		// Set up periodic sync every 2 seconds when editor is active
+		syncInterval = setInterval(() => {
+			if (editor && editor.commands.syncWithSessionManager && document.hasFocus()) {
+				editor.commands.syncWithSessionManager();
+			}
+		}, 2000);
+	}
+
+	// Cleanup sync interval
+	onDestroy(() => {
+		if (editor) {
+			editor.destroy();
+		}
+		if (syncInterval) {
+			clearInterval(syncInterval);
+		}
+	});
 </script>
 
 <div bind:this={element} class="relative w-full min-w-full h-full min-h-fit {className}" />
