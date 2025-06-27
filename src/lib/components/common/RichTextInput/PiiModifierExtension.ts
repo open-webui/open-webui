@@ -611,7 +611,7 @@ function createSelectionMenu(
 		border: 1px solid #312e81;
 		border-radius: 8px;
 		box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-		padding: 16px;
+		padding: 30px 16px 16px 16px;
 		z-index: 1000;
 		font-family: system-ui, -apple-system, sans-serif;
 		font-size: 13px;
@@ -671,9 +671,12 @@ function createSelectionMenu(
 	// Check if there's a meaningful difference between tokenized words and exact selection
 	const tokenizedText = selectionInfo.tokenizedWords.map(w => w.word).join(' ');
 	const exactText = selectionInfo.selectedText;
-	const showSelectionOptions = tokenizedText !== exactText;
+	
+	// In normal mode (showAdvancedMenu = false), never show selection options
+	// In expert mode (showAdvancedMenu = true), show selection options if there's a difference
+	const showSelectionOptions = showAdvancedMenu && (tokenizedText !== exactText);
 
-	// Selection options (only show if there's a difference)
+	// Selection options (only show in expert mode if there's a difference)
 	let tokenizedRadio: HTMLInputElement;
 	let exactRadio: HTMLInputElement;
 	
@@ -755,8 +758,8 @@ function createSelectionMenu(
 		optionsContainer.appendChild(tokenizedOption);
 		optionsContainer.appendChild(exactOption);
 		menu.appendChild(optionsContainer);
-	} else {
-		// Show preview when no selection options are displayed
+	} else if (showAdvancedMenu) {
+		// Show preview only in expert mode when no selection options are displayed
 		const previewContainer = document.createElement('div');
 		previewContainer.style.cssText = `margin-bottom: 12px;`;
 
@@ -769,15 +772,15 @@ function createSelectionMenu(
 		`;
 		const previewText = document.createElement('span');
 		previewText.style.cssText = `
-			background: #f0f9ff;
-			color: #0369a1;
+			background: #f8b76b;
+			color: #3f3d8a;
 			padding: 4px 8px;
 			border-radius: 4px;
 			font-size: 12px;
 			display: inline-block;
 			border: 1px solid #bfdbfe;
 		`;
-		previewText.textContent = `"${tokenizedText}"`;
+		previewText.textContent = `${tokenizedText}`;
 
 		previewContainer.appendChild(previewLabel);
 		previewContainer.appendChild(previewText);
@@ -932,19 +935,27 @@ function createSelectionMenu(
 			return;
 		}
 
-		// If selection options are shown, check which is selected; otherwise default to tokenized
-		const isTokenized = showSelectionOptions ? tokenizedRadio.checked : true;
-		
-		if (isTokenized) {
-			if (selectionInfo.tokenizedWords.length > 0) {
-				const firstWord = selectionInfo.tokenizedWords[0];
-				const lastWord = selectionInfo.tokenizedWords[selectionInfo.tokenizedWords.length - 1];
-				const combinedText = selectionInfo.tokenizedWords.map(w => w.word).join(' ');
-				
-				onMaskSelection(combinedText, piiType, firstWord.from, lastWord.to);
-			}
+		// In normal mode, always use exact text (trimmed)
+		// In expert mode, check selection options or default to tokenized
+		if (!showAdvancedMenu) {
+			// Normal mode: always use exact selection text (trimmed)
+			const trimmedText = selectionInfo.selectedText.trim();
+			onMaskSelection(trimmedText, piiType, selectionInfo.from, selectionInfo.to);
 		} else {
-			onMaskSelection(selectionInfo.selectedText, piiType, selectionInfo.from, selectionInfo.to);
+			// Expert mode: use radio button selection or default to tokenized
+			const isTokenized = showSelectionOptions ? tokenizedRadio.checked : true;
+			
+			if (isTokenized) {
+				if (selectionInfo.tokenizedWords.length > 0) {
+					const firstWord = selectionInfo.tokenizedWords[0];
+					const lastWord = selectionInfo.tokenizedWords[selectionInfo.tokenizedWords.length - 1];
+					const combinedText = selectionInfo.tokenizedWords.map(w => w.word).join(' ');
+					
+					onMaskSelection(combinedText, piiType, firstWord.from, lastWord.to);
+				}
+			} else {
+				onMaskSelection(selectionInfo.selectedText, piiType, selectionInfo.from, selectionInfo.to);
+			}
 		}
 
 		menu.remove();
@@ -1022,6 +1033,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 		let hoverMenuElement: HTMLElement | null = null;
 		let selectionMenuElement: HTMLElement | null = null;
 		let hoverTimeout: number | null = null;
+		let selectionTimeout: number | null = null;
 		let menuCloseTimeout: ReturnType<typeof setTimeout> | null = null;
 		let isMouseOverMenu = false;
 		let isInputFocused = false;
@@ -1029,6 +1041,12 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 
 		// Shared function to handle text selection for both editor and global mouseup
 		const handleTextSelection = (event: MouseEvent, view: any) => {
+			// Clear any existing selection timeout
+			if (selectionTimeout) {
+				clearTimeout(selectionTimeout);
+				selectionTimeout = null;
+			}
+
 			// Handle text selection for selection menu
 			const selection = view.state.selection;
 			
@@ -1046,7 +1064,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 			const selectedText = view.state.doc.textBetween(selection.from, selection.to);
 			
 			// Don't show menu for very short selections or selections longer than 100 characters
-			if (selectedText.length < 2 || selectedText.length > 100) {
+			if (selectedText.length < 2 || selectedText.length > 50) {
 				return false;
 			}
 
@@ -1072,71 +1090,74 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 				selectionMenuElement.remove();
 			}
 
-			// Create timeout manager for selection menu
-			const timeoutManager = {
-				clearAll: () => {
-					if (hoverTimeout) {
-						clearTimeout(hoverTimeout);
-						hoverTimeout = null;
+			// Add delay before showing selection menu
+			selectionTimeout = window.setTimeout(() => {
+				// Create timeout manager for selection menu
+				const timeoutManager = {
+					clearAll: () => {
+						if (hoverTimeout) {
+							clearTimeout(hoverTimeout);
+							hoverTimeout = null;
+						}
+						if (menuCloseTimeout) {
+							clearTimeout(menuCloseTimeout);
+							menuCloseTimeout = null;
+						}
+					},
+					setFallback: (callback: () => void, delay: number) => {
+						if (menuCloseTimeout) {
+							clearTimeout(menuCloseTimeout);
+						}
+						menuCloseTimeout = setTimeout(callback, delay);
+					},
+					setInputFocused: (focused: boolean) => {
+						isInputFocused = focused;
 					}
-					if (menuCloseTimeout) {
-						clearTimeout(menuCloseTimeout);
-						menuCloseTimeout = null;
+				};
+
+				const onMaskSelection = (text: string, piiType: string, from: number, to: number) => {
+					const tr = view.state.tr.setMeta(piiModifierExtensionKey, {
+						type: 'ADD_MODIFIER',
+						modifierAction: 'mask' as ModifierAction,
+						entity: text,
+						piiType,
+						from,
+						to
+					});
+					view.dispatch(tr);
+
+					if (selectionMenuElement) {
+						selectionMenuElement.remove();
+						selectionMenuElement = null;
 					}
-				},
-				setFallback: (callback: () => void, delay: number) => {
-					if (menuCloseTimeout) {
-						clearTimeout(menuCloseTimeout);
+					timeoutManager.clearAll();
+				};
+
+				// Create selection menu (advanced if SHIFT, simplified otherwise)
+				selectionMenuElement = createSelectionMenu(
+					{
+						selectedText,
+						tokenizedWords,
+						from: selection.from,
+						to: selection.to,
+						x: event.clientX,
+						y: event.clientY
+					},
+					onMaskSelection,
+					timeoutManager,
+					showAdvancedMenu
+				);
+
+				document.body.appendChild(selectionMenuElement);
+
+				// Set a fallback timeout to close menu after 15 seconds
+				timeoutManager.setFallback(() => {
+					if (selectionMenuElement) {
+						selectionMenuElement.remove();
+						selectionMenuElement = null;
 					}
-					menuCloseTimeout = setTimeout(callback, delay);
-				},
-				setInputFocused: (focused: boolean) => {
-					isInputFocused = focused;
-				}
-			};
-
-			const onMaskSelection = (text: string, piiType: string, from: number, to: number) => {
-				const tr = view.state.tr.setMeta(piiModifierExtensionKey, {
-					type: 'ADD_MODIFIER',
-					modifierAction: 'mask' as ModifierAction,
-					entity: text,
-					piiType,
-					from,
-					to
-				});
-				view.dispatch(tr);
-
-				if (selectionMenuElement) {
-					selectionMenuElement.remove();
-					selectionMenuElement = null;
-				}
-				timeoutManager.clearAll();
-			};
-
-			// Create selection menu (advanced if SHIFT, simplified otherwise)
-			selectionMenuElement = createSelectionMenu(
-				{
-					selectedText,
-					tokenizedWords,
-					from: selection.from,
-					to: selection.to,
-					x: event.clientX,
-					y: event.clientY
-				},
-				onMaskSelection,
-				timeoutManager,
-				showAdvancedMenu
-			);
-
-			document.body.appendChild(selectionMenuElement);
-
-			// Set a fallback timeout to close menu after 15 seconds
-			timeoutManager.setFallback(() => {
-				if (selectionMenuElement) {
-					selectionMenuElement.remove();
-					selectionMenuElement = null;
-				}
-			}, 15000);
+				}, 15000);
+			}, 400); // 400ms delay
 
 			return true;
 		};
@@ -1613,6 +1634,10 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 						if (hoverTimeout) {
 							clearTimeout(hoverTimeout);
 							hoverTimeout = null;
+						}
+						if (selectionTimeout) {
+							clearTimeout(selectionTimeout);
+							selectionTimeout = null;
 						}
 						if (menuCloseTimeout) {
 							clearTimeout(menuCloseTimeout);
