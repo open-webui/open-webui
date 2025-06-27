@@ -1046,7 +1046,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 			const selectedText = view.state.doc.textBetween(selection.from, selection.to);
 			
 			// Don't show menu for very short selections or selections longer than 100 characters
-			if (selectedText.length < 2 || selectedText.length > 100) {
+			if (selectedText.length < 2 || selectedText.length > 50) {
 				return false;
 			}
 
