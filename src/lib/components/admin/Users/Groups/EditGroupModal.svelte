@@ -48,6 +48,7 @@
 		},
 		chat: {
 			controls: true,
+			image_capture: true,
 			file_upload: true,
 			delete: true,
 			edit: true,

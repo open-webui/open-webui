@@ -21,6 +21,7 @@
 		},
 		chat: {
 			controls: true,
+			image_capture: true,
 			file_upload: true,
 			delete: true,
 			edit: true,
@@ -269,6 +270,14 @@
 			</div>
 
 			<Switch bind:state={permissions.chat.system_prompt} />
+		</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Allow Image capture')}
+			</div>
+
+			<Switch bind:state={permissions.chat.image_capture} />
 		</div>
 
 		<div class="  flex w-full justify-between my-2 pr-2">
