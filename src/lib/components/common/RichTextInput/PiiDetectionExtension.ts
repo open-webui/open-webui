@@ -222,12 +222,15 @@ function syncWithSessionManager(
 	const workingEntities = conversationId
 		? piiSessionManager.getConversationEntitiesForDisplay(conversationId)
 		: piiSessionManager.getEntitiesForDisplay();
+		
+	// CRITICAL FIX: For new chats, also include temporary state entities
+	const temporaryEntities = !conversationId ? piiSessionManager.getTemporaryEntities() : [];
 	
-	// Merge persistent + working entities (working takes precedence for same labels)
+	// Merge persistent + working + temporary entities (working/temporary takes precedence for same labels)
 	const allSessionEntities = [...persistentEntities];
-	workingEntities.forEach(workingEntity => {
-		if (!persistentEntities.find(p => p.label === workingEntity.label)) {
-			allSessionEntities.push(workingEntity);
+	[...workingEntities, ...temporaryEntities].forEach(entity => {
+		if (!persistentEntities.find(p => p.label === entity.label)) {
+			allSessionEntities.push(entity);
 		}
 	});
 	
@@ -235,6 +238,7 @@ function syncWithSessionManager(
 		currentEntities: currentEntities.length,
 		persistentEntities: persistentEntities.length,
 		workingEntities: workingEntities.length,
+		temporaryEntities: temporaryEntities.length,
 		allSessionEntities: allSessionEntities.length
 	});
 	
@@ -412,9 +416,10 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 
 					// CRITICAL FIX: Load conversation entities for cross-message shouldMask persistence
 					// This ensures that entities unmasked in previous messages stay unmasked in new messages
+					// For new chats, load from temporary state instead of empty array
 					const conversationEntities = options.conversationId
 						? piiSessionManager.getConversationEntities(options.conversationId)
-						: [];
+						: piiSessionManager.getTemporaryEntities(); // ✅ Load temporary state for new chats
 					
 					// CRITICAL FIX: Merge plugin state + conversation state for complete context
 					// Plugin state takes precedence (for same-message interactions)
