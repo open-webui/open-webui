@@ -268,7 +268,7 @@ export class PiiSessionManager {
 		// Create conversation state from final temporary entities
 		const conversationState: ConversationPiiState = {
 			entities: finalEntities, // Use final entities only
-			modifiers: [...this.temporaryState.modifiers],
+			modifiers: [...this.globalModifiers, ...this.temporaryState.modifiers],
 			sessionId: this.sessionId || undefined,
 			apiKey: this.apiKey || undefined,
 			lastUpdated: Date.now()
