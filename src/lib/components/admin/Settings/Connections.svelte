@@ -402,7 +402,7 @@
 
 					<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
 						{$i18n.t(
-							'Model List Cache allows for faster access to model information by caching it locally.'
+							'Model List Cache speeds up access by fetching models only at startup or on settings save—faster, but may not show recent model changes.'
 						)}
 					</div>
 				</div>
