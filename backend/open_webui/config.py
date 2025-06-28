@@ -923,6 +923,18 @@ except Exception:
     pass
 OPENAI_API_BASE_URL = "https://api.openai.com/v1"
 
+
+####################################
+# MODEL_LIST
+####################################
+
+ENABLE_MODEL_LIST_CACHE = PersistentConfig(
+    "ENABLE_MODEL_LIST_CACHE",
+    "models.cache",
+    os.environ.get("ENABLE_MODEL_LIST_CACHE", "False").lower() == "true",
+)
+
+
 ####################################
 # TOOL_SERVERS
 ####################################

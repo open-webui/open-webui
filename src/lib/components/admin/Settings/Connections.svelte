@@ -7,7 +7,7 @@
 	import { getOllamaConfig, updateOllamaConfig } from '$lib/apis/ollama';
 	import { getOpenAIConfig, updateOpenAIConfig, getOpenAIModels } from '$lib/apis/openai';
 	import { getModels as _getModels } from '$lib/apis';
-	import { getDirectConnectionsConfig, setDirectConnectionsConfig } from '$lib/apis/configs';
+	import { getConnectionsConfig, setConnectionsConfig } from '$lib/apis/configs';
 
 	import { config, models, settings, user } from '$lib/stores';
 
@@ -43,7 +43,7 @@
 	let ENABLE_OPENAI_API: null | boolean = null;
 	let ENABLE_OLLAMA_API: null | boolean = null;
 
-	let directConnectionsConfig = null;
+	let connectionsConfig = null;
 
 	let pipelineUrls = {};
 	let showAddOpenAIConnectionModal = false;
@@ -106,15 +106,13 @@
 		}
 	};
 
-	const updateDirectConnectionsHandler = async () => {
-		const res = await setDirectConnectionsConfig(localStorage.token, directConnectionsConfig).catch(
-			(error) => {
-				toast.error(`${error}`);
-			}
-		);
+	const updateConnectionsHandler = async () => {
+		const res = await setConnectionsConfig(localStorage.token, connectionsConfig).catch((error) => {
+			toast.error(`${error}`);
+		});
 
 		if (res) {
-			toast.success($i18n.t('Direct Connections settings updated'));
+			toast.success($i18n.t('Connections settings updated'));
 			await models.set(await getModels());
 		}
 	};
@@ -150,7 +148,7 @@
 					openaiConfig = await getOpenAIConfig(localStorage.token);
 				})(),
 				(async () => {
-					directConnectionsConfig = await getDirectConnectionsConfig(localStorage.token);
+					connectionsConfig = await getConnectionsConfig(localStorage.token);
 				})()
 			]);
 
@@ -217,7 +215,7 @@
 
 <form class="flex flex-col h-full justify-between text-sm" on:submit|preventDefault={submitHandler}>
 	<div class=" overflow-y-scroll scrollbar-hidden h-full">
-		{#if ENABLE_OPENAI_API !== null && ENABLE_OLLAMA_API !== null && directConnectionsConfig !== null}
+		{#if ENABLE_OPENAI_API !== null && ENABLE_OLLAMA_API !== null && connectionsConfig !== null}
 			<div class="mb-3.5">
 				<div class=" mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
 
@@ -368,9 +366,9 @@
 						<div class="flex items-center">
 							<div class="">
 								<Switch
-									bind:state={directConnectionsConfig.ENABLE_DIRECT_CONNECTIONS}
+									bind:state={connectionsConfig.ENABLE_DIRECT_CONNECTIONS}
 									on:change={async () => {
-										updateDirectConnectionsHandler();
+										updateConnectionsHandler();
 									}}
 								/>
 							</div>
@@ -380,6 +378,31 @@
 					<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
 						{$i18n.t(
 							'Direct Connections allow users to connect to their own OpenAI compatible API endpoints.'
+						)}
+					</div>
+				</div>
+
+				<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+
+				<div class="my-2">
+					<div class="flex justify-between items-center text-sm">
+						<div class=" text-xs font-medium">{$i18n.t('Cache Model List')}</div>
+
+						<div class="flex items-center">
+							<div class="">
+								<Switch
+									bind:state={connectionsConfig.ENABLE_MODEL_LIST_CACHE}
+									on:change={async () => {
+										updateConnectionsHandler();
+									}}
+								/>
+							</div>
+						</div>
+					</div>
+
+					<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+						{$i18n.t(
+							'Model List Cache allows for faster access to model information by caching it locally.'
 						)}
 					</div>
 				</div>
