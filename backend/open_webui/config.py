@@ -215,7 +215,10 @@ class AppConfig:
     _redis_key_prefix: str
 
     def __init__(
-        self, redis_url: Optional[str] = None, redis_sentinels: Optional[list] = [], redis_key_prefix: str = "open-webui"
+        self,
+        redis_url: Optional[str] = None,
+        redis_sentinels: Optional[list] = [],
+        redis_key_prefix: str = "open-webui",
     ):
         super().__setattr__("_state", {})
         super().__setattr__("_redis_key_prefix", redis_key_prefix)
