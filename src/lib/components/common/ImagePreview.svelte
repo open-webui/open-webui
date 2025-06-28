@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onDestroy, onMount } from 'svelte';
 	import panzoom, { type PanZoom } from 'panzoom';
+	import { fetchImpl } from '$lib/fetch';
 
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
@@ -116,7 +117,7 @@
 							return;
 						} else if (src.startsWith('blob:')) {
 							// Handle blob URLs
-							fetch(src)
+							fetchImpl(src)
 								.then((response) => response.blob())
 								.then((blob) => {
 									// detect the MIME type from the blob
@@ -143,7 +144,7 @@
 							src.startsWith('https://')
 						) {
 							// Handle remote URLs
-							fetch(src)
+							fetchImpl(src)
 								.then((response) => response.blob())
 								.then((blob) => {
 									// detect the MIME type from the blob

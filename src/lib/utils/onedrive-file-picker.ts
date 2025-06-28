@@ -1,6 +1,7 @@
 import { PublicClientApplication } from '@azure/msal-browser';
 import type { PopupRequest } from '@azure/msal-browser';
 import { v4 as uuidv4 } from 'uuid';
+import { fetchImpl } from '$lib/fetch';
 
 class OneDriveConfig {
 	private static instance: OneDriveConfig;
@@ -36,7 +37,7 @@ class OneDriveConfig {
 			'Content-Type': 'application/json'
 		};
 
-		const response = await fetch('/api/config', {
+		const response = await fetchImpl('/api/config', {
 			headers,
 			credentials: 'include'
 		});
@@ -237,7 +238,7 @@ async function downloadOneDriveFile(
 	// The endpoint URL is provided in the file info
 	const fileInfoUrl = `${fileInfo['@sharePoint.endpoint']}/drives/${fileInfo.parentReference.driveId}/items/${fileInfo.id}`;
 
-	const response = await fetch(fileInfoUrl, {
+	const response = await fetchImpl(fileInfoUrl, {
 		headers: {
 			Authorization: `Bearer ${accessToken}`
 		}
@@ -254,7 +255,7 @@ async function downloadOneDriveFile(
 		throw new Error('Download URL not found in file data');
 	}
 
-	const downloadResponse = await fetch(downloadUrl);
+	const downloadResponse = await fetchImpl(downloadUrl);
 
 	if (!downloadResponse.ok) {
 		throw new Error(

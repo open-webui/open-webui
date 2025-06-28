@@ -1,9 +1,10 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
+import { fetchImpl } from '$lib/fetch';
 
 export const getMemories = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/memories/`, {
+	const res = await fetchImpl(`${WEBUI_API_BASE_URL}/memories/`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -31,7 +32,7 @@ export const getMemories = async (token: string) => {
 export const addNewMemory = async (token: string, content: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/memories/add`, {
+	const res = await fetchImpl(`${WEBUI_API_BASE_URL}/memories/add`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -62,7 +63,7 @@ export const addNewMemory = async (token: string, content: string) => {
 export const updateMemoryById = async (token: string, id: string, content: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/memories/${id}/update`, {
+	const res = await fetchImpl(`${WEBUI_API_BASE_URL}/memories/${id}/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -93,7 +94,7 @@ export const updateMemoryById = async (token: string, id: string, content: strin
 export const queryMemory = async (token: string, content: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/memories/query`, {
+	const res = await fetchImpl(`${WEBUI_API_BASE_URL}/memories/query`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -124,7 +125,7 @@ export const queryMemory = async (token: string, content: string) => {
 export const deleteMemoryById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/memories/${id}`, {
+	const res = await fetchImpl(`${WEBUI_API_BASE_URL}/memories/${id}`, {
 		method: 'DELETE',
 		headers: {
 			Accept: 'application/json',
@@ -156,7 +157,7 @@ export const deleteMemoryById = async (token: string, id: string) => {
 export const deleteMemoriesByUserId = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/memories/delete/user`, {
+	const res = await fetchImpl(`${WEBUI_API_BASE_URL}/memories/delete/user`, {
 		method: 'DELETE',
 		headers: {
 			Accept: 'application/json',

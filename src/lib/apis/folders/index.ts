@@ -1,9 +1,10 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
+import { fetchImpl } from '$lib/fetch';
 
 export const createNewFolder = async (token: string, name: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/folders/`, {
+	const res = await fetchImpl(`${WEBUI_API_BASE_URL}/folders/`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -33,7 +34,7 @@ export const createNewFolder = async (token: string, name: string) => {
 export const getFolders = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/folders/`, {
+	const res = await fetchImpl(`${WEBUI_API_BASE_URL}/folders/`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -64,7 +65,7 @@ export const getFolders = async (token: string = '') => {
 export const getFolderById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/folders/${id}`, {
+	const res = await fetchImpl(`${WEBUI_API_BASE_URL}/folders/${id}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -95,7 +96,7 @@ export const getFolderById = async (token: string, id: string) => {
 export const updateFolderNameById = async (token: string, id: string, name: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/folders/${id}/update`, {
+	const res = await fetchImpl(`${WEBUI_API_BASE_URL}/folders/${id}/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -133,7 +134,7 @@ export const updateFolderIsExpandedById = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/folders/${id}/update/expanded`, {
+	const res = await fetchImpl(`${WEBUI_API_BASE_URL}/folders/${id}/update/expanded`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -167,7 +168,7 @@ export const updateFolderIsExpandedById = async (
 export const updateFolderParentIdById = async (token: string, id: string, parentId?: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/folders/${id}/update/parent`, {
+	const res = await fetchImpl(`${WEBUI_API_BASE_URL}/folders/${id}/update/parent`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -206,7 +207,7 @@ type FolderItems = {
 export const updateFolderItemsById = async (token: string, id: string, items: FolderItems) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/folders/${id}/update/items`, {
+	const res = await fetchImpl(`${WEBUI_API_BASE_URL}/folders/${id}/update/items`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -240,7 +241,7 @@ export const updateFolderItemsById = async (token: string, id: string, items: Fo
 export const deleteFolderById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/folders/${id}`, {
+	const res = await fetchImpl(`${WEBUI_API_BASE_URL}/folders/${id}`, {
 		method: 'DELETE',
 		headers: {
 			Accept: 'application/json',

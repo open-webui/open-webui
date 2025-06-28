@@ -1,9 +1,10 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
+import { fetchImpl } from '$lib/fetch';
 
 export const getGravatarUrl = async (token: string, email: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/utils/gravatar?email=${email}`, {
+	const res = await fetchImpl(`${WEBUI_API_BASE_URL}/utils/gravatar?email=${email}`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -26,7 +27,7 @@ export const getGravatarUrl = async (token: string, email: string) => {
 export const executeCode = async (token: string, code: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/utils/code/execute`, {
+	const res = await fetchImpl(`${WEBUI_API_BASE_URL}/utils/code/execute`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -60,7 +61,7 @@ export const executeCode = async (token: string, code: string) => {
 export const formatPythonCode = async (token: string, code: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/utils/code/format`, {
+	const res = await fetchImpl(`${WEBUI_API_BASE_URL}/utils/code/format`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -94,7 +95,7 @@ export const formatPythonCode = async (token: string, code: string) => {
 export const downloadChatAsPDF = async (token: string, title: string, messages: object[]) => {
 	let error = null;
 
-	const blob = await fetch(`${WEBUI_API_BASE_URL}/utils/pdf`, {
+	const blob = await fetchImpl(`${WEBUI_API_BASE_URL}/utils/pdf`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -121,7 +122,7 @@ export const downloadChatAsPDF = async (token: string, title: string, messages: 
 export const getHTMLFromMarkdown = async (token: string, md: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/utils/markdown`, {
+	const res = await fetchImpl(`${WEBUI_API_BASE_URL}/utils/markdown`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -147,7 +148,7 @@ export const getHTMLFromMarkdown = async (token: string, md: string) => {
 export const downloadDatabase = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/utils/db/download`, {
+	const res = await fetchImpl(`${WEBUI_API_BASE_URL}/utils/db/download`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -183,7 +184,7 @@ export const downloadDatabase = async (token: string) => {
 export const downloadLiteLLMConfig = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/utils/litellm/config`, {
+	const res = await fetchImpl(`${WEBUI_API_BASE_URL}/utils/litellm/config`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',

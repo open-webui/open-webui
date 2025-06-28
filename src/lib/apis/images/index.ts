@@ -1,9 +1,10 @@
 import { IMAGES_API_BASE_URL } from '$lib/constants';
+import { fetchImpl } from '$lib/fetch';
 
 export const getConfig = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${IMAGES_API_BASE_URL}/config`, {
+	const res = await fetchImpl(`${IMAGES_API_BASE_URL}/config`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -35,7 +36,7 @@ export const getConfig = async (token: string = '') => {
 export const updateConfig = async (token: string = '', config: object) => {
 	let error = null;
 
-	const res = await fetch(`${IMAGES_API_BASE_URL}/config/update`, {
+	const res = await fetchImpl(`${IMAGES_API_BASE_URL}/config/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -70,7 +71,7 @@ export const updateConfig = async (token: string = '', config: object) => {
 export const verifyConfigUrl = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${IMAGES_API_BASE_URL}/config/url/verify`, {
+	const res = await fetchImpl(`${IMAGES_API_BASE_URL}/config/url/verify`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -102,7 +103,7 @@ export const verifyConfigUrl = async (token: string = '') => {
 export const getImageGenerationConfig = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${IMAGES_API_BASE_URL}/image/config`, {
+	const res = await fetchImpl(`${IMAGES_API_BASE_URL}/image/config`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -134,7 +135,7 @@ export const getImageGenerationConfig = async (token: string = '') => {
 export const updateImageGenerationConfig = async (token: string = '', config: object) => {
 	let error = null;
 
-	const res = await fetch(`${IMAGES_API_BASE_URL}/image/config/update`, {
+	const res = await fetchImpl(`${IMAGES_API_BASE_URL}/image/config/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -167,7 +168,7 @@ export const updateImageGenerationConfig = async (token: string = '', config: ob
 export const getImageGenerationModels = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${IMAGES_API_BASE_URL}/models`, {
+	const res = await fetchImpl(`${IMAGES_API_BASE_URL}/models`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -199,7 +200,7 @@ export const getImageGenerationModels = async (token: string = '') => {
 export const imageGenerations = async (token: string = '', prompt: string) => {
 	let error = null;
 
-	const res = await fetch(`${IMAGES_API_BASE_URL}/generations`, {
+	const res = await fetchImpl(`${IMAGES_API_BASE_URL}/generations`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',

@@ -1,9 +1,10 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
+import { fetchImpl } from '$lib/fetch';
 
 export const getConfig = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/evaluations/config`, {
+	const res = await fetchImpl(`${WEBUI_API_BASE_URL}/evaluations/config`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -34,7 +35,7 @@ export const getConfig = async (token: string = '') => {
 export const updateConfig = async (token: string, config: object) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/evaluations/config`, {
+	const res = await fetchImpl(`${WEBUI_API_BASE_URL}/evaluations/config`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -65,7 +66,7 @@ export const updateConfig = async (token: string, config: object) => {
 export const getAllFeedbacks = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/evaluations/feedbacks/all`, {
+	const res = await fetchImpl(`${WEBUI_API_BASE_URL}/evaluations/feedbacks/all`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -96,7 +97,7 @@ export const getAllFeedbacks = async (token: string = '') => {
 export const exportAllFeedbacks = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/evaluations/feedbacks/all/export`, {
+	const res = await fetchImpl(`${WEBUI_API_BASE_URL}/evaluations/feedbacks/all/export`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -127,7 +128,7 @@ export const exportAllFeedbacks = async (token: string = '') => {
 export const createNewFeedback = async (token: string, feedback: object) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/evaluations/feedback`, {
+	const res = await fetchImpl(`${WEBUI_API_BASE_URL}/evaluations/feedback`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -158,7 +159,7 @@ export const createNewFeedback = async (token: string, feedback: object) => {
 export const getFeedbackById = async (token: string, feedbackId: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/evaluations/feedback/${feedbackId}`, {
+	const res = await fetchImpl(`${WEBUI_API_BASE_URL}/evaluations/feedback/${feedbackId}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -189,7 +190,7 @@ export const getFeedbackById = async (token: string, feedbackId: string) => {
 export const updateFeedbackById = async (token: string, feedbackId: string, feedback: object) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/evaluations/feedback/${feedbackId}`, {
+	const res = await fetchImpl(`${WEBUI_API_BASE_URL}/evaluations/feedback/${feedbackId}`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -220,7 +221,7 @@ export const updateFeedbackById = async (token: string, feedbackId: string, feed
 export const deleteFeedbackById = async (token: string, feedbackId: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/evaluations/feedback/${feedbackId}`, {
+	const res = await fetchImpl(`${WEBUI_API_BASE_URL}/evaluations/feedback/${feedbackId}`, {
 		method: 'DELETE',
 		headers: {
 			Accept: 'application/json',

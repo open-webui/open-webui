@@ -1,4 +1,5 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
+import { fetchImpl } from '$lib/fetch';
 
 type PromptItem = {
 	command: string;
@@ -10,7 +11,7 @@ type PromptItem = {
 export const createNewPrompt = async (token: string, prompt: PromptItem) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/create`, {
+	const res = await fetchImpl(`${WEBUI_API_BASE_URL}/prompts/create`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -42,7 +43,7 @@ export const createNewPrompt = async (token: string, prompt: PromptItem) => {
 export const getPrompts = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/`, {
+	const res = await fetchImpl(`${WEBUI_API_BASE_URL}/prompts/`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -73,7 +74,7 @@ export const getPrompts = async (token: string = '') => {
 export const getPromptList = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/list`, {
+	const res = await fetchImpl(`${WEBUI_API_BASE_URL}/prompts/list`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -104,7 +105,7 @@ export const getPromptList = async (token: string = '') => {
 export const getPromptByCommand = async (token: string, command: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/command/${command}`, {
+	const res = await fetchImpl(`${WEBUI_API_BASE_URL}/prompts/command/${command}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -136,7 +137,7 @@ export const getPromptByCommand = async (token: string, command: string) => {
 export const updatePromptByCommand = async (token: string, prompt: PromptItem) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/command/${prompt.command}/update`, {
+	const res = await fetchImpl(`${WEBUI_API_BASE_URL}/prompts/command/${prompt.command}/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -174,7 +175,7 @@ export const deletePromptByCommand = async (token: string, command: string) => {
 
 	command = command.charAt(0) === '/' ? command.slice(1) : command;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/command/${command}/delete`, {
+	const res = await fetchImpl(`${WEBUI_API_BASE_URL}/prompts/command/${command}/delete`, {
 		method: 'DELETE',
 		headers: {
 			Accept: 'application/json',

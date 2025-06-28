@@ -1,4 +1,5 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
+import { fetchImpl } from '$lib/fetch';
 import { getTimeRange } from '$lib/utils';
 
 type NoteItem = {
@@ -11,7 +12,7 @@ type NoteItem = {
 export const createNewNote = async (token: string, note: NoteItem) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/notes/create`, {
+	const res = await fetchImpl(`${WEBUI_API_BASE_URL}/notes/create`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -42,7 +43,7 @@ export const createNewNote = async (token: string, note: NoteItem) => {
 export const getNotes = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/notes/`, {
+	const res = await fetchImpl(`${WEBUI_API_BASE_URL}/notes/`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -90,7 +91,7 @@ export const getNotes = async (token: string = '') => {
 export const getNoteById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/notes/${id}`, {
+	const res = await fetchImpl(`${WEBUI_API_BASE_URL}/notes/${id}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -122,7 +123,7 @@ export const getNoteById = async (token: string, id: string) => {
 export const updateNoteById = async (token: string, id: string, note: NoteItem) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/notes/${id}/update`, {
+	const res = await fetchImpl(`${WEBUI_API_BASE_URL}/notes/${id}/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -157,7 +158,7 @@ export const updateNoteById = async (token: string, id: string, note: NoteItem) 
 export const deleteNoteById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/notes/${id}/delete`, {
+	const res = await fetchImpl(`${WEBUI_API_BASE_URL}/notes/${id}/delete`, {
 		method: 'DELETE',
 		headers: {
 			Accept: 'application/json',

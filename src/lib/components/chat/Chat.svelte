@@ -13,6 +13,7 @@
 	import { get, type Unsubscriber, type Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
 	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { fetchImpl } from '$lib/fetch';
 
 	import {
 		chatId,
@@ -556,7 +557,7 @@
 
 			// Attempt to fetch the file
 			console.log('Fetching file content from Google Drive...');
-			const fileResponse = await fetch(fileData.url, fetchOptions);
+			const fileResponse = await fetchImpl(fileData.url, fetchOptions);
 
 			if (!fileResponse.ok) {
 				const errorText = await fileResponse.text();

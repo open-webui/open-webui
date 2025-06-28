@@ -1,10 +1,12 @@
+import { fetchImpl } from '$lib/fetch';
+
 // Google Drive Picker API configuration
 let API_KEY = '';
 let CLIENT_ID = '';
 
 // Function to fetch credentials from backend config
 async function getCredentials() {
-	const response = await fetch('/api/config');
+	const response = await fetchImpl('/api/config');
 	if (!response.ok) {
 		throw new Error('Failed to fetch Google Drive credentials');
 	}
@@ -166,7 +168,7 @@ export const createPicker = () => {
 								downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
 							}
 							// Create a Blob from the file download
-							const response = await fetch(downloadUrl, {
+							const response = await fetchImpl(downloadUrl, {
 								headers: {
 									Authorization: `Bearer ${token}`,
 									Accept: '*/*'

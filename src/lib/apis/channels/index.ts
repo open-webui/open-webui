@@ -1,4 +1,5 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
+import { fetchImpl } from '$lib/fetch';
 
 type ChannelForm = {
 	name: string;
@@ -10,7 +11,7 @@ type ChannelForm = {
 export const createNewChannel = async (token: string = '', channel: ChannelForm) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/channels/create`, {
+	const res = await fetchImpl(`${WEBUI_API_BASE_URL}/channels/create`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -42,7 +43,7 @@ export const createNewChannel = async (token: string = '', channel: ChannelForm)
 export const getChannels = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/channels/`, {
+	const res = await fetchImpl(`${WEBUI_API_BASE_URL}/channels/`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -73,7 +74,7 @@ export const getChannels = async (token: string = '') => {
 export const getChannelById = async (token: string = '', channel_id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/channels/${channel_id}`, {
+	const res = await fetchImpl(`${WEBUI_API_BASE_URL}/channels/${channel_id}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -108,7 +109,7 @@ export const updateChannelById = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/channels/${channel_id}/update`, {
+	const res = await fetchImpl(`${WEBUI_API_BASE_URL}/channels/${channel_id}/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -140,7 +141,7 @@ export const updateChannelById = async (
 export const deleteChannelById = async (token: string = '', channel_id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/channels/${channel_id}/delete`, {
+	const res = await fetchImpl(`${WEBUI_API_BASE_URL}/channels/${channel_id}/delete`, {
 		method: 'DELETE',
 		headers: {
 			Accept: 'application/json',
@@ -176,7 +177,7 @@ export const getChannelMessages = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(
+	const res = await fetchImpl(
 		`${WEBUI_API_BASE_URL}/channels/${channel_id}/messages?skip=${skip}&limit=${limit}`,
 		{
 			method: 'GET',
@@ -216,7 +217,7 @@ export const getChannelThreadMessages = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(
+	const res = await fetchImpl(
 		`${WEBUI_API_BASE_URL}/channels/${channel_id}/messages/${message_id}/thread?skip=${skip}&limit=${limit}`,
 		{
 			method: 'GET',
@@ -257,7 +258,7 @@ type MessageForm = {
 export const sendMessage = async (token: string = '', channel_id: string, message: MessageForm) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/channels/${channel_id}/messages/post`, {
+	const res = await fetchImpl(`${WEBUI_API_BASE_URL}/channels/${channel_id}/messages/post`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -294,7 +295,7 @@ export const updateMessage = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(
+	const res = await fetchImpl(
 		`${WEBUI_API_BASE_URL}/channels/${channel_id}/messages/${message_id}/update`,
 		{
 			method: 'POST',
@@ -334,7 +335,7 @@ export const addReaction = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(
+	const res = await fetchImpl(
 		`${WEBUI_API_BASE_URL}/channels/${channel_id}/messages/${message_id}/reactions/add`,
 		{
 			method: 'POST',
@@ -374,7 +375,7 @@ export const removeReaction = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(
+	const res = await fetchImpl(
 		`${WEBUI_API_BASE_URL}/channels/${channel_id}/messages/${message_id}/reactions/remove`,
 		{
 			method: 'POST',
@@ -409,7 +410,7 @@ export const removeReaction = async (
 export const deleteMessage = async (token: string = '', channel_id: string, message_id: string) => {
 	let error = null;
 
-	const res = await fetch(
+	const res = await fetchImpl(
 		`${WEBUI_API_BASE_URL}/channels/${channel_id}/messages/${message_id}/delete`,
 		{
 			method: 'DELETE',
