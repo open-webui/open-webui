@@ -3,15 +3,14 @@ import math
 import stripe
 from typing import Optional
 from fastapi import HTTPException
-import time
 
 from beyond_the_loop.models.users import Users
 from beyond_the_loop.models.companies import Companies
 from beyond_the_loop.services.email_service import EmailService
 from beyond_the_loop.models.model_costs import ModelCosts
 
-PROFIT_MARGIN_FACTOR = 1.5
-DOLLAR_PER_EUR = 0.9
+PROFIT_MARGIN_FACTOR = 1.15
+EUR_PER_DOLLAR = 0.9
 
 class CreditService:
     def __init__(self):
@@ -90,21 +89,21 @@ class CreditService:
         return credit_cost
 
     async def subtract_credits_by_user_for_stt(self, user, model_name: str, minutes: float):
-        tts_cost = ModelCosts.get_cost_per_minute_tts_by_model_name(model_name) * minutes * PROFIT_MARGIN_FACTOR * DOLLAR_PER_EUR
+        tts_cost = ModelCosts.get_cost_per_minute_tts_by_model_name(model_name) * minutes * PROFIT_MARGIN_FACTOR * EUR_PER_DOLLAR
 
         credit_cost = tts_cost
 
         return await self.subtract_credits_by_user_and_credits(user, credit_cost)
 
     async def subtract_credits_by_user_for_tts(self, user, model_name: str, characters: int):
-        tts_cost = characters * (ModelCosts.get_cost_per_million_characters_stt_by_model_name(model_name) / 1000000) * PROFIT_MARGIN_FACTOR * DOLLAR_PER_EUR
+        tts_cost = characters * (ModelCosts.get_cost_per_million_characters_stt_by_model_name(model_name) / 1000000) * PROFIT_MARGIN_FACTOR * EUR_PER_DOLLAR
 
         credit_cost = tts_cost
 
         return await self.subtract_credits_by_user_and_credits(user, credit_cost)
 
     async def subtract_credits_by_user_for_image(self, user, model_name: str):
-        image_cost = ModelCosts.get_cost_per_image_by_model_name(model_name) * PROFIT_MARGIN_FACTOR * DOLLAR_PER_EUR
+        image_cost = ModelCosts.get_cost_per_image_by_model_name(model_name) * PROFIT_MARGIN_FACTOR * EUR_PER_DOLLAR
 
         credit_cost = image_cost
 
@@ -124,7 +123,7 @@ class CreditService:
         else:
             search_query_cost = 0
 
-        total_costs = (input_tokens * costs_per_input_token + output_tokens * cost_per_output_token + reasoning_tokens * cost_per_reasoning_token + search_query_cost) * PROFIT_MARGIN_FACTOR * DOLLAR_PER_EUR
+        total_costs = (input_tokens * costs_per_input_token + output_tokens * cost_per_output_token + reasoning_tokens * cost_per_reasoning_token + search_query_cost) * PROFIT_MARGIN_FACTOR * EUR_PER_DOLLAR
 
         credit_cost = total_costs
 
