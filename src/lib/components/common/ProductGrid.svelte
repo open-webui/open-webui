@@ -45,7 +45,6 @@
                 url: ('attributes' in experience && 'business_url' in experience.attributes)
                     ? experience.attributes.business_url
                     : ('url' in experience ? experience.url : null),
-                // url: experience.url
             },
             thumbnails: experience.thumbnails
         };

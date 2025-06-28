@@ -12,7 +12,7 @@
 	export let className = '';
 	export let inputValue = '';
 	export let numberOfSuggestions = 5;
-	export let numberOfSuggestionsMobile = 9;
+	export let suggestionPerRow = 5;
 
 	let sortedPrompts = [];
 
@@ -26,6 +26,8 @@
 
 	// Initialize Fuse
 	$: fuse = new Fuse(sortedPrompts, fuseOptions);
+	$: numberOfSuggestions = $mobile ? 9 : 10;
+	$: suggestionPerRow = $mobile ? 3 : 5;
 
 	// Update the filteredPrompts if inputValue changes
 	// Only increase version if something wirklich geändert hat
@@ -48,8 +50,18 @@
 			filteredPrompts = [];
 		}
 		else if (inputValue.trim() === '') {
-			// If inputValue is empty, show all prompts
-			filteredPrompts = sortedPrompts.filter((prompt) => prompt.pin === true); // Only pinned prompts
+			// If inputValue is empty, show any prompts that are available using following logic:
+
+			// Always include pinned prompts
+			filteredPrompts = sortedPrompts.filter((prompt) => prompt.pin === true);
+
+			// Add non-pinned prompts at random if there is space
+			const nonPinnedPrompts = sortedPrompts.filter((prompt) => !prompt.pin && prompt.in_season === true);
+			const availableSpace = numberOfSuggestions - filteredPrompts.length;
+			if (availableSpace > 0) {
+				const randomNonPinnedPrompts = nonPinnedPrompts.sort(() => Math.random() - 0.5).slice(0, availableSpace);
+				filteredPrompts = [...filteredPrompts, ...randomNonPinnedPrompts];
+			}
 		} else if (inputValue.length > 0) {
 			const newFilteredPrompts = [
 				...(inputValue.trim() && fuse
@@ -87,63 +99,38 @@
 	{/if}
 </div>
 
-{#if !$mobile}
-	<div class="h-40 overflow-auto scrollbar-none {className} flex flex-wrap gap-2 items-start">
-		{#if filteredPrompts.length > 0}
-			{#each filteredPrompts.slice(0, numberOfSuggestions) as prompt, idx (prompt.id || prompt.content)}
-				<button
-					class="waterfall flex flex-col flex-1 shrink-0 w-[100px] h-[100px] justify-start text-left
-									px-3 py-2 rounded-xl border border-gray-100 bg-white hover:bg-gray-100
-									dark:bg-gray-800 dark:border-gray-600 dark:hover:bg-gray-700 transition group shadow-sm"
-					style="animation-delay: {idx * 60}ms; overflow-wrap: break-word;"
-					on:click={() => dispatch('select', prompt.content)}
-				>
-					{#if prompt.title && prompt.title[0] !== ''}
-						<p class="text-base font-normal text-gray-800 dark:text-gray-200 text-ellipsis overflow-auto">
-							{prompt.title[0]}
-						</p>
-					{:else}
-						<p class="font-medium text-gray-800 dark:text-gray-200 text-ellipsis overflow-auto">
-							{prompt.content}
-						</p>
-					{/if}
-				</button>
-			{/each}
-		{/if}
-	</div>
-{:else}
-	<div class="h-80 overflow-auto scrollbar-none {className} flex flex-col gap-2 items-center">
-		{#if filteredPrompts.length > 0}
-			{#each filteredPrompts.slice(0, numberOfSuggestionsMobile).reduce((rows, prompt, idx) => {
-				if (idx % 3 === 0) rows.push([]);
-				rows[rows.length - 1].push(prompt);
-				return rows;
-			}, []) as row, rowIdx}
-				<div class="flex gap-2">
-					{#each row as prompt, idx (prompt.id || prompt.content)}
-						<button
-							class="waterfall flex flex-col flex-1 shrink-0 w-[100px] h-[100px] justify-center text-left
-											px-3 py-2 rounded-xl border border-gray-100 bg-white hover:bg-gray-100
-											dark:bg-gray-800 dark:border-gray-600 dark:hover:bg-gray-700 transition group shadow-sm"
-							style="animation-delay: {(rowIdx * 3 + idx) * 60}ms; overflow-wrap: break-word;"
-							on:click={() => dispatch('select', prompt.content)}
-						>
-							{#if prompt.title && prompt.title[0] !== ''}
-								<p class="text-base font-normal text-gray-800 dark:text-gray-200 text-ellipsis overflow-auto">
-									{prompt.title[0]}
-								</p>
-							{:else}
-								<p class="font-sm text-gray-800 dark:text-gray-200 text-ellipsis overflow-auto">
-									{prompt.content}
-								</p>
-							{/if}
-						</button>
-					{/each}
-				</div>
-			{/each}
-		{/if}
-	</div>
-{/if}
+<div class="{($mobile ? 'h-80 flex-col' : 'h-60 flex-wrap')} overflow-auto scrollbar-none {className} flex gap-2 items-center">
+	{#if filteredPrompts.length > 0}
+		<!--{#each filteredPrompts.slice(0, numberOfSuggestions) as prompt, idx (prompt.id || prompt.content)}-->
+		{#each filteredPrompts.slice(0, numberOfSuggestions).reduce((rows, prompt, idx) => {
+			if (idx % suggestionPerRow === 0) rows.push([]);
+			rows[rows.length - 1].push(prompt);
+			return rows;
+		}, []) as row, rowIdx}
+			<div class="flex gap-2 { !$mobile ? 'items-center w-full' : '' }">
+				{#each row as prompt, idx (prompt.id || prompt.content)}
+					<button
+						class="waterfall flex flex-col flex-1 shrink-0 w-[100px] h-[100px] justify-start text-left
+										px-3 py-2 rounded-xl border border-gray-100 bg-white hover:bg-gray-100
+										dark:bg-gray-800 dark:border-gray-600 dark:hover:bg-gray-700 transition group shadow-sm"
+						style="animation-delay: {idx * 60}ms; overflow-wrap: break-word;"
+						on:click={() => dispatch('select', prompt.content)}
+					>
+						{#if prompt.title && prompt.title[0] !== ''}
+							<p class="{ !$mobile ? 'text-base' : 'text-sm' } font-normal text-gray-800 dark:text-gray-200 text-ellipsis overflow-auto">
+								{prompt.title[0]}
+							</p>
+						{:else}
+							<p class="{ !$mobile ? 'text-base' : 'text-sm' } text-gray-800 dark:text-gray-200 text-ellipsis overflow-auto">
+								{prompt.content}
+							</p>
+						{/if}
+					</button>
+				{/each}
+			</div>
+		{/each}
+	{/if}
+</div>
 
 <style>
 	/* Waterfall animation for the suggestions */
