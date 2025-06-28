@@ -11,7 +11,7 @@
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import MagnifyingGlass from '$lib/components/icons/MagnifyingGlass.svelte';
+	import Search from '$lib/components/icons/Search.svelte';
 
 	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
@@ -350,7 +350,7 @@
 		<Tooltip content={$i18n.t('Re-rank models by topic similarity')}>
 			<div class="flex flex-1">
 				<div class=" self-center ml-1 mr-3">
-					<MagnifyingGlass className="size-3" />
+					<Search className="size-3" />
 				</div>
 				<input
 					class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
@@ -371,7 +371,7 @@
 	{#if loadingLeaderboard}
 		<div class=" absolute top-0 bottom-0 left-0 right-0 flex">
 			<div class="m-auto">
-				<Spinner />
+				<Spinner className="size-5" />
 			</div>
 		</div>
 	{/if}

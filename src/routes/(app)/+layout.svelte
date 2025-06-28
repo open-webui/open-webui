@@ -198,7 +198,13 @@
 				) {
 					event.preventDefault();
 					console.log('temporaryChat');
-					temporaryChatEnabled.set(!$temporaryChatEnabled);
+
+					if ($user?.permissions?.chat?.temporary_enforced) {
+						temporaryChatEnabled.set(true);
+					} else {
+						temporaryChatEnabled.set(!$temporaryChatEnabled);
+					}
+
 					await goto('/');
 					const newChatButton = document.getElementById('new-chat-button');
 					setTimeout(() => {
@@ -333,7 +339,7 @@
 				<slot />
 			{:else}
 				<div class="w-full flex-1 h-full flex items-center justify-center">
-					<Spinner />
+					<Spinner className="size-5" />
 				</div>
 			{/if}
 		</div>

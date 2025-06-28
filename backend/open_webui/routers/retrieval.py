@@ -1794,6 +1794,13 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
             request.app.state.config.WEB_SEARCH_RESULT_COUNT,
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
         )
+    elif engine == "exa":
+        return search_exa(
+            request.app.state.config.EXA_API_KEY,
+            query,
+            request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+            request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+        )
     elif engine == "perplexity":
         return search_perplexity(
             request.app.state.config.PERPLEXITY_API_KEY,

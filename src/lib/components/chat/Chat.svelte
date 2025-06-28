@@ -708,6 +708,10 @@
 	//////////////////////////
 
 	const initNewChat = async () => {
+		if ($user?.permissions?.chat?.temporary_enforced) {
+			await temporaryChatEnabled.set(true);
+		}
+
 		const availableModels = $models
 			.filter((m) => !(m?.info?.meta?.hidden ?? false))
 			.map((m) => m.id);
@@ -2227,7 +2231,7 @@
 	{:else if loading}
 		<div class=" flex items-center justify-center h-full w-full">
 			<div class="m-auto">
-				<Spinner />
+				<Spinner className="size-5" />
 			</div>
 		</div>
 	{/if}

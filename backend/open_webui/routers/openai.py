@@ -21,6 +21,7 @@ from open_webui.config import (
     CACHE_DIR,
 )
 from open_webui.env import (
+    MODELS_CACHE_TTL,
     AIOHTTP_CLIENT_SESSION_SSL,
     AIOHTTP_CLIENT_TIMEOUT,
     AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST,
@@ -386,7 +387,7 @@ async def get_filtered_models(models, user):
     return filtered_models
 
 
-@cached(ttl=1)
+@cached(ttl=MODELS_CACHE_TTL)
 async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
     log.info("get_all_models()")
 
