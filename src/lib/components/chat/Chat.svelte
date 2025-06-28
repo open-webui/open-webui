@@ -708,6 +708,10 @@
 	//////////////////////////
 
 	const initNewChat = async () => {
+		if ($user?.permissions?.chat?.temporary_enforced) {
+			await temporaryChatEnabled.set(true);
+		}
+
 		const availableModels = $models
 			.filter((m) => !(m?.info?.meta?.hidden ?? false))
 			.map((m) => m.id);

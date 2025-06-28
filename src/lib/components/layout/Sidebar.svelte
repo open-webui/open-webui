@@ -491,7 +491,12 @@
 				on:click={async () => {
 					selectedChatId = null;
 
-					await temporaryChatEnabled.set(false);
+					if ($user?.permissions?.chat?.temporary_enforced) {
+						await temporaryChatEnabled.set(true);
+					} else {
+						await temporaryChatEnabled.set(false);
+					}
+
 					setTimeout(() => {
 						if ($mobile) {
 							showSidebar.set(false);
