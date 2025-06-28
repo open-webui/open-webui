@@ -5,12 +5,12 @@ import { PiiSessionManager } from '$lib/utils/pii';
 import i18next from 'i18next';
 
 // Types for the Shield API modifiers
-export type ModifierAction = 'ignore' | 'mask';
+export type ModifierAction = 'ignore' | 'string-mask' | 'word-mask';
 
 export interface PiiModifier {
 	action: ModifierAction;
 	entity: string;
-	type?: string; // PII type - required for 'mask' action
+	type?: string; // PII type - required for 'string-mask' action
 	id: string; // Unique identifier for this modifier
 }
 
@@ -1118,7 +1118,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 				const onMaskSelection = (text: string, piiType: string, from: number, to: number) => {
 					const tr = view.state.tr.setMeta(piiModifierExtensionKey, {
 						type: 'ADD_MODIFIER',
-						modifierAction: 'mask' as ModifierAction,
+						modifierAction: 'string-mask' as ModifierAction,
 						entity: text,
 						piiType,
 						from,
@@ -1311,7 +1311,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 						
 						// Find mask modifier for this entity
 						const maskModifier = sessionModifiers.find(modifier => 
-							modifier.action === 'mask' && 
+							modifier.action === 'string-mask' && 
 							modifier.entity.toLowerCase() === entityText.toLowerCase()
 						);
 						
@@ -1529,7 +1529,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 							const onMask = (piiType: string) => {
 								const tr = view.state.tr.setMeta(piiModifierExtensionKey, {
 									type: 'ADD_MODIFIER',
-									modifierAction: 'mask' as ModifierAction,
+									modifierAction: 'string-mask' as ModifierAction,
 									entity: finalTargetText,
 									piiType,
 									from: targetInfo.from,
@@ -1572,7 +1572,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 								existingModifiers, // Pass existing modifiers
 								onRemoveModifier, // Pass removal callback
 								timeoutManager, // Pass timeout manager
-								existingModifiers.length === 0 || existingModifiers.some(m => m.action === 'mask') // Show text field if no modifiers or has mask modifiers
+								existingModifiers.length === 0 || existingModifiers.some(m => m.action === 'string-mask') // Show text field if no modifiers or has mask modifiers
 							);
 
 							document.body.appendChild(hoverMenuElement);
@@ -1752,7 +1752,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 			// Clear only mask modifiers (keep ignore modifiers)
 			clearMaskModifiers: () => ({ state, dispatch }: any) => {
 				const pluginState = piiModifierExtensionKey.getState(state);
-				const maskModifiers = pluginState?.modifiers.filter(m => m.action === 'mask') || [];
+				const maskModifiers = pluginState?.modifiers.filter(m => m.action === 'string-mask') || [];
 				
 				if (maskModifiers.length === 0) {
 					return false; // No mask modifiers to clear

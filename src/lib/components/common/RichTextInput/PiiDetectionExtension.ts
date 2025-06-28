@@ -342,9 +342,9 @@ function createPiiDecorations(entities: ExtendedPiiEntity[], modifiers: PiiModif
 					const matchEnd = matchStart + match[0].length;
 					
 					if (matchStart >= 0 && matchEnd <= doc.content.size && matchStart < matchEnd) {
-						const decorationClass = modifier.action === 'mask' 
-							? 'pii-modifier-highlight pii-modifier-mask'
-							: 'pii-modifier-highlight pii-modifier-ignore';
+											const decorationClass = modifier.action === 'string-mask' 
+						? 'pii-modifier-highlight pii-modifier-mask'
+						: 'pii-modifier-highlight pii-modifier-ignore';
 						
 						decorations.push(
 							Decoration.inline(matchStart, matchEnd, {

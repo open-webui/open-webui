@@ -1,5 +1,12 @@
 // PII Detection API using NENNA.ai
-const NENNA_API_BASE_URL = 'https://api.nenna.ai/latest';
+import { config } from '$lib/stores';
+import { get } from 'svelte/store';
+
+// Get the PII API base URL from the config store
+const getPiiApiBaseUrl = (): string => {
+	const configValue = get(config);
+	return configValue?.pii?.api_base_url || 'https://api.nenna.ai/latest';
+};
 
 export interface PiiEntity {
 	id: number;
@@ -47,7 +54,7 @@ export const createPiiSession = async (
 	apiKey: string,
 	ttl: string = '24h'
 ): Promise<PiiSession> => {
-	const response = await fetch(`${NENNA_API_BASE_URL}/sessions`, {
+	const response = await fetch(`${getPiiApiBaseUrl()}/sessions`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -68,7 +75,7 @@ export const createPiiSession = async (
 
 // Interface for Shield API modifiers
 export interface ShieldApiModifier {
-	action: 'ignore' | 'mask';
+	action: 'ignore' | 'word-mask' | 'string-mask';
 	entity: string;
 	type?: string;
 }
@@ -82,11 +89,16 @@ export const maskPiiText = async (
 	createSession: boolean = false,
 	quiet: boolean = false
 ): Promise<PiiMaskResponse> => {
-	const url = new URL(`${NENNA_API_BASE_URL}/text/mask`);
+	const url = new URL(`${getPiiApiBaseUrl()}/text/mask`);
 	if (createSession) url.searchParams.set('create_session', 'true');
 	if (quiet) url.searchParams.set('quiet', 'true');
 
-	const requestBody: any = {
+	const requestBody: {
+		text: string[];
+		pii_labels: { detect: string[] };
+		known_entities?: KnownPiiEntity[];
+		modifiers?: ShieldApiModifier[];
+	} = {
 		text,
 		pii_labels: {
 			detect: ['ALL']
@@ -125,7 +137,7 @@ export const unmaskPiiText = async (
 	text: string[],
 	entities: PiiEntity[]
 ): Promise<PiiUnmaskResponse> => {
-	const response = await fetch(`${NENNA_API_BASE_URL}/text/unmask`, {
+	const response = await fetch(`${getPiiApiBaseUrl()}/text/unmask`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -153,10 +165,15 @@ export const maskPiiTextWithSession = async (
 	modifiers: ShieldApiModifier[] = [],
 	quiet: boolean = false
 ): Promise<PiiMaskResponse> => {
-	const url = new URL(`${NENNA_API_BASE_URL}/sessions/${sessionId}/text/mask`);
+	const url = new URL(`${getPiiApiBaseUrl()}/sessions/${sessionId}/text/mask`);
 	if (quiet) url.searchParams.set('quiet', 'true');
 
-	const requestBody: any = {
+	const requestBody: {
+		text: string[];
+		pii_labels: { detect: string[] };
+		known_entities?: KnownPiiEntity[];
+		modifiers?: ShieldApiModifier[];
+	} = {
 		text,
 		pii_labels: {
 			detect: ['ALL']
@@ -172,7 +189,6 @@ export const maskPiiTextWithSession = async (
 	if (modifiers.length > 0) {
 		requestBody.modifiers = modifiers;
 	}
-
 
 	const response = await fetch(url.toString(), {
 		method: 'POST',
@@ -196,7 +212,7 @@ export const unmaskPiiTextWithSession = async (
 	sessionId: string,
 	text: string[]
 ): Promise<PiiUnmaskResponse> => {
-	const response = await fetch(`${NENNA_API_BASE_URL}/sessions/${sessionId}/text/unmask`, {
+	const response = await fetch(`${getPiiApiBaseUrl()}/sessions/${sessionId}/text/unmask`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -216,7 +232,7 @@ export const unmaskPiiTextWithSession = async (
 
 // Delete session
 export const deletePiiSession = async (apiKey: string, sessionId: string): Promise<void> => {
-	const response = await fetch(`${NENNA_API_BASE_URL}/sessions/${sessionId}`, {
+	const response = await fetch(`${getPiiApiBaseUrl()}/sessions/${sessionId}`, {
 		method: 'DELETE',
 		headers: {
 			'X-API-Key': apiKey
@@ -230,7 +246,7 @@ export const deletePiiSession = async (apiKey: string, sessionId: string): Promi
 
 // Get session info
 export const getPiiSession = async (apiKey: string, sessionId: string): Promise<PiiSession> => {
-	const response = await fetch(`${NENNA_API_BASE_URL}/sessions/${sessionId}`, {
+	const response = await fetch(`${getPiiApiBaseUrl()}/sessions/${sessionId}`, {
 		method: 'GET',
 		headers: {
 			'X-API-Key': apiKey

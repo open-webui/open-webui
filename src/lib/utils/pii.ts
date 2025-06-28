@@ -602,7 +602,7 @@ export class PiiSessionManager {
 	}
 
 	// Get modifiers for API (works for both global and conversation state)
-	getModifiersForApi(conversationId?: string): Array<{ entity: string; action: 'mask' | 'ignore'; type?: string }> {
+	getModifiersForApi(conversationId?: string): Array<{ entity: string; action: 'string-mask' | 'ignore'; type?: string }> {
 		if (conversationId) {
 			// Ensure conversation is loaded
 			this.ensureConversationLoaded(conversationId);
@@ -610,14 +610,14 @@ export class PiiSessionManager {
 			const conversationModifiers = this.getConversationModifiers(conversationId);
 			return conversationModifiers.map(m => ({
 				entity: m.entity,
-				action: m.action as 'mask' | 'ignore',
+				action: m.action as 'string-mask' | 'ignore',
 				type: m.type || undefined
 			}));
 		} else {
 			const globalModifiers = this.getGlobalModifiers();
 			return globalModifiers.map(m => ({
 				entity: m.entity,
-				action: m.action as 'mask' | 'ignore',
+				action: m.action as 'string-mask' | 'ignore',
 				type: m.type || undefined
 			}));
 		}
