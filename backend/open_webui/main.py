@@ -1248,12 +1248,7 @@ async def get_models(
 
         return filtered_models
 
-    if request.app.state.MODELS and (
-        request.app.state.config.ENABLE_MODEL_LIST_CACHE and not refresh
-    ):
-        all_models = list(request.app.state.MODELS.values())
-    else:
-        all_models = await get_all_models(request, user=user)
+    all_models = await get_all_models(request, refresh=refresh, user=user)
 
     models = []
     for model in all_models:
