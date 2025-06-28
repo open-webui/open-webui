@@ -537,7 +537,7 @@ async def lifespan(app: FastAPI):
     asyncio.create_task(periodic_usage_pool_cleanup())
 
     if app.state.config.ENABLE_MODEL_LIST_CACHE:
-        get_all_models(
+        await get_all_models(
             Request(
                 # Creating a mock request object to pass to get_all_models
                 {
