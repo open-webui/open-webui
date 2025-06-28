@@ -399,18 +399,27 @@ ENABLE_COMPRESSION_MIDDLEWARE = (
     os.environ.get("ENABLE_COMPRESSION_MIDDLEWARE", "True").lower() == "true"
 )
 
+####################################
+# MODELS
+####################################
+
+MODELS_CACHE_TTL = os.environ.get("MODELS_CACHE_TTL", "1")
+if MODELS_CACHE_TTL == "":
+    MODELS_CACHE_TTL = None
+else:
+    try:
+        MODELS_CACHE_TTL = int(MODELS_CACHE_TTL)
+    except Exception:
+        MODELS_CACHE_TTL = 1
+
+
+####################################
+# WEBSOCKET SUPPORT
+####################################
+
 ENABLE_WEBSOCKET_SUPPORT = (
     os.environ.get("ENABLE_WEBSOCKET_SUPPORT", "True").lower() == "true"
 )
-
-MODEL_LIST_CACHE_TTL = os.environ.get("MODEL_LIST_CACHE_TTL", "1")
-if MODEL_LIST_CACHE_TTL == "":
-    MODEL_LIST_CACHE_TTL = None
-else:
-    try:
-        MODEL_LIST_CACHE_TTL = int(MODEL_LIST_CACHE_TTL)
-    except Exception:
-        MODEL_LIST_CACHE_TTL = 1
 
 
 WEBSOCKET_MANAGER = os.environ.get("WEBSOCKET_MANAGER", "")
