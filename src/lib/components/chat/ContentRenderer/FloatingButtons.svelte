@@ -12,7 +12,7 @@
 	import ChatBubble from '$lib/components/icons/ChatBubble.svelte';
 	import LightBulb from '$lib/components/icons/LightBulb.svelte';
 	import Markdown from '../Messages/Markdown.svelte';
-	import Skeleton from '../Messages/Skeleton.svelte';
+	import LoadingIndicator from '../Messages/LoadingIndicator.svelte';
 
 	export let id = '';
 	export let model = null;
@@ -327,7 +327,7 @@
 			>
 				<div class=" max-h-80 overflow-y-auto w-full markdown-prose-xs" id="response-container">
 					{#if responseContent.trim() === ''}
-						<Skeleton size="sm" />
+						<LoadingIndicator />
 					{:else}
 						<Markdown id={`${id}-float-response`} content={responseContent} />
 					{/if}
