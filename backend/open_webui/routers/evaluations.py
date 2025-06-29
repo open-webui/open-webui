@@ -13,6 +13,9 @@ from open_webui.models.feedbacks import (
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.utils.auth import get_admin_user, get_verified_user
 
+from open_webui.utils.leaderboard import compute_leaderboard
+from open_webui.models.models import Models  
+
 router = APIRouter()
 
 
@@ -168,3 +171,14 @@ async def delete_feedback_by_id(id: str, user=Depends(get_verified_user)):
         )
 
     return success
+
+@router.post("/leaderboard")
+async def leaderboard_endpoint(
+    data: dict,
+    user=Depends(get_verified_user)
+):
+    query = data.get("query", "")
+    feedbacks = [fb.model_dump() for fb in Feedbacks.get_all_feedbacks()]
+    models = data.get("models", [])  
+    leaderboard = compute_leaderboard(query, feedbacks, models)
+    return {"leaderboard": leaderboard}

@@ -1,5 +1,8 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
+import { get } from 'svelte/store';
+import { models } from '$lib/stores';
+
 export const getConfig = async (token: string = '') => {
 	let error = null;
 
@@ -227,6 +230,38 @@ export const deleteFeedbackById = async (token: string, feedbackId: string) => {
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getLeaderboard = async (query: string, token: string = '', modelsArray?: any[]) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/evaluations/leaderboard`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			query,
+			models: modelsArray
+		})
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
