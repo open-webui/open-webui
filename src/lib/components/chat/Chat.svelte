@@ -36,7 +36,8 @@
 		chatTitle,
 		showArtifacts,
 		tools,
-		toolServers
+		toolServers,
+		showChatSearch
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
@@ -89,6 +90,7 @@
 	import Placeholder from './Placeholder.svelte';
 	import NotificationToast from '../NotificationToast.svelte';
 	import Spinner from '../common/Spinner.svelte';
+	import ChatSearch from './ChatSearch.svelte';
 	import { fade } from 'svelte/transition';
 
 	export let chatIdProp = '';
@@ -102,6 +104,10 @@
 	let autoScroll = true;
 	let processing = '';
 	let messagesContainerElement: HTMLDivElement;
+
+	let minMessagesForSearch = 20; // Track minimum messages needed for search
+
+	let scrollToBottomElement: HTMLDivElement;
 
 	let navbarElement;
 
@@ -2099,6 +2105,7 @@
 										{chatActionHandler}
 										{addMessages}
 										bottomPadding={files.length > 0}
+										minMessagesCount={minMessagesForSearch}
 									/>
 								</div>
 							</div>
@@ -2235,4 +2242,19 @@
 			</div>
 		</div>
 	{/if}
+
+	<!-- Chat Search Overlay -->
+	<ChatSearch 
+		show={$showChatSearch}
+		{history}
+		on:close={() => {
+			showChatSearch.set(false);
+		}}
+		on:ensureMessagesLoaded={(e) => {
+			const { requiredCount } = e.detail;
+			if (requiredCount > minMessagesForSearch) {
+				minMessagesForSearch = requiredCount;
+			}
+		}}
+	/>
 </div>
