@@ -229,6 +229,25 @@ class QdrantClient(VectorDBBase):
                 ),
                 wait=True,
             )
+            # Create payload indexes for efficient filtering on metadata.hash and metadata.file_id
+            self.client.create_payload_index(
+                collection_name=mt_collection_name,
+                field_name="metadata.hash",
+                field_schema=models.KeywordIndexParams(
+                    type=models.KeywordIndexType.KEYWORD,
+                    is_tenant=False,
+                    on_disk=self.QDRANT_ON_DISK,
+                ),
+            )
+            self.client.create_payload_index(
+                collection_name=mt_collection_name,
+                field_name="metadata.file_id",
+                field_schema=models.KeywordIndexParams(
+                    type=models.KeywordIndexType.KEYWORD,
+                    is_tenant=False,
+                    on_disk=self.QDRANT_ON_DISK,
+                ),
+            )
 
             log.info(
                 f"Multi-tenant collection {mt_collection_name} created with dimension {dimension}!"
