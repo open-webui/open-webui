@@ -87,6 +87,25 @@ class QdrantClient(VectorDBBase):
             ),
         )
 
+        # Create payload indexes for efficient filtering
+        self.client.create_payload_index(
+            collection_name=collection_name_with_prefix,
+            field_name="metadata.hash",
+            field_schema=models.KeywordIndexParams(
+                type=models.KeywordIndexType.KEYWORD,
+                is_tenant=False,
+                on_disk=self.QDRANT_ON_DISK,
+            ),
+        )
+        self.client.create_payload_index(
+            collection_name=collection_name_with_prefix,
+            field_name="metadata.file_id",
+            field_schema=models.KeywordIndexParams(
+                type=models.KeywordIndexType.KEYWORD,
+                is_tenant=False,
+                on_disk=self.QDRANT_ON_DISK,
+            ),
+        )
         log.info(f"collection {collection_name_with_prefix} successfully created!")
 
     def _create_collection_if_not_exists(self, collection_name, dimension):
