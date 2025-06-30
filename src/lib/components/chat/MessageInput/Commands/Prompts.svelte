@@ -9,9 +9,10 @@
 		getUserTimezone,
 		getWeekday
 	} from '$lib/utils';
-	import { tick, getContext } from 'svelte';
+	import { tick, getContext, createEventDispatcher } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
+	const dispatch = createEventDispatcher();
 	const i18n = getContext('i18n');
 
 	export let files;
@@ -166,11 +167,16 @@
 				prompt = fullPrompt;
 				await tick();
 
-				chatInputElement.setSelectionRange(word?.startIndex, word.endIndex + 1);
+				if (chatInputElement instanceof HTMLInputElement || chatInputElement instanceof HTMLTextAreaElement) {
+					chatInputElement.setSelectionRange(word?.startIndex, word.endIndex + 1);
+				}
 			} else {
 				chatInputElement.scrollTop = chatInputElement.scrollHeight;
 			}
 		}
+
+		await tick();
+		dispatch('promptapplied', { finalPromptContent: prompt });
 	};
 </script>
 
