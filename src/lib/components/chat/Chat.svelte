@@ -708,7 +708,7 @@
 	//////////////////////////
 
 	const initNewChat = async () => {
-		if ($user?.permissions?.chat?.temporary_enforced) {
+		if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
 			await temporaryChatEnabled.set(true);
 		}
 

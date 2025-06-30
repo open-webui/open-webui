@@ -199,7 +199,7 @@
 					event.preventDefault();
 					console.log('temporaryChat');
 
-					if ($user?.permissions?.chat?.temporary_enforced) {
+					if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
 						temporaryChatEnabled.set(true);
 					} else {
 						temporaryChatEnabled.set(!$temporaryChatEnabled);
@@ -222,7 +222,7 @@
 					temporaryChatEnabled.set(true);
 				}
 
-				if ($user?.permissions?.chat?.temporary_enforced) {
+				if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
 					temporaryChatEnabled.set(true);
 				}
 			}
