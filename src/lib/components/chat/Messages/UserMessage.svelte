@@ -11,6 +11,7 @@
 	import {
 		PiiSessionManager,
 		unmaskAndHighlightTextForDisplay,
+		unmaskTextWithEntities,
 		type ExtendedPiiEntity
 	} from '$lib/utils/pii';
 
@@ -65,6 +66,13 @@
 	let piiSessionManager = PiiSessionManager.getInstance();
 
 	const copyToClipboard = async (text) => {
+		// First unmask any PII placeholders to get the actual text
+		const entities = history?.id
+			? piiSessionManager.getConversationEntities(history.id)
+			: piiSessionManager.getEntities();
+		if (entities.length > 0) {
+			text = unmaskTextWithEntities(text, entities);
+		}
 		const res = await _copyToClipboard(text);
 		if (res) {
 			toast.success($i18n.t('Copying to clipboard was successful!'));
