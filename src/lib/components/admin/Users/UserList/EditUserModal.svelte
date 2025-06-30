@@ -100,6 +100,8 @@
 									>
 										<option value="admin">{$i18n.t('Admin')}</option>
 										<option value="user">{$i18n.t('User')}</option>
+										<option value="local-admin">{$i18n.t('Local admin')}</option>
+										<option value="builder">{$i18n.t('Builder')}</option>
 										<option value="pending">{$i18n.t('Pending')}</option>
 									</select>
 								</div>

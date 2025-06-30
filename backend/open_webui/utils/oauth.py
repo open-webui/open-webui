@@ -125,8 +125,12 @@ class OAuthManager:
                 for allowed_role in oauth_allowed_roles:
                     # If the user has any of the allowed roles, assign the role "user"
                     if allowed_role in oauth_roles:
-                        log.debug("Assigned user the user role")
-                        role = "user"
+                        log.debug(f"Using first role from OAuth: {oauth_roles[0]}")
+                        first_role = oauth_roles[0]
+                        if first_role == "end-user":
+                            role = "user"
+                        else:
+                            role = first_role
                         break
                 for admin_role in oauth_admin_roles:
                     # If the user has any of the admin roles, assign the role "admin"
