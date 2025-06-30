@@ -872,11 +872,6 @@
 		const { PiiSessionManager } = await import('$lib/utils/pii');
 		const piiManager = PiiSessionManager.getInstance();
 		piiManager.clearTemporaryState();
-		
-		// Clear working entities for the conversation we're loading (if any)
-		if ($chatId) {
-			piiManager.clearConversationWorkingEntities($chatId);
-		}
 
 		chat = await getChatById(localStorage.token, $chatId).catch(async (error) => {
 			await goto('/');
@@ -1349,7 +1344,7 @@
 			);
 		}
 
-		console.log(data);
+		//console.log(data);
 		if (autoScroll) {
 			scrollToBottom();
 		}
@@ -2017,7 +2012,7 @@
 				// Get PII state for this conversation
 				const { PiiSessionManager } = await import('$lib/utils/pii');
 				const piiManager = PiiSessionManager.getInstance();
-				const piiState = piiManager.getConversationStateForStorage(_chatId);
+				const piiState = piiManager.getConversationState(_chatId);
 
 				const chatData = {
 					models: selectedModels,

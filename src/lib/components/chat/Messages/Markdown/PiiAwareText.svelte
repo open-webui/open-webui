@@ -17,9 +17,7 @@
 		piiSessionManager.loadConversationState(conversationId);
 	}
 
-	$: entities = conversationId && conversationId !== '' 
-		? piiSessionManager.getConversationEntities(conversationId)
-		: piiSessionManager.getEntitiesForDisplay();
+	$: entities = piiSessionManager.getEntitiesForDisplay(conversationId);
 	
 	$: processedText = (() => {
 		if (!entities.length) {

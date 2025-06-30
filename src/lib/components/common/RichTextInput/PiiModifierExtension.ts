@@ -1235,7 +1235,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 								if (addConversationId) {
 									piiSessionManager.setConversationModifiers(addConversationId, updatedModifiers);
 								} else {
-									piiSessionManager.setGlobalModifiers(updatedModifiers);
+									piiSessionManager.setTemporaryModifiers(updatedModifiers);
 								}
 
 								if (onModifiersChanged) {
@@ -1255,7 +1255,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 								if (removeConversationId) {
 									piiSessionManagerRemove.setConversationModifiers(removeConversationId, remainingModifiers);
 								} else {
-									piiSessionManagerRemove.setGlobalModifiers(remainingModifiers);
+									piiSessionManagerRemove.setTemporaryModifiers(remainingModifiers);
 								}
 
 								if (onModifiersChanged) {
@@ -1274,7 +1274,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 								if (clearConversationId) {
 									piiSessionManagerClear.setConversationModifiers(clearConversationId, []);
 								} else {
-									piiSessionManagerClear.setGlobalModifiers([]);
+									piiSessionManagerClear.setTemporaryModifiers([]);
 								}
 
 								if (onModifiersChanged) {

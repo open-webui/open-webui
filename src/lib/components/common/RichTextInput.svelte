@@ -120,9 +120,7 @@
 			// Set flag immediately to prevent multiple simultaneous calls
 			conversationActivated = true;
 			
-			try {
-				piiSessionManager.activateConversation(conversationId);
-				
+			try {		
 				// Reload modifiers in the extension (only if editor exists and has the command)
 				if (editor && editor.commands && typeof editor.commands.reloadConversationModifiers === 'function') {
 					editor.commands.reloadConversationModifiers(conversationId);
@@ -633,7 +631,6 @@
 			
 			// Activate the new conversation and reload modifiers
 			if (editor && enablePiiModifiers) {
-				piiSessionManager.activateConversation(conversationId);
 				editor.commands.reloadConversationModifiers(conversationId);
 				conversationActivated = true;
 			}

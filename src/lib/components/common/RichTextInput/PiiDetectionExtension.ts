@@ -215,21 +215,19 @@ function syncWithSessionManager(
 ): ExtendedPiiEntity[] {
 	// CRITICAL FIX: Get entities from both persistent and working state
 	// This prevents newly detected entities from being filtered out during periodic syncs
-	const persistentEntities = conversationId 
-		? piiSessionManager.getConversationEntities(conversationId)
-		: piiSessionManager.getEntities();
+	const persistentEntities = piiSessionManager.getEntitiesForDisplay(conversationId); // No global entities for non-conversation contexts
 	
 	const workingEntities = conversationId
 		? piiSessionManager.getConversationEntitiesForDisplay(conversationId)
 		: piiSessionManager.getEntitiesForDisplay();
 		
 	// CRITICAL FIX: For new chats, also include temporary state entities
-	const temporaryEntities = !conversationId ? piiSessionManager.getTemporaryEntities() : [];
+	const temporaryEntities = !conversationId ? piiSessionManager.getTemporaryStateEntities() : [];
 	
 	// Merge persistent + working + temporary entities (working/temporary takes precedence for same labels)
 	const allSessionEntities = [...persistentEntities];
-	[...workingEntities, ...temporaryEntities].forEach(entity => {
-		if (!persistentEntities.find(p => p.label === entity.label)) {
+	[...workingEntities, ...temporaryEntities].forEach((entity: ExtendedPiiEntity) => {
+		if (!persistentEntities.find((p: ExtendedPiiEntity) => p.label === entity.label)) {
 			allSessionEntities.push(entity);
 		}
 	});
@@ -398,9 +396,7 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 			}
 
 			try {
-				const knownEntities = options.conversationId
-					? piiSessionManager.getKnownEntitiesForApi(options.conversationId)
-					: piiSessionManager.getGlobalKnownEntitiesForApi();
+				const knownEntities = piiSessionManager.getKnownEntitiesForApi(options.conversationId);
 
 				const modifiers = piiSessionManager.getModifiersForApi(options.conversationId);
 				const response = await maskPiiText(apiKey, [plainText], knownEntities, modifiers, false, false);
@@ -418,8 +414,8 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 					// This ensures that entities unmasked in previous messages stay unmasked in new messages
 					// For new chats, load from temporary state instead of empty array
 					const conversationEntities = options.conversationId
-						? piiSessionManager.getConversationEntities(options.conversationId)
-						: piiSessionManager.getTemporaryEntities(); // ✅ Load temporary state for new chats
+						? piiSessionManager.getConversationEntitiesForDisplay(options.conversationId)
+						: piiSessionManager.getTemporaryStateEntities(); // ✅ Load temporary state for new chats
 					
 					// CRITICAL FIX: Merge plugin state + conversation state for complete context
 					// Plugin state takes precedence (for same-message interactions)
@@ -453,7 +449,7 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 						if (!piiSessionManager.isTemporaryStateActive()) {
 							piiSessionManager.activateTemporaryState();
 						}
-						piiSessionManager.setTemporaryStateEntitiesWithMaskStates(mappedEntities);
+						piiSessionManager.setTemporaryStateEntities(mappedEntities);
 					}
 
 					const tr = editorView.state.tr.setMeta(piiDetectionPluginKey, {
@@ -522,15 +518,9 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 									newState.entities[entityIndex] = entity;
 									
 									const piiSessionManager = PiiSessionManager.getInstance();
-									if (options.conversationId) {
-										piiSessionManager.toggleConversationEntityMasking(
-											options.conversationId,
-											entity.label,
-											occurrenceIndex
-										);
-									} else {
-										piiSessionManager.toggleEntityMasking(entity.label, occurrenceIndex);
-									}
+									
+									piiSessionManager.toggleEntityMasking(entity.label, occurrenceIndex, options.conversationId);
+									
 									
 									// CRITICAL FIX: Mark that we need to sync with session manager on next transaction
 									// This ensures that subsequent detections use the correct shouldMask state
@@ -626,9 +616,7 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 					
 					// Get modifiers from session manager (not ProseMirror extension state)
 					const piiSessionManager = PiiSessionManager.getInstance();
-					const modifiers = options.conversationId 
-						? piiSessionManager.getConversationModifiers(options.conversationId)
-						: piiSessionManager.getGlobalModifiers();
+					const modifiers = piiSessionManager.getModifiersForDisplay(options.conversationId);
 					
 					if (!pluginState?.entities.length && !modifiers.length) {
 						return DecorationSet.empty;
@@ -665,6 +653,65 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 	},
 
 	addCommands() {
+		// Helper function to update all entity masking states (DRY)
+		const updateAllEntityMaskingStates = (shouldMask: boolean) => ({ state, dispatch }: any) => {
+			const pluginState = piiDetectionPluginKey.getState(state);
+			if (!pluginState?.entities.length) {
+				return false; // No entities to update
+			}
+
+			const extensionOptions = this.options;
+			const piiSessionManager = PiiSessionManager.getInstance();
+
+			// Get current entities using the proper display method
+			const currentEntities = piiSessionManager.getEntitiesForDisplay(extensionOptions.conversationId);
+			
+			if (!currentEntities.length) {
+				return false; // No entities in session manager
+			}
+
+			// Update session manager based on state type
+			if (piiSessionManager.isTemporaryStateActive()) {
+				// Handle temporary state (new chats)
+				const updatedEntities = currentEntities.map((entity: ExtendedPiiEntity) => ({
+					...entity,
+					shouldMask
+				}));
+				piiSessionManager.setTemporaryStateEntities(updatedEntities);
+			} else if (extensionOptions.conversationId) {
+				// Handle conversation state - update each entity individually for proper persistence
+				currentEntities.forEach((entity: ExtendedPiiEntity) => {
+					piiSessionManager.setEntityMaskingState(
+						extensionOptions.conversationId!,
+						entity.label,
+						shouldMask
+					);
+				});
+			}
+
+			// Create updated entities for plugin state
+			const updatedPluginEntities = pluginState.entities.map((entity: ExtendedPiiEntity) => ({
+				...entity,
+				shouldMask
+			}));
+
+			// Update plugin state
+			if (dispatch) {
+				const tr = state.tr.setMeta(piiDetectionPluginKey, {
+					type: 'UPDATE_ENTITIES',
+					entities: updatedPluginEntities
+				});
+				dispatch(tr);
+
+				// Trigger onPiiToggled callback
+				if (extensionOptions.onPiiToggled) {
+					extensionOptions.onPiiToggled(updatedPluginEntities);
+				}
+			}
+
+			return true;
+		};
+
 		return {
 			triggerDetection: () => ({ state, dispatch }: any) => {
 				if (dispatch) {
@@ -740,128 +787,10 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 			},
 
 			// Unmask all PII entities
-			unmaskAllEntities: () => ({ state, dispatch }: any) => {
-				const pluginState = piiDetectionPluginKey.getState(state);
-				if (!pluginState?.entities.length) {
-					return false; // No entities to unmask
-				}
-
-				// Access extension options
-				const extensionOptions = this.options;
-
-				// Create new array with all entities unmasked
-				const unmaskedEntities = pluginState.entities.map(entity => ({
-					...entity,
-					shouldMask: false
-				}));
-
-				// Update session manager directly
-				const piiSessionManager = PiiSessionManager.getInstance();
-				
-				if (extensionOptions.conversationId) {
-					// Get current entities from session manager
-					const currentEntities = piiSessionManager.getConversationEntities(extensionOptions.conversationId);
-					
-					// Update all entities to shouldMask: false
-					const updatedEntities = currentEntities.map(entity => ({
-						...entity,
-						shouldMask: false
-					}));
-					
-					// Set the updated entities back to session manager
-					piiSessionManager.setConversationEntities(extensionOptions.conversationId, updatedEntities);
-				} else {
-					// Get current global entities from session manager
-					const currentEntities = piiSessionManager.getEntities();
-					
-					// Update all entities to shouldMask: false
-					const updatedEntities = currentEntities.map(entity => ({
-						...entity,
-						shouldMask: false
-					}));
-					
-					// Set the updated entities back to session manager
-					piiSessionManager.setEntities(updatedEntities);
-				}
-
-				// Update plugin state
-				if (dispatch) {
-					const tr = state.tr.setMeta(piiDetectionPluginKey, {
-						type: 'UPDATE_ENTITIES',
-						entities: unmaskedEntities
-					});
-					dispatch(tr);
-
-					// Trigger onPiiToggled callback
-					if (extensionOptions.onPiiToggled) {
-						extensionOptions.onPiiToggled(unmaskedEntities);
-					}
-				}
-
-				return true;
-			},
+			unmaskAllEntities: () => updateAllEntityMaskingStates(false),
 
 			// Mask all PII entities
-			maskAllEntities: () => ({ state, dispatch }: any) => {
-				const pluginState = piiDetectionPluginKey.getState(state);
-				if (!pluginState?.entities.length) {
-					return false; // No entities to mask
-				}
-
-				// Access extension options
-				const extensionOptions = this.options;
-
-				// Create new array with all entities masked
-				const maskedEntities = pluginState.entities.map(entity => ({
-					...entity,
-					shouldMask: true
-				}));
-
-				// Update session manager directly
-				const piiSessionManager = PiiSessionManager.getInstance();
-				
-				if (extensionOptions.conversationId) {
-					// Get current entities from session manager
-					const currentEntities = piiSessionManager.getConversationEntities(extensionOptions.conversationId);
-					
-					// Update all entities to shouldMask: true
-					const updatedEntities = currentEntities.map(entity => ({
-						...entity,
-						shouldMask: true
-					}));
-					
-					// Set the updated entities back to session manager
-					piiSessionManager.setConversationEntities(extensionOptions.conversationId, updatedEntities);
-				} else {
-					// Get current global entities from session manager
-					const currentEntities = piiSessionManager.getEntities();
-					
-					// Update all entities to shouldMask: true
-					const updatedEntities = currentEntities.map(entity => ({
-						...entity,
-						shouldMask: true
-					}));
-					
-					// Set the updated entities back to session manager
-					piiSessionManager.setEntities(updatedEntities);
-				}
-
-				// Update plugin state
-				if (dispatch) {
-					const tr = state.tr.setMeta(piiDetectionPluginKey, {
-						type: 'UPDATE_ENTITIES',
-						entities: maskedEntities
-					});
-					dispatch(tr);
-
-					// Trigger onPiiToggled callback
-					if (extensionOptions.onPiiToggled) {
-						extensionOptions.onPiiToggled(maskedEntities);
-					}
-				}
-
-				return true;
-			}
+			maskAllEntities: () => updateAllEntityMaskingStates(true)
 		} as any;
 	}
 }); 

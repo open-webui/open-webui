@@ -97,7 +97,7 @@ export const PiiHighlighter = Extension.create<PiiHighlighterOptions>({
 
 								// Force a re-render by dispatching a transaction
 								const tr = view.state.tr.setMeta('piiHighlighter', {
-									entities: piiSessionManager.getEntities()
+									entities: piiSessionManager.getEntitiesForDisplay()
 								});
 								view.dispatch(tr);
 
