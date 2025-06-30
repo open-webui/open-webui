@@ -117,7 +117,7 @@ from open_webui.config import (
     # Direct Connections
     ENABLE_DIRECT_CONNECTIONS,
     # Model list
-    ENABLE_MODEL_LIST_CACHE,
+    ENABLE_BASE_MODELS_CACHE,
     # Thread pool size for FastAPI/AnyIO
     THREAD_POOL_SIZE,
     # Tool Server Configs
@@ -537,7 +537,7 @@ async def lifespan(app: FastAPI):
 
     asyncio.create_task(periodic_usage_pool_cleanup())
 
-    if app.state.config.ENABLE_MODEL_LIST_CACHE:
+    if app.state.config.ENABLE_BASE_MODELS_CACHE:
         await get_all_models(
             Request(
                 # Creating a mock request object to pass to get_all_models
@@ -643,11 +643,12 @@ app.state.config.ENABLE_DIRECT_CONNECTIONS = ENABLE_DIRECT_CONNECTIONS
 
 ########################################
 #
-# MODEL LIST
+# MODELS
 #
 ########################################
 
-app.state.config.ENABLE_MODEL_LIST_CACHE = ENABLE_MODEL_LIST_CACHE
+app.state.config.ENABLE_BASE_MODELS_CACHE = ENABLE_BASE_MODELS_CACHE
+app.state.BASE_MODELS = []
 
 ########################################
 #

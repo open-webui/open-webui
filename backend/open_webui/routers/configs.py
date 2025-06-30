@@ -45,14 +45,14 @@ async def export_config(user=Depends(get_admin_user)):
 
 class ConnectionsConfigForm(BaseModel):
     ENABLE_DIRECT_CONNECTIONS: bool
-    ENABLE_MODEL_LIST_CACHE: bool
+    ENABLE_BASE_MODELS_CACHE: bool
 
 
 @router.get("/connections", response_model=ConnectionsConfigForm)
 async def get_connections_config(request: Request, user=Depends(get_admin_user)):
     return {
         "ENABLE_DIRECT_CONNECTIONS": request.app.state.config.ENABLE_DIRECT_CONNECTIONS,
-        "ENABLE_MODEL_LIST_CACHE": request.app.state.config.ENABLE_MODEL_LIST_CACHE,
+        "ENABLE_BASE_MODELS_CACHE": request.app.state.config.ENABLE_BASE_MODELS_CACHE,
     }
 
 
@@ -65,11 +65,13 @@ async def set_connections_config(
     request.app.state.config.ENABLE_DIRECT_CONNECTIONS = (
         form_data.ENABLE_DIRECT_CONNECTIONS
     )
-    request.app.state.config.ENABLE_MODEL_LIST_CACHE = form_data.ENABLE_MODEL_LIST_CACHE
+    request.app.state.config.ENABLE_BASE_MODELS_CACHE = (
+        form_data.ENABLE_BASE_MODELS_CACHE
+    )
 
     return {
         "ENABLE_DIRECT_CONNECTIONS": request.app.state.config.ENABLE_DIRECT_CONNECTIONS,
-        "ENABLE_MODEL_LIST_CACHE": request.app.state.config.ENABLE_MODEL_LIST_CACHE,
+        "ENABLE_BASE_MODELS_CACHE": request.app.state.config.ENABLE_BASE_MODELS_CACHE,
     }
 
 

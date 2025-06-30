@@ -931,13 +931,13 @@ OPENAI_API_BASE_URL = "https://api.openai.com/v1"
 
 
 ####################################
-# MODEL_LIST
+# MODELS
 ####################################
 
-ENABLE_MODEL_LIST_CACHE = PersistentConfig(
-    "ENABLE_MODEL_LIST_CACHE",
-    "models.cache",
-    os.environ.get("ENABLE_MODEL_LIST_CACHE", "False").lower() == "true",
+ENABLE_BASE_MODELS_CACHE = PersistentConfig(
+    "ENABLE_BASE_MODELS_CACHE",
+    "models.base_models_cache",
+    os.environ.get("ENABLE_BASE_MODELS_CACHE", "False").lower() == "true",
 )
 
 
