@@ -6,7 +6,7 @@
 
 	import {
 		archiveAllChats,
-		createNewChat,
+		importChat,
 		deleteAllChats,
 		getAllChats,
 		getAllUserChats,
@@ -58,9 +58,9 @@
 			console.log(chat);
 
 			if (chat.chat) {
-				await createNewChat(localStorage.token, chat.chat);
+				await importChat(localStorage.token, chat.chat, chat.meta ?? {}, false, null, chat.created_at, chat.updated_at);
 			} else {
-				await createNewChat(localStorage.token, chat);
+				await importChat(localStorage.token, chat, chat.meta ?? {}, false, null, chat.created_at, chat.updated_at);
 			}
 		}
 
