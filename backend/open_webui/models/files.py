@@ -6,6 +6,8 @@ from open_webui.internal.db import Base, JSONField, get_db
 from open_webui.env import SRC_LOG_LEVELS
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, String, Text, JSON
+from sqlalchemy.orm import relationship
+
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -31,6 +33,8 @@ class File(Base):
 
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)
+
+    users = relationship("User", secondary="shared_file_owner", back_populates="files")
 
 
 class FileModel(BaseModel):
