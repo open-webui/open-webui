@@ -534,7 +534,7 @@
 								/>
 
 								<button
-									class="w-full text-sm font-medium py-2 bg-transparent hover:bg-gray-100 border border-dashed dark:border-gray-850 dark:hover:bg-gray-850 text-center rounded-xl"
+									class="w-full text-sm font-medium py-2 bg-transparent hover:bg-gray-50 border border-dashed border-gray-50 dark:border-gray-850 dark:hover:bg-gray-850 text-center rounded-xl"
 									type="button"
 									on:click={() => {
 										document.getElementById('upload-comfyui-workflow-input')?.click();
@@ -556,10 +556,10 @@
 
 							<div class="text-xs flex flex-col gap-1.5">
 								{#each requiredWorkflowNodes as node}
-									<div class="flex w-full items-center border dark:border-gray-850 rounded-lg">
+									<div class="flex w-full items-center">
 										<div class="shrink-0">
 											<div
-												class=" capitalize line-clamp-1 font-medium px-3 py-1 w-20 text-center rounded-l-lg bg-green-500/10 text-green-700 dark:text-green-200"
+												class=" capitalize line-clamp-1 font-medium px-3 py-1 w-20 text-center bg-green-500/10 text-green-700 dark:text-green-200"
 											>
 												{node.type}{node.type === 'prompt' ? '*' : ''}
 											</div>
@@ -567,7 +567,7 @@
 										<div class="">
 											<Tooltip content="Input Key (e.g. text, unet_name, steps)">
 												<input
-													class="py-1 px-3 w-24 text-xs text-center bg-transparent outline-hidden border-r dark:border-gray-850"
+													class="py-1 px-3 w-24 text-xs text-center bg-transparent outline-hidden border-r border-gray-50 dark:border-gray-850"
 													placeholder="Key"
 													bind:value={node.key}
 													required
@@ -581,7 +581,7 @@
 												placement="top-start"
 											>
 												<input
-													class="w-full py-1 px-4 rounded-r-lg text-xs bg-transparent outline-hidden"
+													class="w-full py-1 px-4 text-xs bg-transparent outline-hidden"
 													placeholder="Node Ids"
 													bind:value={node.node_ids}
 												/>
