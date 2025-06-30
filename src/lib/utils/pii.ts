@@ -293,55 +293,6 @@ export class PiiSessionManager {
 		return this.sessionId;
 	}
 
-	// Main method for setting conversation state (entities + modifiers)
-	setConversationState(
-		conversationId: string, 
-		entities: PiiEntity[], 
-		modifiers: PiiModifier[] = [],
-		sessionId?: string
-	): void {
-		const newExtendedEntities = entities.map((entity) => ({
-			...entity,
-			shouldMask: true
-		}));
-
-		// Get existing state to preserve shouldMask states
-		const existingState = this.conversationStates.get(conversationId);
-		const existingEntities = existingState?.entities || [];
-		
-		// Merge entities (preserve shouldMask)
-		const mergedEntities = [...existingEntities];
-		newExtendedEntities.forEach((newEntity) => {
-			const existingIndex = mergedEntities.findIndex((e) => e.label === newEntity.label);
-			if (existingIndex >= 0) {
-				mergedEntities[existingIndex] = {
-					...newEntity,
-					shouldMask: mergedEntities[existingIndex].shouldMask
-				};
-			} else {
-				mergedEntities.push(newEntity);
-			}
-		});
-
-		const newState: ConversationPiiState = {
-			entities: mergedEntities,
-			modifiers: modifiers,
-			sessionId: sessionId || existingState?.sessionId,
-			apiKey: this.apiKey || existingState?.apiKey,
-			lastUpdated: Date.now()
-		};
-
-		// Update memory state
-		this.conversationStates.set(conversationId, newState);
-		this.temporaryState.entities = mergedEntities;
-
-		// Create backup for error recovery
-		this.errorBackup.set(conversationId, { ...newState });
-
-		// Trigger immediate SQLite save
-		this.triggerChatSave(conversationId);
-	}
-
 	// Trigger chat save method
 	private async triggerChatSave(conversationId: string): Promise<void> {
 		if (this.pendingSaves.has(conversationId)) {
@@ -503,7 +454,7 @@ export class PiiSessionManager {
 
 		// Replace all entities with the latest detection results (like we do for temporary state)
 		const newState: ConversationPiiState = {
-			entities: newExtendedEntities, // Replace, don't merge
+			entities: [...existingEntities, ...newExtendedEntities], // Replace, don't merge
 			modifiers: existingState?.modifiers || [],
 			sessionId: sessionId || existingState?.sessionId,
 			apiKey: this.apiKey || existingState?.apiKey,
