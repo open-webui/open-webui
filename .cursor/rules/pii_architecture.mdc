@@ -1,0 +1,256 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# PII System Architecture Patterns
+
+## Overview
+This rule captures architectural patterns learned from implementing the PII modifier system in open-webui. Use these patterns when working with PII-related functionality.
+
+## Extension Architecture
+
+### Two-Extension Pattern
+The PII system uses two complementary ProseMirror extensions:
+- **[PiiDetectionExtension.ts](mdc:src/lib/components/common/RichTextInput/PiiDetectionExtension.ts)**: Handles API calls and PII highlighting
+- **[PiiModifierExtension.ts](mdc:src/lib/components/common/RichTextInput/PiiModifierExtension.ts)**: Manages user modifier creation and menus
+
+```typescript
+// Extension coordination pattern in RichTextInput.svelte
+const piiDetectionExtension = PiiDetectionExtension.create({
+  apiKey: piiApiKey,
+  enabled: piiEnabled,
+  conversationId: currentConversationId,
+  onPiiDetected: handlePiiDetected
+});
+
+const piiModifierExtension = PiiModifierExtension.create({
+  conversationId: currentConversationId,
+  onModifierChange: handleModifierChange
+});
+
+extensions = [
+  // ... other extensions
+  ...piiDetectionExtension,
+  ...piiModifierExtension
+];
+```
+
+### State Management Singleton
+Use singleton pattern for shared state management:
+```typescript
+// PiiSessionManager in pii.ts uses singleton pattern
+class PiiSessionManager {
+  private static instance: PiiSessionManager;
+  
+  static getInstance(): PiiSessionManager {
+    if (!PiiSessionManager.instance) {
+      PiiSessionManager.instance = new PiiSessionManager();
+    }
+    return PiiSessionManager.instance;
+  }
+}
+
+// Access from extensions
+const piiSessionManager = PiiSessionManager.getInstance();
+```
+
+## API Integration Patterns
+
+### Modifier Format - CRITICAL
+Always use the correct API format for modifiers:
+```typescript
+interface PiiModifier {
+  action: 'mask' | 'ignore';
+  entity: string;           // The actual text content
+  type?: string;           // Required for 'mask' action
+}
+
+// Convert to API format
+const convertToShieldApiModifiers = (modifiers: PiiModifier[]): ShieldApiModifier[] => {
+  return modifiers.map(modifier => ({
+    action: modifier.action,
+    entity: modifier.entity,
+    ...(modifier.type && { type: modifier.type })
+  }));
+};
+```
+
+### Known Entities Pattern
+Always send known entities with API calls for consistent labeling:
+```typescript
+const performPiiDetection = async (text: string) => {
+  const knownEntities = conversationId
+    ? piiSessionManager.getKnownEntitiesForApi(conversationId)
+    : piiSessionManager.getGlobalKnownEntitiesForApi();
+
+  const modifiers = conversationId
+    ? piiSessionManager.getConversationModifiersForApi(conversationId)
+    : piiSessionManager.getGlobalModifiersForApi();
+
+  const response = await maskPiiText(apiKey, [text], knownEntities, modifiers, false, false);
+};
+```
+
+## State Architecture
+
+### Two-Tier Storage Pattern
+Use global state before conversation ID, conversation-specific after:
+```typescript
+// Global state (pre-conversation)
+private globalEntities: ExtendedPiiEntity[] = [];
+private globalModifiers: PiiModifier[] = [];
+
+// Conversation-specific states
+private conversationStates: Map<string, ConversationPiiState> = new Map();
+
+// Transfer when conversation ID becomes available
+transferGlobalToConversation(conversationId: string): void {
+  if (this.globalEntities.length > 0 || this.globalModifiers.length > 0) {
+    // Transfer logic
+  }
+}
+```
+
+### Append-Only Entity Management
+Entities should only grow, never shrink (for consistent labeling):
+```typescript
+// Use append methods, not set methods
+appendConversationEntities(conversationId: string, newEntities: PiiEntity[]): void {
+  // Intelligent merging preserves existing shouldMask states
+}
+
+// Never remove entities, only add new ones
+```
+
+## Performance Patterns
+
+### Content-Based Change Detection
+Only trigger API calls when content actually changes:
+```typescript
+const generateContentHash = (doc: Node): string => {
+  return doc.textContent.trim();
+};
+
+// Only trigger detection on actual content changes
+if (currentHash !== previousHash) {
+  debouncedDetection(currentHash);
+}
+```
+
+### Debounced API Calls
+Always debounce user input to prevent excessive API calls:
+```typescript
+const debouncedDetection = debounce(performPiiDetection, 500);
+```
+
+## Error Handling Architecture
+
+### Graceful Degradation
+PII features should never block core functionality:
+```typescript
+try {
+  const response = await maskPiiText(apiKey, [text], knownEntities, modifiers);
+  // Process successful response
+} catch (error) {
+  console.error('PII detection failed:', error);
+  // Continue without PII features - don't throw or block
+}
+```
+
+### Extension Auto-Disable
+Extensions should disable themselves when prerequisites missing:
+```typescript
+if (!enabled || !apiKey) {
+  console.log('PiiDetectionExtension: Disabled - missing enabled flag or API key');
+  return []; // Return empty array, don't add plugin
+}
+```
+
+## Visual Styling Architecture
+
+### Modifier Precedence Over Detection
+Modifier styles should always take precedence:
+```css
+/* Modifier styles use !important to override detection styles */
+.pii-modifier-mask {
+  background: #22c55e !important;
+  color: #f97316 !important;
+  border-bottom: 2px solid #f97316 !important;
+}
+
+/* Detection styles (lower precedence) */
+.pii-masked {
+  background: #22c55e;
+  color: white;
+  border-bottom: 2px solid #16a34a;
+}
+```
+
+## Integration Patterns
+
+### Component Communication
+Use callback props for cross-component communication:
+```typescript
+// Extension to parent component
+onPiiDetected?: (entities: PiiEntity[], processedText: string) => void;
+onModifierChange?: (modifiers: PiiModifier[]) => void;
+
+// Parent to child components
+const handlePiiDetected = (entities: PiiEntity[], processedText: string) => {
+  // Update parent state
+};
+```
+
+### Conversation ID Transitions
+Handle conversation ID changes properly:
+```typescript
+useEffect(() => {
+  if (conversationId && conversationId !== previousConversationId) {
+    if (previousConversationId === '') {
+      piiSessionManager.transferGlobalToConversation(conversationId);
+    }
+  }
+}, [conversationId]);
+```
+
+## File Organization
+
+### Extension Files
+- Place ProseMirror extensions in `src/lib/components/common/RichTextInput/`
+- Use descriptive names: `PiiDetectionExtension.ts`, `PiiModifierExtension.ts`
+- Keep extensions focused on single responsibilities
+
+### State Management
+- Centralize state management in `src/lib/utils/pii.ts`
+- Use singleton pattern for session managers
+- Separate interfaces from implementation
+
+### API Integration
+- Keep API functions in `src/lib/apis/pii/index.ts`
+- Use consistent interface naming
+- Include proper error handling
+
+## Testing Considerations
+
+### State Testing
+```typescript
+// Test modifier creation and retrieval
+const testModifierCreation = () => {
+  const modifier = { action: 'mask', entity: 'test', type: 'CUSTOM' };
+  piiSessionManager.addGlobalModifier(modifier);
+  
+  const retrieved = piiSessionManager.getGlobalModifiersForApi();
+  console.assert(retrieved.length === 1, 'Modifier not stored');
+};
+```
+
+### API Format Testing
+```typescript
+// Test API format conversion
+const testApiConversion = () => {
+  const internal = { action: 'mask', entity: 'test', type: 'CUSTOM' };
+  const api = convertToShieldApiModifiers([internal]);
+  console.assert(api[0].action === 'mask', 'API conversion failed');
+};
+```

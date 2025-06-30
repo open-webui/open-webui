@@ -1,0 +1,415 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# PII ProseMirror Integration Guide
+
+## Overview
+This guide covers the native ProseMirror integration for PII detection using the `PiiDetectionExtension`. This approach replaces fragile HTML string manipulation with robust document-based position mapping and decoration rendering.
+
+## Core Architecture
+
+### TipTap Extension Structure
+[PiiDetectionExtension.ts](mdc:src/lib/components/common/RichTextInput/PiiDetectionExtension.ts) implements a complete TipTap extension:
+
+```typescript
+export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
+  name: 'piiDetection',
+  
+  addOptions() {
+    return {
+      enabled: false,
+      apiKey: '',
+      conversationId: '',
+      onPiiDetected: undefined,
+      onPiiToggled: undefined,
+      debounceMs: 500
+    };
+  },
+
+  addProseMirrorPlugins() {
+    // Returns array of ProseMirror plugins
+    return [piiDetectionPlugin];
+  },
+
+  addCommands() {
+    // Exposes commands like editor.commands.detectPii()
+    return {
+      detectPii: () => ({ state, dispatch }) => { /* ... */ },
+      updatePiiEntities: (entities) => ({ state, dispatch }) => { /* ... */ },
+      getPiiState: () => ({ state }) => { /* ... */ }
+    };
+  }
+});
+```
+
+### Integration in RichTextInput
+[RichTextInput.svelte](mdc:src/lib/components/common/RichTextInput.svelte) conditionally includes the extension:
+
+```javascript
+editor = new Editor({
+  extensions: [
+    StarterKit,
+    // ... other extensions
+    ...(enablePiiDetection
+      ? [
+          PiiDetectionExtension.configure({
+            enabled: true,
+            apiKey: piiApiKey,
+            conversationId: conversationId,
+            onPiiDetected: onPiiDetected,
+            onPiiToggled: (entities) => {
+              console.log('PII entities toggled:', entities);
+            }
+          })
+        ]
+      : [])
+  ]
+});
+```
+
+## Position Mapping System
+
+### Document Traversal
+The extension builds accurate position mapping using ProseMirror's native document structure:
+
+```typescript
+function buildPositionMapping(doc: ProseMirrorNode): PositionMapping {
+  const plainTextToProseMirror = new Map<number, number>();
+  const proseMirrorToPlainText = new Map<number, number>();
+  let plainTextOffset = 0;
+  let plainText = '';
+
+  doc.nodesBetween(0, doc.content.size, (node, pos) => {
+    if (node.isText && node.text) {
+      // Map each character position
+      for (let i = 0; i < node.text.length; i++) {
+        const proseMirrorPos = pos + i;
+        const plainTextPos = plainTextOffset + i;
+        
+        plainTextToProseMirror.set(plainTextPos, proseMirrorPos);
+        proseMirrorToPlainText.set(proseMirrorPos, plainTextPos);
+      }
+      
+      plainText += node.text;
+      plainTextOffset += node.text.length;
+    } else if (node.type.name === 'paragraph' && plainTextOffset > 0) {
+      // Handle paragraph breaks
+      plainText += '\n';
+      plainTextOffset += 1;
+    } else if (node.type.name === 'hard_break') {
+      // Handle line breaks
+      plainText += '\n';
+      plainTextOffset += 1;
+    }
+    
+    return true; // Continue traversing
+  });
+
+  return { plainTextToProseMirror, proseMirrorToPlainText, plainText: plainText.trim() };
+}
+```
+
+### Position Conversion
+Convert PII API positions (plain text) to ProseMirror positions:
+
+```typescript
+function mapPiiEntitiesToProseMirror(
+  entities: PiiEntity[],
+  mapping: PositionMapping
+): ExtendedPiiEntity[] {
+  return entities.map(entity => ({
+    ...entity,
+    shouldMask: true,
+    occurrences: entity.occurrences.map((occurrence: any) => {
+      const plainTextStart = occurrence.start_idx;
+      const plainTextEnd = occurrence.end_idx;
+      
+      // Convert to ProseMirror positions (handle exclusive/inclusive differences)
+      const proseMirrorStart = mapping.plainTextToProseMirror.get(plainTextStart) ?? plainTextStart + 1;
+      const proseMirrorEnd = mapping.plainTextToProseMirror.get(plainTextEnd - 1) ?? (plainTextEnd - 1 + 1);
+      
+      return {
+        ...occurrence,
+        start_idx: proseMirrorStart,
+        end_idx: proseMirrorEnd + 1 // Make end position inclusive
+      };
+    })
+  }));
+}
+```
+
+## Plugin State Management
+
+### State Interface
+```typescript
+interface PiiDetectionState {
+  entities: ExtendedPiiEntity[];
+  positionMapping: PositionMapping | null;
+  isDetecting: boolean;
+  lastText: string;
+}
+```
+
+### State Transitions
+```typescript
+const plugin = new Plugin<PiiDetectionState>({
+  state: {
+    init(): PiiDetectionState {
+      return {
+        entities: [],
+        positionMapping: null,
+        isDetecting: false,
+        lastText: ''
+      };
+    },
+    
+    apply(tr, prevState): PiiDetectionState {
+      let newState = prevState;
+
+      // Handle document changes
+      if (tr.docChanged) {
+        // Rebuild position mapping
+        const newMapping = buildPositionMapping(tr.doc);
+        newState = { ...newState, positionMapping: newMapping };
+
+        // Trigger detection if text changed
+        if (newMapping.plainText !== prevState.lastText && newMapping.plainText.trim()) {
+          newState = { ...newState, lastText: newMapping.plainText };
+          debouncedDetection(newMapping.plainText);
+        }
+
+        // Update entity positions through transaction mapping
+        if (prevState.entities.length > 0) {
+          const mappedEntities = prevState.entities.map(entity => ({
+            ...entity,
+            occurrences: entity.occurrences.map((occurrence: any) => ({
+              ...occurrence,
+              start_idx: tr.mapping.map(occurrence.start_idx),
+              end_idx: tr.mapping.map(occurrence.end_idx)
+            }))
+          }));
+          newState = { ...newState, entities: mappedEntities };
+        }
+      }
+
+      // Handle meta commands
+      const meta = tr.getMeta(piiDetectionPluginKey);
+      if (meta) {
+        switch (meta.type) {
+          case 'UPDATE_ENTITIES':
+            newState = { ...newState, entities: meta.entities };
+            break;
+          case 'TOGGLE_ENTITY_MASKING':
+            // Handle entity masking toggle
+            break;
+        }
+      }
+
+      return newState;
+    }
+  }
+});
+```
+
+## Decoration System
+
+### Creating Visual Highlights
+```typescript
+function createPiiDecorations(entities: ExtendedPiiEntity[], doc: ProseMirrorNode): Decoration[] {
+  const decorations: Decoration[] = [];
+
+  entities.forEach((entity, entityIndex) => {
+    entity.occurrences.forEach((occurrence: any, occurrenceIndex) => {
+      const { start_idx: from, end_idx: to } = occurrence;
+      
+      // Validate positions for current document
+      if (from >= 0 && to <= doc.content.size && from < to) {
+        const shouldMask = entity.shouldMask ?? true;
+        const maskingClass = shouldMask ? 'pii-masked' : 'pii-unmasked';
+        
+        decorations.push(
+          Decoration.inline(from, to, {
+            class: `pii-highlight ${maskingClass}`,
+            'data-pii-type': entity.type,
+            'data-pii-label': entity.label,
+            'data-pii-text': entity.raw_text,
+            'data-pii-occurrence': occurrenceIndex.toString(),
+            'data-should-mask': shouldMask.toString(),
+            'data-entity-index': entityIndex.toString()
+          })
+        );
+      }
+    });
+  });
+
+  return decorations;
+}
+```
+
+### Decoration Rendering
+```typescript
+const plugin = new Plugin({
+  props: {
+    decorations(state) {
+      const pluginState = piiDetectionPluginKey.getState(state);
+      if (!pluginState?.entities.length) {
+        return DecorationSet.empty;
+      }
+      
+      const decorations = createPiiDecorations(pluginState.entities, state.doc);
+      return DecorationSet.create(state.doc, decorations);
+    }
+  }
+});
+```
+
+## API Integration
+
+### Debounced Detection Function
+```typescript
+const performPiiDetection = async (plainText: string) => {
+  if (!plainText.trim()) return;
+
+  try {
+    // Get known entities for consistent labeling
+    const knownEntities = conversationId
+      ? piiSessionManager.getKnownEntitiesForApi(conversationId)
+      : [];
+
+    const response = await maskPiiText(apiKey, [plainText], knownEntities, false, false);
+    
+    if (response.pii && response.pii[0] && response.pii[0].length > 0) {
+      // Get current editor state and mapping
+      const view = this.editor?.view;
+      const state = piiDetectionPluginKey.getState(view.state);
+      
+      if (state?.positionMapping) {
+        // Convert to ProseMirror positions
+        const mappedEntities = mapPiiEntitiesToProseMirror(response.pii[0], state.positionMapping);
+        
+        // Update plugin state
+        const tr = view.state.tr.setMeta(piiDetectionPluginKey, {
+          type: 'UPDATE_ENTITIES',
+          entities: mappedEntities
+        });
+        view.dispatch(tr);
+
+        // Store in session manager
+        if (conversationId) {
+          piiSessionManager.setConversationEntities(conversationId, response.pii[0]);
+        }
+
+        // Notify parent component
+        if (onPiiDetected) {
+          onPiiDetected(mappedEntities, response.text[0]);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('PII detection failed:', error);
+  }
+};
+
+const debouncedDetection = debounce(performPiiDetection, debounceMs || 500);
+```
+
+## Commands API
+
+### Available Commands
+```typescript
+// Manually trigger PII detection
+editor.commands.detectPii();
+
+// Update entities externally
+editor.commands.updatePiiEntities(newEntities);
+
+// Get current plugin state
+const currentState = editor.commands.getPiiState();
+```
+
+## Event Handling
+
+### Click Events
+```typescript
+handleClick(view, pos, event) {
+  const target = event.target as HTMLElement;
+  
+  if (target.classList.contains('pii-highlight')) {
+    const entityIndex = parseInt(target.getAttribute('data-entity-index') || '0');
+    const occurrenceIndex = parseInt(target.getAttribute('data-pii-occurrence') || '0');
+
+    // Toggle masking via transaction
+    const tr = view.state.tr.setMeta(piiDetectionPluginKey, {
+      type: 'TOGGLE_ENTITY_MASKING',
+      entityIndex,
+      occurrenceIndex
+    });
+    
+    view.dispatch(tr);
+    event.preventDefault();
+    return true;
+  }
+  
+  return false;
+}
+```
+
+## Benefits Over HTML Manipulation
+
+### Accuracy
+- **Position Tracking**: Native ProseMirror position tracking vs fragile string manipulation
+- **Document Changes**: Automatic position updates through transaction mapping
+- **Type Safety**: Full TypeScript integration with ProseMirror types
+
+### Performance
+- **Efficient Rendering**: Decorations update only when needed
+- **Memory Management**: Plugin lifecycle handles cleanup automatically
+- **Event Handling**: Native browser events vs custom DOM traversal
+
+### Maintainability
+- **Standard Patterns**: Uses established ProseMirror/TipTap patterns
+- **Separation of Concerns**: Clear separation between detection logic and rendering
+- **Extensibility**: Easy to add new features via plugin system
+
+## Common Issues
+
+### Position Mapping Accuracy
+- **Symptom**: Highlights appear in wrong locations
+- **Solution**: Check paragraph and line break handling in `buildPositionMapping()`
+- **Debug**: Log position mapping details and compare expected vs actual text
+
+### Entity Position Updates
+- **Symptom**: Highlights disappear after editing
+- **Solution**: Ensure transaction mapping updates entity positions correctly
+- **Debug**: Monitor `tr.mapping.map()` calls in plugin state
+
+### API Integration
+- **Symptom**: No API calls triggered
+- **Solution**: Verify editor reference and debounce timing
+- **Debug**: Check `this.editor?.view` availability in detection function
+
+## Testing Strategies
+
+### Manual Testing
+```javascript
+// Test position mapping
+const doc = editor.view.state.doc;
+const mapping = buildPositionMapping(doc);
+console.log('Plain text:', mapping.plainText);
+console.log('Position mapping size:', mapping.plainTextToProseMirror.size);
+
+// Test API integration
+editor.commands.detectPii();
+
+// Check plugin state
+const state = editor.commands.getPiiState();
+console.log('Current entities:', state?.entities);
+```
+
+### Unit Testing Scenarios
+- Position mapping accuracy with various document structures
+- Entity position conversion from plain text to ProseMirror
+- Transaction mapping through document changes
+- API response handling and error cases

@@ -39,12 +39,17 @@ const config = {
 		}
 	},
 	vitePlugin: {
-		// inspector: {
-		// 	toggleKeyCombo: 'meta-shift', // Key combination to open the inspector
-		// 	holdMode: false, // Enable or disable hold mode
-		// 	showToggleButton: 'always', // Show toggle button ('always', 'active', 'never')
-		// 	toggleButtonPos: 'bottom-right' // Position of the toggle button
-		// }
+		// Enable inspector for better development experience
+		inspector: {
+			toggleKeyCombo: 'meta-shift', // Key combination to open the inspector
+			holdMode: false, // Enable or disable hold mode
+			showToggleButton: 'active', // Show toggle button only when active
+			toggleButtonPos: 'bottom-right' // Position of the toggle button
+		},
+		// Development optimizations
+		experimental: {
+			useVitePreprocess: true
+		}
 	},
 	onwarn: (warning, handler) => {
 		const { code } = warning;

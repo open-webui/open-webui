@@ -1,0 +1,206 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# PII Detection Debugging Guide
+
+## Common Issues & Solutions
+
+### PiiDetectionExtension Not Working (NEW)
+**Symptoms**: No PII detection or highlighting in RichTextInput
+**Debug Steps**:
+1. Check extension initialization logs: `PiiDetectionExtension: Initializing with options`
+2. Verify API key is set: `hasApiKey: true` in console logs
+3. Check position mapping: `PiiDetectionExtension: Built position mapping` logs
+4. Verify API calls: Look for `PiiDetectionExtension: Starting PII detection` logs
+5. Test manual detection: Use editor command `editor.commands.detectPii()`
+
+**Root Causes**:
+- `enablePiiDetection` prop not set to `true`
+- Missing or invalid `piiApiKey`
+- Extension not included in editor extensions array
+- Debounce preventing immediate detection (wait 500ms)
+
+### Position Mapping Issues (NEW)
+**Symptoms**: PII highlights appear in wrong locations or cut off text
+**Debug Steps**:
+1. Check position mapping logs: `PiiDetectionExtension: Built position mapping`
+2. Verify plain text extraction: Check `plainTextPreview` in logs
+3. Check entity position mapping: `PiiDetectionExtension: Mapping entity position`
+4. Compare expected vs actual text in mapping logs
+5. Test with simple text first (no formatting)
+
+**Key Fixes Applied**:
+- Fixed inclusive/exclusive position handling (PII API uses exclusive end, ProseMirror uses inclusive)
+- Improved paragraph and line break handling in `buildPositionMapping()`
+- Added position verification logging
+
+**Debug Commands**:
+```javascript
+// Check current position mapping
+const state = editor.view.state;
+const pluginState = state.plugins.find(p => p.key.key === 'piiDetection$')?.getState(state);
+console.log(pluginState?.positionMapping);
+
+// Test position mapping manually
+const doc = editor.view.state.doc;
+doc.nodesBetween(0, doc.content.size, (node, pos) => {
+  console.log('Node:', node.type.name, 'at pos:', pos, 'text:', node.text);
+});
+```
+
+### Overlay Not Showing in ResponseMessage
+**Symptoms**: PII highlighting works in input but not in AI responses
+**Debug Steps**:
+1. Check browser console for `PiiAwareText debug:` logs
+2. Verify `entitiesCount > 0` in session manager
+3. Check if response content contains masked patterns `[{LABEL_ID}]`
+4. Verify `hasMaskedPatterns` detection in logs
+5. Test `unmaskAndHighlightTextForDisplay()` function directly
+
+**Root Causes**:
+- No PII entities detected in original input
+- Response content doesn't contain PII references
+- Event listeners not properly attached to highlighted elements
+
+### Mouse Events Not Working
+**Symptoms**: PII highlights visible but no hover overlay
+**Debug Steps**:
+1. Check if `.pii-highlight` elements exist in DOM
+2. Verify `data-pii-label` attributes are present
+3. Test event delegation with `mouseover` vs `mouseenter`
+4. Check DOM traversal in event handlers
+5. For extension: Verify `handleClick` in plugin props
+
+**Key Files**: [PiiDetectionExtension.ts](mdc:src/lib/components/common/RichTextInput/PiiDetectionExtension.ts), [PiiAwareText.svelte](mdc:src/lib/components/chat/Messages/Markdown/PiiAwareText.svelte)
+
+### Session Manager State Issues
+**Symptoms**: Entities lost between components
+**Debug Steps**:
+1. Verify `PiiSessionManager.getInstance()` usage
+2. Check entity storage with `getEntities()` or `getConversationEntities(conversationId)`
+3. Test API key configuration with `piiSessionManager.setApiKey(apiKey)`
+4. Verify conversation ID is consistent across components
+5. Check conversation-specific state persistence
+
+**Key File**: [pii.ts](mdc:src/lib/utils/pii.ts)
+
+### API Integration Issues (NEW)
+**Symptoms**: No API calls being made
+**Debug Steps**:
+1. Check network tab for requests to NENNA.ai API
+2. Verify `performPiiDetection` function execution
+3. Check debounce timing (500ms default)
+4. Test API key validity with manual call
+5. Verify `this.editor?.view` reference in extension
+
+**Debug Commands**:
+```javascript
+// Test API call directly
+import { maskPiiText } from '$lib/apis/pii';
+const response = await maskPiiText('your-api-key', ['Test text with John Doe'], [], false, false);
+console.log('API Response:', response);
+```
+
+### Unmasking Issues (FIXED)
+**Symptoms**: Garbled output like `berlGANISATION_5}]OCATION_4}]ON_3}]ERSON_2}]RSON_1}]in`
+**Root Cause**: Incorrect regex pattern construction in `unmaskTextWithEntities()`
+**Fix Applied**: 
+- Extract base type and ID from entity label correctly
+- Entity `label: "PERSON_1"` → `baseType: "PERSON"`, `labelId: "1"`
+- Build pattern `{PERSON_1}` not `{PERSON_1_1}`
+
+**Debug Steps**:
+1. Check entity label format matches `TYPE_NUMBER` pattern
+2. Verify `unmaskTextWithEntities()` is using fixed regex logic
+3. Test with various masking patterns: `[{TYPE_ID}]`, `[TYPE_ID]`, `{TYPE_ID}`, `TYPE_ID`
+
+## Debug Console Commands
+
+### ProseMirror Extension Debugging (NEW)
+```javascript
+// Access editor and plugin state
+const editor = window.editorRef || document.querySelector('.ProseMirror')._editor;
+const view = editor.view;
+const pluginKey = view.state.plugins.find(p => p.key.key === 'piiDetection$')?.key;
+const pluginState = pluginKey?.getState(view.state);
+
+console.log('Plugin State:', pluginState);
+console.log('Current Entities:', pluginState?.entities);
+console.log('Position Mapping:', pluginState?.positionMapping);
+
+// Trigger manual detection
+editor.commands.detectPii();
+
+// Check decorations
+const decorations = view.props.decorations(view.state);
+console.log('Current decorations:', decorations);
+```
+
+### Session Manager Debugging
+```javascript
+// Check session manager state
+window.piiManager = PiiSessionManager.getInstance();
+console.log('Global Entities:', window.piiManager.getEntities());
+
+// Check conversation-specific state
+const conversationId = 'your-conversation-id';
+console.log('Conversation Entities:', window.piiManager.getConversationEntities(conversationId));
+console.log('Known Entities for API:', window.piiManager.getKnownEntitiesForApi(conversationId));
+
+// Test unmasking function
+const testText = "Hello [{PERSON_1}] from [{LOCATION_2}]!";
+const entities = window.piiManager.getEntities();
+console.log('Unmasked:', unmaskTextWithEntities(testText, entities));
+```
+
+### DOM and API Debugging
+```javascript
+// Inspect DOM for PII highlights
+const highlights = document.querySelectorAll('.pii-highlight');
+console.log('PII Highlights:', highlights);
+highlights.forEach(el => console.log(el.dataset));
+
+// Test API connectivity (check network tab for NENNA.ai requests)
+fetch('https://api.nenna.ai/v1/health').then(r => r.json()).then(console.log);
+```
+
+## Essential Debug Logs
+
+Enable these console.log statements for debugging:
+
+### Extension Logs (NEW)
+- `PiiDetectionExtension: Initializing with options` - Extension setup
+- `PiiDetectionExtension: Built position mapping` - Position mapping creation  
+- `PiiDetectionExtension: Starting PII detection` - API call initiation
+- `PiiDetectionExtension: Mapping entity position` - Position conversion
+- `PiiDetectionExtension: Creating X decorations` - Visual highlight creation
+
+### Legacy Component Logs
+- `PiiAwareText debug:` - Entity processing status
+- `RichTextInput: PII detection` - Input field detection (legacy)
+- `Mouse enter event triggered` - Event handling verification
+- `Overlay should now be visible` - Overlay state changes
+
+## Performance Debugging
+
+### Position Mapping Performance (NEW)
+```javascript
+// Measure position mapping performance
+console.time('Position Mapping');
+const mapping = buildPositionMapping(editor.view.state.doc);
+console.timeEnd('Position Mapping');
+console.log('Mapping size:', mapping.plainTextToProseMirror.size);
+```
+
+### API Call Monitoring
+```javascript
+// Monitor API call frequency
+let apiCallCount = 0;
+const originalMaskPii = maskPiiText;
+window.maskPiiText = (...args) => {
+  console.log('API Call #', ++apiCallCount, new Date().toISOString());
+  return originalMaskPii(...args);
+};
+```

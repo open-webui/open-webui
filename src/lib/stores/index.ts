@@ -145,7 +145,7 @@ type Settings = {
 	highContrastMode?: boolean;
 	title?: TitleSettings;
 	splitLargeDeltas?: boolean;
-	chatDirection: 'LTR' | 'RTL' | 'auto';
+	chatDirection?: 'LTR' | 'RTL' | 'auto';
 	ctrlEnterToSend?: boolean;
 
 	system?: string;
@@ -158,6 +158,7 @@ type Settings = {
 	num_batch?: string;
 	num_keep?: string;
 	options?: ModelOptions;
+
 };
 
 type ModelOptions = {
@@ -178,6 +179,8 @@ type TitleSettings = {
 	modelExternal?: string;
 	prompt?: string;
 };
+
+
 
 type Prompt = {
 	command: string;
@@ -216,6 +219,7 @@ type Config = {
 		enable_community_sharing: boolean;
 		enable_autocomplete_generation: boolean;
 		enable_direct_connections: boolean;
+		enable_pii_detection?: boolean;
 	};
 	oauth: {
 		providers: {
@@ -225,6 +229,11 @@ type Config = {
 	ui?: {
 		pending_user_overlay_title?: string;
 		pending_user_overlay_description?: string;
+	};
+	pii?: {
+		enabled: boolean;
+		api_key: string;
+		api_base_url: string;
 	};
 };
 

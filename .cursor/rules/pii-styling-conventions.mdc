@@ -1,0 +1,59 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# PII Styling Conventions
+
+## Color Theme
+The PII system uses a custom orange/purple theme inspired by NENNA.ai branding:
+
+### Primary Colors
+- **Orange**: `#f8b76b` (light), `#f9c689` (lighter variant)
+- **Purple**: `#3f3d8a` (dark)
+- **Status Colors**: Green for masked, Red for unmasked
+
+### CSS Classes
+
+#### PII Highlights
+```css
+.pii-highlight {
+  border-radius: 3px;
+  padding: 1px 2px;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.pii-highlight.pii-masked {
+  background-color: rgba(34, 197, 94, 0.2); /* Green for protected */
+}
+
+.pii-highlight.pii-unmasked {
+  background-color: rgba(239, 68, 68, 0.2); /* Red for unprotected */
+}
+```
+
+#### Overlay Styling
+- **Border**: `border-[#f8b76b] dark:border-[#3f3d8a]`
+- **Background**: `bg-white dark:bg-gray-900`
+- **Shadow**: Custom backdrop-filter with orange/purple shadows
+- **Size**: `min-w-56 max-w-80` for compact display
+
+### Style Injection
+PII styles are injected dynamically in components:
+- [ResponseMessage.svelte](mdc:src/lib/components/chat/Messages/ResponseMessage.svelte) - `#pii-response-styles`
+- [UserMessage.svelte](mdc:src/lib/components/chat/Messages/UserMessage.svelte) - `#pii-user-styles`
+- [RichTextInput.svelte](mdc:src/lib/components/common/RichTextInput.svelte) - Via `createPiiHighlightStyles()`
+
+### Logo Integration
+- **Icon Path**: `/static/static/icon-purple-128.png`
+- **Usage**: 16x16px in overlay header with NENNA.AI branding
+- **Styling**: `w-4 h-4 rounded` with proper object-fit
+
+### Interactive States
+- **Hover**: Subtle transform and shadow for feedback
+- **Protected**: Green background with shield icon
+- **Unprotected**: Red background with warning icon
+- **Transitions**: 200ms ease for smooth interactions

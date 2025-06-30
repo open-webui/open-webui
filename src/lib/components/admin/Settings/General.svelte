@@ -699,6 +699,57 @@
 						</div>
 					</div>
 				</div>
+
+				<div class="mb-3">
+					<div class=" mb-2.5 text-base font-medium">{$i18n.t('PII Detection')}</div>
+
+					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+
+					<div class="mb-2.5 flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">
+							{$i18n.t('Enable PII Detection')}
+						</div>
+						<div class="flex items-center relative">
+							<Switch bind:state={adminConfig.ENABLE_PII_DETECTION} />
+						</div>
+					</div>
+
+					{#if adminConfig.ENABLE_PII_DETECTION}
+						<div class="mb-2.5">
+							<div class=" self-center text-xs font-medium mb-2">
+								{$i18n.t('NENNA API Key')}
+							</div>
+							<SensitiveInput
+								placeholder={$i18n.t('Enter your NENNA API key')}
+								bind:value={adminConfig.PII_API_KEY}
+							/>
+						</div>
+
+						<div class="mb-2.5">
+							<div class=" self-center text-xs font-medium mb-2">
+								{$i18n.t('PII API Base URL')}
+							</div>
+							<input
+								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+								placeholder={$i18n.t('Enter PII API base URL')}
+								bind:value={adminConfig.PII_API_BASE_URL}
+							/>
+						</div>
+
+						<div class="text-xs text-gray-500 space-y-1">
+							<p>
+								Get your API key from <a
+									href="https://nenna.ai"
+									target="_blank"
+									class="text-blue-600 hover:underline">nenna.ai</a
+								>
+							</p>
+							<p>
+								PII detection will automatically detect and mask personally identifiable information across all users.
+							</p>
+						</div>
+					{/if}
+				</div>
 			</div>
 		{/if}
 	</div>
