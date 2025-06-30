@@ -1,6 +1,9 @@
 from fastapi import FastAPI
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
+    OTLPSpanExporter as HttpOTLPSpanExporter,
+)
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import TracerProvider
 from sqlalchemy import Engine
@@ -16,6 +19,7 @@ from open_webui.env import (
     ENABLE_OTEL_METRICS,
     OTEL_BASIC_AUTH_USERNAME,
     OTEL_BASIC_AUTH_PASSWORD,
+    OTEL_OTLP_SPAN_EXPORTER,
 )
 
 
@@ -35,11 +39,18 @@ def setup(app: FastAPI, db_engine: Engine):
         headers = [("authorization", f"Basic {auth_header}")]
 
     # otlp export
-    exporter = OTLPSpanExporter(
-        endpoint=OTEL_EXPORTER_OTLP_ENDPOINT,
-        insecure=OTEL_EXPORTER_OTLP_INSECURE,
-        headers=headers,
-    )
+    if OTEL_OTLP_SPAN_EXPORTER == "http":
+        exporter = HttpOTLPSpanExporter(
+            endpoint=OTEL_EXPORTER_OTLP_ENDPOINT,
+            insecure=OTEL_EXPORTER_OTLP_INSECURE,
+            headers=headers,
+        )
+    else:
+        exporter = OTLPSpanExporter(
+            endpoint=OTEL_EXPORTER_OTLP_ENDPOINT,
+            insecure=OTEL_EXPORTER_OTLP_INSECURE,
+            headers=headers,
+        )
     trace.get_tracer_provider().add_span_processor(LazyBatchSpanProcessor(exporter))
     Instrumentor(app=app, db_engine=db_engine).instrument()
 

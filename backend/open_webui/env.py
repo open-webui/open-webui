@@ -579,6 +579,12 @@ OTEL_TRACES_SAMPLER = os.environ.get(
 OTEL_BASIC_AUTH_USERNAME = os.environ.get("OTEL_BASIC_AUTH_USERNAME", "")
 OTEL_BASIC_AUTH_PASSWORD = os.environ.get("OTEL_BASIC_AUTH_PASSWORD", "")
 
+
+OTEL_OTLP_SPAN_EXPORTER = os.environ.get(
+    "OTEL_OTLP_SPAN_EXPORTER", "grpc"
+).lower()  # grpc or http
+
+
 ####################################
 # TOOLS/FUNCTIONS PIP OPTIONS
 ####################################
