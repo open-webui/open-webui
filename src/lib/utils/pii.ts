@@ -983,51 +983,45 @@ export function unmaskAndHighlightTextForDisplay(text: string, entities: Extende
 	}
 
 	let processedText = text;
-	let replacementsMade = 0;
 
+	const sortedEntities = [...entities].sort((a, b) => b.raw_text.length - a.raw_text.length);
 	// Step 1: Unmask all patterns and simultaneously replace with highlighted spans
-	entities.forEach((entity) => {
+	sortedEntities.forEach((entity) => {
 		const { label, raw_text: rawText } = entity;
 
 		if (!label || !rawText) return;
 
-		// Extract the base type and ID from the label
-		const labelMatch = label.match(/^(.+)_(\d+)$/);
-		if (!labelMatch) return;
+		if (entity.shouldMask) {
+			// Extract the base type and ID from the label
+			const labelMatch = label.match(/^(.+)_(\d+)$/);
+			if (!labelMatch) return;
 
-		const [, baseType, labelId] = labelMatch;
-		const labelVariations = getLabelVariations(baseType);
+			const [, baseType, labelId] = labelMatch;
+			const labelVariations = getLabelVariations(baseType);
 
-		// Create comprehensive patterns for masked text
-		const patterns = [
-			`\\[\\{${labelVariations}_${labelId}\\}\\]`,  // [{TYPE_ID}]
-			`\\[${labelVariations}_${labelId}\\]`,        // [TYPE_ID]
-			`\\{${labelVariations}_${labelId}\\}`,        // {TYPE_ID}
-			`${labelVariations}_${labelId}(?=\\s|$|[^\\w])` // TYPE_ID as word boundary
-		];
-		
-		// Use case-insensitive matching and global flag
-		const labelRegex = new RegExp(patterns.join('|'), 'gi');
+			// Create comprehensive patterns for masked text
+			const patterns = [
+				`\\[\\{${labelVariations}_${labelId}\\}\\]`,  // [{TYPE_ID}]
+				`\\[${labelVariations}_${labelId}\\]`,        // [TYPE_ID]
+				`\\{${labelVariations}_${labelId}\\}`,        // {TYPE_ID}
+				`${labelVariations}_${labelId}(?=\\s|$|[^\\w])` // TYPE_ID as word boundary
+			];
+			
+			// Use case-insensitive matching and global flag
+			const labelRegex = new RegExp(patterns.join('|'), 'gi');
 
-		// Replace masked patterns with highlighted spans containing the original text
-		processedText = processedText.replace(labelRegex, () => {
-			const shouldMask = entity.shouldMask ?? true;
-			const maskingClass = shouldMask ? 'pii-masked' : 'pii-unmasked';
-			const statusText = shouldMask ? 
-				i18next.t('PII Modifier: Was masked in input') : 
-				i18next.t('PII Modifier: Was NOT masked in input');
+			// Replace masked patterns with highlighted spans containing the original text
+			processedText = processedText.replace(labelRegex, () => {
+				const shouldMask = entity.shouldMask ?? true;
+				const maskingClass = shouldMask ? 'pii-masked' : 'pii-unmasked';
+				const statusText = shouldMask ? 
+					i18next.t('PII Modifier: Was masked in input') : 
+					i18next.t('PII Modifier: Was NOT masked in input');
 
-			replacementsMade++;
-			return `<span class="pii-highlight ${maskingClass}" title="${entity.label} - ${statusText}" data-pii-type="${entity.type}" data-pii-label="${entity.label}">${rawText}</span>`;
-		});
-	});
-
-	// Step 2: If no masked patterns were found, highlight any remaining raw text instances
-	if (replacementsMade === 0) {
-		// Sort entities by text length (longest first) to avoid partial replacements
-		const sortedEntities = [...entities].sort((a, b) => b.raw_text.length - a.raw_text.length);
-
-		sortedEntities.forEach((entity) => {
+				//replacementsMade++;
+				return `<span class="pii-highlight ${maskingClass}" title="${entity.label} - ${statusText}" data-pii-type="${entity.type}" data-pii-label="${entity.label}">${rawText}</span>`;
+			});
+		} else {
 			// Skip entities with empty or invalid raw_text
 			if (!entity.raw_text?.trim()) return;
 
@@ -1047,11 +1041,11 @@ export function unmaskAndHighlightTextForDisplay(text: string, entities: Extende
 					i18next.t('PII Modifier: Was masked in input') : 
 					i18next.t('PII Modifier: Was NOT masked in input');
 
-				replacementsMade++;
+				//replacementsMade++;
 				return `<span class="pii-highlight ${maskingClass}" title="${entity.label} - ${statusText}" data-pii-type="${entity.type}" data-pii-label="${entity.label}">${match}</span>`;
 			});
-		});
-	}
+		}
+	});
 
 	return processedText;
 }
