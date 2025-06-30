@@ -15,7 +15,7 @@
 
 	import Markdown from './Markdown.svelte';
 	import Name from './Name.svelte';
-	import Skeleton from './Skeleton.svelte';
+	import LoadingIndicator from './LoadingIndicator.svelte';
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
 	const i18n = getContext('i18n');
 	dayjs.extend(localizedFormat);
@@ -309,7 +309,7 @@
 
 								<div class="mt-1 markdown-prose w-full min-w-full">
 									{#if (message?.content ?? '') === ''}
-										<Skeleton />
+										<LoadingIndicator />
 									{:else}
 										<Markdown id={`merged`} content={message.content ?? ''} />
 									{/if}

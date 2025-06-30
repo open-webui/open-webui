@@ -442,3 +442,17 @@ input[type='number'] {
 .tiptap tr {
 	@apply bg-white dark:bg-gray-900 dark:border-gray-850 text-xs;
 }
+
+@keyframes pulseSize {
+	0%,
+	100% {
+		transform: scale(1);
+	}
+	50% {
+		transform: scale(1.2);
+	}
+}
+
+.animate-pulseSize {
+	animation: pulseSize 1.25s ease-in-out infinite;
+}
