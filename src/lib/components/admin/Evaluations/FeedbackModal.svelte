@@ -104,8 +104,8 @@
 							</div>
 						</div>
 
-						<div class="mb-2 -mx-1">
-							{#if selectedFeedback?.data?.tags && selectedFeedback?.data?.tags.length}
+						{#if selectedFeedback?.data?.tags && selectedFeedback?.data?.tags.length}
+							<div class="mb-2 -mx-1">
 								<div class="flex flex-wrap gap-1 mt-1">
 									{#each selectedFeedback?.data?.tags as tag}
 										<span class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-850 text-[9px]"
@@ -113,10 +113,8 @@
 										>
 									{/each}
 								</div>
-							{:else}
-								<span>-</span>
-							{/if}
-						</div>
+							</div>
+						{/if}
 
 						<div class="flex justify-end pt-2">
 							<button
