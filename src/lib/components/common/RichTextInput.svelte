@@ -59,6 +59,9 @@
 	export let shiftEnter = false;
 	export let largeTextAsFile = false;
 
+	let isUserEditing = false;
+	let lastSyncedValue = value;
+
 	let element;
 	let editor;
 
@@ -256,7 +259,9 @@
 						}
 
 						if (value !== newValue) {
+							isUserEditing = true;
 							value = newValue;
+							lastSyncedValue = newValue;
 
 							// check if the node is paragraph as well
 							if (editor.isActive('paragraph')) {
@@ -409,7 +414,9 @@
 	});
 
 	$: if (value !== null && editor) {
-		onValueChange();
+		if (!isUserEditing && value !== lastSyncedValue) {
+			onValueChange();
+		}
 	}
 
 	const onValueChange = () => {
@@ -447,6 +454,8 @@
 							); // Update editor content
 
 					selectTemplate();
+					lastSyncedValue = value;
+					isUserEditing = false;
 				}
 			}
 		}
