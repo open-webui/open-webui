@@ -1546,6 +1546,7 @@ async def get_app_config(request: Request):
         "name": app.state.WEBUI_NAME,
         "version": VERSION,
         "default_locale": str(DEFAULT_LOCALE),
+        "offline_mode": OFFLINE_MODE,
         "oauth": {
             "providers": {
                 name: config.get("name", name)
