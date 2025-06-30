@@ -172,6 +172,10 @@ HEALTHCHECK CMD curl --silent --fail http://localhost:${PORT:-8080}/health | jq 
 
 USER $UID:$GID
 
+# Set the new entrypoint
+# Generatw a temporary IAM database auth token
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
+
 ARG BUILD_HASH
 ENV WEBUI_BUILD_VERSION=${BUILD_HASH}
 ENV DOCKER=true
