@@ -413,9 +413,7 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 					// CRITICAL FIX: Load conversation entities for cross-message shouldMask persistence
 					// This ensures that entities unmasked in previous messages stay unmasked in new messages
 					// For new chats, load from temporary state instead of empty array
-					const conversationEntities = options.conversationId
-						? piiSessionManager.getConversationEntitiesForDisplay(options.conversationId)
-						: piiSessionManager.getTemporaryStateEntities(); // ✅ Load temporary state for new chats
+					const conversationEntities = piiSessionManager.getEntitiesForDisplay(options.conversationId)
 					
 					// CRITICAL FIX: Merge plugin state + conversation state for complete context
 					// Plugin state takes precedence (for same-message interactions)
