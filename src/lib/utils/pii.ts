@@ -650,7 +650,7 @@ export class PiiSessionManager {
 
 	// Backwards compatibility
 	toggleEntityMasking(entityId: string, occurrenceIndex: number) {
-		const entity = this.entities.find((e) => e.label === entityId);
+		const entity = this.temporaryState.entities.find((e) => e.label === entityId);
 		if (entity && entity.occurrences[occurrenceIndex]) {
 			entity.shouldMask = !entity.shouldMask;
 		}
