@@ -1,10 +1,8 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
 	import DOMPurify from 'dompurify';
 	import {
 		PiiSessionManager,
 		unmaskAndHighlightTextForDisplay,
-		type ExtendedPiiEntity
 	} from '$lib/utils/pii';
 
 	export let text: string;
@@ -14,13 +12,11 @@
 	let containerElement: HTMLElement;
 	let piiSessionManager = PiiSessionManager.getInstance();
 
-	// CRITICAL FIX: Ensure conversation state is loaded for this conversationId
 	// This ensures cross-message consistency
 	$: if (conversationId && conversationId !== '') {
 		piiSessionManager.loadConversationState(conversationId);
 	}
 
-	// CRITICAL FIX: Use conversation-specific entities for consistent display
 	$: entities = conversationId && conversationId !== '' 
 		? piiSessionManager.getConversationEntities(conversationId)
 		: piiSessionManager.getEntitiesForDisplay();
@@ -40,90 +36,6 @@
 		return unmaskAndHighlightTextForDisplay(text, entities);
 	})();
 	$: hasHighlighting = processedText !== text;
-
-	const handleOverlayToggle = () => {
-		// CRITICAL FIX: Trigger reactivity by reassigning entities 
-		// This ensures the display updates immediately after toggle
-		if (conversationId && conversationId !== '') {
-			entities = piiSessionManager.getConversationEntities(conversationId);
-		} else {
-			entities = piiSessionManager.getEntitiesForDisplay();
-		}
-		
-		// Trigger reactive update of processedText
-		// The reactive statement will automatically recalculate processedText
-	};
-
-	// Add event listeners for PII highlights
-	const addPiiEventListeners = () => {
-		if (!containerElement) {
-			return;
-		}
-
-		const piiElements = containerElement.querySelectorAll('.pii-highlight');
-
-		piiElements.forEach((element) => {
-			const htmlElement = element as HTMLElement;
-
-			const handleClick = (event: MouseEvent) => {
-				const target = event.target as HTMLElement;
-				const entityLabel = target.getAttribute('data-pii-label');
-
-				if (entityLabel) {
-					// Use conversation-specific or global entity toggling based on conversationId
-					if (conversationId) {
-						piiSessionManager.toggleConversationEntityMasking(conversationId, entityLabel, 0);
-					} else {
-						piiSessionManager.toggleEntityMasking(entityLabel, 0);
-					}
-					handleOverlayToggle();
-					event.preventDefault();
-				}
-			};
-
-			htmlElement.addEventListener('click', handleClick);
-
-			// Store event listeners for cleanup
-			(htmlElement as any)._piiEventListeners = {
-				click: handleClick
-			};
-		});
-	};
-
-	const removePiiEventListeners = () => {
-		if (!containerElement) return;
-
-		const piiElements = containerElement.querySelectorAll('.pii-highlight');
-
-		piiElements.forEach((element) => {
-			const htmlElement = element as HTMLElement;
-			const listeners = (htmlElement as any)._piiEventListeners;
-
-			if (listeners) {
-				htmlElement.removeEventListener('click', listeners.click);
-				delete (htmlElement as any)._piiEventListeners;
-			}
-		});
-	};
-
-	// Re-add event listeners when the text changes
-	$: if (containerElement && hasHighlighting) {
-		// Use a small delay to ensure DOM is updated
-		setTimeout(() => {
-			removePiiEventListeners();
-			addPiiEventListeners();
-		}, 0);
-	}
-
-	onMount(() => {
-		if (hasHighlighting) {
-			addPiiEventListeners();
-		}
-	});
-
-	onDestroy(() => {
-		removePiiEventListeners();
-	});
 </script>
 
 <span bind:this={containerElement} {id}>

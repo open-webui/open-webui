@@ -71,13 +71,6 @@
 		}
 	};
 
-	// PII processing function for user messages - just return content for display
-	const processUserMessageContent = (content: string): string => {
-		// UserMessage should only display content, not modify PII state
-		// PiiAwareText components will handle conversation-aware entity processing
-		return content;
-	};
-
 	const editMessageHandler = async () => {
 		edit = true;
 		editedContent = message.content;
@@ -411,7 +404,7 @@
 									: ' w-full'}"
 							>
 								{#if message.content}
-									<Markdown id={message.id} content={processUserMessageContent(message.content)} conversationId={history?.id || ''} />
+									<Markdown id={message.id} content={message.content} conversationId={history?.id || ''} />
 								{/if}
 							</div>
 						</div>

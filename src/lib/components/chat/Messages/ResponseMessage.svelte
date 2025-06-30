@@ -184,13 +184,6 @@
 		}
 	};
 
-	// PII Processing function - let markdown components handle unmasking and highlighting
-	const processResponseContent = (content: string): string => {
-		// Don't unmask here - let the PiiAwareText components in markdown handle it
-		// This preserves the [{LABEL_ID}] patterns for the markdown components to process
-		return content;
-	};
-
 	const playAudio = (idx: number) => {
 		return new Promise<void>((res) => {
 			speakingIdx = idx;
@@ -883,7 +876,7 @@
 																	<ContentRenderer
 									id={message.id}
 									{history}
-									content={processResponseContent(message.content)}
+									content={message.content}
 									sources={message.sources}
 									floatingButtons={message?.done && !readOnly}
 									save={!readOnly}
