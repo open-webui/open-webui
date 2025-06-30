@@ -172,6 +172,13 @@
 	let showRateComment = false;
 
 	const copyToClipboard = async (text) => {
+				
+		// First unmask any PII placeholders to get the actual text
+		const entities = chatId ? piiSessionManager.getConversationEntities(chatId) : piiSessionManager.getEntities();
+		if (entities.length > 0) {
+			text = unmaskTextWithEntities(text, entities);
+		}
+		
 		text = removeAllDetails(text);
 
 		if (($config?.ui?.response_watermark ?? '').trim() !== '') {
