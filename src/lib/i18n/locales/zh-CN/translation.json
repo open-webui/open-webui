@@ -740,6 +740,7 @@
 	"Jupyter URL": "Jupyter URL",
 	"JWT Expiration": "JWT 过期",
 	"JWT Token": "JWT 令牌",
+	"API Key Expiration": "API 密钥过期",
 	"Kagi Search API Key": "Kagi 搜索 API 密钥",
 	"Keep in Sidebar": "保留在侧边栏",
 	"Key": "密匙",

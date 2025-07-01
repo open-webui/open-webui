@@ -375,6 +375,28 @@
 
 					<div class=" mb-2.5 w-full justify-between">
 						<div class="flex w-full justify-between">
+							<div class=" self-center text-xs font-medium">{$i18n.t('API Key Expiration')}</div>
+						</div>
+
+						<div class="flex mt-2 space-x-2">
+							<input
+								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+								type="text"
+								placeholder={`e.g.) "30m","1h", "10d", "-1" for no expiration`}
+								bind:value={adminConfig.API_KEY_EXPIRES_IN}
+							/>
+						</div>
+
+						<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+							{$i18n.t('Valid time units:')}
+							<span class=" text-gray-300 font-medium"
+								>{$i18n.t("'s', 'm', 'h', 'd', 'w' or '-1' for no expiration.")}</span
+							>
+						</div>
+					</div>
+
+					<div class=" mb-2.5 w-full justify-between">
+						<div class="flex w-full justify-between">
 							<div class=" self-center text-xs font-medium">{$i18n.t('JWT Expiration')}</div>
 						</div>
 

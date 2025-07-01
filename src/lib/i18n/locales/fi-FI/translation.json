@@ -740,6 +740,7 @@
 	"Jupyter URL": "Jupyter verkko-osoite",
 	"JWT Expiration": "JWT-vanheneminen",
 	"JWT Token": "JWT-token",
+	"API Key Expiration": "API-avain vanhenee",
 	"Kagi Search API Key": "Kagi Search API -avain",
 	"Keep in Sidebar": "Pidä sivupalkissa",
 	"Key": "Avain",

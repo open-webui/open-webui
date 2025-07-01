@@ -740,6 +740,7 @@
 	"Jupyter URL": "رابط Jupyter",
 	"JWT Expiration": "JWT تجريبي",
 	"JWT Token": "JWT Token",
+	"API Key Expiration": "تاريخ انتهاء صلاحية المفتاح",
 	"Kagi Search API Key": "مفتاح API لـ Kagi Search",
 	"Keep in Sidebar": "",
 	"Key": "المفتاح",

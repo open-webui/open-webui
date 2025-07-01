@@ -740,6 +740,7 @@
 	"Jupyter URL": "",
 	"JWT Expiration": "การหมดอายุของ JWT",
 	"JWT Token": "โทเค็น JWT",
+	"API Key Expiration": "หมดอายุของคีย์ API",
 	"Kagi Search API Key": "",
 	"Keep in Sidebar": "",
 	"Key": "",

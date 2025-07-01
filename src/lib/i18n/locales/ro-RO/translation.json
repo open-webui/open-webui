@@ -740,6 +740,7 @@
 	"Jupyter URL": "",
 	"JWT Expiration": "Expirarea JWT",
 	"JWT Token": "Token JWT",
+	"API Key Expiration": "Expirarea cheii API",
 	"Kagi Search API Key": "",
 	"Keep in Sidebar": "",
 	"Key": "",

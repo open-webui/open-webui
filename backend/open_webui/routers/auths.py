@@ -20,6 +20,7 @@ from open_webui.models.auths import (
 )
 from open_webui.models.users import Users
 from open_webui.models.groups import Groups
+from open_webui.models.api_keys import ApiKeys, ApiKeyCreateResponse, ApiKeyResponse
 
 from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
 from open_webui.env import (
@@ -34,9 +35,8 @@ from open_webui.env import (
 )
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse, Response, JSONResponse
-from open_webui.config import OPENID_PROVIDER_URL, ENABLE_OAUTH_SIGNUP, ENABLE_LDAP
+from open_webui.config import OPENID_PROVIDER_URL, ENABLE_OAUTH_SIGNUP, ENABLE_LDAP, API_KEY_EXPIRES_IN
 from pydantic import BaseModel
-
 from open_webui.utils.misc import parse_duration, validate_email_format
 from open_webui.utils.auth import (
     decode_token,
@@ -806,6 +806,7 @@ async def get_admin_config(request: Request, user=Depends(get_admin_user)):
         "ENABLE_SIGNUP": request.app.state.config.ENABLE_SIGNUP,
         "ENABLE_API_KEY": request.app.state.config.ENABLE_API_KEY,
         "ENABLE_API_KEY_ENDPOINT_RESTRICTIONS": request.app.state.config.ENABLE_API_KEY_ENDPOINT_RESTRICTIONS,
+        "API_KEY_EXPIRES_IN": request.app.state.config.API_KEY_EXPIRES_IN,
         "API_KEY_ALLOWED_ENDPOINTS": request.app.state.config.API_KEY_ALLOWED_ENDPOINTS,
         "DEFAULT_USER_ROLE": request.app.state.config.DEFAULT_USER_ROLE,
         "JWT_EXPIRES_IN": request.app.state.config.JWT_EXPIRES_IN,
@@ -826,6 +827,7 @@ class AdminConfig(BaseModel):
     ENABLE_SIGNUP: bool
     ENABLE_API_KEY: bool
     ENABLE_API_KEY_ENDPOINT_RESTRICTIONS: bool
+    API_KEY_EXPIRES_IN: str
     API_KEY_ALLOWED_ENDPOINTS: str
     DEFAULT_USER_ROLE: str
     JWT_EXPIRES_IN: str
@@ -854,16 +856,18 @@ async def update_admin_config(
     request.app.state.config.API_KEY_ALLOWED_ENDPOINTS = (
         form_data.API_KEY_ALLOWED_ENDPOINTS
     )
-
+    
     request.app.state.config.ENABLE_CHANNELS = form_data.ENABLE_CHANNELS
     request.app.state.config.ENABLE_NOTES = form_data.ENABLE_NOTES
 
     if form_data.DEFAULT_USER_ROLE in ["pending", "user", "admin"]:
         request.app.state.config.DEFAULT_USER_ROLE = form_data.DEFAULT_USER_ROLE
 
-    pattern = r"^(-1|0|(-?\d+(\.\d+)?)(ms|s|m|h|d|w))$"
-
     # Check if the input string matches the pattern
+    pattern = r"^(-1|0|(-?\d+(\.\d+)?)(ms|s|m|h|d|w))$"
+    if re.match(pattern, form_data.API_KEY_EXPIRES_IN):
+        request.app.state.config.API_KEY_EXPIRES_IN = form_data.API_KEY_EXPIRES_IN
+
     if re.match(pattern, form_data.JWT_EXPIRES_IN):
         request.app.state.config.JWT_EXPIRES_IN = form_data.JWT_EXPIRES_IN
 
@@ -889,6 +893,7 @@ async def update_admin_config(
         "ENABLE_SIGNUP": request.app.state.config.ENABLE_SIGNUP,
         "ENABLE_API_KEY": request.app.state.config.ENABLE_API_KEY,
         "ENABLE_API_KEY_ENDPOINT_RESTRICTIONS": request.app.state.config.ENABLE_API_KEY_ENDPOINT_RESTRICTIONS,
+        "API_KEY_EXPIRES_IN": request.app.state.config.API_KEY_EXPIRES_IN,
         "API_KEY_ALLOWED_ENDPOINTS": request.app.state.config.API_KEY_ALLOWED_ENDPOINTS,
         "DEFAULT_USER_ROLE": request.app.state.config.DEFAULT_USER_ROLE,
         "JWT_EXPIRES_IN": request.app.state.config.JWT_EXPIRES_IN,
@@ -1011,9 +1016,39 @@ async def update_ldap_config(
 ############################
 
 
-# create api key
-@router.post("/api_key", response_model=ApiKey)
-async def generate_api_key(request: Request, user=Depends(get_current_user)):
+
+class CreateApiKeyRequest(BaseModel):
+    name: Optional[str] = None
+
+
+@router.get("/api_keys", response_model=List[ApiKeyResponse])
+async def get_api_keys(request: Request, user=Depends(get_current_user)):
+    """Get all API keys for the current user"""
+    api_keys = ApiKeys.get_api_keys_by_user_id(user.id)
+    expires_delta = parse_duration(API_KEY_EXPIRES_IN.value)
+    expiry = int(expires_delta.total_seconds()) if expires_delta else -1
+    
+    return [
+        ApiKeyResponse(
+            id=key.id,
+            name=key.name,
+            api_key=key.api_key,
+            created_at=key.created_at,
+            last_used_at=key.last_used_at,
+            expires_at=ApiKeys.get_expiration_timestamp(key, expiry),
+            is_expired=ApiKeys.is_api_key_expired(key, expiry),
+        )
+        for key in api_keys
+    ]
+
+
+@router.post("/api_keys", response_model=ApiKeyCreateResponse)
+async def create_new_api_key(
+    request: Request, 
+    form_data: CreateApiKeyRequest, 
+    user=Depends(get_current_user)
+):
+    """Create a new API key"""
     if not request.app.state.config.ENABLE_API_KEY:
         raise HTTPException(
             status.HTTP_403_FORBIDDEN,
@@ -1021,30 +1056,95 @@ async def generate_api_key(request: Request, user=Depends(get_current_user)):
         )
 
     api_key = create_api_key()
-    success = Users.update_user_api_key_by_id(user.id, api_key)
+    new_key = ApiKeys.create_api_key(user.id, api_key, form_data.name)
 
-    if success:
+    if new_key:
+        return ApiKeyCreateResponse(
+            id=new_key.id,
+            api_key=new_key.api_key,
+            name=new_key.name,
+            created_at=new_key.created_at,
+        )
+    else:
+        raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_API_KEY_ERROR)
+
+
+@router.delete("/api_keys/{api_key_id}", response_model=bool)
+async def delete_api_key(api_key_id: str, user=Depends(get_current_user)):
+    """Delete a specific API key"""
+    success = ApiKeys.delete_api_key_by_id(api_key_id, user.id)
+    return success
+
+
+@router.get("/api_keys/expires_in", response_model=dict)
+async def get_api_key_expiry_info(user=Depends(get_current_user)):
+    """Get API key expiry configuration info"""
+    expires_delta = parse_duration(API_KEY_EXPIRES_IN.value)
+    expiry = int(expires_delta.total_seconds()) if expires_delta else -1
+    return {
+        "expiry": expiry,
+        "expiry_enabled": expiry > 0,
+        "expiry_formatted": (
+            f"{expiry // 86400} days, {(expiry % 86400) // 3600} hours"
+            if expiry > 0
+            else "Never"
+        )
+    }
+
+
+@router.post("/api_keys/cleanup", response_model=dict)
+async def cleanup_expired_api_keys(user=Depends(get_admin_user)):
+    """Clean up expired API keys (admin only)"""
+    expires_delta = parse_duration(API_KEY_EXPIRES_IN.value)
+    expiry = int(expires_delta.total_seconds()) if expires_delta else -1
+    if expiry <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="API key expiry is not enabled"
+        )
+    
+    deleted_count = ApiKeys.cleanup_expired_api_keys(expiry)
+    return {
+        "deleted_count": deleted_count,
+        "message": f"Cleaned up {deleted_count} expired API keys"
+    }
+
+
+# Legacy endpoints for backward compatibility
+@router.post("/api_key", response_model=ApiKey)
+async def generate_api_key_legacy(request: Request, user=Depends(get_current_user)):
+    """Legacy endpoint - creates an API key without name"""
+    if not request.app.state.config.ENABLE_API_KEY:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.API_KEY_CREATION_NOT_ALLOWED,
+        )
+
+    api_key = create_api_key()
+    new_key = ApiKeys.create_api_key(user.id, api_key, "Legacy API Key")
+
+    if new_key:
         return {
-            "api_key": api_key,
+            "api_key": new_key.api_key,
         }
     else:
         raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_API_KEY_ERROR)
 
 
-# delete api key
 @router.delete("/api_key", response_model=bool)
-async def delete_api_key(user=Depends(get_current_user)):
-    success = Users.update_user_api_key_by_id(user.id, None)
+async def delete_all_api_keys_legacy(user=Depends(get_current_user)):
+    """Legacy endpoint - deletes all API keys for user"""
+    success = ApiKeys.delete_all_api_keys_by_user_id(user.id)
     return success
 
 
-# get api key
 @router.get("/api_key", response_model=ApiKey)
-async def get_api_key(user=Depends(get_current_user)):
-    api_key = Users.get_user_api_key_by_id(user.id)
-    if api_key:
+async def get_api_key_legacy(user=Depends(get_current_user)):
+    """Legacy endpoint - gets the first API key for the user"""
+    api_keys = ApiKeys.get_api_keys_by_user_id(user.id)
+    if api_keys:
         return {
-            "api_key": api_key,
+            "api_key": api_keys[0].api_key,
         }
     else:
         raise HTTPException(404, detail=ERROR_MESSAGES.API_KEY_NOT_FOUND)

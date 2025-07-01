@@ -740,6 +740,7 @@
 	"Jupyter URL": "",
 	"JWT Expiration": "JWT-ის ვადა",
 	"JWT Token": "JWT ტოკენი",
+	"API Key Expiration": "API გასაღების ვადა",
 	"Kagi Search API Key": "",
 	"Keep in Sidebar": "",
 	"Key": "გასაღები",

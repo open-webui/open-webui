@@ -740,6 +740,7 @@
 	"Jupyter URL": "",
 	"JWT Expiration": "Vypršanie platnosti JWT (JSON Web Token)",
 	"JWT Token": "JWT Token (JSON Web Token)",
+	"API Key Expiration": "Vypršanie API kľúča",
 	"Kagi Search API Key": "",
 	"Keep in Sidebar": "",
 	"Key": "",

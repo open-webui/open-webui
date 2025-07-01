@@ -621,6 +621,7 @@ export const updateJWTExpiresDuration = async (token: string, duration: string) 
 	return res;
 };
 
+// Legacy API Key functions (for backward compatibility)
 export const createAPIKey = async (token: string) => {
 	let error = null;
 
@@ -676,6 +677,113 @@ export const deleteAPIKey = async (token: string) => {
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/api_key`, {
 		method: 'DELETE',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err.detail;
+			return null;
+		});
+	if (error) {
+		throw error;
+	}
+	return res;
+};
+
+// New Multiple API Keys functions
+export const getAPIKeys = async (token: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/api_keys`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err.detail;
+			return null;
+		});
+	if (error) {
+		throw error;
+	}
+	return res;
+};
+
+export const createAPIKeyWithName = async (token: string, name?: string) => {
+	let error = null;
+	
+	const body: any = {};
+	if (name) {
+		body.name = name;
+	}
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/api_keys`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify(body)
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err.detail;
+			return null;
+		});
+	if (error) {
+		throw error;
+	}
+	return res;
+};
+
+export const deleteAPIKeyById = async (token: string, keyId: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/api_keys/${keyId}`, {
+		method: 'DELETE',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err.detail;
+			return null;
+		});
+	if (error) {
+		throw error;
+	}
+	return res;
+};
+
+export const getAPIKeyExpiryInfo = async (token: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/api_keys/expires_in`, {
+		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
