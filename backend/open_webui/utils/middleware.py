@@ -372,6 +372,9 @@ async def chat_web_search_handler(
             user,
         )
 
+        if res and isinstance(res, Response):
+            res = res.body.decode()
+
         response = res["choices"][0]["message"]["content"]
 
         try:
@@ -528,6 +531,9 @@ async def chat_image_generation_handler(
                 user,
             )
 
+            if res and isinstance(res, Response):
+                res = res.body.decode()
+
             response = res["choices"][0]["message"]["content"]
 
             try:
@@ -618,6 +624,10 @@ async def chat_completion_files_handler(
                 },
                 user,
             )
+
+            if queries_response and isinstance(queries_response, Response):
+                queries_response = queries_response.body.decode()
+
             queries_response = queries_response["choices"][0]["message"]["content"]
 
             try:
@@ -1059,6 +1069,9 @@ async def process_chat_response(
                         user,
                     )
 
+                    if res and isinstance(res, Response):
+                        res = json.loads(res.body.decode())
+
                     if res and isinstance(res, dict):
                         if len(res.get("choices", [])) == 1:
                             follow_ups_string = (
@@ -1114,6 +1127,9 @@ async def process_chat_response(
                             },
                             user,
                         )
+
+                        if res and isinstance(res, Response):
+                            res = json.loads(res.body.decode())
 
                         if res and isinstance(res, dict):
                             if len(res.get("choices", [])) == 1:
@@ -1171,6 +1187,9 @@ async def process_chat_response(
                         },
                         user,
                     )
+
+                    if res and isinstance(res, Response):
+                        res = json.loads(res.body.decode())
 
                     if res and isinstance(res, dict):
                         if len(res.get("choices", [])) == 1:
