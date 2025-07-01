@@ -118,6 +118,8 @@
 								placement="top"
 							>
 								<button
+									aria-hidden={models.length <= 1}
+									aria-label={$i18n.t('Get information on {{name}} in the UI', { name: models[modelIdx]?.name})}
 									on:click={() => {
 										selectedModelIdx = modelIdx;
 									}}
@@ -129,7 +131,7 @@
 												? `/doge.png`
 												: `${WEBUI_BASE_URL}/static/favicon.png`)}
 										class=" size-9 @sm:size-10 rounded-full border-[1px] border-gray-100 dark:border-none"
-										alt="logo"
+										aria-hidden="true"
 										draggable="false"
 									/>
 								</button>
