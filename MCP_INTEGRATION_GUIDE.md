@@ -79,7 +79,7 @@ This guide explains how to set up and use MCP (Model Context Protocol) servers w
 ### OpenRouter Configuration
 
 Your OpenRouter API key is already configured in the `.env` file:
-- **API Key**: `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`
+- **API Key**: `sk-or-v1-REALLY CLAUDE?`
 - **Base URL**: `https://openrouter.ai/api/v1`
 
 ## Testing the Integration
