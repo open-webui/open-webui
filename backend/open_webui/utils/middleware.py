@@ -1216,7 +1216,10 @@ async def process_chat_response(
 
     # Non-streaming response
     if not isinstance(response, StreamingResponse):
-        response_data = json.loads(response.body.decode())
+        if isinstance(response, Response):
+            response_data = json.loads(response.body.decode())
+        else:
+            response_data = response
 
         if event_emitter:
             if "error" in response_data:
@@ -1297,13 +1300,16 @@ async def process_chat_response(
                     **response_data,
                 }
 
-                # Return a new Response object with the merged data
-                return Response(
-                    content=json.dumps(merged_data),
-                    status_code=response.status_code,
-                    headers=dict(response.headers),
-                    media_type=response.media_type,
-                )
+                if isinstance(response, Response):
+                    # Return a new Response object with the merged data
+                    return Response(
+                        content=json.dumps(merged_data),
+                        status_code=response.status_code,
+                        headers=dict(response.headers),
+                        media_type=response.media_type,
+                    )
+                else:
+                    return json.dumps(merged_data)
 
             return response
         else:
@@ -1319,13 +1325,15 @@ async def process_chat_response(
                     **extra_response,
                     **response_data,
                 }
-
-                return Response(
-                    content=json.dumps(merged_data),
-                    status_code=response.status_code,
-                    headers=dict(response.headers),
-                    media_type=response.media_type,
-                )
+                if isinstance(response, Response):
+                    return Response(
+                        content=json.dumps(merged_data),
+                        status_code=response.status_code,
+                        headers=dict(response.headers),
+                        media_type=response.media_type,
+                    )
+                else:
+                    return json.dumps(merged_data)
 
             return response
 
