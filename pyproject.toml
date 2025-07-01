@@ -88,7 +88,7 @@ dependencies = [
     "soundfile==0.13.1",
     "azure-ai-documentintelligence==1.0.2",
 
-    "pillow==11.2.1",
+    "pillow==11.3.0",
     "opencv-python-headless==4.11.0.86",
     "rapidocr-onnxruntime==1.4.4",
     "rank-bm25==0.2.2",
