@@ -28,13 +28,27 @@
 			<!-- svelte-ignore a11y-media-has-caption -->
 			<video
 				class="w-full my-2"
-				src={videoSrc}
+				src={videoSrc.replaceAll('&amp;', '&')}
 				title="Video player"
 				frameborder="0"
 				referrerpolicy="strict-origin-when-cross-origin"
 				controls
 				allowfullscreen
 			></video>
+		{:else}
+			{token.text}
+		{/if}
+	{:else if html && html.includes('<audio')}
+		{@const audio = html.match(/<audio[^>]*>([\s\S]*?)<\/audio>/)}
+		{@const audioSrc = audio && audio[1]}
+		{#if audioSrc}
+			<!-- svelte-ignore a11y-media-has-caption -->
+			<audio
+				class="w-full my-2"
+				src={audioSrc.replaceAll('&amp;', '&')}
+				title="Audio player"
+				controls
+			></audio>
 		{:else}
 			{token.text}
 		{/if}
@@ -55,6 +69,21 @@
 			>
 			</iframe>
 		{/if}
+	{:else if token.text && token.text.includes('<iframe')}
+		{@const match = token.text.match(/<iframe\s+[^>]*src="([^"]+)"[^>]*><\/iframe>/)}
+		{@const iframeSrc = match && match[1]}
+		{#if iframeSrc}
+			<iframe
+				class="w-full my-2"
+				src={iframeSrc}
+				title="Embedded content"
+				frameborder="0"
+				sandbox
+				onload="this.style.height=(this.contentWindow.document.body.scrollHeight+20)+'px';"
+			></iframe>
+		{:else}
+			{token.text}
+		{/if}
 	{:else if token.text.includes(`<file type="html"`)}
 		{@const match = token.text.match(/<file type="html" id="([^"]+)"/)}
 		{@const fileId = match && match[1]}
@@ -64,7 +93,7 @@
 				src={`${WEBUI_BASE_URL}/api/v1/files/${fileId}/content/html`}
 				title="Content"
 				frameborder="0"
-				sandbox="allow-scripts{($settings?.iframeSandboxAllowForms ?? false)
+				sandbox="allow-scripts allow-downloads{($settings?.iframeSandboxAllowForms ?? false)
 					? ' allow-forms'
 					: ''}{($settings?.iframeSandboxAllowSameOrigin ?? false) ? ' allow-same-origin' : ''}"
 				referrerpolicy="strict-origin-when-cross-origin"

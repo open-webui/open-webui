@@ -256,6 +256,10 @@
 	};
 
 	const editMessage = async (messageId, { content, files }, submit = true) => {
+		if ((selectedModels ?? []).filter((id) => id).length === 0) {
+			toast.error($i18n.t('Model not selected'));
+			return;
+		}
 		if (history.messages[messageId].role === 'user') {
 			if (submit) {
 				// New user message

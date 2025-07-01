@@ -19,6 +19,7 @@
 
 	let _user = {
 		profile_image_url: '',
+		role: 'pending',
 		name: '',
 		email: '',
 		password: ''
@@ -96,17 +97,33 @@
 					<div class=" px-5 pt-3 pb-5">
 						<div class=" flex flex-col space-y-1.5">
 							<div class="flex flex-col w-full">
+								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Role')}</div>
+
+								<div class="flex-1">
+									<select
+										class="w-full dark:bg-gray-900 text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-hidden"
+										bind:value={_user.role}
+										disabled={_user.id == sessionUser.id}
+										required
+									>
+										<option value="admin">{$i18n.t('Admin')}</option>
+										<option value="user">{$i18n.t('User')}</option>
+										<option value="pending">{$i18n.t('Pending')}</option>
+									</select>
+								</div>
+							</div>
+
+							<div class="flex flex-col w-full">
 								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Email')}</div>
 
 								<div class="flex-1">
 									<input
-										class="w-full rounded-sm text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-hidden"
+										class="w-full text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-hidden"
 										type="email"
 										bind:value={_user.email}
 										placeholder={$i18n.t('Enter Your Email')}
 										autocomplete="off"
 										required
-										disabled={_user.id == sessionUser.id}
 									/>
 								</div>
 							</div>
@@ -116,7 +133,7 @@
 
 								<div class="flex-1">
 									<input
-										class="w-full rounded-sm text-sm bg-transparent outline-hidden"
+										class="w-full text-sm bg-transparent outline-hidden"
 										type="text"
 										bind:value={_user.name}
 										placeholder={$i18n.t('Enter Your Name')}
@@ -131,7 +148,7 @@
 
 								<div class="flex-1">
 									<input
-										class="w-full rounded-sm text-sm bg-transparent outline-hidden"
+										class="w-full text-sm bg-transparent outline-hidden"
 										type="password"
 										placeholder={$i18n.t('Enter New Password')}
 										bind:value={_user.password}
