@@ -757,6 +757,9 @@ def save_docs_to_vector_db(
 
         return ", ".join(docs_info)
 
+    if VECTOR_DB == 'weaviate':
+        collection_name = collection_name.replace("-", "").lower()
+
     log.info(
         f"save_docs_to_vector_db: document {_get_docs_info(docs)} {collection_name}"
     )
