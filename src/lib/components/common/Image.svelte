@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
+	import { settings } from '$lib/stores';
 	import ImagePreview from './ImagePreview.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import { getContext } from 'svelte';
@@ -8,7 +9,8 @@
 	export let src = '';
 	export let alt = '';
 
-	export let className = ' w-full outline-hidden focus:outline-hidden';
+	export let className = ` w-full ${($settings?.highContrastMode ?? false) ? '' : 'outline-hidden focus:outline-hidden'}`;
+
 	export let imageClassName = 'rounded-lg';
 
 	export let dismissible = false;
