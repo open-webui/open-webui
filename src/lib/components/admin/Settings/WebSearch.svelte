@@ -141,6 +141,7 @@
 												placeholder={$i18n.t('Enter Searxng Query URL')}
 												bind:value={webConfig.SEARXNG_QUERY_URL}
 												autocomplete="off"
+												required
 											/>
 										</div>
 									</div>
