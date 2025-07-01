@@ -12,7 +12,7 @@ import requests
 
 from fastapi import Depends, FastAPI, HTTPException, Request, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, Response, StreamingResponse
 from pydantic import BaseModel
 from starlette.background import BackgroundTask
 
@@ -859,13 +859,22 @@ async def generate_chat_completion(
             )
         else:
             try:
-                response = await r.json()
+                response_content = await r.json()
+                content = json.dumps(response_content)
+                media_type = "application/json"
             except Exception as e:
                 log.error(e)
-                response = await r.text()
-
+                content = await r.text()
+                media_type = "text/plain"
+            
             r.raise_for_status()
-            return response
+            
+            return Response(
+                content=content,
+                status_code=r.status,
+                headers=dict(r.headers),
+                media_type=media_type
+            )
     except Exception as e:
         log.exception(e)
 
