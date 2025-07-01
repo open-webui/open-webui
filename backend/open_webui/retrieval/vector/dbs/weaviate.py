@@ -78,11 +78,22 @@ class WeaviateClient:
             ),  # API key for authentication
         )
 
+    def transform_collection_name(self, collection_name: str) -> str:
+        """
+        Transforms the collection name to a valid Weaviate class name.
+        Weaviate class names must start with a letter and can only contain letters, numbers, and underscores.
+        """
+        collection_name = collection_name.replace("-", "").lower()
+        if not (collection_name.startswith("file") or collection_name.startswith("collection")):
+            collection_name = f"collection{collection_name}"
+        return collection_name
+
     def has_collection(self, collection_name: str) -> bool:
         """
         Checks if a collection (class) already exists.
         """
         # try:
+        collection_name = self.transform_collection_name(collection_name)
         collection_names = self.client.collections.list_all()
         return collection_name in collection_names
         # except Exception:
@@ -92,6 +103,7 @@ class WeaviateClient:
         """
         Ensures that the collection exists; if not, it creates it.
         """
+        collection_name = self.transform_collection_name(collection_name)
         log.info(f"Collection para buscar: {collection_name}")
         if not self.has_collection(collection_name):
             log.info("Creating collection %s", collection_name)
@@ -103,6 +115,7 @@ class WeaviateClient:
           - Uses 'text2vec-openai' vectorizer based on the 'text' property
           - Defines 'documents' and 'metadata' properties
         """
+        collection_name = self.transform_collection_name(collection_name)
         self.client.collections.create(
             collection_name,
             vectorizer_config=[
@@ -144,6 +157,7 @@ class WeaviateClient:
         """
         Deletes a collection (class) from Weaviate.
         """
+        collection_name = self.transform_collection_name(collection_name)
         self.client.collections.delete(collection_name)
 
     def insert(self, collection_name: str, items: List[VectorItem]):
@@ -151,6 +165,7 @@ class WeaviateClient:
         Inserts items into the collection. If the collection does not exist, it will be created.
         Each item contains the properties 'file_id', 'text', and 'metadata'.
         """
+        collection_name = self.transform_collection_name(collection_name)
         self._ensure_collection(collection_name)
         collection = self.client.collections.get(collection_name)
 
@@ -180,6 +195,7 @@ class WeaviateClient:
         Removes all collections from Weaviate.
         WARNING: This operation deletes ALL data.
         """
+        collection_name = self.transform_collection_name(collection_name)
         self._ensure_collection(collection_name)
         coll = self.client.collections.get(collection_name)
         for item in items:
@@ -207,6 +223,7 @@ class WeaviateClient:
         Consulta os objetos da collection utilizando um filtro (no formato Weaviate)
         e retorna os resultados encapsulados em GetResult.
         """
+        collection_name = self.transform_collection_name(collection_name)
         collection = self.client.collections.get(collection_name)
 
         filter_condition = build_filter(filter)
@@ -238,6 +255,7 @@ class WeaviateClient:
         """
         Retorna todos os objetos da collection (limitado a 1000 itens).
         """
+        collection_name = self.transform_collection_name(collection_name)
         collection = self.client.collections.get(collection_name)
         response = collection.query.fetch_objects(limit=limit)
         items = response.objects
@@ -256,6 +274,7 @@ class WeaviateClient:
         Returns results wrapped in SearchResult, including ids, documents,
         metadata, and distances (if available).
         """
+        collection_name = self.transform_collection_name(collection_name)
         collection = self.client.collections.get(collection_name)
         all_ids = []
         all_docs = []
@@ -314,6 +333,7 @@ class WeaviateClient:
         Returns results wrapped in SearchResult, including ids, documents,
         metadata, and relevance scores.
         """
+        collection_name = self.transform_collection_name(collection_name)
         collection = self.client.collections.get(collection_name)
         all_ids = []
         all_docs = []
@@ -368,6 +388,7 @@ class WeaviateClient:
         Removes objects from the collection based on a list of ids or using a filter.
         If a filter is provided, performs the query to obtain the corresponding ids and deletes them.
         """
+        collection_name = self.transform_collection_name(collection_name)
         collection = self.client.collections.get(collection_name)
 
         if ids:
@@ -385,7 +406,7 @@ class WeaviateClient:
         Removes all collections from Weaviate.
         CAUTION: This operation deletes ALL data.
         """
-
+        collection_name = self.transform_collection_name(collection_name)
         collections = self.client.collections.list_all()
         for coll in collections:
             self.client.collections.delete(coll)
