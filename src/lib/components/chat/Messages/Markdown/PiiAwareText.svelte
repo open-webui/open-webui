@@ -29,9 +29,8 @@
 			return text;
 		}
 
-		// Use the combined function that handles both unmasking and highlighting
-		// This prevents double processing and position-based issues
-		return unmaskAndHighlightTextForDisplay(text, entities);
+		const result = unmaskAndHighlightTextForDisplay(text, entities);
+		return result;
 	})();
 	$: hasHighlighting = processedText !== text;
 </script>

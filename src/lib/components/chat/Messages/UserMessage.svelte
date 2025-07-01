@@ -68,6 +68,7 @@
 	const copyToClipboard = async (text: string) => {
 		// First unmask any PII placeholders to get the actual text
 		const entities = piiSessionManager.getEntitiesForDisplay($chatId);
+		console.log('UserMessage: copyToClipboard - chatId:', $chatId, 'entities found:', entities.length);
 		if (entities.length > 0) {
 			text = unmaskTextWithEntities(text, entities);
 		}

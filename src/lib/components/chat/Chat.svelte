@@ -1139,6 +1139,19 @@
 			} else {
 				await saveChatHandler($chatId, history);
 			}
+
+			// CRITICAL FIX: Commit working entities for existing chats
+			// This ensures PII entities detected while typing are persisted before sending
+			if ($chatId && $chatId !== 'local') {
+				try {
+					const { PiiSessionManager } = await import('$lib/utils/pii');
+					const piiManager = PiiSessionManager.getInstance();
+					piiManager.commitConversationWorkingEntities($chatId);
+					console.log('Chat: Committed working entities for existing chat:', $chatId);
+				} catch (error) {
+					console.warn('Chat: Failed to commit working entities:', error);
+				}
+			}
 		}
 	};
 
@@ -1447,6 +1460,19 @@
 		// Append messageId to childrenIds of parent message
 		if (messages.length !== 0) {
 			history.messages[messages.at(-1).id].childrenIds.push(userMessageId);
+		}
+
+		// CRITICAL FIX: Commit working entities for existing chats
+		// This ensures PII entities detected while typing are persisted before sending
+		if ($chatId && $chatId !== 'local') {
+			try {
+				const { PiiSessionManager } = await import('$lib/utils/pii');
+				const piiManager = PiiSessionManager.getInstance();
+				piiManager.commitConversationWorkingEntities($chatId);
+				console.log('Chat: Committed working entities for existing chat:', $chatId);
+			} catch (error) {
+				console.warn('Chat: Failed to commit working entities:', error);
+			}
 		}
 
 		// focus on chat input
@@ -1860,6 +1886,19 @@
 		history.messages[userMessageId] = userMessage;
 		history.currentId = userMessageId;
 
+		// CRITICAL FIX: Commit working entities for existing chats (follow-up messages)
+		// This ensures PII entities detected while typing are persisted before sending
+		if ($chatId && $chatId !== 'local') {
+			try {
+				const { PiiSessionManager } = await import('$lib/utils/pii');
+				const piiManager = PiiSessionManager.getInstance();
+				piiManager.commitConversationWorkingEntities($chatId);
+				console.log('Chat: Committed working entities for follow-up message:', $chatId);
+			} catch (error) {
+				console.warn('Chat: Failed to commit working entities for follow-up:', error);
+			}
+		}
+
 		await tick();
 
 		if (autoScroll) {
@@ -2231,6 +2270,8 @@
 											await uploadWeb(data);
 										} else if (type === 'youtube') {
 											await uploadYoutubeTranscription(data);
+										} else if (type === 'google-drive') {
+											await uploadGoogleDriveFile(data);
 										}
 									}}
 									on:submit={async (e) => {
