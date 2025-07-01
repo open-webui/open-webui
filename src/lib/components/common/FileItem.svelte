@@ -7,6 +7,7 @@
 	import Spinner from './Spinner.svelte';
 	import Tooltip from './Tooltip.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
+	import { settings } from '$lib/stores';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -94,7 +95,11 @@
 				{decodeString(name)}
 			</div>
 
-			<div class=" flex justify-between text-gray-500 text-xs line-clamp-1">
+			<div
+				class=" flex justify-between text-xs line-clamp-1 {($settings?.highContrastMode ?? false)
+					? 'text-gray-800 dark:text-gray-100'
+					: 'text-gray-500'}"
+			>
 				{#if type === 'file'}
 					{$i18n.t('File')}
 				{:else if type === 'doc'}
@@ -128,7 +133,10 @@
 	{#if dismissible}
 		<div class=" absolute -top-1 -right-1">
 			<button
-				class=" bg-white text-black border border-gray-50 rounded-full group-hover:visible invisible transition"
+				class=" bg-white text-black border border-gray-50 rounded-full {($settings?.highContrastMode ??
+				false)
+					? ''
+					: 'outline-hidden focus:outline-hidden group-hover:visible invisible transition'}"
 				type="button"
 				on:click|stopPropagation={() => {
 					dispatch('dismiss');
