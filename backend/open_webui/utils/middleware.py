@@ -1309,7 +1309,7 @@ async def process_chat_response(
                         media_type=response.media_type,
                     )
                 else:
-                    return json.dumps(merged_data)
+                    return merged_data
 
             return response
         else:
@@ -1333,7 +1333,7 @@ async def process_chat_response(
                         media_type=response.media_type,
                     )
                 else:
-                    return json.dumps(merged_data)
+                    return merged_data
 
             return response
 
