@@ -114,7 +114,7 @@
 		"prosemirror-view": "^1.34.3",
 		"pyodide": "^0.27.3",
 		"socket.io-client": "^4.2.0",
-		"sortablejs": "^1.15.2",
+		"sortablejs": "^1.15.6",
 		"svelte-sonner": "^0.3.19",
 		"tippy.js": "^6.3.7",
 		"turndown": "^7.2.0",
