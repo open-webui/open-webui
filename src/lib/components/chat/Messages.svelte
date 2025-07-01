@@ -438,6 +438,7 @@
 						<Message
 							{chatId}
 							bind:history
+							{selectedModels}
 							messageId={message.id}
 							idx={messageIdx}
 							{user}

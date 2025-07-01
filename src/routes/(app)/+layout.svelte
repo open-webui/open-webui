@@ -45,7 +45,6 @@
 	import ChangelogModal from '$lib/components/ChangelogModal.svelte';
 	import AccountPending from '$lib/components/layout/Overlay/AccountPending.svelte';
 	import UpdateInfoToast from '$lib/components/layout/UpdateInfoToast.svelte';
-	import { get } from 'svelte/store';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 
 	const i18n = getContext('i18n');
@@ -78,9 +77,7 @@
 				// IndexedDB Not Found
 			}
 
-			const chatInputKeys = Object.keys(localStorage).filter((key) =>
-				key.startsWith('chat-input-')
-			);
+			const chatInputKeys = Object.keys(localStorage).filter((key) => key.startsWith('chat-input'));
 			if (chatInputKeys.length > 0) {
 				chatInputKeys.forEach((key) => {
 					localStorage.removeItem(key);
@@ -200,7 +197,13 @@
 				) {
 					event.preventDefault();
 					console.log('temporaryChat');
-					temporaryChatEnabled.set(!$temporaryChatEnabled);
+
+					if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
+						temporaryChatEnabled.set(true);
+					} else {
+						temporaryChatEnabled.set(!$temporaryChatEnabled);
+					}
+
 					await goto('/');
 					const newChatButton = document.getElementById('new-chat-button');
 					setTimeout(() => {
@@ -218,13 +221,13 @@
 					temporaryChatEnabled.set(true);
 				}
 
-				if ($user?.permissions?.chat?.temporary_enforced) {
+				if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
 					temporaryChatEnabled.set(true);
 				}
 			}
 
 			// Check for version updates
-			if ($user?.role === 'admin') {
+			if ($user?.role === 'admin' && !$config?.offline_mode) {
 				// Check if the user has dismissed the update toast in the last 24 hours
 				if (localStorage.dismissedUpdateToast) {
 					const dismissedUpdateToast = new Date(Number(localStorage.dismissedUpdateToast));
@@ -335,7 +338,7 @@
 				<slot />
 			{:else}
 				<div class="w-full flex-1 h-full flex items-center justify-center">
-					<Spinner />
+					<Spinner className="size-5" />
 				</div>
 			{/if}
 		</div>

@@ -50,8 +50,8 @@ dependencies = [
     "google-generativeai==0.8.5",
     "tiktoken",
 
-    "langchain==0.3.24",
-    "langchain-community==0.3.23",
+    "langchain==0.3.26",
+    "langchain-community==0.3.26",
 
     "fake-useragent==2.1.0",
     "chromadb==0.6.3",
@@ -138,7 +138,7 @@ requires-python = ">= 3.11, < 3.13.0a1"
 dynamic = ["version"]
 classifiers = [
     "Development Status :: 4 - Beta",
-    "License :: OSI Approved :: MIT License",
+    "License :: Other/Proprietary License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",

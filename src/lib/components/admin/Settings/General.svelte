@@ -90,7 +90,9 @@
 	};
 
 	onMount(async () => {
-		checkForVersionUpdates();
+		if (!$config?.offline_mode) {
+			checkForVersionUpdates();
+		}
 
 		await Promise.all([
 			(async () => {
@@ -160,15 +162,17 @@
 								</button>
 							</div>
 
-							<button
-								class=" text-xs px-3 py-1.5 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-lg font-medium"
-								type="button"
-								on:click={() => {
-									checkForVersionUpdates();
-								}}
-							>
-								{$i18n.t('Check for updates')}
-							</button>
+							{#if !$config?.offline_mode}
+								<button
+									class=" text-xs px-3 py-1.5 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-lg font-medium"
+									type="button"
+									on:click={() => {
+										checkForVersionUpdates();
+									}}
+								>
+									{$i18n.t('Check for updates')}
+								</button>
+							{/if}
 						</div>
 					</div>
 

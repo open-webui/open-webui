@@ -700,7 +700,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 	{#if loading}
 		<div class=" absolute top-0 bottom-0 left-0 right-0 flex">
 			<div class="m-auto">
-				<Spinner />
+				<Spinner className="size-5" />
 			</div>
 		</div>
 	{:else}

@@ -1,5 +1,5 @@
 fastapi==0.115.7
-uvicorn[standard]==0.34.2
+uvicorn[standard]==0.35.0
 pydantic==2.10.6
 python-multipart==0.0.20
 
@@ -42,8 +42,8 @@ google-genai==1.15.0
 google-generativeai==0.8.5
 tiktoken
 
-langchain==0.3.24
-langchain-community==0.3.23
+langchain==0.3.26
+langchain-community==0.3.26
 
 fake-useragent==2.1.0
 chromadb==0.6.3
@@ -114,7 +114,7 @@ pytest-docker~=3.1.1
 googleapis-common-protos==1.63.2
 google-cloud-storage==2.19.0
 
-azure-identity==1.21.0
+azure-identity==1.23.0
 azure-storage-blob==12.24.1
 
 

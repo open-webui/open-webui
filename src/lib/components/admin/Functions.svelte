@@ -135,7 +135,9 @@
 			models.set(
 				await getModels(
 					localStorage.token,
-					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null),
+					false,
+					true
 				)
 			);
 		}
@@ -161,7 +163,9 @@
 			models.set(
 				await getModels(
 					localStorage.token,
-					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null),
+					false,
+					true
 				)
 			);
 		}
@@ -413,7 +417,9 @@
 									await getModels(
 										localStorage.token,
 										$config?.features?.enable_direct_connections &&
-											($settings?.directConnections ?? null)
+											($settings?.directConnections ?? null),
+										false,
+										true
 									)
 								);
 							}}
@@ -559,7 +565,9 @@
 		models.set(
 			await getModels(
 				localStorage.token,
-				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null),
+				false,
+				true
 			)
 		);
 	}}
@@ -585,7 +593,9 @@
 			models.set(
 				await getModels(
 					localStorage.token,
-					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null),
+					false,
+					true
 				)
 			);
 		};

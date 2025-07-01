@@ -19,6 +19,7 @@ from open_webui.env import (
     DATABASE_URL,
     ENV,
     REDIS_URL,
+    REDIS_KEY_PREFIX,
     REDIS_SENTINEL_HOSTS,
     REDIS_SENTINEL_PORT,
     FRONTEND_BUILD_DIR,
@@ -211,11 +212,16 @@ class PersistentConfig(Generic[T]):
 class AppConfig:
     _state: dict[str, PersistentConfig]
     _redis: Optional[redis.Redis] = None
+    _redis_key_prefix: str
 
     def __init__(
-        self, redis_url: Optional[str] = None, redis_sentinels: Optional[list] = []
+        self,
+        redis_url: Optional[str] = None,
+        redis_sentinels: Optional[list] = [],
+        redis_key_prefix: str = "open-webui",
     ):
         super().__setattr__("_state", {})
+        super().__setattr__("_redis_key_prefix", redis_key_prefix)
         if redis_url:
             super().__setattr__(
                 "_redis",
@@ -230,7 +236,7 @@ class AppConfig:
             self._state[key].save()
 
             if self._redis:
-                redis_key = f"open-webui:config:{key}"
+                redis_key = f"{self._redis_key_prefix}:config:{key}"
                 self._redis.set(redis_key, json.dumps(self._state[key].value))
 
     def __getattr__(self, key):
@@ -239,7 +245,7 @@ class AppConfig:
 
         # If Redis is available, check for an updated value
         if self._redis:
-            redis_key = f"open-webui:config:{key}"
+            redis_key = f"{self._redis_key_prefix}:config:{key}"
             redis_value = self._redis.get(redis_key)
 
             if redis_value is not None:
@@ -437,6 +443,12 @@ OAUTH_SCOPES = PersistentConfig(
     os.environ.get("OAUTH_SCOPES", "openid email profile"),
 )
 
+OAUTH_TIMEOUT = PersistentConfig(
+    "OAUTH_TIMEOUT",
+    "oauth.oidc.oauth_timeout",
+    os.environ.get("OAUTH_TIMEOUT", ""),
+)
+
 OAUTH_CODE_CHALLENGE_METHOD = PersistentConfig(
     "OAUTH_CODE_CHALLENGE_METHOD",
     "oauth.oidc.code_challenge_method",
@@ -546,7 +558,14 @@ def load_oauth_providers():
                 client_id=GOOGLE_CLIENT_ID.value,
                 client_secret=GOOGLE_CLIENT_SECRET.value,
                 server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
-                client_kwargs={"scope": GOOGLE_OAUTH_SCOPE.value},
+                client_kwargs={
+                    "scope": GOOGLE_OAUTH_SCOPE.value,
+                    **(
+                        {"timeout": int(OAUTH_TIMEOUT.value)}
+                        if OAUTH_TIMEOUT.value
+                        else {}
+                    ),
+                },
                 redirect_uri=GOOGLE_REDIRECT_URI.value,
             )
 
@@ -569,6 +588,11 @@ def load_oauth_providers():
                 server_metadata_url=f"{MICROSOFT_CLIENT_LOGIN_BASE_URL.value}/{MICROSOFT_CLIENT_TENANT_ID.value}/v2.0/.well-known/openid-configuration?appid={MICROSOFT_CLIENT_ID.value}",
                 client_kwargs={
                     "scope": MICROSOFT_OAUTH_SCOPE.value,
+                    **(
+                        {"timeout": int(OAUTH_TIMEOUT.value)}
+                        if OAUTH_TIMEOUT.value
+                        else {}
+                    ),
                 },
                 redirect_uri=MICROSOFT_REDIRECT_URI.value,
             )
@@ -590,7 +614,14 @@ def load_oauth_providers():
                 authorize_url="https://github.com/login/oauth/authorize",
                 api_base_url="https://api.github.com",
                 userinfo_endpoint="https://api.github.com/user",
-                client_kwargs={"scope": GITHUB_CLIENT_SCOPE.value},
+                client_kwargs={
+                    "scope": GITHUB_CLIENT_SCOPE.value,
+                    **(
+                        {"timeout": int(OAUTH_TIMEOUT.value)}
+                        if OAUTH_TIMEOUT.value
+                        else {}
+                    ),
+                },
                 redirect_uri=GITHUB_CLIENT_REDIRECT_URI.value,
             )
 
@@ -609,6 +640,9 @@ def load_oauth_providers():
         def oidc_oauth_register(client):
             client_kwargs = {
                 "scope": OAUTH_SCOPES.value,
+                **(
+                    {"timeout": int(OAUTH_TIMEOUT.value)} if OAUTH_TIMEOUT.value else {}
+                ),
             }
 
             if (
@@ -900,6 +934,18 @@ try:
 except Exception:
     pass
 OPENAI_API_BASE_URL = "https://api.openai.com/v1"
+
+
+####################################
+# MODELS
+####################################
+
+ENABLE_BASE_MODELS_CACHE = PersistentConfig(
+    "ENABLE_BASE_MODELS_CACHE",
+    "models.base_models_cache",
+    os.environ.get("ENABLE_BASE_MODELS_CACHE", "False").lower() == "true",
+)
+
 
 ####################################
 # TOOL_SERVERS
@@ -1805,6 +1851,7 @@ QDRANT_GRPC_PORT = int(os.environ.get("QDRANT_GRPC_PORT", "6334"))
 ENABLE_QDRANT_MULTITENANCY_MODE = (
     os.environ.get("ENABLE_QDRANT_MULTITENANCY_MODE", "false").lower() == "true"
 )
+QDRANT_COLLECTION_PREFIX = os.environ.get("QDRANT_COLLECTION_PREFIX", "open-webui")
 
 # OpenSearch
 OPENSEARCH_URI = os.environ.get("OPENSEARCH_URI", "https://localhost:9200")
