@@ -16,6 +16,8 @@ from urllib.parse import urlparse
 import aiohttp
 from aiocache import cached
 import requests
+
+from open_webui.models.chats import Chats
 from open_webui.models.users import UserModel
 
 from open_webui.env import (
@@ -147,8 +149,23 @@ async def send_post_request(
             },
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
         )
-        r.raise_for_status()
 
+        if r.ok is False:
+            try:
+                res = await r.json()
+                await cleanup_response(r, session)
+                if "error" in res:
+                    raise HTTPException(status_code=r.status, detail=res["error"])
+            except HTTPException as e:
+                raise e  # Re-raise HTTPException to be handled by FastAPI
+            except Exception as e:
+                log.error(f"Failed to parse error response: {e}")
+                raise HTTPException(
+                    status_code=r.status,
+                    detail=f"Open WebUI: Server Connection Error",
+                )
+
+        r.raise_for_status()  # Raises an error for bad responses (4xx, 5xx)
         if stream:
             response_headers = dict(r.headers)
 
@@ -168,20 +185,14 @@ async def send_post_request(
             await cleanup_response(r, session)
             return res
 
+    except HTTPException as e:
+        raise e  # Re-raise HTTPException to be handled by FastAPI
     except Exception as e:
-        detail = None
-
-        if r is not None:
-            try:
-                res = await r.json()
-                if "error" in res:
-                    detail = f"Ollama: {res.get('error', 'Unknown error')}"
-            except Exception:
-                detail = f"Ollama: {e}"
+        detail = f"Ollama: {e}"
 
         raise HTTPException(
             status_code=r.status if r else 500,
-            detail=detail if detail else "Open WebUI: Server Connection Error",
+            detail=detail if e else "Open WebUI: Server Connection Error",
         )
 
 
@@ -1232,6 +1243,9 @@ class GenerateChatCompletionForm(BaseModel):
     stream: Optional[bool] = True
     keep_alive: Optional[Union[int, str]] = None
     tools: Optional[list[dict]] = None
+    model_config = ConfigDict(
+        extra="allow",
+    )
 
 
 async def get_ollama_url(request: Request, model: str, url_idx: Optional[int] = None):
@@ -1269,7 +1283,9 @@ async def generate_chat_completion(
             detail=str(e),
         )
 
-    payload = {**form_data.model_dump(exclude_none=True)}
+    if isinstance(form_data, BaseModel):
+        payload = {**form_data.model_dump(exclude_none=True)}
+
     if "metadata" in payload:
         del payload["metadata"]
 
@@ -1285,11 +1301,7 @@ async def generate_chat_completion(
         if params:
             system = params.pop("system", None)
 
-            # Unlike OpenAI, Ollama does not support params directly in the body
-            payload["options"] = apply_model_params_to_body_ollama(
-                params, (payload.get("options", {}) or {})
-            )
-
+            payload = apply_model_params_to_body_ollama(params, payload)
             payload = apply_model_system_prompt_to_body(system, payload, metadata, user)
 
         # Check if user has access to the model
@@ -1323,7 +1335,7 @@ async def generate_chat_completion(
     prefix_id = api_config.get("prefix_id", None)
     if prefix_id:
         payload["model"] = payload["model"].replace(f"{prefix_id}.", "")
-    # payload["keep_alive"] = -1 # keep alive forever
+
     return await send_post_request(
         url=f"{url}/api/chat",
         payload=json.dumps(payload),

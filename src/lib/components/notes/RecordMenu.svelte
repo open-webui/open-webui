@@ -2,7 +2,7 @@
 	import { DropdownMenu } from 'bits-ui';
 	import { createEventDispatcher, getContext, onMount } from 'svelte';
 
-	import { showSettings, activeUserIds, USAGE_POOL, mobile, showSidebar, user } from '$lib/stores';
+	import { showSettings, mobile, showSidebar, user } from '$lib/stores';
 	import { fade, slide } from 'svelte/transition';
 
 	import Mic from '../icons/Mic.svelte';
@@ -13,7 +13,7 @@
 	const i18n = getContext('i18n');
 
 	export let show = false;
-	export let className = 'max-w-[160px]';
+	export let className = 'max-w-[170px]';
 
 	export let onRecord = () => {};
 	export let onCaptureAudio = () => {};

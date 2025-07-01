@@ -5,6 +5,7 @@ import os
 import pkgutil
 import sys
 import shutil
+from uuid import uuid4
 from pathlib import Path
 
 import markdown
@@ -130,6 +131,7 @@ else:
         PACKAGE_DATA = {"version": "0.0.0"}
 
 VERSION = PACKAGE_DATA["version"]
+INSTANCE_ID = os.environ.get("INSTANCE_ID", str(uuid4()))
 
 
 # Function to parse each section
@@ -537,6 +539,7 @@ AUDIT_EXCLUDED_PATHS = [path.lstrip("/") for path in AUDIT_EXCLUDED_PATHS]
 ####################################
 
 ENABLE_OTEL = os.environ.get("ENABLE_OTEL", "False").lower() == "true"
+ENABLE_OTEL_METRICS = os.environ.get("ENABLE_OTEL_METRICS", "False").lower() == "true"
 OTEL_EXPORTER_OTLP_ENDPOINT = os.environ.get(
     "OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317"
 )
