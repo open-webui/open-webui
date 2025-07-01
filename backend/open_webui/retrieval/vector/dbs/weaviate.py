@@ -406,7 +406,6 @@ class WeaviateClient:
         Removes all collections from Weaviate.
         CAUTION: This operation deletes ALL data.
         """
-        collection_name = self.transform_collection_name(collection_name)
         collections = self.client.collections.list_all()
         for coll in collections:
             self.client.collections.delete(coll)
