@@ -80,6 +80,34 @@ def remove_open_webui_params(params: dict) -> dict:
     return params
 
 
+def mutate_reasoning_params(params: dict, form_data: dict) -> dict:
+    """
+    Mutates reasoning-related parameters in the provided dictionary based on inspection of params and form_data.
+
+    Args:
+        params (dict): The dictionary containing model parameters.
+        form_data (dict): The form data for completion.
+
+    Returns:
+        dict: The modified params dictionary.
+    """
+
+    if params.get("anthropic_tool_use_reasoning_compatibility", None) == "true":
+        params.pop("anthropic_tool_use_reasoning_compatibility", None)
+        last_role = form_data.get("messages")[-1].get("role")
+        if last_role in ["tool", "assistant"]:
+            for param in [
+                "reasoning_effort",
+                "max_completion_tokens",
+                "reasoning_content",
+                "reasoning",
+                "thinking",
+            ]:
+                params.pop(param, None)
+
+    return params
+
+
 # inplace function: form_data is modified
 def apply_model_params_to_body_openai(params: dict, form_data: dict) -> dict:
     params = remove_open_webui_params(params)
@@ -112,6 +140,9 @@ def apply_model_params_to_body_openai(params: dict, form_data: dict) -> dict:
         "logit_bias": lambda x: x,
         "response_format": dict,
     }
+
+    params = mutate_reasoning_params(params, form_data)
+
     return apply_model_params_to_body(params, form_data, mappings)
 
 

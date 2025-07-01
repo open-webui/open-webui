@@ -1480,6 +1480,38 @@
 			{/if}
 		</div>
 
+		<div>
+			<Tooltip
+				content={$i18n.t(
+					'When enabled, suppresses reasoning after tool calls and code interpreter execution during follow-up completions. This improves compatibility with Anthropic models that are not natively supported by Open WebUI.'
+				)}
+				placement="top-start"
+				className="inline-tooltip"
+			>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs font-medium">
+						{'Reasoning/Tool Use Compatibility'} ({$i18n.t('Anthropic')})
+					</div>
+					<button
+						class="p-1 px-3 text-xs flex rounded-sm transition"
+						on:click={() => {
+							params.anthropic_tool_use_reasoning_compatibility =
+								(params?.anthropic_tool_use_reasoning_compatibility ?? null) === null
+									? 'true'
+									: null;
+						}}
+						type="button"
+					>
+						{#if params.anthropic_tool_use_reasoning_compatibility === 'true'}
+							<span class="ml-2 self-center">{$i18n.t('Enabled')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+						{/if}
+					</button>
+				</div>
+			</Tooltip>
+		</div>
+
 		{#if custom && admin}
 			<div class="flex flex-col justify-center">
 				{#each Object.keys(params?.custom_params ?? {}) as key}
