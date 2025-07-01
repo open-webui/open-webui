@@ -98,7 +98,6 @@ langfuse==2.44.0
 youtube-transcript-api==1.1.0
 pytube==15.0.0
 
-extract_msg
 pydub
 duckduckgo-search==8.0.2
 
