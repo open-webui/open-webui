@@ -659,7 +659,7 @@
 													<div class="relative flex items-center">
 														<Image
 															src={file.url}
-															alt="input"
+															alt=""
 															imageClassName=" size-14 rounded-xl object-cover"
 														/>
 														{#if atSelectedModel ? visionCapableModels.length === 0 : selectedModels.length !== visionCapableModels.length}
@@ -677,6 +677,7 @@
 																	xmlns="http://www.w3.org/2000/svg"
 																	viewBox="0 0 24 24"
 																	fill="currentColor"
+																	aria-hidden="true"
 																	class="size-4 fill-yellow-300"
 																>
 																	<path
@@ -690,8 +691,12 @@
 													</div>
 													<div class=" absolute -top-1 -right-1">
 														<button
-															class=" bg-white text-black border border-white rounded-full group-hover:visible invisible transition"
+															class=" bg-white text-black border border-white rounded-full {($settings?.highContrastMode ??
+															false)
+																? ''
+																: 'outline-hidden focus:outline-hidden group-hover:visible invisible transition'}"
 															type="button"
+															aria-label={$i18n.t('Remove file')}
 															on:click={() => {
 																files.splice(fileIdx, 1);
 																files = files;
@@ -701,6 +706,7 @@
 																xmlns="http://www.w3.org/2000/svg"
 																viewBox="0 0 20 20"
 																fill="currentColor"
+																aria-hidden="true"
 																class="size-4"
 															>
 																<path
@@ -1253,11 +1259,12 @@
 											<button
 												class="bg-transparent hover:bg-gray-100 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5 outline-hidden focus:outline-hidden"
 												type="button"
-												aria-label="More"
+												aria-label={$i18n.t('More Available Tools')}
 											>
 												<svg
 													xmlns="http://www.w3.org/2000/svg"
 													viewBox="0 0 20 20"
+													aria-hidden="true"
 													fill="currentColor"
 													class="size-5"
 												>
@@ -1379,6 +1386,10 @@
 												{#if showCodeInterpreterButton}
 													<Tooltip content={$i18n.t('Execute code for analysis')} placement="top">
 														<button
+															aria-label={codeInterpreterEnabled
+																? $i18n.t('Disable Code Interpreter')
+																: $i18n.t('Enable Code Interpreter')}
+															aria-pressed={codeInterpreterEnabled}
 															on:click|preventDefault={() =>
 																(codeInterpreterEnabled = !codeInterpreterEnabled)}
 															type="button"
@@ -1530,7 +1541,7 @@
 																);
 															}
 														}}
-														aria-label="Call"
+														aria-label={$i18n.t('Voice mode')}
 													>
 														<Headphone className="size-5" />
 													</button>
