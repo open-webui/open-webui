@@ -44,7 +44,7 @@ class PdftotextLoader():
         return txt
 
 
-class PdftotextLoaderAsync():
+class PdftotextLoaderAsync:
     def __init__(self, pdf_path: str, url: str, max_pages: int):
         self.pdf_path = pdf_path
         self.base_url = url + "/api-ds-ocr"
