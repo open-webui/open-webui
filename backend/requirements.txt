@@ -129,7 +129,7 @@ firecrawl-py==1.12.0
 tencentcloud-sdk-python==3.0.1336
 
 ## Trace
-opentelemetry-api==1.32.1
+opentelemetry-api==1.34.1
 opentelemetry-sdk==1.32.1
 opentelemetry-exporter-otlp==1.32.1
 opentelemetry-instrumentation==0.53b1
