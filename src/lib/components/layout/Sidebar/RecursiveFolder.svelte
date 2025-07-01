@@ -50,6 +50,8 @@
 
 	let name = '';
 
+	let shiftKey = false;
+
 	const onDragOver = (e) => {
 		e.preventDefault();
 		e.stopPropagation();
@@ -57,6 +59,18 @@
 			return;
 		}
 		draggedOver = true;
+	};
+
+	const onKeyDown = (e) => {
+		if (e.key === 'Shift') {
+			shiftKey = true;
+		}
+	};
+
+	const onKeyUp = (e) => {
+		if (e.key === 'Shift') {
+			shiftKey = false;
+		}
 	};
 
 	const onDrop = async (e) => {
@@ -215,6 +229,9 @@
 			// Event listener for when dragging ends
 			folderElement.addEventListener('dragend', onDragEnd);
 		}
+
+		window.addEventListener('keydown', onKeyDown);
+		window.addEventListener('keyup', onKeyUp);
 
 		if (folders[folderId]?.new) {
 			delete folders[folderId].new;
@@ -495,6 +512,7 @@
 							<ChatItem
 								id={chat.id}
 								title={chat.title}
+								{shiftKey}
 								on:change={(e) => {
 									dispatch('change', e.detail);
 								}}
