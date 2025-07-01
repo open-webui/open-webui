@@ -177,8 +177,6 @@ export interface ConversationPiiState {
 // Store for PII session management
 export class PiiSessionManager {
 	private static instance: PiiSessionManager;
-	private entities: ExtendedPiiEntity[] = [];
-	private globalModifiers: PiiModifier[] = [];
 	private sessionId: string | null = null;
 	private apiKey: string = '';
 	private conversationStates: Map<string, ConversationPiiState> = new Map();
@@ -219,10 +217,6 @@ export class PiiSessionManager {
 		this.temporaryState.isActive = true;
 		this.temporaryState.entities = [];
 		this.temporaryState.modifiers = [];
-		
-		// Clear global state to prevent contamination
-		this.entities = [];
-		this.globalModifiers = [];
 	}
 
 	
@@ -231,29 +225,7 @@ export class PiiSessionManager {
 	}
 
 	
-	setTemporaryStateEntities(entities: PiiEntity[]) {
-		if (!this.temporaryState.isActive) {
-			console.warn('PiiSessionManager: Attempted to set temporary state when not active');
-			return;
-		}
-		
-		// Convert to ExtendedPiiEntity - preserve shouldMask state for entities with same labels
-		const existingEntities = this.temporaryState.entities;
-		const newExtendedEntities = entities.map(entity => {
-			// Check if this entity existed before and preserve its shouldMask state
-			const existingEntity = existingEntities.find(e => e.label === entity.label);
-			return {
-				...entity,
-				shouldMask: existingEntity ? existingEntity.shouldMask : true // Default to masked for new entities
-			};
-		});
-
-		// Replace all entities with the latest detection results
-		this.temporaryState.entities = newExtendedEntities;
-	}
-
-	
-	setTemporaryStateEntitiesWithMaskStates(entities: ExtendedPiiEntity[]) {
+	setTemporaryStateEntities(entities: ExtendedPiiEntity[]) {
 		if (!this.temporaryState.isActive) {
 			console.warn('PiiSessionManager: Attempted to set temporary state when not active');
 			return;
@@ -265,7 +237,7 @@ export class PiiSessionManager {
 	}
 
 	
-	getTemporaryEntities(): ExtendedPiiEntity[] {
+	getTemporaryStateEntities(): ExtendedPiiEntity[] {
 		return [...this.temporaryState.entities];
 	}
 
@@ -274,13 +246,11 @@ export class PiiSessionManager {
 		if (!this.temporaryState.isActive) {
 			return;
 		}
-
-		const finalEntities = this.getTemporaryEntities();
 		
 		// Create conversation state from final temporary entities
 		const conversationState: ConversationPiiState = {
-			entities: finalEntities, // Use final entities only
-			modifiers: [...this.globalModifiers, ...this.temporaryState.modifiers],
+			entities: [...this.temporaryState.entities], // Use final entities only
+			modifiers: [...this.temporaryState.modifiers],
 			sessionId: this.sessionId || undefined,
 			apiKey: this.apiKey || undefined,
 			lastUpdated: Date.now()
@@ -289,9 +259,7 @@ export class PiiSessionManager {
 		this.conversationStates.set(conversationId, conversationState);
 
 		// Deactivate temporary state
-		this.temporaryState.isActive = false;
-		this.temporaryState.entities = [];
-		this.temporaryState.modifiers = [];
+		this.clearTemporaryState();
 
 		// Trigger save for the new conversation
 		this.triggerChatSave(conversationId);
@@ -306,16 +274,29 @@ export class PiiSessionManager {
 
 	
 	getEntitiesForDisplay(conversationId?: string): ExtendedPiiEntity[] {
-		if (this.temporaryState.isActive) {
-			// Return temporary entities for new chats
-			return this.temporaryState.entities;
-		} else if (conversationId) {
-			// Return working entities if available (during typing), otherwise persistent entities
-			return this.getConversationEntitiesForDisplay(conversationId);
-		} else {
-			// Fallback to global entities (backward compatibility)
-			return this.entities;
+		// Phase 1: New Chat (No Conversation ID or Invalid/Empty ID) - Use temporary state
+		if (!conversationId || conversationId.trim() === '' || !this.conversationStates.has(conversationId)) {
+			if (this.temporaryState.isActive) {
+				return this.temporaryState.entities;
+			}
+			return [];
 		}
+		
+		// Phase 2: Existing Chat (Has Valid Conversation ID) - Use persistent + working entities
+		const persistentEntities = this.conversationStates.get(conversationId)?.entities || [];
+		const workingEntities = this.workingEntitiesForConversations.get(conversationId) || [];
+		
+		// Simple concatenation - working entities take precedence for display
+		return [...persistentEntities, ...workingEntities];
+	}
+
+	getWorkingEntitiesForConversations(conversationId: string | undefined): ExtendedPiiEntity[] {
+		// Only return working entities for existing conversations
+		// Temporary state is handled by getEntitiesForDisplay() 
+		if (conversationId) {
+			return this.workingEntitiesForConversations.get(conversationId) || [];
+		}
+		return [];
 	}
 
 	setSession(sessionId: string) {
@@ -324,75 +305,6 @@ export class PiiSessionManager {
 
 	getSession(): string | null {
 		return this.sessionId;
-	}
-
-	// Set entities for the current global session (backwards compatibility)
-	setEntities(entities: PiiEntity[]) {
-		// Convert to extended entities with default masking enabled
-		this.entities = entities.map((entity) => ({
-			...entity,
-			shouldMask: true // Default to masking enabled
-		}));
-	}
-
-	// Get entities for the current global session (backwards compatibility)
-	getEntities(): ExtendedPiiEntity[] {
-		return this.entities;
-	}
-
-	// Main method for setting conversation state (entities + modifiers)
-	setConversationState(
-		conversationId: string, 
-		entities: PiiEntity[], 
-		modifiers: PiiModifier[] = [],
-		sessionId?: string
-	): void {
-		const newExtendedEntities = entities.map((entity) => ({
-			...entity,
-			shouldMask: true
-		}));
-
-		// Get existing state to preserve shouldMask states
-		const existingState = this.conversationStates.get(conversationId);
-		const existingEntities = existingState?.entities || [];
-		
-		// Merge entities (preserve shouldMask)
-		const mergedEntities = [...existingEntities];
-		newExtendedEntities.forEach((newEntity) => {
-			const existingIndex = mergedEntities.findIndex((e) => e.label === newEntity.label);
-			if (existingIndex >= 0) {
-				mergedEntities[existingIndex] = {
-					...newEntity,
-					shouldMask: mergedEntities[existingIndex].shouldMask
-				};
-			} else {
-				mergedEntities.push(newEntity);
-			}
-		});
-
-		const newState: ConversationPiiState = {
-			entities: mergedEntities,
-			modifiers: modifiers,
-			sessionId: sessionId || existingState?.sessionId,
-			apiKey: this.apiKey || existingState?.apiKey,
-			lastUpdated: Date.now()
-		};
-
-		// Update memory state
-		this.conversationStates.set(conversationId, newState);
-		this.entities = mergedEntities;
-
-		// Create backup for error recovery
-		this.errorBackup.set(conversationId, { ...newState });
-
-		// Trigger immediate SQLite save
-		this.triggerChatSave(conversationId);
-	}
-
-	// Legacy method for backwards compatibility
-	setConversationEntities(conversationId: string, entities: PiiEntity[], sessionId?: string) {
-		const existingState = this.conversationStates.get(conversationId);
-		this.setConversationState(conversationId, entities, existingState?.modifiers || [], sessionId);
 	}
 
 	// Trigger chat save method
@@ -420,23 +332,6 @@ export class PiiSessionManager {
 		}
 	}
 
-	// Load from chat data (replaces localStorage loading)
-	loadFromChatData(conversationId: string, piiState: ConversationPiiState): void {
-		if (piiState) {
-			this.conversationStates.set(conversationId, piiState);
-			this.entities = piiState.entities;
-		}
-	}
-
-	getConversationEntities(conversationId: string): ExtendedPiiEntity[] {
-		const state = this.conversationStates.get(conversationId);
-		return state?.entities || [];
-	}
-
-	getConversationState(conversationId: string): ConversationPiiState | null {
-		return this.conversationStates.get(conversationId) || null;
-	}
-
 	// Load conversation state (now called from loadFromChatData)
 	loadConversationState(conversationId: string, piiState?: ConversationPiiState) {
 		// Prevent loading the same conversation multiple times simultaneously
@@ -454,69 +349,24 @@ export class PiiSessionManager {
 		try {
 			if (piiState) {
 				this.conversationStates.set(conversationId, piiState);
-				// Set as current global state
-				this.entities = piiState.entities;
-				this.sessionId = (piiState.sessionId as string) || null;
-				this.apiKey = piiState.apiKey || this.apiKey;
 			}
 		} finally {
 			this.loadingConversations.delete(conversationId);
 		}
 	}
 
-	// Activate conversation - loads conversation-specific modifiers and entities into working state
-	activateConversation(conversationId: string): boolean {
-		// First ensure the conversation state is loaded
-		this.loadConversationState(conversationId);
-		
-		const conversationState = this.conversationStates.get(conversationId);
-		if (!conversationState) {
-			return false;
-		}
-		
-		// Load conversation's entities and modifiers into working state
-		this.entities = [...conversationState.entities]; // Copy to avoid reference issues
-		
-		// Clear global modifiers and set conversation modifiers as active
-		this.globalModifiers = []; // Clear global modifiers
-		
-		return true;
-	}
-
-	// Get active modifiers (for extensions to use)
-	// This should be used by extensions instead of getGlobalModifiers/getConversationModifiers
-	getActiveModifiers(conversationId?: string): PiiModifier[] {
-		if (conversationId) {
-			const conversationState = this.conversationStates.get(conversationId);
-			if (conversationState) {
-				return conversationState.modifiers;
-			}
-		}
-		
-		// Fallback to global modifiers
-		return this.globalModifiers;
-	}
+	// Removed getActiveModifiers() - use getModifiersForDisplay() instead
 
 	// Get state for saving to localStorage (chat data)
-	getConversationStateForStorage(conversationId: string): ConversationPiiState | null {
+	getConversationState(conversationId: string): ConversationPiiState | null {
 		return this.conversationStates.get(conversationId) || null;
 	}
 
 	// Convert conversation entities to known entities format for API
 	getKnownEntitiesForApi(
-		conversationId: string
+		conversationId?: string
 	): Array<{ id: number; label: string; name: string }> {
-		const entities = this.getConversationEntities(conversationId);
-		return entities.map((entity) => ({
-			id: entity.id,
-			label: entity.label,
-			name: entity.raw_text
-		}));
-	}
-
-	// Convert global entities to known entities format for API
-	getGlobalKnownEntitiesForApi(): Array<{ id: number; label: string; name: string }> {
-		const entities = this.getEntities();
+		const entities = this.getEntitiesForDisplay(conversationId);
 		return entities.map((entity) => ({
 			id: entity.id,
 			label: entity.label,
@@ -525,16 +375,18 @@ export class PiiSessionManager {
 	}
 
 	// MODIFIER MANAGEMENT METHODS
-
-	// Get modifiers for conversation
-	getConversationModifiers(conversationId: string): PiiModifier[] {
+	getModifiersForDisplay(conversationId?: string): PiiModifier[] {
+		// Phase 1: New Chat (No Conversation ID or Invalid/Empty ID) - Use temporary state
+		if (!conversationId || conversationId.trim() === '' || !this.conversationStates.has(conversationId)) {
+			if (this.temporaryState.isActive) {
+				return this.temporaryState.modifiers;
+			}
+			return [];
+		}
+		
+		// Phase 2: Existing Chat (Has Valid Conversation ID) - Use conversation state
 		const state = this.conversationStates.get(conversationId);
 		return state?.modifiers || [];
-	}
-
-	// Get global modifiers (before conversation ID exists)
-	getGlobalModifiers(): PiiModifier[] {
-		return this.globalModifiers;
 	}
 
 	// Set conversation modifiers
@@ -555,213 +407,89 @@ export class PiiSessionManager {
 		this.triggerChatSave(conversationId);
 	}
 
-	// Set conversation entities while preserving existing modifiers
-	setConversationEntitiesPreservingModifiers(conversationId: string, entities: PiiEntity[], sessionId?: string) {
-		const existingState = this.conversationStates.get(conversationId);
-		const existingModifiers = existingState?.modifiers || [];
-		
-		// Use the main setConversationState method which properly merges entities and preserves modifiers
-		this.setConversationState(conversationId, entities, existingModifiers, sessionId);
-	}
-
 	// Set global modifiers (before conversation ID exists)
-	setGlobalModifiers(modifiers: PiiModifier[]) {
-		this.globalModifiers = modifiers;
-	}
-
-	// Clear global state when starting a completely new chat
-	clearGlobalState() {
-		this.entities = [];
-		this.globalModifiers = [];
-		this.sessionId = null;
-	}
-
-	// Switch to an existing conversation - load its state into working memory
-	switchToConversation(conversationId: string) {
-		const conversationState = this.conversationStates.get(conversationId);
-		if (conversationState) {
-			// Load conversation state into working memory
-			this.entities = [...conversationState.entities];
-			this.sessionId = conversationState.sessionId || null;
-			// Clear global modifiers since we're using conversation-specific ones
-			this.globalModifiers = [];
-			return true;
-		}
-		return false;
-	}
-
-	// Ensure conversation state is loaded (synchronous)
-	private ensureConversationLoaded(conversationId: string): boolean {
-		if (this.conversationStates.has(conversationId)) {
-			return true;
-		}
-		
-		// Note: No localStorage loading - using SQLite only
-		// State should be loaded via loadFromChatData() method
-		return false;
+	setTemporaryModifiers(modifiers: PiiModifier[]) {
+		this.temporaryState.modifiers = modifiers;
 	}
 
 	// Get modifiers for API (works for both global and conversation state)
 	getModifiersForApi(conversationId?: string): Array<{ entity: string; action: 'string-mask' | 'ignore'; type?: string }> {
-		if (conversationId) {
-			// Ensure conversation is loaded
-			this.ensureConversationLoaded(conversationId);
-			
-			const conversationModifiers = this.getConversationModifiers(conversationId);
-			return conversationModifiers.map(m => ({
-				entity: m.entity,
-				action: m.action as 'string-mask' | 'ignore',
-				type: m.type || undefined
-			}));
-		} else {
-			const globalModifiers = this.getGlobalModifiers();
-			return globalModifiers.map(m => ({
-				entity: m.entity,
-				action: m.action as 'string-mask' | 'ignore',
-				type: m.type || undefined
-			}));
-		}
+		
+		const conversationModifiers = this.getModifiersForDisplay(conversationId);
+		return conversationModifiers.map(m => ({
+			entity: m.entity,
+			action: m.action as 'string-mask' | 'ignore',
+			type: m.type || undefined
+		}));
 	}
 
-	// Toggle entity masking for specific conversation
-	toggleConversationEntityMasking(
-		conversationId: string,
-		entityId: string,
-		occurrenceIndex: number
-	) {
-		const state = this.conversationStates.get(conversationId);
-		if (state) {
-			const entity = state.entities.find((e) => e.label === entityId);
+	toggleEntityMasking(entityId: string, occurrenceIndex: number, conversationId?: string) {
+		// Phase-based toggle: either conversation state OR temporary state, not both
+		if (conversationId) {
+			// Existing chat: first try to update conversation state (persistent entities)
+			const state = this.conversationStates.get(conversationId);
+			if (state) {
+				const entity = state.entities.find((e) => e.label === entityId);
+				if (entity && entity.occurrences[occurrenceIndex]) {
+					entity.shouldMask = !entity.shouldMask;
+					state.lastUpdated = Date.now();
+					this.triggerChatSave(conversationId);
+					console.log(`PiiSessionManager: Toggled persistent entity ${entityId} shouldMask to ${entity.shouldMask}`);
+					return; // Successfully updated persistent state
+				}
+			}
+			
+			// If entity not found in persistent state, check working entities
+			const workingEntities = this.workingEntitiesForConversations.get(conversationId);
+			if (workingEntities) {
+				const workingEntity = workingEntities.find((e) => e.label === entityId);
+				if (workingEntity && workingEntity.occurrences[occurrenceIndex]) {
+					workingEntity.shouldMask = !workingEntity.shouldMask;
+					console.log(`PiiSessionManager: Toggled working entity ${entityId} shouldMask to ${workingEntity.shouldMask}`);
+					return; // Successfully updated working state
+				}
+			}
+			
+			console.warn(`PiiSessionManager: Entity ${entityId} not found in persistent or working state for conversation ${conversationId}`);
+		} else if (this.temporaryState.isActive) {
+			// New chat: update temporary state
+			const entity = this.temporaryState.entities.find((e) => e.label === entityId);
 			if (entity && entity.occurrences[occurrenceIndex]) {
 				entity.shouldMask = !entity.shouldMask;
-				state.lastUpdated = Date.now();
-
-				// Update global state if this is the current conversation
-				const globalEntity = this.entities.find((e) => e.label === entityId);
-				if (globalEntity) {
-					globalEntity.shouldMask = entity.shouldMask;
-				}
-				
-				// Trigger SQLite save
-				this.triggerChatSave(conversationId);
+				console.log(`PiiSessionManager: Toggled temporary entity ${entityId} shouldMask to ${entity.shouldMask}`);
 			}
 		}
 	}
-
-	// Backwards compatibility
-	toggleEntityMasking(entityId: string, occurrenceIndex: number) {
-		const entity = this.temporaryState.entities.find((e) => e.label === entityId);
-		if (entity && entity.occurrences[occurrenceIndex]) {
-			entity.shouldMask = !entity.shouldMask;
-		}
-	}
-
-	getEntityMaskingState(entityId: string): boolean {
-		const entity = this.entities.find((e) => e.label === entityId);
-		return entity?.shouldMask ?? true;
-	}
-
-	clearSession() {
-		this.sessionId = null;
-		this.entities = [];
-	}
-
-	// Clear conversation-specific state
-	clearConversationState(conversationId: string) {
-		this.conversationStates.delete(conversationId);
-	}
-
-	// Clear all conversation states
-	clearAllConversationStates() {
-		this.conversationStates.clear();
-	}
-
 	
 	setConversationEntitiesFromLatestDetection(conversationId: string, entities: PiiEntity[], sessionId?: string) {
-		// Get existing state to preserve shouldMask preferences for entities with same labels
 		const existingState = this.conversationStates.get(conversationId);
 		const existingEntities = existingState?.entities || [];
 		
-		// Convert new entities to extended format, preserving shouldMask state for entities with same labels
+		// Convert new entities to extended format with default shouldMask: true
 		const newExtendedEntities = entities.map(entity => {
-			// Check if this entity exists in existing state and preserve its shouldMask state
+			// Preserve shouldMask state if entity already exists
 			const existingEntity = existingEntities.find(e => e.label === entity.label);
 			return {
 				...entity,
-				shouldMask: existingEntity ? existingEntity.shouldMask : true // Default to masked for new entities
+				shouldMask: existingEntity?.shouldMask ?? true
 			};
 		});
 
-		// Replace all entities with the latest detection results (like we do for temporary state)
+		// Update conversation state - simple replacement, no complex merging
 		const newState: ConversationPiiState = {
-			entities: newExtendedEntities, // Replace, don't merge
+			entities: newExtendedEntities,
 			modifiers: existingState?.modifiers || [],
 			sessionId: sessionId || existingState?.sessionId,
 			apiKey: this.apiKey || existingState?.apiKey,
 			lastUpdated: Date.now()
 		};
 
-		// Update memory state
 		this.conversationStates.set(conversationId, newState);
-		
-		// Update global working state for display (backward compatibility)
-		this.entities = newExtendedEntities;
-
-		// Create backup for error recovery
 		this.errorBackup.set(conversationId, { ...newState });
-
-		// Trigger immediate SQLite save
 		this.triggerChatSave(conversationId);
 	}
 
-	
-	setConversationWorkingEntities(conversationId: string, entities: PiiEntity[]) {
-		// CRITICAL FIX: Check both persistent and existing working entities to preserve shouldMask state
-		const persistentEntities = this.getConversationEntities(conversationId);
-		const existingWorkingEntities = this.workingEntitiesForConversations.get(conversationId) || [];
-		
-		// Convert new entities to extended format, preserving shouldMask state with priority:
-		// 1. Existing working entities (highest priority - most recent user interactions)
-		// 2. Persistent entities (medium priority - saved state)
-		// 3. Default to masked (lowest priority - for completely new entities)
-		const newExtendedEntities = entities.map(entity => {
-			// First check working entities (current typing session)
-			const existingWorkingEntity = existingWorkingEntities.find(e => e.label === entity.label);
-			if (existingWorkingEntity) {
-				return {
-					...entity,
-					shouldMask: existingWorkingEntity.shouldMask
-				};
-			}
-			
-			// Then check persistent entities (saved conversation state)
-			const persistentEntity = persistentEntities.find(e => e.label === entity.label);
-			if (persistentEntity) {
-				return {
-					...entity,
-					shouldMask: persistentEntity.shouldMask
-				};
-			}
-			
-			// Default to masked for completely new entities
-			return {
-				...entity,
-				shouldMask: true
-			};
-		});
-
-		// Set working entities (for display) - doesn't affect persistent state
-		this.workingEntitiesForConversations.set(conversationId, newExtendedEntities);
-		
-		// Also update global working state for display
-		this.entities = newExtendedEntities;
-	}
-
-	
-	getConversationEntitiesForDisplay(conversationId: string): ExtendedPiiEntity[] {
-		// Return working entities if they exist (during typing), otherwise persistent entities
-		return this.workingEntitiesForConversations.get(conversationId) || this.getConversationEntities(conversationId);
-	}
+	// Removed getConversationEntitiesForDisplay() - functionality moved to getEntitiesForDisplay()
 
 	
 	clearConversationWorkingEntities(conversationId: string) {
@@ -771,18 +499,21 @@ export class PiiSessionManager {
 	
 	commitConversationWorkingEntities(conversationId: string) {
 		const workingEntities = this.workingEntitiesForConversations.get(conversationId);
-		if (workingEntities) {
-			// Convert to PiiEntity format for the existing method
-			const entities = workingEntities.map(entity => ({
-				id: entity.id,
-				label: entity.label,
-				type: entity.type,
-				raw_text: entity.raw_text,
-				occurrences: entity.occurrences
-			}));
-			
-			// Update persistent state
-			this.setConversationEntitiesFromLatestDetection(conversationId, entities);
+		if (workingEntities && workingEntities.length > 0) {
+			// Simple addition of new entities to persistent state
+			const existingState = this.conversationStates.get(conversationId);
+			if (existingState) {
+				const updatedEntities = [...existingState.entities, ...workingEntities];
+				const newState: ConversationPiiState = {
+					...existingState,
+					entities: updatedEntities,
+					lastUpdated: Date.now()
+				};
+				
+				this.conversationStates.set(conversationId, newState);
+				this.errorBackup.set(conversationId, { ...newState });
+				this.triggerChatSave(conversationId);
+			}
 			
 			// Clear working entities since they're now persistent
 			this.clearConversationWorkingEntities(conversationId);
@@ -790,16 +521,18 @@ export class PiiSessionManager {
 	}
 
 	setConversationWorkingEntitiesWithMaskStates(conversationId: string, extendedEntities: ExtendedPiiEntity[]) {
-		// Store the extended entities directly without recalculating shouldMask states
-		// This preserves shouldMask states that were already calculated from plugin state
-		this.workingEntitiesForConversations.set(conversationId, extendedEntities);
+		// Working state is purely additive - only store NEW entities not already in persistent state
+		const persistentEntities = this.conversationStates.get(conversationId)?.entities || [];
+		const newEntities = extendedEntities.filter(entity => 
+			!persistentEntities.find(persistent => persistent.label === entity.label)
+		);
 		
-		// Also update global working state for display
-		this.entities = extendedEntities;
+		// Only store genuinely new entities in working state
+		this.workingEntitiesForConversations.set(conversationId, newEntities);
 	}
 
 	setEntityMaskingState(conversationId: string, entityId: string, shouldMask: boolean) {
-		// Update conversation state
+		// Only update the primary state for this conversation
 		const state = this.conversationStates.get(conversationId);
 		if (state) {
 			const entity = state.entities.find((e) => e.label === entityId);
@@ -809,25 +542,10 @@ export class PiiSessionManager {
 				this.triggerChatSave(conversationId);
 			}
 		}
-		
-		// Update global state if this is the current conversation
-		const globalEntity = this.entities.find((e) => e.label === entityId);
-		if (globalEntity) {
-			globalEntity.shouldMask = shouldMask;
-		}
-		
-		// Update working entities if they exist
-		const workingEntities = this.workingEntitiesForConversations.get(conversationId);
-		if (workingEntities) {
-			const workingEntity = workingEntities.find((e) => e.label === entityId);
-			if (workingEntity) {
-				workingEntity.shouldMask = shouldMask;
-			}
-		}
 	}
 
-	setGlobalEntityMaskingState(entityId: string, shouldMask: boolean) {
-		const entity = this.entities.find((e) => e.label === entityId);
+	setTemporaryEntityMaskingState(entityId: string, shouldMask: boolean) {
+		const entity = this.temporaryState.entities.find((e) => e.label === entityId);
 		if (entity) {
 			entity.shouldMask = shouldMask;
 		}
@@ -985,16 +703,21 @@ export function unmaskAndHighlightTextForDisplay(text: string, entities: Extende
 	let processedText = text;
 
 	const sortedEntities = [...entities].sort((a, b) => b.raw_text.length - a.raw_text.length);
+	
 	// Step 1: Unmask all patterns and simultaneously replace with highlighted spans
 	sortedEntities.forEach((entity) => {
 		const { label, raw_text: rawText } = entity;
 
-		if (!label || !rawText) return;
+		if (!label || !rawText) {
+			return;
+		}
 
 		if (entity.shouldMask) {
 			// Extract the base type and ID from the label
 			const labelMatch = label.match(/^(.+)_(\d+)$/);
-			if (!labelMatch) return;
+			if (!labelMatch) {
+				return;
+			}
 
 			const [, baseType, labelId] = labelMatch;
 			const labelVariations = getLabelVariations(baseType);
@@ -1011,6 +734,7 @@ export function unmaskAndHighlightTextForDisplay(text: string, entities: Extende
 			const labelRegex = new RegExp(patterns.join('|'), 'gi');
 
 			// Replace masked patterns with highlighted spans containing the original text
+			const beforeReplace = processedText;
 			processedText = processedText.replace(labelRegex, () => {
 				const shouldMask = entity.shouldMask ?? true;
 				const maskingClass = shouldMask ? 'pii-masked' : 'pii-unmasked';
@@ -1018,12 +742,17 @@ export function unmaskAndHighlightTextForDisplay(text: string, entities: Extende
 					i18next.t('PII Modifier: Was masked in input') : 
 					i18next.t('PII Modifier: Was NOT masked in input');
 
-				//replacementsMade++;
 				return `<span class="pii-highlight ${maskingClass}" title="${entity.label} - ${statusText}" data-pii-type="${entity.type}" data-pii-label="${entity.label}">${rawText}</span>`;
 			});
+			
+			if (beforeReplace !== processedText) {
+				//replacementsMade++;
+			}
 		} else {
 			// Skip entities with empty or invalid raw_text
-			if (!entity.raw_text?.trim()) return;
+			if (!entity.raw_text?.trim()) {
+				return;
+			}
 
 			// Escape special regex characters and create pattern
 			const escapedText = entity.raw_text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -1034,6 +763,7 @@ export function unmaskAndHighlightTextForDisplay(text: string, entities: Extende
 				? new RegExp(escapedText, 'gi')
 				: new RegExp(`\\b${escapedText}\\b`, 'gi');
 
+			const beforeReplace = processedText;
 			processedText = processedText.replace(regex, (match) => {
 				const shouldMask = entity.shouldMask ?? true;
 				const maskingClass = shouldMask ? 'pii-masked' : 'pii-unmasked';
@@ -1041,9 +771,12 @@ export function unmaskAndHighlightTextForDisplay(text: string, entities: Extende
 					i18next.t('PII Modifier: Was masked in input') : 
 					i18next.t('PII Modifier: Was NOT masked in input');
 
-				//replacementsMade++;
 				return `<span class="pii-highlight ${maskingClass}" title="${entity.label} - ${statusText}" data-pii-type="${entity.type}" data-pii-label="${entity.label}">${match}</span>`;
 			});
+			
+			if (beforeReplace !== processedText) {
+				//replacementsMade++;
+			}
 		}
 	});
 

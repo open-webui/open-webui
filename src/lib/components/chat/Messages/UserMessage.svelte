@@ -3,7 +3,7 @@
 	import { toast } from 'svelte-sonner';
 	import { tick, getContext, onMount } from 'svelte';
 
-	import { models, settings } from '$lib/stores';
+	import { models, settings, chatId } from '$lib/stores';
 	import { user as _user } from '$lib/stores';
 	import { copyToClipboard as _copyToClipboard, formatDate } from '$lib/utils';
 
@@ -65,11 +65,10 @@
 	// PII Detection state
 	let piiSessionManager = PiiSessionManager.getInstance();
 
-	const copyToClipboard = async (text) => {
+	const copyToClipboard = async (text: string) => {
 		// First unmask any PII placeholders to get the actual text
-		const entities = history?.id
-			? piiSessionManager.getConversationEntities(history.id)
-			: piiSessionManager.getEntities();
+		const entities = piiSessionManager.getEntitiesForDisplay($chatId);
+		console.log('UserMessage: copyToClipboard - chatId:', $chatId, 'entities found:', entities.length);
 		if (entities.length > 0) {
 			text = unmaskTextWithEntities(text, entities);
 		}
@@ -412,7 +411,7 @@
 									: ' w-full'}"
 							>
 								{#if message.content}
-									<Markdown id={message.id} content={message.content} conversationId={history?.id || ''} />
+									<Markdown id={message.id} content={message.content} conversationId={$chatId} />
 								{/if}
 							</div>
 						</div>

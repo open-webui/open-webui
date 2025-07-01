@@ -1173,7 +1173,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 						piiSessionManager.loadConversationState(conversationId);
 					}
 					
-					const loadedModifiers = piiSessionManager.getActiveModifiers(conversationId);
+					const loadedModifiers = piiSessionManager.getModifiersForDisplay(conversationId);
 					
 					return {
 						modifiers: loadedModifiers,
@@ -1197,7 +1197,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 									piiSessionManagerReload.loadConversationState(reloadConversationId);
 								}
 								
-								const reloadedModifiers = piiSessionManagerReload.getActiveModifiers(reloadConversationId);
+								const reloadedModifiers = piiSessionManagerReload.getModifiersForDisplay(reloadConversationId);
 								
 								newState = {
 									...newState,
@@ -1235,7 +1235,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 								if (addConversationId) {
 									piiSessionManager.setConversationModifiers(addConversationId, updatedModifiers);
 								} else {
-									piiSessionManager.setGlobalModifiers(updatedModifiers);
+									piiSessionManager.setTemporaryModifiers(updatedModifiers);
 								}
 
 								if (onModifiersChanged) {
@@ -1255,7 +1255,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 								if (removeConversationId) {
 									piiSessionManagerRemove.setConversationModifiers(removeConversationId, remainingModifiers);
 								} else {
-									piiSessionManagerRemove.setGlobalModifiers(remainingModifiers);
+									piiSessionManagerRemove.setTemporaryModifiers(remainingModifiers);
 								}
 
 								if (onModifiersChanged) {
@@ -1274,7 +1274,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 								if (clearConversationId) {
 									piiSessionManagerClear.setConversationModifiers(clearConversationId, []);
 								} else {
-									piiSessionManagerClear.setGlobalModifiers([]);
+									piiSessionManagerClear.setTemporaryModifiers([]);
 								}
 
 								if (onModifiersChanged) {
@@ -1306,7 +1306,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 							piiSessionManager.loadConversationState(currentConversationId);
 						}
 						
-						const sessionModifiers = piiSessionManager.getActiveModifiers(currentConversationId);
+						const sessionModifiers = piiSessionManager.getModifiersForDisplay(currentConversationId);
 						const entityText = existingEntity.text;
 						
 						// Find mask modifier for this entity
@@ -1445,7 +1445,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 							const pluginState = piiModifierExtensionKey.getState(view.state);
 							const currentConversationId = pluginState?.currentConversationId;
 							
-							// Find existing modifiers for this entity using getActiveModifiers consistently
+							// Find existing modifiers for this entity using getModifiersForDisplay consistently
 							const piiSessionManager = PiiSessionManager.getInstance();
 							
 							// Ensure conversation state is loaded if we have a conversationId
@@ -1453,7 +1453,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 								piiSessionManager.loadConversationState(currentConversationId);
 							}
 							
-							const sessionModifiers = piiSessionManager.getActiveModifiers(currentConversationId);
+							const sessionModifiers = piiSessionManager.getModifiersForDisplay(currentConversationId);
 							
 							const targetText = targetInfo.word;
 							
