@@ -19,6 +19,7 @@ if [ -z "$VECTOR_DB" ] || [ -z "$S3_ENDPOINT_URL" ]; then
   # exit 1
 fi
 export NODE_OPTIONS="--max-old-space-size=4096"
+export ENV="dev"
 # Define porta com valor padrão
 PORT="${PORT:-3030}"
 # Inicia o FastAPI com Uvicorn em background

@@ -86,7 +86,7 @@ class WeaviateClient:
         collection_name = collection_name.replace("-", "").lower()
         if not (collection_name.startswith("file") or collection_name.startswith("collection")):
             collection_name = f"collection{collection_name}"
-        return collection_name
+        return collection_name.capitalize()
 
     def has_collection(self, collection_name: str) -> bool:
         """
@@ -130,7 +130,6 @@ class WeaviateClient:
             properties=[
                 Property(name="file_id", data_type=DataType.TEXT),
                 Property(name="documents", data_type=DataType.TEXT),
-                Property(name="hash", data_type=DataType.TEXT),
                 Property(
                     name="metadata",
                     data_type=DataType.OBJECT,
@@ -147,6 +146,7 @@ class WeaviateClient:
                         Property(name="start_index", data_type=DataType.INT),
                         Property(name="embedding_config",
                                  data_type=DataType.TEXT),
+                        Property(name="hash", data_type=DataType.TEXT),
                         # Será armazenado como JSON string
                     ],
                 ),
@@ -173,7 +173,6 @@ class WeaviateClient:
             {
                 "file_id": item["id"],  # Identificador único
                 "documents": item["text"],  # Conteúdo textual
-                "hash": item["metadata"]["hash"],
                 "metadata": item["metadata"],  # Metadados (JSON)
             }
             for item in items
@@ -202,7 +201,6 @@ class WeaviateClient:
             data = {
                 "file_id": item["id"],
                 "documents": item["text"],
-                "hash": item["metadata"]["hash"],
                 "metadata": [item["metadata"]],
             }
             try:
