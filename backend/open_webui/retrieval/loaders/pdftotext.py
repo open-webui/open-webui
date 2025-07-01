@@ -75,12 +75,17 @@ class PdftotextLoaderAsync:
                           files=files,
                           data=data,
                           )
+        if r.status_code != 200:
+            log.error(
+                f"Failed to extract text from PDF using OCR: {r.status_code} - {r.text}")
+            return None
 
         log.info(r)
         response = r.json()
         task_id = response.get("task_id", "")
 
-        log.info(f"Extracted text from pdf using OCR, task_id -> {task_id} ")
+        log.info(
+            f"Extracted text from pdf using OCR, task_id -> {task_id} ")
 
         return task_id
 
@@ -91,6 +96,11 @@ class PdftotextLoaderAsync:
         status_url = f"{self.base_url}/task_status/{task_id}"
 
         r = requests.get(url=status_url, timeout=30)
+
+        if r.status_code != 200:
+            log.error(
+                f"Failed to check status for task {task_id}: {r.status_code} - {r.text}")
+            return None
 
         response = r.json()
 

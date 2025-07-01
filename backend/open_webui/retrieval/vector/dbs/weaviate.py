@@ -68,7 +68,8 @@ class WeaviateClient:
         self.client = weaviate.connect_to_custom(
             http_host=WEAVIATE_HTTP_HOST,  # Hostname for the HTTP API connection
             http_port=WEAVIATE_HTTP_PORT,  # Default is 80, WCD uses 443
-            http_secure=False,  # Whether to use https (secure) for the HTTP API connection
+            # Whether to use https (secure) for the HTTP API connection
+            http_secure=False,
             grpc_host=WEAVIATE_GRPC_HOST,  # Hostname for the gRPC API connection
             grpc_port=WEAVIATE_GRPC_PORT,  # Default is 50051, WCD uses 443
             grpc_secure=False,  # Whether to use a secure channel for the gRPC API connection
@@ -77,22 +78,22 @@ class WeaviateClient:
             ),  # API key for authentication
         )
 
-    def transform_collection_name(self, collection_name):
+    def transform_collection_name(self, collection_name: str) -> str:
         """
-        Transforms a collection name by removing non-alphanumeric characters
-        and ensuring it starts with 'C' for consistency.
+        Transforms the collection name to a valid Weaviate class name.
+        Weaviate class names must start with a letter and can only contain letters, numbers, and underscores.
         """
-        collection_name = re.sub(r"[^a-zA-Z0-9]", "", collection_name)
-        if not (collection_name.startswith("c") or collection_name.startswith("C")):
-            collection_name = f"c{collection_name}"
-
-        return collection_name.capitalize()
+        collection_name = collection_name.replace("-", "").lower()
+        if not (collection_name.startswith("file") or collection_name.startswith("collection")):
+            collection_name = f"collection{collection_name}"
+        return collection_name
 
     def has_collection(self, collection_name: str) -> bool:
         """
         Checks if a collection (class) already exists.
         """
         # try:
+        collection_name = self.transform_collection_name(collection_name)
         collection_names = self.client.collections.list_all()
         return collection_name in collection_names
         # except Exception:
@@ -102,6 +103,7 @@ class WeaviateClient:
         """
         Ensures that the collection exists; if not, it creates it.
         """
+        collection_name = self.transform_collection_name(collection_name)
         log.info(f"Collection para buscar: {collection_name}")
         if not self.has_collection(collection_name):
             log.info("Creating collection %s", collection_name)
@@ -122,7 +124,7 @@ class WeaviateClient:
                     source_properties=["text"],
                     vector_index_config=Configure.VectorIndex.hnsw(),
                     region="sa-east-1",
-                    model= "amazon.titan-embed-text-v2:0"
+                    model="amazon.titan-embed-text-v2:0"
                 ),
             ],
             properties=[
@@ -135,13 +137,16 @@ class WeaviateClient:
                     nested_properties=[
                         Property(name="name", data_type=DataType.TEXT),
                         Property(name="content_type", data_type=DataType.TEXT),
-                        Property(name="size", data_type=DataType.INT),  # Objeto vazio
-                        Property(name="collection_name", data_type=DataType.TEXT),
+                        # Objeto vazio
+                        Property(name="size", data_type=DataType.INT),
+                        Property(name="collection_name",
+                                 data_type=DataType.TEXT),
                         Property(name="created_by", data_type=DataType.TEXT),
                         Property(name="file_id", data_type=DataType.TEXT),
                         Property(name="source", data_type=DataType.TEXT),
                         Property(name="start_index", data_type=DataType.INT),
-                        Property(name="embedding_config", data_type=DataType.TEXT),
+                        Property(name="embedding_config",
+                                 data_type=DataType.TEXT),
                         # Será armazenado como JSON string
                     ],
                 ),
@@ -182,7 +187,8 @@ class WeaviateClient:
                     print("Batch import stopped due to excessive errors.")
                     break
 
-        print(f"Inserted {len(items)} items into collection '{collection_name}'.")
+        print(
+            f"Inserted {len(items)} items into collection '{collection_name}'.")
 
     def upsert(self, collection_name: str, items: List[VectorItem]):
         """
@@ -201,7 +207,8 @@ class WeaviateClient:
             }
             try:
                 # Tenta buscar o objeto pelo id
-                obj = coll.query.fetch_object_by_id(item["id"], include_vector=True)
+                obj = coll.query.fetch_object_by_id(
+                    item["id"], include_vector=True)
                 if obj:
                     coll.data.update(data)
                 else:
@@ -233,8 +240,10 @@ class WeaviateClient:
                 log.info(items)
                 if items:
                     ids = [obj.properties.get("file_id", "") for obj in items]
-                    docs = [obj.properties.get("documents", "") for obj in items]
-                    meta = [obj.properties.get("metadata", {}) for obj in items]
+                    docs = [obj.properties.get("documents", "")
+                            for obj in items]
+                    meta = [obj.properties.get("metadata", {})
+                            for obj in items]
                     return GetResult(ids=[ids], documents=[docs], metadatas=[meta])
         except:
             pass
@@ -275,7 +284,8 @@ class WeaviateClient:
         # Realiza consulta por similaridade usando o vetor
 
         response = collection.query.near_text(
-            query=query, limit=limit, return_metadata=MetadataQuery(distance=True)
+            query=query, limit=limit, return_metadata=MetadataQuery(
+                distance=True)
         )
 
         # response = collection.query.hybrid(
@@ -387,16 +397,16 @@ class WeaviateClient:
         elif filter:
             for idx, f_ in filter.items():
                 log.info(f"Filer: {f_}")
-            collection.data.delete_many(
-                where=Filter.by_property(idx).contains_any([f_])
-            )
+                collection.data.delete_many(
+                    where=Filter.by_property(idx).contains_any([f_])
+                )
 
     def reset(self):
         """
         Removes all collections from Weaviate.
         CAUTION: This operation deletes ALL data.
         """
-
+        collection_name = self.transform_collection_name(collection_name)
         collections = self.client.collections.list_all()
         for coll in collections:
             self.client.collections.delete(coll)

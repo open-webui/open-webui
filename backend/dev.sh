@@ -1,42 +1,32 @@
 #!/bin/bash
 
-
 # Determine o diretório do script atual
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-# CONFIG_FILE="$SCRIPT_DIR/common-vars.sh"
-# chmod +x $CONFIG_FILE
 
-# # Verifique se o arquivo de configuração existe e carregue-o
-# if [ -f "$CONFIG_FILE" ]; then
-#     echo "A carregar variáveis de configuração de: $CONFIG_FILE"
-#     . "$CONFIG_FILE"
-# else
-#     echo "Erro: Arquivo de configuração $CONFIG_FILE não encontrado."
-#     exit 1
-# fi
-
+# Carrega variáveis do arquivo .env (se existir)
 if [ -f ".env" ]; then
-  export $(grep -v '^#' .env | xargs) # Método simples, mas com limitações para valores com espaços/caracteres especiais
+  export $(grep -v '^#' .env | xargs)
 fi
 
-# Now you can use the variables loaded from config.env
-echo "VECTOR_DB is set to: $VECTOR_DB" # For verification
+# Mostra algumas variáveis carregadas
+echo "VECTOR_DB is set to: $VECTOR_DB"
 echo "S3_ENDPOINT_URL is set to: $S3_ENDPOINT_URL"
 
-# Verifique se as variáveis não estão vazias (opcional, mas recomendado)
+# Validação opcional das variáveis
 if [ -z "$VECTOR_DB" ] || [ -z "$S3_ENDPOINT_URL" ]; then
-    echo "Erro: Uma ou mais variáveis de configuração não foram definidas corretamente."
-    echo "Por favor, verifique o arquivo $CONFIG_FILE."
-    # exit 1 # Pode decidir sair se as variáveis forem cruciais
+  echo "Erro: Uma ou mais variáveis de configuração não foram definidas corretamente."
+  echo "Por favor, verifique o arquivo .env."
+  # exit 1
 fi
-
-
-PORT="${PORT:-3030}" # This line can stay, or PORT could also be in config.env
-uvicorn open_webui.main:app --port $PORT --host 0.0.0.0 --log-level=info --forwarded-allow-ips '*' --reload &
+export NODE_OPTIONS="--max-old-space-size=4096"
+# Define porta com valor padrão
+PORT="${PORT:-3030}"
+# Inicia o FastAPI com Uvicorn em background
+uvicorn open_webui.main:app --port $PORT --host 0.0.0.0 --log-level=info --forwarded-allow-ips '*' &
 FASTAPI_PID=$!
-trap "echo 'Stopping FastAPI server...'; kill $FASTAPI_PID" SIGINT SIGTERM
-# If you uncomment the Celery part, you'll want to trap its PID too:
-# trap "echo 'Stopping servers...'; kill $FASTAPI_PID $CELERY_PID" SIGINT SIGTERM
 
+# Define trap para matar o processo quando receber SIGINT ou SIGTERM (ex: CTRL+C)
+trap "echo 'Encerrando FastAPI...'; kill $FASTAPI_PID; exit 0" SIGINT SIGTERM
+
+# Aguarda o processo filho encerrar
 wait $FASTAPI_PID
-# wait $CELERY_PID # If Celery is used

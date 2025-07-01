@@ -1859,7 +1859,7 @@ def process_files_batch(
                 result.status = "failed"
                 errors.append(
                     BatchProcessFilesResult(
-                        file_id=result.file_id, error=str(e))
+                        file_id=result.file_id, status="failed", error=str(e))
                 )
 
     return BatchProcessFilesResponse(results=results, errors=errors)
