@@ -8,7 +8,7 @@ license = { file = "LICENSE" }
 dependencies = [
     "fastapi==0.115.7",
     "uvicorn[standard]==0.34.2",
-    "pydantic==2.10.6",
+    "pydantic==2.11.7",
     "python-multipart==0.0.20",
 
     "python-socketio==5.13.0",
