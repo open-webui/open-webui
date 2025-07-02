@@ -41,6 +41,15 @@
 	onMount(async () => {
 		map = L.map(mapElement).setView(setViewLocation ? setViewLocation : [51.505, -0.09], 10);
 
+		if (setViewLocation) {
+			points = [
+				{
+					coords: setViewLocation,
+					content: `Lat: ${setViewLocation[0]}, Lng: ${setViewLocation[1]}`
+				}
+			];
+		}
+
 		L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 			attribution:
 				'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
