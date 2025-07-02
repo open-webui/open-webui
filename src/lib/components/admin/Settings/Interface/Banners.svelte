@@ -53,7 +53,7 @@
 	};
 </script>
 
-<div class=" flex flex-col gap-3" bind:this={bannerListElement}>
+<div class=" flex flex-col gap-3 {banners?.length > 0 ? 'mt-2' : ''}" bind:this={bannerListElement}>
 	{#each banners as banner, bannerIdx (banner.id)}
 		<div class=" flex justify-between items-start -ml-1" id="banner-item-{banner.id}">
 			<EllipsisVertical className="size-4 cursor-move item-handle" />

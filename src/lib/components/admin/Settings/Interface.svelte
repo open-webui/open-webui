@@ -389,7 +389,7 @@
 				<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
 				<div class="mb-2.5">
-					<div class="flex w-full justify-between mb-2">
+					<div class="flex w-full justify-between">
 						<div class=" self-center text-xs">
 							{$i18n.t('Banners')}
 						</div>
