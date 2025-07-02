@@ -190,7 +190,7 @@ def update_password(user, password):
 
 def sync_admin_user() -> str:
     """Synchronize the admin user by updating their password or creating a new user."""
-    admin_email = os.getenv('ADMIN_EMAIL')
+    admin_email = os.getenv('ADMIN_EMAIL').lower()
     admin_password = os.getenv('ADMIN_PASSWORD')
 
     admin = Users.get_user_by_email(admin_email)
