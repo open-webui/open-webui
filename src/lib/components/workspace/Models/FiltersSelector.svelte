@@ -2,15 +2,22 @@
 	import { getContext, onMount } from 'svelte';
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import Collapsible from '$lib/components/common/Collapsible.svelte';
+	import Valves from '$lib/components/common/Valves.svelte';
 
 	const i18n = getContext('i18n');
 
 	export let filters = [];
 	export let selectedFilterIds = [];
 
+	export let valvesSpecs = {};
+	export let valves = {};
+
 	let _filters = {};
 
 	onMount(() => {
+		console.log(`valvesSpecs: ${JSON.stringify(valvesSpecs)}`);
+		console.log(`valves: ${JSON.stringify(valves)}`);
 		_filters = filters.reduce((acc, filter) => {
 			acc[filter.id] = {
 				...filter,
@@ -34,7 +41,7 @@
 	<!-- TODO: Filer order matters -->
 	<div class="flex flex-col">
 		{#if filters.length > 0}
-			<div class=" flex items-center mt-2 flex-wrap">
+			<div class=" flex flex-col items-left mt-2 flex-wrap">
 				{#each Object.keys(_filters) as filter, filterIdx}
 					<div class=" flex items-center gap-2 mr-3">
 						<div class="self-center flex items-center">
@@ -60,6 +67,18 @@
 							</Tooltip>
 						</div>
 					</div>
+					{#if _filters[filter].selected}
+						<Collapsible
+							title={$i18n.t('Valves')}
+							open={false}
+							buttonClassName="w-full"
+							className="mt-2"
+						>
+							<div slot="content">
+								<Valves valvesSpec={valvesSpecs[filter]} bind:valves={valves[filter]} />
+							</div>
+						</Collapsible>
+					{/if}
 				{/each}
 			</div>
 		{/if}

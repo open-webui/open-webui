@@ -1,0 +1,55 @@
+name: Sync Upstream Changes
+
+on:
+  schedule:
+    - cron: "0 0 * * *"  # Runs daily at midnight UTC
+  workflow_dispatch:  # Allows manual triggering
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo X
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.REPO_WRITE_TOKEN }}  # Uses default GitHub Actions token
+          fetch-depth: 0  # Fetch all history to avoid merge conflicts
+
+      - name: Add Upstream Remote and Fetch
+        run: |
+          git remote add upstream https://github.com/open-webui/open-webui.git || true
+          git fetch upstream
+
+      - name: Update Upstream Branch
+        run: |
+          git checkout -B upstream upstream/main
+          git push origin upstream --force
+
+      - name: Check for Changes and Create PR
+        env:
+          GH_TOKEN: ${{ secrets.REPO_WRITE_TOKEN }}
+        run: |
+          # Configure Git identity
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "actions@github.com"
+          
+          git fetch origin main
+          git fetch origin upstream # ADDED: to ensure local origin/upstream is current for rev-list
+          
+          # Set default repo for gh commands
+          gh repo set-default chrysapp/open-webui
+          
+          # Check if PR already exists or no changes
+          if gh pr list --state open --base main --head upstream --limit 1 | grep -q . || [ "$(git rev-list --count origin/main..origin/upstream)" -eq 0 ]; then
+            echo "Either an open PR from 'upstream' to 'main' already exists, or no new changes found in upstream. Exiting." # MODIFIED echo text
+            exit 0
+          fi
+          
+          gh pr create --title "Include Upstream Changes" \
+                       --body "Automatically syncing upstream changes from open-webui/main." \
+                       --base main \
+                       --head upstream
