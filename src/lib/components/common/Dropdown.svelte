@@ -11,12 +11,6 @@
 	export let ariaLabel: string | undefined = undefined;
 
 	const dispatch = createEventDispatcher();
-
-	const changeFocus = async (elementId) => {
-		setTimeout(() => {
-			document.getElementById(elementId)?.focus();
-		}, 10);
-	};
 </script>
 
 <DropdownMenu.Root
@@ -24,7 +18,6 @@
 	closeFocus={false}
 	onOpenChange={(state) => {
 		dispatch('change', state);
-		changeFocus(buttonID);
 	}}
 	typeahead={false}
 >
