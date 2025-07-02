@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { getContext, onDestroy, onMount, tick } from 'svelte';
 	import { v4 as uuidv4 } from 'uuid';
+	import heic2any from 'heic2any';
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
@@ -328,7 +329,7 @@
 
 	const inputFilesHandler = async (inputFiles) => {
 		console.log('Input files handler called with:', inputFiles);
-		inputFiles.forEach((file) => {
+		inputFiles.forEach(async (file) => {
 			console.log('Processing file:', {
 				name: file.name,
 				type: file.type,
@@ -352,21 +353,48 @@
 				return;
 			}
 
-			if (
-				['image/gif', 'image/webp', 'image/jpeg', 'image/png', 'image/avif'].includes(file['type'])
-			) {
+			if (file['type'].startsWith('image/')) {
+				const compressImageHandler = async (imageUrl, settings = {}, config = {}) => {
+					// Quick shortcut so we don’t do unnecessary work.
+					const settingsCompression = settings?.imageCompression ?? false;
+					const configWidth = config?.file?.image_compression?.width ?? null;
+					const configHeight = config?.file?.image_compression?.height ?? null;
+
+					// If neither settings nor config wants compression, return original URL.
+					if (!settingsCompression && !configWidth && !configHeight) {
+						return imageUrl;
+					}
+
+					// Default to null (no compression unless set)
+					let width = null;
+					let height = null;
+
+					// If user/settings want compression, pick their preferred size.
+					if (settingsCompression) {
+						width = settings?.imageCompressionSize?.width ?? null;
+						height = settings?.imageCompressionSize?.height ?? null;
+					}
+
+					// Apply config limits as an upper bound if any
+					if (configWidth && (width === null || width > configWidth)) {
+						width = configWidth;
+					}
+					if (configHeight && (height === null || height > configHeight)) {
+						height = configHeight;
+					}
+
+					// Do the compression if required
+					if (width || height) {
+						return await compressImage(imageUrl, width, height);
+					}
+					return imageUrl;
+				};
+
 				let reader = new FileReader();
 				reader.onload = async (event) => {
 					let imageUrl = event.target.result;
 
-					if ($settings?.imageCompression ?? false) {
-						const width = $settings?.imageCompressionSize?.width ?? null;
-						const height = $settings?.imageCompressionSize?.height ?? null;
-
-						if (width || height) {
-							imageUrl = await compressImage(imageUrl, width, height);
-						}
-					}
+					imageUrl = await compressImageHandler(imageUrl, $settings, $config);
 
 					files = [
 						...files,
@@ -377,7 +405,11 @@
 					];
 					note.data.files = files;
 				};
-				reader.readAsDataURL(file);
+				reader.readAsDataURL(
+					file['type'] === 'image/heic'
+						? await heic2any({ blob: file, toType: 'image/jpeg' })
+						: file
+				);
 			} else {
 				uploadFileHandler(file);
 			}
