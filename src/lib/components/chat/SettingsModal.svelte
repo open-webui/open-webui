@@ -260,7 +260,6 @@
 				'canchat',
 				'release',
 				'updates',
-				'updateinfo',
 				'versioninfo',
 				'aboutapp',
 				'terms',
