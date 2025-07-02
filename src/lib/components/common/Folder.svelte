@@ -133,32 +133,38 @@
 					</div>
 
 					<div
-						class="flex w-full text-gray-900 dark:text-white bg-transparent group-hover:bg-gray-100 dark:group-hover:bg-transparent px-1 rounded transition"
+						class="flex w-full text-gray-900 dark:text-white bg-transparent group-hover:bg-gray-100 dark:group-hover:bg-transparent rounded transition"
 					>
 						{name}
 					</div>
 				</button>
 
 				{#if onAdd}
-					<button
+					<div
 						class="absolute z-10 right-2 invisible group-hover:visible self-center flex items-center text-gray-700 dark:text-gray-300"
-						on:pointerup={(e) => {
-							e.stopPropagation();
-						}}
-						on:click={(e) => {
-							e.stopPropagation();
-							onAdd();
-						}}
 					>
 						<Tooltip content={onAddLabel}>
 							<button
-								class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto"
-								on:click={(e) => {}}
+								class="absolute z-10 right-2 invisible group-hover:visible self-center flex items-center text-gray-700 dark:text-gray-300"
+								on:pointerup={(e) => {
+									e.stopPropagation();
+								}}
+								on:click={(e) => {
+									e.stopPropagation();
+									onAdd();
+									open = true;
+								}}
+								on:keydown={(e) => {
+									if (e.key === 'Enter' || e.key === ' ') {
+										e.stopPropagation();
+									}
+								}}
+								aria-label={onAddLabel}
 							>
-								<Plus className=" size-3" strokeWidth="2.5" />
+								<Plus className=" size-3 text-gray-900 dark:text-gray-100" strokeWidth="2.5" />
 							</button>
 						</Tooltip>
-					</button>
+					</div>
 				{/if}
 			</div>
 

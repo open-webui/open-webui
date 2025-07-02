@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { config, settings, user } from '$lib/stores';
+	import { ariaMessage, config, settings, user } from '$lib/stores';
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { updateUserInfo } from '$lib/apis/users';
@@ -223,13 +223,14 @@
 >
 	<div class=" space-y-3 overflow-y-scroll max-h-[28rem] lg:max-h-full">
 		<div>
-			<div class=" mb-1.5 text-sm font-medium">{$i18n.t('UI')}</div>
+			<h3 class=" mb-1.5 text-sm font-medium">{$i18n.t('UI')}</h3>
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
 					<div class=" self-center text-xs">{$i18n.t('Landing Page Mode')}</div>
 
 					<button
+						id="landing-page-mode-button"
 						class="p-1 px-3 text-xs flex rounded transition"
 						on:click={() => {
 							toggleLandingPageMode();
@@ -253,6 +254,11 @@
 						class="p-1 px-3 text-xs flex rounded transition"
 						on:click={() => {
 							toggleChatBubble();
+							ariaMessage.set(
+								chatBubble
+									? $i18n.t('Display username option hidden below')
+									: $i18n.t('Display username option visible below')
+							);
 						}}
 						type="button"
 					>
@@ -377,7 +383,7 @@
 				</div>
 			{/if}
 
-			<div class=" my-1.5 text-sm font-medium">{$i18n.t('Chat')}</div>
+			<h3 class=" my-1.5 text-sm font-medium">{$i18n.t('Chat')}</h3>
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
@@ -547,7 +553,7 @@
 				</div>
 			</div>
 
-			<div class=" my-1.5 text-sm font-medium">{$i18n.t('Voice')}</div>
+			<h3 class=" my-1.5 text-sm font-medium">{$i18n.t('Voice')}</h3>
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
@@ -589,7 +595,7 @@
 				</div>
 			</div>
 
-			<div class=" my-1.5 text-sm font-medium">{$i18n.t('File')}</div>
+			<h3 class=" my-1.5 text-sm font-medium">{$i18n.t('File')}</h3>
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">

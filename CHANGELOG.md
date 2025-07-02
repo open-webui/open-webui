@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.7-ccv2-1.4.0] - 2025-06-11
+
+### Added
+
+- **📊 Additional Feedback Columns**: Added more columns to the feedback system for improved analysis and tracking.
+- **📈 Analysis and Global Analysis Roles**: Added new roles to access the metrics dashboard, enabling more granular accessibility for analysis.
+- **🌍 Banner Localization**: Added support for localized banners, allowing announcements to be displayed in multiple languages.
+- **📝 Full Document Retrieval Flag**: Added a flag to enable processing the entire document during web retrieval.
+
+### Changed
+
+- **📊 Users Enrollement graph**: Changed graph from daily total users to number of enrollments.
+- **💡 Default Suggestions Prompts**: Updated the default suggestions prompts to provide more relevant and helpful suggestions for users.
+
+### Fixed
+
+- **📊 Historical Daily User Graph Data Output**: Fixed the historical daily user graph data was incorrect or incomplete, ensuring accurate reporting.
+
+### Removed
+
+- **🧹 Dependency Cleanup**: Removed old dependencies to streamline the project and improve maintainability.
+- **🔗 V1 Prompts Importation**: Removed the ability to import V1 private prompts within the Prompt Workspace.
+
 ## [0.5.7-ccv2-1.3.1] - 2025-05-15
 
 ### Fixed

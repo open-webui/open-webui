@@ -22,10 +22,11 @@
 		getChatPinnedStatusById,
 		toggleChatPinnedStatusById
 	} from '$lib/apis/chats';
-	import { chats } from '$lib/stores';
+	import { chats, returnFocusButtonID } from '$lib/stores';
 	import { createMessagesList } from '$lib/utils';
 	import { downloadChatAsPDF } from '$lib/apis/utils';
 	import Download from '$lib/components/icons/Download.svelte';
+	import { toast } from 'svelte-sonner';
 
 	const i18n = getContext('i18n');
 
@@ -34,15 +35,22 @@
 	export let renameHandler: Function;
 	export let deleteHandler: Function;
 	export let onClose: Function;
-
+	export let buttonClass = '';
+	export let ariaLabel = '';
 	export let chatId = '';
+	export let buttonID = '';
 
 	let show = false;
 	let pinned = false;
 
 	const pinHandler = async () => {
 		await toggleChatPinnedStatusById(localStorage.token, chatId);
-		dispatch('change');
+		dispatch('change', { buttonID });
+		if (pinned) {
+			toast.success($i18n.t('Chat unpinned. It will now appear in the regular list.'));
+		} else {
+			toast.success($i18n.t('Chat pinned. You can find it at the top section of your chat list.'));
+		}
 	};
 
 	const checkPinned = async () => {
@@ -114,10 +122,11 @@
 			onClose();
 		}
 	}}
+	{buttonClass}
+	{ariaLabel}
+	{buttonID}
 >
-	<Tooltip content={$i18n.t('More')}>
-		<slot />
-	</Tooltip>
+	<slot />
 
 	<div slot="content">
 		<DropdownMenu.Content

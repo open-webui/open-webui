@@ -14,7 +14,8 @@
 		showControls,
 		showArtifacts,
 		mobile,
-		temporaryChatEnabled
+		temporaryChatEnabled,
+		returnFocusButtonID
 	} from '$lib/stores';
 	import { flyAndScale } from '$lib/utils/transitions';
 
@@ -36,6 +37,10 @@
 
 	export let chat;
 	export let onClose: Function = () => {};
+
+	export let buttonClass = '';
+	export let ariaLabel = '';
+	export let buttonID = '';
 
 	const getChatAsText = async () => {
 		const history = chat.chat.history;
@@ -88,6 +93,9 @@
 			onClose();
 		}
 	}}
+	{buttonClass}
+	{ariaLabel}
+	{buttonID}
 >
 	<slot />
 
@@ -146,7 +154,8 @@
 				<DropdownMenu.Item
 					class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 					id="chat-share-button"
-					on:click={() => {
+					on:click={async () => {
+						await returnFocusButtonID.set(buttonID);
 						shareHandler();
 					}}
 				>

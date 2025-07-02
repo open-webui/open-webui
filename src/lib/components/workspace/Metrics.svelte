@@ -31,6 +31,7 @@
 
 	const i18n = getContext('i18n');
 	let unsubscribe: () => void;
+	let componentLoaded = false;
 
 	// Data variables
 	let domains: string[] = [];
@@ -559,12 +560,9 @@
 			// Get models based on user role
 			models = await getModels(localStorage.token);
 
-			// Filter models if user is an analyst with domain restriction
-			if (isAnalyst) {
-				// Get only models that have usage data for this domain
-				// This ensures analysts only see models used in their domain
-				models = models.filter((model) => model.includes(selectedDomain));
-			}
+			// Note: For analysts, the models list shows all available models
+			// but the actual metrics data will be filtered by domain in the API calls
+			// This allows analysts to see what models are available for selection
 
 			// Set the first model as the selected model if available
 			if (models.length > 0) {
@@ -574,10 +572,15 @@
 			await updateCharts(selectedDomain, selectedModel);
 			updateRangeMetrics(); // Load initial range metrics
 
+			// Mark component as loaded
+			componentLoaded = true;
+
 			// Store the observer in a variable for cleanup
 			return () => observer.disconnect();
 		} catch (error) {
 			console.error('Error initializing charts:', error);
+			// Even if there's an error, mark as loaded to show the UI
+			componentLoaded = true;
 		}
 	});
 
@@ -610,189 +613,190 @@
 	}
 </script>
 
-<div class="flex flex-col h-screen">
-	<div class="p-4 lg:p-6 flex-shrink-0">
-		<div class="mb-4 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-			<h2 class="text-2xl font-extrabold text-gray-900 dark:text-gray-100">
-				{$i18n.t('Metrics Dashboard')}
-			</h2>
-			<!-- Date Range Controls -->
-			<div class="flex flex-wrap items-center gap-3">
-				<div>
-					<label
-						class="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-2"
-						for="date-range-select"
-					>
-						{$i18n.t('Date Range')}
-					</label>
-					<select
-						id="date-range-select"
-						bind:value={selectedDateRange}
-						on:change={handleDateRangeChange}
-						class="block w-36 p-2 text-sm border border-gray-400 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
-					>
-						{#each dateRangeOptions as option}
-							<option value={option.value}>{$i18n.t(option.label)}</option>
-						{/each}
-					</select>
-				</div>
-				{#if showCustomDateRange}
+{#if componentLoaded && $user}
+	<div class="flex flex-col h-screen">
+		<div class="p-4 lg:p-6 flex-shrink-0">
+			<div class="mb-4 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+				<h2 class="text-2xl font-extrabold text-gray-900 dark:text-gray-100">
+					{$i18n.t('Metrics Dashboard')}
+				</h2>
+				<!-- Date Range Controls -->
+				<div class="flex flex-wrap items-center gap-3">
 					<div>
 						<label
 							class="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-2"
-							for="start-date"
+							for="date-range-select"
 						>
-							{$i18n.t('Start Date')}
+							{$i18n.t('Date Range')}
 						</label>
-						<input
-							type="date"
-							id="start-date"
-							bind:value={startDate}
-							max={formatDate(new Date())}
-							required
-							on:change={updateRangeMetrics}
-							class="block w-40 p-2 text-sm border border-gray-400 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
-						/>
-					</div>
-					<div>
-						<label
-							class="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-2"
-							for="end-date"
-						>
-							{$i18n.t('End Date')}
-						</label>
-						<input
-							type="date"
-							id="end-date"
-							bind:value={endDate}
-							max={formatDate(new Date())}
-							min={startDate}
-							required
-							on:change={updateRangeMetrics}
-							class="block w-40 p-2 text-sm border border-gray-400 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
-						/>
-					</div>
-				{/if}
-				<!-- Domain Selector with better visibility for analyst's domain -->
-				<div>
-					<label
-						class="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-2"
-						for="domain-select"
-					>
-						{#if isAnalyst}
-							{$i18n.t('Your Domain:')}
-						{:else}
-							{$i18n.t('Select Domain:')}
-						{/if}
-					</label>
-					{#if isAnalyst}
-						<!-- For analysts, show a static display with their domain -->
-						<div
-							class="block w-52 p-2 text-sm border border-gray-400 bg-gray-100 dark:bg-gray-700 rounded-md shadow-sm dark:text-gray-200"
-						>
-							{$user?.domain || $user?.email?.split('@')[1] || $i18n.t('Loading...')}
-						</div>
-					{:else}
-						<!-- For admins and global analysts, show the domain selector -->
 						<select
-							id="domain-select"
-							bind:value={selectedDomain}
-							on:change={(e) => {
-								handleDomainChange(e);
-								updateRangeMetrics();
-							}}
+							id="date-range-select"
+							bind:value={selectedDateRange}
+							on:change={handleDateRangeChange}
 							class="block w-36 p-2 text-sm border border-gray-400 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
 						>
-							<option value={null}>{$i18n.t('All')}</option>
-							{#each domains as domain}
-								<option value={domain}>
-									{domain}
-								</option>
+							{#each dateRangeOptions as option}
+								<option value={option.value}>{$i18n.t(option.label)}</option>
 							{/each}
 						</select>
+					</div>
+					{#if showCustomDateRange}
+						<div>
+							<label
+								class="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-2"
+								for="start-date"
+							>
+								{$i18n.t('Start Date')}
+							</label>
+							<input
+								type="date"
+								id="start-date"
+								bind:value={startDate}
+								max={formatDate(new Date())}
+								required
+								on:change={updateRangeMetrics}
+								class="block w-40 p-2 text-sm border border-gray-400 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
+							/>
+						</div>
+						<div>
+							<label
+								class="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-2"
+								for="end-date"
+							>
+								{$i18n.t('End Date')}
+							</label>
+							<input
+								type="date"
+								id="end-date"
+								bind:value={endDate}
+								max={formatDate(new Date())}
+								min={startDate}
+								required
+								on:change={updateRangeMetrics}
+								class="block w-40 p-2 text-sm border border-gray-400 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
+							/>
+						</div>
+					{/if}
+					<!-- Domain Selector with better visibility for analyst's domain -->
+					<div>
+						<label
+							class="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-2"
+							for="domain-select"
+						>
+							{#if isAnalyst}
+								{$i18n.t('Your Domain:')}
+							{:else}
+								{$i18n.t('Select Domain:')}
+							{/if}
+						</label>
+						{#if isAnalyst}
+							<!-- For analysts, show a static display with their domain -->
+							<div
+								class="block w-52 p-2 text-sm border border-gray-400 bg-gray-100 dark:bg-gray-700 rounded-md shadow-sm dark:text-gray-200"
+							>
+								{$user?.domain || $user?.email?.split('@')[1] || $i18n.t('Loading...')}
+							</div>
+						{:else}
+							<!-- For admins and global analysts, show the domain selector -->
+							<select
+								id="domain-select"
+								bind:value={selectedDomain}
+								on:change={(e) => {
+									handleDomainChange(e);
+									updateRangeMetrics();
+								}}
+								class="block w-36 p-2 text-sm border border-gray-400 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
+							>
+								<option value={null}>{$i18n.t('All')}</option>
+								{#each domains as domain}
+									<option value={domain}>
+										{domain}
+									</option>
+								{/each}
+							</select>
+						{/if}
+					</div>
+					<!-- Model Selector (shown only on models tab) -->
+					{#if activeTab === 'models'}
+						<div>
+							<label
+								class="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-2"
+								for="model-select"
+							>
+								{$i18n.t('Select Model:')}
+							</label>
+							<select
+								id="model-select"
+								bind:value={selectedModel}
+								on:change={(e) => {
+									handleModelChange(e);
+									updateRangeMetrics();
+								}}
+								class="block w-36 p-2 text-sm border border-gray-400 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
+							>
+								{#each models as model}
+									<option value={model}>{model}</option>
+								{/each}
+							</select>
+						</div>
 					{/if}
 				</div>
-				<!-- Model Selector (shown only on models tab) -->
-				{#if activeTab === 'models'}
-					<div>
-						<label
-							class="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-2"
-							for="model-select"
-						>
-							{$i18n.t('Select Model:')}
-						</label>
-						<select
-							id="model-select"
-							bind:value={selectedModel}
-							on:change={(e) => {
-								handleModelChange(e);
-								updateRangeMetrics();
-							}}
-							class="block w-36 p-2 text-sm border border-gray-400 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
-						>
-							{#each models as model}
-								<option value={model}>{model}</option>
-							{/each}
-						</select>
-					</div>
-				{/if}
 			</div>
-		</div>
 
-		<!-- Enhanced Tab Navigation - Rename Cost Analysis to Business Insights -->
-		<div class="border-b border-gray-300 dark:border-gray-700">
-			<ul
-				class="flex flex-wrap -mb-px text-sm font-medium text-center text-gray-700 dark:text-gray-300"
-			>
-				<li class="mr-2">
-					<button
-						class={`inline-block p-4 rounded-t-lg border-b-2 ${
-							activeTab === 'users'
-								? 'border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-500'
-								: 'border-transparent hover:text-gray-900 hover:border-gray-300 dark:hover:text-gray-100'
-						}`}
-						on:click={() => setActiveTab('users')}
-					>
-						{$i18n.t('Users')}
-					</button>
-				</li>
-				<li class="mr-2">
-					<button
-						class={`inline-block p-4 rounded-t-lg border-b-2 ${
-							activeTab === 'prompts'
-								? 'border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-500'
-								: 'border-transparent hover:text-gray-900 hover:border-gray-300 dark:hover:text-gray-100'
-						}`}
-						on:click={() => setActiveTab('prompts')}
-					>
-						{$i18n.t('Prompts')}
-					</button>
-				</li>
-				<li class="mr-2">
-					<button
-						class={`inline-block p-4 rounded-t-lg border-b-2 ${
-							activeTab === 'tokens'
-								? 'border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-500'
-								: 'border-transparent hover:text-gray-900 hover:border-gray-300 dark:hover:text-gray-100'
-						}`}
-						on:click={() => setActiveTab('tokens')}
-					>
-						{$i18n.t('Tokens')}
-					</button>
-				</li>
-				<li class="mr-2">
-					<button
-						class={`inline-block p-4 rounded-t-lg border-b-2 ${
-							activeTab === 'models'
-								? 'border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-500'
-								: 'border-transparent hover:text-gray-900 hover:border-gray-300 dark:hover:text-gray-100'
-						}`}
-						on:click={() => setActiveTab('models')}
-					>
-						{$i18n.t('Model Analysis')}
-					</button>
-				</li>
-				<!-- Business Insights tab hidden for now
+			<!-- Enhanced Tab Navigation - Rename Cost Analysis to Business Insights -->
+			<div class="border-b border-gray-300 dark:border-gray-700">
+				<ul
+					class="flex flex-wrap -mb-px text-sm font-medium text-center text-gray-700 dark:text-gray-300"
+				>
+					<li class="mr-2">
+						<button
+							class={`inline-block p-4 rounded-t-lg border-b-2 ${
+								activeTab === 'users'
+									? 'border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-500'
+									: 'border-transparent hover:text-gray-900 hover:border-gray-300 dark:hover:text-gray-100'
+							}`}
+							on:click={() => setActiveTab('users')}
+						>
+							{$i18n.t('Users')}
+						</button>
+					</li>
+					<li class="mr-2">
+						<button
+							class={`inline-block p-4 rounded-t-lg border-b-2 ${
+								activeTab === 'prompts'
+									? 'border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-500'
+									: 'border-transparent hover:text-gray-900 hover:border-gray-300 dark:hover:text-gray-100'
+							}`}
+							on:click={() => setActiveTab('prompts')}
+						>
+							{$i18n.t('Prompts')}
+						</button>
+					</li>
+					<li class="mr-2">
+						<button
+							class={`inline-block p-4 rounded-t-lg border-b-2 ${
+								activeTab === 'tokens'
+									? 'border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-500'
+									: 'border-transparent hover:text-gray-900 hover:border-gray-300 dark:hover:text-gray-100'
+							}`}
+							on:click={() => setActiveTab('tokens')}
+						>
+							{$i18n.t('Tokens')}
+						</button>
+					</li>
+					<li class="mr-2">
+						<button
+							class={`inline-block p-4 rounded-t-lg border-b-2 ${
+								activeTab === 'models'
+									? 'border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-500'
+									: 'border-transparent hover:text-gray-900 hover:border-gray-300 dark:hover:text-gray-100'
+							}`}
+							on:click={() => setActiveTab('models')}
+						>
+							{$i18n.t('Model Analysis')}
+						</button>
+					</li>
+					<!-- Business Insights tab hidden for now
 				<li class="mr-2">
 					<button
 						class={`inline-block p-4 rounded-t-lg border-b-2 ${
@@ -806,248 +810,257 @@
 					</button>
 				</li>
 				-->
-			</ul>
-		</div>
-
-		<!-- Tab Content Container - Takes up remaining height -->
-		<div class="flex-grow overflow-hidden">
-			<!-- Tab Content - Users -->
-			<div class={`${activeTab === 'users' ? 'flex flex-col h-full' : 'hidden'}`}>
-				<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 mt-6">
-					<div class="bg-white shadow-lg rounded-lg p-4 dark:bg-gray-800">
-						<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
-							{$i18n.t('Total Users')}
-						</h5>
-						<h4 class="text-3xl font-bold text-blue-700 dark:text-blue-400">{totalUsers}</h4>
-						<div class="text-sm text-gray-600 dark:text-gray-400 mt-2">
-							{$i18n.t('Total number of registered users')}
-						</div>
-					</div>
-					<div class="bg-white shadow-lg rounded-lg p-4 dark:bg-gray-800">
-						<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
-							{$i18n.t('Daily Active Users')}
-						</h5>
-						<h4 class="text-3xl font-bold text-blue-700 dark:text-blue-400">{dailyUsers}</h4>
-						<div class="text-sm text-gray-600 dark:text-gray-400 mt-2">
-							{$i18n.t('Number of users active in the last 24 hours')}
-						</div>
-					</div>
-				</div>
-				<div class="grid grid-cols-1 gap-6 mb-6">
-					<div class="bg-white shadow-lg rounded-lg p-4 dark:bg-gray-800">
-						<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
-							{$i18n.t('User Enrollments Over Time')}
-						</h5>
-						<div class="h-80">
-							<canvas id="userEnrollmentsOverTimeChart"></canvas>
-						</div>
-					</div>
-				</div>
-				<div class="grid grid-cols-1 gap-6 mb-6">
-					<div class="bg-white shadow-lg rounded-lg p-4 dark:bg-gray-800">
-						<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
-							{$i18n.t('Daily Active Users Over Time')}
-						</h5>
-						<div class="h-80">
-							<canvas id="usersOverTimeChart"></canvas>
-						</div>
-					</div>
-				</div>
+				</ul>
 			</div>
 
-			<!-- Tab Content - Prompts -->
-			<div class={`${activeTab === 'prompts' ? 'flex flex-col h-full' : 'hidden'}`}>
-				<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 mt-6">
-					<div class="bg-white shadow-lg rounded-lg p-4 dark:bg-gray-800">
-						<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
-							{$i18n.t('Total Prompts')}
-						</h5>
-						<h4 class="text-3xl font-bold text-green-700 dark:text-green-400">{totalPrompts}</h4>
-						<div class="text-sm text-gray-600 dark:text-gray-400 mt-2">
-							{$i18n.t('Total number of prompts submitted')}
-						</div>
-					</div>
-					<div class="bg-white shadow-lg rounded-lg p-4 dark:bg-gray-800">
-						<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
-							{$i18n.t('Daily Prompts')}
-						</h5>
-						<h4 class="text-3xl font-bold text-green-700 dark:text-green-400">{dailyPrompts}</h4>
-						<div class="text-sm text-gray-600 dark:text-gray-400 mt-2">
-							{$i18n.t('Number of prompts sent in the last 24 hours')}
-						</div>
-					</div>
-				</div>
-				<div class="grid grid-cols-1 gap-6 mb-6">
-					<div class="bg-white shadow-lg rounded-lg p-4 dark:bg-gray-800">
-						<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
-							{$i18n.t('Daily Prompts Over Time')}
-						</h5>
-						<div class="h-80">
-							<canvas id="promptsOverTimeChart"></canvas>
-						</div>
-					</div>
-				</div>
-			</div>
-
-			<!-- Tab Content - Tokens -->
-			<div class={`${activeTab === 'tokens' ? 'flex flex-col h-full' : 'hidden'}`}>
-				<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 mt-6">
-					<div class="bg-white shadow-lg rounded-lg p-4 dark:bg-gray-800">
-						<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
-							{$i18n.t('Total Tokens')}
-						</h5>
-						<h4 class="text-3xl font-bold text-red-700 dark:text-red-400">{totalTokens}</h4>
-						<div class="text-sm text-gray-600 dark:text-gray-400 mt-2">
-							{$i18n.t('Total number of tokens used')}
-						</div>
-					</div>
-					<div class="bg-white shadow-lg rounded-lg p-4 dark:bg-gray-800">
-						<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
-							{$i18n.t('Daily Tokens')}
-						</h5>
-						<h4 class="text-3xl font-bold text-red-700 dark:text-red-400">{dailyTokens}</h4>
-						<div class="text-sm text-gray-600 dark:text-gray-400 mt-2">
-							{$i18n.t('Number of tokens used in the last 24 hours')}
-						</div>
-					</div>
-				</div>
-				<div class="grid grid-cols-1 gap-6 mb-6">
-					<div class="bg-white shadow-lg rounded-lg p-4 dark:bg-gray-800">
-						<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
-							{$i18n.t('Daily Tokens Over Time')}
-						</h5>
-						<div class="h-80">
-							<canvas id="tokensOverTimeChart"></canvas>
-						</div>
-					</div>
-				</div>
-			</div>
-
-			<!-- Tab Content - Model Analysis -->
-			<div class={`${activeTab === 'models' ? 'flex flex-col h-full' : 'hidden'}`}>
-				{#if models.length === 0}
-					<div
-						class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800 flex items-center justify-center h-64 mt-6"
-					>
-						<div class="text-center">
-							<p class="text-xl text-gray-500 dark:text-gray-400 mb-4">
-								{$i18n.t('No models found')}
-							</p>
-						</div>
-					</div>
-				{:else if selectedModel}
+			<!-- Tab Content Container - Takes up remaining height -->
+			<div class="flex-grow overflow-hidden">
+				<!-- Tab Content - Users -->
+				<div class={`${activeTab === 'users' ? 'flex flex-col h-full' : 'hidden'}`}>
 					<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 mt-6">
 						<div class="bg-white shadow-lg rounded-lg p-4 dark:bg-gray-800">
 							<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
-								{$i18n.t('Total Model Prompts')}
+								{$i18n.t('Total Users')}
 							</h5>
-							<h4 class="text-3xl font-bold text-purple-700 dark:text-purple-400">
-								{modelPrompts}
-							</h4>
+							<h4 class="text-3xl font-bold text-blue-700 dark:text-blue-400">{totalUsers}</h4>
 							<div class="text-sm text-gray-600 dark:text-gray-400 mt-2">
-								{$i18n.t('Total prompts processed by this model')}
+								{$i18n.t('Total number of registered users')}
 							</div>
 						</div>
 						<div class="bg-white shadow-lg rounded-lg p-4 dark:bg-gray-800">
 							<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
-								{$i18n.t('Daily Model Prompts')}
+								{$i18n.t('Daily Active Users')}
 							</h5>
-							<h4 class="text-3xl font-bold text-purple-700 dark:text-purple-400">
-								{modelDailyPrompts}
-							</h4>
+							<h4 class="text-3xl font-bold text-blue-700 dark:text-blue-400">{dailyUsers}</h4>
 							<div class="text-sm text-gray-600 dark:text-gray-400 mt-2">
-								{$i18n.t('Prompts processed by this model in the last 24 hours')}
+								{$i18n.t('Number of users active in the last 24 hours')}
 							</div>
 						</div>
 					</div>
-
 					<div class="grid grid-cols-1 gap-6 mb-6">
 						<div class="bg-white shadow-lg rounded-lg p-4 dark:bg-gray-800">
 							<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
-								{$i18n.t('Daily Model Usage')} - {selectedModel}
+								{$i18n.t('User Enrollments Over Time')}
 							</h5>
 							<div class="h-80">
-								<canvas id="modelOverTimeChart"></canvas>
+								<canvas id="userEnrollmentsOverTimeChart"></canvas>
 							</div>
 						</div>
 					</div>
-				{:else}
-					<div
-						class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800 flex items-center justify-center h-64 mt-6"
-					>
-						<div class="text-center">
-							<p class="text-xl text-gray-500 dark:text-gray-400 mb-4">
-								{$i18n.t('No model selected')}
-							</p>
-							<p class="text-gray-600 dark:text-gray-400">
-								{$i18n.t('Please select a model from the dropdown to view model-specific metrics')}
-							</p>
-						</div>
-					</div>
-				{/if}
-			</div>
-
-			<!-- Replace Cost Analysis Tab Content with Business Insights in matching style -->
-			<div class={`${activeTab === 'business' ? 'flex flex-col h-full' : 'hidden'}`}>
-				<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 mt-6">
-					<div class="bg-white shadow-lg rounded-lg p-4 dark:bg-gray-800">
-						<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
-							{$i18n.t('Cost Analysis')}
-						</h5>
-						<h4 class="text-3xl font-bold text-indigo-700 dark:text-indigo-400">
-							{$i18n.t('Coming Soon')}
-						</h4>
-						<div class="text-sm text-gray-600 dark:text-gray-400 mt-2">
-							{$i18n.t('Analyze AI spending patterns and model efficiency')}
-						</div>
-					</div>
-					<div class="bg-white shadow-lg rounded-lg p-4 dark:bg-gray-800">
-						<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
-							{$i18n.t('Usage Trends')}
-						</h5>
-						<h4 class="text-3xl font-bold text-indigo-700 dark:text-indigo-400">
-							{$i18n.t('Coming Soon')}
-						</h4>
-						<div class="text-sm text-gray-600 dark:text-gray-400 mt-2">
-							{$i18n.t('Track key performance indicators over time')}
+					<div class="grid grid-cols-1 gap-6 mb-6">
+						<div class="bg-white shadow-lg rounded-lg p-4 dark:bg-gray-800">
+							<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
+								{$i18n.t('Daily Active Users Over Time')}
+							</h5>
+							<div class="h-80">
+								<canvas id="usersOverTimeChart"></canvas>
+							</div>
 						</div>
 					</div>
 				</div>
-				<div class="grid grid-cols-1 gap-6 mb-6">
-					<div class="bg-white shadow-lg rounded-lg p-4 dark:bg-gray-800">
-						<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
-							{$i18n.t('Business Intelligence')}
-						</h5>
-						<div class="flex flex-col items-center justify-center h-80 text-center">
-							<div class="mb-4">
-								<svg
-									class="w-16 h-16 text-indigo-500 mx-auto"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-									></path>
-								</svg>
+
+				<!-- Tab Content - Prompts -->
+				<div class={`${activeTab === 'prompts' ? 'flex flex-col h-full' : 'hidden'}`}>
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 mt-6">
+						<div class="bg-white shadow-lg rounded-lg p-4 dark:bg-gray-800">
+							<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
+								{$i18n.t('Total Prompts')}
+							</h5>
+							<h4 class="text-3xl font-bold text-green-700 dark:text-green-400">{totalPrompts}</h4>
+							<div class="text-sm text-gray-600 dark:text-gray-400 mt-2">
+								{$i18n.t('Total number of prompts submitted')}
 							</div>
-							<p class="text-gray-600 dark:text-gray-400 max-w-lg">
-								{$i18n.t(
-									"We're working on advanced analytics features to help you understand and optimize your AI usage patterns."
-								)}
-							</p>
-							<p class="text-gray-600 dark:text-gray-400 max-w-lg mt-4">
-								{$i18n.t(
-									'This feature will provide detailed breakdowns by model, cost analysis, and usage trends to help manage your AI budget effectively.'
-								)}
-							</p>
+						</div>
+						<div class="bg-white shadow-lg rounded-lg p-4 dark:bg-gray-800">
+							<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
+								{$i18n.t('Daily Prompts')}
+							</h5>
+							<h4 class="text-3xl font-bold text-green-700 dark:text-green-400">{dailyPrompts}</h4>
+							<div class="text-sm text-gray-600 dark:text-gray-400 mt-2">
+								{$i18n.t('Number of prompts sent in the last 24 hours')}
+							</div>
+						</div>
+					</div>
+					<div class="grid grid-cols-1 gap-6 mb-6">
+						<div class="bg-white shadow-lg rounded-lg p-4 dark:bg-gray-800">
+							<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
+								{$i18n.t('Daily Prompts Over Time')}
+							</h5>
+							<div class="h-80">
+								<canvas id="promptsOverTimeChart"></canvas>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- Tab Content - Tokens -->
+				<div class={`${activeTab === 'tokens' ? 'flex flex-col h-full' : 'hidden'}`}>
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 mt-6">
+						<div class="bg-white shadow-lg rounded-lg p-4 dark:bg-gray-800">
+							<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
+								{$i18n.t('Total Tokens')}
+							</h5>
+							<h4 class="text-3xl font-bold text-red-700 dark:text-red-400">{totalTokens}</h4>
+							<div class="text-sm text-gray-600 dark:text-gray-400 mt-2">
+								{$i18n.t('Total number of tokens used')}
+							</div>
+						</div>
+						<div class="bg-white shadow-lg rounded-lg p-4 dark:bg-gray-800">
+							<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
+								{$i18n.t('Daily Tokens')}
+							</h5>
+							<h4 class="text-3xl font-bold text-red-700 dark:text-red-400">{dailyTokens}</h4>
+							<div class="text-sm text-gray-600 dark:text-gray-400 mt-2">
+								{$i18n.t('Number of tokens used in the last 24 hours')}
+							</div>
+						</div>
+					</div>
+					<div class="grid grid-cols-1 gap-6 mb-6">
+						<div class="bg-white shadow-lg rounded-lg p-4 dark:bg-gray-800">
+							<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
+								{$i18n.t('Daily Tokens Over Time')}
+							</h5>
+							<div class="h-80">
+								<canvas id="tokensOverTimeChart"></canvas>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- Tab Content - Model Analysis -->
+				<div class={`${activeTab === 'models' ? 'flex flex-col h-full' : 'hidden'}`}>
+					{#if models.length === 0}
+						<div
+							class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800 flex items-center justify-center h-64 mt-6"
+						>
+							<div class="text-center">
+								<p class="text-xl text-gray-500 dark:text-gray-400 mb-4">
+									{$i18n.t('No models found')}
+								</p>
+							</div>
+						</div>
+					{:else if selectedModel}
+						<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 mt-6">
+							<div class="bg-white shadow-lg rounded-lg p-4 dark:bg-gray-800">
+								<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
+									{$i18n.t('Total Model Prompts')}
+								</h5>
+								<h4 class="text-3xl font-bold text-purple-700 dark:text-purple-400">
+									{modelPrompts}
+								</h4>
+								<div class="text-sm text-gray-600 dark:text-gray-400 mt-2">
+									{$i18n.t('Total prompts processed by this model')}
+								</div>
+							</div>
+							<div class="bg-white shadow-lg rounded-lg p-4 dark:bg-gray-800">
+								<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
+									{$i18n.t('Daily Model Prompts')}
+								</h5>
+								<h4 class="text-3xl font-bold text-purple-700 dark:text-purple-400">
+									{modelDailyPrompts}
+								</h4>
+								<div class="text-sm text-gray-600 dark:text-gray-400 mt-2">
+									{$i18n.t('Prompts processed by this model in the last 24 hours')}
+								</div>
+							</div>
+						</div>
+
+						<div class="grid grid-cols-1 gap-6 mb-6">
+							<div class="bg-white shadow-lg rounded-lg p-4 dark:bg-gray-800">
+								<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
+									{$i18n.t('Daily Model Usage')} - {selectedModel}
+								</h5>
+								<div class="h-80">
+									<canvas id="modelOverTimeChart"></canvas>
+								</div>
+							</div>
+						</div>
+					{:else}
+						<div
+							class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800 flex items-center justify-center h-64 mt-6"
+						>
+							<div class="text-center">
+								<p class="text-xl text-gray-500 dark:text-gray-400 mb-4">
+									{$i18n.t('No model selected')}
+								</p>
+								<p class="text-gray-600 dark:text-gray-400">
+									{$i18n.t(
+										'Please select a model from the dropdown to view model-specific metrics'
+									)}
+								</p>
+							</div>
+						</div>
+					{/if}
+				</div>
+
+				<!-- Replace Cost Analysis Tab Content with Business Insights in matching style -->
+				<div class={`${activeTab === 'business' ? 'flex flex-col h-full' : 'hidden'}`}>
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 mt-6">
+						<div class="bg-white shadow-lg rounded-lg p-4 dark:bg-gray-800">
+							<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
+								{$i18n.t('Cost Analysis')}
+							</h5>
+							<h4 class="text-3xl font-bold text-indigo-700 dark:text-indigo-400">
+								{$i18n.t('Coming Soon')}
+							</h4>
+							<div class="text-sm text-gray-600 dark:text-gray-400 mt-2">
+								{$i18n.t('Analyze AI spending patterns and model efficiency')}
+							</div>
+						</div>
+						<div class="bg-white shadow-lg rounded-lg p-4 dark:bg-gray-800">
+							<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
+								{$i18n.t('Usage Trends')}
+							</h5>
+							<h4 class="text-3xl font-bold text-indigo-700 dark:text-indigo-400">
+								{$i18n.t('Coming Soon')}
+							</h4>
+							<div class="text-sm text-gray-600 dark:text-gray-400 mt-2">
+								{$i18n.t('Track key performance indicators over time')}
+							</div>
+						</div>
+					</div>
+					<div class="grid grid-cols-1 gap-6 mb-6">
+						<div class="bg-white shadow-lg rounded-lg p-4 dark:bg-gray-800">
+							<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
+								{$i18n.t('Business Intelligence')}
+							</h5>
+							<div class="flex flex-col items-center justify-center h-80 text-center">
+								<div class="mb-4">
+									<svg
+										class="w-16 h-16 text-indigo-500 mx-auto"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+										></path>
+									</svg>
+								</div>
+								<p class="text-gray-600 dark:text-gray-400 max-w-lg">
+									{$i18n.t(
+										"We're working on advanced analytics features to help you understand and optimize your AI usage patterns."
+									)}
+								</p>
+								<p class="text-gray-600 dark:text-gray-400 max-w-lg mt-4">
+									{$i18n.t(
+										'This feature will provide detailed breakdowns by model, cost analysis, and usage trends to help manage your AI budget effectively.'
+									)}
+								</p>
+							</div>
 						</div>
 					</div>
 				</div>
 			</div>
 		</div>
 	</div>
-</div>
+{:else}
+	<div class="flex justify-center items-center h-64">
+		<div class="text-gray-500 dark:text-gray-400">
+			{$i18n.t('Loading metrics...')}
+		</div>
+	</div>
+{/if}

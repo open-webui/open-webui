@@ -6,6 +6,7 @@
 	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -77,6 +78,27 @@
 						</div>
 
 						<Switch bind:state={webConfig.search.enabled} />
+					</div>
+				</div>
+
+				<div class="  mb-2.5 flex w-full justify-between">
+					<div class=" self-center text-xs font-medium">
+						<Tooltip content={$i18n.t('Full Context Mode')} placement="top-start">
+							{$i18n.t('Bypass Embedding and Retrieval')}
+						</Tooltip>
+					</div>
+					<div class="flex items-center relative">
+						<Tooltip
+							content={webConfig.search.bypass_embedding_and_retrieval
+								? $i18n.t(
+										'Inject the entire document as context for comprehensive processing, this is recommended for complex queries.'
+									)
+								: $i18n.t(
+										'Default to segmented retrieval for focused and relevant content extraction, this is recommended for most cases.'
+									)}
+						>
+							<Switch bind:state={webConfig.search.bypass_embedding_and_retrieval} />
+						</Tooltip>
 					</div>
 				</div>
 

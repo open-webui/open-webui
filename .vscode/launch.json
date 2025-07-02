@@ -1,0 +1,22 @@
+{
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"name": "Python: FastAPI",
+			"type": "debugpy",
+			"request": "launch",
+			"module": "uvicorn",
+			"envFile": "${workspaceFolder}/.env",
+			"env": {
+				// "db_server_port": "5432"
+			},
+			"args": ["open_webui.main:app", "--reload", "--port", "8080", "--app-dir", "backend"]
+		},
+		{
+			"command": "NODE_OPTIONS=\"--inspect\" npm run dev",
+			"name": "Run node debug server",
+			"request": "launch",
+			"type": "node-terminal"
+		}
+	]
+}

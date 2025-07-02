@@ -19,7 +19,9 @@
 	export let showSuggestionHandler: Function;
 
 	export let onClose: Function = () => {};
+
 	export let ariaLabel: string = 'Help';
+
 </script>
 
 <Dropdown
@@ -29,6 +31,8 @@
 			onClose();
 		}
 	}}
+	{buttonClass}
+	{ariaLabel}
 >
 	<slot />
 

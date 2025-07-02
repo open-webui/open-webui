@@ -25,6 +25,17 @@
 		$user?.role === 'admin' || $user?.role === 'analyst' || $user?.role === 'global_analyst';
 
 	onMount(async () => {
+		// Wait for user data to be loaded before making navigation decisions
+		if (!$user) {
+			// If no user data, wait a bit and try again or redirect to login
+			setTimeout(() => {
+				if (!$user) {
+					goto('/');
+				}
+			}, 100);
+			return;
+		}
+
 		if ($user?.role !== 'admin') {
 			if ($page.url.pathname.includes('/models') && !$user?.permissions?.workspace?.models) {
 				goto('/');
