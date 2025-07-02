@@ -1406,7 +1406,14 @@
 							await tick();
 							scrollToBottom();
 
-							const crewResponse = await queryCrewMCP(localStorage.token, prompt, model.id, selectedToolIds, $chatId, $socket?.id);
+							const crewResponse = await queryCrewMCP(
+								localStorage.token,
+								prompt,
+								model.id,
+								selectedToolIds,
+								$chatId,
+								$socket?.id
+							);
 
 							if (crewResponse && crewResponse.result) {
 								// Update message content with CrewAI response

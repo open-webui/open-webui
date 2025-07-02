@@ -54,7 +54,14 @@ export const getCrewMCPTools = async (token: string = '') => {
 	return res;
 };
 
-export const queryCrewMCP = async (token: string = '', query: string, model: string = '', selectedTools: string[] = [], chatId: string = '', sessionId: string = '') => {
+export const queryCrewMCP = async (
+	token: string = '',
+	query: string,
+	model: string = '',
+	selectedTools: string[] = [],
+	chatId: string = '',
+	sessionId: string = ''
+) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/crew-mcp/query`, {

@@ -28,9 +28,7 @@
 	}}
 	typeahead={false}
 >
-
 	<DropdownMenu.Trigger aria-label={ariaLabel}>
-
 		<slot />
 	</DropdownMenu.Trigger>
 

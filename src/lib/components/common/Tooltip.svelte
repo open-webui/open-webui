@@ -79,8 +79,6 @@
 	});
 </script>
 
-
 <div bind:this={tooltipElement} class={className}>
-
 	<slot />
 </div>
