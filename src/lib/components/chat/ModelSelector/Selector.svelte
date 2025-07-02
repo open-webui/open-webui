@@ -352,7 +352,7 @@
 		aria-label={placeholder}
 		id="model-selector-{id}-button"
 	>
-		<button
+		<div
 			class="flex w-full text-left px-0.5 bg-transparent truncate {triggerClassName} justify-between font-medium {($settings?.highContrastMode ??
 			false)
 				? 'dark:placeholder-gray-100 placeholder-gray-800'
@@ -365,7 +365,6 @@
 					)
 				);
 			}}
-			type="button"
 		>
 			{#if selectedModel}
 				{selectedModel.label}
@@ -373,7 +372,7 @@
 				{placeholder}
 			{/if}
 			<ChevronDown className=" self-center ml-2 size-3" strokeWidth="2.5" />
-		</button>
+		</div>
 	</DropdownMenu.Trigger>
 
 	<DropdownMenu.Content
