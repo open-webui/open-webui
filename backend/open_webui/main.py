@@ -93,6 +93,8 @@ from open_webui.config import (
     # Ollama
     DOCS_URL,
     DOCS_URL_FR,
+    TRAINING_URL,
+    TRAINING_URL_FR,
     ENABLE_OLLAMA_API,
     OLLAMA_BASE_URLS,
     OLLAMA_API_CONFIGS,
@@ -689,6 +691,8 @@ app.state.config.DOCS_URL = DOCS_URL
 app.state.config.DOCS_URL_FR = DOCS_URL_FR
 app.state.config.SURVEY_URL = SURVEY_URL
 app.state.config.SURVEY_URL_FR = SURVEY_URL_FR
+app.state.config.TRAINING_URL = TRAINING_URL
+app.state.config.TRAINING_URL_FR = TRAINING_URL_FR
 
 
 ########################################
@@ -1076,6 +1080,8 @@ async def get_app_config(request: Request):
                 "docs_url_fr": app.state.config.DOCS_URL_FR,
                 "survey_url": app.state.config.SURVEY_URL,
                 "survey_url_fr": app.state.config.SURVEY_URL_FR,
+                "training_url": app.state.config.TRAINING_URL,
+                "training_url_fr": app.state.config.TRAINING_URL_FR,
                 "audio": {
                     "tts": {
                         "engine": app.state.config.TTS_ENGINE,

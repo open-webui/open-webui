@@ -49,8 +49,8 @@
 	let showSuggestion = false;
 
 	$: SurveyUrl = $i18n.language === 'fr-CA' ? $config?.survey_url_fr : $config?.survey_url;
-
 	$: DocsUrl = $i18n.language === 'fr-CA' ? $config?.docs_url_fr : $config?.docs_url;
+	$: TrainingUrl = $i18n.language === 'fr-CA' ? $config?.training_url_fr : $config?.training_url;
 </script>
 
 <div class="fixed top-0 right-0 px-2 py-[7px] z-50 flex items-center gap-1">
@@ -98,6 +98,9 @@
 			<HelpMenu
 				showDocsHandler={() => {
 					window.open(DocsUrl, '_blank');
+				}}
+				showTrainingHandler={() => {
+					window.open(TrainingUrl, '_blank');
 				}}
 				showShortcutsHandler={() => {
 					showShortcuts = !showShortcuts;
