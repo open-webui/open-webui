@@ -51,6 +51,7 @@
 
 	let element;
 	let editor;
+	let focusFlag = false;
 
 	const options = {
 		throwOnError: false
@@ -219,6 +220,12 @@
 						}
 					}
 				}
+				requestAnimationFrame(() => {
+					const el = editor?.view?.dom;
+					if (el?.getAttribute('tabindex') === '-1') {
+						el.setAttribute('tabindex', 0);
+					}
+				});
 			},
 			editorProps: {
 				attributes: {
@@ -230,6 +237,12 @@
 				handleDOMEvents: {
 					focus: (view, event) => {
 						eventDispatch('focus', { event });
+						focusFlag = true;
+						return false;
+					},
+					blur: (view, event) => {
+						eventDispatch('blur', { event });
+						focusFlag = false;
 						return false;
 					},
 					keyup: (view, event) => {
@@ -374,7 +387,8 @@
 		);
 		if (placeholderExtension) {
 			placeholderExtension.options.placeholder = placeholderText;
-			editor.view.dispatch(editor.view.state.tr); // Trigger a re-render
+			(placeholderExtension.options.label = $i18n.t('Message Input')),
+				editor.view.dispatch(editor.view.state.tr); // Trigger a re-render
 		}
 	}
 </script>

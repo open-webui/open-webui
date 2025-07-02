@@ -1,7 +1,5 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
-	import { toast } from 'svelte-sonner';
-
 	import {
 		WEBUI_NAME,
 		chatId,
@@ -12,7 +10,8 @@
 		showSidebar,
 		temporaryChatEnabled,
 		user,
-		suggestionCycle
+		suggestionCycle,
+		ariaMessage
 	} from '$lib/stores';
 
 	import { slide } from 'svelte/transition';
@@ -40,6 +39,11 @@
 
 	let showShareChatModal = false;
 	let showDownloadChatModal = false;
+	const changeFocus = async (elementId) => {
+		setTimeout(() => {
+			document.getElementById(elementId)?.focus();
+		}, 110);
+	};
 
 	const handleNewChat = () => {
 		suggestionCycle.update((n) => n + 1);
@@ -61,18 +65,20 @@
 					? 'md:hidden'
 					: ''} mr-1 self-start flex flex-none items-center text-gray-600 dark:text-gray-400"
 			>
-				<button
-					id="sidebar-toggle-button"
-					class="cursor-pointer px-2 py-2 flex rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-					on:click={() => {
-						showSidebar.set(!$showSidebar);
-					}}
-					aria-label="Toggle Sidebar"
-				>
-					<div class=" m-auto self-center">
+				<Tooltip content={$i18n.t('Show Sidebar')}>
+					<button
+						id="sidebar-toggle-button"
+						class="m-auto self-center cursor-pointer px-2 py-2 flex rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+						on:click={async () => {
+							showSidebar.set(!$showSidebar);
+							ariaMessage.set($i18n.t('Sidebar expanded.'));
+							await changeFocus('hide-sidebar-button');
+						}}
+						aria-label="Show Sidebar"
+					>
 						<MenuLines />
-					</div>
-				</button>
+					</button>
+				</Tooltip>
 			</div>
 
 			<div
@@ -88,19 +94,19 @@
 			<div class="self-start flex flex-none items-center text-gray-600 dark:text-gray-400">
 				<!-- <div class="md:hidden flex self-center w-[1px] h-5 mx-2 bg-gray-300 dark:bg-stone-700" /> -->
 				{#if shareEnabled && chat && (chat.id || $temporaryChatEnabled)}
-					<Menu
-						{chat}
-						{shareEnabled}
-						shareHandler={() => {
-							showShareChatModal = !showShareChatModal;
-						}}
-						downloadHandler={() => {
-							showDownloadChatModal = !showDownloadChatModal;
-						}}
-					>
-						<button
-							class="flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-							id="chat-context-menu-button"
+					<Tooltip content={$i18n.t('Chat Context Menu')}>
+						<Menu
+							{chat}
+							{shareEnabled}
+							buttonID={'chat-context-menu-button' + chat.id}
+							buttonClass="flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+							ariaLabel={$i18n.t('Chat Context Menu')}
+							shareHandler={() => {
+								showShareChatModal = !showShareChatModal;
+							}}
+							downloadHandler={() => {
+								showDownloadChatModal = !showDownloadChatModal;
+							}}
 						>
 							<div class=" m-auto self-center">
 								<svg
@@ -118,33 +124,29 @@
 									/>
 								</svg>
 							</div>
-						</button>
-					</Menu>
+						</Menu>
+					</Tooltip>
 				{:else if $mobile && ($user.role === 'admin' || $user?.permissions.chat?.controls)}
 					<Tooltip content={$i18n.t('Controls')}>
 						<button
-							class=" flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+							class="m-auto self-center flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
 							on:click={async () => {
 								await showControls.set(!$showControls);
 							}}
-							aria-label="Controls"
+							aria-label={$i18n.t('Controls')}
 						>
-							<div class=" m-auto self-center">
-								<AdjustmentsHorizontal className=" size-5" strokeWidth="0.5" />
-							</div>
+							<AdjustmentsHorizontal className=" size-5" strokeWidth="0.5" />
 						</button>
 					</Tooltip>
 				{/if}
 				<Tooltip content={$i18n.t('New Chat')}>
 					<button
 						id="new-chat-button"
-						class="flex cursor-pointer px-2 py-2 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+						class=" flex m-auto self-center cursor-pointer px-2 py-2 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
 						on:click={handleNewChat}
-						aria-label="New Chat"
+						aria-label={$i18n.t('New Chat')}
 					>
-						<div class="m-auto self-center">
-							<PencilSquare className="size-5" strokeWidth="2" />
-						</div>
+						<PencilSquare className=" size-5" strokeWidth="2" />
 					</button>
 				</Tooltip>
 			</div>

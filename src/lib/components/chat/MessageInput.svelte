@@ -15,7 +15,8 @@
 		showCallOverlay,
 		tools,
 		user as _user,
-		showControls
+		showControls,
+		ariaMessage
 	} from '$lib/stores';
 
 	import { blobToFile, compressImage, createMessagesList, findWordIndices } from '$lib/utils';
@@ -130,6 +131,7 @@
 			files = [...files, { type: 'image', url: imageUrl }];
 			// Clean memory: Clear video srcObject
 			video.srcObject = null;
+			toast.success('Screen capture completed');
 		} catch (error) {
 			// Handle any errors (e.g., user cancels screen sharing)
 			console.error('Error capturing screen:', error);
@@ -187,6 +189,8 @@
 				if (uploadedFile.error) {
 					console.warn('File upload warning:', uploadedFile.error);
 					toast.warning(uploadedFile.error);
+				} else {
+					toast.success('File uploaded successfully');
 				}
 
 				fileItem.status = 'uploaded';
@@ -519,12 +523,14 @@
 
 								await tick();
 								document.getElementById('chat-input')?.focus();
+								ariaMessage.set($i18n.t('Voice recording cancelled'));
 							}}
 							on:confirm={async (e) => {
 								const { text, filename } = e.detail;
 								prompt = `${prompt}${text} `;
 
 								recording = false;
+								ariaMessage.set($i18n.t('Voice recording transcription completed'));
 
 								await tick();
 								document.getElementById('chat-input')?.focus();
@@ -729,10 +735,10 @@
 													}
 
 													// Command/Ctrl + Shift + Enter to submit a message pair
-													if (isCtrlPressed && e.key === 'Enter' && e.shiftKey) {
-														e.preventDefault();
-														createMessagePair(prompt);
-													}
+													// if (isCtrlPressed && e.key === 'Enter' && e.shiftKey) {
+													// 	e.preventDefault();
+													// 	createMessagePair(prompt);
+													// }
 
 													// Check if Ctrl + R is pressed
 													if (prompt === '' && isCtrlPressed && e.key.toLowerCase() === 'r') {
@@ -1092,6 +1098,7 @@
 
 															if (stream) {
 																recording = true;
+																ariaMessage.set($i18n.t('Voice recording started'));
 																const tracks = stream.getTracks();
 																tracks.forEach((track) => track.stop());
 															}
@@ -1174,6 +1181,7 @@
 													<Tooltip content={$i18n.t('Send message')}>
 														<button
 															id="send-message-button"
+															aria-label={$i18n.t('Send message')}
 															class="{prompt !== ''
 																? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
 																: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"

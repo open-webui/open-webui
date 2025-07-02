@@ -5,6 +5,8 @@
 
 	import { fade } from 'svelte/transition';
 	import { flyAndScale } from '$lib/utils/transitions';
+	import * as focusTrap from 'focus-trap';
+	import { ariaMessage } from '$lib/stores';
 
 	export let title = '';
 	export let message = '';
@@ -20,16 +22,16 @@
 
 	export let show = false;
 
-	let modalElement = null;
+	export let initialFocusSelector = '';
+	export let returnFocusSelector = '';
+
+	let modalElement: HTMLElement;
 	let mounted = false;
+	let trap: any = null;
 
 	const handleKeyDown = (event: KeyboardEvent) => {
 		if (event.key === 'Escape') {
 			show = false;
-		}
-
-		if (event.key === 'Enter') {
-			confirmHandler();
 		}
 	};
 
@@ -52,12 +54,40 @@
 
 			window.addEventListener('keydown', handleKeyDown);
 			document.body.style.overflow = 'hidden';
+			ariaMessage.set($i18n.t('dialogOpened', { title: title }));
 		} else if (modalElement) {
 			window.removeEventListener('keydown', handleKeyDown);
 			document.body.removeChild(modalElement);
 
 			document.body.style.overflow = 'unset';
+			ariaMessage.set($i18n.t('dialogClosed', { title: title }));
 		}
+	}
+	$: if (show && modalElement && !trap) {
+		const config: any = {
+			clickOutsideDeactivates: true,
+			// This makes the trap record the active element automatically
+			returnFocusOnDeactivate: true,
+			// Use the provided initial focus selector if available
+			initialFocus: initialFocusSelector
+				? () => modalElement.querySelector(initialFocusSelector)
+				: undefined,
+			// Override onDeactivate if a custom return focus selector is provided:
+			onDeactivate: () => {
+				if (returnFocusSelector) {
+					const returnEl = document.querySelector(returnFocusSelector);
+					if (returnEl) {
+						returnEl.focus();
+						return;
+					}
+				}
+			}
+		};
+		trap = focusTrap.createFocusTrap(modalElement, config);
+		trap.activate();
+	} else if (!show && trap) {
+		trap.deactivate();
+		trap = null;
 	}
 </script>
 
@@ -73,6 +103,7 @@
 		}}
 	>
 		<div
+			id="confirm-dialog-container-wrapper"
 			class=" m-auto rounded-2xl max-w-full w-[32rem] mx-2 bg-gray-50 dark:bg-gray-950 max-h-[100dvh] shadow-3xl"
 			in:flyAndScale
 			on:mousedown={(e) => {
@@ -82,9 +113,9 @@
 			<div class="px-[1.75rem] py-6 flex flex-col">
 				<div class=" text-lg font-semibold dark:text-gray-200 mb-2.5">
 					{#if title !== ''}
-						{title}
+						<h2>{title}</h2>
 					{:else}
-						{$i18n.t('Confirm your action')}
+						<h2>{$i18n.t('Confirm your action')}</h2>
 					{/if}
 				</div>
 

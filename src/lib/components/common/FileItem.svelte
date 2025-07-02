@@ -26,6 +26,7 @@
 	export let size: number;
 
 	import { deleteFileById } from '$lib/apis/files';
+	import { ariaMessage } from '$lib/stores';
 
 	let showModal = false;
 </script>
@@ -80,26 +81,28 @@
 	{/if}
 
 	{#if !small}
-		<div class="flex flex-col justify-center -space-y-0.5 px-2.5 w-full">
-			<div class=" dark:text-gray-100 text-sm font-medium line-clamp-1 mb-1">
-				{name}
-			</div>
+		<Tooltip content={name} placement="top-start">
+			<div class="flex flex-col justify-center -space-y-0.5 px-2.5 w-full">
+				<div class=" dark:text-gray-100 text-sm font-medium line-clamp-1 mb-1" tabindex="0">
+					{name}
+				</div>
 
-			<div class=" flex justify-between text-gray-500 text-xs line-clamp-1">
-				{#if type === 'file'}
-					{$i18n.t('File')}
-				{:else if type === 'doc'}
-					{$i18n.t('Document')}
-				{:else if type === 'collection'}
-					{$i18n.t('Collection')}
-				{:else}
-					<span class=" capitalize line-clamp-1">{type}</span>
-				{/if}
-				{#if size}
-					<span class="capitalize">{formatFileSize(size)}</span>
-				{/if}
+				<div class=" flex justify-between text-gray-500 text-xs line-clamp-1">
+					{#if type === 'file'}
+						{$i18n.t('File')}
+					{:else if type === 'doc'}
+						{$i18n.t('Document')}
+					{:else if type === 'collection'}
+						{$i18n.t('Collection')}
+					{:else}
+						<span class=" capitalize line-clamp-1">{type}</span>
+					{/if}
+					{#if size}
+						<span class="capitalize">{formatFileSize(size)}</span>
+					{/if}
+				</div>
 			</div>
-		</div>
+		</Tooltip>
 	{:else}
 		<Tooltip content={name} className="flex flex-col w-full" placement="top-start">
 			<div class="flex flex-col justify-center -space-y-0.5 px-2.5 w-full">
@@ -118,33 +121,38 @@
 
 	{#if dismissible}
 		<div class=" absolute -top-1 -right-1">
-			<button
-				class=" bg-gray-400 text-white border border-white rounded-full group-hover:visible invisible transition"
-				type="button"
-				on:click|stopPropagation={() => {
-					dispatch('dismiss');
-				}}
-			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 20 20"
-					fill="currentColor"
-					class="w-4 h-4"
+			<Tooltip content={$i18n.t('Remove File')}>
+				<button
+					tabindex="0"
+					class="bg-black text-white border border-white rounded-full transition focus:outline-blue-600"
+					aria-label={$i18n.t('Remove File')}
+					type="button"
+					on:click|stopPropagation={() => {
+						dispatch('dismiss');
+						ariaMessage.set($i18n.t('File removed'));
+					}}
 				>
-					<path
-						d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-					/>
-				</svg>
-			</button>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 20 20"
+						fill="currentColor"
+						class="w-4 h-4"
+					>
+						<path
+							d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
+						/>
+					</svg>
+				</button>
 
-			<!-- <button
-				class=" p-1 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-full group-hover:visible invisible transition"
-				type="button"
-				on:click={() => {
-				}}
-			>
-				<GarbageBin />
-			</button> -->
+				<!-- <button
+					class=" p-1 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-full group-hover:visible invisible transition"
+					type="button"
+					on:click={() => {
+					}}
+				>
+					<GarbageBin />
+				</button> -->
+			</Tooltip>
 		</div>
 	{/if}
 </button>

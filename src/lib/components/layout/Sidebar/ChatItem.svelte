@@ -51,9 +51,12 @@
 
 	let mouseOver = false;
 	let draggable = false;
+	let buttonID = '';
+
 	$: if (mouseOver) {
 		loadChat();
 	}
+	$: buttonID = `chat-menu-${id}`;
 
 	const loadChat = async () => {
 		if (!chat) {
@@ -105,6 +108,7 @@
 			currentChatPage.set(1);
 			await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			await pinnedChats.set(await getPinnedChatList(localStorage.token));
+			toast.success($i18n.t('Chat cloned successfully. You are now in the new chat.'));
 		}
 	};
 
@@ -130,6 +134,7 @@
 	const archiveChatHandler = async (id) => {
 		await archiveChatById(localStorage.token, id);
 		dispatch('change');
+		toast.success($i18n.t('Chat archived successfully'));
 	};
 
 	const focusEdit = async (node: HTMLInputElement) => {
@@ -210,7 +215,7 @@
 		deleteChatHandler(id);
 	}}
 >
-	<div class=" text-sm text-gray-500 flex-1 line-clamp-3">
+	<div class=" text-sm text-gray-800 dark:text-gray-200 flex-1 line-clamp-3">
 		{$i18n.t('This will delete')} <span class="  font-semibold">{title}</span>.
 	</div>
 </DeleteConfirmDialog>
@@ -236,13 +241,13 @@
 				? 'bg-gray-200 dark:bg-gray-900'
 				: selected
 					? 'bg-gray-100 dark:bg-gray-950'
-					: 'group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
+					: 'group-hover:bg-gray-100 dark:group-hover:bg-gray-950'} whitespace-nowrap text-ellipsis"
 		>
 			<input
 				use:focusEdit
 				bind:value={chatTitle}
 				id="chat-title-input-{id}"
-				class=" bg-transparent w-full outline-none mr-10"
+				class="bg-transparent w-full outline-none mr-10"
 				on:keydown={(e) => {
 					if (e.key === 'Enter') {
 						editChatTitle(id, chatTitle);
@@ -253,40 +258,54 @@
 			/>
 		</div>
 	{:else}
-		<a
-			class=" w-full flex justify-between rounded-lg px-[11px] py-[6px] {id === $chatId ||
-			confirmEdit
-				? 'bg-gray-200 dark:bg-gray-900'
-				: selected
-					? 'bg-gray-100 dark:bg-gray-950'
-					: ' group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
-			href="/c/{id}"
-			on:click={() => {
-				dispatch('select');
-
-				if ($mobile) {
-					showSidebar.set(false);
-				}
+		<Tooltip
+			content={title}
+			placement="bottom-start"
+			popperOptions={{
+				modifiers: [
+					{
+						name: 'offset',
+						options: {
+							offset: ({ reference }) => [reference.width / 2, 4]
+						}
+					}
+				]
 			}}
-			on:dblclick={() => {
-				chatTitle = title;
-				confirmEdit = true;
-			}}
-			on:mouseenter={(e) => {
-				mouseOver = true;
-			}}
-			on:mouseleave={(e) => {
-				mouseOver = false;
-			}}
-			on:focus={(e) => {}}
-			draggable="false"
 		>
-			<div class=" flex self-center flex-1 w-full">
-				<div class=" text-left self-center overflow-hidden w-full h-[20px]">
-					{title}
+			<a
+				class=" w-full flex justify-between rounded-lg px-[11px] py-[6px] {id === $chatId ||
+				confirmEdit
+					? 'bg-gray-200 dark:bg-gray-900'
+					: selected
+						? 'bg-gray-100 dark:bg-gray-950'
+						: 'group-hover:bg-gray-100 dark:group-hover:bg-gray-950'} whitespace-nowrap text-ellipsis"
+				href="/c/{id}"
+				on:click={() => {
+					dispatch('select');
+					if ($mobile) {
+						showSidebar.set(false);
+					}
+				}}
+				on:dblclick={() => {
+					chatTitle = title;
+					confirmEdit = true;
+				}}
+				on:mouseenter={(e) => {
+					mouseOver = true;
+				}}
+				on:mouseleave={(e) => {
+					mouseOver = false;
+				}}
+				on:focus={(e) => {}}
+				draggable="false"
+			>
+				<div class=" flex self-center flex-1 w-full">
+					<div class=" text-left self-center overflow-hidden w-full h-[20px]">
+						{title}
+					</div>
 				</div>
-			</div>
-		</a>
+			</a>
+		</Tooltip>
 	{/if}
 
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -315,11 +334,12 @@
 			>
 				<Tooltip content={$i18n.t('Confirm')}>
 					<button
-						class=" self-center dark:hover:text-white transition"
+						class="self-center dark:hover:text-white transition"
 						on:click={() => {
 							editChatTitle(id, chatTitle);
 							confirmEdit = false;
 							chatTitle = '';
+							toast.success($i18n.t('Chat title saved.'));
 						}}
 					>
 						<Check className=" size-3.5" strokeWidth="2.5" />
@@ -332,6 +352,7 @@
 						on:click={() => {
 							confirmEdit = false;
 							chatTitle = '';
+							toast.success($i18n.t('Chat title rename cancelled'));
 						}}
 					>
 						<XMark strokeWidth="2.5" />
@@ -348,7 +369,7 @@
 						}}
 						type="button"
 					>
-						<ArchiveBox className="size-4  translate-y-[0.5px]" strokeWidth="2" />
+						<ArchiveBox className="size-3  translate-y-[0.5px]" strokeWidth="2" />
 					</button>
 				</Tooltip>
 
@@ -366,43 +387,43 @@
 			</div>
 		{:else}
 			<div class="flex self-center space-x-1 z-10">
-				<ChatMenu
-					chatId={id}
-					cloneChatHandler={() => {
-						cloneChatHandler(id);
-					}}
-					shareHandler={() => {
-						showShareChatModal = true;
-					}}
-					archiveChatHandler={() => {
-						archiveChatHandler(id);
-					}}
-					renameHandler={async () => {
-						chatTitle = title;
-						confirmEdit = true;
+				<Tooltip content={$i18n.t('Chat Menu')}>
+					<ChatMenu
+						ariaLabel={$i18n.t('Chat Menu')}
+						chatId={id}
+						{buttonID}
+						cloneChatHandler={() => {
+							cloneChatHandler(id);
+						}}
+						shareHandler={() => {
+							showShareChatModal = true;
+						}}
+						archiveChatHandler={() => {
+							archiveChatHandler(id);
+						}}
+						renameHandler={async () => {
+							chatTitle = title;
+							confirmEdit = true;
 
-						await tick();
-						const input = document.getElementById(`chat-title-input-${id}`);
-						if (input) {
-							input.focus();
-						}
-					}}
-					deleteHandler={() => {
-						showDeleteConfirm = true;
-					}}
-					onClose={() => {
-						dispatch('unselect');
-					}}
-					on:change={async () => {
-						dispatch('change');
-					}}
-					on:tag={(e) => {
-						dispatch('tag', e.detail);
-					}}
-				>
-					<button
-						aria-label="Chat Menu"
-						class=" self-center dark:hover:text-white transition"
+							await tick();
+							const input = document.getElementById(`chat-title-input-${id}`);
+							if (input) {
+								input.focus();
+							}
+						}}
+						deleteHandler={() => {
+							showDeleteConfirm = true;
+						}}
+						buttonClass="dark:hover:bg-gray-850 rounded-lg touch-auto"
+						onClose={() => {
+							dispatch('unselect');
+						}}
+						on:change={async (e) => {
+							dispatch('change', e.detail);
+						}}
+						on:tag={(e) => {
+							dispatch('tag', e.detail);
+						}}
 						on:click={() => {
 							dispatch('select');
 						}}
@@ -417,9 +438,8 @@
 								d="M2 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM6.5 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM12.5 6.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"
 							/>
 						</svg>
-					</button>
-				</ChatMenu>
-
+					</ChatMenu>
+				</Tooltip>
 				{#if id === $chatId}
 					<!-- Shortcut support using "delete-chat-button" id -->
 					<button
@@ -433,7 +453,7 @@
 							xmlns="http://www.w3.org/2000/svg"
 							viewBox="0 0 16 16"
 							fill="currentColor"
-							class="w-4 h-4"
+							class="w-3 h-3"
 						>
 							<path
 								d="M2 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM6.5 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM12.5 6.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"

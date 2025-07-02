@@ -32,6 +32,7 @@
 	import ChevronUp from '../icons/ChevronUp.svelte';
 	import ChevronDown from '../icons/ChevronDown.svelte';
 	import Spinner from './Spinner.svelte';
+	import { ariaMessage } from '$lib/stores';
 
 	export let open = false;
 	export let className = '';
@@ -44,6 +45,16 @@
 
 	export let disabled = false;
 	export let hide = false;
+
+	let initialized = false;
+
+	const announceAction = (open: boolean) => {
+		if (open) {
+			ariaMessage.set($i18n.t('expanded'));
+		} else {
+			ariaMessage.set($i18n.t('collapsed'));
+		}
+	};
 </script>
 
 <div class={className}>
@@ -52,9 +63,18 @@
 		<!-- svelte-ignore a11y-click-events-have-key-events -->
 		<div
 			class="{buttonClassName} cursor-pointer"
+			tabindex="0"
 			on:pointerup={() => {
 				if (!disabled) {
 					open = !open;
+					announceAction(open);
+				}
+			}}
+			on:keydown={(e) => {
+				if (!disabled && (e.key === 'Enter' || e.key === ' ')) {
+					e.preventDefault();
+					open = !open;
+					announceAction(open);
 				}
 			}}
 		>
@@ -81,7 +101,7 @@
 							{$i18n.t('Thinking...')}
 						{/if}
 					{:else}
-						{title}
+						<h3>{title}</h3>
 					{/if}
 				</div>
 
@@ -102,6 +122,14 @@
 			on:pointerup={() => {
 				if (!disabled) {
 					open = !open;
+					announceAction(open);
+				}
+			}}
+			on:keydown={(e) => {
+				if (!disabled && (e.key === 'Enter' || e.key === ' ')) {
+					e.preventDefault();
+					open = !open;
+					announceAction(open);
 				}
 			}}
 		>
