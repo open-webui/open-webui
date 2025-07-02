@@ -40,7 +40,7 @@ dependencies = [
 
     "RestrictedPython==8.0",
 
-    "loguru==0.7.2",
+    "loguru==0.7.3",
     "asgiref==3.8.1",
 
     "openai",
@@ -48,8 +48,8 @@ dependencies = [
     "google-generativeai==0.8.4",
     "tiktoken",
 
-    "langchain==0.3.19",
-    "langchain-community==0.3.18",
+    "langchain==0.3.24",
+    "langchain-community==0.3.23",
 
     "fake-useragent==2.1.0",
     "chromadb==0.6.3",
@@ -57,10 +57,11 @@ dependencies = [
     "qdrant-client~=1.12.0",
     "opensearch-py==2.8.0",
     "playwright==1.49.1",
-    "elasticsearch==8.17.1",
+    "elasticsearch==9.0.1",
+    "pinecone==6.0.2",
 
     "transformers",
-    "sentence-transformers==3.3.1",
+    "sentence-transformers==4.1.0",
     "accelerate",
     "colbert-ai==0.2.21",
     "einops==0.8.1",
@@ -87,7 +88,7 @@ dependencies = [
 
     "pillow==11.1.0",
     "opencv-python-headless==4.11.0.86",
-    "rapidocr-onnxruntime==1.3.24",
+    "rapidocr-onnxruntime==1.4.4",
     "rank-bm25==0.2.2",
 
     "onnxruntime==1.20.1",

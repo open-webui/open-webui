@@ -20,6 +20,10 @@ elif VECTOR_DB == "elasticsearch":
     from open_webui.retrieval.vector.dbs.elasticsearch import ElasticsearchClient
 
     VECTOR_DB_CLIENT = ElasticsearchClient()
+elif VECTOR_DB == "pinecone":
+    from open_webui.retrieval.vector.dbs.pinecone import PineconeClient
+
+    VECTOR_DB_CLIENT = PineconeClient()
 else:
     from open_webui.retrieval.vector.dbs.chroma import ChromaClient
 

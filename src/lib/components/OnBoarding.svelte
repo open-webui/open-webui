@@ -87,6 +87,7 @@
 				<div class="flex justify-center mt-8">
 					<div class="flex flex-col justify-center items-center">
 						<button
+							aria-labelledby="get-started"
 							class="relative z-20 flex p-1 rounded-full bg-white/5 hover:bg-white/10 transition font-medium text-sm"
 							on:click={() => {
 								getStartedHandler();
@@ -94,12 +95,12 @@
 						>
 							<ArrowRightCircle className="size-6" />
 						</button>
-						<div class="mt-1.5 font-primary text-base font-medium">{$i18n.t(`Get started`)}</div>
+						<div id="get-started" class="mt-1.5 font-primary text-base font-medium">
+							{$i18n.t(`Get started`)}
+						</div>
 					</div>
 				</div>
 			</div>
-
-			<!-- <div class="absolute bottom-12 left-0 right-0 w-full"></div> -->
 		</div>
 	</div>
 {/if}

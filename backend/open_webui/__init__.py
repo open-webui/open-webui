@@ -76,7 +76,7 @@ def serve(
     from open_webui.env import UVICORN_WORKERS  # Import the workers setting
 
     uvicorn.run(
-        open_webui.main.app,
+        "open_webui.main:app",
         host=host,
         port=port,
         forwarded_allow_ips="*",

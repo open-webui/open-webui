@@ -1,10 +1,29 @@
-#!/bin/bash
+echo "[Stopping all servers by port...]"
 
-echo "[Stopping all servers...]"
+# Helper function to stop a process by port
+stop_by_port() {
+    local PORT=$1
+    local NAME=$2
 
-pkill -f "python -m app.server"
-pkill -f "start.sh"
-pkill -f "vite preview"
+    PID=$(lsof -ti tcp:$PORT)
 
-echo "[All servers stopped.]"
+    if [ -n "$PID" ]; then
+        echo "[$NAME] Stopping (PID: $PID)..."
+        kill -9 $PID
+    else
+        echo "[$NAME] Not running (port $PORT)."
+    fi
+}
+
+# --- RAG Server (port 8000) ---
+stop_by_port 8000 "RAG Server"
+
+# --- Backend (port 8080) ---
+stop_by_port 8080 "Backend"
+
+# --- Frontend (port 4173, 5173) ---
+stop_by_port 4173 "Frontend"
+stop_by_port 5173 "Frontend"
+
+echo "[All applicable servers stopped by port.]"
 ~
