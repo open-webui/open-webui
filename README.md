@@ -1,23 +1,23 @@
-# Open WebUI 👋
+# CANChat 👋
 
-![GitHub stars](https://img.shields.io/github/stars/open-webui/open-webui?style=social)
-![GitHub forks](https://img.shields.io/github/forks/open-webui/open-webui?style=social)
-![GitHub watchers](https://img.shields.io/github/watchers/open-webui/open-webui?style=social)
-![GitHub repo size](https://img.shields.io/github/repo-size/open-webui/open-webui)
-![GitHub language count](https://img.shields.io/github/languages/count/open-webui/open-webui)
-![GitHub top language](https://img.shields.io/github/languages/top/open-webui/open-webui)
-![GitHub last commit](https://img.shields.io/github/last-commit/open-webui/open-webui?color=red)
+![GitHub stars](https://img.shields.io/github/stars/ssc-dsai/canchat-v2?style=social)
+![GitHub forks](https://img.shields.io/github/forks/ssc-dsai/canchat-v2?style=social)
+![GitHub watchers](https://img.shields.io/github/watchers/ssc-dsai/canchat-v2?style=social)
+![GitHub repo size](https://img.shields.io/github/repo-size/ssc-dsai/canchat-v2)
+![GitHub language count](https://img.shields.io/github/languages/count/ssc-dsai/canchat-v2)
+![GitHub top language](https://img.shields.io/github/languages/top/ssc-dsai/canchat-v2)
+![GitHub last commit](https://img.shields.io/github/last-commit/ssc-dsai/canchat-v2?color=red)
 ![Hits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2Follama-webui%2Follama-wbui&count_bg=%2379C83D&title_bg=%23555555&icon=&icon_color=%23E7E7E7&title=hits&edge_flat=false)
 [![Discord](https://img.shields.io/badge/Discord-Open_WebUI-blue?logo=discord&logoColor=white)](https://discord.gg/5rJgQTnV4s)
 [![](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86)](https://github.com/sponsors/tjbck)
 
 **Open WebUI is an [extensible](https://docs.openwebui.com/features/plugin/), feature-rich, and user-friendly self-hosted AI platform designed to operate entirely offline.** It supports various LLM runners like **Ollama** and **OpenAI-compatible APIs**, with **built-in inference engine** for RAG, making it a **powerful AI deployment solution**.
 
-For more information, be sure to check out our [Open WebUI Documentation](https://docs.openwebui.com/).
+For more information, be sure to check out the [Open WebUI Documentation](https://docs.openwebui.com/).
 
-![Open WebUI Demo](./demo.gif)
+![CANChat Demo](./demo.gif)
 
-## Key Features of Open WebUI ⭐
+## Key Features of CANChat ⭐
 
 - 🚀 **Effortless Setup**: Install seamlessly using Docker or Kubernetes (kubectl, kustomize or helm) for a hassle-free experience with support for both `:ollama` and `:cuda` tagged images.
 
@@ -49,25 +49,25 @@ For more information, be sure to check out our [Open WebUI Documentation](https:
 
 - 🔐 **Role-Based Access Control (RBAC)**: Ensure secure access with restricted permissions; only authorized individuals can access your Ollama, and exclusive model creation/pulling rights are reserved for administrators.
 
-- 🌐🌍 **Multilingual Support**: Experience Open WebUI in your preferred language with our internationalization (i18n) support. Join us in expanding our supported languages! We're actively seeking contributors!
+- 🌐🌍 **Multilingual Support**: Experience CANChat in your preferred language with our internationalization (i18n) support. Join us in expanding our supported languages! We're actively seeking contributors!
 
-- 🧩 **Pipelines, Open WebUI Plugin Support**: Seamlessly integrate custom logic and Python libraries into Open WebUI using [Pipelines Plugin Framework](https://github.com/open-webui/pipelines). Launch your Pipelines instance, set the OpenAI URL to the Pipelines URL, and explore endless possibilities. [Examples](https://github.com/open-webui/pipelines/tree/main/examples) include **Function Calling**, User **Rate Limiting** to control access, **Usage Monitoring** with tools like Langfuse, **Live Translation with LibreTranslate** for multilingual support, **Toxic Message Filtering** and much more.
+- 🧩 **Pipelines, Open WebUI Plugin Support**: Seamlessly integrate custom logic and Python libraries into CANChat using [Pipelines Plugin Framework](https://github.com/open-webui/pipelines). Launch your Pipelines instance, set the OpenAI URL to the Pipelines URL, and explore endless possibilities. [Examples](https://github.com/open-webui/pipelines/tree/main/examples) include **Function Calling**, User **Rate Limiting** to control access, **Usage Monitoring** with tools like Langfuse, **Live Translation with LibreTranslate** for multilingual support, **Toxic Message Filtering** and much more.
 
-- 🌟 **Continuous Updates**: We are committed to improving Open WebUI with regular updates, fixes, and new features.
+- 🌟 **Continuous Updates**: We are committed to improving CANChat with regular updates, fixes, and new features.
 
-Want to learn more about Open WebUI's features? Check out our [Open WebUI documentation](https://docs.openwebui.com/features) for a comprehensive overview!
+Want to learn more about CANChat's features? Check out the [Open WebUI documentation](https://docs.openwebui.com/features) for a comprehensive overview!
 
 ## 🔗 Also Check Out Open WebUI Community!
 
-Don't forget to explore our sibling project, [Open WebUI Community](https://openwebui.com/), where you can discover, download, and explore customized Modelfiles. Open WebUI Community offers a wide range of exciting possibilities for enhancing your chat interactions with Open WebUI! 🚀
+Don't forget to explore our sibling project, [Open WebUI Community](https://openwebui.com/), where you can discover, download, and explore customized Modelfiles. Open WebUI Community offers a wide range of exciting possibilities for enhancing your chat interactions with CANChat! 🚀
 
 ## How to Install 🚀
 
 ### Installation via Python pip 🐍
 
-Open WebUI can be installed using pip, the Python package installer. Before proceeding, ensure you're using **Python 3.11** to avoid compatibility issues.
+CANChat can be installed using pip, the Python package installer. Before proceeding, ensure you're using **Python 3.11** to avoid compatibility issues.
 
-1. **Install Open WebUI**:
+1. **Install CANChat**:
    Open your terminal and run the following command to install Open WebUI:
 
    ```bash
@@ -75,13 +75,13 @@ Open WebUI can be installed using pip, the Python package installer. Before proc
    ```
 
 2. **Running Open WebUI**:
-   After installation, you can start Open WebUI by executing:
+   After installation, you can start CANChat by executing:
 
    ```bash
    open-webui serve
    ```
 
-This will start the Open WebUI server, which you can access at [http://localhost:8080](http://localhost:8080)
+This will start the CANChat server, which you can access at [http://localhost:8080](http://localhost:8080)
 
 ### Quick Start with Docker 🐳
 
@@ -89,10 +89,10 @@ This will start the Open WebUI server, which you can access at [http://localhost
 > Please note that for certain Docker environments, additional configurations might be needed. If you encounter any connection issues, our detailed guide on [Open WebUI Documentation](https://docs.openwebui.com/) is ready to assist you.
 
 > [!WARNING]
-> When using Docker to install Open WebUI, make sure to include the `-v open-webui:/app/backend/data` in your Docker command. This step is crucial as it ensures your database is properly mounted and prevents any loss of data.
+> When using Docker to install CANChat, make sure to include the `-v open-webui:/app/backend/data` in your Docker command. This step is crucial as it ensures your database is properly mounted and prevents any loss of data.
 
 > [!TIP]  
-> If you wish to utilize Open WebUI with Ollama included or CUDA acceleration, we recommend utilizing our official images tagged with either `:cuda` or `:ollama`. To enable CUDA, you must install the [Nvidia CUDA container toolkit](https://docs.nvidia.com/dgx/nvidia-container-runtime-upgrade/) on your Linux/WSL system.
+> If you wish to utilize CANChat with Ollama included or CUDA acceleration, we recommend utilizing our official images tagged with either `:cuda` or `:ollama`. To enable CUDA, you must install the [Nvidia CUDA container toolkit](https://docs.nvidia.com/dgx/nvidia-container-runtime-upgrade/) on your Linux/WSL system.
 
 ### Installation with Default Configuration
 
@@ -110,7 +110,7 @@ This will start the Open WebUI server, which you can access at [http://localhost
   docker run -d -p 3000:8080 -e OLLAMA_BASE_URL=https://example.com -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
   ```
 
-- **To run Open WebUI with Nvidia GPU support**, use this command:
+- **To run CANChat with Nvidia GPU support**, use this command:
 
   ```bash
   docker run -d -p 3000:8080 --gpus all --add-host=host.docker.internal:host-gateway -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:cuda
@@ -124,9 +124,9 @@ This will start the Open WebUI server, which you can access at [http://localhost
   docker run -d -p 3000:8080 -e OPENAI_API_KEY=your_secret_key -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
   ```
 
-### Installing Open WebUI with Bundled Ollama Support
+### Installing CANChat with Bundled Ollama Support
 
-This installation method uses a single container image that bundles Open WebUI with Ollama, allowing for a streamlined setup via a single command. Choose the appropriate command based on your hardware setup:
+This installation method uses a single container image that bundles CANChat with Ollama, allowing for a streamlined setup via a single command. Choose the appropriate command based on your hardware setup:
 
 - **With GPU Support**:
   Utilize GPU resources by running the following command:
@@ -142,9 +142,9 @@ This installation method uses a single container image that bundles Open WebUI w
   docker run -d -p 3000:8080 -v ollama:/root/.ollama -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:ollama
   ```
 
-Both commands facilitate a built-in, hassle-free installation of both Open WebUI and Ollama, ensuring that you can get everything up and running swiftly.
+Both commands facilitate a built-in, hassle-free installation of both CANChat and Ollama, ensuring that you can get everything up and running swiftly.
 
-After installation, you can access Open WebUI at [http://localhost:3000](http://localhost:3000). Enjoy! 😄
+After installation, you can access CANChat at [http://localhost:3000](http://localhost:3000). Enjoy! 😄
 
 ### Other Installation Methods
 
@@ -154,7 +154,7 @@ We offer various installation alternatives, including non-Docker native installa
 
 Encountering connection issues? Our [Open WebUI Documentation](https://docs.openwebui.com/troubleshooting/) has got you covered. For further assistance and to join our vibrant community, visit the [Open WebUI Discord](https://discord.gg/5rJgQTnV4s).
 
-#### Open WebUI: Server Connection Error
+#### CANChat: Server Connection Error
 
 If you're experiencing connection issues, it’s often due to the WebUI docker container not being able to reach the Ollama server at 127.0.0.1:11434 (host.docker.internal:11434) inside the container . Use the `--network=host` flag in your docker command to resolve this. Note that the port changes from 3000 to 8080, resulting in the link: `http://localhost:8080`.
 
@@ -189,7 +189,7 @@ docker run -d -p 3000:8080 -v open-webui:/app/backend/data --name open-webui --a
 
 ### Offline Mode
 
-If you are running Open WebUI in an offline environment, you can set the `HF_HUB_OFFLINE` environment variable to `1` to prevent attempts to download models from the internet.
+If you are running CANChat in an offline environment, you can set the `HF_HUB_OFFLINE` environment variable to `1` to prevent attempts to download models from the internet.
 
 ```bash
 export HF_HUB_OFFLINE=1
@@ -210,14 +210,14 @@ If you have any questions, suggestions, or need assistance, please open an issue
 
 ## Star History
 
-<a href="https://star-history.com/#open-webui/open-webui&Date">
+<a href="https://star-history.com/#ssc-dsai/canchat-v2&Date">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=open-webui/open-webui&type=Date&theme=dark" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=open-webui/open-webui&type=Date" />
-    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=open-webui/open-webui&type=Date" />
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=ssc-dsai/canchat-v2&type=Date&theme=dark" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=ssc-dsai/canchat-v2&type=Date" />
+    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=ssc-dsai/canchat-v2&type=Date" />
   </picture>
 </a>
 
 ---
 
-Created by [Timothy Jaeryang Baek](https://github.com/tjbck) - Let's make Open WebUI even more amazing together! 💪
+Created by [Timothy Jaeryang Baek](https://github.com/tjbck) - Let's make CANChat even more amazing together! 💪
