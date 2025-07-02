@@ -109,7 +109,7 @@
 									>
 										{decodeString(document?.metadata?.name ?? document.source.name)}
 									</a>
-									{#if document?.metadata?.page}
+									{#if Number.isInteger(document?.metadata?.page)}
 										<span class="text-xs text-gray-500 dark:text-gray-400">
 											({$i18n.t('page')}
 											{document.metadata.page + 1})
@@ -117,6 +117,17 @@
 									{/if}
 								</div>
 							</Tooltip>
+							{#if document.metadata?.parameters}
+								<div class="text-sm font-medium dark:text-gray-300 mt-2">
+									{$i18n.t('Parameters')}
+								</div>
+								<pre
+									class="text-sm dark:text-gray-400 bg-gray-50 dark:bg-gray-800 p-2 rounded-md overflow-auto max-h-40">{JSON.stringify(
+										document.metadata.parameters,
+										null,
+										2
+									)}</pre>
+							{/if}
 							{#if showRelevance}
 								<div class="text-sm font-medium dark:text-gray-300 mt-2">
 									{$i18n.t('Relevance')}

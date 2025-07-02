@@ -34,6 +34,8 @@
 	export let files = [];
 
 	export let selectedToolIds = [];
+	export let selectedFilterIds = [];
+
 	export let imageGenerationEnabled = false;
 	export let codeInterpreterEnabled = false;
 	export let webSearchEnabled = false;
@@ -91,7 +93,7 @@
 <div class="m-auto w-full max-w-6xl px-2 @2xl:px-20 translate-y-6 py-24 text-center">
 	{#if $temporaryChatEnabled}
 		<Tooltip
-			content={$i18n.t('This chat won’t appear in history and your messages will not be saved.')}
+			content={$i18n.t("This chat won't appear in history and your messages will not be saved.")}
 			className="w-full flex justify-center mb-0.5"
 			placement="top"
 		>
@@ -105,7 +107,7 @@
 		class="w-full text-3xl text-gray-800 dark:text-gray-100 text-center flex items-center gap-4 font-primary"
 	>
 		<div class="w-full flex flex-col justify-center items-center">
-			<div class="flex flex-row justify-center gap-3 @sm:gap-3.5 w-fit px-5">
+			<div class="flex flex-row justify-center gap-3 @sm:gap-3.5 w-fit px-5 max-w-xl">
 				<div class="flex shrink-0 justify-center">
 					<div class="flex -space-x-4 mb-0.5" in:fade={{ duration: 100 }}>
 						{#each models as model, modelIdx}
@@ -136,9 +138,20 @@
 					</div>
 				</div>
 
-				<div class=" text-3xl @sm:text-4xl line-clamp-1" in:fade={{ duration: 100 }}>
+				<div
+					class=" text-3xl @sm:text-3xl line-clamp-1 flex items-center"
+					in:fade={{ duration: 100 }}
+				>
 					{#if models[selectedModelIdx]?.name}
-						{models[selectedModelIdx]?.name}
+						<Tooltip
+							content={models[selectedModelIdx]?.name}
+							placement="top"
+							className=" flex items-center "
+						>
+							<span class="line-clamp-1">
+								{models[selectedModelIdx]?.name}
+							</span>
+						</Tooltip>
 					{:else}
 						{$i18n.t('Hello, {{name}}', { name: $user?.name })}
 					{/if}
@@ -192,6 +205,7 @@
 					bind:prompt
 					bind:autoScroll
 					bind:selectedToolIds
+					bind:selectedFilterIds
 					bind:imageGenerationEnabled
 					bind:codeInterpreterEnabled
 					bind:webSearchEnabled
@@ -202,10 +216,12 @@
 					{createMessagePair}
 					placeholder={$i18n.t('How can I help you today?')}
 					onChange={(input) => {
-						if (input.prompt !== null) {
-							localStorage.setItem(`chat-input`, JSON.stringify(input));
-						} else {
-							localStorage.removeItem(`chat-input`);
+						if (!$temporaryChatEnabled) {
+							if (input.prompt !== null) {
+								localStorage.setItem(`chat-input`, JSON.stringify(input));
+							} else {
+								localStorage.removeItem(`chat-input`);
+							}
 						}
 					}}
 					on:upload={(e) => {
@@ -218,7 +234,7 @@
 			</div>
 		</div>
 	</div>
-	<div class="mx-auto max-w-2xl font-primary" in:fade={{ duration: 200, delay: 200 }}>
+	<div class="mx-auto max-w-2xl font-primary mt-2" in:fade={{ duration: 200, delay: 200 }}>
 		<div class="mx-5">
 			<Suggestions
 				suggestionPrompts={atSelectedModel?.info?.meta?.suggestion_prompts ??

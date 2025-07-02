@@ -13,6 +13,7 @@
 	export let onSubmit: Function;
 	export let edit = false;
 	export let prompt = null;
+	export let clone = false;
 
 	const i18n = getContext('i18n');
 
@@ -72,7 +73,7 @@
 			command = prompt.command.at(0) === '/' ? prompt.command.slice(1) : prompt.command;
 			content = prompt.content;
 
-			accessControl = prompt?.access_control ?? {};
+			accessControl = prompt?.access_control === undefined ? {} : prompt?.access_control;
 		}
 	});
 </script>

@@ -2,7 +2,7 @@
 	import { DropdownMenu } from 'bits-ui';
 	import { createEventDispatcher, getContext, onMount } from 'svelte';
 
-	import { showSettings, activeUserIds, USAGE_POOL, mobile, showSidebar, user } from '$lib/stores';
+	import { showSettings, mobile, showSidebar, user } from '$lib/stores';
 	import { fade, slide } from 'svelte/transition';
 
 	import Mic from '../icons/Mic.svelte';
@@ -13,7 +13,7 @@
 	const i18n = getContext('i18n');
 
 	export let show = false;
-	export let className = 'max-w-[160px]';
+	export let className = 'max-w-[170px]';
 
 	export let onRecord = () => {};
 	export let onCaptureAudio = () => {};
@@ -41,7 +41,7 @@
 			transition={(e) => fade(e, { duration: 100 })}
 		>
 			<button
-				class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
 				on:click={async () => {
 					onRecord();
 					show = false;
@@ -54,7 +54,7 @@
 			</button>
 
 			<button
-				class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
 				on:click={() => {
 					onCaptureAudio();
 					show = false;
@@ -67,7 +67,7 @@
 			</button>
 
 			<button
-				class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
 				on:click={() => {
 					onUpload();
 					show = false;
