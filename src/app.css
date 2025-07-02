@@ -30,6 +30,24 @@
 	font-display: swap;
 }
 
+@font-face {
+	font-family: 'NotoKufiArabic-Regular';
+	src: url('/assets/fonts/NotoKufiArabic-Regular.ttf');
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'NotoKufiArabic-Bold';
+	src: url('/assets/fonts/NotoKufiArabic-Bold.ttf');
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'NotoKufiArabic-Medium';
+	src: url('/assets/fonts/NotoKufiArabic-Medium.ttf');
+	font-display: swap;
+}
+
 html {
 	word-break: break-word;
 }
@@ -86,6 +104,18 @@ textarea::placeholder {
 
 .font-primary {
 	font-family: 'Archivo', 'Vazirmatn', sans-serif;
+}
+
+.font-NotoKufi-Regular{
+	font-family: 'NotoKufiArabic-Regular';
+}
+
+.font-NotoKufi-Medium{
+	font-family: 'NotoKufiArabic-Medium';
+}
+
+.font-NotoKufi-Bold{
+	font-family: 'NotoKufiArabic-Bold';
 }
 
 .drag-region {
@@ -441,4 +471,8 @@ input[type='number'] {
 
 .tiptap tr {
 	@apply bg-white dark:bg-gray-900 dark:border-gray-850 text-xs;
+}
+
+body {
+	 font-family: NotoKufiArabic-Regular;
 }

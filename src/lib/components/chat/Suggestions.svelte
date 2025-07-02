@@ -87,7 +87,7 @@
 		<div class="flex flex-wrap gap-3 mt-4 justify-center items-center">
 			{#each filteredPrompts as prompt, idx (prompt.id || prompt.content)}
 				<button
-					class="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-gray-800 transition hover:bg-gray-50 dark:text-gray-100 dark:hover:bg-white/10"
+					class="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium font-NotoKufi-Medium text-gray-1000 transition hover:bg-gray-50 dark:text-gray-100 dark:hover:bg-white/10"
 					style="
 						background: var(--Schemes-Surface, #FFF);
 						box-shadow: 0px 0px 16px -8px rgba(28, 27, 27, 0.04);

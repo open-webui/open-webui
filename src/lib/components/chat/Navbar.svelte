@@ -26,6 +26,9 @@
 	import UserMenu from '$lib/components/layout/Sidebar/UserMenu.svelte';
 	import MenuLines from '../icons/MenuLines.svelte';
 	import AdjustmentsHorizontal from '../icons/AdjustmentsHorizontal.svelte';
+	import Logo from '../icons/Logo.svelte';
+	import LightMode from '../icons/LightMode.svelte';
+	import DarkMode from '../icons/DarkMode.svelte';
 
 	import PencilSquare from '../icons/PencilSquare.svelte';
 	import Banner from '../common/Banner.svelte';
@@ -43,6 +46,7 @@
 
 	let showShareChatModal = false;
 	let showDownloadChatModal = false;
+	 let isOn = false
 </script>
 
 <ShareChatModal bind:show={showShareChatModal} chatId={$chatId} />
@@ -56,52 +60,22 @@
 	aria-label="New Chat"
 />
 
-<nav class="sticky top-0 z-30 w-full py-1 -mb-8 flex flex-col items-center drag-region">
-	<div class="flex items-center w-full pl-1.5 pr-1">
+<nav class="sticky top-0 z-30 w-full px-[20px] py-[18px] flex flex-col items-center drag-region">
+	<div class="flex items-center w-full ">
 		<div
 			class=" bg-surface dark:from-gray-900 dark:via-gray-900 dark:to-transparent pointer-events-none absolute inset-0 -bottom-7 z-[-1]"
 		></div>
-
-		<div class=" flex max-w-full w-full mx-auto px-1 pt-0.5 bg-transparent">
-			<div class="flex items-center w-full max-w-full">
+		<div class=" flex max-w-full w-full mx-auto bg-transparent">
+			<div class="flex items-center justify-between w-full max-w-full">
 				<div
 					class="{$showSidebar
 						? 'md:hidden'
 						: ''} mr-1 self-start flex flex-none items-center text-gray-600 dark:text-gray-400"
 				>
-					<button
-						id="sidebar-toggle-button"
-						class="cursor-pointer px-2 py-2 flex rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-						on:click={() => {
-							showSidebar.set(!$showSidebar);
-						}}
-						aria-label="Toggle Sidebar"
-					>
-						<div class=" m-auto self-center">
-							<MenuLines />
-						</div>
-					</button>
-
-					{#if !$mobile}
-						<Tooltip content={$i18n.t('New Chat')}>
-							<button
-								class=" flex {$showSidebar
-									? 'md:hidden'
-									: ''} cursor-pointer px-2 py-2 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-								on:click={() => {
-									initNewChat();
-								}}
-								aria-label="New Chat"
-							>
-								<div class=" m-auto self-center">
-									<PencilSquare className=" size-5" strokeWidth="2" />
-								</div>
-							</button>
-						</Tooltip>
-					{/if}
+					<Logo strokeWidth="2" className="size-[1.1rem]" />
 				</div>
 
-				<div
+				<!--<div
 					class="flex-1 overflow-hidden max-w-full py-0.5
 			{$showSidebar ? 'ml-1' : ''}
 			"
@@ -109,11 +83,10 @@
 					{#if showModelSelector}
 						<ModelSelector bind:selectedModels showSetDefault={!shareEnabled} />
 					{/if}
-				</div>
-
+				</div> -->
 				<div class="self-start flex flex-none items-center text-gray-600 dark:text-gray-400">
 					<!-- <div class="md:hidden flex self-center w-[1px] h-5 mx-2 bg-gray-300 dark:bg-stone-700" /> -->
-					{#if shareEnabled && chat && (chat.id || $temporaryChatEnabled)}
+					<!--{#if shareEnabled && chat && (chat.id || $temporaryChatEnabled)}
 						<Menu
 							{chat}
 							{shareEnabled}
@@ -146,9 +119,19 @@
 								</div>
 							</button>
 						</Menu>
-					{/if}
+					{/if}-->
+					<div class="flex items-center mr-[12px]">
 
-					<Tooltip content={$i18n.t('Controls')}>
+					<label class="relative inline-flex items-center cursor-pointer">
+						<input type="checkbox" bind:checked={isOn} class="sr-only peer" />
+						<div class="w-[56px] h-[28px] bg-gray-1100 rounded-full peer duration-300">
+						<div class=" flex items-center justify-center absolute  {isOn ? 'left-[3px]' : 'right-[3px]'}  top-[3px] w-[20px] h-[20px] bg-white rounded-full transition-transform duration-300 peer-checked:translate-x-5">
+							<LightMode strokeWidth="2" className="size-[1.1rem]" />
+						</div>
+						</div>
+					</label>
+					</div>
+					<!--<Tooltip content={$i18n.t('Controls')}>
 						<button
 							class=" flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
 							on:click={async () => {
@@ -160,7 +143,7 @@
 								<AdjustmentsHorizontal className=" size-5" strokeWidth="0.5" />
 							</div>
 						</button>
-					</Tooltip>
+					</Tooltip>-->
 
 					{#if $user !== undefined && $user !== null}
 						<UserMenu
@@ -174,13 +157,13 @@
 							}}
 						>
 							<button
-								class="select-none flex rounded-xl p-1.5 w-full hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+								class="select-none flex rounded-xl w-full hover:bg-gray-50 dark:hover:bg-gray-850 transition"
 								aria-label="User Menu"
 							>
 								<div class=" self-center">
 									<img
 										src={$user?.profile_image_url}
-										class="size-6 object-cover rounded-full"
+										class="size-8 object-cover rounded-full"
 										alt="User profile"
 										draggable="false"
 									/>

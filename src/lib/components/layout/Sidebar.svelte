@@ -57,9 +57,18 @@
 	import { getChannels, createNewChannel } from '$lib/apis/channels';
 	import ChannelModal from './Sidebar/ChannelModal.svelte';
 	import ChannelItem from './Sidebar/ChannelItem.svelte';
-	import PencilSquare from '../icons/PencilSquare.svelte';
+	import GenerateText from '../icons/GenerateText.svelte';
+	import Logout from '../icons/Logout.svelte';
+	import Admin from '../icons/Admin.svelte';
+	import Chat2 from '../icons/Chat2.svelte';
+	import Setting from '../icons/Setting.svelte';
+	import AIFolder from '../icons/AIFolder.svelte';
+	import Content from '../icons/Content.svelte';
+	import SearchNew from '../icons/SearchNew.svelte';
 	import Home from '../icons/Home.svelte';
 	import MagnifyingGlass from '../icons/MagnifyingGlass.svelte';
+	import LogoText from '../icons/LogoText.svelte';
+	import Toggle from '../icons/Toggle.svelte';
 	import SearchModal from './SearchModal.svelte';
 
 	const BREAKPOINT = 768;
@@ -422,17 +431,6 @@
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 
-{#if $showSidebar}
-	<div
-		class=" {$isApp
-			? ' ml-[4.5rem] md:ml-0'
-			: ''} fixed md:hidden z-40 top-0 right-0 left-0 bottom-0 bg-black/60 w-full min-h-screen h-screen flex justify-center overflow-hidden overscroll-contain"
-		on:mousedown={() => {
-			showSidebar.set(!$showSidebar);
-		}}
-	/>
-{/if}
-
 <SearchModal
 	bind:show={$showSearch}
 	onClose={() => {
@@ -445,89 +443,56 @@
 <div
 	bind:this={navElement}
 	id="sidebar"
-	class="h-screen max-h-[100dvh] min-h-screen p-4 select-none {$showSidebar
+	class=" h-screen max-h-[100dvh] min-h-screen p-4 select-none {$showSidebar
 		? 'md:relative w-[300px] max-w-[300px]'
-		: '-translate-x-[300px] w-[0px]'} {$isApp
+		: '-translate-x-[300px] w-[80px]'} {$isApp
 		? `ml-[4.5rem] md:ml-0 `
-		: 'transition-width duration-200 ease-in-out'}  shrink-0 bg-surface text-gray-900 dark:bg-gray-950 dark:text-gray-200 text-sm fixed z-50 top-0 left-0 overflow-x-hidden
+		: 'transition-width duration-200 ease-in-out'}  shrink-0 bg-surface text-gray-900 dark:bg-gray-950 dark:text-gray-200 text-sm z-50 top-0 left-0 
         "
 	data-state={$showSidebar}
 >
 	<div
-		class="py-2 my-auto flex flex-col justify-between h-[calc(100vh-2rem)] max-h-[100dvh] w-[calc(300px-2rem)] overflow-x-hidden z-50 bg-white {$showSidebar
-			? ''
-			: 'invisible'}"
-			style="
+		class="flex flex-col justify-between h-[calc(100vh-2rem)] max-h-[100dvh]  overflow-x-hidden z-50 bg-white {$showSidebar ? 'w-[calc(300px-2rem)]': 'w-[80px]'}"
+		style="
     border-radius: 20px;
     background: var(--Schemes-Surface, #FFF);
     box-shadow: 0px 0px 16px -8px rgba(28, 27, 27, 0.04);
   "
 	>
-		<div class="px-1.5 flex justify-between space-x-1 text-gray-600 dark:text-gray-400">
+	<div class="sidebar__top h-[calc(100vh-58px)] overflow-y-auto">
+		<div class="p-[20px] pb-[58px] flex justify-between space-x-1 text-gray-600 dark:text-gray-400">
 			<button
-				class=" cursor-pointer p-[7px] flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+				class=" cursor-pointer flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 				on:click={() => {
 					showSidebar.set(!$showSidebar);
 				}}
 			>
-				<div class=" m-auto self-center">
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke-width="2"
-						stroke="currentColor"
-						class="size-5"
-					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12"
-						/>
-					</svg>
+				<div class="flex items-center">
+					<div class="self-center mr-[5px]">
+						<Toggle strokeWidth="2" className="size-[1.1rem]" />
+					</div>
 				</div>
 			</button>
 
-			<a
-				id="sidebar-new-chat-button"
-				class="flex justify-between items-center flex-1 rounded-lg px-2 py-1 h-full text-right hover:bg-gray-100 dark:hover:bg-gray-900 transition no-drag-region"
-				href="/"
-				draggable="false"
-				on:click={async () => {
-					selectedChatId = null;
-
-					await temporaryChatEnabled.set(false);
-					setTimeout(() => {
-						if ($mobile) {
-							showSidebar.set(false);
-						}
-					}, 0);
+			<button
+				class="hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none {$showSidebar
+							? ''
+							: 'hidden'}"
+				on:click={() => {
+					showSearch.set(true);
 				}}
+				draggable="false"
 			>
-				<div class="flex items-center">
-					<div class="self-center mx-1.5">
-						<img
-							crossorigin="anonymous"
-							src="/static/favicon.png"
-							class="sidebar-new-chat-icon size-5 -translate-x-1.5 rounded-full"
-							alt="logo"
-						/>
-					</div>
-					<div class=" self-center font-medium text-sm text-gray-850 dark:text-white font-primary">
-						{$i18n.t('New Chat')}
-					</div>
+				<div class="self-center">
+					<SearchNew strokeWidth="2" className="size-[1.1rem]" />
 				</div>
-
-				<div>
-					<PencilSquare className=" size-5" strokeWidth="2" />
-				</div>
-			</a>
+			</button>
 		</div>
 
 		<!-- {#if $user?.role === 'admin'}
 			<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
 				<a
-					class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+					class="grow flex items-center rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 					href="/home"
 					on:click={() => {
 						selectedChatId = null;
@@ -544,34 +509,48 @@
 					</div>
 
 					<div class="flex self-center translate-y-[0.5px]">
-						<div class=" self-center font-medium text-sm font-primary">{$i18n.t('Home')}</div>
+						<div class=" self-center font-medium text-sm ">{$i18n.t('Home')}</div>
 					</div>
 				</a>
 			</div>
 		{/if} -->
 
-		<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
-			<button
-				class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
-				on:click={() => {
-					showSearch.set(true);
-				}}
+		<div class="flex justify-center text-gray-800 dark:text-gray-200">
+			<a
+				id="sidebar-new-chat-button"
+				class="p-[14px] flex items-center flex-1 rounded-lg h-full text-right hover:bg-gray-100 dark:hover:bg-gray-900 transition no-drag-region {$showSidebar ? '': 'justify-center'}"
+				href="/"
 				draggable="false"
-			>
-				<div class="self-center">
-					<MagnifyingGlass strokeWidth="2" className="size-[1.1rem]" />
-				</div>
+				on:click={async () => {
+					selectedChatId = null;
 
-				<div class="flex self-center translate-y-[0.5px]">
-					<div class=" self-center font-medium text-sm font-primary">{$i18n.t('Search')}</div>
+					await temporaryChatEnabled.set(false);
+					setTimeout(() => {
+						if ($mobile) {
+							showSidebar.set(false);
+						}
+					}, 0);
+				}}
+			>
+				<div class="flex items-center">
+					<div class="self-center {$showSidebar ? 'mr-[15px]': ''}">
+						<GenerateText strokeWidth="2" className="size-[1.1rem]" />
+					</div>
+					<div
+						class=" self-center font-medium text-sm text-gray-850 dark:text-white leading-[22px] {$showSidebar
+							? ''
+							: 'hidden'}"
+					>
+						{$i18n.t('New Chat')}
+					</div>
 				</div>
-			</button>
+			</a>
 		</div>
 
 		{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
-			<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
+			<div class="flex justify-center text-gray-800 dark:text-gray-200">
 				<a
-					class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+					class="p-[14px] grow flex items-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition {$showSidebar ? '': 'justify-center'}"
 					href="/notes"
 					on:click={() => {
 						selectedChatId = null;
@@ -583,37 +562,21 @@
 					}}
 					draggable="false"
 				>
-					<div class="self-center">
-						<svg
-							class="size-4"
-							aria-hidden="true"
-							xmlns="http://www.w3.org/2000/svg"
-							width="24"
-							height="24"
-							fill="none"
-							viewBox="0 0 24 24"
-						>
-							<path
-								stroke="currentColor"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M10 3v4a1 1 0 0 1-1 1H5m4 8h6m-6-4h6m4-8v16a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7.914a1 1 0 0 1 .293-.707l3.914-3.914A1 1 0 0 1 9.914 3H18a1 1 0 0 1 1 1Z"
-							/>
-						</svg>
+					<div class="self-center {$showSidebar ? 'mr-[15px]': ''}">
+						<Chat2 strokeWidth="2" className="size-[1.1rem]" />
 					</div>
 
-					<div class="flex self-center translate-y-[0.5px]">
-						<div class=" self-center font-medium text-sm font-primary">{$i18n.t('Notes')}</div>
+					<div class="self-center translate-y-[0.5px] {$showSidebar ? '' : 'hidden'}">
+						<div class=" self-center font-medium text-sm leading-[22px] ">{$i18n.t('Notes')}</div>
 					</div>
 				</a>
 			</div>
 		{/if}
 
 		{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools}
-			<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
+			<div class="flex justify-center text-gray-800 dark:text-gray-200">
 				<a
-					class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+					class="p-[14px] grow flex items-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition {$showSidebar ? '': 'justify-center'}"
 					href="/workspace"
 					on:click={() => {
 						selectedChatId = null;
@@ -625,25 +588,12 @@
 					}}
 					draggable="false"
 				>
-					<div class="self-center">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke-width="2"
-							stroke="currentColor"
-							class="size-[1.1rem]"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								d="M13.5 16.875h3.375m0 0h3.375m-3.375 0V13.5m0 3.375v3.375M6 10.5h2.25a2.25 2.25 0 0 0 2.25-2.25V6a2.25 2.25 0 0 0-2.25-2.25H6A2.25 2.25 0 0 0 3.75 6v2.25A2.25 2.25 0 0 0 6 10.5Zm0 9.75h2.25A2.25 2.25 0 0 0 10.5 18v-2.25a2.25 2.25 0 0 0-2.25-2.25H6a2.25 2.25 0 0 0-2.25 2.25V18A2.25 2.25 0 0 0 6 20.25Zm9.75-9.75H18a2.25 2.25 0 0 0 2.25-2.25V6A2.25 2.25 0 0 0 18 3.75h-2.25A2.25 2.25 0 0 0 13.5 6v2.25a2.25 2.25 0 0 0 2.25 2.25Z"
-							/>
-						</svg>
+					<div class="self-center {$showSidebar ? 'mr-[15px]': ''}">
+						<AIFolder strokeWidth="2" className="size-[1.1rem]" />
 					</div>
 
-					<div class="flex self-center translate-y-[0.5px]">
-						<div class=" self-center font-medium text-sm font-primary">{$i18n.t('Workspace')}</div>
+					<div class="self-center translate-y-[0.5px] {$showSidebar ? '' : 'hidden'}">
+						<div class=" self-center font-medium text-sm leading-[22px] ">{$i18n.t('Workspace')}</div>
 					</div>
 				</a>
 			</div>
@@ -655,7 +605,7 @@
 					{#each $settings.pinnedModels as modelId (modelId)}
 						{@const model = $models.find((model) => model.id === modelId)}
 						{#if model}
-							<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
+							<div class="p-[14px] flex justify-center text-gray-800 dark:text-gray-200">
 								<a
 									class="grow flex items-center space-x-2.5 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 									href="/?model={modelId}"
@@ -678,8 +628,10 @@
 										/>
 									</div>
 
-									<div class="flex self-center translate-y-[0.5px]">
-										<div class=" self-center font-medium text-sm font-primary line-clamp-1">
+									<div
+										class="self-center translate-y-[0.5px] {$showSidebar ? '' : 'hidden'}"
+									>
+										<div class=" self-center font-medium text-sm  line-clamp-1">
 											{model?.name ?? modelId}
 										</div>
 									</div>
@@ -946,9 +898,9 @@
 				</div>
 			</Folder>
 		</div>
-
-		<div class="px-2">
-			<div class="flex flex-col font-primary">
+</div>
+		<div class="sidebar__bottom">
+			<div class="w-full p-[14px] flex flex-col  left-[20px] bottom-[20px] bg-white ">
 				{#if $user !== undefined && $user !== null}
 					<UserMenu
 						role={$user?.role}
@@ -959,19 +911,21 @@
 						}}
 					>
 						<button
-							class=" flex items-center rounded-xl py-2.5 px-2.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+							class=" flex items-center rounded-xl w-full hover:bg-gray-100 dark:hover:bg-gray-900 {$showSidebar ? '': 'justify-center'}"
 							on:click={() => {
 								showDropdown = !showDropdown;
 							}}
 						>
-							<div class=" self-center mr-3">
+							<div class=" self-center  {$showSidebar ? 'mr-[15px]' : ''}">
 								<img
 									src={$user?.profile_image_url}
 									class=" max-w-[30px] object-cover rounded-full"
 									alt="User profile"
 								/>
 							</div>
-							<div class=" self-center font-medium">{$user?.name}</div>
+							<div class="self-center font-medium  leading-[22px]  {$showSidebar ? '' : 'hidden'}">
+								{$user?.name}
+							</div>
 						</button>
 					</UserMenu>
 				{/if}
