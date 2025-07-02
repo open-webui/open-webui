@@ -72,7 +72,7 @@
 			align="start"
 			transition={(e) => fade(e, { duration: 100 })}
 		>
-			<button
+			<DropdownMenu.Item
 				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
 				on:click={async () => {
 					await showSettings.set(true);
@@ -87,9 +87,9 @@
 					<Settings className="w-5 h-5" strokeWidth="1.5" />
 				</div>
 				<div class=" self-center truncate">{$i18n.t('Settings')}</div>
-			</button>
+			</DropdownMenu.Item>
 
-			<button
+			<DropdownMenu.Item
 				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
 				on:click={() => {
 					dispatch('show', 'archived-chat');
@@ -104,44 +104,40 @@
 					<ArchiveBox className="size-5" strokeWidth="1.5" />
 				</div>
 				<div class=" self-center truncate">{$i18n.t('Archived Chats')}</div>
-			</button>
+			</DropdownMenu.Item>
 
 			{#if role === 'admin'}
-				<a
-					href="/playground"
+				<DropdownMenu.Item
 					class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition select-none"
 					on:click={() => {
 						show = false;
 						if ($mobile) {
 							showSidebar.set(false);
 						}
+						goto('/playground');
 					}}
-					rel="noopener noreferrer"
-					draggable="false"
 				>
 					<div class=" self-center mr-3">
 						<Code className="size-5" strokeWidth="1.5" />
 					</div>
 					<div class=" self-center truncate">{$i18n.t('Playground')}</div>
-				</a>
+				</DropdownMenu.Item>
 
-				<a
-					href="/admin"
+				<DropdownMenu.Item
 					class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition select-none"
 					on:click={() => {
 						show = false;
 						if ($mobile) {
 							showSidebar.set(false);
 						}
+						goto('/admin');
 					}}
-					rel="noopener noreferrer"
-					draggable="false"
 				>
 					<div class=" self-center mr-3">
 						<UserGroup className="w-5 h-5" strokeWidth="1.5" />
 					</div>
 					<div class=" self-center truncate">{$i18n.t('Admin Panel')}</div>
-				</a>
+				</DropdownMenu.Item>
 			{/if}
 
 			{#if help}
@@ -188,7 +184,7 @@
 
 			<hr class=" border-gray-100 dark:border-gray-800 my-1 p-0" />
 
-			<button
+			<DropdownMenu.Item
 				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
 				on:click={async () => {
 					const res = await userSignOut();
@@ -203,7 +199,7 @@
 					<SignOut className="w-5 h-5" strokeWidth="1.5" />
 				</div>
 				<div class=" self-center truncate">{$i18n.t('Sign Out')}</div>
-			</button>
+			</DropdownMenu.Item>
 
 			{#if usage}
 				{#if usage?.user_ids?.length > 0}
