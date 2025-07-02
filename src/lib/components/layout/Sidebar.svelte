@@ -517,7 +517,7 @@
 							alt="logo"
 						/>
 					</div>
-					<div class=" self-center font-medium text-sm text-gray-850 dark:text-white font-primary">
+					<div class=" self-center text-sm text-gray-850 dark:text-white font-primary">
 						{$i18n.t('New Chat')}
 					</div>
 				</div>
@@ -567,7 +567,7 @@
 				</div>
 
 				<div class="flex self-center translate-y-[0.5px]">
-					<div class=" self-center font-medium text-sm font-primary">{$i18n.t('Search')}</div>
+					<div class=" self-center text-sm font-primary">{$i18n.t('Search')}</div>
 				</div>
 			</button>
 		</div>
@@ -608,7 +608,7 @@
 					</div>
 
 					<div class="flex self-center translate-y-[0.5px]">
-						<div class=" self-center font-medium text-sm font-primary">{$i18n.t('Notes')}</div>
+						<div class=" self-center text-sm font-primary">{$i18n.t('Notes')}</div>
 					</div>
 				</a>
 			</div>
@@ -647,7 +647,7 @@
 					</div>
 
 					<div class="flex self-center translate-y-[0.5px]">
-						<div class=" self-center font-medium text-sm font-primary">{$i18n.t('Workspace')}</div>
+						<div class=" self-center text-sm font-primary">{$i18n.t('Workspace')}</div>
 					</div>
 				</a>
 			</div>
@@ -683,7 +683,7 @@
 									</div>
 
 									<div class="flex self-center translate-y-[0.5px]">
-										<div class=" self-center font-medium text-sm font-primary line-clamp-1">
+										<div class=" self-center text-sm font-primary line-clamp-1">
 											{model?.name ?? modelId}
 										</div>
 									</div>
