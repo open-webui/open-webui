@@ -16,19 +16,19 @@ In the interest of fostering an open and welcoming environment, we as contributo
 
 Examples of behavior that contributes to creating a positive environment include:
 
-* Using welcoming and inclusive language
-* Being respectful of differing viewpoints and experiences
-* Gracefully accepting constructive criticism
-* Focusing on what is best for the department
-* Showing empathy towards other members
+- Using welcoming and inclusive language
+- Being respectful of differing viewpoints and experiences
+- Gracefully accepting constructive criticism
+- Focusing on what is best for the department
+- Showing empathy towards other members
 
 Examples of unacceptable behavior by participants include:
 
-* The use of sexualized language or imagery and unwelcome sexual attention or advances
-* Trolling, insulting/derogatory comments, and personal or political attacks
-* Public or private harassment
-* Publishing others' private information, such as a physical or electronic address, without explicit permission
-* Other conduct which could reasonably be considered inappropriate in a professional setting
+- The use of sexualized language or imagery and unwelcome sexual attention or advances
+- Trolling, insulting/derogatory comments, and personal or political attacks
+- Public or private harassment
+- Publishing others' private information, such as a physical or electronic address, without explicit permission
+- Other conduct which could reasonably be considered inappropriate in a professional setting
 
 ## Our Responsibilities
 
@@ -61,8 +61,11 @@ available at [https://www.contributor-covenant.org/version/1/4/code-of-conduct.h
 This Code of Conduct is also inspired by GDS' `alphagov` [Code of conduct](https://github.com/alphagov/code-of-conduct)
 
 ---
+
 <!--markdownlint-disable MD025-->
+
 # Code de conduite pour le projet canchat-v2
+
 <!--markdownlint-enable MD025-->
 
 ([English](#Contributor-Covenant-Code-of-Conduct-for-the-projectname-project))
@@ -77,19 +80,19 @@ Dans le but de favoriser un environnement ouvert et accueillant, nous nous engag
 
 Exemples de comportements qui contribuent à créer un environnement positif incluent :
 
-* Utiliser un langage accueillant et inclusif
-* Être respectueux des différents points de vue et expériences
-* Accepter gracieusement les critiques constructives
-* Se concentrer sur ce qui est le mieux pour la communauté
-* Faire preuve d'empathie envers les autres membres de la communauté
+- Utiliser un langage accueillant et inclusif
+- Être respectueux des différents points de vue et expériences
+- Accepter gracieusement les critiques constructives
+- Se concentrer sur ce qui est le mieux pour la communauté
+- Faire preuve d'empathie envers les autres membres de la communauté
 
 Voici des exemples de comportements inacceptables de la part des participants :
 
-* L'utilisation d'un langage ou d'images sexualisés et d'une attention sexuelle importunée, ou percées
-* Trollage, commentaires insultants ou méprisants, et attaques personnelles ou politiques
-* Harcèlement public ou privé
-* La publication d'informations privées d'autrui, telles que des informations physiques ou électroniques. adresse, sans autorisation explicite
-* Tout autre comportement qui pourrait raisonnablement être considéré comme inapproprié dans le cadre d'une enquête du contexte professionnel
+- L'utilisation d'un langage ou d'images sexualisés et d'une attention sexuelle importunée, ou percées
+- Trollage, commentaires insultants ou méprisants, et attaques personnelles ou politiques
+- Harcèlement public ou privé
+- La publication d'informations privées d'autrui, telles que des informations physiques ou électroniques. adresse, sans autorisation explicite
+- Tout autre comportement qui pourrait raisonnablement être considéré comme inapproprié dans le cadre d'une enquête du contexte professionnel
 
 ## Nos responsabilités
 
