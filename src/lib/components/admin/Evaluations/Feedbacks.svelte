@@ -22,34 +22,82 @@
 	import FeedbackConversationModal from './FeedbackConversationModal.svelte';
 	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
+	import MagnifyingGlass from '$lib/components/icons/MagnifyingGlass.svelte';
 
-	export let feedbacks = [];
+	export let feedbacks: any[] = [];
 
 	let page = 1;
-	$: paginatedFeedbacks = feedbacks.slice((page - 1) * 10, page * 10);
+	let searchQuery = '';
 
-	type Feedback = {
-		id: string;
-		data: {
-			rating: number;
-			model_id: string;
-			sibling_model_ids: string[] | null;
-			reason: string;
-			comment: string;
-			tags: string[];
-		};
-		user: {
-			name: string;
-			profile_image_url: string;
-		};
-		updated_at: number;
-	};
+	// Reset page when search query changes
+	$: if (searchQuery) {
+		page = 1;
+	}
 
-	type ModelStats = {
-		rating: number;
-		won: number;
-		lost: number;
-	};
+	// Filter feedbacks based on search query
+	$: filteredFeedbacks = feedbacks.filter((feedback: any) => {
+		if (!searchQuery.trim()) return true;
+
+		const query = searchQuery.toLowerCase();
+
+		// Search in model ID
+		if (feedback.data.model_id?.toLowerCase().includes(query)) return true;
+
+		// Search in user name
+		if (feedback.user?.name?.toLowerCase().includes(query)) return true;
+
+		// Search in reason
+		if (feedback.data.reason?.toLowerCase().includes(query)) return true;
+
+		// Search in comment
+		if (feedback.data.comment?.toLowerCase().includes(query)) return true;
+
+		// Search in tags
+		if (feedback.data.tags?.some((tag: string) => tag.toLowerCase().includes(query))) return true;
+
+		// Search in sibling model IDs
+		if (feedback.data.sibling_model_ids?.some((id: string) => id.toLowerCase().includes(query)))
+			return true;
+
+		return false;
+	});
+
+	// Apply sorting to filtered results
+	$: sortedFeedbacks = [...filteredFeedbacks].sort((a: any, b: any) => {
+		// If no sort order is specified, sort by updated_at desc (default behavior)
+		if (sortOrder === null || sortKey === null) {
+			return b.updated_at - a.updated_at; // Default sort by updated_at desc
+		}
+
+		// Helper function to safely navigate nested properties
+		const getValue = (obj: any, path: string) => {
+			const properties = path.split('.');
+			return properties.reduce(
+				(prev: any, curr: string) => (prev && prev[curr] !== undefined ? prev[curr] : null),
+				obj
+			);
+		};
+
+		let valA = getValue(a, sortKey);
+		let valB = getValue(b, sortKey);
+
+		// Special handling for different data types
+		if (typeof valA === 'string' && typeof valB === 'string') {
+			return sortOrder === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+		}
+
+		// Ensure we have values to compare
+		if (valA === null || valA === undefined) return sortOrder === 'asc' ? -1 : 1;
+		if (valB === null || valB === undefined) return sortOrder === 'asc' ? 1 : -1;
+
+		return sortOrder === 'asc' ? valA - valB : valB - valA;
+	});
+
+	// Update paginated feedbacks to use sorted result
+	$: paginatedFeedbacks = sortedFeedbacks.slice((page - 1) * 10, page * 10);
+
+	let selectedFeedback: any = null;
+	let showConversationModal = false;
 
 	//////////////////////
 	//
@@ -63,7 +111,7 @@
 			return null;
 		});
 		if (response) {
-			feedbacks = feedbacks.filter((f) => f.id !== feedbackId);
+			feedbacks = feedbacks.filter((f: any) => f.id !== feedbackId);
 		}
 	};
 
@@ -82,7 +130,7 @@
 	};
 
 	// Simplified conversation extraction function
-	function extractConversation(feedback) {
+	function extractConversation(feedback: any) {
 		// No feedback = no conversation
 		if (!feedback) return [];
 
@@ -93,7 +141,7 @@
 
 				// Check for array-style messages (flat structure)
 				if (Array.isArray(chatData.messages)) {
-					return chatData.messages.map((msg) => ({
+					return chatData.messages.map((msg: any) => ({
 						role: msg.role,
 						content: msg.content || '',
 						timestamp: msg.timestamp || 0
@@ -104,23 +152,23 @@
 				if (chatData.history?.messages) {
 					const messagesObj = chatData.history.messages;
 					return Object.values(messagesObj)
-						.map((msg) => ({
+						.map((msg: any) => ({
 							role: msg.role,
 							content: msg.content || '',
 							timestamp: msg.timestamp || 0
 						}))
-						.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+						.sort((a: any, b: any) => (a.timestamp || 0) - (b.timestamp || 0));
 				}
 
 				// Check for direct object-style messages
 				if (chatData.messages && typeof chatData.messages === 'object') {
 					return Object.values(chatData.messages)
-						.map((msg) => ({
+						.map((msg: any) => ({
 							role: msg.role,
 							content: msg.content || '',
 							timestamp: msg.timestamp || 0
 						}))
-						.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+						.sort((a: any, b: any) => (a.timestamp || 0) - (b.timestamp || 0));
 				}
 			}
 
@@ -161,10 +209,10 @@
 	}
 
 	// Sorting functionality
-	let sortKey = null; // Set initial sort to null instead of 'updated_at'
-	let sortOrder = null; // Set initial order to null instead of 'desc'
+	let sortKey: string | null = null; // Set initial sort to null instead of 'updated_at'
+	let sortOrder: 'asc' | 'desc' | null = null; // Set initial order to null instead of 'desc'
 
-	function setSortKey(key) {
+	function setSortKey(key: string) {
 		if (sortKey === key) {
 			// Cycle through: asc -> desc -> null (default/no sorting)
 			if (sortOrder === 'asc') {
@@ -179,43 +227,6 @@
 			sortOrder = 'asc';
 		}
 	}
-
-	// Apply sorting to feedbacks before pagination
-	$: sortedFeedbacks = [...feedbacks].sort((a, b) => {
-		// If no sort order is specified, sort by updated_at desc (default behavior)
-		if (sortOrder === null || sortKey === null) {
-			return b.updated_at - a.updated_at; // Default sort by updated_at desc
-		}
-
-		// Helper function to safely navigate nested properties
-		const getValue = (obj, path) => {
-			const properties = path.split('.');
-			return properties.reduce(
-				(prev, curr) => (prev && prev[curr] !== undefined ? prev[curr] : null),
-				obj
-			);
-		};
-
-		let valA = getValue(a, sortKey);
-		let valB = getValue(b, sortKey);
-
-		// Special handling for different data types
-		if (typeof valA === 'string' && typeof valB === 'string') {
-			return sortOrder === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
-		}
-
-		// Ensure we have values to compare
-		if (valA === null || valA === undefined) return sortOrder === 'asc' ? -1 : 1;
-		if (valB === null || valB === undefined) return sortOrder === 'asc' ? 1 : -1;
-
-		return sortOrder === 'asc' ? valA - valB : valB - valA;
-	});
-
-	// Update paginated feedbacks to use sorted result
-	$: paginatedFeedbacks = sortedFeedbacks.slice((page - 1) * 10, page * 10);
-
-	let selectedFeedback = null;
-	let showConversationModal = false;
 </script>
 
 <div class="mt-0.5 mb-2 gap-1 flex flex-row justify-between">
@@ -224,14 +235,16 @@
 
 		<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
 
-		<span class="text-lg font-medium text-gray-500 dark:text-gray-300">{feedbacks.length}</span>
+		<span class="text-lg font-medium text-[#767676] dark:text-gray-300">{feedbacks.length}</span>
 	</div>
 
 	<div>
 		<Tooltip content={$i18n.t('Export')}>
 			<button
-				class="p-2 rounded-xl hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 transition font-medium text-sm flex items-center"
+				type="button"
+				class="p-2 rounded-xl hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 transition font-medium text-sm flex items-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
 				on:click={exportHandler}
+				aria-label="Export"
 			>
 				<ArrowDownTray className="size-3" />
 			</button>
@@ -239,22 +252,84 @@
 	</div>
 </div>
 
+<!-- Search bar added here -->
+<div class="mb-4">
+	<label
+		for="feedback-search"
+		class="block text-sm font-medium text-[#4a4a4a] dark:text-gray-300 mb-2"
+	>
+		{$i18n.t('Search Feedbacks')}
+	</label>
+	<div class="relative">
+		<div
+			class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none"
+			aria-hidden="true"
+		>
+			<MagnifyingGlass className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+		</div>
+		<input
+			id="feedback-search"
+			type="text"
+			bind:value={searchQuery}
+			placeholder={$i18n.t('Search by model ID, user name, reason, comment, or tags')}
+			class="block w-full pl-10 pr-12 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none dark:bg-gray-800 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+			aria-describedby={searchQuery ? 'search-results-count' : undefined}
+		/>
+		{#if searchQuery}
+			<div class="absolute inset-y-0 right-0 flex items-center pr-3">
+				<button
+					type="button"
+					on:click={() => (searchQuery = '')}
+					class="text-[#757575] hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded p-1"
+					aria-label="Clear search"
+				>
+					<span aria-hidden="true">✕</span>
+				</button>
+			</div>
+		{/if}
+	</div>
+	{#if searchQuery}
+		<div
+			id="search-results-count"
+			class="mt-2 text-sm text-[#767676] dark:text-gray-400"
+			role="status"
+			aria-live="polite"
+		>
+			{$i18n.t('Showing')}: {filteredFeedbacks.length}/{feedbacks.length}
+		</div>
+	{/if}
+</div>
+
 <div class="relative pt-0.5 w-full">
 	{#if (feedbacks ?? []).length === 0}
-		<div class="text-center text-xs text-gray-500 dark:text-gray-400 py-1">
+		<div class="text-center text-xs text-[#767676] dark:text-gray-400 py-1">
 			{$i18n.t('No feedbacks found')}
 		</div>
 	{:else}
-		<table class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-fixed">
+		<table
+			class="w-full text-sm text-left text-[#767676] dark:text-gray-400 table-fixed"
+			aria-label="Feedback history table"
+			aria-describedby={searchQuery ? 'search-results-count' : undefined}
+		>
 			<thead
-				class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-850 dark:text-gray-400 -translate-y-0.5"
+				class="text-xs text-[#4a4a4a] uppercase bg-gray-50 dark:bg-gray-850 dark:text-gray-400 -translate-y-0.5"
 			>
 				<tr>
 					<!-- User column - wider to accommodate French translation -->
 					<th
 						scope="col"
-						class="px-2 py-1.5 w-16 text-center"
+						class="px-2 py-1.5 w-16 text-center cursor-pointer"
 						on:click={() => setSortKey('user.name')}
+						on:keydown={(e) => e.key === 'Enter' && setSortKey('user.name')}
+						tabindex="0"
+						aria-sort={sortKey === 'user.name'
+							? sortOrder === 'asc'
+								? 'ascending'
+								: sortOrder === 'desc'
+									? 'descending'
+									: 'none'
+							: 'none'}
+						aria-label="Sort by user name"
 					>
 						<div class="flex items-center justify-center">
 							<span class="whitespace-nowrap mx-auto">{$i18n.t('User')}</span>
@@ -275,6 +350,17 @@
 						scope="col"
 						class="px-3 py-1.5 w-[12%] cursor-pointer select-none"
 						on:click={() => setSortKey('data.model_id')}
+						on:keydown={(e) => e.key === 'Enter' && setSortKey('data.model_id')}
+						tabindex="0"
+						role="columnheader"
+						aria-sort={sortKey === 'data.model_id'
+							? sortOrder === 'asc'
+								? 'ascending'
+								: sortOrder === 'desc'
+									? 'descending'
+									: 'none'
+							: 'none'}
+						aria-label="Sort by model"
 					>
 						<div class="flex gap-1 items-center">
 							{$i18n.t('Models')}
@@ -304,6 +390,17 @@
 						scope="col"
 						class="px-1 py-1.5 w-16 cursor-pointer select-none"
 						on:click={() => setSortKey('data.rating')}
+						on:keydown={(e) => e.key === 'Enter' && setSortKey('data.rating')}
+						tabindex="0"
+						role="columnheader"
+						aria-sort={sortKey === 'data.rating'
+							? sortOrder === 'asc'
+								? 'ascending'
+								: sortOrder === 'desc'
+									? 'descending'
+									: 'none'
+							: 'none'}
+						aria-label="Sort by result"
 					>
 						<div class="flex gap-1 items-center">
 							<span class="whitespace-nowrap">{$i18n.t('Result')}</span>
@@ -328,6 +425,17 @@
 						scope="col"
 						class="px-1 py-1.5 w-16 cursor-pointer select-none"
 						on:click={() => setSortKey('data.details.rating')}
+						on:keydown={(e) => e.key === 'Enter' && setSortKey('data.details.rating')}
+						tabindex="0"
+						role="columnheader"
+						aria-sort={sortKey === 'data.details.rating'
+							? sortOrder === 'asc'
+								? 'ascending'
+								: sortOrder === 'desc'
+									? 'descending'
+									: 'none'
+							: 'none'}
+						aria-label="Sort by rating"
 					>
 						<div class="flex gap-1 items-center">
 							<span class="whitespace-nowrap">{$i18n.t('Rating')}</span>
@@ -352,6 +460,17 @@
 						scope="col"
 						class="px-3 py-1.5 w-[13%] cursor-pointer select-none"
 						on:click={() => setSortKey('data.reason')}
+						on:keydown={(e) => e.key === 'Enter' && setSortKey('data.reason')}
+						tabindex="0"
+						role="columnheader"
+						aria-sort={sortKey === 'data.reason'
+							? sortOrder === 'asc'
+								? 'ascending'
+								: sortOrder === 'desc'
+									? 'descending'
+									: 'none'
+							: 'none'}
+						aria-label="Sort by reason"
 					>
 						<div class="flex gap-1 items-center whitespace-nowrap">
 							{$i18n.t('Reason')}
@@ -376,6 +495,17 @@
 						scope="col"
 						class="px-3 py-1.5 w-[15%] cursor-pointer select-none"
 						on:click={() => setSortKey('data.comment')}
+						on:keydown={(e) => e.key === 'Enter' && setSortKey('data.comment')}
+						tabindex="0"
+						role="columnheader"
+						aria-sort={sortKey === 'data.comment'
+							? sortOrder === 'asc'
+								? 'ascending'
+								: sortOrder === 'desc'
+									? 'descending'
+									: 'none'
+							: 'none'}
+						aria-label="Sort by comment"
 					>
 						<div class="flex gap-1 items-center">
 							{$i18n.t('Comment')}
@@ -396,7 +526,7 @@
 					</th>
 
 					<!-- Tags column - reduced width -->
-					<th scope="col" class="px-3 py-1.5 w-[13%] cursor-pointer select-none">
+					<th scope="col" class="px-3 py-1.5 w-[13%]">
 						<span class="whitespace-nowrap">{$i18n.t('Tags')}</span>
 					</th>
 
@@ -405,6 +535,17 @@
 						scope="col"
 						class="px-3 py-1.5 w-[13%] text-right cursor-pointer select-none"
 						on:click={() => setSortKey('updated_at')}
+						on:keydown={(e) => e.key === 'Enter' && setSortKey('updated_at')}
+						tabindex="0"
+						role="columnheader"
+						aria-sort={sortKey === 'updated_at'
+							? sortOrder === 'asc'
+								? 'ascending'
+								: sortOrder === 'desc'
+									? 'descending'
+									: 'none'
+							: 'none'}
+						aria-label="Sort by updated date"
 					>
 						<div class="flex gap-1 items-center justify-end whitespace-nowrap">
 							{$i18n.t('Updated At')}
@@ -421,7 +562,9 @@
 					</th>
 
 					<!-- Actions column - minimal width -->
-					<th scope="col" class="px-2 py-1.5 w-10 text-right"></th>
+					<th scope="col" class="px-2 py-1.5 w-10 text-right">
+						<span class="sr-only">{$i18n.t('Actions')}</span>
+					</th>
 				</tr>
 			</thead>
 
@@ -450,13 +593,13 @@
 						<td class="px-3 py-1.5">
 							<div class="flex flex-col overflow-hidden">
 								<div
-									class="font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap overflow-hidden text-ellipsis"
+									class="font-medium text-[#767676] dark:text-gray-400 whitespace-nowrap overflow-hidden text-ellipsis"
 								>
 									{feedback.data?.model_id || '-'}
 								</div>
 								{#if feedback.data?.sibling_model_ids?.length}
 									<Tooltip content={feedback.data.sibling_model_ids.join(', ')}>
-										<div class="text-[0.65rem] text-gray-600 dark:text-gray-400 line-clamp-1">
+										<div class="text-[0.65rem] text-[#767676] dark:text-gray-400 line-clamp-1">
 											{#if feedback.data.sibling_model_ids.length > 2}
 												{feedback.data.sibling_model_ids.slice(0, 2).join(', ')}, {$i18n.t(
 													'and {{COUNT}} more',
@@ -477,17 +620,20 @@
 								{#if conversation && conversation.length > 0}
 									<Tooltip content={$i18n.t('Chat')}>
 										<button
-											class="w-fit text-sm px-1 py-1 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+											type="button"
+											class="w-fit text-sm px-1 py-1 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
 											on:click={() => {
 												selectedFeedback = feedback;
 												showConversationModal = true;
 											}}
+											aria-label="View chat conversation for this feedback"
 										>
 											<ChatBubbles />
 										</button>
 									</Tooltip>
 								{:else}
-									<span class="text-gray-400 italic text-xs">-</span>
+									<span class="text-[#757575] italic text-xs" aria-label="No chat available">-</span
+									>
 								{/if}
 							</div>
 						</td>
@@ -510,7 +656,7 @@
 							<div class="w-full flex">
 								{#if feedback.data.details?.rating}
 									<div
-										class="inline-flex items-center justify-center px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800"
+										class="inline-flex items-center justify-center px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-[#6a6a6a] dark:text-gray-300"
 									>
 										{feedback.data.details.rating}/10
 									</div>
@@ -595,7 +741,9 @@
 						</td>
 
 						<td class="px-3 py-1.5 text-right text-xs" style="min-width: 90px;">
-							{dayjs(feedback.updated_at * 1000).fromNow()}
+							<time datetime={new Date(feedback.updated_at * 1000).toISOString()}>
+								{dayjs(feedback.updated_at * 1000).fromNow()}
+							</time>
 						</td>
 
 						<!-- Actions cell - ensure right alignment to match header -->
@@ -606,11 +754,12 @@
 										deleteFeedbackHandler(feedback.id);
 									}}
 								>
-									<button
-										class="inline-flex text-sm p-1 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+									<div
+										class="inline-flex text-sm p-1 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl cursor-pointer"
+										aria-label="Open feedback actions menu"
 									>
 										<EllipsisHorizontal />
-									</button>
+									</div>
 								</FeedbackMenu>
 							</div>
 						</td>
@@ -623,6 +772,6 @@
 
 <FeedbackConversationModal bind:show={showConversationModal} feedback={selectedFeedback} />
 
-{#if feedbacks.length > 10}
-	<Pagination bind:page count={feedbacks.length} perPage={10} />
+{#if filteredFeedbacks.length > 10}
+	<Pagination bind:page count={filteredFeedbacks.length} perPage={10} />
 {/if}
