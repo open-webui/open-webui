@@ -132,7 +132,18 @@
 								return null;
 							});
 							if (!chat && item) {
-								chat = await importChat(localStorage.token, item.chat, item?.meta ?? {});
+								chat = await importChat(
+									localStorage.token,
+									item.chat,
+									item?.meta ?? {},
+									false,
+									null,
+									item?.created_at ?? null,
+									item?.updated_at ?? null
+								).catch((error) => {
+									toast.error(`${error}`);
+									return null;
+								});
 							}
 
 							// Move the chat

@@ -29,14 +29,10 @@
 	const i18n = getContext('i18n');
 
 	import {
-		deleteChatById,
 		getChatList,
 		getAllTags,
-		getChatListBySearchText,
-		createNewChat,
 		getPinnedChatList,
 		toggleChatPinnedStatusById,
-		getChatPinnedStatusById,
 		getChatById,
 		updateChatFolderIdById,
 		importChat
@@ -202,7 +198,15 @@
 		for (const item of items) {
 			console.log(item);
 			if (item.chat) {
-				await importChat(localStorage.token, item.chat, item?.meta ?? {}, pinned, folderId);
+				await importChat(
+					localStorage.token,
+					item.chat,
+					item?.meta ?? {},
+					pinned,
+					folderId,
+					item?.created_at ?? null,
+					item?.updated_at ?? null
+				);
 			}
 		}
 
@@ -735,7 +739,15 @@
 							return null;
 						});
 						if (!chat && item) {
-							chat = await importChat(localStorage.token, item.chat, item?.meta ?? {});
+							chat = await importChat(
+								localStorage.token,
+								item.chat,
+								item?.meta ?? {},
+								false,
+								null,
+								item?.created_at ?? null,
+								item?.updated_at ?? null
+							);
 						}
 
 						if (chat) {
@@ -793,7 +805,15 @@
 										return null;
 									});
 									if (!chat && item) {
-										chat = await importChat(localStorage.token, item.chat, item?.meta ?? {});
+										chat = await importChat(
+											localStorage.token,
+											item.chat,
+											item?.meta ?? {},
+											false,
+											null,
+											item?.created_at ?? null,
+											item?.updated_at ?? null
+										);
 									}
 
 									if (chat) {
