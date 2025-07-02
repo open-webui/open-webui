@@ -598,7 +598,7 @@ def get_knowledge_by_id_or_raise(id: str) -> Optional[KnowledgeModel]:
 
 def enforce_ownership_or_admin(user, owner_id):
     if user.role != "admin" and user.id != owner_id:
-        raise HTTPException(status_code=HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
 
 
 def clean_up_files(file_ids: List[str]) -> bool:
