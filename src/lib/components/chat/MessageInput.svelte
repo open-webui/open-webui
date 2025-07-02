@@ -591,11 +591,11 @@
 			</div>
 		</div>
 
-		<div class="{transparentBackground ? 'bg-transparent' : 'bg-white dark:bg-gray-900'} ">
+		<div class="{transparentBackground ? 'bg-transparent' : 'bg-white dark:bg-gray-900'} rounded-3xl flex items-center justify-center">
 			<div
 				class="{($settings?.widescreenMode ?? null)
 					? 'max-w-full'
-					: 'max-w-6xl'} px-2.5 mx-auto inset-x-0"
+					: 'max-w-6xl'} mx-auto w-full flex flex-col relative"
 			>
 				<div class="">
 					<input
@@ -641,7 +641,7 @@
 						/>
 					{:else}
 						<form
-							class="w-full flex flex-col gap-1.5"
+							class="w-full flex items-center"
 							on:submit|preventDefault={() => {
 								// check if selectedModels support image input
 								dispatch('submit', prompt);
