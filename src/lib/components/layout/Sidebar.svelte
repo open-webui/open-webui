@@ -852,6 +852,7 @@
 				{#if folders}
 					<Folders
 						{folders}
+						{shiftKey}
 						on:import={(e) => {
 							const { folderId, items } = e.detail;
 							importChatHandler(items, false, folderId);

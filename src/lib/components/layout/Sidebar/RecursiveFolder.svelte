@@ -36,6 +36,7 @@
 
 	export let folders;
 	export let folderId;
+	export let shiftKey = false;
 
 	export let className = '';
 
@@ -476,6 +477,7 @@
 							<svelte:self
 								{folders}
 								folderId={childFolder.id}
+								{shiftKey}
 								parentDragged={dragged}
 								on:import={(e) => {
 									dispatch('import', e.detail);
@@ -495,6 +497,7 @@
 							<ChatItem
 								id={chat.id}
 								title={chat.title}
+								{shiftKey}
 								on:change={(e) => {
 									dispatch('change', e.detail);
 								}}
