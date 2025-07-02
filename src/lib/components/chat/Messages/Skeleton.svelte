@@ -20,11 +20,11 @@
 			transform: scale(1);
 		}
 		50% {
-			transform: scale(1.2);
+			transform: scale(1.25);
 		}
 	}
 
 	.animate-size {
-		animation: size 1s ease-in-out infinite;
+		animation: size 1.5s ease-in-out infinite;
 	}
 </style>
