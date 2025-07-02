@@ -227,7 +227,7 @@
 			}
 
 			// Check for version updates
-			if ($user?.role === 'admin' && !$config?.offline_mode) {
+			if ($user?.role === 'admin' && $config?.features?.enable_version_update_check) {
 				// Check if the user has dismissed the update toast in the last 24 hours
 				if (localStorage.dismissedUpdateToast) {
 					const dismissedUpdateToast = new Date(Number(localStorage.dismissedUpdateToast));
