@@ -2422,6 +2422,16 @@ SURVEY_URL_FR = PersistentConfig(
     "survey.url.fr",
     os.environ.get("SURVEY_URL_FR", ""),
 )
+TRAINING_URL = PersistentConfig(
+    "TRAINING_URL",
+    "training.url",
+    os.environ.get("TRAINING_URL", ""),
+)
+TRAINING_URL_FR = PersistentConfig(
+    "TRAINING_URL_FR",
+    "training.url.fr",
+    os.environ.get("TRAINING_URL_FR", ""),
+)
 
 ####################################
 # Jira Integration
