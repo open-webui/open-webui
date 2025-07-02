@@ -10,12 +10,11 @@
 
 	import AdvancedParams from './Advanced/AdvancedParams.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
-
 	export let saveSettings: Function;
 	export let getModels: Function;
 
 	// General
-	let themes = ['dark', 'light', 'rose-pine dark', 'rose-pine-dawn light', 'oled-dark'];
+	let themes = ['dark', 'light', 'oled-dark'];
 	let selectedTheme = 'system';
 
 	let languages: Awaited<ReturnType<typeof getLanguages>> = [];
@@ -39,10 +38,6 @@
 			);
 		}
 	};
-
-	// Advanced
-	let requestFormat = null;
-	let keepAlive: string | null = null;
 
 	let params = {
 		// Advanced
@@ -71,37 +66,7 @@
 		num_gpu: null
 	};
 
-	const validateJSON = (json) => {
-		try {
-			const obj = JSON.parse(json);
-
-			if (obj && typeof obj === 'object') {
-				return true;
-			}
-		} catch (e) {}
-		return false;
-	};
-
-	const toggleRequestFormat = async () => {
-		if (requestFormat === null) {
-			requestFormat = 'json';
-		} else {
-			requestFormat = null;
-		}
-
-		saveSettings({ requestFormat: requestFormat !== null ? requestFormat : undefined });
-	};
-
 	const saveHandler = async () => {
-		if (requestFormat !== null && requestFormat !== 'json') {
-			if (validateJSON(requestFormat) === false) {
-				toast.error($i18n.t('Invalid JSON schema'));
-				return;
-			} else {
-				requestFormat = JSON.parse(requestFormat);
-			}
-		}
-
 		saveSettings({
 			system: system !== '' ? system : undefined,
 			params: {
@@ -130,15 +95,13 @@
 				use_mmap: params.use_mmap !== null ? params.use_mmap : undefined,
 				use_mlock: params.use_mlock !== null ? params.use_mlock : undefined,
 				num_thread: params.num_thread !== null ? params.num_thread : undefined,
-				num_gpu: params.num_gpu !== null ? params.num_gpu : undefined
-			},
-			keepAlive: keepAlive ? (isNaN(keepAlive) ? keepAlive : parseInt(keepAlive)) : undefined,
-			requestFormat: requestFormat !== null ? requestFormat : undefined
+				num_gpu: params.num_gpu !== null ? params.num_gpu : undefined,
+				think: params.think !== null ? params.think : undefined,
+				keep_alive: params.keep_alive !== null ? params.keep_alive : undefined,
+				format: params.format !== null ? params.format : undefined
+			}
 		});
 		dispatch('save');
-
-		requestFormat =
-			typeof requestFormat === 'object' ? JSON.stringify(requestFormat, null, 2) : requestFormat;
 	};
 
 	onMount(async () => {
@@ -148,14 +111,6 @@
 
 		notificationEnabled = $settings.notificationEnabled ?? false;
 		system = $settings.system ?? '';
-
-		requestFormat = $settings.requestFormat ?? null;
-		if (requestFormat !== null && requestFormat !== 'json') {
-			requestFormat =
-				typeof requestFormat === 'object' ? JSON.stringify(requestFormat, null, 2) : requestFormat;
-		}
-
-		keepAlive = $settings.keepAlive ?? null;
 
 		params = { ...params, ...$settings.params };
 		params.stop = $settings?.params?.stop ? ($settings?.params?.stop ?? []).join(',') : null;
@@ -232,7 +187,7 @@
 	};
 </script>
 
-<div class="flex flex-col h-full justify-between text-sm">
+<div class="flex flex-col h-full justify-between text-sm" id="tab-general">
 	<div class="  overflow-y-scroll max-h-[28rem] lg:max-h-full">
 		<div class="">
 			<div class=" mb-1 text-sm font-medium">{$i18n.t('WebUI Settings')}</div>
@@ -241,7 +196,9 @@
 				<div class=" self-center text-xs font-medium">{$i18n.t('Theme')}</div>
 				<div class="flex items-center relative">
 					<select
-						class=" dark:bg-gray-900 w-fit pr-8 rounded-sm py-2 px-2 text-xs bg-transparent outline-hidden text-right"
+						class="dark:bg-gray-900 w-fit pr-8 rounded-sm py-2 px-2 text-xs bg-transparent text-right {$settings.highContrastMode
+							? ''
+							: 'outline-hidden'}"
 						bind:value={selectedTheme}
 						placeholder="Select a theme"
 						on:change={() => themeChangeHandler(selectedTheme)}
@@ -261,7 +218,9 @@
 				<div class=" self-center text-xs font-medium">{$i18n.t('Language')}</div>
 				<div class="flex items-center relative">
 					<select
-						class=" dark:bg-gray-900 w-fit pr-8 rounded-sm py-2 px-2 text-xs bg-transparent outline-hidden text-right"
+						class="dark:bg-gray-900 w-fit pr-8 rounded-sm py-2 px-2 text-xs bg-transparent text-right {$settings.highContrastMode
+							? ''
+							: 'outline-hidden'}"
 						bind:value={lang}
 						placeholder="Select a language"
 						on:change={(e) => {
@@ -308,7 +267,7 @@
 			</div>
 		</div>
 
-		{#if $user?.role === 'admin' || $user?.permissions.chat?.controls}
+		{#if $user?.role === 'admin' || ($user?.permissions.chat?.system_prompt ?? true)}
 			<hr class="border-gray-50 dark:border-gray-850 my-3" />
 
 			<div>
@@ -320,7 +279,9 @@
 					placeholder={$i18n.t('Enter system prompt here')}
 				/>
 			</div>
+		{/if}
 
+		{#if $user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true)}
 			<div class="mt-2 space-y-3 pr-1.5">
 				<div class="flex justify-between items-center text-sm">
 					<div class="  font-medium">{$i18n.t('Advanced Parameters')}</div>
@@ -335,77 +296,6 @@
 
 				{#if showAdvanced}
 					<AdvancedParams admin={$user?.role === 'admin'} bind:params />
-					<hr class=" border-gray-100 dark:border-gray-850" />
-
-					<div class=" w-full justify-between">
-						<div class="flex w-full justify-between">
-							<div class=" self-center text-xs font-medium">{$i18n.t('Keep Alive')}</div>
-
-							<button
-								class="p-1 px-3 text-xs flex rounded-sm transition"
-								type="button"
-								on:click={() => {
-									keepAlive = keepAlive === null ? '5m' : null;
-								}}
-							>
-								{#if keepAlive === null}
-									<span class="ml-2 self-center"> {$i18n.t('Default')} </span>
-								{:else}
-									<span class="ml-2 self-center"> {$i18n.t('Custom')} </span>
-								{/if}
-							</button>
-						</div>
-
-						{#if keepAlive !== null}
-							<div class="flex mt-1 space-x-2">
-								<input
-									class="w-full text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-									type="text"
-									placeholder={$i18n.t("e.g. '30s','10m'. Valid time units are 's', 'm', 'h'.")}
-									bind:value={keepAlive}
-								/>
-							</div>
-						{/if}
-					</div>
-
-					<div>
-						<div class=" flex w-full justify-between">
-							<div class=" self-center text-xs font-medium">{$i18n.t('Request Mode')}</div>
-
-							<button
-								class="p-1 px-3 text-xs flex rounded-sm transition"
-								on:click={() => {
-									toggleRequestFormat();
-								}}
-							>
-								{#if requestFormat === null}
-									<span class="ml-2 self-center"> {$i18n.t('Default')} </span>
-								{:else}
-									<!-- <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                            class="w-4 h-4 self-center"
-                        >
-                            <path
-                                d="M10 2a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 2zM10 15a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 15zM10 7a3 3 0 100 6 3 3 0 000-6zM15.657 5.404a.75.75 0 10-1.06-1.06l-1.061 1.06a.75.75 0 001.06 1.06l1.06-1.06zM6.464 14.596a.75.75 0 10-1.06-1.06l-1.06 1.06a.75.75 0 001.06 1.06l1.06-1.06zM18 10a.75.75 0 01-.75.75h-1.5a.75.75 0 010-1.5h1.5A.75.75 0 0118 10zM5 10a.75.75 0 01-.75.75h-1.5a.75.75 0 010-1.5h1.5A.75.75 0 015 10zM14.596 15.657a.75.75 0 001.06-1.06l-1.06-1.061a.75.75 0 10-1.06 1.06l1.06 1.06zM5.404 6.464a.75.75 0 001.06-1.06l-1.06-1.06a.75.75 0 10-1.061 1.06l1.06 1.06z"
-                            />
-                        </svg> -->
-									<span class="ml-2 self-center"> {$i18n.t('JSON')} </span>
-								{/if}
-							</button>
-						</div>
-
-						{#if requestFormat !== null}
-							<div class="flex mt-1 space-x-2">
-								<Textarea
-									className="w-full  text-sm dark:text-gray-300 dark:bg-gray-900 outline-hidden"
-									placeholder={$i18n.t('e.g. "json" or a JSON schema')}
-									bind:value={requestFormat}
-								/>
-							</div>
-						{/if}
-					</div>
 				{/if}
 			</div>
 		{/if}

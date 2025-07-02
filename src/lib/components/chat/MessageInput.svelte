@@ -1,5 +1,9 @@
 <script lang="ts">
+	import DOMPurify from 'dompurify';
+	import { marked } from 'marked';
+
 	import { toast } from 'svelte-sonner';
+
 	import { v4 as uuidv4 } from 'uuid';
 	import { createPicker, getAuthToken } from '$lib/utils/google-drive-picker';
 	import { pickAndDownloadFile } from '$lib/utils/onedrive-file-picker';
@@ -87,7 +91,15 @@
 
 	$: onChange({
 		prompt,
-		files: files.filter((file) => file.type !== 'image'),
+		files: files
+			.filter((file) => file.type !== 'image')
+			.map((file) => {
+				return {
+					...file,
+					user: undefined,
+					access_control: undefined
+				};
+			}),
 		selectedToolIds,
 		selectedFilterIds,
 		imageGenerationEnabled,
@@ -295,6 +307,19 @@
 
 	const inputFilesHandler = async (inputFiles) => {
 		console.log('Input files handler called with:', inputFiles);
+
+		if (
+			($config?.file?.max_count ?? null) !== null &&
+			files.length + inputFiles.length > $config?.file?.max_count
+		) {
+			toast.error(
+				$i18n.t(`You can only chat with a maximum of {{maxCount}} file(s) at a time.`, {
+					maxCount: $config?.file?.max_count
+				})
+			);
+			return;
+		}
+
 		inputFiles.forEach((file) => {
 			console.log('Processing file:', {
 				name: file.name,
@@ -330,9 +355,30 @@
 				reader.onload = async (event) => {
 					let imageUrl = event.target.result;
 
-					if ($settings?.imageCompression ?? false) {
-						const width = $settings?.imageCompressionSize?.width ?? null;
-						const height = $settings?.imageCompressionSize?.height ?? null;
+					if (
+						($settings?.imageCompression ?? false) ||
+						($config?.file?.image_compression?.width ?? null) ||
+						($config?.file?.image_compression?.height ?? null)
+					) {
+						let width = null;
+						let height = null;
+
+						if ($settings?.imageCompression ?? false) {
+							width = $settings?.imageCompressionSize?.width ?? null;
+							height = $settings?.imageCompressionSize?.height ?? null;
+						}
+
+						if (
+							($config?.file?.image_compression?.width ?? null) ||
+							($config?.file?.image_compression?.height ?? null)
+						) {
+							if (width > ($config?.file?.image_compression?.width ?? null)) {
+								width = $config?.file?.image_compression?.width ?? null;
+							}
+							if (height > ($config?.file?.image_compression?.height ?? null)) {
+								height = $config?.file?.image_compression?.height ?? null;
+							}
+						}
 
 						if (width || height) {
 							imageUrl = await compressImage(imageUrl, width, height);
@@ -595,7 +641,7 @@
 						/>
 					{:else}
 						<form
-							class="w-full flex gap-1.5"
+							class="w-full flex flex-col gap-1.5"
 							on:submit|preventDefault={() => {
 								// check if selectedModels support image input
 								dispatch('submit', prompt);
@@ -1520,6 +1566,14 @@
 									</div>
 								</div>
 							</div>
+
+							{#if $config?.license_metadata?.input_footer}
+								<div class=" text-xs text-gray-500 text-center line-clamp-1 marked">
+									{@html DOMPurify.sanitize(marked($config?.license_metadata?.input_footer))}
+								</div>
+							{:else}
+								<div class="mb-1" />
+							{/if}
 						</form>
 					{/if}
 				</div>
