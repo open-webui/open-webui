@@ -1468,7 +1468,7 @@ async def list_tasks_by_chat_id_endpoint(
 
     task_ids = await list_task_ids_by_chat_id(request, chat_id)
 
-    print(f"Task IDs for chat {chat_id}: {task_ids}")
+    log.debug(f"Task IDs for chat {chat_id}: {task_ids}")
     return {"task_ids": task_ids}
 
 
