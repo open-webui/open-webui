@@ -33,7 +33,6 @@
 		</script>
 
 		<script>
-
 			// On page load or when changing themes, best to add inline in `head` to avoid FOUC
 			(() => {
 				const metaThemeColorTag = document.querySelector('meta[name="theme-color"]');
@@ -82,10 +81,11 @@
 
 				const logo = document.createElement('img');
 				logo.id = 'logo';
-				logo.style = "position: absolute; width: auto; height: 6rem; top: 44%; left: 50%; transform: translateX(-50%); display:block;";
+				logo.style =
+					'position: absolute; width: auto; height: 6rem; top: 44%; left: 50%; transform: translateX(-50%); display:block;';
 				logo.src = isDarkMode ? '/static/splash-dark.png' : '/static/splash.png';
 
-				document.addEventListener('DOMContentLoaded', function() {
+				document.addEventListener('DOMContentLoaded', function () {
 					const splash = document.getElementById('splash-screen');
 					if (splash) splash.prepend(logo);
 				});
@@ -109,7 +109,6 @@
 					overflow-y: scroll !important;
 				}
 			</style>
-
 
 			<div
 				style="
