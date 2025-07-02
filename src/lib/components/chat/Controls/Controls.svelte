@@ -8,6 +8,7 @@
 	import Valves from '$lib/components/chat/Controls/Valves.svelte';
 	import FileItem from '$lib/components/common/FileItem.svelte';
 	import Collapsible from '$lib/components/common/Collapsible.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	import { user } from '$lib/stores';
 	export let models = [];
@@ -19,7 +20,7 @@
 
 <div class=" dark:text-white">
 	<div class=" flex items-center justify-between dark:text-gray-100 mb-2">
-		<div class=" text-lg font-medium self-center font-primary">{$i18n.t('Chat Controls')}</div>
+		<h2 class=" text-lg font-medium self-center font-primary">{$i18n.t('Chat Controls')}</h2>
 		<button
 			class="self-center"
 			on:click={() => {
@@ -72,12 +73,14 @@
 
 			<Collapsible title={$i18n.t('System Prompt')} open={true} buttonClassName="w-full">
 				<div class="" slot="content">
-					<textarea
-						bind:value={params.system}
-						class="w-full text-xs py-1.5 bg-transparent outline-none resize-none"
-						rows="4"
-						placeholder={$i18n.t('Enter system prompt')}
-					/>
+					<Tooltip content={$i18n.t('Enter system prompt')} placement="top-start">
+						<textarea
+							bind:value={params.system}
+							class="w-full text-xs py-1.5 bg-transparent outline-none resize-none"
+							rows="4"
+							placeholder={$i18n.t('Enter system prompt')}
+						/>
+					</Tooltip>
 				</div>
 			</Collapsible>
 

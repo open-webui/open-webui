@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import { ariaMessage } from '$lib/stores';
 	import { getContext, createEventDispatcher } from 'svelte';
 
 	const dispatch = createEventDispatcher();
@@ -38,6 +39,21 @@
 
 	let customFieldName = '';
 	let customFieldValue = '';
+
+	const announceCustomField = (value: any) => {
+		ariaMessage.set(
+			(value ?? null) === null
+				? $i18n.t('Default mode enabled. Custom Input field removed')
+				: $i18n.t('Custom mode enabled. Custom Input field available')
+		);
+	};
+	const announceCustomFieldAndSlider = (value: any) => {
+		ariaMessage.set(
+			(value ?? null) === null
+				? $i18n.t('Default mode enabled. Custom Input field removed')
+				: $i18n.t('Custom mode enabled. Slider and Input field removed')
+		);
+	};
 
 	$: if (params) {
 		dispatch('change', params);
@@ -88,6 +104,7 @@
 			)}
 			placement="top-start"
 			className="inline-tooltip"
+			tooltipID="tooltip-seed"
 		>
 			<div class="flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">
@@ -97,8 +114,10 @@
 				<button
 					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
 					type="button"
+					aria-describedby="tooltip-seed"
 					on:click={() => {
 						params.seed = (params?.seed ?? null) === null ? 0 : null;
+						announceCustomField(params.seed);
 					}}
 				>
 					{#if (params?.seed ?? null) === null}
@@ -113,14 +132,16 @@
 		{#if (params?.seed ?? null) !== null}
 			<div class="flex mt-0.5 space-x-2">
 				<div class=" flex-1">
-					<input
-						class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-						type="number"
-						placeholder={$i18n.t('Enter Seed')}
-						bind:value={params.seed}
-						autocomplete="off"
-						min="0"
-					/>
+					<Tooltip content={$i18n.t('Enter Seed')} placement="top-start">
+						<input
+							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+							type="number"
+							placeholder={$i18n.t('Enter Seed')}
+							bind:value={params.seed}
+							autocomplete="off"
+							min="0"
+						/>
+					</Tooltip>
 				</div>
 			</div>
 		{/if}
@@ -133,6 +154,7 @@
 			)}
 			placement="top-start"
 			className="inline-tooltip"
+			tooltipID="tooltip-stop-sequence"
 		>
 			<div class="flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">
@@ -142,8 +164,10 @@
 				<button
 					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
 					type="button"
+					aria-describedby="tooltip-stop-sequence"
 					on:click={() => {
 						params.stop = (params?.stop ?? null) === null ? '' : null;
+						announceCustomField(params.stop);
 					}}
 				>
 					{#if (params?.stop ?? null) === null}
@@ -158,13 +182,15 @@
 		{#if (params?.stop ?? null) !== null}
 			<div class="flex mt-0.5 space-x-2">
 				<div class=" flex-1">
-					<input
-						class="w-full rounded-lg py-2 px-1 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-						type="text"
-						placeholder={$i18n.t('Enter stop sequence')}
-						bind:value={params.stop}
-						autocomplete="off"
-					/>
+					<Tooltip content={$i18n.t('Enter stop sequence')} placement="top-start">
+						<input
+							class="w-full rounded-lg py-2 px-1 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+							type="text"
+							placeholder={$i18n.t('Enter stop sequence')}
+							bind:value={params.stop}
+							autocomplete="off"
+						/>
+					</Tooltip>
 				</div>
 			</div>
 		{/if}
@@ -177,6 +203,7 @@
 			)}
 			placement="top-start"
 			className="inline-tooltip"
+			tooltipID="tooltip-temperature"
 		>
 			<div class="flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">
@@ -185,8 +212,10 @@
 				<button
 					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
 					type="button"
+					aria-describedby="tooltip-temperature"
 					on:click={() => {
 						params.temperature = (params?.temperature ?? null) === null ? 0.8 : null;
+						announceCustomFieldAndSlider(params.temperature);
 					}}
 				>
 					{#if (params?.temperature ?? null) === null}
@@ -232,6 +261,7 @@
 			)}
 			placement="top-start"
 			className="inline-tooltip"
+			tooltipID="tooltip-reasoning-effort"
 		>
 			<div class="flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">
@@ -240,8 +270,10 @@
 				<button
 					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
 					type="button"
+					aria-describedby="tooltip-reasoning-effort"
 					on:click={() => {
 						params.reasoning_effort = (params?.reasoning_effort ?? null) === null ? 'medium' : null;
+						announceCustomField(params.reasoning_effort);
 					}}
 				>
 					{#if (params?.reasoning_effort ?? null) === null}
@@ -256,13 +288,15 @@
 		{#if (params?.reasoning_effort ?? null) !== null}
 			<div class="flex mt-0.5 space-x-2">
 				<div class=" flex-1">
-					<input
-						class="w-full rounded-lg py-2 px-1 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-						type="text"
-						placeholder={$i18n.t('Enter reasoning effort')}
-						bind:value={params.reasoning_effort}
-						autocomplete="off"
-					/>
+					<Tooltip content={$i18n.t('Enter reasoning effort')} placement="top-start">
+						<input
+							class="w-full rounded-lg py-2 px-1 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+							type="text"
+							placeholder={$i18n.t('Enter reasoning effort')}
+							bind:value={params.reasoning_effort}
+							autocomplete="off"
+						/>
+					</Tooltip>
 				</div>
 			</div>
 		{/if}
@@ -283,8 +317,10 @@
 				<button
 					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
 					type="button"
+					aria-describedby="tooltip-mirostat"
 					on:click={() => {
 						params.mirostat = (params?.mirostat ?? null) === null ? 0 : null;
+						announceCustomFieldAndSlider(params.mirostat);
 					}}
 				>
 					{#if (params?.mirostat ?? null) === null}
@@ -330,6 +366,7 @@
 			)}
 			placement="top-start"
 			className="inline-tooltip"
+			tooltipID="tooltip-mirostat-eta"
 		>
 			<div class="flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">
@@ -338,8 +375,10 @@
 				<button
 					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
 					type="button"
+					aria-describedby="tooltip-mirostat-eta"
 					on:click={() => {
 						params.mirostat_eta = (params?.mirostat_eta ?? null) === null ? 0.1 : null;
+						announceCustomFieldAndSlider(params.mirostat_eta);
 					}}
 				>
 					{#if (params?.mirostat_eta ?? null) === null}
@@ -385,6 +424,7 @@
 			)}
 			placement="top-start"
 			className="inline-tooltip"
+			tooltipID="tooltip-mirostat-tau"
 		>
 			<div class="flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">
@@ -394,8 +434,10 @@
 				<button
 					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
 					type="button"
+					aria-describedby="tooltip-mirostat-tau"
 					on:click={() => {
 						params.mirostat_tau = (params?.mirostat_tau ?? null) === null ? 5.0 : null;
+						announceCustomFieldAndSlider(params.mirostat_tau);
 					}}
 				>
 					{#if (params?.mirostat_tau ?? null) === null}
@@ -441,6 +483,7 @@
 			)}
 			placement="top-start"
 			className="inline-tooltip"
+			tooltipID="tooltip-top-k"
 		>
 			<div class="flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">
@@ -449,8 +492,10 @@
 				<button
 					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
 					type="button"
+					aria-describedby="tooltip-top-k"
 					on:click={() => {
 						params.top_k = (params?.top_k ?? null) === null ? 40 : null;
+						announceCustomFieldAndSlider(params.top_k);
 					}}
 				>
 					{#if (params?.top_k ?? null) === null}
@@ -496,6 +541,7 @@
 			)}
 			placement="top-start"
 			className="inline-tooltip"
+			tooltipID="tooltip-top-p"
 		>
 			<div class="flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">
@@ -505,8 +551,10 @@
 				<button
 					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
 					type="button"
+					aria-describedby="tooltip-top-p"
 					on:click={() => {
 						params.top_p = (params?.top_p ?? null) === null ? 0.9 : null;
+						announceCustomFieldAndSlider(params.top_p);
 					}}
 				>
 					{#if (params?.top_p ?? null) === null}
@@ -552,6 +600,7 @@
 			)}
 			placement="top-start"
 			className="inline-tooltip"
+			tooltipID="tooltip-min-p"
 		>
 			<div class="flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">
@@ -560,8 +609,10 @@
 				<button
 					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
 					type="button"
+					aria-describedby="tooltip-min-p"
 					on:click={() => {
 						params.min_p = (params?.min_p ?? null) === null ? 0.0 : null;
+						announceCustomFieldAndSlider(params.min_p);
 					}}
 				>
 					{#if (params?.min_p ?? null) === null}
@@ -607,6 +658,7 @@
 			)}
 			placement="top-start"
 			className="inline-tooltip"
+			tooltipID="tooltip-frequency-penalty"
 		>
 			<div class="flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">
@@ -616,8 +668,10 @@
 				<button
 					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
 					type="button"
+					aria-describedby="tooltip-frequency-penalty"
 					on:click={() => {
 						params.frequency_penalty = (params?.frequency_penalty ?? null) === null ? 1.1 : null;
+						announceCustomFieldAndSlider(params.frequency_penalty);
 					}}
 				>
 					{#if (params?.frequency_penalty ?? null) === null}
@@ -663,6 +717,7 @@
 			)}
 			placement="top-start"
 			className="inline-tooltip"
+			tooltipID="tooltip-presence-penalty"
 		>
 			<div class="flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">
@@ -672,8 +727,10 @@
 				<button
 					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
 					type="button"
+					aria-describedby="tooltip-repeat-last-n"
 					on:click={() => {
 						params.repeat_last_n = (params?.repeat_last_n ?? null) === null ? 64 : null;
+						announceCustomFieldAndSlider(params.repeat_last_n);
 					}}
 				>
 					{#if (params?.repeat_last_n ?? null) === null}
@@ -719,6 +776,7 @@
 			)}
 			placement="top-start"
 			className="inline-tooltip"
+			tooltipID="tooltip-tfs-z"
 		>
 			<div class="flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">
@@ -728,8 +786,10 @@
 				<button
 					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
 					type="button"
+					aria-describedby="tooltip-tfs-z"
 					on:click={() => {
 						params.tfs_z = (params?.tfs_z ?? null) === null ? 1 : null;
+						announceCustomFieldAndSlider(params.tfs_z);
 					}}
 				>
 					{#if (params?.tfs_z ?? null) === null}
@@ -775,6 +835,7 @@
 			)}
 			placement="top-start"
 			className="inline-tooltip"
+			tooltipID="tooltip-num_keep"
 		>
 			<div class="flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">
@@ -784,8 +845,10 @@
 				<button
 					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
 					type="button"
+					aria-describedby="tooltip-num_keep"
 					on:click={() => {
 						params.num_ctx = (params?.num_ctx ?? null) === null ? 2048 : null;
+						announceCustomFieldAndSlider(params.num_ctx);
 					}}
 				>
 					{#if (params?.num_ctx ?? null) === null}
@@ -830,6 +893,7 @@
 			)}
 			placement="top-start"
 			className="inline-tooltip"
+			tooltipID="tooltip-num_predict"
 		>
 			<div class="flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">
@@ -839,8 +903,10 @@
 				<button
 					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
 					type="button"
+					aria-describedby="tooltip-num_predict"
 					on:click={() => {
 						params.num_batch = (params?.num_batch ?? null) === null ? 512 : null;
+						announceCustomFieldAndSlider(params.num_batch);
 					}}
 				>
 					{#if (params?.num_batch ?? null) === null}
@@ -940,6 +1006,7 @@
 			)}
 			placement="top-start"
 			className="inline-tooltip"
+			tooltipID="tooltip-num_batch"
 		>
 			<div class="flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">
@@ -949,8 +1016,10 @@
 				<button
 					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
 					type="button"
+					aria-describedby="tooltip-num_batch"
 					on:click={() => {
 						params.max_tokens = (params?.max_tokens ?? null) === null ? 128 : null;
+						announceCustomFieldAndSlider(params.max_tokens);
 					}}
 				>
 					{#if (params?.max_tokens ?? null) === null}

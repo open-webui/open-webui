@@ -2,20 +2,44 @@ import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 export const getDomains = async (token: string): Promise<string[]> => {
 	try {
-		const res = await fetch(`${WEBUI_API_BASE_URL}/users/domains`, {
-			method: 'GET',
-			headers: {
-				Accept: 'application/json',
-				authorization: `Bearer ${token}`
-			}
-		});
+		const [usersRes, metricsRes] = await Promise.all([
+			fetch(`${WEBUI_API_BASE_URL}/users/domains`, {
+				method: 'GET',
+				headers: {
+					Accept: 'application/json',
+					authorization: `Bearer ${token}`
+				}
+			}),
+			fetch(`${WEBUI_API_BASE_URL}/metrics/domains`, {
+				method: 'GET',
+				headers: {
+					Accept: 'application/json',
+					authorization: `Bearer ${token}`
+				}
+			})
+		]);
 
-		if (!res.ok) {
-			const error = await res.json();
-			throw new Error(`Error ${res.status}: ${error.detail || 'Failed to get domains'}`);
+		if (!usersRes.ok) {
+			const error = await usersRes.json();
+			throw new Error(`Error ${usersRes.status}: ${error.detail || 'Failed to get user domains'}`);
 		}
-		const data = await res.json();
-		return data.domains;
+		if (!metricsRes.ok) {
+			const error = await metricsRes.json();
+			throw new Error(
+				`Error ${metricsRes.status}: ${error.detail || 'Failed to get metrics domains'}`
+			);
+		}
+
+		const usersData = await usersRes.json();
+		const metricsData = await metricsRes.json();
+
+		const allDomains = [
+			...(Array.isArray(usersData.domains) ? usersData.domains : []),
+			...(Array.isArray(metricsData.domains) ? metricsData.domains : [])
+		];
+
+		// Return unique domains
+		return Array.from(new Set(allDomains));
 	} catch (err) {
 		throw new Error(err.message || 'An unexpected error occurred');
 	}
@@ -82,7 +106,6 @@ export const getHistoricalUsers = async (
 	domain?: string
 ): Promise<Array<{ date: string; count: number }>> => {
 	try {
-		// Build URL with proper domain handling
 		let url = `${WEBUI_API_BASE_URL}/users/enrollment/historical?days=${days}`;
 
 		if (domain) {
@@ -118,8 +141,7 @@ export const getHistoricalDailyUsers = async (
 	domain?: string
 ): Promise<Array<{ date: string; count: number }>> => {
 	try {
-		// Build URL with proper domain handling
-		let url = `${WEBUI_API_BASE_URL}/users/daily/historical?days=${days}`;
+		let url = `${WEBUI_API_BASE_URL}/metrics/historical/users/daily?days=${days}`;
 
 		if (domain) {
 			url += `&domain=${encodeURIComponent(domain)}`;
@@ -138,7 +160,9 @@ export const getHistoricalDailyUsers = async (
 				return generateFallbackDates(days);
 			}
 			const error = await res.json();
-			throw new Error(`Error ${res.status}: ${error.detail || 'Failed to get historical users'}`);
+			throw new Error(
+				`Error ${res.status}: ${error.detail || 'Failed to get historical daily users'}`
+			);
 		}
 		const data = await res.json();
 		return data.historical_daily_users || [];
@@ -263,10 +287,8 @@ export const getHistoricalPrompts = async (
 	domain?: string
 ): Promise<any[]> => {
 	try {
-		// Build URL with proper domain handling
 		let url = `${WEBUI_API_BASE_URL}/metrics/historical/prompts?days=${days}`;
 
-		// Only add domain parameter if it's not null or undefined
 		if (domain !== null && domain !== undefined) {
 			url += `&domain=${encodeURIComponent(domain)}`;
 		}
@@ -300,10 +322,8 @@ export const getHistoricalTokens = async (
 	domain?: string
 ): Promise<any[]> => {
 	try {
-		// Build URL with proper domain handling
 		let url = `${WEBUI_API_BASE_URL}/metrics/historical/tokens?days=${days}`;
 
-		// Only add domain parameter if it's not null or undefined
 		if (domain !== null && domain !== undefined) {
 			url += `&domain=${encodeURIComponent(domain)}`;
 		}

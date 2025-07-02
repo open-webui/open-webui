@@ -421,6 +421,7 @@ class YoutubeLoaderConfig(BaseModel):
 
 class WebSearchConfig(BaseModel):
     enabled: bool
+    bypass_embedding_and_retrieval: bool
     engine: Optional[str] = None
     searxng_query_url: Optional[str] = None
     google_pse_api_key: Optional[str] = None
@@ -510,6 +511,9 @@ async def update_rag_config(
         )
 
         request.app.state.config.ENABLE_RAG_WEB_SEARCH = form_data.web.search.enabled
+        request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = (
+            form_data.web.search.bypass_embedding_and_retrieval
+        )
         request.app.state.config.RAG_WEB_SEARCH_ENGINE = form_data.web.search.engine
         request.app.state.config.SEARXNG_QUERY_URL = (
             form_data.web.search.searxng_query_url
@@ -584,6 +588,7 @@ async def update_rag_config(
             "web_loader_ssl_verification": request.app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
             "search": {
                 "enabled": request.app.state.config.ENABLE_RAG_WEB_SEARCH,
+                "bypass_embedding_and_retrieval": request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL,
                 "engine": request.app.state.config.RAG_WEB_SEARCH_ENGINE,
                 "searxng_query_url": request.app.state.config.SEARXNG_QUERY_URL,
                 "google_pse_api_key": request.app.state.config.GOOGLE_PSE_API_KEY,
@@ -670,6 +675,7 @@ def save_docs_to_vector_db(
     overwrite: bool = False,
     split: bool = True,
     add: bool = False,
+    user=None,
 ) -> bool:
     def _get_docs_info(docs: list[Document]) -> str:
         docs_info = set()
@@ -785,7 +791,7 @@ def save_docs_to_vector_db(
         )
 
         embeddings = embedding_function(
-            list(map(lambda x: x.replace("\n", " "), texts))
+            list(map(lambda x: x.replace("\n", " "), texts)), user=user
         )
 
         items = [
@@ -1282,11 +1288,11 @@ async def process_web_search(
             requests_per_second=request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
         )
         docs = loader.load()
-        save_docs_to_vector_db(request, docs, collection_name, overwrite=True)
 
-        if request.app.state.config.RAG_WEB_SEARCH_FULL_CONTEXT:
+        if request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
             return {
                 "status": True,
+                "collection_name": None,
                 "docs": [
                     {
                         "content": doc.page_content,

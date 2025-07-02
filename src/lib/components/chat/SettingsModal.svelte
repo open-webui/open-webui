@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getContext, tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import { models, settings, user } from '$lib/stores';
+	import { ariaMessage, models, settings, user } from '$lib/stores';
 	import { updateUserSettings } from '$lib/apis/users';
 	import { getModels as _getModels } from '$lib/apis';
 	import { goto } from '$app/navigation';
@@ -290,6 +290,7 @@
 		clearTimeout(searchDebounceTimeout);
 		searchDebounceTimeout = setTimeout(() => {
 			visibleTabs = searchSettings(search);
+			ariaMessage.set(visibleTabs.length + $i18n.t('vibile tabs found'));
 			if (visibleTabs.length > 0 && !visibleTabs.includes(selectedTab)) {
 				selectedTab = visibleTabs[0];
 			}
@@ -332,11 +333,18 @@
 			settingsTabsContainer.removeEventListener('wheel', scrollHandler);
 		}
 	};
+	const announceSelectedTab = async () => {
+		const title = $i18n.t(selectedTab);
+		ariaMessage.set($i18n.t('settingsTab', { title }));
+	};
 
 	$: if (show) {
 		addScrollListener();
 	} else {
 		removeScrollListener();
+	}
+	$: if (selectedTab) {
+		announceSelectedTab();
 	}
 </script>
 
