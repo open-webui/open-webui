@@ -2,9 +2,24 @@ import logging
 import requests
 from open_webui.env import SRC_LOG_LEVELS
 import time
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
+
+# Retry até 3 vezes com espera exponencial (1s, 2s, 4s), apenas em falhas de request
+
+
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=1, max=4),
+    retry=retry_if_exception_type(requests.RequestException),
+    reraise=True  # lança o erro após esgotar as tentativas
+)
+def post_with_retry(url, headers=None, files=None, data=None):
+    r = requests.post(url=url, headers=headers, files=files, data=data)
+    r.raise_for_status()  # Lança um HTTPError se o status não for 2xx
+    return r
 
 
 class PdftotextLoader():
@@ -70,16 +85,11 @@ class PdftotextLoaderAsync:
             'header_footer': True
         }
 
-        r = requests.post(url=self.url,
-                          headers=headers,
-                          files=files,
-                          data=data,
-                          )
-        if r.status_code != 200:
-            log.error(
-                f"Failed to extract text from PDF using OCR: {r.status_code} - {r.text}")
-            return None
+        r = self.send_pdf_ocr(files, data, headers)
 
+        if r is None:
+            log.error("Failed to extract text from PDF using OCR after retries.")
+            return None
         log.info(r)
         response = r.json()
         task_id = response.get("task_id", "")
@@ -88,6 +98,16 @@ class PdftotextLoaderAsync:
             f"Extracted text from pdf using OCR, task_id -> {task_id} ")
 
         return task_id
+
+    def send_pdf_ocr(self, files, data, headers):
+        try:
+            r = post_with_retry(url=self.url, headers=headers,
+                                files=files, data=data)
+            return r
+        except requests.RequestException as e:
+            log.error(
+                f"Failed to extract text from PDF using OCR after retries: {e}")
+            return None
 
     def check_status(self, task_id):
         """
