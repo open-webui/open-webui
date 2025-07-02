@@ -1,4 +1,3 @@
-
 ifneq ($(shell which docker-compose 2>/dev/null),)
     DOCKER_COMPOSE := docker-compose
 else
