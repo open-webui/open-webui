@@ -90,10 +90,6 @@
 			return;
 		}
 
-		if (embeddingEngine === 'openai' && (OpenAIKey === '' || OpenAIUrl === '')) {
-			toast.error($i18n.t('OpenAI URL/Key required.'));
-			return;
-		}
 		if (
 			embeddingEngine === 'azure_openai' &&
 			(AzureOpenAIKey === '' || AzureOpenAIUrl === '' || AzureOpenAIVersion === '')
@@ -731,7 +727,11 @@
 										required
 									/>
 
-									<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={OpenAIKey} />
+									<SensitiveInput
+										placeholder={$i18n.t('API Key')}
+										bind:value={OpenAIKey}
+										required={false}
+									/>
 								</div>
 							{:else if embeddingEngine === 'ollama'}
 								<div class="my-0.5 flex gap-2 pr-2">
