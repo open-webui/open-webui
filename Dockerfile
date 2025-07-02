@@ -11,7 +11,7 @@ ARG USE_CUDA_VER=cu128
 # IMPORTANT: If you change the embedding model (sentence-transformers/all-MiniLM-L6-v2) and vice versa, you aren't able to use RAG Chat with your previous documents loaded in the WebUI! You need to re-embed them.
 ARG USE_EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
 ARG USE_RERANKING_MODEL=""
-ARG ARG BUILDPLATFORM=""
+ARG BUILDPLATFORM=linux/amd64
 
 # Tiktoken encoding name; models to use can be found at https://huggingface.co/models?library=tiktoken
 ARG USE_TIKTOKEN_ENCODING_NAME="cl100k_base"
