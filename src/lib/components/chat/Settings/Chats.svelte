@@ -69,6 +69,7 @@
 			} else {
 				// Legacy format
 				await importChat(localStorage.token, chat, {}, false, null);
+			}
 		}
 
 		currentChatPage.set(1);
@@ -108,6 +109,7 @@
 	const handleArchivedChatsChange = async () => {
 		currentChatPage.set(1);
 		await chats.set(await getChatList(localStorage.token, $currentChatPage));
+
 		scrollPaginationEnabled.set(true);
 	};
 </script>
