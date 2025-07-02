@@ -173,19 +173,19 @@
 								}
 							}}
 						>
-							<button
+							<div
 								class="select-none flex rounded-xl p-1.5 w-full hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-								aria-label="User Menu"
 							>
 								<div class=" self-center">
+									<span class="sr-only">{$i18n.t('User menu')}</span>
 									<img
 										src={$user?.profile_image_url}
 										class="size-6 object-cover rounded-full"
-										alt="User profile"
+										alt=""
 										draggable="false"
 									/>
 								</div>
-							</button>
+							</div>
 						</UserMenu>
 					{/if}
 				</div>
