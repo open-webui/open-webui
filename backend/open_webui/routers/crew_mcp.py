@@ -55,28 +55,32 @@ class MCPToolsResponse(BaseModel):
 async def _setup_event_emitter(request: CrewMCPQuery, user):
     """Setup event emitter for WebSocket notifications"""
     try:
-        return get_event_emitter({
-            "chat_id": request.chat_id,
-            "user_id": user.id,
-            "message_id": f"crew_msg_{request.chat_id}",
-            "session_id": request.session_id
-        })
+        return get_event_emitter(
+            {
+                "chat_id": request.chat_id,
+                "user_id": user.id,
+                "message_id": f"crew_msg_{request.chat_id}",
+                "session_id": request.session_id,
+            }
+        )
     except Exception as e:
         log.warning(f"Could not set up event emitter for chat {request.chat_id}: {e}")
         return None
 
 
-async def _generate_title(request_data, request: CrewMCPQuery, result: str, user, task_model_id):
+async def _generate_title(
+    request_data, request: CrewMCPQuery, result: str, user, task_model_id
+):
     """Generate and update chat title"""
     from open_webui.utils.chat import generate_chat_completion
-    
+
     title_prompt = f"""Create a concise, 3-5 word title with an emoji for this conversation:
 
 User: {request.query}
 Assistant: {result[:500]}...
 
 Respond with just the title, no quotes or formatting."""
-    
+
     title_payload = {
         "model": task_model_id,
         "messages": [{"role": "user", "content": title_prompt}],
@@ -84,47 +88,53 @@ Respond with just the title, no quotes or formatting."""
         "max_tokens": 50,
         "metadata": {"task": "title_generation", "chat_id": request.chat_id},
     }
-    
-    title_res = await generate_chat_completion(request_data, form_data=title_payload, user=user)
-    
+
+    title_res = await generate_chat_completion(
+        request_data, form_data=title_payload, user=user
+    )
+
     if title_res and len(title_res.get("choices", [])) == 1:
         title = title_res["choices"][0]["message"]["content"].strip()
         if title:
             Chats.update_chat_title_by_id(request.chat_id, title)
             log.info(f"Generated title for chat {request.chat_id}: {title}")
             return title
-    
+
     log.warning(f"Failed to generate valid title for chat {request.chat_id}")
     return None
 
 
-async def _generate_tags(request_data, request: CrewMCPQuery, result: str, user, task_model_id):
+async def _generate_tags(
+    request_data, request: CrewMCPQuery, result: str, user, task_model_id
+):
     """Generate and update chat tags"""
     from open_webui.utils.chat import generate_chat_completion
     import json
     import re
-    
+
     tags_prompt = f"""Generate 3-6 tags for this conversation. Return ONLY a JSON object:
 {{"tags": ["tag1", "tag2", "tag3"]}}
 
 Conversation:
 User: {request.query}
 Assistant: {result[:1000]}..."""
-    
+
     tags_payload = {
         "model": task_model_id,
         "messages": [{"role": "user", "content": tags_prompt}],
         "stream": False,
         "metadata": {"task": "tags_generation", "chat_id": request.chat_id},
     }
-    
-    tags_res = await generate_chat_completion(request_data, form_data=tags_payload, user=user)
-    
+
+    tags_res = await generate_chat_completion(
+        request_data, form_data=tags_payload, user=user
+    )
+
     if tags_res and len(tags_res.get("choices", [])) == 1:
         content = tags_res["choices"][0]["message"]["content"]
-        
+
         # Extract and parse JSON
-        json_match = re.search(r'\{[^}]*\}', content)
+        json_match = re.search(r"\{[^}]*\}", content)
         if json_match:
             try:
                 tags_json = json.loads(json_match.group())
@@ -135,7 +145,7 @@ Assistant: {result[:1000]}..."""
                     return tags
             except json.JSONDecodeError as e:
                 log.error(f"JSON parse error for chat {request.chat_id}: {e}")
-    
+
     log.warning(f"Failed to generate valid tags for chat {request.chat_id}")
     return None
 
@@ -144,7 +154,7 @@ async def _emit_event(event_emitter, event_type: str, data, chat_id: str):
     """Safely emit WebSocket event"""
     if not event_emitter:
         return
-    
+
     try:
         await event_emitter({"type": event_type, "data": data})
         log.info(f"Emitted {event_type} event for chat {chat_id}")
@@ -152,15 +162,18 @@ async def _emit_event(event_emitter, event_type: str, data, chat_id: str):
         log.error(f"Failed to emit {event_type} event for chat {chat_id}: {e}")
 
 
-async def generate_title_and_tags_background(request_data, request: CrewMCPQuery, result: str, user):
+async def generate_title_and_tags_background(
+    request_data, request: CrewMCPQuery, result: str, user
+):
     """Background task to generate title and tags without blocking the main response"""
     try:
         log.info(f"Starting background title/tag generation for chat {request.chat_id}")
-        
+
         # Setup
         event_emitter = await _setup_event_emitter(request, user)
-        
+
         from open_webui.utils.task import get_task_model_id
+
         models = request_data.app.state.MODELS
         task_model_id = get_task_model_id(
             request.model or "mistral:7b",
@@ -168,18 +181,22 @@ async def generate_title_and_tags_background(request_data, request: CrewMCPQuery
             request_data.app.state.config.TASK_MODEL_EXTERNAL,
             models,
         )
-        
+
         # Generate title and tags
-        title = await _generate_title(request_data, request, result, user, task_model_id)
+        title = await _generate_title(
+            request_data, request, result, user, task_model_id
+        )
         if title:
             await _emit_event(event_emitter, "chat:title", title, request.chat_id)
-        
+
         tags = await _generate_tags(request_data, request, result, user, task_model_id)
         if tags:
             await _emit_event(event_emitter, "chat:tags", tags, request.chat_id)
-            
+
     except Exception as e:
-        log.error(f"Error in background title/tag generation for chat {request.chat_id}: {e}")
+        log.error(
+            f"Error in background title/tag generation for chat {request.chat_id}: {e}"
+        )
 
 
 # Global manager instance
@@ -235,10 +252,10 @@ async def run_crew_query(
 
         # Use intelligent crew approach with manager agent
         selected_tools = request.selected_tools or []
-        
+
         log.info(f"Selected tools: {selected_tools}")
         log.info(f"Using intelligent crew with manager agent for routing")
-        
+
         # Always use the intelligent crew - it will handle routing internally
         result = crew_mcp_manager.run_intelligent_crew(request.query, selected_tools)
         used_tools = [tool["name"] for tool in tools]  # All tools potentially available
@@ -249,18 +266,24 @@ async def run_crew_query(
             try:
                 # Run the title and tag generation in the background
                 import asyncio
+
                 log.info(f"About to create background task for chat {request.chat_id}")
-                task = asyncio.create_task(generate_title_and_tags_background(request_data, request, result, user))
+                task = asyncio.create_task(
+                    generate_title_and_tags_background(
+                        request_data, request, result, user
+                    )
+                )
                 log.info(f"Created background task: {task}")
-                
+
             except Exception as e:
-                log.error(f"Error in title/tag generation for chat {request.chat_id}: {e}")
+                log.error(
+                    f"Error in title/tag generation for chat {request.chat_id}: {e}"
+                )
                 import traceback
+
                 log.error(f"Full traceback: {traceback.format_exc()}")
 
-        return CrewMCPResponse(
-            result=result, tools_used=used_tools, success=True
-        )
+        return CrewMCPResponse(result=result, tools_used=used_tools, success=True)
 
     except Exception as e:
         log.exception(f"Error running CrewAI query: {e}")
@@ -281,7 +304,9 @@ async def run_multi_server_crew_query(
         )
 
     try:
-        log.info(f"Running CrewAI multi-server query for user {user.id}: {request.query}")
+        log.info(
+            f"Running CrewAI multi-server query for user {user.id}: {request.query}"
+        )
 
         # Get available tools first
         tools = crew_mcp_manager.get_available_tools()
@@ -319,7 +344,7 @@ async def get_crew_mcp_status(user=Depends(get_verified_user)) -> dict:
     try:
         tools = crew_mcp_manager.get_available_tools()
         available_servers = crew_mcp_manager.get_available_servers()
-        
+
         # Get server details
         server_details = {}
         for server_name, server_path in available_servers.items():
@@ -328,9 +353,9 @@ async def get_crew_mcp_status(user=Depends(get_verified_user)) -> dict:
                 "available": True,
                 "path": str(server_path),
                 "tool_count": len(server_tools),
-                "tools": [tool["name"] for tool in server_tools]
+                "tools": [tool["name"] for tool in server_tools],
             }
-        
+
         return {
             "status": "active" if tools else "inactive",
             "tools_count": len(tools),

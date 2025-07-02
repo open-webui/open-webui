@@ -460,7 +460,7 @@ def get_server_description(name: str) -> str:
     """Get description for built-in servers"""
     descriptions = {
         "time_server": "Provides current time and timezone information",
-        "news_server": "Provides latest news headlines from NewsDesk"
+        "news_server": "Provides latest news headlines from NewsDesk",
     }
     return descriptions.get(name, f"Built-in MCP server: {name}")
 

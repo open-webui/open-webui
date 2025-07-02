@@ -152,13 +152,17 @@ class CrewMCPManager:
         server_params = StdioServerParameters(
             command="python3",
             args=[str(self.news_server_path)],
-            env=dict(os.environ),  # Pass current environment (includes Azure credentials)
+            env=dict(
+                os.environ
+            ),  # Pass current environment (includes Azure credentials)
         )
 
         try:
             # Use MCPServerAdapter with context manager for automatic cleanup
             with MCPServerAdapter(server_params) as mcp_tools:
-                logger.info(f"Available MCP news tools: {[tool.name for tool in mcp_tools]}")
+                logger.info(
+                    f"Available MCP news tools: {[tool.name for tool in mcp_tools]}"
+                )
 
                 # Create Azure OpenAI LLM
                 llm = self.get_azure_llm_config()
@@ -215,11 +219,15 @@ class CrewMCPManager:
             raise FileNotFoundError("No MCP servers found")
 
         results = []
-        
+
         # Check what servers are available and run the appropriate crews
-        has_time_server = any('time' in name.lower() for name in available_servers.keys())
-        has_news_server = any('news' in name.lower() for name in available_servers.keys())
-        
+        has_time_server = any(
+            "time" in name.lower() for name in available_servers.keys()
+        )
+        has_news_server = any(
+            "news" in name.lower() for name in available_servers.keys()
+        )
+
         try:
             # Run time crew if available
             if has_time_server:
@@ -229,8 +237,10 @@ class CrewMCPManager:
                     results.append(f"Time Information:\n{time_result}")
                 except Exception as e:
                     logger.error(f"Time crew failed: {e}")
-                    results.append("Time Information: Could not retrieve time information.")
-            
+                    results.append(
+                        "Time Information: Could not retrieve time information."
+                    )
+
             # Run news crew if available
             if has_news_server:
                 logger.info("Running news crew for multi-server query")
@@ -239,16 +249,18 @@ class CrewMCPManager:
                     results.append(f"News Information:\n{news_result}")
                 except Exception as e:
                     logger.error(f"News crew failed: {e}")
-                    results.append("News Information: Could not retrieve news information.")
-            
+                    results.append(
+                        "News Information: Could not retrieve news information."
+                    )
+
             if not results:
                 return "No specialized crews available to handle this query."
-            
+
             # Combine results
             combined_result = "\n\n".join(results)
             logger.info(f"Multi-server crew completed with {len(results)} results")
             return combined_result
-            
+
         except Exception as e:
             logger.error(f"Error in CrewAI multi-server integration: {e}")
             raise
@@ -256,36 +268,39 @@ class CrewMCPManager:
     def run_intelligent_crew(self, query: str, selected_tools: list = None) -> str:
         """
         Intelligent router crew that analyzes the query and makes smart routing decisions
-        to coordinate with appropriate specialist agents (time, news, etc.) based on the 
+        to coordinate with appropriate specialist agents (time, news, etc.) based on the
         user's actual needs and intent, not keywords.
-        
+
         Args:
             query: The query to process
             selected_tools: List of tool IDs selected by the user (optional)
-            
+
         Returns:
             The crew's response using intelligent routing and coordination
         """
         logger.info(f"Starting intelligent router for query: {query}")
         logger.info(f"Selected tools: {selected_tools}")
-        
+
         try:
             # Create Azure OpenAI LLM
             llm = self.get_azure_llm_config()
-            
+
             # Determine available specialists based on selected tools
             available_specialists = []
             if selected_tools:
-                if any('time' in tool.lower() for tool in selected_tools):
+                if any("time" in tool.lower() for tool in selected_tools):
                     available_specialists.append("TIME")
-                if any('news' in tool.lower() or 'headline' in tool.lower() for tool in selected_tools):
+                if any(
+                    "news" in tool.lower() or "headline" in tool.lower()
+                    for tool in selected_tools
+                ):
                     available_specialists.append("NEWS")
             else:
                 # If no tools selected, all specialists are available
                 available_specialists = ["TIME", "NEWS"]
-            
+
             logger.info(f"Available specialists: {available_specialists}")
-            
+
             # Create router agent that makes intelligent routing decisions
             router_agent = Agent(
                 role="Intelligent Query Router",
@@ -307,9 +322,9 @@ class CrewMCPManager:
                 Focus on the user's actual intent and information needs, not just keywords.""",
                 verbose=True,
                 allow_delegation=False,
-                llm=llm
+                llm=llm,
             )
-            
+
             # Create routing decision task
             routing_task = Task(
                 description=f"""Analyze this user query and make a routing decision: "{query}"
@@ -344,7 +359,7 @@ PRESENTATION: [brief note on how to present results]
 Be decisive and specific. Only route to specialists that are actually needed.""",
                 agent=router_agent,
             )
-            
+
             # Execute routing decision
             routing_crew = Crew(
                 agents=[router_agent],
@@ -352,35 +367,37 @@ Be decisive and specific. Only route to specialists that are actually needed."""
                 process=Process.sequential,
                 verbose=True,
             )
-            
+
             logger.info("Executing routing decision...")
             routing_result = routing_crew.kickoff()
             logger.info(f"Routing decision result: {routing_result}")
-            
+
             # Parse the routing decision
             routing_str = str(routing_result)
-            
+
             # Extract structured routing information
             routing_decision = None
             time_query = None
             news_query = None
-            
-            for line in routing_str.split('\n'):
+
+            for line in routing_str.split("\n"):
                 line = line.strip()
-                if line.startswith('ROUTING_DECISION:'):
-                    routing_decision = line.split(':', 1)[1].strip()
-                elif line.startswith('TIME_QUERY:'):
-                    time_query_raw = line.split(':', 1)[1].strip()
-                    time_query = time_query_raw if time_query_raw != 'NONE' else None
-                elif line.startswith('NEWS_QUERY:'):
-                    news_query_raw = line.split(':', 1)[1].strip()
-                    news_query = news_query_raw if news_query_raw != 'NONE' else None
-            
-            logger.info(f"Parsed routing - decision: {routing_decision}, time_query: {time_query}, news_query: {news_query}")
-            
+                if line.startswith("ROUTING_DECISION:"):
+                    routing_decision = line.split(":", 1)[1].strip()
+                elif line.startswith("TIME_QUERY:"):
+                    time_query_raw = line.split(":", 1)[1].strip()
+                    time_query = time_query_raw if time_query_raw != "NONE" else None
+                elif line.startswith("NEWS_QUERY:"):
+                    news_query_raw = line.split(":", 1)[1].strip()
+                    news_query = news_query_raw if news_query_raw != "NONE" else None
+
+            logger.info(
+                f"Parsed routing - decision: {routing_decision}, time_query: {time_query}, news_query: {news_query}"
+            )
+
             # Execute the routing decision
             responses = []
-            
+
             # Route to time specialist if needed and available
             if time_query and "TIME" in available_specialists:
                 logger.info(f"Routing to TIME specialist with query: {time_query}")
@@ -389,8 +406,10 @@ Be decisive and specific. Only route to specialists that are actually needed."""
                     responses.append(time_response)
                 except Exception as e:
                     logger.error(f"Error from TIME specialist: {e}")
-                    responses.append("Unable to retrieve time information at this moment.")
-            
+                    responses.append(
+                        "Unable to retrieve time information at this moment."
+                    )
+
             # Route to news specialist if needed and available
             if news_query and "NEWS" in available_specialists:
                 logger.info(f"Routing to NEWS specialist with query: {news_query}")
@@ -399,11 +418,15 @@ Be decisive and specific. Only route to specialists that are actually needed."""
                     responses.append(news_response)
                 except Exception as e:
                     logger.error(f"Error from NEWS specialist: {e}")
-                    responses.append("Unable to retrieve news information at this moment.")
-            
+                    responses.append(
+                        "Unable to retrieve news information at this moment."
+                    )
+
             # If no routing was determined or no responses, use simple fallback
             if not responses:
-                logger.info("No responses from routing decision, using simple fallback...")
+                logger.info(
+                    "No responses from routing decision, using simple fallback..."
+                )
                 # Default to first available specialist
                 if "TIME" in available_specialists:
                     logger.info("Fallback: defaulting to TIME specialist")
@@ -413,7 +436,7 @@ Be decisive and specific. Only route to specialists that are actually needed."""
                     logger.info("Fallback: defaulting to NEWS specialist")
                     news_response = self.run_news_crew(query)
                     responses.append(news_response)
-            
+
             # Return the response(s)
             if len(responses) == 1:
                 logger.info("Returning single specialist response")
@@ -427,17 +450,20 @@ Be decisive and specific. Only route to specialists that are actually needed."""
             else:
                 logger.warning("No responses generated")
                 return "I apologize, but I was unable to process your request at this time."
-                
+
         except Exception as e:
             logger.error(f"Error in intelligent routing: {e}")
             # Emergency fallback - route based on selected tools only
             logger.info("Using emergency fallback routing...")
-            
+
             if selected_tools:
                 # Use selected tools to determine routing
-                has_time = any('time' in tool.lower() for tool in selected_tools)
-                has_news = any('news' in tool.lower() or 'headline' in tool.lower() for tool in selected_tools)
-                
+                has_time = any("time" in tool.lower() for tool in selected_tools)
+                has_news = any(
+                    "news" in tool.lower() or "headline" in tool.lower()
+                    for tool in selected_tools
+                )
+
                 if has_time and not has_news:
                     logger.info("Emergency fallback: TIME only")
                     return self.run_time_crew(query)
@@ -456,52 +482,54 @@ Be decisive and specific. Only route to specialists that are actually needed."""
                 logger.info("Emergency fallback: TIME (no tools selected)")
                 return self.run_time_crew(query)
 
-    def _combine_specialist_responses(self, responses: list, original_query: str) -> str:
+    def _combine_specialist_responses(
+        self, responses: list, original_query: str
+    ) -> str:
         """
-        Combine multiple specialist responses in a structured way that maintains 
+        Combine multiple specialist responses in a structured way that maintains
         compatibility with Open WebUI's chat naming and tagging systems.
         """
         logger.info(f"Combining {len(responses)} specialist responses")
-        
+
         # For now, use a simple structured combination that preserves key information
         # This should work better with Open WebUI's automated analysis systems
-        
+
         if len(responses) == 1:
             return responses[0]
-        
+
         # Create a structured combination with clear sections
         combined_parts = []
-        
+
         for i, response in enumerate(responses):
             # Add each response with minimal formatting
             if i == 0:
                 combined_parts.append(response.strip())
             else:
                 combined_parts.append(f"\n{response.strip()}")
-        
+
         # Join with double line breaks for clear separation
         return "\n\n".join(combined_parts)
 
     def get_available_servers(self) -> dict:
         """Get all available MCP servers dynamically"""
         servers = {}
-        
+
         # Define known servers (can be extended in the future)
         known_servers = {
             "time_server": self.time_server_path,
             "news_server": self.news_server_path,
         }
-        
+
         # Add any other fastmcp_*.py servers found in the backend directory
         for server_file in self.backend_dir.glob("fastmcp_*.py"):
             server_name = server_file.stem  # Remove .py extension
             if server_name not in known_servers:
                 servers[server_name] = server_file
                 logger.info(f"Discovered additional MCP server: {server_name}")
-        
+
         # Add known servers
         servers.update(known_servers)
-        
+
         # Filter to only existing servers
         return {name: path for name, path in servers.items() if path.exists()}
 
@@ -509,26 +537,30 @@ Be decisive and specific. Only route to specialists that are actually needed."""
         """Get list of available MCP tools from all discovered servers"""
         all_tools = []
         available_servers = self.get_available_servers()
-        
+
         for server_name, server_path in available_servers.items():
             server_params = StdioServerParameters(
                 command="python3",
                 args=[str(server_path)],
                 env=dict(os.environ),
             )
-            
+
             try:
                 with MCPServerAdapter(server_params) as server_tools:
                     for tool in server_tools:
-                        all_tools.append({
-                            "name": tool.name, 
-                            "description": tool.description,
-                            "server": server_name
-                        })
-                    logger.info(f"Found {len(list(server_tools))} tools from {server_name}")
+                        all_tools.append(
+                            {
+                                "name": tool.name,
+                                "description": tool.description,
+                                "server": server_name,
+                            }
+                        )
+                    logger.info(
+                        f"Found {len(list(server_tools))} tools from {server_name}"
+                    )
             except Exception as e:
                 logger.error(f"Error getting tools from {server_name}: {e}")
-        
+
         return all_tools
 
 
@@ -558,13 +590,13 @@ def main():
             return
 
         # Test individual server capabilities
-        if any(tool['server'] == 'time_server' for tool in tools):
+        if any(tool["server"] == "time_server" for tool in tools):
             print(f"\n🕐 Testing Time Server:")
             print(f"Query: 'What's the current time in UTC?'")
             result = manager.run_time_crew("What's the current time in UTC?")
             print("Result:", result[:200] + "..." if len(result) > 200 else result)
 
-        if any(tool['server'] == 'news_server' for tool in tools):
+        if any(tool["server"] == "news_server" for tool in tools):
             print(f"\n📰 Testing News Server:")
             print(f"Query: 'Get the latest news headlines'")
             result = manager.run_news_crew("Get the latest news headlines")
@@ -574,16 +606,22 @@ def main():
         if len(available_servers) > 1:
             print(f"\n🌐 Testing Multi-Server Integration:")
             print(f"Query: 'Provide current time and latest news summary'")
-            result = manager.run_multi_server_crew("Provide current time and latest news summary")
-            print("Multi-Server Result:", result[:300] + "..." if len(result) > 300 else result)
+            result = manager.run_multi_server_crew(
+                "Provide current time and latest news summary"
+            )
+            print(
+                "Multi-Server Result:",
+                result[:300] + "..." if len(result) > 300 else result,
+            )
         else:
             print(f"\n⚠️  Only one server available. Multi-server test skipped.")
-            
+
         print(f"\n✅ All tests completed successfully!")
 
     except Exception as e:
         logger.error(f"❌ Error: {e}")
         import traceback
+
         traceback.print_exc()
 
 
