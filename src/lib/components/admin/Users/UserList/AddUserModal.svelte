@@ -150,7 +150,7 @@
 						class="flex -mt-2 mb-1.5 gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-full bg-transparent dark:text-gray-200"
 					>
 						<button
-							class="min-w-fit rounded-full p-1.5 {tab === ''
+							class="min-w-fit p-1.5 {tab === ''
 								? ''
 								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
 							type="button"
@@ -160,7 +160,7 @@
 						>
 
 						<button
-							class="min-w-fit rounded-full p-1.5 {tab === 'import'
+							class="min-w-fit p-1.5 {tab === 'import'
 								? ''
 								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
 							type="button"

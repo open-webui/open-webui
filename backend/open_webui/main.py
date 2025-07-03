@@ -418,7 +418,7 @@ from open_webui.env import (
     ENABLE_WEBSOCKET_SUPPORT,
     BYPASS_MODEL_ACCESS_CONTROL,
     RESET_CONFIG_ON_START,
-    OFFLINE_MODE,
+    ENABLE_VERSION_UPDATE_CHECK,
     ENABLE_OTEL,
     EXTERNAL_PWA_MANIFEST_URL,
     AIOHTTP_CLIENT_SESSION_SSL,
@@ -1507,7 +1507,7 @@ async def list_tasks_by_chat_id_endpoint(
 
     task_ids = await list_task_ids_by_chat_id(request, chat_id)
 
-    print(f"Task IDs for chat {chat_id}: {task_ids}")
+    log.debug(f"Task IDs for chat {chat_id}: {task_ids}")
     return {"task_ids": task_ids}
 
 
@@ -1546,7 +1546,6 @@ async def get_app_config(request: Request):
         "name": app.state.WEBUI_NAME,
         "version": VERSION,
         "default_locale": str(DEFAULT_LOCALE),
-        "offline_mode": OFFLINE_MODE,
         "oauth": {
             "providers": {
                 name: config.get("name", name)
@@ -1561,6 +1560,7 @@ async def get_app_config(request: Request):
             "enable_signup": app.state.config.ENABLE_SIGNUP,
             "enable_login_form": app.state.config.ENABLE_LOGIN_FORM,
             "enable_websocket": ENABLE_WEBSOCKET_SUPPORT,
+            "enable_version_update_check": ENABLE_VERSION_UPDATE_CHECK,
             **(
                 {
                     "enable_direct_connections": app.state.config.ENABLE_DIRECT_CONNECTIONS,
@@ -1666,9 +1666,9 @@ async def get_app_version():
 
 @app.get("/api/version/updates")
 async def get_app_latest_release_version(user=Depends(get_verified_user)):
-    if OFFLINE_MODE:
+    if not ENABLE_VERSION_UPDATE_CHECK:
         log.debug(
-            f"Offline mode is enabled, returning current version as latest version"
+            f"Version update check is disabled, returning current version as latest version"
         )
         return {"current": VERSION, "latest": VERSION}
     try:
