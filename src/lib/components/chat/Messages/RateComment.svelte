@@ -11,6 +11,7 @@
 
 	export let message;
 	export let show = false;
+	export let disabled = false;
 
 	let LIKE_REASONS = [
 		'accurate_information',
@@ -80,67 +81,33 @@
 		}
 	});
 
-	// Add debug variable to track form validity
-	let formValid = false;
-
-	// Function to check if form is valid (all required fields are filled)
-	function isFormValid(): boolean {
-		// Check if rating is selected
-		const hasRating = message?.annotation?.rating !== undefined;
-
-		// Check if detailed rating is selected
-		const hasDetailedRating = detailedRating !== null;
-
-		// Check if reason is selected
-		const hasReason = selectedReason !== null && selectedReason !== '';
-
-		// Check if comment is provided
-		const hasComment = comment !== null && comment.trim() !== '';
-
-		// All fields must be filled
-		return hasRating && hasDetailedRating && hasReason && hasComment;
-	}
-
-	// Call this whenever any relevant form field changes
-	function updateFormValidity() {
-		formValid = isFormValid();
-	}
-
-	// Check validity on component initialization and when fields change
-	$: {
-		updateFormValidity();
-	}
-
-	// Update form validity whenever any relevant value changes
-	$: message?.annotation?.rating, updateFormValidity();
-	$: detailedRating, updateFormValidity();
-	$: selectedReason, updateFormValidity();
-	$: comment, updateFormValidity();
+	// Form validity tracking
+	$: formValid =
+		message?.annotation?.rating !== undefined &&
+		detailedRating !== null &&
+		selectedReason !== null &&
+		selectedReason !== '' &&
+		comment !== null &&
+		comment.trim() !== '';
 
 	function handleDetailedRatingClick(rating) {
 		detailedRating = rating;
-		updateFormValidity();
 	}
 
 	function handleReasonSelect(reason) {
 		selectedReason = reason;
-		updateFormValidity();
 	}
 
 	function handleCommentInput(event) {
 		comment = event.target.value;
-		updateFormValidity();
 	}
 
 	const saveHandler = () => {
-		// Just for debugging - you can remove this later
-		console.log('Form validity state:', {
-			hasRating: message?.annotation?.rating !== undefined,
-			hasDetailedRating: detailedRating !== null,
-			hasReason: selectedReason !== null && selectedReason !== '',
-			hasComment: comment !== null && comment.trim() !== '',
-			overallValid: formValid
-		});
+		// Don't allow saving if disabled (tags are being generated)
+		if (disabled) {
+			toast.error($i18n.t('Please wait while tags are being generated...'));
+			return;
+		}
 
 		// Validate form before saving
 		if (!formValid) {
@@ -312,9 +279,9 @@
 		<button
 			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full disabled:opacity-50 disabled:cursor-not-allowed"
 			on:click={saveHandler}
-			disabled={!formValid}
+			disabled={!formValid || disabled}
 		>
-			{$i18n.t('Save')}
+			{disabled ? $i18n.t('Generating tags...') : $i18n.t('Save')}
 		</button>
 	</div>
 </div>

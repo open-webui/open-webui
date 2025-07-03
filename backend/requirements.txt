@@ -106,3 +106,14 @@ google-cloud-storage==2.19.0
 
 ## LDAP
 ldap3==2.9.1
+
+## MCP (Model Context Protocol)
+fastmcp==2.5.2
+pytz==2025.2
+
+## CrewAI MCP Integration
+crewai==0.126.0
+crewai-tools[mcp]==0.47.0
+
+# Azure Storage for NewsDesk integration
+azure-storage-blob==12.25.1

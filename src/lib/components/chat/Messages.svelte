@@ -32,6 +32,7 @@
 	export let prompt;
 	export let history = {};
 	export let selectedModels;
+	export let selectedToolIds: string[] = [];
 
 	let messages = [];
 
@@ -404,6 +405,7 @@
 							messageId={message.id}
 							idx={messageIdx}
 							{user}
+							{selectedToolIds}
 							{showPreviousMessage}
 							{showNextMessage}
 							{updateChat}

@@ -7,7 +7,6 @@ import os
 import shutil
 import sys
 import time
-import random
 
 from contextlib import asynccontextmanager
 from urllib.parse import urlencode, parse_qs, urlparse
@@ -17,7 +16,6 @@ from sqlalchemy import text
 from typing import Optional
 from aiocache import cached
 import aiohttp
-import requests
 
 
 from fastapi import (
@@ -75,6 +73,8 @@ from open_webui.routers import (
     users,
     jira,
     utils,
+    mcp,
+    crew_mcp,
 )
 
 from open_webui.routers.retrieval import (
@@ -98,6 +98,10 @@ from open_webui.config import (
     ENABLE_OLLAMA_API,
     OLLAMA_BASE_URLS,
     OLLAMA_API_CONFIGS,
+    # MCP (Model Context Protocol)
+    ENABLE_MCP_API,
+    MCP_BASE_URLS,
+    MCP_API_CONFIGS,
     # OpenAI
     ENABLE_OPENAI_API,
     OPENAI_API_BASE_URLS,
@@ -336,6 +340,11 @@ class SPAStaticFiles(StaticFiles):
             return await super().get_response(path, scope)
         except (HTTPException, StarletteHTTPException) as ex:
             if ex.status_code == 404:
+                # Don't serve index.html for API routes
+                if path.startswith(
+                    ("api/", "mcp/", "ollama/", "openai/", "ws/", "health", "oauth/")
+                ):
+                    raise ex
                 return await super().get_response("index.html", scope)
             else:
                 raise ex
@@ -363,8 +372,36 @@ async def lifespan(app: FastAPI):
     if RESET_CONFIG_ON_START:
         reset_config()
 
+    # Initialize FastMCP manager
+    try:
+        from open_webui.mcp_manager import get_mcp_manager
+
+        app.state.mcp_manager = get_mcp_manager()
+        log.info("FastMCP manager initialized")
+
+        # Initialize all MCP servers (built-in and external) if enabled
+        if app.state.config.ENABLE_MCP_API:
+            await app.state.mcp_manager.initialize_all_servers()
+            log.info("All MCP servers initialized")
+
+            # Note: Built-in MCP servers use stdio transport and are managed internally
+            # External MCP servers are loaded from database and managed via API
+
+    except Exception as e:
+        log.error(f"Failed to initialize FastMCP manager: {e}")
+
     asyncio.create_task(periodic_usage_pool_cleanup())
-    yield
+
+    try:
+        yield
+    finally:
+        # Cleanup MCP manager and all its server processes
+        if hasattr(app.state, "mcp_manager") and app.state.mcp_manager:
+            try:
+                await app.state.mcp_manager.cleanup()
+                log.info("MCP manager cleanup completed")
+            except Exception as e:
+                log.error(f"Error during MCP manager cleanup: {e}")
 
 
 app = FastAPI(
@@ -389,6 +426,18 @@ app.state.config.OLLAMA_BASE_URLS = OLLAMA_BASE_URLS
 app.state.config.OLLAMA_API_CONFIGS = OLLAMA_API_CONFIGS
 
 app.state.OLLAMA_MODELS = {}
+
+########################################
+#
+# MCP (Model Context Protocol)
+#
+########################################
+
+app.state.config.ENABLE_MCP_API = ENABLE_MCP_API
+app.state.config.MCP_BASE_URLS = MCP_BASE_URLS
+app.state.config.MCP_API_CONFIGS = MCP_API_CONFIGS
+
+app.state.MCP_TOOLS = {}
 
 ########################################
 #
@@ -802,6 +851,13 @@ app.mount("/ws", socket_app)
 
 app.include_router(ollama.router, prefix="/ollama", tags=["ollama"])
 app.include_router(openai.router, prefix="/openai", tags=["openai"])
+app.include_router(
+    mcp.router, prefix="/mcp", tags=["mcp"]
+)  # For verification endpoints used by GUI
+app.include_router(mcp.router, prefix="/api/v1/mcp", tags=["mcp"])  # For tools API
+app.include_router(
+    crew_mcp.router, prefix="/api/v1/crew-mcp", tags=["crew-mcp"]
+)  # CrewAI MCP integration
 
 
 app.include_router(pipelines.router, prefix="/api/v1/pipelines", tags=["pipelines"])
@@ -835,6 +891,7 @@ app.include_router(
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
 app.include_router(jira.router, prefix="/api/v1/jira", tags=["jira"])
 app.include_router(metrics.router, prefix="/api/v1/metrics", tags=["metrics"])
+app.include_router(crew_mcp.router, prefix="/api/v1/crew-mcp", tags=["crew-mcp"])
 
 
 ##################################

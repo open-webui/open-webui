@@ -6,6 +6,7 @@
 	import { models } from '$lib/stores';
 	import { verifyOpenAIConnection } from '$lib/apis/openai';
 	import { verifyOllamaConnection } from '$lib/apis/ollama';
+	import { verifyMCPConnection } from '$lib/apis/mcp';
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
@@ -21,6 +22,7 @@
 	export let show = false;
 	export let edit = false;
 	export let ollama = false;
+	export let mcp = false;
 
 	export let connection = null;
 
@@ -55,9 +57,28 @@
 		}
 	};
 
+	const verifyMCPHandler = async () => {
+		const res = await verifyMCPConnection(localStorage.token, url, key).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (res) {
+			if (res.status === 'connected') {
+				toast.success($i18n.t('MCP server connection verified'));
+			} else if (res.status === 'failed') {
+				toast.error(`MCP server connection failed: ${res.message || res.error || 'Unknown error'}`);
+			} else {
+				toast.error($i18n.t('MCP server connection failed'));
+			}
+		}
+	};
+
 	const verifyHandler = () => {
 		if (ollama) {
 			verifyOllamaHandler();
+		} else if (mcp) {
+			verifyMCPHandler();
 		} else {
 			verifyOpenAIHandler();
 		}
@@ -73,9 +94,15 @@
 	const submitHandler = async () => {
 		loading = true;
 
-		if (!ollama && (!url || !key)) {
+		if (!ollama && !mcp && (!url || !key)) {
 			loading = false;
 			toast.error('URL and Key are required');
+			return;
+		}
+
+		if (mcp && !url) {
+			loading = false;
+			toast.error('URL is required');
 			return;
 		}
 
@@ -126,8 +153,12 @@
 			<div class=" text-lg font-medium self-center font-primary">
 				{#if edit}
 					{$i18n.t('Edit Connection')}
+				{:else if ollama}
+					{$i18n.t('Add Ollama Connection')}
+				{:else if mcp}
+					{$i18n.t('Add MCP Connection')}
 				{:else}
-					{$i18n.t('Add Connection')}
+					{$i18n.t('Add OpenAI Connection')}
 				{/if}
 			</div>
 			<button

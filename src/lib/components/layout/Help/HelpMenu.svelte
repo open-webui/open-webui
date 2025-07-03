@@ -22,18 +22,16 @@
 
 	export let onClose: Function = () => {};
 
-	export let buttonClass = '';
-	export let ariaLabel = '';
+	export let ariaLabel: string = 'Help';
 </script>
 
 <Dropdown
+	{ariaLabel}
 	on:change={(e) => {
 		if (e.detail === false) {
 			onClose();
 		}
 	}}
-	{buttonClass}
-	{ariaLabel}
 >
 	<slot />
 

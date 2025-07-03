@@ -5,18 +5,12 @@
 	import { flyAndScale } from '$lib/utils/transitions';
 
 	export let show = false;
-	export let side = 'bottom';
-	export let align = 'start';
-	export let buttonClass = '';
-	export let ariaLabel = '';
-	export let buttonID = '';
-	const dispatch = createEventDispatcher();
 
-	const changeFocus = async (elementId) => {
-		setTimeout(() => {
-			document.getElementById(elementId)?.focus();
-		}, 10);
-	};
+	export let side: 'bottom' | 'top' | 'right' | 'left' = 'bottom';
+	export let align: 'start' | 'center' | 'end' = 'start';
+	export let ariaLabel: string | undefined = undefined;
+
+	const dispatch = createEventDispatcher();
 </script>
 
 <DropdownMenu.Root
@@ -24,11 +18,10 @@
 	closeFocus={false}
 	onOpenChange={(state) => {
 		dispatch('change', state);
-		changeFocus(buttonID);
 	}}
 	typeahead={false}
 >
-	<DropdownMenu.Trigger class={buttonClass} aria-label={ariaLabel} id={buttonID}>
+	<DropdownMenu.Trigger aria-label={ariaLabel}>
 		<slot />
 	</DropdownMenu.Trigger>
 

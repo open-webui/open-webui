@@ -79,12 +79,6 @@
 	});
 </script>
 
-<div
-	bind:this={tooltipElement}
-	role="tooltip"
-	aria-label={DOMPurify.sanitize(content)}
-	class={className}
-	id={tooltipID}
->
+<div bind:this={tooltipElement} class={className}>
 	<slot />
 </div>

@@ -7,9 +7,10 @@
 
 	const i18n = getContext('i18n');
 
-	export let sources = [];
+	export let sources: any[] = [];
+	export let selectedToolIds: string[] = [];
 
-	let citations = [];
+	let citations: any[] = [];
 	let showPercentage = false;
 	let showRelevance = true;
 
@@ -42,18 +43,21 @@
 	}
 
 	$: {
-		citations = sources.reduce((acc, source) => {
+		citations = sources.reduce((acc: any[], source: any) => {
 			if (Object.keys(source).length === 0) {
 				return acc;
 			}
 
-			source.document.forEach((document, index) => {
+			source.document.forEach((document: any, index: number) => {
 				const metadata = source.metadata?.[index];
 				const distance = source.distances?.[index];
 
 				// Within the same citation there could be multiple documents
 				const id = metadata?.source ?? 'N/A';
 				let _source = source?.source;
+
+				// Tool citations should always be displayed regardless of current tool selection
+				// to show what tools were actually used in generating the response
 
 				if (metadata?.name) {
 					_source = { ..._source, name: metadata.name };
