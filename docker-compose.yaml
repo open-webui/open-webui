@@ -25,17 +25,22 @@ services:
     environment:
       - 'OLLAMA_BASE_URL=http://ollama:11434'
       - 'WEBUI_SECRET_KEY='
-      - OAUTH_CLIENT_ID=8b2f69c8-c78e-4ff0-9869-d1a7ea677eef
-      - OAUTH_CLIENT_SECRET=L5D8Q~pHe6l5QvvSlCtm-Bqz3t6dgDmy4fcWJdhf
-      - OAUTH_TENANT_ID=07502144-65bd-4e15-90fc-b56798f45494
-      - OAUTH_AUTHORIZATION_URL=https://login.microsoftonline.com/07502144-65bd-4e15-90fc-b56798f45494/oauth2/v2.0/authorize
-      - OAUTH_TOKEN_URL=https://login.microsoftonline.com/07502144-65bd-4e15-90fc-b56798f45494/oauth2/v2.0/token
-      - OAUTH_USERINFO_URL=https://graph.microsoft.com/oidc/userinfo
-      - OAUTH_JWKS_URL=https://login.microsoftonline.com/07502144-65bd-4e15-90fc-b56798f45494/discovery/v2.0/keys
-      - OAUTH_SCOPES="openid profile email"
-      - OAUTH_REDIRECT_URI=http://localhost:8080/oauth # Oder deine Produktions-URL
-      - WEBUI_AUTH_METHOD=oauth
-      - WEBUI_SSO_ONLY=True
+      - OAUTH_CLIENT_ID=${OAUTH_CLIENT_ID} # Lade aus .env
+      - OAUTH_CLIENT_SECRET=${OAUTH_CLIENT_SECRET} # Lade aus .env
+      - OAUTH_TENANT_ID=${OAUTH_TENANT_ID} # Lade aus .env
+      # Füge hier alle anderen OAUTH_* Variablen hinzu, die du aus .env laden möchtest
+      - OAUTH_AUTHORIZATION_URL=${OAUTH_AUTHORIZATION_URL}
+      - OAUTH_TOKEN_URL=${OAUTH_TOKEN_URL}
+      - OAUTH_USERINFO_URL=${OAUTH_USERINFO_URL}
+      - OAUTH_JWKS_URL=${OAUTH_JWKS_URL}
+      - OAUTH_SCOPES=${OAUTH_SCOPES}
+      - OAUTH_REDIRECT_URI=${OAUTH_REDIRECT_URI}
+      - WEBUI_AUTH_METHOD=${WEBUI_AUTH_METHOD}
+      - WEBUI_SSO_ONLY=${WEBUI_SSO_ONLY}
+      #- OAUTH_GROUPS_CLAIM=${OAUTH_GROUPS_CLAIM}
+      #- OAUTH_ADMIN_GROUP_ID=${OAUTH_ADMIN_GROUP_ID}
+    env_file:
+      - .env
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped
