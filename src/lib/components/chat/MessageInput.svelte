@@ -1,6 +1,7 @@
 <script lang="ts">
 	import DOMPurify from 'dompurify';
 	import { marked } from 'marked';
+	import heic2any from 'heic2any';
 
 	import { toast } from 'svelte-sonner';
 
@@ -320,7 +321,7 @@
 			return;
 		}
 
-		inputFiles.forEach((file) => {
+		inputFiles.forEach(async (file) => {
 			console.log('Processing file:', {
 				name: file.name,
 				type: file.type,
@@ -344,46 +345,53 @@
 				return;
 			}
 
-			if (
-				['image/gif', 'image/webp', 'image/jpeg', 'image/png', 'image/avif'].includes(file['type'])
-			) {
+			if (file['type'].startsWith('image/')) {
 				if (visionCapableModels.length === 0) {
 					toast.error($i18n.t('Selected model(s) do not support image inputs'));
 					return;
 				}
+
+				const compressImageHandler = async (imageUrl, settings = {}, config = {}) => {
+					// Quick shortcut so we don’t do unnecessary work.
+					const settingsCompression = settings?.imageCompression ?? false;
+					const configWidth = config?.file?.image_compression?.width ?? null;
+					const configHeight = config?.file?.image_compression?.height ?? null;
+
+					// If neither settings nor config wants compression, return original URL.
+					if (!settingsCompression && !configWidth && !configHeight) {
+						return imageUrl;
+					}
+
+					// Default to null (no compression unless set)
+					let width = null;
+					let height = null;
+
+					// If user/settings want compression, pick their preferred size.
+					if (settingsCompression) {
+						width = settings?.imageCompressionSize?.width ?? null;
+						height = settings?.imageCompressionSize?.height ?? null;
+					}
+
+					// Apply config limits as an upper bound if any
+					if (configWidth && (width === null || width > configWidth)) {
+						width = configWidth;
+					}
+					if (configHeight && (height === null || height > configHeight)) {
+						height = configHeight;
+					}
+
+					// Do the compression if required
+					if (width || height) {
+						return await compressImage(imageUrl, width, height);
+					}
+					return imageUrl;
+				};
+
 				let reader = new FileReader();
 				reader.onload = async (event) => {
 					let imageUrl = event.target.result;
 
-					if (
-						($settings?.imageCompression ?? false) ||
-						($config?.file?.image_compression?.width ?? null) ||
-						($config?.file?.image_compression?.height ?? null)
-					) {
-						let width = null;
-						let height = null;
-
-						if ($settings?.imageCompression ?? false) {
-							width = $settings?.imageCompressionSize?.width ?? null;
-							height = $settings?.imageCompressionSize?.height ?? null;
-						}
-
-						if (
-							($config?.file?.image_compression?.width ?? null) ||
-							($config?.file?.image_compression?.height ?? null)
-						) {
-							if (width > ($config?.file?.image_compression?.width ?? null)) {
-								width = $config?.file?.image_compression?.width ?? null;
-							}
-							if (height > ($config?.file?.image_compression?.height ?? null)) {
-								height = $config?.file?.image_compression?.height ?? null;
-							}
-						}
-
-						if (width || height) {
-							imageUrl = await compressImage(imageUrl, width, height);
-						}
-					}
+					imageUrl = await compressImageHandler(imageUrl, $settings, $config);
 
 					files = [
 						...files,
@@ -393,7 +401,11 @@
 						}
 					];
 				};
-				reader.readAsDataURL(file);
+				reader.readAsDataURL(
+					file['type'] === 'image/heic'
+						? await heic2any({ blob: file, toType: 'image/jpeg' })
+						: file
+				);
 			} else {
 				uploadFileHandler(file);
 			}
@@ -659,7 +671,7 @@
 													<div class="relative flex items-center">
 														<Image
 															src={file.url}
-															alt="input"
+															alt=""
 															imageClassName=" size-14 rounded-xl object-cover"
 														/>
 														{#if atSelectedModel ? visionCapableModels.length === 0 : selectedModels.length !== visionCapableModels.length}
@@ -677,6 +689,7 @@
 																	xmlns="http://www.w3.org/2000/svg"
 																	viewBox="0 0 24 24"
 																	fill="currentColor"
+																	aria-hidden="true"
 																	class="size-4 fill-yellow-300"
 																>
 																	<path
@@ -690,8 +703,12 @@
 													</div>
 													<div class=" absolute -top-1 -right-1">
 														<button
-															class=" bg-white text-black border border-white rounded-full group-hover:visible invisible transition"
+															class=" bg-white text-black border border-white rounded-full {($settings?.highContrastMode ??
+															false)
+																? ''
+																: 'outline-hidden focus:outline-hidden group-hover:visible invisible transition'}"
 															type="button"
+															aria-label={$i18n.t('Remove file')}
 															on:click={() => {
 																files.splice(fileIdx, 1);
 																files = files;
@@ -701,6 +718,7 @@
 																xmlns="http://www.w3.org/2000/svg"
 																viewBox="0 0 20 20"
 																fill="currentColor"
+																aria-hidden="true"
 																class="size-4"
 															>
 																<path
@@ -1253,11 +1271,12 @@
 											<button
 												class="bg-transparent hover:bg-gray-100 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5 outline-hidden focus:outline-hidden"
 												type="button"
-												aria-label="More"
+												aria-label={$i18n.t('More Available Tools')}
 											>
 												<svg
 													xmlns="http://www.w3.org/2000/svg"
 													viewBox="0 0 20 20"
+													aria-hidden="true"
 													fill="currentColor"
 													class="size-5"
 												>
@@ -1379,6 +1398,10 @@
 												{#if showCodeInterpreterButton}
 													<Tooltip content={$i18n.t('Execute code for analysis')} placement="top">
 														<button
+															aria-label={codeInterpreterEnabled
+																? $i18n.t('Disable Code Interpreter')
+																: $i18n.t('Enable Code Interpreter')}
+															aria-pressed={codeInterpreterEnabled}
 															on:click|preventDefault={() =>
 																(codeInterpreterEnabled = !codeInterpreterEnabled)}
 															type="button"
@@ -1530,7 +1553,7 @@
 																);
 															}
 														}}
-														aria-label="Call"
+														aria-label={$i18n.t('Voice mode')}
 													>
 														<Headphone className="size-5" />
 													</button>

@@ -7,6 +7,7 @@ import hashlib
 from concurrent.futures import ThreadPoolExecutor
 import time
 
+from urllib.parse import quote
 from huggingface_hub import snapshot_download
 from langchain.retrievers import ContextualCompressionRetriever, EnsembleRetriever
 from langchain_community.retrievers import BM25Retriever
@@ -459,20 +460,19 @@ def get_sources_from_files(
     )
 
     extracted_collections = []
-    relevant_contexts = []
+    query_results = []
 
     for file in files:
-
-        context = None
+        query_result = None
         if file.get("docs"):
             # BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
-            context = {
+            query_result = {
                 "documents": [[doc.get("content") for doc in file.get("docs")]],
                 "metadatas": [[doc.get("metadata") for doc in file.get("docs")]],
             }
         elif file.get("context") == "full":
             # Manual Full Mode Toggle
-            context = {
+            query_result = {
                 "documents": [[file.get("file").get("data", {}).get("content")]],
                 "metadatas": [[{"file_id": file.get("id"), "name": file.get("name")}]],
             }
@@ -499,7 +499,7 @@ def get_sources_from_files(
                             }
                         )
 
-                context = {
+                query_result = {
                     "documents": [documents],
                     "metadatas": [metadatas],
                 }
@@ -507,7 +507,7 @@ def get_sources_from_files(
             elif file.get("id"):
                 file_object = Files.get_file_by_id(file.get("id"))
                 if file_object:
-                    context = {
+                    query_result = {
                         "documents": [[file_object.data.get("content", "")]],
                         "metadatas": [
                             [
@@ -520,7 +520,7 @@ def get_sources_from_files(
                         ],
                     }
             elif file.get("file").get("data"):
-                context = {
+                query_result = {
                     "documents": [[file.get("file").get("data", {}).get("content")]],
                     "metadatas": [
                         [file.get("file").get("data", {}).get("metadata", {})]
@@ -548,19 +548,27 @@ def get_sources_from_files(
 
             if full_context:
                 try:
-                    context = get_all_items_from_collections(collection_names)
+                    query_result = get_all_items_from_collections(collection_names)
                 except Exception as e:
                     log.exception(e)
 
             else:
                 try:
-                    context = None
+                    query_result = None
                     if file.get("type") == "text":
-                        context = file["content"]
+                        # Not sure when this is used, but it seems to be a fallback
+                        query_result = {
+                            "documents": [
+                                [file.get("file").get("data", {}).get("content")]
+                            ],
+                            "metadatas": [
+                                [file.get("file").get("data", {}).get("meta", {})]
+                            ],
+                        }
                     else:
                         if hybrid_search:
                             try:
-                                context = query_collection_with_hybrid_search(
+                                query_result = query_collection_with_hybrid_search(
                                     collection_names=collection_names,
                                     queries=queries,
                                     embedding_function=embedding_function,
@@ -576,8 +584,8 @@ def get_sources_from_files(
                                     " non hybrid search as fallback."
                                 )
 
-                        if (not hybrid_search) or (context is None):
-                            context = query_collection(
+                        if (not hybrid_search) or (query_result is None):
+                            query_result = query_collection(
                                 collection_names=collection_names,
                                 queries=queries,
                                 embedding_function=embedding_function,
@@ -588,24 +596,24 @@ def get_sources_from_files(
 
             extracted_collections.extend(collection_names)
 
-        if context:
+        if query_result:
             if "data" in file:
                 del file["data"]
 
-            relevant_contexts.append({**context, "file": file})
+            query_results.append({**query_result, "file": file})
 
     sources = []
-    for context in relevant_contexts:
+    for query_result in query_results:
         try:
-            if "documents" in context:
-                if "metadatas" in context:
+            if "documents" in query_result:
+                if "metadatas" in query_result:
                     source = {
-                        "source": context["file"],
-                        "document": context["documents"][0],
-                        "metadata": context["metadatas"][0],
+                        "source": query_result["file"],
+                        "document": query_result["documents"][0],
+                        "metadata": query_result["metadatas"][0],
                     }
-                    if "distances" in context and context["distances"]:
-                        source["distances"] = context["distances"][0]
+                    if "distances" in query_result and query_result["distances"]:
+                        source["distances"] = query_result["distances"][0]
 
                     sources.append(source)
         except Exception as e:
@@ -678,10 +686,10 @@ def generate_openai_batch_embeddings(
                 "Authorization": f"Bearer {key}",
                 **(
                     {
-                        "X-OpenWebUI-User-Name": user.name,
-                        "X-OpenWebUI-User-Id": user.id,
-                        "X-OpenWebUI-User-Email": user.email,
-                        "X-OpenWebUI-User-Role": user.role,
+                        "X-OpenWebUI-User-Name": quote(user.name),
+                        "X-OpenWebUI-User-Id": quote(user.id),
+                        "X-OpenWebUI-User-Email": quote(user.email),
+                        "X-OpenWebUI-User-Role": quote(user.role),
                     }
                     if ENABLE_FORWARD_USER_INFO_HEADERS and user
                     else {}
@@ -727,10 +735,10 @@ def generate_azure_openai_batch_embeddings(
                     "api-key": key,
                     **(
                         {
-                            "X-OpenWebUI-User-Name": user.name,
-                            "X-OpenWebUI-User-Id": user.id,
-                            "X-OpenWebUI-User-Email": user.email,
-                            "X-OpenWebUI-User-Role": user.role,
+                            "X-OpenWebUI-User-Name": quote(user.name),
+                            "X-OpenWebUI-User-Id": quote(user.id),
+                            "X-OpenWebUI-User-Email": quote(user.email),
+                            "X-OpenWebUI-User-Role": quote(user.role),
                         }
                         if ENABLE_FORWARD_USER_INFO_HEADERS and user
                         else {}
@@ -777,10 +785,10 @@ def generate_ollama_batch_embeddings(
                 "Authorization": f"Bearer {key}",
                 **(
                     {
-                        "X-OpenWebUI-User-Name": user.name,
-                        "X-OpenWebUI-User-Id": user.id,
-                        "X-OpenWebUI-User-Email": user.email,
-                        "X-OpenWebUI-User-Role": user.role,
+                        "X-OpenWebUI-User-Name": quote(user.name),
+                        "X-OpenWebUI-User-Id": quote(user.id),
+                        "X-OpenWebUI-User-Email": quote(user.email),
+                        "X-OpenWebUI-User-Role": quote(user.role),
                     }
                     if ENABLE_FORWARD_USER_INFO_HEADERS
                     else {}

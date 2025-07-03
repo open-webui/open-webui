@@ -55,10 +55,7 @@
 
 	import { generateChatCompletion } from '$lib/apis/ollama';
 	import {
-		addTagById,
 		createNewChat,
-		deleteTagById,
-		deleteTagsById,
 		getAllTags,
 		getChatById,
 		getChatList,
@@ -153,10 +150,10 @@
 			webSearchEnabled = false;
 			imageGenerationEnabled = false;
 
-			if (localStorage.getItem(`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`)) {
+			if (sessionStorage.getItem(`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`)) {
 				try {
 					const input = JSON.parse(
-						localStorage.getItem(`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`)
+						sessionStorage.getItem(`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`)
 					);
 
 					if (!$temporaryChatEnabled) {
@@ -446,7 +443,7 @@
 			}
 		});
 
-		if (localStorage.getItem(`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`)) {
+		if (sessionStorage.getItem(`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`)) {
 			prompt = '';
 			files = [];
 			selectedToolIds = [];
@@ -457,7 +454,7 @@
 
 			try {
 				const input = JSON.parse(
-					localStorage.getItem(`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`)
+					sessionStorage.getItem(`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`)
 				);
 
 				if (!$temporaryChatEnabled) {
@@ -708,6 +705,10 @@
 	//////////////////////////
 
 	const initNewChat = async () => {
+		if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
+			await temporaryChatEnabled.set(true);
+		}
+
 		const availableModels = $models
 			.filter((m) => !(m?.info?.meta?.hidden ?? false))
 			.map((m) => m.id);
@@ -2120,12 +2121,12 @@
 									onChange={(input) => {
 										if (!$temporaryChatEnabled) {
 											if (input.prompt !== null) {
-												localStorage.setItem(
+												sessionStorage.setItem(
 													`chat-input${$chatId ? `-${$chatId}` : ''}`,
 													JSON.stringify(input)
 												);
 											} else {
-												localStorage.removeItem(`chat-input${$chatId ? `-${$chatId}` : ''}`);
+												sessionStorage.removeItem(`chat-input${$chatId ? `-${$chatId}` : ''}`);
 											}
 										}
 									}}
@@ -2227,7 +2228,7 @@
 	{:else if loading}
 		<div class=" flex items-center justify-center h-full w-full">
 			<div class="m-auto">
-				<Spinner />
+				<Spinner className="size-5" />
 			</div>
 		</div>
 	{/if}
