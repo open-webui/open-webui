@@ -4,6 +4,10 @@
 	import { onMount, getContext, createEventDispatcher } from 'svelte';
 	import { settings, WEBUI_NAME } from '$lib/stores';
 	import { WEBUI_VERSION } from '$lib/constants';
+	import News from '../icons/News.svelte';
+	import Analytics from '../icons/Analytics.svelte';
+	import Forum from '../icons/Forum.svelte';
+	import EditNotes from '../icons/EditNotes.svelte';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -13,6 +17,7 @@
 	export let inputValue = '';
 
 	let sortedPrompts = [];
+	let iconMap = [News,Analytics,Forum,EditNotes];
 
 	const fuseOptions = {
 		keys: ['content', 'title'],
@@ -87,7 +92,7 @@
 		<div class="flex flex-wrap gap-3 mt-4 justify-center items-center">
 			{#each filteredPrompts as prompt, idx (prompt.id || prompt.content)}
 				<button
-					class="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-gray-800 transition hover:bg-gray-50 dark:text-gray-100 dark:hover:bg-white/10"
+					class="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium font-NotoKufi-Medium text-gray-1000 transition hover:bg-gray-50 dark:text-gray-100 dark:hover:bg-white/10"
 					style="
 						background: var(--Schemes-Surface, #FFF);
 						box-shadow: 0px 0px 16px -8px rgba(28, 27, 27, 0.04);
@@ -96,11 +101,11 @@
 					on:click={() => dispatch('select', prompt.content)}
 				>
 					{#if prompt.icon}
-						<span class="text-purple-600 text-lg">{@html prompt.icon}</span>
+						<span class="text-purple-600 text-lg"><svelte:component this={iconMap[prompt.icon]} class="w-6 h-6" /></span>
 					{:else}
-						<span class="text-purple-600 text-lg">✨</span>
+						<span class="text-purple-600 text-lg"><svelte:component this={iconMap[prompt.icon]} class="w-6 h-6" /></span>
 					{/if}
-					<span class="whitespace-nowrap">{prompt.title?.[0] ?? prompt.content}</span>
+					<span class="whitespace-nowrap leading-[22px] font-NotoKufi-Regular">{prompt.title?.[0] ?? prompt.content}</span>
 				</button>
 			{/each}
 		</div>

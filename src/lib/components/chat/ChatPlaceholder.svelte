@@ -36,7 +36,7 @@
 
 {#key mounted}
 	<div class="m-auto w-full max-w-6xl px-8 lg:px-20">
-		<div class="flex justify-start">
+		<!--<div class="flex justify-start">
 			<div class="flex -space-x-4 mb-0.5" in:fade={{ duration: 200 }}>
 				{#each models as model, modelIdx}
 					<button
@@ -64,7 +64,7 @@
 					</button>
 				{/each}
 			</div>
-		</div>
+		</div>-->
 
 		{#if $temporaryChatEnabled}
 			<Tooltip
@@ -79,10 +79,10 @@
 		{/if}
 
 		<div
-			class=" mt-2 mb-4 text-3xl text-gray-800 dark:text-gray-100 font-medium text-left flex items-center gap-4 font-primary"
+			class=" mt-2 mb-4 text-3xl justify-center text-gray-800 dark:text-gray-100 font-medium text-left flex items-center gap-4 font-primary"
 		>
 			<div>
-				<div class=" capitalize line-clamp-1" in:fade={{ duration: 200 }}>
+				<div class=" justify-center capitalize line-clamp-1" in:fade={{ duration: 200 }}>
 					{#if models[selectedModelIdx]?.name}
 						{models[selectedModelIdx]?.name}
 					{:else}
@@ -93,14 +93,14 @@
 				<div in:fade={{ duration: 200, delay: 200 }}>
 					{#if models[selectedModelIdx]?.info?.meta?.description ?? null}
 						<div
-							class="mt-0.5 text-base font-normal text-gray-500 dark:text-gray-400 line-clamp-3 markdown"
+							class=" justify-center mt-0.5 text-4xl font-normal text-gray-500 dark:text-gray-400 line-clamp-3 markdown"
 						>
 							{@html marked.parse(
 								sanitizeResponseContent(models[selectedModelIdx]?.info?.meta?.description)
 							)}
 						</div>
 						{#if models[selectedModelIdx]?.info?.meta?.user}
-							<div class="mt-0.5 text-sm font-normal text-gray-400 dark:text-gray-500">
+							<div  justify-center class="mt-0.5 text-4xl font-normal text-dark dark:text-gray-500">
 								By
 								{#if models[selectedModelIdx]?.info?.meta?.user.community}
 									<a
@@ -116,7 +116,7 @@
 							</div>
 						{/if}
 					{:else}
-						<div class=" font-medium text-gray-400 dark:text-gray-500 line-clamp-1 font-p">
+						<div class="flex justify-center pt-[20px] pb-[40px] text-base font-normal text-dark dark:text-gray-500">
 							{$i18n.t('How can I help you today?')}
 						</div>
 					{/if}
