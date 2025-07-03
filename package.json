@@ -24,7 +24,7 @@
 	"devDependencies": {
 		"@sveltejs/adapter-auto": "3.2.2",
 		"@sveltejs/adapter-static": "^3.0.2",
-		"@sveltejs/kit": "^2.5.20",
+		"@sveltejs/kit": "^2.22.2",
 		"@sveltejs/vite-plugin-svelte": "^3.1.1",
 		"@tailwindcss/container-queries": "^0.1.1",
 		"@tailwindcss/postcss": "^4.0.0",
