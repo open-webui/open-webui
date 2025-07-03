@@ -98,17 +98,6 @@ from open_webui.constants import ERROR_MESSAGES
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
-
-def is_valid_pdf(filepath):
-    try:
-        with open(filepath, 'rb') as f:
-            header = f.read(5)
-            if header != b'%PDF-':
-                raise InvalidPDFError(
-                    f"Arquivo {filepath} não tem cabeçalho PDF válido.")
-    except Exception as e:
-        raise InvalidPDFError(f"Erro ao validar o PDF {filepath}: {e}")
-
 ##########################################
 #
 # Utility functions
@@ -1099,14 +1088,6 @@ def process_file_async(
     file_path = file.path
     if file_path:
         file_path = Storage.get_file(file_path)
-        file_ext = file.filename.split(".")[-1].lower()
-        if file_ext == "pdf":
-            try:
-                is_valid_pdf(file_path)
-            except InvalidPDFError as e:
-                log.exception(f"Erro na tarefa em background: {e}")
-                raise e
-
         loader = Loader(
             engine=engine,
             TIKA_SERVER_URL=request.app.state.config.TIKA_SERVER_URL,
