@@ -1569,7 +1569,11 @@ def save_docs_to_vector_db(
             (
                 openai_api_key
                 if embedding_engine == "openai"
-                else ollama_api_key
+                else (
+                    ollama_api_key
+                    if embedding_engine == "ollama"
+                    else azure_openai_key
+                )
             ),
             embedding_batch_size,
             azure_api_version=(
