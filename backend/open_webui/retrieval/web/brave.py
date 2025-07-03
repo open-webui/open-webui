@@ -36,7 +36,9 @@ def search_brave(
 
     return [
         SearchResult(
-            link=result["url"], title=result.get("title"), snippet=result.get("snippet")
+            link=result["url"],
+            title=result.get("title"),
+            snippet=result.get("description"),
         )
         for result in results[:count]
     ]

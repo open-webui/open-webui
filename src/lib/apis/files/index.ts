@@ -1,8 +1,12 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
-export const uploadFile = async (token: string, file: File) => {
+export const uploadFile = async (token: string, file: File, metadata?: object | null) => {
 	const data = new FormData();
 	data.append('file', file);
+	if (metadata) {
+		data.append('metadata', JSON.stringify(metadata));
+	}
+
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/files/`, {
@@ -19,7 +23,7 @@ export const uploadFile = async (token: string, file: File) => {
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -76,7 +80,7 @@ export const getFiles = async (token: string = '') => {
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -107,7 +111,7 @@ export const getFileById = async (token: string, id: string) => {
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -141,7 +145,7 @@ export const updateFileDataContentById = async (token: string, id: string, conte
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -168,7 +172,7 @@ export const getFileContentById = async (id: string) => {
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.log(err);
+			console.error(err);
 
 			return null;
 		});
@@ -200,7 +204,7 @@ export const deleteFileById = async (token: string, id: string) => {
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -231,7 +235,7 @@ export const deleteAllFiles = async (token: string) => {
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 

@@ -36,6 +36,7 @@
 
 	export let folders;
 	export let folderId;
+	export let shiftKey = false;
 
 	export let className = '';
 
@@ -131,7 +132,18 @@
 								return null;
 							});
 							if (!chat && item) {
-								chat = await importChat(localStorage.token, item.chat, item?.meta ?? {});
+								chat = await importChat(
+									localStorage.token,
+									item.chat,
+									item?.meta ?? {},
+									false,
+									null,
+									item?.created_at ?? null,
+									item?.updated_at ?? null
+								).catch((error) => {
+									toast.error(`${error}`);
+									return null;
+								});
 							}
 
 							// Move the chat
@@ -252,7 +264,7 @@
 
 	const nameUpdateHandler = async () => {
 		if (name === '') {
-			toast.error($i18n.t('Folder name cannot be empty'));
+			toast.error($i18n.t('Folder name cannot be empty.'));
 			return;
 		}
 
@@ -374,8 +386,8 @@
 		buttonClassName="w-full"
 		hide={(folders[folderId]?.childrenIds ?? []).length === 0 &&
 			(folders[folderId].items?.chats ?? []).length === 0}
-		on:change={(e) => {
-			dispatch('open', e.detail);
+		onChange={(state) => {
+			dispatch('open', state);
 		}}
 	>
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -476,6 +488,7 @@
 							<svelte:self
 								{folders}
 								folderId={childFolder.id}
+								{shiftKey}
 								parentDragged={dragged}
 								on:import={(e) => {
 									dispatch('import', e.detail);
@@ -495,6 +508,7 @@
 							<ChatItem
 								id={chat.id}
 								title={chat.title}
+								{shiftKey}
 								on:change={(e) => {
 									dispatch('change', e.detail);
 								}}

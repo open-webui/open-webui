@@ -23,6 +23,7 @@
 	export let chatId;
 	export let history;
 	export let messageId;
+	export let selectedModels = [];
 
 	export let isLastMessage;
 	export let readOnly = false;
@@ -225,7 +226,7 @@
 					<div
 						class=" snap-center w-full max-w-full m-1 border {history.messages[messageId]
 							?.modelIdx == modelIdx
-							? `border-gray-100 dark:border-gray-850 border-[1.5px] ${
+							? `bg-gray-50 dark:bg-gray-850 border-gray-100 dark:border-gray-800 border-2 ${
 									$mobile ? 'min-w-full' : 'min-w-80'
 								}`
 							: `border-gray-100 dark:border-gray-850 border-dashed ${
@@ -252,6 +253,7 @@
 									{chatId}
 									{history}
 									messageId={_messageId}
+									{selectedModels}
 									isLastMessage={true}
 									siblings={groupedMessageIds[modelIdx].messageIds}
 									gotoMessage={(message, messageIdx) => gotoMessage(modelIdx, messageIdx)}

@@ -10,6 +10,8 @@ from open_webui.models.groups import Groups
 
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, String, Text
+from sqlalchemy import or_
+
 
 ####################
 # User DB Schema
@@ -67,6 +69,11 @@ class UserModel(BaseModel):
 ####################
 
 
+class UserListResponse(BaseModel):
+    users: list[UserModel]
+    total: int
+
+
 class UserResponse(BaseModel):
     id: str
     name: str
@@ -88,6 +95,7 @@ class UserRoleUpdateForm(BaseModel):
 
 
 class UserUpdateForm(BaseModel):
+    role: str
     name: str
     email: str
     profile_image_url: str
@@ -160,11 +168,63 @@ class UsersTable:
             return None
 
     def get_users(
-        self, skip: Optional[int] = None, limit: Optional[int] = None
-    ) -> list[UserModel]:
+        self,
+        filter: Optional[dict] = None,
+        skip: Optional[int] = None,
+        limit: Optional[int] = None,
+    ) -> UserListResponse:
         with get_db() as db:
+            query = db.query(User)
 
-            query = db.query(User).order_by(User.created_at.desc())
+            if filter:
+                query_key = filter.get("query")
+                if query_key:
+                    query = query.filter(
+                        or_(
+                            User.name.ilike(f"%{query_key}%"),
+                            User.email.ilike(f"%{query_key}%"),
+                        )
+                    )
+
+                order_by = filter.get("order_by")
+                direction = filter.get("direction")
+
+                if order_by == "name":
+                    if direction == "asc":
+                        query = query.order_by(User.name.asc())
+                    else:
+                        query = query.order_by(User.name.desc())
+                elif order_by == "email":
+                    if direction == "asc":
+                        query = query.order_by(User.email.asc())
+                    else:
+                        query = query.order_by(User.email.desc())
+
+                elif order_by == "created_at":
+                    if direction == "asc":
+                        query = query.order_by(User.created_at.asc())
+                    else:
+                        query = query.order_by(User.created_at.desc())
+
+                elif order_by == "last_active_at":
+                    if direction == "asc":
+                        query = query.order_by(User.last_active_at.asc())
+                    else:
+                        query = query.order_by(User.last_active_at.desc())
+
+                elif order_by == "updated_at":
+                    if direction == "asc":
+                        query = query.order_by(User.updated_at.asc())
+                    else:
+                        query = query.order_by(User.updated_at.desc())
+                elif order_by == "role":
+                    if direction == "asc":
+                        query = query.order_by(User.role.asc())
+                    else:
+                        query = query.order_by(User.role.desc())
+
+            else:
+                query = query.order_by(User.created_at.desc())
 
             if skip:
                 query = query.offset(skip)
@@ -172,8 +232,10 @@ class UsersTable:
                 query = query.limit(limit)
 
             users = query.all()
-
-            return [UserModel.model_validate(user) for user in users]
+            return {
+                "users": [UserModel.model_validate(user) for user in users],
+                "total": db.query(User).count(),
+            }
 
     def get_users_by_user_ids(self, user_ids: list[str]) -> list[UserModel]:
         with get_db() as db:
@@ -308,7 +370,7 @@ class UsersTable:
         except Exception:
             return False
 
-    def update_user_api_key_by_id(self, id: str, api_key: str) -> str:
+    def update_user_api_key_by_id(self, id: str, api_key: str) -> bool:
         try:
             with get_db() as db:
                 result = db.query(User).filter_by(id=id).update({"api_key": api_key})
@@ -329,6 +391,14 @@ class UsersTable:
         with get_db() as db:
             users = db.query(User).filter(User.id.in_(user_ids)).all()
             return [user.id for user in users]
+
+    def get_super_admin_user(self) -> Optional[UserModel]:
+        with get_db() as db:
+            user = db.query(User).filter_by(role="admin").first()
+            if user:
+                return UserModel.model_validate(user)
+            else:
+                return None
 
 
 Users = UsersTable()

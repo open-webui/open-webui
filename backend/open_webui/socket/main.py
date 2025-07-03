@@ -1,4 +1,6 @@
 import asyncio
+import random
+
 import socketio
 import logging
 import sys
@@ -105,10 +107,26 @@ else:
 
 
 async def periodic_usage_pool_cleanup():
-    if not aquire_func():
-        log.debug("Usage pool cleanup lock already exists. Not running it.")
-        return
-    log.debug("Running periodic_usage_pool_cleanup")
+    max_retries = 2
+    retry_delay = random.uniform(
+        WEBSOCKET_REDIS_LOCK_TIMEOUT / 2, WEBSOCKET_REDIS_LOCK_TIMEOUT
+    )
+    for attempt in range(max_retries + 1):
+        if aquire_func():
+            break
+        else:
+            if attempt < max_retries:
+                log.debug(
+                    f"Cleanup lock already exists. Retry {attempt + 1} after {retry_delay}s..."
+                )
+                await asyncio.sleep(retry_delay)
+            else:
+                log.warning(
+                    "Failed to acquire cleanup lock after retries. Skipping cleanup."
+                )
+                return
+
+    log.debug("Running periodic_cleanup")
     try:
         while True:
             if not renew_func():
@@ -135,11 +153,6 @@ async def periodic_usage_pool_cleanup():
                     USAGE_POOL[model_id] = connections
 
                 send_usage = True
-
-            if send_usage:
-                # Emit updated usage information after cleaning
-                await sio.emit("usage", {"models": get_models_in_use()})
-
             await asyncio.sleep(TIMEOUT_DURATION)
     finally:
         release_func()
@@ -157,20 +170,55 @@ def get_models_in_use():
     return models_in_use
 
 
+def get_active_user_ids():
+    """Get the list of active user IDs."""
+    return list(USER_POOL.keys())
+
+
+def get_user_active_status(user_id):
+    """Check if a user is currently active."""
+    return user_id in USER_POOL
+
+
+def get_user_id_from_session_pool(sid):
+    user = SESSION_POOL.get(sid)
+    if user:
+        return user["id"]
+    return None
+
+
+def get_user_ids_from_room(room):
+    active_session_ids = sio.manager.get_participants(
+        namespace="/",
+        room=room,
+    )
+
+    active_user_ids = list(
+        set(
+            [SESSION_POOL.get(session_id[0])["id"] for session_id in active_session_ids]
+        )
+    )
+    return active_user_ids
+
+
+def get_active_status_by_user_id(user_id):
+    if user_id in USER_POOL:
+        return True
+    return False
+
+
 @sio.on("usage")
 async def usage(sid, data):
-    model_id = data["model"]
-    # Record the timestamp for the last update
-    current_time = int(time.time())
+    if sid in SESSION_POOL:
+        model_id = data["model"]
+        # Record the timestamp for the last update
+        current_time = int(time.time())
 
-    # Store the new usage data and task
-    USAGE_POOL[model_id] = {
-        **(USAGE_POOL[model_id] if model_id in USAGE_POOL else {}),
-        sid: {"updated_at": current_time},
-    }
-
-    # Broadcast the usage data to all clients
-    await sio.emit("usage", {"models": get_models_in_use()})
+        # Store the new usage data and task
+        USAGE_POOL[model_id] = {
+            **(USAGE_POOL[model_id] if model_id in USAGE_POOL else {}),
+            sid: {"updated_at": current_time},
+        }
 
 
 @sio.event
@@ -188,10 +236,6 @@ async def connect(sid, environ, auth):
                 USER_POOL[user.id] = USER_POOL[user.id] + [sid]
             else:
                 USER_POOL[user.id] = [sid]
-
-            # print(f"user {user.name}({user.id}) connected with session ID {sid}")
-            await sio.emit("user-list", {"user_ids": list(USER_POOL.keys())})
-            await sio.emit("usage", {"models": get_models_in_use()})
 
 
 @sio.on("user-join")
@@ -220,10 +264,6 @@ async def user_join(sid, data):
     log.debug(f"{channels=}")
     for channel in channels:
         await sio.enter_room(sid, f"channel:{channel.id}")
-
-    # print(f"user {user.name}({user.id}) connected with session ID {sid}")
-
-    await sio.emit("user-list", {"user_ids": list(USER_POOL.keys())})
     return {"id": user.id, "name": user.name}
 
 
@@ -276,11 +316,6 @@ async def channel_events(sid, data):
         )
 
 
-@sio.on("user-list")
-async def user_list(sid):
-    await sio.emit("user-list", {"user_ids": list(USER_POOL.keys())})
-
-
 @sio.event
 async def disconnect(sid):
     if sid in SESSION_POOL:
@@ -292,8 +327,6 @@ async def disconnect(sid):
 
         if len(USER_POOL[user_id]) == 0:
             del USER_POOL[user_id]
-
-        await sio.emit("user-list", {"user_ids": list(USER_POOL.keys())})
     else:
         pass
         # print(f"Unknown session ID {sid} disconnected")
@@ -314,8 +347,8 @@ def get_event_emitter(request_info, update_db=True):
             )
         )
 
-        for session_id in session_ids:
-            await sio.emit(
+        emit_tasks = [
+            sio.emit(
                 "chat-events",
                 {
                     "chat_id": request_info.get("chat_id", None),
@@ -324,6 +357,10 @@ def get_event_emitter(request_info, update_db=True):
                 },
                 to=session_id,
             )
+            for session_id in session_ids
+        ]
+
+        await asyncio.gather(*emit_tasks)
 
         if update_db:
             if "type" in event_data and event_data["type"] == "status":
@@ -382,30 +419,3 @@ def get_event_call(request_info):
 
 
 get_event_caller = get_event_call
-
-
-def get_user_id_from_session_pool(sid):
-    user = SESSION_POOL.get(sid)
-    if user:
-        return user["id"]
-    return None
-
-
-def get_user_ids_from_room(room):
-    active_session_ids = sio.manager.get_participants(
-        namespace="/",
-        room=room,
-    )
-
-    active_user_ids = list(
-        set(
-            [SESSION_POOL.get(session_id[0])["id"] for session_id in active_session_ids]
-        )
-    )
-    return active_user_ids
-
-
-def get_active_status_by_user_id(user_id):
-    if user_id in USER_POOL:
-        return True
-    return False

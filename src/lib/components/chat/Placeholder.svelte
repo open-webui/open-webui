@@ -34,6 +34,8 @@
 	export let files = [];
 
 	export let selectedToolIds = [];
+	export let selectedFilterIds = [];
+
 	export let imageGenerationEnabled = false;
 	export let codeInterpreterEnabled = false;
 	export let webSearchEnabled = false;
@@ -91,7 +93,7 @@
 <div class="m-auto w-full max-w-6xl px-2 @2xl:px-20 translate-y-6 py-24 text-center">
 	{#if $temporaryChatEnabled}
 		<Tooltip
-			content={$i18n.t('This chat won’t appear in history and your messages will not be saved.')}
+			content={$i18n.t("This chat won't appear in history and your messages will not be saved.")}
 			className="w-full flex justify-center mb-0.5"
 			placement="top"
 		>
@@ -105,7 +107,7 @@
 		class="w-full text-3xl text-gray-800 dark:text-gray-100 text-center flex items-center gap-4 font-primary"
 	>
 		<div class="w-full flex flex-col justify-center items-center">
-			<div class="flex flex-row justify-center gap-3 @sm:gap-3.5 w-fit px-5">
+			<div class="flex flex-row justify-center gap-3 @sm:gap-3.5 w-fit px-5 max-w-xl">
 				<div class="flex shrink-0 justify-center">
 					<div class="flex -space-x-4 mb-0.5" in:fade={{ duration: 100 }}>
 						{#each models as model, modelIdx}
@@ -116,6 +118,8 @@
 								placement="top"
 							>
 								<button
+									aria-hidden={models.length <= 1}
+									aria-label={$i18n.t('Get information on {{name}} in the UI', { name: models[modelIdx]?.name})}
 									on:click={() => {
 										selectedModelIdx = modelIdx;
 									}}
@@ -127,7 +131,7 @@
 												? `/doge.png`
 												: `${WEBUI_BASE_URL}/static/favicon.png`)}
 										class=" size-9 @sm:size-10 rounded-full border-[1px] border-gray-100 dark:border-none"
-										alt="logo"
+										aria-hidden="true"
 										draggable="false"
 									/>
 								</button>
@@ -136,9 +140,20 @@
 					</div>
 				</div>
 
-				<div class=" text-3xl @sm:text-4xl line-clamp-1" in:fade={{ duration: 100 }}>
+				<div
+					class=" text-3xl @sm:text-3xl line-clamp-1 flex items-center"
+					in:fade={{ duration: 100 }}
+				>
 					{#if models[selectedModelIdx]?.name}
-						{models[selectedModelIdx]?.name}
+						<Tooltip
+							content={models[selectedModelIdx]?.name}
+							placement="top"
+							className=" flex items-center "
+						>
+							<span class="line-clamp-1">
+								{models[selectedModelIdx]?.name}
+							</span>
+						</Tooltip>
 					{:else}
 						{$i18n.t('Hello, {{name}}', { name: $user?.name })}
 					{/if}
@@ -151,7 +166,9 @@
 						<Tooltip
 							className=" w-fit"
 							content={marked.parse(
-								sanitizeResponseContent(models[selectedModelIdx]?.info?.meta?.description ?? '')
+								sanitizeResponseContent(
+									models[selectedModelIdx]?.info?.meta?.description ?? ''
+								).replaceAll('\n', '<br>')
 							)}
 							placement="top"
 						>
@@ -159,7 +176,9 @@
 								class="mt-0.5 px-2 text-sm font-normal text-gray-500 dark:text-gray-400 line-clamp-2 max-w-xl markdown"
 							>
 								{@html marked.parse(
-									sanitizeResponseContent(models[selectedModelIdx]?.info?.meta?.description)
+									sanitizeResponseContent(
+										models[selectedModelIdx]?.info?.meta?.description ?? ''
+									).replaceAll('\n', '<br>')
 								)}
 							</div>
 						</Tooltip>
@@ -192,6 +211,7 @@
 					bind:prompt
 					bind:autoScroll
 					bind:selectedToolIds
+					bind:selectedFilterIds
 					bind:imageGenerationEnabled
 					bind:codeInterpreterEnabled
 					bind:webSearchEnabled
@@ -201,6 +221,15 @@
 					{stopResponse}
 					{createMessagePair}
 					placeholder={$i18n.t('How can I help you today?')}
+					onChange={(input) => {
+						if (!$temporaryChatEnabled) {
+							if (input.prompt !== null) {
+								sessionStorage.setItem(`chat-input`, JSON.stringify(input));
+							} else {
+								sessionStorage.removeItem(`chat-input`);
+							}
+						}
+					}}
 					on:upload={(e) => {
 						dispatch('upload', e.detail);
 					}}
@@ -211,7 +240,7 @@
 			</div>
 		</div>
 	</div>
-	<div class="mx-auto max-w-2xl font-primary" in:fade={{ duration: 200, delay: 200 }}>
+	<div class="mx-auto max-w-2xl font-primary mt-2" in:fade={{ duration: 200, delay: 200 }}>
 		<div class="mx-5">
 			<Suggestions
 				suggestionPrompts={atSelectedModel?.info?.meta?.suggestion_prompts ??

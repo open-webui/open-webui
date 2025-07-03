@@ -37,7 +37,8 @@
 			direct_tool_servers: false,
 			web_search: true,
 			image_generation: true,
-			code_interpreter: true
+			code_interpreter: true,
+			notes: true
 		}
 	};
 
@@ -264,6 +265,14 @@
 
 		<div class="  flex w-full justify-between my-2 pr-2">
 			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Allow Chat System Prompt')}
+			</div>
+
+			<Switch bind:state={permissions.chat.system_prompt} />
+		</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
 				{$i18n.t('Allow Chat Delete')}
 			</div>
 
@@ -379,6 +388,14 @@
 			</div>
 
 			<Switch bind:state={permissions.features.code_interpreter} />
+		</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Notes')}
+			</div>
+
+			<Switch bind:state={permissions.features.notes} />
 		</div>
 	</div>
 </div>

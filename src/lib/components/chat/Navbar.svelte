@@ -47,8 +47,17 @@
 
 <ShareChatModal bind:show={showShareChatModal} chatId={$chatId} />
 
-<nav class="sticky top-0 z-30 w-full py-1.5 -mb-8 flex flex-col items-center drag-region">
-	<div class="flex items-center w-full px-1.5">
+<button
+	id="new-chat-button"
+	class="hidden"
+	on:click={() => {
+		initNewChat();
+	}}
+	aria-label="New Chat"
+/>
+
+<nav class="sticky top-0 z-30 w-full py-1 -mb-8 flex flex-col items-center drag-region">
+	<div class="flex items-center w-full pl-1.5 pr-1">
 		<div
 			class=" bg-linear-to-b via-50% from-white via-white to-transparent dark:from-gray-900 dark:via-gray-900 dark:to-transparent pointer-events-none absolute inset-0 -bottom-7 z-[-1]"
 		></div>
@@ -72,6 +81,24 @@
 							<MenuLines />
 						</div>
 					</button>
+
+					{#if !$mobile}
+						<Tooltip content={$i18n.t('New Chat')}>
+							<button
+								class=" flex {$showSidebar
+									? 'md:hidden'
+									: ''} cursor-pointer px-2 py-2 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+								on:click={() => {
+									initNewChat();
+								}}
+								aria-label="New Chat"
+							>
+								<div class=" m-auto self-center">
+									<PencilSquare className=" size-5" strokeWidth="2" />
+								</div>
+							</button>
+						</Tooltip>
+					{/if}
 				</div>
 
 				<div
@@ -135,52 +162,42 @@
 						</button>
 					</Tooltip>
 
-					<Tooltip content={$i18n.t('New Chat')}>
-						<button
-							id="new-chat-button"
-							class=" flex {$showSidebar
-								? 'md:hidden'
-								: ''} cursor-pointer px-2 py-2 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-							on:click={() => {
-								initNewChat();
-							}}
-							aria-label="New Chat"
-						>
-							<div class=" m-auto self-center">
-								<PencilSquare className=" size-5" strokeWidth="2" />
-							</div>
-						</button>
-					</Tooltip>
-
 					{#if $user !== undefined && $user !== null}
 						<UserMenu
-							className="max-w-[200px]"
+							className="max-w-[240px]"
 							role={$user?.role}
+							help={true}
 							on:show={(e) => {
 								if (e.detail === 'archived-chat') {
 									showArchivedChats.set(true);
 								}
 							}}
 						>
-							<button
+							<div
 								class="select-none flex rounded-xl p-1.5 w-full hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-								aria-label="User Menu"
 							>
 								<div class=" self-center">
+									<span class="sr-only">{$i18n.t('User menu')}</span>
 									<img
 										src={$user?.profile_image_url}
 										class="size-6 object-cover rounded-full"
-										alt="User profile"
+										alt=""
 										draggable="false"
 									/>
 								</div>
-							</button>
+							</div>
 						</UserMenu>
 					{/if}
 				</div>
 			</div>
 		</div>
 	</div>
+
+	{#if $temporaryChatEnabled && $chatId === 'local'}
+		<div class=" w-full z-30 text-center">
+			<div class="text-xs text-gray-500">{$i18n.t('Temporary Chat')}</div>
+		</div>
+	{/if}
 
 	{#if !history.currentId && !$chatId && ($banners.length > 0 || ($config?.license_metadata?.type ?? null) === 'trial' || (($config?.license_metadata?.seats ?? null) !== null && $config?.user_count > $config?.license_metadata?.seats))}
 		<div class=" w-full z-30 mt-5">

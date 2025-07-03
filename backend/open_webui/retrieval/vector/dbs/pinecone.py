@@ -1,6 +1,21 @@
 from typing import Optional, List, Dict, Any, Union
 import logging
+import time  # for measuring elapsed time
 from pinecone import Pinecone, ServerlessSpec
+
+# Add gRPC support for better performance (Pinecone best practice)
+try:
+    from pinecone.grpc import PineconeGRPC
+
+    GRPC_AVAILABLE = True
+except ImportError:
+    GRPC_AVAILABLE = False
+
+import asyncio  # for async upserts
+import functools  # for partial binding in async tasks
+
+import concurrent.futures  # for parallel batch upserts
+import random  # for jitter in retry backoff
 
 from open_webui.retrieval.vector.main import (
     VectorDBBase,
@@ -40,8 +55,28 @@ class PineconeClient(VectorDBBase):
         self.metric = PINECONE_METRIC
         self.cloud = PINECONE_CLOUD
 
-        # Initialize Pinecone client
-        self.client = Pinecone(api_key=self.api_key)
+        # Initialize Pinecone client for improved performance
+        if GRPC_AVAILABLE:
+            # Use gRPC client for better performance (Pinecone recommendation)
+            self.client = PineconeGRPC(
+                api_key=self.api_key,
+                pool_threads=20,  # Improved connection pool size
+                timeout=30,  # Reasonable timeout for operations
+            )
+            self.using_grpc = True
+            log.info("Using Pinecone gRPC client for optimal performance")
+        else:
+            # Fallback to HTTP client with enhanced connection pooling
+            self.client = Pinecone(
+                api_key=self.api_key,
+                pool_threads=20,  # Improved connection pool size
+                timeout=30,  # Reasonable timeout for operations
+            )
+            self.using_grpc = False
+            log.info("Using Pinecone HTTP client (gRPC not available)")
+
+        # Persistent executor for batch operations
+        self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
 
         # Create index if it doesn't exist
         self._initialize_index()
@@ -82,11 +117,52 @@ class PineconeClient(VectorDBBase):
                 log.info(f"Using existing Pinecone index '{self.index_name}'")
 
             # Connect to the index
-            self.index = self.client.Index(self.index_name)
+            self.index = self.client.Index(
+                self.index_name,
+                pool_threads=20,  # Enhanced connection pool for index operations
+            )
 
         except Exception as e:
             log.error(f"Failed to initialize Pinecone index: {e}")
             raise RuntimeError(f"Failed to initialize Pinecone index: {e}")
+
+    def _retry_pinecone_operation(self, operation_func, max_retries=3):
+        """Retry Pinecone operations with exponential backoff for rate limits and network issues."""
+        for attempt in range(max_retries):
+            try:
+                return operation_func()
+            except Exception as e:
+                error_str = str(e).lower()
+                # Check if it's a retryable error (rate limits, network issues, timeouts)
+                is_retryable = any(
+                    keyword in error_str
+                    for keyword in [
+                        "rate limit",
+                        "quota",
+                        "timeout",
+                        "network",
+                        "connection",
+                        "unavailable",
+                        "internal error",
+                        "429",
+                        "500",
+                        "502",
+                        "503",
+                        "504",
+                    ]
+                )
+
+                if not is_retryable or attempt == max_retries - 1:
+                    # Don't retry for non-retryable errors or on final attempt
+                    raise
+
+                # Exponential backoff with jitter
+                delay = (2**attempt) + random.uniform(0, 1)
+                log.warning(
+                    f"Pinecone operation failed (attempt {attempt + 1}/{max_retries}), "
+                    f"retrying in {delay:.2f}s: {e}"
+                )
+                time.sleep(delay)
 
     def _create_points(
         self, items: List[VectorItem], collection_name_with_prefix: str
@@ -135,8 +211,8 @@ class PineconeClient(VectorDBBase):
         metadatas = []
 
         for match in matches:
-            metadata = match.get("metadata", {})
-            ids.append(match["id"])
+            metadata = getattr(match, "metadata", {}) or {}
+            ids.append(match.id if hasattr(match, "id") else match["id"])
             documents.append(metadata.get("text", ""))
             metadatas.append(metadata)
 
@@ -162,7 +238,8 @@ class PineconeClient(VectorDBBase):
                 filter={"collection_name": collection_name_with_prefix},
                 include_metadata=False,
             )
-            return len(response.matches) > 0
+            matches = getattr(response, "matches", []) or []
+            return len(matches) > 0
         except Exception as e:
             log.exception(
                 f"Error checking collection '{collection_name_with_prefix}': {e}"
@@ -191,31 +268,98 @@ class PineconeClient(VectorDBBase):
             log.warning("No items to insert")
             return
 
+        start_time = time.time()
+
         collection_name_with_prefix = self._get_collection_name_with_prefix(
             collection_name
         )
         points = self._create_points(items, collection_name_with_prefix)
 
-        # Insert in batches for better performance and reliability
+        # Parallelize batch inserts for performance
+        executor = self._executor
+        futures = []
         for i in range(0, len(points), BATCH_SIZE):
             batch = points[i : i + BATCH_SIZE]
+            futures.append(executor.submit(self.index.upsert, vectors=batch))
+        for future in concurrent.futures.as_completed(futures):
             try:
-                self.index.upsert(vectors=batch)
-                log.debug(
-                    f"Inserted batch of {len(batch)} vectors into '{collection_name_with_prefix}'"
-                )
+                future.result()
             except Exception as e:
-                log.error(
-                    f"Error inserting batch into '{collection_name_with_prefix}': {e}"
-                )
+                log.error(f"Error inserting batch: {e}")
                 raise
-
+        elapsed = time.time() - start_time
+        log.debug(f"Insert of {len(points)} vectors took {elapsed:.2f} seconds")
         log.info(
-            f"Successfully inserted {len(items)} vectors into '{collection_name_with_prefix}'"
+            f"Successfully inserted {len(points)} vectors in parallel batches "
+            f"into '{collection_name_with_prefix}'"
         )
 
     def upsert(self, collection_name: str, items: List[VectorItem]) -> None:
         """Upsert (insert or update) vectors into a collection."""
+        if not items:
+            log.warning("No items to upsert")
+            return
+
+        start_time = time.time()
+
+        collection_name_with_prefix = self._get_collection_name_with_prefix(
+            collection_name
+        )
+        points = self._create_points(items, collection_name_with_prefix)
+
+        # Parallelize batch upserts for performance
+        executor = self._executor
+        futures = []
+        for i in range(0, len(points), BATCH_SIZE):
+            batch = points[i : i + BATCH_SIZE]
+            futures.append(executor.submit(self.index.upsert, vectors=batch))
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                future.result()
+            except Exception as e:
+                log.error(f"Error upserting batch: {e}")
+                raise
+        elapsed = time.time() - start_time
+        log.debug(f"Upsert of {len(points)} vectors took {elapsed:.2f} seconds")
+        log.info(
+            f"Successfully upserted {len(points)} vectors in parallel batches "
+            f"into '{collection_name_with_prefix}'"
+        )
+
+    async def insert_async(self, collection_name: str, items: List[VectorItem]) -> None:
+        """Async version of insert using asyncio and run_in_executor for improved performance."""
+        if not items:
+            log.warning("No items to insert")
+            return
+
+        collection_name_with_prefix = self._get_collection_name_with_prefix(
+            collection_name
+        )
+        points = self._create_points(items, collection_name_with_prefix)
+
+        # Create batches
+        batches = [
+            points[i : i + BATCH_SIZE] for i in range(0, len(points), BATCH_SIZE)
+        ]
+        loop = asyncio.get_event_loop()
+        tasks = [
+            loop.run_in_executor(
+                None, functools.partial(self.index.upsert, vectors=batch)
+            )
+            for batch in batches
+        ]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        for result in results:
+            if isinstance(result, Exception):
+                log.error(f"Error in async insert batch: {result}")
+                raise result
+        log.info(
+            f"Successfully async inserted {len(points)} vectors in batches "
+            f"into '{collection_name_with_prefix}'"
+        )
+
+    async def upsert_async(self, collection_name: str, items: List[VectorItem]) -> None:
+        """Async version of upsert using asyncio and run_in_executor for improved performance."""
         if not items:
             log.warning("No items to upsert")
             return
@@ -225,22 +369,25 @@ class PineconeClient(VectorDBBase):
         )
         points = self._create_points(items, collection_name_with_prefix)
 
-        # Upsert in batches
-        for i in range(0, len(points), BATCH_SIZE):
-            batch = points[i : i + BATCH_SIZE]
-            try:
-                self.index.upsert(vectors=batch)
-                log.debug(
-                    f"Upserted batch of {len(batch)} vectors into '{collection_name_with_prefix}'"
-                )
-            except Exception as e:
-                log.error(
-                    f"Error upserting batch into '{collection_name_with_prefix}': {e}"
-                )
-                raise
-
+        # Create batches
+        batches = [
+            points[i : i + BATCH_SIZE] for i in range(0, len(points), BATCH_SIZE)
+        ]
+        loop = asyncio.get_event_loop()
+        tasks = [
+            loop.run_in_executor(
+                None, functools.partial(self.index.upsert, vectors=batch)
+            )
+            for batch in batches
+        ]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        for result in results:
+            if isinstance(result, Exception):
+                log.error(f"Error in async upsert batch: {result}")
+                raise result
         log.info(
-            f"Successfully upserted {len(items)} vectors into '{collection_name_with_prefix}'"
+            f"Successfully async upserted {len(points)} vectors in batches "
+            f"into '{collection_name_with_prefix}'"
         )
 
     def search(
@@ -270,7 +417,8 @@ class PineconeClient(VectorDBBase):
                 filter={"collection_name": collection_name_with_prefix},
             )
 
-            if not query_response.matches:
+            matches = getattr(query_response, "matches", []) or []
+            if not matches:
                 # Return empty result if no matches
                 return SearchResult(
                     ids=[[]],
@@ -280,13 +428,13 @@ class PineconeClient(VectorDBBase):
                 )
 
             # Convert to GetResult format
-            get_result = self._result_to_get_result(query_response.matches)
+            get_result = self._result_to_get_result(matches)
 
             # Calculate normalized distances based on metric
             distances = [
                 [
-                    self._normalize_distance(match.score)
-                    for match in query_response.matches
+                    self._normalize_distance(getattr(match, "score", 0.0))
+                    for match in matches
                 ]
             ]
 
@@ -328,7 +476,8 @@ class PineconeClient(VectorDBBase):
                 include_metadata=True,
             )
 
-            return self._result_to_get_result(query_response.matches)
+            matches = getattr(query_response, "matches", []) or []
+            return self._result_to_get_result(matches)
 
         except Exception as e:
             log.error(f"Error querying collection '{collection_name}': {e}")
@@ -352,7 +501,8 @@ class PineconeClient(VectorDBBase):
                 filter={"collection_name": collection_name_with_prefix},
             )
 
-            return self._result_to_get_result(query_response.matches)
+            matches = getattr(query_response, "matches", []) or []
+            return self._result_to_get_result(matches)
 
         except Exception as e:
             log.error(f"Error getting collection '{collection_name}': {e}")
@@ -378,10 +528,12 @@ class PineconeClient(VectorDBBase):
                     # This is a limitation of Pinecone - be careful with ID uniqueness
                     self.index.delete(ids=batch_ids)
                     log.debug(
-                        f"Deleted batch of {len(batch_ids)} vectors by ID from '{collection_name_with_prefix}'"
+                        f"Deleted batch of {len(batch_ids)} vectors by ID "
+                        f"from '{collection_name_with_prefix}'"
                     )
                 log.info(
-                    f"Successfully deleted {len(ids)} vectors by ID from '{collection_name_with_prefix}'"
+                    f"Successfully deleted {len(ids)} vectors by ID "
+                    f"from '{collection_name_with_prefix}'"
                 )
 
             elif filter:
@@ -410,3 +562,20 @@ class PineconeClient(VectorDBBase):
         except Exception as e:
             log.error(f"Failed to reset Pinecone index: {e}")
             raise
+
+    def close(self):
+        """Shut down resources."""
+        try:
+            # The new Pinecone client doesn't need explicit closing
+            pass
+        except Exception as e:
+            log.warning(f"Failed to clean up Pinecone resources: {e}")
+        self._executor.shutdown(wait=True)
+
+    def __enter__(self):
+        """Enter context manager."""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Exit context manager, ensuring resources are cleaned up."""
+        self.close()

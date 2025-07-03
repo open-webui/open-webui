@@ -4,33 +4,39 @@
 
 	import { goto } from '$app/navigation';
 	import { user } from '$lib/stores';
-
-	import { getUsers } from '$lib/apis/users';
+	import { page } from '$app/stores';
 
 	import UserList from './Users/UserList.svelte';
 	import Groups from './Users/Groups.svelte';
 
 	const i18n = getContext('i18n');
 
-	let users = [];
-
-	let selectedTab = 'overview';
-	let loaded = false;
-
-	$: if (selectedTab) {
-		getUsersHandler();
+	let selectedTab;
+	$: {
+		const pathParts = $page.url.pathname.split('/');
+		const tabFromPath = pathParts[pathParts.length - 1];
+		selectedTab = ['overview', 'groups'].includes(tabFromPath) ? tabFromPath : 'overview';
 	}
 
-	const getUsersHandler = async () => {
-		users = await getUsers(localStorage.token);
+	$: if (selectedTab) {
+		// scroll to selectedTab
+		scrollToTab(selectedTab);
+	}
+
+	const scrollToTab = (tabId) => {
+		const tabElement = document.getElementById(tabId);
+		if (tabElement) {
+			tabElement.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+		}
 	};
+
+	let loaded = false;
 
 	onMount(async () => {
 		if ($user?.role !== 'admin') {
 			await goto('/');
-		} else {
-			users = await getUsers(localStorage.token);
 		}
+
 		loaded = true;
 
 		const containerElement = document.getElementById('users-tabs-container');
@@ -43,6 +49,9 @@
 				}
 			});
 		}
+
+		// Scroll to the selected tab on mount
+		scrollToTab(selectedTab);
 	});
 </script>
 
@@ -52,12 +61,13 @@
 		class=" flex flex-row overflow-x-auto gap-2.5 max-w-full lg:gap-1 lg:flex-col lg:flex-none lg:w-40 dark:text-gray-200 text-sm font-medium text-left scrollbar-none"
 	>
 		<button
+			id="overview"
 			class="px-0.5 py-1 min-w-fit rounded-lg lg:flex-none flex text-right transition {selectedTab ===
 			'overview'
 				? ''
 				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			on:click={() => {
-				selectedTab = 'overview';
+				goto('/admin/users/overview');
 			}}
 		>
 			<div class=" self-center mr-2">
@@ -76,12 +86,13 @@
 		</button>
 
 		<button
+			id="groups"
 			class="px-0.5 py-1 min-w-fit rounded-lg lg:flex-none flex text-right transition {selectedTab ===
 			'groups'
 				? ''
 				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			on:click={() => {
-				selectedTab = 'groups';
+				goto('/admin/users/groups');
 			}}
 		>
 			<div class=" self-center mr-2">
@@ -102,9 +113,9 @@
 
 	<div class="flex-1 mt-1 lg:mt-0 overflow-y-scroll">
 		{#if selectedTab === 'overview'}
-			<UserList {users} />
+			<UserList />
 		{:else if selectedTab === 'groups'}
-			<Groups {users} />
+			<Groups />
 		{/if}
 	</div>
 </div>

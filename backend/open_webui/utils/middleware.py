@@ -32,15 +32,22 @@ from open_webui.socket.main import (
 from open_webui.routers.tasks import (
     generate_queries,
     generate_title,
+    generate_follow_ups,
     generate_image_prompt,
     generate_chat_tags,
 )
 from open_webui.routers.retrieval import process_web_search, SearchForm
-from open_webui.routers.images import image_generations, GenerateImageForm
+from open_webui.routers.images import (
+    load_b64_image_data,
+    image_generations,
+    GenerateImageForm,
+    upload_image,
+)
 from open_webui.routers.pipelines import (
     process_pipeline_inlet_filter,
     process_pipeline_outlet_filter,
 )
+from open_webui.routers.memories import query_memory, QueryMemoryForm
 
 from open_webui.utils.webhook import post_webhook
 
@@ -241,6 +248,7 @@ async def chat_completion_tools_handler(
                         if tool_id
                         else f"{tool_function_name}"
                     )
+
                     if tool.get("metadata", {}).get("citation", False) or tool.get(
                         "direct", False
                     ):
@@ -251,7 +259,12 @@ async def chat_completion_tools_handler(
                                     "name": (f"TOOL:{tool_name}"),
                                 },
                                 "document": [tool_result],
-                                "metadata": [{"source": (f"TOOL:{tool_name}")}],
+                                "metadata": [
+                                    {
+                                        "source": (f"TOOL:{tool_name}"),
+                                        "parameters": tool_function_params,
+                                    }
+                                ],
                             }
                         )
                     else:
@@ -288,6 +301,45 @@ async def chat_completion_tools_handler(
         del body["metadata"]["files"]
 
     return body, {"sources": sources}
+
+
+async def chat_memory_handler(
+    request: Request, form_data: dict, extra_params: dict, user
+):
+    try:
+        results = await query_memory(
+            request,
+            QueryMemoryForm(
+                **{
+                    "content": get_last_user_message(form_data["messages"]) or "",
+                    "k": 3,
+                }
+            ),
+            user,
+        )
+    except Exception as e:
+        log.debug(e)
+        results = None
+
+    user_context = ""
+    if results and hasattr(results, "documents"):
+        if results.documents and len(results.documents) > 0:
+            for doc_idx, doc in enumerate(results.documents[0]):
+                created_at_date = "Unknown Date"
+
+                if results.metadatas[0][doc_idx].get("created_at"):
+                    created_at_timestamp = results.metadatas[0][doc_idx]["created_at"]
+                    created_at_date = time.strftime(
+                        "%Y-%m-%d", time.localtime(created_at_timestamp)
+                    )
+
+                user_context += f"{doc_idx + 1}. [{created_at_date}] {doc}\n"
+
+    form_data["messages"] = add_or_update_system_message(
+        f"User Context:\n{user_context}\n", form_data["messages"], append=True
+    )
+
+    return form_data
 
 
 async def chat_web_search_handler(
@@ -340,6 +392,11 @@ async def chat_web_search_handler(
         log.exception(e)
         queries = [user_message]
 
+    # Check if generated queries are empty
+    if len(queries) == 1 and queries[0].strip() == "":
+        queries = [user_message]
+
+    # Check if queries are not found
     if len(queries) == 0:
         await event_emitter(
             {
@@ -353,115 +410,88 @@ async def chat_web_search_handler(
         )
         return form_data
 
-    all_results = []
+    await event_emitter(
+        {
+            "type": "status",
+            "data": {
+                "action": "web_search",
+                "description": "Searching the web",
+                "done": False,
+            },
+        }
+    )
 
-    for searchQuery in queries:
-        await event_emitter(
-            {
-                "type": "status",
-                "data": {
-                    "action": "web_search",
-                    "description": 'Searching "{{searchQuery}}"',
-                    "query": searchQuery,
-                    "done": False,
-                },
-            }
+    try:
+        results = await process_web_search(
+            request,
+            SearchForm(queries=queries),
+            user=user,
         )
 
-        try:
-            results = await process_web_search(
-                request,
-                SearchForm(
-                    **{
-                        "query": searchQuery,
+        if results:
+            files = form_data.get("files", [])
+
+            if results.get("collection_names"):
+                for col_idx, collection_name in enumerate(
+                    results.get("collection_names")
+                ):
+                    files.append(
+                        {
+                            "collection_name": collection_name,
+                            "name": ", ".join(queries),
+                            "type": "web_search",
+                            "urls": results["filenames"],
+                            "queries": queries,
+                        }
+                    )
+            elif results.get("docs"):
+                # Invoked when bypass embedding and retrieval is set to True
+                docs = results["docs"]
+                files.append(
+                    {
+                        "docs": docs,
+                        "name": ", ".join(queries),
+                        "type": "web_search",
+                        "urls": results["filenames"],
+                        "queries": queries,
                     }
-                ),
-                user=user,
-            )
+                )
 
-            if results:
-                all_results.append(results)
-                files = form_data.get("files", [])
+            form_data["files"] = files
 
-                if results.get("collection_names"):
-                    for col_idx, collection_name in enumerate(
-                        results.get("collection_names")
-                    ):
-                        files.append(
-                            {
-                                "collection_name": collection_name,
-                                "name": searchQuery,
-                                "type": "web_search",
-                                "urls": [results["filenames"][col_idx]],
-                            }
-                        )
-                elif results.get("docs"):
-                    # Invoked when bypass embedding and retrieval is set to True
-                    docs = results["docs"]
-
-                    if len(docs) == len(results["filenames"]):
-                        # the number of docs and filenames (urls) should be the same
-                        for doc_idx, doc in enumerate(docs):
-                            files.append(
-                                {
-                                    "docs": [doc],
-                                    "name": searchQuery,
-                                    "type": "web_search",
-                                    "urls": [results["filenames"][doc_idx]],
-                                }
-                            )
-                    else:
-                        # edge case when the number of docs and filenames (urls) are not the same
-                        # this should not happen, but if it does, we will just append the docs
-                        files.append(
-                            {
-                                "docs": results.get("docs", []),
-                                "name": searchQuery,
-                                "type": "web_search",
-                                "urls": results["filenames"],
-                            }
-                        )
-
-                form_data["files"] = files
-        except Exception as e:
-            log.exception(e)
             await event_emitter(
                 {
                     "type": "status",
                     "data": {
                         "action": "web_search",
-                        "description": 'Error searching "{{searchQuery}}"',
-                        "query": searchQuery,
+                        "description": "Searched {{count}} sites",
+                        "urls": results["filenames"],
+                        "done": True,
+                    },
+                }
+            )
+        else:
+            await event_emitter(
+                {
+                    "type": "status",
+                    "data": {
+                        "action": "web_search",
+                        "description": "No search results found",
                         "done": True,
                         "error": True,
                     },
                 }
             )
 
-    if all_results:
-        urls = []
-        for results in all_results:
-            if "filenames" in results:
-                urls.extend(results["filenames"])
-
+    except Exception as e:
+        log.exception(e)
         await event_emitter(
             {
                 "type": "status",
                 "data": {
                     "action": "web_search",
-                    "description": "Searched {{count}} sites",
-                    "urls": urls,
-                    "done": True,
-                },
-            }
-        )
-    else:
-        await event_emitter(
-            {
-                "type": "status",
-                "data": {
-                    "action": "web_search",
-                    "description": "No search results found",
+                    "description": "An error occurred while searching the web",
+                    "queries": queries,
                     "done": True,
                     "error": True,
                 },
@@ -627,6 +657,7 @@ async def chat_completion_files_handler(
                         reranking_function=request.app.state.rf,
                         k_reranker=request.app.state.config.TOP_K_RERANKER,
                         r=request.app.state.config.RELEVANCE_THRESHOLD,
+                        hybrid_bm25_weight=request.app.state.config.HYBRID_BM25_WEIGHT,
                         hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
                         full_context=request.app.state.config.RAG_FULL_CONTEXT,
                     ),
@@ -641,35 +672,40 @@ async def chat_completion_files_handler(
 
 def apply_params_to_form_data(form_data, model):
     params = form_data.pop("params", {})
-    if model.get("ollama"):
+    custom_params = params.pop("custom_params", {})
+
+    open_webui_params = {
+        "stream_response": bool,
+        "function_calling": str,
+        "system": str,
+    }
+
+    for key in list(params.keys()):
+        if key in open_webui_params:
+            del params[key]
+
+    if custom_params:
+        # Attempt to parse custom_params if they are strings
+        for key, value in custom_params.items():
+            if isinstance(value, str):
+                try:
+                    # Attempt to parse the string as JSON
+                    custom_params[key] = json.loads(value)
+                except json.JSONDecodeError:
+                    # If it fails, keep the original string
+                    pass
+
+        # If custom_params are provided, merge them into params
+        params = deep_update(params, custom_params)
+
+    if model.get("owned_by") == "ollama":
+        # Ollama specific parameters
         form_data["options"] = params
-
-        if "format" in params:
-            form_data["format"] = params["format"]
-
-        if "keep_alive" in params:
-            form_data["keep_alive"] = params["keep_alive"]
     else:
-        if "seed" in params and params["seed"] is not None:
-            form_data["seed"] = params["seed"]
-
-        if "stop" in params and params["stop"] is not None:
-            form_data["stop"] = params["stop"]
-
-        if "temperature" in params and params["temperature"] is not None:
-            form_data["temperature"] = params["temperature"]
-
-        if "max_tokens" in params and params["max_tokens"] is not None:
-            form_data["max_tokens"] = params["max_tokens"]
-
-        if "top_p" in params and params["top_p"] is not None:
-            form_data["top_p"] = params["top_p"]
-
-        if "frequency_penalty" in params and params["frequency_penalty"] is not None:
-            form_data["frequency_penalty"] = params["frequency_penalty"]
-
-        if "reasoning_effort" in params and params["reasoning_effort"] is not None:
-            form_data["reasoning_effort"] = params["reasoning_effort"]
+        if isinstance(params, dict):
+            for key, value in params.items():
+                if value is not None:
+                    form_data[key] = value
 
         if "logit_bias" in params and params["logit_bias"] is not None:
             try:
@@ -677,12 +713,15 @@ def apply_params_to_form_data(form_data, model):
                     convert_logit_bias_input_to_json(params["logit_bias"])
                 )
             except Exception as e:
-                print(f"Error parsing logit_bias: {e}")
+                log.exception(f"Error parsing logit_bias: {e}")
 
     return form_data
 
 
 async def process_chat_payload(request, form_data, user, metadata, model):
+    # Pipeline Inlet -> Filter Inlet -> Chat Memory -> Chat Web Search -> Chat Image Generation
+    # -> Chat Code Interpreter (Form Data Update) -> (Default) Chat Tools Function Calling
+    # -> Chat Files
 
     form_data = apply_params_to_form_data(form_data, model)
     log.debug(f"form_data: {form_data}")
@@ -693,12 +732,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     extra_params = {
         "__event_emitter__": event_emitter,
         "__event_call__": event_call,
-        "__user__": {
-            "id": user.id,
-            "email": user.email,
-            "name": user.name,
-            "role": user.role,
-        },
+        "__user__": user.model_dump() if isinstance(user, UserModel) else {},
         "__metadata__": metadata,
         "__request__": request,
         "__model__": model,
@@ -777,7 +811,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     try:
         filter_functions = [
             Functions.get_function_by_id(filter_id)
-            for filter_id in get_sorted_filter_ids(model)
+            for filter_id in get_sorted_filter_ids(
+                request, model, metadata.get("filter_ids", [])
+            )
         ]
 
         form_data, flags = await process_filter_functions(
@@ -792,6 +828,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     features = form_data.pop("features", None)
     if features:
+        if "memory" in features and features["memory"]:
+            form_data = await chat_memory_handler(
+                request, form_data, extra_params, user
+            )
+
         if "web_search" in features and features["web_search"]:
             form_data = await chat_web_search_handler(
                 request, form_data, extra_params, user
@@ -875,7 +916,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     request, form_data, extra_params, user, models, tools_dict
                 )
                 sources.extend(flags.get("sources", []))
-
             except Exception as e:
                 log.exception(e)
 
@@ -888,20 +928,28 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # If context is not empty, insert it into the messages
     if len(sources) > 0:
         context_string = ""
-        citation_idx = {}
+        citation_idx_map = {}
+
         for source in sources:
             if "document" in source:
-                for doc_context, doc_meta in zip(
+                for document_text, document_metadata in zip(
                     source["document"], source["metadata"]
                 ):
-                    citation_id = (
-                        doc_meta.get("source", None)
+                    source_name = source.get("source", {}).get("name", None)
+                    source_id = (
+                        document_metadata.get("source", None)
                         or source.get("source", {}).get("id", None)
                         or "N/A"
                     )
-                    if citation_id not in citation_idx:
-                        citation_idx[citation_id] = len(citation_idx) + 1
-                    context_string += f'<source id="{citation_idx[citation_id]}">{doc_context}</source>\n'
+
+                    if source_id not in citation_idx_map:
+                        citation_idx_map[source_id] = len(citation_idx_map) + 1
+
+                    context_string += (
+                        f'<source id="{citation_idx_map[source_id]}"'
+                        + (f' name="{source_name}"' if source_name else "")
+                        + f">{document_text}</source>\n"
+                    )
 
         context_string = context_string.strip()
         prompt = get_last_user_message(form_data["messages"])
@@ -934,7 +982,12 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             )
 
     # If there are citations, add them to the data_items
-    sources = [source for source in sources if source.get("source", {}).get("name", "")]
+    sources = [
+        source
+        for source in sources
+        if source.get("source", {}).get("name", "")
+        or source.get("source", {}).get("id", "")
+    ]
 
     if len(sources) > 0:
         events.append({"sources": sources})
@@ -963,11 +1016,101 @@ async def process_chat_response(
         message = message_map.get(metadata["message_id"]) if message_map else None
 
         if message:
-            messages = get_message_list(message_map, message.get("id"))
+            message_list = get_message_list(message_map, metadata["message_id"])
+
+            # Remove details tags and files from the messages.
+            # as get_message_list creates a new list, it does not affect
+            # the original messages outside of this handler
+
+            messages = []
+            for message in message_list:
+                content = message.get("content", "")
+                if isinstance(content, list):
+                    for item in content:
+                        if item.get("type") == "text":
+                            content = item["text"]
+                            break
+
+                if isinstance(content, str):
+                    content = re.sub(
+                        r"<details\b[^>]*>.*?<\/details>|!\[.*?\]\(.*?\)",
+                        "",
+                        content,
+                        flags=re.S | re.I,
+                    ).strip()
+
+                messages.append(
+                    {
+                        **message,
+                        "role": message.get(
+                            "role", "assistant"
+                        ),  # Safe fallback for missing role
+                        "content": content,
+                    }
+                )
 
             if tasks and messages:
+                if (
+                    TASKS.FOLLOW_UP_GENERATION in tasks
+                    and tasks[TASKS.FOLLOW_UP_GENERATION]
+                ):
+                    res = await generate_follow_ups(
+                        request,
+                        {
+                            "model": message["model"],
+                            "messages": messages,
+                            "message_id": metadata["message_id"],
+                            "chat_id": metadata["chat_id"],
+                        },
+                        user,
+                    )
+
+                    if res and isinstance(res, dict):
+                        if len(res.get("choices", [])) == 1:
+                            follow_ups_string = (
+                                res.get("choices", [])[0]
+                                .get("message", {})
+                                .get("content", "")
+                            )
+                        else:
+                            follow_ups_string = ""
+
+                        follow_ups_string = follow_ups_string[
+                            follow_ups_string.find("{") : follow_ups_string.rfind("}")
+                            + 1
+                        ]
+
+                        try:
+                            follow_ups = json.loads(follow_ups_string).get(
+                                "follow_ups", []
+                            )
+
+                            Chats.upsert_message_to_chat_by_id_and_message_id(
+                                metadata["chat_id"],
+                                metadata["message_id"],
+                                {
+                                    "followUps": follow_ups,
+                                },
+                            )
+
+                            await event_emitter(
+                                {
+                                    "type": "chat:message:follow_ups",
+                                    "data": {
+                                        "follow_ups": follow_ups,
+                                    },
+                                }
+                            )
+                        except Exception as e:
+                            pass
+
                 if TASKS.TITLE_GENERATION in tasks:
+                    user_message = get_last_user_message(messages)
+                    if user_message and len(user_message) > 100:
+                        user_message = user_message[:100] + "..."
+
                     if tasks[TASKS.TITLE_GENERATION]:
+
                         res = await generate_title(
                             request,
                             {
@@ -983,7 +1126,9 @@ async def process_chat_response(
                                 title_string = (
                                     res.get("choices", [])[0]
                                     .get("message", {})
-                                    .get("content", message.get("content", "New Chat"))
+                                    .get(
+                                        "content", message.get("content", user_message)
+                                    )
                                 )
                             else:
                                 title_string = ""
@@ -994,13 +1139,13 @@ async def process_chat_response(
 
                             try:
                                 title = json.loads(title_string).get(
-                                    "title", "New Chat"
+                                    "title", user_message
                                 )
                             except Exception as e:
                                 title = ""
 
                             if not title:
-                                title = messages[0].get("content", "New Chat")
+                                title = messages[0].get("content", user_message)
 
                             Chats.update_chat_title_by_id(metadata["chat_id"], title)
 
@@ -1011,14 +1156,14 @@ async def process_chat_response(
                                 }
                             )
                     elif len(messages) == 2:
-                        title = messages[0].get("content", "New Chat")
+                        title = messages[0].get("content", user_message)
 
                         Chats.update_chat_title_by_id(metadata["chat_id"], title)
 
                         await event_emitter(
                             {
                                 "type": "chat:title",
-                                "data": message.get("content", "New Chat"),
+                                "data": message.get("content", user_message),
                             }
                         )
 
@@ -1128,12 +1273,13 @@ async def process_chat_response(
                         metadata["chat_id"],
                         metadata["message_id"],
                         {
+                            "role": "assistant",
                             "content": content,
                         },
                     )
 
                     # Send a webhook notification if the user is not active
-                    if get_active_status_by_user_id(user.id) is None:
+                    if not get_active_status_by_user_id(user.id):
                         webhook_url = Users.get_user_webhook_url_by_id(user.id)
                         if webhook_url:
                             post_webhook(
@@ -1150,8 +1296,34 @@ async def process_chat_response(
 
                     await background_tasks_handler()
 
+            if events and isinstance(events, list) and isinstance(response, dict):
+                extra_response = {}
+                for event in events:
+                    if isinstance(event, dict):
+                        extra_response.update(event)
+                    else:
+                        extra_response[event] = True
+
+                response = {
+                    **extra_response,
+                    **response,
+                }
+
             return response
         else:
+            if events and isinstance(events, list) and isinstance(response, dict):
+                extra_response = {}
+                for event in events:
+                    if isinstance(event, dict):
+                        extra_response.update(event)
+                    else:
+                        extra_response[event] = True
+
+                response = {
+                    **extra_response,
+                    **response,
+                }
+
             return response
 
     # Non standard response
@@ -1164,19 +1336,16 @@ async def process_chat_response(
     extra_params = {
         "__event_emitter__": event_emitter,
         "__event_call__": event_caller,
-        "__user__": {
-            "id": user.id,
-            "email": user.email,
-            "name": user.name,
-            "role": user.role,
-        },
+        "__user__": user.model_dump() if isinstance(user, UserModel) else {},
         "__metadata__": metadata,
         "__request__": request,
         "__model__": model,
     }
     filter_functions = [
         Functions.get_function_by_id(filter_id)
-        for filter_id in get_sorted_filter_ids(model)
+        for filter_id in get_sorted_filter_ids(
+            request, model, metadata.get("filter_ids", [])
+        )
     ]
 
     # Streaming response
@@ -1207,7 +1376,7 @@ async def process_chat_response(
             return len(backtick_segments) > 1 and len(backtick_segments) % 2 == 0
 
         # Handle as a background task
-        async def post_response_handler(response, events):
+        async def response_handler(response, events):
             def serialize_content_blocks(content_blocks, raw=False):
                 content = ""
 
@@ -1421,6 +1590,9 @@ async def process_chat_response(
 
                             if after_tag:
                                 content_blocks[-1]["content"] = after_tag
+                                tag_content_handler(
+                                    content_type, tags, after_tag, content_blocks
+                                )
 
                             break
                 elif content_blocks[-1]["type"] == content_type:
@@ -1575,7 +1747,7 @@ async def process_chat_response(
                         },
                     )
 
-                async def stream_body_handler(response):
+                async def stream_body_handler(response, form_data):
                     nonlocal content
                     nonlocal content_blocks
 
@@ -1604,7 +1776,7 @@ async def process_chat_response(
                                 filter_functions=filter_functions,
                                 filter_type="stream",
                                 form_data=data,
-                                extra_params=extra_params,
+                                extra_params={"__body__": form_data, **extra_params},
                             )
 
                             if data:
@@ -1708,9 +1880,11 @@ async def process_chat_response(
 
                                     value = delta.get("content")
 
-                                    reasoning_content = delta.get(
-                                        "reasoning_content"
-                                    ) or delta.get("reasoning")
+                                    reasoning_content = (
+                                        delta.get("reasoning_content")
+                                        or delta.get("reasoning")
+                                        or delta.get("thinking")
+                                    )
                                     if reasoning_content:
                                         if (
                                             not content_blocks
@@ -1864,7 +2038,7 @@ async def process_chat_response(
                     if response.background:
                         await response.background()
 
-                await stream_body_handler(response)
+                await stream_body_handler(response, form_data)
 
                 MAX_TOOL_CALL_RETRIES = 10
                 tool_call_retries = 0
@@ -1893,27 +2067,37 @@ async def process_chat_response(
                     tools = metadata.get("tools", {})
 
                     results = []
+
                     for tool_call in response_tool_calls:
                         tool_call_id = tool_call.get("id", "")
                         tool_name = tool_call.get("function", {}).get("name", "")
+                        tool_args = tool_call.get("function", {}).get("arguments", "{}")
 
                         tool_function_params = {}
                         try:
                             # json.loads cannot be used because some models do not produce valid JSON
-                            tool_function_params = ast.literal_eval(
-                                tool_call.get("function", {}).get("arguments", "{}")
-                            )
+                            tool_function_params = ast.literal_eval(tool_args)
                         except Exception as e:
                             log.debug(e)
                             # Fallback to JSON parsing
                             try:
-                                tool_function_params = json.loads(
-                                    tool_call.get("function", {}).get("arguments", "{}")
-                                )
+                                tool_function_params = json.loads(tool_args)
                             except Exception as e:
-                                log.debug(
-                                    f"Error parsing tool call arguments: {tool_call.get('function', {}).get('arguments', '{}')}"
+                                log.error(
+                                    f"Error parsing tool call arguments: {tool_args}"
                                 )
+
+                        # Mutate the original tool call response params as they are passed back to the passed
+                        # back to the LLM via the content blocks. If they are in a json block and are invalid json,
+                        # this can cause downstream LLM integrations to fail (e.g. bedrock gateway) where response
+                        # params are not valid json.
+                        # Main case so far is no args = "" = invalid json.
+                        log.debug(
+                            f"Parsed args from {tool_args} to {tool_function_params}"
+                        )
+                        tool_call.setdefault("function", {})["arguments"] = json.dumps(
+                            tool_function_params
+                        )
 
                         tool_result = None
 
@@ -2003,22 +2187,24 @@ async def process_chat_response(
                     )
 
                     try:
+                        new_form_data = {
+                            "model": model_id,
+                            "stream": True,
+                            "tools": form_data["tools"],
+                            "messages": [
+                                *form_data["messages"],
+                                *convert_content_blocks_to_messages(content_blocks),
+                            ],
+                        }
+
                         res = await generate_chat_completion(
                             request,
-                            {
-                                "model": model_id,
-                                "stream": True,
-                                "tools": form_data["tools"],
-                                "messages": [
-                                    *form_data["messages"],
-                                    *convert_content_blocks_to_messages(content_blocks),
-                                ],
-                            },
+                            new_form_data,
                             user,
                         )
 
                         if isinstance(res, StreamingResponse):
-                            await stream_body_handler(res)
+                            await stream_body_handler(res, new_form_data)
                         else:
                             break
                     except Exception as e:
@@ -2101,28 +2287,21 @@ async def process_chat_response(
                                         stdoutLines = stdout.split("\n")
                                         for idx, line in enumerate(stdoutLines):
                                             if "data:image/png;base64" in line:
-                                                id = str(uuid4())
-
-                                                # ensure the path exists
-                                                os.makedirs(
-                                                    os.path.join(CACHE_DIR, "images"),
-                                                    exist_ok=True,
+                                                image_url = ""
+                                                # Extract base64 image data from the line
+                                                image_data, content_type = (
+                                                    load_b64_image_data(line)
                                                 )
-
-                                                image_path = os.path.join(
-                                                    CACHE_DIR,
-                                                    f"images/{id}.png",
-                                                )
-
-                                                with open(image_path, "wb") as f:
-                                                    f.write(
-                                                        base64.b64decode(
-                                                            line.split(",")[1]
-                                                        )
+                                                if image_data is not None:
+                                                    image_url = upload_image(
+                                                        request,
+                                                        image_data,
+                                                        content_type,
+                                                        metadata,
+                                                        user,
                                                     )
-
                                                 stdoutLines[idx] = (
-                                                    f"![Output Image {idx}](/cache/images/{id}.png)"
+                                                    f"![Output Image]({image_url})"
                                                 )
 
                                         output["stdout"] = "\n".join(stdoutLines)
@@ -2133,30 +2312,22 @@ async def process_chat_response(
                                         resultLines = result.split("\n")
                                         for idx, line in enumerate(resultLines):
                                             if "data:image/png;base64" in line:
-                                                id = str(uuid4())
-
-                                                # ensure the path exists
-                                                os.makedirs(
-                                                    os.path.join(CACHE_DIR, "images"),
-                                                    exist_ok=True,
+                                                image_url = ""
+                                                # Extract base64 image data from the line
+                                                image_data, content_type = (
+                                                    load_b64_image_data(line)
                                                 )
-
-                                                image_path = os.path.join(
-                                                    CACHE_DIR,
-                                                    f"images/{id}.png",
-                                                )
-
-                                                with open(image_path, "wb") as f:
-                                                    f.write(
-                                                        base64.b64decode(
-                                                            line.split(",")[1]
-                                                        )
+                                                if image_data is not None:
+                                                    image_url = upload_image(
+                                                        request,
+                                                        image_data,
+                                                        content_type,
+                                                        metadata,
+                                                        user,
                                                     )
-
                                                 resultLines[idx] = (
-                                                    f"![Output Image {idx}](/cache/images/{id}.png)"
+                                                    f"![Output Image]({image_url})"
                                                 )
-
                                         output["result"] = "\n".join(resultLines)
                         except Exception as e:
                             output = str(e)
@@ -2224,7 +2395,7 @@ async def process_chat_response(
                     )
 
                 # Send a webhook notification if the user is not active
-                if get_active_status_by_user_id(user.id) is None:
+                if not get_active_status_by_user_id(user.id):
                     webhook_url = Users.get_user_webhook_url_by_id(user.id)
                     if webhook_url:
                         post_webhook(
@@ -2264,9 +2435,9 @@ async def process_chat_response(
             if response.background is not None:
                 await response.background()
 
-        # background_tasks.add_task(post_response_handler, response, events)
-        task_id, _ = create_task(
-            post_response_handler(response, events), id=metadata["chat_id"]
+        # background_tasks.add_task(response_handler, response, events)
+        task_id, _ = await create_task(
+            request, response_handler(response, events), id=metadata["chat_id"]
         )
         return {"status": True, "task_id": task_id}
 

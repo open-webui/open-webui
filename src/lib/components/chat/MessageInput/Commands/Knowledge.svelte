@@ -6,7 +6,7 @@
 	import relativeTime from 'dayjs/plugin/relativeTime';
 	dayjs.extend(relativeTime);
 
-	import { createEventDispatcher, tick, getContext, onMount } from 'svelte';
+	import { createEventDispatcher, tick, getContext, onMount, onDestroy } from 'svelte';
 	import { removeLastWordFromString, isValidHttpUrl } from '$lib/utils';
 	import { knowledge } from '$lib/stores';
 
@@ -42,6 +42,24 @@
 		selectedIdx = Math.min(selectedIdx + 1, filteredItems.length - 1);
 	};
 
+	let container;
+	let adjustHeightDebounce;
+
+	const adjustHeight = () => {
+		if (container) {
+			if (adjustHeightDebounce) {
+				clearTimeout(adjustHeightDebounce);
+			}
+
+			adjustHeightDebounce = setTimeout(() => {
+				if (!container) return;
+
+				// Ensure the container is visible before adjusting height
+				const rect = container.getBoundingClientRect();
+				container.style.maxHeight = Math.max(Math.min(240, rect.bottom - 100), 100) + 'px';
+			}, 100);
+		}
+	};
 	const confirmSelect = async (item) => {
 		dispatch('select', item);
 
@@ -75,7 +93,18 @@
 		await tick();
 	};
 
+	const decodeString = (str: string) => {
+		try {
+			return decodeURIComponent(str);
+		} catch (e) {
+			return str;
+		}
+	};
+
 	onMount(() => {
+		window.addEventListener('resize', adjustHeight);
+		adjustHeight();
+
 		let legacy_documents = $knowledge
 			.filter((item) => item?.meta?.document)
 			.map((item) => ({
@@ -155,13 +184,9 @@
 		});
 	});
 
-	const decodeString = (str: string) => {
-		try {
-			return decodeURIComponent(str);
-		} catch (e) {
-			return str;
-		}
-	};
+	onDestroy(() => {
+		window.removeEventListener('resize', adjustHeight);
+	});
 </script>
 
 {#if filteredItems.length > 0 || prompt.split(' ')?.at(0)?.substring(1).startsWith('http')}
@@ -170,10 +195,12 @@
 		class="px-2 mb-2 text-left w-full absolute bottom-0 left-0 right-0 z-10"
 	>
 		<div class="flex w-full rounded-xl border border-gray-100 dark:border-gray-850">
-			<div
-				class="max-h-60 flex flex-col w-full rounded-xl bg-white dark:bg-gray-900 dark:text-gray-100"
-			>
-				<div class="m-1 overflow-y-auto p-1 rounded-r-xl space-y-0.5 scrollbar-hidden">
+			<div class="flex flex-col w-full rounded-xl bg-white dark:bg-gray-900 dark:text-gray-100">
+				<div
+					class="m-1 overflow-y-auto p-1 rounded-r-xl space-y-0.5 scrollbar-hidden max-h-60"
+					id="command-options-container"
+					bind:this={container}
+				>
 					{#each filteredItems as item, idx}
 						<button
 							class=" px-3 py-1.5 rounded-xl w-full text-left flex justify-between items-center {idx ===
@@ -265,7 +292,7 @@
 									{/each}
 								{:else}
 									<div class=" text-gray-500 text-xs mt-1 mb-2">
-										{$i18n.t('No files found.')}
+										{$i18n.t('File not found.')}
 									</div>
 								{/if}
 							</div> -->

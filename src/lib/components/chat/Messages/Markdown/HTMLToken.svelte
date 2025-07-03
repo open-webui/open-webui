@@ -4,6 +4,7 @@
 
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import Source from './Source.svelte';
+	import { settings } from '$lib/stores';
 
 	export let id: string;
 	export let token: Token;
@@ -21,7 +22,36 @@
 
 {#if token.type === 'html'}
 	{#if html && html.includes('<video')}
-		{@html html}
+		{@const video = html.match(/<video[^>]*>([\s\S]*?)<\/video>/)}
+		{@const videoSrc = video && video[1]}
+		{#if videoSrc}
+			<!-- svelte-ignore a11y-media-has-caption -->
+			<video
+				class="w-full my-2"
+				src={videoSrc.replaceAll('&amp;', '&')}
+				title="Video player"
+				frameborder="0"
+				referrerpolicy="strict-origin-when-cross-origin"
+				controls
+				allowfullscreen
+			></video>
+		{:else}
+			{token.text}
+		{/if}
+	{:else if html && html.includes('<audio')}
+		{@const audio = html.match(/<audio[^>]*>([\s\S]*?)<\/audio>/)}
+		{@const audioSrc = audio && audio[1]}
+		{#if audioSrc}
+			<!-- svelte-ignore a11y-media-has-caption -->
+			<audio
+				class="w-full my-2"
+				src={audioSrc.replaceAll('&amp;', '&')}
+				title="Audio player"
+				controls
+			></audio>
+		{:else}
+			{token.text}
+		{/if}
 	{:else if token.text && token.text.match(/<iframe\s+[^>]*src="https:\/\/www\.youtube\.com\/embed\/([a-zA-Z0-9_-]{11})(?:\?[^"]*)?"[^>]*><\/iframe>/)}
 		{@const match = token.text.match(
 			/<iframe\s+[^>]*src="https:\/\/www\.youtube\.com\/embed\/([a-zA-Z0-9_-]{11})(?:\?[^"]*)?"[^>]*><\/iframe>/
@@ -39,8 +69,39 @@
 			>
 			</iframe>
 		{/if}
-	{:else if token.text.includes(`<iframe src="${WEBUI_BASE_URL}/api/v1/files/`)}
-		{@html `${token.text}`}
+	{:else if token.text && token.text.includes('<iframe')}
+		{@const match = token.text.match(/<iframe\s+[^>]*src="([^"]+)"[^>]*><\/iframe>/)}
+		{@const iframeSrc = match && match[1]}
+		{#if iframeSrc}
+			<iframe
+				class="w-full my-2"
+				src={iframeSrc}
+				title="Embedded content"
+				frameborder="0"
+				sandbox
+				onload="this.style.height=(this.contentWindow.document.body.scrollHeight+20)+'px';"
+			></iframe>
+		{:else}
+			{token.text}
+		{/if}
+	{:else if token.text.includes(`<file type="html"`)}
+		{@const match = token.text.match(/<file type="html" id="([^"]+)"/)}
+		{@const fileId = match && match[1]}
+		{#if fileId}
+			<iframe
+				class="w-full my-2"
+				src={`${WEBUI_BASE_URL}/api/v1/files/${fileId}/content/html`}
+				title="Content"
+				frameborder="0"
+				sandbox="allow-scripts allow-downloads{($settings?.iframeSandboxAllowForms ?? false)
+					? ' allow-forms'
+					: ''}{($settings?.iframeSandboxAllowSameOrigin ?? false) ? ' allow-same-origin' : ''}"
+				referrerpolicy="strict-origin-when-cross-origin"
+				allowfullscreen
+				width="100%"
+				onload="this.style.height=(this.contentWindow.document.body.scrollHeight+20)+'px';"
+			></iframe>
+		{/if}
 	{:else if token.text.includes(`<source_id`)}
 		<Source {id} {token} onClick={onSourceClick} />
 	{:else}

@@ -38,11 +38,13 @@
 			return '';
 		});
 
-		checkForVersionUpdates();
+		if (!$config?.offline_mode) {
+			checkForVersionUpdates();
+		}
 	});
 </script>
 
-<div class="flex flex-col h-full justify-between space-y-3 text-sm mb-6">
+<div id="tab-about" class="flex flex-col h-full justify-between space-y-3 text-sm mb-6">
 	<div class=" space-y-3 overflow-y-scroll max-h-[28rem] lg:max-h-full">
 		<div>
 			<div class=" mb-2.5 text-sm font-medium flex space-x-2 items-center">
@@ -80,14 +82,16 @@
 					</button>
 				</div>
 
-				<button
-					class=" text-xs px-3 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-lg font-medium"
-					on:click={() => {
-						checkForVersionUpdates();
-					}}
-				>
-					{$i18n.t('Check for updates')}
-				</button>
+				{#if $config?.offline_mode}
+					<button
+						class=" text-xs px-3 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-lg font-medium"
+						on:click={() => {
+							checkForVersionUpdates();
+						}}
+					>
+						{$i18n.t('Check for updates')}
+					</button>
+				{/if}
 			</div>
 		</div>
 

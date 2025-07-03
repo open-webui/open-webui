@@ -36,6 +36,8 @@
 
 	onMount(() => {
 		mounted = true;
+
+		console.log('Banner mounted:', banner);
 	});
 </script>
 
@@ -82,9 +84,8 @@
 						</div>
 					{/if}
 				</div>
-
-				<div class="flex-1 text-xs text-gray-700 dark:text-white">
-					{@html marked.parse(DOMPurify.sanitize(banner.content))}
+				<div class="flex-1 text-xs text-gray-700 dark:text-white max-h-60 overflow-y-auto">
+					{@html marked.parse(DOMPurify.sanitize((banner?.content ?? '').replace(/\n/g, '<br>')))}
 				</div>
 			</div>
 

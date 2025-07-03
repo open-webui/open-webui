@@ -9,7 +9,7 @@
 		getUserTimezone,
 		getWeekday
 	} from '$lib/utils';
-	import { tick, getContext } from 'svelte';
+	import { tick, getContext, onMount, onDestroy } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
 	const i18n = getContext('i18n');
@@ -36,6 +36,25 @@
 
 	export const selectDown = () => {
 		selectedPromptIdx = Math.min(selectedPromptIdx + 1, filteredPrompts.length - 1);
+	};
+
+	let container;
+	let adjustHeightDebounce;
+
+	const adjustHeight = () => {
+		if (container) {
+			if (adjustHeightDebounce) {
+				clearTimeout(adjustHeightDebounce);
+			}
+
+			adjustHeightDebounce = setTimeout(() => {
+				if (!container) return;
+
+				// Ensure the container is visible before adjusting height
+				const rect = container.getBoundingClientRect();
+				container.style.maxHeight = Math.max(Math.min(240, rect.bottom - 100), 100) + 'px';
+			}, 100);
+		}
 	};
 
 	const confirmPrompt = async (command) => {
@@ -172,6 +191,15 @@
 			}
 		}
 	};
+
+	onMount(() => {
+		window.addEventListener('resize', adjustHeight);
+		adjustHeight();
+	});
+
+	onDestroy(() => {
+		window.removeEventListener('resize', adjustHeight);
+	});
 </script>
 
 {#if filteredPrompts.length > 0}
@@ -180,10 +208,12 @@
 		class="px-2 mb-2 text-left w-full absolute bottom-0 left-0 right-0 z-10"
 	>
 		<div class="flex w-full rounded-xl border border-gray-100 dark:border-gray-850">
-			<div
-				class="max-h-60 flex flex-col w-full rounded-xl bg-white dark:bg-gray-900 dark:text-gray-100"
-			>
-				<div class="m-1 overflow-y-auto p-1 space-y-0.5 scrollbar-hidden">
+			<div class="flex flex-col w-full rounded-xl bg-white dark:bg-gray-900 dark:text-gray-100">
+				<div
+					class="m-1 overflow-y-auto p-1 space-y-0.5 scrollbar-hidden max-h-60"
+					id="command-options-container"
+					bind:this={container}
+				>
 					{#each filteredPrompts as prompt, promptIdx}
 						<button
 							class=" px-3 py-1.5 rounded-xl w-full text-left {promptIdx === selectedPromptIdx
