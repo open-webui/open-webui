@@ -32,19 +32,19 @@
 
 @font-face {
 	font-family: 'NotoKufiArabic-Regular';
-	src: url('/assets/fonts/NotoKufiArabic-Regular.ttf');
+	src: url('../static/assets/fonts/NotoKufiArabic-Regular.ttf');
 	font-display: swap;
 }
 
 @font-face {
 	font-family: 'NotoKufiArabic-Bold';
-	src: url('/assets/fonts/NotoKufiArabic-Bold.ttf');
+	src: url('../static/assets/fonts/NotoKufiArabic-Bold.ttf');
 	font-display: swap;
 }
 
 @font-face {
 	font-family: 'NotoKufiArabic-Medium';
-	src: url('/assets/fonts/NotoKufiArabic-Medium.ttf');
+	src: url('../static/assets/fonts/NotoKufiArabic-Medium.ttf');
 	font-display: swap;
 }
 
@@ -474,5 +474,5 @@ input[type='number'] {
 }
 
 body {
-	 font-family: NotoKufiArabic-Regular;
+	 font-family: 'NotoKufiArabic-Regular';
 }
