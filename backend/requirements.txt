@@ -1,6 +1,6 @@
 fastapi==0.111.0
 uvicorn[standard]==0.30.6
-pydantic==2.9.2
+pydantic>=2.10.6,<3.0.0
 python-multipart==0.0.18
 
 Flask==3.1.0
@@ -35,7 +35,7 @@ APScheduler==3.10.4
 # AI libraries
 openai
 anthropic
-google-generativeai==0.7.2
+google-generativeai==0.8.1
 tiktoken
 
 langchain==0.3.7
@@ -112,8 +112,10 @@ fastmcp==2.5.2
 pytz==2025.2
 
 ## CrewAI MCP Integration
-crewai==0.126.0
-crewai-tools[mcp]==0.47.0
+crewai==0.140.0
+crewai-tools[mcp]==0.49.0
+protobuf>=5.26.1,<6.0.0
+grpcio>=1.49.1,<=1.67.1
 
 # Azure Storage for NewsDesk integration
 azure-storage-blob==12.25.1
