@@ -45,8 +45,8 @@ dependencies = [
     "google-generativeai==0.8.1",
     "tiktoken",
 
-    "langchain==0.3.7",
-    "langchain-community==0.3.7",
+    "langchain==0.3.26",
+    "langchain-community==0.3.26",
 
     "fastmcp==2.5.2",
     "pytz==2025.2",
@@ -68,7 +68,7 @@ dependencies = [
     "einops==0.8.0",
 
     "ftfy==6.2.3",
-    "pypdf==4.3.1",
+    "pypdf>=5.0.0",
     "fpdf2==2.8.2",
     "pymdown-extensions==10.11.2",
     "docx2txt==0.8",
