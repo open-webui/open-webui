@@ -10,19 +10,13 @@
 		<meta name="apple-mobile-web-app-title" content="Open WebUI" />
 
 		<link rel="manifest" href="/manifest.json" crossorigin="use-credentials" />
-		<meta
-			name="viewport"
-			content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"
-		/>
+		<link rel="preload" as="image" href="/static/splash.png" />
+		<link rel="preload" as="image" href="/static/splash-dark.png" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
 		<meta name="theme-color" content="#171717" />
 		<meta name="robots" content="noindex,nofollow" />
 		<meta name="description" content="Open WebUI" />
-		<link
-			rel="search"
-			type="application/opensearchdescription+xml"
-			title="Open WebUI"
-			href="/opensearch.xml"
-		/>
+		<link rel="search" type="application/opensearchdescription+xml" title="Open WebUI" href="/opensearch.xml" />
 		<script src="/static/loader.js" defer></script>
 		<link rel="stylesheet" href="/static/custom.css" />
 
@@ -33,14 +27,11 @@
 		</script>
 
 		<script>
-			// On page load or when changing themes, best to add inline in `head` to avoid FOUC
 			(() => {
 				const metaThemeColorTag = document.querySelector('meta[name="theme-color"]');
 				const prefersDarkTheme = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
-				if (!localStorage?.theme) {
-					localStorage.theme = 'system';
-				}
+				if (!localStorage?.theme) localStorage.theme = 'system';
 
 				if (localStorage.theme === 'system') {
 					document.documentElement.classList.add(prefersDarkTheme ? 'dark' : 'light');
@@ -56,8 +47,7 @@
 					document.documentElement.classList.add('light');
 					metaThemeColorTag.setAttribute('content', '#ffffff');
 				} else if (localStorage.theme === 'her') {
-					document.documentElement.classList.add('dark');
-					document.documentElement.classList.add('her');
+					document.documentElement.classList.add('dark', 'her');
 					metaThemeColorTag.setAttribute('content', '#983724');
 				} else {
 					document.documentElement.classList.add('dark');
@@ -66,124 +56,65 @@
 
 				window.matchMedia('(prefers-color-scheme: dark)').addListener((e) => {
 					if (localStorage.theme === 'system') {
-						if (e.matches) {
-							document.documentElement.classList.add('dark');
-							document.documentElement.classList.remove('light');
-							metaThemeColorTag.setAttribute('content', '#171717');
-						} else {
-							document.documentElement.classList.add('light');
-							document.documentElement.classList.remove('dark');
-							metaThemeColorTag.setAttribute('content', '#ffffff');
-						}
+						document.documentElement.classList.toggle('dark', e.matches);
+						document.documentElement.classList.toggle('light', !e.matches);
+						metaThemeColorTag.setAttribute('content', e.matches ? '#171717' : '#ffffff');
 					}
 				});
 
 				function setSplashImage() {
 					const logo = document.getElementById('logo');
-					const isDarkMode = document.documentElement.classList.contains('dark');
+					if (!logo) return;
 
-					if (isDarkMode) {
-						const darkImage = new Image();
-						darkImage.src = '/static/splash-dark.png';
+					const prefersDark = document.documentElement.classList.contains('dark');
+					const splashSrc = prefersDark ? '/static/splash-dark.png' : '/static/splash.png';
 
-						darkImage.onload = () => {
-							logo.src = '/static/splash-dark.png';
-							logo.style.filter = ''; // Ensure no inversion is applied if splash-dark.png exists
-						};
+					// Initially hide logo
+					logo.style.opacity = '0';
+					logo.style.transition = 'opacity 0.4s ease';
 
-						darkImage.onerror = () => {
-							logo.style.filter = 'invert(1)'; // Invert image if splash-dark.png is missing
-						};
-					}
+					const img = new Image();
+					img.src = splashSrc;
+					img.onload = () => {
+						logo.src = splashSrc;
+						logo.style.filter = '';
+						logo.style.opacity = '1';
+					};
+					img.onerror = () => {
+						logo.src = splashSrc;
+						logo.style.filter = prefersDark ? 'invert(1)' : '';
+						logo.style.opacity = '1';
+					};
 				}
 
-				// Runs after classes are assigned
 				window.onload = setSplashImage;
 			})();
 		</script>
 
 		<title>Open WebUI</title>
-
 		%sveltekit.head%
 	</head>
 
 	<body data-sveltekit-preload-data="hover">
-		<div style="display: contents">%sveltekit.body%</div>
+		<div id="app" style="opacity: 1; transition: opacity 0.5s ease;">%sveltekit.body%</div>
 
-		<div
-			id="splash-screen"
-			style="position: fixed; z-index: 100; top: 0; left: 0; width: 100%; height: 100%"
-		>
-			<style type="text/css" nonce="">
-				html {
-					overflow-y: scroll !important;
-				}
-			</style>
-
+		<div id="splash-screen" class="bg-circle">
 			<img
 				id="logo"
-				style="
-					position: absolute;
-					width: auto;
-					height: 6rem;
-					top: 44%;
-					left: 50%;
-					transform: translateX(-50%);
-				"
+				style="position: absolute; width: auto; height: 6rem; top: 44%; left: 50%; transform: translateX(-50%);"
 				src="/static/splash.png"
 			/>
 
 			<div
-				style="
-					position: absolute;
-					top: 33%;
-					left: 50%;
-
-					width: 24rem;
-					transform: translateX(-50%);
-
-					display: flex;
-					flex-direction: column;
-					align-items: center;
-				"
+				style="position: absolute; top: 33%; left: 50%; width: 24rem; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center;"
 			>
-				<img
-					id="logo-her"
-					style="width: auto; height: 13rem"
-					src="/static/splash.png"
-					class="animate-pulse-fast"
-				/>
+				<img id="logo-her" style="width: auto; height: 13rem" src="/static/splash.png" class="animate-pulse-fast" />
 
 				<div style="position: relative; width: 24rem; margin-top: 0.5rem">
-					<div
-						id="progress-background"
-						style="
-							position: absolute;
-							width: 100%;
-							height: 0.75rem;
-
-							border-radius: 9999px;
-							background-color: #fafafa9a;
-						"
-					></div>
-
-					<div
-						id="progress-bar"
-						style="
-							position: absolute;
-							width: 0%;
-							height: 0.75rem;
-							border-radius: 9999px;
-							background-color: #fff;
-						"
-						class="bg-white"
-					></div>
+					<div id="progress-background"></div>
+					<div id="progress-bar" class="bg-white"></div>
 				</div>
 			</div>
-
-			<!-- <span style="position: absolute; bottom: 32px; left: 50%; margin: -36px 0 0 -36px">
-				Footer content
-			</span> -->
 		</div>
 	</body>
 </html>
@@ -194,11 +125,14 @@
 	}
 
 	#splash-screen {
-		background: #fff;
-	}
-
-	html.dark #splash-screen {
-		background: #000;
+		position: fixed;
+		z-index: 100;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		opacity: 1;
+		transition: opacity 0.5s ease;
 	}
 
 	html.her #splash-screen {
@@ -209,12 +143,22 @@
 		display: none;
 	}
 
-	#progress-background {
+	#progress-background,
+	#progress-bar {
 		display: none;
+		position: absolute;
+		height: 0.75rem;
+		border-radius: 9999px;
+	}
+
+	#progress-background {
+		width: 100%;
+		background-color: #fafafa9a;
 	}
 
 	#progress-bar {
-		display: none;
+		width: 0%;
+		background-color: #fff;
 	}
 
 	html.her #logo {
@@ -226,19 +170,13 @@
 		filter: invert(1);
 	}
 
-	html.her #progress-background {
-		display: block;
-	}
-
+	html.her #progress-background,
 	html.her #progress-bar {
 		display: block;
 	}
 
 	@media (max-width: 24rem) {
-		html.her #progress-background {
-			display: none;
-		}
-
+		html.her #progress-background,
 		html.her #progress-bar {
 			display: none;
 		}

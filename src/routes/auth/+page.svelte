@@ -117,6 +117,7 @@
 	async function setLogoImage() {
 		await tick();
 		const logo = document.getElementById('logo');
+		const mainLogo = document.getElementById('main-logo');
 
 		if (logo) {
 			const isDarkMode = document.documentElement.classList.contains('dark');
@@ -133,6 +134,16 @@
 				darkImage.onerror = () => {
 					logo.style.filter = 'invert(1)'; // Invert image if favicon-dark.png is missing
 				};
+			}
+		}
+
+		if (mainLogo) {
+			const isDarkMode = document.documentElement.classList.contains('dark');
+			
+			if (isDarkMode) {
+				mainLogo.style.filter = 'invert(1)'; // Invert the main logo for dark mode
+			} else {
+				mainLogo.style.filter = ''; // Reset filter for light mode
 			}
 		}
 	}
@@ -181,7 +192,7 @@
 					<img
 						id="logo"
 						crossorigin="anonymous"
-						src="{WEBUI_BASE_URL}/static/favicon.png"
+						src="/static/favicon.png"
 						class=" w-6 rounded-full"
 						alt=""
 					/>
@@ -190,14 +201,18 @@
 		</div>
 
 		<div
-			class="fixed bg-transparent min-h-screen w-full flex justify-center font-primary z-50 text-black dark:text-white"
+			class="fixed bg-circle min-h-screen w-full flex justify-center font-primary z-50 text-black dark:text-white"
 		>
+			<div class="decorative-image-top"></div>
+            <div class="decorative-image-bottom"></div>
 			<div class="w-full sm:max-w-md px-10 min-h-screen flex flex-col text-center">
 				{#if ($config?.features.auth_trusted_header ?? false) || $config?.features.auth === false}
 					<div class=" my-auto pb-10 w-full">
 						<div
 							class="flex items-center justify-center gap-3 text-xl sm:text-2xl text-center font-semibold dark:text-gray-200"
 						>
+							
+
 							<div>
 								{$i18n.t('Signing in to {{WEBUI_NAME}}', { WEBUI_NAME: $WEBUI_NAME })}
 							</div>
@@ -218,15 +233,17 @@
 						>
 							<div class="mb-1">
 								<div class=" text-2xl font-medium">
-									{#if $config?.onboarding ?? false}
-										{$i18n.t(`Get started with {{WEBUI_NAME}}`, { WEBUI_NAME: $WEBUI_NAME })}
-									{:else if mode === 'ldap'}
-										{$i18n.t(`Sign in to {{WEBUI_NAME}} with LDAP`, { WEBUI_NAME: $WEBUI_NAME })}
-									{:else if mode === 'signin'}
-										{$i18n.t(`Sign in to {{WEBUI_NAME}}`, { WEBUI_NAME: $WEBUI_NAME })}
-									{:else}
-										{$i18n.t(`Sign up to {{WEBUI_NAME}}`, { WEBUI_NAME: $WEBUI_NAME })}
-									{/if}
+									<img
+										id="main-logo"
+										class="w-full h-full max-h-[60px] object-contain"
+										src="/logo.png"
+										alt="logo"
+										crossorigin="anonymous"
+									/>
+								</div>
+
+								<div class="mt-5 text-lg font-medium" style="color: #424750;">
+									Your AI-Powered Assistant for Smarter Government Services
 								</div>
 
 								{#if $config?.onboarding ?? false}
@@ -320,7 +337,7 @@
 										</button>
 									{:else}
 										<button
-											class="bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5"
+											class="w-full bg-[#004280] hover:bg-[#003366] text-white font-medium text-sm py-2.5 rounded-full transition-colors duration-200"
 											type="submit"
 										>
 											{mode === 'signin'
@@ -488,7 +505,7 @@
 						{/if}
 					</div>
 				{/if}
-			</div>
+					</div>
 		</div>
 	{/if}
 </div>
