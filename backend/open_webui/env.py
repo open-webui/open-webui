@@ -264,7 +264,19 @@ if os.path.exists(f"{DATA_DIR}/ollama.db"):
 else:
     pass
 
-DATABASE_URL = os.environ.get("DATABASE_URL", f"sqlite:///{DATA_DIR}/webui.db")
+if (DATABASE_URL := os.environ.get("DATABASE_URL")) is None:
+    db_vars = {
+        "db_user": os.environ.get("DATABASE_USER"),
+        "db_password": os.environ.get("DATABASE_PASSWORD"),
+        "db_host": os.environ.get("DATABASE_HOST"),
+        "db_port": os.environ.get("DATABASE_PORT"),
+        "db_name": os.environ.get("DATABASE_NAME"),
+    }
+
+    if all(db_vars.values()):
+        DATABASE_URL = f"postgresql://{db_vars['db_user']}:{db_vars['db_password']}@{db_vars['db_host']}:{db_vars['db_port']}/{db_vars['db_name']}"
+    else:
+        DATABASE_URL = f"sqlite:///{DATA_DIR}/webui.db"
 
 # Replace the postgres:// with postgresql://
 if "postgres://" in DATABASE_URL:
