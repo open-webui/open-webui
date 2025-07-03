@@ -43,3 +43,70 @@
 }
 
 @custom-variant hover (&:hover);
+
+
+.bg-circle {
+	background-color: #F9F9FF;
+	background-image: url('/static/bg-circles.png');
+	background-repeat: no-repeat;
+	background-size: cover;
+	background-position: center center;
+	background-attachment: fixed;
+}
+
+html.dark .bg-circle {
+	background-color: #1A1C21;
+}
+
+.decorative-image-top {
+            position: absolute;
+            top: 70px;
+            left: 0;
+            width: 407px;
+            height: 248px;
+            background-image: url('./top-left.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            border-radius: 0 50px 50px 0;
+            opacity: 0.8;
+            transition: all 0.3s ease;
+            display: none;
+        }
+
+        @media (min-width: 768px) {
+            .decorative-image-top {
+                display: block;
+            }
+        }
+
+        body.dark .decorative-image-top {
+            opacity: 1;
+        }
+
+        .decorative-image-bottom {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 350px;
+            height: 250px;
+            background-image: url('./bottom-right.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            border-radius: 50px 0 0 0;
+            opacity: 0.7;
+            transition: all 0.3s ease;
+            display: none;
+        }
+
+        @media (min-width: 768px) {
+            .decorative-image-bottom {
+                display: block;
+            }
+        }
+
+        body.dark .decorative-image-bottom {
+            opacity: 1;
+        }
+
