@@ -514,6 +514,20 @@
 									bind:value={RAGConfig.DOCLING_OCR_LANG}
 								/>
 							</div>
+							<div class="flex w-full mt-2">
+								<div class="flex-1 flex justify-between">
+									<div class=" self-center text-xs font-medium">
+										{$i18n.t('PDF Backend')}
+									</div>
+									<div class="flex items-center relative">
+										<input
+											class="flex-1 w-full text-sm bg-transparent outline-hidden"
+											placeholder={$i18n.t('Enter Docling PDF Backend')}
+											bind:value={RAGConfig.DOCLING_PDF_BACKEND}
+										/>
+									</div>
+								</div>
+							</div>
 
 							<div class="flex w-full mt-2">
 								<div class="flex-1 flex justify-between">

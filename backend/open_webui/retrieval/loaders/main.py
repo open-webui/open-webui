@@ -180,6 +180,9 @@ class DoclingLoader:
                         for lang in self.params.get("ocr_lang").split(",")
                         if lang.strip()
                     ]
+                
+                if self.params.get("pdf_backend"):
+                    params["pdf_backend"] = self.params.get("pdf_backend")
 
             endpoint = f"{self.url}/v1alpha/convert/file"
             r = requests.post(endpoint, files=files, data=params)

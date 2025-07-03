@@ -1985,6 +1985,12 @@ DOCLING_OCR_ENGINE = PersistentConfig(
     os.getenv("DOCLING_OCR_ENGINE", "tesseract"),
 )
 
+DOCLING_PDF_BACKEND = PersistentConfig(
+    "DOCLING_PDF_BACKEND",
+    "rag.docling_pdf_backend",
+    os.getenv("DOCLING_PDF_BACKEND", "dlparse_v4"),
+)
+
 DOCLING_OCR_LANG = PersistentConfig(
     "DOCLING_OCR_LANG",
     "rag.docling_ocr_lang",
