@@ -5,7 +5,7 @@
 
 	import { getContext, onMount, tick, onDestroy } from 'svelte';
 	import { copyToClipboard } from '$lib/utils';
-	import { page } from '$app/stores';
+
 	import 'highlight.js/styles/github-dark.min.css';
 
 	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
@@ -64,7 +64,6 @@
 	let result = null;
 	let files = null;
 
-	let collapsed = false;
 	let copied = false;
 	let copiedToPlugin = false;
 	let saved = false;
@@ -102,7 +101,7 @@
 			copiedToPlugin = false;
 		}, 1000);
 	};
-	
+
 	const previewCode = () => {
 		onPreview(code);
 	};
@@ -475,7 +474,9 @@
 
 					{#if ($config?.features?.enable_code_execution ?? true) && (lang.toLowerCase() === 'python' || lang.toLowerCase() === 'py' || (lang === '' && checkPythonCode(code)))}
 						{#if executing}
-							<div class="run-code-button bg-none border-none p-1 cursor-not-allowed">Running</div>
+							<div class="run-code-button bg-none border-none p-1 cursor-not-allowed">
+								{$i18n.t('Running')}
+							</div>
 						{:else if run}
 							<button
 								class="flex gap-1 items-center run-code-button bg-none border-none bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
