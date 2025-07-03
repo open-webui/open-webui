@@ -14,7 +14,7 @@ from langchain_community.document_loaders import (
     TextLoader,
     UnstructuredEPubLoader,
     UnstructuredExcelLoader,
-    UnstructuredMarkdownLoader,
+    UnstructuredODTLoader,
     UnstructuredPowerPointLoader,
     UnstructuredRSTLoader,
     UnstructuredXMLLoader,
@@ -392,6 +392,8 @@ class Loader:
                 loader = UnstructuredPowerPointLoader(file_path)
             elif file_ext == "msg":
                 loader = OutlookMessageLoader(file_path)
+            elif file_ext == "odt":
+                loader = UnstructuredODTLoader(file_path)
             elif self._is_text_file(file_ext, file_content_type):
                 loader = TextLoader(file_path, autodetect_encoding=True)
             else:

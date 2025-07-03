@@ -123,6 +123,11 @@
 			if (dispatch) {
 				const tr = state.tr.setSelection(TextSelection.create(doc, template.from, template.to));
 				dispatch(tr);
+
+				// Scroll to the selected template
+				dispatch(
+					tr.scrollIntoView().setMeta('preventScroll', true) // Prevent default scrolling behavior
+				);
 			}
 			return true;
 		}
