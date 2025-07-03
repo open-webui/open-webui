@@ -27,6 +27,7 @@ fi
 echo -e "\n🔍 Checking assets at $BASE_URL..."
 declare -A ASSETS=(
   ["favicon.png"]="500x500"
+  ["favicon-dark.png"]="500x500"
   ["logo.png"]="500x500"
   ["web-app-manifest-512x512.png"]="512x512"
   ["web-app-manifest-192x192.png"]="192x192"
@@ -68,8 +69,6 @@ for file in "${!ASSETS[@]}"; do
 done
 
 # 5️⃣ Update root-level static directories
-#    - ./static/favicon.png
-#    - everything in ./static/static/
 ROOT_STATIC1="./static"
 ROOT_STATIC2="./static/static"
 mkdir -p "$ROOT_STATIC1" "$ROOT_STATIC2"
@@ -85,4 +84,4 @@ sed -i "s|WEBUI_NAME = os.environ.get.*|WEBUI_NAME = os.environ.get(\"WEBUI_NAME
 sed -i "s|WEBUI_FAVICON_URL = .*|WEBUI_FAVICON_URL = \"$BASE_URL/favicon.png\"|" "$ENV_PY"
 sed -i '/if WEBUI_NAME != .*Open WebUI/,/WEBUI_NAME += .*Open WebUI/d' "$ENV_PY"
 
-echo -e "\n🎉 DONE — '$NEW_NAME' is now baked into your local Open WebUI clone, and all icons in backend/open_webui/static, ./static/favicon.png, and ./static/static/* are replaced!"
+echo -e "\n🎉 DONE — '$NEW_NAME' is now rocking with **favicon-dark.png** included across backend and root static dirs!"
