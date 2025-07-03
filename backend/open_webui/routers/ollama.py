@@ -636,7 +636,7 @@ async def get_ollama_versions(request: Request, url_idx: Optional[int] = None):
 
 
 class ModelNameForm(BaseModel):
-    name: str
+    model: str
 
 
 @router.post("/api/unload")
@@ -645,10 +645,10 @@ async def unload_model(
     form_data: ModelNameForm,
     user=Depends(get_admin_user),
 ):
-    model_name = form_data.name
+    model_name = form_data.model
     if not model_name:
         raise HTTPException(
-            status_code=400, detail="Missing 'name' of model to unload."
+            status_code=400, detail="Missing name of the model to unload."
         )
 
     # Refresh/load models if needed, get mapping from name to URLs
@@ -726,7 +726,7 @@ async def pull_model(
 
 
 class PushModelForm(BaseModel):
-    name: str
+    model: str
     insecure: Optional[bool] = None
     stream: Optional[bool] = None
 
@@ -743,12 +743,12 @@ async def push_model(
         await get_all_models(request, user=user)
         models = request.app.state.OLLAMA_MODELS
 
-        if form_data.name in models:
-            url_idx = models[form_data.name]["urls"][0]
+        if form_data.model in models:
+            url_idx = models[form_data.model]["urls"][0]
         else:
             raise HTTPException(
                 status_code=400,
-                detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.name),
+                detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.model),
             )
 
     url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
@@ -871,12 +871,12 @@ async def delete_model(
         await get_all_models(request, user=user)
         models = request.app.state.OLLAMA_MODELS
 
-        if form_data.name in models:
-            url_idx = models[form_data.name]["urls"][0]
+        if form_data.model in models:
+            url_idx = models[form_data.model]["urls"][0]
         else:
             raise HTTPException(
                 status_code=400,
-                detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.name),
+                detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.model),
             )
 
     url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
@@ -931,13 +931,13 @@ async def show_model_info(
     await get_all_models(request, user=user)
     models = request.app.state.OLLAMA_MODELS
 
-    if form_data.name not in models:
+    if form_data.model not in models:
         raise HTTPException(
             status_code=400,
-            detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.name),
+            detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.model),
         )
 
-    url_idx = random.choice(models[form_data.name]["urls"])
+    url_idx = random.choice(models[form_data.model]["urls"])
 
     url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
     key = get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS)
