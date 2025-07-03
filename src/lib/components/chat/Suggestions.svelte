@@ -4,6 +4,10 @@
 	import { onMount, getContext, createEventDispatcher } from 'svelte';
 	import { settings, WEBUI_NAME } from '$lib/stores';
 	import { WEBUI_VERSION } from '$lib/constants';
+	import News from '../icons/News.svelte';
+	import Analytics from '../icons/Analytics.svelte';
+	import Forum from '../icons/Forum.svelte';
+	import EditNotes from '../icons/EditNotes.svelte';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -13,6 +17,7 @@
 	export let inputValue = '';
 
 	let sortedPrompts = [];
+	let iconMap = [News,Analytics,Forum,EditNotes];
 
 	const fuseOptions = {
 		keys: ['content', 'title'],
@@ -96,11 +101,11 @@
 					on:click={() => dispatch('select', prompt.content)}
 				>
 					{#if prompt.icon}
-						<span class="text-purple-600 text-lg">{@html prompt.icon}</span>
+						<span class="text-purple-600 text-lg"><svelte:component this={iconMap[prompt.icon]} class="w-6 h-6" /></span>
 					{:else}
-						<span class="text-purple-600 text-lg">✨</span>
+						<span class="text-purple-600 text-lg"><svelte:component this={iconMap[prompt.icon]} class="w-6 h-6" /></span>
 					{/if}
-					<span class="whitespace-nowrap">{prompt.title?.[0] ?? prompt.content}</span>
+					<span class="whitespace-nowrap leading-[22px] font-NotoKufi-Regular">{prompt.title?.[0] ?? prompt.content}</span>
 				</button>
 			{/each}
 		</div>
