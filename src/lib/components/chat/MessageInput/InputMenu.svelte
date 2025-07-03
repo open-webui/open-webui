@@ -126,10 +126,14 @@
 										offset: [0, 0],
 										flip: false,
 										getReferenceClientRect: () => {
-											const menu = document.querySelector('[data-melt-dropdown-menu][data-state="open"]');
+											const menu = document.querySelector(
+												'[data-melt-dropdown-menu][data-state="open"]'
+											);
 											if (menu) {
 												const menuRect = menu.getBoundingClientRect();
-												const buttonRect = event?.target?.closest('button')?.getBoundingClientRect();
+												const buttonRect = event?.target
+													?.closest('button')
+													?.getBoundingClientRect();
 												if (buttonRect) {
 													return {
 														width: 0,

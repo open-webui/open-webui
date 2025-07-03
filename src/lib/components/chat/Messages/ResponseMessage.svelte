@@ -1249,49 +1249,50 @@
 											</Tooltip>
 										{/each}
 
-									<!-- Help buttons -->
-									<Tooltip content={$i18n.t('Report an Issue')} placement="bottom">
-										<button
-											type="button"
-											class="{isLastMessage
-												? 'visible'
-												: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
-											on:click={() => {
-												showIssueModal = true;
-											}}
-										>
-											<Bug className="size-4" />
-										</button>
-									</Tooltip>
+										<!-- Help buttons -->
+										<Tooltip content={$i18n.t('Report an Issue')} placement="bottom">
+											<button
+												type="button"
+												class="{isLastMessage
+													? 'visible'
+													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+												on:click={() => {
+													showIssueModal = true;
+												}}
+											>
+												<Bug className="size-4" />
+											</button>
+										</Tooltip>
 
-									<Tooltip content={$i18n.t('Suggestion Box')} placement="bottom">
-										<button
-											type="button"
-											class="{isLastMessage
-												? 'visible'
-												: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
-											on:click={() => {
-												showSuggestionModal = true;
-											}}
-										>
-											<LightBlub className="size-4" />
-										</button>
-									</Tooltip>
+										<Tooltip content={$i18n.t('Suggestion Box')} placement="bottom">
+											<button
+												type="button"
+												class="{isLastMessage
+													? 'visible'
+													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+												on:click={() => {
+													showSuggestionModal = true;
+												}}
+											>
+												<LightBlub className="size-4" />
+											</button>
+										</Tooltip>
 
-									<Tooltip content={$i18n.t('User Survey')} placement="bottom">
-										<button
-											type="button"
-											class="{isLastMessage
-												? 'visible'
-												: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
-											on:click={() => {
-												const surveyUrl = $config?.app?.urls?.survey || 'https://forms.gle/ntmgGf5j3FJJJVde9';
-												window.open(surveyUrl, '_blank');
-											}}
-										>
-											<Lifebuoy className="size-4" />
-										</button>
-									</Tooltip>
+										<Tooltip content={$i18n.t('User Survey')} placement="bottom">
+											<button
+												type="button"
+												class="{isLastMessage
+													? 'visible'
+													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+												on:click={() => {
+													const surveyUrl =
+														$config?.app?.urls?.survey || 'https://forms.gle/ntmgGf5j3FJJJVde9';
+													window.open(surveyUrl, '_blank');
+												}}
+											>
+												<Lifebuoy className="size-4" />
+											</button>
+										</Tooltip>
 									{/if}
 								{/if}
 							{/if}
