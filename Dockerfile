@@ -23,7 +23,7 @@ ARG GID=0
 ######## WebUI frontend ########
 FROM --platform=$BUILDPLATFORM node:20-alpine3.20 AS build
 ARG BUILD_HASH
-
+ENV GIT_SSL_NO_VERIFY=true
 WORKDIR /app
 
 # to store git revision in build
