@@ -90,7 +90,8 @@ ENV HF_HOME="/app/backend/data/cache/embedding/models"
 
 ## Torch Extensions ##
 # ENV TORCH_EXTENSIONS_DIR="/.cache/torch_extensions"
-
+#Disable other models while chatting
+ENV USER_PERMISSIONS_CHAT_MULTIPLE_MODELS=False
 #### Other models ##########################################################
 
 WORKDIR /app/backend
