@@ -127,6 +127,7 @@ class CrewMCPManager:
                 # Execute the crew
                 logger.info("Executing CrewAI crew...")
                 result = time_crew.kickoff()
+                logger.info("CrewAI crew execution completed successfully")
                 return str(result)
 
         except Exception as e:

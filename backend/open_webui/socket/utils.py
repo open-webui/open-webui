@@ -11,23 +11,34 @@ class RedisLock:
         self.lock_obtained = False
         self.redis = redis.Redis.from_url(redis_url, decode_responses=True)
 
-    def aquire_lock(self):
-        # nx=True will only set this key if it _hasn't_ already been set
-        self.lock_obtained = self.redis.set(
-            self.lock_name, self.lock_id, nx=True, ex=self.timeout_secs
-        )
-        return self.lock_obtained
+    def acquire_lock(self):
+        try:
+            # nx=True will only set this key if it _hasn't_ already been set
+            self.lock_obtained = self.redis.set(
+                self.lock_name, self.lock_id, nx=True, ex=self.timeout_secs
+            )
+            return self.lock_obtained
+        except Exception as e:
+            print(f"Error acquiring Redis lock: {e}")
+            return False
 
     def renew_lock(self):
-        # xx=True will only set this key if it _has_ already been set
-        return self.redis.set(
-            self.lock_name, self.lock_id, xx=True, ex=self.timeout_secs
-        )
+        try:
+            # xx=True will only set this key if it _has_ already been set
+            return self.redis.set(
+                self.lock_name, self.lock_id, xx=True, ex=self.timeout_secs
+            )
+        except Exception as e:
+            print(f"Error renewing Redis lock: {e}")
+            return False
 
     def release_lock(self):
-        lock_value = self.redis.get(self.lock_name)
-        if lock_value and lock_value == self.lock_id:
-            self.redis.delete(self.lock_name)
+        try:
+            lock_value = self.redis.get(self.lock_name)
+            if lock_value and lock_value == self.lock_id:
+                self.redis.delete(self.lock_name)
+        except Exception as e:
+            print(f"Error releasing Redis lock: {e}")
 
 
 class RedisDict:

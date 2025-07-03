@@ -54,64 +54,100 @@ TIMEOUT_DURATION = 3
 
 if WEBSOCKET_MANAGER == "redis":
     log.debug("Using Redis to manage websockets.")
-    SESSION_POOL = RedisDict("open-webui:session_pool", redis_url=WEBSOCKET_REDIS_URL)
-    USER_POOL = RedisDict("open-webui:user_pool", redis_url=WEBSOCKET_REDIS_URL)
-    USAGE_POOL = RedisDict("open-webui:usage_pool", redis_url=WEBSOCKET_REDIS_URL)
+    try:
+        SESSION_POOL = RedisDict("open-webui:session_pool", redis_url=WEBSOCKET_REDIS_URL)
+        USER_POOL = RedisDict("open-webui:user_pool", redis_url=WEBSOCKET_REDIS_URL)
+        USAGE_POOL = RedisDict("open-webui:usage_pool", redis_url=WEBSOCKET_REDIS_URL)
 
-    clean_up_lock = RedisLock(
-        redis_url=WEBSOCKET_REDIS_URL,
-        lock_name="usage_cleanup_lock",
-        timeout_secs=TIMEOUT_DURATION * 2,
-    )
-    aquire_func = clean_up_lock.aquire_lock
-    renew_func = clean_up_lock.renew_lock
-    release_func = clean_up_lock.release_lock
+        clean_up_lock = RedisLock(
+            redis_url=WEBSOCKET_REDIS_URL,
+            lock_name="usage_cleanup_lock",
+            timeout_secs=TIMEOUT_DURATION * 2,
+        )
+        acquire_func = clean_up_lock.acquire_lock
+        renew_func = clean_up_lock.renew_lock
+        release_func = clean_up_lock.release_lock
+    except Exception as e:
+        log.error(f"Failed to initialize Redis websocket manager: {e}. Falling back to local manager.")
+        # Fallback to local management if Redis fails
+        SESSION_POOL = {}
+        USER_POOL = {}
+        USAGE_POOL = {}
+        acquire_func = release_func = renew_func = lambda: True
 else:
     SESSION_POOL = {}
     USER_POOL = {}
     USAGE_POOL = {}
-    aquire_func = release_func = renew_func = lambda: True
+    acquire_func = release_func = renew_func = lambda: True
 
 
 async def periodic_usage_pool_cleanup():
-    if not aquire_func():
-        log.debug("Usage pool cleanup lock already exists. Not running it.")
-        return
-    log.debug("Running periodic_usage_pool_cleanup")
+    """
+    Periodic cleanup task for usage pool with robust error handling.
+    This task should not cause application shutdown if it fails.
+    """
     try:
+        if not acquire_func():
+            log.debug("Usage pool cleanup lock already exists. Not running it.")
+            return
+        
+        log.debug("Running periodic_usage_pool_cleanup")
+        
         while True:
-            if not renew_func():
-                log.error(f"Unable to renew cleanup lock. Exiting usage pool cleanup.")
-                raise Exception("Unable to renew usage pool cleanup lock.")
+            try:
+                # Check if we can renew the lock
+                if not renew_func():
+                    log.warning("Unable to renew cleanup lock. Another instance may have taken over.")
+                    break
+                    
+                now = int(time.time())
+                send_usage = False
+                
+                try:
+                    for model_id, connections in list(USAGE_POOL.items()):
+                        # Creating a list of sids to remove if they have timed out
+                        expired_sids = [
+                            sid
+                            for sid, details in connections.items()
+                            if now - details["updated_at"] > TIMEOUT_DURATION
+                        ]
 
-            now = int(time.time())
-            send_usage = False
-            for model_id, connections in list(USAGE_POOL.items()):
-                # Creating a list of sids to remove if they have timed out
-                expired_sids = [
-                    sid
-                    for sid, details in connections.items()
-                    if now - details["updated_at"] > TIMEOUT_DURATION
-                ]
+                        for sid in expired_sids:
+                            del connections[sid]
 
-                for sid in expired_sids:
-                    del connections[sid]
+                        if not connections:
+                            log.debug(f"Cleaning up model {model_id} from usage pool")
+                            del USAGE_POOL[model_id]
+                        else:
+                            USAGE_POOL[model_id] = connections
 
-                if not connections:
-                    log.debug(f"Cleaning up model {model_id} from usage pool")
-                    del USAGE_POOL[model_id]
-                else:
-                    USAGE_POOL[model_id] = connections
+                        send_usage = True
 
-                send_usage = True
+                    if send_usage:
+                        # Emit updated usage information after cleaning
+                        await sio.emit("usage", {"models": get_models_in_use()})
+                        
+                except Exception as e:
+                    log.error(f"Error during usage pool cleanup: {e}")
+                    # Continue running even if cleanup fails
 
-            if send_usage:
-                # Emit updated usage information after cleaning
-                await sio.emit("usage", {"models": get_models_in_use()})
-
-            await asyncio.sleep(TIMEOUT_DURATION)
+                await asyncio.sleep(TIMEOUT_DURATION)
+                
+            except Exception as e:
+                log.error(f"Error in cleanup loop: {e}. Will retry in {TIMEOUT_DURATION} seconds.")
+                await asyncio.sleep(TIMEOUT_DURATION)
+                continue
+                
+    except Exception as e:
+        log.error(f"Fatal error in periodic_usage_pool_cleanup: {e}")
     finally:
-        release_func()
+        try:
+            release_func()
+            log.debug("Released usage pool cleanup lock")
+        except Exception as e:
+            log.error(f"Error releasing cleanup lock: {e}")
+            
+    log.info("Periodic usage pool cleanup task exited gracefully")
 
 
 app = socketio.ASGIApp(
