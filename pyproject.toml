@@ -48,6 +48,12 @@ dependencies = [
     "langchain==0.3.7",
     "langchain-community==0.3.7",
 
+    "fastmcp==2.5.2",
+    "pytz==2025.2",
+    "crewai==0.126.0",
+    "crewai-tools[mcp]==0.47.0",
+    "azure-storage-blob==12.25.1",
+
     "fake-useragent==1.5.1",
     "chromadb==0.6.2",
     "pymilvus==2.5.0",
