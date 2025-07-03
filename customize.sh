@@ -84,4 +84,4 @@ sed -i "s|WEBUI_NAME = os.environ.get.*|WEBUI_NAME = os.environ.get(\"WEBUI_NAME
 sed -i "s|WEBUI_FAVICON_URL = .*|WEBUI_FAVICON_URL = \"$BASE_URL/favicon.png\"|" "$ENV_PY"
 sed -i '/if WEBUI_NAME != .*Open WebUI/,/WEBUI_NAME += .*Open WebUI/d' "$ENV_PY"
 
-echo -e "\n🎉 DONE — '$NEW_NAME' is now rocking with **favicon-dark.png** included across backend and root static dirs!"
+echo -e "\n🎉 DONE — '$NEW_NAME'"
