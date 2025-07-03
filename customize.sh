@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
 
-echo "🔥 FixCraft AI WebUI Customizer — Launching..."
-echo "Dranding Customizer By F1xGOD"
+echo "🔥 Open WebUI Customizer — Launching..."
+echo "Branding Customizer By F1xGOD"
 echo ""
 # 1️⃣ Ask for local repo path
 read -p "👉 Path to your local open-webui directory (default: current dir): " OPENWEBUI_DIR
@@ -12,14 +12,12 @@ if [[ ! -d "$OPENWEBUI_DIR" ]]; then
   echo "❌ Directory '$OPENWEBUI_DIR' not found! Exiting."
   exit 1
 fi
-
 cd "$OPENWEBUI_DIR"
 echo "🚀 Operating in: $(pwd)"
 
 # 2️⃣ Get new name & asset URL
 read -p "👉 New WebUI name (default: FixCraft AI): " NEW_NAME
 NEW_NAME=${NEW_NAME:-FixCraft AI}
-
 read -p "👉 Base URL for assets (e.g. https://www.fixcraft.org): " BASE_URL
 if [[ -z "$BASE_URL" ]]; then
   echo "❌ No URL given. Exiting."
@@ -61,22 +59,30 @@ echo -e "\n✅ All assets present. Starting customization..."
 # 3️⃣ Branding in HTML
 sed -i "s/Open WebUI/$NEW_NAME/g" ./src/app.html
 
-# 4️⃣ Download assets
+# 4️⃣ Download into backend static
 STATIC_DIR="./backend/open_webui/static"
 mkdir -p "$STATIC_DIR"
 for file in "${!ASSETS[@]}"; do
-  echo "⬇️  Downloading $file..."
+  echo "⬇️  Downloading $file to backend static..."
   curl -sSf "$BASE_URL/$file" -o "$STATIC_DIR/$file"
 done
 
-# Copy favicon.png also to root static (legacy)
-cp "$STATIC_DIR/favicon.png" "$STATIC_DIR/../favicon.png"
+# 5️⃣ Update root-level static directories
+#    - ./static/favicon.png
+#    - everything in ./static/static/
+ROOT_STATIC1="./static"
+ROOT_STATIC2="./static/static"
+mkdir -p "$ROOT_STATIC1" "$ROOT_STATIC2"
+for file in "${!ASSETS[@]}"; do
+  echo "📂 Copying $file to $ROOT_STATIC1 and $ROOT_STATIC2..."
+  cp "$STATIC_DIR/$file" "$ROOT_STATIC1/$file"
+  cp "$STATIC_DIR/$file" "$ROOT_STATIC2/$file"
+done
 
-# 5️⃣ Patch env.py
+# 6️⃣ Patch env.py
 ENV_PY="./backend/open_webui/env.py"
 sed -i "s|WEBUI_NAME = os.environ.get.*|WEBUI_NAME = os.environ.get(\"WEBUI_NAME\", \"$NEW_NAME\")|" "$ENV_PY"
 sed -i "s|WEBUI_FAVICON_URL = .*|WEBUI_FAVICON_URL = \"$BASE_URL/favicon.png\"|" "$ENV_PY"
 sed -i '/if WEBUI_NAME != .*Open WebUI/,/WEBUI_NAME += .*Open WebUI/d' "$ENV_PY"
 
-echo -e "\n🎉 DONE — '$NEW_NAME' is now baked into your local Open WebUI clone!"
-
+echo -e "\n🎉 DONE — '$NEW_NAME' is now baked into your local Open WebUI clone, and all icons in backend/open_webui/static, ./static/favicon.png, and ./static/static/* are replaced!"
