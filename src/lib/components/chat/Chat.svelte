@@ -836,8 +836,10 @@
 			prompt = $page.url.searchParams.get('q') ?? '';
 
 			if (prompt) {
-				await tick();
-				submitPrompt(prompt);
+				if (($page.url.searchParams.get('submit') ?? 'true') === 'true') {
+					await tick();
+					submitPrompt(prompt);
+				}
 			}
 		}
 
