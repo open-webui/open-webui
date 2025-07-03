@@ -267,6 +267,30 @@ else:
 
 DATABASE_URL = os.environ.get("DATABASE_URL", f"sqlite:///{DATA_DIR}/webui.db")
 
+DATABASE_TYPE = os.environ.get("DATABASE_TYPE")
+DATABASE_USER = os.environ.get("DATABASE_USER")
+DATABASE_PASSWORD = os.environ.get("DATABASE_PASSWORD")
+
+DATABASE_CRED = ""
+if DATABASE_USER:
+    DATABASE_CRED += f"{DATABASE_USER}"
+if DATABASE_PASSWORD:
+    DATABASE_CRED += f":{DATABASE_PASSWORD}"
+if DATABASE_CRED:
+    DATABASE_CRED += "@"
+
+
+DB_VARS = {
+    "db_type": DATABASE_TYPE,
+    "db_cred": DATABASE_CRED,
+    "db_host": os.environ.get("DATABASE_HOST"),
+    "db_port": os.environ.get("DATABASE_PORT"),
+    "db_name": os.environ.get("DATABASE_NAME"),
+}
+
+if all(DB_VARS.values()):
+    DATABASE_URL = f"{DB_VARS['db_type']}://{DB_VARS['db_cred']}@{DB_VARS['db_host']}:{DB_VARS['db_port']}/{DB_VARS['db_name']}"
+
 # Replace the postgres:// with postgresql://
 if "postgres://" in DATABASE_URL:
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://")
