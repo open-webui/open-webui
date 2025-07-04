@@ -50,7 +50,7 @@
 
 				// Ensure the container is visible before adjusting height
 				const rect = container.getBoundingClientRect();
-				container.style.maxHeight = Math.max(Math.min(240, rect.bottom - 100), 100) + 'px';
+				container.style.maxHeight = Math.max(Math.min(240, rect.bottom - 80), 100) + 'px';
 			}, 100);
 		}
 	};

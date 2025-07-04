@@ -125,6 +125,8 @@
 	let webSearchEnabled = false;
 	let codeInterpreterEnabled = false;
 
+	let showCommands = false;
+
 	let chat = null;
 	let tags = [];
 
@@ -2083,6 +2085,7 @@
 						bind:selectedModels
 						shareEnabled={!!history.currentId}
 						{initNewChat}
+						showBanners={!showCommands}
 					/>
 
 					<div class="flex flex-col flex-auto z-10 w-full @container">
@@ -2133,6 +2136,7 @@
 									bind:codeInterpreterEnabled
 									bind:webSearchEnabled
 									bind:atSelectedModel
+									bind:showCommands
 									toolServers={$toolServers}
 									transparentBackground={$settings?.backgroundImageUrl ?? false}
 									{stopResponse}
@@ -2193,6 +2197,7 @@
 									bind:codeInterpreterEnabled
 									bind:webSearchEnabled
 									bind:atSelectedModel
+									bind:showCommands
 									transparentBackground={$settings?.backgroundImageUrl ?? false}
 									toolServers={$toolServers}
 									{stopResponse}

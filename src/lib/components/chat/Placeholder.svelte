@@ -37,6 +37,8 @@
 	export let selectedToolIds = [];
 	export let selectedFilterIds = [];
 
+	export let showCommands = false;
+
 	export let imageGenerationEnabled = false;
 	export let codeInterpreterEnabled = false;
 	export let webSearchEnabled = false;
@@ -220,6 +222,7 @@
 					bind:codeInterpreterEnabled
 					bind:webSearchEnabled
 					bind:atSelectedModel
+					bind:showCommands
 					{toolServers}
 					{transparentBackground}
 					{stopResponse}
