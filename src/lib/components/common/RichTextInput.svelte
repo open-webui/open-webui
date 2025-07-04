@@ -381,8 +381,6 @@
 						.replace(/\u00a0/g, ' ')
 				});
 
-				console.log(html);
-
 				if (json) {
 					value = editor.getJSON();
 				} else {

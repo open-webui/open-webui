@@ -172,7 +172,6 @@
 				try {
 					const input = JSON.parse(storageChatInput);
 
-					console.log(input);
 					if (!$temporaryChatEnabled) {
 						messageInput?.setText(input.prompt);
 						files = input.files;
@@ -477,7 +476,6 @@
 
 			try {
 				const input = JSON.parse(storageChatInput);
-				console.log(input);
 
 				if (!$temporaryChatEnabled) {
 					messageInput?.setText(input.prompt);

@@ -120,8 +120,11 @@
 			if ($settings?.richTextInput ?? true) {
 				chatInputElement.setText(text);
 			} else {
-				// chatInput.value = text;
+				chatInput.value = text;
 				prompt = text;
+
+				chatInput.focus();
+				chatInput.dispatchEvent(new Event('input'));
 			}
 		}
 	};
