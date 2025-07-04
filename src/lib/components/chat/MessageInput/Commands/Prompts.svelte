@@ -175,17 +175,16 @@
 
 			if (words.length > 0) {
 				const word = words.at(0);
-				const fullPrompt = prompt;
-
-				prompt = prompt.substring(0, word?.endIndex + 1);
 				await tick();
 
-				chatInputElement.scrollTop = chatInputElement.scrollHeight;
+				if (!($settings?.richTextInput ?? true)) {
+					chatInputElement.setSelectionRange(word.startIndex, word.endIndex + 1);
+					chatInputElement.focus();
 
-				prompt = fullPrompt;
-				await tick();
-
-				chatInputElement.setSelectionRange(word?.startIndex, word.endIndex + 1);
+					// This is a workaround to ensure the cursor is placed correctly
+					// after the text is inserted, especially for multiline inputs.
+					chatInputElement.setSelectionRange(word.startIndex, word.endIndex + 1);
+				}
 			} else {
 				chatInputElement.scrollTop = chatInputElement.scrollHeight;
 			}

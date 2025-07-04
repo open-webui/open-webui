@@ -569,6 +569,14 @@ if OFFLINE_MODE:
 AUDIT_LOGS_FILE_PATH = f"{DATA_DIR}/audit.log"
 # Maximum size of a file before rotating into a new log file
 AUDIT_LOG_FILE_ROTATION_SIZE = os.getenv("AUDIT_LOG_FILE_ROTATION_SIZE", "10MB")
+
+# Comma separated list of logger names to use for audit logging
+# Default is "uvicorn.access" which is the access log for Uvicorn
+# You can add more logger names to this list if you want to capture more logs
+AUDIT_UVICORN_LOGGER_NAMES = os.getenv(
+    "AUDIT_UVICORN_LOGGER_NAMES", "uvicorn.access"
+).split(",")
+
 # METADATA | REQUEST | REQUEST_RESPONSE
 AUDIT_LOG_LEVEL = os.getenv("AUDIT_LOG_LEVEL", "NONE").upper()
 try:

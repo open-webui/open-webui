@@ -288,21 +288,21 @@
 			>
 
 			<button
-				class="min-w-fit p-1.5 {selectedType === 'filter'
-					? ''
-					: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
-				on:click={() => {
-					selectedType = 'filter';
-				}}>{$i18n.t('Filter')}</button
-			>
-
-			<button
 				class="min-w-fit p-1.5 {selectedType === 'pipe'
 					? ''
 					: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
 				on:click={() => {
 					selectedType = 'pipe';
 				}}>{$i18n.t('Pipe')}</button
+			>
+
+			<button
+				class="min-w-fit p-1.5 {selectedType === 'filter'
+					? ''
+					: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+				on:click={() => {
+					selectedType = 'filter';
+				}}>{$i18n.t('Filter')}</button
 			>
 
 			<button
