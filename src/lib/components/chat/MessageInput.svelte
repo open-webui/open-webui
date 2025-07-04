@@ -1256,10 +1256,8 @@
 												chatInput?.focus();
 											}}
 										>
-											<button
-												class="bg-transparent hover:bg-gray-100 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5 outline-hidden focus:outline-hidden"
-												type="button"
-												aria-label={$i18n.t('More Available Tools')}
+											<div
+												class="bg-transparent hover:bg-gray-100 text-gray-800 dark:text-white dark:hover:bg-gray-800 rounded-full p-1.5 outline-hidden focus:outline-hidden"
 											>
 												<svg
 													xmlns="http://www.w3.org/2000/svg"
@@ -1272,7 +1270,7 @@
 														d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"
 													/>
 												</svg>
-											</button>
+											</div>
 										</InputMenu>
 
 										{#if $_user && (showToolsButton || (toggleFilters && toggleFilters.length > 0) || showWebSearchButton || showImageGenerationButton || showCodeInterpreterButton)}
@@ -1393,9 +1391,12 @@
 															on:click|preventDefault={() =>
 																(codeInterpreterEnabled = !codeInterpreterEnabled)}
 															type="button"
-															class="px-2 @xl:px-2.5 py-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {codeInterpreterEnabled
+															class="px-2 @xl:px-2.5 py-2 flex gap-1.5 items-center text-sm transition-colors duration-300 max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {codeInterpreterEnabled
 																? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
-																: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
+																: 'bg-transparent text-gray-600 dark:text-gray-300 '} {($settings?.highContrastMode ??
+															false)
+																? 'm-1'
+																: 'focus:outline-hidden rounded-full'}"
 														>
 															<CommandLine className="size-4" strokeWidth="1.75" />
 															<span
