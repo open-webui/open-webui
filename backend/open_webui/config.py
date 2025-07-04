@@ -911,7 +911,7 @@ ANTHROPIC_API_BASE_URL = os.environ.get("ANTHROPIC_API_BASE_URL", "")
 
 
 if ANTHROPIC_API_BASE_URL == "":
-    ANTHROPIC_API_BASE_URL = "https://api.anthropic.com/v1"
+    ANTHROPIC_API_BASE_URL = "https://api.anthropic.com"
 
 ANTHROPIC_API_KEYS = os.environ.get("ANTHROPIC_API_KEYS", "")
 ANTHROPIC_API_KEYS = ANTHROPIC_API_KEYS if ANTHROPIC_API_KEYS != "" else ANTHROPIC_API_KEY
@@ -927,7 +927,7 @@ ANTHROPIC_API_BASE_URLS = (
 )
 
 ANTHROPIC_API_BASE_URLS = [
-    url.strip() if url != "" else "https://api.anthropic.com/v1"
+    url.strip() if url != "" else "https://api.anthropic.com"
     for url in ANTHROPIC_API_BASE_URLS.split(";")
 ]
 ANTHROPIC_API_BASE_URLS = PersistentConfig(
