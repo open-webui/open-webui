@@ -1254,11 +1254,12 @@
 												class="{isLastMessage
 													? 'visible'
 													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
-												on:click={() => {
+												on:click={(e) => {
+													e.currentTarget.blur();
 													showIssueModal = true;
 												}}
 											>
-												<ExclamationCircle className="size-4" />
+												<ExclamationCircle className="size-4" strokeWidth="2.3" />
 											</button>
 										</Tooltip>
 
@@ -1268,11 +1269,12 @@
 												class="{isLastMessage
 													? 'visible'
 													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
-												on:click={() => {
+												on:click={(e) => {
+													e.currentTarget.blur();
 													showSuggestionModal = true;
 												}}
 											>
-												<LightBlub className="size-4" />
+												<LightBlub className="size-4" strokeWidth="2.3" />
 											</button>
 										</Tooltip>
 									{/if}
