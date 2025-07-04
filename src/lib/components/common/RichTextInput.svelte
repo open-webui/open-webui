@@ -207,6 +207,49 @@
 		selectNextTemplate(editor.view.state, editor.view.dispatch);
 	};
 
+	export const replaceVariables = (variables) => {
+		if (!editor) return;
+		const { state, view } = editor;
+		const { doc } = state;
+
+		// Create a transaction to replace variables
+		let tr = state.tr;
+		let offset = 0; // Track position changes due to text length differences
+
+		// Collect all replacements first to avoid position conflicts
+		const replacements = [];
+
+		doc.descendants((node, pos) => {
+			if (node.isText && node.text) {
+				const text = node.text;
+				const replacedText = text.replace(/{{\s*([^|}]+)(?:\|[^}]*)?\s*}}/g, (match, varName) => {
+					const trimmedVarName = varName.trim();
+					return variables.hasOwnProperty(trimmedVarName)
+						? String(variables[trimmedVarName])
+						: match;
+				});
+
+				if (replacedText !== text) {
+					replacements.push({
+						from: pos,
+						to: pos + text.length,
+						text: replacedText
+					});
+				}
+			}
+		});
+
+		// Apply replacements in reverse order to maintain correct positions
+		replacements.reverse().forEach(({ from, to, text }) => {
+			tr = tr.replaceWith(from, to, text !== '' ? state.schema.text(text) : []);
+		});
+
+		// Only dispatch if there are changes
+		if (replacements.length > 0) {
+			view.dispatch(tr);
+		}
+	};
+
 	export const focus = () => {
 		if (editor) {
 			editor.view.focus();

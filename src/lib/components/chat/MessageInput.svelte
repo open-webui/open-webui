@@ -64,6 +64,7 @@
 	import Sparkles from '../icons/Sparkles.svelte';
 
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
+	import InputVariablesModal from './MessageInput/InputVariablesModal.svelte';
 	const i18n = getContext('i18n');
 
 	export let transparentBackground = false;
@@ -95,6 +96,10 @@
 	export let webSearchEnabled = false;
 	export let codeInterpreterEnabled = false;
 
+	let showInputVariablesModal = false;
+	let inputVariables = {};
+	let inputVariableValues = {};
+
 	$: onChange({
 		prompt,
 		files: files
@@ -113,74 +118,62 @@
 		codeInterpreterEnabled
 	});
 
-	export const setText = (text?: string) => {
-		const chatInput = document.getElementById('chat-input');
+	const extractInputVariables = (text: string): Record<string, any> => {
+		const regex = /{{\s*([^|}\s]+)\s*\|\s*([^}]+)\s*}}/g;
+		const variables: Record<string, any> = {};
+		let match;
 
-		if (chatInput) {
-			if ($settings?.richTextInput ?? true) {
-				chatInputElement.setText(text);
-				chatInputElement.focus();
-			} else {
-				chatInput.value = text;
-				prompt = text;
-
-				chatInput.focus();
-				chatInput.dispatchEvent(new Event('input'));
-			}
+		// Use exec() loop instead of matchAll() for better compatibility
+		while ((match = regex.exec(text)) !== null) {
+			const varName = match[1].trim();
+			const definition = match[2].trim();
+			variables[varName] = parseVariableDefinition(definition);
 		}
+
+		return variables;
 	};
 
-	function getWordAtCursor(text, cursor) {
-		if (typeof text !== 'string' || cursor == null) return '';
-		const left = text.slice(0, cursor);
-		const right = text.slice(cursor);
-		const leftWord = left.match(/(?:^|\s)([^\s]*)$/)?.[1] || '';
+	const parseVariableDefinition = (definition: string): Record<string, any> => {
+		const [firstPart, ...propertyParts] = definition.split(':');
 
-		const rightWord = right.match(/^([^\s]*)/)?.[1] || '';
-		return leftWord + rightWord;
-	}
+		// Parse type (explicit or implied)
+		const type = firstPart.startsWith('type=') ? firstPart.slice(5) : firstPart;
 
-	const getCommand = () => {
-		const chatInput = document.getElementById('chat-input');
-		let word = '';
+		// Parse properties using reduce
+		const properties = propertyParts.reduce((props, part) => {
+			const [propertyName, ...valueParts] = part.split('=');
+			const propertyValue = valueParts.join('='); // Handle values with = signs
 
-		if (chatInput) {
-			if ($settings?.richTextInput ?? true) {
-				word = chatInputElement?.getWordAtDocPos();
-			} else {
-				const cursor = chatInput ? chatInput.selectionStart : prompt.length;
-				word = getWordAtCursor(prompt, cursor);
+			return propertyName && propertyValue
+				? {
+						...props,
+						[propertyName.trim()]: parseJsonValue(propertyValue.trim())
+					}
+				: props;
+		}, {});
+
+		return { type, ...properties };
+	};
+
+	const parseJsonValue = (value: string): any => {
+		// Check if it starts with square or curly brackets (JSON)
+		if (/^[\[{]/.test(value)) {
+			try {
+				return JSON.parse(value);
+			} catch {
+				return value; // Return as string if JSON parsing fails
 			}
 		}
 
-		return word;
+		return value;
 	};
-
-	function getWordBoundsAtCursor(text, cursor) {
-		let start = cursor,
-			end = cursor;
-		while (start > 0 && !/\s/.test(text[start - 1])) --start;
-		while (end < text.length && !/\s/.test(text[end])) ++end;
-		return { start, end };
-	}
-
-	function replaceCommandWithText(text) {
-		const chatInput = document.getElementById('chat-input');
-		if (!chatInput) return;
-
-		if ($settings?.richTextInput ?? true) {
-			chatInputElement?.replaceCommandWithText(text);
-		} else {
-			const cursor = chatInput.selectionStart;
-			const { start, end } = getWordBoundsAtCursor(prompt, cursor);
-			prompt = prompt.slice(0, start) + text + prompt.slice(end);
-			chatInput.focus();
-			chatInput.setSelectionRange(start + text.length, start + text.length);
-		}
-	}
 
 	const inputVariableHandler = async (text: string) => {
-		return text;
+		inputVariables = extractInputVariables(text);
+
+		if (Object.keys(inputVariables).length > 0) {
+			showInputVariablesModal = true;
+		}
 	};
 
 	const textVariableHandler = async (text: string) => {
@@ -262,8 +255,108 @@
 			text = text.replaceAll('{{CURRENT_WEEKDAY}}', weekday);
 		}
 
-		text = await inputVariableHandler(text);
+		inputVariableHandler(text);
 		return text;
+	};
+
+	const replaceVariables = (variables: Record<string, any>) => {
+		console.log('Replacing variables:', variables);
+
+		const chatInput = document.getElementById('chat-input');
+
+		if (chatInput) {
+			if ($settings?.richTextInput ?? true) {
+				chatInputElement.replaceVariables(variables);
+				chatInputElement.focus();
+			} else {
+				// Get current value from the input element
+				let currentValue = chatInput.value || '';
+
+				// Replace template variables using regex
+				const updatedValue = currentValue.replace(
+					/{{\s*([^|}]+)(?:\|[^}]*)?\s*}}/g,
+					(match, varName) => {
+						const trimmedVarName = varName.trim();
+						return variables.hasOwnProperty(trimmedVarName)
+							? String(variables[trimmedVarName])
+							: match;
+					}
+				);
+
+				// Update the input value
+				chatInput.value = updatedValue;
+				chatInput.focus();
+				chatInput.dispatchEvent(new Event('input', { bubbles: true }));
+			}
+		}
+	};
+
+	export const setText = async (text?: string) => {
+		const chatInput = document.getElementById('chat-input');
+
+		if (chatInput) {
+			text = await textVariableHandler(text || '');
+
+			if ($settings?.richTextInput ?? true) {
+				chatInputElement.setText(text);
+				chatInputElement.focus();
+			} else {
+				chatInput.value = text;
+				prompt = text;
+
+				chatInput.focus();
+				chatInput.dispatchEvent(new Event('input'));
+			}
+		}
+	};
+
+	const getCommand = () => {
+		const getWordAtCursor = (text, cursor) => {
+			if (typeof text !== 'string' || cursor == null) return '';
+			const left = text.slice(0, cursor);
+			const right = text.slice(cursor);
+			const leftWord = left.match(/(?:^|\s)([^\s]*)$/)?.[1] || '';
+
+			const rightWord = right.match(/^([^\s]*)/)?.[1] || '';
+			return leftWord + rightWord;
+		};
+
+		const chatInput = document.getElementById('chat-input');
+		let word = '';
+
+		if (chatInput) {
+			if ($settings?.richTextInput ?? true) {
+				word = chatInputElement?.getWordAtDocPos();
+			} else {
+				const cursor = chatInput ? chatInput.selectionStart : prompt.length;
+				word = getWordAtCursor(prompt, cursor);
+			}
+		}
+
+		return word;
+	};
+
+	const replaceCommandWithText = (text) => {
+		const getWordBoundsAtCursor = (text, cursor) => {
+			let start = cursor,
+				end = cursor;
+			while (start > 0 && !/\s/.test(text[start - 1])) --start;
+			while (end < text.length && !/\s/.test(text[end])) ++end;
+			return { start, end };
+		};
+
+		const chatInput = document.getElementById('chat-input');
+		if (!chatInput) return;
+
+		if ($settings?.richTextInput ?? true) {
+			chatInputElement?.replaceCommandWithText(text);
+		} else {
+			const cursor = chatInput.selectionStart;
+			const { start, end } = getWordBoundsAtCursor(prompt, cursor);
+			prompt = prompt.slice(0, start) + text + prompt.slice(end);
+			chatInput.focus();
+			chatInput.setSelectionRange(start + text.length, start + text.length);
+		}
 	};
 
 	const insertTextAtCursor = async (text: string) => {
@@ -271,6 +364,7 @@
 		if (!chatInput) return;
 
 		text = await textVariableHandler(text);
+
 		if (command) {
 			replaceCommandWithText(text);
 		} else {
@@ -731,6 +825,14 @@
 
 <FilesOverlay show={dragged} />
 <ToolServersModal bind:show={showTools} {selectedToolIds} />
+<InputVariablesModal
+	bind:show={showInputVariablesModal}
+	variables={inputVariables}
+	onSave={(variableValues) => {
+		inputVariableValues = { ...inputVariableValues, ...variableValues };
+		replaceVariables(inputVariableValues);
+	}}
+/>
 
 {#if loaded}
 	<div class="w-full font-primary">

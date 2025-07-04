@@ -32,9 +32,7 @@
 				map.fitBounds(markerGroupLayer.getBounds(), {
 					maxZoom: 13
 				});
-			} catch (error) {
-				console.error('Error fitting bounds for markers:', error);
-			}
+			} catch (error) {}
 		}
 	};
 
