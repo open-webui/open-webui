@@ -80,7 +80,7 @@
       <MaterialIcon name="add" className="w-[18px] h-[18px]" />
     </button>
   {:else}
-    
+
   <img
 	src="/logo-dark.png"
 	alt="GovGPT Logo"
@@ -96,7 +96,7 @@
 					<ModelSelector bind:selectedModels showSetDefault={!shareEnabled} />
 				{/if}
 			</div>
-	
+
 
 
     <!-- No add/new chat icon on desktop -->
