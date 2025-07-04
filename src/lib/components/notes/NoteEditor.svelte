@@ -873,9 +873,9 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 				<RichTextInput
 					className="input-prose-sm px-0.5"
 					bind:value={note.data.content.json}
-					placeholder={$i18n.t('Write something...')}
 					html={note.data?.content?.html}
 					json={true}
+					placeholder={$i18n.t('Write something...')}
 					editable={versionIdx === null && !enhancing}
 					onChange={(content) => {
 						note.data.content.html = content.html;

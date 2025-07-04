@@ -14,6 +14,7 @@ dependencies = [
     "python-socketio==5.13.0",
     "python-jose==3.4.0",
     "passlib[bcrypt]==1.7.4",
+    "cryptography",
 
     "requests==2.32.4",
     "aiohttp==3.11.11",
