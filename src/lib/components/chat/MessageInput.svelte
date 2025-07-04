@@ -30,7 +30,13 @@
 		blobToFile,
 		compressImage,
 		createMessagesList,
-		extractCurlyBraceWords
+		extractCurlyBraceWords,
+		getCurrentDateTime,
+		getFormattedDate,
+		getFormattedTime,
+		getUserPosition,
+		getUserTimezone,
+		getWeekday
 	} from '$lib/utils';
 	import { uploadFile } from '$lib/apis/files';
 	import { generateAutoCompletion } from '$lib/apis';
@@ -58,7 +64,6 @@
 	import Sparkles from '../icons/Sparkles.svelte';
 
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
-
 	const i18n = getContext('i18n');
 
 	export let transparentBackground = false;
@@ -107,6 +112,220 @@
 		webSearchEnabled,
 		codeInterpreterEnabled
 	});
+
+	export const setText = (text?: string) => {
+		const chatInput = document.getElementById('chat-input');
+
+		if (chatInput) {
+			if ($settings?.richTextInput ?? true) {
+				chatInputElement.setText(text);
+			} else {
+				// chatInput.value = text;
+				prompt = text;
+			}
+		}
+	};
+
+	function getWordAtCursor(text, cursor) {
+		if (typeof text !== 'string' || cursor == null) return '';
+		const left = text.slice(0, cursor);
+		const right = text.slice(cursor);
+		const leftWord = left.match(/(?:^|\s)([^\s]*)$/)?.[1] || '';
+
+		const rightWord = right.match(/^([^\s]*)/)?.[1] || '';
+		return leftWord + rightWord;
+	}
+
+	const getCommand = () => {
+		const chatInput = document.getElementById('chat-input');
+		let word = '';
+
+		if (chatInput) {
+			if ($settings?.richTextInput ?? true) {
+				word = chatInputElement?.getWordAtDocPos();
+			} else {
+				const cursor = chatInput ? chatInput.selectionStart : prompt.length;
+				word = getWordAtCursor(prompt, cursor);
+			}
+		}
+
+		return word;
+	};
+
+	function getWordBoundsAtCursor(text, cursor) {
+		let start = cursor,
+			end = cursor;
+		while (start > 0 && !/\s/.test(text[start - 1])) --start;
+		while (end < text.length && !/\s/.test(text[end])) ++end;
+		return { start, end };
+	}
+
+	function replaceCommandWithText(text) {
+		const chatInput = document.getElementById('chat-input');
+		if (!chatInput) return;
+
+		if ($settings?.richTextInput ?? true) {
+			chatInputElement?.replaceCommandWithText(text);
+		} else {
+			const cursor = chatInput.selectionStart;
+			const { start, end } = getWordBoundsAtCursor(prompt, cursor);
+			prompt = prompt.slice(0, start) + text + prompt.slice(end);
+			chatInput.focus();
+			chatInput.setSelectionRange(start + text.length, start + text.length);
+		}
+	}
+
+	const inputVariableHandler = async (text: string) => {
+		return text;
+	};
+
+	const textVariableHandler = async (text: string) => {
+		if (text.includes('{{CLIPBOARD}}')) {
+			const clipboardText = await navigator.clipboard.readText().catch((err) => {
+				toast.error($i18n.t('Failed to read clipboard contents'));
+				return '{{CLIPBOARD}}';
+			});
+
+			const clipboardItems = await navigator.clipboard.read();
+
+			let imageUrl = null;
+			for (const item of clipboardItems) {
+				// Check for known image types
+				for (const type of item.types) {
+					if (type.startsWith('image/')) {
+						const blob = await item.getType(type);
+						imageUrl = URL.createObjectURL(blob);
+					}
+				}
+			}
+
+			if (imageUrl) {
+				files = [
+					...files,
+					{
+						type: 'image',
+						url: imageUrl
+					}
+				];
+			}
+
+			text = text.replaceAll('{{CLIPBOARD}}', clipboardText);
+		}
+
+		if (text.includes('{{USER_LOCATION}}')) {
+			let location;
+			try {
+				location = await getUserPosition();
+			} catch (error) {
+				toast.error($i18n.t('Location access not allowed'));
+				location = 'LOCATION_UNKNOWN';
+			}
+			text = text.replaceAll('{{USER_LOCATION}}', String(location));
+		}
+
+		if (text.includes('{{USER_NAME}}')) {
+			const name = $_user?.name || 'User';
+			text = text.replaceAll('{{USER_NAME}}', name);
+		}
+
+		if (text.includes('{{USER_LANGUAGE}}')) {
+			const language = localStorage.getItem('locale') || 'en-US';
+			text = text.replaceAll('{{USER_LANGUAGE}}', language);
+		}
+
+		if (text.includes('{{CURRENT_DATE}}')) {
+			const date = getFormattedDate();
+			text = text.replaceAll('{{CURRENT_DATE}}', date);
+		}
+
+		if (text.includes('{{CURRENT_TIME}}')) {
+			const time = getFormattedTime();
+			text = text.replaceAll('{{CURRENT_TIME}}', time);
+		}
+
+		if (text.includes('{{CURRENT_DATETIME}}')) {
+			const dateTime = getCurrentDateTime();
+			text = text.replaceAll('{{CURRENT_DATETIME}}', dateTime);
+		}
+
+		if (text.includes('{{CURRENT_TIMEZONE}}')) {
+			const timezone = getUserTimezone();
+			text = text.replaceAll('{{CURRENT_TIMEZONE}}', timezone);
+		}
+
+		if (text.includes('{{CURRENT_WEEKDAY}}')) {
+			const weekday = getWeekday();
+			text = text.replaceAll('{{CURRENT_WEEKDAY}}', weekday);
+		}
+
+		text = await inputVariableHandler(text);
+		return text;
+	};
+
+	const insertTextAtCursor = async (text: string) => {
+		const chatInput = document.getElementById('chat-input');
+		if (!chatInput) return;
+
+		text = await textVariableHandler(text);
+		if (command) {
+			replaceCommandWithText(text);
+		} else {
+			if ($settings?.richTextInput ?? true) {
+				const selection = window.getSelection();
+				if (selection && selection.rangeCount > 0) {
+					const range = selection.getRangeAt(0);
+					range.deleteContents();
+					range.insertNode(document.createTextNode(text));
+					range.collapse(false);
+					selection.removeAllRanges();
+					selection.addRange(range);
+				}
+			} else {
+				const cursor = chatInput.selectionStart;
+				prompt = prompt.slice(0, cursor) + text + prompt.slice(cursor);
+				chatInput.focus();
+				chatInput.setSelectionRange(cursor + text.length, cursor + text.length);
+			}
+		}
+
+		await tick();
+		const chatInputContainer = document.getElementById('chat-input-container');
+		if (chatInputContainer) {
+			chatInputContainer.scrollTop = chatInputContainer.scrollHeight;
+		}
+
+		await tick();
+		if (chatInput) {
+			chatInput.focus();
+			chatInput.dispatchEvent(new Event('input'));
+
+			const words = extractCurlyBraceWords(prompt);
+
+			if (words.length > 0) {
+				const word = words.at(0);
+				await tick();
+
+				if (!($settings?.richTextInput ?? true)) {
+					// Move scroll to the first word
+					chatInput.setSelectionRange(word.startIndex, word.endIndex + 1);
+					chatInput.focus();
+
+					const selectionRow =
+						(word?.startIndex - (word?.startIndex % chatInput.cols)) / chatInput.cols;
+					const lineHeight = chatInput.clientHeight / chatInput.rows;
+
+					chatInput.scrollTop = lineHeight * selectionRow;
+				}
+			} else {
+				chatInput.scrollTop = chatInput.scrollHeight;
+			}
+		}
+	};
+
+	let command = '';
+
+	let showCommands = false;
+	$: showCommands = ['/', '#', '@'].includes(command?.charAt(0)) || '\\#' === command?.slice(0, 2);
 
 	let showTools = false;
 
@@ -583,20 +802,36 @@
 
 					<Commands
 						bind:this={commandsElement}
-						bind:prompt
 						bind:files
-						on:upload={(e) => {
-							dispatch('upload', e.detail);
-						}}
-						on:select={(e) => {
-							const data = e.detail;
+						show={showCommands}
+						{command}
+						insertTextHandler={insertTextAtCursor}
+						onUpload={(e) => {
+							const { type, data } = e;
 
-							if (data?.type === 'model') {
-								atSelectedModel = data.data;
+							if (type === 'file') {
+								if (files.find((f) => f.id === data.id)) {
+									return;
+								}
+								files = [
+									...files,
+									{
+										...data,
+										status: 'processed'
+									}
+								];
+							} else {
+								dispatch('upload', e);
+							}
+						}}
+						onSelect={(e) => {
+							const { type, data } = e;
+
+							if (type === 'model') {
+								atSelectedModel = data;
 							}
 
-							const chatInputElement = document.getElementById('chat-input');
-							chatInputElement?.focus();
+							document.getElementById('chat-input')?.focus();
 						}}
 					/>
 				</div>
@@ -770,8 +1005,12 @@
 										>
 											<RichTextInput
 												bind:this={chatInputElement}
-												bind:value={prompt}
 												id="chat-input"
+												onChange={(e) => {
+													prompt = e.md;
+													command = getCommand();
+												}}
+												json={true}
 												messageInput={true}
 												shiftEnter={!($settings?.ctrlEnterToSend ?? false) &&
 													(!$mobile ||
@@ -990,6 +1229,12 @@
 											class="scrollbar-hidden bg-transparent dark:text-gray-200 outline-hidden w-full pt-3 px-1 resize-none"
 											placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
 											bind:value={prompt}
+											on:input={() => {
+												command = getCommand();
+											}}
+											on:click={() => {
+												command = getCommand();
+											}}
 											on:compositionstart={() => (isComposing = true)}
 											on:compositionend={() => (isComposing = false)}
 											on:keydown={async (e) => {
@@ -1137,17 +1382,20 @@
 
 													if (words.length > 0) {
 														const word = words.at(0);
-														const fullPrompt = prompt;
 
-														prompt = prompt.substring(0, word?.endIndex + 1);
-														await tick();
+														if (word && e.target instanceof HTMLTextAreaElement) {
+															// Prevent default tab behavior
+															e.preventDefault();
+															e.target.setSelectionRange(word?.startIndex, word.endIndex + 1);
+															e.target.focus();
 
-														e.target.scrollTop = e.target.scrollHeight;
-														prompt = fullPrompt;
-														await tick();
+															const selectionRow =
+																(word?.startIndex - (word?.startIndex % e.target.cols)) /
+																e.target.cols;
+															const lineHeight = e.target.clientHeight / e.target.rows;
 
-														e.preventDefault();
-														e.target.setSelectionRange(word?.startIndex, word.endIndex + 1);
+															e.target.scrollTop = lineHeight * selectionRow;
+														}
 													}
 
 													e.target.style.height = '';

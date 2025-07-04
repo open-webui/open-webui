@@ -8,9 +8,8 @@
 
 	const i18n = getContext('i18n');
 
-	const dispatch = createEventDispatcher();
-
 	export let command = '';
+	export let onSelect = (e) => {};
 
 	let selectedIdx = 0;
 	let filteredItems = [];
@@ -71,8 +70,7 @@
 	};
 
 	const confirmSelect = async (model) => {
-		command = '';
-		dispatch('select', model);
+		onSelect({ type: 'model', data: model });
 	};
 
 	onMount(async () => {
