@@ -55,6 +55,13 @@
 	import Wrench from '../icons/Wrench.svelte';
 	import CommandLine from '../icons/CommandLine.svelte';
 	import Sparkles from '../icons/Sparkles.svelte';
+	import ArrowDown from '../icons/ArrowDown.svelte';
+	import MenuBook from '../icons/MenuBook.svelte';
+	import EditNotes from '../icons/EditNotes.svelte';
+	import CheckNew from '../icons/CheckNew.svelte';
+	import Language from '../icons/Language.svelte';
+	import Attach from '../icons/Attach.svelte';
+	
 
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 
@@ -88,6 +95,15 @@
 	export let imageGenerationEnabled = false;
 	export let webSearchEnabled = false;
 	export let codeInterpreterEnabled = false;
+	let isOpen = false;
+  
+  const Modeloptions = [{"label":"Gov knowledge", "icon":MenuBook,},{"label":"Procurement", "icon":EditNotes}];
+  let selected = Modeloptions[0];
+
+  function selectOption(option) {
+    selected = option;
+    isOpen = false;
+  }
 
 	$: onChange({
 		prompt,
@@ -1202,9 +1218,9 @@
 									{/if}
 								</div>
 
-								<div class=" flex justify-between mt-0.5 mb-2.5 mx-0.5 max-w-full" dir="ltr">
+								<div class=" flex justify-between mt-[20px] mb-2.5 mx-0.5 max-w-full" dir="ltr">
 									<div class="ml-1 self-end flex items-center flex-1 max-w-[80%]">
-										<InputMenu
+										<!--<InputMenu
 											bind:selectedToolIds
 											selectedModels={atSelectedModel ? [atSelectedModel.id] : selectedModels}
 											{fileUploadCapableModels}
@@ -1271,14 +1287,69 @@
 													/>
 												</svg>
 											</button>
-										</InputMenu>
+										</InputMenu>-->
 
 										{#if $_user && (showToolsButton || (toggleFilters && toggleFilters.length > 0) || showWebSearchButton || showImageGenerationButton || showCodeInterpreterButton)}
 											<div
 												class="flex self-center w-[1px] h-4 mx-1.5 bg-gray-50 dark:bg-gray-800"
 											/>
+											<div class="flex gap-[12px] items-center">
+<div class="model-box relative inline-block">
+  <!-- Dropdown Button -->
+  <button
+    type="button"
+    on:click={() => isOpen = !isOpen}
+    class="inline-flex gap-2 text-[14px] leading-[22px] font-medium font-NotoKufi-Regular justify-between items-center px-2 py-1 border border-gray-1300 bg-gray-1150 rounded-[40px]"
+  >
+    <svelte:component this={selected.icon} class="w-6 h-6" />
+    {selected.label}
+   <ArrowDown strokeWidth="2" className="size-[1.1rem]" />
 
-											<div class="flex gap-1 items-center overflow-x-auto scrollbar-none flex-1">
+  </button>
+
+  <!-- Dropdown Menu -->
+  {#if isOpen}
+    <div
+      class="absolute z-10 bottom-[40px] w-[211px] bg-white border border-gray-200 rounded-md shadow-lg"
+    >
+      {#each Modeloptions as option}
+        <div
+          on:click={() => selectOption(option)}
+          class="flex px-[14px] py-[15px]  justify-between items-center text-gray-1200 font-medium cursor-pointer leading-[22px] font-NotoKufi-Regular"
+        >
+		<div class="flex gap-2 items-center">
+		<svelte:component this={option.icon} class="w-6 h-6" />
+          {option.label}
+		  </div>
+		   {#if option.label==selected.label}
+		  <CheckNew strokeWidth="2" className="size-[1.1rem]" />
+		  {/if}
+        </div>
+      {/each}
+    </div>
+  {/if}
+</div>
+
+<div class="web-search">
+<button
+    type="button"
+    class="inline-flex border border-gray-1300  bg-gray-1150 gap-2 text-[14px] leading-[22px] font-medium font-NotoKufi-Regular justify-between items-center px-2 py-1 rounded-[40px]"
+  >
+    <Language strokeWidth="2" className="size-[1.1rem]" />
+    Web Search
+  </button>
+</div>
+
+<div class="attach">
+<button
+    type="button"
+    class=""
+  >
+    <Attach strokeWidth="2" className="size-[1.1rem]" />
+  </button>
+</div>
+</div>
+											<!--<div class="flex gap-1 items-center overflow-x-auto scrollbar-none flex-1">
 												{#if showToolsButton}
 													<Tooltip
 														content={$i18n.t('{{COUNT}} Available Tools', {
@@ -1399,7 +1470,7 @@
 														</button>
 													</Tooltip>
 												{/if}
-											</div>
+											</div>-->
 										{/if}
 									</div>
 
