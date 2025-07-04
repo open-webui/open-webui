@@ -75,3 +75,8 @@ The backend server will start on http://localhost:8080.
 - docker push deliah/tech-sense:v1.3.4
 - docker tag tech-sense deliah/tech-sense:latest
 - docker push deliah/tech-sense:latest
+
+# Debug mode
+$env:WEBUI_DEBUG=1 ; .\start_windows.bat
+
+$env:WEBUI_DEBUG=1 ; python -m debugpy --listen 0.0.0.0:5678 --wait-for-client --log-to-stderr uvicorn open_webui.main:app --host "$env:HOST" --port "$env:PORT" --forwarded-allow-ips '*' --workers "$env:UVICORN_WORKERS" --ws auto
