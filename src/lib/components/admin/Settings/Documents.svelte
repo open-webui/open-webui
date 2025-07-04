@@ -18,7 +18,13 @@
 	} from '$lib/apis/retrieval';
 
 	import { reindexKnowledgeFiles } from '$lib/apis/knowledge';
-	import { deleteAllFiles, reindexFiles, countFiles, listenToReindexProgress } from '$lib/apis/files';
+	import { 
+		deleteAllFiles,
+		reindexFiles,
+		countFiles,
+		listenToReindexProgress,
+		checkIfReindexing
+	} from '$lib/apis/files';
 
 	import ResetUploadDirConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import ResetVectorDBConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -239,6 +245,8 @@
             return;
         }
 
+		filesCountMessage = $i18n.t('Counting files to reindex..')
+		showFilesReindexConfirm = true;
         // Fetch the file count
         try {
             const fileCount = await countFiles(token);
@@ -247,7 +255,6 @@
             } else {
                 filesCountMessage = $i18n.t('No files to reindex.');
             }
-            showFilesReindexConfirm = true;  // Show the dialog once the message is updated
         } catch (error) {
             filesCountMessage = $i18n.t('Error fetching file count');
             toast.error(`${error}`);
@@ -291,6 +298,14 @@
 		);
 
 		RAGConfig = config;
+
+		isReindexing = await checkIfReindexing();
+		if (isReindexing) {
+			listenToReindexProgress((p) => {
+				fileProgress = p;
+				if (p >= 100) isReindexing = false;
+			});
+		}
 	});
 </script>
 
@@ -1296,6 +1311,7 @@
 								on:click={() => {
 									openReindexDialog();
 								}}
+								disabled={isReindexing}
 							>
 								{$i18n.t('Reindex')}
 							</button>

@@ -320,3 +320,23 @@ export const listenToReindexProgress = (onProgress: (progress: number) => void) 
 		eventSource?.close();
 	};
 };
+
+export const checkIfReindexing = (): Promise<boolean> => {
+	return new Promise((resolve) => {
+		const eventSource = new EventSource(`${WEBUI_API_BASE_URL}/files/reindex/stream`);
+
+		const handleMessage = (event: MessageEvent) => {
+			const progress = parseInt(event.data);
+			eventSource.close();
+			resolve(progress > 0 && progress < 100); // treat as "in progress"
+		};
+
+		const handleError = () => {
+			eventSource.close();
+			resolve(false);
+		};
+
+		eventSource.onmessage = handleMessage;
+		eventSource.onerror = handleError;
+	});
+};

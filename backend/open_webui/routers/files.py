@@ -31,14 +31,15 @@ from open_webui.models.files import (
 )
 from open_webui.models.knowledge import Knowledges
 
-from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
+from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 from open_webui.routers.knowledge import get_knowledge, get_knowledge_list
 from open_webui.routers.retrieval import ProcessFileForm, process_file
 from open_webui.routers.audio import transcribe
+from open_webui.socket.main import REINDEX_STATE
 from open_webui.storage.provider import Storage
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from pydantic import BaseModel
-from asyncio import sleep
+from asyncio import sleep, to_thread
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -281,13 +282,13 @@ async def search_files(
 # Reindex All Files
 ############################
 
-# use a list for sharing the file progress with the /stream endpoint below
-# mutating a list element allows for shared variable
-file_progress = [0]
-
 
 @router.post('/reindex', response_model=bool)
 async def reindex_all_files(request: Request, user=Depends(get_admin_user)):
+    if REINDEX_STATE["reindex_progress"] > 0:
+        return False
+
+    REINDEX_STATE["reindex_progress"] = 1  # marking as started, before the first file is done
     files = Files.get_files()
     total_files = len(files)
 
@@ -306,7 +307,8 @@ async def reindex_all_files(request: Request, user=Depends(get_admin_user)):
                     "audio/x-m4a",
                     ]:
 
-                process_file(
+                await to_thread(
+                    process_file,
                     request,
                     ProcessFileForm(
                         file_id=file.id,
@@ -314,21 +316,26 @@ async def reindex_all_files(request: Request, user=Depends(get_admin_user)):
                     user=user,
                 )
             else:
-                process_file(
+                await to_thread(
+                    process_file,
                     request,
                     ProcessFileForm(
                         file_id=file.id
                     ),
                     user=user
                 )
-            file_progress[0] = int(i/total_files*100)
+            REINDEX_STATE["reindex_progress"] = max(int(i/total_files*100), 1)  # never go below 1 again to mark as working
             # this line un-blocks the API for the GET progress bar call
             await sleep(0.1)
         except Exception as e:
             log.error(
                     f"Error processing file {file.filename} (ID: {file.id}): {str(e)}"
                 )
+    REINDEX_STATE["reindex_progress"] = 100
+    await sleep(2)  # allow UI to fetch final value
+    REINDEX_STATE["reindex_progress"] = 0
     log.info("Reindexing files completed sucessfully.")
+
     return True
 
 
@@ -337,11 +344,11 @@ async def reindex_all_files(request: Request, user=Depends(get_admin_user)):
 async def stream_progress():
     async def event_generator():
         while True:
-            progress = file_progress[0]
+            progress = REINDEX_STATE.get("reindex_progress", 0)
             yield f"data: {progress}\n\n"
             if progress >= 100:
                 break
-            await sleep(1)  # stream every two second
+            await sleep(2)  # stream every two second
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
