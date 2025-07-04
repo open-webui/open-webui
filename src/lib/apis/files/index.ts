@@ -277,7 +277,7 @@ export const reindexFiles = async (token: string) => {
 export const countFiles = async (token: string) => {
 	let error = null;
 	
-	const res = await fetch(`${WEBUI_API_BASE_URL}/files/`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/files/?content=false`, {
 	  method: 'GET',
 	  headers: {
 		Accept: 'application/json',
