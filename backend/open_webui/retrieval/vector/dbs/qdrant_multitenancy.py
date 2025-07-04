@@ -225,16 +225,12 @@ class QdrantClient(VectorDBBase):
         elif filter:
             must_conditions += [_metadata_filter(k, v) for k, v in filter.items()]
 
-        try:
-            return self.client.delete(
-                collection_name=mt_collection,
-                points_selector=models.FilterSelector(
-                    filter=models.Filter(must=must_conditions, should=should_conditions)
-                ),
-            )
-        except Exception as e:
-            log.warning(f"Error deleting from collection {mt_collection}: {e}")
-            return None
+        return self.client.delete(
+            collection_name=mt_collection,
+            points_selector=models.FilterSelector(
+                filter=models.Filter(must=must_conditions, should=should_conditions)
+            ),
+        )
 
     def search(
         self, collection_name: str, vectors: List[List[float | int]], limit: int
@@ -281,16 +277,12 @@ class QdrantClient(VectorDBBase):
         tenant_filter = _tenant_filter(tenant_id)
         field_conditions = [_metadata_filter(k, v) for k, v in filter.items()]
         combined_filter = models.Filter(must=[tenant_filter, *field_conditions])
-        try:
-            points = self.client.query_points(
-                collection_name=mt_collection,
-                query_filter=combined_filter,
-                limit=limit,
-            )
-            return self._result_to_get_result(points.points)
-        except Exception as e:
-            log.exception(f"Error querying collection '{collection_name}': {e}")
-            return None
+        points = self.client.query_points(
+            collection_name=mt_collection,
+            query_filter=combined_filter,
+            limit=limit,
+        )
+        return self._result_to_get_result(points.points)
 
     def get(self, collection_name: str) -> Optional[GetResult]:
         """
@@ -303,16 +295,12 @@ class QdrantClient(VectorDBBase):
             log.debug(f"Collection {mt_collection} doesn't exist, get returns None")
             return None
         tenant_filter = _tenant_filter(tenant_id)
-        try:
-            points = self.client.query_points(
-                collection_name=mt_collection,
-                query_filter=models.Filter(must=[tenant_filter]),
-                limit=NO_LIMIT,
-            )
-            return self._result_to_get_result(points.points)
-        except Exception as e:
-            log.exception(f"Error getting collection '{collection_name}': {e}")
-            return None
+        points = self.client.query_points(
+            collection_name=mt_collection,
+            query_filter=models.Filter(must=[tenant_filter]),
+            limit=NO_LIMIT,
+        )
+        return self._result_to_get_result(points.points)
 
     def upsert(self, collection_name: str, items: List[VectorItem]):
         """
