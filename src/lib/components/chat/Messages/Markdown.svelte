@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
 	import { marked } from 'marked';
 	import { replaceTokens, processResponseContent } from '$lib/utils';
 	import { user, temporaryChatEnabled } from '$lib/stores';
@@ -73,31 +73,36 @@
 	};
 
 	$: (async () => {
-		if (content) {
-			mcpCommand = parseMcpCommand(content);
-			if (!mcpCommand) {
-				tokens = marked.lexer(
-					replaceTokens(processResponseContent(content), sourceIds, model?.name, $user?.name)
-				);
-			}
-		}
-	})();
+        if (content) {
+            mcpCommand = parseMcpCommand(content);
+            let textToRender = content;
+
+            if (mcpCommand) {
+                // Use the same regex from parseMcpCommand to remove the command from the displayed text
+                const commandRegex = /(?:```(?:json)?\s*)?\{[\s\S]*?"type":\s*"widget"[\s\S]*?"name":\s*"file-upload"[\s\S]*?\}(?:\s*```)?/i;
+                textToRender = content.replace(commandRegex, "").trim();
+            }
+
+            tokens = marked.lexer(
+                replaceTokens(processResponseContent(textToRender), sourceIds, model?.name, $user?.name)
+            );
+        }
+    })();
 </script>
 
 {#key id}
-	{#if mcpCommand}
-		<FileUploadWidget on:upload={handleFileUpload} />
-	{:else}
-		<MarkdownTokens
-			{tokens}
-			{id}
-			{save}
-			{preview}
-			{onTaskClick}
-			{onSourceClick}
-			{onSave}
-			{onUpdate}
-			{onPreview}
-		/>
-	{/if}
+    <MarkdownTokens
+        {tokens}
+        {id}
+        {save}
+        {preview}
+        {onTaskClick}
+        {onSourceClick}
+        {onSave}
+        {onUpdate}
+        {onPreview}
+    />
+    {#if mcpCommand}
+        <FileUploadWidget on:upload={handleFileUpload} />
+    {/if}
 {/key}

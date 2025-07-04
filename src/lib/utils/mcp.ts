@@ -5,24 +5,30 @@ export interface McpCommand {
 }
 
 export const parseMcpCommand = (content: string): McpCommand | null => {
-  try {
-    const trimmedContent = content.trim();
-    if (!trimmedContent.startsWith('{') || !trimmedContent.endsWith('}')) {
-      return null;
-    }
-    const parsed = JSON.parse(trimmedContent);
+    try {
+        // Use a regular expression to find a JSON object within the content.
+        const jsonRegex = /({[\s\S]*})/;
+        const match = content.match(jsonRegex);
 
-    if (
-      typeof parsed === 'object' &&
-      parsed !== null &&
-      parsed.type === 'widget' &&
-      parsed.name === 'file-upload'
-    ) {
-      return parsed as McpCommand;
+        if (!match) {
+            return null;
+        }
+
+        const jsonString = match[1];
+        const parsed = JSON.parse(jsonString);
+
+        if (
+            typeof parsed === 'object' &&
+            parsed !== null &&
+            parsed.type === 'widget' &&
+            parsed.name === 'file-upload'
+        ) {
+            return parsed as McpCommand;
+        }
+        return null;
+    } catch (error) {
+        // This will catch JSON parsing errors if the matched string is not valid JSON.
+        // console.error('Error parsing MCP command:', error);
+        return null;
     }
-    return null;
-  } catch (error) {
-    console.error('Error parsing MCP command:', error);
-    return null;
-  }
 };
