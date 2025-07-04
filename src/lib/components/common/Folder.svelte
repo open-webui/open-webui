@@ -9,6 +9,7 @@
 	import Collapsible from './Collapsible.svelte';
 	import Tooltip from './Tooltip.svelte';
 	import Plus from '../icons/Plus.svelte';
+	import MaterialIcon from '../common/MaterialIcon.svelte';
 
 	export let open = true;
 
@@ -22,6 +23,8 @@
 	export let dragAndDrop = true;
 
 	export let className = '';
+
+	export let showSidebar = true;
 
 	let folderElement;
 
@@ -127,47 +130,85 @@
 		>
 			<!-- svelte-ignore a11y-no-static-element-interactions -->
 			<div
-				class="w-full group rounded-md relative flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-900 text-gray-500 dark:text-gray-500 transition"
+	class="w-full group rounded-md relative flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-900 transition-all duration-300 ease-in-out"
+	class:justify-center={!showSidebar}
+	class:justify-between={showSidebar}
+>
+	<button class="w-full py-1.5 pl-2 flex items-center gap-1.5 text-xs font-medium" class:justify-center={!showSidebar}
+	class:justify-between={showSidebar}
+	class:py-1.5={showSidebar}
+	class:pl-2={showSidebar}
+
+	>
+		<!-- Icon -->
+		<div
+			class="self-center transition-all duration-300 ease-in-out"
+			class:mr-[15px]={showSidebar}
+		>
+			<MaterialIcon name="folder_open" size="1.1rem" />
+		</div>
+
+		<!-- Label + Chevron Wrapper -->
+		{#if showSidebar} 
+		<div class="w-full flex items-center justify-between">
+			<!-- Label -->
+			<div
+				class="self-center overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out"
+				class:max-w-[160px]={showSidebar}
+				class:max-w-0={!showSidebar}
+				class:opacity-100={showSidebar}
+				class:opacity-0={!showSidebar}
 			>
-				<button class="w-full py-1.5 pl-2 flex items-center gap-1.5 text-xs font-medium">
-					<div class="text-gray-300 dark:text-gray-600">
-						{#if open}
-							<ChevronDown className=" size-3" strokeWidth="2.5" />
-						{:else}
-							<ChevronRight className=" size-3" strokeWidth="2.5" />
-						{/if}
-					</div>
-
-					<div class="translate-y-[0.5px]">
-						{name}
-					</div>
-				</button>
-
-				{#if onAdd}
-					<button
-						class="absolute z-10 right-2 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
-						on:pointerup={(e) => {
-							e.stopPropagation();
-						}}
-						on:click={(e) => {
-							e.stopPropagation();
-							onAdd();
-						}}
-					>
-						<Tooltip content={onAddLabel}>
-							<button
-								class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto"
-								on:click={(e) => {}}
-							>
-								<Plus className=" size-3" strokeWidth="2.5" />
-							</button>
-						</Tooltip>
-					</button>
-				{/if}
+				<div class="font-medium text-sm leading-[22px]">
+					{name}
+				</div>
 			</div>
 
+			<!-- Chevron Icon -->
+			 {#if showSidebar}
+				<div
+				class="transition-all duration-300 ease-in-out"
+				class:opacity-100={showSidebar}
+				class:opacity-0={!showSidebar}
+			>
+				{#if open}
+					<ChevronDown className="size-3" strokeWidth="2.5" />
+				{:else}
+					<ChevronRight className="size-3" strokeWidth="2.5" />
+				{/if}
+			</div>
+			 {/if}
+			
+		</div>
+		{/if}
+	</button>
+
+	<!-- Plus button -->
+	{#if onAdd && showSidebar}
+		<button
+			class="absolute z-10 right-2 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
+			on:pointerup={(e) => e.stopPropagation()}
+			on:click={(e) => {
+				e.stopPropagation();
+				onAdd();
+			}}
+		>
+			<Tooltip content={onAddLabel}>
+				<button
+					class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto"
+				>
+					<Plus className="size-3" strokeWidth="2.5" />
+				</button>
+			</Tooltip>
+		</button>
+	{/if}
+</div>
+
+
 			<div slot="content" class="w-full">
-				<slot></slot>
+				{#if showSidebar}
+					<slot></slot>
+				{/if}
 			</div>
 		</Collapsible>
 	{:else}

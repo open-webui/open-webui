@@ -51,7 +51,7 @@
 	import Loader from '../common/Loader.svelte';
 	import AddFilesPlaceholder from '../AddFilesPlaceholder.svelte';
 	import Folder from '../common/Folder.svelte';
-	import Plus from '../icons/Plus.svelte';
+	import MaterialIcon from '../common/MaterialIcon.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import Folders from './Sidebar/Folders.svelte';
 	import { getChannels, createNewChannel } from '$lib/apis/channels';
@@ -88,6 +88,11 @@
 
 	let folders = {};
 	let newFolderId = null;
+
+	// Hover functionality variables
+	let isHovered = false;
+	let wasOpenedByClick = false;
+	let hoverTimeout: number | null = null;
 
 	const initFolders = async () => {
 		const folderList = await getFolders(localStorage.token).catch((error) => {
@@ -326,6 +331,55 @@
 		selectedChatId = null;
 	};
 
+	// Hover functionality handlers
+	const onMouseEnter = () => {
+		isHovered = true;
+		// Clear any existing timeout
+		if (hoverTimeout) {
+			clearTimeout(hoverTimeout);
+			hoverTimeout = null;
+		}
+
+		// Only open sidebar on hover if it wasn't opened by click
+		if (!$showSidebar && !wasOpenedByClick) {
+			showSidebar.set(true);
+		}
+	};
+
+	const onMouseLeave = () => {
+		isHovered = false;
+
+		// Only close sidebar on hover out if it wasn't opened by click
+		if ($showSidebar && !wasOpenedByClick) {
+			// Add a small delay to prevent accidental closing
+			hoverTimeout = setTimeout(() => {
+				if (!isHovered && !wasOpenedByClick) {
+					showSidebar.set(false);
+				}
+			}, 300);
+		}
+	};
+
+	const onSidebarClick = () => {
+		const willBeOpen = !$showSidebar;
+
+		// Mark that sidebar was opened by click if we're opening it
+		if (willBeOpen) {
+			wasOpenedByClick = true;
+		} else {
+			// If we're closing the sidebar, reset the flag
+			wasOpenedByClick = false;
+		}
+
+		showSidebar.set(willBeOpen);
+
+		// Clear any existing timeout
+		if (hoverTimeout) {
+			clearTimeout(hoverTimeout);
+			hoverTimeout = null;
+		}
+	};
+
 	onMount(async () => {
 		showPinnedChat = localStorage?.showPinnedChat ? localStorage.showPinnedChat === 'true' : true;
 
@@ -400,6 +454,11 @@
 		dropZone?.removeEventListener('dragover', onDragOver);
 		dropZone?.removeEventListener('drop', onDrop);
 		dropZone?.removeEventListener('dragleave', onDragLeave);
+
+		// Clean up hover timeout
+		if (hoverTimeout) {
+			clearTimeout(hoverTimeout);
+		}
 	});
 </script>
 
@@ -443,393 +502,443 @@
 <div
 	bind:this={navElement}
 	id="sidebar"
+	role="navigation"
 	class=" h-screen max-h-[100dvh] min-h-screen p-4 select-none {$showSidebar
 		? 'md:relative w-[300px] max-w-[300px]'
-		: '-translate-x-[300px] w-[80px]'} {$isApp
+		: 'w-[80px]'} {$isApp
 		? `ml-[4.5rem] md:ml-0 `
-		: 'transition-width duration-200 ease-in-out'}  shrink-0 bg-surface text-gray-900 dark:bg-gray-950 dark:text-gray-200 text-sm z-50 top-0 left-0 
+		: 'transition-width duration-200 ease-in-out'}  shrink-0 bg-surface text-gray-900 dark:bg-gray-950 dark:text-gray-200 text-sm z-50 top-0 left-0
         "
 	data-state={$showSidebar}
+	on:mouseenter={onMouseEnter}
+	on:mouseleave={onMouseLeave}
 >
 	<div
-		class="flex flex-col justify-between h-[calc(100vh-2rem)] max-h-[100dvh]  overflow-x-hidden z-50 bg-white {$showSidebar ? 'w-[calc(300px-2rem)]': 'w-[80px]'}"
+		class="flex flex-col justify-between h-[calc(100vh-2rem)] max-h-[100dvh] overflow-x-hidden z-50 bg-white {$showSidebar
+			? 'w-[calc(300px-2rem)]'
+			: 'w-[80px]'}"
 		style="
     border-radius: 20px;
     background: var(--Schemes-Surface, #FFF);
     box-shadow: 0px 0px 16px -8px rgba(28, 27, 27, 0.04);
   "
 	>
-	<div class="sidebar__top h-[calc(100vh-58px)] overflow-y-auto">
-		<div class="p-[20px] pb-[58px] flex justify-between space-x-1 text-gray-600 dark:text-gray-400">
-			<button
-				class=" cursor-pointer flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-				on:click={() => {
-					showSidebar.set(!$showSidebar);
-				}}
-			>
-				<div class="flex items-center">
-					<div class="self-center mr-[5px]">
-						<Toggle strokeWidth="2" className="size-[1.1rem]" />
-					</div>
-				</div>
-			</button>
-
-			<button
-				class="hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none {$showSidebar
-							? ''
-							: 'hidden'}"
-				on:click={() => {
-					showSearch.set(true);
-				}}
-				draggable="false"
-			>
-				<div class="self-center">
-					<SearchNew strokeWidth="2" className="size-[1.1rem]" />
-				</div>
-			</button>
-		</div>
-
-		<!-- {#if $user?.role === 'admin'}
-			<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
-				<a
-					class="grow flex items-center rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-					href="/home"
-					on:click={() => {
-						selectedChatId = null;
-						chatId.set('');
-
-						if ($mobile) {
-							showSidebar.set(false);
-						}
-					}}
-					draggable="false"
-				>
-					<div class="self-center">
-						<Home strokeWidth="2" className="size-[1.1rem]" />
-					</div>
-
-					<div class="flex self-center translate-y-[0.5px]">
-						<div class=" self-center font-medium text-sm ">{$i18n.t('Home')}</div>
-					</div>
-				</a>
-			</div>
-		{/if} -->
-
-		<div class="flex justify-center text-gray-800 dark:text-gray-200">
+		<div class="sidebar__top h-[calc(100vh-58px)] overflow-y-auto">
+			<div
+			class="flex justify-between items-center text-gray-600 dark:text-gray-400"
+			class:justify-center={!$showSidebar}
+		>
+			<!-- Menu Icon behaves like other sidebar buttons -->
 			<a
-				id="sidebar-new-chat-button"
-				class="p-[14px] flex items-center flex-1 rounded-lg h-full text-right hover:bg-gray-100 dark:hover:bg-gray-900 transition no-drag-region {$showSidebar ? '': 'justify-center'}"
-				href="/"
-				draggable="false"
-				on:click={async () => {
-					selectedChatId = null;
-
-					await temporaryChatEnabled.set(false);
-					setTimeout(() => {
-						if ($mobile) {
-							showSidebar.set(false);
-						}
-					}, 0);
-				}}
+				class="p-[14px] flex items-center rounded-lg transition-all duration-300 ease-in-out"
+				class:justify-center={!$showSidebar}
+				href="#"
+				on:click={onSidebarClick}
 			>
-				<div class="flex items-center">
-					<div class="self-center {$showSidebar ? 'mr-[15px]': ''}">
-						<GenerateText strokeWidth="2" className="size-[1.1rem]" />
-					</div>
-					<div
-						class=" self-center font-medium text-sm text-gray-850 dark:text-white leading-[22px] {$showSidebar
-							? ''
-							: 'hidden'}"
-					>
-						{$i18n.t('New Chat')}
-					</div>
+				<div
+					class="self-center transition-all duration-300 ease-in-out"
+					class:mr-[15px]={$showSidebar}
+				>
+					<MaterialIcon name="menu" size="1.1rem" />
 				</div>
 			</a>
+
+			<!-- Search icon only when sidebar is expanded, right aligned -->
+			{#if $showSidebar}
+				<div class="flex-1 flex justify-end transition-all duration-300 ease-in-out">
+					<button
+						class="hover:bg-gray-100 dark:hover:bg-gray-900 outline-none rounded-lg p-2 transition-all duration-300 ease-in-out"
+						on:click={() => {
+							showSearch.set(true);
+						}}
+						draggable="false"
+					>
+						<MaterialIcon name="search" size="1.1rem" />
+					</button>
+				</div>
+			{/if}
 		</div>
 
-		{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
-			<div class="flex justify-center text-gray-800 dark:text-gray-200">
-				<a
-					class="p-[14px] grow flex items-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition {$showSidebar ? '': 'justify-center'}"
-					href="/notes"
-					on:click={() => {
-						selectedChatId = null;
-						chatId.set('');
 
-						if ($mobile) {
-							showSidebar.set(false);
-						}
-					}}
-					draggable="false"
-				>
-					<div class="self-center {$showSidebar ? 'mr-[15px]': ''}">
-						<Chat2 strokeWidth="2" className="size-[1.1rem]" />
-					</div>
+			{#if $user?.role === 'admin'}
+				<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
+					<a
+						class="grow flex items-center rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition-all duration-300 ease-in-out"
+						class:justify-center={!$showSidebar}
+						href="/home"
+						on:click={() => {
+							selectedChatId = null;
+							chatId.set('');
 
-					<div class="self-center translate-y-[0.5px] {$showSidebar ? '' : 'hidden'}">
-						<div class=" self-center font-medium text-sm leading-[22px] ">{$i18n.t('Notes')}</div>
-					</div>
-				</a>
-			</div>
-		{/if}
+							if ($mobile) {
+								showSidebar.set(false);
+							}
+						}}
+						draggable="false"
+					>
+						<!-- Icon -->
+						<div
+							class="self-center transition-all duration-300 ease-in-out"
+							class:mr-[15px]={$showSidebar}
+						>
+							<MaterialIcon name="home" size="1.1rem" />
+						</div>
 
-		{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools}
-			<div class="flex justify-center text-gray-800 dark:text-gray-200">
-				<a
-					class="p-[14px] grow flex items-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition {$showSidebar ? '': 'justify-center'}"
-					href="/workspace"
-					on:click={() => {
-						selectedChatId = null;
-						chatId.set('');
-
-						if ($mobile) {
-							showSidebar.set(false);
-						}
-					}}
-					draggable="false"
-				>
-					<div class="self-center {$showSidebar ? 'mr-[15px]': ''}">
-						<AIFolder strokeWidth="2" className="size-[1.1rem]" />
-					</div>
-
-					<div class="self-center translate-y-[0.5px] {$showSidebar ? '' : 'hidden'}">
-						<div class=" self-center font-medium text-sm leading-[22px] ">{$i18n.t('Workspace')}</div>
-					</div>
-				</a>
-			</div>
-		{/if}
-
-		<div class="relative flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
-			{#if ($models ?? []).length > 0 && ($settings?.pinnedModels ?? []).length > 0}
-				<div class="mt-0.5">
-					{#each $settings.pinnedModels as modelId (modelId)}
-						{@const model = $models.find((model) => model.id === modelId)}
-						{#if model}
-							<div class="p-[14px] flex justify-center text-gray-800 dark:text-gray-200">
-								<a
-									class="grow flex items-center space-x-2.5 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-									href="/?model={modelId}"
-									on:click={() => {
-										selectedChatId = null;
-										chatId.set('');
-
-										if ($mobile) {
-											showSidebar.set(false);
-										}
-									}}
-									draggable="false"
-								>
-									<div class="self-center shrink-0">
-										<img
-											crossorigin="anonymous"
-											src={model?.info?.meta?.profile_image_url ?? '/static/favicon.png'}
-											class=" size-5 rounded-full -translate-x-[0.5px]"
-											alt="logo"
-										/>
-									</div>
-
-									<div
-										class="self-center translate-y-[0.5px] {$showSidebar ? '' : 'hidden'}"
-									>
-										<div class=" self-center font-medium text-sm  line-clamp-1">
-											{model?.name ?? modelId}
-										</div>
-									</div>
-								</a>
-							</div>
-						{/if}
-					{/each}
+						<!-- Label -->
+						<div
+							class="self-center font-medium text-sm text-gray-850 dark:text-white leading-[22px] transition-all duration-300 ease-in-out"
+							class:hidden={!$showSidebar}
+						>
+							{$i18n.t('Home')}
+						</div>
+					</a>
 				</div>
 			{/if}
 
-			{#if $config?.features?.enable_channels && ($user?.role === 'admin' || $channels.length > 0)}
-				<Folder
-					className="px-2 mt-0.5"
-					name={$i18n.t('Channels')}
-					dragAndDrop={false}
-					onAdd={async () => {
-						if ($user?.role === 'admin') {
-							await tick();
+			<div class="flex justify-center text-gray-800 dark:text-gray-200">
+				<a
+					id="sidebar-new-chat-button"
+					class="p-[14px] flex items-center flex-1 rounded-lg h-full text-right hover:bg-gray-100 dark:hover:bg-gray-900 transition-all duration-300 ease-in-out no-drag-region"
+					class:justify-center={!$showSidebar}
+					href="/"
+					draggable="false"
+					on:click={async () => {
+						selectedChatId = null;
 
-							setTimeout(() => {
-								showCreateChannel = true;
-							}, 0);
-						}
+						await temporaryChatEnabled.set(false);
+						setTimeout(() => {
+							if ($mobile) {
+								showSidebar.set(false);
+							}
+						}, 0);
 					}}
-					onAddLabel={$i18n.t('Create Channel')}
 				>
-					{#each $channels as channel}
-						<ChannelItem
-							{channel}
-							onUpdate={async () => {
-								await initChannels();
-							}}
-						/>
-					{/each}
-				</Folder>
+					<div class="flex items-center">
+						<!-- Icon -->
+						<div
+							class="self-center transition-all duration-300 ease-in-out"
+							class:mr-[15px]={$showSidebar}
+						>
+							<MaterialIcon name="border_color" size="1.1rem" />
+						</div>
+
+						<!-- Label -->
+						<div
+							class="self-center font-medium text-sm text-gray-850 dark:text-white leading-[22px] transition-all duration-300 ease-in-out"
+							class:hidden={!$showSidebar}
+						>
+							{$i18n.t('New Chat')}
+						</div>
+					</div>
+				</a>
+			</div>
+
+			{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
+				<div class="flex justify-center text-gray-800 dark:text-gray-200">
+					<a
+						class="p-[14px] grow flex items-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition-all duration-300 ease-in-out"
+						class:justify-center={!$showSidebar}
+						href="/notes"
+						on:click={() => {
+							selectedChatId = null;
+							chatId.set('');
+
+							if ($mobile) {
+								showSidebar.set(false);
+							}
+						}}
+						draggable="false"
+					>
+						<!-- Icon -->
+						<div
+							class="self-center transition-all duration-300 ease-in-out"
+							class:mr-[15px]={$showSidebar}
+						>
+							<MaterialIcon name="sticky_note_2" size="1.1rem" />
+						</div>
+
+						<!-- Label -->
+						<div
+							class="self-center translate-y-[0.5px] transition-all duration-300 ease-in-out"
+							class:hidden={!$showSidebar}
+						>
+							<div class="self-center font-medium text-sm leading-[22px]">
+								{$i18n.t('Notes')}
+							</div>
+						</div>
+					</a>
+				</div>
 			{/if}
 
-			<Folder
-				className="px-2 mt-0.5"
-				name={$i18n.t('Chats')}
-				onAdd={() => {
-					createFolder();
-				}}
-				onAddLabel={$i18n.t('New Folder')}
-				on:import={(e) => {
-					importChatHandler(e.detail);
-				}}
-				on:drop={async (e) => {
-					const { type, id, item } = e.detail;
+			{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools}
+				<div class="flex justify-center text-gray-800 dark:text-gray-200">
+					<a
+						class="p-[14px] grow flex items-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition-all duration-300 ease-in-out"
+						class:justify-center={!$showSidebar}
+						href="/workspace"
+						on:click={() => {
+							selectedChatId = null;
+							chatId.set('');
 
-					if (type === 'chat') {
-						let chat = await getChatById(localStorage.token, id).catch((error) => {
-							return null;
-						});
-						if (!chat && item) {
-							chat = await importChat(localStorage.token, item.chat, item?.meta ?? {});
-						}
-
-						if (chat) {
-							console.log(chat);
-							if (chat.folder_id) {
-								const res = await updateChatFolderIdById(localStorage.token, chat.id, null).catch(
-									(error) => {
-										toast.error(`${error}`);
-										return null;
-									}
-								);
+							if ($mobile) {
+								showSidebar.set(false);
 							}
-
-							if (chat.pinned) {
-								const res = await toggleChatPinnedStatusById(localStorage.token, chat.id);
-							}
-
-							initChatList();
-						}
-					} else if (type === 'folder') {
-						if (folders[id].parent_id === null) {
-							return;
-						}
-
-						const res = await updateFolderParentIdById(localStorage.token, id, null).catch(
-							(error) => {
-								toast.error(`${error}`);
-								return null;
-							}
-						);
-
-						if (res) {
-							await initFolders();
-						}
-					}
-				}}
-			>
-				{#if $pinnedChats.length > 0}
-					<div class="flex flex-col space-y-1 rounded-xl">
-						<Folder
-							className=""
-							bind:open={showPinnedChat}
-							on:change={(e) => {
-								localStorage.setItem('showPinnedChat', e.detail);
-								console.log(e.detail);
-							}}
-							on:import={(e) => {
-								importChatHandler(e.detail, true);
-							}}
-							on:drop={async (e) => {
-								const { type, id, item } = e.detail;
-
-								if (type === 'chat') {
-									let chat = await getChatById(localStorage.token, id).catch((error) => {
-										return null;
-									});
-									if (!chat && item) {
-										chat = await importChat(localStorage.token, item.chat, item?.meta ?? {});
-									}
-
-									if (chat) {
-										console.log(chat);
-										if (chat.folder_id) {
-											const res = await updateChatFolderIdById(
-												localStorage.token,
-												chat.id,
-												null
-											).catch((error) => {
-												toast.error(`${error}`);
-												return null;
-											});
-										}
-
-										if (!chat.pinned) {
-											const res = await toggleChatPinnedStatusById(localStorage.token, chat.id);
-										}
-
-										initChatList();
-									}
-								}
-							}}
-							name={$i18n.t('Pinned')}
+						}}
+						draggable="false"
+					>
+						<!-- Icon -->
+						<div
+							class="self-center transition-all duration-300 ease-in-out"
+							class:mr-[15px]={$showSidebar}
 						>
-							<div
-								class="ml-3 pl-1 mt-[1px] flex flex-col overflow-y-auto scrollbar-hidden border-s border-gray-100 dark:border-gray-900"
-							>
-								{#each $pinnedChats as chat, idx (`pinned-chat-${chat?.id ?? idx}`)}
-									<ChatItem
-										className=""
-										id={chat.id}
-										title={chat.title}
-										{shiftKey}
-										selected={selectedChatId === chat.id}
-										on:select={() => {
-											selectedChatId = chat.id;
-										}}
-										on:unselect={() => {
-											selectedChatId = null;
-										}}
-										on:change={async () => {
-											initChatList();
-										}}
-										on:tag={(e) => {
-											const { type, name } = e.detail;
-											tagEventHandler(type, name, chat.id);
-										}}
-									/>
-								{/each}
+							<MaterialIcon name="workspaces" size="1.1rem" />
+						</div>
+
+						<!-- Label -->
+						<div
+							class="self-center translate-y-[0.5px] transition-all duration-300 ease-in-out"
+							class:hidden={!$showSidebar}
+						>
+							<div class="self-center font-medium text-sm leading-[22px]">
+								{$i18n.t('Workspace')}
 							</div>
-						</Folder>
+						</div>
+					</a>
+				</div>
+			{/if}
+
+			<div class="relative flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
+				{#if ($models ?? []).length > 0 && ($settings?.pinnedModels ?? []).length > 0}
+					<div class="mt-0.5">
+						{#each $settings.pinnedModels as modelId (modelId)}
+							{@const model = $models.find((model) => model.id === modelId)}
+							{#if model}
+								<div class="p-[14px] flex justify-center text-gray-800 dark:text-gray-200">
+									<a
+										class="grow flex items-center space-x-2.5 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+										href="/?model={modelId}"
+										on:click={() => {
+											selectedChatId = null;
+											chatId.set('');
+
+											if ($mobile) {
+												showSidebar.set(false);
+											}
+										}}
+										draggable="false"
+									>
+										<div class="self-center shrink-0">
+											<img
+												crossorigin="anonymous"
+												src={model?.info?.meta?.profile_image_url ?? '/static/favicon.png'}
+												class=" size-5 rounded-full -translate-x-[0.5px]"
+												alt="logo"
+											/>
+										</div>
+
+										<div class="self-center translate-y-[0.5px] {$showSidebar ? '' : 'hidden'}">
+											<div class=" self-center font-medium text-sm line-clamp-1">
+												{model?.name ?? modelId}
+											</div>
+										</div>
+									</a>
+								</div>
+							{/if}
+						{/each}
 					</div>
 				{/if}
 
-				{#if folders}
-					<Folders
-						{folders}
-						on:import={(e) => {
-							const { folderId, items } = e.detail;
-							importChatHandler(items, false, folderId);
+				{#if $config?.features?.enable_channels && ($user?.role === 'admin' || $channels.length > 0)}
+					<Folder
+						className="px-2 mt-0.5"
+						name={$i18n.t('Channels')}
+						dragAndDrop={false}
+						showSidebar={$showSidebar}
+						onAdd={async () => {
+							if ($user?.role === 'admin') {
+								await tick();
+
+								setTimeout(() => {
+									showCreateChannel = true;
+								}, 0);
+							}
 						}}
-						on:update={async (e) => {
-							initChatList();
-						}}
-						on:change={async () => {
-							initChatList();
-						}}
-					/>
+						onAddLabel={$i18n.t('Create Channel')}
+					>
+						{#each $channels as channel}
+							<ChannelItem
+								{channel}
+								onUpdate={async () => {
+									await initChannels();
+								}}
+							/>
+						{/each}
+					</Folder>
 				{/if}
 
-				<div class=" flex-1 flex flex-col overflow-y-auto scrollbar-hidden">
-					<div class="pt-1.5">
-						{#if $chats}
-							{#each $chats as chat, idx (`chat-${chat?.id ?? idx}`)}
-								{#if idx === 0 || (idx > 0 && chat.time_range !== $chats[idx - 1].time_range)}
-									<div
-										class="w-full pl-2.5 text-xs text-gray-500 dark:text-gray-500 font-medium {idx ===
-										0
-											? ''
-											: 'pt-5'} pb-1.5"
-									>
-										{$i18n.t(chat.time_range)}
-										<!-- localisation keys for time_range to be recognized from the i18next parser (so they don't get automatically removed):
+				<Folder
+					className="px-2 mt-0.5"
+					name={$i18n.t('Folders')}
+					onAdd={() => {
+						createFolder();
+					}}
+					onAddLabel={$i18n.t('New Folder')}
+					showSidebar={$showSidebar}
+					on:import={(e) => {
+						importChatHandler(e.detail);
+					}}
+					on:drop={async (e) => {
+						const { type, id, item } = e.detail;
+
+						if (type === 'chat') {
+							let chat = await getChatById(localStorage.token, id).catch((error) => {
+								return null;
+							});
+							if (!chat && item) {
+								chat = await importChat(localStorage.token, item.chat, item?.meta ?? {});
+							}
+
+							if (chat) {
+								console.log(chat);
+								if (chat.folder_id) {
+									const res = await updateChatFolderIdById(localStorage.token, chat.id, null).catch(
+										(error) => {
+											toast.error(`${error}`);
+											return null;
+										}
+									);
+								}
+
+								if (chat.pinned) {
+									const res = await toggleChatPinnedStatusById(localStorage.token, chat.id);
+								}
+
+								initChatList();
+							}
+						} else if (type === 'folder') {
+							if (folders[id].parent_id === null) {
+								return;
+							}
+
+							const res = await updateFolderParentIdById(localStorage.token, id, null).catch(
+								(error) => {
+									toast.error(`${error}`);
+									return null;
+								}
+							);
+
+							if (res) {
+								await initFolders();
+							}
+						}
+					}}
+				>
+					{#if $pinnedChats.length > 0}
+						<div class="flex flex-col space-y-1 rounded-xl">
+							<Folder
+								className=""
+								bind:open={showPinnedChat}
+								on:change={(e) => {
+									localStorage.setItem('showPinnedChat', e.detail);
+									console.log(e.detail);
+								}}
+								on:import={(e) => {
+									importChatHandler(e.detail, true);
+								}}
+								on:drop={async (e) => {
+									const { type, id, item } = e.detail;
+
+									if (type === 'chat') {
+										let chat = await getChatById(localStorage.token, id).catch((error) => {
+											return null;
+										});
+										if (!chat && item) {
+											chat = await importChat(localStorage.token, item.chat, item?.meta ?? {});
+										}
+
+										if (chat) {
+											console.log(chat);
+											if (chat.folder_id) {
+												const res = await updateChatFolderIdById(
+													localStorage.token,
+													chat.id,
+													null
+												).catch((error) => {
+													toast.error(`${error}`);
+													return null;
+												});
+											}
+
+											if (!chat.pinned) {
+												const res = await toggleChatPinnedStatusById(localStorage.token, chat.id);
+											}
+
+											initChatList();
+										}
+									}
+								}}
+								name={$i18n.t('Pinned')}
+							>
+								<div
+									class="ml-3 pl-1 mt-[1px] flex flex-col overflow-y-auto scrollbar-hidden border-s border-gray-100 dark:border-gray-900"
+								>
+									{#each $pinnedChats as chat, idx (`pinned-chat-${chat?.id ?? idx}`)}
+										<ChatItem
+											className=""
+											id={chat.id}
+											title={chat.title}
+											{shiftKey}
+											selected={selectedChatId === chat.id}
+											on:select={() => {
+												selectedChatId = chat.id;
+											}}
+											on:unselect={() => {
+												selectedChatId = null;
+											}}
+											on:change={async () => {
+												initChatList();
+											}}
+											on:tag={(e) => {
+												const { type, name } = e.detail;
+												tagEventHandler(type, name, chat.id);
+											}}
+										/>
+									{/each}
+								</div>
+							</Folder>
+						</div>
+					{/if}
+
+					{#if folders}
+						<Folders
+							{folders}
+							on:import={(e) => {
+								const { folderId, items } = e.detail;
+								importChatHandler(items, false, folderId);
+							}}
+							on:update={async (e) => {
+								initChatList();
+							}}
+							on:change={async () => {
+								initChatList();
+							}}
+						/>
+					{/if}
+
+					{#if $showSidebar}
+						<div class=" flex-1 flex flex-col overflow-y-auto scrollbar-hidden">
+							<div class="pt-1.5">
+								{#if $chats}
+									{#each $chats as chat, idx (`chat-${chat?.id ?? idx}`)}
+										{#if idx === 0 || (idx > 0 && chat.time_range !== $chats[idx - 1].time_range)}
+											<div
+												class="w-full pl-2.5 text-xs text-gray-500 dark:text-gray-500 font-medium {idx ===
+												0
+													? ''
+													: 'pt-5'} pb-1.5"
+											>
+												{$i18n.t(chat.time_range)}
+												<!-- localisation keys for time_range to be recognized from the i18next parser (so they don't get automatically removed):
 							{$i18n.t('Today')}
 							{$i18n.t('Yesterday')}
 							{$i18n.t('Previous 7 days')}
@@ -847,60 +956,63 @@
 							{$i18n.t('November')}
 							{$i18n.t('December')}
 							-->
-									</div>
-								{/if}
+											</div>
+										{/if}
 
-								<ChatItem
-									className=""
-									id={chat.id}
-									title={chat.title}
-									{shiftKey}
-									selected={selectedChatId === chat.id}
-									on:select={() => {
-										selectedChatId = chat.id;
-									}}
-									on:unselect={() => {
-										selectedChatId = null;
-									}}
-									on:change={async () => {
-										initChatList();
-									}}
-									on:tag={(e) => {
-										const { type, name } = e.detail;
-										tagEventHandler(type, name, chat.id);
-									}}
-								/>
-							{/each}
+										<ChatItem
+											className=""
+											id={chat.id}
+											title={chat.title}
+											{shiftKey}
+											selected={selectedChatId === chat.id}
+											on:select={() => {
+												selectedChatId = chat.id;
+											}}
+											on:unselect={() => {
+												selectedChatId = null;
+											}}
+											on:change={async () => {
+												initChatList();
+											}}
+											on:tag={(e) => {
+												const { type, name } = e.detail;
+												tagEventHandler(type, name, chat.id);
+											}}
+										/>
+									{/each}
 
-							{#if $scrollPaginationEnabled && !allChatsLoaded}
-								<Loader
-									on:visible={(e) => {
-										if (!chatListLoading) {
-											loadMoreChats();
-										}
-									}}
-								>
+									{#if $scrollPaginationEnabled && !allChatsLoaded}
+										<Loader
+											on:visible={(e) => {
+												if (!chatListLoading) {
+													loadMoreChats();
+												}
+											}}
+										>
+											<div
+												class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2"
+											>
+												<Spinner className=" size-4" />
+												<div class=" ">Loading...</div>
+											</div>
+										</Loader>
+									{/if}
+								{:else}
 									<div
 										class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2"
 									>
 										<Spinner className=" size-4" />
 										<div class=" ">Loading...</div>
 									</div>
-								</Loader>
-							{/if}
-						{:else}
-							<div class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2">
-								<Spinner className=" size-4" />
-								<div class=" ">Loading...</div>
+								{/if}
 							</div>
-						{/if}
-					</div>
-				</div>
-			</Folder>
+						</div>
+					{/if}
+				</Folder>
+			</div>
 		</div>
-</div>
 		<div class="sidebar__bottom">
-			<div class="w-full p-[14px] flex flex-col  left-[20px] bottom-[20px] bg-white ">
+			<div class="w-full p-[14px] flex flex-col left-[20px] bottom-[20px] bg-white">
 				{#if $user !== undefined && $user !== null}
 					<UserMenu
 						role={$user?.role}
@@ -911,19 +1023,21 @@
 						}}
 					>
 						<button
-							class=" flex items-center rounded-xl w-full hover:bg-gray-100 dark:hover:bg-gray-900 {$showSidebar ? '': 'justify-center'}"
+							class=" flex items-center rounded-xl w-full hover:bg-gray-100 dark:hover:bg-gray-900 {$showSidebar
+								? ''
+								: 'justify-center'}"
 							on:click={() => {
 								showDropdown = !showDropdown;
 							}}
 						>
-							<div class=" self-center  {$showSidebar ? 'mr-[15px]' : ''}">
+							<div class=" self-center {$showSidebar ? 'mr-[15px]' : ''}">
 								<img
 									src={$user?.profile_image_url}
 									class=" max-w-[30px] object-cover rounded-full"
 									alt="User profile"
 								/>
 							</div>
-							<div class="self-center font-medium  leading-[22px]  {$showSidebar ? '' : 'hidden'}">
+							<div class="self-center font-medium leading-[22px] {$showSidebar ? '' : 'hidden'}">
 								{$user?.name}
 							</div>
 						</button>
