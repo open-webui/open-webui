@@ -38,20 +38,8 @@
 	import { generateAutoCompletion } from '$lib/apis';
 	import Image from '../common/Image.svelte';
 	import { deleteFileById } from '$lib/apis/files';
-	import Bug from '../icons/Bug.svelte';
-	import LightBlub from '../icons/LightBlub.svelte';
-	import Lifebuoy from '../icons/Lifebuoy.svelte';
-	import IssueModal from '../common/IssueModal.svelte';
-	import SuggestionModal from '../common/SuggestionModal.svelte';
 
 	const i18n = getContext('i18n');
-
-	// Help functionality state
-	let showIssue = false;
-	let showSuggestion = false;
-
-	// Survey URL configuration
-	$: SurveyUrl = $i18n.language === 'fr-CA' ? $config?.survey_url_fr : $config?.survey_url;
 
 	// Static references for i18next-parser - DO NOT REMOVE
 	// These ensure the parser finds the dynamic translation keys
@@ -1099,46 +1087,6 @@
 									{/if}
 
 									<div class="self-end mb-1.5 flex space-x-1 mr-1">
-										<!-- Help buttons -->
-										<Tooltip content={$i18n.t('Report an Issue')}>
-											<button
-												class="text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 self-center"
-												type="button"
-												on:click={() => {
-													showIssue = true;
-												}}
-												aria-label="Report an Issue"
-											>
-												<Bug className="size-5" />
-											</button>
-										</Tooltip>
-
-										<Tooltip content={$i18n.t('Suggestion Box')}>
-											<button
-												class="text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 self-center"
-												type="button"
-												on:click={() => {
-													showSuggestion = true;
-												}}
-												aria-label="Suggestion Box"
-											>
-												<LightBlub className="size-5" />
-											</button>
-										</Tooltip>
-
-										<Tooltip content={$i18n.t('User Survey')}>
-											<button
-												class="text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 self-center"
-												type="button"
-												on:click={() => {
-													window.open(SurveyUrl, '_blank');
-												}}
-												aria-label="User Survey"
-											>
-												<Lifebuoy className="size-5" />
-											</button>
-										</Tooltip>
-
 										{#if !history?.currentId || history.messages[history.currentId]?.done == true}
 											<Tooltip content={$i18n.t('Record voice')}>
 												<button
@@ -1304,7 +1252,3 @@
 		</div>
 	</div>
 {/if}
-
-<!-- Help modals -->
-<IssueModal bind:show={showIssue} />
-<SuggestionModal bind:show={showSuggestion} />

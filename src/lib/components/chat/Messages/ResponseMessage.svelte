@@ -41,12 +41,10 @@
 	import { createNewFeedback, getFeedbackById, updateFeedbackById } from '$lib/apis/evaluations';
 	import { getChatById } from '$lib/apis/chats';
 	import { generateTags } from '$lib/apis';
-
+	import ExclamationCircle from '$lib/components/icons/ExclamationCircle.svelte';
+	import LightBlub from '$lib/components/icons/LightBlub.svelte';
 	import IssueModal from '$lib/components/common/IssueModal.svelte';
 	import SuggestionModal from '$lib/components/common/SuggestionModal.svelte';
-	import Bug from '$lib/components/icons/Bug.svelte';
-	import LightBlub from '$lib/components/icons/LightBlub.svelte';
-	import Lifebuoy from '$lib/components/icons/Lifebuoy.svelte';
 
 	interface MessageType {
 		id: string;
@@ -1260,7 +1258,7 @@
 													showIssueModal = true;
 												}}
 											>
-												<Bug className="size-4" />
+												<ExclamationCircle className="size-4" />
 											</button>
 										</Tooltip>
 
@@ -1275,22 +1273,6 @@
 												}}
 											>
 												<LightBlub className="size-4" />
-											</button>
-										</Tooltip>
-
-										<Tooltip content={$i18n.t('User Survey')} placement="bottom">
-											<button
-												type="button"
-												class="{isLastMessage
-													? 'visible'
-													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
-												on:click={() => {
-													const surveyUrl =
-														$config?.app?.urls?.survey || 'https://forms.gle/ntmgGf5j3FJJJVde9';
-													window.open(surveyUrl, '_blank');
-												}}
-											>
-												<Lifebuoy className="size-4" />
 											</button>
 										</Tooltip>
 									{/if}

@@ -8,7 +8,7 @@
 	import QuestionMarkCircle from '$lib/components/icons/QuestionMarkCircle.svelte';
 	import Lifebuoy from '$lib/components/icons/Lifebuoy.svelte';
 	import Keyboard from '$lib/components/icons/Keyboard.svelte';
-	import Bug from '$lib/components/icons/Bug.svelte';
+	import ExclamationCircle from '$lib/components/icons/ExclamationCircle.svelte';
 	import LightBlub from '$lib/components/icons/LightBlub.svelte';
 	import BookOpen from '$lib/components/icons/BookOpen.svelte';
 	const i18n = getContext('i18n');
@@ -72,7 +72,7 @@
 					showIssueHandler();
 				}}
 			>
-				<Bug className="size-5" />
+				<ExclamationCircle className="size-5" />
 				<div class="flex items-center">{$i18n.t('Report an Issue')}</div>
 			</DropdownMenu.Item>
 
