@@ -7,9 +7,14 @@
 	import { onMount, getContext } from 'svelte';
 	import { models } from '$lib/stores';
 
+	import ModelModal from './LeaderboardModal.svelte';
+
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import MagnifyingGlass from '$lib/components/icons/MagnifyingGlass.svelte';
+
+	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
+	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -27,6 +32,9 @@
 	let tagEmbeddings = new Map();
 	let loadingLeaderboard = true;
 	let debounceTimer;
+
+	let orderBy: string = 'rating'; // default sort column
+	let direction: 'asc' | 'desc' = 'desc'; // default sort order
 
 	type Feedback = {
 		id: string;
@@ -49,6 +57,34 @@
 		rating: number;
 		won: number;
 		lost: number;
+	};
+
+	function setSortKey(key) {
+		if (orderBy === key) {
+			direction = direction === 'asc' ? 'desc' : 'asc';
+		} else {
+			orderBy = key;
+			direction = key === 'name' ? 'asc' : 'desc';
+		}
+	}
+
+	//////////////////////
+	//
+	// Aggregate Level Modal
+	//
+	//////////////////////
+
+	let showLeaderboardModal = false;
+	let selectedModel = null;
+
+	const openFeedbackModal = (model) => {
+		showLeaderboardModal = true;
+		selectedModel = model;
+	};
+
+	const closeLeaderboardModal = () => {
+		showLeaderboardModal = false;
+		selectedModel = null;
 	};
 
 	//////////////////////
@@ -266,7 +302,36 @@
 	onMount(async () => {
 		rankHandler();
 	});
+
+	$: sortedModels = [...rankedModels].sort((a, b) => {
+		let aVal, bVal;
+		if (orderBy === 'name') {
+			aVal = a.name;
+			bVal = b.name;
+			return direction === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+		} else if (orderBy === 'rating') {
+			aVal = a.rating === '-' ? -Infinity : a.rating;
+			bVal = b.rating === '-' ? -Infinity : b.rating;
+			return direction === 'asc' ? aVal - bVal : bVal - aVal;
+		} else if (orderBy === 'won') {
+			aVal = a.stats.won === '-' ? -Infinity : Number(a.stats.won);
+			bVal = b.stats.won === '-' ? -Infinity : Number(b.stats.won);
+			return direction === 'asc' ? aVal - bVal : bVal - aVal;
+		} else if (orderBy === 'lost') {
+			aVal = a.stats.lost === '-' ? -Infinity : Number(a.stats.lost);
+			bVal = b.stats.lost === '-' ? -Infinity : Number(b.stats.lost);
+			return direction === 'asc' ? aVal - bVal : bVal - aVal;
+		}
+		return 0;
+	});
 </script>
+
+<ModelModal
+	bind:show={showLeaderboardModal}
+	model={selectedModel}
+	{feedbacks}
+	onClose={closeLeaderboardModal}
+/>
 
 <div class="mt-0.5 mb-2 gap-1 flex flex-col md:flex-row justify-between">
 	<div class="flex md:self-center text-lg font-medium px-0.5 shrink-0 items-center">
@@ -324,26 +389,124 @@
 				class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-850 dark:text-gray-400 -translate-y-0.5"
 			>
 				<tr class="">
-					<th scope="col" class="px-3 py-1.5 cursor-pointer select-none w-3">
-						{$i18n.t('RK')}
+					<th
+						scope="col"
+						class="px-3 py-1.5 cursor-pointer select-none w-3"
+						on:click={() => setSortKey('rating')}
+					>
+						<div class="flex gap-1.5 items-center">
+							{$i18n.t('RK')}
+							{#if orderBy === 'rating'}
+								<span class="font-normal">
+									{#if direction === 'asc'}
+										<ChevronUp className="size-2" />
+									{:else}
+										<ChevronDown className="size-2" />
+									{/if}
+								</span>
+							{:else}
+								<span class="invisible">
+									<ChevronUp className="size-2" />
+								</span>
+							{/if}
+						</div>
 					</th>
-					<th scope="col" class="px-3 py-1.5 cursor-pointer select-none">
-						{$i18n.t('Model')}
+					<th
+						scope="col"
+						class="px-3 py-1.5 cursor-pointer select-none"
+						on:click={() => setSortKey('name')}
+					>
+						<div class="flex gap-1.5 items-center">
+							{$i18n.t('Model')}
+							{#if orderBy === 'name'}
+								<span class="font-normal">
+									{#if direction === 'asc'}
+										<ChevronUp className="size-2" />
+									{:else}
+										<ChevronDown className="size-2" />
+									{/if}
+								</span>
+							{:else}
+								<span class="invisible">
+									<ChevronUp className="size-2" />
+								</span>
+							{/if}
+						</div>
 					</th>
-					<th scope="col" class="px-3 py-1.5 text-right cursor-pointer select-none w-fit">
-						{$i18n.t('Rating')}
+					<th
+						scope="col"
+						class="px-3 py-1.5 text-right cursor-pointer select-none w-fit"
+						on:click={() => setSortKey('rating')}
+					>
+						<div class="flex gap-1.5 items-center justify-end">
+							{$i18n.t('Rating')}
+							{#if orderBy === 'rating'}
+								<span class="font-normal">
+									{#if direction === 'asc'}
+										<ChevronUp className="size-2" />
+									{:else}
+										<ChevronDown className="size-2" />
+									{/if}
+								</span>
+							{:else}
+								<span class="invisible">
+									<ChevronUp className="size-2" />
+								</span>
+							{/if}
+						</div>
 					</th>
-					<th scope="col" class="px-3 py-1.5 text-right cursor-pointer select-none w-5">
-						{$i18n.t('Won')}
+					<th
+						scope="col"
+						class="px-3 py-1.5 text-right cursor-pointer select-none w-5"
+						on:click={() => setSortKey('won')}
+					>
+						<div class="flex gap-1.5 items-center justify-end">
+							{$i18n.t('Won')}
+							{#if orderBy === 'won'}
+								<span class="font-normal">
+									{#if direction === 'asc'}
+										<ChevronUp className="size-2" />
+									{:else}
+										<ChevronDown className="size-2" />
+									{/if}
+								</span>
+							{:else}
+								<span class="invisible">
+									<ChevronUp className="size-2" />
+								</span>
+							{/if}
+						</div>
 					</th>
-					<th scope="col" class="px-3 py-1.5 text-right cursor-pointer select-none w-5">
-						{$i18n.t('Lost')}
+					<th
+						scope="col"
+						class="px-3 py-1.5 text-right cursor-pointer select-none w-5"
+						on:click={() => setSortKey('lost')}
+					>
+						<div class="flex gap-1.5 items-center justify-end">
+							{$i18n.t('Lost')}
+							{#if orderBy === 'lost'}
+								<span class="font-normal">
+									{#if direction === 'asc'}
+										<ChevronUp className="size-2" />
+									{:else}
+										<ChevronDown className="size-2" />
+									{/if}
+								</span>
+							{:else}
+								<span class="invisible">
+									<ChevronUp className="size-2" />
+								</span>
+							{/if}
+						</div>
 					</th>
 				</tr>
 			</thead>
 			<tbody class="">
-				{#each rankedModels as model, modelIdx (model.id)}
-					<tr class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs group">
+				{#each sortedModels as model, modelIdx (model.id)}
+					<tr
+						class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs group cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+						on:click={() => openFeedbackModal(model)}
+					>
 						<td class="px-3 py-1.5 text-left font-medium text-gray-900 dark:text-white w-fit">
 							<div class=" line-clamp-1">
 								{model?.rating !== '-' ? modelIdx + 1 : '-'}

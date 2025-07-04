@@ -17,16 +17,20 @@
 	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
 	import ChevronUpDown from '$lib/components/icons/ChevronUpDown.svelte';
 	import CommandLine from '$lib/components/icons/CommandLine.svelte';
+	import Cube from '$lib/components/icons/Cube.svelte';
 
 	const i18n = getContext('i18n');
 
 	export let id = '';
 
 	export let onSave = (e) => {};
-	export let onCode = (e) => {};
+	export let onUpdate = (e) => {};
+	export let onPreview = (e) => {};
 
 	export let save = false;
 	export let run = true;
+	export let preview = false;
+	export let collapsed = false;
 
 	export let token;
 	export let lang = '';
@@ -60,7 +64,6 @@
 	let result = null;
 	let files = null;
 
-	let collapsed = false;
 	let copied = false;
 	let copiedToPlugin = false;
 	let saved = false;
@@ -97,6 +100,10 @@
 		setTimeout(() => {
 			copiedToPlugin = false;
 		}, 1000);
+	};
+
+	const previewCode = () => {
+		onPreview(code);
 	};
 
 	const checkPythonCode = (str) => {
@@ -344,6 +351,8 @@
 				await drawMermaidDiagram();
 			})();
 		}
+
+		onUpdate(token);
 	};
 
 	$: if (token) {
@@ -355,8 +364,6 @@
 	$: if (_token) {
 		render();
 	}
-
-	$: onCode({ lang, code });
 
 	$: if (attributes) {
 		onAttributesUpdate();
@@ -390,10 +397,10 @@
 
 	onMount(async () => {
 		console.log('codeblock', lang, code);
-
-		if (lang) {
-			onCode({ lang, code });
+		if (token) {
+			onUpdate(token);
 		}
+
 		if (document.documentElement.classList.contains('dark')) {
 			mermaid.initialize({
 				startOnLoad: true,
@@ -441,7 +448,7 @@
 						class="flex gap-1 items-center bg-none border-none bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
 						on:click={collapseCodeBlock}
 					>
-						<div>
+						<div class=" -translate-y-[0.5px]">
 							<ChevronUpDown className="size-3" />
 						</div>
 
@@ -450,9 +457,26 @@
 						</div>
 					</button>
 
+					{#if preview && ['html', 'svg'].includes(lang)}
+						<button
+							class="flex gap-1 items-center run-code-button bg-none border-none bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
+							on:click={previewCode}
+						>
+							<div class=" -translate-y-[0.5px]">
+								<Cube className="size-3" />
+							</div>
+
+							<div>
+								{$i18n.t('Preview')}
+							</div>
+						</button>
+					{/if}
+
 					{#if ($config?.features?.enable_code_execution ?? true) && (lang.toLowerCase() === 'python' || lang.toLowerCase() === 'py' || (lang === '' && checkPythonCode(code)))}
 						{#if executing}
-							<div class="run-code-button bg-none border-none p-1 cursor-not-allowed">Running</div>
+							<div class="run-code-button bg-none border-none p-1 cursor-not-allowed">
+								{$i18n.t('Running')}
+							</div>
 						{:else if run}
 							<button
 								class="flex gap-1 items-center run-code-button bg-none border-none bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
@@ -462,7 +486,7 @@
 									executePython(code);
 								}}
 							>
-								<div>
+								<div class=" -translate-y-[0.5px]">
 									<CommandLine className="size-3" />
 								</div>
 

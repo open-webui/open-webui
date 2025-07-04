@@ -150,7 +150,11 @@
 				return;
 			}
 
-			const res = await transcribeAudio(localStorage.token, file).catch((error) => {
+			const res = await transcribeAudio(
+				localStorage.token,
+				file,
+				$settings?.audio?.stt?.language
+			).catch((error) => {
 				toast.error(`${error}`);
 				return null;
 			});
@@ -201,8 +205,10 @@
 			return;
 		}
 
+		const mineTypes = ['audio/webm; codecs=opus', 'audio/mp4'];
+
 		mediaRecorder = new MediaRecorder(stream, {
-			mimeType: 'audio/webm; codecs=opus'
+			mimeType: mineTypes.find((type) => MediaRecorder.isTypeSupported(type))
 		});
 
 		mediaRecorder.onstart = () => {

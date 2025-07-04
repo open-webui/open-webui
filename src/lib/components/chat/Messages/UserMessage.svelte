@@ -107,7 +107,11 @@
 	}}
 />
 
-<div class=" flex w-full user-message" dir={$settings.chatDirection} id="message-{message.id}">
+<div
+	class=" flex w-full user-message group"
+	dir={$settings.chatDirection}
+	id="message-{message.id}"
+>
 	{#if !($settings?.chatBubble ?? true)}
 		<div class={`shrink-0 ltr:mr-3 rtl:ml-3`}>
 			<ProfileImage
@@ -115,7 +119,7 @@
 					? ($models.find((m) => m.id === message.user)?.info?.meta?.profile_image_url ??
 						'/user.png')
 					: (user?.profile_image_url ?? '/user.png')}
-				className={'size-8'}
+				className={'size-8 user-message-profile-image'}
 			/>
 		</div>
 	{/if}
@@ -142,6 +146,16 @@
 						</div>
 					{/if}
 				</Name>
+			</div>
+		{:else if message.timestamp}
+			<div class="flex justify-end pb-1 pr-2">
+				<div
+					class="text-xs invisible group-hover:visible text-gray-400 font-medium first-letter:capitalize translate-y-[1px]"
+				>
+					<Tooltip content={dayjs(message.timestamp * 1000).format('LLLL')}>
+						<span class="line-clamp-1">{formatDate(message.timestamp * 1000)}</span>
+					</Tooltip>
+				</div>
 			</div>
 		{/if}
 

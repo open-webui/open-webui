@@ -65,6 +65,7 @@
 		},
 		chat: {
 			controls: true,
+			system_prompt: true,
 			file_upload: true,
 			delete: true,
 			edit: true,
@@ -106,7 +107,7 @@
 	};
 
 	const updateDefaultPermissionsHandler = async (group) => {
-		console.log(group.permissions);
+		console.debug(group.permissions);
 
 		const res = await updateUserDefaultPermissions(localStorage.token, group.permissions).catch(
 			(error) => {

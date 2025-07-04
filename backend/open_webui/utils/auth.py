@@ -13,6 +13,8 @@ import pytz
 from pytz import UTC
 from typing import Optional, Union, List, Dict
 
+from opentelemetry import trace
+
 from open_webui.models.users import Users
 
 from open_webui.constants import ERROR_MESSAGES
@@ -21,6 +23,7 @@ from open_webui.env import (
     TRUSTED_SIGNATURE_KEY,
     STATIC_DIR,
     SRC_LOG_LEVELS,
+    WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
 )
 
 from fastapi import BackgroundTasks, Depends, HTTPException, Request, Response, status
@@ -155,6 +158,7 @@ def get_http_authorization_cred(auth_header: Optional[str]):
 
 def get_current_user(
     request: Request,
+    response: Response,
     background_tasks: BackgroundTasks,
     auth_token: HTTPAuthorizationCredentials = Depends(bearer_security),
 ):
@@ -194,7 +198,17 @@ def get_current_user(
                     status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.API_KEY_NOT_ALLOWED
                 )
 
-        return get_current_user_by_api_key(token)
+        user = get_current_user_by_api_key(token)
+
+        # Add user info to current span
+        current_span = trace.get_current_span()
+        if current_span:
+            current_span.set_attribute("client.user.id", user.id)
+            current_span.set_attribute("client.user.email", user.email)
+            current_span.set_attribute("client.user.role", user.role)
+            current_span.set_attribute("client.auth.type", "api_key")
+
+        return user
 
     # auth by jwt token
     try:
@@ -213,6 +227,29 @@ def get_current_user(
                 detail=ERROR_MESSAGES.INVALID_TOKEN,
             )
         else:
+            if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
+                trusted_email = request.headers.get(
+                    WEBUI_AUTH_TRUSTED_EMAIL_HEADER, ""
+                ).lower()
+                if trusted_email and user.email != trusted_email:
+                    # Delete the token cookie
+                    response.delete_cookie("token")
+                    # Delete OAuth token if present
+                    if request.cookies.get("oauth_id_token"):
+                        response.delete_cookie("oauth_id_token")
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="User mismatch. Please sign in again.",
+                    )
+
+            # Add user info to current span
+            current_span = trace.get_current_span()
+            if current_span:
+                current_span.set_attribute("client.user.id", user.id)
+                current_span.set_attribute("client.user.email", user.email)
+                current_span.set_attribute("client.user.role", user.role)
+                current_span.set_attribute("client.auth.type", "jwt")
+
             # Refresh the user's last active timestamp asynchronously
             # to prevent blocking the request
             if background_tasks:
@@ -234,6 +271,14 @@ def get_current_user_by_api_key(api_key: str):
             detail=ERROR_MESSAGES.INVALID_TOKEN,
         )
     else:
+        # Add user info to current span
+        current_span = trace.get_current_span()
+        if current_span:
+            current_span.set_attribute("client.user.id", user.id)
+            current_span.set_attribute("client.user.email", user.email)
+            current_span.set_attribute("client.user.role", user.role)
+            current_span.set_attribute("client.auth.type", "api_key")
+
         Users.update_user_last_active_by_id(user.id)
 
     return user

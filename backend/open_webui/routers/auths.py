@@ -19,12 +19,14 @@ from open_webui.models.auths import (
     UserResponse,
 )
 from open_webui.models.users import Users
+from open_webui.models.groups import Groups
 
 from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
 from open_webui.env import (
     WEBUI_AUTH,
     WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
     WEBUI_AUTH_TRUSTED_NAME_HEADER,
+    WEBUI_AUTH_TRUSTED_GROUPS_HEADER,
     WEBUI_AUTH_COOKIE_SAME_SITE,
     WEBUI_AUTH_COOKIE_SECURE,
     WEBUI_AUTH_SIGNOUT_REDIRECT_URL,
@@ -32,7 +34,7 @@ from open_webui.env import (
     AXLR_ENABLE_AUTO_LOGIN,
 )
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from fastapi.responses import RedirectResponse, Response
+from fastapi.responses import RedirectResponse, Response, JSONResponse
 from open_webui.config import OPENID_PROVIDER_URL, ENABLE_OAUTH_SIGNUP, ENABLE_LDAP
 from pydantic import BaseModel
 
@@ -52,11 +54,10 @@ from open_webui.utils.access_control import get_permissions
 
 from typing import Optional, List
 
-from ssl import CERT_REQUIRED, PROTOCOL_TLS
+from ssl import CERT_NONE, CERT_REQUIRED, PROTOCOL_TLS
 
-if ENABLE_LDAP.value:
-    from ldap3 import Server, Connection, NONE, Tls
-    from ldap3.utils.conv import escape_filter_chars
+from ldap3 import Server, Connection, NONE, Tls
+from ldap3.utils.conv import escape_filter_chars
 
 router = APIRouter()
 
@@ -187,6 +188,9 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
     LDAP_APP_PASSWORD = request.app.state.config.LDAP_APP_PASSWORD
     LDAP_USE_TLS = request.app.state.config.LDAP_USE_TLS
     LDAP_CA_CERT_FILE = request.app.state.config.LDAP_CA_CERT_FILE
+    LDAP_VALIDATE_CERT = (
+        CERT_REQUIRED if request.app.state.config.LDAP_VALIDATE_CERT else CERT_NONE
+    )
     LDAP_CIPHERS = (
         request.app.state.config.LDAP_CIPHERS
         if request.app.state.config.LDAP_CIPHERS
@@ -198,7 +202,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
 
     try:
         tls = Tls(
-            validate=CERT_REQUIRED,
+            validate=LDAP_VALIDATE_CERT,
             version=PROTOCOL_TLS,
             ca_certs_file=LDAP_CA_CERT_FILE,
             ciphers=LDAP_CIPHERS,
@@ -225,14 +229,30 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
         if not connection_app.bind():
             raise HTTPException(400, detail="Application account bind failed")
 
+        ENABLE_LDAP_GROUP_MANAGEMENT = (
+            request.app.state.config.ENABLE_LDAP_GROUP_MANAGEMENT
+        )
+        ENABLE_LDAP_GROUP_CREATION = request.app.state.config.ENABLE_LDAP_GROUP_CREATION
+        LDAP_ATTRIBUTE_FOR_GROUPS = request.app.state.config.LDAP_ATTRIBUTE_FOR_GROUPS
+
+        search_attributes = [
+            f"{LDAP_ATTRIBUTE_FOR_USERNAME}",
+            f"{LDAP_ATTRIBUTE_FOR_MAIL}",
+            "cn",
+        ]
+
+        if ENABLE_LDAP_GROUP_MANAGEMENT:
+            search_attributes.append(f"{LDAP_ATTRIBUTE_FOR_GROUPS}")
+            log.info(
+                f"LDAP Group Management enabled. Adding {LDAP_ATTRIBUTE_FOR_GROUPS} to search attributes"
+            )
+
+        log.info(f"LDAP search attributes: {search_attributes}")
+
         search_success = connection_app.search(
             search_base=LDAP_SEARCH_BASE,
             search_filter=f"(&({LDAP_ATTRIBUTE_FOR_USERNAME}={escape_filter_chars(form_data.user.lower())}){LDAP_SEARCH_FILTERS})",
-            attributes=[
-                f"{LDAP_ATTRIBUTE_FOR_USERNAME}",
-                f"{LDAP_ATTRIBUTE_FOR_MAIL}",
-                "cn",
-            ],
+            attributes=search_attributes,
         )
 
         if not search_success or not connection_app.entries:
@@ -254,6 +274,69 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
 
         cn = str(entry["cn"])
         user_dn = entry.entry_dn
+
+        user_groups = []
+        if ENABLE_LDAP_GROUP_MANAGEMENT and LDAP_ATTRIBUTE_FOR_GROUPS in entry:
+            group_dns = entry[LDAP_ATTRIBUTE_FOR_GROUPS]
+            log.info(f"LDAP raw group DNs for user {username}: {group_dns}")
+
+            if group_dns:
+                log.info(f"LDAP group_dns original: {group_dns}")
+                log.info(f"LDAP group_dns type: {type(group_dns)}")
+                log.info(f"LDAP group_dns length: {len(group_dns)}")
+
+                if hasattr(group_dns, "value"):
+                    group_dns = group_dns.value
+                    log.info(f"Extracted .value property: {group_dns}")
+                elif hasattr(group_dns, "__iter__") and not isinstance(
+                    group_dns, (str, bytes)
+                ):
+                    group_dns = list(group_dns)
+                    log.info(f"Converted to list: {group_dns}")
+
+                if isinstance(group_dns, list):
+                    group_dns = [str(item) for item in group_dns]
+                else:
+                    group_dns = [str(group_dns)]
+
+                log.info(
+                    f"LDAP group_dns after processing - type: {type(group_dns)}, length: {len(group_dns)}"
+                )
+
+                for group_idx, group_dn in enumerate(group_dns):
+                    group_dn = str(group_dn)
+                    log.info(f"Processing group DN #{group_idx + 1}: {group_dn}")
+
+                    try:
+                        group_cn = None
+
+                        for item in group_dn.split(","):
+                            item = item.strip()
+                            if item.upper().startswith("CN="):
+                                group_cn = item[3:]
+                                break
+
+                        if group_cn:
+                            user_groups.append(group_cn)
+
+                        else:
+                            log.warning(
+                                f"Could not extract CN from group DN: {group_dn}"
+                            )
+                    except Exception as e:
+                        log.warning(
+                            f"Failed to extract group name from DN {group_dn}: {e}"
+                        )
+
+                log.info(
+                    f"LDAP groups for user {username}: {user_groups} (total: {len(user_groups)})"
+                )
+            else:
+                log.info(f"No groups found for user {username}")
+        elif ENABLE_LDAP_GROUP_MANAGEMENT:
+            log.warning(
+                f"LDAP Group Management enabled but {LDAP_ATTRIBUTE_FOR_GROUPS} attribute not found in user entry"
+            )
 
         if username == form_data.user.lower():
             connection_user = Connection(
@@ -297,7 +380,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                         500, detail="Internal error occurred during LDAP user creation."
                     )
 
-            user = Auths.authenticate_user_by_trusted_header(email)
+            user = Auths.authenticate_user_by_email(email)
 
             if user:
                 expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
@@ -330,6 +413,22 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                     user.id, request.app.state.config.USER_PERMISSIONS
                 )
 
+                if (
+                    user.role != "admin"
+                    and ENABLE_LDAP_GROUP_MANAGEMENT
+                    and user_groups
+                ):
+                    if ENABLE_LDAP_GROUP_CREATION:
+                        Groups.create_groups_by_group_names(user.id, user_groups)
+
+                    try:
+                        Groups.sync_groups_by_group_names(user.id, user_groups)
+                        log.info(
+                            f"Successfully synced groups for user {user.id}: {user_groups}"
+                        )
+                    except Exception as e:
+                        log.error(f"Failed to sync groups for user {user.id}: {e}")
+
                 return {
                     "token": token,
                     "token_type": "Bearer",
@@ -361,21 +460,29 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
         if WEBUI_AUTH_TRUSTED_EMAIL_HEADER not in request.headers:
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_TRUSTED_HEADER)
 
-        trusted_email = request.headers[WEBUI_AUTH_TRUSTED_EMAIL_HEADER].lower()
-        trusted_name = trusted_email
+        email = request.headers[WEBUI_AUTH_TRUSTED_EMAIL_HEADER].lower()
+        name = email
+
         if WEBUI_AUTH_TRUSTED_NAME_HEADER:
-            trusted_name = request.headers.get(
-                WEBUI_AUTH_TRUSTED_NAME_HEADER, trusted_email
-            )
-        if not Users.get_user_by_email(trusted_email.lower()):
+            name = request.headers.get(WEBUI_AUTH_TRUSTED_NAME_HEADER, email)
+
+        if not Users.get_user_by_email(email.lower()):
             await signup(
                 request,
                 response,
-                SignupForm(
-                    email=trusted_email, password=str(uuid.uuid4()), name=trusted_name
-                ),
+                SignupForm(email=email, password=str(uuid.uuid4()), name=name),
             )
-        user = Auths.authenticate_user_by_trusted_header(trusted_email)
+
+        user = Auths.authenticate_user_by_email(email)
+        if WEBUI_AUTH_TRUSTED_GROUPS_HEADER and user and user.role != "admin":
+            group_names = request.headers.get(
+                WEBUI_AUTH_TRUSTED_GROUPS_HEADER, ""
+            ).split(",")
+            group_names = [name.strip() for name in group_names if name.strip()]
+
+            if group_names:
+                Groups.sync_groups_by_group_names(user.id, group_names)
+
     elif WEBUI_AUTH == False:
 
         if AXLR_ENABLE_AUTO_LOGIN:
@@ -501,10 +608,6 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
             "admin" if user_count == 0 else request.app.state.config.DEFAULT_USER_ROLE
         )
 
-        if user_count == 0:
-            # Disable signup after the first user is created
-            request.app.state.config.ENABLE_SIGNUP = False
-
         # The password passed to bcrypt must be 72 bytes or fewer. If it is longer, it will be truncated before hashing.
         if len(form_data.password.encode("utf-8")) > 72:
             raise HTTPException(
@@ -564,6 +667,10 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                 user.id, request.app.state.config.USER_PERMISSIONS
             )
 
+            if user_count == 0:
+                # Disable signup after the first user is created
+                request.app.state.config.ENABLE_SIGNUP = False
+
             return {
                 "token": token,
                 "token_type": "Bearer",
@@ -597,9 +704,14 @@ async def signout(request: Request, response: Response):
                             logout_url = openid_data.get("end_session_endpoint")
                             if logout_url:
                                 response.delete_cookie("oauth_id_token")
-                                return RedirectResponse(
+
+                                return JSONResponse(
+                                    status_code=200,
+                                    content={
+                                        "status": True,
+                                        "redirect_url": f"{logout_url}?id_token_hint={oauth_id_token}",
+                                    },
                                     headers=response.headers,
-                                    url=f"{logout_url}?id_token_hint={oauth_id_token}",
                                 )
                         else:
                             raise HTTPException(
@@ -614,12 +726,18 @@ async def signout(request: Request, response: Response):
                 )
 
     if WEBUI_AUTH_SIGNOUT_REDIRECT_URL:
-        return RedirectResponse(
+        return JSONResponse(
+            status_code=200,
+            content={
+                "status": True,
+                "redirect_url": WEBUI_AUTH_SIGNOUT_REDIRECT_URL,
+            },
             headers=response.headers,
-            url=WEBUI_AUTH_SIGNOUT_REDIRECT_URL,
         )
 
-    return {"status": True}
+    return JSONResponse(
+        status_code=200, content={"status": True}, headers=response.headers
+    )
 
 
 ############################
@@ -719,6 +837,9 @@ async def get_admin_config(request: Request, user=Depends(get_admin_user)):
         "ENABLE_CHANNELS": request.app.state.config.ENABLE_CHANNELS,
         "ENABLE_NOTES": request.app.state.config.ENABLE_NOTES,
         "ENABLE_USER_WEBHOOKS": request.app.state.config.ENABLE_USER_WEBHOOKS,
+        "PENDING_USER_OVERLAY_TITLE": request.app.state.config.PENDING_USER_OVERLAY_TITLE,
+        "PENDING_USER_OVERLAY_CONTENT": request.app.state.config.PENDING_USER_OVERLAY_CONTENT,
+        "RESPONSE_WATERMARK": request.app.state.config.RESPONSE_WATERMARK,
     }
 
 
@@ -736,6 +857,9 @@ class AdminConfig(BaseModel):
     ENABLE_CHANNELS: bool
     ENABLE_NOTES: bool
     ENABLE_USER_WEBHOOKS: bool
+    PENDING_USER_OVERLAY_TITLE: Optional[str] = None
+    PENDING_USER_OVERLAY_CONTENT: Optional[str] = None
+    RESPONSE_WATERMARK: Optional[str] = None
 
 
 @router.post("/admin/config")
@@ -773,6 +897,15 @@ async def update_admin_config(
 
     request.app.state.config.ENABLE_USER_WEBHOOKS = form_data.ENABLE_USER_WEBHOOKS
 
+    request.app.state.config.PENDING_USER_OVERLAY_TITLE = (
+        form_data.PENDING_USER_OVERLAY_TITLE
+    )
+    request.app.state.config.PENDING_USER_OVERLAY_CONTENT = (
+        form_data.PENDING_USER_OVERLAY_CONTENT
+    )
+
+    request.app.state.config.RESPONSE_WATERMARK = form_data.RESPONSE_WATERMARK
+
     return {
         "SHOW_ADMIN_DETAILS": request.app.state.config.SHOW_ADMIN_DETAILS,
         "WEBUI_URL": request.app.state.config.WEBUI_URL,
@@ -787,6 +920,9 @@ async def update_admin_config(
         "ENABLE_CHANNELS": request.app.state.config.ENABLE_CHANNELS,
         "ENABLE_NOTES": request.app.state.config.ENABLE_NOTES,
         "ENABLE_USER_WEBHOOKS": request.app.state.config.ENABLE_USER_WEBHOOKS,
+        "PENDING_USER_OVERLAY_TITLE": request.app.state.config.PENDING_USER_OVERLAY_TITLE,
+        "PENDING_USER_OVERLAY_CONTENT": request.app.state.config.PENDING_USER_OVERLAY_CONTENT,
+        "RESPONSE_WATERMARK": request.app.state.config.RESPONSE_WATERMARK,
     }
 
 
@@ -802,6 +938,7 @@ class LdapServerConfig(BaseModel):
     search_filters: str = ""
     use_tls: bool = True
     certificate_path: Optional[str] = None
+    validate_cert: bool = True
     ciphers: Optional[str] = "ALL"
 
 
@@ -819,6 +956,7 @@ async def get_ldap_server(request: Request, user=Depends(get_admin_user)):
         "search_filters": request.app.state.config.LDAP_SEARCH_FILTERS,
         "use_tls": request.app.state.config.LDAP_USE_TLS,
         "certificate_path": request.app.state.config.LDAP_CA_CERT_FILE,
+        "validate_cert": request.app.state.config.LDAP_VALIDATE_CERT,
         "ciphers": request.app.state.config.LDAP_CIPHERS,
     }
 
@@ -854,6 +992,7 @@ async def update_ldap_server(
     request.app.state.config.LDAP_SEARCH_FILTERS = form_data.search_filters
     request.app.state.config.LDAP_USE_TLS = form_data.use_tls
     request.app.state.config.LDAP_CA_CERT_FILE = form_data.certificate_path
+    request.app.state.config.LDAP_VALIDATE_CERT = form_data.validate_cert
     request.app.state.config.LDAP_CIPHERS = form_data.ciphers
 
     return {
@@ -868,6 +1007,7 @@ async def update_ldap_server(
         "search_filters": request.app.state.config.LDAP_SEARCH_FILTERS,
         "use_tls": request.app.state.config.LDAP_USE_TLS,
         "certificate_path": request.app.state.config.LDAP_CA_CERT_FILE,
+        "validate_cert": request.app.state.config.LDAP_VALIDATE_CERT,
         "ciphers": request.app.state.config.LDAP_CIPHERS,
     }
 

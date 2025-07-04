@@ -31,10 +31,6 @@
 		description = '';
 		userIds = [];
 	};
-
-	onMount(() => {
-		console.log('mounted');
-	});
 </script>
 
 <Modal size="sm" bind:show>
