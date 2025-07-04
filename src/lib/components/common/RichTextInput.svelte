@@ -18,6 +18,7 @@
 	import { EditorState, Plugin, PluginKey, TextSelection } from 'prosemirror-state';
 	import { Decoration, DecorationSet } from 'prosemirror-view';
 	import { Editor } from '@tiptap/core';
+	import Spinner from '$lib/components/common/Spinner.svelte';
 
 	import { AIAutocompletion } from './RichTextInput/AutoCompletion.js';
 	import Table from '@tiptap/extension-table';
@@ -75,11 +76,15 @@
 	export let conversationId: string | undefined = undefined;
 	export let onPiiDetected: (entities: ExtendedPiiEntity[], maskedText: string) => void = () => {};
 	export let onPiiToggled: (entities: ExtendedPiiEntity[]) => void = () => {};
+	export let onPiiDetectionStateChanged: (isDetecting: boolean) => void = () => {};
 
 	// PII Modifier props
 	export let enablePiiModifiers = false;
 	export let onPiiModifiersChanged: (modifiers: PiiModifier[]) => void = () => {};
 	export let piiModifierLabels: string[] = [];
+
+	// PII Loading state
+	let isPiiDetectionInProgress = false;
 
 	let element: HTMLElement;
 	let editor: any;
@@ -109,6 +114,12 @@
 	let piiSessionManager = PiiSessionManager.getInstance();
 	let previousConversationId: string | undefined = undefined;
 	let conversationActivated = false; // Track if conversation has been activated
+
+	// Handle PII detection state changes
+	const handlePiiDetectionStateChanged = (isDetecting: boolean) => {
+		isPiiDetectionInProgress = isDetecting;
+		onPiiDetectionStateChanged(isDetecting);
+	};
 
 	const options = {
 		throwOnError: false
@@ -292,7 +303,8 @@
 								apiKey: piiApiKey,
 								conversationId: conversationId,
 								onPiiDetected: onPiiDetected,
-								onPiiToggled: onPiiToggled
+								onPiiToggled: onPiiToggled,
+								onPiiDetectionStateChanged: handlePiiDetectionStateChanged
 							})
 						]
 					: []),
@@ -733,4 +745,14 @@
 	});
 </script>
 
-<div bind:this={element} class="relative w-full min-w-full h-full min-h-fit {className}" />
+<div class="relative w-full min-w-full h-full min-h-fit {className}">
+	<div bind:this={element} class="w-full h-full min-h-fit" />
+	
+	<!-- PII Detection Loading Indicator -->
+	{#if enablePiiDetection && isPiiDetectionInProgress}
+		<div class="absolute top-2 right-2 flex items-center gap-1 bg-gray-50 dark:bg-gray-850 px-2 py-1 rounded-md shadow-sm border border-gray-200 dark:border-gray-700">
+			<Spinner className="size-3" />
+			<span class="text-xs text-gray-600 dark:text-gray-400">Scanning for PII...</span>
+		</div>
+	{/if}
+</div>
