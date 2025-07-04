@@ -80,14 +80,25 @@
       <MaterialIcon name="add" className="w-[18px] h-[18px]" />
     </button>
   {:else}
-    
+
   <img
 	src="/logo-dark.png"
 	alt="GovGPT Logo"
 	class="w-[132px] h-[40px] filter dark:invert dark:brightness-0 dark:contrast-200"
 	/>
 
-   
+	<div
+				class="flex-1 overflow-hidden max-w-full py-0.5
+			{$showSidebar ? 'ml-1' : ''}
+			"
+			>
+				{#if showModelSelector}
+					<ModelSelector bind:selectedModels showSetDefault={!shareEnabled} />
+				{/if}
+			</div>
+
+
+
     <!-- No add/new chat icon on desktop -->
   {/if}
 </nav>

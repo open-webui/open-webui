@@ -89,18 +89,6 @@
 	let folders = {};
 	let newFolderId = null;
 
-	// Hover functionality variables
-	let isHovered = false;
-	let wasOpenedByClick = false;
-	let hoverTimeout: number | null = null;
-
-	function openSidebarOnAction() {
-		if (!$showSidebar) {
-			showSidebar.set(true);
-		}
-		wasOpenedByClick = true;
-	}
-
 	const initFolders = async () => {
 		const folderList = await getFolders(localStorage.token).catch((error) => {
 			toast.error(`${error}`);
@@ -338,57 +326,6 @@
 		selectedChatId = null;
 	};
 
-	// Hover functionality handlers
-	const onMouseEnter = () => {
-		isHovered = true;
-		// Clear any existing timeout
-		if (hoverTimeout) {
-			clearTimeout(hoverTimeout);
-			hoverTimeout = null;
-		}
-
-		// Only open sidebar on hover if it wasn't opened by click
-		if (!$showSidebar && !wasOpenedByClick) {
-			showSidebar.set(true);
-		}
-	};
-
-	const onMouseLeave = () => {
-		isHovered = false;
-
-		// Only close sidebar on hover out if it wasn't opened by click
-		if ($showSidebar && !wasOpenedByClick) {
-			// Add a small delay to prevent accidental closing
-			hoverTimeout = setTimeout(() => {
-				if (!isHovered && !wasOpenedByClick) {
-					showSidebar.set(false);
-				}
-			}, 300);
-		}
-	};
-
-	const onSidebarClick = (e: any) => {
-		e.stopPropagation();
-
-		const willBeOpen = !$showSidebar;
-
-		// Mark that sidebar was opened by click if we're opening it
-		if (willBeOpen) {
-			wasOpenedByClick = true;
-		} else {
-			// If we're closing the sidebar, reset the flag
-			wasOpenedByClick = false;
-		}
-
-		showSidebar.set(willBeOpen);
-
-		// Clear any existing timeout
-		if (hoverTimeout) {
-			clearTimeout(hoverTimeout);
-			hoverTimeout = null;
-		}
-	};
-
 	onMount(async () => {
 		showPinnedChat = localStorage?.showPinnedChat ? localStorage.showPinnedChat === 'true' : true;
 
@@ -464,12 +401,6 @@
 		dropZone?.removeEventListener('dragover', onDragOver);
 		dropZone?.removeEventListener('drop', onDrop);
 		dropZone?.removeEventListener('dragleave', onDragLeave);
-		// dropZone?.removeEventListener('click', openSidebarOnAction);
-
-		// Clean up hover timeout
-		if (hoverTimeout) {
-			clearTimeout(hoverTimeout);
-		}
 	});
 
 	const createNoteHandler = async () => {
@@ -559,7 +490,7 @@
 	data-state={$showSidebar}
 >
 	<div
-		class="flex flex-col justify-between max-h-[100dvh] overflow-x-hidden z-50 bg-white"
+		class="flex flex-col justify-between  max-h-[100dvh] overflow-x-hidden z-50 bg-white"
 		style="
     border-radius: 0px;
     background: var(--Schemes-Surface, #FFF);
@@ -633,7 +564,7 @@
 							class:mr-[8px]={$showSidebar}
 						>
 							<MaterialIcon name="border_color" size="1.1rem" />
-						</div>
+						</div><!-- Label -->
 
 						<!-- Label -->
 						<div
@@ -644,9 +575,7 @@
 						</div>
 					</div>
 				</a>
-			</div>
-
-			{#if $mobile}
+			</div>{#if $mobile}
 			<div class="flex justify-center text-gray-800 dark:text-gray-200 p-2 py-1">
 				<a
 					id="sidebar-new-chat-button"
@@ -667,7 +596,7 @@
 							<MaterialIcon name="search" size="1.1rem" />
 						</div>
 
-						<!-- Label -->
+			<!-- Label -->
 						<div
 							class="self-center font-medium text-sm text-gray-850 dark:text-white leading-[22px] transition-all duration-300 ease-in-out"
 							class:hidden={!$showSidebar}
@@ -905,97 +834,97 @@
 				</Folder>
 
 				{#if false && $pinnedChats.length > 0}
-					<div class="flex flex-col space-y-1 rounded-xl">
-						<Folder
-							className="px-2"
-							bind:open={showPinnedChat}
-							on:change={(e) => {
-								localStorage.setItem('showPinnedChat', e.detail);
-								console.log(e.detail);
-							}}
-							on:import={(e) => {
-								importChatHandler(e.detail, true);
-							}}
-							on:drop={async (e) => {
-								const { type, id, item } = e.detail;
-
-								if (type === 'chat') {
-									let chat = await getChatById(localStorage.token, id).catch((error) => {
-										return null;
-									});
-									if (!chat && item) {
-										chat = await importChat(localStorage.token, item.chat, item?.meta ?? {});
-									}
-
-									if (chat) {
-										console.log(chat);
-										if (chat.folder_id) {
-											const res = await updateChatFolderIdById(
-												localStorage.token,
-												chat.id,
-												null
-											).catch((error) => {
-												toast.error(`${error}`);
-												return null;
-											});
-										}
-
-										if (!chat.pinned) {
-											const res = await toggleChatPinnedStatusById(localStorage.token, chat.id);
-										}
-
-										initChatList();
-									}
-								}
-							}}
-							name={$i18n.t('Pinned')}
-						>
-							<div
-								class="ml-3 pl-1 mt-[1px] flex flex-col overflow-y-auto scrollbar-hidden border-s border-gray-100 dark:border-gray-900"
-							>
-								{#each $pinnedChats as chat, idx (`pinned-chat-${chat?.id ?? idx}`)}
-									<ChatItem
-										className=""
-										id={chat.id}
-										title={chat.title}
-										{shiftKey}
-										selected={selectedChatId === chat.id}
-										on:select={() => {
-											selectedChatId = chat.id;
-										}}
-										on:unselect={() => {
-											selectedChatId = null;
-										}}
-										on:change={async () => {
-											initChatList();
-										}}
-										on:tag={(e) => {
-											const { type, name } = e.detail;
-											tagEventHandler(type, name, chat.id);
-										}}
-									/>
-								{/each}
-							</div>
-						</Folder>
-					</div>
-				{/if}
-
-				{#if $pinnedChats.length > 0}
-					<div class="flex flex-col space-y-1 rounded-xl p-4 pt-6">
-						<div class="text-xs text-gray-500 dark:text-gray-500 font-medium">
-							{$i18n.t('Pinned Chats')}
-						</div>
 						<div class="flex flex-col space-y-1 rounded-xl">
+							<Folder
+								className="px-2"
+								bind:open={showPinnedChat}
+								on:change={(e) => {
+									localStorage.setItem('showPinnedChat', e.detail);
+									console.log(e.detail);
+								}}
+								on:import={(e) => {
+									importChatHandler(e.detail, true);
+								}}
+								on:drop={async (e) => {
+									const { type, id, item } = e.detail;
+
+									if (type === 'chat') {
+										let chat = await getChatById(localStorage.token, id).catch((error) => {
+											return null;
+										});
+										if (!chat && item) {
+											chat = await importChat(localStorage.token, item.chat, item?.meta ?? {});
+										}
+
+										if (chat) {
+											console.log(chat);
+											if (chat.folder_id) {
+												const res = await updateChatFolderIdById(
+													localStorage.token,
+													chat.id,
+													null
+												).catch((error) => {
+													toast.error(`${error}`);
+													return null;
+												});
+											}
+
+											if (!chat.pinned) {
+												const res = await toggleChatPinnedStatusById(localStorage.token, chat.id);
+											}
+
+											initChatList();
+										}
+									}
+								}}
+								name={$i18n.t('Pinned')}
+							>
+								<div
+									class="ml-3 pl-1 mt-[1px] flex flex-col overflow-y-auto scrollbar-hidden border-s border-gray-100 dark:border-gray-900"
+								>
+									{#each $pinnedChats as chat, idx (`pinned-chat-${chat?.id ?? idx}`)}
+										<ChatItem
+											className=""
+											id={chat.id}
+											title={chat.title}
+											{shiftKey}
+											selected={selectedChatId === chat.id}
+											on:select={() => {
+												selectedChatId = chat.id;
+											}}
+											on:unselect={() => {
+												selectedChatId = null;
+											}}
+											on:change={async () => {
+												initChatList();
+											}}
+											on:tag={(e) => {
+												const { type, name } = e.detail;
+												tagEventHandler(type, name, chat.id);
+											}}
+										/>
+									{/each}
+								</div>
+							</Folder>
+						</div>
+					{/if}
+
+					{#if $pinnedChats.length > 0}
+						<div class="flex flex-col space-y-1 rounded-xl p-4 pt-6">
+							<div class="text-xs text-gray-500 dark:text-gray-500 font-medium">
+							{$i18n.t('Pinned Chats')}
+								</div>
+								<div class="flex flex-col space-y-1 rounded-xl">
 							{#each $pinnedChats as chat, idx (`pinned-chat-${chat?.id ?? idx}`)}
-								<ChatItem
-									className=""
-									id={chat.id}
-									title={chat.title}
+							<ChatItem
+								className=""
+							id={chat.id}
+							title={chat.title}
 								/>
 							{/each}
 						</div>
 					</div>
-				{/if}
+					{/if}
 
 
 
@@ -1075,20 +1004,20 @@
 								{:else}
 									<div
 										class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2"
-									>
-										<Spinner className=" size-4" />
+
+										><Spinner className=" size-4" />
 										<div class=" ">Loading...</div>
 									</div>
 								{/if}
 							</div>
 						</div>
 					{/if}
+				{/if}
 				</div>
 			</div>
 		</div>
 		<div class="sidebar__bottom">
-			<div
-				class="w-full p-[14px] flex flex-col left-[20px] bottom-[20px] bg-white"
+			<div class="w-full p-[14px] flex flex-col left-[20px] bottom-[20px] bg-white"
 			>
 				{#if $user !== undefined && $user !== null}
 					<UserMenu
