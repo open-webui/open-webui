@@ -240,8 +240,6 @@
 		}
 
 		loaded = true;
-
-		debugger;
 	});
 
 	const checkForVersionUpdates = async () => {

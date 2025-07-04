@@ -1,4 +1,5 @@
 <script lang="ts">
+	import FileContext from './FileContext.svelte';
 	import DOMPurify from 'dompurify';
 	import { marked } from 'marked';
 
@@ -88,6 +89,14 @@
 	export let imageGenerationEnabled = false;
 	export let webSearchEnabled = false;
 	export let codeInterpreterEnabled = false;
+
+	//AXL:김정민: 파일 컨텍스트 추가 20250704
+	export let contextFiles: {
+		fileName: string;
+		startLine: number;
+		endLine: number;
+		context: string;
+	}[] = [];
 
 	$: onChange({
 		prompt,
@@ -474,6 +483,17 @@
 		dropzoneElement?.addEventListener('dragover', onDragOver);
 		dropzoneElement?.addEventListener('drop', onDrop);
 		dropzoneElement?.addEventListener('dragleave', onDragLeave);
+
+		const nativeMessageHandler = (event) => {
+			contextFiles = [...contextFiles, event.detail.data];
+			// console.log('contextFiles:', contextFiles);
+		};
+
+		window.addEventListener('native-message', nativeMessageHandler);
+
+		return () => {
+			window.removeEventListener('native-message', nativeMessageHandler);
+		};
 	});
 
 	onDestroy(() => {
@@ -1376,7 +1396,10 @@
 													</Tooltip>
 												{/if}
 
-												{#if showCodeInterpreterButton}
+												<!-- AXL:김정민: 파일 컨텍스트 추가 20250704 -->
+												<FileContext bind:contextFiles />
+
+												<!-- AXL:김정민 코드 인터프리터 미사용{#if showCodeInterpreterButton}
 													<Tooltip content={$i18n.t('Execute code for analysis')} placement="top">
 														<button
 															on:click|preventDefault={() =>
@@ -1393,7 +1416,7 @@
 															>
 														</button>
 													</Tooltip>
-												{/if}
+												{/if} -->
 											</div>
 										{/if}
 									</div>

@@ -94,7 +94,6 @@
 
 	const copyCodeToPlugin = async () => {
 		copiedToPlugin = true;
-		debugger;
 		window.pasteIntoEditor(code);
 
 		setTimeout(() => {

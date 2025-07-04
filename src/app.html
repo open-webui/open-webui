@@ -102,6 +102,17 @@
 			})();
 		</script>
 
+		<script>
+			//AXL:김정민 네이티브 메시지 핸들러추가
+			window.handleNativeMessage = function (msg) {
+				//console.log('Received native message:', msg);
+				const event = new CustomEvent('native-message', {
+					detail: msg
+				});
+				window.dispatchEvent(event);
+			};
+		</script>
+
 		<title>AXLRator UI</title>
 
 		%sveltekit.head%
