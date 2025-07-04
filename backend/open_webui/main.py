@@ -65,6 +65,7 @@ from open_webui.routers import (
     images,
     ollama,
     openai,
+    anthropic,
     retrieval,
     pipelines,
     tasks,
@@ -114,6 +115,11 @@ from open_webui.config import (
     OPENAI_API_BASE_URLS,
     OPENAI_API_KEYS,
     OPENAI_API_CONFIGS,
+    # Anthropic
+    ENABLE_ANTHROPIC_API,
+    ANTHROPIC_API_BASE_URLS,
+    ANTHROPIC_API_KEYS,
+    ANTHROPIC_API_CONFIGS,
     # Direct Connections
     ENABLE_DIRECT_CONNECTIONS,
     # Thread pool size for FastAPI/AnyIO
@@ -597,6 +603,19 @@ app.state.config.OPENAI_API_KEYS = OPENAI_API_KEYS
 app.state.config.OPENAI_API_CONFIGS = OPENAI_API_CONFIGS
 
 app.state.OPENAI_MODELS = {}
+
+########################################
+#
+# ANTHROPIC
+#
+########################################
+
+app.state.config.ENABLE_ANTHROPIC_API = ENABLE_ANTHROPIC_API
+app.state.config.ANTHROPIC_API_BASE_URLS = ANTHROPIC_API_BASE_URLS
+app.state.config.ANTHROPIC_API_KEYS = ANTHROPIC_API_KEYS
+app.state.config.ANTHROPIC_API_CONFIGS = ANTHROPIC_API_CONFIGS
+
+app.state.ANTHROPIC_MODELS = {}
 
 ########################################
 #
@@ -1131,6 +1150,7 @@ app.mount("/ws", socket_app)
 
 app.include_router(ollama.router, prefix="/ollama", tags=["ollama"])
 app.include_router(openai.router, prefix="/openai", tags=["openai"])
+app.include_router(anthropic.router, prefix="/anthropic", tags=["anthropic"])
 
 
 app.include_router(pipelines.router, prefix="/api/v1/pipelines", tags=["pipelines"])
@@ -1308,10 +1328,16 @@ async def chat_completion(
         if not model_item.get("direct", False):
             model_id = form_data.get("model", None)
             if model_id not in request.app.state.MODELS:
-                raise Exception("Model not found")
-
-            model = request.app.state.MODELS[model_id]
-            model_info = Models.get_model_by_id(model_id)
+                # Check if it's an Anthropic model if not found in general MODELS
+                if model_id in request.app.state.ANTHROPIC_MODELS:
+                    model = request.app.state.ANTHROPIC_MODELS[model_id]
+                    # For Anthropic, model_info might still be relevant if we store custom settings for them
+                    model_info = Models.get_model_by_id(model_id)
+                else:
+                    raise Exception("Model not found")
+            else:
+                model = request.app.state.MODELS[model_id]
+                model_info = Models.get_model_by_id(model_id)
 
             # Check if user has access to the model
             if not BYPASS_MODEL_ACCESS_CONTROL and user.role == "user":

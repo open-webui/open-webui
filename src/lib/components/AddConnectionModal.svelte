@@ -6,6 +6,7 @@
 	import { settings } from '$lib/stores';
 	import { verifyOpenAIConnection } from '$lib/apis/openai';
 	import { verifyOllamaConnection } from '$lib/apis/ollama';
+	import { verifyAnthropicConnection } from '$lib/apis/anthropic';
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
@@ -23,6 +24,7 @@
 	export let edit = false;
 
 	export let ollama = false;
+	export let anthropic = false; // New prop for Anthropic
 	export let direct = false;
 
 	export let connection = null;
@@ -91,8 +93,26 @@
 	const verifyHandler = () => {
 		if (ollama) {
 			verifyOllamaHandler();
+		} else if (anthropic) {
+			verifyAnthropicHandler();
 		} else {
 			verifyOpenAIHandler();
+		}
+	};
+
+	const verifyAnthropicHandler = async () => {
+		// remove trailing slash from url
+		url = url.replace(/\/$/, '');
+
+		const res = await verifyAnthropicConnection(localStorage.token, {
+			url,
+			key
+		}).catch((error) => {
+			toast.error(`${error}`);
+		});
+
+		if (res) {
+			toast.success($i18n.t('Server connection verified'));
 		}
 	};
 
@@ -106,33 +126,38 @@
 	const submitHandler = async () => {
 		loading = true;
 
-		if (!ollama && !url) {
+		if (!ollama && !anthropic && !url) {
 			loading = false;
 			toast.error('URL is required');
 			return;
 		}
 
-		if (azure) {
+		if (azure && !anthropic) {
 			if (!apiVersion) {
 				loading = false;
-
 				toast.error('API Version is required');
 				return;
 			}
-
 			if (!key) {
 				loading = false;
-
 				toast.error('Key is required');
 				return;
 			}
-
 			if (modelIds.length === 0) {
 				loading = false;
 				toast.error('Deployment names are required');
 				return;
 			}
+		} else if (anthropic) {
+			if (!key) {
+				loading = false;
+				toast.error('API Key is required for Anthropic');
+				return;
+			}
+			// Model IDs for Anthropic can be predefined or user-entered.
+			// If left empty, backend can use default common models.
 		}
+
 
 		// remove trailing slash from url
 		url = url.replace(/\/$/, '');
@@ -146,7 +171,8 @@
 				prefix_id: prefixId,
 				model_ids: modelIds,
 				connection_type: connectionType,
-				...(!ollama && azure ? { azure: true, api_version: apiVersion } : {})
+				...(!ollama && !anthropic && azure ? { azure: true, api_version: apiVersion } : {}),
+				...(anthropic ? { anthropic: true } : {}) // Add a flag for anthropic if needed by backend logic
 			}
 		};
 
@@ -174,7 +200,11 @@
 
 			if (ollama) {
 				connectionType = connection.config?.connection_type ?? 'local';
-			} else {
+			} else if (anthropic) {
+				connectionType = connection.config?.connection_type ?? 'external';
+				// Anthropic doesn't have Azure-like specific fields in this modal for now
+			}
+			 else {
 				connectionType = connection.config?.connection_type ?? 'external';
 				azure = connection.config?.azure ?? false;
 				apiVersion = connection.config?.api_version ?? '';
@@ -456,6 +486,8 @@
 										{$i18n.t('Leave empty to include all models from "{{url}}/api/tags" endpoint', {
 											url: url
 										})}
+									{:else if anthropic}
+										{$i18n.t('Leave empty to include common Anthropic models (e.g., Claude 3 Opus, Sonnet, Haiku). Add specific model IDs if needed.')}
 									{:else if azure}
 										{$i18n.t('Deployment names are required for Azure OpenAI')}
 										<!-- {$i18n.t('Leave empty to include all models from "{{url}}" endpoint', {
