@@ -34,6 +34,7 @@ export interface PiiDetectionOptions {
 	conversationId?: string | undefined;
 	onPiiDetected?: (entities: ExtendedPiiEntity[], maskedText: string) => void;
 	onPiiToggled?: (entities: ExtendedPiiEntity[]) => void;
+	onPiiDetectionStateChanged?: (isDetecting: boolean) => void;
 	debounceMs?: number;
 }
 
@@ -357,6 +358,7 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 			conversationId: '',
 			onPiiDetected: undefined,
 			onPiiToggled: undefined,
+			onPiiDetectionStateChanged: undefined,
 			debounceMs: 500
 		};
 	},
@@ -378,6 +380,16 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 			}
 
 			try {
+				// Set detecting state to true at the start
+				const editorView = this.editor?.view;
+				if (editorView) {
+					const tr = editorView.state.tr.setMeta(piiDetectionPluginKey, {
+						type: 'SET_DETECTING',
+						isDetecting: true
+					});
+					editorView.dispatch(tr);
+				}
+
 				const knownEntities = piiSessionManager.getKnownEntitiesForApi(options.conversationId);
 
 				const modifiers = piiSessionManager.getModifiersForApi(options.conversationId);
@@ -445,6 +457,16 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 				}
 			} catch (error) {
 				console.error('PiiDetectionExtension: PII detection failed:', error);
+			} finally {
+				// Set detecting state to false when done (success or error)
+				const editorView = this.editor?.view;
+				if (editorView) {
+					const tr = editorView.state.tr.setMeta(piiDetectionPluginKey, {
+						type: 'SET_DETECTING',
+						isDetecting: false
+					});
+					editorView.dispatch(tr);
+				}
 			}
 		};
 
@@ -471,6 +493,14 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 					const meta = tr.getMeta(piiDetectionPluginKey);
 					if (meta) {
 						switch (meta.type) {
+							case 'SET_DETECTING':
+								newState.isDetecting = meta.isDetecting;
+								// Call the callback to notify parent component
+								if (options.onPiiDetectionStateChanged) {
+									options.onPiiDetectionStateChanged(meta.isDetecting);
+								}
+								break;
+								
 							case 'UPDATE_ENTITIES':
 								newState.entities = meta.entities || [];
 								break;
