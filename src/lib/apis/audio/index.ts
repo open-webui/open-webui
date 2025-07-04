@@ -95,7 +95,7 @@ export const transcribeAudio = async (token: string, file: File) => {
 	return res;
 };
 
-const DEFAULT_SAMPLE_RATE = 24000;
+const DEFAULT_SAMPLE_RATE = 48000; // 24000 for orpheus
 const START_FADE_S = 0.03; // 30ms fade-in for the very start of a stream
 const END_FADE_S = 0.03;   // 30ms fade-out for the very end of a stream
 const GRACE_MS = 50;
@@ -201,7 +201,16 @@ export const synthesizeStreamingSpeech = async (
 ) => {
 	ttsStreaming.set(true)
 	console.log('!!hitting tts endpoint with text', text)
-	const response = await fetch('http://localhost:8002/tts?text=' + encodeURIComponent(text));
+
+	const response = await fetch('http://localhost:8002/deepdub', {
+		method: 'POST',
+		headers: {
+		  'Content-Type': 'application/json',
+		},
+		body: JSON.stringify({ text: text }), // Send data in the body as a JSON string
+	  });
+
+	// const response = await fetch('http://localhost:8002/deepdub?text=' + encodeURIComponent(text));
 
 	if (!response.ok || !response.body) {
 		console.log('!!response not ok', text)
