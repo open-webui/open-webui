@@ -207,6 +207,14 @@
 		selectNextTemplate(editor.view.state, editor.view.dispatch);
 	};
 
+	export const focus = () => {
+		if (editor) {
+			editor.view.focus();
+			// Scroll to the top of the editor
+			editor.view.dispatch(editor.view.state.tr.scrollIntoView());
+		}
+	};
+
 	// Function to find the next template in the document
 	function findNextTemplate(doc, from = 0) {
 		const patterns = [{ start: '{{', end: '}}' }];

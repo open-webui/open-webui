@@ -43,44 +43,11 @@
 	export let codeInterpreterEnabled = false;
 	export let webSearchEnabled = false;
 
+	export let onSelect = (e) => {};
+
 	export let toolServers = [];
 
 	let models = [];
-
-	const selectSuggestionPrompt = async (p) => {
-		let text = p;
-
-		if (p.includes('{{CLIPBOARD}}')) {
-			const clipboardText = await navigator.clipboard.readText().catch((err) => {
-				toast.error($i18n.t('Failed to read clipboard contents'));
-				return '{{CLIPBOARD}}';
-			});
-
-			text = p.replaceAll('{{CLIPBOARD}}', clipboardText);
-
-			console.log('Clipboard text:', clipboardText, text);
-		}
-
-		prompt = text;
-
-		console.log(prompt);
-		await tick();
-
-		const chatInputContainerElement = document.getElementById('chat-input-container');
-		const chatInputElement = document.getElementById('chat-input');
-
-		if (chatInputContainerElement) {
-			chatInputContainerElement.scrollTop = chatInputContainerElement.scrollHeight;
-		}
-
-		await tick();
-		if (chatInputElement) {
-			chatInputElement.focus();
-			chatInputElement.dispatchEvent(new Event('input'));
-		}
-
-		await tick();
-	};
 
 	let selectedModelIdx = 0;
 
@@ -255,9 +222,7 @@
 					$config?.default_prompt_suggestions ??
 					[]}
 				inputValue={prompt}
-				on:select={(e) => {
-					selectSuggestionPrompt(e.detail);
-				}}
+				{onSelect}
 			/>
 		</div>
 	</div>

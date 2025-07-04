@@ -18,7 +18,7 @@
 	export let models = [];
 	export let atSelectedModel;
 
-	export let submitPrompt;
+	export let onSelect = (e) => {};
 
 	let mounted = false;
 	let selectedModelIdx = 0;
@@ -135,9 +135,7 @@
 					models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
 					$config?.default_prompt_suggestions ??
 					[]}
-				on:select={(e) => {
-					submitPrompt(e.detail);
-				}}
+				{onSelect}
 			/>
 		</div>
 	</div>

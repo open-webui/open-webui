@@ -193,6 +193,15 @@
 		}
 	};
 
+	const onSelect = async (e) => {
+		const { type, data } = e;
+
+		if (type === 'prompt') {
+			// Handle prompt selection
+			messageInput?.setText(data);
+		}
+	};
+
 	$: if (selectedModels && chatIdProp !== '') {
 		saveSessionSelectedModels();
 	}
@@ -2117,6 +2126,7 @@
 										{chatActionHandler}
 										{addMessages}
 										bottomPadding={files.length > 0}
+										{onSelect}
 									/>
 								</div>
 							</div>
@@ -2202,6 +2212,7 @@
 									toolServers={$toolServers}
 									{stopResponse}
 									{createMessagePair}
+									{onSelect}
 									on:upload={async (e) => {
 										const { type, data } = e.detail;
 

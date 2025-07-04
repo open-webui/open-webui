@@ -119,6 +119,7 @@
 		if (chatInput) {
 			if ($settings?.richTextInput ?? true) {
 				chatInputElement.setText(text);
+				chatInputElement.focus();
 			} else {
 				chatInput.value = text;
 				prompt = text;
