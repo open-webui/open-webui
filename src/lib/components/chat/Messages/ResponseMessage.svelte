@@ -41,6 +41,10 @@
 	import { createNewFeedback, getFeedbackById, updateFeedbackById } from '$lib/apis/evaluations';
 	import { getChatById } from '$lib/apis/chats';
 	import { generateTags } from '$lib/apis';
+	import ExclamationCircle from '$lib/components/icons/ExclamationCircle.svelte';
+	import LightBlub from '$lib/components/icons/LightBlub.svelte';
+	import IssueModal from '$lib/components/common/IssueModal.svelte';
+	import SuggestionModal from '$lib/components/common/SuggestionModal.svelte';
 
 	interface MessageType {
 		id: string;
@@ -140,6 +144,8 @@
 	let generatingImage = false;
 
 	let showRateComment = false;
+	let showIssueModal = false;
+	let showSuggestionModal = false;
 
 	const copyToClipboard = async (text) => {
 		const res = await _copyToClipboard(text);
@@ -1240,6 +1246,37 @@
 												</button>
 											</Tooltip>
 										{/each}
+
+										<!-- Help buttons -->
+										<Tooltip content={$i18n.t('Report an Issue')} placement="bottom">
+											<button
+												type="button"
+												class="{isLastMessage
+													? 'visible'
+													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+												on:click={(e) => {
+													e.currentTarget.blur();
+													showIssueModal = true;
+												}}
+											>
+												<ExclamationCircle className="size-4" strokeWidth="2.3" />
+											</button>
+										</Tooltip>
+
+										<Tooltip content={$i18n.t('Suggestion Box')} placement="bottom">
+											<button
+												type="button"
+												class="{isLastMessage
+													? 'visible'
+													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+												on:click={(e) => {
+													e.currentTarget.blur();
+													showSuggestionModal = true;
+												}}
+											>
+												<LightBlub className="size-4" strokeWidth="2.3" />
+											</button>
+										</Tooltip>
 									{/if}
 								{/if}
 							{/if}
@@ -1288,6 +1325,14 @@
 		</div>
 	</div>
 {/key}
+
+{#if showIssueModal}
+	<IssueModal bind:show={showIssueModal} />
+{/if}
+
+{#if showSuggestionModal}
+	<SuggestionModal bind:show={showSuggestionModal} />
+{/if}
 
 <style>
 	.buttons::-webkit-scrollbar {

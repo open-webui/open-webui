@@ -119,8 +119,35 @@
 							<div class="flex-1">
 								<Tooltip
 									content={getToolTooltipContent(tools[toolId], $i18n)}
-									placement="top-start"
+									placement="right"
 									className="flex flex-1 gap-2 items-center"
+									tippyOptions={{
+										placement: 'right',
+										offset: [0, 0],
+										flip: false,
+										getReferenceClientRect: () => {
+											const menu = document.querySelector(
+												'[data-melt-dropdown-menu][data-state="open"]'
+											);
+											if (menu) {
+												const menuRect = menu.getBoundingClientRect();
+												const buttonRect = event?.target
+													?.closest('button')
+													?.getBoundingClientRect();
+												if (buttonRect) {
+													return {
+														width: 0,
+														height: buttonRect.height,
+														top: buttonRect.top,
+														bottom: buttonRect.bottom,
+														left: menuRect.right,
+														right: menuRect.right
+													};
+												}
+											}
+											return null;
+										}
+									}}
 								>
 									<div class="flex-shrink-0">
 										{#if tools[toolId].isMcp}
