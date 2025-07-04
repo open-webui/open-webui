@@ -53,8 +53,9 @@ class QdrantClient(VectorDBBase):
         self.GRPC_PORT = QDRANT_GRPC_PORT
 
         if not self.QDRANT_URI:
-            self.client = None
-            return
+            raise ValueError(
+                "QDRANT_URI is not set. Please configure it in the environment variables."
+            )
 
         # Unified handling for either scheme
         parsed = urlparse(self.QDRANT_URI)
