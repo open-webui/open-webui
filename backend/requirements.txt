@@ -42,6 +42,7 @@ tiktoken
 
 langchain==0.3.19
 langchain-community==0.3.18
+llama-index
 
 fake-useragent==2.1.0
 chromadb==0.6.3
