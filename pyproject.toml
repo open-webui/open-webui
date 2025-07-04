@@ -8,7 +8,7 @@ license = { file = "LICENSE" }
 dependencies = [
     "fastapi==0.115.7",
     "uvicorn[standard]==0.34.2",
-    "pydantic==2.10.6",
+    "pydantic==2.11.7",
     "python-multipart==0.0.20",
 
     "python-socketio==5.13.0",
@@ -50,8 +50,8 @@ dependencies = [
     "google-generativeai==0.8.5",
     "tiktoken",
 
-    "langchain==0.3.24",
-    "langchain-community==0.3.23",
+    "langchain==0.3.26",
+    "langchain-community==0.3.26",
 
     "fake-useragent==2.1.0",
     "chromadb==0.6.3",
@@ -105,7 +105,6 @@ dependencies = [
     "youtube-transcript-api==1.1.0",
     "pytube==15.0.0",
 
-    "extract_msg",
     "pydub",
     "duckduckgo-search==8.0.2",
 

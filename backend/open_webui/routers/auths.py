@@ -675,7 +675,7 @@ async def signout(request: Request, response: Response):
         oauth_id_token = request.cookies.get("oauth_id_token")
         if oauth_id_token:
             try:
-                async with ClientSession() as session:
+                async with ClientSession(trust_env=True) as session:
                     async with session.get(OPENID_PROVIDER_URL.value) as resp:
                         if resp.status == 200:
                             openid_data = await resp.json()
@@ -687,7 +687,7 @@ async def signout(request: Request, response: Response):
                                     status_code=200,
                                     content={
                                         "status": True,
-                                        "redirect_url": f"{logout_url}?id_token_hint={oauth_id_token}",
+                                        "redirect_url": f"{logout_url}?id_token_hint={oauth_id_token}" + (f"&post_logout_redirect_uri={WEBUI_AUTH_SIGNOUT_REDIRECT_URL}" if WEBUI_AUTH_SIGNOUT_REDIRECT_URL else ""),
                                     },
                                     headers=response.headers,
                                 )

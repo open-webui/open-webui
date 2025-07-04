@@ -1,4 +1,6 @@
 import asyncio
+import random
+
 import socketio
 import logging
 import sys
@@ -105,10 +107,26 @@ else:
 
 
 async def periodic_usage_pool_cleanup():
-    if not aquire_func():
-        log.debug("Usage pool cleanup lock already exists. Not running it.")
-        return
-    log.debug("Running periodic_usage_pool_cleanup")
+    max_retries = 2
+    retry_delay = random.uniform(
+        WEBSOCKET_REDIS_LOCK_TIMEOUT / 2, WEBSOCKET_REDIS_LOCK_TIMEOUT
+    )
+    for attempt in range(max_retries + 1):
+        if aquire_func():
+            break
+        else:
+            if attempt < max_retries:
+                log.debug(
+                    f"Cleanup lock already exists. Retry {attempt + 1} after {retry_delay}s..."
+                )
+                await asyncio.sleep(retry_delay)
+            else:
+                log.warning(
+                    "Failed to acquire cleanup lock after retries. Skipping cleanup."
+                )
+                return
+
+    log.debug("Running periodic_cleanup")
     try:
         while True:
             if not renew_func():

@@ -9,7 +9,7 @@
 		getUserTimezone,
 		getWeekday
 	} from '$lib/utils';
-	import { tick, getContext } from 'svelte';
+	import { tick, getContext, onMount, onDestroy } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
 	const i18n = getContext('i18n');
@@ -36,6 +36,25 @@
 
 	export const selectDown = () => {
 		selectedPromptIdx = Math.min(selectedPromptIdx + 1, filteredPrompts.length - 1);
+	};
+
+	let container;
+	let adjustHeightDebounce;
+
+	const adjustHeight = () => {
+		if (container) {
+			if (adjustHeightDebounce) {
+				clearTimeout(adjustHeightDebounce);
+			}
+
+			adjustHeightDebounce = setTimeout(() => {
+				if (!container) return;
+
+				// Ensure the container is visible before adjusting height
+				const rect = container.getBoundingClientRect();
+				container.style.maxHeight = Math.max(Math.min(240, rect.bottom - 100), 100) + 'px';
+			}, 100);
+		}
 	};
 
 	const confirmPrompt = async (command) => {
@@ -156,22 +175,30 @@
 
 			if (words.length > 0) {
 				const word = words.at(0);
-				const fullPrompt = prompt;
-
-				prompt = prompt.substring(0, word?.endIndex + 1);
 				await tick();
 
-				chatInputElement.scrollTop = chatInputElement.scrollHeight;
+				if (!($settings?.richTextInput ?? true)) {
+					chatInputElement.setSelectionRange(word.startIndex, word.endIndex + 1);
+					chatInputElement.focus();
 
-				prompt = fullPrompt;
-				await tick();
-
-				chatInputElement.setSelectionRange(word?.startIndex, word.endIndex + 1);
+					// This is a workaround to ensure the cursor is placed correctly
+					// after the text is inserted, especially for multiline inputs.
+					chatInputElement.setSelectionRange(word.startIndex, word.endIndex + 1);
+				}
 			} else {
 				chatInputElement.scrollTop = chatInputElement.scrollHeight;
 			}
 		}
 	};
+
+	onMount(() => {
+		window.addEventListener('resize', adjustHeight);
+		adjustHeight();
+	});
+
+	onDestroy(() => {
+		window.removeEventListener('resize', adjustHeight);
+	});
 </script>
 
 {#if filteredPrompts.length > 0}
@@ -184,6 +211,7 @@
 				<div
 					class="m-1 overflow-y-auto p-1 space-y-0.5 scrollbar-hidden max-h-60"
 					id="command-options-container"
+					bind:this={container}
 				>
 					{#each filteredPrompts as prompt, promptIdx}
 						<button

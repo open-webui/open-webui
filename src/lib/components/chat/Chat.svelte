@@ -55,10 +55,7 @@
 
 	import { generateChatCompletion } from '$lib/apis/ollama';
 	import {
-		addTagById,
 		createNewChat,
-		deleteTagById,
-		deleteTagsById,
 		getAllTags,
 		getChatById,
 		getChatList,
@@ -708,6 +705,10 @@
 	//////////////////////////
 
 	const initNewChat = async () => {
+		if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
+			await temporaryChatEnabled.set(true);
+		}
+
 		const availableModels = $models
 			.filter((m) => !(m?.info?.meta?.hidden ?? false))
 			.map((m) => m.id);
@@ -835,8 +836,10 @@
 			prompt = $page.url.searchParams.get('q') ?? '';
 
 			if (prompt) {
-				await tick();
-				submitPrompt(prompt);
+				if (($page.url.searchParams.get('submit') ?? 'true') === 'true') {
+					await tick();
+					submitPrompt(prompt);
+				}
 			}
 		}
 
@@ -2227,7 +2230,7 @@
 	{:else if loading}
 		<div class=" flex items-center justify-center h-full w-full">
 			<div class="m-auto">
-				<Spinner />
+				<Spinner className="size-5" />
 			</div>
 		</div>
 	{/if}
