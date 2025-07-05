@@ -1,0 +1,26 @@
+services:
+  open-webui:
+    # Use the image you build from your local Dockerfile
+    build: .
+    container_name: owui-dev
+    ports:
+      # Map the application port
+      - "8080:8080"
+      # [CRITICAL] Map the debugpy port
+      - "5678:5678"
+    volumes:
+      # [CRITICAL] Bind mount your local backend code into the container
+      - ./backend:/app/backend
+    environment:
+      # Set the environment variable to enable your debug key retrieval logic
+      - DEBUG_USER_KEYS=True
+      # Point to the built-in SQLite DB for local debugging
+      - DATABASE_URL=sqlite:///data/db.sqlite
+      # enabled debugger flag in script
+      - DEBUGGER=True
+      # [NEW] Add a secret key for session management
+      - WEBUI_SECRET_KEY=a_secure_random_string_for_local_dev
+    entrypoint: ""
+    command:
+      # The command to run inside the container
+      bash /app/backend/start.sh

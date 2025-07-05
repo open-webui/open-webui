@@ -173,11 +173,26 @@ HEALTHCHECK CMD curl --silent --fail http://localhost:${PORT:-8080}/health | jq 
 USER $UID:$GID
 
 # Set the new entrypoint
-# Generatw a temporary IAM database auth token
-ENTRYPOINT ["/app/docker-entrypoint.sh"]
+# Switch to root user to install packages
+USER root
+
+# [CORRECTED] Copy the script from your project root to the container's backend directory
+# COPY docker-entrypoint.sh /app/backend/docker-entrypoint.sh
+COPY backend/docker-entrypoint.sh /app/backend/docker-entrypoint.sh
+
+# Switch back to the non-root user
+USER 1000
+
+# Generate a temporary IAM database auth token
+# ENTRYPOINT ["/app/docker-entrypoint.sh"]
+# [CORRECTED] Set the new entrypoint with the correct path inside the container
+ENTRYPOINT ["/app/backend/docker-entrypoint.sh"]
 
 ARG BUILD_HASH
 ENV WEBUI_BUILD_VERSION=${BUILD_HASH}
 ENV DOCKER=true
 
-CMD [ "bash", "start.sh"]
+# CMD [ "bash", "start.sh"]
+# The original command to start the server now becomes the CMD
+CMD ["tini", "-s", "--", "bash", "start.sh"]
+
