@@ -89,6 +89,11 @@ if WEBSOCKET_MANAGER == "redis":
         redis_url=WEBSOCKET_REDIS_URL,
         redis_sentinels=redis_sentinels,
     )
+    REINDEX_STATE = RedisDict(
+        "open-webui:reindex_state",
+        redis_url=WEBSOCKET_REDIS_URL,
+        redis_sentinels=redis_sentinels,
+    )
 
     clean_up_lock = RedisLock(
         redis_url=WEBSOCKET_REDIS_URL,
@@ -103,6 +108,7 @@ else:
     SESSION_POOL = {}
     USER_POOL = {}
     USAGE_POOL = {}
+    REINDEX_STATE = {"reindex_progress": 0}
     aquire_func = release_func = renew_func = lambda: True
 
 

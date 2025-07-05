@@ -245,3 +245,98 @@ export const deleteAllFiles = async (token: string) => {
 
 	return res;
 };
+
+export const reindexFiles = async (token: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/files/reindex`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.log(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const countFiles = async (token: string) => {
+	let error = null;
+	
+	const res = await fetch(`${WEBUI_API_BASE_URL}/files/?content=false`, {
+	  method: 'GET',
+	  headers: {
+		Accept: 'application/json',
+		'Content-Type': 'application/json',
+		authorization: `Bearer ${token}`,
+	  }
+	})
+	  .then(async (res) => {
+		if (!res.ok) throw await res.json();
+		const files = await res.json();
+		return files.length;
+	  })
+	  .catch((err) => {
+		error = err.detail;
+		console.log(err);
+		return 0;
+	  });
+  
+	if (error) {
+	  throw error;
+	}
+  
+	return res;
+  };
+
+export const listenToReindexProgress = (onProgress: (progress: number) => void) => {
+	
+	const eventSource = new EventSource(`${WEBUI_API_BASE_URL}/files/reindex/stream`);
+
+	eventSource.onmessage = (event) => {
+		const progress = parseInt(event.data);
+		onProgress(progress);
+		if (progress >= 100) {
+			eventSource?.close();
+		}
+	};
+
+	eventSource.onerror = (err) => {
+		console.error('SSE error:', err);
+		eventSource?.close();
+	};
+};
+
+export const checkIfReindexing = (): Promise<boolean> => {
+	return new Promise((resolve) => {
+		const eventSource = new EventSource(`${WEBUI_API_BASE_URL}/files/reindex/stream`);
+
+		const handleMessage = (event: MessageEvent) => {
+			const progress = parseInt(event.data);
+			eventSource.close();
+			resolve(progress > 0 && progress < 100); // treat as "in progress"
+		};
+
+		const handleError = () => {
+			eventSource.close();
+			resolve(false);
+		};
+
+		eventSource.onmessage = handleMessage;
+		eventSource.onerror = handleError;
+	});
+};
