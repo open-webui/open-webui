@@ -20,6 +20,7 @@ services:
       - DEBUGGER=True
       # [NEW] Add a secret key for session management
       - WEBUI_SECRET_KEY=a_secure_random_string_for_local_dev
+    entrypoint: ""
     command:
       # The command to run inside the container
-      bash start.sh
+      bash /app/backend/start.sh
