@@ -93,8 +93,10 @@
 	//
 	//////////////////////
 
+	let modelRatingHistory = new Map();
+
 	const rankHandler = async (similarities: Map<string, number> = new Map()) => {
-		const modelStats = calculateModelStats(feedbacks, similarities);
+		const modelStats = calculateModelStats(feedbacks, similarities, modelRatingHistory);
 
 		rankedModels = $models
 			.filter((m) => m?.owned_by !== 'arena' && (m?.info?.meta?.hidden ?? false) !== true)
@@ -122,7 +124,8 @@
 
 	function calculateModelStats(
 		feedbacks: Feedback[],
-		similarities: Map<string, number>
+		similarities: Map<string, number>,
+		historyMap: Map<string, Array<{ timestamp: number; rating: number }>>
 	): Map<string, ModelStats> {
 		const stats = new Map<string, ModelStats>();
 		const K = 32;
@@ -131,12 +134,21 @@
 			return stats.get(modelId) || { rating: 1000, won: 0, lost: 0 };
 		}
 
-		function updateStats(modelId: string, ratingChange: number, outcome: number) {
+		function updateStats(
+			modelId: string,
+			ratingChange: number,
+			outcome: number,
+			timestamp: number
+		) {
 			const currentStats = getOrDefaultStats(modelId);
 			currentStats.rating += ratingChange;
 			if (outcome === 1) currentStats.won++;
 			else if (outcome === 0) currentStats.lost++;
 			stats.set(modelId, currentStats);
+			if (historyMap) {
+				if (!historyMap.has(modelId)) historyMap.set(modelId, []);
+				historyMap.get(modelId).push({ timestamp, rating: Math.round(currentStats.rating) });
+			}
 		}
 
 		function calculateEloChange(
@@ -174,8 +186,8 @@
 				const changeA = calculateEloChange(statsA.rating, statsB.rating, outcome, similarity);
 				const changeB = calculateEloChange(statsB.rating, statsA.rating, 1 - outcome, similarity);
 
-				updateStats(modelA, changeA, outcome);
-				updateStats(modelB, changeB, 1 - outcome);
+				updateStats(modelA, changeA, outcome, feedback.updated_at);
+				updateStats(modelB, changeB, 1 - outcome, feedback.updated_at);
 			});
 		});
 
@@ -326,10 +338,11 @@
 	});
 </script>
 
-<ModelModal
+`<ModelModal
 	bind:show={showLeaderboardModal}
 	model={selectedModel}
 	{feedbacks}
+	{modelRatingHistory}
 	onClose={closeLeaderboardModal}
 />
 
