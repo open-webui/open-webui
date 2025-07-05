@@ -32,52 +32,22 @@
 
 	export let prompt = '';
 	export let files = [];
+	export let messageInput = null;
 
 	export let selectedToolIds = [];
 	export let selectedFilterIds = [];
+
+	export let showCommands = false;
 
 	export let imageGenerationEnabled = false;
 	export let codeInterpreterEnabled = false;
 	export let webSearchEnabled = false;
 
+	export let onSelect = (e) => {};
+
 	export let toolServers = [];
 
 	let models = [];
-
-	const selectSuggestionPrompt = async (p) => {
-		let text = p;
-
-		if (p.includes('{{CLIPBOARD}}')) {
-			const clipboardText = await navigator.clipboard.readText().catch((err) => {
-				toast.error($i18n.t('Failed to read clipboard contents'));
-				return '{{CLIPBOARD}}';
-			});
-
-			text = p.replaceAll('{{CLIPBOARD}}', clipboardText);
-
-			console.log('Clipboard text:', clipboardText, text);
-		}
-
-		prompt = text;
-
-		console.log(prompt);
-		await tick();
-
-		const chatInputContainerElement = document.getElementById('chat-input-container');
-		const chatInputElement = document.getElementById('chat-input');
-
-		if (chatInputContainerElement) {
-			chatInputContainerElement.scrollTop = chatInputContainerElement.scrollHeight;
-		}
-
-		await tick();
-		if (chatInputElement) {
-			chatInputElement.focus();
-			chatInputElement.dispatchEvent(new Event('input'));
-		}
-
-		await tick();
-	};
 
 	let selectedModelIdx = 0;
 
@@ -118,6 +88,10 @@
 								placement="top"
 							>
 								<button
+									aria-hidden={models.length <= 1}
+									aria-label={$i18n.t('Get information on {{name}} in the UI', {
+										name: models[modelIdx]?.name
+									})}
 									on:click={() => {
 										selectedModelIdx = modelIdx;
 									}}
@@ -129,7 +103,7 @@
 												? `/doge.png`
 												: `${WEBUI_BASE_URL}/static/favicon.png`)}
 										class=" size-9 @sm:size-10 rounded-full border-[1px] border-gray-100 dark:border-none"
-										alt="logo"
+										aria-hidden="true"
 										draggable="false"
 									/>
 								</button>
@@ -164,7 +138,9 @@
 						<Tooltip
 							className=" w-fit"
 							content={marked.parse(
-								sanitizeResponseContent(models[selectedModelIdx]?.info?.meta?.description ?? '')
+								sanitizeResponseContent(
+									models[selectedModelIdx]?.info?.meta?.description ?? ''
+								).replaceAll('\n', '<br>')
 							)}
 							placement="top"
 						>
@@ -172,7 +148,9 @@
 								class="mt-0.5 px-2 text-sm font-normal text-gray-500 dark:text-gray-400 line-clamp-2 max-w-xl markdown"
 							>
 								{@html marked.parse(
-									sanitizeResponseContent(models[selectedModelIdx]?.info?.meta?.description)
+									sanitizeResponseContent(
+										models[selectedModelIdx]?.info?.meta?.description ?? ''
+									).replaceAll('\n', '<br>')
 								)}
 							</div>
 						</Tooltip>
@@ -199,6 +177,7 @@
 
 			<div class="text-base font-normal @md:max-w-3xl w-full py-3 {atSelectedModel ? 'mt-2' : ''}">
 				<MessageInput
+					bind:this={messageInput}
 					{history}
 					{selectedModels}
 					bind:files
@@ -210,6 +189,7 @@
 					bind:codeInterpreterEnabled
 					bind:webSearchEnabled
 					bind:atSelectedModel
+					bind:showCommands
 					{toolServers}
 					{transparentBackground}
 					{stopResponse}
@@ -218,9 +198,9 @@
 					onChange={(input) => {
 						if (!$temporaryChatEnabled) {
 							if (input.prompt !== null) {
-								localStorage.setItem(`chat-input`, JSON.stringify(input));
+								sessionStorage.setItem(`chat-input`, JSON.stringify(input));
 							} else {
-								localStorage.removeItem(`chat-input`);
+								sessionStorage.removeItem(`chat-input`);
 							}
 						}
 					}}
@@ -242,9 +222,7 @@
 					$config?.default_prompt_suggestions ??
 					[]}
 				inputValue={prompt}
-				on:select={(e) => {
-					selectSuggestionPrompt(e.detail);
-				}}
+				{onSelect}
 			/>
 		</div>
 	</div>

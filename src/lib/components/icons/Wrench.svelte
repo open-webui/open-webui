@@ -8,6 +8,7 @@
 	fill="none"
 	viewBox="0 0 24 24"
 	stroke-width={strokeWidth}
+	aria-hidden="true"
 	stroke="currentColor"
 	class={className}
 >

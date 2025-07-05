@@ -419,7 +419,7 @@ async def chat_action(request: Request, action_id: str, form_data: dict, user: A
                     params[key] = value
 
             if "__user__" in sig.parameters:
-                __user__ = (user.model_dump() if isinstance(user, UserModel) else {},)
+                __user__ = user.model_dump() if isinstance(user, UserModel) else {}
 
                 try:
                     if hasattr(function_module, "UserValves"):

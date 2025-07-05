@@ -37,7 +37,9 @@ export const importChat = async (
 	chat: object,
 	meta: object | null,
 	pinned?: boolean,
-	folderId?: string | null
+	folderId?: string | null,
+	createdAt: number | null = null,
+	updatedAt: number | null = null
 ) => {
 	let error = null;
 
@@ -52,7 +54,9 @@ export const importChat = async (
 			chat: chat,
 			meta: meta ?? {},
 			pinned: pinned,
-			folder_id: folderId
+			folder_id: folderId,
+			created_at: createdAt ?? null,
+			updated_at: updatedAt ?? null
 		})
 	})
 		.then(async (res) => {

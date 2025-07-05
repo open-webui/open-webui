@@ -83,9 +83,9 @@ export const sanitizeResponseContent = (content: string) => {
 		.replace(/<\|[a-z]*$/, '')
 		.replace(/<\|[a-z]+\|$/, '')
 		.replace(/<$/, '')
-		.replaceAll(/<\|[a-z]+\|>/g, ' ')
 		.replaceAll('<', '&lt;')
 		.replaceAll('>', '&gt;')
+		.replaceAll(/<\|[a-z]+\|>/g, ' ')
 		.trim();
 };
 

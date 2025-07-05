@@ -248,6 +248,7 @@ async def chat_completion_tools_handler(
                         if tool_id
                         else f"{tool_function_name}"
                     )
+
                     if tool.get("metadata", {}).get("citation", False) or tool.get(
                         "direct", False
                     ):
@@ -718,6 +719,10 @@ def apply_params_to_form_data(form_data, model):
 
 
 async def process_chat_payload(request, form_data, user, metadata, model):
+    # Pipeline Inlet -> Filter Inlet -> Chat Memory -> Chat Web Search -> Chat Image Generation
+    # -> Chat Code Interpreter (Form Data Update) -> (Default) Chat Tools Function Calling
+    # -> Chat Files
+
     form_data = apply_params_to_form_data(form_data, model)
     log.debug(f"form_data: {form_data}")
 
@@ -804,7 +809,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         raise e
 
     try:
-
         filter_functions = [
             Functions.get_function_by_id(filter_id)
             for filter_id in get_sorted_filter_ids(
@@ -912,7 +916,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     request, form_data, extra_params, user, models, tools_dict
                 )
                 sources.extend(flags.get("sources", []))
-
             except Exception as e:
                 log.exception(e)
 
@@ -925,24 +928,27 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # If context is not empty, insert it into the messages
     if len(sources) > 0:
         context_string = ""
-        citation_idx = {}
+        citation_idx_map = {}
+
         for source in sources:
             if "document" in source:
-                for doc_context, doc_meta in zip(
+                for document_text, document_metadata in zip(
                     source["document"], source["metadata"]
                 ):
                     source_name = source.get("source", {}).get("name", None)
-                    citation_id = (
-                        doc_meta.get("source", None)
+                    source_id = (
+                        document_metadata.get("source", None)
                         or source.get("source", {}).get("id", None)
                         or "N/A"
                     )
-                    if citation_id not in citation_idx:
-                        citation_idx[citation_id] = len(citation_idx) + 1
+
+                    if source_id not in citation_idx_map:
+                        citation_idx_map[source_id] = len(citation_idx_map) + 1
+
                     context_string += (
-                        f'<source id="{citation_idx[citation_id]}"'
+                        f'<source id="{citation_idx_map[source_id]}"'
                         + (f' name="{source_name}"' if source_name else "")
-                        + f">{doc_context}</source>\n"
+                        + f">{document_text}</source>\n"
                     )
 
         context_string = context_string.strip()
@@ -1370,7 +1376,7 @@ async def process_chat_response(
             return len(backtick_segments) > 1 and len(backtick_segments) % 2 == 0
 
         # Handle as a background task
-        async def post_response_handler(response, events):
+        async def response_handler(response, events):
             def serialize_content_blocks(content_blocks, raw=False):
                 content = ""
 
@@ -1741,7 +1747,7 @@ async def process_chat_response(
                         },
                     )
 
-                async def stream_body_handler(response):
+                async def stream_body_handler(response, form_data):
                     nonlocal content
                     nonlocal content_blocks
 
@@ -1770,7 +1776,7 @@ async def process_chat_response(
                                 filter_functions=filter_functions,
                                 filter_type="stream",
                                 form_data=data,
-                                extra_params=extra_params,
+                                extra_params={"__body__": form_data, **extra_params},
                             )
 
                             if data:
@@ -2032,7 +2038,7 @@ async def process_chat_response(
                     if response.background:
                         await response.background()
 
-                await stream_body_handler(response)
+                await stream_body_handler(response, form_data)
 
                 MAX_TOOL_CALL_RETRIES = 10
                 tool_call_retries = 0
@@ -2181,22 +2187,24 @@ async def process_chat_response(
                     )
 
                     try:
+                        new_form_data = {
+                            "model": model_id,
+                            "stream": True,
+                            "tools": form_data["tools"],
+                            "messages": [
+                                *form_data["messages"],
+                                *convert_content_blocks_to_messages(content_blocks),
+                            ],
+                        }
+
                         res = await generate_chat_completion(
                             request,
-                            {
-                                "model": model_id,
-                                "stream": True,
-                                "tools": form_data["tools"],
-                                "messages": [
-                                    *form_data["messages"],
-                                    *convert_content_blocks_to_messages(content_blocks),
-                                ],
-                            },
+                            new_form_data,
                             user,
                         )
 
                         if isinstance(res, StreamingResponse):
-                            await stream_body_handler(res)
+                            await stream_body_handler(res, new_form_data)
                         else:
                             break
                     except Exception as e:
@@ -2427,9 +2435,9 @@ async def process_chat_response(
             if response.background is not None:
                 await response.background()
 
-        # background_tasks.add_task(post_response_handler, response, events)
+        # background_tasks.add_task(response_handler, response, events)
         task_id, _ = await create_task(
-            request, post_response_handler(response, events), id=metadata["chat_id"]
+            request, response_handler(response, events), id=metadata["chat_id"]
         )
         return {"status": True, "task_id": task_id}
 

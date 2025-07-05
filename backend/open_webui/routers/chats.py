@@ -684,8 +684,10 @@ async def archive_chat_by_id(id: str, user=Depends(get_verified_user)):
 
 @router.post("/{id}/share", response_model=Optional[ChatResponse])
 async def share_chat_by_id(request: Request, id: str, user=Depends(get_verified_user)):
-    if not has_permission(
-        user.id, "chat.share", request.app.state.config.USER_PERMISSIONS
+    if (user.role != "admin") and (
+        not has_permission(
+            user.id, "chat.share", request.app.state.config.USER_PERMISSIONS
+        )
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

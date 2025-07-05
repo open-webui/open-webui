@@ -390,7 +390,7 @@
 
 				<div class="mb-2.5">
 					<div class="flex w-full justify-between">
-						<div class=" self-center text-sm">
+						<div class=" self-center text-xs">
 							{$i18n.t('Banners')}
 						</div>
 
@@ -432,7 +432,7 @@
 				{#if $user?.role === 'admin'}
 					<div class=" space-y-3">
 						<div class="flex w-full justify-between mb-2">
-							<div class=" self-center text-sm">
+							<div class=" self-center text-xs">
 								{$i18n.t('Default Prompt Suggestions')}
 							</div>
 
@@ -636,6 +636,6 @@
 	</form>
 {:else}
 	<div class=" h-full w-full flex justify-center items-center">
-		<Spinner />
+		<Spinner className="size-5" />
 	</div>
 {/if}

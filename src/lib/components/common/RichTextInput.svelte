@@ -11,10 +11,12 @@
 	// Use turndown-plugin-gfm for proper GFM table support
 	turndownService.use(gfm);
 
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount, onDestroy, tick } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
+
 	const eventDispatch = createEventDispatcher();
 
+	import { Fragment } from 'prosemirror-model';
 	import { EditorState, Plugin, PluginKey, TextSelection } from 'prosemirror-state';
 	import { Decoration, DecorationSet } from 'prosemirror-view';
 	import { Editor } from '@tiptap/core';
@@ -76,6 +78,186 @@
 		editor.commands.setContent(html);
 	}
 
+	export const getWordAtDocPos = () => {
+		if (!editor) return '';
+		const { state } = editor.view;
+		const pos = state.selection.from;
+		const doc = state.doc;
+		const resolvedPos = doc.resolve(pos);
+		const textBlock = resolvedPos.parent;
+		const paraStart = resolvedPos.start();
+		const text = textBlock.textContent;
+		const offset = resolvedPos.parentOffset;
+
+		let wordStart = offset,
+			wordEnd = offset;
+		while (wordStart > 0 && !/\s/.test(text[wordStart - 1])) wordStart--;
+		while (wordEnd < text.length && !/\s/.test(text[wordEnd])) wordEnd++;
+
+		const word = text.slice(wordStart, wordEnd);
+
+		return word;
+	};
+
+	// Returns {start, end} of the word at pos
+	function getWordBoundsAtPos(doc, pos) {
+		const resolvedPos = doc.resolve(pos);
+		const textBlock = resolvedPos.parent;
+		const paraStart = resolvedPos.start();
+		const text = textBlock.textContent;
+
+		const offset = resolvedPos.parentOffset;
+		let wordStart = offset,
+			wordEnd = offset;
+		while (wordStart > 0 && !/\s/.test(text[wordStart - 1])) wordStart--;
+		while (wordEnd < text.length && !/\s/.test(text[wordEnd])) wordEnd++;
+		return {
+			start: paraStart + wordStart,
+			end: paraStart + wordEnd
+		};
+	}
+
+	export const replaceCommandWithText = async (text) => {
+		const { state, dispatch } = editor.view;
+		const { selection } = state;
+		const pos = selection.from;
+
+		// Get the plain text of this document
+		// const docText = state.doc.textBetween(0, state.doc.content.size, '\n', '\n');
+
+		// Find the word boundaries at cursor
+		const { start, end } = getWordBoundsAtPos(state.doc, pos);
+
+		let tr = state.tr;
+
+		if (text.includes('\n')) {
+			// Split the text into lines and create a <p> node for each line
+			const lines = text.split('\n');
+			const nodes = lines.map(
+				(line, index) =>
+					index === 0
+						? state.schema.text(line) // First line is plain text
+						: state.schema.nodes.paragraph.create({}, line ? state.schema.text(line) : undefined) // Subsequent lines are paragraphs
+			);
+
+			// Build and dispatch the transaction to replace the word at cursor
+			tr = tr.replaceWith(start, end, nodes);
+
+			let newSelectionPos;
+
+			// +1 because the insert happens at start, so last para starts at (start + sum of all previous nodes' sizes)
+			let lastPos = start;
+			for (let i = 0; i < nodes.length; i++) {
+				lastPos += nodes[i].nodeSize;
+			}
+			// Place cursor inside the last paragraph at its end
+			newSelectionPos = lastPos;
+
+			tr = tr.setSelection(TextSelection.near(tr.doc.resolve(newSelectionPos)));
+		} else {
+			tr = tr.replaceWith(
+				start,
+				end, // replace this range
+				text !== '' ? state.schema.text(text) : []
+			);
+
+			tr = tr.setSelection(
+				state.selection.constructor.near(tr.doc.resolve(start + text.length + 1))
+			);
+		}
+
+		dispatch(tr);
+
+		await tick();
+		// selectNextTemplate(state, dispatch);
+	};
+
+	export const setText = (text: string) => {
+		if (!editor) return;
+		text = text.replaceAll('\n\n', '\n');
+		const { state, view } = editor;
+
+		if (text.includes('\n')) {
+			// Multiple lines: make paragraphs
+			const { schema, tr } = state;
+			const lines = text.split('\n');
+
+			// Map each line to a paragraph node (empty lines -> empty paragraph)
+			const nodes = lines.map((line) =>
+				schema.nodes.paragraph.create({}, line ? schema.text(line) : undefined)
+			);
+
+			// Create a document fragment containing all parsed paragraphs
+			const fragment = Fragment.fromArray(nodes);
+
+			// Replace current selection with these paragraphs
+			tr.replaceSelectionWith(fragment, false /* don't select new */);
+
+			// You probably want to move the cursor after the inserted content
+			// tr.setSelection(Selection.near(tr.doc.resolve(tr.selection.to)));
+
+			view.dispatch(tr);
+		} else if (text === '') {
+			// Empty: delete selection or paragraph
+			editor.commands.clearContent();
+		} else {
+			editor.commands.setContent(editor.state.schema.text(text));
+		}
+
+		selectNextTemplate(editor.view.state, editor.view.dispatch);
+	};
+
+	export const replaceVariables = (variables) => {
+		if (!editor) return;
+		const { state, view } = editor;
+		const { doc } = state;
+
+		// Create a transaction to replace variables
+		let tr = state.tr;
+		let offset = 0; // Track position changes due to text length differences
+
+		// Collect all replacements first to avoid position conflicts
+		const replacements = [];
+
+		doc.descendants((node, pos) => {
+			if (node.isText && node.text) {
+				const text = node.text;
+				const replacedText = text.replace(/{{\s*([^|}]+)(?:\|[^}]*)?\s*}}/g, (match, varName) => {
+					const trimmedVarName = varName.trim();
+					return variables.hasOwnProperty(trimmedVarName)
+						? String(variables[trimmedVarName])
+						: match;
+				});
+
+				if (replacedText !== text) {
+					replacements.push({
+						from: pos,
+						to: pos + text.length,
+						text: replacedText
+					});
+				}
+			}
+		});
+
+		// Apply replacements in reverse order to maintain correct positions
+		replacements.reverse().forEach(({ from, to, text }) => {
+			tr = tr.replaceWith(from, to, text !== '' ? state.schema.text(text) : []);
+		});
+
+		// Only dispatch if there are changes
+		if (replacements.length > 0) {
+			view.dispatch(tr);
+		}
+	};
+
+	export const focus = () => {
+		if (editor) {
+			editor.view.focus();
+			// Scroll to the top of the editor
+			editor.view.dispatch(editor.view.state.tr.scrollIntoView());
+		}
+	};
+
 	// Function to find the next template in the document
 	function findNextTemplate(doc, from = 0) {
 		const patterns = [{ start: '{{', end: '}}' }];
@@ -123,6 +305,11 @@
 			if (dispatch) {
 				const tr = state.tr.setSelection(TextSelection.create(doc, template.from, template.to));
 				dispatch(tr);
+
+				// Scroll to the selected template
+				dispatch(
+					tr.scrollIntoView().setMeta('preventScroll', true) // Prevent default scrolling behavior
+				);
 			}
 			return true;
 		}
@@ -235,7 +422,14 @@
 				onChange({
 					html: editor.getHTML(),
 					json: editor.getJSON(),
-					md: turndownService.turndown(editor.getHTML())
+					md: turndownService
+						.turndown(
+							editor
+								.getHTML()
+								.replace(/<p><\/p>/g, '<br/>')
+								.replace(/ {2,}/g, (m) => m.replace(/ /g, '\u00a0'))
+						)
+						.replace(/\u00a0/g, ' ')
 				});
 
 				if (json) {
@@ -303,7 +497,7 @@
 							if (event.key === 'Enter') {
 								const isCtrlPressed = event.ctrlKey || event.metaKey; // metaKey is for Cmd key on Mac
 								if (event.shiftKey && !isCtrlPressed) {
-									editor.commands.setHardBreak(); // Insert a hard break
+									editor.commands.enter(); // Insert a new line
 									view.dispatch(view.state.tr.scrollIntoView()); // Move viewport to the cursor
 									event.preventDefault();
 									return true;

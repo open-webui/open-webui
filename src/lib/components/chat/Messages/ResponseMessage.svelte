@@ -106,6 +106,7 @@
 	export let chatId = '';
 	export let history;
 	export let messageId;
+	export let selectedModels = [];
 
 	let message: MessageType = JSON.parse(JSON.stringify(history.messages[messageId]));
 	$: if (history.messages) {
@@ -601,7 +602,7 @@
 		id="message-{message.id}"
 		dir={$settings.chatDirection}
 	>
-		<div class={`shrink-0 ltr:mr-3 rtl:ml-3 hidden @lg:flex `}>
+		<div class={`shrink-0 ltr:mr-3 rtl:ml-3 hidden @lg:flex mt-1 `}>
 			<ProfileImage
 				src={model?.info?.meta?.profile_image_url ??
 					($i18n.language === 'dg-DG' ? `/doge.png` : `${WEBUI_BASE_URL}/static/favicon.png`)}
@@ -609,7 +610,7 @@
 			/>
 		</div>
 
-		<div class="flex-auto w-0 pl-1 relative -translate-y-0.5">
+		<div class="flex-auto w-0 pl-1 relative">
 			<Name>
 				<Tooltip content={model?.name ?? message.model} placement="top-start">
 					<span class="line-clamp-1 text-black dark:text-white">
@@ -795,6 +796,7 @@
 									<ContentRenderer
 										id={message.id}
 										{history}
+										{selectedModels}
 										content={message.content}
 										sources={message.sources}
 										floatingButtons={message?.done && !readOnly}

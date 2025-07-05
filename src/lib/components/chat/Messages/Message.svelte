@@ -13,6 +13,7 @@
 	import UserMessage from './UserMessage.svelte';
 
 	export let chatId;
+	export let selectedModels = [];
 	export let idx = 0;
 
 	export let history;
@@ -70,6 +71,7 @@
 				{chatId}
 				{history}
 				{messageId}
+				{selectedModels}
 				isLastMessage={messageId === history.currentId}
 				siblings={history.messages[history.messages[messageId].parentId]?.childrenIds ?? []}
 				{gotoMessage}
@@ -92,6 +94,7 @@
 				bind:history
 				{chatId}
 				{messageId}
+				{selectedModels}
 				isLastMessage={messageId === history?.currentId}
 				{updateChat}
 				{editMessage}

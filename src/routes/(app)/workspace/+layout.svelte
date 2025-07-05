@@ -78,9 +78,7 @@
 					>
 						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models}
 							<a
-								class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes(
-									'/workspace/models'
-								)
+								class="min-w-fit p-1.5 {$page.url.pathname.includes('/workspace/models')
 									? ''
 									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
 								href="/workspace/models">{$i18n.t('Models')}</a
@@ -89,9 +87,7 @@
 
 						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.knowledge}
 							<a
-								class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes(
-									'/workspace/knowledge'
-								)
+								class="min-w-fit p-1.5 {$page.url.pathname.includes('/workspace/knowledge')
 									? ''
 									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
 								href="/workspace/knowledge"
@@ -102,9 +98,7 @@
 
 						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.prompts}
 							<a
-								class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes(
-									'/workspace/prompts'
-								)
+								class="min-w-fit p-1.5 {$page.url.pathname.includes('/workspace/prompts')
 									? ''
 									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
 								href="/workspace/prompts">{$i18n.t('Prompts')}</a
@@ -113,7 +107,7 @@
 
 						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.tools}
 							<a
-								class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes('/workspace/tools')
+								class="min-w-fit p-1.5 {$page.url.pathname.includes('/workspace/tools')
 									? ''
 									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
 								href="/workspace/tools"

@@ -15,6 +15,7 @@ import aiohttp
 import aiofiles
 import requests
 import mimetypes
+from urllib.parse import quote
 
 from fastapi import (
     Depends,
@@ -343,10 +344,10 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                         "Authorization": f"Bearer {request.app.state.config.TTS_OPENAI_API_KEY}",
                         **(
                             {
-                                "X-OpenWebUI-User-Name": user.name,
-                                "X-OpenWebUI-User-Id": user.id,
-                                "X-OpenWebUI-User-Email": user.email,
-                                "X-OpenWebUI-User-Role": user.role,
+                                "X-OpenWebUI-User-Name": quote(user.name),
+                                "X-OpenWebUI-User-Id": quote(user.id),
+                                "X-OpenWebUI-User-Email": quote(user.email),
+                                "X-OpenWebUI-User-Role": quote(user.role),
                             }
                             if ENABLE_FORWARD_USER_INFO_HEADERS
                             else {}
@@ -919,14 +920,18 @@ def transcription(
 ):
     log.info(f"file.content_type: {file.content_type}")
 
-    supported_content_types = request.app.state.config.STT_SUPPORTED_CONTENT_TYPES or [
-        "audio/*",
-        "video/webm",
-    ]
+    stt_supported_content_types = getattr(
+        request.app.state.config, "STT_SUPPORTED_CONTENT_TYPES", []
+    )
 
     if not any(
         fnmatch(file.content_type, content_type)
-        for content_type in supported_content_types
+        for content_type in (
+            stt_supported_content_types
+            if stt_supported_content_types
+            and any(t.strip() for t in stt_supported_content_types)
+            else ["audio/*", "video/webm"]
+        )
     ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

@@ -76,8 +76,16 @@ async def get_all_base_models(request: Request, user: UserModel = None):
     return function_models + openai_models + ollama_models
 
 
-async def get_all_models(request, user: UserModel = None):
-    models = await get_all_base_models(request, user=user)
+async def get_all_models(request, refresh: bool = False, user: UserModel = None):
+    if (
+        request.app.state.MODELS
+        and request.app.state.BASE_MODELS
+        and (request.app.state.config.ENABLE_BASE_MODELS_CACHE and not refresh)
+    ):
+        models = request.app.state.BASE_MODELS
+    else:
+        models = await get_all_base_models(request, user=user)
+        request.app.state.BASE_MODELS = models
 
     # If there are no models, return an empty list
     if len(models) == 0:

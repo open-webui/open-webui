@@ -16,6 +16,7 @@ from urllib.parse import urlparse
 import aiohttp
 from aiocache import cached
 import requests
+from urllib.parse import quote
 
 from open_webui.models.chats import Chats
 from open_webui.models.users import UserModel
@@ -58,6 +59,7 @@ from open_webui.config import (
 from open_webui.env import (
     ENV,
     SRC_LOG_LEVELS,
+    MODELS_CACHE_TTL,
     AIOHTTP_CLIENT_SESSION_SSL,
     AIOHTTP_CLIENT_TIMEOUT,
     AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST,
@@ -87,10 +89,10 @@ async def send_get_request(url, key=None, user: UserModel = None):
                     **({"Authorization": f"Bearer {key}"} if key else {}),
                     **(
                         {
-                            "X-OpenWebUI-User-Name": user.name,
-                            "X-OpenWebUI-User-Id": user.id,
-                            "X-OpenWebUI-User-Email": user.email,
-                            "X-OpenWebUI-User-Role": user.role,
+                            "X-OpenWebUI-User-Name": quote(user.name),
+                            "X-OpenWebUI-User-Id": quote(user.id),
+                            "X-OpenWebUI-User-Email": quote(user.email),
+                            "X-OpenWebUI-User-Role": quote(user.role),
                         }
                         if ENABLE_FORWARD_USER_INFO_HEADERS and user
                         else {}
@@ -138,10 +140,10 @@ async def send_post_request(
                 **({"Authorization": f"Bearer {key}"} if key else {}),
                 **(
                     {
-                        "X-OpenWebUI-User-Name": user.name,
-                        "X-OpenWebUI-User-Id": user.id,
-                        "X-OpenWebUI-User-Email": user.email,
-                        "X-OpenWebUI-User-Role": user.role,
+                        "X-OpenWebUI-User-Name": quote(user.name),
+                        "X-OpenWebUI-User-Id": quote(user.id),
+                        "X-OpenWebUI-User-Email": quote(user.email),
+                        "X-OpenWebUI-User-Role": quote(user.role),
                     }
                     if ENABLE_FORWARD_USER_INFO_HEADERS and user
                     else {}
@@ -242,10 +244,10 @@ async def verify_connection(
                     **({"Authorization": f"Bearer {key}"} if key else {}),
                     **(
                         {
-                            "X-OpenWebUI-User-Name": user.name,
-                            "X-OpenWebUI-User-Id": user.id,
-                            "X-OpenWebUI-User-Email": user.email,
-                            "X-OpenWebUI-User-Role": user.role,
+                            "X-OpenWebUI-User-Name": quote(user.name),
+                            "X-OpenWebUI-User-Id": quote(user.id),
+                            "X-OpenWebUI-User-Email": quote(user.email),
+                            "X-OpenWebUI-User-Role": quote(user.role),
                         }
                         if ENABLE_FORWARD_USER_INFO_HEADERS and user
                         else {}
@@ -329,7 +331,7 @@ def merge_ollama_models_lists(model_lists):
     return list(merged_models.values())
 
 
-@cached(ttl=1)
+@cached(ttl=MODELS_CACHE_TTL)
 async def get_all_models(request: Request, user: UserModel = None):
     log.info("get_all_models()")
     if request.app.state.config.ENABLE_OLLAMA_API:
@@ -462,10 +464,10 @@ async def get_ollama_tags(
                     **({"Authorization": f"Bearer {key}"} if key else {}),
                     **(
                         {
-                            "X-OpenWebUI-User-Name": user.name,
-                            "X-OpenWebUI-User-Id": user.id,
-                            "X-OpenWebUI-User-Email": user.email,
-                            "X-OpenWebUI-User-Role": user.role,
+                            "X-OpenWebUI-User-Name": quote(user.name),
+                            "X-OpenWebUI-User-Id": quote(user.id),
+                            "X-OpenWebUI-User-Email": quote(user.email),
+                            "X-OpenWebUI-User-Role": quote(user.role),
                         }
                         if ENABLE_FORWARD_USER_INFO_HEADERS and user
                         else {}
@@ -634,7 +636,7 @@ async def get_ollama_versions(request: Request, url_idx: Optional[int] = None):
 
 
 class ModelNameForm(BaseModel):
-    name: str
+    model: str
 
 
 @router.post("/api/unload")
@@ -643,10 +645,10 @@ async def unload_model(
     form_data: ModelNameForm,
     user=Depends(get_admin_user),
 ):
-    model_name = form_data.name
+    model_name = form_data.model
     if not model_name:
         raise HTTPException(
-            status_code=400, detail="Missing 'name' of model to unload."
+            status_code=400, detail="Missing name of the model to unload."
         )
 
     # Refresh/load models if needed, get mapping from name to URLs
@@ -724,7 +726,7 @@ async def pull_model(
 
 
 class PushModelForm(BaseModel):
-    name: str
+    model: str
     insecure: Optional[bool] = None
     stream: Optional[bool] = None
 
@@ -741,12 +743,12 @@ async def push_model(
         await get_all_models(request, user=user)
         models = request.app.state.OLLAMA_MODELS
 
-        if form_data.name in models:
-            url_idx = models[form_data.name]["urls"][0]
+        if form_data.model in models:
+            url_idx = models[form_data.model]["urls"][0]
         else:
             raise HTTPException(
                 status_code=400,
-                detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.name),
+                detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.model),
             )
 
     url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
@@ -824,10 +826,10 @@ async def copy_model(
                 **({"Authorization": f"Bearer {key}"} if key else {}),
                 **(
                     {
-                        "X-OpenWebUI-User-Name": user.name,
-                        "X-OpenWebUI-User-Id": user.id,
-                        "X-OpenWebUI-User-Email": user.email,
-                        "X-OpenWebUI-User-Role": user.role,
+                        "X-OpenWebUI-User-Name": quote(user.name),
+                        "X-OpenWebUI-User-Id": quote(user.id),
+                        "X-OpenWebUI-User-Email": quote(user.email),
+                        "X-OpenWebUI-User-Role": quote(user.role),
                     }
                     if ENABLE_FORWARD_USER_INFO_HEADERS and user
                     else {}
@@ -869,12 +871,12 @@ async def delete_model(
         await get_all_models(request, user=user)
         models = request.app.state.OLLAMA_MODELS
 
-        if form_data.name in models:
-            url_idx = models[form_data.name]["urls"][0]
+        if form_data.model in models:
+            url_idx = models[form_data.model]["urls"][0]
         else:
             raise HTTPException(
                 status_code=400,
-                detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.name),
+                detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.model),
             )
 
     url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
@@ -890,10 +892,10 @@ async def delete_model(
                 **({"Authorization": f"Bearer {key}"} if key else {}),
                 **(
                     {
-                        "X-OpenWebUI-User-Name": user.name,
-                        "X-OpenWebUI-User-Id": user.id,
-                        "X-OpenWebUI-User-Email": user.email,
-                        "X-OpenWebUI-User-Role": user.role,
+                        "X-OpenWebUI-User-Name": quote(user.name),
+                        "X-OpenWebUI-User-Id": quote(user.id),
+                        "X-OpenWebUI-User-Email": quote(user.email),
+                        "X-OpenWebUI-User-Role": quote(user.role),
                     }
                     if ENABLE_FORWARD_USER_INFO_HEADERS and user
                     else {}
@@ -929,13 +931,13 @@ async def show_model_info(
     await get_all_models(request, user=user)
     models = request.app.state.OLLAMA_MODELS
 
-    if form_data.name not in models:
+    if form_data.model not in models:
         raise HTTPException(
             status_code=400,
-            detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.name),
+            detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.model),
         )
 
-    url_idx = random.choice(models[form_data.name]["urls"])
+    url_idx = random.choice(models[form_data.model]["urls"])
 
     url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
     key = get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS)
@@ -949,10 +951,10 @@ async def show_model_info(
                 **({"Authorization": f"Bearer {key}"} if key else {}),
                 **(
                     {
-                        "X-OpenWebUI-User-Name": user.name,
-                        "X-OpenWebUI-User-Id": user.id,
-                        "X-OpenWebUI-User-Email": user.email,
-                        "X-OpenWebUI-User-Role": user.role,
+                        "X-OpenWebUI-User-Name": quote(user.name),
+                        "X-OpenWebUI-User-Id": quote(user.id),
+                        "X-OpenWebUI-User-Email": quote(user.email),
+                        "X-OpenWebUI-User-Role": quote(user.role),
                     }
                     if ENABLE_FORWARD_USER_INFO_HEADERS and user
                     else {}
@@ -1036,10 +1038,10 @@ async def embed(
                 **({"Authorization": f"Bearer {key}"} if key else {}),
                 **(
                     {
-                        "X-OpenWebUI-User-Name": user.name,
-                        "X-OpenWebUI-User-Id": user.id,
-                        "X-OpenWebUI-User-Email": user.email,
-                        "X-OpenWebUI-User-Role": user.role,
+                        "X-OpenWebUI-User-Name": quote(user.name),
+                        "X-OpenWebUI-User-Id": quote(user.id),
+                        "X-OpenWebUI-User-Email": quote(user.email),
+                        "X-OpenWebUI-User-Role": quote(user.role),
                     }
                     if ENABLE_FORWARD_USER_INFO_HEADERS and user
                     else {}
@@ -1123,10 +1125,10 @@ async def embeddings(
                 **({"Authorization": f"Bearer {key}"} if key else {}),
                 **(
                     {
-                        "X-OpenWebUI-User-Name": user.name,
-                        "X-OpenWebUI-User-Id": user.id,
-                        "X-OpenWebUI-User-Email": user.email,
-                        "X-OpenWebUI-User-Role": user.role,
+                        "X-OpenWebUI-User-Name": quote(user.name),
+                        "X-OpenWebUI-User-Id": quote(user.id),
+                        "X-OpenWebUI-User-Email": quote(user.email),
+                        "X-OpenWebUI-User-Role": quote(user.role),
                     }
                     if ENABLE_FORWARD_USER_INFO_HEADERS and user
                     else {}

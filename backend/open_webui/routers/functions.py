@@ -105,7 +105,7 @@ async def load_function_from_url(
     )
 
     try:
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(trust_env=True) as session:
             async with session.get(
                 url, headers={"Content-Type": "application/json"}
             ) as resp:

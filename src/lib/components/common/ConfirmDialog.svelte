@@ -25,10 +25,18 @@
 
 	export let show = false;
 
+	$: if (show) {
+		init();
+	}
+
 	let modalElement = null;
 	let mounted = false;
 
 	let focusTrap: FocusTrap.FocusTrap | null = null;
+
+	const init = () => {
+		inputValue = '';
+	};
 
 	const handleKeyDown = (event: KeyboardEvent) => {
 		if (event.key === 'Escape') {
