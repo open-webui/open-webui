@@ -54,6 +54,7 @@ opensearch-py==2.8.0
 playwright==1.49.1 # Caution: version must match docker-compose.playwright.yaml
 elasticsearch==9.0.1
 pinecone==6.0.2
+weaviate-client==4.15.1
 
 transformers
 sentence-transformers==4.1.0
