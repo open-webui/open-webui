@@ -21,6 +21,7 @@ from fastapi import (
 from fastapi.responses import FileResponse, StreamingResponse
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
+from open_webui.models.shared_file_owner import SharedFileOwner
 
 from open_webui.models.users import Users
 from open_webui.models.files import (
@@ -63,6 +64,10 @@ def has_access_to_file(
         )
 
     has_access = False
+
+    if SharedFileOwner.has_access(access_type, file_id, user.id):
+        return True
+
     knowledge_base_id = file.meta.get("collection_name") if file.meta else None
 
     if knowledge_base_id:
