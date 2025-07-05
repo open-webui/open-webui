@@ -31,7 +31,6 @@ class User(Base):
     updated_at = Column(BigInteger)
     created_at = Column(BigInteger)
 
-    api_key = Column(String, nullable=True, unique=True)
     settings = Column(JSONField, nullable=True)
     info = Column(JSONField, nullable=True)
 
@@ -55,7 +54,6 @@ class UserModel(BaseModel):
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
 
-    api_key: Optional[str] = None
     settings: Optional[UserSettings] = None
     info: Optional[dict] = None
 
@@ -143,13 +141,7 @@ class UsersTable:
         except Exception:
             return None
 
-    def get_user_by_api_key(self, api_key: str) -> Optional[UserModel]:
-        try:
-            with get_db() as db:
-                user = db.query(User).filter_by(api_key=api_key).first()
-                return UserModel.model_validate(user)
-        except Exception:
-            return None
+
 
     def get_user_by_email(self, email: str) -> Optional[UserModel]:
         try:
@@ -370,22 +362,9 @@ class UsersTable:
         except Exception:
             return False
 
-    def update_user_api_key_by_id(self, id: str, api_key: str) -> bool:
-        try:
-            with get_db() as db:
-                result = db.query(User).filter_by(id=id).update({"api_key": api_key})
-                db.commit()
-                return True if result == 1 else False
-        except Exception:
-            return False
 
-    def get_user_api_key_by_id(self, id: str) -> Optional[str]:
-        try:
-            with get_db() as db:
-                user = db.query(User).filter_by(id=id).first()
-                return user.api_key
-        except Exception:
-            return None
+
+
 
     def get_valid_user_ids(self, user_ids: list[str]) -> list[str]:
         with get_db() as db:

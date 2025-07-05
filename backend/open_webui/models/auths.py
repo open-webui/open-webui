@@ -154,10 +154,26 @@ class AuthsTable:
             return None
 
         try:
-            user = Users.get_user_by_api_key(api_key)
+            from open_webui.models.api_keys import ApiKeys
+            from open_webui.config import API_KEY_EXPIRES_IN
+            from open_webui.utils.misc import parse_duration
+            
+            # Get the API key record from the new API keys table
+            api_key_record = ApiKeys.get_api_key_by_key(api_key)
+            if not api_key_record:
+                return None
+            
+            # Check if API key has expired
+            expires_delta = parse_duration(API_KEY_EXPIRES_IN.value)
+            expiry = int(expires_delta.total_seconds()) if expires_delta else -1
+            if ApiKeys.is_api_key_expired(api_key_record, expiry):
+                return None
+            
+            # Get the user associated with this API key
+            user = Users.get_user_by_id(api_key_record.user_id)
             return user if user else None
         except Exception:
-            return False
+            return None
 
     def authenticate_user_by_email(self, email: str) -> Optional[UserModel]:
         log.info(f"authenticate_user_by_email: {email}")

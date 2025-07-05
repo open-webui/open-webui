@@ -263,23 +263,46 @@ def get_current_user(
 
 
 def get_current_user_by_api_key(api_key: str):
-    user = Users.get_user_by_api_key(api_key)
-
+    from open_webui.models.api_keys import ApiKeys
+    from open_webui.config import API_KEY_EXPIRES_IN
+    from open_webui.utils.misc import parse_duration
+    
+    # Get the API key record
+    api_key_record = ApiKeys.get_api_key_by_key(api_key)
+    if api_key_record is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.INVALID_TOKEN,
+        )
+    
+    # Check if API key has expired using the model's built-in method
+    expires_delta = parse_duration(API_KEY_EXPIRES_IN.value)
+    expiry = int(expires_delta.total_seconds()) if expires_delta else -1
+    if ApiKeys.is_api_key_expired(api_key_record, expiry):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="API key has expired",
+        )
+    
+    # Get the user associated with this API key
+    user = Users.get_user_by_id(api_key_record.user_id)
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.INVALID_TOKEN,
         )
-    else:
-        # Add user info to current span
-        current_span = trace.get_current_span()
-        if current_span:
-            current_span.set_attribute("client.user.id", user.id)
-            current_span.set_attribute("client.user.email", user.email)
-            current_span.set_attribute("client.user.role", user.role)
-            current_span.set_attribute("client.auth.type", "api_key")
 
-        Users.update_user_last_active_by_id(user.id)
+    # Add user info to current span
+    current_span = trace.get_current_span()
+    if current_span:
+        current_span.set_attribute("client.user.id", user.id)
+        current_span.set_attribute("client.user.email", user.email)
+        current_span.set_attribute("client.user.role", user.role)
+        current_span.set_attribute("client.auth.type", "api_key")
+
+    # Update both user last active and API key last used
+    Users.update_user_last_active_by_id(user.id)
+    ApiKeys.update_api_key_last_used(api_key)
 
     return user
 
