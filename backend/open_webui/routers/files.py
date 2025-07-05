@@ -136,6 +136,51 @@ def upload_file(
         }
         contents, file_path = Storage.upload_file(file.file, filename, tags)
 
+        # --- Begin Decryption Integration ---
+        config = request.app.state.config
+        enable_decryption = getattr(config, "ENABLE_FILE_DECRYPTION", False)
+        decryption_endpoint = getattr(config, "FILE_DECRYPTION_ENDPOINT", None)
+        decryption_api_key = getattr(config, "FILE_DECRYPTION_API_KEY", None)
+        decryption_timeout = getattr(config, "FILE_DECRYPTION_TIMEOUT", 30)
+
+        if enable_decryption and decryption_endpoint and decryption_api_key:
+            try:
+                from open_webui.utils.decryption import (
+                    decrypt_file_via_azure,
+                    DecryptionError,
+                )
+
+                # Read the just-uploaded file bytes
+                with open(file_path, "rb") as f:
+                    encrypted_bytes = f.read()
+                decrypted_bytes = decrypt_file_via_azure(
+                    filename,
+                    encrypted_bytes,
+                    decryption_endpoint,
+                    decryption_api_key,
+                    decryption_timeout,
+                )
+                # Overwrite the file with decrypted content
+                with open(file_path, "wb") as f:
+                    f.write(decrypted_bytes)
+                contents = decrypted_bytes
+                log.info(f"File {filename} decrypted successfully.")
+            except DecryptionError as e:
+                log.error(f"File decryption failed: {e}")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=ERROR_MESSAGES.DEFAULT(f"File decryption failed: {e}"),
+                )
+            except Exception as e:
+                log.error(f"Unexpected error during file decryption: {e}")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=ERROR_MESSAGES.DEFAULT(
+                        f"Unexpected error during file decryption: {e}"
+                    ),
+                )
+        # --- End Decryption Integration ---
+
         file_item = Files.insert_new_file(
             user.id,
             FileForm(
@@ -205,6 +250,8 @@ def upload_file(
                 detail=ERROR_MESSAGES.DEFAULT("Error uploading file"),
             )
 
+    except HTTPException as e:
+        raise
     except Exception as e:
         log.exception(e)
         raise HTTPException(
