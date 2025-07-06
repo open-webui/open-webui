@@ -145,8 +145,60 @@
 		return variables;
 	};
 
+	const splitProperties = (str: string, delimiter: string): string[] => {
+		const result: string[] = [];
+		let current = '';
+		let depth = 0;
+		let inString = false;
+		let escapeNext = false;
+
+		for (let i = 0; i < str.length; i++) {
+			const char = str[i];
+
+			if (escapeNext) {
+				current += char;
+				escapeNext = false;
+				continue;
+			}
+
+			if (char === '\\') {
+				current += char;
+				escapeNext = true;
+				continue;
+			}
+
+			if (char === '"' && !escapeNext) {
+				inString = !inString;
+				current += char;
+				continue;
+			}
+
+			if (!inString) {
+				if (char === '{' || char === '[') {
+					depth++;
+				} else if (char === '}' || char === ']') {
+					depth--;
+				}
+
+				if (char === delimiter && depth === 0) {
+					result.push(current.trim());
+					current = '';
+					continue;
+				}
+			}
+
+			current += char;
+		}
+
+		if (current.trim()) {
+			result.push(current.trim());
+		}
+
+		return result;
+	};
+
 	const parseVariableDefinition = (definition: string): Record<string, any> => {
-		const [firstPart, ...propertyParts] = definition.split(':');
+		const [firstPart, ...propertyParts] = splitProperties(definition, ':');
 
 		// Parse type (explicit or implied)
 		const type = firstPart.startsWith('type=') ? firstPart.slice(5) : firstPart;
