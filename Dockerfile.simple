@@ -1,0 +1,18 @@
+# Simple customization approach
+FROM ghcr.io/open-webui/open-webui:latest
+
+# Copy patches for documentation
+COPY patches /patches
+
+# Copy custom static files if any
+COPY custom-config /app/backend/custom-config
+
+# Apply runtime customizations via environment
+ENV WEBUI_NAME="XYNTHOR AI"
+ENV WEBUI_FAVICON_URL="https://chatbot.xynthor.com/favicon.ico"
+ENV XYNTHORAI_ENABLED=true
+ENV XYNTHORAI_MIDDLEWARE_URL=http://xynthorai-middleware:3000
+
+LABEL maintainer="XYNTHORAI System Team" \
+      version="1.0.0" \
+      description="Customized Open WebUI with XYNTHORAI integration"

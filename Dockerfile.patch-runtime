@@ -1,0 +1,37 @@
+# Runtime patching approach - no build required
+FROM ghcr.io/open-webui/open-webui:latest AS base
+
+# Install patch utility
+USER root
+RUN apt-get update && apt-get install -y patch && rm -rf /var/lib/apt/lists/*
+
+# Copy patches
+COPY patches /patches
+
+# Apply patches to the already built files
+WORKDIR /app/backend
+RUN if ls /patches/*.patch 1> /dev/null 2>&1; then \
+    for patch in /patches/*.patch; do \
+        echo "Applying $patch..." && \
+        # Try to apply patch, skip if already applied or fails
+        patch -p1 --forward --reject-file=- < "$patch" || true; \
+    done; \
+    else \
+        echo "No patches to apply"; \
+    fi
+
+# Copy custom configuration
+COPY custom-config /app/backend/custom-config
+
+# Environment variables
+ENV WEBUI_NAME="XYNTHOR AI"
+ENV WEBUI_FAVICON_URL="https://chatbot.xynthor.com/favicon.ico"
+ENV XYNTHORAI_ENABLED=true
+ENV XYNTHORAI_MIDDLEWARE_URL=http://xynthorai-middleware:3000
+
+# Switch back to non-root user
+USER 1000
+
+LABEL maintainer="XYNTHORAI System Team" \
+      version="1.0.0" \
+      description="Runtime-patched Open WebUI with XYNTHORAI integration"

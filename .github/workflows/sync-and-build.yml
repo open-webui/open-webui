@@ -1,0 +1,159 @@
+name: Sync Upstream and Build
+
+on:
+  schedule:
+    - cron: '0 2 * * 1' # Every Monday at 2:00 UTC
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - custom-dpl-integration
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}-webui
+
+jobs:
+  sync-upstream:
+    runs-on: ubuntu-latest
+    outputs:
+      has-updates: ${{ steps.check-updates.outputs.has-updates }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
+      - name: Add upstream remote
+        run: |
+          git remote add upstream https://github.com/open-webui/open-webui.git || true
+          git fetch upstream
+
+      - name: Check for updates
+        id: check-updates
+        run: |
+          UPSTREAM_COMMIT=$(git rev-parse upstream/main)
+          CURRENT_COMMIT=$(git rev-parse HEAD)
+          
+          if [ "$UPSTREAM_COMMIT" != "$CURRENT_COMMIT" ]; then
+            echo "has-updates=true" >> $GITHUB_OUTPUT
+            echo "Updates available from upstream"
+          else
+            echo "has-updates=false" >> $GITHUB_OUTPUT
+            echo "No updates from upstream"
+          fi
+
+      - name: Create sync branch
+        if: steps.check-updates.outputs.has-updates == 'true'
+        run: |
+          BRANCH_NAME="sync-upstream-$(date +%Y%m%d-%H%M%S)"
+          git checkout -b $BRANCH_NAME
+          
+          # Try to merge upstream
+          if git merge upstream/main --no-edit; then
+            echo "✅ Merge successful"
+            git push origin $BRANCH_NAME
+            
+            # Create PR
+            gh pr create \
+              --title "🔄 Sync with upstream Open WebUI" \
+              --body "This PR syncs our fork with the latest upstream changes." \
+              --base main \
+              --head $BRANCH_NAME
+          else
+            echo "❌ Merge conflicts detected"
+            exit 1
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  test-patches:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Test patch application
+        run: |
+          # Clone fresh Open WebUI
+          git clone --depth 1 https://github.com/open-webui/open-webui.git test-repo
+          cd test-repo
+          
+          # Try applying all patches
+          FAILED_PATCHES=()
+          for patch in ../patches/*.patch; do
+            if [ -f "$patch" ]; then
+              echo "Testing $(basename "$patch")..."
+              if ! git apply --check "$patch"; then
+                FAILED_PATCHES+=("$(basename "$patch")")
+              fi
+            fi
+          done
+          
+          if [ ${#FAILED_PATCHES[@]} -gt 0 ]; then
+            echo "::error::The following patches failed: ${FAILED_PATCHES[*]}"
+            exit 1
+          fi
+
+  build-custom-image:
+    needs: [test-patches]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value={{date 'YYYYMMDD'}}-{{sha}}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./xynthorai-open-webui
+          file: ./xynthorai-open-webui/Dockerfile.custom
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BASE_VERSION=latest
+
+  deploy-staging:
+    needs: [build-custom-image]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Deploy to staging
+        run: |
+          echo "Deploying to staging environment..."
+          # Add your deployment logic here
+          # e.g., update kubernetes deployment, docker-compose, etc.

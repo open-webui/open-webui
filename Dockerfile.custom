@@ -1,0 +1,56 @@
+# Multi-stage build for customized Open WebUI
+ARG BASE_VERSION=latest
+
+# Stage 1: Get source code
+FROM alpine/git AS source
+WORKDIR /src
+RUN git clone --depth 1 https://github.com/open-webui/open-webui.git .
+
+# Stage 2: Apply patches
+FROM alpine AS patcher
+RUN apk add --no-cache patch
+WORKDIR /src
+COPY --from=source /src .
+COPY patches /patches
+RUN if ls /patches/*.patch 1> /dev/null 2>&1; then \
+    for patch in /patches/*.patch; do \
+        echo "Applying $patch..." && \
+        patch -p1 < "$patch" || exit 1; \
+    done; \
+    else \
+        echo "No patches to apply"; \
+    fi
+
+# Stage 3: Build frontend
+FROM node:20-alpine AS frontend-builder
+WORKDIR /app
+# Increase Node.js memory limit
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+COPY --from=patcher /src/package*.json ./
+RUN npm ci
+COPY --from=patcher /src .
+RUN npm run build
+
+# Stage 4: Final image based on official
+FROM ghcr.io/open-webui/open-webui:${BASE_VERSION}
+
+# Copy only changed files
+COPY --from=frontend-builder /app/build/static /app/backend/static
+COPY --from=frontend-builder /app/build/index.html /app/backend/static/index.html
+
+# Additional customizations
+COPY custom-config /app/backend/custom-config
+COPY custom-scripts /app/backend/custom-scripts
+
+# Environment for XYNTHORAI integration
+ENV XYNTHORAI_ENABLED=true
+ENV XYNTHORAI_MIDDLEWARE_URL=http://xynthorai-middleware:3000
+ENV CUSTOM_BUILD_VERSION=1.0.0
+
+# Add health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD curl -f http://localhost:8080/health || exit 1
+
+LABEL maintainer="XYNTHORAI System Team" \
+      version="1.0.0" \
+      description="Customized Open WebUI with XYNTHORAI integration"

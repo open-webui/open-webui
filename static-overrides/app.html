@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" type="image/png" href="https://chatbot.xynthor.com/favicon.ico" />
+		<link rel="icon" type="image/png" href="https://chatbot.xynthor.com/favicon.ico" sizes="96x96" />
+		<link rel="icon" type="image/svg+xml" href="https://chatbot.xynthor.com/favicon.ico" />
+		<link rel="shortcut icon" href="https://chatbot.xynthor.com/favicon.ico" />
+		<link rel="apple-touch-icon" sizes="180x180" href="https://chatbot.xynthor.com/favicon.ico" />
+		<meta name="apple-mobile-web-app-title" content="XYNTHOR AI" />
+
+		<link rel="manifest" href="/manifest.json" crossorigin="use-credentials" />
+		<meta
+			name="viewport"
+			content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"
+		/>
+		<meta name="theme-color" content="#171717" />
+		<meta name="robots" content="noindex,nofollow" />
+		<meta name="description" content="XYNTHOR AI" />
+		<link
+			rel="search"
+			type="application/opensearchdescription+xml"
+			title="XYNTHOR AI"
+			href="/opensearch.xml"
+		/>
+		<script src="/static/loader.js" defer></script>
+		<link rel="stylesheet" href="/static/custom.css" />
+
+		<!-- Custom XYNTHOR styles -->
+		<style>
+			:root {
+				--primary-color: #f97316;
+				--primary-hover: #ea580c;
+			}
+		</style>
+
+		%sveltekit.head%
+	</head>
+	<body data-sveltekit-preload-data="hover">
+		<div style="display: contents">%sveltekit.body%</div>
+	</body>
+</html>

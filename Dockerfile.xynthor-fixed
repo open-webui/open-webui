@@ -1,0 +1,9 @@
+FROM xynthorai-open-webui:xynthor-logo
+
+# Fix permissions
+USER root
+RUN mkdir -p /app/backend/data && \
+    chown -R 1000:1000 /app/backend/data
+
+# Switch back to non-root user if needed
+USER 1000

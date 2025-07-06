@@ -1,0 +1,26 @@
+# Apply patches at runtime to built files
+FROM ghcr.io/open-webui/open-webui:latest
+
+# Install tools
+USER root
+RUN apt-get update && apt-get install -y sed && rm -rf /var/lib/apt/lists/*
+
+# Copy custom branding script
+COPY apply-branding.sh /app/apply-branding.sh
+RUN chmod +x /app/apply-branding.sh
+
+# Apply branding to built files
+RUN /app/apply-branding.sh
+
+# Environment variables
+ENV WEBUI_NAME="XYNTHOR AI"
+ENV WEBUI_FAVICON_URL="https://chatbot.xynthor.com/favicon.ico"
+ENV XYNTHORAI_ENABLED=true
+ENV XYNTHORAI_MIDDLEWARE_URL=http://xynthorai-middleware:3000
+
+# Switch back to app user
+USER 1000
+
+LABEL maintainer="XYNTHORAI System Team" \
+      version="1.0.1" \
+      description="Patched Open WebUI with XYNTHOR branding"

@@ -1,0 +1,91 @@
+# Final version with model logo fix
+FROM ghcr.io/open-webui/open-webui:latest
+
+# Install tools
+USER root
+RUN apt-get update && apt-get install -y sed && rm -rf /var/lib/apt/lists/*
+
+# Copy local assets
+COPY static-assets/logo.png /tmp/logo.png
+COPY static-assets/xynthor-favicon.ico /tmp/favicon.ico
+
+# Find and replace ALL favicon/logo/splash files
+RUN find /app -type f \( -name "favicon*.png" -o -name "logo*.png" -o -name "splash*.png" -o -name "favicon*.svg" -o -name "logo*.svg" \) | while read file; do \
+    cp /tmp/logo.png "$file" 2>/dev/null || true; \
+    done
+
+# Replace all .ico files
+RUN find /app -name "*.ico" -type f | while read file; do \
+    cp /tmp/favicon.ico "$file" 2>/dev/null || true; \
+    done
+
+# Specific replacements for known locations
+RUN cp /tmp/logo.png /app/backend/open_webui/static/favicon.png && \
+    cp /tmp/logo.png /app/backend/open_webui/static/favicon-dark.png && \
+    cp /tmp/logo.png /app/backend/open_webui/static/favicon-96x96.png && \
+    cp /tmp/logo.png /app/backend/open_webui/static/logo.png && \
+    cp /tmp/logo.png /app/backend/open_webui/static/splash.png && \
+    cp /tmp/logo.png /app/backend/open_webui/static/splash-dark.png && \
+    cp /tmp/favicon.ico /app/backend/open_webui/static/favicon.ico
+
+# Copy branding script and model fix
+COPY apply-branding-local.sh /app/apply-branding.sh
+COPY fix-model-logos.sh /app/fix-model-logos.sh
+RUN chmod +x /app/apply-branding.sh /app/fix-model-logos.sh
+
+# Apply branding
+RUN /app/apply-branding.sh
+
+# Additional text replacements
+RUN find /app -name "*.py" -type f -exec grep -l "Open WebUI" {} \; | while read file; do \
+    sed -i 's/Open WebUI/XYNTHOR AI/g' "$file"; \
+    done || true
+
+# Create custom CSS to hide broken model images
+RUN echo '/* Custom CSS to handle model avatars */ \
+img[alt="model profile"][src="/logo.png"] { \
+    display: none !important; \
+} \
+.model-avatar-placeholder { \
+    width: 60px; \
+    height: 60px; \
+    background: rgb(243 244 246); \
+    border-radius: 0.75rem; \
+    display: flex; \
+    align-items: center; \
+    justify-content: center; \
+    font-size: 1.5rem; \
+    font-weight: bold; \
+    color: rgb(107 114 128); \
+} \
+@media (min-width: 768px) { \
+    .model-avatar-placeholder { \
+        width: 240px; \
+        height: 240px; \
+        font-size: 3rem; \
+    } \
+} \
+.dark .model-avatar-placeholder { \
+    background: rgb(31 41 55); \
+    color: rgb(156 163 175); \
+}' >> /app/build/static/custom.css
+
+# Fix permissions
+RUN find /app -type f \( -name "*.png" -o -name "*.ico" -o -name "*.svg" \) -exec chown 1000:1000 {} \;
+
+# Clean up
+RUN rm -f /tmp/logo.png /tmp/favicon.ico
+
+# Environment variables
+ENV WEBUI_NAME="XYNTHOR AI"
+ENV WEBUI_BRAND_NAME="XYNTHOR AI"
+ENV APP_NAME="XYNTHOR AI"
+ENV XYNTHORAI_ENABLED=true
+ENV XYNTHORAI_MIDDLEWARE_URL=http://xynthorai-middleware:3000
+
+# Switch back to app user
+USER 1000
+
+LABEL maintainer="XYNTHORAI System Team" \
+      version="1.0.5" \
+      description="Open WebUI with XYNTHOR branding - with model logo fix"

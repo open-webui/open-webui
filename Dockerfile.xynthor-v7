@@ -1,0 +1,65 @@
+# Final version with comprehensive image path fixes
+FROM ghcr.io/open-webui/open-webui:latest
+
+# Install tools
+USER root
+RUN apt-get update && apt-get install -y sed && rm -rf /var/lib/apt/lists/*
+
+# Copy local assets
+COPY static-assets/logo.png /tmp/logo.png
+COPY static-assets/xynthor-favicon.ico /tmp/favicon.ico
+
+# Find and replace ALL favicon/logo/splash files
+RUN find /app -type f \( -name "favicon*.png" -o -name "logo*.png" -o -name "splash*.png" -o -name "favicon*.svg" -o -name "logo*.svg" \) | while read file; do \
+    cp /tmp/logo.png "$file" 2>/dev/null || true; \
+    done
+
+# Replace all .ico files
+RUN find /app -name "*.ico" -type f | while read file; do \
+    cp /tmp/favicon.ico "$file" 2>/dev/null || true; \
+    done
+
+# Specific replacements for known locations
+RUN cp /tmp/logo.png /app/backend/open_webui/static/favicon.png && \
+    cp /tmp/logo.png /app/backend/open_webui/static/favicon-dark.png && \
+    cp /tmp/logo.png /app/backend/open_webui/static/favicon-96x96.png && \
+    cp /tmp/logo.png /app/backend/open_webui/static/logo.png && \
+    cp /tmp/logo.png /app/backend/open_webui/static/splash.png && \
+    cp /tmp/logo.png /app/backend/open_webui/static/splash-dark.png && \
+    cp /tmp/favicon.ico /app/backend/open_webui/static/favicon.ico
+
+# Copy branding and fix scripts
+COPY apply-branding-local.sh /app/apply-branding.sh
+COPY fix-all-image-paths.sh /app/fix-all-image-paths.sh
+RUN chmod +x /app/apply-branding.sh /app/fix-all-image-paths.sh
+
+# Apply branding (includes path fixes)
+RUN /app/apply-branding.sh
+
+# Run additional path fixes to be sure
+RUN /app/fix-all-image-paths.sh
+
+# Additional text replacements
+RUN find /app -name "*.py" -type f -exec grep -l "Open WebUI" {} \; | while read file; do \
+    sed -i 's/Open WebUI/XYNTHOR AI/g' "$file"; \
+    done || true
+
+# Fix permissions
+RUN find /app -type f \( -name "*.png" -o -name "*.ico" -o -name "*.svg" \) -exec chown 1000:1000 {} \;
+
+# Clean up
+RUN rm -f /tmp/logo.png /tmp/favicon.ico
+
+# Environment variables
+ENV WEBUI_NAME="XYNTHOR AI"
+ENV WEBUI_BRAND_NAME="XYNTHOR AI"
+ENV APP_NAME="XYNTHOR AI"
+ENV XYNTHORAI_ENABLED=true
+ENV XYNTHORAI_MIDDLEWARE_URL=http://xynthorai-middleware:3000
+
+# Switch back to app user
+USER 1000
+
+LABEL maintainer="XYNTHORAI System Team" \
+      version="1.0.7" \
+      description="Open WebUI with XYNTHOR branding - comprehensive path fixes"

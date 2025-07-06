@@ -1,0 +1,48 @@
+# Apply patches and use local assets
+FROM ghcr.io/open-webui/open-webui:latest
+
+# Install tools
+USER root
+RUN apt-get update && apt-get install -y sed && rm -rf /var/lib/apt/lists/*
+
+# Copy local assets - replace ALL logo/favicon references
+COPY static-assets/xynthor-logo.png /app/static/logo.png
+COPY static-assets/xynthor-logo.png /app/static/logo.svg
+COPY static-assets/xynthor-logo.png /app/static/splash.png
+COPY static-assets/xynthor-logo.png /app/static/favicon.png
+COPY static-assets/xynthor-favicon.ico /app/static/favicon.ico
+COPY static-assets/xynthor-favicon.ico /app/static/favicon-96x96.png
+COPY static-assets/xynthor-favicon.ico /app/static/apple-touch-icon.png
+
+# Also copy to build directory
+COPY static-assets/xynthor-logo.png /app/build/logo.png
+COPY static-assets/xynthor-logo.png /app/build/splash.png
+COPY static-assets/xynthor-favicon.ico /app/build/favicon.ico
+
+# Copy to backend static directory
+COPY static-assets/xynthor-logo.png /app/backend/open_webui/static/logo.png
+COPY static-assets/xynthor-logo.png /app/backend/open_webui/static/splash.png
+COPY static-assets/xynthor-logo.png /app/backend/open_webui/static/favicon.png
+COPY static-assets/xynthor-favicon.ico /app/backend/open_webui/static/favicon.ico
+
+# Copy branding script
+COPY apply-branding-local.sh /app/apply-branding.sh
+RUN chmod +x /app/apply-branding.sh
+
+# Apply branding to built files
+RUN /app/apply-branding.sh
+
+# Fix permissions
+RUN chown -R 1000:1000 /app/static /app/build /app/backend/open_webui/static
+
+# Environment variables
+ENV WEBUI_NAME="XYNTHOR AI"
+ENV XYNTHORAI_ENABLED=true
+ENV XYNTHORAI_MIDDLEWARE_URL=http://xynthorai-middleware:3000
+
+# Switch back to app user
+USER 1000
+
+LABEL maintainer="XYNTHORAI System Team" \
+      version="1.0.2" \
+      description="Open WebUI with XYNTHOR branding and local assets"

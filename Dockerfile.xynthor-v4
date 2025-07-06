@@ -1,0 +1,86 @@
+# Apply patches and use local assets with symlinks
+FROM ghcr.io/open-webui/open-webui:latest
+
+# Install tools
+USER root
+RUN apt-get update && apt-get install -y sed && rm -rf /var/lib/apt/lists/*
+
+# Copy local assets - replace ALL logo/favicon references
+COPY static-assets/logo.png /tmp/logo.png
+COPY static-assets/xynthor-favicon.ico /tmp/favicon.ico
+
+# Replace all logo files with our logo
+RUN find /app -name "favicon.png" -type f -exec cp /tmp/logo.png {} \; 2>/dev/null || true
+RUN find /app -name "logo.png" -type f -exec cp /tmp/logo.png {} \; 2>/dev/null || true
+RUN find /app -name "logo.svg" -type f -exec cp /tmp/logo.png {} \; 2>/dev/null || true
+RUN find /app -name "splash.png" -type f -exec cp /tmp/logo.png {} \; 2>/dev/null || true
+RUN find /app -name "favicon.ico" -type f -exec cp /tmp/favicon.ico {} \; 2>/dev/null || true
+
+# Create directories if they don't exist
+RUN mkdir -p /app/static /app/build/static /app/backend/open_webui/static /app/backend/static
+
+# Copy to all possible locations
+RUN cp /tmp/logo.png /app/static/logo.png && \
+    cp /tmp/logo.png /app/static/logo.svg && \
+    cp /tmp/logo.png /app/static/splash.png && \
+    cp /tmp/logo.png /app/static/favicon.png && \
+    cp /tmp/favicon.ico /app/static/favicon.ico && \
+    cp /tmp/logo.png /app/build/logo.png && \
+    cp /tmp/logo.png /app/build/splash.png && \
+    cp /tmp/favicon.ico /app/build/favicon.ico && \
+    cp /tmp/logo.png /app/build/static/logo.png && \
+    cp /tmp/logo.png /app/build/static/splash.png && \
+    cp /tmp/logo.png /app/build/static/favicon.png && \
+    cp /tmp/favicon.ico /app/build/static/favicon.ico && \
+    cp /tmp/logo.png /app/backend/open_webui/static/logo.png && \
+    cp /tmp/logo.png /app/backend/open_webui/static/splash.png && \
+    cp /tmp/logo.png /app/backend/open_webui/static/favicon.png && \
+    cp /tmp/favicon.ico /app/backend/open_webui/static/favicon.ico && \
+    cp /tmp/logo.png /app/backend/static/logo.png 2>/dev/null || true
+
+# Copy branding script
+COPY apply-branding-local.sh /app/apply-branding.sh
+RUN chmod +x /app/apply-branding.sh
+
+# Apply branding to built files
+RUN /app/apply-branding.sh
+
+# Additional branding in Python files if needed
+RUN find /app -name "*.py" -type f -exec grep -l "Open WebUI" {} \; | while read file; do \
+    sed -i 's/Open WebUI/XYNTHOR AI/g' "$file"; \
+    sed -i 's/XYNTHOR AI (Open WebUI)/XYNTHOR AI/g' "$file"; \
+    done || true
+
+# Create a startup script that ensures logos are in place
+RUN echo '#!/bin/bash\n\
+# Ensure logos are in place on startup\n\
+cp /tmp/logo.png /app/static/favicon.png 2>/dev/null || true\n\
+cp /tmp/logo.png /app/static/splash.png 2>/dev/null || true\n\
+cp /tmp/logo.png /app/build/static/favicon.png 2>/dev/null || true\n\
+cp /tmp/logo.png /app/build/static/splash.png 2>/dev/null || true\n\
+# Run original startup\n\
+exec bash /app/backend/start.sh "$@"' > /app/custom-start.sh && \
+    chmod +x /app/custom-start.sh
+
+# Clean up
+RUN rm -f /tmp/logo.png /tmp/favicon.ico
+
+# Fix permissions
+RUN chown -R 1000:1000 /app/static /app/build /app/backend/open_webui/static /app/backend/static 2>/dev/null || true
+
+# Environment variables
+ENV WEBUI_NAME="XYNTHOR AI"
+ENV WEBUI_BRAND_NAME="XYNTHOR AI"
+ENV APP_NAME="XYNTHOR AI"
+ENV XYNTHORAI_ENABLED=true
+ENV XYNTHORAI_MIDDLEWARE_URL=http://xynthorai-middleware:3000
+
+# Switch back to app user
+USER 1000
+
+# Override entrypoint to use our custom start script
+ENTRYPOINT ["/app/custom-start.sh"]
+
+LABEL maintainer="XYNTHORAI System Team" \
+      version="1.0.4" \
+      description="Open WebUI with XYNTHOR branding v4 - symlinks and startup script"
