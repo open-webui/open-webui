@@ -366,7 +366,7 @@ export const unloadModel = async (token: string, tagName: string) => {
 			Authorization: `Bearer ${token}`
 		},
 		body: JSON.stringify({
-			name: tagName
+			model: tagName
 		})
 	}).catch((err) => {
 		error = err;
