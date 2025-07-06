@@ -120,6 +120,8 @@
 
 	const extractInputVariables = (text: string): Record<string, any> => {
 		const regex = /{{\s*([^|}\s]+)\s*\|\s*([^}]+)\s*}}/g;
+		const regularRegex = /{{\s*([^|}\s]+)\s*}}/g;
+
 		const variables: Record<string, any> = {};
 		let match;
 
@@ -128,6 +130,16 @@
 			const varName = match[1].trim();
 			const definition = match[2].trim();
 			variables[varName] = parseVariableDefinition(definition);
+		}
+
+		// Then, extract regular variables (without pipe) - only if not already processed
+		while ((match = regularRegex.exec(text)) !== null) {
+			const varName = match[1].trim();
+
+			// Only add if not already processed as custom variable
+			if (!variables.hasOwnProperty(varName)) {
+				variables[varName] = { type: 'text' }; // Default type for regular variables
+			}
 		}
 
 		return variables;
