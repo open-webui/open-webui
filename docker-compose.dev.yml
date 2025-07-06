@@ -10,7 +10,7 @@ services:
       - "5678:5678"
     volumes:
       # [CRITICAL] Bind mount your local backend code into the container
-      - ./backend:/app/backend
+      - ../open-webui:/app/backend/data
     environment:
       # Set the environment variable to enable your debug key retrieval logic
       - DEBUG_USER_KEYS=True

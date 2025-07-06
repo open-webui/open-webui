@@ -22,7 +22,8 @@ import aiohttp
 import anyio.to_thread
 import requests
 from redis import Redis
-
+from open_webui.models import db_encryption_shim
+import open_webui.models.db_encryption_shim  # registers event listeners
 
 from fastapi import (
     Depends,
