@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { getContext, onMount } from 'svelte';
+	import { getContext, onDestroy, onMount } from 'svelte';
 	const i18n = getContext('i18n');
 
 	import Modal from '$lib/components/common/Modal.svelte';
@@ -185,8 +185,10 @@
 		init();
 	}
 
+	let handleOAuthMessage: (event: MessageEvent) => void;
+
 	onMount(() => {
-		window.addEventListener('message', (event) => {
+		handleOAuthMessage = (event: MessageEvent) => {
 			if (event.origin !== WEBUI_BASE_URL) return;
 
 			const data = event.data;
@@ -203,8 +205,13 @@
 			} catch (e: any) {
 				toast.error($i18n.t(`Failed to process authentication response: ${e.message}`));
 			}
-		});
+		};
+		window.addEventListener('message', handleOAuthMessage);
 		init();
+	});
+
+	onDestroy(() => {
+		window.removeEventListener('message', handleOAuthMessage);
 	});
 </script>
 
