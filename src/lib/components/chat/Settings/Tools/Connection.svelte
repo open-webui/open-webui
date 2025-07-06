@@ -63,7 +63,10 @@
 				/>
 			</div>
 
-			{#if (connection?.auth_type ?? 'bearer') === 'bearer' || (connection?.auth_type ?? 'bearer') === 'oauth'}
+			{#if (connection?.auth_type ?? 'bearer') === 'bearer'}
+				<div class="text-xs text-gray-500 self-center translate-y-[1px] mr-4">
+					{$i18n.t('API Key')}
+				</div>
 				<SensitiveInput
 					inputClassName=" outline-hidden bg-transparent w-full"
 					placeholder={$i18n.t('API Key')}
@@ -71,6 +74,32 @@
 					required={false}
 				/>
 			{/if}
+			{#if (connection?.auth_type ?? 'bearer') === 'oauth'}
+				<div class="text-xs text-gray-500 self-center translate-y-[1px] mr-4">
+					{$i18n.t('OAuth ID Token')}
+				</div>
+				<SensitiveInput
+					inputClassName=" outline-hidden bg-transparent w-full"
+					placeholder={$i18n.t('OAuth ID Token')}
+					bind:value={connection.key}
+					required={false}
+				/>
+			{/if}	
+		</div>
+		<div class="flex w-full mt-2">
+			<div class="flex-1 relative">
+				<div class="text-xs text-gray-500 self-center translate-y-[1px]">
+					{$i18n.t('OAuth Access Token')}
+				</div>
+				{#if (connection?.auth_type ?? 'bearer') === 'oauth'}
+				<SensitiveInput
+					inputClassName=" outline-hidden bg-transparent w-full"
+					placeholder={$i18n.t('OAuth Access Token')}
+					bind:value={connection.oAuthAccessToken}
+					required={false}
+				/>
+				{/if}
+			</div>
 		</div>
 	</Tooltip>
 
