@@ -31,6 +31,7 @@
 	let content = '';
 	let files = [];
 
+	let chatInputElement;
 	let filesInputElement;
 	let inputFiles;
 
@@ -287,8 +288,9 @@
 
 		await tick();
 
-		const chatInputElement = document.getElementById(`chat-input-${id}`);
-		chatInputElement?.focus();
+		if (chatInputElement) {
+			chatInputElement.focus();
+		}
 	};
 
 	$: if (content) {
@@ -297,9 +299,10 @@
 
 	onMount(async () => {
 		window.setTimeout(() => {
-			const chatInput = document.getElementById(`chat-input-${id}`);
-			chatInput?.focus();
-		}, 0);
+			if (chatInputElement) {
+				chatInputElement.focus();
+			}
+		}, 100);
 
 		window.addEventListener('keydown', handleKeyDown);
 		await tick();
@@ -402,7 +405,10 @@
 						recording = false;
 
 						await tick();
-						document.getElementById(`chat-input-${id}`)?.focus();
+
+						if (chatInputElement) {
+							chatInputElement.focus();
+						}
 					}}
 					onConfirm={async (data) => {
 						const { text, filename } = data;
@@ -410,7 +416,10 @@
 						recording = false;
 
 						await tick();
-						document.getElementById(`chat-input-${id}`)?.focus();
+
+						if (chatInputElement) {
+							chatInputElement.focus();
+						}
 					}}
 				/>
 			{:else}
@@ -485,17 +494,21 @@
 								class="scrollbar-hidden font-primary text-left bg-transparent dark:text-gray-100 outline-hidden w-full pt-3 px-1 rounded-xl resize-none h-fit max-h-80 overflow-auto"
 							>
 								<RichTextInput
-									bind:value={content}
-									id={`chat-input-${id}`}
+									bind:this={chatInputElement}
+									json={true}
 									messageInput={true}
-									shiftEnter={!$mobile ||
-										!(
-											'ontouchstart' in window ||
-											navigator.maxTouchPoints > 0 ||
-											navigator.msMaxTouchPoints > 0
-										)}
-									{placeholder}
+									shiftEnter={!($settings?.ctrlEnterToSend ?? false) &&
+										(!$mobile ||
+											!(
+												'ontouchstart' in window ||
+												navigator.maxTouchPoints > 0 ||
+												navigator.msMaxTouchPoints > 0
+											))}
 									largeTextAsFile={$settings?.largeTextAsFile ?? false}
+									onChange={(e) => {
+										const { md } = e;
+										content = md;
+									}}
 									on:keydown={async (e) => {
 										e = e.detail.event;
 										const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
