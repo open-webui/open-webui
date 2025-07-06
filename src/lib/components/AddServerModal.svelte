@@ -31,7 +31,10 @@
 	let auth_type = 'bearer';
 	let oAuthProviders: string[] = [];
 	let oAuthProvider = '';
-	let key = '';
+	let bearerKey = '';
+
+	let oAuthAccessToken = '';
+	let oAuthIdToken = '';
 
 	let popup: WindowProxy | null = null;
 
@@ -56,11 +59,6 @@
 	};
 
 	const verifyHandler = async () => {
-		if (auth_type === 'oauth' && key === '') {
-			toast.error($i18n.t('Please Sign In to your selected provider, or manually enter an access token.'));
-			return;
-		}
-
 		if (url === '') {
 			toast.error($i18n.t('Please enter a valid URL'));
 			return;
@@ -71,12 +69,18 @@
 			return;
 		}
 
+		if (auth_type === 'oauth' && oAuthIdToken === '') {
+			toast.error($i18n.t('Please Sign In to your selected provider, or manually enter an ID token.'));
+			return;
+		}
+
+		const key = auth_type === 'oauth' ? oAuthIdToken : auth_type === 'bearer' ? bearerKey : localStorage.token;
+
 		if (direct) {
-			// TODO: Add support for OAuth verification
-			// This could potentially work out of the box if we wire up the backend correctly
 			const res = await getToolServerData(
-				auth_type === 'bearer' ? key : localStorage.token,
-				path.includes('://') ? path : `${url}${path.startsWith('/') ? '' : '/'}${path}`
+				key,
+				oAuthAccessToken ? oAuthAccessToken : null,
+				path.includes('://') ? path : `${url}${path.startsWith('/') ? '' : '/'}${path}`,
 			).catch((err) => {
 				toast.error($i18n.t('Connection failed'));
 			});
@@ -86,7 +90,7 @@
 				console.debug('Connection successful', res);
 			}
 		} else {
-			const res = await verifyToolServerConnection(localStorage.token, {
+			const res = await verifyToolServerConnection(localStorage.token, oAuthAccessToken, {
 				url,
 				path,
 				auth_type,
@@ -111,6 +115,7 @@
 	};
 
 	const submitHandler = async () => {
+		const key = auth_type === 'oauth' ? oAuthIdToken : auth_type === 'bearer' ? bearerKey : localStorage.token;
 		loading = true;
 
 		// remove trailing slash from url
@@ -121,6 +126,7 @@
 			path,
 			auth_type,
 			key,
+			oAuthAccessToken,
 			config: {
 				enable: enable,
 				access_control: accessControl
@@ -138,7 +144,9 @@
 
 		url = '';
 		path = 'openapi.json';
-		key = '';
+		bearerKey = '';
+		oAuthAccessToken = '';
+		oAuthIdToken = '';
 		auth_type = 'bearer';
 
 		name = '';
@@ -154,7 +162,9 @@
 			path = connection?.path ?? 'openapi.json';
 
 			auth_type = connection?.auth_type ?? 'bearer';
-			key = connection?.key ?? '';
+			bearerKey = connection?.key ?? '';
+			oAuthIdToken = connection?.key ?? '';
+			oAuthAccessToken = connection?.oAuthAccessToken ?? '';
 
 			name = connection.info?.name ?? '';
 			description = connection.info?.description ?? '';
@@ -183,7 +193,8 @@
 
 			try {
 				if (data.toolserverAuthSuccess) {
-					key = data.accessToken;
+					oAuthIdToken = data.idToken;
+					oAuthAccessToken = data.accessToken;
 					toast.success($i18n.t(`Authentication successful! Access token was set.`));
 					if (popup) popup.close();
 				} else {
@@ -340,7 +351,7 @@
 										{#if auth_type === 'bearer'}
 											<SensitiveInput
 												className="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
-												bind:value={key}
+												bind:value={bearerKey}
 												placeholder={$i18n.t('API Key')}
 												required={false}
 											/>
@@ -353,7 +364,7 @@
 												class="ml-auto px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
 												on:click={() => startOAuthFlow()}
 											>
-												{$i18n.t(key === '' ? 'Sign In' : 'Refresh Token')}
+												{$i18n.t(oAuthIdToken === '' ? 'Sign In' : 'Refresh Token')}
 											</button>
 										{/if}
 									</div>
@@ -361,10 +372,25 @@
 
 								{#if auth_type === 'oauth'}
 									<div class="mt-2">
+										<div class="text-xs text-gray-500 self-center translate-y-[1px]">
+											{$i18n.t('OAuth ID Token (required)')}
+										</div>
 										<SensitiveInput
 											className="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
-											bind:value={key}
-											placeholder={$i18n.t('Access Token')}
+											bind:value={oAuthIdToken}
+											placeholder={$i18n.t('OAuth ID Token')}
+											required={true}
+										/>
+									</div>
+
+									<div class="mt-2">
+										<div class="text-xs text-gray-500 self-center translate-y-[1px]">
+											{$i18n.t('OAuth Access Token')}
+										</div>
+										<SensitiveInput
+											className="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
+											bind:value={oAuthAccessToken}
+											placeholder={$i18n.t('OAuth Access Token')}
 											required={false}
 										/>
 									</div>
