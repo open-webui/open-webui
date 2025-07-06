@@ -192,9 +192,7 @@
 			view.dispatch(tr);
 		} else if (text === '') {
 			// Empty: replace with empty paragraph using tr
-			const emptyParagraph = schema.nodes.paragraph.create();
-			tr.replaceSelectionWith(emptyParagraph, false);
-			view.dispatch(tr);
+			editor.commands.clearContent();
 		} else {
 			// Single line: create paragraph with text
 			const paragraph = schema.nodes.paragraph.create({}, schema.text(text));
