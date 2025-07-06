@@ -225,7 +225,8 @@
 		if (toolServer) {
 			console.log(toolServer);
 			const res = await executeToolServer(
-				(toolServer?.auth_type ?? 'bearer') === 'bearer' ? toolServer?.key : localStorage.token,
+				(toolServer?.auth_type ?? 'bearer') === 'bearer' || (toolServer?.auth_type ?? 'oauth') === 'oauth' ? toolServer?.key : localStorage.token,
+				(toolServer?.auth_type ?? 'bearer') === 'oauth' ? toolServer?.oAuthAccessToken : null,
 				toolServer.url,
 				data?.name,
 				data?.params,

@@ -292,7 +292,7 @@ export const getTaskIdsByChatId = async (token: string, chat_id: string) => {
 	return res;
 };
 
-export const getToolServerData = async (token: string, url: string) => {
+export const getToolServerData = async (token: string, oAuthAccessToken: string | null = null, url: string) => {
 	let error = null;
 
 	const res = await fetch(`${url}`, {
@@ -300,7 +300,8 @@ export const getToolServerData = async (token: string, url: string) => {
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
+			...(token && { authorization: `Bearer ${token}` }),
+			...(oAuthAccessToken && { 'X-Access-Token': oAuthAccessToken })
 		}
 	})
 		.then(async (res) => {
@@ -383,6 +384,7 @@ export const getToolServerOAuthProviders = async () => {
 
 export const executeToolServer = async (
 	token: string,
+	oAuthAccessToken: string | null = null,
 	url: string,
 	name: string,
 	params: Record<string, any>,
@@ -460,7 +462,8 @@ export const executeToolServer = async (
 		// Prepare headers and request options
 		const headers: Record<string, string> = {
 			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
+			...(token && { authorization: `Bearer ${token}` }),
+			...(oAuthAccessToken && { 'X-Access-Token': oAuthAccessToken })
 		};
 
 		let requestOptions: RequestInit = {

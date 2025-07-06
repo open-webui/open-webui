@@ -63,7 +63,7 @@
 				/>
 			</div>
 
-			{#if (connection?.auth_type ?? 'bearer') === 'bearer'}
+			{#if (connection?.auth_type ?? 'bearer') === 'bearer' || (connection?.auth_type ?? 'bearer') === 'oauth'}
 				<SensitiveInput
 					inputClassName=" outline-hidden bg-transparent w-full"
 					placeholder={$i18n.t('API Key')}
