@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getContext, onMount } from 'svelte';
+	import { getContext, onMount, tick } from 'svelte';
 	import { models, config } from '$lib/stores';
 
 	import { toast } from 'svelte-sonner';
@@ -36,6 +36,14 @@
 			}
 		}
 		loading = false;
+
+		await tick();
+
+		const firstInputElement = document.getElementById('input-variable-0');
+		if (firstInputElement) {
+			console.log('Focusing first input element:', firstInputElement);
+			firstInputElement.focus();
+		}
 	};
 
 	$: if (show) {
@@ -86,6 +94,7 @@
 													<select
 														class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100 dark:border-gray-850"
 														bind:value={variableValues[variable]}
+														id="input-variable-{idx}"
 													>
 														{#each variables[variable]?.options ?? [] as option}
 															<option value={option} selected={option === variableValues[variable]}>
@@ -100,6 +109,7 @@
 																type="checkbox"
 																bind:checked={variableValues[variable]}
 																class="size-3.5 rounded cursor-pointer border border-gray-200 dark:border-gray-700"
+																id="input-variable-{idx}"
 															/>
 														</div>
 
@@ -119,6 +129,7 @@
 																type="color"
 																class="size-6 rounded cursor-pointer border border-gray-200 dark:border-gray-700"
 																value={variableValues[variable]}
+																id="input-variable-{idx}"
 																on:input={(e) => {
 																	// Convert the color value to uppercase immediately
 																	variableValues[variable] = e.target.value.toUpperCase();
@@ -142,6 +153,7 @@
 														placeholder={variables[variable]?.placeholder ?? ''}
 														bind:value={variableValues[variable]}
 														autocomplete="off"
+														id="input-variable-{idx}"
 														required
 													/>
 												{:else if variables[variable]?.type === 'datetime-local'}
@@ -151,6 +163,7 @@
 														placeholder={variables[variable]?.placeholder ?? ''}
 														bind:value={variableValues[variable]}
 														autocomplete="off"
+														id="input-variable-{idx}"
 														required
 													/>
 												{:else if variables[variable]?.type === 'email'}
@@ -160,6 +173,7 @@
 														placeholder={variables[variable]?.placeholder ?? ''}
 														bind:value={variableValues[variable]}
 														autocomplete="off"
+														id="input-variable-{idx}"
 														required
 													/>
 												{:else if variables[variable]?.type === 'month'}
@@ -169,6 +183,7 @@
 														placeholder={variables[variable]?.placeholder ?? ''}
 														bind:value={variableValues[variable]}
 														autocomplete="off"
+														id="input-variable-{idx}"
 														required
 													/>
 												{:else if variables[variable]?.type === 'number'}
@@ -178,6 +193,7 @@
 														placeholder={variables[variable]?.placeholder ?? ''}
 														bind:value={variableValues[variable]}
 														autocomplete="off"
+														id="input-variable-{idx}"
 														required
 													/>
 												{:else if variables[variable]?.type === 'range'}
@@ -187,6 +203,7 @@
 														placeholder={variables[variable]?.placeholder ?? ''}
 														bind:value={variableValues[variable]}
 														autocomplete="off"
+														id="input-variable-{idx}"
 														required
 													/>
 												{:else if variables[variable]?.type === 'tel'}
@@ -196,6 +213,7 @@
 														placeholder={variables[variable]?.placeholder ?? ''}
 														bind:value={variableValues[variable]}
 														autocomplete="off"
+														id="input-variable-{idx}"
 														required
 													/>
 												{:else if variables[variable]?.type === 'text'}
@@ -205,6 +223,7 @@
 														placeholder={variables[variable]?.placeholder ?? ''}
 														bind:value={variableValues[variable]}
 														autocomplete="off"
+														id="input-variable-{idx}"
 														required
 													/>
 												{:else if variables[variable]?.type === 'time'}
@@ -214,6 +233,7 @@
 														placeholder={variables[variable]?.placeholder ?? ''}
 														bind:value={variableValues[variable]}
 														autocomplete="off"
+														id="input-variable-{idx}"
 														required
 													/>
 												{:else if variables[variable]?.type === 'url'}
@@ -223,6 +243,7 @@
 														placeholder={variables[variable]?.placeholder ?? ''}
 														bind:value={variableValues[variable]}
 														autocomplete="off"
+														id="input-variable-{idx}"
 														required
 													/>
 												{:else if variables[variable]?.type === 'map'}
@@ -253,6 +274,7 @@
 														placeholder={variables[variable]?.placeholder ?? ''}
 														bind:value={variableValues[variable]}
 														autocomplete="off"
+														id="input-variable-{idx}"
 														required
 													/>
 												{/if}
