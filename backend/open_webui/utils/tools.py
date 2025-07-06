@@ -94,7 +94,7 @@ def get_tools(
                     auth_type = tool_server_connection.get("auth_type", "bearer")
                     token = None
 
-                    if auth_type == "bearer":
+                    if auth_type == "bearer" or auth_type == "oauth":
                         token = tool_server_connection.get("key", "")
                     elif auth_type == "session":
                         token = request.state.token.credentials
@@ -507,7 +507,7 @@ async def get_tool_servers_data(
             auth_type = server.get("auth_type", "bearer")
             token = None
 
-            if auth_type == "bearer":
+            if auth_type == "bearer" or auth_type == "oauth":
                 token = server.get("key", "")
             elif auth_type == "session":
                 token = session_token

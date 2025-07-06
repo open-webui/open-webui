@@ -123,7 +123,7 @@ async def verify_tool_servers_config(
     try:
 
         token = None
-        if form_data.auth_type == "bearer":
+        if form_data.auth_type == "bearer" or form_data.auth_type == "oauth":
             token = form_data.key
         elif form_data.auth_type == "session":
             token = request.state.token.credentials

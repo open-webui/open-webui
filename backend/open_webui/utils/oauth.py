@@ -579,7 +579,7 @@ class ToolServerOAuthManager:
             raise HTTPException(400, detail="Invalid state parameter")
 
         return {
-            "access_token": token["access_token"],
+            "access_token": token.get("access_token"),
             "id_token": token.get("id_token"),
             "refresh_token": token.get("refresh_token"),
             "expires_at": token.get("expires_at", 0),
