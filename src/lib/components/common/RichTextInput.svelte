@@ -18,7 +18,6 @@
 
 	import { Fragment } from 'prosemirror-model';
 	import { EditorState, Plugin, PluginKey, TextSelection } from 'prosemirror-state';
-	import { Fragment } from 'prosemirror-model';
 	import { Decoration, DecorationSet } from 'prosemirror-view';
 	import { Editor } from '@tiptap/core';
 
