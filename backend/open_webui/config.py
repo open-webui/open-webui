@@ -616,7 +616,11 @@ def load_oauth_providers():
 
 load_oauth_providers()
 
+####################################
+# Tool Server OAuth Providers
+####################################
 
+# Google
 TOOL_GOOGLE_CLIENT_ID = PersistentConfig(
     "TOOL_GOOGLE_CLIENT_ID",
     "toolserver.google.client_id",
@@ -641,6 +645,7 @@ TOOL_GOOGLE_SCOPE = PersistentConfig(
     os.environ.get("TOOL_GOOGLE_SCOPE", ""),
 )
 
+# Atlassian
 TOOL_ATLASSIAN_CLIENT_ID = PersistentConfig(
     "TOOL_ATLASSIAN_CLIENT_ID",
     "toolserver.atlassian.client_id",
@@ -653,16 +658,46 @@ TOOL_ATLASSIAN_CLIENT_SECRET = PersistentConfig(
     os.environ.get("TOOL_ATLASSIAN_CLIENT_SECRET", ""),
 )
 
+TOOL_ATLASSIAN_AUTHORIZE_URL = PersistentConfig(
+    "TOOL_ATLASSIAN_AUTHORIZE_URL",
+    "toolserver.atlassian.authorize_url",
+    os.environ.get("TOOL_ATLASSIAN_AUTHORIZE_URL", "https://auth.atlassian.com/authorize"),
+)
+
+TOOL_ATLASSIAN_API_BASE_URL = PersistentConfig(
+    "TOOL_ATLASSIAN_API_BASE_URL",
+    "toolserver.atlassian.api_base_url",
+    os.environ.get("TOOL_ATLASSIAN_API_BASE_URL", "https://mcp.atlassian.com"),
+)
+
 TOOL_ATLASSIAN_REDIRECT_URI = PersistentConfig(
     "TOOL_ATLASSIAN_REDIRECT_URI",
     "toolserver.atlassian.redirect_uri",
     os.environ.get("TOOL_ATLASSIAN_REDIRECT_URI", ""),
 )
 
+TOOL_ATLASSIAN_USERINFO_ENDPOINT = PersistentConfig(
+    "TOOL_ATLASSIAN_USERINFO_ENDPOINT",
+    "toolserver.atlassian.userinfo_endpoint",
+    os.environ.get("TOOL_ATLASSIAN_USERINFO_ENDPOINT", "https://api.atlassian.com/me"),
+)
+
 TOOL_ATLASSIAN_SCOPE = PersistentConfig(
     "TOOL_ATLASSIAN_SCOPE",
     "toolserver.atlassian.scope",
     os.environ.get("TOOL_ATLASSIAN_SCOPE", ""),
+)
+
+TOOL_ATLASSIAN_AUDIENCE = PersistentConfig(
+    "TOOL_ATLASSIAN_AUDIENCE",
+    "toolserver.atlassian.audience",
+    os.environ.get("TOOL_ATLASSIAN_AUDIENCE", "mcp.atlassian.com"),
+)
+
+TOOL_ATLASSIAN_ACCESS_TOKEN_URL = PersistentConfig(
+    "TOOL_ATLASSIAN_ACCESS_TOKEN_URL",
+    "toolserver.atlassian.access_token_url",
+    os.environ.get("TOOL_ATLASSIAN_ACCESS_TOKEN_URL", "https://auth.atlassian.com/oauth/token"),
 )
 
 def load_tool_server_oauth_providers():
@@ -690,13 +725,13 @@ def load_tool_server_oauth_providers():
                 name="atlassian",
                 client_id=TOOL_ATLASSIAN_CLIENT_ID.value,
                 client_secret=TOOL_ATLASSIAN_CLIENT_SECRET.value,
-                authorize_url="https://auth.atlassian.com/authorize",
-                access_token_url="https://auth.atlassian.com/oauth/token",
-                api_base_url="https://mcp.atlassian.com",
-                userinfo_endpoint="https://api.atlassian.com/me",
+                authorize_url=TOOL_ATLASSIAN_AUTHORIZE_URL.value,
+                access_token_url=TOOL_ATLASSIAN_ACCESS_TOKEN_URL.value,
+                api_base_url=TOOL_ATLASSIAN_API_BASE_URL.value,
+                userinfo_endpoint=TOOL_ATLASSIAN_USERINFO_ENDPOINT.value,
                 client_kwargs={
                     "scope": TOOL_ATLASSIAN_SCOPE.value,
-                    "audience": "mcp.atlassian.com",
+                    "audience": TOOL_ATLASSIAN_AUDIENCE.value,
                     "prompt": "consent",
                 },
                 redirect_uri=TOOL_ATLASSIAN_REDIRECT_URI.value,
