@@ -637,6 +637,9 @@ async def get_ollama_versions(request: Request, url_idx: Optional[int] = None):
 
 class ModelNameForm(BaseModel):
     model: str
+    model_config = ConfigDict(
+        extra="allow",
+    )
 
 
 @router.post("/api/unload")
