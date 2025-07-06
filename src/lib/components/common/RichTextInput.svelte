@@ -136,7 +136,7 @@
 			const nodes = lines.map(
 				(line, index) =>
 					index === 0
-						? state.schema.text(line) // First line is plain text
+						? state.schema.text(line ? line : []) // First line is plain text
 						: state.schema.nodes.paragraph.create({}, line ? state.schema.text(line) : undefined) // Subsequent lines are paragraphs
 			);
 
