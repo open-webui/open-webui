@@ -45,7 +45,7 @@
 				show = false;
 			}}
 		>
-			<div class=" px-3.5 py-2.5 h-screen">
+			<div class=" px-3.5 py-2.5 h-screen flex flex-col">
 				<slot />
 			</div>
 		</Drawer>

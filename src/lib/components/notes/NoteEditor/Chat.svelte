@@ -186,10 +186,10 @@
 	});
 </script>
 
-<div class="flex items-center mb-2">
-	<div class=" -translate-x-1.5">
+<div class="flex items-center mb-2 pt-1">
+	<div class=" -translate-x-1.5 flex items-center">
 		<button
-			class="p-1.5 bg-transparent transition rounded-lg"
+			class="p-0.5 bg-transparent transition rounded-lg"
 			on:click={() => {
 				show = !show;
 			}}

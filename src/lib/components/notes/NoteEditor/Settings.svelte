@@ -9,10 +9,10 @@
 	export let selectedModelId = '';
 </script>
 
-<div class="flex items-center mb-2">
-	<div class=" -translate-x-1.5">
+<div class="flex items-center mb-2 pt-1">
+	<div class=" -translate-x-1.5 flex items-center">
 		<button
-			class="p-1.5 bg-transparent transition rounded-lg"
+			class="p-0.5 bg-transparent transition rounded-lg"
 			on:click={() => {
 				show = !show;
 			}}
@@ -21,7 +21,11 @@
 		</button>
 	</div>
 
-	<div class=" font-medium text-base">Settings</div>
+	<div class=" font-medium text-base flex items-center gap-1">
+		<div>
+			{$i18n.t('Settings')}
+		</div>
+	</div>
 </div>
 
 <div class="mt-1">
