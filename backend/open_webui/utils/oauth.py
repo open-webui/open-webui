@@ -79,23 +79,21 @@ auth_manager_config.JWT_EXPIRES_IN = JWT_EXPIRES_IN
 auth_manager_config.OAUTH_UPDATE_PICTURE_ON_LOGIN = OAUTH_UPDATE_PICTURE_ON_LOGIN
 
 
-def set_aak_role(user_data):
-    log.debug("Running AAK Role management")
-    log.debug(user_data)
-
-    claims_roles = user_data.get("role", "")
-
-    log.debug(f"Using aak_claims_role {claims_roles}.")
-
-    if "builder" in claims_roles:
-        user_data['groups'].append("Builder")
-
-    log.debug(f"Using role-groups {user_data.get('groups', '')}.")
-
-    return user_data
-
-
 def set_aak_groups(user_data):
+    """
+    Set AAK groups based on AAK claims. AAK groups need to be parsed from a collection of AAK claims,
+    so we cannot rely on Open WebUI's claims mapping. Parses the relevant AAK claims and adds them
+    to the "groups" list. This enables us to rely on Open WebUI's role management for user role assignment.
+
+    Note: ENABLE_OAUTH_GROUP_MANAGEMENT and ENABLE_OAUTH_GROUP_CREATION must be set to 'true'
+
+    Args:
+        user_data (dict): The decoded OIDC token
+
+    Returns:
+        The decoded OIDC token with the AAK group names added to the "groups" list.
+    """
+
     log.debug("Running AAK Group management")
     log.debug(user_data)
 
@@ -115,6 +113,35 @@ def set_aak_groups(user_data):
         user_data['groups'].append(user_data.get("Office", "") + " (" + dept_ids[4] + ")")
 
     log.debug(f"Using groups {user_data.get('groups', '')}.")
+
+    return user_data
+
+
+def set_aak_role(user_data):
+    """
+    Set the AAK role based on AAK claims. For "builders" we cannot map to a native Open WebUI role.
+    Instead, we add the role "Builder" to the list of groups.
+
+    Note: ENABLE_OAUTH_GROUP_MANAGEMENT and ENABLE_OAUTH_GROUP_CREATION must be set to 'true'
+
+    Args:
+        user_data (dict): The decoded OIDC token
+
+    Returns:
+        The decoded OIDC token with the AAK role added to the "groups" list.
+    """
+
+    log.debug("Running AAK Role management")
+    log.debug(user_data)
+
+    claims_roles = user_data.get("role", "")
+
+    log.debug(f"Using aak_claims_role {claims_roles}.")
+
+    if "builder" in claims_roles:
+        user_data['groups'].append("Builder")
+
+    log.debug(f"Using role-groups {user_data.get('groups', '')}.")
 
     return user_data
 
