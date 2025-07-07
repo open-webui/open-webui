@@ -34,6 +34,16 @@
 		return urlParams.get(key);
 	};
 
+	const getHashParamValue = (key) => {
+		const hash = window.location.hash;
+		if (!hash) {
+			return null;
+		}
+		const hashString = hash.substring(1);
+		const urlParams = new URLSearchParams(hashString);
+		return urlParams.get(key);
+	};
+
 	const setSessionUser = async (sessionUser) => {
 		if (sessionUser) {
 			console.log(sessionUser);
@@ -45,7 +55,7 @@
 			await user.set(sessionUser);
 			await config.set(await getBackendConfig());
 
-			const redirectPath = querystringValue('redirect') || '/';
+			const redirectPath = querystringValue('redirect') || getHashParamValue('redirect') || '/';
 			goto(redirectPath);
 		}
 	};
@@ -153,6 +163,14 @@
 			onboarding = $config?.onboarding ?? false;
 		}
 	});
+
+	const getLoginUrl = (provider) => {
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    const redirectPath = urlParams.get('redirect') || '/';
+    
+    return `${WEBUI_BASE_URL}/oauth/${provider}/login?state=${encodeURIComponent(redirectPath)}`;
+  }
 </script>
 
 <svelte:head>
@@ -373,7 +391,7 @@
 									<button
 										class="flex justify-center items-center bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5"
 										on:click={() => {
-											window.location.href = `${WEBUI_BASE_URL}/oauth/google/login`;
+											window.location.href = getLoginUrl('google');
 										}}
 									>
 										<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" class="size-6 mr-3">
@@ -398,7 +416,7 @@
 									<button
 										class="flex justify-center items-center bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5"
 										on:click={() => {
-											window.location.href = `${WEBUI_BASE_URL}/oauth/microsoft/login`;
+											window.location.href = getLoginUrl('microsoft');
 										}}
 									>
 										<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21 21" class="size-6 mr-3">
@@ -423,7 +441,7 @@
 									<button
 										class="flex justify-center items-center bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5"
 										on:click={() => {
-											window.location.href = `${WEBUI_BASE_URL}/oauth/github/login`;
+											window.location.href = getLoginUrl('github');
 										}}
 									>
 										<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="size-6 mr-3">
@@ -439,7 +457,7 @@
 									<button
 										class="flex justify-center items-center bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5"
 										on:click={() => {
-											window.location.href = `${WEBUI_BASE_URL}/oauth/oidc/login`;
+											window.location.href = getLoginUrl('oidc');
 										}}
 									>
 										<svg

@@ -6,6 +6,7 @@ import uuid
 import json
 
 import aiohttp
+import urllib.parse
 from authlib.integrations.starlette_client import OAuth
 from authlib.oidc.core import UserInfo
 from fastapi import (
@@ -337,10 +338,13 @@ class OAuthManager:
         redirect_uri = OAUTH_PROVIDERS[provider].get("redirect_uri") or request.url_for(
             "oauth_callback", provider=provider
         )
+        state = request.query_params.get("state")
+        log.info(f"handle_login: Saving state to session: {state}")
+        request.session["oauth_redirect_state"] = state
         client = self.get_client(provider)
         if client is None:
             raise HTTPException(404)
-        return await client.authorize_redirect(request, redirect_uri)
+        return await client.authorize_redirect(request, redirect_uri, state=state)
 
     async def handle_callback(self, request, provider, response):
         if provider not in OAUTH_PROVIDERS:
@@ -351,6 +355,14 @@ class OAuthManager:
         except Exception as e:
             log.warning(f"OAuth callback error: {e}")
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+
+        state_from_url = request.query_params.get("state")
+        state_from_session = request.session.pop("oauth_redirect_state", None)
+        log.info(f"handle_callback: State from URL: {state_from_url}, State from Session: {state_from_session}")
+        if not state_from_session or state_from_session != state_from_url:
+            log.warning("OAuth callback state mismatch. Potential CSRF attack.")
+            raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+        trusted_redirect_path = state_from_session
         user_data: UserInfo = token.get("userinfo")
         if not user_data or auth_manager_config.OAUTH_EMAIL_CLAIM not in user_data:
             user_data: UserInfo = await client.userinfo(token=token)
@@ -536,10 +548,23 @@ class OAuthManager:
                 secure=WEBUI_AUTH_COOKIE_SECURE,
             )
         # Redirect back to the frontend with the JWT token
+        redirect_path_from_state = trusted_redirect_path
+        log.info("redirect_path_from_state: " + str(redirect_path_from_state))
+        
+        # This existing logic is now safe to use
+        if redirect_path_from_state and redirect_path_from_state.startswith("/"):
+            # An additional security check to prevent redirecting to external sites like "//evil.com"
+            if redirect_path_from_state.startswith("//"):
+                final_redirect_path = "/"
+            else:
+                final_redirect_path = redirect_path_from_state
+        else:
+            final_redirect_path = "/"
 
         redirect_base_url = str(request.app.state.config.WEBUI_URL or request.base_url)
         if redirect_base_url.endswith("/"):
             redirect_base_url = redirect_base_url[:-1]
-        redirect_url = f"{redirect_base_url}/auth#token={jwt_token}"
+        encoded_redirect_path = urllib.parse.quote(final_redirect_path, safe='')
+        redirect_url = f"{redirect_base_url}/auth#token={jwt_token}&redirect={encoded_redirect_path}"
 
         return RedirectResponse(url=redirect_url, headers=response.headers)
