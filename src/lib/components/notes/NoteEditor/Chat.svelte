@@ -98,16 +98,20 @@
 					...messages
 				].filter((message) => message),
 				files: [
-					{
-						id: `note:${note?.id ?? 'note'}`,
-						name: note?.name ?? 'Note',
-						file: {
-							data: {
-								content: note?.data?.content?.md ?? ''
-							}
-						},
-						context: 'full'
-					}, // Include the note content as a file
+					...(note?.data?.content?.md
+						? [
+								{
+									id: `note:${note?.id ?? 'note'}`,
+									name: note?.name ?? 'Note',
+									file: {
+										data: {
+											content: note?.data?.content?.md
+										}
+									},
+									context: 'full'
+								}
+							]
+						: []), // Include the note content as a file
 					...files
 				]
 			},
