@@ -942,6 +942,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     context_string += (
                         f'<source id="{citation_idx[citation_id]}"'
                         + (f' name="{source_name}"' if source_name else "")
+                        + (f' file_id="{doc_meta.get("file_id", "")}"')
                         + f">{doc_context}</source>\n"
                     )
 
