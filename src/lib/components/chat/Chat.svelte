@@ -797,6 +797,7 @@
 
 		chatFiles = [];
 		params = {};
+		contextFiles = []; //AXL:김정민: 파일 컨텍스트 초기화 20250704
 
 		if ($page.url.searchParams.get('youtube')) {
 			uploadYoutubeTranscription(
