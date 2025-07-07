@@ -61,8 +61,8 @@
 
 	<Pane
 		bind:pane
-		defaultSize={30}
-		minSize={30}
+		defaultSize={35}
+		minSize={35}
 		onCollapse={() => {
 			show = false;
 		}}
@@ -72,7 +72,7 @@
 		{#if show}
 			<div class="flex max-h-full min-h-full">
 				<div
-					class="w-full pl-1.5 pr-2.5 pt-2 bg-white dark:shadow-lg dark:bg-gray-850 border border-gray-100 dark:border-gray-850 z-40 pointer-events-auto overflow-y-auto scrollbar-hidden"
+					class="w-full pl-1.5 pr-2.5 pt-2 bg-white dark:shadow-lg dark:bg-gray-850 border border-gray-100 dark:border-gray-850 z-40 pointer-events-auto overflow-y-auto scrollbar-hidden flex flex-col"
 				>
 					<slot />
 				</div>

@@ -31,16 +31,21 @@
 	let content = '';
 	let files = [];
 
-	let chatInputElement;
+	export let chatInputElement;
 	let filesInputElement;
 	let inputFiles;
 
 	export let typingUsers = [];
+	export let inputLoading = false;
 
-	export let onSubmit: Function;
-	export let onChange: Function;
+	export let onSubmit: Function = (e) => {};
+	export let onChange: Function = (e) => {};
+	export let onStop: Function = (e) => {};
+
 	export let scrollEnd = true;
 	export let scrollToBottom: Function = () => {};
+
+	export let acceptFiles = true;
 
 	const screenCaptureHandler = async () => {
 		try {
@@ -260,7 +265,7 @@
 	const onDrop = async (e) => {
 		e.preventDefault();
 
-		if (e.dataTransfer?.files) {
+		if (e.dataTransfer?.files && acceptFiles) {
 			const inputFiles = Array.from(e.dataTransfer?.files);
 			if (inputFiles && inputFiles.length > 0) {
 				console.log(inputFiles);
@@ -330,27 +335,30 @@
 
 <FilesOverlay show={draggedOver} />
 
-<input
-	bind:this={filesInputElement}
-	bind:files={inputFiles}
-	type="file"
-	hidden
-	multiple
-	on:change={async () => {
-		if (inputFiles && inputFiles.length > 0) {
-			inputFilesHandler(Array.from(inputFiles));
-		} else {
-			toast.error($i18n.t(`File not found.`));
-		}
+{#if acceptFiles}
+	<input
+		bind:this={filesInputElement}
+		bind:files={inputFiles}
+		type="file"
+		hidden
+		multiple
+		on:change={async () => {
+			if (inputFiles && inputFiles.length > 0) {
+				inputFilesHandler(Array.from(inputFiles));
+			} else {
+				toast.error($i18n.t(`File not found.`));
+			}
 
-		filesInputElement.value = '';
-	}}
-/>
+			filesInputElement.value = '';
+		}}
+	/>
+{/if}
+
 <div class="bg-transparent">
 	<div
 		class="{($settings?.widescreenMode ?? null)
 			? 'max-w-full'
-			: 'max-w-6xl'} px-2.5 mx-auto inset-x-0 relative"
+			: 'max-w-6xl'}  mx-auto inset-x-0 relative"
 	>
 		<div class="absolute top-0 left-0 right-0 mx-auto inset-x-0 bg-transparent flex justify-center">
 			<div class="flex flex-col px-3 w-full">
@@ -492,7 +500,7 @@
 
 						<div class="px-2.5">
 							<div
-								class="scrollbar-hidden font-primary text-left bg-transparent dark:text-gray-100 outline-hidden w-full pt-3 px-1 rounded-xl resize-none h-fit max-h-80 overflow-auto"
+								class="scrollbar-hidden font-primary text-left bg-transparent dark:text-gray-100 outline-hidden w-full pt-3 px-1 resize-none h-fit max-h-80 overflow-auto"
 							>
 								<RichTextInput
 									bind:this={chatInputElement}
@@ -547,29 +555,33 @@
 
 						<div class=" flex justify-between mb-2.5 mt-1.5 mx-0.5">
 							<div class="ml-1 self-end flex space-x-1">
-								<InputMenu
-									{screenCaptureHandler}
-									uploadFilesHandler={() => {
-										filesInputElement.click();
-									}}
-								>
-									<button
-										class="bg-transparent hover:bg-white/80 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5 outline-hidden focus:outline-hidden"
-										type="button"
-										aria-label="More"
-									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											viewBox="0 0 20 20"
-											fill="currentColor"
-											class="size-5"
+								<slot name="menu">
+									{#if acceptFiles}
+										<InputMenu
+											{screenCaptureHandler}
+											uploadFilesHandler={() => {
+												filesInputElement.click();
+											}}
 										>
-											<path
-												d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"
-											/>
-										</svg>
-									</button>
-								</InputMenu>
+											<button
+												class="bg-transparent hover:bg-white/80 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5 outline-hidden focus:outline-hidden"
+												type="button"
+												aria-label="More"
+											>
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													viewBox="0 0 20 20"
+													fill="currentColor"
+													class="size-5"
+												>
+													<path
+														d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"
+													/>
+												</svg>
+											</button>
+										</InputMenu>
+									{/if}
+								</slot>
 							</div>
 
 							<div class="self-end flex space-x-1 mr-1">
@@ -620,31 +632,57 @@
 								{/if}
 
 								<div class=" flex items-center">
-									<div class=" flex items-center">
-										<Tooltip content={$i18n.t('Send message')}>
-											<button
-												id="send-message-button"
-												class="{content !== '' || files.length !== 0
-													? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
-													: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
-												type="submit"
-												disabled={content === '' && files.length === 0}
-											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													viewBox="0 0 16 16"
-													fill="currentColor"
-													class="size-5"
+									{#if inputLoading && onStop}
+										<div class=" flex items-center">
+											<Tooltip content={$i18n.t('Stop')}>
+												<button
+													class="bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5"
+													on:click={() => {
+														onStop();
+													}}
 												>
-													<path
-														fill-rule="evenodd"
-														d="M8 14a.75.75 0 0 1-.75-.75V4.56L4.03 7.78a.75.75 0 0 1-1.06-1.06l4.5-4.5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.75 4.56v8.69A.75.75 0 0 1 8 14Z"
-														clip-rule="evenodd"
-													/>
-												</svg>
-											</button>
-										</Tooltip>
-									</div>
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														viewBox="0 0 24 24"
+														fill="currentColor"
+														class="size-5"
+													>
+														<path
+															fill-rule="evenodd"
+															d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm6-2.438c0-.724.588-1.312 1.313-1.312h4.874c.725 0 1.313.588 1.313 1.313v4.874c0 .725-.588 1.313-1.313 1.313H9.564a1.312 1.312 0 01-1.313-1.313V9.564z"
+															clip-rule="evenodd"
+														/>
+													</svg>
+												</button>
+											</Tooltip>
+										</div>
+									{:else}
+										<div class=" flex items-center">
+											<Tooltip content={$i18n.t('Send message')}>
+												<button
+													id="send-message-button"
+													class="{content !== '' || files.length !== 0
+														? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
+														: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
+													type="submit"
+													disabled={content === '' && files.length === 0}
+												>
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														viewBox="0 0 16 16"
+														fill="currentColor"
+														class="size-5"
+													>
+														<path
+															fill-rule="evenodd"
+															d="M8 14a.75.75 0 0 1-.75-.75V4.56L4.03 7.78a.75.75 0 0 1-1.06-1.06l4.5-4.5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.75 4.56v8.69A.75.75 0 0 1 8 14Z"
+															clip-rule="evenodd"
+														/>
+													</svg>
+												</button>
+											</Tooltip>
+										</div>
+									{/if}
 								</div>
 							</div>
 						</div>

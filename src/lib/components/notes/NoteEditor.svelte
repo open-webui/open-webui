@@ -99,6 +99,8 @@
 	let displayMediaRecord = false;
 
 	let showPanel = false;
+	let selectedPanel = 'chat';
+
 	let showDeleteConfirm = false;
 
 	let dragged = false;
@@ -677,6 +679,9 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 	import { PaneGroup, Pane, PaneResizer } from 'paneforge';
 	import XMark from '../icons/XMark.svelte';
 	import MenuLines from '../icons/MenuLines.svelte';
+	import ChatBubbleOval from '../icons/ChatBubbleOval.svelte';
+	import Settings from './NoteEditor/Settings.svelte';
+	import Chat from './NoteEditor/Chat.svelte';
 </script>
 
 <FilesOverlay show={dragged} />
@@ -709,7 +714,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 						<div class="w-full flex items-center">
 							<div
 								class="{$showSidebar
-									? 'md:hidden'
+									? 'md:hidden pl-0.5'
 									: ''} flex flex-none items-center pr-1 -translate-x-1"
 							>
 								<button
@@ -734,7 +739,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 								required
 							/>
 
-							<div class="flex items-center gap-2 translate-x-1">
+							<div class="flex items-center gap-0.5 translate-x-1">
 								{#if note.data?.versions?.length > 0}
 									<div>
 										<div class="flex items-center gap-0.5 self-center min-w-fit" dir="ltr">
@@ -780,17 +785,46 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 										showDeleteConfirm = true;
 									}}
 								>
-									<EllipsisHorizontal className="size-5" />
+									<div class="p-1 bg-transparent hover:bg-white/5 transition rounded-lg">
+										<EllipsisHorizontal className="size-5" />
+									</div>
 								</NoteMenu>
 
-								<button
-									class="p-1.5 bg-transparent hover:bg-white/5 transition rounded-lg"
-									on:click={() => {
-										showPanel = !showPanel;
-									}}
-								>
-									<Cog6 />
-								</button>
+								<Tooltip placement="top" content={$i18n.t('Chat')} className="cursor-pointer">
+									<button
+										class="p-1.5 bg-transparent hover:bg-white/5 transition rounded-lg"
+										on:click={() => {
+											if (showPanel && selectedPanel === 'chat') {
+												showPanel = false;
+											} else {
+												if (!showPanel) {
+													showPanel = true;
+												}
+												selectedPanel = 'chat';
+											}
+										}}
+									>
+										<ChatBubbleOval />
+									</button>
+								</Tooltip>
+
+								<Tooltip placement="top" content={$i18n.t('Settings')} className="cursor-pointer">
+									<button
+										class="p-1.5 bg-transparent hover:bg-white/5 transition rounded-lg"
+										on:click={() => {
+											if (showPanel && selectedPanel === 'settings') {
+												showPanel = false;
+											} else {
+												if (!showPanel) {
+													showPanel = true;
+												}
+												selectedPanel = 'settings';
+											}
+										}}
+									>
+										<Cog6 />
+									</button>
+								</Tooltip>
 							</div>
 						</div>
 					</div>
@@ -998,36 +1032,10 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 		</div>
 	</Pane>
 	<NotePanel bind:show={showPanel}>
-		<div class="flex items-center mb-2">
-			<div class=" -translate-x-1.5">
-				<button
-					class="p-1.5 bg-transparent transition rounded-lg"
-					on:click={() => {
-						showPanel = !showPanel;
-					}}
-				>
-					<XMark className="size-5" strokeWidth="2.5" />
-				</button>
-			</div>
-
-			<div class=" font-medium text-base">Settings</div>
-		</div>
-
-		<div class="mt-1">
-			<div>
-				<div class=" text-xs font-medium mb-1">Model</div>
-
-				<div class="w-full">
-					<select class="w-full bg-transparent text-sm outline-hidden" bind:value={selectedModelId}>
-						<option value="" class="bg-gray-50 dark:bg-gray-700" disabled>
-							{$i18n.t('Select a model')}
-						</option>
-						{#each $models.filter((model) => !(model?.info?.meta?.hidden ?? false)) as model}
-							<option value={model.id} class="bg-gray-50 dark:bg-gray-700">{model.name}</option>
-						{/each}
-					</select>
-				</div>
-			</div>
-		</div>
+		{#if selectedPanel === 'chat'}
+			<Chat bind:show={showPanel} bind:selectedModelId />
+		{:else if selectedPanel === 'settings'}
+			<Settings bind:show={showPanel} bind:selectedModelId />
+		{/if}
 	</NotePanel>
 </PaneGroup>
