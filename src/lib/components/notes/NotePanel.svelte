@@ -8,7 +8,7 @@
 	export let show = false;
 	export let pane = null;
 
-	export let containerId = 'note-editor';
+	export let containerId = 'note-container';
 
 	let mediaQuery;
 	let largeScreen = false;
@@ -25,11 +25,37 @@
 	};
 
 	onMount(() => {
-		// listen to resize 1024px
-		mediaQuery = window.matchMedia('(min-width: 1024px)');
+		// listen to resize 1000px
+		mediaQuery = window.matchMedia('(min-width: 1000px)');
 
 		mediaQuery.addEventListener('change', handleMediaQuery);
 		handleMediaQuery(mediaQuery);
+
+		// Select the container element you want to observe
+		const container = document.getElementById(containerId);
+
+		// initialize the minSize based on the container width
+		minSize = Math.floor((400 / container.clientWidth) * 100);
+
+		// Create a new ResizeObserver instance
+		const resizeObserver = new ResizeObserver((entries) => {
+			for (let entry of entries) {
+				const width = entry.contentRect.width;
+				// calculate the percentage of 200px
+				const percentage = (400 / width) * 100;
+				// set the minSize to the percentage, must be an integer
+				minSize = Math.floor(percentage);
+
+				// if ($showControls) {
+				// 	if (pane && pane.isExpanded() && pane.getSize() < minSize) {
+				// 		pane.resize(minSize);
+				// 	}
+				// }
+			}
+		});
+
+		// Start observing the container's size changes
+		resizeObserver.observe(container);
 	});
 
 	onDestroy(() => {
@@ -61,8 +87,8 @@
 
 	<Pane
 		bind:pane
-		defaultSize={35}
-		minSize={35}
+		defaultSize={20}
+		{minSize}
 		onCollapse={() => {
 			show = false;
 		}}

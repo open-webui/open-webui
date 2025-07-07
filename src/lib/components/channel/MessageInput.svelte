@@ -554,7 +554,7 @@
 						</div>
 
 						<div class=" flex justify-between mb-2.5 mt-1.5 mx-0.5">
-							<div class="ml-1 self-end flex space-x-1">
+							<div class="ml-1 self-end flex space-x-1 flex-1">
 								<slot name="menu">
 									{#if acceptFiles}
 										<InputMenu

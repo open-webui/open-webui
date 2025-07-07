@@ -85,6 +85,7 @@
 			</div>
 		{:else if message?.edit === true}
 			<Textarea
+				className="w-full bg-transparent outline-hidden text-sm resize-none overflow-hidden"
 				placeholder={$i18n.t(`Enter {{role}} message here`, {
 					role: message.role === 'user' ? $i18n.t('a user') : $i18n.t('an assistant')
 				})}
