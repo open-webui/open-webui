@@ -77,6 +77,9 @@
 			messages = messages;
 		}
 
+		await tick();
+		scrollToBottom();
+
 		const [res, controller] = await chatCompletion(
 			localStorage.token,
 			{
@@ -96,7 +99,7 @@
 		);
 
 		await tick();
-		const textareaElement = document.getElementById(`assistant-${messages.length - 1}-textarea`);
+		scrollToBottom();
 
 		if (res && res.ok) {
 			const reader = res.body
