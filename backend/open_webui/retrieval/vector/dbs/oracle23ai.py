@@ -1,6 +1,32 @@
+"""
+# ORACLE23AI (Oracle23ai Vector Search) : env.examples
+VECTOR_DB = "oracle23ai"
+
+## DBCS or oracle 23ai free
+ORACLE_DB_USE_WALLET =  false
+ORACLE_DB_USER = "DEMOUSER"
+ORACLE_DB_PASSWORD = "Welcome123456"
+ORACLE_DB_DSN = "localhost:1521/FREEPDB1"
+
+## ADW or ATP
+# ORACLE_DB_USE_WALLET =  true 
+# ORACLE_DB_USER = "DEMOUSER"
+# ORACLE_DB_PASSWORD = "Welcome123456"
+# ORACLE_DB_DSN = "medium" 
+# ORACLE_DB_DSN = "(description=  (retry_count=3)(retry_delay=3)(address=(protocol=tcps)(port=1522)(host=xx.oraclecloud.com))(connect_data=(service_name=yy.adb.oraclecloud.com))(security=(ssl_server_dn_match=no)))"
+# ORACLE_WALLET_DIR = "/home/opc/adb_wallet"
+# ORACLE_WALLET_PASSWORD = "Welcome1"
+
+ORACLE_VECTOR_LENGTH = 768
+
+ORACLE_DB_POOL_MIN = 2
+ORACLE_DB_POOL_MAX = 10
+ORACLE_DB_POOL_INCREMENT = 1
+"""
+
 from typing import Optional, List, Dict, Any
 from decimal import Decimal
-
+import logging
 import os
 import oracledb
 
@@ -12,14 +38,27 @@ from open_webui.retrieval.vector.main import (
 )
 
 from open_webui.config import (
-    ORACLE_DB_USE_WALLET
+    ORACLE_DB_USE_WALLET,
     ORACLE_DB_USER,
     ORACLE_DB_PASSWORD,
     ORACLE_DB_DSN,
     ORACLE_WALLET_DIR,
     ORACLE_WALLET_PASSWORD,
     ORACLE_VECTOR_LENGTH,
+    ORACLE_DB_POOL_MIN,
+    ORACLE_DB_POOL_MAX,
+    ORACLE_DB_POOL_INCREMENT,
 )
+from open_webui.env import SRC_LOG_LEVELS
+
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["RAG"])
+
+# ORACLE_DB_USE_WALLET = os.environ.get("ORACLE_DB_USE_WALLET", "DBCS")
+# ORACLE_DB_USER = os.environ.get("ORACLE_DB_USER", "DEMOUSER")
+# ORACLE_DB_PASSWORD = os.environ.get("ORACLE_DB_PASSWORD", "Welcome123456")
+# ORACLE_DB_DSN = os.environ.get("ORACLE_DB_DSN", "medium")
+# ORACLE_DB_DSN = os.environ.get("ORACLE_DB_DSN", "(description=  (retry_count=3)(retry_delay=3)(address=(protocol=tcps)(port=1522)(host=d6aqmjs6.adb.us-chicago-1.oraclecloud.com))(connect_data=(service_name=g13fc7c96b5ee55_agentvs_medium.adb.oraclecloud.com))(security=(ssl_server_dn_match=no)))")
 
 class Oracle23aiClient(VectorDBBase):
     """
@@ -40,48 +79,145 @@ class Oracle23aiClient(VectorDBBase):
         Creates a connection pool with min=2 and max=10 connections, initializes
         the database schema if needed, and sets up necessary tables and indexes.
         
+        Args:
+            db_type (str): Database type - "ADB" for Autonomous Database or "DBCS" for Database Cloud Service
+        
         Raises:
             ValueError: If required configuration parameters are missing
             Exception: If database initialization fails
         """
         try:
-            if not ORACLE_DB_DSN:
-                raise ValueError("ORACLE_DB_DSN is required for Oracle Vector Search")
-                
-            self.pool = oracledb.create_pool(
-                user=ORACLE_DB_USER,
-                password=ORACLE_DB_PASSWORD,
-                dsn=ORACLE_DB_DSN,
-                min=2,
-                max=10,
-                increment=1,
-                config_dir=ORACLE_WALLET_DIR,
-                wallet_location=ORACLE_WALLET_DIR,
-                wallet_password=ORACLE_WALLET_PASSWORD
-            )
+            # Create the appropriate connection pool based on DB type
+            if ORACLE_DB_USE_WALLET:
+                self._create_adb_pool()
+            else:  # DBCS
+                self._create_dbcs_pool()
             
-            log.info(f" >>> Creating Connection Pool [{ORACLE_DB_USER}:**@{ORACLE_DB_DSN}]")
+            dsn = ORACLE_DB_DSN 
+            log.info(f" >>> Creating Connection Pool [{ORACLE_DB_USER}:**@{dsn}]")
             
             with self.get_connection() as connection:
                 log.info("Connection version:", connection.version)
                 self._initialize_database(connection)
                 
-            print("Oracle Vector Search initialization complete.")
+            log.info("Oracle Vector Search initialization complete.")
         except Exception as e:
-            print(f"Error during Oracle Vector Search initialization: {e}")
+            log.exception(f"Error during Oracle Vector Search initialization: {e}")
             raise
+    
+    def _create_adb_pool(self) -> None:
+        """
+        Create connection pool for Oracle Autonomous Database.
+        
+        Uses wallet-based authentication.
+        """
+        self.pool = oracledb.create_pool(
+            user=ORACLE_DB_USER,
+            password=ORACLE_DB_PASSWORD,
+            dsn=ORACLE_DB_DSN,
+            min=ORACLE_DB_POOL_MIN,
+            max=ORACLE_DB_POOL_MAX,
+            increment=ORACLE_DB_POOL_INCREMENT,
+            config_dir=ORACLE_WALLET_DIR,
+            wallet_location=ORACLE_WALLET_DIR,
+            wallet_password=ORACLE_WALLET_PASSWORD
+        )
+        log.info(f"Created ADB connection pool with wallet authentication.")
+    
+    def _create_dbcs_pool(self) -> None:
+        """
+        Create connection pool for Oracle Database Cloud Service.
+        
+        Uses basic authentication without wallet.
+        """
+        self.pool = oracledb.create_pool(
+            user=ORACLE_DB_USER,
+            password=ORACLE_DB_PASSWORD,
+            dsn=ORACLE_DB_DSN,
+            min=ORACLE_DB_POOL_MIN,
+            max=ORACLE_DB_POOL_MAX,
+            increment=ORACLE_DB_POOL_INCREMENT
+        )
+        log.info("Created DB connection pool with basic authentication.")
     
     def get_connection(self):
         """
-        Acquire a connection from the connection pool.
-        
+        Acquire a connection from the connection pool with retry logic.
+
         Returns:
             connection: A database connection with output type handler configured
         """
-        connection = self.pool.acquire()
-        connection.outputtypehandler = self._output_type_handler
-        return connection
-            
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                connection = self.pool.acquire()
+                connection.outputtypehandler = self._output_type_handler
+                return connection
+            except oracledb.DatabaseError as e:
+                error_obj, = e.args
+                log.exception(f"Connection attempt {attempt + 1} failed: {error_obj.message}")
+
+                if attempt < max_retries - 1:
+                    import time
+                    wait_time = 2 ** attempt
+                    log.info(f"Retrying in {wait_time} seconds...")
+                    time.sleep(wait_time)
+                else:
+                    raise    
+
+    def start_health_monitor(self, interval_seconds: int = 60):
+        """
+        Start a background thread to periodically check the health of the connection pool.
+
+        Args:
+            interval_seconds (int): Number of seconds between health checks
+        """
+        def _monitor():
+            while True:
+                try:
+                    log.info("[HealthCheck] Running periodic DB health check...")
+                    self.ensure_connection()
+                    log.info("[HealthCheck] Connection is healthy.")
+                except Exception as e:
+                    log.exception(f"[HealthCheck] Connection health check failed: {e}")
+                time.sleep(interval_seconds)
+
+        thread = threading.Thread(target=_monitor, daemon=True)
+        thread.start()
+        log.info(f"Started DB health monitor every {interval_seconds} seconds.")
+
+    def _reconnect_pool(self):
+        """
+        Attempt to reinitialize the connection pool if it's been closed or broken.
+        
+        Args:
+            db_type (str): Database type - "ADB" for Autonomous Database or "DBCS" for Database Cloud Service
+        """
+        try:
+            log.info("Attempting to reinitialize the Oracle connection pool...")
+            # Re-create the appropriate connection pool based on DB type
+            if ORACLE_DB_USE_WALLET:
+                self._create_adb_pool()
+            else:  # DBCS
+                self._create_dbcs_pool()
+                
+            log.info("Connection pool reinitialized.")
+        except Exception as e:
+            log.exception(f"Failed to reinitialize the connection pool: {e}")
+            raise
+
+    def ensure_connection(self):
+        """
+        Ensure the database connection is alive, reconnecting pool if needed.
+        """
+        try:
+            with self.get_connection() as connection:
+                with connection.cursor() as cursor:
+                    cursor.execute("SELECT 1 FROM dual")
+        except Exception as e:
+            log.exception(f"Connection check failed: {e}, attempting to reconnect pool...")
+            self._reconnect_pool()
+
     def _output_type_handler(self, cursor, metadata):
         """
         Handle Oracle vector type conversion.
@@ -97,6 +233,8 @@ class Oracle23aiClient(VectorDBBase):
             return cursor.var(metadata.type_code, arraysize=cursor.arraysize,
                             outconverter=list)
 
+    # Rest of the Oracle23aiClient class remains unchanged...
+
     def _initialize_database(self, connection) -> None:
         """
         Initialize database schema, tables and indexes.
@@ -109,8 +247,9 @@ class Oracle23aiClient(VectorDBBase):
         Raises:
             Exception: If schema initialization fails
         """
+        
         with connection.cursor() as cursor:
-            print(f" >>> Creating Table document_chunk")
+            log.info(f" >>> Creating Table document_chunk")
             cursor.execute(f"""
                 BEGIN
                     EXECUTE IMMEDIATE '
@@ -130,7 +269,7 @@ class Oracle23aiClient(VectorDBBase):
                 END;
             """)
             
-            print(f" >>> Creating Table document_chunk_collection_name_idx")
+            log.info(f" >>> Creating Table document_chunk_collection_name_idx")
             cursor.execute("""
                 BEGIN
                     EXECUTE IMMEDIATE '
@@ -145,7 +284,7 @@ class Oracle23aiClient(VectorDBBase):
                 END;
             """)
             
-            print(f" >>> Creating VECTOR INDEX document_chunk_vector_ivf_idx")
+            log.info(f" >>> Creating VECTOR INDEX document_chunk_vector_ivf_idx")
             cursor.execute("""
                 BEGIN
                     EXECUTE IMMEDIATE '
@@ -261,7 +400,7 @@ class Oracle23aiClient(VectorDBBase):
             ... ]
             >>> client.insert("my_collection", items)
         """
-        print(f"Oracle23aiClient:Inserting {len(items)} items into collection '{collection_name}'.")
+        log.info(f"Oracle23aiClient:Inserting {len(items)} items into collection '{collection_name}'.")
         with self.get_connection() as connection:
             try:
                 with connection.cursor() as cursor:
@@ -282,10 +421,10 @@ class Oracle23aiClient(VectorDBBase):
                         })
                 
                 connection.commit()
-                print(f"Oracle23aiClient:Inserted {len(items)} items into collection '{collection_name}'.")
+                log.info(f"Oracle23aiClient:Inserted {len(items)} items into collection '{collection_name}'.")
             except Exception as e:
                 connection.rollback()
-                print(f"Error during insert: {e}")
+                log.exception(f"Error during insert: {e}")
                 raise
 
     def upsert(self, collection_name: str, items: List[VectorItem]) -> None:
@@ -344,10 +483,10 @@ class Oracle23aiClient(VectorDBBase):
                         })
                 
                 connection.commit()
-                print(f"Upserted {len(items)} items into collection '{collection_name}'.")
+                log.info(f"Upserted {len(items)} items into collection '{collection_name}'.")
             except Exception as e:
                 connection.rollback()
-                print(f"Error during upsert: {e}")
+                log.exception(f"Error during upsert: {e}")
                 raise
 
     def search(
@@ -425,9 +564,9 @@ class Oracle23aiClient(VectorDBBase):
                 metadatas=metadatas
             )
         except Exception as e:
-            print(f"Error during search: {e}")
+            log.exception(f"Error during search: {e}")
             import traceback
-            print(traceback.format_exc())
+            log.exception(traceback.format_exc())
             return None
 
     def query(
@@ -494,9 +633,9 @@ class Oracle23aiClient(VectorDBBase):
                 metadatas=metadatas
             )
         except Exception as e:
-            print(f"Error during query: {e}")
+            log.exception(f"Error during query: {e}")
             import traceback
-            print(traceback.format_exc())
+            log.exception(traceback.format_exc())
             return None
 
     def get(
@@ -552,9 +691,9 @@ class Oracle23aiClient(VectorDBBase):
                 metadatas=metadatas
             )
         except Exception as e:
-            print(f"Error during get: {e}")
+            log.exception(f"Error during get: {e}")
             import traceback
-            print(traceback.format_exc())
+            log.exception(traceback.format_exc())
             return None
 
     def delete(
@@ -603,9 +742,9 @@ class Oracle23aiClient(VectorDBBase):
                     deleted = cursor.rowcount
                 connection.commit()
             
-            print(f"Deleted {deleted} items from collection '{collection_name}'.")
+            log.info(f"Deleted {deleted} items from collection '{collection_name}'.")
         except Exception as e:
-            print(f"Error during delete: {e}")
+            log.exception(f"Error during delete: {e}")
             raise
 
     def reset(self) -> None:
@@ -627,9 +766,9 @@ class Oracle23aiClient(VectorDBBase):
                     cursor.execute("DELETE FROM document_chunk")
                     deleted = cursor.rowcount
                 connection.commit()
-            print(f"Reset complete. Deleted {deleted} items from 'document_chunk' table.")
+            log.info(f"Reset complete. Deleted {deleted} items from 'document_chunk' table.")
         except Exception as e:
-            print(f"Error during reset: {e}")
+            log.exception(f"Error during reset: {e}")
             raise
 
     def close(self) -> None:
@@ -680,7 +819,7 @@ class Oracle23aiClient(VectorDBBase):
                     count = cursor.fetchone()[0]
             return count > 0
         except Exception as e:
-            print(f"Error checking collection existence: {e}")
+            log.exception(f"Error checking collection existence: {e}")
             return False
 
     def delete_collection(self, collection_name: str) -> None:
@@ -697,4 +836,4 @@ class Oracle23aiClient(VectorDBBase):
             >>> client.delete_collection("obsolete_collection")
         """
         self.delete(collection_name)
-        print(f"Collection '{collection_name}' deleted.")
+        log.info(f"Collection '{collection_name}' deleted.")

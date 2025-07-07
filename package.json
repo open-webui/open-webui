@@ -97,6 +97,7 @@
 		"jspdf": "^3.0.0",
 		"katex": "^0.16.22",
 		"kokoro-js": "^1.1.1",
+		"lowlight": "^3.3.0",
 		"marked": "^9.1.0",
 		"mermaid": "^11.6.0",
 		"paneforge": "^0.0.6",
