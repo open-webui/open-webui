@@ -7,12 +7,15 @@
 	import Markdown from '$lib/components/chat/Messages/Markdown.svelte';
 	import Pencil from '$lib/components/icons/Pencil.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
+	import DocumentArrowUp from '$lib/components/icons/DocumentArrowUp.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	export let message;
 	export let idx;
 
 	export let onDelete;
 	export let onEdit;
+	export let onInsert;
 
 	let textAreaElement: HTMLTextAreaElement;
 </script>
@@ -24,36 +27,51 @@
 		</div>
 
 		<div class="flex items-center gap-2">
-			<button
-				class=" text-transparent group-hover:text-gray-500 dark:hover:text-gray-300 transition"
-				on:click={() => {
-					onEdit();
-				}}
-			>
-				<Pencil className="size-3.5" strokeWidth="2" />
-			</button>
-
-			<button
-				class=" text-transparent group-hover:text-gray-500 dark:hover:text-gray-300 transition"
-				on:click={() => {
-					onDelete();
-				}}
-			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					fill="none"
-					viewBox="0 0 24 24"
-					stroke-width="2"
-					stroke="currentColor"
-					class="size-4"
+			<Tooltip placement="top" content={$i18n.t('Insert')}>
+				<button
+					class=" text-transparent group-hover:text-gray-500 dark:hover:text-gray-300 transition"
+					on:click={() => {
+						onInsert();
+					}}
 				>
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						d="M15 12H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-					/>
-				</svg>
-			</button>
+					<DocumentArrowUp className="size-3.5" strokeWidth="2" />
+				</button>
+			</Tooltip>
+
+			<Tooltip placement="top" content={$i18n.t('Edit')}>
+				<button
+					class=" text-transparent group-hover:text-gray-500 dark:hover:text-gray-300 transition"
+					on:click={() => {
+						onEdit();
+					}}
+				>
+					<Pencil className="size-3.5" strokeWidth="2" />
+				</button>
+			</Tooltip>
+
+			<Tooltip placement="top" content={$i18n.t('Delete')}>
+				<button
+					class=" text-transparent group-hover:text-gray-500 dark:hover:text-gray-300 transition"
+					on:click={() => {
+						onDelete();
+					}}
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke-width="2"
+						stroke="currentColor"
+						class="size-4"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							d="M15 12H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+						/>
+					</svg>
+				</button>
+			</Tooltip>
 		</div>
 	</div>
 
@@ -67,11 +85,13 @@
 			</div>
 		{:else if message?.edit === true}
 			<Textarea
-				class="w-full bg-transparent outline-hidden rounded-lg text-sm resize-none overflow-hidden"
 				placeholder={$i18n.t(`Enter {{role}} message here`, {
 					role: message.role === 'user' ? $i18n.t('a user') : $i18n.t('an assistant')
 				})}
 				bind:value={message.content}
+				onBlur={() => {
+					message.edit = false;
+				}}
 			/>
 		{:else}
 			<div class=" markdown-prose-sm">

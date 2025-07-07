@@ -5,6 +5,7 @@
 	const i18n = getContext('i18n');
 
 	export let messages = [];
+	export let onInsert = (content: string) => {};
 </script>
 
 <div class="space-y-3 pb-12">
@@ -12,6 +13,9 @@
 		<Message
 			{message}
 			{idx}
+			onInsert={() => {
+				onInsert(message?.content ?? '');
+			}}
 			onEdit={() => {
 				messages = messages.map((msg, messageIdx) => {
 					if (messageIdx === idx) {

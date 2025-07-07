@@ -111,6 +111,8 @@
 	let enhancing = false;
 	let streaming = false;
 
+	let inputElement = null;
+
 	const init = async () => {
 		loading = true;
 		const res = await getNoteById(localStorage.token, id).catch((error) => {
@@ -638,6 +640,10 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 		dragged = false;
 	};
 
+	const insertHandler = (content) => {
+		inputElement?.insertContent(content);
+	};
+
 	onMount(async () => {
 		await tick();
 
@@ -896,6 +902,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 						{/if}
 
 						<RichTextInput
+							bind:this={inputElement}
 							className="input-prose-sm px-0.5"
 							bind:value={note.data.content.json}
 							html={note.data?.content?.html}
@@ -1035,7 +1042,14 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 	</Pane>
 	<NotePanel bind:show={showPanel}>
 		{#if selectedPanel === 'chat'}
-			<Chat bind:show={showPanel} bind:selectedModelId bind:messages {files} {note} />
+			<Chat
+				bind:show={showPanel}
+				bind:selectedModelId
+				bind:messages
+				{files}
+				{note}
+				onInsert={insertHandler}
+			/>
 		{:else if selectedPanel === 'settings'}
 			<Settings bind:show={showPanel} bind:selectedModelId />
 		{/if}

@@ -30,6 +30,8 @@
 	export let files = [];
 	export let messages = [];
 
+	export let onInsert = (content) => {};
+
 	let loaded = false;
 
 	let loading = false;
@@ -245,7 +247,7 @@
 				>
 					<div class=" h-full w-full flex flex-col">
 						<div class="flex-1 p-1">
-							<Messages bind:messages />
+							<Messages bind:messages {onInsert} />
 						</div>
 					</div>
 				</div>

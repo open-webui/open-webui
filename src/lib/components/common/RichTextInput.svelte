@@ -204,6 +204,23 @@
 		focus();
 	};
 
+	export const insertContent = (content) => {
+		if (!editor) return;
+		const { state, view } = editor;
+		const { schema, tr } = state;
+
+		// If content is a string, convert it to a ProseMirror node
+		const htmlContent = marked.parse(content, {
+			breaks: true,
+			gfm: true
+		});
+
+		// insert the HTML content at the current selection
+		editor.commands.insertContent(htmlContent);
+
+		focus();
+	};
+
 	export const replaceVariables = (variables) => {
 		if (!editor) return;
 		const { state, view } = editor;
