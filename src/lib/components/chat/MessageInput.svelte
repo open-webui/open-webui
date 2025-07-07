@@ -1182,6 +1182,7 @@
 												}}
 												json={true}
 												messageInput={true}
+												insertPromptAsRichText={$settings?.insertPromptAsRichText ?? false}
 												shiftEnter={!($settings?.ctrlEnterToSend ?? false) &&
 													(!$mobile ||
 														!(

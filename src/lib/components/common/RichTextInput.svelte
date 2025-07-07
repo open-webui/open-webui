@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { marked } from 'marked';
+
 	import TurndownService from 'turndown';
 	import { gfm } from 'turndown-plugin-gfm';
 	const turndownService = new TurndownService({
@@ -7,7 +8,6 @@
 		headingStyle: 'atx'
 	});
 	turndownService.escape = (string) => string;
-
 	// Use turndown-plugin-gfm for proper GFM table support
 	turndownService.use(gfm);
 
@@ -16,8 +16,8 @@
 
 	const eventDispatch = createEventDispatcher();
 
-	import { Fragment } from 'prosemirror-model';
-	import { EditorState, Plugin, PluginKey, TextSelection } from 'prosemirror-state';
+	import { Fragment, DOMParser } from 'prosemirror-model';
+	import { EditorState, Plugin, PluginKey, TextSelection, Selection } from 'prosemirror-state';
 	import { Decoration, DecorationSet } from 'prosemirror-view';
 	import { Editor } from '@tiptap/core';
 
@@ -29,10 +29,10 @@
 
 	import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 	import Placeholder from '@tiptap/extension-placeholder';
-	import { all, createLowlight } from 'lowlight';
 	import StarterKit from '@tiptap/starter-kit';
 	import Highlight from '@tiptap/extension-highlight';
 	import Typography from '@tiptap/extension-typography';
+	import { all, createLowlight } from 'lowlight';
 
 	import { PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
 
@@ -60,6 +60,7 @@
 	export let messageInput = false;
 	export let shiftEnter = false;
 	export let largeTextAsFile = false;
+	export let insertPromptAsRichText = false;
 
 	let element;
 	let editor;
@@ -130,40 +131,74 @@
 
 		let tr = state.tr;
 
-		if (text.includes('\n')) {
-			// Split the text into lines and create a <p> node for each line
-			const lines = text.split('\n');
-			const nodes = lines.map(
-				(line, index) =>
-					index === 0
-						? state.schema.text(line ? line : []) // First line is plain text
-						: state.schema.nodes.paragraph.create({}, line ? state.schema.text(line) : undefined) // Subsequent lines are paragraphs
-			);
+		if (insertPromptAsRichText) {
+			const htmlContent = marked
+				.parse(text, {
+					breaks: true,
+					gfm: true
+				})
+				.trim();
 
-			// Build and dispatch the transaction to replace the word at cursor
-			tr = tr.replaceWith(start, end, nodes);
+			// Create a temporary div to parse HTML
+			const tempDiv = document.createElement('div');
+			tempDiv.innerHTML = htmlContent;
 
-			let newSelectionPos;
+			// Convert HTML to ProseMirror nodes
+			const fragment = DOMParser.fromSchema(state.schema).parse(tempDiv);
 
-			// +1 because the insert happens at start, so last para starts at (start + sum of all previous nodes' sizes)
-			let lastPos = start;
-			for (let i = 0; i < nodes.length; i++) {
-				lastPos += nodes[i].nodeSize;
-			}
-			// Place cursor inside the last paragraph at its end
-			newSelectionPos = lastPos;
+			// Extract just the content, not the wrapper paragraphs
+			const content = fragment.content;
+			let nodesToInsert = [];
 
-			tr = tr.setSelection(TextSelection.near(tr.doc.resolve(newSelectionPos)));
+			content.forEach((node) => {
+				if (node.type.name === 'paragraph') {
+					// If it's a paragraph, extract its content
+					nodesToInsert.push(...node.content.content);
+				} else {
+					nodesToInsert.push(node);
+				}
+			});
+
+			tr = tr.replaceWith(start, end, nodesToInsert);
+			// Calculate new position
+			const newPos = start + nodesToInsert.reduce((sum, node) => sum + node.nodeSize, 0);
+			tr = tr.setSelection(Selection.near(tr.doc.resolve(newPos)));
 		} else {
-			tr = tr.replaceWith(
-				start,
-				end, // replace this range
-				text !== '' ? state.schema.text(text) : []
-			);
+			if (text.includes('\n')) {
+				// Split the text into lines and create a <p> node for each line
+				const lines = text.split('\n');
+				const nodes = lines.map(
+					(line, index) =>
+						index === 0
+							? state.schema.text(line ? line : []) // First line is plain text
+							: state.schema.nodes.paragraph.create({}, line ? state.schema.text(line) : undefined) // Subsequent lines are paragraphs
+				);
 
-			tr = tr.setSelection(
-				state.selection.constructor.near(tr.doc.resolve(start + text.length + 1))
-			);
+				// Build and dispatch the transaction to replace the word at cursor
+				tr = tr.replaceWith(start, end, nodes);
+
+				let newSelectionPos;
+
+				// +1 because the insert happens at start, so last para starts at (start + sum of all previous nodes' sizes)
+				let lastPos = start;
+				for (let i = 0; i < nodes.length; i++) {
+					lastPos += nodes[i].nodeSize;
+				}
+				// Place cursor inside the last paragraph at its end
+				newSelectionPos = lastPos;
+
+				tr = tr.setSelection(TextSelection.near(tr.doc.resolve(newSelectionPos)));
+			} else {
+				tr = tr.replaceWith(
+					start,
+					end, // replace this range
+					text !== '' ? state.schema.text(text) : []
+				);
+
+				tr = tr.setSelection(
+					state.selection.constructor.near(tr.doc.resolve(start + text.length + 1))
+				);
+			}
 		}
 
 		dispatch(tr);
