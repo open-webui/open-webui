@@ -33,6 +33,22 @@ logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
+async def fetch_ollama_models(request: Request, user: UserModel = None):
+    raw_ollama_models = await ollama.get_all_models(request, user=user)
+    return [
+        {
+            "id": model["model"],
+            "name": model["name"],
+            "object": "model",
+            "created": int(time.time()),
+            "owned_by": "ollama",
+            "ollama": model,
+            "connection_type": model.get("connection_type", "local"),
+            "tags": model.get("tags", []),
+        }
+        for model in raw_ollama_models["models"]
+    ]
+
 
 async def get_all_base_models(request: Request, user: UserModel = None):
     function_models = []
