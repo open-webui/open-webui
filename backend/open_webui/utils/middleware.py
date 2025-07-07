@@ -249,30 +249,27 @@ async def chat_completion_tools_handler(
                         else f"{tool_function_name}"
                     )
 
-                    if tool.get("metadata", {}).get("citation", False) or tool.get(
-                        "direct", False
-                    ):
-                        # Citation is enabled for this tool
-                        sources.append(
-                            {
-                                "source": {
-                                    "name": (f"TOOL:{tool_name}"),
-                                },
-                                "document": [tool_result],
-                                "metadata": [
-                                    {
-                                        "source": (f"TOOL:{tool_name}"),
-                                        "parameters": tool_function_params,
-                                    }
-                                ],
-                            }
-                        )
-                    else:
-                        # Citation is not enabled for this tool
-                        body["messages"] = add_or_update_user_message(
-                            f"\nTool `{tool_name}` Output: {tool_result}",
-                            body["messages"],
-                        )
+                    # Citation is enabled for this tool
+                    sources.append(
+                        {
+                            "source": {
+                                "name": (f"TOOL:{tool_name}"),
+                            },
+                            "document": [tool_result],
+                            "metadata": [
+                                {
+                                    "source": (f"TOOL:{tool_name}"),
+                                    "parameters": tool_function_params,
+                                }
+                            ],
+                            "tool_result": True,
+                        }
+                    )
+                    # Citation is not enabled for this tool
+                    body["messages"] = add_or_update_user_message(
+                        f"\nTool `{tool_name}` Output: {tool_result}",
+                        body["messages"],
+                    )
 
                     if (
                         tools[tool_function_name]
@@ -931,7 +928,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         citation_idx_map = {}
 
         for source in sources:
-            if "document" in source:
+            is_tool_result = source.get("tool_result", False)
+
+            if "document" in source and not is_tool_result:
                 for document_text, document_metadata in zip(
                     source["document"], source["metadata"]
                 ):
@@ -952,34 +951,33 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     )
 
         context_string = context_string.strip()
-        prompt = get_last_user_message(form_data["messages"])
 
+        prompt = get_last_user_message(form_data["messages"])
         if prompt is None:
             raise Exception("No user message found")
-        if (
-            request.app.state.config.RELEVANCE_THRESHOLD == 0
-            and context_string.strip() == ""
-        ):
-            log.debug(
-                f"With a 0 relevancy threshold for RAG, the context cannot be empty"
-            )
 
-        # Workaround for Ollama 2.0+ system prompt issue
-        # TODO: replace with add_or_update_system_message
-        if model.get("owned_by") == "ollama":
-            form_data["messages"] = prepend_to_first_user_message_content(
-                rag_template(
-                    request.app.state.config.RAG_TEMPLATE, context_string, prompt
-                ),
-                form_data["messages"],
-            )
+        if context_string == "":
+            if request.app.state.config.RELEVANCE_THRESHOLD == 0:
+                log.debug(
+                    f"With a 0 relevancy threshold for RAG, the context cannot be empty"
+                )
         else:
-            form_data["messages"] = add_or_update_system_message(
-                rag_template(
-                    request.app.state.config.RAG_TEMPLATE, context_string, prompt
-                ),
-                form_data["messages"],
-            )
+            # Workaround for Ollama 2.0+ system prompt issue
+            # TODO: replace with add_or_update_system_message
+            if model.get("owned_by") == "ollama":
+                form_data["messages"] = prepend_to_first_user_message_content(
+                    rag_template(
+                        request.app.state.config.RAG_TEMPLATE, context_string, prompt
+                    ),
+                    form_data["messages"],
+                )
+            else:
+                form_data["messages"] = add_or_update_system_message(
+                    rag_template(
+                        request.app.state.config.RAG_TEMPLATE, context_string, prompt
+                    ),
+                    form_data["messages"],
+                )
 
     # If there are citations, add them to the data_items
     sources = [
