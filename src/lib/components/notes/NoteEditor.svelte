@@ -98,7 +98,7 @@
 	let recording = false;
 	let displayMediaRecord = false;
 
-	let showSettings = false;
+	let showPanel = false;
 	let showDeleteConfirm = false;
 
 	let dragged = false;
@@ -672,6 +672,11 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 			dropzoneElement?.removeEventListener('dragleave', onDragLeave);
 		}
 	});
+
+	import NotePanel from '$lib/components/notes/NotePanel.svelte';
+	import { PaneGroup, Pane, PaneResizer } from 'paneforge';
+	import XMark from '../icons/XMark.svelte';
+	import MenuLines from '../icons/MenuLines.svelte';
 </script>
 
 <FilesOverlay show={dragged} />
@@ -689,293 +694,272 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 	</div>
 </DeleteConfirmDialog>
 
-<div class="relative flex-1 w-full h-full flex justify-center" id="note-editor">
-	<Sidebar bind:show={showSettings} className=" bg-white dark:bg-gray-900" width="300px">
-		<div class="flex flex-col px-5 py-3 text-sm">
-			<div class="flex justify-between items-center mb-2">
-				<div class=" font-medium text-base">Settings</div>
-
-				<div class=" translate-x-1.5">
-					<button
-						class="p-1.5 bg-transparent hover:bg-white/5 transition rounded-lg"
-						on:click={() => {
-							showSettings = !showSettings;
-						}}
-					>
-						<ArrowRight className="size-3" strokeWidth="2.5" />
-					</button>
-				</div>
-			</div>
-
-			<div class="mt-1">
-				<div>
-					<div class=" text-xs font-medium mb-1">Model</div>
-
-					<div class="w-full">
-						<select
-							class="w-full bg-transparent text-sm outline-hidden"
-							bind:value={selectedModelId}
-						>
-							<option value="" class="bg-gray-50 dark:bg-gray-700" disabled>
-								{$i18n.t('Select a model')}
-							</option>
-							{#each $models.filter((model) => !(model?.info?.meta?.hidden ?? false)) as model}
-								<option value={model.id} class="bg-gray-50 dark:bg-gray-700">{model.name}</option>
-							{/each}
-						</select>
+<PaneGroup direction="horizontal" class="w-full h-full">
+	<Pane defaultSize={70} minSize={50} class="h-full flex flex-col w-full relative">
+		<div class="relative flex-1 w-full h-full flex justify-center pt-[11px]" id="note-editor">
+			{#if loading}
+				<div class=" absolute top-0 bottom-0 left-0 right-0 flex">
+					<div class="m-auto">
+						<Spinner className="size-5" />
 					</div>
 				</div>
-			</div>
-		</div>
-	</Sidebar>
+			{:else}
+				<div class=" w-full flex flex-col {loading ? 'opacity-20' : ''}">
+					<div class="shrink-0 w-full flex justify-between items-center px-3.5 mb-1.5">
+						<div class="w-full flex items-center">
+							<div
+								class="{$showSidebar
+									? 'md:hidden'
+									: ''} flex flex-none items-center pr-1 -translate-x-1"
+							>
+								<button
+									id="sidebar-toggle-button"
+									class="cursor-pointer p-1.5 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+									on:click={() => {
+										showSidebar.set(!$showSidebar);
+									}}
+									aria-label="Toggle Sidebar"
+								>
+									<div class=" m-auto self-center">
+										<MenuLines />
+									</div>
+								</button>
+							</div>
 
-	{#if loading}
-		<div class=" absolute top-0 bottom-0 left-0 right-0 flex">
-			<div class="m-auto">
-				<Spinner className="size-5" />
-			</div>
-		</div>
-	{:else}
-		<div class=" w-full flex flex-col {loading ? 'opacity-20' : ''}">
-			<div class="shrink-0 w-full flex justify-between items-center px-4.5 mb-1.5">
-				<div class="w-full flex items-center">
-					<input
-						class="w-full text-2xl font-medium bg-transparent outline-hidden"
-						type="text"
-						bind:value={note.title}
-						placeholder={$i18n.t('Title')}
-						required
-					/>
+							<input
+								class="w-full text-xl font-medium bg-transparent outline-hidden"
+								type="text"
+								bind:value={note.title}
+								placeholder={$i18n.t('Title')}
+								required
+							/>
 
-					<div class="flex items-center gap-2 translate-x-1">
-						{#if note.data?.versions?.length > 0}
-							<div>
-								<div class="flex items-center gap-0.5 self-center min-w-fit" dir="ltr">
-									<button
-										class="self-center p-1 hover:enabled:bg-black/5 dark:hover:enabled:bg-white/5 dark:hover:enabled:text-white hover:enabled:text-black rounded-md transition disabled:cursor-not-allowed disabled:text-gray-500 disabled:hover:text-gray-500"
-										on:click={() => {
-											versionNavigateHandler('prev');
-										}}
-										disabled={(versionIdx === null && note.data.versions.length === 0) ||
-											versionIdx === 0}
-									>
-										<ArrowUturnLeft className="size-4" />
-									</button>
+							<div class="flex items-center gap-2 translate-x-1">
+								{#if note.data?.versions?.length > 0}
+									<div>
+										<div class="flex items-center gap-0.5 self-center min-w-fit" dir="ltr">
+											<button
+												class="self-center p-1 hover:enabled:bg-black/5 dark:hover:enabled:bg-white/5 dark:hover:enabled:text-white hover:enabled:text-black rounded-md transition disabled:cursor-not-allowed disabled:text-gray-500 disabled:hover:text-gray-500"
+												on:click={() => {
+													versionNavigateHandler('prev');
+												}}
+												disabled={(versionIdx === null && note.data.versions.length === 0) ||
+													versionIdx === 0}
+											>
+												<ArrowUturnLeft className="size-4" />
+											</button>
 
-									<button
-										class="self-center p-1 hover:enabled:bg-black/5 dark:hover:enabled:bg-white/5 dark:hover:enabled:text-white hover:enabled:text-black rounded-md transition disabled:cursor-not-allowed disabled:text-gray-500 disabled:hover:text-gray-500"
-										on:click={() => {
-											versionNavigateHandler('next');
-										}}
-										disabled={versionIdx >= note.data.versions.length || versionIdx === null}
-									>
-										<ArrowUturnRight className="size-4" />
-									</button>
-								</div>
+											<button
+												class="self-center p-1 hover:enabled:bg-black/5 dark:hover:enabled:bg-white/5 dark:hover:enabled:text-white hover:enabled:text-black rounded-md transition disabled:cursor-not-allowed disabled:text-gray-500 disabled:hover:text-gray-500"
+												on:click={() => {
+													versionNavigateHandler('next');
+												}}
+												disabled={versionIdx >= note.data.versions.length || versionIdx === null}
+											>
+												<ArrowUturnRight className="size-4" />
+											</button>
+										</div>
+									</div>
+								{/if}
+
+								<NoteMenu
+									onDownload={(type) => {
+										downloadHandler(type);
+									}}
+									onCopyToClipboard={async () => {
+										const res = await copyToClipboard(note.data.content.md).catch((error) => {
+											toast.error(`${error}`);
+											return null;
+										});
+
+										if (res) {
+											toast.success($i18n.t('Copied to clipboard'));
+										}
+									}}
+									onDelete={() => {
+										showDeleteConfirm = true;
+									}}
+								>
+									<EllipsisHorizontal className="size-5" />
+								</NoteMenu>
+
+								<button
+									class="p-1.5 bg-transparent hover:bg-white/5 transition rounded-lg"
+									on:click={() => {
+										showPanel = !showPanel;
+									}}
+								>
+									<Cog6 />
+								</button>
+							</div>
+						</div>
+					</div>
+
+					<div class=" mb-2.5 px-2.5">
+						<div
+							class="flex gap-1 items-center text-xs font-medium text-gray-500 dark:text-gray-500"
+						>
+							<button class=" flex items-center gap-1 w-fit py-1 px-1.5 rounded-lg">
+								<Calendar className="size-3.5" strokeWidth="2" />
+
+								<span>{dayjs(note.created_at / 1000000).calendar()}</span>
+							</button>
+
+							<button class=" flex items-center gap-1 w-fit py-1 px-1.5 rounded-lg">
+								<Users className="size-3.5" strokeWidth="2" />
+
+								<span> You </span>
+							</button>
+						</div>
+					</div>
+
+					<div
+						class=" flex-1 w-full h-full overflow-auto px-3.5 pb-20 relative"
+						id="note-content-container"
+					>
+						{#if enhancing}
+							<div
+								class="w-full h-full fixed top-0 left-0 {streaming
+									? ''
+									: ' backdrop-blur-xs  bg-white/10 dark:bg-gray-900/10'} flex items-center justify-center z-10 cursor-not-allowed"
+							></div>
+						{/if}
+
+						{#if files && files.length > 0}
+							<div class="mb-2.5 w-full flex gap-1 flex-wrap z-40">
+								{#each files as file, fileIdx}
+									<div class="w-fit">
+										{#if file.type === 'image'}
+											<Image
+												src={file.url}
+												imageClassName=" max-h-96 rounded-lg"
+												dismissible={true}
+												onDismiss={() => {
+													files = files.filter((item, idx) => idx !== fileIdx);
+													note.data.files = files.length > 0 ? files : null;
+												}}
+											/>
+										{:else}
+											<FileItem
+												item={file}
+												dismissible={true}
+												url={file.url}
+												name={file.name}
+												type={file.type}
+												size={file?.size}
+												loading={file.status === 'uploading'}
+												on:dismiss={() => {
+													files = files.filter((item) => item?.id !== file.id);
+													note.data.files = files.length > 0 ? files : null;
+												}}
+											/>
+										{/if}
+									</div>
+								{/each}
 							</div>
 						{/if}
 
-						<NoteMenu
-							onDownload={(type) => {
-								downloadHandler(type);
+						<RichTextInput
+							className="input-prose-sm px-0.5"
+							bind:value={note.data.content.json}
+							html={note.data?.content?.html}
+							json={true}
+							placeholder={$i18n.t('Write something...')}
+							editable={versionIdx === null && !enhancing}
+							onChange={(content) => {
+								note.data.content.html = content.html;
+								note.data.content.md = content.md;
 							}}
-							onCopyToClipboard={async () => {
-								const res = await copyToClipboard(note.data.content.md).catch((error) => {
-									toast.error(`${error}`);
-									return null;
-								});
-
-								if (res) {
-									toast.success($i18n.t('Copied to clipboard'));
-								}
-							}}
-							onDelete={() => {
-								showDeleteConfirm = true;
-							}}
-						>
-							<EllipsisHorizontal className="size-5" />
-						</NoteMenu>
-
-						<button
-							class="p-1.5 bg-transparent hover:bg-white/5 transition rounded-lg"
-							on:click={() => {
-								showSettings = !showSettings;
-							}}
-						>
-							<Cog6 />
-						</button>
+						/>
 					</div>
 				</div>
-			</div>
-
-			<div class=" mb-2.5 px-3.5">
-				<div class="flex gap-1 items-center text-xs font-medium text-gray-500 dark:text-gray-500">
-					<button class=" flex items-center gap-1 w-fit py-1 px-1.5 rounded-lg">
-						<Calendar className="size-3.5" strokeWidth="2" />
-
-						<span>{dayjs(note.created_at / 1000000).calendar()}</span>
-					</button>
-
-					<button class=" flex items-center gap-1 w-fit py-1 px-1.5 rounded-lg">
-						<Users className="size-3.5" strokeWidth="2" />
-
-						<span> You </span>
-					</button>
-				</div>
-			</div>
-
-			<div
-				class=" flex-1 w-full h-full overflow-auto px-4 pb-20 relative"
-				id="note-content-container"
-			>
-				{#if enhancing}
-					<div
-						class="w-full h-full fixed top-0 left-0 {streaming
-							? ''
-							: ' backdrop-blur-xs  bg-white/10 dark:bg-gray-900/10'} flex items-center justify-center z-10 cursor-not-allowed"
-					></div>
-				{/if}
-
-				{#if files && files.length > 0}
-					<div class="mb-3.5 mt-1.5 w-full flex gap-1 flex-wrap z-40">
-						{#each files as file, fileIdx}
-							<div class="w-fit">
-								{#if file.type === 'image'}
-									<Image
-										src={file.url}
-										imageClassName=" max-h-96 rounded-lg"
-										dismissible={true}
-										onDismiss={() => {
-											files = files.filter((item, idx) => idx !== fileIdx);
-											note.data.files = files.length > 0 ? files : null;
-										}}
-									/>
-								{:else}
-									<FileItem
-										item={file}
-										dismissible={true}
-										url={file.url}
-										name={file.name}
-										type={file.type}
-										size={file?.size}
-										loading={file.status === 'uploading'}
-										on:dismiss={() => {
-											files = files.filter((item) => item?.id !== file.id);
-											note.data.files = files.length > 0 ? files : null;
-										}}
-									/>
-								{/if}
-							</div>
-						{/each}
-					</div>
-				{/if}
-
-				<RichTextInput
-					className="input-prose-sm px-0.5"
-					bind:value={note.data.content.json}
-					html={note.data?.content?.html}
-					json={true}
-					placeholder={$i18n.t('Write something...')}
-					editable={versionIdx === null && !enhancing}
-					onChange={(content) => {
-						note.data.content.html = content.html;
-						note.data.content.md = content.md;
-					}}
-				/>
-			</div>
+			{/if}
 		</div>
-	{/if}
-</div>
+		<div class="absolute z-20 bottom-0 right-0 p-5 max-w-full w-full flex justify-end">
+			<div class="flex gap-1 justify-between w-full max-w-full">
+				{#if recording}
+					<div class="flex-1 w-full">
+						<VoiceRecording
+							bind:recording
+							className="p-1 w-full max-w-full"
+							transcribe={false}
+							displayMedia={displayMediaRecord}
+							onCancel={() => {
+								recording = false;
+								displayMediaRecord = false;
+							}}
+							onConfirm={(data) => {
+								if (data?.file) {
+									uploadFileHandler(data?.file);
+								}
 
-<div
-	class="absolute z-20 bottom-0 right-0 p-5 max-w-full {$showSidebar
-		? 'md:max-w-[calc(100%-260px)]'
-		: ''} w-full flex justify-end"
->
-	<div class="flex gap-1 justify-between w-full max-w-full">
-		{#if recording}
-			<div class="flex-1 w-full">
-				<VoiceRecording
-					bind:recording
-					className="p-1 w-full max-w-full"
-					transcribe={false}
-					displayMedia={displayMediaRecord}
-					onCancel={() => {
-						recording = false;
-						displayMediaRecord = false;
-					}}
-					onConfirm={(data) => {
-						if (data?.file) {
-							uploadFileHandler(data?.file);
-						}
+								recording = false;
+								displayMediaRecord = false;
+							}}
+						/>
+					</div>
+				{:else}
+					<RecordMenu
+						onRecord={async () => {
+							displayMediaRecord = false;
 
-						recording = false;
-						displayMediaRecord = false;
-					}}
-				/>
-			</div>
-		{:else}
-			<RecordMenu
-				onRecord={async () => {
-					displayMediaRecord = false;
+							try {
+								let stream = await navigator.mediaDevices
+									.getUserMedia({ audio: true })
+									.catch(function (err) {
+										toast.error(
+											$i18n.t(`Permission denied when accessing microphone: {{error}}`, {
+												error: err
+											})
+										);
+										return null;
+									});
 
-					try {
-						let stream = await navigator.mediaDevices
-							.getUserMedia({ audio: true })
-							.catch(function (err) {
-								toast.error(
-									$i18n.t(`Permission denied when accessing microphone: {{error}}`, {
-										error: err
-									})
-								);
-								return null;
-							});
+								if (stream) {
+									recording = true;
+									const tracks = stream.getTracks();
+									tracks.forEach((track) => track.stop());
+								}
+								stream = null;
+							} catch {
+								toast.error($i18n.t('Permission denied when accessing microphone'));
+							}
+						}}
+						onCaptureAudio={async () => {
+							displayMediaRecord = true;
 
-						if (stream) {
 							recording = true;
-							const tracks = stream.getTracks();
-							tracks.forEach((track) => track.stop());
-						}
-						stream = null;
-					} catch {
-						toast.error($i18n.t('Permission denied when accessing microphone'));
-					}
-				}}
-				onCaptureAudio={async () => {
-					displayMediaRecord = true;
+						}}
+						onUpload={async () => {
+							const input = document.createElement('input');
+							input.type = 'file';
+							input.accept = 'audio/*';
+							input.multiple = false;
+							input.click();
 
-					recording = true;
-				}}
-				onUpload={async () => {
-					const input = document.createElement('input');
-					input.type = 'file';
-					input.accept = 'audio/*';
-					input.multiple = false;
-					input.click();
+							input.onchange = async (e) => {
+								const files = e.target.files;
 
-					input.onchange = async (e) => {
-						const files = e.target.files;
-
-						if (files && files.length > 0) {
-							await uploadFileHandler(files[0]);
-						}
-					};
-				}}
-			>
-				<Tooltip content={$i18n.t('Record')} placement="top">
-					<button
-						class="cursor-pointer p-2.5 flex rounded-full border border-gray-50 bg-white dark:border-none dark:bg-gray-850 hover:bg-gray-50 dark:hover:bg-gray-800 transition shadow-xl"
-						type="button"
+								if (files && files.length > 0) {
+									await uploadFileHandler(files[0]);
+								}
+							};
+						}}
 					>
-						<MicSolid className="size-4.5" />
-					</button>
-				</Tooltip>
-			</RecordMenu>
+						<Tooltip content={$i18n.t('Record')} placement="top">
+							<button
+								class="cursor-pointer p-2.5 flex rounded-full border border-gray-50 bg-white dark:border-none dark:bg-gray-850 hover:bg-gray-50 dark:hover:bg-gray-800 transition shadow-xl"
+								type="button"
+							>
+								<MicSolid className="size-4.5" />
+							</button>
+						</Tooltip>
+					</RecordMenu>
 
-			<div
-				class="cursor-pointer flex gap-0.5 rounded-full border border-gray-50 dark:border-gray-850 dark:bg-gray-850 transition shadow-xl"
-			>
-				<!-- <Tooltip content={$i18n.t('My Notes')} placement="top">
+					<div
+						class="cursor-pointer flex gap-0.5 rounded-full border border-gray-50 dark:border-gray-850 dark:bg-gray-850 transition shadow-xl"
+					>
+						<!-- <Tooltip content={$i18n.t('My Notes')} placement="top">
 					<button
 						class="p-2 size-8.5 flex justify-center items-center {selectedVersion === 'note'
 							? 'bg-gray-100 dark:bg-gray-800 '
@@ -990,25 +974,60 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 					</button>
 				</Tooltip> -->
 
-				<Tooltip content={$i18n.t('Enhance')} placement="top">
-					<button
-						class="{enhancing
-							? 'p-2'
-							: 'p-2.5'} flex justify-center items-center hover:bg-gray-50 dark:hover:bg-gray-800 rounded-full transition shrink-0"
-						on:click={() => {
-							enhanceNoteHandler();
-						}}
-						disabled={enhancing}
-						type="button"
-					>
-						{#if enhancing}
-							<Spinner className="size-5" />
-						{:else}
-							<SparklesSolid />
-						{/if}
-					</button>
-				</Tooltip>
+						<Tooltip content={$i18n.t('Enhance')} placement="top">
+							<button
+								class="{enhancing
+									? 'p-2'
+									: 'p-2.5'} flex justify-center items-center hover:bg-gray-50 dark:hover:bg-gray-800 rounded-full transition shrink-0"
+								on:click={() => {
+									enhanceNoteHandler();
+								}}
+								disabled={enhancing}
+								type="button"
+							>
+								{#if enhancing}
+									<Spinner className="size-5" />
+								{:else}
+									<SparklesSolid />
+								{/if}
+							</button>
+						</Tooltip>
+					</div>
+				{/if}
 			</div>
-		{/if}
-	</div>
-</div>
+		</div>
+	</Pane>
+	<NotePanel bind:show={showPanel}>
+		<div class="flex items-center mb-2">
+			<div class=" -translate-x-1.5">
+				<button
+					class="p-1.5 bg-transparent transition rounded-lg"
+					on:click={() => {
+						showPanel = !showPanel;
+					}}
+				>
+					<XMark className="size-5" strokeWidth="2.5" />
+				</button>
+			</div>
+
+			<div class=" font-medium text-base">Settings</div>
+		</div>
+
+		<div class="mt-1">
+			<div>
+				<div class=" text-xs font-medium mb-1">Model</div>
+
+				<div class="w-full">
+					<select class="w-full bg-transparent text-sm outline-hidden" bind:value={selectedModelId}>
+						<option value="" class="bg-gray-50 dark:bg-gray-700" disabled>
+							{$i18n.t('Select a model')}
+						</option>
+						{#each $models.filter((model) => !(model?.info?.meta?.hidden ?? false)) as model}
+							<option value={model.id} class="bg-gray-50 dark:bg-gray-700">{model.name}</option>
+						{/each}
+					</select>
+				</div>
+			</div>
+		</div>
+	</NotePanel>
+</PaneGroup>
