@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { v4 as uuidv4 } from 'uuid';
+	import heic2any from 'heic2any';
 
 	import { tick, getContext, onMount, onDestroy } from 'svelte';
 
@@ -30,6 +31,7 @@
 	let content = '';
 	let files = [];
 
+	let chatInputElement;
 	let filesInputElement;
 	let inputFiles;
 
@@ -78,7 +80,7 @@
 	};
 
 	const inputFilesHandler = async (inputFiles) => {
-		inputFiles.forEach((file) => {
+		inputFiles.forEach(async (file) => {
 			console.info('Processing file:', {
 				name: file.name,
 				type: file.type,
@@ -102,43 +104,50 @@
 				return;
 			}
 
-			if (
-				['image/gif', 'image/webp', 'image/jpeg', 'image/png', 'image/avif'].includes(file['type'])
-			) {
+			if (file['type'].startsWith('image/')) {
+				const compressImageHandler = async (imageUrl, settings = {}, config = {}) => {
+					// Quick shortcut so we don’t do unnecessary work.
+					const settingsCompression = settings?.imageCompression ?? false;
+					const configWidth = config?.file?.image_compression?.width ?? null;
+					const configHeight = config?.file?.image_compression?.height ?? null;
+
+					// If neither settings nor config wants compression, return original URL.
+					if (!settingsCompression && !configWidth && !configHeight) {
+						return imageUrl;
+					}
+
+					// Default to null (no compression unless set)
+					let width = null;
+					let height = null;
+
+					// If user/settings want compression, pick their preferred size.
+					if (settingsCompression) {
+						width = settings?.imageCompressionSize?.width ?? null;
+						height = settings?.imageCompressionSize?.height ?? null;
+					}
+
+					// Apply config limits as an upper bound if any
+					if (configWidth && (width === null || width > configWidth)) {
+						width = configWidth;
+					}
+					if (configHeight && (height === null || height > configHeight)) {
+						height = configHeight;
+					}
+
+					// Do the compression if required
+					if (width || height) {
+						return await compressImage(imageUrl, width, height);
+					}
+					return imageUrl;
+				};
+
 				let reader = new FileReader();
 
 				reader.onload = async (event) => {
 					let imageUrl = event.target.result;
 
-					if (
-						($settings?.imageCompression ?? false) ||
-						($config?.file?.image_compression?.width ?? null) ||
-						($config?.file?.image_compression?.height ?? null)
-					) {
-						let width = null;
-						let height = null;
-
-						if ($settings?.imageCompression ?? false) {
-							width = $settings?.imageCompressionSize?.width ?? null;
-							height = $settings?.imageCompressionSize?.height ?? null;
-						}
-
-						if (
-							($config?.file?.image_compression?.width ?? null) ||
-							($config?.file?.image_compression?.height ?? null)
-						) {
-							if (width > ($config?.file?.image_compression?.width ?? null)) {
-								width = $config?.file?.image_compression?.width ?? null;
-							}
-							if (height > ($config?.file?.image_compression?.height ?? null)) {
-								height = $config?.file?.image_compression?.height ?? null;
-							}
-						}
-
-						if (width || height) {
-							imageUrl = await compressImage(imageUrl, width, height);
-						}
-					}
+					// Compress the image if settings or config require it
+					imageUrl = await compressImageHandler(imageUrl, $settings, $config);
 
 					files = [
 						...files,
@@ -149,7 +158,11 @@
 					];
 				};
 
-				reader.readAsDataURL(file);
+				reader.readAsDataURL(
+					file['type'] === 'image/heic'
+						? await heic2any({ blob: file, toType: 'image/jpeg' })
+						: file
+				);
 			} else {
 				uploadFileHandler(file);
 			}
@@ -275,8 +288,9 @@
 
 		await tick();
 
-		const chatInputElement = document.getElementById(`chat-input-${id}`);
-		chatInputElement?.focus();
+		if (chatInputElement) {
+			chatInputElement.focus();
+		}
 	};
 
 	$: if (content) {
@@ -285,9 +299,10 @@
 
 	onMount(async () => {
 		window.setTimeout(() => {
-			const chatInput = document.getElementById(`chat-input-${id}`);
-			chatInput?.focus();
-		}, 0);
+			if (chatInputElement) {
+				chatInputElement.focus();
+			}
+		}, 100);
 
 		window.addEventListener('keydown', handleKeyDown);
 		await tick();
@@ -390,7 +405,10 @@
 						recording = false;
 
 						await tick();
-						document.getElementById(`chat-input-${id}`)?.focus();
+
+						if (chatInputElement) {
+							chatInputElement.focus();
+						}
 					}}
 					onConfirm={async (data) => {
 						const { text, filename } = data;
@@ -398,7 +416,10 @@
 						recording = false;
 
 						await tick();
-						document.getElementById(`chat-input-${id}`)?.focus();
+
+						if (chatInputElement) {
+							chatInputElement.focus();
+						}
 					}}
 				/>
 			{:else}
@@ -473,17 +494,21 @@
 								class="scrollbar-hidden font-primary text-left bg-transparent dark:text-gray-100 outline-hidden w-full pt-3 px-1 rounded-xl resize-none h-fit max-h-80 overflow-auto"
 							>
 								<RichTextInput
-									bind:value={content}
-									id={`chat-input-${id}`}
+									bind:this={chatInputElement}
+									json={true}
 									messageInput={true}
-									shiftEnter={!$mobile ||
-										!(
-											'ontouchstart' in window ||
-											navigator.maxTouchPoints > 0 ||
-											navigator.msMaxTouchPoints > 0
-										)}
-									{placeholder}
+									shiftEnter={!($settings?.ctrlEnterToSend ?? false) &&
+										(!$mobile ||
+											!(
+												'ontouchstart' in window ||
+												navigator.maxTouchPoints > 0 ||
+												navigator.msMaxTouchPoints > 0
+											))}
 									largeTextAsFile={$settings?.largeTextAsFile ?? false}
+									onChange={(e) => {
+										const { md } = e;
+										content = md;
+									}}
 									on:keydown={async (e) => {
 										e = e.detail.event;
 										const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac

@@ -36,6 +36,8 @@
 
 	onMount(() => {
 		mounted = true;
+
+		console.log('Banner mounted:', banner);
 	});
 </script>
 
@@ -82,9 +84,8 @@
 						</div>
 					{/if}
 				</div>
-
-				<div class="flex-1 text-xs text-gray-700 dark:text-white max-h-20 overflow-y-auto">
-					{@html marked.parse(DOMPurify.sanitize(banner.content))}
+				<div class="flex-1 text-xs text-gray-700 dark:text-white max-h-60 overflow-y-auto">
+					{@html marked.parse(DOMPurify.sanitize((banner?.content ?? '').replace(/\n/g, '<br>')))}
 				</div>
 			</div>
 
@@ -114,15 +115,13 @@
 				</div>
 			{/if}
 			<div class="flex self-start">
-				{#if banner.dismissible}
-					<button
-						on:click={() => {
-							dismiss(banner.id);
-						}}
-						class="  -mt-1 -mb-2 -translate-y-[1px] ml-1.5 mr-1 text-gray-400 dark:hover:text-white"
-						>&times;</button
-					>
-				{/if}
+				<button
+					on:click={() => {
+						dismiss(banner.id);
+					}}
+					class="  -mt-1 -mb-2 -translate-y-[1px] ml-1.5 mr-1 text-gray-400 dark:hover:text-white"
+					>&times;</button
+				>
 			</div>
 		</div>
 	{/if}

@@ -385,7 +385,6 @@
 	};
 
 	onMount(async () => {
-		console.log('codeblock', lang, code);
 		if (token) {
 			onUpdate(token);
 		}
