@@ -340,6 +340,17 @@ DATABASE_ENABLE_SQLITE_WAL = (
     os.environ.get("DATABASE_ENABLE_SQLITE_WAL", "False").lower() == "true"
 )
 
+DATABASE_DEDUPLICATE_INTERVAL = (
+    os.environ.get("DATABASE_DEDUPLICATE_INTERVAL", 0.)
+)
+if DATABASE_DEDUPLICATE_INTERVAL == "":
+    DATABASE_DEDUPLICATE_INTERVAL = 0.0
+else:
+    try:
+        DATABASE_DEDUPLICATE_INTERVAL = float(DATABASE_DEDUPLICATE_INTERVAL)
+    except Exception:
+        DATABASE_DEDUPLICATE_INTERVAL = 0.0
+
 RESET_CONFIG_ON_START = (
     os.environ.get("RESET_CONFIG_ON_START", "False").lower() == "true"
 )
