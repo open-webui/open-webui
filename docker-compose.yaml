@@ -2,6 +2,7 @@ services:
   ollama:
     volumes:
       - ollama:/root/.ollama
+      - ./my-company-ca.crt:/usr/local/share/ca-certificates/my-company-ca.crt
     container_name: ollama
     pull_policy: always
     tty: true
