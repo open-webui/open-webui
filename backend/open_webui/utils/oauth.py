@@ -83,16 +83,14 @@ def set_aak_role(user_data):
     log.debug("Running AAK Role management")
     log.debug(user_data)
 
-    claims_role = user_data.get("role", "")
+    claims_roles = user_data.get("role", "")
 
-    if claims_role == "admin":
-        user_role = 'admin'
-    else:
-        user_role = 'user'
+    log.debug(f"Using aak_claims_role {claims_roles}.")
 
-    user_data['role'] = user_role
+    if "builder" in claims_roles:
+        user_data['groups'].append("Builder")
 
-    log.debug(f"Using role {user_role}.")
+    log.debug(f"Using role-groups {user_data.get('groups', '')}.")
 
     return user_data
 
