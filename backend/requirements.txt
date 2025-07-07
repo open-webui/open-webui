@@ -99,7 +99,7 @@ youtube-transcript-api==1.1.0
 pytube==15.0.0
 
 pydub
-duckduckgo-search==8.0.2
+ddgs==9.0.0
 
 ## Google Drive
 google-api-python-client
