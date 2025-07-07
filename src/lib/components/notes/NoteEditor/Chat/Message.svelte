@@ -4,29 +4,35 @@
 	const i18n = getContext('i18n');
 
 	import Skeleton from '$lib/components/chat/Messages/Skeleton.svelte';
+	import Markdown from '$lib/components/chat/Messages/Markdown.svelte';
+	import Pencil from '$lib/components/icons/Pencil.svelte';
+	import Textarea from '$lib/components/common/Textarea.svelte';
 
 	export let message;
 	export let idx;
 
 	export let onDelete;
+	export let onEdit;
 
 	let textAreaElement: HTMLTextAreaElement;
-
-	onMount(() => {
-		if (textAreaElement) {
-			textAreaElement.style.height = '';
-			textAreaElement.style.height = textAreaElement.scrollHeight + 'px';
-		}
-	});
 </script>
 
 <div class="flex flex-col gap-1 group">
-	<div class="flex items-center justify-between pt-1 px-2">
+	<div class="flex items-center justify-between pt-1">
 		<div class="py-1 text-sm font-semibold uppercase min-w-[6rem] text-left rounded-lg transition">
 			{$i18n.t(message.role)}
 		</div>
 
-		<div class="flex items-center">
+		<div class="flex items-center gap-2">
+			<button
+				class=" text-transparent group-hover:text-gray-500 dark:hover:text-gray-300 transition"
+				on:click={() => {
+					onEdit();
+				}}
+			>
+				<Pencil className="size-3.5" strokeWidth="2" />
+			</button>
+
 			<button
 				class=" text-transparent group-hover:text-gray-500 dark:hover:text-gray-300 transition"
 				on:click={() => {
@@ -56,30 +62,21 @@
 		<!-- $i18n.t('an assistant') -->
 
 		{#if !(message?.done ?? true) && message?.content === ''}
-			<div class="px-2">
+			<div class="">
 				<Skeleton size="sm" />
 			</div>
-		{:else}
-			<textarea
-				id="{message.role}-{idx}-textarea"
-				bind:this={textAreaElement}
-				class="w-full bg-transparent outline-hidden rounded-lg px-2 text-sm resize-none overflow-hidden"
+		{:else if message?.edit === true}
+			<Textarea
+				class="w-full bg-transparent outline-hidden rounded-lg text-sm resize-none overflow-hidden"
 				placeholder={$i18n.t(`Enter {{role}} message here`, {
 					role: message.role === 'user' ? $i18n.t('a user') : $i18n.t('an assistant')
 				})}
-				rows="1"
-				on:input={(e) => {
-					textAreaElement.style.height = '';
-					textAreaElement.style.height = textAreaElement.scrollHeight + 'px';
-				}}
-				on:focus={(e) => {
-					textAreaElement.style.height = '';
-					textAreaElement.style.height = textAreaElement.scrollHeight + 'px';
-
-					// e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
-				}}
 				bind:value={message.content}
 			/>
+		{:else}
+			<div class=" markdown-prose-sm">
+				<Markdown id={`note-message-${idx}`} content={message.content} />
+			</div>
 		{/if}
 	</div>
 </div>

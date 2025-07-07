@@ -129,16 +129,8 @@
 								if (responseMessage.content == '' && data.choices[0].delta.content == '\n') {
 									continue;
 								} else {
-									if (textareaElement) {
-										textareaElement.style.height = textareaElement.scrollHeight + 'px';
-									}
-
 									responseMessage.content += data.choices[0].delta.content ?? '';
 									messages = messages;
-
-									if (textareaElement) {
-										textareaElement.style.height = textareaElement.scrollHeight + 'px';
-									}
 
 									await tick();
 								}
