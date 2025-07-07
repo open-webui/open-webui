@@ -113,7 +113,8 @@
 		selectedFilterIds,
 		imageGenerationEnabled,
 		webSearchEnabled,
-		codeInterpreterEnabled
+		codeInterpreterEnabled,
+		contextFiles //AXL:김정민 20250707 추가
 	});
 
 	let showTools = false;
