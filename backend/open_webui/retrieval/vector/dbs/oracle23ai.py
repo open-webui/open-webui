@@ -566,7 +566,9 @@ class Oracle23aiClient(VectorDBBase):
                         for row in results:
                             ids[qid].append(row[0])
                             documents[qid].append(row[1].read() if isinstance(row[1], oracledb.LOB) else str(row[1]))
-                            metadatas[qid].append(row[2].read() if isinstance(row[2], oracledb.LOB) else row[2])
+                            # 🔧 FIXED: Parse JSON metadata properly
+                            metadata_str = row[2].read() if isinstance(row[2], oracledb.LOB) else row[2]
+                            metadatas[qid].append(self._json_to_metadata(metadata_str))
                             distances[qid].append(float(row[3]))
             
             log.info(f"Search completed. Found {sum(len(ids[i]) for i in range(num_queries))} total results.")
@@ -640,8 +642,10 @@ class Oracle23aiClient(VectorDBBase):
             
             ids = [[row[0] for row in results]]
             documents = [[row[1].read() if isinstance(row[1], oracledb.LOB) else str(row[1]) for row in results]]
-            metadatas = [[row[2].read() if isinstance(row[2], oracledb.LOB) else row[2] for row in results]]
-            log.info(f"Query completed. Found {len(ids)} results.")
+            # 🔧 FIXED: Parse JSON metadata properly
+            metadatas = [[self._json_to_metadata(row[2].read() if isinstance(row[2], oracledb.LOB) else row[2]) for row in results]]
+            
+            log.info(f"Query completed. Found {len(results)} results.")
             
             return GetResult(
                 ids=ids,
@@ -700,8 +704,9 @@ class Oracle23aiClient(VectorDBBase):
             
             ids = [[row[0] for row in results]]
             documents = [[row[1].read() if isinstance(row[1], oracledb.LOB) else str(row[1]) for row in results]]
-            metadatas = [[row[2].read() if isinstance(row[2], oracledb.LOB) else row[2] for row in results]]
-            
+            # 🔧 FIXED: Parse JSON metadata properly
+            metadatas = [[self._json_to_metadata(row[2].read() if isinstance(row[2], oracledb.LOB) else row[2]) for row in results]]
+           
             return GetResult(
                 ids=ids,
                 documents=documents,
@@ -745,9 +750,11 @@ class Oracle23aiClient(VectorDBBase):
             params = {'collection_name': collection_name}
             
             if ids:
-                # Use proper parameterized query for IDs
-                id_list = ",".join([f"'{id}'" for id in ids])
-                query += f" AND id IN ({id_list})"
+                # 🔧 FIXED: Use proper parameterized query to prevent SQL injection
+                placeholders = ','.join([f':id_{i}' for i in range(len(ids))])
+                query += f" AND id IN ({placeholders})"
+                for i, id_val in enumerate(ids):
+                    params[f'id_{i}'] = id_val
             
             if filter:
                 for i, (key, value) in enumerate(filter.items()):
