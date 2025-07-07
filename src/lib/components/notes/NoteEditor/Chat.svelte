@@ -26,6 +26,8 @@
 
 	const i18n = getContext('i18n');
 
+	export let messages = [];
+
 	let loaded = false;
 
 	let loading = false;
@@ -35,9 +37,6 @@
 	let messagesContainerElement: HTMLDivElement;
 
 	let system = '';
-	let content = '';
-
-	let messages = [];
 	let chatInputElement = null;
 
 	const scrollToBottom = () => {

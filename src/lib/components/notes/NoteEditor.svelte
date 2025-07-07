@@ -91,6 +91,7 @@
 	};
 
 	let files = [];
+	let messages = [];
 
 	let versionIdx = null;
 	let selectedModelId = null;
@@ -1033,7 +1034,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 	</Pane>
 	<NotePanel bind:show={showPanel}>
 		{#if selectedPanel === 'chat'}
-			<Chat bind:show={showPanel} bind:selectedModelId />
+			<Chat bind:show={showPanel} bind:selectedModelId bind:messages />
 		{:else if selectedPanel === 'settings'}
 			<Settings bind:show={showPanel} bind:selectedModelId />
 		{/if}
