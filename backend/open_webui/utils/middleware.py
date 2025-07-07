@@ -2217,6 +2217,7 @@ async def process_chat_response(
                         content_blocks[-1]["type"] == "code_interpreter"
                         and retries < MAX_RETRIES
                     ):
+
                         await event_emitter(
                             {
                                 "type": "chat:completion",
@@ -2349,26 +2350,28 @@ async def process_chat_response(
                         )
 
                         try:
+                            new_form_data = {
+                                "model": model_id,
+                                "stream": True,
+                                "messages": [
+                                    *form_data["messages"],
+                                    {
+                                        "role": "assistant",
+                                        "content": serialize_content_blocks(
+                                            content_blocks, raw=True
+                                        ),
+                                    },
+                                ],
+                            }
+
                             res = await generate_chat_completion(
                                 request,
-                                {
-                                    "model": model_id,
-                                    "stream": True,
-                                    "messages": [
-                                        *form_data["messages"],
-                                        {
-                                            "role": "assistant",
-                                            "content": serialize_content_blocks(
-                                                content_blocks, raw=True
-                                            ),
-                                        },
-                                    ],
-                                },
+                                new_form_data,
                                 user,
                             )
 
                             if isinstance(res, StreamingResponse):
-                                await stream_body_handler(res)
+                                await stream_body_handler(res, new_form_data)
                             else:
                                 break
                         except Exception as e:
