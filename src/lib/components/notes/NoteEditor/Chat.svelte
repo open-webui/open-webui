@@ -164,6 +164,10 @@
 			loading = true;
 			await chatCompletionHandler();
 
+			messages = messages.filter((message) => {
+				return message.content !== '';
+			});
+
 			loading = false;
 			stopResponseFlag = false;
 		}
