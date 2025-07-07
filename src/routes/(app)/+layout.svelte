@@ -45,7 +45,6 @@
 	import ChangelogModal from '$lib/components/ChangelogModal.svelte';
 	import AccountPending from '$lib/components/layout/Overlay/AccountPending.svelte';
 	import UpdateInfoToast from '$lib/components/layout/UpdateInfoToast.svelte';
-	import { get } from 'svelte/store';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 
 	const i18n = getContext('i18n');
@@ -329,9 +328,9 @@
 				</div>
 			{/if}
 
-		{#if !$page.url.pathname.startsWith('/d/') && !$page.url.pathname.startsWith('/codeassist')}
-			<Sidebar />
-		{/if}
+			{#if !$page.url.pathname.startsWith('/d/') && !$page.url.pathname.startsWith('/codeassist')}
+				<Sidebar />
+			{/if}
 
 			{#if loaded}
 				<slot />
