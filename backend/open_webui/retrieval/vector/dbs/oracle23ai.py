@@ -12,6 +12,7 @@ from open_webui.retrieval.vector.main import (
 )
 
 from open_webui.config import (
+    ORACLE_DB_USE_WALLET
     ORACLE_DB_USER,
     ORACLE_DB_PASSWORD,
     ORACLE_DB_DSN,
@@ -59,10 +60,10 @@ class Oracle23aiClient(VectorDBBase):
                 wallet_password=ORACLE_WALLET_PASSWORD
             )
             
-            print(f" >>> Creating Connection Pool [{ORACLE_DB_USER}:**@{ORACLE_DB_DSN}]")
+            log.info(f" >>> Creating Connection Pool [{ORACLE_DB_USER}:**@{ORACLE_DB_DSN}]")
             
             with self.get_connection() as connection:
-                print("Connection version:", connection.version)
+                log.info("Connection version:", connection.version)
                 self._initialize_database(connection)
                 
             print("Oracle Vector Search initialization complete.")
