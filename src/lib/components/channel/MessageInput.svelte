@@ -285,6 +285,7 @@
 
 		content = '';
 		files = [];
+		chatInputElement?.setText('');
 
 		await tick();
 
