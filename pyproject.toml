@@ -107,7 +107,7 @@ dependencies = [
     "pytube==15.0.0",
 
     "pydub",
-    "duckduckgo-search==8.0.2",
+    "ddgs==9.0.0",
 
     "google-api-python-client",
     "google-auth-httplib2",
