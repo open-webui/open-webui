@@ -145,8 +145,8 @@
 			{#if help}
 				<hr class=" border-gray-100 dark:border-gray-800 my-1 p-0" />
 
-				<!-- {$i18n.t('Help')} -->
-				<DropdownMenu.Item
+				<!-- {$i18n.t('Help')} AXL:김정민 주석처리 20250707-->
+				<!-- <DropdownMenu.Item
 					class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition"
 					id="chat-share-button"
 					on:click={() => {
@@ -156,10 +156,11 @@
 				>
 					<QuestionMarkCircle className="size-5" />
 					<div class="flex items-center">{$i18n.t('Documentation')}</div>
-				</DropdownMenu.Item>
+				</DropdownMenu.Item> -->
 
 				<!-- Releases -->
-				<DropdownMenu.Item
+
+				<!-- <DropdownMenu.Item AXL:김정민 주석처리 20250707
 					class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition"
 					id="menu-item-releases"
 					on:click={() => {
@@ -169,7 +170,7 @@
 				>
 					<Map className="size-5" />
 					<div class="flex items-center">{$i18n.t('Releases')}</div>
-				</DropdownMenu.Item>
+				</DropdownMenu.Item> -->
 
 				<DropdownMenu.Item
 					class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition"
