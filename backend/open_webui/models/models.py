@@ -7,7 +7,6 @@ from open_webui.env import SRC_LOG_LEVELS
 
 from open_webui.models.users import Users, UserResponse
 
-
 from pydantic import BaseModel, ConfigDict
 
 from sqlalchemy import or_, and_, func

@@ -1,14 +1,10 @@
 import asyncio
-import inspect
 import json
 import logging
 import mimetypes
 import os
-import shutil
 import sys
 import time
-import random
-from uuid import uuid4
 
 
 from contextlib import asynccontextmanager
@@ -16,25 +12,18 @@ from urllib.parse import urlencode, parse_qs, urlparse
 from pydantic import BaseModel
 from sqlalchemy import text
 
-from typing import Optional
-from aiocache import cached
 import aiohttp
 import anyio.to_thread
 import requests
-from redis import Redis
 
 
 from fastapi import (
     Depends,
     FastAPI,
-    File,
-    Form,
     HTTPException,
     Request,
-    UploadFile,
     status,
     applications,
-    BackgroundTasks,
 )
 from fastapi.openapi.docs import get_swagger_ui_html
 
@@ -47,7 +36,7 @@ from starlette_compress import CompressMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
-from starlette.responses import Response, StreamingResponse
+from starlette.responses import Response
 from starlette.datastructures import Headers
 
 
@@ -97,11 +86,12 @@ from open_webui.internal.db import Session, engine
 
 from open_webui.models.functions import Functions
 from open_webui.models.models import Models
-from open_webui.models.users import UserModel, Users
+from open_webui.models.users import Users
 from open_webui.models.chats import Chats
 
 from open_webui.config import (
     LICENSE_KEY,
+    WEBUI_BASE_PATH,
     # Ollama
     ENABLE_OLLAMA_API,
     OLLAMA_BASE_URLS,
@@ -186,24 +176,17 @@ from open_webui.config import (
     WEB_LOADER_ENGINE,
     WHISPER_MODEL,
     WHISPER_VAD_FILTER,
-    WHISPER_LANGUAGE,
     DEEPGRAM_API_KEY,
-    WHISPER_MODEL_AUTO_UPDATE,
-    WHISPER_MODEL_DIR,
-    # Retrieval
     RAG_TEMPLATE,
-    DEFAULT_RAG_TEMPLATE,
     RAG_FULL_CONTEXT,
     BYPASS_EMBEDDING_AND_RETRIEVAL,
     RAG_EMBEDDING_MODEL,
     RAG_EMBEDDING_MODEL_AUTO_UPDATE,
-    RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
     RAG_RERANKING_ENGINE,
     RAG_RERANKING_MODEL,
     RAG_EXTERNAL_RERANKER_URL,
     RAG_EXTERNAL_RERANKER_API_KEY,
     RAG_RERANKING_MODEL_AUTO_UPDATE,
-    RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
     RAG_EMBEDDING_ENGINE,
     RAG_EMBEDDING_BATCH_SIZE,
     RAG_TOP_K,
@@ -296,11 +279,9 @@ from open_webui.config import (
     ONEDRIVE_SHAREPOINT_URL,
     ONEDRIVE_SHAREPOINT_TENANT_ID,
     ENABLE_RAG_HYBRID_SEARCH,
-    ENABLE_RAG_LOCAL_WEB_FETCH,
     ENABLE_WEB_LOADER_SSL_VERIFICATION,
     ENABLE_GOOGLE_DRIVE_INTEGRATION,
     ENABLE_ONEDRIVE_INTEGRATION,
-    UPLOAD_DIR,
     EXTERNAL_WEB_SEARCH_URL,
     EXTERNAL_WEB_SEARCH_API_KEY,
     EXTERNAL_WEB_LOADER_URL,
@@ -330,7 +311,6 @@ from open_webui.config import (
     PENDING_USER_OVERLAY_TITLE,
     DEFAULT_PROMPT_SUGGESTIONS,
     DEFAULT_MODELS,
-    DEFAULT_ARENA_MODEL,
     MODEL_ORDER_LIST,
     EVALUATION_ARENA_MODELS,
     # WebUI (OAuth)
@@ -1752,13 +1732,13 @@ async def get_manifest_json():
             "orientation": "any",
             "icons": [
                 {
-                    "src": "/static/logo.png",
+                    "src": f"{WEBUI_BASE_PATH}/static/logo.png",
                     "type": "image/png",
                     "sizes": "500x500",
                     "purpose": "any",
                 },
                 {
-                    "src": "/static/logo.png",
+                    "src": f"{WEBUI_BASE_PATH}/static/logo.png",
                     "type": "image/png",
                     "sizes": "500x500",
                     "purpose": "maskable",
@@ -1814,9 +1794,9 @@ def swagger_ui_html(*args, **kwargs):
     return get_swagger_ui_html(
         *args,
         **kwargs,
-        swagger_js_url="/static/swagger-ui/swagger-ui-bundle.js",
-        swagger_css_url="/static/swagger-ui/swagger-ui.css",
-        swagger_favicon_url="/static/swagger-ui/favicon.png",
+        swagger_js_url=f"{WEBUI_BASE_PATH}/static/swagger-ui/swagger-ui-bundle.js",
+        swagger_css_url=f"{WEBUI_BASE_PATH}/static/swagger-ui/swagger-ui.css",
+        swagger_favicon_url=f"{WEBUI_BASE_PATH}/static/swagger-ui/favicon.png",
     )
 
 
