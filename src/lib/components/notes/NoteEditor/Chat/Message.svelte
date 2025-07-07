@@ -3,6 +3,8 @@
 
 	const i18n = getContext('i18n');
 
+	import Skeleton from '$lib/components/chat/Messages/Skeleton.svelte';
+
 	export let message;
 	export let idx;
 
@@ -11,8 +13,10 @@
 	let textAreaElement: HTMLTextAreaElement;
 
 	onMount(() => {
-		textAreaElement.style.height = '';
-		textAreaElement.style.height = textAreaElement.scrollHeight + 'px';
+		if (textAreaElement) {
+			textAreaElement.style.height = '';
+			textAreaElement.style.height = textAreaElement.scrollHeight + 'px';
+		}
 	});
 </script>
 
@@ -50,25 +54,32 @@
 	<div class="flex-1">
 		<!-- $i18n.t('a user') -->
 		<!-- $i18n.t('an assistant') -->
-		<textarea
-			id="{message.role}-{idx}-textarea"
-			bind:this={textAreaElement}
-			class="w-full bg-transparent outline-hidden rounded-lg px-2 text-sm resize-none overflow-hidden"
-			placeholder={$i18n.t(`Enter {{role}} message here`, {
-				role: message.role === 'user' ? $i18n.t('a user') : $i18n.t('an assistant')
-			})}
-			rows="1"
-			on:input={(e) => {
-				textAreaElement.style.height = '';
-				textAreaElement.style.height = textAreaElement.scrollHeight + 'px';
-			}}
-			on:focus={(e) => {
-				textAreaElement.style.height = '';
-				textAreaElement.style.height = textAreaElement.scrollHeight + 'px';
 
-				// e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
-			}}
-			bind:value={message.content}
-		/>
+		{#if !(message?.done ?? true) && message?.content === ''}
+			<div class="px-2">
+				<Skeleton size="sm" />
+			</div>
+		{:else}
+			<textarea
+				id="{message.role}-{idx}-textarea"
+				bind:this={textAreaElement}
+				class="w-full bg-transparent outline-hidden rounded-lg px-2 text-sm resize-none overflow-hidden"
+				placeholder={$i18n.t(`Enter {{role}} message here`, {
+					role: message.role === 'user' ? $i18n.t('a user') : $i18n.t('an assistant')
+				})}
+				rows="1"
+				on:input={(e) => {
+					textAreaElement.style.height = '';
+					textAreaElement.style.height = textAreaElement.scrollHeight + 'px';
+				}}
+				on:focus={(e) => {
+					textAreaElement.style.height = '';
+					textAreaElement.style.height = textAreaElement.scrollHeight + 'px';
+
+					// e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
+				}}
+				bind:value={message.content}
+			/>
+		{/if}
 	</div>
 </div>

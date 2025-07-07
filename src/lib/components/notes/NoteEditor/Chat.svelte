@@ -64,6 +64,19 @@
 			return;
 		}
 
+		let responseMessage;
+		if (messages.at(-1)?.role === 'assistant') {
+			responseMessage = messages.at(-1);
+		} else {
+			responseMessage = {
+				role: 'assistant',
+				content: '',
+				done: false
+			};
+			messages.push(responseMessage);
+			messages = messages;
+		}
+
 		const [res, controller] = await chatCompletion(
 			localStorage.token,
 			{
@@ -81,18 +94,6 @@
 			},
 			`${WEBUI_BASE_URL}/api`
 		);
-
-		let responseMessage;
-		if (messages.at(-1)?.role === 'assistant') {
-			responseMessage = messages.at(-1);
-		} else {
-			responseMessage = {
-				role: 'assistant',
-				content: ''
-			};
-			messages.push(responseMessage);
-			messages = messages;
-		}
 
 		await tick();
 		const textareaElement = document.getElementById(`assistant-${messages.length - 1}-textarea`);
@@ -128,12 +129,16 @@
 								if (responseMessage.content == '' && data.choices[0].delta.content == '\n') {
 									continue;
 								} else {
-									textareaElement.style.height = textareaElement.scrollHeight + 'px';
+									if (textareaElement) {
+										textareaElement.style.height = textareaElement.scrollHeight + 'px';
+									}
 
 									responseMessage.content += data.choices[0].delta.content ?? '';
 									messages = messages;
 
-									textareaElement.style.height = textareaElement.scrollHeight + 'px';
+									if (textareaElement) {
+										textareaElement.style.height = textareaElement.scrollHeight + 'px';
+									}
 
 									await tick();
 								}
@@ -163,9 +168,9 @@
 
 			loading = true;
 			await chatCompletionHandler();
-
-			messages = messages.filter((message) => {
-				return message.content !== '';
+			messages = messages.map((message) => {
+				message.done = true;
+				return message;
 			});
 
 			loading = false;
