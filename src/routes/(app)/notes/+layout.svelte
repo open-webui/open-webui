@@ -1,10 +1,8 @@
 <script lang="ts">
 	import { onMount, getContext } from 'svelte';
-	import { WEBUI_NAME, showSidebar, functions, config, user, showArchivedChats } from '$lib/stores';
+	import { WEBUI_NAME, config, user } from '$lib/stores';
 	import { goto } from '$app/navigation';
-
-	import MenuLines from '$lib/components/icons/MenuLines.svelte';
-	import UserMenu from '$lib/components/layout/Sidebar/UserMenu.svelte';
+	import { WEBUI_BASE_PATH } from '$lib/constants';
 
 	const i18n = getContext('i18n');
 
@@ -18,7 +16,7 @@
 			)
 		) {
 			// If the feature is not enabled, redirect to the home page
-			goto('/');
+			goto(WEBUI_BASE_PATH + '/');
 		}
 
 		loaded = true;

@@ -4,7 +4,7 @@
 	import { getToolById, getTools, updateToolById } from '$lib/apis/tools';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import ToolkitEditor from '$lib/components/workspace/Tools/ToolkitEditor.svelte';
-	import { WEBUI_VERSION } from '$lib/constants';
+	import { WEBUI_VERSION, WEBUI_BASE_PATH } from '$lib/constants';
 	import { tools } from '$lib/stores';
 	import { compareVersion, extractFrontmatter } from '$lib/utils';
 	import { onMount, getContext } from 'svelte';
@@ -47,7 +47,7 @@
 			toast.success($i18n.t('Tool updated successfully'));
 			tools.set(await getTools(localStorage.token));
 
-			// await goto('/workspace/tools');
+			// await goto(WEBUI_BASE_PATH + '/workspace/tools');
 		}
 	};
 
@@ -58,7 +58,7 @@
 		if (id) {
 			tool = await getToolById(localStorage.token, id).catch((error) => {
 				toast.error(`${error}`);
-				goto('/workspace/tools');
+				goto(WEBUI_BASE_PATH + '/workspace/tools');
 				return null;
 			});
 

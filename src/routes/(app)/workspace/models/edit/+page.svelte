@@ -12,6 +12,7 @@
 
 	import { getModels } from '$lib/apis';
 	import ModelEditor from '$lib/components/workspace/Models/ModelEditor.svelte';
+	import { WEBUI_BASE_PATH } from '$lib/constants';
 
 	let model = null;
 
@@ -23,10 +24,10 @@
 			});
 
 			if (!model) {
-				goto('/workspace/models');
+				goto(WEBUI_BASE_PATH + '/workspace/models');
 			}
 		} else {
-			goto('/workspace/models');
+			goto(WEBUI_BASE_PATH + '/workspace/models');
 		}
 	});
 
@@ -41,7 +42,7 @@
 				)
 			);
 			toast.success($i18n.t('Model updated successfully'));
-			await goto('/workspace/models');
+			await goto(WEBUI_BASE_PATH + '/workspace/models');
 		}
 	};
 </script>

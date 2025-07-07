@@ -12,6 +12,7 @@
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import { WEBUI_BASE_PATH } from '$lib/constants';
 
 	import Spinner from '../common/Spinner.svelte';
 	import Loader from '../common/Loader.svelte';
@@ -232,7 +233,9 @@
 								>
 									<a
 										class=" basis-3/5"
-										href={shareUrl ? `/s/${chat.id}` : `/c/${chat.id}`}
+										href={shareUrl
+											? `${WEBUI_BASE_PATH}/s/${chat.id}`
+											: `${WEBUI_BASE_PATH}/c/${chat.id}`}
 										on:click={() => (show = false)}
 									>
 										<div class="text-ellipsis line-clamp-1 w-full">
@@ -359,7 +362,7 @@
 														'border-b'} dark:bg-gray-900 border-gray-50 dark:border-gray-850 text-xs"
 												>
 													<td class="px-3 py-1 w-2/3">
-														<a href="/c/{chat.id}" target="_blank">
+														<a href="{WEBUI_BASE_PATH}/c/{chat.id}" target="_blank">
 															<div class=" hover:underline line-clamp-1">
 																{chat.title}
 															</div>

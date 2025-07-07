@@ -5,6 +5,7 @@
 	import { updateUserSettings } from '$lib/apis/users';
 	import { getModels as _getModels } from '$lib/apis';
 	import { goto } from '$app/navigation';
+	import { WEBUI_BASE_PATH } from '$lib/constants';
 
 	import Modal from '../common/Modal.svelte';
 	import Account from './Settings/Account.svelte';
@@ -901,13 +902,13 @@
 				{/if}
 				{#if $user?.role === 'admin'}
 					<a
-						href="/admin/settings"
+						href="{WEBUI_BASE_PATH}/admin/settings"
 						class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none md:mt-auto flex text-left transition {$settings?.highContrastMode
 							? 'hover:bg-gray-200 dark:hover:bg-gray-800'
 							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 						on:click={async (e) => {
 							e.preventDefault();
-							await goto('/admin/settings');
+							await goto(WEBUI_BASE_PATH + '/admin/settings');
 							show = false;
 						}}
 					>

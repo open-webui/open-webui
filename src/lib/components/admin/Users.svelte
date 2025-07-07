@@ -3,6 +3,7 @@
 	import { toast } from 'svelte-sonner';
 
 	import { goto } from '$app/navigation';
+	import { WEBUI_BASE_PATH } from '$lib/constants';
 	import { user } from '$lib/stores';
 	import { page } from '$app/stores';
 
@@ -34,7 +35,7 @@
 
 	onMount(async () => {
 		if ($user?.role !== 'admin') {
-			await goto('/');
+			await goto(WEBUI_BASE_PATH + '/');
 		}
 
 		loaded = true;
@@ -67,7 +68,7 @@
 				? ''
 				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			on:click={() => {
-				goto('/admin/users/overview');
+				goto(WEBUI_BASE_PATH + '/admin/users/overview');
 			}}
 		>
 			<div class=" self-center mr-2">
@@ -92,7 +93,7 @@
 				? ''
 				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			on:click={() => {
-				goto('/admin/users/groups');
+				goto(WEBUI_BASE_PATH + '/admin/users/groups');
 			}}
 		>
 			<div class=" self-center mr-2">

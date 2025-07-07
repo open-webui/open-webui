@@ -1,18 +1,9 @@
 <script lang="ts">
 	import { onMount, getContext } from 'svelte';
-	import {
-		WEBUI_NAME,
-		showSidebar,
-		functions,
-		user,
-		mobile,
-		models,
-		prompts,
-		knowledge,
-		tools
-	} from '$lib/stores';
+	import { WEBUI_NAME, showSidebar, user } from '$lib/stores';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
+	import { WEBUI_BASE_PATH } from '$lib/constants';
 
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
 
@@ -23,19 +14,19 @@
 	onMount(async () => {
 		if ($user?.role !== 'admin') {
 			if ($page.url.pathname.includes('/models') && !$user?.permissions?.workspace?.models) {
-				goto('/');
+				goto(WEBUI_BASE_PATH + '/');
 			} else if (
 				$page.url.pathname.includes('/knowledge') &&
 				!$user?.permissions?.workspace?.knowledge
 			) {
-				goto('/');
+				goto(WEBUI_BASE_PATH + '/');
 			} else if (
 				$page.url.pathname.includes('/prompts') &&
 				!$user?.permissions?.workspace?.prompts
 			) {
-				goto('/');
+				goto(WEBUI_BASE_PATH + '/');
 			} else if ($page.url.pathname.includes('/tools') && !$user?.permissions?.workspace?.tools) {
-				goto('/');
+				goto(WEBUI_BASE_PATH + '/');
 			}
 		}
 
@@ -81,7 +72,7 @@
 								class="min-w-fit p-1.5 {$page.url.pathname.includes('/workspace/models')
 									? ''
 									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
-								href="/workspace/models">{$i18n.t('Models')}</a
+								href="{WEBUI_BASE_PATH}/workspace/models">{$i18n.t('Models')}</a
 							>
 						{/if}
 
@@ -90,7 +81,7 @@
 								class="min-w-fit p-1.5 {$page.url.pathname.includes('/workspace/knowledge')
 									? ''
 									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
-								href="/workspace/knowledge"
+								href="{WEBUI_BASE_PATH}/workspace/knowledge"
 							>
 								{$i18n.t('Knowledge')}
 							</a>
@@ -101,7 +92,7 @@
 								class="min-w-fit p-1.5 {$page.url.pathname.includes('/workspace/prompts')
 									? ''
 									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
-								href="/workspace/prompts">{$i18n.t('Prompts')}</a
+								href="{WEBUI_BASE_PATH}/workspace/prompts">{$i18n.t('Prompts')}</a
 							>
 						{/if}
 
@@ -110,7 +101,7 @@
 								class="min-w-fit p-1.5 {$page.url.pathname.includes('/workspace/tools')
 									? ''
 									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
-								href="/workspace/tools"
+								href="{WEBUI_BASE_PATH}/workspace/tools"
 							>
 								{$i18n.t('Tools')}
 							</a>

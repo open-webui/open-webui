@@ -1,5 +1,6 @@
 <script>
 	import { goto } from '$app/navigation';
+	import { WEBUI_BASE_PATH } from '$lib/constants';
 	import { getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
@@ -38,7 +39,7 @@
 		if (res) {
 			toast.success($i18n.t('Knowledge created successfully.'));
 			knowledge.set(await getKnowledgeBases(localStorage.token));
-			goto(`/workspace/knowledge/${res.id}`);
+			goto(`${WEBUI_BASE_PATH}/workspace/knowledge/${res.id}`);
 		}
 
 		loading = false;
@@ -49,7 +50,7 @@
 	<button
 		class="flex space-x-1"
 		on:click={() => {
-			goto('/workspace/knowledge');
+			goto(WEBUI_BASE_PATH + '/workspace/knowledge');
 		}}
 	>
 		<div class=" self-center">

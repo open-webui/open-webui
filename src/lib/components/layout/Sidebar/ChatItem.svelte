@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { goto, invalidate, invalidateAll } from '$app/navigation';
+	import { goto } from '$app/navigation';
 	import { onMount, getContext, createEventDispatcher, tick, onDestroy } from 'svelte';
 	const i18n = getContext('i18n');
 
@@ -13,7 +13,6 @@
 		getAllTags,
 		getChatById,
 		getChatList,
-		getChatListByTagName,
 		getPinnedChatList,
 		updateChatById
 	} from '$lib/apis/chats';
@@ -35,11 +34,10 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
 	import DragGhost from '$lib/components/common/DragGhost.svelte';
-	import Check from '$lib/components/icons/Check.svelte';
-	import XMark from '$lib/components/icons/XMark.svelte';
 	import Document from '$lib/components/icons/Document.svelte';
 	import Sparkles from '$lib/components/icons/Sparkles.svelte';
 	import { generateTitle } from '$lib/apis';
+	import { WEBUI_BASE_PATH } from '$lib/constants';
 
 	export let className = '';
 
@@ -103,7 +101,7 @@
 		});
 
 		if (res) {
-			goto(`/c/${res.id}`);
+			goto(`${WEBUI_BASE_PATH}/c/${res.id}`);
 
 			currentChatPage.set(1);
 			await chats.set(await getChatList(localStorage.token, $currentChatPage));
@@ -120,7 +118,7 @@
 		if (res) {
 			tags.set(await getAllTags(localStorage.token));
 			if ($chatId === id) {
-				await goto('/');
+				await goto(`${WEBUI_BASE_PATH}/`);
 
 				await chatId.set('');
 				await tick();
@@ -351,7 +349,7 @@
 				: selected
 					? 'bg-gray-100 dark:bg-gray-950'
 					: ' group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
-			href="/c/{id}"
+			href="{WEBUI_BASE_PATH}/c/{id}"
 			on:click={() => {
 				dispatch('select');
 

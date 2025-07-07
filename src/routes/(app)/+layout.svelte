@@ -1,25 +1,19 @@
 <script lang="ts">
-	import { toast } from 'svelte-sonner';
 	import { onMount, tick, getContext } from 'svelte';
 	import { openDB, deleteDB } from 'idb';
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
-	import mermaid from 'mermaid';
 
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { fade } from 'svelte/transition';
 
-	import { getKnowledgeBases } from '$lib/apis/knowledge';
-	import { getFunctions } from '$lib/apis/functions';
 	import { getModels, getToolServersData, getVersionUpdates } from '$lib/apis';
-	import { getAllTags } from '$lib/apis/chats';
-	import { getPrompts } from '$lib/apis/prompts';
 	import { getTools } from '$lib/apis/tools';
 	import { getBanners } from '$lib/apis/configs';
 	import { getUserSettings } from '$lib/apis/users';
 
-	import { WEBUI_VERSION } from '$lib/constants';
+	import { WEBUI_VERSION, WEBUI_BASE_PATH } from '$lib/constants';
 	import { compareVersion } from '$lib/utils';
 
 	import {
@@ -27,11 +21,7 @@
 		user,
 		settings,
 		models,
-		prompts,
-		knowledge,
 		tools,
-		functions,
-		tags,
 		banners,
 		showSettings,
 		showChangelog,
@@ -57,7 +47,7 @@
 
 	onMount(async () => {
 		if ($user === undefined || $user === null) {
-			await goto('/auth');
+			await goto(`${WEBUI_BASE_PATH}/auth`);
 		} else if (['user', 'admin'].includes($user?.role)) {
 			try {
 				// Check if IndexedDB exists
@@ -204,7 +194,7 @@
 						temporaryChatEnabled.set(!$temporaryChatEnabled);
 					}
 
-					await goto('/');
+					await goto(WEBUI_BASE_PATH + '/');
 					const newChatButton = document.getElementById('new-chat-button');
 					setTimeout(() => {
 						newChatButton?.click();

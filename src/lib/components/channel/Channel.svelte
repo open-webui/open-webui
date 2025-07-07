@@ -4,6 +4,7 @@
 
 	import { onDestroy, onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { WEBUI_BASE_PATH } from '$lib/constants';
 
 	import { chatId, showSidebar, socket, user } from '$lib/stores';
 	import { getChannelById, getChannelMessages, sendMessage } from '$lib/apis/channels';
@@ -64,7 +65,7 @@
 				}
 			}
 		} else {
-			goto('/');
+			goto(WEBUI_BASE_PATH + '/');
 		}
 	};
 

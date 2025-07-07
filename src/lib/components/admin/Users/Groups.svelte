@@ -6,6 +6,7 @@
 
 	import { onMount, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { WEBUI_BASE_PATH } from '$lib/constants';
 
 	import { WEBUI_NAME, config, user, showSidebar, knowledge } from '$lib/stores';
 	import { WEBUI_BASE_URL } from '$lib/constants';
@@ -125,7 +126,7 @@
 
 	onMount(async () => {
 		if ($user?.role !== 'admin') {
-			await goto('/');
+			await goto(WEBUI_BASE_PATH + '/');
 			return;
 		}
 

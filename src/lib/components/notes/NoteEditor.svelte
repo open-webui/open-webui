@@ -14,6 +14,7 @@
 	import { toast } from 'svelte-sonner';
 
 	import { goto } from '$app/navigation';
+	import { WEBUI_BASE_PATH } from '$lib/constants';
 
 	import dayjs from '$lib/dayjs';
 	import calendar from 'dayjs/plugin/calendar';
@@ -137,7 +138,7 @@
 			note = res;
 			files = res.data.files || [];
 		} else {
-			goto('/');
+			goto(WEBUI_BASE_PATH + '/');
 			return;
 		}
 
@@ -522,7 +523,7 @@
 
 		if (res) {
 			toast.success($i18n.t('Note deleted successfully'));
-			goto('/notes');
+			goto(WEBUI_BASE_PATH + '/notes');
 		} else {
 			toast.error($i18n.t('Failed to delete note'));
 		}

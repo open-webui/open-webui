@@ -1,16 +1,16 @@
 <script lang="ts">
 	import { v4 as uuidv4 } from 'uuid';
 	import { toast } from 'svelte-sonner';
-	import mermaid from 'mermaid';
-	import { PaneGroup, Pane, PaneResizer } from 'paneforge';
+	import { PaneGroup, Pane } from 'paneforge';
 
 	import { getContext, onDestroy, onMount, tick } from 'svelte';
 	const i18n: Writable<i18nType> = getContext('i18n');
 
 	import { goto } from '$app/navigation';
+	import { WEBUI_BASE_PATH } from '$lib/constants';
 	import { page } from '$app/stores';
 
-	import { get, type Unsubscriber, type Writable } from 'svelte/store';
+	import { type Unsubscriber, type Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
@@ -24,7 +24,6 @@
 		settings,
 		showSidebar,
 		WEBUI_NAME,
-		banners,
 		user,
 		socket,
 		showControls,
@@ -43,17 +42,12 @@
 		copyToClipboard,
 		getMessageContentParts,
 		createMessagesList,
-		extractSentencesForAudio,
 		promptTemplate,
-		splitStream,
-		sleep,
-		removeDetails,
 		getPromptVariables,
 		processDetails,
 		removeAllDetails
 	} from '$lib/utils';
 
-	import { generateChatCompletion } from '$lib/apis/ollama';
 	import {
 		createNewChat,
 		getAllTags,
@@ -63,13 +57,11 @@
 		updateChatById
 	} from '$lib/apis/chats';
 	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
-	import { processWeb, processWebSearch, processYoutubeVideo } from '$lib/apis/retrieval';
+	import { processWeb, processYoutubeVideo } from '$lib/apis/retrieval';
 	import { createOpenAITextStream } from '$lib/apis/streaming';
-	import { queryMemory } from '$lib/apis/memories';
 	import { getAndUpdateUserLocation, getUserSettings } from '$lib/apis/users';
 	import {
 		chatCompleted,
-		generateQueries,
 		chatAction,
 		generateMoACompletion,
 		stopTask,
@@ -77,14 +69,12 @@
 	} from '$lib/apis';
 	import { getTools } from '$lib/apis/tools';
 
-	import Banner from '../common/Banner.svelte';
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
 	import Messages from '$lib/components/chat/Messages.svelte';
 	import Navbar from '$lib/components/chat/Navbar.svelte';
 	import ChatControls from './ChatControls.svelte';
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
 	import Placeholder from './Placeholder.svelte';
-	import NotificationToast from '../NotificationToast.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import { fade } from 'svelte/transition';
 
@@ -189,7 +179,7 @@
 			const chatInput = document.getElementById('chat-input');
 			chatInput?.focus();
 		} else {
-			await goto('/');
+			await goto(WEBUI_BASE_PATH + '/');
 		}
 	};
 
@@ -459,7 +449,7 @@
 		$socket?.on('chat-events', chatEventHandler);
 
 		pageSubscribe = page.subscribe(async (p) => {
-			if (p.url.pathname === '/') {
+			if (p.url.pathname === `${WEBUI_BASE_PATH}/`) {
 				await tick();
 				initNewChat();
 			}
@@ -800,7 +790,7 @@
 		await showArtifacts.set(false);
 
 		if ($page.url.pathname.includes('/c/')) {
-			window.history.replaceState(history.state, '', `/`);
+			window.history.replaceState(history.state, '', `${WEBUI_BASE_PATH}/`);
 		}
 
 		autoScroll = true;
@@ -894,7 +884,7 @@
 		}
 
 		chat = await getChatById(localStorage.token, $chatId).catch(async (error) => {
-			await goto('/');
+			await goto(WEBUI_BASE_PATH + '/');
 			return null;
 		});
 
@@ -1997,7 +1987,7 @@
 			await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			currentChatPage.set(1);
 
-			window.history.replaceState(history.state, '', `/c/${_chatId}`);
+			window.history.replaceState(history.state, '', `${WEBUI_BASE_PATH}/c/${_chatId}`);
 		} else {
 			_chatId = 'local';
 			await chatId.set('local');

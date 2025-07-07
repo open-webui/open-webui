@@ -4,10 +4,10 @@
 	const { saveAs } = fileSaver;
 
 	import { onMount, getContext } from 'svelte';
-	import { WEBUI_NAME, config, prompts, tools as _tools, user } from '$lib/stores';
-	import { createNewPrompt, deletePromptByCommand, getPrompts } from '$lib/apis/prompts';
+	import { WEBUI_NAME, config, tools as _tools, user } from '$lib/stores';
 
 	import { goto } from '$app/navigation';
+	import { WEBUI_BASE_PATH } from '$lib/constants';
 	import {
 		createNewTool,
 		loadToolByUrl,
@@ -17,7 +17,6 @@
 		getToolList,
 		getTools
 	} from '$lib/apis/tools';
-	import ArrowDownTray from '../icons/ArrowDownTray.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import ConfirmDialog from '../common/ConfirmDialog.svelte';
 	import ToolMenu from './Tools/ToolMenu.svelte';
@@ -105,7 +104,7 @@
 				id: `${_tool.id}_clone`,
 				name: `${_tool.name} (Clone)`
 			});
-			goto('/workspace/tools/create');
+			goto(WEBUI_BASE_PATH + '/workspace/tools/create');
 		}
 	};
 
@@ -184,7 +183,7 @@
 		sessionStorage.tool = JSON.stringify({
 			...tool
 		});
-		goto('/workspace/tools/create');
+		goto(WEBUI_BASE_PATH + '/workspace/tools/create');
 	}}
 	loadUrlHandler={async (url) => {
 		return await loadToolByUrl(localStorage.token, url);
@@ -232,7 +231,7 @@
 				{#if $user?.role === 'admin'}
 					<AddToolMenu
 						createHandler={() => {
-							goto('/workspace/tools/create');
+							goto(WEBUI_BASE_PATH + '/workspace/tools/create');
 						}}
 						importFromLinkHandler={() => {
 							showImportModal = true;
@@ -247,7 +246,7 @@
 				{:else}
 					<a
 						class=" px-2 py-2 rounded-xl hover:bg-gray-700/10 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition font-medium text-sm flex items-center space-x-1"
-						href="/workspace/tools/create"
+						href="{WEBUI_BASE_PATH}/workspace/tools/create"
 					>
 						<Plus className="size-3.5" />
 					</a>
@@ -263,7 +262,7 @@
 			>
 				<a
 					class=" flex flex-1 space-x-3.5 cursor-pointer w-full"
-					href={`/workspace/tools/edit?id=${encodeURIComponent(tool.id)}`}
+					href={`${WEBUI_BASE_PATH}/workspace/tools/edit?id=${encodeURIComponent(tool.id)}`}
 				>
 					<div class="flex items-center text-left">
 						<div class=" flex-1 self-center">
@@ -377,7 +376,7 @@
 
 						<ToolMenu
 							editHandler={() => {
-								goto(`/workspace/tools/edit?id=${encodeURIComponent(tool.id)}`);
+								goto(`${WEBUI_BASE_PATH}/workspace/tools/edit?id=${encodeURIComponent(tool.id)}`);
 							}}
 							shareHandler={() => {
 								shareHandler(tool);

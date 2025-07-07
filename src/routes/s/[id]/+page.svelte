@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, tick, getContext } from 'svelte';
+	import { tick, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 
@@ -11,12 +11,12 @@
 	import { getChatByShareId, cloneSharedChatById } from '$lib/apis/chats';
 
 	import Messages from '$lib/components/chat/Messages.svelte';
-	import Navbar from '$lib/components/layout/Navbar.svelte';
 
 	import { getUserById, getUserSettings } from '$lib/apis/users';
 	import { getModels } from '$lib/apis';
 	import { toast } from 'svelte-sonner';
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
+	import { WEBUI_BASE_PATH } from '$lib/constants';
 
 	const i18n = getContext('i18n');
 	dayjs.extend(localizedFormat);
@@ -51,7 +51,7 @@
 				await tick();
 				loaded = true;
 			} else {
-				await goto('/');
+				await goto(WEBUI_BASE_PATH + '/');
 			}
 		})();
 	}
@@ -88,7 +88,7 @@
 		);
 		await chatId.set($page.params.id);
 		chat = await getChatByShareId(localStorage.token, $chatId).catch(async (error) => {
-			await goto('/');
+			await goto(WEBUI_BASE_PATH + '/');
 			return null;
 		});
 
@@ -137,7 +137,7 @@
 		});
 
 		if (res) {
-			goto(`/c/${res.id}`);
+			goto(`${WEBUI_BASE_PATH}/c/${res.id}`);
 		}
 	};
 </script>

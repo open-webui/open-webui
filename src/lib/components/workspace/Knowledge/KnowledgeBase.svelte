@@ -2,28 +2,16 @@
 	import Fuse from 'fuse.js';
 	import { toast } from 'svelte-sonner';
 	import { v4 as uuidv4 } from 'uuid';
-	import { PaneGroup, Pane, PaneResizer } from 'paneforge';
 
-	import { onMount, getContext, onDestroy, tick } from 'svelte';
+	import { onMount, getContext, onDestroy } from 'svelte';
 	const i18n = getContext('i18n');
 
 	import { goto } from '$app/navigation';
+	import { WEBUI_API_BASE_URL, WEBUI_BASE_PATH } from '$lib/constants';
 	import { page } from '$app/stores';
-	import {
-		mobile,
-		showSidebar,
-		knowledge as _knowledge,
-		config,
-		user,
-		settings
-	} from '$lib/stores';
+	import { showSidebar, knowledge as _knowledge, config, user, settings } from '$lib/stores';
 
-	import {
-		updateFileDataContentById,
-		uploadFile,
-		deleteFileById,
-		getFileById
-	} from '$lib/apis/files';
+	import { updateFileDataContentById, uploadFile, getFileById } from '$lib/apis/files';
 	import {
 		addFileToKnowledgeById,
 		getKnowledgeById,
@@ -44,7 +32,6 @@
 
 	import SyncConfirmDialog from '../../common/ConfirmDialog.svelte';
 	import RichTextInput from '$lib/components/common/RichTextInput.svelte';
-	import EllipsisVertical from '$lib/components/icons/EllipsisVertical.svelte';
 	import Drawer from '$lib/components/common/Drawer.svelte';
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
@@ -581,7 +568,7 @@
 		if (res) {
 			knowledge = res;
 		} else {
-			goto('/workspace/knowledge');
+			goto(WEBUI_BASE_PATH + '/workspace/knowledge');
 		}
 
 		const dropZone = document.querySelector('body');
@@ -753,7 +740,9 @@
 								<div class=" flex-1 text-xl font-medium">
 									<a
 										class="hover:text-gray-500 dark:hover:text-gray-100 hover:underline grow line-clamp-1"
-										href={selectedFile.id ? `/api/v1/files/${selectedFile.id}/content` : '#'}
+										href={selectedFile.id
+											? `${WEBUI_API_BASE_URL}/files/${selectedFile.id}/content`
+											: '#'}
 										target="_blank"
 									>
 										{decodeString(selectedFile?.meta?.name)}

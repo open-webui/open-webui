@@ -2,7 +2,7 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import { chats, user, settings, scrollPaginationEnabled, currentChatPage } from '$lib/stores';
+	import { chats, user, scrollPaginationEnabled, currentChatPage } from '$lib/stores';
 
 	import {
 		archiveAllChats,
@@ -12,8 +12,9 @@
 		importChat
 	} from '$lib/apis/chats';
 	import { getImportOrigin, convertOpenAIChats } from '$lib/utils';
-	import { onMount, getContext } from 'svelte';
+	import { getContext } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { WEBUI_BASE_PATH } from '$lib/constants';
 	import { toast } from 'svelte-sonner';
 	import ArchivedChatsModal from '$lib/components/layout/ArchivedChatsModal.svelte';
 
@@ -85,7 +86,7 @@
 	};
 
 	const archiveAllChatsHandler = async () => {
-		await goto('/');
+		await goto(WEBUI_BASE_PATH + '/');
 		await archiveAllChats(localStorage.token).catch((error) => {
 			toast.error(`${error}`);
 		});
@@ -96,7 +97,7 @@
 	};
 
 	const deleteAllChatsHandler = async () => {
-		await goto('/');
+		await goto(WEBUI_BASE_PATH + '/');
 		await deleteAllChats(localStorage.token).catch((error) => {
 			toast.error(`${error}`);
 		});

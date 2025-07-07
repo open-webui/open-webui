@@ -8,6 +8,7 @@
 
 	import { getPromptByCommand, getPrompts, updatePromptByCommand } from '$lib/apis/prompts';
 	import { page } from '$app/stores';
+	import { WEBUI_BASE_PATH } from '$lib/constants';
 
 	import PromptEditor from '$lib/components/workspace/Prompts/PromptEditor.svelte';
 
@@ -22,7 +23,7 @@
 		if (prompt) {
 			toast.success($i18n.t('Prompt updated successfully'));
 			await prompts.set(await getPrompts(localStorage.token));
-			await goto('/workspace/prompts');
+			await goto(WEBUI_BASE_PATH + '/workspace/prompts');
 		}
 	};
 
@@ -45,10 +46,10 @@
 					access_control: _prompt?.access_control === undefined ? {} : _prompt?.access_control
 				};
 			} else {
-				goto('/workspace/prompts');
+				goto(WEBUI_BASE_PATH + '/workspace/prompts');
 			}
 		} else {
-			goto('/workspace/prompts');
+			goto(WEBUI_BASE_PATH + '/workspace/prompts');
 		}
 	});
 </script>

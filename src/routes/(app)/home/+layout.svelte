@@ -3,6 +3,7 @@
 	import { WEBUI_NAME, showSidebar, functions } from '$lib/stores';
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
 	import { page } from '$app/stores';
+	import { WEBUI_BASE_PATH } from '$lib/constants';
 
 	const i18n = getContext('i18n');
 
@@ -45,14 +46,14 @@
 						class="min-w-fit p-1.5 {$page.url.pathname.includes('/home/notes')
 							? ''
 							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
-						href="/playground/notes">{$i18n.t('Notes')}</a
+						href="{WEBUI_BASE_PATH}/playground/notes">{$i18n.t('Notes')}</a
 					>
 
 					<a
 						class="min-w-fit p-1.5 {$page.url.pathname.includes('/playground/calendar')
 							? ''
 							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
-						href="/playground/completions">{$i18n.t('Calendar')}</a
+						href="{WEBUI_BASE_PATH}/playground/completions">{$i18n.t('Calendar')}</a
 					>
 				</div>
 			</div>

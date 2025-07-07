@@ -2,13 +2,13 @@
 	import { marked } from 'marked';
 
 	import { toast } from 'svelte-sonner';
-	import Sortable from 'sortablejs';
 
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
 	import { onMount, getContext, tick } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { WEBUI_BASE_PATH, WEBUI_BASE_URL } from '$lib/constants';
 	const i18n = getContext('i18n');
 
 	import { WEBUI_NAME, config, mobile, models as _models, settings, user } from '$lib/stores';
@@ -92,7 +92,7 @@
 			id: `${model.id}-clone`,
 			name: `${model.name} (Clone)`
 		});
-		goto('/workspace/models/create');
+		goto(WEBUI_BASE_PATH + '/workspace/models/create');
 	};
 
 	const shareModelHandler = async (model) => {
@@ -254,7 +254,7 @@
 			<div>
 				<a
 					class=" px-2 py-2 rounded-xl hover:bg-gray-700/10 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition font-medium text-sm flex items-center space-x-1"
-					href="/workspace/models/create"
+					href="{WEBUI_BASE_PATH}/workspace/models/create"
 				>
 					<Plus className="size-3.5" />
 				</a>
@@ -276,7 +276,7 @@
 								: 'opacity-50 dark:opacity-50'} "
 						>
 							<img
-								src={model?.meta?.profile_image_url ?? '/static/favicon.png'}
+								src={model?.meta?.profile_image_url ?? `${WEBUI_BASE_URL}/static/favicon.png`}
 								alt="modelfile profile"
 								class=" rounded-full w-full h-auto object-cover"
 							/>
@@ -285,7 +285,7 @@
 
 					<a
 						class=" flex flex-1 cursor-pointer w-full"
-						href={`/?models=${encodeURIComponent(model.id)}`}
+						href={`${WEBUI_BASE_PATH}/?models=${encodeURIComponent(model.id)}`}
 					>
 						<div class=" flex-1 self-center {model.is_active ? '' : 'text-gray-500'}">
 							<Tooltip
@@ -360,7 +360,7 @@
 								<a
 									class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 									type="button"
-									href={`/workspace/models/edit?id=${encodeURIComponent(model.id)}`}
+									href={`${WEBUI_BASE_PATH}/workspace/models/edit?id=${encodeURIComponent(model.id)}`}
 								>
 									<svg
 										xmlns="http://www.w3.org/2000/svg"

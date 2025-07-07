@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { WEBUI_BASE_PATH } from '$lib/constants';
 
 	import { socket, user } from '$lib/stores';
 
@@ -49,7 +50,7 @@
 			await tick();
 			scrollToBottom();
 		} else {
-			goto('/');
+			goto(WEBUI_BASE_PATH + '/');
 		}
 	};
 

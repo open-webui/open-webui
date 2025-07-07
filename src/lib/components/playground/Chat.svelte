@@ -4,22 +4,16 @@
 	import { goto } from '$app/navigation';
 	import { onMount, tick, getContext } from 'svelte';
 
-	import {
-		OLLAMA_API_BASE_URL,
-		OPENAI_API_BASE_URL,
-		WEBUI_API_BASE_URL,
-		WEBUI_BASE_URL
-	} from '$lib/constants';
-	import { WEBUI_NAME, config, user, models, settings } from '$lib/stores';
+	import { WEBUI_BASE_URL, WEBUI_BASE_PATH } from '$lib/constants';
+	import { config, user, models, settings } from '$lib/stores';
 
-	import { chatCompletion, generateOpenAIChatCompletion } from '$lib/apis/openai';
+	import { chatCompletion } from '$lib/apis/openai';
 
 	import { splitStream } from '$lib/utils';
 	import Collapsible from '../common/Collapsible.svelte';
 
 	import Messages from '$lib/components/playground/Chat/Messages.svelte';
 	import ChevronUp from '../icons/ChevronUp.svelte';
-	import ChevronDown from '../icons/ChevronDown.svelte';
 	import Pencil from '../icons/Pencil.svelte';
 	import Cog6 from '../icons/Cog6.svelte';
 	import Sidebar from '../common/Sidebar.svelte';
@@ -195,7 +189,7 @@
 
 	onMount(async () => {
 		if ($user?.role !== 'admin') {
-			await goto('/');
+			await goto(WEBUI_BASE_PATH + '/');
 		}
 
 		if ($settings?.models) {

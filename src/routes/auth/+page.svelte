@@ -8,10 +8,10 @@
 	import { getBackendConfig } from '$lib/apis';
 	import { ldapUserSignIn, getSessionUser, userSignIn, userSignUp } from '$lib/apis/auths';
 
-	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+	import { WEBUI_BASE_PATH, WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user, socket } from '$lib/stores';
 
-	import { generateInitialsImage, canvasPixelTest } from '$lib/utils';
+	import { generateInitialsImage } from '$lib/utils';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import OnBoarding from '$lib/components/OnBoarding.svelte';
@@ -45,7 +45,7 @@
 			await user.set(sessionUser);
 			await config.set(await getBackendConfig());
 
-			const redirectPath = querystringValue('redirect') || '/';
+			const redirectPath = querystringValue('redirect') || `${WEBUI_BASE_PATH}/`;
 			goto(redirectPath);
 		}
 	};
@@ -123,10 +123,10 @@
 
 			if (isDarkMode) {
 				const darkImage = new Image();
-				darkImage.src = '/static/favicon-dark.png';
+				darkImage.src = `${WEBUI_BASE_URL}/static/favicon-dark.png`;
 
 				darkImage.onload = () => {
-					logo.src = '/static/favicon-dark.png';
+					logo.src = `${WEBUI_BASE_URL}/static/favicon-dark.png`;
 					logo.style.filter = ''; // Ensure no inversion is applied if favicon-dark.png exists
 				};
 
@@ -139,7 +139,7 @@
 
 	onMount(async () => {
 		if ($user !== undefined) {
-			const redirectPath = querystringValue('redirect') || '/';
+			const redirectPath = querystringValue('redirect') || `${WEBUI_BASE_PATH}/`;
 			goto(redirectPath);
 		}
 		await checkOauthCallback();

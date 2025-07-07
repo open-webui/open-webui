@@ -12,7 +12,8 @@
 		OLLAMA_API_BASE_URL,
 		OPENAI_API_BASE_URL,
 		WEBUI_API_BASE_URL,
-		WEBUI_BASE_URL
+		WEBUI_BASE_URL,
+		WEBUI_BASE_PATH
 	} from '$lib/constants';
 	import { WEBUI_NAME, config, user, models, settings } from '$lib/stores';
 
@@ -266,7 +267,7 @@ Based on the user's instruction, update and enhance the existing notes by incorp
 
 	onMount(async () => {
 		if ($user?.role !== 'admin') {
-			await goto('/');
+			await goto(WEBUI_BASE_PATH + '/');
 		}
 
 		if ($settings?.models) {

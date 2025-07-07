@@ -2,9 +2,11 @@ import { browser, dev } from '$app/environment';
 // import { version } from '../../package.json';
 
 export const APP_NAME = 'Open WebUI';
-
-export const WEBUI_HOSTNAME = browser ? (dev ? `${location.hostname}:8080` : ``) : '';
-export const WEBUI_BASE_URL = browser ? (dev ? `http://${WEBUI_HOSTNAME}` : ``) : ``;
+export const WEBUI_HOSTNAME = browser && dev ? `${location.hostname}:8080` : '';
+/* @preserve Hook for dynamic change of WEBUI_BASE_PATH */
+export const WEBUI_BASE_PATH = ``;
+export const WEBUI_BASE_URL =
+	browser && dev ? `http://${WEBUI_HOSTNAME}${WEBUI_BASE_PATH}` : WEBUI_BASE_PATH;
 export const WEBUI_API_BASE_URL = `${WEBUI_BASE_URL}/api/v1`;
 
 export const OLLAMA_API_BASE_URL = `${WEBUI_BASE_URL}/ollama`;

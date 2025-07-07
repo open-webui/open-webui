@@ -7,6 +7,7 @@
 	import SearchInput from './Sidebar/SearchInput.svelte';
 	import { getChatList, getChatListBySearchText } from '$lib/apis/chats';
 	import Spinner from '../common/Spinner.svelte';
+	import { WEBUI_BASE_PATH } from '$lib/constants';
 
 	import dayjs from '$lib/dayjs';
 	import calendar from 'dayjs/plugin/calendar';
@@ -158,7 +159,7 @@
 						idx
 							? 'bg-gray-50 dark:bg-gray-850'
 							: ''}"
-						href="/c/{chat.id}"
+						href="{WEBUI_BASE_PATH}/c/{chat.id}"
 						draggable="false"
 						data-arrow-selected={selectedIdx === idx ? 'true' : undefined}
 						on:mouseenter={() => {

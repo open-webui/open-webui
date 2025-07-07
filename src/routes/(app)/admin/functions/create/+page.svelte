@@ -2,6 +2,7 @@
 	import { toast } from 'svelte-sonner';
 	import { onMount, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { WEBUI_BASE_PATH } from '$lib/constants';
 
 	import { config, functions, models, settings } from '$lib/stores';
 	import { createNewFunction, getFunctions } from '$lib/apis/functions';
@@ -56,7 +57,7 @@
 				)
 			);
 
-			await goto('/admin/functions');
+			await goto(WEBUI_BASE_PATH + '/admin/functions');
 		}
 	};
 

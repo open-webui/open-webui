@@ -2,8 +2,8 @@
 	import { DropdownMenu } from 'bits-ui';
 	import { createEventDispatcher, getContext, onMount } from 'svelte';
 
-	import { flyAndScale } from '$lib/utils/transitions';
 	import { goto } from '$app/navigation';
+	import { WEBUI_BASE_PATH } from '$lib/constants';
 	import { fade, slide } from 'svelte/transition';
 
 	import { getUsage } from '$lib/apis';
@@ -114,7 +114,7 @@
 						if ($mobile) {
 							showSidebar.set(false);
 						}
-						goto('/playground');
+						goto(WEBUI_BASE_PATH + '/playground');
 					}}
 				>
 					<div class=" self-center mr-3">
@@ -130,7 +130,7 @@
 						if ($mobile) {
 							showSidebar.set(false);
 						}
-						goto('/admin');
+						goto(WEBUI_BASE_PATH + '/admin');
 					}}
 				>
 					<div class=" self-center mr-3">
@@ -191,7 +191,7 @@
 					user.set(null);
 					localStorage.removeItem('token');
 
-					location.href = res?.redirect_url ?? '/auth';
+					location.href = res?.redirect_url ?? `${WEBUI_BASE_PATH}/auth`;
 					show = false;
 				}}
 			>

@@ -1,3 +1,4 @@
+import { WEBUI_BASE_PATH, WEBUI_BASE_URL } from '$lib/constants';
 import { PublicClientApplication } from '@azure/msal-browser';
 import type { PopupRequest } from '@azure/msal-browser';
 import { v4 as uuidv4 } from 'uuid';
@@ -36,7 +37,7 @@ class OneDriveConfig {
 			'Content-Type': 'application/json'
 		};
 
-		const response = await fetch('/api/config', {
+		const response = await fetch(`${WEBUI_BASE_URL}/api/config`, {
 			headers,
 			credentials: 'include'
 		});
@@ -389,9 +390,9 @@ export async function openOneDrivePicker(
 
 				let url = '';
 				if (config.getAuthorityType() === 'organizations') {
-					url = baseUrl + `/_layouts/15/FilePicker.aspx?${queryString}`;
+					url = `${baseUrl}${WEBUI_BASE_PATH}/_layouts/15/FilePicker.aspx?${queryString}`;
 				} else {
-					url = baseUrl + `?${queryString}`;
+					url = `${baseUrl}${WEBUI_BASE_PATH}?${queryString}`;
 				}
 
 				const form = pickerWindow.document.createElement('form');

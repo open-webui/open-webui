@@ -6,6 +6,7 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
 	import { models } from '$lib/stores';
+	import { WEBUI_BASE_URL } from '$lib/constants';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import Minus from '$lib/components/icons/Minus.svelte';
 	import PencilSolid from '$lib/components/icons/PencilSolid.svelte';
@@ -36,7 +37,7 @@
 		}
 	};
 
-	let profileImageUrl = '/favicon.png';
+	let profileImageUrl = `${WEBUI_BASE_URL}/favicon.png`;
 	let description = '';
 
 	let selectedModelId = '';
@@ -92,7 +93,7 @@
 
 		name = '';
 		id = '';
-		profileImageUrl = '/favicon.png';
+		profileImageUrl = `${WEBUI_BASE_URL}/favicon.png`;
 		description = '';
 		modelIds = [];
 		selectedModelId = '';

@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { getContext, createEventDispatcher, onMount } from 'svelte';
-	import { createNewChannel, deleteChannelById } from '$lib/apis/channels';
+	import { getContext } from 'svelte';
+	import { deleteChannelById } from '$lib/apis/channels';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
@@ -11,6 +11,7 @@
 	import { toast } from 'svelte-sonner';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
+	import { WEBUI_BASE_PATH } from '$lib/constants';
 	const i18n = getContext('i18n');
 
 	export let show = false;
@@ -61,8 +62,8 @@
 			toast.success('Channel deleted successfully');
 			onUpdate();
 
-			if ($page.url.pathname === `/channels/${channel.id}`) {
-				goto('/');
+			if ($page.url.pathname === `${WEBUI_BASE_PATH}/channels/${channel.id}`) {
+				goto(WEBUI_BASE_PATH + '/');
 			}
 		}
 
