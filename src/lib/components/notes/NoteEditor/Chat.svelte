@@ -26,6 +26,8 @@
 
 	const i18n = getContext('i18n');
 
+	export let note = null;
+	export let files = [];
 	export let messages = [];
 
 	let loaded = false;
@@ -33,7 +35,6 @@
 	let loading = false;
 	let stopResponseFlag = false;
 
-	let systemTextareaElement: HTMLTextAreaElement;
 	let messagesContainerElement: HTMLDivElement;
 
 	let system = '';
@@ -93,7 +94,20 @@
 							}
 						: undefined,
 					...messages
-				].filter((message) => message)
+				].filter((message) => message),
+				files: [
+					{
+						id: `note:${note?.id ?? 'note'}`,
+						name: note?.name ?? 'Note',
+						file: {
+							data: {
+								content: note?.data?.content?.md ?? ''
+							}
+						},
+						context: 'full'
+					}, // Include the note content as a file
+					...files
+				]
 			},
 			`${WEBUI_BASE_URL}/api`
 		);

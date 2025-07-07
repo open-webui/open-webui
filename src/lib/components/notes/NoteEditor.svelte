@@ -86,6 +86,7 @@
 			versions: [],
 			files: null
 		},
+		// pages: [], // TODO: Implement pages for notes to allow users to create multiple pages in a note
 		meta: null,
 		access_control: null
 	};
@@ -1034,7 +1035,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 	</Pane>
 	<NotePanel bind:show={showPanel}>
 		{#if selectedPanel === 'chat'}
-			<Chat bind:show={showPanel} bind:selectedModelId bind:messages />
+			<Chat bind:show={showPanel} bind:selectedModelId bind:messages {files} {note} />
 		{:else if selectedPanel === 'settings'}
 			<Settings bind:show={showPanel} bind:selectedModelId />
 		{/if}
