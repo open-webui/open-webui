@@ -1845,6 +1845,16 @@ PINECONE_DIMENSION = int(os.getenv("PINECONE_DIMENSION", 1536))  # or 3072, 1024
 PINECONE_METRIC = os.getenv("PINECONE_METRIC", "cosine")
 PINECONE_CLOUD = os.getenv("PINECONE_CLOUD", "aws")  # or "gcp" or "azure"
 
+# ORACLE23AI (Oracle23ai vector search)
+
+ORACLE_DB_USER = os.environ.get("ORACLE_DB_USER", "DEMOUSER")
+ORACLE_DB_PASSWORD = os.environ.get("ORACLE_DB_PASSWORD", "Welcome123456")
+ORACLE_DB_DSN = os.environ.get("ORACLE_DB_DSN", "medium")
+ORACLE_WALLET_DIR = os.environ.get("ORACLE_WALLET_DIR", "/home/opc/adb_wallet")
+ORACLE_WALLET_PASSWORD = os.environ.get("ORACLE_WALLET_PASSWORD", "Welcome1")
+ORACLE_VECTOR_LENGTH = os.environ.get("ORACLE_VECTOR_LENGTH", 768)
+
+
 ####################################
 # Information Retrieval (RAG)
 ####################################

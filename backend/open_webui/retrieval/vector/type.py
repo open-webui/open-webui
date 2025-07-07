@@ -9,3 +9,4 @@ class VectorType(StrEnum):
     ELASTICSEARCH = "elasticsearch"
     OPENSEARCH = "opensearch"
     PGVECTOR = "pgvector"
+    ORACLE23AI = "oracle23ai"
