@@ -205,7 +205,9 @@
 
 		<div>
 			<Tooltip
-				content={$i18n.t('This is an experimental feature, it may not work as expected.')}
+				content={$i18n.t(
+					'This feature is experimental and may be modified or discontinued without notice.'
+				)}
 				position="top"
 				className="inline-block"
 			>
