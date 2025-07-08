@@ -290,11 +290,12 @@
 
 		content = '';
 		files = [];
-		chatInputElement?.setText('');
-
-		await tick();
 
 		if (chatInputElement) {
+			chatInputElement?.setText('');
+
+			await tick();
+
 			chatInputElement.focus();
 		}
 	};
