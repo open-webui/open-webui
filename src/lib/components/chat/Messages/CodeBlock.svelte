@@ -224,7 +224,8 @@
 			code.includes('sympy') ? 'sympy' : null,
 			code.includes('tiktoken') ? 'tiktoken' : null,
 			code.includes('matplotlib') ? 'matplotlib' : null,
-			code.includes('pytz') ? 'pytz' : null
+			code.includes('pytz') ? 'pytz' : null,
+			code.includes('openai') ? 'openai' : null
 		].filter(Boolean);
 
 		console.log(packages);
