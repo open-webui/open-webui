@@ -390,11 +390,37 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         log.error(f"Failed to initialize FastMCP manager: {e}")
 
-    asyncio.create_task(periodic_usage_pool_cleanup())
+    # Start periodic cleanup task in background (should not affect app lifecycle)
+    cleanup_task = asyncio.create_task(periodic_usage_pool_cleanup())
+
+    # Add task completion callback to log if it exits
+    def on_cleanup_done(task):
+        try:
+            if task.exception():
+                log.error(
+                    f"Periodic usage pool cleanup task failed: {task.exception()}"
+                )
+            else:
+                log.info("Periodic usage pool cleanup task completed")
+        except Exception as e:
+            log.error(f"Error in cleanup task callback: {e}")
+
+    cleanup_task.add_done_callback(on_cleanup_done)
 
     try:
         yield
     finally:
+        # Cancel the cleanup task if it's still running
+        if not cleanup_task.done():
+            log.info("Cancelling periodic usage pool cleanup task")
+            cleanup_task.cancel()
+            try:
+                await cleanup_task
+            except asyncio.CancelledError:
+                log.info("Periodic usage pool cleanup task cancelled successfully")
+            except Exception as e:
+                log.error(f"Error cancelling cleanup task: {e}")
+
         # Cleanup MCP manager and all its server processes
         if hasattr(app.state, "mcp_manager") and app.state.mcp_manager:
             try:
