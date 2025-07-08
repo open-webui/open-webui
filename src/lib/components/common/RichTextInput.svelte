@@ -23,9 +23,10 @@
 		}
 	});
 
-	import { onMount, onDestroy, tick } from 'svelte';
+	import { onMount, onDestroy, tick, getContext } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
 
+	const i18n = getContext('i18n');
 	const eventDispatch = createEventDispatcher();
 
 	import { Fragment, DOMParser } from 'prosemirror-model';
@@ -39,6 +40,7 @@
 	import TableHeader from '@tiptap/extension-table-header';
 	import TableCell from '@tiptap/extension-table-cell';
 
+	import Underline from '@tiptap/extension-underline';
 	import TaskItem from '@tiptap/extension-task-item';
 	import TaskList from '@tiptap/extension-task-list';
 
@@ -47,9 +49,15 @@
 	import StarterKit from '@tiptap/starter-kit';
 	import Highlight from '@tiptap/extension-highlight';
 	import Typography from '@tiptap/extension-typography';
+
+	import BubbleMenu from '@tiptap/extension-bubble-menu';
+	import FloatingMenu from '@tiptap/extension-floating-menu';
+
 	import { all, createLowlight } from 'lowlight';
 
 	import { PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
+
+	import FormattingButtons from './RichTextInput/FormattingButtons.svelte';
 
 	export let oncompositionstart = (e) => {};
 	export let oncompositionend = (e) => {};
@@ -69,6 +77,8 @@
 	export let raw = false;
 	export let editable = true;
 
+	export let showFormattingButtons = true;
+
 	export let preserveBreaks = false;
 	export let generateAutoCompletion: Function = async () => null;
 	export let autocomplete = false;
@@ -77,6 +87,8 @@
 	export let largeTextAsFile = false;
 	export let insertPromptAsRichText = false;
 
+	let floatingMenuElement = null;
+	let bubbleMenuElement = null;
 	let element;
 	let editor;
 
@@ -447,6 +459,7 @@
 				}),
 				Highlight,
 				Typography,
+				Underline,
 				Placeholder.configure({ placeholder }),
 				Table.configure({ resizable: true }),
 				TableRow,
@@ -470,6 +483,31 @@
 									}
 
 									return suggestion;
+								}
+							})
+						]
+					: []),
+
+				...(showFormattingButtons
+					? [
+							BubbleMenu.configure({
+								element: bubbleMenuElement,
+								tippyOptions: {
+									duration: 100,
+									arrow: false,
+									placement: 'top',
+									theme: 'transparent',
+									offset: [0, 2]
+								}
+							}),
+							FloatingMenu.configure({
+								element: floatingMenuElement,
+								tippyOptions: {
+									duration: 100,
+									arrow: false,
+									placement: 'top-start',
+									theme: 'transparent',
+									offset: [-10, 2]
 								}
 							})
 						]
@@ -737,5 +775,15 @@
 		}
 	};
 </script>
+
+{#if showFormattingButtons}
+	<div bind:this={bubbleMenuElement} class="p-0">
+		<FormattingButtons {editor} />
+	</div>
+
+	<div bind:this={floatingMenuElement} class="p-0">
+		<FormattingButtons {editor} />
+	</div>
+{/if}
 
 <div bind:this={element} class="relative w-full min-w-full h-full min-h-fit {className}" />
