@@ -7,8 +7,18 @@
 
 	const i18n = getContext('i18n');
 
-	import { config, mobile, settings, socket } from '$lib/stores';
-	import { blobToFile, compressImage } from '$lib/utils';
+	import { config, mobile, settings, socket, user } from '$lib/stores';
+	import {
+		blobToFile,
+		compressImage,
+		extractInputVariables,
+		getCurrentDateTime,
+		getFormattedDate,
+		getFormattedTime,
+		getUserPosition,
+		getUserTimezone,
+		getWeekday
+	} from '$lib/utils';
 
 	import Tooltip from '../common/Tooltip.svelte';
 	import RichTextInput from '../common/RichTextInput.svelte';
@@ -19,6 +29,8 @@
 	import FileItem from '../common/FileItem.svelte';
 	import Image from '../common/Image.svelte';
 	import FilesOverlay from '../chat/MessageInput/FilesOverlay.svelte';
+	import Commands from '../chat/MessageInput/Commands.svelte';
+	import InputVariablesModal from '../chat/MessageInput/InputVariablesModal.svelte';
 
 	export let placeholder = $i18n.t('Send a Message');
 	export let transparentBackground = false;
@@ -32,6 +44,8 @@
 	let files = [];
 
 	export let chatInputElement;
+
+	let commandsElement;
 	let filesInputElement;
 	let inputFiles;
 
@@ -46,6 +60,166 @@
 	export let scrollToBottom: Function = () => {};
 
 	export let acceptFiles = true;
+
+	let showInputVariablesModal = false;
+	let inputVariables: Record<string, any> = {};
+	let inputVariableValues = {};
+
+	const inputVariableHandler = async (text: string) => {
+		inputVariables = extractInputVariables(text);
+		if (Object.keys(inputVariables).length > 0) {
+			showInputVariablesModal = true;
+		}
+	};
+
+	const textVariableHandler = async (text: string) => {
+		if (text.includes('{{CLIPBOARD}}')) {
+			const clipboardText = await navigator.clipboard.readText().catch((err) => {
+				toast.error($i18n.t('Failed to read clipboard contents'));
+				return '{{CLIPBOARD}}';
+			});
+
+			const clipboardItems = await navigator.clipboard.read();
+
+			let imageUrl = null;
+			for (const item of clipboardItems) {
+				// Check for known image types
+				for (const type of item.types) {
+					if (type.startsWith('image/')) {
+						const blob = await item.getType(type);
+						imageUrl = URL.createObjectURL(blob);
+					}
+				}
+			}
+
+			if (imageUrl) {
+				files = [
+					...files,
+					{
+						type: 'image',
+						url: imageUrl
+					}
+				];
+			}
+
+			text = text.replaceAll('{{CLIPBOARD}}', clipboardText);
+		}
+
+		if (text.includes('{{USER_LOCATION}}')) {
+			let location;
+			try {
+				location = await getUserPosition();
+			} catch (error) {
+				toast.error($i18n.t('Location access not allowed'));
+				location = 'LOCATION_UNKNOWN';
+			}
+			text = text.replaceAll('{{USER_LOCATION}}', String(location));
+		}
+
+		if (text.includes('{{USER_NAME}}')) {
+			const name = $user?.name || 'User';
+			text = text.replaceAll('{{USER_NAME}}', name);
+		}
+
+		if (text.includes('{{USER_LANGUAGE}}')) {
+			const language = localStorage.getItem('locale') || 'en-US';
+			text = text.replaceAll('{{USER_LANGUAGE}}', language);
+		}
+
+		if (text.includes('{{CURRENT_DATE}}')) {
+			const date = getFormattedDate();
+			text = text.replaceAll('{{CURRENT_DATE}}', date);
+		}
+
+		if (text.includes('{{CURRENT_TIME}}')) {
+			const time = getFormattedTime();
+			text = text.replaceAll('{{CURRENT_TIME}}', time);
+		}
+
+		if (text.includes('{{CURRENT_DATETIME}}')) {
+			const dateTime = getCurrentDateTime();
+			text = text.replaceAll('{{CURRENT_DATETIME}}', dateTime);
+		}
+
+		if (text.includes('{{CURRENT_TIMEZONE}}')) {
+			const timezone = getUserTimezone();
+			text = text.replaceAll('{{CURRENT_TIMEZONE}}', timezone);
+		}
+
+		if (text.includes('{{CURRENT_WEEKDAY}}')) {
+			const weekday = getWeekday();
+			text = text.replaceAll('{{CURRENT_WEEKDAY}}', weekday);
+		}
+
+		inputVariableHandler(text);
+		return text;
+	};
+
+	const replaceVariables = (variables: Record<string, any>) => {
+		if (!chatInputElement) return;
+		console.log('Replacing variables:', variables);
+
+		chatInputElement.replaceVariables(variables);
+		chatInputElement.focus();
+	};
+
+	export const setText = async (text?: string) => {
+		if (!chatInputElement) return;
+
+		text = await textVariableHandler(text || '');
+
+		chatInputElement?.setText(text);
+		chatInputElement?.focus();
+	};
+
+	const getCommand = () => {
+		if (!chatInputElement) return;
+
+		let word = '';
+		word = chatInputElement?.getWordAtDocPos();
+
+		return word;
+	};
+
+	const replaceCommandWithText = (text) => {
+		if (!chatInputElement) return;
+
+		chatInputElement?.replaceCommandWithText(text);
+	};
+
+	const insertTextAtCursor = async (text: string) => {
+		text = await textVariableHandler(text);
+
+		if (command) {
+			replaceCommandWithText(text);
+		} else {
+			const selection = window.getSelection();
+			if (selection && selection.rangeCount > 0) {
+				const range = selection.getRangeAt(0);
+				range.deleteContents();
+				range.insertNode(document.createTextNode(text));
+				range.collapse(false);
+				selection.removeAllRanges();
+				selection.addRange(range);
+			}
+		}
+
+		await tick();
+		const chatInputContainer = document.getElementById('chat-input-container');
+		if (chatInputContainer) {
+			chatInputContainer.scrollTop = chatInputContainer.scrollHeight;
+		}
+
+		await tick();
+		if (chatInputElement) {
+			chatInputElement.focus();
+		}
+	};
+
+	let command = '';
+
+	export let showCommands = false;
+	$: showCommands = ['/'].includes(command?.charAt(0));
 
 	const screenCaptureHandler = async () => {
 		try {
@@ -355,6 +529,15 @@
 	/>
 {/if}
 
+<InputVariablesModal
+	bind:show={showInputVariablesModal}
+	variables={inputVariables}
+	onSave={(variableValues) => {
+		inputVariableValues = { ...inputVariableValues, ...variableValues };
+		replaceVariables(inputVariableValues);
+	}}
+/>
+
 <div class="bg-transparent">
 	<div
 		class="{($settings?.widescreenMode ?? null)
@@ -403,6 +586,13 @@
 							</div>
 						{/if}
 					</div>
+
+					<Commands
+						bind:this={commandsElement}
+						show={showCommands}
+						{command}
+						insertTextHandler={insertTextAtCursor}
+					/>
 				</div>
 			</div>
 		</div>
@@ -518,27 +708,77 @@
 									onChange={(e) => {
 										const { md } = e;
 										content = md;
+										command = getCommand();
 									}}
 									on:keydown={async (e) => {
 										e = e.detail.event;
 										const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
-										if (
-											!$mobile ||
-											!(
-												'ontouchstart' in window ||
-												navigator.maxTouchPoints > 0 ||
-												navigator.msMaxTouchPoints > 0
-											)
-										) {
-											// Prevent Enter key from creating a new line
-											// Uses keyCode '13' for Enter key for chinese/japanese keyboards
-											if (e.keyCode === 13 && !e.shiftKey) {
+
+										const commandsContainerElement = document.getElementById('commands-container');
+
+										if (commandsContainerElement) {
+											if (commandsContainerElement && e.key === 'ArrowUp') {
 												e.preventDefault();
+												commandsElement.selectUp();
+
+												const commandOptionButton = [
+													...document.getElementsByClassName('selected-command-option-button')
+												]?.at(-1);
+												commandOptionButton.scrollIntoView({ block: 'center' });
 											}
 
-											// Submit the content when Enter key is pressed
-											if (content !== '' && e.keyCode === 13 && !e.shiftKey) {
-												submitHandler();
+											if (commandsContainerElement && e.key === 'ArrowDown') {
+												e.preventDefault();
+												commandsElement.selectDown();
+
+												const commandOptionButton = [
+													...document.getElementsByClassName('selected-command-option-button')
+												]?.at(-1);
+												commandOptionButton.scrollIntoView({ block: 'center' });
+											}
+
+											if (commandsContainerElement && e.key === 'Tab') {
+												e.preventDefault();
+
+												const commandOptionButton = [
+													...document.getElementsByClassName('selected-command-option-button')
+												]?.at(-1);
+
+												commandOptionButton?.click();
+											}
+
+											if (commandsContainerElement && e.key === 'Enter') {
+												e.preventDefault();
+
+												const commandOptionButton = [
+													...document.getElementsByClassName('selected-command-option-button')
+												]?.at(-1);
+
+												if (commandOptionButton) {
+													commandOptionButton?.click();
+												} else {
+													document.getElementById('send-message-button')?.click();
+												}
+											}
+										} else {
+											if (
+												!$mobile ||
+												!(
+													'ontouchstart' in window ||
+													navigator.maxTouchPoints > 0 ||
+													navigator.msMaxTouchPoints > 0
+												)
+											) {
+												// Prevent Enter key from creating a new line
+												// Uses keyCode '13' for Enter key for chinese/japanese keyboards
+												if (e.keyCode === 13 && !e.shiftKey) {
+													e.preventDefault();
+												}
+
+												// Submit the content when Enter key is pressed
+												if (content !== '' && e.keyCode === 13 && !e.shiftKey) {
+													submitHandler();
+												}
 											}
 										}
 
