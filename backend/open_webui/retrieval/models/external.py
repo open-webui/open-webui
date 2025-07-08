@@ -4,7 +4,6 @@ from typing import Optional, List, Tuple
 
 from open_webui.env import ENABLE_FORWARD_USER_INFO_HEADERS, SRC_LOG_LEVELS
 from open_webui.retrieval.models.base_reranker import BaseReranker
-from open_webui.utils.auth import get_admin_user, get_verified_user
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -16,11 +15,12 @@ class ExternalReranker(BaseReranker):
         api_key: str,
         url: str = "http://localhost:8080/v1/rerank",
         model: str = "reranker",
-        user=Depends(get_verified_user),
+        user=user,
     ):
         self.api_key = api_key
         self.url = url
         self.model = model
+        self.user = user
 
     def predict(self, sentences: List[Tuple[str, str]]) -> Optional[List[float]]:
         query = sentences[0][0]
@@ -42,10 +42,10 @@ class ExternalReranker(BaseReranker):
                 "Authorization": f"Bearer {self.api_key}",
             }
             if ENABLE_FORWARD_USER_INFO_HEADERS:
-                headers["X-OpenWebUI-User-Name"] = user.name
-                headers["X-OpenWebUI-User-Id"] = user.id
-                headers["X-OpenWebUI-User-Email"] = user.email
-                headers["X-OpenWebUI-User-Role"] = user.role
+                headers["X-OpenWebUI-User-Name"] = self.user.name
+                headers["X-OpenWebUI-User-Id"] = self.user.id
+                headers["X-OpenWebUI-User-Email"] = self.user.email
+                headers["X-OpenWebUI-User-Role"] = self.user.role
 
             r = requests.post(
                 f"{self.url}",
