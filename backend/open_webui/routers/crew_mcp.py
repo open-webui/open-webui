@@ -180,7 +180,7 @@ async def generate_title_and_tags_background(
         # For deployment environments, try to use any available model
         # Prefer Ollama models but fall back to others if needed
         ollama_models = [k for k, v in models.items() if v.get("owned_by") == "ollama"]
-        
+
         task_model_id = None
         if ollama_models:
             # Use the smallest/most reliable Ollama model
