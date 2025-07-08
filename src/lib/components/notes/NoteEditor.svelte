@@ -13,12 +13,7 @@
 	import { marked } from 'marked';
 	import { toast } from 'svelte-sonner';
 
-	import { config, models, settings, showSidebar } from '$lib/stores';
 	import { goto } from '$app/navigation';
-
-	import { compressImage, copyToClipboard, splitStream } from '$lib/utils';
-	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
-	import { uploadFile } from '$lib/apis/files';
 
 	import dayjs from '$lib/dayjs';
 	import calendar from 'dayjs/plugin/calendar';
@@ -28,6 +23,21 @@
 	dayjs.extend(calendar);
 	dayjs.extend(duration);
 	dayjs.extend(relativeTime);
+
+	import { PaneGroup, Pane, PaneResizer } from 'paneforge';
+
+	import { compressImage, copyToClipboard, splitStream } from '$lib/utils';
+	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+	import { uploadFile } from '$lib/apis/files';
+	import { chatCompletion } from '$lib/apis/openai';
+
+	import { config, models, settings, showSidebar } from '$lib/stores';
+
+	import NotePanel from '$lib/components/notes/NotePanel.svelte';
+	import MenuLines from '../icons/MenuLines.svelte';
+	import ChatBubbleOval from '../icons/ChatBubbleOval.svelte';
+	import Settings from './NoteEditor/Settings.svelte';
+	import Chat from './NoteEditor/Chat.svelte';
 
 	async function loadLocale(locales) {
 		for (const locale of locales) {
@@ -69,7 +79,6 @@
 	import Sidebar from '../common/Sidebar.svelte';
 	import ArrowRight from '../icons/ArrowRight.svelte';
 	import Cog6 from '../icons/Cog6.svelte';
-	import { chatCompletion } from '$lib/apis/openai';
 
 	export let id: null | string = null;
 
@@ -682,14 +691,6 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 			dropzoneElement?.removeEventListener('dragleave', onDragLeave);
 		}
 	});
-
-	import NotePanel from '$lib/components/notes/NotePanel.svelte';
-	import { PaneGroup, Pane, PaneResizer } from 'paneforge';
-	import XMark from '../icons/XMark.svelte';
-	import MenuLines from '../icons/MenuLines.svelte';
-	import ChatBubbleOval from '../icons/ChatBubbleOval.svelte';
-	import Settings from './NoteEditor/Settings.svelte';
-	import Chat from './NoteEditor/Chat.svelte';
 </script>
 
 <FilesOverlay show={dragged} />
@@ -1046,8 +1047,10 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 				bind:show={showPanel}
 				bind:selectedModelId
 				bind:messages
+				bind:note
+				bind:enhancing
+				bind:streaming
 				{files}
-				{note}
 				onInsert={insertHandler}
 			/>
 		{:else if selectedPanel === 'settings'}

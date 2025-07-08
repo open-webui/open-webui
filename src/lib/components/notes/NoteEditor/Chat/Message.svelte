@@ -95,7 +95,7 @@
 				}}
 			/>
 		{:else}
-			<div class=" markdown-prose-sm">
+			<div class=" markdown-prose-sm text-sm">
 				<Markdown id={`note-message-${idx}`} content={message.content} />
 			</div>
 		{/if}

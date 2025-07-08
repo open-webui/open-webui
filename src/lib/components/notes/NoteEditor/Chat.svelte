@@ -2,6 +2,7 @@
 	export let show = false;
 	export let selectedModelId = '';
 
+	import { marked } from 'marked';
 	import { toast } from 'svelte-sonner';
 
 	import { goto } from '$app/navigation';
@@ -23,14 +24,21 @@
 	import MessageInput from '$lib/components/channel/MessageInput.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import Pencil from '$lib/components/icons/Pencil.svelte';
+	import PencilSquare from '$lib/components/icons/PencilSquare.svelte';
 
 	const i18n = getContext('i18n');
 
+	export let enhancing = false;
+	export let streaming = false;
+
 	export let note = null;
+
 	export let files = [];
 	export let messages = [];
 
 	export let onInsert = (content) => {};
+	export let scrollToBottomHandler = () => {};
 
 	let loaded = false;
 
@@ -40,13 +48,43 @@
 	let messagesContainerElement: HTMLDivElement;
 
 	let system = '';
+	let editorEnabled = false;
+
 	let chatInputElement = null;
 
-	const scrollToBottom = () => {
-		const element = messagesContainerElement;
+	const DEFAULT_DOCUMENT_EDITOR_PROMPT = `You are an expert document editor.
 
-		if (element) {
-			element.scrollTop = element?.scrollHeight;
+## Task
+Based on the user's instruction, update and enhance the existing notes by incorporating relevant and accurate information from the provided context. Ensure all edits strictly follow the user’s intent.
+
+## Input Structure
+- Existing notes: Enclosed within <notes></notes> XML tags.
+- Additional context: Enclosed within <context></context> XML tags.
+- Editing instruction: Provided in the user message.
+
+## Output Instructions
+- Deliver a single, rewritten version of the notes in markdown format.
+- Integrate information from the context only if it directly supports the user's instruction.
+- Use clear, organized markdown elements: headings, bullet points, numbered lists, bold and italic text as appropriate.
+- Focus on improving clarity, completeness, and usefulness of the notes.
+- Return only the final, fully-edited markdown notes—do not include explanations, reasoning, or XML tags.
+`;
+
+	let scrolledToBottom = true;
+
+	const scrollToBottom = () => {
+		if (messagesContainerElement) {
+			if (scrolledToBottom) {
+				messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
+			}
+		}
+	};
+
+	const onScroll = () => {
+		if (messagesContainerElement) {
+			scrolledToBottom =
+				messagesContainerElement.scrollHeight - messagesContainerElement.scrollTop <=
+				messagesContainerElement.clientHeight + 10;
 		}
 	};
 
@@ -83,43 +121,51 @@
 		await tick();
 		scrollToBottom();
 
+		let enhancedContent = {
+			json: null,
+			html: '',
+			md: ''
+		};
+
+		system = '';
+
+		if (editorEnabled) {
+			system = `${DEFAULT_DOCUMENT_EDITOR_PROMPT}\n\n`;
+		} else {
+			system = `You are a helpful assistant. Please answer the user's questions based on the context provided.\n\n`;
+		}
+
+		system +=
+			`<notes>${note?.data?.content?.md ?? ''}</notes>` +
+			(files && files.length > 0
+				? `\n<context>${files.map((file) => `${file.name}: ${file?.file?.data?.content ?? 'Could not extract content'}\n`).join('')}</context>`
+				: '');
+
+		const chatMessages = JSON.parse(
+			JSON.stringify([
+				{
+					role: 'system',
+					content: `${system}`
+				},
+				...messages
+			])
+		);
+
 		const [res, controller] = await chatCompletion(
 			localStorage.token,
 			{
 				model: model.id,
 				stream: true,
-				messages: [
-					system
-						? {
-								role: 'system',
-								content: system
-							}
-						: undefined,
-					...messages
-				].filter((message) => message),
-				files: [
-					...(note?.data?.content?.md
-						? [
-								{
-									id: `note:${note?.id ?? 'note'}`,
-									name: note?.name ?? 'Note',
-									file: {
-										data: {
-											content: note?.data?.content?.md
-										}
-									},
-									context: 'full'
-								}
-							]
-						: []), // Include the note content as a file
-					...files
-				]
+				messages: chatMessages
+				// ...(files && files.length > 0 ? { files } : {}) // TODO: Decide whether to use native file handling or not
 			},
 			`${WEBUI_BASE_URL}/api`
 		);
 
 		await tick();
 		scrollToBottom();
+
+		let messageContent = '';
 
 		if (res && res.ok) {
 			const reader = res.body
@@ -133,6 +179,11 @@
 					if (stopResponseFlag) {
 						controller.abort('User: Stop Response');
 					}
+
+					if (editorEnabled) {
+						enhancing = false;
+						streaming = false;
+					}
 					break;
 				}
 
@@ -143,17 +194,41 @@
 						if (line !== '') {
 							console.log(line);
 							if (line === 'data: [DONE]') {
-								// responseMessage.done = true;
+								if (editorEnabled) {
+									responseMessage.content = '<status title="Edited" done="true" />';
+								}
+
+								responseMessage.done = true;
 								messages = messages;
 							} else {
 								let data = JSON.parse(line.replace(/^data: /, ''));
 								console.log(data);
 
-								if (responseMessage.content == '' && data.choices[0].delta.content == '\n') {
+								let deltaContent = data.choices[0]?.delta?.content ?? '';
+								if (responseMessage.content == '' && deltaContent == '\n') {
 									continue;
 								} else {
-									responseMessage.content += data.choices[0].delta.content ?? '';
-									messages = messages;
+									if (editorEnabled) {
+										enhancing = true;
+										streaming = true;
+
+										enhancedContent.md += deltaContent;
+										enhancedContent.html = marked.parse(enhancedContent.md);
+
+										note.data.content.md = enhancedContent.md;
+										note.data.content.html = enhancedContent.html;
+										note.data.content.json = null;
+
+										responseMessage.content = '<status title="Editing" done="false" />';
+
+										scrollToBottomHandler();
+										messages = messages;
+									} else {
+										messageContent += deltaContent;
+
+										responseMessage.content = messageContent;
+										messages = messages;
+									}
 
 									await tick();
 								}
@@ -205,7 +280,10 @@
 		} else {
 			selectedModelId = '';
 		}
+
 		loaded = true;
+
+		scrollToBottom();
 	});
 </script>
 
@@ -240,7 +318,7 @@
 	</div>
 </div>
 
-<div class="flex flex-col items-center mb-2 flex-1">
+<div class="flex flex-col items-center mb-2 flex-1 @container">
 	<div class=" flex flex-col justify-between w-full overflow-y-auto h-full">
 		<div class="mx-auto w-full md:px-0 h-full relative">
 			<div class=" flex flex-col h-full">
@@ -248,6 +326,7 @@
 					class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0"
 					id="messages-container"
 					bind:this={messagesContainerElement}
+					on:scroll={onScroll}
 				>
 					<div class=" h-full w-full flex flex-col">
 						<div class="flex-1 p-1">
@@ -264,15 +343,37 @@
 						onSubmit={submitHandler}
 						onStop={stopHandler}
 					>
-						<div slot="menu">
-							<select
-								class=" bg-transparent rounded-lg py-1 px-2 -mx-0.5 text-sm outline-hidden w-50"
-								bind:value={selectedModelId}
-							>
-								{#each $models as model}
-									<option value={model.id} class="bg-gray-50 dark:bg-gray-700">{model.name}</option>
-								{/each}
-							</select>
+						<div slot="menu" class="flex items-center justify-between gap-2 w-full">
+							<div>
+								<Tooltip content={$i18n.t('Edit')} placement="top">
+									<button
+										on:click|preventDefault={() => (editorEnabled = !editorEnabled)}
+										type="button"
+										class="px-2 @xl:px-2.5 py-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {editorEnabled
+											? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
+											: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
+									>
+										<PencilSquare className="size-4" strokeWidth="1.75" />
+										<span
+											class="block whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
+											>{$i18n.t('Edit')}</span
+										>
+									</button>
+								</Tooltip>
+							</div>
+
+							<Tooltip content={selectedModelId}>
+								<select
+									class=" bg-transparent rounded-lg py-1 px-2 -mx-0.5 text-sm outline-hidden w-20"
+									bind:value={selectedModelId}
+								>
+									{#each $models as model}
+										<option value={model.id} class="bg-gray-50 dark:bg-gray-700"
+											>{model.name}</option
+										>
+									{/each}
+								</select>
+							</Tooltip>
 						</div>
 					</MessageInput>
 				</div>
