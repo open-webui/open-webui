@@ -271,11 +271,35 @@
 		const { state, view } = editor;
 		const { schema, tr } = state;
 
-		// If content is a string, convert it to a ProseMirror node
-		const htmlContent = marked.parse(content, {
+		// Configure marked with extensions
+		marked.use({
 			breaks: true,
-			gfm: true
+			gfm: true,
+			renderer: {
+				list(body, ordered, start) {
+					const isTaskList = body.includes('data-checked=');
+
+					if (isTaskList) {
+						return `<ul data-type="taskList">${body}</ul>`;
+					}
+
+					const type = ordered ? 'ol' : 'ul';
+					const startatt = ordered && start !== 1 ? ` start="${start}"` : '';
+					return `<${type}${startatt}>${body}</${type}>`;
+				},
+
+				listitem(text, task, checked) {
+					if (task) {
+						const checkedAttr = checked ? 'true' : 'false';
+						return `<li data-type="taskItem" data-checked="${checkedAttr}">${text}</li>`;
+					}
+					return `<li>${text}</li>`;
+				}
+			}
 		});
+
+		// If content is a string, convert it to a ProseMirror node
+		const htmlContent = marked.parse(content);
 
 		// insert the HTML content at the current selection
 		editor.commands.insertContent(htmlContent);
