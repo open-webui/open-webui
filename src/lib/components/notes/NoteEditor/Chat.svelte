@@ -79,7 +79,6 @@
 
 	let system = '';
 	let editorEnabled = false;
-
 	let chatInputElement = null;
 
 	const DEFAULT_DOCUMENT_EDITOR_PROMPT = `You are an expert document editor.
@@ -311,6 +310,8 @@ Based on the user's instruction, update and enhance the existing notes by incorp
 			selectedModelId = '';
 		}
 
+		editorEnabled = localStorage.getItem('noteEditorEnabled') === 'true';
+
 		loaded = true;
 
 		await tick();
@@ -379,7 +380,11 @@ Based on the user's instruction, update and enhance the existing notes by incorp
 							<div>
 								<Tooltip content={$i18n.t('Edit')} placement="top">
 									<button
-										on:click|preventDefault={() => (editorEnabled = !editorEnabled)}
+										on:click|preventDefault={() => {
+											editorEnabled = !editorEnabled;
+
+											localStorage.setItem('noteEditorEnabled', editorEnabled ? 'true' : 'false');
+										}}
 										type="button"
 										class="px-2 @xl:px-2.5 py-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {editorEnabled
 											? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
