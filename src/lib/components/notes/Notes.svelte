@@ -61,8 +61,10 @@
 	};
 
 	const createNoteHandler = async () => {
+		//  $i18n.t('New Note'),
 		const res = await createNewNote(localStorage.token, {
-			title: $i18n.t('New Note'),
+			// YYYY-MM-DD
+			title: dayjs().format('YYYY-MM-DD'),
 			data: {
 				content: {
 					json: null,
