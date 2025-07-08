@@ -131,6 +131,8 @@
 			return null;
 		});
 
+		messages = [];
+
 		if (res) {
 			note = res;
 			files = res.data.files || [];
