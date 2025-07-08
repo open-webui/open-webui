@@ -1145,18 +1145,8 @@
 													loading={file.status === 'uploading'}
 													dismissible={true}
 													edit={true}
+													modal={true}
 													on:dismiss={async () => {
-														try {
-															if (file.type !== 'collection' && !file?.collection) {
-																if (file.id) {
-																	// This will handle both file deletion and Chroma cleanup
-																	await deleteFileById(localStorage.token, file.id);
-																}
-															}
-														} catch (error) {
-															console.error('Error deleting file:', error);
-														}
-
 														// Remove from UI state
 														files.splice(fileIdx, 1);
 														files = files;

@@ -479,12 +479,38 @@ def get_sources_from_files(
                 "documents": [[note.data.get("content", {}).get("md", "")]],
                 "metadatas": [[{"file_id": note.id, "name": note.title}]],
             }
-        elif file.get("context") == "full" and file.get("type") == "file":
-            # Manual Full Mode Toggle
-            query_result = {
-                "documents": [[file.get("file").get("data", {}).get("content")]],
-                "metadatas": [[{"file_id": file.get("id"), "name": file.get("name")}]],
-            }
+        elif file.get("context") == "full":
+            if file.get("type") == "file":
+                # Manual Full Mode Toggle
+                query_result = {
+                    "documents": [[file.get("file").get("data", {}).get("content")]],
+                    "metadatas": [
+                        [{"file_id": file.get("id"), "name": file.get("name")}]
+                    ],
+                }
+            elif file.get("type") == "collection":
+                # Manual Full Mode Toggle for Collection
+                file_ids = file.get("data", {}).get("file_ids", [])
+
+                documents = []
+                metadatas = []
+                for file_id in file_ids:
+                    file_object = Files.get_file_by_id(file_id)
+
+                    if file_object:
+                        documents.append(file_object.data.get("content", ""))
+                        metadatas.append(
+                            {
+                                "file_id": file_id,
+                                "name": file_object.filename,
+                                "source": file_object.filename,
+                            }
+                        )
+
+                query_result = {
+                    "documents": [documents],
+                    "metadatas": [metadatas],
+                }
         elif (
             file.get("type") != "web_search"
             and request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL
