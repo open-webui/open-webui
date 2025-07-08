@@ -343,7 +343,7 @@ Based on the user's instruction, update and enhance the existing notes by incorp
 						onSubmit={submitHandler}
 						onStop={stopHandler}
 					>
-						<div slot="menu" class="flex items-center justify-between gap-2 w-full">
+						<div slot="menu" class="flex items-center justify-between gap-2 w-full pr-2">
 							<div>
 								<Tooltip content={$i18n.t('Edit')} placement="top">
 									<button
