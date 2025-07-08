@@ -396,7 +396,9 @@ async def lifespan(app: FastAPI):
     # Add task completion callback to log if it exits
     def on_cleanup_done(task):
         try:
-            if task.exception():
+            if task.cancelled():
+                log.info("Periodic usage pool cleanup task was cancelled")
+            elif task.exception():
                 log.error(
                     f"Periodic usage pool cleanup task failed: {task.exception()}"
                 )

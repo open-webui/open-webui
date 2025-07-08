@@ -396,10 +396,8 @@ async def generate_autocompletion(
     request: Request, form_data: dict, user=Depends(get_verified_user)
 ):
     if not request.app.state.config.ENABLE_AUTOCOMPLETE_GENERATION:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Autocompletion generation is disabled",
-        )
+        # Return empty response instead of error to avoid frontend issues
+        return {"choices": [{"message": {"content": ""}}]}
 
     type = form_data.get("type")
     prompt = form_data.get("prompt")

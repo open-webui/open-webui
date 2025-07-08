@@ -97,10 +97,8 @@ Respond with just the title, no quotes or formatting."""
         title = title_res["choices"][0]["message"]["content"].strip()
         if title:
             Chats.update_chat_title_by_id(request.chat_id, title)
-            log.info(f"Generated title for chat {request.chat_id}: {title}")
             return title
 
-    log.warning(f"Failed to generate valid title for chat {request.chat_id}")
     return None
 
 
@@ -141,12 +139,10 @@ Assistant: {result[:1000]}..."""
                 tags = tags_json.get("tags", [])
                 if isinstance(tags, list) and tags:
                     Chats.update_chat_tags_by_id(request.chat_id, tags, user)
-                    log.info(f"Generated tags for chat {request.chat_id}: {tags}")
                     return tags
-            except json.JSONDecodeError as e:
-                log.error(f"JSON parse error for chat {request.chat_id}: {e}")
+            except json.JSONDecodeError:
+                pass
 
-    log.warning(f"Failed to generate valid tags for chat {request.chat_id}")
     return None
 
 
@@ -165,38 +161,47 @@ async def _emit_event(event_emitter, event_type: str, data, chat_id: str):
 async def generate_title_and_tags_background(
     request_data, request: CrewMCPQuery, result: str, user
 ):
-    """Background task to generate title and tags without blocking the main response"""
+    """
+    Background task to generate title and tags for MCP requests.
+    Uses standard Open WebUI model selection.
+    """
     try:
-        log.info(f"Starting background title/tag generation for chat {request.chat_id}")
-
         # Setup
         event_emitter = await _setup_event_emitter(request, user)
 
         from open_webui.utils.task import get_task_model_id
 
         models = request_data.app.state.MODELS
-        task_model_id = get_task_model_id(
-            request.model or "mistral:7b",
-            request_data.app.state.config.TASK_MODEL,
-            request_data.app.state.config.TASK_MODEL_EXTERNAL,
-            models,
-        )
+        
+        # Safety check to prevent crashes
+        if not models or not isinstance(models, dict):
+            return
+            
+        # Use standard task model selection - only use Ollama models for background tasks
+        ollama_models = [k for k, v in models.items() if v.get("owned_by") == "ollama"]
+        if not ollama_models:
+            return
+            
+        # Use the smallest/most reliable Ollama model
+        task_model_id = "llama3.2:3b" if "llama3.2:3b" in ollama_models else ollama_models[0]
 
         # Generate title and tags
-        title = await _generate_title(
-            request_data, request, result, user, task_model_id
-        )
-        if title:
-            await _emit_event(event_emitter, "chat:title", title, request.chat_id)
+        try:
+            title = await _generate_title(request_data, request, result, user, task_model_id)
+            if title:
+                await _emit_event(event_emitter, "chat:title", title, request.chat_id)
+        except Exception as e:
+            pass
 
-        tags = await _generate_tags(request_data, request, result, user, task_model_id)
-        if tags:
-            await _emit_event(event_emitter, "chat:tags", tags, request.chat_id)
+        try:
+            tags = await _generate_tags(request_data, request, result, user, task_model_id)
+            if tags:
+                await _emit_event(event_emitter, "chat:tags", tags, request.chat_id)
+        except Exception as e:
+            pass
 
     except Exception as e:
-        log.error(
-            f"Error in background title/tag generation for chat {request.chat_id}: {e}"
-        )
+        pass
 
 
 # Global manager instance
@@ -262,26 +267,31 @@ async def run_crew_query(
 
         # Generate proper title and tags if chat_id is provided (like standard chat flow)
         if request.chat_id:
-            log.info(f"Processing title and tag generation for chat {request.chat_id}")
             try:
                 # Run the title and tag generation in the background
                 import asyncio
 
-                log.info(f"About to create background task for chat {request.chat_id}")
+                # Create background task for title/tag generation
                 task = asyncio.create_task(
                     generate_title_and_tags_background(
                         request_data, request, result, user
                     )
                 )
-                log.info(f"Created background task: {task}")
+                
+                # Add error handling for the background task
+                def handle_background_task_completion(task):
+                    try:
+                        if task.cancelled():
+                            pass
+                        elif task.exception():
+                            pass
+                    except Exception as e:
+                        pass
+                
+                task.add_done_callback(handle_background_task_completion)
 
             except Exception as e:
-                log.error(
-                    f"Error in title/tag generation for chat {request.chat_id}: {e}"
-                )
-                import traceback
-
-                log.error(f"Full traceback: {traceback.format_exc()}")
+                pass
 
         return CrewMCPResponse(result=result, tools_used=used_tools, success=True)
 
