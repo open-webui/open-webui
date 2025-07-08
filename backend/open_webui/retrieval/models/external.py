@@ -4,7 +4,7 @@ from typing import Optional, List, Tuple
 
 from open_webui.env import ENABLE_FORWARD_USER_INFO_HEADERS, SRC_LOG_LEVELS
 from open_webui.retrieval.models.base_reranker import BaseReranker
-
+from open_webui.utils.auth import get_admin_user, get_verified_user
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -16,6 +16,7 @@ class ExternalReranker(BaseReranker):
         api_key: str,
         url: str = "http://localhost:8080/v1/rerank",
         model: str = "reranker",
+        user=Depends(get_verified_user),
     ):
         self.api_key = api_key
         self.url = url
