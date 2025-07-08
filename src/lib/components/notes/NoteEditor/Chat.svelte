@@ -191,7 +191,7 @@ Based on the user's instruction, update and enhance the existing notes by incorp
 							console.log(line);
 							if (line === 'data: [DONE]') {
 								if (editorEnabled) {
-									responseMessage.content = '<status title="Edited" done="true" />';
+									responseMessage.content = `<status title="${$i18n.t('Edited')}" done="true" />`;
 								}
 
 								responseMessage.done = true;
@@ -215,7 +215,7 @@ Based on the user's instruction, update and enhance the existing notes by incorp
 										note.data.content.html = enhancedContent.html;
 										note.data.content.json = null;
 
-										responseMessage.content = '<status title="Editing" done="false" />';
+										responseMessage.content = `<status title="${$i18n.t('Editing')}" done="false" />`;
 
 										scrollToBottomHandler();
 										messages = messages;
