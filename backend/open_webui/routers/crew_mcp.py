@@ -172,29 +172,35 @@ async def generate_title_and_tags_background(
         from open_webui.utils.task import get_task_model_id
 
         models = request_data.app.state.MODELS
-        
+
         # Safety check to prevent crashes
         if not models or not isinstance(models, dict):
             return
-            
+
         # Use standard task model selection - only use Ollama models for background tasks
         ollama_models = [k for k, v in models.items() if v.get("owned_by") == "ollama"]
         if not ollama_models:
             return
-            
+
         # Use the smallest/most reliable Ollama model
-        task_model_id = "llama3.2:3b" if "llama3.2:3b" in ollama_models else ollama_models[0]
+        task_model_id = (
+            "llama3.2:3b" if "llama3.2:3b" in ollama_models else ollama_models[0]
+        )
 
         # Generate title and tags
         try:
-            title = await _generate_title(request_data, request, result, user, task_model_id)
+            title = await _generate_title(
+                request_data, request, result, user, task_model_id
+            )
             if title:
                 await _emit_event(event_emitter, "chat:title", title, request.chat_id)
         except Exception as e:
             pass
 
         try:
-            tags = await _generate_tags(request_data, request, result, user, task_model_id)
+            tags = await _generate_tags(
+                request_data, request, result, user, task_model_id
+            )
             if tags:
                 await _emit_event(event_emitter, "chat:tags", tags, request.chat_id)
         except Exception as e:
@@ -277,7 +283,7 @@ async def run_crew_query(
                         request_data, request, result, user
                     )
                 )
-                
+
                 # Add error handling for the background task
                 def handle_background_task_completion(task):
                     try:
@@ -287,7 +293,7 @@ async def run_crew_query(
                             pass
                     except Exception as e:
                         pass
-                
+
                 task.add_done_callback(handle_background_task_completion)
 
             except Exception as e:

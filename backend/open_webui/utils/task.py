@@ -25,12 +25,12 @@ def get_task_model_id(
     """
     # Set the task model
     task_model_id = default_model_id
-    
+
     # CRITICAL FIX: Check if models dict exists and is not empty
     if not models or not isinstance(models, dict):
         # If no models available, return the default anyway to prevent KeyError
         return default_model_id
-    
+
     # Check if the default model exists in the models dict
     if task_model_id not in models:
         # If default model doesn't exist, find the first available model
@@ -39,7 +39,7 @@ def get_task_model_id(
         else:
             # If no models available, return the default anyway
             return default_model_id
-    
+
     # Check if the user has a custom task model and use that model
     # Add safety check to ensure model exists before accessing its properties
     if task_model_id in models and models[task_model_id].get("owned_by") == "ollama":
