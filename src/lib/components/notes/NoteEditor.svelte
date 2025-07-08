@@ -935,7 +935,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 				</div>
 			{/if}
 		</div>
-		<div class="absolute z-20 bottom-0 right-0 p-5 max-w-full w-full flex justify-end">
+		<div class="absolute z-20 bottom-0 right-0 p-3.5 max-w-full w-full flex justify-end">
 			<div class="flex gap-1 justify-between w-full max-w-full">
 				{#if recording}
 					<div class="flex-1 w-full">
