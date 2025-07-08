@@ -330,6 +330,39 @@ input[type='number'] {
 	@apply line-clamp-1 absolute;
 }
 
+.tiptap ul[data-type='taskList'] {
+	list-style: none;
+	margin-left: 0;
+	padding: 0;
+
+	li {
+		align-items: center;
+
+		display: flex;
+
+		> label {
+			flex: 0 0 auto;
+			margin-right: 0.5rem;
+			user-select: none;
+			display: flex;
+		}
+
+		> div {
+			flex: 1 1 auto;
+
+			align-items: center;
+		}
+	}
+
+	input[type='checkbox'] {
+		cursor: pointer;
+	}
+
+	ul[data-type='taskList'] {
+		margin: 0;
+	}
+}
+
 @media (prefers-color-scheme: dark) {
 	.ProseMirror p.is-editor-empty:first-child::before {
 		color: #757575;

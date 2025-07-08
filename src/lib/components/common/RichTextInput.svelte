@@ -11,6 +11,18 @@
 	// Use turndown-plugin-gfm for proper GFM table support
 	turndownService.use(gfm);
 
+	turndownService.addRule('taskListItems', {
+		filter: (node) =>
+			node.nodeName === 'LI' &&
+			(node.getAttribute('data-checked') === 'true' ||
+				node.getAttribute('data-checked') === 'false'),
+		replacement: function (content, node) {
+			const checked = node.getAttribute('data-checked') === 'true';
+			content = content.replace(/^\s+/, '');
+			return `- [${checked ? 'x' : ' '}] ${content}\n`;
+		}
+	});
+
 	import { onMount, onDestroy, tick } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
 
@@ -26,6 +38,9 @@
 	import TableRow from '@tiptap/extension-table-row';
 	import TableHeader from '@tiptap/extension-table-header';
 	import TableCell from '@tiptap/extension-table-cell';
+
+	import TaskItem from '@tiptap/extension-task-item';
+	import TaskList from '@tiptap/extension-task-list';
 
 	import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 	import Placeholder from '@tiptap/extension-placeholder';
@@ -437,6 +452,10 @@
 				TableRow,
 				TableHeader,
 				TableCell,
+				TaskList,
+				TaskItem.configure({
+					nested: true
+				}),
 				...(autocomplete
 					? [
 							AIAutocompletion.configure({
@@ -464,6 +483,8 @@
 
 				const htmlValue = editor.getHTML();
 				const jsonValue = editor.getJSON();
+
+				console.log(htmlValue, jsonValue);
 				let mdValue = turndownService
 					.turndown(
 						htmlValue
