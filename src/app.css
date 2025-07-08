@@ -354,6 +354,15 @@ input[type='number'] {
 		}
 	}
 
+	/* checked data-checked="true" */
+
+	li[data-checked='true'] {
+		> div {
+			opacity: 0.5;
+			text-decoration: line-through;
+		}
+	}
+
 	input[type='checkbox'] {
 		cursor: pointer;
 	}
