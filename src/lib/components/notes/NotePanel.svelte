@@ -46,11 +46,11 @@
 				// set the minSize to the percentage, must be an integer
 				minSize = Math.floor(percentage);
 
-				// if ($showControls) {
-				// 	if (pane && pane.isExpanded() && pane.getSize() < minSize) {
-				// 		pane.resize(minSize);
-				// 	}
-				// }
+				if (show) {
+					if (pane && pane.isExpanded() && pane.getSize() < minSize) {
+						pane.resize(minSize);
+					}
+				}
 			}
 		});
 
