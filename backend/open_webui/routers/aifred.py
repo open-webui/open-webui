@@ -497,7 +497,8 @@ async def generate_chat_completion(
     idx = 0
 
     payload = {**form_data}
-    metadata = payload.pop("metadata", None)
+    #metadata = payload.pop("metadata", None)
+    metadata = payload.get("metadata", None) #AXL:김정민 20250708 metadata 없애지 않고 살리기
 
     model_id = form_data.get("model")
     model_info = Models.get_model_by_id(model_id)
@@ -567,6 +568,7 @@ async def generate_chat_completion(
 
     # Convert the modified body back to JSON
     payload = json.dumps(payload)
+    print(f"###payload: {payload}")
 
     r = None
     session = None
