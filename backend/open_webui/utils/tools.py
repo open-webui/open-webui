@@ -60,11 +60,27 @@ def get_tools(
                     if server["hash"] == server_hash:
                         tool_server_data = server
                         break
+                # This is a tentative resolution for backwards compatibility. Before we started using hashes
+                # we used a positional index to identify the server. We tentatively support both.
+                if tool_server_data is None and server_hash.isdigit():
+                    log.warn(
+                        "Using in-memory positional identifier to match tool with ID:"
+                        f" {tool_id}; this should be migrated to use a hash based ID."
+                        " Please consider updating your model configuration."
+                    )
+                    server_idx = int(server_hash)
+                    for server in request.app.state.TOOL_SERVERS:
+                        if server["idx"] == server_idx:
+                            tool_server_data = server
+                            break
+
                 assert tool_server_data is not None
 
                 # Get connection config directly from server data
                 tool_server_connection = (
-                    request.app.state.config.TOOL_SERVER_CONNECTIONS[server["idx"]]
+                    request.app.state.config.TOOL_SERVER_CONNECTIONS[
+                        tool_server_data["idx"]
+                    ]
                 )
                 specs = tool_server_data.get("specs", [])
 
@@ -546,7 +562,7 @@ async def get_tool_servers_data(
         results.append(
             {
                 "idx": idx,
-                "hash": server_hash,  # Hash-based ID
+                "hash": server_hash,
                 "url": server.get("url"),
                 "openapi": openapi_data,
                 "info": response.get("info"),
