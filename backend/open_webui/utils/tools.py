@@ -1,5 +1,6 @@
 import asyncio
 import copy
+import hashlib
 import inspect
 import logging
 import re
@@ -442,7 +443,7 @@ def compute_server_hash(server_url: str, server_path: str) -> str:
         A hash string to use as the server identifier
     """
     combined = f"{server_url.rstrip('/')}/{server_path.lstrip('/')}"
-    return f"{hash(combined) & 0x7FFFFFFF:08x}"
+    return hashlib.md5(combined.encode()).hexdigest()[:8]
 
 
 async def get_tool_server_data(token: str, url: str) -> Dict[str, Any]:
