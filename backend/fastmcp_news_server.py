@@ -209,8 +209,10 @@ def get_top_headlines(
     """Get latest news headlines with clean formatting"""
     try:
         # Add logging for debugging
-        logger.info(f"Starting get_top_headlines with days_back={days_back}, max_articles={max_articles}")
-        
+        logger.info(
+            f"Starting get_top_headlines with days_back={days_back}, max_articles={max_articles}"
+        )
+
         # Validate inputs
         days_back = max(1, min(days_back, 7))
         max_articles = max(1, min(max_articles, 20))
@@ -220,7 +222,9 @@ def get_top_headlines(
         )
 
         if result["status"] == "error":
-            logger.error(f"Error in fetch_latest_articles_from_azure: {result['message']}")
+            logger.error(
+                f"Error in fetch_latest_articles_from_azure: {result['message']}"
+            )
             return f"Error fetching news: {result['message']}"
 
         articles = result["articles"]
@@ -303,6 +307,7 @@ def get_top_headlines(
     except Exception as e:
         logger.error(f"Error in get_top_headlines: {str(e)}")
         import traceback
+
         logger.error(f"Full traceback: {traceback.format_exc()}")
         return f"Error getting news headlines: {str(e)}"
 
