@@ -177,15 +177,26 @@ async def generate_title_and_tags_background(
         if not models or not isinstance(models, dict):
             return
 
-        # Use standard task model selection - only use Ollama models for background tasks
+        # For deployment environments, try to use any available model
+        # Prefer Ollama models but fall back to others if needed
         ollama_models = [k for k, v in models.items() if v.get("owned_by") == "ollama"]
-        if not ollama_models:
+
+        task_model_id = None
+        if ollama_models:
+            # Use the smallest/most reliable Ollama model
+            task_model_id = (
+                "llama3.2:3b" if "llama3.2:3b" in ollama_models else ollama_models[0]
+            )
+        elif models:
+            # In deployment, use the first available model if no Ollama models
+            task_model_id = next(iter(models.keys()))
+        else:
+            # No models available at all
             return
 
-        # Use the smallest/most reliable Ollama model
-        task_model_id = (
-            "llama3.2:3b" if "llama3.2:3b" in ollama_models else ollama_models[0]
-        )
+        # Only proceed if we have a valid model
+        if not task_model_id:
+            return
 
         # Generate title and tags
         try:
@@ -278,11 +289,16 @@ async def run_crew_query(
                 import asyncio
 
                 # Create background task for title/tag generation
-                task = asyncio.create_task(
-                    generate_title_and_tags_background(
-                        request_data, request, result, user
-                    )
-                )
+                async def safe_background_task():
+                    try:
+                        await generate_title_and_tags_background(
+                            request_data, request, result, user
+                        )
+                    except Exception as e:
+                        # Completely isolate any background task exceptions
+                        pass
+
+                task = asyncio.create_task(safe_background_task())
 
                 # Add error handling for the background task
                 def handle_background_task_completion(task):
@@ -290,13 +306,21 @@ async def run_crew_query(
                         if task.cancelled():
                             pass
                         elif task.exception():
+                            # Don't re-raise the exception, just log it if needed
+                            exc = task.exception()
+                            # Silently handle the exception without logging to avoid spam
+                            pass
+                        else:
+                            # Task completed successfully
                             pass
                     except Exception as e:
+                        # Don't let callback exceptions propagate
                         pass
 
                 task.add_done_callback(handle_background_task_completion)
 
             except Exception as e:
+                # Completely isolate any background task creation exceptions
                 pass
 
         return CrewMCPResponse(result=result, tools_used=used_tools, success=True)
