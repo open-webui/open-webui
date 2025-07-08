@@ -121,27 +121,22 @@
 	const extractInputVariables = (text: string): Record<string, any> => {
 		const regex = /{{\s*([^|}\s]+)\s*\|\s*([^}]+)\s*}}/g;
 		const regularRegex = /{{\s*([^|}\s]+)\s*}}/g;
-
 		const variables: Record<string, any> = {};
 		let match;
-
 		// Use exec() loop instead of matchAll() for better compatibility
 		while ((match = regex.exec(text)) !== null) {
 			const varName = match[1].trim();
 			const definition = match[2].trim();
 			variables[varName] = parseVariableDefinition(definition);
 		}
-
 		// Then, extract regular variables (without pipe) - only if not already processed
 		while ((match = regularRegex.exec(text)) !== null) {
 			const varName = match[1].trim();
-
 			// Only add if not already processed as custom variable
 			if (!variables.hasOwnProperty(varName)) {
 				variables[varName] = { type: 'text' }; // Default type for regular variables
 			}
 		}
-
 		return variables;
 	};
 
@@ -198,14 +193,18 @@
 	};
 
 	const parseVariableDefinition = (definition: string): Record<string, any> => {
-		const [firstPart, ...propertyParts] = splitProperties(definition, ':');
+		// Use splitProperties for the main colon delimiter to handle quoted strings
+		const parts = splitProperties(definition, ':');
+		const [firstPart, ...propertyParts] = parts;
 
 		// Parse type (explicit or implied)
 		const type = firstPart.startsWith('type=') ? firstPart.slice(5) : firstPart;
 
 		// Parse properties using reduce
 		const properties = propertyParts.reduce((props, part) => {
-			const [propertyName, ...valueParts] = part.split('=');
+			// Use splitProperties for the equals sign as well, in case there are nested quotes
+			const equalsParts = splitProperties(part, '=');
+			const [propertyName, ...valueParts] = equalsParts;
 			const propertyValue = valueParts.join('='); // Handle values with = signs
 
 			return propertyName && propertyValue
@@ -220,6 +219,11 @@
 	};
 
 	const parseJsonValue = (value: string): any => {
+		// Remove surrounding quotes if present (for string values)
+		if (value.startsWith('"') && value.endsWith('"')) {
+			return value.slice(1, -1);
+		}
+
 		// Check if it starts with square or curly brackets (JSON)
 		if (/^[\[{]/.test(value)) {
 			try {
@@ -234,7 +238,6 @@
 
 	const inputVariableHandler = async (text: string) => {
 		inputVariables = extractInputVariables(text);
-
 		if (Object.keys(inputVariables).length > 0) {
 			showInputVariablesModal = true;
 		}
