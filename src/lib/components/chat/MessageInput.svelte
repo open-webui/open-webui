@@ -1145,7 +1145,7 @@
 													loading={file.status === 'uploading'}
 													dismissible={true}
 													edit={true}
-													modal={true}
+													modal={['file', 'collection'].includes(file?.type)}
 													on:dismiss={async () => {
 														// Remove from UI state
 														files.splice(fileIdx, 1);
