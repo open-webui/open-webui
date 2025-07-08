@@ -724,7 +724,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 </DeleteConfirmDialog>
 
 <PaneGroup direction="horizontal" class="w-full h-full">
-	<Pane defaultSize={70} minSize={50} class="h-full flex flex-col w-full relative">
+	<Pane defaultSize={70} minSize={30} class="h-full flex flex-col w-full relative">
 		<div class="relative flex-1 w-full h-full flex justify-center pt-[11px]" id="note-editor">
 			{#if loading}
 				<div class=" absolute top-0 bottom-0 left-0 right-0 flex">
