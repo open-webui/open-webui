@@ -36,20 +36,22 @@ class ExternalReranker(BaseReranker):
         try:
             log.info(f"ExternalReranker:predict:model {self.model}")
             log.info(f"ExternalReranker:predict:query {query}")
-
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {self.api_key}",
-            }
-            if ENABLE_FORWARD_USER_INFO_HEADERS:
-                headers["X-OpenWebUI-User-Name"] = self.user.name
-                headers["X-OpenWebUI-User-Id"] = self.user.id
-                headers["X-OpenWebUI-User-Email"] = self.user.email
-                headers["X-OpenWebUI-User-Role"] = self.user.role
-
+            
             r = requests.post(
                 f"{self.url}",
-                headers,
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {self.api_key}",
+                    **(
+                        {
+                            "X-OpenWebUI-User-Name": self.user.name,
+                            "X-OpenWebUI-User-Id": self.user.id,
+                            "X-OpenWebUI-User-Email": self.user.email,
+                            "X-OpenWebUI-User-Role": self.user.role,
+                        }
+                        if ENABLE_FORWARD_USER_INFO_HEADERS and user
+                        else {}
+                },
                 json=payload,
             )
 
