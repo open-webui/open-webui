@@ -2,7 +2,7 @@ import logging
 import requests
 from typing import Optional, List, Tuple
 
-from open_webui.env import SRC_LOG_LEVELS
+from open_webui.env import ENABLE_FORWARD_USER_INFO_HEADERS, SRC_LOG_LEVELS
 from open_webui.retrieval.models.base_reranker import BaseReranker
 
 
@@ -36,12 +36,19 @@ class ExternalReranker(BaseReranker):
             log.info(f"ExternalReranker:predict:model {self.model}")
             log.info(f"ExternalReranker:predict:query {query}")
 
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {self.api_key}",
+            }
+            if ENABLE_FORWARD_USER_INFO_HEADERS:
+                headers["X-OpenWebUI-User-Name"] = user.name
+                headers["X-OpenWebUI-User-Id"] = user.id
+                headers["X-OpenWebUI-User-Email"] = user.email
+                headers["X-OpenWebUI-User-Role"] = user.role
+
             r = requests.post(
                 f"{self.url}",
-                headers={
-                    "Content-Type": "application/json",
-                    "Authorization": f"Bearer {self.api_key}",
-                },
+                headers,
                 json=payload,
             )
 
