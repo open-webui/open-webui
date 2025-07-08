@@ -665,6 +665,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 	};
 
 	const insertHandler = (content) => {
+		insertNoteVersion(note);
 		inputElement?.insertContent(content);
 	};
 
@@ -1075,6 +1076,9 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 				{files}
 				onInsert={insertHandler}
 				onStop={stopResponseHandler}
+				insertNoteHandler={() => {
+					insertNoteVersion(note);
+				}}
 				scrollToBottomHandler={scrollToBottom}
 			/>
 		{:else if selectedPanel === 'settings'}

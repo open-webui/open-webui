@@ -40,6 +40,8 @@
 
 	export let onInsert = (content) => {};
 	export let onStop = () => {};
+
+	export let insertNoteHandler = () => {};
 	export let scrollToBottomHandler = () => {};
 
 	let loaded = false;
@@ -253,6 +255,11 @@ Based on the user's instruction, update and enhance the existing notes by incorp
 			scrollToBottom();
 
 			loading = true;
+
+			if (editorEnabled) {
+				insertNoteHandler();
+			}
+
 			await chatCompletionHandler();
 			messages = messages.map((message) => {
 				message.done = true;
@@ -340,7 +347,7 @@ Based on the user's instruction, update and enhance the existing notes by incorp
 						onSubmit={submitHandler}
 						{onStop}
 					>
-						<div slot="menu" class="flex items-center justify-between gap-2 w-full pr-2">
+						<div slot="menu" class="flex items-center justify-between gap-2 w-full pr-1">
 							<div>
 								<Tooltip content={$i18n.t('Edit')} placement="top">
 									<button
@@ -361,7 +368,7 @@ Based on the user's instruction, update and enhance the existing notes by incorp
 
 							<Tooltip content={selectedModelId}>
 								<select
-									class=" bg-transparent rounded-lg py-1 px-2 -mx-0.5 text-sm outline-hidden w-20"
+									class=" bg-transparent rounded-lg py-1 px-2 -mx-0.5 text-sm outline-hidden w-full text-right pr-5"
 									bind:value={selectedModelId}
 								>
 									{#each $models as model}
