@@ -104,19 +104,23 @@
 													</select>
 												{:else if variables[variable]?.type === 'checkbox'}
 													<div class="flex items-center space-x-2">
-														<div class="relative size-6 flex justify-center items-center">
+														<div class="relative flex justify-center items-center gap-2">
 															<input
 																type="checkbox"
 																bind:checked={variableValues[variable]}
 																class="size-3.5 rounded cursor-pointer border border-gray-200 dark:border-gray-700"
 																id="input-variable-{idx}"
 															/>
+
+															<label for="input-variable-{idx}" class="text-sm"
+																>{variables[variable]?.label ?? variable}</label
+															>
 														</div>
 
 														<input
 															type="text"
-															class="flex-1 py-2 text-sm dark:text-gray-300 bg-transparent outline-hidden"
-															placeholder="Enter checkbox label"
+															class="flex-1 py-1 text-sm dark:text-gray-300 bg-transparent outline-hidden"
+															placeholder="Enter value (true/false)"
 															bind:value={variableValues[variable]}
 															autocomplete="off"
 															required
