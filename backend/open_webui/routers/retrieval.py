@@ -167,7 +167,7 @@ def get_rf(
                         url=external_reranker_url,
                         api_key=external_reranker_api_key,
                         model=reranking_model,
-                        user=user,
+                        user=Depends(get_verified_user),
                     )
                 except Exception as e:
                     log.error(f"ExternalReranking: {e}")
