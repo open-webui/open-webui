@@ -279,6 +279,7 @@ Based on the user's instruction, update and enhance the existing notes by incorp
 
 		loaded = true;
 
+		await tick();
 		scrollToBottom();
 	});
 </script>
@@ -319,7 +320,7 @@ Based on the user's instruction, update and enhance the existing notes by incorp
 		<div class="mx-auto w-full md:px-0 h-full relative">
 			<div class=" flex flex-col h-full">
 				<div
-					class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0"
+					class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 scrollbar-hidden"
 					id="messages-container"
 					bind:this={messagesContainerElement}
 					on:scroll={onScroll}

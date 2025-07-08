@@ -1073,6 +1073,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 				{files}
 				onInsert={insertHandler}
 				onStop={stopResponseHandler}
+				scrollToBottomHandler={scrollToBottom}
 			/>
 		{:else if selectedPanel === 'settings'}
 			<Settings bind:show={showPanel} bind:selectedModelId />
