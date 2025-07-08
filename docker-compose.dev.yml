@@ -10,7 +10,9 @@ services:
       - "5678:5678"
     volumes:
       # [CRITICAL] Bind mount your local backend code into the container
-      - ../open-webui:/app/backend/data
+      - ./backend:/app/backend
+      # Create a separate volume for the database to persist it
+      - open-webui-db:/app/backend/data
     environment:
       # Set the environment variable to enable your debug key retrieval logic
       - DEBUG_USER_KEYS=True
@@ -24,3 +26,5 @@ services:
     command:
       # The command to run inside the container
       bash /app/backend/start.sh
+volumes:
+  open-webui-db:
