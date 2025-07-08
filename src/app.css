@@ -476,3 +476,60 @@ input[type='number'] {
 body {
 	 font-family: 'NotoKufiArabic-Regular';
 }
+
+
+.tabs-nav a {
+  @apply px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 dark:text-gray-400 transition-all duration-200;
+  @apply hover:text-gray-800 hover:border-gray-300 dark:hover:text-white dark:hover:border-gray-600;
+  @apply rounded-none; /* Remove any default radius */
+  white-space: nowrap; /* Prevent wrapping */
+}
+
+/* Active tab state */
+.tabs-nav a.active {
+  @apply text-blue-600 border-blue-600 dark:text-blue-400 dark:border-blue-400;
+}
+
+
+/* === Material Design Vertical Tabs === */
+
+.material-tabs {
+  @apply flex flex-col w-52 bg-white dark:bg-gray-900 rounded-md shadow-sm overflow-hidden border border-gray-200 dark:border-gray-800;
+}
+
+.material-tab, .material-tabs button {
+  @apply relative px-4 py-3 w-full text-left flex items-center gap-3 text-sm font-medium text-gray-600 dark:text-gray-300 transition-colors duration-200 cursor-pointer;
+  @apply hover:bg-gray-50 dark:hover:bg-gray-800;
+}
+
+.material-tab svg, .material-tabs button svg {
+  @apply w-5 h-5 text-gray-400 dark:text-gray-500;
+}
+
+.material-tab::before,  .material-tabs button::before {
+  content: '';
+  @apply absolute left-0 top-0 h-full w-1 bg-transparent transition-colors duration-300;
+}
+
+/* Active state */
+.material-tab.active, .material-tabs button.active {
+  @apply bg-gray-50 dark:bg-gray-800 text-blue-600 dark:text-blue-400 font-semibold;
+}
+
+.material-tab.active::before, .material-tabs button.active::before{
+  @apply bg-blue-600 dark:bg-blue-400;
+}
+
+.material-tab.active svg  .material-tabs button.active svg{
+  @apply text-blue-600 dark:text-blue-400;
+}
+
+
+/* === Global Bordered Table Styles === */
+
+
+
+
+td {
+  @apply border-b-1 border-gray-100 dark:border-gray-700 px-4 py-3;
+}
