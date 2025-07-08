@@ -40,6 +40,8 @@
 
 	export let onInsert = (content) => {};
 	export let onStop = () => {};
+
+	export let insertNoteHandler = () => {};
 	export let scrollToBottomHandler = () => {};
 
 	let loaded = false;
@@ -253,6 +255,11 @@ Based on the user's instruction, update and enhance the existing notes by incorp
 			scrollToBottom();
 
 			loading = true;
+
+			if (editorEnabled) {
+				insertNoteHandler();
+			}
+
 			await chatCompletionHandler();
 			messages = messages.map((message) => {
 				message.done = true;
