@@ -760,7 +760,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 							</div>
 
 							<input
-								class="w-full text-xl font-medium bg-transparent outline-hidden"
+								class="w-full text-2xl font-medium bg-transparent outline-hidden"
 								type="text"
 								bind:value={note.title}
 								placeholder={$i18n.t('Title')}
