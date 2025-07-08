@@ -9,6 +9,7 @@
 	import { tick, getContext, onMount, onDestroy } from 'svelte';
 	import { removeLastWordFromString, isValidHttpUrl } from '$lib/utils';
 	import { knowledge } from '$lib/stores';
+	import { getNoteList, getNotes } from '$lib/apis/notes';
 
 	const i18n = getContext('i18n');
 
@@ -75,9 +76,22 @@
 		}
 	};
 
-	onMount(() => {
+	onMount(async () => {
 		window.addEventListener('resize', adjustHeight);
 		adjustHeight();
+
+		let notes = await getNoteList(localStorage.token).catch(() => {
+			return [];
+		});
+
+		notes = notes.map((note) => {
+			return {
+				...note,
+				type: 'note',
+				name: note.title,
+				description: dayjs(note.updated_at / 1000000).fromNow()
+			};
+		});
 
 		let legacy_documents = $knowledge
 			.filter((item) => item?.meta?.document)
@@ -144,14 +158,18 @@
 					]
 				: [];
 
-		items = [...collections, ...collection_files, ...legacy_collections, ...legacy_documents].map(
-			(item) => {
-				return {
-					...item,
-					...(item?.legacy || item?.meta?.legacy || item?.meta?.document ? { legacy: true } : {})
-				};
-			}
-		);
+		items = [
+			...notes,
+			...collections,
+			...collection_files,
+			...legacy_collections,
+			...legacy_documents
+		].map((item) => {
+			return {
+				...item,
+				...(item?.legacy || item?.meta?.legacy || item?.meta?.document ? { legacy: true } : {})
+			};
+		});
 
 		fuse = new Fuse(items, {
 			keys: ['name', 'description']
@@ -209,6 +227,12 @@
 											class="bg-gray-500/20 text-gray-700 dark:text-gray-200 rounded-sm uppercase text-xs font-bold px-1 shrink-0"
 										>
 											File
+										</div>
+									{:else if item?.type === 'note'}
+										<div
+											class="bg-blue-500/20 text-blue-700 dark:text-blue-200 rounded-sm uppercase text-xs font-bold px-1 shrink-0"
+										>
+											Note
 										</div>
 									{:else}
 										<div

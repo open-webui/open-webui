@@ -51,7 +51,14 @@ async def get_notes(request: Request, user=Depends(get_verified_user)):
     return notes
 
 
-@router.get("/list", response_model=list[NoteUserResponse])
+class NoteTitleIdResponse(BaseModel):
+    id: str
+    title: str
+    updated_at: int
+    created_at: int
+
+
+@router.get("/list", response_model=list[NoteTitleIdResponse])
 async def get_note_list(request: Request, user=Depends(get_verified_user)):
 
     if user.role != "admin" and not has_permission(
@@ -63,12 +70,7 @@ async def get_note_list(request: Request, user=Depends(get_verified_user)):
         )
 
     notes = [
-        NoteUserResponse(
-            **{
-                **note.model_dump(),
-                "user": UserResponse(**Users.get_user_by_id(note.user_id).model_dump()),
-            }
-        )
+        NoteTitleIdResponse(**note.model_dump())
         for note in Notes.get_notes_by_user_id(user.id, "read")
     ]
 

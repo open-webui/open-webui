@@ -442,7 +442,10 @@
 
 	const downloadHandler = async (type) => {
 		console.log('downloadHandler', type);
-		if (type === 'md') {
+		if (type === 'txt') {
+			const blob = new Blob([note.data.content.md], { type: 'text/plain' });
+			saveAs(blob, `${note.title}.txt`);
+		} else if (type === 'md') {
 			const blob = new Blob([note.data.content.md], { type: 'text/markdown' });
 			saveAs(blob, `${note.title}.md`);
 		} else if (type === 'pdf') {

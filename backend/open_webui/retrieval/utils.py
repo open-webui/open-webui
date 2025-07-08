@@ -18,6 +18,7 @@ from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 
 from open_webui.models.users import UserModel
 from open_webui.models.files import Files
+from open_webui.models.notes import Notes
 
 from open_webui.retrieval.vector.main import GetResult
 
@@ -470,7 +471,15 @@ def get_sources_from_files(
                 "documents": [[doc.get("content") for doc in file.get("docs")]],
                 "metadatas": [[doc.get("metadata") for doc in file.get("docs")]],
             }
-        elif file.get("context") == "full":
+        elif file.get("type") == "note":
+            # Note Attached
+            note = Notes.get_note_by_id(file.get("id"))
+
+            query_result = {
+                "documents": [[note.data.get("content", {}).get("md", "")]],
+                "metadatas": [[{"file_id": note.id, "name": note.title}]],
+            }
+        elif file.get("context") == "full" and file.get("type") == "file":
             # Manual Full Mode Toggle
             query_result = {
                 "documents": [[file.get("file").get("data", {}).get("content")]],

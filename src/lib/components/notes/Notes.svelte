@@ -302,7 +302,7 @@
 						</div>
 
 						<div
-							class="mb-5 gap-2.5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
+							class="mb-5 gap-2.5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
 						>
 							{#each notes[timeRange] as note, idx (note.id)}
 								<div
@@ -340,7 +340,7 @@
 												</div>
 
 												<div
-													class=" text-xs text-gray-500 dark:text-gray-500 mb-3 line-clamp-5 min-h-18"
+													class=" text-xs text-gray-500 dark:text-gray-500 mb-3 line-clamp-3 min-h-10"
 												>
 													{#if note.data?.content?.md}
 														{note.data?.content?.md}
