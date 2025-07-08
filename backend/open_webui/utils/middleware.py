@@ -419,6 +419,7 @@ async def chat_web_search_handler(
             request,
             SearchForm(queries=queries),
             user=user,
+            user_message=user_message
         )
 
         if results:

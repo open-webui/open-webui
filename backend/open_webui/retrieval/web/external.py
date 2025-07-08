@@ -20,12 +20,17 @@ def search_external(
         response = requests.post(
             external_url,
             headers={
-                "User-Agent": "Open WebUI (https://github.com/open-webui/open-webui) RAG Bot",
+                "Content-Type": "application/json",
                 "Authorization": f"Bearer {external_api_key}",
             },
             json={
-                "query": query,
-                "count": count,
+                "model": "gpt-4o",
+                "input": query,
+                "tools": [
+                    {
+                        "type": "web_search"
+                    }
+                ]
             },
         )
         response.raise_for_status()

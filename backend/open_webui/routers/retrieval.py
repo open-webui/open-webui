@@ -1806,9 +1806,9 @@ async def process_web_search(
                 search_web,
                 request,
                 request.app.state.config.WEB_SEARCH_ENGINE,
-                query,
+                user_message,
             )
-            for query in form_data.queries
+            # for query in form_data.queries
         ]
 
         search_results = await asyncio.gather(*search_tasks)
