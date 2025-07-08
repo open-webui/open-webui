@@ -9,6 +9,18 @@ export default {
 		extend: {
 			colors: {
 				surface: '#F9F9FF',
+				neutrals:{
+                       50: 'var(--color-neutrals-50, #ECEEF1)',
+					   100: 'var(--color-neutrals-100, #DEE0E3)',
+					   400: 'var(--color-neutrals-400, #A5A6A9)',
+					   700: 'var(--color-neutrals-700, #4F5154)',
+					   black: 'var(--color-neutrals-black, #1D1F22)',  
+					   white: 'var(--color-neutrals-white, #ffffff)', 
+					   error:'var(--color-neutrals-error, #D91938)'
+				},
+				primary:{
+					400: 'var(--color-primary-400, #0054F2)',  
+			    },
 				gray: {
 					50: 'var(--color-gray-50, #f9f9f9)',
 					100: 'var(--color-gray-100, #ececec)',
@@ -43,7 +55,13 @@ export default {
 			},
 			padding: {
 				'safe-bottom': 'env(safe-area-inset-bottom)'
-			}
+			},
+			backgroundImage: {
+				'login': "url('/login-bg.jpg')",
+			  },
+			boxShadow: {
+				'custom': '0px 48px 96px 0px rgba(0, 0, 0, 0.08)',
+			},
 		}
 	},
 	plugins: [typography, containerQuries]
