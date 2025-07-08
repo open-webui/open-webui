@@ -227,12 +227,39 @@
 		}
 
 		const model = atSelectedModel ?? $models.find((m) => m.id === selectedModels[0]);
-		if (model && model?.info?.meta?.toolIds) {
-			selectedToolIds = [
-				...new Set(
-					[...(model?.info?.meta?.toolIds ?? [])].filter((id) => $tools.find((t) => t.id === id))
-				)
-			];
+		if (model && model?.info?.meta?.toolIds && $tools && Array.isArray($tools) && $tools.length > 0) {
+			const findTool = (id: string): string | undefined => {
+				// First try to find tool by exact ID match
+				const maybeTool = $tools.find((t) => t.id === id);
+				if (maybeTool) {
+					return maybeTool;
+				}
+
+				// Handle legacy server: prefixed IDs based on in-memory positional index
+				if (id.startsWith('server:')) {
+					console.warn(
+						`Using in-memory positional identifier to match tool with ID=${id}. ` +
+						`This should be migrated to use a hash-based ID. ` +
+						`Please consider updating your model configuration.`
+					);
+
+					const positionalIndex = id.split(':')[1];
+
+					// Validate that the positional index is a valid number
+					if (positionalIndex && /^\d+$/.test(positionalIndex)) {
+						const index = parseInt(positionalIndex, 10);
+						const server = $tools[index];
+
+						if (server) {
+							return server;
+						}
+					}
+				}
+
+				return undefined;
+			};
+			const foundTools = [...(model?.info?.meta?.toolIds ?? [])].map(findTool).filter((tool) => tool !== undefined)
+			selectedToolIds = [...new Set(foundTools.map((tool) => tool.id))]
 		} else {
 			selectedToolIds = [];
 		}
@@ -435,7 +462,6 @@
 	let pageSubscribe = null;
 	onMount(async () => {
 		loading = true;
-		console.log('mounted');
 		window.addEventListener('message', onMessageHandler);
 		$socket?.on('chat-events', chatEventHandler);
 
