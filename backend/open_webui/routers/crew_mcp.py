@@ -279,7 +279,19 @@ async def run_crew_query(
         log.info(f"Using intelligent crew with manager agent for routing")
 
         # Always use the intelligent crew - it will handle routing internally
-        result = crew_mcp_manager.run_intelligent_crew(request.query, selected_tools)
+        # Run in executor to prevent blocking the main thread and causing health check failures
+        import asyncio
+        import concurrent.futures
+
+        loop = asyncio.get_event_loop()
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            result = await loop.run_in_executor(
+                executor,
+                crew_mcp_manager.run_intelligent_crew,
+                request.query,
+                selected_tools,
+            )
+
         used_tools = [tool["name"] for tool in tools]  # All tools potentially available
 
         # Generate proper title and tags if chat_id is provided (like standard chat flow)
