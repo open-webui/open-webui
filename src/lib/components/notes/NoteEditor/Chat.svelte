@@ -344,6 +344,7 @@ Based on the user's instruction, update and enhance the existing notes by incorp
 						bind:chatInputElement
 						acceptFiles={false}
 						inputLoading={loading}
+						showFormattingButtons={false}
 						onSubmit={submitHandler}
 						{onStop}
 					>
