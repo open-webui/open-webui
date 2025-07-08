@@ -332,7 +332,9 @@
 			<Sidebar />
 
 			{#if loaded}
-				<slot />
+				
+					<slot />
+				
 			{:else}
 				<div class="w-full flex-1 h-full flex items-center justify-center">
 					<Spinner />
