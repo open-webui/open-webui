@@ -36,7 +36,7 @@ class ExternalReranker(BaseReranker):
         try:
             log.info(f"ExternalReranker:predict:model {self.model}")
             log.info(f"ExternalReranker:predict:query {query}")
-            
+
             r = requests.post(
                 f"{self.url}",
                 headers={
