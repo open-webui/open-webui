@@ -88,7 +88,7 @@
 		},
 		// pages: [], // TODO: Implement pages for notes to allow users to create multiple pages in a note
 		meta: null,
-		access_control: null
+		access_control: {}
 	};
 
 	let files = [];

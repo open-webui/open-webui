@@ -71,7 +71,7 @@
 				}
 			},
 			meta: null,
-			access_control: null
+			access_control: {}
 		}).catch((error) => {
 			toast.error(`${error}`);
 			return null;
@@ -198,7 +198,7 @@
 						}
 					},
 					meta: null,
-					access_control: null
+					access_control: {}
 				}).catch((error) => {
 					toast.error(`${error}`);
 					return null;
