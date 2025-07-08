@@ -9,7 +9,7 @@ from open_webui.models.groups import Groups
 
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text
+from sqlalchemy import BigInteger, Column, String, Text, LargeBinary
 from sqlalchemy import or_
 
 
@@ -37,6 +37,11 @@ class User(Base):
 
     oauth_sub = Column(Text, unique=True)
 
+    # Fields for per-user encryption
+    salt = Column(LargeBinary, nullable=True)
+    user_encrypted_dek = Column(LargeBinary, nullable=True)
+    # kms_encrypted_dek = Column(LargeBinary, nullable=True) # For future implementation
+
 
 class UserSettings(BaseModel):
     ui: Optional[dict] = {}
@@ -60,6 +65,11 @@ class UserModel(BaseModel):
     info: Optional[dict] = None
 
     oauth_sub: Optional[str] = None
+
+    # Fields for per-user encryption
+    salt: Optional[bytes] = None
+    user_encrypted_dek: Optional[bytes] = None
+    # kms_encrypted_dek: Optional[bytes] = None # For future implementation
 
     model_config = ConfigDict(from_attributes=True)
 
