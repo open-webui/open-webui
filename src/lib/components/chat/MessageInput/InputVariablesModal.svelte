@@ -77,6 +77,8 @@
 						{#if !loading}
 							<div class="flex flex-col gap-1">
 								{#each Object.keys(variables) as variable, idx}
+									{@const { type, ...variableAttributes } = variables[variable] ?? {}}
+
 									<div class=" py-0.5 w-full justify-between">
 										<div class="flex w-full justify-between mb-1.5">
 											<div class=" self-center text-xs font-medium">
@@ -91,12 +93,20 @@
 										<div class="flex mt-0.5 mb-0.5 space-x-2">
 											<div class=" flex-1">
 												{#if variables[variable]?.type === 'select'}
+													{@const options = variableAttributes?.options ?? []}
+													{@const placeholder = variableAttributes?.placeholder ?? ''}
+
 													<select
 														class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100 dark:border-gray-850"
 														bind:value={variableValues[variable]}
 														id="input-variable-{idx}"
 													>
-														{#each variables[variable]?.options ?? [] as option}
+														{#if placeholder}
+															<option value="" disabled selected>
+																{placeholder}
+															</option>
+														{/if}
+														{#each options as option}
 															<option value={option} selected={option === variableValues[variable]}>
 																{option}
 															</option>
@@ -110,6 +120,7 @@
 																bind:checked={variableValues[variable]}
 																class="size-3.5 rounded cursor-pointer border border-gray-200 dark:border-gray-700"
 																id="input-variable-{idx}"
+																{...variableAttributes}
 															/>
 
 															<label for="input-variable-{idx}" class="text-sm"
@@ -138,6 +149,7 @@
 																	// Convert the color value to uppercase immediately
 																	variableValues[variable] = e.target.value.toUpperCase();
 																}}
+																{...variableAttributes}
 															/>
 														</div>
 
@@ -159,6 +171,7 @@
 														autocomplete="off"
 														id="input-variable-{idx}"
 														required
+														{...variableAttributes}
 													/>
 												{:else if variables[variable]?.type === 'datetime-local'}
 													<input
@@ -169,6 +182,7 @@
 														autocomplete="off"
 														id="input-variable-{idx}"
 														required
+														{...variableAttributes}
 													/>
 												{:else if variables[variable]?.type === 'email'}
 													<input
@@ -179,6 +193,7 @@
 														autocomplete="off"
 														id="input-variable-{idx}"
 														required
+														{...variableAttributes}
 													/>
 												{:else if variables[variable]?.type === 'month'}
 													<input
@@ -189,6 +204,7 @@
 														autocomplete="off"
 														id="input-variable-{idx}"
 														required
+														{...variableAttributes}
 													/>
 												{:else if variables[variable]?.type === 'number'}
 													<input
@@ -199,9 +215,31 @@
 														autocomplete="off"
 														id="input-variable-{idx}"
 														required
+														{...variableAttributes}
 													/>
 												{:else if variables[variable]?.type === 'range'}
-													<input
+													<div class="flex items-center space-x-2">
+														<div class="relative flex justify-center items-center gap-2 flex-1">
+															<input
+																type="range"
+																bind:value={variableValues[variable]}
+																class="w-full rounded-lg py-1 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100 dark:border-gray-850"
+																id="input-variable-{idx}"
+																{...variableAttributes}
+															/>
+														</div>
+
+														<input
+															type="text"
+															class=" py-1 text-sm dark:text-gray-300 bg-transparent outline-hidden text-right"
+															placeholder="Enter value"
+															bind:value={variableValues[variable]}
+															autocomplete="off"
+															required
+														/>
+													</div>
+
+													<!-- <input
 														type="range"
 														class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100 dark:border-gray-850"
 														placeholder={variables[variable]?.placeholder ?? ''}
@@ -209,7 +247,7 @@
 														autocomplete="off"
 														id="input-variable-{idx}"
 														required
-													/>
+													/> -->
 												{:else if variables[variable]?.type === 'tel'}
 													<input
 														type="tel"
@@ -219,6 +257,7 @@
 														autocomplete="off"
 														id="input-variable-{idx}"
 														required
+														{...variableAttributes}
 													/>
 												{:else if variables[variable]?.type === 'text'}
 													<input
@@ -229,6 +268,7 @@
 														autocomplete="off"
 														id="input-variable-{idx}"
 														required
+														{...variableAttributes}
 													/>
 												{:else if variables[variable]?.type === 'time'}
 													<input
@@ -239,6 +279,7 @@
 														autocomplete="off"
 														id="input-variable-{idx}"
 														required
+														{...variableAttributes}
 													/>
 												{:else if variables[variable]?.type === 'url'}
 													<input
@@ -249,6 +290,7 @@
 														autocomplete="off"
 														id="input-variable-{idx}"
 														required
+														{...variableAttributes}
 													/>
 												{:else if variables[variable]?.type === 'map'}
 													<!-- EXPERIMENTAL INPUT TYPE, DO NOT USE IN PRODUCTION -->
