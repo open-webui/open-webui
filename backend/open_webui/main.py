@@ -1696,6 +1696,13 @@ async def oauth_login(provider: str, request: Request):
 async def oauth_callback(provider: str, request: Request, response: Response):
     return await oauth_manager.handle_callback(request, provider, response)
 
+# OAuth login
+# for mobile auth process
+# returns user info, token, auth_token
+@app.get("/oauth/{provider}/callback_mob")
+async def oauth_callback_mob(provider: str, request: Request, response: Response):
+    log.warning("[DEBUG] : in oauth_callback_mob")
+    return await oauth_manager.handle_callback_mob(request, provider, response)
 
 @app.get("/manifest.json")
 async def get_manifest_json():
