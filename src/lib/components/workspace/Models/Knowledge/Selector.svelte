@@ -85,13 +85,13 @@
 
 	<div slot="content">
 		<DropdownMenu.Content
-			class="w-full max-w-80 rounded-lg px-1 py-1.5 border border-gray-300/30 dark:border-gray-700/50 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
+			class="w-full max-w-80 rounded-xl px-1 py-1.5 border border-gray-300/30 dark:border-gray-700/50 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
 			sideOffset={8}
 			side="bottom"
 			align="start"
 			transition={flyAndScale}
 		>
-			<div class=" flex w-full space-x-2 py-0.5 px-2">
+			<div class=" flex w-full space-x-2 py-0.5 px-2 pb-2">
 				<div class="flex flex-1">
 					<div class=" self-center ml-1 mr-3">
 						<Search />
@@ -103,8 +103,6 @@
 					/>
 				</div>
 			</div>
-
-			<hr class=" border-gray-50 dark:border-gray-700 my-1.5" />
 
 			<div class="max-h-48 overflow-y-scroll">
 				{#if filteredItems.length === 0}
