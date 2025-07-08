@@ -307,3 +307,9 @@ dist
 cypress/videos
 cypress/screenshots
 .vscode/settings.json
+backend/requirements.txt
+backend/startssh.sh
+compilar.sh
+package-lock.json
+package.json
+pyproject.toml
