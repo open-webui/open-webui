@@ -220,12 +220,12 @@
 				{/each}
 			</ol>
 		{:else}
-			<ul dir="auto">
+			<ul dir="auto" class="">
 				{#each token.items as item, itemIdx}
-					<li class="text-start">
+					<li class="text-start {item?.task ? 'flex -translate-x-7 gap-3.5 ' : ''}">
 						{#if item?.task}
 							<input
-								class=" translate-y-[1px] -translate-x-1"
+								class=""
 								type="checkbox"
 								checked={item.checked}
 								on:change={(e) => {
@@ -239,15 +239,25 @@
 									});
 								}}
 							/>
-						{/if}
 
-						<svelte:self
-							id={`${id}-${tokenIdx}-${itemIdx}`}
-							tokens={item.tokens}
-							top={token.loose}
-							{onTaskClick}
-							{onSourceClick}
-						/>
+							<div>
+								<svelte:self
+									id={`${id}-${tokenIdx}-${itemIdx}`}
+									tokens={item.tokens}
+									top={token.loose}
+									{onTaskClick}
+									{onSourceClick}
+								/>
+							</div>
+						{:else}
+							<svelte:self
+								id={`${id}-${tokenIdx}-${itemIdx}`}
+								tokens={item.tokens}
+								top={token.loose}
+								{onTaskClick}
+								{onSourceClick}
+							/>
+						{/if}
 					</li>
 				{/each}
 			</ul>

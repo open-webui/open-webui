@@ -484,7 +484,6 @@
 				const htmlValue = editor.getHTML();
 				const jsonValue = editor.getJSON();
 
-				console.log(htmlValue, jsonValue);
 				let mdValue = turndownService
 					.turndown(
 						htmlValue
@@ -578,7 +577,7 @@
 									}
 
 									const isInCodeBlock = isInside(['codeBlock']);
-									const isInList = isInside(['listItem', 'bulletList', 'orderedList']);
+									const isInList = isInside(['listItem', 'bulletList', 'orderedList', 'taskList']);
 									const isInHeading = isInside(['heading']);
 
 									if (isInCodeBlock || isInList || isInHeading) {
