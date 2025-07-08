@@ -120,6 +120,8 @@
 	let enhancing = false;
 	let streaming = false;
 
+	let stopResponseFlag = false;
+
 	let inputElement = null;
 
 	const init = async () => {
@@ -213,6 +215,11 @@
 		enhancing = false;
 		versionIdx = null;
 	}
+
+	const stopResponseHandler = async () => {
+		stopResponseFlag = true;
+		console.log('stopResponse', stopResponseFlag);
+	};
 
 	function setContentByVersion(versionIdx) {
 		if (!note.data.versions?.length) return;
@@ -578,7 +585,13 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 
 			while (true) {
 				const { value, done } = await reader.read();
-				if (done) {
+				if (done || stopResponseFlag) {
+					if (stopResponseFlag) {
+						controller.abort('User: Stop Response');
+					}
+
+					enhancing = false;
+					streaming = false;
 					break;
 				}
 
@@ -1019,22 +1032,28 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 				</Tooltip> -->
 
 						<Tooltip content={$i18n.t('Enhance')} placement="top">
-							<button
-								class="{enhancing
-									? 'p-2'
-									: 'p-2.5'} flex justify-center items-center hover:bg-gray-50 dark:hover:bg-gray-800 rounded-full transition shrink-0"
-								on:click={() => {
-									enhanceNoteHandler();
-								}}
-								disabled={enhancing}
-								type="button"
-							>
-								{#if enhancing}
+							{#if enhancing}
+								<button
+									class="p-2 flex justify-center items-center hover:bg-gray-50 dark:hover:bg-gray-800 rounded-full transition shrink-0"
+									on:click={() => {
+										stopResponseHandler();
+									}}
+									type="button"
+								>
 									<Spinner className="size-5" />
-								{:else}
+								</button>
+							{:else}
+								<button
+									class="p-2.5 flex justify-center items-center hover:bg-gray-50 dark:hover:bg-gray-800 rounded-full transition shrink-0"
+									on:click={() => {
+										enhanceNoteHandler();
+									}}
+									disabled={enhancing}
+									type="button"
+								>
 									<SparklesSolid />
-								{/if}
-							</button>
+								</button>
+							{/if}
 						</Tooltip>
 					</div>
 				{/if}
@@ -1050,8 +1069,10 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 				bind:note
 				bind:enhancing
 				bind:streaming
+				bind:stopResponseFlag
 				{files}
 				onInsert={insertHandler}
+				onStop={stopResponseHandler}
 			/>
 		{:else if selectedPanel === 'settings'}
 			<Settings bind:show={showPanel} bind:selectedModelId />

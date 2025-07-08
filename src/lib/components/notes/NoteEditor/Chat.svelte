@@ -31,6 +31,7 @@
 
 	export let enhancing = false;
 	export let streaming = false;
+	export let stopResponseFlag = false;
 
 	export let note = null;
 
@@ -38,12 +39,12 @@
 	export let messages = [];
 
 	export let onInsert = (content) => {};
+	export let onStop = () => {};
 	export let scrollToBottomHandler = () => {};
 
 	let loaded = false;
 
 	let loading = false;
-	let stopResponseFlag = false;
 
 	let messagesContainerElement: HTMLDivElement;
 
@@ -86,11 +87,6 @@ Based on the user's instruction, update and enhance the existing notes by incorp
 				messagesContainerElement.scrollHeight - messagesContainerElement.scrollTop <=
 				messagesContainerElement.clientHeight + 10;
 		}
-	};
-
-	const stopHandler = () => {
-		stopResponseFlag = true;
-		console.log('stopResponse');
 	};
 
 	const chatCompletionHandler = async () => {
@@ -341,7 +337,7 @@ Based on the user's instruction, update and enhance the existing notes by incorp
 						acceptFiles={false}
 						inputLoading={loading}
 						onSubmit={submitHandler}
-						onStop={stopHandler}
+						{onStop}
 					>
 						<div slot="menu" class="flex items-center justify-between gap-2 w-full pr-2">
 							<div>
