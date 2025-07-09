@@ -4,10 +4,7 @@
 	import { onMount, getContext, createEventDispatcher } from 'svelte';
 	import { settings, WEBUI_NAME } from '$lib/stores';
 	import { WEBUI_VERSION } from '$lib/constants';
-	import News from '../icons/News.svelte';
-	import Analytics from '../icons/Analytics.svelte';
-	import Forum from '../icons/Forum.svelte';
-	import EditNotes from '../icons/EditNotes.svelte';
+	import MaterialIcon from '$lib/components/common/MaterialIcon.svelte';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -17,7 +14,6 @@
 	export let inputValue = '';
 
 	let sortedPrompts = [];
-	let iconMap = [News,Analytics,Forum,EditNotes];
 
 	const fuseOptions = {
 		keys: ['content', 'title'],
@@ -86,64 +82,29 @@
 	{/if}
 </div> -->
 
-<div class="h-40 w-full">
+<div class="w-full flex items-center justify-center">
 	{#if filteredPrompts.length > 0}
-
-		<div class="flex flex-wrap gap-3 mt-4 justify-center items-center">
+		<div class="flex flex-wrap gap-3 mt-4 justify-center items-center w-full">
 			{#each filteredPrompts as prompt, idx (prompt.id || prompt.content)}
-				<button
-					class="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium font-NotoKufi-Medium text-gray-1000 transition hover:bg-gray-50 dark:text-gray-100 dark:hover:bg-white/10"
-					style="
-						background: var(--Schemes-Surface, #FFF);
-						box-shadow: 0px 0px 16px -8px rgba(28, 27, 27, 0.04);
-						animation-delay: {idx * 60}ms;
-					"
-					on:click={() => dispatch('select', prompt.content)}
-				>
-					{#if prompt.icon}
-						<span class="text-purple-600 text-lg"><svelte:component this={iconMap[prompt.icon]} class="w-6 h-6" /></span>
-					{:else}
-						<span class="text-purple-600 text-lg"><svelte:component this={iconMap[prompt.icon]} class="w-6 h-6" /></span>
-					{/if}
-					<span class="whitespace-nowrap leading-[22px] font-NotoKufi-Regular">{prompt.title?.[0] ?? prompt.content}</span>
-				</button>
+				<div class="relative rounded-lg backdrop-blur-md bg-white/90">
+					<div class="absolute inset-0 border border-white rounded-lg pointer-events-none"></div>
+					<button
+						class="flex items-center gap-1 p-2.5 w-full font-heading font-medium text-[14px] leading-[22px] text-neutral-800 text-left whitespace-nowrap overflow-hidden text-ellipsis transition hover:bg-gray-50 dark:text-gray-100 dark:hover:bg-white/10"
+						style="animation-delay: {idx * 60}ms;"
+						on:click={() => dispatch('select', prompt.content)}
+					>
+							{#if prompt.icon_name}
+								<MaterialIcon name={prompt.icon_name} className="w-[18px] h-[18px]" color="{prompt.icon_color}" />
+							{:else}
+								<MaterialIcon name="lightbulb" className="w-[18px] h-[18px]" />
+							{/if}
+						<span class="font-heading font-medium text-[14px] leading-[22px] text-neutral-800 text-left whitespace-nowrap">
+							{prompt.title?.[0] ?? prompt.content}
+						</span>
+					</button>
+				</div>
 			{/each}
 		</div>
-
-
-		<!-- <div class="max-h-40 overflow-auto scrollbar-none items-start {className}">
-			{#each filteredPrompts as prompt, idx (prompt.id || prompt.content)}
-				<button
-					class="waterfall flex flex-col flex-1 shrink-0 w-full justify-between
-				       px-3 py-2 rounded-xl bg-transparent hover:bg-black/5
-				       dark:hover:bg-white/5 transition group"
-					style="animation-delay: {idx * 60}ms"
-					on:click={() => dispatch('select', prompt.content)}
-				>
-					<div class="flex flex-col text-left">
-						{#if prompt.title && prompt.title[0] !== ''}
-							<div
-								class="font-medium dark:text-gray-300 dark:group-hover:text-gray-200 transition line-clamp-1"
-							>
-								{prompt.title[0]}
-							</div>
-							<div class="text-xs text-gray-600 dark:text-gray-400 font-normal line-clamp-1">
-								{prompt.title[1]}
-							</div>
-						{:else}
-							<div
-								class="font-medium dark:text-gray-300 dark:group-hover:text-gray-200 transition line-clamp-1"
-							>
-								{prompt.content}
-							</div>
-							<div class="text-xs text-gray-600 dark:text-gray-400 font-normal line-clamp-1">
-								{$i18n.t('Prompt')}
-							</div>
-						{/if}
-					</div>
-				</button>
-			{/each}
-		</div> -->
 	{/if}
 </div>
 

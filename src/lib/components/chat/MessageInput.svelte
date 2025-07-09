@@ -55,6 +55,12 @@
 	import Wrench from '../icons/Wrench.svelte';
 	import CommandLine from '../icons/CommandLine.svelte';
 	import Sparkles from '../icons/Sparkles.svelte';
+	import ArrowDown from '../icons/ArrowDown.svelte';
+	import MenuBook from '../icons/MenuBook.svelte';
+	import EditNotes from '../icons/EditNotes.svelte';
+	import CheckNew from '../icons/CheckNew.svelte';
+	import Language from '../icons/Language.svelte';
+	import Attach from '../icons/Attach.svelte';
 
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 
@@ -88,6 +94,18 @@
 	export let imageGenerationEnabled = false;
 	export let webSearchEnabled = false;
 	export let codeInterpreterEnabled = false;
+	let isOpen = false;
+
+	const Modeloptions = [
+		{ label: 'Gov knowledge', icon: MenuBook },
+		{ label: 'Procurement', icon: EditNotes }
+	];
+	let selected = Modeloptions[0];
+
+	function selectOption(option) {
+		selected = option;
+		isOpen = false;
+	}
 
 	$: onChange({
 		prompt,
@@ -648,12 +666,8 @@
 							}}
 						>
 							<div
-								class="flex-1 flex flex-col relative w-full shadow-none rounded-3xl transition px-1 bg-white/90 dark:bg-gray-400/5 dark:text-gray-100"
-								style="
-    border-radius: 20px;
-    background: var(--Schemes-Surface, #FFF);
-    box-shadow: 0px 0px 16px -8px rgba(28, 27, 27, 0.04);
-  "
+								class="flex-1 flex flex-col relative w-full shadow-none rounded-3xl transition px-1 bg-white/90 dark:bg-gray-400/5 dark:text-gray-100 rounded-2xl"
+								style="box-shadow: 0px 48px 100px 0px rgba(0, 84, 242, 0.08);"
 								dir={$settings?.chatDirection ?? 'auto'}
 							>
 								{#if files.length > 0}
@@ -1202,9 +1216,9 @@
 									{/if}
 								</div>
 
-								<div class=" flex justify-between mt-0.5 mb-2.5 mx-0.5 max-w-full" dir="ltr">
+								<div class=" flex justify-between mt-[20px] mb-2.5 mx-0.5 max-w-full" dir="ltr">
 									<div class="ml-1 self-end flex items-center flex-1 max-w-[80%]">
-										<InputMenu
+										<!--<InputMenu
 											bind:selectedToolIds
 											selectedModels={atSelectedModel ? [atSelectedModel.id] : selectedModels}
 											{fileUploadCapableModels}
@@ -1271,140 +1285,98 @@
 													/>
 												</svg>
 											</button>
-										</InputMenu>
+										</InputMenu>-->
 
 										{#if $_user && (showToolsButton || (toggleFilters && toggleFilters.length > 0) || showWebSearchButton || showImageGenerationButton || showCodeInterpreterButton)}
 											<div
 												class="flex self-center w-[1px] h-4 mx-1.5 bg-gray-50 dark:bg-gray-800"
 											/>
-
-											<div class="flex gap-1 items-center overflow-x-auto scrollbar-none flex-1">
-												{#if showToolsButton}
-													<Tooltip
-														content={$i18n.t('{{COUNT}} Available Tools', {
-															COUNT: toolServers.length + selectedToolIds.length
-														})}
-													>
+											<div class="flex gap-[12px] items-center">
+												{#if false}
+													<div class="model-box relative inline-block">
+														<!-- Dropdown Button -->
 														<button
-															class="translate-y-[0.5px] flex gap-1 items-center text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 rounded-lg p-1 self-center transition"
-															aria-label="Available Tools"
 															type="button"
-															on:click={() => {
-																showTools = !showTools;
-															}}
+															on:click={() => (isOpen = !isOpen)}
+															class="inline-flex gap-2 text-[14px] leading-[22px] font-medium font-NotoKufi-Regular justify-between items-center px-2 py-1 border border-gray-1300 bg-gray-1150 rounded-[40px]"
 														>
-															<Wrench className="size-4" strokeWidth="1.75" />
+															<svelte:component this={selected.icon} class="w-6 h-6" />
+															{selected.label}
+															<ArrowDown strokeWidth="2" className="size-[1.1rem]" />
+														</button>
 
-															<span class="text-sm font-medium text-gray-600 dark:text-gray-300">
-																{toolServers.length + selectedToolIds.length}
+														<!-- Dropdown Menu -->
+														{#if isOpen}
+															<div
+																class="absolute z-10 bottom-[40px] w-[211px] bg-white border border-gray-200 rounded-md shadow-lg"
+															>
+																{#each Modeloptions as option}
+																	<div
+																		on:click={() => selectOption(option)}
+																		class="flex px-[14px] py-[15px] justify-between items-center text-gray-1200 font-medium cursor-pointer leading-[22px] font-NotoKufi-Regular"
+																	>
+																		<div class="flex gap-2 items-center">
+																			<svelte:component this={option.icon} class="w-6 h-6" />
+																			{option.label}
+																		</div>
+																		{#if option.label == selected.label}
+																			<CheckNew strokeWidth="2" className="size-[1.1rem]" />
+																		{/if}
+																	</div>
+																{/each}
+															</div>
+														{/if}
+													</div>
+												{/if}
+
+												{#if false}
+													<div class="web-search">
+														<button
+															type="button"
+															class="relative flex items-center bg-white border border-[#dee0e3] rounded-full px-3 py-2 gap-2 focus:outline-none"
+															aria-label="Web Search"
+														>
+															<span class="w-[18px] h-[18px] flex items-center justify-center">
+																<Language
+																	strokeWidth="2"
+																	className="w-[18px] h-[18px] text-[#36383b]"
+																/>
+															</span>
+															<span
+																class="font-heading font-medium text-[14px] leading-[22px] text-[#36383b] text-left whitespace-nowrap"
+															>
+																Web Search
 															</span>
 														</button>
-													</Tooltip>
+													</div>
 												{/if}
 
-												{#each toggleFilters as filter, filterIdx (filter.id)}
-													<Tooltip content={filter?.description} placement="top">
-														<button
-															on:click|preventDefault={() => {
-																if (selectedFilterIds.includes(filter.id)) {
-																	selectedFilterIds = selectedFilterIds.filter(
-																		(id) => id !== filter.id
-																	);
-																} else {
-																	selectedFilterIds = [...selectedFilterIds, filter.id];
-																}
-															}}
-															type="button"
-															class="px-2 @xl:px-2.5 py-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {selectedFilterIds.includes(
-																filter.id
-															)
-																? 'text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
-																: 'bg-transparent text-gray-600 dark:text-gray-300  '} capitalize"
+												<div class="attach">
+													<button
+														type="button"
+														class="relative flex items-center bg-white border border-[#dee0e3] rounded-full px-3 py-2 gap-2 focus:outline-none"
+														on:click={() => filesInputElement.click()}
+														aria-label="Attach files"
+													>
+														<span class="w-[18px] h-[18px] flex items-center justify-center">
+															<Attach
+																strokeWidth="2"
+																className="w-[18px] h-[18px] text-[#36383b]"
+															/>
+														</span>
+														<span
+															class="font-heading font-medium text-[14px] leading-[22px] text-[#36383b] text-left whitespace-nowrap"
 														>
-															{#if filter?.icon}
-																<div class="size-4 items-center flex justify-center">
-																	<img
-																		src={filter.icon}
-																		class="size-3.5 {filter.icon.includes('svg')
-																			? 'dark:invert-[80%]'
-																			: ''}"
-																		style="fill: currentColor;"
-																		alt={filter.name}
-																	/>
-																</div>
-															{:else}
-																<Sparkles className="size-4" strokeWidth="1.75" />
-															{/if}
-															<span
-																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
-																>{filter?.name}</span
-															>
-														</button>
-													</Tooltip>
-												{/each}
-
-												{#if showWebSearchButton}
-													<Tooltip content={$i18n.t('Search the internet')} placement="top">
-														<button
-															on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
-															type="button"
-															class="px-2 @xl:px-2.5 py-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {webSearchEnabled ||
-															($settings?.webSearch ?? false) === 'always'
-																? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
-																: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
-														>
-															<GlobeAlt className="size-4" strokeWidth="1.75" />
-															<span
-																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
-																>{$i18n.t('Web Search')}</span
-															>
-														</button>
-													</Tooltip>
-												{/if}
-
-												{#if showImageGenerationButton}
-													<Tooltip content={$i18n.t('Generate an image')} placement="top">
-														<button
-															on:click|preventDefault={() =>
-																(imageGenerationEnabled = !imageGenerationEnabled)}
-															type="button"
-															class="px-2 @xl:px-2.5 py-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {imageGenerationEnabled
-																? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
-																: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
-														>
-															<Photo className="size-4" strokeWidth="1.75" />
-															<span
-																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
-																>{$i18n.t('Image')}</span
-															>
-														</button>
-													</Tooltip>
-												{/if}
-
-												{#if showCodeInterpreterButton}
-													<Tooltip content={$i18n.t('Execute code for analysis')} placement="top">
-														<button
-															on:click|preventDefault={() =>
-																(codeInterpreterEnabled = !codeInterpreterEnabled)}
-															type="button"
-															class="px-2 @xl:px-2.5 py-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {codeInterpreterEnabled
-																? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
-																: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
-														>
-															<CommandLine className="size-4" strokeWidth="1.75" />
-															<span
-																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
-																>{$i18n.t('Code Interpreter')}</span
-															>
-														</button>
-													</Tooltip>
-												{/if}
+															Attach files
+														</span>
+													</button>
+												</div>
 											</div>
 										{/if}
 									</div>
 
 									<div class="self-end flex space-x-1 mr-1 shrink-0">
-										{#if (!history?.currentId || history.messages[history.currentId]?.done == true) && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.stt ?? true))}
+										{#if false && (!history?.currentId || history.messages[history.currentId]?.done == true) && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.stt ?? true))}
 											<!-- {$i18n.t('Record voice')} -->
 											<Tooltip content={$i18n.t('Dictate')}>
 												<button
@@ -1478,7 +1450,7 @@
 													</button>
 												</Tooltip>
 											</div>
-										{:else if prompt === '' && files.length === 0 && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.call ?? true))}
+										{:else if false && prompt === '' && files.length === 0 && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.call ?? true))}
 											<div class=" flex items-center">
 												<!-- {$i18n.t('Call')} -->
 												<Tooltip content={$i18n.t('Voice mode')}>

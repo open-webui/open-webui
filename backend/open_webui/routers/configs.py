@@ -8,6 +8,7 @@ from open_webui.config import get_config, save_config
 from open_webui.config import BannerModel
 
 from open_webui.utils.tools import get_tool_server_data, get_tool_servers_data
+import random
 
 
 router = APIRouter()
@@ -292,6 +293,14 @@ async def set_default_suggestions(
     data = form_data.model_dump()
     request.app.state.config.DEFAULT_PROMPT_SUGGESTIONS = data["suggestions"]
     return request.app.state.config.DEFAULT_PROMPT_SUGGESTIONS
+
+
+@router.get("/suggestions/random")
+async def get_random_prompt_suggestions(request: Request):
+    suggestions = request.app.state.config.DEFAULT_PROMPT_SUGGESTIONS
+    if len(suggestions) > 3:
+        return random.sample(suggestions, 3)
+    return suggestions
 
 
 ############################

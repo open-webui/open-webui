@@ -601,6 +601,7 @@
 		id="message-{message.id}"
 		dir={$settings.chatDirection}
 	>
+	    {#if false}
 		<div class={`shrink-0 ltr:mr-3 rtl:ml-3 hidden @lg:flex `}>
 			<ProfileImage
 				src={model?.info?.meta?.profile_image_url ??
@@ -608,14 +609,15 @@
 				className={'size-8 assistant-message-profile-image'}
 			/>
 		</div>
+		{/if}
 
 		<div class="flex-auto w-0 pl-1 relative -translate-y-0.5">
 			<Name>
-				<Tooltip content={model?.name ?? message.model} placement="top-start">
+				<!-- <Tooltip content={model?.name ?? message.model} placement="top-start">
 					<span class="line-clamp-1 text-black dark:text-white">
 						{model?.name ?? message.model}
 					</span>
-				</Tooltip>
+				</Tooltip> -->
 
 				{#if message.timestamp}
 					<div
@@ -627,6 +629,8 @@
 					</div>
 				{/if}
 			</Name>
+
+			
 
 			<div>
 				<div class="chat-{message.role} w-full min-w-full markdown-prose">
@@ -1457,7 +1461,7 @@
 						/>
 					{/if}
 
-					{#if isLastMessage && message.done && !readOnly && (message?.followUps ?? []).length > 0}
+					{#if false && isLastMessage && message.done && !readOnly && (message?.followUps ?? []).length > 0}
 						<div class="mt-2.5" in:fade={{ duration: 100 }}>
 							<FollowUps
 								followUps={message?.followUps}

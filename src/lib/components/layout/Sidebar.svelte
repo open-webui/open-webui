@@ -94,6 +94,13 @@
 	let wasOpenedByClick = false;
 	let hoverTimeout: number | null = null;
 
+	function openSidebarOnAction() {
+		if (!$showSidebar) {
+			showSidebar.set(true);
+		}
+		wasOpenedByClick = true;
+	}
+
 	const initFolders = async () => {
 		const folderList = await getFolders(localStorage.token).catch((error) => {
 			toast.error(`${error}`);
@@ -360,7 +367,9 @@
 		}
 	};
 
-	const onSidebarClick = () => {
+	const onSidebarClick = (e: any) => {
+		e.stopPropagation();
+
 		const willBeOpen = !$showSidebar;
 
 		// Mark that sidebar was opened by click if we're opening it
@@ -437,6 +446,7 @@
 		dropZone?.addEventListener('dragover', onDragOver);
 		dropZone?.addEventListener('drop', onDrop);
 		dropZone?.addEventListener('dragleave', onDragLeave);
+		// dropZone?.addEventListener('click', openSidebarOnAction);
 	});
 
 	onDestroy(() => {
@@ -454,6 +464,7 @@
 		dropZone?.removeEventListener('dragover', onDragOver);
 		dropZone?.removeEventListener('drop', onDrop);
 		dropZone?.removeEventListener('dragleave', onDragLeave);
+		// dropZone?.removeEventListener('click', openSidebarOnAction);
 
 		// Clean up hover timeout
 		if (hoverTimeout) {
@@ -503,62 +514,70 @@
 	bind:this={navElement}
 	id="sidebar"
 	role="navigation"
-	class=" h-screen max-h-[100dvh] min-h-screen p-4 select-none {$showSidebar
-		? 'md:relative w-[300px] max-w-[300px]'
-		: 'w-[80px]'} {$isApp
-		? `ml-[4.5rem] md:ml-0 `
-		: 'transition-width duration-200 ease-in-out'}  shrink-0 bg-surface text-gray-900 dark:bg-gray-950 dark:text-gray-200 text-sm z-50 top-0 left-0
+	class=" h-screen max-h-[100dvh] min-h-screen select-none shadown-none border-0 {$showSidebar
+		? `md:relative w-[300px] max-w-[300px] ${$mobile ? 'w-[0px] absolute' : 'w-[80px]'}`
+		: $mobile ? 'w-[0px] absolute' : 'w-[80px]'} {$isApp
+		? `ml-[4.5rem] md:ml-0`
+		: 'transition-width duration-200 ease-in-out'} shadow-md shrink-0 text-gray-900 dark:bg-gray-950 dark:text-gray-200 text-sm z-50 top-0 left-0
+	}
         "
 	data-state={$showSidebar}
-	on:mouseenter={onMouseEnter}
-	on:mouseleave={onMouseLeave}
 >
 	<div
-		class="flex flex-col justify-between h-[calc(100vh-2rem)] max-h-[100dvh] overflow-x-hidden z-50 bg-white {$showSidebar
-			? 'w-[calc(300px-2rem)]'
-			: 'w-[80px]'}"
-		style="
-    border-radius: 20px;
-    background: var(--Schemes-Surface, #FFF);
-    box-shadow: 0px 0px 16px -8px rgba(28, 27, 27, 0.04);
-  "
+		class="flex flex-col justify-between max-h-[100dvh] overflow-x-hidden z-50 bg-white shadow-[0px_48px_96px_0px_rgba(0,0,0,0.08)]"
 	>
 		<div class="sidebar__top h-[calc(100vh-58px)] overflow-y-auto">
 			<div
-			class="flex justify-between items-center text-gray-600 dark:text-gray-400"
-			class:justify-center={!$showSidebar}
-		>
-			<!-- Menu Icon behaves like other sidebar buttons -->
-			<a
-				class="p-[14px] flex items-center rounded-lg transition-all duration-300 ease-in-out"
+				class="flex justify-between items-center text-gray-600 dark:text-gray-400"
 				class:justify-center={!$showSidebar}
-				href="#"
-				on:click={onSidebarClick}
 			>
-				<div
-					class="self-center transition-all duration-300 ease-in-out"
-					class:mr-[15px]={$showSidebar}
+				<!-- Menu Icon behaves like other sidebar buttons -->
+				{#if $mobile}
+				<img src="/logo-dark.png" alt="GovGPT Logo" class="h-[50px] p-4"/>
+				{:else}
+				
+				<a
+					class="p-[14px] flex items-center rounded-lg transition-all duration-300 ease-in-out"
+					class:justify-center={!$showSidebar}
+					href="#"
+					on:click={onSidebarClick}
 				>
-					<MaterialIcon name="menu" size="1.1rem" />
-				</div>
-			</a>
-
-			<!-- Search icon only when sidebar is expanded, right aligned -->
-			{#if $showSidebar}
-				<div class="flex-1 flex justify-end transition-all duration-300 ease-in-out">
-					<button
-						class="hover:bg-gray-100 dark:hover:bg-gray-900 outline-none rounded-lg p-2 transition-all duration-300 ease-in-out"
-						on:click={() => {
-							showSearch.set(true);
-						}}
-						draggable="false"
+					<div
+						class="self-center transition-all duration-300 ease-in-out"
+						class:mr-[15px]={$showSidebar}
 					>
-						<MaterialIcon name="search" size="1.1rem" />
-					</button>
-				</div>
-			{/if}
-		</div>
+						<MaterialIcon name="menu" size="1.1rem" />
+					</div>
+				</a>
+				{/if}
 
+				<!-- Search icon only when sidebar is expanded, right aligned -->
+				{#if $showSidebar}
+					{#if $mobile}
+					<div class="flex-1 flex justify-end transition-all duration-300 ease-in-out">
+						<button
+							class="hover:bg-gray-100 dark:hover:bg-gray-900 outline-none rounded-lg p-2 transition-all duration-300 ease-in-out"
+							on:click={onSidebarClick}
+							draggable="false"
+						>
+							<MaterialIcon name="close" size="1.1rem" />
+						</button>
+					</div>
+				{:else}
+					<div class="flex-1 flex justify-end transition-all duration-300 ease-in-out">
+						<button
+							class="hover:bg-gray-100 dark:hover:bg-gray-900 outline-none rounded-lg p-2 transition-all duration-300 ease-in-out"
+							on:click={() => {
+								showSearch.set(true);
+							}}
+							draggable="false"
+						>
+							<MaterialIcon name="search" size="1.1rem" />
+						</button>
+					</div>
+					{/if}
+				{/if}
+			</div>
 
 			{#if $user?.role === 'admin'}
 				<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">

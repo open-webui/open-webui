@@ -657,7 +657,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 	</div>
 </DeleteConfirmDialog>
 
-<div class="relative flex-1 w-full h-full flex justify-center" id="note-editor">
+<div class="relative flex-1 w-full h-full flex justify-center bg-white dark:bg-gray-900 rounded-2xl h-[calc(100%-40px)]" id="note-editor" style="height: calc(100% - 40px);">
 	<Sidebar bind:show={showSettings} className=" bg-white dark:bg-gray-900" width="300px">
 		<div class="flex flex-col px-5 py-3 text-sm">
 			<div class="flex justify-between items-center mb-2">
@@ -704,7 +704,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 			</div>
 		</div>
 	{:else}
-		<div class=" w-full flex flex-col {loading ? 'opacity-20' : ''}">
+		<div class=" w-full flex flex-col py-4 {loading ? 'opacity-20' : ''}">
 			<div class="shrink-0 w-full flex justify-between items-center px-4.5 mb-1.5">
 				<div class="w-full flex items-center">
 					<input
@@ -850,9 +850,34 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 						note.data.content.md = content.md;
 					}}
 				/>
+
+
+		
 			</div>
 		</div>
 	{/if}
+
+	<div class="absolute bottom-0 left-0 right-0 p-5 max-w-full flex justify-end">
+		<div class="flex gap-0.5 justify-end w-full">
+			<button
+						class="{enhancing
+							? 'p-2'
+							: 'p-2.5'} flex justify-center items-center hover:bg-gray-50 dark:hover:bg-gray-800 rounded-full transition shrink-0 bg-primary text-white hover:bg-primary-dark hover:text-primary dark:border-none dark:bg-gray-850 hover:bg-gray-50 dark:hover:bg-gray-800"
+						on:click={() => {
+							enhanceNoteHandler();
+						}}
+						disabled={enhancing}
+						type="button"
+					>
+						{#if enhancing}
+							<Spinner className="size-5" />
+						{:else}
+							<SparklesSolid />
+						{/if}
+					</button>
+		
+		</div>
+	</div>
 </div>
 
 <div
@@ -958,7 +983,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 					</button>
 				</Tooltip> -->
 
-				<Tooltip content={$i18n.t('Enhance')} placement="top">
+				<!-- <Tooltip content={$i18n.t('Enhance')} placement="top">
 					<button
 						class="{enhancing
 							? 'p-2'
@@ -975,7 +1000,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 							<SparklesSolid />
 						{/if}
 					</button>
-				</Tooltip>
+				</Tooltip> -->
 			</div>
 		{/if}
 	</div>

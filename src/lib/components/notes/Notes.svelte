@@ -293,18 +293,18 @@
 
 		<div class="px-4.5 @container h-full pt-2">
 			{#if Object.keys(notes).length > 0}
-				<div class="pb-10">
+				<div class="pb-10 max-w-[1140px] mx-auto">
 					{#each Object.keys(notes) as timeRange}
 						<div class="w-full text-xs text-gray-500 dark:text-gray-500 font-medium pb-2.5">
 							{$i18n.t(timeRange)}
 						</div>
 
 						<div
-							class="mb-5 gap-2.5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
+							class="mb-5 gap-2.5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3"
 						>
 							{#each notes[timeRange] as note, idx (note.id)}
-								<div
-									class=" flex space-x-4 cursor-pointer w-full px-4.5 py-4 bg-gray-50 dark:bg-gray-850 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition"
+										<div
+									class=" flex space-x-4 cursor-pointer w-full px-4.5 py-4 bg-gray-50 dark:bg-gray-850 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition rounded-[12px] bg-white/90 backdrop-blur-[12px]"
 								>
 									<div class=" flex flex-1 space-x-4 cursor-pointer w-full">
 										<a
@@ -392,7 +392,7 @@
 			<div class="flex gap-0.5 justify-end w-full">
 				<Tooltip content={$i18n.t('Create Note')}>
 					<button
-						class="cursor-pointer p-2.5 flex rounded-full border border-gray-50 bg-white dark:border-none dark:bg-gray-850 hover:bg-gray-50 dark:hover:bg-gray-800 transition shadow-xl"
+						class="cursor-pointer p-2.5 flex rounded-full border border-gray-50 bg-primary text-white hover:bg-primary-dark hover:text-primary dark:border-none dark:bg-gray-850 hover:bg-gray-50 dark:hover:bg-gray-800 transition shadow-xl"
 						type="button"
 						on:click={async () => {
 							createNoteHandler();
