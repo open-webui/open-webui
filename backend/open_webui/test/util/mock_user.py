@@ -4,14 +4,6 @@ from fastapi import FastAPI
 
 
 @contextmanager
-def mock_webui_user(**kwargs):
-    from open_webui.routers.webui import app
-
-    with mock_user(app, **kwargs):
-        yield
-
-
-@contextmanager
 def mock_user(app: FastAPI, **kwargs):
     from open_webui.utils.auth import (
         get_current_user,
@@ -26,7 +18,7 @@ def mock_user(app: FastAPI, **kwargs):
             "id": "1",
             "name": "John Doe",
             "email": "john.doe@openwebui.com",
-            "role": "user",
+            "role": "admin",
             "profile_image_url": "/user.png",
             "last_active_at": 1627351200,
             "updated_at": 1627351200,
