@@ -544,7 +544,7 @@ class ConfigForm(BaseModel):
     RAG_TEMPLATE: Optional[str] = None
     TOP_K: Optional[int] = None
     BYPASS_EMBEDDING_AND_RETRIEVAL: Optional[bool] = None
-    RAG_FULL_CONTEXT: Optional[bool] = None    
+    RAG_FULL_CONTEXT: Optional[bool] = None
 
     # Hybrid search settings
     ENABLE_RAG_HYBRID_SEARCH: Optional[bool] = None
