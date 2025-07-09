@@ -189,6 +189,20 @@
 	<div class="w-full absolute top-0 left-0 right-0 h-8 drag-region" />
 
 	{#if loaded}
+		<div class="fixed m-10 z-50">
+			<div class="flex space-x-2">
+				<div class=" self-center">
+					<img
+						id="logo"
+						crossorigin="anonymous"
+						src="/favicon.png"
+						class=" w-6 rounded-full"
+						alt=""
+					/>
+				</div>
+			</div>
+		</div>
+
 		<div
 			class="fixed bg-transparent min-h-screen w-full flex justify-center font-primary z-50 text-black dark:text-white"
 			id="auth-container"
