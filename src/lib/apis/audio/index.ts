@@ -1,5 +1,6 @@
 import { AUDIO_API_BASE_URL } from '$lib/constants';
-import { ttsStreaming } from '$lib/stores';
+import { ttsSentenceQueue, ttsStreaming } from '$lib/stores';
+import { get } from 'svelte/store';
 
 export const getAudioConfig = async (token: string) => {
 	let error = null;
@@ -116,10 +117,15 @@ export const streamAudio = async (reader) => { // Removed isFirstSentenceInSeque
     // This helps ensure silence before the first sound if there's any scheduling delay.
     // However, gain nodes are per-source, so the main thing is the first source's gain.
 
+	let firstChunk = true
     try {
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
+			if (value && firstChunk) {
+				console.log('TTFA', performance.now() - startTime)
+				firstChunk = false
+			}
 
             const pcmData = value.buffer;
             let samples = new Int16Array(pcmData);
@@ -195,6 +201,7 @@ export const streamAudio = async (reader) => { // Removed isFirstSentenceInSeque
     }
 };
 
+let startTime = 0
 
 export const synthesizeStreamingSpeech = async (
 	text: string = '',
@@ -202,13 +209,16 @@ export const synthesizeStreamingSpeech = async (
 	ttsStreaming.set(true)
 	console.log('!!hitting tts endpoint with text', text)
 
+	startTime = performance.now()
 	const response = await fetch('http://localhost:8002/deepdub', {
 		method: 'POST',
 		headers: {
 		  'Content-Type': 'application/json',
 		},
-		body: JSON.stringify({ text: text }), // Send data in the body as a JSON string
+		body: JSON.stringify({ text: text }),
 	  });
+
+
 
 	// const response = await fetch('http://localhost:8002/deepdub?text=' + encodeURIComponent(text));
 
@@ -224,6 +234,47 @@ export const synthesizeStreamingSpeech = async (
 	return reader
 }
 
+export async function processTTSQueue() {
+	// Use get() to read the current value of stores outside of component context or .subscribe
+	const isStreaming = get(ttsStreaming);
+	const queue = get(ttsSentenceQueue);
+
+	console.log(`[TTS QUEUE STORE] processTTSQueue called. isStreaming: ${isStreaming}, queue length: ${queue.length}`);
+
+	if (isStreaming || queue.length === 0) {
+		return;
+	}
+
+	ttsStreaming.set(true); // Mark TTS as busy
+
+	let taskToProcess;
+	// Update the store to remove the first item (dequeue)
+	ttsSentenceQueue.update(currentQueue => {
+		taskToProcess = currentQueue[0]; // Get the first item
+		return currentQueue.slice(1);     // Return a new array without the first item
+	});
+
+	if (!taskToProcess) { // Should only happen if queue became empty concurrently (unlikely here)
+		ttsStreaming.set(false);
+		return;
+	}
+
+	console.log(`[TTS QUEUE STORE] Dequeued task for message ${taskToProcess.id}: "${taskToProcess.content}"`);
+
+	try {
+		const reader = await synthesizeStreamingSpeech(taskToProcess.content)
+		await streamAudio(reader)
+		console.log(`[TTS QUEUE STORE] Successfully streamed audio for: "${taskToProcess.content}"`);
+	} catch (error) {
+		console.error(`[TTS QUEUE STORE] Error fetching/streaming audio for "${taskToProcess.content}":`, error);
+	} finally {
+		ttsStreaming.set(false);
+		console.log('[TTS QUEUE STORE] TTS is now free.');
+		// Call processTTSQueue again to check if there are more items
+		// This is crucial to continue processing if items were added while this one was busy.
+		processTTSQueue();
+	}
+}
 
 export const synthesizeOpenAISpeech = async (
 	token: string = '',

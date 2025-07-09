@@ -1185,6 +1185,7 @@
 
 			if ($settings.responseAutoPlayback && !$showCallOverlay) {
 				await tick();
+				console.log('!!clicking')
 				document.getElementById(`speak-button-${message.id}`)?.click();
 			}
 

@@ -1,20 +1,17 @@
 <script lang="ts">
-	import { config, models, settings, showCallOverlay, ttsSentenceQueue, ttsStreaming, TTSWorker } from '$lib/stores';
+	import { config, models, settings, showCallOverlay, ttsStreaming } from '$lib/stores';
 	import { onMount, tick, getContext, onDestroy, createEventDispatcher } from 'svelte';
 
 	const dispatch = createEventDispatcher();
 
 	import { blobToFile } from '$lib/utils';
-	import { generateEmoji } from '$lib/apis';
-	import { synthesizeOpenAISpeech, transcribeAudio, synthesizeStreamingSpeech, streamAudio } from '$lib/apis/audio';
+	import { transcribeAudio, processTTSQueue } from '$lib/apis/audio';
 
 	import { toast } from 'svelte-sonner';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import VideoInputMenu from './CallOverlay/VideoInputMenu.svelte';
-	import { KokoroWorker } from '$lib/workers/KokoroWorker';
-	import { get } from 'svelte/store';
-
+	
 	const i18n = getContext('i18n');
 
 	export let eventTarget: EventTarget;
@@ -250,21 +247,8 @@
 	};
 
 	const stopAudioStream = async () => {
-		try {
-			if (mediaRecorder) {
-				mediaRecorder.stop();
-			}
-		} catch (error) {
-			console.log('Error stopping audio stream:', error);
-		}
 
-		if (!audioStream) return;
-
-		audioStream.getAudioTracks().forEach(function (track) {
-			track.stop();
-		});
-
-		audioStream = null;
+		ttsStreaming.set(false);
 	};
 
 	// Function to calculate the RMS level from time domain data
@@ -452,124 +436,10 @@
 	const audioCache = new Map();
 	const emojiCache = new Map();
 
-	const fetchAudio = async (content) => {
-		// TODO: add flag for feature
-		if ($showCallOverlay) {
-			console.log('!!fetchAudio')
-			const reader = await synthesizeStreamingSpeech(content)
-			await streamAudio(reader)
-		}
-
-		return 
-		if (!audioCache.has(content)) {
-			try {
-				// Set the emoji for the content if needed
-				if ($settings?.showEmojiInCall ?? false) {
-					const emoji = await generateEmoji(localStorage.token, modelId, content, chatId);
-					if (emoji) {
-						emojiCache.set(content, emoji);
-					}
-				}
-
-				if ($settings.audio?.tts?.engine === 'browser-kokoro') {
-					const blob = await $TTSWorker
-						.generate({
-							text: content,
-							voice: $settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice
-						})
-						.catch((error) => {
-							console.error(error);
-							toast.error(`${error}`);
-						});
-
-					if (blob) {
-						audioCache.set(content, new Audio(blob));
-					}
-				} else if ($config.audio.tts.engine !== '') {
-					const res = await synthesizeOpenAISpeech(
-						localStorage.token,
-						$settings?.audio?.tts?.defaultVoice === $config.audio.tts.voice
-							? ($settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice)
-							: $config?.audio?.tts?.voice,
-						content
-					).catch((error) => {
-						console.error(error);
-						return null;
-					});
-
-					if (res) {
-						const blob = await res.blob();
-						const blobUrl = URL.createObjectURL(blob);
-						audioCache.set(content, new Audio(blobUrl));
-					}
-				} else {
-					audioCache.set(content, true);
-				}
-			} catch (error) {
-				console.error('Error synthesizing speech:', error);
-			}
-		}
-
-		return audioCache.get(content);
-	};
 
 	let messages = {};
 
-	const monitorAndPlayAudio = async (id, signal) => {
-		// TODO: implement flag
-		return 
-
-		while (!signal.aborted) {
-			if (messages[id] && messages[id].length > 0) {
-				// Retrieve the next content string from the queue
-				const content = messages[id].shift(); // Dequeues the content for playing
-
-				// ignore cache for orpheus
-				if (audioCache.has(content)) {
-					// If content is available in the cache, play it
-
-					// Set the emoji for the content if available
-					if (($settings?.showEmojiInCall ?? false) && emojiCache.has(content)) {
-						emoji = emojiCache.get(content);
-					} else {
-						emoji = null;
-					}
-
-					if ($config.audio.tts.engine !== '') {
-						try {
-							console.log(
-								'%c%s',
-								'color: red; font-size: 20px;',
-								`Playing audio for content: ${content}`
-							);
-
-							const audio = audioCache.get(content);
-							await playAudio(audio); // Here ensure that playAudio is indeed correct method to execute
-							console.log(`Played audio for content: ${content}`);
-							await new Promise((resolve) => setTimeout(resolve, 200)); // Wait before retrying to reduce tight loop
-						} catch (error) {
-							console.error('Error playing audio:', error);
-						}
-					} else {
-						await speakSpeechSynthesisHandler(content);
-					}
-				} else {
-					// If not available in the cache, push it back to the queue and delay
-					messages[id].unshift(content); // Re-queue the content at the start
-					console.log(`Audio for "${content}" not yet available in the cache, re-queued...`);
-					await new Promise((resolve) => setTimeout(resolve, 200)); // Wait before retrying to reduce tight loop
-				}
-			} else if (finishedMessages[id] && messages[id] && messages[id].length === 0) {
-				// If the message is finished and there are no more messages to process, break the loop
-				assistantSpeaking = false;
-				break;
-			} else {
-				// No messages to process, sleep for a bit
-				await new Promise((resolve) => setTimeout(resolve, 200));
-			}
-		}
-		console.log(`Audio monitoring and playing stopped for message ID ${id}`);
-	};
+	
 
 	const chatStartHandler = async (e) => {
 		const { id } = e.detail;
@@ -586,50 +456,10 @@
 			audioAbortController = new AbortController();
 
 			assistantSpeaking = true;
-			// Start monitoring and playing audio for the message ID
-			monitorAndPlayAudio(id, audioAbortController.signal);
 		}
 	};
-	async function processTTSQueue() {
-		// Use get() to read the current value of stores outside of component context or .subscribe
-		const isStreaming = get(ttsStreaming);
-		const queue = get(ttsSentenceQueue);
 
-		console.log(`[TTS QUEUE STORE] processTTSQueue called. isStreaming: ${isStreaming}, queue length: ${queue.length}`);
 
-		if (isStreaming || queue.length === 0) {
-			return;
-		}
-
-		ttsStreaming.set(true); // Mark TTS as busy
-
-		let taskToProcess;
-		// Update the store to remove the first item (dequeue)
-		ttsSentenceQueue.update(currentQueue => {
-			taskToProcess = currentQueue[0]; // Get the first item
-			return currentQueue.slice(1);     // Return a new array without the first item
-		});
-
-		if (!taskToProcess) { // Should only happen if queue became empty concurrently (unlikely here)
-			ttsStreaming.set(false);
-			return;
-		}
-
-		console.log(`[TTS QUEUE STORE] Dequeued task for message ${taskToProcess.id}: "${taskToProcess.content}"`);
-
-		try {
-			await fetchAudio(taskToProcess.content); // fetchAudio still needs to await streamAudio
-			console.log(`[TTS QUEUE STORE] Successfully streamed audio for: "${taskToProcess.content}"`);
-		} catch (error) {
-			console.error(`[TTS QUEUE STORE] Error fetching/streaming audio for "${taskToProcess.content}":`, error);
-		} finally {
-			ttsStreaming.set(false);
-			console.log('[TTS QUEUE STORE] TTS is now free.');
-			// Call processTTSQueue again to check if there are more items
-			// This is crucial to continue processing if items were added while this one was busy.
-			processTTSQueue();
-		}
-	}
 	const chatEventHandler = async (e) => {
 		const { id, content } = e.detail;
 		// "id" here is message id
@@ -650,17 +480,10 @@
 			console.log('processing tts queue:', content);
 
 			processTTSQueue();
-			// while (true) { 
-			// 	const isStreaming = get(ttsStreaming)
-			// 	if (!isStreaming) {
-			// 		fetchAudio(content);
-			// 	}
-			// }
 
 		} catch (error) {
 			console.error('Failed to fetch or play audio:', error);
 		}
-		// }
 	};
 
 	const chatFinishHandler = async (e) => {
