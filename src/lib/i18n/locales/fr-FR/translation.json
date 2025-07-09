@@ -754,6 +754,7 @@
 	"Jupyter URL": "URL Jupyter",
 	"JWT Expiration": "Expiration du token JWT",
 	"JWT Token": "Token JWT",
+	"API Key Expiration": "Expiration de la clé API",
 	"Kagi Search API Key": "Clé API Kagi Search",
 	"Keep in Sidebar": "Epingler dans la barre latérale",
 	"Key": "Clé",

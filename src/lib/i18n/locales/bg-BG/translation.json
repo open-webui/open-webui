@@ -754,6 +754,7 @@
 	"Jupyter URL": "URL адрес на Jupyter",
 	"JWT Expiration": "JWT изтичане",
 	"JWT Token": "JWT токен",
+	"API Key Expiration": "Изтичане на API ключ",
 	"Kagi Search API Key": "API ключ за Kagi Search",
 	"Keep in Sidebar": "",
 	"Key": "Ключ",

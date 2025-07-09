@@ -754,6 +754,7 @@
 	"Jupyter URL": "Adres URL Jupytera",
 	"JWT Expiration": "Termin ważności JWT",
 	"JWT Token": "Token JWT",
+	"API Key Expiration": "Wygasanie klucza API",
 	"Kagi Search API Key": "Klucz API Kagi Search",
 	"Keep in Sidebar": "",
 	"Key": "Klucz",

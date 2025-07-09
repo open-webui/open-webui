@@ -754,6 +754,7 @@
 	"Jupyter URL": "Jupyter URL",
 	"JWT Expiration": "JWT lejárat",
 	"JWT Token": "JWT token",
+	"API Key Expiration": "API kulcs lejárata",
 	"Kagi Search API Key": "Kagi Search API kulcs",
 	"Keep in Sidebar": "",
 	"Key": "Kulcs",

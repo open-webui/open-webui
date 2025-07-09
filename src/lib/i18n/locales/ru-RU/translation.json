@@ -754,6 +754,7 @@
 	"Jupyter URL": "",
 	"JWT Expiration": "Истечение срока JWT",
 	"JWT Token": "Токен JWT",
+	"API Key Expiration": "Истечение срока API ключа",
 	"Kagi Search API Key": "API ключ поиска Kagi",
 	"Keep in Sidebar": "Оставить на боковой панели",
 	"Key": "Ключ",
