@@ -4,6 +4,7 @@
 	import { fade } from 'svelte/transition';
 	import DOMPurify from 'dompurify';
 	import { marked } from 'marked';
+	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	const dispatch = createEventDispatcher();
 
@@ -60,7 +61,7 @@
 						<div class="flex md:hidden group w-fit md:items-center">
 							<a
 								class="text-gray-700 dark:text-white text-xs font-semibold underline"
-								href="/assets/files/whitepaper.pdf"
+								href="{WEBUI_BASE_URL}/assets/files/whitepaper.pdf"
 								target="_blank">Learn More</a
 							>
 
