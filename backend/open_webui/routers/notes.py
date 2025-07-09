@@ -71,7 +71,7 @@ async def get_note_list(request: Request, user=Depends(get_verified_user)):
 
     notes = [
         NoteTitleIdResponse(**note.model_dump())
-        for note in Notes.get_notes_by_user_id(user.id, "read")
+        for note in Notes.get_notes_by_user_id(user.id, "write")
     ]
 
     return notes
