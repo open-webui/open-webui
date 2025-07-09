@@ -39,7 +39,7 @@
 	>
 		<nav class="   px-2 pt-1 backdrop-blur-xl w-full drag-region">
 			<div class=" flex items-center">
-				<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center">
+				<!-- <div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center">
 					<button
 						id="sidebar-toggle-button"
 						class="cursor-pointer p-1.5 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
@@ -52,19 +52,12 @@
 							<MenuLines />
 						</div>
 					</button>
-				</div>
+				</div> -->
 
 				<div class="ml-2 py-0.5 self-center flex items-center justify-between w-full">
-					<div class="">
-						<div
-							class="flex gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium bg-transparent py-1 touch-auto pointer-events-auto"
-						>
-							<a class="min-w-fit transition" href="/notes">
-								{$i18n.t('Notes')}
-							</a>
-						</div>
-					</div>
 
+					<img src="/logo-dark.png" alt="GovGPT Logo" class="w-[132px] h-[40px]"/>
+					
 					<div class=" self-center flex items-center gap-1">
 						{#if $user !== undefined && $user !== null}
 							<UserMenu
@@ -97,7 +90,7 @@
 			</div>
 		</nav>
 
-		<div class=" pb-1 flex-1 max-h-full overflow-y-auto @container">
+		<div class=" pb-1 flex-1 max-h-full overflow-y-auto @container p-20">
 			<slot />
 		</div>
 	</div>

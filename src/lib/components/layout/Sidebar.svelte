@@ -446,7 +446,7 @@
 		dropZone?.addEventListener('dragover', onDragOver);
 		dropZone?.addEventListener('drop', onDrop);
 		dropZone?.addEventListener('dragleave', onDragLeave);
-		dropZone?.addEventListener('click', openSidebarOnAction);
+		// dropZone?.addEventListener('click', openSidebarOnAction);
 	});
 
 	onDestroy(() => {
@@ -464,7 +464,7 @@
 		dropZone?.removeEventListener('dragover', onDragOver);
 		dropZone?.removeEventListener('drop', onDrop);
 		dropZone?.removeEventListener('dragleave', onDragLeave);
-		dropZone?.removeEventListener('click', openSidebarOnAction);
+		// dropZone?.removeEventListener('click', openSidebarOnAction);
 
 		// Clean up hover timeout
 		if (hoverTimeout) {
