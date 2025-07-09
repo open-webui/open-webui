@@ -4,7 +4,7 @@ from fastapi import FastAPI
 
 
 @contextmanager
-def mock_user(app: FastAPI, **kwargs):
+def mock_user(app: FastAPI = None, **kwargs):
     from open_webui.utils.auth import (
         get_current_user,
         get_verified_user,
@@ -12,6 +12,11 @@ def mock_user(app: FastAPI, **kwargs):
         get_current_user_by_api_key,
     )
     from open_webui.models.users import User
+
+    if not app:
+        import open_webui
+
+        app = open_webui.main.app
 
     def create_user():
         user_parameters = {

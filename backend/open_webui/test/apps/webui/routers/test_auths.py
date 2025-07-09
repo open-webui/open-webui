@@ -1,16 +1,24 @@
+import pytest
 from open_webui.test.util.abstract_integration_test import AbstractIntegrationTest
 from open_webui.test.util.mock_user import mock_user
 
 
+@pytest.fixture
+def auths():
+    from open_webui.models.auths import Auths
+
+    return Auths
+
+
+@pytest.fixture
+def users():
+    from open_webui.models.users import Users
+
+    return Users
+
+
 class TestAuths(AbstractIntegrationTest):
     BASE_PATH = "/api/v1/auths"
-
-    def setup_class(cls):
-        from open_webui.models.auths import Auths
-        from open_webui.models.users import Users
-
-        cls.auths = Auths
-        cls.users = Users
 
     # def test_get_session_user(self):
     #     with mock_user(self.fast_api_client.app):
@@ -24,10 +32,11 @@ class TestAuths(AbstractIntegrationTest):
     #         "profile_image_url": "/user.png",
     #     }
 
-    def test_update_profile(self, postgres_client):
+    @pytest.mark.asyncio
+    async def test_update_profile(self, postgres_client, auths, users):
         from open_webui.utils.auth import get_password_hash
 
-        user = self.auths.insert_new_auth(
+        user = auths.insert_new_auth(
             email="john.doe@openwebui.com",
             password=get_password_hash("old_password"),
             name="John Doe",
@@ -35,20 +44,21 @@ class TestAuths(AbstractIntegrationTest):
             role="user",
         )
 
-        with mock_user(postgres_client.app, id=user.id):
-            response = postgres_client.post(
+        with mock_user(id=user.id):
+            response = await postgres_client.post(
                 self.create_url("/update/profile"),
                 json={"name": "John Doe 2", "profile_image_url": "/user2.png"},
             )
         assert response.status_code == 200
-        db_user = self.users.get_user_by_id(user.id)
+        db_user = users.get_user_by_id(user.id)
         assert db_user.name == "John Doe 2"
         assert db_user.profile_image_url == "/user2.png"
 
-    def test_update_password(self, postgres_client):
+    @pytest.mark.asyncio
+    async def test_update_password(self, postgres_client, auths):
         from open_webui.utils.auth import get_password_hash
 
-        user = self.auths.insert_new_auth(
+        user = auths.insert_new_auth(
             email="john.doe@openwebui.com",
             password=get_password_hash("old_password"),
             name="John Doe",
@@ -56,33 +66,30 @@ class TestAuths(AbstractIntegrationTest):
             role="user",
         )
 
-        with mock_user(postgres_client.app, id=user.id):
-            response = postgres_client.post(
+        with mock_user(id=user.id):
+            response = await postgres_client.post(
                 self.create_url("/update/password"),
                 json={"password": "old_password", "new_password": "new_password"},
             )
         assert response.status_code == 200
 
-        old_auth = self.auths.authenticate_user(
-            "john.doe@openwebui.com", "old_password"
-        )
+        old_auth = auths.authenticate_user("john.doe@openwebui.com", "old_password")
         assert old_auth is None
-        new_auth = self.auths.authenticate_user(
-            "john.doe@openwebui.com", "new_password"
-        )
+        new_auth = auths.authenticate_user("john.doe@openwebui.com", "new_password")
         assert new_auth is not None
 
-    def test_signin(self, postgres_client):
+    @pytest.mark.asyncio
+    async def test_signin(self, postgres_client, auths):
         from open_webui.utils.auth import get_password_hash
 
-        user = self.auths.insert_new_auth(
+        user = auths.insert_new_auth(
             email="john.doe@openwebui.com",
             password=get_password_hash("password"),
             name="John Doe",
             profile_image_url="/user.png",
             role="user",
         )
-        response = postgres_client.post(
+        response = await postgres_client.post(
             self.create_url("/signin"),
             json={"email": "john.doe@openwebui.com", "password": "password"},
         )
@@ -96,8 +103,9 @@ class TestAuths(AbstractIntegrationTest):
         assert data["token"] is not None and len(data["token"]) > 0
         assert data["token_type"] == "Bearer"
 
-    def test_signup(self, postgres_client):
-        response = postgres_client.post(
+    @pytest.mark.asyncio
+    async def test_signup(self, postgres_client):
+        response = await postgres_client.post(
             self.create_url("/signup"),
             json={
                 "name": "John Doe",
@@ -115,9 +123,10 @@ class TestAuths(AbstractIntegrationTest):
         assert data["token"] is not None and len(data["token"]) > 0
         assert data["token_type"] == "Bearer"
 
-    def test_add_user(self, postgres_client):
-        with mock_user(postgres_client.app):
-            response = postgres_client.post(
+    @pytest.mark.asyncio
+    async def test_add_user(self, postgres_client):
+        with mock_user():
+            response = await postgres_client.post(
                 self.create_url("/add"),
                 json={
                     "name": "John Doe 2",
@@ -136,16 +145,17 @@ class TestAuths(AbstractIntegrationTest):
         assert data["token"] is not None and len(data["token"]) > 0
         assert data["token_type"] == "Bearer"
 
-    def test_get_admin_details(self, postgres_client):
-        self.auths.insert_new_auth(
+    @pytest.mark.asyncio
+    async def test_get_admin_details(self, postgres_client, auths):
+        auths.insert_new_auth(
             email="john.doe@openwebui.com",
             password="password",
             name="John Doe",
             profile_image_url="/user.png",
             role="admin",
         )
-        with mock_user(postgres_client.app):
-            response = postgres_client.get(self.create_url("/admin/details"))
+        with mock_user():
+            response = await postgres_client.get(self.create_url("/admin/details"))
 
         assert response.status_code == 200
         assert response.json() == {
@@ -153,47 +163,50 @@ class TestAuths(AbstractIntegrationTest):
             "email": "john.doe@openwebui.com",
         }
 
-    def test_create_api_key_(self, postgres_client):
-        user = self.auths.insert_new_auth(
+    @pytest.mark.asyncio
+    async def test_create_api_key_(self, postgres_client, auths):
+        user = auths.insert_new_auth(
             email="john.doe@openwebui.com",
             password="password",
             name="John Doe",
             profile_image_url="/user.png",
             role="admin",
         )
-        with mock_user(postgres_client.app, id=user.id):
-            response = postgres_client.post(self.create_url("/api_key"))
+        with mock_user(id=user.id):
+            response = await postgres_client.post(self.create_url("/api_key"))
         assert response.status_code == 200
         data = response.json()
         assert data["api_key"] is not None
         assert len(data["api_key"]) > 0
 
-    def test_delete_api_key(self, postgres_client):
-        user = self.auths.insert_new_auth(
+    @pytest.mark.asyncio
+    async def test_delete_api_key(self, postgres_client, auths, users):
+        user = auths.insert_new_auth(
             email="john.doe@openwebui.com",
             password="password",
             name="John Doe",
             profile_image_url="/user.png",
             role="admin",
         )
-        self.users.update_user_api_key_by_id(user.id, "abc")
-        with mock_user(postgres_client.app, id=user.id):
-            response = postgres_client.delete(self.create_url("/api_key"))
+        users.update_user_api_key_by_id(user.id, "abc")
+        with mock_user(id=user.id):
+            response = await postgres_client.delete(self.create_url("/api_key"))
         assert response.status_code == 200
         assert response.json() == True
-        db_user = self.users.get_user_by_id(user.id)
+        db_user = users.get_user_by_id(user.id)
         assert db_user.api_key is None
 
-    def test_get_api_key(self, postgres_client):
-        user = self.auths.insert_new_auth(
+    @pytest.mark.asyncio
+    async def test_get_api_key(self, postgres_client, auths, users):
+        user = auths.insert_new_auth(
             email="john.doe@openwebui.com",
             password="password",
             name="John Doe",
             profile_image_url="/user.png",
             role="admin",
         )
-        self.users.update_user_api_key_by_id(user.id, "abc")
-        with mock_user(postgres_client.app, id=user.id):
-            response = postgres_client.get(self.create_url("/api_key"))
+        users.update_user_api_key_by_id(user.id, "abc")
+        with mock_user(id=user.id):
+            response = await postgres_client.get(self.create_url("/api_key"))
         assert response.status_code == 200
         assert response.json() == {"api_key": "abc"}

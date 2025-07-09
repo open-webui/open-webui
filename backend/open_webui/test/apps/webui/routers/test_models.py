@@ -1,3 +1,4 @@
+import pytest
 from open_webui.test.util.abstract_integration_test import AbstractIntegrationTest
 from open_webui.test.util.mock_user import mock_user
 
@@ -5,16 +6,17 @@ from open_webui.test.util.mock_user import mock_user
 class TestModels(AbstractIntegrationTest):
     BASE_PATH = "/api/v1/models"
 
-    def test_models(self, postgres_client):
+    @pytest.mark.asyncio
+    async def test_models(self, postgres_client):
         self.fast_api_client = postgres_client
-        app = self.fast_api_client.app
-        with mock_user(app, id="2"):
-            response = self.fast_api_client.get(self.create_url("/"))
+
+        with mock_user(id="2"):
+            response = await self.fast_api_client.get(self.create_url("/"))
         assert response.status_code == 200
         assert len(response.json()) == 0
 
-        with mock_user(app, id="2"):
-            response = self.fast_api_client.post(
+        with mock_user(id="2"):
+            response = await self.fast_api_client.post(
                 self.create_url("/create"),
                 json={
                     "id": "my-model",
@@ -31,13 +33,13 @@ class TestModels(AbstractIntegrationTest):
             )
         assert response.status_code == 200
 
-        with mock_user(app, id="2"):
-            response = self.fast_api_client.get(self.create_url("/"))
+        with mock_user(id="2"):
+            response = await self.fast_api_client.get(self.create_url("/"))
         assert response.status_code == 200
         assert len(response.json()) == 1
 
-        with mock_user(app, id="2"):
-            response = self.fast_api_client.get(
+        with mock_user(id="2"):
+            response = await self.fast_api_client.get(
                 self.create_url("/", query_params={"id": "my-model"})
             )
         assert response.status_code == 200
@@ -45,13 +47,13 @@ class TestModels(AbstractIntegrationTest):
         assert data["id"] == "my-model"
         assert data["name"] == "Hello World"
 
-        with mock_user(app, id="2"):
-            response = self.fast_api_client.delete(
+        with mock_user(id="2"):
+            response = await self.fast_api_client.delete(
                 self.create_url("/model/delete", query_params={"id": "my-model"})
             )
         assert response.status_code == 200
 
-        with mock_user(app, id="2"):
-            response = self.fast_api_client.get(self.create_url("/"))
+        with mock_user(id="2"):
+            response = await self.fast_api_client.get(self.create_url("/"))
         assert response.status_code == 200
         assert len(response.json()) == 0

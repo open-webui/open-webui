@@ -3,10 +3,11 @@ import os
 import time
 
 import docker
+import docker.errors
 import pytest
 from unittest import mock
 from pytest_docker.plugin import get_docker_ip
-from fastapi.testclient import TestClient
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy import create_engine
 
 
@@ -16,8 +17,7 @@ log = logging.getLogger(__name__)
 def get_fast_api_client():
     from open_webui.main import app
 
-    with TestClient(app) as c:
-        return c
+    return AsyncClient(transport=ASGITransport(app=app), base_url="http://test")
 
 
 def _create_db_url(env_vars_postgres: dict, port: int) -> str:
@@ -40,6 +40,12 @@ def postgres_container():
 
     port = 8081
     container_name = "postgres-test-container-will-get-deleted"
+
+    try:
+        docker_client.containers.get(container_name).remove(force=True)
+    except docker.errors.NotFound as e:
+        pass
+
     docker_client.containers.run(
         "postgres:16.2",
         detach=True,

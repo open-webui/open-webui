@@ -1,3 +1,4 @@
+import pytest
 from open_webui.test.util.abstract_integration_test import AbstractIntegrationTest
 from open_webui.test.util.mock_user import mock_user
 
@@ -5,18 +6,19 @@ from open_webui.test.util.mock_user import mock_user
 class TestPrompts(AbstractIntegrationTest):
     BASE_PATH = "/api/v1/prompts"
 
-    def test_prompts(self, postgres_client):
+    @pytest.mark.asyncio
+    async def test_prompts(self, postgres_client):
         self.fast_api_client = postgres_client
-        app = self.fast_api_client.app
+
         # Get all prompts
-        with mock_user(app, id="2"):
-            response = self.fast_api_client.get(self.create_url("/"))
+        with mock_user(id="2"):
+            response = await self.fast_api_client.get(self.create_url("/"))
         assert response.status_code == 200
         assert len(response.json()) == 0
 
         # Create a two new prompts
-        with mock_user(app, id="2"):
-            response = self.fast_api_client.post(
+        with mock_user(id="2"):
+            response = await self.fast_api_client.post(
                 self.create_url("/create"),
                 json={
                     "command": "/my-command",
@@ -25,8 +27,8 @@ class TestPrompts(AbstractIntegrationTest):
                 },
             )
         assert response.status_code == 200
-        with mock_user(app, id="3"):
-            response = self.fast_api_client.post(
+        with mock_user(id="3"):
+            response = await self.fast_api_client.post(
                 self.create_url("/create"),
                 json={
                     "command": "/my-command2",
@@ -37,14 +39,16 @@ class TestPrompts(AbstractIntegrationTest):
         assert response.status_code == 200
 
         # Get all prompts
-        with mock_user(app, id="2"):
-            response = self.fast_api_client.get(self.create_url("/"))
+        with mock_user(id="2"):
+            response = await self.fast_api_client.get(self.create_url("/"))
         assert response.status_code == 200
         assert len(response.json()) == 2
 
         # Get prompt by command
-        with mock_user(app, id="2"):
-            response = self.fast_api_client.get(self.create_url("/command/my-command"))
+        with mock_user(id="2"):
+            response = await self.fast_api_client.get(
+                self.create_url("/command/my-command")
+            )
         assert response.status_code == 200
         data = response.json()
         assert data["command"] == "/my-command"
@@ -53,8 +57,8 @@ class TestPrompts(AbstractIntegrationTest):
         assert data["user_id"] == "2"
 
         # Update prompt
-        with mock_user(app, id="2"):
-            response = self.fast_api_client.post(
+        with mock_user(id="2"):
+            response = await self.fast_api_client.post(
                 self.create_url("/command/my-command2/update"),
                 json={
                     "command": "irrelevant for request",
@@ -70,8 +74,10 @@ class TestPrompts(AbstractIntegrationTest):
         assert data["user_id"] == "3"
 
         # Get prompt by command
-        with mock_user(app, id="2"):
-            response = self.fast_api_client.get(self.create_url("/command/my-command2"))
+        with mock_user(id="2"):
+            response = await self.fast_api_client.get(
+                self.create_url("/command/my-command2")
+            )
         assert response.status_code == 200
         data = response.json()
         assert data["command"] == "/my-command2"
@@ -80,14 +86,14 @@ class TestPrompts(AbstractIntegrationTest):
         assert data["user_id"] == "3"
 
         # Delete prompt
-        with mock_user(app, id="2"):
-            response = self.fast_api_client.delete(
+        with mock_user(id="2"):
+            response = await self.fast_api_client.delete(
                 self.create_url("/command/my-command/delete")
             )
         assert response.status_code == 200
 
         # Get all prompts
-        with mock_user(app, id="2"):
-            response = self.fast_api_client.get(self.create_url("/"))
+        with mock_user(id="2"):
+            response = await self.fast_api_client.get(self.create_url("/"))
         assert response.status_code == 200
         assert len(response.json()) == 1

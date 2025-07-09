@@ -26,17 +26,25 @@ def postgres_client(postgres_client):
     yield postgres_client
 
 
+@pytest.fixture
+def chats():
+    from open_webui.models.chats import Chats
+
+    return Chats
+
+
 class TestChats(AbstractIntegrationTest):
     BASE_PATH = "/api/v1/chats"
 
-    def setup_method(self):
-        from open_webui.models.chats import Chats
+    # def setup_method(self):
+    #     from open_webui.models.chats import Chats
 
-        self.chats = Chats
+    #     self.chats = Chats
 
-    def test_get_session_user_chat_list(self, postgres_client):
-        with mock_user(postgres_client.app, id="2"):
-            response = postgres_client.get(self.create_url("/"))
+    @pytest.mark.asyncio
+    async def test_get_session_user_chat_list(self, postgres_client):
+        with mock_user(id="2"):
+            response = await postgres_client.get(self.create_url("/"))
         assert response.status_code == 200
         first_chat = response.json()[0]
         assert first_chat["id"] is not None
@@ -44,15 +52,17 @@ class TestChats(AbstractIntegrationTest):
         assert first_chat["created_at"] is not None
         assert first_chat["updated_at"] is not None
 
-    def test_delete_all_user_chats(self, postgres_client):
-        with mock_user(postgres_client.app, id="2"):
-            response = postgres_client.delete(self.create_url("/"))
+    @pytest.mark.asyncio
+    async def test_delete_all_user_chats(self, postgres_client, chats):
+        with mock_user(id="2"):
+            response = await postgres_client.delete(self.create_url("/"))
         assert response.status_code == 200
-        assert len(self.chats.get_chats()) == 0
+        assert len(chats.get_chats()) == 0
 
-    def test_get_user_chat_list_by_user_id(self, postgres_client):
-        with mock_user(postgres_client.app, id="3"):
-            response = postgres_client.get(self.create_url("/list/user/2"))
+    @pytest.mark.asyncio
+    async def test_get_user_chat_list_by_user_id(self, postgres_client):
+        with mock_user(id="3"):
+            response = await postgres_client.get(self.create_url("/list/user/2"))
         assert response.status_code == 200
         first_chat = response.json()[0]
         assert first_chat["id"] is not None
@@ -60,9 +70,10 @@ class TestChats(AbstractIntegrationTest):
         assert first_chat["created_at"] is not None
         assert first_chat["updated_at"] is not None
 
-    def test_create_new_chat(self, postgres_client):
-        with mock_user(postgres_client.app, id="2"):
-            response = postgres_client.post(
+    @pytest.mark.asyncio
+    async def test_create_new_chat(self, postgres_client, chats):
+        with mock_user(id="2"):
+            response = await postgres_client.post(
                 self.create_url("/new"),
                 json={
                     "chat": {
@@ -86,15 +97,16 @@ class TestChats(AbstractIntegrationTest):
         assert data["title"] == "New Chat"
         assert data["updated_at"] is not None
         assert data["created_at"] is not None
-        assert len(self.chats.get_chats()) == 2
+        assert len(chats.get_chats()) == 2
 
-    def test_get_user_archived_chats(self, postgres_client):
-        self.chats.archive_all_chats_by_user_id("2")
+    @pytest.mark.asyncio
+    async def test_get_user_archived_chats(self, postgres_client, chats):
+        chats.archive_all_chats_by_user_id("2")
         from open_webui.internal.db import Session
 
         Session.commit()
-        with mock_user(postgres_client.app, id="2"):
-            response = postgres_client.get(self.create_url("/all/archived"))
+        with mock_user(id="2"):
+            response = await postgres_client.get(self.create_url("/all/archived"))
         assert response.status_code == 200
         first_chat = response.json()[0]
         assert first_chat["id"] is not None
@@ -102,23 +114,26 @@ class TestChats(AbstractIntegrationTest):
         assert first_chat["created_at"] is not None
         assert first_chat["updated_at"] is not None
 
-    def test_get_all_user_chats_in_db(self, postgres_client):
-        with mock_user(postgres_client.app, id="4"):
-            response = postgres_client.get(self.create_url("/all/db"))
+    @pytest.mark.asyncio
+    async def test_get_all_user_chats_in_db(self, postgres_client):
+        with mock_user(id="4"):
+            response = await postgres_client.get(self.create_url("/all/db"))
         assert response.status_code == 200
         assert len(response.json()) == 1
 
-    def test_archive_all_chats(self, postgres_client):
-        with mock_user(postgres_client.app, id="2"):
-            response = postgres_client.post(self.create_url("/archive/all"))
+    @pytest.mark.asyncio
+    async def test_archive_all_chats(self, postgres_client, chats):
+        with mock_user(id="2"):
+            response = await postgres_client.post(self.create_url("/archive/all"))
         assert response.status_code == 200
-        assert len(self.chats.get_archived_chats_by_user_id("2")) == 1
+        assert len(chats.get_archived_chats_by_user_id("2")) == 1
 
-    def test_get_shared_chat_by_id(self, postgres_client):
-        chat_id = self.chats.get_chats()[0].id
-        self.chats.update_chat_share_id_by_id(chat_id, chat_id)
-        with mock_user(postgres_client.app, id="2"):
-            response = postgres_client.get(self.create_url(f"/share/{chat_id}"))
+    @pytest.mark.asyncio
+    async def test_get_shared_chat_by_id(self, postgres_client, chats):
+        chat_id = chats.get_chats()[0].id
+        chats.update_chat_share_id_by_id(chat_id, chat_id)
+        with mock_user(id="2"):
+            response = await postgres_client.get(self.create_url(f"/share/{chat_id}"))
         assert response.status_code == 200
         data = response.json()
         assert data["id"] == chat_id
@@ -132,10 +147,11 @@ class TestChats(AbstractIntegrationTest):
         assert data["share_id"] == chat_id
         assert data["title"] == "New Chat"
 
-    def test_get_chat_by_id(self, postgres_client):
-        chat_id = self.chats.get_chats()[0].id
-        with mock_user(postgres_client.app, id="2"):
-            response = postgres_client.get(self.create_url(f"/{chat_id}"))
+    @pytest.mark.asyncio
+    async def test_get_chat_by_id(self, postgres_client, chats):
+        chat_id = chats.get_chats()[0].id
+        with mock_user(id="2"):
+            response = await postgres_client.get(self.create_url(f"/{chat_id}"))
         assert response.status_code == 200
         data = response.json()
         assert data["id"] == chat_id
@@ -149,10 +165,11 @@ class TestChats(AbstractIntegrationTest):
         assert data["title"] == "New Chat"
         assert data["user_id"] == "2"
 
-    def test_update_chat_by_id(self, postgres_client):
-        chat_id = self.chats.get_chats()[0].id
-        with mock_user(postgres_client.app, id="2"):
-            response = postgres_client.post(
+    @pytest.mark.asyncio
+    async def test_update_chat_by_id(self, postgres_client, chats):
+        chat_id = chats.get_chats()[0].id
+        with mock_user(id="2"):
+            response = await postgres_client.post(
                 self.create_url(f"/{chat_id}"),
                 json={
                     "chat": {
@@ -177,17 +194,19 @@ class TestChats(AbstractIntegrationTest):
         assert data["title"] == "Just another title"
         assert data["user_id"] == "2"
 
-    def test_delete_chat_by_id(self, postgres_client):
-        chat_id = self.chats.get_chats()[0].id
-        with mock_user(postgres_client.app, id="2"):
-            response = postgres_client.delete(self.create_url(f"/{chat_id}"))
+    @pytest.mark.asyncio
+    async def test_delete_chat_by_id(self, postgres_client, chats):
+        chat_id = chats.get_chats()[0].id
+        with mock_user(id="2"):
+            response = await postgres_client.delete(self.create_url(f"/{chat_id}"))
         assert response.status_code == 200
         assert response.json() is True
 
-    def test_clone_chat_by_id(self, postgres_client):
-        chat_id = self.chats.get_chats()[0].id
-        with mock_user(postgres_client.app, id="2"):
-            response = postgres_client.post(
+    @pytest.mark.asyncio
+    async def test_clone_chat_by_id(self, postgres_client, chats):
+        chat_id = chats.get_chats()[0].id
+        with mock_user(id="2"):
+            response = await postgres_client.post(
                 self.create_url(f"/{chat_id}/clone"),
                 json={"title": "Clone of New Chat"},
             )
@@ -209,31 +228,38 @@ class TestChats(AbstractIntegrationTest):
         assert data["title"] == "Clone of New Chat"
         assert data["user_id"] == "2"
 
-    def test_archive_chat_by_id(self, postgres_client):
-        chat_id = self.chats.get_chats()[0].id
-        with mock_user(postgres_client.app, id="2"):
-            response = postgres_client.post(self.create_url(f"/{chat_id}/archive"))
+    @pytest.mark.asyncio
+    async def test_archive_chat_by_id(self, postgres_client, chats):
+        chat_id = chats.get_chats()[0].id
+        with mock_user(id="2"):
+            response = await postgres_client.post(
+                self.create_url(f"/{chat_id}/archive")
+            )
         assert response.status_code == 200
 
-        chat = self.chats.get_chat_by_id(chat_id)
+        chat = chats.get_chat_by_id(chat_id)
         assert chat.archived is True
 
-    def test_share_chat_by_id(self, postgres_client):
-        chat_id = self.chats.get_chats()[0].id
-        with mock_user(postgres_client.app, id="2"):
-            response = postgres_client.post(self.create_url(f"/{chat_id}/share"))
+    @pytest.mark.asyncio
+    async def test_share_chat_by_id(self, postgres_client, chats):
+        chat_id = chats.get_chats()[0].id
+        with mock_user(id="2"):
+            response = await postgres_client.post(self.create_url(f"/{chat_id}/share"))
         assert response.status_code == 200
 
-        chat = self.chats.get_chat_by_id(chat_id)
+        chat = chats.get_chat_by_id(chat_id)
         assert chat.share_id is not None
 
-    def test_delete_shared_chat_by_id(self, postgres_client):
-        chat_id = self.chats.get_chats()[0].id
+    @pytest.mark.asyncio
+    async def test_delete_shared_chat_by_id(self, postgres_client, chats):
+        chat_id = chats.get_chats()[0].id
         share_id = str(uuid.uuid4())
-        self.chats.update_chat_share_id_by_id(chat_id, share_id)
-        with mock_user(postgres_client.app, id="2"):
-            response = postgres_client.delete(self.create_url(f"/{chat_id}/share"))
+        chats.update_chat_share_id_by_id(chat_id, share_id)
+        with mock_user(id="2"):
+            response = await postgres_client.delete(
+                self.create_url(f"/{chat_id}/share")
+            )
         assert response.status_code
 
-        chat = self.chats.get_chat_by_id(chat_id)
+        chat = chats.get_chat_by_id(chat_id)
         assert chat.share_id is None

@@ -47,12 +47,12 @@ def postgres_client(postgres_client):
 class TestUsers(AbstractIntegrationTest):
     BASE_PATH = "/api/v1/users"
 
-    def test_users(self, postgres_client):
+    @pytest.mark.asyncio
+    async def test_users(self, postgres_client):
         self.fast_api_client = postgres_client
-        app = self.fast_api_client.app
         # Get all users
-        with mock_user(app, id="3"):
-            response = self.fast_api_client.get(self.create_url("/"))
+        with mock_user(id="3"):
+            response = await self.fast_api_client.get(self.create_url("/"))
         assert response.status_code == 200
         assert len(response.json()) == 2
         data = response.json()
@@ -60,8 +60,8 @@ class TestUsers(AbstractIntegrationTest):
         _assert_user(data["users"], "2")
 
         # update role
-        with mock_user(app, id="3"):
-            response = self.fast_api_client.post(
+        with mock_user(id="3"):
+            response = await self.fast_api_client.post(
                 self.create_url("/2/update"),
                 json={
                     "role": "admin",
@@ -75,8 +75,8 @@ class TestUsers(AbstractIntegrationTest):
         _assert_user([response.json()], "2", role="admin")
 
         # Get all users
-        with mock_user(app, id="3"):
-            response = self.fast_api_client.get(self.create_url("/"))
+        with mock_user(id="3"):
+            response = await self.fast_api_client.get(self.create_url("/"))
         assert response.status_code == 200
         assert len(response.json()) == 2
         data = response.json()
@@ -84,14 +84,14 @@ class TestUsers(AbstractIntegrationTest):
         _assert_user(data["users"], "2", role="admin")
 
         # Get (empty) user settings
-        with mock_user(app, id="2"):
-            response = self.fast_api_client.get(self.create_url("/user/settings"))
+        with mock_user(id="2"):
+            response = await self.fast_api_client.get(self.create_url("/user/settings"))
         assert response.status_code == 200
         assert response.json() is None
 
         # Update user settings
-        with mock_user(app, id="2"):
-            response = self.fast_api_client.post(
+        with mock_user(id="2"):
+            response = await self.fast_api_client.post(
                 self.create_url("/user/settings/update"),
                 json={
                     "ui": {"attr1": "value1", "attr2": "value2"},
@@ -101,8 +101,8 @@ class TestUsers(AbstractIntegrationTest):
         assert response.status_code == 200
 
         # Get user settings
-        with mock_user(app, id="2"):
-            response = self.fast_api_client.get(self.create_url("/user/settings"))
+        with mock_user(id="2"):
+            response = await self.fast_api_client.get(self.create_url("/user/settings"))
         assert response.status_code == 200
         assert response.json() == {
             "ui": {"attr1": "value1", "attr2": "value2"},
@@ -110,28 +110,28 @@ class TestUsers(AbstractIntegrationTest):
         }
 
         # Get (empty) user info
-        with mock_user(app, id="1"):
-            response = self.fast_api_client.get(self.create_url("/user/info"))
+        with mock_user(id="1"):
+            response = await self.fast_api_client.get(self.create_url("/user/info"))
         assert response.status_code == 200
         assert response.json() is None
 
         # Update user info
-        with mock_user(app, id="1"):
-            response = self.fast_api_client.post(
+        with mock_user(id="1"):
+            response = await self.fast_api_client.post(
                 self.create_url("/user/info/update"),
                 json={"attr1": "value1", "attr2": "value2"},
             )
         assert response.status_code == 200
 
         # Get user info
-        with mock_user(app, id="1"):
-            response = self.fast_api_client.get(self.create_url("/user/info"))
+        with mock_user(id="1"):
+            response = await self.fast_api_client.get(self.create_url("/user/info"))
         assert response.status_code == 200
         assert response.json() == {"attr1": "value1", "attr2": "value2"}
 
         # Get user by id
-        with mock_user(app, id="1"):
-            response = self.fast_api_client.get(self.create_url("/2"))
+        with mock_user(id="1"):
+            response = await self.fast_api_client.get(self.create_url("/2"))
         assert response.status_code == 200
         assert response.json() == {
             "active": False,
@@ -140,8 +140,8 @@ class TestUsers(AbstractIntegrationTest):
         }
 
         # Update user by id
-        with mock_user(app, id="2"):
-            response = self.fast_api_client.post(
+        with mock_user(id="2"):
+            response = await self.fast_api_client.post(
                 self.create_url("/2/update"),
                 json={
                     "role": "admin",
@@ -153,8 +153,8 @@ class TestUsers(AbstractIntegrationTest):
         assert response.status_code == 200
 
         # Get all users
-        with mock_user(app, id="3"):
-            response = self.fast_api_client.get(self.create_url("/"))
+        with mock_user(id="3"):
+            response = await self.fast_api_client.get(self.create_url("/"))
         assert response.status_code == 200
         assert len(response.json()) == 2
         data = response.json()
@@ -169,13 +169,13 @@ class TestUsers(AbstractIntegrationTest):
         )
 
         # Delete user by id
-        with mock_user(app, id="1"):
-            response = self.fast_api_client.delete(self.create_url("/2"))
+        with mock_user(id="1"):
+            response = await self.fast_api_client.delete(self.create_url("/2"))
         assert response.status_code == 200
 
         # Get all users
-        with mock_user(app, id="3"):
-            response = self.fast_api_client.get(self.create_url("/"))
+        with mock_user(id="3"):
+            response = await self.fast_api_client.get(self.create_url("/"))
         assert response.status_code == 200
         data = response.json()
         assert len(data["users"]) == 1
