@@ -398,6 +398,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         # Content extraction settings
         "CONTENT_EXTRACTION_ENGINE": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
         "PDF_EXTRACT_IMAGES": request.app.state.config.PDF_EXTRACT_IMAGES,
+        "ENABLE_OPENAI_PDF_PARSER": request.app.state.config.ENABLE_OPENAI_PDF_PARSER,
         "DATALAB_MARKER_API_KEY": request.app.state.config.DATALAB_MARKER_API_KEY,
         "DATALAB_MARKER_LANGS": request.app.state.config.DATALAB_MARKER_LANGS,
         "DATALAB_MARKER_SKIP_CACHE": request.app.state.config.DATALAB_MARKER_SKIP_CACHE,
@@ -543,7 +544,7 @@ class ConfigForm(BaseModel):
     RAG_TEMPLATE: Optional[str] = None
     TOP_K: Optional[int] = None
     BYPASS_EMBEDDING_AND_RETRIEVAL: Optional[bool] = None
-    RAG_FULL_CONTEXT: Optional[bool] = None
+    RAG_FULL_CONTEXT: Optional[bool] = None    
 
     # Hybrid search settings
     ENABLE_RAG_HYBRID_SEARCH: Optional[bool] = None
@@ -554,6 +555,7 @@ class ConfigForm(BaseModel):
     # Content extraction settings
     CONTENT_EXTRACTION_ENGINE: Optional[str] = None
     PDF_EXTRACT_IMAGES: Optional[bool] = None
+    ENABLE_OPENAI_PDF_PARSER: Optional[bool] = None
     DATALAB_MARKER_API_KEY: Optional[str] = None
     DATALAB_MARKER_LANGS: Optional[str] = None
     DATALAB_MARKER_SKIP_CACHE: Optional[bool] = None
@@ -661,6 +663,11 @@ async def update_rag_config(
         form_data.PDF_EXTRACT_IMAGES
         if form_data.PDF_EXTRACT_IMAGES is not None
         else request.app.state.config.PDF_EXTRACT_IMAGES
+    )
+    request.app.state.config.ENABLE_OPENAI_PDF_PARSER = (
+        form_data.ENABLE_OPENAI_PDF_PARSER
+        if form_data.ENABLE_OPENAI_PDF_PARSER is not None
+        else request.app.state.config.ENABLE_OPENAI_PDF_PARSER
     )
     request.app.state.config.DATALAB_MARKER_API_KEY = (
         form_data.DATALAB_MARKER_API_KEY
@@ -961,6 +968,7 @@ async def update_rag_config(
         # Content extraction settings
         "CONTENT_EXTRACTION_ENGINE": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
         "PDF_EXTRACT_IMAGES": request.app.state.config.PDF_EXTRACT_IMAGES,
+        "ENABLE_OPENAI_PDF_PARSER": request.app.state.config.ENABLE_OPENAI_PDF_PARSER,
         "DATALAB_MARKER_API_KEY": request.app.state.config.DATALAB_MARKER_API_KEY,
         "DATALAB_MARKER_LANGS": request.app.state.config.DATALAB_MARKER_LANGS,
         "DATALAB_MARKER_SKIP_CACHE": request.app.state.config.DATALAB_MARKER_SKIP_CACHE,
@@ -1367,7 +1375,7 @@ def process_file(
             {"content": text_content},
         )
         
-        # Store PDF base64 for OpenAI API
+        # Store PDF base64 for OpenAI built-in file parser        
         with open(file_path, "rb") as f:
             upload_file_bytes = f.read()
         uploaded_file_base64_string = base64.b64encode(upload_file_bytes).decode("utf-8")

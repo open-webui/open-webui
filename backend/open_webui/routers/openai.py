@@ -826,35 +826,36 @@ async def generate_chat_completion(
         request_url = f"{url}/chat/completions"
         headers["Authorization"] = f"Bearer {key}"
 
-    # append PDF base64
-    if len(payload["messages"]) >= 2 and \
-        "files" in form_data['metadata'] and form_data['metadata']['files'] is not None and len(form_data['metadata']['files']) >= 1:
-        new_content = []
-        for a_file in  form_data['metadata']['files']:
-            if a_file['type'] != "file":
-                continue
-            if a_file['file']['meta']['content_type'] != "application/pdf":
-                continue
-            assert "uploaded_file_base64_string" in a_file["file"]["data"]
-            uploaded_file_base64_string = a_file["file"]["data"]["uploaded_file_base64_string"]
-            uploaded_file_name = a_file["file"]["meta"]["name"]
-            new_content.append({
-                "type": "file",
-                "file": {
-                    "filename": uploaded_file_name,
-                    "file_data": f"data:application/pdf;base64,{uploaded_file_base64_string}",
-                }
-            })
-        old_content = payload['messages'][1]['content']
-        if isinstance(old_content, str):
-            new_content.append({
-                    "type": "text",
-                    "text": old_content
+    if request.app.state.config.ENABLE_OPENAI_PDF_PARSER:
+        # Use OpenAI built-in file parser
+        if len(payload["messages"]) >= 2 and \
+            "files" in form_data['metadata'] and form_data['metadata']['files'] is not None and len(form_data['metadata']['files']) >= 1:
+            new_content = []
+            for a_file in  form_data['metadata']['files']:
+                if a_file['type'] != "file":
+                    continue
+                if a_file['file']['meta']['content_type'] != "application/pdf":  # currently OpenAI only support PDF file
+                    continue
+                assert "uploaded_file_base64_string" in a_file["file"]["data"]
+                uploaded_file_base64_string = a_file["file"]["data"]["uploaded_file_base64_string"]
+                uploaded_file_name = a_file["file"]["meta"]["name"]
+                new_content.append({
+                    "type": "file",
+                    "file": {
+                        "filename": uploaded_file_name,
+                        "file_data": f"data:application/pdf;base64,{uploaded_file_base64_string}",
+                    }
                 })
-        else:
-            assert isinstance(old_content, list)
-            new_content += old_content
-        payload['messages'][1]['content'] = new_content
+            old_content = payload['messages'][1]['content']
+            if isinstance(old_content, str):
+                new_content.append({
+                        "type": "text",
+                        "text": old_content
+                    })
+            else:
+                assert isinstance(old_content, list)
+                new_content += old_content
+            payload['messages'][1]['content'] = new_content
     
     payload = json.dumps(payload)
 

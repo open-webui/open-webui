@@ -2043,6 +2043,12 @@ PDF_EXTRACT_IMAGES = PersistentConfig(
     os.environ.get("PDF_EXTRACT_IMAGES", "False").lower() == "true",
 )
 
+ENABLE_OPENAI_PDF_PARSER = PersistentConfig(
+    "ENABLE_OPENAI_PDF_PARSER",
+    "rag.enable_openai_pdf_parser",
+    os.environ.get("ENABLE_OPENAI_PDF_PARSER", "False").lower() == "true",
+)
+
 RAG_EMBEDDING_MODEL = PersistentConfig(
     "RAG_EMBEDDING_MODEL",
     "rag.embedding_model",
@@ -2228,7 +2234,6 @@ YOUTUBE_LOADER_PROXY_URL = PersistentConfig(
     "rag.youtube_loader_proxy_url",
     os.getenv("YOUTUBE_LOADER_PROXY_URL", ""),
 )
-
 
 ####################################
 # Web Search (RAG)

@@ -324,6 +324,16 @@
 									</div>
 								</div>
 							</div>
+							<div class="flex w-full mt-1">
+								<div class="flex-1 flex justify-between">
+									<div class="self-center text-xs font-medium">
+										{$i18n.t('Enable OpenAI PDF Parser')}
+									</div>
+									<div class="flex items-center relative">
+										<Switch bind:state={RAGConfig.ENABLE_OPENAI_PDF_PARSER} />
+									</div>
+								</div>
+							</div>
 						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'datalab_marker'}
 							<div class="my-0.5 flex gap-2 pr-2">
 								<SensitiveInput
