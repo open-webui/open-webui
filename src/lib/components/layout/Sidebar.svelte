@@ -514,22 +514,18 @@
 	bind:this={navElement}
 	id="sidebar"
 	role="navigation"
-	class=" h-screen max-h-[100dvh] min-h-screen p-4 select-none {$showSidebar
+	class=" h-screen max-h-[100dvh] min-h-screen select-none border-0 {$showSidebar
 		? 'md:relative w-[300px] max-w-[300px]'
-		: 'w-[120px]'} {$isApp
+		: 'w-[80px]'} {$isApp
 		? `ml-[4.5rem] md:ml-0 `
-		: 'transition-width duration-200 ease-in-out'}  shrink-0 bg-surface text-gray-900 dark:bg-gray-950 dark:text-gray-200 text-sm z-50 top-0 left-0
+		: 'transition-width duration-200 ease-in-out'} shadow-md shrink-0 text-gray-900 dark:bg-gray-950 dark:text-gray-200 text-sm z-50 top-0 left-0
         "
 	data-state={$showSidebar}
-	on:mouseenter={onMouseEnter}
-	on:mouseleave={onMouseLeave}
 >
 	<div
-		class="flex flex-col justify-between h-[calc(100vh-2rem)] max-h-[100dvh] overflow-x-hidden z-50 bg-white {$showSidebar
-			? 'w-[calc(300px-2rem)]'
-			: 'w-[80px]'}"
+		class="flex flex-col justify-between max-h-[100dvh] overflow-x-hidden z-50 bg-white"
 		style="
-    border-radius: 20px;
+    border-radius: 0px;
     background: var(--Schemes-Surface, #FFF);
     box-shadow: 0px 0px 16px -8px rgba(28, 27, 27, 0.04);
   "
