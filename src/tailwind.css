@@ -110,3 +110,14 @@ html.dark .bg-circle {
             opacity: 1;
         }
 
+
+
+        .bg-surface {
+            
+            background: radial-gradient(42.65% 25.17% at 68.23% 29.35%, rgba(98, 51, 169, 0.14) 0%, rgba(98, 51, 169, 0.00) 100%), linear-gradient(101deg, rgba(255, 109, 193, 0.00) 41.77%, rgba(255, 109, 193, 0.14) 84.17%), linear-gradient(210deg, rgba(0, 229, 255, 0.00) 25.6%, rgba(0, 229, 255, 0.10) 75.47%), var(--neutrals-neutral-50, #ECEEF1);
+      
+            background-color: #eceef1; /* fallback */
+            position: relative;
+            overflow: clip;
+  }
+

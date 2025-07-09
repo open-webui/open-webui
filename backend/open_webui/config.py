@@ -972,12 +972,7 @@ if default_prompt_suggestions == []:
             "title": ["Brainstorm"],
             "content": "Help me brainstorm ideas for [project/topic/goal].",
             "icon":2
-        },
-        {
-            "title": ["Help me write"],
-            "content": "Help me write a professional response/message/document based on the following",
-            "icon":3
-        },
+        }
     ]
 
 DEFAULT_PROMPT_SUGGESTIONS = PersistentConfig(
