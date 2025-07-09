@@ -203,7 +203,8 @@ class ModelsTable:
             model
             for model in models
             if model.user_id == user_id
-            or has_access(user_id, permission, model.access_control)
+            or has_access(user_id, "write", model.access_control)
+            or has_access(user_id, "inspect", model.access_control)
         ]
 
     def get_model_by_id(self, id: str) -> Optional[ModelModel]:

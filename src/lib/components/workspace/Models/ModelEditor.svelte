@@ -16,6 +16,7 @@
 	import { getKnowledgeBases } from '$lib/apis/knowledge';
 	import { getToolValvesSpecById } from '$lib/apis/tools';
 	import { getFunctionValvesSpecById } from '$lib/apis/functions';
+	import { getUserGroups } from '$lib/apis/users';
 	import AccessControl from '../common/AccessControl.svelte';
 	import { stringify } from 'postcss';
 	import { toast } from 'svelte-sonner';
@@ -24,6 +25,44 @@
 
 	export let onSubmit: Function;
 	export let onBack: null | Function = null;
+
+	// Store user groups fetched from API
+	let userGroups = [];
+	let userGroupsLoaded = false;
+
+	// Reactive statement to check if current user has inspect access
+	// Only apply inspect restrictions when editing an existing model, not when creating a new one
+	// Users with inspect access get backend read/write permissions but frontend UI restrictions
+	// Exception: Model creators always get full access regardless of group permissions
+	$: hasInspectAccess = edit && loaded && userGroupsLoaded && (() => {
+		// Early exit if not loaded, user groups not loaded, no access control, or no user
+		if (!loaded || !userGroupsLoaded || !accessControl || !$user) {
+			return false;
+		}
+		
+		// If there are no inspect group_ids, user doesn't have inspect access
+		if (!accessControl?.inspect?.group_ids?.length) {
+			return false;
+		}
+		
+		// Check if current user is the model creator 
+		// Model creators are the only users who should be in write.user_ids
+		const isModelCreator = accessControl?.write?.user_ids?.includes($user.id);
+		if (isModelCreator) {
+			return false;
+		}
+		
+		// Use fetched userGroups instead of user store data
+		const userGroupIds = userGroups.map(group => group.id);
+		
+		// Check if user has inspect access - if so, apply frontend UI restrictions
+		// Note: Users with inspect access also get read/write on backend, but frontend restricts editing
+		const hasInspectAccess = userGroupIds.some(groupId => {
+			return accessControl.inspect.group_ids.includes(groupId);
+		});
+		
+		return hasInspectAccess;
+	})();
 
 	export let model = null;
 	export let edit = false;
@@ -102,6 +141,7 @@
 	let toolValves = {};
 
 	let accessControl = {};
+	let accessControlComponent;
 
 	const addUsage = (base_model_id) => {
 		const baseModel = $models.find((m) => m.id === base_model_id);
@@ -123,9 +163,6 @@
 		info.name = name;
 		info.meta.valves = {};
 
-		console.log(`submitting with new toolValves: ${JSON.stringify(toolValves)}`);
-		console.log(`submitting with new functionValves: ${JSON.stringify(functionValves)}`);
-
 		if (id === '') {
 			toast.error('Model ID is required.');
 		}
@@ -136,7 +173,49 @@
 
 		info.params = { ...info.params, ...params };
 
-		info.access_control = accessControl;
+		// Prevent inspect users from modifying access control
+		if (hasInspectAccess && model?.access_control) {
+			// Keep the original access control if user has inspect access
+			info.access_control = model.access_control;
+		} else {
+			info.access_control = accessControl;
+		}
+
+		// Ensure model creator gets write access via user_ids
+		// Only the model creator gets added to write.user_ids
+		// Group members get write access through group membership, not individual user_ids
+		// This allows creators to maintain full access to their models even if they're in groups with only inspect access
+		if (info.access_control && info.access_control !== null) {
+			// Initialize write user_ids array if it doesn't exist
+			if (!info.access_control.write) {
+				info.access_control.write = { group_ids: [], user_ids: [] };
+			}
+			if (!info.access_control.write.user_ids) {
+				info.access_control.write.user_ids = [];
+			}
+
+			// Determine who the model creator is
+			let modelCreatorId;
+			if (edit && model?.user_id) {
+				// When editing, use the original creator from the model data
+				modelCreatorId = model.user_id;
+			} else {
+				// When creating a new model (including clones), current user becomes the new owner
+				// Clear any existing user_ids from cloned models
+				const hadExistingUserIds = info.access_control.write.user_ids.length > 0;
+				info.access_control.write.user_ids = [];
+				modelCreatorId = $user?.id;
+			}
+
+			// Add creator to write permissions if not already present
+			if (modelCreatorId && !info.access_control.write.user_ids.includes(modelCreatorId)) {
+				info.access_control.write.user_ids.push(modelCreatorId);
+			}
+
+			// Note: Only the model creator gets added to write.user_ids
+			// Group members get write access through group membership, not individual user_ids
+		}
+
 		info.meta.capabilities = capabilities;
 
 		if (enableDescription) {
@@ -204,6 +283,17 @@
 	};
 
 	onMount(async () => {
+		// Fetch user groups first
+		try {
+			userGroups = await getUserGroups(localStorage.token);
+			console.log('User groups loaded:', userGroups);
+			userGroupsLoaded = true;
+		} catch (error) {
+			console.error('Error loading user groups:', error);
+			userGroups = [];
+			userGroupsLoaded = true; // Set to true even if failed, so UI doesn't hang
+		}
+
 		await tools.set(await getTools(localStorage.token));
 		await functions.set(await getFunctions(localStorage.token));
 		await knowledgeCollections.set(await getKnowledgeBases(localStorage.token));
@@ -325,9 +415,6 @@
 				accessControl = {};
 			}
 
-			console.log(model?.access_control);
-			console.log(accessControl);
-
 			info = {
 				...info,
 				...JSON.parse(
@@ -350,6 +437,19 @@
 </script>
 
 {#if loaded}
+	{#if hasInspectAccess}
+		<div class="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+			<div class="flex items-center">
+				<svg class="w-5 h-5 text-yellow-600 dark:text-yellow-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+					<path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+				</svg>
+				<span class="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+					Read-Only Mode: You have inspect access only. All settings are view-only.
+				</span>
+			</div>
+		</div>
+	{/if}
+	
 	{#if onBack}
 		<button
 			class="flex space-x-1"
@@ -447,7 +547,16 @@
 		{#if !edit || (edit && model)}
 			<form
 				class="flex flex-col md:flex-row w-full gap-3 md:gap-6"
-				on:submit|preventDefault={() => {
+				on:submit|preventDefault={(e) => {
+					if (hasInspectAccess) {
+						e.preventDefault();
+						toast.error('You have inspect access only. Editing is not allowed.');
+						return;
+					}
+					// Commit AccessControl changes before saving
+					if (accessControlComponent) {
+						accessControlComponent.commitChanges();
+					}
 					submitHandler();
 				}}
 			>
@@ -459,6 +568,7 @@
 								? 'bg-transparent'
 								: 'bg-white'} shadow-xl group relative"
 							type="button"
+							disabled={hasInspectAccess}
 							on:click={() => {
 								filesInputElement.click();
 							}}
@@ -525,6 +635,7 @@
 									class="text-3xl font-semibold w-full bg-transparent outline-hidden"
 									placeholder={$i18n.t('Model Name')}
 									bind:value={name}
+									disabled={hasInspectAccess}
 									required
 								/>
 							</div>
@@ -536,7 +647,7 @@
 									class="text-xs w-full bg-transparent text-gray-500 outline-hidden"
 									placeholder={$i18n.t('Model ID')}
 									bind:value={id}
-									disabled={edit}
+									disabled={edit || hasInspectAccess}
 									required
 								/>
 							</div>
@@ -552,6 +663,7 @@
 									class="text-sm w-full bg-transparent outline-hidden"
 									placeholder="Select a base model (e.g. llama3, gpt-4o)"
 									bind:value={info.base_model_id}
+									disabled={hasInspectAccess}
 									on:change={(e) => {
 										addUsage(e.target.value);
 									}}
@@ -575,6 +687,7 @@
 							<button
 								class="p-1 text-xs flex rounded-sm transition"
 								type="button"
+								disabled={hasInspectAccess}
 								on:click={() => {
 									enableDescription = !enableDescription;
 								}}
@@ -592,39 +705,67 @@
 								className=" text-sm w-full bg-transparent outline-hidden resize-none overflow-y-hidden "
 								placeholder={$i18n.t('Add a short description about what this model does')}
 								bind:value={info.meta.description}
+								disabled={hasInspectAccess}
 							/>
 						{/if}
 					</div>
 
 					<div class=" mt-2 my-1">
 						<div class="">
-							<Tags
-								tags={info?.meta?.tags ?? []}
-								on:delete={(e) => {
-									const tagName = e.detail;
-									info.meta.tags = info.meta.tags.filter((tag) => tag.name !== tagName);
-								}}
-								on:add={(e) => {
-									const tagName = e.detail;
-									if (!(info?.meta?.tags ?? null)) {
-										info.meta.tags = [{ name: tagName }];
-									} else {
-										info.meta.tags = [...info.meta.tags, { name: tagName }];
-									}
-								}}
-							/>
+							{#if !hasInspectAccess}
+								<Tags
+									tags={info?.meta?.tags ?? []}
+									on:delete={(e) => {
+										const tagName = e.detail;
+										info.meta.tags = info.meta.tags.filter((tag) => tag.name !== tagName);
+									}}
+									on:add={(e) => {
+										const tagName = e.detail;
+										if (!(info?.meta?.tags ?? null)) {
+											info.meta.tags = [{ name: tagName }];
+										} else {
+											info.meta.tags = [...info.meta.tags, { name: tagName }];
+										}
+									}}
+								/>
+							{:else}
+								<div class="flex flex-wrap gap-1">
+									{#each info?.meta?.tags ?? [] as tag}
+										<span class="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-xs">
+											{tag.name}
+										</span>
+									{/each}
+									{#if (info?.meta?.tags ?? []).length === 0}
+										<span class="text-gray-500 text-xs">No tags</span>
+									{/if}
+								</div>
+							{/if}
 						</div>
 					</div>
 
-					<div class="my-2">
-						<div class="px-3 py-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
-							<AccessControl
-								bind:accessControl
-								accessRoles={['read', 'write']}
-								allowPublic={$user?.permissions?.sharing?.public_models || $user?.role === 'admin'}
-							/>
+					{#if !hasInspectAccess}
+						<div class="my-2">
+							<div class="px-3 py-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
+								<AccessControl
+									bind:this={accessControlComponent}
+									bind:accessControl
+									accessRoles={['read', 'write', 'inspect']}
+									allowPublic={$user?.permissions?.sharing?.public_models || $user?.role === 'admin'}
+									onChange={(newAccessControl) => {
+										accessControl = newAccessControl;
+									}}
+								/>
+							</div>
 						</div>
-					</div>
+					{:else}
+						<div class="my-2">
+							<div class="px-3 py-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
+								<div class="text-sm text-gray-500 text-center py-2">
+									Access control settings are read-only for inspect users.
+								</div>
+							</div>
+						</div>
+					{/if}
 
 					<hr class=" border-gray-100 dark:border-gray-850 my-1.5" />
 
@@ -642,6 +783,7 @@
 										placeholder={`Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.`}
 										rows={4}
 										bind:value={system}
+										disabled={hasInspectAccess}
 									/>
 								</div>
 							</div>
@@ -654,6 +796,7 @@
 								<button
 									class="p-1 px-3 text-xs flex rounded-sm transition"
 									type="button"
+									disabled={hasInspectAccess}
 									on:click={() => {
 										showAdvanced = !showAdvanced;
 									}}
@@ -668,7 +811,13 @@
 
 							{#if showAdvanced}
 								<div class="my-2">
-									<AdvancedParams admin={true} custom={true} bind:params />
+									{#if !hasInspectAccess}
+										<AdvancedParams admin={true} custom={true} bind:params />
+									{:else}
+										<div class="text-sm text-gray-500 text-center py-2">
+											Advanced parameters are read-only for inspect users.
+										</div>
+									{/if}
 								</div>
 							{/if}
 						</div>
@@ -686,6 +835,7 @@
 								<button
 									class="p-1 text-xs flex rounded-sm transition"
 									type="button"
+									disabled={hasInspectAccess}
 									on:click={() => {
 										if ((info?.meta?.suggestion_prompts ?? null) === null) {
 											info.meta.suggestion_prompts = [{ content: '' }];
@@ -706,6 +856,7 @@
 								<button
 									class="p-1 px-2 text-xs flex rounded-sm transition"
 									type="button"
+									disabled={hasInspectAccess}
 									on:click={() => {
 										if (
 											info.meta.suggestion_prompts.length === 0 ||
@@ -741,11 +892,13 @@
 												class=" text-sm w-full bg-transparent outline-hidden border-r border-gray-100 dark:border-gray-850"
 												placeholder={$i18n.t('Write a prompt suggestion (e.g. Who are you?)')}
 												bind:value={prompt.content}
+												disabled={hasInspectAccess}
 											/>
 
 											<button
 												class="px-2"
 												type="button"
+												disabled={hasInspectAccess}
 												on:click={() => {
 													info.meta.suggestion_prompts.splice(promptIdx, 1);
 													info.meta.suggestion_prompts = info.meta.suggestion_prompts;
@@ -774,38 +927,133 @@
 					<hr class=" border-gray-100 dark:border-gray-850 my-1.5" />
 
 					<div class="my-2">
-						<Knowledge bind:selectedKnowledge={knowledge} collections={$knowledgeCollections} />
+						{#if !hasInspectAccess}
+							<Knowledge bind:selectedKnowledge={knowledge} collections={$knowledgeCollections} />
+						{:else}
+							<div>
+								<div class="flex w-full justify-between mb-1">
+									<div class=" self-center text-sm font-semibold">Knowledge</div>
+								</div>
+								<div class="text-xs text-gray-500 mb-2">Knowledge selection is read-only for inspect users.</div>
+								<div class="flex flex-wrap gap-1">
+									{#each knowledge as item}
+										<span class="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-xs">
+											{item.name}
+										</span>
+									{/each}
+									{#if knowledge.length === 0}
+										<span class="text-gray-500 text-xs">No knowledge bases selected</span>
+									{/if}
+								</div>
+							</div>
+						{/if}
 					</div>
 
 					<div class="my-2">
-						<ToolsSelector
-							valvesSpecs={toolValvesSpecs}
-							bind:valves={toolValves}
-							bind:selectedToolIds={toolIds}
-							tools={$tools}
-						/>
+						{#if !hasInspectAccess}
+							<ToolsSelector
+								valvesSpecs={toolValvesSpecs}
+								bind:valves={toolValves}
+								bind:selectedToolIds={toolIds}
+								tools={$tools}
+							/>
+						{:else}
+							<div>
+								<div class="flex w-full justify-between mb-1">
+									<div class=" self-center text-sm font-semibold">Tools</div>
+								</div>
+								<div class="text-xs text-gray-500 mb-2">Tool selection is read-only for inspect users.</div>
+								<div class="flex flex-wrap gap-1">
+									{#each $tools.filter(tool => toolIds.includes(tool.id)) as tool}
+										<span class="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-xs">
+											{tool.name}
+										</span>
+									{/each}
+									{#if toolIds.length === 0}
+										<span class="text-gray-500 text-xs">No tools selected</span>
+									{/if}
+								</div>
+							</div>
+						{/if}
 					</div>
 
 					<div class="my-2">
-						<FiltersSelector
-							valvesSpecs={functionValvesSpecs}
-							bind:valves={functionValves}
-							bind:selectedFilterIds={filterIds}
-							filters={$functions.filter((func) => func.type === 'filter')}
-						/>
+						{#if !hasInspectAccess}
+							<FiltersSelector
+								valvesSpecs={functionValvesSpecs}
+								bind:valves={functionValves}
+								bind:selectedFilterIds={filterIds}
+								filters={$functions.filter((func) => func.type === 'filter')}
+							/>
+						{:else}
+							<div>
+								<div class="flex w-full justify-between mb-1">
+									<div class=" self-center text-sm font-semibold">Filters</div>
+								</div>
+								<div class="text-xs text-gray-500 mb-2">Filter selection is read-only for inspect users.</div>
+								<div class="flex flex-wrap gap-1">
+									{#each $functions.filter(func => func.type === 'filter' && filterIds.includes(func.id)) as filter}
+										<span class="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-xs">
+											{filter.name}
+										</span>
+									{/each}
+									{#if filterIds.length === 0}
+										<span class="text-gray-500 text-xs">No filters selected</span>
+									{/if}
+								</div>
+							</div>
+						{/if}
 					</div>
 
 					<div class="my-2">
-						<ActionsSelector
-							valvesSpecs={functionValvesSpecs}
-							bind:valves={functionValves}
-							bind:selectedActionIds={actionIds}
-							actions={$functions.filter((func) => func.type === 'action')}
-						/>
+						{#if !hasInspectAccess}
+							<ActionsSelector
+								valvesSpecs={functionValvesSpecs}
+								bind:valves={functionValves}
+								bind:selectedActionIds={actionIds}
+								actions={$functions.filter((func) => func.type === 'action')}
+							/>
+						{:else}
+							<div>
+								<div class="flex w-full justify-between mb-1">
+									<div class=" self-center text-sm font-semibold">Actions</div>
+								</div>
+								<div class="text-xs text-gray-500 mb-2">Action selection is read-only for inspect users.</div>
+								<div class="flex flex-wrap gap-1">
+									{#each $functions.filter(func => func.type === 'action' && actionIds.includes(func.id)) as action}
+										<span class="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-xs">
+											{action.name}
+										</span>
+									{/each}
+									{#if actionIds.length === 0}
+										<span class="text-gray-500 text-xs">No actions selected</span>
+									{/if}
+								</div>
+							</div>
+						{/if}
 					</div>
 
 					<div class="my-2">
-						<Capabilities bind:capabilities />
+						{#if !hasInspectAccess}
+							<Capabilities bind:capabilities />
+						{:else}
+							<div>
+								<div class="flex w-full justify-between mb-1">
+									<div class=" self-center text-sm font-semibold">Capabilities</div>
+								</div>
+								<div class="text-xs text-gray-500 mb-2">Capabilities are read-only for inspect users.</div>
+								<div class="flex flex-wrap gap-1">
+									{#each Object.keys(capabilities).filter(key => capabilities[key]) as capability}
+										<span class="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-xs">
+											{capability}
+										</span>
+									{/each}
+									{#if Object.keys(capabilities).filter(key => capabilities[key]).length === 0}
+										<span class="text-gray-500 text-xs">No capabilities enabled</span>
+									{/if}
+								</div>
+							</div>
+						{/if}
 					</div>
 
 					<div class="my-2 text-gray-300 dark:text-gray-700">
@@ -815,6 +1063,7 @@
 							<button
 								class="p-1 px-3 text-xs flex rounded-sm transition"
 								type="button"
+								disabled={hasInspectAccess}
 								on:click={() => {
 									showPreview = !showPreview;
 								}}
@@ -841,49 +1090,55 @@
 					</div>
 
 					<div class="my-2 flex justify-end pb-20">
-						<button
-							class=" text-sm px-3 py-2 transition rounded-lg {loading
-								? ' cursor-not-allowed bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'
-								: 'bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'} flex w-full justify-center"
-							type="submit"
-							disabled={loading}
-						>
-							<div class=" self-center font-medium">
-								{#if edit}
-									{$i18n.t('Save & Update')}
-								{:else}
-									{$i18n.t('Save & Create')}
-								{/if}
-							</div>
-
-							{#if loading}
-								<div class="ml-1.5 self-center">
-									<svg
-										class=" w-4 h-4"
-										viewBox="0 0 24 24"
-										fill="currentColor"
-										xmlns="http://www.w3.org/2000/svg"
-										><style>
-											.spinner_ajPY {
-												transform-origin: center;
-												animation: spinner_AtaB 0.75s infinite linear;
-											}
-											@keyframes spinner_AtaB {
-												100% {
-													transform: rotate(360deg);
-												}
-											}
-										</style><path
-											d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
-											opacity=".25"
-										/><path
-											d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
-											class="spinner_ajPY"
-										/></svg
-									>
+						{#if !hasInspectAccess}
+							<button
+								class=" text-sm px-3 py-2 transition rounded-lg {loading
+									? ' cursor-not-allowed bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'
+									: 'bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'} flex w-full justify-center"
+								type="submit"
+								disabled={loading}
+							>
+								<div class=" self-center font-medium">
+									{#if edit}
+										{$i18n.t('Save & Update')}
+									{:else}
+										{$i18n.t('Save & Create')}
+									{/if}
 								</div>
-							{/if}
-						</button>
+
+								{#if loading}
+									<div class="ml-1.5 self-center">
+										<svg
+											class=" w-4 h-4"
+											viewBox="0 0 24 24"
+											fill="currentColor"
+											xmlns="http://www.w3.org/2000/svg"
+											><style>
+												.spinner_ajPY {
+													transform-origin: center;
+													animation: spinner_AtaB 0.75s infinite linear;
+												}
+												@keyframes spinner_AtaB {
+													100% {
+														transform: rotate(360deg);
+													}
+												}
+											</style><path
+												d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
+												opacity=".25"
+											/><path
+												d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
+												class="spinner_ajPY"
+											/></svg
+										>
+									</div>
+								{/if}
+							</button>
+						{:else}
+							<div class="text-sm text-gray-500 text-center w-full py-2">
+								You have inspect access only. Editing is not allowed.
+							</div>
+						{/if}
 					</div>
 				</div>
 			</form>
