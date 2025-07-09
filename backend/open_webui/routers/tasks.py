@@ -197,7 +197,7 @@ async def generate_title(
     # AXL-Code 모델은 별도의 쿼리 생성 템플릿을 사용하지 않고 Messages를 그대로 사용
     content = None
     if model_id == "1234.AXLR-Code": 
-        content = form_data["messages"]
+        content = form_data["messages"][0].get("content")
     else:
         template = None
         if request.app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE != "":
@@ -301,7 +301,7 @@ async def generate_follow_ups(
     # AXL-Code 모델은 별도의 쿼리 생성 템플릿을 사용하지 않고 Messages를 그대로 사용
     content = None
     if model_id == "1234.AXLR-Code": 
-        content = form_data["messages"]
+        content = form_data["messages"][0].get("content")
     else:
         template = None
         if request.app.state.config.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE != "":
@@ -394,7 +394,7 @@ async def generate_chat_tags(
     # AXL-Code 모델은 별도의 쿼리 생성 템플릿을 사용하지 않고 Messages를 그대로 사용
     content = None
     if model_id == "1234.AXLR-Code": 
-        content = form_data["messages"]
+        content = form_data["messages"][0].get("content")
     else:
         template = None
         if request.app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE != "":
@@ -562,7 +562,7 @@ async def generate_queries(
     # AXL-Code 모델은 별도의 쿼리 생성 템플릿을 사용하지 않고 Messages를 그대로 사용
     content = None
     if model_id == "1234.AXLR-Code": 
-        content = form_data["messages"]
+        content = form_data["messages"][0].get("content")
     else:
         template = None
         if (request.app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE).strip() != "":
