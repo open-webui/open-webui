@@ -42,7 +42,7 @@
 
 	let largeTextAsFile = false;
 
-	let landingPageMode = '';
+	let landingPageMode = 'chat';
 	let chatBubble = true;
 	let chatDirection: 'LTR' | 'RTL' | 'auto' = 'auto';
 	let ctrlEnterToSend = false;
