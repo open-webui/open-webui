@@ -24,6 +24,7 @@ export default {
 				},
 				primary:{
 					400: 'var(--color-primary-400, #0054F2)',  
+					DEFAULT: 'var(--color-primary-400, #0054F2)',
 			    },
 				gray: {
 					50: 'var(--color-gray-50, #f9f9f9)',

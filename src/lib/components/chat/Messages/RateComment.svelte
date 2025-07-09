@@ -5,10 +5,8 @@
 	import { config, models } from '$lib/stores';
 	import Tags from '$lib/components/common/Tags.svelte';
 	import MaterialIcon from '$lib/components/common/MaterialIcon.svelte';
-	import type { i18n as i18nType } from 'i18next';
-	import type { Writable } from 'svelte/store';
 
-	const i18n = getContext<Writable<i18nType>>('i18n');
+	const i18n = getContext('i18n');
 
 	const dispatch = createEventDispatcher();
 
@@ -16,83 +14,33 @@
 	export let show = false;
 
 	let LIKE_REASONS = [
-		{
-			key: 'accurate_correct',
-			header: 'Accurate & correct',
-			sub: 'Facts match trusted sources'
-		},
-		{
-			key: 'clear_easy',
-			header: 'Clear & easy to follow',
-			sub: 'Writing is straightforward, no complicated jargon'
-		},
-		{
-			key: 'complete_detailed',
-			header: 'Complete & detailed',
-			sub: 'Covers the topic thoroughly'
-		},
-		{
-			key: 'relevant_need',
-			header: 'Relevant to my need',
-			sub: 'Directly answers my question'
-		},
-		{
-			key: 'well_structured',
-			header: 'Well structured & formatted',
-			sub: 'Logical flow, tidy layout'
-		},
-		{
-			key: 'other',
-			header: 'Other',
-			sub: ''
-		}
+		'accurate_information',
+		'followed_instructions_perfectly',
+		'showcased_creativity',
+		'positive_attitude',
+		'attention_to_detail',
+		'thorough_explanation',
+		'other'
 	];
 	let DISLIKE_REASONS = [
-		{
-			key: 'factually_incorrect',
-			header: 'Factually incorrect',
-			sub: 'Contains the wrong or misleading info'
-		},
-		{
-			key: 'unclear_confusing',
-			header: 'Unclear or confusing',
-			sub: 'Hard to read or understand'
-		},
-		{
-			key: 'incomplete_missing',
-			header: 'Incomplete/missing details',
-			sub: 'Too brief and important points left out'
-		},
-		{
-			key: 'off_topic',
-			header: 'Off-topic and irrelevant',
-			sub: 
-				"Doesnt' address my question"
-		},
-		{
-			key: 'too_technical',
-			header: 'Too technical or jargon-heavy',
-			sub: "Uses terms the average reader won't know"
-		},
-		{
-			key: 'poor_structure',
-			header: 'Poor structure or formatting',
-			sub: 'Disorganized or visually messy'
-		},
-		{
-			key: 'other',
-			header: 'Other',
-			sub: ''
-		}
+		'dont_like_the_style',
+		'too_verbose',
+		'not_helpful',
+		'not_factually_correct',
+		'didnt_fully_follow_instructions',
+		'refused_when_it_shouldnt_have',
+		'being_lazy',
+		'other'
 	];
 
-	let tags: { name: string }[] = [];
-	let reasons: { key: string; header: string; sub: string }[] = [];
-	let selectedReason: string | null = null;
+	let tags = [];
+
+	let reasons = [];
+	let selectedReason = null;
 	let comment = '';
 
-	let detailedRating: any = null;
-	let selectedModel: any = null;
+	let detailedRating = null;
+	let selectedModel = null;
 
 	$: if (message?.annotation?.rating === 1) {
 		reasons = LIKE_REASONS;
@@ -113,7 +61,7 @@
 			comment = message?.annotation?.comment ?? '';
 		}
 
-		tags = (message?.annotation?.tags ?? []).map((tag: string) => ({
+		tags = (message?.annotation?.tags ?? []).map((tag) => ({
 			name: tag
 		}));
 
@@ -210,12 +158,45 @@
 			<div class="flex flex-wrap gap-1.5 text-sm mt-1.5 py-2">
 				{#each reasons as reason}
 					<button
-						class="px-3 py-0.5 border border-gray-100 dark:border-gray-850 hover:bg-gray-50 dark:hover:bg-gray-850 {selectedReason === reason.key ? 'bg-gray-100 dark:bg-gray-800' : ''} transition rounded-3xl flex flex-col items-center min-w-[200px]"
+						class="px-3 py-0.5 border border-gray-100 dark:border-gray-850 hover:bg-gray-50 dark:hover:bg-gray-850 {selectedReason ===
+						reason
+							? 'bg-gray-100 dark:bg-gray-800'
+							: ''} transition rounded-xl"
 						on:click={() => {
-							selectedReason = reason.key;
+							selectedReason = reason;
 						}}
 					>
-						<span class="font-semibold p-2">{reason.header}</span>
+						{#if reason === 'accurate_information'}
+							{$i18n.t('Accurate information')}
+						{:else if reason === 'followed_instructions_perfectly'}
+							{$i18n.t('Followed instructions perfectly')}
+						{:else if reason === 'showcased_creativity'}
+							{$i18n.t('Showcased creativity')}
+						{:else if reason === 'positive_attitude'}
+							{$i18n.t('Positive attitude')}
+						{:else if reason === 'attention_to_detail'}
+							{$i18n.t('Attention to detail')}
+						{:else if reason === 'thorough_explanation'}
+							{$i18n.t('Thorough explanation')}
+						{:else if reason === 'dont_like_the_style'}
+							{$i18n.t("Don't like the style")}
+						{:else if reason === 'too_verbose'}
+							{$i18n.t('Too verbose')}
+						{:else if reason === 'not_helpful'}
+							{$i18n.t('Not helpful')}
+						{:else if reason === 'not_factually_correct'}
+							{$i18n.t('Not factually correct')}
+						{:else if reason === 'didnt_fully_follow_instructions'}
+							{$i18n.t("Didn't fully follow instructions")}
+						{:else if reason === 'refused_when_it_shouldnt_have'}
+							{$i18n.t("Refused when it shouldn't have")}
+						{:else if reason === 'being_lazy'}
+							{$i18n.t('Being lazy')}
+						{:else if reason === 'other'}
+							{$i18n.t('Other')}
+						{:else}
+							{reason}
+						{/if}
 					</button>
 				{/each}
 			</div>

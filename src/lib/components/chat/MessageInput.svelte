@@ -61,7 +61,6 @@
 	import CheckNew from '../icons/CheckNew.svelte';
 	import Language from '../icons/Language.svelte';
 	import Attach from '../icons/Attach.svelte';
-	
 
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 
@@ -96,14 +95,17 @@
 	export let webSearchEnabled = false;
 	export let codeInterpreterEnabled = false;
 	let isOpen = false;
-  
-  const Modeloptions = [{"label":"Gov knowledge", "icon":MenuBook,},{"label":"Procurement", "icon":EditNotes}];
-  let selected = Modeloptions[0];
 
-  function selectOption(option) {
-    selected = option;
-    isOpen = false;
-  }
+	const Modeloptions = [
+		{ label: 'Gov knowledge', icon: MenuBook },
+		{ label: 'Procurement', icon: EditNotes }
+	];
+	let selected = Modeloptions[0];
+
+	function selectOption(option) {
+		selected = option;
+		isOpen = false;
+	}
 
 	$: onChange({
 		prompt,
@@ -664,12 +666,8 @@
 							}}
 						>
 							<div
-								class="flex-1 flex flex-col relative w-full shadow-none rounded-3xl transition px-1 bg-white/90 dark:bg-gray-400/5 dark:text-gray-100"
-								style="
-    border-radius: 20px;
-    background: var(--Schemes-Surface, #FFF);
-    box-shadow: 0px 0px 16px -8px rgba(28, 27, 27, 0.04);
-  "
+								class="flex-1 flex flex-col relative w-full shadow-none rounded-3xl transition px-1 bg-white/90 dark:bg-gray-400/5 dark:text-gray-100 rounded-2xl"
+								style="box-shadow: 0px 48px 100px 0px rgba(0, 84, 242, 0.08);"
 								dir={$settings?.chatDirection ?? 'auto'}
 							>
 								{#if files.length > 0}
@@ -1417,81 +1415,90 @@
 											</div>
 											<div class="flex gap-[12px] items-center">
 												{#if false}
-<div class="model-box relative inline-block">
-  <!-- Dropdown Button -->
-  <button
-    type="button"
-    on:click={() => isOpen = !isOpen}
-    class="inline-flex gap-2 text-[14px] leading-[22px] font-medium font-NotoKufi-Regular justify-between items-center px-2 py-1 border border-gray-1300 bg-gray-1150 rounded-[40px]"
-  >
-    <svelte:component this={selected.icon} class="w-6 h-6" />
-    {selected.label}
-   <ArrowDown strokeWidth="2" className="size-[1.1rem]" />
+													<div class="model-box relative inline-block">
+														<!-- Dropdown Button -->
+														<button
+															type="button"
+															on:click={() => (isOpen = !isOpen)}
+															class="inline-flex gap-2 text-[14px] leading-[22px] font-medium font-NotoKufi-Regular justify-between items-center px-2 py-1 border border-gray-1300 bg-gray-1150 rounded-[40px]"
+														>
+															<svelte:component this={selected.icon} class="w-6 h-6" />
+															{selected.label}
+															<ArrowDown strokeWidth="2" className="size-[1.1rem]" />
+														</button>
 
-  </button>
+														<!-- Dropdown Menu -->
+														{#if isOpen}
+															<div
+																class="absolute z-10 bottom-[40px] w-[211px] bg-white border border-gray-200 rounded-md shadow-lg"
+															>
+																{#each Modeloptions as option}
+																	<div
+																		on:click={() => selectOption(option)}
+																		class="flex px-[14px] py-[15px] justify-between items-center text-gray-1200 font-medium cursor-pointer leading-[22px] font-NotoKufi-Regular"
+																	>
+																		<div class="flex gap-2 items-center">
+																			<svelte:component this={option.icon} class="w-6 h-6" />
+																			{option.label}
+																		</div>
+																		{#if option.label == selected.label}
+																			<CheckNew strokeWidth="2" className="size-[1.1rem]" />
+																		{/if}
+																	</div>
+																{/each}
+															</div>
+														{/if}
+													</div>
+												{/if}
 
-  <!-- Dropdown Menu -->
-  {#if isOpen}
-    <div
-      class="absolute z-10 bottom-[40px] w-[211px] bg-white border border-gray-200 rounded-md shadow-lg"
-    >
-      {#each Modeloptions as option}
-        <div
-          on:click={() => selectOption(option)}
-          class="flex px-[14px] py-[15px]  justify-between items-center text-gray-1200 font-medium cursor-pointer leading-[22px] font-NotoKufi-Regular"
-        >
-		<div class="flex gap-2 items-center">
-		<svelte:component this={option.icon} class="w-6 h-6" />
-          {option.label}
-		  </div>
-		   {#if option.label==selected.label}
-		  <CheckNew strokeWidth="2" className="size-[1.1rem]" />
-		  {/if}
-        </div>
-      {/each}
-    </div>
-  {/if}
-</div>
+												{#if false}
+													<!--<div class="web-search">
+														<button
+															type="button"
+															class="relative flex items-center bg-white border border-[#dee0e3] rounded-full px-3 py-2 gap-2 focus:outline-none"
+															aria-label="Web Search"
+														>
+															<span class="w-[18px] h-[18px] flex items-center justify-center">
+																<Language
+																	strokeWidth="2"
+																	className="w-[18px] h-[18px] text-[#36383b]"
+																/>
+															</span>
+															<span
+																class="font-heading font-medium text-[14px] leading-[22px] text-[#36383b] text-left whitespace-nowrap"
+															>
+																Web Search
+															</span>
+														</button>
+													</div>
+												{/if}
 
-{/if}
-<!--<div class="web-search">
-  <button
-    type="button"
-    class="relative flex items-center bg-white border border-[#dee0e3] rounded-full px-3 py-2 gap-2 focus:outline-none"
-    aria-label="Web Search"
-  >
-    <span class="w-[18px] h-[18px] flex items-center justify-center">
-      <Language strokeWidth="2" className="w-[18px] h-[18px] text-[#36383b]" />
-    </span>
-    <span class="font-heading font-medium text-[14px] leading-[22px] text-[#36383b] text-left whitespace-nowrap">
-      Web Search
-    </span>
-    <span class="absolute inset-0 border border-[#dee0e3] rounded-full pointer-events-none" aria-hidden="true"></span>
-  </button>
-</div>
-
-<div class="attach">
-  <button
-    type="button"
-    class="relative flex items-center bg-white border border-[#dee0e3] rounded-full px-3 py-2 gap-2 focus:outline-none"
-    on:click={() => filesInputElement.click()}
-    aria-label="Attach files"
-  >
-    <span class="w-[18px] h-[18px] flex items-center justify-center">
-      <Attach strokeWidth="2" className="w-[18px] h-[18px] text-[#36383b]" />
-    </span>
-    <span class="font-heading font-medium text-[14px] leading-[22px] text-[#36383b] text-left whitespace-nowrap">
-      Attach files
-    </span>
-    <span class="absolute inset-0 border border-[#dee0e3] rounded-full pointer-events-none" aria-hidden="true"></span>
-  </button>
-</div>-->
-</div>
+												<div class="attach">
+													<button
+														type="button"
+														class="relative flex items-center bg-white border border-[#dee0e3] rounded-full px-3 py-2 gap-2 focus:outline-none"
+														on:click={() => filesInputElement.click()}
+														aria-label="Attach files"
+													>
+														<span class="w-[18px] h-[18px] flex items-center justify-center">
+															<Attach
+																strokeWidth="2"
+																className="w-[18px] h-[18px] text-[#36383b]"
+															/>
+														</span>
+														<span
+															class="font-heading font-medium text-[14px] leading-[22px] text-[#36383b] text-left whitespace-nowrap"
+														>
+															Attach files
+														</span>
+													</button>
+												</div>-->
+											</div>
 										{/if}
 									</div>
 
 									<div class="self-end flex space-x-1 mr-1 shrink-0">
-										{#if (!history?.currentId || history.messages[history.currentId]?.done == true) && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.stt ?? true))}
+										{#if false && (!history?.currentId || history.messages[history.currentId]?.done == true) && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.stt ?? true))}
 											<!-- {$i18n.t('Record voice')} -->
 											<Tooltip content={$i18n.t('Dictate')}>
 												<button
@@ -1565,7 +1572,7 @@
 													</button>
 												</Tooltip>
 											</div>
-										{:else if prompt === '' && files.length === 0 && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.call ?? true))}
+										{:else if false && prompt === '' && files.length === 0 && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.call ?? true))}
 											<div class=" flex items-center">
 												<!-- {$i18n.t('Call')} -->
 												<Tooltip content={$i18n.t('Voice mode')}>
