@@ -23,6 +23,7 @@
 
 	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
+	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	export let feedbacks = [];
 
@@ -313,7 +314,7 @@
 								<Tooltip content={feedback?.user?.name}>
 									<div class="shrink-0">
 										<img
-											src={feedback?.user?.profile_image_url ?? '/user.png'}
+											src={feedback?.user?.profile_image_url ?? `${WEBUI_BASE_URL}/user.png`}
 											alt={feedback?.user?.name}
 											class="size-5 rounded-full object-cover shrink-0"
 										/>
