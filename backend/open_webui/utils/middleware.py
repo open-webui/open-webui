@@ -2148,7 +2148,7 @@ async def process_chat_response(
                         if isinstance(tool_result, dict) or isinstance(
                             tool_result, list
                         ):
-                            tool_result = json.dumps(tool_result, indent=2)
+                            tool_result = json.dumps(tool_result, indent=2, ensure_ascii=False)
 
                         results.append(
                             {
