@@ -947,6 +947,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 							bind:value={note.data.content.json}
 							html={note.data?.content?.html}
 							json={true}
+							link={true}
 							placeholder={$i18n.t('Write something...')}
 							editable={versionIdx === null && !enhancing}
 							onChange={(content) => {

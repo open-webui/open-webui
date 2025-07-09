@@ -98,6 +98,7 @@
 
 	export let className = 'input-prose';
 	export let placeholder = 'Type here...';
+	export let link = false;
 
 	export let id = '';
 	export let value = '';
@@ -486,10 +487,7 @@
 				Highlight,
 				Typography,
 				Underline,
-				Link.configure({
-					openOnClick: true,
-					linkOnPaste: true
-				}),
+
 				Placeholder.configure({ placeholder }),
 				Table.configure({ resizable: true }),
 				TableRow,
@@ -500,6 +498,14 @@
 					nested: true
 				}),
 				CharacterCount.configure({}),
+				...(link
+					? [
+							Link.configure({
+								openOnClick: true,
+								linkOnPaste: true
+							})
+						]
+					: []),
 				...(autocomplete
 					? [
 							AIAutocompletion.configure({
@@ -536,9 +542,9 @@
 								tippyOptions: {
 									duration: 100,
 									arrow: false,
-									placement: 'top-start',
+									placement: 'bottom-start',
 									theme: 'transparent',
-									offset: [-10, 2]
+									offset: [-12, 4]
 								}
 							})
 						]
