@@ -1358,7 +1358,7 @@ async def chat_completion(
             "variables": form_data.get("variables", {}),
             "model": model,
             "direct": model_item.get("direct", False),
-            "file_context": form_data.get("file_context", None), # [{file_name:xxx, context:xxx}]
+            "file_contexts": form_data.get("file_contexts", None), # [{file_name:xxx, context:xxx}]
 
             **(
                 {"function_calling": "native"}

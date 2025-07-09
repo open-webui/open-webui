@@ -1731,7 +1731,7 @@
 							}
 						}
 					: {}),
-				file_context: contextFiles.map((file) => ({
+				file_contexts: contextFiles.map((file) => ({
 					//AXL:김정민 20250707 추가
 					file_name: file.fileName,
 					context: file.context

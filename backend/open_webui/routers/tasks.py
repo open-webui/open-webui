@@ -193,19 +193,26 @@ async def generate_title(
         f"generating chat title using model {task_model_id} for user {user.email} "
     )
 
-    if request.app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE != "":
-        template = request.app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE
+    # AXL: 김정민 20250709 
+    # AXL-Code 모델은 별도의 쿼리 생성 템플릿을 사용하지 않고 Messages를 그대로 사용
+    content = None
+    if model_id == "1234.AXLR-Code": 
+        content = form_data["messages"]
     else:
-        template = DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE
+        template = None
+        if request.app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE != "":
+            template = request.app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE
+        else:
+            template = DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE
 
-    content = title_generation_template(
-        template,
-        form_data["messages"],
-        {
-            "name": user.name,
-            "location": user.info.get("location") if user.info else None,
-        },
-    )
+        content = title_generation_template(
+            template,
+            form_data["messages"],
+            {
+                "name": user.name,
+                "location": user.info.get("location") if user.info else None,
+            },
+        )
 
     max_tokens = (
         models[task_model_id].get("info", {}).get("params", {}).get("max_tokens", 1000)
@@ -235,6 +242,12 @@ async def generate_title(
         payload = await process_pipeline_inlet_filter(request, payload, user, models)
     except Exception as e:
         raise e
+    
+    # 채팅형태:제목짓기 AXL:김정민 20250709 추가
+    payload = {
+        **payload,
+        "chat_type": "04"  
+    }
 
     try:
         return await generate_chat_completion(request, form_data=payload, user=user)
@@ -284,19 +297,26 @@ async def generate_follow_ups(
         f"generating chat title using model {task_model_id} for user {user.email} "
     )
 
-    if request.app.state.config.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE != "":
-        template = request.app.state.config.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE
+    # AXL: 김정민 20250709 
+    # AXL-Code 모델은 별도의 쿼리 생성 템플릿을 사용하지 않고 Messages를 그대로 사용
+    content = None
+    if model_id == "1234.AXLR-Code": 
+        content = form_data["messages"]
     else:
-        template = DEFAULT_FOLLOW_UP_GENERATION_PROMPT_TEMPLATE
+        template = None
+        if request.app.state.config.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE != "":
+            template = request.app.state.config.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE
+        else:
+            template = DEFAULT_FOLLOW_UP_GENERATION_PROMPT_TEMPLATE
 
-    content = follow_up_generation_template(
-        template,
-        form_data["messages"],
-        {
-            "name": user.name,
-            "location": user.info.get("location") if user.info else None,
-        },
-    )
+        content = follow_up_generation_template(
+            template,
+            form_data["messages"],
+            {
+                "name": user.name,
+                "location": user.info.get("location") if user.info else None,
+            },
+        )
 
     payload = {
         "model": task_model_id,
@@ -308,6 +328,7 @@ async def generate_follow_ups(
             "task_body": form_data,
             "chat_id": form_data.get("chat_id", None),
         },
+        
     }
 
     # Process the payload through the pipeline
@@ -316,6 +337,11 @@ async def generate_follow_ups(
     except Exception as e:
         raise e
 
+    # 채팅형태:후속질문 AXL:김정민 20250709 추가
+    payload = {
+        **payload,
+        "chat_type": "03"
+    }
     try:
         return await generate_chat_completion(request, form_data=payload, user=user)
     except Exception as e:
@@ -364,14 +390,21 @@ async def generate_chat_tags(
         f"generating chat tags using model {task_model_id} for user {user.email} "
     )
 
-    if request.app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE != "":
-        template = request.app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE
+    # AXL: 김정민 20250709 
+    # AXL-Code 모델은 별도의 쿼리 생성 템플릿을 사용하지 않고 Messages를 그대로 사용
+    content = None
+    if model_id == "1234.AXLR-Code": 
+        content = form_data["messages"]
     else:
-        template = DEFAULT_TAGS_GENERATION_PROMPT_TEMPLATE
-
-    content = tags_generation_template(
-        template, form_data["messages"], {"name": user.name}
-    )
+        template = None
+        if request.app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE != "":
+            template = request.app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE
+        else:
+            template = DEFAULT_TAGS_GENERATION_PROMPT_TEMPLATE
+            
+        content = tags_generation_template(
+            template, form_data["messages"], {"name": user.name}
+        )
 
     payload = {
         "model": task_model_id,
@@ -390,6 +423,12 @@ async def generate_chat_tags(
         payload = await process_pipeline_inlet_filter(request, payload, user, models)
     except Exception as e:
         raise e
+
+    # 채팅형태:태그추출 AXL:김정민 20250709 추가
+    payload = {
+        **payload,
+        "chat_type": "05"  
+    }
 
     try:
         return await generate_chat_completion(request, form_data=payload, user=user)
@@ -519,15 +558,22 @@ async def generate_queries(
         f"generating {type} queries using model {task_model_id} for user {user.email}"
     )
 
-    if (request.app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE).strip() != "":
-        template = request.app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE
+    # AXL: 김정민 20250709 
+    # AXL-Code 모델은 별도의 쿼리 생성 템플릿을 사용하지 않고 Messages를 그대로 사용
+    content = None
+    if model_id == "1234.AXLR-Code": 
+        content = form_data["messages"]
     else:
-        template = DEFAULT_QUERY_GENERATION_PROMPT_TEMPLATE
+        template = None
+        if (request.app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE).strip() != "":
+            template = request.app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE
+        else:
+            template = DEFAULT_QUERY_GENERATION_PROMPT_TEMPLATE
 
-    content = query_generation_template(
-        template, form_data["messages"], {"name": user.name}
-    )
-
+        content = query_generation_template(
+            template, form_data["messages"], {"name": user.name}
+        )
+ 
     payload = {
         "model": task_model_id,
         "messages": [{"role": "user", "content": content}],
@@ -537,7 +583,7 @@ async def generate_queries(
             "task": str(TASKS.QUERY_GENERATION),
             "task_body": form_data,
             "chat_id": form_data.get("chat_id", None),
-        },
+        },        
     }
 
     # Process the payload through the pipeline
@@ -545,6 +591,12 @@ async def generate_queries(
         payload = await process_pipeline_inlet_filter(request, payload, user, models)
     except Exception as e:
         raise e
+
+    # 채팅형태:검색어찾기 AXL:김정민 20250709 추가
+    payload = {
+        **payload,
+        "chat_type": "01" 
+    }
 
     try:
         return await generate_chat_completion(request, form_data=payload, user=user)
