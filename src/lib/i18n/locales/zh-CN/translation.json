@@ -932,7 +932,7 @@
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "糟糕！此链接似乎为无效链接。请检查后重试。",
 	"Oops! There are files still uploading. Please wait for the upload to complete.": "糟糕！仍有文件正在上传。请等待上传完成。",
 	"Oops! There was an error in the previous response.": "糟糕！之前的回复中出现了错误。",
-	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "糟糕！您正在使用不受支持的方法（仅运行前端服务）。请通过后端服务提供 WebUI 界面。",
+	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "糟糕！您正在使用不受支持的方法（仅运行前端服务）。请通过后端服务提供 WebUI。",
 	"Open file": "打开文件",
 	"Open in full screen": "全屏打开",
 	"Open modal to configure connection": "打开外部连接配置弹窗",
