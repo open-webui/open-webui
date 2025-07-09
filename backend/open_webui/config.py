@@ -4,6 +4,7 @@ import os
 import shutil
 import base64
 import redis
+import random
 
 from datetime import datetime
 from pathlib import Path
@@ -957,23 +958,58 @@ except Exception as e:
     log.exception(f"Error loading DEFAULT_PROMPT_SUGGESTIONS: {e}")
     default_prompt_suggestions = []
 if default_prompt_suggestions == []:
-    default_prompt_suggestions = [
+    all_suggestions = [
+        {
+            "title": ["Find Document"],
+            "content": "Help me find the official document, policy, or guideline related to",
+            "icon_name": "find_in_page",
+            "icon_color": "#36383b"
+        },
+        {
+            "title": ["Summarize Text"],
+            "content": "Please summarize the following text and highlight the key points or conclusions",
+            "icon_name": "lightbulb",
+            "icon_color": "#20a17f"
+        },
+        {
+            "title": ["Draft Message"],
+            "content": "Help me draft a message, such as an email or memo regarding the following",
+            "icon_name": "contract_edit",
+            "icon_color": "#cc7a00"
+        },
+        {
+            "title": ["Compare Content"],
+            "content": "Compare the following documents/text and highlight the key differences or similarities.",
+            "icon_name": "library_books",
+            "icon_color": "#36383b"
+        },
+        {
+            "title": ["Explain Simply"],
+            "content": "Explain the following in a simple and easy-to-understand way",
+            "icon_name": "psychology",
+            "icon_color": "#008a57"
+        },
+        {
+            "title": ["Make a Plan"],
+            "content": "Help me create a step-by-step plan to accomplish the following",
+            "icon_name": "flowchart",
+            "icon_color": "#9239FF"
+        },
         {
             "title": ["Analyze Data"],
-            "content": "Help me analyze the following dataset and identify key pattern or insights.",
-            "icon":0
+            "content": "Help me analyze the following dataset and identify key patterns and insights",
+            "icon_name": "finance_mode",
+            "icon_color": "#20a17f"
         },
         {
-            "title": ["Summarize text"],
-            "content": "Help me summarize the following.",
-            "icon":1
-        },
-        {
-            "title": ["Brainstorm"],
-            "content": "Help me brainstorm ideas for [project/topic/goal].",
-            "icon":2
+            "title": ["Brainstorm Ideas"],
+            "content": "Let's brainstorm creative ideas for the following",
+            "icon_name": "lightbulb",
+            "icon_color": "#cc7a00"
         }
     ]
+
+    default_prompt_suggestions = random.sample(all_suggestions, 3) if len(all_suggestions) > 3 else all_suggestions
 
 DEFAULT_PROMPT_SUGGESTIONS = PersistentConfig(
     "DEFAULT_PROMPT_SUGGESTIONS",
@@ -1427,7 +1463,7 @@ FOLLOW_UP_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
 DEFAULT_FOLLOW_UP_GENERATION_PROMPT_TEMPLATE = """### Task:
 Suggest 3-5 relevant follow-up questions or prompts that the user might naturally ask next in this conversation as a **user**, based on the chat history, to help continue or deepen the discussion.
 ### Guidelines:
-- Write all follow-up questions from the user’s point of view, directed to the assistant.
+- Write all follow-up questions from the user's point of view, directed to the assistant.
 - Make questions concise, clear, and directly related to the discussed topic(s).
 - Only suggest follow-ups that make sense given the chat content and do not repeat what was already covered.
 - If the conversation is very short or not specific, suggest more general (but relevant) follow-ups the user might ask.
