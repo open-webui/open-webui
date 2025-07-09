@@ -18,7 +18,9 @@
 	import Tooltip from '../Tooltip.svelte';
 </script>
 
-<div class="flex gap-0.5 p-0.5 rounded-lg shadow-lg dark:bg-gray-800 min-w-fit">
+<div
+	class="flex gap-0.5 p-0.5 rounded-lg shadow-lg bg-white text-gray-800 dark:text-white dark:bg-gray-800 min-w-fit"
+>
 	<Tooltip placement="top" content={$i18n.t('H1')}>
 		<button
 			on:click={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()}
