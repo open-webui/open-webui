@@ -104,6 +104,9 @@
 	let files = [];
 	let messages = [];
 
+	let wordCount = 0;
+	let charCount = 0;
+
 	let versionIdx = null;
 	let selectedModelId = null;
 
@@ -878,12 +881,12 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 								<div class="flex items-center gap-1 px-1">
 									<div>
 										{$i18n.t('{{count}} words', {
-											count: editor.storage.characterCount.words()
+											count: wordCount
 										})}
 									</div>
 									<div>
 										{$i18n.t('{{count}} characters', {
-											count: editor.storage.characterCount.characters()
+											count: charCount
 										})}
 									</div>
 								</div>
@@ -949,6 +952,11 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 							onChange={(content) => {
 								note.data.content.html = content.html;
 								note.data.content.md = content.md;
+
+								if (editor) {
+									wordCount = editor.storage.characterCount.words();
+									charCount = editor.storage.characterCount.characters();
+								}
 							}}
 						/>
 					</div>

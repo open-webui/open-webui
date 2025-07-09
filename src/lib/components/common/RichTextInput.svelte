@@ -499,7 +499,9 @@
 				TaskItem.configure({
 					nested: true
 				}),
-				CharacterCount,
+				CharacterCount.configure({
+					mode: 'nodeSize'
+				}),
 				...(autocomplete
 					? [
 							AIAutocompletion.configure({
