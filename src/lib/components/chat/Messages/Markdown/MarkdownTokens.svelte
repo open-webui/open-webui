@@ -222,7 +222,7 @@
 		{:else}
 			<ul dir="auto" class="">
 				{#each token.items as item, itemIdx}
-					<li class="text-start {item?.task ? 'flex -translate-x-7 gap-3.5 ' : ''}">
+					<li class="text-start {item?.task ? 'flex -translate-x-6.5 gap-3 ' : ''}">
 						{#if item?.task}
 							<input
 								class=""
