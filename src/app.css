@@ -336,13 +336,14 @@ input[type='number'] {
 	padding: 0;
 
 	li {
-		align-items: center;
+		align-items: start;
 
 		display: flex;
 
 		> label {
 			flex: 0 0 auto;
 			margin-right: 0.5rem;
+			margin-top: 0.2rem;
 			user-select: none;
 			display: flex;
 		}
