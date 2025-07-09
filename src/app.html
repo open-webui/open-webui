@@ -92,14 +92,14 @@
 			})();
 		</script>
 
-		<title>Open WebUI</title>
+		<title>GovGPT</title>
 		%sveltekit.head%
 	</head>
 
 	<body data-sveltekit-preload-data="hover">
 		<div id="app" style="opacity: 1; transition: opacity 0.5s ease;">%sveltekit.body%</div>
 
-		<div id="splash-screen" class="bg-circle">
+		<div id="splash-screen" >
 			<img
 				id="logo"
 				style="position: absolute; width: auto; height: 6rem; top: 44%; left: 50%; transform: translateX(-50%);"
@@ -134,7 +134,9 @@
 		height: 100%;
 		opacity: 1;
 		transition: opacity 0.5s ease;
-	}
+		background: linear-gradient(288deg, rgba(255, 255, 255, 0.20) 84.56%, rgba(255, 255, 255, 0.11) 109.37%), radial-gradient(82.69% 65.48% at 72.6% 34.85%, rgba(255, 109, 193, 0.20) 0%, rgba(255, 109, 193, 0.00) 100%), radial-gradient(74.08% 56.97% at 50% 64.75%, rgba(0, 229, 255, 0.17) 0%, rgba(0, 229, 255, 0.00) 100%), var(--neutrals-white, #FFF);
+    	background-color: #eceef1;
+  	}
 
 	html.her #splash-screen {
 		background: #983724;

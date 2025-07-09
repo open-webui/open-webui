@@ -4,10 +4,7 @@
 	import { onMount, getContext, createEventDispatcher } from 'svelte';
 	import { settings, WEBUI_NAME } from '$lib/stores';
 	import { WEBUI_VERSION } from '$lib/constants';
-	import News from '../icons/News.svelte';
-	import Analytics from '../icons/Analytics.svelte';
-	import Forum from '../icons/Forum.svelte';
-	import EditNotes from '../icons/EditNotes.svelte';
+	import MaterialIcon from '$lib/components/common/MaterialIcon.svelte';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -17,7 +14,6 @@
 	export let inputValue = '';
 
 	let sortedPrompts = [];
-	let iconMap = [News,Analytics,Forum,EditNotes];
 
 	const fuseOptions = {
 		keys: ['content', 'title'],
@@ -97,13 +93,11 @@
 						style="animation-delay: {idx * 60}ms;"
 						on:click={() => dispatch('select', prompt.content)}
 					>
-						<span class="relative shrink-0 w-[18px] h-[18px] flex items-center justify-center">
-							{#if prompt.icon}
-								<svelte:component this={iconMap[prompt.icon]} className="w-[18px] h-[18px]" />
+							{#if prompt.icon_name}
+								<MaterialIcon name={prompt.icon_name} className="w-[18px] h-[18px]" color="{prompt.icon_color}" />
 							{:else}
-								<svelte:component this={iconMap[0]} className="w-[18px] h-[18px]" />
+								<MaterialIcon name="lightbulb" className="w-[18px] h-[18px]" />
 							{/if}
-						</span>
 						<span class="font-heading font-medium text-[14px] leading-[22px] text-neutral-800 text-left whitespace-nowrap">
 							{prompt.title?.[0] ?? prompt.content}
 						</span>

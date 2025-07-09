@@ -350,7 +350,7 @@ input[type='number'] {
 	float: left;
 	/* Below color is from tailwind, and has the proper contrast
 	text-gray-600 from: https://tailwindcss.com/docs/color */
-	color: #676767;
+	color: #A5A6A9;
 	pointer-events: none;
 
 	@apply line-clamp-1 absolute;

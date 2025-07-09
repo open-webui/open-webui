@@ -514,21 +514,17 @@
 	bind:this={navElement}
 	id="sidebar"
 	role="navigation"
-	class=" h-screen max-h-[100dvh] min-h-screen select-none border-0 {$showSidebar
-		? 'md:relative w-[300px] max-w-[300px]'
-		: 'w-[80px]'} {$isApp
-		? `ml-[4.5rem] md:ml-0 `
+	class=" h-screen max-h-[100dvh] min-h-screen select-none shadown-none border-0 {$showSidebar
+		? `md:relative w-[300px] max-w-[300px] ${$mobile ? 'w-[0px] absolute' : 'w-[80px]'}`
+		: $mobile ? 'w-[0px] absolute' : 'w-[80px]'} {$isApp
+		? `ml-[4.5rem] md:ml-0`
 		: 'transition-width duration-200 ease-in-out'} shadow-md shrink-0 text-gray-900 dark:bg-gray-950 dark:text-gray-200 text-sm z-50 top-0 left-0
+	}
         "
 	data-state={$showSidebar}
 >
 	<div
-		class="flex flex-col justify-between max-h-[100dvh] overflow-x-hidden z-50 bg-white"
-		style="
-    border-radius: 0px;
-    background: var(--Schemes-Surface, #FFF);
-    box-shadow: 0px 0px 16px -8px rgba(28, 27, 27, 0.04);
-  "
+		class="flex flex-col justify-between max-h-[100dvh] overflow-x-hidden z-50 bg-white shadow-[0px_48px_96px_0px_rgba(0,0,0,0.08)]"
 	>
 		<div class="sidebar__top h-[calc(100vh-58px)] overflow-y-auto">
 			<div
@@ -536,6 +532,10 @@
 				class:justify-center={!$showSidebar}
 			>
 				<!-- Menu Icon behaves like other sidebar buttons -->
+				{#if $mobile}
+				<img src="/logo-dark.png" alt="GovGPT Logo" class="h-[50px] p-4"/>
+				{:else}
+				
 				<a
 					class="p-[14px] flex items-center rounded-lg transition-all duration-300 ease-in-out"
 					class:justify-center={!$showSidebar}
@@ -549,9 +549,21 @@
 						<MaterialIcon name="menu" size="1.1rem" />
 					</div>
 				</a>
+				{/if}
 
 				<!-- Search icon only when sidebar is expanded, right aligned -->
 				{#if $showSidebar}
+					{#if $mobile}
+					<div class="flex-1 flex justify-end transition-all duration-300 ease-in-out">
+						<button
+							class="hover:bg-gray-100 dark:hover:bg-gray-900 outline-none rounded-lg p-2 transition-all duration-300 ease-in-out"
+							on:click={onSidebarClick}
+							draggable="false"
+						>
+							<MaterialIcon name="close" size="1.1rem" />
+						</button>
+					</div>
+				{:else}
 					<div class="flex-1 flex justify-end transition-all duration-300 ease-in-out">
 						<button
 							class="hover:bg-gray-100 dark:hover:bg-gray-900 outline-none rounded-lg p-2 transition-all duration-300 ease-in-out"
@@ -563,6 +575,7 @@
 							<MaterialIcon name="search" size="1.1rem" />
 						</button>
 					</div>
+					{/if}
 				{/if}
 			</div>
 
