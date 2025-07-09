@@ -70,6 +70,8 @@
 	import TaskItem from '@tiptap/extension-task-item';
 	import TaskList from '@tiptap/extension-task-list';
 
+	import CharacterCount from '@tiptap/extension-character-count';
+
 	import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 	import Placeholder from '@tiptap/extension-placeholder';
 	import StarterKit from '@tiptap/starter-kit';
@@ -91,6 +93,8 @@
 
 	// create a lowlight instance with all languages loaded
 	const lowlight = createLowlight(all);
+
+	export let editor = null;
 
 	export let className = 'input-prose';
 	export let placeholder = 'Type here...';
@@ -116,7 +120,6 @@
 	let floatingMenuElement = null;
 	let bubbleMenuElement = null;
 	let element;
-	let editor;
 
 	const options = {
 		throwOnError: false
@@ -496,6 +499,7 @@
 				TaskItem.configure({
 					nested: true
 				}),
+				CharacterCount,
 				...(autocomplete
 					? [
 							AIAutocompletion.configure({

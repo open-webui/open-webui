@@ -82,6 +82,7 @@
 
 	export let id: null | string = null;
 
+	let editor = null;
 	let note = null;
 
 	const newNote = {
@@ -872,6 +873,21 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 
 								<span> You </span>
 							</button>
+
+							{#if editor}
+								<div class="flex items-center gap-1 px-1">
+									<div>
+										{$i18n.t('{{count}} words', {
+											count: editor.storage.characterCount.words()
+										})}
+									</div>
+									<div>
+										{$i18n.t('{{count}} characters', {
+											count: editor.storage.characterCount.characters()
+										})}
+									</div>
+								</div>
+							{/if}
 						</div>
 					</div>
 
@@ -923,6 +939,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 
 						<RichTextInput
 							bind:this={inputElement}
+							bind:editor
 							className="input-prose-sm px-0.5"
 							bind:value={note.data.content.json}
 							html={note.data?.content?.html}
