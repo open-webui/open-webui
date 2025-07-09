@@ -875,7 +875,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     tools_dict = {}
 
     if tool_ids:
-        tools_dict = get_tools(
+        tools_dict = await get_tools(
             request,
             tool_ids,
             user,

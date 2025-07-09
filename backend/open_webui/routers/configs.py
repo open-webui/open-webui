@@ -1,14 +1,15 @@
-from fastapi import APIRouter, Depends, Request, HTTPException
-from pydantic import BaseModel, ConfigDict
-
 from typing import Optional
 
+from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel, ConfigDict
+
+from open_webui.config import BannerModel, get_config, save_config
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.config import get_config, save_config
-from open_webui.config import BannerModel
-
-from open_webui.utils.tools import get_tool_server_data, get_tool_servers_data
-
+from open_webui.utils.tools import get_tool_server_data
+from open_webui.utils.tools_cache import (
+    get_cached_tool_servers,
+    set_and_cache_tool_servers,
+)
 
 router = APIRouter()
 
@@ -96,8 +97,10 @@ class ToolServersConfigForm(BaseModel):
 
 @router.get("/tool_servers", response_model=ToolServersConfigForm)
 async def get_tool_servers_config(request: Request, user=Depends(get_admin_user)):
+    tool_servers = await get_cached_tool_servers(request)
+
     return {
-        "TOOL_SERVER_CONNECTIONS": request.app.state.config.TOOL_SERVER_CONNECTIONS,
+        "TOOL_SERVER_CONNECTIONS": [server.get("__raw", {}) for server in tool_servers],
     }
 
 
@@ -107,16 +110,14 @@ async def set_tool_servers_config(
     form_data: ToolServersConfigForm,
     user=Depends(get_admin_user),
 ):
-    request.app.state.config.TOOL_SERVER_CONNECTIONS = [
+    connections = [
         connection.model_dump() for connection in form_data.TOOL_SERVER_CONNECTIONS
     ]
 
-    request.app.state.TOOL_SERVERS = await get_tool_servers_data(
-        request.app.state.config.TOOL_SERVER_CONNECTIONS
-    )
+    await set_and_cache_tool_servers(request, connections)
 
     return {
-        "TOOL_SERVER_CONNECTIONS": request.app.state.config.TOOL_SERVER_CONNECTIONS,
+        "TOOL_SERVER_CONNECTIONS": connections,
     }
 
 
@@ -170,19 +171,41 @@ async def get_code_execution_config(request: Request, user=Depends(get_admin_use
     return {
         "ENABLE_CODE_EXECUTION": request.app.state.config.ENABLE_CODE_EXECUTION,
         "CODE_EXECUTION_ENGINE": request.app.state.config.CODE_EXECUTION_ENGINE,
-        "CODE_EXECUTION_JUPYTER_URL": request.app.state.config.CODE_EXECUTION_JUPYTER_URL,
-        "CODE_EXECUTION_JUPYTER_AUTH": request.app.state.config.CODE_EXECUTION_JUPYTER_AUTH,
-        "CODE_EXECUTION_JUPYTER_AUTH_TOKEN": request.app.state.config.CODE_EXECUTION_JUPYTER_AUTH_TOKEN,
-        "CODE_EXECUTION_JUPYTER_AUTH_PASSWORD": request.app.state.config.CODE_EXECUTION_JUPYTER_AUTH_PASSWORD,
-        "CODE_EXECUTION_JUPYTER_TIMEOUT": request.app.state.config.CODE_EXECUTION_JUPYTER_TIMEOUT,
+        "CODE_EXECUTION_JUPYTER_URL": (
+            request.app.state.config.CODE_EXECUTION_JUPYTER_URL
+        ),
+        "CODE_EXECUTION_JUPYTER_AUTH": (
+            request.app.state.config.CODE_EXECUTION_JUPYTER_AUTH
+        ),
+        "CODE_EXECUTION_JUPYTER_AUTH_TOKEN": (
+            request.app.state.config.CODE_EXECUTION_JUPYTER_AUTH_TOKEN
+        ),
+        "CODE_EXECUTION_JUPYTER_AUTH_PASSWORD": (
+            request.app.state.config.CODE_EXECUTION_JUPYTER_AUTH_PASSWORD
+        ),
+        "CODE_EXECUTION_JUPYTER_TIMEOUT": (
+            request.app.state.config.CODE_EXECUTION_JUPYTER_TIMEOUT
+        ),
         "ENABLE_CODE_INTERPRETER": request.app.state.config.ENABLE_CODE_INTERPRETER,
         "CODE_INTERPRETER_ENGINE": request.app.state.config.CODE_INTERPRETER_ENGINE,
-        "CODE_INTERPRETER_PROMPT_TEMPLATE": request.app.state.config.CODE_INTERPRETER_PROMPT_TEMPLATE,
-        "CODE_INTERPRETER_JUPYTER_URL": request.app.state.config.CODE_INTERPRETER_JUPYTER_URL,
-        "CODE_INTERPRETER_JUPYTER_AUTH": request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH,
-        "CODE_INTERPRETER_JUPYTER_AUTH_TOKEN": request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_TOKEN,
-        "CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD": request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD,
-        "CODE_INTERPRETER_JUPYTER_TIMEOUT": request.app.state.config.CODE_INTERPRETER_JUPYTER_TIMEOUT,
+        "CODE_INTERPRETER_PROMPT_TEMPLATE": (
+            request.app.state.config.CODE_INTERPRETER_PROMPT_TEMPLATE
+        ),
+        "CODE_INTERPRETER_JUPYTER_URL": (
+            request.app.state.config.CODE_INTERPRETER_JUPYTER_URL
+        ),
+        "CODE_INTERPRETER_JUPYTER_AUTH": (
+            request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH
+        ),
+        "CODE_INTERPRETER_JUPYTER_AUTH_TOKEN": (
+            request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_TOKEN
+        ),
+        "CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD": (
+            request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD
+        ),
+        "CODE_INTERPRETER_JUPYTER_TIMEOUT": (
+            request.app.state.config.CODE_INTERPRETER_JUPYTER_TIMEOUT
+        ),
     }
 
 
@@ -237,19 +260,41 @@ async def set_code_execution_config(
     return {
         "ENABLE_CODE_EXECUTION": request.app.state.config.ENABLE_CODE_EXECUTION,
         "CODE_EXECUTION_ENGINE": request.app.state.config.CODE_EXECUTION_ENGINE,
-        "CODE_EXECUTION_JUPYTER_URL": request.app.state.config.CODE_EXECUTION_JUPYTER_URL,
-        "CODE_EXECUTION_JUPYTER_AUTH": request.app.state.config.CODE_EXECUTION_JUPYTER_AUTH,
-        "CODE_EXECUTION_JUPYTER_AUTH_TOKEN": request.app.state.config.CODE_EXECUTION_JUPYTER_AUTH_TOKEN,
-        "CODE_EXECUTION_JUPYTER_AUTH_PASSWORD": request.app.state.config.CODE_EXECUTION_JUPYTER_AUTH_PASSWORD,
-        "CODE_EXECUTION_JUPYTER_TIMEOUT": request.app.state.config.CODE_EXECUTION_JUPYTER_TIMEOUT,
+        "CODE_EXECUTION_JUPYTER_URL": (
+            request.app.state.config.CODE_EXECUTION_JUPYTER_URL
+        ),
+        "CODE_EXECUTION_JUPYTER_AUTH": (
+            request.app.state.config.CODE_EXECUTION_JUPYTER_AUTH
+        ),
+        "CODE_EXECUTION_JUPYTER_AUTH_TOKEN": (
+            request.app.state.config.CODE_EXECUTION_JUPYTER_AUTH_TOKEN
+        ),
+        "CODE_EXECUTION_JUPYTER_AUTH_PASSWORD": (
+            request.app.state.config.CODE_EXECUTION_JUPYTER_AUTH_PASSWORD
+        ),
+        "CODE_EXECUTION_JUPYTER_TIMEOUT": (
+            request.app.state.config.CODE_EXECUTION_JUPYTER_TIMEOUT
+        ),
         "ENABLE_CODE_INTERPRETER": request.app.state.config.ENABLE_CODE_INTERPRETER,
         "CODE_INTERPRETER_ENGINE": request.app.state.config.CODE_INTERPRETER_ENGINE,
-        "CODE_INTERPRETER_PROMPT_TEMPLATE": request.app.state.config.CODE_INTERPRETER_PROMPT_TEMPLATE,
-        "CODE_INTERPRETER_JUPYTER_URL": request.app.state.config.CODE_INTERPRETER_JUPYTER_URL,
-        "CODE_INTERPRETER_JUPYTER_AUTH": request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH,
-        "CODE_INTERPRETER_JUPYTER_AUTH_TOKEN": request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_TOKEN,
-        "CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD": request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD,
-        "CODE_INTERPRETER_JUPYTER_TIMEOUT": request.app.state.config.CODE_INTERPRETER_JUPYTER_TIMEOUT,
+        "CODE_INTERPRETER_PROMPT_TEMPLATE": (
+            request.app.state.config.CODE_INTERPRETER_PROMPT_TEMPLATE
+        ),
+        "CODE_INTERPRETER_JUPYTER_URL": (
+            request.app.state.config.CODE_INTERPRETER_JUPYTER_URL
+        ),
+        "CODE_INTERPRETER_JUPYTER_AUTH": (
+            request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH
+        ),
+        "CODE_INTERPRETER_JUPYTER_AUTH_TOKEN": (
+            request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_TOKEN
+        ),
+        "CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD": (
+            request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD
+        ),
+        "CODE_INTERPRETER_JUPYTER_TIMEOUT": (
+            request.app.state.config.CODE_INTERPRETER_JUPYTER_TIMEOUT
+        ),
     }
 
 

@@ -120,8 +120,6 @@ from open_webui.config import (
     ENABLE_BASE_MODELS_CACHE,
     # Thread pool size for FastAPI/AnyIO
     THREAD_POOL_SIZE,
-    # Tool Server Configs
-    TOOL_SERVER_CONNECTIONS,
     # Code Execution
     ENABLE_CODE_EXECUTION,
     CODE_EXECUTION_ENGINE,
@@ -630,7 +628,6 @@ app.state.OPENAI_MODELS = {}
 #
 ########################################
 
-app.state.config.TOOL_SERVER_CONNECTIONS = TOOL_SERVER_CONNECTIONS
 app.state.TOOL_SERVERS = []
 
 ########################################

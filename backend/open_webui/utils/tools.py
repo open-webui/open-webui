@@ -1,48 +1,28 @@
+import asyncio
+import copy
 import inspect
 import logging
 import re
-import inspect
+from functools import partial, update_wrapper
+from typing import Any, Awaitable, Callable, Dict, List, Optional, get_type_hints
+
 import aiohttp
-import asyncio
 import yaml
-
-from pydantic import BaseModel
-from pydantic.fields import FieldInfo
-from typing import (
-    Any,
-    Awaitable,
-    Callable,
-    get_type_hints,
-    get_args,
-    get_origin,
-    Dict,
-    List,
-    Tuple,
-    Union,
-    Optional,
-    Type,
-)
-from functools import update_wrapper, partial
-
-
 from fastapi import Request
-from pydantic import BaseModel, Field, create_model
-
 from langchain_core.utils.function_calling import (
     convert_to_openai_function as convert_pydantic_model_to_openai_function_spec,
 )
+from pydantic import BaseModel, Field, create_model
 
-
+from open_webui.env import (
+    AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
+    AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA,
+    SRC_LOG_LEVELS,
+)
 from open_webui.models.tools import Tools
 from open_webui.models.users import UserModel
 from open_webui.utils.plugin import load_tool_module_by_id
-from open_webui.env import (
-    SRC_LOG_LEVELS,
-    AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA,
-    AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
-)
-
-import copy
+from open_webui.utils.tools_cache import get_cached_tool_servers
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -67,7 +47,7 @@ def get_async_tool_function_and_apply_extra_params(
         return new_function
 
 
-def get_tools(
+async def get_tools(
     request: Request, tool_ids: list[str], user: UserModel, extra_params: dict
 ) -> dict[str, dict]:
     tools_dict = {}
@@ -77,15 +57,15 @@ def get_tools(
         if tool is None:
             if tool_id.startswith("server:"):
                 server_idx = int(tool_id.split(":")[1])
-                tool_server_connection = (
-                    request.app.state.config.TOOL_SERVER_CONNECTIONS[server_idx]
-                )
                 tool_server_data = None
-                for server in request.app.state.TOOL_SERVERS:
+                tool_servers = await get_cached_tool_servers(request)
+                for server in tool_servers:
                     if server["idx"] == server_idx:
                         tool_server_data = server
                         break
                 assert tool_server_data is not None
+
+                tool_server_connection = tool_server_data.get("__raw", {})
                 specs = tool_server_data.get("specs", [])
 
                 for spec in specs:
@@ -187,8 +167,9 @@ def get_tools(
                     "spec": spec,
                     # Misc info
                     "metadata": {
-                        "file_handler": hasattr(module, "file_handler")
-                        and module.file_handler,
+                        "file_handler": (
+                            hasattr(module, "file_handler") and module.file_handler
+                        ),
                         "citation": hasattr(module, "citation") and module.citation,
                     },
                 }
@@ -541,6 +522,8 @@ async def get_tool_servers_data(
                 "openapi": openapi_data,
                 "info": response.get("info"),
                 "specs": response.get("specs"),
+                "access_control": server.get("config", {}).get("access_control", None),
+                "__raw": server,  # Preserve original connection configuration
             }
         )
 

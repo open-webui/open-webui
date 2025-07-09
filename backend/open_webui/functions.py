@@ -232,7 +232,7 @@ async def generate_function_chat_completion(
         "__metadata__": metadata,
         "__request__": request,
     }
-    extra_params["__tools__"] = get_tools(
+    extra_params["__tools__"] = await get_tools(
         request,
         tool_ids,
         user,
