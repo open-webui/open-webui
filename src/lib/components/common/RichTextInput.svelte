@@ -65,6 +65,7 @@
 	import TableHeader from '@tiptap/extension-table-header';
 	import TableCell from '@tiptap/extension-table-cell';
 
+	import Link from '@tiptap/extension-link';
 	import Underline from '@tiptap/extension-underline';
 	import TaskItem from '@tiptap/extension-task-item';
 	import TaskList from '@tiptap/extension-task-list';
@@ -482,6 +483,10 @@
 				Highlight,
 				Typography,
 				Underline,
+				Link.configure({
+					openOnClick: true,
+					linkOnPaste: true
+				}),
 				Placeholder.configure({ placeholder }),
 				Table.configure({ resizable: true }),
 				TableRow,
