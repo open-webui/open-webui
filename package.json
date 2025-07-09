@@ -111,6 +111,7 @@
 		"mermaid": "^11.6.0",
 		"paneforge": "^0.0.6",
 		"panzoom": "^9.4.3",
+		"pdfjs-dist": "^5.3.93",
 		"prosemirror-collab": "^1.3.1",
 		"prosemirror-commands": "^1.6.0",
 		"prosemirror-example-setup": "^1.2.3",

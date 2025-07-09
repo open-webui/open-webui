@@ -471,6 +471,12 @@ def get_sources_from_files(
                 "documents": [[doc.get("content") for doc in file.get("docs")]],
                 "metadatas": [[doc.get("metadata") for doc in file.get("docs")]],
             }
+        elif file.get("type") == "text":
+            # Text File
+            query_result = {
+                "documents": [[file.get("content")]],
+                "metadatas": [[{"file_id": file.get("id"), "name": file.get("name")}]],
+            }
         elif file.get("type") == "note":
             # Note Attached
             note = Notes.get_note_by_id(file.get("id"))

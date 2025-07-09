@@ -1507,3 +1507,74 @@ export const parseJsonValue = (value: string): any => {
 
 	return value;
 };
+
+export const extractContentFromFile = async (file, pdfjsLib = null) => {
+	// Known text file extensions for extra fallback
+	const textExtensions = [
+		'.txt',
+		'.md',
+		'.csv',
+		'.json',
+		'.js',
+		'.ts',
+		'.css',
+		'.html',
+		'.xml',
+		'.yaml',
+		'.yml',
+		'.rtf'
+	];
+
+	function getExtension(filename) {
+		const dot = filename.lastIndexOf('.');
+		return dot === -1 ? '' : filename.substr(dot).toLowerCase();
+	}
+
+	// Uses pdfjs to extract text from PDF
+	async function extractPdfText(file) {
+		if (!pdfjsLib) {
+			throw new Error('pdfjsLib is required for PDF extraction');
+		}
+
+		const arrayBuffer = await file.arrayBuffer();
+		const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+		let allText = '';
+		for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+			const page = await pdf.getPage(pageNum);
+			const content = await page.getTextContent();
+			const strings = content.items.map((item) => item.str);
+			allText += strings.join(' ') + '\n';
+		}
+		return allText;
+	}
+
+	// Reads file as text using FileReader
+	function readAsText(file) {
+		return new Promise((resolve, reject) => {
+			const reader = new FileReader();
+			reader.onload = () => resolve(reader.result);
+			reader.onerror = reject;
+			reader.readAsText(file);
+		});
+	}
+
+	const type = file.type || '';
+	const ext = getExtension(file.name);
+
+	// PDF check
+	if (type === 'application/pdf' || ext === '.pdf') {
+		return await extractPdfText(file);
+	}
+
+	// Text check (plain or common text-based)
+	if (type.startsWith('text/') || textExtensions.includes(ext)) {
+		return await readAsText(file);
+	}
+
+	// Fallback: try to read as text, if decodable
+	try {
+		return await readAsText(file);
+	} catch (err) {
+		throw new Error('Unsupported or non-text file type: ' + (file.name || type));
+	}
+};

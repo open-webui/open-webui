@@ -1597,7 +1597,7 @@
 		let files = JSON.parse(JSON.stringify(chatFiles));
 		files.push(
 			...(userMessage?.files ?? []).filter((item) =>
-				['doc', 'file', 'note', 'collection'].includes(item.type)
+				['doc', 'text', 'file', 'note', 'collection'].includes(item.type)
 			)
 		);
 		// Remove duplicates
