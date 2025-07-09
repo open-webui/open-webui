@@ -8,6 +8,7 @@ class TestAuths(AbstractIntegrationTest):
     def setup_class(cls):
         from open_webui.models.auths import Auths
         from open_webui.models.users import Users
+
         cls.auths = Auths
         cls.users = Users
 

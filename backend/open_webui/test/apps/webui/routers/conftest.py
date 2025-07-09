@@ -20,7 +20,7 @@ def get_fast_api_client():
         return c
 
 
-def _create_db_url(env_vars_postgres: dict, port:int) -> str:
+def _create_db_url(env_vars_postgres: dict, port: int) -> str:
     host = get_docker_ip()
     user = env_vars_postgres["POSTGRES_USER"]
     pw = env_vars_postgres["POSTGRES_PASSWORD"]
@@ -74,10 +74,11 @@ def postgres_container():
         yield get_fast_api_client()
 
     from open_webui.internal.db import SQLALCHEMY_DATABASE_URL
+
     assert SQLALCHEMY_DATABASE_URL == database_url
 
     docker_client.containers.get(container_name).remove(force=True)
-        
+
 
 @pytest.fixture
 def postgres_client(postgres_container):
@@ -101,4 +102,3 @@ def postgres_client(postgres_container):
     Session.commit()
 
     yield postgres_container
-    

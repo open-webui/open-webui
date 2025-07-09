@@ -3,7 +3,6 @@ from open_webui.test.util.abstract_integration_test import AbstractIntegrationTe
 from open_webui.test.util.mock_user import mock_user
 
 
-
 def _get_user_by_id(data, param):
     return next((item for item in data if item["id"] == param), None)
 
@@ -21,9 +20,11 @@ def _assert_user(data, id, **kwargs):
     for key, value in comparison_data.items():
         assert user[key] == value
 
+
 @pytest.fixture
 def postgres_client(postgres_client):
     from open_webui.models.users import Users
+
     users = Users
     users.insert_new_user(
         id="1",
@@ -46,7 +47,6 @@ def postgres_client(postgres_client):
 class TestUsers(AbstractIntegrationTest):
     BASE_PATH = "/api/v1/users"
 
-
     def test_users(self, postgres_client):
         self.fast_api_client = postgres_client
         app = self.fast_api_client.app
@@ -62,9 +62,15 @@ class TestUsers(AbstractIntegrationTest):
         # update role
         with mock_user(app, id="3"):
             response = self.fast_api_client.post(
-                self.create_url("/2/update"), json={"role": "admin", "name": "user 2", "email": "user2@openwebui.com", "profile_image_url": "/user2.png"}
+                self.create_url("/2/update"),
+                json={
+                    "role": "admin",
+                    "name": "user 2",
+                    "email": "user2@openwebui.com",
+                    "profile_image_url": "/user2.png",
+                },
             )
-    
+
         assert response.status_code == 200
         _assert_user([response.json()], "2", role="admin")
 
@@ -127,7 +133,11 @@ class TestUsers(AbstractIntegrationTest):
         with mock_user(app, id="1"):
             response = self.fast_api_client.get(self.create_url("/2"))
         assert response.status_code == 200
-        assert response.json() == {"active": False, "name": "user 2", "profile_image_url": "/user2.png"}
+        assert response.json() == {
+            "active": False,
+            "name": "user 2",
+            "profile_image_url": "/user2.png",
+        }
 
         # Update user by id
         with mock_user(app, id="2"):

@@ -1,7 +1,9 @@
 import io
+
 # import os
 # import boto3
 import pytest
+
 # from botocore.exceptions import ClientError
 # from moto import mock_aws
 # from gcp_storage_emulator.server import create_server

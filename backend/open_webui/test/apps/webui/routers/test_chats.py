@@ -31,6 +31,7 @@ class TestChats(AbstractIntegrationTest):
 
     def setup_method(self):
         from open_webui.models.chats import Chats
+
         self.chats = Chats
 
     def test_get_session_user_chat_list(self, postgres_client):
@@ -186,7 +187,10 @@ class TestChats(AbstractIntegrationTest):
     def test_clone_chat_by_id(self, postgres_client):
         chat_id = self.chats.get_chats()[0].id
         with mock_user(postgres_client.app, id="2"):
-            response = postgres_client.post(self.create_url(f"/{chat_id}/clone"), json={"title": "Clone of New Chat"})
+            response = postgres_client.post(
+                self.create_url(f"/{chat_id}/clone"),
+                json={"title": "Clone of New Chat"},
+            )
 
         assert response.status_code == 200
         print(response.content)

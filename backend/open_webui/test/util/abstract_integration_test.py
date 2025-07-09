@@ -9,7 +9,7 @@ class AbstractIntegrationTest:
     def create_url(self, path="", query_params=None):
         if self.BASE_PATH is None:
             raise Exception("BASE_PATH is not set")
-        
+
         query_parts = ""
         if query_params:
             query_parts = "&".join(
