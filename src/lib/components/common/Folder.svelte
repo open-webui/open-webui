@@ -122,7 +122,7 @@
 	{#if collapsible}
 		<Collapsible
 			bind:open
-			className="w-full "
+			className="w-full py-0"
 			buttonClassName="w-full"
 			onChange={(state) => {
 				dispatch('change', state);
@@ -130,80 +130,81 @@
 		>
 			<!-- svelte-ignore a11y-no-static-element-interactions -->
 			<div
-	class="w-full group rounded-md relative flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-900 transition-all duration-300 ease-in-out"
-	class:justify-center={!showSidebar}
-	class:justify-between={showSidebar}
->
-	<button class="px-[16px] py-[8px] w-full flex items-center text-xs font-medium" class:justify-center={!showSidebar}
-	class:justify-between={showSidebar}
-	class:py-1.5={showSidebar}
-	class:pl-2={showSidebar}
-
-	>
-		<!-- Icon -->
-		<div
-			class="flex items-center transition-all duration-300 ease-in-out"
-			class:mr-[8px]={showSidebar}
-		>
-			<MaterialIcon name="folder_open" size="1.1rem" />
-		</div>
-
-		<!-- Label + Chevron Wrapper -->
-		{#if showSidebar} 
-		<div class="w-full flex items-center justify-between">
-			<!-- Label -->
-			<div
-				class="self-center overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out"
-				class:max-w-[160px]={showSidebar}
-				class:max-w-0={!showSidebar}
-				class:opacity-100={showSidebar}
-				class:opacity-0={!showSidebar}
+				class="w-full group rounded-md relative flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-900 transition-all duration-300 ease-in-out"
+				class:justify-center={!showSidebar}
+				class:justify-between={showSidebar}
 			>
-				<div class="text-neutrals-800 text-[16px] leading-[24px] font-medium ">
-					{name}
-				</div>
-			</div>
+				<button
+					class="w-full py-1.5 px-2 flex items-center gap-1.5 text-xs font-medium"
+					class:justify-center={!showSidebar}
+					class:justify-between={showSidebar}
+					class:py-1.5={showSidebar}
+					class:py-2={showSidebar}
+				>
+					<!-- Icon -->
+					<div
+						class="self-center transition-all duration-300 ease-in-out"
+						class:mr-[15px]={showSidebar}
+					>
+						{#if open}
+							<MaterialIcon name="folder_open" size="1.1rem" />
+						{:else}
+							<MaterialIcon name="folder" size="1.1rem" />
+						{/if}
+					</div>
 
-			<!-- Chevron Icon -->
-			 {#if showSidebar}
-				<div
-				class="visible group-hover:invisible"
-				class:opacity-100={showSidebar}
-				class:opacity-0={!showSidebar}
-			>
-				{#if open}
-					<ChevronDown className="size-3" strokeWidth="2.5" />
-				{:else}
-					<ChevronRight className="size-3" strokeWidth="2.5" />
+					<!-- Label + Chevron Wrapper -->
+					{#if showSidebar}
+						<div class="w-full flex items-center justify-between">
+							<!-- Label -->
+							<div
+								class="self-center overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out"
+								class:max-w-[160px]={showSidebar}
+								class:max-w-0={!showSidebar}
+								class:opacity-100={showSidebar}
+								class:opacity-0={!showSidebar}
+							>
+								<div class="text-neutrals-800 text-[16px] leading-[24px] font-medium ">
+									{name}
+								</div>
+							</div>
+
+							<!-- Chevron Icon -->
+							{#if showSidebar}
+								<div
+									class="visible group-hover:invisible"
+									class:opacity-100={showSidebar}
+									class:opacity-0={!showSidebar}
+								>
+									{#if open}
+										<ChevronDown className="size-3" strokeWidth="2.5" />
+									{:else}
+										<ChevronRight className="size-3" strokeWidth="2.5" />
+									{/if}
+								</div>
+							{/if}
+						</div>
+					{/if}
+				</button>
+
+				<!-- Plus button -->
+				{#if onAdd && showSidebar}
+					<button
+						class="absolute z-10 right-8 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
+						on:pointerup={(e) => e.stopPropagation()}
+						on:click={(e) => {
+							e.stopPropagation();
+							onAdd();
+						}}
+					>
+						<Tooltip content={onAddLabel}>
+							<button class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto">
+								<Plus className="size-3" strokeWidth="2.5" />
+							</button>
+						</Tooltip>
+					</button>
 				{/if}
 			</div>
-			 {/if}
-			
-		</div>
-		{/if}
-	</button>
-
-	<!-- Plus button -->
-	{#if onAdd && showSidebar}
-		<button
-			class="absolute z-10 right-[14px] invisible group-hover:visible self-center flex items-center dark:text-gray-300"
-			on:pointerup={(e) => e.stopPropagation()}
-			on:click={(e) => {
-				e.stopPropagation();
-				onAdd();
-			}}
-		>
-			<Tooltip content={onAddLabel}>
-				<button
-					class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto"
-				>
-					<Plus className="size-3" strokeWidth="2.5" />
-				</button>
-			</Tooltip>
-		</button>
-	{/if}
-</div>
-
 
 			<div slot="content" class="w-full">
 				{#if showSidebar}

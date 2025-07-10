@@ -270,7 +270,7 @@
 				}}
 			>
 				<DocumentDuplicate strokeWidth="2" />
-				<div class="flex items-center">Duplicate</div>
+				<div class="flex items-center">{$i18n.t('Duplicate')}</div>
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
@@ -283,7 +283,7 @@
 				<div class="flex items-center">{$i18n.t('Archive')}</div>
 			</DropdownMenu.Item>
 
-			
+
 
 			<DropdownMenu.Sub>
 				<DropdownMenu.SubTrigger
