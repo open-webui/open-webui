@@ -294,12 +294,12 @@
 
 <div
 	bind:this={itemElement}
-	class=" w-full {className} relative group"
+	class=" w-full {className} relative group flex items-center"
 	draggable={draggable && !confirmEdit}
 >
 	{#if confirmEdit}
 		<div
-			class=" w-full flex justify-between rounded-lg px-[11px] py-[6px] {id === $chatId ||
+			class=" w-full flex justify-between text-neutrals-800 text-[16px] leading-[24px] font-medium {id === $chatId ||
 			confirmEdit
 				? 'bg-gray-200 dark:bg-gray-900'
 				: selected
@@ -345,7 +345,7 @@
 		</div>
 	{:else}
 		<a
-			class=" w-full flex justify-between rounded-lg px-[11px] py-[6px] {id === $chatId ||
+			class=" w-full flex items-center justify-between text-neutrals-800 text-[16px] leading-[24px] font-medium rounded-[8px] px-[16px] py-[14px] {id === $chatId ||
 			confirmEdit
 				? 'bg-gray-200 dark:bg-gray-900'
 				: selected
@@ -393,7 +393,7 @@
 				: 'invisible group-hover:visible from-gray-100 dark:from-gray-950'}
             absolute {className === 'pr-2'
 			? 'right-[8px]'
-			: 'right-1'} top-[4px] py-1 pr-0.5 mr-1.5 pl-5 bg-linear-to-l from-80%
+			: 'right-1'} top-[10px] py-1 pr-0.5 mr-1.5 pl-5 bg-linear-to-l from-80%
 
               to-transparent"
 		on:mouseenter={(e) => {

@@ -14,9 +14,12 @@ export default {
 					   100: 'var(--color-neutrals-100, #DEE0E3)',
 					   400: 'var(--color-neutrals-400, #A5A6A9)',
 					   700: 'var(--color-neutrals-700, #4F5154)',
+					   800: 'var(--color-neutrals-800, #36383B)',
+					   hover: 'var(--color-neutrals-hover, rgba(236, 238, 241, 0.72))',
 					   black: 'var(--color-neutrals-black, #1D1F22)',  
 					   white: 'var(--color-neutrals-white, #ffffff)', 
-					   error:'var(--color-neutrals-error, #D91938)'
+					   error:'var(--color-neutrals-error, #D91938)', 
+					   errorTone:'var(--color-neutrals-errorTone, #C2451E)',
 				},
 				primary:{
 					400: 'var(--color-primary-400, #0054F2)',  
@@ -42,6 +45,9 @@ export default {
 					1300:'var(--color-gray-1350, #EAEAEA)',
 				},
 			},
+			  boxShadow: {
+				'custom': '0px 24px 48px 0px rgba(0, 0, 0, 0.08)',
+			  },
 			typography: {
 				DEFAULT: {
 					css: {
@@ -58,10 +64,7 @@ export default {
 			},
 			backgroundImage: {
 				'login': "url('/login-bg.jpg')",
-			  },
-			boxShadow: {
-				'custom': '0px 48px 96px 0px rgba(0, 0, 0, 0.08)',
-			},
+			  }
 		}
 	},
 	plugins: [typography, containerQuries]

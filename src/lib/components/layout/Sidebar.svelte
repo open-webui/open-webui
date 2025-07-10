@@ -544,7 +544,7 @@
 				>
 					<div
 						class="self-center transition-all duration-300 ease-in-out"
-						class:mr-[15px]={$showSidebar}
+						class:mr-[8px]={$showSidebar}
 					>
 						<MaterialIcon name="menu" size="1.1rem" />
 					</div>
@@ -566,40 +566,7 @@
 				{/if}
 			</div>
 
-			{#if $user?.role === 'admin'}
-				<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
-					<a
-						class="grow flex items-center rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition-all duration-300 ease-in-out"
-						class:justify-center={!$showSidebar}
-						href="/home"
-						on:click={() => {
-							selectedChatId = null;
-							chatId.set('');
-
-							if ($mobile) {
-								showSidebar.set(false);
-							}
-						}}
-						draggable="false"
-					>
-						<!-- Icon -->
-						<div
-							class="self-center transition-all duration-300 ease-in-out"
-							class:mr-[15px]={$showSidebar}
-						>
-							<MaterialIcon name="home" size="1.1rem" />
-						</div>
-
-						<!-- Label -->
-						<div
-							class="self-center font-medium text-sm text-gray-850 dark:text-white leading-[22px] transition-all duration-300 ease-in-out"
-							class:hidden={!$showSidebar}
-						>
-							{$i18n.t('Home')}
-						</div>
-					</a>
-				</div>
-			{/if}
+			
 
 			<div class="flex justify-center text-gray-800 dark:text-gray-200">
 				<a
@@ -622,15 +589,15 @@
 					<div class="flex items-center">
 						<!-- Icon -->
 						<div
-							class="self-center transition-all duration-300 ease-in-out"
-							class:mr-[15px]={$showSidebar}
+							class="flex items-center  transition-all duration-300 ease-in-out"
+							class:mr-[8px]={$showSidebar}
 						>
 							<MaterialIcon name="border_color" size="1.1rem" />
 						</div>
 
 						<!-- Label -->
 						<div
-							class="self-center font-medium text-sm text-gray-850 dark:text-white leading-[22px] transition-all duration-300 ease-in-out"
+							class="self-center text-neutrals-800 text-[16px] leading-[24px] font-medium  dark:text-white transition-all duration-300 ease-in-out"
 							class:hidden={!$showSidebar}
 						>
 							{$i18n.t('New Chat')}
@@ -642,7 +609,7 @@
 			{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
 				<div class="flex justify-center text-gray-800 dark:text-gray-200">
 					<a
-						class="p-[14px] grow flex items-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition-all duration-300 ease-in-out"
+						class="px-[16px] py-[8px] grow flex items-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition-all duration-300 ease-in-out"
 						class:justify-center={!$showSidebar}
 						href="/notes"
 						on:click={() => {
@@ -657,8 +624,8 @@
 					>
 						<!-- Icon -->
 						<div
-							class="self-center transition-all duration-300 ease-in-out"
-							class:mr-[15px]={$showSidebar}
+							class="flex items-center  transition-all duration-300 ease-in-out"
+							class:mr-[8px]={$showSidebar}
 						>
 							<MaterialIcon name="sticky_note_2" size="1.1rem" />
 						</div>
@@ -668,7 +635,7 @@
 							class="self-center translate-y-[0.5px] transition-all duration-300 ease-in-out"
 							class:hidden={!$showSidebar}
 						>
-							<div class="self-center font-medium text-sm leading-[22px]">
+							<div class="self-center text-neutrals-800 text-[16px] leading-[24px] font-medium ">
 								{$i18n.t('Notes')}
 							</div>
 						</div>
@@ -676,42 +643,7 @@
 				</div>
 			{/if}
 
-			{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools}
-				<div class="flex justify-center text-gray-800 dark:text-gray-200">
-					<a
-						class="p-[14px] grow flex items-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition-all duration-300 ease-in-out"
-						class:justify-center={!$showSidebar}
-						href="/workspace"
-						on:click={() => {
-							selectedChatId = null;
-							chatId.set('');
-
-							if ($mobile) {
-								showSidebar.set(false);
-							}
-						}}
-						draggable="false"
-					>
-						<!-- Icon -->
-						<div
-							class="self-center transition-all duration-300 ease-in-out"
-							class:mr-[15px]={$showSidebar}
-						>
-							<MaterialIcon name="workspaces" size="1.1rem" />
-						</div>
-
-						<!-- Label -->
-						<div
-							class="self-center translate-y-[0.5px] transition-all duration-300 ease-in-out"
-							class:hidden={!$showSidebar}
-						>
-							<div class="self-center font-medium text-sm leading-[22px]">
-								{$i18n.t('Workspace')}
-							</div>
-						</div>
-					</a>
-				</div>
-			{/if}
+			
 
 			<div class="relative flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
 				{#if ($models ?? []).length > 0 && ($settings?.pinnedModels ?? []).length > 0}
@@ -719,7 +651,7 @@
 						{#each $settings.pinnedModels as modelId (modelId)}
 							{@const model = $models.find((model) => model.id === modelId)}
 							{#if model}
-								<div class="p-[14px] flex justify-center text-gray-800 dark:text-gray-200">
+								<div class="px-[16px] py-[8px] flex justify-center text-gray-800 dark:text-gray-200">
 									<a
 										class="grow flex items-center space-x-2.5 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 										href="/?model={modelId}"
@@ -932,13 +864,13 @@
 					{/if}
 
 					{#if $showSidebar}
-						<div class=" flex-1 flex flex-col overflow-y-auto scrollbar-hidden">
+						<div class="flex-1 flex flex-col overflow-y-auto scrollbar-hidden">
 							<div class="pt-1.5">
 								{#if $chats}
 									{#each $chats as chat, idx (`chat-${chat?.id ?? idx}`)}
 										{#if idx === 0 || (idx > 0 && chat.time_range !== $chats[idx - 1].time_range)}
 											<div
-												class="w-full pl-2.5 text-xs text-gray-500 dark:text-gray-500 font-medium {idx ===
+												class="w-full px-[16px] py-[8px] text-neutrals-400 text-[14px] leading-[22px] dark:text-gray-500 font-medium {idx ===
 												0
 													? ''
 													: 'pt-5'} pb-1.5"
@@ -1029,23 +961,28 @@
 						}}
 					>
 						<button
-							class=" flex items-center rounded-xl w-full hover:bg-gray-100 dark:hover:bg-gray-900 {$showSidebar
+							class=" flex items-center justify-between cursor-pointer rounded-xl w-full hover:bg-hover dark:hover:bg-gray-900 {$showSidebar
 								? ''
 								: 'justify-center'}"
 							on:click={() => {
 								showDropdown = !showDropdown;
 							}}
 						>
-							<div class=" self-center {$showSidebar ? 'mr-[15px]' : ''}">
+						<div class="flex">
+							<div class=" self-center {$showSidebar ? 'mr-[8px]' : ''}">
 								<img
 									src={$user?.profile_image_url}
 									class=" max-w-[30px] object-cover rounded-full"
 									alt="User profile"
 								/>
 							</div>
-							<div class="self-center font-medium leading-[22px] {$showSidebar ? '' : 'hidden'}">
+							<div class="self-center text-neutrals-800 text-[16px] leading-[24px] font-medium  {$showSidebar ? '' : 'hidden'}">
 								{$user?.name}
 							</div>
+							</div>
+							<div><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+  <path d="M11.354 8.35354L6.35403 13.3535C6.30757 13.4 6.25242 13.4368 6.19173 13.462C6.13103 13.4871 6.06598 13.5001 6.00028 13.5001C5.93458 13.5001 5.86953 13.4871 5.80883 13.462C5.74813 13.4368 5.69298 13.4 5.64653 13.3535C5.60007 13.3071 5.56322 13.2519 5.53808 13.1912C5.51294 13.1305 5.5 13.0655 5.5 12.9998C5.5 12.9341 5.51294 12.869 5.53808 12.8083C5.56322 12.7476 5.60007 12.6925 5.64653 12.646L10.2934 7.99979L5.64653 3.35354C5.55271 3.25972 5.5 3.13247 5.5 2.99979C5.5 2.86711 5.55271 2.73986 5.64653 2.64604C5.74035 2.55222 5.8676 2.49951 6.00028 2.49951C6.13296 2.49951 6.26021 2.55222 6.35403 2.64604L11.354 7.64604C11.4005 7.69248 11.4374 7.74762 11.4626 7.80832C11.4877 7.86902 11.5007 7.93408 11.5007 7.99979C11.5007 8.0655 11.4877 8.13056 11.4626 8.19126C11.4374 8.25196 11.4005 8.3071 11.354 8.35354Z" fill="#36383B"/>
+</svg></div>
 						</button>
 					</UserMenu>
 				{/if}
