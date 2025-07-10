@@ -134,7 +134,7 @@
 	class:justify-center={!showSidebar}
 	class:justify-between={showSidebar}
 >
-	<button class="w-full py-1.5 pl-2 flex items-center gap-1.5 text-xs font-medium" class:justify-center={!showSidebar}
+	<button class="px-[16px] py-[8px] w-full flex items-center text-xs font-medium" class:justify-center={!showSidebar}
 	class:justify-between={showSidebar}
 	class:py-1.5={showSidebar}
 	class:pl-2={showSidebar}
@@ -142,8 +142,8 @@
 	>
 		<!-- Icon -->
 		<div
-			class="self-center transition-all duration-300 ease-in-out"
-			class:mr-[15px]={showSidebar}
+			class="flex items-center transition-all duration-300 ease-in-out"
+			class:mr-[8px]={showSidebar}
 		>
 			<MaterialIcon name="folder_open" size="1.1rem" />
 		</div>
@@ -159,7 +159,7 @@
 				class:opacity-100={showSidebar}
 				class:opacity-0={!showSidebar}
 			>
-				<div class="font-medium text-sm leading-[22px]">
+				<div class="text-neutrals-800 text-[16px] leading-[24px] font-medium ">
 					{name}
 				</div>
 			</div>
