@@ -31,7 +31,6 @@
 	let userGroupsLoaded = false;
 
 	// Reactive statement to check if current user has inspect access
-	// Only apply inspect restrictions when editing an existing model, not when creating a new one
 	// Users with inspect access get backend read/write permissions but frontend UI restrictions
 	// Exception: Model creators always get full access regardless of group permissions
 	$: hasInspectAccess = edit && loaded && userGroupsLoaded && (() => {
@@ -56,7 +55,6 @@
 		const userGroupIds = userGroups.map(group => group.id);
 		
 		// Check if user has inspect access - if so, apply frontend UI restrictions
-		// Note: Users with inspect access also get read/write on backend, but frontend restricts editing
 		const hasInspectAccess = userGroupIds.some(groupId => {
 			return accessControl.inspect.group_ids.includes(groupId);
 		});
@@ -163,6 +161,9 @@
 		info.name = name;
 		info.meta.valves = {};
 
+		console.log(`submitting with new toolValves: ${JSON.stringify(toolValves)}`);
+		console.log(`submitting with new functionValves: ${JSON.stringify(functionValves)}`);
+
 		if (id === '') {
 			toast.error('Model ID is required.');
 		}
@@ -184,7 +185,6 @@
 		// Ensure model creator gets write access via user_ids
 		// Only the model creator gets added to write.user_ids
 		// Group members get write access through group membership, not individual user_ids
-		// This allows creators to maintain full access to their models even if they're in groups with only inspect access
 		if (info.access_control && info.access_control !== null) {
 			// Initialize write user_ids array if it doesn't exist
 			if (!info.access_control.write) {
@@ -211,9 +211,6 @@
 			if (modelCreatorId && !info.access_control.write.user_ids.includes(modelCreatorId)) {
 				info.access_control.write.user_ids.push(modelCreatorId);
 			}
-
-			// Note: Only the model creator gets added to write.user_ids
-			// Group members get write access through group membership, not individual user_ids
 		}
 
 		info.meta.capabilities = capabilities;
@@ -414,6 +411,9 @@
 			} else {
 				accessControl = {};
 			}
+
+			console.log(model?.access_control);
+			console.log(accessControl);
 
 			info = {
 				...info,
@@ -687,7 +687,6 @@
 							<button
 								class="p-1 text-xs flex rounded-sm transition"
 								type="button"
-								disabled={hasInspectAccess}
 								on:click={() => {
 									enableDescription = !enableDescription;
 								}}
@@ -934,7 +933,6 @@
 								<div class="flex w-full justify-between mb-1">
 									<div class=" self-center text-sm font-semibold">Knowledge</div>
 								</div>
-								<div class="text-xs text-gray-500 mb-2">Knowledge selection is read-only for inspect users.</div>
 								<div class="flex flex-wrap gap-1">
 									{#each knowledge as item}
 										<span class="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-xs">
@@ -962,7 +960,6 @@
 								<div class="flex w-full justify-between mb-1">
 									<div class=" self-center text-sm font-semibold">Tools</div>
 								</div>
-								<div class="text-xs text-gray-500 mb-2">Tool selection is read-only for inspect users.</div>
 								<div class="flex flex-wrap gap-1">
 									{#each $tools.filter(tool => toolIds.includes(tool.id)) as tool}
 										<span class="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-xs">
@@ -990,7 +987,6 @@
 								<div class="flex w-full justify-between mb-1">
 									<div class=" self-center text-sm font-semibold">Filters</div>
 								</div>
-								<div class="text-xs text-gray-500 mb-2">Filter selection is read-only for inspect users.</div>
 								<div class="flex flex-wrap gap-1">
 									{#each $functions.filter(func => func.type === 'filter' && filterIds.includes(func.id)) as filter}
 										<span class="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-xs">
@@ -1018,7 +1014,6 @@
 								<div class="flex w-full justify-between mb-1">
 									<div class=" self-center text-sm font-semibold">Actions</div>
 								</div>
-								<div class="text-xs text-gray-500 mb-2">Action selection is read-only for inspect users.</div>
 								<div class="flex flex-wrap gap-1">
 									{#each $functions.filter(func => func.type === 'action' && actionIds.includes(func.id)) as action}
 										<span class="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-xs">
@@ -1041,7 +1036,6 @@
 								<div class="flex w-full justify-between mb-1">
 									<div class=" self-center text-sm font-semibold">Capabilities</div>
 								</div>
-								<div class="text-xs text-gray-500 mb-2">Capabilities are read-only for inspect users.</div>
 								<div class="flex flex-wrap gap-1">
 									{#each Object.keys(capabilities).filter(key => capabilities[key]) as capability}
 										<span class="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-xs">

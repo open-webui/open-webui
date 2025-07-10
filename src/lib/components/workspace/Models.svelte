@@ -53,6 +53,15 @@
 
 	let group_ids = [];
 
+	// Helper function to check if user has write access to a model
+	const hasWriteAccess = (model, user, userGroupIds) => {
+		return (
+			user?.role === 'admin' ||
+			model.user_id === user?.id ||
+			model.access_control?.write?.group_ids?.some((wg) => userGroupIds.includes(wg))
+		);
+	};
+
 	$: if (models) {
 		filteredModels = models.filter((m) => {
 			if (query === '') return true;
@@ -327,7 +336,7 @@
 					</div>
 
 					<div class="flex flex-row gap-0.5 items-center">
-						{#if shiftKey}
+						{#if shiftKey && hasWriteAccess(model, $user, group_ids)}
 							<Tooltip content={model?.meta?.hidden ? $i18n.t('Show') : $i18n.t('Hide')}>
 								<button
 									class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
@@ -356,7 +365,7 @@
 								</button>
 							</Tooltip>
 						{:else}
-							{#if $user?.role === 'admin' || model.user_id === $user?.id || model.access_control.write.group_ids.some( (wg) => group_ids.includes(wg) ) || model.access_control?.inspect?.group_ids?.some( (ig) => group_ids.includes(ig) )}
+							{#if $user?.role === 'admin' || model.user_id === $user?.id || model.access_control?.write?.group_ids?.some( (wg) => group_ids.includes(wg) ) || model.access_control?.inspect?.group_ids?.some( (ig) => group_ids.includes(ig) )}
 								<a
 									class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 									type="button"
@@ -391,16 +400,16 @@
 								exportHandler={() => {
 									exportModelHandler(model);
 								}}
-								hideHandler={() => {
+								hideHandler={hasWriteAccess(model, $user, group_ids) ? () => {
 									hideModelHandler(model);
-								}}
+								} : undefined}
 								copyLinkHandler={() => {
 									copyLinkHandler(model);
 								}}
-								deleteHandler={() => {
+								deleteHandler={hasWriteAccess(model, $user, group_ids) ? () => {
 									selectedModel = model;
 									showModelDeleteConfirm = true;
-								}}
+								} : undefined}
 								onClose={() => {}}
 							>
 								<button
@@ -411,23 +420,25 @@
 								</button>
 							</ModelMenu>
 
-							<div class="ml-1">
-								<Tooltip content={model.is_active ? $i18n.t('Enabled') : $i18n.t('Disabled')}>
-									<Switch
-										bind:state={model.is_active}
-										on:change={async (e) => {
-											toggleModelById(localStorage.token, model.id);
-											_models.set(
-												await getModels(
-													localStorage.token,
-													$config?.features?.enable_direct_connections &&
-														($settings?.directConnections ?? null)
-												)
-											);
-										}}
-									/>
-								</Tooltip>
-							</div>
+							{#if hasWriteAccess(model, $user, group_ids)}
+								<div class="ml-1">
+									<Tooltip content={model.is_active ? $i18n.t('Enabled') : $i18n.t('Disabled')}>
+										<Switch
+											bind:state={model.is_active}
+											on:change={async (e) => {
+												toggleModelById(localStorage.token, model.id);
+												_models.set(
+													await getModels(
+														localStorage.token,
+														$config?.features?.enable_direct_connections &&
+															($settings?.directConnections ?? null)
+													)
+												);
+											}}
+										/>
+									</Tooltip>
+								</div>
+							{/if}
 						{/if}
 					</div>
 				</div>

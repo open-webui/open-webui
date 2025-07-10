@@ -92,8 +92,6 @@ async def get_model_by_id(id: str, user=Depends(get_verified_user)):
             user.role == "admin"
             or model.user_id == user.id
             or has_access(user.id, "read", model.access_control)
-            or has_access(user.id, "write", model.access_control)
-            or has_access(user.id, "inspect", model.access_control)
         ):
             return model
     else:
@@ -116,7 +114,6 @@ async def toggle_model_by_id(id: str, user=Depends(get_verified_user)):
             user.role == "admin"
             or model.user_id == user.id
             or has_access(user.id, "write", model.access_control)
-            or has_access(user.id, "inspect", model.access_control)
         ):
             model = Models.toggle_model_by_id(id)
 
@@ -160,7 +157,8 @@ async def update_model_by_id(
 
     if (
         model.user_id != user.id
-        and not (has_access(user.id, "write", model.access_control) or not has_access(user.id, "inspect", model.access_control))
+        and not has_access(user.id, "write", model.access_control)
+        and not has_access(user.id, "inspect", model.access_control)
         and user.role != "admin"
     ):
         raise HTTPException(
@@ -189,7 +187,7 @@ async def delete_model_by_id(id: str, user=Depends(get_verified_user)):
     if (
         user.role != "admin"
         and model.user_id != user.id
-        and not (has_access(user.id, "write", model.access_control) or has_access(user.id, "inspect", model.access_control))
+        and not has_access(user.id, "write", model.access_control) 
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
