@@ -33,6 +33,9 @@
 	import PencilSquare from '../icons/PencilSquare.svelte';
 	import Banner from '../common/Banner.svelte';
 
+	import MaterialIcon from '$lib/components/common/MaterialIcon.svelte';
+
+
 	const i18n = getContext('i18n');
 
 	export let initNewChat: Function;
@@ -60,7 +63,7 @@
 	aria-label="New Chat"
 />
 
-<nav class="w-full flex items-center justify-between px-4 py-0 h-[56px] relative z-30 { $mobile ? 'bg-white border-b border-[#dee0e3]' : 'bg-transparent' }">
+<nav class="w-full flex items-center justify-between px-4 py-0 h-[56px] relative z-30 { $mobile ? 'bg-white dark:bg-gray-900 border-b border-[#dee0e3] dark:border-gray-800' : 'bg-transparent' }">
   {#if $mobile}
     <button
       class="flex items-center justify-center rounded-lg size-10 hover:bg-[#e5e7eb] transition"
@@ -78,7 +81,12 @@
     </button>
   {:else}
     
-	  <img src="/logo-dark.png" alt="GovGPT Logo" class="w-[132px] h-[40px]"/>
+  <img
+	src="/logo-dark.png"
+	alt="GovGPT Logo"
+	class="w-[132px] h-[40px] filter dark:invert dark:brightness-0 dark:contrast-200"
+	/>
+
    
     <!-- No add/new chat icon on desktop -->
   {/if}
