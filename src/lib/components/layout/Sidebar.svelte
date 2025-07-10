@@ -524,7 +524,7 @@
 	data-state={$showSidebar}
 >
 	<div
-		class="flex flex-col justify-between max-h-[100dvh] overflow-x-hidden z-50 bg-white shadow-[0px_48px_96px_0px_rgba(0,0,0,0.08)]"
+		class="flex flex-col justify-between max-h-[100dvh] overflow-x-hidden z-50 bg-white dark:bg-gray-950 shadow-[0px_48px_96px_0px_rgba(0,0,0,0.08)] dark:shadow-none"
 	>
 		<div class="sidebar__top h-[calc(100vh-58px)] overflow-y-auto">
 			<div
@@ -533,7 +533,12 @@
 			>
 				<!-- Menu Icon behaves like other sidebar buttons -->
 				{#if $mobile}
-				<img src="/logo-dark.png" alt="GovGPT Logo" class="h-[50px] p-4"/>
+				<img
+  src="/logo-dark.png"
+  alt="GovGPT Logo"
+  class="h-[50px] p-4 filter dark:invert dark:brightness-0 dark:contrast-200"
+/>
+
 				{:else}
 				
 				<a
@@ -652,7 +657,7 @@
 				</a>
 			</div>
 
-			{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
+			{#if false && ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
 				<div class="flex justify-center text-gray-800 dark:text-gray-200">
 					<a
 						class="p-[14px] grow flex items-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition-all duration-300 ease-in-out"
@@ -1031,7 +1036,7 @@
 			</div>
 		</div>
 		<div class="sidebar__bottom">
-			<div class="w-full p-[14px] flex flex-col left-[20px] bottom-[20px] bg-white">
+			<div class="w-full p-[14px] flex flex-col left-[20px] bottom-[20px] bg-white dark:bg-gray-950 border-t border-gray-100 dark:border-gray-900">
 				{#if $user !== undefined && $user !== null}
 					<UserMenu
 						role={$user?.role}
