@@ -92,14 +92,14 @@ def _traverse_and_encrypt(chat_obj: Chat):
                 if not plaintext:        # Skip empty content
                     continue
 
-                log.info(f"(CHAT MSG) BEFORE ENCRYPT: {plaintext[:30]}...")
+                log.info(f"(CHAT) BEFORE ENCRYPT: {plaintext[:30]}...")
                 ciphertext = encryption_utils.encrypt_message(plaintext)
                 message["content"] = {
                     "ciphertext": ciphertext,
                     "is_encrypted": True
                 }
 
-                log.info(f" CHAT MSG) AFTER ENCRYPT: {ciphertext[:30]}...")
+                log.info(f" (CHAT) AFTER ENCRYPT: {ciphertext[:30]}...")
                 modified = True
 
     # This handles the nested history structure.
@@ -115,14 +115,14 @@ def _traverse_and_encrypt(chat_obj: Chat):
                 if not plaintext:
                     continue
 
-                log.info(f"(HISTORY MSG) BEFORE ENCRYPT: {plaintext[:30]}...")
+                log.info(f"(HISTORY) BEFORE ENCRYPT: {plaintext[:30]}...")
                 ciphertext = encryption_utils.encrypt_message(plaintext)
                 message["content"] = {
                     "ciphertext": ciphertext,
                     "is_encrypted": True
                 }
 
-                log.info(f"(HISTORY MSG) AFTER ENCRYPT: {ciphertext[:30]}...")
+                log.info(f"(HISTORY) AFTER ENCRYPT: {ciphertext[:30]}...")
                 modified = True
 
     if modified:
@@ -143,7 +143,7 @@ def _traverse_and_decrypt(chat_obj: Chat):
             content_data = message.get("content")
             if isinstance(content_data, dict) and content_data.get("is_encrypted"):
                 ciphertext = content_data.get('ciphertext','')
-                log.info(f"(CHAT MSG) BEFORE DECRYPT: {ciphertext[:30]}...")
+                log.info(f"(CHAT) BEFORE DECRYPT: {ciphertext[:30]}...")
                 try:
                     plaintext = encryption_utils.decrypt_message(ciphertext)
                     message["content"] = plaintext;
@@ -165,7 +165,7 @@ def _traverse_and_decrypt(chat_obj: Chat):
 
             if isinstance(content_data, dict) and content_data.get("is_encrypted"):
                 ciphertext = content_data.get('ciphertext','')
-                log.info(f"(HISTORY MSG) BEFORE DECRYPT: {ciphertext[:30]}...")
+                log.info(f"(HISTORY) BEFORE DECRYPT: {ciphertext[:30]}...")
 
                 try:
                     plaintext = encryption_utils.decrypt_message(ciphertext)
