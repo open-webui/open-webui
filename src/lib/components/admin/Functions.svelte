@@ -49,6 +49,8 @@
 	let showConfirm = false;
 	let query = '';
 
+	let selectedType = 'all';
+
 	let showManifestModal = false;
 	let showValvesModal = false;
 	let selectedFunction = null;
@@ -59,9 +61,10 @@
 	$: filteredItems = $functions
 		.filter(
 			(f) =>
-				query === '' ||
-				f.name.toLowerCase().includes(query.toLowerCase()) ||
-				f.id.toLowerCase().includes(query.toLowerCase())
+				(selectedType !== 'all' ? f.type === selectedType : true) &&
+				(query === '' ||
+					f.name.toLowerCase().includes(query.toLowerCase()) ||
+					f.id.toLowerCase().includes(query.toLowerCase()))
 		)
 		.sort((a, b) => a.type.localeCompare(b.type) || a.name.localeCompare(b.name));
 
@@ -135,7 +138,9 @@
 			models.set(
 				await getModels(
 					localStorage.token,
-					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null),
+					false,
+					true
 				)
 			);
 		}
@@ -161,7 +166,9 @@
 			models.set(
 				await getModels(
 					localStorage.token,
-					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null),
+					false,
+					true
 				)
 			);
 		}
@@ -215,8 +222,8 @@
 	}}
 />
 
-<div class="flex flex-col gap-1 mt-1.5 mb-2">
-	<div class="flex justify-between items-center">
+<div class="flex flex-col mt-1.5 mb-0.5">
+	<div class="flex justify-between items-center mb-1">
 		<div class="flex md:self-center text-xl items-center font-medium px-0.5">
 			{$i18n.t('Functions')}
 			<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
@@ -266,12 +273,54 @@
 			</AddFunctionMenu>
 		</div>
 	</div>
+
+	<div class=" flex w-full">
+		<div
+			class="flex gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-full bg-transparent"
+		>
+			<button
+				class="min-w-fit p-1.5 {selectedType === 'all'
+					? ''
+					: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+				on:click={() => {
+					selectedType = 'all';
+				}}>{$i18n.t('All')}</button
+			>
+
+			<button
+				class="min-w-fit p-1.5 {selectedType === 'pipe'
+					? ''
+					: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+				on:click={() => {
+					selectedType = 'pipe';
+				}}>{$i18n.t('Pipe')}</button
+			>
+
+			<button
+				class="min-w-fit p-1.5 {selectedType === 'filter'
+					? ''
+					: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+				on:click={() => {
+					selectedType = 'filter';
+				}}>{$i18n.t('Filter')}</button
+			>
+
+			<button
+				class="min-w-fit p-1.5 {selectedType === 'action'
+					? ''
+					: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+				on:click={() => {
+					selectedType = 'action';
+				}}>{$i18n.t('Action')}</button
+			>
+		</div>
+	</div>
 </div>
 
 <div class="mb-5">
 	{#each filteredItems as func (func.id)}
 		<div
-			class=" flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl"
+			class=" flex space-x-4 cursor-pointer w-full px-2 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl"
 		>
 			<a
 				class=" flex flex-1 space-x-3.5 cursor-pointer w-full"
@@ -413,7 +462,9 @@
 									await getModels(
 										localStorage.token,
 										$config?.features?.enable_direct_connections &&
-											($settings?.directConnections ?? null)
+											($settings?.directConnections ?? null),
+										false,
+										true
 									)
 								);
 							}}
@@ -559,7 +610,9 @@
 		models.set(
 			await getModels(
 				localStorage.token,
-				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null),
+				false,
+				true
 			)
 		);
 	}}
@@ -585,7 +638,9 @@
 			models.set(
 				await getModels(
 					localStorage.token,
-					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null),
+					false,
+					true
 				)
 			);
 		};

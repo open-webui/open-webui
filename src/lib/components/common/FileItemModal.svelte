@@ -10,6 +10,7 @@
 	import Info from '../icons/Info.svelte';
 	import Switch from './Switch.svelte';
 	import Tooltip from './Tooltip.svelte';
+	import dayjs from 'dayjs';
 
 	export let item;
 	export let show = false;
@@ -77,6 +78,24 @@
 			<div>
 				<div class="flex flex-col items-center md:flex-row gap-1 justify-between w-full">
 					<div class=" flex flex-wrap text-sm gap-1 text-gray-500">
+						{#if item?.type === 'collection'}
+							{#if item?.type}
+								<div class="capitalize shrink-0">{item.type}</div>
+								•
+							{/if}
+
+							{#if item?.description}
+								<div class="line-clamp-1">{item.description}</div>
+								•
+							{/if}
+
+							{#if item?.created_at}
+								<div class="capitalize shrink-0">
+									{dayjs(item.created_at * 1000).format('LL')}
+								</div>
+							{/if}
+						{/if}
+
 						{#if item.size}
 							<div class="capitalize shrink-0">{formatFileSize(item.size)}</div>
 							•
@@ -127,7 +146,17 @@
 		</div>
 
 		<div class="max-h-[75vh] overflow-auto">
-			{#if isPDF}
+			{#if item?.type === 'collection'}
+				<div>
+					{#each item?.files as file}
+						<div class="flex items-center gap-2 mb-2">
+							<div class="flex-shrink-0 text-xs">
+								{file?.meta?.name}
+							</div>
+						</div>
+					{/each}
+				</div>
+			{:else if isPDF}
 				<iframe
 					title={item?.name}
 					src={`${WEBUI_API_BASE_URL}/files/${item.id}/content`}

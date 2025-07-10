@@ -1,11 +1,12 @@
 fastapi==0.115.7
-uvicorn[standard]==0.34.2
-pydantic==2.10.6
+uvicorn[standard]==0.35.0
+pydantic==2.11.7
 python-multipart==0.0.20
 
 python-socketio==5.13.0
 python-jose==3.4.0
 passlib[bcrypt]==1.7.4
+cryptography
 
 requests==2.32.4
 aiohttp==3.11.11
@@ -42,13 +43,13 @@ google-genai==1.15.0
 google-generativeai==0.8.5
 tiktoken
 
-langchain==0.3.24
-langchain-community==0.3.23
+langchain==0.3.26
+langchain-community==0.3.26
 
 fake-useragent==2.1.0
 chromadb==0.6.3
 pymilvus==2.5.0
-qdrant-client~=1.12.0
+qdrant-client==1.14.3
 opensearch-py==2.8.0
 playwright==1.49.1 # Caution: version must match docker-compose.playwright.yaml
 elasticsearch==9.0.1
@@ -99,7 +100,7 @@ youtube-transcript-api==1.1.0
 pytube==15.0.0
 
 pydub
-duckduckgo-search==8.0.2
+ddgs==9.0.0
 
 ## Google Drive
 google-api-python-client
@@ -114,7 +115,7 @@ pytest-docker~=3.1.1
 googleapis-common-protos==1.63.2
 google-cloud-storage==2.19.0
 
-azure-identity==1.21.0
+azure-identity==1.23.0
 azure-storage-blob==12.24.1
 
 

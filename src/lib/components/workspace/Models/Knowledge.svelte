@@ -24,7 +24,10 @@
 				{#each selectedKnowledge as file, fileIdx}
 					<FileItem
 						{file}
+						item={file}
 						name={file.name}
+						modal={true}
+						edit={true}
 						type={file?.legacy
 							? `Legacy${file.type ? ` ${file.type}` : ''}`
 							: (file?.type ?? 'Collection')}

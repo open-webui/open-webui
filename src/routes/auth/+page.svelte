@@ -123,10 +123,10 @@
 
 			if (isDarkMode) {
 				const darkImage = new Image();
-				darkImage.src = '/static/favicon-dark.png';
+				darkImage.src = `${WEBUI_BASE_URL}/static/favicon-dark.png`;
 
 				darkImage.onload = () => {
-					logo.src = '/static/favicon-dark.png';
+					logo.src = `${WEBUI_BASE_URL}/static/favicon-dark.png`;
 					logo.style.filter = ''; // Ensure no inversion is applied if favicon-dark.png exists
 				};
 
@@ -203,7 +203,7 @@
 							</div>
 
 							<div>
-								<Spinner />
+								<Spinner className="size-5" />
 							</div>
 						</div>
 					</div>
@@ -302,8 +302,8 @@
 											id="password"
 											class="my-0.5 w-full text-sm outline-hidden bg-transparent"
 											placeholder={$i18n.t('Enter Your Password')}
-											autocomplete="current-password"
-											name="current-password"
+											autocomplete={mode === 'signup' ? 'new-password' : 'current-password'}
+											name="password"
 											required
 										/>
 									</div>
