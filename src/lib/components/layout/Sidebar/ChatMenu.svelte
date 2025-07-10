@@ -270,7 +270,7 @@
 				}}
 			>
 				<DocumentDuplicate strokeWidth="2" />
-				<div class="flex items-center">{$i18n.t('Clone')}</div>
+				<div class="flex items-center">{$i18n.t('Duplicate')}</div>
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item

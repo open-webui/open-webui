@@ -89,7 +89,7 @@
 				<div class="relative rounded-lg backdrop-blur-md bg-white/90">
 					<div class="absolute inset-0 border border-white rounded-lg pointer-events-none"></div>
 					<button
-					class="flex items-center gap-1 p-2.5 w-full font-heading font-medium text-sm leading-[22px] text-left whitespace-nowrap overflow-hidden text-ellipsis transition 
+					class="rounded-lg flex items-center gap-1 p-2.5 w-full font-heading font-medium text-sm leading-[22px] text-left whitespace-nowrap overflow-hidden text-ellipsis transition 
 							bg-white text-neutral-800 hover:bg-gray-50 
 							dark:bg-gray-900 dark:text-gray-100 dark:hover:bg-white/10 dark:hover:text-gray-900"
 					style="animation-delay: {idx * 60}ms;"

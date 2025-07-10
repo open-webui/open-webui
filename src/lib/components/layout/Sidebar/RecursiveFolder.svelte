@@ -31,6 +31,7 @@
 	import ChatItem from './ChatItem.svelte';
 	import FolderMenu from './Folders/FolderMenu.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import MaterialIcon from '$lib/components/common/MaterialIcon.svelte';
 
 	export let open = false;
 
@@ -370,7 +371,7 @@
 
 	<Collapsible
 		bind:open
-		className="w-full"
+		className="w-full pl-4"
 		buttonClassName="w-full"
 		hide={(folders[folderId]?.childrenIds ?? []).length === 0 &&
 			(folders[folderId].items?.chats ?? []).length === 0}
@@ -389,9 +390,11 @@
 			>
 				<div class="text-gray-300 dark:text-gray-600">
 					{#if open}
-						<ChevronDown className=" size-3" strokeWidth="2.5" />
+						<MaterialIcon name="folder_open" className="size-3" />
+						<!-- <ChevronDown className=" size-3" strokeWidth="2.5" /> -->
 					{:else}
-						<ChevronRight className=" size-3" strokeWidth="2.5" />
+						<MaterialIcon name="folder" className="size-3" />
+						<!-- <ChevronRight className=" size-3" strokeWidth="2.5" /> -->
 					{/if}
 				</div>
 
