@@ -315,7 +315,7 @@
 		collapseCodeBlocks = $settings?.collapseCodeBlocks ?? false;
 		expandDetails = $settings?.expandDetails ?? false;
 
-		landingPageMode = $settings?.landingPageMode ?? '';
+		landingPageMode = $settings?.landingPageMode ?? 'chat';
 		chatBubble = $settings?.chatBubble ?? true;
 		widescreenMode = $settings?.widescreenMode ?? false;
 		splitLargeChunks = $settings?.splitLargeChunks ?? false;

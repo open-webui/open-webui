@@ -126,5 +126,9 @@ body.dark .decorative-image-bottom {
 .bg-login {
     background-size: cover;
     height: 100vh;
-    background-position: center;
+    background-position: top center;
+}
+
+.dark .bg-surface {
+    background: var(--color-gray-900, #171717);
 }
