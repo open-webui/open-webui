@@ -90,7 +90,7 @@
 	import Placeholder from './Placeholder.svelte';
 	import NotificationToast from '../NotificationToast.svelte';
 	import Spinner from '../common/Spinner.svelte';
-	import { streamAudio, synthesizeStreamingSpeech } from '$lib/apis/audio';
+	import { streamAudio, synthesizeOpenAISpeech, synthesizeStreamingSpeech } from '$lib/apis/audio';
 
 	export let chatIdProp = '';
 
@@ -245,7 +245,7 @@
 	};
 
 	const chatEventHandler = async (event, cb) => {
-		console.log(event);
+		// console.log(event);
 
 		if (event.chat_id === $chatId) {
 			await tick();
@@ -1099,7 +1099,7 @@
 			message.sources = sources;
 		}
 
-		console.log('!!content', content)
+		// console.log('!!content', content)
 
 
 		if (content) {
@@ -1138,6 +1138,7 @@
 
 					ttsSentenceQueue.update(queue => [...queue, { id: message.id, content: trimmedPart }]);
 
+					console.log('!!!!dispatching trimmedPart')
 					eventTarget.dispatchEvent(
 						new CustomEvent('chat', {
 							detail: {
@@ -1195,7 +1196,8 @@
 					-1
 				) ?? '';
 			if (lastMessageContentPart) {
-				console.log('!!lastMessageContentPart', lastMessageContentPart)
+				// RACE CONDITION
+				console.log('!!!!dispatching !!lastMessageContentPart', lastMessageContentPart)
 				ttsSentenceQueue.update(queue => [...queue, { id: message.id, content: lastMessageContentPart }]);
 
 				eventTarget.dispatchEvent(
@@ -1204,6 +1206,8 @@
 					})
 				);
 			}
+
+			console.log('!!!!dispatching chat:finish', message.content)
 			eventTarget.dispatchEvent(
 				new CustomEvent('chat:finish', {
 					detail: {
@@ -1400,15 +1404,20 @@
 		// Save chat after all messages have been created
 		await saveChatHandler(_chatId, _history);
 
-		const speechArr = ['Oh wow look at you!', 'Oh brilliant chucklefucks!', 'Doodly doodly doo!', 'Um, well, let me think.']
+		// const speechArr = ['Oh wow look at you!', 'Oh brilliant chucklefucks!', 'Doodly doodly doo!', 'Um, well, let me think.']
+
+		const speechArr = ['Oh wow look at you!']
 
 		let i = Math.floor(Math.random() * speechArr.length);
 		let preprogrammedSpeech = speechArr[i];
-		ttsSentenceQueue.update(queue => [...queue, { id: uuidv4(), content: preprogrammedSpeech }]);
+		console.log('!!!dispatching chat', preprogrammedSpeech)
+		
+		// RACE CONDITION
+		ttsSentenceQueue.update(queue => [...queue, { filler: true, content: preprogrammedSpeech }]);
 
 		eventTarget.dispatchEvent(
 			new CustomEvent('chat', {
-				detail: { id: uuidv4(), content: preprogrammedSpeech }
+				detail: { filler: true, content: preprogrammedSpeech }
 			})
 		);
 

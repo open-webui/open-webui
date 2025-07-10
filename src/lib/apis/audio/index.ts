@@ -103,8 +103,10 @@ const GRACE_MS = 50;
 const VERY_LOW_GAIN = 0.00001; // Closer to zero for exponential ramp
 const DC_OFFSET_THRESHOLD = 0.005;
 
+const ctx = new AudioContext({ sampleRate: DEFAULT_SAMPLE_RATE });
+
+
 export const streamAudio = async (reader) => { // Removed isFirstSentenceInSequence, as each call is a "new stream"
-    const ctx = new AudioContext({ sampleRate: DEFAULT_SAMPLE_RATE });
     // Start scheduling slightly in the future to give context and gain ramp time
     let nextPlayTime = ctx.currentTime + 0.01; // Start scheduling 10ms into the future
     let firstChunkProcessed = false;
@@ -196,8 +198,8 @@ export const streamAudio = async (reader) => { // Removed isFirstSentenceInSeque
              console.log(`[streamAudio] Grace period: ${GRACE_MS}ms.`);
             await new Promise(resolve => setTimeout(resolve, GRACE_MS));
         }
-        await ctx.close();
-        console.log(`[streamAudio] Stream END. Context closed. Final scheduled time: ${nextPlayTime.toFixed(3)}`);
+		// leave ctx open, do not close ctx to allow multiple audio to be played seamlessly within a user session
+        console.log(`[streamAudio] Stream END. Final scheduled time: ${nextPlayTime.toFixed(3)}`);
     }
 };
 
@@ -234,7 +236,55 @@ export const synthesizeStreamingSpeech = async (
 	return reader
 }
 
-export async function processTTSQueue() {
+const playAudio = (buffer) => {
+	return new Promise(async (resolve) => {
+        // If the context was suspended (e.g., by browser policy), resume it
+        if (ctx.state === 'suspended') {
+            await ctx.resume();
+        }
+
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(ctx.destination);
+        source.onended = resolve; // Resolve the promise when playback finishes
+        source.start(0);
+    });
+};
+
+const audioCache = new Map();
+
+async function playFillerPhrase(content: string) {
+	let audioBuffer = audioCache.get(content);
+
+	if (!audioBuffer) {
+		const res = await synthesizeOpenAISpeech(
+			localStorage.token,
+			'',
+			content,
+			''
+		)
+		if (res) {
+			console.log("Server Content-Type:", res.headers.get('Content-Type'));
+            const arrayBuffer = await res.blob().then(b => b.arrayBuffer());
+			audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+			audioCache.set(content, audioBuffer);
+		}
+	} else {
+		console.log('loaded audioBuffer from cache')
+	}
+
+	if (audioBuffer) {
+        await new Promise(resolve => {
+            const source = ctx.createBufferSource();
+			source.buffer = audioBuffer;
+			source.connect(ctx.destination);
+			source.onended = resolve; // Resolve the promise when playback finishes
+			source.start();
+        });
+	}
+}
+
+export async function processTTSQueue(filler: boolean = false) {
 	// Use get() to read the current value of stores outside of component context or .subscribe
 	const isStreaming = get(ttsStreaming);
 	const queue = get(ttsSentenceQueue);
@@ -262,9 +312,15 @@ export async function processTTSQueue() {
 	console.log(`[TTS QUEUE STORE] Dequeued task for message ${taskToProcess.id}: "${taskToProcess.content}"`);
 
 	try {
-		const reader = await synthesizeStreamingSpeech(taskToProcess.content)
-		await streamAudio(reader)
-		console.log(`[TTS QUEUE STORE] Successfully streamed audio for: "${taskToProcess.content}"`);
+		if (filler) {
+			console.log('playing filler')
+			await playFillerPhrase(taskToProcess.content)
+		} else {
+			console.log('playing rest of sentence',Date.now())
+			const reader = await synthesizeStreamingSpeech(taskToProcess.content)
+			await streamAudio(reader)
+			console.log(`[TTS QUEUE STORE] Successfully streamed audio for: "${taskToProcess.content}"`);
+		}
 	} catch (error) {
 		console.error(`[TTS QUEUE STORE] Error fetching/streaming audio for "${taskToProcess.content}":`, error);
 	} finally {
@@ -272,7 +328,7 @@ export async function processTTSQueue() {
 		console.log('[TTS QUEUE STORE] TTS is now free.');
 		// Call processTTSQueue again to check if there are more items
 		// This is crucial to continue processing if items were added while this one was busy.
-		processTTSQueue();
+		processTTSQueue()
 	}
 }
 
