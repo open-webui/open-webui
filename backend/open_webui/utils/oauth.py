@@ -331,16 +331,35 @@ class OAuthManager:
             return "/user.png"
 
     async def handle_login(self, request, provider):
+        log.info(f"Login attempt for provider: {provider}")
+
         if provider not in OAUTH_PROVIDERS:
-            raise HTTPException(404)
-        # If the provider has a custom redirect URL, use that, otherwise automatically generate one
-        redirect_uri = OAUTH_PROVIDERS[provider].get("redirect_uri") or request.url_for(
-            "oauth_callback", provider=provider
-        )
+            log.warning(f"Provider '{provider}' not found in OAUTH_PROVIDERS")
+            raise HTTPException(404, detail="OAuth provider not supported")
+
+        # Determine redirect URI
+        try:
+            redirect_uri = (
+                OAUTH_PROVIDERS[provider].get("redirect_uri") or 
+                request.url_for("oauth_callback", provider=provider)
+            )
+            log.info(f"Redirect URI for provider '{provider}': {redirect_uri}")
+        except Exception as e:
+            log.error(f"Error generating redirect URI for provider '{provider}': {e}")
+            raise HTTPException(500, detail="Error generating redirect URI")
+
+        # Get OAuth client
         client = self.get_client(provider)
         if client is None:
-            raise HTTPException(404)
-        return await client.authorize_redirect(request, redirect_uri)
+            log.error(f"Failed to get OAuth client for provider: {provider}")
+            raise HTTPException(404, detail="OAuth client not found")
+
+        log.info(f"Authorizing redirect for provider '{provider}'")
+        try:
+            return await client.authorize_redirect(request, redirect_uri)
+        except Exception as e:
+            log.exception(f"OAuth authorization failed for provider '{provider}': {e}")
+            raise HTTPException(500, detail="OAuth authorization failed")
 
     async def handle_callback(self, request, provider, response):
         if provider not in OAUTH_PROVIDERS:

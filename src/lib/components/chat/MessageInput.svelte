@@ -63,6 +63,7 @@
 	import Attach from '../icons/Attach.svelte';
 
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
+	import { stringify } from 'postcss';
 
 	const i18n = getContext('i18n');
 
@@ -676,6 +677,7 @@
 											{#if file.type === 'image'}
 												<div class=" relative group">
 													<div class="relative flex items-center">
+													
 														<Image
 															src={file.url}
 															alt="input"

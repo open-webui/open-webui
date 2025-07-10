@@ -14,6 +14,7 @@ export default {
 					   100: 'var(--color-neutrals-100, #DEE0E3)',
 					   400: 'var(--color-neutrals-400, #A5A6A9)',
 					   700: 'var(--color-neutrals-700, #4F5154)',
+					   
 					   black: 'var(--color-neutrals-black, #1D1F22)',  
 					   white: 'var(--color-neutrals-white, #ffffff)', 
 					   error:'var(--color-neutrals-error, #D91938)'

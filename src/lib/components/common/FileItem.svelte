@@ -11,7 +11,7 @@
 	const dispatch = createEventDispatcher();
 
 	export let className = 'w-60';
-	export let colorClassName = 'bg-white dark:bg-gray-850 border border-gray-50 dark:border-white/5';
+	export let colorClassName = 'bg-white dark:bg-gray-850 border border-gray-100 dark:border-white/5';
 	export let url: string | null = null;
 
 	export let dismissible = false;
@@ -26,6 +26,7 @@
 	export let size: number;
 
 	import { deleteFileById } from '$lib/apis/files';
+	import MaterialIcon from './MaterialIcon.svelte';
 
 	let showModal = false;
 
@@ -64,7 +65,7 @@
 	}}
 >
 	{#if !small}
-		<div class="p-3 bg-black/20 dark:bg-white/10 text-white rounded-xl">
+		<div class="p-2 text-neutral-800 dark:text-neutral-100 rounded-xl">
 			{#if !loading}
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
@@ -88,13 +89,13 @@
 	{/if}
 
 	{#if !small}
-		<div class="flex flex-col justify-center -space-y-0.5 px-2.5 w-full">
+		<div class="flex flex-col justify-center -space-y-0.5 w-full">
 			<div class=" dark:text-gray-100 text-sm font-medium line-clamp-1 mb-1">
 				{decodeString(name)}
 			</div>
 
 			<div class=" flex justify-between text-gray-500 text-xs line-clamp-1">
-				{#if type === 'file'}
+				<!-- {#if type === 'file'}
 					{$i18n.t('File')}
 				{:else if type === 'doc'}
 					{$i18n.t('Document')}
@@ -102,7 +103,7 @@
 					{$i18n.t('Collection')}
 				{:else}
 					<span class=" capitalize line-clamp-1">{type}</span>
-				{/if}
+				{/if} -->
 				{#if size}
 					<span class="capitalize">{formatFileSize(size)}</span>
 				{/if}
@@ -125,7 +126,7 @@
 	{/if}
 
 	{#if dismissible}
-		<div class=" absolute -top-1 -right-1">
+		<div class="">
 			<button
 				class=" bg-white text-black border border-gray-50 rounded-full group-hover:visible invisible transition"
 				type="button"
@@ -133,7 +134,11 @@
 					dispatch('dismiss');
 				}}
 			>
-				<svg
+				
+
+				<MaterialIcon name="delete" className="size-4" />
+			
+				<!-- <svg
 					xmlns="http://www.w3.org/2000/svg"
 					viewBox="0 0 20 20"
 					fill="currentColor"
@@ -142,7 +147,7 @@
 					<path
 						d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
 					/>
-				</svg>
+				</svg> -->
 			</button>
 
 			<!-- <button
