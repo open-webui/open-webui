@@ -549,7 +549,7 @@ class Oracle23aiClient(VectorDBBase):
                         
                         cursor.execute("""
                             SELECT dc.id, dc.text, 
-                                JSON_SERIALIZE(dc.vmetadata) as vmetadata,
+                                JSON_SERIALIZE(dc.vmetadata RETURNING VARCHAR2(4096)) as vmetadata,
                                 VECTOR_DISTANCE(dc.vector, :query_vector, COSINE) as distance
                             FROM document_chunk dc
                             WHERE dc.collection_name = :collection_name
@@ -616,7 +616,7 @@ class Oracle23aiClient(VectorDBBase):
             limit = limit or 100
             
             query = """
-                SELECT id, text, vmetadata
+                SELECT id, text, JSON_SERIALIZE(vmetadata RETURNING VARCHAR2(4096)) as vmetadata 
                 FROM document_chunk
                 WHERE collection_name = :collection_name
             """
@@ -687,7 +687,7 @@ class Oracle23aiClient(VectorDBBase):
             with self.get_connection() as connection:
                 with connection.cursor() as cursor:
                     cursor.execute("""
-                        SELECT /*+ MONITOR */ id, text, vmetadata
+                        SELECT /*+ MONITOR */ id, text, JSON_SERIALIZE(vmetadata RETURNING VARCHAR2(4096)) as vmetadata
                         FROM document_chunk
                         WHERE collection_name = :collection_name
                         FETCH FIRST :limit ROWS ONLY
