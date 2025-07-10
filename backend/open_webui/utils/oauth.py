@@ -14,6 +14,9 @@ from fastapi import (
 )
 from starlette.responses import RedirectResponse
 
+from urllib.parse import unquote
+
+
 from open_webui.models.auths import Auths
 from open_webui.models.users import Users
 from open_webui.models.groups import Groups, GroupModel, GroupUpdateForm, GroupForm
@@ -339,9 +342,14 @@ class OAuthManager:
 
         # Determine redirect URI
         try:
+
+            query_params = dict(request.query_params)
+            custom_redirect_uri = query_params.get("redirect_uri")
             redirect_uri = (
-                OAUTH_PROVIDERS[provider].get("redirect_uri") or 
-                request.url_for("oauth_callback", provider=provider)
+                unquote(custom_redirect_uri)
+                if custom_redirect_uri
+                else OAUTH_PROVIDERS[provider].get("redirect_uri") or
+                    request.url_for("oauth_callback", provider=provider)
             )
             log.info(f"Redirect URI for provider '{provider}': {redirect_uri}")
         except Exception as e:
