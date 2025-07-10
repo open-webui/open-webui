@@ -3,8 +3,6 @@
 	import { toast } from 'svelte-sonner';
 	import mermaid from 'mermaid';
 	import { PaneGroup, Pane, PaneResizer } from 'paneforge';
-	import { marked } from 'marked';
-	import { sanitizeResponseContent } from '$lib/utils';
 
 	import { getContext, onDestroy, onMount, tick } from 'svelte';
 	const i18n: Writable<i18nType> = getContext('i18n');
@@ -108,7 +106,6 @@
 	let messagesContainerElement: HTMLDivElement;
 
 	let navbarElement;
-	let selectedModelDescription = '';
 	let showEventConfirmation = false;
 	let eventConfirmationTitle = '';
 	let eventConfirmationMessage = '';
@@ -461,19 +458,6 @@
 
 	let pageSubscribe = null;
 	onMount(async () => {
-		let selectedModels = sessionStorage.selectedModels;
-
-		if (selectedModels) {
-			selectedModels = JSON.parse(sessionStorage.selectedModels);
-			if (selectedModels[0] !== '') {
-				const selectedModel: Model | undefined = $models.find(({ id }) => id === selectedModels[0]);
-
-				if (selectedModel?.info?.meta?.description) {
-					selectedModelDescription = selectedModel.info?.meta?.description;
-				}
-			}
-		}
-
 		loading = true;
 		console.log('mounted');
 		window.addEventListener('message', onMessageHandler);
@@ -2250,14 +2234,6 @@
 									/>
 								</div>
 							</div>
-
-							{#if selectedModelDescription ?? null}
-								<div
-									class="mt-0.5 px-2.5 py-2.5 text-sm font-normal text-gray-500 dark:text-gray-400 line-clamp-2 max-w-xl markdown"
-								>
-									{@html marked.parse(sanitizeResponseContent(selectedModelDescription))}
-								</div>
-							{/if}
 
 							<div class=" pb-2">
 								<MessageInput
