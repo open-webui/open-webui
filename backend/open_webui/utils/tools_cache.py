@@ -3,8 +3,6 @@ import logging
 
 from fastapi import Request
 
-from open_webui.utils.tools import get_tool_servers_data
-
 log = logging.getLogger(__name__)
 
 
@@ -69,6 +67,9 @@ async def set_and_cache_tool_servers(request: Request, connections: list):
     Set tool server connections and immediately fetch and cache the tool servers.
     This replaces the need to store connections in app.state.config.
     """
+    # Dynamic import to avoid circular import
+    from open_webui.utils.tools import get_tool_servers_data
+
     await invalidate_tool_servers_cache(request)
 
     tool_servers = await get_tool_servers_data(connections)
