@@ -41,7 +41,7 @@
 	export let id = '';
 	export let value = '';
 	export let placeholder = 'Select a model';
-	export let searchEnabled = true;
+	export let searchEnabled = false;
 	export let searchPlaceholder = $i18n.t('Search a model');
 
 	export let showTemporaryChatControl = false;
@@ -54,7 +54,7 @@
 		[key: string]: any;
 	}[] = [];
 
-	export let className = 'w-[32rem]';
+	export let className = 'w-[200px]';
 	export let triggerClassName = 'text-lg';
 
 	export let pinModelHandler: (modelId: string) => void = () => {};
@@ -410,6 +410,7 @@
 				</div>
 			{/if}
 
+			{#if false}
 			<div class="px-3">
 				{#if tags && items.filter((item) => !(item.model?.info?.meta?.hidden ?? false)).length > 0}
 					<div
@@ -499,8 +500,9 @@
 					</div>
 				{/if}
 			</div>
+			{/if}
 
-			<div class="px-3 max-h-64 overflow-y-auto group relative">
+			<div class="p-3 max-h-64 overflow-y-auto group relative max-w-[200px]">
 				{#each filteredItems as item, index}
 					<ModelItem
 						{selectedModelIdx}
@@ -628,7 +630,7 @@
 				{/each}
 			</div>
 
-			{#if showTemporaryChatControl}
+			{#if false && showTemporaryChatControl}
 				<div class="flex items-center mx-2 mt-1 mb-2">
 					<button
 						class="flex justify-between w-full font-medium line-clamp-1 select-none items-center rounded-button py-2 px-3 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer data-highlighted:bg-muted"
@@ -662,7 +664,7 @@
 					</button>
 				</div>
 			{:else}
-				<div class="mb-3"></div>
+				<div class="mb-0"></div>
 			{/if}
 
 			<div class="hidden w-[42rem]" />

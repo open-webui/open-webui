@@ -45,7 +45,7 @@
 	}
 </script>
 
-<div class="flex flex-col w-full items-start">
+<div class="flex flex-col w-full items-start max-w-[100px]">
 	{#each selectedModels as selectedModel, selectedModelIdx}
 		<div class="flex w-full max-w-fit">
 			<div class="overflow-hidden w-full">
@@ -68,7 +68,7 @@
 				</div>
 			</div>
 
-			{#if $user?.role === 'admin' || ($user?.permissions?.chat?.multiple_models ?? true)}
+			{#if false && ($user?.role === 'admin' || ($user?.permissions?.chat?.multiple_models ?? true))}
 				{#if selectedModelIdx === 0}
 					<div
 						class="  self-center mx-1 disabled:text-gray-600 disabled:hover:text-gray-600 -translate-y-[0.5px]"
@@ -127,7 +127,7 @@
 	{/each}
 </div>
 
-{#if showSetDefault}
+{#if false && showSetDefault}
 	<div
 		class="absolute text-left mt-[1px] ml-1 text-[0.7rem] text-gray-600 dark:text-gray-400 font-primary"
 	>
