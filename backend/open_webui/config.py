@@ -13,6 +13,8 @@ from urllib.parse import urlparse
 import requests
 from pydantic import BaseModel
 from sqlalchemy import JSON, Column, DateTime, Integer, func
+from authlib.integrations.starlette_client import OAuth
+
 
 from open_webui.env import (
     DATA_DIR,
@@ -546,7 +548,7 @@ def load_oauth_providers():
     OAUTH_PROVIDERS.clear()
     if GOOGLE_CLIENT_ID.value and GOOGLE_CLIENT_SECRET.value:
 
-        def google_oauth_register(client):
+        def google_oauth_register(client: OAuth):
             client.register(
                 name="google",
                 client_id=GOOGLE_CLIENT_ID.value,
@@ -574,7 +576,7 @@ def load_oauth_providers():
         and MICROSOFT_CLIENT_TENANT_ID.value
     ):
 
-        def microsoft_oauth_register(client):
+        def microsoft_oauth_register(client: OAuth):
             client.register(
                 name="microsoft",
                 client_id=MICROSOFT_CLIENT_ID.value,
@@ -599,7 +601,7 @@ def load_oauth_providers():
 
     if GITHUB_CLIENT_ID.value and GITHUB_CLIENT_SECRET.value:
 
-        def github_oauth_register(client):
+        def github_oauth_register(client: OAuth):
             client.register(
                 name="github",
                 client_id=GITHUB_CLIENT_ID.value,
@@ -631,7 +633,7 @@ def load_oauth_providers():
         and OPENID_PROVIDER_URL.value
     ):
 
-        def oidc_oauth_register(client):
+        def oidc_oauth_register(client: OAuth):
             client_kwargs = {
                 "scope": OAUTH_SCOPES.value,
                 **(
