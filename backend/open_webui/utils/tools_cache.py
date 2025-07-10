@@ -48,7 +48,13 @@ async def get_cached_tool_servers(request: Request):
     if request.app.state.TOOL_SERVERS:
         return request.app.state.TOOL_SERVERS
 
-    log.debug("No cached tool servers found")
+    # Check if the tool server connections have been initialized by an environment variable
+    if request.app.state.config.TOOL_SERVER_CONNECTIONS:
+        return await set_and_cache_tool_servers(
+            request, request.app.state.config.TOOL_SERVER_CONNECTIONS
+        )
+
+    log.debug("No cached tool servers or tool server connections found")
     return []
 
 
