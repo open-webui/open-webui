@@ -19,24 +19,30 @@ class OneDriveConfig {
 		return OneDriveConfig.instance;
 	}
 
-	public async initialize(authorityType?: 'personal' | 'organizations'): Promise<void> {
+	public async initialize(
+		baseUrl: string,
+		authorityType?: 'personal' | 'organizations'
+	): Promise<void> {
 		if (authorityType && this.currentAuthorityType !== authorityType) {
 			this.currentAuthorityType = authorityType;
 			this.msalInstance = null;
 		}
-		await this.getCredentials();
+		await this.getCredentials(baseUrl);
 	}
 
-	public async ensureInitialized(authorityType?: 'personal' | 'organizations'): Promise<void> {
-		await this.initialize(authorityType);
+	public async ensureInitialized(
+		baseUrl: string,
+		authorityType?: 'personal' | 'organizations'
+	): Promise<void> {
+		await this.initialize(baseUrl, authorityType);
 	}
 
-	private async getCredentials(): Promise<void> {
+	private async getCredentials(baseUrl: string): Promise<void> {
 		const headers: HeadersInit = {
 			'Content-Type': 'application/json'
 		};
 
-		const response = await fetch('/api/config', {
+		const response = await fetch(`${baseUrl}/api/config`, {
 			headers,
 			credentials: 'include'
 		});
@@ -61,9 +67,10 @@ class OneDriveConfig {
 	}
 
 	public async getMsalInstance(
+		baseUrl: string,
 		authorityType?: 'personal' | 'organizations'
 	): Promise<PublicClientApplication> {
-		await this.ensureInitialized(authorityType);
+		await this.ensureInitialized(baseUrl, authorityType);
 
 		if (!this.msalInstance) {
 			const authorityEndpoint =
@@ -116,11 +123,12 @@ class OneDriveConfig {
 
 // Retrieve OneDrive access token
 async function getToken(
+	baseUrl: string,
 	resource?: string,
 	authorityType?: 'personal' | 'organizations'
 ): Promise<string> {
 	const config = OneDriveConfig.getInstance();
-	await config.ensureInitialized(authorityType);
+	await config.ensureInitialized(baseUrl, authorityType);
 
 	const currentAuthorityType = config.getAuthorityType();
 
@@ -133,11 +141,11 @@ async function getToken(
 	let accessToken = '';
 
 	try {
-		const msalInstance = await config.getMsalInstance(authorityType);
+		const msalInstance = await config.getMsalInstance(baseUrl, authorityType);
 		const resp = await msalInstance.acquireTokenSilent(authParams);
 		accessToken = resp.accessToken;
 	} catch (err) {
-		const msalInstance = await config.getMsalInstance(authorityType);
+		const msalInstance = await config.getMsalInstance(baseUrl, authorityType);
 		try {
 			const resp = await msalInstance.loginPopup(authParams);
 			msalInstance.setActiveAccount(resp.account);
@@ -226,10 +234,11 @@ interface OneDriveFileInfo {
 
 // Download file from OneDrive
 async function downloadOneDriveFile(
+	baseUrl: string,
 	fileInfo: OneDriveFileInfo,
 	authorityType?: 'personal' | 'organizations'
 ): Promise<Blob> {
-	const accessToken = await getToken(undefined, authorityType);
+	const accessToken = await getToken(baseUrl, undefined, authorityType);
 	if (!accessToken) {
 		throw new Error('Unable to retrieve OneDrive access token.');
 	}
@@ -267,6 +276,7 @@ async function downloadOneDriveFile(
 
 // Open OneDrive file picker and return selected file metadata
 export async function openOneDrivePicker(
+	baseUrl: string,
 	authorityType?: 'personal' | 'organizations'
 ): Promise<PickerResult | null> {
 	if (typeof window === 'undefined') {
@@ -275,7 +285,7 @@ export async function openOneDrivePicker(
 
 	// Initialize OneDrive config with the specified authority type
 	const config = OneDriveConfig.getInstance();
-	await config.initialize(authorityType);
+	await config.initialize(baseUrl, authorityType);
 
 	return new Promise((resolve, reject) => {
 		let pickerWindow: Window | null = null;
@@ -309,7 +319,7 @@ export async function openOneDrivePicker(
 								// Pass the resource from the command for org accounts
 								const resource =
 									config.getAuthorityType() === 'organizations' ? command.resource : undefined;
-								const newToken = await getToken(resource, authorityType);
+								const newToken = await getToken(baseUrl, resource, authorityType);
 								if (newToken) {
 									channelPort?.postMessage({
 										type: 'result',
@@ -373,7 +383,7 @@ export async function openOneDrivePicker(
 
 		const initializePicker = async () => {
 			try {
-				const authToken = await getToken(undefined, authorityType);
+				const authToken = await getToken(baseUrl, undefined, authorityType);
 				if (!authToken) {
 					return reject(new Error('Failed to acquire access token'));
 				}
@@ -421,16 +431,17 @@ export async function openOneDrivePicker(
 
 // Pick and download file from OneDrive
 export async function pickAndDownloadFile(
+	baseUrl: string,
 	authorityType?: 'personal' | 'organizations'
 ): Promise<{ blob: Blob; name: string } | null> {
-	const pickerResult = await openOneDrivePicker(authorityType);
+	const pickerResult = await openOneDrivePicker(baseUrl, authorityType);
 
 	if (!pickerResult || !pickerResult.items || pickerResult.items.length === 0) {
 		return null;
 	}
 
 	const selectedFile = pickerResult.items[0];
-	const blob = await downloadOneDriveFile(selectedFile, authorityType);
+	const blob = await downloadOneDriveFile(baseUrl, selectedFile, authorityType);
 
 	return { blob, name: selectedFile.name };
 }

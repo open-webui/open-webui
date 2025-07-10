@@ -1575,7 +1575,7 @@
 											}}
 											uploadGoogleDriveHandler={async () => {
 												try {
-													const fileData = await createPicker();
+													const fileData = await createPicker(WEBUI_BASE_URL);
 													if (fileData) {
 														const file = new File([fileData.blob], fileData.name, {
 															type: fileData.blob.type
@@ -1595,7 +1595,7 @@
 											}}
 											uploadOneDriveHandler={async (authorityType) => {
 												try {
-													const fileData = await pickAndDownloadFile(authorityType);
+													const fileData = await pickAndDownloadFile(WEBUI_BASE_URL, authorityType);
 													if (fileData) {
 														const file = new File([fileData.blob], fileData.name, {
 															type: fileData.blob.type || 'application/octet-stream'
