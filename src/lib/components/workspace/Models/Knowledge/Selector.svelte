@@ -116,13 +116,7 @@
 					]
 				: [];
 
-		items = [
-			...notes,
-			...collections,
-			...collection_files,
-			...legacy_collections,
-			...legacy_documents
-		].map((item) => {
+		items = [...notes, ...collections, ...legacy_collections].map((item) => {
 			return {
 				...item,
 				...(item?.legacy || item?.meta?.legacy || item?.meta?.document ? { legacy: true } : {})
