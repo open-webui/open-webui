@@ -3,8 +3,8 @@ let API_KEY = '';
 let CLIENT_ID = '';
 
 // Function to fetch credentials from backend config
-async function getCredentials() {
-	const response = await fetch('/api/config');
+async function getCredentials(baseUrl: string) {
+	const response = await fetch(`${baseUrl}/api/config`);
 	if (!response.ok) {
 		throw new Error('Failed to fetch Google Drive credentials');
 	}
@@ -95,20 +95,20 @@ export const getAuthToken = async () => {
 	return oauthToken;
 };
 
-const initialize = async () => {
+const initialize = async (baseUrl: string) => {
 	if (!initialized) {
-		await getCredentials();
+		await getCredentials(baseUrl);
 		validateCredentials();
 		await Promise.all([loadGoogleDriveApi(), loadGoogleAuthApi()]);
 		initialized = true;
 	}
 };
 
-export const createPicker = () => {
+export const createPicker = (baseUrl: string) => {
 	return new Promise(async (resolve, reject) => {
 		try {
 			console.log('Initializing Google Drive Picker...');
-			await initialize();
+			await initialize(baseUrl);
 			console.log('Getting auth token...');
 			const token = await getAuthToken();
 			if (!token) {
