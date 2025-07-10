@@ -9,7 +9,14 @@
 
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { mobile, showSidebar, knowledge as _knowledge, config, user } from '$lib/stores';
+	import {
+		mobile,
+		showSidebar,
+		knowledge as _knowledge,
+		config,
+		user,
+		settings
+	} from '$lib/stores';
 
 	import {
 		updateFileDataContentById,
@@ -131,9 +138,11 @@
 			size: file.size,
 			status: 'uploading',
 			error: '',
+			progress: 0,
 			itemId: tempItemId
+			
 		};
-
+		
 		if (fileItem.size == 0) {
 			toast.error($i18n.t('You cannot upload an empty file.'));
 			return null;
@@ -153,36 +162,59 @@
 				})
 			);
 			return;
+
 		}
 
+		// Add fileItem to knowledge.files
 		knowledge.files = [...(knowledge.files ?? []), fileItem];
 
-		try {
-			// marking not to process the files being uploaded here as they will be process when added to knowledge
-			// don't want to process twice
-			const uploadedFile = await uploadFile(localStorage.token, file).catch((e) => {
-				toast.error(`${e}`);
-				return null;
-			});
 
-			if (uploadedFile) {
-				knowledge.files = knowledge.files.map((item) => {
+
+		let uploadedFile = null;
+		try {
+			uploadedFile = await uploadFile(localStorage.token, file, true, (percent) => {
+				// Update upload progress, capped at 50%
+				knowledge.files = knowledge.files.map(item => {
 					if (item.itemId === tempItemId) {
-						item.id = uploadedFile.id;
+						item.progress = percent > 50 ? 50 : percent;
+						if (item.progress === 50){
+							item.status = 'processing'
+						}
 					}
 
-					// Remove temporary item id
-					delete item.itemId;
 					return item;
 				});
 
-				await addFileHandler(uploadedFile.id);
-			} else {
-				toast.error($i18n.t('Failed to upload file.'));
-			}
+			});
 		} catch (e) {
-			toast.error(`${e}`);
+			toast.error(`Failed to upload: ${e}`);
+
+			// Mark file as error
+			knowledge.files = knowledge.files.map(item => {
+				if (item.itemId === tempItemId) {
+					item.status = 'error';
+				}
+				return item;
+			});
+
+
+			return;  // Exit early on error
 		}
+
+		// Finalize file in knowledge.files
+		knowledge.files = knowledge.files.map(item => {
+			if (item.itemId === tempItemId) {
+				item.id = uploadedFile.id;
+				delete item.itemId;
+				item.status = 'ready';
+				item.progress = 100;  // Ensure progress shows 100%
+			}
+			
+			return item;
+		});
+
+		// Final API call to add to knowledge base
+		await addFileHandler(uploadedFile.id);
 	};
 
 	const uploadDirectoryHandler = async () => {
