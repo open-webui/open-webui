@@ -11,8 +11,9 @@ services:
     volumes:
       # [CRITICAL] Bind mount your local backend code into the container
       - ./backend:/app/backend
-      # Create a separate volume for the database to persist it
-      - open-webui-db:/app/backend/data
+
+      # - open-webui-db:/app/backend/data
+      - ./backend/data:/app/backend/data       # ./backend/data is where the DB lives during development
     environment:
       # Set the environment variable to enable your debug key retrieval logic
       - DEBUG_USER_KEYS=True
@@ -22,9 +23,11 @@ services:
       - DEBUGGER=True
       # [NEW] Add a secret key for session management
       - WEBUI_SECRET_KEY=a_secure_random_string_for_local_dev
+      # Add this line to enable the sign-up page
+      - ENABLE_SIGNUP=True
     entrypoint: ""
     command:
       # The command to run inside the container
       bash /app/backend/start.sh
-volumes:
-  open-webui-db:
+# volumes:
+#  open-webui-db:

@@ -1,29 +1,30 @@
 import time
 from typing import Optional
+import base64
 
 from open_webui.internal.db import Base, JSONField, get_db
-
-
 from open_webui.models.chats import Chats
 from open_webui.models.groups import Groups
-
 
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, String, Text, LargeBinary
 from sqlalchemy import or_
 
-
 ####################
 # User DB Schema
 ####################
 
-
 class User(Base):
     __tablename__ = "user"
 
-    id = Column(String, primary_key=True)
+    # id stores the derived UserID (HMAC of email, hex digest). This is the primary key.
+    id = Column(String, primary_key=True, index=True)
     name = Column(String)
-    email = Column(String)
+
+    # Email is still stored and used for login, and as the source for UserID generation.
+    # It must be unique as it's the basis for the unique UserID.
+    # WRONG - I will ultimately no use this for SaaS; may be used for Enterprise
+    email = Column(String, unique=True, index=True, nullable=False)
     role = Column(String)
     profile_image_url = Column(Text)
 
@@ -35,13 +36,29 @@ class User(Base):
     settings = Column(JSONField, nullable=True)
     info = Column(JSONField, nullable=True)
 
-    oauth_sub = Column(Text, unique=True)
+    # Made nullable to accommodate users created before OAuth integration or local users.
+    # WE ARE NOT GOING TO SUPPORT OAUTH
+    oauth_sub = Column(Text, unique=True, nullable=True)
 
-    # Fields for per-user encryption
+    # Fields for per-user encryption:
+    # TODO: CRITICAL FOR SECURITY - The 'user_key' column is for temporary local development ONLY.
+    # It stores the raw derived UserKey (PBKDF2 output). In a production system adhering to the spec,
+    # this key would NOT be stored in the database. It would be managed client-side,
+    # ideally delivered via a client certificate for mTLS authentication.
+    # This field should be removed when client certificate issuance and mTLS auth are implemented.
+    user_key = Column(LargeBinary, nullable=True)  # TEMPORARY STORAGE for raw UserKey
+
+    # Salt used in PBKDF2 with the UserID to derive the UserKey.
     salt = Column(LargeBinary, nullable=True)
-    user_encrypted_dek = Column(LargeBinary, nullable=True)
-    # kms_encrypted_dek = Column(LargeBinary, nullable=True) # For future implementation
 
+    # The user's Data Encryption Key (DEK), encrypted with their UserKey.
+    # The DEK is randomly generated per user and is used to encrypt their actual chat messages.
+    user_encrypted_dek = Column(LargeBinary, nullable=True)
+
+    # The same plaintext DEK, but encrypted with a master KMS Customer-Managed Key (CMK).
+    # This serves as the "break-glass" disaster recovery mechanism for user data.
+    # TODO: This field will store actual KMS ciphertext when deployed to AWS and integrated with KMS.
+    kms_encrypted_dek = Column(LargeBinary, nullable=True)  # STUB - For future KMS integration
 
 class UserSettings(BaseModel):
     ui: Optional[dict] = {}
@@ -50,7 +67,10 @@ class UserSettings(BaseModel):
 
 
 class UserModel(BaseModel):
-    id: str
+    # Pydantic model for User data. Corresponds to the User SQLAlchemy model.
+    # Ensures data validation and serialization/deserialization.
+
+    id: str  # Derived UserID (HMAC of email)
     name: str
     email: str
     role: str = "pending"
@@ -66,12 +86,20 @@ class UserModel(BaseModel):
 
     oauth_sub: Optional[str] = None
 
-    # Fields for per-user encryption
+    # Fields for per-user encryption.
+    # These are stored as bytes in the DB; Pydantic model represents them as Optional[bytes].
+    # TODO: Remove 'user_key' from this model when it's removed from the User DB model (after client certs).
+    user_key: Optional[bytes] = None                # TEMPORARY
     salt: Optional[bytes] = None
     user_encrypted_dek: Optional[bytes] = None
-    # kms_encrypted_dek: Optional[bytes] = None # For future implementation
+    kms_encrypted_dek: Optional[bytes] = None       # STUB for KMS
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        from_attributes=True, # orm_mode = True in Pydantic V1
+        json_encoders={
+            bytes: lambda b: base64.b64encode(b).decode('utf-8') if b is not None else None
+        }
+    )
 
 
 ####################
@@ -115,16 +143,25 @@ class UserUpdateForm(BaseModel):
 class UsersTable:
     def insert_new_user(
         self,
-        id: str,
+        id: str,                  # This is now the derived UserID (HMAC of email)
         name: str,
         email: str,
         profile_image_url: str = "/user.png",
         role: str = "pending",
         oauth_sub: Optional[str] = None,
+
+        # New parameters for encryption fields
+        salt: Optional[bytes] = None,
+        user_key: Optional[bytes] = None,               # TEMPORARY - Raw UserKey
+        user_encrypted_dek: Optional[bytes] = None,
+        kms_encrypted_dek: Optional[bytes] = None,      # STUB for KMS
     ) -> Optional[UserModel]:
+        # Inserts a new user into the database with all associated information,
+        # including fields required for per-user encryption.
+        # The 'id' parameter is the derived UserID.
+        # The 'user_key' is stored temporarily and should be removed in later stages.
         with get_db() as db:
-            user = UserModel(
-                **{
+            user_data = {
                     "id": id,
                     "name": name,
                     "email": email,
@@ -134,30 +171,42 @@ class UsersTable:
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
                     "oauth_sub": oauth_sub,
-                }
-            )
-            result = User(**user.model_dump())
-            db.add(result)
+                # Encryption-related fields
+                "salt": salt,
+                "user_key": user_key, # TEMPORARY
+                "user_encrypted_dek": user_encrypted_dek,
+                "kms_encrypted_dek": kms_encrypted_dek, # STUB
+            }
+            
+            # Create Pydantic model instance for validation and to ensure all fields are present/defaulted
+            user_model_instance = UserModel(**user_data)
+            
+            # Create SQLAlchemy model instance using the Pydantic model's dump.
+            # exclude_none=True ensures that fields not provided (and thus None) are not
+            # passed to the SQLAlchemy model if they are not explicitly nullable there or have server defaults.
+            db_user = User(**user_model_instance.model_dump(exclude_none=True))
+            
+            db.add(db_user)
             db.commit()
-            db.refresh(result)
-            if result:
-                return user
-            else:
-                return None
+            db.refresh(db_user)
+            
+            # Return the Pydantic model instance, which is useful for API responses.
+            return UserModel.model_validate(db_user)
 
     def get_user_by_id(self, id: str) -> Optional[UserModel]:
         try:
             with get_db() as db:
                 user = db.query(User).filter_by(id=id).first()
-                return UserModel.model_validate(user)
+                return UserModel.model_validate(user) if user else None
         except Exception:
+            # Consider logging the exception here
             return None
 
     def get_user_by_api_key(self, api_key: str) -> Optional[UserModel]:
         try:
             with get_db() as db:
                 user = db.query(User).filter_by(api_key=api_key).first()
-                return UserModel.model_validate(user)
+                return UserModel.model_validate(user) if user else None
         except Exception:
             return None
 
@@ -165,7 +214,7 @@ class UsersTable:
         try:
             with get_db() as db:
                 user = db.query(User).filter_by(email=email).first()
-                return UserModel.model_validate(user)
+                return UserModel.model_validate(user) if user else None
         except Exception:
             return None
 
@@ -173,7 +222,7 @@ class UsersTable:
         try:
             with get_db() as db:
                 user = db.query(User).filter_by(oauth_sub=sub).first()
-                return UserModel.model_validate(user)
+                return UserModel.model_validate(user) if user else None
         except Exception:
             return None
 
@@ -256,11 +305,11 @@ class UsersTable:
         with get_db() as db:
             return db.query(User).count()
 
-    def get_first_user(self) -> UserModel:
+    def get_first_user(self) -> Optional[UserModel]:
         try:
             with get_db() as db:
                 user = db.query(User).order_by(User.created_at).first()
-                return UserModel.model_validate(user)
+                return UserModel.model_validate(user) if user else None
         except Exception:
             return None
 
@@ -286,7 +335,7 @@ class UsersTable:
                 db.query(User).filter_by(id=id).update({"role": role})
                 db.commit()
                 user = db.query(User).filter_by(id=id).first()
-                return UserModel.model_validate(user)
+                return UserModel.model_validate(user) if user else None
         except Exception:
             return None
 
@@ -301,7 +350,7 @@ class UsersTable:
                 db.commit()
 
                 user = db.query(User).filter_by(id=id).first()
-                return UserModel.model_validate(user)
+                return UserModel.model_validate(user) if user else None
         except Exception:
             return None
 
@@ -314,7 +363,7 @@ class UsersTable:
                 db.commit()
 
                 user = db.query(User).filter_by(id=id).first()
-                return UserModel.model_validate(user)
+                return UserModel.model_validate(user) if user else None
         except Exception:
             return None
 
@@ -327,7 +376,7 @@ class UsersTable:
                 db.commit()
 
                 user = db.query(User).filter_by(id=id).first()
-                return UserModel.model_validate(user)
+                return UserModel.model_validate(user) if user else None
         except Exception:
             return None
 
@@ -338,7 +387,7 @@ class UsersTable:
                 db.commit()
 
                 user = db.query(User).filter_by(id=id).first()
-                return UserModel.model_validate(user)
+                return UserModel.model_validate(user) if user else None
                 # return UserModel(**user.dict())
         except Exception:
             return None
@@ -357,7 +406,7 @@ class UsersTable:
                 db.commit()
 
                 user = db.query(User).filter_by(id=id).first()
-                return UserModel.model_validate(user)
+                return UserModel.model_validate(user) if user else None
         except Exception:
             return None
 
@@ -393,7 +442,7 @@ class UsersTable:
         try:
             with get_db() as db:
                 user = db.query(User).filter_by(id=id).first()
-                return user.api_key
+                return user.api_key if user else None
         except Exception:
             return None
 
