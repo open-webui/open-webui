@@ -1,6 +1,7 @@
 import logging
 import requests
 from typing import Optional, List, Tuple
+from urllib.parse import quote
 
 from open_webui.env import ENABLE_FORWARD_USER_INFO_HEADERS, SRC_LOG_LEVELS
 from open_webui.retrieval.models.base_reranker import BaseReranker
@@ -44,7 +45,7 @@ class ExternalReranker(BaseReranker):
                     "Authorization": f"Bearer {self.api_key}",
                     **(
                         {
-                            "X-OpenWebUI-User-Name": self.user.name,
+                            "X-OpenWebUI-User-Name": quote(self.user.name, safe=" "),
                             "X-OpenWebUI-User-Id": self.user.id,
                             "X-OpenWebUI-User-Email": self.user.email,
                             "X-OpenWebUI-User-Role": self.user.role,
