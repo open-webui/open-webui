@@ -11,7 +11,7 @@
 	import { userSignOut } from '$lib/apis/auths';
 	import { updateUserSettings } from '$lib/apis/users';
 
-	import {config, showSettings, mobile, showSidebar, user, settings, models,theme } from '$lib/stores';
+	import {config, showSettings, mobile, showSidebar, user, settings, models } from '$lib/stores';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
@@ -40,11 +40,6 @@
 	
 	let isOnNotification = false;
 	let notificationEnabled = false;
-	let isOnThemeToggle = true;
-	let themeEnabled = false;
-	// General
-	let themes = ['dark', 'light'];
-	let selectedTheme = 'light';
 	const toggleNotification = async () => {
 		const permission = await Notification.requestPermission();
 		if (permission === 'granted') {
@@ -87,73 +82,6 @@
 	$: if (show) {
 		getUsageInfo();
 	}
-
-	const applyTheme = (_theme: string) => {
-		let themeToApply = _theme === 'oled-dark' ? 'dark' : _theme;
-
-		if (_theme === 'system') {
-			themeToApply = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-		}
-
-		if (themeToApply === 'dark') {
-			document.documentElement.style.setProperty('--color-gray-800', '#333');
-			document.documentElement.style.setProperty('--color-gray-850', '#262626');
-			document.documentElement.style.setProperty('--color-gray-900', '#171717');
-			document.documentElement.style.setProperty('--color-gray-950', '#0d0d0d');
-			document.documentElement.style.setProperty('--Schemes-Surface', '#36383B');
-			document.documentElement.style.setProperty('--color-neutrals-800', '#fff');
-		}else {
-			document.documentElement.style='';
-		}
-
-		themes
-			.filter((e) => e !== themeToApply)
-			.forEach((e) => {
-				e.split(' ').forEach((e) => {
-					document.documentElement.classList.remove(e);
-				});
-			});
-
-		themeToApply.split(' ').forEach((e) => {
-			document.documentElement.classList.add(e);
-		});
-
-		const metaThemeColor = document.querySelector('meta[name="theme-color"]');
-		if (metaThemeColor) {
-			if (_theme.includes('system')) {
-				const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
-					? 'dark'
-					: 'light';
-				console.log('Setting system meta theme color: ' + systemTheme);
-				metaThemeColor.setAttribute('content', systemTheme === 'light' ? '#ffffff' : '#171717');
-			} else {
-				console.log('Setting meta theme color: ' + _theme);
-				metaThemeColor.setAttribute(
-					'content',
-					_theme === 'dark'
-						? '#171717'
-						: _theme === 'oled-dark'
-							? '#000000'
-							: _theme === 'her'
-								? '#983724'
-								: '#ffffff'
-				);
-			}
-		}
-
-		if (typeof window !== 'undefined' && window.applyTheme) {
-			window.applyTheme();
-		}
-
-		
-		console.log(_theme);
-	};
-
-	const themeChangeHandler = (_theme: string) => {
-		theme.set(_theme);
-		localStorage.setItem('theme', _theme);
-		applyTheme(_theme);
-	};
 </script>
 
 <ShortcutsModal bind:show={showShortcuts} />
@@ -178,41 +106,23 @@
 			transition={(e) => fade(e, { duration: 100 })}
 		>
 		    <button
-				class="flex {$mobile?'flex-row-reverse justify-between px-[16px]':'px-[8px]'} rounded-md py-[10px] w-full hover:bg-neutrals-hover dark:hover:bg-gray-800 transition cursor-pointer"
+				class="flex rounded-md px-[8px] py-[10px] w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer"
 				on:click={() => changeLanguage(document.documentElement.lang==='en-US' ? 'ar' : 'en-US')}
 			>
-				<div class=" self-center {$mobile?'':'mr-3'} ">
+				<div class=" self-center mr-3">
 					<MaterialIcon name="translate" size="1.1rem" />
 				</div>
 				<div class=" self-center truncate text-neutrals-800 gap-[8px]  text-[16px] leading-[24px] font-medium">{ document.documentElement.lang==='en-US' ? 'Switch to Arabic' : 'التبديل إلى اللغة الإنجليزية' }</div>
 			</button>
-		<div class="flex {$mobile?'px-[16px]':'px-[8px]'}  py-[10px] items-center justify-between">
+		<div class="flex px-[8px] py-[10px] items-center justify-between">
 				<label class="flex items-center text-neutrals-800 gap-[8px]  text-[16px] leading-[24px] font-medium"
-					>{#if !$mobile}<MaterialIcon name="notifications" size="1.1rem" />{/if}  {$i18n.t('Notifications')}</label
+					><MaterialIcon name="notifications" size="1.1rem" />  {$i18n.t('Notifications')}</label
 				>
 				<label class="relative inline-flex items-center cursor-pointer">
 					<input type="checkbox" bind:checked={isOnNotification} on:change={()=>toggleNotification()} class="sr-only peer" />
-					<div class="w-[40px] h-[20px]  {isOnNotification?'bg-neutrals-green':'bg-neutrals-50'} rounded-full peer duration-300">
+					<div class="w-[40px] h-[20px] bg-neutrals-50 rounded-full peer duration-300">
 						<div
 							class=" flex items-center justify-center absolute {isOnNotification
-								? 'left-[1px]'
-								: 'right-[1px]'}  top-[1px] bg-neutrals-white w-[18px] h-[18px] rounded-full transition-transform duration-300 peer-checked:translate-x-5"
-						>
-							
-						</div>
-					</div>
-				</label>
-			</div>
-
-			<div class="flex {$mobile?'px-[16px]':'px-[8px]'}  py-[10px] items-center justify-between">
-				<label class="flex items-center text-neutrals-800 gap-[8px]  text-[16px] leading-[24px] font-medium"
-					>{#if !$mobile}<MaterialIcon name="settings" size="1.1rem" />{/if}  {$i18n.t('Theme')}</label
-				>
-				<label class="relative inline-flex items-center cursor-pointer">
-					<input type="checkbox" bind:checked={isOnThemeToggle} on:change={() => themeChangeHandler(isOnThemeToggle?'light':'dark')} class="sr-only peer" />
-					<div class="w-[40px] h-[20px]  {isOnThemeToggle?'bg-neutrals-green':'bg-neutrals-50'} rounded-full peer duration-300">
-						<div
-							class=" flex items-center justify-center absolute {isOnThemeToggle
 								? 'left-[1px]'
 								: 'right-[1px]'}  top-[1px] bg-neutrals-white w-[18px] h-[18px] rounded-full transition-transform duration-300 peer-checked:translate-x-5"
 						>
@@ -240,7 +150,7 @@
 			</button>-->
 
 			<button
-				class="flex  {$mobile?'flex-row-reverse justify-between px-[16px]':'px-[8px]'} rounded-md px-[8px] py-[10px] w-full hover:bg-neutrals-hover dark:hover:bg-gray-800 transition"
+				class="flex rounded-md px-[8px] py-[10px] w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
 				on:click={() => {
 					dispatch('show', 'archived-chat');
 					show = false;
@@ -277,7 +187,7 @@
 				</button>
 
 				<button
-					class="flex rounded-md  px-[8px] py-[10px] w-full hover:bg-neutrals-hover dark:hover:bg-gray-800 transition"
+					class="flex rounded-md  px-[8px] py-[10px] w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
 					on:click={() => {
 						goto('/admin');
 						show = false;
@@ -299,7 +209,7 @@
 
 				<!-- {$i18n.t('Help')} -->
 				<DropdownMenu.Item
-					class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-neutrals-hover dark:hover:bg-gray-800 rounded-md transition"
+					class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition"
 					id="chat-share-button"
 					on:click={() => {
 						window.open('https://docs.openwebui.com', '_blank');
@@ -312,7 +222,7 @@
 
 				<!-- Releases -->
 				<DropdownMenu.Item
-					class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-neutrals-hover dark:hover:bg-gray-800 rounded-md transition"
+					class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition"
 					id="menu-item-releases"
 					on:click={() => {
 						window.open('https://github.com/open-webui/open-webui/releases', '_blank');
@@ -324,7 +234,7 @@
 				</DropdownMenu.Item>
 
 				<DropdownMenu.Item
-					class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-neutrals-hover dark:hover:bg-gray-800 rounded-md transition"
+					class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition"
 					id="chat-share-button"
 					on:click={() => {
 						showShortcuts = !showShortcuts;
@@ -339,7 +249,7 @@
 			<hr class=" border-gray-100 dark:border-gray-800 my-1 p-0" />
 
 			<button
-				class="flex  {$mobile?'flex-row-reverse justify-between px-[16px]':'px-[8px]'} rounded-md py-[10px] w-full hover:bg-neutrals-hover dark:hover:bg-gray-800 transition"
+				class="flex rounded-md px-[8px] py-[10px] w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
 				on:on:click={() => {
 						goto('/playground');
 					}}
@@ -353,7 +263,7 @@
 			</button>
 
 			<button
-				class="flex  {$mobile?'flex-row-reverse justify-between px-[16px]':'px-[8px]'} rounded-md py-[10px] w-full hover:bg-neutrals-hover dark:hover:bg-gray-800 transition"
+				class="flex rounded-md  px-[8px] py-[10px] w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
 				on:click={async () => {
 					const res = await userSignOut();
 					user.set(null);
@@ -369,7 +279,7 @@
 				<div class=" self-center truncate text-neutrals-800 gap-[8px]  text-[16px] leading-[24px] font-medium">{$i18n.t('Sign Out')}</div>
 			</button>
 
-			<!--{#if usage && role === 'admin'}
+			{#if usage}
 				{#if usage?.user_ids?.length > 0}
 					<hr class=" border-gray-100 dark:border-gray-800 my-1 p-0" />
 
@@ -404,7 +314,7 @@
 						</div>
 					</Tooltip>
 				{/if}
-			{/if}-->
+			{/if}
 
 			<!-- <DropdownMenu.Item class="flex items-center py-1.5 px-3 text-sm ">
 				<div class="flex items-center">Profile</div>

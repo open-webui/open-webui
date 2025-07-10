@@ -239,7 +239,7 @@
 			transition={flyAndScale}
 		>
 			<DropdownMenu.Item
-				class="p-[8px] flex items-center text-neutrals-800 gap-[8px]  text-[16px] leading-[24px] font-medium cursor-pointer hover:bg-neutrals-hover dark:hover:bg-gray-800 rounded-md"
+				class="p-[8px] flex items-center text-neutrals-800 gap-[8px]  text-[16px] leading-[24px] font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 				on:click={() => {
 					pinHandler();
 				}}
@@ -254,7 +254,7 @@
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
-				class="p-[8px] flex items-center text-neutrals-800 gap-[8px]  text-[16px] leading-[24px] font-medium cursor-pointer hover:bg-neutrals-hover dark:hover:bg-gray-800 rounded-md"
+				class="p-[8px] flex items-center text-neutrals-800 gap-[8px]  text-[16px] leading-[24px] font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 				on:click={() => {
 					renameHandler();
 				}}
@@ -264,17 +264,17 @@
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
-				class="p-[8px] flex items-center text-neutrals-800 gap-[8px]  text-[16px] leading-[24px] font-medium cursor-pointer hover:bg-neutrals-hover dark:hover:bg-gray-800 rounded-md"
+				class="p-[8px] flex items-center text-neutrals-800 gap-[8px]  text-[16px] leading-[24px] font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 				on:click={() => {
 					cloneChatHandler();
 				}}
 			>
 				<DocumentDuplicate strokeWidth="2" />
-				<div class="flex items-center">{$i18n.t('Duplicate')}</div>
+				<div class="flex items-center">Duplicate</div>
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
-				class="p-[8px] flex items-center text-neutrals-800 gap-[8px]  text-[16px] leading-[24px] font-medium cursor-pointer hover:bg-neutrals-hover dark:hover:bg-gray-800 rounded-md"
+				class="p-[8px] flex items-center text-neutrals-800 gap-[8px]  text-[16px] leading-[24px] font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 				on:click={() => {
 					archiveChatHandler();
 				}}
@@ -283,11 +283,11 @@
 				<div class="flex items-center">{$i18n.t('Archive')}</div>
 			</DropdownMenu.Item>
 
-
+			
 
 			<DropdownMenu.Sub>
 				<DropdownMenu.SubTrigger
-					class="p-[8px] flex items-center text-neutrals-800 gap-[8px]  text-[16px] leading-[24px] font-medium cursor-pointer hover:bg-neutrals-hover dark:hover:bg-gray-800 rounded-md"
+					class="p-[8px] flex items-center text-neutrals-800 gap-[8px]  text-[16px] leading-[24px] font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 				>
 					<Download strokeWidth="2" />
 
@@ -300,7 +300,7 @@
 				>
 					{#if $user?.role === 'admin' || ($user.permissions?.chat?.export ?? true)}
 						<DropdownMenu.Item
-							class="p-[8px] flex gap-2 items-center text-neutrals-800 text-[16px] leading-[24px] font-medium  cursor-pointer hover:bg-neutrals-hover dark:hover:bg-gray-800 rounded-md"
+							class="p-[8px] flex gap-2 items-center text-neutrals-800 text-[16px] leading-[24px] font-medium  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 							on:click={() => {
 								downloadJSONExport();
 							}}
@@ -310,7 +310,7 @@
 					{/if}
 
 					<DropdownMenu.Item
-						class="p-[8px] flex gap-2 items-center text-neutrals-800 text-[16px] leading-[24px] font-medium cursor-pointer hover:bg-neutrals-hover dark:hover:bg-gray-800 rounded-md"
+						class="p-[8px] flex gap-2 items-center text-neutrals-800 text-[16px] leading-[24px] font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 						on:click={() => {
 							downloadTxt();
 						}}
@@ -319,7 +319,7 @@
 					</DropdownMenu.Item>
 
 					<DropdownMenu.Item
-						class="p-[8px] flex gap-2 items-center text-neutrals-800 text-[16px] leading-[24px] font-medium cursor-pointer hover:bg-neutrals-hover dark:hover:bg-gray-800 rounded-md"
+						class="p-[8px] flex gap-2 items-center text-neutrals-800 text-[16px] leading-[24px] font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 						on:click={() => {
 							downloadPdf();
 						}}
@@ -330,7 +330,7 @@
 			</DropdownMenu.Sub>
 			{#if $user?.role === 'admin' || ($user.permissions?.chat?.share ?? true)}
 				<DropdownMenu.Item
-					class="p-[8px] flex items-center text-neutrals-800 gap-[8px]  text-[16px] leading-[24px] font-medium cursor-pointer hover:bg-neutrals-hover dark:hover:bg-gray-800  rounded-md"
+					class="p-[8px] flex items-center text-neutrals-800 gap-[8px]  text-[16px] leading-[24px] font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800  rounded-md"
 					on:click={() => {
 						shareHandler();
 					}}
@@ -340,7 +340,7 @@
 				</DropdownMenu.Item>
 			{/if}
 			<DropdownMenu.Item
-				class="p-[8px] flex items-center text-neutrals-errorTone gap-[8px]  text-[16px] leading-[24px] font-medium cursor-pointer hover:bg-neutrals-hover dark:hover:bg-gray-800 rounded-md"
+				class="p-[8px] flex items-center text-neutrals-errorTone gap-[8px]  text-[16px] leading-[24px] font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 				on:click={() => {
 					deleteHandler();
 				}}

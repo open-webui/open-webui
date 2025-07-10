@@ -16,15 +16,13 @@ export default {
 					   700: 'var(--color-neutrals-700, #4F5154)',
 					   800: 'var(--color-neutrals-800, #36383B)',
 					   hover: 'var(--color-neutrals-hover, rgba(236, 238, 241, 0.72))',
-					   black: 'var(--color-neutrals-black, #1D1F22)',
+					   black: 'var(--color-neutrals-black, #1D1F22)',  
 					   white: 'var(--color-neutrals-white, #ffffff)', 
-					   error:'var(--color-neutrals-error, #D91938)',
+					   error:'var(--color-neutrals-error, #D91938)', 
 					   errorTone:'var(--color-neutrals-errorTone, #C2451E)',
-					   green:'var(--color-neutrals-errorTone, #04C759)',
 				},
 				primary:{
 					400: 'var(--color-primary-400, #0054F2)',  
-					DEFAULT: 'var(--color-primary-400, #0054F2)',
 			    },
 				gray: {
 					50: 'var(--color-gray-50, #f9f9f9)',
@@ -49,7 +47,6 @@ export default {
 			},
 			  boxShadow: {
 				'custom': '0px 24px 48px 0px rgba(0, 0, 0, 0.08)',
-				'custom2': '0px 48px 100px 0px rgba(0, 84, 242, 0.08)',
 			  },
 			typography: {
 				DEFAULT: {
