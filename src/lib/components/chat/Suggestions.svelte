@@ -83,7 +83,7 @@
 </div> -->
 
 <div class="w-full flex items-center justify-center">
-	{#if filteredPrompts.length > 0}
+	{#if filteredPrompts.length > 0} 
 		<div class="flex flex-wrap gap-3 mt-4 justify-center items-center w-full">
 			{#each filteredPrompts as prompt, idx (prompt.id || prompt.content)}
 				<div class="relative rounded-lg backdrop-blur-md bg-white/90">

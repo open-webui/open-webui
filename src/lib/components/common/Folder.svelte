@@ -194,6 +194,7 @@
 						on:pointerup={(e) => e.stopPropagation()}
 						on:click={(e) => {
 							e.stopPropagation();
+							open = true;
 							onAdd();
 						}}
 					>
