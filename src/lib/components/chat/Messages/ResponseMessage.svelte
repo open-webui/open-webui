@@ -712,6 +712,7 @@
 								{#each message.files as file}
 									<div>
 										{#if file.type === 'image'}
+											{file}
 											<Image src={file.url} alt={message.content} />
 										{:else}
 											<FileItem
@@ -1028,7 +1029,7 @@
 									</button>
 								</Tooltip>
 
-								{#if $user?.role === 'admin' || ($user?.permissions?.chat?.tts ?? true)}
+								{#if false && ($user?.role === 'admin' || ($user?.permissions?.chat?.tts ?? true))}
 									<Tooltip content={$i18n.t('Read Aloud')} placement="bottom">
 										<button
 											aria-label={$i18n.t('Read Aloud')}
@@ -1302,7 +1303,7 @@
 										</Tooltip>
 									{/if}
 
-									{#if isLastMessage}
+									{#if false && isLastMessage}
 										<Tooltip content={$i18n.t('Continue Response')} placement="bottom">
 											<button
 												aria-label={$i18n.t('Continue Response')}
