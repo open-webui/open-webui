@@ -37,7 +37,7 @@
 	const dispatch = createEventDispatcher();
 
 	let usage = null;
-	
+
 	let isOnNotification = false;
 	let notificationEnabled = false;
 	let isOnThemeToggle = true;
@@ -57,7 +57,7 @@
 				)
 			);
 		}
-		
+
 	};
 
 	const saveSettings = async (updated) => {
@@ -145,7 +145,7 @@
 			window.applyTheme();
 		}
 
-		
+
 		console.log(_theme);
 	};
 
@@ -198,7 +198,7 @@
 								? 'left-[1px]'
 								: 'right-[1px]'}  top-[1px] bg-neutrals-white w-[18px] h-[18px] rounded-full transition-transform duration-300 peer-checked:translate-x-5"
 						>
-							
+
 						</div>
 					</div>
 				</label>
@@ -216,7 +216,7 @@
 								? 'left-[1px]'
 								: 'right-[1px]'}  top-[1px] bg-neutrals-white w-[18px] h-[18px] rounded-full transition-transform duration-300 peer-checked:translate-x-5"
 						>
-							
+
 						</div>
 					</div>
 				</label>
@@ -256,7 +256,7 @@
 				<div class=" self-center truncate text-neutrals-800 gap-[8px]  text-[16px] leading-[24px] font-medium">{$i18n.t('Archived Chats')}</div>
 			</button>
 
-			
+
 
 			{#if role === 'admin'}
 				<!--<button
@@ -369,7 +369,7 @@
 				<div class=" self-center truncate text-neutrals-800 gap-[8px]  text-[16px] leading-[24px] font-medium">{$i18n.t('Sign Out')}</div>
 			</button>
 
-			<!--{#if usage}
+			<!--{#if usage && role === 'admin'}
 				{#if usage?.user_ids?.length > 0}
 					<hr class=" border-gray-100 dark:border-gray-800 my-1 p-0" />
 
