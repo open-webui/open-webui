@@ -979,10 +979,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     ),
                 form_data["messages"],
             )
-        form_data["chat_type"] = "02"  # 채팅형태 = 질문하기 AXL: 김정민 20250709  추가
 
-            
-
+    form_data["chat_type"] = "02"  # 채팅형태 = 질문하기 AXL: 김정민 20250709  추가
+                    
     # If there are citations, add them to the data_items
     sources = [
         source
@@ -1006,6 +1005,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 },
             }
         )
+        
 
     return form_data, metadata, events
 
