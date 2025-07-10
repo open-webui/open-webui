@@ -3,9 +3,7 @@
 	import Selector from './Knowledge/Selector.svelte';
 	import FileItem from '$lib/components/common/FileItem.svelte';
 
-	export let selectedKnowledge = [];
-	export let collections = [];
-
+	export let selectedItems = [];
 	const i18n = getContext('i18n');
 </script>
 
@@ -19,9 +17,9 @@
 	</div>
 
 	<div class="flex flex-col">
-		{#if selectedKnowledge?.length > 0}
+		{#if selectedItems?.length > 0}
 			<div class=" flex flex-wrap items-center gap-2 mt-2">
-				{#each selectedKnowledge as file, fileIdx}
+				{#each selectedItems as file, fileIdx}
 					<FileItem
 						{file}
 						item={file}
@@ -33,7 +31,7 @@
 							: (file?.type ?? 'Collection')}
 						dismissible
 						on:dismiss={(e) => {
-							selectedKnowledge = selectedKnowledge.filter((_, idx) => idx !== fileIdx);
+							selectedItems = selectedItems.filter((_, idx) => idx !== fileIdx);
 						}}
 					/>
 				{/each}
@@ -45,9 +43,9 @@
 				on:select={(e) => {
 					const item = e.detail;
 
-					if (!selectedKnowledge.find((k) => k.id === item.id)) {
-						selectedKnowledge = [
-							...selectedKnowledge,
+					if (!selectedItems.find((k) => k.id === item.id)) {
+						selectedItems = [
+							...selectedItems,
 							{
 								...item
 							}

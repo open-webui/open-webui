@@ -19,6 +19,7 @@
 	import { toast } from 'svelte-sonner';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
+	import { getNoteList } from '$lib/apis/notes';
 
 	const i18n = getContext('i18n');
 
@@ -182,7 +183,10 @@
 	onMount(async () => {
 		await tools.set(await getTools(localStorage.token));
 		await functions.set(await getFunctions(localStorage.token));
-		await knowledgeCollections.set(await getKnowledgeBases(localStorage.token));
+		await knowledgeCollections.set([
+			...(await getNoteList(localStorage.token)),
+			...(await getKnowledgeBases(localStorage.token))
+		]);
 
 		// Scroll to top 'workspace-container' element
 		const workspaceContainer = document.getElementById('workspace-container');
@@ -694,7 +698,7 @@
 					<hr class=" border-gray-100 dark:border-gray-850 my-1.5" />
 
 					<div class="my-2">
-						<Knowledge bind:selectedKnowledge={knowledge} collections={$knowledgeCollections} />
+						<Knowledge bind:selectedItems={knowledge} />
 					</div>
 
 					<div class="my-2">
