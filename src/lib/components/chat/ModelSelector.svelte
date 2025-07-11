@@ -53,7 +53,7 @@
 				</div>
 			</div>
 
-			{#if selectedModelIdx === 0}
+			{#if selectedModelIdx === 0 && selectedModels.length < 3}
 				<div
 					class="  self-center mx-1 disabled:text-gray-600 disabled:hover:text-gray-600 -translate-y-[0.5px]"
 				>
@@ -79,7 +79,7 @@
 						</button>
 					</Tooltip>
 				</div>
-			{:else}
+			{:else if selectedModelIdx > 0 || (selectedModelIdx === 0 && selectedModels.length < 3)}
 				<div
 					class="  self-center mx-1 disabled:text-gray-600 disabled:hover:text-gray-600 -translate-y-[0.5px]"
 				>
