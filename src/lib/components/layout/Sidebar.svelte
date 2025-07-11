@@ -43,7 +43,7 @@
 	} from '$lib/apis/chats';
 	import { createNewFolder, getFolders, updateFolderParentIdById } from '$lib/apis/folders';
 	import { WEBUI_BASE_URL } from '$lib/constants';
-
+	import { createNewNote } from '$lib/apis/notes';
 	import ArchivedChatsModal from './ArchivedChatsModal.svelte';
 	import UserMenu from './Sidebar/UserMenu.svelte';
 	import ChatItem from './Sidebar/ChatItem.svelte';
@@ -402,6 +402,28 @@
 		dropZone?.removeEventListener('drop', onDrop);
 		dropZone?.removeEventListener('dragleave', onDragLeave);
 	});
+
+	const createNoteHandler = async () => {
+		const res = await createNewNote(localStorage.token, {
+			title: $i18n.t('New Note'),
+			data: {
+				content: {
+					json: null,
+					html: '',
+					md: ''
+				}
+			},
+			meta: null,
+			access_control: null
+		}).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (res) {
+			goto(`/notes/${res.id}`);
+		}
+	};
 </script>
 
 <ArchivedChatsModal
@@ -587,9 +609,9 @@
 			{/if}
 
 			{#if false &&($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
-				<div class="flex justify-center text-gray-800 dark:text-gray-200">
+				<div class="px-[16px] flex justify-center text-gray-800 dark:text-gray-200">
 					<a
-						class="px-[16px] py-[8px] grow flex items-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition-all duration-300 ease-in-out"
+						class="py-[8px] grow flex items-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition-all duration-300 ease-in-out"
 						class:justify-center={!$showSidebar}
 						href="/notes"
 						on:click={() => {
@@ -612,14 +634,18 @@
 
 						<!-- Label -->
 						<div
-							class="self-center translate-y-[0.5px] transition-all duration-300 ease-in-out"
+							class="flex justify-between w-full items-center translate-y-[0.5px] transition-all duration-300 ease-in-out"
 							class:hidden={!$showSidebar}
 						>
 							<div class="self-center text-neutrals-800 text-[16px] leading-[24px] font-medium ">
 								{$i18n.t('Notes')}
 							</div>
+
 						</div>
 					</a>
+					<button on:click={async () => {
+							createNoteHandler();
+						}}><Tooltip placement="right" content="Create note"><MaterialIcon name="add" size="1.1rem" /></Tooltip></button>
 				</div>
 			{/if}
 
