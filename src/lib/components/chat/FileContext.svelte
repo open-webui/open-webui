@@ -26,7 +26,7 @@
 			class="px-2.5 py-2 pr-1 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 bg-transparent text-gray-600 dark:text-gray-300"
 		>
 			<CommandLine className="size-4" strokeWidth="1.75" />
-			<span class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none">
+			<span class="@xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none">
 				{`${file.fileName}${file.startLine !== undefined ? `[${file.startLine}-${file.endLine}]` : ''}`}
 			</span>
 		</button>
