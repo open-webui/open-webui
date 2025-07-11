@@ -1634,7 +1634,19 @@ async def get_app_config(request: Request):
                 ),
             }
             if user is not None
-            else {}
+            else {
+                **(
+                    {
+                        "metadata": {
+                            "login_footer": app.state.LICENSE_METADATA.get(
+                                "login_footer", ""
+                            )
+                        }
+                    }
+                    if app.state.LICENSE_METADATA
+                    else {}
+                )
+            }
         ),
     }
 
