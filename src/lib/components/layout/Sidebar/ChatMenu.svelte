@@ -61,6 +61,12 @@
 		
 		// Get PII entities for unmasking
 		const piiSessionManager = PiiSessionManager.getInstance();
+		
+		// Load PII state from chat data if not already loaded
+		if (chat.chat?.piiState && chatId) {
+			piiSessionManager.loadConversationState(chatId, chat.chat.piiState);
+		}
+		
 		const piiEntities = piiSessionManager.getEntitiesForDisplay(chatId);
 		
 		const chatText = messages.reduce((a: string, message: any, i: number, arr: any[]) => {
@@ -221,6 +227,12 @@
 		if (chat) {
 			// Get PII entities for unmasking
 			const piiSessionManager = PiiSessionManager.getInstance();
+			
+			// Load PII state from chat data if not already loaded
+			if (chat.chat?.piiState && chatId) {
+				piiSessionManager.loadConversationState(chatId, chat.chat.piiState);
+			}
+			
 			const piiEntities = piiSessionManager.getEntitiesForDisplay(chatId);
 			
 			// Create a deep copy of the chat and unmask content
