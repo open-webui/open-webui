@@ -432,7 +432,7 @@
 						ensureConversationActivated(); // Ensure conversation is activated on first keystroke
 
 						// Handle CTRL+SHIFT+L to unmask all PIIs and clear mask modifiers
-						if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'l') {
+						if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'l') {
 							if (enablePiiDetection && enablePiiModifiers && editor) {
 								event.preventDefault();
 
@@ -450,8 +450,8 @@
 							}
 						}
 
-						// Handle CTRL+SHIFT+O to mask all PIIs again
-						if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'o') {
+						// Handle CTRL+SHIFT+Q to mask all PIIs again
+						if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'q') {
 							if (enablePiiDetection && editor) {
 								event.preventDefault();
 
