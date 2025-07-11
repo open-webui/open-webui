@@ -289,15 +289,15 @@
 			}
 		}
 
-		onConnect() {
+		onConnect = () => {
 			this.isConnected = true;
 			this.joinDocument();
-		}
+		};
 
-		onDisconnect() {
+		onDisconnect = () => {
 			this.isConnected = false;
 			this.synced = false;
-		}
+		};
 
 		destroy() {
 			this.socket.off('yjs:document:update');

@@ -449,6 +449,7 @@ async def yjs_document_update(sid, data):
         await stop_item_tasks(REDIS, document_id)
 
         user_id = data.get("user_id", sid)
+
         update = data["update"]  # List of bytes from frontend
 
         if document_id not in DOCUMENTS:
@@ -484,7 +485,6 @@ async def yjs_document_update(sid, data):
                 document_id, data.get("data", {}), SESSION_POOL.get(sid)
             )
 
-        await stop_item_tasks(REDIS, document_id)  # Cancel previous in-flight save
         await create_task(REDIS, debounced_save(), document_id)
 
     except Exception as e:
