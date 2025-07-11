@@ -419,16 +419,20 @@
 								exportHandler={() => {
 									exportModelHandler(model);
 								}}
-								hideHandler={hasWriteAccess(model, $user, group_ids) ? () => {
-									hideModelHandler(model);
-								} : undefined}
+								hideHandler={hasWriteAccess(model, $user, group_ids)
+									? () => {
+											hideModelHandler(model);
+										}
+									: undefined}
 								copyLinkHandler={() => {
 									copyLinkHandler(model);
 								}}
-								deleteHandler={hasWriteAccess(model, $user, group_ids) ? () => {
-									selectedModel = model;
-									showModelDeleteConfirm = true;
-								} : undefined}
+								deleteHandler={hasWriteAccess(model, $user, group_ids)
+									? () => {
+											selectedModel = model;
+											showModelDeleteConfirm = true;
+										}
+									: undefined}
 								onClose={() => {}}
 							>
 								<button

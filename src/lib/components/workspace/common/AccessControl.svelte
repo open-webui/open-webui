@@ -57,7 +57,9 @@
 		lastAccessControlString = JSON.stringify(accessControl);
 		onChange(accessControl);
 		// Reset the flag after a tick to allow future syncs
-		setTimeout(() => { isCommitting = false; }, 0);
+		setTimeout(() => {
+			isCommitting = false;
+		}, 0);
 	}
 
 	$: if (!allowPublic && accessControl === null) {
@@ -120,7 +122,7 @@
 		console.log('onSelectGroup called with:', selectedGroupId);
 		console.log('localAccessControl before:', localAccessControl);
 		if (selectedGroupId !== '') {
-			// Ensure localAccessControl is properly initialized  
+			// Ensure localAccessControl is properly initialized
 			if (!localAccessControl || !localAccessControl.read) {
 				console.log('Initializing localAccessControl');
 				localAccessControl = {
@@ -129,14 +131,14 @@
 					inspect: { group_ids: [], user_ids: [] }
 				};
 			}
-			
+
 			localAccessControl.read.group_ids = [...localAccessControl.read.group_ids, selectedGroupId];
 			console.log('Updated localAccessControl after adding group:', localAccessControl);
-			
+
 			// Trigger Svelte reactivity by reassigning the object
 			localAccessControl = { ...localAccessControl };
 			console.log('Final localAccessControl after reactivity trigger:', localAccessControl);
-			
+
 			selectedGroupId = '';
 		}
 	};
@@ -229,7 +231,9 @@
 		{@const accessGroups = groups.filter((group) =>
 			localAccessControl?.read?.group_ids?.includes(group.id)
 		)}
-		{@const availableGroups = groups.filter((group) => !localAccessControl?.read?.group_ids?.includes(group.id))}
+		{@const availableGroups = groups.filter(
+			(group) => !localAccessControl?.read?.group_ids?.includes(group.id)
+		)}
 		{(() => {
 			console.log('Template rendering with:');
 			console.log('- localAccessControl:', localAccessControl);
@@ -304,20 +308,23 @@
 											// NOTE: Groups always remain in read.group_ids for UI display
 											if (localAccessControl.inspect.group_ids.includes(group.id)) {
 												// Currently inspect, remove from inspect and write, back to read-only
-												localAccessControl.inspect.group_ids = localAccessControl.inspect.group_ids.filter(
-													(group_id) => group_id !== group.id
-												);
-												localAccessControl.write.group_ids = localAccessControl.write.group_ids.filter(
-													(group_id) => group_id !== group.id
-												);
+												localAccessControl.inspect.group_ids =
+													localAccessControl.inspect.group_ids.filter(
+														(group_id) => group_id !== group.id
+													);
+												localAccessControl.write.group_ids =
+													localAccessControl.write.group_ids.filter(
+														(group_id) => group_id !== group.id
+													);
 												// Group remains in read.group_ids for UI display
 											} else if (localAccessControl.write.group_ids.includes(group.id)) {
 												// Currently write, move to inspect if available
 												if (accessRoles.includes('inspect')) {
 													// Remove from write and add to inspect
-													localAccessControl.write.group_ids = localAccessControl.write.group_ids.filter(
-														(group_id) => group_id !== group.id
-													);
+													localAccessControl.write.group_ids =
+														localAccessControl.write.group_ids.filter(
+															(group_id) => group_id !== group.id
+														);
 													localAccessControl.inspect.group_ids = [
 														...localAccessControl.inspect.group_ids,
 														group.id
@@ -325,9 +332,10 @@
 													// Group remains in read.group_ids for UI display
 												} else {
 													// No inspect role, just toggle back to read
-													localAccessControl.write.group_ids = localAccessControl.write.group_ids.filter(
-														(group_id) => group_id !== group.id
-													);
+													localAccessControl.write.group_ids =
+														localAccessControl.write.group_ids.filter(
+															(group_id) => group_id !== group.id
+														);
 													// Group remains in read.group_ids for UI display
 												}
 											} else {
@@ -361,12 +369,10 @@
 											localAccessControl.read.group_ids = localAccessControl.read.group_ids.filter(
 												(id) => id !== group.id
 											);
-											localAccessControl.write.group_ids = localAccessControl.write.group_ids.filter(
-												(id) => id !== group.id
-											);
-											localAccessControl.inspect.group_ids = localAccessControl.inspect.group_ids.filter(
-												(id) => id !== group.id
-											);
+											localAccessControl.write.group_ids =
+												localAccessControl.write.group_ids.filter((id) => id !== group.id);
+											localAccessControl.inspect.group_ids =
+												localAccessControl.inspect.group_ids.filter((id) => id !== group.id);
 											// Trigger Svelte reactivity
 											localAccessControl = { ...localAccessControl };
 										}}

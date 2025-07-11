@@ -33,34 +33,38 @@
 	// Reactive statement to check if current user has inspect access
 	// Users with inspect access get backend read/write permissions but frontend UI restrictions
 	// Exception: Model creators always get full access regardless of group permissions
-	$: hasInspectAccess = edit && loaded && userGroupsLoaded && (() => {
-		// Early exit if not loaded, user groups not loaded, no access control, or no user
-		if (!loaded || !userGroupsLoaded || !accessControl || !$user) {
-			return false;
-		}
-		
-		// If there are no inspect group_ids, user doesn't have inspect access
-		if (!accessControl?.inspect?.group_ids?.length) {
-			return false;
-		}
-		
-		// Check if current user is the model creator 
-		// Model creators are the only users who should be in write.user_ids
-		const isModelCreator = accessControl?.write?.user_ids?.includes($user.id);
-		if (isModelCreator) {
-			return false;
-		}
-		
-		// Use fetched userGroups instead of user store data
-		const userGroupIds = userGroups.map(group => group.id);
-		
-		// Check if user has inspect access - if so, apply frontend UI restrictions
-		const hasInspectAccess = userGroupIds.some(groupId => {
-			return accessControl.inspect.group_ids.includes(groupId);
-		});
-		
-		return hasInspectAccess;
-	})();
+	$: hasInspectAccess =
+		edit &&
+		loaded &&
+		userGroupsLoaded &&
+		(() => {
+			// Early exit if not loaded, user groups not loaded, no access control, or no user
+			if (!loaded || !userGroupsLoaded || !accessControl || !$user) {
+				return false;
+			}
+
+			// If there are no inspect group_ids, user doesn't have inspect access
+			if (!accessControl?.inspect?.group_ids?.length) {
+				return false;
+			}
+
+			// Check if current user is the model creator
+			// Model creators are the only users who should be in write.user_ids
+			const isModelCreator = accessControl?.write?.user_ids?.includes($user.id);
+			if (isModelCreator) {
+				return false;
+			}
+
+			// Use fetched userGroups instead of user store data
+			const userGroupIds = userGroups.map((group) => group.id);
+
+			// Check if user has inspect access - if so, apply frontend UI restrictions
+			const hasInspectAccess = userGroupIds.some((groupId) => {
+				return accessControl.inspect.group_ids.includes(groupId);
+			});
+
+			return hasInspectAccess;
+		})();
 
 	export let model = null;
 	export let edit = false;
@@ -438,18 +442,30 @@
 
 {#if loaded}
 	{#if hasInspectAccess}
-		<div class="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+		<div
+			class="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg"
+		>
 			<div class="flex items-center">
-				<svg class="w-5 h-5 text-yellow-600 dark:text-yellow-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
-					<path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+				<svg
+					class="w-5 h-5 text-yellow-600 dark:text-yellow-400 mr-2"
+					fill="currentColor"
+					viewBox="0 0 20 20"
+				>
+					<path
+						fill-rule="evenodd"
+						d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+						clip-rule="evenodd"
+					/>
 				</svg>
 				<span class="text-sm font-medium text-yellow-800 dark:text-yellow-200">
-					Read-Only Mode: You have inspect access only. All settings are view-only.
+					{$i18n.t(
+						'Template Mode: All settings are read-only. Please clone this model to modify its configuration.'
+					)}
 				</span>
 			</div>
 		</div>
 	{/if}
-	
+
 	{#if onBack}
 		<button
 			class="flex space-x-1"
@@ -550,7 +566,11 @@
 				on:submit|preventDefault={(e) => {
 					if (hasInspectAccess) {
 						e.preventDefault();
-						toast.error('You have inspect access only. Editing is not allowed.');
+						toast.error(
+							$i18n.t(
+								'Template Mode: All settings are read-only. Please clone this model to modify its configuration.'
+							)
+						);
 						return;
 					}
 					// Commit AccessControl changes before saving
@@ -749,7 +769,8 @@
 									bind:this={accessControlComponent}
 									bind:accessControl
 									accessRoles={['read', 'write', 'inspect']}
-									allowPublic={$user?.permissions?.sharing?.public_models || $user?.role === 'admin'}
+									allowPublic={$user?.permissions?.sharing?.public_models ||
+										$user?.role === 'admin'}
 									onChange={(newAccessControl) => {
 										accessControl = newAccessControl;
 									}}
@@ -961,7 +982,7 @@
 									<div class=" self-center text-sm font-semibold">Tools</div>
 								</div>
 								<div class="flex flex-wrap gap-1">
-									{#each $tools.filter(tool => toolIds.includes(tool.id)) as tool}
+									{#each $tools.filter((tool) => toolIds.includes(tool.id)) as tool}
 										<span class="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-xs">
 											{tool.name}
 										</span>
@@ -988,7 +1009,7 @@
 									<div class=" self-center text-sm font-semibold">Filters</div>
 								</div>
 								<div class="flex flex-wrap gap-1">
-									{#each $functions.filter(func => func.type === 'filter' && filterIds.includes(func.id)) as filter}
+									{#each $functions.filter((func) => func.type === 'filter' && filterIds.includes(func.id)) as filter}
 										<span class="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-xs">
 											{filter.name}
 										</span>
@@ -1015,7 +1036,7 @@
 									<div class=" self-center text-sm font-semibold">Actions</div>
 								</div>
 								<div class="flex flex-wrap gap-1">
-									{#each $functions.filter(func => func.type === 'action' && actionIds.includes(func.id)) as action}
+									{#each $functions.filter((func) => func.type === 'action' && actionIds.includes(func.id)) as action}
 										<span class="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-xs">
 											{action.name}
 										</span>
@@ -1037,12 +1058,12 @@
 									<div class=" self-center text-sm font-semibold">Capabilities</div>
 								</div>
 								<div class="flex flex-wrap gap-1">
-									{#each Object.keys(capabilities).filter(key => capabilities[key]) as capability}
+									{#each Object.keys(capabilities).filter((key) => capabilities[key]) as capability}
 										<span class="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-xs">
 											{capability}
 										</span>
 									{/each}
-									{#if Object.keys(capabilities).filter(key => capabilities[key]).length === 0}
+									{#if Object.keys(capabilities).filter((key) => capabilities[key]).length === 0}
 										<span class="text-gray-500 text-xs">No capabilities enabled</span>
 									{/if}
 								</div>
@@ -1130,7 +1151,9 @@
 							</button>
 						{:else}
 							<div class="text-sm text-gray-500 text-center w-full py-2">
-								You have inspect access only. Editing is not allowed.
+								{$i18n.t(
+									'Template Mode: All settings are read-only. Please clone this model to modify its configuration.'
+								)}
 							</div>
 						{/if}
 					</div>
