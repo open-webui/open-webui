@@ -58,7 +58,7 @@
 	import FilesOverlay from '../chat/MessageInput/FilesOverlay.svelte';
 	import RecordMenu from './RecordMenu.svelte';
 	import NoteMenu from './Notes/NoteMenu.svelte';
-	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
+	import EllipsisVertical from '../icons/EllipsisVertical.svelte';
 	import Sparkles from '../icons/Sparkles.svelte';
 	import SparklesSolid from '../icons/SparklesSolid.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
@@ -704,11 +704,11 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 			</div>
 		</div>
 	{:else}
-		<div class=" w-full flex flex-col {loading ? 'opacity-20' : ''}">
-			<div class="shrink-0 w-full flex justify-between items-center px-4.5 mb-1.5">
+		<div class="max-w-[800px] mx-auto p-[16px] rounded-[12px] w-full flex flex-col bg-white/88">
+			<div class="shrink-0 w-full flex justify-between items-center">
 				<div class="w-full flex items-center">
 					<input
-						class="w-full text-2xl font-medium bg-transparent outline-hidden"
+						class="w-full text-neutrals-800 gap-[8px] text-[14px] leading-[22px] font-bold bg-transparent outline-hidden"
 						type="text"
 						bind:value={note.title}
 						placeholder={$i18n.t('Title')}
@@ -761,24 +761,24 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 								showDeleteConfirm = true;
 							}}
 						>
-							<EllipsisHorizontal className="size-5" />
+							<EllipsisVertical className="size-5" />
 						</NoteMenu>
 
-						<button
+						<!--<button
 							class="p-1.5 bg-transparent hover:bg-white/5 transition rounded-lg"
 							on:click={() => {
 								showSettings = !showSettings;
 							}}
 						>
 							<Cog6 />
-						</button>
+						</button>-->
 					</div>
 				</div>
 			</div>
 
-			<div class=" mb-2.5 px-3.5">
-				<div class="flex gap-1 items-center text-xs font-medium text-gray-500 dark:text-gray-500">
-					<button class=" flex items-center gap-1 w-fit py-1 px-1.5 rounded-lg">
+			<div class="mb-[24px] ">
+				<div class="flex gap-1 items-center text-neutrals-500 gap-[8px] text-[14px] leading-[22px] font-medium dark:text-gray-500">
+					<!--<button class=" flex items-center gap-1 w-fit py-1 px-1.5 rounded-lg">
 						<Calendar className="size-3.5" strokeWidth="2" />
 
 						<span>{dayjs(note.created_at / 1000000).calendar()}</span>
@@ -788,12 +788,13 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 						<Users className="size-3.5" strokeWidth="2" />
 
 						<span> You </span>
-					</button>
+					</button>-->
+					Created on {dayjs(note.created_at / 1000000).calendar()}
 				</div>
 			</div>
 
 			<div
-				class=" flex-1 w-full h-full overflow-auto px-4 pb-20 relative"
+				class="flex-1 w-full h-full overflow-auto relative"
 				id="note-content-container"
 			>
 				{#if enhancing}
@@ -960,9 +961,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 
 				<Tooltip content={$i18n.t('Enhance')} placement="top">
 					<button
-						class="{enhancing
-							? 'p-2'
-							: 'p-2.5'} flex justify-center items-center hover:bg-gray-50 dark:hover:bg-gray-800 rounded-full transition shrink-0"
+						class="px-[12px] py-[8px] text-neutrals-500 gap-[8px] text-[14px] leading-[24px] font-medium flex justify-center text-white items-center gap-[4px] bg-primary-400 dark:hover:bg-gray-800 rounded-full transition shrink-0"
 						on:click={() => {
 							enhanceNoteHandler();
 						}}
@@ -973,7 +972,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 							<Spinner className="size-5" />
 						{:else}
 							<SparklesSolid />
-						{/if}
+						{/if} Enhanced
 					</button>
 				</Tooltip>
 			</div>

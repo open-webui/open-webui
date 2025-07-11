@@ -34,7 +34,7 @@
 	import { createNewNote, deleteNoteById, getNotes } from '$lib/apis/notes';
 	import { capitalizeFirstLetter } from '$lib/utils';
 
-	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
+	import EllipsisVertical from '../icons/EllipsisVertical.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Search from '../icons/Search.svelte';
 	import Plus from '../icons/Plus.svelte';
@@ -245,6 +245,11 @@
 		dragged = false;
 	};
 
+	let scrollBox;
+	function scrollToTop() {
+		scrollBox.scrollTo({ top: 0, behavior: 'smooth' });
+	}
+
 	onDestroy(() => {
 		console.log('destroy');
 		const dropzoneElement = document.getElementById('notes-container');
@@ -276,7 +281,11 @@
 
 <FilesOverlay show={dragged} />
 
-<div id="notes-container" class="w-full min-h-full h-full">
+<div
+	id="notes-container"
+	class="relative w-full min-h-full h-full"
+	
+>
 	{#if loaded}
 		<DeleteConfirmDialog
 			bind:show={showDeleteConfirm}
@@ -291,20 +300,18 @@
 			</div>
 		</DeleteConfirmDialog>
 
-		<div class="px-4.5 @container h-full pt-2">
+		<div class="max-w-[800px] mx-auto @container h-[calc(100dvh-135px)]  overflow-y-auto" bind:this={scrollBox}>
 			{#if Object.keys(notes).length > 0}
 				<div class="pb-10">
 					{#each Object.keys(notes) as timeRange}
-						<div class="w-full text-xs text-gray-500 dark:text-gray-500 font-medium pb-2.5">
+						<!--<div class="w-full text-xs text-gray-500 dark:text-gray-500 font-medium pb-2.5">
 							{$i18n.t(timeRange)}
-						</div>
+						</div>-->
 
-						<div
-							class="mb-5 gap-2.5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
-						>
+						<div class="gap-[12px] grid grid-cols-3 sm:grid-cols-1">
 							{#each notes[timeRange] as note, idx (note.id)}
 								<div
-									class=" flex space-x-4 cursor-pointer w-full px-4.5 py-4 bg-gray-50 dark:bg-gray-850 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition"
+									class=" flex cursor-pointer w-full p-[16px] mb-[12px] bg-white/88 dark:bg-gray-850 dark:hover:bg-white/5 hover:bg-black/5 rounded-[12px] transition"
 								>
 									<div class=" flex flex-1 space-x-4 cursor-pointer w-full">
 										<a
@@ -312,8 +319,12 @@
 											class="w-full -translate-y-0.5 flex flex-col justify-between"
 										>
 											<div class="flex-1">
-												<div class="  flex items-center gap-2 self-center mb-1 justify-between">
-													<div class=" font-semibold line-clamp-1 capitalize">{note.title}</div>
+												<div class="flex items-center gap-2 self-center justify-between">
+													<div
+														class="mb-[12px] font-bold text-[14px] leading-[22px] text-neutrals-800 capitalize"
+													>
+														{note.title}
+													</div>
 
 													<div>
 														<NoteMenu
@@ -331,14 +342,14 @@
 																class="self-center w-fit text-sm p-1 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 																type="button"
 															>
-																<EllipsisHorizontal className="size-5" />
+																<EllipsisVertical className="size-5" />
 															</button>
 														</NoteMenu>
 													</div>
 												</div>
 
 												<div
-													class=" text-xs text-gray-500 dark:text-gray-500 mb-3 line-clamp-5 min-h-18"
+													class="font-medium font-bold text-[14px] leading-[22px] mb-[24px] text-neutrals-500 line-clamp-5"
 												>
 													{#if note.data?.content?.md}
 														{note.data?.content?.md}
@@ -348,11 +359,11 @@
 												</div>
 											</div>
 
-											<div class=" text-xs px-0.5 w-full flex justify-between items-center">
+											<div class="font-medium text-[12px] leading-[20px] text-neutrals-500">
 												<div>
 													{dayjs(note.updated_at / 1000000).fromNow()}
 												</div>
-												<Tooltip
+												<!--<Tooltip
 													content={note?.user?.email ?? $i18n.t('Deleted User')}
 													className="flex shrink-0"
 													placement="top-start"
@@ -364,7 +375,7 @@
 															)
 														})}
 													</div>
-												</Tooltip>
+												</Tooltip>-->
 											</div>
 										</a>
 									</div>
@@ -388,17 +399,28 @@
 			{/if}
 		</div>
 
-		<div class="absolute bottom-0 left-0 right-0 p-5 max-w-full flex justify-end">
+		<div class="absolute z-50 bottom-0 left-0 right-0 p-5 max-w-full flex justify-end">
 			<div class="flex gap-0.5 justify-end w-full">
 				<Tooltip content={$i18n.t('Create Note')}>
 					<button
-						class="cursor-pointer p-2.5 flex rounded-full border border-gray-50 bg-white dark:border-none dark:bg-gray-850 hover:bg-gray-50 dark:hover:bg-gray-800 transition shadow-xl"
+						class="cursor-pointer p-2.5 flex rounded-full border border-gray-50 bg-primary-400 dark:border-none dark:bg-gray-850 hover:bg-gray-50 dark:hover:bg-gray-800 transition shadow-xl"
 						type="button"
 						on:click={async () => {
 							createNoteHandler();
 						}}
 					>
-						<Plus className="size-4.5" strokeWidth="2.5" />
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							width="18"
+							height="18"
+							viewBox="0 0 18 18"
+							fill="none"
+						>
+							<path
+								d="M8.4375 9.5625H4.125V8.4375H8.4375V4.125H9.5625V8.4375H13.875V9.5625H9.5625V13.875H8.4375V9.5625Z"
+								fill="white"
+							/>
+						</svg>
 					</button>
 				</Tooltip>
 
@@ -409,7 +431,26 @@
 			</button> -->
 			</div>
 		</div>
-
+		<div
+			class="absolute left-0 bottom-0 w-full h-[98px] flex justify-center bg-[linear-gradient(180deg,rgba(255,255,255,0)_0%,#FFF_100%)]"
+		>
+			<button
+				class="cursor-pointer relative z-50 flex justify-center items-center border border-neutrals-100 rounded-full w-[32px] h-[32px]"
+				on:click={scrollToTop}
+				><svg
+					xmlns="http://www.w3.org/2000/svg"
+					width="18"
+					height="18"
+					viewBox="0 0 18 18"
+					fill="none"
+				>
+					<path
+						d="M8.43737 16.1243V4.0075L4.7783 7.65512L3.99512 6.87194L8.99987 1.86719L14.0046 6.87194L13.2214 7.67387L9.56237 4.01463V16.1243H8.43737Z"
+						fill="#36383B"
+					/>
+				</svg></button
+			>
+		</div>
 		<!-- {#if $user?.role === 'admin'}
 		<div class=" flex justify-end w-full mb-3">
 			<div class="flex space-x-2">
