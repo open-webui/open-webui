@@ -21,7 +21,7 @@ from typing import Optional, Union, List, Dict
 
 from opentelemetry import trace
 
-from open_webui.models.users import Users
+from open_webui.models.users import User, Users
 
 from open_webui.constants import ERROR_MESSAGES
 
@@ -350,3 +350,44 @@ def get_admin_user(user=Depends(get_current_user)):
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
     return user
+
+
+def get_trusted_user_role(
+        user: User, 
+        trusted_role_management_enabled: bool, 
+        requested_roles: list[str], 
+        allowed_roles: list[str],
+        admin_roles: list[str], 
+        default_role: str,
+):
+    if user and Users.get_num_users() == 1:
+        # If the user is the only user, assign the role "admin" - actually repairs role for single user on login
+        log.debug("Assigning the only user the admin role")
+        return "admin"
+    if not user and Users.get_num_users() == 0:
+        # If there are no users, assign the role "admin", as the first user will be an admin
+        log.debug("Assigning the first user the admin role")
+        return "admin"
+
+    # Default/fallback role if no matching roles are found or user management is disabled
+    role = default_role
+
+    if trusted_role_management_enabled:
+        log.debug("Running Role management")
+
+        log.debug(f"Requested User roles: {requested_roles}")
+        log.debug(f"Accepted user roles: {allowed_roles}")
+        log.debug(f"Accepted admin roles: {admin_roles}")
+
+        if any(item in allowed_roles for item in requested_roles):
+            log.debug("Assigned user the user role")
+            role = "user"
+
+        if any(item in admin_roles for item in requested_roles):
+            log.debug("Assigned user the admin role")
+            role = "admin"
+    elif user:
+        # If role management is enabled, use the existing role for existing users
+        role = user.role
+
+    return role

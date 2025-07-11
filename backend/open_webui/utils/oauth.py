@@ -15,7 +15,7 @@ from fastapi import (
 from starlette.responses import RedirectResponse
 
 from open_webui.models.auths import Auths
-from open_webui.models.users import Users
+from open_webui.models.users import User, Users
 from open_webui.models.groups import Groups, GroupModel, GroupUpdateForm, GroupForm
 from open_webui.config import (
     DEFAULT_USER_ROLE,
@@ -47,7 +47,7 @@ from open_webui.env import (
     WEBUI_AUTH_COOKIE_SECURE,
 )
 from open_webui.utils.misc import parse_duration
-from open_webui.utils.auth import get_password_hash, create_token
+from open_webui.utils.auth import get_password_hash, create_token, get_trusted_user_role
 from open_webui.utils.webhook import post_webhook
 
 from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
@@ -87,62 +87,27 @@ class OAuthManager:
     def get_client(self, provider_name):
         return self.oauth.create_client(provider_name)
 
-    def get_user_role(self, user, user_data):
-        if user and Users.get_num_users() == 1:
-            # If the user is the only user, assign the role "admin" - actually repairs role for single user on login
-            log.debug("Assigning the only user the admin role")
-            return "admin"
-        if not user and Users.get_num_users() == 0:
-            # If there are no users, assign the role "admin", as the first user will be an admin
-            log.debug("Assigning the first user the admin role")
-            return "admin"
+    def get_user_role(self, user: User, user_data):
+        oauth_claim = auth_manager_config.OAUTH_ROLES_CLAIM
+        oauth_allowed_roles = auth_manager_config.OAUTH_ALLOWED_ROLES
+        oauth_admin_roles = auth_manager_config.OAUTH_ADMIN_ROLES
+        oauth_roles = []
 
-        if auth_manager_config.ENABLE_OAUTH_ROLE_MANAGEMENT:
-            log.debug("Running OAUTH Role management")
-            oauth_claim = auth_manager_config.OAUTH_ROLES_CLAIM
-            oauth_allowed_roles = auth_manager_config.OAUTH_ALLOWED_ROLES
-            oauth_admin_roles = auth_manager_config.OAUTH_ADMIN_ROLES
-            oauth_roles = []
-            # Default/fallback role if no matching roles are found
-            role = auth_manager_config.DEFAULT_USER_ROLE
+        if oauth_claim:
+            claim_data = user_data
+            nested_claims = oauth_claim.split(".")
+            for nested_claim in nested_claims:
+                claim_data = claim_data.get(nested_claim, {})
+            oauth_roles = claim_data if isinstance(claim_data, list) else []
 
-            # Next block extracts the roles from the user data, accepting nested claims of any depth
-            if oauth_claim and oauth_allowed_roles and oauth_admin_roles:
-                claim_data = user_data
-                nested_claims = oauth_claim.split(".")
-                for nested_claim in nested_claims:
-                    claim_data = claim_data.get(nested_claim, {})
-                oauth_roles = claim_data if isinstance(claim_data, list) else []
-
-            log.debug(f"Oauth Roles claim: {oauth_claim}")
-            log.debug(f"User roles from oauth: {oauth_roles}")
-            log.debug(f"Accepted user roles: {oauth_allowed_roles}")
-            log.debug(f"Accepted admin roles: {oauth_admin_roles}")
-
-            # If any roles are found, check if they match the allowed or admin roles
-            if oauth_roles:
-                # If role management is enabled, and matching roles are provided, use the roles
-                for allowed_role in oauth_allowed_roles:
-                    # If the user has any of the allowed roles, assign the role "user"
-                    if allowed_role in oauth_roles:
-                        log.debug("Assigned user the user role")
-                        role = "user"
-                        break
-                for admin_role in oauth_admin_roles:
-                    # If the user has any of the admin roles, assign the role "admin"
-                    if admin_role in oauth_roles:
-                        log.debug("Assigned user the admin role")
-                        role = "admin"
-                        break
-        else:
-            if not user:
-                # If role management is disabled, use the default role for new users
-                role = auth_manager_config.DEFAULT_USER_ROLE
-            else:
-                # If role management is disabled, use the existing role for existing users
-                role = user.role
-
-        return role
+        return get_trusted_user_role(
+            user, 
+            auth_manager_config.ENABLE_OAUTH_ROLE_MANAGEMENT, 
+            oauth_roles, 
+            oauth_allowed_roles, 
+            oauth_admin_roles,
+            auth_manager_config.DEFAULT_USER_ROLE,
+        )
 
     def update_user_groups(self, user, user_data, default_permissions):
         log.debug("Running OAUTH Group management")
