@@ -31,7 +31,7 @@
 	import { uploadFile } from '$lib/apis/files';
 	import { chatCompletion } from '$lib/apis/openai';
 
-	import { config, models, settings, showSidebar } from '$lib/stores';
+	import { config, models, settings, showSidebar, socket, user } from '$lib/stores';
 
 	import NotePanel from '$lib/components/notes/NotePanel.svelte';
 	import MenuLines from '../icons/MenuLines.svelte';
@@ -170,10 +170,6 @@
 			});
 		}, 200);
 	};
-
-	$: if (note) {
-		changeDebounceHandler();
-	}
 
 	$: if (id) {
 		init();
@@ -862,7 +858,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 						</div>
 					</div>
 
-					<div class=" mb-2.5 px-2.5">
+					<div class="  px-2.5">
 						<div
 							class=" flex w-full bg-transparent overflow-x-auto scrollbar-none"
 							on:wheel={(e) => {
@@ -906,7 +902,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 					</div>
 
 					<div
-						class=" flex-1 w-full h-full overflow-auto px-3.5 pb-20 relative"
+						class=" flex-1 w-full h-full overflow-auto px-3.5 pb-20 relative z-40 pt-2.5"
 						id="note-content-container"
 					>
 						{#if enhancing}
@@ -959,6 +955,10 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 							html={note.data?.content?.html}
 							json={true}
 							link={true}
+							documentId={`note:${note.id}`}
+							collaboration={true}
+							socket={$socket}
+							user={$user}
 							placeholder={$i18n.t('Write something...')}
 							editable={versionIdx === null && !enhancing}
 							onChange={(content) => {

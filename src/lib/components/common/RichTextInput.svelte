@@ -56,13 +56,22 @@
 
 	import { Fragment, DOMParser } from 'prosemirror-model';
 	import { EditorState, Plugin, PluginKey, TextSelection, Selection } from 'prosemirror-state';
-	import { receiveTransaction, sendableSteps, getVersion } from 'prosemirror-collab';
-	import { Step } from 'prosemirror-transform';
-	import { Decoration, DecorationSet } from 'prosemirror-view';
 	import { Editor, Extension } from '@tiptap/core';
 
+	// Yjs imports
+	import * as Y from 'yjs';
+	import {
+		ySyncPlugin,
+		yCursorPlugin,
+		yUndoPlugin,
+		undo,
+		redo,
+		prosemirrorJSONToYDoc,
+		yDocToProsemirrorJSON
+	} from 'y-prosemirror';
+	import { keymap } from 'prosemirror-keymap';
+
 	import { AIAutocompletion } from './RichTextInput/AutoCompletion.js';
-	import History from '@tiptap/extension-history';
 	import Table from '@tiptap/extension-table';
 	import TableRow from '@tiptap/extension-table-row';
 	import TableHeader from '@tiptap/extension-table-header';
@@ -126,98 +135,292 @@
 	export let largeTextAsFile = false;
 	export let insertPromptAsRichText = false;
 
-	let isConnected = false;
-	let collaborators = new Map();
-	let version = 0;
+	let content = null;
+	let htmlValue = '';
+	let jsonValue = '';
+	let mdValue = '';
 
-	// Custom collaboration plugin
-	const collaborationPlugin = () => {
-		return new Plugin({
-			key: new PluginKey('collaboration'),
-			state: {
-				init: () => ({ version: 0 }),
-				apply: (tr, pluginState) => {
-					const newState = { ...pluginState };
+	// Yjs setup
+	let ydoc = null;
+	let yXmlFragment = null;
+	let awareness = null;
 
-					if (tr.getMeta('collaboration')) {
-						newState.version = tr.getMeta('collaboration').version;
-					}
+	// Custom Yjs Socket.IO provider
+	class SocketIOProvider {
+		constructor(doc, documentId, socket, user) {
+			this.doc = doc;
+			this.documentId = documentId;
+			this.socket = socket;
+			this.user = user;
+			this.isConnected = false;
+			this.synced = false;
 
-					return newState;
-				}
-			},
-			view: () => ({
-				update: (view, prevState) => {
-					const sendable = sendableSteps(view.state);
-					if (sendable) {
-						socket.emit('document_steps', {
-							document_id: documentId,
-							user_id: user?.id,
-							version: sendable.version,
-							steps: sendable.steps.map((step) => step.toJSON()),
-							clientID: sendable.clientID
-						});
-					}
-				}
-			})
-		});
-	};
-
-	function initializeCollaboration() {
-		if (!socket || !user || !documentId) {
-			console.warn('Collaboration not initialized: missing socket, user, or documentId');
-			return;
+			this.setupEventListeners();
 		}
 
-		socket.emit('join_document', {
-			document_id: documentId,
-			user_id: user?.id,
-			user_name: user?.name,
-			user_color: user?.color
-		});
+		onConnect() {
+			this.isConnected = true;
+			this.joinDocument();
+		}
 
-		socket.on('document_steps', handleDocumentSteps);
-		socket.on('document_state', handleDocumentState);
-		socket.on('user_joined', handleUserJoined);
-		socket.on('user_left', handleUserLeft);
-		socket.on('connect', () => {
-			isConnected = true;
-		});
-		socket.on('disconnect', () => {
-			isConnected = false;
-		});
-	}
+		onDisconnect() {
+			this.isConnected = false;
+			this.synced = false;
+		}
 
-	function handleDocumentSteps(data) {
-		if (data.user_id !== user?.id && editor) {
-			const steps = data.steps.map((stepJSON) => Step.fromJSON(editor.schema, stepJSON));
-			const tr = receiveTransaction(editor.state, steps, data.clientID);
+		setupEventListeners() {
+			// Listen for document updates from server
+			this.socket.on('yjs:document:update', (data) => {
+				if (data.document_id === this.documentId && data.socket_id !== this.socket.id) {
+					try {
+						const update = new Uint8Array(data.update);
+						Y.applyUpdate(this.doc, update);
+					} catch (error) {
+						console.error('Error applying Yjs update:', error);
+					}
+				}
+			});
 
-			if (tr) {
-				editor.view.dispatch(tr);
+			// Listen for document state from server
+			this.socket.on('yjs:document:state', async (data) => {
+				if (data.document_id === this.documentId) {
+					try {
+						if (data.state) {
+							const state = new Uint8Array(data.state);
+
+							if (state.length === 2 && state[0] === 0 && state[1] === 0) {
+								// Empty state, check if we have content to initialize
+								if (content) {
+									const pydoc = prosemirrorJSONToYDoc(editor.schema, content);
+									if (pydoc) {
+										Y.applyUpdate(this.doc, Y.encodeStateAsUpdate(pydoc));
+									}
+								}
+							} else {
+								Y.applyUpdate(this.doc, state);
+							}
+						}
+						this.synced = true;
+					} catch (error) {
+						console.error('Error applying Yjs state:', error);
+					}
+				}
+			});
+
+			// Listen for awareness updates
+			this.socket.on('yjs:awareness:update', (data) => {
+				if (data.document_id === this.documentId && awareness) {
+					try {
+						const awarenessUpdate = new Uint8Array(data.update);
+						awareness.applyUpdate(awarenessUpdate, 'server');
+					} catch (error) {
+						console.error('Error applying awareness update:', error);
+					}
+				}
+			});
+
+			// Handle connection events
+			this.socket.on('connect', this.onConnect);
+			this.socket.on('disconnect', this.onDisconnect);
+
+			// Listen for document updates from Yjs
+			this.doc.on('update', async (update, origin) => {
+				if (origin !== 'server' && this.isConnected) {
+					await tick(); // Ensure the DOM is updated before sending
+					this.socket.emit('yjs:document:update', {
+						document_id: this.documentId,
+						user_id: this.user?.id,
+						socket_id: this.socket.id,
+						update: Array.from(update),
+						data: {
+							content: {
+								md: mdValue,
+								html: htmlValue,
+								json: jsonValue
+							}
+						}
+					});
+				}
+			});
+
+			// Listen for awareness updates from Yjs
+			if (awareness) {
+				awareness.on('change', ({ added, updated, removed }, origin) => {
+					if (origin !== 'server' && this.isConnected) {
+						const changedClients = added.concat(updated).concat(removed);
+						const awarenessUpdate = awareness.encodeUpdate(changedClients);
+						this.socket.emit('yjs:awareness:update', {
+							document_id: this.documentId,
+							user_id: this.socket.id,
+							update: Array.from(awarenessUpdate)
+						});
+					}
+				});
+			}
+
+			if (this.socket.connected) {
+				this.isConnected = true;
+				this.joinDocument();
+			}
+		}
+
+		generateUserColor() {
+			const colors = [
+				'#FF6B6B',
+				'#4ECDC4',
+				'#45B7D1',
+				'#96CEB4',
+				'#FFEAA7',
+				'#DDA0DD',
+				'#98D8C8',
+				'#F7DC6F',
+				'#BB8FCE',
+				'#85C1E9'
+			];
+			return colors[Math.floor(Math.random() * colors.length)];
+		}
+
+		joinDocument() {
+			const userColor = this.generateUserColor();
+			this.socket.emit('yjs:document:join', {
+				document_id: this.documentId,
+				user_id: this.user?.id,
+				user_name: this.user?.name,
+				user_color: userColor
+			});
+
+			// Set user awareness info
+			if (awareness && this.user) {
+				awareness.setLocalStateField('user', {
+					name: `${this.user.name}`,
+					color: userColor,
+					id: this.socket.id
+				});
+			}
+		}
+
+		destroy() {
+			this.socket.off('yjs:document:update');
+			this.socket.off('yjs:document:state');
+			this.socket.off('yjs:awareness:update');
+			this.socket.off('connect', this.onConnect);
+			this.socket.off('disconnect', this.onDisconnect);
+
+			if (this.isConnected) {
+				this.socket.emit('yjs:document:leave', {
+					document_id: this.documentId,
+					user_id: this.user?.id
+				});
 			}
 		}
 	}
 
-	function handleDocumentState(data) {
-		version = data.version;
-		if (data.content && editor) {
-			editor.commands.setContent(data.content);
+	let provider = null;
+
+	// Simple awareness implementation
+	class SimpleAwareness {
+		constructor(yDoc) {
+			// Yjs awareness expects clientID (not clientId) property
+			this.clientID = yDoc ? yDoc.clientID : Math.floor(Math.random() * 0xffffffff);
+			// Map from clientID (number) to state (object)
+			this._states = new Map(); // _states, not states; will make getStates() for compat
+			this._updateHandlers = [];
+			this._localState = {};
+			// As in Yjs Awareness, add our local state to the states map from the start:
+			this._states.set(this.clientID, this._localState);
 		}
-		isConnected = true;
+		on(event, handler) {
+			if (event === 'change') this._updateHandlers.push(handler);
+		}
+		off(event, handler) {
+			if (event === 'change') {
+				const i = this._updateHandlers.indexOf(handler);
+				if (i !== -1) this._updateHandlers.splice(i, 1);
+			}
+		}
+		getLocalState() {
+			return this._states.get(this.clientID) || null;
+		}
+		getStates() {
+			// Yjs returns a Map (clientID->state)
+			return this._states;
+		}
+		setLocalStateField(field, value) {
+			let localState = this._states.get(this.clientID);
+			if (!localState) {
+				localState = {};
+				this._states.set(this.clientID, localState);
+			}
+			localState[field] = value;
+			// After updating, fire 'update' event to all handlers
+			for (const cb of this._updateHandlers) {
+				// Follows Yjs Awareness ({ added, updated, removed }, origin)
+				cb({ added: [], updated: [this.clientID], removed: [] }, 'local');
+			}
+		}
+		applyUpdate(update, origin) {
+			// Very simple: Accepts a serialized JSON state for now as Uint8Array
+			try {
+				const str = new TextDecoder().decode(update);
+				const obj = JSON.parse(str);
+				// Should be a plain object: { clientID: state, ... }
+				for (const [k, v] of Object.entries(obj)) {
+					this._states.set(+k, v);
+				}
+				for (const cb of this._updateHandlers) {
+					cb({ added: [], updated: Array.from(Object.keys(obj)).map(Number), removed: [] }, origin);
+				}
+			} catch (e) {
+				console.warn('SimpleAwareness: Could not decode update:', e);
+			}
+		}
+		encodeUpdate(clients) {
+			// Encodes the states for the given clientIDs as Uint8Array (JSON)
+			const obj = {};
+			for (const id of clients || Array.from(this._states.keys())) {
+				const st = this._states.get(id);
+				if (st) obj[id] = st;
+			}
+			const json = JSON.stringify(obj);
+			return new TextEncoder().encode(json);
+		}
 	}
 
-	function handleUserJoined(data) {
-		collaborators.set(data.user_id, {
-			name: data.user_name,
-			color: data.user_color
-		});
-		collaborators = collaborators;
-	}
+	// Yjs collaboration extension
+	const YjsCollaboration = Extension.create({
+		name: 'yjsCollaboration',
 
-	function handleUserLeft(data) {
-		collaborators.delete(data.user_id);
-		collaborators = collaborators;
+		addProseMirrorPlugins() {
+			if (!collaboration || !yXmlFragment) return [];
+
+			const plugins = [
+				ySyncPlugin(yXmlFragment),
+				yUndoPlugin(),
+				keymap({
+					'Mod-z': undo,
+					'Mod-y': redo,
+					'Mod-Shift-z': redo
+				})
+			];
+
+			if (awareness) {
+				plugins.push(yCursorPlugin(awareness));
+			}
+
+			return plugins;
+		}
+	});
+
+	function initializeCollaboration() {
+		if (!collaboration) return;
+
+		// Create Yjs document
+		ydoc = new Y.Doc();
+		yXmlFragment = ydoc.getXmlFragment('prosemirror');
+		awareness = new SimpleAwareness(ydoc);
+
+		// Create custom Socket.IO provider
+		provider = new SocketIOProvider(ydoc, documentId, socket, user);
 	}
 
 	let floatingMenuElement = null;
@@ -538,7 +741,7 @@
 	};
 
 	onMount(async () => {
-		let content = value;
+		content = value;
 
 		if (json) {
 			if (!content) {
@@ -655,28 +858,18 @@
 							})
 						]
 					: []),
-
-				...(collaboration
-					? [
-							Extension.create({
-								name: 'socketCollaboration',
-								addProseMirrorPlugins() {
-									return [collaborationPlugin()];
-								}
-							})
-						]
-					: [])
+				...(collaboration ? [YjsCollaboration] : [])
 			],
-			content: content,
+			content: collaboration ? undefined : content,
 			autofocus: messageInput ? true : false,
 			onTransaction: () => {
 				// force re-render so `editor.isActive` works as expected
 				editor = editor;
 
-				const htmlValue = editor.getHTML();
-				const jsonValue = editor.getJSON();
+				htmlValue = editor.getHTML();
+				jsonValue = editor.getJSON();
 
-				let mdValue = turndownService
+				mdValue = turndownService
 					.turndown(
 						htmlValue
 							.replace(/<p><\/p>/g, '<br/>')
@@ -872,16 +1065,8 @@
 	});
 
 	onDestroy(() => {
-		if (socket) {
-			socket.off('document_steps', handleDocumentSteps);
-			socket.off('document_state', handleDocumentState);
-			socket.off('user_joined', handleUserJoined);
-			socket.off('user_left', handleUserLeft);
-
-			socket.emit('leave_document', {
-				document_id: documentId,
-				user_id: userId
-			});
+		if (provider) {
+			provider.destroy();
 		}
 
 		if (editor) {
@@ -889,7 +1074,7 @@
 		}
 	});
 
-	$: if (value !== null && editor) {
+	$: if (value !== null && editor && !collaboration) {
 		onValueChange();
 	}
 
