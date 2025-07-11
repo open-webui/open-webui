@@ -453,7 +453,7 @@ from open_webui.utils.redis import get_redis_connection
 
 from open_webui.tasks import (
     redis_task_command_listener,
-    list_task_ids_by_chat_id,
+    list_task_ids_by_item_id,
     stop_task,
     list_tasks,
 )  # Import from tasks.py
@@ -1505,7 +1505,7 @@ async def list_tasks_by_chat_id_endpoint(
     if chat is None or chat.user_id != user.id:
         return {"task_ids": []}
 
-    task_ids = await list_task_ids_by_chat_id(request.app.state.redis, chat_id)
+    task_ids = await list_task_ids_by_item_id(request.app.state.redis, chat_id)
 
     log.debug(f"Task IDs for chat {chat_id}: {task_ids}")
     return {"task_ids": task_ids}
