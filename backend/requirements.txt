@@ -132,3 +132,4 @@ PyPDF2==3.0.1
 # Jupyternotebook editor tool
 ipykernel
 nbformat
+matplotlib
