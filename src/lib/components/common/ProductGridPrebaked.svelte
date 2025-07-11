@@ -44,7 +44,7 @@
         const giftRequestContent = await response.text();
         const currentGiftRequest = JSON.parse(giftRequestContent)[0].current_gift_idea;
         // Check if the gift idea ID matches currentGiftRequest.hash_id
-        if (currentGiftRequest.hash_id == giftIdeaId) {
+        if (currentGiftRequest && currentGiftRequest.hash_id == giftIdeaId) {
             const gift_type = currentGiftRequest.type;
             if (gift_type === 'product') {
                 products = currentGiftRequest.matched_products;
