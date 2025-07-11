@@ -26,12 +26,16 @@ def stdout_format(record: "Record") -> str:
     Returns:
     str: A formatted log string intended for stdout.
     """
-    record["extra"]["extra_json"] = json.dumps(record["extra"])
+    if record["extra"]:
+        record["extra"]["extra_json"] = json.dumps(record["extra"])
+        extra_format = " - {extra[extra_json]}"
+    else:
+        extra_format = ""
     return (
         "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | "
         "<level>{level: <8}</level> | "
         "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - "
-        "<level>{message}</level> - {extra[extra_json]}"
+        "<level>{message}</level>" + extra_format +
         "\n{exception}"
     )
 
