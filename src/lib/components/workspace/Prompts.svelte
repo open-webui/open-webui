@@ -23,6 +23,7 @@
 	import Plus from '../icons/Plus.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
+	import Pagination from '$lib/components/common/Pagination.svelte';
 	import { capitalizeFirstLetter, sanitizeResponseContent } from '$lib/utils';
 
 	const i18n = getContext('i18n');
@@ -40,8 +41,18 @@
 	let showDeleteConfirm = false;
 	let deletePrompt = null;
 
+	let page = 1;
+
 	let filteredItems = [];
 	$: filteredItems = prompts.filter((p) => query === '' || p.command.includes(query));
+
+	// Reset page when search query changes
+	$: if (query) {
+		page = 1;
+	}
+
+	// Paginate filtered items (showing 20 items per page like in admin evaluations)
+	$: paginatedItems = filteredItems.slice((page - 1) * 20, page * 20);
 
 	const generateRandomSuffix = () => {
 		const characters = 'abcdefghijklmnopqrstuvwxyz0123456789';
@@ -181,7 +192,7 @@
 	</div>
 
 	<div class="mb-5 gap-2 grid lg:grid-cols-2 xl:grid-cols-3">
-		{#each filteredItems as prompt}
+		{#each paginatedItems as prompt}
 			<div
 				class="flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition"
 			>
@@ -279,6 +290,10 @@
 			</div>
 		{/each}
 	</div>
+
+	{#if filteredItems.length > 20}
+		<Pagination bind:page count={filteredItems.length} perPage={20} />
+	{/if}
 
 	<div class=" flex justify-end w-full mb-3">
 		<div class="flex space-x-2">
