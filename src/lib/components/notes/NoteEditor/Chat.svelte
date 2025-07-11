@@ -146,6 +146,7 @@ Based on the user's instruction, update and enhance the existing notes by incorp
 		await tick();
 		scrollToBottom();
 
+		stopResponseFlag = false;
 		let enhancedContent = {
 			json: null,
 			html: '',

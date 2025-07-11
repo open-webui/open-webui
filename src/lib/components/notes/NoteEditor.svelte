@@ -540,6 +540,7 @@
 	};
 
 	const enhanceCompletionHandler = async (model) => {
+		stopResponseFlag = false;
 		let enhancedContent = {
 			json: null,
 			html: '',
