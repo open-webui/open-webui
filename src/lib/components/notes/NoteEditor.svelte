@@ -771,6 +771,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 								type="text"
 								bind:value={note.title}
 								placeholder={$i18n.t('Title')}
+								disabled={note?.user_id !== $user?.id && $user?.role !== 'admin'}
 								required
 								on:input={changeDebounceHandler}
 							/>
@@ -900,6 +901,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 									on:click={() => {
 										showAccessControlModal = true;
 									}}
+									disabled={note?.user_id !== $user?.id && $user?.role !== 'admin'}
 								>
 									<Users className="size-3.5" strokeWidth="2" />
 
