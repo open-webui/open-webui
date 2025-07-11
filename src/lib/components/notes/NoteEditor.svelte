@@ -810,39 +810,6 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 									</div>
 								{/if}
 
-								<NoteMenu
-									onDownload={(type) => {
-										downloadHandler(type);
-									}}
-									onCopyLink={async () => {
-										const baseUrl = window.location.origin;
-										const res = await copyToClipboard(`${baseUrl}/notes/${note.id}`);
-
-										if (res) {
-											toast.success($i18n.t('Copied link to clipboard'));
-										} else {
-											toast.error($i18n.t('Failed to copy link'));
-										}
-									}}
-									onCopyToClipboard={async () => {
-										const res = await copyToClipboard(note.data.content.md).catch((error) => {
-											toast.error(`${error}`);
-											return null;
-										});
-
-										if (res) {
-											toast.success($i18n.t('Copied to clipboard'));
-										}
-									}}
-									onDelete={() => {
-										showDeleteConfirm = true;
-									}}
-								>
-									<div class="p-1 bg-transparent hover:bg-white/5 transition rounded-lg">
-										<EllipsisHorizontal className="size-5" />
-									</div>
-								</NoteMenu>
-
 								<Tooltip placement="top" content={$i18n.t('Chat')} className="cursor-pointer">
 									<button
 										class="p-1.5 bg-transparent hover:bg-white/5 transition rounded-lg"
@@ -878,6 +845,39 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 										<Cog6 />
 									</button>
 								</Tooltip>
+
+								<NoteMenu
+									onDownload={(type) => {
+										downloadHandler(type);
+									}}
+									onCopyLink={async () => {
+										const baseUrl = window.location.origin;
+										const res = await copyToClipboard(`${baseUrl}/notes/${note.id}`);
+
+										if (res) {
+											toast.success($i18n.t('Copied link to clipboard'));
+										} else {
+											toast.error($i18n.t('Failed to copy link'));
+										}
+									}}
+									onCopyToClipboard={async () => {
+										const res = await copyToClipboard(note.data.content.md).catch((error) => {
+											toast.error(`${error}`);
+											return null;
+										});
+
+										if (res) {
+											toast.success($i18n.t('Copied to clipboard'));
+										}
+									}}
+									onDelete={() => {
+										showDeleteConfirm = true;
+									}}
+								>
+									<div class="p-1 bg-transparent hover:bg-white/5 transition rounded-lg">
+										<EllipsisHorizontal className="size-5" />
+									</div>
+								</NoteMenu>
 							</div>
 						</div>
 					</div>
