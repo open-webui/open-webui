@@ -4,7 +4,7 @@
 	import { onMount, getContext, createEventDispatcher } from 'svelte';
 	import { WEBUI_NAME, mobile } from '$lib/stores';
 	import { WEBUI_VERSION } from '$lib/constants';
-	import ProductGridPrebaked from '$lib/components/common/ProductGridPrebaked.svelte';
+	import ProductGrid from '$lib/components/common/ProductGrid.svelte';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -17,7 +17,7 @@
 	export let maxSuggestions = 20;
 	export let promptSelected = null;
 
-	let sortedPrompts = [];
+	export let sortedPrompts = [];
 
 	const fuseOptions = {
 		keys: ['content', 'title'],
@@ -69,7 +69,6 @@
 				const firstPrompt = filteredPrompts[0];
 				firstPrompt.selected = true;
 				promptSelected = firstPrompt;
-				console.log(promptSelected.chat_id, promptSelected.hash_id)
 			}
 		} else if (inputValue.length > 0) {
 			const newFilteredPrompts = [
@@ -101,7 +100,6 @@
 </script>
 
 <div class="mx-5">
-
 	<div class="mb-1 flex gap-1 text-xs font-medium items-center text-gray-400 dark:text-gray-600">
 		<Bolt />
 		{$i18n.t('Suggested')}
@@ -146,9 +144,9 @@
 	<!-- Render Product List -->
 	{#key promptSelected}
 		{#if promptSelected}
-			<ProductGridPrebaked
+			<ProductGrid
 				chat_id={promptSelected.chat_id}
-				gift_idea_id={{ id: promptSelected.hash_id }}
+				gift_idea_id={{ id: 'random' }}
 				on:click={(e) => {
 					console.log(e);
 				}}
