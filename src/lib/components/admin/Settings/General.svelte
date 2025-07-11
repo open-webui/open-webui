@@ -745,7 +745,8 @@
 								>
 							</p>
 							<p>
-								PII detection will automatically detect and mask personally identifiable information across all users.
+								PII detection will automatically detect and mask personally identifiable information
+								across all users.
 							</p>
 						</div>
 					{/if}

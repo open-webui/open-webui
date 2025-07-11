@@ -354,17 +354,14 @@ from open_webui.config import (
     LDAP_CA_CERT_FILE,
     LDAP_VALIDATE_CERT,
     LDAP_CIPHERS,
-
     # PII Detection
     ENABLE_PII_DETECTION,
     PII_API_KEY,
     PII_API_BASE_URL,
-
     # LDAP Group Management
     ENABLE_LDAP_GROUP_MANAGEMENT,
     ENABLE_LDAP_GROUP_CREATION,
     LDAP_ATTRIBUTE_FOR_GROUPS,
-
     # Misc
     ENV,
     CACHE_DIR,

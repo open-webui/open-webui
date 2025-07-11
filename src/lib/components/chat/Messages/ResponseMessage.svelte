@@ -172,13 +172,12 @@
 	let showRateComment = false;
 
 	const copyToClipboard = async (text) => {
-				
 		// First unmask any PII placeholders to get the actual text
 		const entities = piiSessionManager.getEntitiesForDisplay(chatId);
 		if (entities.length > 0) {
 			text = unmaskTextWithEntities(text, entities);
 		}
-		
+
 		text = removeAllDetails(text);
 
 		if (($config?.ui?.response_watermark ?? '').trim() !== '') {
@@ -880,16 +879,16 @@
 								{:else if message.content && message.error !== true}
 									<!-- always show message contents even if there's an error -->
 									<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
-																	<ContentRenderer
-									id={message.id}
-									{history}
-									content={message.content}
-									sources={message.sources}
-									floatingButtons={message?.done && !readOnly}
-									save={!readOnly}
-									preview={!readOnly}
-									{model}
-									conversationId={chatId}
+									<ContentRenderer
+										id={message.id}
+										{history}
+										content={message.content}
+										sources={message.sources}
+										floatingButtons={message?.done && !readOnly}
+										save={!readOnly}
+										preview={!readOnly}
+										{model}
+										conversationId={chatId}
 										onTaskClick={async (e) => {
 											console.log(e);
 										}}

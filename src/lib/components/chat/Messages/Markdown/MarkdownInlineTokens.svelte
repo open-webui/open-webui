@@ -69,6 +69,6 @@
 			onload="this.style.height=(this.contentWindow.document.body.scrollHeight+20)+'px';"
 		></iframe>
 	{:else if token.type === 'text'}
-		<PiiAwareText text={token.raw} id={`${id}-text-${token.type}`} conversationId={conversationId} />
+		<PiiAwareText text={token.raw} id={`${id}-text-${token.type}`} {conversationId} />
 	{/if}
 {/each}

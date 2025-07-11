@@ -246,20 +246,25 @@
 
 			// Escape special regex characters
 			const escapedText = entity.raw_text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-			
+
 			// Use word boundaries for better matching, but handle special characters gracefully
 			const hasSpecialChars = /[^\w\s]/.test(entity.raw_text);
-			const regex = hasSpecialChars 
+			const regex = hasSpecialChars
 				? new RegExp(escapedText, 'gi')
 				: new RegExp(`\\b${escapedText}\\b`, 'gi');
 
-			console.log('MessageInput: Replacing text for entity', entity.label, 'raw text:', entity.raw_text);
+			console.log(
+				'MessageInput: Replacing text for entity',
+				entity.label,
+				'raw text:',
+				entity.raw_text
+			);
 
 			// Replace all occurrences of the raw text with the masked pattern
 			const replacementPattern = `[{${entity.label}}]`;
 			const beforeReplace = maskedText;
 			maskedText = maskedText.replace(regex, replacementPattern);
-			
+
 			if (maskedText !== beforeReplace) {
 				console.log('MessageInput: Successfully masked entity', entity.label);
 			} else {
@@ -842,7 +847,21 @@
 												autocomplete={$config?.features?.enable_autocomplete_generation &&
 													($settings?.promptAutocomplete ?? false)}
 												enablePiiModifiers={true}
-												piiModifierLabels={['PERSON', 'EMAIL', 'PHONE_NUMBER', 'ADDRESS', 'SSN', 'CREDIT_CARD', 'DATE_TIME', 'IP_ADDRESS', 'URL', 'IBAN', 'MEDICAL_LICENSE', 'US_PASSPORT', 'US_DRIVER_LICENSE']}
+												piiModifierLabels={[
+													'PERSON',
+													'EMAIL',
+													'PHONE_NUMBER',
+													'ADDRESS',
+													'SSN',
+													'CREDIT_CARD',
+													'DATE_TIME',
+													'IP_ADDRESS',
+													'URL',
+													'IBAN',
+													'MEDICAL_LICENSE',
+													'US_PASSPORT',
+													'US_DRIVER_LICENSE'
+												]}
 												{enablePiiDetection}
 												{piiApiKey}
 												conversationId={chatId || undefined}

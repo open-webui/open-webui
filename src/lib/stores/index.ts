@@ -158,7 +158,6 @@ type Settings = {
 	num_batch?: string;
 	num_keep?: string;
 	options?: ModelOptions;
-
 };
 
 type ModelOptions = {
@@ -179,8 +178,6 @@ type TitleSettings = {
 	modelExternal?: string;
 	prompt?: string;
 };
-
-
 
 type Prompt = {
 	command: string;

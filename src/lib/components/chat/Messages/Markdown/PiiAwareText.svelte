@@ -1,9 +1,6 @@
 <script lang="ts">
 	import DOMPurify from 'dompurify';
-	import {
-		PiiSessionManager,
-		unmaskAndHighlightTextForDisplay,
-	} from '$lib/utils/pii';
+	import { PiiSessionManager, unmaskAndHighlightTextForDisplay } from '$lib/utils/pii';
 
 	export let text: string;
 	export let id: string = '';
@@ -18,7 +15,7 @@
 	}
 
 	$: entities = piiSessionManager.getEntitiesForDisplay(conversationId);
-	
+
 	$: processedText = (() => {
 		if (!entities.length) {
 			return text;

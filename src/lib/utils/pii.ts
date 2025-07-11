@@ -48,17 +48,17 @@ export function countBrTagsBeforePosition(html: string, plainTextPos: number): n
 	const tempDiv = document.createElement('div');
 	tempDiv.innerHTML = html;
 	const plainText = tempDiv.textContent || tempDiv.innerText || '';
-	
+
 	if (plainTextPos >= plainText.length) {
 		// Count all br tags if position is at or beyond end
 		return (html.match(/<br\s*\/?>/gi) || []).length;
 	}
-	
+
 	// Walk through the HTML and count br tags that appear before the target plain text position
 	let currentPlainTextPos = 0;
 	let brCount = 0;
 	let htmlPos = 0;
-	
+
 	while (htmlPos < html.length && currentPlainTextPos < plainTextPos) {
 		// Check if we're at a br tag
 		const brMatch = html.slice(htmlPos).match(/^<br\s*\/?>/i);
@@ -67,19 +67,19 @@ export function countBrTagsBeforePosition(html: string, plainTextPos: number): n
 			htmlPos += brMatch[0].length;
 			continue;
 		}
-		
+
 		// Check if we're at the start of any tag
 		const tagMatch = html.slice(htmlPos).match(/^<[^>]*>/);
 		if (tagMatch) {
 			htmlPos += tagMatch[0].length;
 			continue;
 		}
-		
+
 		// Regular character
 		currentPlainTextPos++;
 		htmlPos++;
 	}
-	
+
 	return brCount;
 }
 
@@ -90,7 +90,7 @@ export function mapPlainTextPositionToProseMirror(
 ): number {
 	// Count br tags that appear before this position in the plain text
 	const brTagsBeforePosition = countBrTagsBeforePosition(editorHtml, plainTextPos);
-	
+
 	// ProseMirror positions start at 1, add 1 for document offset, plus br tag positions
 	return plainTextPos + 1 + brTagsBeforePosition;
 }
@@ -180,14 +180,13 @@ export class PiiSessionManager {
 	private sessionId: string | null = null;
 	private apiKey: string = '';
 	private conversationStates: Map<string, ConversationPiiState> = new Map();
-	
+
 	// Error recovery backup for failed saves
 	private errorBackup: Map<string, ConversationPiiState> = new Map();
 	private pendingSaves: Set<string> = new Set();
 	// Track conversations currently being loaded
 	private loadingConversations = new Set<string>();
-	
-	
+
 	private temporaryState: {
 		entities: ExtendedPiiEntity[];
 		modifiers: PiiModifier[];
@@ -198,7 +197,6 @@ export class PiiSessionManager {
 		isActive: false
 	};
 
-	
 	private workingEntitiesForConversations: Map<string, ExtendedPiiEntity[]> = new Map();
 
 	static getInstance(): PiiSessionManager {
@@ -212,41 +210,36 @@ export class PiiSessionManager {
 		this.apiKey = apiKey;
 	}
 
-	
 	activateTemporaryState() {
 		this.temporaryState.isActive = true;
 		this.temporaryState.entities = [];
 		this.temporaryState.modifiers = [];
 	}
 
-	
 	isTemporaryStateActive(): boolean {
 		return this.temporaryState.isActive;
 	}
 
-	
 	setTemporaryStateEntities(entities: ExtendedPiiEntity[]) {
 		if (!this.temporaryState.isActive) {
 			console.warn('PiiSessionManager: Attempted to set temporary state when not active');
 			return;
 		}
-		
+
 		// Store the extended entities directly without recalculating shouldMask states
 		// This preserves shouldMask states that were already calculated from plugin state
 		this.temporaryState.entities = entities;
 	}
 
-	
 	getTemporaryStateEntities(): ExtendedPiiEntity[] {
 		return [...this.temporaryState.entities];
 	}
 
-	
 	transferTemporaryToConversation(conversationId: string) {
 		if (!this.temporaryState.isActive) {
 			return;
 		}
-		
+
 		// Create conversation state from final temporary entities
 		const conversationState: ConversationPiiState = {
 			entities: [...this.temporaryState.entities], // Use final entities only
@@ -265,34 +258,36 @@ export class PiiSessionManager {
 		this.triggerChatSave(conversationId);
 	}
 
-	
 	clearTemporaryState() {
 		this.temporaryState.isActive = false;
 		this.temporaryState.entities = [];
 		this.temporaryState.modifiers = [];
 	}
 
-	
 	getEntitiesForDisplay(conversationId?: string): ExtendedPiiEntity[] {
 		// Phase 1: New Chat (No Conversation ID or Invalid/Empty ID) - Use temporary state
-		if (!conversationId || conversationId.trim() === '' || !this.conversationStates.has(conversationId)) {
+		if (
+			!conversationId ||
+			conversationId.trim() === '' ||
+			!this.conversationStates.has(conversationId)
+		) {
 			if (this.temporaryState.isActive) {
 				return this.temporaryState.entities;
 			}
 			return [];
 		}
-		
+
 		// Phase 2: Existing Chat (Has Valid Conversation ID) - Use persistent + working entities
 		const persistentEntities = this.conversationStates.get(conversationId)?.entities || [];
 		const workingEntities = this.workingEntitiesForConversations.get(conversationId) || [];
-		
+
 		// Simple concatenation - working entities take precedence for display
 		return [...persistentEntities, ...workingEntities];
 	}
 
 	getWorkingEntitiesForConversations(conversationId: string | undefined): ExtendedPiiEntity[] {
 		// Only return working entities for existing conversations
-		// Temporary state is handled by getEntitiesForDisplay() 
+		// Temporary state is handled by getEntitiesForDisplay()
 		if (conversationId) {
 			return this.workingEntitiesForConversations.get(conversationId) || [];
 		}
@@ -314,14 +309,16 @@ export class PiiSessionManager {
 		}
 
 		this.pendingSaves.add(conversationId);
-		
+
 		try {
-			// Trigger the chat save handler 
-			const windowWithTrigger = window as Window & { triggerPiiChatSave?: (id: string) => Promise<void> };
+			// Trigger the chat save handler
+			const windowWithTrigger = window as Window & {
+				triggerPiiChatSave?: (id: string) => Promise<void>;
+			};
 			if (windowWithTrigger.triggerPiiChatSave) {
 				await windowWithTrigger.triggerPiiChatSave(conversationId);
 			}
-			
+
 			// Success - remove backup
 			this.errorBackup.delete(conversationId);
 		} catch (error) {
@@ -338,14 +335,14 @@ export class PiiSessionManager {
 		if (this.loadingConversations.has(conversationId)) {
 			return;
 		}
-		
+
 		// Check if conversation is already loaded
 		if (this.conversationStates.has(conversationId) && !piiState) {
 			return;
 		}
-		
+
 		this.loadingConversations.add(conversationId);
-		
+
 		try {
 			if (piiState) {
 				this.conversationStates.set(conversationId, piiState);
@@ -377,13 +374,17 @@ export class PiiSessionManager {
 	// MODIFIER MANAGEMENT METHODS
 	getModifiersForDisplay(conversationId?: string): PiiModifier[] {
 		// Phase 1: New Chat (No Conversation ID or Invalid/Empty ID) - Use temporary state
-		if (!conversationId || conversationId.trim() === '' || !this.conversationStates.has(conversationId)) {
+		if (
+			!conversationId ||
+			conversationId.trim() === '' ||
+			!this.conversationStates.has(conversationId)
+		) {
 			if (this.temporaryState.isActive) {
 				return this.temporaryState.modifiers;
 			}
 			return [];
 		}
-		
+
 		// Phase 2: Existing Chat (Has Valid Conversation ID) - Use conversation state
 		const state = this.conversationStates.get(conversationId);
 		return state?.modifiers || [];
@@ -399,9 +400,9 @@ export class PiiSessionManager {
 			apiKey: existingState?.apiKey || this.apiKey || undefined,
 			lastUpdated: Date.now()
 		};
-		
+
 		this.conversationStates.set(conversationId, newState);
-		
+
 		// Create backup and trigger save
 		this.errorBackup.set(conversationId, { ...newState });
 		this.triggerChatSave(conversationId);
@@ -413,10 +414,11 @@ export class PiiSessionManager {
 	}
 
 	// Get modifiers for API (works for both global and conversation state)
-	getModifiersForApi(conversationId?: string): Array<{ entity: string; action: 'string-mask' | 'ignore'; type?: string }> {
-		
+	getModifiersForApi(
+		conversationId?: string
+	): Array<{ entity: string; action: 'string-mask' | 'ignore'; type?: string }> {
 		const conversationModifiers = this.getModifiersForDisplay(conversationId);
-		return conversationModifiers.map(m => ({
+		return conversationModifiers.map((m) => ({
 			entity: m.entity,
 			action: m.action as 'string-mask' | 'ignore',
 			type: m.type || undefined
@@ -434,41 +436,53 @@ export class PiiSessionManager {
 					entity.shouldMask = !entity.shouldMask;
 					state.lastUpdated = Date.now();
 					this.triggerChatSave(conversationId);
-					console.log(`PiiSessionManager: Toggled persistent entity ${entityId} shouldMask to ${entity.shouldMask}`);
+					console.log(
+						`PiiSessionManager: Toggled persistent entity ${entityId} shouldMask to ${entity.shouldMask}`
+					);
 					return; // Successfully updated persistent state
 				}
 			}
-			
+
 			// If entity not found in persistent state, check working entities
 			const workingEntities = this.workingEntitiesForConversations.get(conversationId);
 			if (workingEntities) {
 				const workingEntity = workingEntities.find((e) => e.label === entityId);
 				if (workingEntity && workingEntity.occurrences[occurrenceIndex]) {
 					workingEntity.shouldMask = !workingEntity.shouldMask;
-					console.log(`PiiSessionManager: Toggled working entity ${entityId} shouldMask to ${workingEntity.shouldMask}`);
+					console.log(
+						`PiiSessionManager: Toggled working entity ${entityId} shouldMask to ${workingEntity.shouldMask}`
+					);
 					return; // Successfully updated working state
 				}
 			}
-			
-			console.warn(`PiiSessionManager: Entity ${entityId} not found in persistent or working state for conversation ${conversationId}`);
+
+			console.warn(
+				`PiiSessionManager: Entity ${entityId} not found in persistent or working state for conversation ${conversationId}`
+			);
 		} else if (this.temporaryState.isActive) {
 			// New chat: update temporary state
 			const entity = this.temporaryState.entities.find((e) => e.label === entityId);
 			if (entity && entity.occurrences[occurrenceIndex]) {
 				entity.shouldMask = !entity.shouldMask;
-				console.log(`PiiSessionManager: Toggled temporary entity ${entityId} shouldMask to ${entity.shouldMask}`);
+				console.log(
+					`PiiSessionManager: Toggled temporary entity ${entityId} shouldMask to ${entity.shouldMask}`
+				);
 			}
 		}
 	}
-	
-	setConversationEntitiesFromLatestDetection(conversationId: string, entities: PiiEntity[], sessionId?: string) {
+
+	setConversationEntitiesFromLatestDetection(
+		conversationId: string,
+		entities: PiiEntity[],
+		sessionId?: string
+	) {
 		const existingState = this.conversationStates.get(conversationId);
 		const existingEntities = existingState?.entities || [];
-		
+
 		// Convert new entities to extended format with default shouldMask: true
-		const newExtendedEntities = entities.map(entity => {
+		const newExtendedEntities = entities.map((entity) => {
 			// Preserve shouldMask state if entity already exists
-			const existingEntity = existingEntities.find(e => e.label === entity.label);
+			const existingEntity = existingEntities.find((e) => e.label === entity.label);
 			return {
 				...entity,
 				shouldMask: existingEntity?.shouldMask ?? true
@@ -491,12 +505,10 @@ export class PiiSessionManager {
 
 	// Removed getConversationEntitiesForDisplay() - functionality moved to getEntitiesForDisplay()
 
-	
 	clearConversationWorkingEntities(conversationId: string) {
 		this.workingEntitiesForConversations.delete(conversationId);
 	}
 
-	
 	commitConversationWorkingEntities(conversationId: string) {
 		const workingEntities = this.workingEntitiesForConversations.get(conversationId);
 		if (workingEntities && workingEntities.length > 0) {
@@ -509,24 +521,27 @@ export class PiiSessionManager {
 					entities: updatedEntities,
 					lastUpdated: Date.now()
 				};
-				
+
 				this.conversationStates.set(conversationId, newState);
 				this.errorBackup.set(conversationId, { ...newState });
 				this.triggerChatSave(conversationId);
 			}
-			
+
 			// Clear working entities since they're now persistent
 			this.clearConversationWorkingEntities(conversationId);
 		}
 	}
 
-	setConversationWorkingEntitiesWithMaskStates(conversationId: string, extendedEntities: ExtendedPiiEntity[]) {
+	setConversationWorkingEntitiesWithMaskStates(
+		conversationId: string,
+		extendedEntities: ExtendedPiiEntity[]
+	) {
 		// Working state is purely additive - only store NEW entities not already in persistent state
 		const persistentEntities = this.conversationStates.get(conversationId)?.entities || [];
-		const newEntities = extendedEntities.filter(entity => 
-			!persistentEntities.find(persistent => persistent.label === entity.label)
+		const newEntities = extendedEntities.filter(
+			(entity) => !persistentEntities.find((persistent) => persistent.label === entity.label)
 		);
-		
+
 		// Only store genuinely new entities in working state
 		this.workingEntitiesForConversations.set(conversationId, newEntities);
 	}
@@ -600,7 +615,7 @@ export function unmaskTextWithEntities(text: string, entities: ExtendedPiiEntity
 				`\\b${labelVariations}_${labelId}\\b`, // TYPE_ID
 			'g'
 		);
-		
+
 		unmaskedText = unmaskedText.replace(labelRegex, rawText);
 	});
 
@@ -626,19 +641,19 @@ export function highlightUnmaskedEntities(text: string, entities: ExtendedPiiEnt
 		if (!entity.raw_text?.trim()) return;
 
 		const escapedText = entity.raw_text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-		
+
 		// Use global flag but be more careful about word boundaries
 		const hasSpecialChars = /[^\w\s]/.test(entity.raw_text);
-		const regex = hasSpecialChars 
+		const regex = hasSpecialChars
 			? new RegExp(escapedText, 'gi')
 			: new RegExp(`\\b${escapedText}\\b`, 'gi');
 
 		highlightedText = highlightedText.replace(regex, (match) => {
 			const shouldMask = entity.shouldMask ?? true;
 			const maskingClass = shouldMask ? 'pii-masked' : 'pii-unmasked';
-			const statusText = shouldMask ? 
-				i18next.t('PII Modifier: Was masked in input') : 
-				i18next.t('PII Modifier: Was NOT masked in input');
+			const statusText = shouldMask
+				? i18next.t('PII Modifier: Was masked in input')
+				: i18next.t('PII Modifier: Was NOT masked in input');
 
 			return `<span class="pii-highlight ${maskingClass}" title="${entity.label} - ${statusText}" data-pii-type="${entity.type}" data-pii-label="${entity.label}">${match}</span>`;
 		});
@@ -656,24 +671,24 @@ export function adjustPiiEntityPositionsForDisplay(
 
 	// Extract plain text without br tags for comparison
 	const textWithoutBrTags = originalHtmlText.replace(/<br\s*\/?>/gi, '');
-	
+
 	// If no br tags were present, no adjustment needed
 	if (originalHtmlText === textWithoutBrTags) {
 		return entities;
 	}
 
-	return entities.map(entity => {
-		const adjustedOccurrences = entity.occurrences.map(occurrence => {
+	return entities.map((entity) => {
+		const adjustedOccurrences = entity.occurrences.map((occurrence) => {
 			// Count br tags before this position in the original text
 			const brTagsBeforeStart = countBrTagsBeforePosition(originalHtmlText, occurrence.start_idx);
 			const brTagsBeforeEnd = countBrTagsBeforePosition(originalHtmlText, occurrence.end_idx);
-			
+
 			// Each br tag that was removed shifts positions back
 			// Estimate br tag length as 4 characters (e.g., "<br>")
 			const averageBrTagLength = 4;
 			const startAdjustment = brTagsBeforeStart * averageBrTagLength;
 			const endAdjustment = brTagsBeforeEnd * averageBrTagLength;
-			
+
 			const adjustedStart = Math.max(0, occurrence.start_idx - startAdjustment);
 			const adjustedEnd = Math.max(adjustedStart, occurrence.end_idx - endAdjustment);
 
@@ -692,7 +707,10 @@ export function adjustPiiEntityPositionsForDisplay(
 }
 
 // Enhanced function to unmask and highlight text with modifier awareness for display
-export function unmaskAndHighlightTextForDisplay(text: string, entities: ExtendedPiiEntity[]): string {
+export function unmaskAndHighlightTextForDisplay(
+	text: string,
+	entities: ExtendedPiiEntity[]
+): string {
 	if (!entities.length || !text) return text;
 
 	// Check if text is already processed to prevent double processing
@@ -703,7 +721,7 @@ export function unmaskAndHighlightTextForDisplay(text: string, entities: Extende
 	let processedText = text;
 
 	const sortedEntities = [...entities].sort((a, b) => b.raw_text.length - a.raw_text.length);
-	
+
 	// Step 1: Unmask all patterns and simultaneously replace with highlighted spans
 	sortedEntities.forEach((entity) => {
 		const { label, raw_text: rawText } = entity;
@@ -724,12 +742,12 @@ export function unmaskAndHighlightTextForDisplay(text: string, entities: Extende
 
 			// Create comprehensive patterns for masked text
 			const patterns = [
-				`\\[\\{${labelVariations}_${labelId}\\}\\]`,  // [{TYPE_ID}]
-				`\\[${labelVariations}_${labelId}\\]`,        // [TYPE_ID]
-				`\\{${labelVariations}_${labelId}\\}`,        // {TYPE_ID}
+				`\\[\\{${labelVariations}_${labelId}\\}\\]`, // [{TYPE_ID}]
+				`\\[${labelVariations}_${labelId}\\]`, // [TYPE_ID]
+				`\\{${labelVariations}_${labelId}\\}`, // {TYPE_ID}
 				`${labelVariations}_${labelId}(?=\\s|$|[^\\w])` // TYPE_ID as word boundary
 			];
-			
+
 			// Use case-insensitive matching and global flag
 			const labelRegex = new RegExp(patterns.join('|'), 'gi');
 
@@ -738,13 +756,13 @@ export function unmaskAndHighlightTextForDisplay(text: string, entities: Extende
 			processedText = processedText.replace(labelRegex, () => {
 				const shouldMask = entity.shouldMask ?? true;
 				const maskingClass = shouldMask ? 'pii-masked' : 'pii-unmasked';
-				const statusText = shouldMask ? 
-					i18next.t('PII Modifier: Was masked in input') : 
-					i18next.t('PII Modifier: Was NOT masked in input');
+				const statusText = shouldMask
+					? i18next.t('PII Modifier: Was masked in input')
+					: i18next.t('PII Modifier: Was NOT masked in input');
 
 				return `<span class="pii-highlight ${maskingClass}" title="${entity.label} - ${statusText}" data-pii-type="${entity.type}" data-pii-label="${entity.label}">${rawText}</span>`;
 			});
-			
+
 			if (beforeReplace !== processedText) {
 				//replacementsMade++;
 			}
@@ -756,10 +774,10 @@ export function unmaskAndHighlightTextForDisplay(text: string, entities: Extende
 
 			// Escape special regex characters and create pattern
 			const escapedText = entity.raw_text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-			
+
 			// Use word boundaries for better matching, but handle special characters gracefully
 			const hasSpecialChars = /[^\w\s]/.test(entity.raw_text);
-			const regex = hasSpecialChars 
+			const regex = hasSpecialChars
 				? new RegExp(escapedText, 'gi')
 				: new RegExp(`\\b${escapedText}\\b`, 'gi');
 
@@ -767,13 +785,13 @@ export function unmaskAndHighlightTextForDisplay(text: string, entities: Extende
 			processedText = processedText.replace(regex, (match) => {
 				const shouldMask = entity.shouldMask ?? true;
 				const maskingClass = shouldMask ? 'pii-masked' : 'pii-unmasked';
-				const statusText = shouldMask ? 
-					i18next.t('PII Modifier: Was masked in input') : 
-					i18next.t('PII Modifier: Was NOT masked in input');
+				const statusText = shouldMask
+					? i18next.t('PII Modifier: Was masked in input')
+					: i18next.t('PII Modifier: Was NOT masked in input');
 
 				return `<span class="pii-highlight ${maskingClass}" title="${entity.label} - ${statusText}" data-pii-type="${entity.type}" data-pii-label="${entity.label}">${match}</span>`;
 			});
-			
+
 			if (beforeReplace !== processedText) {
 				//replacementsMade++;
 			}

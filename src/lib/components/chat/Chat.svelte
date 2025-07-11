@@ -712,7 +712,6 @@
 			.filter((m) => !(m?.info?.meta?.hidden ?? false))
 			.map((m) => m.id);
 
-		
 		const { PiiSessionManager } = await import('$lib/utils/pii');
 		const piiManager = PiiSessionManager.getInstance();
 		piiManager.clearTemporaryState();
@@ -868,7 +867,6 @@
 			temporaryChatEnabled.set(false);
 		}
 
-		
 		const { PiiSessionManager } = await import('$lib/utils/pii');
 		const piiManager = PiiSessionManager.getInstance();
 		piiManager.clearTemporaryState();
@@ -2002,7 +2000,6 @@
 	const initChatHandler = async (history) => {
 		let _chatId = $chatId;
 
-		
 		const { PiiSessionManager } = await import('$lib/utils/pii');
 		const piiManager = PiiSessionManager.getInstance();
 
@@ -2022,12 +2019,10 @@
 			_chatId = chat.id;
 			await chatId.set(_chatId);
 
-			
 			if (piiManager.isTemporaryStateActive()) {
 				piiManager.transferTemporaryToConversation(_chatId);
 			}
 
-			
 			if (_chatId && _chatId !== 'local') {
 				piiManager.commitConversationWorkingEntities(_chatId);
 			}

@@ -35,7 +35,7 @@ interface PiiModifierState {
 	} | null;
 	selectedTextInfo: {
 		selectedText: string;
-		tokenizedWords: Array<{ word: string; from: number; to: number; }>;
+		tokenizedWords: Array<{ word: string; from: number; to: number }>;
 		from: number;
 		to: number;
 		x: number;
@@ -57,52 +57,56 @@ function generateModifierId(): string {
 const WORD_TOKENIZER_PATTERN = /[\w'-äöüÄÖÜß]+(?=\b|\.)/g;
 
 // Find all tokenized words touched by a text selection with broader context
-function findTokenizedWords(doc: ProseMirrorNode, selectionFrom: number, selectionTo: number): Array<{ word: string; from: number; to: number; }> {
-	const words: Array<{ word: string; from: number; to: number; }> = [];
-	
+function findTokenizedWords(
+	doc: ProseMirrorNode,
+	selectionFrom: number,
+	selectionTo: number
+): Array<{ word: string; from: number; to: number }> {
+	const words: Array<{ word: string; from: number; to: number }> = [];
+
 	// Expand context to include words that might be partially selected
 	const contextStart = Math.max(0, selectionFrom - 100); // 100 chars before
 	const contextEnd = Math.min(doc.content.size, selectionTo + 100); // 100 chars after
-	
+
 	let contextText = '';
-	
+
 	// Build context text with position mapping
 	const positionMap: number[] = []; // Maps context text index to document position
-	
+
 	doc.nodesBetween(contextStart, contextEnd, (node, nodePos) => {
 		if (node.isText && node.text) {
 			const nodeStart = nodePos;
 			const nodeEnd = nodePos + node.text.length;
 			const effectiveStart = Math.max(nodeStart, contextStart);
 			const effectiveEnd = Math.min(nodeEnd, contextEnd);
-			
+
 			if (effectiveStart < effectiveEnd) {
 				const startOffset = effectiveStart - nodeStart;
 				const endOffset = effectiveEnd - nodeStart;
 				const textSlice = node.text.substring(startOffset, endOffset);
-				
+
 				// Map each character position
 				for (let i = 0; i < textSlice.length; i++) {
 					positionMap.push(effectiveStart + i);
 				}
-				
+
 				contextText += textSlice;
 			}
 		}
 	});
-	
+
 	// Find all words using tokenizer
 	let match;
 	WORD_TOKENIZER_PATTERN.lastIndex = 0; // Reset regex
-	
+
 	while ((match = WORD_TOKENIZER_PATTERN.exec(contextText)) !== null) {
 		const wordStart = match.index;
 		const wordEnd = match.index + match[0].length;
-		
+
 		// Map back to document positions
 		const docStart = positionMap[wordStart];
 		const docEnd = positionMap[wordEnd - 1] + 1; // +1 because we want end position
-		
+
 		// Check if this word is "touched" by the selection (overlaps with selection range)
 		if (docEnd > selectionFrom && docStart < selectionTo) {
 			words.push({
@@ -112,17 +116,23 @@ function findTokenizedWords(doc: ProseMirrorNode, selectionFrom: number, selecti
 			});
 		}
 	}
-	
+
 	// Remove duplicates and sort by position
-	const uniqueWords = words.filter((word, index, arr) => 
-		arr.findIndex(w => w.from === word.from && w.to === word.to) === index
-	).sort((a, b) => a.from - b.from);
-	
+	const uniqueWords = words
+		.filter(
+			(word, index, arr) => arr.findIndex((w) => w.from === word.from && w.to === word.to) === index
+		)
+		.sort((a, b) => a.from - b.from);
+
 	return uniqueWords;
 }
 
 // Find existing PII or modifier element under mouse cursor
-function findExistingEntityAtPosition(view: any, clientX: number, clientY: number): { from: number; to: number; text: string; type: 'pii' | 'modifier' } | null {
+function findExistingEntityAtPosition(
+	view: any,
+	clientX: number,
+	clientY: number
+): { from: number; to: number; text: string; type: 'pii' | 'modifier' } | null {
 	const target = document.elementFromPoint(clientX, clientY) as HTMLElement;
 	if (!target) return null;
 
@@ -153,7 +163,7 @@ function findExistingEntityAtPosition(view: any, clientX: number, clientY: numbe
 			} catch (error) {
 				// Fall through to position-based approach
 			}
-			
+
 			const position = getPositionFromCoords(piiText);
 			if (position) return { ...position, text: piiText, type: 'pii' };
 		}
@@ -162,7 +172,8 @@ function findExistingEntityAtPosition(view: any, clientX: number, clientY: numbe
 	// Check modifier element
 	const modifierElement = target.closest('.pii-modifier-highlight');
 	if (modifierElement) {
-		const modifierText = modifierElement.getAttribute('data-modifier-entity') || modifierElement.textContent || '';
+		const modifierText =
+			modifierElement.getAttribute('data-modifier-entity') || modifierElement.textContent || '';
 		if (modifierText.length >= 2) {
 			const position = getPositionFromCoords(modifierText);
 			if (position) return { ...position, text: modifierText, type: 'modifier' };
@@ -174,22 +185,39 @@ function findExistingEntityAtPosition(view: any, clientX: number, clientY: numbe
 
 // Predefined PII labels for autocompletion (from SPACY_LABEL_MAPPINGS values)
 const PREDEFINED_LABELS = [
-	'ADDRESS', 'BANK_ACCOUNT_NUMBER', 'ID_NUMBER', 'HEALTH_DATA', 'LOCATION', 
-	'NUMBER', 'TAX_NUMBER', 'CREDIT_CARD', 'DATE', 'SIGNATURE', 'EMAIL', 
-	'IBAN', 'HEALTH_ID', 'IPv4v6', 'PHONENUMBER', 'LICENSE_PLATE', 'CURRENCY', 
-	'ORGANISATION', 'PASSPORT', 'PERSON', 'SSN'
+	'ADDRESS',
+	'BANK_ACCOUNT_NUMBER',
+	'ID_NUMBER',
+	'HEALTH_DATA',
+	'LOCATION',
+	'NUMBER',
+	'TAX_NUMBER',
+	'CREDIT_CARD',
+	'DATE',
+	'SIGNATURE',
+	'EMAIL',
+	'IBAN',
+	'HEALTH_ID',
+	'IPv4v6',
+	'PHONENUMBER',
+	'LICENSE_PLATE',
+	'CURRENCY',
+	'ORGANISATION',
+	'PASSPORT',
+	'PERSON',
+	'SSN'
 ];
 
 // Find best matching label for inline completion
 function findBestMatch(input: string, labels: string[]): string | null {
 	if (!input) return null;
-	
+
 	const upperInput = input.toUpperCase();
-	
+
 	// Only find exact prefix matches - autocomplete should only suggest words that start with the input
-	const exactMatch = labels.find(label => label.startsWith(upperInput));
+	const exactMatch = labels.find((label) => label.startsWith(upperInput));
 	if (exactMatch) return exactMatch;
-	
+
 	// No partial/substring matching - let user type what they want
 	return null;
 }
@@ -202,7 +230,10 @@ function createHoverMenu(
 	showIgnoreButton: boolean = false,
 	existingModifiers: PiiModifier[] = [],
 	onRemoveModifier?: (modifierId: string) => void,
-	timeoutManager?: { clearAll: () => void; setFallback: (callback: () => void, delay: number) => void },
+	timeoutManager?: {
+		clearAll: () => void;
+		setFallback: (callback: () => void, delay: number) => void;
+	},
 	showTextField: boolean = true
 ): HTMLElement {
 	const menu = document.createElement('div');
@@ -249,26 +280,24 @@ function createHoverMenu(
 		transition: all 0.2s ease;
 		z-index: 10;
 	`;
-	
+
 	// Add hover effects for help icon
 	helpIcon.addEventListener('mouseenter', () => {
 		helpIcon.style.backgroundColor = '#f59e0b';
 		helpIcon.style.transform = 'scale(1.1)';
 	});
-	
+
 	helpIcon.addEventListener('mouseleave', () => {
 		helpIcon.style.backgroundColor = '#f8b76b';
 		helpIcon.style.transform = 'scale(1)';
 	});
-	
+
 	// Prevent help icon click from closing menu
 	helpIcon.addEventListener('click', (e) => {
 		e.stopPropagation();
 	});
-	
+
 	menu.appendChild(helpIcon);
-
-
 
 	// Show existing modifiers if any
 	if (existingModifiers.length > 0) {
@@ -391,10 +420,10 @@ function createHoverMenu(
 			position: relative;
 		`;
 
-	const labelInput = document.createElement('input');
-	labelInput.type = 'text';
-	labelInput.value = 'CUSTOM';
-	labelInput.style.cssText = `
+		const labelInput = document.createElement('input');
+		labelInput.type = 'text';
+		labelInput.value = 'CUSTOM';
+		labelInput.style.cssText = `
 		width: 100%;
 		padding: 6px 8px;
 		border: 1px solid #ddd;
@@ -405,108 +434,105 @@ function createHoverMenu(
 		background: white;
 	`;
 
-	let isDefaultValue = true;
-	let skipAutocompletion = false;
+		let isDefaultValue = true;
+		let skipAutocompletion = false;
 
-	// Handle focus/click - clear default value
-	const handleInputFocus = (e: Event) => {
-		e.stopPropagation();
-		
-		if (timeoutManager) {
-			(timeoutManager as any).setInputFocused(true);
-		}
-		
-		if (isDefaultValue) {
-			labelInput.value = '';
-			labelInput.style.color = '#333';
-			isDefaultValue = false;
-		}
-	};
+		// Handle focus/click - clear default value
+		const handleInputFocus = (e: Event) => {
+			e.stopPropagation();
 
-	labelInput.addEventListener('focus', handleInputFocus);
-	labelInput.addEventListener('click', handleInputFocus);
-
-	// Handle blur - restore default if empty
-	labelInput.addEventListener('blur', () => {
-		
-		// Notify timeout manager that input is no longer focused
-		if (timeoutManager) {
-			(timeoutManager as any).setInputFocused(false);
-		}
-		
-		if (labelInput.value.trim() === '') {
-			labelInput.value = 'CUSTOM';
-			labelInput.style.color = '#999';
-			isDefaultValue = true;
-		}
-	});
-
-	// Handle input for inline autocompletion
-	labelInput.addEventListener('input', (e) => {
-		e.stopPropagation();
-		
-		// Skip autocompletion if we're handling a backspace
-		if (skipAutocompletion) {
-			skipAutocompletion = false;
-			return;
-		}
-		
-		const inputValue = labelInput.value;
-		
-		// Only autocomplete if not default value and user has typed something
-		if (!isDefaultValue && inputValue) {
-			const bestMatch = findBestMatch(inputValue, PREDEFINED_LABELS);
-			
-			if (bestMatch && bestMatch !== inputValue.toUpperCase()) {
-				// Complete the text inline
-				const cursorPos = labelInput.selectionStart || 0;
-				labelInput.value = bestMatch;
-				
-				// Select the completed portion
-				labelInput.setSelectionRange(cursorPos, bestMatch.length);
+			if (timeoutManager) {
+				(timeoutManager as any).setInputFocused(true);
 			}
-		}
-	});
 
-	// Prevent ProseMirror from intercepting keyboard events when input is focused
-	labelInput.addEventListener('keydown', (e) => {
-		// Stop propagation for all keyboard events to prevent ProseMirror interference
-		e.stopPropagation();
-		
-		// Handle specific keys
-		if (e.key === 'Enter') {
-			e.preventDefault();
-			const label = isDefaultValue ? 'CUSTOM' : labelInput.value.trim().toUpperCase();
-			if (label) {
-				onMask(label);
+			if (isDefaultValue) {
+				labelInput.value = '';
+				labelInput.style.color = '#333';
+				isDefaultValue = false;
 			}
-		} else if (e.key === 'Tab') {
-			// Accept the current autocompletion on Tab
-			e.preventDefault();
-			// The text is already completed, just move cursor to end
-			labelInput.setSelectionRange(labelInput.value.length, labelInput.value.length);
-		} else if (e.key === 'Escape') {
-			// Close menu on Escape
-			e.preventDefault();
-			menu.remove();
-		} else if (e.key === 'Backspace') {
-			// Just set flag to skip autocompletion and let browser handle backspace naturally
-			skipAutocompletion = true;
-			// Don't prevent default - let browser handle backspace naturally
-		}
-		// For all other keys, let the input handle them naturally
-	});
+		};
 
-	// Also prevent keyup events from bubbling to ProseMirror
-	labelInput.addEventListener('keyup', (e) => {
-		e.stopPropagation();
-	});
+		labelInput.addEventListener('focus', handleInputFocus);
+		labelInput.addEventListener('click', handleInputFocus);
 
+		// Handle blur - restore default if empty
+		labelInput.addEventListener('blur', () => {
+			// Notify timeout manager that input is no longer focused
+			if (timeoutManager) {
+				(timeoutManager as any).setInputFocused(false);
+			}
 
+			if (labelInput.value.trim() === '') {
+				labelInput.value = 'CUSTOM';
+				labelInput.style.color = '#999';
+				isDefaultValue = true;
+			}
+		});
 
-	const maskBtn = document.createElement('button');
-	maskBtn.innerHTML = `<img src="/static/icon-purple-32.png" style="width: 14px; height: 14px; margin-right: 6px; vertical-align: middle;">${i18next.t('PII Modifier: Change Label')}`;
-	maskBtn.style.cssText = `
+		// Handle input for inline autocompletion
+		labelInput.addEventListener('input', (e) => {
+			e.stopPropagation();
+
+			// Skip autocompletion if we're handling a backspace
+			if (skipAutocompletion) {
+				skipAutocompletion = false;
+				return;
+			}
+
+			const inputValue = labelInput.value;
+
+			// Only autocomplete if not default value and user has typed something
+			if (!isDefaultValue && inputValue) {
+				const bestMatch = findBestMatch(inputValue, PREDEFINED_LABELS);
+
+				if (bestMatch && bestMatch !== inputValue.toUpperCase()) {
+					// Complete the text inline
+					const cursorPos = labelInput.selectionStart || 0;
+					labelInput.value = bestMatch;
+
+					// Select the completed portion
+					labelInput.setSelectionRange(cursorPos, bestMatch.length);
+				}
+			}
+		});
+
+		// Prevent ProseMirror from intercepting keyboard events when input is focused
+		labelInput.addEventListener('keydown', (e) => {
+			// Stop propagation for all keyboard events to prevent ProseMirror interference
+			e.stopPropagation();
+
+			// Handle specific keys
+			if (e.key === 'Enter') {
+				e.preventDefault();
+				const label = isDefaultValue ? 'CUSTOM' : labelInput.value.trim().toUpperCase();
+				if (label) {
+					onMask(label);
+				}
+			} else if (e.key === 'Tab') {
+				// Accept the current autocompletion on Tab
+				e.preventDefault();
+				// The text is already completed, just move cursor to end
+				labelInput.setSelectionRange(labelInput.value.length, labelInput.value.length);
+			} else if (e.key === 'Escape') {
+				// Close menu on Escape
+				e.preventDefault();
+				menu.remove();
+			} else if (e.key === 'Backspace') {
+				// Just set flag to skip autocompletion and let browser handle backspace naturally
+				skipAutocompletion = true;
+				// Don't prevent default - let browser handle backspace naturally
+			}
+			// For all other keys, let the input handle them naturally
+		});
+
+		// Also prevent keyup events from bubbling to ProseMirror
+		labelInput.addEventListener('keyup', (e) => {
+			e.stopPropagation();
+		});
+
+		const maskBtn = document.createElement('button');
+		maskBtn.innerHTML = `<img src="/static/icon-purple-32.png" style="width: 14px; height: 14px; margin-right: 6px; vertical-align: middle;">${i18next.t('PII Modifier: Change Label')}`;
+		maskBtn.style.cssText = `
 		width: 100%;
 		padding: 6px 10px;
 		border: 1px solid #f8b76b;
@@ -522,40 +548,36 @@ function createHoverMenu(
 		justify-content: center;
 	`;
 
-	// Add hover effects for the button
-	maskBtn.addEventListener('mouseenter', () => {
-		maskBtn.style.backgroundColor = '#f59e0b';
-	});
-	
-	maskBtn.addEventListener('mouseleave', () => {
-		maskBtn.style.backgroundColor = '#f8b76b';
-	});
+		// Add hover effects for the button
+		maskBtn.addEventListener('mouseenter', () => {
+			maskBtn.style.backgroundColor = '#f59e0b';
+		});
 
-	// Handle mask button click
-	maskBtn.addEventListener('click', (e) => {
-		e.preventDefault();
-		e.stopPropagation();
-		const piiType = isDefaultValue ? 'CUSTOM' : labelInput.value.trim().toUpperCase();
-		if (piiType) {
-			onMask(piiType);
-		} else {
-			// Highlight input if empty
-			labelInput.style.borderColor = '#ff6b6b';
-			labelInput.focus();
-			setTimeout(() => {
-				labelInput.style.borderColor = '#ddd';
-			}, 1000);
-		}
-	});
+		maskBtn.addEventListener('mouseleave', () => {
+			maskBtn.style.backgroundColor = '#f8b76b';
+		});
 
-
+		// Handle mask button click
+		maskBtn.addEventListener('click', (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			const piiType = isDefaultValue ? 'CUSTOM' : labelInput.value.trim().toUpperCase();
+			if (piiType) {
+				onMask(piiType);
+			} else {
+				// Highlight input if empty
+				labelInput.style.borderColor = '#ff6b6b';
+				labelInput.focus();
+				setTimeout(() => {
+					labelInput.style.borderColor = '#ddd';
+				}, 1000);
+			}
+		});
 
 		labelSection.appendChild(labelInput);
 		labelSection.appendChild(maskBtn);
 		menu.appendChild(labelSection);
 	}
-
-
 
 	// Add hover protection to keep menu open
 	menu.addEventListener('mouseenter', () => {
@@ -569,13 +591,13 @@ function createHoverMenu(
 		if (relatedTarget && menu.contains(relatedTarget)) {
 			return;
 		}
-		
+
 		if (timeoutManager) {
 			timeoutManager.setFallback(() => {
 				if (menu && document.body.contains(menu)) {
 					const activeElement = document.activeElement;
 					const isInputFocused = activeElement && menu.contains(activeElement);
-					
+
 					if (!isInputFocused) {
 						menu.remove();
 					}
@@ -589,16 +611,19 @@ function createHoverMenu(
 
 // Create text selection menu element
 function createSelectionMenu(
-	selectionInfo: { 
-		selectedText: string; 
-		tokenizedWords: Array<{ word: string; from: number; to: number; }>; 
-		from: number; 
-		to: number; 
-		x: number; 
-		y: number; 
+	selectionInfo: {
+		selectedText: string;
+		tokenizedWords: Array<{ word: string; from: number; to: number }>;
+		from: number;
+		to: number;
+		x: number;
+		y: number;
 	},
 	onMaskSelection: (text: string, label: string, from: number, to: number) => void,
-	timeoutManager?: { clearAll: () => void; setFallback: (callback: () => void, delay: number) => void },
+	timeoutManager?: {
+		clearAll: () => void;
+		setFallback: (callback: () => void, delay: number) => void;
+	},
 	showAdvancedMenu: boolean = true
 ): HTMLElement {
 	const menu = document.createElement('div');
@@ -647,39 +672,37 @@ function createSelectionMenu(
 		transition: all 0.2s ease;
 		z-index: 10;
 	`;
-	
+
 	// Add hover effects for help icon
 	helpIcon.addEventListener('mouseenter', () => {
 		helpIcon.style.backgroundColor = '#f59e0b';
 		helpIcon.style.transform = 'scale(1.1)';
 	});
-	
+
 	helpIcon.addEventListener('mouseleave', () => {
 		helpIcon.style.backgroundColor = '#f8b76b';
 		helpIcon.style.transform = 'scale(1)';
 	});
-	
+
 	// Prevent help icon click from closing menu
 	helpIcon.addEventListener('click', (e) => {
 		e.stopPropagation();
 	});
-	
+
 	menu.appendChild(helpIcon);
 
-
-
 	// Check if there's a meaningful difference between tokenized words and exact selection
-	const tokenizedText = selectionInfo.tokenizedWords.map(w => w.word).join(' ');
+	const tokenizedText = selectionInfo.tokenizedWords.map((w) => w.word).join(' ');
 	const exactText = selectionInfo.selectedText;
-	
+
 	// In normal mode (showAdvancedMenu = false), never show selection options
 	// In expert mode (showAdvancedMenu = true), show selection options if there's a difference
-	const showSelectionOptions = showAdvancedMenu && (tokenizedText !== exactText);
+	const showSelectionOptions = showAdvancedMenu && tokenizedText !== exactText;
 
 	// Selection options (only show in expert mode if there's a difference)
 	let tokenizedRadio: HTMLInputElement;
 	let exactRadio: HTMLInputElement;
-	
+
 	if (showSelectionOptions) {
 		const optionsContainer = document.createElement('div');
 		optionsContainer.style.cssText = `margin-bottom: 12px;`;
@@ -819,11 +842,11 @@ function createSelectionMenu(
 		// Handle input focus
 		const handleInputFocus = (e: Event) => {
 			e.stopPropagation();
-			
+
 			if (timeoutManager) {
 				(timeoutManager as any).setInputFocused(true);
 			}
-			
+
 			if (isDefaultValue) {
 				labelInput.value = '';
 				labelInput.style.color = '#333';
@@ -838,7 +861,7 @@ function createSelectionMenu(
 			if (timeoutManager) {
 				(timeoutManager as any).setInputFocused(false);
 			}
-			
+
 			if (labelInput.value.trim() === '') {
 				labelInput.value = 'CUSTOM';
 				labelInput.style.color = '#999';
@@ -849,17 +872,17 @@ function createSelectionMenu(
 		// Handle autocompletion
 		labelInput.addEventListener('input', (e) => {
 			e.stopPropagation();
-			
+
 			if (skipAutocompletion) {
 				skipAutocompletion = false;
 				return;
 			}
-			
+
 			const inputValue = labelInput.value;
-			
+
 			if (!isDefaultValue && inputValue) {
 				const bestMatch = findBestMatch(inputValue, PREDEFINED_LABELS);
-				
+
 				if (bestMatch && bestMatch !== inputValue.toUpperCase()) {
 					const cursorPos = labelInput.selectionStart || 0;
 					labelInput.value = bestMatch;
@@ -871,7 +894,7 @@ function createSelectionMenu(
 		// Handle keyboard events
 		labelInput.addEventListener('keydown', (e) => {
 			e.stopPropagation();
-			
+
 			if (e.key === 'Enter') {
 				e.preventDefault();
 				markSelectedText();
@@ -915,17 +938,19 @@ function createSelectionMenu(
 	markBtn.addEventListener('mouseenter', () => {
 		markBtn.style.backgroundColor = '#f59e0b';
 	});
-	
+
 	markBtn.addEventListener('mouseleave', () => {
 		markBtn.style.backgroundColor = '#f8b76b';
 	});
 
 	const markSelectedText = () => {
 		// In advanced mode, use input value; in simple mode, use default "CUSTOM"
-		const piiType = showAdvancedMenu ? 
-			(isDefaultValue ? 'CUSTOM' : labelInput.value.trim().toUpperCase()) : 
-			'CUSTOM';
-			
+		const piiType = showAdvancedMenu
+			? isDefaultValue
+				? 'CUSTOM'
+				: labelInput.value.trim().toUpperCase()
+			: 'CUSTOM';
+
 		if (showAdvancedMenu && !piiType) {
 			labelInput.style.borderColor = '#ff6b6b';
 			labelInput.focus();
@@ -944,13 +969,13 @@ function createSelectionMenu(
 		} else {
 			// Expert mode: use radio button selection or default to tokenized
 			const isTokenized = showSelectionOptions ? tokenizedRadio.checked : true;
-			
+
 			if (isTokenized) {
 				if (selectionInfo.tokenizedWords.length > 0) {
 					const firstWord = selectionInfo.tokenizedWords[0];
 					const lastWord = selectionInfo.tokenizedWords[selectionInfo.tokenizedWords.length - 1];
-					const combinedText = selectionInfo.tokenizedWords.map(w => w.word).join(' ');
-					
+					const combinedText = selectionInfo.tokenizedWords.map((w) => w.word).join(' ');
+
 					onMaskSelection(combinedText, piiType, firstWord.from, lastWord.to);
 				}
 			} else {
@@ -982,13 +1007,13 @@ function createSelectionMenu(
 		if (relatedTarget && menu.contains(relatedTarget)) {
 			return;
 		}
-		
+
 		if (timeoutManager) {
 			timeoutManager.setFallback(() => {
 				if (menu && document.body.contains(menu)) {
 					const activeElement = document.activeElement;
 					const isInputFocused = activeElement && menu.contains(activeElement);
-					
+
 					if (!isInputFocused) {
 						menu.remove();
 					}
@@ -1000,8 +1025,6 @@ function createSelectionMenu(
 	return menu;
 }
 
-
-
 export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 	name: 'piiModifier',
 
@@ -1011,9 +1034,19 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 			conversationId: '',
 			onModifiersChanged: undefined,
 			availableLabels: [
-				'PERSON', 'EMAIL', 'PHONE_NUMBER', 'ADDRESS', 'SSN', 
-				'CREDIT_CARD', 'DATE_TIME', 'IP_ADDRESS', 'URL', 'IBAN',
-				'MEDICAL_LICENSE', 'US_PASSPORT', 'US_DRIVER_LICENSE'
+				'PERSON',
+				'EMAIL',
+				'PHONE_NUMBER',
+				'ADDRESS',
+				'SSN',
+				'CREDIT_CARD',
+				'DATE_TIME',
+				'IP_ADDRESS',
+				'URL',
+				'IBAN',
+				'MEDICAL_LICENSE',
+				'US_PASSPORT',
+				'US_DRIVER_LICENSE'
 			]
 		};
 	},
@@ -1049,7 +1082,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 
 			// Handle text selection for selection menu
 			const selection = view.state.selection;
-			
+
 			// Only show selection menu if there's actual text selected
 			if (selection.empty || selection.from === selection.to) {
 				// Close selection menu if no selection
@@ -1062,7 +1095,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 
 			// Get selected text
 			const selectedText = view.state.doc.textBetween(selection.from, selection.to);
-			
+
 			// Don't show menu for very short selections or selections longer than 100 characters
 			if (selectedText.length < 2 || selectedText.length > 50) {
 				return false;
@@ -1070,7 +1103,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 
 			// Find tokenized words touched by the selection
 			const tokenizedWords = findTokenizedWords(view.state.doc, selection.from, selection.to);
-			
+
 			// Don't show menu if no words found
 			if (tokenizedWords.length === 0) {
 				return false;
@@ -1168,13 +1201,13 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 			state: {
 				init(): PiiModifierState {
 					const piiSessionManager = PiiSessionManager.getInstance();
-					
+
 					if (conversationId) {
 						piiSessionManager.loadConversationState(conversationId);
 					}
-					
+
 					const loadedModifiers = piiSessionManager.getModifiersForDisplay(conversationId);
-					
+
 					return {
 						modifiers: loadedModifiers,
 						currentConversationId: conversationId,
@@ -1192,13 +1225,14 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 							case 'RELOAD_CONVERSATION_MODIFIERS':
 								const piiSessionManagerReload = PiiSessionManager.getInstance();
 								const reloadConversationId = meta.conversationId;
-								
+
 								if (reloadConversationId) {
 									piiSessionManagerReload.loadConversationState(reloadConversationId);
 								}
-								
-								const reloadedModifiers = piiSessionManagerReload.getModifiersForDisplay(reloadConversationId);
-								
+
+								const reloadedModifiers =
+									piiSessionManagerReload.getModifiersForDisplay(reloadConversationId);
+
 								newState = {
 									...newState,
 									modifiers: reloadedModifiers,
@@ -1209,20 +1243,20 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 									onModifiersChanged(reloadedModifiers);
 								}
 								break;
-								
+
 							case 'ADD_MODIFIER':
 								const newModifier: PiiModifier = {
 									id: generateModifierId(),
 									action: meta.modifierAction,
 									entity: meta.entity,
-									type: meta.piiType,
+									type: meta.piiType
 								};
 
 								// Replace any existing modifier for the same entity text (case-insensitive)
-								const filteredModifiers = newState.modifiers.filter(modifier => 
-									modifier.entity.toLowerCase() !== meta.entity.toLowerCase()
+								const filteredModifiers = newState.modifiers.filter(
+									(modifier) => modifier.entity.toLowerCase() !== meta.entity.toLowerCase()
 								);
-								
+
 								const updatedModifiers = [...filteredModifiers, newModifier];
 
 								newState = {
@@ -1244,7 +1278,9 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 								break;
 
 							case 'REMOVE_MODIFIER':
-								const remainingModifiers = newState.modifiers.filter(m => m.id !== meta.modifierId);
+								const remainingModifiers = newState.modifiers.filter(
+									(m) => m.id !== meta.modifierId
+								);
 								newState = {
 									...newState,
 									modifiers: remainingModifiers
@@ -1253,7 +1289,10 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 								const piiSessionManagerRemove = PiiSessionManager.getInstance();
 								const removeConversationId = newState.currentConversationId;
 								if (removeConversationId) {
-									piiSessionManagerRemove.setConversationModifiers(removeConversationId, remainingModifiers);
+									piiSessionManagerRemove.setConversationModifiers(
+										removeConversationId,
+										remainingModifiers
+									);
 								} else {
 									piiSessionManagerRemove.setTemporaryModifiers(remainingModifiers);
 								}
@@ -1262,7 +1301,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 									onModifiersChanged(remainingModifiers);
 								}
 								break;
-								
+
 							case 'CLEAR_MODIFIERS':
 								newState = {
 									...newState,
@@ -1291,30 +1330,32 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 			props: {
 				handleClick(view, pos, event) {
 					const target = event.target as HTMLElement;
-					
+
 					// Check if clicking on a text element with a mask modifier
 					const existingEntity = findExistingEntityAtPosition(view, event.clientX, event.clientY);
-					
+
 					if (existingEntity) {
 						// Get current conversation ID from plugin state
 						const pluginState = piiModifierExtensionKey.getState(view.state);
 						const currentConversationId = pluginState?.currentConversationId;
-						
+
 						// Get session modifiers
 						const piiSessionManager = PiiSessionManager.getInstance();
 						if (currentConversationId) {
 							piiSessionManager.loadConversationState(currentConversationId);
 						}
-						
-						const sessionModifiers = piiSessionManager.getModifiersForDisplay(currentConversationId);
+
+						const sessionModifiers =
+							piiSessionManager.getModifiersForDisplay(currentConversationId);
 						const entityText = existingEntity.text;
-						
+
 						// Find mask modifier for this entity
-						const maskModifier = sessionModifiers.find(modifier => 
-							modifier.action === 'string-mask' && 
-							modifier.entity.toLowerCase() === entityText.toLowerCase()
+						const maskModifier = sessionModifiers.find(
+							(modifier) =>
+								modifier.action === 'string-mask' &&
+								modifier.entity.toLowerCase() === entityText.toLowerCase()
 						);
-						
+
 						if (maskModifier) {
 							// Remove the mask modifier directly
 							const tr = view.state.tr.setMeta(piiModifierExtensionKey, {
@@ -1322,33 +1363,33 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 								modifierId: maskModifier.id
 							});
 							view.dispatch(tr);
-							
+
 							// Prevent further event handling
 							event.preventDefault();
 							return true;
 						}
 					}
-					
+
 					// Close hover menu if clicking outside of it
 					if (hoverMenuElement) {
 						const isClickInsideHoverMenu = hoverMenuElement.contains(target);
-						
+
 						if (!isClickInsideHoverMenu) {
 							hoverMenuElement.remove();
 							hoverMenuElement = null;
 						}
 					}
-					
+
 					// Close selection menu if clicking outside of it
 					if (selectionMenuElement) {
 						const isClickInsideSelectionMenu = selectionMenuElement.contains(target);
-						
+
 						if (!isClickInsideSelectionMenu) {
 							selectionMenuElement.remove();
 							selectionMenuElement = null;
 						}
 					}
-					
+
 					// Reset input focus state if clicking outside menus
 					if (!hoverMenuElement && !selectionMenuElement) {
 						isInputFocused = false;
@@ -1368,15 +1409,17 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 				handleDOMEvents: {
 					mousemove: (view, event) => {
 						// Check if mouse is over existing menus
-						const isOverHoverMenu = hoverMenuElement && hoverMenuElement.contains(event.target as Node);
-						const isOverSelectionMenu = selectionMenuElement && selectionMenuElement.contains(event.target as Node);
-						
+						const isOverHoverMenu =
+							hoverMenuElement && hoverMenuElement.contains(event.target as Node);
+						const isOverSelectionMenu =
+							selectionMenuElement && selectionMenuElement.contains(event.target as Node);
+
 						if (isOverHoverMenu || isOverSelectionMenu) {
 							// Update mouse over menu state
 							if (!isMouseOverMenu) {
 								isMouseOverMenu = true;
 							}
-							
+
 							// Clear any pending timeouts to keep menu stable
 							if (hoverTimeout) {
 								clearTimeout(hoverTimeout);
@@ -1422,8 +1465,12 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 						// Set new timeout for hover
 						hoverTimeout = window.setTimeout(() => {
 							// Use DOM-based entity detection instead of position-based
-							const existingEntity = findExistingEntityAtPosition(view, event.clientX, event.clientY);
-							
+							const existingEntity = findExistingEntityAtPosition(
+								view,
+								event.clientX,
+								event.clientY
+							);
+
 							if (!existingEntity) {
 								// Hide menu if no entity found
 								if (hoverMenuElement) {
@@ -1444,25 +1491,27 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 							// Get current conversation ID from plugin state (not options)
 							const pluginState = piiModifierExtensionKey.getState(view.state);
 							const currentConversationId = pluginState?.currentConversationId;
-							
+
 							// Find existing modifiers for this entity using getModifiersForDisplay consistently
 							const piiSessionManager = PiiSessionManager.getInstance();
-							
+
 							// Ensure conversation state is loaded if we have a conversationId
 							if (currentConversationId) {
 								piiSessionManager.loadConversationState(currentConversationId);
 							}
-							
-							const sessionModifiers = piiSessionManager.getModifiersForDisplay(currentConversationId);
-							
+
+							const sessionModifiers =
+								piiSessionManager.getModifiersForDisplay(currentConversationId);
+
 							const targetText = targetInfo.word;
-							
+
 							// Check if the hovered entity is part of any modifier entity
-							let existingModifiers = sessionModifiers.filter(modifier => {
-								// Check if modifier's entity text matches the target text (case-insensitive)
-								return modifier.entity.toLowerCase() === targetText.toLowerCase();
-							}) || [];
-							
+							let existingModifiers =
+								sessionModifiers.filter((modifier) => {
+									// Check if modifier's entity text matches the target text (case-insensitive)
+									return modifier.entity.toLowerCase() === targetText.toLowerCase();
+								}) || [];
+
 							// If no exact match, check if the hovered text is part of any multi-word modifier
 							if (existingModifiers.length === 0) {
 								for (const modifier of sessionModifiers || []) {
@@ -1572,7 +1621,8 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 								existingModifiers, // Pass existing modifiers
 								onRemoveModifier, // Pass removal callback
 								timeoutManager, // Pass timeout manager
-								existingModifiers.length === 0 || existingModifiers.some(m => m.action === 'string-mask') // Show text field if no modifiers or has mask modifiers
+								existingModifiers.length === 0 ||
+									existingModifiers.some((m) => m.action === 'string-mask') // Show text field if no modifiers or has mask modifiers
 							);
 
 							document.body.appendChild(hoverMenuElement);
@@ -1584,7 +1634,6 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 									hoverMenuElement = null;
 								}
 							}, 10000);
-
 						}, 300);
 					},
 
@@ -1612,7 +1661,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 						}, 10);
 					}
 				};
-				
+
 				document.addEventListener('mouseup', globalMouseUpListener, true);
 
 				return {
@@ -1622,7 +1671,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 							document.removeEventListener('mouseup', globalMouseUpListener, true);
 							globalMouseUpListener = null;
 						}
-						
+
 						if (hoverMenuElement) {
 							hoverMenuElement.remove();
 							hoverMenuElement = null;
@@ -1654,124 +1703,147 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 	addCommands() {
 		return {
 			// Get current modifiers
-			getModifiers: () => ({ state }: any) => {
-				const pluginState = piiModifierExtensionKey.getState(state);
-				return pluginState?.modifiers || [];
-			},
+			getModifiers:
+				() =>
+				({ state }: any) => {
+					const pluginState = piiModifierExtensionKey.getState(state);
+					return pluginState?.modifiers || [];
+				},
 
 			// Reload modifiers for a conversation (called when conversation changes)
-			reloadConversationModifiers: (conversationId: string) => ({ state, dispatch }: any) => {
-				const tr = state.tr.setMeta(piiModifierExtensionKey, {
-					type: 'RELOAD_CONVERSATION_MODIFIERS',
-					conversationId
-				});
-
-				if (dispatch) {
-					dispatch(tr);
-				}
-
-				return true;
-			},
-
-			// Clear all modifiers
-			clearModifiers: () => ({ state, dispatch }: any) => {
-				const pluginState = piiModifierExtensionKey.getState(state);
-				if (!pluginState?.modifiers.length) {
-					return false;
-				}
-
-				const tr = state.tr.setMeta(piiModifierExtensionKey, {
-					type: 'CLEAR_MODIFIERS'
-				});
-
-				if (dispatch) {
-					dispatch(tr);
-				}
-
-				return true;
-			},
-
-			// Add a modifier programmatically
-			addModifier: (options: { action: ModifierAction; entity: string; type?: string; from: number; to: number; }) => ({ state, dispatch }: any) => {
-				const tr = state.tr.setMeta(piiModifierExtensionKey, {
-					type: 'ADD_MODIFIER',
-					modifierAction: options.action,
-					entity: options.entity,
-					piiType: options.type,
-					from: options.from,
-					to: options.to
-				});
-
-				if (dispatch) {
-					dispatch(tr);
-				}
-
-				return true;
-			},
-
-			// Remove a modifier by ID
-			removeModifier: (modifierId: string) => ({ state, dispatch }: any) => {
-				const tr = state.tr.setMeta(piiModifierExtensionKey, {
-					type: 'REMOVE_MODIFIER',
-					modifierId
-				});
-
-				if (dispatch) {
-					dispatch(tr);
-				}
-
-				return true;
-			},
-
-			// Export modifiers in Shield API format
-			exportModifiersForApi: () => ({ state }: any) => {
-				const pluginState = piiModifierExtensionKey.getState(state);
-				if (!pluginState?.modifiers.length) {
-					return [];
-				}
-
-				return pluginState.modifiers.map(modifier => ({
-					action: modifier.action,
-					entity: modifier.entity,
-					...(modifier.type && { type: modifier.type })
-				}));
-			},
-
-			// Get modifiers for a specific entity text
-			getModifiersForEntity: (entityText: string) => ({ state }: any) => {
-				const pluginState = piiModifierExtensionKey.getState(state);
-				if (!pluginState?.modifiers.length) {
-					return [];
-				}
-
-				return pluginState.modifiers.filter(modifier => 
-					modifier.entity.toLowerCase() === entityText.toLowerCase()
-				);
-			},
-
-			// Clear only mask modifiers (keep ignore modifiers)
-			clearMaskModifiers: () => ({ state, dispatch }: any) => {
-				const pluginState = piiModifierExtensionKey.getState(state);
-				const maskModifiers = pluginState?.modifiers.filter(m => m.action === 'string-mask') || [];
-				
-				if (maskModifiers.length === 0) {
-					return false; // No mask modifiers to clear
-				}
-
-				// Remove each mask modifier individually
-				maskModifiers.forEach(modifier => {
+			reloadConversationModifiers:
+				(conversationId: string) =>
+				({ state, dispatch }: any) => {
 					const tr = state.tr.setMeta(piiModifierExtensionKey, {
-						type: 'REMOVE_MODIFIER',
-						modifierId: modifier.id
+						type: 'RELOAD_CONVERSATION_MODIFIERS',
+						conversationId
 					});
-					
+
 					if (dispatch) {
 						dispatch(tr);
 					}
-				});
 
-				return true;
-			}
+					return true;
+				},
+
+			// Clear all modifiers
+			clearModifiers:
+				() =>
+				({ state, dispatch }: any) => {
+					const pluginState = piiModifierExtensionKey.getState(state);
+					if (!pluginState?.modifiers.length) {
+						return false;
+					}
+
+					const tr = state.tr.setMeta(piiModifierExtensionKey, {
+						type: 'CLEAR_MODIFIERS'
+					});
+
+					if (dispatch) {
+						dispatch(tr);
+					}
+
+					return true;
+				},
+
+			// Add a modifier programmatically
+			addModifier:
+				(options: {
+					action: ModifierAction;
+					entity: string;
+					type?: string;
+					from: number;
+					to: number;
+				}) =>
+				({ state, dispatch }: any) => {
+					const tr = state.tr.setMeta(piiModifierExtensionKey, {
+						type: 'ADD_MODIFIER',
+						modifierAction: options.action,
+						entity: options.entity,
+						piiType: options.type,
+						from: options.from,
+						to: options.to
+					});
+
+					if (dispatch) {
+						dispatch(tr);
+					}
+
+					return true;
+				},
+
+			// Remove a modifier by ID
+			removeModifier:
+				(modifierId: string) =>
+				({ state, dispatch }: any) => {
+					const tr = state.tr.setMeta(piiModifierExtensionKey, {
+						type: 'REMOVE_MODIFIER',
+						modifierId
+					});
+
+					if (dispatch) {
+						dispatch(tr);
+					}
+
+					return true;
+				},
+
+			// Export modifiers in Shield API format
+			exportModifiersForApi:
+				() =>
+				({ state }: any) => {
+					const pluginState = piiModifierExtensionKey.getState(state);
+					if (!pluginState?.modifiers.length) {
+						return [];
+					}
+
+					return pluginState.modifiers.map((modifier) => ({
+						action: modifier.action,
+						entity: modifier.entity,
+						...(modifier.type && { type: modifier.type })
+					}));
+				},
+
+			// Get modifiers for a specific entity text
+			getModifiersForEntity:
+				(entityText: string) =>
+				({ state }: any) => {
+					const pluginState = piiModifierExtensionKey.getState(state);
+					if (!pluginState?.modifiers.length) {
+						return [];
+					}
+
+					return pluginState.modifiers.filter(
+						(modifier) => modifier.entity.toLowerCase() === entityText.toLowerCase()
+					);
+				},
+
+			// Clear only mask modifiers (keep ignore modifiers)
+			clearMaskModifiers:
+				() =>
+				({ state, dispatch }: any) => {
+					const pluginState = piiModifierExtensionKey.getState(state);
+					const maskModifiers =
+						pluginState?.modifiers.filter((m) => m.action === 'string-mask') || [];
+
+					if (maskModifiers.length === 0) {
+						return false; // No mask modifiers to clear
+					}
+
+					// Remove each mask modifier individually
+					maskModifiers.forEach((modifier) => {
+						const tr = state.tr.setMeta(piiModifierExtensionKey, {
+							type: 'REMOVE_MODIFIER',
+							modifierId: modifier.id
+						});
+
+						if (dispatch) {
+							dispatch(tr);
+						}
+					});
+
+					return true;
+				}
 		} as any;
 	}
 });
@@ -1779,7 +1851,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 // Utility function to add CSS styles for modifier system
 export function addPiiModifierStyles() {
 	const styleId = 'pii-modifier-styles';
-	
+
 	// Check if styles already exist
 	if (document.getElementById(styleId)) {
 		return;

@@ -88,7 +88,12 @@
 		<hr class=" border-gray-100 dark:border-gray-850" />
 	{:else if token.type === 'heading'}
 		<svelte:element this={headerComponent(token.depth)} dir="auto">
-			<MarkdownInlineTokens id={`${id}-${tokenIdx}-h`} tokens={token.tokens} {onSourceClick} {conversationId} />
+			<MarkdownInlineTokens
+				id={`${id}-${tokenIdx}-h`}
+				tokens={token.tokens}
+				{onSourceClick}
+				{conversationId}
+			/>
 		</svelte:element>
 	{:else if token.type === 'code'}
 		{#if token.raw.includes('```')}
@@ -298,9 +303,18 @@
 		{#if top}
 			<p>
 				{#if token.tokens}
-					<MarkdownInlineTokens id={`${id}-${tokenIdx}-t`} tokens={token.tokens} {onSourceClick} {conversationId} />
+					<MarkdownInlineTokens
+						id={`${id}-${tokenIdx}-t`}
+						tokens={token.tokens}
+						{onSourceClick}
+						{conversationId}
+					/>
 				{:else}
-					<PiiAwareText text={unescapeHtml(token.text)} id={`${id}-${tokenIdx}-text`} conversationId={conversationId} />
+					<PiiAwareText
+						text={unescapeHtml(token.text)}
+						id={`${id}-${tokenIdx}-text`}
+						{conversationId}
+					/>
 				{/if}
 			</p>
 		{:else if token.tokens}
@@ -311,7 +325,11 @@
 				{conversationId}
 			/>
 		{:else}
-			<PiiAwareText text={unescapeHtml(token.text)} id={`${id}-${tokenIdx}-text-inline`} conversationId={conversationId} />
+			<PiiAwareText
+				text={unescapeHtml(token.text)}
+				id={`${id}-${tokenIdx}-text-inline`}
+				{conversationId}
+			/>
 		{/if}
 	{:else if token.type === 'inlineKatex'}
 		{#if token.text}

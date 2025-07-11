@@ -44,7 +44,7 @@
 			// Fallback if element not yet in DOM
 			return `left: ${position.x}px; top: ${position.y - 100}px; opacity: 0;`;
 		}
-		
+
 		const viewportWidth = window.innerWidth;
 		const viewportHeight = window.innerHeight;
 
@@ -57,7 +57,7 @@
 		if (x < 10) {
 			x = 10;
 		}
-		
+
 		// Ensure overlay doesn't go off the right edge
 		if (x + rect.width > viewportWidth - 10) {
 			x = viewportWidth - rect.width - 10;
@@ -67,7 +67,7 @@
 		if (y < 10) {
 			y = position.y + 25; // Position below the element with less spacing
 		}
-		
+
 		// Ensure overlay doesn't go off the bottom of the viewport
 		if (y + rect.height > viewportHeight - 10) {
 			y = viewportHeight - rect.height - 10;
@@ -125,7 +125,7 @@
 	>
 		<!-- Invisible padding area to extend mouse interaction zone -->
 		<div class="absolute -inset-4 pointer-events-auto" aria-hidden="true"></div>
-		
+
 		<div
 			class="bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-[#f8b76b] dark:border-[#3f3d8a] min-w-56 max-w-80 custom-overlay relative"
 			transition:fly={{ y: 10, duration: 200 }}
