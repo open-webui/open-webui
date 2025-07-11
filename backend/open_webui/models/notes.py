@@ -125,11 +125,10 @@ class NoteTable:
             if not note:
                 return None
 
-            form_data = form_data.model_dump(exclude_none=True)
+            form_data = form_data.model_dump(exclude_unset=True)
 
             if "title" in form_data:
                 note.title = form_data["title"]
-
             if "data" in form_data:
                 note.data = form_data["data"]
             if "meta" in form_data:

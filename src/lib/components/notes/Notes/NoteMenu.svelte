@@ -13,6 +13,7 @@
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
 	import DocumentDuplicate from '$lib/components/icons/DocumentDuplicate.svelte';
 	import Share from '$lib/components/icons/Share.svelte';
+	import Link from '$lib/components/icons/Link.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -21,6 +22,8 @@
 
 	export let onDownload = (type) => {};
 	export let onDelete = () => {};
+
+	export let onCopyLink = () => {};
 	export let onCopyToClipboard = () => {};
 
 	export let onChange = () => {};
@@ -99,6 +102,16 @@
 					transition={flyAndScale}
 					sideOffset={8}
 				>
+					<DropdownMenu.Item
+						class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+						on:click={() => {
+							onCopyLink();
+						}}
+					>
+						<Link />
+						<div class="flex items-center">{$i18n.t('Copy link')}</div>
+					</DropdownMenu.Item>
+
 					<DropdownMenu.Item
 						class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 						on:click={() => {

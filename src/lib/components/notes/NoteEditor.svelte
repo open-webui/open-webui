@@ -38,6 +38,7 @@
 	import ChatBubbleOval from '../icons/ChatBubbleOval.svelte';
 	import Settings from './NoteEditor/Settings.svelte';
 	import Chat from './NoteEditor/Chat.svelte';
+	import AccessControlModal from '$lib/components/workspace/common/AccessControlModal.svelte';
 
 	async function loadLocale(locales) {
 		for (const locale of locales) {
@@ -117,6 +118,7 @@
 	let selectedPanel = 'chat';
 
 	let showDeleteConfirm = false;
+	let showAccessControlModal = false;
 
 	let dragged = false;
 	let loading = false;
@@ -156,15 +158,9 @@
 		}
 
 		debounceTimeout = setTimeout(async () => {
-			if (!note || enhancing || versionIdx !== null) {
-				return;
-			}
-
-			console.log('Saving note:', note);
-
 			const res = await updateNoteById(localStorage.token, id, {
-				...note,
-				title: note.title === '' ? $i18n.t('Untitled') : note.title
+				title: note?.title === '' ? $i18n.t('Untitled') : note.title,
+				access_control: note?.access_control
 			}).catch((e) => {
 				toast.error(`${e}`);
 			});
@@ -712,6 +708,17 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 	});
 </script>
 
+{#if note}
+	<AccessControlModal
+		bind:show={showAccessControlModal}
+		bind:accessControl={note.access_control}
+		accessRoles={['read', 'write']}
+		onChange={() => {
+			changeDebounceHandler();
+		}}
+	/>
+{/if}
+
 <FilesOverlay show={dragged} />
 
 <DeleteConfirmDialog
@@ -765,6 +772,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 								bind:value={note.title}
 								placeholder={$i18n.t('Title')}
 								required
+								on:input={changeDebounceHandler}
 							/>
 
 							<div class="flex items-center gap-0.5 translate-x-1">
@@ -799,6 +807,16 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 								<NoteMenu
 									onDownload={(type) => {
 										downloadHandler(type);
+									}}
+									onCopyLink={async () => {
+										const baseUrl = window.location.origin;
+										const res = await copyToClipboard(`${baseUrl}/notes/${note.id}`);
+
+										if (res) {
+											toast.success($i18n.t('Copied link to clipboard'));
+										} else {
+											toast.error($i18n.t('Failed to copy link'));
+										}
 									}}
 									onCopyToClipboard={async () => {
 										const res = await copyToClipboard(note.data.content.md).catch((error) => {
@@ -877,10 +895,15 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 									<span>{dayjs(note.created_at / 1000000).calendar()}</span>
 								</button>
 
-								<button class=" flex items-center gap-1 w-fit py-1 px-1.5 rounded-lg min-w-fit">
+								<button
+									class=" flex items-center gap-1 w-fit py-1 px-1.5 rounded-lg min-w-fit"
+									on:click={() => {
+										showAccessControlModal = true;
+									}}
+								>
 									<Users className="size-3.5" strokeWidth="2" />
 
-									<span> You </span>
+									<span> {note?.access_control ? $i18n.t('Private') : $i18n.t('Everyone')} </span>
 								</button>
 
 								{#if editor}
