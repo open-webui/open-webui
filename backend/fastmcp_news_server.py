@@ -28,7 +28,7 @@ LABELS = {
         "sentiment": "🎭 Sentiment",
         "no_articles": "No recent articles found matching your criteria.",
         "source": "📰 Source",
-        "published": "📅 Published"
+        "published": "📅 Published",
     },
     "F": {  # French
         "content": "📄 Contenu",
@@ -36,8 +36,8 @@ LABELS = {
         "sentiment": "🎭 Sentiment",
         "no_articles": "Aucun article récent trouvé correspondant à vos critères.",
         "source": "📰 Source",
-        "published": "📅 Publié"
-    }
+        "published": "📅 Publié",
+    },
 }
 
 
@@ -116,8 +116,10 @@ def fetch_latest_articles_from_azure(
                                             # Check publication field (new structure)
                                             publication_name = ""
                                             if "publication" in article:
-                                                publication_name = str(article["publication"])
-                                            
+                                                publication_name = str(
+                                                    article["publication"]
+                                                )
+
                                             if (
                                                 publication_filter.lower()
                                                 not in publication_name.lower()
@@ -133,11 +135,17 @@ def fetch_latest_articles_from_azure(
                                             "summary": article.get("summary", ""),
                                             "url": article.get("url", ""),
                                             "byline": article.get("byline", ""),
-                                            "publication": article.get("publication", "Unknown"),
-                                            "publication_date": article.get("publication_date", ""),
+                                            "publication": article.get(
+                                                "publication", "Unknown"
+                                            ),
+                                            "publication_date": article.get(
+                                                "publication_date", ""
+                                            ),
                                             "language": article.get("language", "E"),
                                             "wordcount": article.get("wordcount", 0),
-                                            "nlp_sentiment": article.get("nlp_sentiment", 0.0),
+                                            "nlp_sentiment": article.get(
+                                                "nlp_sentiment", 0.0
+                                            ),
                                             "provider": article.get("provider", ""),
                                             "media": article.get("media", ""),
                                         }
@@ -184,16 +192,16 @@ def fetch_latest_articles_from_azure(
 
 @mcp.tool()
 def get_top_headlines(
-    days_back: int = 1, 
-    max_articles: int = 5, 
+    days_back: int = 1,
+    max_articles: int = 5,
     publication_filter: str = None,
-    language: str = "english"
+    language: str = "english",
 ) -> str:
     """Get latest news headlines with clean formatting
-    
+
     Args:
         days_back: Number of days back to search (1-7)
-        max_articles: Maximum number of articles to return (1-20) 
+        max_articles: Maximum number of articles to return (1-20)
         publication_filter: Filter by publication name (optional)
         language: Language filter - "english", "french", or language code like "E", "F" (default: "english")
     """
@@ -206,7 +214,7 @@ def get_top_headlines(
         # Validate inputs
         days_back = max(1, min(days_back, 7))
         max_articles = max(1, min(max_articles, 20))
-        
+
         # Convert language to code
         language_code = "E"  # Default to English
         if language.lower() in ["french", "français", "fr", "f"]:
@@ -248,7 +256,7 @@ def get_top_headlines(
             publication = article["publication"]
             pub_date = article.get("publication_date", "(Information not provided)")
             byline = article.get("byline", "")
-            
+
             # Format each article cleanly
             response_lines.append(f"\n📰 {title}")
             if article.get("subtitle"):
@@ -268,9 +276,10 @@ def get_top_headlines(
                 content = article["summary"]
             elif article.get("body"):
                 content = article["body"]
-            
+
             if content:
                 import re
+
                 # Remove HTML tags
                 content_text = re.sub(r"<[^>]+>", "", content)
                 # Limit length for readability
@@ -281,11 +290,15 @@ def get_top_headlines(
             # Add word count and sentiment if available
             if article.get("wordcount"):
                 response_lines.append(f"{labels['word_count']}: {article['wordcount']}")
-            
+
             if article.get("nlp_sentiment") is not None:
                 sentiment = article["nlp_sentiment"]
-                sentiment_emoji = "😊" if sentiment > 0.1 else "😐" if sentiment > -0.1 else "😞"
-                response_lines.append(f"{labels['sentiment']}: {sentiment_emoji} ({sentiment:.2f})")
+                sentiment_emoji = (
+                    "😊" if sentiment > 0.1 else "😐" if sentiment > -0.1 else "😞"
+                )
+                response_lines.append(
+                    f"{labels['sentiment']}: {sentiment_emoji} ({sentiment:.2f})"
+                )
 
             # Add spacing between articles
             response_lines.append("")
