@@ -57,12 +57,18 @@
 				<div
 					class="  self-center mx-1 disabled:text-gray-600 disabled:hover:text-gray-600 -translate-y-[0.5px]"
 				>
-					<Tooltip content={$i18n.t('Add Model')}>
+					<Tooltip
+						content={selectedModels.length >= 3
+							? $i18n.t('Maximum of 3 models allowed')
+							: $i18n.t('Add Model')}
+					>
 						<button
 							class=" "
-							{disabled}
+							disabled={disabled || selectedModels.length >= 3}
 							on:click={() => {
-								selectedModels = [...selectedModels, ''];
+								if (selectedModels.length < 3) {
+									selectedModels = [...selectedModels, ''];
+								}
 							}}
 							aria-label="Add Model"
 						>

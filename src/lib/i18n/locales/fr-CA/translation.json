@@ -668,6 +668,7 @@
 	"Max Tokens (num_predict)": "Jetons maximaux (num_predict)",
 	"Max Upload Count": "Nombre de téléchargements max",
 	"Max Upload Size": "Taille de téléchargement max",
+	"Maximum of 3 models allowed": "Maximum de 3 modèles autorisés",
 	"Maximum of 3 models can be downloaded simultaneously. Please try again later.": "Un maximum de 3 modèles peut être téléchargé en même temps. Veuillez réessayer ultérieurement.",
 	"May": "Mai",
 	"MCP": "MCP",
