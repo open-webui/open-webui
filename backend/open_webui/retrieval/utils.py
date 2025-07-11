@@ -473,10 +473,21 @@ def get_sources_from_items(
         if item.get("type") == "text":
             # Raw Text
             # Used during temporary chat file uploads
-            query_result = {
-                "documents": [[item.get("content")]],
-                "metadatas": [[{"file_id": item.get("id"), "name": item.get("name")}]],
-            }
+
+            if item.get("file"):
+                # if item has file data, use it
+                query_result = {
+                    "documents": [[item.get("file").get("data", {}).get("content")]],
+                    "metadatas": [[item.get("file").get("data", {}).get("meta", {})]],
+                }
+            else:
+                # Fallback to item content
+                query_result = {
+                    "documents": [[item.get("content")]],
+                    "metadatas": [
+                        [{"file_id": item.get("id"), "name": item.get("name")}]
+                    ],
+                }
 
         elif item.get("type") == "note":
             # Note Attached
@@ -594,60 +605,44 @@ def get_sources_from_items(
                 log.debug(f"skipping {item} as it has already been extracted")
                 continue
 
-            if full_context:
-                try:
+            try:
+                if full_context:
                     query_result = get_all_items_from_collections(collection_names)
-                except Exception as e:
-                    log.exception(e)
-            else:
-                try:
-                    query_result = None
-                    if item.get("type") == "text":
-                        # Not sure when this is used, but it seems to be a fallback
-                        # TODO: remove?
-                        query_result = {
-                            "documents": [
-                                [item.get("file").get("data", {}).get("content")]
-                            ],
-                            "metadatas": [
-                                [item.get("file").get("data", {}).get("meta", {})]
-                            ],
-                        }
-                    else:
-                        if hybrid_search:
-                            try:
-                                query_result = query_collection_with_hybrid_search(
-                                    collection_names=collection_names,
-                                    queries=queries,
-                                    embedding_function=embedding_function,
-                                    k=k,
-                                    reranking_function=reranking_function,
-                                    k_reranker=k_reranker,
-                                    r=r,
-                                    hybrid_bm25_weight=hybrid_bm25_weight,
-                                )
-                            except Exception as e:
-                                log.debug(
-                                    "Error when using hybrid search, using"
-                                    " non hybrid search as fallback."
-                                )
-
-                        if (not hybrid_search) or (query_result is None):
-                            query_result = query_collection(
+                else:
+                    query_result = None  # Initialize to None
+                    if hybrid_search:
+                        try:
+                            query_result = query_collection_with_hybrid_search(
                                 collection_names=collection_names,
                                 queries=queries,
                                 embedding_function=embedding_function,
                                 k=k,
+                                reranking_function=reranking_function,
+                                k_reranker=k_reranker,
+                                r=r,
+                                hybrid_bm25_weight=hybrid_bm25_weight,
                             )
-                except Exception as e:
-                    log.exception(e)
+                        except Exception as e:
+                            log.debug(
+                                "Error when using hybrid search, using non hybrid search as fallback."
+                            )
+
+                    # fallback to non-hybrid search
+                    if not hybrid_search and query_result is None:
+                        query_result = query_collection(
+                            collection_names=collection_names,
+                            queries=queries,
+                            embedding_function=embedding_function,
+                            k=k,
+                        )
+            except Exception as e:
+                log.exception(e)
 
             extracted_collections.extend(collection_names)
 
         if query_result:
             if "data" in item:
                 del item["data"]
-
             query_results.append({**query_result, "file": item})
 
     sources = []
