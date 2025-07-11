@@ -73,9 +73,8 @@ from open_webui.routers import (
     users,
     jira,
     utils,
-    mcp,
-    crew_mcp,
 )
+from mcp_backend.routers import mcp, crew_mcp
 
 from open_webui.routers.retrieval import (
     get_embedding_function,
@@ -374,7 +373,7 @@ async def lifespan(app: FastAPI):
 
     # Initialize FastMCP manager
     try:
-        from open_webui.mcp_manager import get_mcp_manager
+        from mcp_backend.management.mcp_manager import get_mcp_manager
 
         app.state.mcp_manager = get_mcp_manager()
         log.info("FastMCP manager initialized")
