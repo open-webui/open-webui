@@ -153,7 +153,7 @@ async def stop_task(redis, task_id: str):
         # Optionally check if task_id still in Redis a few moments later for feedback?
         return {"status": True, "message": f"Stop signal sent for {task_id}"}
 
-    task = tasks.get(task_id)
+    task = tasks.pop(task_id)
     if not task:
         raise ValueError(f"Task with ID {task_id} not found.")
 
@@ -162,7 +162,6 @@ async def stop_task(redis, task_id: str):
         await task  # Wait for the task to handle the cancellation
     except asyncio.CancelledError:
         # Task successfully canceled
-        tasks.pop(task_id, None)  # Remove it from the dictionary
         return {"status": True, "message": f"Task {task_id} successfully stopped."}
 
     return {"status": False, "message": f"Failed to stop task {task_id}."}
