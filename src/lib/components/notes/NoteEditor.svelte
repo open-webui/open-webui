@@ -927,7 +927,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 					</div>
 
 					<div
-						class=" flex-1 w-full h-full overflow-auto px-3.5 pb-20 relative z-40 pt-2.5"
+						class=" flex-1 w-full h-full overflow-auto px-3.5 pb-20 relative pt-2.5"
 						id="note-content-container"
 					>
 						{#if enhancing}
@@ -976,14 +976,14 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 							bind:this={inputElement}
 							bind:editor
 							className="input-prose-sm px-0.5"
+							json={true}
 							bind:value={note.data.content.json}
 							html={note.data?.content?.html}
-							json={true}
-							link={true}
 							documentId={`note:${note.id}`}
 							collaboration={true}
 							socket={$socket}
 							user={$user}
+							link={true}
 							placeholder={$i18n.t('Write something...')}
 							editable={versionIdx === null && !enhancing}
 							onChange={(content) => {

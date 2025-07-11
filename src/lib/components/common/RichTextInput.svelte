@@ -158,16 +158,6 @@
 			this.setupEventListeners();
 		}
 
-		onConnect() {
-			this.isConnected = true;
-			this.joinDocument();
-		}
-
-		onDisconnect() {
-			this.isConnected = false;
-			this.synced = false;
-		}
-
 		setupEventListeners() {
 			// Listen for document updates from server
 			this.socket.on('yjs:document:update', (data) => {
@@ -297,6 +287,16 @@
 					id: this.socket.id
 				});
 			}
+		}
+
+		onConnect() {
+			this.isConnected = true;
+			this.joinDocument();
+		}
+
+		onDisconnect() {
+			this.isConnected = false;
+			this.synced = false;
 		}
 
 		destroy() {
