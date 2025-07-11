@@ -67,6 +67,7 @@
 	// Reset page when search query changes
 	$: if (debouncedQuery !== undefined) {
 		page = 1;
+		loadCount(); // Update count when search changes
 		loadPrompts();
 	}
 

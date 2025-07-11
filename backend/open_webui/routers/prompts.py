@@ -24,7 +24,8 @@ async def get_prompts(user=Depends(get_verified_user)):
     if user.role == "admin":
         prompts = Prompts.get_prompts()
     else:
-        prompts = Prompts.get_prompts_by_user_id(user.id, "read")
+        # Non-admin users only see their own prompts
+        prompts = Prompts.get_prompts_by_user_id(user.id)
 
     return prompts
 
@@ -35,7 +36,8 @@ async def get_prompt_list(user=Depends(get_verified_user)):
     if user.role == "admin":
         prompts = Prompts.get_prompts()
     else:
-        prompts = Prompts.get_prompts_by_user_id(user.id, "read")
+        # Non-admin users only see their own prompts
+        prompts = Prompts.get_prompts_by_user_id(user.id)
 
     return prompts
 
@@ -52,8 +54,9 @@ async def get_prompts_paginated(
     if user.role == "admin":
         prompts = Prompts.get_prompts_paginated(page=page, limit=limit, search=search)
     else:
+        # Non-admin users only see their own prompts
         prompts = Prompts.get_prompts_by_user_id_paginated(
-            user.id, "read", page=page, limit=limit, search=search
+            user.id, page=page, limit=limit, search=search
         )
 
     return prompts
@@ -72,8 +75,9 @@ async def get_prompt_list_paginated(
             page=page, limit=limit, search=search
         )
     else:
+        # Non-admin users only see their own prompts
         prompts = Prompts.get_prompts_by_user_id_with_users_paginated(
-            user.id, "read", page=page, limit=limit, search=search
+            user.id, page=page, limit=limit, search=search
         )
 
     return prompts
@@ -88,7 +92,8 @@ async def get_prompts_count(
     if user.role == "admin":
         count = Prompts.get_prompts_count(search=search)
     else:
-        count = Prompts.get_prompts_count_by_user_id(user.id, "read", search=search)
+        # Non-admin users only see count of their own prompts
+        count = Prompts.get_prompts_count_by_user_id(user.id, search=search)
 
     return {"count": count}
 

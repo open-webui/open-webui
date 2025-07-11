@@ -203,15 +203,16 @@ class PromptsTable:
     def get_prompts_by_user_id_paginated(
         self,
         user_id: str,
-        permission: str = "write",
         page: int = 1,
         limit: int = 20,
         search: str = None,
     ) -> list[PromptModel]:
-        """Get paginated prompts by user with permission check and optional search"""
-        # For pagination, we need to filter in the database for efficiency
+        """Get paginated prompts by user - users only see their own prompts"""
         with get_db() as db:
             query = db.query(Prompt)
+
+            # Users only see their own prompts
+            query = query.filter(Prompt.user_id == user_id)
 
             # Apply search filter if provided
             if search and search.strip():
@@ -222,13 +223,6 @@ class PromptsTable:
                     | Prompt.content.ilike(search_term)
                 )
 
-            # Filter by user access: public prompts, user's own prompts, or prompts with specific access
-            query = query.filter(
-                (Prompt.user_id == user_id)  # User's own prompts
-                | (Prompt.access_control.is_(None))  # Public prompts
-                # Note: For complex access control with groups, we'd need additional logic
-            )
-
             # Apply pagination
             offset = (page - 1) * limit
             prompts = (
@@ -238,32 +232,20 @@ class PromptsTable:
                 .all()
             )
 
-            # Filter by access control for the remaining prompts
-            result = []
-            for prompt_data in prompts:
-                prompt = PromptModel.model_validate(prompt_data)
-                if (
-                    prompt.user_id == user_id
-                    or prompt.access_control is None
-                    or has_access(user_id, permission, prompt.access_control)
-                ):
-                    result.append(prompt)
+            return [PromptModel.model_validate(prompt) for prompt in prompts]
 
             return result
 
     def get_prompts_by_user_id_with_users_paginated(
         self,
         user_id: str,
-        permission: str = "write",
         page: int = 1,
         limit: int = 20,
         search: str = None,
     ) -> list[PromptUserResponse]:
-        """Get paginated prompts by user with user info, permission check and optional search"""
+        """Get paginated prompts by user with user info - users only see their own prompts"""
         # Get prompts first
-        prompts = self.get_prompts_by_user_id_paginated(
-            user_id, permission, page, limit, search
-        )
+        prompts = self.get_prompts_by_user_id_paginated(user_id, page, limit, search)
 
         # Add user info
         result = []
@@ -280,12 +262,13 @@ class PromptsTable:
 
         return result
 
-    def get_prompts_count_by_user_id(
-        self, user_id: str, permission: str = "write", search: str = None
-    ) -> int:
-        """Get total count of prompts accessible by user with optional search filter"""
+    def get_prompts_count_by_user_id(self, user_id: str, search: str = None) -> int:
+        """Get count of prompts for user - users only see their own prompts"""
         with get_db() as db:
             query = db.query(Prompt)
+
+            # Users only see their own prompts
+            query = query.filter(Prompt.user_id == user_id)
 
             # Apply search filter if provided
             if search and search.strip():
@@ -296,13 +279,13 @@ class PromptsTable:
                     | Prompt.content.ilike(search_term)
                 )
 
-            # Filter by user access: public prompts, user's own prompts, or prompts with specific access
-            query = query.filter(
-                (Prompt.user_id == user_id)  # User's own prompts
-                | (Prompt.access_control.is_(None))  # Public prompts
-            )
-
             return query.count()
+
+    def get_prompts_by_user_id(self, user_id: str) -> list[PromptUserResponse]:
+        """Get prompts for user - users only see their own prompts"""
+        prompts = self.get_prompts()
+
+        return [prompt for prompt in prompts if prompt.user_id == user_id]
 
     def update_prompt_by_command(
         self, command: str, form_data: PromptForm
