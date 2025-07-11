@@ -26,6 +26,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **🛡️ Brave Search URL Validation**: Now validates the URL of Brave search results and logs out any malformed URLs to improve reliability and security.
 - **🔒 Improved Redis Lock Error Handling**: Enhanced error handling for Redis lock management and cleanup tasks, increasing reliability and stability.
 
+- **📝 Improved Accessibility**: Enhanced accessibility for improved user experience.
+- **📊 Metric Dashboard**: Enhanced model metrics access and display for analysts.
+
 ### Removed
 
 - **🔕 New Version Notification Toast Removed**: Removed the toast notification for new version updates.
