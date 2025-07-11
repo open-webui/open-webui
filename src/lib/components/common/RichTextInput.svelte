@@ -50,16 +50,20 @@
 
 	import { onMount, onDestroy, tick, getContext } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
+	import { socket } from '$lib/stores';
 
 	const i18n = getContext('i18n');
 	const eventDispatch = createEventDispatcher();
 
 	import { Fragment, DOMParser } from 'prosemirror-model';
 	import { EditorState, Plugin, PluginKey, TextSelection, Selection } from 'prosemirror-state';
+	import { receiveTransaction, sendableSteps, getVersion } from 'prosemirror-collab';
+	import { Step } from 'prosemirror-transform';
 	import { Decoration, DecorationSet } from 'prosemirror-view';
 	import { Editor } from '@tiptap/core';
 
 	import { AIAutocompletion } from './RichTextInput/AutoCompletion.js';
+	import History from '@tiptap/extension-history';
 	import Table from '@tiptap/extension-table';
 	import TableRow from '@tiptap/extension-table-row';
 	import TableHeader from '@tiptap/extension-table-header';
@@ -117,6 +121,75 @@
 	export let shiftEnter = false;
 	export let largeTextAsFile = false;
 	export let insertPromptAsRichText = false;
+
+	let isConnected = false;
+	let collaborators = new Map();
+	let version = 0;
+
+	// Custom collaboration plugin
+	const collaborationPlugin = () => {
+		return new Plugin({
+			key: new PluginKey('collaboration'),
+			state: {
+				init: () => ({ version: 0 }),
+				apply: (tr, pluginState) => {
+					const newState = { ...pluginState };
+
+					if (tr.getMeta('collaboration')) {
+						newState.version = tr.getMeta('collaboration').version;
+					}
+
+					return newState;
+				}
+			},
+			view: () => ({
+				update: (view, prevState) => {
+					const sendable = sendableSteps(view.state);
+					if (sendable) {
+						$socket.emit('document_steps', {
+							document_id: documentId,
+							user_id: userId,
+							version: sendable.version,
+							steps: sendable.steps.map((step) => step.toJSON()),
+							clientID: sendable.clientID
+						});
+					}
+				}
+			})
+		});
+	};
+
+	function handleDocumentSteps(data) {
+		if (data.user_id !== userId && editor) {
+			const steps = data.steps.map((stepJSON) => Step.fromJSON(editor.schema, stepJSON));
+			const tr = receiveTransaction(editor.state, steps, data.clientID);
+
+			if (tr) {
+				editor.view.dispatch(tr);
+			}
+		}
+	}
+
+	function handleDocumentState(data) {
+		version = data.version;
+		if (data.content && editor) {
+			editor.commands.setContent(data.content);
+		}
+		isConnected = true;
+	}
+
+	function handleUserJoined(data) {
+		collaborators.set(data.user_id, {
+			name: data.user_name,
+			color: data.user_color
+		});
+		collaborators = collaborators;
+	}
+
+	function handleUserLeft(data) {
+		collaborators.delete(data.user_id);
+		collaborators = collaborators;
+	}
 
 	let floatingMenuElement = null;
 	let bubbleMenuElement = null;

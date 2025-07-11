@@ -68,6 +68,7 @@
 		"@tiptap/extension-code-block-lowlight": "^2.11.9",
 		"@tiptap/extension-floating-menu": "^2.25.0",
 		"@tiptap/extension-highlight": "^2.10.0",
+		"@tiptap/extension-history": "^2.25.1",
 		"@tiptap/extension-link": "^2.25.0",
 		"@tiptap/extension-placeholder": "^2.10.0",
 		"@tiptap/extension-table": "^2.12.0",

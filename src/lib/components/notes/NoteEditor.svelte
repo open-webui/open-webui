@@ -772,16 +772,16 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 							/>
 
 							<div class="flex items-center gap-0.5 translate-x-1">
-								{#if note.data?.versions?.length > 0}
+								{#if editor}
 									<div>
 										<div class="flex items-center gap-0.5 self-center min-w-fit" dir="ltr">
 											<button
 												class="self-center p-1 hover:enabled:bg-black/5 dark:hover:enabled:bg-white/5 dark:hover:enabled:text-white hover:enabled:text-black rounded-md transition disabled:cursor-not-allowed disabled:text-gray-500 disabled:hover:text-gray-500"
 												on:click={() => {
-													versionNavigateHandler('prev');
+													editor.chain().focus().undo().run();
+													// versionNavigateHandler('prev');
 												}}
-												disabled={(versionIdx === null && note.data.versions.length === 0) ||
-													versionIdx === 0}
+												disabled={!editor.can().undo()}
 											>
 												<ArrowUturnLeft className="size-4" />
 											</button>
@@ -789,9 +789,10 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 											<button
 												class="self-center p-1 hover:enabled:bg-black/5 dark:hover:enabled:bg-white/5 dark:hover:enabled:text-white hover:enabled:text-black rounded-md transition disabled:cursor-not-allowed disabled:text-gray-500 disabled:hover:text-gray-500"
 												on:click={() => {
-													versionNavigateHandler('next');
+													editor.chain().focus().redo().run();
+													// versionNavigateHandler('next');
 												}}
-												disabled={versionIdx >= note.data.versions.length || versionIdx === null}
+												disabled={!editor.can().redo()}
 											>
 												<ArrowUturnRight className="size-4" />
 											</button>
