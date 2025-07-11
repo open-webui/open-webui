@@ -26,7 +26,7 @@
 		getChatPinnedStatusById,
 		toggleChatPinnedStatusById
 	} from '$lib/apis/chats';
-	import { chats, settings, theme, user } from '$lib/stores';
+	import { chats, settings, theme, user, chatId as currentChatId } from '$lib/stores';
 	import { createMessagesList } from '$lib/utils';
 	import { downloadChatAsPDF } from '$lib/apis/utils';
 	import Download from '$lib/components/icons/Download.svelte';
@@ -89,7 +89,12 @@
 	const downloadPdf = async () => {
 		const chat = await getChatById(localStorage.token, chatId);
 
-		if ($settings?.stylizedPdfExport ?? true) {
+		// Check if we're exporting the currently displayed chat
+		// Only use stylized PDF export if we're exporting the current chat
+		// Otherwise fall back to plain text PDF to avoid capturing wrong content
+		const isCurrentChat = chatId === $currentChatId;
+
+		if (($settings?.stylizedPdfExport ?? true) && isCurrentChat) {
 			const containerElement = document.getElementById('messages-container');
 
 			if (containerElement) {
