@@ -105,6 +105,7 @@ if WEBSOCKET_MANAGER == "redis":
         redis_sentinels=redis_sentinels,
     )
 
+    # TODO: Implement Yjs document management with Redis
     DOCUMENTS = {}
     DOCUMENT_USERS = {}
 
