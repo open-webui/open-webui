@@ -73,6 +73,7 @@
 		stopTask
 	} from '$lib/apis';
 	import { getTools } from '$lib/apis/tools';
+	import { queryCrewMCP } from '$lib/apis/crew-mcp';
 
 	import Banner from '../common/Banner.svelte';
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
@@ -111,7 +112,7 @@
 	let selectedModelIds = [];
 	$: selectedModelIds = atSelectedModel !== undefined ? [atSelectedModel.id] : selectedModels;
 
-	let selectedToolIds = [];
+	let selectedToolIds: string[] = [];
 	let imageGenerationEnabled = false;
 	let webSearchEnabled = false;
 
@@ -133,29 +134,27 @@
 
 	$: if (chatIdProp) {
 		(async () => {
-			prompt = '';
-			files = [];
-			selectedToolIds = [];
-			webSearchEnabled = false;
-			imageGenerationEnabled = false;
+			// First, try to restore from localStorage before resetting
+			let storedInput = null;
+			const storedData = localStorage.getItem(`chat-input-${chatIdProp}`);
+			if (storedData) {
+				try {
+					storedInput = JSON.parse(storedData);
+				} catch (e) {}
+			}
+
+			// Reset states, but use stored values if available
+			prompt = storedInput?.prompt || '';
+			files = storedInput?.files || [];
+			selectedToolIds = storedInput?.selectedToolIds || [];
+			webSearchEnabled = storedInput?.webSearchEnabled || false;
+			imageGenerationEnabled = storedInput?.imageGenerationEnabled || false;
 
 			loaded = false;
 
 			if (chatIdProp && (await loadChat())) {
 				await tick();
 				loaded = true;
-
-				if (localStorage.getItem(`chat-input-${chatIdProp}`)) {
-					try {
-						const input = JSON.parse(localStorage.getItem(`chat-input-${chatIdProp}`));
-
-						prompt = input.prompt;
-						files = input.files;
-						selectedToolIds = input.selectedToolIds;
-						webSearchEnabled = input.webSearchEnabled;
-						imageGenerationEnabled = input.imageGenerationEnabled;
-					} catch (e) {}
-				}
 
 				window.setTimeout(() => scrollToBottom(), 0);
 				const chatInput = document.getElementById('chat-input');
@@ -396,12 +395,15 @@
 
 		if (localStorage.getItem(`chat-input-${chatIdProp}`)) {
 			try {
-				const input = JSON.parse(localStorage.getItem(`chat-input-${chatIdProp}`));
-				prompt = input.prompt;
-				files = input.files;
-				selectedToolIds = input.selectedToolIds;
-				webSearchEnabled = input.webSearchEnabled;
-				imageGenerationEnabled = input.imageGenerationEnabled;
+				const storedData = localStorage.getItem(`chat-input-${chatIdProp}`);
+				if (storedData) {
+					const input = JSON.parse(storedData);
+					prompt = input.prompt;
+					files = input.files;
+					selectedToolIds = input.selectedToolIds;
+					webSearchEnabled = input.webSearchEnabled;
+					imageGenerationEnabled = input.imageGenerationEnabled;
+				}
 			} catch (e) {
 				prompt = '';
 				files = [];
@@ -1390,6 +1392,89 @@
 					}
 					responseMessage.userContext = userContext;
 
+					// Check if user has selected ANY tools for this chat
+					const hasSelectedTools = selectedToolIds.length > 0;
+
+					if (hasSelectedTools) {
+						// Use CrewAI when user has selected any tools
+						try {
+							console.log('Routing to CrewAI based on selected tools:', selectedToolIds);
+
+							// Update response message to show it's using CrewAI
+							responseMessage.content = $i18n.t('Consulting CrewAI agents...');
+							history.messages[responseMessageId] = responseMessage;
+							await tick();
+							scrollToBottom();
+
+							const crewResponse = await queryCrewMCP(
+								localStorage.token,
+								prompt,
+								model.id,
+								selectedToolIds,
+								$chatId,
+								$socket?.id
+							);
+
+							if (crewResponse && crewResponse.result) {
+								// Update message content with CrewAI response
+								responseMessage.content = crewResponse.result;
+								responseMessage.done = true;
+								responseMessage.crewAI = true; // Mark as CrewAI response
+
+								// Add metadata about which agents/tools were used
+								if (crewResponse.metadata) {
+									responseMessage.crewMetadata = crewResponse.metadata;
+								}
+
+								history.messages[responseMessageId] = responseMessage;
+
+								// Emit completion events
+								eventTarget.dispatchEvent(
+									new CustomEvent('chat:finish', {
+										detail: {
+											id: responseMessage.id,
+											content: responseMessage.content
+										}
+									})
+								);
+
+								// Save the chat with CrewAI response
+								await tick();
+								if ($chatId && !$temporaryChatEnabled) {
+									const messages = createMessagesList(responseMessageId);
+
+									chat = await updateChatById(localStorage.token, $chatId, {
+										models: selectedModels,
+										messages: messages,
+										history: history,
+										params: params,
+										files: chatFiles
+									});
+
+									currentChatPage.set(1);
+									await chats.set(await getChatList(localStorage.token, $currentChatPage));
+								}
+
+								// Don't call chatCompletedHandler for CrewAI responses to avoid 400 error
+								return; // Return early for successful CrewAI response
+							} else {
+								throw new Error('CrewAI returned no result');
+							}
+						} catch (error) {
+							console.error('CrewAI Error:', error);
+							toast.error(`CrewAI Error: ${(error as Error).message || error}`);
+
+							// Fall back to regular chat completion - reset message state
+							responseMessage.content = '';
+							responseMessage.done = false;
+							delete responseMessage.crewAI;
+							delete responseMessage.crewMetadata;
+							history.messages[responseMessageId] = responseMessage;
+							await tick();
+						}
+					}
+
+					// Only proceed with regular completion if CrewAI wasn't used or failed
 					const chatEventEmitter = await getChatEventEmitter(model.id, _chatId);
 
 					scrollToBottom();
@@ -1487,6 +1572,7 @@
 						})
 			}));
 
+		// Regular OpenAI completion
 		const res = await generateOpenAIChatCompletion(
 			localStorage.token,
 			{
@@ -1873,6 +1959,7 @@
 									bind:autoScroll
 									bind:prompt
 									{selectedModels}
+									{selectedToolIds}
 									{sendPrompt}
 									{showMessage}
 									{submitMessage}

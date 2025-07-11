@@ -9,6 +9,8 @@
 
 	import { archiveChatById, deleteChatById, getArchivedChatList } from '$lib/apis/chats';
 
+	import { ariaMessage, returnFocusButtonID } from '$lib/stores';
+
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import UnarchiveAllConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -21,10 +23,15 @@
 	let searchValue = '';
 	let showUnarchiveAllConfirmDialog = false;
 
+	let filteredChatList = [];
+
 	const unarchiveChatHandler = async (chatId) => {
 		const res = await archiveChatById(localStorage.token, chatId).catch((error) => {
 			toast.error(`${error}`);
 		});
+		if (res) {
+			toast.success($i18n.t('Chat unarchived'));
+		}
 
 		chats = await getArchivedChatList(localStorage.token);
 		dispatch('change');
@@ -34,13 +41,22 @@
 		const res = await deleteChatById(localStorage.token, chatId).catch((error) => {
 			toast.error(`${error}`);
 		});
+		if (res) {
+			toast.success($i18n.t('Chat deleted'));
+		}
 
 		chats = await getArchivedChatList(localStorage.token);
 	};
 
 	const unarchiveAllHandler = async () => {
+		let res = null;
 		for (const chat of chats) {
-			await archiveChatById(localStorage.token, chat.id);
+			res = await archiveChatById(localStorage.token, chat.id).catch((error) => {
+				toast.error(`${error}`);
+			});
+		}
+		if (res) {
+			toast.success($i18n.t('All archived chat unarchived'));
 		}
 		chats = await getArchivedChatList(localStorage.token);
 	};
@@ -50,6 +66,9 @@
 			chats = await getArchivedChatList(localStorage.token);
 		})();
 	}
+	$: filteredChatList = chats.filter(
+		(c) => searchValue === '' || c.title.toLowerCase().includes(searchValue.toLowerCase())
+	);
 </script>
 
 <UnarchiveAllConfirmDialog
@@ -61,11 +80,17 @@
 	}}
 />
 
-<Modal size="lg" bind:show>
+<Modal
+	size="lg"
+	bind:show
+	title={$i18n.t('Archived Chats')}
+	returnFocusSelector={'#' + $returnFocusButtonID}
+>
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-1">
-			<div class=" text-lg font-medium self-center">{$i18n.t('Archived Chats')}</div>
+			<h2 class=" text-lg font-medium self-center">{$i18n.t('Archived Chats')}</h2>
 			<button
+				aria-label={$i18n.t('Close')}
 				class="self-center"
 				on:click={() => {
 					show = false;
@@ -87,29 +112,34 @@
 		</div>
 
 		<div class="flex flex-col w-full px-5 pb-4 dark:text-gray-200">
-			<div class=" flex w-full mt-2 space-x-2">
-				<div class="flex flex-1">
-					<div class=" self-center ml-1 mr-3">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 20 20"
-							fill="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
-								clip-rule="evenodd"
-							/>
-						</svg>
+			<Tooltip placement="top-start" content={$i18n.t('Search Chats')}>
+				<div class=" flex w-full mt-2 space-x-2">
+					<div class="flex flex-1">
+						<div class=" self-center ml-1 mr-3">
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 20 20"
+								fill="currentColor"
+								class="w-4 h-4"
+							>
+								<path
+									fill-rule="evenodd"
+									d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
+									clip-rule="evenodd"
+								/>
+							</svg>
+						</div>
+
+						<input
+							class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-none bg-transparent"
+							bind:value={searchValue}
+							on:input={() =>
+								ariaMessage.set(filteredChatList.length + $i18n.t(' archived chat found'))}
+							placeholder={$i18n.t('Search Chats')}
+						/>
 					</div>
-					<input
-						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-none bg-transparent"
-						bind:value={searchValue}
-						placeholder={$i18n.t('Search Chats')}
-					/>
 				</div>
-			</div>
+			</Tooltip>
 			<hr class=" dark:border-gray-850 my-2" />
 			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 				{#if chats.length > 0}
@@ -129,19 +159,19 @@
 										</tr>
 									</thead>
 									<tbody>
-										{#each chats.filter((c) => searchValue === '' || c.title
-													.toLowerCase()
-													.includes(searchValue.toLowerCase())) as chat, idx}
+										{#each filteredChatList as chat, idx}
 											<tr
 												class="bg-transparent {idx !== chats.length - 1 &&
 													'border-b'} dark:bg-gray-900 dark:border-gray-850 text-xs"
 											>
 												<td class="px-3 py-1 w-2/3">
-													<a href="/c/{chat.id}" target="_blank">
-														<div class=" underline line-clamp-1">
-															{chat.title}
-														</div>
-													</a>
+													<Tooltip placement="top-start" content={chat.title}>
+														<a href="/c/{chat.id}" target="_blank">
+															<div class=" underline line-clamp-1">
+																{chat.title}
+															</div>
+														</a>
+													</Tooltip>
 												</td>
 
 												<td class=" px-3 py-1 hidden md:flex h-[2.5rem]">
@@ -154,6 +184,7 @@
 													<div class="flex justify-end w-full">
 														<Tooltip content={$i18n.t('Unarchive Chat')}>
 															<button
+																aria-label={$i18n.t('Unarchive Chat')}
 																class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 																on:click={async () => {
 																	unarchiveChatHandler(chat.id);
@@ -178,6 +209,7 @@
 
 														<Tooltip content={$i18n.t('Delete Chat')}>
 															<button
+																aria-label={$i18n.t('Delete Chat')}
 																class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 																on:click={async () => {
 																	deleteChatHandler(chat.id);

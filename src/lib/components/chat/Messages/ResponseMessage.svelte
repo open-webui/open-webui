@@ -9,7 +9,7 @@
 
 	const dispatch = createEventDispatcher();
 
-	import { config, models, settings, user } from '$lib/stores';
+	import { ariaMessage, config, models, settings, user } from '$lib/stores';
 	import { synthesizeOpenAISpeech } from '$lib/apis/audio';
 	import { imageGenerations } from '$lib/apis/images';
 	import {
@@ -41,6 +41,10 @@
 	import { createNewFeedback, getFeedbackById, updateFeedbackById } from '$lib/apis/evaluations';
 	import { getChatById } from '$lib/apis/chats';
 	import { generateTags } from '$lib/apis';
+	import ExclamationCircle from '$lib/components/icons/ExclamationCircle.svelte';
+	import LightBlub from '$lib/components/icons/LightBlub.svelte';
+	import IssueModal from '$lib/components/common/IssueModal.svelte';
+	import SuggestionModal from '$lib/components/common/SuggestionModal.svelte';
 
 	interface MessageType {
 		id: string;
@@ -96,6 +100,7 @@
 	export let chatId = '';
 	export let history;
 	export let messageId;
+	export let selectedToolIds: string[] = [];
 
 	let message: MessageType = JSON.parse(JSON.stringify(history.messages[messageId]));
 	$: if (history.messages) {
@@ -139,6 +144,8 @@
 	let generatingImage = false;
 
 	let showRateComment = false;
+	let showIssueModal = false;
+	let showSuggestionModal = false;
 
 	const copyToClipboard = async (text) => {
 		const res = await _copyToClipboard(text);
@@ -285,7 +292,7 @@
 		editedContent = message.content;
 
 		await tick();
-
+		ariaMessage.set($i18n.t('Message editing started.'));
 		editTextAreaElement.style.height = '';
 		editTextAreaElement.style.height = `${editTextAreaElement.scrollHeight}px`;
 	};
@@ -297,6 +304,7 @@
 		editedContent = '';
 
 		await tick();
+		toast.success($i18n.t('Message editing confirmed.'));
 	};
 
 	const saveAsCopyHandler = async () => {
@@ -306,12 +314,14 @@
 		editedContent = '';
 
 		await tick();
+		ariaMessage.set($i18n.t('Message saved as copy. You are now in copied message chain.'));
 	};
 
 	const cancelEditMessage = async () => {
 		edit = false;
 		editedContent = '';
 		await tick();
+		ariaMessage.set($i18n.t('Message editing cancelled.'));
 	};
 
 	const generateImage = async (message: MessageType) => {
@@ -337,6 +347,8 @@
 
 	let feedbackLoading = false;
 
+	let tagGenerationInProgress = false;
+
 	const feedbackHandler = async (rating: number | null = null, details: object | null = null) => {
 		feedbackLoading = true;
 		const updatedMessage = {
@@ -361,18 +373,22 @@
 			type: 'rating',
 			data: {
 				...(updatedMessage?.annotation ? updatedMessage.annotation : {}),
-				model_id: message?.selectedModelId ?? message.model,
+				model_id: message?.crewAI ? 'azure/o3-mini' : (message?.selectedModelId ?? message.model),
 				...(history.messages[message.parentId].childrenIds.length > 1
 					? {
 							sibling_model_ids: history.messages[message.parentId].childrenIds
 								.filter((id) => id !== message.id)
-								.map((id) => history.messages[id]?.selectedModelId ?? history.messages[id].model)
+								.map((id) =>
+									history.messages[id]?.crewAI
+										? 'azure/o3-mini'
+										: (history.messages[id]?.selectedModelId ?? history.messages[id].model)
+								)
 						}
 					: {})
 			},
 			meta: {
 				arena: message ? message.arena : false,
-				model_id: message.model,
+				model_id: message?.crewAI ? 'azure/o3-mini' : message.model,
 				message_id: message.id,
 				message_index: messages.length,
 				chat_id: chatId
@@ -396,6 +412,19 @@
 			return acc;
 		}, {});
 		feedbackItem.meta.base_models = baseModels;
+
+		// If this is a detailed feedback submission, wait for any ongoing tag generation to complete
+		if (details && tagGenerationInProgress) {
+			// Wait for tag generation to complete before proceeding
+			while (tagGenerationInProgress) {
+				await new Promise((resolve) => setTimeout(resolve, 100));
+			}
+			// Refresh the message to get the latest tags
+			const latestMessage = history.messages[message.id];
+			if (latestMessage?.annotation?.tags) {
+				updatedMessage.annotation.tags = latestMessage.annotation.tags;
+			}
+		}
 
 		let feedback = null;
 		if (message?.feedbackId) {
@@ -424,6 +453,7 @@
 			showRateComment = true;
 
 			if (!updatedMessage.annotation?.tags) {
+				tagGenerationInProgress = true;
 				// attempt to generate tags
 				const tags = await generateTags(localStorage.token, message.model, messages, chatId).catch(
 					(error) => {
@@ -445,19 +475,36 @@
 						toast.error(`${error}`);
 					});
 				}
+				tagGenerationInProgress = false;
 			}
 		}
 
 		feedbackLoading = false;
 	};
 
-	$: if (!edit) {
-		(async () => {
-			await tick();
-		})();
-	}
-
 	onMount(async () => {
+		// If message has feedbackId but no annotation, fetch feedback data
+		if (message?.feedbackId && !message?.annotation?.rating) {
+			try {
+				const feedback = await getFeedbackById(localStorage.token, message.feedbackId);
+				if (feedback && feedback.data) {
+					// Update message annotation with feedback data
+					const updatedMessage = {
+						...message,
+						annotation: {
+							...(message?.annotation ?? {}),
+							rating: feedback.data.rating,
+							reason: feedback.data.reason,
+							comment: feedback.data.comment
+						}
+					};
+					saveMessage(message.id, updatedMessage);
+				}
+			} catch (error) {
+				console.warn('Failed to fetch feedback data:', error);
+			}
+		}
+
 		await tick();
 	});
 </script>
@@ -475,8 +522,15 @@
 		<div class="flex-auto w-0 pl-1">
 			<Name>
 				<Tooltip content={model?.name ?? message.model} placement="top-start">
-					<span class="line-clamp-1">
+					<span class="line-clamp-1 flex items-center gap-1">
 						{model?.name ?? message.model}
+						{#if message.crewAI}
+							<span
+								class="px-1.5 py-0.5 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-full font-medium"
+							>
+								CrewAI
+							</span>
+						{/if}
 					</span>
 				</Tooltip>
 
@@ -611,6 +665,7 @@
 									<div>
 										<button
 											id="save-new-message-button"
+											aria-label={$i18n.t('Save as Copy')}
 											class=" px-4 py-2 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border dark:border-gray-700 text-gray-700 dark:text-gray-200 transition rounded-3xl"
 											on:click={() => {
 												saveAsCopyHandler();
@@ -698,7 +753,7 @@
 								{/if}
 
 								{#if (message?.sources || message?.citations) && (model?.info?.meta?.capabilities?.citations ?? true)}
-									<Citations sources={message?.sources ?? message?.citations} />
+									<Citations sources={message?.sources ?? message?.citations} {selectedToolIds} />
 								{/if}
 
 								{#if message.code_executions}
@@ -716,27 +771,30 @@
 						>
 							{#if siblings.length > 1}
 								<div class="flex self-center min-w-fit">
-									<button
-										class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
-										on:click={() => {
-											showPreviousMessage(message);
-										}}
-									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											fill="none"
-											viewBox="0 0 24 24"
-											stroke="currentColor"
-											stroke-width="2.5"
-											class="size-3.5"
+									<Tooltip content={$i18n.t('Previous Response')} placement="bottom">
+										<button
+											aria-label={$i18n.t('Previous Response')}
+											class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
+											on:click={() => {
+												showPreviousMessage(message);
+											}}
 										>
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												d="M15.75 19.5 8.25 12l7.5-7.5"
-											/>
-										</svg>
-									</button>
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												fill="none"
+												viewBox="0 0 24 24"
+												stroke="currentColor"
+												stroke-width="2.5"
+												class="size-3.5"
+											>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													d="M15.75 19.5 8.25 12l7.5-7.5"
+												/>
+											</svg>
+										</button>
+									</Tooltip>
 
 									<div
 										class="text-sm tracking-widest font-semibold self-center dark:text-gray-100 min-w-fit"
@@ -801,6 +859,7 @@
 
 								<Tooltip content={$i18n.t('Copy')} placement="bottom">
 									<button
+										aria-label={$i18n.t('Copy')}
 										class="{isLastMessage
 											? 'visible'
 											: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition copy-response-button"
@@ -828,6 +887,7 @@
 								<Tooltip content={$i18n.t('Read Aloud')} placement="bottom">
 									<button
 										id="speak-button-{message.id}"
+										aria-label={$i18n.t('Read Aloud')}
 										class="{isLastMessage
 											? 'visible'
 											: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
@@ -1085,6 +1145,7 @@
 										<Tooltip content={$i18n.t('Continue Response')} placement="bottom">
 											<button
 												type="button"
+												aria-label={$i18n.t('Continue Response')}
 												id="continue-response-button"
 												class="{isLastMessage
 													? 'visible'
@@ -1185,6 +1246,37 @@
 												</button>
 											</Tooltip>
 										{/each}
+
+										<!-- Help buttons -->
+										<Tooltip content={$i18n.t('Report an Issue')} placement="bottom">
+											<button
+												type="button"
+												class="{isLastMessage
+													? 'visible'
+													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+												on:click={(e) => {
+													e.currentTarget.blur();
+													showIssueModal = true;
+												}}
+											>
+												<ExclamationCircle className="size-4" strokeWidth="2.3" />
+											</button>
+										</Tooltip>
+
+										<Tooltip content={$i18n.t('Suggestion Box')} placement="bottom">
+											<button
+												type="button"
+												class="{isLastMessage
+													? 'visible'
+													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+												on:click={(e) => {
+													e.currentTarget.blur();
+													showSuggestionModal = true;
+												}}
+											>
+												<LightBlub className="size-4" strokeWidth="2.3" />
+											</button>
+										</Tooltip>
 									{/if}
 								{/if}
 							{/if}
@@ -1195,18 +1287,52 @@
 						<RateComment
 							bind:message
 							bind:show={showRateComment}
+							disabled={tagGenerationInProgress}
 							on:save={async (e) => {
 								await feedbackHandler(null, {
 									...e.detail
 								});
 							}}
 						/>
+						{#if tagGenerationInProgress}
+							<div class="text-xs text-gray-500 mt-2 flex items-center">
+								<svg
+									class="animate-spin -ml-1 mr-2 h-3 w-3 text-gray-500"
+									xmlns="http://www.w3.org/2000/svg"
+									fill="none"
+									viewBox="0 0 24 24"
+								>
+									<circle
+										class="opacity-25"
+										cx="12"
+										cy="12"
+										r="10"
+										stroke="currentColor"
+										stroke-width="4"
+									></circle>
+									<path
+										class="opacity-75"
+										fill="currentColor"
+										d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+									></path>
+								</svg>
+								{$i18n.t('Generating tags...')}
+							</div>
+						{/if}
 					{/if}
 				{/if}
 			</div>
 		</div>
 	</div>
 {/key}
+
+{#if showIssueModal}
+	<IssueModal bind:show={showIssueModal} />
+{/if}
+
+{#if showSuggestionModal}
+	<SuggestionModal bind:show={showSuggestionModal} />
+{/if}
 
 <style>
 	.buttons::-webkit-scrollbar {

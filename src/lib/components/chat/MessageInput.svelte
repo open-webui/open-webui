@@ -15,12 +15,14 @@
 		showCallOverlay,
 		tools,
 		user as _user,
-		showControls
+		showControls,
+		ariaMessage
 	} from '$lib/stores';
 
 	import { blobToFile, compressImage, createMessagesList, findWordIndices } from '$lib/utils';
 	import { transcribeAudio } from '$lib/apis/audio';
 	import { uploadFile } from '$lib/apis/files';
+	import { getToolDisplayName } from '$lib/utils/mcp-tools';
 
 	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL, PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
 
@@ -38,6 +40,18 @@
 	import { deleteFileById } from '$lib/apis/files';
 
 	const i18n = getContext('i18n');
+
+	// Static references for i18next-parser - DO NOT REMOVE
+	// These ensure the parser finds the dynamic translation keys
+	const _ensureTranslationKeys = () => {
+		// Time tool translations (using actual English text as keys)
+		$i18n.t('MCP: Current Time');
+		$i18n.t('Get current date and time in any timezone');
+
+		// News tool translations
+		$i18n.t('MCP: News Headlines');
+		$i18n.t('Get latest news headlines from around the world');
+	};
 
 	export let transparentBackground = false;
 
@@ -130,6 +144,7 @@
 			files = [...files, { type: 'image', url: imageUrl }];
 			// Clean memory: Clear video srcObject
 			video.srcObject = null;
+			toast.success('Screen capture completed');
 		} catch (error) {
 			// Handle any errors (e.g., user cancels screen sharing)
 			console.error('Error capturing screen:', error);
@@ -187,6 +202,8 @@
 				if (uploadedFile.error) {
 					console.warn('File upload warning:', uploadedFile.error);
 					toast.warning(uploadedFile.error);
+				} else {
+					toast.success('File uploaded successfully');
 				}
 
 				fileItem.status = 'uploaded';
@@ -386,7 +403,7 @@
 													className=" {toolIdx !== 0 ? 'pl-0.5' : ''} flex-shrink-0"
 													placement="top"
 												>
-													{tool.name}
+													{getToolDisplayName(tool, $i18n)}
 												</Tooltip>
 
 												{#if toolIdx !== selectedToolIds.length - 1}
@@ -519,12 +536,14 @@
 
 								await tick();
 								document.getElementById('chat-input')?.focus();
+								ariaMessage.set($i18n.t('Voice recording cancelled'));
 							}}
 							on:confirm={async (e) => {
 								const { text, filename } = e.detail;
 								prompt = `${prompt}${text} `;
 
 								recording = false;
+								ariaMessage.set($i18n.t('Voice recording transcription completed'));
 
 								await tick();
 								document.getElementById('chat-input')?.focus();
@@ -729,10 +748,10 @@
 													}
 
 													// Command/Ctrl + Shift + Enter to submit a message pair
-													if (isCtrlPressed && e.key === 'Enter' && e.shiftKey) {
-														e.preventDefault();
-														createMessagePair(prompt);
-													}
+													// if (isCtrlPressed && e.key === 'Enter' && e.shiftKey) {
+													// 	e.preventDefault();
+													// 	createMessagePair(prompt);
+													// }
 
 													// Check if Ctrl + R is pressed
 													if (prompt === '' && isCtrlPressed && e.key.toLowerCase() === 'r') {
@@ -1092,6 +1111,7 @@
 
 															if (stream) {
 																recording = true;
+																ariaMessage.set($i18n.t('Voice recording started'));
 																const tracks = stream.getTracks();
 																tracks.forEach((track) => track.stop());
 															}
@@ -1174,6 +1194,7 @@
 													<Tooltip content={$i18n.t('Send message')}>
 														<button
 															id="send-message-button"
+															aria-label={$i18n.t('Send message')}
 															class="{prompt !== ''
 																? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
 																: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
@@ -1188,7 +1209,7 @@
 															>
 																<path
 																	fill-rule="evenodd"
-																	d="M8 14a.75.75 0 0 1-.75-.75V4.56L4.03 7.78a.75.75 0 0 1-1.06-1.06l4.5-4.5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.75 4.56v8.69A.75.75 0 0 1 8 14Z"
+																	d="M8 14a.75.75 0 01-.75-.75V4.56L4.03 7.78a.75.75 0 01-1.06-1.06l4.5-4.5a.75.75 0 011.06 0l4.5 4.5a.75.75 0 01-1.06 1.06L8.75 4.56v8.69A.75.75 0 018 14Z"
 																	clip-rule="evenodd"
 																/>
 															</svg>

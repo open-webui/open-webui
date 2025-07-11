@@ -19,10 +19,30 @@ log.setLevel(SRC_LOG_LEVELS["RAG"])
 def get_task_model_id(
     default_model_id: str, task_model: str, task_model_external: str, models
 ) -> str:
+    """
+    Get the model ID for background tasks like title and tag generation.
+    Fixed to prevent KeyError crashes that cause Kubernetes pod restarts.
+    """
     # Set the task model
     task_model_id = default_model_id
+
+    # CRITICAL FIX: Check if models dict exists and is not empty
+    if not models or not isinstance(models, dict):
+        # If no models available, return the default anyway to prevent KeyError
+        return default_model_id
+
+    # Check if the default model exists in the models dict
+    if task_model_id not in models:
+        # If default model doesn't exist, find the first available model
+        if models:
+            task_model_id = next(iter(models.keys()))
+        else:
+            # If no models available, return the default anyway
+            return default_model_id
+
     # Check if the user has a custom task model and use that model
-    if models[task_model_id]["owned_by"] == "ollama":
+    # Add safety check to ensure model exists before accessing its properties
+    if task_model_id in models and models[task_model_id].get("owned_by") == "ollama":
         if task_model and task_model in models:
             task_model_id = task_model
     else:

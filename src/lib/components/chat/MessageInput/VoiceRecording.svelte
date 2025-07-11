@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { createEventDispatcher, tick, getContext, onMount, onDestroy } from 'svelte';
-	import { config, settings } from '$lib/stores';
+	import { ariaMessage, config, settings } from '$lib/stores';
 	import { blobToFile, calculateSHA256, findWordIndices } from '$lib/utils';
 
 	import { transcribeAudio } from '$lib/apis/audio';
@@ -267,6 +267,7 @@
 	const confirmRecording = async () => {
 		loading = true;
 		confirmed = true;
+		ariaMessage.set($i18n.t('Voice recording transcription started'));
 
 		if (recording && mediaRecorder) {
 			await mediaRecorder.stop();

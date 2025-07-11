@@ -189,6 +189,12 @@ async def get_historical_tokens(
 @router.get("/models")
 async def get_models(user=Depends(get_metrics_user)):
     models = MessageMetrics.get_used_models() or []
+
+    # For analyst role, we should filter models by domain if needed
+    # However, since this is for metrics display, analysts should see all models
+    # that have been used (they'll be domain-filtered in the actual data queries)
+    # This allows the dropdown to show all available models for selection
+
     return {"models": models}
 
 

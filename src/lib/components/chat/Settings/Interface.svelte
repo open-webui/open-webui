@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { config, settings, user } from '$lib/stores';
+	import { ariaMessage, config, settings, user } from '$lib/stores';
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { updateUserInfo } from '$lib/apis/users';
@@ -36,7 +36,6 @@
 	};
 
 	// Admin - Show Update Available Toast
-	let showUpdateToast = true;
 	let showChangelog = true;
 
 	let showEmojiInCall = false;
@@ -61,11 +60,6 @@
 	const toggleLandingPageMode = async () => {
 		landingPageMode = landingPageMode === '' ? 'chat' : '';
 		saveSettings({ landingPageMode: landingPageMode });
-	};
-
-	const toggleShowUpdateToast = async () => {
-		showUpdateToast = !showUpdateToast;
-		saveSettings({ showUpdateToast: showUpdateToast });
 	};
 
 	const toggleNotificationSound = async () => {
@@ -184,7 +178,6 @@
 		responseAutoCopy = $settings.responseAutoCopy ?? false;
 
 		showUsername = $settings.showUsername ?? false;
-		showUpdateToast = $settings.showUpdateToast ?? true;
 		showChangelog = $settings.showChangelog ?? true;
 
 		showEmojiInCall = $settings.showEmojiInCall ?? false;
@@ -223,13 +216,14 @@
 >
 	<div class=" space-y-3 overflow-y-scroll max-h-[28rem] lg:max-h-full">
 		<div>
-			<div class=" mb-1.5 text-sm font-medium">{$i18n.t('UI')}</div>
+			<h3 class=" mb-1.5 text-sm font-medium">{$i18n.t('UI')}</h3>
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
 					<div class=" self-center text-xs">{$i18n.t('Landing Page Mode')}</div>
 
 					<button
+						id="landing-page-mode-button"
 						class="p-1 px-3 text-xs flex rounded transition"
 						on:click={() => {
 							toggleLandingPageMode();
@@ -253,6 +247,11 @@
 						class="p-1 px-3 text-xs flex rounded transition"
 						on:click={() => {
 							toggleChatBubble();
+							ariaMessage.set(
+								chatBubble
+									? $i18n.t('Display username option hidden below')
+									: $i18n.t('Display username option visible below')
+							);
 						}}
 						type="button"
 					>
@@ -335,28 +334,6 @@
 				<div>
 					<div class=" py-0.5 flex w-full justify-between">
 						<div class=" self-center text-xs">
-							{$i18n.t('Toast notifications for new updates')}
-						</div>
-
-						<button
-							class="p-1 px-3 text-xs flex rounded transition"
-							on:click={() => {
-								toggleShowUpdateToast();
-							}}
-							type="button"
-						>
-							{#if showUpdateToast === true}
-								<span class="ml-2 self-center">{$i18n.t('On')}</span>
-							{:else}
-								<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-							{/if}
-						</button>
-					</div>
-				</div>
-
-				<div>
-					<div class=" py-0.5 flex w-full justify-between">
-						<div class=" self-center text-xs">
 							{$i18n.t(`Show "What's New" modal on login`)}
 						</div>
 
@@ -377,7 +354,7 @@
 				</div>
 			{/if}
 
-			<div class=" my-1.5 text-sm font-medium">{$i18n.t('Chat')}</div>
+			<h3 class=" my-1.5 text-sm font-medium">{$i18n.t('Chat')}</h3>
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
@@ -547,7 +524,7 @@
 				</div>
 			</div>
 
-			<div class=" my-1.5 text-sm font-medium">{$i18n.t('Voice')}</div>
+			<h3 class=" my-1.5 text-sm font-medium">{$i18n.t('Voice')}</h3>
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
@@ -589,7 +566,7 @@
 				</div>
 			</div>
 
-			<div class=" my-1.5 text-sm font-medium">{$i18n.t('File')}</div>
+			<h3 class=" my-1.5 text-sm font-medium">{$i18n.t('File')}</h3>
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">

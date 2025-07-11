@@ -815,7 +815,7 @@ if OLLAMA_BASE_URL == "" and OLLAMA_API_BASE_URL != "":
 if ENV == "prod":
     if OLLAMA_BASE_URL == "/ollama" and not K8S_FLAG:
         if USE_OLLAMA_DOCKER.lower() == "true":
-            # if you use all-in-one docker container (Open WebUI + Ollama)
+            # if you use all-in-one docker container (CANChat + Ollama)
             # with the docker build arg USE_OLLAMA=true (--build-arg="USE_OLLAMA=true") this only works with http://localhost:11434
             OLLAMA_BASE_URL = "http://localhost:11434"
         else:
@@ -835,6 +835,29 @@ OLLAMA_BASE_URLS = PersistentConfig(
 OLLAMA_API_CONFIGS = PersistentConfig(
     "OLLAMA_API_CONFIGS",
     "ollama.api_configs",
+    {},
+)
+
+####################################
+# MCP (Model Context Protocol)
+####################################
+
+ENABLE_MCP_API = PersistentConfig(
+    "ENABLE_MCP_API",
+    "mcp.enabled",
+    os.environ.get("ENABLE_MCP_API", "False").lower() == "true",
+)
+
+MCP_BASE_URL = os.environ.get("MCP_BASE_URL", "")
+MCP_BASE_URLS = os.environ.get("MCP_BASE_URLS", "")
+MCP_BASE_URLS = MCP_BASE_URLS if MCP_BASE_URLS != "" else MCP_BASE_URL
+
+MCP_BASE_URLS = [url.strip() for url in MCP_BASE_URLS.split(";") if url.strip()]
+MCP_BASE_URLS = PersistentConfig("MCP_BASE_URLS", "mcp.base_urls", MCP_BASE_URLS)
+
+MCP_API_CONFIGS = PersistentConfig(
+    "MCP_API_CONFIGS",
+    "mcp.api_configs",
     {},
 )
 
@@ -1406,7 +1429,7 @@ Analyze the chat history to determine the necessity of generating search queries
 - Always prioritize providing actionable and broad queries that maximize informational coverage.
 
 ### Output:
-Strictly return in JSON format: 
+Strictly return in JSON format:
 {
   "queries": ["query1", "query2"]
 }
@@ -1420,7 +1443,7 @@ Strictly return in JSON format:
 ENABLE_AUTOCOMPLETE_GENERATION = PersistentConfig(
     "ENABLE_AUTOCOMPLETE_GENERATION",
     "task.autocomplete.enable",
-    os.environ.get("ENABLE_AUTOCOMPLETE_GENERATION", "True").lower() == "true",
+    os.environ.get("ENABLE_AUTOCOMPLETE_GENERATION", "False").lower() == "true",
 )
 
 AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH = PersistentConfig(
@@ -1437,44 +1460,44 @@ AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
 
 
 DEFAULT_AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE = """### Task:
-You are an autocompletion system. Continue the text in `<text>` based on the **completion type** in `<type>` and the given language.  
+You are an autocompletion system. Continue the text in `<text>` based on the **completion type** in `<type>` and the given language.
 
 ### **Instructions**:
-1. Analyze `<text>` for context and meaning.  
-2. Use `<type>` to guide your output:  
-   - **General**: Provide a natural, concise continuation.  
-   - **Search Query**: Complete as if generating a realistic search query.  
-3. Start as if you are directly continuing `<text>`. Do **not** repeat, paraphrase, or respond as a model. Simply complete the text.  
+1. Analyze `<text>` for context and meaning.
+2. Use `<type>` to guide your output:
+   - **General**: Provide a natural, concise continuation.
+   - **Search Query**: Complete as if generating a realistic search query.
+3. Start as if you are directly continuing `<text>`. Do **not** repeat, paraphrase, or respond as a model. Simply complete the text.
 4. Ensure the continuation:
-   - Flows naturally from `<text>`.  
-   - Avoids repetition, overexplaining, or unrelated ideas.  
-5. If unsure, return: `{ "text": "" }`.  
+   - Flows naturally from `<text>`.
+   - Avoids repetition, overexplaining, or unrelated ideas.
+5. If unsure, return: `{ "text": "" }`.
 
 ### **Output Rules**:
 - Respond only in JSON format: `{ "text": "<your_completion>" }`.
 
 ### **Examples**:
-#### Example 1:  
-Input:  
-<type>General</type>  
-<text>The sun was setting over the horizon, painting the sky</text>  
-Output:  
+#### Example 1:
+Input:
+<type>General</type>
+<text>The sun was setting over the horizon, painting the sky</text>
+Output:
 { "text": "with vibrant shades of orange and pink." }
 
-#### Example 2:  
-Input:  
-<type>Search Query</type>  
-<text>Top-rated restaurants in</text>  
-Output:  
-{ "text": "New York City for Italian cuisine." }  
+#### Example 2:
+Input:
+<type>Search Query</type>
+<text>Top-rated restaurants in</text>
+Output:
+{ "text": "New York City for Italian cuisine." }
 
 ---
 ### Context:
 <chat_history>
 {{MESSAGES:END:6}}
 </chat_history>
-<type>{{TYPE}}</type>  
-<text>{{PROMPT}}</text>  
+<type>{{TYPE}}</type>
+<text>{{PROMPT}}</text>
 #### Output:
 """
 
@@ -1529,7 +1552,20 @@ MILVUS_DB = os.environ.get("MILVUS_DB", "default")
 
 # Qdrant
 QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY", None)
-QDRANT_URL = os.environ.get("QDRANT_URL", "http://localhost:6333")
+# Quantize vectors and keep quantized data in memory to reduce memory usage
+# Docs: https://qdrant.tech/documentation/guides/optimize/
+QDRANT_ENABLE_QUANTIZATION = (
+    os.environ.get("QDRANT_ENABLE_QUANTIZATION", "False").lower() == "true"
+)
+QDRANT_ON_DISK_HNSW = os.environ.get("QDRANT_ON_DISK_HNSW", "False").lower() == "true"
+QDRANT_ON_DISK_PAYLOAD = (
+    os.environ.get("QDRANT_ON_DISK_PAYLOAD", "False").lower() == "true"
+)
+QDRANT_ON_DISK_VECTOR = (
+    os.environ.get("QDRANT_ON_DISK_VECTOR", "False").lower() == "true"
+)
+QDRANT_PREFER_GRPC = os.environ.get("QDRANT_PREFER_GRPC", "False").lower() == "true"
+QDRANT_URL = os.environ.get("QDRANT_URL", "http://localhost")
 QDRANT_TIMEOUT_SECONDS = os.environ.get("QDRANT_TIMEOUT_SECONDS", 5)
 
 # OpenSearch
@@ -1735,13 +1771,13 @@ Respond to the user query using the provided context, incorporating inline citat
 - Respond in the same language as the user's query.
 - If the context is unreadable or of poor quality, inform the user and provide the best possible answer.
 - If the answer isn't present in the context but you possess the knowledge, explain this to the user and provide the answer using your own understanding.
-- **Only include inline citations using [source_id] when a <source_id> tag is explicitly provided in the context.**  
-- Do not cite if the <source_id> tag is not provided in the context.  
+- **Only include inline citations using [source_id] when a <source_id> tag is explicitly provided in the context.**
+- Do not cite if the <source_id> tag is not provided in the context.
 - Do not use XML tags in your response.
 - Ensure citations are concise and directly related to the information provided.
 
 ### Example of Citation:
-If the user asks about a specific topic and the information is found in "whitepaper.pdf" with a provided <source_id>, the response should include the citation like so:  
+If the user asks about a specific topic and the information is found in "whitepaper.pdf" with a provided <source_id>, the response should include the citation like so:
 * "According to the study, the proposed method increases efficiency by 20% [whitepaper.pdf]."
 If no <source_id> is present, the response should omit the citation.
 
@@ -1808,6 +1844,12 @@ ENABLE_RAG_WEB_SEARCH = PersistentConfig(
     "ENABLE_RAG_WEB_SEARCH",
     "rag.web.search.enable",
     os.getenv("ENABLE_RAG_WEB_SEARCH", "False").lower() == "true",
+)
+
+BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = PersistentConfig(
+    "BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL",
+    "rag.web.search.bypass_embedding_and_retrieval",
+    os.getenv("BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL", "False").lower() == "true",
 )
 
 RAG_WEB_SEARCH_ENGINE = PersistentConfig(
@@ -2379,6 +2421,16 @@ SURVEY_URL_FR = PersistentConfig(
     "SURVEY_URL_FR",
     "survey.url.fr",
     os.environ.get("SURVEY_URL_FR", ""),
+)
+TRAINING_URL = PersistentConfig(
+    "TRAINING_URL",
+    "training.url",
+    os.environ.get("TRAINING_URL", ""),
+)
+TRAINING_URL_FR = PersistentConfig(
+    "TRAINING_URL_FR",
+    "training.url.fr",
+    os.environ.get("TRAINING_URL_FR", ""),
 )
 
 ####################################

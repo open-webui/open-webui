@@ -10,6 +10,8 @@
 
 	export let onClose: Function = () => {};
 	export let devices: any;
+	export let buttonID = '';
+	export let buttonClass = '';
 
 	let show = false;
 </script>
@@ -21,6 +23,8 @@
 			onClose();
 		}
 	}}
+	{buttonID}
+	{buttonClass}
 >
 	<slot />
 

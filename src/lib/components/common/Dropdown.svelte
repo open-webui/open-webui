@@ -5,8 +5,11 @@
 	import { flyAndScale } from '$lib/utils/transitions';
 
 	export let show = false;
-	export let side = 'bottom';
-	export let align = 'start';
+
+	export let side: 'bottom' | 'top' | 'right' | 'left' = 'bottom';
+	export let align: 'start' | 'center' | 'end' = 'start';
+	export let ariaLabel: string | undefined = undefined;
+
 	const dispatch = createEventDispatcher();
 </script>
 
@@ -18,7 +21,7 @@
 	}}
 	typeahead={false}
 >
-	<DropdownMenu.Trigger>
+	<DropdownMenu.Trigger aria-label={ariaLabel}>
 		<slot />
 	</DropdownMenu.Trigger>
 

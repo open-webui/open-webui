@@ -7,7 +7,6 @@ import os
 import shutil
 import sys
 import time
-import random
 
 from contextlib import asynccontextmanager
 from urllib.parse import urlencode, parse_qs, urlparse
@@ -17,7 +16,6 @@ from sqlalchemy import text
 from typing import Optional
 from aiocache import cached
 import aiohttp
-import requests
 
 
 from fastapi import (
@@ -75,6 +73,8 @@ from open_webui.routers import (
     users,
     jira,
     utils,
+    mcp,
+    crew_mcp,
 )
 
 from open_webui.routers.retrieval import (
@@ -93,9 +93,15 @@ from open_webui.config import (
     # Ollama
     DOCS_URL,
     DOCS_URL_FR,
+    TRAINING_URL,
+    TRAINING_URL_FR,
     ENABLE_OLLAMA_API,
     OLLAMA_BASE_URLS,
     OLLAMA_API_CONFIGS,
+    # MCP (Model Context Protocol)
+    ENABLE_MCP_API,
+    MCP_BASE_URLS,
+    MCP_API_CONFIGS,
     # OpenAI
     ENABLE_OPENAI_API,
     OPENAI_API_BASE_URLS,
@@ -194,6 +200,7 @@ from open_webui.config import (
     ENABLE_RAG_LOCAL_WEB_FETCH,
     ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
     ENABLE_RAG_WEB_SEARCH,
+    BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL,
     ENABLE_GOOGLE_DRIVE_INTEGRATION,
     UPLOAD_DIR,
     # WebUI
@@ -333,6 +340,11 @@ class SPAStaticFiles(StaticFiles):
             return await super().get_response(path, scope)
         except (HTTPException, StarletteHTTPException) as ex:
             if ex.status_code == 404:
+                # Don't serve index.html for API routes
+                if path.startswith(
+                    ("api/", "mcp/", "ollama/", "openai/", "ws/", "health", "oauth/")
+                ):
+                    raise ex
                 return await super().get_response("index.html", scope)
             else:
                 raise ex
@@ -360,8 +372,64 @@ async def lifespan(app: FastAPI):
     if RESET_CONFIG_ON_START:
         reset_config()
 
-    asyncio.create_task(periodic_usage_pool_cleanup())
-    yield
+    # Initialize FastMCP manager
+    try:
+        from open_webui.mcp_manager import get_mcp_manager
+
+        app.state.mcp_manager = get_mcp_manager()
+        log.info("FastMCP manager initialized")
+
+        # Initialize all MCP servers (built-in and external) if enabled
+        if app.state.config.ENABLE_MCP_API:
+            await app.state.mcp_manager.initialize_all_servers()
+            log.info("All MCP servers initialized")
+
+            # Note: Built-in MCP servers use stdio transport and are managed internally
+            # External MCP servers are loaded from database and managed via API
+
+    except Exception as e:
+        log.error(f"Failed to initialize FastMCP manager: {e}")
+
+    # Start periodic cleanup task in background (should not affect app lifecycle)
+    cleanup_task = asyncio.create_task(periodic_usage_pool_cleanup())
+
+    # Add task completion callback to log if it exits
+    def on_cleanup_done(task):
+        try:
+            if task.cancelled():
+                log.info("Periodic usage pool cleanup task was cancelled")
+            elif task.exception():
+                log.error(
+                    f"Periodic usage pool cleanup task failed: {task.exception()}"
+                )
+            else:
+                log.info("Periodic usage pool cleanup task completed")
+        except Exception as e:
+            log.error(f"Error in cleanup task callback: {e}")
+
+    cleanup_task.add_done_callback(on_cleanup_done)
+
+    try:
+        yield
+    finally:
+        # Cancel the cleanup task if it's still running
+        if not cleanup_task.done():
+            log.info("Cancelling periodic usage pool cleanup task")
+            cleanup_task.cancel()
+            try:
+                await cleanup_task
+            except asyncio.CancelledError:
+                log.info("Periodic usage pool cleanup task cancelled successfully")
+            except Exception as e:
+                log.error(f"Error cancelling cleanup task: {e}")
+
+        # Cleanup MCP manager and all its server processes
+        if hasattr(app.state, "mcp_manager") and app.state.mcp_manager:
+            try:
+                await app.state.mcp_manager.cleanup()
+                log.info("MCP manager cleanup completed")
+            except Exception as e:
+                log.error(f"Error during MCP manager cleanup: {e}")
 
 
 app = FastAPI(
@@ -386,6 +454,18 @@ app.state.config.OLLAMA_BASE_URLS = OLLAMA_BASE_URLS
 app.state.config.OLLAMA_API_CONFIGS = OLLAMA_API_CONFIGS
 
 app.state.OLLAMA_MODELS = {}
+
+########################################
+#
+# MCP (Model Context Protocol)
+#
+########################################
+
+app.state.config.ENABLE_MCP_API = ENABLE_MCP_API
+app.state.config.MCP_BASE_URLS = MCP_BASE_URLS
+app.state.config.MCP_API_CONFIGS = MCP_API_CONFIGS
+
+app.state.MCP_TOOLS = {}
 
 ########################################
 #
@@ -517,6 +597,9 @@ app.state.config.YOUTUBE_LOADER_PROXY_URL = YOUTUBE_LOADER_PROXY_URL
 
 
 app.state.config.ENABLE_RAG_WEB_SEARCH = ENABLE_RAG_WEB_SEARCH
+app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = (
+    BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
+)
 app.state.config.RAG_WEB_SEARCH_ENGINE = RAG_WEB_SEARCH_ENGINE
 app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST = RAG_WEB_SEARCH_DOMAIN_FILTER_LIST
 
@@ -685,6 +768,8 @@ app.state.config.DOCS_URL = DOCS_URL
 app.state.config.DOCS_URL_FR = DOCS_URL_FR
 app.state.config.SURVEY_URL = SURVEY_URL
 app.state.config.SURVEY_URL_FR = SURVEY_URL_FR
+app.state.config.TRAINING_URL = TRAINING_URL
+app.state.config.TRAINING_URL_FR = TRAINING_URL_FR
 
 
 ########################################
@@ -794,6 +879,13 @@ app.mount("/ws", socket_app)
 
 app.include_router(ollama.router, prefix="/ollama", tags=["ollama"])
 app.include_router(openai.router, prefix="/openai", tags=["openai"])
+app.include_router(
+    mcp.router, prefix="/mcp", tags=["mcp"]
+)  # For verification endpoints used by GUI
+app.include_router(mcp.router, prefix="/api/v1/mcp", tags=["mcp"])  # For tools API
+app.include_router(
+    crew_mcp.router, prefix="/api/v1/crew-mcp", tags=["crew-mcp"]
+)  # CrewAI MCP integration
 
 
 app.include_router(pipelines.router, prefix="/api/v1/pipelines", tags=["pipelines"])
@@ -827,6 +919,7 @@ app.include_router(
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
 app.include_router(jira.router, prefix="/api/v1/jira", tags=["jira"])
 app.include_router(metrics.router, prefix="/api/v1/metrics", tags=["metrics"])
+app.include_router(crew_mcp.router, prefix="/api/v1/crew-mcp", tags=["crew-mcp"])
 
 
 ##################################
@@ -1072,6 +1165,8 @@ async def get_app_config(request: Request):
                 "docs_url_fr": app.state.config.DOCS_URL_FR,
                 "survey_url": app.state.config.SURVEY_URL,
                 "survey_url_fr": app.state.config.SURVEY_URL_FR,
+                "training_url": app.state.config.TRAINING_URL,
+                "training_url_fr": app.state.config.TRAINING_URL_FR,
                 "audio": {
                     "tts": {
                         "engine": app.state.config.TTS_ENGINE,
@@ -1117,29 +1212,6 @@ async def get_app_version():
     return {
         "version": VERSION,
     }
-
-
-@app.get("/api/version/updates")
-async def get_app_latest_release_version():
-    if OFFLINE_MODE:
-        log.debug(
-            f"Offline mode is enabled, returning current version as latest version"
-        )
-        return {"current": VERSION, "latest": VERSION}
-    try:
-        timeout = aiohttp.ClientTimeout(total=1)
-        async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
-            async with session.get(
-                "https://api.github.com/repos/ssc-dsai/canchat-v2/releases/latest"
-            ) as response:
-                response.raise_for_status()
-                data = await response.json()
-                latest_version = data["tag_name"]
-
-                return {"current": VERSION, "latest": latest_version[1:]}
-    except Exception as e:
-        log.debug(e)
-        return {"current": VERSION, "latest": VERSION}
 
 
 @app.get("/api/changelog")

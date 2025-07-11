@@ -13,6 +13,7 @@
 	import Interface from './Settings/Interface.svelte';
 	import Models from './Settings/Models.svelte';
 	import Connections from './Settings/Connections.svelte';
+	import MCP from './Settings/MCP.svelte';
 	import Documents from './Settings/Documents.svelte';
 	import WebSearch from './Settings/WebSearch.svelte';
 	import ChartBar from '../icons/ChartBar.svelte';
@@ -46,7 +47,7 @@
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 lg:flex-none flex text-right transition {selectedTab ===
 			'general'
 				? ''
-				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+				: ' text-gray-600 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			on:click={() => {
 				selectedTab = 'general';
 			}}
@@ -72,7 +73,7 @@
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'connections'
 				? ''
-				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+				: ' text-gray-600 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			on:click={() => {
 				selectedTab = 'connections';
 			}}
@@ -94,9 +95,38 @@
 
 		<button
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
+			'mcp'
+				? ''
+				: ' text-gray-600 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+			on:click={() => {
+				selectedTab = 'mcp';
+			}}
+		>
+			<div class=" self-center mr-2">
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 24 24"
+					fill="currentColor"
+					class="w-4 h-4"
+				>
+					<path
+						d="M8.25 3v1.5c0 .414.336.75.75.75s.75-.336.75-.75V3h3v1.5c0 .414.336.75.75.75s.75-.336.75-.75V3h3a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3h3Z"
+					/>
+					<path
+						fill-rule="evenodd"
+						d="M9 9a.75.75 0 0 1 .75-.75h4.5a.75.75 0 0 1 0 1.5h-4.5A.75.75 0 0 1 9 9Zm0 3a.75.75 0 0 1 .75-.75h4.5a.75.75 0 0 1 0 1.5h-4.5A.75.75 0 0 1 9 12Zm0 3a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 0 1.5h-1.5A.75.75 0 0 1 9 15Z"
+						clip-rule="evenodd"
+					/>
+				</svg>
+			</div>
+			<div class=" self-center">{$i18n.t('MCP')}</div>
+		</button>
+
+		<button
+			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'models'
 				? ''
-				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+				: ' text-gray-600 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			on:click={() => {
 				selectedTab = 'models';
 			}}
@@ -122,7 +152,7 @@
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'evaluations'
 				? ''
-				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+				: ' text-gray-600 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			on:click={() => {
 				selectedTab = 'evaluations';
 			}}
@@ -137,7 +167,7 @@
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'documents'
 				? ''
-				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+				: ' text-gray-600 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			on:click={() => {
 				selectedTab = 'documents';
 			}}
@@ -167,7 +197,7 @@
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'web'
 				? ''
-				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+				: ' text-gray-600 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			on:click={() => {
 				selectedTab = 'web';
 			}}
@@ -191,7 +221,7 @@
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'interface'
 				? ''
-				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+				: ' text-gray-600 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			on:click={() => {
 				selectedTab = 'interface';
 			}}
@@ -217,7 +247,7 @@
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'audio'
 				? ''
-				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+				: ' text-gray-600 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			on:click={() => {
 				selectedTab = 'audio';
 			}}
@@ -244,7 +274,7 @@
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'images'
 				? ''
-				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+				: ' text-gray-600 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			on:click={() => {
 				selectedTab = 'images';
 			}}
@@ -270,7 +300,7 @@
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'pipelines'
 				? ''
-				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+				: ' text-gray-600 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			on:click={() => {
 				selectedTab = 'pipelines';
 			}}
@@ -300,7 +330,7 @@
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'db'
 				? ''
-				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+				: ' text-gray-600 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			on:click={() => {
 				selectedTab = 'db';
 			}}
@@ -337,6 +367,12 @@
 			/>
 		{:else if selectedTab === 'connections'}
 			<Connections
+				on:save={() => {
+					toast.success($i18n.t('Settings saved successfully!'));
+				}}
+			/>
+		{:else if selectedTab === 'mcp'}
+			<MCP
 				on:save={() => {
 					toast.success($i18n.t('Settings saved successfully!'));
 				}}

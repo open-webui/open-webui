@@ -4,11 +4,12 @@
 	import { getLanguages } from '$lib/i18n';
 	const dispatch = createEventDispatcher();
 
-	import { models, settings, theme, user } from '$lib/stores';
+	import { ariaMessage, models, settings, theme, user } from '$lib/stores';
 
 	const i18n = getContext('i18n');
 
 	import AdvancedParams from './Advanced/AdvancedParams.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	export let saveSettings: Function;
 	export let getModels: Function;
@@ -138,12 +139,13 @@
 <div class="flex flex-col h-full justify-between text-sm">
 	<div class="  overflow-y-scroll max-h-[28rem] lg:max-h-full">
 		<div class="">
-			<div class=" mb-1 text-sm font-medium">{$i18n.t('Settings')}</div>
+			<h3 class=" mb-1 text-sm font-medium">{$i18n.t('Settings')}</h3>
 
 			<div class="flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">{$i18n.t('Theme')}</div>
 				<div class="flex items-center relative">
 					<select
+						id="theme-selection"
 						class=" dark:bg-gray-900 w-fit pr-8 rounded py-2 px-2 text-xs bg-transparent outline-none text-right"
 						bind:value={selectedTheme}
 						placeholder="Select a theme"
@@ -181,22 +183,29 @@
 			<hr class=" dark:border-gray-850 my-3" />
 
 			<div>
-				<div class=" my-2.5 text-sm font-medium">{$i18n.t('System Prompt')}</div>
-				<textarea
-					bind:value={system}
-					class="w-full rounded-lg p-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
-					rows="4"
-				/>
+				<h3 class=" my-2.5 text-sm font-medium">{$i18n.t('System Prompt')}</h3>
+				<Tooltip content={$i18n.t('Enter system prompt here')} placement="top-start">
+					<textarea
+						bind:value={system}
+						class="w-full rounded-lg p-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
+						rows="4"
+					/>
+				</Tooltip>
 			</div>
 
 			<div class="mt-2 space-y-3 pr-1.5">
 				<div class="flex justify-between items-center text-sm">
-					<div class="  font-medium">{$i18n.t('Advanced Parameters')}</div>
+					<h3 class="  font-medium">{$i18n.t('Advanced Parameters')}</h3>
 					<button
 						class=" text-xs font-medium text-gray-500"
 						type="button"
 						on:click={() => {
 							showAdvanced = !showAdvanced;
+							ariaMessage.set(
+								showAdvanced
+									? $i18n.t('Showing advanced parameters below')
+									: $i18n.t('Hiding advanced parameters')
+							);
 						}}>{showAdvanced ? $i18n.t('Hide') : $i18n.t('Show')}</button
 					>
 				</div>

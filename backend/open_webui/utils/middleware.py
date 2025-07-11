@@ -59,7 +59,7 @@ from open_webui.utils.misc import (
     get_last_assistant_message,
     prepend_to_first_user_message_content,
 )
-from open_webui.utils.tools import get_tools
+from open_webui.utils.tools import get_tools, get_tools_async
 from open_webui.utils.plugin import load_function_module_by_id
 
 
@@ -226,7 +226,7 @@ async def chat_completion_tools_handler(
         request.app.state.config.TASK_MODEL_EXTERNAL,
         models,
     )
-    tools = get_tools(
+    tools = await get_tools_async(
         request,
         tool_ids,
         user,
@@ -255,50 +255,201 @@ async def chat_completion_tools_handler(
         body["messages"], task_model_id, tools_function_calling_prompt
     )
 
+    # Debug: Log the user query
+    user_message = get_last_user_message(body["messages"])
+    log.info(f"=== USER QUERY FOR FUNCTION CALLING ===")
+    log.info(f"User query: {user_message}")
+    log.info(f"======================================")
+
     try:
         response = await generate_chat_completion(request, form_data=payload, user=user)
         log.debug(f"{response=}")
         content = await get_content_from_response(response)
-        log.debug(f"{content=}")
+        log.info(f"=== FUNCTION CALLING RESPONSE ===")
+        log.info(f"Model response for tool calling: {content}")
+        log.info(f"==================================")
 
         if not content:
             return body, {}
 
+        # Check if the response is an empty string (indicating no tools should be used)
+        content_stripped = content.strip()
+        if (
+            content_stripped == '""'
+            or content_stripped == ""
+            or content_stripped.lower() in ["", '""', "no tools needed", "none"]
+        ):
+            log.debug("Model indicated no tools should be used")
+            return body, {}
+
         try:
-            content = content[content.find("{") : content.rfind("}") + 1]
-            if not content:
-                raise Exception("No JSON object found in the response")
+            # Parse multiple JSON objects from the response
+            tool_calls = []
 
-            result = json.loads(content)
+            log.info(f"=== PARSING TOOL CALLS ===")
+            log.info(f"Raw content to parse: {repr(content)}")
+            log.info(f"==========================")
 
-            tool_function_name = result.get("name", None)
-            if tool_function_name not in tools:
-                return body, {}
-
-            tool_function_params = result.get("parameters", {})
-
+            # First, try to parse as a single JSON array
             try:
-                required_params = (
-                    tools[tool_function_name]
-                    .get("spec", {})
-                    .get("parameters", {})
-                    .get("required", [])
-                )
-                tool_function = tools[tool_function_name]["callable"]
-                tool_function_params = {
-                    k: v
-                    for k, v in tool_function_params.items()
-                    if k in required_params
-                }
-                tool_output = await tool_function(**tool_function_params)
+                if content.strip().startswith("[") and content.strip().endswith("]"):
+                    parsed_array = json.loads(content.strip())
+                    log.debug(f"Parsed tool calls as JSON array: {parsed_array}")
 
-            except Exception as e:
-                tool_output = str(e)
+                    # Handle case where array elements are JSON strings that need to be parsed again
+                    tool_calls = []
+                    for item in parsed_array:
+                        if isinstance(item, str):
+                            # Try to parse the string as JSON
+                            try:
+                                parsed_item = json.loads(item)
+                                tool_calls.append(parsed_item)
+                                log.debug(f"Parsed JSON string in array: {parsed_item}")
+                            except json.JSONDecodeError:
+                                log.warning(
+                                    f"Failed to parse array item as JSON: {item}"
+                                )
+                        elif isinstance(item, dict):
+                            # Already a dictionary, use as-is
+                            tool_calls.append(item)
+                        else:
+                            log.warning(
+                                f"Unexpected array item type: {type(item)}, value: {item}"
+                            )
+                else:
+                    raise json.JSONDecodeError("Not a JSON array", content, 0)
+            except json.JSONDecodeError:
+                # If not a JSON array, try to parse multiple JSON objects separated by newlines
+                lines = content.strip().split("\n")
+                for line in lines:
+                    line = line.strip()
+                    if line and line.startswith("{") and line.endswith("}"):
+                        try:
+                            tool_call = json.loads(line)
+                            tool_calls.append(tool_call)
+                            log.debug(f"Parsed individual tool call: {tool_call}")
+                        except json.JSONDecodeError as e:
+                            log.warning(
+                                f"Failed to parse line as JSON: {line}, error: {e}"
+                            )
+                            continue
 
-            if isinstance(tool_output, str):
-                if tools[tool_function_name]["citation"]:
-                    sources.append(
-                        {
+                # If no valid tool calls found, try to find all JSON objects in the content
+                if not tool_calls:
+                    import re
+
+                    # Find all JSON-like objects in the content
+                    json_pattern = r"\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}"
+                    json_matches = re.findall(json_pattern, content)
+
+                    for match in json_matches:
+                        try:
+                            tool_call = json.loads(match)
+                            if "name" in tool_call:  # Ensure it looks like a tool call
+                                tool_calls.append(tool_call)
+                                log.debug(f"Parsed tool call from regex: {tool_call}")
+                        except json.JSONDecodeError:
+                            continue
+
+                # If still no valid tool calls found, try the old single JSON approach
+                if not tool_calls:
+                    json_start = content.find("{")
+                    json_end = content.rfind("}") + 1
+
+                    if json_start == -1 or json_end == 0:
+                        log.debug(
+                            "No JSON object found in response, treating as no tool usage"
+                        )
+                        return body, {}
+
+                    json_content = content[json_start:json_end]
+                    log.debug(f"Extracted JSON content: {json_content}")
+
+                    try:
+                        result = json.loads(json_content)
+                        tool_calls = [result]
+                    except json.JSONDecodeError as json_error:
+                        log.error(f"JSON parsing failed for content: {json_content}")
+                        log.error(f"JSON error: {json_error}")
+                        log.error(f"Full response content: {repr(content)}")
+                        # Try to find a more complete JSON object by looking for balanced braces
+                        brace_count = 0
+                        json_end_corrected = json_start
+                        for i, char in enumerate(content[json_start:], json_start):
+                            if char == "{":
+                                brace_count += 1
+                            elif char == "}":
+                                brace_count -= 1
+                                if brace_count == 0:
+                                    json_end_corrected = i + 1
+                                    break
+
+                        if json_end_corrected > json_start:
+                            json_content = content[json_start:json_end_corrected]
+                            log.debug(f"Trying corrected JSON content: {json_content}")
+                            try:
+                                result = json.loads(json_content)
+                                tool_calls = [result]
+                            except json.JSONDecodeError:
+                                log.error(
+                                    f"Corrected JSON parsing also failed, treating as no tool usage"
+                                )
+                                return body, {}
+                        else:
+                            log.error(
+                                f"Could not find balanced JSON, treating as no tool usage"
+                            )
+                            return body, {}
+
+            log.info(f"=== PARSED TOOL CALLS ===")
+            log.info(f"Total tool calls extracted: {len(tool_calls)}")
+            for i, call in enumerate(tool_calls):
+                log.info(f"Tool call {i}: {call}")
+            log.info(f"=========================")
+
+            # Process all tool calls
+            for tool_call in tool_calls:
+                tool_function_name = tool_call.get("name", None)
+                if not tool_function_name or tool_function_name not in tools:
+                    log.debug(
+                        f"Tool function '{tool_function_name}' not found in available tools"
+                    )
+                    continue
+
+                tool_function_params = tool_call.get("parameters", {})
+                log.info(f"=== TOOL CALL DEBUG ===")
+                log.info(f"Tool: {tool_function_name}")
+                log.info(f"Raw parameters from model: {tool_function_params}")
+                log.info(f"=======================)")
+
+                try:
+                    # Get all parameters from the tool spec, not just required ones
+                    all_params = (
+                        tools[tool_function_name]
+                        .get("spec", {})
+                        .get("parameters", {})
+                        .get("properties", {})
+                    )
+                    tool_function = tools[tool_function_name]["callable"]
+
+                    # Filter to only include parameters that exist in the tool spec and are not None/null
+                    filtered_params = {
+                        k: v
+                        for k, v in tool_function_params.items()
+                        if k in all_params and v is not None and v != "null" and v != ""
+                    }
+                    log.info(f"Filtered parameters to pass to tool: {filtered_params}")
+                    tool_output = await tool_function(**filtered_params)
+
+                except Exception as e:
+                    tool_output = str(e)
+
+                if isinstance(tool_output, str):
+                    log.info(
+                        f"Tool {tool_function_name} output: {tool_output[:200]}..."
+                    )  # Log first 200 chars
+                    if tools[tool_function_name]["citation"]:
+                        source_entry = {
                             "source": {
                                 "name": f"TOOL:{tools[tool_function_name]['toolkit_id']}/{tool_function_name}"
                             },
@@ -309,22 +460,25 @@ async def chat_completion_tools_handler(
                                 }
                             ],
                         }
-                    )
-                else:
-                    sources.append(
-                        {
-                            "source": {},
-                            "document": [tool_output],
-                            "metadata": [
-                                {
-                                    "source": f"TOOL:{tools[tool_function_name]['toolkit_id']}/{tool_function_name}"
-                                }
-                            ],
-                        }
-                    )
+                        sources.append(source_entry)
+                        log.info(
+                            f"Added source entry for {tool_function_name}: {source_entry['source']['name']}"
+                        )
+                    else:
+                        sources.append(
+                            {
+                                "source": {},
+                                "document": [tool_output],
+                                "metadata": [
+                                    {
+                                        "source": f"TOOL:{tools[tool_function_name]['toolkit_id']}/{tool_function_name}"
+                                    }
+                                ],
+                            }
+                        )
 
-                if tools[tool_function_name]["file_handler"]:
-                    skip_files = True
+                    if tools[tool_function_name]["file_handler"]:
+                        skip_files = True
 
         except Exception as e:
             log.exception(f"Error: {e}")
@@ -404,6 +558,8 @@ async def chat_web_search_handler(
         )
         return
 
+    all_results = []
+
     searchQuery = queries[0]
 
     await event_emitter(
@@ -419,7 +575,6 @@ async def chat_web_search_handler(
     )
 
     try:
-
         results = await process_web_search(
             request,
             SearchForm(
@@ -431,28 +586,28 @@ async def chat_web_search_handler(
         )
 
         if results:
-            await event_emitter(
-                {
-                    "type": "status",
-                    "data": {
-                        "action": "web_search",
-                        "description": "Searched {{count}} sites",
-                        "query": searchQuery,
-                        "urls": results["filenames"],
-                        "done": True,
-                    },
-                }
-            )
-
+            all_results.append(results)
             files = form_data.get("files", [])
-            files.append(
-                {
-                    "collection_name": results["collection_name"],
-                    "name": searchQuery,
-                    "type": "web_search_results",
-                    "urls": results["filenames"],
-                }
-            )
+
+            if results.get("collection_name"):
+                files.append(
+                    {
+                        "collection_name": results["collection_name"],
+                        "name": searchQuery,
+                        "type": "web_search",
+                        "urls": results["filenames"],
+                    }
+                )
+            elif results.get("docs"):
+                files.append(
+                    {
+                        # "context": "full",
+                        "docs": results.get("docs", []),
+                        "name": searchQuery,
+                        "type": "web_search",
+                        "urls": results["filenames"],
+                    }
+                )
             form_data["files"] = files
         else:
             await event_emitter(
@@ -476,6 +631,36 @@ async def chat_web_search_handler(
                     "action": "web_search",
                     "description": 'Error searching "{{searchQuery}}"',
                     "query": searchQuery,
+                    "done": True,
+                    "error": True,
+                },
+            }
+        )
+
+    if all_results:
+        urls = []
+        for results in all_results:
+            if "filenames" in results:
+                urls.extend(results["filenames"])
+
+        await event_emitter(
+            {
+                "type": "status",
+                "data": {
+                    "action": "web_search",
+                    "description": "Searched {{count}} sites",
+                    "urls": urls,
+                    "done": True,
+                },
+            }
+        )
+    else:
+        await event_emitter(
+            {
+                "type": "status",
+                "data": {
+                    "action": "web_search",
+                    "description": "No search results found",
                     "done": True,
                     "error": True,
                 },
@@ -623,6 +808,7 @@ async def chat_completion_files_handler(
                 sources = await loop.run_in_executor(
                     executor,
                     lambda: get_sources_from_files(
+                        request=request,
                         files=files,
                         queries=queries,
                         embedding_function=request.app.state.EMBEDDING_FUNCTION,
@@ -808,6 +994,19 @@ async def process_chat_payload(request, form_data, metadata, user, model):
                         context_string += f"<source><source_context>{doc_context}</source_context></source>\n"
 
         context_string = context_string.strip()
+        log.info(f"Generated context string length: {len(context_string)}")
+        log.info(
+            f"Context string preview: {context_string[:500]}..."
+        )  # Log first 500 chars
+
+        # Debug: Log the complete context structure for tools
+        if any(
+            "TOOL:" in source.get("source", {}).get("name", "") for source in sources
+        ):
+            log.info("=== COMPLETE TOOL CONTEXT DEBUG ===")
+            log.info(f"Full context string: {context_string}")
+            log.info("=== END COMPLETE TOOL CONTEXT DEBUG ===")
+
         prompt = get_last_user_message(form_data["messages"])
 
         if prompt is None:
@@ -822,20 +1021,29 @@ async def process_chat_payload(request, form_data, metadata, user, model):
 
         # Workaround for Ollama 2.0+ system prompt issue
         # TODO: replace with add_or_update_system_message
+        rag_content = rag_template(
+            request.app.state.config.RAG_TEMPLATE, context_string, prompt
+        )
+        log.info(f"RAG template content length: {len(rag_content)}")
+        log.info(f"RAG template preview: {rag_content[:500]}...")
+
         if model["owned_by"] == "ollama":
             form_data["messages"] = prepend_to_first_user_message_content(
-                rag_template(
-                    request.app.state.config.RAG_TEMPLATE, context_string, prompt
-                ),
+                rag_content,
                 form_data["messages"],
             )
         else:
             form_data["messages"] = add_or_update_system_message(
-                rag_template(
-                    request.app.state.config.RAG_TEMPLATE, context_string, prompt
-                ),
+                rag_content,
                 form_data["messages"],
             )
+
+        # Log the final messages to see what gets sent to the model
+        log.info(f"Final messages count: {len(form_data['messages'])}")
+        for idx, msg in enumerate(form_data["messages"]):
+            log.info(
+                f"Message {idx} ({msg['role']}): {msg['content'][:300]}..."
+            )  # Log first 300 chars
 
     # If there are citations, add them to the data_items
     sources = [source for source in sources if source.get("source", {}).get("name", "")]
@@ -1030,6 +1238,25 @@ async def process_chat_response(
                                 },
                             )
 
+                    # Send sources events after completion is done
+                    for event in events:
+                        if "sources" in event:
+                            await event_emitter(
+                                {
+                                    "type": "chat:completion",
+                                    "data": event,
+                                }
+                            )
+
+                            # Save sources in the database
+                            Chats.upsert_message_to_chat_by_id_and_message_id(
+                                metadata["chat_id"],
+                                metadata["message_id"],
+                                {
+                                    **event,
+                                },
+                            )
+
                     await background_tasks_handler()
 
             return response
@@ -1054,7 +1281,18 @@ async def process_chat_response(
             content = message.get("content", "") if message else ""
 
             try:
+                # Separate sources events from other events
+                sources_events = []
+                other_events = []
+
                 for event in events:
+                    if "sources" in event:
+                        sources_events.append(event)
+                    else:
+                        other_events.append(event)
+
+                # Process non-sources events first
+                for event in other_events:
                     await event_emitter(
                         {
                             "type": "chat:completion",
@@ -1258,6 +1496,24 @@ async def process_chat_response(
                     }
                 )
 
+                # Send sources events after completion is done
+                for event in sources_events:
+                    await event_emitter(
+                        {
+                            "type": "chat:completion",
+                            "data": event,
+                        }
+                    )
+
+                    # Save sources in the database
+                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                        metadata["chat_id"],
+                        metadata["message_id"],
+                        {
+                            **event,
+                        },
+                    )
+
                 await background_tasks_handler()
             except asyncio.CancelledError:
                 print("Task was cancelled!")
@@ -1287,11 +1543,27 @@ async def process_chat_response(
             def wrap_item(item):
                 return f"data: {item}\n\n"
 
+            # Separate sources events from other events
+            sources_events = []
+            other_events = []
+
             for event in events:
+                if "sources" in event:
+                    sources_events.append(event)
+                else:
+                    other_events.append(event)
+
+            # Send non-sources events first
+            for event in other_events:
                 yield wrap_item(json.dumps(event))
 
+            # Stream the original response
             async for data in original_generator:
                 yield data
+
+            # Send sources events after completion
+            for event in sources_events:
+                yield wrap_item(json.dumps(event))
 
         return StreamingResponse(
             stream_wrapper(response.body_iterator, events),

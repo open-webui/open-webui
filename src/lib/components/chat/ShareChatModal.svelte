@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getContext, onMount } from 'svelte';
-	import { models, config } from '$lib/stores';
+	import { models, config, returnFocusButtonID } from '$lib/stores';
 
 	import { toast } from 'svelte-sonner';
 	import { deleteSharedChatById, getChatById, shareChatById } from '$lib/apis/chats';
@@ -76,10 +76,15 @@
 	}
 </script>
 
-<Modal bind:show size="md">
+<Modal
+	bind:show
+	size="md"
+	title={$i18n.t('Share Chat')}
+	returnFocusSelector={`#${$returnFocusButtonID}`}
+>
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-0.5">
-			<div class=" text-lg font-medium self-center">{$i18n.t('Share Chat')}</div>
+			<h2 class=" text-lg font-medium self-center">{$i18n.t('Share Chat')}</h2>
 			<button
 				class="self-center"
 				on:click={() => {

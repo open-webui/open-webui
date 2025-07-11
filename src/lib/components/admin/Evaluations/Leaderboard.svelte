@@ -35,6 +35,9 @@
 			reason: string;
 			comment: string;
 			tags: string[];
+			details?: {
+				rating: number;
+			};
 		};
 		user: {
 			name: string;
@@ -62,20 +65,32 @@
 			.filter((m) => m?.owned_by !== 'arena' && (m?.info?.meta?.hidden ?? false) !== true)
 			.map((model) => {
 				const stats = modelStats.get(model.id);
+				const hasStats = stats && (stats.won > 0 || stats.lost > 0);
+				const hasEloRating = stats && stats.rating !== 1000; // 1000 is the default starting rating
+
 				return {
 					...model,
-					rating: stats ? Math.round(stats.rating) : '-',
+					rating: hasEloRating ? Math.round(stats.rating) : hasStats ? 'N/A' : '-',
 					stats: {
-						count: stats ? stats.won + stats.lost : 0,
-						won: stats ? stats.won.toString() : '-',
-						lost: stats ? stats.lost.toString() : '-'
+						count: hasStats ? stats.won + stats.lost : 0,
+						won: hasStats ? stats.won.toString() : '-',
+						lost: hasStats ? stats.lost.toString() : '-'
 					}
 				};
 			})
 			.sort((a, b) => {
-				if (a.rating === '-' && b.rating !== '-') return 1;
-				if (b.rating === '-' && a.rating !== '-') return -1;
-				if (a.rating !== '-' && b.rating !== '-') return b.rating - a.rating;
+				// Sort by rating first (numeric ratings come first)
+				if (typeof a.rating === 'number' && typeof b.rating !== 'number') return -1;
+				if (typeof b.rating === 'number' && typeof a.rating !== 'number') return 1;
+				if (typeof a.rating === 'number' && typeof b.rating === 'number')
+					return b.rating - a.rating;
+
+				// Then by count (models with feedback come next)
+				if (a.stats.count > 0 && b.stats.count === 0) return -1;
+				if (b.stats.count > 0 && a.stats.count === 0) return 1;
+				if (a.stats.count > 0 && b.stats.count > 0) return b.stats.count - a.stats.count;
+
+				// Finally by name
 				return a.name.localeCompare(b.name);
 			});
 
@@ -87,17 +102,44 @@
 		similarities: Map<string, number>
 	): Map<string, ModelStats> {
 		const stats = new Map<string, ModelStats>();
-		const K = 32;
+		const K_COMPETITIVE = 32; // Higher K-factor for competitive feedback
+		const K_INDIVIDUAL = 16; // Lower K-factor for individual feedback
+		const VIRTUAL_OPPONENT_RATING = 1000; // Baseline ELO for individual ratings
 
 		function getOrDefaultStats(modelId: string): ModelStats {
 			return stats.get(modelId) || { rating: 1000, won: 0, lost: 0 };
 		}
 
-		function updateStats(modelId: string, ratingChange: number, outcome: number) {
+		function getNormalizedRating(feedback: Feedback): number | null {
+			// Check for detailed rating (1-10 scale) first
+			if (feedback.data.details?.rating !== undefined && feedback.data.details?.rating !== null) {
+				const detailedRating = parseInt(feedback.data.details.rating.toString());
+				if (detailedRating >= 1 && detailedRating <= 10) {
+					return detailedRating / 10; // Normalize to 0-1 scale
+				}
+			}
+
+			// Fallback to binary rating system for backward compatibility
+			switch (feedback.data.rating.toString()) {
+				case '1':
+					return 0.8; // Treat thumbs up as 8/10
+				case '-1':
+					return 0.3; // Treat thumbs down as 3/10
+				default:
+					return null; // Skip invalid ratings
+			}
+		}
+
+		function updateStats(modelId: string, ratingChange: number, normalizedRating: number) {
 			const currentStats = getOrDefaultStats(modelId);
 			currentStats.rating += ratingChange;
-			if (outcome === 1) currentStats.won++;
-			else if (outcome === 0) currentStats.lost++;
+
+			// Count wins/losses based on normalized rating
+			if (normalizedRating >= 0.6)
+				currentStats.won++; // 6+/10 = won
+			else if (normalizedRating <= 0.5) currentStats.lost++; // 1-5/10 = lost
+			// 5.1-5.9/10 range is neither won nor lost (neutral)
+
 			stats.set(modelId, currentStats);
 		}
 
@@ -105,40 +147,57 @@
 			ratingA: number,
 			ratingB: number,
 			outcome: number,
-			similarity: number
+			kFactor: number,
+			similarity: number = 1
 		): number {
 			const expectedScore = 1 / (1 + Math.pow(10, (ratingB - ratingA) / 400));
-			return K * (outcome - expectedScore) * similarity;
+			return kFactor * (outcome - expectedScore) * similarity;
 		}
 
 		feedbacks.forEach((feedback) => {
 			const modelA = feedback.data.model_id;
 			const statsA = getOrDefaultStats(modelA);
-			let outcome: number;
 
-			switch (feedback.data.rating.toString()) {
-				case '1':
-					outcome = 1;
-					break;
-				case '-1':
-					outcome = 0;
-					break;
-				default:
-					return; // Skip invalid ratings
-			}
+			const normalizedRating = getNormalizedRating(feedback);
+			if (normalizedRating === null) return; // Skip invalid ratings
 
-			// If the query is empty, set similarity to 1, else get the similarity from the map
 			const similarity = query !== '' ? similarities.get(feedback.id) || 0 : 1;
 			const opponents = feedback.data.sibling_model_ids || [];
+			const outcome = normalizedRating >= 0.6 ? 1 : 0; // Convert to binary outcome for ELO
 
-			opponents.forEach((modelB) => {
-				const statsB = getOrDefaultStats(modelB);
-				const changeA = calculateEloChange(statsA.rating, statsB.rating, outcome, similarity);
-				const changeB = calculateEloChange(statsB.rating, statsA.rating, 1 - outcome, similarity);
+			if (opponents.length > 0) {
+				// Traditional ELO for competing models (higher weight)
+				opponents.forEach((modelB) => {
+					const statsB = getOrDefaultStats(modelB);
+					const changeA = calculateEloChange(
+						statsA.rating,
+						statsB.rating,
+						outcome,
+						K_COMPETITIVE,
+						similarity
+					);
+					const changeB = calculateEloChange(
+						statsB.rating,
+						statsA.rating,
+						1 - outcome,
+						K_COMPETITIVE,
+						similarity
+					);
 
-				updateStats(modelA, changeA, outcome);
-				updateStats(modelB, changeB, 1 - outcome);
-			});
+					updateStats(modelA, changeA, normalizedRating);
+					updateStats(modelB, changeB, 1 - normalizedRating);
+				});
+			} else {
+				// Virtual ELO against baseline for individual ratings (lower weight)
+				const changeA = calculateEloChange(
+					statsA.rating,
+					VIRTUAL_OPPONENT_RATING,
+					outcome,
+					K_INDIVIDUAL,
+					similarity
+				);
+				updateStats(modelA, changeA, normalizedRating);
+			}
 		});
 
 		return stats;
@@ -274,7 +333,7 @@
 
 		<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
 
-		<span class="text-lg font-medium text-gray-500 dark:text-gray-300 mr-1.5"
+		<span class="text-lg font-medium text-[#767676] dark:text-gray-300 mr-1.5"
 			>{rankedModels.length}</span
 		>
 	</div>
@@ -282,57 +341,74 @@
 	<div class=" flex space-x-2">
 		<Tooltip content={$i18n.t('Re-rank models by topic similarity')}>
 			<div class="flex flex-1">
-				<div class=" self-center ml-1 mr-3">
+				<label for="leaderboard-search" class="sr-only"
+					>{$i18n.t('Search leaderboard by topic')}</label
+				>
+				<div class=" self-center ml-1 mr-3" aria-hidden="true">
 					<MagnifyingGlass className="size-3" />
 				</div>
 				<input
-					class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-none bg-transparent"
+					id="leaderboard-search"
+					type="text"
+					class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-none bg-transparent focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
 					bind:value={query}
 					placeholder={$i18n.t('Search')}
+					aria-describedby="leaderboard-search-help"
 					on:focus={() => {
 						loadEmbeddingModel();
 					}}
 				/>
 			</div>
 		</Tooltip>
+		<div id="leaderboard-search-help" class="sr-only">
+			{$i18n.t(
+				'Search to re-rank models by topic similarity. This does not filter models but weights their ratings based on topic relevance.'
+			)}
+		</div>
 	</div>
 </div>
 
 <div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full rounded pt-0.5">
 	{#if loadingLeaderboard}
-		<div class=" absolute top-0 bottom-0 left-0 right-0 flex">
+		<div
+			class=" absolute top-0 bottom-0 left-0 right-0 flex"
+			aria-live="polite"
+			aria-label="Loading leaderboard"
+		>
 			<div class="m-auto">
 				<Spinner />
 			</div>
 		</div>
 	{/if}
 	{#if (rankedModels ?? []).length === 0}
-		<div class="text-center text-xs text-gray-500 dark:text-gray-400 py-1">
+		<div class="text-center text-xs text-[#767676] dark:text-gray-400 py-1">
 			{$i18n.t('No models found')}
 		</div>
 	{:else}
 		<table
-			class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto max-w-full rounded {loadingLeaderboard
+			class="w-full text-sm text-left text-[#767676] dark:text-gray-400 table-auto max-w-full rounded {loadingLeaderboard
 				? 'opacity-20'
 				: ''}"
+			aria-label="Model leaderboard rankings"
+			aria-describedby={query ? 'leaderboard-search-help' : undefined}
 		>
 			<thead
-				class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-850 dark:text-gray-400 -translate-y-0.5"
+				class="text-xs text-[#4a4a4a] uppercase bg-gray-50 dark:bg-gray-850 dark:text-gray-400 -translate-y-0.5"
 			>
 				<tr class="">
-					<th scope="col" class="px-3 py-1.5 cursor-pointer select-none w-3">
+					<th scope="col" class="px-3 py-1.5 w-3">
 						{$i18n.t('RK')}
 					</th>
-					<th scope="col" class="px-3 py-1.5 cursor-pointer select-none">
+					<th scope="col" class="px-3 py-1.5">
 						{$i18n.t('Model')}
 					</th>
-					<th scope="col" class="px-3 py-1.5 text-right cursor-pointer select-none w-fit">
+					<th scope="col" class="px-3 py-1.5 text-right w-fit">
 						{$i18n.t('Rating')}
 					</th>
-					<th scope="col" class="px-3 py-1.5 text-right cursor-pointer select-none w-5">
+					<th scope="col" class="px-3 py-1.5 text-right w-5">
 						{$i18n.t('Won')}
 					</th>
-					<th scope="col" class="px-3 py-1.5 text-right cursor-pointer select-none w-5">
+					<th scope="col" class="px-3 py-1.5 text-right w-5">
 						{$i18n.t('Lost')}
 					</th>
 				</tr>
@@ -364,7 +440,7 @@
 							{model.rating}
 						</td>
 
-						<td class=" px-3 py-1.5 text-right font-semibold text-green-500">
+						<td class=" px-3 py-1.5 text-right font-semibold text-[#14873f] dark:text-green-400">
 							<div class=" w-10">
 								{#if model.stats.won === '-'}
 									-
@@ -396,15 +472,15 @@
 	{/if}
 </div>
 
-<div class=" text-gray-500 text-xs mt-1.5 w-full flex justify-end">
-	<div class=" text-right">
+<div class=" text-[#767676] text-xs mt-1.5 w-full flex justify-end">
+	<div class=" text-right" role="note" aria-label="Leaderboard methodology explanation">
 		<div class="line-clamp-1">
 			ⓘ {$i18n.t(
-				'The evaluation leaderboard is based on the Elo rating system and is updated in real-time.'
+				'The evaluation leaderboard uses a hybrid rating system combining competitive ELO ratings with individual feedback analysis.'
 			)}
 		</div>
 		{$i18n.t(
-			'The leaderboard is currently in beta, and we may adjust the rating calculations as we refine the algorithm.'
+			'All feedback contributes to Won/Lost counts. Ratings 6-10 count as "Won", 1-5 as "Lost". Competitive feedback (comparing models) receives higher weighting than individual ratings.'
 		)}
 	</div>
 </div>
