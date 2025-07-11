@@ -62,6 +62,9 @@ export const characters: Writable<CharacterPrompt[]> = writable([]);
 
 export const ttsSentenceQueue: Writable<any[]> = writable([]);
 export const ttsStreaming: Writable<boolean> = writable(false);
+export const fillerEventStartTime = writable(0);
+export const ttsState = writable('idle');
+export const prefetchedReader: Writable<Promise<any>> = writable();
 
 export const banners: Writable<Banner[]> = writable([]);
 

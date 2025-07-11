@@ -39,7 +39,8 @@
 		chatSysPrompt,
 		ttsSentenceQueue,
 
-		ttsStreaming
+		ttsStreaming,
+		fillerEventStartTime
 
 	} from '$lib/stores';
 	import {
@@ -1120,7 +1121,7 @@
 				$config?.audio?.tts?.split_on ?? 'punctuation'
 			);
 
-			console.log(`Processing parts. Total parts now: ${allParts.length}, Last dispatched index: ${message.lastDispatchedSentenceIndex}`);
+			// console.log(`Processing parts. Total parts now: ${allParts.length}, Last dispatched index: ${message.lastDispatchedSentenceIndex}`);
 
 			// **** 2. Dispatch only NEW, COMPLETE parts ****
 			// Iterate through the parts array. Start checking from the index *after* the last one dispatched.
@@ -1226,7 +1227,7 @@
 			);
 		}
 
-		console.log(data);
+		// console.log(data);
 		if (autoScroll) {
 			scrollToBottom();
 		}
@@ -1410,20 +1411,20 @@
 
 		let i = Math.floor(Math.random() * speechArr.length);
 		let preprogrammedSpeech = speechArr[i];
-		console.log('!!!dispatching chat', preprogrammedSpeech)
+		console.log('!!!dispatching filler phrase via chat event', preprogrammedSpeech)
 		
-		// RACE CONDITION
-		ttsSentenceQueue.update(queue => [...queue, { filler: true, content: preprogrammedSpeech }]);
-
+		ttsSentenceQueue.update(queue => [...queue, { isFiller: true, content: preprogrammedSpeech }]);
+		fillerEventStartTime.set(performance.now())
+		
 		eventTarget.dispatchEvent(
 			new CustomEvent('chat', {
-				detail: { filler: true, content: preprogrammedSpeech }
+				detail: { isFiller: true, content: preprogrammedSpeech }
 			})
 		);
 
 		await Promise.all(
 			selectedModelIds.map(async (modelId, _modelIdx) => {
-				console.log('modelId', modelId);
+				// console.log('modelId', modelId);
 				const model = $models.filter((m) => m.id === modelId).at(0);
 
 				if (model) {
@@ -1667,7 +1668,7 @@
 			return null;
 		});
 
-		console.log(res);
+		// console.log(res);
 
 		if (res) {
 			taskId = res.task_id;

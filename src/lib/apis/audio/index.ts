@@ -1,5 +1,5 @@
 import { AUDIO_API_BASE_URL } from '$lib/constants';
-import { fillerEventStartTime, ttsSentenceQueue, ttsStreaming } from '$lib/stores';
+import { fillerEventStartTime, ttsSentenceQueue, ttsStreaming, ttsState, prefetchedReader } from '$lib/stores';
 import { get } from 'svelte/store';
 
 export const getAudioConfig = async (token: string) => {
@@ -130,8 +130,7 @@ export const streamAudio = async (reader) => { // Removed isFirstSentenceInSeque
             const { done, value } = await reader.read();
             if (done) break;
 			if (value && firstChunk) {
-				console.log(`!!!timer: time taken from hitting TTS endpoint to getting first chunk TTFA ${(performance.now() - startTimeForHittingTTS) / 1000}s, value: ${value} `)
-				// console.log(`!!!timer: firstchunk received after ${(performance.now() - whenFinishedPlayingFiller)/1000}s from finishedPlayingFiller`)
+				console.log(`!!!timer: time taken from hitting TTS endpoint to getting first chunk TTFA ${(performance.now() - startTimeForHittingTTS) / 1000}s`)
 				firstChunk = false
 			}
 
@@ -215,13 +214,7 @@ let startTimeForHittingTTS = 0
 export const synthesizeStreamingSpeech = async (
 	text: string = '',
 ) => {
-	ttsStreaming.set(true)
-
-
-	const startedStreamingTime = performance.now() - get(fillerEventStartTime)
-	console.log(`hitting tts endpoint with text !!!timer: started streaming ${text} after ${(startedStreamingTime)/1000}s from start and after ${(performance.now() - whenFinishedPlayingFiller)/1000}s from finishedPlayingFiller`)
-	console.log(`!!!timer: Time taken from finish playing filler phrase to hitting TTS endpoint ${(performance.now() - whenFinishedPlayingFiller)/1000}s`)
-	startTimeForHittingTTS = performance.now()
+	console.log(`hitting tts endpoint with text: `, text)
 
 	const response = await fetch('http://localhost:8002/deepdub', {
 		method: 'POST',
@@ -238,8 +231,6 @@ export const synthesizeStreamingSpeech = async (
 	} 
 	
 	const reader = response.body.getReader();
-
-	console.log('!!returning reader')
 
 	return reader
 }
@@ -277,8 +268,6 @@ async function playFillerPhrase(content: string) {
 	}
 }
 
-let howLongItTookToFinishPlayingFiller = 0
-let whenFinishedPlayingFiller = 0
 
 export async function processTTSQueue(filler: boolean = false) {
 	// Use get() to read the current value of stores outside of component context or .subscribe
@@ -308,19 +297,42 @@ export async function processTTSQueue(filler: boolean = false) {
 	console.log(`[TTS QUEUE STORE] Dequeued task for message ${taskToProcess.id}: "${taskToProcess.content}"`);
 
 	try {
-		if (filler) {
-			console.log('playing filler')
-			await playFillerPhrase(taskToProcess.content)
+		if (get(ttsState)=== 'idle' && queue.length > 0) {
+			if (taskToProcess.isFiller) {
+				console.log('playing filler')
+				ttsState.set('playing_filler');
+				const fillerPlaybackPromise = playFillerPhrase(taskToProcess.content)
+				
+				// TODO: is it possible to prefetch here already if queue.length > 1?
+				fillerPlaybackPromise.then(async () => {
+					const readerPromise = get(prefetchedReader);
 
-			// add timer to note 
-			whenFinishedPlayingFiller = performance.now()
-			howLongItTookToFinishPlayingFiller =  whenFinishedPlayingFiller - get(fillerEventStartTime)
-			console.log(`!!!timer: filler phrase finished playing after ${howLongItTookToFinishPlayingFiller / 1000}s from start`)
+					if (get(ttsState) === 'prefetching' && readerPromise) {
+						console.log('[Watcher] Filler ended, pre-fetched audio is ready.');
+						ttsState.set('playing_main');
+						const reader = await readerPromise;
+						if (reader) await streamAudio(reader);
+						ttsState.set('idle');
+						prefetchedReader.set(null);
+					} else {
+						console.log('[Watcher] Filler ended, nothing was pre-fetched.');
+						ttsState.set('idle');
+					}
+				})
+			} else {
+				ttsState.set('playing_main');
+				const reader = await synthesizeStreamingSpeech(taskToProcess.content);
+				if (reader) await streamAudio(reader);
+				ttsState.set('idle');
+			}
+		}
 
-		} else {
-			const reader = await synthesizeStreamingSpeech(taskToProcess.content)
-			await streamAudio(reader)
-			console.log(`[TTS QUEUE STORE] Successfully streamed audio for: "${taskToProcess.content}"`);
+		if (get(ttsState) === 'playing_filler' && queue.length > 0 && !queue[0].isFiller) {
+			console.log('[Watcher] OPPORTUNITY! Pre-fetching main sentence while filler plays.');
+			ttsState.set('prefetching');
+	
+			// Start fetching and store the promise so the .then() block above can find it.
+			prefetchedReader.set(synthesizeStreamingSpeech(taskToProcess.content));
 		}
 	} catch (error) {
 		console.error(`[TTS QUEUE STORE] Error fetching/streaming audio for "${taskToProcess.content}":`, error);

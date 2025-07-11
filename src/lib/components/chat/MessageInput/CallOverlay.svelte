@@ -464,7 +464,6 @@
 	const chatEventHandler = async (e) => {
 		const { id, content, filler } = e.detail;
 		
-		console.log('hitting chatEventHandler with', content)
 		console.log(`!![chateventhandler] Received chat event for message ID ${id}: ${content}`);
 
 		try {
@@ -473,8 +472,6 @@
 			} else {
 				messages[id].push(content);
 			}
-
-			console.log('processing tts queue:', content);
 
 			processTTSQueue(filler);
 
