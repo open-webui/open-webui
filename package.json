@@ -135,7 +135,9 @@
 		"undici": "^7.3.0",
 		"uuid": "^9.0.1",
 		"vite-plugin-static-copy": "^2.2.0",
-		"yaml": "^2.7.1"
+		"y-prosemirror": "^1.3.7",
+		"yaml": "^2.7.1",
+		"yjs": "^13.6.27"
 	},
 	"engines": {
 		"node": ">=18.13.0 <=22.x.x",
