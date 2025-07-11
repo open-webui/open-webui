@@ -56,7 +56,7 @@
 
 	const i18n = getContext('i18n');
 
-	export let enhancing = false;
+	export let editing = false;
 	export let streaming = false;
 	export let stopResponseFlag = false;
 
@@ -67,6 +67,7 @@
 
 	export let onInsert = (content) => {};
 	export let onStop = () => {};
+	export let onEdited = () => {};
 
 	export let insertNoteHandler = () => {};
 	export let scrollToBottomHandler = () => {};
@@ -205,9 +206,11 @@ Based on the user's instruction, update and enhance the existing notes by incorp
 					}
 
 					if (editorEnabled) {
-						enhancing = false;
+						editing = false;
 						streaming = false;
+						onEdited();
 					}
+
 					break;
 				}
 
@@ -233,7 +236,7 @@ Based on the user's instruction, update and enhance the existing notes by incorp
 									continue;
 								} else {
 									if (editorEnabled) {
-										enhancing = true;
+										editing = true;
 										streaming = true;
 
 										enhancedContent.md += deltaContent;
