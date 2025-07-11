@@ -1,5 +1,5 @@
 import { AUDIO_API_BASE_URL } from '$lib/constants';
-import { ttsSentenceQueue, ttsStreaming } from '$lib/stores';
+import { fillerEventStartTime, ttsSentenceQueue, ttsStreaming } from '$lib/stores';
 import { get } from 'svelte/store';
 
 export const getAudioConfig = async (token: string) => {
@@ -121,13 +121,20 @@ export const streamAudio = async (reader) => { // Removed isFirstSentenceInSeque
 
 	let firstChunk = true
     try {
+
+		if (ctx.state === 'suspended') {
+			await ctx.resume();
+		}
+
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
 			if (value && firstChunk) {
-				console.log('TTFA', performance.now() - startTime)
+				console.log(`!!!timer: time taken from hitting TTS endpoint to getting first chunk TTFA ${(performance.now() - startTimeForHittingTTS) / 1000}s, value: ${value} `)
+				// console.log(`!!!timer: firstchunk received after ${(performance.now() - whenFinishedPlayingFiller)/1000}s from finishedPlayingFiller`)
 				firstChunk = false
 			}
+
 
             const pcmData = value.buffer;
             let samples = new Int16Array(pcmData);
@@ -203,15 +210,19 @@ export const streamAudio = async (reader) => { // Removed isFirstSentenceInSeque
     }
 };
 
-let startTime = 0
+let startTimeForHittingTTS = 0
 
 export const synthesizeStreamingSpeech = async (
 	text: string = '',
 ) => {
 	ttsStreaming.set(true)
-	console.log('!!hitting tts endpoint with text', text)
 
-	startTime = performance.now()
+
+	const startedStreamingTime = performance.now() - get(fillerEventStartTime)
+	console.log(`hitting tts endpoint with text !!!timer: started streaming ${text} after ${(startedStreamingTime)/1000}s from start and after ${(performance.now() - whenFinishedPlayingFiller)/1000}s from finishedPlayingFiller`)
+	console.log(`!!!timer: Time taken from finish playing filler phrase to hitting TTS endpoint ${(performance.now() - whenFinishedPlayingFiller)/1000}s`)
+	startTimeForHittingTTS = performance.now()
+
 	const response = await fetch('http://localhost:8002/deepdub', {
 		method: 'POST',
 		headers: {
@@ -220,9 +231,6 @@ export const synthesizeStreamingSpeech = async (
 		body: JSON.stringify({ text: text }),
 	  });
 
-
-
-	// const response = await fetch('http://localhost:8002/deepdub?text=' + encodeURIComponent(text));
 
 	if (!response.ok || !response.body) {
 		console.log('!!response not ok', text)
@@ -235,21 +243,6 @@ export const synthesizeStreamingSpeech = async (
 
 	return reader
 }
-
-const playAudio = (buffer) => {
-	return new Promise(async (resolve) => {
-        // If the context was suspended (e.g., by browser policy), resume it
-        if (ctx.state === 'suspended') {
-            await ctx.resume();
-        }
-
-        const source = ctx.createBufferSource();
-        source.buffer = buffer;
-        source.connect(ctx.destination);
-        source.onended = resolve; // Resolve the promise when playback finishes
-        source.start(0);
-    });
-};
 
 const audioCache = new Map();
 
@@ -284,6 +277,9 @@ async function playFillerPhrase(content: string) {
 	}
 }
 
+let howLongItTookToFinishPlayingFiller = 0
+let whenFinishedPlayingFiller = 0
+
 export async function processTTSQueue(filler: boolean = false) {
 	// Use get() to read the current value of stores outside of component context or .subscribe
 	const isStreaming = get(ttsStreaming);
@@ -315,8 +311,13 @@ export async function processTTSQueue(filler: boolean = false) {
 		if (filler) {
 			console.log('playing filler')
 			await playFillerPhrase(taskToProcess.content)
+
+			// add timer to note 
+			whenFinishedPlayingFiller = performance.now()
+			howLongItTookToFinishPlayingFiller =  whenFinishedPlayingFiller - get(fillerEventStartTime)
+			console.log(`!!!timer: filler phrase finished playing after ${howLongItTookToFinishPlayingFiller / 1000}s from start`)
+
 		} else {
-			console.log('playing rest of sentence',Date.now())
 			const reader = await synthesizeStreamingSpeech(taskToProcess.content)
 			await streamAudio(reader)
 			console.log(`[TTS QUEUE STORE] Successfully streamed audio for: "${taskToProcess.content}"`);

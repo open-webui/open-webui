@@ -463,56 +463,24 @@
 
 	const chatEventHandler = async (e) => {
 		const { id, content, filler } = e.detail;
-		// "id" here is message id
-		// if "id" is not the same as "currentMessageId" then do not process
-		// "content" here is a sentence from the assistant,
-		// there will be many sentences for the same "id"
+		
+		console.log('hitting chatEventHandler with', content)
+		console.log(`!![chateventhandler] Received chat event for message ID ${id}: ${content}`);
 
-		// if (filler) {
-		// 	if (!audioCache.has(content)) {
-		// 		const res = await synthesizeOpenAISpeech(
-		// 			localStorage.token,
-		// 			'',
-		// 			content,
-		// 			''
-		// 		)
-		// 		if (res) {
-		// 			try {
-		// 				const blob = await res.blob();
-		// 				const blobUrl = URL.createObjectURL(blob);
-		// 				console.log('!!!blobUrl', blobUrl)
-		// 				const audio = new Audio(blobUrl)
-		// 				await playAudio(audio)
-		// 				audioCache.set(content, audio)
-		// 			} catch (error) {
-		// 				console.error('!!!error', error)
-		// 			}
-		// 		}
-		// 	} else {
-		// 		console.log('got content')
-		// 		const audio = audioCache.get(content)
-		// 		await playAudio(audio)
-		// 	}
-		// } else {
-			console.log('hitting chatEventHandler with', content)
-			// if (currentMessageId === id) {
-			console.log(`!![chateventhandler] Received chat event for message ID ${id}: ${content}`);
-
-			try {
-				if (messages[id] === undefined) {
-					messages[id] = [content];
-				} else {
-					messages[id].push(content);
-				}
-
-				console.log('processing tts queue:', content);
-
-				processTTSQueue(filler);
-
-			} catch (error) {
-				console.error('Failed to fetch or play audio:', error);
+		try {
+			if (messages[id] === undefined) {
+				messages[id] = [content];
+			} else {
+				messages[id].push(content);
 			}
-		// }
+
+			console.log('processing tts queue:', content);
+
+			processTTSQueue(filler);
+
+		} catch (error) {
+			console.error('Failed to fetch or play audio:', error);
+		}
 	};
 
 	const chatFinishHandler = async (e) => {
