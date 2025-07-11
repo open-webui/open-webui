@@ -43,6 +43,7 @@ from open_webui.utils.auth import (
     create_api_key,
     create_token,
     get_admin_user,
+    get_trusted_header_user_role,
     get_verified_user,
     get_current_user,
     get_password_hash,
@@ -474,6 +475,11 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
             )
 
         user = Auths.authenticate_user_by_email(email)
+        determined_role = get_trusted_header_user_role(user, request)
+
+        if user.role != determined_role:
+            user = Users.update_user_role_by_id(user.id, determined_role)
+
         if WEBUI_AUTH_TRUSTED_GROUPS_HEADER and user and user.role != "admin":
             group_names = request.headers.get(
                 WEBUI_AUTH_TRUSTED_GROUPS_HEADER, ""
@@ -557,7 +563,9 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
 
 
 @router.post("/signup", response_model=SessionUserResponse)
-async def signup(request: Request, response: Response, form_data: SignupForm, default_role: str):
+async def signup(
+    request: Request, response: Response, form_data: SignupForm, default_role: str
+):
     user_count = Users.get_num_users()
 
     if WEBUI_AUTH:
@@ -687,7 +695,12 @@ async def signout(request: Request, response: Response):
                                     status_code=200,
                                     content={
                                         "status": True,
-                                        "redirect_url": f"{logout_url}?id_token_hint={oauth_id_token}" + (f"&post_logout_redirect_uri={WEBUI_AUTH_SIGNOUT_REDIRECT_URL}" if WEBUI_AUTH_SIGNOUT_REDIRECT_URL else ""),
+                                        "redirect_url": f"{logout_url}?id_token_hint={oauth_id_token}"
+                                        + (
+                                            f"&post_logout_redirect_uri={WEBUI_AUTH_SIGNOUT_REDIRECT_URL}"
+                                            if WEBUI_AUTH_SIGNOUT_REDIRECT_URL
+                                            else ""
+                                        ),
                                     },
                                     headers=response.headers,
                                 )

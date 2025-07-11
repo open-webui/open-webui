@@ -101,10 +101,10 @@ class OAuthManager:
             oauth_roles = claim_data if isinstance(claim_data, list) else []
 
         return get_trusted_user_role(
-            user, 
-            auth_manager_config.ENABLE_OAUTH_ROLE_MANAGEMENT, 
-            oauth_roles, 
-            oauth_allowed_roles, 
+            user,
+            auth_manager_config.ENABLE_OAUTH_ROLE_MANAGEMENT,
+            oauth_roles,
+            oauth_allowed_roles,
             oauth_admin_roles,
             auth_manager_config.DEFAULT_USER_ROLE,
         )
