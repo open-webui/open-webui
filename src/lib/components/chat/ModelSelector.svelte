@@ -53,22 +53,16 @@
 				</div>
 			</div>
 
-			{#if selectedModelIdx === 0}
+			{#if selectedModelIdx === 0 && selectedModels.length < 3}
 				<div
 					class="  self-center mx-1 disabled:text-gray-600 disabled:hover:text-gray-600 -translate-y-[0.5px]"
 				>
-					<Tooltip
-						content={selectedModels.length >= 3
-							? $i18n.t('Maximum of 3 models allowed')
-							: $i18n.t('Add Model')}
-					>
+					<Tooltip content={$i18n.t('Add Model')}>
 						<button
 							class=" "
-							disabled={disabled || selectedModels.length >= 3}
+							{disabled}
 							on:click={() => {
-								if (selectedModels.length < 3) {
-									selectedModels = [...selectedModels, ''];
-								}
+								selectedModels = [...selectedModels, ''];
 							}}
 							aria-label="Add Model"
 						>
@@ -85,7 +79,7 @@
 						</button>
 					</Tooltip>
 				</div>
-			{:else}
+			{:else if selectedModelIdx > 0 || (selectedModelIdx === 0 && selectedModels.length < 3)}
 				<div
 					class="  self-center mx-1 disabled:text-gray-600 disabled:hover:text-gray-600 -translate-y-[0.5px]"
 				>
