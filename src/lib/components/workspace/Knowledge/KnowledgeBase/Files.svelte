@@ -13,7 +13,7 @@
 		for (const file of files) {
 			if (file.status === 'processing' && !file._sseConnected) {
 				file._sseConnected = true;
-				handleUploadComplete(file.id);
+				setTimeout(() => handleUploadComplete(file.id), 100);
 			}
 		}
 	}

@@ -33,6 +33,7 @@ router = APIRouter()
 async def process_file_stream(request: Request):
     async def event_stream():
         try:
+            clear_queue(progress_queue)
             while True:
                 if await request.is_disconnected():
                     print("SSE client disconnected.")
