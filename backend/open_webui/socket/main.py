@@ -446,7 +446,10 @@ async def yjs_document_update(sid, data):
     """Handle Yjs document updates"""
     try:
         document_id = data["document_id"]
-        await stop_item_tasks(REDIS, document_id)
+        try:
+            await stop_item_tasks(REDIS, document_id)
+        except:
+            pass
 
         user_id = data.get("user_id", sid)
 
