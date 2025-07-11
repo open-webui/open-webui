@@ -450,8 +450,8 @@
 							}
 						}
 
-						// Handle CTRL+SHIFT+O to mask all PIIs again
-						if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'o') {
+						// Handle CTRL+SHIFT+Q to mask all PIIs again
+						if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'q') {
 							if (enablePiiDetection && editor) {
 								event.preventDefault();
 

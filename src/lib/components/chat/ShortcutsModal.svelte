@@ -425,7 +425,7 @@
 							<div
 								class=" h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
 							>
-								O
+								Q
 							</div>
 						</div>
 					</div>
