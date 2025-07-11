@@ -353,8 +353,12 @@ async def yjs_document_join(sid, data):
                 log.error(f"Note {note_id} not found")
                 return
 
-            if user.get("role") != "admin" and has_access(
-                user.get("id"), type="read", access_control=note.access_control
+            if (
+                user.get("role") != "admin"
+                and user.get("id") != note.user_id
+                and not has_access(
+                    user.get("id"), type="read", access_control=note.access_control
+                )
             ):
                 log.error(
                     f"User {user.get('id')} does not have access to note {note_id}"
@@ -424,8 +428,12 @@ async def document_save_handler(document_id, data, user):
             log.error(f"Note {note_id} not found")
             return
 
-        if user.get("role") != "admin" and has_access(
-            user.get("id"), type="read", access_control=note.access_control
+        if (
+            user.get("role") != "admin"
+            and user.get("id") != note.user_id
+            and not has_access(
+                user.get("id"), type="read", access_control=note.access_control
+            )
         ):
             log.error(f"User {user.get('id')} does not have access to note {note_id}")
             return
