@@ -27,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **🔒 Improved Redis Lock Error Handling**: Enhanced error handling for Redis lock management and cleanup tasks, increasing reliability and stability.
 
 - **📝 Improved Accessibility**: Enhanced accessibility for improved user experience.
-- **📊 Metric Dashboard**: Enhanced model metrics access and display for analysts.
+- **📊 Metrics Dashboard**: Enhanced model metrics access and display for analysts.
 
 ### Removed
 
