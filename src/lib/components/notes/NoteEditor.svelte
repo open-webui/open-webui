@@ -864,34 +864,44 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 
 					<div class=" mb-2.5 px-2.5">
 						<div
-							class="flex gap-1 items-center text-xs font-medium text-gray-500 dark:text-gray-500"
+							class=" flex w-full bg-transparent overflow-x-auto scrollbar-none"
+							on:wheel={(e) => {
+								if (e.deltaY !== 0) {
+									e.preventDefault();
+									e.currentTarget.scrollLeft += e.deltaY;
+								}
+							}}
 						>
-							<button class=" flex items-center gap-1 w-fit py-1 px-1.5 rounded-lg">
-								<Calendar className="size-3.5" strokeWidth="2" />
+							<div
+								class="flex gap-1 items-center text-xs font-medium text-gray-500 dark:text-gray-500 w-fit"
+							>
+								<button class=" flex items-center gap-1 w-fit py-1 px-1.5 rounded-lg min-w-fit">
+									<Calendar className="size-3.5" strokeWidth="2" />
 
-								<span>{dayjs(note.created_at / 1000000).calendar()}</span>
-							</button>
+									<span>{dayjs(note.created_at / 1000000).calendar()}</span>
+								</button>
 
-							<button class=" flex items-center gap-1 w-fit py-1 px-1.5 rounded-lg">
-								<Users className="size-3.5" strokeWidth="2" />
+								<button class=" flex items-center gap-1 w-fit py-1 px-1.5 rounded-lg min-w-fit">
+									<Users className="size-3.5" strokeWidth="2" />
 
-								<span> You </span>
-							</button>
+									<span> You </span>
+								</button>
 
-							{#if editor}
-								<div class="flex items-center gap-1 px-1">
-									<div>
-										{$i18n.t('{{count}} words', {
-											count: wordCount
-										})}
+								{#if editor}
+									<div class="flex items-center gap-1 px-1 min-w-fit">
+										<div>
+											{$i18n.t('{{count}} words', {
+												count: wordCount
+											})}
+										</div>
+										<div>
+											{$i18n.t('{{count}} characters', {
+												count: charCount
+											})}
+										</div>
 									</div>
-									<div>
-										{$i18n.t('{{count}} characters', {
-											count: charCount
-										})}
-									</div>
-								</div>
-							{/if}
+								{/if}
+							</div>
 						</div>
 					</div>
 
