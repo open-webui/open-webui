@@ -62,6 +62,13 @@ class NoteForm(BaseModel):
     access_control: Optional[dict] = None
 
 
+class NoteUpdateForm(BaseModel):
+    title: Optional[str] = None
+    data: Optional[dict] = None
+    meta: Optional[dict] = None
+    access_control: Optional[dict] = None
+
+
 class NoteUserResponse(NoteModel):
     user: Optional[UserResponse] = None
 
@@ -110,7 +117,9 @@ class NoteTable:
             note = db.query(Note).filter(Note.id == id).first()
             return NoteModel.model_validate(note) if note else None
 
-    def update_note_by_id(self, id: str, form_data: NoteForm) -> Optional[NoteModel]:
+    def update_note_by_id(
+        self, id: str, form_data: NoteUpdateForm
+    ) -> Optional[NoteModel]:
         with get_db() as db:
             note = db.query(Note).filter(Note.id == id).first()
             if not note:
