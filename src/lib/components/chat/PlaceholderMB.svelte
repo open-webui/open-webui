@@ -225,24 +225,14 @@
 		</div>
 	</div>
 	<div class="mx-auto max-w-2xl font-primary mt-2 flex flex-col" in:fade={{ duration: 200, delay: 200 }}>
-		<div class="mx-5">
-			<SuggestionsMB
-				suggestionPrompts={atSelectedModel?.info?.meta?.suggestion_prompts ??
-					models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
-					$config?.default_prompt_suggestions ??
-					[]}
-				inputValue={prompt}
-				on:select={(e) => {
-					selectSuggestionPrompt(e.detail);
-				}}
-			/>
-		</div>
-		<!-- Render Product List -->
-		<ProductGridPrebaked
-			chat_id="b463f783-b78c-4896-a0b2-b03e64790d3c"
-			gift_idea_id={{ id: '51649d54a403c3f9e3424fa30a01bd49' }}
-			on:click={(e) => {
-				console.log(e);
+		<SuggestionsMB
+			suggestionPrompts={atSelectedModel?.info?.meta?.suggestion_prompts ??
+				models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
+				$config?.default_prompt_suggestions ??
+				[]}
+			inputValue={prompt}
+			on:select={(e) => {
+				selectSuggestionPrompt(e.detail);
 			}}
 		/>
 	</div>
