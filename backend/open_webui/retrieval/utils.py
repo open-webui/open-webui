@@ -120,6 +120,7 @@ def query_doc_with_hybrid_search(
     k_reranker: int,
     r: float,
     hybrid_bm25_weight: float,
+    user: UserModel = None,
 ) -> dict:
     try:
         log.debug(f"query_doc_with_hybrid_search:doc {collection_name}")
@@ -154,6 +155,7 @@ def query_doc_with_hybrid_search(
             top_n=k_reranker,
             reranking_function=reranking_function,
             r_score=r,
+            user=user,
         )
 
         compression_retriever = ContextualCompressionRetriever(
@@ -329,6 +331,7 @@ def query_collection_with_hybrid_search(
     k_reranker: int,
     r: float,
     hybrid_bm25_weight: float,
+    user: UserModel = None,
 ) -> dict:
     results = []
     error = False
@@ -363,6 +366,7 @@ def query_collection_with_hybrid_search(
                 k_reranker=k_reranker,
                 r=r,
                 hybrid_bm25_weight=hybrid_bm25_weight,
+                user=user,
             )
             return result, None
         except Exception as e:
@@ -455,6 +459,7 @@ def get_sources_from_files(
     hybrid_bm25_weight,
     hybrid_search,
     full_context=False,
+    user: UserModel = None,
 ):
     log.debug(
         f"files: {files} {queries} {embedding_function} {reranking_function} {full_context}"
@@ -618,6 +623,7 @@ def get_sources_from_files(
                                     k_reranker=k_reranker,
                                     r=r,
                                     hybrid_bm25_weight=hybrid_bm25_weight,
+                                    user=user,
                                 )
                             except Exception as e:
                                 log.debug(
@@ -909,6 +915,7 @@ class RerankCompressor(BaseDocumentCompressor):
     top_n: int
     reranking_function: Any
     r_score: float
+    user: UserModel
 
     class Config:
         extra = "forbid"
@@ -923,6 +930,7 @@ class RerankCompressor(BaseDocumentCompressor):
         reranking = self.reranking_function is not None
 
         if reranking:
+            self.reranking_function.user = self.user
             scores = self.reranking_function.predict(
                 [(query, doc.page_content) for doc in documents]
             )
