@@ -158,6 +158,41 @@
 			this.setupEventListeners();
 		}
 
+		generateUserColor() {
+			const colors = [
+				'#FF6B6B',
+				'#4ECDC4',
+				'#45B7D1',
+				'#96CEB4',
+				'#FFEAA7',
+				'#DDA0DD',
+				'#98D8C8',
+				'#F7DC6F',
+				'#BB8FCE',
+				'#85C1E9'
+			];
+			return colors[Math.floor(Math.random() * colors.length)];
+		}
+
+		joinDocument() {
+			const userColor = this.generateUserColor();
+			this.socket.emit('yjs:document:join', {
+				document_id: this.documentId,
+				user_id: this.user?.id,
+				user_name: this.user?.name,
+				user_color: userColor
+			});
+
+			// Set user awareness info
+			if (awareness && this.user) {
+				awareness.setLocalStateField('user', {
+					name: `${this.user.name}`,
+					color: userColor,
+					id: this.socket.id
+				});
+			}
+		}
+
 		setupEventListeners() {
 			// Listen for document updates from server
 			this.socket.on('yjs:document:update', (data) => {
@@ -251,41 +286,6 @@
 			if (this.socket.connected) {
 				this.isConnected = true;
 				this.joinDocument();
-			}
-		}
-
-		generateUserColor() {
-			const colors = [
-				'#FF6B6B',
-				'#4ECDC4',
-				'#45B7D1',
-				'#96CEB4',
-				'#FFEAA7',
-				'#DDA0DD',
-				'#98D8C8',
-				'#F7DC6F',
-				'#BB8FCE',
-				'#85C1E9'
-			];
-			return colors[Math.floor(Math.random() * colors.length)];
-		}
-
-		joinDocument() {
-			const userColor = this.generateUserColor();
-			this.socket.emit('yjs:document:join', {
-				document_id: this.documentId,
-				user_id: this.user?.id,
-				user_name: this.user?.name,
-				user_color: userColor
-			});
-
-			// Set user awareness info
-			if (awareness && this.user) {
-				awareness.setLocalStateField('user', {
-					name: `${this.user.name}`,
-					color: userColor,
-					id: this.socket.id
-				});
 			}
 		}
 
