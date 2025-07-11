@@ -58,6 +58,10 @@
 
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 
+	// PII Detection imports
+	import { maskPiiTextWithSession, createPiiSession, type PiiEntity } from '$lib/apis/pii';
+	import { PiiSessionManager, type ExtendedPiiEntity } from '$lib/utils/pii';
+
 	const i18n = getContext('i18n');
 
 	export let transparentBackground = false;
@@ -76,14 +80,15 @@
 
 	export let history;
 	export let taskIds = null;
+	export let chatId = '';
 
 	export let prompt = '';
-	export let files = [];
+	export let files: any[] = [];
 
-	export let toolServers = [];
+	export let toolServers: any[] = [];
 
-	export let selectedToolIds = [];
-	export let selectedFilterIds = [];
+	export let selectedToolIds: any[] = [];
+	export let selectedFilterIds: any[] = [];
 
 	export let imageGenerationEnabled = false;
 	export let webSearchEnabled = false;
@@ -117,16 +122,24 @@
 	let chatInputContainerElement;
 	let chatInputElement;
 
-	let filesInputElement;
-	let commandsElement;
+	let filesInputElement: any;
+	let commandsElement: any;
 
-	let inputFiles;
-
+	let inputFiles: any;
 	let dragged = false;
 	let shiftKey = false;
 
 	let user = null;
 	export let placeholder = '';
+
+	// PII Detection state
+	let piiSessionManager = PiiSessionManager.getInstance();
+	let currentPiiEntities: ExtendedPiiEntity[] = [];
+	let maskedPrompt = '';
+
+	// Get PII settings from config
+	$: enablePiiDetection = $config?.features?.enable_pii_detection ?? false;
+	$: piiApiKey = $config?.pii?.api_key ?? '';
 
 	let visionCapableModels = [];
 	$: visionCapableModels = (atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).filter(
@@ -194,6 +207,73 @@
 			top: element.scrollHeight,
 			behavior: 'smooth'
 		});
+	};
+
+	// PII Detection handler
+	const handlePiiDetected = (entities: ExtendedPiiEntity[], maskedText: string) => {
+		currentPiiEntities = entities;
+		maskedPrompt = maskedText;
+	};
+
+	// PII Toggle handler - update current entities when user toggles masking in editor
+	const handlePiiToggled = (entities: ExtendedPiiEntity[]) => {
+		currentPiiEntities = entities;
+		console.log('MessageInput: PII entities toggled, updated currentPiiEntities:', entities.length);
+	};
+
+	// Function to get the prompt to send (masked if PII detected)
+	const getPromptToSend = (): string => {
+		if (!enablePiiDetection || !currentPiiEntities.length) {
+			return prompt;
+		}
+
+		// Create a masked version based on user's masking preferences
+		let maskedText = prompt;
+		const entitiesToMask = currentPiiEntities.filter((entity) => entity.shouldMask);
+
+		console.log('MessageInput: Creating masked prompt, entities to mask:', entitiesToMask.length);
+		console.log('MessageInput: Original prompt:', prompt.substring(0, 200));
+
+		// Use a more robust approach: sort entities by raw text length (longest first)
+		// to avoid partial replacements, then replace by raw text instead of positions
+		const sortedEntities = entitiesToMask.sort((a, b) => b.raw_text.length - a.raw_text.length);
+
+		sortedEntities.forEach((entity) => {
+			if (!entity.raw_text || entity.raw_text.trim() === '') {
+				console.log('MessageInput: Skipping entity with empty raw text:', entity.label);
+				return;
+			}
+
+			// Escape special regex characters
+			const escapedText = entity.raw_text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+			// Use word boundaries for better matching, but handle special characters gracefully
+			const hasSpecialChars = /[^\w\s]/.test(entity.raw_text);
+			const regex = hasSpecialChars
+				? new RegExp(escapedText, 'gi')
+				: new RegExp(`\\b${escapedText}\\b`, 'gi');
+
+			console.log(
+				'MessageInput: Replacing text for entity',
+				entity.label,
+				'raw text:',
+				entity.raw_text
+			);
+
+			// Replace all occurrences of the raw text with the masked pattern
+			const replacementPattern = `[{${entity.label}}]`;
+			const beforeReplace = maskedText;
+			maskedText = maskedText.replace(regex, replacementPattern);
+
+			if (maskedText !== beforeReplace) {
+				console.log('MessageInput: Successfully masked entity', entity.label);
+			} else {
+				console.log('MessageInput: No replacements made for entity', entity.label);
+			}
+		});
+
+		console.log('MessageInput: Final masked prompt:', maskedText.substring(0, 200));
+		return maskedText;
 	};
 
 	const screenCaptureHandler = async () => {
@@ -635,7 +715,7 @@
 								document.getElementById('chat-input')?.focus();
 
 								if ($settings?.speechAutoSend ?? false) {
-									dispatch('submit', prompt);
+									dispatch('submit', getPromptToSend());
 								}
 							}}
 						/>
@@ -644,7 +724,7 @@
 							class="w-full flex flex-col gap-1.5"
 							on:submit|preventDefault={() => {
 								// check if selectedModels support image input
-								dispatch('submit', prompt);
+								dispatch('submit', getPromptToSend());
 							}}
 						>
 							<div
@@ -766,6 +846,27 @@
 												largeTextAsFile={($settings?.largeTextAsFile ?? false) && !shiftKey}
 												autocomplete={$config?.features?.enable_autocomplete_generation &&
 													($settings?.promptAutocomplete ?? false)}
+												enablePiiModifiers={true}
+												piiModifierLabels={[
+													'PERSON',
+													'EMAIL',
+													'PHONE_NUMBER',
+													'ADDRESS',
+													'SSN',
+													'CREDIT_CARD',
+													'DATE_TIME',
+													'IP_ADDRESS',
+													'URL',
+													'IBAN',
+													'MEDICAL_LICENSE',
+													'US_PASSPORT',
+													'US_DRIVER_LICENSE'
+												]}
+												{enablePiiDetection}
+												{piiApiKey}
+												conversationId={chatId || undefined}
+												onPiiDetected={handlePiiDetected}
+												onPiiToggled={handlePiiToggled}
 												generateAutoCompletion={async (text) => {
 													if (selectedModelIds.length === 0 || !selectedModelIds.at(0)) {
 														toast.error($i18n.t('Please select a model first.'));
@@ -803,7 +904,7 @@
 													// Command/Ctrl + Shift + Enter to submit a message pair
 													if (isCtrlPressed && e.key === 'Enter' && e.shiftKey) {
 														e.preventDefault();
-														createMessagePair(prompt);
+														createMessagePair(getPromptToSend());
 													}
 
 													// Check if Ctrl + R is pressed
@@ -904,7 +1005,7 @@
 															if (enterPressed) {
 																e.preventDefault();
 																if (prompt !== '' || files.length > 0) {
-																	dispatch('submit', prompt);
+																	dispatch('submit', getPromptToSend());
 																}
 															}
 														}

@@ -1,0 +1,265 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# PII System Overview & Quick Reference
+
+## System Components
+
+The PII system in open-webui consists of multiple interconnected components working together to provide comprehensive PII detection and user control capabilities.
+
+## Core Architecture Files
+
+### Extensions
+- **[PiiDetectionExtension.ts](mdc:src/lib/components/common/RichTextInput/PiiDetectionExtension.ts)** - Main PII detection and highlighting
+- **[PiiModifierExtension.ts](mdc:src/lib/components/common/RichTextInput/PiiModifierExtension.ts)** - User modifier creation and menu interactions
+
+### State Management
+- **[pii.ts](mdc:src/lib/utils/pii.ts)** - `PiiSessionManager` singleton for state persistence
+- **[index.ts](mdc:src/lib/apis/pii/index.ts)** - API integration functions
+
+### UI Components
+- **[RichTextInput.svelte](mdc:src/lib/components/common/RichTextInput.svelte)** - Extension orchestration
+- **[PiiAwareText.svelte](mdc:src/lib/components/chat/Messages/Markdown/PiiAwareText.svelte)** - Response display with PII highlighting
+- **[UserMessage.svelte](mdc:src/lib/components/chat/Messages/UserMessage.svelte)** - User message integration
+- **[ResponseMessage.svelte](mdc:src/lib/components/chat/Messages/ResponseMessage.svelte)** - Response message integration
+
+## Related Cursor Rules
+
+### [pii_architecture.mdc](mdc:.cursor/rules/pii_architecture.mdc)
+Architecture patterns and best practices for PII system development:
+- Two-extension coordination pattern
+- Singleton state management
+- API integration patterns
+- Error handling architecture
+- Visual styling hierarchy
+
+### [prosemirror_extensions.mdc](mdc:.cursor/rules/prosemirror_extensions.mdc)
+ProseMirror extension development patterns:
+- Factory pattern for extensions
+- Plugin state management
+- Position mapping strategies
+- Decoration creation and validation
+- Event handling in plugins
+- Extension lifecycle management
+
+### [event_handling_patterns.mdc](mdc:.cursor/rules/event_handling_patterns.mdc)
+Interactive UI event handling patterns:
+- Hover state management
+- Menu coordination
+- Text selection handling
+- Timeout management
+- Dynamic positioning
+- Accessibility considerations
+
+### [api_integration_patterns.mdc](mdc:.cursor/rules/api_integration_patterns.mdc)
+API integration best practices:
+- Request structure and validation
+- Response processing patterns
+- Error handling and recovery
+- Rate limiting and debouncing
+- State synchronization
+- Monitoring and caching
+
+### [pii_modifier_system.mdc](mdc:.cursor/rules/pii_modifier_system.mdc)
+Comprehensive implementation guide for the complete modifier system.
+
+## Quick Start Guide
+
+### Adding PII Detection to a Component
+```typescript
+// 1. Import extensions
+import { PiiDetectionExtension } from '$lib/components/common/RichTextInput/PiiDetectionExtension';
+import { PiiModifierExtension } from '$lib/components/common/RichTextInput/PiiModifierExtension';
+
+// 2. Add to extension array
+const extensions = [
+  // ... other extensions
+  ...(piiEnabled ? PiiDetectionExtension.create({
+    apiKey: piiApiKey,
+    enabled: piiEnabled,
+    conversationId: currentConversationId,
+    onPiiDetected: handlePiiDetected
+  }) : []),
+  
+  ...(piiEnabled ? PiiModifierExtension.create({
+    conversationId: currentConversationId,
+    onModifierChange: handleModifierChange
+  }) : [])
+];
+
+// 3. Handle callbacks
+const handlePiiDetected = (entities, processedText) => {
+  // Update component state
+};
+
+const handleModifierChange = (modifiers) => {
+  // Handle modifier updates
+};
+```
+
+### Accessing PII State
+```typescript
+import { PiiSessionManager } from '$lib/utils/pii';
+
+const piiSessionManager = PiiSessionManager.getInstance();
+
+// Get entities for conversation
+const entities = piiSessionManager.getConversationEntities(conversationId);
+
+// Get modifiers for API
+const modifiers = piiSessionManager.getConversationModifiersForApi(conversationId);
+
+// Add new modifier
+const modifier = { action: 'mask', entity: 'John', type: 'PERSON' };
+piiSessionManager.addConversationModifier(conversationId, modifier);
+```
+
+### Making PII API Calls
+```typescript
+import { maskPiiText } from '$lib/apis/pii';
+
+const response = await maskPiiText(
+  apiKey,
+  [text],
+  knownEntities,  // For consistent labeling
+  modifiers,      // User-created modifiers
+  false,
+  false
+);
+```
+
+## Common Patterns
+
+### Error Handling
+```typescript
+try {
+  const response = await performPiiDetection(text);
+  // Process successful response
+} catch (error) {
+  console.error('PII detection failed:', error);
+  // Continue without PII features - don't block UI
+}
+```
+
+### State Transfer (Global to Conversation)
+```typescript
+useEffect(() => {
+  if (conversationId && conversationId !== previousConversationId) {
+    if (previousConversationId === '') {
+      piiSessionManager.transferGlobalToConversation(conversationId);
+    }
+  }
+}, [conversationId]);
+```
+
+### Content Change Detection
+```typescript
+const generateContentHash = (doc) => doc.textContent.trim();
+
+// Only trigger detection on actual content changes
+if (currentHash !== previousHash) {
+  debouncedDetection(currentHash);
+}
+```
+
+## Debugging Commands
+
+### Check Extension Status
+```javascript
+// In browser console
+const extensions = editor.extensionManager.extensions;
+console.log('PII Extensions:', extensions.filter(e => e.name?.includes('Pii')));
+```
+
+### Inspect PII State
+```javascript
+const manager = window.PiiSessionManager?.getInstance();
+if (manager) {
+  console.log('Global entities:', manager.getGlobalEntities());
+  console.log('Global modifiers:', manager.getGlobalModifiers());
+}
+```
+
+### Monitor API Calls
+```javascript
+// Enable in PiiDetectionExtension
+console.log('PII API Request:', {
+  textLength: plainText.length,
+  knownEntitiesCount: knownEntities.length,
+  modifiersCount: modifiers.length
+});
+```
+
+## Common Issues and Solutions
+
+### Position Mapping Errors
+**Symptom**: Decorations appear in wrong positions
+**Solution**: Validate positions before creating decorations
+```typescript
+if (from >= 0 && to <= doc.content.size && from < to) {
+  decorations.push(Decoration.inline(from, to, attributes));
+} else {
+  console.warn('Invalid position range:', { from, to, docSize: doc.content.size });
+}
+```
+
+### Menu Flickering
+**Symptom**: Menus appear and disappear rapidly
+**Solution**: Proper timeout management with grace periods
+```typescript
+const scheduleMenuHide = () => {
+  if (menuTimeout) clearTimeout(menuTimeout);
+  menuTimeout = setTimeout(hideMenu, 300); // Grace period
+};
+```
+
+### State Inconsistency
+**Symptom**: Modifiers don't persist across page reloads
+**Solution**: Ensure proper localStorage integration
+```typescript
+// State automatically persists via PiiSessionManager
+// Check localStorage in browser devtools under 'chats' key
+```
+
+### API Format Errors
+**Symptom**: API calls fail with validation errors
+**Solution**: Use correct modifier format
+```typescript
+// CORRECT format
+const modifier = { action: 'mask', entity: 'John', type: 'PERSON' };
+
+// INCORRECT (old format)
+const modifier = { type: 'PERSON', entity: 'John', label: 'PERSON_1' };
+```
+
+## Performance Tips
+
+1. **Debounce API calls**: Use 500ms debounce for user input
+2. **Content-based detection**: Only trigger on actual content changes
+3. **Efficient position mapping**: Cache mapping per document version
+4. **Graceful degradation**: Continue without PII on API failures
+5. **Append-only entities**: Never remove entities, only add new ones
+
+## Testing Checklist
+
+- [ ] Extensions load without errors when PII enabled
+- [ ] Extensions disable gracefully when API key missing
+- [ ] Text selection shows modifier menu
+- [ ] Hover over detected PII shows hover menu
+- [ ] Modifiers persist across page reloads
+- [ ] API calls include known entities and modifiers
+- [ ] State transfers from global to conversation correctly
+- [ ] Visual styling precedence (modifiers override detection)
+- [ ] Error handling doesn't break UI functionality
+
+## File Modification Guidelines
+
+When modifying PII system files:
+
+1. **Always test API format changes** - Use browser console to verify request/response
+2. **Validate position calculations** - Check browser console for position warnings
+3. **Test state persistence** - Reload page and verify state restoration
+4. **Check error handling** - Disable network/API key to test graceful degradation
+5. **Verify conversation transitions** - Test global → conversation state transfer

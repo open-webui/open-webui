@@ -1,0 +1,158 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# PII Detection System Architecture
+
+## Overview
+The PII detection system integrates NENNA.ai API to identify, mask, and highlight personally identifiable information across the Open WebUI chat interface. The system uses a **ProseMirror-native architecture** with built-in position mapping and decoration-based highlighting for robust text processing.
+
+## Core Architecture
+
+### Native ProseMirror Integration
+**RichTextInput → PiiDetectionExtension (TipTap) → ProseMirror Plugin → Decorations**
+- [RichTextInput.svelte](mdc:src/lib/components/common/RichTextInput.svelte) - Main input component with TipTap editor
+- [PiiDetectionExtension.ts](mdc:src/lib/components/common/RichTextInput/PiiDetectionExtension.ts) - **NEW**: Native ProseMirror extension for real-time detection
+- Native ProseMirror decorations for highlighting (no HTML manipulation)
+- Built-in position mapping through `doc.nodesBetween()` traversal
+
+### Legacy Display Paths (Read-only)
+**UserMessage/ResponseMessage → Markdown → PiiAwareText → PiiHoverOverlay**
+- [UserMessage.svelte](mdc:src/lib/components/chat/Messages/UserMessage.svelte) - User message container
+- [ResponseMessage.svelte](mdc:src/lib/components/chat/Messages/ResponseMessage.svelte) - AI response container
+- [PiiAwareText.svelte](mdc:src/lib/components/chat/Messages/Markdown/PiiAwareText.svelte) - Text processing with PII highlighting
+- [PiiHoverOverlay.svelte](mdc:src/lib/components/common/PiiHoverOverlay.svelte) - Interactive overlay component
+
+## Key Architectural Improvements
+
+### 1. Native Position Mapping
+```typescript
+// OLD: Fragile HTML string manipulation with br tag counting
+function mapPlainTextPositionToProseMirror(plainTextPos: number, editorHtml: string): number
+
+
+function buildPositionMapping(doc: ProseMirrorNode): PositionMapping {
+  doc.nodesBetween(0, doc.content.size, (node, pos) => {
+    // Direct mapping between plain text and ProseMirror positions
+  });
+}
+```
+
+### 2. ProseMirror Plugin Architecture
+```typescript
+// PiiDetectionExtension uses native ProseMirror plugin system
+const plugin = new Plugin<PiiDetectionState>({
+  key: piiDetectionPluginKey,
+  state: {
+    init(): PiiDetectionState,
+    apply(tr, prevState): PiiDetectionState // Handles document changes
+  },
+  props: {
+    decorations(state) {
+      // Creates visual highlights via decorations
+      return DecorationSet.create(state.doc, decorations);
+    },
+    handleClick(view, pos, event) {
+      // Native click handling for PII interactions
+    }
+  }
+});
+```
+
+### 3. Automatic Position Updates
+- **Document Changes**: ProseMirror's transaction mapping automatically updates entity positions
+- **Real-time Sync**: Position mapping rebuilds on every document change
+- **No Manual Position Tracking**: Eliminates fragile position calculations
+
+## Core Components
+
+### Session Management
+- [pii.ts](mdc:src/lib/utils/pii.ts) - `PiiSessionManager` singleton for entity state management
+- [pii.ts](mdc:src/lib/apis/pii.ts) - NENNA.ai API integration functions
+
+### Key Classes & Interfaces
+```typescript
+// Enhanced state management
+interface PiiDetectionState {
+  entities: ExtendedPiiEntity[];
+  positionMapping: PositionMapping | null;
+  isDetecting: boolean;
+  lastText: string;
+}
+
+// Bidirectional position mapping
+interface PositionMapping {
+  plainTextToProseMirror: Map<number, number>;
+  proseMirrorToPlainText: Map<number, number>;
+  plainText: string;
+}
+
+// Extension configuration
+interface PiiDetectionOptions {
+  enabled: boolean;
+  apiKey: string;
+  conversationId: string;
+  onPiiDetected?: (entities: ExtendedPiiEntity[], maskedText: string) => void;
+  onPiiToggled?: (entities: ExtendedPiiEntity[]) => void;
+  debounceMs?: number;
+}
+```
+
+## Data Flow
+
+### 1. Real-time Detection (Input Field)
+1. **User Types**: Text changes trigger `doc.nodesBetween()` traversal
+2. **Position Mapping**: Builds bidirectional mapping between plain text and ProseMirror positions
+3. **API Call**: Debounced PII detection via NENNA.ai API
+4. **Entity Mapping**: Converts plain text positions to ProseMirror positions
+5. **Decorations**: Creates visual highlights using ProseMirror decorations
+6. **State Storage**: Entities stored in `PiiSessionManager` for conversation persistence
+
+### 2. Display Processing (Messages)
+1. **Pattern Detection**: Text processed with `unmaskAndHighlightTextForDisplay()`
+2. **Unmasking**: Replaces masked patterns `[{PERSON_1}]` with original text
+3. **Highlighting**: Applies CSS classes for visual indication
+4. **Interaction**: Mouse events trigger `PiiHoverOverlay` display
+
+### 3. Position Accuracy Features
+- **Paragraph Handling**: Properly maps line breaks between paragraphs
+- **Hard Breaks**: Handles `<br>` elements in position calculations
+- **Inclusive/Exclusive**: Correctly handles PII API exclusive end positions vs ProseMirror inclusive positions
+
+## Event Handling Patterns
+
+### Native ProseMirror Events
+```typescript
+handleClick(view, pos, event) {
+  const target = event.target as HTMLElement;
+  if (target.classList.contains('pii-highlight')) {
+    // Direct entity toggling via plugin state
+    const tr = view.state.tr.setMeta(piiDetectionPluginKey, {
+      type: 'TOGGLE_ENTITY_MASKING',
+      entityIndex, occurrenceIndex
+    });
+    view.dispatch(tr);
+  }
+}
+```
+
+### Legacy DOM Events (Display Components)
+- **Mouse Events**: `mouseover`/`mouseout` with DOM traversal for event delegation
+- **Hover Management**: Timeout-based with overlay mouse enter/leave prevention
+- **Entity Toggle**: Click events toggle masking state via session manager
+
+## Migration Benefits
+
+### From HTML Manipulation to Native PM
+- **Robust Position Tracking**: No more manual HTML parsing and br tag counting
+- **Automatic Updates**: ProseMirror handles position updates through transactions
+- **Type Safety**: Full TypeScript integration with ProseMirror types
+- **Performance**: Native document traversal vs string manipulation
+- **Maintainability**: Uses established ProseMirror patterns instead of custom utilities
+
+### Backwards Compatibility
+- Display components (UserMessage/ResponseMessage) continue using existing pattern-based approach
+- Session manager maintains conversation-specific entity state
+- API integration unchanged
+- CSS highlighting styles preserved

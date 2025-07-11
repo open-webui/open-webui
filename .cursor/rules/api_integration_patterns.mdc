@@ -1,0 +1,618 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# API Integration Patterns for PII Systems
+
+## Overview
+API integration patterns learned from implementing PII detection and modifier systems. Focus on reliability, data consistency, and proper error handling.
+
+## API Request Patterns
+
+### Consistent Request Structure
+Always structure API requests with complete context:
+```typescript
+const performPiiDetection = async (
+  plainText: string,
+  conversationId?: string
+): Promise<PiiApiResponse> => {
+  // Get known entities for consistent labeling
+  const knownEntities = conversationId
+    ? piiSessionManager.getKnownEntitiesForApi(conversationId)
+    : piiSessionManager.getGlobalKnownEntitiesForApi();
+
+  // Get current modifiers for behavior control
+  const modifiers = conversationId
+    ? piiSessionManager.getConversationModifiersForApi(conversationId)
+    : piiSessionManager.getGlobalModifiersForApi();
+
+  console.log('PII API Request:', {
+    textLength: plainText.length,
+    knownEntitiesCount: knownEntities.length,
+    modifiersCount: modifiers.length,
+    conversationId
+  });
+
+  // Make API call with full context
+  const response = await maskPiiText(
+    apiKey,
+    [plainText],
+    knownEntities,
+    modifiers,
+    false,
+    false
+  );
+
+  return response;
+};
+```
+
+### API Format Validation
+Validate and transform data formats correctly:
+```typescript
+// Internal modifier format
+interface PiiModifier {
+  action: 'mask' | 'ignore';
+  entity: string;
+  type?: string;
+}
+
+// API format (Shield API)
+interface ShieldApiModifier {
+  action: 'mask' | 'ignore';
+  entity: string;
+  type?: string;
+}
+
+// Conversion function - CRITICAL for correct API integration
+const convertToShieldApiModifiers = (modifiers: PiiModifier[]): ShieldApiModifier[] => {
+  return modifiers.map(modifier => ({
+    action: modifier.action,
+    entity: modifier.entity,
+    ...(modifier.type && { type: modifier.type })
+  }));
+};
+
+// Known entities format for API
+interface KnownPiiEntity {
+  id: number;
+  label: string;
+  name: string; // This is the raw_text from the entity
+}
+
+const convertToKnownEntities = (entities: ExtendedPiiEntity[]): KnownPiiEntity[] => {
+  return entities.map(entity => ({
+    id: entity.id,
+    label: entity.label,
+    name: entity.raw_text
+  }));
+};
+```
+
+## Response Processing Patterns
+
+### Response Validation
+Validate API responses before processing:
+```typescript
+interface PiiApiResponse {
+  text: string[];
+  pii: PiiEntity[][];
+}
+
+const validateApiResponse = (response: any): PiiApiResponse | null => {
+  if (!response || typeof response !== 'object') {
+    console.error('Invalid API response: not an object');
+    return null;
+  }
+
+  if (!Array.isArray(response.text)) {
+    console.error('Invalid API response: text is not an array');
+    return null;
+  }
+
+  if (!Array.isArray(response.pii) || !Array.isArray(response.pii[0])) {
+    console.error('Invalid API response: pii is not a nested array');
+    return null;
+  }
+
+  return response as PiiApiResponse;
+};
+
+// Usage in API integration
+const processApiResponse = async (response: any) => {
+  const validatedResponse = validateApiResponse(response);
+  
+  if (!validatedResponse) {
+    // Handle invalid response gracefully
+    console.warn('API returned invalid response, continuing without PII processing');
+    return;
+  }
+
+  // Process valid response
+  handleValidResponse(validatedResponse);
+};
+```
+
+### Entity State Synchronization
+Synchronize API response entities with local state:
+```typescript
+const synchronizeEntities = (
+  conversationId: string,
+  apiEntities: PiiEntity[]
+): void => {
+  try {
+    if (conversationId) {
+      // Append to conversation state (preserves existing shouldMask states)
+      piiSessionManager.appendConversationEntities(conversationId, apiEntities);
+    } else {
+      // Append to global state for pre-conversation
+      piiSessionManager.appendGlobalEntities(apiEntities);
+    }
+
+    console.log(`Synchronized ${apiEntities.length} entities for conversation: ${conversationId || 'global'}`);
+  } catch (error) {
+    console.error('Failed to synchronize entities:', error);
+    // Don't throw - continue without synchronization
+  }
+};
+```
+
+## Error Handling Patterns
+
+### Graceful API Failure Recovery
+Handle API failures without blocking UI:
+```typescript
+const safeApiCall = async <T>(
+  apiCall: () => Promise<T>,
+  fallbackValue: T,
+  context: string
+): Promise<T> => {
+  try {
+    return await apiCall();
+  } catch (error) {
+    console.error(`API call failed in ${context}:`, error);
+    
+    // Log error details for debugging
+    if (error instanceof Error) {
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
+    
+    // Return fallback instead of throwing
+    return fallbackValue;
+  }
+};
+
+// Usage
+const performSafePiiDetection = async (text: string): Promise<PiiEntity[]> => {
+  return safeApiCall(
+    () => performPiiDetection(text).then(r => r.pii[0]),
+    [], // Empty array as fallback
+    'PII detection'
+  );
+};
+```
+
+### Network Error Classification
+Classify and handle different types of network errors:
+```typescript
+const classifyApiError = (error: any): 'network' | 'auth' | 'validation' | 'server' | 'unknown' => {
+  if (!error) return 'unknown';
+  
+  // Network connectivity issues
+  if (error.name === 'NetworkError' || error.code === 'NETWORK_ERROR') {
+    return 'network';
+  }
+  
+  // HTTP status codes
+  if (error.status) {
+    if (error.status === 401 || error.status === 403) {
+      return 'auth';
+    }
+    if (error.status >= 400 && error.status < 500) {
+      return 'validation';
+    }
+    if (error.status >= 500) {
+      return 'server';
+    }
+  }
+  
+  return 'unknown';
+};
+
+const handleApiError = (error: any, context: string) => {
+  const errorType = classifyApiError(error);
+  
+  switch (errorType) {
+    case 'network':
+      console.warn(`Network error in ${context}. Check internet connection.`);
+      // Could show user notification
+      break;
+      
+    case 'auth':
+      console.error(`Authentication error in ${context}. Check API key.`);
+      // Could disable PII features
+      break;
+      
+    case 'validation':
+      console.error(`Validation error in ${context}:`, error.message);
+      // Log request data for debugging
+      break;
+      
+    case 'server':
+      console.error(`Server error in ${context}. Try again later.`);
+      break;
+      
+    default:
+      console.error(`Unknown error in ${context}:`, error);
+  }
+};
+```
+
+## Rate Limiting and Throttling
+
+### Debounced API Calls
+Implement proper debouncing for user input:
+```typescript
+const createDebouncedApiCall = <T extends any[], R>(
+  apiCall: (...args: T) => Promise<R>,
+  delay: number = 500
+) => {
+  let timeoutId: NodeJS.Timeout | null = null;
+  let lastArgs: T | null = null;
+  
+  const debouncedCall = (...args: T): Promise<R> => {
+    lastArgs = args;
+    
+    return new Promise((resolve, reject) => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      
+      timeoutId = setTimeout(async () => {
+        try {
+          const result = await apiCall(...lastArgs!);
+          resolve(result);
+        } catch (error) {
+          reject(error);
+        } finally {
+          timeoutId = null;
+          lastArgs = null;
+        }
+      }, delay);
+    });
+  };
+  
+  // Cleanup method
+  debouncedCall.cancel = () => {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      timeoutId = null;
+      lastArgs = null;
+    }
+  };
+  
+  return debouncedCall;
+};
+
+// Usage
+const debouncedPiiDetection = createDebouncedApiCall(
+  performPiiDetection,
+  500
+);
+
+// Remember to cleanup
+onDestroy(() => {
+  debouncedPiiDetection.cancel();
+});
+```
+
+### Request Queuing
+Queue requests to prevent overwhelming the API:
+```typescript
+class ApiRequestQueue {
+  private queue: Array<() => Promise<any>> = [];
+  private processing = false;
+  private maxConcurrent = 1;
+  private currentActive = 0;
+
+  async enqueue<T>(request: () => Promise<T>): Promise<T> {
+    return new Promise((resolve, reject) => {
+      this.queue.push(async () => {
+        try {
+          const result = await request();
+          resolve(result);
+        } catch (error) {
+          reject(error);
+        }
+      });
+      
+      this.processQueue();
+    });
+  }
+
+  private async processQueue() {
+    if (this.processing || this.currentActive >= this.maxConcurrent) {
+      return;
+    }
+
+    this.processing = true;
+
+    while (this.queue.length > 0 && this.currentActive < this.maxConcurrent) {
+      const request = this.queue.shift()!;
+      this.currentActive++;
+
+      // Process request without awaiting
+      request().finally(() => {
+        this.currentActive--;
+        this.processQueue();
+      });
+    }
+
+    this.processing = false;
+  }
+}
+
+// Global queue instance
+const piiApiQueue = new ApiRequestQueue();
+
+// Usage
+const queuedPiiDetection = (text: string) => {
+  return piiApiQueue.enqueue(() => performPiiDetection(text));
+};
+```
+
+## State Management Integration
+
+### API Response to State Mapping
+Map API responses to application state consistently:
+```typescript
+const updateStateFromApiResponse = (
+  response: PiiApiResponse,
+  conversationId?: string
+): void => {
+  const entities = response.pii[0] || [];
+  
+  // Update entity state (append-only for consistent labeling)
+  if (conversationId) {
+    piiSessionManager.appendConversationEntities(conversationId, entities);
+  } else {
+    piiSessionManager.appendGlobalEntities(entities);
+  }
+  
+  // Trigger UI updates via callbacks
+  if (onPiiDetected) {
+    onPiiDetected(entities, response.text[0]);
+  }
+  
+  // Update extension state via ProseMirror transactions
+  if (editorView) {
+    const tr = editorView.state.tr.setMeta(piiDetectionPluginKey, {
+      type: 'UPDATE_ENTITIES',
+      entities: entities
+    });
+    editorView.dispatch(tr);
+  }
+};
+```
+
+### State Consistency Checks
+Validate state consistency after API operations:
+```typescript
+const validateStateConsistency = (conversationId?: string): boolean => {
+  try {
+    const entities = conversationId
+      ? piiSessionManager.getConversationEntities(conversationId)
+      : piiSessionManager.getGlobalEntities();
+    
+    const modifiers = conversationId
+      ? piiSessionManager.getConversationModifiers(conversationId)
+      : piiSessionManager.getGlobalModifiers();
+    
+    // Check for orphaned modifiers (modifiers without corresponding entities)
+    const entityTexts = new Set(entities.map(e => e.raw_text));
+    const orphanedModifiers = modifiers.filter(m => !entityTexts.has(m.entity));
+    
+    if (orphanedModifiers.length > 0) {
+      console.warn('Found orphaned modifiers:', orphanedModifiers);
+      // Could clean up orphaned modifiers
+    }
+    
+    return orphanedModifiers.length === 0;
+  } catch (error) {
+    console.error('State consistency check failed:', error);
+    return false;
+  }
+};
+```
+
+## Caching Strategies
+
+### Response Caching
+Cache API responses to reduce redundant calls:
+```typescript
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+  ttl: number;
+}
+
+class ApiResponseCache<T> {
+  private cache = new Map<string, CacheEntry<T>>();
+  private defaultTtl = 5 * 60 * 1000; // 5 minutes
+
+  set(key: string, data: T, ttl: number = this.defaultTtl): void {
+    this.cache.set(key, {
+      data,
+      timestamp: Date.now(),
+      ttl
+    });
+  }
+
+  get(key: string): T | null {
+    const entry = this.cache.get(key);
+    
+    if (!entry) {
+      return null;
+    }
+
+    if (Date.now() - entry.timestamp > entry.ttl) {
+      this.cache.delete(key);
+      return null;
+    }
+
+    return entry.data;
+  }
+
+  clear(): void {
+    this.cache.clear();
+  }
+}
+
+// Usage
+const piiResponseCache = new ApiResponseCache<PiiApiResponse>();
+
+const getCachedOrFetchPii = async (text: string): Promise<PiiApiResponse> => {
+  const cacheKey = `pii:${hashText(text)}`;
+  
+  // Check cache first
+  const cached = piiResponseCache.get(cacheKey);
+  if (cached) {
+    console.log('Using cached PII response');
+    return cached;
+  }
+  
+  // Fetch from API
+  const response = await performPiiDetection(text);
+  
+  // Cache response
+  piiResponseCache.set(cacheKey, response);
+  
+  return response;
+};
+```
+
+## Monitoring and Logging
+
+### API Call Monitoring
+Monitor API performance and usage:
+```typescript
+interface ApiMetrics {
+  totalCalls: number;
+  successfulCalls: number;
+  failedCalls: number;
+  averageResponseTime: number;
+  lastError: string | null;
+}
+
+class ApiMonitor {
+  private metrics: ApiMetrics = {
+    totalCalls: 0,
+    successfulCalls: 0,
+    failedCalls: 0,
+    averageResponseTime: 0,
+    lastError: null
+  };
+  
+  private responseTimes: number[] = [];
+
+  async monitorApiCall<T>(
+    apiCall: () => Promise<T>,
+    context: string
+  ): Promise<T> {
+    const startTime = Date.now();
+    this.metrics.totalCalls++;
+
+    try {
+      const result = await apiCall();
+      
+      // Record success
+      this.metrics.successfulCalls++;
+      const responseTime = Date.now() - startTime;
+      this.recordResponseTime(responseTime);
+      
+      console.log(`API call successful (${responseTime}ms): ${context}`);
+      return result;
+      
+    } catch (error) {
+      // Record failure
+      this.metrics.failedCalls++;
+      this.metrics.lastError = error instanceof Error ? error.message : String(error);
+      
+      console.error(`API call failed: ${context}`, error);
+      throw error;
+    }
+  }
+
+  private recordResponseTime(time: number): void {
+    this.responseTimes.push(time);
+    
+    // Keep only last 100 response times
+    if (this.responseTimes.length > 100) {
+      this.responseTimes = this.responseTimes.slice(-100);
+    }
+    
+    // Calculate average
+    this.metrics.averageResponseTime = 
+      this.responseTimes.reduce((a, b) => a + b, 0) / this.responseTimes.length;
+  }
+
+  getMetrics(): ApiMetrics {
+    return { ...this.metrics };
+  }
+}
+
+// Global monitor instance
+const piiApiMonitor = new ApiMonitor();
+
+// Usage
+const monitoredPiiDetection = (text: string) => {
+  return piiApiMonitor.monitorApiCall(
+    () => performPiiDetection(text),
+    `PII detection for ${text.length} characters`
+  );
+};
+```
+
+## Testing Patterns
+
+### API Integration Testing
+Test API integration with proper mocking:
+```typescript
+// Mock API response for testing
+const createMockPiiResponse = (entities: Partial<PiiEntity>[] = []): PiiApiResponse => {
+  return {
+    text: ['test text'],
+    pii: [entities.map((entity, index) => ({
+      id: entity.id || index + 1,
+      label: entity.label || `TEST_${index + 1}`,
+      type: entity.type || 'PERSON',
+      raw_text: entity.raw_text || 'test',
+      occurrences: entity.occurrences || [{ start_idx: 0, end_idx: 4 }]
+    }))]
+  };
+};
+
+// Test API integration
+const testApiIntegration = async () => {
+  console.log('Testing API integration...');
+  
+  try {
+    // Test successful response
+    const response = await performPiiDetection('Test with John Doe');
+    console.assert(response.pii.length > 0, 'API should return PII entities');
+    
+    // Test error handling
+    try {
+      await performPiiDetection(''); // Empty text might cause error
+    } catch (error) {
+      console.log('Error handling works correctly');
+    }
+    
+    console.log('API integration tests passed');
+  } catch (error) {
+    console.error('API integration tests failed:', error);
+  }
+};
+```

@@ -1,0 +1,158 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Admin PII Configuration System
+
+## Overview
+
+The PII (Personally Identifiable Information) detection system has been converted from per-user settings to a centralized admin-only configuration system. This ensures consistent API key management, centralized control, and simplified user experience.
+
+## Architecture
+
+### Backend Configuration
+
+#### Core Configuration ([config.py](mdc:backend/open_webui/config.py))
+```python
+# PII Detection configuration
+ENABLE_PII_DETECTION = PersistentConfig(
+    "ENABLE_PII_DETECTION",
+    "pii.enable", 
+    os.environ.get("ENABLE_PII_DETECTION", "False").lower() == "true",
+)
+
+PII_API_KEY = PersistentConfig(
+    "PII_API_KEY",
+    "pii.api_key",
+    os.environ.get("PII_API_KEY", ""),
+)
+
+PII_API_BASE_URL = PersistentConfig(
+    "PII_API_BASE_URL", 
+    "pii.api_base_url",
+    os.environ.get("PII_API_BASE_URL", "https://api.nenna.ai/latest"),
+)
+```
+
+#### Application State ([main.py](mdc:backend/open_webui/main.py))
+- PII configuration is loaded into `app.state.config` on startup
+- Exposed to frontend via `/api/config` endpoint in features and pii sections
+- All users automatically inherit admin PII settings
+
+#### Admin API ([auths.py](mdc:backend/open_webui/routers/auths.py))
+```python
+class AdminConfig(BaseModel):
+    # ... existing fields ...
+    ENABLE_PII_DETECTION: bool = False
+    PII_API_KEY: Optional[str] = None
+    PII_API_BASE_URL: Optional[str] = "https://api.nenna.ai/latest"
+```
+
+### Frontend Integration
+
+#### Admin Settings UI ([General.svelte](mdc:src/lib/components/admin/Settings/General.svelte))
+- New "PII Detection" section in Admin Settings > General
+- Toggle for enabling/disabling system-wide PII detection
+- Secure API key input using `SensitiveInput` component
+- Configurable API base URL field
+- Help text linking to nenna.ai for API key acquisition
+
+#### Configuration Access ([stores/index.ts](mdc:src/lib/stores/index.ts))
+```typescript
+type Config = {
+  features: {
+    enable_pii_detection?: boolean;
+    // ... other features
+  };
+  pii?: {
+    enabled: boolean;
+    api_key: string;
+    api_base_url: string;
+  };
+};
+```
+
+#### Component Usage ([MessageInput.svelte](mdc:src/lib/components/chat/MessageInput.svelte))
+```typescript
+// Get PII settings from config (not user settings)
+$: enablePiiDetection = $config?.features?.enable_pii_detection ?? false;
+$: piiApiKey = $config?.pii?.api_key ?? '';
+```
+
+## Configuration Patterns
+
+### Admin Configuration Flow
+1. **Access**: Admin navigates to Admin Settings > General
+2. **Enable**: Toggle "Enable PII Detection" switch
+3. **Configure**: Enter NENNA API key and optionally modify base URL
+4. **Save**: Settings are persisted system-wide via admin config API
+5. **Propagation**: All users immediately inherit the PII settings
+
+### Environment Variable Override
+```bash
+# Optional environment variable configuration
+ENABLE_PII_DETECTION=true
+PII_API_KEY=your-nenna-api-key
+PII_API_BASE_URL=https://api.nenna.ai/latest
+```
+
+## Integration Guidelines
+
+### Adding PII-Aware Components
+```typescript
+// Access PII configuration from system config
+$: piiEnabled = $config?.features?.enable_pii_detection ?? false;
+$: piiApiKey = $config?.pii?.api_key ?? '';
+
+// Use in PII detection extensions
+if (piiEnabled && piiApiKey) {
+  // Initialize PII detection
+}
+```
+
+### API Key Security
+- API keys stored in persistent backend configuration
+- Transmitted to frontend only when PII is enabled
+- Use `SensitiveInput` component for admin key entry
+- No client-side storage of API keys in user settings
+
+## Security Considerations
+
+### Admin-Only Access
+- PII configuration requires admin role
+- API keys not exposed to regular users
+- Centralized key management reduces security risks
+
+### API Key Protection
+- Keys stored in backend persistent configuration
+- Not included in user-accessible settings
+- Secure transmission via admin-only endpoints
+
+### Debug Commands
+```javascript
+// Check PII configuration in browser console
+console.log('PII enabled:', $config?.features?.enable_pii_detection);
+console.log('PII config:', $config?.pii);
+
+// Verify admin access
+console.log('User role:', $user?.role);
+```
+
+## Related Files
+
+### Backend
+- [config.py](mdc:backend/open_webui/config.py) - Core PII configuration
+- [main.py](mdc:backend/open_webui/main.py) - Application state and config endpoint
+- [auths.py](mdc:backend/open_webui/routers/auths.py) - Admin configuration API
+
+### Frontend
+- [General.svelte](mdc:src/lib/components/admin/Settings/General.svelte) - Admin PII settings UI
+- [stores/index.ts](mdc:src/lib/stores/index.ts) - Config type definitions
+- [MessageInput.svelte](mdc:src/lib/components/chat/MessageInput.svelte) - Example PII config usage
+
+### PII System Components
+- [PiiDetectionExtension.ts](mdc:src/lib/components/common/RichTextInput/PiiDetectionExtension.ts) - Core PII detection
+- [PiiModifierExtension.ts](mdc:src/lib/components/common/RichTextInput/PiiModifierExtension.ts) - User PII modifiers
+- [pii.ts](mdc:src/lib/utils/pii.ts) - PII session management
+- [pii/index.ts](mdc:src/lib/apis/pii/index.ts) - NENNA API integration

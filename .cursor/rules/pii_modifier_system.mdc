@@ -1,0 +1,413 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# PII Modifier System - Comprehensive Implementation Guide
+
+## Overview
+A complete ProseMirror-based system that allows users to manually control PII detection through modifiers sent to the Nenna API. Implemented across two main extensions with persistent storage, visual feedback, and sophisticated menu systems.
+
+The system operates with two-tier storage (global pre-conversation, conversation-specific after) and provides intuitive user interfaces for PII management through hover menus and text selection interactions.
+
+## Architecture Components
+
+### Core Extensions
+- **[PiiDetectionExtension.ts](mdc:src/lib/components/common/RichTextInput/PiiDetectionExtension.ts)**: Handles PII detection API calls and highlighting
+- **[PiiModifierExtension.ts](mdc:src/lib/components/common/RichTextInput/PiiModifierExtension.ts)**: Manages user modifier creation and interaction menus
+- **[PiiSessionManager](mdc:src/lib/utils/pii.ts)**: Centralized state management with two-tier storage
+
+### Integration Points
+- **[RichTextInput.svelte](mdc:src/lib/components/common/RichTextInput.svelte)**: Orchestrates both extensions
+- **[PiiAwareText.svelte](mdc:src/lib/components/chat/Messages/Markdown/PiiAwareText.svelte)**: Displays PII highlighting in responses
+- **[UserMessage.svelte](mdc:src/lib/components/chat/Messages/UserMessage.svelte)**: Message component integration
+
+## API Integration - Corrected Implementation
+
+### Nenna API Modifiers Format
+```typescript
+interface PiiModifier {
+  action: 'mask' | 'ignore';
+  entity: string;           // The actual text content
+  type?: string;           // Required for 'mask' action, optional for 'ignore'
+}
+
+interface ShieldApiModifier {
+  action: 'mask' | 'ignore';
+  entity: string;
+  type?: string;
+}
+
+// Examples:
+// {"action": "mask", "entity": "meep", "type": "CUSTOM"}
+// {"action": "ignore", "entity": "Dr. Hahn"}
+```
+
+### API Call Implementation
+```typescript
+// In PiiDetectionExtension.ts
+const performPiiDetection = async (plainText: string) => {
+  const knownEntities = conversationId
+    ? piiSessionManager.getKnownEntitiesForApi(conversationId)
+    : piiSessionManager.getGlobalKnownEntitiesForApi();
+
+  const modifiers = conversationId
+    ? piiSessionManager.getConversationModifiersForApi(conversationId)
+    : piiSessionManager.getGlobalModifiersForApi();
+
+  const response = await maskPiiText(apiKey, [plainText], knownEntities, modifiers, false, false);
+  
+  // Append ALL entities (including modifier-created ones)
+  if (conversationId) {
+    piiSessionManager.appendConversationEntities(conversationId, response.pii[0]);
+  } else {
+    piiSessionManager.appendGlobalEntities(response.pii[0]);
+  }
+};
+```
+
+## State Management - Enhanced Implementation
+
+### Two-Tier Storage with Transfer Logic
+```typescript
+interface ConversationPiiState {
+  entities: ExtendedPiiEntity[];     // Append-only entity storage
+  modifiers: PiiModifier[];          // User-created modifiers
+  sessionId?: string;
+  lastUpdated: number;
+}
+
+class PiiSessionManager {
+  // Global state for pre-conversation usage (temporary storage)
+  private globalEntities: ExtendedPiiEntity[] = [];
+  private globalModifiers: PiiModifier[] = [];
+  
+  // Per-conversation state management (permanent storage)
+  private conversationStates: Map<string, ConversationPiiState> = new Map();
+  
+  // CRITICAL: Transfer method for conversation ID assignment
+  transferGlobalToConversation(conversationId: string): void {
+    if (this.globalEntities.length > 0 || this.globalModifiers.length > 0) {
+      // Copy global state to conversation
+      this.conversationStates.set(conversationId, {
+        entities: [...this.globalEntities],
+        modifiers: [...this.globalModifiers],
+        lastUpdated: Date.now()
+      });
+      
+      // MANDATORY: Clear global state after transfer to prevent memory leaks
+      this.globalEntities = [];
+      this.globalModifiers = [];
+      
+      console.log(`Transferred ${this.globalEntities.length} entities and ${this.globalModifiers.length} modifiers to conversation ${conversationId}`);
+      console.log('Global state cleared after transfer');
+    }
+  }
+  
+  // APPEND-ONLY entity management
+  appendConversationEntities(conversationId: string, newEntities: PiiEntity[]): void {
+    // Intelligent merging preserves existing shouldMask states
+  }
+}
+```
+
+### Persistence Strategy
+- **localStorage**: Both global and conversation states persist automatically
+- **Transfer Logic**: When conversationId changes from empty → actual ID, copy global state to conversation state, then **CLEAR global state**
+- **Global State Cleanup**: Global state is temporary - must be emptied after transfer to prevent memory leaks and state confusion
+- **Append-Only Entities**: Known Entities only grow, never shrink (ensures consistent labeling)
+- **Mutable Modifiers**: Can be added/removed/changed at any time
+
+## User Interface - Implemented Features
+
+### Menu System Architecture
+```typescript
+// PiiModifierExtension.ts - Dual menu system
+interface MenuState {
+  showHoverMenu: boolean;
+  showSelectionMenu: boolean;
+  hoverEntity: PiiEntity | null;
+  selectedText: string;
+  selectedRange: { from: number; to: number } | null;
+  menuPosition: { x: number; y: number };
+}
+```
+
+### Text Selection with Tokenization
+```typescript
+// Broader context tokenization pattern
+const WORD_BOUNDARY_REGEX = /[\w'-äöüÄÖÜß]/;
+const tokenizeSelection = (text: string, selectionStart: number, selectionEnd: number): string[] => {
+  // Find word boundaries around selection
+  // Extract all complete words touched by selection
+  // Return array of tokenized words for user choice
+};
+```
+
+### Menu Options Implementation
+**Hover Menu (for detected PIIs):**
+- **Ignore**: Creates ignore modifier for detected PII
+- **Change Type**: Allows type modification with mask modifier
+- **Remove**: Removes existing modifier
+
+**Selection Menu (for any text):**
+- **Radio Selection**: Choose between tokenized words or exact selection
+- **Type Input**: Type-ahead with standard PII types + custom input
+- **Mask Action**: Creates mask modifier for selected text
+
+**Standard PII Types Available:**
+ADDRESS, BANK_ACCOUNT_NUMBER, ID_NUMBER, HEALTH_DATA, LOCATION, NUMBER, TAX_NUMBER, CREDIT_CARD, DATE, SIGNATURE, EMAIL, IBAN, HEALTH_ID, IPv4v6, PHONENUMBER, LICENSE_PLATE, CURRENCY, ORGANISATION, PASSPORT, PERSON, SSN
+
+### Visual Styling Hierarchy
+```css
+/* Modifier styles take precedence over PII detection */
+.pii-modifier-mask {
+  background: #22c55e !important;  /* Green background */
+  color: #f97316 !important;       /* Orange text */
+  border-bottom: 2px solid #f97316 !important;
+}
+
+.pii-modifier-ignore {
+  background: transparent !important;
+  color: #f97316 !important;       /* Orange text only */
+  text-decoration: line-through !important;
+}
+
+/* Original PII detection styles (lower precedence) */
+.pii-masked {
+  background: #22c55e;
+  color: white;
+  border-bottom: 2px solid #16a34a;
+}
+```
+
+## Implementation Patterns - Working Solutions
+
+### Extension Coordination
+```typescript
+// RichTextInput.svelte - Extension orchestration
+const piiDetectionExtension = PiiDetectionExtension.create({
+  apiKey: piiApiKey,
+  enabled: piiEnabled,
+  conversationId: currentConversationId,
+  onPiiDetected: handlePiiDetected
+});
+
+const piiModifierExtension = PiiModifierExtension.create({
+  conversationId: currentConversationId,
+  onModifierChange: handleModifierChange
+});
+
+extensions = [
+  // ... other extensions
+  ...piiDetectionExtension,
+  ...piiModifierExtension
+];
+```
+
+### Content Change Detection
+```typescript
+// Efficient change detection using content hashing
+const generateContentHash = (doc: Node): string => {
+  return doc.textContent.trim();
+};
+
+// Only trigger detection on actual content changes
+if (currentHash !== previousHash) {
+  debouncedDetection(currentHash);
+}
+```
+
+### Position Mapping Strategy
+```typescript
+// Robust position mapping for decorations
+const buildPositionMapping = (doc: Node) => {
+  const mapping = {
+    plainText: '',
+    plainTextToProseMirror: new Map<number, number>(),
+    proseMirrorToPlainText: new Map<number, number>()
+  };
+  
+  // Bidirectional position mapping for accurate decoration placement
+  doc.nodesBetween(0, doc.content.size, (node, pos) => {
+    if (node.isText) {
+      // Map each character position
+    }
+  });
+  
+  return mapping;
+};
+```
+
+## Critical Implementation Details
+
+### Modifier Hash Generation
+```typescript
+// Content-based hashing for modifier identification
+const generateModifierHash = (modifier: PiiModifier): string => {
+  return `${modifier.action}-${modifier.entity}-${modifier.type || 'no-type'}`;
+};
+```
+
+### API Format Conversion
+```typescript
+// Convert internal modifiers to API format
+const convertToShieldApiModifiers = (modifiers: PiiModifier[]): ShieldApiModifier[] => {
+  return modifiers.map(modifier => ({
+    action: modifier.action,
+    entity: modifier.entity,
+    ...(modifier.type && { type: modifier.type })
+  }));
+};
+```
+
+### Event Handling Patterns
+```typescript
+// Menu timeout management
+let menuTimeout: NodeJS.Timeout | null = null;
+
+const scheduleMenuHide = () => {
+  if (menuTimeout) clearTimeout(menuTimeout);
+  menuTimeout = setTimeout(() => {
+    hideAllMenus();
+  }, 200);
+};
+
+const cancelMenuHide = () => {
+  if (menuTimeout) {
+    clearTimeout(menuTimeout);
+    menuTimeout = null;
+  }
+};
+```
+
+## Business Rules
+
+### Entity Management
+- **Known Entities**: Append-only collection sent with every API call
+- **Purpose**: Maintain consistent labeling (PERSON_1 always same person)
+- **Growth**: Only add, never remove or modify
+- **Source**: API response "pii" field
+- **Critical**: Every modifier-created entity becomes a known entity with unique label
+
+### Modifier Management
+- **One Modifier Per Entity Text**: Each unique text string can have max one modifier
+- **Originally Detected PIIs**: Can use 'ignore' (to suppress) or 'mask' (to change label type)
+- **Non-Detected Text**: Can only use 'mask' (to force detection) with user-defined type
+- **Replacement Logic**: New modifier replaces old modifier for same entity text
+- **Scope**: Modifiers can be added/changed in any prompt throughout conversation
+- **Persistence**: Modifiers survive conversation reloads via localStorage
+
+## Error Handling & Edge Cases
+
+### API Failure Recovery
+```typescript
+try {
+  const response = await maskPiiText(apiKey, [plainText], knownEntities, modifiers);
+  // Process successful response
+} catch (error) {
+  console.error('PII detection failed:', error);
+  // Graceful degradation - continue without PII features
+  // Don't block user interaction
+}
+```
+
+### Position Validation
+```typescript
+// Validate decoration positions before creation
+if (from >= 0 && to <= doc.content.size && from < to) {
+  decorations.push(Decoration.inline(from, to, attributes));
+} else {
+  console.warn('Invalid position range for decoration:', { from, to, docSize: doc.content.size });
+}
+```
+
+### Conversation ID Transitions
+```typescript
+// Handle conversation ID changes during chat flow with mandatory cleanup
+useEffect(() => {
+  if (conversationId && conversationId !== previousConversationId) {
+    // Transfer global state to conversation if needed
+    if (previousConversationId === '') {
+      // Transfer and clear global state
+      piiSessionManager.transferGlobalToConversation(conversationId);
+      
+      // Verify global state was cleared (important for memory management)
+      const remainingGlobalEntities = piiSessionManager.getGlobalEntities();
+      const remainingGlobalModifiers = piiSessionManager.getGlobalModifiers();
+      
+      if (remainingGlobalEntities.length > 0 || remainingGlobalModifiers.length > 0) {
+        console.error('CRITICAL: Global state was not cleared after transfer!');
+        console.error('Remaining entities:', remainingGlobalEntities.length);
+        console.error('Remaining modifiers:', remainingGlobalModifiers.length);
+      } else {
+        console.log('✓ Global state successfully cleared after conversation transfer');
+      }
+    }
+  }
+}, [conversationId]);
+```
+
+## Testing & Validation
+
+### Component Testing
+```typescript
+// Test modifier creation
+const testModifierCreation = () => {
+  const modifier = { action: 'mask', entity: 'test', type: 'CUSTOM' };
+  piiSessionManager.addGlobalModifier(modifier);
+  
+  const retrieved = piiSessionManager.getGlobalModifiersForApi();
+  console.assert(retrieved.length === 1, 'Modifier not stored');
+};
+
+// Test API format conversion
+const testApiConversion = () => {
+  const internal = { action: 'mask', entity: 'test', type: 'CUSTOM' };
+  const api = convertToShieldApiModifiers([internal]);
+  console.assert(api[0].action === 'mask', 'API conversion failed');
+};
+```
+
+### Performance Monitoring
+```typescript
+// Monitor API call frequency
+let apiCallCount = 0;
+const performPiiDetection = async (text: string) => {
+  apiCallCount++;
+  console.log(`PII API call #${apiCallCount}:`, text.substring(0, 50));
+  // ... API call logic
+};
+```
+
+## Production Deployment Notes
+
+### Required Configuration
+- Nenna API key must be configured in PII settings
+- PII detection must be enabled in user preferences
+- Extensions auto-disable if API key missing (graceful degradation)
+
+### Performance Considerations
+- 500ms debounce on text input prevents excessive API calls
+- Position mapping cached per document version
+- Menu timeouts prevent UI flicker and improve UX
+
+### Browser Compatibility
+- Uses modern ES6+ features (Map, Set, async/await)
+- ProseMirror provides cross-browser compatibility layer
+- CSS custom properties used for theming
+
+### Storage Limits
+- localStorage used for persistence (5MB typical limit)
+- Conversation states cleaned up periodically
+- Large entity lists may need pagination in future
+
+## Critical Success Factors
+
+1. **Consistent Labeling**: Known entities ensure PERSON_1 always refers to same person
+2. **State Persistence**: Modifiers and entities survive page reloads
+3. **Global State Cleanup**: Global state MUST be cleared after transfer to prevent memory leaks
+4. **Visual Feedback**: Clear distinction between PIIs, modifiers, and their states
+5. **User Control**: Easy modifier creation/removal without technical knowledge
+6. **Performance**: Debounced API calls, efficient decoration updates
+7. **Separation of Concerns**: PII detection ≠ Modifier management (different visual treatments) 

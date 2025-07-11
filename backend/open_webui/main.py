@@ -354,6 +354,10 @@ from open_webui.config import (
     LDAP_CA_CERT_FILE,
     LDAP_VALIDATE_CERT,
     LDAP_CIPHERS,
+    # PII Detection
+    ENABLE_PII_DETECTION,
+    PII_API_KEY,
+    PII_API_BASE_URL,
     # LDAP Group Management
     ENABLE_LDAP_GROUP_MANAGEMENT,
     ENABLE_LDAP_GROUP_CREATION,
@@ -685,11 +689,15 @@ app.state.config.LDAP_CA_CERT_FILE = LDAP_CA_CERT_FILE
 app.state.config.LDAP_VALIDATE_CERT = LDAP_VALIDATE_CERT
 app.state.config.LDAP_CIPHERS = LDAP_CIPHERS
 
+# PII Detection
+app.state.config.ENABLE_PII_DETECTION = ENABLE_PII_DETECTION
+app.state.config.PII_API_KEY = PII_API_KEY
+app.state.config.PII_API_BASE_URL = PII_API_BASE_URL
+
 # For LDAP Group Management
 app.state.config.ENABLE_LDAP_GROUP_MANAGEMENT = ENABLE_LDAP_GROUP_MANAGEMENT
 app.state.config.ENABLE_LDAP_GROUP_CREATION = ENABLE_LDAP_GROUP_CREATION
 app.state.config.LDAP_ATTRIBUTE_FOR_GROUPS = LDAP_ATTRIBUTE_FOR_GROUPS
-
 
 app.state.AUTH_TRUSTED_EMAIL_HEADER = WEBUI_AUTH_TRUSTED_EMAIL_HEADER
 app.state.AUTH_TRUSTED_NAME_HEADER = WEBUI_AUTH_TRUSTED_NAME_HEADER
@@ -1538,6 +1546,7 @@ async def get_app_config(request: Request):
                     "enable_admin_chat_access": ENABLE_ADMIN_CHAT_ACCESS,
                     "enable_google_drive_integration": app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
                     "enable_onedrive_integration": app.state.config.ENABLE_ONEDRIVE_INTEGRATION,
+                    "enable_pii_detection": app.state.config.ENABLE_PII_DETECTION,
                 }
                 if user is not None
                 else {}
@@ -1583,6 +1592,11 @@ async def get_app_config(request: Request):
                     "pending_user_overlay_title": app.state.config.PENDING_USER_OVERLAY_TITLE,
                     "pending_user_overlay_content": app.state.config.PENDING_USER_OVERLAY_CONTENT,
                     "response_watermark": app.state.config.RESPONSE_WATERMARK,
+                },
+                "pii": {
+                    "enabled": app.state.config.ENABLE_PII_DETECTION,
+                    "api_key": app.state.config.PII_API_KEY,
+                    "api_base_url": app.state.config.PII_API_BASE_URL,
                 },
                 "license_metadata": app.state.LICENSE_METADATA,
                 **(

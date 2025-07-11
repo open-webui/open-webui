@@ -1,0 +1,451 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# ProseMirror Extension Development Patterns
+
+## Overview
+Patterns and best practices for developing ProseMirror extensions in the open-webui context, specifically learned from the PII detection and modifier system implementation.
+
+## Extension Structure
+
+### Factory Pattern
+Use static factory methods for extension creation:
+```typescript
+// PiiDetectionExtension.ts
+export class PiiDetectionExtension {
+  static create(options: PiiDetectionOptions): Extension {
+    // Validation
+    if (!options.enabled || !options.apiKey) {
+      console.log('PiiDetectionExtension: Disabled');
+      return [];
+    }
+    
+    // Return array of plugins/extensions
+    return [
+      piiDetectionPlugin(options),
+      piiDecorationExtension()
+    ];
+  }
+}
+```
+
+### Options Interface Pattern
+Define clear option interfaces for extensions:
+```typescript
+interface PiiDetectionOptions {
+  apiKey: string;
+  enabled: boolean;
+  conversationId?: string;
+  debounceMs?: number;
+  onPiiDetected?: (entities: PiiEntity[], processedText: string) => void;
+}
+
+interface PiiModifierOptions {
+  conversationId?: string;
+  onModifierChange?: (modifiers: PiiModifier[]) => void;
+}
+```
+
+## Plugin Development
+
+### Plugin State Management
+Use proper plugin state interfaces:
+```typescript
+interface PiiDetectionState {
+  entities: PiiEntity[];
+  decorations: DecorationSet;
+  lastContentHash: string;
+}
+
+const piiDetectionPlugin = (options: PiiDetectionOptions) => {
+  return new Plugin<PiiDetectionState>({
+    key: piiDetectionPluginKey,
+    
+    state: {
+      init(): PiiDetectionState {
+        return {
+          entities: [],
+          decorations: DecorationSet.empty,
+          lastContentHash: ''
+        };
+      },
+      
+      apply(tr, prevState): PiiDetectionState {
+        // Handle state updates via transactions
+        const meta = tr.getMeta(piiDetectionPluginKey);
+        if (meta) {
+          // Process meta actions
+        }
+        return newState;
+      }
+    }
+  });
+};
+```
+
+### Position Mapping Strategy
+Implement robust position mapping for decorations:
+```typescript
+const buildPositionMapping = (doc: Node) => {
+  const mapping = {
+    plainText: '',
+    plainTextToProseMirror: new Map<number, number>(),
+    proseMirrorToPlainText: new Map<number, number>()
+  };
+  
+  let plainTextPos = 0;
+  
+  doc.nodesBetween(0, doc.content.size, (node, pos) => {
+    if (node.isText) {
+      const text = node.text;
+      for (let i = 0; i < text.length; i++) {
+        const pmPos = pos + i;
+        mapping.plainTextToProseMirror.set(plainTextPos, pmPos);
+        mapping.proseMirrorToPlainText.set(pmPos, plainTextPos);
+        plainTextPos++;
+      }
+      mapping.plainText += text;
+    }
+  });
+  
+  return mapping;
+};
+```
+
+### Decoration Creation Patterns
+Validate positions before creating decorations:
+```typescript
+const createDecorations = (doc: Node, entities: PiiEntity[], mapping: PositionMapping) => {
+  const decorations: Decoration[] = [];
+  
+  entities.forEach((entity, entityIndex) => {
+    entity.occurrences.forEach((occurrence, occurrenceIndex) => {
+      const from = mapping.plainTextToProseMirror.get(occurrence.start_idx);
+      const to = mapping.plainTextToProseMirror.get(occurrence.end_idx - 1);
+      
+      // Critical: Validate positions
+      if (from !== undefined && to !== undefined && from >= 0 && to < doc.content.size && from <= to) {
+        const attributes = {
+          class: 'pii-highlight pii-masked',
+          'data-pii-label': entity.label,
+          'data-pii-type': entity.type,
+          'data-entity-index': entityIndex.toString(),
+          'data-pii-occurrence': occurrenceIndex.toString()
+        };
+        
+        decorations.push(Decoration.inline(from, to + 1, attributes));
+      } else {
+        console.warn('Invalid position range for PII entity:', { from, to, docSize: doc.content.size });
+      }
+    });
+  });
+  
+  return DecorationSet.create(doc, decorations);
+};
+```
+
+## Event Handling Patterns
+
+### Click Event Handling
+Handle click events properly in plugins:
+```typescript
+const plugin = new Plugin({
+  props: {
+    handleClick(view, pos, event) {
+      const target = event.target as HTMLElement;
+      
+      if (target.classList.contains('pii-highlight')) {
+        console.log('PII highlight clicked');
+        
+        // Extract data attributes
+        const entityIndex = parseInt(target.getAttribute('data-entity-index') || '0');
+        const occurrenceIndex = parseInt(target.getAttribute('data-pii-occurrence') || '0');
+        
+        // Dispatch transaction to update plugin state
+        const tr = view.state.tr.setMeta(piiDetectionPluginKey, {
+          type: 'TOGGLE_ENTITY_MASKING',
+          entityIndex,
+          occurrenceIndex
+        });
+        
+        view.dispatch(tr);
+        event.preventDefault();
+        return true; // Event handled
+      }
+      
+      return false; // Let other handlers process
+    }
+  }
+});
+```
+
+### Text Selection Handling
+Handle text selection for modifier creation:
+```typescript
+const handleSelectionChange = (view: EditorView) => {
+  const { from, to } = view.state.selection;
+  
+  if (from !== to) {
+    const selectedText = view.state.doc.textBetween(from, to);
+    
+    if (selectedText.trim()) {
+      // Show selection menu
+      showSelectionMenu(selectedText, { from, to }, view);
+    }
+  } else {
+    // Hide selection menu
+    hideSelectionMenu();
+  }
+};
+```
+
+## Menu Integration Patterns
+
+### Menu State Management
+Manage menu state within extensions:
+```typescript
+interface MenuState {
+  showHoverMenu: boolean;
+  showSelectionMenu: boolean;
+  hoverEntity: PiiEntity | null;
+  selectedText: string;
+  selectedRange: { from: number; to: number } | null;
+  menuPosition: { x: number; y: number };
+}
+
+let menuState: MenuState = {
+  showHoverMenu: false,
+  showSelectionMenu: false,
+  hoverEntity: null,
+  selectedText: '',
+  selectedRange: null,
+  menuPosition: { x: 0, y: 0 }
+};
+```
+
+### Menu Timeout Management
+Implement proper timeout handling for menus:
+```typescript
+let menuTimeout: NodeJS.Timeout | null = null;
+
+const scheduleMenuHide = () => {
+  if (menuTimeout) clearTimeout(menuTimeout);
+  menuTimeout = setTimeout(() => {
+    hideAllMenus();
+  }, 200);
+};
+
+const cancelMenuHide = () => {
+  if (menuTimeout) {
+    clearTimeout(menuTimeout);
+    menuTimeout = null;
+  }
+};
+
+// Use in mouse event handlers
+const handleMouseEnter = () => {
+  cancelMenuHide();
+  showMenu();
+};
+
+const handleMouseLeave = () => {
+  scheduleMenuHide();
+};
+```
+
+## Content Change Detection
+
+### Hash-Based Change Detection
+Implement efficient content change detection:
+```typescript
+const generateContentHash = (doc: Node): string => {
+  return doc.textContent.trim();
+};
+
+// In plugin state apply method
+apply(tr, prevState) {
+  const currentHash = generateContentHash(tr.doc);
+  
+  // Only process if content actually changed
+  if (currentHash !== prevState.lastContentHash && currentHash.length > 0) {
+    // Trigger debounced API call
+    debouncedDetection(currentHash);
+    
+    return {
+      ...prevState,
+      lastContentHash: currentHash
+    };
+  }
+  
+  return prevState;
+}
+```
+
+### Debounced API Integration
+Integrate debounced API calls with extensions:
+```typescript
+const debouncedDetection = debounce(async (plainText: string) => {
+  try {
+    // Perform API call
+    const response = await performPiiDetection(plainText);
+    
+    // Update plugin state via transaction
+    const tr = view.state.tr.setMeta(piiDetectionPluginKey, {
+      type: 'UPDATE_ENTITIES',
+      entities: response.pii[0]
+    });
+    
+    view.dispatch(tr);
+  } catch (error) {
+    console.error('PII detection failed:', error);
+  }
+}, 500);
+```
+
+## Extension Lifecycle
+
+### Cleanup Patterns
+Implement proper cleanup in extensions:
+```typescript
+const plugin = new Plugin({
+  view(editorView) {
+    // Initialize view-specific state
+    return {
+      destroy() {
+        // Cleanup: Clear timeouts, remove event listeners
+        if (menuTimeout) {
+          clearTimeout(menuTimeout);
+        }
+        
+        // Clear any external references
+        cleanupExternalReferences();
+      }
+    };
+  }
+});
+```
+
+### Extension Coordination
+Coordinate multiple extensions properly:
+```typescript
+// In RichTextInput.svelte
+$: {
+  // Recreate extensions when dependencies change
+  const newExtensions = [
+    // Core extensions first
+    StarterKit,
+    Placeholder.configure({ placeholder }),
+    
+    // PII extensions (order matters)
+    ...(piiEnabled ? PiiDetectionExtension.create({
+      apiKey: piiApiKey,
+      enabled: piiEnabled,
+      conversationId: currentConversationId,
+      onPiiDetected: handlePiiDetected
+    }) : []),
+    
+    ...(piiEnabled ? PiiModifierExtension.create({
+      conversationId: currentConversationId,
+      onModifierChange: handleModifierChange
+    }) : [])
+  ];
+  
+  // Update editor extensions
+  if (editor) {
+    editor.extensionManager.reconfigure({ extensions: newExtensions });
+  }
+}
+```
+
+## Error Handling
+
+### Plugin Error Recovery
+Implement robust error handling in plugins:
+```typescript
+const plugin = new Plugin({
+  state: {
+    apply(tr, prevState) {
+      try {
+        // Plugin logic
+        return newState;
+      } catch (error) {
+        console.error('Plugin error:', error);
+        // Return previous state to prevent crashes
+        return prevState;
+      }
+    }
+  },
+  
+  props: {
+    handleClick(view, pos, event) {
+      try {
+        // Click handling logic
+        return true;
+      } catch (error) {
+        console.error('Click handler error:', error);
+        return false; // Let other handlers process
+      }
+    }
+  }
+});
+```
+
+### Extension Fallbacks
+Provide fallbacks when extensions fail:
+```typescript
+export const createPiiExtensions = (options: PiiOptions): Extension => {
+  try {
+    if (!options.enabled || !options.apiKey) {
+      return []; // Graceful disable
+    }
+    
+    return [
+      PiiDetectionExtension.create(options),
+      PiiModifierExtension.create(options)
+    ];
+  } catch (error) {
+    console.error('Failed to create PII extensions:', error);
+    return []; // Return empty array, don't crash editor
+  }
+};
+```
+
+## Performance Considerations
+
+### Decoration Optimization
+Optimize decoration updates:
+```typescript
+// Only update decorations when necessary
+const shouldUpdateDecorations = (prevEntities: PiiEntity[], newEntities: PiiEntity[]): boolean => {
+  if (prevEntities.length !== newEntities.length) return true;
+  
+  // Compare entity signatures
+  for (let i = 0; i < prevEntities.length; i++) {
+    if (prevEntities[i].label !== newEntities[i].label) return true;
+  }
+  
+  return false;
+};
+```
+
+### Memory Management
+Avoid memory leaks in extensions:
+```typescript
+// Clear references in cleanup
+const cleanupExtension = () => {
+  // Clear timers
+  if (debounceTimer) clearTimeout(debounceTimer);
+  
+  // Clear DOM references
+  if (menuElement) {
+    menuElement.remove();
+    menuElement = null;
+  }
+  
+  // Clear callback references
+  onPiiDetected = null;
+  onModifierChange = null;
+};
+```

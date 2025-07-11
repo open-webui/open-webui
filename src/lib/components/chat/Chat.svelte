@@ -712,6 +712,11 @@
 			.filter((m) => !(m?.info?.meta?.hidden ?? false))
 			.map((m) => m.id);
 
+		const { PiiSessionManager } = await import('$lib/utils/pii');
+		const piiManager = PiiSessionManager.getInstance();
+		piiManager.clearTemporaryState();
+		piiManager.activateTemporaryState();
+
 		if ($page.url.searchParams.get('models') || $page.url.searchParams.get('model')) {
 			const urlModels = (
 				$page.url.searchParams.get('models') ||
@@ -770,7 +775,6 @@
 		await showControls.set(false);
 		await showCallOverlay.set(false);
 		await showOverview.set(false);
-		await showArtifacts.set(false);
 
 		if ($page.url.pathname.includes('/c/')) {
 			window.history.replaceState(history.state, '', `/`);
@@ -863,6 +867,10 @@
 			temporaryChatEnabled.set(false);
 		}
 
+		const { PiiSessionManager } = await import('$lib/utils/pii');
+		const piiManager = PiiSessionManager.getInstance();
+		piiManager.clearTemporaryState();
+
 		chat = await getChatById(localStorage.token, $chatId).catch(async (error) => {
 			await goto('/');
 			return null;
@@ -895,6 +903,11 @@
 						: convertMessagesToHistory(chatContent.messages);
 
 				chatTitle.set(chatContent.title);
+
+				// Load PII state for this conversation if available
+				if (chatContent?.piiState && $chatId) {
+					piiManager.loadConversationState($chatId, chatContent.piiState);
+				}
 
 				const userSettings = await getUserSettings(localStorage.token);
 
@@ -1124,6 +1137,19 @@
 			} else {
 				await saveChatHandler($chatId, history);
 			}
+
+			// CRITICAL FIX: Commit working entities for existing chats
+			// This ensures PII entities detected while typing are persisted before sending
+			if ($chatId && $chatId !== 'local') {
+				try {
+					const { PiiSessionManager } = await import('$lib/utils/pii');
+					const piiManager = PiiSessionManager.getInstance();
+					piiManager.commitConversationWorkingEntities($chatId);
+					console.log('Chat: Committed working entities for existing chat:', $chatId);
+				} catch (error) {
+					console.warn('Chat: Failed to commit working entities:', error);
+				}
+			}
 		}
 	};
 
@@ -1329,7 +1355,7 @@
 			);
 		}
 
-		console.log(data);
+		//console.log(data);
 		if (autoScroll) {
 			scrollToBottom();
 		}
@@ -1432,6 +1458,19 @@
 		// Append messageId to childrenIds of parent message
 		if (messages.length !== 0) {
 			history.messages[messages.at(-1).id].childrenIds.push(userMessageId);
+		}
+
+		// CRITICAL FIX: Commit working entities for existing chats
+		// This ensures PII entities detected while typing are persisted before sending
+		if ($chatId && $chatId !== 'local') {
+			try {
+				const { PiiSessionManager } = await import('$lib/utils/pii');
+				const piiManager = PiiSessionManager.getInstance();
+				piiManager.commitConversationWorkingEntities($chatId);
+				console.log('Chat: Committed working entities for existing chat:', $chatId);
+			} catch (error) {
+				console.warn('Chat: Failed to commit working entities:', error);
+			}
 		}
 
 		// focus on chat input
@@ -1845,6 +1884,19 @@
 		history.messages[userMessageId] = userMessage;
 		history.currentId = userMessageId;
 
+		// CRITICAL FIX: Commit working entities for existing chats (follow-up messages)
+		// This ensures PII entities detected while typing are persisted before sending
+		if ($chatId && $chatId !== 'local') {
+			try {
+				const { PiiSessionManager } = await import('$lib/utils/pii');
+				const piiManager = PiiSessionManager.getInstance();
+				piiManager.commitConversationWorkingEntities($chatId);
+				console.log('Chat: Committed working entities for follow-up message:', $chatId);
+			} catch (error) {
+				console.warn('Chat: Failed to commit working entities for follow-up:', error);
+			}
+		}
+
 		await tick();
 
 		if (autoScroll) {
@@ -1948,6 +2000,9 @@
 	const initChatHandler = async (history) => {
 		let _chatId = $chatId;
 
+		const { PiiSessionManager } = await import('$lib/utils/pii');
+		const piiManager = PiiSessionManager.getInstance();
+
 		if (!$temporaryChatEnabled) {
 			chat = await createNewChat(localStorage.token, {
 				id: _chatId,
@@ -1963,6 +2018,14 @@
 
 			_chatId = chat.id;
 			await chatId.set(_chatId);
+
+			if (piiManager.isTemporaryStateActive()) {
+				piiManager.transferTemporaryToConversation(_chatId);
+			}
+
+			if (_chatId && _chatId !== 'local') {
+				piiManager.commitConversationWorkingEntities(_chatId);
+			}
 
 			await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			currentChatPage.set(1);
@@ -1980,18 +2043,35 @@
 	const saveChatHandler = async (_chatId, history) => {
 		if ($chatId == _chatId) {
 			if (!$temporaryChatEnabled) {
-				chat = await updateChatById(localStorage.token, _chatId, {
+				// Get PII state for this conversation
+				const { PiiSessionManager } = await import('$lib/utils/pii');
+				const piiManager = PiiSessionManager.getInstance();
+				const piiState = piiManager.getConversationState(_chatId);
+
+				const chatData = {
 					models: selectedModels,
 					history: history,
 					messages: createMessagesList(history, history.currentId),
 					params: params,
-					files: chatFiles
-				});
+					files: chatFiles,
+					...(piiState && { piiState })
+				};
+
+				chat = await updateChatById(localStorage.token, _chatId, chatData);
 				currentChatPage.set(1);
 				await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			}
 		}
 	};
+
+	// Expose saveChatHandler for PiiSessionManager to trigger saves
+	if (typeof window !== 'undefined') {
+		(window as any).triggerPiiChatSave = async (conversationId: string) => {
+			if (conversationId === $chatId) {
+				await saveChatHandler(conversationId, history);
+			}
+		};
+	}
 </script>
 
 <svelte:head>
@@ -2117,6 +2197,7 @@
 									transparentBackground={$settings?.backgroundImageUrl ?? false}
 									{stopResponse}
 									{createMessagePair}
+									chatId={$chatId}
 									onChange={(input) => {
 										if (!$temporaryChatEnabled) {
 											if (input.prompt !== null) {
@@ -2176,6 +2257,7 @@
 									toolServers={$toolServers}
 									{stopResponse}
 									{createMessagePair}
+									chatId={$chatId}
 									on:upload={async (e) => {
 										const { type, data } = e.detail;
 
@@ -2183,6 +2265,8 @@
 											await uploadWeb(data);
 										} else if (type === 'youtube') {
 											await uploadYoutubeTranscription(data);
+										} else if (type === 'google-drive') {
+											await uploadGoogleDriveFile(data);
 										}
 									}}
 									on:submit={async (e) => {

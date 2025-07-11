@@ -3,9 +3,17 @@
 	import { toast } from 'svelte-sonner';
 	import { tick, getContext, onMount } from 'svelte';
 
-	import { models, settings } from '$lib/stores';
+	import { models, settings, chatId } from '$lib/stores';
 	import { user as _user } from '$lib/stores';
 	import { copyToClipboard as _copyToClipboard, formatDate } from '$lib/utils';
+
+	// PII Detection imports
+	import {
+		PiiSessionManager,
+		unmaskAndHighlightTextForDisplay,
+		unmaskTextWithEntities,
+		type ExtendedPiiEntity
+	} from '$lib/utils/pii';
 
 	import Name from './Name.svelte';
 	import ProfileImage from './ProfileImage.svelte';
@@ -54,7 +62,21 @@
 		}
 	}
 
-	const copyToClipboard = async (text) => {
+	// PII Detection state
+	let piiSessionManager = PiiSessionManager.getInstance();
+
+	const copyToClipboard = async (text: string) => {
+		// First unmask any PII placeholders to get the actual text
+		const entities = piiSessionManager.getEntitiesForDisplay($chatId);
+		console.log(
+			'UserMessage: copyToClipboard - chatId:',
+			$chatId,
+			'entities found:',
+			entities.length
+		);
+		if (entities.length > 0) {
+			text = unmaskTextWithEntities(text, entities);
+		}
 		const res = await _copyToClipboard(text);
 		if (res) {
 			toast.success($i18n.t('Copying to clipboard was successful!'));
@@ -95,7 +117,85 @@
 	};
 
 	onMount(() => {
-		// console.log('UserMessage mounted');
+		// Add PII highlighting styles if not already present
+		if (!document.getElementById('pii-user-styles')) {
+			const styleElement = document.createElement('style');
+			styleElement.id = 'pii-user-styles';
+			styleElement.textContent = `
+				.pii-highlight {
+					border-radius: 3px;
+					padding: 1px 2px;
+					position: relative;
+					transition: all 0.2s ease;
+					cursor: pointer;
+				}
+				
+				.pii-highlight:hover {
+					box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+				}
+				
+				/* Masked entities - dark green font, green background, green dashed underline */
+				.pii-highlight.pii-masked {
+					color: #15803d;
+					background-color: rgba(34, 197, 94, 0.2);
+					border-bottom: 2px dashed #15803d;
+				}
+				
+				.pii-highlight.pii-masked:hover {
+					background-color: rgba(34, 197, 94, 0.3);
+					border-bottom: 3px dashed #15803d;
+				}
+				
+				/* Unmasked entities - red background, solid red underline */
+				.pii-highlight.pii-unmasked {
+					background-color: rgba(239, 68, 68, 0.2);
+					border-bottom: 1px solid #dc2626;
+				}
+				
+				.pii-highlight.pii-unmasked:hover {
+					background-color: rgba(239, 68, 68, 0.3);
+					border-bottom: 2px solid #dc2626;
+				}
+				
+				/* Modifier-affected text - yellow font, keeps other formatting */
+				.pii-modifier-highlight {
+					color: #ca8a04;
+					cursor: pointer;
+					transition: color 0.2s ease;
+				}
+				
+				.pii-modifier-highlight:hover {
+					color: #a16207;
+				}
+				
+				/* Modifier-affected text - yellow font (base styling) */
+				.pii-modifier-highlight {
+					color: #ca8a04;
+					cursor: pointer;
+					transition: all 0.2s ease;
+				}
+				
+				.pii-modifier-highlight:hover {
+					color: #a16207;
+				}
+				
+				/* Mask modifier - yellow font, green background, green dashed underline */
+				.pii-modifier-highlight.pii-modifier-mask {
+					color: #ca8a04;
+					background-color: rgba(34, 197, 94, 0.2);
+					border-bottom: 1px dashed #15803d;
+					border-radius: 3px;
+					padding: 1px 2px;
+				}
+				
+				.pii-modifier-highlight.pii-modifier-mask:hover {
+					color: #a16207;
+					background-color: rgba(34, 197, 94, 0.3);
+					border-bottom: 2px dashed #15803d;
+				}
+			`;
+			document.head.appendChild(styleElement);
+		}
 	});
 </script>
 
@@ -316,7 +416,7 @@
 									: ' w-full'}"
 							>
 								{#if message.content}
-									<Markdown id={message.id} content={message.content} />
+									<Markdown id={message.id} content={message.content} conversationId={$chatId} />
 								{/if}
 							</div>
 						</div>

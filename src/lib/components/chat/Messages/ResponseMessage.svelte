@@ -15,6 +15,15 @@
 	import { getChatById } from '$lib/apis/chats';
 	import { generateTags } from '$lib/apis';
 
+	// PII Detection imports
+	import { unmaskPiiTextWithSession, type PiiEntity } from '$lib/apis/pii';
+	import {
+		PiiSessionManager,
+		unmaskTextWithEntities,
+		highlightUnmaskedEntities,
+		type ExtendedPiiEntity
+	} from '$lib/utils/pii';
+
 	import { config, models, settings, temporaryChatEnabled, TTSWorker, user } from '$lib/stores';
 	import { synthesizeOpenAISpeech } from '$lib/apis/audio';
 	import { imageGenerations } from '$lib/apis/images';
@@ -114,6 +123,11 @@
 		}
 	}
 
+	// PII Detection state
+	let piiSessionManager = PiiSessionManager.getInstance();
+	let unmaskedContent = '';
+	let isUnmaskingPii = false;
+
 	export let siblings;
 
 	export let gotoMessage: Function = () => {};
@@ -158,6 +172,12 @@
 	let showRateComment = false;
 
 	const copyToClipboard = async (text) => {
+		// First unmask any PII placeholders to get the actual text
+		const entities = piiSessionManager.getEntitiesForDisplay(chatId);
+		if (entities.length > 0) {
+			text = unmaskTextWithEntities(text, entities);
+		}
+
 		text = removeAllDetails(text);
 
 		if (($config?.ui?.response_watermark ?? '').trim() !== '') {
@@ -564,7 +584,74 @@
 	}
 
 	onMount(async () => {
-		// console.log('ResponseMessage mounted');
+		// Add PII highlighting styles if not already present
+		if (!document.getElementById('pii-response-styles')) {
+			const styleElement = document.createElement('style');
+			styleElement.id = 'pii-response-styles';
+			styleElement.textContent = `
+				.pii-highlight {
+					border-radius: 3px;
+					padding: 1px 2px;
+					position: relative;
+					transition: all 0.2s ease;
+					cursor: pointer;
+				}
+				
+				.pii-highlight:hover {
+					box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+				}
+				
+				/* Masked entities - dark green font, green background, green dashed underline */
+				.pii-highlight.pii-masked {
+					color: #15803d;
+					background-color: rgba(34, 197, 94, 0.2);
+					border-bottom: 2px dashed #15803d;
+				}
+				
+				.pii-highlight.pii-masked:hover {
+					background-color: rgba(34, 197, 94, 0.3);
+					border-bottom: 3px dashed #15803d;
+				}
+				
+				/* Unmasked entities - red background, solid red underline */
+				.pii-highlight.pii-unmasked {
+					background-color: rgba(239, 68, 68, 0.2);
+					border-bottom: 1px solid #dc2626;
+				}
+				
+				.pii-highlight.pii-unmasked:hover {
+					background-color: rgba(239, 68, 68, 0.3);
+					border-bottom: 2px solid #dc2626;
+				}
+				
+				/* Modifier-affected text - yellow font (base styling) */
+				.pii-modifier-highlight {
+					color: #ca8a04;
+					cursor: pointer;
+					transition: all 0.2s ease;
+				}
+				
+				.pii-modifier-highlight:hover {
+					color: #a16207;
+				}
+				
+				/* Mask modifier - yellow font, green background, green dashed underline */
+				.pii-modifier-highlight.pii-modifier-mask {
+					color: #ca8a04;
+					background-color: rgba(34, 197, 94, 0.2);
+					border-bottom: 1px dashed #15803d;
+					border-radius: 3px;
+					padding: 1px 2px;
+				}
+				
+				.pii-modifier-highlight.pii-modifier-mask:hover {
+					color: #a16207;
+					background-color: rgba(34, 197, 94, 0.3);
+					border-bottom: 2px dashed #15803d;
+				}
+			`;
+			document.head.appendChild(styleElement);
+		}
 
 		await tick();
 		if (buttonsContainerElement) {
@@ -801,6 +888,7 @@
 										save={!readOnly}
 										preview={!readOnly}
 										{model}
+										conversationId={chatId}
 										onTaskClick={async (e) => {
 											console.log(e);
 										}}
