@@ -50,7 +50,6 @@
 
 	import { onMount, onDestroy, tick, getContext } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
-	import { socket } from '$lib/stores';
 
 	const i18n = getContext('i18n');
 	const eventDispatch = createEventDispatcher();
@@ -60,7 +59,7 @@
 	import { receiveTransaction, sendableSteps, getVersion } from 'prosemirror-collab';
 	import { Step } from 'prosemirror-transform';
 	import { Decoration, DecorationSet } from 'prosemirror-view';
-	import { Editor } from '@tiptap/core';
+	import { Editor, Extension } from '@tiptap/core';
 
 	import { AIAutocompletion } from './RichTextInput/AutoCompletion.js';
 	import History from '@tiptap/extension-history';
@@ -100,6 +99,10 @@
 
 	export let editor = null;
 
+	export let socket = null;
+	export let user = null;
+	export let documentId = '';
+
 	export let className = 'input-prose';
 	export let placeholder = 'Type here...';
 	export let link = false;
@@ -111,6 +114,7 @@
 	export let json = false;
 	export let raw = false;
 	export let editable = true;
+	export let collaboration = false;
 
 	export let showFormattingButtons = true;
 
@@ -146,9 +150,9 @@
 				update: (view, prevState) => {
 					const sendable = sendableSteps(view.state);
 					if (sendable) {
-						$socket.emit('document_steps', {
+						socket.emit('document_steps', {
 							document_id: documentId,
-							user_id: userId,
+							user_id: user?.id,
 							version: sendable.version,
 							steps: sendable.steps.map((step) => step.toJSON()),
 							clientID: sendable.clientID
@@ -159,8 +163,33 @@
 		});
 	};
 
+	function initializeCollaboration() {
+		if (!socket || !user || !documentId) {
+			console.warn('Collaboration not initialized: missing socket, user, or documentId');
+			return;
+		}
+
+		socket.emit('join_document', {
+			document_id: documentId,
+			user_id: user?.id,
+			user_name: user?.name,
+			user_color: user?.color
+		});
+
+		socket.on('document_steps', handleDocumentSteps);
+		socket.on('document_state', handleDocumentState);
+		socket.on('user_joined', handleUserJoined);
+		socket.on('user_left', handleUserLeft);
+		socket.on('connect', () => {
+			isConnected = true;
+		});
+		socket.on('disconnect', () => {
+			isConnected = false;
+		});
+	}
+
 	function handleDocumentSteps(data) {
-		if (data.user_id !== userId && editor) {
+		if (data.user_id !== user?.id && editor) {
 			const steps = data.steps.map((stepJSON) => Step.fromJSON(editor.schema, stepJSON));
 			const tr = receiveTransaction(editor.state, steps, data.clientID);
 
@@ -550,6 +579,10 @@
 
 		console.log('content', content);
 
+		if (collaboration) {
+			initializeCollaboration();
+		}
+
 		editor = new Editor({
 			element: element,
 			extensions: [
@@ -618,6 +651,17 @@
 									placement: 'bottom-start',
 									theme: 'transparent',
 									offset: [-12, 4]
+								}
+							})
+						]
+					: []),
+
+				...(collaboration
+					? [
+							Extension.create({
+								name: 'socketCollaboration',
+								addProseMirrorPlugins() {
+									return [collaborationPlugin()];
 								}
 							})
 						]
@@ -828,6 +872,18 @@
 	});
 
 	onDestroy(() => {
+		if (socket) {
+			socket.off('document_steps', handleDocumentSteps);
+			socket.off('document_state', handleDocumentState);
+			socket.off('user_joined', handleUserJoined);
+			socket.off('user_left', handleUserLeft);
+
+			socket.emit('leave_document', {
+				document_id: documentId,
+				user_id: userId
+			});
+		}
+
 		if (editor) {
 			editor.destroy();
 		}

@@ -613,8 +613,10 @@
 					}}
 					onConfirm={async (data) => {
 						const { text, filename } = data;
-						content = `${content}${text} `;
 						recording = false;
+
+						await tick();
+						insertTextAtCursor(text);
 
 						await tick();
 

@@ -325,15 +325,7 @@
 			replaceCommandWithText(text);
 		} else {
 			if ($settings?.richTextInput ?? true) {
-				const selection = window.getSelection();
-				if (selection && selection.rangeCount > 0) {
-					const range = selection.getRangeAt(0);
-					range.deleteContents();
-					range.insertNode(document.createTextNode(text));
-					range.collapse(false);
-					selection.removeAllRanges();
-					selection.addRange(range);
-				}
+				chatInputElement?.insertContent(text);
 			} else {
 				const cursor = chatInput.selectionStart;
 				prompt = prompt.slice(0, cursor) + text + prompt.slice(cursor);
@@ -966,9 +958,11 @@
 							}}
 							onConfirm={async (data) => {
 								const { text, filename } = data;
-								prompt = `${prompt}${text} `;
 
 								recording = false;
+
+								await tick();
+								insertTextAtCursor(text);
 
 								await tick();
 								document.getElementById('chat-input')?.focus();
