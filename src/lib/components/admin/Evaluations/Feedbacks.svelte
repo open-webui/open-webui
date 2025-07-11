@@ -243,7 +243,7 @@
 
 		<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
 
-		<span class="text-lg font-medium text-[#767676] dark:text-gray-300">{feedbacks.length}</span>
+		<span class="text-lg font-medium text-[#767676] dark:text-gray-300">{totalFeedbackCount}</span>
 	</div>
 
 	<div>
