@@ -2441,7 +2441,9 @@ async def process_chat_response(
 
         # background_tasks.add_task(response_handler, response, events)
         task_id, _ = await create_task(
-            request, response_handler(response, events), id=metadata["chat_id"]
+            request.app.state.redis,
+            response_handler(response, events),
+            id=metadata["chat_id"],
         )
         return {"status": True, "task_id": task_id}
 
