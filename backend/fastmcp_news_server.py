@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-FastMCP News Server - Clean Version
-Fetches news articles from Azure Blob Storage with clean, user-friendly formatting.
+FastMCP News Server - Updated Version
+Fetches news articles from Azure Blob Storage with support for the new JSON structure.
+Supports language filtering (English/French) and clean, user-friendly formatting.
 """
 
 import os
@@ -19,11 +20,32 @@ logger = logging.getLogger(__name__)
 # Create FastMCP server
 mcp = FastMCP("news-server")
 
+# Localization dictionary for UI labels
+LABELS = {
+    "E": {  # English
+        "content": "📄 Content",
+        "word_count": "📊 Word count",
+        "sentiment": "🎭 Sentiment",
+        "no_articles": "No recent articles found matching your criteria.",
+        "source": "📰 Source",
+        "published": "📅 Published"
+    },
+    "F": {  # French
+        "content": "📄 Contenu",
+        "word_count": "📊 Nombre de mots",
+        "sentiment": "🎭 Sentiment",
+        "no_articles": "Aucun article récent trouvé correspondant à vos critères.",
+        "source": "📰 Source",
+        "published": "📅 Publié"
+    }
+}
+
 
 def fetch_latest_articles_from_azure(
     days_back: int = 1,
     max_articles: int = 5,
     publication_filter: Optional[str] = None,
+    language: str = "E",
 ) -> Dict:
     """
     Fetch latest news articles from Azure Blob Storage (NewsDesk)
@@ -84,82 +106,40 @@ def fetch_latest_articles_from_azure(
 
                                 if "articles" in json_data:
                                     for article in json_data["articles"]:
+                                        # Filter by language (default to English "E")
+                                        article_language = article.get("language", "E")
+                                        if language.upper() != article_language.upper():
+                                            continue
+
                                         # Apply publication filter if specified
                                         if publication_filter:
-                                            source_name = ""
+                                            # Check publication field (new structure)
+                                            publication_name = ""
                                             if "publication" in article:
-                                                if isinstance(
-                                                    article["publication"], dict
-                                                ):
-                                                    source_name = article[
-                                                        "publication"
-                                                    ].get("name", "")
-                                                else:
-                                                    source_name = str(
-                                                        article["publication"]
-                                                    )
-                                            elif "source" in article:
-                                                if isinstance(article["source"], dict):
-                                                    source_name = article["source"].get(
-                                                        "name", ""
-                                                    )
-                                                else:
-                                                    source_name = str(article["source"])
-
+                                                publication_name = str(article["publication"])
+                                            
                                             if (
                                                 publication_filter.lower()
-                                                not in source_name.lower()
+                                                not in publication_name.lower()
                                             ):
                                                 continue
 
-                                        # Extract source name
-                                        source_name = "Unknown"
-                                        if "publication" in article:
-                                            if isinstance(article["publication"], dict):
-                                                source_name = article[
-                                                    "publication"
-                                                ].get("name", "Unknown")
-                                            else:
-                                                source_name = str(
-                                                    article["publication"]
-                                                )
-                                        elif "source" in article:
-                                            if isinstance(article["source"], dict):
-                                                source_name = article["source"].get(
-                                                    "name", "Unknown"
-                                                )
-                                            else:
-                                                source_name = str(article["source"])
-
-                                        # Format article - capture ALL possible URL fields
+                                        # Format article using new structure
                                         formatted_article = {
+                                            "id": article.get("id", ""),
                                             "title": article.get("title", "No title"),
-                                            "source": source_name,
-                                            "url": article.get("url", ""),
-                                            "infomedia_url": article.get(
-                                                "infomedia_url", ""
-                                            ),
-                                            "articleUrl": article.get("articleUrl", ""),
-                                            "originalArticleUrl": article.get(
-                                                "originalArticleUrl", ""
-                                            ),
-                                            "original_url": article.get(
-                                                "original_url", ""
-                                            ),
-                                            "source_url": article.get("source_url", ""),
-                                            "link": article.get("link", ""),
-                                            "href": article.get("href", ""),
-                                            "publishedAt": article.get(
-                                                "published_at",
-                                                article.get(
-                                                    "publicationDate",
-                                                    article.get(
-                                                        "publicationDateFormatted", ""
-                                                    ),
-                                                ),
-                                            ),
-                                            "lead": article.get("lead", ""),
                                             "subtitle": article.get("subtitle", ""),
+                                            "body": article.get("body", ""),
+                                            "summary": article.get("summary", ""),
+                                            "url": article.get("url", ""),
+                                            "byline": article.get("byline", ""),
+                                            "publication": article.get("publication", "Unknown"),
+                                            "publication_date": article.get("publication_date", ""),
+                                            "language": article.get("language", "E"),
+                                            "wordcount": article.get("wordcount", 0),
+                                            "nlp_sentiment": article.get("nlp_sentiment", 0.0),
+                                            "provider": article.get("provider", ""),
+                                            "media": article.get("media", ""),
                                         }
                                         all_articles.append(formatted_article)
 
@@ -185,7 +165,7 @@ def fetch_latest_articles_from_azure(
                 break
 
         # Sort by publication date
-        all_articles.sort(key=lambda x: x.get("publishedAt", ""), reverse=True)
+        all_articles.sort(key=lambda x: x.get("publication_date", ""), reverse=True)
 
         return {
             "status": "ok",
@@ -204,21 +184,40 @@ def fetch_latest_articles_from_azure(
 
 @mcp.tool()
 def get_top_headlines(
-    days_back: int = 1, max_articles: int = 5, publication_filter: str = None
+    days_back: int = 1, 
+    max_articles: int = 5, 
+    publication_filter: str = None,
+    language: str = "english"
 ) -> str:
-    """Get latest news headlines with clean formatting"""
+    """Get latest news headlines with clean formatting
+    
+    Args:
+        days_back: Number of days back to search (1-7)
+        max_articles: Maximum number of articles to return (1-20) 
+        publication_filter: Filter by publication name (optional)
+        language: Language filter - "english", "french", or language code like "E", "F" (default: "english")
+    """
     try:
         # Add logging for debugging
         logger.info(
-            f"Starting get_top_headlines with days_back={days_back}, max_articles={max_articles}"
+            f"Starting get_top_headlines with days_back={days_back}, max_articles={max_articles}, language={language}"
         )
 
         # Validate inputs
         days_back = max(1, min(days_back, 7))
         max_articles = max(1, min(max_articles, 20))
+        
+        # Convert language to code
+        language_code = "E"  # Default to English
+        if language.lower() in ["french", "français", "fr", "f"]:
+            language_code = "F"
+        elif language.lower() in ["english", "en", "e"]:
+            language_code = "E"
+        elif language.upper() in ["E", "F"]:
+            language_code = language.upper()
 
         result = fetch_latest_articles_from_azure(
-            days_back, max_articles, publication_filter
+            days_back, max_articles, publication_filter, language_code
         )
 
         if result["status"] == "error":
@@ -230,72 +229,63 @@ def get_top_headlines(
         articles = result["articles"]
         if not articles:
             logger.warning("No articles found")
-            return "No news articles found."
+            # Use localized "no articles" message
+            labels = LABELS.get(language_code, LABELS["E"])
+            return labels["no_articles"]
 
         # Clean formatting
+        language_display = "English" if language_code == "E" else "French"
         response_lines = [
-            f"Here are the current top headlines retrieved from NewsDesk (from the past {days_back} day{'s' if days_back > 1 else ''}):",
+            f"Here are the current top headlines in {language_display} retrieved from NewsDesk (from the past {days_back} day{'s' if days_back > 1 else ''}):",
             "",
         ]
 
+        # Get localized labels for the current language
+        labels = LABELS.get(language_code, LABELS["E"])
+
         for i, article in enumerate(articles, 1):
             title = article["title"]
-            source = article["source"]
-            pub_date = article.get("publishedAt", "(Information not provided)")
-
+            publication = article["publication"]
+            pub_date = article.get("publication_date", "(Information not provided)")
+            byline = article.get("byline", "")
+            
             # Format each article cleanly
             response_lines.append(f"\n📰 {title}")
-            response_lines.append(f"📅 Published: {pub_date}")
-            response_lines.append(f"📰 Source: {source}")
-
-            # Add ALL available URLs - prioritize original article URLs
-            urls_found = []
-
-            # InfoMedia URLs first
-            if article.get("url"):
-                urls_found.append(f"🔗 InfoMedia: {article['url']}")
-            if article.get("infomedia_url"):
-                urls_found.append(f"🔗 InfoMedia: {article['infomedia_url']}")
-
-            # Article URLs
-            if article.get("articleUrl"):
-                urls_found.append(f"🔗 Article URL: {article['articleUrl']}")
-
-            # ORIGINAL ARTICLE URLS - CHECK ALL POSSIBLE FIELDS
-            original_urls = []
-            if article.get("originalArticleUrl"):
-                original_urls.append(article["originalArticleUrl"])
-            if article.get("original_url"):
-                original_urls.append(article["original_url"])
-            if article.get("source_url"):
-                original_urls.append(article["source_url"])
-            if article.get("link"):
-                original_urls.append(article["link"])
-            if article.get("href"):
-                original_urls.append(article["href"])
-
-            # Remove duplicates and add to display
-            seen_urls = set()
-            for orig_url in original_urls:
-                if orig_url and orig_url not in seen_urls:
-                    urls_found.append(f"🌐 Original Article: {orig_url}")
-                    seen_urls.add(orig_url)
-
-            # Add the URLs we found
-            for url_line in urls_found:
-                response_lines.append(url_line)
-
-            # Add lead content (cleaned up)
-            if article.get("lead"):
-                import re
-
-                lead_text = re.sub(r"<[^>]+>", "", article["lead"])  # Remove HTML tags
-                # Don't truncate - show full lead
-                response_lines.append(f"📄 Lead: {lead_text}")
-
-            # Add subtitle if available
             if article.get("subtitle"):
-                response_lines.append(f"Additional Note: {article['subtitle']}")
+                response_lines.append(f"� Subtitle: {article['subtitle']}")
+            response_lines.append(f"{labels['published']}: {pub_date}")
+            response_lines.append(f"� Source: {publication}")
+            if byline:
+                response_lines.append(f"✍️ By: {byline}")
+
+            # Add URL if available
+            if article.get("url"):
+                response_lines.append(f"🔗 Link: {article['url']}")
+
+            # Add summary or body content (cleaned up)
+            content = ""
+            if article.get("summary"):
+                content = article["summary"]
+            elif article.get("body"):
+                content = article["body"]
+            
+            if content:
+                import re
+                # Remove HTML tags
+                content_text = re.sub(r"<[^>]+>", "", content)
+                # Limit length for readability
+                if len(content_text) > 300:
+                    content_text = content_text[:300] + "..."
+                response_lines.append(f"{labels['content']}: {content_text}")
+
+            # Add word count and sentiment if available
+            if article.get("wordcount"):
+                response_lines.append(f"{labels['word_count']}: {article['wordcount']}")
+            
+            if article.get("nlp_sentiment") is not None:
+                sentiment = article["nlp_sentiment"]
+                sentiment_emoji = "😊" if sentiment > 0.1 else "😐" if sentiment > -0.1 else "😞"
+                response_lines.append(f"{labels['sentiment']}: {sentiment_emoji} ({sentiment:.2f})")
 
             # Add spacing between articles
             response_lines.append("")

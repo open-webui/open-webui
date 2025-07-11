@@ -67,7 +67,8 @@ class CrewMCPManager:
 
         # Create LLM instance with Azure configuration
         # Use the environment variables approach which CrewAI handles better
-        return LLM(model=f"azure/{self.azure_config.deployment}", temperature=0.1)
+        # Set low temperature for more consistent formatting preservation
+        return LLM(model=f"azure/{self.azure_config.deployment}", temperature=0.0)
 
     def run_time_crew(self, query: str = "What's the current time?") -> str:
         """
@@ -171,8 +172,8 @@ class CrewMCPManager:
                 # Create news specialist agent with MCP tools
                 news_agent = Agent(
                     role="News Specialist",
-                    goal="Provide current news information and analysis using available news tools",
-                    backstory="I am an AI specialist focused on news and current events. I have access to NewsDesk via MCP tools and can fetch the latest headlines, analyze news trends, and provide relevant news information based on user queries.",
+                    goal="Provide current news information exactly as returned by news tools, preserving original formatting and language",
+                    backstory="I am an AI specialist focused on news and current events. I have access to NewsDesk via MCP tools and can fetch the latest headlines. My role is to pass through the news information exactly as provided by the tools, preserving all formatting, emojis, language (French/English), and structure without translation or summarization.",
                     tools=mcp_tools,  # Pass MCP tools to agent
                     llm=llm,
                     verbose=True,
@@ -181,7 +182,7 @@ class CrewMCPManager:
                 # Create task for news query
                 news_task = Task(
                     description=f"Process this news-related query: {query}. Use the available news tools to get current headlines and relevant information. If the query asks for specific topics, filter or search for relevant articles.",
-                    expected_output="A clear and informative response with current news headlines, properly formatted with sources and publication dates when available.",
+                    expected_output="Return the news information EXACTLY as provided by the news tools, preserving all original formatting, emojis, language, and structure. Do NOT translate, summarize, or reformat the content. Simply pass through the original response from the news tools with minimal additional commentary.",
                     agent=news_agent,
                 )
 
