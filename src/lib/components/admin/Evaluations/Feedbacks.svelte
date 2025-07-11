@@ -25,76 +25,51 @@
 	import MagnifyingGlass from '$lib/components/icons/MagnifyingGlass.svelte';
 
 	export let feedbacks: any[] = [];
+	export let totalFeedbackCount: number = 0;
+	export let feedbacksPage: number = 1;
+	export let feedbacksPerPage: number = 10;
+	export let loadFeedbacks: (page: number, search: string) => Promise<void>;
+	export let loadFeedbacksCount: (search: string) => Promise<void>;
+	export let page: number = 1;
 
-	let page = 1;
 	let searchQuery = '';
+	let searchTimeout: NodeJS.Timeout;
+	let debouncedSearchQuery = '';
 
-	// Reset page when search query changes
-	$: if (searchQuery) {
-		page = 1;
+	// Debounced search - wait 500ms after user stops typing
+	$: {
+		if (searchTimeout) {
+			clearTimeout(searchTimeout);
+		}
+
+		searchTimeout = setTimeout(() => {
+			debouncedSearchQuery = searchQuery;
+		}, 500);
 	}
 
-	// Filter feedbacks based on search query
-	$: filteredFeedbacks = feedbacks.filter((feedback: any) => {
-		if (!searchQuery.trim()) return true;
+	// Handle search query changes
+	$: if (debouncedSearchQuery !== undefined) {
+		page = 1;
+		handleSearch();
+	}
 
-		const query = searchQuery.toLowerCase();
+	// Handle page changes
+	$: if (page && loadFeedbacks) {
+		loadFeedbacks(page, debouncedSearchQuery);
+	}
 
-		// Search in model ID
-		if (feedback.data.model_id?.toLowerCase().includes(query)) return true;
-
-		// Search in user name
-		if (feedback.user?.name?.toLowerCase().includes(query)) return true;
-
-		// Search in reason
-		if (feedback.data.reason?.toLowerCase().includes(query)) return true;
-
-		// Search in comment
-		if (feedback.data.comment?.toLowerCase().includes(query)) return true;
-
-		// Search in tags
-		if (feedback.data.tags?.some((tag: string) => tag.toLowerCase().includes(query))) return true;
-
-		// Search in sibling model IDs
-		if (feedback.data.sibling_model_ids?.some((id: string) => id.toLowerCase().includes(query)))
-			return true;
-
-		return false;
-	});
-
-	// Apply sorting to filtered results
-	$: sortedFeedbacks = [...filteredFeedbacks].sort((a: any, b: any) => {
-		// If no sort order is specified, sort by updated_at desc (default behavior)
-		if (sortOrder === null || sortKey === null) {
-			return b.updated_at - a.updated_at; // Default sort by updated_at desc
+	const handleSearch = async () => {
+		if (loadFeedbacksCount && loadFeedbacks) {
+			await loadFeedbacksCount(debouncedSearchQuery);
+			await loadFeedbacks(1, debouncedSearchQuery);
 		}
+	};
 
-		// Helper function to safely navigate nested properties
-		const getValue = (obj: any, path: string) => {
-			const properties = path.split('.');
-			return properties.reduce(
-				(prev: any, curr: string) => (prev && prev[curr] !== undefined ? prev[curr] : null),
-				obj
-			);
-		};
+	// Calculate total pages
+	$: totalPages = Math.ceil(totalFeedbackCount / feedbacksPerPage);
 
-		let valA = getValue(a, sortKey);
-		let valB = getValue(b, sortKey);
-
-		// Special handling for different data types
-		if (typeof valA === 'string' && typeof valB === 'string') {
-			return sortOrder === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
-		}
-
-		// Ensure we have values to compare
-		if (valA === null || valA === undefined) return sortOrder === 'asc' ? -1 : 1;
-		if (valB === null || valB === undefined) return sortOrder === 'asc' ? 1 : -1;
-
-		return sortOrder === 'asc' ? valA - valB : valB - valA;
-	});
-
-	// Update paginated feedbacks to use sorted result
-	$: paginatedFeedbacks = sortedFeedbacks.slice((page - 1) * 10, page * 10);
+	// Use the feedbacks directly from props (no more client-side filtering/pagination)
+	$: displayFeedbacks = feedbacks;
 
 	let selectedFeedback: any = null;
 	let showConversationModal = false;
@@ -111,7 +86,9 @@
 			return null;
 		});
 		if (response) {
-			feedbacks = feedbacks.filter((f: any) => f.id !== feedbackId);
+			// Reload current page and update count
+			await loadFeedbacksCount(debouncedSearchQuery);
+			await loadFeedbacks(page, debouncedSearchQuery);
 		}
 	};
 
@@ -208,9 +185,9 @@
 		}
 	}
 
-	// Sorting functionality
-	let sortKey: string | null = null; // Set initial sort to null instead of 'updated_at'
-	let sortOrder: 'asc' | 'desc' | null = null; // Set initial order to null instead of 'desc'
+	// Sorting functionality (currently client-side, could be moved to server-side)
+	let sortKey: string | null = null;
+	let sortOrder: 'asc' | 'desc' | null = null;
 
 	function setSortKey(key: string) {
 		if (sortKey === key) {
@@ -227,6 +204,37 @@
 			sortOrder = 'asc';
 		}
 	}
+
+	// Apply client-side sorting to display feedbacks (for now)
+	$: sortedDisplayFeedbacks =
+		sortKey && sortOrder
+			? [...displayFeedbacks].sort((a: any, b: any) => {
+					// Helper function to safely navigate nested properties
+					const getValue = (obj: any, path: string) => {
+						const properties = path.split('.');
+						return properties.reduce(
+							(prev: any, curr: string) => (prev && prev[curr] !== undefined ? prev[curr] : null),
+							obj
+						);
+					};
+
+					let valA = getValue(a, sortKey);
+					let valB = getValue(b, sortKey);
+
+					// Special handling for different data types
+					if (typeof valA === 'string' && typeof valB === 'string') {
+						return sortOrder === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+					}
+
+					// Ensure we have values to compare
+					if (valA === null || valA === undefined) return sortOrder === 'asc' ? -1 : 1;
+					if (valB === null || valB === undefined) return sortOrder === 'asc' ? 1 : -1;
+
+					return sortOrder === 'asc' ? valA - valB : valB - valA;
+				})
+			: displayFeedbacks;
+
+	// ...existing code...
 </script>
 
 <div class="mt-0.5 mb-2 gap-1 flex flex-row justify-between">
@@ -295,7 +303,7 @@
 			role="status"
 			aria-live="polite"
 		>
-			{$i18n.t('Showing')}: {filteredFeedbacks.length}/{feedbacks.length}
+			{$i18n.t('Showing')}: {displayFeedbacks.length} / {totalFeedbackCount} total
 		</div>
 	{/if}
 </div>
@@ -569,7 +577,7 @@
 			</thead>
 
 			<tbody>
-				{#each paginatedFeedbacks as feedback (feedback.id)}
+				{#each sortedDisplayFeedbacks as feedback (feedback.id)}
 					{@const conversation = extractConversation(feedback)}
 					<tr
 						class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs hover:bg-gray-50 dark:hover:bg-gray-850"
@@ -772,6 +780,6 @@
 
 <FeedbackConversationModal bind:show={showConversationModal} feedback={selectedFeedback} />
 
-{#if filteredFeedbacks.length > 10}
-	<Pagination bind:page count={filteredFeedbacks.length} perPage={10} />
+{#if totalFeedbackCount > feedbacksPerPage}
+	<Pagination bind:page count={totalFeedbackCount} perPage={feedbacksPerPage} />
 {/if}

@@ -7,7 +7,7 @@ from open_webui.models.prompts import (
     Prompts,
 )
 from open_webui.constants import ERROR_MESSAGES
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access, has_permission
 
@@ -20,6 +20,7 @@ router = APIRouter()
 
 @router.get("/", response_model=list[PromptModel])
 async def get_prompts(user=Depends(get_verified_user)):
+    """Get all prompts (original behavior)"""
     if user.role == "admin":
         prompts = Prompts.get_prompts()
     else:
@@ -30,12 +31,66 @@ async def get_prompts(user=Depends(get_verified_user)):
 
 @router.get("/list", response_model=list[PromptUserResponse])
 async def get_prompt_list(user=Depends(get_verified_user)):
+    """Get all prompts with user info (original behavior)"""
     if user.role == "admin":
         prompts = Prompts.get_prompts()
     else:
         prompts = Prompts.get_prompts_by_user_id(user.id, "read")
 
     return prompts
+
+
+# NEW PAGINATED ENDPOINTS
+@router.get("/paginated", response_model=list[PromptModel])
+async def get_prompts_paginated(
+    user=Depends(get_verified_user),
+    page: int = Query(1, ge=1, description="Page number"),
+    limit: int = Query(20, ge=1, le=100, description="Items per page"),
+    search: Optional[str] = Query(None, description="Search query"),
+):
+    """Get paginated prompts with optional search"""
+    if user.role == "admin":
+        prompts = Prompts.get_prompts_paginated(page=page, limit=limit, search=search)
+    else:
+        prompts = Prompts.get_prompts_by_user_id_paginated(
+            user.id, "read", page=page, limit=limit, search=search
+        )
+
+    return prompts
+
+
+@router.get("/list/paginated", response_model=list[PromptUserResponse])
+async def get_prompt_list_paginated(
+    user=Depends(get_verified_user),
+    page: int = Query(1, ge=1, description="Page number"),
+    limit: int = Query(20, ge=1, le=100, description="Items per page"),
+    search: Optional[str] = Query(None, description="Search query"),
+):
+    """Get paginated prompt list with user info and optional search"""
+    if user.role == "admin":
+        prompts = Prompts.get_prompts_with_users_paginated(
+            page=page, limit=limit, search=search
+        )
+    else:
+        prompts = Prompts.get_prompts_by_user_id_with_users_paginated(
+            user.id, "read", page=page, limit=limit, search=search
+        )
+
+    return prompts
+
+
+@router.get("/count")
+async def get_prompts_count(
+    user=Depends(get_verified_user),
+    search: Optional[str] = Query(None, description="Search query"),
+):
+    """Get total count of prompts with optional search filter"""
+    if user.role == "admin":
+        count = Prompts.get_prompts_count(search=search)
+    else:
+        count = Prompts.get_prompts_count_by_user_id(user.id, "read", search=search)
+
+    return {"count": count}
 
 
 ############################

@@ -1,5 +1,5 @@
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
 from pydantic import BaseModel
 
 from open_webui.models.users import Users, UserModel
@@ -35,8 +35,7 @@ async def get_config(request: Request, user=Depends(get_admin_user)):
 
 
 class UpdateConfigForm(BaseModel):
-    ENABLE_EVALUATION_ARENA_MODELS: Optional[bool] = None
-    EVALUATION_ARENA_MODELS: Optional[list[dict]] = None
+    ENABLE_EVALUATION_ARENA_MODELS: bool
 
 
 @router.post("/config")
@@ -45,15 +44,17 @@ async def update_config(
     form_data: UpdateConfigForm,
     user=Depends(get_admin_user),
 ):
-    config = request.app.state.config
-    if form_data.ENABLE_EVALUATION_ARENA_MODELS is not None:
-        config.ENABLE_EVALUATION_ARENA_MODELS = form_data.ENABLE_EVALUATION_ARENA_MODELS
-    if form_data.EVALUATION_ARENA_MODELS is not None:
-        config.EVALUATION_ARENA_MODELS = form_data.EVALUATION_ARENA_MODELS
+    request.app.state.config.ENABLE_EVALUATION_ARENA_MODELS = (
+        form_data.ENABLE_EVALUATION_ARENA_MODELS
+    )
     return {
-        "ENABLE_EVALUATION_ARENA_MODELS": config.ENABLE_EVALUATION_ARENA_MODELS,
-        "EVALUATION_ARENA_MODELS": config.EVALUATION_ARENA_MODELS,
+        "ENABLE_EVALUATION_ARENA_MODELS": request.app.state.config.ENABLE_EVALUATION_ARENA_MODELS,
     }
+
+
+############################
+# Feedbacks
+############################
 
 
 class FeedbackUserResponse(FeedbackResponse):
@@ -62,6 +63,7 @@ class FeedbackUserResponse(FeedbackResponse):
 
 @router.get("/feedbacks/all", response_model=list[FeedbackUserResponse])
 async def get_all_feedbacks(user=Depends(get_admin_user)):
+    """Get all feedbacks (original behavior)"""
     feedbacks = Feedbacks.get_all_feedbacks()
     return [
         FeedbackUserResponse(
@@ -71,21 +73,33 @@ async def get_all_feedbacks(user=Depends(get_admin_user)):
     ]
 
 
-@router.delete("/feedbacks/all")
-async def delete_all_feedbacks(user=Depends(get_admin_user)):
-    success = Feedbacks.delete_all_feedbacks()
-    return success
-
-
-@router.get("/feedbacks/all/export", response_model=list[FeedbackModel])
-async def get_all_feedbacks(user=Depends(get_admin_user)):
-    feedbacks = Feedbacks.get_all_feedbacks()
+# NEW PAGINATED ENDPOINT
+@router.get("/feedbacks/all/paginated", response_model=list[FeedbackUserResponse])
+async def get_all_feedbacks_paginated(
+    user=Depends(get_admin_user),
+    page: int = Query(1, ge=1, description="Page number"),
+    limit: int = Query(10, ge=1, le=100, description="Items per page"),
+    search: Optional[str] = Query(None, description="Search query"),
+):
+    """Get paginated feedbacks with optional search"""
+    feedbacks = Feedbacks.get_all_feedbacks_paginated(
+        page=page, limit=limit, search=search
+    )
     return [
-        FeedbackModel(
+        FeedbackUserResponse(
             **feedback.model_dump(), user=Users.get_user_by_id(feedback.user_id)
         )
         for feedback in feedbacks
     ]
+
+
+@router.get("/feedbacks/count")
+async def get_feedbacks_count(
+    user=Depends(get_admin_user),
+    search: Optional[str] = Query(None, description="Search query"),
+):
+    """Get total count of feedbacks with optional search filter"""
+    return {"count": Feedbacks.get_feedbacks_count(search=search)}
 
 
 @router.get("/feedbacks/user", response_model=list[FeedbackUserResponse])
