@@ -18,11 +18,18 @@
 	} from '$lib/apis/retrieval';
 
 	import { reindexKnowledgeFiles } from '$lib/apis/knowledge';
-	import { deleteAllFiles } from '$lib/apis/files';
+	import { 
+		deleteAllFiles,
+		reindexFiles,
+		countFiles,
+		listenToReindexProgress,
+		checkIfReindexing
+	} from '$lib/apis/files';
 
 	import ResetUploadDirConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import ResetVectorDBConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import ReindexKnowledgeFilesConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import ReindexFilesConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
@@ -37,6 +44,10 @@
 	let showResetConfirm = false;
 	let showResetUploadDirConfirm = false;
 	let showReindexConfirm = false;
+	let showFilesReindexConfirm = false;
+	let filesCountMessage = '';
+	let fileProgress = 0;
+	let isReindexing = false;
 
 	let embeddingEngine = '';
 	let embeddingModel = '';
@@ -226,6 +237,49 @@
 			AzureOpenAIVersion = embeddingConfig.azure_openai_config.version;
 		}
 	};
+
+	const openReindexDialog = async () => {
+        const token = localStorage.token;
+        if (!token) {
+            toast.error($i18n.t('No token found'));
+            return;
+        }
+
+		filesCountMessage = $i18n.t('Counting files to reindex..')
+		showFilesReindexConfirm = true;
+        // Fetch the file count
+        try {
+            const fileCount = await countFiles(token);
+            if (fileCount > 0) {
+                filesCountMessage = $i18n.t('You are about to reindex') + ` ${fileCount} ` + $i18n.t('files. This could take a while. Do you want to proceed?');
+            } else {
+                filesCountMessage = $i18n.t('No files to reindex.');
+            }
+        } catch (error) {
+            filesCountMessage = $i18n.t('Error fetching file count');
+            toast.error(`${error}`);
+        }
+    };
+
+	const startReindexing = async () => {
+		isReindexing = true;
+		fileProgress = 0;
+
+		listenToReindexProgress((p) => {
+			fileProgress = p;
+			if (p >= 100) isReindexing = false;
+		});
+
+		const res = await reindexFiles(localStorage.token).catch((error) => {
+			toast.error(`${error}`);
+			isReindexing = false;
+			return null;
+		});
+
+		if (res) {
+			toast.success($i18n.t('Success'));
+		}
+	};
 	onMount(async () => {
 		await setEmbeddingConfig();
 
@@ -244,6 +298,14 @@
 		);
 
 		RAGConfig = config;
+
+		isReindexing = await checkIfReindexing();
+		if (isReindexing) {
+			listenToReindexProgress((p) => {
+				fileProgress = p;
+				if (p >= 100) isReindexing = false;
+			});
+		}
 	});
 </script>
 
@@ -287,6 +349,12 @@
 			toast.success($i18n.t('Success'));
 		}
 	}}
+/>
+
+<ReindexFilesConfirmDialog
+	bind:show={showFilesReindexConfirm}
+	message={filesCountMessage}
+	on:confirm={startReindexing}
 />
 
 <form
@@ -1234,6 +1302,32 @@
 							</button>
 						</div>
 					</div>
+					<div class="  mb-2.5 flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">
+							{$i18n.t('Reindex all Files Vectors')}
+						</div>
+						<div class="flex items-center relative">
+							<button
+								class="text-xs"
+								on:click={() => {
+									openReindexDialog();
+								}}
+								disabled={isReindexing}
+							>
+								{$i18n.t('Reindex')}
+							</button>
+						</div>
+					</div>
+					{#if isReindexing}
+						<div class="w-full bg-gray-200 rounded-full h-3 mt-4">
+							<div class="bg-blue-600 h-3 rounded-full" style="width: {fileProgress}%"></div>
+						</div>
+						<!-- <p class="text-sm mt-2 text-gray-600">'Reindexing... {fileProgress}%' -->
+						<p class="text-sm mt-2 text-gray-600">{$i18n.t('Reindexing... {{progress}}%', { progress: fileProgress })}
+							
+						</p>
+					{/if}
+
 				</div>
 			</div>
 		</div>
