@@ -30,6 +30,7 @@
 	import { createMessagesList } from '$lib/utils';
 	import { downloadChatAsPDF } from '$lib/apis/utils';
 	import Download from '$lib/components/icons/Download.svelte';
+	import { PiiSessionManager, unmaskTextWithEntities } from '$lib/utils/pii';
 
 	const i18n = getContext('i18n');
 
@@ -54,11 +55,18 @@
 		pinned = await getChatPinnedStatusById(localStorage.token, chatId);
 	};
 
-	const getChatAsText = async (chat) => {
+	const getChatAsText = async (chat: any, chatId: string) => {
 		const history = chat.chat.history;
 		const messages = createMessagesList(history, history.currentId);
-		const chatText = messages.reduce((a, message, i, arr) => {
-			return `${a}### ${message.role.toUpperCase()}\n${message.content}\n\n`;
+		
+		// Get PII entities for unmasking
+		const piiSessionManager = PiiSessionManager.getInstance();
+		const piiEntities = piiSessionManager.getEntitiesForDisplay(chatId);
+		
+		const chatText = messages.reduce((a: string, message: any, i: number, arr: any[]) => {
+			// Apply PII unmasking to message content
+			const unmaskedContent = unmaskTextWithEntities(message.content, piiEntities);
+			return `${a}### ${message.role.toUpperCase()}\n${unmaskedContent}\n\n`;
 		}, '');
 
 		return chatText.trim();
@@ -70,7 +78,7 @@
 			return;
 		}
 
-		const chatText = await getChatAsText(chat);
+		const chatText = await getChatAsText(chat, chatId);
 		let blob = new Blob([chatText], {
 			type: 'text/plain'
 		});
@@ -91,7 +99,7 @@
 					const pagePixelHeight = 1200; // Each slice height (adjust to avoid canvas bugs; generally 2–4k is safe)
 
 					// Clone & style once
-					const clonedElement = containerElement.cloneNode(true);
+					const clonedElement = containerElement.cloneNode(true) as HTMLElement;
 					clonedElement.classList.add('text-black');
 					clonedElement.classList.add('dark:text-white');
 					clonedElement.style.width = `${virtualWidth}px`;
@@ -156,7 +164,7 @@
 		} else {
 			console.log('Downloading PDF');
 
-			const chatText = await getChatAsText(chat);
+			const chatText = await getChatAsText(chat, chatId);
 
 			const doc = new jsPDF();
 
@@ -206,7 +214,33 @@
 		const chat = await getChatById(localStorage.token, chatId);
 
 		if (chat) {
-			let blob = new Blob([JSON.stringify([chat])], {
+			// Get PII entities for unmasking
+			const piiSessionManager = PiiSessionManager.getInstance();
+			const piiEntities = piiSessionManager.getEntitiesForDisplay(chatId);
+			
+			// Create a deep copy of the chat and unmask content
+			const unmaskedChat = JSON.parse(JSON.stringify(chat));
+			
+			// Unmask content in chat history
+			if (unmaskedChat.chat?.history) {
+				const messages = createMessagesList(unmaskedChat.chat.history, unmaskedChat.chat.history.currentId);
+				messages.forEach((message: any) => {
+					if (message.content) {
+						message.content = unmaskTextWithEntities(message.content, piiEntities);
+					}
+				});
+			}
+			
+			// Unmask content in chat messages block
+			if (unmaskedChat.chat?.messages) {
+				unmaskedChat.chat.messages.forEach((message: any) => {
+					if (message.content) {
+						message.content = unmaskTextWithEntities(message.content, piiEntities);
+					}
+				});
+			}
+			
+			let blob = new Blob([JSON.stringify([unmaskedChat])], {
 				type: 'application/json'
 			});
 			saveAs(blob, `chat-export-${Date.now()}.json`);
