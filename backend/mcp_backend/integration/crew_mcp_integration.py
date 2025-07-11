@@ -51,8 +51,12 @@ class CrewMCPManager:
         if not self.azure_config.validate_config():
             raise ValueError("Invalid Azure OpenAI configuration")
         self.backend_dir = Path(__file__).parent.parent.parent  # Go up to backend dir
-        self.time_server_path = self.backend_dir / "mcp_backend" / "servers" / "fastmcp_time_server.py"
-        self.news_server_path = self.backend_dir / "mcp_backend" / "servers" / "fastmcp_news_server.py"
+        self.time_server_path = (
+            self.backend_dir / "mcp_backend" / "servers" / "fastmcp_time_server.py"
+        )
+        self.news_server_path = (
+            self.backend_dir / "mcp_backend" / "servers" / "fastmcp_news_server.py"
+        )
 
     def get_azure_llm_config(self) -> LLM:
         """Get Azure OpenAI LLM configuration for CrewAI"""

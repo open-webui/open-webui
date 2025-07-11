@@ -394,8 +394,10 @@ class FastMCPManager:
         """Initialize and start default MCP servers with stdio transport"""
         # Add configuration for time server (stdio)
         backend_dir = Path(__file__).parent.parent.parent  # Go up to backend/ directory
-        time_server_path = backend_dir / "mcp_backend" / "servers" / "fastmcp_time_server.py"
-        
+        time_server_path = (
+            backend_dir / "mcp_backend" / "servers" / "fastmcp_time_server.py"
+        )
+
         log.info(f"Looking for time server at: {time_server_path}")
         log.info(f"Time server exists: {time_server_path.exists()}")
 
@@ -415,8 +417,10 @@ class FastMCPManager:
             log.warning(f"Time server not found at {time_server_path}")
 
         # Add configuration for news server (stdio)
-        news_server_path = backend_dir / "mcp_backend" / "servers" / "fastmcp_news_server.py"
-        
+        news_server_path = (
+            backend_dir / "mcp_backend" / "servers" / "fastmcp_news_server.py"
+        )
+
         log.info(f"Looking for news server at: {news_server_path}")
         log.info(f"News server exists: {news_server_path.exists()}")
 
