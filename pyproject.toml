@@ -116,6 +116,8 @@ dependencies = [
     "docker~=7.1.0",
     "pytest~=8.3.2",
     "pytest-docker~=3.1.1",
+    "gcp-storage-emulator~=2024.8.0",
+    "moto[s3]>=5.0.26",
 
     "googleapis-common-protos==1.63.2",
     "google-cloud-storage==2.19.0",
@@ -131,7 +133,6 @@ dependencies = [
 
     "gcp-storage-emulator>=2024.8.3",
 
-    "moto[s3]>=5.0.26",
 
 ]
 readme = "README.md"
