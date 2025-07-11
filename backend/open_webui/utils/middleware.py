@@ -56,7 +56,7 @@ from open_webui.models.users import UserModel
 from open_webui.models.functions import Functions
 from open_webui.models.models import Models
 
-from open_webui.retrieval.utils import get_sources_from_files
+from open_webui.retrieval.utils import get_sources_from_items
 
 
 from open_webui.utils.chat import generate_chat_completion
@@ -638,14 +638,14 @@ async def chat_completion_files_handler(
             queries = [get_last_user_message(body["messages"])]
 
         try:
-            # Offload get_sources_from_files to a separate thread
+            # Offload get_sources_from_items to a separate thread
             loop = asyncio.get_running_loop()
             with ThreadPoolExecutor() as executor:
                 sources = await loop.run_in_executor(
                     executor,
-                    lambda: get_sources_from_files(
+                    lambda: get_sources_from_items(
                         request=request,
-                        files=files,
+                        items=files,
                         queries=queries,
                         embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
                             query, prefix=prefix, user=user
@@ -657,6 +657,7 @@ async def chat_completion_files_handler(
                         hybrid_bm25_weight=request.app.state.config.HYBRID_BM25_WEIGHT,
                         hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
                         full_context=request.app.state.config.RAG_FULL_CONTEXT,
+                        user=user,
                     ),
                 )
         except Exception as e:
@@ -2152,7 +2153,9 @@ async def process_chat_response(
                         if isinstance(tool_result, dict) or isinstance(
                             tool_result, list
                         ):
-                            tool_result = json.dumps(tool_result, indent=2, ensure_ascii=False)
+                            tool_result = json.dumps(
+                                tool_result, indent=2, ensure_ascii=False
+                            )
 
                         results.append(
                             {
