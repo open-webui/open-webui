@@ -200,15 +200,21 @@ class TestS3StorageProvider:
 
 
 class TestGCSStorageProvider:
-    Storage = provider.GCSStorageProvider()
-    Storage.bucket_name = "my-bucket"
-    file_content = b"test content"
-    filename = "test.txt"
-    filename_extra = "test_exyta.txt"
-    file_bytesio_empty = io.BytesIO()
+    Storage: provider.GCSStorageProvider
+    file_content: bytes
+    filename: str
+    filename_extra: str
+    file_bytesio_empty: io.BytesIO
 
     @pytest.fixture(scope="class")
     def setup(self):
+        self.Storage = provider.GCSStorageProvider()
+        self.Storage.bucket_name = "my-bucket"
+        self.file_content = b"test content"
+        self.filename = "test.txt"
+        self.filename_extra = "test_exyta.txt"
+        self.file_bytesio_empty = io.BytesIO()
+
         host, port = "localhost", 9023
 
         server = create_server(host, port, in_memory=True)
