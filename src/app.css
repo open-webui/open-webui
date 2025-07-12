@@ -475,7 +475,7 @@ input[type='number'] {
 	pointer-events: none;
 }
 
-.tiptap > pre > code {
+.tiptap pre > code {
 	border-radius: 0.4rem;
 	font-size: 0.85rem;
 	padding: 0.25em 0.3em;
@@ -483,7 +483,7 @@ input[type='number'] {
 	@apply dark:bg-gray-800 bg-gray-50;
 }
 
-.tiptap > pre {
+.tiptap pre {
 	border-radius: 0.5rem;
 	font-family: 'JetBrainsMono', monospace;
 	margin: 1.5rem 0;

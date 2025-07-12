@@ -80,6 +80,7 @@
 	import Sidebar from '../common/Sidebar.svelte';
 	import ArrowRight from '../icons/ArrowRight.svelte';
 	import Cog6 from '../icons/Cog6.svelte';
+	import AiMenu from './AIMenu.svelte';
 
 	export let id: null | string = null;
 
@@ -1005,8 +1006,8 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 				</div>
 			{/if}
 		</div>
-		<div class="absolute z-20 bottom-0 right-0 p-3.5 max-w-full w-full flex justify-end">
-			<div class="flex gap-1 justify-between w-full max-w-full">
+		<div class="absolute z-20 bottom-0 right-0 p-3.5 max-w-full w-full flex">
+			<div class="flex gap-1 w-full min-w-full justify-between">
 				{#if recording}
 					<div class="flex-1 w-full">
 						<VoiceRecording
@@ -1077,33 +1078,17 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 						}}
 					>
 						<Tooltip content={$i18n.t('Record')} placement="top">
-							<button
+							<div
 								class="cursor-pointer p-2.5 flex rounded-full border border-gray-50 bg-white dark:border-none dark:bg-gray-850 hover:bg-gray-50 dark:hover:bg-gray-800 transition shadow-xl"
-								type="button"
 							>
 								<MicSolid className="size-4.5" />
-							</button>
+							</div>
 						</Tooltip>
 					</RecordMenu>
 
 					<div
 						class="cursor-pointer flex gap-0.5 rounded-full border border-gray-50 dark:border-gray-850 dark:bg-gray-850 transition shadow-xl"
 					>
-						<!-- <Tooltip content={$i18n.t('My Notes')} placement="top">
-					<button
-						class="p-2 size-8.5 flex justify-center items-center {selectedVersion === 'note'
-							? 'bg-gray-100 dark:bg-gray-800 '
-							: ' hover:bg-gray-50 dark:hover:bg-gray-800'}  rounded-full transition shrink-0"
-						type="button"
-						on:click={() => {
-							selectedVersion = 'note';
-							versionToggleHandler();
-						}}
-					>
-						<Bars3BottomLeft />
-					</button>
-				</Tooltip> -->
-
 						<Tooltip content={$i18n.t('Enhance')} placement="top">
 							{#if editing}
 								<button
@@ -1116,16 +1101,21 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 									<Spinner className="size-5" />
 								</button>
 							{:else}
-								<button
-									class="p-2.5 flex justify-center items-center hover:bg-gray-50 dark:hover:bg-gray-800 rounded-full transition shrink-0"
-									on:click={() => {
+								<AiMenu
+									onEdit={() => {
 										enhanceNoteHandler();
 									}}
-									disabled={editing}
-									type="button"
+									onChat={() => {
+										showPanel = true;
+										selectedPanel = 'chat';
+									}}
 								>
-									<SparklesSolid />
-								</button>
+									<div
+										class="cursor-pointer p-2.5 flex rounded-full border border-gray-50 bg-white dark:border-none dark:bg-gray-850 hover:bg-gray-50 dark:hover:bg-gray-800 transition shadow-xl"
+									>
+										<SparklesSolid />
+									</div>
+								</AiMenu>
 							{/if}
 						</Tooltip>
 					</div>

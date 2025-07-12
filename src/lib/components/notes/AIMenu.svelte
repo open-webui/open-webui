@@ -5,29 +5,21 @@
 	import { showSettings, mobile, showSidebar, user } from '$lib/stores';
 	import { fade, slide } from 'svelte/transition';
 
-	import Mic from '../icons/Mic.svelte';
-	import CursorArrowRays from '../icons/CursorArrowRays.svelte';
-	import DocumentArrowUp from '../icons/DocumentArrowUp.svelte';
-	import CloudArrowUp from '../icons/CloudArrowUp.svelte';
+	import PencilSquare from '../icons/PencilSquare.svelte';
+	import ChatBubbleOval from '../icons/ChatBubbleOval.svelte';
 
 	const i18n = getContext('i18n');
 
 	export let show = false;
 	export let className = 'max-w-[170px]';
 
-	export let onRecord = () => {};
-	export let onCaptureAudio = () => {};
-	export let onUpload = () => {};
+	export let onEdit = () => {};
+	export let onChat = () => {};
 
-	const dispatch = createEventDispatcher();
+	export let onChange = () => {};
 </script>
 
-<DropdownMenu.Root
-	bind:open={show}
-	onOpenChange={(state) => {
-		dispatch('change', state);
-	}}
->
+<DropdownMenu.Root bind:open={show} onOpenChange={onChange}>
 	<DropdownMenu.Trigger>
 		<slot />
 	</DropdownMenu.Trigger>
@@ -43,40 +35,27 @@
 			<button
 				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
 				on:click={async () => {
-					onRecord();
+					onEdit();
 					show = false;
 				}}
 			>
 				<div class=" self-center mr-2">
-					<Mic className="size-4" strokeWidth="2" />
+					<PencilSquare className="size-4" strokeWidth="2" />
 				</div>
-				<div class=" self-center truncate">{$i18n.t('Record')}</div>
+				<div class=" self-center truncate">{$i18n.t('Edit Note')}</div>
 			</button>
 
 			<button
 				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
 				on:click={() => {
-					onCaptureAudio();
+					onChat();
 					show = false;
 				}}
 			>
 				<div class=" self-center mr-2">
-					<CursorArrowRays className="size-4" strokeWidth="2" />
+					<ChatBubbleOval className="size-4" strokeWidth="2" />
 				</div>
-				<div class=" self-center truncate">{$i18n.t('Capture Audio')}</div>
-			</button>
-
-			<button
-				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
-				on:click={() => {
-					onUpload();
-					show = false;
-				}}
-			>
-				<div class=" self-center mr-2">
-					<CloudArrowUp className="size-4" strokeWidth="2" />
-				</div>
-				<div class=" self-center truncate">{$i18n.t('Upload Audio')}</div>
+				<div class=" self-center truncate">{$i18n.t('Chat')}</div>
 			</button>
 		</DropdownMenu.Content>
 	</slot>

@@ -78,7 +78,7 @@
 	{/if}
 {:else if show}
 	<PaneResizer
-		class="relative flex w-2 items-center justify-center bg-background group bg-white dark:shadow-lg dark:bg-gray-850 border border-gray-100 dark:border-gray-850"
+		class="relative flex w-2 items-center justify-center bg-background group bg-white dark:shadow-lg dark:bg-gray-850 border-l border-gray-50 dark:border-gray-850"
 	>
 		<div class="z-10 flex h-7 w-5 items-center justify-center rounded-xs">
 			<EllipsisVertical className="size-4 invisible group-hover:visible" />
@@ -98,7 +98,7 @@
 		{#if show}
 			<div class="flex max-h-full min-h-full">
 				<div
-					class="w-full pl-1.5 pr-2.5 pt-2 bg-white dark:shadow-lg dark:bg-gray-850 border border-gray-100 dark:border-gray-850 z-40 pointer-events-auto overflow-y-auto scrollbar-hidden flex flex-col"
+					class="w-full pl-1.5 pr-2.5 pt-2 bg-white dark:shadow-lg dark:bg-gray-850 z-40 pointer-events-auto overflow-y-auto scrollbar-hidden flex flex-col"
 				>
 					<slot />
 				</div>

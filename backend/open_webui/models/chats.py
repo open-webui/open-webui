@@ -67,6 +67,7 @@ class ChatModel(BaseModel):
 
 class ChatForm(BaseModel):
     chat: dict
+    folder_id: Optional[str] = None
 
 
 class ChatImportForm(ChatForm):
@@ -121,6 +122,7 @@ class ChatTable:
                         else "New Chat"
                     ),
                     "chat": form_data.chat,
+                    "folder_id": form_data.folder_id,
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
                 }
@@ -639,8 +641,7 @@ class ChatTable:
                 sqlite_content_clause = text(sqlite_content_sql)
                 query = query.filter(
                     or_(
-                        Chat.title.ilike(bindparam('title_key')),
-                        sqlite_content_clause
+                        Chat.title.ilike(bindparam("title_key")), sqlite_content_clause
                     ).params(title_key=f"%{search_text}%", content_key=search_text)
                 )
 
@@ -686,8 +687,8 @@ class ChatTable:
                 postgres_content_clause = text(postgres_content_sql)
                 query = query.filter(
                     or_(
-                        Chat.title.ilike(bindparam('title_key')),
-                        postgres_content_clause
+                        Chat.title.ilike(bindparam("title_key")),
+                        postgres_content_clause,
                     ).params(title_key=f"%{search_text}%", content_key=search_text)
                 )
 
