@@ -1026,7 +1026,27 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 								<button class=" flex items-center gap-1 w-fit py-1 px-1.5 rounded-lg min-w-fit">
 									<Calendar className="size-3.5" strokeWidth="2" />
 
-									<span>{dayjs(note.created_at / 1000000).calendar()}</span>
+									<!-- check for same date, yesterday, last week, and other -->
+
+									{#if dayjs(note.created_at / 1000000).isSame(dayjs(), 'day')}
+										<span
+											>{dayjs(note.created_at / 1000000).format($i18n.t('[Today at] h:mm A'))}</span
+										>
+									{:else if dayjs(note.created_at / 1000000).isSame(dayjs().subtract(1, 'day'), 'day')}
+										<span
+											>{dayjs(note.created_at / 1000000).format(
+												$i18n.t('[Yesterday at] h:mm A')
+											)}</span
+										>
+									{:else if dayjs(note.created_at / 1000000).isSame(dayjs().subtract(1, 'week'), 'week')}
+										<span
+											>{dayjs(note.created_at / 1000000).format(
+												$i18n.t('[Last] dddd [at] h:mm A')
+											)}</span
+										>
+									{:else}
+										<span>{dayjs(note.created_at / 1000000).format($i18n.t('DD/MM/YYYY'))}</span>
+									{/if}
 								</button>
 
 								<button
@@ -1044,13 +1064,13 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 								{#if editor}
 									<div class="flex items-center gap-1 px-1 min-w-fit">
 										<div>
-											{$i18n.t('{{count}} words', {
-												count: wordCount
+											{$i18n.t('{{COUNT}} words', {
+												COUNT: wordCount
 											})}
 										</div>
 										<div>
-											{$i18n.t('{{count}} characters', {
-												count: charCount
+											{$i18n.t('{{COUNT}} characters', {
+												COUNT: charCount
 											})}
 										</div>
 									</div>

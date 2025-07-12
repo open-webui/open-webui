@@ -49,6 +49,7 @@ async def get_all_channels(user=Depends(get_verified_user)):
         return Channels.get_channels()
     return Channels.get_channels_by_user_id(user.id)
 
+
 ############################
 # CreateNewChannel
 ############################
