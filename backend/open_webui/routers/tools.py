@@ -1,29 +1,27 @@
 import logging
-from pathlib import Path
-from typing import Optional
-import time
 import re
+import time
+from typing import Optional
+
 import aiohttp
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, HttpUrl
 
+from open_webui.config import CACHE_DIR
+from open_webui.constants import ERROR_MESSAGES
+from open_webui.env import SRC_LOG_LEVELS
 from open_webui.models.tools import (
     ToolForm,
     ToolModel,
     ToolResponse,
-    ToolUserResponse,
     Tools,
+    ToolUserResponse,
 )
-from open_webui.utils.plugin import load_tool_module_by_id, replace_imports
-from open_webui.config import CACHE_DIR
-from open_webui.constants import ERROR_MESSAGES
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-from open_webui.utils.tools import get_tool_specs
-from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access, has_permission
-from open_webui.env import SRC_LOG_LEVELS
-
-from open_webui.utils.tools import get_tool_servers_data
-
+from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.plugin import load_tool_module_by_id, replace_imports
+from open_webui.utils.tools import get_tool_specs
+from open_webui.utils.tools_cache import get_cached_tool_servers
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
@@ -39,35 +37,28 @@ router = APIRouter()
 @router.get("/", response_model=list[ToolUserResponse])
 async def get_tools(request: Request, user=Depends(get_verified_user)):
 
-    if not request.app.state.TOOL_SERVERS:
-        # If the tool servers are not set, we need to set them
-        # This is done only once when the server starts
-        # This is done to avoid loading the tool servers every time
-
-        request.app.state.TOOL_SERVERS = await get_tool_servers_data(
-            request.app.state.config.TOOL_SERVER_CONNECTIONS
-        )
-
     tools = Tools.get_tools()
-    for server in request.app.state.TOOL_SERVERS:
+
+    tool_servers = await get_cached_tool_servers(request)
+    for server in tool_servers:
         tools.append(
             ToolUserResponse(
                 **{
                     "id": f"server:{server['idx']}",
                     "user_id": f"server:{server['idx']}",
-                    "name": server.get("openapi", {})
-                    .get("info", {})
-                    .get("title", "Tool Server"),
-                    "meta": {
-                        "description": server.get("openapi", {})
+                    "name": (
+                        server.get("openapi", {})
                         .get("info", {})
-                        .get("description", ""),
+                        .get("title", "Tool Server")
+                    ),
+                    "meta": {
+                        "description": (
+                            server.get("openapi", {})
+                            .get("info", {})
+                            .get("description", "")
+                        ),
                     },
-                    "access_control": request.app.state.config.TOOL_SERVER_CONNECTIONS[
-                        server["idx"]
-                    ]
-                    .get("config", {})
-                    .get("access_control", None),
+                    "access_control": server.get("access_control"),
                     "updated_at": int(time.time()),
                     "created_at": int(time.time()),
                 }
