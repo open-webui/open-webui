@@ -16,10 +16,6 @@
 
 	$: filteredUsers = users
 		.filter((user) => {
-			if (user?.role === 'admin') {
-				return false;
-			}
-
 			if (query === '') {
 				return true;
 			}
