@@ -29,7 +29,7 @@
 	import { compressImage, copyToClipboard, splitStream } from '$lib/utils';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { uploadFile } from '$lib/apis/files';
-	import { chatCompletion } from '$lib/apis/openai';
+	import { chatCompletion, generateOpenAIChatCompletion } from '$lib/apis/openai';
 
 	import { config, models, settings, showSidebar, socket, user } from '$lib/stores';
 
@@ -121,6 +121,9 @@
 	let showDeleteConfirm = false;
 	let showAccessControlModal = false;
 
+	let titleInputFocused = false;
+	let titleGenerating = false;
+
 	let dragged = false;
 	let loading = false;
 
@@ -194,6 +197,81 @@
 	const onEdited = async () => {
 		if (!editor) return;
 		editor.commands.setContent(note.data.content.html);
+	};
+
+	const generateTitleHandler = async () => {
+		const content = note.data.content.md;
+		const DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE = `### Task:
+Generate a concise, 3-5 word title with an emoji summarizing the content.
+### Guidelines:
+- The title should clearly represent the main theme or subject of the content.
+- Use emojis that enhance understanding of the topic, but avoid quotation marks or special formatting.
+- Write the title in the chat's primary language; default to English if multilingual.
+- Prioritize accuracy over excessive creativity; keep it clear and simple.
+- Your entire response must consist solely of the JSON object, without any introductory or concluding text.
+- The output must be a single, raw JSON object, without any markdown code fences or other encapsulating text.
+- Ensure no conversational text, affirmations, or explanations precede or follow the raw JSON output, as this will cause direct parsing failure.
+### Output:
+JSON format: { "title": "your concise title here" }
+### Examples:
+- { "title": "📉 Stock Market Trends" },
+- { "title": "🍪 Perfect Chocolate Chip Recipe" },
+- { "title": "Evolution of Music Streaming" },
+- { "title": "Remote Work Productivity Tips" },
+- { "title": "Artificial Intelligence in Healthcare" },
+- { "title": "🎮 Video Game Development Insights" }
+### Content:
+<content>
+${content}
+</content>`;
+
+		const oldTitle = JSON.parse(JSON.stringify(note.title));
+		note.title = '';
+		titleGenerating = true;
+
+		const res = await generateOpenAIChatCompletion(
+			localStorage.token,
+			{
+				model: selectedModelId,
+				stream: false,
+				messages: [
+					{
+						role: 'user',
+						content: DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE
+					}
+				]
+			},
+			`${WEBUI_BASE_URL}/api`
+		);
+		if (res) {
+			// Step 1: Safely extract the response string
+			const response = res?.choices[0]?.message?.content ?? '';
+
+			try {
+				const jsonStartIndex = response.indexOf('{');
+				const jsonEndIndex = response.lastIndexOf('}');
+
+				if (jsonStartIndex !== -1 && jsonEndIndex !== -1) {
+					const jsonResponse = response.substring(jsonStartIndex, jsonEndIndex + 1);
+					const parsed = JSON.parse(jsonResponse);
+
+					if (parsed && parsed.title) {
+						note.title = parsed.title.trim();
+					}
+				}
+			} catch (e) {
+				console.error('Error parsing JSON response:', e);
+				toast.error($i18n.t('Failed to generate title'));
+			}
+		}
+
+		if (!note.title) {
+			note.title = oldTitle;
+		}
+
+		titleGenerating = false;
+		await tick();
+		changeDebounceHandler();
 	};
 
 	async function enhanceNoteHandler() {
@@ -776,11 +854,46 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 								class="w-full text-2xl font-medium bg-transparent outline-hidden"
 								type="text"
 								bind:value={note.title}
-								placeholder={$i18n.t('Title')}
-								disabled={note?.user_id !== $user?.id && $user?.role !== 'admin'}
+								placeholder={titleGenerating ? $i18n.t('Generating...') : $i18n.t('Title')}
+								disabled={(note?.user_id !== $user?.id && $user?.role !== 'admin') ||
+									titleGenerating}
 								required
 								on:input={changeDebounceHandler}
+								on:focus={() => {
+									titleInputFocused = true;
+								}}
+								on:blur={(e) => {
+									// check if target is generate button
+									if (e.relatedTarget?.id === 'generate-title-button') {
+										return;
+									}
+
+									titleInputFocused = false;
+									changeDebounceHandler();
+								}}
 							/>
+
+							{#if titleInputFocused && !titleGenerating}
+								<div
+									class="flex self-center items-center space-x-1.5 z-10 translate-y-[0.5px] -translate-x-[0.5px]"
+								>
+									<Tooltip content={$i18n.t('Generate')}>
+										<button
+											class=" self-center dark:hover:text-white transition"
+											id="generate-title-button"
+											on:click={(e) => {
+												e.preventDefault();
+												e.stopImmediatePropagation();
+												e.stopPropagation();
+
+												generateTitleHandler();
+											}}
+										>
+											<Sparkles strokeWidth="2" />
+										</button>
+									</Tooltip>
+								</div>
+							{/if}
 
 							<div class="flex items-center gap-0.5 translate-x-1">
 								{#if editor}
