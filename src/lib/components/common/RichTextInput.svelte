@@ -215,7 +215,9 @@
 
 							if (state.length === 2 && state[0] === 0 && state[1] === 0) {
 								// Empty state, check if we have content to initialize
-								if (content) {
+								// check if editor empty as well
+								const isEmptyEditor = !editor || editor.getText().trim() === '';
+								if (content && isEmptyEditor) {
 									const pydoc = prosemirrorJSONToYDoc(editor.schema, content);
 									if (pydoc) {
 										Y.applyUpdate(this.doc, Y.encodeStateAsUpdate(pydoc));
