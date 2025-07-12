@@ -44,8 +44,10 @@ async def get_channels(user=Depends(get_verified_user)):
 
 
 @router.get("/list", response_model=list[ChannelModel])
-async def get_all_channels(user=Depends(get_admin_user)):
-    return Channels.get_channels()
+async def get_all_channels(user=Depends(get_verified_user)):
+    if user.role == "admin":
+        return Channels.get_channels()
+    return Channels.get_channels_by_user_id(user.id)
 
 ############################
 # CreateNewChannel
