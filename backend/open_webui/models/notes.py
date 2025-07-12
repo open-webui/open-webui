@@ -130,9 +130,9 @@ class NoteTable:
             if "title" in form_data:
                 note.title = form_data["title"]
             if "data" in form_data:
-                note.data = form_data["data"]
+                note.data = {**note.data, **form_data["data"]}
             if "meta" in form_data:
-                note.meta = form_data["meta"]
+                note.meta = {**note.meta, **form_data["meta"]}
 
             if "access_control" in form_data:
                 note.access_control = form_data["access_control"]

@@ -626,7 +626,7 @@ ${content}
 			md: ''
 		};
 
-		const systemPrompt = `Enhance existing notes using additional context provided from audio transcription or uploaded file content. Your task is to make the notes more useful and comprehensive by incorporating relevant information from the provided context.
+		const systemPrompt = `Enhance existing notes using additional context provided from audio transcription or uploaded file content in the content's primary language. Your task is to make the notes more useful and comprehensive by incorporating relevant information from the provided context.
 
 Input will be provided within <notes> and <context> XML tags, providing a structure for the existing notes and context respectively.
 
