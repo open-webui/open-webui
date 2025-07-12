@@ -32,7 +32,7 @@
 	import { WEBUI_NAME, config, prompts as _prompts, user } from '$lib/stores';
 
 	import { createNewNote, deleteNoteById, getNotes } from '$lib/apis/notes';
-	import { capitalizeFirstLetter } from '$lib/utils';
+	import { capitalizeFirstLetter, copyToClipboard } from '$lib/utils';
 
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -323,6 +323,16 @@
 																selectedNote = note;
 
 																downloadHandler(type);
+															}}
+															onCopyLink={async () => {
+																const baseUrl = window.location.origin;
+																const res = await copyToClipboard(`${baseUrl}/notes/${note.id}`);
+
+																if (res) {
+																	toast.success($i18n.t('Copied link to clipboard'));
+																} else {
+																	toast.error($i18n.t('Failed to copy link'));
+																}
 															}}
 															onDelete={() => {
 																selectedNote = note;
