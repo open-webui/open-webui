@@ -18,7 +18,7 @@
 	import {
 		deleteFolderById,
 		updateFolderIsExpandedById,
-		updateFolderNameById,
+		updateFolderById,
 		updateFolderParentIdById
 	} from '$lib/apis/folders';
 	import { toast } from 'svelte-sonner';
@@ -278,7 +278,7 @@
 		name = name.trim();
 		folders[folderId].name = name;
 
-		const res = await updateFolderNameById(localStorage.token, folderId, name).catch((error) => {
+		const res = await updateFolderById(localStorage.token, folderId, { name }).catch((error) => {
 			toast.error(`${error}`);
 
 			folders[folderId].name = currentName;
