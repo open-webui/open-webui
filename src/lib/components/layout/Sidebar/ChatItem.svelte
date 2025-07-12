@@ -25,7 +25,8 @@
 		pinnedChats,
 		showSidebar,
 		currentChatPage,
-		tags
+		tags,
+		selectedFolder
 	} from '$lib/stores';
 
 	import ChatMenu from './ChatMenu.svelte';
@@ -354,6 +355,13 @@
 			href="/c/{id}"
 			on:click={() => {
 				dispatch('select');
+
+				if (
+					$selectedFolder &&
+					!($selectedFolder?.items?.chats.map((chat) => chat.id) ?? []).includes(id)
+				) {
+					selectedFolder.set(null); // Reset selected folder if the chat is not in it
+				}
 
 				if ($mobile) {
 					showSidebar.set(false);
