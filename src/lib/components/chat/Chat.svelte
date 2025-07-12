@@ -1988,6 +1988,7 @@
 				history: history,
 				messages: createMessagesList(history, history.currentId),
 				tags: [],
+				...($selectedFolder ? { folder_id: $selectedFolder?.id } : {}),
 				timestamp: Date.now()
 			});
 
