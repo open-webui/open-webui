@@ -929,12 +929,39 @@
 					},
 					keydown: (view, event) => {
 						if (messageInput) {
+							// Check if the current selection is inside a structured block (like codeBlock or list)
+							const { state } = view;
+							const { $head } = state.selection;
+
+							// Recursive function to check ancestors for specific node types
+							function isInside(nodeTypes: string[]): boolean {
+								let currentNode = $head;
+								while (currentNode) {
+									if (nodeTypes.includes(currentNode.parent.type.name)) {
+										return true;
+									}
+									if (!currentNode.depth) break; // Stop if we reach the top
+									currentNode = state.doc.resolve(currentNode.before()); // Move to the parent node
+								}
+								return false;
+							}
+
 							// Handle Tab Key
 							if (event.key === 'Tab') {
-								const handled = selectNextTemplate(view.state, view.dispatch);
-								if (handled) {
+								const isInCodeBlock = isInside(['codeBlock']);
+
+								if (isInCodeBlock) {
+									// Handle tab in code block - insert tab character or spaces
+									const tabChar = '\t'; // or '    ' for 4 spaces
+									editor.commands.insertContent(tabChar);
 									event.preventDefault();
-									return true;
+									return true; // Prevent further propagation
+								} else {
+									const handled = selectNextTemplate(view.state, view.dispatch);
+									if (handled) {
+										event.preventDefault();
+										return true;
+									}
 								}
 							}
 
@@ -946,23 +973,6 @@
 									event.preventDefault();
 									return true;
 								} else {
-									// Check if the current selection is inside a structured block (like codeBlock or list)
-									const { state } = view;
-									const { $head } = state.selection;
-
-									// Recursive function to check ancestors for specific node types
-									function isInside(nodeTypes: string[]): boolean {
-										let currentNode = $head;
-										while (currentNode) {
-											if (nodeTypes.includes(currentNode.parent.type.name)) {
-												return true;
-											}
-											if (!currentNode.depth) break; // Stop if we reach the top
-											currentNode = state.doc.resolve(currentNode.before()); // Move to the parent node
-										}
-										return false;
-									}
-
 									const isInCodeBlock = isInside(['codeBlock']);
 									const isInList = isInside(['listItem', 'bulletList', 'orderedList', 'taskList']);
 									const isInHeading = isInside(['heading']);
