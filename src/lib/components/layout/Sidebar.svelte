@@ -362,6 +362,12 @@
 			}
 		});
 
+		chats.subscribe((value) => {
+			if ($selectedFolder) {
+				initFolders();
+			}
+		});
+
 		await initChannels();
 		await initChatList();
 

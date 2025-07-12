@@ -301,7 +301,7 @@
 		<div
 			class=" w-full flex justify-between rounded-lg px-[11px] py-[6px] {id === $chatId ||
 			confirmEdit
-				? 'bg-gray-200 dark:bg-gray-900'
+				? 'bg-gray-100 dark:bg-gray-900'
 				: selected
 					? 'bg-gray-100 dark:bg-gray-950'
 					: 'group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis relative {generating
@@ -347,7 +347,7 @@
 		<a
 			class=" w-full flex justify-between rounded-lg px-[11px] py-[6px] {id === $chatId ||
 			confirmEdit
-				? 'bg-gray-200 dark:bg-gray-900'
+				? 'bg-gray-100 dark:bg-gray-900'
 				: selected
 					? 'bg-gray-100 dark:bg-gray-950'
 					: ' group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
@@ -387,7 +387,7 @@
 	<div
 		class="
         {id === $chatId || confirmEdit
-			? 'from-gray-200 dark:from-gray-900'
+			? 'from-gray-100 dark:from-gray-900'
 			: selected
 				? 'from-gray-100 dark:from-gray-950'
 				: 'invisible group-hover:visible from-gray-100 dark:from-gray-950'}
