@@ -212,13 +212,13 @@ class FolderTable:
                     .first()
                 )
 
-                if existing_folder:
+                if existing_folder and existing_folder.id != id:
                     return None
 
                 folder.name = form_data.get("name", folder.name)
                 if "data" in form_data:
                     folder.data = {
-                        **folder.data,
+                        **(folder.data or {}),
                         **form_data["data"],
                     }
 
