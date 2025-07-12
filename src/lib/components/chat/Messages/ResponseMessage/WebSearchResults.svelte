@@ -1,7 +1,7 @@
 <script lang="ts">
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
-	import MagnifyingGlass from '$lib/components/icons/MagnifyingGlass.svelte';
+	import Search from '$lib/components/icons/Search.svelte';
 	import Collapsible from '$lib/components/common/Collapsible.svelte';
 
 	export let status = { urls: [], query: '' };
@@ -31,7 +31,7 @@
 				class="flex w-full items-center p-3 px-4 border-b border-gray-300/30 dark:border-gray-700/50 group/item justify-between font-normal text-gray-800 dark:text-gray-300 no-underline"
 			>
 				<div class="flex gap-2 items-center">
-					<MagnifyingGlass />
+					<Search />
 
 					<div class=" line-clamp-1">
 						{status.query}

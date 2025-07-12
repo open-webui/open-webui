@@ -48,35 +48,28 @@
 	/**
 	 * Finds multiple diffs in two strings and generates minimal change edits.
 	 */
-	function findChanges(oldStr, newStr) {
-		let changes = [];
-		let oldIndex = 0,
-			newIndex = 0;
-
-		while (oldIndex < oldStr.length || newIndex < newStr.length) {
-			if (oldStr[oldIndex] !== newStr[newIndex]) {
-				let start = oldIndex;
-
-				// Identify the changed portion
-				while (oldIndex < oldStr.length && oldStr[oldIndex] !== newStr[newIndex]) {
-					oldIndex++;
-				}
-				while (newIndex < newStr.length && newStr[newIndex] !== oldStr[start]) {
-					newIndex++;
-				}
-
-				changes.push({
-					from: start,
-					to: oldIndex, // Replace the differing part
-					insert: newStr.substring(start, newIndex)
-				});
-			} else {
-				oldIndex++;
-				newIndex++;
-			}
+	function findChanges(oldStr: string, newStr: string) {
+		// Find the start of the difference
+		let start = 0;
+		while (start < oldStr.length && start < newStr.length && oldStr[start] === newStr[start]) {
+			start++;
 		}
-
-		return changes;
+		// If equal, nothing to change
+		if (oldStr === newStr) return [];
+		// Find the end of the difference by comparing backwards
+		let endOld = oldStr.length,
+			endNew = newStr.length;
+		while (endOld > start && endNew > start && oldStr[endOld - 1] === newStr[endNew - 1]) {
+			endOld--;
+			endNew--;
+		}
+		return [
+			{
+				from: start,
+				to: endOld,
+				insert: newStr.slice(start, endNew)
+			}
+		];
 	}
 
 	export let id = '';

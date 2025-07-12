@@ -403,6 +403,7 @@ export const deleteUserById = async (token: string, userId: string) => {
 };
 
 type UserUpdateForm = {
+	role: string;
 	profile_image_url: string;
 	email: string;
 	name: string;

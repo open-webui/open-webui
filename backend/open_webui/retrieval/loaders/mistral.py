@@ -507,6 +507,7 @@ class MistralLoader:
             timeout=timeout,
             headers={"User-Agent": "OpenWebUI-MistralLoader/2.0"},
             raise_for_status=False,  # We handle status codes manually
+            trust_env=True,
         ) as session:
             yield session
 

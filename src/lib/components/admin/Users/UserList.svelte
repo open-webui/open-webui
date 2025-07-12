@@ -151,7 +151,7 @@
 
 {#if users === null || total === null}
 	<div class="my-10">
-		<Spinner />
+		<Spinner className="size-5" />
 	</div>
 {:else}
 	<div class="mt-0.5 mb-2 gap-1 flex flex-col md:flex-row justify-between">
@@ -396,7 +396,7 @@
 									user.profile_image_url.startsWith('https://www.gravatar.com/avatar/') ||
 									user.profile_image_url.startsWith('data:')
 										? user.profile_image_url
-										: `/user.png`}
+										: `${WEBUI_BASE_URL}/user.png`}
 									alt="user"
 								/>
 

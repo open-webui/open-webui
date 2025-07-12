@@ -29,14 +29,10 @@
 	const i18n = getContext('i18n');
 
 	import {
-		deleteChatById,
 		getChatList,
 		getAllTags,
-		getChatListBySearchText,
-		createNewChat,
 		getPinnedChatList,
 		toggleChatPinnedStatusById,
-		getChatPinnedStatusById,
 		getChatById,
 		updateChatFolderIdById,
 		importChat
@@ -59,7 +55,7 @@
 	import ChannelItem from './Sidebar/ChannelItem.svelte';
 	import PencilSquare from '../icons/PencilSquare.svelte';
 	import Home from '../icons/Home.svelte';
-	import MagnifyingGlass from '../icons/MagnifyingGlass.svelte';
+	import Search from '../icons/Search.svelte';
 	import SearchModal from './SearchModal.svelte';
 
 	const BREAKPOINT = 768;
@@ -202,7 +198,15 @@
 		for (const item of items) {
 			console.log(item);
 			if (item.chat) {
-				await importChat(localStorage.token, item.chat, item?.meta ?? {}, pinned, folderId);
+				await importChat(
+					localStorage.token,
+					item.chat,
+					item?.meta ?? {},
+					pinned,
+					folderId,
+					item?.created_at ?? null,
+					item?.updated_at ?? null
+				);
 			}
 		}
 
@@ -491,7 +495,12 @@
 				on:click={async () => {
 					selectedChatId = null;
 
-					await temporaryChatEnabled.set(false);
+					if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
+						await temporaryChatEnabled.set(true);
+					} else {
+						await temporaryChatEnabled.set(false);
+					}
+
 					setTimeout(() => {
 						if ($mobile) {
 							showSidebar.set(false);
@@ -508,7 +517,7 @@
 							alt="logo"
 						/>
 					</div>
-					<div class=" self-center font-medium text-sm text-gray-850 dark:text-white font-primary">
+					<div class=" self-center text-sm text-gray-850 dark:text-white font-primary">
 						{$i18n.t('New Chat')}
 					</div>
 				</div>
@@ -554,11 +563,11 @@
 				draggable="false"
 			>
 				<div class="self-center">
-					<MagnifyingGlass strokeWidth="2" className="size-[1.1rem]" />
+					<Search strokeWidth="2" className="size-[1.1rem]" />
 				</div>
 
 				<div class="flex self-center translate-y-[0.5px]">
-					<div class=" self-center font-medium text-sm font-primary">{$i18n.t('Search')}</div>
+					<div class=" self-center text-sm font-primary">{$i18n.t('Search')}</div>
 				</div>
 			</button>
 		</div>
@@ -599,7 +608,7 @@
 					</div>
 
 					<div class="flex self-center translate-y-[0.5px]">
-						<div class=" self-center font-medium text-sm font-primary">{$i18n.t('Notes')}</div>
+						<div class=" self-center text-sm font-primary">{$i18n.t('Notes')}</div>
 					</div>
 				</a>
 			</div>
@@ -638,7 +647,7 @@
 					</div>
 
 					<div class="flex self-center translate-y-[0.5px]">
-						<div class=" self-center font-medium text-sm font-primary">{$i18n.t('Workspace')}</div>
+						<div class=" self-center text-sm font-primary">{$i18n.t('Workspace')}</div>
 					</div>
 				</a>
 			</div>
@@ -667,14 +676,15 @@
 									<div class="self-center shrink-0">
 										<img
 											crossorigin="anonymous"
-											src={model?.info?.meta?.profile_image_url ?? '/static/favicon.png'}
+											src={model?.info?.meta?.profile_image_url ??
+												`${WEBUI_BASE_URL}/static/favicon.png`}
 											class=" size-5 rounded-full -translate-x-[0.5px]"
 											alt="logo"
 										/>
 									</div>
 
 									<div class="flex self-center translate-y-[0.5px]">
-										<div class=" self-center font-medium text-sm font-primary line-clamp-1">
+										<div class=" self-center text-sm font-primary line-clamp-1">
 											{model?.name ?? modelId}
 										</div>
 									</div>
@@ -730,7 +740,15 @@
 							return null;
 						});
 						if (!chat && item) {
-							chat = await importChat(localStorage.token, item.chat, item?.meta ?? {});
+							chat = await importChat(
+								localStorage.token,
+								item.chat,
+								item?.meta ?? {},
+								false,
+								null,
+								item?.created_at ?? null,
+								item?.updated_at ?? null
+							);
 						}
 
 						if (chat) {
@@ -788,7 +806,15 @@
 										return null;
 									});
 									if (!chat && item) {
-										chat = await importChat(localStorage.token, item.chat, item?.meta ?? {});
+										chat = await importChat(
+											localStorage.token,
+											item.chat,
+											item?.meta ?? {},
+											false,
+											null,
+											item?.created_at ?? null,
+											item?.updated_at ?? null
+										);
 									}
 
 									if (chat) {
@@ -847,6 +873,7 @@
 				{#if folders}
 					<Folders
 						{folders}
+						{shiftKey}
 						on:import={(e) => {
 							const { folderId, items } = e.detail;
 							importChatHandler(items, false, folderId);

@@ -144,7 +144,9 @@
 					<ProfilePreview user={message.user}>
 						<ProfileImage
 							src={message.user?.profile_image_url ??
-								($i18n.language === 'dg-DG' ? `/doge.png` : `${WEBUI_BASE_URL}/static/favicon.png`)}
+								($i18n.language === 'dg-DG'
+									? `${WEBUI_BASE_URL}/doge.png`
+									: `${WEBUI_BASE_URL}/static/favicon.png`)}
 							className={'size-8 translate-y-1 ml-0.5'}
 						/>
 					</ProfilePreview>
@@ -275,7 +277,7 @@
 										>
 											{#if $shortCodesToEmojis[reaction.name]}
 												<img
-													src="/assets/emojis/{$shortCodesToEmojis[
+													src="{WEBUI_BASE_URL}/assets/emojis/{$shortCodesToEmojis[
 														reaction.name
 													].toLowerCase()}.svg"
 													alt={reaction.name}

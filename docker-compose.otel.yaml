@@ -1,0 +1,24 @@
+services:
+  grafana:
+    image: grafana/otel-lgtm:latest
+    container_name: lgtm
+    ports:
+      - "3000:3000"   # Grafana UI
+      - "4317:4317"   # OTLP/gRPC
+      - "4318:4318"   # OTLP/HTTP
+    restart: unless-stopped
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: open-webui
+    depends_on: [grafana]
+    environment:
+      - ENABLE_OTEL=true
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://grafana:4317 
+      - OTEL_SERVICE_NAME=open-webui
+    ports:
+      - "8088:8080"
+    networks: [default]
+
+networks:
+  default:

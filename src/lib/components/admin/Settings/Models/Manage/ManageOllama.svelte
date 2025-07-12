@@ -1057,6 +1057,6 @@
 	</div>
 {:else}
 	<div class="flex justify-center items-center w-full h-full py-3">
-		<Spinner />
+		<Spinner className="size-5" />
 	</div>
 {/if}

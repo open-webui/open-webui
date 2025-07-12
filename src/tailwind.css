@@ -40,6 +40,35 @@
 	textarea::placeholder {
 		color: theme(--color-gray-400);
 	}
+
+	input[type='checkbox'] {
+		@apply appearance-none size-3.5 align-middle bg-white border border-gray-300 rounded transition cursor-pointer focus:ring-2 focus:ring-blue-500 focus:outline-none dark:bg-gray-800 dark:border-gray-600 self-center;
+		/* Center the custom mark */
+		display: inline-block;
+		position: relative;
+	}
+	input[type='checkbox']:checked {
+		@apply bg-blue-600 border-blue-600;
+	}
+	input[type='checkbox']:after {
+		content: '';
+		display: block;
+		width: 100%;
+		height: 100%;
+		/* Hide by default */
+		opacity: 0;
+		transition: opacity 0.2s;
+		position: absolute;
+		top: 0;
+		left: 0;
+		pointer-events: none;
+		/* SVG checkmark as background image */
+		background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 16 16" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M4 8l3 3l5-5"/></svg>')
+			center/80% no-repeat;
+	}
+	input[type='checkbox']:checked:after {
+		opacity: 1;
+	}
 }
 
 @custom-variant hover (&:hover);

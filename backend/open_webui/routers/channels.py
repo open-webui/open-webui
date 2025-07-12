@@ -40,10 +40,14 @@ router = APIRouter()
 
 @router.get("/", response_model=list[ChannelModel])
 async def get_channels(user=Depends(get_verified_user)):
+    return Channels.get_channels_by_user_id(user.id)
+
+
+@router.get("/list", response_model=list[ChannelModel])
+async def get_all_channels(user=Depends(get_verified_user)):
     if user.role == "admin":
         return Channels.get_channels()
-    else:
-        return Channels.get_channels_by_user_id(user.id)
+    return Channels.get_channels_by_user_id(user.id)
 
 
 ############################

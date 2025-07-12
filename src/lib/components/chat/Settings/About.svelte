@@ -38,7 +38,9 @@
 			return '';
 		});
 
-		checkForVersionUpdates();
+		if ($config?.features?.enable_version_update_check) {
+			checkForVersionUpdates();
+		}
 	});
 </script>
 
@@ -58,16 +60,18 @@
 							v{WEBUI_VERSION}
 						</Tooltip>
 
-						<a
-							href="https://github.com/open-webui/open-webui/releases/tag/v{version.latest}"
-							target="_blank"
-						>
-							{updateAvailable === null
-								? $i18n.t('Checking for updates...')
-								: updateAvailable
-									? `(v${version.latest} ${$i18n.t('available!')})`
-									: $i18n.t('(latest)')}
-						</a>
+						{#if $config?.features?.enable_version_update_check}
+							<a
+								href="https://github.com/open-webui/open-webui/releases/tag/v{version.latest}"
+								target="_blank"
+							>
+								{updateAvailable === null
+									? $i18n.t('Checking for updates...')
+									: updateAvailable
+										? `(v${version.latest} ${$i18n.t('available!')})`
+										: $i18n.t('(latest)')}
+							</a>
+						{/if}
 					</div>
 
 					<button
@@ -80,14 +84,16 @@
 					</button>
 				</div>
 
-				<button
-					class=" text-xs px-3 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-lg font-medium"
-					on:click={() => {
-						checkForVersionUpdates();
-					}}
-				>
-					{$i18n.t('Check for updates')}
-				</button>
+				{#if $config?.features?.enable_version_update_check}
+					<button
+						class=" text-xs px-3 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-lg font-medium"
+						on:click={() => {
+							checkForVersionUpdates();
+						}}
+					>
+						{$i18n.t('Check for updates')}
+					</button>
+				{/if}
 			</div>
 		</div>
 

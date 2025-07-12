@@ -77,28 +77,18 @@
 						}
 					}
 				});
+				const isDarkMode = document.documentElement.classList.contains('dark');
 
-				function setSplashImage() {
-					const logo = document.getElementById('logo');
-					const isDarkMode = document.documentElement.classList.contains('dark');
+				const logo = document.createElement('img');
+				logo.id = 'logo';
+				logo.style =
+					'position: absolute; width: auto; height: 6rem; top: 44%; left: 50%; transform: translateX(-50%); display:block;';
+				logo.src = isDarkMode ? '/static/splash-dark.png' : '/static/splash.png';
 
-					if (isDarkMode) {
-						const darkImage = new Image();
-						darkImage.src = '/static/splash-dark.png';
-
-						darkImage.onload = () => {
-							logo.src = '/static/splash-dark.png';
-							logo.style.filter = ''; // Ensure no inversion is applied if splash-dark.png exists
-						};
-
-						darkImage.onerror = () => {
-							logo.style.filter = 'invert(1)'; // Invert image if splash-dark.png is missing
-						};
-					}
-				}
-
-				// Runs after classes are assigned
-				window.onload = setSplashImage;
+				document.addEventListener('DOMContentLoaded', function () {
+					const splash = document.getElementById('splash-screen');
+					if (splash) splash.prepend(logo);
+				});
 			})();
 		</script>
 
@@ -119,19 +109,6 @@
 					overflow-y: scroll !important;
 				}
 			</style>
-
-			<img
-				id="logo"
-				style="
-					position: absolute;
-					width: auto;
-					height: 6rem;
-					top: 44%;
-					left: 50%;
-					transform: translateX(-50%);
-				"
-				src="/static/splash.png"
-			/>
 
 			<div
 				style="
