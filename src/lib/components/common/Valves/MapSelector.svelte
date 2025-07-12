@@ -30,7 +30,7 @@
 
 			try {
 				map.fitBounds(markerGroupLayer.getBounds(), {
-					maxZoom: 13
+					maxZoom: Math.max(map.getZoom(), 13)
 				});
 			} catch (error) {}
 		}
