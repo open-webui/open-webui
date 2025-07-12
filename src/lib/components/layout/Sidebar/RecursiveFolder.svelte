@@ -10,7 +10,7 @@
 
 	import { toast } from 'svelte-sonner';
 
-	import { selectedFolder } from '$lib/stores';
+	import { chatId, selectedFolder } from '$lib/stores';
 
 	import {
 		deleteFolderById,
@@ -37,6 +37,7 @@
 	import FolderMenu from './Folders/FolderMenu.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import EditFolderModal from './Folders/EditFolderModal.svelte';
+	import { goto } from '$app/navigation';
 
 	export let open = false;
 
@@ -422,8 +423,11 @@
 				on:dblclick={() => {
 					renameHandler();
 				}}
-				on:click={(e) => {
+				on:click={async (e) => {
 					selectedFolder.set(folders[folderId]);
+					if ($chatId) {
+						await goto('/');
+					}
 				}}
 			>
 				<div class="text-gray-300 dark:text-gray-600">
