@@ -202,11 +202,11 @@
 	const generateTitleHandler = async () => {
 		const content = note.data.content.md;
 		const DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE = `### Task:
-Generate a concise, 3-5 word title with an emoji summarizing the content.
+Generate a concise, 3-5 word title with an emoji summarizing the content in the content's primary language.
 ### Guidelines:
 - The title should clearly represent the main theme or subject of the content.
 - Use emojis that enhance understanding of the topic, but avoid quotation marks or special formatting.
-- Write the title in the chat's primary language; default to English if multilingual.
+- Write the title in the content's primary language.
 - Prioritize accuracy over excessive creativity; keep it clear and simple.
 - Your entire response must consist solely of the JSON object, without any introductory or concluding text.
 - The output must be a single, raw JSON object, without any markdown code fences or other encapsulating text.
@@ -875,7 +875,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 
 							{#if titleInputFocused && !titleGenerating}
 								<div
-									class="flex self-center items-center space-x-1.5 z-10 translate-y-[0.5px] -translate-x-[0.5px]"
+									class="flex self-center items-center space-x-1.5 z-10 translate-y-[0.5px] -translate-x-[0.5px] pl-2"
 								>
 									<Tooltip content={$i18n.t('Generate')}>
 										<button
