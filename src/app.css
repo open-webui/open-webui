@@ -480,7 +480,7 @@ input[type='number'] {
 	font-size: 0.85rem;
 	padding: 0.25em 0.3em;
 
-	@apply dark:bg-gray-800 bg-gray-100;
+	@apply dark:bg-gray-800 bg-gray-50;
 }
 
 .tiptap > pre {
@@ -489,7 +489,7 @@ input[type='number'] {
 	margin: 1.5rem 0;
 	padding: 0.75rem 1rem;
 
-	@apply dark:bg-gray-800 bg-gray-100;
+	@apply dark:bg-gray-800 bg-gray-50;
 }
 
 .tiptap p code {
@@ -498,7 +498,7 @@ input[type='number'] {
 	padding: 3px 8px;
 	font-size: 0.8em;
 	font-weight: 600;
-	@apply rounded-md dark:bg-gray-800 bg-gray-100 mx-0.5;
+	@apply rounded-md dark:bg-gray-800 bg-gray-50 mx-0.5;
 }
 
 /* Code styling */
