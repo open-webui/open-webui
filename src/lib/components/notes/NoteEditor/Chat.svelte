@@ -95,7 +95,7 @@ Based on the user's instruction, update and enhance the existing notes by incorp
 ## Output Instructions
 - Deliver a single, rewritten version of the notes in markdown format.
 - Integrate information from the context only if it directly supports the user's instruction.
-- Use clear, organized markdown elements: headings, lists (ordered, bullet, or checklist), bold and italic text as appropriate.
+- Use clear, organized markdown elements: headings, lists, task lists ([ ]) where tasks or checklists are implied, bold and italic text as appropriate.
 - Focus on improving clarity, completeness, and usefulness of the notes.
 - Return only the final, fully-edited markdown notes—do not include explanations, reasoning, or XML tags.
 `;
