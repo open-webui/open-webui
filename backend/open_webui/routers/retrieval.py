@@ -1163,22 +1163,22 @@ def save_docs_to_vector_db(
             docs = text_splitter.split_documents(docs)
         elif request.app.state.config.TEXT_SPLITTER == "markdown_header":
             log.info("Using markdown header text splitter")
-            
+
             # Define headers to split on - covering most common markdown header levels
             headers_to_split_on = [
                 ("#", "Header 1"),
-                ("##", "Header 2"), 
+                ("##", "Header 2"),
                 ("###", "Header 3"),
                 ("####", "Header 4"),
                 ("#####", "Header 5"),
                 ("######", "Header 6"),
             ]
-            
+
             markdown_splitter = MarkdownHeaderTextSplitter(
                 headers_to_split_on=headers_to_split_on,
                 strip_headers=False,  # Keep headers in content for context
             )
-            
+
             md_split_docs = []
             for doc in docs:
                 md_header_splits = markdown_splitter.split_text(doc.page_content)
@@ -1188,19 +1188,23 @@ def save_docs_to_vector_db(
                     add_start_index=True,
                 )
                 md_header_splits = text_splitter.split_documents(md_header_splits)
-                
+
                 # Convert back to Document objects, preserving original metadata
                 for split_chunk in md_header_splits:
                     headings_list = []
                     # Extract header values in order based on headers_to_split_on
                     for _, header_meta_key_name in headers_to_split_on:
                         if header_meta_key_name in split_chunk.metadata:
-                            headings_list.append(split_chunk.metadata[header_meta_key_name])
-                    
-                    md_split_docs.append(Document(
-                        page_content=split_chunk.page_content,
-                        metadata={**doc.metadata, "headings": headings_list}
-                    ))
+                            headings_list.append(
+                                split_chunk.metadata[header_meta_key_name]
+                            )
+
+                    md_split_docs.append(
+                        Document(
+                            page_content=split_chunk.page_content,
+                            metadata={**doc.metadata, "headings": headings_list},
+                        )
+                    )
 
             docs = md_split_docs
         else:

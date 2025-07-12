@@ -687,7 +687,12 @@ async def signout(request: Request, response: Response):
                                     status_code=200,
                                     content={
                                         "status": True,
-                                        "redirect_url": f"{logout_url}?id_token_hint={oauth_id_token}" + (f"&post_logout_redirect_uri={WEBUI_AUTH_SIGNOUT_REDIRECT_URL}" if WEBUI_AUTH_SIGNOUT_REDIRECT_URL else ""),
+                                        "redirect_url": f"{logout_url}?id_token_hint={oauth_id_token}"
+                                        + (
+                                            f"&post_logout_redirect_uri={WEBUI_AUTH_SIGNOUT_REDIRECT_URL}"
+                                            if WEBUI_AUTH_SIGNOUT_REDIRECT_URL
+                                            else ""
+                                        ),
                                     },
                                     headers=response.headers,
                                 )
