@@ -887,6 +887,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 												e.stopPropagation();
 
 												generateTitleHandler();
+												titleInputFocused = false;
 											}}
 										>
 											<Sparkles strokeWidth="2" />
@@ -1202,7 +1203,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 					<div
 						class="cursor-pointer flex gap-0.5 rounded-full border border-gray-50 dark:border-gray-850 dark:bg-gray-850 transition shadow-xl"
 					>
-						<Tooltip content={$i18n.t('Enhance')} placement="top">
+						<Tooltip content={$i18n.t('AI')} placement="top">
 							{#if editing}
 								<button
 									class="p-2 flex justify-center items-center hover:bg-gray-50 dark:hover:bg-gray-800 rounded-full transition shrink-0"
