@@ -17,6 +17,10 @@
 	export let transcribe = true;
 	export let displayMedia = false;
 
+	export let echoCancellation = true;
+	export let noiseSuppression = true;
+	export let autoGainControl = true;
+
 	export let className = ' p-2.5 w-full max-w-full';
 
 	export let onCancel = () => {};
@@ -192,9 +196,9 @@
 			} else {
 				stream = await navigator.mediaDevices.getUserMedia({
 					audio: {
-						echoCancellation: true,
-						noiseSuppression: true,
-						autoGainControl: true
+						echoCancellation: echoCancellation,
+						noiseSuppression: noiseSuppression,
+						autoGainControl: autoGainControl
 					}
 				});
 			}

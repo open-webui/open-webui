@@ -1142,6 +1142,8 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 							className="p-1 w-full max-w-full"
 							transcribe={false}
 							displayMedia={displayMediaRecord}
+							echoCancellation={false}
+							noiseSuppression={false}
 							onCancel={() => {
 								recording = false;
 								displayMediaRecord = false;
