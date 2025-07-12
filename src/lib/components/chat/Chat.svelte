@@ -36,7 +36,8 @@
 		chatTitle,
 		showArtifacts,
 		tools,
-		toolServers
+		toolServers,
+		selectedFolder
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,

@@ -22,7 +22,8 @@
 		socket,
 		config,
 		isApp,
-		models
+		models,
+		selectedFolder
 	} from '$lib/stores';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 
@@ -494,6 +495,7 @@
 				draggable="false"
 				on:click={async () => {
 					selectedChatId = null;
+					selectedFolder.set(null);
 
 					if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
 						await temporaryChatEnabled.set(true);

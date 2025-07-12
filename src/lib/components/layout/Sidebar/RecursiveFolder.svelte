@@ -31,12 +31,15 @@
 	import ChatItem from './ChatItem.svelte';
 	import FolderMenu from './Folders/FolderMenu.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import { selectedFolder } from '$lib/stores';
 
 	export let open = false;
 
 	export let folders;
 	export let folderId;
 	export let shiftKey = false;
+
+	export let onCreateChat = (e) => {};
 
 	export let className = '';
 
@@ -288,6 +291,11 @@
 		if (res) {
 			folders[folderId].name = name;
 			toast.success($i18n.t('Folder name updated successfully'));
+
+			if ($selectedFolder?.id === folderId) {
+				selectedFolder.set(folders[folderId]);
+			}
+
 			dispatch('update');
 		}
 	};
@@ -394,9 +402,15 @@
 		<div class="w-full group">
 			<button
 				id="folder-{folderId}-button"
-				class="relative w-full py-1.5 px-2 rounded-md flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-500 font-medium hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+				class="relative w-full py-1.5 px-2 rounded-md flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-500 font-medium hover:bg-gray-100 dark:hover:bg-gray-900 transition {$selectedFolder?.id ===
+				folderId
+					? 'bg-gray-100 dark:bg-gray-900'
+					: ''}"
 				on:dblclick={() => {
 					editHandler();
+				}}
+				on:click={(e) => {
+					selectedFolder.set(folders[folderId]);
 				}}
 			>
 				<div class="text-gray-300 dark:text-gray-600">
@@ -446,18 +460,19 @@
 					on:pointerup={(e) => {
 						e.stopPropagation();
 					}}
+					on:click={(e) => e.stopPropagation()}
 				>
 					<FolderMenu
-						on:rename={() => {
+						onEdit={() => {
 							// Requires a timeout to prevent the click event from closing the dropdown
 							setTimeout(() => {
 								editHandler();
 							}, 200);
 						}}
-						on:delete={() => {
+						onDelete={() => {
 							showDeleteConfirm = true;
 						}}
-						on:export={() => {
+						onExport={() => {
 							exportHandler();
 						}}
 					>
