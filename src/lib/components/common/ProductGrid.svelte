@@ -121,7 +121,7 @@
     <div class="modal" role="dialog" tabindex="0" aria-modal="true" on:click={() => handleCloseClick()} on:keydown={(e) => e.key === 'Escape' && handleCloseClick()} >
         <div class="relative items-center justify-center h-[400px] w-[400px] border-1 rounded-lg bg-white"
             on:click|stopPropagation tabindex="0" role="document" on:keydown={(e) => e.key === 'Escape' && handleCloseClick()}>
-            <button class="close-button px-1 py-1 rounded-sm bg-gray-50 dark:bg-gray-600 border-gray-50 shadow-md z-10" on:click={() => handleCloseClick()} >
+            <button class="close-button px-1 py-1 rounded-sm bg-gray-50 border-gray-50 text-gray-700 shadow-md z-10" on:click={() => handleCloseClick()} >
               <div class=" m-auto self-center">
                 <svg
                     xmlns="http://www.w3.org/2000/svg"
