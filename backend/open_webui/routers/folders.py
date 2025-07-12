@@ -127,9 +127,7 @@ async def update_folder_name_by_id(
             )
 
         try:
-            folder = Folders.update_folder_name_by_id_and_user_id(
-                id, user.id, form_data.name
-            )
+            folder = Folders.update_folder_by_id_and_user_id(id, user.id, form_data)
 
             return folder
         except Exception as e:
