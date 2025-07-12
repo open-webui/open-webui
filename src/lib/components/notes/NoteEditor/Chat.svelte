@@ -318,7 +318,7 @@ Based on the user's instruction, update and enhance the existing notes by incorp
 	});
 </script>
 
-<div class="flex items-center mb-2 pt-1">
+<div class="flex items-center mb-1.5 pt-1.5">
 	<div class=" -translate-x-1.5 flex items-center">
 		<button
 			class="p-0.5 bg-transparent transition rounded-lg"
