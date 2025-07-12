@@ -7,6 +7,7 @@
 
 	import PencilSquare from '../icons/PencilSquare.svelte';
 	import ChatBubbleOval from '../icons/ChatBubbleOval.svelte';
+	import Sparkles from '../icons/Sparkles.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -40,9 +41,9 @@
 				}}
 			>
 				<div class=" self-center mr-2">
-					<PencilSquare className="size-4" strokeWidth="2" />
+					<Sparkles className="size-4" strokeWidth="2" />
 				</div>
-				<div class=" self-center truncate">{$i18n.t('Edit Note')}</div>
+				<div class=" self-center truncate">{$i18n.t('Enhance')}</div>
 			</button>
 
 			<button
