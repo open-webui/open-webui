@@ -675,6 +675,7 @@ async def signout(request: Request, response: Response):
         oauth_id_token = request.cookies.get("oauth_id_token")
         if oauth_id_token:
             try:
+                # Decode id_token to get iss and aud (no signature verification needed for logout claims extraction)
                 decoded_id_token = jwt.decode(
                     oauth_id_token,
                     options={"verify_signature": False, "verify_aud": False}
@@ -684,11 +685,16 @@ async def signout(request: Request, response: Response):
                 if not iss:
                     raise ValueError("No 'iss' claim in oauth_id_token")
 
+                # Handle aud as list if necessary
+                if isinstance(aud, list):
+                    aud = aud[0] if aud else None
+
                 openid_config_url = None
                 if OPENID_PROVIDER_URL.value:
                     openid_config_url = OPENID_PROVIDER_URL.value
                 else:
                     openid_config_url = f"{iss}/.well-known/openid-configuration"
+                    # Microsoft-specific: Append ?appid if iss indicates Entra ID (matches registration pattern)
                     if "microsoftonline.com" in iss.lower() and aud:
                         openid_config_url += f"?appid={aud}"
 
@@ -700,11 +706,33 @@ async def signout(request: Request, response: Response):
                             if logout_url:
                                 response.delete_cookie("oauth_id_token")
 
+                                # Construct post_logout_redirect_uri (absolute URL to signin page)
+                                post_logout_redirect_uri = None
+                                if WEBUI_AUTH_SIGNOUT_REDIRECT_URL and WEBUI_AUTH_SIGNOUT_REDIRECT_URL.startswith('http'):
+                                    post_logout_redirect_uri = WEBUI_AUTH_SIGNOUT_REDIRECT_URL
+                                elif request.app.state.config.WEBUI_URL:
+                                    post_logout_redirect_uri = f"{request.app.state.config.WEBUI_URL}/signin"
+                                else:
+                                    # Fallback to constructing from request
+                                    host = request.headers.get('host', 'localhost')
+                                    scheme = request.scheme
+                                    post_logout_redirect_uri = f"{scheme}://{host}/signin"
+
+                                # Build full logout URL with params
+                                full_logout_url = f"{logout_url}?id_token_hint={oauth_id_token}"
+                                if post_logout_redirect_uri:
+                                    full_logout_url += f"&post_logout_redirect_uri={quote(post_logout_redirect_uri)}"
+                                else:
+                                    log.warning("No post_logout_redirect_uri constructed; provider may not redirect back properly.")
+                                
+                                if aud and "microsoftonline.com" in iss.lower():
+                                    full_logout_url += f"&client_id={aud}"
+
                                 return JSONResponse(
                                     status_code=200,
                                     content={
                                         "status": True,
-                                        "redirect_url": f"{logout_url}?id_token_hint={oauth_id_token}",
+                                        "redirect_url": full_logout_url,
                                     },
                                     headers=response.headers,
                                 )
