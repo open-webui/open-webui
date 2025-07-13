@@ -1067,6 +1067,7 @@ async def update_ldap_config(
     request.app.state.config.ENABLE_LDAP = form_data.enable_ldap
     return {"ENABLE_LDAP": request.app.state.config.ENABLE_LDAP}
 
+
 ############################
 # API Key
 ############################
