@@ -679,7 +679,7 @@ async def signout(request: Request, response: Response):
                 # Decode id_token to get iss and aud (no signature verification needed for logout claims extraction)
                 decoded_id_token = jwt.decode(
                     oauth_id_token,
-                    options={"verify_signature": False, "verify_aud": False}
+                    options={"verify_signature": False, "verify_aud": False},
                 )
                 iss = decoded_id_token.get("iss")
                 aud = decoded_id_token.get("aud")
@@ -709,23 +709,38 @@ async def signout(request: Request, response: Response):
 
                                 # Construct post_logout_redirect_uri (absolute URL to signin page)
                                 post_logout_redirect_uri = None
-                                if WEBUI_AUTH_SIGNOUT_REDIRECT_URL and WEBUI_AUTH_SIGNOUT_REDIRECT_URL.startswith('http'):
-                                    post_logout_redirect_uri = WEBUI_AUTH_SIGNOUT_REDIRECT_URL
+                                if (
+                                    WEBUI_AUTH_SIGNOUT_REDIRECT_URL
+                                    and WEBUI_AUTH_SIGNOUT_REDIRECT_URL.startswith(
+                                        "http"
+                                    )
+                                ):
+                                    post_logout_redirect_uri = (
+                                        WEBUI_AUTH_SIGNOUT_REDIRECT_URL
+                                    )
                                 elif request.app.state.config.WEBUI_URL:
-                                    post_logout_redirect_uri = f"{request.app.state.config.WEBUI_URL}/signin"
+                                    post_logout_redirect_uri = (
+                                        f"{request.app.state.config.WEBUI_URL}/signin"
+                                    )
                                 else:
                                     # Fallback to constructing from request
-                                    host = request.headers.get('host', 'localhost')
+                                    host = request.headers.get("host", "localhost")
                                     scheme = request.scheme
-                                    post_logout_redirect_uri = f"{scheme}://{host}/signin"
+                                    post_logout_redirect_uri = (
+                                        f"{scheme}://{host}/signin"
+                                    )
 
                                 # Build full logout URL with params
-                                full_logout_url = f"{logout_url}?id_token_hint={oauth_id_token}"
+                                full_logout_url = (
+                                    f"{logout_url}?id_token_hint={oauth_id_token}"
+                                )
                                 if post_logout_redirect_uri:
                                     full_logout_url += f"&post_logout_redirect_uri={quote(post_logout_redirect_uri)}"
                                 else:
-                                    log.warning("No post_logout_redirect_uri constructed; provider may not redirect back properly.")
-                                
+                                    log.warning(
+                                        "No post_logout_redirect_uri constructed; provider may not redirect back properly."
+                                    )
+
                                 if aud and "microsoftonline.com" in iss.lower():
                                     full_logout_url += f"&client_id={aud}"
 
