@@ -51,6 +51,7 @@ steps:
 
 # Build Docker Image
 - script: |
+    ls
     cd $(Build.SourcesDirectory)
     ls
     docker build -t $(dockerRegistryUrl)/$(sourceImageName):latest -t $(dockerRegistryUrl)/$(sourceImageName):$(Build.BuildId) -f Dockerfile .
