@@ -92,9 +92,9 @@
 						<div class="mb-2 text-xs text-gray-500">{$i18n.t('System Prompt')}</div>
 						<div>
 							<Textarea
-								className=" text-sm w-full bg-transparent outline-hidden resize-none overflow-y-hidden "
+								className=" text-sm w-full bg-transparent outline-hidden "
 								placeholder={`Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.`}
-								rows={4}
+								maxSize={200}
 								bind:value={data.system_prompt}
 							/>
 						</div>
