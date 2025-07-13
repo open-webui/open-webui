@@ -49,16 +49,16 @@ steps:
     echo $(dockerRegistryPassword) | docker login $(dockerRegistryUrl) -u $(dockerRegistryUsername) --password-stdin
   displayName: 'Authenticate to ACR'
 
-# # Build Docker Image
-# - script: |
-#     docker build -t $(dockerRegistryUrl)/$(sourceImageName):latest -t $(dockerRegistryUrl)/$(sourceImageName):$(Build.BuildId) -f Dockerfile .
-#   displayName: 'Build Docker Image'
+# Build Docker Image
+- script: |
+    docker build -t $(dockerRegistryUrl)/$(sourceImageName):latest -t $(dockerRegistryUrl)/$(sourceImageName):$(Build.BuildId) -f Dockerfile .
+  displayName: 'Build Docker Image'
 
-# # Push Docker Image to ACR
-# - script: |
-#     docker push $(dockerRegistryUrl)/$(sourceImageName):latest
-#     docker push $(dockerRegistryUrl)/$(sourceImageName):$(Build.BuildId)
-#   displayName: 'Push Docker Image to ACR'
+# Push Docker Image to ACR
+- script: |
+    docker push $(dockerRegistryUrl)/$(sourceImageName):latest
+    docker push $(dockerRegistryUrl)/$(sourceImageName):$(Build.BuildId)
+  displayName: 'Push Docker Image to ACR'
 
 - script: |
     echo "Updating image tag in sandbox.yaml to $(Build.BuildId)"
