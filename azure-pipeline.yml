@@ -60,8 +60,8 @@ steps:
 # Push Docker Image to ACR
 - script: |
     ls
-    docker push $(dockerRegistryUrl)/$(sourceImageName):latest
-    docker push $(dockerRegistryUrl)/$(sourceImageName):$(Build.BuildId)
+    # docker push $(dockerRegistryUrl)/$(sourceImageName):latest
+    # docker push $(dockerRegistryUrl)/$(sourceImageName):$(Build.BuildId)
   displayName: 'Push Docker Image to ACR'
 
 - script: |
