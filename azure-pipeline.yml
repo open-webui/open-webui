@@ -61,9 +61,12 @@ steps:
   inputs:
     targetType: 'inline'
     script: |
-      yq e '.image.tag = "$(Build.BuildId)"' -i helm-chart/govgpt/sandbox.yaml
+      git clone https://ADGOV-AI@dev.azure.com/ADGOV-AI/AIFactory/_git/gitops
+      cd gitops
+      yq e '.image.tag = "$(Build.BuildId)"' -i helm-charts/govgpt/sandbox.yaml
       git config user.name "Azure Pipeline"
       git config user.email "pipeline@azure.gitops"
-      git add helm-charts/govgpt/sandbox.yaml
+      git add helm-chart/govgpt/sandbox.yaml
       git commit -m "chore: bump govgpt tag to $(Build.BuildId)"
       git push origin HEAD:main
+
