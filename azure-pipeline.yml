@@ -49,3 +49,22 @@ steps:
     docker push $(dockerRegistryUrl)/$(sourceImageName):latest
     docker push $(dockerRegistryUrl)/$(sourceImageName):$(Build.BuildId)
   displayName: 'Push Docker Image to ACR'
+
+
+- script: |
+    docker push $(dockerRegistryUrl)/$(sourceImageName):latest
+    docker push $(dockerRegistryUrl)/$(sourceImageName):$(Build.BuildId)
+  displayName: 'Push Docker Image to ACR'
+
+- task: Bash@3
+  displayName: 'Update Helm image tag'
+  inputs:
+    targetType: 'inline'
+    script: |
+      sudo apt-get update && sudo apt-get install -y yq
+      yq e '.image.tag = "$(Build.BuildId)"' -i helm-chart/govgpt/sandbox.yaml
+      git config user.name "Azure Pipeline"
+      git config user.email "pipeline@azure.gitops"
+      git add helm-chart/govgpt/sandbox.yaml
+      git commit -m "chore: bump govgpt tag to $(Build.BuildId)"
+      git push origin HEAD:main
