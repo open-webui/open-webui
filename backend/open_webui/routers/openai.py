@@ -43,6 +43,9 @@ from open_webui.utils.misc import (
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access
+from open_webui.socket.main import (
+    get_event_emitter,
+)
 
 
 log = logging.getLogger(__name__)
@@ -704,6 +707,7 @@ async def generate_chat_completion(
 
     payload = {**form_data}
     metadata = payload.pop("metadata", None)
+    __event_emitter__ = get_event_emitter(metadata)
 
     model_id = form_data.get("model")
     model_info = Models.get_model_by_id(model_id)
@@ -849,8 +853,20 @@ async def generate_chat_completion(
         # Check if response is SSE
         if "text/event-stream" in r.headers.get("Content-Type", ""):
             streaming = True
+            # Read the stream and propagate the event if needed
+            async def stream_events():
+                async for line in r.content:
+                    if line:
+                        if line.startswith(b"data: "):
+                            data = json.loads(line[6:])
+                            if data and "event" in data:
+                                await __event_emitter__(data["event"])
+                            else:
+                                yield line
+                        else:
+                            yield line
             return StreamingResponse(
-                r.content,
+                stream_events(),
                 status_code=r.status,
                 headers=dict(r.headers),
                 background=BackgroundTask(
