@@ -44,8 +44,6 @@ steps:
 - checkout: self
 - checkout: gitops
 
-
-steps:
 # Login to Azure Container Registry manually using username and password
 - script: |
     echo $(dockerRegistryPassword) | docker login $(dockerRegistryUrl) -u $(dockerRegistryUsername) --password-stdin
