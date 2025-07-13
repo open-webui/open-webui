@@ -696,7 +696,7 @@ async def signout(request: Request, response: Response):
                 else:
                     openid_config_url = f"{iss}/.well-known/openid-configuration"
                     # Microsoft-specific: Append ?appid if iss indicates Entra ID (matches registration pattern)
-                    if "microsoftonline.com" in iss.lower() and aud:
+                    if aud and re.search(r'(microsoftonline\.com|microsoftonline\.us|partner\.microsoftonline\.cn|microsoftonline\.de)', iss.lower()):
                         openid_config_url += f"?appid={aud}"
 
                 async with ClientSession() as session:
@@ -741,7 +741,7 @@ async def signout(request: Request, response: Response):
                                         "No post_logout_redirect_uri constructed; provider may not redirect back properly."
                                     )
 
-                                if aud and "microsoftonline.com" in iss.lower():
+                                if aud and re.search(r'(microsoftonline\.com|microsoftonline\.us|partner\.microsoftonline\.cn|microsoftonline\.de)', iss.lower()):
                                     full_logout_url += f"&client_id={aud}"
 
                                 return JSONResponse(
