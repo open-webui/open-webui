@@ -4,6 +4,7 @@ import time
 import datetime
 import logging
 from aiohttp import ClientSession
+import jwt
 
 from open_webui.models.auths import (
     AddUserForm,
@@ -674,8 +675,25 @@ async def signout(request: Request, response: Response):
         oauth_id_token = request.cookies.get("oauth_id_token")
         if oauth_id_token:
             try:
+                decoded_id_token = jwt.decode(
+                    oauth_id_token,
+                    options={"verify_signature": False, "verify_aud": False}
+                )
+                iss = decoded_id_token.get("iss")
+                aud = decoded_id_token.get("aud")
+                if not iss:
+                    raise ValueError("No 'iss' claim in oauth_id_token")
+
+                openid_config_url = None
+                if OPENID_PROVIDER_URL.value:
+                    openid_config_url = OPENID_PROVIDER_URL.value
+                else:
+                    openid_config_url = f"{iss}/.well-known/openid-configuration"
+                    if "microsoftonline.com" in iss.lower() and aud:
+                        openid_config_url += f"?appid={aud}"
+
                 async with ClientSession() as session:
-                    async with session.get(OPENID_PROVIDER_URL.value) as resp:
+                    async with session.get(openid_config_url) as resp:
                         if resp.status == 200:
                             openid_data = await resp.json()
                             logout_url = openid_data.get("end_session_endpoint")
@@ -715,7 +733,6 @@ async def signout(request: Request, response: Response):
     return JSONResponse(
         status_code=200, content={"status": True}, headers=response.headers
     )
-
 
 ############################
 # AddUser
