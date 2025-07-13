@@ -737,6 +737,9 @@
 					createFolder();
 				}}
 				onAddLabel={$i18n.t('New Folder')}
+				on:change={(e) => {
+					selectedFolder.set(null);
+				}}
 				on:import={(e) => {
 					importChatHandler(e.detail);
 				}}
