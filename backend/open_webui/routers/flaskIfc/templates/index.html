@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>TSAVORITE Web UI For Model Inference</title>
+</head>
+<body>
+    <h1>Model Inference Configuration</h1>
+    <form action="/submit" method="post">
+        <!-- Model Selection -->
+        <label for="model">Choose a model:</label>
+        <select name="model" id="model">
+            <option value="tiny-llama">Tiny LLaMA</option>
+            <option value="Tiny-llama-F32">LLaMA 2 1B</option>
+        </select>
+        <br><br>
+
+        <!-- Backend Selection -->
+        <label for="backend">Select backend:</label>
+        <select name="backend" id="backend">
+            <option value="tSavorite">TSAVORITE</option>
+            <option value="none">CPU</option>
+        </select>
+        <br><br>
+
+        <!-- Number of Tokens -->
+        <label for="tokens">Number of predicted tokens:</label>
+        <input type="number" name="tokens" id="tokens" min="1" max="1000" value="50">
+        <br><br>
+	
+	<!-- Repeat Penalty -->
+        <label for="repeat-penalty">Repeat Penalty:</label>
+        <input type="number" name="repeat-penalty" id="repeat-penalty" min="1" max="1000" step="any"  value="1.5">
+        <br><br>
+
+        <!-- Batch Size -->
+        <label for="batch-size">Batch Size</label>
+        <input type="number" name="batch-size" id="batch-size" min="1" max="10000" value="1024">
+        <br><br>
+
+        <!-- Top K -->
+        <label for="top-k">Top K</label>
+        <input type="number" name="top-k" id="top-k" min="1" max="1000" value="50">
+        <br><br>
+
+        <!-- Top P -->
+        <label for="top-p">Top P</label>
+        <input type="number" name="top-p" id="top-p" min="0" max="1000" step="any" value="0.9">
+        <br><br>
+
+        <!-- Last N -->
+        <label for="last-n">Last N:</label>
+        <input type="number" name="last-n" id="last-n" min="1" max="1000" value="5">
+        <br><br>
+
+	<!-- Context Length  -->
+        <label for="context-length">Context Length:</label>
+        <input type="number" name="context-length" id="context-length" min="1" max="100000" value="12288">
+        <br><br>
+
+        <!-- Temp -->
+        <label for="temp">Temperature</label>
+        <input type="number" name="temp" id="temp" min="-1" max="1000" step="any" value="0.0">
+        <br><br>
+
+        <!-- Prompt Input -->
+        <label for="prompt">Prompt:</label><br>
+        <textarea name="prompt" id="prompt" rows="4" cols="50" placeholder="Enter your prompt here..."></textarea>
+        <br><br>
+
+        <button type="submit">Submit</button>
+    </form>
+</body>
+</html>

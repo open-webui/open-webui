@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Processing</title>
+    <script>
+        function checkStatus() {
+            fetch('/status')
+                .then(response => response.text())
+                .then(status => {
+                    if (status === 'done') {
+                        window.location.href = '/result';
+                    }
+                });
+        }
+        setInterval(checkStatus, 3000);
+    </script>
+</head>
+<body>
+    <h1>Model is running...</h1>
+    <button onclick="location.href='/abort'">Abort</button>
+</body>
+</html>

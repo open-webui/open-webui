@@ -1257,7 +1257,8 @@ async def get_ollama_url(request: Request, model: str, url_idx: Optional[int] = 
                 detail=ERROR_MESSAGES.MODEL_NOT_FOUND(model),
             )
         url_idx = random.choice(models[model].get("urls", []))
-    url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
+    #url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
+    url = "http://localhost:5000"
     return url, url_idx
 
 
