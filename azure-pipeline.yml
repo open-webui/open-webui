@@ -60,7 +60,7 @@ steps:
     docker push $(dockerRegistryUrl)/$(sourceImageName):$(Build.BuildId)
   displayName: 'Push Docker Image to ACR'
 
-Update sandbox.yaml in GitOps repo
+# Update GitOps repo
 - script: |
     echo "Installing yq..."
 
