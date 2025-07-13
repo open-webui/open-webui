@@ -54,14 +54,14 @@ steps:
     ls
     cd govgpt
     ls
-    # docker build -t $(dockerRegistryUrl)/$(sourceImageName):latest -t $(dockerRegistryUrl)/$(sourceImageName):$(Build.BuildId) -f Dockerfile .
+    docker build -t $(dockerRegistryUrl)/$(sourceImageName):latest -t $(dockerRegistryUrl)/$(sourceImageName):$(Build.BuildId) -f Dockerfile .
   displayName: 'Build Docker Image'
 
 # Push Docker Image to ACR
 - script: |
     ls
-    # docker push $(dockerRegistryUrl)/$(sourceImageName):latest
-    # docker push $(dockerRegistryUrl)/$(sourceImageName):$(Build.BuildId)
+    docker push $(dockerRegistryUrl)/$(sourceImageName):latest
+    docker push $(dockerRegistryUrl)/$(sourceImageName):$(Build.BuildId)
   displayName: 'Push Docker Image to ACR'
 
 - script: |
