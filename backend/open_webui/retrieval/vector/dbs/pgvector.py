@@ -37,6 +37,7 @@ from open_webui.config import (
     PGVECTOR_DB_URL,
     PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH,
     PGVECTOR_PGCRYPTO,
+    PGVECTOR_PGCRYPTO_KEY,
 )
 from open_webui.env import (
     DATABASE_POOL_MAX_OVERFLOW,
