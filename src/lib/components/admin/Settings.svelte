@@ -137,7 +137,6 @@
 			<div class=" self-center">{$i18n.t('Connections')}</div>
 		</button>
 
-
 		<button
 			id="models"
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
