@@ -18,14 +18,13 @@ from sqlalchemy import (
     values,
 )
 from sqlalchemy.sql import true
-from sqlalchemy.pool import NullPool
+from sqlalchemy.pool import NullPool, QueuePool
 
 from sqlalchemy.orm import declarative_base, scoped_session, sessionmaker
 from sqlalchemy.dialects.postgresql import JSONB, array
 from pgvector.sqlalchemy import Vector
 from sqlalchemy.ext.mutable import MutableDict
 from sqlalchemy.exc import NoSuchTableError
-from sqlalchemy.pool import QueuePool, NullPool
 
 from open_webui.retrieval.vector.main import (
     VectorDBBase,
