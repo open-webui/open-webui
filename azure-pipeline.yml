@@ -61,7 +61,6 @@ steps:
   inputs:
     targetType: 'inline'
     script: |
-      sudo apt-get update && sudo apt-get install -y yq
       yq e '.image.tag = "$(Build.BuildId)"' -i helm-chart/govgpt/sandbox.yaml
       git config user.name "Azure Pipeline"
       git config user.email "pipeline@azure.gitops"
