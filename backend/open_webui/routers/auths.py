@@ -4,6 +4,7 @@ import time
 import datetime
 import logging
 from aiohttp import ClientSession
+from urllib.parse import quote
 import jwt
 
 from open_webui.models.auths import (
