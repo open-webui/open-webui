@@ -10,6 +10,7 @@ from typing import Optional, List, Dict, Any
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Query, Header, status
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, ConfigDict
 
 from open_webui.models.users import Users, UserModel
@@ -32,6 +33,29 @@ SCIM_ERROR_SCHEMA = "urn:ietf:params:scim:api:messages:2.0:Error"
 # SCIM Resource Types
 SCIM_RESOURCE_TYPE_USER = "User"
 SCIM_RESOURCE_TYPE_GROUP = "Group"
+
+
+def scim_error(status_code: int, detail: str, scim_type: Optional[str] = None):
+    """Create a SCIM-compliant error response"""
+    error_body = {
+        "schemas": [SCIM_ERROR_SCHEMA],
+        "status": str(status_code),
+        "detail": detail
+    }
+    
+    if scim_type:
+        error_body["scimType"] = scim_type
+    elif status_code == 404:
+        error_body["scimType"] = "invalidValue"
+    elif status_code == 409:
+        error_body["scimType"] = "uniqueness"
+    elif status_code == 400:
+        error_body["scimType"] = "invalidSyntax"
+    
+    return JSONResponse(
+        status_code=status_code,
+        content=error_body
+    )
 
 
 class SCIMError(BaseModel):
@@ -247,6 +271,7 @@ def get_scim_auth(request: Request, authorization: Optional[str] = Header(None))
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authentication failed",
         )
+
 
 
 def user_to_scim(user: UserModel, request: Request) -> SCIMUser:
@@ -493,9 +518,9 @@ async def get_user(
     """Get SCIM User by ID"""
     user = Users.get_user_by_id(user_id)
     if not user:
-        raise HTTPException(
+        return scim_error(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"User {user_id} not found",
+            detail=f"User {user_id} not found"
         )
     
     return user_to_scim(user, request)
