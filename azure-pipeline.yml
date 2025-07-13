@@ -33,6 +33,18 @@ variables:
     value: 'govgpt'
 
 
+resources:
+  repositories:
+    - repository: gitops
+      type: git
+      name: AIFactory/gitops
+      ref: refs/heads/main
+
+steps:
+- checkout: self
+- checkout: gitops
+
+
 steps:
 # Login to Azure Container Registry manually using username and password
 - script: |
