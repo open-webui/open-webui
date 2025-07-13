@@ -52,9 +52,9 @@ steps:
 # Build Docker Image
 - script: |
     ls
-    cd $(Build.SourcesDirectory)
+    cd govgpt
     ls
-    docker build -t $(dockerRegistryUrl)/$(sourceImageName):latest -t $(dockerRegistryUrl)/$(sourceImageName):$(Build.BuildId) -f Dockerfile .
+    # docker build -t $(dockerRegistryUrl)/$(sourceImageName):latest -t $(dockerRegistryUrl)/$(sourceImageName):$(Build.BuildId) -f Dockerfile .
   displayName: 'Build Docker Image'
 
 # Push Docker Image to ACR
