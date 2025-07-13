@@ -2,16 +2,41 @@
 	import Modal from '$lib/components/common/Modal.svelte';
 	import { getContext } from 'svelte';
 	const i18n = getContext('i18n');
+	import XMark from '$lib/components/icons/XMark.svelte';
+	import { getFeedbackById } from '$lib/apis/evaluations';
+	import { toast } from 'svelte-sonner';
+	import Spinner from '$lib/components/common/Spinner.svelte';
 
 	export let show = false;
 	export let selectedFeedback = null;
 
 	export let onClose: () => void = () => {};
 
+	let loaded = false;
+
+	let feedbackData = null;
+
 	const close = () => {
 		show = false;
 		onClose();
 	};
+
+	const init = async () => {
+		loaded = false;
+		feedbackData = null;
+		if (selectedFeedback) {
+			feedbackData = await getFeedbackById(localStorage.token, selectedFeedback.id).catch((err) => {
+				return null;
+			});
+
+			console.log('Feedback Data:', selectedFeedback, feedbackData);
+		}
+		loaded = true;
+	};
+
+	$: if (show) {
+		init();
+	}
 </script>
 
 <Modal size="sm" bind:show>
@@ -22,58 +47,89 @@
 					{$i18n.t('Feedback Details')}
 				</div>
 				<button class="self-center" on:click={close} aria-label="Close">
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						viewBox="0 0 20 20"
-						fill="currentColor"
-						class="w-5 h-5"
-					>
-						<path
-							d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-						/>
-					</svg>
+					<XMark className={'size-5'} />
 				</button>
 			</div>
 
 			<div class="flex flex-col md:flex-row w-full px-5 pb-4 md:space-x-4 dark:text-gray-200">
-				<div class="flex flex-col w-full">
-					<div class="flex flex-col w-full mb-2">
-						<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Rating')}</div>
+				{#if loaded}
+					<div class="flex flex-col w-full">
+						{#if feedbackData}
+							{@const messageId = feedbackData?.meta?.message_id}
+							{@const messages = feedbackData?.snapshot?.chat?.chat?.history.messages}
 
-						<div class="flex-1">
-							<span>{selectedFeedback?.data?.details?.rating ?? '-'}</span>
-						</div>
-					</div>
-					<div class="flex flex-col w-full mb-2">
-						<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Reason')}</div>
+							{#if messages[messages[messageId]?.parentId]}
+								<div class="flex flex-col w-full mb-2">
+									<div class="mb-1 text-xs text-gray-500">{$i18n.t('Prompt')}</div>
 
-						<div class="flex-1">
-							<span>{selectedFeedback?.data?.reason || '-'}</span>
-						</div>
-					</div>
+									<div class="flex-1 text-xs whitespace-pre-line break-words">
+										<span>{messages[messages[messageId]?.parentId]?.content || '-'}</span>
+									</div>
+								</div>
+							{/if}
 
-					<div class="mb-2">
-						{#if selectedFeedback?.data?.tags && selectedFeedback?.data?.tags.length}
-							<div class="flex flex-wrap gap-1 mt-1">
-								{#each selectedFeedback?.data?.tags as tag}
-									<span class="px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-xs">{tag}</span
+							{#if messages[messageId]}
+								<div class="flex flex-col w-full mb-2">
+									<div class="mb-1 text-xs text-gray-500">{$i18n.t('Response')}</div>
+									<div
+										class="flex-1 text-xs whitespace-pre-line break-words max-h-32 overflow-y-auto"
 									>
-								{/each}
-							</div>
-						{:else}
-							<span>-</span>
+										<span>{messages[messageId]?.content || '-'}</span>
+									</div>
+								</div>
+							{/if}
 						{/if}
+
+						<div class="flex flex-col w-full mb-2">
+							<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Rating')}</div>
+
+							<div class="flex-1 text-xs">
+								<span>{selectedFeedback?.data?.details?.rating ?? '-'}</span>
+							</div>
+						</div>
+						<div class="flex flex-col w-full mb-2">
+							<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Reason')}</div>
+
+							<div class="flex-1 text-xs">
+								<span>{selectedFeedback?.data?.reason || '-'}</span>
+							</div>
+						</div>
+
+						<div class="flex flex-col w-full mb-2">
+							<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Comment')}</div>
+
+							<div class="flex-1 text-xs">
+								<span>{selectedFeedback?.data?.comment || '-'}</span>
+							</div>
+						</div>
+
+						{#if selectedFeedback?.data?.tags && selectedFeedback?.data?.tags.length}
+							<div class="mb-2 -mx-1">
+								<div class="flex flex-wrap gap-1 mt-1">
+									{#each selectedFeedback?.data?.tags as tag}
+										<span class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-850 text-[9px]"
+											>{tag}</span
+										>
+									{/each}
+								</div>
+							</div>
+						{/if}
+
+						<div class="flex justify-end pt-2">
+							<button
+								class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+								type="button"
+								on:click={close}
+							>
+								{$i18n.t('Close')}
+							</button>
+						</div>
 					</div>
-					<div class="flex justify-end pt-3">
-						<button
-							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
-							type="button"
-							on:click={close}
-						>
-							{$i18n.t('Close')}
-						</button>
+				{:else}
+					<div class="flex items-center justify-center w-full h-32">
+						<Spinner className={'size-5'} />
 					</div>
-				</div>
+				{/if}
 			</div>
 		</div>
 	{/if}
