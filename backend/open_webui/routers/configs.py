@@ -2,10 +2,16 @@ from fastapi import APIRouter, Depends, Request, HTTPException
 from pydantic import BaseModel, ConfigDict
 
 from typing import Optional
+from datetime import datetime, timedelta
+import secrets
+import string
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.config import get_config, save_config
 from open_webui.config import BannerModel
+from open_webui.models.users import Users
+from open_webui.models.groups import Groups
+from open_webui.env import WEBUI_AUTH
 
 from open_webui.utils.tools import get_tool_server_data, get_tool_servers_data
 
@@ -320,3 +326,222 @@ async def get_banners(
     user=Depends(get_verified_user),
 ):
     return request.app.state.config.BANNERS
+
+
+############################
+# SCIM Configuration
+############################
+
+
+class SCIMConfigForm(BaseModel):
+    enabled: bool
+    token: Optional[str] = None
+    token_created_at: Optional[str] = None
+    token_expires_at: Optional[str] = None
+
+
+class SCIMTokenRequest(BaseModel):
+    expires_in: Optional[int] = None  # seconds until expiration, None = never
+
+
+class SCIMTokenResponse(BaseModel):
+    token: str
+    created_at: str
+    expires_at: Optional[str] = None
+
+
+class SCIMStats(BaseModel):
+    total_users: int
+    total_groups: int
+    last_sync: Optional[str] = None
+
+
+# In-memory storage for SCIM tokens (in production, use database)
+scim_tokens = {}
+
+
+def generate_scim_token(length: int = 48) -> str:
+    """Generate a secure random token for SCIM authentication"""
+    alphabet = string.ascii_letters + string.digits + "-_"
+    return "".join(secrets.choice(alphabet) for _ in range(length))
+
+
+@router.get("/scim", response_model=SCIMConfigForm)
+async def get_scim_config(request: Request, user=Depends(get_admin_user)):
+    """Get current SCIM configuration"""
+    # Get token info from storage
+    token_info = None
+    scim_token = getattr(request.app.state.config, "SCIM_TOKEN", None)
+    # Handle both PersistentConfig and direct value
+    if hasattr(scim_token, 'value'):
+        scim_token = scim_token.value
+    
+    if scim_token and scim_token in scim_tokens:
+        token_info = scim_tokens[scim_token]
+    
+    scim_enabled = getattr(request.app.state.config, "SCIM_ENABLED", False)
+    print(f"Getting SCIM config - raw SCIM_ENABLED: {scim_enabled}, type: {type(scim_enabled)}")
+    # Handle both PersistentConfig and direct value
+    if hasattr(scim_enabled, 'value'):
+        scim_enabled = scim_enabled.value
+    
+    print(f"Returning SCIM config: enabled={scim_enabled}, token={'set' if scim_token else 'not set'}")
+    
+    return SCIMConfigForm(
+        enabled=scim_enabled,
+        token="***" if scim_token else None,  # Don't expose actual token
+        token_created_at=token_info.get("created_at") if token_info else None,
+        token_expires_at=token_info.get("expires_at") if token_info else None,
+    )
+
+
+@router.post("/scim", response_model=SCIMConfigForm)
+async def update_scim_config(request: Request, config: SCIMConfigForm, user=Depends(get_admin_user)):
+    """Update SCIM configuration"""
+    if not WEBUI_AUTH:
+        raise HTTPException(400, detail="Authentication must be enabled for SCIM")
+    
+    print(f"Updating SCIM config: enabled={config.enabled}")
+    
+    # Import here to avoid circular import
+    from open_webui.config import save_config, get_config
+    
+    # Get current config data
+    config_data = get_config()
+    
+    # Update SCIM settings in config data
+    if "scim" not in config_data:
+        config_data["scim"] = {}
+    
+    config_data["scim"]["enabled"] = config.enabled
+    
+    # Save config to database
+    save_config(config_data)
+    
+    # Also update the runtime config
+    scim_enabled_attr = getattr(request.app.state.config, "SCIM_ENABLED", None)
+    if scim_enabled_attr:
+        if hasattr(scim_enabled_attr, 'value'):
+            # It's a PersistentConfig object
+            print(f"Updating PersistentConfig SCIM_ENABLED from {scim_enabled_attr.value} to {config.enabled}")
+            scim_enabled_attr.value = config.enabled
+        else:
+            # Direct assignment
+            print(f"Direct assignment SCIM_ENABLED to {config.enabled}")
+            request.app.state.config.SCIM_ENABLED = config.enabled
+    else:
+        # Create if doesn't exist
+        print(f"Creating SCIM_ENABLED with value {config.enabled}")
+        request.app.state.config.SCIM_ENABLED = config.enabled
+    
+    # Return updated config
+    return await get_scim_config(request=request, user=user)
+
+
+@router.post("/scim/token", response_model=SCIMTokenResponse)
+async def generate_scim_token_endpoint(
+    request: Request, token_request: SCIMTokenRequest, user=Depends(get_admin_user)
+):
+    """Generate a new SCIM bearer token"""
+    token = generate_scim_token()
+    created_at = datetime.utcnow()
+    expires_at = None
+    
+    if token_request.expires_in:
+        expires_at = created_at + timedelta(seconds=token_request.expires_in)
+    
+    # Store token info
+    token_info = {
+        "token": token,
+        "created_at": created_at.isoformat(),
+        "expires_at": expires_at.isoformat() if expires_at else None,
+    }
+    scim_tokens[token] = token_info
+    
+    # Import here to avoid circular import
+    from open_webui.config import save_config, get_config
+    
+    # Get current config data
+    config_data = get_config()
+    
+    # Update SCIM token in config data
+    if "scim" not in config_data:
+        config_data["scim"] = {}
+    
+    config_data["scim"]["token"] = token
+    
+    # Save config to database
+    save_config(config_data)
+    
+    # Also update the runtime config
+    scim_token_attr = getattr(request.app.state.config, "SCIM_TOKEN", None)
+    if scim_token_attr:
+        if hasattr(scim_token_attr, 'value'):
+            # It's a PersistentConfig object
+            scim_token_attr.value = token
+        else:
+            # Direct assignment
+            request.app.state.config.SCIM_TOKEN = token
+    else:
+        # Create if doesn't exist
+        request.app.state.config.SCIM_TOKEN = token
+    
+    return SCIMTokenResponse(
+        token=token,
+        created_at=token_info["created_at"],
+        expires_at=token_info["expires_at"],
+    )
+
+
+@router.delete("/scim/token")
+async def revoke_scim_token(request: Request, user=Depends(get_admin_user)):
+    """Revoke the current SCIM token"""
+    # Get current token
+    scim_token = getattr(request.app.state.config, "SCIM_TOKEN", None)
+    if hasattr(scim_token, 'value'):
+        scim_token = scim_token.value
+    
+    # Remove from storage
+    if scim_token and scim_token in scim_tokens:
+        del scim_tokens[scim_token]
+    
+    # Import here to avoid circular import
+    from open_webui.config import save_config, get_config
+    
+    # Get current config data
+    config_data = get_config()
+    
+    # Remove SCIM token from config data
+    if "scim" in config_data:
+        config_data["scim"]["token"] = None
+    
+    # Save config to database
+    save_config(config_data)
+    
+    # Also update the runtime config
+    scim_token_attr = getattr(request.app.state.config, "SCIM_TOKEN", None)
+    if scim_token_attr:
+        if hasattr(scim_token_attr, 'value'):
+            # It's a PersistentConfig object
+            scim_token_attr.value = None
+        else:
+            # Direct assignment
+            request.app.state.config.SCIM_TOKEN = None
+    
+    return {"detail": "SCIM token revoked successfully"}
+
+
+@router.get("/scim/stats", response_model=SCIMStats)
+async def get_scim_stats(request: Request, user=Depends(get_admin_user)):
+    """Get SCIM statistics"""
+    users = Users.get_users()
+    groups = Groups.get_groups()
+    
+    # Get last sync time (in production, track this properly)
+    last_sync = None
+    
+    return SCIMStats(
+        total_users=len(users),
+        total_groups=len(groups) if groups else 0,
+        last_sync=last_sync,
+    )
