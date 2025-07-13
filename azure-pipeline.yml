@@ -53,6 +53,7 @@ steps:
 - script: |
     echo "Updating image tag in sandbox.yaml to $(Build.BuildId)"
     cd gitops/helm-charts/govgpt
+    ls
     yq e '.image.tag = "$(Build.BuildId)"' -i sandbox.yaml
     git config user.name "Azure Pipeline"
     git config user.email "pipeline@azure.gitops"
