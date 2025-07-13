@@ -7,6 +7,7 @@ pool:
   name: sandbox
   demands: agent.name -equals vm-devops-runner-sandbox
 
+# Parameters for manual selection
 parameters:
   - name: environment
     displayName: 'Target Environment'
@@ -31,27 +32,16 @@ variables:
   - name: sourceImageName
     value: 'govgpt'
 
-resources:
-  repositories:
-    - repository: gitops
-      type: git
-      name: AIFactory/gitops
-      ref: refs/heads/main
 
 steps:
-- checkout: self
-- checkout: gitops
-
-# ACR Login
+# Login to Azure Container Registry manually using username and password
 - script: |
     echo $(dockerRegistryPassword) | docker login $(dockerRegistryUrl) -u $(dockerRegistryUsername) --password-stdin
   displayName: 'Authenticate to ACR'
 
 # Build Docker Image
 - script: |
-    docker build -t $(dockerRegistryUrl)/$(sourceImageName):latest \
-                 -t $(dockerRegistryUrl)/$(sourceImageName):$(Build.BuildId) \
-                 -f Dockerfile .
+    docker build -t $(dockerRegistryUrl)/$(sourceImageName):latest -t $(dockerRegistryUrl)/$(sourceImageName):$(Build.BuildId) -f Dockerfile .
   displayName: 'Build Docker Image'
 
 # Push Docker Image to ACR
@@ -60,23 +50,12 @@ steps:
     docker push $(dockerRegistryUrl)/$(sourceImageName):$(Build.BuildId)
   displayName: 'Push Docker Image to ACR'
 
-# Update GitOps repo
 - script: |
-    echo "Installing yq..."
-
-    echo "Updating image tag in sandbox.yaml to $(Build.BuildId)"
-    cd gitops/helm-charts/govgpt
-    yq e '.image.tag = "$(Build.BuildId)"' -i sandbox.yaml
-
-    git config user.name "Azure Pipeline"
-    git config user.email "pipeline@azure.gitops"
-    git add sandbox.yaml
-    git commit -m "chore: bump govgpt tag to $(Build.BuildId)"
-
-    # Use access token for pushing
-    git remote set-url origin https://$(System.AccessToken)@dev.azure.com/ADGOV-AI/AIFactory/_git/gitops
+    git clone https://<token>@dev.azure.com/org/project/_git/manifests /tmp/manifests
+    cd /tmp/manifests
+    sed -i 's|image: .*/myapp:.*|image: myacr.azurecr.io/myapp:$(Build.BuildId)|g' deployment.yaml
+    git config user.email "ci@org"
+    git config user.name "CI Bot"
+    git commit -am "chore: bump image to $(Build.BuildId)"
     git push origin HEAD:main
-  displayName: 'Update Helm image tag in GitOps repo'
-  env:
-    SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-
+  displayName: 'Update r'
