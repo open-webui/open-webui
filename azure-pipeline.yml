@@ -58,4 +58,4 @@ steps:
     git config user.name "CI Bot"
     git commit -am "chore: bump image to $(Build.BuildId)"
     git push origin HEAD:main
-  displayName: 'Update r'
+  displayName: 'Update Image Tag in GitOps Helm'
