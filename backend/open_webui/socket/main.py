@@ -1,13 +1,18 @@
 import asyncio
+import random
+
 import socketio
 import logging
 import sys
 import time
+from typing import Dict, Set
 from redis import asyncio as aioredis
+import pycrdt as Y
 
 from open_webui.models.users import Users, UserNameResponse
 from open_webui.models.channels import Channels
 from open_webui.models.chats import Chats
+from open_webui.models.notes import Notes, NoteUpdateForm
 from open_webui.utils.redis import (
     get_sentinels_from_env,
     get_sentinel_url_from_env,
@@ -23,6 +28,10 @@ from open_webui.env import (
 )
 from open_webui.utils.auth import decode_token
 from open_webui.socket.utils import RedisDict, RedisLock
+from open_webui.tasks import create_task, stop_item_tasks
+from open_webui.utils.redis import get_redis_connection
+from open_webui.utils.access_control import has_access, get_users_with_access
+
 
 from open_webui.env import (
     GLOBAL_LOG_LEVEL,
@@ -34,6 +43,14 @@ logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["SOCKET"])
 
+
+REDIS = get_redis_connection(
+    redis_url=WEBSOCKET_REDIS_URL,
+    redis_sentinels=get_sentinels_from_env(
+        WEBSOCKET_SENTINEL_HOSTS, WEBSOCKET_SENTINEL_PORT
+    ),
+    async_mode=True,
+)
 
 if WEBSOCKET_MANAGER == "redis":
     if WEBSOCKET_SENTINEL_HOSTS:
@@ -88,6 +105,10 @@ if WEBSOCKET_MANAGER == "redis":
         redis_sentinels=redis_sentinels,
     )
 
+    # TODO: Implement Yjs document management with Redis
+    DOCUMENTS = {}
+    DOCUMENT_USERS = {}
+
     clean_up_lock = RedisLock(
         redis_url=WEBSOCKET_REDIS_URL,
         lock_name="usage_cleanup_lock",
@@ -101,14 +122,33 @@ else:
     SESSION_POOL = {}
     USER_POOL = {}
     USAGE_POOL = {}
+
+    DOCUMENTS = {}  # document_id -> Y.YDoc instance
+    DOCUMENT_USERS = {}  # document_id -> set of user sids
     aquire_func = release_func = renew_func = lambda: True
 
 
 async def periodic_usage_pool_cleanup():
-    if not aquire_func():
-        log.debug("Usage pool cleanup lock already exists. Not running it.")
-        return
-    log.debug("Running periodic_usage_pool_cleanup")
+    max_retries = 2
+    retry_delay = random.uniform(
+        WEBSOCKET_REDIS_LOCK_TIMEOUT / 2, WEBSOCKET_REDIS_LOCK_TIMEOUT
+    )
+    for attempt in range(max_retries + 1):
+        if aquire_func():
+            break
+        else:
+            if attempt < max_retries:
+                log.debug(
+                    f"Cleanup lock already exists. Retry {attempt + 1} after {retry_delay}s..."
+                )
+                await asyncio.sleep(retry_delay)
+            else:
+                log.warning(
+                    "Failed to acquire cleanup lock after retries. Skipping cleanup."
+                )
+                return
+
+    log.debug("Running periodic_cleanup")
     try:
         while True:
             if not renew_func():
@@ -296,6 +336,217 @@ async def channel_events(sid, data):
             },
             room=room,
         )
+
+
+@sio.on("yjs:document:join")
+async def yjs_document_join(sid, data):
+    """Handle user joining a document"""
+    user = SESSION_POOL.get(sid)
+
+    try:
+        document_id = data["document_id"]
+
+        if document_id.startswith("note:"):
+            note_id = document_id.split(":")[1]
+            note = Notes.get_note_by_id(note_id)
+            if not note:
+                log.error(f"Note {note_id} not found")
+                return
+
+            if (
+                user.get("role") != "admin"
+                and user.get("id") != note.user_id
+                and not has_access(
+                    user.get("id"), type="read", access_control=note.access_control
+                )
+            ):
+                log.error(
+                    f"User {user.get('id')} does not have access to note {note_id}"
+                )
+                return
+
+        user_id = data.get("user_id", sid)
+        user_name = data.get("user_name", "Anonymous")
+        user_color = data.get("user_color", "#000000")
+
+        log.info(f"User {user_id} joining document {document_id}")
+
+        # Initialize document if it doesn't exist
+        if document_id not in DOCUMENTS:
+            DOCUMENTS[document_id] = {
+                "ydoc": Y.Doc(),  # Create actual Yjs document
+                "users": set(),
+            }
+            DOCUMENT_USERS[document_id] = set()
+
+        # Add user to document
+        DOCUMENTS[document_id]["users"].add(sid)
+        DOCUMENT_USERS[document_id].add(sid)
+
+        # Join Socket.IO room
+        await sio.enter_room(sid, f"doc_{document_id}")
+
+        # Send current document state as a proper Yjs update
+        ydoc = DOCUMENTS[document_id]["ydoc"]
+
+        # Encode the entire document state as an update
+        state_update = ydoc.get_update()
+        await sio.emit(
+            "yjs:document:state",
+            {
+                "document_id": document_id,
+                "state": list(state_update),  # Convert bytes to list for JSON
+            },
+            room=sid,
+        )
+
+        # Notify other users about the new user
+        await sio.emit(
+            "yjs:user:joined",
+            {
+                "document_id": document_id,
+                "user_id": user_id,
+                "user_name": user_name,
+                "user_color": user_color,
+            },
+            room=f"doc_{document_id}",
+            skip_sid=sid,
+        )
+
+        log.info(f"User {user_id} successfully joined document {document_id}")
+
+    except Exception as e:
+        log.error(f"Error in yjs_document_join: {e}")
+        await sio.emit("error", {"message": "Failed to join document"}, room=sid)
+
+
+async def document_save_handler(document_id, data, user):
+    if document_id.startswith("note:"):
+        note_id = document_id.split(":")[1]
+        note = Notes.get_note_by_id(note_id)
+        if not note:
+            log.error(f"Note {note_id} not found")
+            return
+
+        if (
+            user.get("role") != "admin"
+            and user.get("id") != note.user_id
+            and not has_access(
+                user.get("id"), type="read", access_control=note.access_control
+            )
+        ):
+            log.error(f"User {user.get('id')} does not have access to note {note_id}")
+            return
+
+        Notes.update_note_by_id(note_id, NoteUpdateForm(data=data))
+
+
+@sio.on("yjs:document:update")
+async def yjs_document_update(sid, data):
+    """Handle Yjs document updates"""
+    try:
+        document_id = data["document_id"]
+        try:
+            await stop_item_tasks(REDIS, document_id)
+        except:
+            pass
+
+        user_id = data.get("user_id", sid)
+
+        update = data["update"]  # List of bytes from frontend
+
+        if document_id not in DOCUMENTS:
+            log.warning(f"Document {document_id} not found")
+            return
+
+        # Apply the update to the server's Yjs document
+        ydoc = DOCUMENTS[document_id]["ydoc"]
+        update_bytes = bytes(update)
+
+        try:
+            ydoc.apply_update(update_bytes)
+        except Exception as e:
+            log.error(f"Failed to apply Yjs update: {e}")
+            return
+
+        # Broadcast update to all other users in the document
+        await sio.emit(
+            "yjs:document:update",
+            {
+                "document_id": document_id,
+                "user_id": user_id,
+                "update": update,
+                "socket_id": sid,  # Add socket_id to match frontend filtering
+            },
+            room=f"doc_{document_id}",
+            skip_sid=sid,
+        )
+
+        async def debounced_save():
+            await asyncio.sleep(0.5)
+            await document_save_handler(
+                document_id, data.get("data", {}), SESSION_POOL.get(sid)
+            )
+
+        await create_task(REDIS, debounced_save(), document_id)
+
+    except Exception as e:
+        log.error(f"Error in yjs_document_update: {e}")
+
+
+@sio.on("yjs:document:leave")
+async def yjs_document_leave(sid, data):
+    """Handle user leaving a document"""
+    try:
+        document_id = data["document_id"]
+        user_id = data.get("user_id", sid)
+
+        log.info(f"User {user_id} leaving document {document_id}")
+
+        if document_id in DOCUMENTS:
+            DOCUMENTS[document_id]["users"].discard(sid)
+
+        if document_id in DOCUMENT_USERS:
+            DOCUMENT_USERS[document_id].discard(sid)
+
+        # Leave Socket.IO room
+        await sio.leave_room(sid, f"doc_{document_id}")
+
+        # Notify other users
+        await sio.emit(
+            "yjs:user:left",
+            {"document_id": document_id, "user_id": user_id},
+            room=f"doc_{document_id}",
+        )
+
+        if document_id in DOCUMENTS and not DOCUMENTS[document_id]["users"]:
+            # If no users left, clean up the document
+            log.info(f"Cleaning up document {document_id} as no users are left")
+            del DOCUMENTS[document_id]
+            del DOCUMENT_USERS[document_id]
+
+    except Exception as e:
+        log.error(f"Error in yjs_document_leave: {e}")
+
+
+@sio.on("yjs:awareness:update")
+async def yjs_awareness_update(sid, data):
+    """Handle awareness updates (cursors, selections, etc.)"""
+    try:
+        document_id = data["document_id"]
+        user_id = data.get("user_id", sid)
+        update = data["update"]
+
+        # Broadcast awareness update to all other users in the document
+        await sio.emit(
+            "yjs:awareness:update",
+            {"document_id": document_id, "user_id": user_id, "update": update},
+            room=f"doc_{document_id}",
+            skip_sid=sid,
+        )
+
+    except Exception as e:
+        log.error(f"Error in yjs_awareness_update: {e}")
 
 
 @sio.event

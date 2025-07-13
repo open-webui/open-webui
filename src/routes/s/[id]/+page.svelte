@@ -116,8 +116,8 @@
 				autoScroll = true;
 				await tick();
 
-				if (messages.length > 0) {
-					history.messages[messages.at(-1).id].done = true;
+				if (messages.length > 0 && messages.at(-1)?.id && messages.at(-1)?.id in history.messages) {
+					history.messages[messages.at(-1)?.id].done = true;
 				}
 				await tick();
 

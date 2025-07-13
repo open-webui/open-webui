@@ -671,36 +671,14 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
 @router.get("/signout")
 async def signout(request: Request, response: Response):
     response.delete_cookie("token")
+    response.delete_cookie("oui-session")
 
     if ENABLE_OAUTH_SIGNUP.value:
         oauth_id_token = request.cookies.get("oauth_id_token")
         if oauth_id_token:
             try:
-                # Decode id_token to get iss and aud (no signature verification needed for logout claims extraction)
-                decoded_id_token = jwt.decode(
-                    oauth_id_token,
-                    options={"verify_signature": False, "verify_aud": False},
-                )
-                iss = decoded_id_token.get("iss")
-                aud = decoded_id_token.get("aud")
-                if not iss:
-                    raise ValueError("No 'iss' claim in oauth_id_token")
-
-                # Handle aud as list if necessary
-                if isinstance(aud, list):
-                    aud = aud[0] if aud else None
-
-                openid_config_url = None
-                if OPENID_PROVIDER_URL.value:
-                    openid_config_url = OPENID_PROVIDER_URL.value
-                else:
-                    openid_config_url = f"{iss}/.well-known/openid-configuration"
-                    # Microsoft-specific: Append ?appid if iss indicates Entra ID (matches registration pattern)
-                    if "microsoftonline.com" in iss.lower() and aud:
-                        openid_config_url += f"?appid={aud}"
-
                 async with ClientSession() as session:
-                    async with session.get(openid_config_url) as resp:
+                    async with session.get(OPENID_PROVIDER_URL.value) as resp:
                         if resp.status == 200:
                             openid_data = await resp.json()
                             logout_url = openid_data.get("end_session_endpoint")
@@ -748,7 +726,7 @@ async def signout(request: Request, response: Response):
                                     status_code=200,
                                     content={
                                         "status": True,
-                                        "redirect_url": full_logout_url,
+                                        "redirect_url": f"{logout_url}?id_token_hint={oauth_id_token}",
                                     },
                                     headers=response.headers,
                                 )
