@@ -63,8 +63,6 @@ steps:
 # Update sandbox.yaml in GitOps repo
 - script: |
     echo "Installing yq..."
-    sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq
-    sudo chmod +x /usr/bin/yq
 
     echo "Updating image tag in sandbox.yaml to $(Build.BuildId)"
     cd gitops/helm-charts/govgpt
@@ -74,7 +72,11 @@ steps:
     git config user.email "pipeline@azure.gitops"
     git add sandbox.yaml
     git commit -m "chore: bump govgpt tag to $(Build.BuildId)"
+
+    # Use access token for pushing
+    git remote set-url origin https://$(System.AccessToken)@dev.azure.com/ADGOV-AI/AIFactory/_git/gitops
     git push origin HEAD:main
   displayName: 'Update Helm image tag in GitOps repo'
   env:
     SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+
