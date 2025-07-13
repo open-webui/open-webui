@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field, ConfigDict
 
 from open_webui.models.users import Users, UserModel
 from open_webui.models.groups import Groups, GroupModel
-from open_webui.utils.auth import get_admin_user, get_current_user, decode_token
+from open_webui.utils.auth import get_admin_user, get_current_user, decode_token, get_verified_user
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
 
@@ -236,8 +236,13 @@ def get_scim_auth(request: Request, authorization: Optional[str] = Header(None))
             )
         
         return True
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
     except Exception as e:
         log.error(f"SCIM authentication error: {e}")
+        import traceback
+        log.error(f"Traceback: {traceback.format_exc()}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authentication failed",
@@ -310,6 +315,7 @@ def group_to_scim(group: GroupModel, request: Request) -> SCIMGroup:
             location=f"{request.base_url}api/v1/scim/v2/Groups/{group.id}",
         ),
     )
+
 
 
 # SCIM Service Provider Config
