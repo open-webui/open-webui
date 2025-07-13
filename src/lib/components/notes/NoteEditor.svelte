@@ -778,6 +778,10 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 			}
 		}
 
+		if (!selectedModelId) {
+			selectedModelId = $models.at(0)?.id || '';
+		}
+
 		const dropzoneElement = document.getElementById('note-editor');
 
 		dropzoneElement?.addEventListener('dragover', onDragOver);

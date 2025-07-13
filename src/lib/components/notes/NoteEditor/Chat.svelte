@@ -301,14 +301,6 @@ Based on the user's instruction, update and enhance the existing notes by incorp
 			await goto('/');
 		}
 
-		if ($settings?.models) {
-			selectedModelId = $settings?.models[0];
-		} else if ($config?.default_models) {
-			selectedModelId = $config?.default_models.split(',')[0];
-		} else {
-			selectedModelId = '';
-		}
-
 		editorEnabled = localStorage.getItem('noteEditorEnabled') === 'true';
 
 		loaded = true;
