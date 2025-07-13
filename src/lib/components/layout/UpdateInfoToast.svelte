@@ -21,7 +21,7 @@
 			LATEST_VERSION: version.latest
 		})}
 
-		<a href="https://github.com/open-webui/open-webui/releases" target="_blank" class="underline">
+		<a href="https://github.com/answerai/answerai/releases" target="_blank" class="underline">
 			{$i18n.t('Update for the latest features and improvements.')}</a
 		>
 	</div>

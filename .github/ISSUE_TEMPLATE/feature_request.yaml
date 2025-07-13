@@ -8,7 +8,7 @@ body:
       value: |
         ## Important Notes
         ### Before submitting
-        Please check the [Issues](https://github.com/open-webui/open-webui/issues) or [Discussions](https://github.com/open-webui/open-webui/discussions) to see if a similar request has been posted.
+        Please check the [Issues](https://github.com/answerai/answerai/issues) or [Discussions](https://github.com/answerai/answerai/discussions) to see if a similar request has been posted.
         It's likely we're already tracking it! If you’re unsure, start a discussion post first.
         This will help us efficiently focus on improving the project.
 
@@ -16,7 +16,7 @@ body:
         We value a **constructive attitude**, so please be mindful of your communication. If negativity is part of your approach, our capacity to engage may be limited. We're here to help if you're **open to learning** and **communicating positively**.
 
         Remember:
-        - Open WebUI is a **volunteer-driven project**
+        - AnswerAI is a **volunteer-driven project**
         - It's managed by a **single maintainer**
         - It's supported by contributors who also have **full-time jobs**
 
@@ -24,10 +24,10 @@ body:
 
 
         ### Contributing
-        If you encounter an issue, we highly encourage you to submit a pull request or fork the project. We actively work to prevent contributor burnout to maintain the quality and continuity of Open WebUI.
+        If you encounter an issue, we highly encourage you to submit a pull request or fork the project. We actively work to prevent contributor burnout to maintain the quality and continuity of AnswerAI.
 
         ### Bug reproducibility
-        If a bug cannot be reproduced with a `:main` or `:dev` Docker setup, or a `pip install` with Python 3.11, it may require additional help from the community. In such cases, we will move it to the "[issues](https://github.com/open-webui/open-webui/discussions/categories/issues)" Discussions section due to our limited resources. We encourage the community to assist with these issues. Remember, it’s not that the issue doesn’t exist; we need your help!
+        If a bug cannot be reproduced with a `:main` or `:dev` Docker setup, or a `pip install` with Python 3.11, it may require additional help from the community. In such cases, we will move it to the "[issues](https://github.com/answerai/answerai/discussions/categories/issues)" Discussions section due to our limited resources. We encourage the community to assist with these issues. Remember, it’s not that the issue doesn’t exist; we need your help!
 
   - type: checkboxes
     id: existing-issue

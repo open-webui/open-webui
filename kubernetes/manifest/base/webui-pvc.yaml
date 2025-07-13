@@ -2,9 +2,9 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   labels:
-    app: open-webui
-  name: open-webui-pvc
-  namespace: open-webui
+    app: answerai
+  name: answerai-pvc
+  namespace: answerai
 spec:
   accessModes: ["ReadWriteOnce"]
   resources:

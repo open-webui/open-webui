@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: ollama
-  namespace: open-webui
+  namespace: answerai
 spec:
   serviceName: "ollama"
   replicas: 1

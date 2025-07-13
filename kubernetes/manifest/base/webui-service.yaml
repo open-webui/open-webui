@@ -1,12 +1,12 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: open-webui-service
-  namespace: open-webui
+  name: answerai-service
+  namespace: answerai
 spec:
   type: NodePort  # Use LoadBalancer if you're on a cloud that supports it
   selector:
-    app: open-webui
+    app: answerai
   ports:
     - protocol: TCP
       port: 8080

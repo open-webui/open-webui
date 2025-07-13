@@ -1,7 +1,7 @@
 #!/bin/bash
 
-image_name="open-webui"
-container_name="open-webui"
+image_name="answerai"
+container_name="answerai"
 host_port=3000
 container_port=8080
 

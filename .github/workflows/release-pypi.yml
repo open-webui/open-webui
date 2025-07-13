@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/p/open-webui
+      url: https://pypi.org/p/answerai
     permissions:
       id-token: write
     steps:

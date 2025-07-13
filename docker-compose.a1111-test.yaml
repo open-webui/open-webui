@@ -23,7 +23,7 @@ services:
     volumes:
       - ./test/test_files/image_gen/sd-empty.pt:/empty.pt
 
-  open-webui:
+  answerai:
     environment:
       ENABLE_IMAGE_GENERATION: "true"
       AUTOMATIC1111_BASE_URL: http://stable-diffusion-webui:7860

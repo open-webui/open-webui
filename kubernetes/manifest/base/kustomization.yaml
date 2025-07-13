@@ -1,5 +1,5 @@
 resources:
-  - open-webui.yaml
+  - answerai.yaml
   - ollama-service.yaml
   - ollama-statefulset.yaml
   - webui-deployment.yaml

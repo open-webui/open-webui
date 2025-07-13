@@ -238,10 +238,10 @@
 					Couldn't find your language?
 					<a
 						class=" text-gray-300 font-medium underline"
-						href="https://github.com/open-webui/open-webui/blob/main/docs/CONTRIBUTING.md#-translations-and-internationalization"
+						href="https://github.com/answerai/answerai/blob/main/docs/CONTRIBUTING.md#-translations-and-internationalization"
 						target="_blank"
 					>
-						Help us translate Open WebUI!
+						Help us translate AnswerAI!
 					</a>
 				</div>
 			{/if}

@@ -159,7 +159,7 @@ jobs:
           GLOBAL_LOG_LEVEL: debug
         run: |
           cd backend
-          uvicorn open_webui.main:app --port "8080" --forwarded-allow-ips '*' &
+          uvicorn answerai.main:app --port "8080" --forwarded-allow-ips '*' &
           UVICORN_PID=$!
           # Wait up to 40 seconds for the server to start
           for i in {1..40}; do
@@ -189,7 +189,7 @@ jobs:
           DATABASE_POOL_TIMEOUT: 30
         run: |
           cd backend
-          uvicorn open_webui.main:app --port "8081" --forwarded-allow-ips '*' &
+          uvicorn answerai.main:app --port "8081" --forwarded-allow-ips '*' &
           UVICORN_PID=$!
           # Wait up to 20 seconds for the server to start
           for i in {1..20}; do
@@ -235,7 +235,7 @@ jobs:
 #          DATABASE_URL: mysql://root:mysql@localhost:3306/mysql
 #        run: |
 #          cd backend
-#          uvicorn open_webui.main:app --port "8083" --forwarded-allow-ips '*' &
+#          uvicorn answerai.main:app --port "8083" --forwarded-allow-ips '*' &
 #          UVICORN_PID=$!
 #          # Wait up to 20 seconds for the server to start
 #          for i in {1..20}; do

@@ -150,7 +150,7 @@
 					class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition"
 					id="chat-share-button"
 					on:click={() => {
-						window.open('https://docs.openwebui.com', '_blank');
+						window.open('https://answerai.in/docs', '_blank');
 						show = false;
 					}}
 				>
@@ -163,7 +163,7 @@
 					class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition"
 					id="menu-item-releases"
 					on:click={() => {
-						window.open('https://github.com/open-webui/open-webui/releases', '_blank');
+						window.open('https://github.com/answerai/answerai/releases', '_blank');
 						show = false;
 					}}
 				>

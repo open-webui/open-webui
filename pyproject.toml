@@ -1,8 +1,8 @@
 [project]
-name = "open-webui"
-description = "Open WebUI"
+name = "answerai"
+description = "AnswerAI"
 authors = [
-    { name = "Timothy Jaeryang Baek", email = "tim@openwebui.com" }
+    { name = "AnswerAI Team", email = "team@answerai.in" }
 ]
 license = { file = "LICENSE" }
 dependencies = [
@@ -147,7 +147,7 @@ classifiers = [
 ]
 
 [project.scripts]
-open-webui = "open_webui:app"
+answerai = "answerai:app"
 
 [build-system]
 requires = ["hatchling"]
@@ -179,7 +179,7 @@ exclude = [
     "webui.db",
     "chroma.sqlite3",
 ]
-force-include = { "CHANGELOG.md" = "open_webui/CHANGELOG.md", build = "open_webui/frontend" }
+force-include = { "CHANGELOG.md" = "answerai/CHANGELOG.md", build = "answerai/frontend" }
 
 [tool.codespell]
 # Ref: https://github.com/codespell-project/codespell#using-a-config-file
