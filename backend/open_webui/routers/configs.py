@@ -2,16 +2,10 @@ from fastapi import APIRouter, Depends, Request, HTTPException
 from pydantic import BaseModel, ConfigDict
 
 from typing import Optional
-from datetime import datetime, timedelta
-import secrets
-import string
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.config import get_config, save_config
 from open_webui.config import BannerModel
-from open_webui.models.users import Users
-from open_webui.models.groups import Groups
-from open_webui.env import WEBUI_AUTH
 
 from open_webui.utils.tools import get_tool_server_data, get_tool_servers_data
 
@@ -326,5 +320,3 @@ async def get_banners(
     user=Depends(get_verified_user),
 ):
     return request.app.state.config.BANNERS
-
-
