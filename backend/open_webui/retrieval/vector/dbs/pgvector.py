@@ -37,6 +37,10 @@ from open_webui.config import (
     PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH,
     PGVECTOR_PGCRYPTO,
     PGVECTOR_PGCRYPTO_KEY,
+    DATABASE_POOL_MAX_OVERFLOW,
+    DATABASE_POOL_RECYCLE,
+    DATABASE_POOL_SIZE,
+    DATABASE_POOL_TIMEOUT,
 )
 
 from open_webui.env import SRC_LOG_LEVELS
@@ -80,9 +84,20 @@ class PgvectorClient(VectorDBBase):
 
             self.session = Session
         else:
-            engine = create_engine(
-                PGVECTOR_DB_URL, pool_pre_ping=True, poolclass=NullPool
-            )
+            if DATABASE_POOL_SIZE > 0:
+                engine = create_engine(
+                    PGVECTOR_DB_URL,
+                    pool_size=DATABASE_POOL_SIZE,
+                    max_overflow=DATABASE_POOL_MAX_OVERFLOW,
+                    pool_timeout=DATABASE_POOL_TIMEOUT,
+                    pool_recycle=DATABASE_POOL_RECYCLE,
+                    pool_pre_ping=True,
+                    poolclass=QueuePool,
+                )
+            else:
+                engine = create_engine(
+                    PGVECTOR_DB_URL, pool_pre_ping=True, poolclass=NullPool
+                )
             SessionLocal = sessionmaker(
                 autocommit=False, autoflush=False, bind=engine, expire_on_commit=False
             )
