@@ -1040,7 +1040,15 @@
                                                              		</Tooltip>
 
                                                              		{#if (RAGConfig?.HYBRID_BM25_WEIGHT ?? null) !== null}
-                                                             			<div class="flex mt-0.5 space-x-2">
+										<div class="flex w-full justify-between">
+                                                             				<div class=" text-left text-xs font-small">
+												{$i18n.t('lexical')}
+											</div>
+                                                             				<div class=" text-right text-xs font-small" style="padding-right: 64px;">
+												{$i18n.t('semantic')}
+											</div>
+										</div>
+										<div class="flex mt-0.5 space-x-2">
                                                              				<div class=" flex-1">
                                                              					<input
                                                              						id="steps-range"
