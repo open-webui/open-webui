@@ -12,8 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🗂️ **Folders as Projects**: Organize your workflow with folder-based projects—set folder-level system prompts and associate custom knowledge, bringing seamless, context-rich management to teams and users handling multiple initiatives or clients.
 - 📁 **Instant Folder-Based Chat Creation**: Start a new chat directly from any folder; just click and your new conversation is automatically embedded in the right project context—no more manual dragging or setup, saving time and eliminating mistakes.
 - 🧩 **Prompt Variables with Automatic Input Modal**: Prompts containing variables now display a clean, auto-generated input modal for instant value entry—just select the prompt and fill in exactly what’s needed, reducing friction and guesswork.
-- 🔡 **Variable Input Typing in Prompts**: Define input types for prompt variables (e.g., text, color, number), giving everyone a clearer and more precise prompt-building experience for advanced automation or workflows.
+- 🔡 **Variable Input Typing in Prompts**: Define input types for prompt variables (e.g., text, textarea, number, select, color, date, map and more), giving everyone a clearer and more precise prompt-building experience for advanced automation or workflows.
 - 🚀 **Base Model List Caching**: Cache your base model list to speed up model selection and reduce repeated API calls; toggle this in Admin Settings > Connections for responsive model management even in large or multi-provider setups.
+- ⏱️ **Configurable Model List Cache TTL**: Take control over model list caching with the new `MODEL_LIST_CACHE_TTL` environment variable. Set a custom cache duration in seconds to balance performance and freshness, reducing API requests in stable environments or ensuring rapid updates when models change frequently.
 - 🔖 **Reference Notes as Knowledge or in Chats**: Use any note as knowledge for a model or folder, or reference it directly from chat—integrate living documentation into your Retrieval Augmented Generation workflows or discussions, bridging knowledge and action.
 - 📝 **Chat Directly with Notes (Experimental)**: Ask questions about any note, and directly edit or update notes from within a chat—unlock direct AI-powered brainstorming, summarization, and cleanup, like having your own collaborative AI canvas.
 - 🤝 **Collaborative Notes with Multi-User Editing**: Share notes with others and collaborate live—multiple users can edit a note in real-time, boosting cooperative knowledge building and workflow documentation.
@@ -30,6 +31,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 📱 **Mobile Experience Polished**: The "new chat" button is back in mobile, plus core navigation and input controls have been smoothed out for better usability on phones and tablets.
 - ⚙️ **General Backend Refactoring**: Extensive refactoring delivers a faster, more reliable, and robust backend experience—improving chat speed, model management, and day-to-day reliability.
 - 🌍 **Expanded & Improved Translations**: Enjoy a more accessible and intuitive experience thanks to comprehensive updates and enhancements for Chinese (Simplified and Traditional), German, French, Catalan, Irish, and Spanish translations throughout the interface.
+- 📄 **OpenDocument Text (.odt) Support**: Seamlessly upload and process `.odt` files from open-source office suites like LibreOffice and OpenOffice, expanding your ability to build knowledge from a wider range of document formats.
+- 📑 **Enhanced Markdown Document Splitting**: Improve knowledge retrieval from Markdown files with a new header-aware splitting strategy. This method intelligently chunks documents based on their header structure (`#`, `##`, etc.), preserving the original context and hierarchy for more accurate and relevant RAG results.
+- 📚 **Full Context Mode for Knowledge Bases**: When adding a knowledge base to a folder or custom model, you can now toggle full context mode for the entire knowledge base. This bypasses the usual chunking and retrieval process, making it perfect for leaner knowledge bases.
+- 🕰️ **Configurable OAuth Timeout**: Enhance login reliability by setting a custom timeout (`OAUTH_TIMEOUT`) for all OAuth providers (Google, Microsoft, GitHub, OIDC), preventing authentication failures on slow or restricted networks.
+- 🎨 **High-Contrast Theme Enhancements**: Improved accessibility with significant updates to the high-contrast theme, ensuring new UI elements like system prompt fields and other interactive components are fully compliant and readable for visually impaired users.
+- ↕️ **Resizable System Prompt Fields**: Conveniently resize system prompt input fields to comfortably view and edit lengthy or complex instructions, improving the user experience for advanced model configuration.
+- 🔧 **Granular Update Check Control**: Gain finer control over outbound connections with the new `ENABLE_VERSION_UPDATE_CHECK` flag. This allows administrators to disable version update checks independently of the full `OFFLINE_MODE`, perfect for environments with restricted internet access that still need to download embedding models.
+- 🗃️ **Configurable Qdrant Collection Prefix**: Enhance scalability by setting a custom `QDRANT_COLLECTION_PREFIX`. This allows multiple Open WebUI instances to share a single Qdrant cluster safely, ensuring complete data isolation between separate deployments without conflicts.
 
 ### Fixed
 
@@ -43,6 +52,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🗝️ **Note Access Control Security**: Tightened access control logic for notes to guarantee that shared or collaborative notes respect all user permissions and privacy safeguards.
 - 🧾 **Ollama API Compatibility**: Fixed model parameter naming in the API to ensure uninterrupted compatibility for all Ollama endpoints.
 - 🛠️ **Detection for 'text/html' Files**: Files loaded with docling/tika are now reliably detected as the correct type, improving knowledge ingestion and document parsing.
+- 🔐 **OAuth Login Stability**: Resolved a critical OAuth bug that caused login failures (e.g., "mismatching_state: CSRF Warning!") on subsequent attempts after logging out. The user session is now completely cleared on logout, ensuring reliable and secure authentication across all supported providers (Google, Microsoft, GitHub, OIDC).
+- 🚪 **OAuth Logout and Redirect Reliability**: The OAuth logout process has been made more robust. Logout requests now correctly use proxy environment variables, ensuring they succeed in corporate networks. Additionally, the custom `WEBUI_AUTH_SIGNOUT_REDIRECT_URL` is now properly respected for all OAuth/OIDC configurations, ensuring a seamless sign-out experience.
+- 📜 **Banner Newline Rendering**: Banners now correctly render newline characters (`\n`), ensuring that multi-line announcements and messages are displayed with their intended formatting.
+- ℹ️ **Consistent Model Description Rendering**: Model descriptions now render Markdown correctly in the main chat interface, matching the formatting seen in the model selection dropdown for a consistent user experience.
+- 🔄 **Offline Mode Update Check Display**: Corrected a UI bug where the "Checking for Updates..." message would display indefinitely when the application was set to offline mode.
 
 ## [0.6.15] - 2025-06-16
 
