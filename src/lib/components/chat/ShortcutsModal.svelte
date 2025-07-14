@@ -384,7 +384,7 @@
 				<div class="flex flex-col space-y-3 w-full self-start">
 					<div class="w-full flex justify-between items-center">
 						<div class=" text-sm">
-							{$i18n.t('Unmask all PIIs and clear mask modifiers')}
+							{$i18n.t('Toggle PII masking (mask all / unmask all)')}
 						</div>
 
 						<div class="flex space-x-1 text-xs">
@@ -402,30 +402,6 @@
 								class=" h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
 							>
 								L
-							</div>
-						</div>
-					</div>
-
-					<div class="w-full flex justify-between items-center">
-						<div class=" text-sm">
-							{$i18n.t('Mask all PIIs')}
-						</div>
-
-						<div class="flex space-x-1 text-xs">
-							<div
-								class=" h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
-							>
-								Ctrl
-							</div>
-							<div
-								class=" h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
-							>
-								Shift
-							</div>
-							<div
-								class=" h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
-							>
-								Q
 							</div>
 						</div>
 					</div>

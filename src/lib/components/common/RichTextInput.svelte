@@ -431,33 +431,38 @@
 					keydown: (view, event) => {
 						ensureConversationActivated(); // Ensure conversation is activated on first keystroke
 
-						// Handle CTRL+SHIFT+L to unmask all PIIs and clear mask modifiers
+						// Handle CTRL+SHIFT+L to toggle PII masking (mask all <-> unmask all)
 						if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'l') {
 							if (enablePiiDetection && enablePiiModifiers && editor) {
 								event.preventDefault();
 
-								// 1. Clear all mask modifiers (keep ignore modifiers)
-								if (editor.commands?.clearMaskModifiers) {
-									editor.commands.clearMaskModifiers();
-								}
+								// Get current entities from PiiSessionManager to determine state
+								const piiSessionManager = PiiSessionManager.getInstance();
+								const currentEntities = piiSessionManager.getEntitiesForDisplay(conversationId);
 
-								// 2. Unmask all PII entities
-								if (editor.commands?.unmaskAllEntities) {
-									editor.commands.unmaskAllEntities();
-								}
+								if (currentEntities.length > 0) {
+									// Check if most entities are currently masked
+									const maskedCount = currentEntities.filter(entity => entity.shouldMask).length;
+									const unmaskedCount = currentEntities.length - maskedCount;
+									const mostlyMasked = maskedCount >= unmaskedCount;
 
-								return true;
-							}
-						}
+									if (mostlyMasked) {
+										// Currently masked -> unmask all and clear mask modifiers
+										// 1. Clear all mask modifiers (keep ignore modifiers)
+										if (editor.commands?.clearMaskModifiers) {
+											editor.commands.clearMaskModifiers();
+										}
 
-						// Handle CTRL+SHIFT+Q to mask all PIIs again
-						if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'q') {
-							if (enablePiiDetection && editor) {
-								event.preventDefault();
-
-								// Mask all PII entities
-								if (editor.commands?.maskAllEntities) {
-									editor.commands.maskAllEntities();
+										// 2. Unmask all PII entities
+										if (editor.commands?.unmaskAllEntities) {
+											editor.commands.unmaskAllEntities();
+										}
+									} else {
+										// Currently unmasked -> mask all entities
+										if (editor.commands?.maskAllEntities) {
+											editor.commands.maskAllEntities();
+										}
+									}
 								}
 
 								return true;
