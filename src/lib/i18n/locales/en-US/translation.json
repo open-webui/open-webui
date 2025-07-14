@@ -1276,6 +1276,7 @@
 	"The score should be a value between 0.0 (0%) and 1.0 (100%).": "",
 	"The temperature of the model. Increasing the temperature will make the model answer more creatively.": "",
 	"The width in pixels to compress images to. Leave empty for no compression.": "",
+	"The Weight of BM25 Hybrid Search. 0 more lexical, 1 more semantic. Default 0.5",
 	"Theme": "",
 	"Thinking...": "",
 	"This action cannot be undone. Do you wish to continue?": "",
