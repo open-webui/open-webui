@@ -153,6 +153,7 @@
 								...file,
 								name: file?.meta?.name,
 								description: `${file?.collection?.name} - ${file?.collection?.description}`,
+								knowledge: true, // DO NOT REMOVE, USED TO INDICATE KNOWLEDGE BASE FILE
 								type: 'file'
 							}))
 					]
