@@ -101,7 +101,10 @@
 						class="outline-none bg-transparent text-sm font-medium rounded-lg block w-fit pr-8 max-w-full placeholder-gray-400"
 						value={accessControl !== null ? 'private' : 'public'}
 						on:change={(e) => {
-							accessControl = e.target.value === 'public' ? null : { read: { group_ids: [] }, write: { group_ids: [] } };
+							accessControl =
+								e.target.value === 'public'
+									? null
+									: { read: { group_ids: [] }, write: { group_ids: [] } };
 						}}
 					>
 						<option class=" text-gray-700" value="private" selected>{$i18n.t('Private')}</option>
@@ -110,7 +113,6 @@
 						{/if}
 					</select>
 				{/if}
-				
 
 				<div class=" text-xs text-gray-400 font-medium">
 					{#if $user?.role === 'admin'}
