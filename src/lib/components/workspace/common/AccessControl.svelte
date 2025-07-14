@@ -93,40 +93,27 @@
 			</div>
 
 			<div>
-				<select
-					id="models"
-					class="outline-none bg-transparent text-sm font-medium rounded-lg block w-fit pr-10 max-w-full placeholder-gray-400"
-					value={accessControl !== null ? 'private' : 'public'}
-					on:change={(e) => {
-						if (
-							$user?.role === 'admin' ||
-							$user?.role === 'analyst' ||
-							$user?.role === 'global_analyst'
-						) {
-							if (e.target.value === 'public') {
-								accessControl = null;
-							} else {
-								accessControl = {
-									read: {
-										group_ids: []
-									},
-									write: {
-										group_ids: []
-									}
-								};
-							}
-						}
-					}}
-					disabled={$user?.role === 'user'}
-				>
-					<option class=" text-gray-700" value="private" selected>{$i18n.t('Private')}</option>
-					{#if $user?.role === 'admin' || $user?.role === 'analyst' || $user?.role === 'global_analyst'}
-						<option class=" text-gray-700" value="public">{$i18n.t('Public')}</option>
-					{/if}
-				</select>
+				{#if $user?.role !== 'admin'}
+					<p class="text-sm font-medium">{$i18n.t('Private')}</p>
+				{:else}
+					<select
+						id="models"
+						class="outline-none bg-transparent text-sm font-medium rounded-lg block w-fit pr-8 max-w-full placeholder-gray-400"
+						value={accessControl !== null ? 'private' : 'public'}
+						on:change={(e) => {
+							accessControl = e.target.value === 'public' ? null : { read: { group_ids: [] }, write: { group_ids: [] } };
+						}}
+					>
+						<option class=" text-gray-700" value="private" selected>{$i18n.t('Private')}</option>
+						{#if $user?.role === 'admin'}
+							<option class=" text-gray-700" value="public">{$i18n.t('Public')}</option>
+						{/if}
+					</select>
+				{/if}
+				
 
 				<div class=" text-xs text-gray-400 font-medium">
-					{#if $user?.role === 'admin' || $user?.role === 'analyst' || $user?.role === 'global_analyst'}
+					{#if $user?.role === 'admin'}
 						{#if accessControl !== null}
 							{$i18n.t('Only select users and groups with permission can access')}
 						{:else}
@@ -137,7 +124,7 @@
 			</div>
 		</div>
 	</div>
-	{#if accessControl !== null}
+	{#if accessControl !== null && groups.length > 0}
 		{@const accessGroups = groups.filter(
 			(group) =>
 				(accessControl?.read?.group_ids || []).includes(group.id) ||
