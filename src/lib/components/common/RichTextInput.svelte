@@ -218,7 +218,7 @@
 								// Empty state, check if we have content to initialize
 								// check if editor empty as well
 								const isEmptyEditor = !editor || editor.getText().trim() === '';
-								if (content && isEmptyEditor) {
+								if (content && isEmptyEditor && (data?.sessions ?? ['']).length === 1) {
 									const editorYdoc = prosemirrorJSONToYDoc(editor.schema, content);
 									if (editorYdoc) {
 										Y.applyUpdate(this.doc, Y.encodeStateAsUpdate(editorYdoc));
@@ -231,6 +231,11 @@
 						this.synced = true;
 					} catch (error) {
 						console.error('Error applying Yjs state:', error);
+
+						this.synced = false;
+						this.socket.emit('ydoc:document:state', {
+							document_id: this.documentId
+						});
 					}
 				}
 			});

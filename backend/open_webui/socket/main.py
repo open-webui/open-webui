@@ -209,16 +209,20 @@ def get_user_id_from_session_pool(sid):
     return None
 
 
-def get_user_ids_from_room(room):
+def get_session_ids_from_room(room):
+    """Get all session IDs from a specific room."""
     active_session_ids = sio.manager.get_participants(
         namespace="/",
         room=room,
     )
+    return [session_id[0] for session_id in active_session_ids]
+
+
+def get_user_ids_from_room(room):
+    active_session_ids = get_session_ids_from_room(room)
 
     active_user_ids = list(
-        set(
-            [SESSION_POOL.get(session_id[0])["id"] for session_id in active_session_ids]
-        )
+        set([SESSION_POOL.get(session_id)["id"] for session_id in active_session_ids])
     )
     return active_user_ids
 
@@ -384,12 +388,12 @@ async def ydoc_document_join(sid, data):
         # Join Socket.IO room
         await sio.enter_room(sid, f"doc_{document_id}")
 
-        # Send current document state as a proper Yjs update
+        active_session_ids = get_session_ids_from_room(f"doc_{document_id}")
+
+        # Get the Yjs document state
         ydoc = Y.Doc()
-        if document_id in DOCUMENTS:
-            # If the document already exists, apply its updates
-            for update in DOCUMENTS[document_id]["updates"]:
-                ydoc.apply_update(bytes(update))
+        for update in DOCUMENTS[document_id]["updates"]:
+            ydoc.apply_update(bytes(update))
 
         # Encode the entire document state as an update
         state_update = ydoc.get_update()
@@ -398,6 +402,7 @@ async def ydoc_document_join(sid, data):
             {
                 "document_id": document_id,
                 "state": list(state_update),  # Convert bytes to list for JSON
+                "sessions": active_session_ids,
             },
             room=sid,
         )
@@ -441,6 +446,44 @@ async def document_save_handler(document_id, data, user):
             return
 
         Notes.update_note_by_id(note_id, NoteUpdateForm(data=data))
+
+
+@sio.on("ydoc:document:state")
+async def yjs_document_state(sid, data):
+    """Send the current state of the Yjs document to the user"""
+    try:
+        document_id = data["document_id"]
+        room = f"doc_{document_id}"
+
+        active_session_ids = get_session_ids_from_room(room)
+        print(active_session_ids)
+        if sid not in active_session_ids:
+            log.warning(f"Session {sid} not in room {room}. Cannot send state.")
+            return
+
+        if document_id not in DOCUMENTS:
+            log.warning(f"Document {document_id} not found")
+            return
+
+        # Get the Yjs document state
+        ydoc = Y.Doc()
+        for update in DOCUMENTS[document_id]["updates"]:
+            ydoc.apply_update(bytes(update))
+
+        # Encode the entire document state as an update
+        state_update = ydoc.get_update()
+
+        await sio.emit(
+            "ydoc:document:state",
+            {
+                "document_id": document_id,
+                "state": list(state_update),  # Convert bytes to list for JSON
+                "sessions": active_session_ids,
+            },
+            room=sid,
+        )
+    except Exception as e:
+        log.error(f"Error in yjs_document_state: {e}")
 
 
 @sio.on("ydoc:document:update")
