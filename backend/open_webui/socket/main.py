@@ -107,7 +107,6 @@ if WEBSOCKET_MANAGER == "redis":
 
     # TODO: Implement Yjs document management with Redis
     DOCUMENTS = {}
-    DOCUMENT_USERS = {}
 
     clean_up_lock = RedisLock(
         redis_url=WEBSOCKET_REDIS_URL,
@@ -124,7 +123,6 @@ else:
     USAGE_POOL = {}
 
     DOCUMENTS = {}  # document_id -> Y.YDoc instance
-    DOCUMENT_USERS = {}  # document_id -> set of user sids
     aquire_func = release_func = renew_func = lambda: True
 
 
@@ -377,11 +375,9 @@ async def yjs_document_join(sid, data):
                 "ydoc": Y.Doc(),  # Create actual Yjs document
                 "users": set(),
             }
-            DOCUMENT_USERS[document_id] = set()
 
         # Add user to document
         DOCUMENTS[document_id]["users"].add(sid)
-        DOCUMENT_USERS[document_id].add(sid)
 
         # Join Socket.IO room
         await sio.enter_room(sid, f"doc_{document_id}")
@@ -506,9 +502,6 @@ async def yjs_document_leave(sid, data):
         if document_id in DOCUMENTS:
             DOCUMENTS[document_id]["users"].discard(sid)
 
-        if document_id in DOCUMENT_USERS:
-            DOCUMENT_USERS[document_id].discard(sid)
-
         # Leave Socket.IO room
         await sio.leave_room(sid, f"doc_{document_id}")
 
@@ -523,7 +516,6 @@ async def yjs_document_leave(sid, data):
             # If no users left, clean up the document
             log.info(f"Cleaning up document {document_id} as no users are left")
             del DOCUMENTS[document_id]
-            del DOCUMENT_USERS[document_id]
 
     except Exception as e:
         log.error(f"Error in yjs_document_leave: {e}")
