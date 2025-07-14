@@ -12,10 +12,11 @@
 	import Italic from '$lib/components/icons/Italic.svelte';
 	import ListBullet from '$lib/components/icons/ListBullet.svelte';
 	import NumberedList from '$lib/components/icons/NumberedList.svelte';
-	import QueueList from '$lib/components/icons/QueueList.svelte';
 	import Strikethrough from '$lib/components/icons/Strikethrough.svelte';
 	import Underline from '$lib/components/icons/Underline.svelte';
+
 	import Tooltip from '../Tooltip.svelte';
+	import CheckBox from '$lib/components/icons/CheckBox.svelte';
 </script>
 
 <div
@@ -89,7 +90,7 @@
 				: ''} hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg p-1.5 transition-all"
 			type="button"
 		>
-			<QueueList />
+			<CheckBox />
 		</button>
 	</Tooltip>
 
