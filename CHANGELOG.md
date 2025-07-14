@@ -35,10 +35,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 📑 **Enhanced Markdown Document Splitting**: Improve knowledge retrieval from Markdown files with a new header-aware splitting strategy. This method intelligently chunks documents based on their header structure (`#`, `##`, etc.), preserving the original context and hierarchy for more accurate and relevant RAG results.
 - 📚 **Full Context Mode for Knowledge Bases**: When adding a knowledge base to a folder or custom model, you can now toggle full context mode for the entire knowledge base. This bypasses the usual chunking and retrieval process, making it perfect for leaner knowledge bases.
 - 🕰️ **Configurable OAuth Timeout**: Enhance login reliability by setting a custom timeout (`OAUTH_TIMEOUT`) for all OAuth providers (Google, Microsoft, GitHub, OIDC), preventing authentication failures on slow or restricted networks.
-- 🎨 **High-Contrast Theme Enhancements**: Improved accessibility with significant updates to the high-contrast theme, ensuring new UI elements like system prompt fields and other interactive components are fully compliant and readable for visually impaired users.
+- 🎨 **Accessibility & High-Contrast Theme Enhancements**: Major accessibility overhaul with significant updates to the high-contrast theme. Improved focus visibility, ARIA labels, and semantic HTML ensure core components like the chat interface and model selector are fully compliant and readable for visually impaired users.
 - ↕️ **Resizable System Prompt Fields**: Conveniently resize system prompt input fields to comfortably view and edit lengthy or complex instructions, improving the user experience for advanced model configuration.
 - 🔧 **Granular Update Check Control**: Gain finer control over outbound connections with the new `ENABLE_VERSION_UPDATE_CHECK` flag. This allows administrators to disable version update checks independently of the full `OFFLINE_MODE`, perfect for environments with restricted internet access that still need to download embedding models.
 - 🗃️ **Configurable Qdrant Collection Prefix**: Enhance scalability by setting a custom `QDRANT_COLLECTION_PREFIX`. This allows multiple Open WebUI instances to share a single Qdrant cluster safely, ensuring complete data isolation between separate deployments without conflicts.
+- ⚙️ **Improved Default Database Performance**: Enhanced out-of-the-box performance by setting smarter database connection pooling defaults, reducing API response times for users on non-SQLite databases without requiring manual configuration.
+- 🔧 **Configurable Redis Key Prefix**: Added support for the `REDIS_KEY_PREFIX` environment variable, allowing multiple Open WebUI instances to share a Redis cluster with isolated key namespaces for improved multi-tenancy.
 
 ### Fixed
 
@@ -52,11 +54,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🗝️ **Note Access Control Security**: Tightened access control logic for notes to guarantee that shared or collaborative notes respect all user permissions and privacy safeguards.
 - 🧾 **Ollama API Compatibility**: Fixed model parameter naming in the API to ensure uninterrupted compatibility for all Ollama endpoints.
 - 🛠️ **Detection for 'text/html' Files**: Files loaded with docling/tika are now reliably detected as the correct type, improving knowledge ingestion and document parsing.
-- 🔐 **OAuth Login Stability**: Resolved a critical OAuth bug that caused login failures (e.g., "mismatching_state: CSRF Warning!") on subsequent attempts after logging out. The user session is now completely cleared on logout, ensuring reliable and secure authentication across all supported providers (Google, Microsoft, GitHub, OIDC).
+- 🔐 **OAuth Login Stability**: Resolved a critical OAuth bug that caused login failures on subsequent attempts after logging out. The user session is now completely cleared on logout, ensuring reliable and secure authentication across all supported providers (Google, Microsoft, GitHub, OIDC).
 - 🚪 **OAuth Logout and Redirect Reliability**: The OAuth logout process has been made more robust. Logout requests now correctly use proxy environment variables, ensuring they succeed in corporate networks. Additionally, the custom `WEBUI_AUTH_SIGNOUT_REDIRECT_URL` is now properly respected for all OAuth/OIDC configurations, ensuring a seamless sign-out experience.
 - 📜 **Banner Newline Rendering**: Banners now correctly render newline characters (`\n`), ensuring that multi-line announcements and messages are displayed with their intended formatting.
 - ℹ️ **Consistent Model Description Rendering**: Model descriptions now render Markdown correctly in the main chat interface, matching the formatting seen in the model selection dropdown for a consistent user experience.
 - 🔄 **Offline Mode Update Check Display**: Corrected a UI bug where the "Checking for Updates..." message would display indefinitely when the application was set to offline mode.
+- 🛠️ **Tool Result Encoding**: Fixed a bug where tool calls returning non-ASCII characters would fail, ensuring robust handling of international text and special characters in tool outputs.
 
 ## [0.6.15] - 2025-06-16
 
