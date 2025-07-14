@@ -446,6 +446,8 @@ def get_embedding_function(
 
 
 def get_reranking_function(reranking_engine, reranking_model, reranking_function):
+    if reranking_function is None:
+        return None
     if reranking_engine == "external":
         return lambda sentences, user=None: reranking_function.predict(
             sentences, user=user

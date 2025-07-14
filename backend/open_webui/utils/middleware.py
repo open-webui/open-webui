@@ -652,8 +652,14 @@ async def chat_completion_files_handler(
                             query, prefix=prefix, user=user
                         ),
                         k=request.app.state.config.TOP_K,
-                        reranking_function=lambda sentences: request.app.state.RERANKING_FUNCTION(
-                            sentences, user=user
+                        reranking_function=(
+                            lambda sentences: (
+                                request.app.state.RERANKING_FUNCTION(
+                                    sentences, user=user
+                                )
+                                if request.app.state.RERANKING_FUNCTION
+                                else None
+                            )
                         ),
                         k_reranker=request.app.state.config.TOP_K_RERANKER,
                         r=request.app.state.config.RELEVANCE_THRESHOLD,
