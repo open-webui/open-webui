@@ -258,11 +258,11 @@ def get_top_headlines(
             byline = article.get("byline", "")
 
             # Format each article cleanly
-            response_lines.append(f"\n📰 {title}")
+            response_lines.append(f"---\n### 📰 {title}")
             if article.get("subtitle"):
-                response_lines.append(f"� Subtitle: {article['subtitle']}")
+                response_lines.append(f"🗞️ Subtitle: {article['subtitle']}")
             response_lines.append(f"{labels['published']}: {pub_date}")
-            response_lines.append(f"� Source: {publication}")
+            response_lines.append(f"🔎 Source: {publication}")
             if byline:
                 response_lines.append(f"✍️ By: {byline}")
 
