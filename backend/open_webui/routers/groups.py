@@ -35,6 +35,12 @@ async def get_groups(user=Depends(get_verified_user)):
         return Groups.get_groups()
     else:
         return Groups.get_groups_by_member_id(user.id)
+    # commenting this code as only admins are able to share knowledge base access with all groups. 
+
+    # if user.role == "admin":
+    #     return Groups.get_groups()
+    # else:
+    #     return Groups.get_groups_by_member_id(user.id)
 
 
 ############################

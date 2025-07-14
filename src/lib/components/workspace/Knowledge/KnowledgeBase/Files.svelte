@@ -8,6 +8,7 @@
 	export let files = [];
 
 	export let small = false;
+	export let canWrite = false;
 </script>
 
 <div class=" max-h-full flex flex-col w-full">
@@ -24,7 +25,7 @@
 				type="file"
 				size={file?.size ?? file?.meta?.size ?? ''}
 				loading={file.status === 'uploading'}
-				dismissible
+				dismissible={canWrite}
 				on:click={() => {
 					if (file.status === 'uploading') {
 						return;

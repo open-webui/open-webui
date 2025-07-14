@@ -38,7 +38,8 @@
 			models: false,
 			knowledge: false,
 			prompts: false,
-			tools: false
+			tools: false,
+			analytics: false
 		},
 		sharing: {
 			public_models: false,

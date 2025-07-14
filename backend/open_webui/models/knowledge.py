@@ -90,6 +90,7 @@ class KnowledgeResponse(KnowledgeModel):
 
 class KnowledgeUserResponse(KnowledgeUserModel):
     files: Optional[list[FileMetadataResponse | dict]] = None
+    can_write: Optional[bool] = None
 
 
 class KnowledgeForm(BaseModel):

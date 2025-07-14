@@ -122,6 +122,7 @@ class WorkspacePermissions(BaseModel):
     knowledge: bool = False
     prompts: bool = False
     tools: bool = False
+    analytics: bool = False
 
 
 class SharingPermissions(BaseModel):

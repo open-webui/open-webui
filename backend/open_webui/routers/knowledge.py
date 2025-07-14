@@ -93,7 +93,17 @@ async def get_knowledge_list(user=Depends(get_verified_user)):
     if user.role == "admin":
         knowledge_bases = Knowledges.get_knowledge_bases()
     else:
-        knowledge_bases = Knowledges.get_knowledge_bases_by_user_id(user.id, "write")
+        read_knowledge_bases = Knowledges.get_knowledge_bases_by_user_id(user.id, "read")
+        write_knowledge_bases = Knowledges.get_knowledge_bases_by_user_id(user.id, "write")
+
+        # Combine and deduplicate based on knowledge base ID
+        seen_ids = set()
+        knowledge_bases = []
+
+        for kb in read_knowledge_bases + write_knowledge_bases:
+            if kb.id not in seen_ids:
+                seen_ids.add(kb.id)
+                knowledge_bases.append(kb)
 
     # Get files for each knowledge base
     knowledge_with_files = []
@@ -123,11 +133,19 @@ async def get_knowledge_list(user=Depends(get_verified_user)):
                     )
 
                     files = Files.get_file_metadatas_by_ids(file_ids)
+        
+        # Add permission information to the response
+        can_write = (
+            user.role == "admin"
+            or knowledge_base.user_id == user.id
+            or has_access(user.id, "write", knowledge_base.access_control)
+        )
 
         knowledge_with_files.append(
             KnowledgeUserResponse(
                 **knowledge_base.model_dump(),
                 files=files,
+                can_write=can_write,
             )
         )
     return knowledge_with_files
@@ -249,6 +267,7 @@ async def reindex_knowledge_files(request: Request, user=Depends(get_verified_us
 
 class KnowledgeFilesResponse(KnowledgeResponse):
     files: list[FileMetadataResponse]
+    can_write: Optional[bool] = None
 
 
 @router.get("/{id}", response_model=Optional[KnowledgeFilesResponse])
@@ -266,9 +285,16 @@ async def get_knowledge_by_id(id: str, user=Depends(get_verified_user)):
             file_ids = knowledge.data.get("file_ids", []) if knowledge.data else []
             files = Files.get_file_metadatas_by_ids(file_ids)
 
+            can_write = (
+                user.role == "admin"
+                or knowledge.user_id == user.id
+                or has_access(user.id, "write", knowledge.access_control)
+            )
+
             return KnowledgeFilesResponse(
                 **knowledge.model_dump(),
                 files=files,
+                can_write=can_write,
             )
     else:
         raise HTTPException(
@@ -308,11 +334,19 @@ async def update_knowledge_by_id(
     knowledge = Knowledges.update_knowledge_by_id(id=id, form_data=form_data)
     if knowledge:
         file_ids = knowledge.data.get("file_ids", []) if knowledge.data else []
-        files = Files.get_files_by_ids(file_ids)
+        files = Files.get_file_metadatas_by_ids(file_ids)
+
+        # Add permission information to the response
+        can_write = (
+            user.role == "admin"
+            or knowledge.user_id == user.id
+            or has_access(user.id, "write", knowledge.access_control)
+        )
 
         return KnowledgeFilesResponse(
             **knowledge.model_dump(),
             files=files,
+            can_write=can_write,
         )
     else:
         raise HTTPException(
@@ -394,9 +428,16 @@ def add_file_to_knowledge_by_id(
             if knowledge:
                 files = Files.get_file_metadatas_by_ids(file_ids)
 
+                can_write = (
+                    user.role == "admin"
+                    or knowledge.user_id == user.id
+                    or has_access(user.id, "write", knowledge.access_control)
+                )
+
                 return KnowledgeFilesResponse(
                     **knowledge.model_dump(),
                     files=files,
+                    can_write=can_write,
                 )
             else:
                 raise HTTPException(
@@ -471,9 +512,16 @@ def update_file_from_knowledge_by_id(
 
         files = Files.get_file_metadatas_by_ids(file_ids)
 
+        can_write = (
+            user.role == "admin"
+            or knowledge.user_id == user.id
+            or has_access(user.id, "write", knowledge.access_control)
+        )
+
         return KnowledgeFilesResponse(
             **knowledge.model_dump(),
             files=files,
+            can_write=can_write,
         )
     else:
         raise HTTPException(
@@ -553,9 +601,16 @@ def remove_file_from_knowledge_by_id(
             if knowledge:
                 files = Files.get_file_metadatas_by_ids(file_ids)
 
+                can_write = (
+                    user.role == "admin"
+                    or knowledge.user_id == user.id
+                    or has_access(user.id, "write", knowledge.access_control)
+                )
+
                 return KnowledgeFilesResponse(
                     **knowledge.model_dump(),
                     files=files,
+                    can_write=can_write,
                 )
             else:
                 raise HTTPException(

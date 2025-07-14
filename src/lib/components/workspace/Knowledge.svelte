@@ -169,12 +169,16 @@
 						{/if}
 
 						<div class=" flex self-center -mr-1 translate-y-1">
-							<ItemMenu
-								on:delete={() => {
-									selectedItem = item;
-									showDeleteConfirm = true;
-								}}
-							/>
+							{#if item.can_write}
+								<ItemMenu
+									on:delete={() => {
+										selectedItem = item;
+										showDeleteConfirm = true;
+									}}
+								/>
+							{:else}
+								<div style="width: 2rem; height: 2rem; visibility: hidden;"></div>
+							{/if}
 						</div>
 					</div>
 

@@ -124,6 +124,10 @@
 	};
 
 	const uploadFileHandler = async (file) => {
+		if (!knowledge?.can_write) {
+			toast.error($i18n.t('You do not have permission to upload files to this knowledge base.'));
+			return;
+		}
 		console.log(file);
 
 		const tempItemId = uuidv4();
@@ -398,6 +402,10 @@
 	};
 
 	const deleteFileHandler = async (fileId) => {
+		if (!knowledge?.can_write) {
+			toast.error($i18n.t('You do not have permission to delete files from this knowledge base.'));
+			return;
+		}
 		try {
 			console.log('Starting file deletion process for:', fileId);
 
@@ -417,6 +425,10 @@
 	};
 
 	const updateFileContentHandler = async () => {
+		if (!knowledge?.can_write) {
+			toast.error($i18n.t('You do not have permission to edit files in this knowledge base.'));
+			return;
+		}
 		const fileId = selectedFile.id;
 		const content = selectedFileContent;
 
@@ -442,6 +454,9 @@
 	};
 
 	const changeDebounceHandler = () => {
+		if (!knowledge?.can_write) {
+			return; // Don't allow editing if user doesn't have write access
+		}
 		console.log('debounce');
 		if (debounceTimeout) {
 			clearTimeout(debounceTimeout);
@@ -502,7 +517,10 @@
 
 	const onDragOver = (e) => {
 		e.preventDefault();
-
+		// Only show drop zone if user has write access
+		if (!knowledge?.can_write) {
+			return;
+		}
 		// Check if a file is being draggedOver.
 		if (e.dataTransfer?.types?.includes('Files')) {
 			dragged = true;
@@ -518,7 +536,10 @@
 	const onDrop = async (e) => {
 		e.preventDefault();
 		dragged = false;
-
+		if (!knowledge?.can_write) {
+			toast.error($i18n.t('You do not have permission to upload files to this knowledge base.'));
+			return;
+		}
 		if (e.dataTransfer?.types?.includes('Files')) {
 			if (e.dataTransfer?.files) {
 				const inputFiles = e.dataTransfer?.files;
@@ -655,6 +676,10 @@
 	multiple
 	hidden
 	on:change={async () => {
+		if (!knowledge?.can_write) {
+			toast.error($i18n.t('You do not have permission to upload files to this knowledge base.'));
+			return;
+		}
 		if (inputFiles && inputFiles.length > 0) {
 			for (const file of inputFiles) {
 				await uploadFileHandler(file);
@@ -693,27 +718,29 @@
 								class="text-left w-full font-semibold text-2xl font-primary bg-transparent outline-hidden"
 								bind:value={knowledge.name}
 								placeholder="Knowledge Name"
+								readonly={!knowledge.can_write}
 								on:input={() => {
 									changeDebounceHandler();
 								}}
 							/>
 						</div>
 
-						<div class="self-center shrink-0">
-							<button
-								class="bg-gray-50 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2 py-1 rounded-full flex gap-1 items-center"
-								type="button"
-								on:click={() => {
-									showAccessControlModal = true;
-								}}
-							>
-								<LockClosed strokeWidth="2.5" className="size-3.5" />
-
-								<div class="text-sm font-medium shrink-0">
-									{$i18n.t('Access')}
-								</div>
-							</button>
-						</div>
+						{#if knowledge.can_write}
+							<div class="self-center shrink-0">
+								<button
+									class="bg-gray-50 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2 py-1 rounded-full flex gap-1 items-center"
+									type="button"
+									on:click={() => {
+										showAccessControlModal = true;
+									}}
+								>
+									<LockClosed strokeWidth="2.5" className="size-3.5" />
+									<div class="text-sm font-medium shrink-0">
+										{$i18n.t('Access')}
+									</div>
+								</button>
+							</div>
+						{/if}
 					</div>
 
 					<div class="flex w-full px-1">
@@ -722,6 +749,7 @@
 							class="text-left text-xs w-full text-gray-500 bg-transparent outline-hidden"
 							bind:value={knowledge.description}
 							placeholder="Knowledge Description"
+							readonly={!knowledge.can_write}
 							on:input={() => {
 								changeDebounceHandler();
 							}}
@@ -760,16 +788,18 @@
 									</a>
 								</div>
 
-								<div>
-									<button
-										class="self-center w-fit text-sm py-1 px-2.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-lg"
-										on:click={() => {
-											updateFileContentHandler();
-										}}
-									>
-										{$i18n.t('Save')}
-									</button>
-								</div>
+								{#if knowledge.can_write}
+									<div>
+										<button
+											class="self-center w-fit text-sm py-1 px-2.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-lg"
+											on:click={() => {
+												updateFileContentHandler();
+											}}
+										>
+											{$i18n.t('Save')}
+										</button>
+									</div>
+								{/if}
 							</div>
 
 							<div
@@ -781,6 +811,7 @@
 										bind:value={selectedFileContent}
 										placeholder={$i18n.t('Add content here')}
 										preserveBreaks={false}
+										readonly={!knowledge.can_write}
 									/>
 								{/key}
 							</div>
@@ -818,16 +849,18 @@
 									{selectedFile?.meta?.name}
 								</div>
 
-								<div>
-									<button
-										class="self-center w-fit text-sm py-1 px-2.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-lg"
-										on:click={() => {
-											updateFileContentHandler();
-										}}
-									>
-										{$i18n.t('Save')}
-									</button>
-								</div>
+								{#if knowledge.can_write}
+									<div>
+										<button
+											class="self-center w-fit text-sm py-1 px-2.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-lg"
+											on:click={() => {
+												updateFileContentHandler();
+											}}
+										>
+											{$i18n.t('Save')}
+										</button>
+									</div>
+								{/if}
 							</div>
 
 							<div
@@ -839,6 +872,7 @@
 										bind:value={selectedFileContent}
 										placeholder={$i18n.t('Add content here')}
 										preserveBreaks={false}
+										readonly={!knowledge.can_write}
 									/>
 								{/key}
 							</div>
@@ -873,22 +907,24 @@
 									}}
 								/>
 
-								<div>
-									<AddContentMenu
-										on:upload={(e) => {
-											if (e.detail.type === 'directory') {
-												uploadDirectoryHandler();
-											} else if (e.detail.type === 'text') {
-												showAddTextContentModal = true;
-											} else {
-												document.getElementById('files-input').click();
-											}
-										}}
-										on:sync={(e) => {
-											showSyncConfirmModal = true;
-										}}
-									/>
-								</div>
+								{#if knowledge.can_write}
+									<div>
+										<AddContentMenu
+											on:upload={(e) => {
+												if (e.detail.type === 'directory') {
+													uploadDirectoryHandler();
+												} else if (e.detail.type === 'text') {
+													showAddTextContentModal = true;
+												} else {
+													document.getElementById('files-input').click();
+												}
+											}}
+											on:sync={(e) => {
+												showSyncConfirmModal = true;
+											}}
+										/>
+									</div>
+								{/if}
 							</div>
 						</div>
 
@@ -898,6 +934,7 @@
 									small
 									files={filteredItems}
 									{selectedFileId}
+									canWrite={knowledge.can_write}
 									on:click={(e) => {
 										selectedFileId = selectedFileId === e.detail ? null : e.detail;
 									}}

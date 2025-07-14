@@ -2231,6 +2231,7 @@ async def process_chat_response(
                             request,
                             new_form_data,
                             user,
+                            mcp_call=True,
                         )
 
                         if isinstance(res, StreamingResponse):

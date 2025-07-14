@@ -613,8 +613,8 @@ async def execute_tool_server(
 
         if token:
             headers["Authorization"] = f"Bearer {token}"
-
-        async with aiohttp.ClientSession(trust_env=True) as session:
+        tool_timeout = aiohttp.ClientTimeout(total=15000)
+        async with aiohttp.ClientSession(timeout=tool_timeout, trust_env=True) as session:
             request_method = getattr(session, http_method.lower())
 
             if http_method in ["post", "put", "patch"]:

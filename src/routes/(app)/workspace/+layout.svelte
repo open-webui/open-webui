@@ -35,8 +35,10 @@
 			) {
 				goto('/');
 			} else if ($page.url.pathname.includes('/tools') && !$user?.permissions?.workspace?.tools) {
-				goto('/');
-			}
+			goto('/');
+		} else if ($page.url.pathname.includes('/analytics') && !$user?.permissions?.workspace?.analytics) {
+			goto('/');
+		}
 		}
 
 		loaded = true;
@@ -113,6 +115,17 @@
 								href="/workspace/tools"
 							>
 								{$i18n.t('Tools')}
+							</a>
+						{/if}
+
+						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.analytics}
+							<a
+								class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes('/workspace/analytics')
+									? ''
+									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+								href="/workspace/analytics"
+							>
+								{$i18n.t('Analytics')}
 							</a>
 						{/if}
 					</div>

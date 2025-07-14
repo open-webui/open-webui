@@ -708,6 +708,7 @@ async def generate_chat_completion(
     form_data: dict,
     user=Depends(get_verified_user),
     bypass_filter: Optional[bool] = False,
+    mcp_call: Optional[bool] = False,
 ):
     if BYPASS_MODEL_ACCESS_CONTROL:
         bypass_filter = True
@@ -732,7 +733,9 @@ async def generate_chat_completion(
             system = params.pop("system", None)
 
             payload = apply_model_params_to_body_openai(params, payload)
-            payload = apply_model_system_prompt_to_body(system, payload, metadata, user)
+            # payload = apply_model_system_prompt_to_body(system, payload, metadata, user)
+            if not mcp_call:
+                payload = apply_model_system_prompt_to_body(system, payload, metadata, user)
 
         # Check if user has access to the model
         if not bypass_filter and user.role == "user":
@@ -810,8 +813,8 @@ async def generate_chat_completion(
         "Content-Type": "application/json",
         **(
             {
-                "HTTP-Referer": "https://openwebui.com/",
-                "X-Title": "Open WebUI",
+                "HTTP-Referer": "https://metis.pocketfm.org/",
+                "X-Title": "Metis",
             }
             if "openrouter.ai" in url
             else {}

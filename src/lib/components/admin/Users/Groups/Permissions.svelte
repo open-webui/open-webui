@@ -11,7 +11,8 @@
 			models: false,
 			knowledge: false,
 			prompts: false,
-			tools: false
+			tools: false,
+			analytics: false
 		},
 		sharing: {
 			public_models: false,
@@ -205,6 +206,12 @@
 				</div>
 				<Switch bind:state={permissions.workspace.tools} />
 			</Tooltip>
+		</div>
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Analytics Access')}
+			</div>
+			<Switch bind:state={permissions.workspace.analytics} />
 		</div>
 	</div>
 
