@@ -44,13 +44,7 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["SOCKET"])
 
 
-REDIS = get_redis_connection(
-    redis_url=WEBSOCKET_REDIS_URL,
-    redis_sentinels=get_sentinels_from_env(
-        WEBSOCKET_SENTINEL_HOSTS, WEBSOCKET_SENTINEL_PORT
-    ),
-    async_mode=True,
-)
+REDIS = None
 
 if WEBSOCKET_MANAGER == "redis":
     if WEBSOCKET_SENTINEL_HOSTS:
@@ -86,6 +80,14 @@ TIMEOUT_DURATION = 3
 
 if WEBSOCKET_MANAGER == "redis":
     log.debug("Using Redis to manage websockets.")
+    REDIS = get_redis_connection(
+        redis_url=WEBSOCKET_REDIS_URL,
+        redis_sentinels=get_sentinels_from_env(
+            WEBSOCKET_SENTINEL_HOSTS, WEBSOCKET_SENTINEL_PORT
+        ),
+        async_mode=True,
+    )
+
     redis_sentinels = get_sentinels_from_env(
         WEBSOCKET_SENTINEL_HOSTS, WEBSOCKET_SENTINEL_PORT
     )
@@ -105,9 +107,6 @@ if WEBSOCKET_MANAGER == "redis":
         redis_sentinels=redis_sentinels,
     )
 
-    # TODO: Implement Yjs document management with Redis
-    DOCUMENTS = {}
-
     clean_up_lock = RedisLock(
         redis_url=WEBSOCKET_REDIS_URL,
         lock_name="usage_cleanup_lock",
@@ -122,8 +121,11 @@ else:
     USER_POOL = {}
     USAGE_POOL = {}
 
-    DOCUMENTS = {}  # document_id -> Y.YDoc instance
     aquire_func = release_func = renew_func = lambda: True
+
+
+# TODO: Implement Yjs document management with Redis
+DOCUMENTS = {}  # document_id -> Y.YDoc instance
 
 
 async def periodic_usage_pool_cleanup():
@@ -336,8 +338,8 @@ async def channel_events(sid, data):
         )
 
 
-@sio.on("yjs:document:join")
-async def yjs_document_join(sid, data):
+@sio.on("ydoc:document:join")
+async def ydoc_document_join(sid, data):
     """Handle user joining a document"""
     user = SESSION_POOL.get(sid)
 
@@ -372,7 +374,7 @@ async def yjs_document_join(sid, data):
         # Initialize document if it doesn't exist
         if document_id not in DOCUMENTS:
             DOCUMENTS[document_id] = {
-                "ydoc": Y.Doc(),  # Create actual Yjs document
+                "updates": [],  # Store updates for the document
                 "users": set(),
             }
 
@@ -383,12 +385,16 @@ async def yjs_document_join(sid, data):
         await sio.enter_room(sid, f"doc_{document_id}")
 
         # Send current document state as a proper Yjs update
-        ydoc = DOCUMENTS[document_id]["ydoc"]
+        ydoc = Y.Doc()
+        if document_id in DOCUMENTS:
+            # If the document already exists, apply its updates
+            for update in DOCUMENTS[document_id]["updates"]:
+                ydoc.apply_update(bytes(update))
 
         # Encode the entire document state as an update
         state_update = ydoc.get_update()
         await sio.emit(
-            "yjs:document:state",
+            "ydoc:document:state",
             {
                 "document_id": document_id,
                 "state": list(state_update),  # Convert bytes to list for JSON
@@ -398,7 +404,7 @@ async def yjs_document_join(sid, data):
 
         # Notify other users about the new user
         await sio.emit(
-            "yjs:user:joined",
+            "ydoc:user:joined",
             {
                 "document_id": document_id,
                 "user_id": user_id,
@@ -437,7 +443,7 @@ async def document_save_handler(document_id, data, user):
         Notes.update_note_by_id(note_id, NoteUpdateForm(data=data))
 
 
-@sio.on("yjs:document:update")
+@sio.on("ydoc:document:update")
 async def yjs_document_update(sid, data):
     """Handle Yjs document updates"""
     try:
@@ -455,19 +461,12 @@ async def yjs_document_update(sid, data):
             log.warning(f"Document {document_id} not found")
             return
 
-        # Apply the update to the server's Yjs document
-        ydoc = DOCUMENTS[document_id]["ydoc"]
-        update_bytes = bytes(update)
-
-        try:
-            ydoc.apply_update(update_bytes)
-        except Exception as e:
-            log.error(f"Failed to apply Yjs update: {e}")
-            return
+        updates = DOCUMENTS[document_id]["updates"]
+        updates.append(update)
 
         # Broadcast update to all other users in the document
         await sio.emit(
-            "yjs:document:update",
+            "ydoc:document:update",
             {
                 "document_id": document_id,
                 "user_id": user_id,
@@ -490,7 +489,7 @@ async def yjs_document_update(sid, data):
         log.error(f"Error in yjs_document_update: {e}")
 
 
-@sio.on("yjs:document:leave")
+@sio.on("ydoc:document:leave")
 async def yjs_document_leave(sid, data):
     """Handle user leaving a document"""
     try:
@@ -507,7 +506,7 @@ async def yjs_document_leave(sid, data):
 
         # Notify other users
         await sio.emit(
-            "yjs:user:left",
+            "ydoc:user:left",
             {"document_id": document_id, "user_id": user_id},
             room=f"doc_{document_id}",
         )
@@ -521,7 +520,7 @@ async def yjs_document_leave(sid, data):
         log.error(f"Error in yjs_document_leave: {e}")
 
 
-@sio.on("yjs:awareness:update")
+@sio.on("ydoc:awareness:update")
 async def yjs_awareness_update(sid, data):
     """Handle awareness updates (cursors, selections, etc.)"""
     try:
@@ -531,7 +530,7 @@ async def yjs_awareness_update(sid, data):
 
         # Broadcast awareness update to all other users in the document
         await sio.emit(
-            "yjs:awareness:update",
+            "ydoc:awareness:update",
             {"document_id": document_id, "user_id": user_id, "update": update},
             room=f"doc_{document_id}",
             skip_sid=sid,
