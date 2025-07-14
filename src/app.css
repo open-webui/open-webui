@@ -54,12 +54,6 @@
 	font-display: swap;
 }
 
-@font-face {
-	font-family: 'RedHatDisplay-Medium';
-	src: url('/assets/fonts/RedHatDisplay-Medium.ttf');
-	font-display: swap;
-}
-
 html {
 	word-break: break-word;
 }
@@ -132,14 +126,6 @@ textarea::placeholder {
 
 .font-RedHatDisplay-Regular {
 	font-family: 'RedHatDisplay-Regular';
-}
-
-.font-RedHatDisplay-Medium {
-	font-family: 'RedHatDisplay-Medium';
-}
-
-.font-RedHatDisplay-Bold {
-	font-family: 'RedHatDisplay-Bold';
 }
 
 .drag-region {
@@ -374,7 +360,7 @@ input[type='number'] {
 	float: left;
 	/* Below color is from tailwind, and has the proper contrast
 	text-gray-600 from: https://tailwindcss.com/docs/color */
-	color: #A5A6A9;
+	color: #676767;
 	pointer-events: none;
 
 	@apply line-clamp-1 absolute;
