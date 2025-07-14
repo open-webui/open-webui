@@ -488,8 +488,12 @@ def get_sources_from_items(
             if item.get("file"):
                 # if item has file data, use it
                 query_result = {
-                    "documents": [[item.get("file").get("data", {}).get("content")]],
-                    "metadatas": [[item.get("file").get("data", {}).get("meta", {})]],
+                    "documents": [
+                        [item.get("file", {}).get("data", {}).get("content")]
+                    ],
+                    "metadatas": [
+                        [item.get("file", {}).get("data", {}).get("meta", {})]
+                    ],
                 }
             else:
                 # Fallback to item content
@@ -516,12 +520,12 @@ def get_sources_from_items(
                 item.get("context") == "full"
                 or request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL
             ):
-                if item.get("file").get("data", {}):
+                if item.get("file", {}).get("data", {}).get("content", ""):
                     # Manual Full Mode Toggle
                     # Used from chat file modal, we can assume that the file content will be available from item.get("file").get("data", {}).get("content")
                     query_result = {
                         "documents": [
-                            [item.get("file").get("data", {}).get("content", "")]
+                            [item.get("file", {}).get("data", {}).get("content", "")]
                         ],
                         "metadatas": [
                             [
