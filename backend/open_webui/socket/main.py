@@ -124,7 +124,6 @@ else:
     aquire_func = release_func = renew_func = lambda: True
 
 
-# TODO: Implement Yjs document management with Redis
 YDOC_MANAGER = YdocManager(
     redis=REDIS,
     redis_key_prefix="open-webui:ydoc:documents",
