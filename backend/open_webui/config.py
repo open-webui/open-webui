@@ -1886,6 +1886,45 @@ if PGVECTOR_PGCRYPTO and not PGVECTOR_PGCRYPTO_KEY:
         "PGVECTOR_PGCRYPTO is enabled but PGVECTOR_PGCRYPTO_KEY is not set. Please provide a valid key."
     )
 
+
+PGVECTOR_POOL_SIZE = os.environ.get("PGVECTOR_POOL_SIZE", None)
+
+if PGVECTOR_POOL_SIZE != None:
+    try:
+        PGVECTOR_POOL_SIZE = int(PGVECTOR_POOL_SIZE)
+    except Exception:
+        PGVECTOR_POOL_SIZE = None
+
+PGVECTOR_POOL_MAX_OVERFLOW = os.environ.get("PGVECTOR_POOL_MAX_OVERFLOW", 0)
+
+if PGVECTOR_POOL_MAX_OVERFLOW == "":
+    PGVECTOR_POOL_MAX_OVERFLOW = 0
+else:
+    try:
+        PGVECTOR_POOL_MAX_OVERFLOW = int(PGVECTOR_POOL_MAX_OVERFLOW)
+    except Exception:
+        PGVECTOR_POOL_MAX_OVERFLOW = 0
+
+PGVECTOR_POOL_TIMEOUT = os.environ.get("PGVECTOR_POOL_TIMEOUT", 30)
+
+if PGVECTOR_POOL_TIMEOUT == "":
+    PGVECTOR_POOL_TIMEOUT = 30
+else:
+    try:
+        PGVECTOR_POOL_TIMEOUT = int(PGVECTOR_POOL_TIMEOUT)
+    except Exception:
+        PGVECTOR_POOL_TIMEOUT = 30
+
+PGVECTOR_POOL_RECYCLE = os.environ.get("PGVECTOR_POOL_RECYCLE", 3600)
+
+if PGVECTOR_POOL_RECYCLE == "":
+    PGVECTOR_POOL_RECYCLE = 3600
+else:
+    try:
+        PGVECTOR_POOL_RECYCLE = int(PGVECTOR_POOL_RECYCLE)
+    except Exception:
+        PGVECTOR_POOL_RECYCLE = 3600
+
 # Pinecone
 PINECONE_API_KEY = os.environ.get("PINECONE_API_KEY", None)
 PINECONE_ENVIRONMENT = os.environ.get("PINECONE_ENVIRONMENT", None)
