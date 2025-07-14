@@ -445,6 +445,15 @@ def get_embedding_function(
         raise ValueError(f"Unknown embedding engine: {embedding_engine}")
 
 
+def get_reranking_function(reranking_engine, reranking_model, reranking_function):
+    if reranking_engine == "external":
+        return lambda sentences, user=None: reranking_function.predict(
+            sentences, user=user
+        )
+    else:
+        return lambda sentences, user=None: reranking_function.predict(sentences)
+
+
 def get_sources_from_items(
     request,
     items,
@@ -925,7 +934,7 @@ class RerankCompressor(BaseDocumentCompressor):
         reranking = self.reranking_function is not None
 
         if reranking:
-            scores = self.reranking_function.predict(
+            scores = self.reranking_function(
                 [(query, doc.page_content) for doc in documents]
             )
         else:

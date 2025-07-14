@@ -70,6 +70,7 @@ from open_webui.retrieval.web.external import search_external
 
 from open_webui.retrieval.utils import (
     get_embedding_function,
+    get_reranking_function,
     get_model_path,
     query_collection,
     query_collection_with_hybrid_search,
@@ -823,6 +824,12 @@ async def update_rag_config(
                 request.app.state.config.RAG_EXTERNAL_RERANKER_URL,
                 request.app.state.config.RAG_EXTERNAL_RERANKER_API_KEY,
                 True,
+            )
+
+            request.app.state.RERANKING_FUNCTION = get_reranking_function(
+                request.app.state.config.RAG_RERANKING_ENGINE,
+                request.app.state.config.RAG_RERANKING_MODEL,
+                request.app.state.rf,
             )
         except Exception as e:
             log.error(f"Error loading reranking model: {e}")
@@ -2042,7 +2049,9 @@ def query_doc_handler(
                     query, prefix=prefix, user=user
                 ),
                 k=form_data.k if form_data.k else request.app.state.config.TOP_K,
-                reranking_function=request.app.state.rf,
+                reranking_function=lambda sentences: request.app.state.RERANKING_FUNCTION(
+                    sentences, user=user
+                ),
                 k_reranker=form_data.k_reranker
                 or request.app.state.config.TOP_K_RERANKER,
                 r=(
@@ -2099,7 +2108,9 @@ def query_collection_handler(
                     query, prefix=prefix, user=user
                 ),
                 k=form_data.k if form_data.k else request.app.state.config.TOP_K,
-                reranking_function=request.app.state.rf,
+                reranking_function=lambda sentences: request.app.state.RERANKING_FUNCTION(
+                    sentences, user=user
+                ),
                 k_reranker=form_data.k_reranker
                 or request.app.state.config.TOP_K_RERANKER,
                 r=(
