@@ -13,7 +13,7 @@
 	"{{COUNT}} characters": "{{COUNT}} 个字符",
 	"{{COUNT}} hidden lines": "{{COUNT}} 行被隐藏",
 	"{{COUNT}} Replies": "{{COUNT}} 回复",
-	"{{COUNT}} words": "{{COUNT}} 个字",
+	"{{COUNT}} words": "{{COUNT}} 个词",
 	"{{user}}'s Chats": "{{user}} 的对话记录",
 	"{{webUIName}} Backend Required": "{{webUIName}} 需要后端服务",
 	"*Prompt node ID(s) are required for image generation": "*图片生成需要 Prompt node ID",
