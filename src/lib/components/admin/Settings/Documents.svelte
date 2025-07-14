@@ -1011,25 +1011,62 @@
 							{/if}
 
 							{#if RAGConfig.ENABLE_RAG_HYBRID_SEARCH === true}
-								<div class="mb-2.5 flex w-full justify-between">
-									<div class="self-center text-xs font-medium">
-										{$i18n.t('Weight of BM25 Retrieval')}
-									</div>
-									<div class="flex items-center relative">
-										<input
-											class="flex-1 w-full text-sm bg-transparent outline-hidden"
-											type="number"
-											step="0.01"
-											placeholder={$i18n.t('Enter BM25 Weight')}
-											bind:value={RAGConfig.HYBRID_BM25_WEIGHT}
-											autocomplete="off"
-											min="0.0"
-											max="1.0"
-										/>
-									</div>
-								</div>
-							{/if}
-						{/if}
+                                                        	<div class=" py-0.5 w-full justify-between">
+                                                             		<Tooltip
+                                                             			content={$i18n.t(
+                                                             				'The Weight of BM25 Hybrid Search. 0 more lexical, 1 more semantic. Default 0.5'
+                                                             			)}
+                                                             			placement="top-start"
+                                                             			className="inline-tooltip"
+                                                             		>
+                                                             			<div class="flex w-full justify-between">
+                                                             				<div class=" self-center text-xs font-medium">
+                                                             					{$i18n.t('Weight of BM25 Retrieval')}
+                                                             				</div>
+                                                             				<button
+                                                             					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
+                                                             					type="button"
+                                                             					on:click={() => {
+                                                             						RAGConfig.HYBRID_BM25_WEIGHT = (RAGConfig?.HYBRID_BM25_WEIGHT ?? null) === null ? 0.5 : null;
+                                                             					}}
+                                                             				>
+                                                             					{#if (RAGConfig?.HYBRID_BM25_WEIGHT ?? null) === null}
+                                                             						<span class="ml-2 self-center"> {$i18n.t('Default')} </span>
+                                                             					{:else}
+                                                             						<span class="ml-2 self-center"> {$i18n.t('Custom')} </span>
+                                                             					{/if}
+                                                             				</button>
+                                                             			</div>
+                                                             		</Tooltip>
+
+                                                             		{#if (RAGConfig?.HYBRID_BM25_WEIGHT ?? null) !== null}
+                                                             			<div class="flex mt-0.5 space-x-2">
+                                                             				<div class=" flex-1">
+                                                             					<input
+                                                             						id="steps-range"
+                                                             						type="range"
+                                                             						min="0"
+                                                             						max="1"
+                                                             						step="0.05"
+                                                             						bind:value={RAGConfig.HYBRID_BM25_WEIGHT}
+                                                             						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+                                                             					/>
+                                                             				</div>
+                                                             				<div>
+                                                             					<input
+                                                             						bind:value={RAGConfig.HYBRID_BM25_WEIGHT}
+                                                             						type="number"
+                                                             						class=" bg-transparent text-center w-14"
+                                                             						min="0"
+                                                             						max="1"
+                                                             						step="any"
+                                                             					/>
+                                                             				</div>
+                                                             			</div>
+                                                             		{/if}
+                                                                </div>
+                                      			{/if}
+                                                {/if}
 
 						<div class="  mb-2.5 flex flex-col w-full justify-between">
 							<div class=" mb-1 text-xs font-medium">{$i18n.t('RAG Template')}</div>
