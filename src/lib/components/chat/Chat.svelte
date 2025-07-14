@@ -2004,6 +2004,8 @@
 
 			await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			currentChatPage.set(1);
+
+			selectedFolder.set(null);
 		} else {
 			_chatId = 'local';
 			await chatId.set('local');
