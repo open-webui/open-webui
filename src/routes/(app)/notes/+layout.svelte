@@ -1,6 +1,14 @@
 <script lang="ts">
 	import { onMount, getContext } from 'svelte';
-	import { WEBUI_NAME, showSidebar, functions, config, user, showArchivedChats } from '$lib/stores';
+	import {
+		WEBUI_NAME,
+		showSidebar,
+		functions,
+		config,
+		user,
+		showArchivedChats,
+		mobile
+	} from '$lib/stores';
 	import { goto } from '$app/navigation';
 
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
@@ -34,19 +42,16 @@
 
 {#if loaded}
 	<div
-		class="bg-[linear-gradient(288deg, rgba(255, 255, 255, 0.20) 84.56%, rgba(255, 255, 255, 0.11) 109.37%), radial-gradient(82.69% 65.48% at 72.6% 34.85%, rgba(255, 109, 193, 0.20) 0%, rgba(255, 109, 193, 0.00) 100%), radial-gradient(74.08% 56.97% at 50% 64.75%, rgba(0, 229, 255, 0.17) 0%, rgba(0, 229, 255, 0.00) 100%), var(--neutrals-white, #FFF)] flex flex-col w-full h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
+		class="relative background-gradient-bg flex  w-full h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
 			? 'md:max-w-[calc(100%-300px)]'
 			: ''} max-w-full"
-	>
-		<nav class=" p-[24px] pb-[72px] flex items-center justify-between w-full drag-region">
-		<Newlogo/>
-		<div
-							class=" font-bold text-[22px] leading-[30px] text-neutrals-800 touch-auto pointer-events-auto"
-						>
-							<a class="min-w-fit transition" href="/notes">
-								{$i18n.t('Notes')}
-							</a>
-						</div>
+	>{#if !$mobile}
+		<nav
+			class=" p-[24px] pb-[72px]">
+
+				<Newlogo />
+
+
 			<!--<div class=" flex items-center">
 				<!-- <div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center">
 					<button
@@ -98,9 +103,17 @@
 				</div>
 			</div>-->
 		</nav>
-
-		<div class=" pb-1 flex-1 max-h-full @container p-20">
+{/if}
+		<div class="max-w-[800px] flex-1 max-h-full @container p-20">
 			<slot />
 		</div>
+
+		<div
+				class="{$mobile ?'fixed right-0 bg-neutrals-50 w-full h-[60px] px-[16px] flex justify-end items-center':'p-[24px] pb-[72px] '} font-bold text-[22px] leading-[30px] text-neutrals-800 touch-auto pointer-events-auto"
+			>
+				<a class="min-w-fit transition" href="/notes">
+					{$i18n.t('Notes')}
+				</a>
+			</div>
 	</div>
 {/if}

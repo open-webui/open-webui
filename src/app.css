@@ -48,6 +48,12 @@
 	font-display: swap;
 }
 
+@font-face {
+	font-family: 'RedHatDisplay-Regular';
+	src: url('/assets/fonts/RedHatDisplay-Regular.ttf');
+	font-display: swap;
+}
+
 html {
 	word-break: break-word;
 }
@@ -116,6 +122,10 @@ textarea::placeholder {
 
 .font-NotoKufi-Bold{
 	font-family: 'NotoKufiArabic-Bold';
+}
+
+.font-RedHatDisplay-Regular {
+	font-family: 'RedHatDisplay-Regular';
 }
 
 .drag-region {
@@ -533,3 +543,22 @@ body {
 td {
   @apply border-b-1 border-gray-100 dark:border-gray-700 px-4 py-3;
 }
+
+@layer utilities {
+	.background-gradient-bg {
+	  background: linear-gradient(288deg, rgba(255, 255, 255, 0.20) 84.56%, rgba(255, 255, 255, 0.11) 109.37%),
+				  radial-gradient(82.69% 65.48% at 72.6% 34.85%, rgba(255, 109, 193, 0.20) 0%, rgba(255, 109, 193, 0.00) 100%),
+				  radial-gradient(74.08% 56.97% at 50% 64.75%, rgba(0, 229, 255, 0.17) 0%, rgba(0, 229, 255, 0.00) 100%),
+				  #ECEEF1; /* fallback solid */
+	  background-blend-mode: normal;
+	}
+
+	.background-gradient-bg2 {
+		background:linear-gradient(180deg, rgba(255, 255, 255, 0.00) 0%, #FFF 100%); /* fallback solid */
+		background-blend-mode: normal;
+	  }
+  }
+
+  body {
+	font-family: 'RedHatDisplay-Regular';
+  }
