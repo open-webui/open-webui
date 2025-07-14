@@ -2,6 +2,7 @@
     import { createEventDispatcher } from 'svelte';
     import '$lib/styles/pill-button.css'; // Import the shared styles
     import Carousel from '$lib/components/common/Carousel.svelte';
+    import {mobile } from '$lib/stores';
 
     const dispatch = createEventDispatcher();
 
@@ -155,10 +156,17 @@
             <div class="grid-item dark:bg-gray-800 dark:text-gray-200 dark:shadow-gray-400 bg-gray-100 text-gray-800 shadow-md rounded-lg">
 <!--                &lt;!&ndash; Display image &ndash;&gt;-->
 <!--                <img src={product.thumbnails[0]} alt={product.thumbnails[0]} class="grid-item-image" />-->
-								<button class="grid-item-image relative items-center justify-center bg-white"
-                on:click={() => handleViewDetailsClick(product)}>
-									<Carousel imageUrls={product.thumbnails} showArrows={false} />
-								</button>
+                {#if !$mobile}
+                  <button class="grid-item-image relative items-center justify-center bg-white"
+                  on:click={() => handleViewDetailsClick(product)}>
+                    <Carousel imageUrls={product.thumbnails} showArrows={false} />
+                  </button>
+                {:else}
+                  <button class="grid-item-image-mobile relative items-center justify-center bg-white"
+                  on:click={() => handleViewDetailsClick(product)}>
+                    <Carousel imageUrls={product.thumbnails} showArrows={false} />
+                  </button>
+                {/if}
 
                 <!-- Display name -->
                 {#if product.product_info}
@@ -245,7 +253,15 @@
 
     .grid-item-image {
         width: 100%;
-        height: 200px;
+        height: 300px;
+        object-fit: cover;
+        margin: 0; /* Remove any margin */
+        border-radius: 0; /* Remove rounded corners */
+    }
+
+    .grid-item-image-mobile {
+        width: 100%;
+        height: 360px;
         object-fit: cover;
         margin: 0; /* Remove any margin */
         border-radius: 0; /* Remove rounded corners */

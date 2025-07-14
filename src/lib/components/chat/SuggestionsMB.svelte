@@ -107,7 +107,6 @@
 
 	<div class="{($mobile ? 'h-60 flex-col' : 'h-40 flex-wrap')} overflow-auto scrollbar-none {className} flex gap-2 items-center">
 		{#if filteredPrompts.length > 0}
-			<!--{#each filteredPrompts.slice(0, numberOfSuggestions) as prompt, idx (prompt.id || prompt.content)}-->
 			{#each filteredPrompts.slice(0, numberOfSuggestions).reduce((rows, prompt, idx) => {
 				if (idx % suggestionPerRow === 0) rows.push([]);
 				rows[rows.length - 1].push(prompt);

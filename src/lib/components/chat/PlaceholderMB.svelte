@@ -15,7 +15,6 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
 	import MessageInput from './MessageInput.svelte';
-	import ProductGrid from '$lib/components/common/ProductGrid.svelte';
 
 	const i18n = getContext('i18n');
 
