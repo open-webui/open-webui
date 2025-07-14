@@ -134,6 +134,7 @@
 	export let shiftEnter = false;
 	export let largeTextAsFile = false;
 	export let insertPromptAsRichText = false;
+	export let floatingMenuPlacement = 'bottom-start';
 
 	let content = null;
 	let htmlValue = '';
@@ -853,7 +854,7 @@
 								tippyOptions: {
 									duration: 100,
 									arrow: false,
-									placement: 'bottom-start',
+									placement: floatingMenuPlacement,
 									theme: 'transparent',
 									offset: [-12, 4]
 								}
