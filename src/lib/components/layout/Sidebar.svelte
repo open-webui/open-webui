@@ -885,12 +885,16 @@
 					<Folders
 						{folders}
 						{shiftKey}
+						onDelete={(folderId) => {
+							selectedFolder.set(null);
+							initChatList();
+						}}
+						on:update={() => {
+							initChatList();
+						}}
 						on:import={(e) => {
 							const { folderId, items } = e.detail;
 							importChatHandler(items, false, folderId);
-						}}
-						on:update={async (e) => {
-							initChatList();
 						}}
 						on:change={async () => {
 							initChatList();

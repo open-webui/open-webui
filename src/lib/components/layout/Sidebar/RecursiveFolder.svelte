@@ -49,6 +49,8 @@
 
 	export let parentDragged = false;
 
+	export let onDelete = (e) => {};
+
 	let folderElement;
 
 	let showEditFolderModal = false;
@@ -266,7 +268,7 @@
 
 		if (res) {
 			toast.success($i18n.t('Folder deleted successfully'));
-			dispatch('update');
+			onDelete(folderId);
 		}
 	};
 
@@ -519,6 +521,7 @@
 								folderId={childFolder.id}
 								{shiftKey}
 								parentDragged={dragged}
+								{onDelete}
 								on:import={(e) => {
 									dispatch('import', e.detail);
 								}}
