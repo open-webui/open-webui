@@ -1387,23 +1387,23 @@
 											</button>
 										</InputMenu>
 
-										{#if enablePiiDetection}
-											<Tooltip content="Toggle PII masking (maskieren)">
-												<button
-													class="bg-transparent hover:bg-gray-100 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-lg p-1.5 ml-1 flex items-center gap-1.5 text-xs font-medium"
-													type="button"
-													on:click={togglePiiMasking}
-													aria-label="Toggle PII masking"
-												>
-													<img 
-														src="/static/icon-purple-32.png" 
-														alt="PII Mask" 
-														class="size-4"
-													/>
-													<span class="hidden @sm:inline">maskieren</span>
-												</button>
-											</Tooltip>
-										{/if}
+														{#if enablePiiDetection}
+					<Tooltip content={$i18n.t('Toggle PII masking')}>
+						<button
+							class="bg-transparent hover:bg-gray-100 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-lg p-1.5 ml-1 flex items-center gap-1.5 text-xs font-medium"
+							type="button"
+							on:click={togglePiiMasking}
+							aria-label={$i18n.t('Toggle PII masking')}
+						>
+							<img 
+								src="/static/icon-purple-32.png" 
+								alt="PII Mask" 
+								class="size-4"
+							/>
+							<span class="hidden @sm:inline">{$i18n.t('Toggle PII masking')}</span>
+						</button>
+					</Tooltip>
+				{/if}
 
 										{#if $_user && (showToolsButton || (toggleFilters && toggleFilters.length > 0) || showWebSearchButton || showImageGenerationButton || showCodeInterpreterButton)}
 											<div
