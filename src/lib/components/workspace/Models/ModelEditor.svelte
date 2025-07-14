@@ -90,6 +90,7 @@
 	let name = '';
 
 	let enableDescription = true;
+	let enableCustomSuggestions = false;
 
 	$: if (!edit) {
 		if (name) {
@@ -137,6 +138,7 @@
 	let toolIds = [];
 	let filterIds = [];
 	let actionIds = [];
+	let customSuggestionPrompts = [];
 	let toolValvesSpecs = {};
 	let functionValvesSpecs = {};
 	let functionValves = {};
@@ -223,6 +225,14 @@
 			info.meta.description = info.meta.description.trim() === '' ? null : info.meta.description;
 		} else {
 			info.meta.description = null;
+		}
+
+		if (enableCustomSuggestions) {
+			// Filter out empty suggestions before saving
+			const validSuggestions = customSuggestionPrompts.filter(prompt => prompt.content.trim() !== '');
+			info.meta.suggestion_prompts = validSuggestions.length > 0 ? validSuggestions : null;
+		} else {
+			info.meta.suggestion_prompts = null;
 		}
 
 		if (knowledge.length > 0) {
@@ -363,6 +373,8 @@
 			id = model.id;
 
 			enableDescription = model?.meta?.description !== null;
+			enableCustomSuggestions = model?.meta?.suggestion_prompts !== null;
+			customSuggestionPrompts = model?.meta?.suggestion_prompts || [{ content: '' }];
 
 			if (model.base_model_id) {
 				const base_model = $models
@@ -684,6 +696,7 @@
 									placeholder="Select a base model (e.g. llama3, gpt-4o)"
 									bind:value={info.base_model_id}
 									disabled={hasInspectAccess}
+									style={hasInspectAccess ? 'background-image: none;' : ''}
 									on:change={(e) => {
 										addUsage(e.target.value);
 									}}
@@ -711,10 +724,18 @@
 									enableDescription = !enableDescription;
 								}}
 							>
-								{#if !enableDescription}
-									<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+								{#if hasInspectAccess}
+									{#if !enableDescription}
+										<span class="ml-2 self-center">{$i18n.t('Show')}</span>
+									{:else}
+										<span class="ml-2 self-center">{$i18n.t('Hide')}</span>
+									{/if}
 								{:else}
-									<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
+									{#if !enableDescription}
+										<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+									{:else}
+										<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
+									{/if}
 								{/if}
 							</button>
 						</div>
@@ -811,16 +832,13 @@
 							<div class="flex w-full justify-between">
 								<div class=" self-center text-xs font-semibold">
 									{$i18n.t('Advanced Params')}
-								</div>
-
-								<button
-									class="p-1 px-3 text-xs flex rounded-sm transition"
-									type="button"
-									disabled={hasInspectAccess}
-									on:click={() => {
-										showAdvanced = !showAdvanced;
-									}}
-								>
+								</div>							<button
+								class="p-1 px-3 text-xs flex rounded-sm transition"
+								type="button"
+								on:click={() => {
+									showAdvanced = !showAdvanced;
+								}}
+							>
 									{#if showAdvanced}
 										<span class="ml-2 self-center">{$i18n.t('Hide')}</span>
 									{:else}
@@ -831,13 +849,9 @@
 
 							{#if showAdvanced}
 								<div class="my-2">
-									{#if !hasInspectAccess}
+									<div class="pointer-events-{hasInspectAccess ? 'none' : 'auto'} {hasInspectAccess ? 'opacity-60' : ''}">
 										<AdvancedParams admin={true} custom={true} bind:params />
-									{:else}
-										<div class="text-sm text-gray-500 text-center py-2">
-											Advanced parameters are read-only for inspect users.
-										</div>
-									{/if}
+									</div>
 								</div>
 							{/if}
 						</div>
@@ -855,35 +869,37 @@
 								<button
 									class="p-1 text-xs flex rounded-sm transition"
 									type="button"
-									disabled={hasInspectAccess}
 									on:click={() => {
-										if ((info?.meta?.suggestion_prompts ?? null) === null) {
-											info.meta.suggestion_prompts = [{ content: '' }];
-										} else {
-											info.meta.suggestion_prompts = null;
-										}
+										enableCustomSuggestions = !enableCustomSuggestions;
 									}}
 								>
-									{#if (info?.meta?.suggestion_prompts ?? null) === null}
-										<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+									{#if hasInspectAccess}
+										{#if !enableCustomSuggestions}
+											<span class="ml-2 self-center">{$i18n.t('Show')}</span>
+										{:else}
+											<span class="ml-2 self-center">{$i18n.t('Hide')}</span>
+										{/if}
 									{:else}
-										<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
+										{#if !enableCustomSuggestions}
+											<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+										{:else}
+											<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
+										{/if}
 									{/if}
 								</button>
 							</div>
 
-							{#if (info?.meta?.suggestion_prompts ?? null) !== null}
+							{#if enableCustomSuggestions && !hasInspectAccess}
 								<button
 									class="p-1 px-2 text-xs flex rounded-sm transition"
 									type="button"
-									disabled={hasInspectAccess}
 									on:click={() => {
 										if (
-											info.meta.suggestion_prompts.length === 0 ||
-											info.meta.suggestion_prompts.at(-1).content !== ''
+											customSuggestionPrompts.length === 0 ||
+											customSuggestionPrompts.at(-1).content !== ''
 										) {
-											info.meta.suggestion_prompts = [
-												...info.meta.suggestion_prompts,
+											customSuggestionPrompts = [
+												...customSuggestionPrompts,
 												{ content: '' }
 											];
 										}
@@ -903,38 +919,39 @@
 							{/if}
 						</div>
 
-						{#if info?.meta?.suggestion_prompts}
+						{#if enableCustomSuggestions}
 							<div class="flex flex-col space-y-1 mt-1 mb-3">
-								{#if info.meta.suggestion_prompts.length > 0}
-									{#each info.meta.suggestion_prompts as prompt, promptIdx}
+								{#if customSuggestionPrompts.length > 0}
+									{#each customSuggestionPrompts as prompt, promptIdx}
 										<div class=" flex rounded-lg">
 											<input
-												class=" text-sm w-full bg-transparent outline-hidden border-r border-gray-100 dark:border-gray-850"
+												class=" text-sm w-full bg-transparent outline-hidden {hasInspectAccess ? '' : 'border-r border-gray-100 dark:border-gray-850'}"
 												placeholder={$i18n.t('Write a prompt suggestion (e.g. Who are you?)')}
 												bind:value={prompt.content}
 												disabled={hasInspectAccess}
 											/>
 
-											<button
-												class="px-2"
-												type="button"
-												disabled={hasInspectAccess}
-												on:click={() => {
-													info.meta.suggestion_prompts.splice(promptIdx, 1);
-													info.meta.suggestion_prompts = info.meta.suggestion_prompts;
-												}}
-											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													viewBox="0 0 20 20"
-													fill="currentColor"
-													class="w-4 h-4"
+											{#if !hasInspectAccess}
+												<button
+													class="px-2"
+													type="button"
+													on:click={() => {
+														customSuggestionPrompts.splice(promptIdx, 1);
+														customSuggestionPrompts = customSuggestionPrompts;
+													}}
 												>
-													<path
-														d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-													/>
-												</svg>
-											</button>
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														viewBox="0 0 20 20"
+														fill="currentColor"
+														class="w-4 h-4"
+													>
+														<path
+															d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
+														/>
+													</svg>
+												</button>
+											{/if}
 										</div>
 									{/each}
 								{:else}
@@ -1078,7 +1095,6 @@
 							<button
 								class="p-1 px-3 text-xs flex rounded-sm transition"
 								type="button"
-								disabled={hasInspectAccess}
 								on:click={() => {
 									showPreview = !showPreview;
 								}}
