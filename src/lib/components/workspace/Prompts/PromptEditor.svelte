@@ -75,11 +75,11 @@
 		return regex.test(inputString);
 	};
 
-	// Initialize with group access control for non-admin users
+	// Initialize with private access control for all users (including admin)
 	onMount(async () => {
-		if (!edit && ($user?.role === 'user' || $user?.role === 'analyst')) {
-			// Initialize empty access control without any group
-			// this makes user 'private' by default in Prompts edit/create
+		if (!edit) {
+			// Initialize empty access control without any group or user IDs
+			// This makes prompts private by default for all users
 			accessControl = {
 				read: { group_ids: [], user_ids: [] },
 				write: { group_ids: [], user_ids: [] }
