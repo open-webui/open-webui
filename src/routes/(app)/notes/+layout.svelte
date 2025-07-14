@@ -48,10 +48,9 @@
 	>{#if !$mobile}
 		<nav
 			class=" p-[24px] pb-[72px]">
-			
+
 				<Newlogo />
-			
-			
+
 			<!--<div class=" flex items-center">
 				<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center">
 					<button
