@@ -1702,9 +1702,12 @@ async def oauth_callback(provider: str, request: Request, response: Response):
 # returns user info, token, auth_token
 @app.get("/oauth/{provider}/token")
 async def oauth_callback_mob(provider: str, request: Request, response: Response):
-    log.debug(f"In oauth_callback_mob")
-    return await oauth_manager.handle_callback(request, provider, response, return_json=True)
-
+    try:
+        log.info(f"Validating the token oauth_callback_mob")
+        return await oauth_manager.handle_mobile_callback(request, provider)
+    except Exception as e:
+        log.error(f"Error in oauth_callback_mob: {e}")
+        raise HTTPException(500, detail="Internal Server Error")
 
 @app.get("/manifest.json")
 async def get_manifest_json():

@@ -53,6 +53,9 @@ from open_webui.utils.misc import parse_duration
 from open_webui.utils.webhook import post_webhook
 from starlette.responses import RedirectResponse
 
+from open_webui.config import OPENID_PROVIDER_URL, OAUTH_CLIENT_ID, OAUTH_CLIENT_SECRET
+
+
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["OAUTH"])
@@ -376,7 +379,7 @@ class OAuthManager:
             raise HTTPException(404)
         client = self.get_client(provider)
         try:
-            token = await client.authorize_access_token(request)
+            token = await client.authoxrize_access_token(request)
         except Exception as e:
             log.warning(f"OAuth callback error: {e}")
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
@@ -596,3 +599,172 @@ class OAuthManager:
 
             return RedirectResponse(url=redirect_url, headers=response.headers)
 
+
+    async def handle_mobile_callback(self, request, provider):
+        log.info("--- In handle_mobile_callback")
+
+        if provider not in OAUTH_PROVIDERS:
+            log.error(f"Unsupported provider: {provider}")
+            raise HTTPException(404, detail="Unsupported provider")
+
+        code = request.query_params.get("code")
+        if not code:
+            log.error("Missing authorization code")
+            raise HTTPException(400, detail="Missing authorization code")
+
+        provider_cfg = OAUTH_PROVIDERS[provider]
+        log.info(f"Provider config: {json.dumps(provider_cfg, indent=2, default=str)}")
+
+        token_url = OPENID_PROVIDER_URL.value.removesuffix("/.well-known/openid-configuration") + "/protocol/openid-connect/token"
+        log.info(f"Token URL: {token_url}")
+
+        try:
+            query_params = dict(request.query_params)
+            custom_redirect_uri = query_params.get("redirect_uri")
+            redirect_uri = (
+                unquote(custom_redirect_uri)
+                if custom_redirect_uri
+                else OAUTH_PROVIDERS[provider].get("redirect_uri") or request.url_for("oauth_callback", provider=provider)
+            )
+            log.info(f"Redirect URI for provider '{provider}': {redirect_uri}")
+        except Exception as e:
+            log.error(f"Error processing redirect URI for provider '{provider}': {e}")
+            raise HTTPException(500, detail="Error generating redirect URI")
+
+        data = {
+            "grant_type": "authorization_code",
+            "code": code,
+            "redirect_uri": redirect_uri,
+            "client_id": OAUTH_CLIENT_ID.value,
+            "client_secret": OAUTH_CLIENT_SECRET.value,
+        }
+
+        try:
+            async with aiohttp.ClientSession(trust_env=True) as session:
+                async with session.post(token_url, data=data, ssl=AIOHTTP_CLIENT_SESSION_SSL) as resp:
+                    log.debug(f"Token response status: {resp.status}")
+                    if resp.status != 200:
+                        error_text = await resp.text()
+                        log.warning(f"Token request failed: {error_text}")
+                        raise HTTPException(400, detail="OAuth token fetch failed")
+                    token = await resp.json()
+                    log.debug(f"Token response: {json.dumps(token, indent=2)}")
+        except Exception as e:
+            log.exception(f"OAuth token fetch error: {e}")
+            raise HTTPException(400, detail="OAuth token fetch failed")
+
+        userinfo_url = OPENID_PROVIDER_URL.value.removesuffix("/.well-known/openid-configuration") + "/protocol/openid-connect/userinfo"
+        log.debug(f"UserInfo URL: {userinfo_url}")
+
+        try:
+            async with aiohttp.ClientSession(trust_env=True) as session:
+                async with session.get(
+                    userinfo_url,
+                    headers={"Authorization": f"Bearer {token['access_token']}"},
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                ) as resp:
+                    log.debug(f"User info response status: {resp.status}")
+                    if resp.status != 200:
+                        error_text = await resp.text()
+                        log.error(f"Failed to fetch user info: {error_text}")
+                        raise HTTPException(400, detail="Failed to fetch user info")
+                    user_data = await resp.json()
+                    log.debug(f"User info: {json.dumps(user_data, indent=2)}")
+        except Exception as e:
+            log.exception(f"User info fetch error: {e}")
+            raise HTTPException(400, detail="Failed to fetch user info")
+
+        sub = user_data.get(OAUTH_PROVIDERS[provider].get("sub_claim", "sub"))
+        if not sub:
+            log.warning(f"OAuth callback failed, sub is missing: {user_data}")
+            raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+
+        provider_sub = f"{provider}@{sub}"
+        email = user_data.get(auth_manager_config.OAUTH_EMAIL_CLAIM, "").lower()
+        if not email:
+            log.warning(f"OAuth callback failed, email is missing: {user_data}")
+            raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+
+        if (
+            "*" not in auth_manager_config.OAUTH_ALLOWED_DOMAINS
+            and email.split("@")[-1] not in auth_manager_config.OAUTH_ALLOWED_DOMAINS
+        ):
+            log.warning(f"Email domain not allowed: {email}")
+            raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+
+        user = Users.get_user_by_oauth_sub(provider_sub)
+        if not user and auth_manager_config.OAUTH_MERGE_ACCOUNTS_BY_EMAIL:
+            user = Users.get_user_by_email(email)
+            if user:
+                Users.update_user_oauth_sub_by_id(user.id, provider_sub)
+
+        if user:
+            determined_role = self.get_user_role(user, user_data)
+            if user.role != determined_role:
+                Users.update_user_role_by_id(user.id, determined_role)
+
+            if auth_manager_config.OAUTH_UPDATE_PICTURE_ON_LOGIN:
+                picture_url = user_data.get(
+                    auth_manager_config.OAUTH_PICTURE_CLAIM,
+                    OAUTH_PROVIDERS[provider].get("picture_url", "")
+                )
+                processed_url = await self._process_picture_url(picture_url, token.get("access_token"))
+                if processed_url != user.profile_image_url:
+                    Users.update_user_profile_image_url_by_id(user.id, processed_url)
+
+        if not user:
+            if not auth_manager_config.ENABLE_OAUTH_SIGNUP:
+                raise HTTPException(403, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
+
+            if Users.get_user_by_email(email):
+                raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
+
+            picture_url = user_data.get(auth_manager_config.OAUTH_PICTURE_CLAIM, "/user.png")
+            picture_url = await self._process_picture_url(picture_url, token.get("access_token"))
+            name = user_data.get(auth_manager_config.OAUTH_USERNAME_CLAIM, email)
+            role = self.get_user_role(None, user_data)
+
+            user = Auths.insert_new_auth(
+                email=email,
+                password=get_password_hash(str(uuid.uuid4())),
+                name=name,
+                profile_image_url=picture_url,
+                role=role,
+                oauth_sub=provider_sub,
+            )
+
+            if auth_manager_config.WEBHOOK_URL:
+                post_webhook(
+                    WEBUI_NAME,
+                    auth_manager_config.WEBHOOK_URL,
+                    WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
+                    {
+                        "action": "signup",
+                        "message": WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
+                        "user": user.model_dump_json(exclude_none=True),
+                    },
+                )
+
+        jwt_token = create_token(
+            data={"id": user.id},
+            expires_delta=parse_duration(auth_manager_config.JWT_EXPIRES_IN),
+        )
+
+        if auth_manager_config.ENABLE_OAUTH_GROUP_MANAGEMENT and user.role != "admin":
+            self.update_user_groups(
+                user=user,
+                user_data=user_data,
+                default_permissions=request.app.state.config.USER_PERMISSIONS,
+            )
+
+        return {
+            "token": jwt_token,
+            "user": {
+                "id": user.id,
+                "name": user.name,
+                "email": user.email,
+                "role": user.role,
+                "profile_image_url": user.profile_image_url,
+            },
+            "id_token": token.get("id_token") if ENABLE_OAUTH_SIGNUP.value else None,
+        }
