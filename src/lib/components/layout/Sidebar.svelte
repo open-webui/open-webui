@@ -478,7 +478,7 @@
 <div
 	bind:this={navElement}
 	id="sidebar"
-	role="navigation"
+	role="navi:gation"
 	class="fixed md:relative z-[70] h-screen max-h-[100dvh] min-h-screen select-none border-0 {$showSidebar
 		? 'md:relative w-[300px] max-w-[300px]'
 		: $mobile
