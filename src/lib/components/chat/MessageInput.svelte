@@ -221,6 +221,24 @@
 		console.log('MessageInput: PII entities toggled, updated currentPiiEntities:', entities.length);
 	};
 
+	// Function to toggle PII masking (same logic as Ctrl + Shift + L shortcut)
+	const togglePiiMasking = () => {
+		if (!enablePiiDetection) {
+			console.log('MessageInput: PII detection not enabled');
+			return;
+		}
+
+		if (!chatInputElement?.togglePiiMasking) {
+			console.log('MessageInput: RichTextInput toggle method not available');
+			return;
+		}
+
+		console.log('MessageInput: Toggle PII masking button clicked');
+		
+		// Call the toggle method on the RichTextInput component
+		chatInputElement.togglePiiMasking();
+	};
+
 	// Function to get the prompt to send (masked if PII detected)
 	const getPromptToSend = (): string => {
 		if (!enablePiiDetection || !currentPiiEntities.length) {
@@ -1368,6 +1386,24 @@
 												</svg>
 											</button>
 										</InputMenu>
+
+										{#if enablePiiDetection}
+											<Tooltip content="Toggle PII masking (maskieren)">
+												<button
+													class="bg-transparent hover:bg-gray-100 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-lg p-1.5 ml-1 flex items-center gap-1.5 text-xs font-medium"
+													type="button"
+													on:click={togglePiiMasking}
+													aria-label="Toggle PII masking"
+												>
+													<img 
+														src="/static/icon-purple-32.png" 
+														alt="PII Mask" 
+														class="size-4"
+													/>
+													<span class="hidden @sm:inline">maskieren</span>
+												</button>
+											</Tooltip>
+										{/if}
 
 										{#if $_user && (showToolsButton || (toggleFilters && toggleFilters.length > 0) || showWebSearchButton || showImageGenerationButton || showCodeInterpreterButton)}
 											<div

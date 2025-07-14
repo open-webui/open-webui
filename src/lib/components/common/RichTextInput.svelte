@@ -215,6 +215,51 @@
 		editor.commands.setContent(content);
 	};
 
+	// Export method to toggle PII masking (same as Ctrl + Shift + L)
+	export const togglePiiMasking = () => {
+		if (!enablePiiDetection || !enablePiiModifiers || !editor) {
+			console.log('RichTextInput: PII detection/modifiers not enabled or editor not available');
+			return;
+		}
+
+		// Get current entities from PiiSessionManager to determine state
+		const piiSessionManager = PiiSessionManager.getInstance();
+		const currentEntities = piiSessionManager.getEntitiesForDisplay(conversationId);
+
+		if (currentEntities.length > 0) {
+			// Check if most entities are currently masked
+			const maskedCount = currentEntities.filter(entity => entity.shouldMask).length;
+			const unmaskedCount = currentEntities.length - maskedCount;
+			const mostlyMasked = maskedCount >= unmaskedCount;
+
+			console.log('RichTextInput: Toggle PII masking - masked:', maskedCount, 'unmasked:', unmaskedCount, 'mostly masked:', mostlyMasked);
+
+			if (mostlyMasked) {
+				// Currently masked -> unmask all and clear mask modifiers
+				// 1. Clear all mask modifiers (keep ignore modifiers)
+				if (editor.commands?.clearMaskModifiers) {
+					editor.commands.clearMaskModifiers();
+				}
+
+				// 2. Unmask all PII entities
+				if (editor.commands?.unmaskAllEntities) {
+					editor.commands.unmaskAllEntities();
+				}
+
+				console.log('RichTextInput: Unmasked all PII entities via toggle method');
+			} else {
+				// Currently unmasked -> mask all entities
+				if (editor.commands?.maskAllEntities) {
+					editor.commands.maskAllEntities();
+				}
+
+				console.log('RichTextInput: Masked all PII entities via toggle method');
+			}
+		} else {
+			console.log('RichTextInput: No PII entities found to toggle');
+		}
+	};
+
 	const selectTemplate = () => {
 		if (value !== '') {
 			// After updating the state, try to find and select the next template
