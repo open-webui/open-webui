@@ -61,7 +61,7 @@
 		showEdit = true;
 	}}
 >
-	<div class="flex items-center gap-1.5 w-full font-medium basis-3/5">
+	<div class="flex items-center gap-1.5 w-full font-medium flex-1">
 		<div>
 			<UserCircleSolid className="size-4" />
 		</div>
@@ -70,15 +70,13 @@
 		</div>
 	</div>
 
-	<div class="flex items-center gap-1.5 w-full font-medium basis-1/5">
+	<div class="flex items-center gap-1.5 w-fit font-medium text-right justify-end">
 		{group.user_ids.length}
 
 		<div>
 			<User className="size-3.5" />
 		</div>
-	</div>
 
-	<div class="w-full flex justify-end basis-1/5">
 		<div class=" rounded-lg p-1 hover:bg-gray-100 dark:hover:bg-gray-850 transition">
 			<Pencil className="size-3.5" />
 		</div>
