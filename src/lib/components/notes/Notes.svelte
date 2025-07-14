@@ -29,7 +29,7 @@
 
 	import { goto } from '$app/navigation';
 	import { onMount, getContext, onDestroy } from 'svelte';
-	import { WEBUI_NAME, config, prompts as _prompts, user } from '$lib/stores';
+	import { WEBUI_NAME, config, prompts as _prompts, user, mobile } from '$lib/stores';
 
 	import { createNewNote, deleteNoteById, getNotes } from '$lib/apis/notes';
 	import { capitalizeFirstLetter } from '$lib/utils';
@@ -295,20 +295,20 @@
 				showDeleteConfirm = false;
 			}}
 		>
-			<div class=" text-sm text-gray-500">
-				{$i18n.t('This will delete')} <span class="  font-semibold">{selectedNote.title}</span>.
+			<div class="text-neutrals-700 text-[16px] leading-[24px] ">
+				{$i18n.t('This will delete')} <span class="  font-bold">{selectedNote.title}</span>.
 			</div>
 		</DeleteConfirmDialog>
 
-		<div class="max-w-[800px] mx-auto @container h-[calc(100dvh-135px)]  overflow-y-auto" bind:this={scrollBox}>
+		<div class="pt-[136px] max-w-[800px] mx-auto @container h-full overflow-y-auto" bind:this={scrollBox}>
 			{#if Object.keys(notes).length > 0}
-				<div class="pb-10">
+				<div>
 					{#each Object.keys(notes) as timeRange}
 						<!--<div class="w-full text-xs text-gray-500 dark:text-gray-500 font-medium pb-2.5">
 							{$i18n.t(timeRange)}
 						</div>-->
 
-						<div class="gap-[12px] grid grid-cols-3 sm:grid-cols-1">
+						<div class="gap-[12px] grid {$mobile?'grid-cols-1 px-[48px]':'grid-cols-3'}">
 							{#each notes[timeRange] as note, idx (note.id)}
 								<div
 									class=" flex cursor-pointer w-full p-[16px] mb-[12px] bg-white/88 dark:bg-gray-850 dark:hover:bg-white/5 hover:bg-black/5 rounded-[12px] transition"
@@ -316,7 +316,7 @@
 									<div class=" flex flex-1 space-x-4 cursor-pointer w-full">
 										<a
 											href={`/notes/${note.id}`}
-											class="w-full -translate-y-0.5 flex flex-col justify-between"
+											class="w-full flex flex-col justify-between"
 										>
 											<div class="flex-1">
 												<div class="flex items-center gap-2 self-center justify-between">
@@ -399,40 +399,9 @@
 			{/if}
 		</div>
 
-		<div class="absolute z-50 bottom-0 left-0 right-0 p-5 max-w-full flex justify-end">
-			<div class="flex gap-0.5 justify-end w-full">
-				<Tooltip content={$i18n.t('Create Note')}>
-					<button
-						class="cursor-pointer p-2.5 flex rounded-full border border-gray-50 bg-primary-400 dark:border-none dark:bg-gray-850 hover:bg-gray-50 dark:hover:bg-gray-800 transition shadow-xl"
-						type="button"
-						on:click={async () => {
-							createNoteHandler();
-						}}
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							width="18"
-							height="18"
-							viewBox="0 0 18 18"
-							fill="none"
-						>
-							<path
-								d="M8.4375 9.5625H4.125V8.4375H8.4375V4.125H9.5625V8.4375H13.875V9.5625H9.5625V13.875H8.4375V9.5625Z"
-								fill="white"
-							/>
-						</svg>
-					</button>
-				</Tooltip>
-
-				<!-- <button
-				class="cursor-pointer p-2.5 flex rounded-full hover:bg-gray-100 dark:hover:bg-gray-850 transition shadow-xl"
-			>
-				<SparklesSolid className="size-4" />
-			</button> -->
-			</div>
-		</div>
+		
 		<div
-			class="absolute left-0 bottom-0 w-full h-[98px] flex justify-center bg-[linear-gradient(180deg,rgba(255,255,255,0)_0%,#FFF_100%)]"
+			class="pb-[48px] pt-[20px] absolute left-0 bottom-0 w-full flex justify-center background-gradient-bg2"
 		>
 			<button
 				class="cursor-pointer relative z-50 flex justify-center items-center border border-neutrals-100 rounded-full w-[32px] h-[32px]"
@@ -507,3 +476,35 @@
 		</div>
 	{/if}
 </div>
+<div class="absolute z-50 bottom-0 right-0 p-5 w-[50px] flex justify-end">
+			<div class="flex gap-0.5 justify-end w-full">
+				<Tooltip content={$i18n.t('Create Note')}>
+					<button
+						class="cursor-pointer p-2.5 flex rounded-full border border-gray-50 bg-primary-400 dark:border-none dark:bg-gray-850 hover:bg-gray-50 dark:hover:bg-gray-800 transition shadow-xl"
+						type="button"
+						on:click={async () => {
+							createNoteHandler();
+						}}
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							width="18"
+							height="18"
+							viewBox="0 0 18 18"
+							fill="none"
+						>
+							<path
+								d="M8.4375 9.5625H4.125V8.4375H8.4375V4.125H9.5625V8.4375H13.875V9.5625H9.5625V13.875H8.4375V9.5625Z"
+								fill="white"
+							/>
+						</svg>
+					</button>
+				</Tooltip>
+
+				<!-- <button
+				class="cursor-pointer p-2.5 flex rounded-full hover:bg-gray-100 dark:hover:bg-gray-850 transition shadow-xl"
+			>
+				<SparklesSolid className="size-4" />
+			</button> -->
+			</div>
+		</div>
