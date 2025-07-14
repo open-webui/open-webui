@@ -5,6 +5,7 @@
 	import dayjs from '$lib/dayjs';
 
 	import { mobile, settings, user } from '$lib/stores';
+	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { copyToClipboard, sanitizeResponseContent } from '$lib/utils';
@@ -41,7 +42,8 @@
 </script>
 
 <button
-	aria-label="model-item"
+	aria-roledescription="model-item"
+	aria-label={item.label}
 	class="flex group/item w-full text-left font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer data-highlighted:bg-muted {index ===
 	selectedModelIdx
 		? 'bg-gray-100 dark:bg-gray-800 group-hover:bg-transparent'
@@ -73,7 +75,8 @@
 			<div class="flex items-center min-w-fit">
 				<Tooltip content={$user?.role === 'admin' ? (item?.value ?? '') : ''} placement="top-start">
 					<img
-						src={item.model?.info?.meta?.profile_image_url ?? '/static/favicon.png'}
+						src={item.model?.info?.meta?.profile_image_url ??
+							`${WEBUI_BASE_URL}/static/favicon.png`}
 						alt="Model"
 						class="rounded-full size-5 flex items-center"
 					/>

@@ -43,7 +43,6 @@
 	}
 
 	$: {
-		console.log('sources', sources);
 		citations = sources.reduce((acc, source) => {
 			if (Object.keys(source).length === 0) {
 				return acc;
