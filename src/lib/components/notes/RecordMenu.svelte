@@ -48,7 +48,7 @@
 				}}
 			>
 				<div class=" self-center mr-2">
-					<Mic className="size-5" strokeWidth="1.5" />
+					<Mic className="size-4" strokeWidth="2" />
 				</div>
 				<div class=" self-center truncate">{$i18n.t('Record')}</div>
 			</button>
@@ -61,7 +61,7 @@
 				}}
 			>
 				<div class=" self-center mr-2">
-					<CursorArrowRays className="size-5" strokeWidth="1.5" />
+					<CursorArrowRays className="size-4" strokeWidth="2" />
 				</div>
 				<div class=" self-center truncate">{$i18n.t('Capture Audio')}</div>
 			</button>
@@ -74,7 +74,7 @@
 				}}
 			>
 				<div class=" self-center mr-2">
-					<CloudArrowUp className="size-5" strokeWidth="1.5" />
+					<CloudArrowUp className="size-4" strokeWidth="2" />
 				</div>
 				<div class=" self-center truncate">{$i18n.t('Upload Audio')}</div>
 			</button>
