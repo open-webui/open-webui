@@ -102,6 +102,25 @@ async def get_feedbacks_count(
     return {"count": Feedbacks.get_feedbacks_count(search=search)}
 
 
+@router.get("/feedbacks/all/export", response_model=list[FeedbackUserResponse])
+async def export_all_feedbacks(user=Depends(get_admin_user)):
+    """Export all feedbacks for admin use"""
+    feedbacks = Feedbacks.get_all_feedbacks()
+    return [
+        FeedbackUserResponse(
+            **feedback.model_dump(), user=Users.get_user_by_id(feedback.user_id)
+        )
+        for feedback in feedbacks
+    ]
+
+
+@router.delete("/feedbacks/all")
+async def delete_all_feedbacks(user=Depends(get_admin_user)):
+    """Delete all feedbacks (admin only)"""
+    success = Feedbacks.delete_all_feedbacks()
+    return success
+
+
 @router.get("/feedbacks/user", response_model=list[FeedbackUserResponse])
 async def get_feedbacks(user=Depends(get_verified_user)):
     feedbacks = Feedbacks.get_feedbacks_by_user_id(user.id)
