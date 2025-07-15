@@ -45,14 +45,14 @@
 					</div>
 				</Tooltip>
 
-				<div class="">
+				<!-- <div class="">
 					<Switch
 						bind:state={enableMemory}
 						on:change={async () => {
 							saveSettings({ memory: enableMemory });
 						}}
 					/>
-				</div>
+				</div> -->
 			</div>
 		</div>
 
