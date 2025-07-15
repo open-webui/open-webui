@@ -306,9 +306,7 @@ async def update_knowledge_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    log.info(f"Received form_data: {form_data}")
     knowledge = Knowledges.update_knowledge_by_id(id=id, form_data=form_data)
-    log.info(f"Updated knowledge: {knowledge}")
     if knowledge:
         file_ids = knowledge.data.get("file_ids", []) if knowledge.data else []
         files = Files.get_file_metadatas_by_ids(file_ids)

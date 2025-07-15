@@ -3,8 +3,8 @@
 	const i18n = getContext('i18n');
 
 	import Modal from '$lib/components/common/Modal.svelte';
-import AccessControl from './AccessControl.svelte';
-let accessControlRef;
+	import AccessControl from './AccessControl.svelte';
+	let accessControlRef;
 
 	export let show = false;
 	export let accessControl = {};
@@ -13,15 +13,12 @@ let accessControlRef;
 
 	const dispatch = createEventDispatcher();
 
-
-// Use AccessControl's commitChanges method via ref
-function commitChanges() {
-	if (accessControlRef && accessControlRef.commitChanges) {
-		accessControlRef.commitChanges();
-		// After committing, dispatch the updated value and close modal
-		dispatch('save', accessControl);
-		show = false;
-	}
+	function commitChanges() {
+		if (accessControlRef && accessControlRef.commitChanges) {
+			accessControlRef.commitChanges();
+			dispatch('save', accessControl);
+			show = false;
+		}
 }
 </script>
 

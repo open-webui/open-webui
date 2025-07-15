@@ -463,9 +463,7 @@
 
 		if (res) {
 			toast.success($i18n.t('Knowledge updated successfully'));
-			// Fetch latest knowledge base and update local state
 			const refreshedKnowledge = await getKnowledgeById(localStorage.token, id);
-			console.log('Refreshed knowledge access_control:', refreshedKnowledge?.access_control);
 			knowledge = refreshedKnowledge;
 			_knowledge.set(await getKnowledgeBases(localStorage.token));
 		}
@@ -682,8 +680,6 @@
 	bind:accessControl={knowledge.access_control}
 	allowPublic={$user?.permissions?.sharing?.public_knowledge || $user?.role === 'admin'}
 	on:save={(e) => {
-		// Update the parent knowledge.access_control with the new value from modal
-		console.log('AccessControlModal save event detail:', e.detail);
 		knowledge.access_control = e.detail;
 		changeDebounceHandler();
 	}}

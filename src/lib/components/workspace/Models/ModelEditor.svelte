@@ -26,39 +26,29 @@
 	export let onSubmit: Function;
 	export let onBack: null | Function = null;
 
-	// Store user groups fetched from API
 	let userGroups = [];
 	let userGroupsLoaded = false;
 
-	// Reactive statement to check if current user has inspect access
-	// Users with inspect access get backend read/write permissions but frontend UI restrictions
-	// Exception: Model creators always get full access regardless of group permissions
 	$: hasInspectAccess =
 		edit &&
 		loaded &&
 		userGroupsLoaded &&
 		(() => {
-			// Early exit if not loaded, user groups not loaded, no access control, or no user
 			if (!loaded || !userGroupsLoaded || !accessControl || !$user) {
 				return false;
 			}
 
-			// If there are no inspect group_ids, user doesn't have inspect access
 			if (!accessControl?.inspect?.group_ids?.length) {
 				return false;
 			}
 
-			// Check if current user is the model creator
-			// Model creators are the only users who should be in write.user_ids
 			const isModelCreator = accessControl?.write?.user_ids?.includes($user.id);
 			if (isModelCreator) {
 				return false;
 			}
 
-			// Use fetched userGroups instead of user store data
 			const userGroupIds = userGroups.map((group) => group.id);
 
-			// Check if user has inspect access - if so, apply frontend UI restrictions
 			const hasInspectAccess = userGroupIds.some((groupId) => {
 				return accessControl.inspect.group_ids.includes(groupId);
 			});
@@ -180,19 +170,13 @@
 
 		info.params = { ...info.params, ...params };
 
-		// Prevent inspect users from modifying access control
 		if (hasInspectAccess && model?.access_control) {
-			// Keep the original access control if user has inspect access
 			info.access_control = model.access_control;
 		} else {
 			info.access_control = accessControl;
 		}
 
-		// Ensure model creator gets write access via user_ids
-		// Only the model creator gets added to write.user_ids
-		// Group members get write access through group membership, not individual user_ids
 		if (info.access_control && info.access_control !== null) {
-			// Initialize write user_ids array if it doesn't exist
 			if (!info.access_control.write) {
 				info.access_control.write = { group_ids: [], user_ids: [] };
 			}
@@ -200,20 +184,15 @@
 				info.access_control.write.user_ids = [];
 			}
 
-			// Determine who the model creator is
 			let modelCreatorId;
 			if (edit && model?.user_id) {
-				// When editing, use the original creator from the model data
 				modelCreatorId = model.user_id;
 			} else {
-				// When creating a new model (including clones), current user becomes the new owner
-				// Clear any existing user_ids from cloned models
 				const hadExistingUserIds = info.access_control.write.user_ids.length > 0;
 				info.access_control.write.user_ids = [];
 				modelCreatorId = $user?.id;
 			}
 
-			// Add creator to write permissions if not already present
 			if (modelCreatorId && !info.access_control.write.user_ids.includes(modelCreatorId)) {
 				info.access_control.write.user_ids.push(modelCreatorId);
 			}
@@ -228,7 +207,6 @@
 		}
 
 		if (enableCustomSuggestions) {
-			// Filter out empty suggestions before saving
 			const validSuggestions = customSuggestionPrompts.filter(prompt => prompt.content.trim() !== '');
 			info.meta.suggestion_prompts = validSuggestions.length > 0 ? validSuggestions : null;
 		} else {
@@ -302,7 +280,7 @@
 		} catch (error) {
 			console.error('Error loading user groups:', error);
 			userGroups = [];
-			userGroupsLoaded = true; // Set to true even if failed, so UI doesn't hang
+			userGroupsLoaded = true;
 		}
 
 		await tools.set(await getTools(localStorage.token));
@@ -832,7 +810,8 @@
 							<div class="flex w-full justify-between">
 								<div class=" self-center text-xs font-semibold">
 									{$i18n.t('Advanced Params')}
-								</div>							<button
+								</div>							
+								<button
 								class="p-1 px-3 text-xs flex rounded-sm transition"
 								type="button"
 								on:click={() => {

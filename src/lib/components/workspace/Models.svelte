@@ -53,7 +53,6 @@
 
 	let group_ids = [];
 
-	// Helper function to check if user has write access to a model
 	const hasWriteAccess = (model, user, userGroupIds) => {
 		return (
 			user?.role === 'admin' ||
@@ -372,7 +371,6 @@
 									href={`/workspace/models/edit?id=${encodeURIComponent(model.id)}`}
 								>
 									{#if hasWriteAccess(model, $user, group_ids)}
-										<!-- Edit icon for users with write access -->
 										<svg
 											xmlns="http://www.w3.org/2000/svg"
 											fill="none"
@@ -388,7 +386,6 @@
 											/>
 										</svg>
 									{:else}
-										<!-- Inspect icon for users with only inspect access -->
 										<svg
 											xmlns="http://www.w3.org/2000/svg"
 											fill="none"

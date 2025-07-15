@@ -17,23 +17,14 @@
 
 	export let allowPublic = true;
 
-	// Local state for UI changes - only committed to parent when explicitly requested
 	let localAccessControl = {};
 	let selectedGroupId = '';
 	let groups = [];
 
-	// Function to get the current local access control for the parent to read
-	export function getLocalAccessControl() {
-		return localAccessControl;
-	}
-
-	// Track if we're in the middle of committing to avoid sync loops
 	let isCommitting = false;
 	let lastAccessControlString = '';
 
-	// Sync external changes to local state (e.g., when parent resets)
-	// Only sync when we're not in the middle of committing our own changes
-	// and when accessControl actually changed externally
+	// Sync external changes to local state
 	$: {
 		if (accessControl && !isCommitting) {
 			const currentAccessControlString = JSON.stringify(accessControl);
@@ -50,13 +41,12 @@
 		}
 	}
 
-	// Function to commit local changes to parent
+	// Function to commit local changes to accessControl
 	export function commitChanges() {
 		isCommitting = true;
 		accessControl = JSON.parse(JSON.stringify(localAccessControl));
 		lastAccessControlString = JSON.stringify(accessControl);
 		onChange(accessControl);
-		// Reset the flag after a tick to allow future syncs
 		setTimeout(() => {
 			isCommitting = false;
 		}, 0);
@@ -89,10 +79,8 @@
 			if (allowPublic) {
 				localAccessControl = null;
 			} else {
-				// This will be handled by the reactive statement above
 			}
 		} else {
-			// Ensure accessControl has all required properties
 			accessControl = {
 				read: {
 					group_ids: accessControl?.read?.group_ids ?? [],
@@ -107,22 +95,17 @@
 					user_ids: accessControl?.inspect?.user_ids ?? []
 				}
 			};
-			// Initialize local state with current access control
 			localAccessControl = JSON.parse(JSON.stringify(accessControl));
 			lastAccessControlString = JSON.stringify(accessControl);
 		}
 	});
 
 	$: if (selectedGroupId) {
-		console.log('Reactive statement triggered with selectedGroupId:', selectedGroupId);
 		onSelectGroup();
 	}
 
 	const onSelectGroup = () => {
-		console.log('onSelectGroup called with:', selectedGroupId);
-		console.log('localAccessControl before:', localAccessControl);
 		if (selectedGroupId !== '') {
-			// Ensure localAccessControl is properly initialized
 			if (!localAccessControl || !localAccessControl.read) {
 				console.log('Initializing localAccessControl');
 				localAccessControl = {
@@ -133,11 +116,7 @@
 			}
 
 			localAccessControl.read.group_ids = [...localAccessControl.read.group_ids, selectedGroupId];
-			console.log('Updated localAccessControl after adding group:', localAccessControl);
-
-			// Trigger Svelte reactivity by reassigning the object
 			localAccessControl = { ...localAccessControl };
-			console.log('Final localAccessControl after reactivity trigger:', localAccessControl);
 
 			selectedGroupId = '';
 		}
@@ -305,9 +284,7 @@
 										type="button"
 										on:click={() => {
 											// Cycle through permissions: read → write → inspect → read
-											// NOTE: Groups always remain in read.group_ids for UI display
 											if (localAccessControl.inspect.group_ids.includes(group.id)) {
-												// Currently inspect, remove from inspect and write, back to read-only
 												localAccessControl.inspect.group_ids =
 													localAccessControl.inspect.group_ids.filter(
 														(group_id) => group_id !== group.id
@@ -316,11 +293,8 @@
 													localAccessControl.write.group_ids.filter(
 														(group_id) => group_id !== group.id
 													);
-												// Group remains in read.group_ids for UI display
 											} else if (localAccessControl.write.group_ids.includes(group.id)) {
-												// Currently write, move to inspect if available
 												if (accessRoles.includes('inspect')) {
-													// Remove from write and add to inspect
 													localAccessControl.write.group_ids =
 														localAccessControl.write.group_ids.filter(
 															(group_id) => group_id !== group.id
@@ -329,26 +303,20 @@
 														...localAccessControl.inspect.group_ids,
 														group.id
 													];
-													// Group remains in read.group_ids for UI display
 												} else {
-													// No inspect role, just toggle back to read
 													localAccessControl.write.group_ids =
 														localAccessControl.write.group_ids.filter(
 															(group_id) => group_id !== group.id
 														);
-													// Group remains in read.group_ids for UI display
 												}
 											} else {
-												// Currently read, move to write if available
 												if (accessRoles.includes('write')) {
 													localAccessControl.write.group_ids = [
 														...localAccessControl.write.group_ids,
 														group.id
 													];
-													// Group remains in read.group_ids for UI display
 												}
 											}
-											// Trigger Svelte reactivity
 											localAccessControl = { ...localAccessControl };
 										}}
 									>
@@ -365,7 +333,6 @@
 										class=" rounded-full p-1 hover:bg-gray-100 dark:hover:bg-gray-850 transition"
 										type="button"
 										on:click={() => {
-											// Remove group from all permission arrays
 											localAccessControl.read.group_ids = localAccessControl.read.group_ids.filter(
 												(id) => id !== group.id
 											);
@@ -373,7 +340,6 @@
 												localAccessControl.write.group_ids.filter((id) => id !== group.id);
 											localAccessControl.inspect.group_ids =
 												localAccessControl.inspect.group_ids.filter((id) => id !== group.id);
-											// Trigger Svelte reactivity
 											localAccessControl = { ...localAccessControl };
 										}}
 									>
