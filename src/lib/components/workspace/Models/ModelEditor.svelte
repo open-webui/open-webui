@@ -207,7 +207,9 @@
 		}
 
 		if (enableCustomSuggestions) {
-			const validSuggestions = customSuggestionPrompts.filter(prompt => prompt.content.trim() !== '');
+			const validSuggestions = customSuggestionPrompts.filter(
+				(prompt) => prompt.content.trim() !== ''
+			);
 			info.meta.suggestion_prompts = validSuggestions.length > 0 ? validSuggestions : null;
 		} else {
 			info.meta.suggestion_prompts = null;
@@ -708,12 +710,10 @@
 									{:else}
 										<span class="ml-2 self-center">{$i18n.t('Hide')}</span>
 									{/if}
+								{:else if !enableDescription}
+									<span class="ml-2 self-center">{$i18n.t('Default')}</span>
 								{:else}
-									{#if !enableDescription}
-										<span class="ml-2 self-center">{$i18n.t('Default')}</span>
-									{:else}
-										<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
-									{/if}
+									<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
 								{/if}
 							</button>
 						</div>
@@ -810,14 +810,14 @@
 							<div class="flex w-full justify-between">
 								<div class=" self-center text-xs font-semibold">
 									{$i18n.t('Advanced Params')}
-								</div>							
+								</div>
 								<button
-								class="p-1 px-3 text-xs flex rounded-sm transition"
-								type="button"
-								on:click={() => {
-									showAdvanced = !showAdvanced;
-								}}
-							>
+									class="p-1 px-3 text-xs flex rounded-sm transition"
+									type="button"
+									on:click={() => {
+										showAdvanced = !showAdvanced;
+									}}
+								>
 									{#if showAdvanced}
 										<span class="ml-2 self-center">{$i18n.t('Hide')}</span>
 									{:else}
@@ -828,7 +828,11 @@
 
 							{#if showAdvanced}
 								<div class="my-2">
-									<div class="pointer-events-{hasInspectAccess ? 'none' : 'auto'} {hasInspectAccess ? 'opacity-60' : ''}">
+									<div
+										class="pointer-events-{hasInspectAccess ? 'none' : 'auto'} {hasInspectAccess
+											? 'opacity-60'
+											: ''}"
+									>
 										<AdvancedParams admin={true} custom={true} bind:params />
 									</div>
 								</div>
@@ -858,12 +862,10 @@
 										{:else}
 											<span class="ml-2 self-center">{$i18n.t('Hide')}</span>
 										{/if}
+									{:else if !enableCustomSuggestions}
+										<span class="ml-2 self-center">{$i18n.t('Default')}</span>
 									{:else}
-										{#if !enableCustomSuggestions}
-											<span class="ml-2 self-center">{$i18n.t('Default')}</span>
-										{:else}
-											<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
-										{/if}
+										<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
 									{/if}
 								</button>
 							</div>
@@ -877,10 +879,7 @@
 											customSuggestionPrompts.length === 0 ||
 											customSuggestionPrompts.at(-1).content !== ''
 										) {
-											customSuggestionPrompts = [
-												...customSuggestionPrompts,
-												{ content: '' }
-											];
+											customSuggestionPrompts = [...customSuggestionPrompts, { content: '' }];
 										}
 									}}
 								>
@@ -904,7 +903,9 @@
 									{#each customSuggestionPrompts as prompt, promptIdx}
 										<div class=" flex rounded-lg">
 											<input
-												class=" text-sm w-full bg-transparent outline-hidden {hasInspectAccess ? '' : 'border-r border-gray-100 dark:border-gray-850'}"
+												class=" text-sm w-full bg-transparent outline-hidden {hasInspectAccess
+													? ''
+													: 'border-r border-gray-100 dark:border-gray-850'}"
 												placeholder={$i18n.t('Write a prompt suggestion (e.g. Who are you?)')}
 												bind:value={prompt.content}
 												disabled={hasInspectAccess}

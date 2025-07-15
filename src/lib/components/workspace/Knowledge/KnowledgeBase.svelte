@@ -441,34 +441,34 @@
 	};
 
 	const changeDebounceHandler = () => {
-	console.log('debounce');
-	if (debounceTimeout) {
-		clearTimeout(debounceTimeout);
-	}
-
-	debounceTimeout = setTimeout(async () => {
-		if (knowledge.name.trim() === '' || knowledge.description.trim() === '') {
-			toast.error($i18n.t('Please fill in all fields.'));
-			return;
+		console.log('debounce');
+		if (debounceTimeout) {
+			clearTimeout(debounceTimeout);
 		}
 
-		const res = await updateKnowledgeById(localStorage.token, id, {
-			...knowledge,
-			name: knowledge.name,
-			description: knowledge.description,
-			access_control: knowledge.access_control
-		}).catch((e) => {
-			toast.error(`${e}`);
-		});
+		debounceTimeout = setTimeout(async () => {
+			if (knowledge.name.trim() === '' || knowledge.description.trim() === '') {
+				toast.error($i18n.t('Please fill in all fields.'));
+				return;
+			}
 
-		if (res) {
-			toast.success($i18n.t('Knowledge updated successfully'));
-			const refreshedKnowledge = await getKnowledgeById(localStorage.token, id);
-			knowledge = refreshedKnowledge;
-			_knowledge.set(await getKnowledgeBases(localStorage.token));
-		}
-	}, 1000);
-};
+			const res = await updateKnowledgeById(localStorage.token, id, {
+				...knowledge,
+				name: knowledge.name,
+				description: knowledge.description,
+				access_control: knowledge.access_control
+			}).catch((e) => {
+				toast.error(`${e}`);
+			});
+
+			if (res) {
+				toast.success($i18n.t('Knowledge updated successfully'));
+				const refreshedKnowledge = await getKnowledgeById(localStorage.token, id);
+				knowledge = refreshedKnowledge;
+				_knowledge.set(await getKnowledgeBases(localStorage.token));
+			}
+		}, 1000);
+	};
 
 	const handleMediaQuery = async (e) => {
 		if (e.matches) {
@@ -675,16 +675,16 @@
 
 <div class="flex flex-col w-full translate-y-1" id="collection-container">
 	{#if id && knowledge}
-<AccessControlModal
-	bind:show={showAccessControlModal}
-	bind:accessControl={knowledge.access_control}
-	allowPublic={$user?.permissions?.sharing?.public_knowledge || $user?.role === 'admin'}
-	on:save={(e) => {
-		knowledge.access_control = e.detail;
-		changeDebounceHandler();
-	}}
-	accessRoles={['read', 'write']}
-/>
+		<AccessControlModal
+			bind:show={showAccessControlModal}
+			bind:accessControl={knowledge.access_control}
+			allowPublic={$user?.permissions?.sharing?.public_knowledge || $user?.role === 'admin'}
+			on:save={(e) => {
+				knowledge.access_control = e.detail;
+				changeDebounceHandler();
+			}}
+			accessRoles={['read', 'write']}
+		/>
 		<div class="w-full mb-2.5">
 			<div class=" flex w-full">
 				<div class="flex-1">

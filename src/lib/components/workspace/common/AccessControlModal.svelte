@@ -19,7 +19,7 @@
 			dispatch('save', accessControl);
 			show = false;
 		}
-}
+	}
 </script>
 
 <Modal size="sm" bind:show>
