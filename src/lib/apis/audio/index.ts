@@ -216,7 +216,7 @@ export const synthesizeStreamingSpeech = async (
 ) => {
 	console.log(`hitting tts endpoint with text: `, text)
 
-	const response = await fetch('http://localhost:8002/deepdub', {
+	const response = await fetch(`${AUDIO_API_BASE_URL}/speech/deepdub`, {
 		method: 'POST',
 		headers: {
 		  'Content-Type': 'application/json',

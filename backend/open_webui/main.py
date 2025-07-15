@@ -9,6 +9,7 @@ import sys
 import time
 import random
 
+import deepdub
 from contextlib import asynccontextmanager
 from urllib.parse import urlencode, parse_qs, urlparse
 from pydantic import BaseModel
@@ -354,7 +355,7 @@ from open_webui.utils.oauth import OAuthManager
 from open_webui.utils.security_headers import SecurityHeadersMiddleware
 
 from open_webui.tasks import stop_task, list_tasks  # Import from tasks.py
-
+import datetime
 
 if SAFE_MODE:
     print("SAFE MODE ENABLED")
@@ -397,6 +398,8 @@ https://github.com/open-webui/open-webui
 )
 
 
+dd = deepdub.DeepdubClient(api_key=os.environ.get("DEEPDUB_API_KEY", ""))
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     start_logger()
@@ -407,6 +410,10 @@ async def lifespan(app: FastAPI):
         get_license_data(app, LICENSE_KEY)
 
     asyncio.create_task(periodic_usage_pool_cleanup())
+    t1 = time.time()
+    async with dd.async_connect():
+        print(f"{datetime.datetime.now()} Initial connect time: {time.time() - t1}")
+        yield
     yield
 
 
@@ -423,6 +430,7 @@ app.state.config = AppConfig()
 
 app.state.WEBUI_NAME = WEBUI_NAME
 app.state.LICENSE_METADATA = None
+app.state.dd = dd
 
 ########################################
 #

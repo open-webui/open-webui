@@ -24,7 +24,7 @@ from fastapi import (
     APIRouter,
 )
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 
 
@@ -43,7 +43,11 @@ from open_webui.env import (
     DEVICE_TYPE,
     ENABLE_FORWARD_USER_INFO_HEADERS,
 )
-
+import wave
+import io
+import base64
+import time
+import datetime
 
 router = APIRouter()
 
@@ -239,9 +243,74 @@ def load_speech_pipeline(request):
         )
 
 
+def create_wave_header(sample_rate):
+    num_channels = 1
+    sample_width = 2 # (16-bit = 2 bytes)
+    frame_rate = sample_rate
+
+    wav_header = io.BytesIO()
+    with wave.open(wav_header, "wb") as wav_file:
+        wav_file.setnchannels(num_channels)
+        wav_file.setsampwidth(sample_width) 
+        wav_file.setframerate(frame_rate)
+
+    wav_header.seek(0)
+    wave_header_bytes = wav_header.read()
+    wav_header.close()
+
+    # Create a new BytesIO with the correct MIME type for Firefox
+    final_wave_header = io.BytesIO()
+    final_wave_header.write(wave_header_bytes)
+    final_wave_header.seek(0)
+
+    return final_wave_header.getvalue()
+
+
+def extract_pcm_frames(wav_bytes):
+    with wave.open(io.BytesIO(wav_bytes)) as wf:
+        return wf.readframes(wf.getnframes())
+
+file_path = SPEECH_CACHE_DIR.joinpath(f"irishcropped3.mp3")
+
+with open(file_path, "rb") as audio_file:
+    audio_bytes = audio_file.read()
+    audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
+        
+async def stream_deepdub_audio_generator(text, dd):
+    wav_header = create_wave_header(sample_rate=48000)
+    yield wav_header
+    
+    t1 = time.time()
+    ttfa = True
+    async for chunk in dd.async_tts(text=text, 
+        voicePromptId="bb767ac8-6166-44c3-b344-6429c070a7b0_spontaneous-speech-neutral", 
+        realtime=True,
+        model="dd-etts-2.5", 
+        locale="en-GB", 
+        voice_reference=audio_b64,
+        ):
+            if ttfa:
+                print(f"{datetime.datetime.now()} TTFA: {time.time() - t1}")
+                ttfa = False
+            pcm_data = extract_pcm_frames(chunk)
+            yield pcm_data
+    print(f"TTFL: {time.time() - t1}")
+
+
+class TTSRequest(BaseModel):
+    text: str
+
+
+@router.post("/speech/deepdub")
+async def deepdub(request: TTSRequest):
+    return StreamingResponse(stream_deepdub_audio_generator(request.text, request.app.state.dd),  media_type="application/octet-stream")
+
+
 @router.post("/speech")
 async def speech(request: Request, user=Depends(get_verified_user)):
     body = await request.body()
+    print('!!!body@2', body)
+    
     name = hashlib.sha256(
         body
         + str(request.app.state.config.TTS_ENGINE).encode("utf-8")
@@ -251,8 +320,11 @@ async def speech(request: Request, user=Depends(get_verified_user)):
     file_path = SPEECH_CACHE_DIR.joinpath(f"{name}.mp3")
     file_body_path = SPEECH_CACHE_DIR.joinpath(f"{name}.json")
 
+    print('!!!file_path', file_path)
+    
     # Check if the file already exists in the cache
     if file_path.is_file():
+        print('file already exists')
         return FileResponse(file_path)
 
     payload = None
