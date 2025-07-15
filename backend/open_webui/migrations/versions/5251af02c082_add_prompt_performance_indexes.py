@@ -38,13 +38,11 @@ def upgrade() -> None:
     # Index for search functionality on title
     op.create_index("idx_prompt_title_search", "prompt", ["title"], unique=False)
 
-    # Index for command-based lookups (prompt hotkey functionality)
-    op.create_index("idx_prompt_command_search", "prompt", ["command"], unique=False)
+    # Note: command index not needed - prompt_command (UNIQUE) already exists
 
 
 def downgrade() -> None:
     # Remove all the performance indexes
-    op.drop_index("idx_prompt_command_search", table_name="prompt")
     op.drop_index("idx_prompt_title_search", table_name="prompt")
     op.drop_index("idx_prompt_user_timestamp", table_name="prompt")
     op.drop_index("idx_prompt_user_id", table_name="prompt")
