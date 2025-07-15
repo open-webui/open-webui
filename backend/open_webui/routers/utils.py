@@ -6,16 +6,18 @@ from open_webui.models.chats import ChatTitleMessagesForm
 from open_webui.config import DATA_DIR, ENABLE_ADMIN_EXPORT
 from open_webui.constants import ERROR_MESSAGES
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from starlette.responses import FileResponse
-
+from asyncio import sleep
+from json import dumps
 
 from open_webui.utils.misc import get_gravatar_url
 from open_webui.utils.pdf_generator import PDFGenerator
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.code_interpreter import execute_code_jupyter
 from open_webui.env import SRC_LOG_LEVELS
-
+from open_webui.socket.main import REINDEX_STATE
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
@@ -133,3 +135,25 @@ async def download_litellm_config_yaml(user=Depends(get_admin_user)):
         media_type="application/octet-stream",
         filename="config.yaml",
     )
+
+
+@router.get("/reindex/stream")
+async def stream_progress():
+    async def event_generator():
+        while True:
+            active_source = None
+
+            for key, value in REINDEX_STATE.items():
+                if key.endswith("_progress") and 0 < value < 100:
+                    active_source = key.removesuffix("_progress")
+                    progress_value = value
+                    break  # only one can be active by design
+
+            if not active_source:
+                yield f"data: {dumps({'source': None, 'progress': 0})}\n\n"
+                break
+
+            yield f"data: {dumps({'source': active_source, 'progress': progress_value})}\n\n"
+            await sleep(2)  # stream every two second
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")

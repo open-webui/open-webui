@@ -108,7 +108,7 @@ else:
     SESSION_POOL = {}
     USER_POOL = {}
     USAGE_POOL = {}
-    REINDEX_STATE = {"reindex_progress": 0}
+    REINDEX_STATE = {"memories_progress": 0, "files_progress": 0}
     aquire_func = release_func = renew_func = lambda: True
 
 

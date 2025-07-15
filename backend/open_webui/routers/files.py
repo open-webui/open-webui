@@ -285,10 +285,10 @@ async def search_files(
 
 @router.post('/reindex', response_model=bool)
 async def reindex_all_files(request: Request, user=Depends(get_admin_user)):
-    if REINDEX_STATE["reindex_progress"] > 0:
+    if REINDEX_STATE.get("files_progress", 0) > 0:
         return False
 
-    REINDEX_STATE["reindex_progress"] = 1  # marking as started, before the first file is done
+    REINDEX_STATE["files_progress"] = 1  # marking as started, before the first file is done
     files = Files.get_files()
     total_files = len(files)
 
@@ -324,33 +324,19 @@ async def reindex_all_files(request: Request, user=Depends(get_admin_user)):
                     ),
                     user=user
                 )
-            REINDEX_STATE["reindex_progress"] = max(int(i/total_files*100), 1)  # never go below 1 again to mark as working
+            REINDEX_STATE["files_progress"] = max(int(i/total_files*100), 1)  # never go below 1 again to mark as working
             # this line un-blocks the API for the GET progress bar call
             await sleep(0.1)
         except Exception as e:
             log.error(
                     f"Error processing file {file.filename} (ID: {file.id}): {str(e)}"
                 )
-    REINDEX_STATE["reindex_progress"] = 100
+    REINDEX_STATE["files_progress"] = 100
     await sleep(2)  # allow UI to fetch final value
-    REINDEX_STATE["reindex_progress"] = 0
+    REINDEX_STATE["files_progress"] = 0
     log.info("Reindexing files completed sucessfully.")
 
     return True
-
-
-# This function is just used to get a progress bar about the re-indexing to the UI
-@router.get("/reindex/stream")
-async def stream_progress():
-    async def event_generator():
-        while True:
-            progress = REINDEX_STATE.get("reindex_progress", 0)
-            yield f"data: {progress}\n\n"
-            if progress >= 100:
-                break
-            await sleep(2)  # stream every two second
-
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
 ############################

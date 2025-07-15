@@ -303,14 +303,45 @@ export const countFiles = async (token: string) => {
 	return res;
   };
 
-export const listenToReindexProgress = (onProgress: (progress: number) => void) => {
+export const reindexMemories = async (token: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/memories/reindex`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.log(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const listenToReindexProgress = (onProgress: (data: { source: string | null; progress: number }) => void) => {
 	
-	const eventSource = new EventSource(`${WEBUI_API_BASE_URL}/files/reindex/stream`);
+	const eventSource = new EventSource(`${WEBUI_API_BASE_URL}/utils/reindex/stream`);
 
 	eventSource.onmessage = (event) => {
-		const progress = parseInt(event.data);
-		onProgress(progress);
-		if (progress >= 100) {
+		const data = JSON.parse(event.data);
+		const source = data.source;
+		const progress = data.progress;
+
+		onProgress({ source, progress });
+		if (source === null) {
 			eventSource?.close();
 		}
 	};
@@ -323,10 +354,12 @@ export const listenToReindexProgress = (onProgress: (progress: number) => void) 
 
 export const checkIfReindexing = (): Promise<boolean> => {
 	return new Promise((resolve) => {
-		const eventSource = new EventSource(`${WEBUI_API_BASE_URL}/files/reindex/stream`);
+		const eventSource = new EventSource(`${WEBUI_API_BASE_URL}/utils/reindex/stream`);
 
 		const handleMessage = (event: MessageEvent) => {
-			const progress = parseInt(event.data);
+			const data = JSON.parse(event.data);
+        	const progress = data.progress;
+
 			eventSource.close();
 			resolve(progress > 0 && progress < 100); // treat as "in progress"
 		};

@@ -21,6 +21,7 @@
 	import { 
 		deleteAllFiles,
 		reindexFiles,
+		reindexMemories,
 		countFiles,
 		listenToReindexProgress,
 		checkIfReindexing
@@ -46,7 +47,10 @@
 	let showReindexConfirm = false;
 	let showFilesReindexConfirm = false;
 	let filesCountMessage = '';
-	let fileProgress = 0;
+	let reindexProgress = 0;
+	let reindexSource: string | null = '';
+	let memoriesMessage = '0%';
+	let filesMessage = '0%';
 	let isReindexing = false;
 
 	let embeddingEngine = '';
@@ -250,35 +254,59 @@
         // Fetch the file count
         try {
             const fileCount = await countFiles(token);
-            if (fileCount > 0) {
-                filesCountMessage = $i18n.t('You are about to reindex') + ` ${fileCount} ` + $i18n.t('files. This could take a while. Do you want to proceed?');
-            } else {
-                filesCountMessage = $i18n.t('No files to reindex.');
-            }
+            
+			filesCountMessage = $i18n.t(
+				'You are about to reindex all memories and all {{count}} files. This could take a while. Do you want to proceed?',
+				{ count: fileCount }
+			);
         } catch (error) {
             filesCountMessage = $i18n.t('Error fetching file count');
             toast.error(`${error}`);
         }
     };
 
+	const handleReindexProgress = ({ source, progress }: { source: string | null; progress: number }) => {
+		reindexProgress = progress;
+		reindexSource = source;
+		switch (reindexSource){
+			case 'memories':
+				memoriesMessage = `${progress}%`;
+				break;
+			case 'files':
+				memoriesMessage = $i18n.t('Done');
+				filesMessage = `${progress}%`;
+				break
+			default:
+				break
+		}
+		if (source === null) {
+			
+			isReindexing = false;
+		}
+	};
+
 	const startReindexing = async () => {
 		isReindexing = true;
-		fileProgress = 0;
+		reindexProgress = 0;
 
-		listenToReindexProgress((p) => {
-			fileProgress = p;
-			if (p >= 100) isReindexing = false;
-		});
-
-		const res = await reindexFiles(localStorage.token).catch((error) => {
+		const res_memories = await reindexMemories(localStorage.token).catch((error) => {
 			toast.error(`${error}`);
-			isReindexing = false;
 			return null;
 		});
 
-		if (res) {
+		setTimeout(() => {
+			listenToReindexProgress(handleReindexProgress);
+		}, 1000);
+
+		const res_files = await reindexFiles(localStorage.token).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (res_memories && res_files) {
 			toast.success($i18n.t('Success'));
 		}
+		isReindexing = false;
 	};
 	onMount(async () => {
 		await setEmbeddingConfig();
@@ -301,10 +329,7 @@
 
 		isReindexing = await checkIfReindexing();
 		if (isReindexing) {
-			listenToReindexProgress((p) => {
-				fileProgress = p;
-				if (p >= 100) isReindexing = false;
-			});
+			listenToReindexProgress(handleReindexProgress);
 		}
 	});
 </script>
@@ -1319,10 +1344,13 @@
 					</div>
 					{#if isReindexing}
 						<div class="w-full bg-gray-200 rounded-full h-3 mt-4">
-							<div class="bg-blue-600 h-3 rounded-full" style="width: {fileProgress}%"></div>
+							<div class="bg-blue-600 h-3 rounded-full" style="width: {reindexProgress}%"></div>
 						</div>
 						<!-- <p class="text-sm mt-2 text-gray-600">'Reindexing... {fileProgress}%' -->
-						<p class="text-sm mt-2 text-gray-600">{$i18n.t('Reindexing... {{progress}}%', { progress: fileProgress })}
+						<p class="text-sm mt-2 text-gray-600">{$i18n.t('Reindexing: Memories: {{memories}}, Files: {{files}}.', {
+							memories: memoriesMessage,
+							files: filesMessage
+						 })}
 							
 						</p>
 					{/if}
