@@ -1350,9 +1350,16 @@ async def healthcheck():
 
 
 @app.get("/health/db")
-async def healthcheck_with_db():
-    Session.execute(text("SELECT 1;")).all()
-    return {"status": True}
+def healthcheck_with_db():
+    try:
+        Session.execute(text("SELECT 1;")).all()
+        return {"status": True}
+    except Exception as e:
+        log.error(f"Database health check failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database connection failed",
+        )
 
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
