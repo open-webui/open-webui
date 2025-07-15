@@ -601,6 +601,25 @@
 		}
 	};
 
+	const uploadImageForProcessing = async (file) => {
+		try {
+			console.log('Uploading image for content extraction processing:', file.name);
+			const uploadedFile = await uploadFile(localStorage.token, file, null);
+			
+			if (uploadedFile) {
+				console.log('Image uploaded for content extraction processing:', {
+					id: uploadedFile.id,
+					name: file.name,
+					collection: uploadedFile?.meta?.collection_name
+				});
+				return uploadedFile;
+			}
+		} catch (e) {
+			console.warn('Failed to upload image for content extraction processing (vision models will still work):', e);
+		}
+		return null;
+	};
+
 	const inputFilesHandler = async (inputFiles) => {
 		console.log('Input files handler called with:', inputFiles);
 
@@ -682,17 +701,24 @@
 					return imageUrl;
 				};
 
+				// Upload image to backend for content extraction processing (runs in parallel)
+				const backendUploadPromise = uploadImageForProcessing(file);
+
 				let reader = new FileReader();
 				reader.onload = async (event) => {
 					let imageUrl = event.target.result;
 
 					imageUrl = await compressImageHandler(imageUrl, $settings, $config);
 
+					// Wait for backend upload to complete (or fail gracefully)
+					const backendFile = await backendUploadPromise;
+
 					files = [
 						...files,
 						{
 							type: 'image',
-							url: `${imageUrl}`
+							url: `${imageUrl}`,
+							...(backendFile ? { backendFile } : {})
 						}
 					];
 				};
