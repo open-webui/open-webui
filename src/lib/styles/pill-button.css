@@ -25,3 +25,17 @@
     pointer-events: none;
     display: none;
 }
+
+
+.shade-1 { background-color: #EB5352; }
+.shade-2 { background-color: #F06563; }
+.shade-3 { background-color: #F57874; }
+.shade-4 { background-color: #FA8A85; }
+.shade-5 { background-color: #FF9C96; }
+.shade-6 { background-color: #FFAFA7; }
+.shade-7 { background-color: #FFC1B8; }
+.shade-8 { background-color: #FFD3C9; }
+.shade-9 { background-color: #FFE6DA; }
+.shade-10 { background-color: #FFF8EB; }
+.shade-11 { background-color: #FFFDFC; }
+.shade-12 { background-color: #FFFFFF; }

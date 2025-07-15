@@ -3,6 +3,7 @@
     import '$lib/styles/pill-button.css'; // Import the shared styles
     import Carousel from '$lib/components/common/Carousel.svelte';
     import {mobile } from '$lib/stores';
+   	import { WEBUI_BASE_URL } from '$lib/constants';
 
     const dispatch = createEventDispatcher();
 
@@ -105,7 +106,14 @@
         }
     }
 
-    buildProductListFromGiftRequestFile(chat_id, gift_idea_id);
+    export let loading = false; // Add loading state
+
+    $: if (chat_id && gift_idea_id) {
+        loading = true;
+        buildProductListFromGiftRequestFile(chat_id, gift_idea_id).finally(() => {
+            loading = false;
+        });
+    }
 
     function handleExperienceBuyNowClick(url: string, chat_id: string) {
         console.log('Buy Now clicked', url, chat_id);
@@ -150,12 +158,15 @@
     {#if product_context.header_message}
         {product_context.header_message}
     {/if}
+    {#if loading}
+      <div class="loading-spinner">
+          <img src={`${WEBUI_BASE_URL}/static/loading.gif`} alt="Loading..." style="width: 50px; height: 50px;"/>
+      </div>
+    {/if}
 
     <div class="product-grid">
         {#each products as product}
             <div class="grid-item dark:bg-gray-800 dark:text-gray-200 dark:shadow-gray-400 bg-gray-100 text-gray-800 shadow-md rounded-lg">
-<!--                &lt;!&ndash; Display image &ndash;&gt;-->
-<!--                <img src={product.thumbnails[0]} alt={product.thumbnails[0]} class="grid-item-image" />-->
                 {#if !$mobile}
                   <button class="grid-item-image relative items-center justify-center bg-white"
                   on:click={() => handleViewDetailsClick(product)}>
@@ -253,7 +264,7 @@
 
     .grid-item-image {
         width: 100%;
-        height: 300px;
+        height: 200px;
         object-fit: cover;
         margin: 0; /* Remove any margin */
         border-radius: 0; /* Remove rounded corners */
@@ -295,5 +306,14 @@
         overflow: hidden;
         text-overflow: ellipsis;
         line-height: 1.2em; /* Adjust line height to match the text spacing */
+    }
+
+    .loading-spinner {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 1.2rem;
+        color: #333;
+        min-height: 100px;
     }
 </style>
