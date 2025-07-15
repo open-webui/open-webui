@@ -218,24 +218,24 @@
 								// Empty state, check if we have content to initialize
 								// check if editor empty as well
 								const isEmptyEditor = !editor || editor.getText().trim() === '';
-								if (content && (data?.sessions ?? ['']).length === 1) {
-									if (isEmptyEditor) {
+								if (isEmptyEditor) {
+									if (content && (data?.sessions ?? ['']).length === 1) {
 										const editorYdoc = prosemirrorJSONToYDoc(editor.schema, content);
 										if (editorYdoc) {
 											Y.applyUpdate(this.doc, Y.encodeStateAsUpdate(editorYdoc));
 										}
+									}
+								} else {
+									// If the editor already has content, we don't need to send an empty state
+									if (this.doc.getXmlFragment('prosemirror').length > 0) {
+										this.socket.emit('ydoc:document:update', {
+											document_id: this.documentId,
+											user_id: this.user?.id,
+											socket_id: this.socket.id,
+											update: Y.encodeStateAsUpdate(this.doc)
+										});
 									} else {
-										// If the editor already has content, we don't need to send an empty state
-										if (this.doc.getXmlFragment('prosemirror').length > 0) {
-											this.socket.emit('ydoc:document:update', {
-												document_id: this.documentId,
-												user_id: this.user?.id,
-												socket_id: this.socket.id,
-												update: Y.encodeStateAsUpdate(this.doc)
-											});
-										} else {
-											console.warn('Yjs document is empty, not sending state.');
-										}
+										console.warn('Yjs document is empty, not sending state.');
 									}
 								}
 							} else {
