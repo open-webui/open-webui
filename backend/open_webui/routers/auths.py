@@ -535,12 +535,15 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
 
         user = Auths.authenticate_user_by_email(email)
         if WEBUI_AUTH_TRUSTED_GROUPS_HEADER and user and user.role != "admin":
-            group_names = request.headers.get(
-                WEBUI_AUTH_TRUSTED_GROUPS_HEADER, ""
-            ).split(",")
+            groups_header_value = request.headers.get(WEBUI_AUTH_TRUSTED_GROUPS_HEADER, "")
+            log.info(f"Groups header value: {groups_header_value}")
+            group_names = groups_header_value.split(",")
             group_names = [name.strip() for name in group_names if name.strip()]
+            log.info(f"Group names: {group_names}")
 
             if group_names:
+                Groups.create_groups_by_group_names(user.id, group_names)
+                log.info(f"Syncing groups for user {user.id} - {user.email}: {group_names}")
                 Groups.sync_groups_by_group_names(user.id, group_names)
 
     elif WEBUI_AUTH == False:
