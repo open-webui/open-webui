@@ -120,16 +120,14 @@ async def update_folder_name_by_id(
         existing_folder = Folders.get_folder_by_parent_id_and_user_id_and_name(
             folder.parent_id, user.id, form_data.name
         )
-        if existing_folder:
+        if existing_folder and existing_folder.id != id:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ERROR_MESSAGES.DEFAULT("Folder already exists"),
             )
 
         try:
-            folder = Folders.update_folder_name_by_id_and_user_id(
-                id, user.id, form_data.name
-            )
+            folder = Folders.update_folder_by_id_and_user_id(id, user.id, form_data)
 
             return folder
         except Exception as e:
