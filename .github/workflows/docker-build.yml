@@ -3,6 +3,15 @@ name: Build and publish Docker image
 on:
   push:
     branches: [ main ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - 'CONTRIBUTOR_LICENSE_AGREEMENT'
+      - '.gitignore'
+      - '.dockerignore'
+      - 'demo.gif'
+      - '**.txt'
   workflow_dispatch:
 
 env:
