@@ -106,21 +106,21 @@
 			transition={(e) => fade(e, { duration: 100 })}
 		>
 		    <button
-				class="flex rounded-md px-[8px] py-[10px] w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer"
+				class="flex {$mobile?'flex-row-reverse justify-between px-[16px]':'px-[8px]'} rounded-md py-[10px] w-full hover:bg-neutrals-hover dark:hover:bg-gray-800 transition cursor-pointer"
 				on:click={() => changeLanguage(document.documentElement.lang==='en-US' ? 'ar' : 'en-US')}
 			>
-				<div class=" self-center mr-3">
+				<div class=" self-center {$mobile?'':'mr-3'} ">
 					<MaterialIcon name="translate" size="1.1rem" />
 				</div>
 				<div class=" self-center truncate text-neutrals-800 gap-[8px]  text-[16px] leading-[24px] font-medium">{ document.documentElement.lang==='en-US' ? 'Switch to Arabic' : 'التبديل إلى اللغة الإنجليزية' }</div>
 			</button>
-		<div class="flex px-[8px] py-[10px] items-center justify-between">
+		<div class="flex {$mobile?'px-[16px]':'px-[8px]'}  py-[10px] items-center justify-between">
 				<label class="flex items-center text-neutrals-800 gap-[8px]  text-[16px] leading-[24px] font-medium"
-					><MaterialIcon name="notifications" size="1.1rem" />  {$i18n.t('Notifications')}</label
+					>{#if !$mobile}<MaterialIcon name="notifications" size="1.1rem" />{/if}  {$i18n.t('Notifications')}</label
 				>
 				<label class="relative inline-flex items-center cursor-pointer">
 					<input type="checkbox" bind:checked={isOnNotification} on:change={()=>toggleNotification()} class="sr-only peer" />
-					<div class="w-[40px] h-[20px] bg-neutrals-50 rounded-full peer duration-300">
+					<div class="w-[40px] h-[20px]  {isOnNotification?'bg-neutrals-green':'bg-neutrals-50'} rounded-full peer duration-300">
 						<div
 							class=" flex items-center justify-center absolute {isOnNotification
 								? 'left-[1px]'
@@ -150,7 +150,7 @@
 			</button>-->
 
 			<button
-				class="flex rounded-md px-[8px] py-[10px] w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+				class="flex  {$mobile?'flex-row-reverse justify-between px-[16px]':'px-[8px]'} rounded-md px-[8px] py-[10px] w-full hover:bg-neutrals-hover dark:hover:bg-gray-800 transition"
 				on:click={() => {
 					dispatch('show', 'archived-chat');
 					show = false;
@@ -187,7 +187,7 @@
 				</button>
 
 				<button
-					class="flex rounded-md  px-[8px] py-[10px] w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+					class="flex rounded-md  px-[8px] py-[10px] w-full hover:bg-neutrals-hover dark:hover:bg-gray-800 transition"
 					on:click={() => {
 						goto('/admin');
 						show = false;
@@ -209,7 +209,7 @@
 
 				<!-- {$i18n.t('Help')} -->
 				<DropdownMenu.Item
-					class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition"
+					class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-neutrals-hover dark:hover:bg-gray-800 rounded-md transition"
 					id="chat-share-button"
 					on:click={() => {
 						window.open('https://docs.openwebui.com', '_blank');
@@ -222,7 +222,7 @@
 
 				<!-- Releases -->
 				<DropdownMenu.Item
-					class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition"
+					class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-neutrals-hover dark:hover:bg-gray-800 rounded-md transition"
 					id="menu-item-releases"
 					on:click={() => {
 						window.open('https://github.com/open-webui/open-webui/releases', '_blank');
@@ -234,7 +234,7 @@
 				</DropdownMenu.Item>
 
 				<DropdownMenu.Item
-					class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition"
+					class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-neutrals-hover dark:hover:bg-gray-800 rounded-md transition"
 					id="chat-share-button"
 					on:click={() => {
 						showShortcuts = !showShortcuts;
@@ -249,7 +249,7 @@
 			<hr class=" border-gray-100 dark:border-gray-800 my-1 p-0" />
 
 			<button
-				class="flex rounded-md px-[8px] py-[10px] w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+				class="flex  {$mobile?'flex-row-reverse justify-between px-[16px]':'px-[8px]'} rounded-md py-[10px] w-full hover:bg-neutrals-hover dark:hover:bg-gray-800 transition"
 				on:on:click={() => {
 						goto('/playground');
 					}}
@@ -263,7 +263,7 @@
 			</button>
 
 			<button
-				class="flex rounded-md  px-[8px] py-[10px] w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+				class="flex  {$mobile?'flex-row-reverse justify-between px-[16px]':'px-[8px]'} rounded-md py-[10px] w-full hover:bg-neutrals-hover dark:hover:bg-gray-800 transition"
 				on:click={async () => {
 					const res = await userSignOut();
 					user.set(null);
@@ -279,7 +279,7 @@
 				<div class=" self-center truncate text-neutrals-800 gap-[8px]  text-[16px] leading-[24px] font-medium">{$i18n.t('Sign Out')}</div>
 			</button>
 
-			{#if usage}
+			<!--{#if usage}
 				{#if usage?.user_ids?.length > 0}
 					<hr class=" border-gray-100 dark:border-gray-800 my-1 p-0" />
 
@@ -314,7 +314,7 @@
 						</div>
 					</Tooltip>
 				{/if}
-			{/if}
+			{/if}-->
 
 			<!-- <DropdownMenu.Item class="flex items-center py-1.5 px-3 text-sm ">
 				<div class="flex items-center">Profile</div>
