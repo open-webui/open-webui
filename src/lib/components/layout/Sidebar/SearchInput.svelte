@@ -88,9 +88,9 @@
 	});
 </script>
 
-<div class="px-1 mb-1 flex justify-center space-x-2 relative z-10" id="search-container">
-	<div class="flex w-full rounded-xl" id="chat-search">
-		<div class="self-center py-2 rounded-l-xl bg-transparent dark:text-gray-300">
+<div class="mb-1 flex justify-center space-x-2 relative z-10" id="search-container">
+	<div class="border-b border-b-neutrals-100 flex w-full" id="chat-search">
+		<!--<div class="self-center py-2 rounded-l-xl bg-transparent dark:text-gray-300">
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
 				viewBox="0 0 20 20"
@@ -103,10 +103,10 @@
 					clip-rule="evenodd"
 				/>
 			</svg>
-		</div>
+		</div>-->
 
 		<input
-			class="w-full rounded-r-xl py-1.5 pl-2.5 text-sm bg-transparent dark:text-gray-300 outline-hidden"
+			class="w-full py-[24px] px-[16px] text-neutrals-400 text-[16px] leading-[24px] bg-transparent dark:text-gray-300 outline-hidden"
 			placeholder={placeholder ? placeholder : $i18n.t('Search')}
 			bind:value
 			on:input={() => {
@@ -168,7 +168,7 @@
 	{#if focused && (filteredOptions.length > 0 || filteredTags.length > 0)}
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
 		<div
-			class="absolute top-0 mt-8 left-0 right-1 border border-gray-100 dark:border-gray-900 bg-gray-50 dark:bg-gray-950 rounded-lg z-10 shadow-lg"
+			class="absolute top-[20px] mt-8 left-0 right-1 border border-gray-100 dark:border-gray-900 bg-gray-50 dark:bg-gray-950 rounded-lg z-10 shadow-lg"
 			id="search-options-container"
 			in:fade={{ duration: 50 }}
 			on:mouseenter={() => {

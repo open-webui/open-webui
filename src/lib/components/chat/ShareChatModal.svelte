@@ -82,30 +82,23 @@
 
 <Modal bind:show size="md">
 	<div>
-		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-0.5">
-			<div class=" text-lg font-medium self-center">{$i18n.t('Share Chat')}</div>
+		<div class=" flex justify-between px-[16px] py-[16px]">
+			<div class="text-neutrals-800 text-[18px] leading-[26px] font-medium self-center">{$i18n.t('Share Chat')}</div>
 			<button
 				class="self-center"
 				on:click={() => {
 					show = false;
 				}}
 			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 20 20"
-					fill="currentColor"
-					class="w-5 h-5"
-				>
-					<path
-						d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-					/>
-				</svg>
+				<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18" fill="none">
+  <path d="M14.4608 13.6648C14.513 13.7171 14.5545 13.7792 14.5828 13.8474C14.6111 13.9157 14.6256 13.9889 14.6256 14.0628C14.6256 14.1367 14.6111 14.2099 14.5828 14.2782C14.5545 14.3465 14.513 14.4085 14.4608 14.4608C14.4085 14.513 14.3465 14.5545 14.2782 14.5828C14.2099 14.6111 14.1367 14.6256 14.0628 14.6256C13.9889 14.6256 13.9157 14.6111 13.8474 14.5828C13.7792 14.5545 13.7171 14.513 13.6648 14.4608L9.00031 9.79555L4.33578 14.4608C4.23023 14.5663 4.08708 14.6256 3.93781 14.6256C3.78855 14.6256 3.64539 14.5663 3.53984 14.4608C3.4343 14.3552 3.375 14.2121 3.375 14.0628C3.375 13.9135 3.4343 13.7704 3.53984 13.6648L8.20508 9.00031L3.53984 4.33578C3.4343 4.23023 3.375 4.08708 3.375 3.93781C3.375 3.78855 3.4343 3.64539 3.53984 3.53984C3.64539 3.4343 3.78855 3.375 3.93781 3.375C4.08708 3.375 4.23023 3.4343 4.33578 3.53984L9.00031 8.20508L13.6648 3.53984C13.7704 3.4343 13.9135 3.375 14.0628 3.375C14.2121 3.375 14.3552 3.4343 14.4608 3.53984C14.5663 3.64539 14.6256 3.78855 14.6256 3.93781C14.6256 4.08708 14.5663 4.23023 14.4608 4.33578L9.79555 9.00031L14.4608 13.6648Z" fill="#36383B"/>
+</svg>
 			</button>
 		</div>
 
 		{#if chat}
-			<div class="px-5 pt-4 pb-5 w-full flex flex-col justify-center">
-				<div class=" text-sm dark:text-gray-300 mb-1">
+			<div class="px-[16px] py-[16px] w-full flex flex-col justify-center">
+				<div class="text-neutrals-700 text-[16px] leading-[24px] dark:text-gray-300">
 					{#if chat.share_id}
 						<a href="/s/{chat.share_id}" target="_blank"
 							>{$i18n.t('You have shared this chat')}
@@ -148,7 +141,7 @@
 							{/if}
 
 							<button
-								class="self-center flex items-center gap-1 px-3.5 py-2 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+								class="self-center flex items-center gap-1 px-3.5 py-2 text-sm font-medium bg-primary-400 hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 								type="button"
 								id="copy-and-share-chat-button"
 								on:click={async () => {

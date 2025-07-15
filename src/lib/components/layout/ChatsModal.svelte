@@ -75,48 +75,30 @@
 
 <Modal size="lg" bind:show>
 	<div>
-		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-1">
-			<div class=" text-lg font-medium self-center">{title}</div>
+		<div class=" flex justify-between dark:text-gray-300 px-[16px] pt-[21px] pb-[21px]">
+			<div class="text-neutrals-800 text-[18px] leading-[26px] font-medium self-center font-RedHatDisplay-Medium">{title}</div>
 			<button
 				class="self-center"
 				on:click={() => {
 					show = false;
 				}}
 			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 20 20"
-					fill="currentColor"
-					class="w-5 h-5"
-				>
-					<path
-						fill-rule="evenodd"
-						d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-						clip-rule="evenodd"
-					/>
-				</svg>
+				<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18" fill="none">
+  <path d="M4.79812 13.9904L4.00781 13.2001L8.20781 9.00008L4.00781 4.80008L4.79812 4.00977L8.99813 8.20977L13.1981 4.00977L13.9884 4.80008L9.78844 9.00008L13.9884 13.2001L13.1981 13.9904L8.99813 9.79039L4.79812 13.9904Z" fill="#36383B"/>
+</svg>
 			</button>
 		</div>
 
 		<div class="flex flex-col w-full px-5 pb-4 dark:text-gray-200">
 			<div class=" flex w-full space-x-2 mb-0.5">
 				<div class="flex flex-1">
-					<div class=" self-center ml-1 mr-3">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 20 20"
-							fill="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
-								clip-rule="evenodd"
-							/>
-						</svg>
+					<div class=" self-center mr-[16px]">
+						<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
+  <path d="M16.2845 17.1477L11.0505 11.9135C10.6339 12.2575 10.1547 12.5268 9.61302 12.7212C9.07135 12.9157 8.51101 13.0129 7.93198 13.0129C6.50767 13.0129 5.30226 12.5198 4.31573 11.5335C3.3292 10.5473 2.83594 9.34212 2.83594 7.91809C2.83594 6.4942 3.32906 5.28865 4.31531 4.30143C5.30156 3.31434 6.5067 2.8208 7.93073 2.8208C9.35462 2.8208 10.5602 3.31406 11.5474 4.30059C12.5345 5.28712 13.028 6.49254 13.028 7.91684C13.028 8.51198 12.9282 9.08038 12.7284 9.62205C12.5286 10.1637 12.262 10.6348 11.9286 11.0354L17.1626 16.2693L16.2845 17.1477ZM7.93198 11.7631C9.00573 11.7631 9.91517 11.3905 10.6603 10.6452C11.4056 9.90004 11.7782 8.99059 11.7782 7.91684C11.7782 6.84309 11.4056 5.93365 10.6603 5.18851C9.91517 4.44323 9.00573 4.07059 7.93198 4.07059C6.85823 4.07059 5.94878 4.44323 5.20365 5.18851C4.45837 5.93365 4.08573 6.84309 4.08573 7.91684C4.08573 8.99059 4.45837 9.90004 5.20365 10.6452C5.94878 11.3905 6.85823 11.7631 7.93198 11.7631Z" fill="#36383B"/>
+</svg>
 					</div>
 					<input
-						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
+						class=" w-full text-neutrals-400 text-[16px] leading-[24px] pr-[16px] py-[24px] rounded-r-xl outline-hidden bg-transparent"
 						bind:value={query}
 						placeholder={$i18n.t('Search Chats')}
 					/>
@@ -141,7 +123,7 @@
 				{#if chatList}
 					<div class="w-full">
 						{#if chatList.length > 0}
-							<div class="flex text-xs font-medium mb-1.5">
+							<!--<div class="flex text-xs font-medium mb-1.5">
 								<button
 									class="px-1.5 py-1 cursor-pointer select-none basis-3/5"
 									on:click={() => setSortKey('title')}
@@ -186,7 +168,7 @@
 										{/if}
 									</div>
 								</button>
-							</div>
+							</div>-->
 						{/if}
 						<div class="text-left text-sm w-full mb-3 max-h-[22rem] overflow-y-scroll">
 							{#if chatList.length === 0}
@@ -200,9 +182,9 @@
 							{#each chatList as chat, idx (chat.id)}
 								{#if (idx === 0 || (idx > 0 && chat.time_range !== chatList[idx - 1].time_range)) && chat?.time_range}
 									<div
-										class="w-full text-xs text-gray-500 dark:text-gray-500 font-medium {idx === 0
+										class="w-full text-neutrals-400 text-[14px] leading-[22px] {idx === 0
 											? ''
-											: 'pt-5'} pb-2 px-2"
+											: 'pt-5'} pb-[8px]"
 									>
 										{$i18n.t(chat.time_range)}
 										<!-- localisation keys for time_range to be recognized from the i18next parser (so they don't get automatically removed):
@@ -227,23 +209,26 @@
 								{/if}
 
 								<div
-									class=" w-full flex justify-between items-center rounded-lg text-sm py-2 px-3 hover:bg-gray-50 dark:hover:bg-gray-850"
+									class=" w-full flex justify-between items-center py-[8px]"
 									draggable="false"
 								>
 									<a
-										class=" basis-3/5"
+										class="flex items-center gap-[8px] basis-3/5"
 										href={shareUrl ? `/s/${chat.id}` : `/c/${chat.id}`}
 										on:click={() => (show = false)}
 									>
-										<div class="text-ellipsis line-clamp-1 w-full">
+									<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+  <path d="M9.8923 12.4424L9.17947 11.7463L12.4321 8.49359H1.66797V7.49376H12.4385L9.19614 4.24109L9.8923 3.54492L14.341 7.99376L9.8923 12.4424Z" fill="#36383B"/>
+</svg>
+										<div class="text-neutrals-800 text-[16px] leading-[24px] text-ellipsis line-clamp-1 w-full">
 											{chat?.title}
 										</div>
 									</a>
 
 									<div class="basis-2/5 flex items-center justify-end">
-										<div class="hidden sm:flex text-gray-500 dark:text-gray-400 text-xs">
+										<!--<div class="hidden sm:flex text-gray-500 dark:text-gray-400 text-xs">
 											{dayjs(chat?.updated_at * 1000).calendar()}
-										</div>
+										</div>-->
 
 										<div class="flex justify-end pl-2.5 text-gray-600 dark:text-gray-300">
 											{#if unarchiveHandler}
@@ -256,20 +241,9 @@
 															unarchiveHandler(chat.id);
 														}}
 													>
-														<svg
-															xmlns="http://www.w3.org/2000/svg"
-															fill="none"
-															viewBox="0 0 24 24"
-															stroke-width="1.5"
-															stroke="currentColor"
-															class="size-4"
-														>
-															<path
-																stroke-linecap="round"
-																stroke-linejoin="round"
-																d="M9 8.25H7.5a2.25 2.25 0 0 0-2.25 2.25v9a2.25 2.25 0 0 0 2.25 2.25h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25H15m0-3-3-3m0 0-3 3m3-3V15"
-															/>
-														</svg>
+														<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+  <path d="M7.5 10.5257V4.92567L5.8565 6.56917L5.15383 5.84617L8 3L10.8462 5.84617L10.1435 6.56917L8.5 4.92567V10.5257H7.5ZM4.20517 13C3.86839 13 3.58333 12.8833 3.35 12.65C3.11667 12.4167 3 12.1316 3 11.7948V9.98717H4V11.7948C4 11.8462 4.02139 11.8932 4.06417 11.9358C4.10683 11.9786 4.15383 12 4.20517 12H11.7948C11.8462 12 11.8932 11.9786 11.9358 11.9358C11.9786 11.8932 12 11.8462 12 11.7948V9.98717H13V11.7948C13 12.1316 12.8833 12.4167 12.65 12.65C12.4167 12.8833 12.1316 13 11.7948 13H4.20517Z" fill="#36383B"/>
+</svg>
 													</button>
 												</Tooltip>
 											{/if}
