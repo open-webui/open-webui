@@ -4,6 +4,7 @@
 	import { fade } from 'svelte/transition';
 	import DOMPurify from 'dompurify';
 	import { marked } from 'marked';
+	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	const dispatch = createEventDispatcher();
 
@@ -36,6 +37,8 @@
 
 	onMount(() => {
 		mounted = true;
+
+		console.log('Banner mounted:', banner);
 	});
 </script>
 
@@ -58,7 +61,7 @@
 						<div class="flex md:hidden group w-fit md:items-center">
 							<a
 								class="text-gray-700 dark:text-white text-xs font-semibold underline"
-								href="/assets/files/whitepaper.pdf"
+								href="{WEBUI_BASE_URL}/assets/files/whitepaper.pdf"
 								target="_blank">Learn More</a
 							>
 
@@ -82,9 +85,8 @@
 						</div>
 					{/if}
 				</div>
-
-				<div class="flex-1 text-xs text-gray-700 dark:text-white max-h-20 overflow-y-auto">
-					{@html marked.parse(DOMPurify.sanitize(banner.content))}
+				<div class="flex-1 text-xs text-gray-700 dark:text-white max-h-60 overflow-y-auto">
+					{@html marked.parse(DOMPurify.sanitize((banner?.content ?? '').replace(/\n/g, '<br>')))}
 				</div>
 			</div>
 
@@ -114,15 +116,13 @@
 				</div>
 			{/if}
 			<div class="flex self-start">
-				{#if banner.dismissible}
-					<button
-						on:click={() => {
-							dismiss(banner.id);
-						}}
-						class="  -mt-1 -mb-2 -translate-y-[1px] ml-1.5 mr-1 text-gray-400 dark:hover:text-white"
-						>&times;</button
-					>
-				{/if}
+				<button
+					on:click={() => {
+						dismiss(banner.id);
+					}}
+					class="  -mt-1 -mb-2 -translate-y-[1px] ml-1.5 mr-1 text-gray-400 dark:hover:text-white"
+					>&times;</button
+				>
 			</div>
 		</div>
 	{/if}

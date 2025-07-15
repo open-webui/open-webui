@@ -6,6 +6,7 @@
 	import { models, settings } from '$lib/stores';
 	import { user as _user } from '$lib/stores';
 	import { copyToClipboard as _copyToClipboard, formatDate } from '$lib/utils';
+	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import Name from './Name.svelte';
 	import ProfileImage from './ProfileImage.svelte';
@@ -113,12 +114,12 @@
 	id="message-{message.id}"
 >
 	{#if !($settings?.chatBubble ?? true)}
-		<div class={`shrink-0 ltr:mr-3 rtl:ml-3`}>
+		<div class={`shrink-0 ltr:mr-3 rtl:ml-3 mt-1`}>
 			<ProfileImage
 				src={message.user
 					? ($models.find((m) => m.id === message.user)?.info?.meta?.profile_image_url ??
-						'/user.png')
-					: (user?.profile_image_url ?? '/user.png')}
+						`${WEBUI_BASE_URL}/user.png`)
+					: (user?.profile_image_url ?? `${WEBUI_BASE_URL}/user.png`)}
 				className={'size-8 user-message-profile-image'}
 			/>
 		</div>
@@ -148,9 +149,9 @@
 				</Name>
 			</div>
 		{:else if message.timestamp}
-			<div class="flex justify-end pb-1 pr-2">
+			<div class="flex justify-end pr-2 text-xs">
 				<div
-					class="text-xs invisible group-hover:visible text-gray-400 font-medium first-letter:capitalize translate-y-[1px]"
+					class="text-[0.65rem] invisible group-hover:visible text-gray-400 font-medium first-letter:capitalize mb-0.5"
 				>
 					<Tooltip content={dayjs(message.timestamp * 1000).format('LLLL')}>
 						<span class="line-clamp-1">{formatDate(message.timestamp * 1000)}</span>
@@ -162,7 +163,7 @@
 		<div class="chat-{message.role} w-full min-w-full markdown-prose">
 			{#if edit !== true}
 				{#if message.files}
-					<div class="mt-2.5 mb-1 w-full flex flex-col justify-end overflow-x-auto gap-1 flex-wrap">
+					<div class="mb-1 w-full flex flex-col justify-end overflow-x-auto gap-1 flex-wrap">
 						{#each message.files as file}
 							<div class={($settings?.chatBubble ?? true) ? 'self-end' : ''}>
 								{#if file.type === 'image'}
