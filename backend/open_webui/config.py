@@ -292,6 +292,12 @@ JWT_EXPIRES_IN = PersistentConfig(
     "JWT_EXPIRES_IN", "auth.jwt_expiry", os.environ.get("JWT_EXPIRES_IN", "-1")
 )
 
+RESPECT_USER_WORKSPACE_PRIVACY = PersistentConfig(
+    "RESPECT_USER_WORKSPACE_PRIVACY",
+    "admin.respect_user_workspace_privacy", 
+    os.environ.get("RESPECT_USER_WORKSPACE_PRIVACY", "False").lower() == "true"
+)
+
 ####################################
 # OAuth config
 ####################################

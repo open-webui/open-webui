@@ -14,7 +14,7 @@ from open_webui.models.tools import (
     Tools,
 )
 from open_webui.utils.plugin import load_tool_module_by_id, replace_imports
-from open_webui.config import CACHE_DIR
+from open_webui.config import CACHE_DIR, RESPECT_USER_WORKSPACE_PRIVACY
 from open_webui.constants import ERROR_MESSAGES
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from open_webui.utils.tools import get_tool_specs
@@ -48,9 +48,13 @@ async def get_tools(request: Request, user=Depends(get_verified_user)):
             request.app.state.config.TOOL_SERVER_CONNECTIONS
         )
 
-    tools = Tools.get_tools()
+    # Get database tools
+    db_tools = Tools.get_tools()
+    
+    # Get tool server tools
+    server_tools = []
     for server in request.app.state.TOOL_SERVERS:
-        tools.append(
+        server_tools.append(
             ToolUserResponse(
                 **{
                     "id": f"server:{server['idx']}",
@@ -74,15 +78,23 @@ async def get_tools(request: Request, user=Depends(get_verified_user)):
             )
         )
 
-    if user.role != "admin":
-        tools = [
+    # Combine all tools
+    all_tools = db_tools + server_tools
+
+    # Apply filtering based on user role and privacy settings
+    if user.role == "admin" and not RESPECT_USER_WORKSPACE_PRIVACY.value:
+        # Admin with full access sees all tools
+        filtered_tools = db_tools + server_tools
+    else:
+        # Regular users and privacy-enabled admins see only accessible tools
+        filtered_tools = [
             tool
-            for tool in tools
+            for tool in all_tools
             if tool.user_id == user.id
             or has_access(user.id, "read", tool.access_control)
         ]
 
-    return tools
+    return filtered_tools
 
 
 ############################
@@ -92,10 +104,11 @@ async def get_tools(request: Request, user=Depends(get_verified_user)):
 
 @router.get("/list", response_model=list[ToolUserResponse])
 async def get_tool_list(user=Depends(get_verified_user)):
-    if user.role == "admin":
+    if user.role == "admin" and not RESPECT_USER_WORKSPACE_PRIVACY.value:
         tools = Tools.get_tools()
     else:
         tools = Tools.get_tools_by_user_id(user.id, "write")
+    
     return tools
 
 
