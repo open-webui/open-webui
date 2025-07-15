@@ -88,17 +88,19 @@
 
 					<hr class=" border-gray-50 dark:border-gray-850 my-2.5 w-full" />
 
-					<div class="my-1">
-						<div class="mb-2 text-xs text-gray-500">{$i18n.t('System Prompt')}</div>
-						<div>
-							<Textarea
-								className=" text-sm w-full bg-transparent outline-hidden "
-								placeholder={`Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.`}
-								maxSize={200}
-								bind:value={data.system_prompt}
-							/>
+					{#if $user?.role === 'admin' || ($user?.permissions.chat?.system_prompt ?? true)}
+						<div class="my-1">
+							<div class="mb-2 text-xs text-gray-500">{$i18n.t('System Prompt')}</div>
+							<div>
+								<Textarea
+									className=" text-sm w-full bg-transparent outline-hidden "
+									placeholder={`Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.`}
+									maxSize={200}
+									bind:value={data.system_prompt}
+								/>
+							</div>
 						</div>
-					</div>
+					{/if}
 
 					<div class="my-2">
 						<Knowledge bind:selectedItems={data.files}>
