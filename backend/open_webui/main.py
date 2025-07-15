@@ -414,7 +414,10 @@ async def lifespan(app: FastAPI):
     async with dd.async_connect():
         print(f"{datetime.datetime.now()} Initial connect time: {time.time() - t1}")
         yield
-    yield
+        
+    
+    print(f"[{datetime.datetime.now()}] Server shutting down...")
+    # dd.websocket.close()
 
 
 app = FastAPI(

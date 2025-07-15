@@ -207,7 +207,7 @@
 		console.log('toggleSpeakMessage!!message?.content', message?.content)
 
 		ttsSentenceQueue.update(queue => [...queue, { id: message.id, content: message?.content }]);
-		processTTSQueue();
+		// processTTSQueue();
 
 		// const reader = await synthesizeStreamingSpeech(message?.content)
 		// await streamAudio(reader)

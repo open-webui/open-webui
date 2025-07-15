@@ -302,8 +302,9 @@ class TTSRequest(BaseModel):
 
 
 @router.post("/speech/deepdub")
-async def deepdub(request: TTSRequest):
-    return StreamingResponse(stream_deepdub_audio_generator(request.text, request.app.state.dd),  media_type="application/octet-stream")
+async def deepdub(body: TTSRequest, request: Request):
+    print(f"{datetime.datetime.now()} @text", body.text)
+    return StreamingResponse(stream_deepdub_audio_generator(body.text, request.app.state.dd),  media_type="application/octet-stream")
 
 
 @router.post("/speech")
