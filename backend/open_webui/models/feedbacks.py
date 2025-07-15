@@ -4,11 +4,11 @@ import uuid
 from typing import Optional
 
 from open_webui.internal.db import Base, get_db
-from open_webui.models.chats import Chats
+from open_webui.models.users import User
 
 from open_webui.env import SRC_LOG_LEVELS
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, Text, JSON, Boolean
+from sqlalchemy import BigInteger, Column, Text, JSON
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -158,16 +158,32 @@ class FeedbackTable:
     ) -> list[FeedbackModel]:
         """Get paginated feedbacks with optional search"""
         with get_db() as db:
-            query = db.query(Feedback)
+            # Join with users table to enable username search
+            query = db.query(Feedback).outerjoin(User, Feedback.user_id == User.id)
 
             # Apply search filter if provided
             if search and search.strip():
                 search_term = f"%{search.strip().lower()}%"
-                # Search in data JSON fields - model_id, reason, comment
+                # Search in multiple fields:
+                # 1. JSON data fields: model_id, reason, comment
+                # 2. JSON data tags array (using JSON path)
+                # 3. User name and email
+                # 4. Feedback type
                 query = query.filter(
+                    # Search in data JSON fields
                     Feedback.data.op("->>")("model_id").ilike(search_term)
                     | Feedback.data.op("->>")("reason").ilike(search_term)
                     | Feedback.data.op("->>")("comment").ilike(search_term)
+                    # Search in tags array (convert to string and search)
+                    | Feedback.data.op("->>")("tags").cast(Text).ilike(search_term)
+                    # Search in user info
+                    | User.name.ilike(search_term)
+                    | User.email.ilike(search_term)
+                    # Search in feedback type
+                    | Feedback.type.ilike(search_term)
+                    # Search in meta JSON fields (chat_id, message_id)
+                    | Feedback.meta.op("->>")("chat_id").ilike(search_term)
+                    | Feedback.meta.op("->>")("message_id").ilike(search_term)
                 )
 
             # Apply pagination
@@ -184,15 +200,28 @@ class FeedbackTable:
     def get_feedbacks_count(self, search: str = None) -> int:
         """Get total count of feedbacks with optional search filter"""
         with get_db() as db:
-            query = db.query(Feedback)
+            # Join with users table to enable username search
+            query = db.query(Feedback).outerjoin(User, Feedback.user_id == User.id)
 
             # Apply search filter if provided
             if search and search.strip():
                 search_term = f"%{search.strip().lower()}%"
+                # Use same comprehensive search as paginated query
                 query = query.filter(
+                    # Search in data JSON fields
                     Feedback.data.op("->>")("model_id").ilike(search_term)
                     | Feedback.data.op("->>")("reason").ilike(search_term)
                     | Feedback.data.op("->>")("comment").ilike(search_term)
+                    # Search in tags array
+                    | Feedback.data.op("->>")("tags").cast(Text).ilike(search_term)
+                    # Search in user info
+                    | User.name.ilike(search_term)
+                    | User.email.ilike(search_term)
+                    # Search in feedback type
+                    | Feedback.type.ilike(search_term)
+                    # Search in meta JSON fields
+                    | Feedback.meta.op("->>")("chat_id").ilike(search_term)
+                    | Feedback.meta.op("->>")("message_id").ilike(search_term)
                 )
 
             return query.count()
