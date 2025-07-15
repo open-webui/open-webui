@@ -347,11 +347,6 @@ class OAuthManager:
         if provider not in OAUTH_PROVIDERS:
             raise HTTPException(404)
         client = self.get_client(provider)
-
-        if "sid" in request.query_params and "state" not in request.query_params:
-            log.info("Handling front-channel logout notification")
-            return Response(status_code=200)
-
         try:
             token = await client.authorize_access_token(request)
         except Exception as e:
