@@ -191,3 +191,8 @@ skip = '.git*,*.svg,package-lock.json,i18n,*.lock,*.css,*-bundle.js,locales,exam
 check-hidden = true
 # ignore-regex = ''
 ignore-words-list = 'ans'
+
+[dependency-groups]
+dev = [
+    "pytest-asyncio>=1.0.0",
+]
