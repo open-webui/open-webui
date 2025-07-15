@@ -450,7 +450,7 @@ async def yjs_document_state(sid, data):
         room = f"doc_{document_id}"
 
         active_session_ids = get_session_ids_from_room(room)
-        print(active_session_ids)
+
         if sid not in active_session_ids:
             log.warning(f"Session {sid} not in room {room}. Cannot send state.")
             return
@@ -520,7 +520,8 @@ async def yjs_document_update(sid, data):
                 document_id, data.get("data", {}), SESSION_POOL.get(sid)
             )
 
-        await create_task(REDIS, debounced_save(), document_id)
+        if data.get("data"):
+            await create_task(REDIS, debounced_save(), document_id)
 
     except Exception as e:
         log.error(f"Error in yjs_document_update: {e}")
