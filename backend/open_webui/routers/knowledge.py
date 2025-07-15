@@ -265,6 +265,7 @@ async def get_knowledge_by_id(id: str, user=Depends(get_verified_user)):
 
             file_ids = knowledge.data.get("file_ids", []) if knowledge.data else []
             files = Files.get_file_metadatas_by_ids(file_ids)
+            files = [FileMetadataResponse.model_validate(file) for file in files]
 
             return KnowledgeFilesResponse(
                 **knowledge.model_dump(),
@@ -305,10 +306,13 @@ async def update_knowledge_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
+    log.info(f"Received form_data: {form_data}")
     knowledge = Knowledges.update_knowledge_by_id(id=id, form_data=form_data)
+    log.info(f"Updated knowledge: {knowledge}")
     if knowledge:
         file_ids = knowledge.data.get("file_ids", []) if knowledge.data else []
-        files = Files.get_files_by_ids(file_ids)
+        files = Files.get_file_metadatas_by_ids(file_ids)
+        files = [FileMetadataResponse.model_validate(file) for file in files]
 
         return KnowledgeFilesResponse(
             **knowledge.model_dump(),
@@ -393,6 +397,7 @@ def add_file_to_knowledge_by_id(
 
             if knowledge:
                 files = Files.get_file_metadatas_by_ids(file_ids)
+                files = [FileMetadataResponse.model_validate(file) for file in files]
 
                 return KnowledgeFilesResponse(
                     **knowledge.model_dump(),
@@ -470,6 +475,7 @@ def update_file_from_knowledge_by_id(
         file_ids = data.get("file_ids", [])
 
         files = Files.get_file_metadatas_by_ids(file_ids)
+        files = [FileMetadataResponse.model_validate(file) for file in files]
 
         return KnowledgeFilesResponse(
             **knowledge.model_dump(),
@@ -562,6 +568,7 @@ def remove_file_from_knowledge_by_id(
 
             if knowledge:
                 files = Files.get_file_metadatas_by_ids(file_ids)
+                files = [FileMetadataResponse.model_validate(file) for file in files]
 
                 return KnowledgeFilesResponse(
                     **knowledge.model_dump(),
@@ -755,16 +762,20 @@ def add_files_to_knowledge_batch(
     # If there were any errors, include them in the response
     if result.errors:
         error_details = [f"{err.file_id}: {err.error}" for err in result.errors]
+        files = Files.get_file_metadatas_by_ids(existing_file_ids)
+        files = [FileMetadataResponse.model_validate(file) for file in files]
         return KnowledgeFilesResponse(
             **knowledge.model_dump(),
-            files=Files.get_file_metadatas_by_ids(existing_file_ids),
+            files=files,
             warnings={
                 "message": "Some files failed to process",
                 "errors": error_details,
             },
         )
 
+    files = Files.get_file_metadatas_by_ids(existing_file_ids)
+    files = [FileMetadataResponse.model_validate(file) for file in files]
     return KnowledgeFilesResponse(
         **knowledge.model_dump(),
-        files=Files.get_file_metadatas_by_ids(existing_file_ids),
+        files=files,
     )

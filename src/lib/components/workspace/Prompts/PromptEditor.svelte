@@ -83,6 +83,9 @@
 	bind:accessControl
 	accessRoles={['read', 'write']}
 	allowPublic={$user?.permissions?.sharing?.public_prompts || $user?.role === 'admin'}
+	on:save={(e) => {
+		accessControl = e.detail;
+	}}
 />
 
 <div class="w-full max-h-full flex justify-center">

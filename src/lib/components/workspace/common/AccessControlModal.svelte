@@ -1,16 +1,28 @@
 <script>
-	import { getContext } from 'svelte';
+	import { getContext, createEventDispatcher } from 'svelte';
 	const i18n = getContext('i18n');
 
 	import Modal from '$lib/components/common/Modal.svelte';
-	import AccessControl from './AccessControl.svelte';
+import AccessControl from './AccessControl.svelte';
+let accessControlRef;
 
 	export let show = false;
 	export let accessControl = {};
 	export let accessRoles = ['read'];
 	export let allowPublic = true;
 
-	export let onChange = () => {};
+	const dispatch = createEventDispatcher();
+
+
+// Use AccessControl's commitChanges method via ref
+function commitChanges() {
+	if (accessControlRef && accessControlRef.commitChanges) {
+		accessControlRef.commitChanges();
+		// After committing, dispatch the updated value and close modal
+		dispatch('save', accessControl);
+		show = false;
+	}
+}
 </script>
 
 <Modal size="sm" bind:show>
@@ -39,7 +51,17 @@
 		</div>
 
 		<div class="w-full px-5 pb-4 dark:text-white">
-			<AccessControl bind:accessControl {onChange} {accessRoles} {allowPublic} />
+			<AccessControl bind:accessControl bind:this={accessControlRef} {accessRoles} {allowPublic} />
+
+			<div class="flex justify-end mt-4">
+				<button
+					class="text-sm w-full lg:w-fit px-4 py-2 transition rounded-lg bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black flex w-full justify-center"
+					type="button"
+					on:click={commitChanges}
+				>
+					{$i18n.t('Save')}
+				</button>
+			</div>
 		</div>
 	</div>
 </Modal>
