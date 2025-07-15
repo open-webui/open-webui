@@ -1350,26 +1350,10 @@ async def healthcheck():
 
 
 @app.get("/health/db")
-async def healthcheck_with_db():
+def healthcheck_with_db():
     try:
-        # Use asyncio to avoid blocking the async event loop with a timeout
-        import asyncio
-
-        def db_check():
-            return Session.execute(text("SELECT 1;")).all()
-
-        # Run the database check in a thread with a timeout
-        await asyncio.wait_for(
-            asyncio.get_event_loop().run_in_executor(None, db_check),
-            timeout=5.0,  # 5 second timeout
-        )
+        Session.execute(text("SELECT 1;")).all()
         return {"status": True}
-    except asyncio.TimeoutError:
-        log.error("Database health check timed out after 5 seconds")
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Database connection timeout",
-        )
     except Exception as e:
         log.error(f"Database health check failed: {e}")
         raise HTTPException(
