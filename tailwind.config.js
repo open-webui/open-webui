@@ -20,6 +20,7 @@ export default {
 					   white: 'var(--color-neutrals-white, #ffffff)', 
 					   error:'var(--color-neutrals-error, #D91938)',
 					   errorTone:'var(--color-neutrals-errorTone, #C2451E)',
+					   green:'var(--color-neutrals-errorTone, #04C759)',
 				},
 				primary:{
 					400: 'var(--color-primary-400, #0054F2)',  
