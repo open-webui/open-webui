@@ -43,7 +43,8 @@
 		loading = true;
 		await Promise.all([
 			(async () => {
-				prompts.set(await getPrompts(localStorage.token));
+				// Don't override global store - let Commands/Prompts.svelte handle dynamic loading
+				// The global store should maintain the full dataset for compatibility
 			})(),
 			(async () => {
 				knowledge.set(await getKnowledgeBases(localStorage.token));
