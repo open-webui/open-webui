@@ -184,7 +184,6 @@ async def send_post_request(
             )
         else:
             res = await r.json()
-            await cleanup_response(r, session)
             return res
 
     except HTTPException as e:
@@ -196,6 +195,9 @@ async def send_post_request(
             status_code=r.status if r else 500,
             detail=detail if e else "Open WebUI: Server Connection Error",
         )
+    finally:
+        if not stream:
+            await cleanup_response(r, session)
 
 
 def get_api_key(idx, url, configs):
