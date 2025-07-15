@@ -39,7 +39,7 @@ RUN npm ci --force
 
 COPY . .
 ENV APP_BUILD_HASH=${BUILD_HASH}
-RUN npm run build
+RUN NODE_OPTIONS="--max_old_space_size=4096" npm run build
 
 ######## WebUI backend ########
 FROM python:3.11-slim-bookworm AS base
@@ -116,10 +116,9 @@ RUN echo -n 00000000-0000-0000-0000-000000000000 > $HOME/.cache/chroma/telemetry
 # Make sure the user has access to the app and root directory
 RUN chown -R $UID:$GID /app $HOME
 
-# Install common system dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    git build-essential pandoc gcc netcat-openbsd curl jq \
+    git build-essential pandoc gcc netcat-openbsd curl jq cron \
     python3-dev \
     ffmpeg libsm6 libxext6 \
     && rm -rf /var/lib/apt/lists/*
@@ -166,6 +165,12 @@ COPY --chown=$UID:$GID --from=build /app/package.json /app/package.json
 
 # copy backend files
 COPY --chown=$UID:$GID ./backend .
+
+# Create directories for logs
+RUN mkdir -p /var/log && \
+    touch /var/log/clean-orphaned-files.log && \
+    chmod 644 /var/log/clean-orphaned-files.log && \
+    chown $UID:$GID /var/log/clean-orphaned-files.log
 
 EXPOSE 8080
 

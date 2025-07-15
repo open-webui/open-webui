@@ -35,6 +35,27 @@ if test "$WEBUI_SECRET_KEY $WEBUI_JWT_SECRET_KEY" = " "; then
   WEBUI_SECRET_KEY=$(cat "$KEY_FILE")
 fi
 
+# Setup and start cron service
+echo "Setting up cron service..."
+if [ -x "$(command -v cron)" ]; then
+  # Create necessary directories for scripts if they don't exist
+  mkdir -p /app/backend/data/scripts
+
+  # Make the setup-cron.sh script executable
+  chmod +x "$SCRIPT_DIR/setup-cron.sh"
+  
+  # Run the cron setup script
+  "$SCRIPT_DIR/setup-cron.sh"
+  
+  # Start the cron service
+  echo "Starting cron service..."
+  service cron start || cron
+  
+  echo "Cron service started."
+else
+  echo "Warning: cron is not installed. Scheduled tasks will not run."
+fi
+
 if [[ "${USE_OLLAMA_DOCKER,,}" == "true" ]]; then
     echo "USE_OLLAMA is set to true, starting ollama serve."
     ollama serve &
