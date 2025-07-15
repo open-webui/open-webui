@@ -157,7 +157,8 @@
 					...files,
 					{
 						type: 'image',
-						url: imageUrl
+						url: imageUrl,
+						status: 'completed'
 					}
 				];
 			}
@@ -490,7 +491,7 @@
 			// Convert the canvas to a Base64 image URL
 			const imageUrl = canvas.toDataURL('image/png');
 			// Add the captured image to the files array to render it
-			files = [...files, { type: 'image', url: imageUrl }];
+			files = [...files, { type: 'image', url: imageUrl, status: 'completed' }];
 			// Clean memory: Clear video srcObject
 			video.srcObject = null;
 		} catch (error) {
@@ -704,23 +705,54 @@
 				// Upload image to backend for content extraction processing (runs in parallel)
 				const backendUploadPromise = uploadImageForProcessing(file);
 
+				// Create temporary ID for tracking
+				const tempImageId = uuidv4();
+
+				// Add image to files array immediately with uploading status
+				const tempImageEntry = {
+					type: 'image',
+					url: '',
+					status: 'uploading',
+					tempId: tempImageId,
+					name: file.name
+				};
+
+				files = [...files, tempImageEntry];
+
 				let reader = new FileReader();
 				reader.onload = async (event) => {
 					let imageUrl = event.target.result;
 
 					imageUrl = await compressImageHandler(imageUrl, $settings, $config);
 
+					// Update the image entry with the processed URL and processing status
+					const tempImageIndex = files.findIndex(f => f.tempId === tempImageId);
+					if (tempImageIndex !== -1) {
+						files[tempImageIndex] = {
+							...files[tempImageIndex],
+							url: `${imageUrl}`,
+							status: 'processing'
+						};
+						files = files;
+					}
+
 					// Wait for backend upload to complete (or fail gracefully)
 					const backendFile = await backendUploadPromise;
 
-					files = [
-						...files,
-						{
+					// Update the final image entry
+					const finalImageIndex = files.findIndex(f => f.tempId === tempImageId);
+					if (finalImageIndex !== -1) {
+						files[finalImageIndex] = {
 							type: 'image',
 							url: `${imageUrl}`,
+							status: 'completed',
 							...(backendFile ? { backendFile } : {})
-						}
-					];
+						};
+						// Remove temp tracking properties
+						delete files[finalImageIndex].tempId;
+						delete files[finalImageIndex].name;
+						files = files;
+					}
 				};
 				reader.readAsDataURL(
 					file['type'] === 'image/heic'
@@ -1016,11 +1048,58 @@
 											{#if file.type === 'image'}
 												<div class=" relative group">
 													<div class="relative flex items-center">
-														<Image
-															src={file.url}
-															alt=""
-															imageClassName=" size-14 rounded-xl object-cover"
-														/>
+														{#if file.url && file.status !== 'uploading'}
+															<Image
+																src={file.url}
+																alt=""
+																imageClassName=" size-14 rounded-xl object-cover"
+															/>
+														{:else}
+															<!-- Placeholder when no URL yet -->
+															<div class="size-14 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+																<svg
+																	xmlns="http://www.w3.org/2000/svg"
+																	viewBox="0 0 24 24"
+																	fill="currentColor"
+																	class="size-6 text-gray-400"
+																>
+																	<path
+																		fill-rule="evenodd"
+																		d="M1.5 6a2.25 2.25 0 0 1 2.25-2.25h16.5A2.25 2.25 0 0 1 22.5 6v12a2.25 2.25 0 0 1-2.25 2.25H3.75A2.25 2.25 0 0 1 1.5 18V6ZM3 16.06V18c0 .414.336.75.75.75h16.5A.75.75 0 0 0 21 18v-1.94l-2.69-2.689a1.5 1.5 0 0 0-2.12 0l-.88.879.97.97a.75.75 0 1 1-1.06 1.06l-5.16-5.159a1.5 1.5 0 0 0-2.12 0L3 16.061Zm10.125-7.81a1.125 1.125 0 1 1 2.25 0 1.125 1.125 0 0 1-2.25 0Z"
+																		clip-rule="evenodd"
+																	/>
+																</svg>
+															</div>
+														{/if}
+
+														<!-- Progress indicator overlay -->
+														{#if file.status === 'uploading' || file.status === 'processing'}
+															<div class="absolute inset-0 bg-black/30 rounded-xl flex items-center justify-center">
+																<div class="bg-white/90 rounded-full p-1">
+																	<svg
+																		class="size-4 animate-spin text-gray-600"
+																		xmlns="http://www.w3.org/2000/svg"
+																		fill="none"
+																		viewBox="0 0 24 24"
+																	>
+																		<circle
+																			class="opacity-25"
+																			cx="12"
+																			cy="12"
+																			r="10"
+																			stroke="currentColor"
+																			stroke-width="4"
+																		></circle>
+																		<path
+																			class="opacity-75"
+																			fill="currentColor"
+																			d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+																		></path>
+																	</svg>
+																</div>
+															</div>
+														{/if}
+
 														{#if atSelectedModel ? visionCapableModels.length === 0 : selectedModels.length !== visionCapableModels.length}
 															<Tooltip
 																className=" absolute top-1 left-1"
@@ -1299,7 +1378,8 @@
 																		...files,
 																		{
 																			type: 'image',
-																			url: `${e.target.result}`
+																			url: `${e.target.result}`,
+																			status: 'completed'
 																		}
 																	];
 																};
@@ -1539,7 +1619,8 @@
 																	...files,
 																	{
 																		type: 'image',
-																		url: `${e.target.result}`
+																		url: `${e.target.result}`,
+																		status: 'completed'
 																	}
 																];
 															};
