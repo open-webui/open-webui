@@ -10,6 +10,7 @@
 	import { goto } from '$app/navigation';
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Knowledge from '$lib/components/workspace/Models/Knowledge.svelte';
+	import { user } from '$lib/stores';
 	const i18n = getContext('i18n');
 
 	export let show = false;
