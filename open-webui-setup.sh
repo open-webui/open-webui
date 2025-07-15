@@ -12,6 +12,7 @@ node -v
 npm -v
 nvm install 20.18.1
 nvm use 20.18.1
+pip install --upgrade chromadb
 ln -s $(pwd)/build backend/open_webui/frontend
 fi
 uv run open-webui serve

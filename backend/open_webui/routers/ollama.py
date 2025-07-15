@@ -1267,7 +1267,6 @@ class GenerateChatCompletionForm(BaseModel):
         extra="allow",
     )
 
-
 async def get_ollama_url(request: Request, model: str, url_idx: Optional[int] = None):
     if url_idx is None:
         models = request.app.state.OLLAMA_MODELS
@@ -1277,8 +1276,22 @@ async def get_ollama_url(request: Request, model: str, url_idx: Optional[int] = 
                 detail=ERROR_MESSAGES.MODEL_NOT_FOUND(model),
             )
         url_idx = random.choice(models[model].get("urls", []))
-    #url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
-    url = "http://localhost:5000"
+
+    # Try to print JSON body
+    try:
+        json_body = await request.json()
+        target_value = None
+        if json_body:
+            target_value = json_body.get("params", {}).get("target")
+    except Exception:
+        target_value = None
+
+    if target_value == None or str(target_value).lower() == 'native':
+        url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
+    if str(target_value).lower() == 'cpu' or str(target_value).lower() == 'opu':
+        url = "http://localhost:5000"
+    else:
+        url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
     return url, url_idx
 
 
