@@ -1,0 +1,28 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to Azure Container Registry
+        run: echo "${{ secrets.ACR_PASSWORD }}" | docker login ${{ secrets.ACR_LOGIN_SERVER }} -u ${{ secrets.ACR_USERNAME }} --password-stdin
+
+      - name: Build Docker image
+        run: |
+          IMAGE=${{ secrets.ACR_LOGIN_SERVER }}/fpwebui:${{ github.sha }}
+          docker build . -t $IMAGE
+
+      - name: Push Docker image
+        run: |
+          IMAGE=${{ secrets.ACR_LOGIN_SERVER }}/fpwebui:${{ github.sha }}
+          docker push $IMAGE
