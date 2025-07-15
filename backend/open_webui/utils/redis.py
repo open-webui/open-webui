@@ -6,6 +6,7 @@ import redis
 
 MAX_RETRY_COUNT = 2
 
+
 class SentinelRedisProxy:
     def __init__(self, sentinel, service, *, async_mode: bool = True, **kw):
         self._sentinel = sentinel
