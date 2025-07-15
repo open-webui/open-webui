@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { prompts, user } from '$lib/stores';
+	import { getPrompts } from '$lib/apis/prompts';
 	import {
 		findWordIndices,
 		getUserPosition,
@@ -21,10 +22,95 @@
 
 	let selectedPromptIdx = 0;
 	let filteredPrompts = [];
+	let loadedPrompts = [];
+	let currentPage = 1;
+	let isLoading = false;
+	let hasMorePrompts = true;
+	const pageSize = 20;
 
-	$: filteredPrompts = $prompts
-		.filter((p) => p.command.toLowerCase().includes(command.toLowerCase()))
-		.sort((a, b) => a.title.localeCompare(b.title));
+	// Debounced search for dynamic loading
+	let searchTimeout;
+	let lastCommand = '';
+	let currentSearch = '';
+	let isInitialized = false;
+
+	// Load prompts dynamically based on search
+	const loadPrompts = async (search = '', page = 1, append = false) => {
+		if (isLoading) return;
+
+		isLoading = true;
+
+		// Update current search when starting a new search (not appending)
+		if (!append) {
+			currentSearch = search;
+		}
+
+		try {
+			const newPrompts = await getPrompts(localStorage.token, {
+				page,
+				limit: pageSize,
+				search: search || undefined
+			});
+
+			if (append) {
+				loadedPrompts = [...loadedPrompts, ...newPrompts];
+			} else {
+				loadedPrompts = newPrompts;
+				currentPage = 1; // Reset page counter for new search
+			}
+
+			hasMorePrompts = newPrompts.length === pageSize;
+		} catch (error) {
+			console.error('Error loading prompts:', error);
+			// Fallback to global store on error
+			loadedPrompts = $prompts.filter(
+				(p) => !search || p.command.toLowerCase().includes(search.toLowerCase())
+			);
+			hasMorePrompts = false;
+		} finally {
+			isLoading = false;
+		}
+	};
+
+	// Load more prompts when scrolling near bottom
+	const loadMorePrompts = async () => {
+		if (hasMorePrompts && !isLoading) {
+			currentPage++;
+			await loadPrompts(currentSearch, currentPage, true);
+		}
+	};
+
+	// Reactive filtering with dynamic loading
+	$: {
+		// Clear timeout if exists
+		if (searchTimeout) clearTimeout(searchTimeout);
+
+		// Only trigger new search if command actually changed
+		if (command !== lastCommand) {
+			lastCommand = command;
+
+			// Extract search term from command (remove the leading /)
+			const searchTerm = command.startsWith('/') ? command.slice(1) : command;
+
+			// Debounce search to avoid too many API calls
+			searchTimeout = setTimeout(() => {
+				loadPrompts(searchTerm, 1, false);
+			}, 200);
+		}
+
+		// Update filtered prompts from loaded prompts
+		filteredPrompts = loadedPrompts.sort((a, b) => a.title.localeCompare(b.title));
+	}
+
+	// Initial load when component mounts
+	import { onMount } from 'svelte';
+	onMount(() => {
+		// Load initial prompts when component is shown
+		if (!isInitialized) {
+			isInitialized = true;
+			loadPrompts('', 1, false);
+		}
+	});
 
 	$: if (command) {
 		selectedPromptIdx = 0;
@@ -142,7 +228,21 @@
 			<div
 				class="max-h-60 flex flex-col w-full rounded-xl bg-white dark:bg-gray-900 dark:text-gray-100"
 			>
-				<div class="m-1 overflow-y-auto p-1 space-y-0.5 scrollbar-hidden">
+				<div
+					class="m-1 overflow-y-auto p-1 space-y-0.5 scrollbar-hidden"
+					on:scroll={(e) => {
+						const target = e.target;
+						if (target) {
+							const scrollPercentage =
+								(target.scrollTop + target.clientHeight) / target.scrollHeight;
+
+							// Load more when scrolled near the bottom (80% threshold for better UX)
+							if (scrollPercentage >= 0.8) {
+								loadMorePrompts();
+							}
+						}
+					}}
+				>
 					{#each filteredPrompts as prompt, promptIdx}
 						<button
 							class=" px-3 py-1.5 rounded-xl w-full text-left {promptIdx === selectedPromptIdx
@@ -166,6 +266,12 @@
 							</div>
 						</button>
 					{/each}
+
+					{#if isLoading}
+						<div class="px-3 py-2 text-center text-xs text-gray-500 dark:text-gray-400">
+							{$i18n.t('Loading more prompts...')}
+						</div>
+					{/if}
 				</div>
 
 				<div
