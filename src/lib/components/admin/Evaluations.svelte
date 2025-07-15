@@ -4,7 +4,7 @@
 	import Leaderboard from './Evaluations/Leaderboard.svelte';
 	import Feedbacks from './Evaluations/Feedbacks.svelte';
 
-	import { getAllFeedbacks } from '$lib/apis/evaluations';
+	import { getAllFeedbacks, getFeedbacksCount } from '$lib/apis/evaluations';
 
 	const i18n = getContext('i18n');
 
@@ -12,9 +12,35 @@
 
 	let loaded = false;
 	let feedbacks = [];
+	let totalFeedbackCount = 0;
+	let feedbacksPage = 1;
+	const feedbacksPerPage = 10;
+
+	const loadFeedbacks = async (page = 1, search = '') => {
+		try {
+			feedbacks = await getAllFeedbacks(localStorage.token, {
+				page,
+				limit: feedbacksPerPage,
+				search: search?.trim() || undefined
+			});
+		} catch (error) {
+			console.error('Error loading feedbacks:', error);
+			toast.error('Failed to load feedbacks');
+		}
+	};
+
+	const loadFeedbacksCount = async (search = '') => {
+		try {
+			const result = await getFeedbacksCount(localStorage.token, search?.trim() || undefined);
+			totalFeedbackCount = result.count;
+		} catch (error) {
+			console.error('Error loading feedbacks count:', error);
+		}
+	};
 
 	onMount(async () => {
-		feedbacks = await getAllFeedbacks(localStorage.token);
+		await loadFeedbacksCount();
+		await loadFeedbacks();
 		loaded = true;
 
 		const containerElement = document.getElementById('users-tabs-container');
@@ -93,7 +119,15 @@
 			{#if selectedTab === 'leaderboard'}
 				<Leaderboard {feedbacks} />
 			{:else if selectedTab === 'feedbacks'}
-				<Feedbacks {feedbacks} />
+				<Feedbacks
+					{feedbacks}
+					{totalFeedbackCount}
+					{feedbacksPage}
+					{feedbacksPerPage}
+					{loadFeedbacks}
+					{loadFeedbacksCount}
+					bind:page={feedbacksPage}
+				/>
 			{/if}
 		</div>
 	</div>

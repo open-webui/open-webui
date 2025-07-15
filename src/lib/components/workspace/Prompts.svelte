@@ -11,7 +11,9 @@
 		createNewPrompt,
 		deletePromptByCommand,
 		getPrompts,
-		getPromptList
+		getPromptList,
+		getPromptsCount,
+		getPromptsLegacy
 	} from '$lib/apis/prompts';
 
 	import { getGroups } from '$lib/apis/groups';
@@ -23,6 +25,7 @@
 	import Plus from '../icons/Plus.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
+	import Pagination from '$lib/components/common/Pagination.svelte';
 	import { capitalizeFirstLetter, sanitizeResponseContent } from '$lib/utils';
 
 	const i18n = getContext('i18n');
@@ -36,12 +39,45 @@
 
 	let prompts = [];
 	let groups = [];
+	let totalCount = 0;
+	let loading = false;
 
 	let showDeleteConfirm = false;
 	let deletePrompt = null;
 
-	let filteredItems = [];
-	$: filteredItems = prompts.filter((p) => query === '' || p.command.includes(query));
+	let page = 1;
+	const itemsPerPage = 20;
+
+	// Debounced search - wait 300ms after user stops typing
+	let searchTimeout: NodeJS.Timeout;
+	let debouncedQuery = '';
+
+	$: {
+		// Clear the previous timeout
+		if (searchTimeout) {
+			clearTimeout(searchTimeout);
+		}
+
+		// Set a new timeout
+		searchTimeout = setTimeout(() => {
+			debouncedQuery = query;
+		}, 300);
+	}
+
+	// Reset page when search query changes
+	$: if (debouncedQuery !== undefined) {
+		page = 1;
+		loadCount(); // Update count when search changes
+		loadPrompts();
+	}
+
+	// Load prompts when page changes
+	$: if (page && loaded) {
+		loadPrompts();
+	}
+
+	// Calculate total pages
+	$: totalPages = Math.ceil(totalCount / itemsPerPage);
 
 	const generateRandomSuffix = () => {
 		const characters = 'abcdefghijklmnopqrstuvwxyz0123456789';
@@ -68,13 +104,43 @@
 	const deleteHandler = async (prompt) => {
 		const command = prompt.command;
 		await deletePromptByCommand(localStorage.token, command);
-		await init();
+		await loadPrompts(); // Reload current page
+		await loadCount(); // Update total count
+	};
+
+	const loadPrompts = async () => {
+		if (!loaded) return;
+
+		loading = true;
+		try {
+			const searchQuery = debouncedQuery?.trim() || undefined;
+			prompts = await getPromptList(localStorage.token, {
+				page,
+				limit: itemsPerPage,
+				search: searchQuery
+			});
+		} catch (error) {
+			console.error('Error loading prompts:', error);
+			toast.error('Failed to load prompts');
+		} finally {
+			loading = false;
+		}
+	};
+
+	const loadCount = async () => {
+		try {
+			const searchQuery = debouncedQuery?.trim() || undefined;
+			const result = await getPromptsCount(localStorage.token, searchQuery);
+			totalCount = result.count;
+		} catch (error) {
+			console.error('Error loading prompts count:', error);
+		}
 	};
 
 	const init = async () => {
-		prompts = await getPromptList(localStorage.token);
 		groups = await getGroups(localStorage.token);
-		await _prompts.set(await getPrompts(localStorage.token));
+		await loadCount();
+		await loadPrompts();
 	};
 
 	const getPromptGroupName = (prompt) => {
@@ -151,9 +217,12 @@
 			<div class="flex md:self-center text-xl font-medium px-0.5 items-center">
 				{$i18n.t('Prompts')}
 				<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
-				<span class="text-lg font-medium text-gray-500 dark:text-gray-300"
-					>{filteredItems.length}</span
-				>
+				<span class="text-lg font-medium text-gray-500 dark:text-gray-300">{totalCount}</span>
+				{#if loading}
+					<div class="ml-2">
+						<Spinner className="size-3" />
+					</div>
+				{/if}
 			</div>
 		</div>
 
@@ -181,7 +250,7 @@
 	</div>
 
 	<div class="mb-5 gap-2 grid lg:grid-cols-2 xl:grid-cols-3">
-		{#each filteredItems as prompt}
+		{#each prompts as prompt}
 			<div
 				class="flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition"
 			>
@@ -280,6 +349,13 @@
 		{/each}
 	</div>
 
+	<!-- Pagination Controls -->
+	{#if totalPages > 1}
+		<div class="mt-4">
+			<Pagination bind:page count={totalCount} perPage={itemsPerPage} />
+		</div>
+	{/if}
+
 	<div class=" flex justify-end w-full mb-3">
 		<div class="flex space-x-2">
 			{#if $user?.role === 'admin'}
@@ -328,7 +404,7 @@
 							}
 
 							prompts = await getPromptList(localStorage.token);
-							await _prompts.set(await getPrompts(localStorage.token));
+							await _prompts.set(await getPromptsLegacy(localStorage.token));
 
 							importFiles = [];
 							promptsImportInputElement.value = '';

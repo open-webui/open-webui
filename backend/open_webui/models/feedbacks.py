@@ -153,6 +153,50 @@ class FeedbackTable:
                 .all()
             ]
 
+    def get_all_feedbacks_paginated(
+        self, page: int = 1, limit: int = 10, search: str = None
+    ) -> list[FeedbackModel]:
+        """Get paginated feedbacks with optional search"""
+        with get_db() as db:
+            query = db.query(Feedback)
+
+            # Apply search filter if provided
+            if search and search.strip():
+                search_term = f"%{search.strip().lower()}%"
+                # Search in data JSON fields - model_id, reason, comment
+                query = query.filter(
+                    Feedback.data.op("->>")("model_id").ilike(search_term)
+                    | Feedback.data.op("->>")("reason").ilike(search_term)
+                    | Feedback.data.op("->>")("comment").ilike(search_term)
+                )
+
+            # Apply pagination
+            offset = (page - 1) * limit
+            feedbacks = (
+                query.order_by(Feedback.updated_at.desc())
+                .offset(offset)
+                .limit(limit)
+                .all()
+            )
+
+            return [FeedbackModel.model_validate(feedback) for feedback in feedbacks]
+
+    def get_feedbacks_count(self, search: str = None) -> int:
+        """Get total count of feedbacks with optional search filter"""
+        with get_db() as db:
+            query = db.query(Feedback)
+
+            # Apply search filter if provided
+            if search and search.strip():
+                search_term = f"%{search.strip().lower()}%"
+                query = query.filter(
+                    Feedback.data.op("->>")("model_id").ilike(search_term)
+                    | Feedback.data.op("->>")("reason").ilike(search_term)
+                    | Feedback.data.op("->>")("comment").ilike(search_term)
+                )
+
+            return query.count()
+
     def get_feedbacks_by_type(self, type: str) -> list[FeedbackModel]:
         with get_db() as db:
             return [

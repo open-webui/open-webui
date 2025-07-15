@@ -14,7 +14,7 @@
 	import { getFunctions } from '$lib/apis/functions';
 	import { getModels } from '$lib/apis';
 	import { getAllTags } from '$lib/apis/chats';
-	import { getPrompts } from '$lib/apis/prompts';
+	import { getPrompts, getPromptsLegacy } from '$lib/apis/prompts';
 	import { getTools } from '$lib/apis/tools';
 	import { getBanners } from '$lib/apis/configs';
 	import { getUserSettings } from '$lib/apis/users';
@@ -92,6 +92,8 @@
 			models.set(await getModels(localStorage.token));
 			banners.set(await getBanners(localStorage.token));
 			tools.set(await getTools(localStorage.token));
+			// Load all prompts for global store (now using original endpoint)
+			prompts.set(await getPromptsLegacy(localStorage.token));
 
 			document.addEventListener('keydown', async function (event) {
 				const isCtrlPressed = event.ctrlKey || event.metaKey; // metaKey is for Cmd key on Mac
