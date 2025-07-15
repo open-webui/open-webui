@@ -663,9 +663,11 @@
 							
 						</div>
 					</a>
+					{#if $showSidebar}					
 					<button on:click={async () => {
 							createNoteHandler();
 						}}><Tooltip placement="right" content="Create note"><MaterialIcon name="add" size="1.1rem" /></Tooltip></button>
+						{/if}
 				</div>
 			{/if}
 
