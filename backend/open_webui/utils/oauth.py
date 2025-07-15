@@ -11,7 +11,6 @@ from authlib.oidc.core import UserInfo
 from fastapi import (
     HTTPException,
     status,
-    Response,
 )
 from starlette.responses import RedirectResponse
 
