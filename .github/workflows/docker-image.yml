@@ -1,27 +1,34 @@
-name: Build and Push Docker image
+name: Build and Push to Azure Container Registry
 
 on:
   push:
-    branches: [main] 
+    branches: [ "main" ]      # Or whichever branch you want to trigger on
+  workflow_dispatch:          # Allows manual triggering in GitHub UI
+
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
+      - name: Log in to Azure using OIDC
+        uses: azure/login@v2
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          client-id: ${{secrets.AZURE_CLIENT_ID}}
+          tenant-id: ${{secrets.AZURE_TENANT_ID}}
+          subscription-id: ${{secrets.AZURE_SUBSCRIPTION_ID}}
 
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: ghcr.io/cima-ai/open-webui-cima:latest
+      - name: Log in to Azure Container Registry (ACR)
+        run: |
+          az acr login --name crcimaopenwebui
+
+      - name: Build and push image to ACR
+        run: |
+          IMAGE_TAG=crcimaopenwebui-bvfjb7gfc8cnb5cu.azurecr.io/open-webui-cima:latest
+          docker build -t $IMAGE_TAG .
+          docker push $IMAGE_TAG
