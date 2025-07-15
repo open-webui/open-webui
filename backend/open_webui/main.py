@@ -73,9 +73,8 @@ from open_webui.routers import (
     users,
     jira,
     utils,
-    mcp,
-    crew_mcp,
 )
+from mcp_backend.routers import mcp, crew_mcp
 
 from open_webui.routers.retrieval import (
     get_embedding_function,
@@ -374,7 +373,7 @@ async def lifespan(app: FastAPI):
 
     # Initialize FastMCP manager
     try:
-        from open_webui.mcp_manager import get_mcp_manager
+        from mcp_backend.management.mcp_manager import get_mcp_manager
 
         app.state.mcp_manager = get_mcp_manager()
         log.info("FastMCP manager initialized")
@@ -831,24 +830,75 @@ app.add_middleware(SecurityHeadersMiddleware)
 
 @app.middleware("http")
 async def commit_session_after_request(request: Request, call_next):
-    response = await call_next(request)
-    # log.debug("Commit session after request")
-    Session.commit()
-    return response
+    try:
+        response = await call_next(request)
+        # log.debug("Commit session after request")
+        Session.commit()
+
+        # Ensure we always return a response
+        if response is None:
+            log.error(
+                f"No response generated in commit_session_after_request for {request.url.path}"
+            )
+            return JSONResponse(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                content={"detail": "No response generated"},
+            )
+        return response
+    except Exception as e:
+        log.error(
+            f"Error in commit_session_after_request middleware for {request.url.path}: {e}"
+        )
+        try:
+            Session.rollback()
+        except Exception as rollback_error:
+            log.error(f"Error during session rollback: {rollback_error}")
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"detail": "Internal server error"},
+        )
 
 
 @app.middleware("http")
 async def check_url(request: Request, call_next):
     start_time = int(time.time())
     request.state.enable_api_key = app.state.config.ENABLE_API_KEY
-    response = await call_next(request)
-    process_time = int(time.time()) - start_time
-    response.headers["X-Process-Time"] = str(process_time)
-    return response
+
+    try:
+        response = await call_next(request)
+
+        # Ensure we always return a response
+        if response is None:
+            log.error(
+                f"No response generated in check_url middleware for {request.url.path}"
+            )
+            return JSONResponse(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                content={"detail": "No response generated"},
+            )
+
+        process_time = int(time.time()) - start_time
+        response.headers["X-Process-Time"] = str(process_time)
+        return response
+    except Exception as e:
+        log.error(f"Error in check_url middleware for {request.url.path}: {e}")
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"detail": "Internal server error"},
+        )
 
 
 @app.middleware("http")
 async def inspect_websocket(request: Request, call_next):
+    # Log all socket.io requests for debugging
+    if "/ws/socket.io" in request.url.path:
+        log.debug(f"Socket.io request: {request.url.path}?{request.url.query}")
+        log.debug(f"Transport: {request.query_params.get('transport')}")
+        log.debug(
+            f"Headers: Upgrade={request.headers.get('Upgrade')}, Connection={request.headers.get('Connection')}"
+        )
+
+    # Only apply WebSocket validation for actual WebSocket upgrade requests
     if (
         "/ws/socket.io" in request.url.path
         and request.query_params.get("transport") == "websocket"
@@ -858,11 +908,39 @@ async def inspect_websocket(request: Request, call_next):
         # Check that there's the correct headers for an upgrade, else reject the connection
         # This is to work around this upstream issue: https://github.com/miguelgrinberg/python-engineio/issues/367
         if upgrade != "websocket" or "upgrade" not in connection:
+            log.warning(
+                f"Invalid WebSocket upgrade request: upgrade={upgrade}, connection={connection}"
+            )
             return JSONResponse(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 content={"detail": "Invalid WebSocket upgrade request"},
             )
-    return await call_next(request)
+
+    try:
+        response = await call_next(request)
+        # Ensure we always return a response
+        if response is None:
+            log.error(f"No response generated for {request.url.path}")
+            return JSONResponse(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                content={"detail": "No response generated"},
+            )
+        return response
+    except Exception as e:
+        log.error(f"Error in inspect_websocket middleware for {request.url.path}: {e}")
+        # For WebSocket upgrade requests, return a proper error response
+        if (
+            "/ws/socket.io" in request.url.path
+            and request.query_params.get("transport") == "websocket"
+        ):
+            return JSONResponse(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                content={"detail": "WebSocket connection failed"},
+            )
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"detail": "Internal server error"},
+        )
 
 
 app.add_middleware(
@@ -1271,9 +1349,16 @@ async def healthcheck():
 
 
 @app.get("/health/db")
-async def healthcheck_with_db():
-    Session.execute(text("SELECT 1;")).all()
-    return {"status": True}
+def healthcheck_with_db():
+    try:
+        Session.execute(text("SELECT 1;")).all()
+        return {"status": True}
+    except Exception as e:
+        log.error(f"Database health check failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database connection failed",
+        )
 
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")

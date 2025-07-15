@@ -42,7 +42,7 @@ async def call_mcp_tool(
     """Call an MCP tool using the MCP router"""
     try:
         # Import here to avoid circular imports
-        from open_webui.routers.mcp import (
+        from mcp_backend.routers.mcp import (
             MCPToolCallForm,
             call_mcp_tool as router_call_mcp_tool,
         )
@@ -80,7 +80,7 @@ async def get_mcp_tools(request: Request) -> dict:
     """Get all available MCP tools"""
     try:
         # Import here to avoid circular imports
-        from open_webui.routers.mcp import get_all_mcp_tools
+        from mcp_backend.routers.mcp import get_all_mcp_tools
 
         if not request.app.state.config.ENABLE_MCP_API:
             return {}

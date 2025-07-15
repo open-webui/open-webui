@@ -49,7 +49,7 @@ async def get_tools(request: Request, user=Depends(get_verified_user)):
         )
 
         if enable_mcp or has_mcp_manager:
-            from open_webui.routers.mcp import get_all_mcp_tools
+            from mcp_backend.routers.mcp import get_all_mcp_tools
             from open_webui.models.tools import ToolMeta
 
             mcp_tools_response = await get_all_mcp_tools(request)

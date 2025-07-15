@@ -21,7 +21,7 @@ backend_dir = Path(__file__).parent.parent.parent
 sys.path.append(str(backend_dir))
 
 try:
-    from crew_mcp_integration import CrewMCPManager
+    from mcp_backend.integration.crew_mcp_integration import CrewMCPManager
 except ImportError as e:
     logging.error(f"Failed to import CrewMCPManager: {e}")
     CrewMCPManager = None
