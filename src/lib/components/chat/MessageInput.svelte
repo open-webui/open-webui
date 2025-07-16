@@ -136,6 +136,7 @@
 	let piiSessionManager = PiiSessionManager.getInstance();
 	let currentPiiEntities: ExtendedPiiEntity[] = [];
 	let maskedPrompt = '';
+	let piiMaskingEnabled = true; // Toggle state for PII masking
 
 	// Get PII settings from config
 	$: enablePiiDetection = $config?.features?.enable_pii_detection ?? false;
@@ -211,7 +212,12 @@
 
 	// PII Detection handler
 	const handlePiiDetected = (entities: ExtendedPiiEntity[], maskedText: string) => {
-		currentPiiEntities = entities;
+		// Set shouldMask based on the toggle state for newly detected entities
+		const entitiesWithToggleState = entities.map(entity => ({
+			...entity,
+			shouldMask: piiMaskingEnabled
+		}));
+		currentPiiEntities = entitiesWithToggleState;
 		maskedPrompt = maskedText;
 	};
 
@@ -228,15 +234,28 @@
 			return;
 		}
 
-		if (!chatInputElement?.togglePiiMasking) {
-			console.log('MessageInput: RichTextInput toggle method not available');
-			return;
-		}
-
-		console.log('MessageInput: Toggle PII masking button clicked');
+		// Toggle the masking state
+		piiMaskingEnabled = !piiMaskingEnabled;
 		
-		// Call the toggle method on the RichTextInput component
-		chatInputElement.togglePiiMasking();
+		console.log('MessageInput: PII masking toggled to:', piiMaskingEnabled);
+
+		// Update all existing entities to match the new toggle state
+		if (currentPiiEntities.length > 0) {
+			currentPiiEntities = currentPiiEntities.map(entity => ({
+				...entity,
+				shouldMask: piiMaskingEnabled
+			}));
+
+			// Update the session manager with the new entity states
+			if (chatId) {
+				piiSessionManager.setConversationEntities(chatId, currentPiiEntities);
+			}
+
+			// If we have a reference to the RichTextInput, update its visual state
+			if (chatInputElement?.togglePiiMasking) {
+				chatInputElement.togglePiiMasking();
+			}
+		}
 	};
 
 	// Function to get the prompt to send (masked if PII detected)
@@ -1390,7 +1409,9 @@
 														{#if enablePiiDetection}
 					<Tooltip content={$i18n.t('Toggle PII masking')}>
 						<button
-							class="px-2 @xl:px-2.5 py-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 bg-transparent text-gray-600 dark:text-gray-300"
+							class="px-2 @xl:px-2.5 py-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {piiMaskingEnabled
+								? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
+								: 'bg-transparent text-gray-600 dark:text-gray-300'}"
 							type="button"
 							on:click={togglePiiMasking}
 							aria-label={$i18n.t('Toggle PII masking')}
