@@ -1574,8 +1574,18 @@ async def process_chat_response(
 
                 if content_blocks[-1]["type"] == "text":
                     for start_tag, end_tag in tags:
-                        # Match start tag e.g., <tag> or <tag attr="value">
-                        start_tag_pattern = rf"<{re.escape(start_tag)}(\s.*?)?>"
+
+                        if start_tag.startswith("<") and end_tag.endswith(">"):
+                            # Match start tag e.g., <tag> or <tag attr="value">
+                            # remove both '<' and '>' from start_tag
+                            start_tag = start_tag[1:-1]
+
+                            # Match start tag with attributes
+                            start_tag_pattern = rf"<{re.escape(start_tag)}(\s.*?)?>"
+                        else:
+                            # Handle cases where start_tag is just a tag name
+                            start_tag_pattern = rf"{re.escape(start_tag)}"
+
                         match = re.search(start_tag_pattern, content)
                         if match:
                             attr_content = (
@@ -1626,8 +1636,13 @@ async def process_chat_response(
                 elif content_blocks[-1]["type"] == content_type:
                     start_tag = content_blocks[-1]["start_tag"]
                     end_tag = content_blocks[-1]["end_tag"]
-                    # Match end tag e.g., </tag>
-                    end_tag_pattern = rf"<{re.escape(end_tag)}>"
+
+                    if end_tag.startswith("<") and end_tag.endswith(">"):
+                        # Match end tag e.g., </tag>
+                        end_tag_pattern = rf"{re.escape(end_tag)}"
+                    else:
+                        # Handle cases where end_tag is just a tag name
+                        end_tag_pattern = rf"{re.escape(end_tag)}"
 
                     # Check if the content has the end tag
                     if re.search(end_tag_pattern, content):
@@ -1744,18 +1759,19 @@ async def process_chat_response(
             )
 
             reasoning_tags = [
-                ("think", "/think"),
-                ("thinking", "/thinking"),
-                ("reason", "/reason"),
-                ("reasoning", "/reasoning"),
-                ("thought", "/thought"),
-                ("Thought", "/Thought"),
-                ("|begin_of_thought|", "|end_of_thought|"),
+                ("<think>", "</think>"),
+                ("<thinking>", "</thinking>"),
+                ("<reason>", "</reason>"),
+                ("<reasoning>", "</reasoning>"),
+                ("<thought>", "</thought>"),
+                ("<Thought>", "</Thought>"),
+                ("<|begin_of_thought|>", "<|end_of_thought|>"),
+                ("◁think▷", "◁/think▷"),
             ]
 
-            code_interpreter_tags = [("code_interpreter", "/code_interpreter")]
+            code_interpreter_tags = [("<code_interpreter>", "</code_interpreter>")]
 
-            solution_tags = [("|begin_of_solution|", "|end_of_solution|")]
+            solution_tags = [("<|begin_of_solution|>", "<|end_of_solution|>")]
 
             try:
                 for event in events:
