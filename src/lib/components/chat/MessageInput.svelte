@@ -54,13 +54,14 @@
 	import Photo from '../icons/Photo.svelte';
 	import Wrench from '../icons/Wrench.svelte';
 	import CommandLine from '../icons/CommandLine.svelte';
-	import Sparkles from '../icons/Sparkles.svelte';
+import Sparkles from '../icons/Sparkles.svelte';
+import Mask from '../icons/Mask.svelte';
 
-	import { KokoroWorker } from '$lib/workers/KokoroWorker';
+import { KokoroWorker } from '$lib/workers/KokoroWorker';
 
-	// PII Detection imports
-	import { maskPiiTextWithSession, createPiiSession, type PiiEntity } from '$lib/apis/pii';
-	import { PiiSessionManager, type ExtendedPiiEntity } from '$lib/utils/pii';
+// PII Detection imports
+import { maskPiiTextWithSession, createPiiSession, type PiiEntity } from '$lib/apis/pii';
+import { PiiSessionManager, type ExtendedPiiEntity } from '$lib/utils/pii';
 
 	const i18n = getContext('i18n');
 
@@ -1414,11 +1415,7 @@
 							on:click={togglePiiMasking}
 							aria-label={$i18n.t('Toggle PII masking')}
 						>
-							<img 
-								src="/static/icon-purple-32.png" 
-								alt="PII Mask" 
-								class="size-4"
-							/>
+							<Mask className="size-4" />
 							<span class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5">{$i18n.t('Toggle PII masking')}</span>
 						</button>
 					</Tooltip>
