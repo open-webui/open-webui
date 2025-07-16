@@ -937,7 +937,6 @@ app.state.EMBEDDING_FUNCTION = get_embedding_function(
 
 app.state.RERANKING_FUNCTION = get_reranking_function(
     app.state.config.RAG_RERANKING_ENGINE,
-    app.state.config.RAG_RERANKING_MODEL,
     reranking_function=app.state.rf,
 )
 

@@ -828,7 +828,6 @@ async def update_rag_config(
 
             request.app.state.RERANKING_FUNCTION = get_reranking_function(
                 request.app.state.config.RAG_RERANKING_ENGINE,
-                request.app.state.config.RAG_RERANKING_MODEL,
                 request.app.state.rf,
             )
         except Exception as e:

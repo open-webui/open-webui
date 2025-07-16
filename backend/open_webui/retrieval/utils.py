@@ -445,7 +445,7 @@ def get_embedding_function(
         raise ValueError(f"Unknown embedding engine: {embedding_engine}")
 
 
-def get_reranking_function(reranking_engine, reranking_model, reranking_function):
+def get_reranking_function(reranking_engine, reranking_function):
     if reranking_function is None:
         return None
     if reranking_engine == "external":
