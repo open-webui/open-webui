@@ -331,6 +331,63 @@ export const reindexMemories = async (token: string) => {
 	return res;
 };
 
+export const reindexKnowledge = async (token: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/reindex`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.log(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const countKnowledges = async (token: string) => {
+	let error = null;
+	
+	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/?content=false`, {
+	  method: 'GET',
+	  headers: {
+		Accept: 'application/json',
+		'Content-Type': 'application/json',
+		authorization: `Bearer ${token}`,
+	  }
+	})
+	  .then(async (res) => {
+		if (!res.ok) throw await res.json();
+		const knowledges = await res.json();
+		return knowledges.length;
+	  })
+	  .catch((err) => {
+		error = err.detail;
+		console.log(err);
+		return 0;
+	  });
+  
+	if (error) {
+	  throw error;
+	}
+  
+	return res;
+  };
+
 export const listenToReindexProgress = (onProgress: (data: { source: string | null; progress: number }) => void) => {
 	
 	const eventSource = new EventSource(`${WEBUI_API_BASE_URL}/utils/reindex/stream`);

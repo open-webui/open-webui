@@ -22,7 +22,9 @@
 		deleteAllFiles,
 		reindexFiles,
 		reindexMemories,
+		reindexKnowledge,
 		countFiles,
+		countKnowledges,
 		listenToReindexProgress,
 		checkIfReindexing
 	} from '$lib/apis/files';
@@ -51,7 +53,9 @@
 	let reindexSource: string | null = '';
 	let memoriesMessage = '0%';
 	let filesMessage = '0%';
+	let knowledgeMessage = '0%';
 	let isReindexing = false;
+	let showReindexBar = false;
 
 	let embeddingEngine = '';
 	let embeddingModel = '';
@@ -253,14 +257,18 @@
 		showFilesReindexConfirm = true;
         // Fetch the file count
         try {
-            const fileCount = await countFiles(token);
+			const fileCount = await countFiles(token);
+			const knowledgeCount = await countKnowledges(token)
             
 			filesCountMessage = $i18n.t(
-				'You are about to reindex all memories and all {{count}} files. This could take a while. Do you want to proceed?',
-				{ count: fileCount }
+				'You are about to reindex all memories, all {{files}} files and {{knowledges}} Knowledges. This could take a while. Do you want to proceed?',
+				{ 
+					files: fileCount,
+					knowledges: knowledgeCount
+				}
 			);
         } catch (error) {
-            filesCountMessage = $i18n.t('Error fetching file count');
+            filesCountMessage = $i18n.t('Error fetching file/knowledge count');
             toast.error(`${error}`);
         }
     };
@@ -276,7 +284,13 @@
 				memoriesMessage = $i18n.t('Done');
 				filesMessage = `${progress}%`;
 				break
+			case 'knowledge':
+				memoriesMessage = $i18n.t('Done');
+				filesMessage = $i18n.t('Done');
+				knowledgeMessage = `${progress}%`;
+				break
 			default:
+				knowledgeMessage = $i18n.t('Done');
 				break
 		}
 		if (source === null) {
@@ -286,8 +300,9 @@
 	};
 
 	const startReindexing = async () => {
-		memoriesMessage = '0%'
-		filesMessage = '0%'
+		memoriesMessage = '0%';
+		filesMessage = '0%';
+		knowledgeMessage = '0%';
 		showReindexBar = true;
 		isReindexing = true;
 		reindexProgress = 0;
@@ -306,7 +321,12 @@
 			return null;
 		});
 
-		if (res_memories && res_files) {
+		const res_knowleges = await reindexKnowledge(localStorage.token).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (res_memories && res_files && res_knowleges) {
 			toast.success($i18n.t('Success'));
 		}
 		isReindexing = false;
@@ -1332,7 +1352,7 @@
 					</div>
 					<div class="  mb-2.5 flex w-full justify-between">
 						<div class=" self-center text-xs font-medium">
-							{$i18n.t('Reindex all Files Vectors')}
+							{$i18n.t('Reindex all Vectors')}
 						</div>
 						<div class="flex items-center relative">
 							<button
@@ -1354,7 +1374,8 @@
 						<p class="text-sm mt-2 text-gray-600">
 							{$i18n.t('Reindexing')}:
 							{$i18n.t('Memory')}: {memoriesMessage},
-							{$i18n.t('Files')}: {filesMessage}.
+							{$i18n.t('Files')}: {filesMessage},
+							{$i18n.t('Knowledge')}: {knowledgeMessage}.
 						</p>
 					{/if}
 
