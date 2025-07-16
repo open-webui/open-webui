@@ -308,7 +308,7 @@
 							{$i18n.t(timeRange)}
 						</div>-->
 
-						<div class="gap-[12px] grid {$mobile?'grid-cols-1 px-[48px]':'grid-cols-3'}">
+						<div class="gap-[12px] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 px-[48px] sm:px-[16px] lg:px-[0px] ">
 							{#each notes[timeRange] as note, idx (note.id)}
 								<div
 									class=" flex cursor-pointer w-full p-[16px] mb-[12px] bg-white/88 dark:bg-gray-850 dark:hover:bg-white/5 hover:bg-black/5 rounded-[12px] transition"
