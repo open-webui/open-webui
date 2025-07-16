@@ -5,7 +5,7 @@
 	const dispatch = createEventDispatcher();
 
 	import { blobToFile } from '$lib/utils';
-	import { transcribeAudio, processTTSQueue, synthesizeOpenAISpeech } from '$lib/apis/audio';
+	import { transcribeAudio, processTTSQueue, synthesizeOpenAISpeech, processReadyToPlayQueue } from '$lib/apis/audio';
 
 	import { toast } from 'svelte-sonner';
 
@@ -460,8 +460,8 @@
 	};
 
 
-	$: processTTSQueue($ttsState, $ttsSentenceQueue, $readyToPlayQueue);
-	// $: processReadyToPlayQueue($readyToPlayQueue);
+	$: processTTSQueue($ttsSentenceQueue);
+	$: processReadyToPlayQueue($readyToPlayQueue);
 
 	const chatEventHandler = async (e) => {
 		const { id, content, filler } = e.detail;

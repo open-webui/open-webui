@@ -1,5 +1,5 @@
 import { AUDIO_API_BASE_URL } from '$lib/constants';
-import { fillerEventStartTime, ttsSentenceQueue, ttsStreaming, ttsState, prefetchedReader,readyToPlayQueue } from '$lib/stores';
+import { fillerEventStartTime, ttsSentenceQueue, ttsStreaming, ttsState, prefetchedReader, readyToPlayQueue } from '$lib/stores';
 import { get } from 'svelte/store';
 
 
@@ -108,106 +108,106 @@ const ctx = new AudioContext({ sampleRate: DEFAULT_SAMPLE_RATE });
 
 
 export const streamAudio = async (reader) => { // Removed isFirstSentenceInSequence, as each call is a "new stream"
-    // Start scheduling slightly in the future to give context and gain ramp time
-    let nextPlayTime = ctx.currentTime + 0.01; // Start scheduling 10ms into the future
-    let firstChunkProcessed = false;
-    let lastGainNode = null;
-    let lastChunkEndTime = 0;
+	// Start scheduling slightly in the future to give context and gain ramp time
+	let nextPlayTime = ctx.currentTime + 0.01; // Start scheduling 10ms into the future
+	let firstChunkProcessed = false;
+	let lastGainNode = null;
+	let lastChunkEndTime = 0;
 
-    console.log(`[streamAudio] New Stream START. Initial ctx.currentTime: ${ctx.currentTime.toFixed(3)}, Scheduling starts at: ${nextPlayTime.toFixed(3)}`);
+	console.log(`[streamAudio] New Stream START. Initial ctx.currentTime: ${ctx.currentTime.toFixed(3)}, Scheduling starts at: ${nextPlayTime.toFixed(3)}`);
 
-    // Pre-set the destination gain to 0 if we anticipate a fade-in.
-    // This helps ensure silence before the first sound if there's any scheduling delay.
-    // However, gain nodes are per-source, so the main thing is the first source's gain.
+	// Pre-set the destination gain to 0 if we anticipate a fade-in.
+	// This helps ensure silence before the first sound if there's any scheduling delay.
+	// However, gain nodes are per-source, so the main thing is the first source's gain.
 
 	let firstChunk = true
-    try {
+	try {
 
 		if (ctx.state === 'suspended') {
 			await ctx.resume();
 		}
 
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
+		while (true) {
+			const { done, value } = await reader.read();
+			if (done) break;
 			if (value && firstChunk) {
 				console.log(`!!!timer: time taken from hitting TTS endpoint to getting first chunk TTFA ${(performance.now() - startTimeForHittingTTS) / 1000}s`)
 				firstChunk = false
 			}
 
 
-            const pcmData = value.buffer;
-            let samples = new Int16Array(pcmData);
-            let float32 = new Float32Array(samples.length);
-            let sum = 0;
-            for (let i = 0; i < samples.length; i++) {
-                float32[i] = samples[i] / 32768;
-                sum += float32[i];
-            }
+			const pcmData = value.buffer;
+			let samples = new Int16Array(pcmData);
+			let float32 = new Float32Array(samples.length);
+			let sum = 0;
+			for (let i = 0; i < samples.length; i++) {
+				float32[i] = samples[i] / 32768;
+				sum += float32[i];
+			}
 
-            const dcOffset = sum / float32.length;
-            if (Math.abs(dcOffset) > DC_OFFSET_THRESHOLD) {
-                for (let i = 0; i < float32.length; i++) float32[i] -= dcOffset;
-            }
+			const dcOffset = sum / float32.length;
+			if (Math.abs(dcOffset) > DC_OFFSET_THRESHOLD) {
+				for (let i = 0; i < float32.length; i++) float32[i] -= dcOffset;
+			}
 
-            const audioBuffer = ctx.createBuffer(1, float32.length, DEFAULT_SAMPLE_RATE);
-            audioBuffer.getChannelData(0).set(float32);
+			const audioBuffer = ctx.createBuffer(1, float32.length, DEFAULT_SAMPLE_RATE);
+			audioBuffer.getChannelData(0).set(float32);
 
-            const sourceNode = ctx.createBufferSource();
-            sourceNode.buffer = audioBuffer;
-            const gainNode = ctx.createGain();
-            sourceNode.connect(gainNode);
-            gainNode.connect(ctx.destination);
+			const sourceNode = ctx.createBufferSource();
+			sourceNode.buffer = audioBuffer;
+			const gainNode = ctx.createGain();
+			sourceNode.connect(gainNode);
+			gainNode.connect(ctx.destination);
 
-            // 'scheduleTime' is when this specific chunk will start playing
-            const scheduleTime = Math.max(nextPlayTime, ctx.currentTime); // Ensure not in past
+			// 'scheduleTime' is when this specific chunk will start playing
+			const scheduleTime = Math.max(nextPlayTime, ctx.currentTime); // Ensure not in past
 
-            if (!firstChunkProcessed) {
-                // **CRITICAL FADE-IN FOR THE VERY FIRST CHUNK OF THE STREAM**
-                gainNode.gain.setValueAtTime(VERY_LOW_GAIN, ctx.currentTime); // Ensure gain is low NOW
-                gainNode.gain.setValueAtTime(VERY_LOW_GAIN, scheduleTime);    // Explicitly set to VERY_LOW_GAIN at scheduled start
-                gainNode.gain.exponentialRampToValueAtTime(1, scheduleTime + START_FADE_S);
-                console.log(`[streamAudio] FIRST CHUNK FADE-IN: Scheduled at ${scheduleTime.toFixed(3)}, Ramp ends ${(scheduleTime + START_FADE_S).toFixed(3)}`);
-                firstChunkProcessed = true;
-            } else {
-                gainNode.gain.setValueAtTime(1, scheduleTime); // Full gain for subsequent chunks
-            }
+			if (!firstChunkProcessed) {
+				// **CRITICAL FADE-IN FOR THE VERY FIRST CHUNK OF THE STREAM**
+				gainNode.gain.setValueAtTime(VERY_LOW_GAIN, ctx.currentTime); // Ensure gain is low NOW
+				gainNode.gain.setValueAtTime(VERY_LOW_GAIN, scheduleTime);    // Explicitly set to VERY_LOW_GAIN at scheduled start
+				gainNode.gain.exponentialRampToValueAtTime(1, scheduleTime + START_FADE_S);
+				console.log(`[streamAudio] FIRST CHUNK FADE-IN: Scheduled at ${scheduleTime.toFixed(3)}, Ramp ends ${(scheduleTime + START_FADE_S).toFixed(3)}`);
+				firstChunkProcessed = true;
+			} else {
+				gainNode.gain.setValueAtTime(1, scheduleTime); // Full gain for subsequent chunks
+			}
 
-            sourceNode.start(scheduleTime);
-            nextPlayTime = scheduleTime + audioBuffer.duration;
-            lastGainNode = gainNode;
-            lastChunkEndTime = nextPlayTime;
-        }
+			sourceNode.start(scheduleTime);
+			nextPlayTime = scheduleTime + audioBuffer.duration;
+			lastGainNode = gainNode;
+			lastChunkEndTime = nextPlayTime;
+		}
 
-        // After loop: if we processed any chunks, apply fade-OUT to the last one
-        if (lastGainNode) {
-            const fadeOutStartTime = lastChunkEndTime - END_FADE_S;
-            const now = ctx.currentTime;
-            const effectiveRampStartTime = Math.max(now, fadeOutStartTime);
-            const effectiveRampEndTime = effectiveRampStartTime + END_FADE_S;
+		// After loop: if we processed any chunks, apply fade-OUT to the last one
+		if (lastGainNode) {
+			const fadeOutStartTime = lastChunkEndTime - END_FADE_S;
+			const now = ctx.currentTime;
+			const effectiveRampStartTime = Math.max(now, fadeOutStartTime);
+			const effectiveRampEndTime = effectiveRampStartTime + END_FADE_S;
 
-            // Ensure gain is 1 before ramp starts
-            lastGainNode.gain.setValueAtTime(1, effectiveRampStartTime);
-            lastGainNode.gain.exponentialRampToValueAtTime(VERY_LOW_GAIN, effectiveRampEndTime);
-            console.log(`[streamAudio] LAST CHUNK FADE-OUT: Ramp starts ${effectiveRampStartTime.toFixed(3)}, Ramp ends ${effectiveRampEndTime.toFixed(3)}`);
-            nextPlayTime = Math.max(nextPlayTime, effectiveRampEndTime);
-        }
+			// Ensure gain is 1 before ramp starts
+			lastGainNode.gain.setValueAtTime(1, effectiveRampStartTime);
+			lastGainNode.gain.exponentialRampToValueAtTime(VERY_LOW_GAIN, effectiveRampEndTime);
+			console.log(`[streamAudio] LAST CHUNK FADE-OUT: Ramp starts ${effectiveRampStartTime.toFixed(3)}, Ramp ends ${effectiveRampEndTime.toFixed(3)}`);
+			nextPlayTime = Math.max(nextPlayTime, effectiveRampEndTime);
+		}
 
-    } catch (error) {
-        console.error("[streamAudio] Error:", error);
-    } finally {
-        const timeToWaitMs = (nextPlayTime - ctx.currentTime) * 1000;
-        if (timeToWaitMs > 0) {
-            console.log(`[streamAudio] Waiting ${timeToWaitMs.toFixed(0)}ms for audio to complete.`);
-            await new Promise(resolve => setTimeout(resolve, Math.max(0, timeToWaitMs)));
-        }
-        if (GRACE_MS > 0) {
-             console.log(`[streamAudio] Grace period: ${GRACE_MS}ms.`);
-            await new Promise(resolve => setTimeout(resolve, GRACE_MS));
-        }
+	} catch (error) {
+		console.error("[streamAudio] Error:", error);
+	} finally {
+		const timeToWaitMs = (nextPlayTime - ctx.currentTime) * 1000;
+		if (timeToWaitMs > 0) {
+			console.log(`[streamAudio] Waiting ${timeToWaitMs.toFixed(0)}ms for audio to complete.`);
+			await new Promise(resolve => setTimeout(resolve, Math.max(0, timeToWaitMs)));
+		}
+		if (GRACE_MS > 0) {
+			console.log(`[streamAudio] Grace period: ${GRACE_MS}ms.`);
+			await new Promise(resolve => setTimeout(resolve, GRACE_MS));
+		}
 		// leave ctx open, do not close ctx to allow multiple audio to be played seamlessly within a user session
-        console.log(`[streamAudio] Stream END. Final scheduled time: ${nextPlayTime.toFixed(3)}`);
-    }
+		console.log(`[streamAudio] Stream END. Final scheduled time: ${nextPlayTime.toFixed(3)}`);
+	}
 };
 
 let startTimeForHittingTTS = 0
@@ -224,14 +224,14 @@ export const synthesizeStreamingSpeech = async (
 			'Content-Type': 'application/json'
 		},
 		body: JSON.stringify({ text: text }),
-	  });
+	});
 
 
 	if (!response.ok || !response.body) {
 		console.log('!!response not ok', text)
 		return
-	} 
-	
+	}
+
 	const reader = response.body.getReader();
 
 	return reader
@@ -251,7 +251,7 @@ async function playFillerPhrase(content: string) {
 		)
 		if (res) {
 			console.log("Server Content-Type:", res.headers.get('Content-Type'));
-            const arrayBuffer = await res.blob().then(b => b.arrayBuffer());
+			const arrayBuffer = await res.blob().then(b => b.arrayBuffer());
 			audioBuffer = await ctx.decodeAudioData(arrayBuffer);
 			audioCache.set(content, audioBuffer);
 		}
@@ -260,109 +260,108 @@ async function playFillerPhrase(content: string) {
 	}
 
 	if (audioBuffer) {
-        await new Promise(resolve => {
-            const source = ctx.createBufferSource();
+		await new Promise(resolve => {
+			const source = ctx.createBufferSource();
 			source.buffer = audioBuffer;
 			source.connect(ctx.destination);
 			source.onended = resolve; // Resolve the promise when playback finishes
 			source.start();
-        });
+		});
 	}
 }
 
 let isProcessing = false;
 
+/**
+ * - check if there is anything to play
+ * - read from readyToPlayQueue
+ * - play audio
+ */
+export async function processReadyToPlayQueue() {
+	const audioToPlay = get(readyToPlayQueue)[0]; // index 0 because we want to get the first item
+
+	if (audioToPlay) {
+		console.log(`[Processor] Playing from ready queue: "${audioToPlay.content}"`);
+		await streamAudio(audioToPlay.reader);
+		console.log(`[Processor] Finished: "${audioToPlay.content}"`);
+	}
+}
+
+// queue: ['this is my filler text',]
+// queue: []
+// queue: ['hello my name is serena']
+// queue: []
 export async function processTTSQueue() {
-    if (isProcessing) return;
-    isProcessing = true;
+	try {
+		// if (isProcessing) return;
+		// isProcessing = true;
 
-	console.log(`processTTSQueue get(ttsSentenceQueue).length ${get(ttsSentenceQueue).length} get(readyToPlayQueue).length ${get(readyToPlayQueue).length}`)
-    try {
-        while (get(ttsSentenceQueue).length > 0 || get(readyToPlayQueue).length > 0) {
-            
-            const textQueue = get(ttsSentenceQueue);
-            const firstTextTask = textQueue[0];
+		console.log(`processTTSQueue get(ttsSentenceQueue).length ${get(ttsSentenceQueue).length} get(readyToPlayQueue).length ${get(readyToPlayQueue).length}`)
+		const textQueue = get(ttsSentenceQueue);
 
-            // --- PRIORITY 1: Handle Standalone Fillers (Fallback) ---
-            if (firstTextTask && firstTextTask.isFiller && textQueue.length === 1) {
-                ttsSentenceQueue.update(q => q.slice(1));
-                console.log(`[Processor] Playing standalone filler: "${firstTextTask.content}"`);
+		if (textQueue.length) {
+			// always begin by playing filler
+			const textToPlay = textQueue[0]
 
-				// await Promise.all([
-				// 	playFillerPhrase(firstTextTask.content), synthesizeTheThing()]
-				// )
-				await playFillerPhrase(firstTextTask.content)
-                // playFillerPhrase(firstTextTask.content).then(async () => {
-				// 	console.log(`[Processor] Finished playing standalone filler: "${firstTextTask.content}"`);
-				// 	// return new Promise(resolve => setTimeout(resolve, 50));
-				// 	if (get(ttsSentenceQueue) && get(ttsSentenceQueue)[0]) {
-				// 		const s1 = get(ttsSentenceQueue)[0]
-				// 		const reader = await synthesizeStreamingSpeech(s1.content);
-				// 		if (reader) {
-				// 			readyToPlayQueue.update(q => [...q, { reader, content: s1.content }]);
-				// 		}
-				// 	}
-				// })
-                continue;
-            }
+			if (textToPlay.isFiller) {
+				ttsSentenceQueue.update(q => q.slice(1)); // dequeue chunk to be processed - do we want to do this _after_ we've processed in case of failed generations?
+				console.log(`[Processor] Playing standalone filler: "${textToPlay.content}"`);
+				// await playFillerPhrase(fillerText.content) // this is currently blocking
+				await playFillerPhrase(textToPlay.content)
+				console.log("yay we're done")
+				// return
+			} else {
+				// backup: if we have a single audio 
+				synthesizeAudioIfExists()
+			}
 
-            // --- PRIORITY 2: add to readytoplayqueue if queue Empty ---
-			console.log('firstTextTask', firstTextTask)
-            if (get(readyToPlayQueue).length === 0 && firstTextTask) {
-                ttsSentenceQueue.update(q => q.slice(1));
-                console.log(`[Processor] Priming pipeline with: "${firstTextTask.content}"`);
-                const reader = await synthesizeStreamingSpeech(firstTextTask.content);
-                if (reader) {
-                    readyToPlayQueue.update(q => [...q, { reader, content: firstTextTask.content }]);
-                }
-            }
-            
-            // --- PRIORITY 3: Play from Ready Queue + Pre-fetch Next ---
-            const audioToPlay = get(readyToPlayQueue)[0];
-            if (audioToPlay) {
-                readyToPlayQueue.update(q => q.slice(1));
-                
-                // Pre-fetch the next text item while playing the current audio.
-                const nextTextToFetch = get(ttsSentenceQueue)[0];
-                if (nextTextToFetch && !nextTextToFetch.isFiller) {
-                    ttsSentenceQueue.update(q => q.slice(1));
-                    console.log(`[Processor] Pre-fetching "${nextTextToFetch.content}" in background.`);
-                    synthesizeStreamingSpeech(nextTextToFetch.content).then(reader => {
-                        if (reader) {
-                            readyToPlayQueue.update(q => [...q, { reader, content: nextTextToFetch.content }]);
-                        }
-                    });
-                }
+		}
+	} catch (error) {
+		console.error("[Processor] An error occurred in the processing loop:", error);
+	} finally {
+		console.log("[Processor] All work is done. Processor is now idle.");
+		// isProcessing = false;
+	}
+}
 
-                // Play the current audio.
-                console.log(`[Processor] Playing from ready queue: "${audioToPlay.content}"`);
-                await streamAudio(audioToPlay.reader);
-                console.log(`[Processor] Finished: "${audioToPlay.content}"`);
-            }
-        }
-    } catch (error) {
-        console.error("[Processor] An error occurred in the processing loop:", error);
-    } finally {
-        console.log("[Processor] All work is done. Processor is now idle.");
-        isProcessing = false;
-    }
+export async function synthesizeAudioIfExists() {
+	const textQueue = get(ttsSentenceQueue);
+	console.log(`[Processor] synthesizeaudioifexists "${textQueue}"`);
+
+	if (!textQueue.length) {
+		return
+	}
+
+	const textToPlay = textQueue[0]
+
+	if (textToPlay.isFiller) {
+		return
+	}
+
+	ttsSentenceQueue.update(q => q.slice(1));
+	console.log(`[Processor] Priming pipeline with: "${textToPlay.content}"`);
+	const reader = await synthesizeStreamingSpeech(textToPlay.content);
+	if (reader) {
+		// make the update to the readyToPlayQueue to get the processReadyToPlayQueue function reacting
+		readyToPlayQueue.update(q => [...q, { reader, content: textToPlay.content }]);
+	}
 }
 
 // this tries to address the pause in between sentences by prefetching every sentence if possible but it makes the audio overlap
 // export async function processTTSQueue(state, currentQueue, readyQueue) {
-    
+
 //     // --- HIGH-PRIORITY ACTION: Handle Fillers ---
 //     // If there's a filler phrase at the front of the queue, play it immediately,
 //     if (currentQueue.length > 0 && currentQueue[0].isFiller) {
 //         ttsState.set('playing_filler'); 
-        
+
 //         const fillerTask = currentQueue[0];
 //         ttsSentenceQueue.update(q => q.slice(1));
 
 //         console.log(`[Filler] Playing high-priority filler: "${fillerTask.content}"`);
 //         await playFillerPhrase(fillerTask.content);
 //         console.log('[Filler] Finished filler playback.');
-        
+
 //         // This will re-trigger the watcher, allowing it to continue with the producer/consumer logic.
 //         ttsState.set('idle');
 //         return;
@@ -372,19 +371,19 @@ export async function processTTSQueue() {
 //     // If we are not busy playing and there's text to fetch, start fetching.
 //     // We can fetch even while another clip is playing.
 //     const shouldFetch = state !== 'fetching' && currentQueue.length > 0;
-    
+
 //     if (shouldFetch) {
 //         ttsState.set('fetching');
 
 //         const task = currentQueue[0];
 //         ttsSentenceQueue.update(q => q.slice(1));
-        
+
 //         console.log(`[Fetcher] Fetching audio for: "${task.content}"`);
 //         const reader = await synthesizeStreamingSpeech(task.content);
 //         if (reader) {
 //             readyToPlayQueue.update(q => [...q, { reader, content: task.content }]);
 //         }
-        
+
 //         if (get(ttsState) === 'fetching') {
 //             ttsState.set('idle');
 //         }
@@ -461,7 +460,7 @@ export async function processTTSQueue() {
 
 // 	// 	if (task.isFiller) {
 // 	// 		ttsState.set('playing_filler');
-			
+
 // 	// 		playFillerPhrase(task.content).then(async () => {
 // 	// 			const finalState = get(ttsState);
 // 	// 			const readerPromise = get(prefetchedReader);
@@ -494,7 +493,7 @@ export async function processTTSQueue() {
 // 	// // --- ACTION 2: We are playing a filler, and a main sentence just arrived. ---
 // 	// if (currentState === 'playing_filler' && currentQueue.length > 0 && !currentQueue[0].isFiller) {
 // 	// 	console.log('[Watcher] OPPORTUNITY! Pre-fetching main sentence while filler plays.');
-		
+
 // 	// 	const taskToPrefetch = currentQueue[0];
 // 	// 	ttsSentenceQueue.update(q => q.slice(1)); // Dequeue the task we're pre-fetching
 
@@ -518,7 +517,7 @@ export async function processTTSQueue() {
 //     // Dequeue the next task
 //     const taskToProcess = queue[0];
 //     ttsSentenceQueue.update(q => q.slice(1));
-    
+
 //     console.log(`[Processor] Dequeued: "${taskToProcess.content}"`);
 
 //     try {
