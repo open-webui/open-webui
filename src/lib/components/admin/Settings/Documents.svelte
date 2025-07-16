@@ -17,17 +17,18 @@
 		updateRAGConfig
 	} from '$lib/apis/retrieval';
 
-	import { reindexKnowledgeFiles } from '$lib/apis/knowledge';
+	import { reindexMemories } from '$lib/apis/memories';
+	import { 
+		reindexKnowledgeFiles,
+		reindexKnowledge,
+		countKnowledges
+	} from '$lib/apis/knowledge';
 	import { 
 		deleteAllFiles,
 		reindexFiles,
-		reindexMemories,
-		reindexKnowledge,
-		countFiles,
-		countKnowledges,
-		listenToReindexProgress,
-		checkIfReindexing
+		countFiles
 	} from '$lib/apis/files';
+	import { listenToReindexProgress, checkIfReindexing } from '$lib/apis/utils';
 
 	import ResetUploadDirConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import ResetVectorDBConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
