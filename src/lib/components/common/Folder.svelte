@@ -167,7 +167,7 @@
 			<!-- Chevron Icon -->
 			 {#if showSidebar}
 				<div
-				class="transition-all duration-300 ease-in-out"
+				class="visible group-hover:invisible"
 				class:opacity-100={showSidebar}
 				class:opacity-0={!showSidebar}
 			>
@@ -186,7 +186,7 @@
 	<!-- Plus button -->
 	{#if onAdd && showSidebar}
 		<button
-			class="absolute z-10 right-2 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
+			class="absolute z-10 right-[14px] invisible group-hover:visible self-center flex items-center dark:text-gray-300"
 			on:pointerup={(e) => e.stopPropagation()}
 			on:click={(e) => {
 				e.stopPropagation();
