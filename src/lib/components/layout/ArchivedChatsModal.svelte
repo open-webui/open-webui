@@ -145,7 +145,7 @@
 	{unarchiveHandler}
 >
 	<div slot="footer">
-		<div class="flex flex-wrap text-sm font-medium gap-1.5 mt-2 m-1 justify-end w-full">
+		<!--<div class="flex flex-wrap text-sm font-medium gap-1.5 mt-2 m-1 justify-end w-full">
 			<button
 				class=" px-3.5 py-1.5 font-medium hover:bg-black/5 dark:hover:bg-white/5 outline outline-1 outline-gray-100 dark:outline-gray-800 rounded-3xl"
 				on:click={() => {
@@ -163,6 +163,6 @@
 			>
 				{$i18n.t('Export All Archived Chats')}
 			</button>
-		</div>
+		</div>-->
 	</div>
 </ChatsModal>

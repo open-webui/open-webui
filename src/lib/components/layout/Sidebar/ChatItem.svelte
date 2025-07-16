@@ -311,7 +311,7 @@
 			<input
 				id="chat-title-input-{id}"
 				bind:value={chatTitle}
-				class=" bg-transparent w-full outline-hidden mr-10"
+				class="py-[8px] px-[8px] rounded-[8px] text-neutrals-800 text-[16px] leading-[24px] font-medium bg-transparent w-full outline-hidden mr-10"
 				placeholder={generating ? $i18n.t('Generating...') : ''}
 				on:keydown={chatTitleInputKeydownHandler}
 				on:blur={async (e) => {

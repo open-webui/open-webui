@@ -10,7 +10,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
 	import Download from '$lib/components/icons/Download.svelte';
-	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
+	import Trash from '$lib/components/icons/Trash.svelte';
 	import DocumentDuplicate from '$lib/components/icons/DocumentDuplicate.svelte';
 	import Share from '$lib/components/icons/Share.svelte';
 
@@ -38,7 +38,7 @@
 
 	<slot name="content">
 		<DropdownMenu.Content
-			class="w-full {className} text-sm rounded-xl px-1 py-1.5 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg font-primary"
+			class="w-full {className} rounded-[8px] border border-neutrals-50 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-custom"
 			sideOffset={6}
 			side="bottom"
 			align="start"
@@ -46,7 +46,7 @@
 		>
 			<DropdownMenu.Sub>
 				<DropdownMenu.SubTrigger
-					class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+					class="p-[8px] flex items-center text-neutrals-800 gap-[8px] text-[16px] leading-[24px] font-medium  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 				>
 					<Download strokeWidth="2" />
 
@@ -58,7 +58,7 @@
 					sideOffset={8}
 				>
 					<DropdownMenu.Item
-						class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+						class="p-[8px] flex items-center text-neutrals-800 gap-[8px] text-[16px] leading-[24px] font-medium  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 						on:click={() => {
 							onDownload('md');
 						}}
@@ -67,7 +67,7 @@
 					</DropdownMenu.Item>
 
 					<DropdownMenu.Item
-						class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+						class=" p-[8px] flex items-center text-neutrals-800 gap-[8px] text-[16px] leading-[24px] font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 						on:click={() => {
 							onDownload('pdf');
 						}}
@@ -79,7 +79,7 @@
 
 			<DropdownMenu.Sub>
 				<DropdownMenu.SubTrigger
-					class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+					class="p-[8px] flex items-center text-neutrals-800 gap-[8px] text-[16px] leading-[24px] font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 				>
 					<Share strokeWidth="2" />
 
@@ -91,7 +91,7 @@
 					sideOffset={8}
 				>
 					<DropdownMenu.Item
-						class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+						class="flex items-center text-neutrals-800 gap-[8px] text-[16px] leading-[24px] font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 						on:click={() => {
 							onCopyToClipboard();
 						}}
@@ -103,13 +103,13 @@
 			</DropdownMenu.Sub>
 
 			<DropdownMenu.Item
-				class="flex  gap-2  items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				class="p-[8px] flex items-center text-neutrals-800 gap-[8px] text-[16px] leading-[24px] font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 				on:click={() => {
 					onDelete();
 				}}
 			>
-				<GarbageBin strokeWidth="2" />
-				<div class="flex items-center">{$i18n.t('Delete')}</div>
+				<Trash strokeWidth="2" />
+				<div class="flex items-center text-[#C2451E]">{$i18n.t('Delete')}</div>
 			</DropdownMenu.Item>
 		</DropdownMenu.Content>
 	</slot>

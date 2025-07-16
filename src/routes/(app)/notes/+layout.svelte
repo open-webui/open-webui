@@ -1,10 +1,19 @@
 <script lang="ts">
 	import { onMount, getContext } from 'svelte';
-	import { WEBUI_NAME, showSidebar, functions, config, user, showArchivedChats } from '$lib/stores';
+	import {
+		WEBUI_NAME,
+		showSidebar,
+		functions,
+		config,
+		user,
+		showArchivedChats,
+		mobile
+	} from '$lib/stores';
 	import { goto } from '$app/navigation';
 
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
 	import UserMenu from '$lib/components/layout/Sidebar/UserMenu.svelte';
+	import Newlogo from '$lib/components/icons/Newlogo.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -33,12 +42,17 @@
 
 {#if loaded}
 	<div
-		class=" flex flex-col w-full h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
+		class="relative background-gradient-bg flex  w-full h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
 			? 'md:max-w-[calc(100%-300px)]'
 			: ''} max-w-full"
-	>
-		<nav class="   px-2 pt-1 backdrop-blur-xl w-full drag-region">
-			<div class=" flex items-center">
+	>{#if !$mobile}
+		<nav
+			class=" p-[24px] pb-[72px]">
+			
+				<Newlogo />
+			
+			
+			<!--<div class=" flex items-center">
 				<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center">
 					<button
 						id="sidebar-toggle-button"
@@ -94,11 +108,19 @@
 						{/if}
 					</div>
 				</div>
-			</div>
+			</div>-->
 		</nav>
-
-		<div class=" pb-1 flex-1 max-h-full overflow-y-auto @container">
+{/if}
+		<div class="max-w-[800px] flex-1 max-h-full @container">
 			<slot />
 		</div>
+
+		<div
+				class="{$mobile ?'fixed right-0 bg-neutrals-50 w-full h-[60px] px-[16px] flex justify-end items-center':'p-[24px] pb-[72px] '} font-bold text-[22px] leading-[30px] text-neutrals-800 touch-auto pointer-events-auto"
+			>
+				<a class="min-w-fit transition" href="/notes">
+					{$i18n.t('Notes')}
+				</a>
+			</div>
 	</div>
 {/if}

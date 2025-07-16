@@ -83,7 +83,7 @@
 
 <Modal size="md" bind:show>
 	<div class="py-2.5 dark:text-gray-300 text-gray-700">
-		<div class="px-3.5 pb-1.5">
+		<div class=" pb-1.5">
 			<SearchInput
 				bind:value={query}
 				on:input={searchHandler}
@@ -113,10 +113,10 @@
 				}}
 			/>
 		</div>
-
+      
 		<!-- <hr class="border-gray-100 dark:border-gray-850 my-1" /> -->
 
-		<div class="flex flex-col overflow-y-auto h-80 scrollbar-hidden px-3 pb-1">
+		<div class="flex flex-col overflow-y-auto h-80 scrollbar-hidden px-[24px] pb-1">
 			{#if chatList}
 				{#if chatList.length === 0}
 					<div class="text-xs text-gray-500 dark:text-gray-400 text-center px-5">
@@ -127,9 +127,9 @@
 				{#each chatList as chat, idx (chat.id)}
 					{#if idx === 0 || (idx > 0 && chat.time_range !== chatList[idx - 1].time_range)}
 						<div
-							class="w-full text-xs text-gray-500 dark:text-gray-500 font-medium {idx === 0
+							class="w-full text-neutrals-400 text-[14px] leading-[22px] {idx === 0
 								? ''
-								: 'pt-5'} pb-2 px-2"
+								: 'pt-5'} pb-[8px]"
 						>
 							{$i18n.t(chat.time_range)}
 							<!-- localisation keys for time_range to be recognized from the i18next parser (so they don't get automatically removed):
@@ -154,10 +154,7 @@
 					{/if}
 
 					<a
-						class=" w-full flex justify-between items-center rounded-lg text-sm py-2 px-3 hover:bg-gray-50 dark:hover:bg-gray-850 {selectedIdx ===
-						idx
-							? 'bg-gray-50 dark:bg-gray-850'
-							: ''}"
+						class="py-[8px] w-full flex gap-[8px] items-center "
 						href="/c/{chat.id}"
 						draggable="false"
 						data-arrow-selected={selectedIdx === idx ? 'true' : undefined}
@@ -169,15 +166,18 @@
 							onClose();
 						}}
 					>
+					<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+  <path d="M9.89035 12.4424L9.17752 11.7463L12.4302 8.49359H1.66602V7.49376H12.4365L9.19418 4.24109L9.89035 3.54492L14.339 7.99376L9.89035 12.4424Z" fill="#36383B"/>
+</svg>
 						<div class=" flex-1">
-							<div class="text-ellipsis line-clamp-1 w-full">
+							<div class="text-ellipsis line-clamp-1 w-full text-neutrals-800 text-[16px] leading-[24px] font-medium">
 								{chat?.title}
 							</div>
 						</div>
 
-						<div class=" pl-3 shrink-0 text-gray-500 dark:text-gray-400 text-xs">
+						<!--<div class=" pl-3 shrink-0 text-gray-500 dark:text-gray-400 text-xs">
 							{dayjs(chat?.updated_at * 1000).calendar()}
-						</div>
+						</div>-->
 					</a>
 				{/each}
 

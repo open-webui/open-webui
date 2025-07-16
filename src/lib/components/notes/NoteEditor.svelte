@@ -12,7 +12,7 @@
 	import { marked } from 'marked';
 	import { toast } from 'svelte-sonner';
 
-	import { config, models, settings, showSidebar } from '$lib/stores';
+	import { config, models, settings, showSidebar,mobile } from '$lib/stores';
 	import { goto } from '$app/navigation';
 
 	import { compressImage, copyToClipboard, splitStream } from '$lib/utils';
@@ -58,7 +58,7 @@
 	import FilesOverlay from '../chat/MessageInput/FilesOverlay.svelte';
 	import RecordMenu from './RecordMenu.svelte';
 	import NoteMenu from './Notes/NoteMenu.svelte';
-	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
+	import EllipsisVertical from '../icons/EllipsisVertical.svelte';
 	import Sparkles from '../icons/Sparkles.svelte';
 	import SparklesSolid from '../icons/SparklesSolid.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
@@ -67,6 +67,8 @@
 	import ArrowUturnRight from '../icons/ArrowUturnRight.svelte';
 	import Sidebar from '../common/Sidebar.svelte';
 	import ArrowRight from '../icons/ArrowRight.svelte';
+	import ArrowLeftNew from '../icons/ArrowLeftNew.svelte';
+	
 	import Cog6 from '../icons/Cog6.svelte';
 	import { chatCompletion } from '$lib/apis/openai';
 
@@ -657,7 +659,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 	</div>
 </DeleteConfirmDialog>
 
-<div class="relative flex-1 w-full h-full flex justify-center" id="note-editor">
+<div class="flex-1 w-full h-full flex justify-center" id="note-editor">
 	<Sidebar bind:show={showSettings} className=" bg-white dark:bg-gray-900" width="300px">
 		<div class="flex flex-col px-5 py-3 text-sm">
 			<div class="flex justify-between items-center mb-2">
@@ -704,11 +706,13 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 			</div>
 		</div>
 	{:else}
-		<div class=" w-full flex flex-col {loading ? 'opacity-20' : ''}">
-			<div class="shrink-0 w-full flex justify-between items-center px-4.5 mb-1.5">
+	<div class="pt-[136px] {$mobile?'px-[16px]':''} max-w-[800px] mx-auto w-full h-full">
+	<a href="/notes" class="items-center mb-[17px] ml-[12px] inline-flex gap-[4px] text-neutrals-800 text-[14px] leading-[22px] font-bold"><ArrowLeftNew/>back</a>
+		<div class="relative max-w-[800px] mx-auto p-[16px] h-[85%] rounded-[12px] w-full flex flex-col bg-white/88">
+			<div class="shrink-0 w-full flex justify-between items-center">
 				<div class="w-full flex items-center">
 					<input
-						class="w-full text-2xl font-medium bg-transparent outline-hidden"
+						class="w-full text-neutrals-800 gap-[8px] text-[14px] leading-[22px] font-bold bg-transparent outline-hidden"
 						type="text"
 						bind:value={note.title}
 						placeholder={$i18n.t('Title')}
@@ -720,7 +724,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 							<div>
 								<div class="flex items-center gap-0.5 self-center min-w-fit" dir="ltr">
 									<button
-										class="self-center p-1 hover:enabled:bg-black/5 dark:hover:enabled:bg-white/5 dark:hover:enabled:text-white hover:enabled:text-black rounded-md transition disabled:cursor-not-allowed disabled:text-gray-500 disabled:hover:text-gray-500"
+										class="self-center p-1 cursor-pointer hover:enabled:bg-black/5 dark:hover:enabled:bg-white/5 dark:hover:enabled:text-white hover:enabled:text-black rounded-md transition disabled:cursor-not-allowed disabled:text-gray-500 disabled:hover:text-gray-500"
 										on:click={() => {
 											versionNavigateHandler('prev');
 										}}
@@ -731,7 +735,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 									</button>
 
 									<button
-										class="self-center p-1 hover:enabled:bg-black/5 dark:hover:enabled:bg-white/5 dark:hover:enabled:text-white hover:enabled:text-black rounded-md transition disabled:cursor-not-allowed disabled:text-gray-500 disabled:hover:text-gray-500"
+										class="self-center cursor-pointer p-1 hover:enabled:bg-black/5 dark:hover:enabled:bg-white/5 dark:hover:enabled:text-white hover:enabled:text-black rounded-md transition disabled:cursor-not-allowed disabled:text-gray-500 disabled:hover:text-gray-500"
 										on:click={() => {
 											versionNavigateHandler('next');
 										}}
@@ -761,24 +765,26 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 								showDeleteConfirm = true;
 							}}
 						>
-							<EllipsisHorizontal className="size-5" />
+							<EllipsisVertical className="size-5 cursor-pointer hover:bg-black" />
 						</NoteMenu>
 
-						<button
+						<!--<button
 							class="p-1.5 bg-transparent hover:bg-white/5 transition rounded-lg"
 							on:click={() => {
 								showSettings = !showSettings;
 							}}
 						>
 							<Cog6 />
-						</button>
+						</button>-->
 					</div>
 				</div>
 			</div>
 
-			<div class=" mb-2.5 px-3.5">
-				<div class="flex gap-1 items-center text-xs font-medium text-gray-500 dark:text-gray-500">
-					<button class=" flex items-center gap-1 w-fit py-1 px-1.5 rounded-lg">
+			<div class="mb-[24px]">
+				<div
+					class="flex gap-1 items-center text-neutrals-500 gap-[8px] text-[14px] leading-[22px] font-medium dark:text-gray-500"
+				>
+					<!--<button class=" flex items-center gap-1 w-fit py-1 px-1.5 rounded-lg">
 						<Calendar className="size-3.5" strokeWidth="2" />
 
 						<span>{dayjs(note.created_at / 1000000).calendar()}</span>
@@ -788,14 +794,12 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 						<Users className="size-3.5" strokeWidth="2" />
 
 						<span> You </span>
-					</button>
+					</button>-->
+					Created on {dayjs(note.created_at / 1000000).calendar()}
 				</div>
 			</div>
 
-			<div
-				class=" flex-1 w-full h-full overflow-auto px-4 pb-20 relative"
-				id="note-content-container"
-			>
+			<div class="flex-1 w-full h-full overflow-auto relative" id="note-content-container">
 				{#if enhancing}
 					<div
 						class="w-full h-full fixed top-0 left-0 {streaming
@@ -851,99 +855,95 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 					}}
 				/>
 			</div>
-		</div>
-	{/if}
-</div>
-
-<div
-	class="absolute z-20 bottom-0 right-0 p-5 max-w-full {$showSidebar
-		? 'md:max-w-[calc(100%-300px)]'
-		: ''} w-full flex justify-end"
->
-	<div class="flex gap-1 justify-between w-full max-w-full">
-		{#if recording}
-			<div class="flex-1 w-full">
-				<VoiceRecording
-					bind:recording
-					className="p-1 w-full max-w-full"
-					transcribe={false}
-					displayMedia={displayMediaRecord}
-					onCancel={() => {
-						recording = false;
-						displayMediaRecord = false;
-					}}
-					onConfirm={(data) => {
-						if (data?.file) {
-							uploadFileHandler(data?.file);
-						}
-
-						recording = false;
-						displayMediaRecord = false;
-					}}
-				/>
-			</div>
-		{:else}
-			<RecordMenu
-				onRecord={async () => {
-					displayMediaRecord = false;
-
-					try {
-						let stream = await navigator.mediaDevices
-							.getUserMedia({ audio: true })
-							.catch(function (err) {
-								toast.error(
-									$i18n.t(`Permission denied when accessing microphone: {{error}}`, {
-										error: err
-									})
-								);
-								return null;
-							});
-
-						if (stream) {
-							recording = true;
-							const tracks = stream.getTracks();
-							tracks.forEach((track) => track.stop());
-						}
-						stream = null;
-					} catch {
-						toast.error($i18n.t('Permission denied when accessing microphone'));
-					}
-				}}
-				onCaptureAudio={async () => {
-					displayMediaRecord = true;
-
-					recording = true;
-				}}
-				onUpload={async () => {
-					const input = document.createElement('input');
-					input.type = 'file';
-					input.accept = 'audio/*';
-					input.multiple = false;
-					input.click();
-
-					input.onchange = async (e) => {
-						const files = e.target.files;
-
-						if (files && files.length > 0) {
-							await uploadFileHandler(files[0]);
-						}
-					};
-				}}
-			>
-				<Tooltip content={$i18n.t('Record')} placement="top">
-					<button
-						class="cursor-pointer p-2.5 flex rounded-full border border-gray-50 bg-white dark:border-none dark:bg-gray-850 hover:bg-gray-50 dark:hover:bg-gray-800 transition shadow-xl"
-						type="button"
-					>
-						<MicSolid className="size-4.5" />
-					</button>
-				</Tooltip>
-			</RecordMenu>
-
 			<div
-				class="cursor-pointer flex gap-0.5 rounded-full border border-gray-50 dark:border-gray-850 dark:bg-gray-850 transition shadow-xl"
+				class="absolute z-20 bottom-0 right-0 p-[16px] max-w-full {$showSidebar
+					? 'md:max-w-[calc(100%-300px)]'
+					: ''} w-full flex justify-end"
 			>
-				<!-- <Tooltip content={$i18n.t('My Notes')} placement="top">
+				<div class="flex gap-1 justify-between w-full max-w-full">
+					{#if recording}
+						<div class="flex-1 w-full">
+							<VoiceRecording
+								bind:recording
+								className="p-1 w-full max-w-full"
+								transcribe={false}
+								displayMedia={displayMediaRecord}
+								onCancel={() => {
+									recording = false;
+									displayMediaRecord = false;
+								}}
+								onConfirm={(data) => {
+									if (data?.file) {
+										uploadFileHandler(data?.file);
+									}
+
+									recording = false;
+									displayMediaRecord = false;
+								}}
+							/>
+						</div>
+					{:else}
+						<RecordMenu
+							onRecord={async () => {
+								displayMediaRecord = false;
+
+								try {
+									let stream = await navigator.mediaDevices
+										.getUserMedia({ audio: true })
+										.catch(function (err) {
+											toast.error(
+												$i18n.t(`Permission denied when accessing microphone: {{error}}`, {
+													error: err
+												})
+											);
+											return null;
+										});
+
+									if (stream) {
+										recording = true;
+										const tracks = stream.getTracks();
+										tracks.forEach((track) => track.stop());
+									}
+									stream = null;
+								} catch {
+									toast.error($i18n.t('Permission denied when accessing microphone'));
+								}
+							}}
+							onCaptureAudio={async () => {
+								displayMediaRecord = true;
+
+								recording = true;
+							}}
+							onUpload={async () => {
+								const input = document.createElement('input');
+								input.type = 'file';
+								input.accept = 'audio/*';
+								input.multiple = false;
+								input.click();
+
+								input.onchange = async (e) => {
+									const files = e.target.files;
+
+									if (files && files.length > 0) {
+										await uploadFileHandler(files[0]);
+									}
+								};
+							}}
+						>
+							<Tooltip content={$i18n.t('Record')} placement="top">
+								<button
+									class="cursor-pointer p-2.5 flex rounded-full border border-gray-50 bg-white dark:border-none dark:bg-gray-850 hover:bg-gray-50 dark:hover:bg-gray-800 transition shadow-xl"
+									type="button"
+								>
+									<MicSolid className="size-4.5" />
+								</button>
+							</Tooltip>
+						</RecordMenu>
+
+						<div
+							class="cursor-pointer flex gap-0.5 rounded-full border border-gray-50 dark:border-gray-850 dark:bg-gray-850 transition"
+						>
+							<!-- <Tooltip content={$i18n.t('My Notes')} placement="top">
 					<button
 						class="p-2 size-8.5 flex justify-center items-center {selectedVersion === 'note'
 							? 'bg-gray-100 dark:bg-gray-800 '
@@ -958,25 +958,27 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 					</button>
 				</Tooltip> -->
 
-				<Tooltip content={$i18n.t('Enhance')} placement="top">
-					<button
-						class="{enhancing
-							? 'p-2'
-							: 'p-2.5'} flex justify-center items-center hover:bg-gray-50 dark:hover:bg-gray-800 rounded-full transition shrink-0"
-						on:click={() => {
-							enhanceNoteHandler();
-						}}
-						disabled={enhancing}
-						type="button"
-					>
-						{#if enhancing}
-							<Spinner className="size-5" />
-						{:else}
-							<SparklesSolid />
-						{/if}
-					</button>
-				</Tooltip>
+							<Tooltip content={$i18n.t('Enhance')} placement="top">
+								<button
+									class="px-[12px] py-[8px] text-neutrals-500 gap-[8px] text-[14px] leading-[24px] font-medium flex justify-center text-white items-center gap-[4px] bg-primary-400 dark:hover:bg-gray-800 rounded-full transition shrink-0"
+									on:click={() => {
+										enhanceNoteHandler();
+									}}
+									disabled={enhancing}
+									type="button"
+								>
+									{#if enhancing}
+										<Spinner className="size-5" />
+									{:else}
+										<SparklesSolid />
+									{/if} Enhanced
+								</button>
+							</Tooltip>
+						</div>
+					{/if}
+				</div>
 			</div>
-		{/if}
-	</div>
+		</div>
+		</div>
+	{/if}
 </div>
