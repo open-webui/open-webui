@@ -1,9 +1,13 @@
 import inspect
 from urllib.parse import urlparse
 
+import logging
+
 import redis
 
 from open_webui.env import REDIS_SENTINEL_MAX_RETRY_COUNT
+
+log = logging.getLogger(__name__)
 
 
 class SentinelRedisProxy:
@@ -42,7 +46,18 @@ class SentinelRedisProxy:
                         redis.exceptions.ReadOnlyError,
                     ) as e:
                         if i < REDIS_SENTINEL_MAX_RETRY_COUNT - 1:
+                            log.debug(
+                                "Redis sentinel fail-over (%s). Retry %s/%s",
+                                type(e).__name__,
+                                i + 1,
+                                REDIS_SENTINEL_MAX_RETRY_COUNT,
+                            )
                             continue
+                        log.error(
+                            "Redis operation failed after %s retries: %s",
+                            REDIS_SENTINEL_MAX_RETRY_COUNT,
+                            e,
+                        )
                         raise e from e
 
             return _wrapped
@@ -59,7 +74,18 @@ class SentinelRedisProxy:
                         redis.exceptions.ReadOnlyError,
                     ) as e:
                         if i < REDIS_SENTINEL_MAX_RETRY_COUNT - 1:
+                            log.debug(
+                                "Redis sentinel fail-over (%s). Retry %s/%s",
+                                type(e).__name__,
+                                i + 1,
+                                REDIS_SENTINEL_MAX_RETRY_COUNT,
+                            )
                             continue
+                        log.error(
+                            "Redis operation failed after %s retries: %s",
+                            REDIS_SENTINEL_MAX_RETRY_COUNT,
+                            e,
+                        )
                         raise e from e
 
             return _wrapped
