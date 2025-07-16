@@ -150,3 +150,5 @@ opentelemetry-instrumentation-requests==0.59b0
 opentelemetry-instrumentation-logging==0.59b0
 opentelemetry-instrumentation-httpx==0.59b0
 opentelemetry-instrumentation-aiohttp-client==0.59b0
+
+rollbar==1.3.0
