@@ -398,7 +398,7 @@ https://github.com/open-webui/open-webui
 )
 
 
-dd = deepdub.DeepdubClient(api_key=os.environ.get("DEEPDUB_API_KEY", ""))
+# dd = deepdub.DeepdubClient(api_key=os.environ.get("DEEPDUB_API_KEY", ""))
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -411,10 +411,11 @@ async def lifespan(app: FastAPI):
 
     asyncio.create_task(periodic_usage_pool_cleanup())
     t1 = time.time()
-    async with dd.async_connect():
-        print(f"{datetime.datetime.now()} Initial connect time: {time.time() - t1}")
-        yield
+    # async with dd.async_connect():
+    #     print(f"{datetime.datetime.now()} Initial connect time: {time.time() - t1}")
+    #     yield
         
+    yield
     
     print(f"[{datetime.datetime.now()}] Server shutting down...")
     # dd.websocket.close()
@@ -433,7 +434,7 @@ app.state.config = AppConfig()
 
 app.state.WEBUI_NAME = WEBUI_NAME
 app.state.LICENSE_METADATA = None
-app.state.dd = dd
+# app.state.dd = dd
 
 ########################################
 #

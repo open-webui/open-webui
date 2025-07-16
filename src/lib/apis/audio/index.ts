@@ -1,5 +1,5 @@
 import { AUDIO_API_BASE_URL } from '$lib/constants';
-import { fillerEventStartTime, ttsSentenceQueue, ttsStreaming, ttsState, prefetchedReader } from '$lib/stores';
+import { fillerEventStartTime, ttsSentenceQueue, ttsStreaming, ttsState, prefetchedReader,readyToPlayQueue } from '$lib/stores';
 import { get } from 'svelte/store';
 
 
@@ -270,63 +270,240 @@ async function playFillerPhrase(content: string) {
 	}
 }
 
-export async function processTTSQueue(currentState, currentQueue) {
-	if (currentQueue.length > 0) {
-		console.log(`[Watcher] Triggered. State: ${currentState}, Queue Length: ${currentQueue.length}, content: ${currentQueue[0].content}`);
-	} else {
-		console.log(`[Watcher] Triggered. State: ${currentState}, Queue Length: ${currentQueue.length}`);
-	}
+let isProcessing = false;
 
-	// --- ACTION 1: The system is idle and work has appeared. ---
-	if (currentState === 'idle' && currentQueue.length > 0) {
-		const task = currentQueue[0];
-		ttsSentenceQueue.update(q => q.slice(1)); // Dequeue the task
+export async function processTTSQueue() {
+    if (isProcessing) return;
+    isProcessing = true;
 
-		if (task.isFiller) {
-			ttsState.set('playing_filler');
-			
-			playFillerPhrase(task.content).then(async () => {
-				const finalState = get(ttsState);
-				const readerPromise = get(prefetchedReader);
+	console.log(`processTTSQueue get(ttsSentenceQueue).length ${get(ttsSentenceQueue).length} get(readyToPlayQueue).length ${get(readyToPlayQueue).length}`)
+    try {
+        while (get(ttsSentenceQueue).length > 0 || get(readyToPlayQueue).length > 0) {
+            
+            const textQueue = get(ttsSentenceQueue);
+            const firstTextTask = textQueue[0];
 
-				// Case A: We successfully pre-fetched the next sentence.
-				if (finalState === 'prefetching' && readerPromise) {
-					console.log('[Watcher] Filler ended, pre-fetched audio is ready.');
-					ttsState.set('playing_main');
-					const reader = await readerPromise;
-					if (reader) await streamAudio(reader);
-					ttsState.set('idle'); // We are now idle
-					prefetchedReader.set(null); // Clean up
-				} 
-				// Case B: The filler finished and we did not pre-fetch anything.
-				else {
-					console.log('[Watcher] Filler ended, nothing was pre-fetched.');
-					ttsState.set('idle');
-				}
-			});
+            // --- PRIORITY 1: Handle Standalone Fillers (Fallback) ---
+            if (firstTextTask && firstTextTask.isFiller && textQueue.length === 1) {
+                ttsSentenceQueue.update(q => q.slice(1));
+                console.log(`[Processor] Playing standalone filler: "${firstTextTask.content}"`);
 
-		} else {
-			console.log('[Watcher] playing main sentence');
-			ttsState.set('playing_main');
-			const reader = await synthesizeStreamingSpeech(task.content);
-			if (reader) await streamAudio(reader);
-			ttsState.set('idle'); // We are now idle
-		}
-	}
+				// await Promise.all([
+				// 	playFillerPhrase(firstTextTask.content), synthesizeTheThing()]
+				// )
+				await playFillerPhrase(firstTextTask.content)
+                // playFillerPhrase(firstTextTask.content).then(async () => {
+				// 	console.log(`[Processor] Finished playing standalone filler: "${firstTextTask.content}"`);
+				// 	// return new Promise(resolve => setTimeout(resolve, 50));
+				// 	if (get(ttsSentenceQueue) && get(ttsSentenceQueue)[0]) {
+				// 		const s1 = get(ttsSentenceQueue)[0]
+				// 		const reader = await synthesizeStreamingSpeech(s1.content);
+				// 		if (reader) {
+				// 			readyToPlayQueue.update(q => [...q, { reader, content: s1.content }]);
+				// 		}
+				// 	}
+				// })
+                continue;
+            }
 
-	// --- ACTION 2: We are playing a filler, and a main sentence just arrived. ---
-	if (currentState === 'playing_filler' && currentQueue.length > 0 && !currentQueue[0].isFiller) {
-		console.log('[Watcher] OPPORTUNITY! Pre-fetching main sentence while filler plays.');
-		
-		const taskToPrefetch = currentQueue[0];
-		ttsSentenceQueue.update(q => q.slice(1)); // Dequeue the task we're pre-fetching
+            // --- PRIORITY 2: add to readytoplayqueue if queue Empty ---
+			console.log('firstTextTask', firstTextTask)
+            if (get(readyToPlayQueue).length === 0 && firstTextTask) {
+                ttsSentenceQueue.update(q => q.slice(1));
+                console.log(`[Processor] Priming pipeline with: "${firstTextTask.content}"`);
+                const reader = await synthesizeStreamingSpeech(firstTextTask.content);
+                if (reader) {
+                    readyToPlayQueue.update(q => [...q, { reader, content: firstTextTask.content }]);
+                }
+            }
+            
+            // --- PRIORITY 3: Play from Ready Queue + Pre-fetch Next ---
+            const audioToPlay = get(readyToPlayQueue)[0];
+            if (audioToPlay) {
+                readyToPlayQueue.update(q => q.slice(1));
+                
+                // Pre-fetch the next text item while playing the current audio.
+                const nextTextToFetch = get(ttsSentenceQueue)[0];
+                if (nextTextToFetch && !nextTextToFetch.isFiller) {
+                    ttsSentenceQueue.update(q => q.slice(1));
+                    console.log(`[Processor] Pre-fetching "${nextTextToFetch.content}" in background.`);
+                    synthesizeStreamingSpeech(nextTextToFetch.content).then(reader => {
+                        if (reader) {
+                            readyToPlayQueue.update(q => [...q, { reader, content: nextTextToFetch.content }]);
+                        }
+                    });
+                }
 
-		// Change state and start the fetch. DO NOT await.
-		// Store the promise so the `.then()` block above can access it.
-		ttsState.set('prefetching');
-		prefetchedReader.set(synthesizeStreamingSpeech(taskToPrefetch.content));
-	}
+                // Play the current audio.
+                console.log(`[Processor] Playing from ready queue: "${audioToPlay.content}"`);
+                await streamAudio(audioToPlay.reader);
+                console.log(`[Processor] Finished: "${audioToPlay.content}"`);
+            }
+        }
+    } catch (error) {
+        console.error("[Processor] An error occurred in the processing loop:", error);
+    } finally {
+        console.log("[Processor] All work is done. Processor is now idle.");
+        isProcessing = false;
+    }
 }
+
+// this tries to address the pause in between sentences by prefetching every sentence if possible but it makes the audio overlap
+// export async function processTTSQueue(state, currentQueue, readyQueue) {
+    
+//     // --- HIGH-PRIORITY ACTION: Handle Fillers ---
+//     // If there's a filler phrase at the front of the queue, play it immediately,
+//     if (currentQueue.length > 0 && currentQueue[0].isFiller) {
+//         ttsState.set('playing_filler'); 
+        
+//         const fillerTask = currentQueue[0];
+//         ttsSentenceQueue.update(q => q.slice(1));
+
+//         console.log(`[Filler] Playing high-priority filler: "${fillerTask.content}"`);
+//         await playFillerPhrase(fillerTask.content);
+//         console.log('[Filler] Finished filler playback.');
+        
+//         // This will re-trigger the watcher, allowing it to continue with the producer/consumer logic.
+//         ttsState.set('idle');
+//         return;
+//     }
+
+//     // --- PRODUCER LOGIC ---
+//     // If we are not busy playing and there's text to fetch, start fetching.
+//     // We can fetch even while another clip is playing.
+//     const shouldFetch = state !== 'fetching' && currentQueue.length > 0;
+    
+//     if (shouldFetch) {
+//         ttsState.set('fetching');
+
+//         const task = currentQueue[0];
+//         ttsSentenceQueue.update(q => q.slice(1));
+        
+//         console.log(`[Fetcher] Fetching audio for: "${task.content}"`);
+//         const reader = await synthesizeStreamingSpeech(task.content);
+//         if (reader) {
+//             readyToPlayQueue.update(q => [...q, { reader, content: task.content }]);
+//         }
+        
+//         if (get(ttsState) === 'fetching') {
+//             ttsState.set('idle');
+//         }
+//     }
+
+//     // --- CONSUMER LOGIC ---
+//     // If we are idle and have something ready to play, play it.
+//     if (state === 'idle' && readyQueue.length > 0) {
+//         ttsState.set('playing');
+
+//         const audio = readyQueue[0];
+//         readyToPlayQueue.update(q => q.slice(1));
+
+//         console.log(`[Player] Playing: "${audio.content}"`);
+//         await streamAudio(audio.reader);
+//         console.log(`[Player] Finished: "${audio.content}"`);
+
+//         // After playing, we are idle again. The watcher will re-run automatically on this state change.
+//         ttsState.set('idle');
+//     }
+// }
+
+// export async function processTTSQueue(currentState, currentQueue) {
+// 	if (currentQueue.length > 0) {
+// 		console.log(`[Watcher] Triggered. State: ${currentState}, Queue Length: ${currentQueue.length}, content: ${currentQueue[0].content}`);
+// 	} else {
+// 		console.log(`[Watcher] Triggered. State: ${currentState}, Queue Length: ${currentQueue.length}`);
+// 	}
+
+
+// 	////////////////////
+// 	// scenario 1 play filler
+// 	if(currentQueue[0].isFiller) {
+// 		const task = currentQueue[0];
+// 		ttsSentenceQueue.update(q => q.slice(1)); // Dequeue the task
+// 		ttsState.set('playing_filler');
+// 		await playFillerPhrase(task.content)
+// 		ttsState.set('idle');
+// 		return 
+// 	} 
+
+// 	// scenario 2 prefetch
+// 	if ((currentState === 'playing_filler' && currentQueue.length > 0) || (currentState === 'playing_main' && currentQueue.length > 1)) {
+// 		const taskToPrefetch = currentQueue[0];
+// 		ttsSentenceQueue.update(q => q.slice(1));
+// 		ttsState.set('prefetching');
+// 		readyToPlayQueue.update(q => [...q, { reader: synthesizeStreamingSpeech(taskToPrefetch.content), content: taskToPrefetch.content }]);
+// 	}
+
+// 	// scenario 3 play from prefetched reader
+// 	if (currentState.queue === 'idle') {
+// 		const readyToPlayQueueTemp = get(readyToPlayQueue)
+// 		ttsState.set('playing_main');
+// 		console.log('[Watcher] playing main sentence');
+
+// 		if (readyToPlayQueueTemp.length > 0) {
+// 			const readerPromise = readyToPlayQueueTemp[0].reader
+// 			readyToPlayQueue.update(q => q.slice(1));
+// 			const reader = await readerPromise;
+// 			if (reader) await streamAudio(reader);
+// 		} else {
+// 			const reader = await synthesizeStreamingSpeech(task.content);
+// 			if (reader) await streamAudio(reader);
+// 		}
+// 		ttsState.set('idle');
+
+// 	}
+
+// 	///////////////////
+// 	// // --- ACTION 1: The system is idle and work has appeared. ---
+// 	// if (currentState === 'idle' && currentQueue.length > 0) {
+// 	// 	const task = currentQueue[0];
+// 	// 	ttsSentenceQueue.update(q => q.slice(1)); // Dequeue the task
+
+// 	// 	if (task.isFiller) {
+// 	// 		ttsState.set('playing_filler');
+			
+// 	// 		playFillerPhrase(task.content).then(async () => {
+// 	// 			const finalState = get(ttsState);
+// 	// 			const readerPromise = get(prefetchedReader);
+
+// 	// 			// Case A: We successfully pre-fetched the next sentence.
+// 	// 			if (finalState === 'prefetching' && readerPromise) {
+// 	// 				console.log('[Watcher] Filler ended, pre-fetched audio is ready.');
+// 	// 				ttsState.set('playing_main');
+// 	// 				const reader = await readerPromise;
+// 	// 				if (reader) await streamAudio(reader);
+// 	// 				ttsState.set('idle'); // We are now idle
+// 	// 				prefetchedReader.set(null); // Clean up
+// 	// 			} 
+// 	// 			// Case B: The filler finished and we did not pre-fetch anything.
+// 	// 			else {
+// 	// 				console.log('[Watcher] Filler ended, nothing was pre-fetched.');
+// 	// 				ttsState.set('idle');
+// 	// 			}
+// 	// 		});
+
+// 	// 	} else {
+// 	// 		console.log('[Watcher] playing main sentence');
+// 	// 		ttsState.set('playing_main');
+// 	// 		const reader = await synthesizeStreamingSpeech(task.content);
+// 	// 		if (reader) await streamAudio(reader);
+// 	// 		ttsState.set('idle'); // We are now idle
+// 	// 	}
+// 	// }
+
+// 	// // --- ACTION 2: We are playing a filler, and a main sentence just arrived. ---
+// 	// if (currentState === 'playing_filler' && currentQueue.length > 0 && !currentQueue[0].isFiller) {
+// 	// 	console.log('[Watcher] OPPORTUNITY! Pre-fetching main sentence while filler plays.');
+		
+// 	// 	const taskToPrefetch = currentQueue[0];
+// 	// 	ttsSentenceQueue.update(q => q.slice(1)); // Dequeue the task we're pre-fetching
+
+// 	// 	// Change state and start the fetch. DO NOT await.
+// 	// 	// Store the promise so the `.then()` block above can access it.
+// 	// 	ttsState.set('prefetching');
+// 	// 	prefetchedReader.set(synthesizeStreamingSpeech(taskToPrefetch.content));
+// 	// }
+// }
 
 // export async function processTTSQueue() {
 //     const queue = get(ttsSentenceQueue);

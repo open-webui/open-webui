@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { config, models, settings, showCallOverlay, ttsStreaming, ttsState, ttsSentenceQueue } from '$lib/stores';
+	import { config, models, settings, showCallOverlay, ttsStreaming, ttsState, ttsSentenceQueue, readyToPlayQueue } from '$lib/stores';
 	import { onMount, tick, getContext, onDestroy, createEventDispatcher } from 'svelte';
 
 	const dispatch = createEventDispatcher();
@@ -460,8 +460,8 @@
 	};
 
 
-	$: processTTSQueue($ttsState, $ttsSentenceQueue);
-
+	$: processTTSQueue($ttsState, $ttsSentenceQueue, $readyToPlayQueue);
+	// $: processReadyToPlayQueue($readyToPlayQueue);
 
 	const chatEventHandler = async (e) => {
 		const { id, content, filler } = e.detail;

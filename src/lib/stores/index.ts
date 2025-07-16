@@ -65,6 +65,7 @@ export const ttsStreaming: Writable<boolean> = writable(false);
 export const fillerEventStartTime = writable(0);
 export const ttsState = writable('idle');
 export const prefetchedReader: Writable<Promise<any>> = writable();
+export const readyToPlayQueue = writable([]);
 
 export const banners: Writable<Banner[]> = writable([]);
 

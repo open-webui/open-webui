@@ -7,7 +7,7 @@ from functools import lru_cache
 from pathlib import Path
 from pydub import AudioSegment
 from pydub.silence import split_on_silence
-
+import deepdub
 import aiohttp
 import aiofiles
 import requests
@@ -275,26 +275,32 @@ file_path = SPEECH_CACHE_DIR.joinpath(f"irishcropped3.mp3")
 with open(file_path, "rb") as audio_file:
     audio_bytes = audio_file.read()
     audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
-        
-async def stream_deepdub_audio_generator(text, dd):
+
+
+async def stream_deepdub_audio_generator(text):
     wav_header = create_wave_header(sample_rate=48000)
     yield wav_header
     
     t1 = time.time()
     ttfa = True
-    async for chunk in dd.async_tts(text=text, 
-        voicePromptId="bb767ac8-6166-44c3-b344-6429c070a7b0_spontaneous-speech-neutral", 
-        realtime=True,
-        model="dd-etts-2.5", 
-        locale="en-GB", 
-        voice_reference=audio_b64,
-        ):
-            if ttfa:
-                print(f"{datetime.datetime.now()} TTFA: {time.time() - t1}")
-                ttfa = False
-            pcm_data = extract_pcm_frames(chunk)
-            yield pcm_data
-    print(f"TTFL: {time.time() - t1}")
+    dd = deepdub.DeepdubClient(api_key=os.environ.get("DEEPDUB_API_KEY", ""))
+    
+    async with dd.async_connect():
+        print(f"{datetime.datetime.now()} Initial connect time: {time.time() - t1}")
+        t1 = time.time()
+        async for chunk in dd.async_tts(text=text, 
+            voicePromptId="bb767ac8-6166-44c3-b344-6429c070a7b0_spontaneous-speech-neutral", 
+            realtime=True,
+            model="dd-etts-2.5", 
+            locale="en-GB", 
+            voice_reference=audio_b64,
+            ):
+                if ttfa:
+                    print(f"{datetime.datetime.now()} TTFA: {time.time() - t1}")
+                    ttfa = False
+                pcm_data = extract_pcm_frames(chunk)
+                yield pcm_data
+        print(f"TTFL: {time.time() - t1}")
 
 
 class TTSRequest(BaseModel):
@@ -302,9 +308,9 @@ class TTSRequest(BaseModel):
 
 
 @router.post("/speech/deepdub")
-async def deepdub(body: TTSRequest, request: Request):
+async def deepdub_endpoint(body: TTSRequest):
     print(f"{datetime.datetime.now()} @text", body.text)
-    return StreamingResponse(stream_deepdub_audio_generator(body.text, request.app.state.dd),  media_type="application/octet-stream")
+    return StreamingResponse(stream_deepdub_audio_generator(body.text),  media_type="application/octet-stream")
 
 
 @router.post("/speech")
