@@ -531,6 +531,9 @@
 		}
 	}}
 />
+{#if $showSidebar}
+<div class="block md:hidden fixed z-[60] w-full h-full bg-[rgba(0,0,0,0.08)] backdrop-blur-lg"></div>
+{/if}
 <div class="fixed flex items-center justify-between z-[50] w-full t-0 px-[26px] py-[22px] bg-neutrals-50 md:hidden">
 <button
 					class="flex items-center rounded-lg transition-all duration-300 ease-in-out"
@@ -545,7 +548,7 @@
 	bind:this={navElement}
 	id="sidebar"
 	role="navigation"
-	class="fixed md:relative h-screen max-h-[100dvh] min-h-screen select-none border-0 {$showSidebar
+	class="fixed md:relative z-[70] h-screen max-h-[100dvh] min-h-screen select-none border-0 {$showSidebar
 		? 'md:relative w-[300px] max-w-[300px]'
 		: $mobile?'w-[0]':'w-[80px]'} {$isApp
 		? `ml-[4.5rem] md:ml-0 `
