@@ -46,7 +46,7 @@
 
 	let showShareChatModal = false;
 	let showDownloadChatModal = false;
-	 let isOn = false
+	let isOn = false;
 </script>
 
 <ShareChatModal bind:show={showShareChatModal} chatId={$chatId} />
@@ -61,7 +61,7 @@
 />
 
 <nav class="sticky top-0 z-30 w-full px-[20px] py-[18px] flex flex-col items-center drag-region">
-	<div class="flex items-center w-full ">
+	<div class="flex items-center w-full">
 		<div
 			class=" bg-surface dark:from-gray-900 dark:via-gray-900 dark:to-transparent pointer-events-none absolute inset-0 -bottom-7 z-[-1]"
 		></div>
@@ -75,7 +75,7 @@
 					<Logo strokeWidth="2" className="size-[1.1rem]" />
 				</div>
 
-				<div
+				<!--<div
 					class="flex-1 overflow-hidden max-w-full py-0.5
 			{$showSidebar ? 'ml-1' : ''}
 			"
@@ -83,7 +83,7 @@
 					{#if showModelSelector}
 						<ModelSelector bind:selectedModels showSetDefault={!shareEnabled} />
 					{/if}
-				</div> 
+				</div> -->
 				<div class="self-start flex flex-none items-center text-gray-600 dark:text-gray-400">
 					<!-- <div class="md:hidden flex self-center w-[1px] h-5 mx-2 bg-gray-300 dark:bg-stone-700" /> -->
 					<!--{#if shareEnabled && chat && (chat.id || $temporaryChatEnabled)}
@@ -121,15 +121,18 @@
 						</Menu>
 					{/if}-->
 					<div class="flex items-center mr-[12px]">
-
-					<label class="relative inline-flex items-center cursor-pointer">
-						<input type="checkbox" bind:checked={isOn} class="sr-only peer" />
-						<div class="w-[56px] h-[28px] bg-gray-1100 rounded-full peer duration-300">
-						<div class=" flex items-center justify-center absolute  {isOn ? 'left-[3px]' : 'right-[3px]'}  top-[3px] w-[20px] h-[20px] bg-white rounded-full transition-transform duration-300 peer-checked:translate-x-5">
-							<LightMode strokeWidth="2" className="size-[1.1rem]" />
-						</div>
-						</div>
-					</label>
+						<label class="relative inline-flex items-center cursor-pointer">
+							<input type="checkbox" bind:checked={isOn} class="sr-only peer" />
+							<div class="w-[56px] h-[28px] bg-gray-1100 rounded-full peer duration-300">
+								<div
+									class=" flex items-center justify-center absolute {isOn
+										? 'left-[3px]'
+										: 'right-[3px]'}  top-[3px] w-[20px] h-[20px] bg-white rounded-full transition-transform duration-300 peer-checked:translate-x-5"
+								>
+									<LightMode strokeWidth="2" className="size-[1.1rem]" />
+								</div>
+							</div>
+						</label>
 					</div>
 					<!--<Tooltip content={$i18n.t('Controls')}>
 						<button
