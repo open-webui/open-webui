@@ -531,14 +531,23 @@
 		}
 	}}
 />
-
+<div class="fixed flex items-center justify-between z-[50] w-full t-0 px-[26px] py-[22px] bg-neutrals-50 md:hidden">
+<button
+					class="flex items-center rounded-lg transition-all duration-300 ease-in-out"
+					class:justify-center={!$showSidebar}
+					on:click={onSidebarClick}
+				>
+					<MaterialIcon name="menu" size="1.1rem" />
+				</button>
+				
+				</div>
 <div
 	bind:this={navElement}
 	id="sidebar"
 	role="navigation"
-	class=" h-screen max-h-[100dvh] min-h-screen select-none border-0 {$showSidebar
+	class="fixed md:relative h-screen max-h-[100dvh] min-h-screen select-none border-0 {$showSidebar
 		? 'md:relative w-[300px] max-w-[300px]'
-		: 'w-[80px]'} {$isApp
+		: $mobile?'w-[0]':'w-[80px]'} {$isApp
 		? `ml-[4.5rem] md:ml-0 `
 		: 'transition-width duration-200 ease-in-out'} shadow-md shrink-0 text-gray-900 dark:bg-gray-950 dark:text-gray-200 text-sm z-50 top-0 left-0
         "
