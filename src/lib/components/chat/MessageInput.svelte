@@ -1279,6 +1279,13 @@
 																};
 
 																reader.readAsDataURL(blob);
+															} else if (item?.kind === 'file') {
+																const file = item.getAsFile();
+																if (file) {
+																	const _files = [file];
+																	await inputFilesHandler(_files);
+																	e.preventDefault();
+																}
 															} else if (item.type === 'text/plain') {
 																if (($settings?.largeTextAsFile ?? false) && !shiftKey) {
 																	const text = clipboardData.getData('text/plain');
@@ -1504,6 +1511,7 @@
 
 												if (clipboardData && clipboardData.items) {
 													for (const item of clipboardData.items) {
+														console.log(item);
 														if (item.type.indexOf('image') !== -1) {
 															const blob = item.getAsFile();
 															const reader = new FileReader();
@@ -1519,6 +1527,13 @@
 															};
 
 															reader.readAsDataURL(blob);
+														} else if (item?.kind === 'file') {
+															const file = item.getAsFile();
+															if (file) {
+																const _files = [file];
+																await inputFilesHandler(_files);
+																e.preventDefault();
+															}
 														} else if (item.type === 'text/plain') {
 															if (($settings?.largeTextAsFile ?? false) && !shiftKey) {
 																const text = clipboardData.getData('text/plain');

@@ -1077,7 +1077,10 @@
 							const hasImageItem = Array.from(event.clipboardData.items).some((item) =>
 								item.type.startsWith('image/')
 							);
-							if (hasImageFile || hasImageItem) {
+
+							const hasFile = Array.from(event.clipboardData.files).length > 0;
+
+							if (hasImageFile || hasImageItem || hasFile) {
 								eventDispatch('paste', { event });
 								event.preventDefault();
 								return true;
