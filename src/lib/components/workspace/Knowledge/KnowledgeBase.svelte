@@ -139,7 +139,8 @@
 			status: 'uploading',
 			error: '',
 			progress: 0,
-			itemId: tempItemId
+			itemId: tempItemId,
+			xhr: null,
 			
 		};
 		
@@ -172,7 +173,7 @@
 
 		let uploadedFile = null;
 		try {
-			uploadedFile = await uploadFile(localStorage.token, file, true, (percent) => {
+			const { xhr, promise } = uploadFile(localStorage.token, file, true, (percent) => {
 				// Update upload progress, capped at 50%
 				knowledge.files = knowledge.files.map(item => {
 					if (item.itemId === tempItemId) {
@@ -186,13 +187,23 @@
 				});
 
 			});
+			knowledge.files = knowledge.files.map(item => {
+				if (item.itemId === tempItemId) {
+					item.xhr = xhr;
+				}
+				return item;
+			});
+
+
+			uploadedFile = await promise;
+
 		} catch (e) {
 			toast.error(`Failed to upload: ${e}`);
 
 			// Mark file as error
 			knowledge.files = knowledge.files.map(item => {
 				if (item.itemId === tempItemId) {
-					item.status = 'error';
+					item.status = e === 'Upload canceled.' ? 'cancelled' : 'error';
 				}
 				return item;
 			});
@@ -415,6 +426,12 @@
 		}
 	};
 
+	const deleteTempUpload = async (fileId) => {
+		if (knowledge?.files) {
+			knowledge.files = knowledge.files.filter(file => file.itemId !== fileId);
+		}
+	}; 											
+
 	const deleteFileHandler = async (fileId) => {
 		try {
 			console.log('Starting file deletion process for:', fileId);
@@ -444,7 +461,6 @@
 		const res = updateFileDataContentById(localStorage.token, fileId, content).catch((e) => {
 			toast.error(`${e}`);
 		});
-
 		const updatedKnowledge = await updateFileFromKnowledgeById(
 			localStorage.token,
 			id,
@@ -452,7 +468,6 @@
 		).catch((e) => {
 			toast.error(`${e}`);
 		});
-
 		if (res && updatedKnowledge) {
 			knowledge = updatedKnowledge;
 			toast.success($i18n.t('File content updated successfully.'));
@@ -931,10 +946,18 @@
 										selectedFileId = selectedFileId === e.detail ? null : e.detail;
 									}}
 									on:delete={(e) => {
-										console.log(e.detail);
+										if( e.detail.status === 'uploading' || e.detail.status === 'processing' ){
+											console.log(e.detail.id);
+											selectedFileId = null;
+											deleteTempUpload(e.detail.id)
 
-										selectedFileId = null;
-										deleteFileHandler(e.detail);
+										}else{
+											console.log(e.detail.id);
+
+											selectedFileId = null;
+											deleteFileHandler(e.detail);
+
+										}
 									}}
 								/>
 							</div>

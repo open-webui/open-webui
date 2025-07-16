@@ -77,17 +77,25 @@
 				name={file?.name ?? file?.meta?.name}
 				type="file"
 				size={file?.size ?? file?.meta?.size ?? ''}
-				loading={file.status === 'uploading'}
+				loading={file.status === 'uploading' || file.status === 'processing'}
 				dismissible
 				on:click={() => {
-					if (file.status === 'uploading') {
+					if (file.status === 'uploading' || file.status === 'processing' ) {
 						return;
 					}
-
 					dispatch('click', file.id);
 				}}
 				on:dismiss={() => {
 					if (file.status === 'uploading') {
+						if(file.xhr) {
+							file.xhr.abort();
+						}
+						
+						const e = {id: file.itemId, status: file.status}
+						
+						dispatch('delete', e);
+						return;
+					}else if (file.status === 'processing') {
 						return;
 					}
 
