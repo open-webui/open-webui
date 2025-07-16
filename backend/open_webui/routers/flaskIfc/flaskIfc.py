@@ -373,110 +373,43 @@ def extract_json_output(text):
 def chats():
     global job_status
     serial_script.pre_and_post_check(port,baudrate)
-
-    #./run_llama_cli.sh "my cat's name" "10" "tinyllama-vo-5m-para.gguf" "none"
+    
     data = request.get_json()
-    print("Request:\n", request.method, json.dumps(data, indent=2), "\n")
-    command = original_prompt = flattened_prompt = prompt = None
-    #model = data['model']
-    model = DEFAULT_MODEL
-    backend = DEFAULT_BACKEND
-    tokens = DEFAULT_TOKEN
-    original_prompt = data['messages'][0]['content']
-    flattened_prompt = re.sub(r'\s+', ' ', original_prompt).strip()
-    tmpprompt = flattened_prompt.replace('"', '\\"').encode('utf-8')
-    prompt = tmpprompt.decode('utf-8')
-    repeat_penalty = request.form.get('repeat-penalty', DEFAULT_REPEAT_PENALTY)
-    batch_size = request.form.get('batch-size', DEFAULT_BATCH_SIZE)
-    top_k = request.form.get('top-k', DEFAULT_TOP_K)
-    top_p = request.form.get('top-p', DEFAULT_TOP_P)
-    last_n = request.form.get('last-n', DEFAULT_LAST_N)
-    context_length = request.form.get('context-length', DEFAULT_CONTEXT_LENGTH)
-    temp = request.form.get('temp', DEFAULT_TEMP)
-    # Define the model path (update with actual paths)
-    model_paths = {
-        "tiny-llama": "tinyllama-vo-5m-para.gguf",
-        "Tiny-llama-F32": "Tiny-Llama-v0.3-FP32-1.1B-F32.gguf"
-    }
-    model_path = model_paths.get(model, "")
-    if not model_path:
-        model_path = model
-    script_path = "./run_llama_cli.sh"
-    command = f"cd {exe_path}; {script_path} \"{prompt}\" {tokens} {model_path} {backend} {repeat_penalty} {batch_size} {top_k} {top_p} {last_n} {context_length} {temp}"
-    try:
-        is_job_running()
-        job_status["running"] = True
-        result = serial_script.send_serial_command(port,baudrate,command)
-        job_status["running"] = False
-        if result:
-            response_text = result
-            start_phrase = "llama_perf_sampler_print: "
-            if start_phrase in response_text:
-                filtered_text = response_text.split(start_phrase, 1)[0] # Split once and drop the second part
-                formatted_text = response_text.split(start_phrase, 1)[1]
-            else:
-                filtered_text = result
-        else:
-            filtered_text = "Result Empty: Desired phrase not found in the response."
-        job_status["result"] = filtered_text
-        job_status["running"] = False
-        extracted_json = extract_json_output(filtered_text)
-        chat_history = extract_chat_history(filtered_text)
-        final_chat_output = extract_final_output_after_chat_history(chat_history)
-        #print("Output Text:\n", json.dumps(extracted_json), "\n")
-        #print("Chat history:\n", chat_history)
-        print("Final_chat_output:\n", final_chat_output)
-    except subprocess.CalledProcessError as e:
-        job_status["running"] = False
-        job_status["result"] = f"Error: {e.stderr}"
 
-    json_string ={
-            "status": "success",
-            "model": "ollama",
-            "message": {
-                "content": final_chat_output,
-                "thinking": chat_history,
-                "tool_calls": None,
-                "openai_tool_calls": None
-                },
-            "user": {
-                "name": "Alice",
-                "id": "12345",
-                "email": "alice@example.com",
-                "role": "admin"
-                },
-            "data": {
-                "some_key": "some_value"
+    parameters = {'target': 'opu',
+                  'num_predict': DEFAULT_TOKEN,
+                  'repeat_penalty': DEFAULT_REPEAT_PENALTY,
+                  'num_batch': DEFAULT_BATCH_SIZE,
+                  'top_k': DEFAULT_TOP_K,
+                  'top_p': DEFAULT_TOP_P,
+                  'repeat_last_n': DEFAULT_LAST_N,
+                  'num_ctx': DEFAULT_CONTEXT_LENGTH,
+                  'temperature': DEFAULT_TEMP
                 }
-            }
-    return manual_response(json_string), 200
 
-@app.route('/api/chat', methods=['POST', 'GET'])
-@app.route('/api/chat/completion', methods=['POST', 'GET'])
-@app.route('/api/chat/completed', methods=['POST', 'GET'])
-@app.route('/api/generate', methods=['POST', 'GET'])
-def chat():
-    global job_status
-    serial_script.pre_and_post_check(port,baudrate)
-    #./run_llama_cli.sh "my cat's name" "10" "tinyllama-vo-5m-para.gguf" "none"
-    data = request.get_json()
-    print("Request:\n", request.method, json.dumps(data, indent=2), "\n")
+    if 'options' in data:
+        for item in parameters:
+            if item in data['options']:
+                parameters[item] = data['options'][item]
 
-    #model = data['model']
-    model = DEFAULT_MODEL
-    backend = DEFAULT_BACKEND
-    tokens = DEFAULT_TOKEN
-    original_prompt = data['messages'][0]['content']
+    original_prompt = data['messages'][-1]['content']
     flattened_prompt = re.sub(r'\s+', ' ', original_prompt).strip()
     tmpprompt = flattened_prompt.replace('"', '\\"').encode('utf-8')
     prompt = tmpprompt.decode('utf-8')
-    repeat_penalty = request.form.get('repeat-penalty', DEFAULT_REPEAT_PENALTY)
-    batch_size = request.form.get('batch-size', DEFAULT_BATCH_SIZE)
-    top_k = request.form.get('top-k', DEFAULT_TOP_K)
-    top_p = request.form.get('top-p', DEFAULT_TOP_P)
-    last_n = request.form.get('last-n', DEFAULT_LAST_N)
-    context_length = request.form.get('context-length', DEFAULT_CONTEXT_LENGTH)
-    temp = request.form.get('temp', DEFAULT_TEMP)
+      
+    model = DEFAULT_MODEL
+    backend = DEFAULT_BACKEND #tSavorite
+    if parameters['target'] == 'cpu':
+        backend = 'none'
+    tokens = parameters['num_predict']
+    repeat_penalty = parameters['repeat_penalty']
+    batch_size = parameters['num_batch']
+    top_k = parameters['top_k']
+    top_p = parameters['top_p']
+    last_n = parameters['repeat_last_n']
+    context_length = parameters['num_ctx']
+    temp = parameters['temperature']
+    
     # Define the model path (update with actual paths)
     model_paths = {
         "tiny-llama": "tinyllama-vo-5m-para.gguf",
@@ -528,9 +461,6 @@ def chat():
     extracted_json = extract_json_output(filtered_text)
     chat_history = extract_chat_history(filtered_text)
     final_chat_output = extract_final_output_after_chat_history(chat_history)
-    #print("Output Text:\n", json.dumps(extracted_json), "\n")
-    #print("Chat history:\n", chat_history)
-    print("final_chat_output:\n", chat_history)
     json_string ={
             "status": "success",
             "model": "ollama",
@@ -551,6 +481,124 @@ def chat():
                 }
             }
     return manual_response(json_string), 200
+
+@app.route('/api/chat', methods=['POST', 'GET'])
+@app.route('/api/chat/completion', methods=['POST', 'GET'])
+@app.route('/api/chat/completed', methods=['POST', 'GET'])
+@app.route('/api/generate', methods=['POST', 'GET'])
+def chat():
+    global job_status
+    serial_script.pre_and_post_check(port,baudrate)
+    
+    data = request.get_json()
+
+    parameters = {'target': 'opu',
+                  'num_predict': DEFAULT_TOKEN,
+                  'repeat_penalty': DEFAULT_REPEAT_PENALTY,
+                  'num_batch': DEFAULT_BATCH_SIZE,
+                  'top_k': DEFAULT_TOP_K,
+                  'top_p': DEFAULT_TOP_P,
+                  'repeat_last_n': DEFAULT_LAST_N,
+                  'num_ctx': DEFAULT_CONTEXT_LENGTH,
+                  'temperature': DEFAULT_TEMP
+                }
+
+    if 'options' in data:
+        for item in parameters:
+            if item in data['options']:
+                parameters[item] = data['options'][item]
+
+    original_prompt = data['messages'][-1]['content']
+    flattened_prompt = re.sub(r'\s+', ' ', original_prompt).strip()
+    tmpprompt = flattened_prompt.replace('"', '\\"').encode('utf-8')
+    prompt = tmpprompt.decode('utf-8')
+      
+    model = DEFAULT_MODEL
+    backend = DEFAULT_BACKEND #tSavorite
+    if parameters['target'] == 'cpu':
+        backend = 'none'
+    tokens = parameters['num_predict']
+    repeat_penalty = parameters['repeat_penalty']
+    batch_size = parameters['num_batch']
+    top_k = parameters['top_k']
+    top_p = parameters['top_p']
+    last_n = parameters['repeat_last_n']
+    context_length = parameters['num_ctx']
+    temp = parameters['temperature']
+    
+    # Define the model path (update with actual paths)
+    model_paths = {
+        "tiny-llama": "tinyllama-vo-5m-para.gguf",
+        "Tiny-llama-F32": "Tiny-Llama-v0.3-FP32-1.1B-F32.gguf"
+    }
+    model_path = model_paths.get(model, "")
+    if not model_path:
+        model_path = model
+    # Build llama-cli command
+    #command = [
+    #    "./llama-cli",
+    #    "-p", prompt,
+    #    "-m", model_path,
+    #    "--device", backend,
+    #    "--temp", "0",
+    #    "--n-predict", tokens,
+    #    "--repeat-penalty", "1",
+    #    "--top-k", "0",
+    #    "--top-p", "1"
+    #]
+    script_path = "./run_llama_cli.sh"
+    command = f"cd {exe_path}; {script_path} \"{prompt}\" {tokens} {model_path} {backend} {repeat_penalty} {batch_size} {top_k} {top_p} {last_n} {context_length} {temp}"
+    def run_script(command):
+        try:
+            is_job_running()
+            job_status["running"] = True
+            result = serial_script.send_serial_command(port,baudrate,command)
+            if result:
+                response_text = result
+                start_phrase = "llama_perf_sampler_print: "
+                if start_phrase in response_text:
+                    filtered_text = response_text.split(start_phrase, 1)[0] # Split once and drop the second part
+                    formatted_text = response_text.split(start_phrase, 1)[1]
+                else:
+                    filtered_text = result
+            else:
+                filtered_text = "Result Empty: Desired phrase not found in the response."
+                job_status["result"] = filtered_text
+
+            job_status["running"] = False
+            return filtered_text
+        except subprocess.CalledProcessError as e:
+            filtered_text = f"Error: {e.stderr}"
+            job_status["result"] = filtered_text
+            job_status["running"] = False
+        return filtered_text
+
+    filtered_text = run_script(command)
+    extracted_json = extract_json_output(filtered_text)
+    chat_history = extract_chat_history(filtered_text)
+    final_chat_output = extract_final_output_after_chat_history(chat_history)
+    json_string ={
+            "status": "success",
+            "model": "ollama",
+            "message": {
+                "content": final_chat_output,
+                "thinking": chat_history,
+                "tool_calls": None,
+                "openai_tool_calls": None
+                },
+            "user": {
+                "name": "Alice",
+                "id": "12345",
+                "email": "alice@example.com",
+                "role": "admin"
+                },
+            "data": {
+                "some_key": "some_value"
+                }
+            }
+    return manual_response(json_string), 200
+    
+    
 
 @app.route('/submit', methods=['POST'])
 def submit():
