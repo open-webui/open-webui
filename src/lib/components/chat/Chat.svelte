@@ -1228,7 +1228,7 @@
 			await handleOpenAIError(error, message);
 		}
 
-		if (sources) {
+		if (sources && !message?.sources) {
 			message.sources = sources;
 		}
 
