@@ -89,6 +89,7 @@ from open_webui.routers import (
 
 from open_webui.routers.retrieval import (
     get_embedding_function,
+    get_reranking_function,
     get_ef,
     get_rf,
 )
@@ -453,7 +454,7 @@ from open_webui.utils.redis import get_redis_connection
 
 from open_webui.tasks import (
     redis_task_command_listener,
-    list_task_ids_by_chat_id,
+    list_task_ids_by_item_id,
     stop_task,
     list_tasks,
 )  # Import from tasks.py
@@ -878,6 +879,7 @@ app.state.config.FIRECRAWL_API_KEY = FIRECRAWL_API_KEY
 app.state.config.TAVILY_EXTRACT_DEPTH = TAVILY_EXTRACT_DEPTH
 
 app.state.EMBEDDING_FUNCTION = None
+app.state.RERANKING_FUNCTION = None
 app.state.ef = None
 app.state.rf = None
 
@@ -906,8 +908,8 @@ except Exception as e:
 app.state.EMBEDDING_FUNCTION = get_embedding_function(
     app.state.config.RAG_EMBEDDING_ENGINE,
     app.state.config.RAG_EMBEDDING_MODEL,
-    app.state.ef,
-    (
+    embedding_function=app.state.ef,
+    url=(
         app.state.config.RAG_OPENAI_API_BASE_URL
         if app.state.config.RAG_EMBEDDING_ENGINE == "openai"
         else (
@@ -916,7 +918,7 @@ app.state.EMBEDDING_FUNCTION = get_embedding_function(
             else app.state.config.RAG_AZURE_OPENAI_BASE_URL
         )
     ),
-    (
+    key=(
         app.state.config.RAG_OPENAI_API_KEY
         if app.state.config.RAG_EMBEDDING_ENGINE == "openai"
         else (
@@ -925,12 +927,18 @@ app.state.EMBEDDING_FUNCTION = get_embedding_function(
             else app.state.config.RAG_AZURE_OPENAI_API_KEY
         )
     ),
-    app.state.config.RAG_EMBEDDING_BATCH_SIZE,
+    embedding_batch_size=app.state.config.RAG_EMBEDDING_BATCH_SIZE,
     azure_api_version=(
         app.state.config.RAG_AZURE_OPENAI_API_VERSION
         if app.state.config.RAG_EMBEDDING_ENGINE == "azure_openai"
         else None
     ),
+)
+
+app.state.RERANKING_FUNCTION = get_reranking_function(
+    app.state.config.RAG_RERANKING_ENGINE,
+    app.state.config.RAG_RERANKING_MODEL,
+    reranking_function=app.state.rf,
 )
 
 ########################################
@@ -1486,7 +1494,7 @@ async def stop_task_endpoint(
     request: Request, task_id: str, user=Depends(get_verified_user)
 ):
     try:
-        result = await stop_task(request, task_id)
+        result = await stop_task(request.app.state.redis, task_id)
         return result
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
@@ -1494,7 +1502,7 @@ async def stop_task_endpoint(
 
 @app.get("/api/tasks")
 async def list_tasks_endpoint(request: Request, user=Depends(get_verified_user)):
-    return {"tasks": await list_tasks(request)}
+    return {"tasks": await list_tasks(request.app.state.redis)}
 
 
 @app.get("/api/tasks/chat/{chat_id}")
@@ -1505,7 +1513,7 @@ async def list_tasks_by_chat_id_endpoint(
     if chat is None or chat.user_id != user.id:
         return {"task_ids": []}
 
-    task_ids = await list_task_ids_by_chat_id(request, chat_id)
+    task_ids = await list_task_ids_by_item_id(request.app.state.redis, chat_id)
 
     log.debug(f"Task IDs for chat {chat_id}: {task_ids}")
     return {"task_ids": task_ids}
@@ -1634,7 +1642,19 @@ async def get_app_config(request: Request):
                 ),
             }
             if user is not None
-            else {}
+            else {
+                **(
+                    {
+                        "metadata": {
+                            "login_footer": app.state.LICENSE_METADATA.get(
+                                "login_footer", ""
+                            )
+                        }
+                    }
+                    if app.state.LICENSE_METADATA
+                    else {}
+                )
+            }
         ),
     }
 

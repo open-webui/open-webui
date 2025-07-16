@@ -16,10 +16,6 @@
 
 	$: filteredUsers = users
 		.filter((user) => {
-			if (user?.role === 'admin') {
-				return false;
-			}
-
 			if (query === '') {
 				return true;
 			}
@@ -88,7 +84,7 @@
 										user.profile_image_url.startsWith('https://www.gravatar.com/avatar/') ||
 										user.profile_image_url.startsWith('data:')
 											? user.profile_image_url
-											: `/user.png`}
+											: `${WEBUI_BASE_URL}/user.png`}
 										alt="user"
 									/>
 

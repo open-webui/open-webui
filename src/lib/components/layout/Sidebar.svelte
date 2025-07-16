@@ -22,7 +22,8 @@
 		socket,
 		config,
 		isApp,
-		models
+		models,
+		selectedFolder
 	} from '$lib/stores';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 
@@ -361,6 +362,12 @@
 			}
 		});
 
+		chats.subscribe((value) => {
+			if ($selectedFolder) {
+				initFolders();
+			}
+		});
+
 		await initChannels();
 		await initChatList();
 
@@ -494,6 +501,7 @@
 				draggable="false"
 				on:click={async () => {
 					selectedChatId = null;
+					selectedFolder.set(null);
 
 					if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
 						await temporaryChatEnabled.set(true);
@@ -676,7 +684,8 @@
 									<div class="self-center shrink-0">
 										<img
 											crossorigin="anonymous"
-											src={model?.info?.meta?.profile_image_url ?? '/static/favicon.png'}
+											src={model?.info?.meta?.profile_image_url ??
+												`${WEBUI_BASE_URL}/static/favicon.png`}
 											class=" size-5 rounded-full -translate-x-[0.5px]"
 											alt="logo"
 										/>
@@ -728,6 +737,9 @@
 					createFolder();
 				}}
 				onAddLabel={$i18n.t('New Folder')}
+				on:change={(e) => {
+					selectedFolder.set(null);
+				}}
 				on:import={(e) => {
 					importChatHandler(e.detail);
 				}}
@@ -873,12 +885,16 @@
 					<Folders
 						{folders}
 						{shiftKey}
+						onDelete={(folderId) => {
+							selectedFolder.set(null);
+							initChatList();
+						}}
+						on:update={() => {
+							initChatList();
+						}}
 						on:import={(e) => {
 							const { folderId, items } = e.detail;
 							importChatHandler(items, false, folderId);
-						}}
-						on:update={async (e) => {
-							initChatList();
 						}}
 						on:change={async () => {
 							initChatList();

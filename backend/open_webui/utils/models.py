@@ -82,10 +82,13 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
         and request.app.state.BASE_MODELS
         and (request.app.state.config.ENABLE_BASE_MODELS_CACHE and not refresh)
     ):
-        models = request.app.state.BASE_MODELS
+        base_models = request.app.state.BASE_MODELS
     else:
-        models = await get_all_base_models(request, user=user)
-        request.app.state.BASE_MODELS = models
+        base_models = await get_all_base_models(request, user=user)
+        request.app.state.BASE_MODELS = base_models
+
+    # deep copy the base models to avoid modifying the original list
+    models = [model.copy() for model in base_models]
 
     # If there are no models, return an empty list
     if len(models) == 0:
@@ -145,6 +148,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
     custom_models = Models.get_all_models()
     for custom_model in custom_models:
         if custom_model.base_model_id is None:
+            # Applied directly to a base model
             for model in models:
                 if custom_model.id == model["id"] or (
                     model.get("owned_by") == "ollama"

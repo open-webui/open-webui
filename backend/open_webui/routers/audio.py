@@ -328,6 +328,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         log.exception(e)
         raise HTTPException(status_code=400, detail="Invalid JSON payload")
 
+    r = None
     if request.app.state.config.TTS_ENGINE == "openai":
         payload["model"] = request.app.state.config.TTS_MODEL
 
@@ -336,7 +337,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             async with aiohttp.ClientSession(
                 timeout=timeout, trust_env=True
             ) as session:
-                async with session.post(
+                r = await session.post(
                     url=f"{request.app.state.config.TTS_OPENAI_API_BASE_URL}/audio/speech",
                     json=payload,
                     headers={
@@ -344,24 +345,25 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                         "Authorization": f"Bearer {request.app.state.config.TTS_OPENAI_API_KEY}",
                         **(
                             {
-                                "X-OpenWebUI-User-Name": quote(user.name),
-                                "X-OpenWebUI-User-Id": quote(user.id),
-                                "X-OpenWebUI-User-Email": quote(user.email),
-                                "X-OpenWebUI-User-Role": quote(user.role),
+                                "X-OpenWebUI-User-Name": quote(user.name, safe=" "),
+                                "X-OpenWebUI-User-Id": user.id,
+                                "X-OpenWebUI-User-Email": user.email,
+                                "X-OpenWebUI-User-Role": user.role,
                             }
                             if ENABLE_FORWARD_USER_INFO_HEADERS
                             else {}
                         ),
                     },
                     ssl=AIOHTTP_CLIENT_SESSION_SSL,
-                ) as r:
-                    r.raise_for_status()
+                )
 
-                    async with aiofiles.open(file_path, "wb") as f:
-                        await f.write(await r.read())
+                r.raise_for_status()
 
-                    async with aiofiles.open(file_body_path, "w") as f:
-                        await f.write(json.dumps(payload))
+                async with aiofiles.open(file_path, "wb") as f:
+                    await f.write(await r.read())
+
+                async with aiofiles.open(file_body_path, "w") as f:
+                    await f.write(json.dumps(payload))
 
             return FileResponse(file_path)
 
@@ -369,18 +371,18 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             log.exception(e)
             detail = None
 
-            try:
-                if r.status != 200:
-                    res = await r.json()
+            status_code = 500
+            detail = f"Open WebUI: Server Connection Error"
 
-                    if "error" in res:
-                        detail = f"External: {res['error'].get('message', '')}"
-            except Exception:
-                detail = f"External: {e}"
+            if r is not None:
+                status_code = r.status
+                res = await r.json()
+                if "error" in res:
+                    detail = f"External: {res['error'].get('message', '')}"
 
             raise HTTPException(
-                status_code=getattr(r, "status", 500) if r else 500,
-                detail=detail if detail else "Open WebUI: Server Connection Error",
+                status_code=status_code,
+                detail=detail,
             )
 
     elif request.app.state.config.TTS_ENGINE == "elevenlabs":

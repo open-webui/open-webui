@@ -6,16 +6,16 @@
 	import relativeTime from 'dayjs/plugin/relativeTime';
 	dayjs.extend(relativeTime);
 
-	import { createEventDispatcher, tick, getContext, onMount, onDestroy } from 'svelte';
+	import { tick, getContext, onMount, onDestroy } from 'svelte';
 	import { removeLastWordFromString, isValidHttpUrl } from '$lib/utils';
 	import { knowledge } from '$lib/stores';
+	import { getNoteList, getNotes } from '$lib/apis/notes';
 
 	const i18n = getContext('i18n');
 
-	export let prompt = '';
 	export let command = '';
+	export let onSelect = (e) => {};
 
-	const dispatch = createEventDispatcher();
 	let selectedIdx = 0;
 
 	let items = [];
@@ -60,37 +60,12 @@
 			}, 100);
 		}
 	};
-	const confirmSelect = async (item) => {
-		dispatch('select', item);
 
-		prompt = removeLastWordFromString(prompt, command);
-		const chatInputElement = document.getElementById('chat-input');
-
-		await tick();
-		chatInputElement?.focus();
-		await tick();
-	};
-
-	const confirmSelectWeb = async (url) => {
-		dispatch('url', url);
-
-		prompt = removeLastWordFromString(prompt, command);
-		const chatInputElement = document.getElementById('chat-input');
-
-		await tick();
-		chatInputElement?.focus();
-		await tick();
-	};
-
-	const confirmSelectYoutube = async (url) => {
-		dispatch('youtube', url);
-
-		prompt = removeLastWordFromString(prompt, command);
-		const chatInputElement = document.getElementById('chat-input');
-
-		await tick();
-		chatInputElement?.focus();
-		await tick();
+	const confirmSelect = async (type, data) => {
+		onSelect({
+			type: type,
+			data: data
+		});
 	};
 
 	const decodeString = (str: string) => {
@@ -101,9 +76,22 @@
 		}
 	};
 
-	onMount(() => {
+	onMount(async () => {
 		window.addEventListener('resize', adjustHeight);
 		adjustHeight();
+
+		let notes = await getNoteList(localStorage.token).catch(() => {
+			return [];
+		});
+
+		notes = notes.map((note) => {
+			return {
+				...note,
+				type: 'note',
+				name: note.title,
+				description: dayjs(note.updated_at / 1000000).fromNow()
+			};
+		});
 
 		let legacy_documents = $knowledge
 			.filter((item) => item?.meta?.document)
@@ -165,19 +153,24 @@
 								...file,
 								name: file?.meta?.name,
 								description: `${file?.collection?.name} - ${file?.collection?.description}`,
+								knowledge: true, // DO NOT REMOVE, USED TO INDICATE KNOWLEDGE BASE FILE
 								type: 'file'
 							}))
 					]
 				: [];
 
-		items = [...collections, ...collection_files, ...legacy_collections, ...legacy_documents].map(
-			(item) => {
-				return {
-					...item,
-					...(item?.legacy || item?.meta?.legacy || item?.meta?.document ? { legacy: true } : {})
-				};
-			}
-		);
+		items = [
+			...notes,
+			...collections,
+			...collection_files,
+			...legacy_collections,
+			...legacy_documents
+		].map((item) => {
+			return {
+				...item,
+				...(item?.legacy || item?.meta?.legacy || item?.meta?.document ? { legacy: true } : {})
+			};
+		});
 
 		fuse = new Fuse(items, {
 			keys: ['name', 'description']
@@ -189,7 +182,7 @@
 	});
 </script>
 
-{#if filteredItems.length > 0 || prompt.split(' ')?.at(0)?.substring(1).startsWith('http')}
+{#if filteredItems.length > 0 || command?.substring(1).startsWith('http')}
 	<div
 		id="commands-container"
 		class="px-2 mb-2 text-left w-full absolute bottom-0 left-0 right-0 z-10"
@@ -210,7 +203,7 @@
 							type="button"
 							on:click={() => {
 								console.log(item);
-								confirmSelect(item);
+								confirmSelect('knowledge', item);
 							}}
 							on:mousemove={() => {
 								selectedIdx = idx;
@@ -235,6 +228,12 @@
 											class="bg-gray-500/20 text-gray-700 dark:text-gray-200 rounded-sm uppercase text-xs font-bold px-1 shrink-0"
 										>
 											File
+										</div>
+									{:else if item?.type === 'note'}
+										<div
+											class="bg-blue-500/20 text-blue-700 dark:text-blue-200 rounded-sm uppercase text-xs font-bold px-1 shrink-0"
+										>
+											Note
 										</div>
 									{:else}
 										<div
@@ -298,18 +297,15 @@
 							</div> -->
 					{/each}
 
-					{#if prompt
-						.split(' ')
-						.some((s) => s.substring(1).startsWith('https://www.youtube.com') || s
-									.substring(1)
-									.startsWith('https://youtu.be'))}
+					{#if command.substring(1).startsWith('https://www.youtube.com') || command
+							.substring(1)
+							.startsWith('https://youtu.be')}
 						<button
 							class="px-3 py-1.5 rounded-xl w-full text-left bg-gray-50 dark:bg-gray-850 dark:text-gray-100 selected-command-option-button"
 							type="button"
 							on:click={() => {
-								const url = prompt.split(' ')?.at(0)?.substring(1);
-								if (isValidHttpUrl(url)) {
-									confirmSelectYoutube(url);
+								if (isValidHttpUrl(command.substring(1))) {
+									confirmSelect('youtube', command.substring(1));
 								} else {
 									toast.error(
 										$i18n.t(
@@ -320,19 +316,18 @@
 							}}
 						>
 							<div class=" font-medium text-black dark:text-gray-100 line-clamp-1">
-								{prompt.split(' ')?.at(0)?.substring(1)}
+								{command.substring(1)}
 							</div>
 
 							<div class=" text-xs text-gray-600 line-clamp-1">{$i18n.t('Youtube')}</div>
 						</button>
-					{:else if prompt.split(' ')?.at(0)?.substring(1).startsWith('http')}
+					{:else if command.substring(1).startsWith('http')}
 						<button
 							class="px-3 py-1.5 rounded-xl w-full text-left bg-gray-50 dark:bg-gray-850 dark:text-gray-100 selected-command-option-button"
 							type="button"
 							on:click={() => {
-								const url = prompt.split(' ')?.at(0)?.substring(1);
-								if (isValidHttpUrl(url)) {
-									confirmSelectWeb(url);
+								if (isValidHttpUrl(command.substring(1))) {
+									confirmSelect('web', command.substring(1));
 								} else {
 									toast.error(
 										$i18n.t(
@@ -343,7 +338,7 @@
 							}}
 						>
 							<div class=" font-medium text-black dark:text-gray-100 line-clamp-1">
-								{prompt.split(' ')?.at(0)?.substring(1)}
+								{command}
 							</div>
 
 							<div class=" text-xs text-gray-600 line-clamp-1">{$i18n.t('Web')}</div>

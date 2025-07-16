@@ -1,7 +1,7 @@
 <script lang="ts">
 	import DOMPurify from 'dompurify';
 
-	import { onMount, getContext, createEventDispatcher, onDestroy } from 'svelte';
+	import { onMount, getContext, createEventDispatcher, onDestroy, tick } from 'svelte';
 	import * as FocusTrap from 'focus-trap';
 
 	const i18n = getContext('i18n');
@@ -52,6 +52,7 @@
 
 	const confirmHandler = async () => {
 		show = false;
+		await tick();
 		await onConfirm();
 		dispatch('confirm', inputValue);
 	};

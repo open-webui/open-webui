@@ -5,12 +5,12 @@
 	import { tick, getContext } from 'svelte';
 
 	import { models } from '$lib/stores';
+	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	const i18n = getContext('i18n');
 
-	const dispatch = createEventDispatcher();
-
 	export let command = '';
+	export let onSelect = (e) => {};
 
 	let selectedIdx = 0;
 	let filteredItems = [];
@@ -71,8 +71,7 @@
 	};
 
 	const confirmSelect = async (model) => {
-		command = '';
-		dispatch('select', model);
+		onSelect({ type: 'model', data: model });
 	};
 
 	onMount(async () => {
@@ -119,7 +118,8 @@
 						>
 							<div class="flex font-medium text-black dark:text-gray-100 line-clamp-1">
 								<img
-									src={model?.info?.meta?.profile_image_url ?? '/static/favicon.png'}
+									src={model?.info?.meta?.profile_image_url ??
+										`${WEBUI_BASE_URL}/static/favicon.png`}
 									alt={model?.name ?? model.id}
 									class="rounded-full size-6 items-center mr-2"
 								/>

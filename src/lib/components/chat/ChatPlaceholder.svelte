@@ -18,7 +18,7 @@
 	export let models = [];
 	export let atSelectedModel;
 
-	export let submitPrompt;
+	export let onSelect = (e) => {};
 
 	let mounted = false;
 	let selectedModelIdx = 0;
@@ -56,7 +56,7 @@
 								crossorigin="anonymous"
 								src={model?.info?.meta?.profile_image_url ??
 									($i18n.language === 'dg-DG'
-										? `/doge.png`
+										? `${WEBUI_BASE_URL}/doge.png`
 										: `${WEBUI_BASE_URL}/static/favicon.png`)}
 								class=" size-[2.7rem] rounded-full border-[1px] border-gray-100 dark:border-none"
 								alt="logo"
@@ -135,9 +135,7 @@
 					models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
 					$config?.default_prompt_suggestions ??
 					[]}
-				on:select={(e) => {
-					submitPrompt(e.detail);
-				}}
+				{onSelect}
 			/>
 		</div>
 	</div>

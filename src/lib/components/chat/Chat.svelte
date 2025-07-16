@@ -36,7 +36,8 @@
 		chatTitle,
 		showArtifacts,
 		tools,
-		toolServers
+		toolServers,
+		selectedFolder
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
@@ -96,6 +97,8 @@
 	let controlPane;
 	let controlPaneComponent;
 
+	let messageInput;
+
 	let autoScroll = true;
 	let processing = '';
 	let messagesContainerElement: HTMLDivElement;
@@ -123,6 +126,8 @@
 	let webSearchEnabled = false;
 	let codeInterpreterEnabled = false;
 
+	let showCommands = false;
+
 	let chat = null;
 	let tags = [];
 
@@ -140,24 +145,38 @@
 	let params = {};
 
 	$: if (chatIdProp) {
-		(async () => {
-			loading = true;
+		navigateHandler();
+	}
 
-			prompt = '';
-			files = [];
-			selectedToolIds = [];
-			selectedFilterIds = [];
-			webSearchEnabled = false;
-			imageGenerationEnabled = false;
+	const navigateHandler = async () => {
+		loading = true;
 
-			if (sessionStorage.getItem(`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`)) {
+		prompt = '';
+		messageInput?.setText('');
+
+		files = [];
+		selectedToolIds = [];
+		selectedFilterIds = [];
+		webSearchEnabled = false;
+		imageGenerationEnabled = false;
+
+		const storageChatInput = sessionStorage.getItem(
+			`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`
+		);
+
+		if (chatIdProp && (await loadChat())) {
+			await tick();
+			loading = false;
+			window.setTimeout(() => scrollToBottom(), 0);
+
+			await tick();
+
+			if (storageChatInput) {
 				try {
-					const input = JSON.parse(
-						sessionStorage.getItem(`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`)
-					);
+					const input = JSON.parse(storageChatInput);
 
 					if (!$temporaryChatEnabled) {
-						prompt = input.prompt;
+						messageInput?.setText(input.prompt);
 						files = input.files;
 						selectedToolIds = input.selectedToolIds;
 						selectedFilterIds = input.selectedFilterIds;
@@ -168,17 +187,21 @@
 				} catch (e) {}
 			}
 
-			if (chatIdProp && (await loadChat())) {
-				await tick();
-				loading = false;
-				window.setTimeout(() => scrollToBottom(), 0);
-				const chatInput = document.getElementById('chat-input');
-				chatInput?.focus();
-			} else {
-				await goto('/');
-			}
-		})();
-	}
+			const chatInput = document.getElementById('chat-input');
+			chatInput?.focus();
+		} else {
+			await goto('/');
+		}
+	};
+
+	const onSelect = async (e) => {
+		const { type, data } = e;
+
+		if (type === 'prompt') {
+			// Handle prompt selection
+			messageInput?.setText(data);
+		}
+	};
 
 	$: if (selectedModels && chatIdProp !== '') {
 		saveSessionSelectedModels();
@@ -405,7 +428,7 @@
 			const inputElement = document.getElementById('chat-input');
 
 			if (inputElement) {
-				prompt = event.data.text;
+				messageInput?.setText(event.data.text);
 				inputElement.focus();
 			}
 		}
@@ -443,8 +466,19 @@
 			}
 		});
 
-		if (sessionStorage.getItem(`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`)) {
+		const storageChatInput = sessionStorage.getItem(
+			`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`
+		);
+
+		if (!chatIdProp) {
+			loading = false;
+			await tick();
+		}
+
+		if (storageChatInput) {
 			prompt = '';
+			messageInput?.setText('');
+
 			files = [];
 			selectedToolIds = [];
 			selectedFilterIds = [];
@@ -453,12 +487,10 @@
 			codeInterpreterEnabled = false;
 
 			try {
-				const input = JSON.parse(
-					sessionStorage.getItem(`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`)
-				);
+				const input = JSON.parse(storageChatInput);
 
 				if (!$temporaryChatEnabled) {
-					prompt = input.prompt;
+					messageInput?.setText(input.prompt);
 					files = input.files;
 					selectedToolIds = input.selectedToolIds;
 					selectedFilterIds = input.selectedFilterIds;
@@ -467,11 +499,6 @@
 					codeInterpreterEnabled = input.codeInterpreterEnabled;
 				}
 			} catch (e) {}
-		}
-
-		if (!chatIdProp) {
-			loading = false;
-			await tick();
 		}
 
 		showControls.subscribe(async (value) => {
@@ -833,12 +860,13 @@
 		}
 
 		if ($page.url.searchParams.get('q')) {
-			prompt = $page.url.searchParams.get('q') ?? '';
+			const q = $page.url.searchParams.get('q') ?? '';
+			messageInput?.setText(q);
 
-			if (prompt) {
+			if (q) {
 				if (($page.url.searchParams.get('submit') ?? 'true') === 'true') {
 					await tick();
-					submitPrompt(prompt);
+					submitPrompt(q);
 				}
 			}
 		}
@@ -1071,7 +1099,7 @@
 	};
 
 	const createMessagePair = async (userPrompt) => {
-		prompt = '';
+		messageInput?.setText('');
 		if (selectedModels.length === 0) {
 			toast.error($i18n.t('Model not selected'));
 		} else {
@@ -1392,7 +1420,7 @@
 			return;
 		}
 
-		prompt = '';
+		messageInput?.setText('');
 
 		// Reset chat input textarea
 		if (!($settings?.richTextInput ?? true)) {
@@ -1413,7 +1441,7 @@
 		);
 
 		files = [];
-		prompt = '';
+		messageInput?.setText('');
 
 		// Create user message
 		let userMessageId = uuidv4();
@@ -1570,9 +1598,8 @@
 		let files = JSON.parse(JSON.stringify(chatFiles));
 		files.push(
 			...(userMessage?.files ?? []).filter((item) =>
-				['doc', 'file', 'collection'].includes(item.type)
-			),
-			...(responseMessage?.files ?? []).filter((item) => ['web_search_results'].includes(item.type))
+				['doc', 'text', 'file', 'note', 'collection'].includes(item.type)
+			)
 		);
 		// Remove duplicates
 		files = files.filter(
@@ -1952,25 +1979,33 @@
 		let _chatId = $chatId;
 
 		if (!$temporaryChatEnabled) {
-			chat = await createNewChat(localStorage.token, {
-				id: _chatId,
-				title: $i18n.t('New Chat'),
-				models: selectedModels,
-				system: $settings.system ?? undefined,
-				params: params,
-				history: history,
-				messages: createMessagesList(history, history.currentId),
-				tags: [],
-				timestamp: Date.now()
-			});
+			chat = await createNewChat(
+				localStorage.token,
+				{
+					id: _chatId,
+					title: $i18n.t('New Chat'),
+					models: selectedModels,
+					system: $settings.system ?? undefined,
+					params: params,
+					history: history,
+					messages: createMessagesList(history, history.currentId),
+					tags: [],
+					timestamp: Date.now()
+				},
+				$selectedFolder?.id
+			);
 
 			_chatId = chat.id;
 			await chatId.set(_chatId);
 
+			window.history.replaceState(history.state, '', `/c/${_chatId}`);
+
+			await tick();
+
 			await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			currentChatPage.set(1);
 
-			window.history.replaceState(history.state, '', `/c/${_chatId}`);
+			selectedFolder.set(null);
 		} else {
 			_chatId = 'local';
 			await chatId.set('local');
@@ -2067,6 +2102,7 @@
 						bind:selectedModels
 						shareEnabled={!!history.currentId}
 						{initNewChat}
+						showBanners={!showCommands}
 					/>
 
 					<div class="flex flex-col flex-auto z-10 w-full @container">
@@ -2098,12 +2134,14 @@
 										{chatActionHandler}
 										{addMessages}
 										bottomPadding={files.length > 0}
+										{onSelect}
 									/>
 								</div>
 							</div>
 
 							<div class=" pb-2">
 								<MessageInput
+									bind:this={messageInput}
 									{history}
 									{taskIds}
 									{selectedModels}
@@ -2116,6 +2154,7 @@
 									bind:codeInterpreterEnabled
 									bind:webSearchEnabled
 									bind:atSelectedModel
+									bind:showCommands
 									toolServers={$toolServers}
 									transparentBackground={$settings?.backgroundImageUrl ?? false}
 									{stopResponse}
@@ -2166,6 +2205,7 @@
 								<Placeholder
 									{history}
 									{selectedModels}
+									bind:messageInput
 									bind:files
 									bind:prompt
 									bind:autoScroll
@@ -2175,10 +2215,12 @@
 									bind:codeInterpreterEnabled
 									bind:webSearchEnabled
 									bind:atSelectedModel
+									bind:showCommands
 									transparentBackground={$settings?.backgroundImageUrl ?? false}
 									toolServers={$toolServers}
 									{stopResponse}
 									{createMessagePair}
+									{onSelect}
 									on:upload={async (e) => {
 										const { type, data } = e.detail;
 

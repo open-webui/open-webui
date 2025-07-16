@@ -26,7 +26,6 @@
 		feedbackData = null;
 		if (selectedFeedback) {
 			feedbackData = await getFeedbackById(localStorage.token, selectedFeedback.id).catch((err) => {
-				toast.error(err);
 				return null;
 			});
 

@@ -51,6 +51,8 @@ export const chats = writable(null);
 export const pinnedChats = writable([]);
 export const tags = writable([]);
 
+export const selectedFolder = writable(null);
+
 export const models: Writable<Model[]> = writable([]);
 
 export const prompts: Writable<null | Prompt[]> = writable(null);

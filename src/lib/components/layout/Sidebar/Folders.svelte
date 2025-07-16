@@ -6,6 +6,8 @@
 	export let folders = {};
 	export let shiftKey = false;
 
+	export let onDelete = (folderId) => {};
+
 	let folderList = [];
 	// Get the list of folders that have no parent, sorted by name alphabetically
 	$: folderList = Object.keys(folders)
@@ -24,6 +26,7 @@
 		{folders}
 		{folderId}
 		{shiftKey}
+		{onDelete}
 		on:import={(e) => {
 			dispatch('import', e.detail);
 		}}

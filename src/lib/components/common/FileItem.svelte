@@ -17,6 +17,7 @@
 	export let url: string | null = null;
 
 	export let dismissible = false;
+	export let modal = false;
 	export let loading = false;
 
 	export let item = null;
@@ -50,7 +51,7 @@
 		: 'rounded-2xl'} text-left"
 	type="button"
 	on:click={async () => {
-		if (item?.file?.data?.content) {
+		if (item?.file?.data?.content || modal) {
 			showModal = !showModal;
 		} else {
 			if (url) {
