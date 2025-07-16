@@ -1232,7 +1232,7 @@
 	"This action cannot be undone. Do you wish to continue?": "Это действие нельзя отменить. Вы хотите продолжить?",
 	"This channel was created on {{createdAt}}. This is the very beginning of the {{channelName}} channel.": "Этот канал был создан {{createdAt}}. Это самое начало канала {{channelName}}.",
 	"This chat won't appear in history and your messages will not be saved.": "Этот чат не появится в истории, и ваши сообщения не будут сохранены.",
-	"This chat won’t appear in history and your messages will not be saved.": "Этот чат не появится в истории, и ваши сообщения не будут сохранены.",
+	"This chat won't appear in history and your messages will not be saved.": "Этот чат не появится в истории, и ваши сообщения не будут сохранены.",
 	"This ensures that your valuable conversations are securely saved to your backend database. Thank you!": "Это обеспечивает сохранение ваших ценных разговоров в безопасной базе данных на вашем сервере. Спасибо!",
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "Это экспериментальная функция, она может работать не так, как ожидалось, и может быть изменена в любое время.",
 	"This model is not publicly available. Please select another model.": "Эта модель недоступна в открытом доступе. Пожалуйста, выберите другую модель.",
@@ -1418,5 +1418,18 @@
 	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "Весь ваш взнос будет направлен непосредственно разработчику плагина; Open WebUI не взимает никаких процентов. Однако выбранная платформа финансирования может иметь свои собственные сборы.",
 	"Youtube": "YouTube",
 	"Youtube Language": "Язык YouTube",
-	"Youtube Proxy URL": "URL прокси для YouTube"
+	"Youtube Proxy URL": "URL прокси YouTube",
+	"PII Modifier: Ignore": "🚫 Игнорировать",
+	"PII Modifier: Change Label": "Изменить метку",
+	"PII Modifier: Current Modifiers": "Текущая метка:",
+	"PII Modifier: Remove modifier": "Снять маску",
+	"PII Modifier: Words": "Слова:",
+	"PII Modifier: Exact": "Точно:",
+	"PII Modifier: Mask": "Маскировать",
+	"PII Modifier: Enter PII label type": "Введите метку PII",
+	"PII Modifier: Was masked in input": "Было замаскировано",
+	"PII Modifier: Was NOT masked in input": "НЕ было замаскировано",
+	"NENNA.AI PII detection": "Обнаружение PII NENNA.AI",
+	"Unmask all PIIs and clear mask modifiers": "Размаскировать все PII и очистить модификаторы маски",
+	"Mask all PIIs": "Маскировать все PII"
 }

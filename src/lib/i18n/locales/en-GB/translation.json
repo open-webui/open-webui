@@ -1416,7 +1416,20 @@
 	"You're now logged in.": "",
 	"Your account status is currently pending activation.": "",
 	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "",
-	"Youtube": "",
-	"Youtube Language": "",
-	"Youtube Proxy URL": ""
+	"Youtube": "YouTube",
+	"Youtube Language": "YouTube Language",
+	"Youtube Proxy URL": "YouTube Proxy URL",
+	"PII Modifier: Ignore": "🚫 Ignore",
+	"PII Modifier: Change Label": "Change Label",
+	"PII Modifier: Current Modifiers": "Current Label:",
+	"PII Modifier: Remove modifier": "Remove Mask",
+	"PII Modifier: Words": "Words:",
+	"PII Modifier: Exact": "Exact:",
+	"PII Modifier: Mask": "Mask",
+	"PII Modifier: Enter PII label type": "Enter PII Label",
+	"PII Modifier: Was masked in input": "Was Masked",
+	"PII Modifier: Was NOT masked in input": "Was NOT Masked",
+	"NENNA.AI PII detection": "NENNA.AI PII Detection",
+	"Unmask all PIIs and clear mask modifiers": "Unmask All PIIs and Clear Mask Modifiers",
+	"Mask all PIIs": "Mask All PIIs"
 }

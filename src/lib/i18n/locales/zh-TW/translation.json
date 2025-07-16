@@ -1232,7 +1232,7 @@
 	"This action cannot be undone. Do you wish to continue?": "此操作無法復原。您確定要繼續進行嗎？",
 	"This channel was created on {{createdAt}}. This is the very beginning of the {{channelName}} channel.": "此頻道建立於 {{createdAt}}。這是 {{channelName}} 頻道的起點。",
 	"This chat won't appear in history and your messages will not be saved.": "此對話不會出現在歷史記錄中，且您的訊息將不被儲存。",
-	"This chat won’t appear in history and your messages will not be saved.": "",
+	"This chat won't appear in history and your messages will not be saved.": "",
 	"This ensures that your valuable conversations are securely saved to your backend database. Thank you!": "這確保您寶貴的對話會安全地儲存到您的後端資料庫。謝謝！",
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "這是一個實驗性功能，它可能無法如預期運作，並且可能會隨時變更。",
 	"This model is not publicly available. Please select another model.": "此模型未開放公眾使用，請選擇其他模型。",
@@ -1418,5 +1418,18 @@
 	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "您的所有貢獻將會直接交給外掛開發者；Open WebUI 不會收取任何百分比。然而，所選擇的贊助平臺可能有其自身的費用。",
 	"Youtube": "YouTube",
 	"Youtube Language": "YouTube 語言",
-	"Youtube Proxy URL": "YouTube 代理伺服器網址"
+	"Youtube Proxy URL": "YouTube 代理 URL",
+	"PII Modifier: Ignore": "🚫 忽略",
+	"PII Modifier: Change Label": "更改標籤",
+	"PII Modifier: Current Modifiers": "目前標籤：",
+	"PII Modifier: Remove modifier": "移除遮罩",
+	"PII Modifier: Words": "詞語：",
+	"PII Modifier: Exact": "精確：",
+	"PII Modifier: Mask": "遮罩",
+	"PII Modifier: Enter PII label type": "輸入 PII 標籤",
+	"PII Modifier: Was masked in input": "輸入時已遮罩",
+	"PII Modifier: Was NOT masked in input": "輸入時未遮罩",
+	"NENNA.AI PII detection": "NENNA.AI PII 偵測",
+	"Unmask all PIIs and clear mask modifiers": "取消所有 PII 遮罩並清除遮罩修飾符",
+	"Mask all PIIs": "遮罩所有 PII"
 }
