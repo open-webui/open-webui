@@ -903,6 +903,10 @@ export const deleteChatById = async (token: string, id: string) => {
 export const getTagsById = async (token: string, id: string) => {
 	let error = null;
 
+	if (!id) {
+		throw new Error('tag_id is required');
+	}
+	
 	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}/tags`, {
 		method: 'GET',
 		headers: {
@@ -934,6 +938,10 @@ export const getTagsById = async (token: string, id: string) => {
 
 export const addTagById = async (token: string, id: string, tagName: string) => {
 	let error = null;
+
+	if (!id) {
+		throw new Error('tag_id is required');
+	}
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}/tags`, {
 		method: 'POST',
@@ -968,6 +976,10 @@ export const addTagById = async (token: string, id: string, tagName: string) => 
 
 export const deleteTagById = async (token: string, id: string, tagName: string) => {
 	let error = null;
+
+	if (!id) {
+		throw new Error('tag_id is required');
+	}
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}/tags`, {
 		method: 'DELETE',

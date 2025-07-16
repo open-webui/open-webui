@@ -272,6 +272,10 @@ export const stopTask = async (token: string, id: string) => {
 export const getTaskIdsByChatId = async (token: string, chat_id: string) => {
 	let error = null;
 
+	if (!chat_id) {
+		throw new Error('chat_id is required');
+	}
+
 	const res = await fetch(`${WEBUI_BASE_URL}/api/tasks/chat/${chat_id}`, {
 		method: 'GET',
 		headers: {
