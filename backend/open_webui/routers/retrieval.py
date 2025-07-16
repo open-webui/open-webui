@@ -2050,11 +2050,13 @@ def query_doc_handler(
                 ),
                 k=form_data.k if form_data.k else request.app.state.config.TOP_K,
                 reranking_function=(
-                    lambda sentences: (
-                        request.app.state.RERANKING_FUNCTION(sentences, user=user)
-                        if request.app.state.RERANKING_FUNCTION
-                        else None
+                    (
+                        lambda sentences: request.app.state.RERANKING_FUNCTION(
+                            sentences, user=user
+                        )
                     )
+                    if request.app.state.RERANKING_FUNCTION
+                    else None
                 ),
                 k_reranker=form_data.k_reranker
                 or request.app.state.config.TOP_K_RERANKER,
@@ -2112,8 +2114,14 @@ def query_collection_handler(
                     query, prefix=prefix, user=user
                 ),
                 k=form_data.k if form_data.k else request.app.state.config.TOP_K,
-                reranking_function=lambda sentences: request.app.state.RERANKING_FUNCTION(
-                    sentences, user=user
+                reranking_function=(
+                    (
+                        lambda sentences: request.app.state.RERANKING_FUNCTION(
+                            sentences, user=user
+                        )
+                    )
+                    if request.app.state.RERANKING_FUNCTION
+                    else None
                 ),
                 k_reranker=form_data.k_reranker
                 or request.app.state.config.TOP_K_RERANKER,
