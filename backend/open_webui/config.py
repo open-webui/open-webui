@@ -648,8 +648,8 @@ def load_oauth_providers():
                     }
                     if OAUTH_TOKEN_ENDPOINT_AUTH_METHOD.value
                     else {}
-                )
-                ** (
+                ),
+                **(
                     {"timeout": int(OAUTH_TIMEOUT.value)} if OAUTH_TIMEOUT.value else {}
                 ),
             }
