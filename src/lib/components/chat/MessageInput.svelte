@@ -1390,7 +1390,7 @@
 														{#if enablePiiDetection}
 					<Tooltip content={$i18n.t('Toggle PII masking')}>
 						<button
-							class="bg-transparent hover:bg-gray-100 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-lg p-1.5 ml-1 flex items-center gap-1.5 text-xs font-medium"
+							class="px-2 @xl:px-2.5 py-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 bg-transparent text-gray-600 dark:text-gray-300"
 							type="button"
 							on:click={togglePiiMasking}
 							aria-label={$i18n.t('Toggle PII masking')}
@@ -1400,7 +1400,7 @@
 								alt="PII Mask" 
 								class="size-4"
 							/>
-							<span class="hidden @sm:inline">{$i18n.t('Toggle PII masking')}</span>
+							<span class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5">{$i18n.t('Toggle PII masking')}</span>
 						</button>
 					</Tooltip>
 				{/if}
