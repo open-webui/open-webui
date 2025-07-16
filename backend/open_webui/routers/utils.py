@@ -140,20 +140,25 @@ async def download_litellm_config_yaml(user=Depends(get_admin_user)):
 @router.get("/reindex/stream")
 async def stream_progress():
     async def event_generator():
+        no_progress_counter = 0
         while True:
             active_source = None
 
             for key, value in REINDEX_STATE.items():
-                if key.endswith("_progress") and 0 < value < 100:
+                if key.endswith("_progress") and 0 < value <= 100:
                     active_source = key.removesuffix("_progress")
                     progress_value = value
                     break  # only one can be active by design
 
             if not active_source:
-                yield f"data: {dumps({'source': None, 'progress': 0})}\n\n"
-                break
-
-            yield f"data: {dumps({'source': active_source, 'progress': progress_value})}\n\n"
+                # Add delay to not immediately end the stream when jumping from one reindex task to another
+                no_progress_counter += 1
+                if no_progress_counter >= 3:
+                    yield f"data: {dumps({'source': None, 'progress': 0})}\n\n"
+                    break
+            else:
+                no_progress_counter = 0
+                yield f"data: {dumps({'source': active_source, 'progress': progress_value})}\n\n"
             await sleep(2)  # stream every two second
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")

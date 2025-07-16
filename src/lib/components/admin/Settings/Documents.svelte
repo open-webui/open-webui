@@ -286,6 +286,9 @@
 	};
 
 	const startReindexing = async () => {
+		memoriesMessage = '0%'
+		filesMessage = '0%'
+		showReindexBar = true;
 		isReindexing = true;
 		reindexProgress = 0;
 
@@ -329,6 +332,7 @@
 
 		isReindexing = await checkIfReindexing();
 		if (isReindexing) {
+			showReindexBar = true;
 			listenToReindexProgress(handleReindexProgress);
 		}
 	});
@@ -1342,16 +1346,15 @@
 							</button>
 						</div>
 					</div>
-					{#if isReindexing}
+					{#if showReindexBar}
 						<div class="w-full bg-gray-200 rounded-full h-3 mt-4">
 							<div class="bg-blue-600 h-3 rounded-full" style="width: {reindexProgress}%"></div>
 						</div>
 						<!-- <p class="text-sm mt-2 text-gray-600">'Reindexing... {fileProgress}%' -->
-						<p class="text-sm mt-2 text-gray-600">{$i18n.t('Reindexing: Memories: {{memories}}, Files: {{files}}.', {
-							memories: memoriesMessage,
-							files: filesMessage
-						 })}
-							
+						<p class="text-sm mt-2 text-gray-600">
+							{$i18n.t('Reindexing')}:
+							{$i18n.t('Memory')}: {memoriesMessage},
+							{$i18n.t('Files')}: {filesMessage}.
 						</p>
 					{/if}
 
