@@ -19,7 +19,6 @@
 
 	import { reindexMemories } from '$lib/apis/memories';
 	import { 
-		reindexKnowledgeFiles,
 		reindexKnowledge,
 		countKnowledges
 	} from '$lib/apis/knowledge';
@@ -47,7 +46,6 @@
 
 	let showResetConfirm = false;
 	let showResetUploadDirConfirm = false;
-	let showReindexConfirm = false;
 	let showFilesReindexConfirm = false;
 	let filesCountMessage = '';
 	let reindexProgress = 0;
@@ -377,20 +375,6 @@
 	bind:show={showResetConfirm}
 	on:confirm={() => {
 		const res = resetVectorDB(localStorage.token).catch((error) => {
-			toast.error(`${error}`);
-			return null;
-		});
-
-		if (res) {
-			toast.success($i18n.t('Success'));
-		}
-	}}
-/>
-
-<ReindexKnowledgeFilesConfirmDialog
-	bind:show={showReindexConfirm}
-	on:confirm={async () => {
-		const res = await reindexKnowledgeFiles(localStorage.token).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});
@@ -1334,21 +1318,6 @@
 								}}
 							>
 								{$i18n.t('Reset')}
-							</button>
-						</div>
-					</div>
-					<div class="  mb-2.5 flex w-full justify-between">
-						<div class=" self-center text-xs font-medium">
-							{$i18n.t('Reindex Knowledge Base Vectors')}
-						</div>
-						<div class="flex items-center relative">
-							<button
-								class="text-xs"
-								on:click={() => {
-									showReindexConfirm = true;
-								}}
-							>
-								{$i18n.t('Reindex')}
 							</button>
 						</div>
 					</div>
