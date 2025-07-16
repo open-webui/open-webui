@@ -579,6 +579,7 @@
 							'/static/favicon.png'
 								? 'bg-transparent'
 								: 'bg-white'} shadow-xl group relative"
+							class:cursor-default={hasInspectAccess}
 							type="button"
 							disabled={hasInspectAccess}
 							on:click={() => {
@@ -602,7 +603,9 @@
 							<div class="absolute bottom-0 right-0 z-10">
 								<div class="m-1.5">
 									<div
-										class="shadow-xl p-1 rounded-full border-2 border-white bg-gray-800 text-white group-hover:bg-gray-600 transition dark:border-black dark:bg-white dark:group-hover:bg-gray-200 dark:text-black"
+										class="shadow-xl p-1 rounded-full border-2 border-white bg-gray-800 text-white transition dark:border-black dark:bg-white dark:text-black"
+										class:group-hover:bg-gray-600={!hasInspectAccess}
+										class:dark:group-hover:bg-gray-200={!hasInspectAccess}
 									>
 										<svg
 											xmlns="http://www.w3.org/2000/svg"
@@ -621,21 +624,24 @@
 							</div>
 
 							<div
-								class="absolute top-0 bottom-0 left-0 right-0 bg-white dark:bg-black rounded-lg opacity-0 group-hover:opacity-20 transition"
+								class="absolute top-0 bottom-0 left-0 right-0 bg-white dark:bg-black rounded-lg opacity-0 transition"
+								class:group-hover:opacity-20={!hasInspectAccess}
 							></div>
 						</button>
 
-						<div class="flex w-full mt-1 justify-end">
-							<button
-								class="px-2 py-1 text-gray-500 rounded-lg text-xs"
-								on:click={() => {
-									info.meta.profile_image_url = '/static/favicon.png';
-								}}
-								type="button"
-							>
-								Reset Image</button
-							>
-						</div>
+						{#if !hasInspectAccess}
+							<div class="flex w-full mt-1 justify-end">
+								<button
+									class="px-2 py-1 text-gray-500 rounded-lg text-xs"
+									on:click={() => {
+										info.meta.profile_image_url = '/static/favicon.png';
+									}}
+									type="button"
+								>
+									Reset Image
+								</button>
+							</div>
+						{/if}
 					</div>
 				</div>
 
