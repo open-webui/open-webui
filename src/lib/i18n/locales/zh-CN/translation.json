@@ -447,7 +447,7 @@
 	"Enter CFG Scale (e.g. 7.0)": "输入 CFG Scale（例如：7.0）",
 	"Enter Chunk Overlap": "输入块重叠 (Chunk Overlap)",
 	"Enter Chunk Size": "输入块大小 (Chunk Size)",
-	"Enter comma-separated \"token:bias_value\" pairs (example: 5432:100, 413:-100)": "输入以逗号分隔的"token:bias_value"对（例如：5432:100, 413:-100）",
+	"Enter comma-separated \"token:bias_value\" pairs (example: 5432:100, 413:-100)": "输入以逗号分隔的\"token:bias_value\"对（例如：5432:100, 413:-100）",
 	"Enter Config in JSON format": "输入 JSON 格式的配置",
 	"Enter content for the pending user info overlay. Leave empty for default.": "输入用户待激活界面的内容。留空使用默认",
 	"Enter Datalab Marker API Key": "输入 Datalab Marker API 密钥",
