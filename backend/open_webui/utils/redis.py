@@ -3,8 +3,7 @@ from urllib.parse import urlparse
 
 import redis
 
-
-MAX_RETRY_COUNT = 2
+from open_webui.env import REDIS_SENTINEL_MAX_RETRY_COUNT
 
 
 class SentinelRedisProxy:
@@ -31,7 +30,7 @@ class SentinelRedisProxy:
         if self._async_mode:
 
             async def _wrapped(*args, **kwargs):
-                for i in range(MAX_RETRY_COUNT):
+                for i in range(REDIS_SENTINEL_MAX_RETRY_COUNT):
                     try:
                         method = getattr(self._master(), item)
                         result = method(*args, **kwargs)
@@ -42,7 +41,7 @@ class SentinelRedisProxy:
                         redis.exceptions.ConnectionError,
                         redis.exceptions.ReadOnlyError,
                     ) as e:
-                        if i < MAX_RETRY_COUNT - 1:
+                        if i < REDIS_SENTINEL_MAX_RETRY_COUNT - 1:
                             continue
                         raise e from e
 
@@ -51,7 +50,7 @@ class SentinelRedisProxy:
         else:
 
             def _wrapped(*args, **kwargs):
-                for i in range(MAX_RETRY_COUNT):
+                for i in range(REDIS_SENTINEL_MAX_RETRY_COUNT):
                     try:
                         method = getattr(self._master(), item)
                         return method(*args, **kwargs)
@@ -59,7 +58,7 @@ class SentinelRedisProxy:
                         redis.exceptions.ConnectionError,
                         redis.exceptions.ReadOnlyError,
                     ) as e:
-                        if i < MAX_RETRY_COUNT - 1:
+                        if i < REDIS_SENTINEL_MAX_RETRY_COUNT - 1:
                             continue
                         raise e from e
 
