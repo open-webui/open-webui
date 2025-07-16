@@ -1598,6 +1598,19 @@ async def get_app_config(request: Request):
         ),
     }
 
+@app.get("/api/config/mobile")
+async def get_app_config_mobile():
+    suggestions = app.state.config.DEFAULT_PROMPT_SUGGESTIONS or []
+
+    return JSONResponse({
+        "inputLinesNum": 5,
+        "suggestions": suggestions,
+        "fileUploadCountAllowed": 5,
+        "maxFileSizeAllowed": 5 * 1024 * 1024,  # 5MB in bytes
+        "fileTypesAllowed": ["pdf"],
+        "privacyPolicyURL": "placeholder/privacy",#url will be provided later
+        "termsConditionsURL": "placeholder/terms"#url will be provided later
+    })
 
 class UrlForm(BaseModel):
     url: str
