@@ -9,3 +9,4 @@ class VectorType(StrEnum):
     ELASTICSEARCH = "elasticsearch"
     OPENSEARCH = "opensearch"
     PGVECTOR = "pgvector"
+    S3VECTOR = "s3vector"
