@@ -505,6 +505,11 @@
 			return null;
 		}
 
+		if (fileUploadCapableModels.length !== selectedModels.length) {
+			toast.error($i18n.t('Model(s) do not support file upload'));
+			return null;
+		}
+
 		const tempItemId = uuidv4();
 		const fileItem = {
 			type: 'file',
