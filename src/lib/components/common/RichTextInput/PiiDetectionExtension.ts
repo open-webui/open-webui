@@ -32,6 +32,7 @@ export interface PiiDetectionOptions {
 	enabled: boolean;
 	apiKey: string;
 	conversationId?: string | undefined;
+	getShouldMask?: () => boolean; // Dynamic function to get current masking state
 	onPiiDetected?: (entities: ExtendedPiiEntity[], maskedText: string) => void;
 	onPiiToggled?: (entities: ExtendedPiiEntity[]) => void;
 	onPiiDetectionStateChanged?: (isDetecting: boolean) => void;
@@ -85,12 +86,13 @@ function buildPositionMapping(doc: ProseMirrorNode): PositionMapping {
 function mapPiiEntitiesToProseMirror(
 	entities: PiiEntity[],
 	mapping: PositionMapping,
-	existingEntities: ExtendedPiiEntity[] = []
+	existingEntities: ExtendedPiiEntity[] = [],
+	defaultShouldMask: boolean = true
 ): ExtendedPiiEntity[] {
 	return entities.map((entity) => {
 		// Find existing entity with same label to preserve shouldMask state
 		const existingEntity = existingEntities.find((existing) => existing.label === entity.label);
-		const shouldMask = existingEntity?.shouldMask ?? true; // Default to true if not found
+		const shouldMask = existingEntity?.shouldMask ?? defaultShouldMask; // Use defaultShouldMask if not found
 
 		return {
 			...entity,
@@ -388,6 +390,7 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 			enabled: false,
 			apiKey: '',
 			conversationId: '',
+			getShouldMask: () => true, // Default to masked for backward compatibility
 			onPiiDetected: undefined,
 			onPiiToggled: undefined,
 			onPiiDetectionStateChanged: undefined,
@@ -474,7 +477,8 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 					const mappedEntities = mapPiiEntitiesToProseMirror(
 						response.pii[0],
 						state.positionMapping,
-						existingEntitiesForMapping
+						existingEntitiesForMapping,
+						options.getShouldMask ? options.getShouldMask() : true
 					);
 
 					// CRITICAL FIX: Sync the mapped entities back to session manager

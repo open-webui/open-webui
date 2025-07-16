@@ -227,7 +227,7 @@
 		console.log('MessageInput: PII entities toggled, updated currentPiiEntities:', entities.length);
 	};
 
-	// Function to toggle PII masking (same logic as Ctrl + Shift + L shortcut)
+	// Function to toggle PII masking (deterministic based on button state)
 	const togglePiiMasking = () => {
 		if (!enablePiiDetection) {
 			console.log('MessageInput: PII detection not enabled');
@@ -239,21 +239,18 @@
 		
 		console.log('MessageInput: PII masking toggled to:', piiMaskingEnabled);
 
-		// Update all existing entities to match the new toggle state
-		if (currentPiiEntities.length > 0) {
-			currentPiiEntities = currentPiiEntities.map(entity => ({
-				...entity,
-				shouldMask: piiMaskingEnabled
-			}));
-
-			// Update the session manager with the new entity states
-			if (chatId) {
-				piiSessionManager.setConversationEntities(chatId, currentPiiEntities);
+		// Deterministic behavior based on button state
+		if (piiMaskingEnabled) {
+			// Button ON: Mask all entities
+			if (chatInputElement?.maskAllPiiEntities) {
+				chatInputElement.maskAllPiiEntities();
+			} else {
 			}
-
-			// If we have a reference to the RichTextInput, update its visual state
-			if (chatInputElement?.togglePiiMasking) {
-				chatInputElement.togglePiiMasking();
+		} else {
+			// Button OFF: Unmask all entities and clear modifiers
+			if (chatInputElement?.unmaskAllPiiEntities) {
+				chatInputElement.unmaskAllPiiEntities();
+			} else {
 			}
 		}
 	};
@@ -901,6 +898,7 @@
 												]}
 												{enablePiiDetection}
 												{piiApiKey}
+												{piiMaskingEnabled}
 												conversationId={chatId || undefined}
 												onPiiDetected={handlePiiDetected}
 												onPiiToggled={handlePiiToggled}
