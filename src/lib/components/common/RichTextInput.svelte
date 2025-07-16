@@ -74,6 +74,7 @@
 	export let enablePiiDetection = false;
 	export let piiApiKey = '';
 	export let conversationId: string | undefined = undefined;
+	export let piiMaskingEnabled = true; // Controls whether newly detected PIIs are initialized as masked
 	export let onPiiDetected: (entities: ExtendedPiiEntity[], maskedText: string) => void = () => {};
 	export let onPiiToggled: (entities: ExtendedPiiEntity[]) => void = () => {};
 	export let onPiiDetectionStateChanged: (isDetecting: boolean) => void = () => {};
@@ -215,6 +216,77 @@
 		editor.commands.setContent(content);
 	};
 
+	// Export method to toggle PII masking (same as Ctrl + Shift + L)
+	export const togglePiiMasking = () => {
+		if (!enablePiiDetection || !enablePiiModifiers || !editor) {
+			return;
+		}
+
+		// Get current entities from PiiSessionManager to determine state
+		const piiSessionManager = PiiSessionManager.getInstance();
+		const currentEntities = piiSessionManager.getEntitiesForDisplay(conversationId);
+
+		if (currentEntities.length > 0) {
+			// Check if most entities are currently masked
+			const maskedCount = currentEntities.filter(entity => entity.shouldMask).length;
+			const unmaskedCount = currentEntities.length - maskedCount;
+			const mostlyMasked = maskedCount >= unmaskedCount;
+
+
+			if (mostlyMasked) {
+				// Currently masked -> unmask all and clear mask modifiers
+				// 1. Clear all mask modifiers (keep ignore modifiers)
+				if (editor.commands?.clearMaskModifiers) {
+					editor.commands.clearMaskModifiers();
+				}
+
+				// 2. Unmask all PII entities
+				if (editor.commands?.unmaskAllEntities) {
+					editor.commands.unmaskAllEntities();
+				}
+
+			} else {
+				// Currently unmasked -> mask all entities
+				if (editor.commands?.maskAllEntities) {
+					editor.commands.maskAllEntities();
+				}
+
+			}
+		} else {
+		}
+	};
+
+	// Export method to deterministically mask all PII entities
+	export const maskAllPiiEntities = () => {
+		if (!enablePiiDetection || !editor) {
+			return;
+		}
+
+		
+		// Mask all PII entities
+		if (editor.commands?.maskAllEntities) {
+			editor.commands.maskAllEntities();
+		}
+	};
+
+	// Export method to deterministically unmask all PII entities and clear modifiers
+	export const unmaskAllPiiEntities = () => {
+		if (!enablePiiDetection || !editor) {
+			return;
+		}
+
+		
+		// Clear all mask modifiers (keep ignore modifiers)
+		if (editor.commands?.clearMaskModifiers) {
+			editor.commands.clearMaskModifiers();
+		}
+
+		// Unmask all PII entities
+		if (editor.commands?.unmaskAllEntities) {
+			editor.commands.unmaskAllEntities();
+		}
+	};
+
 	const selectTemplate = () => {
 		if (value !== '') {
 			// After updating the state, try to find and select the next template
@@ -306,6 +378,7 @@
 								enabled: true,
 								apiKey: piiApiKey,
 								conversationId: conversationId,
+								getShouldMask: () => piiMaskingEnabled,
 								onPiiDetected: onPiiDetected,
 								onPiiToggled: onPiiToggled,
 								onPiiDetectionStateChanged: handlePiiDetectionStateChanged
@@ -431,33 +504,38 @@
 					keydown: (view, event) => {
 						ensureConversationActivated(); // Ensure conversation is activated on first keystroke
 
-						// Handle CTRL+SHIFT+L to unmask all PIIs and clear mask modifiers
+						// Handle CTRL+SHIFT+L to toggle PII masking (mask all <-> unmask all)
 						if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'l') {
 							if (enablePiiDetection && enablePiiModifiers && editor) {
 								event.preventDefault();
 
-								// 1. Clear all mask modifiers (keep ignore modifiers)
-								if (editor.commands?.clearMaskModifiers) {
-									editor.commands.clearMaskModifiers();
-								}
+								// Get current entities from PiiSessionManager to determine state
+								const piiSessionManager = PiiSessionManager.getInstance();
+								const currentEntities = piiSessionManager.getEntitiesForDisplay(conversationId);
 
-								// 2. Unmask all PII entities
-								if (editor.commands?.unmaskAllEntities) {
-									editor.commands.unmaskAllEntities();
-								}
+								if (currentEntities.length > 0) {
+									// Check if most entities are currently masked
+									const maskedCount = currentEntities.filter(entity => entity.shouldMask).length;
+									const unmaskedCount = currentEntities.length - maskedCount;
+									const mostlyMasked = maskedCount >= unmaskedCount;
 
-								return true;
-							}
-						}
+									if (mostlyMasked) {
+										// Currently masked -> unmask all and clear mask modifiers
+										// 1. Clear all mask modifiers (keep ignore modifiers)
+										if (editor.commands?.clearMaskModifiers) {
+											editor.commands.clearMaskModifiers();
+										}
 
-						// Handle CTRL+SHIFT+Q to mask all PIIs again
-						if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'q') {
-							if (enablePiiDetection && editor) {
-								event.preventDefault();
-
-								// Mask all PII entities
-								if (editor.commands?.maskAllEntities) {
-									editor.commands.maskAllEntities();
+										// 2. Unmask all PII entities
+										if (editor.commands?.unmaskAllEntities) {
+											editor.commands.unmaskAllEntities();
+										}
+									} else {
+										// Currently unmasked -> mask all entities
+										if (editor.commands?.maskAllEntities) {
+											editor.commands.maskAllEntities();
+										}
+									}
 								}
 
 								return true;
