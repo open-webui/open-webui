@@ -1,0 +1,324 @@
+name: Build and Deploy PocketFM
+on:
+  push:
+    branches:
+      - master-fm
+      - qa-fm
+  workflow_dispatch:
+    inputs:
+      build_with_cache:
+        description: "Build with cache?"
+        required: true
+        default: 'yes'
+        type: choice
+        options:
+          - 'yes'
+          - 'no'
+      commitId:
+        description: "Commit ID to deploy (default: latest)"
+        required: false
+        default: 'latest'
+        type: string
+
+# Prevent concurrent deployments
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  id-token: write
+  contents: read
+  issues: write
+  pull-requests: write
+
+env:
+  BRANCH_NAME: ${{ github.ref_name }}
+  IS_PRODUCTION: ${{ github.ref_name == 'master-fm' }}
+  ECR_BASE: 856517911253.dkr.ecr.ap-southeast-1.amazonaws.com
+  ECR_REPO: opensource/${{ env.IS_PRODUCTION && 'prod' || 'qa' }}/open-web-ui
+
+jobs:
+  check-image:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.commitId != 'latest'
+    outputs:
+      image-exists: ${{ steps.check-image.outputs.exists }}
+    steps:
+      - name: Get version number from package.json
+        id: get_version
+        run: |
+          VERSION=$(jq -r '.version' package.json)
+          echo "::set-output name=version::$VERSION-pocketfm-${{ github.ref_name }}"
+      
+      - name: ECR Repository
+        id: set_repo
+        run: |
+          echo "::set-output name=ecrRepo::$ECR_REPO"
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4.0.1
+        with:
+          role-to-assume: ${{ secrets.AWS_IAM_ASSUME_ROLE }}
+          role-session-name: GitHub_to_AWS_via_FederatedOIDC
+          aws-region: ap-southeast-1
+
+      - name: Check if image exists in ECR
+        id: check-image
+        run: |
+          # Try to inspect the image manifest
+          if aws ecr batch-get-image --repository-name ${{ env.ECR_REPO }} --image-ids imageTag=${{ steps.get_version.outputs.version }} --region ap-southeast-1 --query 'images[].imageId' --output text > /dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Image found in ECR"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "Image not found in ECR"
+            exit 1
+          fi
+
+  build:
+    runs-on: self-hosted-arc-arm64
+    timeout-minutes: 30
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.commitId == 'latest'
+    outputs:
+      docker-tag: ${{ steps.get_version.outputs.version }}
+      ecr-repo: ${{ steps.set_repo.outputs.ecrRepo }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4.0.1
+        with:
+          role-to-assume: ${{ secrets.AWS_IAM_ASSUME_ROLE }}
+          role-session-name: GitHub_to_AWS_via_FederatedOIDC
+          aws-region: ap-southeast-1
+
+      - name: Log in to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+        id: ecr-login
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          install: true
+          driver: docker-container
+          buildkitd-flags: --debug
+
+      - name: Build and Push Multi-Architecture Image with Cache
+        if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.build_with_cache == 'yes' }}
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/arm64
+          push: true
+          tags: |
+            ${{ env.ECR_REPO }}:${{ steps.get_version.outputs.version }}
+            ${{ env.ECR_REPO }}:latest
+          cache-from: type=registry,ref=${{ env.ECR_REPO }}:cache
+          cache-to: mode=max,image-manifest=true,oci-mediatypes=true,type=registry,ref=${{ env.ECR_REPO }}:cache
+          build-args: |
+            GITHUB_USERNAME=${{ secrets.GIT_USERNAME }}
+            GITHUB_TOKEN=${{ secrets.GIT_TOKEN }}
+
+      - name: Build and Push Multi-Architecture Image without Cache
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_with_cache == 'no' }}
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/arm64
+          push: true
+          tags: |
+            ${{ env.ECR_REPO }}:${{ steps.get_version.outputs.version }}
+            ${{ env.ECR_REPO }}:latest
+          no-cache: true
+          build-args: |
+            GITHUB_USERNAME=${{ secrets.GIT_USERNAME }}
+            GITHUB_TOKEN=${{ secrets.GIT_TOKEN }}
+
+      - name: Notify Slack - Build Success
+        if: success()
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          channel-id: ${{ secrets.SLACK_CHANNEL_ID }}
+          slack-message: "✅ Build successful for Open Web UI service\nBranch: ${{ env.BRANCH_NAME }}\nCommit: ${{ github.sha }}\nDocker Tag: ${{ steps.get_version.outputs.version }}"
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+
+      - name: Notify Slack - Build Failure
+        if: failure()
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          channel-id: ${{ secrets.SLACK_CHANNEL_ID }}
+          slack-message: "❌ Build failed for Open Web UI service\nBranch: ${{ env.BRANCH_NAME }}\nCommit: ${{ github.sha }}\nSee details: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+
+  deploy:
+    needs: [build, check-image]
+    if: |
+      always() && 
+      (needs.build.result == 'success' || (needs.check-image.result == 'success' && needs.check-image.outputs.image-exists == 'true'))
+    runs-on: ubuntu-latest
+    env:
+      dockerTag: ${{ needs.build.outputs.docker-tag || github.event.inputs.commitId }}
+    timeout-minutes: 30
+    steps:
+      - name: Checkout Infra Repo
+        uses: actions/checkout@v4
+        with:
+          repository: Pocket-Fm/Infra_deployments_k8s
+          token: ${{ secrets.GIT_TOKEN }}
+          path: infra
+  
+      - name: Checkout Workflow Source Repo
+        uses: actions/checkout@v4
+        with:
+          path: source-repo
+  
+      - name: Extract Commit Information
+        id: commit_details
+        run: |
+          cd source-repo
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.event.inputs.commitId }}" != "latest" ]]; then
+            echo "COMMIT_HASH=${{ github.event.inputs.commitId }}" >> $GITHUB_ENV
+          else
+            echo "COMMIT_HASH=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          fi
+          echo "COMMIT_AUTHOR_NAME=$(git log -1 --pretty=format:'%an')" >> $GITHUB_ENV
+          echo "COMMIT_AUTHOR_EMAIL=$(git log -1 --pretty=format:'%ae')" >> $GITHUB_ENV
+
+      - name: Notify Slack - Pre-Deployment Approval Required
+        if: env.IS_PRODUCTION == 'true'
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          channel-id: ${{ secrets.SLACK_CHANNEL_ID }}
+          slack-message: "🔔 Open Web UI Approval Required: Pre-Deployment\nBranch: ${{ env.BRANCH_NAME }}\nCommit: ${{ env.COMMIT_HASH }}\nApprovers: Infra, platform\nIssues: https://github.com/Pocket-Fm/pocket_tv/issues"
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+
+      - name: Manual approval for pre-deployment
+        if: env.IS_PRODUCTION == 'true'
+        uses: trstringer/manual-approval@v1
+        with:
+          secret: ${{ secrets.GIT_TOKEN }}
+          approvers: Infra
+          minimum-approvals: 1
+          issue-title: "Approval for pre-deployment"
+          issue-body: "Approve to proceed with updating the Pre deployment"
+          timeout-minutes: 60
+
+      - name: Store Previous Manifest State
+        if: env.IS_PRODUCTION == 'true'
+        id: store_manifest
+        run: |
+          cd infra
+          PRE_DEPLOYMENT_PATH="overlays/llm-agent/dev/open-webui/values.yaml"
+          # Store the current image and version
+          CURRENT_IMAGE=$(yq eval '.image.repository' $PRE_DEPLOYMENT_PATH)
+          CURRENT_VERSION=$(yq eval '.image.tag' $PRE_DEPLOYMENT_PATH)
+          echo "previous_image=$CURRENT_IMAGE" >> $GITHUB_OUTPUT
+          echo "previous_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Update Pre deployment for Production
+        if: env.IS_PRODUCTION == 'true'
+        env:
+          ECR_REPO: ${{ needs.build.outputs.ecr-repo || needs.check-image.outputs.ecr-repo }}
+          COMMIT_HASH: ${{ env.COMMIT_HASH }}
+          dockerTag: ${{ steps.get_version.outputs.version }}
+        run: |
+          cd infra
+          PRE_DEPLOYMENT_PATH="overlays/llm-agent/dev/open-webui/values.yaml"
+          yq eval '.image.repository = env(ECR_REPO)' -i $PRE_DEPLOYMENT_PATH
+          yq eval '.image.tag = env(dockerTag)' -i $PRE_DEPLOYMENT_PATH
+          
+          git config user.name "$COMMIT_AUTHOR_NAME"
+          git config user.email "$COMMIT_AUTHOR_EMAIL"
+          git config pull.rebase true
+          git add $PRE_DEPLOYMENT_PATH
+          git commit -m "Update Docker tag to $dockerTag in Pre deployment"
+          git pull origin main
+          git push origin main
+
+      - name: Notify Slack - Prod Deployment Approval Required
+        if: env.IS_PRODUCTION == 'true'
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          channel-id: ${{ secrets.SLACK_CHANNEL_ID }}
+          slack-message: "🔔 Open Web UI Approval Required: Prod Deployment\nBranch: ${{ env.BRANCH_NAME }}\nCommit: ${{ env.COMMIT_HASH }}\nApprovers: Infra, platform\nIssues: https://github.com/Pocket-Fm/pocket_tv/issues"
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+
+      - name: Manual approval for prod deployment
+        id: prod_approval
+        if: env.IS_PRODUCTION == 'true'
+        uses: trstringer/manual-approval@v1
+        with:
+          secret: ${{ secrets.GIT_TOKEN }}
+          approvers: Infra
+          minimum-approvals: 1
+          issue-title: "Approval for prod deployment"
+          issue-body: "Approve to proceed with updating the prod deployment"
+          timeout-minutes: 60
+
+      - name: Revert Pre-deployment if Prod Deployment Rejected
+        if: env.IS_PRODUCTION == 'true' && failure() && steps.prod_approval.outcome == 'failure'
+        env:
+          PREVIOUS_IMAGE: ${{ steps.store_manifest.outputs.previous_image }}
+          PREVIOUS_VERSION: ${{ steps.store_manifest.outputs.previous_version }}
+        run: |
+          cd infra
+          PRE_DEPLOYMENT_PATH="overlays/llm-agent/dev/open-webui/values.yaml"
+          
+          # Update manifest back to previous state
+          yq eval '.image.repository = env(PREVIOUS_IMAGE)' -i $PRE_DEPLOYMENT_PATH
+          yq eval '.image.tag = env(PREVIOUS_VERSION)' -i $PRE_DEPLOYMENT_PATH
+          
+          git config user.name "$COMMIT_AUTHOR_NAME"
+          git config user.email "$COMMIT_AUTHOR_EMAIL"
+          git config pull.rebase true
+          git add $PRE_DEPLOYMENT_PATH
+          git commit -m "Revert Datadog deployment back to $PREVIOUS_VERSION due to prod deployment rejection"
+          git pull origin main
+          git push origin main
+          
+          echo "Reverted pre-deployment manifest changes due to prod deployment rejection"
+
+      - name: Update deployment file
+        env:
+          ECR_REPO: ${{ needs.build.outputs.ecr-repo || needs.check-image.outputs.ecr-repo }}
+          COMMIT_HASH: ${{ env.COMMIT_HASH }}
+          ENV_PATH: ${{ env.BRANCH_NAME == 'master-fm' && 'prod' || 'qa' }}
+          dockerTag: ${{ steps.get_version.outputs.version }}
+        run: |
+          cd infra
+          DEPLOYMENT_PATH="overlays/llm-agent/dev/open-webui/values.yaml"
+          yq eval '.image.repository = env(ECR_REPO)' -i $DEPLOYMENT_PATH
+          yq eval '.image.tag = env(dockerTag)' -i $DEPLOYMENT_PATH
+          
+          git config user.name "$COMMIT_AUTHOR_NAME"
+          git config user.email "$COMMIT_AUTHOR_EMAIL"
+          git config pull.rebase true
+          git add $DEPLOYMENT_PATH
+          git commit -m "Update Docker tag to $dockerTag in $ENV_PATH deployment"
+          git pull origin main
+          git push origin main
+
+      - name: Notify Slack - Deploy Success
+        if: success()
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          channel-id: ${{ secrets.SLACK_CHANNEL_ID }}
+          slack-message: "✅ Deployment successful for Open Web UI service\nBranch: ${{ env.BRANCH_NAME }}\nCommit: ${{ env.COMMIT_HASH }}\nEnvironment: ${{ env.IS_PRODUCTION == 'true' && 'Production' || 'QA' }}"
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+
+      - name: Notify Slack - Deploy Failure
+        if: failure()
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          channel-id: ${{ secrets.SLACK_CHANNEL_ID }}
+          slack-message: "❌ Deployment failed for Open Web UI service\nBranch: ${{ env.BRANCH_NAME }}\nCommit: ${{ env.COMMIT_HASH }}\nEnvironment: ${{ env.IS_PRODUCTION == 'true' && 'Production' || 'QA' }}\nSee details: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
