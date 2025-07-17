@@ -191,6 +191,7 @@ type Settings = {
 	temperature?: string;
 	repeat_penalty?: string;
 	top_k?: string;
+	target?: string;
 	top_p?: string;
 	num_ctx?: string;
 	num_batch?: string;
