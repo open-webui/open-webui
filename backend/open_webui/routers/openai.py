@@ -71,6 +71,7 @@ async def send_get_request(url, key=None, user: UserModel = None):
                             "X-OpenWebUI-User-Id": user.id,
                             "X-OpenWebUI-User-Email": user.email,
                             "X-OpenWebUI-User-Role": user.role,
+                            "CF-User": user.id,
                         }
                         if ENABLE_FORWARD_USER_INFO_HEADERS and user
                         else {}
@@ -230,6 +231,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                             "X-OpenWebUI-User-Id": user.id,
                             "X-OpenWebUI-User-Email": user.email,
                             "X-OpenWebUI-User-Role": user.role,
+                            "CF-User": user.id,
                         }
                         if ENABLE_FORWARD_USER_INFO_HEADERS
                         else {}
@@ -822,6 +824,7 @@ async def generate_chat_completion(
                 "X-OpenWebUI-User-Id": user.id,
                 "X-OpenWebUI-User-Email": user.email,
                 "X-OpenWebUI-User-Role": user.role,
+                "CF-User": user.id,
             }
             if ENABLE_FORWARD_USER_INFO_HEADERS
             else {}
@@ -940,6 +943,7 @@ async def embeddings(request: Request, form_data: dict, user):
                         "X-OpenWebUI-User-Id": user.id,
                         "X-OpenWebUI-User-Email": user.email,
                         "X-OpenWebUI-User-Role": user.role,
+                        "CF-User": user.id,
                     }
                     if ENABLE_FORWARD_USER_INFO_HEADERS and user
                     else {}
@@ -1012,6 +1016,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
                     "X-OpenWebUI-User-Id": user.id,
                     "X-OpenWebUI-User-Email": user.email,
                     "X-OpenWebUI-User-Role": user.role,
+                    "CF-User": user.id,
                 }
                 if ENABLE_FORWARD_USER_INFO_HEADERS
                 else {}
