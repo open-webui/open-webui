@@ -228,10 +228,9 @@
 
 		if (currentEntities.length > 0) {
 			// Check if most entities are currently masked
-			const maskedCount = currentEntities.filter(entity => entity.shouldMask).length;
+			const maskedCount = currentEntities.filter((entity) => entity.shouldMask).length;
 			const unmaskedCount = currentEntities.length - maskedCount;
 			const mostlyMasked = maskedCount >= unmaskedCount;
-
 
 			if (mostlyMasked) {
 				// Currently masked -> unmask all and clear mask modifiers
@@ -244,13 +243,11 @@
 				if (editor.commands?.unmaskAllEntities) {
 					editor.commands.unmaskAllEntities();
 				}
-
 			} else {
 				// Currently unmasked -> mask all entities
 				if (editor.commands?.maskAllEntities) {
 					editor.commands.maskAllEntities();
 				}
-
 			}
 		} else {
 		}
@@ -262,7 +259,6 @@
 			return;
 		}
 
-		
 		// Mask all PII entities
 		if (editor.commands?.maskAllEntities) {
 			editor.commands.maskAllEntities();
@@ -275,7 +271,6 @@
 			return;
 		}
 
-		
 		// Clear all mask modifiers (keep ignore modifiers)
 		if (editor.commands?.clearMaskModifiers) {
 			editor.commands.clearMaskModifiers();
@@ -505,7 +500,11 @@
 						ensureConversationActivated(); // Ensure conversation is activated on first keystroke
 
 						// Handle CTRL+SHIFT+L to toggle PII masking (mask all <-> unmask all)
-						if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'l') {
+						if (
+							(event.ctrlKey || event.metaKey) &&
+							event.shiftKey &&
+							event.key.toLowerCase() === 'l'
+						) {
 							if (enablePiiDetection && enablePiiModifiers && editor) {
 								event.preventDefault();
 
@@ -515,7 +514,7 @@
 
 								if (currentEntities.length > 0) {
 									// Check if most entities are currently masked
-									const maskedCount = currentEntities.filter(entity => entity.shouldMask).length;
+									const maskedCount = currentEntities.filter((entity) => entity.shouldMask).length;
 									const unmaskedCount = currentEntities.length - maskedCount;
 									const mostlyMasked = maskedCount >= unmaskedCount;
 

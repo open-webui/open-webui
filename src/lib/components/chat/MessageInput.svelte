@@ -54,14 +54,14 @@
 	import Photo from '../icons/Photo.svelte';
 	import Wrench from '../icons/Wrench.svelte';
 	import CommandLine from '../icons/CommandLine.svelte';
-import Sparkles from '../icons/Sparkles.svelte';
-import Mask from '../icons/Mask.svelte';
+	import Sparkles from '../icons/Sparkles.svelte';
+	import Mask from '../icons/Mask.svelte';
 
-import { KokoroWorker } from '$lib/workers/KokoroWorker';
+	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 
-// PII Detection imports
-import { maskPiiTextWithSession, createPiiSession, type PiiEntity } from '$lib/apis/pii';
-import { PiiSessionManager, type ExtendedPiiEntity } from '$lib/utils/pii';
+	// PII Detection imports
+	import { maskPiiTextWithSession, createPiiSession, type PiiEntity } from '$lib/apis/pii';
+	import { PiiSessionManager, type ExtendedPiiEntity } from '$lib/utils/pii';
 
 	const i18n = getContext('i18n');
 
@@ -214,7 +214,7 @@ import { PiiSessionManager, type ExtendedPiiEntity } from '$lib/utils/pii';
 	// PII Detection handler
 	const handlePiiDetected = (entities: ExtendedPiiEntity[], maskedText: string) => {
 		// Set shouldMask based on the toggle state for newly detected entities
-		const entitiesWithToggleState = entities.map(entity => ({
+		const entitiesWithToggleState = entities.map((entity) => ({
 			...entity,
 			shouldMask: piiMaskingEnabled
 		}));
@@ -237,7 +237,7 @@ import { PiiSessionManager, type ExtendedPiiEntity } from '$lib/utils/pii';
 
 		// Toggle the masking state
 		piiMaskingEnabled = !piiMaskingEnabled;
-		
+
 		console.log('MessageInput: PII masking toggled to:', piiMaskingEnabled);
 
 		// Deterministic behavior based on button state
@@ -1405,21 +1405,24 @@ import { PiiSessionManager, type ExtendedPiiEntity } from '$lib/utils/pii';
 											</button>
 										</InputMenu>
 
-														{#if enablePiiDetection}
-					<Tooltip content={$i18n.t('Toggle PII masking')}>
-						<button
-							class="px-2 @xl:px-2.5 py-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {piiMaskingEnabled
-								? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
-								: 'bg-transparent text-gray-600 dark:text-gray-300'}"
-							type="button"
-							on:click={togglePiiMasking}
-							aria-label={$i18n.t('Toggle PII masking')}
-						>
-							<Mask className="size-4" />
-							<span class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5">{$i18n.t('Toggle PII masking')}</span>
-						</button>
-					</Tooltip>
-				{/if}
+										{#if enablePiiDetection}
+											<Tooltip content={$i18n.t('Toggle PII masking')}>
+												<button
+													class="px-2 @xl:px-2.5 py-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {piiMaskingEnabled
+														? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
+														: 'bg-transparent text-gray-600 dark:text-gray-300'}"
+													type="button"
+													on:click={togglePiiMasking}
+													aria-label={$i18n.t('Toggle PII masking')}
+												>
+													<Mask className="size-4" />
+													<span
+														class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
+														>{$i18n.t('Toggle PII masking')}</span
+													>
+												</button>
+											</Tooltip>
+										{/if}
 
 										{#if $_user && (showToolsButton || (toggleFilters && toggleFilters.length > 0) || showWebSearchButton || showImageGenerationButton || showCodeInterpreterButton)}
 											<div
