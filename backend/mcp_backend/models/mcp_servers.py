@@ -2,7 +2,9 @@ from typing import List, Optional
 import time
 import uuid
 
-from open_webui.internal.db import Base, get_db
+from open_webui.internal.db import get_db
+from open_webui.models.base import Base
+
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON, Integer
 

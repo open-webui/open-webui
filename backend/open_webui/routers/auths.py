@@ -8,7 +8,6 @@ from aiohttp import ClientSession
 from open_webui.models.auths import (
     AddUserForm,
     ApiKey,
-    Auths,
     Token,
     LdapForm,
     SigninForm,
@@ -18,6 +17,7 @@ from open_webui.models.auths import (
     UpdateProfileForm,
     UserResponse,
 )
+from open_webui.models.auths_table import Auths
 from open_webui.models.users import Users
 
 from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES

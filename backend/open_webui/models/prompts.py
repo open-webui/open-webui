@@ -1,7 +1,8 @@
 import time
 from typing import Optional
 
-from open_webui.internal.db import Base, get_db
+from open_webui.internal.db import get_db
+from open_webui.models.base import Base
 from open_webui.models.users import Users, UserResponse
 
 from pydantic import BaseModel, ConfigDict

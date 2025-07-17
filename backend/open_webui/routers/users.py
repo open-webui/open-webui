@@ -1,7 +1,7 @@
 import logging
 from typing import Optional
 
-from open_webui.models.auths import Auths
+from open_webui.models.auths_table import Auths
 from open_webui.models.chats import Chats
 from open_webui.models.users import (
     UserModel,

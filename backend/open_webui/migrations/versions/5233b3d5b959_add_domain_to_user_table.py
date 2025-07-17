@@ -32,7 +32,7 @@ def upgrade() -> None:
     else:
         op.execute(
             """
-            UPDATE "user" 
+            UPDATE "user"
             SET domain = split_part(email, '@', 2)
             WHERE domain IS NULL
             """

@@ -2,9 +2,9 @@ import time
 from typing import Optional
 from logging import getLogger
 
-from open_webui.internal.db import Base, JSONField, get_db
+from open_webui.internal.db import JSONField, get_db
 
-
+from open_webui.models.base import Base
 from open_webui.models.chats import Chats
 from open_webui.models.groups import Groups
 
