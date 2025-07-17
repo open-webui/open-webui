@@ -345,7 +345,23 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
 async def delete_file_by_id(id: str, user=Depends(get_verified_user)):
     file = Files.get_file_by_id(id)
     if file and (file.user_id == user.id or user.role == "admin"):
-        # We should add Chroma cleanup here
+        # Clean up vectors from Qdrant before deleting file record
+        try:
+            from open_webui.routers.retrieval import cleanup_file_vectors
+            
+            # Get collection name from file metadata if available
+            collection_name = None
+            if hasattr(file, 'meta') and file.meta:
+                collection_name = file.meta.get('collection_name')
+            
+            # Clean up vectors
+            cleanup_success = cleanup_file_vectors(file.id, collection_name)
+            if not cleanup_success:
+                log.warning(f"Vector cleanup failed for file {file.id}, but continuing with file deletion")
+                
+        except Exception as e:
+            log.exception(f"Error during vector cleanup for file {file.id}: {e}")
+            # Continue with file deletion even if vector cleanup fails
 
         result = Files.delete_file_by_id(id)
         if result:

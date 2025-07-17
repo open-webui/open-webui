@@ -3,11 +3,19 @@ import logging
 import mimetypes
 import os
 import shutil
+import hashlib
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Iterator, List, Optional, Sequence, Union
+import hashlib
+import re
+import os
+import logging
+import json
+import uuid
+import tiktoken
 
 from fastapi import (
     Depends,
@@ -23,7 +31,6 @@ from fastapi import (
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel
-import tiktoken
 
 
 from langchain.text_splitter import RecursiveCharacterTextSplitter, TokenTextSplitter
@@ -104,18 +111,25 @@ def get_ef(
     auto_update: bool = False,
 ):
     ef = None
+    log.info(f"Loading embedding function with engine='{engine}', model='{embedding_model}'")
+    
     if embedding_model and engine == "":
         from sentence_transformers import SentenceTransformer
 
         try:
+            log.info(f"Loading SentenceTransformer model: {embedding_model}")
             ef = SentenceTransformer(
                 get_model_path(embedding_model, auto_update),
                 device=DEVICE_TYPE,
                 trust_remote_code=RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
             )
+            log.info(f"Successfully loaded SentenceTransformer model: {embedding_model}")
         except Exception as e:
-            log.debug(f"Error loading SentenceTransformer: {e}")
+            log.error(f"Error loading SentenceTransformer model '{embedding_model}': {e}")
 
+    if ef is None:
+        log.warning(f"Failed to load embedding function. Engine: '{engine}', Model: '{embedding_model}'")
+    
     return ef
 
 
@@ -748,6 +762,13 @@ def save_docs_to_vector_db(
                     "model": request.app.state.config.RAG_EMBEDDING_MODEL,
                 }
             ),
+            "created_at": datetime.now().isoformat(),
+            "collection_type": (
+                "file" if collection_name.startswith("file-") 
+                else "web_search" if collection_name.startswith("web-search-")
+                else "knowledge"
+            ),
+            "user_id": user.id if user else None,
         }
         for doc in docs
     ]
@@ -1258,8 +1279,39 @@ async def process_web_search(
     request: Request, form_data: SearchForm, user=Depends(get_verified_user)
 ):
     try:
+        # Check for cached web search results first
+        search_hash = get_web_search_hash(form_data.query, request.app.state.config.RAG_WEB_SEARCH_ENGINE)
+        log.info(f"Generated search hash for query '{form_data.query}' with engine '{request.app.state.config.RAG_WEB_SEARCH_ENGINE}': {search_hash}")
+        
+        cached_collection = check_web_search_cache(search_hash)
+        log.info(f"Cache check result: {cached_collection}")
+        
+        if cached_collection:
+            log.info(f"✅ Using cached web search results: {cached_collection}")
+            # Return cached results without doing new web search
+            try:
+                # Query the cached collection to get some sample results
+                result = query_collection(
+                    collection_names=[cached_collection],
+                    queries=[form_data.query],
+                    embedding_function=request.app.state.EMBEDDING_FUNCTION,
+                    k=5
+                )
+                
+                return {
+                    "status": True,
+                    "collection_name": cached_collection,
+                    "filenames": ["cached_results"],
+                    "loaded_count": len(result.get("documents", [])),
+                    "cached": True
+                }
+            except Exception as e:
+                log.warning(f"Error querying cached results, proceeding with fresh search: {e}")
+        else:
+            log.info(f"❌ No cached results found for hash {search_hash}, proceeding with fresh search")
+        
         logging.info(
-            f"trying to web search with {request.app.state.config.RAG_WEB_SEARCH_ENGINE, form_data.query}"
+            f"Performing new web search with {request.app.state.config.RAG_WEB_SEARCH_ENGINE, form_data.query}"
         )
         web_results = search_web(
             request, request.app.state.config.RAG_WEB_SEARCH_ENGINE, form_data.query
@@ -1277,9 +1329,9 @@ async def process_web_search(
     try:
         collection_name = form_data.collection_name
         if collection_name == "" or collection_name is None:
-            collection_name = f"web-search-{calculate_sha256_string(form_data.query)}"[
-                :63
-            ]
+            # Use consistent hash-based naming for web search caching
+            search_hash = get_web_search_hash(form_data.query, request.app.state.config.RAG_WEB_SEARCH_ENGINE)
+            collection_name = f"web_{search_hash}"
 
         urls = [result.link for result in web_results]
         loader = get_web_loader(
@@ -1288,6 +1340,17 @@ async def process_web_search(
             requests_per_second=request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
         )
         docs = loader.load()
+
+        # Add timestamp metadata for cache management
+        for doc in docs:
+            if not hasattr(doc, 'metadata'):
+                doc.metadata = {}
+            doc.metadata.update({
+                "created_at": datetime.now().isoformat(),
+                "search_query": form_data.query,
+                "search_engine": request.app.state.config.RAG_WEB_SEARCH_ENGINE,
+                "type": "web_search"
+            })
 
         if request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
             return {
@@ -1569,3 +1632,503 @@ def process_files_batch(
                 )
 
     return BatchProcessFilesResponse(results=results, errors=errors)
+
+##########################################
+#
+# Vector DB Cleanup Utilities
+#
+##########################################
+
+def cleanup_file_vectors(file_id: str, collection_name: str = None) -> bool:
+    """
+    Clean up vectors associated with a specific file from Qdrant.
+    
+    Args:
+        file_id: The ID of the file to clean up
+        collection_name: Optional specific collection name, otherwise uses file-{file_id}
+    
+    Returns:
+        bool: True if cleanup was successful, False otherwise
+    """
+    try:
+        # Use specific collection name or default to file-{file_id}
+        target_collection = collection_name or f"file-{file_id}"
+        
+        log.info(f"Cleaning up vectors for file {file_id} in collection {target_collection}")
+        
+        # Check if collection exists
+        if VECTOR_DB_CLIENT.has_collection(collection_name=target_collection):
+            # Delete by file_id metadata
+            VECTOR_DB_CLIENT.delete(
+                collection_name=target_collection,
+                metadata={"file_id": file_id}
+            )
+            
+            # If this was a file-specific collection, delete the entire collection
+            if target_collection.startswith(f"file-{file_id}"):
+                VECTOR_DB_CLIENT.delete_collection(collection_name=target_collection)
+                log.info(f"Deleted entire collection {target_collection}")
+            
+            log.info(f"Successfully cleaned up vectors for file {file_id}")
+            return True
+        else:
+            log.info(f"Collection {target_collection} does not exist, nothing to clean up")
+            return True
+            
+    except Exception as e:
+        log.error(f"Error cleaning up vectors for file {file_id}: {e}")
+        return False
+
+def cleanup_orphaned_vectors() -> dict:
+    """
+    Clean up orphaned vectors that no longer have corresponding files in the database.
+    
+    Returns:
+        dict: Summary of cleanup operations
+    """
+    try:
+        cleanup_summary = {
+            "collections_checked": 0,
+            "collections_cleaned": 0,
+            "vectors_removed": 0,
+            "errors": []
+        }
+        
+        # Get all collections from vector DB
+        # Check if we're using Qdrant
+        if hasattr(VECTOR_DB_CLIENT, 'client') and hasattr(VECTOR_DB_CLIENT.client, 'get_collections'):
+            # Qdrant client
+            collections_response = VECTOR_DB_CLIENT.client.get_collections()
+            collections = [col.name for col in collections_response.collections]
+        else:
+            # Other clients that might not have this method
+            collections = []
+            log.warning("Vector DB client does not support listing collections for cleanup")
+        
+        cleanup_summary["collections_checked"] = len(collections)
+        
+        for collection_name in collections:
+            try:
+                # Skip non-file collections
+                if not collection_name.startswith("file-"):
+                    continue
+                
+                # Extract file ID from collection name
+                file_id = collection_name.replace("file-", "")
+                
+                # Check if file still exists in database
+                try:
+                    file = Files.get_file_by_id(file_id)
+                    if not file:
+                        # File doesn't exist, delete the collection
+                        VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
+                        cleanup_summary["collections_cleaned"] += 1
+                        log.info(f"Cleaned up orphaned collection: {collection_name}")
+                except Exception:
+                    # File doesn't exist, delete the collection
+                    VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
+                    cleanup_summary["collections_cleaned"] += 1
+                    log.info(f"Cleaned up orphaned collection: {collection_name}")
+                    
+            except Exception as e:
+                error_msg = f"Error processing collection {collection_name}: {e}"
+                log.error(error_msg)
+                cleanup_summary["errors"].append(error_msg)
+        
+        log.info(f"Orphaned vector cleanup completed: {cleanup_summary}")
+        return cleanup_summary
+        
+    except Exception as e:
+        log.error(f"Error during orphaned vector cleanup: {e}")
+        return {"error": str(e), "collections_cleaned": 0, "vectors_cleaned": 0}
+
+
+def get_vector_db_stats(user) -> dict:
+    """
+    Get comprehensive statistics about the vector database.
+    
+    Args:
+        user: Admin user (for permission check)
+        
+    Returns:
+        dict: Statistics about vector DB collections and vectors
+    """
+    try:
+        if not VECTOR_DB_CLIENT:
+            return {"error": "Vector DB not available"}
+            
+        # Get collections in a compatible way
+        collections = []
+        try:
+            if hasattr(VECTOR_DB_CLIENT, 'client') and hasattr(VECTOR_DB_CLIENT.client, 'get_collections'):
+                # Qdrant client
+                collections_response = VECTOR_DB_CLIENT.client.get_collections()
+                collections = [col.name for col in collections_response.collections]
+            else:
+                # For other vector DBs, we'll need to implement collection listing
+                log.warning("Vector DB client does not support listing collections for stats")
+                return {"error": "Collection listing not supported for this vector DB", "stats": {}}
+        except Exception as e:
+            log.error(f"Error getting collections: {e}")
+            return {"error": f"Error getting collections: {e}", "stats": {}}
+        
+        stats = {
+            "total_collections": len(collections),
+            "file_collections": 0,
+            "web_search_collections": 0,
+            "knowledge_collections": 0,
+            "other_collections": 0,
+            "total_vectors": 0,
+            "collections_detail": []
+        }
+        
+        for collection in collections:
+            # Handle both string collections and collection objects
+            collection_name = collection if isinstance(collection, str) else collection.name
+            
+            # For now, skip vector count as Qdrant doesn't have a simple get_collection method
+            # This is not essential for cleanup operations
+            vector_count = 0  # Could be implemented later with collection_info() if needed
+            
+            # Categorize collection by name pattern
+            if collection_name.startswith('file_') or collection_name.startswith('file-'):
+                stats["file_collections"] += 1
+                category = "file"
+            elif collection_name.startswith('web_'):
+                stats["web_search_collections"] += 1
+                category = "web_search"
+            elif collection_name.startswith('knowledge_'):
+                stats["knowledge_collections"] += 1
+                category = "knowledge"
+            elif len(collection_name) == 36 and collection_name.count('-') == 4:
+                # UUID format knowledge collections (e.g., 4e4c3b25-25a9-46e8-a8ae-094bfed192d4)
+                stats["knowledge_collections"] += 1
+                category = "knowledge"
+            else:
+                stats["other_collections"] += 1
+                category = "other"
+            
+            stats["total_vectors"] += vector_count
+            stats["collections_detail"].append({
+                "name": collection_name,
+                "category": category,
+                "vector_count": vector_count
+            })
+        
+        return {"status": "success", "stats": stats}
+        
+    except Exception as e:
+        log.error(f"Error getting vector DB stats: {e}")
+        return {"error": str(e), "stats": {}}
+
+
+def get_web_search_hash(query: str, search_engine: str) -> str:
+    """
+    Generate a consistent hash for web search caching.
+    Normalizes query for better cache hits.
+    
+    Args:
+        query: Search query string
+        search_engine: Search engine used
+        
+    Returns:
+        str: Hash string for the search
+    """
+    # Normalize the query for consistent caching
+    normalized_query = query.lower().strip()
+    # Remove extra whitespace and normalize punctuation
+    normalized_query = re.sub(r'\s+', ' ', normalized_query)
+    # Remove common punctuation that doesn't affect search meaning
+    normalized_query = re.sub(r'[?!.]+$', '', normalized_query)
+    
+    content = f"{search_engine}:{normalized_query}".encode('utf-8')
+    return hashlib.sha256(content).hexdigest()[:16]
+
+
+def check_web_search_cache(search_hash: str) -> str:
+    """
+    Check if a web search result is cached in vector DB.
+    
+    Args:
+        search_hash: Hash of the search query
+        
+    Returns:
+        str: Collection name if cached, None otherwise
+    """
+    try:
+        if not VECTOR_DB_CLIENT:
+            return None
+            
+        collection_name = f"web_{search_hash}"
+        
+        # Check if collection exists
+        if VECTOR_DB_CLIENT.has_collection(collection_name=collection_name):
+            return collection_name
+                
+        return None
+        
+    except Exception as e:
+        log.error(f"Error checking web search cache: {e}")
+        return None
+
+
+def cleanup_expired_web_searches(max_age_days: int = 30) -> dict:
+    """
+    Clean up expired web search results from vector database.
+    
+    Args:
+        max_age_days: Maximum age in days for web search results
+        
+    Returns:
+        dict: Summary of cleanup operations
+    """
+    try:
+        cleanup_summary = {
+            "collections_checked": 0,
+            "collections_cleaned": 0,
+            "vectors_cleaned": 0,
+            "errors": []
+        }
+        
+        if not VECTOR_DB_CLIENT:
+            cleanup_summary["errors"].append("Vector DB client not available")
+            return cleanup_summary
+            
+        # Get collections in a compatible way
+        collections = []
+        try:
+            if hasattr(VECTOR_DB_CLIENT, 'client') and hasattr(VECTOR_DB_CLIENT.client, 'get_collections'):
+                # Qdrant client
+                collections_response = VECTOR_DB_CLIENT.client.get_collections()
+                collections = [col.name for col in collections_response.collections]
+            else:
+                log.warning("Vector DB client does not support listing collections for web search cleanup")
+                return cleanup_summary
+        except Exception as e:
+            log.error(f"Error getting collections: {e}")
+            cleanup_summary["errors"].append(f"Error getting collections: {e}")
+            return cleanup_summary
+        cutoff_timestamp = datetime.now() - timedelta(days=max_age_days)
+        
+        for collection in collections:
+            # Handle both string collections and collection objects
+            collection_name = collection if isinstance(collection, str) else collection.name
+            
+            # Only process web search collections
+            if not collection_name.startswith('web_'):
+                continue
+                
+            try:
+                cleanup_summary["collections_checked"] += 1
+                
+                # Get collection info to check if it has expired metadata
+                # For Qdrant, we can scroll to get a sample of points
+                should_delete = False
+                
+                try:
+                    if hasattr(VECTOR_DB_CLIENT, 'client') and hasattr(VECTOR_DB_CLIENT.client, 'scroll'):
+                        # Qdrant client - get a sample point to check metadata
+                        points, _ = VECTOR_DB_CLIENT.client.scroll(
+                            collection_name=collection_name,
+                            limit=1,
+                            with_payload=True
+                        )
+                        
+                        if points:  # If there are points
+                            point = points[0]
+                            if hasattr(point, 'payload') and point.payload:
+                                # Check if timestamp indicates expiry
+                                created_at = point.payload.get('metadata', {}).get('created_at')
+                                if created_at:
+                                    try:
+                                        point_timestamp = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                                        if point_timestamp < cutoff_timestamp:
+                                            should_delete = True
+                                    except (ValueError, TypeError):
+                                        # If timestamp is invalid, consider it old
+                                        should_delete = True
+                                else:
+                                    # No timestamp means it's from before we added timestamps
+                                    should_delete = True
+                        else:
+                            # Empty collection should be cleaned up
+                            should_delete = True
+                    else:
+                        # For other vector DBs, we might not be able to check timestamps
+                        # so we'll skip the cleanup for now
+                        log.warning(f"Cannot check timestamp for collection {collection_name} on this vector DB")
+                        continue
+                        
+                except Exception as e:
+                    log.error(f"Error checking collection {collection_name}: {e}")
+                    cleanup_summary["errors"].append(f"Error checking collection {collection_name}: {e}")
+                    continue
+                
+                if should_delete:
+                    # Delete the entire collection for expired web searches
+                    try:
+                        VECTOR_DB_CLIENT.delete_collection(collection_name)
+                        cleanup_summary["collections_cleaned"] += 1
+                        log.info(f"Deleted expired web search collection: {collection_name}")
+                    except Exception as e:
+                        error_msg = f"Error deleting collection {collection_name}: {str(e)}"
+                        log.error(error_msg)
+                        cleanup_summary["errors"].append(error_msg)
+                    
+            except Exception as e:
+                error_msg = f"Error cleaning collection {collection_name}: {str(e)}"
+                log.error(error_msg)
+                cleanup_summary["errors"].append(error_msg)
+        
+        log.info(f"Web search cleanup completed: {cleanup_summary}")
+        return cleanup_summary
+        
+    except Exception as e:
+        log.error(f"Error during web search cleanup: {e}")
+        return {"error": str(e), "collections_cleaned": 0, "vectors_cleaned": 0}
+
+
+####################################
+#
+# API Endpoints for K8s CronJob Integration
+#
+####################################
+
+@router.post("/maintenance/cleanup/orphaned")
+def api_cleanup_orphaned_vectors(user=Depends(get_admin_user)):
+    """
+    API endpoint to cleanup orphaned vectors.
+    Used by K8s CronJobs for scheduled maintenance.
+    """
+    try:
+        result = cleanup_orphaned_vectors()
+        return {
+            "status": "success",
+            "timestamp": datetime.now().isoformat(),
+            "cleanup_result": result
+        }
+    except Exception as e:
+        log.error(f"Orphaned vector cleanup API failed: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "status": "error",
+                "timestamp": datetime.now().isoformat(),
+                "error": str(e)
+            }
+        )
+
+
+@router.post("/maintenance/cleanup/web-search")
+def api_cleanup_web_search_vectors(
+    max_age_days: int = None,
+    user=Depends(get_admin_user)
+):
+    """
+    API endpoint to cleanup expired web search vectors.
+    Used by K8s CronJobs for scheduled maintenance.
+    """
+    try:
+        # Use config default if not specified
+        if max_age_days is None:
+            max_age_days = int(os.getenv("VECTOR_DB_WEB_SEARCH_EXPIRY_DAYS", "30"))
+        
+        result = cleanup_expired_web_searches(max_age_days)
+        return {
+            "status": "success",
+            "timestamp": datetime.now().isoformat(),
+            "max_age_days": max_age_days,
+            "cleanup_result": result
+        }
+    except Exception as e:
+        log.error(f"Web search vector cleanup API failed: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "status": "error",
+                "timestamp": datetime.now().isoformat(),
+                "error": str(e)
+            }
+        )
+
+
+@router.post("/maintenance/cleanup/comprehensive")
+def api_comprehensive_cleanup(
+    max_age_days: int = None,
+    user=Depends(get_admin_user)
+):
+    """
+    API endpoint for comprehensive vector DB cleanup.
+    Combines orphaned and web search cleanup.
+    Used by K8s CronJobs for complete maintenance.
+    """
+    try:
+        if max_age_days is None:
+            max_age_days = int(os.getenv("VECTOR_DB_WEB_SEARCH_EXPIRY_DAYS", "30"))
+        
+        # Run both cleanup operations
+        orphaned_result = cleanup_orphaned_vectors()
+        web_search_result = cleanup_expired_web_searches(max_age_days)
+        
+        return {
+            "status": "success",
+            "timestamp": datetime.now().isoformat(),
+            "max_age_days": max_age_days,
+            "cleanup_results": {
+                "orphaned_vectors": orphaned_result,
+                "web_search_vectors": web_search_result
+            }
+        }
+    except Exception as e:
+        log.error(f"Comprehensive vector cleanup API failed: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "status": "error",
+                "timestamp": datetime.now().isoformat(),
+                "error": str(e)
+            }
+        )
+
+
+@router.get("/maintenance/health/vector-db")
+def api_vector_db_health(user=Depends(get_admin_user)):
+    """
+    Health check endpoint for vector database status.
+    Used by K8s health checks and monitoring.
+    """
+    try:
+        stats = get_vector_db_stats(user)
+        
+        health_status = {
+            "status": "healthy",
+            "timestamp": datetime.now().isoformat(),
+            "vector_db": {
+                "connection": "ok",
+                "total_collections": stats.get("stats", {}).get("total_collections", 0),
+                "file_collections": stats.get("stats", {}).get("file_collections", 0),
+                "web_search_collections": stats.get("stats", {}).get("web_search_collections", 0),
+                "knowledge_collections": stats.get("stats", {}).get("knowledge_collections", 0)
+            }
+        }
+        
+        return health_status
+        
+    except Exception as e:
+        log.error(f"Vector DB health check failed: {str(e)}")
+        
+        health_status = {
+            "status": "unhealthy",
+            "timestamp": datetime.now().isoformat(),
+            "vector_db": {
+                "connection": "failed",
+                "error": str(e)
+            }
+        }
+        
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=health_status,
+        )
+
+# ...existing code...
