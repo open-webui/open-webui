@@ -725,9 +725,25 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 	const onDragOver = (e) => {
 		e.preventDefault();
 
-		// Check if a file is being dragged.
-		if (e.dataTransfer?.types?.includes('Files')) {
-			dragged = true;
+		if (
+			e.dataTransfer?.types?.includes('text/plain') ||
+			e.dataTransfer?.types?.includes('text/html')
+		) {
+			dragged = false;
+			return;
+		}
+
+		// Check if the dragged item is a file or image
+		if (e.dataTransfer?.types?.includes('Files') && e.dataTransfer?.items) {
+			const items = Array.from(e.dataTransfer.items);
+			const hasFiles = items.some((item) => item.kind === 'file');
+			const hasImages = items.some((item) => item.type.startsWith('image/'));
+
+			if (hasFiles && !hasImages) {
+				dragged = true;
+			} else {
+				dragged = false;
+			}
 		} else {
 			dragged = false;
 		}
