@@ -81,7 +81,8 @@
     </button>
   {:else}
 
-  <img
+  <div class="flex items-center">
+    <img
 	src="/logo-dark.png"
 	alt="GovGPT Logo"
 	class="w-[132px] h-[40px] filter dark:invert dark:brightness-0 dark:contrast-200"
