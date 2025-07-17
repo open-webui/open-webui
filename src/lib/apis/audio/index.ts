@@ -284,6 +284,7 @@ export async function processReadyToPlayQueue() {
 		console.log(`[Processor] Playing from ready queue: "${audioToPlay.content}"`);
 		await streamAudio(audioToPlay.reader);
 		console.log(`[Processor] Finished: "${audioToPlay.content}"`);
+		readyToPlayQueue.update(q => q.slice(1));
 	}
 }
 
