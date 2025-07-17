@@ -1,6 +1,6 @@
 {
-  "name": "Open WebUI",
-  "short_name": "WebUI",
+  "name": "TSI WebUI",
+  "short_name": "TSI UI",
   "icons": [
     {
       "src": "/static/web-app-manifest-192x192.png",
