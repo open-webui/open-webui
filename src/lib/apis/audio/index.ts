@@ -107,7 +107,7 @@ const DC_OFFSET_THRESHOLD = 0.005;
 const ctx = new AudioContext({ sampleRate: DEFAULT_SAMPLE_RATE });
 
 
-export const streamAudio = async (reader) => { // Removed isFirstSentenceInSequence, as each call is a "new stream"
+export const streamAudio = async (reader, timestamp) => { // Removed isFirstSentenceInSequence, as each call is a "new stream"
 	// Start scheduling slightly in the future to give context and gain ramp time
 	let nextPlayTime = ctx.currentTime + 0.01; // Start scheduling 10ms into the future
 	let firstChunkProcessed = false;
@@ -130,10 +130,6 @@ export const streamAudio = async (reader) => { // Removed isFirstSentenceInSeque
 		while (true) {
 			const { done, value } = await reader.read();
 			if (done) break;
-			if (value && firstChunk) {
-				console.log(`!!!timer: time taken from hitting TTS endpoint to getting first chunk TTFA ${(performance.now() - startTimeForHittingTTS) / 1000}s`)
-				firstChunk = false
-			}
 
 
 			const pcmData = value.buffer;
@@ -171,6 +167,11 @@ export const streamAudio = async (reader) => { // Removed isFirstSentenceInSeque
 				firstChunkProcessed = true;
 			} else {
 				gainNode.gain.setValueAtTime(1, scheduleTime); // Full gain for subsequent chunks
+			}
+
+			if (firstChunk && value) {
+				console.log(`[Processor] Starting to stream from ready queue with delay of ${Date.now() - timestamp}`)
+				firstChunk = false
 			}
 
 			sourceNode.start(scheduleTime);
@@ -270,23 +271,41 @@ async function playFillerPhrase(content: string) {
 	}
 }
 
-let isProcessing = false;
+let isPlaying = false;
+
+// first process processReadyToPlayQueue2
+//     1     streamAudio -> processReadyToPlayQueue2, isplaying = false -> processReadyToPlayQueue2 and dies
+//     2          processReadyToPlayQueue2 -> dies
+//     3
+
+// get(readyToPlayQueue).length === 0
+export async function processReadyToPlayQueue() {
+	if (isPlaying) return;
+	isPlaying = true;
+
+	try {
+		const audioToPlay = get(readyToPlayQueue)?.[0]; // index 0 because we want to get the first item
+		if (!audioToPlay) return;
+
+		console.log(`[Processor] Playing from ready queue: "${audioToPlay.content}"`);
+		await streamAudio(audioToPlay.reader, Date.now());
+		console.log(`[Processor] Finished: "${audioToPlay.content}"`);
+		readyToPlayQueue.update(q => q.slice(1));
+	} finally {
+		isPlaying = false;
+
+		if (get(readyToPlayQueue).length > 0) {
+			await processReadyToPlayQueue();
+		}
+	}
+}
 
 /**
  * - check if there is anything to play
  * - read from readyToPlayQueue
  * - play audio
  */
-export async function processReadyToPlayQueue() {
-	const audioToPlay = get(readyToPlayQueue)[0]; // index 0 because we want to get the first item
 
-	if (audioToPlay) {
-		console.log(`[Processor] Playing from ready queue: "${audioToPlay.content}"`);
-		await streamAudio(audioToPlay.reader);
-		console.log(`[Processor] Finished: "${audioToPlay.content}"`);
-		readyToPlayQueue.update(q => q.slice(1));
-	}
-}
 
 // queue: ['this is my filler text',]
 // queue: []
@@ -308,8 +327,11 @@ export async function processTTSQueue() {
 				ttsSentenceQueue.update(q => q.slice(1)); // dequeue chunk to be processed - do we want to do this _after_ we've processed in case of failed generations?
 				console.log(`[Processor] Playing standalone filler: "${textToPlay.content}"`);
 				// await playFillerPhrase(fillerText.content) // this is currently blocking
+				isPlaying = true
 				await playFillerPhrase(textToPlay.content)
 				console.log("yay we're done")
+				isPlaying = false
+				processReadyToPlayQueue()
 				// return
 			} else {
 				// backup: if we have a single audio 
