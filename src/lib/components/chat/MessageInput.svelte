@@ -62,7 +62,6 @@
 	import Language from '../icons/Language.svelte';
 	import Attach from '../icons/Attach.svelte';
 
-
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 
 	const i18n = getContext('i18n');
@@ -97,7 +96,10 @@
 	export let codeInterpreterEnabled = false;
 	let isOpen = false;
 
-	const Modeloptions = [{"label":"Gov knowledge", "icon":MenuBook,},{"label":"Procurement", "icon":EditNotes}];
+	const Modeloptions = [
+		{ label: 'Gov knowledge', icon: MenuBook },
+		{ label: 'Procurement', icon: EditNotes }
+	];
 	let selected = Modeloptions[0];
 
 	function selectOption(option) {
@@ -183,26 +185,28 @@
 	let showToolsButton = false;
 	$: showToolsButton = toolServers.length + selectedToolIds.length > 0;
 
-	let showWebSearchButton = false;
-	$: showWebSearchButton =
-		(atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).length ===
-		webSearchCapableModels.length &&
-		$config?.features?.enable_web_search &&
-		($_user.role === 'admin' || $_user?.permissions?.features?.web_search);
+	let showWebSearchButton = true;
+	// $: showWebSearchButton =
+	// 	(atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).length ===
+	// 	webSearchCapableModels.length &&
+	// 	$config?.features?.enable_web_search &&
+	// 	($_user.role === 'admin' || $_user?.permissions?.features?.web_search);
 
 	let showImageGenerationButton = false;
 	$: showImageGenerationButton =
 		(atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).length ===
-		imageGenerationCapableModels.length &&
+			imageGenerationCapableModels.length &&
 		$config?.features?.enable_image_generation &&
 		($_user.role === 'admin' || $_user?.permissions?.features?.image_generation);
 
 	let showCodeInterpreterButton = false;
-	$: showCodeInterpreterButton =
-		(atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).length ===
-		codeInterpreterCapableModels.length &&
-		$config?.features?.enable_code_interpreter &&
-		($_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter);
+	// $: showCodeInterpreterButton =
+	// 	(atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).length ===
+	// 		codeInterpreterCapableModels.length &&
+	// 	$config?.features?.enable_code_interpreter &&
+	// 	($_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter);
+
+	let showFileUploadButton = true;
 
 	const scrollToBottom = () => {
 		const element = document.getElementById('messages-container');
@@ -1414,79 +1418,71 @@
 														</button>
 													</Tooltip>
 												{/if}
+
+												{#if showFileUploadButton}
+													<Tooltip content={$i18n.t('Upload File')} placement="top">
+														<button
+															on:click={() => filesInputElement.click()}
+															type="button"
+															class="px-2 @xl:px-2.5 py-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {webSearchEnabled ||
+															($settings?.webSearch ?? false) === 'always'
+																? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
+																: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
+														>
+															<Attach
+																strokeWidth="2"
+																className="w-[18px] h-[18px] text-[#36383b]"
+															/>
+															<span
+															class="font-heading font-medium text-[14px] leading-[22px] text-[#36383b] text-left whitespace-nowrap"
+														>
+															Attach files
+														</span>
+														</button>
+													</Tooltip>
+												{/if}
+
 											</div>
 											<div class="flex gap-[12px] items-center">
 												{#if false}
-<div class="model-box relative inline-block">
-  <!-- Dropdown Button -->
-  <button
-    type="button"
-    on:click={() => isOpen = !isOpen}
-    class="inline-flex gap-2 text-[14px] leading-[22px] font-medium font-NotoKufi-Regular justify-between items-center px-2 py-1 border border-gray-1300 bg-gray-1150 rounded-[40px]"
-  >
-    <svelte:component this={selected.icon} class="w-6 h-6" />
-    {selected.label}
-   <ArrowDown strokeWidth="2" className="size-[1.1rem]" />
+													<div class="model-box relative inline-block">
+														<!-- Dropdown Button -->
+														<button
+															type="button"
+															on:click={() => (isOpen = !isOpen)}
+															class="inline-flex gap-2 text-[14px] leading-[22px] font-medium font-NotoKufi-Regular justify-between items-center px-2 py-1 border border-gray-1300 bg-gray-1150 rounded-[40px]"
+														>
+															<svelte:component this={selected.icon} class="w-6 h-6" />
+															{selected.label}
+															<ArrowDown strokeWidth="2" className="size-[1.1rem]" />
+														</button>
 
-  </button>
+														<!-- Dropdown Menu -->
+														{#if isOpen}
+															<div
+																class="absolute z-10 bottom-[40px] w-[211px] bg-white border border-gray-200 rounded-md shadow-lg"
+															>
+																{#each Modeloptions as option}
+																	<div
+																		on:click={() => selectOption(option)}
+																		class="flex px-[14px] py-[15px] justify-between items-center text-gray-1200 font-medium cursor-pointer leading-[22px] font-NotoKufi-Regular"
+																	>
+																		<div class="flex gap-2 items-center">
+																			<svelte:component this={option.icon} class="w-6 h-6" />
+																			{option.label}
+																		</div>
+																		{#if option.label == selected.label}
+																			<CheckNew strokeWidth="2" className="size-[1.1rem]" />
+																		{/if}
+																	</div>
+																{/each}
+															</div>
+														{/if}
+													</div>
+												{/if}
 
-  <!-- Dropdown Menu -->
-  {#if isOpen}
-    <div
-      class="absolute z-10 bottom-[40px] w-[211px] bg-white border border-gray-200 rounded-md shadow-lg"
-    >
-      {#each Modeloptions as option}
-        <div
-          on:click={() => selectOption(option)}
-          class="flex px-[14px] py-[15px]  justify-between items-center text-gray-1200 font-medium cursor-pointer leading-[22px] font-NotoKufi-Regular"
-        >
-		<div class="flex gap-2 items-center">
-		<svelte:component this={option.icon} class="w-6 h-6" />
-          {option.label}
-		  </div>
-		   {#if option.label==selected.label}
-		  <CheckNew strokeWidth="2" className="size-[1.1rem]" />
-		  {/if}
-        </div>
-      {/each}
-    </div>
-  {/if}
-</div>
-
-{/if}
-<!--<div class="web-search">
-  <button
-    type="button"
-    class="relative flex items-center bg-white border border-[#dee0e3] rounded-full px-3 py-2 gap-2 focus:outline-none"
-    aria-label="Web Search"
-  >
-    <span class="w-[18px] h-[18px] flex items-center justify-center">
-      <Language strokeWidth="2" className="w-[18px] h-[18px] text-[#36383b]" />
-    </span>
-    <span class="font-heading font-medium text-[14px] leading-[22px] text-[#36383b] text-left whitespace-nowrap">
-      Web Search
-    </span>
-    <span class="absolute inset-0 border border-[#dee0e3] rounded-full pointer-events-none" aria-hidden="true"></span>
-  </button>
-</div>
-
-<div class="attach">
-  <button
-    type="button"
-    class="relative flex items-center bg-white border border-[#dee0e3] rounded-full px-3 py-2 gap-2 focus:outline-none"
-    on:click={() => filesInputElement.click()}
-    aria-label="Attach files"
-  >
-    <span class="w-[18px] h-[18px] flex items-center justify-center">
-      <Attach strokeWidth="2" className="w-[18px] h-[18px] text-[#36383b]" />
-    </span>
-    <span class="font-heading font-medium text-[14px] leading-[22px] text-[#36383b] text-left whitespace-nowrap">
-      Attach files
-    </span>
-    <span class="absolute inset-0 border border-[#dee0e3] rounded-full pointer-events-none" aria-hidden="true"></span>
-  </button>
-</div>-->
-</div>
+												
+											</div>
 										{/if}
 									</div>
 
