@@ -134,7 +134,7 @@
 	class:justify-center={!showSidebar}
 	class:justify-between={showSidebar}
 >
-	<button class="px-[16px] py-[8px] w-full flex items-center text-xs font-medium" class:justify-center={!showSidebar}
+	<button class="w-full py-1.5 pl-2 flex items-center gap-1.5 text-xs font-medium" class:justify-center={!showSidebar}
 	class:justify-between={showSidebar}
 	class:py-1.5={showSidebar}
 	class:pl-2={showSidebar}
@@ -142,8 +142,8 @@
 	>
 		<!-- Icon -->
 		<div
-			class="flex items-center transition-all duration-300 ease-in-out"
-			class:mr-[8px]={showSidebar}
+			class="self-center transition-all duration-300 ease-in-out"
+			class:mr-[15px]={showSidebar}
 		>
 			<MaterialIcon name="folder_open" size="1.1rem" />
 		</div>
@@ -159,7 +159,7 @@
 				class:opacity-100={showSidebar}
 				class:opacity-0={!showSidebar}
 			>
-				<div class="text-neutrals-800 text-[16px] leading-[24px] font-medium ">
+				<div class="font-medium text-sm leading-[22px]">
 					{name}
 				</div>
 			</div>
@@ -167,7 +167,7 @@
 			<!-- Chevron Icon -->
 			 {#if showSidebar}
 				<div
-				class="visible group-hover:invisible"
+				class="transition-all duration-300 ease-in-out"
 				class:opacity-100={showSidebar}
 				class:opacity-0={!showSidebar}
 			>
@@ -186,7 +186,7 @@
 	<!-- Plus button -->
 	{#if onAdd && showSidebar}
 		<button
-			class="absolute z-10 right-[14px] invisible group-hover:visible self-center flex items-center dark:text-gray-300"
+			class="absolute z-10 right-8 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
 			on:pointerup={(e) => e.stopPropagation()}
 			on:click={(e) => {
 				e.stopPropagation();
