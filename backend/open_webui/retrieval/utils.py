@@ -387,18 +387,22 @@ def get_embedding_function(
     key,
     embedding_batch_size,
 ):
-    from open_webui.routers.progress import update_progress  # global progress queue
+
+    from open_webui.routers.progress import update_progress, getStop, resetStop  # global progress queue
     print("INFO *************************")
     print(embedding_engine)
     print(embedding_model)
     print(embedding_function)
-
+    
     if embedding_engine == "":
         def generate_multiple(query, prefix, user):
             total = len(query)
             embeddings = []
 
             for i in range(0, total, embedding_batch_size):
+                if(getStop()):
+                   resetStop()
+                   raise RuntimeError("Embedding cancelled by user")
                 batch = query[i : i + embedding_batch_size]
 
                 # Encode this batch
@@ -427,6 +431,9 @@ def get_embedding_function(
             if isinstance(query, list):
                 embeddings = []
                 for i in range(0, len(query), embedding_batch_size):
+                    if(getStop()):
+                        resetStop()
+                        raise RuntimeError("Embedding cancelled by user")
                     embeddings.extend(
                         func(
                             query[i : i + embedding_batch_size],
@@ -434,7 +441,7 @@ def get_embedding_function(
                             user=user,
                         )
                     )
-                    update_progress(min(i + batch_size, total), total)
+                    update_progress(min(i + embedding_batch_size, len(query)), len(query))
                 return embeddings
             else:
                 return func(query, prefix, user)

@@ -961,18 +961,21 @@ def process_file(
             try:
                 for parser in parsers:
                     parser.is_applicable_to_item(file.filename)
-                    result_dict = parser.parse(
-                        request,
-                        docs=docs,
-                        metadata={
-                            "file_id": file.id,
-                            "name": file.filename,
-                            "hash": hash,
-                        },
-                        user=user,
-                        file_path=file.path
-                    )
-
+                    try:
+                        result_dict = parser.parse(
+                            request,
+                            docs=docs,
+                            metadata={
+                                "file_id": file.id,
+                                "name": file.filename,
+                                "hash": hash,
+                            },
+                            user=user,
+                            file_path=file.path
+                        )
+                    except RuntimeError as e:
+                        raise HTTPException(status_code=499, detail= "Embedding cancelled by user.")
+                    
                     Files.update_file_data_by_id(
                         file.id,
                         {f"parser_{parser.name}_content": result_dict},

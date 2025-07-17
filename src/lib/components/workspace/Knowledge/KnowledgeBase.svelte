@@ -31,7 +31,8 @@
 		removeFileFromKnowledgeById,
 		resetKnowledgeById,
 		updateFileFromKnowledgeById,
-		updateKnowledgeById
+		updateKnowledgeById,
+		endEmbed
 	} from '$lib/apis/knowledge';
 
 	import { transcribeAudio } from '$lib/apis/audio';
@@ -430,7 +431,7 @@
 		if (knowledge?.files) {
 			knowledge.files = knowledge.files.filter(file => file.itemId !== fileId);
 		}
-	}; 											
+	}; 						
 
 	const deleteFileHandler = async (fileId) => {
 		try {
@@ -946,16 +947,21 @@
 										selectedFileId = selectedFileId === e.detail ? null : e.detail;
 									}}
 									on:delete={(e) => {
-										if( e.detail.status === 'uploading' || e.detail.status === 'processing' ){
+										if( e.detail.status === 'uploading'){
 											console.log(e.detail.id);
 											selectedFileId = null;
-											deleteTempUpload(e.detail.id)
+											deleteTempUpload(e.detail.id);
 
+										}else if(e.detail.status === 'processing' ){
+											console.log(e.detail.id);
+											endEmbed(localStorage.token);
+											selectedFileId = null;
+											deleteTempUpload(e.detail.id);
 										}else{
 											console.log(e.detail.id);
 
 											selectedFileId = null;
-											deleteFileHandler(e.detail);
+											deleteFileHandler(e.detail.id);
 
 										}
 									}}

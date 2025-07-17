@@ -20,7 +20,7 @@
 		
 	function handleUploadComplete(fileId: string) {
 		const source = new EventSource(`${PROGRESS_API_BASE_URL}/process/file/stream`);
-
+		
 		source.onmessage = (event) => {
 			try {
 				const data = JSON.parse(event.data);
@@ -47,18 +47,7 @@
 			source.close();
 		};
 	}
-
-
-
-
-
-
-
-
 	
-
-	
-
 </script>
 
 
@@ -95,11 +84,13 @@
 						
 						dispatch('delete', e);
 						return;
-					}else if (file.status === 'processing') {
-						return;
+					}else if(file.status === 'processing'){
+						const e = {id: file.itemId, status: file.status}
+						dispatch('delete', e);
+						return;						
 					}
-
-					dispatch('delete', file.id);
+					const e = {id: file.id, status: file.status}
+					dispatch('delete', e);
 				}}
 			/>
 

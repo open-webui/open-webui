@@ -96,9 +96,12 @@ class DefaultParser(ParserInterface):
         metadatas = self.metadata(request, docs, metadata)
 
         assert texts is not None
-
-        embeddings = self.embed(request, texts, user)
-
+        try:
+            embeddings = self.embed(request, texts, user)
+        except RuntimeError as e:
+            print("embedding was cancelled")
+            raise
+        
         assert len(metadatas) == len(texts) and f"length mismatch: metadata {metadatas} vs texts {texts}"
         assert len(metadatas) == len(embeddings) and f"length mismatch: metadata {metadatas} vs embeddings {embeddings}"
 

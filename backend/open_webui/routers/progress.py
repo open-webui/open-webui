@@ -6,6 +6,7 @@ import json
 import threading
 
 progress_queue = asyncio.Queue()
+stopWhileRun = False
 
 def update_progress(current, total):
     progress = round((current / total) * 100, 2)
@@ -24,8 +25,13 @@ def update_progress(current, total):
 
 
 
+def getStop():
+    global stopWhileRun
+    return stopWhileRun
 
-
+def resetStop():
+    global stopWhileRun
+    stopWhileRun = False
 
 router = APIRouter()
 
@@ -38,9 +44,11 @@ async def process_file_stream(request: Request):
                 if await request.is_disconnected():
                     print("SSE client disconnected.")
                     break
-                
+                if getStop():
+                    print("Embedding has been canceled.")
+                    break
                 try:
-                    data = await asyncio.wait_for(progress_queue.get(), timeout=0.5)
+                    data = await asyncio.wait_for(progress_queue.get(), timeout=0.1)
                     print("sending SSE data:", data.strip())
                     yield data
                 
@@ -49,16 +57,22 @@ async def process_file_stream(request: Request):
         
         finally:
             #Clear queue once stream ends
-            print("Queue Clear")
             clear_queue(progress_queue)
-
     return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+
+@router.post("/process/file/stop")
+def endWhileRun():
+    clear_queue(progress_queue)
+    global stopWhileRun
+    stopWhileRun = True
 
 
 
 def clear_queue(queue: asyncio.Queue):
     try:
         while not queue.empty():
+            print("Queue Clear")
             queue.get_nowait()
             queue.task_done()
     except Exception as e:
