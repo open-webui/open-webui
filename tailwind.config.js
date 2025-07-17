@@ -9,6 +9,12 @@ export default {
 		extend: {
 			colors: {
 				surface: '#F9F9FF',
+				'gradient-bg-2': 'rgba(204, 221, 252, 0.3)',
+				typography:{
+                    titles:'#23282E',
+					'secondary-body-text':'#979EAD',
+					disabled: '#ABB4C5',
+				},
 				neutrals:{
                        50: 'var(--color-neutrals-50, #ECEEF1)',
 					   100: 'var(--color-neutrals-100, #DEE0E3)',
