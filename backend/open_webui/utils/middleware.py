@@ -125,7 +125,7 @@ async def chat_completion_tools_handler(
     def get_tools_function_calling_payload(messages, task_model_id, content):
         user_message = get_last_user_message(messages)
         history = "\n".join(
-            f"{message['role'].upper()}: \"\"\"{message['content']}\"\"\""
+            f'{message["role"].upper()}: """{message["content"]}"""'
             for message in messages[::-1][:4]
         )
 
@@ -928,6 +928,25 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     "server": tool_server,
                 }
 
+    try:
+        model_tools = model["info"]["meta"]["toolIds"]
+    except (KeyError, AttributeError):
+        model_tools = []
+
+    model_tools_dict = get_tools(
+        request,
+        model_tools,
+        user,
+        {
+            **extra_params,
+            "__model__": models[task_model_id],
+            "__messages__": form_data["messages"],
+            "__files__": metadata.get("files", []),
+        },
+    )
+
+    tools_dict.update(model_tools_dict)
+
     if tools_dict:
         if metadata.get("function_calling") == "native":
             # If the function calling is native, then call the tools function calling handler
@@ -1138,7 +1157,6 @@ async def process_chat_response(
                         user_message = user_message[:100] + "..."
 
                     if tasks[TASKS.TITLE_GENERATION]:
-
                         res = await generate_title(
                             request,
                             {
@@ -1248,8 +1266,173 @@ async def process_chat_response(
         event_emitter = get_event_emitter(metadata)
         event_caller = get_event_call(metadata)
 
+    # Check if this is a custom model with tools that need processing
+    def has_custom_tools():
+        try:
+            model_tools = model["info"]["meta"]["toolIds"]
+            return bool(model_tools)
+        except (KeyError, AttributeError):
+            return False
+
+    # Helper function to process tool calls
+    async def process_tool_calls(tool_calls, tools_dict):
+        """Process a list of tool calls and return the results."""
+        tool_results = []
+        for tool_call in tool_calls:
+            tool_call_id = tool_call.get("id", "")
+            tool_name = tool_call.get("function", {}).get("name", "")
+            tool_arguments = tool_call.get("function", {}).get("arguments", "{}")
+
+            tool_function_params = {}
+            try:
+                tool_function_params = ast.literal_eval(tool_arguments)
+            except Exception:
+                try:
+                    tool_function_params = json.loads(tool_arguments)
+                except Exception:
+                    log.debug(f"Error parsing tool call arguments: {tool_arguments}")
+
+            tool_result = None
+            if tool_name in tools_dict:
+                tool = tools_dict[tool_name]
+                spec = tool.get("spec", {})
+
+                try:
+                    allowed_params = (
+                        spec.get("parameters", {}).get("properties", {}).keys()
+                    )
+
+                    tool_function_params = {
+                        k: v
+                        for k, v in tool_function_params.items()
+                        if k in allowed_params
+                    }
+
+                    tool_function = tool["callable"]
+                    tool_result = await tool_function(**tool_function_params)
+                except Exception:
+                    tool_result = "Tool execution failed"
+
+            if isinstance(tool_result, dict) or isinstance(tool_result, list):
+                tool_result = json.dumps(tool_result, indent=2)
+
+            tool_results.append(
+                {
+                    "tool_call_id": tool_call_id,
+                    "role": "tool",
+                    "content": (
+                        str(tool_result) if tool_result else "Tool execution failed"
+                    ),
+                }
+            )
+
+        return tool_results
+
     # Non-streaming response
     if not isinstance(response, StreamingResponse):
+        # Process tool calls for custom models even without event emitters (API calls)
+        if has_custom_tools() and isinstance(response, dict):
+            choices = response.get("choices", [])
+            if choices and choices[0].get("message", {}).get("tool_calls"):
+                # Load tools for this model
+                model_tools = model["info"]["meta"]["toolIds"]
+                tools_dict = get_tools(
+                    request,
+                    model_tools,
+                    user,
+                    {
+                        "__event_emitter__": event_emitter,
+                        "__event_call__": event_caller,
+                        "__user__": (
+                            user.model_dump() if isinstance(user, UserModel) else {}
+                        ),
+                        "__metadata__": metadata,
+                        "__request__": request,
+                        "__model__": model,
+                    },
+                )
+
+                # Process initial tool calls
+                tool_calls = choices[0]["message"]["tool_calls"]
+                tool_results = await process_tool_calls(tool_calls, tools_dict)
+
+                # If we have tool results, iterate until we get a final response without tool calls
+                if tool_results:
+                    current_messages = (
+                        form_data.get("messages", [])
+                        + [
+                            choices[0][
+                                "message"
+                            ]  # The assistant message with tool calls
+                        ]
+                        + tool_results
+                    )  # The tool results
+
+                    # Prepare the tools in the format expected by the completion call
+                    tools_for_completion = [
+                        {"type": "function", "function": tool.get("spec", {})}
+                        for tool in tools_dict.values()
+                    ]
+
+                    max_iterations = 10  # Prevent infinite loops
+                    iteration = 0
+
+                    while iteration < max_iterations:
+                        iteration += 1
+
+                        # Make a completion call
+                        follow_up_response = await generate_chat_completion(
+                            request,
+                            {
+                                "model": form_data.get("model"),
+                                "messages": current_messages,
+                                "stream": False,
+                                "tools": tools_for_completion,  # Include tools for potential further tool calls
+                                # Include other relevant parameters from the original request
+                                **{
+                                    k: v
+                                    for k, v in form_data.items()
+                                    if k not in ["messages", "stream", "tools"]
+                                    and v is not None
+                                },
+                            },
+                            user,
+                        )
+
+                        # Check if this response has more tool calls
+                        if (
+                            isinstance(follow_up_response, dict)
+                            and follow_up_response.get("choices", [])
+                            and follow_up_response["choices"][0]
+                            .get("message", {})
+                            .get("tool_calls")
+                        ):
+                            # Process the additional tool calls using the same helper function
+                            additional_tool_calls = follow_up_response["choices"][0][
+                                "message"
+                            ]["tool_calls"]
+                            additional_tool_results = await process_tool_calls(
+                                additional_tool_calls, tools_dict
+                            )
+
+                            # Update messages for next iteration
+                            current_messages = (
+                                current_messages
+                                + [follow_up_response["choices"][0]["message"]]
+                                + additional_tool_results
+                            )
+
+                        else:
+                            # No more tool calls, this is our final response
+                            response = follow_up_response
+                            break
+                    else:
+                        # Max iterations reached, use the last response
+                        response = follow_up_response
+                        log.warning(
+                            f"Max tool call iterations ({max_iterations}) reached for custom model tools"
+                        )
+
         if event_emitter:
             if "error" in response:
                 error = response["error"].get("detail", response["error"])
@@ -1275,7 +1458,6 @@ async def process_chat_response(
                 content = response["choices"][0]["message"]["content"]
 
                 if content:
-
                     await event_emitter(
                         {
                             "type": "chat:completion",
@@ -1418,10 +1600,8 @@ async def process_chat_response(
                         results = block.get("results", [])
 
                         if results:
-
                             tool_calls_display_content = ""
                             for tool_call in tool_calls:
-
                                 tool_call_id = tool_call.get("id", "")
                                 tool_name = tool_call.get("function", {}).get(
                                     "name", ""
@@ -1472,12 +1652,12 @@ async def process_chat_response(
 
                         if reasoning_duration is not None:
                             if raw:
-                                content = f'{content}\n<{block["start_tag"]}>{block["content"]}<{block["end_tag"]}>\n'
+                                content = f"{content}\n<{block['start_tag']}>{block['content']}<{block['end_tag']}>\n"
                             else:
                                 content = f'{content}\n<details type="reasoning" done="true" duration="{reasoning_duration}">\n<summary>Thought for {reasoning_duration} seconds</summary>\n{reasoning_display_content}\n</details>\n'
                         else:
                             if raw:
-                                content = f'{content}\n<{block["start_tag"]}>{block["content"]}<{block["end_tag"]}>\n'
+                                content = f"{content}\n<{block['start_tag']}>{block['content']}<{block['end_tag']}>\n"
                             else:
                                 content = f'{content}\n<details type="reasoning" done="false">\n<summary>Thinking…</summary>\n{reasoning_display_content}\n</details>\n'
 
@@ -1679,7 +1859,6 @@ async def process_chat_response(
                             # Reset the content_blocks by appending a new text block
                             if content_type != "code_interpreter":
                                 if leftover_content:
-
                                     content_blocks.append(
                                         {
                                             "type": "text",
