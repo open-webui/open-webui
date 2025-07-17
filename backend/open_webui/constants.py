@@ -21,7 +21,7 @@ class ERROR_MESSAGES(str, Enum):
         return super().__str__()
 
     DEFAULT = (
-        lambda err="": f'{"Something went wrong :/" if err == "" else "[ERROR: " + str(err) + "]"}'
+        lambda err="": f"{'Something went wrong :/' if err == '' else '[ERROR: ' + str(err) + ']'}"
     )
     ENV_VAR_NOT_FOUND = "Required environment variable not found. Terminating now."
     CREATE_USER_ERROR = "Oops! Something went wrong while creating your account. Please try again later. If the issue persists, contact support for assistance."

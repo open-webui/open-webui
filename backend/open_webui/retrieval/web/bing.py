@@ -1,5 +1,4 @@
 import logging
-import os
 from pprint import pprint
 from typing import Optional
 import requests

@@ -4,7 +4,6 @@ import uuid
 from pydantic import BaseModel
 from sqlalchemy import Column, Text, BigInteger, func
 from open_webui.internal.db import Base, get_db
-from open_webui.models.users import User
 from logging import getLogger
 
 logger = getLogger(__name__)
@@ -484,7 +483,6 @@ class MessageMetricsTable:
             end_time = today_midnight + (24 * 60 * 60)
 
             with get_db() as db:
-
                 query = db.query(
                     MessageMetric.user_id, MessageMetric.created_at
                 ).filter(

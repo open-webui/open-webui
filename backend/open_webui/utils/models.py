@@ -2,7 +2,6 @@ import time
 import logging
 import sys
 
-from aiocache import cached
 from fastapi import Request
 
 from open_webui.routers import openai, ollama

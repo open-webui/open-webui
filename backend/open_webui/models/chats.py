@@ -1,16 +1,14 @@
-import json
 import time
 import uuid
 from typing import Optional
 
 from open_webui.internal.db import Base, get_db
-from open_webui.models.tags import TagModel, Tag, Tags
+from open_webui.models.tags import TagModel, Tags
 
 
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON
-from sqlalchemy import or_, func, select, and_, text
-from sqlalchemy.sql import exists
+from sqlalchemy import or_, and_, text
 
 ####################
 # Chat DB Schema
@@ -736,7 +734,7 @@ class ChatTable:
                 # SQLite JSON1 querying for tags within the meta JSON field
                 query = query.filter(
                     text(
-                        f"EXISTS (SELECT 1 FROM json_each(Chat.meta, '$.tags') WHERE json_each.value = :tag_id)"
+                        "EXISTS (SELECT 1 FROM json_each(Chat.meta, '$.tags') WHERE json_each.value = :tag_id)"
                     )
                 ).params(tag_id=tag_id)
             elif db.bind.dialect.name == "postgresql":
@@ -789,7 +787,7 @@ class ChatTable:
                 # SQLite JSON1 support for querying the tags inside the `meta` JSON field
                 query = query.filter(
                     text(
-                        f"EXISTS (SELECT 1 FROM json_each(Chat.meta, '$.tags') WHERE json_each.value = :tag_id)"
+                        "EXISTS (SELECT 1 FROM json_each(Chat.meta, '$.tags') WHERE json_each.value = :tag_id)"
                     )
                 ).params(tag_id=tag_id)
 

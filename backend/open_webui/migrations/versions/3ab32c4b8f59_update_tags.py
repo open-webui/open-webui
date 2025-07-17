@@ -7,11 +7,8 @@ Create Date: 2024-10-09 21:02:35.241684
 """
 
 from alembic import op
-import sqlalchemy as sa
-from sqlalchemy.sql import table, select, update, column
 from sqlalchemy.engine.reflection import Inspector
 
-import json
 
 revision = "3ab32c4b8f59"
 down_revision = "1af9b942657b"

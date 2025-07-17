@@ -171,7 +171,6 @@ class UsersTable:
         self, skip: Optional[int] = None, limit: Optional[int] = None
     ) -> list[UserModel]:
         with get_db() as db:
-
             query = db.query(User).order_by(User.created_at.desc())
 
             if skip:

@@ -1,26 +1,19 @@
 import json
 import logging
-import mimetypes
 import os
 import shutil
 
 import uuid
 from datetime import datetime
-from pathlib import Path
-from typing import Iterator, List, Optional, Sequence, Union
+from typing import List, Optional
 
 from fastapi import (
     Depends,
-    FastAPI,
-    File,
-    Form,
     HTTPException,
-    UploadFile,
     Request,
     status,
     APIRouter,
 )
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel
 import tiktoken
@@ -74,9 +67,7 @@ from open_webui.utils.auth import get_admin_user, get_verified_user
 
 from open_webui.config import (
     ENV,
-    RAG_EMBEDDING_MODEL_AUTO_UPDATE,
     RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
-    RAG_RERANKING_MODEL_AUTO_UPDATE,
     RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
     UPLOAD_DIR,
     DEFAULT_LOCALE,

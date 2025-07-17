@@ -1,6 +1,5 @@
 from fastapi import (
     Depends,
-    FastAPI,
     File,
     Form,
     HTTPException,
@@ -14,12 +13,10 @@ import logging
 import shutil
 import requests
 from pydantic import BaseModel
-from starlette.responses import FileResponse
 from typing import Optional
 
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.config import CACHE_DIR
-from open_webui.constants import ERROR_MESSAGES
 
 
 from open_webui.routers.openai import get_all_models_responses

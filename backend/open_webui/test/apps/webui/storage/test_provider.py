@@ -93,7 +93,6 @@ class TestLocalStorageProvider:
 
 @mock_aws
 class TestS3StorageProvider:
-
     def __init__(self):
         self.Storage = provider.S3StorageProvider()
         self.Storage.bucket_name = "my-bucket"

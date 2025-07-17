@@ -1,8 +1,8 @@
-from typing import List, Union, Optional
+from typing import List, Optional
 import time
 import uuid
 
-from open_webui.internal.db import Base, JSONField, get_db
+from open_webui.internal.db import Base, get_db
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON, Integer
 
