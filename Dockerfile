@@ -84,6 +84,9 @@ ENV TIKTOKEN_ENCODING_NAME="cl100k_base" \
 ## Hugging Face download cache ##
 ENV HF_HOME="/app/backend/data/cache/embedding/models"
 
+# Set a writable cache directory for Matplotlib to prevent run-time permission errors.
+ENV MPLCONFIGDIR="/app/backend/data/cache/matplotlib"
+
 ## Torch Extensions ##
 # ENV TORCH_EXTENSIONS_DIR="/.cache/torch_extensions"
 
@@ -99,6 +102,9 @@ RUN if [ $UID -ne 0 ]; then \
     fi; \
     adduser --uid $UID --gid $GID --home $HOME --disabled-password --no-create-home app; \
     fi
+
+# Create the matplotlib cache directory and ensure the application user owns it.
+RUN mkdir -p /app/backend/data/cache/matplotlib && chown -R $UID:$GID /app/backend/data/cache/matplotlib
 
 RUN mkdir -p $HOME/.cache/chroma
 RUN echo -n 00000000-0000-0000-0000-000000000000 > $HOME/.cache/chroma/telemetry_user_id
