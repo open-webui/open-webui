@@ -822,6 +822,7 @@ async def generate_chat_completion(
                 "X-OpenWebUI-User-Id": user.id,
                 "X-OpenWebUI-User-Email": user.email,
                 "X-OpenWebUI-User-Role": user.role,
+                "X-OpenWebUI-Chat-Id": metadata.get("chat_id", "") if metadata else "",
             }
             if ENABLE_FORWARD_USER_INFO_HEADERS
             else {}
@@ -917,6 +918,7 @@ async def embeddings(request: Request, form_data: dict, user):
     # Find correct backend url/key based on model
     await get_all_models(request, user=user)
     model_id = form_data.get("model")
+
     models = request.app.state.OPENAI_MODELS
     if model_id in models:
         idx = models[model_id]["urlIdx"]
