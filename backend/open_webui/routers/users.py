@@ -1,7 +1,7 @@
 import logging
 from typing import Optional
 
-from open_webui.models.auths import Auths
+from open_webui.models.auths_table import Auths
 from open_webui.models.chats import Chats
 from open_webui.models.users import (
     UserModel,
@@ -60,7 +60,7 @@ async def get_user_groups(user=Depends(get_verified_user)):
 
 @router.get("/domains")
 async def get_user_domains(user=Depends(get_verified_user)):
-    if not user.role in ["admin", "analyst", "global_analyst"]:
+    if user.role not in ["admin", "analyst", "global_analyst"]:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.NOT_FOUND,

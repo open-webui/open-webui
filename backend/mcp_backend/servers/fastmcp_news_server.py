@@ -9,7 +9,7 @@ import os
 import json
 import logging
 from datetime import datetime, timedelta
-from typing import List, Dict, Optional
+from typing import Dict, Optional
 from azure.storage.blob import BlobServiceClient
 from fastmcp import FastMCP
 
@@ -159,14 +159,14 @@ def fetch_latest_articles_from_azure(
                                     # if len(all_articles) > 0:
                                     #     break
 
-                            except Exception as e:
+                            except Exception:
                                 continue
 
                     # Don't break here either - let it continue searching
                     # if len(all_articles) > 0:
                     #     break
 
-                except Exception as e:
+                except Exception:
                     continue
 
             if len(all_articles) >= max_articles:

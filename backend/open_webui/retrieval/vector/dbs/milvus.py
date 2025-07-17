@@ -1,5 +1,5 @@
 from pymilvus import MilvusClient as Client
-from pymilvus import FieldSchema, DataType
+from pymilvus import DataType
 import json
 
 from typing import Optional

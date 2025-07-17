@@ -79,7 +79,7 @@ class ChromaClient:
                     }
                 )
             return None
-        except Exception as e:
+        except Exception:
             return None
 
     def query(

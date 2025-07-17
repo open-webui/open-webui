@@ -7,7 +7,6 @@ from open_webui.internal.wrappers import register_connection
 from open_webui.env import (
     OPEN_WEBUI_DIR,
     DATABASE_URL,
-    DATABASE_SCHEMA,
     SRC_LOG_LEVELS,
     DATABASE_POOL_MAX_OVERFLOW,
     DATABASE_POOL_RECYCLE,
@@ -15,8 +14,7 @@ from open_webui.env import (
     DATABASE_POOL_TIMEOUT,
 )
 from peewee_migrate import Router
-from sqlalchemy import Dialect, create_engine, MetaData, types
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import Dialect, create_engine, types
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.pool import QueuePool, NullPool
 from sqlalchemy.sql.type_api import _T
@@ -75,6 +73,26 @@ def handle_peewee_migration(DATABASE_URL):
 handle_peewee_migration(DATABASE_URL)
 
 
+# Function to run the alembic migrations
+def run_migrations():
+    print("Running migrations")
+    try:
+        from alembic import command
+        from alembic.config import Config
+
+        alembic_cfg = Config(OPEN_WEBUI_DIR / "alembic.ini")
+
+        # Set the script location dynamically
+        migrations_path = OPEN_WEBUI_DIR / "migrations"
+        alembic_cfg.set_main_option("script_location", str(migrations_path))
+
+        command.upgrade(alembic_cfg, "head")
+    except Exception as e:
+        print(f"Error: {e}")
+
+
+run_migrations()
+
 SQLALCHEMY_DATABASE_URL = DATABASE_URL
 if "sqlite" in SQLALCHEMY_DATABASE_URL:
     engine = create_engine(
@@ -100,8 +118,7 @@ else:
 SessionLocal = sessionmaker(
     autocommit=False, autoflush=False, bind=engine, expire_on_commit=False
 )
-metadata_obj = MetaData(schema=DATABASE_SCHEMA)
-Base = declarative_base(metadata=metadata_obj)
+
 Session = scoped_session(SessionLocal)
 
 

@@ -7,7 +7,6 @@ Simple integration using MCPServerAdapter with stdio transport for FastMCP time 
 import os
 import logging
 from pathlib import Path
-from typing import Optional, Dict, Any
 from pydantic import BaseModel
 
 # Disable CrewAI telemetry to avoid connection timeout errors
@@ -318,7 +317,7 @@ class CrewMCPManager:
                 - TIME: Handles current time, dates, timezones, scheduling, time-related calculations
                 - NEWS: Handles current news, headlines, articles, breaking news, news search
                 
-                Available specialists for this query: {', '.join(available_specialists)}
+                Available specialists for this query: {", ".join(available_specialists)}
                 
                 Your job is to analyze the user's intent and decide:
                 1. Which specialist(s) can best answer their question
@@ -335,7 +334,7 @@ class CrewMCPManager:
             routing_task = Task(
                 description=f"""Analyze this user query and make a routing decision: "{query}"
 
-Available specialists: {', '.join(available_specialists)}
+Available specialists: {", ".join(available_specialists)}
 
 Based on what the user is actually asking for, decide:
 
@@ -597,21 +596,21 @@ def main():
 
         # Test individual server capabilities
         if any(tool["server"] == "time_server" for tool in tools):
-            print(f"\n🕐 Testing Time Server:")
-            print(f"Query: 'What's the current time in UTC?'")
+            print("\n🕐 Testing Time Server:")
+            print("Query: 'What's the current time in UTC?'")
             result = manager.run_time_crew("What's the current time in UTC?")
             print("Result:", result[:200] + "..." if len(result) > 200 else result)
 
         if any(tool["server"] == "news_server" for tool in tools):
-            print(f"\n📰 Testing News Server:")
-            print(f"Query: 'Get the latest news headlines'")
+            print("\n📰 Testing News Server:")
+            print("Query: 'Get the latest news headlines'")
             result = manager.run_news_crew("Get the latest news headlines")
             print("Result:", result[:200] + "..." if len(result) > 200 else result)
 
         # Test multi-server capability
         if len(available_servers) > 1:
-            print(f"\n🌐 Testing Multi-Server Integration:")
-            print(f"Query: 'Provide current time and latest news summary'")
+            print("\n🌐 Testing Multi-Server Integration:")
+            print("Query: 'Provide current time and latest news summary'")
             result = manager.run_multi_server_crew(
                 "Provide current time and latest news summary"
             )
@@ -620,9 +619,9 @@ def main():
                 result[:300] + "..." if len(result) > 300 else result,
             )
         else:
-            print(f"\n⚠️  Only one server available. Multi-server test skipped.")
+            print("\n⚠️  Only one server available. Multi-server test skipped.")
 
-        print(f"\n✅ All tests completed successfully!")
+        print("\n✅ All tests completed successfully!")
 
     except Exception as e:
         logger.error(f"❌ Error: {e}")

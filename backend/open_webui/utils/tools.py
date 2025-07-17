@@ -1,7 +1,6 @@
 import inspect
 import logging
 import re
-import json
 import asyncio
 from typing import Any, Awaitable, Callable, get_type_hints
 from functools import update_wrapper, partial
@@ -202,10 +201,10 @@ async def get_tools_async(
     # Add MCP tools if enabled and requested
     try:
         mcp_tools = await get_mcp_tools(request)
-        log.info(f"=== MCP TOOLS DEBUG ===")
+        log.info("=== MCP TOOLS DEBUG ===")
         log.info(f"Available MCP tools: {list(mcp_tools.keys())}")
         log.info(f"Requested tool_ids: {tool_ids}")
-        log.info(f"=======================")
+        log.info("=======================")
 
         for tool_name, tool_dict in mcp_tools.items():
             # Check if this MCP tool is in the requested tool_ids
@@ -232,7 +231,7 @@ async def get_tools_async(
 
             if tool_name in tools_dict:
                 log.warning(f"MCP tool {tool_name} already exists in regular tools!")
-                log.warning(f"Prepending 'mcp_' to avoid collision")
+                log.warning("Prepending 'mcp_' to avoid collision")
                 tool_name = f"mcp_{tool_name}"
                 tool_dict["spec"]["name"] = tool_name
 

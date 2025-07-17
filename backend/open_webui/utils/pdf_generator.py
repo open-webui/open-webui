@@ -1,9 +1,7 @@
 from datetime import datetime
-from io import BytesIO
 from pathlib import Path
 from typing import Dict, Any, List
 
-from markdown import markdown
 
 import site
 from fpdf import FPDF
@@ -35,7 +33,7 @@ class PDFGenerator:
         try:
             date_time = datetime.fromtimestamp(timestamp)
             return date_time.strftime("%Y-%m-%d, %H:%M:%S")
-        except (ValueError, TypeError) as e:
+        except (ValueError, TypeError):
             # Log the error if necessary
             return ""
 

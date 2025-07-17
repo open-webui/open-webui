@@ -6,7 +6,6 @@ import uuid
 from functools import lru_cache
 from pathlib import Path
 from pydub import AudioSegment
-from pydub.silence import split_on_silence
 
 import aiohttp
 import aiofiles
@@ -14,7 +13,6 @@ import requests
 
 from fastapi import (
     Depends,
-    FastAPI,
     File,
     HTTPException,
     Request,
@@ -22,7 +20,6 @@ from fastapi import (
     status,
     APIRouter,
 )
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
@@ -36,7 +33,6 @@ from open_webui.config import (
 
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import (
-    ENV,
     SRC_LOG_LEVELS,
     DEVICE_TYPE,
     ENABLE_FORWARD_USER_INFO_HEADERS,
@@ -62,7 +58,6 @@ SPEECH_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 #
 ##########################################
 
-from pydub import AudioSegment
 from pydub.utils import mediainfo
 
 

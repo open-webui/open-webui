@@ -92,8 +92,6 @@ class AbstractPostgresTest(AbstractIntegrationTest):
             db = None
             while retries > 0:
                 try:
-                    from open_webui.config import OPEN_WEBUI_DIR
-
                     db = create_engine(database_url, pool_pre_ping=True)
                     db = db.connect()
                     log.info("postgres is ready!")

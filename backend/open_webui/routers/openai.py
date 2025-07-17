@@ -3,15 +3,14 @@ import hashlib
 import json
 import logging
 from pathlib import Path
-from typing import Literal, Optional, overload
+from typing import Optional
 
 import aiohttp
 from aiocache import cached
 import requests
 
 
-from fastapi import Depends, FastAPI, HTTPException, Request, APIRouter
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import Depends, HTTPException, Request, APIRouter
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 from starlette.background import BackgroundTask
@@ -28,7 +27,7 @@ from open_webui.env import (
 )
 
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import ENV, SRC_LOG_LEVELS
+from open_webui.env import SRC_LOG_LEVELS
 
 
 from open_webui.utils.payload import (

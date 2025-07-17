@@ -6,7 +6,6 @@ Create Date: 2025-04-01 10:45:28.890543
 
 """
 
-from typing import Union, Sequence
 from alembic import op
 import sqlalchemy as sa
 
@@ -33,7 +32,7 @@ def upgrade() -> None:
     else:
         op.execute(
             """
-            UPDATE "user" 
+            UPDATE "user"
             SET domain = split_part(email, '@', 2)
             WHERE domain IS NULL
             """

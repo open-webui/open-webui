@@ -1,9 +1,7 @@
 import logging
 import os
-import uuid
 from typing import Optional, Union
 
-import asyncio
 import requests
 
 from huggingface_hub import snapshot_download
@@ -14,7 +12,6 @@ from langchain_core.documents import Document
 
 from open_webui.config import VECTOR_DB
 from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
-from open_webui.utils.misc import get_last_user_message
 
 from open_webui.models.users import UserModel
 from open_webui.models.files import Files
@@ -143,7 +140,7 @@ def query_doc_with_hybrid_search(
 
         log.info(
             "query_doc_with_hybrid_search:result "
-            + f'{result["metadatas"]} {result["distances"]}'
+            + f"{result['metadatas']} {result['distances']}"
         )
         return result
     except Exception as e:
@@ -283,9 +280,7 @@ def query_collection_with_hybrid_search(
                 )
                 results.append(result)
         except Exception as e:
-            log.exception(
-                "Error when querying the collection with " f"hybrid_search: {e}"
-            )
+            log.exception(f"Error when querying the collection with hybrid_search: {e}")
             error = True
 
     if error:
@@ -463,7 +458,7 @@ def get_sources_from_files(
                                     reranking_function=reranking_function,
                                     r=r,
                                 )
-                            except Exception as e:
+                            except Exception:
                                 log.debug(
                                     "Error when using hybrid search, using"
                                     " non hybrid search as fallback."
