@@ -432,6 +432,14 @@ ${content}
 			note.data.files = null;
 		}
 
+		editor.storage.files = files;
+		// open the settings panel if it is not open
+		selectedPanel = 'settings';
+
+		if (!showPanel) {
+			showPanel = true;
+		}
+
 		changeDebounceHandler();
 	};
 
@@ -504,20 +512,39 @@ ${content}
 
 					imageUrl = await compressImageHandler(imageUrl, $settings, $config);
 
-					files = [
-						...files,
-						{
-							type: 'image',
-							url: `${imageUrl}`
-						}
-					];
+					const fileId = uuidv4();
+					const fileItem = {
+						id: fileId,
+						type: 'image',
+						url: `${imageUrl}`
+					};
+					files = [...files, fileItem];
 					note.data.files = files;
+
+					if (imageUrl && editor) {
+						editor.storage.files = files;
+						editor
+							?.chain()
+							.insertContentAt(editor.state.selection.$anchor.pos, {
+								type: 'image',
+								attrs: {
+									file: fileItem,
+									src: `data://${fileId}`
+
+									// src: imageUrl
+								}
+							})
+							.focus()
+							.run();
+					}
 				};
 				reader.readAsDataURL(
 					file['type'] === 'image/heic'
 						? await heic2any({ blob: file, toType: 'image/jpeg' })
 						: file
 				);
+
+				changeDebounceHandler();
 			} else {
 				uploadFileHandler(file);
 			}
@@ -773,8 +800,47 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 		inputElement?.insertContent(content);
 	};
 
+	const noteEventHandler = async (_note) => {
+		console.log('noteEventHandler', _note);
+		if (_note.id !== id) return;
+
+		if (_note.access_control && _note.access_control !== note.access_control) {
+			note.access_control = _note.access_control;
+		}
+
+		if (_note.data && _note.data.files) {
+			files = _note.data.files;
+			note.data.files = files;
+		}
+
+		if (_note.title && _note.title) {
+			note.title = _note.title;
+		}
+
+		editor.storage.files = files;
+		await tick();
+
+		for (const file of files) {
+			if (file.type === 'image') {
+				const e = new CustomEvent('data', { files: files });
+
+				const img = document.getElementById(`image:${file.id}`);
+				if (img) {
+					img.dispatchEvent(e);
+				}
+			}
+		}
+	};
+
 	onMount(async () => {
 		await tick();
+		$socket?.emit('join-note', {
+			note_id: id,
+			auth: {
+				token: localStorage.token
+			}
+		});
+		$socket?.on('note-events', noteEventHandler);
 
 		if ($settings?.models) {
 			selectedModelId = $settings?.models[0];
@@ -807,6 +873,8 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 
 	onDestroy(() => {
 		console.log('destroy');
+		$socket?.off('note-events', noteEventHandler);
+
 		const dropzoneElement = document.getElementById('note-editor');
 
 		if (dropzoneElement) {
@@ -1111,52 +1179,21 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 							></div>
 						{/if}
 
-						{#if files && files.length > 0}
-							<div class="mb-2.5 w-full flex gap-1 flex-wrap z-40">
-								{#each files as file, fileIdx}
-									<div class="w-fit">
-										{#if file.type === 'image'}
-											<Image
-												src={file.url}
-												imageClassName=" max-h-96 rounded-lg"
-												dismissible={true}
-												onDismiss={() => {
-													files = files.filter((item, idx) => idx !== fileIdx);
-													note.data.files = files.length > 0 ? files : null;
-												}}
-											/>
-										{:else}
-											<FileItem
-												item={file}
-												dismissible={true}
-												url={file.url}
-												name={file.name}
-												type={file.type}
-												size={file?.size}
-												loading={file.status === 'uploading'}
-												on:dismiss={() => {
-													files = files.filter((item) => item?.id !== file.id);
-													note.data.files = files.length > 0 ? files : null;
-												}}
-											/>
-										{/if}
-									</div>
-								{/each}
-							</div>
-						{/if}
-
 						<RichTextInput
 							bind:this={inputElement}
 							bind:editor
+							id={`note-${note.id}`}
 							className="input-prose-sm px-0.5"
 							json={true}
 							bind:value={note.data.content.json}
 							html={note.data?.content?.html}
 							documentId={`note:${note.id}`}
+							{files}
 							collaboration={true}
 							socket={$socket}
 							user={$user}
 							link={true}
+							image={true}
 							placeholder={$i18n.t('Write something...')}
 							editable={versionIdx === null && !editing}
 							onChange={(content) => {
@@ -1312,7 +1349,14 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 				scrollToBottomHandler={scrollToBottom}
 			/>
 		{:else if selectedPanel === 'settings'}
-			<Settings bind:show={showPanel} bind:selectedModelId />
+			<Settings
+				bind:show={showPanel}
+				bind:selectedModelId
+				bind:files
+				onUpdate={() => {
+					changeDebounceHandler();
+				}}
+			/>
 		{/if}
 	</NotePanel>
 </PaneGroup>

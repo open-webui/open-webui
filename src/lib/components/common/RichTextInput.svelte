@@ -84,6 +84,10 @@
 	import { ListKit } from '@tiptap/extension-list';
 	import { Placeholder, CharacterCount } from '@tiptap/extensions';
 
+	import Image from './RichTextInput/Image/index.js';
+	// import TiptapImage from '@tiptap/extension-image';
+
+	import FileHandler from '@tiptap/extension-file-handler';
 	import Typography from '@tiptap/extension-typography';
 	import Highlight from '@tiptap/extension-highlight';
 	import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
@@ -106,11 +110,15 @@
 
 	export let socket = null;
 	export let user = null;
+	export let files = [];
+
 	export let documentId = '';
 
 	export let className = 'input-prose';
 	export let placeholder = 'Type here...';
 	export let link = false;
+	export let image = false;
+	export let fileHandler = false;
 
 	export let id = '';
 	export let value = '';
@@ -819,7 +827,9 @@
 		editor = new Editor({
 			element: element,
 			extensions: [
-				StarterKit,
+				StarterKit.configure({
+					link: link
+				}),
 				Placeholder.configure({ placeholder }),
 
 				CodeBlockLowlight.configure({
@@ -837,6 +847,60 @@
 					}
 				}),
 				CharacterCount.configure({}),
+
+				...(image ? [Image] : []),
+				...(fileHandler
+					? [
+							FileHandler.configure({
+								allowedMimeTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp'],
+								onDrop: (currentEditor, files, pos) => {
+									files.forEach((file) => {
+										const fileReader = new FileReader();
+
+										fileReader.readAsDataURL(file);
+										fileReader.onload = () => {
+											currentEditor
+												.chain()
+												.insertContentAt(pos, {
+													type: 'image',
+													attrs: {
+														src: fileReader.result
+													}
+												})
+												.focus()
+												.run();
+										};
+									});
+								},
+								onPaste: (currentEditor, files, htmlContent) => {
+									files.forEach((file) => {
+										if (htmlContent) {
+											// if there is htmlContent, stop manual insertion & let other extensions handle insertion via inputRule
+											// you could extract the pasted file from this url string and upload it to a server for example
+											console.log(htmlContent); // eslint-disable-line no-console
+											return false;
+										}
+
+										const fileReader = new FileReader();
+
+										fileReader.readAsDataURL(file);
+										fileReader.onload = () => {
+											currentEditor
+												.chain()
+												.insertContentAt(currentEditor.state.selection.anchor, {
+													type: 'image',
+													attrs: {
+														src: fileReader.result
+													}
+												})
+												.focus()
+												.run();
+										};
+									});
+								}
+							})
+						]
+					: []),
 
 				...(autocomplete
 					? [
@@ -1092,6 +1156,11 @@
 						view.dispatch(view.state.tr.scrollIntoView());
 						return false;
 					}
+				}
+			},
+			onBeforeCreate: ({ editor }) => {
+				if (files) {
+					editor.storage.files = files;
 				}
 			}
 		});
