@@ -1,4 +1,5 @@
 import logging
+import json
 from typing import Optional
 
 from open_webui.models.chats import (
@@ -10,6 +11,9 @@ from open_webui.models.chats import (
 )
 from open_webui.models.tags import TagModel, Tags
 from open_webui.models.folders import Folders
+from open_webui.models.files import Files
+from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
+from open_webui.storage.provider import Storage
 
 from open_webui.config import ENABLE_ADMIN_CHAT_ACCESS, ENABLE_ADMIN_EXPORT
 from open_webui.constants import ERROR_MESSAGES
@@ -60,6 +64,26 @@ async def delete_all_user_chats(request: Request, user=Depends(get_verified_user
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
+    log.info(f"User {user.id} deleting all chats and associated files")
+    
+    # Get all user chats before deletion to extract file IDs
+    user_chats = Chats.get_chat_list_by_user_id(user.id, include_archived=True)
+    
+    total_files_cleaned = 0
+    for chat in user_chats:
+        try:
+            # Extract and clean up files from each chat
+            file_ids = extract_file_ids_from_chat(chat)
+            if file_ids:
+                cleanup_result = cleanup_chat_files(file_ids)
+                total_files_cleaned += cleanup_result['files_deleted']
+                log.info(f"Cleaned up {cleanup_result['files_deleted']} files from chat {chat.id}")
+        except Exception as e:
+            log.error(f"Error cleaning files from chat {chat.id}: {e}")
+    
+    log.info(f"Total files cleaned from all chats: {total_files_cleaned}")
+    
+    # Delete all chats from database
     result = Chats.delete_chats_by_user_id(user.id)
     return result
 
@@ -379,12 +403,27 @@ async def update_chat_by_id(
 async def delete_chat_by_id(request: Request, id: str, user=Depends(get_verified_user)):
     if user.role == "admin":
         chat = Chats.get_chat_by_id(id)
+        if not chat:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=ERROR_MESSAGES.NOT_FOUND,
+            )
+        
+        log.info(f"Admin deleting chat {id} and associated files")
+        
+        # Extract and clean up all files from chat messages
+        file_ids = extract_file_ids_from_chat(chat)
+        if file_ids:
+            cleanup_result = cleanup_chat_files(file_ids)
+            log.info(f"Cleaned up {cleanup_result['files_deleted']} files from chat {id}")
+        
+        # Clean up tags
         for tag in chat.meta.get("tags", []):
             if Chats.count_chats_by_tag_name_and_user_id(tag, user.id) == 1:
                 Tags.delete_tag_by_name_and_user_id(tag, user.id)
 
+        # Delete chat from database
         result = Chats.delete_chat_by_id(id)
-
         return result
     else:
         if not has_permission(
@@ -396,10 +435,33 @@ async def delete_chat_by_id(request: Request, id: str, user=Depends(get_verified
             )
 
         chat = Chats.get_chat_by_id(id)
+        if not chat:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=ERROR_MESSAGES.NOT_FOUND,
+            )
+        
+        # Verify user owns the chat
+        if chat.user_id != user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+            )
+        
+        log.info(f"User {user.id} deleting chat {id} and associated files")
+        
+        # Extract and clean up all files from chat messages  
+        file_ids = extract_file_ids_from_chat(chat)
+        if file_ids:
+            cleanup_result = cleanup_chat_files(file_ids)
+            log.info(f"Cleaned up {cleanup_result['files_deleted']} files from chat {id}")
+        
+        # Clean up tags
         for tag in chat.meta.get("tags", []):
             if Chats.count_chats_by_tag_name_and_user_id(tag, user.id) == 1:
                 Tags.delete_tag_by_name_and_user_id(tag, user.id)
 
+        # Delete chat from database
         result = Chats.delete_chat_by_id_and_user_id(id, user.id)
         return result
 
@@ -694,3 +756,104 @@ async def delete_all_tags_by_id(id: str, user=Depends(get_verified_user)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND
         )
+
+
+def extract_file_ids_from_chat(chat):
+    """
+    Extract all file IDs from chat messages to enable proper cleanup.
+
+    Args:
+        chat: Chat object with chat data containing messages
+
+    Returns:
+        set: Set of unique file IDs found in the chat
+    """
+    file_ids = set()
+
+    try:
+        # Get messages from chat data
+        messages = chat.chat.get("messages", []) if chat.chat else []
+
+        for message in messages:
+            # Check if message has files
+            if isinstance(message, dict) and message.get("files"):
+                files = message["files"]
+                if isinstance(files, list):
+                    for file_item in files:
+                        if isinstance(file_item, dict):
+                            # Extract file ID from various possible formats
+                            file_id = (
+                                file_item.get("id")
+                                or file_item.get("file", {}).get("id")
+                                if isinstance(file_item.get("file"), dict)
+                                else None
+                            )
+                            if file_id:
+                                file_ids.add(file_id)
+
+        log.info(f"Extracted {len(file_ids)} file IDs from chat {chat.id}")
+        return file_ids
+
+    except Exception as e:
+        log.error(f"Error extracting file IDs from chat {chat.id}: {e}")
+        return set()
+
+
+def cleanup_chat_files(file_ids):
+    """
+    Clean up files associated with a chat from database, storage, and vector DB.
+
+    Args:
+        file_ids: Set or list of file IDs to clean up
+
+    Returns:
+        dict: Summary of cleanup operations
+    """
+    cleanup_summary = {
+        "files_processed": 0,
+        "files_deleted": 0,
+        "vector_collections_deleted": 0,
+        "physical_files_deleted": 0,
+        "errors": []
+    }
+
+    for file_id in file_ids:
+        try:
+            cleanup_summary["files_processed"] += 1
+
+            # Get file info
+            file = Files.get_file_by_id(file_id)
+
+            if file:
+                # Clean up vector collection
+                file_collection = f"file-{file_id}"
+                try:
+                    if VECTOR_DB_CLIENT and VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
+                        VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection)
+                        cleanup_summary["vector_collections_deleted"] += 1
+                        log.info(f"Deleted vector collection: {file_collection}")
+                except Exception as e:
+                    log.warning(f"Could not delete vector collection {file_collection}: {e}")
+
+                # Delete physical file
+                try:
+                    Storage.delete_file(file.path)
+                    cleanup_summary["physical_files_deleted"] += 1
+                    log.info(f"Deleted physical file: {file.path}")
+                except Exception as e:
+                    log.warning(f"Could not delete physical file {file.path}: {e}")
+
+                # Delete file from database
+                Files.delete_file_by_id(file_id)
+                cleanup_summary["files_deleted"] += 1
+                log.info(f"Deleted file {file_id} from database")
+            else:
+                log.warning(f"File {file_id} not found in database, may already be deleted")
+
+        except Exception as e:
+            error_msg = f"Error cleaning up file {file_id}: {e}"
+            log.error(error_msg)
+            cleanup_summary["errors"].append(error_msg)
+
+    log.info(f"Chat file cleanup completed: {cleanup_summary}")
+    return cleanup_summary

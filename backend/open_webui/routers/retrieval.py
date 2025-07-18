@@ -2070,7 +2070,7 @@ def api_comprehensive_cleanup(
 ):
     """
     API endpoint for comprehensive vector DB cleanup.
-    Cleans up orphaned standalone files and expired web searches.
+    Cleans up orphaned standalone files, expired web searches, and orphaned chat files.
     PRESERVES knowledge bases and all files within them.
     Used by K8s CronJobs for complete maintenance.
     """
@@ -2078,9 +2078,10 @@ def api_comprehensive_cleanup(
         if max_age_days is None:
             max_age_days = int(os.getenv("VECTOR_DB_WEB_SEARCH_EXPIRY_DAYS", "30"))
         
-        # Run both cleanup operations
+        # Run all cleanup operations
         orphaned_result = cleanup_orphaned_vectors()
         web_search_result = cleanup_expired_web_searches(max_age_days)
+        chat_files_result = cleanup_orphaned_chat_files()
         
         return {
             "status": "success",
@@ -2088,7 +2089,8 @@ def api_comprehensive_cleanup(
             "max_age_days": max_age_days,
             "cleanup_results": {
                 "orphaned_vectors": orphaned_result,
-                "web_search_vectors": web_search_result
+                "web_search_vectors": web_search_result,
+                "chat_files": chat_files_result
             }
         }
     except Exception as e:
@@ -2143,4 +2145,184 @@ def api_vector_db_health(user=Depends(get_admin_user)):
             detail=health_status,
         )
 
-# ...existing code...
+def extract_file_ids_from_chat_data(chat):
+    """
+    Extract all file IDs from chat messages to enable proper cleanup.
+    
+    Args:
+        chat: Chat object with chat data containing messages
+        
+    Returns:
+        set: Set of unique file IDs found in the chat
+    """
+    file_ids = set()
+    
+    try:
+        # Get messages from chat data
+        messages = chat.chat.get("messages", []) if chat.chat else []
+        
+        for message in messages:
+            # Check if message has files
+            if isinstance(message, dict) and message.get("files"):
+                files = message["files"]
+                if isinstance(files, list):
+                    for file_item in files:
+                        if isinstance(file_item, dict):
+                            # Extract file ID from various possible formats
+                            file_id = (
+                                file_item.get("id") or 
+                                file_item.get("file", {}).get("id") if isinstance(file_item.get("file"), dict) else None
+                            )
+                            if file_id:
+                                file_ids.add(file_id)
+                                
+        log.debug(f"Extracted {len(file_ids)} file IDs from chat {chat.id}")
+        return file_ids
+        
+    except Exception as e:
+        log.error(f"Error extracting file IDs from chat {chat.id}: {e}")
+        return set()
+
+
+def cleanup_orphaned_chat_files() -> dict:
+    """
+    Clean up files that were uploaded to chats but whose chats no longer exist.
+    This is critical for preventing vector DB growth from chat file orphans.
+    
+    Returns:
+        dict: Summary of cleanup operations
+    """
+    try:
+        cleanup_summary = {
+            "chat_files_checked": 0,
+            "orphaned_files_found": 0,
+            "collections_cleaned": 0,
+            "files_deleted": 0,
+            "errors": []
+        }
+        
+        log.info("Starting orphaned chat files cleanup...")
+        
+        # Get all file collections from vector DB
+        collections = []
+        if hasattr(VECTOR_DB_CLIENT, 'client') and hasattr(VECTOR_DB_CLIENT.client, 'get_collections'):
+            collections_response = VECTOR_DB_CLIENT.client.get_collections()
+            collections = [col.name for col in collections_response.collections]
+        else:
+            log.warning("Vector DB client does not support listing collections for chat cleanup")
+            return cleanup_summary
+            
+        # Get all existing knowledge base IDs to preserve them
+        from open_webui.models.knowledge import Knowledges
+        try:
+            existing_knowledge_bases = Knowledges.get_knowledge_bases()
+            existing_kb_ids = {kb.id for kb in existing_knowledge_bases}
+            log.info(f"Found {len(existing_kb_ids)} knowledge bases to preserve")
+        except Exception as e:
+            log.warning(f"Could not get knowledge bases: {e}")
+            existing_kb_ids = set()
+            
+        # Get all files that are currently referenced in existing chats
+        from open_webui.models.chats import Chats
+        from open_webui.models.users import Users
+        
+        # Get all users to iterate through their chats
+        users = Users.get_users()
+        chat_referenced_files = set()
+        
+        for user in users:
+            try:
+                user_chats = Chats.get_chat_list_by_user_id(user.id, include_archived=True)
+                for chat in user_chats:
+                    file_ids = extract_file_ids_from_chat_data(chat)
+                    chat_referenced_files.update(file_ids)
+            except Exception as e:
+                log.warning(f"Error extracting files from user {user.id} chats: {e}")
+        
+        log.info(f"Found {len(chat_referenced_files)} files referenced in existing chats")
+        
+        # Process file collections
+        for collection_name in collections:
+            cleanup_summary["chat_files_checked"] += 1
+            
+            try:
+                # Skip knowledge base collections
+                if collection_name in existing_kb_ids:
+                    continue
+                    
+                # Skip non-file collections  
+                if not collection_name.startswith("file-"):
+                    continue
+                    
+                # Extract file ID
+                file_id = collection_name.replace("file-", "")
+                
+                # Check if file exists in database
+                file = Files.get_file_by_id(file_id)
+                if not file:
+                    # File doesn't exist in database - orphaned
+                    cleanup_summary["orphaned_files_found"] += 1
+                    VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
+                    cleanup_summary["collections_cleaned"] += 1
+                    log.info(f"Cleaned up orphaned file collection: {collection_name}")
+                    continue
+                
+                # File exists in database, check if it's referenced in any chat
+                if file_id not in chat_referenced_files:
+                    # File exists but not referenced in any chat - orphaned
+                    cleanup_summary["orphaned_files_found"] += 1
+                    
+                    # Delete vector collection
+                    VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
+                    cleanup_summary["collections_cleaned"] += 1
+                    
+                    # Delete physical file
+                    try:
+                        Storage.delete_file(file.path)
+                    except Exception as e:
+                        log.warning(f"Could not delete physical file {file.path}: {e}")
+                    
+                    # Delete from database
+                    Files.delete_file_by_id(file_id)
+                    cleanup_summary["files_deleted"] += 1
+                    
+                    log.info(f"Cleaned up orphaned chat file: {file_id}")
+                    
+            except Exception as e:
+                error_msg = f"Error processing collection {collection_name}: {e}"
+                log.error(error_msg)
+                cleanup_summary["errors"].append(error_msg)
+        
+        log.info(f"Orphaned chat files cleanup completed: {cleanup_summary}")
+        return cleanup_summary
+        
+    except Exception as e:
+        log.error(f"Error during orphaned chat files cleanup: {e}")
+        return {"error": str(e), "collections_cleaned": 0, "files_deleted": 0}
+    
+
+@router.post("/maintenance/cleanup/chat-files")
+def api_cleanup_orphaned_chat_files(user=Depends(get_admin_user)):
+    """
+    API endpoint to cleanup orphaned chat files.
+    Removes files that were uploaded to chats but whose chats no longer exist.
+    PRESERVES knowledge bases and all files within them.
+    Used by K8s CronJobs for scheduled maintenance.
+    """
+    try:
+        result = cleanup_orphaned_chat_files()
+        return {
+            "status": "success",
+            "timestamp": datetime.now().isoformat(),
+            "cleanup_result": result
+        }
+    except Exception as e:
+        log.error(f"Orphaned chat files cleanup API failed: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "status": "error",
+                "timestamp": datetime.now().isoformat(),
+                "error": str(e)
+            }
+        )
