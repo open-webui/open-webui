@@ -1,6 +1,6 @@
 {
-  "name": "Open WebUI",
-  "short_name": "WebUI",
+  "name": "mAI",
+  "short_name": "mAI",
   "icons": [
     {
       "src": "/static/web-app-manifest-192x192.png",
