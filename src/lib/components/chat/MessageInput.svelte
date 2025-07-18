@@ -55,6 +55,7 @@
 	import Wrench from '../icons/Wrench.svelte';
 	import CommandLine from '../icons/CommandLine.svelte';
 	import Sparkles from '../icons/Sparkles.svelte';
+	import Mask from '../icons/Mask.svelte';
 
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 
@@ -136,6 +137,7 @@
 	let piiSessionManager = PiiSessionManager.getInstance();
 	let currentPiiEntities: ExtendedPiiEntity[] = [];
 	let maskedPrompt = '';
+	let piiMaskingEnabled = true; // Toggle state for PII masking
 
 	// Get PII settings from config
 	$: enablePiiDetection = $config?.features?.enable_pii_detection ?? false;
@@ -211,7 +213,12 @@
 
 	// PII Detection handler
 	const handlePiiDetected = (entities: ExtendedPiiEntity[], maskedText: string) => {
-		currentPiiEntities = entities;
+		// Set shouldMask based on the toggle state for newly detected entities
+		const entitiesWithToggleState = entities.map((entity) => ({
+			...entity,
+			shouldMask: piiMaskingEnabled
+		}));
+		currentPiiEntities = entitiesWithToggleState;
 		maskedPrompt = maskedText;
 	};
 
@@ -219,6 +226,34 @@
 	const handlePiiToggled = (entities: ExtendedPiiEntity[]) => {
 		currentPiiEntities = entities;
 		console.log('MessageInput: PII entities toggled, updated currentPiiEntities:', entities.length);
+	};
+
+	// Function to toggle PII masking (deterministic based on button state)
+	const togglePiiMasking = () => {
+		if (!enablePiiDetection) {
+			console.log('MessageInput: PII detection not enabled');
+			return;
+		}
+
+		// Toggle the masking state
+		piiMaskingEnabled = !piiMaskingEnabled;
+
+		console.log('MessageInput: PII masking toggled to:', piiMaskingEnabled);
+
+		// Deterministic behavior based on button state
+		if (piiMaskingEnabled) {
+			// Button ON: Mask all entities
+			if (chatInputElement?.maskAllPiiEntities) {
+				chatInputElement.maskAllPiiEntities();
+			} else {
+			}
+		} else {
+			// Button OFF: Unmask all entities and clear modifiers
+			if (chatInputElement?.unmaskAllPiiEntities) {
+				chatInputElement.unmaskAllPiiEntities();
+			} else {
+			}
+		}
 	};
 
 	// Function to get the prompt to send (masked if PII detected)
@@ -864,6 +899,7 @@
 												]}
 												{enablePiiDetection}
 												{piiApiKey}
+												{piiMaskingEnabled}
 												conversationId={chatId || undefined}
 												onPiiDetected={handlePiiDetected}
 												onPiiToggled={handlePiiToggled}
@@ -1368,6 +1404,25 @@
 												</svg>
 											</button>
 										</InputMenu>
+
+										{#if enablePiiDetection}
+											<Tooltip content={$i18n.t('Toggle PII masking')}>
+												<button
+													class="px-2 @xl:px-2.5 py-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {piiMaskingEnabled
+														? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
+														: 'bg-transparent text-gray-600 dark:text-gray-300'}"
+													type="button"
+													on:click={togglePiiMasking}
+													aria-label={$i18n.t('Toggle PII masking')}
+												>
+													<Mask className="size-4" />
+													<span
+														class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
+														>{$i18n.t('Toggle PII masking')}</span
+													>
+												</button>
+											</Tooltip>
+										{/if}
 
 										{#if $_user && (showToolsButton || (toggleFilters && toggleFilters.length > 0) || showWebSearchButton || showImageGenerationButton || showCodeInterpreterButton)}
 											<div
