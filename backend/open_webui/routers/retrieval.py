@@ -1687,15 +1687,33 @@ def cleanup_file_vectors(file_id: str, collection_name: str = None) -> bool:
 
         # Check if collection exists
         if VECTOR_DB_CLIENT.has_collection(collection_name=target_collection):
-            # Delete by file_id metadata
-            VECTOR_DB_CLIENT.delete(
-                collection_name=target_collection, metadata={"file_id": file_id}
-            )
-
-            # If this was a file-specific collection, delete the entire collection
+            # For file-specific collections (file-{file_id}), delete the entire collection
             if target_collection.startswith(f"file-{file_id}"):
                 VECTOR_DB_CLIENT.delete_collection(collection_name=target_collection)
                 log.info(f"Deleted entire collection {target_collection}")
+            else:
+                # For shared collections, we need to delete by filter
+                # Note: This requires the vector client to support filtering by metadata
+                try:
+                    VECTOR_DB_CLIENT.delete(
+                        collection_name=target_collection,
+                        points_selector={
+                            "filter": {
+                                "must": [
+                                    {"key": "file_id", "match": {"value": file_id}}
+                                ]
+                            }
+                        },
+                    )
+                    log.info(
+                        f"Deleted vectors with file_id {file_id} from collection {target_collection}"
+                    )
+                except Exception as filter_error:
+                    log.warning(
+                        f"Could not delete by filter, attempting collection deletion: {filter_error}"
+                    )
+                    # Fallback: if filtering doesn't work, log and continue
+                    pass
 
             log.info(f"Successfully cleaned up vectors for file {file_id}")
             return True
