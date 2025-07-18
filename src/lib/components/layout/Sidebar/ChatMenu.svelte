@@ -58,17 +58,17 @@
 	const getChatAsText = async (chat: any, chatId: string) => {
 		const history = chat.chat.history;
 		const messages = createMessagesList(history, history.currentId);
-		
+
 		// Get PII entities for unmasking
 		const piiSessionManager = PiiSessionManager.getInstance();
-		
+
 		// Load PII state from chat data if not already loaded
 		if (chat.chat?.piiState && chatId) {
 			piiSessionManager.loadConversationState(chatId, chat.chat.piiState);
 		}
-		
+
 		const piiEntities = piiSessionManager.getEntitiesForDisplay(chatId);
-		
+
 		const chatText = messages.reduce((a: string, message: any, i: number, arr: any[]) => {
 			// Apply PII unmasking to message content
 			const unmaskedContent = unmaskTextWithEntities(message.content, piiEntities);
@@ -227,27 +227,30 @@
 		if (chat) {
 			// Get PII entities for unmasking
 			const piiSessionManager = PiiSessionManager.getInstance();
-			
+
 			// Load PII state from chat data if not already loaded
 			if (chat.chat?.piiState && chatId) {
 				piiSessionManager.loadConversationState(chatId, chat.chat.piiState);
 			}
-			
+
 			const piiEntities = piiSessionManager.getEntitiesForDisplay(chatId);
-			
+
 			// Create a deep copy of the chat and unmask content
 			const unmaskedChat = JSON.parse(JSON.stringify(chat));
-			
+
 			// Unmask content in chat history
 			if (unmaskedChat.chat?.history) {
-				const messages = createMessagesList(unmaskedChat.chat.history, unmaskedChat.chat.history.currentId);
+				const messages = createMessagesList(
+					unmaskedChat.chat.history,
+					unmaskedChat.chat.history.currentId
+				);
 				messages.forEach((message: any) => {
 					if (message.content) {
 						message.content = unmaskTextWithEntities(message.content, piiEntities);
 					}
 				});
 			}
-			
+
 			// Unmask content in chat messages block
 			if (unmaskedChat.chat?.messages) {
 				unmaskedChat.chat.messages.forEach((message: any) => {
@@ -256,7 +259,7 @@
 					}
 				});
 			}
-			
+
 			let blob = new Blob([JSON.stringify([unmaskedChat])], {
 				type: 'application/json'
 			});
