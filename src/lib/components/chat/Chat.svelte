@@ -2064,21 +2064,36 @@
 <div
 	class="h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
 		? '  md:max-w-[calc(100%-260px)]'
-		: ' '} w-full max-w-full flex flex-col"
+		: ' '} w-full max-w-full flex flex-col message-spacing-{$settings?.messageSpacing ?? 'normal'} chat-width-{$settings?.chatWidth ?? 'normal'} font-size-{$settings?.fontSize ?? 'normal'}"
 	id="chat-container"
 >
 	{#if !loading}
 		<div in:fade={{ duration: 50 }} class="w-full h-full flex flex-col">
+			<!-- Background Image -->
 			{#if $settings?.backgroundImageUrl ?? null}
 				<div
 					class="absolute {$showSidebar
 						? 'md:max-w-[calc(100%-260px)] md:translate-x-[260px]'
-						: ''} top-0 left-0 w-full h-full bg-cover bg-center bg-no-repeat"
-					style="background-image: url({$settings.backgroundImageUrl})  "
+						: ''} top-0 left-0 w-full h-full"
+					style="background-image: url({$settings.backgroundImageUrl}); 
+					       background-size: {$settings?.backgroundSize ?? 'cover'}; 
+					       background-position: {$settings?.backgroundPosition ?? 'center'}; 
+					       background-repeat: no-repeat;
+					       opacity: {($settings?.backgroundOpacity ?? 20) / 100};"
 				/>
 
 				<div
 					class="absolute top-0 left-0 w-full h-full bg-linear-to-t from-white to-white/85 dark:from-gray-900 dark:to-gray-900/90 z-0"
+				/>
+			{/if}
+
+			<!-- Background Pattern -->
+			{#if $settings?.backgroundPattern && $settings.backgroundPattern !== 'none'}
+				<div
+					class="absolute {$showSidebar
+						? 'md:max-w-[calc(100%-260px)] md:translate-x-[260px]'
+						: ''} top-0 left-0 w-full h-full background-pattern-{$settings.backgroundPattern}"
+					style="opacity: {($settings?.backgroundOpacity ?? 20) / 100};"
 				/>
 			{/if}
 

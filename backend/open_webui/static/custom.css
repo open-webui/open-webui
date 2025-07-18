@@ -1,0 +1,123 @@
+/* mAI Backend Custom Styles - Theme-specific overrides and background patterns */
+
+/* Professional theme specific overrides - Corporate Navy */
+.mai-professional .mai-accent {
+  color: #2563eb;
+}
+
+/* Creative theme specific overrides - Vibrant Purple */
+.mai-creative .mai-accent {
+  color: #a855f7;
+}
+
+/* Minimalist theme specific overrides - Ultra Clean */
+.mai-minimalist .mai-accent {
+  color: #212529;
+}
+
+/* Warm theme specific overrides - Cozy Amber */
+.mai-warm .mai-accent {
+  color: #f59e0b;
+}
+
+/* Background Patterns */
+.background-pattern-dots {
+  background-image: radial-gradient(circle, var(--color-gray-300) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.background-pattern-grid {
+  background-image: linear-gradient(var(--color-gray-300) 1px, transparent 1px),
+                    linear-gradient(90deg, var(--color-gray-300) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.background-pattern-diagonal {
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 10px,
+    var(--color-gray-300) 10px,
+    var(--color-gray-300) 11px
+  );
+}
+
+.background-pattern-gradient-blue {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(147, 51, 234, 0.1) 100%);
+}
+
+.background-pattern-gradient-purple {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.1) 0%, rgba(236, 72, 153, 0.1) 100%);
+}
+
+.background-pattern-gradient-warm {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(239, 68, 68, 0.1) 100%);
+}
+
+/* Dark mode adjustments for patterns */
+.dark .background-pattern-dots {
+  background-image: radial-gradient(circle, var(--color-gray-600) 1px, transparent 1px);
+}
+
+.dark .background-pattern-grid {
+  background-image: linear-gradient(var(--color-gray-600) 1px, transparent 1px),
+                    linear-gradient(90deg, var(--color-gray-600) 1px, transparent 1px);
+}
+
+.dark .background-pattern-diagonal {
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 10px,
+    var(--color-gray-600) 10px,
+    var(--color-gray-600) 11px
+  );
+}
+
+/* Layout & Spacing Customization */
+/* Message Spacing */
+.message-spacing-compact .message-item {
+  margin-bottom: 0.5rem;
+}
+
+.message-spacing-normal .message-item {
+  margin-bottom: 1rem;
+}
+
+.message-spacing-relaxed .message-item {
+  margin-bottom: 1.5rem;
+}
+
+/* Chat Width */
+.chat-width-narrow .chat-container {
+  max-width: 600px;
+}
+
+.chat-width-normal .chat-container {
+  max-width: 800px;
+}
+
+.chat-width-wide .chat-container {
+  max-width: 1200px;
+}
+
+.chat-width-full .chat-container {
+  max-width: none;
+}
+
+/* Font Size */
+.font-size-small {
+  font-size: 0.875rem;
+}
+
+.font-size-normal {
+  font-size: 1rem;
+}
+
+.font-size-large {
+  font-size: 1.125rem;
+}
+
+.font-size-extra-large {
+  font-size: 1.25rem;
+}

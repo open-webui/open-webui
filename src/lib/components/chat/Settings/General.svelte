@@ -14,7 +14,7 @@
 	export let getModels: Function;
 
 	// General
-	let themes = ['dark', 'light', 'oled-dark'];
+	let themes = ['dark', 'light', 'oled-dark', 'mai-professional', 'mai-creative', 'mai-minimalist', 'mai-warm'];
 	let selectedTheme = 'system';
 
 	let languages: Awaited<ReturnType<typeof getLanguages>> = [];
@@ -123,6 +123,11 @@
 			themeToApply = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 		}
 
+		// Handle mAI custom themes
+		if (_theme.startsWith('mai-')) {
+			themeToApply = _theme.includes('minimalist') ? 'light' : 'dark';
+		}
+
 		if (themeToApply === 'dark' && !_theme.includes('oled')) {
 			document.documentElement.style.setProperty('--color-gray-800', '#333');
 			document.documentElement.style.setProperty('--color-gray-850', '#262626');
@@ -142,6 +147,49 @@
 			document.documentElement.classList.add(e);
 		});
 
+		// Apply custom mAI theme styles
+		if (_theme === 'mai-professional') {
+			// Deep Navy Corporate Theme - Professional, authoritative, trustworthy
+			document.documentElement.style.setProperty('--color-gray-800', '#1e293b');
+			document.documentElement.style.setProperty('--color-gray-850', '#0f172a');
+			document.documentElement.style.setProperty('--color-gray-900', '#020617');
+			document.documentElement.style.setProperty('--color-gray-950', '#020617');
+			document.documentElement.style.setProperty('--color-primary', '#2563eb');  // Professional blue
+			document.documentElement.style.setProperty('--color-secondary', '#475569'); // Steel gray
+			document.documentElement.style.setProperty('--color-accent', '#06b6d4');   // Cyan highlights
+		} else if (_theme === 'mai-creative') {
+			// Vibrant Purple Creative Theme - Imaginative, energetic, innovative
+			document.documentElement.style.setProperty('--color-gray-800', '#2d1b69');  // Deep purple base
+			document.documentElement.style.setProperty('--color-gray-850', '#1e1065');  // Deeper purple
+			document.documentElement.style.setProperty('--color-gray-900', '#0f0a2e');  // Almost black purple
+			document.documentElement.style.setProperty('--color-gray-950', '#0f0a2e');
+			document.documentElement.style.setProperty('--color-primary', '#a855f7');  // Vibrant purple
+			document.documentElement.style.setProperty('--color-secondary', '#ec4899'); // Hot pink
+			document.documentElement.style.setProperty('--color-accent', '#06b6d4');   // Electric cyan
+		} else if (_theme === 'mai-minimalist') {
+			// Ultra-clean Monochrome Theme - Pure, focused, distraction-free
+			document.documentElement.style.setProperty('--color-gray-50', '#ffffff');   // Pure white
+			document.documentElement.style.setProperty('--color-gray-100', '#f8f9fa');  // Off-white
+			document.documentElement.style.setProperty('--color-gray-200', '#e9ecef');  // Light gray
+			document.documentElement.style.setProperty('--color-gray-300', '#dee2e6');  // Slightly darker
+			document.documentElement.style.setProperty('--color-gray-400', '#ced4da');  // Medium gray
+			document.documentElement.style.setProperty('--color-gray-500', '#6c757d');  // Neutral gray
+			document.documentElement.style.setProperty('--color-gray-600', '#495057');  // Dark gray
+			document.documentElement.style.setProperty('--color-gray-700', '#343a40');  // Very dark gray
+			document.documentElement.style.setProperty('--color-primary', '#212529');  // Near black
+			document.documentElement.style.setProperty('--color-secondary', '#6c757d'); // Neutral gray
+			document.documentElement.style.setProperty('--color-accent', '#495057');   // Dark gray accent
+		} else if (_theme === 'mai-warm') {
+			// Cozy Amber Theme - Comfortable, inviting, human-centered
+			document.documentElement.style.setProperty('--color-gray-800', '#451a03');  // Deep amber brown
+			document.documentElement.style.setProperty('--color-gray-850', '#292524');  // Rich brown
+			document.documentElement.style.setProperty('--color-gray-900', '#1c1917');  // Dark brown
+			document.documentElement.style.setProperty('--color-gray-950', '#0c0a09');  // Almost black brown
+			document.documentElement.style.setProperty('--color-primary', '#f59e0b');  // Warm amber
+			document.documentElement.style.setProperty('--color-secondary', '#ea580c'); // Deep orange
+			document.documentElement.style.setProperty('--color-accent', '#dc2626');   // Warm red
+		}
+
 		const metaThemeColor = document.querySelector('meta[name="theme-color"]');
 		if (metaThemeColor) {
 			if (_theme.includes('system')) {
@@ -158,9 +206,15 @@
 						? '#171717'
 						: _theme === 'oled-dark'
 							? '#000000'
-							: _theme === 'her'
-								? '#983724'
-								: '#ffffff'
+							: _theme === 'mai-professional'
+								? '#020617'
+								: _theme === 'mai-creative'
+									? '#0f0a2e'
+									: _theme === 'mai-minimalist'
+										? '#ffffff'
+										: _theme === 'mai-warm'
+											? '#0c0a09'
+											: '#ffffff'
 				);
 			}
 		}
@@ -192,25 +246,50 @@
 		<div class="">
 			<div class=" mb-1 text-sm font-medium">{$i18n.t('WebUI Settings')}</div>
 
-			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">{$i18n.t('Theme')}</div>
-				<div class="flex items-center relative">
-					<select
-						class="dark:bg-gray-900 w-fit pr-8 rounded-sm py-2 px-2 text-xs bg-transparent text-right {$settings.highContrastMode
-							? ''
-							: 'outline-hidden'}"
-						bind:value={selectedTheme}
-						placeholder="Select a theme"
-						on:change={() => themeChangeHandler(selectedTheme)}
-					>
-						<option value="system">⚙️ {$i18n.t('System')}</option>
-						<option value="dark">🌑 {$i18n.t('Dark')}</option>
-						<option value="oled-dark">🌃 {$i18n.t('OLED Dark')}</option>
-						<option value="light">☀️ {$i18n.t('Light')}</option>
-						<option value="her">🌷 Her</option>
-						<!-- <option value="rose-pine dark">🪻 {$i18n.t('Rosé Pine')}</option>
-						<option value="rose-pine-dawn light">🌷 {$i18n.t('Rosé Pine Dawn')}</option> -->
-					</select>
+			<div class="w-full">
+				<div class="mb-3 text-xs font-medium">{$i18n.t('Theme')}</div>
+				<div class="grid grid-cols-2 gap-2">
+					{#each [
+						{ value: 'system', label: 'System', emoji: '⚙️', colors: ['#f3f4f6', '#1f2937'] },
+						{ value: 'light', label: 'Light', emoji: '☀️', colors: ['#ffffff', '#f9fafb'] },
+						{ value: 'dark', label: 'Dark', emoji: '🌑', colors: ['#1f2937', '#111827'] },
+						{ value: 'oled-dark', label: 'OLED Dark', emoji: '🌃', colors: ['#000000', '#050505'] },
+						{ value: 'mai-professional', label: 'mAI Professional', emoji: '💼', colors: ['#020617', '#1e293b'] },
+						{ value: 'mai-creative', label: 'mAI Creative', emoji: '🎨', colors: ['#0f0a2e', '#2d1b69'] },
+						{ value: 'mai-minimalist', label: 'mAI Minimalist', emoji: '⚡', colors: ['#ffffff', '#f8f9fa'] },
+						{ value: 'mai-warm', label: 'mAI Warm', emoji: '🔥', colors: ['#0c0a09', '#451a03'] }
+					] as themeOption}
+						<button
+							class="theme-card flex items-center p-2 rounded-lg border-2 transition-all duration-200 hover:shadow-md {selectedTheme === themeOption.value 
+								? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+								: 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'}"
+							on:click={() => {
+								selectedTheme = themeOption.value;
+								themeChangeHandler(selectedTheme);
+							}}
+						>
+							<div class="flex items-center space-x-2 flex-1">
+								<div class="flex space-x-1">
+									<div 
+										class="w-4 h-4 rounded-full border border-gray-300 dark:border-gray-600" 
+										style="background-color: {themeOption.colors[0]}"
+									></div>
+									<div 
+										class="w-4 h-4 rounded-full border border-gray-300 dark:border-gray-600" 
+										style="background-color: {themeOption.colors[1]}"
+									></div>
+								</div>
+								<div class="flex-1 text-left">
+									<div class="text-xs font-medium text-gray-900 dark:text-gray-100">
+										{themeOption.emoji} {themeOption.label}
+									</div>
+								</div>
+							</div>
+							{#if selectedTheme === themeOption.value}
+								<div class="text-blue-500 text-xs">✓</div>
+							{/if}
+						</button>
+					{/each}
 				</div>
 			</div>
 

@@ -14,6 +14,13 @@
 	let backgroundImageUrl = null;
 	let inputFiles = null;
 	let filesInputElement;
+	let backgroundPattern = 'none';
+	let backgroundOpacity = 20;
+	let backgroundSize = 'cover';
+	let backgroundPosition = 'center';
+	let messageSpacing = 'normal';
+	let chatWidth = 'normal';
+	let fontSize = 'normal';
 
 	// Addons
 	let titleAutoGenerate = true;
@@ -277,7 +284,14 @@
 	const updateInterfaceHandler = async () => {
 		saveSettings({
 			models: [defaultModelId],
-			imageCompressionSize: imageCompressionSize
+			imageCompressionSize: imageCompressionSize,
+			backgroundPattern: backgroundPattern,
+			backgroundOpacity: backgroundOpacity,
+			backgroundSize: backgroundSize,
+			backgroundPosition: backgroundPosition,
+			messageSpacing: messageSpacing,
+			chatWidth: chatWidth,
+			fontSize: fontSize
 		});
 	};
 
@@ -351,6 +365,13 @@
 		}
 
 		backgroundImageUrl = $settings?.backgroundImageUrl ?? null;
+		backgroundPattern = $settings?.backgroundPattern ?? 'none';
+		backgroundOpacity = $settings?.backgroundOpacity ?? 20;
+		backgroundSize = $settings?.backgroundSize ?? 'cover';
+		backgroundPosition = $settings?.backgroundPosition ?? 'center';
+		messageSpacing = $settings?.messageSpacing ?? 'normal';
+		chatWidth = $settings?.chatWidth ?? 'normal';
+		fontSize = $settings?.fontSize ?? 'normal';
 		webSearch = $settings?.webSearch ?? null;
 	});
 </script>
@@ -911,6 +932,8 @@
 				</div>
 			</div>
 
+			<div class=" my-1.5 text-sm font-medium">{$i18n.t('Background')}</div>
+
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
 					<div id="chat-background-label" class=" self-center text-xs">
@@ -936,6 +959,165 @@
 							<span class="ml-2 self-center">{$i18n.t('Upload')}</span>
 						{/if}
 					</button>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div id="background-pattern-label" class=" self-center text-xs">
+						{$i18n.t('Background Pattern')}
+					</div>
+
+					<select
+						aria-labelledby="background-pattern-label"
+						class="dark:bg-gray-900 w-fit pr-8 rounded-sm py-1 px-2 text-xs bg-transparent text-right outline-hidden"
+						bind:value={backgroundPattern}
+						on:change={() => {
+							saveSettings({ backgroundPattern });
+						}}
+					>
+						<option value="none">{$i18n.t('None')}</option>
+						<option value="dots">{$i18n.t('Dots')}</option>
+						<option value="grid">{$i18n.t('Grid')}</option>
+						<option value="diagonal">{$i18n.t('Diagonal Lines')}</option>
+						<option value="gradient-blue">{$i18n.t('Blue Gradient')}</option>
+						<option value="gradient-purple">{$i18n.t('Purple Gradient')}</option>
+						<option value="gradient-warm">{$i18n.t('Warm Gradient')}</option>
+					</select>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div id="background-opacity-label" class=" self-center text-xs">
+						{$i18n.t('Background Opacity')} ({backgroundOpacity}%)
+					</div>
+
+					<input
+						aria-labelledby="background-opacity-label"
+						type="range"
+						class="w-20 h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+						min="0"
+						max="100"
+						step="5"
+						bind:value={backgroundOpacity}
+						on:input={() => {
+							saveSettings({ backgroundOpacity });
+						}}
+					/>
+				</div>
+			</div>
+
+			{#if backgroundImageUrl}
+				<div>
+					<div class=" py-0.5 flex w-full justify-between">
+						<div id="background-size-label" class=" self-center text-xs">
+							{$i18n.t('Background Size')}
+						</div>
+
+						<select
+							aria-labelledby="background-size-label"
+							class="dark:bg-gray-900 w-fit pr-8 rounded-sm py-1 px-2 text-xs bg-transparent text-right outline-hidden"
+							bind:value={backgroundSize}
+							on:change={() => {
+								saveSettings({ backgroundSize });
+							}}
+						>
+							<option value="cover">{$i18n.t('Cover')}</option>
+							<option value="contain">{$i18n.t('Contain')}</option>
+							<option value="auto">{$i18n.t('Original')}</option>
+						</select>
+					</div>
+				</div>
+
+				<div>
+					<div class=" py-0.5 flex w-full justify-between">
+						<div id="background-position-label" class=" self-center text-xs">
+							{$i18n.t('Background Position')}
+						</div>
+
+						<select
+							aria-labelledby="background-position-label"
+							class="dark:bg-gray-900 w-fit pr-8 rounded-sm py-1 px-2 text-xs bg-transparent text-right outline-hidden"
+							bind:value={backgroundPosition}
+							on:change={() => {
+								saveSettings({ backgroundPosition });
+							}}
+						>
+							<option value="center">{$i18n.t('Center')}</option>
+							<option value="top">{$i18n.t('Top')}</option>
+							<option value="bottom">{$i18n.t('Bottom')}</option>
+							<option value="left">{$i18n.t('Left')}</option>
+							<option value="right">{$i18n.t('Right')}</option>
+						</select>
+					</div>
+				</div>
+			{/if}
+
+			<div class=" my-1.5 text-sm font-medium">{$i18n.t('Layout & Spacing')}</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div id="message-spacing-label" class=" self-center text-xs">
+						{$i18n.t('Message Spacing')}
+					</div>
+
+					<select
+						aria-labelledby="message-spacing-label"
+						class="dark:bg-gray-900 w-fit pr-8 rounded-sm py-1 px-2 text-xs bg-transparent text-right outline-hidden"
+						bind:value={messageSpacing}
+						on:change={() => {
+							saveSettings({ messageSpacing });
+						}}
+					>
+						<option value="compact">{$i18n.t('Compact')}</option>
+						<option value="normal">{$i18n.t('Normal')}</option>
+						<option value="relaxed">{$i18n.t('Relaxed')}</option>
+					</select>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div id="chat-width-label" class=" self-center text-xs">
+						{$i18n.t('Chat Width')}
+					</div>
+
+					<select
+						aria-labelledby="chat-width-label"
+						class="dark:bg-gray-900 w-fit pr-8 rounded-sm py-1 px-2 text-xs bg-transparent text-right outline-hidden"
+						bind:value={chatWidth}
+						on:change={() => {
+							saveSettings({ chatWidth });
+						}}
+					>
+						<option value="narrow">{$i18n.t('Narrow')}</option>
+						<option value="normal">{$i18n.t('Normal')}</option>
+						<option value="wide">{$i18n.t('Wide')}</option>
+						<option value="full">{$i18n.t('Full Width')}</option>
+					</select>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div id="font-size-label" class=" self-center text-xs">
+						{$i18n.t('Font Size')}
+					</div>
+
+					<select
+						aria-labelledby="font-size-label"
+						class="dark:bg-gray-900 w-fit pr-8 rounded-sm py-1 px-2 text-xs bg-transparent text-right outline-hidden"
+						bind:value={fontSize}
+						on:change={() => {
+							saveSettings({ fontSize });
+						}}
+					>
+						<option value="small">{$i18n.t('Small')}</option>
+						<option value="normal">{$i18n.t('Normal')}</option>
+						<option value="large">{$i18n.t('Large')}</option>
+						<option value="extra-large">{$i18n.t('Extra Large')}</option>
+					</select>
 				</div>
 			</div>
 
