@@ -11,13 +11,6 @@
 
 	export let saveSettings: Function;
 
-	let backgroundImageUrl = null;
-	let inputFiles = null;
-	let filesInputElement;
-	let backgroundPattern = 'none';
-	let backgroundOpacity = 20;
-	let backgroundSize = 'cover';
-	let backgroundPosition = 'center';
 	let messageSpacing = 'normal';
 	let fontSize = 'normal';
 
@@ -284,10 +277,6 @@
 		saveSettings({
 			models: [defaultModelId],
 			imageCompressionSize: imageCompressionSize,
-			backgroundPattern: backgroundPattern,
-			backgroundOpacity: backgroundOpacity,
-			backgroundSize: backgroundSize,
-			backgroundPosition: backgroundPosition,
 			messageSpacing: messageSpacing,
 			fontSize: fontSize
 		});
@@ -362,11 +351,6 @@
 			defaultModelId = $config.default_models.split(',')[0];
 		}
 
-		backgroundImageUrl = $settings?.backgroundImageUrl ?? null;
-		backgroundPattern = $settings?.backgroundPattern ?? 'none';
-		backgroundOpacity = $settings?.backgroundOpacity ?? 20;
-		backgroundSize = $settings?.backgroundSize ?? 'cover';
-		backgroundPosition = $settings?.backgroundPosition ?? 'center';
 		messageSpacing = $settings?.messageSpacing ?? 'normal';
 		fontSize = $settings?.fontSize ?? 'normal';
 		webSearch = $settings?.webSearch ?? null;
@@ -381,33 +365,6 @@
 		dispatch('save');
 	}}
 >
-	<input
-		bind:this={filesInputElement}
-		bind:files={inputFiles}
-		type="file"
-		hidden
-		accept="image/*"
-		on:change={() => {
-			let reader = new FileReader();
-			reader.onload = (event) => {
-				let originalImageUrl = `${event.target.result}`;
-
-				backgroundImageUrl = originalImageUrl;
-				saveSettings({ backgroundImageUrl });
-			};
-
-			if (
-				inputFiles &&
-				inputFiles.length > 0 &&
-				['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(inputFiles[0]['type'])
-			) {
-				reader.readAsDataURL(inputFiles[0]);
-			} else {
-				console.log(`Unsupported File Type '${inputFiles[0]['type']}'.`);
-				inputFiles = null;
-			}
-		}}
-	/>
 
 	<div class=" space-y-3 overflow-y-scroll max-h-[28rem] lg:max-h-full">
 		<div>
@@ -929,124 +886,6 @@
 				</div>
 			</div>
 
-			<div class=" my-1.5 text-sm font-medium">{$i18n.t('Background')}</div>
-
-			<div>
-				<div class=" py-0.5 flex w-full justify-between">
-					<div id="chat-background-label" class=" self-center text-xs">
-						{$i18n.t('Chat Background Image')}
-					</div>
-
-					<button
-						aria-labelledby="chat-background-label"
-						class="p-1 px-3 text-xs flex rounded-sm transition"
-						on:click={() => {
-							if (backgroundImageUrl !== null) {
-								backgroundImageUrl = null;
-								saveSettings({ backgroundImageUrl });
-							} else {
-								filesInputElement.click();
-							}
-						}}
-						type="button"
-					>
-						{#if backgroundImageUrl !== null}
-							<span class="ml-2 self-center">{$i18n.t('Reset')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Upload')}</span>
-						{/if}
-					</button>
-				</div>
-			</div>
-
-			<div>
-				<div class=" py-0.5 flex w-full justify-between">
-					<div id="background-pattern-label" class=" self-center text-xs">
-						{$i18n.t('Background Pattern')}
-					</div>
-
-					<select
-						aria-labelledby="background-pattern-label"
-						class="dark:bg-gray-900 w-fit pr-8 rounded-sm py-1 px-2 text-xs bg-transparent text-right outline-hidden"
-						bind:value={backgroundPattern}
-						on:change={() => {
-							saveSettings({ backgroundPattern });
-						}}
-					>
-						<option value="none">{$i18n.t('None')}</option>
-						<option value="dots">{$i18n.t('Dots')}</option>
-						<option value="grid">{$i18n.t('Grid')}</option>
-						<option value="diagonal">{$i18n.t('Diagonal Lines')}</option>
-					</select>
-				</div>
-			</div>
-
-			<div>
-				<div class=" py-0.5 flex w-full justify-between">
-					<div id="background-opacity-label" class=" self-center text-xs">
-						{$i18n.t('Background Opacity')} ({backgroundOpacity}%)
-					</div>
-
-					<input
-						aria-labelledby="background-opacity-label"
-						type="range"
-						class="w-20 h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-						min="0"
-						max="100"
-						step="5"
-						bind:value={backgroundOpacity}
-						on:input={() => {
-							saveSettings({ backgroundOpacity });
-						}}
-					/>
-				</div>
-			</div>
-
-			{#if backgroundImageUrl}
-				<div>
-					<div class=" py-0.5 flex w-full justify-between">
-						<div id="background-size-label" class=" self-center text-xs">
-							{$i18n.t('Background Size')}
-						</div>
-
-						<select
-							aria-labelledby="background-size-label"
-							class="dark:bg-gray-900 w-fit pr-8 rounded-sm py-1 px-2 text-xs bg-transparent text-right outline-hidden"
-							bind:value={backgroundSize}
-							on:change={() => {
-								saveSettings({ backgroundSize });
-							}}
-						>
-							<option value="cover">{$i18n.t('Cover')}</option>
-							<option value="contain">{$i18n.t('Contain')}</option>
-							<option value="auto">{$i18n.t('Original')}</option>
-						</select>
-					</div>
-				</div>
-
-				<div>
-					<div class=" py-0.5 flex w-full justify-between">
-						<div id="background-position-label" class=" self-center text-xs">
-							{$i18n.t('Background Position')}
-						</div>
-
-						<select
-							aria-labelledby="background-position-label"
-							class="dark:bg-gray-900 w-fit pr-8 rounded-sm py-1 px-2 text-xs bg-transparent text-right outline-hidden"
-							bind:value={backgroundPosition}
-							on:change={() => {
-								saveSettings({ backgroundPosition });
-							}}
-						>
-							<option value="center">{$i18n.t('Center')}</option>
-							<option value="top">{$i18n.t('Top')}</option>
-							<option value="bottom">{$i18n.t('Bottom')}</option>
-							<option value="left">{$i18n.t('Left')}</option>
-							<option value="right">{$i18n.t('Right')}</option>
-						</select>
-					</div>
-				</div>
-			{/if}
 
 			<div class=" my-1.5 text-sm font-medium">{$i18n.t('Layout & Spacing')}</div>
 

@@ -20,48 +20,6 @@
   color: #f59e0b;
 }
 
-/* Background Patterns */
-.background-pattern-dots {
-  background-image: radial-gradient(circle, var(--color-gray-300) 1px, transparent 1px);
-  background-size: 20px 20px;
-}
-
-.background-pattern-grid {
-  background-image: linear-gradient(var(--color-gray-300) 1px, transparent 1px),
-                    linear-gradient(90deg, var(--color-gray-300) 1px, transparent 1px);
-  background-size: 20px 20px;
-}
-
-.background-pattern-diagonal {
-  background-image: repeating-linear-gradient(
-    45deg,
-    transparent,
-    transparent 10px,
-    var(--color-gray-300) 10px,
-    var(--color-gray-300) 11px
-  );
-}
-
-
-/* Dark mode adjustments for patterns */
-.dark .background-pattern-dots {
-  background-image: radial-gradient(circle, var(--color-gray-600) 1px, transparent 1px);
-}
-
-.dark .background-pattern-grid {
-  background-image: linear-gradient(var(--color-gray-600) 1px, transparent 1px),
-                    linear-gradient(90deg, var(--color-gray-600) 1px, transparent 1px);
-}
-
-.dark .background-pattern-diagonal {
-  background-image: repeating-linear-gradient(
-    45deg,
-    transparent,
-    transparent 10px,
-    var(--color-gray-600) 10px,
-    var(--color-gray-600) 11px
-  );
-}
 
 /* Layout & Spacing Customization */
 /* Message Spacing - Target actual message containers */
