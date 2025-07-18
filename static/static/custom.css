@@ -55,7 +55,7 @@
 
 /* Background Patterns */
 :root {
-  --background-pattern-opacity: 0.1;
+  --background-pattern-opacity: 0.05;
 }
 
 .background-pattern-dots {

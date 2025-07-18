@@ -24,7 +24,7 @@
 
 	// Background pattern settings
 	let backgroundPattern = 'none';
-	let backgroundOpacity = 50;
+	let backgroundOpacity = 5;
 
 	let showAdvanced = false;
 
@@ -113,7 +113,16 @@
 	};
 
 	onMount(async () => {
-		selectedTheme = localStorage.theme ?? 'system';
+		// Migrate deprecated themes
+		let currentTheme = localStorage.theme ?? 'system';
+		if (currentTheme === 'dark') {
+			currentTheme = 'oled-dark';
+			localStorage.setItem('theme', currentTheme);
+		} else if (currentTheme === 'light') {
+			currentTheme = 'mai-minimalist';
+			localStorage.setItem('theme', currentTheme);
+		}
+		selectedTheme = currentTheme;
 
 		languages = await getLanguages();
 
@@ -122,7 +131,7 @@
 
 		// Load background pattern settings
 		backgroundPattern = $settings.backgroundPattern || 'none';
-		backgroundOpacity = $settings.backgroundOpacity || 50;
+		backgroundOpacity = $settings.backgroundOpacity || 5;
 
 		params = { ...params, ...$settings.params };
 		params.stop = $settings?.params?.stop ? ($settings?.params?.stop ?? []).join(',') : null;
@@ -214,19 +223,17 @@
 				console.log('Setting meta theme color: ' + _theme);
 				metaThemeColor.setAttribute(
 					'content',
-					_theme === 'dark'
-						? '#171717'
-						: _theme === 'oled-dark'
-							? '#000000'
-							: _theme === 'mai-professional'
-								? '#020617'
-								: _theme === 'mai-creative'
-									? '#0f0a2e'
-									: _theme === 'mai-minimalist'
-										? '#ffffff'
-										: _theme === 'mai-warm'
-											? '#0c0a09'
-											: '#ffffff'
+					_theme === 'oled-dark'
+						? '#000000'
+						: _theme === 'mai-professional'
+							? '#020617'
+							: _theme === 'mai-creative'
+								? '#0f0a2e'
+								: _theme === 'mai-minimalist'
+									? '#ffffff'
+									: _theme === 'mai-warm'
+										? '#0c0a09'
+										: '#ffffff'
 				);
 			}
 		}
@@ -263,8 +270,6 @@
 				<div class="grid grid-cols-2 gap-2">
 					{#each [
 						{ value: 'system', label: 'System', emoji: '⚙️', colors: ['#f3f4f6', '#1f2937'] },
-						{ value: 'light', label: 'Light', emoji: '☀️', colors: ['#ffffff', '#f9fafb'] },
-						{ value: 'dark', label: 'Dark', emoji: '🌑', colors: ['#1f2937', '#111827'] },
 						{ value: 'oled-dark', label: 'OLED Dark', emoji: '🌃', colors: ['#000000', '#050505'] },
 						{ value: 'mai-professional', label: 'mAI Professional', emoji: '💼', colors: ['#020617', '#1e293b'] },
 						{ value: 'mai-creative', label: 'mAI Creative', emoji: '🎨', colors: ['#0f0a2e', '#2d1b69'] },
