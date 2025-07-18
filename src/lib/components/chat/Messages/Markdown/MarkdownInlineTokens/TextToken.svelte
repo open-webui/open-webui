@@ -12,7 +12,7 @@
 	{token?.raw}
 {:else}
 	{#each texts as text}
-		<span class="" transition:fade>
+		<span class="" transition:fade={{ duration: 100 }}>
 			{text}
 		</span>
 	{/each}

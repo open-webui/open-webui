@@ -192,7 +192,13 @@
 			<AlertRenderer {token} {alert} />
 		{:else}
 			<blockquote dir="auto">
-				<svelte:self id={`${id}-${tokenIdx}`} tokens={token.tokens} {onTaskClick} {onSourceClick} />
+				<svelte:self
+					id={`${id}-${tokenIdx}`}
+					tokens={token.tokens}
+					{done}
+					{onTaskClick}
+					{onSourceClick}
+				/>
 			</blockquote>
 		{/if}
 	{:else if token.type === 'list'}
@@ -222,6 +228,7 @@
 							id={`${id}-${tokenIdx}-${itemIdx}`}
 							tokens={item.tokens}
 							top={token.loose}
+							{done}
 							{onTaskClick}
 							{onSourceClick}
 						/>
@@ -254,6 +261,7 @@
 									id={`${id}-${tokenIdx}-${itemIdx}`}
 									tokens={item.tokens}
 									top={token.loose}
+									{done}
 									{onTaskClick}
 									{onSourceClick}
 								/>
@@ -263,6 +271,7 @@
 								id={`${id}-${tokenIdx}-${itemIdx}`}
 								tokens={item.tokens}
 								top={token.loose}
+								{done}
 								{onTaskClick}
 								{onSourceClick}
 							/>
@@ -284,6 +293,7 @@
 					id={`${id}-${tokenIdx}-d`}
 					tokens={marked.lexer(token.text)}
 					attributes={token?.attributes}
+					{done}
 					{onTaskClick}
 					{onSourceClick}
 				/>
