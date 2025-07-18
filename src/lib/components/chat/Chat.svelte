@@ -1352,6 +1352,12 @@
 			);
 
 			history.messages[message.id] = message;
+
+			await tick();
+			if (autoScroll) {
+				scrollToBottom();
+			}
+
 			await chatCompletedHandler(
 				chatId,
 				message.model,
@@ -1361,6 +1367,8 @@
 		}
 
 		console.log(data);
+		await tick();
+
 		if (autoScroll) {
 			scrollToBottom();
 		}
