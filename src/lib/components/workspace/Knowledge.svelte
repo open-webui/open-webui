@@ -10,6 +10,7 @@
 	const i18n = getContext('i18n');
 
 	import { WEBUI_NAME, knowledge } from '$lib/stores';
+	import { APP_TAGLINE } from '$lib/constants';
 	import {
 		getKnowledgeBases,
 		deleteKnowledgeById,
@@ -83,7 +84,7 @@
 
 <svelte:head>
 	<title>
-		{$i18n.t('Knowledge')} • {$WEBUI_NAME}
+		{$i18n.t('Knowledge')} • {$WEBUI_NAME} | {APP_TAGLINE}
 	</title>
 </svelte:head>
 

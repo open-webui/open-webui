@@ -12,7 +12,7 @@
 
 	import { get, type Unsubscriber, type Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
-	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { WEBUI_BASE_URL, APP_TAGLINE } from '$lib/constants';
 
 	import {
 		chatId,
@@ -2036,7 +2036,7 @@
 	<title>
 		{$chatTitle
 			? `${$chatTitle.length > 30 ? `${$chatTitle.slice(0, 30)}...` : $chatTitle} • ${$WEBUI_NAME}`
-			: `${$WEBUI_NAME}`}
+			: `${$WEBUI_NAME} | ${APP_TAGLINE}`}
 	</title>
 </svelte:head>
 

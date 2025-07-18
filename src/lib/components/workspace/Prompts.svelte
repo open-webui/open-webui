@@ -6,6 +6,7 @@
 	import { goto } from '$app/navigation';
 	import { onMount, getContext } from 'svelte';
 	import { WEBUI_NAME, config, prompts as _prompts, user } from '$lib/stores';
+	import { APP_TAGLINE } from '$lib/constants';
 
 	import {
 		createNewPrompt,
@@ -106,7 +107,7 @@
 
 <svelte:head>
 	<title>
-		{$i18n.t('Prompts')} • {$WEBUI_NAME}
+		{$i18n.t('Prompts')} • {$WEBUI_NAME} | {APP_TAGLINE}
 	</title>
 </svelte:head>
 

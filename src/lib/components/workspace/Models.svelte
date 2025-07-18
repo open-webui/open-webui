@@ -12,6 +12,7 @@
 	const i18n = getContext('i18n');
 
 	import { WEBUI_NAME, config, mobile, models as _models, settings, user } from '$lib/stores';
+	import { APP_TAGLINE } from '$lib/constants';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import {
 		createNewModel,
@@ -220,7 +221,7 @@
 
 <svelte:head>
 	<title>
-		{$i18n.t('Models')} • {$WEBUI_NAME}
+		{$i18n.t('Models')} • {$WEBUI_NAME} | {APP_TAGLINE}
 	</title>
 </svelte:head>
 

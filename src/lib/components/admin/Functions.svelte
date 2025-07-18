@@ -4,6 +4,7 @@
 	const { saveAs } = fileSaver;
 
 	import { WEBUI_NAME, config, functions, models, settings } from '$lib/stores';
+	import { APP_TAGLINE } from '$lib/constants';
 	import { onMount, getContext, tick } from 'svelte';
 
 	import { goto } from '$app/navigation';
@@ -205,7 +206,7 @@
 
 <svelte:head>
 	<title>
-		{$i18n.t('Functions')} • {$WEBUI_NAME}
+		{$i18n.t('Functions')} • {$WEBUI_NAME} | {APP_TAGLINE}
 	</title>
 </svelte:head>
 
