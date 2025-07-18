@@ -39,7 +39,7 @@ This is mAI, a customized fork of Open WebUI - a feature-rich, extensible AI pla
 
 ### Start Development Environment
 ```bash
-# Start both frontend and backend servers
+# Start both frontend and backend servers (recommended)
 ./start-dev.sh
 
 # OR manually:
@@ -49,28 +49,37 @@ source .venv/bin/activate
 sh dev.sh  # Starts uvicorn on port 8080
 
 # Terminal 2: Frontend
-npm run dev  # Starts Vite dev server on port 5173
+npm run dev        # Starts Vite dev server on port 5173
+npm run dev:5050   # Alternative: Start on port 5050
 ```
+
+### Development Testing Policy
+**IMPORTANT: DO NOT test solutions by running the development server.** The user always has the server and Open WebUI application running in a new tab and sees changes in real time or reloads the server manually. Focus on code verification through build processes and type checking instead.
 
 ### Build and Testing
 ```bash
 # Frontend
-npm run build              # Build for production
-npm run preview           # Preview production build
-npm run check             # Type checking with svelte-check
-npm run test:frontend     # Run Vitest tests
+npm run build              # Build for production (includes pyodide fetch)
+npm run build:watch        # Build for production with watch mode
+npm run preview            # Preview production build
+npm run check              # Type checking with svelte-check
+npm run check:watch        # Type checking with watch mode
+npm run test:frontend      # Run Vitest tests
 
 # Linting and Formatting
-npm run lint              # Lint frontend, types, and backend
-npm run lint:frontend     # ESLint for frontend
-npm run lint:backend      # Pylint for backend
-npm run format            # Prettier for frontend
-npm run format:backend    # Black for backend
+npm run lint               # Lint frontend, types, and backend
+npm run lint:frontend      # ESLint for frontend with auto-fix
+npm run lint:types         # Type checking (alias for check)
+npm run lint:backend       # Pylint for backend
+npm run format             # Prettier for frontend
+npm run format:backend     # Black for backend
 
-# Backend Testing
+# Internationalization
+npm run i18n:parse         # Parse i18n files and format them
+
+# Backend Development
 cd backend
-pytest                    # Run backend tests
-black .                   # Format Python code
+black .                    # Format Python code
 ```
 
 ### Database Operations
@@ -143,13 +152,13 @@ make update              # Pull, rebuild, restart
 
 ### Frontend Testing
 - **Unit Tests**: Vitest for component and utility testing
-- **E2E Tests**: Cypress for user flow testing
+- **E2E Tests**: Cypress for user flow testing (use `npm run cy:open`)
 - **Type Safety**: TypeScript with strict mode
 
 ### Backend Testing
-- **Unit Tests**: pytest for individual function testing
-- **Integration Tests**: Database and API endpoint testing
-- **Docker Testing**: pytest-docker for containerized testing
+- **Code Quality**: Black for formatting, Pylint for linting
+- **Type Safety**: Python type hints with modern syntax
+- **Manual Testing**: Use dev.sh for development server testing
 
 ## Development Workflow
 
@@ -162,6 +171,21 @@ make update              # Pull, rebuild, restart
 - **Frontend**: ESLint + Prettier + TypeScript
 - **Backend**: Black + Pylint + mypy (type checking)
 - **Pre-commit**: Automated formatting and linting
+
+### Custom Branding & Customization
+- **Logo Assets**: Located in `static/static/` and `backend/open_webui/static/`
+- **Custom CSS**: `static/custom.css` for theme overrides
+- **Themes**: `static/themes/` for custom theme definitions
+- **Branding Rules**: See `.cursor/rules/project.mdc` for detailed customization guidelines
+- **License Compliance**: White-labeling allowed for ≤50 users with attribution requirements
+
+### Customization Workflow (From .cursor/rules/project.mdc)
+- **ALWAYS** work on `customization` branch (never commit to main)
+- **ALWAYS** create backups before modifications: `cp -r static/static customization-backup/static-$(date +%Y%m%d)`
+- **Required Testing**: All theme variants (Light/Dark/OLED/"Her"), mobile responsiveness
+- **Asset Requirements**: Logo files <100KB, proper format requirements (PNG for logos, ICO for favicons, SVG for scalable)
+- **Commit Prefixes**: `brand:`, `theme:`, `ui:`, `assets:` for organized changes
+- **Quality Standards**: WCAG 2.1 AA compliance, contrast ratios 4.5:1 minimum
 
 ### Deployment
 - **Docker**: Multi-stage builds for production
@@ -218,3 +242,38 @@ make update              # Pull, rebuild, restart
 - **Dynamic Loading**: Lazy-loaded translation files
 - **RTL Support**: Right-to-left language support
 - **Pluralization**: Advanced plural form handling
+
+## Single Test Execution
+
+### Running Individual Tests
+```bash
+# Frontend single test
+npm run test:frontend -- --run path/to/test.test.ts
+
+# Open Cypress for E2E testing
+npm run cy:open
+
+# Backend code quality
+cd backend
+black .                    # Format specific files
+pylint backend/            # Lint backend code
+```
+
+## Environment Variables
+
+### Key Environment Variables
+- `PORT` - Backend server port (default: 8080)
+- `OLLAMA_BASE_URL` - Ollama server URL
+- `OPENAI_API_KEY` - OpenAI API key
+- `HF_HUB_OFFLINE` - Set to `1` for offline mode
+- `ENV` - Environment (dev/prod)
+
+### Setting Environment Variables
+```bash
+# Development
+export PORT=8080
+export OLLAMA_BASE_URL=http://localhost:11434
+
+# Production
+export ENV=prod
+```

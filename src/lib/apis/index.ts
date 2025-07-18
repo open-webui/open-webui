@@ -465,7 +465,7 @@ export const executeToolServer = async (
 			...(token && { authorization: `Bearer ${token}` })
 		};
 
-		let requestOptions: RequestInit = {
+		const requestOptions: RequestInit = {
 			method: httpMethod.toUpperCase(),
 			headers
 		};
@@ -1014,7 +1014,7 @@ export const getPipelinesList = async (token: string = '') => {
 		throw error;
 	}
 
-	let pipelines = res?.data ?? [];
+	const pipelines = res?.data ?? [];
 	return pipelines;
 };
 
@@ -1157,7 +1157,7 @@ export const getPipelines = async (token: string, urlIdx?: string) => {
 		throw error;
 	}
 
-	let pipelines = res?.data ?? [];
+	const pipelines = res?.data ?? [];
 	return pipelines;
 };
 

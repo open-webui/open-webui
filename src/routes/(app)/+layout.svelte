@@ -49,6 +49,15 @@
 
 	const i18n = getContext('i18n');
 
+	// Update CSS variables when background pattern settings change
+	$: if (typeof document !== 'undefined' && $settings) {
+		if ($settings.backgroundPattern !== 'none' && $settings.backgroundOpacity !== undefined) {
+			document.documentElement.style.setProperty('--background-pattern-opacity', ($settings.backgroundOpacity / 100).toString());
+		} else {
+			document.documentElement.style.removeProperty('--background-pattern-opacity');
+		}
+	}
+
 	let loaded = false;
 	let DB = null;
 	let localDBChats = [];

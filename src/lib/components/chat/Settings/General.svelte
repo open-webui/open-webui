@@ -22,6 +22,10 @@
 	let notificationEnabled = false;
 	let system = '';
 
+	// Background pattern settings
+	let backgroundPattern = 'none';
+	let backgroundOpacity = 50;
+
 	let showAdvanced = false;
 
 	const toggleNotification = async () => {
@@ -66,9 +70,13 @@
 		num_gpu: null
 	};
 
+	// Background pattern variables are initialized in onMount and updated on save
+
 	const saveHandler = async () => {
 		saveSettings({
 			system: system !== '' ? system : undefined,
+			backgroundPattern: backgroundPattern,
+			backgroundOpacity: backgroundOpacity,
 			params: {
 				stream_response: params.stream_response !== null ? params.stream_response : undefined,
 				function_calling: params.function_calling !== null ? params.function_calling : undefined,
@@ -111,6 +119,10 @@
 
 		notificationEnabled = $settings.notificationEnabled ?? false;
 		system = $settings.system ?? '';
+
+		// Load background pattern settings
+		backgroundPattern = $settings.backgroundPattern || 'none';
+		backgroundOpacity = $settings.backgroundOpacity || 50;
 
 		params = { ...params, ...$settings.params };
 		params.stop = $settings?.params?.stop ? ($settings?.params?.stop ?? []).join(',') : null;
@@ -342,6 +354,46 @@
 							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
 						{/if}
 					</button>
+				</div>
+			</div>
+
+			<!-- Background Pattern Settings -->
+			<div class="mt-4">
+				<div class="mb-3 text-xs font-medium">{$i18n.t('Background Pattern')}</div>
+				
+				<!-- Pattern Type -->
+				<div class="mb-3">
+					<div class="flex w-full justify-between items-center">
+						<div class="self-center text-xs font-medium">{$i18n.t('Pattern Type')}</div>
+						<select
+							bind:value={backgroundPattern}
+							class="w-fit pr-8 rounded-sm py-1 px-2 text-xs bg-transparent text-right {$settings.highContrastMode
+								? 'border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800'
+								: 'dark:bg-gray-900 outline-hidden'}"
+						>
+							<option value="none">{$i18n.t('None')}</option>
+							<option value="dots">{$i18n.t('Dots')}</option>
+							<option value="grid">{$i18n.t('Grid')}</option>
+							<option value="diagonal">{$i18n.t('Diagonal')}</option>
+						</select>
+					</div>
+				</div>
+
+				<!-- Pattern Opacity -->
+				<div class="mb-3">
+					<div class="flex w-full justify-between items-center">
+						<div class="self-center text-xs font-medium">{$i18n.t('Pattern Opacity')}</div>
+						<div class="flex items-center space-x-2">
+							<input
+								type="range"
+								min="0"
+								max="100"
+								bind:value={backgroundOpacity}
+								class="w-20 h-1 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
+							/>
+							<span class="text-xs text-gray-600 dark:text-gray-400 w-8">{backgroundOpacity}%</span>
+						</div>
+					</div>
 				</div>
 			</div>
 		</div>

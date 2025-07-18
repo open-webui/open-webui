@@ -19,7 +19,7 @@ const packages = [
 
 import { loadPyodide } from 'pyodide';
 import { setGlobalDispatcher, ProxyAgent } from 'undici';
-import { writeFile, readFile, copyFile, readdir, rmdir } from 'fs/promises';
+import { writeFile, readFile, copyFile, readdir, rm } from 'fs/promises';
 
 /**
  * Loading network proxy configurations from the environment variables.
@@ -73,7 +73,7 @@ async function downloadPackages() {
 
 		if (pyodideVersion !== pyodidePackageVersion) {
 			console.log('Pyodide version mismatch, removing static/pyodide directory');
-			await rmdir('static/pyodide', { recursive: true });
+			await rm('static/pyodide', { recursive: true, force: true });
 		}
 	} catch (err) {
 		console.log('Pyodide package not found, proceeding with download.', err);

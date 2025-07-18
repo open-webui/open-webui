@@ -1,4 +1,4 @@
-/* mAI Backend Custom Styles - Theme-specific overrides and background patterns */
+/* mAI Custom Styles - Theme-specific overrides and background patterns */
 
 /* Professional theme specific overrides - Corporate Navy */
 .mai-professional .mai-accent {
@@ -22,35 +22,19 @@
 
 
 /* Layout & Spacing Customization */
-/* Message Spacing */
-.message-spacing-compact .message-item {
+/* Message Spacing - Target actual message containers */
+.message-spacing-compact .flex.flex-col.justify-between.px-5.mb-3 {
   margin-bottom: 0.5rem;
 }
 
-.message-spacing-normal .message-item {
+.message-spacing-normal .flex.flex-col.justify-between.px-5.mb-3 {
   margin-bottom: 1rem;
 }
 
-.message-spacing-relaxed .message-item {
+.message-spacing-relaxed .flex.flex-col.justify-between.px-5.mb-3 {
   margin-bottom: 1.5rem;
 }
 
-/* Chat Width */
-.chat-width-narrow .chat-container {
-  max-width: 600px;
-}
-
-.chat-width-normal .chat-container {
-  max-width: 800px;
-}
-
-.chat-width-wide .chat-container {
-  max-width: 1200px;
-}
-
-.chat-width-full .chat-container {
-  max-width: none;
-}
 
 /* Font Size */
 .font-size-small {

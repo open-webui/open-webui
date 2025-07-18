@@ -42,23 +42,73 @@
 					localStorage.theme = 'system';
 				}
 
-				if (localStorage.theme === 'system') {
+				const theme = localStorage.theme;
+
+				if (theme === 'system') {
 					document.documentElement.classList.add(prefersDarkTheme ? 'dark' : 'light');
 					metaThemeColorTag.setAttribute('content', prefersDarkTheme ? '#171717' : '#ffffff');
-				} else if (localStorage.theme === 'oled-dark') {
+				} else if (theme === 'oled-dark') {
 					document.documentElement.style.setProperty('--color-gray-800', '#101010');
 					document.documentElement.style.setProperty('--color-gray-850', '#050505');
 					document.documentElement.style.setProperty('--color-gray-900', '#000000');
 					document.documentElement.style.setProperty('--color-gray-950', '#000000');
 					document.documentElement.classList.add('dark');
 					metaThemeColorTag.setAttribute('content', '#000000');
-				} else if (localStorage.theme === 'light') {
+				} else if (theme === 'light') {
 					document.documentElement.classList.add('light');
 					metaThemeColorTag.setAttribute('content', '#ffffff');
-				} else if (localStorage.theme === 'her') {
+				} else if (theme === 'her') {
 					document.documentElement.classList.add('dark');
 					document.documentElement.classList.add('her');
 					metaThemeColorTag.setAttribute('content', '#983724');
+				} else if (theme === 'mai-professional') {
+					// Deep Navy Corporate Theme
+					document.documentElement.classList.add('dark');
+					document.documentElement.style.setProperty('--color-gray-800', '#1e293b');
+					document.documentElement.style.setProperty('--color-gray-850', '#0f172a');
+					document.documentElement.style.setProperty('--color-gray-900', '#020617');
+					document.documentElement.style.setProperty('--color-gray-950', '#020617');
+					document.documentElement.style.setProperty('--color-primary', '#2563eb');
+					document.documentElement.style.setProperty('--color-secondary', '#475569');
+					document.documentElement.style.setProperty('--color-accent', '#06b6d4');
+					metaThemeColorTag.setAttribute('content', '#020617');
+				} else if (theme === 'mai-creative') {
+					// Vibrant Purple Creative Theme
+					document.documentElement.classList.add('dark');
+					document.documentElement.style.setProperty('--color-gray-800', '#2d1b69');
+					document.documentElement.style.setProperty('--color-gray-850', '#1e1065');
+					document.documentElement.style.setProperty('--color-gray-900', '#0f0a2e');
+					document.documentElement.style.setProperty('--color-gray-950', '#0f0a2e');
+					document.documentElement.style.setProperty('--color-primary', '#a855f7');
+					document.documentElement.style.setProperty('--color-secondary', '#ec4899');
+					document.documentElement.style.setProperty('--color-accent', '#06b6d4');
+					metaThemeColorTag.setAttribute('content', '#0f0a2e');
+				} else if (theme === 'mai-minimalist') {
+					// Ultra-clean Monochrome Theme
+					document.documentElement.classList.add('light');
+					document.documentElement.style.setProperty('--color-gray-50', '#ffffff');
+					document.documentElement.style.setProperty('--color-gray-100', '#f8f9fa');
+					document.documentElement.style.setProperty('--color-gray-200', '#e9ecef');
+					document.documentElement.style.setProperty('--color-gray-300', '#dee2e6');
+					document.documentElement.style.setProperty('--color-gray-400', '#ced4da');
+					document.documentElement.style.setProperty('--color-gray-500', '#6c757d');
+					document.documentElement.style.setProperty('--color-gray-600', '#495057');
+					document.documentElement.style.setProperty('--color-gray-700', '#343a40');
+					document.documentElement.style.setProperty('--color-primary', '#212529');
+					document.documentElement.style.setProperty('--color-secondary', '#6c757d');
+					document.documentElement.style.setProperty('--color-accent', '#495057');
+					metaThemeColorTag.setAttribute('content', '#ffffff');
+				} else if (theme === 'mai-warm') {
+					// Cozy Amber Theme
+					document.documentElement.classList.add('dark');
+					document.documentElement.style.setProperty('--color-gray-800', '#451a03');
+					document.documentElement.style.setProperty('--color-gray-850', '#292524');
+					document.documentElement.style.setProperty('--color-gray-900', '#1c1917');
+					document.documentElement.style.setProperty('--color-gray-950', '#0c0a09');
+					document.documentElement.style.setProperty('--color-primary', '#f59e0b');
+					document.documentElement.style.setProperty('--color-secondary', '#ea580c');
+					document.documentElement.style.setProperty('--color-accent', '#dc2626');
+					metaThemeColorTag.setAttribute('content', '#0c0a09');
 				} else {
 					document.documentElement.classList.add('dark');
 					metaThemeColorTag.setAttribute('content', '#171717');
@@ -77,6 +127,70 @@
 						}
 					}
 				});
+
+				// Define the global applyTheme function for use by components
+				window.applyTheme = function() {
+					const currentTheme = localStorage.theme;
+					if (currentTheme) {
+						// Re-apply current theme to ensure consistency
+						if (currentTheme === 'system') {
+							const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+							document.documentElement.classList.remove('dark', 'light');
+							document.documentElement.classList.add(isDark ? 'dark' : 'light');
+							metaThemeColorTag.setAttribute('content', isDark ? '#171717' : '#ffffff');
+						} else if (currentTheme.startsWith('mai-')) {
+							// Re-apply mAI custom theme
+							document.documentElement.classList.remove('dark', 'light');
+							
+							if (currentTheme === 'mai-minimalist') {
+								document.documentElement.classList.add('light');
+							} else {
+								document.documentElement.classList.add('dark');
+							}
+							
+							// Apply theme-specific colors again to ensure they stick
+							setTimeout(() => {
+								if (currentTheme === 'mai-professional') {
+									document.documentElement.style.setProperty('--color-gray-800', '#1e293b');
+									document.documentElement.style.setProperty('--color-gray-850', '#0f172a');
+									document.documentElement.style.setProperty('--color-gray-900', '#020617');
+									document.documentElement.style.setProperty('--color-gray-950', '#020617');
+									document.documentElement.style.setProperty('--color-primary', '#2563eb');
+									document.documentElement.style.setProperty('--color-secondary', '#475569');
+									document.documentElement.style.setProperty('--color-accent', '#06b6d4');
+								} else if (currentTheme === 'mai-creative') {
+									document.documentElement.style.setProperty('--color-gray-800', '#2d1b69');
+									document.documentElement.style.setProperty('--color-gray-850', '#1e1065');
+									document.documentElement.style.setProperty('--color-gray-900', '#0f0a2e');
+									document.documentElement.style.setProperty('--color-gray-950', '#0f0a2e');
+									document.documentElement.style.setProperty('--color-primary', '#a855f7');
+									document.documentElement.style.setProperty('--color-secondary', '#ec4899');
+									document.documentElement.style.setProperty('--color-accent', '#06b6d4');
+								} else if (currentTheme === 'mai-minimalist') {
+									document.documentElement.style.setProperty('--color-gray-50', '#ffffff');
+									document.documentElement.style.setProperty('--color-gray-100', '#f8f9fa');
+									document.documentElement.style.setProperty('--color-gray-200', '#e9ecef');
+									document.documentElement.style.setProperty('--color-gray-300', '#dee2e6');
+									document.documentElement.style.setProperty('--color-gray-400', '#ced4da');
+									document.documentElement.style.setProperty('--color-gray-500', '#6c757d');
+									document.documentElement.style.setProperty('--color-gray-600', '#495057');
+									document.documentElement.style.setProperty('--color-gray-700', '#343a40');
+									document.documentElement.style.setProperty('--color-primary', '#212529');
+									document.documentElement.style.setProperty('--color-secondary', '#6c757d');
+									document.documentElement.style.setProperty('--color-accent', '#495057');
+								} else if (currentTheme === 'mai-warm') {
+									document.documentElement.style.setProperty('--color-gray-800', '#451a03');
+									document.documentElement.style.setProperty('--color-gray-850', '#292524');
+									document.documentElement.style.setProperty('--color-gray-900', '#1c1917');
+									document.documentElement.style.setProperty('--color-gray-950', '#0c0a09');
+									document.documentElement.style.setProperty('--color-primary', '#f59e0b');
+									document.documentElement.style.setProperty('--color-secondary', '#ea580c');
+									document.documentElement.style.setProperty('--color-accent', '#dc2626');
+								}
+							}, 10);
+						}
+					}
+				};
 				const isDarkMode = document.documentElement.classList.contains('dark');
 
 				const logo = document.createElement('img');

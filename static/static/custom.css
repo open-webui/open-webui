@@ -59,32 +59,32 @@
 }
 
 .background-pattern-dots {
-  background-image: radial-gradient(circle, rgba(var(--color-gray-900), var(--background-pattern-opacity)) 1px, transparent 1px);
+  background-image: radial-gradient(circle, rgba(0, 0, 0, var(--background-pattern-opacity)) 1px, transparent 1px);
   background-size: 20px 20px;
 }
 
 .dark .background-pattern-dots {
-  background-image: radial-gradient(circle, rgba(var(--color-gray-100), var(--background-pattern-opacity)) 1px, transparent 1px);
+  background-image: radial-gradient(circle, rgba(255, 255, 255, var(--background-pattern-opacity)) 1px, transparent 1px);
 }
 
 .background-pattern-grid {
   background-image: 
-    linear-gradient(rgba(var(--color-gray-900), var(--background-pattern-opacity)) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(var(--color-gray-900), var(--background-pattern-opacity)) 1px, transparent 1px);
+    linear-gradient(rgba(0, 0, 0, var(--background-pattern-opacity)) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, var(--background-pattern-opacity)) 1px, transparent 1px);
   background-size: 20px 20px;
 }
 
 .dark .background-pattern-grid {
   background-image: 
-    linear-gradient(rgba(var(--color-gray-100), var(--background-pattern-opacity)) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(var(--color-gray-100), var(--background-pattern-opacity)) 1px, transparent 1px);
+    linear-gradient(rgba(255, 255, 255, var(--background-pattern-opacity)) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, var(--background-pattern-opacity)) 1px, transparent 1px);
 }
 
 .background-pattern-diagonal {
   background-image: repeating-linear-gradient(
     45deg,
-    rgba(var(--color-gray-900), calc(var(--background-pattern-opacity) * 0.5)) 0px,
-    rgba(var(--color-gray-900), calc(var(--background-pattern-opacity) * 0.5)) 1px,
+    rgba(0, 0, 0, calc(var(--background-pattern-opacity) * 0.5)) 0px,
+    rgba(0, 0, 0, calc(var(--background-pattern-opacity) * 0.5)) 1px,
     transparent 1px,
     transparent 20px
   );
@@ -93,8 +93,8 @@
 .dark .background-pattern-diagonal {
   background-image: repeating-linear-gradient(
     45deg,
-    rgba(var(--color-gray-100), calc(var(--background-pattern-opacity) * 0.5)) 0px,
-    rgba(var(--color-gray-100), calc(var(--background-pattern-opacity) * 0.5)) 1px,
+    rgba(255, 255, 255, calc(var(--background-pattern-opacity) * 0.5)) 0px,
+    rgba(255, 255, 255, calc(var(--background-pattern-opacity) * 0.5)) 1px,
     transparent 1px,
     transparent 20px
   );

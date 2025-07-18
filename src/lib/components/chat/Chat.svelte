@@ -2190,7 +2190,7 @@
 								</div>
 							</div>
 						{:else}
-							<div class="overflow-auto w-full h-full flex items-center">
+							<div class="overflow-auto w-full h-full flex items-center {$settings?.backgroundPattern !== 'none' && $settings?.backgroundPattern ? `background-pattern-${$settings.backgroundPattern}` : ''}" style={$settings?.backgroundPattern !== 'none' && $settings?.backgroundOpacity !== undefined ? `--background-pattern-opacity: ${$settings.backgroundOpacity / 100};` : ''}>
 								<Placeholder
 									{history}
 									{selectedModels}
