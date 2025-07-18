@@ -958,54 +958,54 @@ except Exception as e:
     log.exception(f"Error loading DEFAULT_PROMPT_SUGGESTIONS: {e}")
     default_prompt_suggestions = []
 if default_prompt_suggestions == []:
-    all_suggestions = [
+    all_suggestions =  [
         {
             "title": ["Find Document"],
             "content": "Help me find the official document, policy, or guideline related to",
             "icon_name": "find_in_page",
-            "icon_color": "#36383b"
+            "icon_color": "#F57851"
         },
         {
             "title": ["Summarize Text"],
             "content": "Please summarize the following text and highlight the key points or conclusions",
             "icon_name": "lightbulb",
-            "icon_color": "#20a17f"
+            "icon_color": "#CC7A00"
         },
-        {
-            "title": ["Draft Message"],
-            "content": "Help me draft a message, such as an email or memo regarding the following",
-            "icon_name": "contract_edit",
-            "icon_color": "#cc7a00"
-        },
+        # {
+        #     "title": ["Draft Message"],
+        #     "content": "Help me draft a message, such as an email or memo regarding the following",
+        #     "icon_name": "contract_edit",
+        #     "icon_color": "#0043C2"
+        # },
         {
             "title": ["Compare Content"],
             "content": "Compare the following documents/text and highlight the key differences or similarities.",
             "icon_name": "library_books",
-            "icon_color": "#36383b"
+            "icon_color": "#008A57"
         },
         {
             "title": ["Explain Simply"],
             "content": "Explain the following in a simple and easy-to-understand way",
             "icon_name": "psychology",
-            "icon_color": "#008a57"
+            "icon_color": "#20A17F"
         },
+        # {
+        #     "title": ["Make a Plan"],
+        #     "content": "Help me create a step-by-step plan to accomplish the following",
+        # "icon_name": "flowchart",
+        # "icon_color": "#0077B6"
+        # },
+        # {
+        # "title": ["Analyze Data"],
+        # "content": "Help me analyze the following dataset and identify key patterns and insights",
+        # "icon_name": "finance_mode",
+        # "icon_color": "#9239FF"
+        # },
         {
-            "title": ["Make a Plan"],
-            "content": "Help me create a step-by-step plan to accomplish the following",
-            "icon_name": "flowchart",
-            "icon_color": "#9239FF"
-        },
-        {
-            "title": ["Analyze Data"],
-            "content": "Help me analyze the following dataset and identify key patterns and insights",
-            "icon_name": "finance_mode",
-            "icon_color": "#20a17f"
-        },
-        {
-            "title": ["Brainstorm Ideas"],
-            "content": "Let's brainstorm creative ideas for the following",
-            "icon_name": "lightbulb",
-            "icon_color": "#cc7a00"
+        "title": ["Brainstorm Ideas"],
+        "content": "Let's brainstorm creative ideas for the following",
+        "icon_name": "lightbulb",
+        "icon_color": "#cc7a00"
         }
     ]
 

@@ -295,7 +295,7 @@
 				showDeleteConfirm = false;
 			}}
 		>
-			<div class="text-neutrals-700 text-[16px] leading-[24px] ">
+			<div class="pb-[16px] text-neutrals-700 text-[16px] leading-[24px] ">
 				{$i18n.t('This will delete')} <span class="  font-bold">{selectedNote.title}</span>.
 			</div>
 		</DeleteConfirmDialog>

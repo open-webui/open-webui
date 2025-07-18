@@ -345,12 +345,12 @@
 		</div>
 	{:else}
 		<a
-			class=" w-full flex items-center justify-between text-neutrals-800 text-[16px] leading-[24px] font-medium rounded-[8px] px-[16px] py-[14px] {id === $chatId ||
+			class=" w-full flex items-center justify-between text-typography-titles link-style rounded-[8px] px-[16px] py-[15px] {id === $chatId ||
 			confirmEdit
-				? 'bg-gray-200 dark:bg-gray-900'
+				? 'bg-gradient-bg-2 dark:bg-gray-900'
 				: selected
-					? 'bg-gray-100 dark:bg-gray-950'
-					: ' group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
+					? 'bg-gradient-bg-2 dark:bg-gray-950'
+					: ' group-hover:bg-gradient-bg-2 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
 			href="/c/{id}"
 			on:click={() => {
 				dispatch('select');
@@ -375,10 +375,13 @@
 			on:focus={(e) => {}}
 			draggable="false"
 		>
-			<div class=" flex self-center flex-1 w-full">
+			<div class=" flex items-center justify-between self-center flex-1 w-full">
 				<div dir="auto" class="text-left self-center overflow-hidden w-full h-[20px]">
 					{title}
 				</div>
+				{#if className==='pinned'}<div class="visible group-hover:invisible "><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
+  <path d="M12.9175 10.1761L14.4079 11.6665V12.9165H10.6258V17.4998L10.0008 18.1248L9.37583 17.4998V12.9165H5.59375V11.6665L7.08417 10.1761V4.1665H6.25083V2.9165H13.7508V4.1665H12.9175V10.1761ZM7.37583 11.6665H12.6258L11.6675 10.7082V4.1665H8.33417V10.7082L7.37583 11.6665Z" fill="#23282E"/>
+</svg></div>{/if}
 			</div>
 		</a>
 	{/if}
@@ -390,12 +393,10 @@
 			? 'from-gray-200 dark:from-gray-900'
 			: selected
 				? 'from-gray-100 dark:from-gray-950'
-				: 'invisible group-hover:visible from-gray-100 dark:from-gray-950'}
+				: 'invisible group-hover:visible '}
             absolute {className === 'pr-2'
 			? 'right-[8px]'
-			: 'right-1'} top-[10px] py-1 pr-0.5 mr-1.5 pl-5 bg-linear-to-l from-80%
-
-              to-transparent"
+			: 'right-1'} top-[10px] py-1 pr-0.5 mr-1.5 pl-5 "
 		on:mouseenter={(e) => {
 			mouseOver = true;
 		}}
@@ -483,16 +484,9 @@
 							dispatch('select');
 						}}
 					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 16 16"
-							fill="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								d="M2 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM6.5 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM12.5 6.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"
-							/>
-						</svg>
+					<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
+  <path d="M10 16.0578C9.65625 16.0578 9.36201 15.9354 9.11729 15.6905C8.87243 15.4458 8.75 15.1516 8.75 14.8078C8.75 14.4641 8.87243 14.1697 9.11729 13.9249C9.36201 13.6802 9.65625 13.5578 10 13.5578C10.3438 13.5578 10.638 13.6802 10.8827 13.9249C11.1276 14.1697 11.25 14.4641 11.25 14.8078C11.25 15.1516 11.1276 15.4458 10.8827 15.6905C10.638 15.9354 10.3438 16.0578 10 16.0578ZM10 11.2501C9.65625 11.2501 9.36201 11.1277 9.11729 10.8828C8.87243 10.6381 8.75 10.3438 8.75 10.0001C8.75 9.65634 8.87243 9.36211 9.11729 9.11738C9.36201 8.87252 9.65625 8.75009 10 8.75009C10.3438 8.75009 10.638 8.87252 10.8827 9.11738C11.1276 9.36211 11.25 9.65634 11.25 10.0001C11.25 10.3438 11.1276 10.6381 10.8827 10.8828C10.638 11.1277 10.3438 11.2501 10 11.2501ZM10 6.44238C9.65625 6.44238 9.36201 6.32002 9.11729 6.0753C8.87243 5.83044 8.75 5.53613 8.75 5.19238C8.75 4.84863 8.87243 4.5544 9.11729 4.30967C9.36201 4.06481 9.65625 3.94238 10 3.94238C10.3438 3.94238 10.638 4.06481 10.8827 4.30967C11.1276 4.5544 11.25 4.84863 11.25 5.19238C11.25 5.53613 11.1276 5.83044 10.8827 6.0753C10.638 6.32002 10.3438 6.44238 10 6.44238Z" fill="#23282E"/>
+</svg>
 					</button>
 				</ChatMenu>
 

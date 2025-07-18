@@ -103,6 +103,10 @@ from open_webui.env import (
 
 from open_webui.constants import ERROR_MESSAGES
 
+from open_webui.config import BYPASS_WEB_SEARCH_WEB_LOADER
+
+from open_webui.env import GOV_GPT_WEB_SEARCH
+
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
@@ -1833,6 +1837,9 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
 async def process_web_search(
     request: Request, form_data: SearchForm, user=Depends(get_verified_user)
 ):
+    # logging.warning(
+    #     f"trying to web search with {request.app.state.config.WEB_SEARCH_ENGINE, form_data.queries}"
+    # )
 
     urls = []
     try:
@@ -1859,6 +1866,9 @@ async def process_web_search(
                         urls.append(item.link)
 
         urls = list(dict.fromkeys(urls))
+
+        log.info(f"search_results in process_web_search ------- : {search_results}") # have links till here
+
         log.debug(f"urls: {urls}")
 
     except Exception as e:
@@ -1869,25 +1879,52 @@ async def process_web_search(
             detail=ERROR_MESSAGES.WEB_SEARCH_ERROR(e),
         )
 
+    logging.warning(f"val of BYPASS_WEB_SEARCH_WEB_LOADER block ===== {BYPASS_WEB_SEARCH_WEB_LOADER}" )
     try:
         if request.app.state.config.BYPASS_WEB_SEARCH_WEB_LOADER:
-            search_results = [
-                item for result in search_results for item in result if result
-            ]
+            logging.warning(f"IN BYPASS_WEB_SEARCH_WEB_LOADER block ============")
 
-            docs = [
-                Document(
-                    page_content=result.snippet,
-                    metadata={
-                        "source": result.link,
-                        "title": result.title,
-                        "snippet": result.snippet,
-                        "link": result.link,
-                    },
-                )
-                for result in search_results
-                if hasattr(result, "snippet")
-            ]
+            if GOV_GPT_WEB_SEARCH:
+                # Normalize: Flatten nested lists
+                flattened_results = [item for sublist in search_results for item in sublist]
+
+                docs = []
+                for result in flattened_results:
+                    page_content = result.snippet or result.title or "No content"
+
+                    docs.append(
+                        {
+                            "page_content": page_content,
+                            "metadata": {
+                                "title": result.title,
+                                "link": result.link,
+                                "source": "serper"
+                            },
+                        }
+                    )
+
+                return {
+                    "docs": docs,
+                    "filenames": [r.link for r in flattened_results],
+                }
+
+            else:#existing code
+                search_results = [
+                    item for result in search_results for item in result if result
+                ]
+                docs = [
+                    Document(
+                        page_content=result.snippet,
+                        metadata={
+                            "source": result.link,
+                            "title": result.title,
+                            "snippet": result.snippet,
+                            "link": result.link,
+                        },
+                    )
+                    for result in search_results
+                    if hasattr(result, "snippet")
+                ]
         else:
             loader = get_web_loader(
                 urls,

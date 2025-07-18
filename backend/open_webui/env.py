@@ -564,3 +564,10 @@ PIP_PACKAGE_INDEX_OPTIONS = os.getenv("PIP_PACKAGE_INDEX_OPTIONS", "").split()
 ####################################
 
 EXTERNAL_PWA_MANIFEST_URL = os.environ.get("EXTERNAL_PWA_MANIFEST_URL")
+
+
+###################################
+GOV_GPT_WEB_SEARCH = os.getenv("GOV_GPT_WEB_SEARCH")
+MAX_RETRIALS_WEB_SEARCH = os.getenv("MAX_RETRIALS_WEB_SEARCH")
+CUSTOM_WEB_SEARCH_URL = os.getenv("CUSTOM_WEB_SEARCH_URL")
+
