@@ -4,9 +4,12 @@ import logging
 from typing import Optional
 
 from open_webui.models.memories import Memories, MemoryModel
+from open_webui.models.users import Users
 from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
-from open_webui.utils.auth import get_verified_user
+from open_webui.socket.main import REINDEX_STATE
+from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.env import SRC_LOG_LEVELS
+from asyncio import sleep
 
 
 log = logging.getLogger(__name__)
@@ -89,6 +92,57 @@ async def query_memory(
     )
 
     return results
+
+
+############################
+# ReindexMemory
+############################
+
+@router.post("/reindex", response_model=bool)
+async def reindex_all_memory(request: Request, user=Depends(get_admin_user)):
+    if REINDEX_STATE.get("memories_progress", 0) > 0:
+        return False
+    
+    REINDEX_STATE["memories_progress"] = 1  # marking as started, before the first memory is done
+    memories = Memories.get_memories()
+    total_memories = len(memories)
+
+    log.info(f"Starting reindexing for {total_memories} memories.")
+    for i, memory in enumerate(memories, start=1):
+        try:
+            VECTOR_DB_CLIENT.delete(
+                collection_name=f"user-memory-{memory.user_id}", ids=[memory.id]
+            )
+        except Exception as e:
+            log.error(f"Error deleting memory 'file-{memory.id}' from vector store: {str(e)}")
+        try:
+            VECTOR_DB_CLIENT.upsert(
+                collection_name=f"user-memory-{memory.user_id}",
+                items=[
+                    {
+                        "id": memory.id,
+                        "text": memory.content,
+                        "vector": request.app.state.EMBEDDING_FUNCTION(
+                            memory.content, user=Users.get_user_by_id(memory.user_id)
+                        ),
+                        "metadata": {
+                            "created_at": memory.created_at,
+                            "updated_at": memory.updated_at,
+                        },
+                    }
+                ],
+            )
+            REINDEX_STATE["memories_progress"] = max(int(i/total_memories*100), 1)  # never go below 1 again to mark as working
+            await sleep(0.1)
+        except Exception as e:
+            log.error(
+                f"Error processing memory {memory.id} (user-id: {memory.user_id}): {str(e)}"
+            )
+    REINDEX_STATE["memories_progress"] = 100
+    await sleep(2)  # allow UI to fetch final value
+    REINDEX_STATE["memories_progress"] = 0
+    log.info("Reindexing memories completed sucessfully.")
+    return True
 
 
 ############################

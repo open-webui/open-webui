@@ -2,6 +2,7 @@ from typing import List, Optional
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 import logging
+from asyncio import sleep
 
 from open_webui.models.knowledge import (
     Knowledges,
@@ -17,6 +18,7 @@ from open_webui.routers.retrieval import (
     process_files_batch,
     BatchProcessFilesForm,
 )
+from open_webui.socket.main import REINDEX_STATE
 from open_webui.storage.provider import Storage
 
 from open_webui.constants import ERROR_MESSAGES
@@ -173,14 +175,17 @@ async def reindex_knowledge_files(request: Request, user=Depends(get_verified_us
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
-
+    if REINDEX_STATE.get("knowledge_progress", 0) > 0:
+        return False
+    
+    REINDEX_STATE["knowledge_progress"] = 1  # marking as started, before the first knowledge is done
     knowledge_bases = Knowledges.get_knowledge_bases()
 
     log.info(f"Starting reindexing for {len(knowledge_bases)} knowledge bases")
 
     deleted_knowledge_bases = []
 
-    for knowledge_base in knowledge_bases:
+    for i, knowledge_base in enumerate(knowledge_bases, start=1):
         # -- Robust error handling for missing or invalid data
         if not knowledge_base.data or not isinstance(knowledge_base.data, dict):
             log.warning(
@@ -229,13 +234,20 @@ async def reindex_knowledge_files(request: Request, user=Depends(get_verified_us
             # Don't raise, just continue
             continue
 
+        finally:
+            REINDEX_STATE["knowledge_progress"] = max(int(i/len(knowledge_bases)*100), 1)  # never go below 1 again to mark as working
+            # this line un-blocks the API for the GET progress bar call
+            await sleep(0.1)
         if failed_files:
             log.warning(
                 f"Failed to process {len(failed_files)} files in knowledge base {knowledge_base.id}"
             )
             for failed in failed_files:
                 log.warning(f"File ID: {failed['file_id']}, Error: {failed['error']}")
-
+    
+    REINDEX_STATE["knowledge_progress"] = 100
+    await sleep(2)  # allow UI to fetch final value
+    REINDEX_STATE["knowledge_progress"] = 0
     log.info(
         f"Reindexing completed. Deleted {len(deleted_knowledge_bases)} invalid knowledge bases: {deleted_knowledge_bases}"
     )

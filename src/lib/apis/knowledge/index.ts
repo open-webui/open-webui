@@ -346,7 +346,7 @@ export const deleteKnowledgeById = async (token: string, id: string) => {
 	return res;
 };
 
-export const reindexKnowledgeFiles = async (token: string) => {
+export const reindexKnowledge = async (token: string) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/reindex`, {
@@ -363,7 +363,7 @@ export const reindexKnowledgeFiles = async (token: string) => {
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.error(err);
+			console.log(err);
 			return null;
 		});
 
@@ -371,5 +371,34 @@ export const reindexKnowledgeFiles = async (token: string) => {
 		throw error;
 	}
 
+	return res;
+};
+
+export const countKnowledges = async (token: string) => {
+	let error = null;
+	
+	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/?content=false`, {
+	  method: 'GET',
+	  headers: {
+		Accept: 'application/json',
+		'Content-Type': 'application/json',
+		authorization: `Bearer ${token}`,
+	  }
+	})
+	  .then(async (res) => {
+		if (!res.ok) throw await res.json();
+		const knowledges = await res.json();
+		return knowledges.length;
+	  })
+	  .catch((err) => {
+		error = err.detail;
+		console.log(err);
+		return 0;
+	  });
+  
+	if (error) {
+	  throw error;
+	}
+  
 	return res;
 };
