@@ -1,6 +1,7 @@
 {
-  "name": "mAI",
+  "name": "mAI | You + AI = superpowers! 🚀",
   "short_name": "mAI",
+  "description": "You + AI = superpowers! 🚀",
   "icons": [
     {
       "src": "/static/web-app-manifest-192x192.png",

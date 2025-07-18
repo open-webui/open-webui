@@ -166,6 +166,13 @@
 					</div>
 				</div>
 
+				<!-- mAI Tagline -->
+				<div class="flex justify-center mt-2 mb-4" in:fade={{ duration: 100, delay: 100 }}>
+					<div class="text-lg @sm:text-xl text-center text-gray-600 dark:text-gray-400 font-medium">
+						You + AI = superpowers! 🚀
+					</div>
+				</div>
+
 				<div class="flex mt-1 mb-2">
 					<div in:fade={{ duration: 100, delay: 50 }}>
 						{#if models[selectedModelIdx]?.info?.meta?.description ?? null}
