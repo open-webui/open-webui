@@ -804,6 +804,7 @@
 										floatingButtons={message?.done && !readOnly}
 										save={!readOnly}
 										preview={!readOnly}
+										done={message?.done ?? false}
 										{model}
 										onTaskClick={async (e) => {
 											console.log(e);

@@ -28,6 +28,8 @@
 	export let top = true;
 	export let attributes = {};
 
+	export let done = true;
+
 	export let save = false;
 	export let preview = false;
 
@@ -85,7 +87,12 @@
 		<hr class=" border-gray-100 dark:border-gray-850" />
 	{:else if token.type === 'heading'}
 		<svelte:element this={headerComponent(token.depth)} dir="auto">
-			<MarkdownInlineTokens id={`${id}-${tokenIdx}-h`} tokens={token.tokens} {onSourceClick} />
+			<MarkdownInlineTokens
+				id={`${id}-${tokenIdx}-h`}
+				tokens={token.tokens}
+				{done}
+				{onSourceClick}
+			/>
 		</svelte:element>
 	{:else if token.type === 'code'}
 		{#if token.raw.includes('```')}
@@ -132,6 +139,7 @@
 											<MarkdownInlineTokens
 												id={`${id}-${tokenIdx}-header-${headerIdx}`}
 												tokens={header.tokens}
+												{done}
 												{onSourceClick}
 											/>
 										</div>
@@ -152,6 +160,7 @@
 											<MarkdownInlineTokens
 												id={`${id}-${tokenIdx}-row-${rowIdx}-${cellIdx}`}
 												tokens={cell.tokens}
+												{done}
 												{onSourceClick}
 											/>
 										</div>
@@ -295,6 +304,7 @@
 			<MarkdownInlineTokens
 				id={`${id}-${tokenIdx}-p`}
 				tokens={token.tokens ?? []}
+				{done}
 				{onSourceClick}
 			/>
 		</p>
@@ -302,7 +312,12 @@
 		{#if top}
 			<p>
 				{#if token.tokens}
-					<MarkdownInlineTokens id={`${id}-${tokenIdx}-t`} tokens={token.tokens} {onSourceClick} />
+					<MarkdownInlineTokens
+						id={`${id}-${tokenIdx}-t`}
+						tokens={token.tokens}
+						{done}
+						{onSourceClick}
+					/>
 				{:else}
 					{unescapeHtml(token.text)}
 				{/if}
@@ -311,6 +326,7 @@
 			<MarkdownInlineTokens
 				id={`${id}-${tokenIdx}-p`}
 				tokens={token.tokens ?? []}
+				{done}
 				{onSourceClick}
 			/>
 		{:else}

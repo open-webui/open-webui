@@ -14,8 +14,10 @@
 	import KatexRenderer from './KatexRenderer.svelte';
 	import Source from './Source.svelte';
 	import HtmlToken from './HTMLToken.svelte';
+	import TextToken from './MarkdownInlineTokens/TextToken.svelte';
 
 	export let id: string;
+	export let done = true;
 	export let tokens: Token[];
 	export let onSourceClick: Function = () => {};
 </script>
@@ -66,6 +68,6 @@
 			onload="this.style.height=(this.contentWindow.document.body.scrollHeight+20)+'px';"
 		></iframe>
 	{:else if token.type === 'text'}
-		{token.raw}
+		<TextToken {token} {done} />
 	{/if}
 {/each}
