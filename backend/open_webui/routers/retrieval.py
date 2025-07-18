@@ -2273,8 +2273,12 @@ def extract_file_ids_from_chat_data(chat):
 
 def cleanup_orphaned_chat_files() -> dict:
     """
-    Clean up files that were uploaded to chats but whose chats no longer exist.
-    This is critical for preventing vector DB growth from chat file orphans.
+    Clean up ALL chat files (except Knowledge Base files).
+    This aggressive cleanup deletes all files except those belonging to KBs,
+    regardless of whether they're still referenced in chats.
+
+    PRESERVES: Only Knowledge Base files
+    DELETES: All other files (chat files, orphaned files, etc.)
 
     Returns:
         dict: Summary of cleanup operations
@@ -2315,27 +2319,9 @@ def cleanup_orphaned_chat_files() -> dict:
             log.warning(f"Could not get knowledge bases: {e}")
             existing_kb_ids = set()
 
-        # Get all files that are currently referenced in existing chats
-        from open_webui.models.chats import Chats
-        from open_webui.models.users import Users
-
-        # Get all users to iterate through their chats
-        users = Users.get_users()
-        chat_referenced_files = set()
-
-        for user in users:
-            try:
-                user_chats = Chats.get_chat_list_by_user_id(
-                    user.id, include_archived=True
-                )
-                for chat in user_chats:
-                    file_ids = extract_file_ids_from_chat_data(chat)
-                    chat_referenced_files.update(file_ids)
-            except Exception as e:
-                log.warning(f"Error extracting files from user {user.id} chats: {e}")
-
+        # No longer checking chat references - we delete all chat files except KB files
         log.info(
-            f"Found {len(chat_referenced_files)} files referenced in existing chats"
+            "Chat file cleanup: Will delete ALL chat files (preserving only KB files)"
         )
 
         # Get files referenced in knowledge bases (these should NEVER be deleted)
@@ -2386,26 +2372,25 @@ def cleanup_orphaned_chat_files() -> dict:
                     log.info(f"Cleaned up orphaned file collection: {collection_name}")
                     continue
 
-                # File exists in database, check if it's referenced in any chat
-                if file_id not in chat_referenced_files:
-                    # File exists but not referenced in any chat - orphaned
-                    cleanup_summary["orphaned_files_found"] += 1
+                # Delete ALL chat files (regardless of whether they're still in use)
+                # Only KB files are preserved
+                cleanup_summary["orphaned_files_found"] += 1
 
-                    # Delete vector collection
-                    VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
-                    cleanup_summary["collections_cleaned"] += 1
+                # Delete vector collection
+                VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
+                cleanup_summary["collections_cleaned"] += 1
 
-                    # Delete physical file
-                    try:
-                        Storage.delete_file(file.path)
-                    except Exception as e:
-                        log.warning(f"Could not delete physical file {file.path}: {e}")
+                # Delete physical file
+                try:
+                    Storage.delete_file(file.path)
+                except Exception as e:
+                    log.warning(f"Could not delete physical file {file.path}: {e}")
 
-                    # Delete from database
-                    Files.delete_file_by_id(file_id)
-                    cleanup_summary["files_deleted"] += 1
+                # Delete from database
+                Files.delete_file_by_id(file_id)
+                cleanup_summary["files_deleted"] += 1
 
-                    log.info(f"Cleaned up orphaned chat file: {file_id}")
+                log.info(f"Cleaned up chat file: {file_id}")
 
             except Exception as e:
                 error_msg = f"Error processing collection {collection_name}: {e}"
