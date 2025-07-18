@@ -122,6 +122,10 @@
 				<span class=" capitalize">{$config?.license_metadata?.organization_name}</span>
 			</div>
 		{:else}
+			<div class="mb-2 text-xs text-gray-500 dark:text-gray-300">
+				<span class="font-medium">{$WEBUI_NAME}</span> is a customized fork of 
+				<a href="https://github.com/open-webui/open-webui" target="_blank" class="text-blue-600 dark:text-blue-400 underline">Open WebUI</a>
+			</div>
 			<div class="flex space-x-1">
 				<a href="https://discord.gg/5rJgQTnV4s" target="_blank">
 					<img
