@@ -57,6 +57,12 @@
 								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
 							href="/admin">{$i18n.t('Users')}</a
 						>
+						<a
+							class="min-w-fit p-1.5 {$page.url.pathname.includes('/admin/charities')
+								? ''
+								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+							href="/admin/charities">{$i18n.t('Charities')}</a
+						>
 
 						<a
 							class="min-w-fit p-1.5 {$page.url.pathname.includes('/admin/evaluations')
