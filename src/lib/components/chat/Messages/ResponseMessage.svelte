@@ -804,7 +804,9 @@
 										floatingButtons={message?.done && !readOnly}
 										save={!readOnly}
 										preview={!readOnly}
-										done={message?.done ?? false}
+										done={($settings?.chatFadeStreamingText ?? true)
+											? (message?.done ?? false)
+											: true}
 										{model}
 										onTaskClick={async (e) => {
 											console.log(e);
