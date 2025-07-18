@@ -346,17 +346,19 @@ async def delete_file_by_id(id: str, user=Depends(get_verified_user)):
         # Clean up vectors from Qdrant before deleting file record
         try:
             from open_webui.routers.retrieval import cleanup_file_vectors
-            
+
             # Get collection name from file metadata if available
             collection_name = None
-            if hasattr(file, 'meta') and file.meta:
-                collection_name = file.meta.get('collection_name')
-            
+            if hasattr(file, "meta") and file.meta:
+                collection_name = file.meta.get("collection_name")
+
             # Clean up vectors
             cleanup_success = cleanup_file_vectors(file.id, collection_name)
             if not cleanup_success:
-                log.warning(f"Vector cleanup failed for file {file.id}, but continuing with file deletion")
-                
+                log.warning(
+                    f"Vector cleanup failed for file {file.id}, but continuing with file deletion"
+                )
+
         except Exception as e:
             log.exception(f"Error during vector cleanup for file {file.id}: {e}")
             # Continue with file deletion even if vector cleanup fails
