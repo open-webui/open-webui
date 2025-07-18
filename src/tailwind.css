@@ -115,8 +115,10 @@ body.dark .decorative-image-bottom {
 
 
 .bg-surface {
-    background: linear-gradient(288deg, rgba(255, 255, 255, 0.20) 84.56%, rgba(255, 255, 255, 0.11) 109.37%), radial-gradient(82.69% 65.48% at 72.6% 34.85%, rgba(255, 109, 193, 0.20) 0%, rgba(255, 109, 193, 0.00) 100%), radial-gradient(74.08% 56.97% at 50% 64.75%, rgba(0, 229, 255, 0.17) 0%, rgba(0, 229, 255, 0.00) 100%), var(--neutrals-white, #FFF);
-    background-color: #eceef1;
+    background: radial-gradient(93.48% 68.59% at 40.87% 70.12%, rgba(204, 221, 252, 0.04) 37.67%, rgba(204, 221, 252, 0.40) 100%), 
+                     radial-gradient(70.94% 58.43% at 27.53% 86.82%, rgba(204, 221, 252, 0.25) 0%, rgba(204, 221, 252, 0.00) 100%), 
+                     linear-gradient(0deg, rgba(236, 238, 241, 0.20) 0%, rgba(236, 238, 241, 0.20) 100%), 
+                     #FFF;
     /* fallback */
     position: relative;
     overflow: clip;
