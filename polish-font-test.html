@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>mAI - Test polskich znaków</title>
+    <style>
+        @font-face {
+            font-family: 'Inter';
+            src: url('/assets/fonts/Inter-Variable.ttf') format('truetype');
+            font-weight: 100 900;
+            font-style: normal;
+            font-display: swap;
+            unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD, U+0100-017F, U+0180-024F, U+1E00-1EFF, U+20A0-20AB, U+20AD-20CF;
+        }
+        
+        body {
+            font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            padding: 40px;
+            background: #f9f9f9;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+            color: #1a1a1a;
+        }
+        
+        .polish-text {
+            font-size: 1.125rem;
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+        }
+        
+        .weight-demo {
+            margin: 2rem 0;
+        }
+        
+        .weight-demo h3 {
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+            color: #4a4a4a;
+        }
+        
+        .weight-400 { font-weight: 400; }
+        .weight-500 { font-weight: 500; }
+        .weight-600 { font-weight: 600; }
+        .weight-700 { font-weight: 700; }
+        
+        .chat-demo {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 2rem 0;
+        }
+        
+        .message {
+            margin: 10px 0;
+            padding: 12px 16px;
+            border-radius: 8px;
+            background: white;
+            border: 1px solid #e3e3e3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>mAI - Test polskich znaków</h1>
+        
+        <div class="polish-text">
+            <strong>Wszystkie polskie znaki diakrytyczne:</strong><br>
+            ą, ć, ę, ł, ń, ó, ś, ź, ż<br>
+            Ą, Ć, Ę, Ł, Ń, Ó, Ś, Ź, Ż
+        </div>
+        
+        <div class="polish-text">
+            <strong>Przykładowy tekst:</strong><br>
+            Żółć jaźń moźe być piękną rzeczą, gdyż głębię duszy człowieka charakteryzuje jego stosunek do świata.
+        </div>
+        
+        <div class="weight-demo">
+            <h3>Różne wagi czcionki:</h3>
+            <p class="weight-400">Waga 400 (Regular): Sztuczna inteligencja ułatwia codzienne zadania</p>
+            <p class="weight-500">Waga 500 (Medium): Zaawansowane możliwości przetwarzania języka</p>
+            <p class="weight-600">Waga 600 (Semibold): Nowoczesny interfejs użytkownika</p>
+            <p class="weight-700">Waga 700 (Bold): Najlepsze doświadczenia w dziedzinie AI</p>
+        </div>
+        
+        <div class="chat-demo">
+            <h3>Symulacja interfejsu czatu:</h3>
+            <div class="message">
+                <strong>Użytkownik:</strong> Czy możesz pomóc mi w tłumaczeniu tego tekstu na język angielski?
+            </div>
+            <div class="message">
+                <strong>mAI:</strong> Oczywiście! Będę szczęśliwy pomóc Ci w tłumaczeniu. Proszę, wklej tekst, który chcesz przetłumaczyć, a ja przygotuje dla Ciebie dokładne tłumaczenie na język angielski.
+            </div>
+            <div class="message">
+                <strong>Użytkownik:</strong> Dziękuję za szybką odpowiedź. Oto tekst: "Nasz zespół pracuje nad nowoczesnymi rozwiązaniami AI, które mogą zmienić sposób, w jaki ludzie współpracują z technologią."
+            </div>
+        </div>
+        
+        <div class="polish-text">
+            <strong>Specjalne przypadki:</strong><br>
+            - Długie słowa: "najniesamowitszy", "przeczulony", "rozprzestrzenianie"<br>
+            - Liczby: 1 234 567,89 złotych<br>
+            - Interpunkcja: "Czy to działa?" — Tak, świetnie!
+        </div>
+    </div>
+</body>
+</html>

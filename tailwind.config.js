@@ -7,6 +7,32 @@ export default {
 	content: ['./src/**/*.{html,js,svelte,ts}'],
 	theme: {
 		extend: {
+			fontFamily: {
+				sans: [
+					'Inter',
+					'ui-sans-serif',
+					'system-ui',
+					'-apple-system',
+					'BlinkMacSystemFont',
+					'Segoe UI',
+					'Roboto',
+					'Helvetica Neue',
+					'Arial',
+					'sans-serif',
+					'Apple Color Emoji',
+					'Segoe UI Emoji',
+					'Segoe UI Symbol',
+					'Noto Color Emoji'
+				],
+				mono: [
+					'SF Mono',
+					'Monaco',
+					'Cascadia Code',
+					'Roboto Mono',
+					'Consolas',
+					'monospace'
+				]
+			},
 			colors: {
 				gray: {
 					50: 'var(--color-gray-50, #f9f9f9)',
