@@ -13,6 +13,7 @@ import html
 import inspect
 import re
 import ast
+import aiohttp
 
 from uuid import uuid4
 from concurrent.futures import ThreadPoolExecutor
@@ -98,6 +99,7 @@ from open_webui.env import (
 )
 from open_webui.constants import TASKS
 
+from open_webui.env import CUSTOM_WEB_SEARCH_URL, MAX_RETRIALS_WEB_SEARCH, GOV_GPT_WEB_SEARCH
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -344,6 +346,14 @@ async def chat_memory_handler(
 async def chat_web_search_handler(
     request: Request, form_data: dict, extra_params: dict, user
 ):
+    log.warning(f"what all is in request -- {request}")
+
+    user_query = get_last_user_message(form_data["messages"])
+    log.warning(f"user_query : {user_query}")
+
+    session_id = str(extra_params.get("session_id", "no-session"))
+
+
     event_emitter = extra_params["__event_emitter__"]
     await event_emitter(
         {
@@ -360,36 +370,60 @@ async def chat_web_search_handler(
     user_message = get_last_user_message(messages)
 
     queries = []
-    try:
-        res = await generate_queries(
-            request,
-            {
-                "model": form_data["model"],
-                "messages": messages,
-                "prompt": user_message,
-                "type": "web_search",
-            },
-            user,
-        )
 
-        response = res["choices"][0]["message"]["content"]
+    #custom logic
+    if GOV_GPT_WEB_SEARCH:
 
+        log.warning("in GOV_GPT_WEB_SEARCH-----------------")
+
+        result = await run_gov_gpt_web_search(user_query, user, session_id, user_message, event_emitter, request, form_data)
+
+        log.info(f"after fun call result : {result}")
+
+        if result and result.get("response"):
+            form_data["files"] = [{
+                "type": "web_search_custom",
+                "docs": [{"page_content": result["response"]}],
+                "urls": result.get("urls", []),
+                "queries": result.get("queries", []),
+            }]
+
+        log.warning(f"form_data--- : {form_data}")
+
+        return form_data
+
+    else: #existing code
         try:
-            bracket_start = response.find("{")
-            bracket_end = response.rfind("}") + 1
+            res = await generate_queries(
+                request,
+                {
+                    "model": form_data["model"],
+                    "messages": messages,
+                    "prompt": user_message,
+                    "type": "web_search",
+                },
+                user,
+            )
 
-            if bracket_start == -1 or bracket_end == -1:
-                raise Exception("No JSON object found in the response")
+            response = res["choices"][0]["message"]["content"]
 
-            response = response[bracket_start:bracket_end]
-            queries = json.loads(response)
-            queries = queries.get("queries", [])
+            try:
+                bracket_start = response.find("{")
+                bracket_end = response.rfind("}") + 1
+
+                if bracket_start == -1 or bracket_end == -1:
+                    raise Exception("No JSON object found in the response")
+
+                response = response[bracket_start:bracket_end]
+                queries = json.loads(response)
+                queries = queries.get("queries", [])
+            except Exception as e:
+                queries = [response]
+
         except Exception as e:
-            queries = [response]
+            log.exception(e)
+            queries = [user_message]
 
-    except Exception as e:
-        log.exception(e)
-        queries = [user_message]
 
     # Check if generated queries are empty
     if len(queries) == 1 and queries[0].strip() == "":
@@ -498,6 +532,185 @@ async def chat_web_search_handler(
         )
 
     return form_data
+
+
+#for custom gov gpt web search--
+async def run_gov_gpt_web_search(user_query, user, session_id, user_message, event_emitter, request, form_data):
+    user_id = getattr(user, "id", "anonymous")
+    user_name = getattr(user, "name", "anonymous")
+    website_results = []
+    queries = []
+    final_response = None
+    refined_query = user_query
+    iteration_count = 0
+    max_iterations = int(MAX_RETRIALS_WEB_SEARCH)
+    search_results = []
+
+    while iteration_count < max_iterations:
+        log.info("Starting --- Inside while block")
+
+        try:
+            #Call custom /search API
+            async with aiohttp.ClientSession() as session:
+
+                async with session.post(
+                        CUSTOM_WEB_SEARCH_URL,
+                        json={
+                            "user_query": refined_query,
+                            "user_name": user_name,
+                            "user_id": user_id,
+                            "session_id": session_id,
+                            "chat_history": [],
+                            "website_results": website_results
+                        },
+                        timeout=15
+                ) as resp:
+                    if resp.status != 200:
+                        error_detail = await resp.text()
+                        raise Exception(f"Custom Search failed: {resp.status}, {error_detail}")
+                    result = await resp.json()
+                    search_results = result
+
+                    log.info("after /search call-----------------")
+                    log.warning(f"resp : {search_results}")
+
+            queries = search_results.get("refined_query", [])
+            search_again = search_results.get("need_to_search_again", False)
+            final_response = search_results.get("response")
+
+            log.info(f"queries : {queries}")
+            log.info(f"search_again : {search_again}")
+            log.info(f"final_response : {final_response}")
+
+            iteration_count += 1
+            # search_again = False#for Unit test remove later
+            if not search_again:
+                return final_response
+
+            #Perform Serper web search using refined queries
+            # Check if generated queries are empty
+            if len(queries) == 1 and queries[0].strip() == "":
+                queries = [user_message]
+
+            # Check if queries are not found
+            if len(queries) == 0:
+                await event_emitter(
+                    {
+                        "type": "status",
+                        "data": {
+                            "action": "web_search",
+                            "description": "No search query generated",
+                            "done": True,
+                        },
+                    }
+                )
+                return form_data
+
+            await event_emitter(
+                {
+                    "type": "status",
+                    "data": {
+                        "action": "web_search",
+                        "description": "Searching the web",
+                        "done": False,
+                    },
+                }
+            )
+
+            try:
+                results = await process_web_search(
+                    request,
+                    SearchForm(queries=queries),
+                    user=user,
+                )
+
+                if results:
+                    files = form_data.get("files", [])
+
+                    if results.get("collection_names"):
+                        for col_idx, collection_name in enumerate(
+                                results.get("collection_names")
+                        ):
+                            files.append(
+                                {
+                                    "collection_name": collection_name,
+                                    "name": ", ".join(queries),
+                                    "type": "web_search",
+                                    "urls": results["filenames"],
+                                    "queries": queries,
+                                }
+                            )
+                    elif results.get("docs"):
+                        # Invoked when bypass embedding and retrieval is set to True
+                        docs = results["docs"]
+                        files.append(
+                            {
+                                "docs": docs,
+                                "name": ", ".join(queries),
+                                "type": "web_search",
+                                "urls": results["filenames"],
+                                "queries": queries,
+                            }
+                        )
+
+                    form_data["files"] = files
+
+                    await event_emitter(
+                        {
+                            "type": "status",
+                            "data": {
+                                "action": "web_search",
+                                "description": "Searched {{count}} sites",
+                                "urls": results["filenames"],
+                                "done": True,
+                            },
+                        }
+                    )
+                else:
+                    await event_emitter(
+                        {
+                            "type": "status",
+                            "data": {
+                                "action": "web_search",
+                                "description": "No search results found",
+                                "done": True,
+                                "error": True,
+                            },
+                        }
+                    )
+
+            except Exception as e:
+                log.exception(e)
+                await event_emitter(
+                    {
+                        "type": "status",
+                        "data": {
+                            "action": "web_search",
+                            "description": "An error occurred while searching the web",
+                            "queries": queries,
+                            "done": True,
+                            "error": True,
+                        },
+                    }
+                )
+
+        #end of the loop
+
+        except Exception as e:
+            log.warning(f"GOV_GPT web search loop failed at iteration {iteration_count}: {str(e)}")
+            break
+
+    log.warning(f"LAST final_response---- {final_response}")
+    return {
+        "response": final_response,
+        "queries": queries,
+        "files": form_data.get("files", []),
+        "urls": [
+            url
+            for file in form_data.get("files", [])
+            for url in file.get("filenames", [])
+        ]
+    }
 
 
 async def chat_image_generation_handler(
@@ -718,6 +931,9 @@ def apply_params_to_form_data(form_data, model):
 
 
 async def process_chat_payload(request, form_data, user, metadata, model):
+
+    log.warning("inside process_chat_payload ------------------")
+
     form_data = apply_params_to_form_data(form_data, model)
     log.debug(f"form_data: {form_data}")
 
@@ -752,6 +968,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     events = []
     sources = []
 
+    log.warning("CHECK POINT - 1 - --------------")
+
     user_message = get_last_user_message(form_data["messages"])
     model_knowledge = model.get("info", {}).get("meta", {}).get("knowledge", False)
 
@@ -766,6 +984,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 },
             }
         )
+        log.warning("CHECK POINT - 2 - --------------")
 
         knowledge_files = []
         for item in model_knowledge:
@@ -793,6 +1012,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         files.extend(knowledge_files)
         form_data["files"] = files
 
+    log.warning("CHECK POINT - 3 - --------------")
+
     variables = form_data.pop("variables", None)
 
     # Process the form_data through the pipeline
@@ -804,7 +1025,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         raise e
 
     try:
-
+        log.warning("CHECK POINT - 4 - --------------")
         filter_functions = [
             Functions.get_function_by_id(filter_id)
             for filter_id in get_sorted_filter_ids(
@@ -822,7 +1043,12 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     except Exception as e:
         raise Exception(f"Error: {e}")
 
+    log.warning("CHECK POINT - 5 - --------------")
+
     features = form_data.pop("features", None)
+
+    log.warning(f"features - :{features}")
+
     if features:
         if "memory" in features and features["memory"]:
             form_data = await chat_memory_handler(
@@ -830,6 +1056,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             )
 
         if "web_search" in features and features["web_search"]:
+
+            log.warning("inside web_search block ------------------")
+
             form_data = await chat_web_search_handler(
                 request, form_data, extra_params, user
             )
