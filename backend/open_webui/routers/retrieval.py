@@ -1,11 +1,12 @@
 import json
 import logging
 import os
+import re
 import shutil
 import hashlib
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Optional
 
 from fastapi import (
@@ -702,7 +703,7 @@ def save_docs_to_vector_db(
             filter={"hash": metadata["hash"]},
         )
 
-        if result is not None:
+        if result is not None and result.ids and len(result.ids) > 0 and len(result.ids[0]) > 0:
             existing_doc_ids = result.ids[0]
             if existing_doc_ids:
                 log.info(f"Document with hash {metadata['hash']} already exists")
@@ -795,6 +796,12 @@ def save_docs_to_vector_db(
             request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
         )
 
+        # Check if embedding function is properly initialized
+        if embedding_function is None:
+            error_msg = f"Embedding function is None. Engine: {request.app.state.config.RAG_EMBEDDING_ENGINE}, Model: {request.app.state.config.RAG_EMBEDDING_MODEL}"
+            log.error(error_msg)
+            raise ValueError(error_msg)
+
         embeddings = embedding_function(
             list(map(lambda x: x.replace("\n", " "), texts)), user=user
         )
@@ -868,7 +875,7 @@ def process_file(
                 collection_name=f"file-{file.id}", filter={"file_id": file.id}
             )
 
-            if result is not None and len(result.ids[0]) > 0:
+            if result is not None and result.ids and len(result.ids) > 0 and len(result.ids[0]) > 0:
                 docs = [
                     Document(
                         page_content=result.documents[0][idx],
@@ -1666,6 +1673,7 @@ def cleanup_file_vectors(file_id: str, collection_name: str = None) -> bool:
 def cleanup_orphaned_vectors() -> dict:
     """
     Clean up orphaned vectors that no longer have corresponding files in the database.
+    This ONLY cleans up standalone file collections (file-*), preserving knowledge bases and their files.
     
     Returns:
         dict: Summary of cleanup operations
@@ -1674,6 +1682,7 @@ def cleanup_orphaned_vectors() -> dict:
         cleanup_summary = {
             "collections_checked": 0,
             "collections_cleaned": 0,
+            "kb_collections_preserved": 0,
             "vectors_removed": 0,
             "errors": []
         }
@@ -1691,9 +1700,25 @@ def cleanup_orphaned_vectors() -> dict:
         
         cleanup_summary["collections_checked"] = len(collections)
         
+        # Get all knowledge base IDs to preserve them
+        from open_webui.models.knowledge import Knowledges
+        try:
+            existing_knowledge_bases = Knowledges.get_knowledge_bases()
+            existing_kb_ids = {kb.id for kb in existing_knowledge_bases}
+            log.info(f"Found {len(existing_kb_ids)} knowledge bases to preserve")
+        except Exception as e:
+            log.warning(f"Could not get knowledge bases: {e}")
+            existing_kb_ids = set()
+        
         for collection_name in collections:
             try:
-                # Skip non-file collections
+                # PRESERVE knowledge base collections - DO NOT CLEAN THEM
+                if collection_name in existing_kb_ids:
+                    cleanup_summary["kb_collections_preserved"] += 1
+                    log.debug(f"Preserving knowledge base collection: {collection_name}")
+                    continue
+                
+                # Only process standalone file collections (file-*)
                 if not collection_name.startswith("file-"):
                     continue
                 
@@ -1707,12 +1732,12 @@ def cleanup_orphaned_vectors() -> dict:
                         # File doesn't exist, delete the collection
                         VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
                         cleanup_summary["collections_cleaned"] += 1
-                        log.info(f"Cleaned up orphaned collection: {collection_name}")
+                        log.info(f"Cleaned up orphaned standalone file collection: {collection_name}")
                 except Exception:
                     # File doesn't exist, delete the collection
                     VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
                     cleanup_summary["collections_cleaned"] += 1
-                    log.info(f"Cleaned up orphaned collection: {collection_name}")
+                    log.info(f"Cleaned up orphaned standalone file collection: {collection_name}")
                     
             except Exception as e:
                 error_msg = f"Error processing collection {collection_name}: {e}"
@@ -1981,7 +2006,9 @@ def cleanup_expired_web_searches(max_age_days: int = 30) -> dict:
 @router.post("/maintenance/cleanup/orphaned")
 def api_cleanup_orphaned_vectors(user=Depends(get_admin_user)):
     """
-    API endpoint to cleanup orphaned vectors.
+    API endpoint to cleanup orphaned vectors from standalone files.
+    PRESERVES knowledge bases and all files within them.
+    Only cleans up orphaned file-* collections with no corresponding database entry.
     Used by K8s CronJobs for scheduled maintenance.
     """
     try:
@@ -2043,7 +2070,8 @@ def api_comprehensive_cleanup(
 ):
     """
     API endpoint for comprehensive vector DB cleanup.
-    Combines orphaned and web search cleanup.
+    Cleans up orphaned standalone files and expired web searches.
+    PRESERVES knowledge bases and all files within them.
     Used by K8s CronJobs for complete maintenance.
     """
     try:

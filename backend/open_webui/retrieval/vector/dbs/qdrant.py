@@ -42,11 +42,13 @@ class QdrantClient:
         documents = []
         metadatas = []
 
-        # Iterate over the tuple of records
-        for record in result[0]:
-            ids.append([record.id])
-            documents.append([record.payload["text"]])
-            metadatas.append([record.payload["metadata"]])
+        # Check if result is valid and has records
+        if result and len(result) > 0 and len(result[0]) > 0:
+            # Iterate over the tuple of records
+            for record in result[0]:
+                ids.append([record.id])
+                documents.append([record.payload["text"]])
+                metadatas.append([record.payload["metadata"]])
 
         return GetResult(
             **{
