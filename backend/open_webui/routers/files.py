@@ -83,7 +83,7 @@ def has_access_to_file(
 
 
 @router.post("/", response_model=FileModelResponse)
-def upload_file(
+async def upload_file(
     request: Request,
     file: UploadFile = File(...),
     metadata: Optional[dict | str] = Form(None),
@@ -91,7 +91,10 @@ def upload_file(
     internal: bool = False,
     user=Depends(get_verified_user),
 ):
-    log.info(f"file.content_type: {file.content_type}")
+    log.info(f"Starting file upload: {file.filename}")
+    log.info(f"Content type: {file.content_type}")
+    log.info(f"Process flag: {process}")
+    log.info(f"Content extraction engine: {request.app.state.config.CONTENT_EXTRACTION_ENGINE}")
 
     if isinstance(metadata, str):
         try:
@@ -134,6 +137,8 @@ def upload_file(
             "OpenWebUI-User-Name": user.name,
             "OpenWebUI-File-Id": id,
         }
+        
+        log.info(f"Storing file with ID: {id}")
         contents, file_path = Storage.upload_file(file.file, filename, tags)
 
         file_item = Files.insert_new_file(
@@ -152,8 +157,10 @@ def upload_file(
                 }
             ),
         )
+        
         if process:
             try:
+                log.info("Starting file processing")
                 if file.content_type:
                     stt_supported_content_types = (
                         request.app.state.config.STT_SUPPORTED_CONTENT_TYPES
@@ -167,10 +174,11 @@ def upload_file(
                         fnmatch(file.content_type, content_type)
                         for content_type in stt_supported_content_types
                     ):
+                        log.info("Processing audio/video file")
                         file_path = Storage.get_file(file_path)
                         result = transcribe(request, file_path, file_metadata)
 
-                        process_file(
+                        await process_file(
                             request,
                             ProcessFileForm(file_id=id, content=result.get("text", "")),
                             user=user,
@@ -178,17 +186,27 @@ def upload_file(
                     elif (not file.content_type.startswith(("image/", "video/"))) or (
                         request.app.state.config.CONTENT_EXTRACTION_ENGINE == "external"
                     ):
-                        process_file(request, ProcessFileForm(file_id=id), user=user)
+                        log.info(f"Processing document using engine: {request.app.state.config.CONTENT_EXTRACTION_ENGINE}")
+                        process_result = await process_file(
+                            request, 
+                            ProcessFileForm(file_id=id), 
+                            user=user
+                        )
+                        log.info(f"Process result: {process_result}")
                 else:
                     log.info(
                         f"File type {file.content_type} is not provided, but trying to process anyway"
                     )
-                    process_file(request, ProcessFileForm(file_id=id), user=user)
+                    await process_file(
+                        request, 
+                        ProcessFileForm(file_id=id), 
+                        user=user
+                    )
 
                 file_item = Files.get_file_by_id(id=id)
+                log.info(f"Final file item: {file_item}")
             except Exception as e:
-                log.exception(e)
-                log.error(f"Error processing file: {file_item.id}")
+                log.exception(f"Error processing file: {e}")
                 file_item = FileModelResponse(
                     **{
                         **file_item.model_dump(),
@@ -205,12 +223,11 @@ def upload_file(
             )
 
     except Exception as e:
-        log.exception(e)
+        log.exception(f"Error in file upload: {e}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.DEFAULT("Error uploading file"),
         )
-
 
 ############################
 # List Files

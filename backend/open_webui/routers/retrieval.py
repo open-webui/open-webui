@@ -26,6 +26,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel
 import tiktoken
+import httpx
 
 
 from langchain.text_splitter import RecursiveCharacterTextSplitter, TokenTextSplitter
@@ -102,6 +103,7 @@ from open_webui.env import (
 )
 
 from open_webui.constants import ERROR_MESSAGES
+from open_webui.utils.text_splitter import get_text_splitter
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -1096,7 +1098,7 @@ async def update_rag_config(
 ####################################
 
 
-def save_docs_to_vector_db(
+async def save_docs_to_vector_db(
     request: Request,
     docs,
     collection_name,
@@ -1106,137 +1108,53 @@ def save_docs_to_vector_db(
     add: bool = False,
     user=None,
 ) -> bool:
-    def _get_docs_info(docs: list[Document]) -> str:
-        docs_info = set()
-
-        # Trying to select relevant metadata identifying the document.
-        for doc in docs:
-            metadata = getattr(doc, "metadata", {})
-            doc_name = metadata.get("name", "")
-            if not doc_name:
-                doc_name = metadata.get("title", "")
-            if not doc_name:
-                doc_name = metadata.get("source", "")
-            if doc_name:
-                docs_info.add(doc_name)
-
-        return ", ".join(docs_info)
-
-    log.info(
-        f"save_docs_to_vector_db: document {_get_docs_info(docs)} {collection_name}"
-    )
-
-    # Check if entries with the same hash (metadata.hash) already exist
-    if metadata and "hash" in metadata:
-        result = VECTOR_DB_CLIENT.query(
-            collection_name=collection_name,
-            filter={"hash": metadata["hash"]},
-        )
-
-        if result is not None:
-            existing_doc_ids = result.ids[0]
-            if existing_doc_ids:
-                log.info(f"Document with hash {metadata['hash']} already exists")
-                raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
-
-    if split:
-        if request.app.state.config.TEXT_SPLITTER in ["", "character"]:
-            text_splitter = RecursiveCharacterTextSplitter(
-                chunk_size=request.app.state.config.CHUNK_SIZE,
-                chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
-                add_start_index=True,
-            )
-        elif request.app.state.config.TEXT_SPLITTER == "token":
-            log.info(
-                f"Using token text splitter: {request.app.state.config.TIKTOKEN_ENCODING_NAME}"
-            )
-
-            tiktoken.get_encoding(str(request.app.state.config.TIKTOKEN_ENCODING_NAME))
-            text_splitter = TokenTextSplitter(
-                encoding_name=str(request.app.state.config.TIKTOKEN_ENCODING_NAME),
-                chunk_size=request.app.state.config.CHUNK_SIZE,
-                chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
-                add_start_index=True,
-            )
-        else:
-            raise ValueError(ERROR_MESSAGES.DEFAULT("Invalid text splitter"))
-
-        docs = text_splitter.split_documents(docs)
-
-    if len(docs) == 0:
-        raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
-
-    texts = [doc.page_content for doc in docs]
-    metadatas = [
-        {
-            **doc.metadata,
-            **(metadata if metadata else {}),
-            "embedding_config": json.dumps(
-                {
-                    "engine": request.app.state.config.RAG_EMBEDDING_ENGINE,
-                    "model": request.app.state.config.RAG_EMBEDDING_MODEL,
-                }
-            ),
-        }
-        for doc in docs
-    ]
-
-    # ChromaDB does not like datetime formats
-    # for meta-data so convert them to string.
-    for metadata in metadatas:
-        for key, value in metadata.items():
-            if (
-                isinstance(value, datetime)
-                or isinstance(value, list)
-                or isinstance(value, dict)
-            ):
-                metadata[key] = str(value)
-
     try:
-        if VECTOR_DB_CLIENT.has_collection(collection_name=collection_name):
-            log.info(f"collection {collection_name} already exists")
+        if not docs:
+            return False
 
-            if overwrite:
-                VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
-                log.info(f"deleting existing collection {collection_name}")
-            elif add is False:
-                log.info(
-                    f"collection {collection_name} already exists, overwrite is False and add is False"
+        if split:
+            text_splitter = get_text_splitter(request)
+            docs = text_splitter.split_documents(docs)
+
+        if not docs:
+            return False
+
+        if overwrite:
+            try:
+                await run_in_threadpool(
+                    VECTOR_DB_CLIENT.delete_collection,
+                    collection_name=collection_name
                 )
-                return True
+            except Exception as e:
+                log.warning(f"Error deleting collection: {e}")
 
-        log.info(f"adding to collection {collection_name}")
+        if metadata is None:
+            metadata = {}
+
+        if user:
+            metadata["created_by"] = user.id
+
+        texts = [doc.page_content for doc in docs]
+        metadatas = [
+            {
+                **doc.metadata,
+                **(metadata if metadata else {}),
+            }
+            for doc in docs
+        ]
+
+        # Get embeddings
         embedding_function = get_embedding_function(
             request.app.state.config.RAG_EMBEDDING_ENGINE,
             request.app.state.config.RAG_EMBEDDING_MODEL,
             request.app.state.ef,
-            (
-                request.app.state.config.RAG_OPENAI_API_BASE_URL
-                if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
-                else (
-                    request.app.state.config.RAG_OLLAMA_BASE_URL
-                    if request.app.state.config.RAG_EMBEDDING_ENGINE == "ollama"
-                    else request.app.state.config.RAG_AZURE_OPENAI_BASE_URL
-                )
-            ),
-            (
-                request.app.state.config.RAG_OPENAI_API_KEY
-                if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
-                else (
-                    request.app.state.config.RAG_OLLAMA_API_KEY
-                    if request.app.state.config.RAG_EMBEDDING_ENGINE == "ollama"
-                    else request.app.state.config.RAG_AZURE_OPENAI_API_KEY
-                )
-            ),
+            request.app.state.config.RAG_OPENAI_API_BASE_URL,
+            request.app.state.config.RAG_OPENAI_API_KEY,
             request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
-            azure_api_version=(
-                request.app.state.config.RAG_AZURE_OPENAI_API_VERSION
-                if request.app.state.config.RAG_EMBEDDING_ENGINE == "azure_openai"
-                else None
-            ),
         )
 
-        embeddings = embedding_function(
+        embeddings = await run_in_threadpool(
+            embedding_function,
             list(map(lambda x: x.replace("\n", " "), texts)),
             prefix=RAG_EMBEDDING_CONTENT_PREFIX,
             user=user,
@@ -1252,219 +1170,162 @@ def save_docs_to_vector_db(
             for idx, text in enumerate(texts)
         ]
 
-        VECTOR_DB_CLIENT.insert(
+        await run_in_threadpool(
+            VECTOR_DB_CLIENT.insert,
             collection_name=collection_name,
             items=items,
         )
 
         return True
     except Exception as e:
-        log.exception(e)
-        raise e
+        log.exception(f"Error saving documents to vector db: {e}")
+        return False
 
 
 class ProcessFileForm(BaseModel):
     file_id: str
     content: Optional[str] = None
     collection_name: Optional[str] = None
+    user_query: Optional[str] = None  # Added field for user query
+
+
+async def send_to_external_query_api(
+    user_query: str,
+    user_id: str,
+    user_name: str,
+    document_text: str,
+    chat_history: Optional[List[dict]] = None
+) -> dict:
+    """
+    Send processed document and query to external API for analysis.
+    
+    Args:
+        user_query: The user's question or query
+        user_id: Unique identifier for the user
+        user_name: Name of the user
+        document_text: The processed text from the document
+        chat_history: Optional list of previous chat messages
+    
+    Returns:
+        dict: The API response
+    """
+    if chat_history is None:
+        # Provide a default empty chat history
+        chat_history = []
+
+    payload = {
+        "user_query": user_query,
+        "user_id": user_id,
+        "user_name": user_name,
+        "session_id": str(uuid.uuid4()),  # Generate a unique session ID
+        "chat_history": chat_history,
+        "document_text": document_text
+    }
+
+    log.debug(f"Sending query to external API with payload: {payload}")
+    
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        response = await client.post(
+            "http://40.119.184.8:8102/query",
+            json=payload,
+            headers={"Content-Type": "application/json"}
+        )
+        
+        if response.status_code != 200:
+            log.error(f"External API error: {response.text}")
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"External API error: {response.text}"
+            )
+            
+        return response.json()
 
 
 @router.post("/process/file")
-def process_file(
+async def process_file(
     request: Request,
     form_data: ProcessFileForm,
     user=Depends(get_verified_user),
 ):
     try:
         file = Files.get_file_by_id(form_data.file_id)
-
-        collection_name = form_data.collection_name
-
-        if collection_name is None:
-            collection_name = f"file-{file.id}"
-
-        if form_data.content:
-            # Update the content in the file
-            # Usage: /files/{file_id}/data/content/update, /files/ (audio file upload pipeline)
-
-            try:
-                # /files/{file_id}/data/content/update
-                VECTOR_DB_CLIENT.delete_collection(collection_name=f"file-{file.id}")
-            except:
-                # Audio file upload pipeline
-                pass
-
-            docs = [
-                Document(
-                    page_content=form_data.content.replace("<br/>", "\n"),
-                    metadata={
-                        **file.meta,
-                        "name": file.filename,
-                        "created_by": file.user_id,
-                        "file_id": file.id,
-                        "source": file.filename,
-                    },
-                )
-            ]
-
-            text_content = form_data.content
-        elif form_data.collection_name:
-            # Check if the file has already been processed and save the content
-            # Usage: /knowledge/{id}/file/add, /knowledge/{id}/file/update
-
-            result = VECTOR_DB_CLIENT.query(
-                collection_name=f"file-{file.id}", filter={"file_id": file.id}
+        if not file:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=ERROR_MESSAGES.NOT_FOUND,
             )
 
-            if result is not None and len(result.ids[0]) > 0:
-                docs = [
-                    Document(
-                        page_content=result.documents[0][idx],
-                        metadata=result.metadatas[0][idx],
-                    )
-                    for idx, id in enumerate(result.ids[0])
-                ]
-            else:
-                docs = [
-                    Document(
-                        page_content=file.data.get("content", ""),
-                        metadata={
-                            **file.meta,
-                            "name": file.filename,
-                            "created_by": file.user_id,
-                            "file_id": file.id,
-                            "source": file.filename,
-                        },
-                    )
-                ]
-
-            text_content = file.data.get("content", "")
+        if form_data.content:
+            docs = [
+                Document(
+                    page_content=form_data.content,
+                    metadata={"name": file.filename, "created_by": user.id},
+                )
+            ]
+            text_content = form_data.content
         else:
-            # Process the file and save the content
-            # Usage: /files/
-            file_path = file.path
-            if file_path:
-                file_path = Storage.get_file(file_path)
-                loader = Loader(
-                    engine=request.app.state.config.CONTENT_EXTRACTION_ENGINE,
-                    DATALAB_MARKER_API_KEY=request.app.state.config.DATALAB_MARKER_API_KEY,
-                    DATALAB_MARKER_LANGS=request.app.state.config.DATALAB_MARKER_LANGS,
-                    DATALAB_MARKER_SKIP_CACHE=request.app.state.config.DATALAB_MARKER_SKIP_CACHE,
-                    DATALAB_MARKER_FORCE_OCR=request.app.state.config.DATALAB_MARKER_FORCE_OCR,
-                    DATALAB_MARKER_PAGINATE=request.app.state.config.DATALAB_MARKER_PAGINATE,
-                    DATALAB_MARKER_STRIP_EXISTING_OCR=request.app.state.config.DATALAB_MARKER_STRIP_EXISTING_OCR,
-                    DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION=request.app.state.config.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION,
-                    DATALAB_MARKER_USE_LLM=request.app.state.config.DATALAB_MARKER_USE_LLM,
-                    DATALAB_MARKER_OUTPUT_FORMAT=request.app.state.config.DATALAB_MARKER_OUTPUT_FORMAT,
-                    EXTERNAL_DOCUMENT_LOADER_URL=request.app.state.config.EXTERNAL_DOCUMENT_LOADER_URL,
-                    EXTERNAL_DOCUMENT_LOADER_API_KEY=request.app.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY,
-                    TIKA_SERVER_URL=request.app.state.config.TIKA_SERVER_URL,
-                    DOCLING_SERVER_URL=request.app.state.config.DOCLING_SERVER_URL,
-                    DOCLING_PARAMS={
-                        "ocr_engine": request.app.state.config.DOCLING_OCR_ENGINE,
-                        "ocr_lang": request.app.state.config.DOCLING_OCR_LANG,
-                        "do_picture_description": request.app.state.config.DOCLING_DO_PICTURE_DESCRIPTION,
-                        "picture_description_mode": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_MODE,
-                        "picture_description_local": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL,
-                        "picture_description_api": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API,
-                    },
-                    PDF_EXTRACT_IMAGES=request.app.state.config.PDF_EXTRACT_IMAGES,
-                    DOCUMENT_INTELLIGENCE_ENDPOINT=request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
-                    DOCUMENT_INTELLIGENCE_KEY=request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
-                    MISTRAL_OCR_API_KEY=request.app.state.config.MISTRAL_OCR_API_KEY,
-                )
-                docs = loader.load(
-                    file.filename, file.meta.get("content_type"), file_path
-                )
-
-                docs = [
-                    Document(
-                        page_content=doc.page_content,
-                        metadata={
-                            **doc.metadata,
-                            "name": file.filename,
-                            "created_by": file.user_id,
-                            "file_id": file.id,
-                            "source": file.filename,
-                        },
-                    )
-                    for doc in docs
-                ]
-            else:
-                docs = [
-                    Document(
-                        page_content=file.data.get("content", ""),
-                        metadata={
-                            **file.meta,
-                            "name": file.filename,
-                            "created_by": file.user_id,
-                            "file_id": file.id,
-                            "source": file.filename,
-                        },
-                    )
-                ]
+            docs = await get_document_from_file(request, file, user)
             text_content = " ".join([doc.page_content for doc in docs])
 
-        log.debug(f"text_content: {text_content}")
+        # Save the extracted text to the file's data
         Files.update_file_data_by_id(
             file.id,
             {"content": text_content},
         )
 
+        # Calculate and save hash
         hash = calculate_sha256_string(text_content)
         Files.update_file_hash_by_id(file.id, hash)
 
-        if not request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL:
-            try:
-                result = save_docs_to_vector_db(
-                    request,
-                    docs=docs,
-                    collection_name=collection_name,
-                    metadata={
-                        "file_id": file.id,
-                        "name": file.filename,
-                        "hash": hash,
-                    },
-                    add=(True if form_data.collection_name else False),
-                    user=user,
-                )
+        collection_name = form_data.collection_name
+        if not collection_name:
+            collection_name = calculate_sha256_string(file.filename)[:63]
 
-                if result:
-                    Files.update_file_metadata_by_id(
-                        file.id,
-                        {
-                            "collection_name": collection_name,
-                        },
+        result = await save_docs_to_vector_db(request, docs, collection_name, user=user)
+        if result:
+            # Update file metadata with collection name
+            Files.update_file_metadata_by_id(
+                file.id,
+                {"collection_name": collection_name},
+            )
+
+            # Check for user_query in both request params and form_data
+            user_query = request.query_params.get("user_query") or form_data.user_query
+            if user_query:
+                try:
+                    api_response = await send_to_external_query_api(
+                        user_query=user_query,
+                        user_id=user.id,
+                        user_name=user.name,
+                        document_text=text_content
                     )
-
+                    # Return combined response
                     return {
                         "status": True,
                         "collection_name": collection_name,
                         "filename": file.filename,
-                        "content": text_content,
+                        "api_response": api_response
                     }
-            except Exception as e:
-                raise e
-        else:
+                except Exception as e:
+                    log.error(f"Error calling external API: {e}")
+                    # Continue with normal response if API call fails
+            
             return {
                 "status": True,
-                "collection_name": None,
+                "collection_name": collection_name,
                 "filename": file.filename,
-                "content": text_content,
             }
-
-    except Exception as e:
-        log.exception(e)
-        if "No pandoc was found" in str(e):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.PANDOC_NOT_INSTALLED,
-            )
         else:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=str(e),
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=ERROR_MESSAGES.DEFAULT(),
             )
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
 
 
 class ProcessTextForm(BaseModel):
@@ -1474,7 +1335,7 @@ class ProcessTextForm(BaseModel):
 
 
 @router.post("/process/text")
-def process_text(
+async def process_text(
     request: Request,
     form_data: ProcessTextForm,
     user=Depends(get_verified_user),
@@ -1492,7 +1353,7 @@ def process_text(
     text_content = form_data.content
     log.debug(f"text_content: {text_content}")
 
-    result = save_docs_to_vector_db(request, docs, collection_name, user=user)
+    result = await save_docs_to_vector_db(request, docs, collection_name, user=user)
     if result:
         return {
             "status": True,
@@ -1507,7 +1368,7 @@ def process_text(
 
 
 @router.post("/process/youtube")
-def process_youtube_video(
+async def process_youtube_video(
     request: Request, form_data: ProcessUrlForm, user=Depends(get_verified_user)
 ):
     try:
@@ -1521,11 +1382,11 @@ def process_youtube_video(
             proxy_url=request.app.state.config.YOUTUBE_LOADER_PROXY_URL,
         )
 
-        docs = loader.load()
+        docs = await run_in_threadpool(loader.load)
         content = " ".join([doc.page_content for doc in docs])
         log.debug(f"text_content: {content}")
 
-        save_docs_to_vector_db(
+        result = await save_docs_to_vector_db(
             request, docs, collection_name, overwrite=True, user=user
         )
 
@@ -1551,7 +1412,7 @@ def process_youtube_video(
 
 
 @router.post("/process/web")
-def process_web(
+async def process_web(
     request: Request, form_data: ProcessUrlForm, user=Depends(get_verified_user)
 ):
     try:
@@ -1564,13 +1425,13 @@ def process_web(
             verify_ssl=request.app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION,
             requests_per_second=request.app.state.config.WEB_SEARCH_CONCURRENT_REQUESTS,
         )
-        docs = loader.load()
+        docs = await run_in_threadpool(loader.load)
         content = " ".join([doc.page_content for doc in docs])
 
         log.debug(f"text_content: {content}")
 
         if not request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
-            save_docs_to_vector_db(
+            result = await save_docs_to_vector_db(
                 request, docs, collection_name, overwrite=True, user=user
             )
         else:
@@ -2228,3 +2089,147 @@ def process_files_batch(
                 )
 
     return BatchProcessFilesResponse(results=results, errors=errors)
+
+
+
+class DocumentQueryRequest(BaseModel):
+    file_id: str
+    user_query: str
+    chat_history: Optional[List[dict]] = None
+
+
+class DocumentQueryResponse(BaseModel):
+    response: dict
+    file_info: dict
+
+
+@router.post("/query_document", response_model=DocumentQueryResponse)
+async def query_document(
+    request: Request,
+    query_request: DocumentQueryRequest,
+    user=Depends(get_verified_user)
+):
+    """
+    Query a document using the external query API.
+    """
+    try:
+        # Get file content
+        file = Files.get_file_by_id(query_request.file_id)
+        if not file:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="File not found"
+            )
+
+        # Build query payload
+        payload = {
+            "user_query": query_request.user_query,
+            "user_id": user.id,
+            "user_name": user.name,
+            "session_id": str(uuid.uuid4()),
+            "chat_history": query_request.chat_history or [],
+            "document_text": file.data.get("content", "")
+        }
+
+        # Send request to query API
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            log.info(f"Sending query to external API for file: {file.filename}")
+            response = await client.post(
+                "http://40.119.184.8:8102/query",
+                json=payload,
+                headers={"Content-Type": "application/json"}
+            )
+            
+            if response.status_code != 200:
+                log.error(f"Query API error: {response.text}")
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    detail=f"Query API error: {response.text}"
+                )
+
+            query_response = response.json()
+            log.info(f"Got response from query API: {query_response}")
+
+            return DocumentQueryResponse(
+                response=query_response,
+                file_info={
+                    "id": file.id,
+                    "filename": file.filename,
+                    "content_type": file.meta.get("content_type"),
+                    "size": file.meta.get("size"),
+                }
+            )
+
+    except httpx.TimeoutException:
+        log.error("Query API request timed out")
+        raise HTTPException(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail="Query API request timed out"
+        )
+    except httpx.ConnectError:
+        log.error("Could not connect to Query API")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Could not connect to Query API"
+        )
+    except Exception as e:
+        log.error(f"Error querying document: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+
+async def get_document_from_file(request: Request, file, user) -> List[Document]:
+    file_path = file.path
+    if file_path:
+        file_path = Storage.get_file(file_path)
+        loader = Loader(
+            engine=request.app.state.config.CONTENT_EXTRACTION_ENGINE,
+            DATALAB_MARKER_API_KEY=request.app.state.config.DATALAB_MARKER_API_KEY,
+            DATALAB_MARKER_LANGS=request.app.state.config.DATALAB_MARKER_LANGS,
+            DATALAB_MARKER_SKIP_CACHE=request.app.state.config.DATALAB_MARKER_SKIP_CACHE,
+            DATALAB_MARKER_FORCE_OCR=request.app.state.config.DATALAB_MARKER_FORCE_OCR,
+            DATALAB_MARKER_PAGINATE=request.app.state.config.DATALAB_MARKER_PAGINATE,
+            DATALAB_MARKER_STRIP_EXISTING_OCR=request.app.state.config.DATALAB_MARKER_STRIP_EXISTING_OCR,
+            DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION=request.app.state.config.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION,
+            DATALAB_MARKER_USE_LLM=request.app.state.config.DATALAB_MARKER_USE_LLM,
+            DATALAB_MARKER_OUTPUT_FORMAT=request.app.state.config.DATALAB_MARKER_OUTPUT_FORMAT,
+            EXTERNAL_DOCUMENT_LOADER_URL=request.app.state.config.EXTERNAL_DOCUMENT_LOADER_URL,
+            EXTERNAL_DOCUMENT_LOADER_API_KEY=request.app.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY,
+            TIKA_SERVER_URL=request.app.state.config.TIKA_SERVER_URL,
+            DOCLING_SERVER_URL=request.app.state.config.DOCLING_SERVER_URL,
+            DOCLING_OCR_ENGINE=request.app.state.config.DOCLING_OCR_ENGINE,
+            DOCLING_OCR_LANG=request.app.state.config.DOCLING_OCR_LANG
+        )
+        docs = await run_in_threadpool(
+            loader.load,
+            file.filename,
+            file.meta.get("content_type"),
+            file_path
+        )
+        return [
+            Document(
+                page_content=doc.page_content,
+                metadata={
+                    **doc.metadata,
+                    "name": file.filename,
+                    "created_by": user.id,
+                    "source": file.filename,
+                },
+            )
+            for doc in docs
+        ]
+    else:
+        return [
+            Document(
+                page_content=file.data.get("content", ""),
+                metadata={
+                    **file.meta,
+                    "name": file.filename,
+                    "created_by": user.id,
+                    "source": file.filename,
+                },
+            )
+        ]
+

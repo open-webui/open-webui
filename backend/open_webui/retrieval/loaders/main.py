@@ -134,8 +134,8 @@ class DoclingLoader:
         self.url = url.rstrip("/")
         self.file_path = file_path
         self.mime_type = mime_type
-
         self.params = params or {}
+        log.debug(f"DoclingLoader initialized with URL: {self.url}, mime_type: {self.mime_type}, params: {self.params}")
 
     def load(self) -> list[Document]:
         with open(self.file_path, "rb") as f:
@@ -181,11 +181,14 @@ class DoclingLoader:
                         if lang.strip()
                     ]
 
+            log.debug(f"DoclingLoader making request to {self.url}/v1alpha/convert/file with params: {params}")
             endpoint = f"{self.url}/v1alpha/convert/file"
             r = requests.post(endpoint, files=files, data=params)
+            log.debug(f"DoclingLoader response status: {r.status_code}")
 
         if r.ok:
             result = r.json()
+            log.debug(f"DoclingLoader response: {result}")
             document_data = result.get("document", {})
             text = document_data.get("md_content", "<No text content found>")
 
@@ -203,6 +206,7 @@ class DoclingLoader:
                         error_msg += f" - {error_data['detail']}"
                 except Exception:
                     error_msg += f" - {r.text}"
+            log.error(f"DoclingLoader error: {error_msg}")
             raise Exception(f"Error calling Docling: {error_msg}")
 
 

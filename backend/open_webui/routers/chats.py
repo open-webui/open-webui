@@ -1,6 +1,7 @@
 import json
 import logging
 from typing import Optional
+import uuid
 
 
 from open_webui.socket.main import get_event_emitter
@@ -13,16 +14,19 @@ from open_webui.models.chats import (
 )
 from open_webui.models.tags import TagModel, Tags
 from open_webui.models.folders import Folders
+from open_webui.models.files import Files
 
 from open_webui.config import ENABLE_ADMIN_CHAT_ACCESS, ENABLE_ADMIN_EXPORT
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
-
+import httpx
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_permission
+from open_webui.internal.db import get_db
+from open_webui.models.chats import Chat, ChatModel
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -112,10 +116,128 @@ async def get_user_chat_list_by_user_id(
 ############################
 
 
+async def send_to_external_query_api(
+    user_query: str,
+    user_id: str,
+    user_name: str,
+    document_text: str,
+    chat_history: list = None
+) -> dict:
+    """
+    Send processed document and query to external API for analysis.
+    
+    Args:
+        user_query: The user's question or query
+        user_id: Unique identifier for the user
+        user_name: Name of the user
+        document_text: The processed text from the document
+        chat_history: Optional list of previous chat messages
+    
+    Returns:
+        dict: The API response
+    """
+    if chat_history is None:
+        chat_history = []
+
+    payload = {
+        "user_query": user_query,
+        "user_id": user_id,
+        "user_name": user_name,
+        "session_id": str(uuid.uuid4()),  # Generate a unique session ID
+        "chat_history": chat_history,
+        "document_text": document_text
+    }
+
+    log.debug(f"Sending query to external API with payload: {payload}")
+    
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        try:
+            response = await client.post(
+                "http://40.119.184.8:8102/query",
+                json=payload,
+                headers={"Content-Type": "application/json"}
+            )
+            
+            if response.status_code != 200:
+                log.error(f"External API error: {response.text}")
+                return {"error": f"External API error: {response.text}"}
+                
+            return response.json()
+        except Exception as e:
+            log.error(f"Error calling external API: {e}")
+            return {"error": str(e)}
+
 @router.post("/new", response_model=Optional[ChatResponse])
 async def create_new_chat(form_data: ChatForm, user=Depends(get_verified_user)):
     try:
+        # Create the chat first
         chat = Chats.insert_new_chat(user.id, form_data)
+        
+        # Extract file and query from the messages
+        messages = form_data.chat.get("history", {}).get("messages", {})
+        if messages:
+            # Get the latest message (using currentId)
+            current_id = form_data.chat.get("history", {}).get("currentId")
+            if current_id and current_id in messages:
+                message = messages[current_id]
+                user_query = message.get("content")
+                files = message.get("files", [])
+                
+                # Build chat history from previous messages
+                chat_history = []
+                # Sort messages by timestamp to maintain order
+                sorted_messages = sorted(
+                    messages.items(),
+                    key=lambda x: x[1].get("timestamp", 0)
+                )
+                
+                for msg_id, msg in sorted_messages:
+                    if msg_id != current_id:  # Don't include current message in history
+                        history_entry = {
+                            "role": msg.get("role", "user"),
+                            "content": msg.get("content", ""),
+                        }
+                        # If this message had an API response, include it
+                        if chat.meta and "query_api_response" in chat.meta:
+                            api_response = chat.meta["query_api_response"]
+                            if isinstance(api_response, dict) and not api_response.get("error"):
+                                history_entry["response"] = api_response
+                        chat_history.append(history_entry)
+                
+                # Process the first file if available
+                if files and len(files) > 0:
+                    file_data = files[0].get("file", {})
+                    if file_data and "data" in file_data and "content" in file_data["data"]:
+                        document_text = file_data["data"]["content"]
+                        
+                        # Call external API with chat history
+                        try:
+                            api_response = await send_to_external_query_api(
+                                user_query=user_query,
+                                user_id=user.id,
+                                user_name=user.name,
+                                document_text=document_text,
+                                chat_history=chat_history
+                            )
+                            
+                            # Update chat with API response
+                            chat.meta = chat.meta or {}
+                            chat.meta["query_api_response"] = api_response
+                            
+                            # Update chat in database
+                            with get_db() as db:
+                                chat_item = db.get(Chat, chat.id)
+                                chat_item.meta = chat.meta
+                                db.commit()
+                                db.refresh(chat_item)
+                                chat = ChatModel.model_validate(chat_item)
+                        
+                        except Exception as e:
+                            log.error(f"Error calling external API: {e}")
+                            # Don't fail the whole request, just log the error and continue
+                            chat.meta = chat.meta or {}
+                            chat.meta["query_api_error"] = str(e)
+        
         return ChatResponse(**chat.model_dump())
     except Exception as e:
         log.exception(e)

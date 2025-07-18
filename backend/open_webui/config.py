@@ -1921,7 +1921,7 @@ ONEDRIVE_SHAREPOINT_TENANT_ID = PersistentConfig(
 CONTENT_EXTRACTION_ENGINE = PersistentConfig(
     "CONTENT_EXTRACTION_ENGINE",
     "rag.CONTENT_EXTRACTION_ENGINE",
-    os.environ.get("CONTENT_EXTRACTION_ENGINE", "").lower(),
+    os.environ.get("CONTENT_EXTRACTION_ENGINE", "docling").lower(),
 )
 
 DATALAB_MARKER_API_KEY = PersistentConfig(
@@ -2000,19 +2000,19 @@ TIKA_SERVER_URL = PersistentConfig(
 DOCLING_SERVER_URL = PersistentConfig(
     "DOCLING_SERVER_URL",
     "rag.docling_server_url",
-    os.getenv("DOCLING_SERVER_URL", "http://docling:5001"),
+    os.getenv("DOCLING_SERVER_URL", "http://74.162.37.71:5001"),
 )
 
 DOCLING_OCR_ENGINE = PersistentConfig(
     "DOCLING_OCR_ENGINE",
     "rag.docling_ocr_engine",
-    os.getenv("DOCLING_OCR_ENGINE", "tesseract"),
+    os.getenv("DOCLING_OCR_ENGINE", "easyocr"),
 )
 
 DOCLING_OCR_LANG = PersistentConfig(
     "DOCLING_OCR_LANG",
     "rag.docling_ocr_lang",
-    os.getenv("DOCLING_OCR_LANG", "eng,fra,deu,spa"),
+    os.getenv("DOCLING_OCR_LANG", "en,fra,deu,spa"),
 )
 
 DOCLING_DO_PICTURE_DESCRIPTION = PersistentConfig(

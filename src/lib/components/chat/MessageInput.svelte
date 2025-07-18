@@ -1469,7 +1469,7 @@
     <span class="absolute inset-0 border border-[#dee0e3] rounded-full pointer-events-none" aria-hidden="true"></span>
   </button>
 </div>
-
+-->
 <div class="attach">
   <button
     type="button"
@@ -1485,7 +1485,7 @@
     </span>
     <span class="absolute inset-0 border border-[#dee0e3] rounded-full pointer-events-none" aria-hidden="true"></span>
   </button>
-</div>-->
+</div>
 </div>
 										{/if}
 									</div>
