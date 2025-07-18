@@ -2064,7 +2064,7 @@
 <div
 	class="h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
 		? '  md:max-w-[calc(100%-260px)]'
-		: ' '} w-full max-w-full flex flex-col message-spacing-{$settings?.messageSpacing ?? 'normal'} chat-width-{$settings?.chatWidth ?? 'normal'} font-size-{$settings?.fontSize ?? 'normal'}"
+		: ' '} w-full max-w-full flex flex-col message-spacing-{$settings?.messageSpacing ?? 'normal'} font-size-{$settings?.fontSize ?? 'normal'}"
 	id="chat-container"
 >
 	{#if !loading}
