@@ -1082,16 +1082,20 @@ async def process_chat_response(
                     TASKS.FOLLOW_UP_GENERATION in tasks
                     and tasks[TASKS.FOLLOW_UP_GENERATION]
                 ):
-                    res = await generate_follow_ups(
-                        request,
-                        {
-                            "model": message["model"],
-                            "messages": messages,
-                            "message_id": metadata["message_id"],
-                            "chat_id": metadata["chat_id"],
-                        },
-                        user,
-                    )
+                    try:
+                        res = await generate_follow_ups(
+                            request,
+                            {
+                                "model": message["model"],
+                                "messages": messages,
+                                "message_id": metadata["message_id"],
+                                "chat_id": metadata["chat_id"],
+                            },
+                            user,
+                        )
+                    except Exception as e:
+                        log.error(f"Failed to generate follow-ups: {str(e)}")
+                        res = None
 
                     if res and isinstance(res, dict):
                         if len(res.get("choices", [])) == 1:
@@ -2450,7 +2454,10 @@ async def process_chat_response(
                     }
                 )
 
-                await background_tasks_handler()
+                try:
+                    await background_tasks_handler()
+                except Exception as e:
+                    log.error(f"Error in background tasks handler: {str(e)}", exc_info=True)
             except asyncio.CancelledError:
                 log.warning("Task was cancelled!")
                 await event_emitter({"type": "task-cancelled"})

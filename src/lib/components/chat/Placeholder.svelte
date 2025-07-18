@@ -168,8 +168,8 @@
 
 				<!-- mAI Tagline -->
 				<div class="flex justify-center mt-2 mb-4" in:fade={{ duration: 100, delay: 100 }}>
-					<div class="text-lg @sm:text-xl text-center text-gray-600 dark:text-gray-400 font-medium">
-						You + AI = superpowers! 🚀
+					<div class="text-base @sm:text-lg text-center text-gray-600 dark:text-gray-400 font-medium">
+						{$i18n.language === 'pl-PL' ? 'Ty + AI = supermoce! 🚀' : 'You + AI = superpowers! 🚀'}
 					</div>
 				</div>
 
