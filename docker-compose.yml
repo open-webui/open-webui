@@ -16,11 +16,8 @@ services:
       dockerfile: Dockerfile
     # image: ghcr.io/open-webui/open-webui:main
     container_name: open-webui
-    volumes:
-      - ./open-webui-data:/app/backend/data
-      # - ./backend/open_webui:/app/backend/open_webui  # TEMP: for python debug
-    # depends_on:
-    #   - ollama
+    depends_on:
+      - postgres
     ports:
       - ${OPEN_WEBUI_PORT-3000}:8080
     environment:
@@ -31,10 +28,24 @@ services:
       - GOOGLE_CLIENT_SECRET=
       - 'WEBUI_SECRET_KEY='
       - OPENAI_API_KEY=
+      - DATABASE_URL=postgresql://postgres:password@postgres/webui
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped
 
+  postgres:
+    image: postgres:17.5
+    container_name: postgres
+    restart: unless-stopped
+    ports:
+      - ${POSTGRES_PORT-5432}:5432
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=webui
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
 volumes:
   ollama: {}
-  #open-webui: {}
+  postgres-data: {}

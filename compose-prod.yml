@@ -3,10 +3,9 @@ version: '3.4'
 services:
   w-open-webui:
     container_name: w-open-webui
-    #image: europe-west3-docker.pkg.dev/w-calderone/w-chatbot-ui/w-chatbot-ui:latest
     image: europe-west3-docker.pkg.dev/w-calderone/w-chat-gpt-2/w-chat-gpt-2:latest
-    volumes:
-      - open-webui:/app/backend/data
+    # volumes:
+    #   - open-webui:/app/backend/data
     ports:
       - ${OPEN_WEBUI_PORT-3000}:8080
     labels:
@@ -20,11 +19,29 @@ services:
       # - 'OLLAMA_BASE_URL=http://ollama:11434'
       - ENABLE_OAUTH_SIGNUP=True
       - OAUTH_MERGE_ACCOUNTS_BY_EMAIL=True
+      - DATABASE_URL=postgresql://postgres:r70T6SyirCeN4fOS@postgres/webui
     extra_hosts:
       - host.docker.internal:host-gateway
+    depends_on:
+      - postgres
     networks:
       - chatbot-network
     restart: unless-stopped
+
+  postgres:
+    image: postgres:17.5
+    container_name: postgres
+    restart: unless-stopped
+    ports:
+      - ${POSTGRES_PORT-5432}:5432
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=r70T6SyirCeN4fOS
+      - POSTGRES_DB=webui
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - chatbot-network
 
   traefik:
     image: 'traefik:v2.0.0-rc3'
@@ -53,7 +70,8 @@ services:
 
 volumes:
   # ollama: {}
-  open-webui: {}
+  # open-webui: {}
+  postgres-data: {}
 
 networks:
   chatbot-network:
