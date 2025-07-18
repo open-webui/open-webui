@@ -2285,6 +2285,7 @@ def cleanup_orphaned_chat_files() -> dict:
             "orphaned_files_found": 0,
             "collections_cleaned": 0,
             "files_deleted": 0,
+            "kb_files_preserved": 0,
             "errors": [],
         }
 
@@ -2337,6 +2338,22 @@ def cleanup_orphaned_chat_files() -> dict:
             f"Found {len(chat_referenced_files)} files referenced in existing chats"
         )
 
+        # Get files referenced in knowledge bases (these should NEVER be deleted)
+        kb_referenced_files = set()
+        try:
+            for kb in existing_knowledge_bases:
+                if kb.data and isinstance(kb.data, dict):
+                    file_ids = kb.data.get("file_ids", [])
+                    if isinstance(file_ids, list):
+                        kb_referenced_files.update(file_ids)
+
+            log.info(
+                f"Found {len(kb_referenced_files)} files referenced in knowledge bases (will be preserved)"
+            )
+        except Exception as e:
+            log.error(f"Error getting knowledge base files: {e}")
+            kb_referenced_files = set()
+
         # Process file collections
         for collection_name in collections:
             cleanup_summary["chat_files_checked"] += 1
@@ -2352,6 +2369,12 @@ def cleanup_orphaned_chat_files() -> dict:
 
                 # Extract file ID
                 file_id = collection_name.replace("file-", "")
+
+                # NEVER delete files that belong to knowledge bases
+                if file_id in kb_referenced_files:
+                    cleanup_summary["kb_files_preserved"] += 1
+                    log.debug(f"Skipping file {file_id} - belongs to knowledge base")
+                    continue
 
                 # Check if file exists in database
                 file = Files.get_file_by_id(file_id)
