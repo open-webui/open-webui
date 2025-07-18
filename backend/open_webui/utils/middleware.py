@@ -607,62 +607,170 @@ async def chat_completion_files_handler(
     sources = []
 
     if files := body.get("metadata", {}).get("files", None):
-        queries = []
-        try:
-            queries_response = await generate_queries(
-                request,
-                {
-                    "model": body["model"],
-                    "messages": body["messages"],
-                    "type": "retrieval",
-                },
-                user,
-            )
-            queries_response = queries_response["choices"][0]["message"]["content"]
+        # Check if govGpt-file-search-service is enabled
+        use_govgpt_service = os.environ.get("ENABLE_GOVGPT_FILE_SEARCH", "false").lower() == "true"
+        
+        if not use_govgpt_service:
+            log.info(f"govGpt-file-search-service is DISABLED - using regular retrieval for user {user.id}")
+        
+        if use_govgpt_service:
+            log.info(f"govGpt-file-search-service is ENABLED for user {user.id}")
+            # Use govGpt-file-search-service instead of regular retrieval
+            try:
+                from open_webui.routers.custom_document_qa import (
+                    call_custom_qa_api, 
+                    get_document_content_from_files, 
+                    get_last_user_message
+                )
+                
+                user_message = get_last_user_message(body["messages"])
+                log.info(f"govGpt-file-search-service processing user message: '{user_message}'")
+                
+                # Get file IDs from the files list
+                file_ids = []
+                for file_item in files:
+                    if isinstance(file_item, dict):
+                        if "id" in file_item:
+                            file_ids.append(file_item["id"])
+                        elif "file_id" in file_item:
+                            file_ids.append(file_item["file_id"])
+                    elif isinstance(file_item, str):
+                        file_ids.append(file_item)
+                
+                log.info(f"govGpt-file-search-service found {len(file_ids)} file IDs: {file_ids}")
+                
+                if file_ids:
+                    # Get document content
+                    log.info(f"govGpt-file-search-service extracting document content for {len(file_ids)} files")
+                    document_text = get_document_content_from_files(request, file_ids, user)
+                    log.info(f"govGpt-file-search-service extracted {len(document_text)} characters of document content")
+                    
+                    # Get chat history for context
+                    chat_history = []
+                    messages = body.get("messages", [])
+                    for i in range(0, len(messages) - 1, 2):  # Skip the last user message
+                        if i + 1 < len(messages):
+                            chat_history.append({
+                                "role": "user",
+                                "content": messages[i].get("content", "")
+                            })
+                            chat_history.append({
+                                "role": "assistant", 
+                                "content": messages[i + 1].get("content", "")
+                            })
+                    
+                    log.info(f"govGpt-file-search-service prepared {len(chat_history)} chat history messages")
+                    
+                    # Call the govGpt-file-search-service
+                    log.info(f"govGpt-file-search-service calling external API for user {user.id}")
+                    api_response = await call_custom_qa_api(
+                        user_query=user_message,
+                        document_text=document_text,
+                        user_id=user.id,
+                        user_name=user.name,
+                        session_id=body.get("metadata", {}).get("session_id"),
+                        chat_history=chat_history
+                    )
+                    
+                    # Extract the response and add it to the user message
+                    log.info(f"govGpt-file-search-service API response keys: {list(api_response.keys())}")
+                    custom_response = api_response.get("response", "")
+                    
+                    if custom_response.strip():
+                        log.info(f"govGpt-file-search-service received response: {len(custom_response)} characters")
+                        log.info(f"govGpt-file-search-service response preview: '{custom_response[:200]}...'")
+                        log.info(f"govGpt-file-search-service full response: {custom_response}")
+                        
+                        # Add sources from the custom API if available
+                        if api_response.get("sources"):
+                            sources.extend(api_response["sources"])
+                            log.info(f"govGpt-file-search-service added {len(api_response['sources'])} sources")
+                        
+                        # Create a direct response with the custom content
+                        # Add the custom response as an assistant message
+                        body["messages"].append({
+                            "role": "assistant",
+                            "content": custom_response,
+                            "metadata": {
+                                "source": "govGpt-file-search-service",
+                                "api_response": True
+                            }
+                        })
+                        
+                        log.info(f"govGpt-file-search-service direct response added for user {user.id}")
+                        
+                        # Mark the body to skip regular chat completion
+                        body["skip_chat_completion"] = True
+                        body["custom_response"] = custom_response
+                        
+                        # Return the body with the custom response directly
+                        return body, {"sources": sources}
+                    else:
+                        log.warning(f"govGpt-file-search-service received empty response for user {user.id}")
+                    
+            except Exception as e:
+                log.error(f"Error calling govGpt-file-search-service: {e}")
+                # Fall back to regular retrieval if custom service fails
+                use_govgpt_service = False
+        
+        if not use_govgpt_service:
+            # Regular retrieval flow (original code)
+            queries = []
+            try:
+                queries_response = await generate_queries(
+                    request,
+                    {
+                        "model": body["model"],
+                        "messages": body["messages"],
+                        "type": "retrieval",
+                    },
+                    user,
+                )
+                queries_response = queries_response["choices"][0]["message"]["content"]
+
+                try:
+                    bracket_start = queries_response.find("{")
+                    bracket_end = queries_response.rfind("}") + 1
+
+                    if bracket_start == -1 or bracket_end == -1:
+                        raise Exception("No JSON object found in the response")
+
+                    queries_response = queries_response[bracket_start:bracket_end]
+                    queries_response = json.loads(queries_response)
+                except Exception as e:
+                    queries_response = {"queries": [queries_response]}
+
+                queries = queries_response.get("queries", [])
+            except:
+                pass
+
+            if len(queries) == 0:
+                queries = [get_last_user_message(body["messages"])]
 
             try:
-                bracket_start = queries_response.find("{")
-                bracket_end = queries_response.rfind("}") + 1
-
-                if bracket_start == -1 or bracket_end == -1:
-                    raise Exception("No JSON object found in the response")
-
-                queries_response = queries_response[bracket_start:bracket_end]
-                queries_response = json.loads(queries_response)
-            except Exception as e:
-                queries_response = {"queries": [queries_response]}
-
-            queries = queries_response.get("queries", [])
-        except:
-            pass
-
-        if len(queries) == 0:
-            queries = [get_last_user_message(body["messages"])]
-
-        try:
-            # Offload get_sources_from_files to a separate thread
-            loop = asyncio.get_running_loop()
-            with ThreadPoolExecutor() as executor:
-                sources = await loop.run_in_executor(
-                    executor,
-                    lambda: get_sources_from_files(
-                        request=request,
-                        files=files,
-                        queries=queries,
-                        embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
-                            query, prefix=prefix, user=user
+                # Offload get_sources_from_files to a separate thread
+                loop = asyncio.get_running_loop()
+                with ThreadPoolExecutor() as executor:
+                    sources = await loop.run_in_executor(
+                        executor,
+                        lambda: get_sources_from_files(
+                            request=request,
+                            files=files,
+                            queries=queries,
+                            embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
+                                query, prefix=prefix, user=user
+                            ),
+                            k=request.app.state.config.TOP_K,
+                            reranking_function=request.app.state.rf,
+                            k_reranker=request.app.state.config.TOP_K_RERANKER,
+                            r=request.app.state.config.RELEVANCE_THRESHOLD,
+                            hybrid_bm25_weight=request.app.state.config.HYBRID_BM25_WEIGHT,
+                            hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
+                            full_context=request.app.state.config.RAG_FULL_CONTEXT,
                         ),
-                        k=request.app.state.config.TOP_K,
-                        reranking_function=request.app.state.rf,
-                        k_reranker=request.app.state.config.TOP_K_RERANKER,
-                        r=request.app.state.config.RELEVANCE_THRESHOLD,
-                        hybrid_bm25_weight=request.app.state.config.HYBRID_BM25_WEIGHT,
-                        hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
-                        full_context=request.app.state.config.RAG_FULL_CONTEXT,
-                    ),
-                )
-        except Exception as e:
-            log.exception(e)
+                    )
+            except Exception as e:
+                log.exception(e)
 
         log.debug(f"rag_contexts:sources: {sources}")
 
