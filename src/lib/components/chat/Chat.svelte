@@ -1601,6 +1601,26 @@
 				['doc', 'text', 'file', 'note', 'collection'].includes(item.type)
 			)
 		);
+		
+		// Add image files that have OCR content from backend processing
+		const imageFilesWithContent = (userMessage?.files ?? [])
+			.filter((item) => item.type === 'image' && item.backendFile?.data?.content)
+			.map((imageFile) => ({
+				type: 'file',
+				context: 'full', // CRITICAL: This tells the RAG system to use content directly
+				file: imageFile.backendFile,
+				id: imageFile.backendFile.id,
+				url: imageFile.backendFile.url || `/api/v1/files/${imageFile.backendFile.id}`,
+				name: imageFile.backendFile.filename || imageFile.name,
+				collection_name: imageFile.backendFile.meta?.collection_name,
+				status: 'uploaded',
+				size: imageFile.backendFile.meta?.size,
+				error: ''
+			}));
+		
+		files.push(...imageFilesWithContent);
+		
+		
 		// Remove duplicates
 		files = files.filter(
 			(item, index, array) =>
