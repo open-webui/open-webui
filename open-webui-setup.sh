@@ -10,6 +10,7 @@ uv pip install -r backend/requirements.txt
 pip install npm
 node -v
 npm -v
+export WEBUI_NAME="TSI WebUI"
 nvm install 20.18.1
 nvm use 20.18.1
 pip install --upgrade chromadb
