@@ -822,6 +822,11 @@ async def generate_chat_completion(
                 "X-OpenWebUI-User-Id": user.id,
                 "X-OpenWebUI-User-Email": user.email,
                 "X-OpenWebUI-User-Role": user.role,
+                **(
+                    {"X-OpenWebUI-Chat-Id": metadata.get("chat_id")}
+                    if metadata and metadata.get("chat_id")
+                    else {}
+                ),
             }
             if ENABLE_FORWARD_USER_INFO_HEADERS
             else {}
