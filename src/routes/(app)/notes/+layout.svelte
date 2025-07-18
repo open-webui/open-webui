@@ -27,7 +27,7 @@
 
 <svelte:head>
 	<title>
-		{$i18n.t('Notes')} • {$WEBUI_NAME}
+		{$i18n.t('Notes')} • {$WEBUI_NAME} | You + AI = superpowers! 🚀
 	</title>
 </svelte:head>
 

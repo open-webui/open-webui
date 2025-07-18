@@ -804,8 +804,8 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 <svelte:head>
 	<title>
 		{note?.title
-			? `${note?.title.length > 30 ? `${note?.title.slice(0, 30)}...` : note?.title} • ${$WEBUI_NAME}`
-			: `${$WEBUI_NAME}`}
+			? `${note?.title.length > 30 ? `${note?.title.slice(0, 30)}...` : note?.title} • ${$WEBUI_NAME} | You + AI = superpowers! 🚀`
+			: `${$WEBUI_NAME} | You + AI = superpowers! 🚀`}
 	</title>
 </svelte:head>
 

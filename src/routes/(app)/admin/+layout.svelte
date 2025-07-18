@@ -20,7 +20,7 @@
 
 <svelte:head>
 	<title>
-		{$i18n.t('Admin Panel')} • {$WEBUI_NAME}
+		{$i18n.t('Admin Panel')} • {$WEBUI_NAME} | You + AI = superpowers! 🚀
 	</title>
 </svelte:head>
 

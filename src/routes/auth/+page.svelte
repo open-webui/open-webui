@@ -160,7 +160,7 @@
 
 <svelte:head>
 	<title>
-		{`${$WEBUI_NAME}`}
+		{`${$WEBUI_NAME} | You + AI = superpowers! 🚀`}
 	</title>
 </svelte:head>
 
