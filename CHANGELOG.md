@@ -9,9 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- 🛡️ masking toggle button
-- 📤 unmasked chat export
-- ⌨️ shortcut Ctrl + Shift + L for mask/unmask all
+- 🛡️ Masking toggle button.
+- 📤 Unmasked chat export.
+- ⌨️ Shortcut (Ctrl + Shift + L) for mask/unmask all
 
 ## [0.6.15_n1] - 2025-7-11
 
