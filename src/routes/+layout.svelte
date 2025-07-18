@@ -541,9 +541,34 @@
 					clearInterval(tokenTimer);
 				}
 				tokenTimer = setInterval(checkTokenExpiry, 15000);
+
+				// Update Usetiful user identification
+				if (typeof window !== 'undefined') {
+					// Parse name into first and last name
+					const nameParts = value.name?.split(' ') || [];
+					const firstName = nameParts[0] || '';
+					const lastName = nameParts.slice(1).join(' ') || '';
+
+					window.usetifulTags = {
+						userId: value.id,
+						firstName: firstName,
+						lastName: lastName
+					};
+
+					console.log('Usetiful user identification updated:', window.usetifulTags);
+				}
 			} else {
 				$socket?.off('chat-events', chatEventHandler);
 				$socket?.off('channel-events', channelEventHandler);
+
+				// Clear Usetiful user identification when user logs out
+				if (typeof window !== 'undefined') {
+					window.usetifulTags = {
+						userId: null,
+						firstName: null,
+						lastName: null
+					};
+				}
 			}
 		});
 
