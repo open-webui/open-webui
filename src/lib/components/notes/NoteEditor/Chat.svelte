@@ -297,10 +297,6 @@ Based on the user's instruction, update and enhance the existing notes by incorp
 	};
 
 	onMount(async () => {
-		if ($user?.role !== 'admin') {
-			await goto('/');
-		}
-
 		editorEnabled = localStorage.getItem('noteEditorEnabled') === 'true';
 
 		loaded = true;
