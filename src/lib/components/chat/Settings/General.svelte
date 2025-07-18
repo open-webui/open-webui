@@ -26,6 +26,9 @@
 	let backgroundPattern = 'none';
 	let backgroundOpacity = 5;
 
+	// Font size settings
+	let fontSize = 'normal';
+
 	let showAdvanced = false;
 
 	const toggleNotification = async () => {
@@ -77,6 +80,7 @@
 			system: system !== '' ? system : undefined,
 			backgroundPattern: backgroundPattern,
 			backgroundOpacity: backgroundOpacity,
+			fontSize: fontSize,
 			params: {
 				stream_response: params.stream_response !== null ? params.stream_response : undefined,
 				function_calling: params.function_calling !== null ? params.function_calling : undefined,
@@ -132,6 +136,9 @@
 		// Load background pattern settings
 		backgroundPattern = $settings.backgroundPattern || 'none';
 		backgroundOpacity = $settings.backgroundOpacity || 5;
+
+		// Load font size setting
+		fontSize = $settings.fontSize || 'normal';
 
 		params = { ...params, ...$settings.params };
 		params.stop = $settings?.params?.stop ? ($settings?.params?.stop ?? []).join(',') : null;
@@ -399,6 +406,29 @@
 							<span class="text-xs text-gray-600 dark:text-gray-400 w-8">{backgroundOpacity}%</span>
 						</div>
 					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- Font Size Settings -->
+		<div class="mb-4">
+			<div class="mb-2">
+				<h3 class="text-sm font-medium text-gray-900 dark:text-gray-100">{$i18n.t('Font Size')}</h3>
+				<p class="text-xs text-gray-600 dark:text-gray-400">Adjust text size for chat messages and hints</p>
+			</div>
+			
+			<div class="mb-3">
+				<div class="flex w-full justify-between items-center">
+					<div class="self-center text-xs font-medium">{$i18n.t('Font Size')}</div>
+					<select
+						class="px-3 py-1 text-xs bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md"
+						bind:value={fontSize}
+					>
+						<option value="small">{$i18n.t('Small')}</option>
+						<option value="normal">{$i18n.t('Normal')}</option>
+						<option value="large">{$i18n.t('Large')}</option>
+						<option value="extra-large">{$i18n.t('Extra Large')}</option>
+					</select>
 				</div>
 			</div>
 		</div>

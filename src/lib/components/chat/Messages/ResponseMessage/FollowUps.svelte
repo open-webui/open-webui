@@ -9,7 +9,7 @@
 </script>
 
 <div class="mt-4">
-	<div class="text-sm font-medium">
+	<div class="font-medium">
 		{$i18n.t('Follow up')}
 	</div>
 
@@ -18,7 +18,7 @@
 			<!-- svelte-ignore a11y-no-static-element-interactions -->
 			<!-- svelte-ignore a11y-click-events-have-key-events -->
 			<div
-				class=" mr-2 py-1.5 bg-transparent text-left text-sm flex items-center gap-2 px-1.5 text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white transition cursor-pointer"
+				class=" mr-2 py-1.5 bg-transparent text-left flex items-center gap-2 px-1.5 text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white transition cursor-pointer"
 				on:click={() => onClick(followUp)}
 				title={followUp}
 				aria-label={followUp}

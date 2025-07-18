@@ -11,8 +11,6 @@
 
 	export let saveSettings: Function;
 
-	let messageSpacing = 'normal';
-	let fontSize = 'normal';
 
 	// Addons
 	let titleAutoGenerate = true;
@@ -277,8 +275,6 @@
 		saveSettings({
 			models: [defaultModelId],
 			imageCompressionSize: imageCompressionSize,
-			messageSpacing: messageSpacing,
-			fontSize: fontSize
 		});
 	};
 
@@ -351,8 +347,6 @@
 			defaultModelId = $config.default_models.split(',')[0];
 		}
 
-		messageSpacing = $settings?.messageSpacing ?? 'normal';
-		fontSize = $settings?.fontSize ?? 'normal';
 		webSearch = $settings?.webSearch ?? null;
 	});
 </script>
@@ -887,51 +881,6 @@
 			</div>
 
 
-			<div class=" my-1.5 text-sm font-medium">{$i18n.t('Layout & Spacing')}</div>
-
-			<div>
-				<div class=" py-0.5 flex w-full justify-between">
-					<div id="message-spacing-label" class=" self-center text-xs">
-						{$i18n.t('Message Spacing')}
-					</div>
-
-					<select
-						aria-labelledby="message-spacing-label"
-						class="dark:bg-gray-900 w-fit pr-8 rounded-sm py-1 px-2 text-xs bg-transparent text-right outline-hidden"
-						bind:value={messageSpacing}
-						on:change={() => {
-							saveSettings({ messageSpacing });
-						}}
-					>
-						<option value="compact">{$i18n.t('Compact')}</option>
-						<option value="normal">{$i18n.t('Normal')}</option>
-						<option value="relaxed">{$i18n.t('Relaxed')}</option>
-					</select>
-				</div>
-			</div>
-
-
-			<div>
-				<div class=" py-0.5 flex w-full justify-between">
-					<div id="font-size-label" class=" self-center text-xs">
-						{$i18n.t('Font Size')}
-					</div>
-
-					<select
-						aria-labelledby="font-size-label"
-						class="dark:bg-gray-900 w-fit pr-8 rounded-sm py-1 px-2 text-xs bg-transparent text-right outline-hidden"
-						bind:value={fontSize}
-						on:change={() => {
-							saveSettings({ fontSize });
-						}}
-					>
-						<option value="small">{$i18n.t('Small')}</option>
-						<option value="normal">{$i18n.t('Normal')}</option>
-						<option value="large">{$i18n.t('Large')}</option>
-						<option value="extra-large">{$i18n.t('Extra Large')}</option>
-					</select>
-				</div>
-			</div>
 
 			<div>
 				<div id="allow-user-location-label" class=" py-0.5 flex w-full justify-between">
