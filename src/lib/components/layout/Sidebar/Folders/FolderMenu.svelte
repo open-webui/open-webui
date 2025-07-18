@@ -29,41 +29,44 @@
 
 	<div slot="content">
 		<DropdownMenu.Content
-			class="w-full max-w-[170px] rounded-lg px-1 py-1.5  z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
+			class="w-full max-w-[228px] rounded-lg   z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
 			sideOffset={-2}
 			side="bottom"
 			align="start"
 			transition={flyAndScale}
 		>
 			<DropdownMenu.Item
-				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				class="flex justify-between items-center px-[16px] py-[11px] text-[17px] leading-[22px] cursor-pointer"
 				on:click={() => {
 					dispatch('rename');
 				}}
 			>
-				<Pencil strokeWidth="2" />
+				
 				<div class="flex items-center">{$i18n.t('Rename')}</div>
+				<Pencil strokeWidth="2" />
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
-				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				class="flex justify-between items-center px-[16px] py-[11px] text-[17px] leading-[22px] cursor-pointer"
 				on:click={() => {
 					dispatch('export');
 				}}
 			>
-				<Download strokeWidth="2" />
+				
 
 				<div class="flex items-center">{$i18n.t('Export')}</div>
+				<Download strokeWidth="2" />
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
-				class="flex  gap-2  items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				class="flex justify-between items-center px-[16px] py-[11px] text-[17px] leading-[22px] cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 				on:click={() => {
 					dispatch('delete');
 				}}
 			>
-				<GarbageBin strokeWidth="2" />
+				
 				<div class="flex items-center">{$i18n.t('Delete')}</div>
+				<GarbageBin strokeWidth="2" />
 			</DropdownMenu.Item>
 		</DropdownMenu.Content>
 	</div>

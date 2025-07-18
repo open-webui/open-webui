@@ -29,6 +29,8 @@
 	import Logo from '../icons/Logo.svelte';
 	import LightMode from '../icons/LightMode.svelte';
 	import DarkMode from '../icons/DarkMode.svelte';
+	
+	
 
 	import PencilSquare from '../icons/PencilSquare.svelte';
 	import Banner from '../common/Banner.svelte';
@@ -63,7 +65,7 @@
 	aria-label="New Chat"
 />
 
-<nav class="w-full flex items-center justify-between px-4 py-0 h-[56px] relative z-30 { $mobile ? 'bg-white dark:bg-gray-900 border-b border-[#dee0e3] dark:border-gray-800' : 'bg-transparent' }">
+<nav class="w-full flex items-center justify-between px-4 py-0 h-[56px] relative z-30 { $mobile ? ' dark:bg-gray-900 dark:border-gray-800' : 'bg-transparent' }">
   {#if $mobile}
     <button
       class="flex items-center justify-center rounded-lg size-10 hover:bg-[#e5e7eb] transition"
@@ -83,9 +85,9 @@
 
   <div class="flex items-center">
     <img
-	src="/logo-dark.png"
+	src="/logov4.png"
 	alt="GovGPT Logo"
-	class="w-[132px] h-[40px] filter dark:invert dark:brightness-0 dark:contrast-200"
+	class="w-[28px] h-[28px] filter dark:invert dark:brightness-0 dark:contrast-200"
 	/>
 
 	<!--<div
@@ -133,7 +135,7 @@
 							</button>
 						</Menu>
 					{/if}-->
-					<div class="flex items-center mr-[12px]">
+					<!--<div class="flex items-center mr-[12px]">
 
 					<label class="relative inline-flex items-center cursor-pointer">
 						<input type="checkbox" bind:checked={isOn} class="sr-only peer" />
@@ -143,7 +145,7 @@
 						</div>
 						</div>
 					</label>
-					</div>
+					</div>-->
 					<!--<Tooltip content={$i18n.t('Controls')}>
 						<button
 							class=" flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
@@ -159,7 +161,7 @@
 					</Tooltip>-->
 
 					{#if $user !== undefined && $user !== null}
-						<UserMenu
+						<!--<UserMenu
 							className="max-w-[240px]"
 							role={$user?.role}
 							help={true}
@@ -182,7 +184,7 @@
 									/>
 								</div>
 							</button>
-						</UserMenu>
+						</UserMenu>-->
 					{/if}
 				</div>
 			</div>

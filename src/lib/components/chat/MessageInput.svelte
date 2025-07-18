@@ -61,6 +61,7 @@
 	import CheckNew from '../icons/CheckNew.svelte';
 	import Language from '../icons/Language.svelte';
 	import Attach from '../icons/Attach.svelte';
+	import Save from '../icons/Save.svelte';
 
 
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
@@ -611,7 +612,7 @@
 			<div
 				class="{($settings?.widescreenMode ?? null)
 					? 'max-w-full'
-					: 'max-w-6xl'} px-2.5 mx-auto inset-x-0"
+					: 'max-w-6xl'} mx-auto inset-x-0"
 			>
 				<div class="">
 					<input
@@ -664,12 +665,8 @@
 							}}
 						>
 							<div
-								class="flex-1 flex flex-col relative w-full shadow-none rounded-3xl transition px-1 bg-white/90 dark:bg-gray-400/5 dark:text-gray-100"
-								style="
-    border-radius: 20px;
-    background: var(--Schemes-Surface, #FFF);
-    box-shadow: 0px 0px 16px -8px rgba(28, 27, 27, 0.04);
-  "
+								class="p-[24px] flex-1 flex flex-col bounded-[12px] shadow-custom3  relative w-full rounded-3xl transition bg-[#FBFCFC] dark:bg-gray-400/5 dark:text-gray-100"
+								
 								dir={$settings?.chatDirection ?? 'auto'}
 							>
 								{#if files.length > 0}
@@ -765,10 +762,10 @@
 									</div>
 								{/if}
 
-								<div class="px-2.5">
+								<div class="">
 									{#if $settings?.richTextInput ?? true}
 										<div
-											class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-gray-100 outline-hidden w-full pt-2.5 pb-[5px] px-1 resize-none h-fit max-h-80 overflow-auto"
+											class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-gray-100 outline-hidden w-full text-[16px] leading-[24px] text-disabled resize-none h-fit max-h-80 overflow-auto"
 											id="chat-input-container"
 										>
 											<RichTextInput
@@ -1218,7 +1215,7 @@
 									{/if}
 								</div>
 
-								<div class=" flex justify-between mt-[20px] mb-2.5 mx-0.5 max-w-full" dir="ltr">
+								<div class=" flex justify-between mt-[48px] max-w-full" dir="ltr">
 									<div class="ml-1 self-end flex items-center flex-1 max-w-[80%]">
 										<!--<InputMenu
 											bind:selectedToolIds
@@ -1290,10 +1287,10 @@
 										</InputMenu>-->
 
 										{#if $_user && (showToolsButton || (toggleFilters && toggleFilters.length > 0) || showWebSearchButton || showImageGenerationButton || showCodeInterpreterButton)}
-											<div
+											<!--<div
 												class="flex self-center w-[1px] h-4 mx-1.5 bg-gray-50 dark:bg-gray-800"
-											/>
-											<div class="flex gap-1 items-center overflow-x-auto scrollbar-none flex-1">
+											/>-->
+											<div class="flex gap-[8px] items-center  flex-1">
 												{#if showToolsButton}
 													<Tooltip
 														content={$i18n.t('{{COUNT}} Available Tools', {
@@ -1363,7 +1360,7 @@
 														<button
 															on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
 															type="button"
-															class="px-2 @xl:px-2.5 py-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {webSearchEnabled ||
+															class="flex items-center px-[12px] gap-[4px] py-[8px] shadow-custom3 border border-[#E5EBF3] bg-[#FBFCFC] text-typography-titles text-[14px] leading-[22px] rounded-full rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-[#CCDDFC] dark:hover:bg-gray-800 {webSearchEnabled ||
 															($settings?.webSearch ?? false) === 'always'
 																? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
 																: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
@@ -1383,7 +1380,7 @@
 															on:click|preventDefault={() =>
 																(imageGenerationEnabled = !imageGenerationEnabled)}
 															type="button"
-															class="px-2 @xl:px-2.5 py-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {imageGenerationEnabled
+															class="flex items-center px-[12px] gap-[4px] py-[8px] shadow-custom3 border border-[#E5EBF3] bg-[#FBFCFC] text-typography-titles text-[14px] leading-[22px] rounded-full rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-[#CCDDFC] dark:hover:bg-gray-800 {imageGenerationEnabled
 																? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
 																: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
 														>
@@ -1402,7 +1399,7 @@
 															on:click|preventDefault={() =>
 																(codeInterpreterEnabled = !codeInterpreterEnabled)}
 															type="button"
-															class="px-2 @xl:px-2.5 py-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {codeInterpreterEnabled
+															class="flex items-center px-[12px] gap-[4px] py-[8px] rounded-full shadow-custom3 border border-[#E5EBF3] bg-[#FBFCFC] text-typography-titles text-[14px] leading-[22px] transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-[#CCDDFC] dark:hover:bg-gray-800 {codeInterpreterEnabled
 																? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
 																: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
 														>
@@ -1414,6 +1411,23 @@
 														</button>
 													</Tooltip>
 												{/if}
+
+												<div class="attach">
+  <button
+    type="button"
+    class="relative flex items-center px-[12px] gap-[4px] py-[8px] rounded-full shadow-custom3 border border-[#E5EBF3] bg-[#FBFCFC] hover:bg-[#CCDDFC] text-typography-titles text-[14px] leading-[22px] focus:outline-none"
+    on:click={() => filesInputElement.click()}
+    aria-label="Attach files"
+  >
+    <span class="w-[18px] h-[18px] flex items-center justify-center">
+      <Attach strokeWidth="2" className="w-[18px] h-[14px] text-[#36383b]" />
+    </span>
+    <span class="hidden @xl:block text-[14px] leading-[22px] text-typography-titles text-left whitespace-nowrap">
+      Attach files
+    </span>
+    <span class="absolute inset-0 border border-[#dee0e3] rounded-full pointer-events-none" aria-hidden="true"></span>
+  </button>
+</div>
 											</div>
 											<div class="flex gap-[12px] items-center">
 												{#if false}
@@ -1454,38 +1468,7 @@
 </div>
 
 {/if}
-<!--<div class="web-search">
-  <button
-    type="button"
-    class="relative flex items-center bg-white border border-[#dee0e3] rounded-full px-3 py-2 gap-2 focus:outline-none"
-    aria-label="Web Search"
-  >
-    <span class="w-[18px] h-[18px] flex items-center justify-center">
-      <Language strokeWidth="2" className="w-[18px] h-[18px] text-[#36383b]" />
-    </span>
-    <span class="font-heading font-medium text-[14px] leading-[22px] text-[#36383b] text-left whitespace-nowrap">
-      Web Search
-    </span>
-    <span class="absolute inset-0 border border-[#dee0e3] rounded-full pointer-events-none" aria-hidden="true"></span>
-  </button>
-</div>
 
-<div class="attach">
-  <button
-    type="button"
-    class="relative flex items-center bg-white border border-[#dee0e3] rounded-full px-3 py-2 gap-2 focus:outline-none"
-    on:click={() => filesInputElement.click()}
-    aria-label="Attach files"
-  >
-    <span class="w-[18px] h-[18px] flex items-center justify-center">
-      <Attach strokeWidth="2" className="w-[18px] h-[18px] text-[#36383b]" />
-    </span>
-    <span class="font-heading font-medium text-[14px] leading-[22px] text-[#36383b] text-left whitespace-nowrap">
-      Attach files
-    </span>
-    <span class="absolute inset-0 border border-[#dee0e3] rounded-full pointer-events-none" aria-hidden="true"></span>
-  </button>
-</div>-->
 </div>
 										{/if}
 									</div>
@@ -1633,24 +1616,12 @@
 												<Tooltip content={$i18n.t('Send message')}>
 													<button
 														id="send-message-button"
-														class="{!(prompt === '' && files.length === 0)
-															? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
-															: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
+														class=""
 														type="submit"
 														disabled={prompt === '' && files.length === 0}
 													>
-														<svg
-															xmlns="http://www.w3.org/2000/svg"
-															viewBox="0 0 16 16"
-															fill="currentColor"
-															class="size-5"
-														>
-															<path
-																fill-rule="evenodd"
-																d="M8 14a.75.75 0 0 1-.75-.75V4.56L4.03 7.78a.75.75 0 0 1-1.06-1.06l4.5-4.5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.75 4.56v8.69A.75.75 0 0 1 8 14Z"
-																clip-rule="evenodd"
-															/>
-														</svg>
+														<Save strokeWidth="2" disabled={prompt === '' && files.length === 0} />
+														
 													</button>
 												</Tooltip>
 											</div>

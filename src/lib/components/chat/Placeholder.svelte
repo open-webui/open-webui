@@ -7,13 +7,14 @@
 
 	const dispatch = createEventDispatcher();
 
-	import { config, user, models as _models, temporaryChatEnabled } from '$lib/stores';
+	import { config, user, models as _models, temporaryChatEnabled, mobile } from '$lib/stores';
 	import { sanitizeResponseContent, extractCurlyBraceWords } from '$lib/utils';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import Suggestions from './Suggestions.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
+	import LogoV4 from '$lib/components/icons/LogoV4.svelte';
 	import MessageInput from './MessageInput.svelte';
 
 	const i18n = getContext('i18n');
@@ -90,7 +91,7 @@
 	onMount(() => {});
 </script>
 
-<div class="m-auto w-full max-w-6xl px-2 @2xl:px-20 translate-y-6 py-24 text-center">
+<div class="max-w-[800px] pb-[40px] sm:pb-[60px]  w-full mx-auto text-center px-[16px] md:px-[0]">
 	{#if $temporaryChatEnabled}
 		<Tooltip
 			content={$i18n.t("This chat won't appear in history and your messages will not be saved.")}
@@ -107,7 +108,7 @@
 		class="w-full text-3xl text-gray-800 dark:text-gray-100 text-center flex items-center gap-4 font-primary"
 	>
 		<div class="w-full flex flex-col justify-center items-center">
-			<div class="flex flex-row justify-center gap-3 @sm:gap-3.5 w-fit px-5 max-w-xl">
+			<div class="flex flex-row justify-center ">
 				<!-- <div class="flex shrink-0 justify-center">
 					<div class="flex -space-x-4 mb-0.5" in:fade={{ duration: 100 }}>
 						{#each models as model, modelIdx}
@@ -156,8 +157,17 @@
 						{$i18n.t('Hello, {{name}}', { name: $user?.name })}
 					{/if}
 				</div> -->
+ 
+				<div class="welcome-text">
+				     {#if !$mobile}<div class="mb-[110px] flex justify-center"><LogoV4 strokeWidth="2.5" className="size-5" /></div>{/if}
+					 <div>
+					 <h1 class="pb-[16px] text-typography-titles text-[28px] leading-[22px] font-Inter_SemiBold">Hey {$user.name}👋🏼</h1>
+					{#if !$mobile} <p class=" text-typography-subtext text-[14px] leading-[26px]">Quick answers. Clear drafts. Trusted knowledge. What’s next?  Enter your request to begin.</p>{/if}
+					 </div>
+				</div>
+				
 
-				<div class="text-center my-6" in:fade={{ duration: 100 }}>
+				<!--<div class="text-center my-6" in:fade={{ duration: 100 }}>
 					{#if models[selectedModelIdx]?.name}
 						<Tooltip
 							content={models[selectedModelIdx]?.name}
@@ -175,8 +185,7 @@
 							Hi {$user.name}, how can I help today?
 						</p>
 					{/if}
-				</div>
-
+				</div>-->
 			</div>
 
 			<div class="flex mt-1 mb-2">
@@ -218,7 +227,22 @@
 				</div>
 			</div>
 
-			<div class="text-base font-normal @md:max-w-3xl w-full py-3 {atSelectedModel ? 'mt-2' : ''}">
+			<div class="mx-auto  font-primary" in:fade={{ duration: 200, delay: 200 }}>
+		<div class="">
+			<Suggestions
+				suggestionPrompts={atSelectedModel?.info?.meta?.suggestion_prompts ??
+					models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
+					$config?.default_prompt_suggestions ??
+					[]}
+				inputValue={prompt}
+				on:select={(e) => {
+					selectSuggestionPrompt(e.detail);
+				}}
+			/>
+		</div>
+	</div>
+
+			<div class="text-base font-normal w-full">
 				<MessageInput
 					{history}
 					{selectedModels}
@@ -255,18 +279,5 @@
 			</div>
 		</div>
 	</div>
-	<div class="mx-auto max-w-2xl font-primary mt-2" in:fade={{ duration: 200, delay: 200 }}>
-		<div class="mx-5">
-			<Suggestions
-				suggestionPrompts={atSelectedModel?.info?.meta?.suggestion_prompts ??
-					models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
-					$config?.default_prompt_suggestions ??
-					[]}
-				inputValue={prompt}
-				on:select={(e) => {
-					selectSuggestionPrompt(e.detail);
-				}}
-			/>
-		</div>
-	</div>
+	
 </div>
