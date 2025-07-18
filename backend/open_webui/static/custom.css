@@ -68,3 +68,50 @@
 .font-size-extra-large {
   font-size: 1.25rem;
 }
+
+/* Background Patterns */
+:root {
+  --background-pattern-opacity: 0.1;
+}
+
+.background-pattern-dots {
+  background-image: radial-gradient(circle, rgba(var(--color-gray-900), var(--background-pattern-opacity)) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.dark .background-pattern-dots {
+  background-image: radial-gradient(circle, rgba(var(--color-gray-100), var(--background-pattern-opacity)) 1px, transparent 1px);
+}
+
+.background-pattern-grid {
+  background-image: 
+    linear-gradient(rgba(var(--color-gray-900), var(--background-pattern-opacity)) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(var(--color-gray-900), var(--background-pattern-opacity)) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.dark .background-pattern-grid {
+  background-image: 
+    linear-gradient(rgba(var(--color-gray-100), var(--background-pattern-opacity)) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(var(--color-gray-100), var(--background-pattern-opacity)) 1px, transparent 1px);
+}
+
+.background-pattern-diagonal {
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(var(--color-gray-900), calc(var(--background-pattern-opacity) * 0.5)) 0px,
+    rgba(var(--color-gray-900), calc(var(--background-pattern-opacity) * 0.5)) 1px,
+    transparent 1px,
+    transparent 20px
+  );
+}
+
+.dark .background-pattern-diagonal {
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(var(--color-gray-100), calc(var(--background-pattern-opacity) * 0.5)) 0px,
+    rgba(var(--color-gray-100), calc(var(--background-pattern-opacity) * 0.5)) 1px,
+    transparent 1px,
+    transparent 20px
+  );
+}

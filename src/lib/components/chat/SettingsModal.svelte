@@ -15,6 +15,7 @@
 	import Chats from './Settings/Chats.svelte';
 	import User from '../icons/User.svelte';
 	import Personalization from './Settings/Personalization.svelte';
+	import Appearance from './Settings/Appearance.svelte';
 	import Search from '../icons/Search.svelte';
 	import XMark from '../icons/XMark.svelte';
 	import Connections from './Settings/Connections.svelte';
@@ -189,6 +190,40 @@
 				'whats new',
 				'websearchinchat',
 				'web search in chat'
+			]
+		},
+		{
+			id: 'appearance',
+			title: 'Appearance',
+			keywords: [
+				'appearance',
+				'colors',
+				'color customization',
+				'color picker',
+				'primary color',
+				'secondary color',
+				'accent color',
+				'success color',
+				'warning color',
+				'error color',
+				'background patterns',
+				'background pattern',
+				'pattern type',
+				'pattern opacity',
+				'pattern preview',
+				'dots',
+				'grid',
+				'diagonal',
+				'theme customization',
+				'custom colors',
+				'color scheme',
+				'design',
+				'styling',
+				'ui colors',
+				'interface colors',
+				'visual customization',
+				'branding',
+				'personalization'
 			]
 		},
 		...($user?.role === 'admin' ||
@@ -649,6 +684,42 @@
 								</div>
 								<div class=" self-center">{$i18n.t('Interface')}</div>
 							</button>
+						{:else if tabId === 'appearance'}
+							<button
+								role="tab"
+								aria-controls="tab-appearance"
+								aria-selected={selectedTab === 'appearance'}
+								class={`px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition
+								${
+									selectedTab === 'appearance'
+										? ($settings?.highContrastMode ?? false)
+											? 'dark:bg-gray-800 bg-gray-200'
+											: ''
+										: ($settings?.highContrastMode ?? false)
+											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
+											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
+								}`}
+								on:click={() => {
+									selectedTab = 'appearance';
+								}}
+							>
+								<div class=" self-center mr-2">
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										aria-hidden="true"
+										viewBox="0 0 24 24"
+										fill="currentColor"
+										class="w-4 h-4"
+									>
+										<path
+											fill-rule="evenodd"
+											d="M20.599 1.5c-.376 0-.743.111-1.055.32l-5.08 3.385a18.747 18.747 0 0 0-3.471 2.987 10.04 10.04 0 0 1 4.815 4.815 18.748 18.748 0 0 0 2.987-3.472l3.386-5.079A1.902 1.902 0 0 0 20.599 1.5Zm-8.3 14.025a18.76 18.76 0 0 0 1.896-1.207 8.026 8.026 0 0 0-4.513-4.513A18.75 18.75 0 0 0 8.475 11.7l-.278.5a5.26 5.26 0 0 1 3.601 3.602l.502-.278ZM6.75 13.5A3.75 3.75 0 0 0 3 17.25a1.5 1.5 0 0 1-1.601 1.497.75.75 0 0 0-.7 1.123 5.25 5.25 0 0 0 9.8-2.62 3.75 3.75 0 0 0-3.75-3.75Z"
+											clip-rule="evenodd"
+										/>
+									</svg>
+								</div>
+								<div class=" self-center">{$i18n.t('Appearance')}</div>
+							</button>
 						{:else if tabId === 'connections'}
 							{#if $user?.role === 'admin' || ($user?.role === 'user' && $config?.features?.enable_direct_connections)}
 								<button
@@ -941,6 +1012,13 @@
 					/>
 				{:else if selectedTab === 'interface'}
 					<Interface
+						{saveSettings}
+						on:save={() => {
+							toast.success($i18n.t('Settings saved successfully!'));
+						}}
+					/>
+				{:else if selectedTab === 'appearance'}
+					<Appearance
 						{saveSettings}
 						on:save={() => {
 							toast.success($i18n.t('Settings saved successfully!'));

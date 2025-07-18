@@ -2096,9 +2096,10 @@
 					<div class="flex flex-col flex-auto z-10 w-full @container">
 						{#if $settings?.landingPageMode === 'chat' || createMessagesList(history, history.currentId).length > 0}
 							<div
-								class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden"
+								class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden {$settings?.backgroundPattern !== 'none' && $settings?.backgroundPattern ? `background-pattern-${$settings.backgroundPattern}` : ''}"
 								id="messages-container"
 								bind:this={messagesContainerElement}
+								style={$settings?.backgroundPattern !== 'none' && $settings?.backgroundOpacity !== undefined ? `--background-pattern-opacity: ${$settings.backgroundOpacity / 100};` : ''}
 								on:scroll={(e) => {
 									autoScroll =
 										messagesContainerElement.scrollHeight - messagesContainerElement.scrollTop <=
