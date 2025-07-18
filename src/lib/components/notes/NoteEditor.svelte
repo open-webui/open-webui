@@ -385,6 +385,13 @@ ${content}
 
 		files = [...files, fileItem];
 
+		// open the settings panel if it is not open
+		selectedPanel = 'settings';
+
+		if (!showPanel) {
+			showPanel = true;
+		}
+
 		try {
 			// If the file is an audio file, provide the language for STT.
 			let metadata = null;
@@ -436,12 +443,6 @@ ${content}
 		}
 
 		editor.storage.files = files;
-		// open the settings panel if it is not open
-		selectedPanel = 'settings';
-
-		if (!showPanel) {
-			showPanel = true;
-		}
 
 		changeDebounceHandler();
 
