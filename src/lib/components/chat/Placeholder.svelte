@@ -67,6 +67,28 @@
 	$: models = selectedModels.map((id) => $_models.find((m) => m.id === id));
 
 	onMount(() => {});
+
+	$: langCode = $i18n.language?.split('-')[0] || 'de';
+
+	function getTranslatedLabel(label, langCode) {
+		if (!label) return '';
+
+		try {
+			// If it's already an object, use it directly
+			const translations = typeof label === 'object' ? label : JSON.parse(label);
+			return (
+				translations[langCode] ||
+				translations.en ||
+				translations.de ||
+				translations.fr ||
+				translations.it ||
+				''
+			);
+		} catch (e) {
+			// If parsing fails, return the original value
+			return label;
+		}
+	}
 </script>
 
 <div class="m-auto w-full max-w-6xl px-2 @2xl:px-20 translate-y-6 py-24 text-center">
@@ -157,7 +179,7 @@
 								className=" flex items-center "
 							>
 								<span class="line-clamp-1">
-									{models[selectedModelIdx]?.name}
+									{getTranslatedLabel(models[selectedModelIdx]?.name, langCode)}
 								</span>
 							</Tooltip>
 						{:else}
