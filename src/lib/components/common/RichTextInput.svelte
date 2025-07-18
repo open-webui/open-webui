@@ -655,6 +655,10 @@
 	export const setText = (text: string) => {
 		if (!editor) return;
 		text = text.replaceAll('\n\n', '\n');
+
+		// reset the editor content
+		editor.commands.clearContent();
+
 		const { state, view } = editor;
 		const { schema, tr } = state;
 

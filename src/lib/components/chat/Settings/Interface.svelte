@@ -43,6 +43,9 @@
 
 	let largeTextAsFile = false;
 
+	let keepFollowUpPrompts = false;
+	let insertFollowUpPrompt = false;
+
 	let landingPageMode = '';
 	let chatBubble = true;
 	let chatDirection: 'LTR' | 'RTL' | 'auto' = 'auto';
@@ -230,6 +233,16 @@
 		saveSettings({ insertPromptAsRichText });
 	};
 
+	const toggleKeepFollowUpPrompts = async () => {
+		keepFollowUpPrompts = !keepFollowUpPrompts;
+		saveSettings({ keepFollowUpPrompts });
+	};
+
+	const toggleInsertFollowUpPrompt = async () => {
+		insertFollowUpPrompt = !insertFollowUpPrompt;
+		saveSettings({ insertFollowUpPrompt });
+	};
+
 	const toggleLargeTextAsFile = async () => {
 		largeTextAsFile = !largeTextAsFile;
 		saveSettings({ largeTextAsFile });
@@ -324,6 +337,9 @@
 		richTextInput = $settings?.richTextInput ?? true;
 		insertPromptAsRichText = $settings?.insertPromptAsRichText ?? false;
 		promptAutocomplete = $settings?.promptAutocomplete ?? false;
+
+		keepFollowUpPrompts = $settings?.keepFollowUpPrompts ?? false;
+		insertFollowUpPrompt = $settings?.insertFollowUpPrompt ?? false;
 
 		largeTextAsFile = $settings?.largeTextAsFile ?? false;
 		copyFormatted = $settings?.copyFormatted ?? false;
@@ -769,6 +785,52 @@
 						type="button"
 					>
 						{#if chatFadeStreamingText === true}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div id="keep-followup-prompts-label" class=" self-center text-xs">
+						{$i18n.t('Keep Follow-Up Prompts in Chat')}
+					</div>
+
+					<button
+						aria-labelledby="keep-followup-prompts-label"
+						class="p-1 px-3 text-xs flex rounded-sm transition"
+						on:click={() => {
+							toggleKeepFollowUpPrompts();
+						}}
+						type="button"
+					>
+						{#if keepFollowUpPrompts === true}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div id="insert-followup-prompt-label" class=" self-center text-xs">
+						{$i18n.t('Insert Follow-Up Prompt to Input')}
+					</div>
+
+					<button
+						aria-labelledby="insert-followup-prompt-label"
+						class="p-1 px-3 text-xs flex rounded-sm transition"
+						on:click={() => {
+							toggleInsertFollowUpPrompt();
+						}}
+						type="button"
+					>
+						{#if insertFollowUpPrompt === true}
 							<span class="ml-2 self-center">{$i18n.t('On')}</span>
 						{:else}
 							<span class="ml-2 self-center">{$i18n.t('Off')}</span>

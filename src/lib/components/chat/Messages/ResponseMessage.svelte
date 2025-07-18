@@ -117,6 +117,7 @@
 
 	export let siblings;
 
+	export let setInputText: Function = () => {};
 	export let gotoMessage: Function = () => {};
 	export let showPreviousMessage: Function;
 	export let showNextMessage: Function;
@@ -1464,12 +1465,18 @@
 						/>
 					{/if}
 
-					{#if isLastMessage && message.done && !readOnly && (message?.followUps ?? []).length > 0}
+					{#if (isLastMessage || ($settings?.keepFollowUpPrompts ?? false)) && message.done && !readOnly && (message?.followUps ?? []).length > 0}
 						<div class="mt-2.5" in:fade={{ duration: 100 }}>
 							<FollowUps
 								followUps={message?.followUps}
 								onClick={(prompt) => {
-									submitMessage(message?.id, prompt);
+									if ($settings?.insertFollowUpPrompt ?? false) {
+										// Insert the follow-up prompt into the input box
+										setInputText(prompt);
+									} else {
+										// Submit the follow-up prompt directly
+										submitMessage(message?.id, prompt);
+									}
 								}}
 							/>
 						</div>

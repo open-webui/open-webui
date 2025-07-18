@@ -2123,6 +2123,9 @@
 										bind:history
 										bind:autoScroll
 										bind:prompt
+										setInputText={(text) => {
+											messageInput?.setText(text);
+										}}
 										{selectedModels}
 										{atSelectedModel}
 										{sendPrompt}
