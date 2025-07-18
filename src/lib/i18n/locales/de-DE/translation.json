@@ -399,6 +399,7 @@
 	"Download canceled": "Exportierung abgebrochen",
 	"Download Database": "Datenbank exportieren",
 	"Drag and drop a file to upload or select a file to view": "Ziehen Sie eine Datei zum Hochladen oder wählen Sie eine Datei zum Anzeigen aus",
+	"Select a file to view": "Wählen Sie eine Datei zum Anzeigen aus",
 	"Draw": "Zeichnen",
 	"Drop any files here to upload": "Dateien hierher ziehen, um sie hochzuladen",
 	"e.g. '30s','10m'. Valid time units are 's', 'm', 'h'.": "z. B. '30s','10m'. Gültige Zeiteinheiten sind 's', 'm', 'h'.",

@@ -9,7 +9,7 @@
 	import { onMount, getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
-	import { WEBUI_NAME, knowledge } from '$lib/stores';
+	import { WEBUI_NAME, knowledge, knowledgeList } from '$lib/stores';
 	import {
 		getKnowledgeBases,
 		deleteKnowledgeById,
@@ -37,6 +37,7 @@
 	let fuse = null;
 
 	let knowledgeBases = [];
+	let knowledgeBaseList = [];
 	let filteredItems = [];
 
 	$: if (knowledgeBases.length > 0) {
@@ -69,14 +70,21 @@
 		});
 
 		if (res) {
-			knowledgeBases = await getKnowledgeBaseList(localStorage.token);
-			knowledge.set(await getKnowledgeBases(localStorage.token));
+			knowledgeBaseList = await getKnowledgeBaseList(localStorage.token);
+			knowledgeList.set(knowledgeBaseList);
+			knowledgeBases = await getKnowledgeBases(localStorage.token);
+			knowledge.set(knowledgeBases);
 			toast.success($i18n.t('Knowledge deleted successfully.'));
 		}
 	};
 
+	const checkWriteAccess = (item) => {
+		return knowledgeBaseList.some((k) => k.id === item.id);
+	};
+
 	onMount(async () => {
-		knowledgeBases = await getKnowledgeBaseList(localStorage.token);
+		knowledgeBaseList = await getKnowledgeBaseList(localStorage.token);
+		knowledgeBases = await getKnowledgeBases(localStorage.token);
 		loaded = true;
 	});
 </script>
@@ -161,21 +169,27 @@
 				}}
 			>
 				<div class=" w-full">
-					<div class="flex items-center justify-between -mt-1">
-						{#if item?.meta?.document}
-							<Badge type="muted" content={$i18n.t('Document')} />
-						{:else}
-							<Badge type="success" content={$i18n.t('Collection')} />
-						{/if}
-
-						<div class=" flex self-center -mr-1 translate-y-1">
-							<ItemMenu
-								on:delete={() => {
-									selectedItem = item;
-									showDeleteConfirm = true;
-								}}
-							/>
+					<div class="flex items-center justify-between -mt-1 min-h-[32px]">
+						<div class="flex items-center space-x-1">
+							{#if item?.meta?.document}
+								<Badge type="muted" content={$i18n.t('Document')} />
+							{:else}
+								<Badge type="success" content={$i18n.t('Collection')} />
+							{/if}
+							{#if !checkWriteAccess(item)}
+								<Badge type="secondary" content={$i18n.t('Public')} />
+							{/if}
 						</div>
+						{#if checkWriteAccess(item)}
+							<div class=" flex self-center -mr-1 translate-y-1">
+								<ItemMenu
+									on:delete={() => {
+										selectedItem = item;
+										showDeleteConfirm = true;
+									}}
+								/>
+							</div>
+						{/if}
 					</div>
 
 					<div class=" self-center flex-1 px-1 mb-1">
