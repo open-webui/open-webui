@@ -1082,7 +1082,11 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 										}
 									}}
 									onCopyToClipboard={async () => {
-										const res = await copyToClipboard(note.data.content.md).catch((error) => {
+										const res = await copyToClipboard(
+											note.data.content.md,
+											note.data.content.html,
+											true
+										).catch((error) => {
 											toast.error(`${error}`);
 											return null;
 										});

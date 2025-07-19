@@ -166,7 +166,7 @@
 			text = `${text}\n\n${$config?.ui?.response_watermark}`;
 		}
 
-		const res = await _copyToClipboard(text, $settings?.copyFormatted ?? false);
+		const res = await _copyToClipboard(text, null, $settings?.copyFormatted ?? false);
 		if (res) {
 			toast.success($i18n.t('Copying to clipboard was successful!'));
 		}
