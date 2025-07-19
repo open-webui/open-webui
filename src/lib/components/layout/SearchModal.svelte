@@ -171,8 +171,6 @@
 			}
 
 			selectedIdx = Math.max(selectedIdx - 1, 0);
-		} else {
-			selectedIdx = 0;
 		}
 
 		const item = document.querySelector(`[data-arrow-selected="true"]`);
