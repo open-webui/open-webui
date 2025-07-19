@@ -1635,8 +1635,6 @@ async def process_chat_response(
                     start_tag = content_blocks[-1]["start_tag"]
                     end_tag = content_blocks[-1]["end_tag"]
 
-                    print(start_tag, end_tag)
-
                     if end_tag.startswith("<") and end_tag.endswith(">"):
                         # Match end tag e.g., </tag>
                         end_tag_pattern = rf"{re.escape(end_tag)}"
