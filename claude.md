@@ -8,7 +8,7 @@ This is mAI, a customized fork of Open WebUI - a feature-rich, extensible AI pla
 
 **Key customizations:**
 - Renamed from "Open WebUI" to "mAI" 
-- Added tagline "You + AI = superpowers! 🚀"
+- Added tagline "You + AI = superpowers! 🚀" (with Polish localization: "Ty + AI = supermoce! 🚀")
 - Custom branding and logo replacement capabilities
 - Currently on branch: `customization` (main branch: `main`)
 
@@ -277,3 +277,52 @@ export OLLAMA_BASE_URL=http://localhost:11434
 # Production
 export ENV=prod
 ```
+
+## Error Handling Patterns
+
+### Backend Error Handling
+- **Follow-up Generation**: Wrapped in try-catch to prevent Ollama failures from crashing chat sessions (see backend/open_webui/utils/middleware.py:1085)
+- **Background Tasks**: Protected with error handling to ensure main chat flow continues even if background operations fail
+- **Model Runner Failures**: Gracefully handled to prevent "model runner has unexpectedly stopped" errors from affecting user experience
+
+### Frontend Error Handling
+- **API Calls**: All API functions in `src/lib/apis/` include error handling
+- **Socket.io Reconnection**: Automatic reconnection logic for real-time features
+- **Form Validation**: Client-side validation before API submission
+
+## Common Workflows
+
+### Adding New Language Support
+1. Add language to `src/lib/i18n/locales/languages.json`
+2. Create translation file: `src/lib/i18n/locales/[lang-CODE]/translation.json`
+3. Run `npm run i18n:parse` to format
+4. Test with UI language switcher
+
+### Modifying Chat Interface
+1. Main placeholder: `src/lib/components/chat/Placeholder.svelte`
+2. Message components: `src/lib/components/chat/Messages/`
+3. Input handling: `src/lib/components/chat/MessageInput.svelte`
+4. Chat settings: `src/lib/components/chat/Settings/`
+
+### Backend API Development
+1. Create router in `backend/open_webui/routers/`
+2. Add models in `backend/open_webui/models/`
+3. Register router in `backend/open_webui/main.py`
+4. Create frontend API client in `src/lib/apis/`
+
+## Debug and Monitoring
+
+### Backend Logging
+- Log configuration in `backend/open_webui/utils/misc.py`
+- Use `log.info()`, `log.error()` with proper context
+- Exception logging with `exc_info=True` for stack traces
+
+### Frontend Debugging
+- Browser DevTools for network and console debugging
+- Svelte DevTools for component inspection
+- `$inspect()` for reactive debugging in Svelte 5
+
+### Performance Monitoring
+- Backend: FastAPI middleware timing
+- Frontend: Vite build analysis with `npm run build -- --sourcemap`
+- Database: Query performance with SQLAlchemy logging
