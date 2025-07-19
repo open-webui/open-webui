@@ -292,12 +292,6 @@ JWT_EXPIRES_IN = PersistentConfig(
     "JWT_EXPIRES_IN", "auth.jwt_expiry", os.environ.get("JWT_EXPIRES_IN", "-1")
 )
 
-RESPECT_USER_WORKSPACE_PRIVACY = PersistentConfig(
-    "RESPECT_USER_WORKSPACE_PRIVACY",
-    "admin.respect_user_workspace_privacy", 
-    os.environ.get("RESPECT_USER_WORKSPACE_PRIVACY", "False").lower() == "true"
-)
-
 ####################################
 # OAuth config
 ####################################
@@ -1289,6 +1283,12 @@ ENABLE_ADMIN_EXPORT = os.environ.get("ENABLE_ADMIN_EXPORT", "True").lower() == "
 
 ENABLE_ADMIN_CHAT_ACCESS = (
     os.environ.get("ENABLE_ADMIN_CHAT_ACCESS", "True").lower() == "true"
+)
+
+ENABLE_ADMIN_USER_WORKSPACE_ACCESS = PersistentConfig(
+    "ENABLE_ADMIN_USER_WORKSPACE_ACCESS",
+    "admin.enable_admin_user_workspace_access", 
+    os.environ.get("ENABLE_ADMIN_USER_WORKSPACE_ACCESS", "True").lower() == "true"
 )
 
 ENABLE_COMMUNITY_SHARING = PersistentConfig(
