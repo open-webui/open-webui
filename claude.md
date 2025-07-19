@@ -6,11 +6,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is mAI, a customized fork of Open WebUI - a feature-rich, extensible AI platform that operates entirely offline. The project supports various LLM runners like Ollama and OpenAI-compatible APIs, with built-in inference engine for RAG (Retrieval Augmented Generation).
 
+**Current Version:** 0.6.17 (upgraded from Open WebUI on January 19, 2025)
+
 **Key customizations:**
 - Renamed from "Open WebUI" to "mAI" 
 - Added tagline "You + AI = superpowers! 🚀" (with Polish localization: "Ty + AI = supermoce! 🚀")
 - Custom branding and logo replacement capabilities
+- Custom background patterns feature with opacity controls
 - Currently on branch: `customization` (main branch: `main`)
+
+**Recent Updates:**
+- Successfully merged Open WebUI v0.6.17 preserving all customizations
+- Upgraded to Tiptap v3 for rich text editing
+- See `UPGRADE-GUIDE.md` for detailed upgrade process documentation
 
 ## Architecture
 
@@ -326,3 +334,34 @@ export ENV=prod
 - Backend: FastAPI middleware timing
 - Frontend: Vite build analysis with `npm run build -- --sourcemap`
 - Database: Query performance with SQLAlchemy logging
+
+## Upgrading from Open WebUI
+
+### Process Overview
+When upgrading mAI to incorporate new Open WebUI releases:
+
+1. **Preparation**
+   - Ensure clean working directory
+   - Create backup branch
+   - Verify upstream remote is configured
+
+2. **Merge Process**
+   - Fetch and merge specific version tag
+   - Resolve conflicts preserving mAI customizations
+   - Special attention to: package.json, Chat.svelte, Polish translations
+
+3. **Post-Merge**
+   - Update dependencies with `npm install --force`
+   - Build and test thoroughly
+   - Revert workflow files if lacking GitHub permissions
+
+4. **Documentation**
+   - See `UPGRADE-GUIDE.md` for detailed step-by-step instructions
+   - Document any new conflicts or issues for future upgrades
+
+### Critical Files to Preserve During Upgrades
+- `package.json`: Keep "name": "mai"
+- `src/lib/components/chat/Chat.svelte`: Background pattern functionality
+- `src/lib/components/chat/Placeholder.svelte`: Custom branding
+- `src/lib/i18n/locales/pl-PL/translation.json`: Polish customizations
+- Theme and asset files in `static/`
