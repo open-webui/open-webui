@@ -68,12 +68,17 @@ Common conflict areas in mAI:
 - Keep mAI-specific UI customizations
 - Merge new features carefully
 
-**c) Translation Files**
+**c) Settings Components**
+- Background patterns now in General tab (not separate Appearance tab)
+- Custom mAI themes in theme selector
+- Font size controls in General settings
+
+**d) Translation Files**
 - Polish translation (pl-PL/translation.json) often has conflicts
 - Generally accept upstream changes unless they override customizations
 - May need to manually clean up conflict markers
 
-**d) Workflow Files (.github/workflows/)**
+**e) Workflow Files (.github/workflows/)**
 - Often cannot be pushed without special GitHub permissions
 - May need to revert these changes if you don't have workflow scope
 
