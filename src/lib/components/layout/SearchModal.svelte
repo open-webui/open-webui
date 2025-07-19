@@ -37,7 +37,9 @@
 	let history = null;
 	let messages = null;
 
-	$: loadChatPreview(selectedIdx);
+	$: if (!chatListLoading && chatList) {
+		loadChatPreview(selectedIdx);
+	}
 
 	const loadChatPreview = async (selectedIdx) => {
 		if (!chatList || chatList.length === 0) {
@@ -97,6 +99,11 @@
 				chatList = await getChatListBySearchText(localStorage.token, query, page);
 			}, 500);
 		}
+
+		selectedChat = null;
+		messages = null;
+		history = null;
+		selectedModels = [''];
 
 		if ((chatList ?? []).length === 0) {
 			allChatsLoaded = true;
