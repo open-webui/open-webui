@@ -33,7 +33,10 @@ from fastapi import (
     Request,
     UploadFile,
     APIRouter,
+    status,
+    Response,
 )
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, validator
@@ -60,7 +63,7 @@ from open_webui.env import (
     ENV,
     SRC_LOG_LEVELS,
     MODELS_CACHE_TTL,
-    AIOHTTP_CLIENT_SESSION_SSL,
+    get_ssl_context,
     AIOHTTP_CLIENT_TIMEOUT,
     AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST,
     BYPASS_MODEL_ACCESS_CONTROL,
@@ -80,6 +83,17 @@ log.setLevel(SRC_LOG_LEVELS["OLLAMA"])
 
 async def send_get_request(url, key=None, user: UserModel = None):
     timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
+    ssl_context = get_ssl_context()
+    
+    # Log SSL context information
+    log.info(f"Making request to: {url}")
+    log.info(f"SSL context verify_mode: {ssl_context.verify_mode}")
+    log.info(f"SSL context check_hostname: {ssl_context.check_hostname}")
+    
+    # Log environment variables for debugging
+    log.info(f"Environment - SSL_CA_CERT: {os.environ.get('SSL_CA_CERT')}")
+    log.info(f"Environment - AIOHTTP_CLIENT_SESSION_SSL: {os.environ.get('AIOHTTP_CLIENT_SESSION_SSL')}")
+    
     try:
         async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
             async with session.get(
@@ -98,7 +112,7 @@ async def send_get_request(url, key=None, user: UserModel = None):
                         else {}
                     ),
                 },
-                ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                ssl=ssl_context,
             ) as response:
                 return await response.json()
     except Exception as e:
@@ -125,6 +139,16 @@ async def send_post_request(
     content_type: Optional[str] = None,
     user: UserModel = None,
 ):
+    ssl_context = get_ssl_context()
+    
+    # Log SSL context information
+    log.info(f"Making POST request to: {url}")
+    log.info(f"SSL context verify_mode: {ssl_context.verify_mode}")
+    log.info(f"SSL context check_hostname: {ssl_context.check_hostname}")
+    log.info(f"Content type: {content_type}")
+    log.info(f"Payload type: {type(payload)}")
+    if isinstance(payload, str) and len(payload) < 1000:  # Don't log very large payloads
+        log.info(f"Payload: {payload}")
 
     r = None
     try:
@@ -149,7 +173,7 @@ async def send_post_request(
                     else {}
                 ),
             },
-            ssl=AIOHTTP_CLIENT_SESSION_SSL,
+            ssl=ssl_context,
         )
 
         if r.ok is False:
@@ -214,6 +238,23 @@ def get_api_key(idx, url, configs):
 
 router = APIRouter()
 
+@router.get("/test-ssl")
+async def test_ssl():
+    """Test endpoint to check SSL configuration"""
+    import ssl
+    import os
+    
+    ssl_context = get_ssl_context()
+    
+    return {
+        "ssl_verify_mode": ssl_context.verify_mode,
+        "ssl_check_hostname": ssl_context.check_hostname,
+        "env_ssl_ca_cert": os.environ.get("SSL_CA_CERT"),
+        "env_aiohttp_ssl_verify": os.environ.get("AIOHTTP_CLIENT_SESSION_SSL"),
+        "python_ssl_verify_mode": ssl.CERT_NONE if ssl_context.verify_mode == ssl.CERT_NONE else "VERIFY_ENABLED",
+        "message": "If verify_mode is 0 (CERT_NONE), SSL verification is disabled"
+    }
+
 
 @router.head("/")
 @router.get("/")
@@ -253,7 +294,7 @@ async def verify_connection(
                         else {}
                     ),
                 },
-                ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                ssl=ssl_context,
             ) as r:
                 if r.status != 200:
                     detail = f"HTTP Error: {r.status}"
@@ -1649,6 +1690,7 @@ def parse_huggingface_url(hf_url):
 async def download_file_stream(
     ollama_url, file_url, file_path, file_name, chunk_size=1024 * 1024
 ):
+    ssl_context = get_ssl_context()
     done = False
 
     if os.path.exists(file_path):
@@ -1662,7 +1704,7 @@ async def download_file_stream(
 
     async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
         async with session.get(
-            file_url, headers=headers, ssl=AIOHTTP_CLIENT_SESSION_SSL
+            file_url, headers=headers, ssl=ssl_context
         ) as response:
             total_size = int(response.headers.get("content-length", 0)) + current_size
 

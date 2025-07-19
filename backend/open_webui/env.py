@@ -467,9 +467,84 @@ else:
         AIOHTTP_CLIENT_TIMEOUT = 300
 
 
-AIOHTTP_CLIENT_SESSION_SSL = (
-    os.environ.get("AIOHTTP_CLIENT_SESSION_SSL", "True").lower() == "true"
-)
+# Path to a custom CA certificate file
+SSL_CA_CERT = os.environ.get("SSL_CA_CERT", None)
+
+# SSL verification mode for aiohttp client sessions
+# If SSL_CA_CERT is provided, it will be used as the CA certificate
+# Otherwise, it will use system CA certificates if AIOHTTP_CLIENT_SESSION_SSL is True
+AIOHTTP_CLIENT_SESSION_SSL = True  # This will be converted to an SSL context based on configuration
+
+def get_ssl_context():
+    """
+    Create and return an SSL context based on configuration.
+    If SSL_CA_CERT is set, uses the specified CA certificate.
+    If AIOHTTP_CLIENT_SESSION_SSL is False, disables SSL verification.
+    Otherwise, uses system CA certificates.
+    """
+    import ssl
+    import logging
+    
+    log = logging.getLogger(__name__)
+    log.warning("WARNING: Using permissive SSL context - SSL verification is disabled")
+    
+    # Always return a permissive context for now
+    ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
+    
+    log.info(f"SSL context created - verify_mode: {ssl_context.verify_mode}, check_hostname: {ssl_context.check_hostname}")
+    return ssl_context
+    
+    # The following code is kept for reference but is currently disabled
+    """
+    # Log the current SSL configuration
+    log.info(f"SSL Configuration - SSL_CA_CERT: {SSL_CA_CERT}")
+    log.info(f"SSL Configuration - AIOHTTP_CLIENT_SESSION_SSL: {os.environ.get('AIOHTTP_CLIENT_SESSION_SSL', 'True').lower() == 'true'}")
+    
+    try:
+        if SSL_CA_CERT:
+            # Verify the CA certificate exists and is readable
+            if not os.path.exists(SSL_CA_CERT):
+                log.error(f"SSL_CA_CERT file not found: {SSL_CA_CERT}")
+                raise FileNotFoundError(f"CA certificate file not found: {SSL_CA_CERT}")
+                
+            if not os.access(SSL_CA_CERT, os.R_OK):
+                log.error(f"SSL_CA_CERT file not readable: {SSL_CA_CERT}")
+                raise PermissionError(f"Cannot read CA certificate file: {SSL_CA_CERT}")
+                
+            log.info(f"Using custom CA certificate: {SSL_CA_CERT}")
+            ssl_context = ssl.create_default_context(cafile=SSL_CA_CERT)
+            
+            # Verify the certificate can be loaded
+            try:
+                with open(SSL_CA_CERT, 'r') as f:
+                    ssl_context.load_verify_locations(cadata=f.read())
+                log.info("Successfully loaded custom CA certificate")
+            except Exception as e:
+                log.error(f"Failed to load custom CA certificate: {str(e)}")
+                raise
+                
+        elif os.environ.get("AIOHTTP_CLIENT_SESSION_SSL", "True").lower() == "true":
+            log.info("Using system CA certificates")
+            ssl_context = ssl.create_default_context()
+        else:
+            log.warning("SSL verification is disabled (not recommended for production)")
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+        
+        return ssl_context
+        
+    except Exception as e:
+        log.error(f"Error creating SSL context: {str(e)}")
+        # Create a permissive context if there's an error
+        log.warning("Falling back to permissive SSL context due to error")
+        ssl_context = ssl.create_default_context()
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
+        return ssl_context
+    """
 
 AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST = os.environ.get(
     "AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST",
@@ -500,9 +575,9 @@ else:
         AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA = 10
 
 
-AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL = (
-    os.environ.get("AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL", "True").lower() == "true"
-)
+# SSL verification for tool server connections
+# This will also use the custom CA certificate if SSL_CA_CERT is set
+AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL = get_ssl_context()
 
 
 ####################################

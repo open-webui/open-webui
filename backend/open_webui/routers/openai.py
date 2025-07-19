@@ -22,7 +22,7 @@ from open_webui.config import (
 )
 from open_webui.env import (
     MODELS_CACHE_TTL,
-    AIOHTTP_CLIENT_SESSION_SSL,
+    get_ssl_context,
     AIOHTTP_CLIENT_TIMEOUT,
     AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST,
     ENABLE_FORWARD_USER_INFO_HEADERS,
@@ -76,7 +76,7 @@ async def send_get_request(url, key=None, user: UserModel = None):
                         else {}
                     ),
                 },
-                ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                ssl=ssl_context,
             ) as response:
                 return await response.json()
     except Exception as e:
@@ -500,7 +500,7 @@ async def get_models(
                     async with session.get(
                         f"{url}/models",
                         headers=headers,
-                        ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                        ssl=ssl_context,
                     ) as r:
                         if r.status != 200:
                             # Extract response error details if available
@@ -565,6 +565,7 @@ async def verify_connection(
 
     api_config = form_data.config or {}
 
+    ssl_context = get_ssl_context()
     async with aiohttp.ClientSession(
         trust_env=True,
         timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST),
@@ -591,7 +592,7 @@ async def verify_connection(
                 async with session.get(
                     url=f"{url}/openai/models?api-version={api_version}",
                     headers=headers,
-                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                    ssl=ssl_context,
                 ) as r:
                     if r.status != 200:
                         # Extract response error details if available
@@ -609,7 +610,7 @@ async def verify_connection(
                 async with session.get(
                     f"{url}/models",
                     headers=headers,
-                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                    ssl=ssl_context,
                 ) as r:
                     if r.status != 200:
                         # Extract response error details if available
