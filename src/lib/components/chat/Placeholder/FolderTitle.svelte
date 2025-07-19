@@ -125,7 +125,7 @@
 			</div>
 		</div>
 
-		<div class="flex items-center">
+		<div class="flex items-center translate-x-2.5">
 			<FolderMenu
 				align="end"
 				onEdit={() => {

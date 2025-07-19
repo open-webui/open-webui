@@ -226,7 +226,7 @@
 			filterIds = model?.meta?.filterIds ?? [];
 			actionIds = model?.meta?.actionIds ?? [];
 			knowledge = (model?.meta?.knowledge ?? []).map((item) => {
-				if (item?.collection_name) {
+				if (item?.collection_name && item?.type !== 'file') {
 					return {
 						id: item.collection_name,
 						name: item.name,
