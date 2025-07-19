@@ -1193,23 +1193,27 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 							bind:value={note.data.content.json}
 							html={note.data?.content?.html}
 							documentId={`note:${note.id}`}
-							{files}
 							collaboration={true}
 							socket={$socket}
 							user={$user}
 							link={true}
 							image={true}
+							{files}
 							placeholder={$i18n.t('Write something...')}
 							editable={versionIdx === null && !editing}
 							onSelectionUpdate={({ editor }) => {
 								const { from, to } = editor.state.selection;
 								const selectedText = editor.state.doc.textBetween(from, to, ' ');
 
-								selectedContent = {
-									text: selectedText,
-									from: from,
-									to: to
-								};
+								if (selectedText.length === 0) {
+									selectedContent = null;
+								} else {
+									selectedContent = {
+										text: selectedText,
+										from: from,
+										to: to
+									};
+								}
 							}}
 							onChange={(content) => {
 								note.data.content.html = content.html;

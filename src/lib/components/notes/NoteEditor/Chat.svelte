@@ -232,7 +232,7 @@ Based on the user's instruction, update and enhance the existing notes or select
 								if (editEnabled) {
 									responseMessage.content = `<status title="${$i18n.t('Edited')}" done="true" />`;
 
-									if (selectedContent && editor) {
+									if (selectedContent && selectedContent?.text && editor) {
 										editor.commands.insertContentAt(
 											{
 												from: selectedContent.from,
@@ -262,16 +262,15 @@ Based on the user's instruction, update and enhance the existing notes or select
 										enhancedContent.md += deltaContent;
 										enhancedContent.html = marked.parse(enhancedContent.md);
 
-										if (!selectedContent) {
+										if (!selectedContent || !selectedContent?.text) {
 											note.data.content.md = enhancedContent.md;
 											note.data.content.html = enhancedContent.html;
 											note.data.content.json = null;
-
-											scrollToBottomHandler();
 										}
 
-										responseMessage.content = `<status title="${$i18n.t('Editing')}" done="false" />`;
+										scrollToBottomHandler();
 
+										responseMessage.content = `<status title="${$i18n.t('Editing')}" done="false" />`;
 										messages = messages;
 									} else {
 										messageContent += deltaContent;
