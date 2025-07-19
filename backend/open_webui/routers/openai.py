@@ -833,6 +833,9 @@ async def generate_chat_completion(
         ),
     }
 
+    if "stream" in payload and payload["stream"]:
+        headers["Accept"] = "text/event-stream"
+
     if api_config.get("azure", False):
         api_version = api_config.get("api_version", "2023-03-15-preview")
         request_url, payload = convert_to_azure_payload(url, payload, api_version)
