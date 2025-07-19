@@ -2168,7 +2168,9 @@
 									bind:atSelectedModel
 									bind:showCommands
 									toolServers={$toolServers}
-									transparentBackground={$settings?.backgroundImageUrl ?? false}
+									transparentBackground={$settings?.backgroundImageUrl ??
+										$config?.license_metadata?.background_image_url ??
+										false}
 									{stopResponse}
 									{createMessagePair}
 									onChange={(input) => {
@@ -2228,7 +2230,9 @@
 									bind:webSearchEnabled
 									bind:atSelectedModel
 									bind:showCommands
-									transparentBackground={$settings?.backgroundImageUrl ?? false}
+									transparentBackground={$settings?.backgroundImageUrl ??
+										$config?.license_metadata?.background_image_url ??
+										false}
 									toolServers={$toolServers}
 									{stopResponse}
 									{createMessagePair}
