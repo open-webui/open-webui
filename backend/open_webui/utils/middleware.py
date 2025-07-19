@@ -653,13 +653,13 @@ async def chat_completion_files_handler(
                         ),
                         k=request.app.state.config.TOP_K,
                         reranking_function=(
-                            lambda sentences: (
-                                request.app.state.RERANKING_FUNCTION(
+                            (
+                                lambda sentences: request.app.state.RERANKING_FUNCTION(
                                     sentences, user=user
                                 )
-                                if request.app.state.RERANKING_FUNCTION
-                                else None
                             )
+                            if request.app.state.RERANKING_FUNCTION
+                            else None
                         ),
                         k_reranker=request.app.state.config.TOP_K_RERANKER,
                         r=request.app.state.config.RELEVANCE_THRESHOLD,
@@ -1472,12 +1472,12 @@ async def process_chat_response(
 
                         if reasoning_duration is not None:
                             if raw:
-                                content = f'{content}\n<{block["start_tag"]}>{block["content"]}<{block["end_tag"]}>\n'
+                                content = f'{content}\n{block["start_tag"]}{block["content"]}{block["end_tag"]}\n'
                             else:
                                 content = f'{content}\n<details type="reasoning" done="true" duration="{reasoning_duration}">\n<summary>Thought for {reasoning_duration} seconds</summary>\n{reasoning_display_content}\n</details>\n'
                         else:
                             if raw:
-                                content = f'{content}\n<{block["start_tag"]}>{block["content"]}<{block["end_tag"]}>\n'
+                                content = f'{content}\n{block["start_tag"]}{block["content"]}{block["end_tag"]}\n'
                             else:
                                 content = f'{content}\n<details type="reasoning" done="false">\n<summary>Thinking…</summary>\n{reasoning_display_content}\n</details>\n'
 
@@ -1574,8 +1574,16 @@ async def process_chat_response(
 
                 if content_blocks[-1]["type"] == "text":
                     for start_tag, end_tag in tags:
-                        # Match start tag e.g., <tag> or <tag attr="value">
-                        start_tag_pattern = rf"<{re.escape(start_tag)}(\s.*?)?>"
+
+                        start_tag_pattern = rf"{re.escape(start_tag)}"
+                        if start_tag.startswith("<") and start_tag.endswith(">"):
+                            # Match start tag e.g., <tag> or <tag attr="value">
+                            # remove both '<' and '>' from start_tag
+                            # Match start tag with attributes
+                            start_tag_pattern = (
+                                rf"<{re.escape(start_tag[1:-1])}(\s.*?)?>"
+                            )
+
                         match = re.search(start_tag_pattern, content)
                         if match:
                             attr_content = (
@@ -1626,8 +1634,13 @@ async def process_chat_response(
                 elif content_blocks[-1]["type"] == content_type:
                     start_tag = content_blocks[-1]["start_tag"]
                     end_tag = content_blocks[-1]["end_tag"]
-                    # Match end tag e.g., </tag>
-                    end_tag_pattern = rf"<{re.escape(end_tag)}>"
+
+                    if end_tag.startswith("<") and end_tag.endswith(">"):
+                        # Match end tag e.g., </tag>
+                        end_tag_pattern = rf"{re.escape(end_tag)}"
+                    else:
+                        # Handle cases where end_tag is just a tag name
+                        end_tag_pattern = rf"{re.escape(end_tag)}"
 
                     # Check if the content has the end tag
                     if re.search(end_tag_pattern, content):
@@ -1699,8 +1712,17 @@ async def process_chat_response(
                                 )
 
                         # Clean processed content
+                        start_tag_pattern = rf"{re.escape(start_tag)}"
+                        if start_tag.startswith("<") and start_tag.endswith(">"):
+                            # Match start tag e.g., <tag> or <tag attr="value">
+                            # remove both '<' and '>' from start_tag
+                            # Match start tag with attributes
+                            start_tag_pattern = (
+                                rf"<{re.escape(start_tag[1:-1])}(\s.*?)?>"
+                            )
+
                         content = re.sub(
-                            rf"<{re.escape(start_tag)}(.*?)>(.|\n)*?<{re.escape(end_tag)}>",
+                            rf"{start_tag_pattern}(.|\n)*?{re.escape(end_tag)}",
                             "",
                             content,
                             flags=re.DOTALL,
@@ -1744,18 +1766,19 @@ async def process_chat_response(
             )
 
             reasoning_tags = [
-                ("think", "/think"),
-                ("thinking", "/thinking"),
-                ("reason", "/reason"),
-                ("reasoning", "/reasoning"),
-                ("thought", "/thought"),
-                ("Thought", "/Thought"),
-                ("|begin_of_thought|", "|end_of_thought|"),
+                ("<think>", "</think>"),
+                ("<thinking>", "</thinking>"),
+                ("<reason>", "</reason>"),
+                ("<reasoning>", "</reasoning>"),
+                ("<thought>", "</thought>"),
+                ("<Thought>", "</Thought>"),
+                ("<|begin_of_thought|>", "<|end_of_thought|>"),
+                ("◁think▷", "◁/think▷"),
             ]
 
-            code_interpreter_tags = [("code_interpreter", "/code_interpreter")]
+            code_interpreter_tags = [("<code_interpreter>", "</code_interpreter>")]
 
-            solution_tags = [("|begin_of_solution|", "|end_of_solution|")]
+            solution_tags = [("<|begin_of_solution|>", "<|end_of_solution|>")]
 
             try:
                 for event in events:
@@ -2039,7 +2062,7 @@ async def process_chat_response(
                             if done:
                                 pass
                             else:
-                                log.debug("Error: ", e)
+                                log.debug(f"Error: {e}")
                                 continue
 
                     if content_blocks:

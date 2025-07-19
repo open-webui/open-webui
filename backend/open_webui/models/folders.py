@@ -63,7 +63,7 @@ class FolderForm(BaseModel):
 
 class FolderTable:
     def insert_new_folder(
-        self, user_id: str, name: str, parent_id: Optional[str] = None
+        self, user_id: str, form_data: FolderForm, parent_id: Optional[str] = None
     ) -> Optional[FolderModel]:
         with get_db() as db:
             id = str(uuid.uuid4())
@@ -71,7 +71,7 @@ class FolderTable:
                 **{
                     "id": id,
                     "user_id": user_id,
-                    "name": name,
+                    **(form_data.model_dump(exclude_unset=True) or {}),
                     "parent_id": parent_id,
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
