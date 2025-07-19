@@ -226,13 +226,15 @@
 					</div>
 				</Selector>
 
-				<button
-					class=" px-3.5 py-1.5 font-medium hover:bg-black/5 dark:hover:bg-white/5 outline outline-1 outline-gray-100 dark:outline-gray-850 rounded-3xl"
-					type="button"
-					on:click={() => {
-						filesInputElement.click();
-					}}>{$i18n.t('Upload Files')}</button
-				>
+				{#if $user?.role === 'admin' || $user?.permissions?.chat?.file_upload}
+					<button
+						class=" px-3.5 py-1.5 font-medium hover:bg-black/5 dark:hover:bg-white/5 outline outline-1 outline-gray-100 dark:outline-gray-850 rounded-3xl"
+						type="button"
+						on:click={() => {
+							filesInputElement.click();
+						}}>{$i18n.t('Upload Files')}</button
+					>
+				{/if}
 			</div>
 		{/if}
 		<!-- {knowledge} -->
