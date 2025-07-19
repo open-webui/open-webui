@@ -16,6 +16,8 @@
 	export let show = false;
 	export let onSubmit: Function = (e) => {};
 
+	export let edit = false;
+
 	export let folder = null;
 
 	let name = '';
@@ -53,7 +55,11 @@
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-1">
 			<div class=" text-lg font-medium self-center">
-				{$i18n.t('Edit Folder')}
+				{#if edit}
+					{$i18n.t('Edit Folder')}
+				{:else}
+					{$i18n.t('Create Folder')}
+				{/if}
 			</div>
 			<button
 				class="self-center"

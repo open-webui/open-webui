@@ -363,9 +363,7 @@
 		});
 
 		chats.subscribe((value) => {
-			if ($selectedFolder) {
-				initFolders();
-			}
+			initFolders();
 		});
 
 		await initChannels();
