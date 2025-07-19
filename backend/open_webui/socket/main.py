@@ -316,6 +316,37 @@ async def join_channel(sid, data):
         await sio.enter_room(sid, f"channel:{channel.id}")
 
 
+@sio.on("join-note")
+async def join_note(sid, data):
+    auth = data["auth"] if "auth" in data else None
+    if not auth or "token" not in auth:
+        return
+
+    token_data = decode_token(auth["token"])
+    if token_data is None or "id" not in token_data:
+        return
+
+    user = Users.get_user_by_id(token_data["id"])
+    if not user:
+        return
+
+    note = Notes.get_note_by_id(data["note_id"])
+    if not note:
+        log.error(f"Note {data['note_id']} not found for user {user.id}")
+        return
+
+    if (
+        user.role != "admin"
+        and user.id != note.user_id
+        and not has_access(user.id, type="read", access_control=note.access_control)
+    ):
+        log.error(f"User {user.id} does not have access to note {data['note_id']}")
+        return
+
+    log.debug(f"Joining note {note.id} for user {user.id}")
+    await sio.enter_room(sid, f"note:{note.id}")
+
+
 @sio.on("channel-events")
 async def channel_events(sid, data):
     room = f"channel:{data['channel_id']}"
@@ -450,7 +481,7 @@ async def yjs_document_state(sid, data):
         room = f"doc_{document_id}"
 
         active_session_ids = get_session_ids_from_room(room)
-        print(active_session_ids)
+
         if sid not in active_session_ids:
             log.warning(f"Session {sid} not in room {room}. Cannot send state.")
             return
@@ -520,7 +551,8 @@ async def yjs_document_update(sid, data):
                 document_id, data.get("data", {}), SESSION_POOL.get(sid)
             )
 
-        await create_task(REDIS, debounced_save(), document_id)
+        if data.get("data"):
+            await create_task(REDIS, debounced_save(), document_id)
 
     except Exception as e:
         log.error(f"Error in yjs_document_update: {e}")

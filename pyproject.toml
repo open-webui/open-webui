@@ -136,6 +136,8 @@ dependencies = [
 
     "moto[s3]>=5.0.26",
 
+    "posthog==5.4.0",
+
 ]
 readme = "README.md"
 requires-python = ">= 3.11, < 3.13.0a1"
@@ -191,3 +193,8 @@ skip = '.git*,*.svg,package-lock.json,i18n,*.lock,*.css,*-bundle.js,locales,exam
 check-hidden = true
 # ignore-regex = ''
 ignore-words-list = 'ans'
+
+[dependency-groups]
+dev = [
+    "pytest-asyncio>=1.0.0",
+]

@@ -21,6 +21,7 @@ from fastapi import (
 from fastapi.responses import FileResponse, StreamingResponse
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
+from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 
 from open_webui.models.users import Users
 from open_webui.models.files import (
@@ -286,6 +287,7 @@ async def delete_all_files(user=Depends(get_admin_user)):
     if result:
         try:
             Storage.delete_all_files()
+            VECTOR_DB_CLIENT.reset()
         except Exception as e:
             log.exception(e)
             log.error("Error deleting files")
@@ -603,12 +605,12 @@ async def delete_file_by_id(id: str, user=Depends(get_verified_user)):
         or user.role == "admin"
         or has_access_to_file(id, "write", user)
     ):
-        # We should add Chroma cleanup here
 
         result = Files.delete_file_by_id(id)
         if result:
             try:
                 Storage.delete_file(file.path)
+                VECTOR_DB_CLIENT.delete(collection_name=f"file-{id}")
             except Exception as e:
                 log.exception(e)
                 log.error("Error deleting files")

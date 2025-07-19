@@ -278,7 +278,11 @@
 	"Copy Formatted Text": "Skopiuj sformatowany tekst",
 	"Copy last code block": "Skopiuj ostatni fragment kodu",
 	"Copy last response": "Skopiuj ostatnią wypowiedź",
+<<<<<<< HEAD
 	"Copy link": "Kopiuj link",
+=======
+	"Copy link": "Skopiuj link",
+>>>>>>> v0.6.17
 	"Copy Link": "Skopiuj link",
 	"Copy to clipboard": "Wklej do schowka",
 	"Copying to clipboard was successful!": "Kopiowanie do schowka zakończyło się sukcesem!",
@@ -289,12 +293,17 @@
 	"Create Account": "Utwórz konto",
 	"Create Admin Account": "Utwórz konto administratora",
 	"Create Channel": "Utwórz kanał",
+	"Create Folder": "",
 	"Create Group": "Utwórz grupę",
 	"Create Knowledge": "Utwórz wiedzę",
 	"Create new key": "Utwórz nowy klucz",
 	"Create new secret key": "Utwórz nowy secret key",
 	"Create Note": "Utwórz notatkę",
+<<<<<<< HEAD
 	"Create your first note by clicking on the plus button below.": "Utwórz swoją pierwszą notatkę klikając przycisk plus poniżej.",
+=======
+	"Create your first note by clicking on the plus button below.": "Utwórz swoją pierwszą notatkę klikając w plus poniżej.",
+>>>>>>> v0.6.17
 	"Created at": "Utworzono o",
 	"Created At": "Utworzono o",
 	"Created by": "Stworzone przez",
@@ -334,11 +343,15 @@
 	"Delete All Models": "Usuń Wszystkie Modele",
 	"Delete chat": "Usuń rozmowę",
 	"Delete Chat": "Usuń rozmowę",
-	"Delete chat?": "Usuń czat?",
-	"Delete folder?": "Usuń folder?",
+	"Delete chat?": "Usunąć czat?",
+	"Delete folder?": "Usunąć folder?",
 	"Delete function?": "Czy na pewno chcesz usunąć funkcję?",
 	"Delete Message": "Usuń wiadomość",
+<<<<<<< HEAD
 	"Delete message?": "Usuń wiadomość?",
+=======
+	"Delete message?": "Usunąć wiadomość?",
+>>>>>>> v0.6.17
 	"Delete note?": "Usunąć notatkę?",
 	"Delete prompt?": "Czy chcesz usunąć prompt?",
 	"delete this link": "usuń to połączenie",
@@ -411,11 +424,19 @@
 	"e.g. my_tools": "np. moje_narzędzia",
 	"e.g. pdf, docx, txt": "np. pdf, docx, txt",
 	"e.g. Tools for performing various operations": "np. Narzędzia do wykonywania różnych operacji",
+<<<<<<< HEAD
 	"e.g., 3, 4, 5 (leave blank for default)": "np. 3, 4, 5 (pozostaw puste dla domyślnego)",
 	"e.g., audio/wav,audio/mpeg,video/* (leave blank for defaults, * for all)": "np. audio/wav,audio/mpeg,video/* (pozostaw puste dla domyślnych, * dla wszystkich)",
 	"e.g., en-US,ja-JP (leave blank for auto-detect)": "np. pl-PL,en-US (pozostaw puste dla automatycznego wykrywania)",
 	"e.g., westus (leave blank for eastus)": "np. westus (pozostaw puste dla eastus)",
 	"e.g.) en,fr,de": "np.) pl,en,de",
+=======
+	"e.g., 3, 4, 5 (leave blank for default)": "",
+	"e.g., audio/wav,audio/mpeg,video/* (leave blank for defaults)": "",
+	"e.g., en-US,ja-JP (leave blank for auto-detect)": "",
+	"e.g., westus (leave blank for eastus)": "",
+	"e.g.) en,fr,de": "",
+>>>>>>> v0.6.17
 	"Edit": "Edytuj",
 	"Edit Arena Model": "Edytuj model arenę",
 	"Edit Channel": "Edytuj kanał",
@@ -479,6 +500,7 @@
 	"Enter Document Intelligence Key": "Wprowadź klucz Document Intelligence",
 	"Enter domains separated by commas (e.g., example.com,site.org)": "Wprowadź domeny oddzielone przecinkami (np. example.com, site.org)",
 	"Enter Exa API Key": "Wprowadź klucz API Exa",
+<<<<<<< HEAD
 	"Enter External Document Loader API Key": "Wprowadź klucz API zewnętrznego ładowacza dokumentów",
 	"Enter External Document Loader URL": "Wprowadź URL zewnętrznego ładowacza dokumentów",
 	"Enter External Web Loader API Key": "Wprowadź klucz API zewnętrznego ładowacza stron",
@@ -487,6 +509,16 @@
 	"Enter External Web Search URL": "Wprowadź URL zewnętrznego wyszukiwania",
 	"Enter Firecrawl API Base URL": "Wprowadź bazowy URL API Firecrawl",
 	"Enter Firecrawl API Key": "Wprowadź klucz API Firecrawl",
+=======
+	"Enter External Document Loader API Key": "",
+	"Enter External Document Loader URL": "",
+	"Enter External Web Loader API Key": "",
+	"Enter External Web Loader URL": "",
+	"Enter External Web Search API Key": "",
+	"Enter External Web Search URL": "",
+	"Enter Firecrawl API Base URL": "",
+	"Enter Firecrawl API Key": "",
+>>>>>>> v0.6.17
 	"Enter folder name": "Wprowadź nazwę folderu",
 	"Enter Github Raw URL": "Wprowadź surowy adres URL usługi GitHub",
 	"Enter Google PSE API Key": "Wprowadź klucz API Google PSE",
@@ -537,7 +569,11 @@
 	"Enter the URL of the function to import": "Wprowadź URL funkcji do zaimportowania",
 	"Enter the URL to import": "Wprowadź URL do zaimportowania",
 	"Enter Tika Server URL": "Wprowadź adres URL serwera Tika",
+<<<<<<< HEAD
 	"Enter timeout in seconds": "Wprowadź limit czasu w sekundach",
+=======
+	"Enter timeout in seconds": "",
+>>>>>>> v0.6.17
 	"Enter to Send": "Enter aby wysłać",
 	"Enter Top K": "Wprowadź {Top K}",
 	"Enter Top K Reranker": "Wprowadź Top K Reranker",
@@ -565,7 +601,11 @@
 	"Error unloading model: {{error}}": "Błąd wyładowywania modelu: {{error}}",
 	"Error uploading file: {{error}}": "Błąd podczas przesyłania pliku: {{error}}",
 	"Evaluations": "Oceny",
+<<<<<<< HEAD
 	"Everyone": "Wszyscy",
+=======
+	"Everyone": "Każdy",
+>>>>>>> v0.6.17
 	"Exa API Key": "Klucz API Exa",
 	"Example: (&(objectClass=inetOrgPerson)(uid=%s))": "Przykład: (&(objectClass=inetOrgPerson)(uid=%s))",
 	"Example: ALL": "Przykład: ALL",
@@ -593,6 +633,7 @@
 	"Export Prompts": "Eksportuj prompty",
 	"Export to CSV": "Eksport do CSV",
 	"Export Tools": "Eksportuj narzędzia",
+<<<<<<< HEAD
 	"External": "Zewnętrzny",
 	"External Document Loader URL required.": "Wymagany URL zewnętrznego ładowacza dokumentów.",
 	"External Task Model": "Zewnętrzny model zadań",
@@ -612,6 +653,29 @@
 	"Failed to load file content.": "Nie udało się załadować treści pliku.",
 	"Failed to read clipboard contents": "Nie udało się odczytać zawartości schowka",
 	"Failed to save connections": "Nie udało się zapisać połączeń",
+=======
+	"External": "",
+	"External Document Loader URL required.": "",
+	"External Task Model": "",
+	"External Web Loader API Key": "",
+	"External Web Loader URL": "",
+	"External Web Search API Key": "",
+	"External Web Search URL": "",
+	"Fade Effect for Streaming Text": "",
+	"Failed to add file.": "Nie udało się dodać pliku.",
+	"Failed to connect to {{URL}} OpenAPI tool server": "",
+	"Failed to copy link": "Nie udało się skopiować linku",
+	"Failed to create API Key.": "Nie udało się wygenerować klucza API.",
+	"Failed to delete note": "Nie udało się usunąć notatki",
+	"Failed to extract content from the file: {{error}}": "",
+	"Failed to extract content from the file.": "",
+	"Failed to fetch models": "Nie udało się pobrać modeli",
+	"Failed to generate title": "Nie udało się wygenerować tytułu",
+	"Failed to load chat preview": "",
+	"Failed to load file content.": "Nie udało się załadować zawartości pliku.",
+	"Failed to read clipboard contents": "Nie udało się odczytać zawartości schowka",
+	"Failed to save connections": "Nie udałio się zapisać połączeń",
+>>>>>>> v0.6.17
 	"Failed to save models configuration": "Nie udało się zapisać konfiguracji modelu",
 	"Failed to update settings": "Nie udało się zaktualizować ustawień",
 	"Failed to upload file.": "Nie udało się przesłać pliku.",
@@ -632,7 +696,11 @@
 	"File Upload": "Przesyłanie plików",
 	"File uploaded successfully": "Plik został pomyślnie przesłany",
 	"Files": "Pliki",
+<<<<<<< HEAD
 	"Filter": "Filtruj",
+=======
+	"Filter": "Filtr",
+>>>>>>> v0.6.17
 	"Filter is now globally disabled": "Filtr jest teraz globalnie wyłączony",
 	"Filter is now globally enabled": "Filtr jest teraz globalnie włączony",
 	"Filters": "Filtry",
@@ -652,7 +720,11 @@
 	"Follow-Up Auto-Generation": "Automatyczne generowanie kontynuacji",
 	"Followed instructions perfectly": "Wykonał instrukcje idealnie",
 	"Force OCR": "Wymuś OCR",
+<<<<<<< HEAD
 	"Force OCR on all pages of the PDF. This can lead to worse results if you have good text in your PDFs. Defaults to False.": "Wymuś OCR na wszystkich stronach PDF. Może to prowadzić do gorszych wyników, jeśli masz dobry tekst w swoich plikach PDF. Domyślnie False.",
+=======
+	"Force OCR on all pages of the PDF. This can lead to worse results if you have good text in your PDFs. Defaults to False.": "",
+>>>>>>> v0.6.17
 	"Forge new paths": "Wytyczaj nowe ścieżki",
 	"Form": "Formularz",
 	"Format your variables using brackets like this:": "Sformatuj swoje zmienne, używając nawiasów w następujący sposób:",
@@ -676,13 +748,21 @@
 	"Gemini API Config": "Konfiguracja API Gemini",
 	"Gemini API Key is required.": "Wymagany jest klucz API Gemini.",
 	"General": "Ogólne",
+<<<<<<< HEAD
 	"Generate": "Generuj",
+=======
+	"Generate": "Wygeneruj",
+>>>>>>> v0.6.17
 	"Generate an image": "Wygeneruj obraz",
 	"Generate Image": "Wygeneruj obraz",
 	"Generate prompt pair": "Generuj parę promptów",
 	"Generating search query": "Tworzenie zapytania wyszukiwania",
 	"Generating...": "Generowanie...",
+<<<<<<< HEAD
 	"Get information on {{name}} in the UI": "Uzyskaj informacje o {{name}} w interfejsie",
+=======
+	"Get information on {{name}} in the UI": "",
+>>>>>>> v0.6.17
 	"Get started": "Rozpocznij",
 	"Get started with {{WEBUI_NAME}}": "Rozpocznij pracę z {{WEBUI_NAME}}",
 	"Global": "Globalny",
@@ -706,9 +786,15 @@
 	"Hex Color": "Kolor heksadecymalny",
 	"Hex Color - Leave empty for default color": "Kolor heksadecymalny - pozostaw puste dla domyślnego koloru",
 	"Hide": "Ukryj",
+<<<<<<< HEAD
 	"Hide from Sidebar": "Ukryj na pasku bocznym",
 	"Hide Model": "Ukryj model",
 	"High Contrast Mode": "Tryb wysokiego kontrastu",
+=======
+	"Hide from Sidebar": "Ukryj z paska bocznego",
+	"Hide Model": "Ukryj model",
+	"High Contrast Mode": "",
+>>>>>>> v0.6.17
 	"Home": "Dom",
 	"Host": "Serwer",
 	"How can I help you today?": "Jak mogę Ci dzisiaj pomóc?",
@@ -738,8 +824,13 @@
 	"Import Chats": "Importuj czaty",
 	"Import Config from JSON File": "Importuj konfigurację z pliku JSON",
 	"Import From Link": "Importuj z linku",
+<<<<<<< HEAD
 	"Import Functions": "Importowanie funkcji",
 	"Import Models": "Importowanie modeli",
+=======
+	"Import Functions": "Importuj funkcje",
+	"Import Models": "Importuj modele",
+>>>>>>> v0.6.17
 	"Import Notes": "Importuj notatki",
 	"Import Presets": "Importuj ustawienia",
 	"Import Prompt Suggestions": "Importuj sugestie promptów",
@@ -752,14 +843,25 @@
 	"Info": "Informacje",
 	"Inject the entire content as context for comprehensive processing, this is recommended for complex queries.": "Wstrzyknij całą treść jako kontekst dla kompleksowego przetwarzania, to jest zalecane dla złożonych zapytań.",
 	"Input commands": "Wprowadź polecenia",
+<<<<<<< HEAD
 	"Input Variables": "Zmienne wejściowe",
 	"Insert": "Wstaw",
 	"Insert Prompt as Rich Text": "Wstaw prompt jako tekst sformatowany",
+=======
+	"Input Variables": "",
+	"Insert": "",
+	"Insert Follow-Up Prompt to Input": "",
+	"Insert Prompt as Rich Text": "",
+>>>>>>> v0.6.17
 	"Install from Github URL": "Instalacja z adresu URL serwisu Github",
 	"Instant Auto-Send After Voice Transcription": "Automatyczne natychmiastowe wysyłanie po transkrypcji głosowej",
 	"Integration": "Integracja",
 	"Interface": "Interfejs",
+<<<<<<< HEAD
 	"Invalid file content": "Nieprawidłowa treść pliku",
+=======
+	"Invalid file content": "Nieprawidłowa zawartość pliku",
+>>>>>>> v0.6.17
 	"Invalid file format.": "Nieprawidłowy format pliku.",
 	"Invalid JSON file": "Nieprawidłowy plik JSON",
 	"Invalid Tag": "Nieprawidłowy tag",
@@ -777,7 +879,12 @@
 	"JWT Expiration": "Termin ważności JWT",
 	"JWT Token": "Token JWT",
 	"Kagi Search API Key": "Klucz API Kagi Search",
+<<<<<<< HEAD
 	"Keep in Sidebar": "Zachowaj na pasku bocznym",
+=======
+	"Keep Follow-Up Prompts in Chat": "",
+	"Keep in Sidebar": "",
+>>>>>>> v0.6.17
 	"Key": "Klucz",
 	"Keyboard shortcuts": "Skróty klawiszowe",
 	"Knowledge": "Wiedza",
@@ -811,6 +918,7 @@
 	"Leave empty to use the default prompt, or enter a custom prompt": "Pozostaw puste, aby użyć domyślnego promptu, lub wprowadź niestandardowy prompt",
 	"Leave model field empty to use the default model.": "Pozostaw pole modelu puste, aby użyć domyślnego modelu.",
 	"License": "Licencja",
+	"Lift List": "",
 	"Light": "Jasny",
 	"Listening...": "Słuchanie...",
 	"Llama.cpp": "Llama.cpp",
@@ -865,7 +973,11 @@
 	"Model {{name}} is now {{status}}": "Model {{name}} jest teraz {{status}}",
 	"Model {{name}} is now hidden": "Model {{name}} jest teraz ukryty",
 	"Model {{name}} is now visible": "Model {{name}} jest teraz widoczny",
+<<<<<<< HEAD
 	"Model accepts file inputs": "Model akceptuje pliki wejściowe",
+=======
+	"Model accepts file inputs": "",
+>>>>>>> v0.6.17
 	"Model accepts image inputs": "Model przyjmuje wejścia obrazowe",
 	"Model can execute code and perform calculations": "Model może wykonywać kod i przeprowadzać obliczenia",
 	"Model can generate images based on text prompts": "Model może generować obrazy na podstawie promptów tekstowych",
@@ -894,16 +1006,27 @@
 	"Name your knowledge base": "Nazwij swoją bazę wiedzy",
 	"Native": "Rodzimy",
 	"New Chat": "Nowy czat",
+<<<<<<< HEAD
 	"New Folder": "Nowy Folder",
+=======
+	"New Folder": "Nowy folder",
+>>>>>>> v0.6.17
 	"New Function": "Nowa funkcja",
 	"New Note": "Nowa notatka",
 	"New Password": "Nowe hasło",
 	"New Tool": "Nowe narzędzie",
 	"new-channel": "nowy-kanał",
 	"Next message": "Następna wiadomość",
+<<<<<<< HEAD
 	"No chats found for this user.": "Nie znaleziono czatów dla tego użytkownika.",
 	"No chats found.": "Nie znaleziono czatów.",
 	"No content": "Brak treści",
+=======
+	"No chats found": "",
+	"No chats found for this user.": "",
+	"No chats found.": "",
+	"No content": "",
+>>>>>>> v0.6.17
 	"No content found": "Nie znaleziono żadnej zawartości.",
 	"No content found in file.": "Nie znaleziono treści w pliku.",
 	"No content to speak": "Brak treści do omówienia",
@@ -927,9 +1050,13 @@
 	"None": "Brak",
 	"Not factually correct": "Niezgodne z rzeczywistością",
 	"Not helpful": "Nieprzydatne",
+<<<<<<< HEAD
 	"Note deleted successfully": "Notatka usunięta pomyślnie",
+=======
+	"Note deleted successfully": "Notatka została usunięta",
+>>>>>>> v0.6.17
 	"Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score.": "Uwaga: Jeśli określisz minimalną punktację, wyszukiwanie zwróci tylko dokumenty o wyniku równym lub wyższym niż minimalna punktacja.",
-	"Notes": "Uwagi",
+	"Notes": "Notatki",
 	"Notification Sound": "Dźwięk powiadomienia",
 	"Notification Webhook": "Powiadomienie Webhook",
 	"Notifications": "Powiadomienia",
@@ -1033,8 +1160,13 @@
 	"Preview": "Podgląd",
 	"Previous 30 days": "Ostatnie 30 dni",
 	"Previous 7 days": "Ostatnie 7 dni",
+<<<<<<< HEAD
 	"Previous message": "Poprzednia wiadomość",
 	"Private": "Prywatny",
+=======
+	"Previous message": "",
+	"Private": "Prywatne",
+>>>>>>> v0.6.17
 	"Profile Image": "Zdjęcie profilowe",
 	"Prompt": "Wprowadź prompt: ",
 	"Prompt (e.g. Tell me a fun fact about the Roman Empire)": "Prompt (np. podaj ciekawostkę o Imperium Rzymskim)",
@@ -1122,7 +1254,11 @@
 	"Search Functions": "Funkcje wyszukiwania",
 	"Search Knowledge": "Przeszukaj wiedzę",
 	"Search Models": "Wyszukiwanie modeli",
+<<<<<<< HEAD
 	"Search Notes": "Przeszukaj notatki",
+=======
+	"Search Notes": "Wyszukiwanie notatek",
+>>>>>>> v0.6.17
 	"Search options": "Opcje wyszukiwania",
 	"Search Prompts": "Szukaj promptów",
 	"Search Result Count": "Liczba wyników wyszukiwania",
@@ -1139,6 +1275,7 @@
 	"See what's new": "Sprawdź nowości",
 	"Seed": "Seed",
 	"Select a base model": "Wybór modelu bazowego",
+	"Select a conversation to preview": "",
 	"Select a engine": "Wybierz silnik",
 	"Select a function": "Wybierz funkcję",
 	"Select a group": "Wybierz grupę",
@@ -1209,6 +1346,7 @@
 	"Sign up to {{WEBUI_NAME}}": "Zarejestruj się w {{WEBUI_NAME}}",
 	"Significantly improves accuracy by using an LLM to enhance tables, forms, inline math, and layout detection. Will increase latency. Defaults to True.": "Znacznie poprawia dokładność poprzez użycie LLM do wzbogacania tabel, formularzy, matematyki wbudowanej i wykrywania układu. Zwiększy opóźnienie. Domyślnie True.",
 	"Signing in to {{WEBUI_NAME}}": "Logowanie do {{WEBUI_NAME}}",
+	"Sink List": "",
 	"sk-1234": "sk-1234",
 	"Skip Cache": "Omiń bufor",
 	"Skip the cache and re-run the inference. Defaults to False.": "Omiń bufor i ponownie uruchom wnioskowanie. Domyślnie False.",
@@ -1314,6 +1452,7 @@
 	"To access the WebUI, please reach out to the administrator. Admins can manage user statuses from the Admin Panel.": "Aby uzyskać dostęp do interfejsu WebUI, skontaktuj się z administratorem. Administratorzy mogą zarządzać statusami użytkowników z Panelu Administracyjnego.",
 	"To attach knowledge base here, add them to the \"Knowledge\" workspace first.": "Aby dołączyć bazę wiedzy tutaj, dodaj je najpierw do przestrzeni roboczej \"Wiedza\". ",
 	"To learn more about available endpoints, visit our documentation.": "Aby dowiedzieć się więcej o dostępnych punktach końcowych, odwiedź naszą dokumentację.",
+	"To learn more about powerful prompt variables, click here": "",
 	"To protect your privacy, only ratings, model IDs, tags, and metadata are shared from your feedback—your chat logs remain private and are not included.": "Aby chronić Twoją prywatność, udostępniane są tylko oceny, identyfikatory modeli, tagi i metadane z Twoich opinii – Twoje dzienniki czatu pozostają prywatne i nie są uwzględniane.",
 	"To select actions here, add them to the \"Functions\" workspace first.": "Aby wybrać działania tutaj, najpierw dodaj je do przestrzeni roboczej \"Funkcje\".",
 	"To select filters here, add them to the \"Functions\" workspace first.": "Aby wybrać filtry tutaj, najpierw dodaj je do przestrzeni roboczej \"Funkcje\".",
@@ -1360,6 +1499,7 @@
 	"Unlock mysteries": "Rozwiązywanie zagadek",
 	"Unpin": "Odpiąć",
 	"Unravel secrets": "Odkryj tajemnice",
+	"Unsupported file type.": "",
 	"Untagged": "Nie otagowane",
 	"Untitled": "Bez tytułu",
 	"Update": "Aktualizacja",
@@ -1372,7 +1512,11 @@
 	"Upgrade to a licensed plan for enhanced capabilities, including custom theming and branding, and dedicated support.": "Przejdź na licencjonowany plan, aby uzyskać rozszerzone możliwości, w tym niestandardowe motywy, personalizację oraz dedykowane wsparcie.",
 	"Upload": "Prześlij",
 	"Upload a GGUF model": "Prześlij model GGUF",
+<<<<<<< HEAD
 	"Upload Audio": "Prześlij dźwięk",
+=======
+	"Upload Audio": "Prześlij audio",
+>>>>>>> v0.6.17
 	"Upload directory": "Prześlij katalog",
 	"Upload files": "Prześlij pliki",
 	"Upload Files": "Prześlij pliki",
@@ -1395,14 +1539,14 @@
 	"User Webhooks": "Webhooki użytkownika",
 	"Username": "Nazwa użytkownika",
 	"Users": "Użytkownicy",
+	"Using Entire Document": "",
+	"Using Focused Retrieval": "",
 	"Using the default arena model with all models. Click the plus button to add custom models.": "Korzystanie z domyślnego modelu areny ze wszystkimi modelami. Kliknij przycisk plus, aby dodać niestandardowe modele.",
-	"Utilize": "Wykorzystaj",
 	"Valid time units:": "Dozwolone jednostki czasu:",
 	"Valves": "Zawory",
 	"Valves updated": "Zawory zaktualizowane",
 	"Valves updated successfully": "Zawory zaktualizowane pomyślnie",
 	"variable": "zmienna",
-	"variable to have them replaced with clipboard content.": "Zmienna, która ma zostać zastąpiona zawartością schowka.",
 	"Verify Connection": "Sprawdź połączenie",
 	"Verify SSL Certificate": "Sprawdź certyfikat SSL",
 	"Version": "Wersja",
@@ -1429,10 +1573,17 @@
 	"Webhook URL": "Adres URL webhooka",
 	"WebUI Settings": "Ustawienia interfejsu WebUI",
 	"WebUI URL": "Adres URL interfejsu internetowego",
+<<<<<<< HEAD
 	"WebUI will make requests to \"{{url}}\"": "WebUI będzie wykonywać żądania do \"{{url}}\"",
 	"WebUI will make requests to \"{{url}}/api/chat\"": "WebUI będzie wysyłać żądania do \"{{url}}/api/chat\".",
 	"WebUI will make requests to \"{{url}}/chat/completions\"": "WebUI będzie wysyłać żądania do \"{{url}}/chat/completions\".",
 	"Weight of BM25 Retrieval": "Waga pobierania BM25",
+=======
+	"WebUI will make requests to \"{{url}}\"": "WebUI będzie wysyłać żądania do \"{{url}}\"",
+	"WebUI will make requests to \"{{url}}/api/chat\"": "WebUI będzie wysyłać żądania do \"{{url}}/api/chat\"",
+	"WebUI will make requests to \"{{url}}/chat/completions\"": "WebUI będzie wysyłać żądania do \"{{url}}/chat/completions\"",
+	"Weight of BM25 Retrieval": "",
+>>>>>>> v0.6.17
 	"What are you trying to achieve?": "Do czego dążysz?",
 	"What are you working on?": "Nad czym pracujesz?",
 	"What's New in": "Co nowego w",
@@ -1455,7 +1606,11 @@
 	"Yacy Username": "Nazwa użytkownika Yacy",
 	"Yesterday": "Wczoraj",
 	"You": "Ty",
+<<<<<<< HEAD
 	"You are currently using a trial license. Please contact support to upgrade your license.": "Obecnie używasz licencji próbnej. Skontaktuj się z wsparciem, aby uaktualnić swoją licencję.",
+=======
+	"You are currently using a trial license. Please contact support to upgrade your license.": "Obecnie używasz licencji trial. Skontaktuj się z supportem, aby zupgradować Twoją licencję.",
+>>>>>>> v0.6.17
 	"You can only chat with a maximum of {{maxCount}} file(s) at a time.": "Możesz rozmawiać jednocześnie maksymalnie z {{maxCount}} plikiem(i).",
 	"You can personalize your interactions with LLMs by adding memories through the 'Manage' button below, making them more helpful and tailored to you.": "Możesz spersonalizować swoje interakcje z LLM, dodając wspomnienia za pomocą przycisku 'Zarządzaj' poniżej, dzięki czemu będą one bardziej pomocne i dostosowane do Ciebie.",
 	"You cannot upload an empty file.": "Nie możesz przesłać pustego pliku.",
