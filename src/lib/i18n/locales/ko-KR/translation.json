@@ -654,7 +654,7 @@
 	"Follow Up Generation": "후속 질문 생성",
 	"Follow Up Generation Prompt": "후속 질문 생성 프롬프트",
 	"Follow-Up Auto-Generation": "후속 질문 자동 생성",
-	"Followed instructions perfectly": "지시를를 완벽히 수행함",
+	"Followed instructions perfectly": "지시를 완벽히 수행함",
 	"Force OCR": "OCR 강제 적용",
 	"Force OCR on all pages of the PDF. This can lead to worse results if you have good text in your PDFs. Defaults to False.": "PDF의 모든 페이지에 대해 OCR을 강제로 적용합니다. PDF에 좋은 텍스트가 포함된 경우 결과가 더 나빠질 수 있습니다. 기본값은 False입니다.",
 	"Forge new paths": "새로운 경로 만들기",
