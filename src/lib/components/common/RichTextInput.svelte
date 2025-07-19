@@ -56,6 +56,7 @@
 
 	import { Fragment, DOMParser } from 'prosemirror-model';
 	import { EditorState, Plugin, PluginKey, TextSelection, Selection } from 'prosemirror-state';
+	import { Decoration, DecorationSet } from 'prosemirror-view';
 	import { Editor, Extension } from '@tiptap/core';
 
 	// Yjs imports
@@ -167,6 +168,8 @@
 		});
 	};
 
+	export let onSelectionUpdate = (e) => {};
+
 	export let id = '';
 	export let value = '';
 	export let html = '';
@@ -191,6 +194,8 @@
 	let htmlValue = '';
 	let jsonValue = '';
 	let mdValue = '';
+
+	let lastSelectionBookmark = null;
 
 	// Yjs setup
 	let ydoc = null;
@@ -827,6 +832,33 @@
 		}
 	};
 
+	const SelectionDecoration = Extension.create({
+		name: 'selectionDecoration',
+		addProseMirrorPlugins() {
+			return [
+				new Plugin({
+					key: new PluginKey('selection'),
+					props: {
+						decorations: (state) => {
+							const { selection } = state;
+							const { focused } = this.editor;
+
+							if (focused || selection.empty) {
+								return null;
+							}
+
+							return DecorationSet.create(state.doc, [
+								Decoration.inline(selection.from, selection.to, {
+									class: 'editor-selection'
+								})
+							]);
+						}
+					}
+				})
+			];
+		}
+	});
+
 	onMount(async () => {
 		content = value;
 
@@ -882,6 +914,7 @@
 					link: link
 				}),
 				Placeholder.configure({ placeholder }),
+				SelectionDecoration,
 
 				CodeBlockLowlight.configure({
 					lowlight
@@ -1168,7 +1201,8 @@
 				if (files) {
 					editor.storage.files = files;
 				}
-			}
+			},
+			onSelectionUpdate: onSelectionUpdate
 		});
 
 		if (messageInput) {

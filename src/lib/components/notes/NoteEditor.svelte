@@ -121,6 +121,8 @@
 	let showPanel = false;
 	let selectedPanel = 'chat';
 
+	let selectedContent = null;
+
 	let showDeleteConfirm = false;
 	let showAccessControlModal = false;
 
@@ -1199,6 +1201,16 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 							image={true}
 							placeholder={$i18n.t('Write something...')}
 							editable={versionIdx === null && !editing}
+							onSelectionUpdate={({ editor }) => {
+								const { from, to } = editor.state.selection;
+								const selectedText = editor.state.doc.textBetween(from, to, ' ');
+
+								selectedContent = {
+									text: selectedText,
+									from: from,
+									to: to
+								};
+							}}
 							onChange={(content) => {
 								note.data.content.html = content.html;
 								note.data.content.md = content.md;
@@ -1398,6 +1410,9 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 				bind:editing
 				bind:streaming
 				bind:stopResponseFlag
+				{editor}
+				{inputElement}
+				{selectedContent}
 				{files}
 				onInsert={insertHandler}
 				onStop={stopResponseHandler}
