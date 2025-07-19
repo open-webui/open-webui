@@ -14,7 +14,7 @@ from open_webui.models.tools import (
     Tools,
 )
 from open_webui.utils.plugin import load_tool_module_by_id, replace_imports
-from open_webui.config import CACHE_DIR, RESPECT_USER_WORKSPACE_PRIVACY
+from open_webui.config import CACHE_DIR, ENABLE_ADMIN_USER_WORKSPACE_ACCESS
 from open_webui.constants import ERROR_MESSAGES
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from open_webui.utils.tools import get_tool_specs
@@ -82,7 +82,7 @@ async def get_tools(request: Request, user=Depends(get_verified_user)):
     all_tools = db_tools + server_tools
 
     # Apply filtering based on user role and privacy settings
-    if user.role == "admin" and not RESPECT_USER_WORKSPACE_PRIVACY.value:
+    if user.role == "admin" and ENABLE_ADMIN_USER_WORKSPACE_ACCESS.value:
         # Admin with full access sees all tools
         filtered_tools = db_tools + server_tools
     else:
@@ -104,7 +104,7 @@ async def get_tools(request: Request, user=Depends(get_verified_user)):
 
 @router.get("/list", response_model=list[ToolUserResponse])
 async def get_tool_list(user=Depends(get_verified_user)):
-    if user.role == "admin" and not RESPECT_USER_WORKSPACE_PRIVACY.value:
+    if user.role == "admin" and ENABLE_ADMIN_USER_WORKSPACE_ACCESS.value:
         tools = Tools.get_tools()
     else:
         tools = Tools.get_tools_by_user_id(user.id, "write")
