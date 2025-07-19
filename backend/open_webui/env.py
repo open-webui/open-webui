@@ -336,9 +336,7 @@ else:
     except Exception:
         DATABASE_POOL_RECYCLE = 3600
 
-DATABASE_ENABLE_SQLITE_WAL = (
-    os.environ.get("DATABASE_ENABLE_SQLITE_WAL", "False").lower() == "true"
-)
+DATABASE_ENABLE_SQLITE_WAL = (os.environ.get("DATABASE_ENABLE_SQLITE_WAL", "False").lower() == "true")
 
 DATABASE_DEDUPLICATE_INTERVAL = (
     os.environ.get("DATABASE_DEDUPLICATE_INTERVAL", 0.)

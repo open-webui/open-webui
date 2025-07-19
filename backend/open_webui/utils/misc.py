@@ -500,6 +500,7 @@ def deduplicate(interval: float = 10.0):
 
     :param interval: Duration in seconds to wait before allowing the function to be called again.
     """
+
     def decorator(func):
         last_calls = {}
         lock = threading.Lock()
@@ -514,6 +515,7 @@ def deduplicate(interval: float = 10.0):
                     return None
                 last_calls[key] = now
             return func(*args, **kwargs)
+
         return wrapper
 
     return decorator
