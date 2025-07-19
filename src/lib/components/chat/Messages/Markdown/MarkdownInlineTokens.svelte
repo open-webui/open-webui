@@ -14,8 +14,11 @@
 	import KatexRenderer from './KatexRenderer.svelte';
 	import Source from './Source.svelte';
 	import HtmlToken from './HTMLToken.svelte';
+	import TextToken from './MarkdownInlineTokens/TextToken.svelte';
+	import CodespanToken from './MarkdownInlineTokens/CodespanToken.svelte';
 
 	export let id: string;
+	export let done = true;
 	export let tokens: Token[];
 	export let onSourceClick: Function = () => {};
 </script>
@@ -28,7 +31,7 @@
 	{:else if token.type === 'link'}
 		{#if token.tokens}
 			<a href={token.href} target="_blank" rel="nofollow" title={token.title}>
-				<svelte:self id={`${id}-a`} tokens={token.tokens} {onSourceClick} />
+				<svelte:self id={`${id}-a`} tokens={token.tokens} {onSourceClick} {done} />
 			</a>
 		{:else}
 			<a href={token.href} target="_blank" rel="nofollow" title={token.title}>{token.text}</a>
@@ -40,15 +43,7 @@
 	{:else if token.type === 'em'}
 		<em><svelte:self id={`${id}-em`} tokens={token.tokens} {onSourceClick} /></em>
 	{:else if token.type === 'codespan'}
-		<!-- svelte-ignore a11y-click-events-have-key-events -->
-		<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-		<code
-			class="codespan cursor-pointer"
-			on:click={() => {
-				copyToClipboard(unescapeHtml(token.text));
-				toast.success($i18n.t('Copied to clipboard'));
-			}}>{unescapeHtml(token.text)}</code
-		>
+		<CodespanToken {token} {done} />
 	{:else if token.type === 'br'}
 		<br />
 	{:else if token.type === 'del'}
@@ -66,6 +61,6 @@
 			onload="this.style.height=(this.contentWindow.document.body.scrollHeight+20)+'px';"
 		></iframe>
 	{:else if token.type === 'text'}
-		{token.raw}
+		<TextToken {token} {done} />
 	{/if}
 {/each}

@@ -51,6 +51,7 @@ langchain-community==0.3.26
 
 fake-useragent==2.1.0
 chromadb==0.6.3
+posthog==5.4.0
 pymilvus==2.5.0
 qdrant-client==1.14.3
 opensearch-py==2.8.0
