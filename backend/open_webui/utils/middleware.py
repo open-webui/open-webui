@@ -2064,7 +2064,7 @@ async def process_chat_response(
                             if done:
                                 pass
                             else:
-                                log.debug("Error: ", e)
+                                log.debug(f"Error: {e}")
                                 continue
 
                     if content_blocks:
