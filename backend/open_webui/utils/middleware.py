@@ -371,6 +371,9 @@ async def chat_web_search_handler(
             user,
         )
 
+        if res and isinstance(res, Response):
+            res = res.body.decode()
+
         response = res["choices"][0]["message"]["content"]
 
         try:
@@ -527,6 +530,9 @@ async def chat_image_generation_handler(
                 user,
             )
 
+            if res and isinstance(res, Response):
+                res = res.body.decode()
+
             response = res["choices"][0]["message"]["content"]
 
             try:
@@ -617,6 +623,10 @@ async def chat_completion_files_handler(
                 },
                 user,
             )
+
+            if queries_response and isinstance(queries_response, Response):
+                queries_response = queries_response.body.decode()
+
             queries_response = queries_response["choices"][0]["message"]["content"]
 
             try:
@@ -1093,6 +1103,9 @@ async def process_chat_response(
                         user,
                     )
 
+                    if res and isinstance(res, Response):
+                        res = json.loads(res.body.decode())
+
                     if res and isinstance(res, dict):
                         if len(res.get("choices", [])) == 1:
                             follow_ups_string = (
@@ -1148,6 +1161,9 @@ async def process_chat_response(
                             },
                             user,
                         )
+
+                        if res and isinstance(res, Response):
+                            res = json.loads(res.body.decode())
 
                         if res and isinstance(res, dict):
                             if len(res.get("choices", [])) == 1:
@@ -1206,6 +1222,9 @@ async def process_chat_response(
                         user,
                     )
 
+                    if res and isinstance(res, Response):
+                        res = json.loads(res.body.decode())
+
                     if res and isinstance(res, dict):
                         if len(res.get("choices", [])) == 1:
                             tags_string = (
@@ -1250,9 +1269,14 @@ async def process_chat_response(
 
     # Non-streaming response
     if not isinstance(response, StreamingResponse):
+        if isinstance(response, Response):
+            response_data = json.loads(response.body.decode())
+        else:
+            response_data = response
+
         if event_emitter:
-            if "error" in response:
-                error = response["error"].get("detail", response["error"])
+            if "error" in response_data:
+                error = response_data["error"].get("detail", response_data["error"])
                 Chats.upsert_message_to_chat_by_id_and_message_id(
                     metadata["chat_id"],
                     metadata["message_id"],
@@ -1260,31 +1284,25 @@ async def process_chat_response(
                         "error": {"content": error},
                     },
                 )
-
-            if "selected_model_id" in response:
+            if "selected_model_id" in response_data:
                 Chats.upsert_message_to_chat_by_id_and_message_id(
                     metadata["chat_id"],
                     metadata["message_id"],
                     {
-                        "selectedModelId": response["selected_model_id"],
+                        "selectedModelId": response_data["selected_model_id"],
                     },
                 )
-
-            choices = response.get("choices", [])
+            choices = response_data.get("choices", [])
             if choices and choices[0].get("message", {}).get("content"):
-                content = response["choices"][0]["message"]["content"]
-
+                content = response_data["choices"][0]["message"]["content"]
                 if content:
-
                     await event_emitter(
                         {
                             "type": "chat:completion",
-                            "data": response,
+                            "data": response_data,
                         }
                     )
-
                     title = Chats.get_chat_title_by_id(metadata["chat_id"])
-
                     await event_emitter(
                         {
                             "type": "chat:completion",
@@ -1295,7 +1313,6 @@ async def process_chat_response(
                             },
                         }
                     )
-
                     # Save message in the database
                     Chats.upsert_message_to_chat_by_id_and_message_id(
                         metadata["chat_id"],
@@ -1305,7 +1322,6 @@ async def process_chat_response(
                             "content": content,
                         },
                     )
-
                     # Send a webhook notification if the user is not active
                     if not get_active_status_by_user_id(user.id):
                         webhook_url = Users.get_user_webhook_url_by_id(user.id)
@@ -1321,10 +1337,9 @@ async def process_chat_response(
                                     "url": f"{request.app.state.config.WEBUI_URL}/c/{metadata['chat_id']}",
                                 },
                             )
-
                     await background_tasks_handler()
 
-            if events and isinstance(events, list) and isinstance(response, dict):
+            if events and isinstance(events, list):
                 extra_response = {}
                 for event in events:
                     if isinstance(event, dict):
@@ -1332,14 +1347,26 @@ async def process_chat_response(
                     else:
                         extra_response[event] = True
 
-                response = {
+                # Merge the extra response
+                merged_data = {
                     **extra_response,
-                    **response,
+                    **response_data,
                 }
+
+                if isinstance(response, Response):
+                    # Return a new Response object with the merged data
+                    return Response(
+                        content=json.dumps(merged_data),
+                        status_code=response.status_code,
+                        headers=dict(response.headers),
+                        media_type=response.media_type,
+                    )
+                else:
+                    return merged_data
 
             return response
         else:
-            if events and isinstance(events, list) and isinstance(response, dict):
+            if events and isinstance(events, list):
                 extra_response = {}
                 for event in events:
                     if isinstance(event, dict):
@@ -1347,10 +1374,19 @@ async def process_chat_response(
                     else:
                         extra_response[event] = True
 
-                response = {
+                merged_data = {
                     **extra_response,
-                    **response,
+                    **response_data,
                 }
+                if isinstance(response, Response):
+                    return Response(
+                        content=json.dumps(merged_data),
+                        status_code=response.status_code,
+                        headers=dict(response.headers),
+                        media_type=response.media_type,
+                    )
+                else:
+                    return merged_data
 
             return response
 
