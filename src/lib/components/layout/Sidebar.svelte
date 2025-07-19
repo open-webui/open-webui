@@ -58,6 +58,7 @@
 	import Home from '../icons/Home.svelte';
 	import Search from '../icons/Search.svelte';
 	import SearchModal from './SearchModal.svelte';
+	import FolderModal from './Sidebar/Folders/FolderModal.svelte';
 
 	const BREAKPOINT = 768;
 
@@ -74,6 +75,7 @@
 	let chatListLoading = false;
 	let allChatsLoaded = false;
 
+	let showCreateFolderModal = false;
 	let folders = {};
 	let newFolderId = null;
 
@@ -117,7 +119,7 @@
 		}
 	};
 
-	const createFolder = async (name = 'Untitled') => {
+	const createFolder = async ({ name, data }) => {
 		if (name === '') {
 			toast.error($i18n.t('Folder name cannot be empty.'));
 			return;
@@ -148,13 +150,16 @@
 			}
 		};
 
-		const res = await createNewFolder(localStorage.token, name).catch((error) => {
+		const res = await createNewFolder(localStorage.token, {
+			name,
+			data
+		}).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});
 
 		if (res) {
-			newFolderId = res.id;
+			// newFolderId = res.id;
 			await initFolders();
 		}
 	};
@@ -426,6 +431,14 @@
 			await initChannels();
 			showCreateChannel = false;
 		}
+	}}
+/>
+
+<FolderModal
+	bind:show={showCreateFolderModal}
+	onSubmit={async (folder) => {
+		await createFolder(folder);
+		showCreateFolderModal = false;
 	}}
 />
 
@@ -732,7 +745,7 @@
 				className="px-2 mt-0.5"
 				name={$i18n.t('Chats')}
 				onAdd={() => {
-					createFolder();
+					showCreateFolderModal = true;
 				}}
 				onAddLabel={$i18n.t('New Folder')}
 				on:change={async (e) => {

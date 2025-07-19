@@ -49,6 +49,14 @@
 	$: if (folder) {
 		init();
 	}
+
+	$: if (!show && !edit) {
+		name = '';
+		data = {
+			system_prompt: '',
+			files: []
+		};
+	}
 </script>
 
 <Modal size="md" bind:show>
