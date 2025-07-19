@@ -146,6 +146,24 @@ Always ensure these customizations remain intact:
 - [ ] Polish translations are intact
 - [ ] All new features from upstream are working
 - [ ] No regression in existing functionality
+- [ ] FFmpeg installed for audio processing (if needed)
+
+### Audio Support Setup
+
+For full audio functionality (transcription, audio processing), install FFmpeg:
+
+```bash
+# macOS (with Homebrew)
+brew install ffmpeg
+
+# Verify installation
+ffmpeg -version
+```
+
+This resolves the "Couldn't find ffmpeg or avconv" warning and enables:
+- Audio file transcription with Whisper
+- Audio format conversion
+- Audio processing features in notes
 
 ### Version History
 

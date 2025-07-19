@@ -18,6 +18,7 @@ This is mAI, a customized fork of Open WebUI - a feature-rich, extensible AI pla
 **Recent Updates:**
 - Successfully merged Open WebUI v0.6.17 preserving all customizations
 - Upgraded to Tiptap v3 for rich text editing
+- Installed FFmpeg for full audio processing support
 - See `UPGRADE-GUIDE.md` for detailed upgrade process documentation
 
 ## Architecture
