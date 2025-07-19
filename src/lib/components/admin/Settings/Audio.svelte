@@ -201,7 +201,7 @@
 									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 									bind:value={STT_SUPPORTED_CONTENT_TYPES}
 									placeholder={$i18n.t(
-										'e.g., audio/wav,audio/mpeg,video/* (leave blank for defaults, * for all)'
+										'e.g., audio/wav,audio/mpeg,video/* (leave blank for defaults)'
 									)}
 								/>
 							</div>
