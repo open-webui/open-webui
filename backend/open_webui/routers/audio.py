@@ -376,9 +376,13 @@ async def speech(request: Request, user=Depends(get_verified_user)):
 
             if r is not None:
                 status_code = r.status
-                res = await r.json()
-                if "error" in res:
-                    detail = f"External: {res['error'].get('message', '')}"
+
+                try:
+                    res = await r.json()
+                    if "error" in res:
+                        detail = f"External: {res['error']}"
+                except Exception:
+                    detail = f"External: {e}"
 
             raise HTTPException(
                 status_code=status_code,

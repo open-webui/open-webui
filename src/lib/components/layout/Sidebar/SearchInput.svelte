@@ -96,6 +96,7 @@
 		</div>
 
 		<input
+			id="search-input"
 			class="w-full rounded-r-xl py-1.5 pl-2.5 text-sm bg-transparent dark:text-gray-300 outline-hidden"
 			placeholder={placeholder ? placeholder : $i18n.t('Search')}
 			bind:value
@@ -105,6 +106,9 @@
 			on:focus={() => {
 				focused = true;
 				initTags();
+			}}
+			on:blur={() => {
+				focused = false;
 			}}
 			on:keydown={(e) => {
 				if (e.key === 'Enter') {
