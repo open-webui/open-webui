@@ -737,8 +737,9 @@
 					createFolder();
 				}}
 				onAddLabel={$i18n.t('New Folder')}
-				on:change={(e) => {
+				on:change={async (e) => {
 					selectedFolder.set(null);
+					await goto('/');
 				}}
 				on:import={(e) => {
 					importChatHandler(e.detail);

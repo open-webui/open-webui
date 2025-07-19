@@ -426,10 +426,9 @@
 					renameHandler();
 				}}
 				on:click={async (e) => {
+					await goto('/');
+
 					selectedFolder.set(folders[folderId]);
-					if ($chatId) {
-						await goto('/');
-					}
 				}}
 			>
 				<div class="text-gray-300 dark:text-gray-600">
