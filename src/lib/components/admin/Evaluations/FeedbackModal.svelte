@@ -115,7 +115,13 @@
 							</div>
 						{/if}
 
-						<div class="flex justify-end pt-2">
+						<div class="flex justify-between items-center pt-2">
+							<a
+								class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+								href={`/s/${selectedFeedback?.meta?.chat_id}`}
+							>
+								{$i18n.t('View full chat')}
+							</a>
 							<button
 								class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 								type="button"
