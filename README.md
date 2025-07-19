@@ -253,6 +253,6 @@ If you have any questions, suggestions, or need assistance, please open an issue
   </picture>
 </a>
 
----
+----
 
 Created by [Timothy Jaeryang Baek](https://github.com/tjbck) - Let's make Open WebUI even more amazing together! 💪
