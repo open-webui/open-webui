@@ -5,6 +5,7 @@
 	import FileItem from '$lib/components/common/FileItem.svelte';
 
 	export let selectedFileId = null;
+	export let dismissible = false;
 	export let files = [];
 
 	export let small = false;
@@ -24,7 +25,7 @@
 				type="file"
 				size={file?.size ?? file?.meta?.size ?? ''}
 				loading={file.status === 'uploading'}
-				dismissible
+				dismissible={dismissible}
 				on:click={() => {
 					if (file.status === 'uploading') {
 						return;
