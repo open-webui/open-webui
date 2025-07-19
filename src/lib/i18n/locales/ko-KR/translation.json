@@ -1221,7 +1221,7 @@
 	"Sink List": "",
 	"sk-1234": "",
 	"Skip Cache": "캐시 무시",
-	"Skip the cache and re-run the inference. Defaults to False.": "캐시를 무시하고 추론을 다시 실행합니다. 기본값은 False입니다.",	
+	"Skip the cache and re-run the inference. Defaults to False.": "캐시를 무시하고 추론을 다시 실행합니다. 기본값은 False입니다.",
 	"Sougou Search API sID": "",
 	"Sougou Search API SK": "",
 	"Source": "출처",

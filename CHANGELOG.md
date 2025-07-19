@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- 🚑 **Users Not Loading in Groups**: Resolved a major issue where users were not displaying within user groups, restoring full visibility and management of group memberships for teams and admins—now you can seamlessly view and edit user assignments in all groups without disruption.
+- 🚑 **Users Not Loading in Groups**: Resolved an issue where user list was not displaying within user groups, restoring full visibility and management of group memberships for teams and admins.
 
 ## [0.6.17] - 2025-07-19
 
