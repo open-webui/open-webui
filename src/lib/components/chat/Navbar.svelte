@@ -49,6 +49,13 @@
 
 	let showShareChatModal = false;
 	let showDownloadChatModal = false;
+
+	function scrollToChatInput() {
+		const chatInputContainerElement = document.getElementById('chat-input-container');
+		if (chatInputContainerElement) {
+			chatInputContainerElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+		}
+	}
 </script>
 
 <ShareChatModal bind:show={showShareChatModal} chatId={$chatId} />
@@ -201,6 +208,7 @@
 								: ''} cursor-pointer px-2 py-2 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
 							on:click={() => {
 								initNewChat();
+								scrollToChatInput();
 							}}
 							aria-label="New Gift Chat"
 						>

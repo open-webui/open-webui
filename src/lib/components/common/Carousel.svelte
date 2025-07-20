@@ -33,7 +33,7 @@
 <div class="carousel-container">
   {#each imageUrls as imageUrl, idx (idx)}
    <div
-    class="image rounded-lg shadow-[0_-4px_10px_rgba(0,0,0,0.5)] justify-center absolute top-0 left-0 bg-cover bg-center transition-opacity duration-250"
+    class="image justify-center absolute top-0 left-0 bg-cover bg-center transition-opacity duration-250"
     style="opacity: {selectedImageIdx === idx ? 1 : 0}; background-image: url('{imageUrl}')"
    ></div>
   {/each}
