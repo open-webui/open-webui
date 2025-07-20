@@ -23,14 +23,18 @@ def explicit_boot_command(port,baudrate):
 
 def explicit_root_command(port,baudrate,path):
     
+    timeout = 180  # seconds
     ser = serial.Serial(port,baudrate)
+    start_time = time.time()
 
     while True:
+        if (time.time() - start_time >= timeout):
+            break
         line = ser.readline().decode('utf-8', errors='ignore').strip()
         print("SERIAL/TARGET:" + line)
         if line:
             #print(f"Received: {line}")
-            if '(Yocto Project Reference Distro) 5.2.1 agilex7_dk_si_agf014ea' in line:
+            if '(Yocto Project Reference Distro) 5.2.' in line and 'agilex7_dk_si_agf014ea' in line:
                 time.sleep(3)
                 ser.write(b'root\n')
                 break

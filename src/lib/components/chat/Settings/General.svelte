@@ -12,6 +12,7 @@
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	export let saveSettings: Function;
 	export let getModels: Function;
+	import { restartOpu } from '../Controls/Controls.svelte';
 
 	// General
 	let themes = ['dark', 'light', 'oled-dark'];
@@ -285,6 +286,27 @@
 				/>
 			</div>
 		{/if}
+
+		{#if ($user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true)) && (params.target === 'cpu' || params.target === 'opu') }
+                        <div class="mt-2 space-y-3 pr-1.5">
+                                <div class="flex justify-between items-center text-sm">
+                                        <div class="  font-medium">{$i18n.t('Restart Opu')}</div>
+
+				<button
+					class={
+						'w-auto text-sm px-2 py-1 rounded-md transition-colors duration-200' +
+						($settings.highContrastMode
+						? ' border-2 border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-850 text-gray-900 dark:text-gray-100 hover:bg-blue-100 dark:hover:bg-blue-900'
+						: ' bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600')
+					}
+					on:click={() => {
+						restartOpu(); // Replace with your restart logic
+						//placeholder={$i18n.t('Enter restart here')}
+						}
+					}>{$i18n.t('Restart Now')}</button>
+				</div>
+                        </div>
+                {/if}
 
 		{#if $user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true)}
 			<div class="mt-2 space-y-3 pr-1.5">

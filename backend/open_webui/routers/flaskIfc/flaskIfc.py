@@ -22,7 +22,7 @@ baudrate = '921600'
 #baudrate = '115200'
 exe_path = "/usr/bin/tsi/v0.1.1*/bin/"
 
-DEFAULT_MODEL = "tiny-llama"
+DEFAULT_MODEL = "Tiny-llama-F32"
 DEFAULT_BACKEND = "tSavorite"
 DEFAULT_TOKEN = 10
 DEFAULT_REPEAT_PENALTY = 1.5
@@ -455,14 +455,14 @@ def chats():
                 job_status["result"] = filtered_text
 
             job_status["running"] = False
-            return filtered_text
+            return filtered_text, formatted_text
         except subprocess.CalledProcessError as e:
             filtered_text = f"Error: {e.stderr}"
             job_status["result"] = filtered_text
             job_status["running"] = False
-        return filtered_text
+        return filtered_text, formatted_text
 
-    filtered_text = run_script(command)
+    filtered_text, profile_text = run_script(command)
     extracted_json = extract_json_output(filtered_text)
     chat_history = extract_chat_history(filtered_text)
     final_chat_output = extract_final_output_after_chat_history(chat_history)
@@ -482,7 +482,8 @@ def chats():
                 "role": "admin"
                 },
             "data": {
-                "some_key": "some_value"
+                "some_key": "some_value",
+                "profile_data": profile_text
                 }
             }
     return manual_response(json_string), 200
@@ -560,19 +561,20 @@ def chat():
                     formatted_text = response_text.split(start_phrase, 1)[1]
                 else:
                     filtered_text = result
+                    formatted_text = None
             else:
                 filtered_text = "Result Empty: Desired phrase not found in the response."
                 job_status["result"] = filtered_text
 
             job_status["running"] = False
-            return filtered_text
+            return filtered_text, formatted_text
         except subprocess.CalledProcessError as e:
             filtered_text = f"Error: {e.stderr}"
             job_status["result"] = filtered_text
             job_status["running"] = False
-        return filtered_text
+        return filtered_text, formatted_text
 
-    filtered_text = run_script(command)
+    filtered_text, profile_text = run_script(command)
     extracted_json = extract_json_output(filtered_text)
     chat_history = extract_chat_history(filtered_text)
     final_chat_output = extract_final_output_after_chat_history(chat_history)
@@ -592,12 +594,38 @@ def chat():
                 "role": "admin"
                 },
             "data": {
+                "some_key": "some_value",
+                "profile_data": profile_text
+                }
+            }
+    return manual_response(json_string), 200
+
+@app.route('/api/restart-txe', methods=['GET', 'POST'])
+def restart_txe_ollama_serial_command():
+    global job_status
+    global parameters
+    serial_script.pre_and_post_check(port,baudrate)
+    internal_restart_txe()
+    json_string ={
+            "status": "success",
+            "model": "ollama",
+            "message": {
+                "content": "Restart OPU Done",
+                "thinking": "Restart OPU Done",
+                "tool_calls": None,
+                "openai_tool_calls": None
+                },
+            "user": {
+                "name": "Alice",
+                "id": "12345",
+                "email": "alice@example.com",
+                "role": "admin"
+                },
+            "data": {
                 "some_key": "some_value"
                 }
             }
     return manual_response(json_string), 200
-    
-    
 
 @app.route('/submit', methods=['POST'])
 def submit():

@@ -14,6 +14,7 @@
 
 	const defaultParams = {
 		// Advanced
+		target: null,
 		stream_response: null, // Set stream responses for this model individually
 		function_calling: null,
 		seed: null,
@@ -42,8 +43,7 @@
 		num_ctx: null,
 		num_batch: null,
 		num_thread: null,
-		num_gpu: null,
-		target: null
+		num_gpu: null
 	};
 
 	export let params = defaultParams;
@@ -51,6 +51,7 @@
 		onChange(params);
 	}
 </script>
+
 
 <div class=" space-y-1 text-xs pb-safe-bottom">
 	<div>
@@ -85,6 +86,28 @@
 						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
 					{/if}
 				</button>
+			</div>
+		</Tooltip>
+	</div>
+
+	<div class="py-0.5 w-full justify-between">
+		<Tooltip
+			content={$i18n.t('Configure backend Ollama queries to go to Native (HOST), CPU (FPGA Host), and OPU (FPGA)')}
+			placement="top-start"
+			className="inline-tooltip"
+			>
+			<div class="flex w-full justify-between">
+			<div class="self-center text-xs font-medium">
+					{$i18n.t('target')}
+			</div>
+				<select
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden bg-white text-black dark:bg-gray-800 dark:text-white"
+					bind:value={params.target}
+				>
+					<option value="native">{$i18n.t('Native')}</option>
+					<option value="opu">{$i18n.t('OPU')}</option>
+					<option value="cpu">{$i18n.t('CPU')}</option>
+				</select>
 			</div>
 		</Tooltip>
 	</div>
@@ -1439,28 +1462,6 @@
 					</div>
 				</div>
 			{/if}
-		</div>
-
-		<div class="py-0.5 w-full justify-between">
-			<Tooltip
-				content={$i18n.t('Configure backend Ollama queries to go to native, cpu, and gpu')}
-				placement="top-start"
-				className="inline-tooltip"
-			>
-				<div class="flex w-full justify-between">
-				<div class="self-center text-xs font-medium">
-						{$i18n.t('target')}
-					</div>
-					<select
-						class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
-						bind:value={params.target}
-					>
-						<option value="native">{$i18n.t('native')}</option>
-						<option value="cpu">{$i18n.t('cpu')}</option>
-						<option value="opu">{$i18n.t('opu')}</option>
-					</select>
-				</div>
-			</Tooltip>
 		</div>
 
 		<div class=" py-0.5 w-full justify-between">

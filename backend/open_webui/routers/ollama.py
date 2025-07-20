@@ -69,7 +69,7 @@ from open_webui.constants import ERROR_MESSAGES
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["OLLAMA"])
-
+DEFAULT_FLASK_URL = "http://localhost:5000"
 
 ##########################################
 #
@@ -1289,7 +1289,7 @@ async def get_ollama_url(request: Request, model: str, url_idx: Optional[int] = 
     if target_value == None or str(target_value).lower() == 'native':
         url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
     if str(target_value).lower() == 'cpu' or str(target_value).lower() == 'opu':
-        url = "http://localhost:5000"
+        url = DEFAULT_FLASK_URL
     else:
         url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
     return url, url_idx
@@ -1379,6 +1379,23 @@ async def generate_chat_completion(
         user=user,
     )
 
+@router.post("/api/restartopu")
+async def restart_opu(
+    request: Request,
+    form_data: dict,
+    url_idx: Optional[int] = None,
+    user=Depends(get_verified_user),
+    bypass_filter: Optional[bool] = False,
+):
+    url = DEFAULT_FLASK_URL
+    return await send_post_request(
+        url=f"{url}/api/restart-txe",
+        payload=None,
+        stream=False,
+        key=None,
+        content_type="application/x-ndjson",
+        user=user,
+    )
 
 # TODO: we should update this part once Ollama supports other types
 class OpenAIChatMessageContent(BaseModel):
