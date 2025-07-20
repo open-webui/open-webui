@@ -9,12 +9,14 @@ export default {
 		extend: {
 			colors: {
 				surface: '#F9F9FF',
+				'light-bg': 'var(--color-light-bg)',
 				'gradient-bg-2': 'rgba(204, 221, 252, 0.3)',
+				'label-primary': 'var(--color-label-primary)',
 				typography:{
-                    titles:'#23282E',
-					subtext:'#666D7A',
-					'secondary-body-text':'#979EAD',
-					disabled: '#ABB4C5',
+                    titles:'var(--color-titles)',
+					subtext:'var(--color-subtext)',
+					'secondary-body-text':'var(--color-secondary-body-text)',
+					disabled: 'var(--color-disabled)',
 				},
 				neutrals:{
                        50: 'var(--color-neutrals-50, #ECEEF1)',

@@ -2,6 +2,23 @@
 
 @config '../tailwind.config.js';
 
+:root {
+  --color-titles: #23282E;
+   --color-subtext: #666D7A;
+   --color-disabled: #ABB4C5;
+   --color-secondary-body-text: #979EAD;
+   --color-light-bg: #FBFCFC;
+   --color-label-primary: #000000;
+}
+
+.dark {
+  --color-titles: #E0EBF6;
+  --color-subtext: #979EAD;
+   --color-disabled: #6B717C;
+   --color-secondary-body-text: #979EAD;
+   --color-light-bg: #010E1D;
+   --color-label-primary: #E0EBF6;
+}
 /*
   The default border color has changed to `currentColor` in Tailwind CSS v4,
   so we've added these compatibility styles to make sure everything still
@@ -132,5 +149,6 @@ body.dark .decorative-image-bottom {
 }
 
 .dark .bg-surface {
-    background: var(--color-gray-900, #171717);
+    background: radial-gradient(93.48% 68.59% at 40.87% 70.12%, rgba(7, 45, 90, 0.03) 37.67%, rgba(7, 45, 90, 0.25) 100%), radial-gradient(70.94% 58.43% at 27.53% 86.82%, rgba(7, 45, 90, 0.20) 0%, rgba(7, 45, 90, 0.00) 100%), linear-gradient(0deg, rgba(3, 25, 51, 0.20) 0%, rgba(3, 25, 51, 0.20) 100%), #010E1D;
 }
+

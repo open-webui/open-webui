@@ -99,7 +99,7 @@
 					{:else}
 						<MaterialIcon name="lightbulb" class="w-[18px] h-[18px]" />
 					{/if}
-					<div class="w-full {$mobile ? ' ' : ' mt-[12px]' }  text-typography-titles dark:text-[#E0EBF6] text-[14px] leading-[22px] whitespace-nowrap">
+					<div class="w-full {$mobile ? ' ' : ' mt-[12px]' }  text-typography-titles text-[14px] leading-[22px] whitespace-nowrap">
 						{prompt.title?.[0] ?? prompt.content}
 					</div>
 					</button>

@@ -29,7 +29,7 @@
 
 	<div slot="content">
 		<DropdownMenu.Content
-			class="w-full max-w-[228px] rounded-lg   z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
+			class="w-full max-w-[228px] rounded-lg  z-50 bg-light-bg text-label-primary shadow-lg"
 			sideOffset={-2}
 			side="bottom"
 			align="start"

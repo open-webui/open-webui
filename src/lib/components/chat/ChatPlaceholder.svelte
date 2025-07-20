@@ -53,7 +53,7 @@
 				<div class="pb-[16px] text-typography-titles text-[28px] leading-[22px] font-Inter_SemiBold truncate">
 					Hi {($user?.name ?? 'there')} 👋🏼
 				</div>
-				<div class=" text-typography-subtext text-[14px] leading-[26px] text-center truncate dark:text-gray-100">
+				<div class=" text-typography-subtext text-[14px] leading-[26px] text-center truncate">
 					How can I help you?
 				</div>
 			</div>

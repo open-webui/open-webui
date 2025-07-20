@@ -608,7 +608,7 @@
 			</div>
 		</div>
 
-		<div class="{transparentBackground ? 'bg-transparent' : 'bg-transparent dark:bg-gray-900'} ">
+		<div class="{transparentBackground ? 'bg-transparent' : 'bg-transparent bg-light-bg'} ">
 			<div
 				class="{($settings?.widescreenMode ?? null)
 					? 'max-w-full'
@@ -665,7 +665,7 @@
 							}}
 						>
 							<div
-								class="p-[24px] flex-1 flex flex-col bounded-[12px] shadow-custom3  relative w-full rounded-3xl transition bg-[#FBFCFC] dark:bg-gray-400/5 dark:text-gray-100"
+								class="p-[24px] flex-1 flex flex-col bounded-[12px] shadow-custom3  relative w-full rounded-3xl transition bg-light-bg dark:text-gray-100"
 								
 								dir={$settings?.chatDirection ?? 'auto'}
 							>
@@ -1415,7 +1415,7 @@
 												<div class="attach">
   <button
     type="button"
-    class="relative flex items-center px-[12px] gap-[4px] py-[8px] rounded-full shadow-custom3 border border-[#E5EBF3] bg-[#FBFCFC] hover:bg-[#CCDDFC] text-typography-titles text-[14px] leading-[22px] focus:outline-none"
+    class="relative flex items-center px-[12px] gap-[4px] py-[8px] rounded-full shadow-custom3 border border-[#E5EBF3] hover:bg-[#CCDDFC]  bg-transparent text-typography-titles text-[14px] leading-[22px] focus:outline-none"
     on:click={() => filesInputElement.click()}
     aria-label="Attach files"
   >

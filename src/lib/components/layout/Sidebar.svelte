@@ -524,13 +524,13 @@
 			? 'w-[0px] absolute'
 			: 'w-[80px]'} {$isApp
 		? `ml-[4.5rem] md:ml-0`
-		: 'transition-width duration-200 ease-in-out'} shadow-md shrink-0 text-gray-900 dark:bg-gray-950 dark:text-gray-200 text-sm z-50 top-0 left-0
+		: 'transition-width duration-200 ease-in-out'} shadow-md shrink-0  text-sm z-50 top-0 left-0
 	}
         "
 	data-state={$showSidebar}
 >
 	<div
-		class="flex flex-col justify-between max-h-[100dvh] overflow-x-hidden z-50 bg-white dark:bg-gray-950 shadow-[0px_48px_96px_0px_rgba(0,0,0,0.08)] dark:shadow-none"
+		class="flex flex-col justify-between max-h-[100dvh] overflow-x-hidden z-50 bg-light-bg  shadow-[0px_48px_96px_0px_rgba(0,0,0,0.08)] dark:shadow-none"
 	>
 		<div class="px-[8px] py-[24px] sidebar__top h-[calc(100vh-58px)] overflow-y-auto">
 		 {#if $mobile}
@@ -552,7 +552,7 @@
 
 						<!-- Label -->
 						<div
-							class="self-center font-medium text-typography-disabled dark:text-white text-[16px] leading-[22px] transition-all duration-300 ease-in-out"
+							class="self-center font-medium text-typography-disabled text-[16px] leading-[22px] transition-all duration-300 ease-in-out"
 							class:hidden={!$showSidebar}
 						>
 							{$i18n.t('Search')}
@@ -599,7 +599,7 @@
 
 						<!-- Label -->
 						<div
-							class="self-center link-style text-typography-titles dark:text-white transition-all duration-300 ease-in-out"
+							class="self-center link-style text-typography-titles transition-all duration-300 ease-in-out"
 						>
 							GovGPT
 					</div>
@@ -705,7 +705,7 @@
 
 						<!-- Label -->
 						<div
-							class="self-center link-style text-typography-titles dark:text-white transition-all duration-300 ease-in-out"
+							class="self-center link-style text-typography-titles transition-all duration-300 ease-in-out"
 							class:hidden={!$showSidebar}
 						>
 							{$i18n.t('New Chat')}
@@ -1017,7 +1017,7 @@
 
 				{#if $showSidebar && $pinnedChats.length > 0}
 					<div class="flex flex-col space-y-1 rounded-xl">
-						<div class="px-[16px] py-[8px] pt-[20px] mt-[12px] text-[12px] sm:text-[14px] leading-[22px] text-typography-secondary-body-text dark:text-gray-500 font-medium ">
+						<div class="px-[16px] py-[8px] pt-[20px] mt-[12px] text-[12px] sm:text-[14px] leading-[22px] text-typography-secondary-body-text font-medium ">
 							{$i18n.t('Pinned Chats')}
 						</div>
 						<div class="flex flex-col space-y-1 rounded-xl">
@@ -1042,7 +1042,7 @@
 									{#each $chats as chat, idx (`chat-${chat?.id ?? idx}`)}
 										{#if idx === 0 || (idx > 0 && chat.time_range !== $chats[idx - 1].time_range)}
 											<div
-												class="w-full px-[16px] py-[8px] pt-[20px] mt-[12px] text-[12px] sm:text-[14px] leading-[22px] text-typography-secondary-body-text dark:text-gray-500 font-medium border-t border-gray-100 dark:border-gray-900 {idx ===
+												class="w-full px-[16px] py-[8px] pt-[20px] mt-[12px] text-[12px] sm:text-[14px] leading-[22px] text-typography-secondary-body-text font-medium border-t border-gray-100 dark:border-gray-900 {idx ===
 												0
 													? ''
 													: 'pt-5'} pb-1.5"
@@ -1123,7 +1123,7 @@
 		</div>
 		<div class="p-[8px] pb-[24px] sidebar__bottom">
 			<div
-				class="w-full flex flex-col left-[20px] bottom-[20px] bg-white dark:bg-gray-950  dark:border-gray-900"
+				class="w-full flex flex-col left-[20px] bottom-[20px]  dark:border-gray-900"
 			>
 				{#if $user !== undefined && $user !== null}
 					<UserMenu
