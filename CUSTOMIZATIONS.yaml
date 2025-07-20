@@ -1,0 +1,236 @@
+# mAI Customizations Documentation
+# Version: v0.0.0
+# Based on: Open WebUI v0.6.17
+# Last Updated: January 20, 2025
+
+---
+metadata:
+  version: "0.0.0"
+  base_version: "open-webui-v0.6.17"
+  maintainer: "mAI Team"
+  created: "2025-01-20"
+
+branding:
+  application_name:
+    from: "Open WebUI"
+    to: "mAI"
+    files_affected:
+      - "package.json"
+      - "src/lib/constants.ts"
+      - "backend/open_webui/env.py"
+      - "src/app.html"
+      - "pyproject.toml"
+      - "static/static/site.webmanifest"
+      - "backend/open_webui/static/site.webmanifest"
+      - "static/opensearch.xml"
+  
+  tagline:
+    default: "You + AI = superpowers! 🚀"
+    polish: "Ty + AI = supermoce! 🚀"
+    files_affected:
+      - "src/lib/components/chat/Placeholder.svelte"
+      - "src/lib/constants.ts"
+      - "src/app.html"
+      - "static/opensearch.xml"
+
+visual_identity:
+  assets_replaced:
+    - name: "logo.png"
+      size: "19.8KB"
+      locations:
+        - "static/static/"
+        - "backend/open_webui/static/"
+    - name: "favicon.png"
+      size: "19.8KB"
+      locations:
+        - "static/static/"
+        - "backend/open_webui/static/"
+    - name: "favicon.svg"
+      size: "3.2KB"
+      locations:
+        - "static/static/"
+        - "backend/open_webui/static/"
+    - name: "favicon-dark.png"
+      size: "20.1KB"
+      locations:
+        - "static/static/"
+        - "backend/open_webui/static/"
+    - name: "favicon-96x96.png"
+      size: "4.7KB"
+      locations:
+        - "static/static/"
+        - "backend/open_webui/static/"
+    - name: "ai-assistant.svg"
+      size: "3.2KB"
+      locations:
+        - "static/static/"
+        - "backend/open_webui/static/"
+    - name: "splash.png"
+      size: "19.8KB"
+      locations:
+        - "static/static/"
+        - "backend/open_webui/static/"
+    - name: "splash-dark.png"
+      size: "20.1KB"
+      locations:
+        - "static/static/"
+        - "backend/open_webui/static/"
+    - name: "apple-touch-icon.png"
+      size: "7.3KB"
+      locations:
+        - "static/static/"
+        - "backend/open_webui/static/"
+    - name: "web-app-manifest-192x192.png"
+      size: "7.6KB"
+      locations:
+        - "static/static/"
+        - "backend/open_webui/static/"
+    - name: "web-app-manifest-512x512.png"
+      size: "19.5KB"
+      locations:
+        - "static/static/"
+        - "backend/open_webui/static/"
+  
+  source_assets_folder: "mai_logos/"
+
+features:
+  background_patterns:
+    description: "Custom background patterns with opacity control"
+    types:
+      - "None"
+      - "Dots"
+      - "Grid"
+      - "Diagonal"
+    settings_location: "Settings > General Tab"
+    files_affected:
+      - "src/lib/components/chat/Chat.svelte"
+      - "src/lib/components/chat/Settings/General.svelte"
+      - "static/static/custom.css"
+      - "backend/open_webui/static/custom.css"
+  
+  custom_themes:
+    themes:
+      - name: "mAI Professional"
+        icon: "🔧"
+        description: "Brown/professional theme"
+      - name: "mAI Minimalist"
+        icon: "⚡"
+        description: "Lightning bolt theme"
+      - name: "mAI Creative"
+        icon: "🎨"
+        description: "Purple/creative theme"
+      - name: "mAI Warm"
+        icon: "🔥"
+        description: "Orange/warm theme"
+    files_affected:
+      - "Theme definition files"
+      - "src/lib/components/chat/Settings/General.svelte"
+  
+  font_size_controls:
+    description: "Adjustable text size for chat messages and hints"
+    options:
+      - "Normal"
+      - "Other sizes"
+    location: "Settings > General Tab"
+    files_affected:
+      - "Settings components"
+      - "Chat message components"
+
+localization:
+  polish_translation:
+    status: "Complete (373 entries)"
+    features:
+      - "Dynamic tagline switching based on interface language"
+      - "100% UI translation coverage"
+    files_affected:
+      - "src/lib/i18n/locales/pl-PL/translation.json"
+      - "src/lib/components/chat/Placeholder.svelte"
+
+error_handling:
+  ollama_failures:
+    description: "Graceful handling of Ollama model runner failures"
+    improvements:
+      - "Follow-up generation wrapped in try-catch"
+      - "Background tasks protected"
+      - "Chat sessions continue even if background operations fail"
+    files_affected:
+      - "backend/open_webui/utils/middleware.py:1085"
+
+technical_changes:
+  package_name:
+    from: "open-webui"
+    to: "mai"
+    file: "package.json"
+  
+  node_memory_allocation:
+    description: "Increased memory for build process"
+    setting: "NODE_OPTIONS='--max-old-space-size=4096'"
+    files_affected:
+      - "package.json (build scripts)"
+      - "Dockerfile (ENV NODE_OPTIONS)"
+  
+  dependencies:
+    notes:
+      - "Tiptap upgraded from v2 to v3"
+      - "Force install required due to peer dependency conflicts"
+
+deployment:
+  docker:
+    image_size: "~4.3GB"
+    memory_usage: "~1GB runtime"
+    build_memory: "4GB+ required"
+  
+  volumes:
+    - "mai-data:/app/backend/data"
+  
+  environment_variables:
+    - "WEBUI_AUTH=False (for single-user mode)"
+    - "OLLAMA_BASE_URL=http://host.docker.internal:11434"
+
+documentation:
+  custom_files:
+    - "MAI-CHANGELOG.md"
+    - "MAI-CUSTOMIZATIONS-CHECKLIST.md"
+    - "UPGRADE-GUIDE.md"
+    - "CUSTOMIZATIONS.yaml (this file)"
+    - "test-mai-container.sh"
+  
+  ai_instructions:
+    - "CLAUDE.md"
+    - ".cursor/rules/project.mdc"
+
+git_strategy:
+  branches:
+    - main: "Production releases"
+    - v0-stable: "Version zero baseline (frozen)"
+    - customization: "Active development"
+    - staging: "Pre-production testing"
+    - production: "Production deployment"
+  
+  remotes:
+    - origin: "https://github.com/pilpat/mAI.git"
+    - upstream: "https://github.com/open-webui/open-webui.git"
+  
+  commit_prefixes:
+    - "brand:" 
+    - "theme:"
+    - "ui:"
+    - "assets:"
+    - "docs:"
+    - "fix:"
+    - "merge:"
+
+testing_requirements:
+  pre_commit:
+    - "All theme variants (Light/Dark/OLED/Her)"
+    - "Mobile responsiveness"
+    - "Polish language switching"
+    - "Background pattern functionality"
+    - "Custom theme loading"
+  
+  production:
+    - "Docker build success"
+    - "Ollama integration"
+    - "PWA installation"
+    - "Multi-user functionality"
+    - "Data persistence"
