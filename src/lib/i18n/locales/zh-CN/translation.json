@@ -31,7 +31,7 @@
 	"Action": "操作",
 	"Actions": "自动化",
 	"Activate": "激活",
-	"Activate this command by typing \"/{{COMMAND}}\" to chat input.": "在聊天框中输入 \"/{{COMMAND}}\" 激活此命令",
+	"Activate this command by typing \"/{{COMMAND}}\" to chat input.": "在对话框中输入 \"/{{COMMAND}}\" 激活此命令",
 	"Active Users": "当前在线用户",
 	"Add": "添加",
 	"Add a model ID": "添加一个模型 ID",
