@@ -51,7 +51,7 @@
 		{#if !top}
 			<Loader
 				on:visible={(e) => {
-					console.log('visible');
+					console.info('visible');
 					if (!messagesLoading) {
 						loadMoreMessages();
 					}
@@ -73,10 +73,13 @@
 						<div class="text-2xl font-medium capitalize">{channel.name}</div>
 
 						<div class=" text-gray-500">
-							This channel was created on {dayjs(channel.created_at / 1000000).format(
-								'MMMM D, YYYY'
-							)}. This is the very beginning of the {channel.name}
-							channel.
+							{$i18n.t(
+								'This channel was created on {{createdAt}}. This is the very beginning of the {{channelName}} channel.',
+								{
+									createdAt: dayjs(channel.created_at / 1000000).format('MMMM D, YYYY'),
+									channelName: channel.name
+								}
+							)}
 						</div>
 					</div>
 				{:else}
@@ -129,7 +132,7 @@
 					if (
 						(message?.reactions ?? [])
 							.find((reaction) => reaction.name === name)
-							?.user_ids?.includes($user.id) ??
+							?.user_ids?.includes($user?.id) ??
 						false
 					) {
 						messages = messages.map((m) => {
@@ -137,7 +140,7 @@
 								const reaction = m.reactions.find((reaction) => reaction.name === name);
 
 								if (reaction) {
-									reaction.user_ids = reaction.user_ids.filter((id) => id !== $user.id);
+									reaction.user_ids = reaction.user_ids.filter((id) => id !== $user?.id);
 									reaction.count = reaction.user_ids.length;
 
 									if (reaction.count === 0) {
@@ -164,12 +167,12 @@
 									const reaction = m.reactions.find((reaction) => reaction.name === name);
 
 									if (reaction) {
-										reaction.user_ids.push($user.id);
+										reaction.user_ids.push($user?.id);
 										reaction.count = reaction.user_ids.length;
 									} else {
 										m.reactions.push({
 											name: name,
-											user_ids: [$user.id],
+											user_ids: [$user?.id],
 											count: 1
 										});
 									}

@@ -1,6 +1,10 @@
 import logging
 from pathlib import Path
 from typing import Optional
+import time
+import re
+import aiohttp
+from pydantic import BaseModel, HttpUrl
 
 from open_webui.models.tools import (
     ToolForm,
@@ -9,14 +13,17 @@ from open_webui.models.tools import (
     ToolUserResponse,
     Tools,
 )
-from open_webui.utils.plugin import load_tools_module_by_id, replace_imports
+from open_webui.utils.plugin import load_tool_module_by_id, replace_imports
 from open_webui.config import CACHE_DIR
 from open_webui.constants import ERROR_MESSAGES
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from open_webui.utils.tools import get_tools_specs
+from open_webui.utils.tools import get_tool_specs
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access, has_permission
 from open_webui.env import SRC_LOG_LEVELS
+
+from open_webui.utils.tools import get_tool_servers_data
+
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
@@ -30,11 +37,51 @@ router = APIRouter()
 
 
 @router.get("/", response_model=list[ToolUserResponse])
-async def get_tools(user=Depends(get_verified_user)):
-    if user.role == "admin":
-        tools = Tools.get_tools()
-    else:
-        tools = Tools.get_tools_by_user_id(user.id, "read")
+async def get_tools(request: Request, user=Depends(get_verified_user)):
+
+    if not request.app.state.TOOL_SERVERS:
+        # If the tool servers are not set, we need to set them
+        # This is done only once when the server starts
+        # This is done to avoid loading the tool servers every time
+
+        request.app.state.TOOL_SERVERS = await get_tool_servers_data(
+            request.app.state.config.TOOL_SERVER_CONNECTIONS
+        )
+
+    tools = Tools.get_tools()
+    for server in request.app.state.TOOL_SERVERS:
+        tools.append(
+            ToolUserResponse(
+                **{
+                    "id": f"server:{server['idx']}",
+                    "user_id": f"server:{server['idx']}",
+                    "name": server.get("openapi", {})
+                    .get("info", {})
+                    .get("title", "Tool Server"),
+                    "meta": {
+                        "description": server.get("openapi", {})
+                        .get("info", {})
+                        .get("description", ""),
+                    },
+                    "access_control": request.app.state.config.TOOL_SERVER_CONNECTIONS[
+                        server["idx"]
+                    ]
+                    .get("config", {})
+                    .get("access_control", None),
+                    "updated_at": int(time.time()),
+                    "created_at": int(time.time()),
+                }
+            )
+        )
+
+    if user.role != "admin":
+        tools = [
+            tool
+            for tool in tools
+            if tool.user_id == user.id
+            or has_access(user.id, "read", tool.access_control)
+        ]
+
     return tools
 
 
@@ -50,6 +97,81 @@ async def get_tool_list(user=Depends(get_verified_user)):
     else:
         tools = Tools.get_tools_by_user_id(user.id, "write")
     return tools
+
+
+############################
+# LoadFunctionFromLink
+############################
+
+
+class LoadUrlForm(BaseModel):
+    url: HttpUrl
+
+
+def github_url_to_raw_url(url: str) -> str:
+    # Handle 'tree' (folder) URLs (add main.py at the end)
+    m1 = re.match(r"https://github\.com/([^/]+)/([^/]+)/tree/([^/]+)/(.*)", url)
+    if m1:
+        org, repo, branch, path = m1.groups()
+        return f"https://raw.githubusercontent.com/{org}/{repo}/refs/heads/{branch}/{path.rstrip('/')}/main.py"
+
+    # Handle 'blob' (file) URLs
+    m2 = re.match(r"https://github\.com/([^/]+)/([^/]+)/blob/([^/]+)/(.*)", url)
+    if m2:
+        org, repo, branch, path = m2.groups()
+        return (
+            f"https://raw.githubusercontent.com/{org}/{repo}/refs/heads/{branch}/{path}"
+        )
+
+    # No match; return as-is
+    return url
+
+
+@router.post("/load/url", response_model=Optional[dict])
+async def load_tool_from_url(
+    request: Request, form_data: LoadUrlForm, user=Depends(get_admin_user)
+):
+    # NOTE: This is NOT a SSRF vulnerability:
+    # This endpoint is admin-only (see get_admin_user), meant for *trusted* internal use,
+    # and does NOT accept untrusted user input. Access is enforced by authentication.
+
+    url = str(form_data.url)
+    if not url:
+        raise HTTPException(status_code=400, detail="Please enter a valid URL")
+
+    url = github_url_to_raw_url(url)
+    url_parts = url.rstrip("/").split("/")
+
+    file_name = url_parts[-1]
+    tool_name = (
+        file_name[:-3]
+        if (
+            file_name.endswith(".py")
+            and (not file_name.startswith(("main.py", "index.py", "__init__.py")))
+        )
+        else url_parts[-2] if len(url_parts) > 1 else "function"
+    )
+
+    try:
+        async with aiohttp.ClientSession(trust_env=True) as session:
+            async with session.get(
+                url, headers={"Content-Type": "application/json"}
+            ) as resp:
+                if resp.status != 200:
+                    raise HTTPException(
+                        status_code=resp.status, detail="Failed to fetch the tool"
+                    )
+                data = await resp.text()
+                if not data:
+                    raise HTTPException(
+                        status_code=400, detail="No data received from the URL"
+                    )
+        return {
+            "name": tool_name,
+            "content": data,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error importing tool: {e}")
 
 
 ############################
@@ -94,15 +216,15 @@ async def create_new_tools(
     if tools is None:
         try:
             form_data.content = replace_imports(form_data.content)
-            tools_module, frontmatter = load_tools_module_by_id(
+            tool_module, frontmatter = load_tool_module_by_id(
                 form_data.id, content=form_data.content
             )
             form_data.meta.manifest = frontmatter
 
             TOOLS = request.app.state.TOOLS
-            TOOLS[form_data.id] = tools_module
+            TOOLS[form_data.id] = tool_module
 
-            specs = get_tools_specs(TOOLS[form_data.id])
+            specs = get_tool_specs(TOOLS[form_data.id])
             tools = Tools.insert_new_tool(user.id, form_data, specs)
 
             tool_cache_dir = CACHE_DIR / "tools" / form_data.id
@@ -183,15 +305,13 @@ async def update_tools_by_id(
 
     try:
         form_data.content = replace_imports(form_data.content)
-        tools_module, frontmatter = load_tools_module_by_id(
-            id, content=form_data.content
-        )
+        tool_module, frontmatter = load_tool_module_by_id(id, content=form_data.content)
         form_data.meta.manifest = frontmatter
 
         TOOLS = request.app.state.TOOLS
-        TOOLS[id] = tools_module
+        TOOLS[id] = tool_module
 
-        specs = get_tools_specs(TOOLS[id])
+        specs = get_tool_specs(TOOLS[id])
 
         updated = {
             **form_data.model_dump(exclude={"id"}),
@@ -289,7 +409,7 @@ async def get_tools_valves_spec_by_id(
         if id in request.app.state.TOOLS:
             tools_module = request.app.state.TOOLS[id]
         else:
-            tools_module, _ = load_tools_module_by_id(id)
+            tools_module, _ = load_tool_module_by_id(id)
             request.app.state.TOOLS[id] = tools_module
 
         if hasattr(tools_module, "Valves"):
@@ -332,7 +452,7 @@ async def update_tools_valves_by_id(
     if id in request.app.state.TOOLS:
         tools_module = request.app.state.TOOLS[id]
     else:
-        tools_module, _ = load_tools_module_by_id(id)
+        tools_module, _ = load_tool_module_by_id(id)
         request.app.state.TOOLS[id] = tools_module
 
     if not hasattr(tools_module, "Valves"):
@@ -388,7 +508,7 @@ async def get_tools_user_valves_spec_by_id(
         if id in request.app.state.TOOLS:
             tools_module = request.app.state.TOOLS[id]
         else:
-            tools_module, _ = load_tools_module_by_id(id)
+            tools_module, _ = load_tool_module_by_id(id)
             request.app.state.TOOLS[id] = tools_module
 
         if hasattr(tools_module, "UserValves"):
@@ -412,7 +532,7 @@ async def update_tools_user_valves_by_id(
         if id in request.app.state.TOOLS:
             tools_module = request.app.state.TOOLS[id]
         else:
-            tools_module, _ = load_tools_module_by_id(id)
+            tools_module, _ = load_tool_module_by_id(id)
             request.app.state.TOOLS[id] = tools_module
 
         if hasattr(tools_module, "UserValves"):

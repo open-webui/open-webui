@@ -9,6 +9,7 @@
 	import Switch from '$lib/components/common/Switch.svelte';
 	import { round } from '@huggingface/transformers';
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	const dispatch = createEventDispatcher();
 
 	const i18n = getContext('i18n');
@@ -22,6 +23,7 @@
 	let nonLocalVoices = false;
 
 	let STTEngine = '';
+	let STTLanguage = '';
 
 	let TTSEngine = '';
 	let TTSEngineConfig = {};
@@ -35,7 +37,6 @@
 
 	// Audio speed control
 	let playbackRate = 1;
-	const speedOptions = [2, 1.75, 1.5, 1.25, 1, 0.75, 0.5];
 
 	const getVoices = async () => {
 		if (TTSEngine === 'browser-kokoro') {
@@ -90,6 +91,7 @@
 		responseAutoPlayback = $settings.responseAutoPlayback ?? false;
 
 		STTEngine = $settings?.audio?.stt?.engine ?? '';
+		STTLanguage = $settings?.audio?.stt?.language ?? '';
 
 		TTSEngine = $settings?.audio?.tts?.engine ?? '';
 		TTSEngineConfig = $settings?.audio?.tts?.engineConfig ?? {};
@@ -152,12 +154,14 @@
 </script>
 
 <form
+	id="tab-audio"
 	class="flex flex-col h-full justify-between space-y-3 text-sm"
 	on:submit|preventDefault={async () => {
 		saveSettings({
 			audio: {
 				stt: {
-					engine: STTEngine !== '' ? STTEngine : undefined
+					engine: STTEngine !== '' ? STTEngine : undefined,
+					language: STTLanguage !== '' ? STTLanguage : undefined
 				},
 				tts: {
 					engine: TTSEngine !== '' ? TTSEngine : undefined,
@@ -188,6 +192,26 @@
 							<option value="">{$i18n.t('Default')}</option>
 							<option value="web">{$i18n.t('Web API')}</option>
 						</select>
+					</div>
+				</div>
+
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs font-medium">{$i18n.t('Language')}</div>
+
+					<div class="flex items-center relative text-xs px-3">
+						<Tooltip
+							content={$i18n.t(
+								'The language of the input audio. Supplying the input language in ISO-639-1 (e.g. en) format will improve accuracy and latency. Leave blank to automatically detect the language.'
+							)}
+							placement="top"
+						>
+							<input
+								type="text"
+								bind:value={STTLanguage}
+								placeholder={$i18n.t('e.g. en')}
+								class=" text-sm text-right bg-transparent dark:text-gray-300 outline-hidden"
+							/>
+						</Tooltip>
 					</div>
 				</div>
 			{/if}
@@ -270,15 +294,15 @@
 			<div class=" py-0.5 flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">{$i18n.t('Speech Playback Speed')}</div>
 
-				<div class="flex items-center relative">
-					<select
-						class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+				<div class="flex items-center relative text-xs px-3">
+					<input
+						type="number"
+						min="0"
+						step="0.01"
 						bind:value={playbackRate}
-					>
-						{#each speedOptions as option}
-							<option value={option} selected={playbackRate === option}>{option}x</option>
-						{/each}
-					</select>
+						class=" text-sm text-right bg-transparent dark:text-gray-300 outline-hidden"
+					/>
+					x
 				</div>
 			</div>
 		</div>
@@ -293,7 +317,7 @@
 						<div class="flex-1">
 							<input
 								list="voice-list"
-								class="w-full rounded-lg py-2 px-4 text-sm bg-white dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+								class="w-full text-sm bg-transparent dark:text-gray-300 outline-hidden"
 								bind:value={voice}
 								placeholder="Select a voice"
 							/>
@@ -330,7 +354,7 @@
 				<div class="flex w-full">
 					<div class="flex-1">
 						<select
-							class="w-full rounded-lg py-2 px-4 text-sm bg-white dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+							class="w-full text-sm bg-transparent dark:text-gray-300 outline-hidden"
 							bind:value={voice}
 						>
 							<option value="" selected={voice !== ''}>{$i18n.t('Default')}</option>
@@ -361,7 +385,7 @@
 					<div class="flex-1">
 						<input
 							list="voice-list"
-							class="w-full rounded-lg py-2 px-4 text-sm bg-white dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+							class="w-full text-sm bg-transparent dark:text-gray-300 outline-hidden"
 							bind:value={voice}
 							placeholder="Select a voice"
 						/>

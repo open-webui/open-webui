@@ -10,7 +10,7 @@
 	import { chatCompletion } from '$lib/apis/openai';
 
 	import ChatBubble from '$lib/components/icons/ChatBubble.svelte';
-	import LightBlub from '$lib/components/icons/LightBlub.svelte';
+	import LightBulb from '$lib/components/icons/LightBulb.svelte';
 	import Markdown from '../Messages/Markdown.svelte';
 	import Skeleton from '../Messages/Skeleton.svelte';
 
@@ -44,7 +44,13 @@
 			toast.error('Model not selected');
 			return;
 		}
-		prompt = `${floatingInputValue}\n\`\`\`\n${selectedText}\n\`\`\``;
+		prompt = [
+			// Blockquote each line of the selected text
+			...selectedText.split('\n').map((line) => `> ${line}`),
+			'',
+			// Then your question
+			floatingInputValue
+		].join('\n');
 		floatingInputValue = '';
 
 		responseContent = '';
@@ -121,8 +127,11 @@
 			toast.error('Model not selected');
 			return;
 		}
-		const explainText = $i18n.t('Explain this section to me in more detail');
-		prompt = `${explainText}\n\n\`\`\`\n${selectedText}\n\`\`\``;
+		const quotedText = selectedText
+			.split('\n')
+			.map((line) => `> ${line}`)
+			.join('\n');
+		prompt = `${quotedText}\n\nExplain`;
 
 		responseContent = '';
 		const [res, controller] = await chatCompletion(localStorage.token, {
@@ -256,14 +265,14 @@
 						explainHandler();
 					}}
 				>
-					<LightBlub className="size-3 shrink-0" />
+					<LightBulb className="size-3 shrink-0" />
 
 					<div class="shrink-0">{$i18n.t('Explain')}</div>
 				</button>
 			</div>
 		{:else}
 			<div
-				class="py-1 flex dark:text-gray-100 bg-gray-50 dark:bg-gray-800 border dark:border-gray-850 w-72 rounded-full shadow-xl"
+				class="py-1 flex dark:text-gray-100 bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-850 w-72 rounded-full shadow-xl"
 			>
 				<input
 					type="text"

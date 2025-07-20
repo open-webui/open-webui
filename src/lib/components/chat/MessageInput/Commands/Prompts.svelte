@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { prompts, user } from '$lib/stores';
+	import { prompts, settings, user } from '$lib/stores';
 	import {
-		findWordIndices,
+		extractCurlyBraceWords,
 		getUserPosition,
 		getFormattedDate,
 		getFormattedTime,
@@ -9,15 +9,13 @@
 		getUserTimezone,
 		getWeekday
 	} from '$lib/utils';
-	import { tick, getContext } from 'svelte';
+	import { tick, getContext, onMount, onDestroy } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
 	const i18n = getContext('i18n');
 
-	export let files;
-
-	export let prompt = '';
 	export let command = '';
+	export let onSelect = (e) => {};
 
 	let selectedPromptIdx = 0;
 	let filteredPrompts = [];
@@ -38,106 +36,37 @@
 		selectedPromptIdx = Math.min(selectedPromptIdx + 1, filteredPrompts.length - 1);
 	};
 
-	const confirmPrompt = async (command) => {
-		let text = command.content;
+	let container;
+	let adjustHeightDebounce;
 
-		if (command.content.includes('{{CLIPBOARD}}')) {
-			const clipboardText = await navigator.clipboard.readText().catch((err) => {
-				toast.error($i18n.t('Failed to read clipboard contents'));
-				return '{{CLIPBOARD}}';
-			});
-
-			const clipboardItems = await navigator.clipboard.read();
-
-			let imageUrl = null;
-			for (const item of clipboardItems) {
-				// Check for known image types
-				for (const type of item.types) {
-					if (type.startsWith('image/')) {
-						const blob = await item.getType(type);
-						imageUrl = URL.createObjectURL(blob);
-					}
-				}
+	const adjustHeight = () => {
+		if (container) {
+			if (adjustHeightDebounce) {
+				clearTimeout(adjustHeightDebounce);
 			}
 
-			if (imageUrl) {
-				files = [
-					...files,
-					{
-						type: 'image',
-						url: imageUrl
-					}
-				];
-			}
+			adjustHeightDebounce = setTimeout(() => {
+				if (!container) return;
 
-			text = text.replaceAll('{{CLIPBOARD}}', clipboardText);
-		}
-
-		if (command.content.includes('{{USER_LOCATION}}')) {
-			let location;
-			try {
-				location = await getUserPosition();
-			} catch (error) {
-				toast.error($i18n.t('Location access not allowed'));
-				location = 'LOCATION_UNKNOWN';
-			}
-			text = text.replaceAll('{{USER_LOCATION}}', String(location));
-		}
-
-		if (command.content.includes('{{USER_NAME}}')) {
-			console.log($user);
-			const name = $user.name || 'User';
-			text = text.replaceAll('{{USER_NAME}}', name);
-		}
-
-		if (command.content.includes('{{USER_LANGUAGE}}')) {
-			const language = localStorage.getItem('locale') || 'en-US';
-			text = text.replaceAll('{{USER_LANGUAGE}}', language);
-		}
-
-		if (command.content.includes('{{CURRENT_DATE}}')) {
-			const date = getFormattedDate();
-			text = text.replaceAll('{{CURRENT_DATE}}', date);
-		}
-
-		if (command.content.includes('{{CURRENT_TIME}}')) {
-			const time = getFormattedTime();
-			text = text.replaceAll('{{CURRENT_TIME}}', time);
-		}
-
-		if (command.content.includes('{{CURRENT_DATETIME}}')) {
-			const dateTime = getCurrentDateTime();
-			text = text.replaceAll('{{CURRENT_DATETIME}}', dateTime);
-		}
-
-		if (command.content.includes('{{CURRENT_TIMEZONE}}')) {
-			const timezone = getUserTimezone();
-			text = text.replaceAll('{{CURRENT_TIMEZONE}}', timezone);
-		}
-
-		if (command.content.includes('{{CURRENT_WEEKDAY}}')) {
-			const weekday = getWeekday();
-			text = text.replaceAll('{{CURRENT_WEEKDAY}}', weekday);
-		}
-
-		prompt = text;
-
-		const chatInputContainerElement = document.getElementById('chat-input-container');
-		const chatInputElement = document.getElementById('chat-input');
-
-		await tick();
-		if (chatInputContainerElement) {
-			chatInputContainerElement.style.height = '';
-			chatInputContainerElement.style.height =
-				Math.min(chatInputContainerElement.scrollHeight, 200) + 'px';
-		}
-
-		await tick();
-		if (chatInputElement) {
-			chatInputElement.focus();
-			chatInputElement.dispatchEvent(new Event('input'));
+				// Ensure the container is visible before adjusting height
+				const rect = container.getBoundingClientRect();
+				container.style.maxHeight = Math.max(Math.min(240, rect.bottom - 80), 100) + 'px';
+			}, 100);
 		}
 	};
+
+	const confirmPrompt = async (command) => {
+		onSelect({ type: 'prompt', data: command });
+	};
+
+	onMount(() => {
+		window.addEventListener('resize', adjustHeight);
+		adjustHeight();
+	});
+
+	onDestroy(() => {
+		window.removeEventListener('resize', adjustHeight);
+	});
 </script>
 
 {#if filteredPrompts.length > 0}
@@ -146,18 +75,20 @@
 		class="px-2 mb-2 text-left w-full absolute bottom-0 left-0 right-0 z-10"
 	>
 		<div class="flex w-full rounded-xl border border-gray-100 dark:border-gray-850">
-			<div
-				class="max-h-60 flex flex-col w-full rounded-xl bg-white dark:bg-gray-900 dark:text-gray-100"
-			>
-				<div class="m-1 overflow-y-auto p-1 space-y-0.5 scrollbar-hidden">
-					{#each filteredPrompts as prompt, promptIdx}
+			<div class="flex flex-col w-full rounded-xl bg-white dark:bg-gray-900 dark:text-gray-100">
+				<div
+					class="m-1 overflow-y-auto p-1 space-y-0.5 scrollbar-hidden max-h-60"
+					id="command-options-container"
+					bind:this={container}
+				>
+					{#each filteredPrompts as promptItem, promptIdx}
 						<button
 							class=" px-3 py-1.5 rounded-xl w-full text-left {promptIdx === selectedPromptIdx
 								? '  bg-gray-50 dark:bg-gray-850 selected-command-option-button'
 								: ''}"
 							type="button"
 							on:click={() => {
-								confirmPrompt(prompt);
+								confirmPrompt(promptItem);
 							}}
 							on:mousemove={() => {
 								selectedPromptIdx = promptIdx;
@@ -165,11 +96,11 @@
 							on:focus={() => {}}
 						>
 							<div class=" font-medium text-black dark:text-gray-100">
-								{prompt.command}
+								{promptItem.command}
 							</div>
 
 							<div class=" text-xs text-gray-600 dark:text-gray-100">
-								{prompt.title}
+								{promptItem.title}
 							</div>
 						</button>
 					{/each}

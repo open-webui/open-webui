@@ -9,9 +9,21 @@
 
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { mobile, showSidebar, knowledge as _knowledge } from '$lib/stores';
+	import {
+		mobile,
+		showSidebar,
+		knowledge as _knowledge,
+		config,
+		user,
+		settings
+	} from '$lib/stores';
 
-	import { updateFileDataContentById, uploadFile, deleteFileById } from '$lib/apis/files';
+	import {
+		updateFileDataContentById,
+		uploadFile,
+		deleteFileById,
+		getFileById
+	} from '$lib/apis/files';
 	import {
 		addFileToKnowledgeById,
 		getKnowledgeById,
@@ -21,10 +33,7 @@
 		updateFileFromKnowledgeById,
 		updateKnowledgeById
 	} from '$lib/apis/knowledge';
-
-	import { transcribeAudio } from '$lib/apis/audio';
 	import { blobToFile } from '$lib/utils';
-	import { processFile } from '$lib/apis/retrieval';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Files from './KnowledgeBase/Files.svelte';
@@ -40,6 +49,7 @@
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
+	import Search from '$lib/components/icons/Search.svelte';
 
 	let largeScreen = true;
 
@@ -84,12 +94,15 @@
 
 	let selectedFile = null;
 	let selectedFileId = null;
+	let selectedFileContent = '';
+
+	// Add cache object
+	let fileContentCache = new Map();
 
 	$: if (selectedFileId) {
 		const file = (knowledge?.files ?? []).find((file) => file.id === selectedFileId);
 		if (file) {
-			file.data = file.data ?? { content: '' };
-			selectedFile = file;
+			fileSelectHandler(file);
 		} else {
 			selectedFile = null;
 		}
@@ -131,10 +144,37 @@
 			return null;
 		}
 
+		if (
+			($config?.file?.max_size ?? null) !== null &&
+			file.size > ($config?.file?.max_size ?? 0) * 1024 * 1024
+		) {
+			console.log('File exceeds max size limit:', {
+				fileSize: file.size,
+				maxSize: ($config?.file?.max_size ?? 0) * 1024 * 1024
+			});
+			toast.error(
+				$i18n.t(`File size should not exceed {{maxSize}} MB.`, {
+					maxSize: $config?.file?.max_size
+				})
+			);
+			return;
+		}
+
 		knowledge.files = [...(knowledge.files ?? []), fileItem];
 
 		try {
-			const uploadedFile = await uploadFile(localStorage.token, file).catch((e) => {
+			// If the file is an audio file, provide the language for STT.
+			let metadata = null;
+			if (
+				(file.type.startsWith('audio/') || file.type.startsWith('video/')) &&
+				$settings?.audio?.stt?.language
+			) {
+				metadata = {
+					language: $settings?.audio?.stt?.language
+				};
+			}
+
+			const uploadedFile = await uploadFile(localStorage.token, file, metadata).catch((e) => {
 				toast.error(`${e}`);
 				return null;
 			});
@@ -378,7 +418,10 @@
 
 	const updateFileContentHandler = async () => {
 		const fileId = selectedFile.id;
-		const content = selectedFile.data.content;
+		const content = selectedFileContent;
+
+		// Clear the cache for this file since we're updating it
+		fileContentCache.delete(fileId);
 
 		const res = updateFileDataContentById(localStorage.token, fileId, content).catch((e) => {
 			toast.error(`${e}`);
@@ -431,6 +474,29 @@
 			largeScreen = true;
 		} else {
 			largeScreen = false;
+		}
+	};
+
+	const fileSelectHandler = async (file) => {
+		try {
+			selectedFile = file;
+
+			// Check cache first
+			if (fileContentCache.has(file.id)) {
+				selectedFileContent = fileContentCache.get(file.id);
+				return;
+			}
+
+			const response = await getFileById(localStorage.token, file.id);
+			if (response) {
+				selectedFileContent = response.data.content;
+				// Cache the content
+				fileContentCache.set(file.id, response.data.content);
+			} else {
+				toast.error($i18n.t('No content found in file.'));
+			}
+		} catch (e) {
+			toast.error($i18n.t('Failed to load file content.'));
 		}
 	};
 
@@ -531,6 +597,14 @@
 		dropZone?.removeEventListener('drop', onDrop);
 		dropZone?.removeEventListener('dragleave', onDragLeave);
 	});
+
+	const decodeString = (str: string) => {
+		try {
+			return decodeURIComponent(str);
+		} catch (e) {
+			return str;
+		}
+	};
 </script>
 
 {#if dragged}
@@ -603,6 +677,7 @@
 		<AccessControlModal
 			bind:show={showAccessControlModal}
 			bind:accessControl={knowledge.access_control}
+			allowPublic={$user?.permissions?.sharing?.public_knowledge || $user?.role === 'admin'}
 			onChange={() => {
 				changeDebounceHandler();
 			}}
@@ -681,7 +756,7 @@
 										href={selectedFile.id ? `/api/v1/files/${selectedFile.id}/content` : '#'}
 										target="_blank"
 									>
-										{selectedFile?.meta?.name}
+										{decodeString(selectedFile?.meta?.name)}
 									</a>
 								</div>
 
@@ -703,9 +778,9 @@
 								{#key selectedFile.id}
 									<RichTextInput
 										className="input-prose-sm"
-										bind:value={selectedFile.data.content}
+										bind:value={selectedFileContent}
 										placeholder={$i18n.t('Add content here')}
-										preserveBreaks={true}
+										preserveBreaks={false}
 									/>
 								{/key}
 							</div>
@@ -722,7 +797,7 @@
 				<Drawer
 					className="h-full"
 					show={selectedFileId !== null}
-					on:close={() => {
+					onClose={() => {
 						selectedFileId = null;
 					}}
 				>
@@ -761,9 +836,9 @@
 								{#key selectedFile.id}
 									<RichTextInput
 										className="input-prose-sm"
-										bind:value={selectedFile.data.content}
+										bind:value={selectedFileContent}
 										placeholder={$i18n.t('Add content here')}
-										preserveBreaks={true}
+										preserveBreaks={false}
 									/>
 								{/key}
 							</div>
@@ -787,18 +862,7 @@
 						<div class=" px-3">
 							<div class="flex mb-0.5">
 								<div class=" self-center ml-1 mr-3">
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 20 20"
-										fill="currentColor"
-										class="w-4 h-4"
-									>
-										<path
-											fill-rule="evenodd"
-											d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
-											clip-rule="evenodd"
-										/>
-									</svg>
+									<Search />
 								</div>
 								<input
 									class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
@@ -857,6 +921,6 @@
 			</div>
 		</div>
 	{:else}
-		<Spinner />
+		<Spinner className="size-5" />
 	{/if}
 </div>

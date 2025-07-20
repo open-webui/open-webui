@@ -25,7 +25,8 @@
 		pinnedChats,
 		showSidebar,
 		currentChatPage,
-		tags
+		tags,
+		selectedFolder
 	} from '$lib/stores';
 
 	import ChatMenu from './ChatMenu.svelte';
@@ -38,6 +39,8 @@
 	import Check from '$lib/components/icons/Check.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import Document from '$lib/components/icons/Document.svelte';
+	import Sparkles from '$lib/components/icons/Sparkles.svelte';
+	import { generateTitle } from '$lib/apis';
 
 	export let className = '';
 
@@ -83,6 +86,8 @@
 			currentChatPage.set(1);
 			await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			await pinnedChats.set(await getPinnedChatList(localStorage.token));
+
+			dispatch('change');
 		}
 	};
 
@@ -131,12 +136,10 @@
 		dispatch('change');
 	};
 
-	const focusEdit = async (node: HTMLInputElement) => {
-		node.focus();
-	};
-
 	let itemElement;
 
+	let generating = false;
+	let doubleClicked = false;
 	let dragged = false;
 	let x = 0;
 	let y = 0;
@@ -198,6 +201,69 @@
 	});
 
 	let showDeleteConfirm = false;
+
+	const chatTitleInputKeydownHandler = (e) => {
+		if (e.key === 'Enter') {
+			e.preventDefault();
+			setTimeout(() => {
+				const input = document.getElementById(`chat-title-input-${id}`);
+				if (input) input.blur();
+			}, 0);
+		} else if (e.key === 'Escape') {
+			e.preventDefault();
+			confirmEdit = false;
+			chatTitle = '';
+		}
+	};
+
+	const renameHandler = async () => {
+		chatTitle = title;
+		confirmEdit = true;
+
+		await tick();
+
+		setTimeout(() => {
+			const input = document.getElementById(`chat-title-input-${id}`);
+			if (input) input.focus();
+		}, 0);
+	};
+
+	const generateTitleHandler = async () => {
+		generating = true;
+		if (!chat) {
+			chat = await getChatById(localStorage.token, id);
+		}
+
+		const messages = (chat.chat?.messages ?? []).map((message) => {
+			return {
+				role: message.role,
+				content: message.content
+			};
+		});
+
+		const model = chat.chat.models.at(0) ?? chat.models.at(0) ?? '';
+
+		chatTitle = '';
+
+		const generatedTitle = await generateTitle(localStorage.token, model, messages).catch(
+			(error) => {
+				toast.error(`${error}`);
+				return null;
+			}
+		);
+
+		if (generatedTitle) {
+			if (generatedTitle !== title) {
+				editChatTitle(id, generatedTitle);
+			}
+
+			confirmEdit = false;
+		} else {
+			chatTitle = title;
+		}
+
+		generating = false;
+	};
 </script>
 
 <ShareChatModal bind:show={showShareChatModal} chatId={id} />
@@ -236,23 +302,53 @@
 		<div
 			class=" w-full flex justify-between rounded-lg px-[11px] py-[6px] {id === $chatId ||
 			confirmEdit
-				? 'bg-gray-200 dark:bg-gray-900'
+				? 'bg-gray-100 dark:bg-gray-900'
 				: selected
 					? 'bg-gray-100 dark:bg-gray-950'
-					: 'group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
+					: 'group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis relative {generating
+				? 'cursor-not-allowed'
+				: ''}"
 		>
 			<input
-				use:focusEdit
-				bind:value={chatTitle}
 				id="chat-title-input-{id}"
+				bind:value={chatTitle}
 				class=" bg-transparent w-full outline-hidden mr-10"
+				placeholder={generating ? $i18n.t('Generating...') : ''}
+				on:keydown={chatTitleInputKeydownHandler}
+				on:blur={async (e) => {
+					// check if target is generate button
+					if (e.relatedTarget?.id === 'generate-title-button') {
+						return;
+					}
+
+					if (doubleClicked) {
+						e.preventDefault();
+						e.stopPropagation();
+
+						await tick();
+						setTimeout(() => {
+							const input = document.getElementById(`chat-title-input-${id}`);
+							if (input) input.focus();
+						}, 0);
+
+						doubleClicked = false;
+						return;
+					}
+
+					if (chatTitle !== title) {
+						editChatTitle(id, chatTitle);
+					}
+
+					confirmEdit = false;
+					chatTitle = '';
+				}}
 			/>
 		</div>
 	{:else}
 		<a
 			class=" w-full flex justify-between rounded-lg px-[11px] py-[6px] {id === $chatId ||
 			confirmEdit
-				? 'bg-gray-200 dark:bg-gray-900'
+				? 'bg-gray-100 dark:bg-gray-900'
 				: selected
 					? 'bg-gray-100 dark:bg-gray-950'
 					: ' group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
@@ -260,13 +356,23 @@
 			on:click={() => {
 				dispatch('select');
 
+				if (
+					$selectedFolder &&
+					!($selectedFolder?.items?.chats.map((chat) => chat.id) ?? []).includes(id)
+				) {
+					selectedFolder.set(null); // Reset selected folder if the chat is not in it
+				}
+
 				if ($mobile) {
 					showSidebar.set(false);
 				}
 			}}
-			on:dblclick={() => {
-				chatTitle = title;
-				confirmEdit = true;
+			on:dblclick={async (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+
+				doubleClicked = true;
+				renameHandler();
 			}}
 			on:mouseenter={(e) => {
 				mouseOver = true;
@@ -289,13 +395,13 @@
 	<div
 		class="
         {id === $chatId || confirmEdit
-			? 'from-gray-200 dark:from-gray-900'
+			? 'from-gray-100 dark:from-gray-900'
 			: selected
 				? 'from-gray-100 dark:from-gray-950'
 				: 'invisible group-hover:visible from-gray-100 dark:from-gray-950'}
             absolute {className === 'pr-2'
 			? 'right-[8px]'
-			: 'right-0'}  top-[4px] py-1 pr-0.5 mr-1.5 pl-5 bg-linear-to-l from-80%
+			: 'right-1'} top-[4px] py-1 pr-0.5 mr-1.5 pl-5 bg-linear-to-l from-80%
 
               to-transparent"
 		on:mouseenter={(e) => {
@@ -309,28 +415,19 @@
 			<div
 				class="flex self-center items-center space-x-1.5 z-10 translate-y-[0.5px] -translate-x-[0.5px]"
 			>
-				<Tooltip content={$i18n.t('Confirm')}>
+				<Tooltip content={$i18n.t('Generate')}>
 					<button
 						class=" self-center dark:hover:text-white transition"
-						on:click={() => {
-							editChatTitle(id, chatTitle);
-							confirmEdit = false;
-							chatTitle = '';
-						}}
-					>
-						<Check className=" size-3.5" strokeWidth="2.5" />
-					</button>
-				</Tooltip>
+						id="generate-title-button"
+						on:click={(e) => {
+							e.preventDefault();
+							e.stopImmediatePropagation();
+							e.stopPropagation();
 
-				<Tooltip content={$i18n.t('Cancel')}>
-					<button
-						class=" self-center dark:hover:text-white transition"
-						on:click={() => {
-							confirmEdit = false;
-							chatTitle = '';
+							generateTitleHandler();
 						}}
 					>
-						<XMark strokeWidth="2.5" />
+						<Sparkles strokeWidth="2" />
 					</button>
 				</Tooltip>
 			</div>
@@ -361,7 +458,7 @@
 				</Tooltip>
 			</div>
 		{:else}
-			<div class="flex self-center space-x-1 z-10">
+			<div class="flex self-center z-10 items-end">
 				<ChatMenu
 					chatId={id}
 					cloneChatHandler={() => {
@@ -373,16 +470,7 @@
 					archiveChatHandler={() => {
 						archiveChatHandler(id);
 					}}
-					renameHandler={async () => {
-						chatTitle = title;
-						confirmEdit = true;
-
-						await tick();
-						const input = document.getElementById(`chat-title-input-${id}`);
-						if (input) {
-							input.focus();
-						}
-					}}
+					{renameHandler}
 					deleteHandler={() => {
 						showDeleteConfirm = true;
 					}}
@@ -398,7 +486,7 @@
 				>
 					<button
 						aria-label="Chat Menu"
-						class=" self-center dark:hover:text-white transition"
+						class=" self-center dark:hover:text-white transition m-0"
 						on:click={() => {
 							dispatch('select');
 						}}

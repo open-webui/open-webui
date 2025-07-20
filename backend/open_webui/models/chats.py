@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON
 from sqlalchemy import or_, func, select, and_, text
 from sqlalchemy.sql import exists
+from sqlalchemy.sql.expression import bindparam
 
 ####################
 # Chat DB Schema
@@ -66,12 +67,14 @@ class ChatModel(BaseModel):
 
 class ChatForm(BaseModel):
     chat: dict
+    folder_id: Optional[str] = None
 
 
 class ChatImportForm(ChatForm):
     meta: Optional[dict] = {}
     pinned: Optional[bool] = False
-    folder_id: Optional[str] = None
+    created_at: Optional[int] = None
+    updated_at: Optional[int] = None
 
 
 class ChatTitleMessagesForm(BaseModel):
@@ -118,6 +121,7 @@ class ChatTable:
                         else "New Chat"
                     ),
                     "chat": form_data.chat,
+                    "folder_id": form_data.folder_id,
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
                 }
@@ -147,8 +151,16 @@ class ChatTable:
                     "meta": form_data.meta,
                     "pinned": form_data.pinned,
                     "folder_id": form_data.folder_id,
-                    "created_at": int(time.time()),
-                    "updated_at": int(time.time()),
+                    "created_at": (
+                        form_data.created_at
+                        if form_data.created_at
+                        else int(time.time())
+                    ),
+                    "updated_at": (
+                        form_data.updated_at
+                        if form_data.updated_at
+                        else int(time.time())
+                    ),
                 }
             )
 
@@ -231,6 +243,10 @@ class ChatTable:
         chat = self.get_chat_by_id(id)
         if chat is None:
             return None
+
+        # Sanitize message content for null characters before upserting
+        if isinstance(message.get("content"), str):
+            message["content"] = message["content"].replace("\x00", "")
 
         chat = chat.chat
         history = chat.get("history", {})
@@ -377,22 +393,47 @@ class ChatTable:
             return False
 
     def get_archived_chat_list_by_user_id(
-        self, user_id: str, skip: int = 0, limit: int = 50
+        self,
+        user_id: str,
+        filter: Optional[dict] = None,
+        skip: int = 0,
+        limit: int = 50,
     ) -> list[ChatModel]:
+
         with get_db() as db:
-            all_chats = (
-                db.query(Chat)
-                .filter_by(user_id=user_id, archived=True)
-                .order_by(Chat.updated_at.desc())
-                # .limit(limit).offset(skip)
-                .all()
-            )
+            query = db.query(Chat).filter_by(user_id=user_id, archived=True)
+
+            if filter:
+                query_key = filter.get("query")
+                if query_key:
+                    query = query.filter(Chat.title.ilike(f"%{query_key}%"))
+
+                order_by = filter.get("order_by")
+                direction = filter.get("direction")
+
+                if order_by and direction and getattr(Chat, order_by):
+                    if direction.lower() == "asc":
+                        query = query.order_by(getattr(Chat, order_by).asc())
+                    elif direction.lower() == "desc":
+                        query = query.order_by(getattr(Chat, order_by).desc())
+                    else:
+                        raise ValueError("Invalid direction for ordering")
+            else:
+                query = query.order_by(Chat.updated_at.desc())
+
+            if skip:
+                query = query.offset(skip)
+            if limit:
+                query = query.limit(limit)
+
+            all_chats = query.all()
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
     def get_chat_list_by_user_id(
         self,
         user_id: str,
         include_archived: bool = False,
+        filter: Optional[dict] = None,
         skip: int = 0,
         limit: int = 50,
     ) -> list[ChatModel]:
@@ -401,7 +442,23 @@ class ChatTable:
             if not include_archived:
                 query = query.filter_by(archived=False)
 
-            query = query.order_by(Chat.updated_at.desc())
+            if filter:
+                query_key = filter.get("query")
+                if query_key:
+                    query = query.filter(Chat.title.ilike(f"%{query_key}%"))
+
+                order_by = filter.get("order_by")
+                direction = filter.get("direction")
+
+                if order_by and direction and getattr(Chat, order_by):
+                    if direction.lower() == "asc":
+                        query = query.order_by(getattr(Chat, order_by).asc())
+                    elif direction.lower() == "desc":
+                        query = query.order_by(getattr(Chat, order_by).desc())
+                    else:
+                        raise ValueError("Invalid direction for ordering")
+            else:
+                query = query.order_by(Chat.updated_at.desc())
 
             if skip:
                 query = query.offset(skip)
@@ -436,7 +493,7 @@ class ChatTable:
 
             all_chats = query.all()
 
-            # result has to be destrctured from sqlalchemy `row` and mapped to a dict since the `ChatModel`is not the returned dataclass.
+            # result has to be destructured from sqlalchemy `row` and mapped to a dict since the `ChatModel`is not the returned dataclass.
             return [
                 ChatTitleIdResponse.model_validate(
                     {
@@ -539,10 +596,12 @@ class ChatTable:
         """
         Filters chats based on a search query using Python, allowing pagination using skip and limit.
         """
-        search_text = search_text.lower().strip()
+        search_text = search_text.replace("\u0000", "").lower().strip()
 
         if not search_text:
-            return self.get_chat_list_by_user_id(user_id, include_archived, skip, limit)
+            return self.get_chat_list_by_user_id(
+                user_id, include_archived, filter={}, skip=skip, limit=limit
+            )
 
         search_text_words = search_text.split(" ")
 
@@ -571,21 +630,18 @@ class ChatTable:
             dialect_name = db.bind.dialect.name
             if dialect_name == "sqlite":
                 # SQLite case: using JSON1 extension for JSON searching
+                sqlite_content_sql = (
+                    "EXISTS ("
+                    "    SELECT 1 "
+                    "    FROM json_each(Chat.chat, '$.messages') AS message "
+                    "    WHERE LOWER(message.value->>'content') LIKE '%' || :content_key || '%'"
+                    ")"
+                )
+                sqlite_content_clause = text(sqlite_content_sql)
                 query = query.filter(
-                    (
-                        Chat.title.ilike(
-                            f"%{search_text}%"
-                        )  # Case-insensitive search in title
-                        | text(
-                            """
-                            EXISTS (
-                                SELECT 1 
-                                FROM json_each(Chat.chat, '$.messages') AS message 
-                                WHERE LOWER(message.value->>'content') LIKE '%' || :search_text || '%'
-                            )
-                            """
-                        )
-                    ).params(search_text=search_text)
+                    or_(
+                        Chat.title.ilike(bindparam("title_key")), sqlite_content_clause
+                    ).params(title_key=f"%{search_text}%", content_key=search_text)
                 )
 
                 # Check if there are any tags to filter, it should have all the tags
@@ -620,21 +676,19 @@ class ChatTable:
 
             elif dialect_name == "postgresql":
                 # PostgreSQL relies on proper JSON query for search
+                postgres_content_sql = (
+                    "EXISTS ("
+                    "    SELECT 1 "
+                    "    FROM json_array_elements(Chat.chat->'messages') AS message "
+                    "    WHERE LOWER(message->>'content') LIKE '%' || :content_key || '%'"
+                    ")"
+                )
+                postgres_content_clause = text(postgres_content_sql)
                 query = query.filter(
-                    (
-                        Chat.title.ilike(
-                            f"%{search_text}%"
-                        )  # Case-insensitive search in title
-                        | text(
-                            """
-                            EXISTS (
-                                SELECT 1
-                                FROM json_array_elements(Chat.chat->'messages') AS message
-                                WHERE LOWER(message->>'content') LIKE '%' || :search_text || '%'
-                            )
-                            """
-                        )
-                    ).params(search_text=search_text)
+                    or_(
+                        Chat.title.ilike(bindparam("title_key")),
+                        postgres_content_clause,
+                    ).params(title_key=f"%{search_text}%", content_key=search_text)
                 )
 
                 # Check if there are any tags to filter, it should have all the tags

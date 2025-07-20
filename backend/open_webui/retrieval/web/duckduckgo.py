@@ -2,7 +2,8 @@ import logging
 from typing import Optional
 
 from open_webui.retrieval.web.main import SearchResult, get_filtered_results
-from duckduckgo_search import DDGS
+from ddgs import DDGS
+from ddgs.exceptions import RatelimitException
 from open_webui.env import SRC_LOG_LEVELS
 
 log = logging.getLogger(__name__)
@@ -22,16 +23,15 @@ def search_duckduckgo(
         list[SearchResult]: A list of search results
     """
     # Use the DDGS context manager to create a DDGS object
+    search_results = []
     with DDGS() as ddgs:
         # Use the ddgs.text() method to perform the search
-        ddgs_gen = ddgs.text(
-            query, safesearch="moderate", max_results=count, backend="api"
-        )
-        # Check if there are search results
-        if ddgs_gen:
-            # Convert the search results into a list
-            search_results = [r for r in ddgs_gen]
-
+        try:
+            search_results = ddgs.text(
+                query, safesearch="moderate", max_results=count, backend="lite"
+            )
+        except RatelimitException as e:
+            log.error(f"RatelimitException: {e}")
     if filter_list:
         search_results = get_filtered_results(search_results, filter_list)
 

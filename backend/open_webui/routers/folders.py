@@ -20,11 +20,13 @@ from open_webui.env import SRC_LOG_LEVELS
 from open_webui.constants import ERROR_MESSAGES
 
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status, Request
 from fastapi.responses import FileResponse, StreamingResponse
 
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.access_control import has_permission
+
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -47,7 +49,7 @@ async def get_folders(user=Depends(get_verified_user)):
             **folder.model_dump(),
             "items": {
                 "chats": [
-                    {"title": chat.title, "id": chat.id}
+                    {"title": chat.title, "id": chat.id, "updated_at": chat.updated_at}
                     for chat in Chats.get_chats_by_folder_id_and_user_id(
                         folder.id, user.id
                     )
@@ -76,7 +78,7 @@ def create_folder(form_data: FolderForm, user=Depends(get_verified_user)):
         )
 
     try:
-        folder = Folders.insert_new_folder(user.id, form_data.name)
+        folder = Folders.insert_new_folder(user.id, form_data)
         return folder
     except Exception as e:
         log.exception(e)
@@ -118,16 +120,14 @@ async def update_folder_name_by_id(
         existing_folder = Folders.get_folder_by_parent_id_and_user_id_and_name(
             folder.parent_id, user.id, form_data.name
         )
-        if existing_folder:
+        if existing_folder and existing_folder.id != id:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ERROR_MESSAGES.DEFAULT("Folder already exists"),
             )
 
         try:
-            folder = Folders.update_folder_name_by_id_and_user_id(
-                id, user.id, form_data.name
-            )
+            folder = Folders.update_folder_by_id_and_user_id(id, user.id, form_data)
 
             return folder
         except Exception as e:
@@ -228,7 +228,19 @@ async def update_folder_is_expanded_by_id(
 
 
 @router.delete("/{id}")
-async def delete_folder_by_id(id: str, user=Depends(get_verified_user)):
+async def delete_folder_by_id(
+    request: Request, id: str, user=Depends(get_verified_user)
+):
+    chat_delete_permission = has_permission(
+        user.id, "chat.delete", request.app.state.config.USER_PERMISSIONS
+    )
+
+    if user.role != "admin" and not chat_delete_permission:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
     folder = Folders.get_folder_by_id_and_user_id(id, user.id)
     if folder:
         try:

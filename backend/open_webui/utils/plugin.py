@@ -7,7 +7,7 @@ import types
 import tempfile
 import logging
 
-from open_webui.env import SRC_LOG_LEVELS
+from open_webui.env import SRC_LOG_LEVELS, PIP_OPTIONS, PIP_PACKAGE_INDEX_OPTIONS
 from open_webui.models.functions import Functions
 from open_webui.models.tools import Tools
 
@@ -68,23 +68,23 @@ def replace_imports(content):
     return content
 
 
-def load_tools_module_by_id(toolkit_id, content=None):
+def load_tool_module_by_id(tool_id, content=None):
 
     if content is None:
-        tool = Tools.get_tool_by_id(toolkit_id)
+        tool = Tools.get_tool_by_id(tool_id)
         if not tool:
-            raise Exception(f"Toolkit not found: {toolkit_id}")
+            raise Exception(f"Toolkit not found: {tool_id}")
 
         content = tool.content
 
         content = replace_imports(content)
-        Tools.update_tool_by_id(toolkit_id, {"content": content})
+        Tools.update_tool_by_id(tool_id, {"content": content})
     else:
         frontmatter = extract_frontmatter(content)
         # Install required packages found within the frontmatter
         install_frontmatter_requirements(frontmatter.get("requirements", ""))
 
-    module_name = f"tool_{toolkit_id}"
+    module_name = f"tool_{tool_id}"
     module = types.ModuleType(module_name)
     sys.modules[module_name] = module
 
@@ -108,14 +108,14 @@ def load_tools_module_by_id(toolkit_id, content=None):
         else:
             raise Exception("No Tools class found in the module")
     except Exception as e:
-        log.error(f"Error loading module: {toolkit_id}: {e}")
+        log.error(f"Error loading module: {tool_id}: {e}")
         del sys.modules[module_name]  # Clean up
         raise e
     finally:
         os.unlink(temp_file.name)
 
 
-def load_function_module_by_id(function_id, content=None):
+def load_function_module_by_id(function_id: str, content: str | None = None):
     if content is None:
         function = Functions.get_function_by_id(function_id)
         if not function:
@@ -157,7 +157,8 @@ def load_function_module_by_id(function_id, content=None):
             raise Exception("No Function class found in the module")
     except Exception as e:
         log.error(f"Error loading module: {function_id}: {e}")
-        del sys.modules[module_name]  # Cleanup by removing the module in case of error
+        # Cleanup by removing the module in case of error
+        del sys.modules[module_name]
 
         Functions.update_function_by_id(function_id, {"is_active": False})
         raise e
@@ -165,16 +166,105 @@ def load_function_module_by_id(function_id, content=None):
         os.unlink(temp_file.name)
 
 
-def install_frontmatter_requirements(requirements):
+def get_function_module_from_cache(request, function_id, load_from_db=True):
+    if load_from_db:
+        # Always load from the database by default
+        # This is useful for hooks like "inlet" or "outlet" where the content might change
+        # and we want to ensure the latest content is used.
+
+        function = Functions.get_function_by_id(function_id)
+        if not function:
+            raise Exception(f"Function not found: {function_id}")
+        content = function.content
+
+        new_content = replace_imports(content)
+        if new_content != content:
+            content = new_content
+            # Update the function content in the database
+            Functions.update_function_by_id(function_id, {"content": content})
+
+        if (
+            hasattr(request.app.state, "FUNCTION_CONTENTS")
+            and function_id in request.app.state.FUNCTION_CONTENTS
+        ) and (
+            hasattr(request.app.state, "FUNCTIONS")
+            and function_id in request.app.state.FUNCTIONS
+        ):
+            if request.app.state.FUNCTION_CONTENTS[function_id] == content:
+                return request.app.state.FUNCTIONS[function_id], None, None
+
+        function_module, function_type, frontmatter = load_function_module_by_id(
+            function_id, content
+        )
+    else:
+        # Load from cache (e.g. "stream" hook)
+        # This is useful for performance reasons
+
+        if (
+            hasattr(request.app.state, "FUNCTIONS")
+            and function_id in request.app.state.FUNCTIONS
+        ):
+            return request.app.state.FUNCTIONS[function_id], None, None
+
+        function_module, function_type, frontmatter = load_function_module_by_id(
+            function_id
+        )
+
+    if not hasattr(request.app.state, "FUNCTIONS"):
+        request.app.state.FUNCTIONS = {}
+
+    if not hasattr(request.app.state, "FUNCTION_CONTENTS"):
+        request.app.state.FUNCTION_CONTENTS = {}
+
+    request.app.state.FUNCTIONS[function_id] = function_module
+    request.app.state.FUNCTION_CONTENTS[function_id] = content
+
+    return function_module, function_type, frontmatter
+
+
+def install_frontmatter_requirements(requirements: str):
     if requirements:
         try:
             req_list = [req.strip() for req in requirements.split(",")]
-            for req in req_list:
-                log.info(f"Installing requirement: {req}")
-                subprocess.check_call([sys.executable, "-m", "pip", "install", req])
+            log.info(f"Installing requirements: {' '.join(req_list)}")
+            subprocess.check_call(
+                [sys.executable, "-m", "pip", "install"]
+                + PIP_OPTIONS
+                + req_list
+                + PIP_PACKAGE_INDEX_OPTIONS
+            )
         except Exception as e:
-            log.error(f"Error installing package: {req}")
+            log.error(f"Error installing packages: {' '.join(req_list)}")
             raise e
 
     else:
         log.info("No requirements found in frontmatter.")
+
+
+def install_tool_and_function_dependencies():
+    """
+    Install all dependencies for all admin tools and active functions.
+
+    By first collecting all dependencies from the frontmatter of each tool and function,
+    and then installing them using pip. Duplicates or similar version specifications are
+    handled by pip as much as possible.
+    """
+    function_list = Functions.get_functions(active_only=True)
+    tool_list = Tools.get_tools()
+
+    all_dependencies = ""
+    try:
+        for function in function_list:
+            frontmatter = extract_frontmatter(replace_imports(function.content))
+            if dependencies := frontmatter.get("requirements"):
+                all_dependencies += f"{dependencies}, "
+        for tool in tool_list:
+            # Only install requirements for admin tools
+            if tool.user.role == "admin":
+                frontmatter = extract_frontmatter(replace_imports(tool.content))
+                if dependencies := frontmatter.get("requirements"):
+                    all_dependencies += f"{dependencies}, "
+
+        install_frontmatter_requirements(all_dependencies.strip(", "))
+    except Exception as e:
+        log.error(f"Error installing requirements: {e}")

@@ -1,11 +1,13 @@
-from fastapi import APIRouter, Depends, Request
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, Request, HTTPException
+from pydantic import BaseModel, ConfigDict
 
 from typing import Optional
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.config import get_config, save_config
 from open_webui.config import BannerModel
+
+from open_webui.utils.tools import get_tool_server_data, get_tool_servers_data
 
 
 router = APIRouter()
@@ -37,39 +39,116 @@ async def export_config(user=Depends(get_admin_user)):
 
 
 ############################
-# Direct Connections Config
+# Connections Config
 ############################
 
 
-class DirectConnectionsConfigForm(BaseModel):
+class ConnectionsConfigForm(BaseModel):
     ENABLE_DIRECT_CONNECTIONS: bool
+    ENABLE_BASE_MODELS_CACHE: bool
 
 
-@router.get("/direct_connections", response_model=DirectConnectionsConfigForm)
-async def get_direct_connections_config(request: Request, user=Depends(get_admin_user)):
+@router.get("/connections", response_model=ConnectionsConfigForm)
+async def get_connections_config(request: Request, user=Depends(get_admin_user)):
     return {
         "ENABLE_DIRECT_CONNECTIONS": request.app.state.config.ENABLE_DIRECT_CONNECTIONS,
+        "ENABLE_BASE_MODELS_CACHE": request.app.state.config.ENABLE_BASE_MODELS_CACHE,
     }
 
 
-@router.post("/direct_connections", response_model=DirectConnectionsConfigForm)
-async def set_direct_connections_config(
+@router.post("/connections", response_model=ConnectionsConfigForm)
+async def set_connections_config(
     request: Request,
-    form_data: DirectConnectionsConfigForm,
+    form_data: ConnectionsConfigForm,
     user=Depends(get_admin_user),
 ):
     request.app.state.config.ENABLE_DIRECT_CONNECTIONS = (
         form_data.ENABLE_DIRECT_CONNECTIONS
     )
+    request.app.state.config.ENABLE_BASE_MODELS_CACHE = (
+        form_data.ENABLE_BASE_MODELS_CACHE
+    )
+
     return {
         "ENABLE_DIRECT_CONNECTIONS": request.app.state.config.ENABLE_DIRECT_CONNECTIONS,
+        "ENABLE_BASE_MODELS_CACHE": request.app.state.config.ENABLE_BASE_MODELS_CACHE,
     }
+
+
+############################
+# ToolServers Config
+############################
+
+
+class ToolServerConnection(BaseModel):
+    url: str
+    path: str
+    auth_type: Optional[str]
+    key: Optional[str]
+    config: Optional[dict]
+
+    model_config = ConfigDict(extra="allow")
+
+
+class ToolServersConfigForm(BaseModel):
+    TOOL_SERVER_CONNECTIONS: list[ToolServerConnection]
+
+
+@router.get("/tool_servers", response_model=ToolServersConfigForm)
+async def get_tool_servers_config(request: Request, user=Depends(get_admin_user)):
+    return {
+        "TOOL_SERVER_CONNECTIONS": request.app.state.config.TOOL_SERVER_CONNECTIONS,
+    }
+
+
+@router.post("/tool_servers", response_model=ToolServersConfigForm)
+async def set_tool_servers_config(
+    request: Request,
+    form_data: ToolServersConfigForm,
+    user=Depends(get_admin_user),
+):
+    request.app.state.config.TOOL_SERVER_CONNECTIONS = [
+        connection.model_dump() for connection in form_data.TOOL_SERVER_CONNECTIONS
+    ]
+
+    request.app.state.TOOL_SERVERS = await get_tool_servers_data(
+        request.app.state.config.TOOL_SERVER_CONNECTIONS
+    )
+
+    return {
+        "TOOL_SERVER_CONNECTIONS": request.app.state.config.TOOL_SERVER_CONNECTIONS,
+    }
+
+
+@router.post("/tool_servers/verify")
+async def verify_tool_servers_config(
+    request: Request, form_data: ToolServerConnection, user=Depends(get_admin_user)
+):
+    """
+    Verify the connection to the tool server.
+    """
+    try:
+
+        token = None
+        if form_data.auth_type == "bearer":
+            token = form_data.key
+        elif form_data.auth_type == "session":
+            token = request.state.token.credentials
+
+        url = f"{form_data.url}/{form_data.path}"
+        return await get_tool_server_data(token, url)
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Failed to connect to the tool server: {str(e)}",
+        )
 
 
 ############################
 # CodeInterpreterConfig
 ############################
 class CodeInterpreterConfigForm(BaseModel):
+    ENABLE_CODE_EXECUTION: bool
     CODE_EXECUTION_ENGINE: str
     CODE_EXECUTION_JUPYTER_URL: Optional[str]
     CODE_EXECUTION_JUPYTER_AUTH: Optional[str]
@@ -89,6 +168,7 @@ class CodeInterpreterConfigForm(BaseModel):
 @router.get("/code_execution", response_model=CodeInterpreterConfigForm)
 async def get_code_execution_config(request: Request, user=Depends(get_admin_user)):
     return {
+        "ENABLE_CODE_EXECUTION": request.app.state.config.ENABLE_CODE_EXECUTION,
         "CODE_EXECUTION_ENGINE": request.app.state.config.CODE_EXECUTION_ENGINE,
         "CODE_EXECUTION_JUPYTER_URL": request.app.state.config.CODE_EXECUTION_JUPYTER_URL,
         "CODE_EXECUTION_JUPYTER_AUTH": request.app.state.config.CODE_EXECUTION_JUPYTER_AUTH,
@@ -110,6 +190,8 @@ async def get_code_execution_config(request: Request, user=Depends(get_admin_use
 async def set_code_execution_config(
     request: Request, form_data: CodeInterpreterConfigForm, user=Depends(get_admin_user)
 ):
+
+    request.app.state.config.ENABLE_CODE_EXECUTION = form_data.ENABLE_CODE_EXECUTION
 
     request.app.state.config.CODE_EXECUTION_ENGINE = form_data.CODE_EXECUTION_ENGINE
     request.app.state.config.CODE_EXECUTION_JUPYTER_URL = (
@@ -153,6 +235,7 @@ async def set_code_execution_config(
     )
 
     return {
+        "ENABLE_CODE_EXECUTION": request.app.state.config.ENABLE_CODE_EXECUTION,
         "CODE_EXECUTION_ENGINE": request.app.state.config.CODE_EXECUTION_ENGINE,
         "CODE_EXECUTION_JUPYTER_URL": request.app.state.config.CODE_EXECUTION_JUPYTER_URL,
         "CODE_EXECUTION_JUPYTER_AUTH": request.app.state.config.CODE_EXECUTION_JUPYTER_AUTH,

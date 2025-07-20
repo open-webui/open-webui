@@ -4,7 +4,7 @@ import logging
 from typing import Optional
 
 from open_webui.models.memories import Memories, MemoryModel
-from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
+from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 from open_webui.utils.auth import get_verified_user
 from open_webui.env import SRC_LOG_LEVELS
 
@@ -57,7 +57,9 @@ async def add_memory(
             {
                 "id": memory.id,
                 "text": memory.content,
-                "vector": request.app.state.EMBEDDING_FUNCTION(memory.content, user),
+                "vector": request.app.state.EMBEDDING_FUNCTION(
+                    memory.content, user=user
+                ),
                 "metadata": {"created_at": memory.created_at},
             }
         ],
@@ -82,7 +84,7 @@ async def query_memory(
 ):
     results = VECTOR_DB_CLIENT.search(
         collection_name=f"user-memory-{user.id}",
-        vectors=[request.app.state.EMBEDDING_FUNCTION(form_data.content, user)],
+        vectors=[request.app.state.EMBEDDING_FUNCTION(form_data.content, user=user)],
         limit=form_data.k,
     )
 
@@ -105,7 +107,9 @@ async def reset_memory_from_vector_db(
             {
                 "id": memory.id,
                 "text": memory.content,
-                "vector": request.app.state.EMBEDDING_FUNCTION(memory.content, user),
+                "vector": request.app.state.EMBEDDING_FUNCTION(
+                    memory.content, user=user
+                ),
                 "metadata": {
                     "created_at": memory.created_at,
                     "updated_at": memory.updated_at,
@@ -149,7 +153,9 @@ async def update_memory_by_id(
     form_data: MemoryUpdateModel,
     user=Depends(get_verified_user),
 ):
-    memory = Memories.update_memory_by_id(memory_id, form_data.content)
+    memory = Memories.update_memory_by_id_and_user_id(
+        memory_id, user.id, form_data.content
+    )
     if memory is None:
         raise HTTPException(status_code=404, detail="Memory not found")
 
@@ -161,7 +167,7 @@ async def update_memory_by_id(
                     "id": memory.id,
                     "text": memory.content,
                     "vector": request.app.state.EMBEDDING_FUNCTION(
-                        memory.content, user
+                        memory.content, user=user
                     ),
                     "metadata": {
                         "created_at": memory.created_at,

@@ -5,7 +5,12 @@ from chromadb.utils.batch_utils import create_batches
 
 from typing import Optional
 
-from open_webui.retrieval.vector.main import VectorItem, SearchResult, GetResult
+from open_webui.retrieval.vector.main import (
+    VectorDBBase,
+    VectorItem,
+    SearchResult,
+    GetResult,
+)
 from open_webui.config import (
     CHROMA_DATA_PATH,
     CHROMA_HTTP_HOST,
@@ -23,7 +28,7 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
-class ChromaClient:
+class ChromaClient(VectorDBBase):
     def __init__(self):
         settings_dict = {
             "allow_reset": True,
@@ -75,10 +80,16 @@ class ChromaClient:
                     n_results=limit,
                 )
 
+                # chromadb has cosine distance, 2 (worst) -> 0 (best). Re-odering to 0 -> 1
+                # https://docs.trychroma.com/docs/collections/configure cosine equation
+                distances: list = result["distances"][0]
+                distances = [2 - dist for dist in distances]
+                distances = [[dist / 2 for dist in distances]]
+
                 return SearchResult(
                     **{
                         "ids": result["ids"],
-                        "distances": result["distances"],
+                        "distances": distances,
                         "documents": result["documents"],
                         "metadatas": result["metadatas"],
                     }
@@ -166,12 +177,19 @@ class ChromaClient:
         filter: Optional[dict] = None,
     ):
         # Delete the items from the collection based on the ids.
-        collection = self.client.get_collection(name=collection_name)
-        if collection:
-            if ids:
-                collection.delete(ids=ids)
-            elif filter:
-                collection.delete(where=filter)
+        try:
+            collection = self.client.get_collection(name=collection_name)
+            if collection:
+                if ids:
+                    collection.delete(ids=ids)
+                elif filter:
+                    collection.delete(where=filter)
+        except Exception as e:
+            # If collection doesn't exist, that's fine - nothing to delete
+            log.debug(
+                f"Attempted to delete from non-existent collection {collection_name}. Ignoring."
+            )
+            pass
 
     def reset(self):
         # Resets the database. This will delete all collections and item entries.

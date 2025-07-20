@@ -6,5 +6,5 @@ services:
 
   open-webui:
     environment:
-      - 'RAG_WEB_LOADER_ENGINE=playwright'
-      - 'PLAYWRIGHT_WS_URI=ws://playwright:3000'
+      - 'WEB_LOADER_ENGINE=playwright'
+      - 'PLAYWRIGHT_WS_URL=ws://playwright:3000'

@@ -9,6 +9,7 @@ from open_webui.models.groups import (
     GroupForm,
     GroupUpdateForm,
     GroupResponse,
+    UserIdsForm,
 )
 
 from open_webui.config import CACHE_DIR
@@ -101,6 +102,56 @@ async def update_group_by_id(
             )
     except Exception as e:
         log.exception(f"Error updating group {id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(e),
+        )
+
+
+############################
+# AddUserToGroupByUserIdAndGroupId
+############################
+
+
+@router.post("/id/{id}/users/add", response_model=Optional[GroupResponse])
+async def add_user_to_group(
+    id: str, form_data: UserIdsForm, user=Depends(get_admin_user)
+):
+    try:
+        if form_data.user_ids:
+            form_data.user_ids = Users.get_valid_user_ids(form_data.user_ids)
+
+        group = Groups.add_users_to_group(id, form_data.user_ids)
+        if group:
+            return group
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT("Error adding users to group"),
+            )
+    except Exception as e:
+        log.exception(f"Error adding users to group {id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(e),
+        )
+
+
+@router.post("/id/{id}/users/remove", response_model=Optional[GroupResponse])
+async def remove_users_from_group(
+    id: str, form_data: UserIdsForm, user=Depends(get_admin_user)
+):
+    try:
+        group = Groups.remove_users_from_group(id, form_data.user_ids)
+        if group:
+            return group
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT("Error removing users from group"),
+            )
+    except Exception as e:
+        log.exception(f"Error removing users from group {id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.DEFAULT(e),

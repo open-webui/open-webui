@@ -13,7 +13,7 @@
 	import Messages from '$lib/components/chat/Messages.svelte';
 	import Navbar from '$lib/components/layout/Navbar.svelte';
 
-	import { getUserById } from '$lib/apis/users';
+	import { getUserById, getUserSettings } from '$lib/apis/users';
 	import { getModels } from '$lib/apis';
 	import { toast } from 'svelte-sonner';
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
@@ -61,6 +61,25 @@
 	//////////////////////////
 
 	const loadSharedChat = async () => {
+		const userSettings = await getUserSettings(localStorage.token).catch((error) => {
+			console.error(error);
+			return null;
+		});
+
+		if (userSettings) {
+			settings.set(userSettings.ui);
+		} else {
+			let localStorageSettings = {} as Parameters<(typeof settings)['set']>[0];
+
+			try {
+				localStorageSettings = JSON.parse(localStorage.getItem('settings') ?? '{}');
+			} catch (e: unknown) {
+				console.error('Failed to parse settings from localStorage', e);
+			}
+
+			settings.set(localStorageSettings);
+		}
+
 		await models.set(
 			await getModels(
 				localStorage.token,
@@ -97,8 +116,8 @@
 				autoScroll = true;
 				await tick();
 
-				if (messages.length > 0) {
-					history.messages[messages.at(-1).id].done = true;
+				if (messages.length > 0 && messages.at(-1)?.id && messages.at(-1)?.id in history.messages) {
+					history.messages[messages.at(-1)?.id].done = true;
 				}
 				await tick();
 
@@ -126,7 +145,7 @@
 <svelte:head>
 	<title>
 		{title
-			? `${title.length > 30 ? `${title.slice(0, 30)}...` : title} | ${$WEBUI_NAME}`
+			? `${title.length > 30 ? `${title.slice(0, 30)}...` : title} • ${$WEBUI_NAME}`
 			: `${$WEBUI_NAME}`}
 	</title>
 </svelte:head>
@@ -137,7 +156,11 @@
 	>
 		<div class="flex flex-col flex-auto justify-center relative">
 			<div class=" flex flex-col w-full flex-auto overflow-auto h-0" id="messages-container">
-				<div class="pt-5 px-2 w-full max-w-5xl mx-auto">
+				<div
+					class="pt-5 px-2 w-full {($settings?.widescreenMode ?? null)
+						? 'max-w-full'
+						: 'max-w-5xl'} mx-auto"
+				>
 					<div class="px-3">
 						<div class=" text-2xl font-semibold line-clamp-1">
 							{title}
@@ -152,9 +175,9 @@
 				</div>
 
 				<div class=" h-full w-full flex flex-col py-2">
-					<div class="">
+					<div class="w-full">
 						<Messages
-							className="h-full flex pt-4 pb-8"
+							className="h-full flex pt-4 pb-8 "
 							{user}
 							chatId={$chatId}
 							readOnly={true}

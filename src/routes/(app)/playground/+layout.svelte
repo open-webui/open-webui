@@ -11,7 +11,7 @@
 
 <svelte:head>
 	<title>
-		{$i18n.t('Playground')} | {$WEBUI_NAME}
+		{$i18n.t('Playground')} • {$WEBUI_NAME}
 	</title>
 </svelte:head>
 
@@ -42,25 +42,21 @@
 					class="flex gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-full bg-transparent pt-1"
 				>
 					<a
-						class="min-w-fit rounded-full p-1.5 {['/playground', '/playground/'].includes(
-							$page.url.pathname
-						)
+						class="min-w-fit p-1.5 {['/playground', '/playground/'].includes($page.url.pathname)
 							? ''
 							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
 						href="/playground">{$i18n.t('Chat')}</a
 					>
 
 					<!-- <a
-						class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes('/playground/notes')
+						class="min-w-fit p-1.5 {$page.url.pathname.includes('/playground/notes')
 							? ''
 							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
 						href="/playground/notes">{$i18n.t('Notes')}</a
 					> -->
 
 					<a
-						class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes(
-							'/playground/completions'
-						)
+						class="min-w-fit p-1.5 {$page.url.pathname.includes('/playground/completions')
 							? ''
 							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
 						href="/playground/completions">{$i18n.t('Completions')}</a

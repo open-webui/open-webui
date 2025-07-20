@@ -8,12 +8,24 @@
 		"title": "English (GB)"
 	},
 	{
+		"code": "ar",
+		"title": "Arabic (العربية)"
+	},
+	{
 		"code": "ar-BH",
-		"title": "Arabic (عربي)"
+		"title": "Arabic (Bahrain)"
+	},
+	{
+		"code": "eu-ES",
+		"title": "Basque (Euskara)"
 	},
 	{
 		"code": "bn-BD",
 		"title": "Bengali (বাংলা)"
+	},
+	{
+		"code": "bo-TB",
+		"title": "Tibetan (བོད)"
 	},
 	{
 		"code": "bg-BG",
@@ -28,6 +40,10 @@
 		"title": "Cebuano (Filipino)"
 	},
 	{
+		"code": "hr-HR",
+		"title": "Croatian (Hrvatski)"
+	},
+	{
 		"code": "cs-CZ",
 		"title": "Czech (čeština)"
 	},
@@ -36,20 +52,12 @@
 		"title": "Danish (Denmark)"
 	},
 	{
-		"code": "de-DE",
-		"title": "German (Deutsch)"
+		"code": "nl-NL",
+		"title": "Dutch (Netherlands)"
 	},
 	{
-		"code": "es-ES",
-		"title": "Spanish (Español)"
-	},
-	{
-		"code": "eu-ES",
-		"title": "Basque (Euskara)"
-	},
-	{
-		"code": "fa-IR",
-		"title": "Persian (فارسی)"
+		"code": "et-EE",
+		"title": "Estonian (Eesti)"
 	},
 	{
 		"code": "fi-FI",
@@ -64,6 +72,18 @@
 		"title": "French (France)"
 	},
 	{
+		"code": "gl-ES",
+		"title": "Galician (Galego)"
+	},
+	{
+		"code": "ka-GE",
+		"title": "Georgian (ქართული)"
+	},
+	{
+		"code": "de-DE",
+		"title": "German (Deutsch)"
+	},
+	{
 		"code": "el-GR",
 		"title": "Greek (Ἑλλάδα)"
 	},
@@ -74,10 +94,6 @@
 	{
 		"code": "hi-IN",
 		"title": "Hindi (हिंदी)"
-	},
-	{
-		"code": "hr-HR",
-		"title": "Croatian (Hrvatski)"
 	},
 	{
 		"code": "hu-HU",
@@ -100,10 +116,6 @@
 		"title": "Japanese (日本語)"
 	},
 	{
-		"code": "ka-GE",
-		"title": "Georgian (ქართული)"
-	},
-	{
 		"code": "ko-KR",
 		"title": "Korean (한국어)"
 	},
@@ -120,12 +132,8 @@
 		"title": "Norwegian Bokmål (Norway)"
 	},
 	{
-		"code": "nl-NL",
-		"title": "Dutch (Netherlands)"
-	},
-	{
-		"code": "pa-IN",
-		"title": "Punjabi (India)"
+		"code": "fa-IR",
+		"title": "Persian (فارسی)"
 	},
 	{
 		"code": "pl-PL",
@@ -140,6 +148,10 @@
 		"title": "Portuguese (Portugal)"
 	},
 	{
+		"code": "pa-IN",
+		"title": "Punjabi (India)"
+	},
+	{
 		"code": "ro-RO",
 		"title": "Romanian (Romania)"
 	},
@@ -148,16 +160,20 @@
 		"title": "Russian (Russia)"
 	},
 	{
+		"code": "sr-RS",
+		"title": "Serbian (Српски)"
+	},
+	{
 		"code": "sk-SK",
 		"title": "Slovak (Slovenčina)"
 	},
 	{
-		"code": "sv-SE",
-		"title": "Swedish (Svenska)"
+		"code": "es-ES",
+		"title": "Spanish (Español)"
 	},
 	{
-		"code": "sr-RS",
-		"title": "Serbian (Српски)"
+		"code": "sv-SE",
+		"title": "Swedish (Svenska)"
 	},
 	{
 		"code": "th-TH",
@@ -168,7 +184,7 @@
 		"title": "Turkish (Türkçe)"
 	},
 	{
-		"code": "tk-TW",
+		"code": "tk-TM",
 		"title": "Turkmen (Türkmençe)"
 	},
 	{
@@ -178,6 +194,18 @@
 	{
 		"code": "ur-PK",
 		"title": "Urdu (اردو)"
+	},
+	{
+		"code": "ug-CN",
+		"title": "Uyghur (ئۇيغۇرچە)"
+	},
+	{
+		"code": "uz-Cyrl-UZ",
+		"title": "Uzbek (Cyrillic)"
+	},
+	{
+		"code": "uz-Latn-UZ",
+		"title": "Uzbek (Latin)"
 	},
 	{
 		"code": "vi-VN",

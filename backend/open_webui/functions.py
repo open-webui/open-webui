@@ -25,10 +25,14 @@ from open_webui.socket.main import (
 )
 
 
+from open_webui.models.users import UserModel
 from open_webui.models.functions import Functions
 from open_webui.models.models import Models
 
-from open_webui.utils.plugin import load_function_module_by_id
+from open_webui.utils.plugin import (
+    load_function_module_by_id,
+    get_function_module_from_cache,
+)
 from open_webui.utils.tools import get_tools
 from open_webui.utils.access_control import has_access
 
@@ -53,12 +57,7 @@ log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
 def get_function_module_by_id(request: Request, pipe_id: str):
-    # Check if function is already loaded
-    if pipe_id not in request.app.state.FUNCTIONS:
-        function_module, _, _ = load_function_module_by_id(pipe_id)
-        request.app.state.FUNCTIONS[pipe_id] = function_module
-    else:
-        function_module = request.app.state.FUNCTIONS[pipe_id]
+    function_module, _, _ = get_function_module_from_cache(request, pipe_id)
 
     if hasattr(function_module, "valves") and hasattr(function_module, "Valves"):
         valves = Functions.get_function_valves_by_id(pipe_id)
@@ -223,15 +222,13 @@ async def generate_function_chat_completion(
     extra_params = {
         "__event_emitter__": __event_emitter__,
         "__event_call__": __event_call__,
+        "__chat_id__": metadata.get("chat_id", None),
+        "__session_id__": metadata.get("session_id", None),
+        "__message_id__": metadata.get("message_id", None),
         "__task__": __task__,
         "__task_body__": __task_body__,
         "__files__": files,
-        "__user__": {
-            "id": user.id,
-            "email": user.email,
-            "name": user.name,
-            "role": user.role,
-        },
+        "__user__": user.model_dump() if isinstance(user, UserModel) else {},
         "__metadata__": metadata,
         "__request__": request,
     }
@@ -252,8 +249,13 @@ async def generate_function_chat_completion(
             form_data["model"] = model_info.base_model_id
 
         params = model_info.params.model_dump()
-        form_data = apply_model_params_to_body_openai(params, form_data)
-        form_data = apply_model_system_prompt_to_body(params, form_data, metadata, user)
+
+        if params:
+            system = params.pop("system", None)
+            form_data = apply_model_params_to_body_openai(params, form_data)
+            form_data = apply_model_system_prompt_to_body(
+                system, form_data, metadata, user
+            )
 
     pipe_id = get_pipe_id(form_data)
     function_module = get_function_module_by_id(request, pipe_id)

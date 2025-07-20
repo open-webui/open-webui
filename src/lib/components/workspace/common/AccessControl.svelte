@@ -13,16 +13,46 @@
 	export let onChange: Function = () => {};
 
 	export let accessRoles = ['read'];
-	export let accessControl = null;
+	export let accessControl = {};
+
+	export let allowPublic = true;
 
 	let selectedGroupId = '';
 	let groups = [];
+
+	$: if (!allowPublic && accessControl === null) {
+		accessControl = {
+			read: {
+				group_ids: [],
+				user_ids: []
+			},
+			write: {
+				group_ids: [],
+				user_ids: []
+			}
+		};
+		onChange(accessControl);
+	}
 
 	onMount(async () => {
 		groups = await getGroups(localStorage.token);
 
 		if (accessControl === null) {
-			accessControl = null;
+			if (allowPublic) {
+				accessControl = null;
+			} else {
+				accessControl = {
+					read: {
+						group_ids: [],
+						user_ids: []
+					},
+					write: {
+						group_ids: [],
+						user_ids: []
+					}
+				};
+				onChange(accessControl);
+			}
 		} else {
 			accessControl = {
 				read: {
@@ -104,17 +134,21 @@
 						} else {
 							accessControl = {
 								read: {
-									group_ids: []
+									group_ids: [],
+									user_ids: []
 								},
 								write: {
-									group_ids: []
+									group_ids: [],
+									user_ids: []
 								}
 							};
 						}
 					}}
 				>
-					<option class=" text-gray-700" value="private" selected>Private</option>
-					<option class=" text-gray-700" value="public" selected>Public</option>
+					<option class=" text-gray-700" value="private" selected>{$i18n.t('Private')}</option>
+					{#if allowPublic}
+						<option class=" text-gray-700" value="public" selected>{$i18n.t('Public')}</option>
+					{/if}
 				</select>
 
 				<div class=" text-xs text-gray-400 font-medium">

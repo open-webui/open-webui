@@ -22,7 +22,7 @@ def get_task_model_id(
     # Set the task model
     task_model_id = default_model_id
     # Check if the user has a custom task model and use that model
-    if models[task_model_id].get("owned_by") == "ollama":
+    if models[task_model_id].get("connection_type") == "local":
         if task_model and task_model in models:
             task_model_id = task_model
     else:
@@ -152,6 +152,8 @@ def rag_template(template: str, context: str, query: str):
     if template.strip() == "":
         template = DEFAULT_RAG_TEMPLATE
 
+    template = prompt_template(template)
+
     if "[context]" not in template and "{{CONTEXT}}" not in template:
         log.debug(
             "WARNING: The RAG template does not contain the '[context]' or '{{CONTEXT}}' placeholder."
@@ -202,6 +204,24 @@ def title_generation_template(
         ),
     )
 
+    return template
+
+
+def follow_up_generation_template(
+    template: str, messages: list[dict], user: Optional[dict] = None
+) -> str:
+    prompt = get_last_user_message(messages)
+    template = replace_prompt_variable(template, prompt)
+    template = replace_messages_variable(template, messages)
+
+    template = prompt_template(
+        template,
+        **(
+            {"user_name": user.get("name"), "user_location": user.get("location")}
+            if user
+            else {}
+        ),
+    )
     return template
 
 

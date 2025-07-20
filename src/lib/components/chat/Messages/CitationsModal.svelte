@@ -4,6 +4,8 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
+	import XMark from '$lib/components/icons/XMark.svelte';
+
 	const i18n = getContext('i18n');
 
 	export let show = false;
@@ -14,6 +16,7 @@
 	let mergedDocuments = [];
 
 	function calculatePercentage(distance: number) {
+		if (typeof distance !== 'number') return null;
 		if (distance < 0) return 0;
 		if (distance > 1) return 100;
 		return Math.round(distance * 10000) / 100;
@@ -44,6 +47,14 @@
 			);
 		}
 	}
+
+	const decodeString = (str: string) => {
+		try {
+			return decodeURIComponent(str);
+		} catch (e) {
+			return str;
+		}
+	};
 </script>
 
 <Modal size="lg" bind:show>
@@ -58,16 +69,7 @@
 					show = false;
 				}}
 			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 20 20"
-					fill="currentColor"
-					class="w-5 h-5"
-				>
-					<path
-						d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-					/>
-				</svg>
+				<XMark className={'size-5'} />
 			</button>
 		</div>
 
@@ -98,9 +100,9 @@
 												: `#`}
 										target="_blank"
 									>
-										{document?.metadata?.name ?? document.source.name}
+										{decodeString(document?.metadata?.name ?? document.source.name)}
 									</a>
-									{#if document?.metadata?.page}
+									{#if Number.isInteger(document?.metadata?.page)}
 										<span class="text-xs text-gray-500 dark:text-gray-400">
 											({$i18n.t('page')}
 											{document.metadata.page + 1})
@@ -108,6 +110,17 @@
 									{/if}
 								</div>
 							</Tooltip>
+							{#if document.metadata?.parameters}
+								<div class="text-sm font-medium dark:text-gray-300 mt-2">
+									{$i18n.t('Parameters')}
+								</div>
+								<pre
+									class="text-sm dark:text-gray-400 bg-gray-50 dark:bg-gray-800 p-2 rounded-md overflow-auto max-h-40">{JSON.stringify(
+										document.metadata.parameters,
+										null,
+										2
+									)}</pre>
+							{/if}
 							{#if showRelevance}
 								<div class="text-sm font-medium dark:text-gray-300 mt-2">
 									{$i18n.t('Relevance')}
@@ -122,17 +135,23 @@
 										<div class="text-sm my-1 dark:text-gray-400 flex items-center gap-2 w-fit">
 											{#if showPercentage}
 												{@const percentage = calculatePercentage(document.distance)}
-												<span
-													class={`px-1 rounded-sm font-medium ${getRelevanceColor(percentage)}`}
-												>
-													{percentage.toFixed(2)}%
-												</span>
+
+												{#if typeof percentage === 'number'}
+													<span
+														class={`px-1 rounded-sm font-medium ${getRelevanceColor(percentage)}`}
+													>
+														{percentage.toFixed(2)}%
+													</span>
+												{/if}
+
+												{#if typeof document?.distance === 'number'}
+													<span class="text-gray-500 dark:text-gray-500">
+														({(document?.distance ?? 0).toFixed(4)})
+													</span>
+												{/if}
+											{:else if typeof document?.distance === 'number'}
 												<span class="text-gray-500 dark:text-gray-500">
-													({document.distance.toFixed(4)})
-												</span>
-											{:else}
-												<span class="text-gray-500 dark:text-gray-500">
-													{document.distance.toFixed(4)}
+													({(document?.distance ?? 0).toFixed(4)})
 												</span>
 											{/if}
 										</div>

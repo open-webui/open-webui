@@ -26,6 +26,7 @@
 	import Spinner from '../common/Spinner.svelte';
 	import { capitalizeFirstLetter } from '$lib/utils';
 	import Tooltip from '../common/Tooltip.svelte';
+	import XMark from '../icons/XMark.svelte';
 
 	let loaded = false;
 
@@ -38,10 +39,20 @@
 	let knowledgeBases = [];
 	let filteredItems = [];
 
-	$: if (knowledgeBases) {
+	$: if (knowledgeBases.length > 0) {
+		// Added a check for non-empty array, good practice
 		fuse = new Fuse(knowledgeBases, {
-			keys: ['name', 'description']
+			keys: [
+				'name',
+				'description',
+				'user.name', // Ensures Fuse looks into item.user.name
+				'user.email' // Ensures Fuse looks into item.user.email
+			],
+			threshold: 0.0 // You might want to adjust this. Lower is more strict. Default is 0.6.
+			// 0.0 is exact match.
 		});
+	} else {
+		fuse = null; // Reset fuse if knowledgeBases is empty
 	}
 
 	$: if (fuse) {
@@ -72,7 +83,7 @@
 
 <svelte:head>
 	<title>
-		{$i18n.t('Knowledge')} | {$WEBUI_NAME}
+		{$i18n.t('Knowledge')} • {$WEBUI_NAME}
 	</title>
 </svelte:head>
 
@@ -105,6 +116,18 @@
 					bind:value={query}
 					placeholder={$i18n.t('Search Knowledge')}
 				/>
+				{#if query}
+					<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
+						<button
+							class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+							on:click={() => {
+								query = '';
+							}}
+						>
+							<XMark className="size-3" strokeWidth="2" />
+						</button>
+					</div>
+				{/if}
 			</div>
 
 			<div>
@@ -124,7 +147,7 @@
 	<div class="mb-5 grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-2">
 		{#each filteredItems as item}
 			<button
-				class=" flex space-x-4 cursor-pointer text-left w-full px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-850 transition rounded-xl"
+				class=" flex space-x-4 cursor-pointer text-left w-full px-3 py-2 hover:bg-black/5 dark:hover:bg-white/5 transition rounded-xl"
 				on:click={() => {
 					if (item?.meta?.document) {
 						toast.error(
@@ -192,6 +215,6 @@
 	</div>
 {:else}
 	<div class="w-full h-full flex justify-center items-center">
-		<Spinner />
+		<Spinner className="size-5" />
 	</div>
 {/if}

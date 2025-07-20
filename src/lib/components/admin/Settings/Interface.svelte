@@ -1,20 +1,26 @@
 <script lang="ts">
+	import fileSaver from 'file-saver';
+	const { saveAs } = fileSaver;
+
 	import { v4 as uuidv4 } from 'uuid';
 	import { toast } from 'svelte-sonner';
 
-	import { getBackendConfig, getTaskConfig, updateTaskConfig } from '$lib/apis';
+	import { getBackendConfig, getModels, getTaskConfig, updateTaskConfig } from '$lib/apis';
 	import { setDefaultPromptSuggestions } from '$lib/apis/configs';
-	import { config, models, settings, user } from '$lib/stores';
+	import { config, settings, user } from '$lib/stores';
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
 
 	import { banners as _banners } from '$lib/stores';
 	import type { Banner } from '$lib/types';
 
+	import { getBaseModels } from '$lib/apis/models';
 	import { getBanners, setBanners } from '$lib/apis/configs';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
+	import Spinner from '$lib/components/common/Spinner.svelte';
+	import Banners from './Interface/Banners.svelte';
 
 	const dispatch = createEventDispatcher();
 
@@ -25,6 +31,8 @@
 		TASK_MODEL_EXTERNAL: '',
 		ENABLE_TITLE_GENERATION: true,
 		TITLE_GENERATION_PROMPT_TEMPLATE: '',
+		ENABLE_FOLLOW_UP_GENERATION: true,
+		FOLLOW_UP_GENERATION_PROMPT_TEMPLATE: '',
 		IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE: '',
 		ENABLE_AUTOCOMPLETE_GENERATION: true,
 		AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH: -1,
@@ -42,6 +50,7 @@
 	const updateInterfaceHandler = async () => {
 		taskConfig = await updateTaskConfig(localStorage.token, taskConfig);
 
+		promptSuggestions = promptSuggestions.filter((p) => p.content !== '');
 		promptSuggestions = await setDefaultPromptSuggestions(localStorage.token, promptSuggestions);
 		await updateBanners();
 
@@ -49,6 +58,7 @@
 	};
 
 	onMount(async () => {
+		await init();
 		taskConfig = await getTaskConfig(localStorage.token);
 
 		promptSuggestions = $config?.default_prompt_suggestions ?? [];
@@ -58,9 +68,40 @@
 	const updateBanners = async () => {
 		_banners.set(await setBanners(localStorage.token, banners));
 	};
+
+	let workspaceModels = null;
+	let baseModels = null;
+
+	let models = null;
+
+	const init = async () => {
+		workspaceModels = await getBaseModels(localStorage.token);
+		baseModels = await getModels(localStorage.token, null, false);
+
+		models = baseModels.map((m) => {
+			const workspaceModel = workspaceModels.find((wm) => wm.id === m.id);
+
+			if (workspaceModel) {
+				return {
+					...m,
+					...workspaceModel
+				};
+			} else {
+				return {
+					...m,
+					id: m.id,
+					name: m.name,
+
+					is_active: true
+				};
+			}
+		});
+
+		console.debug('models', models);
+	};
 </script>
 
-{#if taskConfig}
+{#if models !== null && taskConfig}
 	<form
 		class="flex flex-col h-full justify-between space-y-3 text-sm"
 		on:submit|preventDefault={() => {
@@ -74,8 +115,8 @@
 
 				<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
-				<div class=" mb-1 font-medium flex items-center">
-					<div class=" text-xs mr-1">{$i18n.t('Set Task Model')}</div>
+				<div class=" mb-2 font-medium flex items-center">
+					<div class=" text-xs mr-1">{$i18n.t('Task Model')}</div>
 					<Tooltip
 						content={$i18n.t(
 							'A task model is used when performing tasks such as generating titles for chats and web search queries'
@@ -100,32 +141,70 @@
 
 				<div class=" mb-2.5 flex w-full gap-2">
 					<div class="flex-1">
-						<div class=" text-xs mb-1">{$i18n.t('Local Models')}</div>
+						<div class=" text-xs mb-1">{$i18n.t('Local Task Model')}</div>
 						<select
 							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 							bind:value={taskConfig.TASK_MODEL}
 							placeholder={$i18n.t('Select a model')}
+							on:change={() => {
+								if (taskConfig.TASK_MODEL) {
+									const model = models.find((m) => m.id === taskConfig.TASK_MODEL);
+									if (model) {
+										if (model?.access_control !== null) {
+											toast.error(
+												$i18n.t(
+													'This model is not publicly available. Please select another model.'
+												)
+											);
+										}
+
+										taskConfig.TASK_MODEL = model.id;
+									} else {
+										taskConfig.TASK_MODEL = '';
+									}
+								}
+							}}
 						>
 							<option value="" selected>{$i18n.t('Current Model')}</option>
-							{#each $models.filter((m) => m.owned_by === 'ollama') as model}
+							{#each models as model}
 								<option value={model.id} class="bg-gray-100 dark:bg-gray-700">
 									{model.name}
+									{model?.connection_type === 'local' ? `(${$i18n.t('Local')})` : ''}
 								</option>
 							{/each}
 						</select>
 					</div>
 
 					<div class="flex-1">
-						<div class=" text-xs mb-1">{$i18n.t('External Models')}</div>
+						<div class=" text-xs mb-1">{$i18n.t('External Task Model')}</div>
 						<select
 							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 							bind:value={taskConfig.TASK_MODEL_EXTERNAL}
 							placeholder={$i18n.t('Select a model')}
+							on:change={() => {
+								if (taskConfig.TASK_MODEL_EXTERNAL) {
+									const model = models.find((m) => m.id === taskConfig.TASK_MODEL_EXTERNAL);
+									if (model) {
+										if (model?.access_control !== null) {
+											toast.error(
+												$i18n.t(
+													'This model is not publicly available. Please select another model.'
+												)
+											);
+										}
+
+										taskConfig.TASK_MODEL_EXTERNAL = model.id;
+									} else {
+										taskConfig.TASK_MODEL_EXTERNAL = '';
+									}
+								}
+							}}
 						>
 							<option value="" selected>{$i18n.t('Current Model')}</option>
-							{#each $models as model}
+							{#each models as model}
 								<option value={model.id} class="bg-gray-100 dark:bg-gray-700">
 									{model.name}
+									{model?.connection_type === 'local' ? `(${$i18n.t('Local')})` : ''}
 								</option>
 							{/each}
 						</select>
@@ -150,6 +229,32 @@
 						>
 							<Textarea
 								bind:value={taskConfig.TITLE_GENERATION_PROMPT_TEMPLATE}
+								placeholder={$i18n.t(
+									'Leave empty to use the default prompt, or enter a custom prompt'
+								)}
+							/>
+						</Tooltip>
+					</div>
+				{/if}
+
+				<div class="mb-2.5 flex w-full items-center justify-between">
+					<div class=" self-center text-xs font-medium">
+						{$i18n.t('Follow Up Generation')}
+					</div>
+
+					<Switch bind:state={taskConfig.ENABLE_FOLLOW_UP_GENERATION} />
+				</div>
+
+				{#if taskConfig.ENABLE_FOLLOW_UP_GENERATION}
+					<div class="mb-2.5">
+						<div class=" mb-1 text-xs font-medium">{$i18n.t('Follow Up Generation Prompt')}</div>
+
+						<Tooltip
+							content={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
+							placement="top-start"
+						>
+							<Textarea
+								bind:value={taskConfig.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE}
 								placeholder={$i18n.t(
 									'Leave empty to use the default prompt, or enter a custom prompt'
 								)}
@@ -283,9 +388,9 @@
 
 				<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
-				<div class="  {banners.length > 0 ? ' mb-3' : ''}">
-					<div class="mb-2.5 flex w-full justify-between">
-						<div class=" self-center text-sm font-semibold">
+				<div class="mb-2.5">
+					<div class="flex w-full justify-between">
+						<div class=" self-center text-xs">
 							{$i18n.t('Banners')}
 						</div>
 
@@ -321,69 +426,13 @@
 						</button>
 					</div>
 
-					<div class=" flex flex-col space-y-1">
-						{#each banners as banner, bannerIdx}
-							<div class=" flex justify-between">
-								<div
-									class="flex flex-row flex-1 border rounded-xl border-gray-100 dark:border-gray-850"
-								>
-									<select
-										class="w-fit capitalize rounded-xl py-2 px-4 text-xs bg-transparent outline-hidden"
-										bind:value={banner.type}
-										required
-									>
-										{#if banner.type == ''}
-											<option value="" selected disabled class="text-gray-900"
-												>{$i18n.t('Type')}</option
-											>
-										{/if}
-										<option value="info" class="text-gray-900">{$i18n.t('Info')}</option>
-										<option value="warning" class="text-gray-900">{$i18n.t('Warning')}</option>
-										<option value="error" class="text-gray-900">{$i18n.t('Error')}</option>
-										<option value="success" class="text-gray-900">{$i18n.t('Success')}</option>
-									</select>
-
-									<input
-										class="pr-5 py-1.5 text-xs w-full bg-transparent outline-hidden"
-										placeholder={$i18n.t('Content')}
-										bind:value={banner.content}
-									/>
-
-									<div class="relative top-1.5 -left-2">
-										<Tooltip content={$i18n.t('Dismissible')} className="flex h-fit items-center">
-											<Switch bind:state={banner.dismissible} />
-										</Tooltip>
-									</div>
-								</div>
-
-								<button
-									class="px-2"
-									type="button"
-									on:click={() => {
-										banners.splice(bannerIdx, 1);
-										banners = banners;
-									}}
-								>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 20 20"
-										fill="currentColor"
-										class="w-4 h-4"
-									>
-										<path
-											d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-										/>
-									</svg>
-								</button>
-							</div>
-						{/each}
-					</div>
+					<Banners bind:banners />
 				</div>
 
-				{#if $user.role === 'admin'}
+				{#if $user?.role === 'admin'}
 					<div class=" space-y-3">
 						<div class="flex w-full justify-between mb-2">
-							<div class=" self-center text-sm font-semibold">
+							<div class=" self-center text-xs">
 								{$i18n.t('Default Prompt Suggestions')}
 							</div>
 
@@ -466,6 +515,111 @@
 								{$i18n.t('Adjusting these settings will apply changes universally to all users.')}
 							</div>
 						{/if}
+
+						<div class="flex items-center justify-end space-x-2 mt-2">
+							<input
+								id="prompt-suggestions-import-input"
+								type="file"
+								accept=".json"
+								hidden
+								on:change={(e) => {
+									const files = e.target.files;
+									if (!files || files.length === 0) {
+										return;
+									}
+
+									console.log(files);
+
+									let reader = new FileReader();
+									reader.onload = async (event) => {
+										try {
+											let suggestions = JSON.parse(event.target.result);
+
+											suggestions = suggestions.map((s) => {
+												if (typeof s.title === 'string') {
+													s.title = [s.title, ''];
+												} else if (!Array.isArray(s.title)) {
+													s.title = ['', ''];
+												}
+
+												return s;
+											});
+
+											promptSuggestions = [...promptSuggestions, ...suggestions];
+										} catch (error) {
+											toast.error($i18n.t('Invalid JSON file'));
+											return;
+										}
+									};
+
+									reader.readAsText(files[0]);
+
+									e.target.value = ''; // Reset the input value
+								}}
+							/>
+
+							<button
+								class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
+								type="button"
+								on:click={() => {
+									const input = document.getElementById('prompt-suggestions-import-input');
+									if (input) {
+										input.click();
+									}
+								}}
+							>
+								<div class=" self-center mr-2 font-medium line-clamp-1">
+									{$i18n.t('Import Prompt Suggestions')}
+								</div>
+
+								<div class=" self-center">
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										viewBox="0 0 16 16"
+										fill="currentColor"
+										class="w-3.5 h-3.5"
+									>
+										<path
+											fill-rule="evenodd"
+											d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 9.5a.75.75 0 0 1-.75-.75V8.06l-.72.72a.75.75 0 0 1-1.06-1.06l2-2a.75.75 0 0 1 1.06 0l2 2a.75.75 0 1 1-1.06 1.06l-.72-.72v2.69a.75.75 0 0 1-.75.75Z"
+											clip-rule="evenodd"
+										/>
+									</svg>
+								</div>
+							</button>
+
+							{#if promptSuggestions.length}
+								<button
+									class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
+									type="button"
+									on:click={async () => {
+										let blob = new Blob([JSON.stringify(promptSuggestions)], {
+											type: 'application/json'
+										});
+										saveAs(blob, `prompt-suggestions-export-${Date.now()}.json`);
+									}}
+								>
+									<div class=" self-center mr-2 font-medium line-clamp-1">
+										{$i18n.t('Export Prompt Suggestions')} ({promptSuggestions.length})
+									</div>
+
+									<div class=" self-center">
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											viewBox="0 0 16 16"
+											fill="currentColor"
+											class="w-3.5 h-3.5"
+										>
+											<path
+												fill-rule="evenodd"
+												d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 3.5a.75.75 0 0 1 .75.75v2.69l.72-.72a.75.75 0 1 1 1.06 1.06l-2 2a.75.75 0 0 1-1.06 0l-2-2a.75.75 0 0 1 1.06-1.06l.72.72V6.25A.75.75 0 0 1 8 5.5Z"
+												clip-rule="evenodd"
+											/>
+										</svg>
+									</div>
+								</button>
+							{/if}
+						</div>
 					</div>
 				{/if}
 			</div>
@@ -480,4 +634,8 @@
 			</button>
 		</div>
 	</form>
+{:else}
+	<div class=" h-full w-full flex justify-center items-center">
+		<Spinner className="size-5" />
+	</div>
 {/if}

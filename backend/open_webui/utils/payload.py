@@ -1,5 +1,6 @@
 from open_webui.utils.task import prompt_template, prompt_variables_template
 from open_webui.utils.misc import (
+    deep_update,
     add_or_update_system_message,
 )
 
@@ -9,9 +10,8 @@ import json
 
 # inplace function: form_data is modified
 def apply_model_system_prompt_to_body(
-    params: dict, form_data: dict, metadata: Optional[dict] = None, user=None
+    system: Optional[str], form_data: dict, metadata: Optional[dict] = None, user=None
 ) -> dict:
-    system = params.get("system", None)
     if not system:
         return form_data
 
@@ -45,29 +45,94 @@ def apply_model_params_to_body(
     if not params:
         return form_data
 
-    for key, cast_func in mappings.items():
-        if (value := params.get(key)) is not None:
-            form_data[key] = cast_func(value)
+    for key, value in params.items():
+        if value is not None:
+            if key in mappings:
+                cast_func = mappings[key]
+                if isinstance(cast_func, Callable):
+                    form_data[key] = cast_func(value)
+            else:
+                form_data[key] = value
 
     return form_data
 
 
+def remove_open_webui_params(params: dict) -> dict:
+    """
+    Removes OpenWebUI specific parameters from the provided dictionary.
+
+    Args:
+        params (dict): The dictionary containing parameters.
+
+    Returns:
+        dict: The modified dictionary with OpenWebUI parameters removed.
+    """
+    open_webui_params = {
+        "stream_response": bool,
+        "function_calling": str,
+        "system": str,
+    }
+
+    for key in list(params.keys()):
+        if key in open_webui_params:
+            del params[key]
+
+    return params
+
+
 # inplace function: form_data is modified
 def apply_model_params_to_body_openai(params: dict, form_data: dict) -> dict:
+    params = remove_open_webui_params(params)
+
+    custom_params = params.pop("custom_params", {})
+    if custom_params:
+        # Attempt to parse custom_params if they are strings
+        for key, value in custom_params.items():
+            if isinstance(value, str):
+                try:
+                    # Attempt to parse the string as JSON
+                    custom_params[key] = json.loads(value)
+                except json.JSONDecodeError:
+                    # If it fails, keep the original string
+                    pass
+
+        # If there are custom parameters, we need to apply them first
+        params = deep_update(params, custom_params)
+
     mappings = {
         "temperature": float,
         "top_p": float,
+        "min_p": float,
         "max_tokens": int,
         "frequency_penalty": float,
+        "presence_penalty": float,
         "reasoning_effort": str,
         "seed": lambda x: x,
         "stop": lambda x: [bytes(s, "utf-8").decode("unicode_escape") for s in x],
         "logit_bias": lambda x: x,
+        "response_format": dict,
     }
     return apply_model_params_to_body(params, form_data, mappings)
 
 
 def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
+    params = remove_open_webui_params(params)
+
+    custom_params = params.pop("custom_params", {})
+    if custom_params:
+        # Attempt to parse custom_params if they are strings
+        for key, value in custom_params.items():
+            if isinstance(value, str):
+                try:
+                    # Attempt to parse the string as JSON
+                    custom_params[key] = json.loads(value)
+                except json.JSONDecodeError:
+                    # If it fails, keep the original string
+                    pass
+
+        # If there are custom parameters, we need to apply them first
+        params = deep_update(params, custom_params)
+
     # Convert OpenAI parameter names to Ollama parameter names if needed.
     name_differences = {
         "max_tokens": "num_predict",
@@ -110,7 +175,32 @@ def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
         "num_thread": int,
     }
 
-    return apply_model_params_to_body(params, form_data, mappings)
+    def parse_json(value: str) -> dict:
+        """
+        Parses a JSON string into a dictionary, handling potential JSONDecodeError.
+        """
+        try:
+            return json.loads(value)
+        except Exception as e:
+            return value
+
+    ollama_root_params = {
+        "format": lambda x: parse_json(x),
+        "keep_alive": lambda x: parse_json(x),
+        "think": bool,
+    }
+
+    for key, value in ollama_root_params.items():
+        if (param := params.get(key, None)) is not None:
+            # Copy the parameter to new name then delete it, to prevent Ollama warning of invalid option provided
+            form_data[key] = value(param)
+            del params[key]
+
+    # Unlike OpenAI, Ollama does not support params directly in the body
+    form_data["options"] = apply_model_params_to_body(
+        params, (form_data.get("options", {}) or {}), mappings
+    )
+    return form_data
 
 
 def convert_messages_openai_to_ollama(messages: list[dict]) -> list[dict]:
@@ -205,31 +295,48 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
         openai_payload.get("messages")
     )
     ollama_payload["stream"] = openai_payload.get("stream", False)
-
     if "tools" in openai_payload:
         ollama_payload["tools"] = openai_payload["tools"]
-
-    if "format" in openai_payload:
-        ollama_payload["format"] = openai_payload["format"]
 
     # If there are advanced parameters in the payload, format them in Ollama's options field
     if openai_payload.get("options"):
         ollama_payload["options"] = openai_payload["options"]
         ollama_options = openai_payload["options"]
 
+        def parse_json(value: str) -> dict:
+            """
+            Parses a JSON string into a dictionary, handling potential JSONDecodeError.
+            """
+            try:
+                return json.loads(value)
+            except Exception as e:
+                return value
+
+        ollama_root_params = {
+            "format": lambda x: parse_json(x),
+            "keep_alive": lambda x: parse_json(x),
+            "think": bool,
+        }
+
+        # Ollama's options field can contain parameters that should be at the root level.
+        for key, value in ollama_root_params.items():
+            if (param := ollama_options.get(key, None)) is not None:
+                # Copy the parameter to new name then delete it, to prevent Ollama warning of invalid option provided
+                ollama_payload[key] = value(param)
+                del ollama_options[key]
+
         # Re-Mapping OpenAI's `max_tokens` -> Ollama's `num_predict`
         if "max_tokens" in ollama_options:
             ollama_options["num_predict"] = ollama_options["max_tokens"]
-            del ollama_options[
-                "max_tokens"
-            ]  # To prevent Ollama warning of invalid option provided
+            del ollama_options["max_tokens"]
 
         # Ollama lacks a "system" prompt option. It has to be provided as a direct parameter, so we copy it down.
+        # Comment: Not sure why this is needed, but we'll keep it for compatibility.
         if "system" in ollama_options:
             ollama_payload["system"] = ollama_options["system"]
-            del ollama_options[
-                "system"
-            ]  # To prevent Ollama warning of invalid option provided
+            del ollama_options["system"]
+
+        ollama_payload["options"] = ollama_options
 
     # If there is the "stop" parameter in the openai_payload, remap it to the ollama_payload.options
     if "stop" in openai_payload:
@@ -239,5 +346,43 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
 
     if "metadata" in openai_payload:
         ollama_payload["metadata"] = openai_payload["metadata"]
+
+    if "response_format" in openai_payload:
+        response_format = openai_payload["response_format"]
+        format_type = response_format.get("type", None)
+
+        schema = response_format.get(format_type, None)
+        if schema:
+            format = schema.get("schema", None)
+            ollama_payload["format"] = format
+
+    return ollama_payload
+
+
+def convert_embedding_payload_openai_to_ollama(openai_payload: dict) -> dict:
+    """
+    Convert an embeddings request payload from OpenAI format to Ollama format.
+
+    Args:
+        openai_payload (dict): The original payload designed for OpenAI API usage.
+
+    Returns:
+        dict: A payload compatible with the Ollama API embeddings endpoint.
+    """
+    ollama_payload = {"model": openai_payload.get("model")}
+    input_value = openai_payload.get("input")
+
+    # Ollama expects 'input' as a list, and 'prompt' as a single string.
+    if isinstance(input_value, list):
+        ollama_payload["input"] = input_value
+        ollama_payload["prompt"] = "\n".join(str(x) for x in input_value)
+    else:
+        ollama_payload["input"] = [input_value]
+        ollama_payload["prompt"] = str(input_value)
+
+    # Optionally forward other fields if present
+    for optional_key in ("options", "truncate", "keep_alive"):
+        if optional_key in openai_payload:
+            ollama_payload[optional_key] = openai_payload[optional_key]
 
     return ollama_payload

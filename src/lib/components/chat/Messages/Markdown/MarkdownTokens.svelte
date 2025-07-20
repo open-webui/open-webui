@@ -1,6 +1,6 @@
 <script lang="ts">
 	import DOMPurify from 'dompurify';
-	import { createEventDispatcher, onMount, getContext } from 'svelte';
+	import { onMount, getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
 	import fileSaver from 'file-saver';
@@ -14,19 +14,28 @@
 	import CodeBlock from '$lib/components/chat/Messages/CodeBlock.svelte';
 	import MarkdownInlineTokens from '$lib/components/chat/Messages/Markdown/MarkdownInlineTokens.svelte';
 	import KatexRenderer from './KatexRenderer.svelte';
+	import AlertRenderer, { alertComponent } from './AlertRenderer.svelte';
 	import Collapsible from '$lib/components/common/Collapsible.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ArrowDownTray from '$lib/components/icons/ArrowDownTray.svelte';
-	import Source from './Source.svelte';
 
-	const dispatch = createEventDispatcher();
+	import Source from './Source.svelte';
+	import { settings } from '$lib/stores';
+	import HtmlToken from './HTMLToken.svelte';
 
 	export let id: string;
 	export let tokens: Token[];
 	export let top = true;
 	export let attributes = {};
 
+	export let done = true;
+
 	export let save = false;
+	export let preview = false;
+
+	export let onSave: Function = () => {};
+	export let onUpdate: Function = () => {};
+	export let onPreview: Function = () => {};
 
 	export let onTaskClick: Function = () => {};
 	export let onSourceClick: Function = () => {};
@@ -78,27 +87,33 @@
 		<hr class=" border-gray-100 dark:border-gray-850" />
 	{:else if token.type === 'heading'}
 		<svelte:element this={headerComponent(token.depth)} dir="auto">
-			<MarkdownInlineTokens id={`${id}-${tokenIdx}-h`} tokens={token.tokens} {onSourceClick} />
+			<MarkdownInlineTokens
+				id={`${id}-${tokenIdx}-h`}
+				tokens={token.tokens}
+				{done}
+				{onSourceClick}
+			/>
 		</svelte:element>
 	{:else if token.type === 'code'}
 		{#if token.raw.includes('```')}
 			<CodeBlock
 				id={`${id}-${tokenIdx}`}
+				collapsed={$settings?.collapseCodeBlocks ?? false}
 				{token}
 				lang={token?.lang ?? ''}
 				code={token?.text ?? ''}
 				{attributes}
 				{save}
-				onCode={(value) => {
-					dispatch('code', value);
-				}}
+				{preview}
 				onSave={(value) => {
-					dispatch('update', {
+					onSave({
 						raw: token.raw,
 						oldContent: token.text,
 						newContent: value
 					});
 				}}
+				{onUpdate}
+				{onPreview}
 			/>
 		{:else}
 			{token.text}
@@ -119,11 +134,12 @@
 									class="px-3! py-1.5! cursor-pointer border border-gray-100 dark:border-gray-850"
 									style={token.align[headerIdx] ? '' : `text-align: ${token.align[headerIdx]}`}
 								>
-									<div class="flex flex-col gap-1.5 text-left">
+									<div class="gap-1.5 text-left">
 										<div class="shrink-0 break-normal">
 											<MarkdownInlineTokens
 												id={`${id}-${tokenIdx}-header-${headerIdx}`}
 												tokens={header.tokens}
+												{done}
 												{onSourceClick}
 											/>
 										</div>
@@ -138,12 +154,13 @@
 								{#each row ?? [] as cell, cellIdx}
 									<td
 										class="px-3! py-1.5! text-gray-900 dark:text-white w-max border border-gray-100 dark:border-gray-850"
-										style={token.align[cellIdx] ? '' : `text-align: ${token.align[cellIdx]}`}
+										style={token.align[cellIdx] ? `text-align: ${token.align[cellIdx]}` : ''}
 									>
-										<div class="flex flex-col break-normal">
+										<div class="break-normal">
 											<MarkdownInlineTokens
 												id={`${id}-${tokenIdx}-row-${rowIdx}-${cellIdx}`}
 												tokens={cell.tokens}
+												{done}
 												{onSourceClick}
 											/>
 										</div>
@@ -170,14 +187,25 @@
 			</div>
 		</div>
 	{:else if token.type === 'blockquote'}
-		<blockquote dir="auto">
-			<svelte:self id={`${id}-${tokenIdx}`} tokens={token.tokens} {onTaskClick} {onSourceClick} />
-		</blockquote>
+		{@const alert = alertComponent(token)}
+		{#if alert}
+			<AlertRenderer {token} {alert} />
+		{:else}
+			<blockquote dir="auto">
+				<svelte:self
+					id={`${id}-${tokenIdx}`}
+					tokens={token.tokens}
+					{done}
+					{onTaskClick}
+					{onSourceClick}
+				/>
+			</blockquote>
+		{/if}
 	{:else if token.type === 'list'}
 		{#if token.ordered}
-			<ol start={token.start || 1}>
+			<ol start={token.start || 1} dir="auto">
 				{#each token.items as item, itemIdx}
-					<li dir="auto" class="text-start">
+					<li class="text-start">
 						{#if item?.task}
 							<input
 								class=" translate-y-[1px] -translate-x-1"
@@ -200,6 +228,7 @@
 							id={`${id}-${tokenIdx}-${itemIdx}`}
 							tokens={item.tokens}
 							top={token.loose}
+							{done}
 							{onTaskClick}
 							{onSourceClick}
 						/>
@@ -207,12 +236,12 @@
 				{/each}
 			</ol>
 		{:else}
-			<ul>
+			<ul dir="auto" class="">
 				{#each token.items as item, itemIdx}
-					<li dir="auto" class="text-start">
+					<li class="text-start {item?.task ? 'flex -translate-x-6.5 gap-3 ' : ''}">
 						{#if item?.task}
 							<input
-								class=" translate-y-[1px] -translate-x-1"
+								class=""
 								type="checkbox"
 								checked={item.checked}
 								on:change={(e) => {
@@ -226,15 +255,27 @@
 									});
 								}}
 							/>
-						{/if}
 
-						<svelte:self
-							id={`${id}-${tokenIdx}-${itemIdx}`}
-							tokens={item.tokens}
-							top={token.loose}
-							{onTaskClick}
-							{onSourceClick}
-						/>
+							<div>
+								<svelte:self
+									id={`${id}-${tokenIdx}-${itemIdx}`}
+									tokens={item.tokens}
+									top={token.loose}
+									{done}
+									{onTaskClick}
+									{onSourceClick}
+								/>
+							</div>
+						{:else}
+							<svelte:self
+								id={`${id}-${tokenIdx}-${itemIdx}`}
+								tokens={item.tokens}
+								top={token.loose}
+								{done}
+								{onTaskClick}
+								{onSourceClick}
+							/>
+						{/if}
 					</li>
 				{/each}
 			</ul>
@@ -242,6 +283,7 @@
 	{:else if token.type === 'details'}
 		<Collapsible
 			title={token.summary}
+			open={$settings?.expandDetails ?? false}
 			attributes={token?.attributes}
 			className="w-full space-y-1"
 			dir="auto"
@@ -251,22 +293,14 @@
 					id={`${id}-${tokenIdx}-d`}
 					tokens={marked.lexer(token.text)}
 					attributes={token?.attributes}
+					{done}
 					{onTaskClick}
 					{onSourceClick}
 				/>
 			</div>
 		</Collapsible>
 	{:else if token.type === 'html'}
-		{@const html = DOMPurify.sanitize(token.text)}
-		{#if html && html.includes('<video')}
-			{@html html}
-		{:else if token.text.includes(`<iframe src="${WEBUI_BASE_URL}/api/v1/files/`)}
-			{@html `${token.text}`}
-		{:else if token.text.includes(`<source_id`)}
-			<Source {id} {token} onClick={onSourceClick} />
-		{:else}
-			{token.text}
-		{/if}
+		<HtmlToken {id} {token} {onSourceClick} />
 	{:else if token.type === 'iframe'}
 		<iframe
 			src="{WEBUI_BASE_URL}/api/v1/files/{token.fileId}/content"
@@ -280,14 +314,20 @@
 			<MarkdownInlineTokens
 				id={`${id}-${tokenIdx}-p`}
 				tokens={token.tokens ?? []}
+				{done}
 				{onSourceClick}
 			/>
 		</p>
 	{:else if token.type === 'text'}
 		{#if top}
-			<p dir="auto">
+			<p>
 				{#if token.tokens}
-					<MarkdownInlineTokens id={`${id}-${tokenIdx}-t`} tokens={token.tokens} {onSourceClick} />
+					<MarkdownInlineTokens
+						id={`${id}-${tokenIdx}-t`}
+						tokens={token.tokens}
+						{done}
+						{onSourceClick}
+					/>
 				{:else}
 					{unescapeHtml(token.text)}
 				{/if}
@@ -296,6 +336,7 @@
 			<MarkdownInlineTokens
 				id={`${id}-${tokenIdx}-p`}
 				tokens={token.tokens ?? []}
+				{done}
 				{onSourceClick}
 			/>
 		{:else}

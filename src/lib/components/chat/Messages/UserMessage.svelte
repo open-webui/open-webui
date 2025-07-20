@@ -6,6 +6,7 @@
 	import { models, settings } from '$lib/stores';
 	import { user as _user } from '$lib/stores';
 	import { copyToClipboard as _copyToClipboard, formatDate } from '$lib/utils';
+	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import Name from './Name.svelte';
 	import ProfileImage from './ProfileImage.svelte';
@@ -27,6 +28,7 @@
 
 	export let siblings;
 
+	export let gotoMessage: Function;
 	export let showPreviousMessage: Function;
 	export let showNextMessage: Function;
 
@@ -38,8 +40,12 @@
 
 	let showDeleteConfirm = false;
 
+	let messageIndexEdit = false;
+
 	let edit = false;
 	let editedContent = '';
+	let editedFiles = [];
+
 	let messageEditTextAreaElement: HTMLTextAreaElement;
 
 	let message = JSON.parse(JSON.stringify(history.messages[messageId]));
@@ -59,25 +65,30 @@
 	const editMessageHandler = async () => {
 		edit = true;
 		editedContent = message.content;
+		editedFiles = message.files;
 
 		await tick();
 
-		messageEditTextAreaElement.style.height = '';
-		messageEditTextAreaElement.style.height = `${messageEditTextAreaElement.scrollHeight}px`;
+		if (messageEditTextAreaElement) {
+			messageEditTextAreaElement.style.height = '';
+			messageEditTextAreaElement.style.height = `${messageEditTextAreaElement.scrollHeight}px`;
 
-		messageEditTextAreaElement?.focus();
+			messageEditTextAreaElement?.focus();
+		}
 	};
 
 	const editMessageConfirmHandler = async (submit = true) => {
-		editMessage(message.id, editedContent, submit);
+		editMessage(message.id, { content: editedContent, files: editedFiles }, submit);
 
 		edit = false;
 		editedContent = '';
+		editedFiles = [];
 	};
 
 	const cancelEditMessage = () => {
 		edit = false;
 		editedContent = '';
+		editedFiles = [];
 	};
 
 	const deleteMessageHandler = async () => {
@@ -97,15 +108,19 @@
 	}}
 />
 
-<div class=" flex w-full user-message" dir={$settings.chatDirection} id="message-{message.id}">
+<div
+	class=" flex w-full user-message group"
+	dir={$settings.chatDirection}
+	id="message-{message.id}"
+>
 	{#if !($settings?.chatBubble ?? true)}
-		<div class={`shrink-0 ${($settings?.chatDirection ?? 'LTR') === 'LTR' ? 'mr-3' : 'ml-3'}`}>
+		<div class={`shrink-0 ltr:mr-3 rtl:ml-3 mt-1`}>
 			<ProfileImage
 				src={message.user
 					? ($models.find((m) => m.id === message.user)?.info?.meta?.profile_image_url ??
-						'/user.png')
-					: (user?.profile_image_url ?? '/user.png')}
-				className={'size-8'}
+						`${WEBUI_BASE_URL}/user.png`)
+					: (user?.profile_image_url ?? `${WEBUI_BASE_URL}/user.png`)}
+				className={'size-8 user-message-profile-image'}
 			/>
 		</div>
 	{/if}
@@ -133,33 +148,103 @@
 					{/if}
 				</Name>
 			</div>
+		{:else if message.timestamp}
+			<div class="flex justify-end pr-2 text-xs">
+				<div
+					class="text-[0.65rem] invisible group-hover:visible text-gray-400 font-medium first-letter:capitalize mb-0.5"
+				>
+					<Tooltip content={dayjs(message.timestamp * 1000).format('LLLL')}>
+						<span class="line-clamp-1">{formatDate(message.timestamp * 1000)}</span>
+					</Tooltip>
+				</div>
+			</div>
 		{/if}
 
 		<div class="chat-{message.role} w-full min-w-full markdown-prose">
-			{#if message.files}
-				<div class="mt-2.5 mb-1 w-full flex flex-col justify-end overflow-x-auto gap-1 flex-wrap">
-					{#each message.files as file}
-						<div class={($settings?.chatBubble ?? true) ? 'self-end' : ''}>
-							{#if file.type === 'image'}
-								<Image src={file.url} imageClassName=" max-h-96 rounded-lg" />
-							{:else}
-								<FileItem
-									item={file}
-									url={file.url}
-									name={file.name}
-									type={file.type}
-									size={file?.size}
-									colorClassName="bg-white dark:bg-gray-850 "
-								/>
-							{/if}
-						</div>
-					{/each}
-				</div>
+			{#if edit !== true}
+				{#if message.files}
+					<div class="mb-1 w-full flex flex-col justify-end overflow-x-auto gap-1 flex-wrap">
+						{#each message.files as file}
+							<div class={($settings?.chatBubble ?? true) ? 'self-end' : ''}>
+								{#if file.type === 'image'}
+									<Image src={file.url} imageClassName=" max-h-96 rounded-lg" />
+								{:else}
+									<FileItem
+										item={file}
+										url={file.url}
+										name={file.name}
+										type={file.type}
+										size={file?.size}
+										colorClassName="bg-white dark:bg-gray-850 "
+									/>
+								{/if}
+							</div>
+						{/each}
+					</div>
+				{/if}
 			{/if}
 
 			{#if message.content !== ''}
 				{#if edit === true}
 					<div class=" w-full bg-gray-50 dark:bg-gray-800 rounded-3xl px-5 py-3 mb-2">
+						{#if (editedFiles ?? []).length > 0}
+							<div class="flex items-center flex-wrap gap-2 -mx-2 mb-1">
+								{#each editedFiles as file, fileIdx}
+									{#if file.type === 'image'}
+										<div class=" relative group">
+											<div class="relative flex items-center">
+												<Image
+													src={file.url}
+													alt="input"
+													imageClassName=" size-14 rounded-xl object-cover"
+												/>
+											</div>
+											<div class=" absolute -top-1 -right-1">
+												<button
+													class=" bg-white text-black border border-white rounded-full group-hover:visible invisible transition"
+													type="button"
+													on:click={() => {
+														editedFiles.splice(fileIdx, 1);
+
+														editedFiles = editedFiles;
+													}}
+												>
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														viewBox="0 0 20 20"
+														fill="currentColor"
+														class="size-4"
+													>
+														<path
+															d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
+														/>
+													</svg>
+												</button>
+											</div>
+										</div>
+									{:else}
+										<FileItem
+											item={file}
+											name={file.name}
+											type={file.type}
+											size={file?.size}
+											loading={file.status === 'uploading'}
+											dismissible={true}
+											edit={true}
+											on:dismiss={async () => {
+												editedFiles.splice(fileIdx, 1);
+
+												editedFiles = editedFiles;
+											}}
+											on:click={() => {
+												console.log(file);
+											}}
+										/>
+									{/if}
+								{/each}
+							</div>
+						{/if}
+
 						<div class="max-h-96 overflow-auto">
 							<textarea
 								id="message-edit-{message.id}"
@@ -189,7 +274,7 @@
 							<div>
 								<button
 									id="save-edit-message-button"
-									class=" px-4 py-2 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border dark:border-gray-700 text-gray-700 dark:text-gray-200 transition rounded-3xl"
+									class=" px-4 py-2 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border border-gray-100 dark:border-gray-700 text-gray-700 dark:text-gray-200 transition rounded-3xl"
 									on:click={() => {
 										editMessageConfirmHandler(false);
 									}}
@@ -267,11 +352,52 @@
 											</svg>
 										</button>
 
-										<div
-											class="text-sm tracking-widest font-semibold self-center dark:text-gray-100"
-										>
-											{siblings.indexOf(message.id) + 1}/{siblings.length}
-										</div>
+										{#if messageIndexEdit}
+											<div
+												class="text-sm flex justify-center font-semibold self-center dark:text-gray-100 min-w-fit"
+											>
+												<input
+													id="message-index-input-{message.id}"
+													type="number"
+													value={siblings.indexOf(message.id) + 1}
+													min="1"
+													max={siblings.length}
+													on:focus={(e) => {
+														e.target.select();
+													}}
+													on:blur={(e) => {
+														gotoMessage(message, e.target.value - 1);
+														messageIndexEdit = false;
+													}}
+													on:keydown={(e) => {
+														if (e.key === 'Enter') {
+															gotoMessage(message, e.target.value - 1);
+															messageIndexEdit = false;
+														}
+													}}
+													class="bg-transparent font-semibold self-center dark:text-gray-100 min-w-fit outline-hidden"
+												/>/{siblings.length}
+											</div>
+										{:else}
+											<!-- svelte-ignore a11y-no-static-element-interactions -->
+											<div
+												class="text-sm tracking-widest font-semibold self-center dark:text-gray-100 min-w-fit"
+												on:dblclick={async () => {
+													messageIndexEdit = true;
+
+													await tick();
+													const input = document.getElementById(
+														`message-index-input-${message.id}`
+													);
+													if (input) {
+														input.focus();
+														input.select();
+													}
+												}}
+											>
+												{siblings.indexOf(message.id) + 1}/{siblings.length}
+											</div>
+										{/if}
 
 										<button
 											class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
@@ -347,7 +473,7 @@
 								</button>
 							</Tooltip>
 
-							{#if !isFirstMessage && !readOnly}
+							{#if !readOnly && (!isFirstMessage || siblings.length > 1)}
 								<Tooltip content={$i18n.t('Delete')} placement="bottom">
 									<button
 										class="invisible group-hover:visible p-1 rounded-sm dark:hover:text-white hover:text-black transition"
@@ -398,11 +524,52 @@
 											</svg>
 										</button>
 
-										<div
-											class="text-sm tracking-widest font-semibold self-center dark:text-gray-100"
-										>
-											{siblings.indexOf(message.id) + 1}/{siblings.length}
-										</div>
+										{#if messageIndexEdit}
+											<div
+												class="text-sm flex justify-center font-semibold self-center dark:text-gray-100 min-w-fit"
+											>
+												<input
+													id="message-index-input-{message.id}"
+													type="number"
+													value={siblings.indexOf(message.id) + 1}
+													min="1"
+													max={siblings.length}
+													on:focus={(e) => {
+														e.target.select();
+													}}
+													on:blur={(e) => {
+														gotoMessage(message, e.target.value - 1);
+														messageIndexEdit = false;
+													}}
+													on:keydown={(e) => {
+														if (e.key === 'Enter') {
+															gotoMessage(message, e.target.value - 1);
+															messageIndexEdit = false;
+														}
+													}}
+													class="bg-transparent font-semibold self-center dark:text-gray-100 min-w-fit outline-hidden"
+												/>/{siblings.length}
+											</div>
+										{:else}
+											<!-- svelte-ignore a11y-no-static-element-interactions -->
+											<div
+												class="text-sm tracking-widest font-semibold self-center dark:text-gray-100 min-w-fit"
+												on:dblclick={async () => {
+													messageIndexEdit = true;
+
+													await tick();
+													const input = document.getElementById(
+														`message-index-input-${message.id}`
+													);
+													if (input) {
+														input.focus();
+														input.select();
+													}
+												}}
+											>
+												{siblings.indexOf(message.id) + 1}/{siblings.length}
+											</div>
+										{/if}
 
 										<button
 											class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"

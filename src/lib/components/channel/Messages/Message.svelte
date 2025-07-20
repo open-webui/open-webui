@@ -106,7 +106,7 @@
 						</Tooltip>
 					{/if}
 
-					{#if message.user_id === $user.id || $user.role === 'admin'}
+					{#if message.user_id === $user?.id || $user?.role === 'admin'}
 						<Tooltip content={$i18n.t('Edit')}>
 							<button
 								class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
@@ -144,7 +144,9 @@
 					<ProfilePreview user={message.user}>
 						<ProfileImage
 							src={message.user?.profile_image_url ??
-								($i18n.language === 'dg-DG' ? `/doge.png` : `${WEBUI_BASE_URL}/static/favicon.png`)}
+								($i18n.language === 'dg-DG'
+									? `${WEBUI_BASE_URL}/doge.png`
+									: `${WEBUI_BASE_URL}/static/favicon.png`)}
 							className={'size-8 translate-y-1 ml-0.5'}
 						/>
 					</ProfilePreview>
@@ -265,7 +267,7 @@
 									<Tooltip content={`:${reaction.name}:`}>
 										<button
 											class="flex items-center gap-1.5 transition rounded-xl px-2 py-1 cursor-pointer {reaction.user_ids.includes(
-												$user.id
+												$user?.id
 											)
 												? ' bg-blue-300/10 outline outline-blue-500/50 outline-1'
 												: 'bg-gray-300/10 dark:bg-gray-500/10 hover:outline hover:outline-gray-700/30 dark:hover:outline-gray-300/30 hover:outline-1'}"
@@ -275,7 +277,7 @@
 										>
 											{#if $shortCodesToEmojis[reaction.name]}
 												<img
-													src="/assets/emojis/{$shortCodesToEmojis[
+													src="{WEBUI_BASE_URL}/assets/emojis/{$shortCodesToEmojis[
 														reaction.name
 													].toLowerCase()}.svg"
 													alt={reaction.name}

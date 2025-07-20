@@ -166,8 +166,9 @@
 
 				{#if $user !== undefined}
 					<UserMenu
-						className="max-w-[200px]"
-						role={$user.role}
+						className="max-w-[240px]"
+						role={$user?.role}
+						help={true}
 						on:show={(e) => {
 							if (e.detail === 'archived-chat') {
 								showArchivedChats.set(true);
@@ -180,7 +181,7 @@
 						>
 							<div class=" self-center">
 								<img
-									src={$user.profile_image_url}
+									src={$user?.profile_image_url}
 									class="size-6 object-cover rounded-full"
 									alt="User profile"
 									draggable="false"
