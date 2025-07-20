@@ -1,5 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { user } from '$lib/stores';
+  import { logActivity } from '$lib/utils/log-activity';
 
   export let imageUrls = [
    '/assets/images/adam.jpg',
@@ -42,7 +44,7 @@
     <!-- Left button -->
     <button
      class="absolute top-1/2 left-1 transform -translate-y-1/2 text-gray-300 text-3xl p-2"
-     on:click={prevImage}
+     on:click={() => { prevImage(); logActivity(`Carousel: Moved to previous image`, $user?.id); }}
     >
      &#10094;
     </button>
@@ -50,7 +52,7 @@
     <!-- Right button -->
     <button
      class="absolute top-1/2 right-1 transform -translate-y-1/2 text-gray-300 text-3xl p-2"
-     on:click={nextImage}
+     on:click={() => { nextImage(); logActivity(`Carousel: Moved to next image`, $user?.id); }}
     >
      &#10095;
     </button>

@@ -287,6 +287,7 @@ from open_webui.config import (
     ENABLE_ONEDRIVE_INTEGRATION,
     UPLOAD_DIR,
     GIFT_REQUESTS_DIR,
+    USER_ACTIVITY_LOG_DIR,
     EXTERNAL_WEB_SEARCH_URL,
     EXTERNAL_WEB_SEARCH_API_KEY,
     EXTERNAL_WEB_LOADER_URL,
@@ -1651,6 +1652,17 @@ async def log_message(form_data: dict):
     if not message:
         raise HTTPException(status_code=400, detail="Missing log_message")
     log.info(message)
+    return {"status": "logged"}
+
+@app.post("/api/log_activity")
+async def log_message_to_file(form_data: dict):
+    message = form_data.get("log_message")
+    user_id = form_data.get("user_id")
+    if not message:
+        raise HTTPException(status_code=400, detail="Missing log_message")
+    log_file_path = os.path.join(USER_ACTIVITY_LOG_DIR, f"{user_id}.log")
+    with open(log_file_path, "a", encoding="utf-8") as f:
+        f.write(message + "\n")
     return {"status": "logged"}
 
 def swagger_ui_html(*args, **kwargs):

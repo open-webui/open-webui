@@ -758,6 +758,13 @@ GIFT_REQUESTS_DIR = DATA_DIR / "gift_requests"
 GIFT_REQUESTS_DIR.mkdir(parents=True, exist_ok=True)
 
 ####################################
+# user activity logs DIR
+####################################
+
+USER_ACTIVITY_LOG_DIR = DATA_DIR / "logs" / "user_activity"
+USER_ACTIVITY_LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+####################################
 # DIRECT CONNECTIONS
 ####################################
 

@@ -2,11 +2,11 @@
     import { createEventDispatcher } from 'svelte';
     import '$lib/styles/pill-button.css'; // Import the shared styles
     import Carousel from '$lib/components/common/Carousel.svelte';
-    import {mobile } from '$lib/stores';
+    import {mobile, user } from '$lib/stores';
    	import { WEBUI_BASE_URL } from '$lib/constants';
+    import { logActivity } from '$lib/utils/log-activity';
 
     const dispatch = createEventDispatcher();
-
 
     export let products = [];
     export let chat_id = '';
@@ -18,10 +18,20 @@
     function handleViewDetailsClick(product) {
         showProductDetailsModal = true; // Show the modal
         productSelected = product;
+        // Log product details view
+        logActivity(
+            `Product url_id: ${product.product_info?.url_id || product.experience_info?.url_id}. Product details clicked.`,
+            $user?.id
+        );
     }
 
     function handleCloseClick() {
         showProductDetailsModal = false;
+        // Log modal close
+        logActivity(
+            `Product url_id: ${productSelected.product_info.url_id}. Product details modal closed.`,
+            $user?.id
+        );
         productSelected = null;
     }
 
@@ -115,22 +125,17 @@
         });
     }
 
-    function handleExperienceBuyNowClick(url: string, chat_id: string) {
-        console.log('Buy Now clicked', url, chat_id);
-        fetch('/api/log', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ log_message: `Buy Now clicked: ${url}, chat_id: ${chat_id}` })
-        });
+    function handleBuyNowClick(url: string, chat_id: string) {
         window.open(url, '_blank');
+        logActivity(`Buy Now clicked: ${url}, chat_id: ${chat_id ?? 'suggested-product'}`, $user?.id);
     }
 </script>
 
 {#if showProductDetailsModal}
-    <div class="modal" role="dialog" tabindex="0" aria-modal="true" on:click={() => handleCloseClick()} on:keydown={(e) => e.key === 'Escape' && handleCloseClick()} >
+    <div class="modal" role="dialog" tabindex="0" aria-modal="true" on:click={() => handleCloseClick(productSelected)} on:keydown={(e) => e.key === 'Escape' && handleCloseClick(productSelected)} >
         <div class="relative items-center justify-center h-[400px] w-[400px] border-1 rounded-lg bg-white"
-            on:click|stopPropagation tabindex="0" role="document" on:keydown={(e) => e.key === 'Escape' && handleCloseClick()}>
-            <button class="close-button px-1 py-1 rounded-sm bg-gray-50 border-gray-50 text-gray-700 shadow-md z-10" on:click={() => handleCloseClick()} >
+            on:click|stopPropagation tabindex="0" role="document" on:keydown={(e) => e.key === 'Escape' && handleCloseClick(productSelected)}>
+            <button class="close-button px-1 py-1 rounded-sm bg-gray-50 border-gray-50 text-gray-700 shadow-md z-10" on:click={() => handleCloseClick(productSelected)} >
               <div class=" m-auto self-center">
                 <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -196,11 +201,11 @@
                 <!-- Buy now button -->
                 <div class="grid-item-footer w-full flex justify-center py-1">
                     {#if product.product_info}
-                        <button class="pill-button " on:click={() => handleExperienceBuyNowClick(product.product_info.url, chat_id)}>
+                        <button class="pill-button " on:click={() => handleBuyNowClick(product.product_info.url, chat_id)}>
                             {'Buy Now'}
                         </button>
                     {:else if product.experience_info}
-                        <button class="pill-button " on:click={() => handleExperienceBuyNowClick(product.experience_info.url, chat_id)}>
+                        <button class="pill-button " on:click={() => handleBuyNowClick(product.experience_info.url, chat_id)}>
                             {'Book Now'}
                         </button>
                     {/if}

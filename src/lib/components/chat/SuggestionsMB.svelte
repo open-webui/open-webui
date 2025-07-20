@@ -2,9 +2,10 @@
 	import Fuse from 'fuse.js';
 	import Bolt from '$lib/components/icons/Bolt.svelte';
 	import { onMount, getContext, createEventDispatcher } from 'svelte';
-	import { WEBUI_NAME, mobile } from '$lib/stores';
+	import { WEBUI_NAME, mobile, user } from '$lib/stores';
 	import { WEBUI_VERSION } from '$lib/constants';
 	import ProductGrid from '$lib/components/common/ProductGrid.svelte';
+	import { logActivity } from '$lib/utils/log-activity';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -95,6 +96,7 @@
 			//dispatch('select', prompt.content)
 			prompt.selected = true; // Mark the clicked prompt as selected
 			promptSelected = prompt;
+			logActivity(`Suggested Prompt Clicked: ${prompt.title[0]}`, $user?.id);
 	}
 
 </script>
@@ -146,9 +148,6 @@
 			<ProductGrid
 				chat_id={promptSelected.chat_id}
 				gift_idea_id={{ id: 'random' }}
-				on:click={(e) => {
-					console.log(e);
-				}}
 			/>
 		{/if}
 	{/key}
