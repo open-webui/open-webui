@@ -43,10 +43,23 @@
 			...users.users.map((user) => {
 				return headers
 					.map((header) => {
-						if (header === 'settings' || header === 'info') {
-							return JSON.stringify(user[header]);
+						if (user[header] === null || user[header] === undefined) {
+							return '';
 						}
-						return user[header];
+
+						if (header === 'settings' || header === 'info') {
+							return `"${JSON.stringify(user[header]).replace(/"/g, '""')}"`;
+						}
+
+						if (
+							header === 'last_active_at' ||
+							header === 'updated_at' ||
+							header === 'created_at'
+						) {
+							return new Date(user[header] * 1000).toISOString();
+						}
+
+						return `"${String(user[header]).replace(/"/g, '""')}"`;
 					})
 					.join(',');
 			})
