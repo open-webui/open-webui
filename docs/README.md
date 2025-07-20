@@ -1,3 +1,32 @@
-# Project workflow
+# mAI Documentation
 
-[![](https://mermaid.ink/img/pako:eNq1k01rAjEQhv_KkFNLFe1N9iAUevFSRVl6Cci4Gd1ANtlmsmtF_O_N7iqtHxR76ClhMu87zwyZvcicIpEIpo-KbEavGjceC2lL9EFnukQbIGXygNye5y9TY7DAZTpZLsjXXVYXg3dapRM4hh9mu5A7-3hTfSXtAtJK21Tsj8dPl3USmJZkGVbebWNKD2rNOjAYl6HJHYdkNBwNpb3U9aNZvzFNYE6h8tFiSyZzBUGJG4K1dwVwTSYQrCptlLRvLt5dA5i2la5Ruk51Ux0VKQjuxPVbAwuyiuFlNgHfzJ5DoxtgqQf1813gnZRLZ5lAYcD7WT1lpGtiQKug9C4jZrrp-Fd-1-Y1bdzo4dvnZDLz7lPHyj8sOgfg4x84E7RTuEaZt8yRZqtDfgT_rwG2u3Dv_ERPFOQL1Cqu2F5aAClCTgVJkcSrojVWJkgh7SGmYhXcYmczkQRfUU9UZfQ4baRI1miYDl_QqlPg?type=png)](https://mermaid.live/edit#pako:eNq1k01rAjEQhv_KkFNLFe1N9iAUevFSRVl6Cci4Gd1ANtlmsmtF_O_N7iqtHxR76ClhMu87zwyZvcicIpEIpo-KbEavGjceC2lL9EFnukQbIGXygNye5y9TY7DAZTpZLsjXXVYXg3dapRM4hh9mu5A7-3hTfSXtAtJK21Tsj8dPl3USmJZkGVbebWNKD2rNOjAYl6HJHYdkNBwNpb3U9aNZvzFNYE6h8tFiSyZzBUGJG4K1dwVwTSYQrCptlLRvLt5dA5i2la5Ruk51Ux0VKQjuxPVbAwuyiuFlNgHfzJ5DoxtgqQf1813gnZRLZ5lAYcD7WT1lpGtiQKug9C4jZrrp-Fd-1-Y1bdzo4dvnZDLz7lPHyj8sOgfg4x84E7RTuEaZt8yRZqtDfgT_rwG2u3Dv_ERPFOQL1Cqu2F5aAClCTgVJkcSrojVWJkgh7SGmYhXcYmczkQRfUU9UZfQ4baRI1miYDl_QqlPg)
+Welcome to the mAI documentation. This directory contains all documentation organized by category.
+
+## Documentation Structure
+
+### 📦 [Deployment](./deployment/)
+- [Hetzner Deployment Guide](./deployment/hetzner-guide.md) - Step-by-step production deployment on Hetzner
+
+### 🛠️ [Development](./development/)
+- [Contributing Guide](./development/contributing.md) - How to contribute to mAI
+- [Upgrade Guide](./development/upgrade-guide.md) - How to merge updates from Open WebUI
+- [Development Scripts](./development/development-scripts.md) - Available development scripts
+
+### 🎨 [Customization](./customization/)
+- [mAI Changelog](./customization/mai-changelog.md) - Changes specific to mAI
+- [Customization Checklist](./customization/customization-checklist.md) - Tracking customizations
+- [Extraction Plan](./customization/extraction-plan.md) - Future configuration-based customization
+
+### 🔧 [Operations](./operations/)
+- [Installation Guide](./operations/installation.md) - How to install mAI
+- [Troubleshooting](./operations/troubleshooting.md) - Common issues and solutions
+- [Security](./operations/security.md) - Security considerations
+
+### ⚙️ [Configuration](./configuration/)
+- [Apache Configuration](./configuration/apache.md) - Apache reverse proxy setup
+
+## Quick Links
+
+- [Main README](../README.md) - Project overview
+- [CLAUDE.md](../CLAUDE.md) - Instructions for Claude Code
+- [Deployments](../deployments/README.md) - Client deployment system

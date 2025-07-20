@@ -15,7 +15,7 @@ UPSTREAM_REMOTE="upstream"
 UPSTREAM_REPO="https://github.com/open-webui/open-webui.git"
 MAIN_BRANCH="main"
 DEV_BRANCH="customization"
-CUSTOMIZATION_FILE="MAI-CUSTOMIZATIONS-CHECKLIST.md"
+CUSTOMIZATION_FILE="docs/customization/customization-checklist.md"
 
 # Functions
 log_info() {
@@ -188,7 +188,7 @@ finalize_merge() {
     
     echo -e "\n${YELLOW}Next steps:${NC}"
     echo "1. Test the application thoroughly"
-    echo "2. Update MAI-CHANGELOG.md with changes"
+    echo "2. Update docs/customization/mai-changelog.md with changes"
     echo "3. Push to origin: git push origin ${DEV_BRANCH}"
     echo "4. Create PR for review"
 }

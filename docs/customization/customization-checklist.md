@@ -176,6 +176,6 @@ This document lists all custom mAI features that must be preserved during Open W
 3. **Test all features** in the checklist
 4. **Verify themes** work in both light/dark modes
 5. **Test Polish language** switching
-6. **Document any new conflicts** in UPGRADE-GUIDE.md
+6. **Document any new conflicts** in docs/development/upgrade-guide.md
 
 Last Updated: January 19, 2025 - v0.6.17 Update

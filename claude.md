@@ -20,7 +20,8 @@ This is mAI, a customized fork of Open WebUI - a feature-rich, extensible AI pla
 - Upgraded to Tiptap v3 for rich text editing
 - Installed FFmpeg for full audio processing support
 - Complete mAI visual identity system implemented (January 20, 2025)
-- See `UPGRADE-GUIDE.md` for detailed upgrade process documentation
+- Documentation reorganized into structured categories (January 20, 2025)
+- See `docs/development/upgrade-guide.md` for detailed upgrade process documentation
 
 ## Architecture
 
@@ -198,6 +199,15 @@ make update              # Pull, rebuild, restart
 - **Commit Prefixes**: `brand:`, `theme:`, `ui:`, `assets:` for organized changes
 - **Quality Standards**: WCAG 2.1 AA compliance, contrast ratios 4.5:1 minimum
 
+### Documentation Organization
+- **Main Documentation**: Located in `docs/` directory with subdirectories for different categories
+- **Deployment Guides**: `docs/deployment/` - Production deployment instructions
+- **Development Docs**: `docs/development/` - Contributing, upgrading, and development scripts
+- **Customization Docs**: `docs/customization/` - mAI-specific changes and plans
+- **Operations Docs**: `docs/operations/` - Installation, troubleshooting, security
+- **Configuration Docs**: `docs/configuration/` - Server and proxy configurations
+- **Documentation Index**: `docs/README.md` - Central hub for all documentation
+
 ### Deployment
 - **Docker**: Multi-stage builds for production
 - **Static Assets**: Vite builds to `build/` directory
@@ -359,7 +369,7 @@ When upgrading mAI to incorporate new Open WebUI releases:
    - Revert workflow files if lacking GitHub permissions
 
 4. **Documentation**
-   - See `UPGRADE-GUIDE.md` for detailed step-by-step instructions
+   - See `docs/development/upgrade-guide.md` for detailed step-by-step instructions
    - Document any new conflicts or issues for future upgrades
 
 ### Critical Files to Preserve During Upgrades

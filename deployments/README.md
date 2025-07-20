@@ -122,9 +122,9 @@ deployments/
 ## Support
 
 ### Documentation
-- [Hetzner Deployment Guide](docs/HETZNER-DEPLOYMENT-GUIDE.md)
-- [Customization Plan](../docs/CUSTOMIZATION-EXTRACTION-PLAN.md)
-- [Upgrade Guide](../UPGRADE-GUIDE.md)
+- [Hetzner Deployment Guide](../docs/deployment/hetzner-guide.md)
+- [Customization Plan](../docs/customization/extraction-plan.md)
+- [Upgrade Guide](../docs/development/upgrade-guide.md)
 
 ### Troubleshooting
 1. Check Docker logs: `docker compose logs`

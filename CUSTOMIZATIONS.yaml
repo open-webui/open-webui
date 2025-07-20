@@ -189,11 +189,12 @@ deployment:
 
 documentation:
   custom_files:
-    - "MAI-CHANGELOG.md"
-    - "MAI-CUSTOMIZATIONS-CHECKLIST.md"
-    - "UPGRADE-GUIDE.md"
+    - "docs/customization/mai-changelog.md"
+    - "docs/customization/customization-checklist.md"
+    - "docs/development/upgrade-guide.md"
+    - "docs/deployment/hetzner-guide.md"
+    - "docs/README.md (documentation hub)"
     - "CUSTOMIZATIONS.yaml (this file)"
-    - "test-mai-container.sh"
   
   ai_instructions:
     - "CLAUDE.md"
