@@ -40,6 +40,11 @@ code {
 	width: auto;
 }
 
+.editor-selection {
+	background: rgba(180, 213, 255, 0.5);
+	border-radius: 2px;
+}
+
 .font-secondary {
 	font-family: 'InstrumentSerif', sans-serif;
 }

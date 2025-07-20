@@ -34,10 +34,10 @@
 	import { config, models, settings, showSidebar, socket, user, WEBUI_NAME } from '$lib/stores';
 
 	import NotePanel from '$lib/components/notes/NotePanel.svelte';
-	import MenuLines from '../icons/MenuLines.svelte';
-	import ChatBubbleOval from '../icons/ChatBubbleOval.svelte';
-	import Settings from './NoteEditor/Settings.svelte';
+
+	import Controls from './NoteEditor/Controls.svelte';
 	import Chat from './NoteEditor/Chat.svelte';
+
 	import AccessControlModal from '$lib/components/workspace/common/AccessControlModal.svelte';
 
 	async function loadLocale(locales) {
@@ -61,6 +61,8 @@
 	import MicSolid from '../icons/MicSolid.svelte';
 	import VoiceRecording from '../chat/MessageInput/VoiceRecording.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import MenuLines from '../icons/MenuLines.svelte';
+	import ChatBubbleOval from '../icons/ChatBubbleOval.svelte';
 
 	import Calendar from '../icons/Calendar.svelte';
 	import Users from '../icons/Users.svelte';
@@ -81,6 +83,7 @@
 	import ArrowRight from '../icons/ArrowRight.svelte';
 	import Cog6 from '../icons/Cog6.svelte';
 	import AiMenu from './AIMenu.svelte';
+	import AdjustmentsHorizontalOutline from '../icons/AdjustmentsHorizontalOutline.svelte';
 
 	export let id: null | string = null;
 
@@ -117,6 +120,8 @@
 
 	let showPanel = false;
 	let selectedPanel = 'chat';
+
+	let selectedContent = null;
 
 	let showDeleteConfirm = false;
 	let showAccessControlModal = false;
@@ -382,6 +387,13 @@ ${content}
 
 		files = [...files, fileItem];
 
+		// open the settings panel if it is not open
+		selectedPanel = 'settings';
+
+		if (!showPanel) {
+			showPanel = true;
+		}
+
 		try {
 			// If the file is an audio file, provide the language for STT.
 			let metadata = null;
@@ -432,95 +444,115 @@ ${content}
 			note.data.files = null;
 		}
 
+		editor.storage.files = files;
+
 		changeDebounceHandler();
+
+		return fileItem;
 	};
 
-	const inputFilesHandler = async (inputFiles) => {
-		console.log('Input files handler called with:', inputFiles);
-		inputFiles.forEach(async (file) => {
-			console.log('Processing file:', {
-				name: file.name,
-				type: file.type,
-				size: file.size,
-				extension: file.name.split('.').at(-1)
+	const compressImageHandler = async (imageUrl, settings = {}, config = {}) => {
+		// Quick shortcut so we don’t do unnecessary work.
+		const settingsCompression = settings?.imageCompression ?? false;
+		const configWidth = config?.file?.image_compression?.width ?? null;
+		const configHeight = config?.file?.image_compression?.height ?? null;
+
+		// If neither settings nor config wants compression, return original URL.
+		if (!settingsCompression && !configWidth && !configHeight) {
+			return imageUrl;
+		}
+
+		// Default to null (no compression unless set)
+		let width = null;
+		let height = null;
+
+		// If user/settings want compression, pick their preferred size.
+		if (settingsCompression) {
+			width = settings?.imageCompressionSize?.width ?? null;
+			height = settings?.imageCompressionSize?.height ?? null;
+		}
+
+		// Apply config limits as an upper bound if any
+		if (configWidth && (width === null || width > configWidth)) {
+			width = configWidth;
+		}
+		if (configHeight && (height === null || height > configHeight)) {
+			height = configHeight;
+		}
+
+		// Do the compression if required
+		if (width || height) {
+			return await compressImage(imageUrl, width, height);
+		}
+		return imageUrl;
+	};
+
+	const inputFileHandler = async (file) => {
+		console.log('Processing file:', {
+			name: file.name,
+			type: file.type,
+			size: file.size,
+			extension: file.name.split('.').at(-1)
+		});
+
+		if (
+			($config?.file?.max_size ?? null) !== null &&
+			file.size > ($config?.file?.max_size ?? 0) * 1024 * 1024
+		) {
+			console.log('File exceeds max size limit:', {
+				fileSize: file.size,
+				maxSize: ($config?.file?.max_size ?? 0) * 1024 * 1024
 			});
+			toast.error(
+				$i18n.t(`File size should not exceed {{maxSize}} MB.`, {
+					maxSize: $config?.file?.max_size
+				})
+			);
+			return;
+		}
 
-			if (
-				($config?.file?.max_size ?? null) !== null &&
-				file.size > ($config?.file?.max_size ?? 0) * 1024 * 1024
-			) {
-				console.log('File exceeds max size limit:', {
-					fileSize: file.size,
-					maxSize: ($config?.file?.max_size ?? 0) * 1024 * 1024
-				});
-				toast.error(
-					$i18n.t(`File size should not exceed {{maxSize}} MB.`, {
-						maxSize: $config?.file?.max_size
-					})
-				);
-				return;
-			}
-
-			if (file['type'].startsWith('image/')) {
-				const compressImageHandler = async (imageUrl, settings = {}, config = {}) => {
-					// Quick shortcut so we don’t do unnecessary work.
-					const settingsCompression = settings?.imageCompression ?? false;
-					const configWidth = config?.file?.image_compression?.width ?? null;
-					const configHeight = config?.file?.image_compression?.height ?? null;
-
-					// If neither settings nor config wants compression, return original URL.
-					if (!settingsCompression && !configWidth && !configHeight) {
-						return imageUrl;
-					}
-
-					// Default to null (no compression unless set)
-					let width = null;
-					let height = null;
-
-					// If user/settings want compression, pick their preferred size.
-					if (settingsCompression) {
-						width = settings?.imageCompressionSize?.width ?? null;
-						height = settings?.imageCompressionSize?.height ?? null;
-					}
-
-					// Apply config limits as an upper bound if any
-					if (configWidth && (width === null || width > configWidth)) {
-						width = configWidth;
-					}
-					if (configHeight && (height === null || height > configHeight)) {
-						height = configHeight;
-					}
-
-					// Do the compression if required
-					if (width || height) {
-						return await compressImage(imageUrl, width, height);
-					}
-					return imageUrl;
-				};
-
+		if (file['type'].startsWith('image/')) {
+			const uploadImagePromise = new Promise(async (resolve, reject) => {
 				let reader = new FileReader();
 				reader.onload = async (event) => {
-					let imageUrl = event.target.result;
+					try {
+						let imageUrl = event.target.result;
+						imageUrl = await compressImageHandler(imageUrl, $settings, $config);
 
-					imageUrl = await compressImageHandler(imageUrl, $settings, $config);
-
-					files = [
-						...files,
-						{
+						const fileId = uuidv4();
+						const fileItem = {
+							id: fileId,
 							type: 'image',
 							url: `${imageUrl}`
-						}
-					];
-					note.data.files = files;
+						};
+						files = [...files, fileItem];
+						note.data.files = files;
+						editor.storage.files = files;
+
+						changeDebounceHandler();
+						resolve(fileItem);
+					} catch (err) {
+						reject(err);
+					}
 				};
+
 				reader.readAsDataURL(
 					file['type'] === 'image/heic'
 						? await heic2any({ blob: file, toType: 'image/jpeg' })
 						: file
 				);
-			} else {
-				uploadFileHandler(file);
-			}
+			});
+
+			return await uploadImagePromise;
+		} else {
+			return await uploadFileHandler(file);
+		}
+	};
+
+	const inputFilesHandler = async (inputFiles) => {
+		console.log('Input files handler called with:', inputFiles);
+		inputFiles.forEach(async (file) => {
+			await inputFileHandler(file);
 		});
 	};
 
@@ -725,9 +757,25 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 	const onDragOver = (e) => {
 		e.preventDefault();
 
-		// Check if a file is being dragged.
-		if (e.dataTransfer?.types?.includes('Files')) {
-			dragged = true;
+		if (
+			e.dataTransfer?.types?.includes('text/plain') ||
+			e.dataTransfer?.types?.includes('text/html')
+		) {
+			dragged = false;
+			return;
+		}
+
+		// Check if the dragged item is a file or image
+		if (e.dataTransfer?.types?.includes('Files') && e.dataTransfer?.items) {
+			const items = Array.from(e.dataTransfer.items);
+			const hasFiles = items.some((item) => item.kind === 'file');
+			const hasImages = items.some((item) => item.type.startsWith('image/'));
+
+			if (hasFiles && !hasImages) {
+				dragged = true;
+			} else {
+				dragged = false;
+			}
 		} else {
 			dragged = false;
 		}
@@ -757,8 +805,47 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 		inputElement?.insertContent(content);
 	};
 
+	const noteEventHandler = async (_note) => {
+		console.log('noteEventHandler', _note);
+		if (_note.id !== id) return;
+
+		if (_note.access_control && _note.access_control !== note.access_control) {
+			note.access_control = _note.access_control;
+		}
+
+		if (_note.data && _note.data.files) {
+			files = _note.data.files;
+			note.data.files = files;
+		}
+
+		if (_note.title && _note.title) {
+			note.title = _note.title;
+		}
+
+		editor.storage.files = files;
+		await tick();
+
+		for (const file of files) {
+			if (file.type === 'image') {
+				const e = new CustomEvent('data', { files: files });
+
+				const img = document.getElementById(`image:${file.id}`);
+				if (img) {
+					img.dispatchEvent(e);
+				}
+			}
+		}
+	};
+
 	onMount(async () => {
 		await tick();
+		$socket?.emit('join-note', {
+			note_id: id,
+			auth: {
+				token: localStorage.token
+			}
+		});
+		$socket?.on('note-events', noteEventHandler);
 
 		if ($settings?.models) {
 			selectedModelId = $settings?.models[0];
@@ -784,19 +871,21 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 
 		const dropzoneElement = document.getElementById('note-editor');
 
-		dropzoneElement?.addEventListener('dragover', onDragOver);
-		dropzoneElement?.addEventListener('drop', onDrop);
-		dropzoneElement?.addEventListener('dragleave', onDragLeave);
+		// dropzoneElement?.addEventListener('dragover', onDragOver);
+		// dropzoneElement?.addEventListener('drop', onDrop);
+		// dropzoneElement?.addEventListener('dragleave', onDragLeave);
 	});
 
 	onDestroy(() => {
 		console.log('destroy');
+		$socket?.off('note-events', noteEventHandler);
+
 		const dropzoneElement = document.getElementById('note-editor');
 
 		if (dropzoneElement) {
-			dropzoneElement?.removeEventListener('dragover', onDragOver);
-			dropzoneElement?.removeEventListener('drop', onDrop);
-			dropzoneElement?.removeEventListener('dragleave', onDragLeave);
+			// dropzoneElement?.removeEventListener('dragover', onDragOver);
+			// dropzoneElement?.removeEventListener('drop', onDrop);
+			// dropzoneElement?.removeEventListener('dragleave', onDragLeave);
 		}
 	});
 </script>
@@ -960,7 +1049,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 									</button>
 								</Tooltip>
 
-								<Tooltip placement="top" content={$i18n.t('Settings')} className="cursor-pointer">
+								<Tooltip placement="top" content={$i18n.t('Controls')} className="cursor-pointer">
 									<button
 										class="p-1.5 bg-transparent hover:bg-white/5 transition rounded-lg"
 										on:click={() => {
@@ -974,7 +1063,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 											}
 										}}
 									>
-										<Cog6 />
+										<AdjustmentsHorizontalOutline />
 									</button>
 								</Tooltip>
 
@@ -993,7 +1082,11 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 										}
 									}}
 									onCopyToClipboard={async () => {
-										const res = await copyToClipboard(note.data.content.md).catch((error) => {
+										const res = await copyToClipboard(
+											note.data.content.md,
+											note.data.content.html,
+											true
+										).catch((error) => {
 											toast.error(`${error}`);
 											return null;
 										});
@@ -1095,43 +1188,10 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 							></div>
 						{/if}
 
-						{#if files && files.length > 0}
-							<div class="mb-2.5 w-full flex gap-1 flex-wrap z-40">
-								{#each files as file, fileIdx}
-									<div class="w-fit">
-										{#if file.type === 'image'}
-											<Image
-												src={file.url}
-												imageClassName=" max-h-96 rounded-lg"
-												dismissible={true}
-												onDismiss={() => {
-													files = files.filter((item, idx) => idx !== fileIdx);
-													note.data.files = files.length > 0 ? files : null;
-												}}
-											/>
-										{:else}
-											<FileItem
-												item={file}
-												dismissible={true}
-												url={file.url}
-												name={file.name}
-												type={file.type}
-												size={file?.size}
-												loading={file.status === 'uploading'}
-												on:dismiss={() => {
-													files = files.filter((item) => item?.id !== file.id);
-													note.data.files = files.length > 0 ? files : null;
-												}}
-											/>
-										{/if}
-									</div>
-								{/each}
-							</div>
-						{/if}
-
 						<RichTextInput
 							bind:this={inputElement}
 							bind:editor
+							id={`note-${note.id}`}
 							className="input-prose-sm px-0.5"
 							json={true}
 							bind:value={note.data.content.json}
@@ -1141,8 +1201,24 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 							socket={$socket}
 							user={$user}
 							link={true}
+							image={true}
+							{files}
 							placeholder={$i18n.t('Write something...')}
 							editable={versionIdx === null && !editing}
+							onSelectionUpdate={({ editor }) => {
+								const { from, to } = editor.state.selection;
+								const selectedText = editor.state.doc.textBetween(from, to, ' ');
+
+								if (selectedText.length === 0) {
+									selectedContent = null;
+								} else {
+									selectedContent = {
+										text: selectedText,
+										from: from,
+										to: to
+									};
+								}
+							}}
 							onChange={(content) => {
 								note.data.content.html = content.html;
 								note.data.content.md = content.md;
@@ -1150,6 +1226,62 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 								if (editor) {
 									wordCount = editor.storage.characterCount.words();
 									charCount = editor.storage.characterCount.characters();
+								}
+							}}
+							fileHandler={true}
+							onFileDrop={(currentEditor, files, pos) => {
+								files.forEach(async (file) => {
+									const fileItem = await inputFileHandler(file).catch((error) => {
+										return null;
+									});
+
+									if (fileItem.type === 'image') {
+										// If the file is an image, insert it directly
+										currentEditor
+											.chain()
+											.insertContentAt(pos, {
+												type: 'image',
+												attrs: {
+													src: `data://${fileItem.id}`
+												}
+											})
+											.focus()
+											.run();
+									}
+								});
+							}}
+							onFilePaste={() => {}}
+							on:paste={async (e) => {
+								e = e.detail.event || e;
+								const clipboardData = e.clipboardData || window.clipboardData;
+								console.log('Clipboard data:', clipboardData);
+
+								if (clipboardData && clipboardData.items) {
+									console.log('Clipboard data items:', clipboardData.items);
+									for (const item of clipboardData.items) {
+										console.log('Clipboard item:', item);
+										if (item.type.indexOf('image') !== -1) {
+											const blob = item.getAsFile();
+											const fileItem = await inputFileHandler(blob);
+
+											if (editor) {
+												editor
+													?.chain()
+													.insertContentAt(editor.state.selection.$anchor.pos, {
+														type: 'image',
+														attrs: {
+															src: `data://${fileItem.id}` // Use data URI for the image
+														}
+													})
+													.focus()
+													.run();
+											}
+										} else if (item?.kind === 'file') {
+											const file = item.getAsFile();
+											await inputFileHandler(file);
+											e.preventDefault();
+										}
+									}
 								}
 							}}
 						/>
@@ -1286,6 +1418,9 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 				bind:editing
 				bind:streaming
 				bind:stopResponseFlag
+				{editor}
+				{inputElement}
+				{selectedContent}
 				{files}
 				onInsert={insertHandler}
 				onStop={stopResponseHandler}
@@ -1296,7 +1431,14 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 				scrollToBottomHandler={scrollToBottom}
 			/>
 		{:else if selectedPanel === 'settings'}
-			<Settings bind:show={showPanel} bind:selectedModelId />
+			<Controls
+				bind:show={showPanel}
+				bind:selectedModelId
+				bind:files
+				onUpdate={() => {
+					changeDebounceHandler();
+				}}
+			/>
 		{/if}
 	</NotePanel>
 </PaneGroup>
