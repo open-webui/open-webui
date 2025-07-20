@@ -24,19 +24,7 @@
 	const exportUsers = async () => {
 		const users = await getAllUsers(localStorage.token);
 
-		const headers = [
-			'id',
-			'name',
-			'email',
-			'role',
-			'profile_image_url',
-			'last_active_at',
-			'updated_at',
-			'created_at',
-			'api_key',
-			'settings',
-			'info'
-		];
+		const headers = ['id', 'name', 'email', 'role'];
 
 		const csv = [
 			headers.join(','),
@@ -46,19 +34,6 @@
 						if (user[header] === null || user[header] === undefined) {
 							return '';
 						}
-
-						if (header === 'settings' || header === 'info') {
-							return `"${JSON.stringify(user[header]).replace(/"/g, '""')}"`;
-						}
-
-						if (
-							header === 'last_active_at' ||
-							header === 'updated_at' ||
-							header === 'created_at'
-						) {
-							return new Date(user[header] * 1000).toISOString();
-						}
-
 						return `"${String(user[header]).replace(/"/g, '""')}"`;
 					})
 					.join(',');
