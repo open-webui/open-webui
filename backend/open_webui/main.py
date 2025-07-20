@@ -1381,6 +1381,9 @@ async def chat_completion(
         # Check if we have a custom response from govGpt-file-search-service
         if form_data.get("skip_chat_completion") and form_data.get("custom_response"):
             log.info(f"govGpt-file-search-service: Skipping regular chat completion for user {user.id}")
+            log.info(f"govGpt-file-search-service: Custom response length: {len(form_data['custom_response'])}")
+            log.info(f"govGpt-file-search-service: Custom response preview: '{form_data['custom_response'][:200]}...'")
+            
             # Create a mock response that will be processed normally
             response = {
                 "choices": [
@@ -1396,7 +1399,9 @@ async def chat_completion(
                     }
                 ]
             }
+            log.info(f"govGpt-file-search-service: Created mock response for processing")
         else:
+            log.info(f"govGpt-file-search-service: No custom response found, using regular chat completion")
             response = await chat_completion_handler(request, form_data, user)
 
         return await process_chat_response(

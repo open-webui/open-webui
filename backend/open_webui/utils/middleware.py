@@ -346,12 +346,15 @@ async def chat_memory_handler(
 async def chat_web_search_handler(
     request: Request, form_data: dict, extra_params: dict, user
 ):
-    log.warning(f"what all is in request -- {request}")
+    log.info(f"Web Search Handler: Starting web search for user {getattr(user, 'id', 'anonymous')}")
+    log.info(f"Web Search Handler: Request method: {request.method}")
+    log.info(f"Web Search Handler: Request URL: {request.url}")
 
     user_query = get_last_user_message(form_data["messages"])
-    log.warning(f"user_query : {user_query}")
+    log.info(f"Web Search Handler: User query: '{user_query}'")
 
     session_id = str(extra_params.get("session_id", "no-session"))
+    log.info(f"Web Search Handler: Session ID: {session_id}")
 
 
     event_emitter = extra_params["__event_emitter__"]
@@ -373,27 +376,49 @@ async def chat_web_search_handler(
 
     #custom logic
     if GOV_GPT_WEB_SEARCH:
-
-        log.warning("in GOV_GPT_WEB_SEARCH-----------------")
+        log.info(f"Web Search Handler: Using GOV_GPT_WEB_SEARCH for user {getattr(user, 'id', 'anonymous')}")
+        log.info(f"Web Search Handler: User query: '{user_query}'")
+        log.info(f"Web Search Handler: Session ID: {session_id}")
 
         result = await run_gov_gpt_web_search(user_query, user, session_id, user_message, event_emitter, request, form_data)
 
-        log.info(f"after fun call result : {result}")
+        log.info(f"Web Search Handler: Received result from GOV_GPT web search")
+        log.info(f"Web Search Handler: Result has response: {bool(result and result.get('response'))}")
+        log.info(f"Web Search Handler: Result has files: {bool(result and result.get('files'))}")
+        log.info(f"Web Search Handler: Result URLs count: {len(result.get('urls', [])) if result else 0}")
 
         if result and result.get("response"):
-            form_data["files"] = [{
-                "type": "web_search_custom",
-                "docs": [{"page_content": result["response"]}],
-                "urls": result.get("urls", []),
-                "queries": result.get("queries", []),
-            }]
+            # Store the custom response for the file search service to use
+            form_data["govgpt_web_search_response"] = result["response"]
+            form_data["govgpt_web_search_urls"] = result.get("urls", [])
+            form_data["govgpt_web_search_queries"] = result.get("queries", [])
+            
+            # Use the files structure returned by the function
+            if result.get("files"):
+                form_data["files"] = result["files"]
+                log.info(f"Web Search Handler: Using files structure from result with {len(result['files'])} files")
+            else:
+                # Fallback to old structure
+                form_data["files"] = [{
+                    "type": "web_search_custom",
+                    "docs": [{"page_content": result["response"]}],
+                    "urls": result.get("urls", []),
+                    "queries": result.get("queries", []),
+                }]
+                log.info(f"Web Search Handler: Using fallback files structure")
 
-        log.warning(f"form_data--- : {form_data}")
+            log.info(f"Web Search Handler: Final form_data files count: {len(form_data.get('files', []))}")
+            log.info(f"Web Search Handler: Stored custom response for file search service")
+        else:
+            log.warning(f"Web Search Handler: No response in result, skipping file processing")
 
+        log.info(f"Web Search Handler: Returning form_data with {len(form_data.get('files', []))} files")
         return form_data
 
     else: #existing code
+        log.info(f"Web Search Handler: Using existing web search logic for user {getattr(user, 'id', 'anonymous')}")
         try:
+            log.info(f"Web Search Handler: Generating queries for model: {form_data['model']}")
             res = await generate_queries(
                 request,
                 {
@@ -406,6 +431,7 @@ async def chat_web_search_handler(
             )
 
             response = res["choices"][0]["message"]["content"]
+            log.info(f"Web Search Handler: Generated query response: {response[:200]}...")
 
             try:
                 bracket_start = response.find("{")
@@ -417,20 +443,26 @@ async def chat_web_search_handler(
                 response = response[bracket_start:bracket_end]
                 queries = json.loads(response)
                 queries = queries.get("queries", [])
+                log.info(f"Web Search Handler: Parsed queries: {queries}")
             except Exception as e:
+                log.warning(f"Web Search Handler: Failed to parse JSON, using response as single query: {e}")
                 queries = [response]
 
         except Exception as e:
-            log.exception(e)
+            log.error(f"Web Search Handler: Failed to generate queries: {e}")
+            log.exception(f"Web Search Handler: Full exception details:")
             queries = [user_message]
+            log.info(f"Web Search Handler: Using user message as fallback query: '{user_message}'")
 
 
     # Check if generated queries are empty
     if len(queries) == 1 and queries[0].strip() == "":
+        log.warning(f"Web Search Handler: Generated query is empty, using user message: '{user_message}'")
         queries = [user_message]
 
     # Check if queries are not found
     if len(queries) == 0:
+        log.warning(f"Web Search Handler: No queries generated, returning early")
         await event_emitter(
             {
                 "type": "status",
@@ -443,6 +475,7 @@ async def chat_web_search_handler(
         )
         return form_data
 
+    log.info(f"Web Search Handler: Starting web search with {len(queries)} queries")
     await event_emitter(
         {
             "type": "status",
@@ -455,42 +488,48 @@ async def chat_web_search_handler(
     )
 
     try:
+        log.info(f"Web Search Handler: Calling process_web_search with queries: {queries}")
         results = await process_web_search(
             request,
             SearchForm(queries=queries),
             user=user,
         )
 
+        log.info(f"Web Search Handler: Processing web search results")
         if results:
+            log.info(f"Web Search Handler: Web search successful, processing results")
             files = form_data.get("files", [])
 
             if results.get("collection_names"):
+                log.info(f"Web Search Handler: Using collection_names: {results.get('collection_names')}")
                 for col_idx, collection_name in enumerate(
                     results.get("collection_names")
                 ):
-                    files.append(
-                        {
-                            "collection_name": collection_name,
-                            "name": ", ".join(queries),
-                            "type": "web_search",
-                            "urls": results["filenames"],
-                            "queries": queries,
-                        }
-                    )
-            elif results.get("docs"):
-                # Invoked when bypass embedding and retrieval is set to True
-                docs = results["docs"]
-                files.append(
-                    {
-                        "docs": docs,
+                    file_entry = {
+                        "collection_name": collection_name,
                         "name": ", ".join(queries),
                         "type": "web_search",
                         "urls": results["filenames"],
                         "queries": queries,
                     }
-                )
+                    files.append(file_entry)
+                    log.info(f"Web Search Handler: Added collection file: {collection_name}")
+            elif results.get("docs"):
+                # Invoked when bypass embedding and retrieval is set to True
+                docs = results["docs"]
+                log.info(f"Web Search Handler: Using docs with {len(docs)} documents")
+                file_entry = {
+                    "docs": docs,
+                    "name": ", ".join(queries),
+                    "type": "web_search",
+                    "urls": results["filenames"],
+                    "queries": queries,
+                }
+                files.append(file_entry)
+                log.info(f"Web Search Handler: Added docs file with {len(docs)} documents")
 
             form_data["files"] = files
+            log.info(f"Web Search Handler: Updated form_data with {len(files)} files")
 
             await event_emitter(
                 {
@@ -504,6 +543,7 @@ async def chat_web_search_handler(
                 }
             )
         else:
+            log.warning(f"Web Search Handler: No search results found")
             await event_emitter(
                 {
                     "type": "status",
@@ -517,7 +557,8 @@ async def chat_web_search_handler(
             )
 
     except Exception as e:
-        log.exception(e)
+        log.error(f"Web Search Handler: Error during web search: {e}")
+        log.exception(f"Web Search Handler: Full exception details:")
         await event_emitter(
             {
                 "type": "status",
@@ -531,186 +572,291 @@ async def chat_web_search_handler(
             }
         )
 
+    log.info(f"Web Search Handler: Completed web search for user {getattr(user, 'id', 'anonymous')}")
     return form_data
 
 
+# Helper function to get web results from Serper API
+async def get_web_results_from_serper(query, request):
+    """Get web search results from Serper API"""
+    log.info(f"Serper API: Starting web search for query: '{query}'")
+    
+    try:
+        serper_api_key = request.app.state.config.SERPER_API_KEY
+        if not serper_api_key:
+            log.error("Serper API: No SERPER_API_KEY found in configuration")
+            return []
+        
+        # Log request details
+        payload = {"q": query}
+        headers = {
+            'X-API-KEY': serper_api_key,
+            'Content-Type': 'application/json'
+        }
+        
+        log.info(f"Serper API: Request payload: {json.dumps(payload)}")
+        log.info(f"Serper API: Request headers: {json.dumps({k: v for k, v in headers.items() if k != 'X-API-KEY'})}")
+        
+        start_time = time.time()
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                "https://google.serper.dev/search",
+                json=payload,
+                headers=headers,
+                timeout=15
+            ) as resp:
+                end_time = time.time()
+                response_time = end_time - start_time
+                
+                log.info(f"Serper API: Response status: {resp.status}")
+                log.info(f"Serper API: Response time: {response_time:.2f} seconds")
+                
+                if resp.status != 200:
+                    error_text = await resp.text()
+                    log.error(f"Serper API: Failed with status {resp.status}")
+                    log.error(f"Serper API: Error response: {error_text}")
+                    return []
+                
+                data = await resp.json()
+                log.info(f"Serper API: Full response: {json.dumps(data, indent=2)}")
+                
+                organic_results = data.get('organic', [])
+                log.info(f"Serper API: Found {len(organic_results)} organic results")
+                
+                web_results = []
+                for i, result in enumerate(organic_results[:3]):  # Limit to top 3 results
+                    web_result = {
+                        "title": result.get('title', ''),
+                        "url": result.get('link', ''),
+                        "snippet": result.get('snippet', ''),
+                        "searched_keywords": query
+                    }
+                    web_results.append(web_result)
+                    
+                    log.info(f"Serper API: Result {i+1}:")
+                    log.info(f"  Title: {web_result['title']}")
+                    log.info(f"  URL: {web_result['url']}")
+                    log.info(f"  Snippet: {web_result['snippet'][:100]}...")
+                
+                log.info(f"Serper API: Successfully retrieved {len(web_results)} web results for query: '{query}'")
+                return web_results
+                
+    except Exception as e:
+        log.error(f"Serper API: Error getting web results for query '{query}': {str(e)}")
+        log.exception(f"Serper API: Full exception details:")
+        return []
+
 #for custom gov gpt web search--
 async def run_gov_gpt_web_search(user_query, user, session_id, user_message, event_emitter, request, form_data):
+    log.info(f"GOV_GPT Web Search: Starting search for user {getattr(user, 'id', 'anonymous')}")
+    log.info(f"GOV_GPT Web Search: Original query: '{user_query}'")
+    log.info(f"GOV_GPT Web Search: Session ID: {session_id}")
+    
     user_id = getattr(user, "id", "anonymous")
     user_name = getattr(user, "name", "anonymous")
     website_results = []
     queries = []
     final_response = None
+    org_query = user_query
     refined_query = user_query
     iteration_count = 0
     max_iterations = int(MAX_RETRIALS_WEB_SEARCH)
-    search_results = []
+    need_to_search = False
+    first_run = True
+
+    log.info(f"GOV_GPT Web Search: Max iterations: {max_iterations}")
 
     while iteration_count < max_iterations:
-        log.info("Starting --- Inside while block")
+        log.info(f"GOV_GPT Web Search: Starting iteration {iteration_count + 1} of {max_iterations}")
 
         try:
-            #Call custom /search API
-            async with aiohttp.ClientSession() as session:
-
-                async with session.post(
-                        CUSTOM_WEB_SEARCH_URL,
-                        json={
-                            "user_query": refined_query,
-                            "user_name": user_name,
-                            "user_id": user_id,
-                            "session_id": session_id,
-                            "chat_history": [],
-                            "website_results": website_results
+            if not need_to_search:
+                # First run - no web search needed initially
+                log.info("GOV_GPT Web Search: First run - calling custom API without web results")
+                website_results = []
+                first_run = True
+            else:
+                # Subsequent runs - perform web search with refined queries
+                log.info(f"GOV_GPT Web Search: Searching for refined queries: {refined_query}")
+                await event_emitter(
+                    {
+                        "type": "status",
+                        "data": {
+                            "action": "web_search",
+                            "description": "Searching the web",
+                            "done": False,
                         },
-                        timeout=15
-                ) as resp:
-                    if resp.status != 200:
-                        error_detail = await resp.text()
-                        raise Exception(f"Custom Search failed: {resp.status}, {error_detail}")
-                    result = await resp.json()
-                    search_results = result
+                    }
+                )
+                
+                # Get web results for each refined query
+                if isinstance(refined_query, list):
+                    log.info(f"GOV_GPT Web Search: Processing {len(refined_query)} refined queries")
+                    for i, query in enumerate(refined_query):
+                        log.info(f"GOV_GPT Web Search: Processing query {i+1}/{len(refined_query)}: '{query}'")
+                        web_results = await get_web_results_from_serper(query, request)
+                        website_results.extend(web_results)
+                        log.info(f"GOV_GPT Web Search: Added {len(web_results)} results for query '{query}'")
+                else:
+                    log.info(f"GOV_GPT Web Search: Processing single refined query: '{refined_query}'")
+                    web_results = await get_web_results_from_serper(refined_query, request)
+                    website_results.extend(web_results)
+                    log.info(f"GOV_GPT Web Search: Added {len(web_results)} results for query '{refined_query}'")
+                
+                first_run = False
+                
+                log.info(f"GOV_GPT Web Search: Total website results collected: {len(website_results)}")
+                
+                await event_emitter(
+                    {
+                        "type": "status",
+                        "data": {
+                            "action": "web_search",
+                            "description": f"Searched {len(website_results)} sites",
+                            "done": True,
+                        },
+                    }
+                )
 
-                    log.info("after /search call-----------------")
-                    log.warning(f"resp : {search_results}")
+            # Call custom /search API with current state
+            log.info(f"GOV_GPT Web Search: Preparing to call custom API at {CUSTOM_WEB_SEARCH_URL}")
+            
+            payload = {
+                "user_query": org_query,
+                "user_name": user_name,
+                "user_id": user_id,
+                "session_id": session_id,
+                "chat_history": [],
+                "website_results": website_results
+            }
+            
+            log.info(f"GOV_GPT Web Search: Request payload:")
+            log.info(f"  User query: '{payload['user_query']}'")
+            log.info(f"  User name: '{payload['user_name']}'")
+            log.info(f"  User ID: '{payload['user_id']}'")
+            log.info(f"  Session ID: '{payload['session_id']}'")
+            log.info(f"  Website results count: {len(payload['website_results'])}")
+            
+            if website_results:
+                log.info(f"GOV_GPT Web Search: Website results preview:")
+                for i, result in enumerate(website_results[:3]):
+                    log.info(f"  Result {i+1}: {result.get('title', 'N/A')} - {result.get('url', 'N/A')}")
+            
+            start_time = time.time()
+            
+            log.info(f"GOV_GPT Web Search: Making request to custom API with timeout of 30 seconds")
+            
+            try:
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(
+                        CUSTOM_WEB_SEARCH_URL,
+                        json=payload,
+                        timeout=aiohttp.ClientTimeout(total=30, connect=10)
+                    ) as resp:
+                        end_time = time.time()
+                        response_time = end_time - start_time
+                        
+                        log.info(f"GOV_GPT Web Search: Custom API response status: {resp.status}")
+                        log.info(f"GOV_GPT Web Search: Custom API response time: {response_time:.2f} seconds")
+                        
+                        if resp.status != 200:
+                            error_detail = await resp.text()
+                            log.error(f"GOV_GPT Web Search: Custom API failed with status {resp.status}")
+                            log.error(f"GOV_GPT Web Search: Error response: {error_detail}")
+                            raise Exception(f"Custom Search failed: {resp.status}, {error_detail}")
+                        
+                        result = await resp.json()
+                        log.info(f"GOV_GPT Web Search: Custom API full response: {json.dumps(result, indent=2)}")
+                        
+            except asyncio.TimeoutError:
+                log.error(f"GOV_GPT Web Search: Custom API request timed out after 30 seconds")
+                raise Exception("Custom API request timed out")
+            except aiohttp.ClientError as e:
+                log.error(f"GOV_GPT Web Search: Custom API client error: {str(e)}")
+                raise Exception(f"Custom API client error: {str(e)}")
+            except Exception as e:
+                log.error(f"GOV_GPT Web Search: Custom API unexpected error: {str(e)}")
+                raise
 
-            queries = search_results.get("refined_query", [])
-            search_again = search_results.get("need_to_search_again", False)
-            final_response = search_results.get("response")
+            # Process the response
+            refined_query = result.get("refined_query", [])
+            need_to_search_again = result.get("need_to_search_again", False)
+            final_response = result.get("response")
 
-            log.info(f"queries : {queries}")
-            log.info(f"search_again : {search_again}")
-            log.info(f"final_response : {final_response}")
+            log.info(f"GOV_GPT Web Search: Processing response:")
+            log.info(f"  Refined queries: {refined_query}")
+            log.info(f"  Need to search again: {need_to_search_again}")
+            log.info(f"  Final response: {final_response[:200] if final_response else 'None'}...")
 
             iteration_count += 1
-            # search_again = False#for Unit test remove later
-            if not search_again:
-                return final_response
-
-            #Perform Serper web search using refined queries
-            # Check if generated queries are empty
-            if len(queries) == 1 and queries[0].strip() == "":
-                queries = [user_message]
-
-            # Check if queries are not found
-            if len(queries) == 0:
-                await event_emitter(
-                    {
-                        "type": "status",
-                        "data": {
-                            "action": "web_search",
-                            "description": "No search query generated",
-                            "done": True,
-                        },
-                    }
-                )
-                return form_data
-
-            await event_emitter(
-                {
-                    "type": "status",
-                    "data": {
-                        "action": "web_search",
-                        "description": "Searching the web",
-                        "done": False,
-                    },
-                }
-            )
-
-            try:
-                results = await process_web_search(
-                    request,
-                    SearchForm(queries=queries),
-                    user=user,
-                )
-
-                if results:
-                    files = form_data.get("files", [])
-
-                    if results.get("collection_names"):
-                        for col_idx, collection_name in enumerate(
-                                results.get("collection_names")
-                        ):
-                            files.append(
-                                {
-                                    "collection_name": collection_name,
-                                    "name": ", ".join(queries),
-                                    "type": "web_search",
-                                    "urls": results["filenames"],
-                                    "queries": queries,
-                                }
-                            )
-                    elif results.get("docs"):
-                        # Invoked when bypass embedding and retrieval is set to True
-                        docs = results["docs"]
-                        files.append(
-                            {
-                                "docs": docs,
-                                "name": ", ".join(queries),
-                                "type": "web_search",
-                                "urls": results["filenames"],
-                                "queries": queries,
-                            }
-                        )
-
-                    form_data["files"] = files
-
-                    await event_emitter(
-                        {
-                            "type": "status",
-                            "data": {
-                                "action": "web_search",
-                                "description": "Searched {{count}} sites",
-                                "urls": results["filenames"],
-                                "done": True,
-                            },
-                        }
-                    )
-                else:
-                    await event_emitter(
-                        {
-                            "type": "status",
-                            "data": {
-                                "action": "web_search",
-                                "description": "No search results found",
-                                "done": True,
-                                "error": True,
-                            },
-                        }
-                    )
-
-            except Exception as e:
-                log.exception(e)
-                await event_emitter(
-                    {
-                        "type": "status",
-                        "data": {
-                            "action": "web_search",
-                            "description": "An error occurred while searching the web",
-                            "queries": queries,
-                            "done": True,
-                            "error": True,
-                        },
-                    }
-                )
-
-        #end of the loop
+            
+            if not need_to_search_again:
+                log.info("GOV_GPT Web Search: No more searches needed, returning final response")
+                break
+            
+            log.info("GOV_GPT Web Search: More searches needed, continuing to next iteration")
+            need_to_search = True
 
         except Exception as e:
-            log.warning(f"GOV_GPT web search loop failed at iteration {iteration_count}: {str(e)}")
-            break
+            log.error(f"GOV_GPT Web Search: Loop failed at iteration {iteration_count}: {str(e)}")
+            log.exception(f"GOV_GPT Web Search: Full exception details:")
+            
+            # If it's a timeout or connection error, try to provide a fallback response
+            if "timeout" in str(e).lower() or "connection" in str(e).lower():
+                log.warning(f"GOV_GPT Web Search: Custom API appears to be unavailable, providing fallback response")
+                
+                if website_results:
+                    # Create a comprehensive response from web search results
+                    final_response = f"Based on my web search results for '{org_query}', here's what I found:\n\n"
+                    
+                    # Group results by source for better organization
+                    sources = {}
+                    for result in website_results:
+                        domain = result.get('url', '').split('/')[2] if result.get('url') else 'Unknown'
+                        if domain not in sources:
+                            sources[domain] = []
+                        sources[domain].append(result)
+                    
+                    for domain, results in list(sources.items())[:3]:  # Limit to top 3 sources
+                        final_response += f"**From {domain}:**\n"
+                        for result in results[:2]:  # Limit to 2 results per source
+                            final_response += f"• {result.get('title', 'N/A')}\n"
+                            final_response += f"  {result.get('snippet', 'N/A')[:150]}...\n"
+                            final_response += f"  Source: {result.get('url', 'N/A')}\n\n"
+                    
+                    final_response += f"\n*Note: I was unable to access the specialized search service, so this information is based on general web search results.*"
+                else:
+                    final_response = f"I apologize, but I'm unable to access the specialized search service at the moment, and I couldn't find any relevant web search results for your query: '{org_query}'"
+                
+                break
+            else:
+                break
 
-    log.warning(f"LAST final_response---- {final_response}")
-    return {
+    log.info(f"GOV_GPT Web Search: Final response: {final_response[:200] if final_response else 'None'}...")
+    log.info(f"GOV_GPT Web Search: Total iterations completed: {iteration_count}")
+    log.info(f"GOV_GPT Web Search: Total website results: {len(website_results)}")
+    
+    # Create the file structure expected by the frontend
+    files = []
+    if website_results:
+        files.append({
+            "type": "web_search_custom",
+            "docs": [{"page_content": final_response}] if final_response else [],
+            "urls": [result.get("url", "") for result in website_results if result.get("url")],
+            "queries": refined_query if isinstance(refined_query, list) else [refined_query],
+        })
+        log.info(f"GOV_GPT Web Search: Created file structure with {len(files[0]['urls'])} URLs")
+    
+    result_data = {
         "response": final_response,
-        "queries": queries,
-        "files": form_data.get("files", []),
-        "urls": [
-            url
-            for file in form_data.get("files", [])
-            for url in file.get("filenames", [])
-        ]
+        "queries": refined_query if isinstance(refined_query, list) else [refined_query],
+        "urls": [result.get("url", "") for result in website_results if result.get("url")],
+        "files": files
     }
+    
+    log.info(f"GOV_GPT Web Search: Returning result with {len(result_data['urls'])} URLs and {len(result_data['queries'])} queries")
+    return result_data
 
 
 async def chat_image_generation_handler(
@@ -828,6 +974,34 @@ async def chat_completion_files_handler(
         
         if use_govgpt_service:
             log.info(f"govGpt-file-search-service is ENABLED for user {user.id}")
+            
+            # Check if we have a web search response from GOV_GPT web search
+            govgpt_response = body.get("govgpt_web_search_response")
+            if govgpt_response:
+                log.info(f"govGpt-file-search-service found GOV_GPT web search response: {len(govgpt_response)} characters")
+                log.info(f"govGpt-file-search-service response preview: '{govgpt_response[:200]}...'")
+                
+                # Create a direct response with the GOV_GPT web search content
+                body["messages"].append({
+                    "role": "assistant",
+                    "content": govgpt_response,
+                    "metadata": {
+                        "source": "govGpt-web-search-service",
+                        "api_response": True,
+                        "urls": body.get("govgpt_web_search_urls", []),
+                        "queries": body.get("govgpt_web_search_queries", [])
+                    }
+                })
+                
+                log.info(f"govGpt-file-search-service direct response added for user {user.id}")
+                
+                # Mark the body to skip regular chat completion
+                body["skip_chat_completion"] = True
+                body["custom_response"] = govgpt_response
+                
+                # Return the body with the custom response directly
+                return body, {"sources": sources}
+            
             # Use govGpt-file-search-service instead of regular retrieval
             try:
                 from open_webui.routers.custom_document_qa import (
