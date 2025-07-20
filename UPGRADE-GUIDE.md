@@ -175,6 +175,7 @@ This resolves the "Couldn't find ffmpeg or avconv" warning and enables:
 | From Version | To Version | Date | Major Changes | Notes |
 |--------------|------------|------|---------------|-------|
 | 0.6.16 | 0.6.17 | 2025-01-19 | Tiptap v3, Folder features, Note improvements | Workflow file reverted due to permissions |
+| mAI v0.6.17 | mAI v0.6.17+visual | 2025-01-20 | Complete visual identity replacement | 11 assets replaced across frontend/backend |
 
 ### Troubleshooting
 
@@ -199,9 +200,33 @@ This resolves the "Couldn't find ffmpeg or avconv" warning and enables:
 - [Open WebUI Changelog](https://github.com/open-webui/open-webui/blob/main/CHANGELOG.md)
 - [mAI Repository](https://github.com/pilpat/mAI)
 
+### Visual Identity Preservation
+
+**Critical:** During upgrades, ensure mAI visual identity assets are preserved:
+
+**Source Files Location:** `/mai_logos/` (11 files)
+- `logo.png`, `favicon.png`, `favicon.svg`, `favicon-dark.png`, `favicon-96x96.png`  
+- `ai-assistant.svg`, `splash.png`, `splash-dark.png`
+- `apple-touch-icon.png`, `web-app-manifest-192x192.png`, `web-app-manifest-512x512.png`
+
+**Target Locations to Update:**
+- Frontend: `/static/static/` (11 files)
+- Backend: `/backend/open_webui/static/` (11 files)
+
+**Verification Commands:**
+```bash
+# Check all assets are mAI branded
+ls -la static/static/*.{png,svg} | wc -l  # Should show 11 files
+ls -la backend/open_webui/static/*.{png,svg} | grep -v fonts | wc -l  # Should show 11+ files
+
+# Compare source vs deployed
+diff -r mai_logos/ static/static/ --include="*.png" --include="*.svg"
+```
+
 ### Future Improvements
 
 Consider automating parts of this process:
 1. Script to handle common merge conflicts
 2. Automated testing suite for customizations
 3. GitHub Action for dependency updates (with proper permissions)
+4. **Visual identity verification script** to ensure all assets are properly deployed

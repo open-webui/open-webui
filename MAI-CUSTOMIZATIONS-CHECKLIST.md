@@ -47,7 +47,30 @@ This document lists all custom mAI features that must be preserved during Open W
 - Patterns display correctly in chat interface
 - Works in both light/dark themes
 
-### 4. **Custom mAI Themes** (Based on screenshot)
+### 4. **Complete mAI Visual Identity System** (Commit: `c17dee8b0`)
+**Location:** All graphic assets replaced across frontend and backend
+
+**Files to check:**
+- `static/static/` - Frontend assets (11 files)
+- `backend/open_webui/static/` - Backend assets (11 files)  
+- `mai_logos/` - Source files folder
+
+**Assets list:**
+- `logo.png` - Main application logo
+- `favicon.png`, `favicon.svg`, `favicon-dark.png`, `favicon-96x96.png` - Browser favicons
+- `ai-assistant.svg` - AI assistant icon
+- `splash.png`, `splash-dark.png` - Splash screen graphics
+- `apple-touch-icon.png` - iOS app icon
+- `web-app-manifest-192x192.png`, `web-app-manifest-512x512.png` - PWA icons
+
+**✅ What to verify:**
+- Main logo appears in application interface (not OWUI logo)
+- Browser tabs show mAI favicon
+- PWA installation uses mAI icons
+- Splash screens display mAI branding
+- All assets properly sized and displaying correctly
+
+### 5. **Custom mAI Themes** (Based on screenshot)
 **Location:** Settings > General Tab > Theme section
 
 **Themes to verify exist:**
@@ -101,6 +124,10 @@ This document lists all custom mAI features that must be preserved during Open W
 - [ ] PWA name is "mAI" when installed
 - [ ] Chat placeholder shows correct tagline
 - [ ] Package.json name remains "mai"
+- [ ] **Visual Identity Assets:** All mAI logos and icons display correctly
+- [ ] **Main logo:** Application interface shows mAI logo (not OWUI)
+- [ ] **Favicons:** Browser tabs show mAI favicon
+- [ ] **PWA icons:** App installation uses mAI icons
 
 ### Settings > General Tab
 - [ ] Theme section shows all custom mAI themes

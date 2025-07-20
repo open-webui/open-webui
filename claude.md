@@ -19,6 +19,7 @@ This is mAI, a customized fork of Open WebUI - a feature-rich, extensible AI pla
 - Successfully merged Open WebUI v0.6.17 preserving all customizations
 - Upgraded to Tiptap v3 for rich text editing
 - Installed FFmpeg for full audio processing support
+- Complete mAI visual identity system implemented (January 20, 2025)
 - See `UPGRADE-GUIDE.md` for detailed upgrade process documentation
 
 ## Architecture
@@ -130,8 +131,9 @@ make update              # Pull, rebuild, restart
 - `src/lib/i18n/` - Internationalization files
 
 ### Customization Assets
-- `static/static/` - Frontend favicon and logo assets
-- `backend/open_webui/static/` - Backend static assets
+- `static/static/` - Frontend favicon and logo assets (complete mAI visual identity)
+- `backend/open_webui/static/` - Backend static assets (complete mAI visual identity)  
+- `mai_logos/` - Source files for all mAI graphic assets (11 files)
 - `static/custom.css` - Custom CSS overrides
 
 ## Architecture Patterns
