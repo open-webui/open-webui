@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { v4 as uuidv4 } from 'uuid';
+	import { debounce } from 'lodash-es';
 	import { toast } from 'svelte-sonner';
 	import mermaid from 'mermaid';
 	import { PaneGroup, Pane, PaneResizer } from 'paneforge';
@@ -88,6 +89,18 @@
 	import NotificationToast from '../NotificationToast.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import { fade } from 'svelte/transition';
+
+	// debounce draft‑save: skip huge inputs, run in idle time
+	const saveDraft = debounce((input) => {
+		if (input.prompt && input.prompt.length < 5000) {
+			requestIdleCallback(() => {
+				sessionStorage.setItem(
+					`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`,
+					JSON.stringify(input)
+				);
+			});
+		}
+	}, 300);
 
 	export let chatIdProp = '';
 
@@ -2176,10 +2189,7 @@
 									onChange={(input) => {
 										if (!$temporaryChatEnabled) {
 											if (input.prompt !== null) {
-												sessionStorage.setItem(
-													`chat-input${$chatId ? `-${$chatId}` : ''}`,
-													JSON.stringify(input)
-												);
+												saveDraft(input);
 											} else {
 												sessionStorage.removeItem(`chat-input${$chatId ? `-${$chatId}` : ''}`);
 											}
