@@ -366,7 +366,7 @@ def get_sources_from_files(
             }
         elif (
             file.get("type") != "web_search"
-            and request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
+            and request.app.state.config.RAG_FULL_CONTEXT
         ):
             # BYPASS_EMBEDDING_AND_RETRIEVAL
             if file.get("type") == "collection":
