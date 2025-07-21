@@ -364,13 +364,18 @@ def get_sources_from_files(
                 "documents": [[file.get("file").get("data", {}).get("content")]],
                 "metadatas": [[{"file_id": file.get("id"), "name": file.get("name")}]],
             }
-        elif (
-            file.get("type") != "web_search"
-            and request.app.state.config.RAG_FULL_CONTEXT
-        ):
-            # BYPASS_EMBEDDING_AND_RETRIEVAL
-            if file.get("type") == "collection":
-                file_ids = file.get("data", {}).get("file_ids", [])
+        elif file.get("type") != "web_search":
+            # For collections: respect RAG_FULL_CONTEXT setting
+            # For individual files: always use full content for comprehensive analysis
+            if (
+                file.get("type") == "collection"
+                and request.app.state.config.RAG_FULL_CONTEXT
+            ) or (
+                file.get("type") != "collection"  # Individual uploaded files
+            ):
+                # BYPASS_EMBEDDING_AND_RETRIEVAL
+                if file.get("type") == "collection":
+                    file_ids = file.get("data", {}).get("file_ids", [])
 
                 documents = []
                 metadatas = []
