@@ -15,7 +15,7 @@ class DatalabMarkerLoader:
         self,
         file_path: str,
         api_key: str,
-        langs: Optional[str] = None,
+        additional_config: Optional[str] = None,
         use_llm: bool = False,
         skip_cache: bool = False,
         force_ocr: bool = False,
@@ -26,7 +26,7 @@ class DatalabMarkerLoader:
     ):
         self.file_path = file_path
         self.api_key = api_key
-        self.langs = langs
+        self.additional_config = additional_config
         self.use_llm = use_llm
         self.skip_cache = skip_cache
         self.force_ocr = force_ocr
@@ -87,7 +87,6 @@ class DatalabMarkerLoader:
         headers = {"X-Api-Key": self.api_key}
 
         form_data = {
-            "langs": self.langs,
             "use_llm": str(self.use_llm).lower(),
             "skip_cache": str(self.skip_cache).lower(),
             "force_ocr": str(self.force_ocr).lower(),
@@ -96,6 +95,9 @@ class DatalabMarkerLoader:
             "disable_image_extraction": str(self.disable_image_extraction).lower(),
             "output_format": self.output_format,
         }
+
+        if self.additional_config and self.additional_config.strip():
+            form_data["additional_config"] = self.additional_config
 
         log.info(
             f"Datalab Marker POST request parameters: {{'filename': '{filename}', 'mime_type': '{mime_type}', **{form_data}}}"

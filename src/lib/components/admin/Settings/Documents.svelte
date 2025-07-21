@@ -171,6 +171,19 @@
 		}
 
 		if (
+			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'datalab_marker' &&
+			RAGConfig.DATALAB_MARKER_ADDITIONAL_CONFIG &&
+			RAGConfig.DATALAB_MARKER_ADDITIONAL_CONFIG.trim() !== ''
+		) {
+			try {
+				JSON.parse(RAGConfig.DATALAB_MARKER_ADDITIONAL_CONFIG);
+			} catch (e) {
+				toast.error($i18n.t('Invalid JSON format in Additional Config'));
+				return;
+			}
+		}
+
+		if (
 			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'document_intelligence' &&
 			(RAGConfig.DOCUMENT_INTELLIGENCE_ENDPOINT === '' ||
 				RAGConfig.DOCUMENT_INTELLIGENCE_KEY === '')
@@ -195,10 +208,6 @@
 			ALLOWED_FILE_EXTENSIONS: RAGConfig.ALLOWED_FILE_EXTENSIONS.split(',')
 				.map((ext) => ext.trim())
 				.filter((ext) => ext !== ''),
-			DATALAB_MARKER_LANGS: RAGConfig.DATALAB_MARKER_LANGS.split(',')
-				.map((code) => code.trim())
-				.filter((code) => code !== '')
-				.join(', '),
 			DOCLING_PICTURE_DESCRIPTION_LOCAL: JSON.parse(
 				RAGConfig.DOCLING_PICTURE_DESCRIPTION_LOCAL || '{}'
 			),
@@ -344,17 +353,26 @@
 								/>
 							</div>
 
-							<div class="flex justify-between w-full mt-2">
-								<div class="text-xs font-medium">
-									{$i18n.t('Languages')}
+							<div class="flex flex-col gap-2 mt-2">
+								<div class=" flex flex-col w-full justify-between">
+									<div class=" mb-1 text-xs font-medium">
+										{$i18n.t('Additional Config')}
+									</div>
+									<div class="flex w-full items-center relative">
+										<Tooltip
+											content={$i18n.t(
+												'Additional configuration options for marker. This should be a JSON string with key-value pairs. For example, \'{"key": "value"}\'. Supported keys include: disable_links, keep_pageheader_in_output, keep_pagefooter_in_output, filter_blank_pages, drop_repeated_text, layout_coverage_threshold, merge_threshold, height_tolerance, gap_threshold, image_threshold, min_line_length, level_count, default_level'
+											)}
+											placement="top-start"
+											className="w-full"
+										>
+											<Textarea
+												bind:value={RAGConfig.DATALAB_MARKER_ADDITIONAL_CONFIG}
+												placeholder={$i18n.t('Enter JSON config (e.g., {"disable_links": true})')}
+											/>
+										</Tooltip>
+									</div>
 								</div>
-
-								<input
-									class="text-sm bg-transparent outline-hidden"
-									type="text"
-									bind:value={RAGConfig.DATALAB_MARKER_LANGS}
-									placeholder={$i18n.t('e.g.) en,fr,de')}
-								/>
 							</div>
 
 							<div class="flex justify-between w-full mt-2">
