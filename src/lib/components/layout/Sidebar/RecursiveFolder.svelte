@@ -36,7 +36,7 @@
 	import ChatItem from './ChatItem.svelte';
 	import FolderMenu from './Folders/FolderMenu.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
-	import EditFolderModal from './Folders/EditFolderModal.svelte';
+	import FolderModal from './Folders/FolderModal.svelte';
 	import { goto } from '$app/navigation';
 
 	export let open = false;
@@ -53,7 +53,7 @@
 
 	let folderElement;
 
-	let showEditFolderModal = false;
+	let showFolderModal = false;
 	let edit = false;
 
 	let draggedOver = false;
@@ -378,8 +378,9 @@
 	</div>
 </DeleteConfirmDialog>
 
-<EditFolderModal
-	bind:show={showEditFolderModal}
+<FolderModal
+	bind:show={showFolderModal}
+	edit={true}
 	folder={folders[folderId]}
 	onSubmit={updateHandler}
 />
@@ -426,10 +427,9 @@
 					renameHandler();
 				}}
 				on:click={async (e) => {
+					await goto('/');
+
 					selectedFolder.set(folders[folderId]);
-					if ($chatId) {
-						await goto('/');
-					}
 				}}
 			>
 				<div class="text-gray-300 dark:text-gray-600">
@@ -483,7 +483,7 @@
 				>
 					<FolderMenu
 						onEdit={() => {
-							showEditFolderModal = true;
+							showFolderModal = true;
 						}}
 						onDelete={() => {
 							showDeleteConfirm = true;

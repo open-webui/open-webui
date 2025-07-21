@@ -83,8 +83,12 @@ class GroupForm(BaseModel):
     permissions: Optional[dict] = None
 
 
-class GroupUpdateForm(GroupForm):
+class UserIdsForm(BaseModel):
     user_ids: Optional[list[str]] = None
+
+
+class GroupUpdateForm(GroupForm, UserIdsForm):
+    pass
 
 
 class GroupTable:
@@ -274,6 +278,54 @@ class GroupTable:
             except Exception as e:
                 log.exception(e)
                 return False
+
+    def add_users_to_group(
+        self, id: str, user_ids: Optional[list[str]] = None
+    ) -> Optional[GroupModel]:
+        try:
+            with get_db() as db:
+                group = db.query(Group).filter_by(id=id).first()
+                if not group:
+                    return None
+
+                if not group.user_ids:
+                    group.user_ids = []
+
+                for user_id in user_ids:
+                    if user_id not in group.user_ids:
+                        group.user_ids.append(user_id)
+
+                group.updated_at = int(time.time())
+                db.commit()
+                db.refresh(group)
+                return GroupModel.model_validate(group)
+        except Exception as e:
+            log.exception(e)
+            return None
+
+    def remove_users_from_group(
+        self, id: str, user_ids: Optional[list[str]] = None
+    ) -> Optional[GroupModel]:
+        try:
+            with get_db() as db:
+                group = db.query(Group).filter_by(id=id).first()
+                if not group:
+                    return None
+
+                if not group.user_ids:
+                    return GroupModel.model_validate(group)
+
+                for user_id in user_ids:
+                    if user_id in group.user_ids:
+                        group.user_ids.remove(user_id)
+
+                group.updated_at = int(time.time())
+                db.commit()
+                db.refresh(group)
+                return GroupModel.model_validate(group)
+        except Exception as e:
+            log.exception(e)
+            return None
 
 
 Groups = GroupTable()

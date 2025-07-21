@@ -49,7 +49,7 @@ async def get_folders(user=Depends(get_verified_user)):
             **folder.model_dump(),
             "items": {
                 "chats": [
-                    {"title": chat.title, "id": chat.id}
+                    {"title": chat.title, "id": chat.id, "updated_at": chat.updated_at}
                     for chat in Chats.get_chats_by_folder_id_and_user_id(
                         folder.id, user.id
                     )
@@ -78,7 +78,7 @@ def create_folder(form_data: FolderForm, user=Depends(get_verified_user)):
         )
 
     try:
-        folder = Folders.insert_new_folder(user.id, form_data.name)
+        folder = Folders.insert_new_folder(user.id, form_data)
         return folder
     except Exception as e:
         log.exception(e)

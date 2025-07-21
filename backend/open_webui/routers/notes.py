@@ -6,6 +6,9 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, status, BackgroundTasks
 from pydantic import BaseModel
 
+from open_webui.socket.main import sio
+
+
 from open_webui.models.users import Users, UserResponse
 from open_webui.models.notes import Notes, NoteModel, NoteForm, NoteUserResponse
 
@@ -170,6 +173,12 @@ async def update_note_by_id(
 
     try:
         note = Notes.update_note_by_id(id, form_data)
+        await sio.emit(
+            "note-events",
+            note.model_dump(),
+            to=f"note:{note.id}",
+        )
+
         return note
     except Exception as e:
         log.exception(e)
