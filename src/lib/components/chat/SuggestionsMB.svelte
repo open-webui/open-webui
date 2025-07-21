@@ -93,7 +93,7 @@
 	}
 
 	function handlePromptClick(prompt) {
-			//dispatch('select', prompt.content)
+			dispatch('select', prompt.content)
 			prompt.selected = true; // Mark the clicked prompt as selected
 			promptSelected = prompt;
 			logActivity(`Suggested Prompt Clicked: ${prompt.title[0]}`, $user?.id);
