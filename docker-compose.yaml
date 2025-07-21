@@ -1,12 +1,22 @@
 services:
   ollama:
-    volumes:
-      - ollama:/root/.ollama
+    image: ollama/ollama:${OLLAMA_DOCKER_TAG-latest}
     container_name: ollama
     pull_policy: always
     tty: true
     restart: unless-stopped
-    image: ollama/ollama:${OLLAMA_DOCKER_TAG-latest}
+    volumes:
+      # Mount host Ollama directory to share models
+      - ~/.ollama:/root/.ollama
+    ports:
+      - "11434:11434"  # Expose Ollama port for external access
+    environment:
+      - OLLAMA_HOST=0.0.0.0  # Allow external connections
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   open-webui:
     build:
@@ -18,6 +28,8 @@ services:
     container_name: open-webui
     volumes:
       - open-webui:/app/backend/data
+      # Optional: mount static files for easy updates
+      # - ./static/static:/app/backend/static
     depends_on:
       - ollama
     ports:
@@ -25,10 +37,22 @@ services:
     environment:
       - 'OLLAMA_BASE_URL=http://ollama:11434'
       - 'WEBUI_SECRET_KEY='
+      # Add more environment variables as needed
+      - 'WEBUI_NAME=mAI'
+      - 'WEBUI_URL=http://localhost:3000'
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 volumes:
-  ollama: {}
-  open-webui: {}
+  ollama:
+    # Optional: specify a custom name for easier identification
+    name: mai_ollama_data
+  open-webui:
+    # Optional: specify a custom name for easier identification
+    name: mai_webui_data

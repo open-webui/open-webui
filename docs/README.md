@@ -19,6 +19,7 @@ Welcome to the mAI documentation. This directory contains all documentation orga
 
 ### 🔧 [Operations](./operations/)
 - [Installation Guide](./operations/installation.md) - How to install mAI
+- [Docker Setup Guide](./operations/docker-setup.md) - Comprehensive Docker configuration
 - [Troubleshooting](./operations/troubleshooting.md) - Common issues and solutions
 - [Security](./operations/security.md) - Security considerations
 
