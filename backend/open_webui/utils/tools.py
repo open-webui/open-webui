@@ -101,9 +101,6 @@ def get_tools(
 
                     def make_tool_function(function_name, token, tool_server_data):
                         async def tool_function(**kwargs):
-                            print(
-                                f"Executing tool function {function_name} with params: {kwargs}"
-                            )
                             return await execute_tool_server(
                                 token=token,
                                 url=tool_server_data["url"],

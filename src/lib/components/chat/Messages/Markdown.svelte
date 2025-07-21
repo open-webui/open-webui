@@ -28,7 +28,8 @@
 	let tokens = [];
 
 	const options = {
-		throwOnError: false
+		throwOnError: false,
+		breaks: true
 	};
 
 	marked.use(markedKatexExtension(options));

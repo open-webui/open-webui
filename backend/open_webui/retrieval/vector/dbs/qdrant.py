@@ -18,6 +18,7 @@ from open_webui.config import (
     QDRANT_ON_DISK,
     QDRANT_GRPC_PORT,
     QDRANT_PREFER_GRPC,
+    QDRANT_COLLECTION_PREFIX,
 )
 from open_webui.env import SRC_LOG_LEVELS
 
@@ -29,7 +30,7 @@ log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 class QdrantClient(VectorDBBase):
     def __init__(self):
-        self.collection_prefix = "open-webui"
+        self.collection_prefix = QDRANT_COLLECTION_PREFIX
         self.QDRANT_URI = QDRANT_URI
         self.QDRANT_API_KEY = QDRANT_API_KEY
         self.QDRANT_ON_DISK = QDRANT_ON_DISK
@@ -86,6 +87,25 @@ class QdrantClient(VectorDBBase):
             ),
         )
 
+        # Create payload indexes for efficient filtering
+        self.client.create_payload_index(
+            collection_name=collection_name_with_prefix,
+            field_name="metadata.hash",
+            field_schema=models.KeywordIndexParams(
+                type=models.KeywordIndexType.KEYWORD,
+                is_tenant=False,
+                on_disk=self.QDRANT_ON_DISK,
+            ),
+        )
+        self.client.create_payload_index(
+            collection_name=collection_name_with_prefix,
+            field_name="metadata.file_id",
+            field_schema=models.KeywordIndexParams(
+                type=models.KeywordIndexType.KEYWORD,
+                is_tenant=False,
+                on_disk=self.QDRANT_ON_DISK,
+            ),
+        )
         log.info(f"collection {collection_name_with_prefix} successfully created!")
 
     def _create_collection_if_not_exists(self, collection_name, dimension):

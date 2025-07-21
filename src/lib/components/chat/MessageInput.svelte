@@ -1,6 +1,11 @@
 <script lang="ts">
+	import * as pdfjs from 'pdfjs-dist';
+	import * as pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs';
+	pdfjs.GlobalWorkerOptions.workerSrc = import.meta.url + 'pdfjs-dist/build/pdf.worker.mjs';
+
 	import DOMPurify from 'dompurify';
 	import { marked } from 'marked';
+	import heic2any from 'heic2any';
 
 	import { toast } from 'svelte-sonner';
 
@@ -22,14 +27,23 @@
 		tools,
 		user as _user,
 		showControls,
-		TTSWorker
+		TTSWorker,
+		temporaryChatEnabled
 	} from '$lib/stores';
 
 	import {
 		blobToFile,
 		compressImage,
 		createMessagesList,
-		extractCurlyBraceWords
+		extractContentFromFile,
+		extractCurlyBraceWords,
+		extractInputVariables,
+		getCurrentDateTime,
+		getFormattedDate,
+		getFormattedTime,
+		getUserPosition,
+		getUserTimezone,
+		getWeekday
 	} from '$lib/utils';
 	import { uploadFile } from '$lib/apis/files';
 	import { generateAutoCompletion } from '$lib/apis';
@@ -62,7 +76,7 @@
 	// PII Detection imports
 	import { maskPiiTextWithSession, createPiiSession, type PiiEntity } from '$lib/apis/pii';
 	import { PiiSessionManager, type ExtendedPiiEntity } from '$lib/utils/pii';
-
+	import InputVariablesModal from './MessageInput/InputVariablesModal.svelte';
 	const i18n = getContext('i18n');
 
 	export let transparentBackground = false;
@@ -95,6 +109,10 @@
 	export let webSearchEnabled = false;
 	export let codeInterpreterEnabled = false;
 
+	let showInputVariablesModal = false;
+	let inputVariables = {};
+	let inputVariableValues = {};
+
 	$: onChange({
 		prompt,
 		files: files
@@ -112,6 +130,254 @@
 		webSearchEnabled,
 		codeInterpreterEnabled
 	});
+
+	const inputVariableHandler = async (text: string) => {
+		inputVariables = extractInputVariables(text);
+		if (Object.keys(inputVariables).length > 0) {
+			showInputVariablesModal = true;
+		}
+	};
+
+	const textVariableHandler = async (text: string) => {
+		if (text.includes('{{CLIPBOARD}}')) {
+			const clipboardText = await navigator.clipboard.readText().catch((err) => {
+				toast.error($i18n.t('Failed to read clipboard contents'));
+				return '{{CLIPBOARD}}';
+			});
+
+			const clipboardItems = await navigator.clipboard.read();
+
+			let imageUrl = null;
+			for (const item of clipboardItems) {
+				// Check for known image types
+				for (const type of item.types) {
+					if (type.startsWith('image/')) {
+						const blob = await item.getType(type);
+						imageUrl = URL.createObjectURL(blob);
+					}
+				}
+			}
+
+			if (imageUrl) {
+				files = [
+					...files,
+					{
+						type: 'image',
+						url: imageUrl
+					}
+				];
+			}
+
+			text = text.replaceAll('{{CLIPBOARD}}', clipboardText);
+		}
+
+		if (text.includes('{{USER_LOCATION}}')) {
+			let location;
+			try {
+				location = await getUserPosition();
+			} catch (error) {
+				toast.error($i18n.t('Location access not allowed'));
+				location = 'LOCATION_UNKNOWN';
+			}
+			text = text.replaceAll('{{USER_LOCATION}}', String(location));
+		}
+
+		if (text.includes('{{USER_NAME}}')) {
+			const name = $_user?.name || 'User';
+			text = text.replaceAll('{{USER_NAME}}', name);
+		}
+
+		if (text.includes('{{USER_LANGUAGE}}')) {
+			const language = localStorage.getItem('locale') || 'en-US';
+			text = text.replaceAll('{{USER_LANGUAGE}}', language);
+		}
+
+		if (text.includes('{{CURRENT_DATE}}')) {
+			const date = getFormattedDate();
+			text = text.replaceAll('{{CURRENT_DATE}}', date);
+		}
+
+		if (text.includes('{{CURRENT_TIME}}')) {
+			const time = getFormattedTime();
+			text = text.replaceAll('{{CURRENT_TIME}}', time);
+		}
+
+		if (text.includes('{{CURRENT_DATETIME}}')) {
+			const dateTime = getCurrentDateTime();
+			text = text.replaceAll('{{CURRENT_DATETIME}}', dateTime);
+		}
+
+		if (text.includes('{{CURRENT_TIMEZONE}}')) {
+			const timezone = getUserTimezone();
+			text = text.replaceAll('{{CURRENT_TIMEZONE}}', timezone);
+		}
+
+		if (text.includes('{{CURRENT_WEEKDAY}}')) {
+			const weekday = getWeekday();
+			text = text.replaceAll('{{CURRENT_WEEKDAY}}', weekday);
+		}
+
+		inputVariableHandler(text);
+		return text;
+	};
+
+	const replaceVariables = (variables: Record<string, any>) => {
+		console.log('Replacing variables:', variables);
+
+		const chatInput = document.getElementById('chat-input');
+
+		if (chatInput) {
+			if ($settings?.richTextInput ?? true) {
+				chatInputElement.replaceVariables(variables);
+				chatInputElement.focus();
+			} else {
+				// Get current value from the input element
+				let currentValue = chatInput.value || '';
+
+				// Replace template variables using regex
+				const updatedValue = currentValue.replace(
+					/{{\s*([^|}]+)(?:\|[^}]*)?\s*}}/g,
+					(match, varName) => {
+						const trimmedVarName = varName.trim();
+						return variables.hasOwnProperty(trimmedVarName)
+							? String(variables[trimmedVarName])
+							: match;
+					}
+				);
+
+				// Update the input value
+				chatInput.value = updatedValue;
+				chatInput.focus();
+				chatInput.dispatchEvent(new Event('input', { bubbles: true }));
+			}
+		}
+	};
+
+	export const setText = async (text?: string) => {
+		const chatInput = document.getElementById('chat-input');
+
+		if (chatInput) {
+			text = await textVariableHandler(text || '');
+
+			if ($settings?.richTextInput ?? true) {
+				chatInputElement?.setText(text);
+				chatInputElement?.focus();
+			} else {
+				chatInput.value = text;
+				prompt = text;
+
+				chatInput.focus();
+				chatInput.dispatchEvent(new Event('input'));
+			}
+		}
+	};
+
+	const getCommand = () => {
+		const getWordAtCursor = (text, cursor) => {
+			if (typeof text !== 'string' || cursor == null) return '';
+			const left = text.slice(0, cursor);
+			const right = text.slice(cursor);
+			const leftWord = left.match(/(?:^|\s)([^\s]*)$/)?.[1] || '';
+
+			const rightWord = right.match(/^([^\s]*)/)?.[1] || '';
+			return leftWord + rightWord;
+		};
+
+		const chatInput = document.getElementById('chat-input');
+		let word = '';
+
+		if (chatInput) {
+			if ($settings?.richTextInput ?? true) {
+				word = chatInputElement?.getWordAtDocPos();
+			} else {
+				const cursor = chatInput ? chatInput.selectionStart : prompt.length;
+				word = getWordAtCursor(prompt, cursor);
+			}
+		}
+
+		return word;
+	};
+
+	const replaceCommandWithText = (text) => {
+		const getWordBoundsAtCursor = (text, cursor) => {
+			let start = cursor,
+				end = cursor;
+			while (start > 0 && !/\s/.test(text[start - 1])) --start;
+			while (end < text.length && !/\s/.test(text[end])) ++end;
+			return { start, end };
+		};
+
+		const chatInput = document.getElementById('chat-input');
+		if (!chatInput) return;
+
+		if ($settings?.richTextInput ?? true) {
+			chatInputElement?.replaceCommandWithText(text);
+		} else {
+			const cursor = chatInput.selectionStart;
+			const { start, end } = getWordBoundsAtCursor(prompt, cursor);
+			prompt = prompt.slice(0, start) + text + prompt.slice(end);
+			chatInput.focus();
+			chatInput.setSelectionRange(start + text.length, start + text.length);
+		}
+	};
+
+	const insertTextAtCursor = async (text: string) => {
+		const chatInput = document.getElementById('chat-input');
+		if (!chatInput) return;
+
+		text = await textVariableHandler(text);
+
+		if (command) {
+			replaceCommandWithText(text);
+		} else {
+			if ($settings?.richTextInput ?? true) {
+				chatInputElement?.insertContent(text);
+			} else {
+				const cursor = chatInput.selectionStart;
+				prompt = prompt.slice(0, cursor) + text + prompt.slice(cursor);
+				chatInput.focus();
+				chatInput.setSelectionRange(cursor + text.length, cursor + text.length);
+			}
+		}
+
+		await tick();
+		const chatInputContainer = document.getElementById('chat-input-container');
+		if (chatInputContainer) {
+			chatInputContainer.scrollTop = chatInputContainer.scrollHeight;
+		}
+
+		await tick();
+		if (chatInput) {
+			chatInput.focus();
+			chatInput.dispatchEvent(new Event('input'));
+
+			const words = extractCurlyBraceWords(prompt);
+
+			if (words.length > 0) {
+				const word = words.at(0);
+				await tick();
+
+				if (!($settings?.richTextInput ?? true)) {
+					// Move scroll to the first word
+					chatInput.setSelectionRange(word.startIndex, word.endIndex + 1);
+					chatInput.focus();
+
+					const selectionRow =
+						(word?.startIndex - (word?.startIndex % chatInput.cols)) / chatInput.cols;
+					const lineHeight = chatInput.clientHeight / chatInput.rows;
+
+					chatInput.scrollTop = lineHeight * selectionRow;
+				}
+			} else {
+				chatInput.scrollTop = chatInput.scrollHeight;
+			}
+		}
+	};
+
+	let command = '';
+
+	export let showCommands = false;
+	$: showCommands = ['/', '#', '@'].includes(command?.charAt(0)) || '\\#' === command?.slice(0, 2);
 
 	let showTools = false;
 
@@ -376,47 +642,77 @@
 
 		files = [...files, fileItem];
 
-		try {
-			// If the file is an audio file, provide the language for STT.
-			let metadata = null;
-			if (
-				(file.type.startsWith('audio/') || file.type.startsWith('video/')) &&
-				$settings?.audio?.stt?.language
-			) {
-				metadata = {
-					language: $settings?.audio?.stt?.language
-				};
-			}
-
-			// During the file upload, file content is automatically extracted.
-			const uploadedFile = await uploadFile(localStorage.token, file, metadata);
-
-			if (uploadedFile) {
-				console.log('File upload completed:', {
-					id: uploadedFile.id,
-					name: fileItem.name,
-					collection: uploadedFile?.meta?.collection_name
-				});
-
-				if (uploadedFile.error) {
-					console.warn('File upload warning:', uploadedFile.error);
-					toast.warning(uploadedFile.error);
+		if (!$temporaryChatEnabled) {
+			try {
+				// If the file is an audio file, provide the language for STT.
+				let metadata = null;
+				if (
+					(file.type.startsWith('audio/') || file.type.startsWith('video/')) &&
+					$settings?.audio?.stt?.language
+				) {
+					metadata = {
+						language: $settings?.audio?.stt?.language
+					};
 				}
 
-				fileItem.status = 'uploaded';
-				fileItem.file = uploadedFile;
-				fileItem.id = uploadedFile.id;
-				fileItem.collection_name =
-					uploadedFile?.meta?.collection_name || uploadedFile?.collection_name;
-				fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
+				// During the file upload, file content is automatically extracted.
+				const uploadedFile = await uploadFile(localStorage.token, file, metadata);
 
-				files = files;
-			} else {
+				if (uploadedFile) {
+					console.log('File upload completed:', {
+						id: uploadedFile.id,
+						name: fileItem.name,
+						collection: uploadedFile?.meta?.collection_name
+					});
+
+					if (uploadedFile.error) {
+						console.warn('File upload warning:', uploadedFile.error);
+						toast.warning(uploadedFile.error);
+					}
+
+					fileItem.status = 'uploaded';
+					fileItem.file = uploadedFile;
+					fileItem.id = uploadedFile.id;
+					fileItem.collection_name =
+						uploadedFile?.meta?.collection_name || uploadedFile?.collection_name;
+					fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
+
+					files = files;
+				} else {
+					files = files.filter((item) => item?.itemId !== tempItemId);
+				}
+			} catch (e) {
+				toast.error(`${e}`);
 				files = files.filter((item) => item?.itemId !== tempItemId);
 			}
-		} catch (e) {
-			toast.error(`${e}`);
-			files = files.filter((item) => item?.itemId !== tempItemId);
+		} else {
+			// If temporary chat is enabled, we just add the file to the list without uploading it.
+
+			const content = await extractContentFromFile(file, pdfjsLib).catch((error) => {
+				toast.error(
+					$i18n.t('Failed to extract content from the file: {{error}}', { error: error })
+				);
+				return null;
+			});
+
+			if (content === null) {
+				toast.error($i18n.t('Failed to extract content from the file.'));
+				files = files.filter((item) => item?.itemId !== tempItemId);
+				return null;
+			} else {
+				console.log('Extracted content from file:', {
+					name: file.name,
+					size: file.size,
+					content: content
+				});
+
+				fileItem.status = 'uploaded';
+				fileItem.type = 'text';
+				fileItem.content = content;
+				fileItem.id = uuidv4(); // Temporary ID for the file
+
+				files = files;
+			}
 		}
 	};
 
@@ -435,7 +731,7 @@
 			return;
 		}
 
-		inputFiles.forEach((file) => {
+		inputFiles.forEach(async (file) => {
 			console.log('Processing file:', {
 				name: file.name,
 				type: file.type,
@@ -459,46 +755,53 @@
 				return;
 			}
 
-			if (
-				['image/gif', 'image/webp', 'image/jpeg', 'image/png', 'image/avif'].includes(file['type'])
-			) {
+			if (file['type'].startsWith('image/')) {
 				if (visionCapableModels.length === 0) {
 					toast.error($i18n.t('Selected model(s) do not support image inputs'));
 					return;
 				}
+
+				const compressImageHandler = async (imageUrl, settings = {}, config = {}) => {
+					// Quick shortcut so we don’t do unnecessary work.
+					const settingsCompression = settings?.imageCompression ?? false;
+					const configWidth = config?.file?.image_compression?.width ?? null;
+					const configHeight = config?.file?.image_compression?.height ?? null;
+
+					// If neither settings nor config wants compression, return original URL.
+					if (!settingsCompression && !configWidth && !configHeight) {
+						return imageUrl;
+					}
+
+					// Default to null (no compression unless set)
+					let width = null;
+					let height = null;
+
+					// If user/settings want compression, pick their preferred size.
+					if (settingsCompression) {
+						width = settings?.imageCompressionSize?.width ?? null;
+						height = settings?.imageCompressionSize?.height ?? null;
+					}
+
+					// Apply config limits as an upper bound if any
+					if (configWidth && (width === null || width > configWidth)) {
+						width = configWidth;
+					}
+					if (configHeight && (height === null || height > configHeight)) {
+						height = configHeight;
+					}
+
+					// Do the compression if required
+					if (width || height) {
+						return await compressImage(imageUrl, width, height);
+					}
+					return imageUrl;
+				};
+
 				let reader = new FileReader();
 				reader.onload = async (event) => {
 					let imageUrl = event.target.result;
 
-					if (
-						($settings?.imageCompression ?? false) ||
-						($config?.file?.image_compression?.width ?? null) ||
-						($config?.file?.image_compression?.height ?? null)
-					) {
-						let width = null;
-						let height = null;
-
-						if ($settings?.imageCompression ?? false) {
-							width = $settings?.imageCompressionSize?.width ?? null;
-							height = $settings?.imageCompressionSize?.height ?? null;
-						}
-
-						if (
-							($config?.file?.image_compression?.width ?? null) ||
-							($config?.file?.image_compression?.height ?? null)
-						) {
-							if (width > ($config?.file?.image_compression?.width ?? null)) {
-								width = $config?.file?.image_compression?.width ?? null;
-							}
-							if (height > ($config?.file?.image_compression?.height ?? null)) {
-								height = $config?.file?.image_compression?.height ?? null;
-							}
-						}
-
-						if (width || height) {
-							imageUrl = await compressImage(imageUrl, width, height);
-						}
-					}
+					imageUrl = await compressImageHandler(imageUrl, $settings, $config);
 
 					files = [
 						...files,
@@ -508,7 +811,11 @@
 						}
 					];
 				};
-				reader.readAsDataURL(file);
+				reader.readAsDataURL(
+					file['type'] === 'image/heic'
+						? await heic2any({ blob: file, toType: 'image/jpeg' })
+						: file
+				);
 			} else {
 				uploadFileHandler(file);
 			}
@@ -611,6 +918,14 @@
 
 <FilesOverlay show={dragged} />
 <ToolServersModal bind:show={showTools} {selectedToolIds} />
+<InputVariablesModal
+	bind:show={showInputVariablesModal}
+	variables={inputVariables}
+	onSave={(variableValues) => {
+		inputVariableValues = { ...inputVariableValues, ...variableValues };
+		replaceVariables(inputVariableValues);
+	}}
+/>
 
 {#if loaded}
 	<div class="w-full font-primary">
@@ -663,7 +978,7 @@
 										src={$models.find((model) => model.id === atSelectedModel.id)?.info?.meta
 											?.profile_image_url ??
 											($i18n.language === 'dg-DG'
-												? `/doge.png`
+												? `${WEBUI_BASE_URL}/doge.png`
 												: `${WEBUI_BASE_URL}/static/favicon.png`)}
 									/>
 									<div class="translate-y-[0.5px]">
@@ -686,20 +1001,36 @@
 
 					<Commands
 						bind:this={commandsElement}
-						bind:prompt
 						bind:files
-						on:upload={(e) => {
-							dispatch('upload', e.detail);
-						}}
-						on:select={(e) => {
-							const data = e.detail;
+						show={showCommands}
+						{command}
+						insertTextHandler={insertTextAtCursor}
+						onUpload={(e) => {
+							const { type, data } = e;
 
-							if (data?.type === 'model') {
-								atSelectedModel = data.data;
+							if (type === 'file') {
+								if (files.find((f) => f.id === data.id)) {
+									return;
+								}
+								files = [
+									...files,
+									{
+										...data,
+										status: 'processed'
+									}
+								];
+							} else {
+								dispatch('upload', e);
+							}
+						}}
+						onSelect={(e) => {
+							const { type, data } = e;
+
+							if (type === 'model') {
+								atSelectedModel = data;
 							}
 
-							const chatInputElement = document.getElementById('chat-input');
-							chatInputElement?.focus();
+							document.getElementById('chat-input')?.focus();
 						}}
 					/>
 				</div>
@@ -742,9 +1073,11 @@
 							}}
 							onConfirm={async (data) => {
 								const { text, filename } = data;
-								prompt = `${prompt}${text} `;
 
 								recording = false;
+
+								await tick();
+								insertTextAtCursor(text);
 
 								await tick();
 								document.getElementById('chat-input')?.focus();
@@ -774,7 +1107,7 @@
 													<div class="relative flex items-center">
 														<Image
 															src={file.url}
-															alt="input"
+															alt=""
 															imageClassName=" size-14 rounded-xl object-cover"
 														/>
 														{#if atSelectedModel ? visionCapableModels.length === 0 : selectedModels.length !== visionCapableModels.length}
@@ -792,6 +1125,7 @@
 																	xmlns="http://www.w3.org/2000/svg"
 																	viewBox="0 0 24 24"
 																	fill="currentColor"
+																	aria-hidden="true"
 																	class="size-4 fill-yellow-300"
 																>
 																	<path
@@ -805,8 +1139,12 @@
 													</div>
 													<div class=" absolute -top-1 -right-1">
 														<button
-															class=" bg-white text-black border border-white rounded-full group-hover:visible invisible transition"
+															class=" bg-white text-black border border-white rounded-full {($settings?.highContrastMode ??
+															false)
+																? ''
+																: 'outline-hidden focus:outline-hidden group-hover:visible invisible transition'}"
 															type="button"
+															aria-label={$i18n.t('Remove file')}
 															on:click={() => {
 																files.splice(fileIdx, 1);
 																files = files;
@@ -816,6 +1154,7 @@
 																xmlns="http://www.w3.org/2000/svg"
 																viewBox="0 0 20 20"
 																fill="currentColor"
+																aria-hidden="true"
 																class="size-4"
 															>
 																<path
@@ -834,18 +1173,8 @@
 													loading={file.status === 'uploading'}
 													dismissible={true}
 													edit={true}
+													modal={['file', 'collection'].includes(file?.type)}
 													on:dismiss={async () => {
-														try {
-															if (file.type !== 'collection' && !file?.collection) {
-																if (file.id) {
-																	// This will handle both file deletion and Chroma cleanup
-																	await deleteFileById(localStorage.token, file.id);
-																}
-															}
-														} catch (error) {
-															console.error('Error deleting file:', error);
-														}
-
 														// Remove from UI state
 														files.splice(fileIdx, 1);
 														files = files;
@@ -867,9 +1196,15 @@
 										>
 											<RichTextInput
 												bind:this={chatInputElement}
-												bind:value={prompt}
 												id="chat-input"
+												onChange={(e) => {
+													prompt = e.md;
+													command = getCommand();
+												}}
+												json={true}
 												messageInput={true}
+												showFormattingButtons={false}
+												insertPromptAsRichText={$settings?.insertPromptAsRichText ?? false}
 												shiftEnter={!($settings?.ctrlEnterToSend ?? false) &&
 													(!$mobile ||
 														!(
@@ -1109,6 +1444,12 @@
 											class="scrollbar-hidden bg-transparent dark:text-gray-200 outline-hidden w-full pt-3 px-1 resize-none"
 											placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
 											bind:value={prompt}
+											on:input={() => {
+												command = getCommand();
+											}}
+											on:click={() => {
+												command = getCommand();
+											}}
 											on:compositionstart={() => (isComposing = true)}
 											on:compositionend={() => (isComposing = false)}
 											on:keydown={async (e) => {
@@ -1256,17 +1597,20 @@
 
 													if (words.length > 0) {
 														const word = words.at(0);
-														const fullPrompt = prompt;
 
-														prompt = prompt.substring(0, word?.endIndex + 1);
-														await tick();
+														if (word && e.target instanceof HTMLTextAreaElement) {
+															// Prevent default tab behavior
+															e.preventDefault();
+															e.target.setSelectionRange(word?.startIndex, word.endIndex + 1);
+															e.target.focus();
 
-														e.target.scrollTop = e.target.scrollHeight;
-														prompt = fullPrompt;
-														await tick();
+															const selectionRow =
+																(word?.startIndex - (word?.startIndex % e.target.cols)) /
+																e.target.cols;
+															const lineHeight = e.target.clientHeight / e.target.rows;
 
-														e.preventDefault();
-														e.target.setSelectionRange(word?.startIndex, word.endIndex + 1);
+															e.target.scrollTop = lineHeight * selectionRow;
+														}
 													}
 
 													e.target.style.height = '';
@@ -1387,14 +1731,13 @@
 												chatInput?.focus();
 											}}
 										>
-											<button
-												class="bg-transparent hover:bg-gray-100 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5 outline-hidden focus:outline-hidden"
-												type="button"
-												aria-label="More"
+											<div
+												class="bg-transparent hover:bg-gray-100 text-gray-800 dark:text-white dark:hover:bg-gray-800 rounded-full p-1.5 outline-hidden focus:outline-hidden"
 											>
 												<svg
 													xmlns="http://www.w3.org/2000/svg"
 													viewBox="0 0 20 20"
+													aria-hidden="true"
 													fill="currentColor"
 													class="size-5"
 												>
@@ -1402,7 +1745,7 @@
 														d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"
 													/>
 												</svg>
-											</button>
+											</div>
 										</InputMenu>
 
 										{#if enablePiiDetection}
@@ -1535,12 +1878,19 @@
 												{#if showCodeInterpreterButton}
 													<Tooltip content={$i18n.t('Execute code for analysis')} placement="top">
 														<button
+															aria-label={codeInterpreterEnabled
+																? $i18n.t('Disable Code Interpreter')
+																: $i18n.t('Enable Code Interpreter')}
+															aria-pressed={codeInterpreterEnabled}
 															on:click|preventDefault={() =>
 																(codeInterpreterEnabled = !codeInterpreterEnabled)}
 															type="button"
-															class="px-2 @xl:px-2.5 py-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {codeInterpreterEnabled
+															class="px-2 @xl:px-2.5 py-2 flex gap-1.5 items-center text-sm transition-colors duration-300 max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {codeInterpreterEnabled
 																? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
-																: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
+																: 'bg-transparent text-gray-600 dark:text-gray-300 '} {($settings?.highContrastMode ??
+															false)
+																? 'm-1'
+																: 'focus:outline-hidden rounded-full'}"
 														>
 															<CommandLine className="size-4" strokeWidth="1.75" />
 															<span
@@ -1686,7 +2036,7 @@
 																);
 															}
 														}}
-														aria-label="Call"
+														aria-label={$i18n.t('Voice mode')}
 													>
 														<Headphone className="size-5" />
 													</button>
