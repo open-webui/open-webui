@@ -359,11 +359,17 @@
 							</div>
 
 							<div class="my-0.5 flex gap-2 pr-2">
-								<input
-									class="flex-1 w-full text-sm bg-transparent outline-hidden"
-									placeholder={$i18n.t('Enter Datalab Marker API Base URL')}
-									bind:value={RAGConfig.DATALAB_MARKER_API_BASE_URL}
-								/>
+								<Tooltip
+									content={$i18n.t('API Base URL for Datalab Marker service. Defaults to: https://www.datalab.to/api/v1/marker')}
+									placement="top-start"
+									className="w-full"
+								>
+									<input
+										class="flex-1 w-full text-sm bg-transparent outline-hidden"
+										placeholder={$i18n.t('Enter Datalab Marker API Base URL')}
+										bind:value={RAGConfig.DATALAB_MARKER_API_BASE_URL}
+									/>
+								</Tooltip>
 							</div>
 
 							<div class="flex flex-col gap-2 mt-2">
@@ -392,7 +398,7 @@
 								<div class="self-center text-xs font-medium">
 									<Tooltip
 										content={$i18n.t(
-											'Significantly improves accuracy by using an LLM to enhance tables, forms, inline math, and layout detection. Will increase latency. Defaults to True.'
+											'Significantly improves accuracy by using an LLM to enhance tables, forms, inline math, and layout detection. Will increase latency. Defaults to False.'
 										)}
 										placement="top-start"
 									>
