@@ -1144,47 +1144,47 @@
 					keydown: (view, event) => {
 						ensureConversationActivated(); // Ensure conversation is activated on first keystroke
 
-// Handle CTRL+SHIFT+L to toggle PII masking (mask all <-> unmask all)
-if (
-	(event.ctrlKey || event.metaKey) &&
-	event.shiftKey &&
-	event.key.toLowerCase() === 'l'
-) {
-	if (enablePiiDetection && enablePiiModifiers && editor) {
-		event.preventDefault();
+						// Handle CTRL+SHIFT+L to toggle PII masking (mask all <-> unmask all)
+						if (
+							(event.ctrlKey || event.metaKey) &&
+							event.shiftKey &&
+							event.key.toLowerCase() === 'l'
+						) {
+							if (enablePiiDetection && enablePiiModifiers && editor) {
+								event.preventDefault();
 
-		// Get current entities from PiiSessionManager to determine state
-		const piiSessionManager = PiiSessionManager.getInstance();
-		const currentEntities = piiSessionManager.getEntitiesForDisplay(conversationId);
+								// Get current entities from PiiSessionManager to determine state
+								const piiSessionManager = PiiSessionManager.getInstance();
+								const currentEntities = piiSessionManager.getEntitiesForDisplay(conversationId);
 
-		if (currentEntities.length > 0) {
-			// Check if most entities are currently masked
-			const maskedCount = currentEntities.filter((entity) => entity.shouldMask).length;
-			const unmaskedCount = currentEntities.length - maskedCount;
-			const mostlyMasked = maskedCount >= unmaskedCount;
+								if (currentEntities.length > 0) {
+									// Check if most entities are currently masked
+									const maskedCount = currentEntities.filter((entity) => entity.shouldMask).length;
+									const unmaskedCount = currentEntities.length - maskedCount;
+									const mostlyMasked = maskedCount >= unmaskedCount;
 
-			if (mostlyMasked) {
-				// Currently masked -> unmask all and clear mask modifiers
-				// 1. Clear all mask modifiers (keep ignore modifiers)
-				if (editor.commands?.clearMaskModifiers) {
-					editor.commands.clearMaskModifiers();
-				}
+									if (mostlyMasked) {
+										// Currently masked -> unmask all and clear mask modifiers
+										// 1. Clear all mask modifiers (keep ignore modifiers)
+										if (editor.commands?.clearMaskModifiers) {
+											editor.commands.clearMaskModifiers();
+										}
 
-				// 2. Unmask all PII entities
-				if (editor.commands?.unmaskAllEntities) {
-					editor.commands.unmaskAllEntities();
-				}
-			} else {
-				// Currently unmasked -> mask all entities
-				if (editor.commands?.maskAllEntities) {
-					editor.commands.maskAllEntities();
-				}
-			}
-		}
+										// 2. Unmask all PII entities
+										if (editor.commands?.unmaskAllEntities) {
+											editor.commands.unmaskAllEntities();
+										}
+									} else {
+										// Currently unmasked -> mask all entities
+										if (editor.commands?.maskAllEntities) {
+											editor.commands.maskAllEntities();
+										}
+									}
+								}
 
-		return true;
-	}
-}
+								return true;
+							}
+						}
 
 						if (messageInput) {
 							// Check if the current selection is inside a structured block (like codeBlock or list)
