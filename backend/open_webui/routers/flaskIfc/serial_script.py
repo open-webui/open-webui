@@ -30,7 +30,7 @@ def explicit_root_command(port,baudrate,path):
     while True:
         if (time.time() - start_time >= timeout):
             break
-        line = ser.readline().decode('utf-8', errors='ignore').strip()
+        line = ser.readline().decode('utf-8', errors='replace').strip()
         print("SERIAL/TARGET:" + line)
         if line:
             #print(f"Received: {line}")
@@ -79,7 +79,10 @@ def send_serial_command(port, baudrate, command):
                     if (byte == b"\n") or (byte == b"#"):  # Stop when delimiter is found
                         break
                 if line: # Check if line is not empty
-                    read_next_line = line.decode('utf-8')
+                    try:
+                        read_next_line = line.decode('utf-8', errors='replace')
+                    except UnicodeDecodeError as e:
+                        print("Decoding error:", e, "Raw line:", line)
                     if ("run-platform-done" in read_next_line.strip()) or \
                             ("SOCFPGA_AGILEX7 " in read_next_line.strip()) or \
                             ("Unknown command " in read_next_line.strip()) or \
@@ -122,15 +125,15 @@ def pre_and_post_check(port,baudrate):
                 break
                 
             line += byte
-        if 'ogin incorrec' in line.decode('utf-8'):
+        if 'ogin incorrec' in line.decode('utf-8', errors='replace'):
             time.sleep(0.1)
             flag[0] = 'root issue'
             break
-        elif 'nknown command \'trash\'' in line.decode('utf-8'):
+        elif 'nknown command \'trash\'' in line.decode('utf-8', errors='replace'):
             time.sleep(0.1)
             flag[0] = 'boot issue'
             break
-        elif 'trash: command' in line.decode('utf-8'):
+        elif 'trash: command' in line.decode('utf-8', errors='replace'):
             time.sleep(0.1)
             break
     ser.close()

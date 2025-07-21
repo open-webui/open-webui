@@ -16,29 +16,28 @@
 
 	let showValves = false;
 
-</script>
+	let isRestarting = false;
 
-<script context="module">
-	// Define the restartOpu function
-	export function restartOpu() {
-		// Your restart logic here
-		// Send a request to backend to restart OPU
-		fetch('/ollama/api/restartopu', {
-			method: 'POST',
-			headers: {
-			'Content-Type': 'application/json',
-			},
-			body: JSON.stringify({ target: 'opu' }),
-		})
-		.then(response => {
+	async function restartOpu() {
+		isRestarting = true;
+		try {
+			const response = await fetch('/ollama/api/restartopu', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({ target: 'opu' }),
+			});
 			if (!response.ok) throw new Error('Restart failed');
 			alert('OPU restarted successfully!');
-		})
-		.catch(error => {
+		} catch (error) {
 			console.error('Error restarting OPU:', error);
 			alert('Something went wrong while restarting OPU.');
-		});
-	};
+		}
+		finally {
+			isRestarting = false;
+		}
+	}
 </script>
 
 <div class=" dark:text-white">
@@ -115,11 +114,14 @@
 				<div class="" slot="content">
 					<!-- Main Restart Now button -->
 					<button
+						disabled={isRestarting}
 						class={
-						      'w-auto text-sm px-2 py-1 rounded-md transition-colors duration-200' +
-						      ($settings.highContrastMode
-						      ? ' border-2 border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-850 text-gray-900 dark:text-gray-100 hover:bg-blue-100 dark:hover:bg-blue-900'
-						      : ' bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600')
+							'w-auto text-sm px-2 py-1 rounded-md transition-colors duration-200' +
+							($settings.highContrastMode?
+							 ' border-2 border-gray-300 dark : border-gray-700 bg-gray-50 dark:bg-gray-850 text-gray-900 dark:text-gray-100 ' +
+							(isRestarting ? 'opacity-50 cursor-not-allowed' :
+							'hover:bg-blue-100 dark:hover:bg-blue-900') : ' bg-blue-600 text-white ' +
+							(isRestarting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700 dark:bg-blue-600'))
 						}
 						on:click={() => {
 							restartOpu(); // Replace with your restart logic
@@ -127,7 +129,7 @@
 							}
 						}
 						>
-						{$i18n.t('Restart Now')}
+						{isRestarting ? $i18n.t('Restarting...') : $i18n.t('Restart Now')}
 					</button>
 				</div>
 			</Collapsible>
