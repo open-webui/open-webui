@@ -660,6 +660,7 @@ async def run_gov_gpt_web_search(user_query, user, session_id, user_message, eve
     final_response = None
     org_query = user_query
     refined_query = user_query
+    final_queries = user_query
     iteration_count = 0
     max_iterations = int(MAX_RETRIALS_WEB_SEARCH)
     need_to_search = False
@@ -691,6 +692,7 @@ async def run_gov_gpt_web_search(user_query, user, session_id, user_message, eve
                 )
                 
                 # Get web results for each refined query
+                final_queries = refined_query
                 if isinstance(refined_query, list):
                     log.info(f"GOV_GPT Web Search: Processing {len(refined_query)} refined queries")
                     for i, query in enumerate(refined_query):
@@ -713,7 +715,8 @@ async def run_gov_gpt_web_search(user_query, user, session_id, user_message, eve
                         "type": "status",
                         "data": {
                             "action": "web_search",
-                            "description": f"Searched {len(website_results)} sites",
+                            "description": f"Searched {len(website_results)} sites see top 3 sites",
+                            "urls": [result.get("url") for result in website_results if result.get("url")][:3],#limit 3
                             "done": True,
                         },
                     }
@@ -745,14 +748,14 @@ async def run_gov_gpt_web_search(user_query, user, session_id, user_message, eve
             
             start_time = time.time()
             
-            log.info(f"GOV_GPT Web Search: Making request to custom API with timeout of 30 seconds")
+            log.info(f"GOV_GPT Web Search: Making request to custom API with timeout of 120 seconds")
             
             try:
                 async with aiohttp.ClientSession() as session:
                     async with session.post(
                         CUSTOM_WEB_SEARCH_URL,
                         json=payload,
-                        timeout=aiohttp.ClientTimeout(total=30, connect=10)
+                        timeout=aiohttp.ClientTimeout(total=120, connect=10)
                     ) as resp:
                         end_time = time.time()
                         response_time = end_time - start_time
@@ -770,7 +773,7 @@ async def run_gov_gpt_web_search(user_query, user, session_id, user_message, eve
                         log.info(f"GOV_GPT Web Search: Custom API full response: {json.dumps(result, indent=2)}")
                         
             except asyncio.TimeoutError:
-                log.error(f"GOV_GPT Web Search: Custom API request timed out after 30 seconds")
+                log.error(f"GOV_GPT Web Search: Custom API request timed out after 120 seconds")
                 raise Exception("Custom API request timed out")
             except aiohttp.ClientError as e:
                 log.error(f"GOV_GPT Web Search: Custom API client error: {str(e)}")
@@ -843,15 +846,15 @@ async def run_gov_gpt_web_search(user_query, user, session_id, user_message, eve
         files.append({
             "type": "web_search_custom",
             "docs": [{"page_content": final_response}] if final_response else [],
-            "urls": [result.get("url", "") for result in website_results if result.get("url")],
-            "queries": refined_query if isinstance(refined_query, list) else [refined_query],
+            "urls": [result.get("url", "") for result in website_results if result.get("url")][:3],# Limit to 3 urls
+            "queries": final_queries if isinstance(final_queries, list) else [final_queries],
         })
         log.info(f"GOV_GPT Web Search: Created file structure with {len(files[0]['urls'])} URLs")
     
     result_data = {
         "response": final_response,
-        "queries": refined_query if isinstance(refined_query, list) else [refined_query],
-        "urls": [result.get("url", "") for result in website_results if result.get("url")],
+        "queries": final_queries if isinstance(final_queries, list) else [final_queries],
+        "urls": [result.get("url", "") for result in website_results if result.get("url")][:3],# Limit to 3 urls
         "files": files
     }
     
