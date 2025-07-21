@@ -91,11 +91,12 @@
 	import { fade } from 'svelte/transition';
 
 	// debounce draft‑save: skip huge inputs, run in idle time
+	const MAX_DRAFT_LENGTH = 5000;
 	const saveDraft = debounce((input) => {
-		if (input.prompt && input.prompt.length < 5000) {
+		if (input.prompt && input.prompt.length < MAX_DRAFT_LENGTH) {
 			requestIdleCallback(() => {
 				sessionStorage.setItem(
-					`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`,
+					`chat-input${$chatId ? `-${$chatId}` : ''}`,
 					JSON.stringify(input)
 				);
 			});
