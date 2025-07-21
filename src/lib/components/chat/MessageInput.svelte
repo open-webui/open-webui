@@ -608,7 +608,7 @@
 			</div>
 		</div>
 
-		<div class="{transparentBackground ? 'bg-transparent' : 'bg-transparent bg-light-bg'} ">
+		<div class="{transparentBackground ? 'bg-transparent' : 'bg-transparent dark:bg-gray-900'} ">
 			<div
 				class="{($settings?.widescreenMode ?? null)
 					? 'max-w-full'
@@ -1415,7 +1415,7 @@
 												<div class="attach">
   <button
     type="button"
-    class="relative flex items-center px-[12px] gap-[4px] py-[8px] rounded-full shadow-custom3 border border-[#E5EBF3] hover:bg-[#CCDDFC]  bg-transparent text-typography-titles text-[14px] leading-[22px] focus:outline-none"
+    class="relative flex items-center px-[12px] gap-[4px] py-[8px] rounded-full shadow-custom3 border border-[#E5EBF3] bg-light-bg text-typography-titles text-[14px] leading-[22px] focus:outline-none"
     on:click={() => filesInputElement.click()}
     aria-label="Attach files"
   >

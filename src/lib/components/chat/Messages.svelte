@@ -415,7 +415,7 @@
 			}}
 		/>
 	{:else}
-		<div class="w-full pt-2">
+		<div class="w-full pt-2 mt-auto">
 			{#key chatId}
 				<div class="w-full">
 					{#if messages.at(0)?.parentId !== null}
@@ -460,7 +460,6 @@
 						/>
 					{/each}
 				</div>
-				<div class="pb-12" />
 				{#if bottomPadding}
 					<div class="  pb-6" />
 				{/if}

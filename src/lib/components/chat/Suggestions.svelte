@@ -88,8 +88,8 @@
 			{#each filteredPrompts as prompt, idx (prompt.id || prompt.content)}
 				<button
 					class="flex {$mobile ? 'items-center gap-[4px] ' : 'shadow-custom3 flex-col items-start' }  border border-[#E5EBF3] p-[16px] rounded-[20px]  whitespace-nowrap overflow-hidden text-ellipsis transition 
-							bg-[#FBFCFC]  hover:bg-gradient-bg-2 
-							dark:bg-[#010E1D] dark:border-[#2D3642] dark:hover:bg-white/10 dark:hover:text-gray-900"
+							bg-light-bg  hover:bg-gradient-bg-2 
+							 dark:border-[#2D3642] dark:hover:bg-white/10 dark:hover:text-gray-900"
 					style="animation-delay: {idx * 60}ms;"
 					on:click={() => dispatch('select', prompt.content)}
 					>

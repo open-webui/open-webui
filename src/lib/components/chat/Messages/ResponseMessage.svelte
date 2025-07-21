@@ -51,6 +51,7 @@
 	import FollowUps from './ResponseMessage/FollowUps.svelte';
 	import { fade } from 'svelte/transition';
 	import { flyAndScale } from '$lib/utils/transitions';
+	import Copy from '$lib/components/icons/Copy.svelte';
 
 	interface MessageType {
 		id: string;
@@ -621,7 +622,7 @@
 
 				{#if message.timestamp}
 					<div
-						class=" self-center text-xs invisible group-hover:visible text-gray-400 font-medium first-letter:capitalize ml-0.5 translate-y-[1px]"
+						class=" self-center text-xs invisible  text-gray-400 font-medium first-letter:capitalize ml-0.5 translate-y-[1px]"
 					>
 						<Tooltip content={dayjs(message.timestamp * 1000).format('LLLL')}>
 							<span class="line-clamp-1">{formatDate(message.timestamp * 1000)}</span>
@@ -730,7 +731,7 @@
 						{/if}
 
 						{#if edit === true}
-							<div class="w-full bg-gray-50 dark:bg-gray-800 rounded-3xl px-5 py-3 my-2">
+							<div class="p-[24px] w-full rounded-[16px] text-[14px] text-typography-titles leading-[24px] bg-light-bg shadow-custom4 dark:border dark:border-[#2D82D2]">
 								<textarea
 									id="message-edit-{message.id}"
 									bind:this={editTextAreaElement}
@@ -754,23 +755,23 @@
 									}}
 								/>
 
-								<div class=" mt-2 mb-1 flex justify-between text-sm font-medium">
+								<div class="mt-[20px] flex items-center justify-between">
 									<div>
 										<button
 											id="save-new-message-button"
-											class=" px-4 py-2 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border border-gray-100 dark:border-gray-700 text-gray-700 dark:text-gray-200 transition rounded-3xl"
+											class="flex items-center gap-[8px] text-[14px] text-typography-btn-text-secondary font-Inter_SemiBold"
 											on:click={() => {
 												saveAsCopyHandler();
 											}}
 										>
-											{$i18n.t('Save As Copy')}
+											<Copy/>{$i18n.t('Copy')}
 										</button>
 									</div>
 
-									<div class="flex space-x-1.5">
+									<div class="flex space-x-[12px]">
 										<button
 											id="close-edit-message-button"
-											class="px-4 py-2 bg-white dark:bg-gray-900 hover:bg-gray-100 text-gray-800 dark:text-gray-100 transition rounded-3xl"
+											class="btn-secondary"
 											on:click={() => {
 												cancelEditMessage();
 											}}
@@ -780,7 +781,7 @@
 
 										<button
 											id="confirm-edit-message-button"
-											class=" px-4 py-2 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-3xl"
+											class="btn-primary "
 											on:click={() => {
 												editMessageConfirmHandler();
 											}}
@@ -791,7 +792,7 @@
 								</div>
 							</div>
 						{:else}
-							<div class="w-full flex flex-col relative" id="response-content-container">
+							<div class="w-full text-[14px] text-typography-titles leading-[24px]  flex flex-col relative" id="response-content-container">
 								{#if message.content === '' && !message.error && (message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]).length === 0}
 									<Skeleton />
 								{:else if message.content && message.error !== true}
@@ -868,14 +869,14 @@
 				{#if !edit}
 					<div
 						bind:this={buttonsContainerElement}
-						class="flex justify-start overflow-x-auto buttons text-gray-600 dark:text-gray-500 mt-0.5"
+						class="mt-[24px] flex gap-[2px] justify-start overflow-x-auto buttons text-gray-600 dark:text-gray-500"
 					>
 						{#if message.done || siblings.length > 1}
 							{#if siblings.length > 1}
 								<div class="flex self-center min-w-fit" dir="ltr">
 									<button
 										aria-label={$i18n.t('Previous message')}
-										class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
+										class="self-center p-1 hover:bg-gradient-bg-2 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
 										on:click={() => {
 											showPreviousMessage(message);
 										}}
@@ -943,7 +944,7 @@
 									{/if}
 
 									<button
-										class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
+										class="self-center p-1 hover:bg-gradient-bg-2 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
 										on:click={() => {
 											showNextMessage(message);
 										}}
@@ -974,28 +975,19 @@
 										<Tooltip content={$i18n.t('Edit')} placement="bottom">
 											<button
 												aria-label={$i18n.t('Edit')}
-												class="{isLastMessage
-													? 'visible'
-													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+												class="p-1.5 hover:bg-gradient-bg-2 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
 												on:click={() => {
 													editMessageHandler();
 												}}
 											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													fill="none"
-													viewBox="0 0 24 24"
-													stroke-width="2.3"
-													aria-hidden="true"
-													stroke="currentColor"
-													class="w-4 h-4"
-												>
-													<path
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"
-													/>
-												</svg>
+												<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18" fill="none">
+  <mask id="mask0_2146_22832" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="0" y="0" width="18" height="18">
+    <rect width="18" height="18" fill="#D9D9D9"/>
+  </mask>
+  <g mask="url(#mask0_2146_22832)">
+    <path d="M3.44803 15.3469C3.20965 15.3998 3.0044 15.3402 2.83228 15.168C2.66015 14.9959 2.60053 14.7907 2.6534 14.5523L3.28078 11.5407L6.45965 14.7195L3.44803 15.3469ZM6.45965 14.7195L3.28078 11.5407L11.6952 3.12622C11.9538 2.86759 12.274 2.73828 12.6558 2.73828C13.0375 2.73828 13.3577 2.86759 13.6163 3.12622L14.8741 4.38397C15.1327 4.64259 15.262 4.96278 15.262 5.34453C15.262 5.72628 15.1327 6.04647 14.8741 6.30509L6.45965 14.7195ZM12.4972 3.91672L4.8284 11.5782L6.42215 13.1719L14.0836 5.50316C14.1268 5.45991 14.1485 5.40584 14.1485 5.34097C14.1485 5.27597 14.1268 5.22184 14.0836 5.17859L12.8217 3.91672C12.7785 3.87347 12.7243 3.85184 12.6593 3.85184C12.5945 3.85184 12.5404 3.87347 12.4972 3.91672Z" fill="#23282E"/>
+  </g>
+</svg>
 											</button>
 										</Tooltip>
 									{/if}
@@ -1006,26 +998,14 @@
 										aria-label={$i18n.t('Copy')}
 										class="{isLastMessage
 											? 'visible'
-											: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition copy-response-button"
+											: 'invisible group-hover:visible'} p-1.5 hover:bg-gradient-bg-2 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition copy-response-button"
 										on:click={() => {
 											copyToClipboard(message.content);
 										}}
 									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											fill="none"
-											aria-hidden="true"
-											viewBox="0 0 24 24"
-											stroke-width="2.3"
-											stroke="currentColor"
-											class="w-4 h-4"
-										>
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184"
-											/>
-										</svg>
+										<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18" fill="none">
+  <path d="M6.79331 13.125C6.41444 13.125 6.09375 12.9938 5.83125 12.7313C5.56875 12.4688 5.4375 12.1481 5.4375 11.7692V3.23081C5.4375 2.85194 5.56875 2.53125 5.83125 2.26875C6.09375 2.00625 6.41444 1.875 6.79331 1.875H13.0817C13.4606 1.875 13.7812 2.00625 14.0438 2.26875C14.3063 2.53125 14.4375 2.85194 14.4375 3.23081V11.7692C14.4375 12.1481 14.3063 12.4688 14.0438 12.7313C13.7812 12.9938 13.4606 13.125 13.0817 13.125H6.79331ZM6.79331 12H13.0817C13.1394 12 13.1923 11.9759 13.2403 11.9278C13.2884 11.8798 13.3125 11.8269 13.3125 11.7692V3.23081C13.3125 3.17306 13.2884 3.12019 13.2403 3.07219C13.1923 3.02406 13.1394 3 13.0817 3H6.79331C6.73556 3 6.68269 3.02406 6.63469 3.07219C6.58656 3.12019 6.5625 3.17306 6.5625 3.23081V11.7692C6.5625 11.8269 6.58656 11.8798 6.63469 11.9278C6.68269 11.9759 6.73556 12 6.79331 12ZM4.16831 15.75C3.78944 15.75 3.46875 15.6188 3.20625 15.3563C2.94375 15.0938 2.8125 14.7731 2.8125 14.3942V4.73081H3.9375V14.3942C3.9375 14.4519 3.96156 14.5048 4.00969 14.5528C4.05769 14.6009 4.11056 14.625 4.16831 14.625H11.5817V15.75H4.16831Z" fill="#23282E"/>
+</svg>
 									</button>
 								</Tooltip>
 
@@ -1036,7 +1016,7 @@
 											id="speak-button-{message.id}"
 											class="{isLastMessage
 												? 'visible'
-												: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+												: 'invisible group-hover:visible'} p-1.5 hover:bg-gradient-bg-2 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
 											on:click={() => {
 												if (!loadingSpeech) {
 													toggleSpeakMessage();
@@ -1119,7 +1099,7 @@
 											aria-label={$i18n.t('Generate Image')}
 											class="{isLastMessage
 												? 'visible'
-												: 'invisible group-hover:visible'}  p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+												: 'invisible group-hover:visible'}  p-1.5 hover:bg-gradient-bg-2 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
 											on:click={() => {
 												if (!generatingImage) {
 													generateImage(message);
@@ -1199,7 +1179,7 @@
 											aria-hidden="true"
 											class=" {isLastMessage
 												? 'visible'
-												: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition whitespace-pre-wrap"
+												: 'invisible group-hover:visible'} p-1.5 hover:bg-gradient-bg-2 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition whitespace-pre-wrap"
 											on:click={() => {
 												console.log(message);
 											}}
@@ -1231,7 +1211,7 @@
 												aria-label={$i18n.t('Good Response')}
 												class="{isLastMessage
 													? 'visible'
-													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg {(
+													: 'invisible group-hover:visible'} p-1.5 hover:bg-gradient-bg-2 dark:hover:bg-white/5 rounded-lg {(
 													message?.annotation?.rating ?? ''
 												).toString() === '1'
 													? 'bg-gray-100 dark:bg-gray-800'
@@ -1246,21 +1226,9 @@
 													}, 0);
 												}}
 											>
-												<svg
-													aria-hidden="true"
-													stroke="currentColor"
-													fill="none"
-													stroke-width="2.3"
-													viewBox="0 0 24 24"
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													class="w-4 h-4"
-													xmlns="http://www.w3.org/2000/svg"
-												>
-													<path
-														d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"
-													/>
-												</svg>
+												<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18" fill="none">
+  <path d="M13.2981 15.3767H5.40862V6.37669L10.3847 1.42969L11.0192 2.06419C11.0971 2.14206 11.1617 2.24519 11.2133 2.37356C11.2646 2.50194 11.2903 2.62288 11.2903 2.73638V2.92669L10.4942 6.37669H15.5192C15.8759 6.37669 16.1911 6.5135 16.4646 6.78713C16.7382 7.06063 16.875 7.37575 16.875 7.7325V8.94394C16.875 9.02181 16.8649 9.10594 16.8446 9.19631C16.8245 9.28669 16.8019 9.37088 16.7769 9.44888L14.6278 14.52C14.5202 14.7604 14.3399 14.9633 14.0871 15.1286C13.8342 15.294 13.5712 15.3767 13.2981 15.3767ZM6.53363 14.2517H13.2981C13.3509 14.2517 13.405 14.2373 13.4603 14.2084C13.5156 14.1795 13.5578 14.1314 13.5866 14.0642L15.75 9.00169V7.7325C15.75 7.66513 15.7284 7.60981 15.6851 7.56656C15.6419 7.52331 15.5866 7.50169 15.5192 7.50169H9.07219L10.0125 3.39113L6.53363 6.85556V14.2517ZM5.40862 6.37669V7.50169H3V14.2517H5.40862V15.3767H1.875V6.37669H5.40862Z" fill="#23282E"/>
+</svg>
 											</button>
 										</Tooltip>
 
@@ -1269,7 +1237,7 @@
 												aria-label={$i18n.t('Bad Response')}
 												class="{isLastMessage
 													? 'visible'
-													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg {(
+													: 'invisible group-hover:visible'} p-1.5 hover:bg-gradient-bg-2 dark:hover:bg-white/5 rounded-lg {(
 													message?.annotation?.rating ?? ''
 												).toString() === '-1'
 													? 'bg-gray-100 dark:bg-gray-800'
@@ -1284,21 +1252,9 @@
 													}, 0);
 												}}
 											>
-												<svg
-													aria-hidden="true"
-													stroke="currentColor"
-													fill="none"
-													stroke-width="2.3"
-													viewBox="0 0 24 24"
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													class="w-4 h-4"
-													xmlns="http://www.w3.org/2000/svg"
-												>
-													<path
-														d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"
-													/>
-												</svg>
+												<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18" fill="none">
+  <path d="M4.70194 2.92969H12.5914V11.9295L7.61531 16.8767L6.98081 16.242C6.90294 16.1641 6.83825 16.061 6.78675 15.9326C6.73537 15.8043 6.70969 15.6834 6.70969 15.57V15.3795L7.50581 11.9295H2.48081C2.12406 11.9295 1.80894 11.7928 1.53544 11.5193C1.26181 11.2456 1.125 10.9305 1.125 10.5739V9.36225C1.125 9.28438 1.13512 9.20025 1.15537 9.10988C1.1755 9.0195 1.19806 8.93538 1.22306 8.8575L3.37219 3.78638C3.47981 3.546 3.66006 3.34313 3.91294 3.17775C4.16581 3.01238 4.42881 2.92969 4.70194 2.92969ZM11.4664 4.05469H4.70194C4.64906 4.05469 4.595 4.06906 4.53975 4.09781C4.48438 4.12669 4.44225 4.17481 4.41338 4.24219L2.25 9.30469V10.5739C2.25 10.6411 2.27163 10.6964 2.31488 10.7396C2.35812 10.783 2.41344 10.8047 2.48081 10.8047H8.92781L7.9875 14.9153L11.4664 11.4508V4.05469ZM12.5914 11.9295V10.8047H15V4.05469H12.5914V2.92969H16.125V11.9295H12.5914Z" fill="#23282E"/>
+</svg>
 											</button>
 										</Tooltip>
 									{/if}
@@ -1311,7 +1267,7 @@
 												id="continue-response-button"
 												class="{isLastMessage
 													? 'visible'
-													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition regenerate-response-button"
+													: 'invisible group-hover:visible'} p-1.5 hover:bg-gradient-bg-2 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition regenerate-response-button"
 												on:click={() => {
 													continueResponse();
 												}}
@@ -1346,7 +1302,7 @@
 											aria-label={$i18n.t('Regenerate')}
 											class="{isLastMessage
 												? 'visible'
-												: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition regenerate-response-button"
+												: 'invisible group-hover:visible'} p-1.5 hover:bg-gradient-bg-2 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition regenerate-response-button"
 											on:click={() => {
 												showRateComment = false;
 												regenerateResponse(message);
@@ -1390,7 +1346,7 @@
 												id="delete-response-button"
 												class="{isLastMessage
 													? 'visible'
-													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition regenerate-response-button"
+													: 'invisible group-hover:visible'} p-1.5 hover:bg-gradient-bg-2 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition regenerate-response-button"
 												on:click={() => {
 													showDeleteConfirm = true;
 												}}
@@ -1422,7 +1378,7 @@
 													aria-label={action.name}
 													class="{isLastMessage
 														? 'visible'
-														: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+														: 'invisible group-hover:visible'} p-1.5 hover:bg-gradient-bg-2 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
 													on:click={() => {
 														actionMessage(action.id, message);
 													}}

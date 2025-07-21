@@ -138,7 +138,7 @@
 
 					{#if message.timestamp}
 						<div
-							class=" self-center text-xs invisible group-hover:visible text-gray-400 font-medium first-letter:capitalize ml-0.5 translate-y-[1px]"
+							class=" self-center text-xs invisible text-gray-400 font-medium first-letter:capitalize ml-0.5 translate-y-[1px]"
 						>
 							<Tooltip content={dayjs(message.timestamp * 1000).format('LLLL')}>
 								<span class="line-clamp-1">{formatDate(message.timestamp * 1000)}</span>
@@ -150,7 +150,7 @@
 		{:else if message.timestamp}
 			<div class="flex justify-end pb-1 pr-2">
 				<div
-					class="text-xs invisible group-hover:visible text-gray-400 font-medium first-letter:capitalize translate-y-[1px]"
+					class="text-xs invisible text-gray-400 font-medium first-letter:capitalize translate-y-[1px]"
 				>
 					<Tooltip content={dayjs(message.timestamp * 1000).format('LLLL')}>
 						<span class="line-clamp-1">{formatDate(message.timestamp * 1000)}</span>
@@ -185,7 +185,7 @@
 
 			{#if message.content !== ''}
 				{#if edit === true}
-					<div class=" w-full bg-gray-50 dark:bg-gray-800 rounded-3xl px-5 py-3 mb-2">
+					<div class="w-full bg-light-bg rounded-[12px] p-[24px] mb-[8px] shadow-custom4">
 						{#if (editedFiles ?? []).length > 0}
 							<div class="flex items-center flex-wrap gap-2 -mx-2 mb-1">
 								{#each editedFiles as file, fileIdx}
@@ -269,11 +269,11 @@
 							/>
 						</div>
 
-						<div class=" mt-2 mb-1 flex justify-between text-sm font-medium">
+						<div class="mt-[20px] flex justify-between text-sm font-medium">
 							<div>
 								<button
 									id="save-edit-message-button"
-									class=" px-4 py-2 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border border-gray-100 dark:border-gray-700 text-gray-700 dark:text-gray-200 transition rounded-3xl"
+									class=" btn-primary"
 									on:click={() => {
 										editMessageConfirmHandler(false);
 									}}
@@ -285,7 +285,7 @@
 							<div class="flex space-x-1.5">
 								<button
 									id="close-edit-message-button"
-									class="px-4 py-2 bg-white dark:bg-gray-900 hover:bg-gray-100 text-gray-800 dark:text-gray-100 transition rounded-3xl"
+									class="btn-secondary"
 									on:click={() => {
 										cancelEditMessage();
 									}}
@@ -295,7 +295,7 @@
 
 								<button
 									id="confirm-edit-message-button"
-									class=" px-4 py-2 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-3xl"
+									class="btn-primary"
 									on:click={() => {
 										editMessageConfirmHandler();
 									}}
@@ -309,8 +309,8 @@
 					<div class="w-full">
 						<div class="flex {($settings?.chatBubble ?? true) ? 'justify-end pb-1' : 'w-full'}">
 							<div
-								class="rounded-xl {($settings?.chatBubble ?? true)
-									? `max-w-[90%] px-5 py-2 bg-white dark:bg-gray-850 ${
+								class="rounded-[16px] text-[14px] text-typography-titles leading-[24px] {($settings?.chatBubble ?? true)
+									? `max-w-[90%] p-[24px] bg-light-bg shadow-custom4 ${
 											message.files ? 'rounded-tr-lg' : ''
 										}`
 									: ' w-full'}"
@@ -425,75 +425,52 @@
 							{#if !readOnly}
 								<Tooltip content={$i18n.t('Edit')} placement="bottom">
 									<button
-										class="invisible group-hover:visible p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition edit-user-message-button"
+										class=" p-1.5 hover:bg-gradient-bg-2 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition edit-user-message-button"
 										on:click={() => {
 											editMessageHandler();
 										}}
 									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											fill="none"
-											viewBox="0 0 24 24"
-											stroke-width="2.3"
-											stroke="currentColor"
-											class="w-4 h-4"
-										>
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"
-											/>
-										</svg>
+										<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18" fill="none">
+  <mask id="mask0_2146_3836" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="0" y="0" width="18" height="18">
+    <rect width="18" height="18" fill="#D9D9D9"/>
+  </mask>
+  <g mask="url(#mask0_2146_3836)">
+    <path d="M3.44803 15.3469C3.20965 15.3998 3.0044 15.3402 2.83228 15.168C2.66015 14.9959 2.60053 14.7907 2.6534 14.5523L3.28078 11.5407L6.45965 14.7195L3.44803 15.3469ZM6.45965 14.7195L3.28078 11.5407L11.6952 3.12622C11.9538 2.86759 12.274 2.73828 12.6558 2.73828C13.0375 2.73828 13.3577 2.86759 13.6163 3.12622L14.8741 4.38397C15.1327 4.64259 15.262 4.96278 15.262 5.34453C15.262 5.72628 15.1327 6.04647 14.8741 6.30509L6.45965 14.7195ZM12.4972 3.91672L4.8284 11.5782L6.42215 13.1719L14.0836 5.50316C14.1268 5.45991 14.1485 5.40584 14.1485 5.34097C14.1485 5.27597 14.1268 5.22184 14.0836 5.17859L12.8217 3.91672C12.7785 3.87347 12.7243 3.85184 12.6593 3.85184C12.5945 3.85184 12.5404 3.87347 12.4972 3.91672Z" fill="#23282E"/>
+  </g>
+</svg>
 									</button>
 								</Tooltip>
 							{/if}
 
 							<Tooltip content={$i18n.t('Copy')} placement="bottom">
 								<button
-									class="invisible group-hover:visible p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+									class=" p-1.5 hover:bg-gradient-bg-2 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
 									on:click={() => {
 										copyToClipboard(message.content);
 									}}
 								>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										fill="none"
-										viewBox="0 0 24 24"
-										stroke-width="2.3"
-										stroke="currentColor"
-										class="w-4 h-4"
-									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184"
-										/>
-									</svg>
+									<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18" fill="none">
+  <path d="M6.79331 13.125C6.41444 13.125 6.09375 12.9938 5.83125 12.7313C5.56875 12.4688 5.4375 12.1481 5.4375 11.7692V3.23081C5.4375 2.85194 5.56875 2.53125 5.83125 2.26875C6.09375 2.00625 6.41444 1.875 6.79331 1.875H13.0817C13.4606 1.875 13.7812 2.00625 14.0438 2.26875C14.3063 2.53125 14.4375 2.85194 14.4375 3.23081V11.7692C14.4375 12.1481 14.3063 12.4688 14.0438 12.7313C13.7812 12.9938 13.4606 13.125 13.0817 13.125H6.79331ZM6.79331 12H13.0817C13.1394 12 13.1923 11.9759 13.2403 11.9278C13.2884 11.8798 13.3125 11.8269 13.3125 11.7692V3.23081C13.3125 3.17306 13.2884 3.12019 13.2403 3.07219C13.1923 3.02406 13.1394 3 13.0817 3H6.79331C6.73556 3 6.68269 3.02406 6.63469 3.07219C6.58656 3.12019 6.5625 3.17306 6.5625 3.23081V11.7692C6.5625 11.8269 6.58656 11.8798 6.63469 11.9278C6.68269 11.9759 6.73556 12 6.79331 12ZM4.16831 15.75C3.78944 15.75 3.46875 15.6188 3.20625 15.3563C2.94375 15.0938 2.8125 14.7731 2.8125 14.3942V4.73081H3.9375V14.3942C3.9375 14.4519 3.96156 14.5048 4.00969 14.5528C4.05769 14.6009 4.11056 14.625 4.16831 14.625H11.5817V15.75H4.16831Z" fill="#23282E"/>
+</svg>
 								</button>
 							</Tooltip>
 
 							{#if !readOnly && (!isFirstMessage || siblings.length > 1)}
 								<Tooltip content={$i18n.t('Delete')} placement="bottom">
 									<button
-										class="invisible group-hover:visible p-1 rounded-sm dark:hover:text-white hover:text-black transition"
+										class=" p-1 rounded-sm dark:hover:text-white hover:text-black transition"
 										on:click={() => {
 											showDeleteConfirm = true;
 										}}
 									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											fill="none"
-											viewBox="0 0 24 24"
-											stroke-width="2"
-											stroke="currentColor"
-											class="w-4 h-4"
-										>
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
-											/>
-										</svg>
+										<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18" fill="none">
+  <mask id="mask0_2146_3844" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="0" y="0" width="18" height="18">
+    <rect width="18" height="18" fill="#D9D9D9"/>
+  </mask>
+  <g mask="url(#mask0_2146_3844)">
+    <path d="M5.48081 15.3743C5.10681 15.3743 4.78731 15.2419 4.52231 14.977C4.25744 14.712 4.125 14.3925 4.125 14.0185V4.49931H3.375V3.37431H6.75V2.71094H11.25V3.37431H14.625V4.49931H13.875V14.0185C13.875 14.3974 13.7438 14.7181 13.4813 14.9806C13.2188 15.2431 12.8981 15.3743 12.5192 15.3743H5.48081ZM12.75 4.49931H5.25V14.0185C5.25 14.0859 5.27162 14.1412 5.31487 14.1844C5.35812 14.2277 5.41344 14.2493 5.48081 14.2493H12.5192C12.5769 14.2493 12.6298 14.2253 12.6778 14.1771C12.7259 14.1291 12.75 14.0763 12.75 14.0185V4.49931ZM7.053 12.7493H8.17781V5.99931H7.053V12.7493ZM9.82219 12.7493H10.947V5.99931H9.82219V12.7493Z" fill="#23282E"/>
+  </g>
+</svg>
 									</button>
 								</Tooltip>
 							{/if}
