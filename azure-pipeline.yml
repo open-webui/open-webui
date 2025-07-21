@@ -33,7 +33,17 @@ variables:
     value: 'govgpt'
 
 
+resources:
+  repositories:
+    - repository: gitops
+      type: git
+      name: AIFactory/gitops
+      ref: refs/heads/main
+
 steps:
+- checkout: self
+- checkout: gitops
+
 # Login to Azure Container Registry manually using username and password
 - script: |
     echo $(dockerRegistryPassword) | docker login $(dockerRegistryUrl) -u $(dockerRegistryUsername) --password-stdin
@@ -41,11 +51,29 @@ steps:
 
 # Build Docker Image
 - script: |
+    ls
+    cd govgpt
+    ls
     docker build -t $(dockerRegistryUrl)/$(sourceImageName):latest -t $(dockerRegistryUrl)/$(sourceImageName):$(Build.BuildId) -f Dockerfile .
   displayName: 'Build Docker Image'
 
 # Push Docker Image to ACR
 - script: |
+    ls
     docker push $(dockerRegistryUrl)/$(sourceImageName):latest
     docker push $(dockerRegistryUrl)/$(sourceImageName):$(Build.BuildId)
   displayName: 'Push Docker Image to ACR'
+
+- script: |
+    echo "Updating image tag in sandbox.yaml to $(Build.BuildId)"
+    cd gitops/helm-charts/govgpt
+    ls
+    yq e '.image.tag = "$(Build.BuildId)"' -i sandbox.yaml
+    git config user.name "Azure Pipeline"
+    git config user.email "pipeline@azure.gitops"
+    git add sandbox.yaml
+    git commit -m "chore: bump govgpt tag to $(Build.BuildId)"
+    git push origin HEAD:main
+  displayName: 'Update Helm image tag in GitOps repo'
+  env:
+    SYSTEM_ACCESSTOKEN: $(System.AccessToken)

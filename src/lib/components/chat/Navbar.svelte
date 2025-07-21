@@ -29,9 +29,14 @@
 	import Logo from '../icons/Logo.svelte';
 	import LightMode from '../icons/LightMode.svelte';
 	import DarkMode from '../icons/DarkMode.svelte';
+	
+	
 
 	import PencilSquare from '../icons/PencilSquare.svelte';
 	import Banner from '../common/Banner.svelte';
+
+	import MaterialIcon from '$lib/components/common/MaterialIcon.svelte';
+
 
 	const i18n = getContext('i18n');
 
@@ -60,30 +65,40 @@
 	aria-label="New Chat"
 />
 
-<nav class="sticky top-0 z-30 w-full px-[20px] py-[18px] flex flex-col items-center drag-region">
-	<div class="flex items-center w-full ">
-		<div
-			class=" bg-surface dark:from-gray-900 dark:via-gray-900 dark:to-transparent pointer-events-none absolute inset-0 -bottom-7 z-[-1]"
-		></div>
-		<div class=" flex max-w-full w-full mx-auto bg-transparent">
-			<div class="flex items-center justify-between w-full max-w-full">
-				<div
-					class="{$showSidebar
-						? 'my-1'
-						: ''} mx-5 self-start flex flex-none items-center text-gray-600 dark:text-gray-400"
-				>
-					<Logo strokeWidth="2" className="size-[1.1rem]" />
-				</div>
+<nav class="w-full flex items-center justify-between px-4 py-0 h-[56px] relative z-30 { $mobile ? ' dark:bg-gray-900 dark:border-gray-800' : 'bg-transparent' }">
+  {#if $mobile}
+    <button
+      class="flex items-center justify-center rounded-lg size-10 hover:bg-[#e5e7eb] transition"
+      aria-label="Toggle Sidebar"
+      on:click={() => showSidebar.set(!$showSidebar)}
+    >
+      <MaterialIcon name="menu" className="w-6 h-6" />
+    </button>
+    <button
+      class="flex items-center justify-center rounded-lg size-10 hover:bg-[#e5e7eb] transition"
+      aria-label="New Chat"
+      on:click={() => initNewChat()}
+    >
+      <MaterialIcon name="add" className="w-[18px] h-[18px]" />
+    </button>
+  {:else}
 
-				<!--<div
-					class="flex-1 overflow-hidden max-w-full py-0.5
+  <div class="flex items-center">
+    <img
+	src="/logov4.png"
+	alt="GovGPT Logo"
+	class="w-[28px] h-[28px] filter dark:invert dark:brightness-0 dark:contrast-200"
+	/>
+
+	<!--<div
+				class="flex-1 overflow-hidden max-w-full py-0.5
 			{$showSidebar ? 'ml-1' : ''}
 			"
 				>
 					{#if showModelSelector}
 						<ModelSelector bind:selectedModels showSetDefault={!shareEnabled} />
 					{/if}
-				</div> -->
+				</div>-->
 				<div class="self-start flex flex-none items-center text-gray-600 dark:text-gray-400">
 					<!-- <div class="md:hidden flex self-center w-[1px] h-5 mx-2 bg-gray-300 dark:bg-stone-700" /> -->
 					<!--{#if shareEnabled && chat && (chat.id || $temporaryChatEnabled)}
@@ -120,7 +135,7 @@
 							</button>
 						</Menu>
 					{/if}-->
-					<div class="flex items-center mr-[12px]">
+					<!--<div class="flex items-center mr-[12px]">
 
 					<label class="relative inline-flex items-center cursor-pointer">
 						<input type="checkbox" bind:checked={isOn} class="sr-only peer" />
@@ -130,7 +145,7 @@
 						</div>
 						</div>
 					</label>
-					</div>
+					</div>-->
 					<!--<Tooltip content={$i18n.t('Controls')}>
 						<button
 							class=" flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
@@ -146,7 +161,7 @@
 					</Tooltip>-->
 
 					{#if $user !== undefined && $user !== null}
-						<UserMenu
+						<!--<UserMenu
 							className="max-w-[240px]"
 							role={$user?.role}
 							help={true}
@@ -169,65 +184,13 @@
 									/>
 								</div>
 							</button>
-						</UserMenu>
+						</UserMenu>-->
 					{/if}
 				</div>
 			</div>
-		</div>
-	</div>
 
-	{#if $temporaryChatEnabled && $chatId === 'local'}
-		<div class=" w-full z-30 text-center">
-			<div class="text-xs text-gray-500">{$i18n.t('Temporary Chat')}</div>
-		</div>
-	{/if}
 
-	{#if !history.currentId && !$chatId && ($banners.length > 0 || ($config?.license_metadata?.type ?? null) === 'trial' || (($config?.license_metadata?.seats ?? null) !== null && $config?.user_count > $config?.license_metadata?.seats))}
-		<div class=" w-full z-30 mt-5">
-			<div class=" flex flex-col gap-1 w-full">
-				{#if ($config?.license_metadata?.type ?? null) === 'trial'}
-					<Banner
-						banner={{
-							type: 'info',
-							title: 'Trial License',
-							content: $i18n.t(
-								'You are currently using a trial license. Please contact support to upgrade your license.'
-							)
-						}}
-					/>
-				{/if}
 
-				{#if ($config?.license_metadata?.seats ?? null) !== null && $config?.user_count > $config?.license_metadata?.seats}
-					<Banner
-						banner={{
-							type: 'error',
-							title: 'License Error',
-							content: $i18n.t(
-								'Exceeded the number of seats in your license. Please contact support to increase the number of seats.'
-							)
-						}}
-					/>
-				{/if}
-
-				{#each $banners.filter( (b) => (b.dismissible ? !JSON.parse(localStorage.getItem('dismissedBannerIds') ?? '[]').includes(b.id) : true) ) as banner}
-					<Banner
-						{banner}
-						on:dismiss={(e) => {
-							const bannerId = e.detail;
-
-							localStorage.setItem(
-								'dismissedBannerIds',
-								JSON.stringify(
-									[
-										bannerId,
-										...JSON.parse(localStorage.getItem('dismissedBannerIds') ?? '[]')
-									].filter((id) => $banners.find((b) => b.id === id))
-								)
-							);
-						}}
-					/>
-				{/each}
-			</div>
-		</div>
-	{/if}
+    <!-- No add/new chat icon on desktop -->
+  {/if}
 </nav>

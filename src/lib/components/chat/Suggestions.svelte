@@ -2,12 +2,9 @@
 	import Fuse from 'fuse.js';
 	import Bolt from '$lib/components/icons/Bolt.svelte';
 	import { onMount, getContext, createEventDispatcher } from 'svelte';
-	import { settings, WEBUI_NAME } from '$lib/stores';
+	import { settings, WEBUI_NAME, mobile } from '$lib/stores';
 	import { WEBUI_VERSION } from '$lib/constants';
-	import News from '../icons/News.svelte';
-	import Analytics from '../icons/Analytics.svelte';
-	import Forum from '../icons/Forum.svelte';
-	import EditNotes from '../icons/EditNotes.svelte';
+	import MaterialIcon from '$lib/components/common/MaterialIcon.svelte';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -17,7 +14,6 @@
 	export let inputValue = '';
 
 	let sortedPrompts = [];
-	let iconMap = [News,Analytics,Forum,EditNotes];
 
 	const fuseOptions = {
 		keys: ['content', 'title'],
@@ -86,29 +82,27 @@
 	{/if}
 </div> -->
 
-<div class="w-full flex items-center justify-center">
-	{#if filteredPrompts.length > 0}
-		<div class="flex flex-wrap gap-3 mt-4 justify-center items-center w-full">
+<div class="w-full flex items-center justify-center ">
+	{#if filteredPrompts.length > 0} 
+		<div class="flex  gap-[8px] mt-4 justify-center items-center w-full flex-1  {$mobile ? 'overflow-x-auto scrollbar-none ' : 'flex-wrap' }">
 			{#each filteredPrompts as prompt, idx (prompt.id || prompt.content)}
-				<div class="relative rounded-lg backdrop-blur-md bg-white/90">
-					<div class="absolute inset-0 border border-white rounded-lg pointer-events-none"></div>
-					<button
-						class="flex items-center gap-1 p-2.5 w-full font-heading font-medium text-[14px] leading-[22px] text-neutral-800 text-left whitespace-nowrap overflow-hidden text-ellipsis transition hover:bg-gray-50 dark:text-gray-100 dark:hover:bg-white/10"
-						style="animation-delay: {idx * 60}ms;"
-						on:click={() => dispatch('select', prompt.content)}
+				<button
+					class="flex {$mobile ? 'items-center gap-[4px] ' : 'shadow-custom3 flex-col items-start' }  border border-[#E5EBF3] p-[16px] rounded-[20px]  whitespace-nowrap overflow-hidden text-ellipsis transition 
+							bg-[#FBFCFC]  hover:bg-gradient-bg-2 
+							dark:bg-[#010E1D] dark:border-[#2D3642] dark:hover:bg-white/10 dark:hover:text-gray-900"
+					style="animation-delay: {idx * 60}ms;"
+					on:click={() => dispatch('select', prompt.content)}
 					>
-						<span class="relative shrink-0 w-[18px] h-[18px] flex items-center justify-center">
-							{#if prompt.icon}
-								<svelte:component this={iconMap[prompt.icon]} className="w-[18px] h-[18px]" />
-							{:else}
-								<svelte:component this={iconMap[0]} className="w-[18px] h-[18px]" />
-							{/if}
-						</span>
-						<span class="font-heading font-medium text-[14px] leading-[22px] text-neutral-800 text-left whitespace-nowrap">
-							{prompt.title?.[0] ?? prompt.content}
-						</span>
+					
+					{#if prompt.icon_name}
+						<MaterialIcon name={prompt.icon_name} class="w-[18px] h-[18px]" color="{prompt.icon_color}" />
+					{:else}
+						<MaterialIcon name="lightbulb" class="w-[18px] h-[18px]" />
+					{/if}
+					<div class="w-full {$mobile ? ' ' : ' mt-[12px]' }  text-typography-titles dark:text-[#E0EBF6] text-[14px] leading-[22px] whitespace-nowrap">
+						{prompt.title?.[0] ?? prompt.content}
+					</div>
 					</button>
-				</div>
 			{/each}
 		</div>
 	{/if}

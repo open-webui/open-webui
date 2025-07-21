@@ -1109,7 +1109,7 @@
 	"Selected model(s) do not support image inputs": "",
 	"Semantic distance to query": "",
 	"Send": "",
-	"Send a Message": "",
+	"Send a Message": "How can I assist you with your work today?",
 	"Send message": "",
 	"Sends `stream_options: { include_usage: true }` in the request.\nSupported providers will return token usage information in the response when set.": "",
 	"September": "",

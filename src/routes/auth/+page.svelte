@@ -187,9 +187,9 @@
 		<div
 			class="login flex bg-circle min-h-screen w-full flex justify-center"
 		>
-			<div class="login__left bg-login bg-cover bg-top w-full"></div>
-			<div class="login__right w-full sm:max-w-md flex items-center justify-center text-center ">
-			   <div class="login-box bg-white p-[32px] shadow-custom max-w-[440px] rounded-[24px]">
+			<div class="login__left hidden sm:block w-[40%] bg-login bg-cover bg-top "></div>
+			<div class="login__right p-[16px] flex-1 flex items-center justify-center text-center ">
+			   <div class="login-box bg-white p-[32px] shadow-custom w-full md:w-[440px] rounded-[24px]">
 				{#if ($config?.features.auth_trusted_header ?? false) || $config?.features.auth === false}
 					<div class=" my-auto w-full">
 						<div

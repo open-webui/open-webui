@@ -42,7 +42,7 @@
 
 	let largeTextAsFile = false;
 
-	let landingPageMode = '';
+	let landingPageMode = 'chat';
 	let chatBubble = true;
 	let chatDirection: 'LTR' | 'RTL' | 'auto' = 'auto';
 	let ctrlEnterToSend = false;
@@ -315,7 +315,7 @@
 		collapseCodeBlocks = $settings?.collapseCodeBlocks ?? false;
 		expandDetails = $settings?.expandDetails ?? false;
 
-		landingPageMode = $settings?.landingPageMode ?? '';
+		landingPageMode = $settings?.landingPageMode ?? 'chat';
 		chatBubble = $settings?.chatBubble ?? true;
 		widescreenMode = $settings?.widescreenMode ?? false;
 		splitLargeChunks = $settings?.splitLargeChunks ?? false;

@@ -12,9 +12,8 @@
 	import ChevronRight from '../../icons/ChevronRight.svelte';
 	import Collapsible from '../../common/Collapsible.svelte';
 	import DragGhost from '$lib/components/common/DragGhost.svelte';
-
 	import FolderOpen from '$lib/components/icons/FolderOpen.svelte';
-	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
+	import EllipsisVertical from '$lib/components/icons/EllipsisVertical.svelte';
 	import {
 		deleteFolderById,
 		updateFolderIsExpandedById,
@@ -31,6 +30,7 @@
 	import ChatItem from './ChatItem.svelte';
 	import FolderMenu from './Folders/FolderMenu.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import MaterialIcon from '$lib/components/common/MaterialIcon.svelte';
 
 	export let open = false;
 
@@ -353,7 +353,7 @@
 		<div class=" bg-black/80 backdrop-blur-2xl px-2 py-1 rounded-lg w-fit max-w-40">
 			<div class="flex items-center gap-1">
 				<FolderOpen className="size-3.5" strokeWidth="2" />
-				<div class=" text-xs text-white line-clamp-1">
+				<div class="link-sub-nav-style  text-white line-clamp-1">
 					{folders[folderId].name}
 				</div>
 			</div>
@@ -370,7 +370,7 @@
 
 	<Collapsible
 		bind:open
-		className="w-full"
+		className="w-full pl-4"
 		buttonClassName="w-full"
 		hide={(folders[folderId]?.childrenIds ?? []).length === 0 &&
 			(folders[folderId].items?.chats ?? []).length === 0}
@@ -382,16 +382,18 @@
 		<div class="w-full group">
 			<button
 				id="folder-{folderId}-button"
-				class="relative w-full py-1.5 px-2 rounded-md flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-500 font-medium hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+				class="flex items-center relative w-full py-[8px] px-[16px] pl-[32px]  rounded-md flex items-center gap-[8px] link-style dark:text-gray-500 text-typography-titles hover:bg-gradient-bg-2 dark:hover:bg-gray-900 transition"
 				on:dblclick={() => {
 					editHandler();
 				}}
 			>
-				<div class="text-gray-300 dark:text-gray-600">
+				<div class="flex items-center text-gray-300 dark:text-gray-600">
 					{#if open}
-						<ChevronDown className=" size-3" strokeWidth="2.5" />
+						<MaterialIcon name="folder_open" className="size-3" />
+						<!-- <ChevronDown className=" size-3" strokeWidth="2.5" /> -->
 					{:else}
-						<ChevronRight className=" size-3" strokeWidth="2.5" />
+						<MaterialIcon name="folder" className="size-3" />
+						<!-- <ChevronRight className=" size-3" strokeWidth="2.5" /> -->
 					{/if}
 				</div>
 
@@ -450,7 +452,7 @@
 						}}
 					>
 						<button class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto" on:click={(e) => {}}>
-							<EllipsisHorizontal className="size-4" strokeWidth="2.5" />
+							<EllipsisVertical className="size-4" strokeWidth="2.5" />
 						</button>
 					</FolderMenu>
 				</button>

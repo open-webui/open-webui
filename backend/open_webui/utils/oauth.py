@@ -1,9 +1,12 @@
 import base64
+import json
 import logging
 import mimetypes
 import sys
 import uuid
-import json
+
+from urllib.parse import unquote
+
 
 import aiohttp
 from authlib.integrations.starlette_client import OAuth
@@ -12,11 +15,6 @@ from fastapi import (
     HTTPException,
     status,
 )
-from starlette.responses import RedirectResponse
-
-from open_webui.models.auths import Auths
-from open_webui.models.users import Users
-from open_webui.models.groups import Groups, GroupModel, GroupUpdateForm, GroupForm
 from open_webui.config import (
     DEFAULT_USER_ROLE,
     ENABLE_OAUTH_SIGNUP,
@@ -46,11 +44,17 @@ from open_webui.env import (
     WEBUI_AUTH_COOKIE_SAME_SITE,
     WEBUI_AUTH_COOKIE_SECURE,
 )
-from open_webui.utils.misc import parse_duration
-from open_webui.utils.auth import get_password_hash, create_token
-from open_webui.utils.webhook import post_webhook
-
 from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
+from open_webui.models.auths import Auths
+from open_webui.models.groups import Groups, GroupModel, GroupUpdateForm, GroupForm
+from open_webui.models.users import Users
+from open_webui.utils.auth import get_password_hash, create_token
+from open_webui.utils.misc import parse_duration
+from open_webui.utils.webhook import post_webhook
+from starlette.responses import RedirectResponse
+
+from open_webui.config import OPENID_PROVIDER_URL, OAUTH_CLIENT_ID, OAUTH_CLIENT_SECRET
+
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -330,19 +334,47 @@ class OAuthManager:
             log.error(f"Error processing profile picture '{picture_url}': {e}")
             return "/user.png"
 
+    from urllib.parse import unquote
+
     async def handle_login(self, request, provider):
+        log.info(f"Login attempt for provider: {provider}")
+
         if provider not in OAUTH_PROVIDERS:
-            raise HTTPException(404)
-        # If the provider has a custom redirect URL, use that, otherwise automatically generate one
-        redirect_uri = OAUTH_PROVIDERS[provider].get("redirect_uri") or request.url_for(
-            "oauth_callback", provider=provider
-        )
+            log.warning(f"Provider '{provider}' not found in OAUTH_PROVIDERS")
+            raise HTTPException(404, detail="OAuth provider not supported")
+
+    # Get redirect_uri from query params
+        try:
+            query_params = dict(request.query_params)
+            custom_redirect_uri = query_params.get("redirect_uri")
+            redirect_uri = (
+                unquote(custom_redirect_uri)
+                if custom_redirect_uri
+                else OAUTH_PROVIDERS[provider].get("redirect_uri") or
+                    request.url_for("oauth_callback", provider=provider)
+            )
+            log.info(f"Redirect URI for provider '{provider}': {redirect_uri}")
+        except Exception as e:
+            log.error(f"Error processing redirect URI for provider '{provider}': {e}")
+            raise HTTPException(500, detail="Error generating redirect URI")
+
+        # Get OAuth client
         client = self.get_client(provider)
         if client is None:
-            raise HTTPException(404)
-        return await client.authorize_redirect(request, redirect_uri)
+            log.error(f"Failed to get OAuth client for provider: {provider}")
+            raise HTTPException(404, detail="OAuth client not found")
 
-    async def handle_callback(self, request, provider, response):
+        log.info(f"Authorizing redirect for provider '{provider}'")
+        try:
+            return await client.authorize_redirect(request, redirect_uri)
+        except Exception as e:
+            log.exception(f"OAuth authorization failed for provider '{provider}': {e}")
+            raise HTTPException(500, detail="OAuth authorization failed")
+
+
+    async def handle_callback(self, request, provider, response, return_json: bool = False):
+        log.debug(f"---In handle_callback return_json:  {return_json}")
+
         if provider not in OAUTH_PROVIDERS:
             raise HTTPException(404)
         client = self.get_client(provider)
@@ -517,29 +549,222 @@ class OAuthManager:
                 default_permissions=request.app.state.config.USER_PERMISSIONS,
             )
 
-        # Set the cookie token
-        response.set_cookie(
-            key="token",
-            value=jwt_token,
-            httponly=True,  # Ensures the cookie is not accessible via JavaScript
-            samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
-            secure=WEBUI_AUTH_COOKIE_SECURE,
-        )
-
         if ENABLE_OAUTH_SIGNUP.value:
             oauth_id_token = token.get("id_token")
+
+        if return_json :
+            log.debug(f"In return_json block ")
+
+            response = {
+                "token": jwt_token,
+                "user": {
+                    "id": user.id,
+                    "name": user.name,
+                    "email": user.email,
+                    "role": user.role,
+                    "profile_image_url": user.profile_image_url,
+                }
+            }
+
+            if ENABLE_OAUTH_SIGNUP.value:
+                response["id_token"] = oauth_id_token
+
+            return response
+
+        else :
+            log.debug(f"In cookie block ")
+            # Set the cookie token
             response.set_cookie(
-                key="oauth_id_token",
-                value=oauth_id_token,
-                httponly=True,
+                key="token",
+                value=jwt_token,
+                httponly=True,  # Ensures the cookie is not accessible via JavaScript
                 samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
                 secure=WEBUI_AUTH_COOKIE_SECURE,
             )
-        # Redirect back to the frontend with the JWT token
 
-        redirect_base_url = str(request.app.state.config.WEBUI_URL or request.base_url)
-        if redirect_base_url.endswith("/"):
-            redirect_base_url = redirect_base_url[:-1]
-        redirect_url = f"{redirect_base_url}/auth#token={jwt_token}"
+            if ENABLE_OAUTH_SIGNUP.value:
+                response.set_cookie(
+                    key="oauth_id_token",
+                    value=oauth_id_token,
+                    httponly=True,
+                    samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
+                    secure=WEBUI_AUTH_COOKIE_SECURE,
+                )
+            # Redirect back to the frontend with the JWT token
 
-        return RedirectResponse(url=redirect_url, headers=response.headers)
+            redirect_base_url = str(request.app.state.config.WEBUI_URL or request.base_url)
+            if redirect_base_url.endswith("/"):
+                redirect_base_url = redirect_base_url[:-1]
+            redirect_url = f"{redirect_base_url}/auth#token={jwt_token}"
+
+            return RedirectResponse(url=redirect_url, headers=response.headers)
+
+
+    async def handle_mobile_callback(self, request, provider):
+        log.info("--- In handle_mobile_callback")
+
+        if provider not in OAUTH_PROVIDERS:
+            log.error(f"Unsupported provider: {provider}")
+            raise HTTPException(404, detail="Unsupported provider")
+
+        code = request.query_params.get("code")
+        if not code:
+            log.error("Missing authorization code")
+            raise HTTPException(400, detail="Missing authorization code")
+
+        provider_cfg = OAUTH_PROVIDERS[provider]
+        log.info(f"Provider config: {json.dumps(provider_cfg, indent=2, default=str)}")
+
+        token_url = OPENID_PROVIDER_URL.value.removesuffix("/.well-known/openid-configuration") + "/protocol/openid-connect/token"
+        log.info(f"Token URL: {token_url}")
+
+        try:
+            query_params = dict(request.query_params)
+            custom_redirect_uri = query_params.get("redirect_uri")
+            redirect_uri = (
+                unquote(custom_redirect_uri)
+                if custom_redirect_uri
+                else OAUTH_PROVIDERS[provider].get("redirect_uri") or request.url_for("oauth_callback", provider=provider)
+            )
+            log.info(f"Redirect URI for provider '{provider}': {redirect_uri}")
+        except Exception as e:
+            log.error(f"Error processing redirect URI for provider '{provider}': {e}")
+            raise HTTPException(500, detail="Error generating redirect URI")
+
+        data = {
+            "grant_type": "authorization_code",
+            "code": code,
+            "redirect_uri": redirect_uri,
+            "client_id": OAUTH_CLIENT_ID.value,
+            "client_secret": OAUTH_CLIENT_SECRET.value,
+        }
+
+        try:
+            async with aiohttp.ClientSession(trust_env=True) as session:
+                async with session.post(token_url, data=data, ssl=AIOHTTP_CLIENT_SESSION_SSL) as resp:
+                    log.debug(f"Token response status: {resp.status}")
+                    if resp.status != 200:
+                        error_text = await resp.text()
+                        log.warning(f"Token request failed: {error_text}")
+                        raise HTTPException(400, detail="OAuth token fetch failed")
+                    token = await resp.json()
+                    log.debug(f"Token response: {json.dumps(token, indent=2)}")
+        except Exception as e:
+            log.exception(f"OAuth token fetch error: {e}")
+            raise HTTPException(400, detail="OAuth token fetch failed")
+
+        userinfo_url = OPENID_PROVIDER_URL.value.removesuffix("/.well-known/openid-configuration") + "/protocol/openid-connect/userinfo"
+        log.debug(f"UserInfo URL: {userinfo_url}")
+
+        try:
+            async with aiohttp.ClientSession(trust_env=True) as session:
+                async with session.get(
+                    userinfo_url,
+                    headers={"Authorization": f"Bearer {token['access_token']}"},
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                ) as resp:
+                    log.debug(f"User info response status: {resp.status}")
+                    if resp.status != 200:
+                        error_text = await resp.text()
+                        log.error(f"Failed to fetch user info: {error_text}")
+                        raise HTTPException(400, detail="Failed to fetch user info")
+                    user_data = await resp.json()
+                    log.debug(f"User info: {json.dumps(user_data, indent=2)}")
+        except Exception as e:
+            log.exception(f"User info fetch error: {e}")
+            raise HTTPException(400, detail="Failed to fetch user info")
+
+        sub = user_data.get(OAUTH_PROVIDERS[provider].get("sub_claim", "sub"))
+        if not sub:
+            log.warning(f"OAuth callback failed, sub is missing: {user_data}")
+            raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+
+        provider_sub = f"{provider}@{sub}"
+        email = user_data.get(auth_manager_config.OAUTH_EMAIL_CLAIM, "").lower()
+        if not email:
+            log.warning(f"OAuth callback failed, email is missing: {user_data}")
+            raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+
+        if (
+            "*" not in auth_manager_config.OAUTH_ALLOWED_DOMAINS
+            and email.split("@")[-1] not in auth_manager_config.OAUTH_ALLOWED_DOMAINS
+        ):
+            log.warning(f"Email domain not allowed: {email}")
+            raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+
+        user = Users.get_user_by_oauth_sub(provider_sub)
+        if not user and auth_manager_config.OAUTH_MERGE_ACCOUNTS_BY_EMAIL:
+            user = Users.get_user_by_email(email)
+            if user:
+                Users.update_user_oauth_sub_by_id(user.id, provider_sub)
+
+        if user:
+            determined_role = self.get_user_role(user, user_data)
+            if user.role != determined_role:
+                Users.update_user_role_by_id(user.id, determined_role)
+
+            if auth_manager_config.OAUTH_UPDATE_PICTURE_ON_LOGIN:
+                picture_url = user_data.get(
+                    auth_manager_config.OAUTH_PICTURE_CLAIM,
+                    OAUTH_PROVIDERS[provider].get("picture_url", "")
+                )
+                processed_url = await self._process_picture_url(picture_url, token.get("access_token"))
+                if processed_url != user.profile_image_url:
+                    Users.update_user_profile_image_url_by_id(user.id, processed_url)
+
+        if not user:
+            if not auth_manager_config.ENABLE_OAUTH_SIGNUP:
+                raise HTTPException(403, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
+
+            if Users.get_user_by_email(email):
+                raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
+
+            picture_url = user_data.get(auth_manager_config.OAUTH_PICTURE_CLAIM, "/user.png")
+            picture_url = await self._process_picture_url(picture_url, token.get("access_token"))
+            name = user_data.get(auth_manager_config.OAUTH_USERNAME_CLAIM, email)
+            role = self.get_user_role(None, user_data)
+
+            user = Auths.insert_new_auth(
+                email=email,
+                password=get_password_hash(str(uuid.uuid4())),
+                name=name,
+                profile_image_url=picture_url,
+                role=role,
+                oauth_sub=provider_sub,
+            )
+
+            if auth_manager_config.WEBHOOK_URL:
+                post_webhook(
+                    WEBUI_NAME,
+                    auth_manager_config.WEBHOOK_URL,
+                    WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
+                    {
+                        "action": "signup",
+                        "message": WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
+                        "user": user.model_dump_json(exclude_none=True),
+                    },
+                )
+
+        jwt_token = create_token(
+            data={"id": user.id},
+            expires_delta=parse_duration(auth_manager_config.JWT_EXPIRES_IN),
+        )
+
+        if auth_manager_config.ENABLE_OAUTH_GROUP_MANAGEMENT and user.role != "admin":
+            self.update_user_groups(
+                user=user,
+                user_data=user_data,
+                default_permissions=request.app.state.config.USER_PERMISSIONS,
+            )
+
+        return {
+            "token": jwt_token,
+            "user": {
+                "id": user.id,
+                "name": user.name,
+                "email": user.email,
+                "role": user.role,
+                "profile_image_url": user.profile_image_url,
+            },
+            "id_token": token.get("id_token") if ENABLE_OAUTH_SIGNUP.value else None,
+        }

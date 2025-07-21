@@ -60,6 +60,31 @@
 	font-display: swap;
 }
 
+@font-face {
+	font-family: 'Inter_24pt-Regular';
+	src: url('/assets/fonts/Inter_24pt-Regular.ttf');
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Inter_24pt-Medium';
+	src: url('/assets/fonts/Inter_24pt-Medium.ttf');
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Inter_24pt-SemiBold';
+	src: url('/assets/fonts/Inter_24pt-SemiBold.ttf');
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Inter_24pt-Bold';
+	src: url('/assets/fonts/Inter_24pt-Bold.ttf');
+	font-display: swap;
+}
+
+
 html {
 	word-break: break-word;
 }
@@ -140,6 +165,22 @@ textarea::placeholder {
 
 .font-RedHatDisplay-Bold {
 	font-family: 'RedHatDisplay-Bold';
+}
+
+.font-Inter_Regular {
+	font-family: 'Inter_24pt-Regular';
+}
+
+.font-Inter_Medium {
+	font-family: 'Inter_24pt-Medium';
+}
+
+.font-Inter_SemiBold {
+	font-family: 'Inter_24pt-SemiBold';
+}
+
+.font-Inter_Bold {
+	font-family: 'Inter_24pt-Bold';
 }
 
 .drag-region {
@@ -374,7 +415,7 @@ input[type='number'] {
 	float: left;
 	/* Below color is from tailwind, and has the proper contrast
 	text-gray-600 from: https://tailwindcss.com/docs/color */
-	color: #676767;
+	color: #A5A6A9;
 	pointer-events: none;
 
 	@apply line-clamp-1 absolute;
@@ -574,5 +615,15 @@ td {
   }
 
   body {
-	font-family: 'RedHatDisplay-Regular';
+	font-family: 'Inter_24pt-Regular';
+  }
+
+  .link-style {
+	 @apply text-[14px] leading-[24px] font-normal sm:text-base sm:leading-[24px];
+  }
+
+  .link-sub-nav-style {
+	 font-size: 14px;
+	 line-height: 24px;
+	 font-weight: 500;
   }

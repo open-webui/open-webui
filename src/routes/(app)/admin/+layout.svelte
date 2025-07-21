@@ -31,7 +31,7 @@
 			: 'md:max-w-[calc(100%-80px)]'} max-w-full"
 			
 	>
-		<div class="bg-white h-[calc(100vh-2rem)] max-h-[100dvh]">
+		<div class="bg-white h-[calc(100vh-2rem)] max-h-[100dvh] dark:bg-gray-900">
 			<nav class="px-2.5 pt-1 backdrop-blur-xl drag-region">
 				<div class=" flex items-center gap-1">
 					<!-- <div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center self-end">
