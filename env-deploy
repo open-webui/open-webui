@@ -1,5 +1,5 @@
 # Deployment Configuration
-VERSION=2025_02_12
+VERSION=2025_07_21
 IMAGE_BASE_NAME=koscomtechdev/open-webui
 CONTAINER_NAME=open-webui_deploy
 HOST_PORT=8080
@@ -7,6 +7,7 @@ CONTAINER_PORT=8080
 LOCAL_CACHE_DIR=./backend/data/cache
 BUILDPLATFORM=linux/amd64
 CORS_ALLOW_ORIGIN=*
+HF_HUB_OFFLINE=1
 ENV=dev  # for swagger
 
 # OAuth
@@ -25,7 +26,7 @@ ENV=dev  # for swagger
 CHUNK_SIZE=800
 CHUNK_OVERLAP=200
 
-RAG_EMBEDDING_MODEL=jhgan/ko-sroberta-multitask
+RAG_EMBEDDING_MODEL=nlpai-lab/KURE-v1
 
 # dev
 # OLLAMA_BASE_URL=http://localhost:11434

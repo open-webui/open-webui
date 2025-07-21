@@ -81,6 +81,7 @@ build_image() {
     # Step 3: Copy local cache files into the temporary container
     echo "Copying local cache files from '$LOCAL_CACHE_DIR' to '$CACHE_DIR' inside the container..."
     docker cp "$LOCAL_CACHE_DIR"/. temp_container:"$CACHE_DIR"/
+    docker exec temp_container python -c "import nltk; nltk.download('punkt_tab')"
 
     # Step 4: Commit the container's state to a new image
     echo "Committing the container with cache files to a new image '$UPDATED_IMAGE_TAG'..."
