@@ -13,6 +13,7 @@ This is mAI, a customized fork of Open WebUI - a feature-rich, extensible AI pla
 - Added tagline "You + AI = superpowers! 🚀" (with Polish localization: "Ty + AI = supermoce! 🚀")
 - Custom branding and logo replacement capabilities
 - Custom background patterns feature with opacity controls
+- Complete favicon and PWA manifest implementation
 - Currently on branch: `customization` (main branch: `main`)
 
 **Recent Updates:**
@@ -20,7 +21,9 @@ This is mAI, a customized fork of Open WebUI - a feature-rich, extensible AI pla
 - Upgraded to Tiptap v3 for rich text editing
 - Installed FFmpeg for full audio processing support
 - Complete mAI visual identity system implemented (January 20, 2025)
-- See `UPGRADE-GUIDE.md` for detailed upgrade process documentation
+- Documentation reorganized into structured categories (January 20, 2025)
+- Fixed favicon display issues in production (January 21, 2025)
+- See `docs/development/upgrade-guide.md` for detailed upgrade process documentation
 
 ## Architecture
 
@@ -64,7 +67,7 @@ npm run dev:5050   # Alternative: Start on port 5050
 ```
 
 ### Development Testing Policy
-**IMPORTANT: DO NOT test solutions by running the development server.** The user always has the server and Open WebUI application running in a new tab and sees changes in real time or reloads the server manually. Focus on code verification through build processes and type checking instead.
+**IMPORTANT: DO NOT test solutions by running the development server.** The user always has the server and mAI application running in a new tab and sees changes in real time or reloads the server manually. Focus on code verification through build processes and type checking instead.
 
 ### Build and Testing
 ```bash
@@ -101,12 +104,69 @@ python -m alembic revision --autogenerate -m "description"  # Create migration
 ```
 
 ### Docker Operations
+
+#### Development with Docker (Recommended)
+```bash
+# Use host Ollama (recommended for local development)
+docker compose -f docker-compose-host-ollama.yaml up -d
+
+# Or use Docker Ollama (creates isolated instance)
+docker compose up -d
+
+# View logs
+docker compose logs -f
+
+# Stop services
+docker compose down
+```
+
+#### Production Deployment
 ```bash
 # Via Makefile
 make install              # docker-compose up -d
 make start               # docker-compose start
 make stop                # docker-compose stop
 make update              # Pull, rebuild, restart
+```
+
+## Docker Configuration Best Practices
+
+### Local Development Setup
+Use `docker-compose-host-ollama.yaml` to connect to your host Ollama installation:
+```yaml
+services:
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: open-webui
+    volumes:
+      - open-webui:/app/backend/data
+    environment:
+      - 'OLLAMA_BASE_URL=http://host.docker.internal:11434'
+      - 'WEBUI_NAME=mAI'
+    ports:
+      - 3000:8080
+    extra_hosts:
+      - host.docker.internal:host-gateway
+
+volumes:
+  open-webui:
+    external: true
+    name: mai_open-webui  # Use existing volume with data
+```
+
+### Important Docker Notes
+- **Always use named volumes** with `external: true` to preserve data
+- **Never create new volumes** unless intentionally starting fresh
+- **For updates**: Copy files directly to running container instead of rebuilding
+- **Browser caching**: Always clear cache after favicon/asset updates
+
+### Quick Updates Without Rebuilding
+```bash
+# Copy updated files directly to running container
+docker cp static/static/favicon.ico open-webui:/app/backend/static/
+docker cp static/static/favicon.png open-webui:/app/backend/static/
+docker cp static/manifest.json open-webui:/app/backend/static/
+docker restart open-webui
 ```
 
 ## Key File Locations
@@ -135,6 +195,7 @@ make update              # Pull, rebuild, restart
 - `backend/open_webui/static/` - Backend static assets (complete mAI visual identity)  
 - `mai_logos/` - Source files for all mAI graphic assets (11 files)
 - `static/custom.css` - Custom CSS overrides
+- `static/manifest.json` - PWA manifest with mAI branding
 
 ## Architecture Patterns
 
@@ -190,7 +251,7 @@ make update              # Pull, rebuild, restart
 - **Branding Rules**: See `.cursor/rules/project.mdc` for detailed customization guidelines
 - **License Compliance**: White-labeling allowed for ≤50 users with attribution requirements
 
-### Customization Workflow (From .cursor/rules/project.mdc)
+### Customization Workflow
 - **ALWAYS** work on `customization` branch (never commit to main)
 - **ALWAYS** create backups before modifications: `cp -r static/static customization-backup/static-$(date +%Y%m%d)`
 - **Required Testing**: All theme variants (Light/Dark/OLED/"Her"), mobile responsiveness
@@ -198,10 +259,20 @@ make update              # Pull, rebuild, restart
 - **Commit Prefixes**: `brand:`, `theme:`, `ui:`, `assets:` for organized changes
 - **Quality Standards**: WCAG 2.1 AA compliance, contrast ratios 4.5:1 minimum
 
+### Documentation Organization
+- **Main Documentation**: Located in `docs/` directory with subdirectories for different categories
+- **Deployment Guides**: `docs/deployment/` - Production deployment instructions
+- **Development Docs**: `docs/development/` - Contributing, upgrading, and development scripts
+- **Customization Docs**: `docs/customization/` - mAI-specific changes and plans
+- **Operations Docs**: `docs/operations/` - Installation, troubleshooting, security
+- **Configuration Docs**: `docs/configuration/` - Server and proxy configurations
+- **Documentation Index**: `docs/README.md` - Central hub for all documentation
+
 ### Deployment
 - **Docker**: Multi-stage builds for production
 - **Static Assets**: Vite builds to `build/` directory
 - **Database**: Automatic migrations on container start
+- **Volume Management**: Use named volumes with `external: true` for data persistence
 
 ## Performance Considerations
 
@@ -254,22 +325,6 @@ make update              # Pull, rebuild, restart
 - **RTL Support**: Right-to-left language support
 - **Pluralization**: Advanced plural form handling
 
-## Single Test Execution
-
-### Running Individual Tests
-```bash
-# Frontend single test
-npm run test:frontend -- --run path/to/test.test.ts
-
-# Open Cypress for E2E testing
-npm run cy:open
-
-# Backend code quality
-cd backend
-black .                    # Format specific files
-pylint backend/            # Lint backend code
-```
-
 ## Environment Variables
 
 ### Key Environment Variables
@@ -278,6 +333,8 @@ pylint backend/            # Lint backend code
 - `OPENAI_API_KEY` - OpenAI API key
 - `HF_HUB_OFFLINE` - Set to `1` for offline mode
 - `ENV` - Environment (dev/prod)
+- `WEBUI_NAME` - Application name (default: mAI)
+- `WEBUI_URL` - Application URL
 
 ### Setting Environment Variables
 ```bash
@@ -292,7 +349,7 @@ export ENV=prod
 ## Error Handling Patterns
 
 ### Backend Error Handling
-- **Follow-up Generation**: Wrapped in try-catch to prevent Ollama failures from crashing chat sessions (see backend/open_webui/utils/middleware.py:1085)
+- **Follow-up Generation**: Wrapped in try-catch to prevent Ollama failures from crashing chat sessions
 - **Background Tasks**: Protected with error handling to ensure main chat flow continues even if background operations fail
 - **Model Runner Failures**: Gracefully handled to prevent "model runner has unexpectedly stopped" errors from affecting user experience
 
@@ -359,7 +416,7 @@ When upgrading mAI to incorporate new Open WebUI releases:
    - Revert workflow files if lacking GitHub permissions
 
 4. **Documentation**
-   - See `UPGRADE-GUIDE.md` for detailed step-by-step instructions
+   - See `docs/development/upgrade-guide.md` for detailed step-by-step instructions
    - Document any new conflicts or issues for future upgrades
 
 ### Critical Files to Preserve During Upgrades
@@ -368,3 +425,30 @@ When upgrading mAI to incorporate new Open WebUI releases:
 - `src/lib/components/chat/Placeholder.svelte`: Custom branding
 - `src/lib/i18n/locales/pl-PL/translation.json`: Polish customizations
 - Theme and asset files in `static/`
+- `static/manifest.json`: PWA manifest with mAI branding
+- `src/app.html`: Favicon references
+
+## Docker Volume Management
+
+### Best Practices
+1. **Named Volumes**: Always use explicitly named volumes
+2. **External Volumes**: Use `external: true` to reference existing volumes
+3. **Data Persistence**: Never delete volumes without backup
+4. **Volume Inspection**: Use `docker volume ls` and `docker volume inspect`
+
+### Common Issues
+- **Multiple volumes with same data**: Check timestamps to identify the active one
+- **Lost data after rebuild**: Always use `external: true` for existing volumes
+- **Ollama models missing**: Connect to host Ollama or mount host directory
+
+### Cleanup Commands
+```bash
+# List volumes
+docker volume ls | grep mai
+
+# Remove unused volumes (careful!)
+docker volume prune
+
+# Inspect volume contents
+docker run --rm -v volume_name:/data alpine ls -la /data/
+```

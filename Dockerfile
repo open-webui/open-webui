@@ -29,6 +29,9 @@ WORKDIR /app
 # to store git revision in build
 RUN apk add --no-cache git
 
+# Set Node.js memory limit for build process
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+
 COPY package.json package-lock.json ./
 RUN npm ci --force
 

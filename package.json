@@ -5,8 +5,8 @@
 	"scripts": {
 		"dev": "npm run pyodide:fetch && vite dev --host",
 		"dev:5050": "npm run pyodide:fetch && vite dev --port 5050",
-		"build": "npm run pyodide:fetch && vite build",
-		"build:watch": "npm run pyodide:fetch && vite build --watch",
+		"build": "NODE_OPTIONS='--max-old-space-size=4096' npm run pyodide:fetch && NODE_OPTIONS='--max-old-space-size=4096' vite build",
+		"build:watch": "NODE_OPTIONS='--max-old-space-size=4096' npm run pyodide:fetch && NODE_OPTIONS='--max-old-space-size=4096' vite build --watch",
 		"preview": "vite preview",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
