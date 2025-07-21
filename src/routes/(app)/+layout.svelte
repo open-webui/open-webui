@@ -34,6 +34,7 @@
 		tags,
 		banners,
 		showSettings,
+		showShortcuts,
 		showChangelog,
 		temporaryChatEnabled,
 		toolServers,
@@ -185,8 +186,8 @@
 				// Check if Ctrl + / is pressed
 				if (isCtrlPressed && event.key === '/') {
 					event.preventDefault();
-					console.log('showShortcuts');
-					document.getElementById('show-shortcuts-button')?.click();
+
+					showShortcuts.set(!$showShortcuts);
 				}
 
 				// Check if Ctrl + Shift + ' is pressed
