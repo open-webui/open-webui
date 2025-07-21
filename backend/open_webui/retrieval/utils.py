@@ -7,6 +7,7 @@ import hashlib
 from concurrent.futures import ThreadPoolExecutor
 import time
 
+from urllib.parse import quote
 from huggingface_hub import snapshot_download
 from langchain.retrievers import ContextualCompressionRetriever, EnsembleRetriever
 from langchain_community.retrievers import BM25Retriever
@@ -17,8 +18,11 @@ from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 
 from open_webui.models.users import UserModel
 from open_webui.models.files import Files
+from open_webui.models.knowledge import Knowledges
+from open_webui.models.notes import Notes
 
 from open_webui.retrieval.vector.main import GetResult
+from open_webui.utils.access_control import has_access
 
 
 from open_webui.env import (
@@ -441,9 +445,20 @@ def get_embedding_function(
         raise ValueError(f"Unknown embedding engine: {embedding_engine}")
 
 
-def get_sources_from_files(
+def get_reranking_function(reranking_engine, reranking_model, reranking_function):
+    if reranking_function is None:
+        return None
+    if reranking_engine == "external":
+        return lambda sentences, user=None: reranking_function.predict(
+            sentences, user=user
+        )
+    else:
+        return lambda sentences, user=None: reranking_function.predict(sentences)
+
+
+def get_sources_from_items(
     request,
-    files,
+    items,
     queries,
     embedding_function,
     k,
@@ -453,159 +468,213 @@ def get_sources_from_files(
     hybrid_bm25_weight,
     hybrid_search,
     full_context=False,
+    user: Optional[UserModel] = None,
 ):
     log.debug(
-        f"files: {files} {queries} {embedding_function} {reranking_function} {full_context}"
+        f"items: {items} {queries} {embedding_function} {reranking_function} {full_context}"
     )
 
     extracted_collections = []
-    relevant_contexts = []
+    query_results = []
 
-    for file in files:
+    for item in items:
+        query_result = None
+        collection_names = []
 
-        context = None
-        if file.get("docs"):
-            # BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
-            context = {
-                "documents": [[doc.get("content") for doc in file.get("docs")]],
-                "metadatas": [[doc.get("metadata") for doc in file.get("docs")]],
-            }
-        elif file.get("context") == "full":
-            # Manual Full Mode Toggle
-            context = {
-                "documents": [[file.get("file").get("data", {}).get("content")]],
-                "metadatas": [[{"file_id": file.get("id"), "name": file.get("name")}]],
-            }
-        elif (
-            file.get("type") != "web_search"
-            and request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL
-        ):
-            # BYPASS_EMBEDDING_AND_RETRIEVAL
-            if file.get("type") == "collection":
-                file_ids = file.get("data", {}).get("file_ids", [])
+        if item.get("type") == "text":
+            # Raw Text
+            # Used during temporary chat file uploads
 
-                documents = []
-                metadatas = []
-                for file_id in file_ids:
-                    file_object = Files.get_file_by_id(file_id)
-
-                    if file_object:
-                        documents.append(file_object.data.get("content", ""))
-                        metadatas.append(
-                            {
-                                "file_id": file_id,
-                                "name": file_object.filename,
-                                "source": file_object.filename,
-                            }
-                        )
-
-                context = {
-                    "documents": [documents],
-                    "metadatas": [metadatas],
+            if item.get("file"):
+                # if item has file data, use it
+                query_result = {
+                    "documents": [
+                        [item.get("file", {}).get("data", {}).get("content")]
+                    ],
+                    "metadatas": [
+                        [item.get("file", {}).get("data", {}).get("meta", {})]
+                    ],
+                }
+            else:
+                # Fallback to item content
+                query_result = {
+                    "documents": [[item.get("content")]],
+                    "metadatas": [
+                        [{"file_id": item.get("id"), "name": item.get("name")}]
+                    ],
                 }
 
-            elif file.get("id"):
-                file_object = Files.get_file_by_id(file.get("id"))
-                if file_object:
-                    context = {
-                        "documents": [[file_object.data.get("content", "")]],
+        elif item.get("type") == "note":
+            # Note Attached
+            note = Notes.get_note_by_id(item.get("id"))
+
+            if user.role == "admin" or has_access(user.id, "read", note.access_control):
+                # User has access to the note
+                query_result = {
+                    "documents": [[note.data.get("content", {}).get("md", "")]],
+                    "metadatas": [[{"file_id": note.id, "name": note.title}]],
+                }
+
+        elif item.get("type") == "file":
+            if (
+                item.get("context") == "full"
+                or request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL
+            ):
+                if item.get("file", {}).get("data", {}).get("content", ""):
+                    # Manual Full Mode Toggle
+                    # Used from chat file modal, we can assume that the file content will be available from item.get("file").get("data", {}).get("content")
+                    query_result = {
+                        "documents": [
+                            [item.get("file", {}).get("data", {}).get("content", "")]
+                        ],
                         "metadatas": [
                             [
                                 {
-                                    "file_id": file.get("id"),
-                                    "name": file_object.filename,
-                                    "source": file_object.filename,
+                                    "file_id": item.get("id"),
+                                    "name": item.get("name"),
+                                    **item.get("file")
+                                    .get("data", {})
+                                    .get("metadata", {}),
                                 }
                             ]
                         ],
                     }
-            elif file.get("file").get("data"):
-                context = {
-                    "documents": [[file.get("file").get("data", {}).get("content")]],
-                    "metadatas": [
-                        [file.get("file").get("data", {}).get("metadata", {})]
-                    ],
-                }
-        else:
-            collection_names = []
-            if file.get("type") == "collection":
-                if file.get("legacy"):
-                    collection_names = file.get("collection_names", [])
+                elif item.get("id"):
+                    file_object = Files.get_file_by_id(item.get("id"))
+                    if file_object:
+                        query_result = {
+                            "documents": [[file_object.data.get("content", "")]],
+                            "metadatas": [
+                                [
+                                    {
+                                        "file_id": item.get("id"),
+                                        "name": file_object.filename,
+                                        "source": file_object.filename,
+                                    }
+                                ]
+                            ],
+                        }
+            else:
+                # Fallback to collection names
+                if item.get("legacy"):
+                    collection_names.append(f"{item['id']}")
                 else:
-                    collection_names.append(file["id"])
-            elif file.get("collection_name"):
-                collection_names.append(file["collection_name"])
-            elif file.get("id"):
-                if file.get("legacy"):
-                    collection_names.append(f"{file['id']}")
-                else:
-                    collection_names.append(f"file-{file['id']}")
+                    collection_names.append(f"file-{item['id']}")
 
+        elif item.get("type") == "collection":
+            if (
+                item.get("context") == "full"
+                or request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL
+            ):
+                # Manual Full Mode Toggle for Collection
+                knowledge_base = Knowledges.get_knowledge_by_id(item.get("id"))
+
+                if knowledge_base and (
+                    user.role == "admin"
+                    or has_access(user.id, "read", knowledge_base.access_control)
+                ):
+
+                    file_ids = knowledge_base.data.get("file_ids", [])
+
+                    documents = []
+                    metadatas = []
+                    for file_id in file_ids:
+                        file_object = Files.get_file_by_id(file_id)
+
+                        if file_object:
+                            documents.append(file_object.data.get("content", ""))
+                            metadatas.append(
+                                {
+                                    "file_id": file_id,
+                                    "name": file_object.filename,
+                                    "source": file_object.filename,
+                                }
+                            )
+
+                    query_result = {
+                        "documents": [documents],
+                        "metadatas": [metadatas],
+                    }
+            else:
+                # Fallback to collection names
+                if item.get("legacy"):
+                    collection_names = item.get("collection_names", [])
+                else:
+                    collection_names.append(item["id"])
+
+        elif item.get("docs"):
+            # BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
+            query_result = {
+                "documents": [[doc.get("content") for doc in item.get("docs")]],
+                "metadatas": [[doc.get("metadata") for doc in item.get("docs")]],
+            }
+        elif item.get("collection_name"):
+            # Direct Collection Name
+            collection_names.append(item["collection_name"])
+        elif item.get("collection_names"):
+            # Collection Names List
+            collection_names.extend(item["collection_names"])
+
+        # If query_result is None
+        # Fallback to collection names and vector search the collections
+        if query_result is None and collection_names:
             collection_names = set(collection_names).difference(extracted_collections)
             if not collection_names:
-                log.debug(f"skipping {file} as it has already been extracted")
+                log.debug(f"skipping {item} as it has already been extracted")
                 continue
 
-            if full_context:
-                try:
-                    context = get_all_items_from_collections(collection_names)
-                except Exception as e:
-                    log.exception(e)
-
-            else:
-                try:
-                    context = None
-                    if file.get("type") == "text":
-                        context = file["content"]
-                    else:
-                        if hybrid_search:
-                            try:
-                                context = query_collection_with_hybrid_search(
-                                    collection_names=collection_names,
-                                    queries=queries,
-                                    embedding_function=embedding_function,
-                                    k=k,
-                                    reranking_function=reranking_function,
-                                    k_reranker=k_reranker,
-                                    r=r,
-                                    hybrid_bm25_weight=hybrid_bm25_weight,
-                                )
-                            except Exception as e:
-                                log.debug(
-                                    "Error when using hybrid search, using"
-                                    " non hybrid search as fallback."
-                                )
-
-                        if (not hybrid_search) or (context is None):
-                            context = query_collection(
+            try:
+                if full_context:
+                    query_result = get_all_items_from_collections(collection_names)
+                else:
+                    query_result = None  # Initialize to None
+                    if hybrid_search:
+                        try:
+                            query_result = query_collection_with_hybrid_search(
                                 collection_names=collection_names,
                                 queries=queries,
                                 embedding_function=embedding_function,
                                 k=k,
+                                reranking_function=reranking_function,
+                                k_reranker=k_reranker,
+                                r=r,
+                                hybrid_bm25_weight=hybrid_bm25_weight,
                             )
-                except Exception as e:
-                    log.exception(e)
+                        except Exception as e:
+                            log.debug(
+                                "Error when using hybrid search, using non hybrid search as fallback."
+                            )
+
+                    # fallback to non-hybrid search
+                    if not hybrid_search and query_result is None:
+                        query_result = query_collection(
+                            collection_names=collection_names,
+                            queries=queries,
+                            embedding_function=embedding_function,
+                            k=k,
+                        )
+            except Exception as e:
+                log.exception(e)
 
             extracted_collections.extend(collection_names)
 
-        if context:
-            if "data" in file:
-                del file["data"]
-
-            relevant_contexts.append({**context, "file": file})
+        if query_result:
+            if "data" in item:
+                del item["data"]
+            query_results.append({**query_result, "file": item})
 
     sources = []
-    for context in relevant_contexts:
+    for query_result in query_results:
         try:
-            if "documents" in context:
-                if "metadatas" in context:
+            if "documents" in query_result:
+                if "metadatas" in query_result:
                     source = {
-                        "source": context["file"],
-                        "document": context["documents"][0],
-                        "metadata": context["metadatas"][0],
+                        "source": query_result["file"],
+                        "document": query_result["documents"][0],
+                        "metadata": query_result["metadatas"][0],
                     }
-                    if "distances" in context and context["distances"]:
-                        source["distances"] = context["distances"][0]
+                    if "distances" in query_result and query_result["distances"]:
+                        source["distances"] = query_result["distances"][0]
 
                     sources.append(source)
         except Exception as e:
@@ -678,7 +747,7 @@ def generate_openai_batch_embeddings(
                 "Authorization": f"Bearer {key}",
                 **(
                     {
-                        "X-OpenWebUI-User-Name": user.name,
+                        "X-OpenWebUI-User-Name": quote(user.name, safe=" "),
                         "X-OpenWebUI-User-Id": user.id,
                         "X-OpenWebUI-User-Email": user.email,
                         "X-OpenWebUI-User-Role": user.role,
@@ -727,7 +796,7 @@ def generate_azure_openai_batch_embeddings(
                     "api-key": key,
                     **(
                         {
-                            "X-OpenWebUI-User-Name": user.name,
+                            "X-OpenWebUI-User-Name": quote(user.name, safe=" "),
                             "X-OpenWebUI-User-Id": user.id,
                             "X-OpenWebUI-User-Email": user.email,
                             "X-OpenWebUI-User-Role": user.role,
@@ -777,7 +846,7 @@ def generate_ollama_batch_embeddings(
                 "Authorization": f"Bearer {key}",
                 **(
                     {
-                        "X-OpenWebUI-User-Name": user.name,
+                        "X-OpenWebUI-User-Name": quote(user.name, safe=" "),
                         "X-OpenWebUI-User-Id": user.id,
                         "X-OpenWebUI-User-Email": user.email,
                         "X-OpenWebUI-User-Role": user.role,
@@ -874,7 +943,7 @@ class RerankCompressor(BaseDocumentCompressor):
         reranking = self.reranking_function is not None
 
         if reranking:
-            scores = self.reranking_function.predict(
+            scores = self.reranking_function(
                 [(query, doc.page_content) for doc in documents]
             )
         else:

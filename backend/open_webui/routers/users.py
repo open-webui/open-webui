@@ -7,6 +7,7 @@ from open_webui.models.chats import Chats
 from open_webui.models.users import (
     UserModel,
     UserListResponse,
+    UserInfoListResponse,
     UserRoleUpdateForm,
     Users,
     UserSettings,
@@ -14,7 +15,11 @@ from open_webui.models.users import (
 )
 
 
-from open_webui.socket.main import get_active_status_by_user_id
+from open_webui.socket.main import (
+    get_active_status_by_user_id,
+    get_active_user_ids,
+    get_user_active_status,
+)
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -28,6 +33,24 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 router = APIRouter()
+
+
+############################
+# GetActiveUsers
+############################
+
+
+@router.get("/active")
+async def get_active_users(
+    user=Depends(get_verified_user),
+):
+    """
+    Get a list of active users.
+    """
+    return {
+        "user_ids": get_active_user_ids(),
+    }
+
 
 ############################
 # GetUsers
@@ -61,7 +84,7 @@ async def get_users(
     return Users.get_users(filter=filter, skip=skip, limit=limit)
 
 
-@router.get("/all", response_model=UserListResponse)
+@router.get("/all", response_model=UserInfoListResponse)
 async def get_all_users(
     user=Depends(get_admin_user),
 ):
@@ -111,6 +134,7 @@ class SharingPermissions(BaseModel):
 
 class ChatPermissions(BaseModel):
     controls: bool = True
+    system_prompt: bool = True
     file_upload: bool = True
     delete: bool = True
     edit: bool = True
@@ -163,22 +187,6 @@ async def update_default_user_permissions(
 ):
     request.app.state.config.USER_PERMISSIONS = form_data.model_dump()
     return request.app.state.config.USER_PERMISSIONS
-
-
-############################
-# UpdateUserRole
-############################
-
-
-@router.post("/update/role", response_model=Optional[UserModel])
-async def update_user_role(form_data: UserRoleUpdateForm, user=Depends(get_admin_user)):
-    if user.id != form_data.id and form_data.id != Users.get_first_user().id:
-        return Users.update_user_role_by_id(form_data.id, form_data.role)
-
-    raise HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail=ERROR_MESSAGES.ACTION_PROHIBITED,
-    )
 
 
 ############################
@@ -320,6 +328,18 @@ async def get_user_by_id(user_id: str, user=Depends(get_verified_user)):
 
 
 ############################
+# GetUserActiveStatusById
+############################
+
+
+@router.get("/{user_id}/active", response_model=dict)
+async def get_user_active_status_by_id(user_id: str, user=Depends(get_verified_user)):
+    return {
+        "active": get_user_active_status(user_id),
+    }
+
+
+############################
 # UpdateUserById
 ############################
 
@@ -333,11 +353,22 @@ async def update_user_by_id(
     # Prevent modification of the primary admin user by other admins
     try:
         first_user = Users.get_first_user()
-        if first_user and user_id == first_user.id and session_user.id != user_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=ERROR_MESSAGES.ACTION_PROHIBITED,
-            )
+        if first_user:
+            if user_id == first_user.id:
+                if session_user.id != user_id:
+                    # If the user trying to update is the primary admin, and they are not the primary admin themselves
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail=ERROR_MESSAGES.ACTION_PROHIBITED,
+                    )
+
+                if form_data.role != "admin":
+                    # If the primary admin is trying to change their own role, prevent it
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail=ERROR_MESSAGES.ACTION_PROHIBITED,
+                    )
+
     except Exception as e:
         log.error(f"Error checking primary admin status: {e}")
         raise HTTPException(
@@ -365,6 +396,7 @@ async def update_user_by_id(
         updated_user = Users.update_user_by_id(
             user_id,
             {
+                "role": form_data.role,
                 "name": form_data.name,
                 "email": form_data.email.lower(),
                 "profile_image_url": form_data.profile_image_url,

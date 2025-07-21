@@ -4,6 +4,7 @@
 
 	import { user, config, settings } from '$lib/stores';
 	import { updateUserProfile, createAPIKey, getAPIKey, getSessionUser } from '$lib/apis/auths';
+	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import UpdatePassword from './Account/UpdatePassword.svelte';
 	import { getGravatarUrl } from '$lib/apis/utils';
@@ -86,7 +87,7 @@
 	});
 </script>
 
-<div class="flex flex-col h-full justify-between text-sm">
+<div id="tab-account" class="flex flex-col h-full justify-between text-sm">
 	<div class=" overflow-y-scroll max-h-[28rem] lg:max-h-full">
 		<input
 			id="profile-image-input"
@@ -223,7 +224,7 @@
 						<button
 							class=" text-xs text-center text-gray-800 dark:text-gray-400 rounded-lg px-2 py-1"
 							on:click={async () => {
-								profileImageUrl = '/user.png';
+								profileImageUrl = `${WEBUI_BASE_URL}/user.png`;
 							}}>{$i18n.t('Remove')}</button
 						>
 					</div>

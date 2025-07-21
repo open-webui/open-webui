@@ -90,10 +90,6 @@
 			return;
 		}
 
-		if (embeddingEngine === 'openai' && (OpenAIKey === '' || OpenAIUrl === '')) {
-			toast.error($i18n.t('OpenAI URL/Key required.'));
-			return;
-		}
 		if (
 			embeddingEngine === 'azure_openai' &&
 			(AzureOpenAIKey === '' || AzureOpenAIUrl === '' || AzureOpenAIVersion === '')
@@ -194,17 +190,20 @@
 			await embeddingModelUpdateHandler();
 		}
 
-		RAGConfig.ALLOWED_FILE_EXTENSIONS = (RAGConfig?.ALLOWED_FILE_EXTENSIONS ?? '')
-			.split(',')
-			.map((ext) => ext.trim())
-			.filter((ext) => ext !== '');
-
-		RAGConfig.DATALAB_MARKER_LANGS = RAGConfig.DATALAB_MARKER_LANGS.split(',')
-			.map((code) => code.trim())
-			.filter((code) => code !== '')
-			.join(', ');
-
-		const res = await updateRAGConfig(localStorage.token, RAGConfig);
+		const res = await updateRAGConfig(localStorage.token, {
+			...RAGConfig,
+			ALLOWED_FILE_EXTENSIONS: RAGConfig.ALLOWED_FILE_EXTENSIONS.split(',')
+				.map((ext) => ext.trim())
+				.filter((ext) => ext !== ''),
+			DATALAB_MARKER_LANGS: RAGConfig.DATALAB_MARKER_LANGS.split(',')
+				.map((code) => code.trim())
+				.filter((code) => code !== '')
+				.join(', '),
+			DOCLING_PICTURE_DESCRIPTION_LOCAL: JSON.parse(
+				RAGConfig.DOCLING_PICTURE_DESCRIPTION_LOCAL || '{}'
+			),
+			DOCLING_PICTURE_DESCRIPTION_API: JSON.parse(RAGConfig.DOCLING_PICTURE_DESCRIPTION_API || '{}')
+		});
 		dispatch('save');
 	};
 
@@ -232,6 +231,18 @@
 
 		const config = await getRAGConfig(localStorage.token);
 		config.ALLOWED_FILE_EXTENSIONS = (config?.ALLOWED_FILE_EXTENSIONS ?? []).join(', ');
+
+		config.DOCLING_PICTURE_DESCRIPTION_LOCAL = JSON.stringify(
+			config.DOCLING_PICTURE_DESCRIPTION_LOCAL ?? {},
+			null,
+			2
+		);
+		config.DOCLING_PICTURE_DESCRIPTION_API = JSON.stringify(
+			config.DOCLING_PICTURE_DESCRIPTION_API ?? {},
+			null,
+			2
+		);
+
 		RAGConfig = config;
 	});
 </script>
@@ -510,6 +521,71 @@
 									</div>
 								</div>
 							</div>
+							{#if RAGConfig.DOCLING_DO_PICTURE_DESCRIPTION}
+								<div class="flex justify-between w-full mt-2">
+									<div class="self-center text-xs font-medium">
+										<Tooltip content={''} placement="top-start">
+											{$i18n.t('Picture Description Mode')}
+										</Tooltip>
+									</div>
+									<div class="">
+										<select
+											class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+											bind:value={RAGConfig.DOCLING_PICTURE_DESCRIPTION_MODE}
+										>
+											<option value="">{$i18n.t('Default')}</option>
+											<option value="local">{$i18n.t('Local')}</option>
+											<option value="api">{$i18n.t('API')}</option>
+										</select>
+									</div>
+								</div>
+
+								{#if RAGConfig.DOCLING_PICTURE_DESCRIPTION_MODE === 'local'}
+									<div class="flex flex-col gap-2 mt-2">
+										<div class=" flex flex-col w-full justify-between">
+											<div class=" mb-1 text-xs font-medium">
+												{$i18n.t('Picture Description Local Config')}
+											</div>
+											<div class="flex w-full items-center relative">
+												<Tooltip
+													content={$i18n.t(
+														'Options for running a local vision-language model in the picture description. The parameters refer to a model hosted on Hugging Face. This parameter is mutually exclusive with picture_description_api.'
+													)}
+													placement="top-start"
+													className="w-full"
+												>
+													<Textarea
+														bind:value={RAGConfig.DOCLING_PICTURE_DESCRIPTION_LOCAL}
+														placeholder={$i18n.t('Enter Config in JSON format')}
+													/>
+												</Tooltip>
+											</div>
+										</div>
+									</div>
+								{:else if RAGConfig.DOCLING_PICTURE_DESCRIPTION_MODE === 'api'}
+									<div class="flex flex-col gap-2 mt-2">
+										<div class=" flex flex-col w-full justify-between">
+											<div class=" mb-1 text-xs font-medium">
+												{$i18n.t('Picture Description API Config')}
+											</div>
+											<div class="flex w-full items-center relative">
+												<Tooltip
+													content={$i18n.t(
+														'API details for using a vision-language model in the picture description. This parameter is mutually exclusive with picture_description_local.'
+													)}
+													placement="top-start"
+													className="w-full"
+												>
+													<Textarea
+														bind:value={RAGConfig.DOCLING_PICTURE_DESCRIPTION_API}
+														placeholder={$i18n.t('Enter Config in JSON format')}
+													/>
+												</Tooltip>
+											</div>
+										</div>
+									</div>
+								{/if}
+							{/if}
 						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'document_intelligence'}
 							<div class="my-0.5 flex gap-2 pr-2">
 								<input
@@ -563,6 +639,7 @@
 								>
 									<option value="">{$i18n.t('Default')} ({$i18n.t('Character')})</option>
 									<option value="token">{$i18n.t('Token')} ({$i18n.t('Tiktoken')})</option>
+									<option value="markdown_header">{$i18n.t('Markdown (Header)')}</option>
 								</select>
 							</div>
 						</div>
@@ -651,7 +728,11 @@
 										required
 									/>
 
-									<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={OpenAIKey} />
+									<SensitiveInput
+										placeholder={$i18n.t('API Key')}
+										bind:value={OpenAIKey}
+										required={false}
+									/>
 								</div>
 							{:else if embeddingEngine === 'ollama'}
 								<div class="my-0.5 flex gap-2 pr-2">
@@ -728,33 +809,7 @@
 											>
 												{#if updateEmbeddingModelLoading}
 													<div class="self-center">
-														<svg
-															class=" w-4 h-4"
-															viewBox="0 0 24 24"
-															fill="currentColor"
-															xmlns="http://www.w3.org/2000/svg"
-														>
-															<style>
-																.spinner_ajPY {
-																	transform-origin: center;
-																	animation: spinner_AtaB 0.75s infinite linear;
-																}
-
-																@keyframes spinner_AtaB {
-																	100% {
-																		transform: rotate(360deg);
-																	}
-																}
-															</style>
-															<path
-																d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
-																opacity=".25"
-															/>
-															<path
-																d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
-																class="spinner_ajPY"
-															/>
-														</svg>
+														<Spinner />
 													</div>
 												{:else}
 													<svg
@@ -830,12 +885,7 @@
 							<div class="  mb-2.5 flex w-full justify-between">
 								<div class=" self-center text-xs font-medium">{$i18n.t('Hybrid Search')}</div>
 								<div class="flex items-center relative">
-									<Switch
-										bind:state={RAGConfig.ENABLE_RAG_HYBRID_SEARCH}
-										on:change={() => {
-											submitHandler();
-										}}
-									/>
+									<Switch bind:state={RAGConfig.ENABLE_RAG_HYBRID_SEARCH} />
 								</div>
 							</div>
 
@@ -1069,6 +1119,50 @@
 							</Tooltip>
 						</div>
 					</div>
+
+					<div class="  mb-2.5 flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">{$i18n.t('Image Compression Width')}</div>
+						<div class="flex items-center relative">
+							<Tooltip
+								content={$i18n.t(
+									'The width in pixels to compress images to. Leave empty for no compression.'
+								)}
+								placement="top-start"
+							>
+								<input
+									class="flex-1 w-full text-sm bg-transparent outline-hidden"
+									type="number"
+									placeholder={$i18n.t('Leave empty for no compression')}
+									bind:value={RAGConfig.FILE_IMAGE_COMPRESSION_WIDTH}
+									autocomplete="off"
+									min="0"
+								/>
+							</Tooltip>
+						</div>
+					</div>
+
+					<div class="  mb-2.5 flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">
+							{$i18n.t('Image Compression Height')}
+						</div>
+						<div class="flex items-center relative">
+							<Tooltip
+								content={$i18n.t(
+									'The height in pixels to compress images to. Leave empty for no compression.'
+								)}
+								placement="top-start"
+							>
+								<input
+									class="flex-1 w-full text-sm bg-transparent outline-hidden"
+									type="number"
+									placeholder={$i18n.t('Leave empty for no compression')}
+									bind:value={RAGConfig.FILE_IMAGE_COMPRESSION_HEIGHT}
+									autocomplete="off"
+									min="0"
+								/>
+							</Tooltip>
+						</div>
+					</div>
 				</div>
 
 				<div class="mb-3">
@@ -1153,7 +1247,7 @@
 		</div>
 	{:else}
 		<div class="flex items-center justify-center h-full">
-			<Spinner />
+			<Spinner className="size-5" />
 		</div>
 	{/if}
 </form>

@@ -8,6 +8,23 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
+	import { toast } from 'svelte-sonner';
+
+	import { chatId, selectedFolder } from '$lib/stores';
+
+	import {
+		deleteFolderById,
+		updateFolderIsExpandedById,
+		updateFolderById,
+		updateFolderParentIdById
+	} from '$lib/apis/folders';
+	import {
+		getChatById,
+		getChatsByFolderId,
+		importChat,
+		updateChatFolderIdById
+	} from '$lib/apis/chats';
+
 	import ChevronDown from '../../icons/ChevronDown.svelte';
 	import ChevronRight from '../../icons/ChevronRight.svelte';
 	import Collapsible from '../../common/Collapsible.svelte';
@@ -15,34 +32,28 @@
 
 	import FolderOpen from '$lib/components/icons/FolderOpen.svelte';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
-	import {
-		deleteFolderById,
-		updateFolderIsExpandedById,
-		updateFolderNameById,
-		updateFolderParentIdById
-	} from '$lib/apis/folders';
-	import { toast } from 'svelte-sonner';
-	import {
-		getChatById,
-		getChatsByFolderId,
-		importChat,
-		updateChatFolderIdById
-	} from '$lib/apis/chats';
+
 	import ChatItem from './ChatItem.svelte';
 	import FolderMenu from './Folders/FolderMenu.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import FolderModal from './Folders/FolderModal.svelte';
+	import { goto } from '$app/navigation';
 
 	export let open = false;
 
 	export let folders;
 	export let folderId;
+	export let shiftKey = false;
 
 	export let className = '';
 
 	export let parentDragged = false;
 
+	export let onDelete = (e) => {};
+
 	let folderElement;
 
+	let showFolderModal = false;
 	let edit = false;
 
 	let draggedOver = false;
@@ -131,7 +142,18 @@
 								return null;
 							});
 							if (!chat && item) {
-								chat = await importChat(localStorage.token, item.chat, item?.meta ?? {});
+								chat = await importChat(
+									localStorage.token,
+									item.chat,
+									item?.meta ?? {},
+									false,
+									null,
+									item?.created_at ?? null,
+									item?.updated_at ?? null
+								).catch((error) => {
+									toast.error(`${error}`);
+									return null;
+								});
 							}
 
 							// Move the chat
@@ -220,7 +242,7 @@
 			delete folders[folderId].new;
 
 			await tick();
-			editHandler();
+			renameHandler();
 		}
 	});
 
@@ -246,18 +268,13 @@
 
 		if (res) {
 			toast.success($i18n.t('Folder deleted successfully'));
-			dispatch('update');
+			onDelete(folderId);
 		}
 	};
 
-	const nameUpdateHandler = async () => {
+	const updateHandler = async ({ name, data }) => {
 		if (name === '') {
 			toast.error($i18n.t('Folder name cannot be empty.'));
-			return;
-		}
-
-		if (name === folders[folderId].name) {
-			edit = false;
 			return;
 		}
 
@@ -266,7 +283,10 @@
 		name = name.trim();
 		folders[folderId].name = name;
 
-		const res = await updateFolderNameById(localStorage.token, folderId, name).catch((error) => {
+		const res = await updateFolderById(localStorage.token, folderId, {
+			name,
+			...(data ? { data } : {})
+		}).catch((error) => {
 			toast.error(`${error}`);
 
 			folders[folderId].name = currentName;
@@ -275,7 +295,17 @@
 
 		if (res) {
 			folders[folderId].name = name;
-			toast.success($i18n.t('Folder name updated successfully'));
+			if (data) {
+				folders[folderId].data = data;
+			}
+
+			// toast.success($i18n.t('Folder name updated successfully'));
+			toast.success($i18n.t('Folder updated successfully'));
+
+			if ($selectedFolder?.id === folderId) {
+				selectedFolder.set(folders[folderId]);
+			}
+
 			dispatch('update');
 		}
 	};
@@ -300,7 +330,7 @@
 
 	$: isExpandedUpdateDebounceHandler(open);
 
-	const editHandler = async () => {
+	const renameHandler = async () => {
 		console.log('Edit');
 		await tick();
 		name = folders[folderId].name;
@@ -348,6 +378,13 @@
 	</div>
 </DeleteConfirmDialog>
 
+<FolderModal
+	bind:show={showFolderModal}
+	edit={true}
+	folder={folders[folderId]}
+	onSubmit={updateHandler}
+/>
+
 {#if dragged && x && y}
 	<DragGhost {x} {y}>
 		<div class=" bg-black/80 backdrop-blur-2xl px-2 py-1 rounded-lg w-fit max-w-40">
@@ -382,9 +419,17 @@
 		<div class="w-full group">
 			<button
 				id="folder-{folderId}-button"
-				class="relative w-full py-1.5 px-2 rounded-md flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-500 font-medium hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+				class="relative w-full py-1.5 px-2 rounded-md flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-500 font-medium hover:bg-gray-100 dark:hover:bg-gray-900 transition {$selectedFolder?.id ===
+				folderId
+					? 'bg-gray-100 dark:bg-gray-900'
+					: ''}"
 				on:dblclick={() => {
-					editHandler();
+					renameHandler();
+				}}
+				on:click={async (e) => {
+					await goto('/');
+
+					selectedFolder.set(folders[folderId]);
 				}}
 			>
 				<div class="text-gray-300 dark:text-gray-600">
@@ -405,7 +450,7 @@
 								e.target.select();
 							}}
 							on:blur={() => {
-								nameUpdateHandler();
+								updateHandler({ name });
 								edit = false;
 							}}
 							on:click={(e) => {
@@ -418,7 +463,7 @@
 							}}
 							on:keydown={(e) => {
 								if (e.key === 'Enter') {
-									nameUpdateHandler();
+									updateHandler({ name });
 									edit = false;
 								}
 							}}
@@ -434,18 +479,16 @@
 					on:pointerup={(e) => {
 						e.stopPropagation();
 					}}
+					on:click={(e) => e.stopPropagation()}
 				>
 					<FolderMenu
-						on:rename={() => {
-							// Requires a timeout to prevent the click event from closing the dropdown
-							setTimeout(() => {
-								editHandler();
-							}, 200);
+						onEdit={() => {
+							showFolderModal = true;
 						}}
-						on:delete={() => {
+						onDelete={() => {
 							showDeleteConfirm = true;
 						}}
-						on:export={() => {
+						onExport={() => {
 							exportHandler();
 						}}
 					>
@@ -476,7 +519,9 @@
 							<svelte:self
 								{folders}
 								folderId={childFolder.id}
+								{shiftKey}
 								parentDragged={dragged}
+								{onDelete}
 								on:import={(e) => {
 									dispatch('import', e.detail);
 								}}
@@ -495,6 +540,7 @@
 							<ChatItem
 								id={chat.id}
 								title={chat.title}
+								{shiftKey}
 								on:change={(e) => {
 									dispatch('change', e.detail);
 								}}

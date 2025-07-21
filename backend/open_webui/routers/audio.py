@@ -10,11 +10,12 @@ from pydub.silence import split_on_silence
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional
 
-
+from fnmatch import fnmatch
 import aiohttp
 import aiofiles
 import requests
 import mimetypes
+from urllib.parse import quote
 
 from fastapi import (
     Depends,
@@ -168,6 +169,7 @@ class STTConfigForm(BaseModel):
     OPENAI_API_KEY: str
     ENGINE: str
     MODEL: str
+    SUPPORTED_CONTENT_TYPES: list[str] = []
     WHISPER_MODEL: str
     DEEPGRAM_API_KEY: str
     AZURE_API_KEY: str
@@ -202,6 +204,7 @@ async def get_audio_config(request: Request, user=Depends(get_admin_user)):
             "OPENAI_API_KEY": request.app.state.config.STT_OPENAI_API_KEY,
             "ENGINE": request.app.state.config.STT_ENGINE,
             "MODEL": request.app.state.config.STT_MODEL,
+            "SUPPORTED_CONTENT_TYPES": request.app.state.config.STT_SUPPORTED_CONTENT_TYPES,
             "WHISPER_MODEL": request.app.state.config.WHISPER_MODEL,
             "DEEPGRAM_API_KEY": request.app.state.config.DEEPGRAM_API_KEY,
             "AZURE_API_KEY": request.app.state.config.AUDIO_STT_AZURE_API_KEY,
@@ -236,6 +239,10 @@ async def update_audio_config(
     request.app.state.config.STT_OPENAI_API_KEY = form_data.stt.OPENAI_API_KEY
     request.app.state.config.STT_ENGINE = form_data.stt.ENGINE
     request.app.state.config.STT_MODEL = form_data.stt.MODEL
+    request.app.state.config.STT_SUPPORTED_CONTENT_TYPES = (
+        form_data.stt.SUPPORTED_CONTENT_TYPES
+    )
+
     request.app.state.config.WHISPER_MODEL = form_data.stt.WHISPER_MODEL
     request.app.state.config.DEEPGRAM_API_KEY = form_data.stt.DEEPGRAM_API_KEY
     request.app.state.config.AUDIO_STT_AZURE_API_KEY = form_data.stt.AZURE_API_KEY
@@ -250,6 +257,8 @@ async def update_audio_config(
         request.app.state.faster_whisper_model = set_faster_whisper_model(
             form_data.stt.WHISPER_MODEL, WHISPER_MODEL_AUTO_UPDATE
         )
+    else:
+        request.app.state.faster_whisper_model = None
 
     return {
         "tts": {
@@ -269,6 +278,7 @@ async def update_audio_config(
             "OPENAI_API_KEY": request.app.state.config.STT_OPENAI_API_KEY,
             "ENGINE": request.app.state.config.STT_ENGINE,
             "MODEL": request.app.state.config.STT_MODEL,
+            "SUPPORTED_CONTENT_TYPES": request.app.state.config.STT_SUPPORTED_CONTENT_TYPES,
             "WHISPER_MODEL": request.app.state.config.WHISPER_MODEL,
             "DEEPGRAM_API_KEY": request.app.state.config.DEEPGRAM_API_KEY,
             "AZURE_API_KEY": request.app.state.config.AUDIO_STT_AZURE_API_KEY,
@@ -318,6 +328,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         log.exception(e)
         raise HTTPException(status_code=400, detail="Invalid JSON payload")
 
+    r = None
     if request.app.state.config.TTS_ENGINE == "openai":
         payload["model"] = request.app.state.config.TTS_MODEL
 
@@ -326,7 +337,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             async with aiohttp.ClientSession(
                 timeout=timeout, trust_env=True
             ) as session:
-                async with session.post(
+                r = await session.post(
                     url=f"{request.app.state.config.TTS_OPENAI_API_BASE_URL}/audio/speech",
                     json=payload,
                     headers={
@@ -334,7 +345,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                         "Authorization": f"Bearer {request.app.state.config.TTS_OPENAI_API_KEY}",
                         **(
                             {
-                                "X-OpenWebUI-User-Name": user.name,
+                                "X-OpenWebUI-User-Name": quote(user.name, safe=" "),
                                 "X-OpenWebUI-User-Id": user.id,
                                 "X-OpenWebUI-User-Email": user.email,
                                 "X-OpenWebUI-User-Role": user.role,
@@ -344,14 +355,15 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                         ),
                     },
                     ssl=AIOHTTP_CLIENT_SESSION_SSL,
-                ) as r:
-                    r.raise_for_status()
+                )
 
-                    async with aiofiles.open(file_path, "wb") as f:
-                        await f.write(await r.read())
+                r.raise_for_status()
 
-                    async with aiofiles.open(file_body_path, "w") as f:
-                        await f.write(json.dumps(payload))
+                async with aiofiles.open(file_path, "wb") as f:
+                    await f.write(await r.read())
+
+                async with aiofiles.open(file_body_path, "w") as f:
+                    await f.write(json.dumps(payload))
 
             return FileResponse(file_path)
 
@@ -359,18 +371,22 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             log.exception(e)
             detail = None
 
-            try:
-                if r.status != 200:
-                    res = await r.json()
+            status_code = 500
+            detail = f"Open WebUI: Server Connection Error"
 
+            if r is not None:
+                status_code = r.status
+
+                try:
+                    res = await r.json()
                     if "error" in res:
-                        detail = f"External: {res['error'].get('message', '')}"
-            except Exception:
-                detail = f"External: {e}"
+                        detail = f"External: {res['error']}"
+                except Exception:
+                    detail = f"External: {e}"
 
             raise HTTPException(
-                status_code=getattr(r, "status", 500) if r else 500,
-                detail=detail if detail else "Open WebUI: Server Connection Error",
+                status_code=status_code,
+                detail=detail,
             )
 
     elif request.app.state.config.TTS_ENGINE == "elevenlabs":
@@ -628,7 +644,7 @@ def transcription_handler(request, file_path, metadata):
 
             # Make request to Deepgram API
             r = requests.post(
-                "https://api.deepgram.com/v1/listen",
+                "https://api.deepgram.com/v1/listen?smart_format=true",
                 headers=headers,
                 params=params,
                 data=file_data,
@@ -910,10 +926,18 @@ def transcription(
 ):
     log.info(f"file.content_type: {file.content_type}")
 
-    SUPPORTED_CONTENT_TYPES = {"video/webm"}  # Extend if you add more video types!
-    if not (
-        file.content_type.startswith("audio/")
-        or file.content_type in SUPPORTED_CONTENT_TYPES
+    stt_supported_content_types = getattr(
+        request.app.state.config, "STT_SUPPORTED_CONTENT_TYPES", []
+    )
+
+    if not any(
+        fnmatch(file.content_type, content_type)
+        for content_type in (
+            stt_supported_content_types
+            if stt_supported_content_types
+            and any(t.strip() for t in stt_supported_content_types)
+            else ["audio/*", "video/webm"]
+        )
     ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

@@ -8,6 +8,7 @@ import re
 from pathlib import Path
 from typing import Optional
 
+from urllib.parse import quote
 import requests
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
 from open_webui.config import CACHE_DIR
@@ -302,8 +303,16 @@ async def update_image_config(
 ):
     set_image_model(request, form_data.MODEL)
 
+    if form_data.IMAGE_SIZE == "auto" and form_data.MODEL != "gpt-image-1":
+        raise HTTPException(
+            status_code=400,
+            detail=ERROR_MESSAGES.INCORRECT_FORMAT(
+                "  (auto is only allowed with gpt-image-1)."
+            ),
+        )
+
     pattern = r"^\d+x\d+$"
-    if re.match(pattern, form_data.IMAGE_SIZE):
+    if form_data.IMAGE_SIZE == "auto" or re.match(pattern, form_data.IMAGE_SIZE):
         request.app.state.config.IMAGE_SIZE = form_data.IMAGE_SIZE
     else:
         raise HTTPException(
@@ -420,7 +429,7 @@ def load_b64_image_data(b64_str):
     try:
         if "," in b64_str:
             header, encoded = b64_str.split(",", 1)
-            mime_type = header.split(";")[0]
+            mime_type = header.split(";")[0].lstrip("data:")
             img_data = base64.b64decode(encoded)
         else:
             mime_type = "image/png"
@@ -428,7 +437,7 @@ def load_b64_image_data(b64_str):
         return img_data, mime_type
     except Exception as e:
         log.exception(f"Error loading image data: {e}")
-        return None
+        return None, None
 
 
 def load_url_image_data(url, headers=None):
@@ -471,7 +480,14 @@ async def image_generations(
     form_data: GenerateImageForm,
     user=Depends(get_verified_user),
 ):
-    width, height = tuple(map(int, request.app.state.config.IMAGE_SIZE.split("x")))
+    # if IMAGE_SIZE = 'auto', default WidthxHeight to the 512x512 default
+    # This is only relevant when the user has set IMAGE_SIZE to 'auto' with an
+    # image model other than gpt-image-1, which is warned about on settings save
+    width, height = (
+        tuple(map(int, request.app.state.config.IMAGE_SIZE.split("x")))
+        if "x" in request.app.state.config.IMAGE_SIZE
+        else (512, 512)
+    )
 
     r = None
     try:
@@ -483,7 +499,7 @@ async def image_generations(
             headers["Content-Type"] = "application/json"
 
             if ENABLE_FORWARD_USER_INFO_HEADERS:
-                headers["X-OpenWebUI-User-Name"] = user.name
+                headers["X-OpenWebUI-User-Name"] = quote(user.name, safe=" ")
                 headers["X-OpenWebUI-User-Id"] = user.id
                 headers["X-OpenWebUI-User-Email"] = user.email
                 headers["X-OpenWebUI-User-Role"] = user.role

@@ -29,6 +29,7 @@
 				bind:value={tagName}
 				class=" px-2 cursor-pointer self-center text-xs h-fit bg-transparent outline-hidden line-clamp-1 w-[6.5rem]"
 				placeholder={$i18n.t('Add a tag')}
+				aria-label={$i18n.t('Add a tag')}
 				list="tagOptions"
 				on:keydown={(event) => {
 					if (event.key === 'Enter') {
@@ -48,6 +49,7 @@
 					viewBox="0 0 16 16"
 					fill="currentColor"
 					stroke-width="2"
+					aria-hidden="true"
 					class="w-3 h-3"
 				>
 					<path
@@ -72,6 +74,7 @@
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
 				viewBox="0 0 16 16"
+				aria-hidden="true"
 				fill="currentColor"
 				class="w-3 h-3 {showTagInput ? 'rotate-45' : ''} transition-all transform"
 			>

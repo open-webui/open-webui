@@ -101,9 +101,6 @@ def get_tools(
 
                     def make_tool_function(function_name, token, tool_server_data):
                         async def tool_function(**kwargs):
-                            print(
-                                f"Executing tool function {function_name} with params: {kwargs}"
-                            )
                             return await execute_tool_server(
                                 token=token,
                                 url=tool_server_data["url"],
@@ -479,7 +476,7 @@ async def get_tool_server_data(token: str, url: str) -> Dict[str, Any]:
         "specs": convert_openapi_to_tool_payload(res),
     }
 
-    log.info("Fetched data:", data)
+    log.info(f"Fetched data: {data}")
     return data
 
 
