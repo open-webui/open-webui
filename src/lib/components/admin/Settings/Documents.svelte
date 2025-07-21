@@ -252,6 +252,11 @@
 			2
 		);
 
+		// Set default API Base URL if empty
+		if (!config.DATALAB_MARKER_API_BASE_URL) {
+			config.DATALAB_MARKER_API_BASE_URL = 'https://www.datalab.to/api/v1/marker';
+		}
+
 		RAGConfig = config;
 	});
 </script>
@@ -350,6 +355,14 @@
 									placeholder={$i18n.t('Enter Datalab Marker API Key')}
 									required={false}
 									bind:value={RAGConfig.DATALAB_MARKER_API_KEY}
+								/>
+							</div>
+
+							<div class="my-0.5 flex gap-2 pr-2">
+								<input
+									class="flex-1 w-full text-sm bg-transparent outline-hidden"
+									placeholder={$i18n.t('Enter Datalab Marker API Base URL')}
+									bind:value={RAGConfig.DATALAB_MARKER_API_BASE_URL}
 								/>
 							</div>
 

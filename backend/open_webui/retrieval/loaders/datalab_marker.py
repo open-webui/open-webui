@@ -15,6 +15,7 @@ class DatalabMarkerLoader:
         self,
         file_path: str,
         api_key: str,
+        api_base_url: str,
         additional_config: Optional[str] = None,
         use_llm: bool = False,
         skip_cache: bool = False,
@@ -26,6 +27,7 @@ class DatalabMarkerLoader:
     ):
         self.file_path = file_path
         self.api_key = api_key
+        self.api_base_url = api_base_url
         self.additional_config = additional_config
         self.use_llm = use_llm
         self.skip_cache = skip_cache
@@ -60,7 +62,7 @@ class DatalabMarkerLoader:
         return mime_map.get(ext, "application/octet-stream")
 
     def check_marker_request_status(self, request_id: str) -> dict:
-        url = f"https://www.datalab.to/api/v1/marker/{request_id}"
+        url = f"{self.api_base_url}/{request_id}"
         headers = {"X-Api-Key": self.api_key}
         try:
             response = requests.get(url, headers=headers)
@@ -81,7 +83,7 @@ class DatalabMarkerLoader:
             )
 
     def load(self) -> List[Document]:
-        url = "https://www.datalab.to/api/v1/marker"
+        url = self.api_base_url
         filename = os.path.basename(self.file_path)
         mime_type = self._get_mime_type(filename)
         headers = {"X-Api-Key": self.api_key}

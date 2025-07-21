@@ -284,6 +284,7 @@ class Loader:
             loader = DatalabMarkerLoader(
                 file_path=file_path,
                 api_key=self.kwargs["DATALAB_MARKER_API_KEY"],
+                api_base_url=self.kwargs.get("DATALAB_MARKER_API_BASE_URL", "https://www.datalab.to/api/v1/marker"),
                 additional_config=self.kwargs.get("DATALAB_MARKER_ADDITIONAL_CONFIG"),
                 use_llm=self.kwargs.get("DATALAB_MARKER_USE_LLM", False),
                 skip_cache=self.kwargs.get("DATALAB_MARKER_SKIP_CACHE", False),
