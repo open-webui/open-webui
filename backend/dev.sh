@@ -18,12 +18,12 @@ if [ -z "$VECTOR_DB" ] || [ -z "$S3_ENDPOINT_URL" ]; then
   echo "Por favor, verifique o arquivo .env."
   # exit 1
 fi
-export NODE_OPTIONS="--max-old-space-size=4096"
+export NODE_OPTIONS="--max-old-space-size=8096"
 export ENV="dev"
 # Define porta com valor padrão
 PORT="${PORT:-3030}"
 # Inicia o FastAPI com Uvicorn em background
-uvicorn open_webui.main:app --port $PORT --host 0.0.0.0 --log-level=info --forwarded-allow-ips '*' &
+uvicorn open_webui.main:app --port $PORT --host 0.0.0.0 --log-level=info  &
 FASTAPI_PID=$!
 
 # Define trap para matar o processo quando receber SIGINT ou SIGTERM (ex: CTRL+C)
