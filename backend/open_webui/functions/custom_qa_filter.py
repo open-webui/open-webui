@@ -102,7 +102,7 @@ class Filter:
             # Call the custom QA API
             api_response = call_custom_qa_api(
                 user_query=user_message,
-                document_text=document_text,
+                document_texts=document_text,
                 user_id=__user__["id"],
                 user_name=__user__["name"],
                 session_id=body.get("metadata", {}).get("session_id"),
