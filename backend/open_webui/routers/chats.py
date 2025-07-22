@@ -66,24 +66,21 @@ async def delete_all_user_chats(request: Request, user=Depends(get_verified_user
 
     log.info(f"User {user.id} deleting all chats and associated files")
 
-    # Get all user chats before deletion to extract file IDs
+    # Note: File cleanup now handled by background job to prevent
+    # deleting shared files when chats are cloned
     user_chats = Chats.get_chat_list_by_user_id(user.id, include_archived=True)
+    total_file_references = 0
 
-    total_files_cleaned = 0
     for chat in user_chats:
         try:
-            # Extract and clean up files from each chat
             file_ids = extract_file_ids_from_chat(chat)
-            if file_ids:
-                cleanup_result = cleanup_chat_files(file_ids)
-                total_files_cleaned += cleanup_result["files_deleted"]
-                log.info(
-                    f"Cleaned up {cleanup_result['files_deleted']} files from chat {chat.id}"
-                )
+            total_file_references += len(file_ids)
         except Exception as e:
-            log.error(f"Error cleaning files from chat {chat.id}: {e}")
+            log.error(f"Error extracting file IDs from chat {chat.id}: {e}")
 
-    log.info(f"Total files cleaned from all chats: {total_files_cleaned}")
+    log.info(
+        f"Found {total_file_references} total file references across all chats - cleanup will be handled by background job"
+    )
 
     # Delete all chats from database
     result = Chats.delete_chats_by_user_id(user.id)
@@ -413,13 +410,12 @@ async def delete_chat_by_id(request: Request, id: str, user=Depends(get_verified
 
         log.info(f"Admin deleting chat {id} and associated files")
 
-        # Extract and clean up all files from chat messages
+        # Note: File cleanup now handled by background job to prevent
+        # deleting shared files when chats are cloned
         file_ids = extract_file_ids_from_chat(chat)
-        if file_ids:
-            cleanup_result = cleanup_chat_files(file_ids)
-            log.info(
-                f"Cleaned up {cleanup_result['files_deleted']} files from chat {id}"
-            )
+        log.info(
+            f"Chat {id} contains {len(file_ids)} file references - cleanup will be handled by background job"
+        )
 
         # Clean up tags
         for tag in chat.meta.get("tags", []):
@@ -454,13 +450,12 @@ async def delete_chat_by_id(request: Request, id: str, user=Depends(get_verified
 
         log.info(f"User {user.id} deleting chat {id} and associated files")
 
-        # Extract and clean up all files from chat messages
+        # Note: File cleanup now handled by background job to prevent
+        # deleting shared files when chats are cloned
         file_ids = extract_file_ids_from_chat(chat)
-        if file_ids:
-            cleanup_result = cleanup_chat_files(file_ids)
-            log.info(
-                f"Cleaned up {cleanup_result['files_deleted']} files from chat {id}"
-            )
+        log.info(
+            f"Chat {id} contains {len(file_ids)} file references - cleanup will be handled by background job"
+        )
 
         # Clean up tags
         for tag in chat.meta.get("tags", []):
@@ -803,71 +798,3 @@ def extract_file_ids_from_chat(chat):
     except Exception as e:
         log.error(f"Error extracting file IDs from chat {chat.id}: {e}")
         return set()
-
-
-def cleanup_chat_files(file_ids):
-    """
-    Clean up files associated with a chat from database, storage, and vector DB.
-
-    Args:
-        file_ids: Set or list of file IDs to clean up
-
-    Returns:
-        dict: Summary of cleanup operations
-    """
-    cleanup_summary = {
-        "files_processed": 0,
-        "files_deleted": 0,
-        "vector_collections_deleted": 0,
-        "physical_files_deleted": 0,
-        "errors": [],
-    }
-
-    for file_id in file_ids:
-        try:
-            cleanup_summary["files_processed"] += 1
-
-            # Get file info
-            file = Files.get_file_by_id(file_id)
-
-            if file:
-                # Clean up vector collection
-                file_collection = f"file-{file_id}"
-                try:
-                    if VECTOR_DB_CLIENT and VECTOR_DB_CLIENT.has_collection(
-                        collection_name=file_collection
-                    ):
-                        VECTOR_DB_CLIENT.delete_collection(
-                            collection_name=file_collection
-                        )
-                        cleanup_summary["vector_collections_deleted"] += 1
-                        log.info(f"Deleted vector collection: {file_collection}")
-                except Exception as e:
-                    log.warning(
-                        f"Could not delete vector collection {file_collection}: {e}"
-                    )
-
-                # Delete physical file
-                try:
-                    Storage.delete_file(file.path)
-                    cleanup_summary["physical_files_deleted"] += 1
-                    log.info(f"Deleted physical file: {file.path}")
-                except Exception as e:
-                    log.warning(f"Could not delete physical file {file.path}: {e}")
-
-                # Delete file from database
-                Files.delete_file_by_id(file_id)
-                cleanup_summary["files_deleted"] += 1
-                log.info(f"Deleted file {file_id} from database")
-            else:
-                log.warning(
-                    f"File {file_id} not found in database, may already be deleted"
-                )
-
-        except Exception as e:
-            error_msg = f"Error cleaning up file {file_id}: {e}"
-            log.error(error_msg)
-            cleanup_summary["errors"].append(error_msg)
-
-    log.info(f"Chat file cleanup completed: {cleanup_summary}")
-    return cleanup_summary

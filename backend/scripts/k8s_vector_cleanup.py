@@ -100,6 +100,7 @@ def main():
             cleanup_orphaned_vectors,
             cleanup_expired_web_searches,
             cleanup_orphaned_chat_files,
+            cleanup_orphaned_files_by_reference,
         )
         from open_webui.models.knowledge import Knowledges
 
@@ -131,14 +132,25 @@ def main():
         else:
             logger.info("✓ [DRY RUN] Would clean orphaned standalone files")
 
-        # 2. Clean up orphaned chat files
-        logger.info("🔍 Cleaning orphaned chat files...")
+        # 2. Clean up files not referenced by any chats (safe for cloned chats)
+        logger.info("🔍 Cleaning files not referenced by any chats...")
         if not args.dry_run:
-            result = cleanup_orphaned_chat_files()
-            cleanup_results["chat_files"] = result
-            logger.info(f"✓ Chat files cleanup: {result}")
+            result = cleanup_orphaned_files_by_reference()
+            cleanup_results["orphaned_files_by_reference"] = result
+            logger.info(f"✓ Reference-based file cleanup: {result}")
         else:
-            logger.info("✓ [DRY RUN] Would clean orphaned chat files")
+            logger.info("✓ [DRY RUN] Would clean files not referenced by any chats")
+
+        # 2b. Aggressive chat file cleanup (optional - only if explicitly enabled)
+        # This is disabled by default to prevent issues with cloned chats
+        # if getattr(args, 'aggressive_cleanup', False):
+        #     logger.info("🔍 Aggressive chat files cleanup...")
+        #     if not args.dry_run:
+        #         result = cleanup_orphaned_chat_files()
+        #         cleanup_results["chat_files"] = result
+        #         logger.info(f"✓ Chat files cleanup: {result}")
+        #     else:
+        #         logger.info("✓ [DRY RUN] Would clean orphaned chat files")
 
         # 3. Clean up expired web search results
         logger.info(

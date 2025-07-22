@@ -25,6 +25,7 @@ from langchain_core.documents import Document
 
 from open_webui.models.files import FileModel, Files
 from open_webui.models.knowledge import Knowledges
+from open_webui.models.chats import Chats
 from open_webui.storage.provider import Storage
 
 
@@ -2285,6 +2286,127 @@ def extract_file_ids_from_chat_data(chat):
     except Exception as e:
         log.error(f"Error extracting file IDs from chat {chat.id}: {e}")
         return set()
+
+
+def get_all_file_references_from_chats():
+    """
+    Extract all file IDs referenced across all chats in the system.
+
+    Returns:
+        set: Set of all file IDs that are still referenced by existing chats
+    """
+    try:
+        log.info("Scanning all chats for file references...")
+        all_file_ids = set()
+
+        # Get all chats in the system
+        all_chats = Chats.get_chat_list(include_archived=True)
+
+        for chat in all_chats:
+            try:
+                file_ids = extract_file_ids_from_chat_data(chat)
+                all_file_ids.update(file_ids)
+            except Exception as e:
+                log.error(f"Error extracting file IDs from chat {chat.id}: {e}")
+
+        log.info(
+            f"Found {len(all_file_ids)} total file references across {len(all_chats)} chats"
+        )
+        return all_file_ids
+
+    except Exception as e:
+        log.error(f"Error scanning chats for file references: {e}")
+        return set()
+
+
+def cleanup_orphaned_files_by_reference():
+    """
+    Clean up files that are not referenced by any existing chats.
+    This is the safe way to handle file cleanup when chats can be cloned.
+
+    Returns:
+        dict: Summary of cleanup operations
+    """
+    try:
+        cleanup_summary = {
+            "files_checked": 0,
+            "orphaned_files_found": 0,
+            "files_deleted": 0,
+            "collections_cleaned": 0,
+            "kb_files_preserved": 0,
+            "errors": [],
+        }
+
+        log.info("Starting reference-based file cleanup...")
+
+        # Get all file references from existing chats
+        referenced_file_ids = get_all_file_references_from_chats()
+
+        # Get knowledge base files that should be preserved
+        kb_referenced_files = set()
+        try:
+            existing_knowledge_bases = Knowledges.get_knowledge_bases()
+            for kb in existing_knowledge_bases:
+                if kb.data and isinstance(kb.data, dict):
+                    file_ids = kb.data.get("file_ids", [])
+                    if isinstance(file_ids, list):
+                        kb_referenced_files.update(file_ids)
+            log.info(
+                f"Found {len(kb_referenced_files)} files in knowledge bases to preserve"
+            )
+        except Exception as e:
+            log.error(f"Error getting knowledge base files: {e}")
+            kb_referenced_files = set()
+
+        # Get all files from the database
+        all_files = Files.get_files()
+
+        for file in all_files:
+            cleanup_summary["files_checked"] += 1
+
+            # Skip KB files
+            if file.id in kb_referenced_files:
+                cleanup_summary["kb_files_preserved"] += 1
+                log.debug(f"Preserving KB file: {file.id}")
+                continue
+
+            # Check if file is referenced by any chat
+            if file.id not in referenced_file_ids:
+                # File is orphaned - safe to delete
+                cleanup_summary["orphaned_files_found"] += 1
+
+                try:
+                    # Delete vector collection
+                    collection_name = f"file-{file.id}"
+                    if VECTOR_DB_CLIENT.has_collection(collection_name):
+                        VECTOR_DB_CLIENT.delete_collection(collection_name)
+                        cleanup_summary["collections_cleaned"] += 1
+                        log.info(f"Deleted vector collection: {collection_name}")
+
+                    # Delete physical file
+                    if file.path:
+                        Storage.delete_file(file.path)
+                        log.info(f"Deleted physical file: {file.path}")
+
+                    # Delete from database
+                    Files.delete_file_by_id(file.id)
+                    cleanup_summary["files_deleted"] += 1
+                    log.info(f"Deleted orphaned file: {file.id}")
+
+                except Exception as e:
+                    error_msg = f"Error deleting orphaned file {file.id}: {e}"
+                    log.error(error_msg)
+                    cleanup_summary["errors"].append(error_msg)
+            else:
+                log.debug(f"File {file.id} is still referenced by chats")
+
+        log.info(f"Reference-based cleanup completed: {cleanup_summary}")
+        return cleanup_summary
+
+    except Exception as e:
+        error_msg = f"Error in reference-based file cleanup: {e}"
+        log.error(error_msg)
+        return {"error": error_msg}
 
 
 def cleanup_orphaned_chat_files() -> dict:
