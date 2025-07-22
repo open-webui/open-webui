@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: open-webui
+    env: node
+    plan: free
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./build
+    pullRequestPreviewsEnabled: true
+    headers:
+      - path: /*
+        headers:
+          - key: X-Robots-Tag
+            value: noindex
+    routes:
+      - type: redirect
+        source: /*
+        destination: /index.html

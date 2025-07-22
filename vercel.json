@@ -1,0 +1,30 @@
+{
+  "version": 2,
+  "framework": "sveltekit",
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "build"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/.*",
+      "dest": "/index.html"
+    }
+  ],
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "outputDirectory": "build",
+  "env": {
+    "VITE_API_BASE_URL": "https://your-backend-service.onrender.com",
+    "NODE_VERSION": "18"
+  }
+}
