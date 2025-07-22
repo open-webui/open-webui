@@ -457,6 +457,8 @@ from open_webui.tasks import (
 
 from open_webui.utils.redis import get_sentinels_from_env
 
+from open_webui.env import MOBILE_INPUT_LINES, FILE_UPLOAD_COUNT_ALLOWED, ALLOWED_FILE_TYPES, \
+    PRIVACY_POLICY_URL, TERMS_CONDITIONS_URL, MAX_FILE_SIZE
 
 if SAFE_MODE:
     print("SAFE MODE ENABLED")
@@ -1624,6 +1626,19 @@ async def get_app_config(request: Request):
         ),
     }
 
+@app.get("/api/config/mobile")
+async def get_app_config_mobile():
+    suggestions = app.state.config.DEFAULT_PROMPT_SUGGESTIONS or []
+
+    return JSONResponse({
+        "inputLinesNum": int(MOBILE_INPUT_LINES),
+        "suggestions": suggestions,
+        "fileUploadCountAllowed": int(FILE_UPLOAD_COUNT_ALLOWED),
+        "maxFileSizeAllowed": int(MAX_FILE_SIZE),
+        "fileTypesAllowed": ALLOWED_FILE_TYPES.split(","),
+        "privacyPolicyURL": PRIVACY_POLICY_URL, #url will be provided later
+        "termsConditionsURL": TERMS_CONDITIONS_URL #url will be provided later
+    })
 
 class UrlForm(BaseModel):
     url: str
