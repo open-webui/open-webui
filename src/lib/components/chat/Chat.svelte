@@ -2068,7 +2068,7 @@
 						{initNewChat}
 					/>
 
-					<div class="m-auto h-full max-w-[800px] flex-1 flex flex-col flex-auto z-10  @container">
+					<div class="m-auto h-full max-w-[800px] flex-1 flex flex-col flex-auto z-10  @container ">
 						{#if $settings?.landingPageMode === 'chat' || createMessagesList(history, history.currentId).length > 0}
 							<div
 								class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden"
@@ -2101,7 +2101,7 @@
 								</div>
 							</div>
 
-							<div class=" pb-2">
+							<div class="pb-[40px] sm:pb-[60px]">
 								<MessageInput
 									{history}
 									{taskIds}

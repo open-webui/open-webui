@@ -5,6 +5,8 @@
 	import { settings, WEBUI_NAME, mobile } from '$lib/stores';
 	import { WEBUI_VERSION } from '$lib/constants';
 	import MaterialIcon from '$lib/components/common/MaterialIcon.svelte';
+	import SuggestionsIcon from '$lib/components/icons/SuggestionsIcon.svelte';
+	
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -84,22 +86,22 @@
 
 <div class="w-full flex items-center justify-center ">
 	{#if filteredPrompts.length > 0} 
-		<div class="flex  gap-[8px] mt-4 justify-center items-center w-full flex-1  {$mobile ? 'overflow-x-auto scrollbar-none ' : 'flex-wrap' }">
+		<div class="flex gap-[8px] mt-4  items-center w-full flex-1  {$mobile ? 'overflow-x-auto scrollbar-none ' : 'flex-wrap justify-center' }">
 			{#each filteredPrompts as prompt, idx (prompt.id || prompt.content)}
 				<button
-					class="flex {$mobile ? 'items-center gap-[4px] ' : 'shadow-custom3 flex-col items-start' }  border border-[#E5EBF3] p-[16px] rounded-[20px]  whitespace-nowrap overflow-hidden text-ellipsis transition 
-							bg-light-bg  hover:bg-gradient-bg-2 
-							 dark:border-[#2D3642] dark:hover:bg-white/10 dark:hover:text-gray-900"
+					class="flex {$mobile ? 'items-center gap-[4px] flex-shrink-0' : 'shadow-custom3 flex-col items-start' } text-typography-subtext hover:text-typography-titles  border border-[#E5EBF3]  hover:border-[#90C9FF] p-[16px] rounded-[20px]  whitespace-nowrap overflow-hidden text-ellipsis transition 
+							bg-light-bg dark:border-[#2D3642] dark:hover:border-[#004280] dark:hover:text-white"
 					style="animation-delay: {idx * 60}ms;"
 					on:click={() => dispatch('select', prompt.content)}
 					>
 					
 					{#if prompt.icon_name}
-						<MaterialIcon name={prompt.icon_name} class="w-[18px] h-[18px]" color="{prompt.icon_color}" />
+					<SuggestionsIcon name={prompt.icon_name} />
+				
 					{:else}
-						<MaterialIcon name="lightbulb" class="w-[18px] h-[18px]" />
+						<MaterialIcon name="lightbulb" class="w-[24px] h-[24px]" />
 					{/if}
-					<div class="w-full {$mobile ? ' ' : ' mt-[12px]' }  text-typography-titles text-[14px] leading-[22px] whitespace-nowrap">
+					<div class="w-full {$mobile ? ' ' : ' mt-[12px]' } text-[14px] leading-[22px] whitespace-nowrap">
 						{prompt.title?.[0] ?? prompt.content}
 					</div>
 					</button>
