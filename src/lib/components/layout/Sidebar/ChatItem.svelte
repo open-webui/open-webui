@@ -139,7 +139,10 @@
 	let itemElement;
 
 	let generating = false;
+
+	let ignoreBlur = false;
 	let doubleClicked = false;
+
 	let dragged = false;
 	let x = 0;
 	let y = 0;
@@ -314,10 +317,12 @@
 				bind:value={chatTitle}
 				class=" bg-transparent w-full outline-hidden mr-10"
 				placeholder={generating ? $i18n.t('Generating...') : ''}
+				disabled={generating}
 				on:keydown={chatTitleInputKeydownHandler}
 				on:blur={async (e) => {
-					// check if target is generate button
-					if (e.relatedTarget?.id === 'generate-title-button') {
+					if (ignoreBlur) {
+						ignoreBlur = false;
+
 						return;
 					}
 
@@ -417,8 +422,12 @@
 			>
 				<Tooltip content={$i18n.t('Generate')}>
 					<button
-						class=" self-center dark:hover:text-white transition"
+						class=" self-center dark:hover:text-white transition disabled:cursor-not-allowed"
 						id="generate-title-button"
+						disabled={generating}
+						on:mouseenter={() => {
+							ignoreBlur = true;
+						}}
 						on:click={(e) => {
 							e.preventDefault();
 							e.stopImmediatePropagation();
