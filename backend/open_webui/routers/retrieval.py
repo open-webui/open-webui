@@ -752,6 +752,9 @@ def save_docs_to_vector_db(
 
     # Check if entries with the same hash (metadata.hash) already exist
     if metadata and "hash" in metadata:
+        log.info(
+            f"Checking for existing documents with hash {metadata['hash']} in collection {collection_name}"
+        )
         result = VECTOR_DB_CLIENT.query(
             collection_name=collection_name,
             filter={"hash": metadata["hash"]},
