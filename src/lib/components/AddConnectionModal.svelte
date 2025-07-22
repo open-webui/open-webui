@@ -35,7 +35,7 @@
 	let connectionType = 'external';
 	let azure = false;
 	$: azure =
-		(url.includes('azure.com') || url.includes('cognitive.microsoft.com')) && !direct
+		(url.includes('azure') || url.includes('cognitive.microsoft.com')) && !direct
 			? true
 			: false;
 
