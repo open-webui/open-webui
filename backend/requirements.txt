@@ -1,67 +1,118 @@
+# Merged Requirements
+
+## Web Framework & Server
 fastapi==0.115.7
 uvicorn[standard]==0.34.0
-pydantic==2.10.6
+pydantic==2.11.7
 python-multipart==0.0.20
 
+## Real-time Communication
 python-socketio==5.13.0
+
+## Authentication & Security
 python-jose==3.4.0
 passlib[bcrypt]==1.7.4
+argon2-cffi==23.1.0
+bcrypt==4.3.0
+PyJWT[crypto]==2.10.1
+authlib==1.4.1
+ldap3==2.9.1
 
+## HTTP & Async
 requests==2.32.3
-aiohttp==3.11.11
+aiohttp==3.11.18
 async-timeout
 aiocache
 aiofiles
+aiohappyeyeballs==2.6.1
+aiosignal==1.3.2
+anyio==4.9.0
+frozenlist==1.6.0
+h11==0.16.0
+httpcore==1.0.9
+httpx==0.28.1
+idna==3.10
+multidict==6.4.3
+sniffio==1.3.1
+urllib3==2.4.0
+yarl==1.20.0
 
-sqlalchemy==2.0.38
+## Database & ORM
+sqlalchemy==2.0.40
 alembic==1.14.0
 peewee==3.17.9
 peewee-migrate==1.12.2
 psycopg2-binary==2.9.9
 pgvector==0.4.0
 PyMySQL==1.1.1
-bcrypt==4.3.0
-
 pymongo
 redis
+aiosqlite==0.21.0
+greenlet
+pyodbc
+
+## Cloud & Storage
 boto3==1.35.53
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib
+googleapis-common-protos==1.63.2
+google-cloud-storage==2.19.0
+azure-identity==1.21.0
+azure-storage-blob==12.24.1
+azure-common==1.1.28
+azure-core==1.33.0
 
-argon2-cffi==23.1.0
-APScheduler==3.10.4
-
-RestrictedPython==8.0
-
-loguru==0.7.2
-asgiref==3.8.1
-
-# AI libraries
-openai
+## AI & Machine Learning Core
+openai==1.95.1
 anthropic
 google-generativeai==0.8.4
-tiktoken
-
-langchain==0.3.19
-langchain-community==0.3.18
-llama-index
-
-fake-useragent==2.1.0
-chromadb==0.6.3
-pymilvus==2.5.0
-qdrant-client~=1.12.0
-opensearch-py==2.8.0
-playwright==1.49.1 # Caution: version must match docker-compose.playwright.yaml
-elasticsearch==8.17.1
-
-
+tiktoken==0.9.0
 transformers
 sentence-transformers==3.3.1
 accelerate
 colbert-ai==0.2.21
 einops==0.8.1
+onnxruntime==1.20.1
+faster-whisper==1.1.1
+sentencepiece
+numpy
 
+## LlamaIndex Family
+llama-index==0.12.48
+llama-index-agent-openai==0.4.12
+llama-index-cli==0.4.4
+llama-index-core==0.12.48
+llama-index-embeddings-azure-openai==0.3.9
+llama-index-embeddings-openai==0.3.1
+llama-index-indices-managed-llama-cloud==0.6.11
+llama-index-instrumentation==0.2.0
+llama-index-llms-azure-openai==0.3.4
+llama-index-llms-openai==0.4.7
+llama-index-multi-modal-llms-openai==0.5.3
+llama-index-program-openai==0.3.2
+llama-index-question-gen-openai==0.3.1
+llama-index-readers-file==0.4.7
+llama-index-readers-llama-parse==0.4.0
+llama-index-workflows==1.1.0
+llama-cloud==0.1.19
+llama-cloud-services==0.6.22
+llama-parse==0.6.22
 
+## Langchain
+langchain==0.3.19
+langchain-community==0.3.18
+
+## Vector Databases
+chromadb==0.6.3
+pymilvus==2.5.0
+qdrant-client~=1.12.0
+opensearch-py==2.8.0
+elasticsearch==8.17.1
+
+## Document & Data Processing
 ftfy==6.2.3
-pypdf==4.3.1
+pypdf==5.4.0
 fpdf2==2.8.2
 pymdown-extensions==10.14.2
 docx2txt==0.8
@@ -74,60 +125,23 @@ pandas==2.2.3
 openpyxl==3.1.5
 pyxlsb==1.0.10
 xlrd==2.0.1
-validators==0.34.0
-psutil
-sentencepiece
-soundfile==0.13.1
-azure-ai-documentintelligence==1.0.0
-
-pillow==11.1.0
+pillow==11.2.1
 opencv-python-headless==4.11.0.86
 rapidocr-onnxruntime==1.3.24
-rank-bm25==0.2.2
-
-onnxruntime==1.20.1
-
-faster-whisper==1.1.1
-
-PyJWT[crypto]==2.10.1
-authlib==1.4.1
-
-black==25.1.0
-langfuse==2.44.0
-youtube-transcript-api==1.0.3
-pytube==15.0.0
-
-extract_msg
+soundfile==0.13.1
 pydub
-duckduckgo-search~=8.0.0
+extract_msg
+beautifulsoup4==4.13.4
+soupsieve==2.7
+striprtf==0.0.26
 
-## Google Drive
-google-api-python-client
-google-auth-httplib2
-google-auth-oauthlib
-
-## Tests
-docker~=7.1.0
-pytest~=8.3.2
-pytest-docker~=3.1.1
-
-googleapis-common-protos==1.63.2
-google-cloud-storage==2.19.0
-
-azure-identity==1.21.0
-azure-storage-blob==12.24.1
-
-
-## LDAP
-ldap3==2.9.1
-
-## Firecrawl
+## Web Scraping & Search
+playwright==1.49.1 # Caution: version must match docker-compose.playwright.yaml
 firecrawl-py==1.12.0
+duckduckgo-search~=8.0.0
+fake-useragent==2.1.0
 
-# Sougou API SDK(Tencentcloud SDK)
-tencentcloud-sdk-python==3.0.1336
-
-## Trace
+## Telemetry & Tracing
 opentelemetry-api==1.31.1
 opentelemetry-sdk==1.31.1
 opentelemetry-exporter-otlp==1.31.1
@@ -140,5 +154,69 @@ opentelemetry-instrumentation-logging==0.52b1
 opentelemetry-instrumentation-httpx==0.52b1
 opentelemetry-instrumentation-aiohttp-client==0.52b1
 
-## SQL
-pyodbc
+## Development & Testing
+black==25.1.0
+docker~=7.1.0
+pytest~=8.3.2
+pytest-docker~=3.1.1
+RestrictedPython==8.0
+
+## Other Utilities
+APScheduler==3.10.4
+loguru==0.7.2
+asgiref==3.8.1
+validators==0.34.0
+psutil
+rank-bm25==0.2.2
+langfuse==2.60.2
+youtube-transcript-api==1.0.3
+pytube==15.0.0
+tencentcloud-sdk-python==3.0.1336
+python-dotenv==1.1.0
+annotated-types==0.7.0
+attrs==25.3.0
+azure-search-documents==11.5.2
+backoff==2.2.1
+banks==2.1.2
+certifi==2025.4.26
+cffi==1.17.1
+charset-normalizer==3.4.2
+click==8.1.8
+colorama==0.4.6
+cryptography==44.0.3
+dataclasses-json==0.6.7
+Deprecated==1.2.18
+dirtyjson==1.0.8
+distro==1.9.0
+filetype==1.2.0
+fsspec==2025.3.2
+griffe==1.7.3
+isodate==0.7.2
+Jinja2==3.1.6
+jiter==0.9.0
+joblib==1.5.0
+MarkupSafe==3.0.2
+marshmallow==3.26.1
+msal==1.32.3
+msal-extensions==1.3.1
+mypy_extensions==1.1.0
+nest-asyncio==1.6.0
+networkx==3.4.2
+packaging==24.2
+platformdirs==4.3.8
+propcache==0.3.1
+pycparser==2.22
+pydantic_core==2.33.2
+python-dateutil==2.9.0.post0
+pytz==2025.2
+PyYAML==6.0.2
+regex==2024.11.6
+setuptools==80.9.0
+six==1.17.0
+tenacity==9.1.2
+tqdm==4.67.1
+typing-inspect==0.9.0
+typing-inspection==0.4.0
+typing_extensions==4.13.2
+tzdata==2025.2
+wrapt==1.17.2
