@@ -1033,7 +1033,7 @@ async def chat_completion_files_handler(
                     # Get document content
                     log.info(f"govGpt-file-search-service extracting document content for {len(file_ids)} files")
                     document_text = get_document_content_from_files(request, file_ids, user)
-                    log.info(f"govGpt-file-search-service extracted {len(document_text)} characters of document content")
+                    log.info(f"govGpt-file-search-service extracted {len(document_text)} document content")
                     
                     # Get chat history for context
                     chat_history = []
@@ -1055,7 +1055,7 @@ async def chat_completion_files_handler(
                     log.info(f"govGpt-file-search-service calling external API for user {user.id}")
                     api_response = await call_custom_qa_api(
                         user_query=user_message,
-                        document_text=document_text,
+                        document_texts=document_text,
                         user_id=user.id,
                         user_name=user.name,
                         session_id=body.get("metadata", {}).get("session_id"),

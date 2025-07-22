@@ -78,7 +78,7 @@ def get_custom_qa_enabled() -> bool:
 
 async def call_custom_qa_api(
     user_query: str,
-    document_text: str,
+    document_texts: list[str],
     user_id: str,
     user_name: str,
     session_id: str = None,
@@ -93,14 +93,14 @@ async def call_custom_qa_api(
         "user_name": user_name,
         "session_id": session_id or f"session_{user_id}",
         "chat_history": chat_history or [],
-        "document_text": document_text
+        "document_texts": document_texts
     }
     
     # Log the request details
     log.info(f"{SERVICE_NAME} REQUEST to {CUSTOM_QA_API_URL}")
     log.info(f"{SERVICE_NAME} REQUEST payload: {json.dumps(payload, indent=2)}")
     log.info(f"{SERVICE_NAME} REQUEST user_query: '{user_query}'")
-    log.info(f"{SERVICE_NAME} REQUEST document_text length: {len(document_text)} characters")
+    log.info(f"{SERVICE_NAME} REQUEST document_texts size: {len(document_texts)} ")
     log.info(f"{SERVICE_NAME} REQUEST chat_history length: {len(chat_history or [])} messages")
     
     try:
@@ -219,10 +219,10 @@ def get_document_content_from_files(request: Request, file_ids: List[str], user)
                 log.warning(f"File {file_id} not found or has no content")
         
         # Combine all text with proper spacing
-        combined_text = "\n\n".join(document_texts)
+        # combined_text = "\n\n".join(document_texts)
         
-        log.info(f"Retrieved {len(document_texts)} document files with total {len(combined_text)} characters for user {user.id}")
-        return combined_text
+        log.info(f"Retrieved {len(document_texts)} document files, for user {user.id}")
+        return document_texts #return list
         
     except Exception as e:
         log.error(f"Error retrieving document content: {e}")
@@ -311,7 +311,7 @@ async def custom_qa_filter_inlet(body: dict, __user__: dict, __request__: Reques
         # Get document content
         document_text = get_document_content_from_files(__request__, file_ids, __user__)
         
-        if not document_text.strip():
+        if not any(doc.strip() for doc in document_text):
             return body
         
         # Get chat history for context
@@ -330,7 +330,7 @@ async def custom_qa_filter_inlet(body: dict, __user__: dict, __request__: Reques
         # Call the custom QA API
         api_response = await call_custom_qa_api(
             user_query=user_message,
-            document_text=document_text,
+            document_texts=document_text,
             user_id=__user__["id"],
             user_name=__user__["name"],
             session_id=body.get("metadata", {}).get("session_id"),
@@ -384,33 +384,35 @@ async def custom_document_qa(
             )
         
         # Get document content
-        document_text = ""
+        document_text = []
         
         if form_data.file_ids:
             # Get content from uploaded files
             file_content = get_document_content_from_files(request, form_data.file_ids, user)
-            document_text += file_content
+            document_text.extend(file_content)
         
         if form_data.collection_names:
             # Get content from knowledge base collections
             collection_content = get_document_content_from_collections(request, form_data.collection_names, user)
-            if document_text:
-                document_text += "\n\n" + collection_content
-            else:
-                document_text = collection_content
-        
-        if not document_text.strip():
+            # if document_text:
+            #     document_text += "\n\n" + collection_content
+            # else:
+            #     document_text = collection_content
+            document_text.append(collection_content)
+
+        #if all documents are empty
+        if not any(doc.strip() for doc in document_text):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="No document content found"
             )
-        
-        log.info(f"Processing {SERVICE_NAME} query for user {user.id} with {len(document_text)} characters of content")
+
+        log.info(f"Processing {SERVICE_NAME} query for user {user.id} with {len(document_text)} doc of content")
         
         # Call the external QA API
         api_response = await call_custom_qa_api(
             user_query=form_data.user_query,
-            document_text=document_text,
+            document_texts=document_text,
             user_id=user.id,
             user_name=user.name,
             session_id=form_data.session_id,
