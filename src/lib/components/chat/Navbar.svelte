@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getContext } from 'svelte';
+	import { getContext, onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
 	import {
@@ -36,6 +36,7 @@
 	import Banner from '../common/Banner.svelte';
 
 	import MaterialIcon from '$lib/components/common/MaterialIcon.svelte';
+	import { updateUserSettings } from '$lib/apis/users';
 
 
 	const i18n = getContext('i18n');
@@ -52,6 +53,14 @@
 	let showShareChatModal = false;
 	let showDownloadChatModal = false;
 	 let isOn = false
+
+	 const setDefaultModel = async () => {
+		settings.set({ ...$settings, models: ['gpt-4.1'] });
+		await updateUserSettings(localStorage.token, { ui: $settings });
+	};
+	onMount(() => {
+		setDefaultModel();
+	});
 </script>
 
 <ShareChatModal bind:show={showShareChatModal} chatId={$chatId} />
@@ -89,7 +98,7 @@
 	alt="GovGPT Logo"
 	class="w-[28px] h-[28px] filter dark:invert dark:brightness-0 dark:contrast-200"
 	/>
-
+                 
 	<!--<div
 				class="flex-1 overflow-hidden max-w-full py-0.5
 			{$showSidebar ? 'ml-1' : ''}

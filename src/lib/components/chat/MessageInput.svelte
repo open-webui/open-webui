@@ -63,6 +63,7 @@
 	import Attach from '../icons/Attach.svelte';
 	import Save from '../icons/Save.svelte';
 	import GovKno from '../icons/GovKno.svelte';
+	import { updateUserSettings } from '$lib/apis/users';
 
 
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
@@ -189,7 +190,14 @@
 	
 	let govBtnEnable = false;
     let showGovKnoButton = false;
-	$: showGovKnoButton = $models.find((model)=> model.id==='contextual-Rag');
+	$: showGovKnoButton = $models.find((model)=> model.id==='contextual-rag');
+
+	const saveGovKnoModel = async () => {
+		//settings.set({ ...$settings, models: ['contextual-rag'] });
+		//await updateUserSettings(localStorage.token, { ui: $settings });
+		toast.success($i18n.t('Gov Knowledge model updated'));
+		govBtnEnable = !govBtnEnable
+	};
 	
 	let showWebSearchButton = true;
 	// $: showWebSearchButton =
@@ -1367,7 +1375,7 @@
 												{#if showGovKnoButton}
 													<Tooltip content={$i18n.t('Gov Knowledge')} placement="top">
 														<button
-															on:click|preventDefault={() => (govBtnEnable = !govBtnEnable)}
+															on:click|preventDefault={() => saveGovKnoModel()}
 															type="button"
 															class="govkno-btn flex items-center px-[12px] gap-[4px] py-[8px] shadow-custom3 border border-[#E5EBF3] bg-[#FBFCFC] text-typography-titles text-[14px] leading-[22px] rounded-full rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-[#CCDDFC] dark:hover:bg-gray-800 {govBtnEnable
 																? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
