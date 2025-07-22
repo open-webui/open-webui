@@ -1381,14 +1381,6 @@ async def process_chat_response(
         task_id = str(uuid4())  # Create a unique task ID.
         model_id = form_data.get("model", "")
 
-        Chats.upsert_message_to_chat_by_id_and_message_id(
-            metadata["chat_id"],
-            metadata["message_id"],
-            {
-                "model": model_id,
-            },
-        )
-
         def split_content_and_whitespace(content):
             content_stripped = content.rstrip()
             original_whitespace = (
