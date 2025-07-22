@@ -581,7 +581,7 @@ async def yjs_document_leave(sid, data):
         )
 
         if (
-            YDOC_MANAGER.document_exists(document_id)
+            await YDOC_MANAGER.document_exists(document_id)
             and len(await YDOC_MANAGER.get_users(document_id)) == 0
         ):
             log.info(f"Cleaning up document {document_id} as no users are left")
