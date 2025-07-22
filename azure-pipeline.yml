@@ -70,7 +70,7 @@ steps:
     ls
     yq e '.image.tag = "$(Build.BuildId)"' -i sandbox.yaml
     git config user.name "Azure Pipeline"
-    git config user.email "pipeline@azure.gitops"
+    git config user.email "rohit.kamle@dge.gov.ae"
     git add sandbox.yaml
     git commit -m "chore: bump govgpt tag to $(Build.BuildId)"
     git push origin HEAD:main

@@ -50,11 +50,11 @@
 
 		<div class="flex flex-col gap-4 items-center justify-center w-full mt-12 mb-8">
 			<div class="w-full">
-				<div class="pb-[16px] text-typography-titles text-[28px] leading-[22px] font-Inter_SemiBold truncate">
+				<div class="pb-[16px] text-typography-titles text-[28px] leading-[22px] font-Inter_SemiBold truncate text-center">
 					Hi {($user?.name ?? 'there')} 👋🏼
 				</div>
-				<div class=" text-typography-subtext text-[14px] leading-[26px] text-center truncate dark:text-gray-100">
-					How can I help you?
+				<div class=" text-typography-subtext text-[14px] leading-[26px] text-center dark:text-gray-100 w-[350px] text-center m-auto">
+					Quick answers. Clear drafts. Trusted knowledge. What’s next? Enter your request to begin.
 				</div>
 			</div>
 		</div>
