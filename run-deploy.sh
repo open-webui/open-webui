@@ -83,12 +83,12 @@ build_image() {
     docker cp "$LOCAL_CACHE_DIR"/. temp_container:"$CACHE_DIR"/
     docker exec temp_container python -c "import nltk; nltk.download('punkt_tab')"
 
-    # Step 4: Commit the container's state to a new image
+    # commit: Commit the container's state to a new image
     echo "Committing the container with cache files to a new image '$UPDATED_IMAGE_TAG'..."
     docker commit temp_container "$UPDATED_IMAGE_TAG"
     echo "New image '$UPDATED_IMAGE_TAG' created successfully."
 
-    # Step 5: Remove the temporary container
+    # final: Remove the temporary container
     echo "Removing temporary container 'temp_container'..."
     docker rm -f temp_container > /dev/null 2>&1
     echo "Temporary container removed."

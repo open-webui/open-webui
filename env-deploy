@@ -8,19 +8,7 @@ LOCAL_CACHE_DIR=./backend/data/cache
 BUILDPLATFORM=linux/amd64
 CORS_ALLOW_ORIGIN=*
 HF_HUB_OFFLINE=1
-ENV=dev  # for swagger
-
-# OAuth
-# ENABLE_OAUTH_SIGNUP=true
-# OAUTH_MERGE_ACCOUNTS_BY_EMAIL=true
-
-# OAUTH_CLIENT_ID=open-webui
-# OAUTH_CLIENT_SECRET=SECRETE
-# OPENID_PROVIDER_URL=http://host.docker.internal:8888/realms/myrealm/.well-known/openid-configuration
-# OPENID_PROVIDER_URL=http://host.docker.internal:8888/realms/myrealm/.well-known/openid-configuration
-# OAUTH_PROVIDER_NAME=keycloak
-# ENABLE_OAUTH_GROUP_MANAGEMENT=true
-
+# ENV=dev  # for swagger
 
 # Application Configuration
 CHUNK_SIZE=800
