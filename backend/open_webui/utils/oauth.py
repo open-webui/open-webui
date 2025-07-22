@@ -3,6 +3,7 @@ import json
 import logging
 import mimetypes
 import sys
+import time
 import uuid
 
 from urllib.parse import unquote
@@ -337,51 +338,108 @@ class OAuthManager:
     from urllib.parse import unquote
 
     async def handle_login(self, request, provider):
-        log.info(f"Login attempt for provider: {provider}")
+        log.info(f"OAuth Login: Starting login attempt for provider: {provider}")
+        log.info(f"OAuth Login: Request URL: {request.url}")
+        log.info(f"OAuth Login: Request method: {request.method}")
+        log.info(f"OAuth Login: Request headers: {dict(request.headers)}")
+        log.info(f"OAuth Login: Available providers: {list(OAUTH_PROVIDERS.keys())}")
+        log.info(f"OAuth Login: Provider config: {OAUTH_PROVIDERS.get(provider, 'Not found')}")
 
         if provider not in OAUTH_PROVIDERS:
-            log.warning(f"Provider '{provider}' not found in OAUTH_PROVIDERS")
+            log.warning(f"OAuth Login: Provider '{provider}' not found in OAUTH_PROVIDERS")
+            log.warning(f"OAuth Login: Available providers: {list(OAUTH_PROVIDERS.keys())}")
             raise HTTPException(404, detail="OAuth provider not supported")
 
-    # Get redirect_uri from query params
+        # Get redirect_uri from query params
         try:
             query_params = dict(request.query_params)
+            log.info(f"OAuth Login: Query parameters: {query_params}")
+            
             custom_redirect_uri = query_params.get("redirect_uri")
+            log.info(f"OAuth Login: Custom redirect URI from query: {custom_redirect_uri}")
+            
+            default_redirect_uri = OAUTH_PROVIDERS[provider].get("redirect_uri")
+            fallback_redirect_uri = request.url_for("oauth_callback", provider=provider)
+            
+            log.info(f"OAuth Login: Default redirect URI from config: {default_redirect_uri}")
+            log.info(f"OAuth Login: Fallback redirect URI: {fallback_redirect_uri}")
+            
             redirect_uri = (
                 unquote(custom_redirect_uri)
                 if custom_redirect_uri
-                else OAUTH_PROVIDERS[provider].get("redirect_uri") or
-                    request.url_for("oauth_callback", provider=provider)
+                else default_redirect_uri or fallback_redirect_uri
             )
-            log.info(f"Redirect URI for provider '{provider}': {redirect_uri}")
+            log.info(f"OAuth Login: Final redirect URI for provider '{provider}': {redirect_uri}")
         except Exception as e:
-            log.error(f"Error processing redirect URI for provider '{provider}': {e}")
+            log.error(f"OAuth Login: Error processing redirect URI for provider '{provider}': {e}")
+            log.exception(f"OAuth Login: Full exception details:")
             raise HTTPException(500, detail="Error generating redirect URI")
 
         # Get OAuth client
+        log.info(f"OAuth Login: Getting OAuth client for provider: {provider}")
         client = self.get_client(provider)
         if client is None:
-            log.error(f"Failed to get OAuth client for provider: {provider}")
+            log.error(f"OAuth Login: Failed to get OAuth client for provider: {provider}")
+            log.error(f"OAuth Login: Available OAuth clients: {list(self.oauth._clients.keys()) if hasattr(self.oauth, '_clients') else 'No clients'}")
             raise HTTPException(404, detail="OAuth client not found")
 
-        log.info(f"Authorizing redirect for provider '{provider}'")
+        log.info(f"OAuth Login: Successfully got OAuth client for provider: {provider}")
+        log.info(f"OAuth Login: Client type: {type(client)}")
+        log.info(f"OAuth Login: Starting authorization redirect for provider '{provider}'")
+        
         try:
-            return await client.authorize_redirect(request, redirect_uri)
+            extra_params = {}
+            if provider == "oidc":
+                extra_params["kc_idp_hint"] = "microsoft"
+                log.info(f"OAuth Login: Added Keycloak IDP hint for Microsoft")
+            
+            log.info(f"OAuth Login: Extra parameters: {extra_params}")
+            log.info(f"OAuth Login: Calling authorize_redirect with redirect_uri: {redirect_uri}")
+            log.info(f"OAuth Login: Request object type: {type(request)}")
+            
+            start_time = time.time()
+            result = await client.authorize_redirect(request, redirect_uri, **extra_params)
+            end_time = time.time()
+            
+            log.info(f"OAuth Login: Authorization redirect successful for provider: {provider}")
+            log.info(f"OAuth Login: Redirect took {end_time - start_time:.2f} seconds")
+            log.info(f"OAuth Login: Result type: {type(result)}")
+            log.info(f"OAuth Login: Result status code: {getattr(result, 'status_code', 'N/A')}")
+            log.info(f"OAuth Login: Result headers: {dict(result.headers) if hasattr(result, 'headers') else 'N/A'}")
+            
+            return result
         except Exception as e:
-            log.exception(f"OAuth authorization failed for provider '{provider}': {e}")
+            log.error(f"OAuth Login: OAuth authorization failed for provider '{provider}': {e}")
+            log.exception(f"OAuth Login: Full exception details:")
             raise HTTPException(500, detail="OAuth authorization failed")
 
 
     async def handle_callback(self, request, provider, response, return_json: bool = False):
-        log.debug(f"---In handle_callback return_json:  {return_json}")
+        log.info(f"OAuth Callback: Starting callback for provider: {provider}")
+        log.info(f"OAuth Callback: Request URL: {request.url}")
+        log.info(f"OAuth Callback: Return JSON mode: {return_json}")
+        log.info(f"OAuth Callback: Available providers: {list(OAUTH_PROVIDERS.keys())}")
 
         if provider not in OAUTH_PROVIDERS:
+            log.error(f"OAuth Callback: Provider '{provider}' not found in OAUTH_PROVIDERS")
             raise HTTPException(404)
+        
+        log.info(f"OAuth Callback: Getting OAuth client for provider: {provider}")
         client = self.get_client(provider)
+        if client is None:
+            log.error(f"OAuth Callback: Failed to get OAuth client for provider: {provider}")
+            raise HTTPException(404, detail="OAuth client not found")
+        
+        log.info(f"OAuth Callback: Successfully got OAuth client for provider: {provider}")
+        
         try:
+            log.info(f"OAuth Callback: Calling authorize_access_token for provider: {provider}")
             token = await client.authorize_access_token(request)
+            log.info(f"OAuth Callback: Successfully got access token for provider: {provider}")
+            log.debug(f"OAuth Callback: Token keys: {list(token.keys()) if token else 'No token'}")
         except Exception as e:
-            log.warning(f"OAuth callback error: {e}")
+            log.error(f"OAuth Callback: OAuth callback error for provider '{provider}': {e}")
+            log.exception(f"OAuth Callback: Full exception details:")
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
         user_data: UserInfo = token.get("userinfo")
         if not user_data or auth_manager_config.OAUTH_EMAIL_CLAIM not in user_data:
