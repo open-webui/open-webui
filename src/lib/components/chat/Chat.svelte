@@ -2161,7 +2161,7 @@
 								</div>
 							</div>
 						{:else}
-							<div class="overflow-auto w-full h-full flex items-end">
+							<div class="overflow-auto w-full h-full flex ">
 								<Placeholder
 									{history}
 									{selectedModels}

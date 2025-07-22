@@ -85,6 +85,7 @@ from open_webui.routers import (
     tools,
     users,
     utils,
+    custom_document_qa,
 )
 
 from open_webui.routers.retrieval import (
@@ -1165,6 +1166,7 @@ app.include_router(
     evaluations.router, prefix="/api/v1/evaluations", tags=["evaluations"]
 )
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
+app.include_router(custom_document_qa.router, prefix="/api/v1/custom-qa", tags=["custom-qa"])
 
 
 try:
@@ -1376,7 +1378,31 @@ async def chat_completion(
         )
 
     try:
-        response = await chat_completion_handler(request, form_data, user)
+        # Check if we have a custom response from govGpt-file-search-service
+        if form_data.get("skip_chat_completion") and form_data.get("custom_response"):
+            log.info(f"govGpt-file-search-service: Skipping regular chat completion for user {user.id}")
+            log.info(f"govGpt-file-search-service: Custom response length: {len(form_data['custom_response'])}")
+            log.info(f"govGpt-file-search-service: Custom response preview: '{form_data['custom_response'][:200]}...'")
+            
+            # Create a mock response that will be processed normally
+            response = {
+                "choices": [
+                    {
+                        "message": {
+                            "role": "assistant",
+                            "content": form_data["custom_response"],
+                            "metadata": {
+                                "source": "govGpt-file-search-service",
+                                "api_response": True
+                            }
+                        }
+                    }
+                ]
+            }
+            log.info(f"govGpt-file-search-service: Created mock response for processing")
+        else:
+            log.info(f"govGpt-file-search-service: No custom response found, using regular chat completion")
+            response = await chat_completion_handler(request, form_data, user)
 
         return await process_chat_response(
             request, response, form_data, user, metadata, model, events, tasks

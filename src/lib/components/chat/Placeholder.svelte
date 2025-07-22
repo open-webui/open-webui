@@ -91,7 +91,7 @@
 	onMount(() => {});
 </script>
 
-<div class="max-w-[800px] pb-[40px] sm:pb-[60px]  w-full mx-auto text-center px-[16px] md:px-[0]">
+<div class="max-w-[800px] pb-4 w-full mx-auto text-center px-[16px] md:px-[0]">
 	{#if $temporaryChatEnabled}
 		<Tooltip
 			content={$i18n.t("This chat won't appear in history and your messages will not be saved.")}
@@ -105,9 +105,10 @@
 	{/if}
 
 	<div
-		class="w-full text-3xl text-gray-800 dark:text-gray-100 text-center flex items-center gap-4 font-primary"
+		class="w-full h-full text-3xl text-gray-800 dark:text-gray-100 text-center flex items-center gap-4 font-primary"
 	>
-		<div class="w-full flex flex-col justify-center items-center">
+		<div class="w-full h-full flex flex-col justify-center items-center">
+		<div class="top-box flex-grow flex flex-col justify-center"> 
 			<div class="flex flex-row justify-center ">
 				<!-- <div class="flex shrink-0 justify-center">
 					<div class="flex -space-x-4 mb-0.5" in:fade={{ duration: 100 }}>
@@ -226,7 +227,8 @@
 					{/if}
 				</div>
 			</div>
-
+			</div>
+<div class="suggestion-inputbox w-full">
 			<div class="mx-auto  font-primary" in:fade={{ duration: 200, delay: 200 }}>
 		<div class="">
 			<Suggestions
@@ -276,6 +278,7 @@
 						dispatch('submit', e.detail);
 					}}
 				/>
+			</div>
 			</div>
 		</div>
 	</div>

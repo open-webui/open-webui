@@ -98,7 +98,10 @@
 	export let codeInterpreterEnabled = false;
 	let isOpen = false;
 
-	const Modeloptions = [{"label":"Gov knowledge", "icon":MenuBook,},{"label":"Procurement", "icon":EditNotes}];
+	const Modeloptions = [
+		{ label: 'Gov knowledge', icon: MenuBook },
+		{ label: 'Procurement', icon: EditNotes }
+	];
 	let selected = Modeloptions[0];
 
 	function selectOption(option) {
@@ -184,12 +187,12 @@
 	let showToolsButton = false;
 	$: showToolsButton = toolServers.length + selectedToolIds.length > 0;
 
-	let showWebSearchButton = false;
-	$: showWebSearchButton =
-		(atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).length ===
-		webSearchCapableModels.length &&
-		$config?.features?.enable_web_search &&
-		($_user.role === 'admin' || $_user?.permissions?.features?.web_search);
+	let showWebSearchButton = true;
+	// $: showWebSearchButton =
+	// 	(atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).length ===
+	// 	webSearchCapableModels.length &&
+	// 	$config?.features?.enable_web_search &&
+	// 	($_user.role === 'admin' || $_user?.permissions?.features?.web_search);
 
 	let showImageGenerationButton = false;
 	$: showImageGenerationButton =
@@ -199,11 +202,13 @@
 		($_user.role === 'admin' || $_user?.permissions?.features?.image_generation);
 
 	let showCodeInterpreterButton = false;
-	$: showCodeInterpreterButton =
-		(atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).length ===
-		codeInterpreterCapableModels.length &&
-		$config?.features?.enable_code_interpreter &&
-		($_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter);
+	// $: showCodeInterpreterButton =
+	// 	(atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).length ===
+	// 		codeInterpreterCapableModels.length &&
+	// 	$config?.features?.enable_code_interpreter &&
+	// 	($_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter);
+
+	let showFileUploadButton = true;
 
 	const scrollToBottom = () => {
 		const element = document.getElementById('messages-container');
@@ -608,7 +613,7 @@
 			</div>
 		</div>
 
-		<div class="{transparentBackground ? 'bg-transparent' : 'bg-transparent dark:bg-gray-900'} ">
+		<div class="{transparentBackground ? 'px-4 bg-transparent' : 'px-4 bg-transparent dark:bg-gray-900'} ">
 			<div
 				class="{($settings?.widescreenMode ?? null)
 					? 'max-w-full'
@@ -666,7 +671,7 @@
 						>
 							<div
 								class="p-[24px] flex-1 flex flex-col bounded-[12px] shadow-custom3  relative w-full rounded-3xl transition bg-light-bg dark:text-gray-100"
-								
+
 								dir={$settings?.chatDirection ?? 'auto'}
 							>
 								{#if files.length > 0}
@@ -1412,22 +1417,69 @@
 													</Tooltip>
 												{/if}
 
-												<div class="attach">
-  <button
-    type="button"
-    class="relative flex items-center px-[12px] gap-[4px] py-[8px] rounded-full shadow-custom3 border border-[#E5EBF3] bg-light-bg text-typography-titles text-[14px] leading-[22px] focus:outline-none"
-    on:click={() => filesInputElement.click()}
-    aria-label="Attach files"
-  >
-    <span class="w-[18px] h-[18px] flex items-center justify-center">
-      <Attach strokeWidth="2" className="w-[18px] h-[14px] text-[#36383b]" />
-    </span>
-    <span class="hidden @xl:block text-[14px] leading-[22px] text-typography-titles text-left whitespace-nowrap">
-      Attach files
-    </span>
-    <span class="absolute inset-0 border border-[#dee0e3] rounded-full pointer-events-none" aria-hidden="true"></span>
-  </button>
-</div>
+												{#if showFileUploadButton}
+													<Tooltip content={$i18n.t('Upload File')} placement="top">
+														<button
+															on:click={() => filesInputElement.click()}
+															type="button"
+															class="px-2 @xl:px-2.5 py-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {webSearchEnabled ||
+															($settings?.webSearch ?? false) === 'always'
+																? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
+																: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
+														>
+															<Attach
+																strokeWidth="2"
+																className="w-[18px] h-[18px] text-[#36383b]"
+															/>
+															<span
+															class="font-heading font-medium text-[14px] leading-[22px] text-[#36383b] text-left whitespace-nowrap"
+														>
+															Attach files
+														</span>
+														</button>
+													</Tooltip>
+												{/if}
+
+											</div>
+											<div class="flex gap-[12px] items-center">
+												{#if false}
+													<div class="model-box relative inline-block">
+														<!-- Dropdown Button -->
+														<button
+															type="button"
+															on:click={() => (isOpen = !isOpen)}
+															class="inline-flex gap-2 text-[14px] leading-[22px] font-medium font-NotoKufi-Regular justify-between items-center px-2 py-1 border border-gray-1300 bg-gray-1150 rounded-[40px]"
+														>
+															<svelte:component this={selected.icon} class="w-6 h-6" />
+															{selected.label}
+															<ArrowDown strokeWidth="2" className="size-[1.1rem]" />
+														</button>
+
+														<!-- Dropdown Menu -->
+														{#if isOpen}
+															<div
+																class="absolute z-10 bottom-[40px] w-[211px] bg-white border border-gray-200 rounded-md shadow-lg"
+															>
+																{#each Modeloptions as option}
+																	<div
+																		on:click={() => selectOption(option)}
+																		class="flex px-[14px] py-[15px] justify-between items-center text-gray-1200 font-medium cursor-pointer leading-[22px] font-NotoKufi-Regular"
+																	>
+																		<div class="flex gap-2 items-center">
+																			<svelte:component this={option.icon} class="w-6 h-6" />
+																			{option.label}
+																		</div>
+																		{#if option.label == selected.label}
+																			<CheckNew strokeWidth="2" className="size-[1.1rem]" />
+																		{/if}
+																	</div>
+																{/each}
+															</div>
+														{/if}
+													</div>
+												{/if}
+
+
 											</div>
 											<div class="flex gap-[12px] items-center">
 												{#if false}
@@ -1616,12 +1668,24 @@
 												<Tooltip content={$i18n.t('Send message')}>
 													<button
 														id="send-message-button"
-														class=""
+														class="{!(prompt === '' && files.length === 0)
+															? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
+															: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
 														type="submit"
 														disabled={prompt === '' && files.length === 0}
 													>
-														<Save strokeWidth="2" disabled={prompt === '' && files.length === 0} />
-														
+														<svg
+															xmlns="http://www.w3.org/2000/svg"
+															viewBox="0 0 16 16"
+															fill="currentColor"
+															class="size-5"
+														>
+															<path
+																fill-rule="evenodd"
+																d="M8 14a.75.75 0 0 1-.75-.75V4.56L4.03 7.78a.75.75 0 0 1-1.06-1.06l4.5-4.5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.75 4.56v8.69A.75.75 0 0 1 8 14Z"
+																clip-rule="evenodd"
+															/>
+														</svg>
 													</button>
 												</Tooltip>
 											</div>
