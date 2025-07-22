@@ -414,7 +414,7 @@
 		<div class="mb-4">
 			<div class="mb-2">
 				<h3 class="text-sm font-medium text-gray-900 dark:text-gray-100">{$i18n.t('Font Size')}</h3>
-				<p class="text-xs text-gray-600 dark:text-gray-400">Adjust text size for chat messages and hints</p>
+				<p class="text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Adjust text size for chat messages and hints')}</p>
 			</div>
 			
 			<div class="mb-3">
