@@ -44,7 +44,7 @@
 {/if}
 
 <button
-	class="relative group p-1.5 {className} flex items-center gap-1 {colorClassName} {small
+	class="relative group p-[16px] {className} flex items-center gap-[8px] {colorClassName} {small
 		? 'rounded-xl'
 		: 'rounded-2xl'} text-left"
 	type="button"
@@ -90,11 +90,11 @@
 
 	{#if !small}
 		<div class="flex flex-col justify-center -space-y-0.5 w-full">
-			<div class=" dark:text-gray-100 text-sm font-medium line-clamp-1 mb-1">
+			<div class="text-neutrals-800 text-[12px] leading-[14px] font-medium line-clamp-1 mb-[8px]">
 				{decodeString(name)}
 			</div>
 
-			<div class=" flex justify-between text-gray-500 text-xs line-clamp-1">
+			<div class=" flex justify-between text-neutrals-500 text-[10px] line-clamp-1">
 				<!-- {#if type === 'file'}
 					{$i18n.t('File')}
 				{:else if type === 'doc'}
