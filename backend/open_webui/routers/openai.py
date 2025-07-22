@@ -822,6 +822,11 @@ async def generate_chat_completion(
                 "X-OpenWebUI-User-Id": user.id,
                 "X-OpenWebUI-User-Email": user.email,
                 "X-OpenWebUI-User-Role": user.role,
+                **(
+                    {"X-OpenWebUI-Chat-Id": metadata.get("chat_id")}
+                    if metadata and metadata.get("chat_id")
+                    else {}
+                ),
             }
             if ENABLE_FORWARD_USER_INFO_HEADERS
             else {}
@@ -893,10 +898,8 @@ async def generate_chat_completion(
             detail=detail if detail else "Open WebUI: Server Connection Error",
         )
     finally:
-        if not streaming and session:
-            if r:
-                r.close()
-            await session.close()
+        if not streaming:
+            await cleanup_response(r, session)
 
 
 async def embeddings(request: Request, form_data: dict, user):
@@ -975,10 +978,8 @@ async def embeddings(request: Request, form_data: dict, user):
             detail=detail if detail else "Open WebUI: Server Connection Error",
         )
     finally:
-        if not streaming and session:
-            if r:
-                r.close()
-            await session.close()
+        if not streaming:
+            await cleanup_response(r, session)
 
 
 @router.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
@@ -1074,7 +1075,5 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
             detail=detail if detail else "Open WebUI: Server Connection Error",
         )
     finally:
-        if not streaming and session:
-            if r:
-                r.close()
-            await session.close()
+        if not streaming:
+            await cleanup_response(r, session)
