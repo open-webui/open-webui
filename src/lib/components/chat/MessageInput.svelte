@@ -62,6 +62,7 @@
 	import Language from '../icons/Language.svelte';
 	import Attach from '../icons/Attach.svelte';
 	import Save from '../icons/Save.svelte';
+	import GovKno from '../icons/GovKno.svelte';
 
 
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
@@ -81,7 +82,6 @@
 
 	let selectedModelIds = [];
 	$: selectedModelIds = atSelectedModel !== undefined ? [atSelectedModel.id] : selectedModels;
-
 	export let history;
 	export let taskIds = null;
 
@@ -186,7 +186,11 @@
 
 	let showToolsButton = false;
 	$: showToolsButton = toolServers.length + selectedToolIds.length > 0;
-
+	
+	let govBtnEnable = false;
+    let showGovKnoButton = false;
+	$: showGovKnoButton = $models.find((model)=> model.id==='contextual-Rag');
+	
 	let showWebSearchButton = true;
 	// $: showWebSearchButton =
 	// 	(atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).length ===
@@ -1360,6 +1364,24 @@
 													</Tooltip>
 												{/each}
 
+												{#if showGovKnoButton}
+													<Tooltip content={$i18n.t('Gov Knowledge')} placement="top">
+														<button
+															on:click|preventDefault={() => (govBtnEnable = !govBtnEnable)}
+															type="button"
+															class="govkno-btn flex items-center px-[12px] gap-[4px] py-[8px] shadow-custom3 border border-[#E5EBF3] bg-[#FBFCFC] text-typography-titles text-[14px] leading-[22px] rounded-full rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-[#CCDDFC] dark:hover:bg-gray-800 {govBtnEnable
+																? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
+																: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
+														>
+															<GovKno  />
+															<span
+																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
+																>{$i18n.t('Gov Knowledge')}</span
+															>
+														</button>
+													</Tooltip>
+												{/if}
+
 												{#if showWebSearchButton}
 													<Tooltip content={$i18n.t('Search the internet')} placement="top">
 														<button
@@ -1427,10 +1449,7 @@
 																? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
 																: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
 														>
-															<Attach
-																strokeWidth="2"
-																className="w-[18px] h-[18px] text-[#36383b]"
-															/>
+															<Attach/>
 															<span
 															class="font-heading font-medium text-[14px] leading-[22px] text-[#36383b] text-left whitespace-nowrap"
 														>
