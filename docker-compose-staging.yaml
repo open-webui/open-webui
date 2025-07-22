@@ -1,0 +1,29 @@
+services:
+  open-webui-staging:
+    build:
+      context: .
+      args:
+        OLLAMA_BASE_URL: '/ollama'
+      dockerfile: Dockerfile
+    container_name: open-webui-staging
+    volumes:
+      - open-webui-staging:/app/backend/data
+    ports:
+      - "3001:8080"
+    environment:
+      - 'OLLAMA_BASE_URL=http://ollama:11434'
+      - 'WEBUI_SECRET_KEY='
+      - 'WEBUI_NAME=mAI Staging'
+      - 'WEBUI_URL=http://localhost:3001'
+    external_links:
+      - ollama
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  open-webui-staging:
+    name: mai_staging_data
