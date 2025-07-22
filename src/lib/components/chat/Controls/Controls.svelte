@@ -9,17 +9,17 @@
 	import FileItem from '$lib/components/common/FileItem.svelte';
 	import Collapsible from '$lib/components/common/Collapsible.svelte';
 
-	import { user, settings } from '$lib/stores';
+	import { user, settings, isRestarting } from '$lib/stores';
 	export let models = [];
 	export let chatFiles = [];
 	export let params = {};
 
 	let showValves = false;
+</script>
 
-	let isRestarting = false;
-
-	async function restartOpu() {
-		isRestarting = true;
+<script context="module">
+	export async function restartOpu() {
+		isRestarting.set(true);
 		try {
 			const response = await fetch('/ollama/api/restartopu', {
 				method: 'POST',
@@ -35,7 +35,7 @@
 			alert('Something went wrong while restarting OPU.');
 		}
 		finally {
-			isRestarting = false;
+			isRestarting.set(false);
 		}
 	}
 </script>
@@ -114,22 +114,21 @@
 				<div class="" slot="content">
 					<!-- Main Restart Now button -->
 					<button
-						disabled={isRestarting}
+						disabled={$isRestarting}
 						class={
 							'w-auto text-sm px-2 py-1 rounded-md transition-colors duration-200' +
 							($settings.highContrastMode?
 							 ' border-2 border-gray-300 dark : border-gray-700 bg-gray-50 dark:bg-gray-850 text-gray-900 dark:text-gray-100 ' +
-							(isRestarting ? 'opacity-50 cursor-not-allowed' :
+							($isRestarting ? 'opacity-50 cursor-not-allowed' :
 							'hover:bg-blue-100 dark:hover:bg-blue-900') : ' bg-blue-600 text-white ' +
-							(isRestarting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700 dark:bg-blue-600'))
+							($isRestarting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700 dark:bg-blue-600'))
 						}
 						on:click={() => {
-							restartOpu(); // Replace with your restart logic
-							//placeholder={$i18n.t('Enter restart here')}
+							restartOpu(); // Restart logic
 							}
 						}
 						>
-						{isRestarting ? $i18n.t('Restarting...') : $i18n.t('Restart Now')}
+						{$isRestarting ? $i18n.t('Restarting...') : $i18n.t('Restart Now')}
 					</button>
 				</div>
 			</Collapsible>
