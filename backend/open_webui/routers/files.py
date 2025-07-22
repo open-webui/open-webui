@@ -160,34 +160,47 @@ async def upload_file_async(
                                 "result": None, "error": None}
     name = filename
     filename = f"{id}_{filename}"
-    contents, file_path = Storage.upload_file(file.file, filename)
+    try:
+        contents, file_path = Storage.upload_file(file.file, filename)
 
-    _ = Files.insert_new_file(
-        user.id,
-        FileForm(
-            **{
-                "id": task_id,
-                "filename": name,
-                "path": file_path,
-                "meta": {
-                    "name": name,
-                    "content_type": file.content_type,
-                    "size": len(contents),
-                },
+        _ = Files.insert_new_file(
+            user.id,
+            FileForm(
+                **{
+                    "id": task_id,
+                    "filename": name,
+                    "path": file_path,
+                    "meta": {
+                        "name": name,
+                        "content_type": file.content_type,
+                        "size": len(contents),
+                    },
+                }
+            ),
+        )
+
+        background_tasks.add_task(
+            process_tasks,
+            request,
+            ProcessFileForm(file_id=task_id),
+            user,
+            task_id,
+        )
+        # file_item = Files.get_file_by_id(id=id)
+
+        return {"task_id": task_id}
+    except Exception as e:
+        log.exception(e)
+        with cache_lock:
+            tasks_cache[task_id] = {
+                "status": "Processing Failed",
+                "result": None,
+                "error": str(e),
             }
-        ),
-    )
-
-    background_tasks.add_task(
-        process_tasks,
-        request,
-        ProcessFileForm(file_id=task_id),
-        user,
-        task_id,
-    )
-    # file_item = Files.get_file_by_id(id=id)
-
-    return {"task_id": task_id}
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(e),
+        )
 
 
 ############################
