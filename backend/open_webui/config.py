@@ -742,7 +742,7 @@ if frontend_loader.exists():
 
 CUSTOM_NAME = os.environ.get("CUSTOM_NAME", "")
 
-if CUSTOM_NAME:
+if CUSTOM_NAME and not OFFLINE_MODE:
     try:
         r = requests.get(f"https://api.openwebui.com/api/v1/custom/{CUSTOM_NAME}")
         data = r.json()
