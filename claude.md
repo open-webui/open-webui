@@ -25,22 +25,6 @@
 
 **Recent Status**: Successfully merged Open WebUI v0.6.17 preserving all customizations (Jan 2025)
 
-## Essential Commands
-
-```bash
-# Development start (recommended)
-./start-dev.sh
-
-# Manual start
-cd backend && source .venv/bin/activate && sh dev.sh  # Port 8080
-npm run dev  # Port 5173
-
-# Build & quality checks
-npm run build              # Production build
-npm run check              # Type checking
-npm run lint               # Lint all code
-npm run format             # Format all code
-```
 
 ## Detailed Documentation
 
@@ -49,7 +33,6 @@ npm run format             # Format all code
 **Docker & Deployment**: @docs/deployment.md
 **Customization Workflows**: @docs/workflows.md
 **File Locations & Structure**: @docs/file-locations.md
-**Troubleshooting & Error Handling**: @docs/troubleshooting.md
 
 ## Critical Customization Rules
 
@@ -65,9 +48,7 @@ npm run format             # Format all code
 - All theme and asset files in `static/`
 
 **Branch Strategy:**
-- Work only on `customization` branch
-- Create feature branches for specific improvements
-- Never commit to main - keep it clean for upstream merges
+- At the start work only on `customization` branch
 
 ## Quick Actions
 
