@@ -122,6 +122,8 @@ def get_tools(
                         "tool_id": tool_id,
                         "callable": callable,
                         "spec": spec,
+                        "endpoint": tool_server_data["url"],
+                        "api_key": token,
                     }
 
                     # TODO: if collision, prepend toolkit name
