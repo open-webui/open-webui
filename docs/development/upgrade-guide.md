@@ -4,7 +4,7 @@ This document describes the process for upgrading mAI (a customized fork of Open
 
 ## Last Upgrade: v0.6.16 → v0.6.17
 
-**Date:** January 19, 2025  
+**Date:** July 19, 2025  
 **Performed by:** Claude Code AI Assistant
 
 ### Overview
