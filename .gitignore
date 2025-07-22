@@ -307,3 +307,9 @@ dist
 cypress/videos
 cypress/screenshots
 .vscode/settings.json
+/.zenai_storage
+/backend/.zenai_storage
+/.vscode
+/.vscode
+.vscode/launch.json
+backend/.vscode/launch.json

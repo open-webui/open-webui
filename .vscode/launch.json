@@ -14,6 +14,22 @@
                     "remoteRoot": "."
                 }
             ]
+        },
+        {
+            "name": "Python: Attach to Backend",
+            "type": "python",
+            "request": "attach",
+            "connect": {
+                "host": "localhost",
+                "port": 5678
+            },
+            "pathMappings": [
+                {
+                    "localRoot": "${workspaceFolder}/backend",
+                    "remoteRoot": "${workspaceFolder}/backend"
+                }
+            ],
+            "justMyCode": true
         }
     ]
 }
