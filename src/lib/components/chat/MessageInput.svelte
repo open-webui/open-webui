@@ -190,7 +190,7 @@
 	
 	let govBtnEnable = false;
     let showGovKnoButton = false;
-	$: showGovKnoButton = $models.find((model)=> model.id==='contextual-rag');
+	$: showGovKnoButton = $models.find((model)=> model.id.includes('rag'));
 
 	const saveGovKnoModel = async () => {
 		const modelName = govBtnEnable?'contextual-rag':'gpt-4.1';
