@@ -184,8 +184,18 @@
 		dragged = false;
 	};
 
+	const onClickOutside = (event) => {
+		if (confirmEdit && !event.target.closest(`#chat-title-input-${id}`)) {
+			confirmEdit = false;
+			ignoreBlur = false;
+			chatTitle = '';
+		}
+	};
+
 	onMount(() => {
 		if (itemElement) {
+			document.addEventListener('click', onClickOutside, true);
+
 			// Event listener for when dragging starts
 			itemElement.addEventListener('dragstart', onDragStart);
 			// Event listener for when dragging occurs (optional)
@@ -197,6 +207,8 @@
 
 	onDestroy(() => {
 		if (itemElement) {
+			document.removeEventListener('click', onClickOutside, true);
+
 			itemElement.removeEventListener('dragstart', onDragStart);
 			itemElement.removeEventListener('drag', onDrag);
 			itemElement.removeEventListener('dragend', onDragEnd);
