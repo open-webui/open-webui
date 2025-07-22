@@ -189,7 +189,7 @@
 			</button>
 		<div class="flex px-[16px] py-[11px] w-full items-center justify-between border-b border-gray-100">
 				<label class="flex items-center gap-[8px]  text-[17px] leading-[22px]  "
-					>{#if !$mobile}<MaterialIcon name="notifications" size="1.1rem" />{/if}  {$i18n.t('Notifications')}</label
+					> {$i18n.t('Notifications')}</label
 				>
 				<label class="relative inline-flex items-center cursor-pointer">
 					<input type="checkbox" bind:checked={isOnNotification} on:change={()=>toggleNotification()} class="sr-only peer" />
@@ -207,7 +207,7 @@
 
 			<div class="flex px-[16px] py-[11px] w-full items-center justify-between border-b border-gray-100">
 				<label class="flex items-center gap-[8px]  text-[17px] leading-[22px]  "
-					>{#if !$mobile}<MaterialIcon name="settings" size="1.1rem" />{/if}  {$i18n.t('Theme')}</label
+					> {$i18n.t('Theme')}</label
 				>
 				<label class="relative inline-flex items-center cursor-pointer">
 					<input type="checkbox" bind:checked={isOnThemeToggle} on:change={() => themeChangeHandler(isOnThemeToggle?'light':'dark')} class="sr-only peer" />
@@ -222,7 +222,7 @@
 					</div>
 				</label>
 			</div>
-
+{#if role === 'admin'}
 			<button
 				class="flex justify-between items-center border-b border-gray-100 px-[16px] py-[11px] w-full transition"
 				on:click={async () => {
@@ -240,7 +240,7 @@
 					<Settings className="w-5 h-5" strokeWidth="1.5" />
 				</div>
 			</button>
-
+{/if}
 			<button
 				class="flex justify-between items-center border-b border-gray-100 px-[16px] py-[11px] w-full transition"
 				on:click={() => {
@@ -262,8 +262,8 @@
 
 
 			{#if role === 'admin'}
-				<!--<button
-					class="flex rounded-md  px-[8px] py-[10px] w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+				<button
+					class="flex justify-between items-center border-b border-gray-100 px-[16px] py-[11px] w-full transition"
 					on:click={() => {
 						goto('/playground');
 						show = false;
@@ -281,7 +281,7 @@
 				</button>
 
 				<button
-					class="flex rounded-md  px-[8px] py-[10px] w-full hover:bg-neutrals-hover dark:hover:bg-gray-800 transition"
+					class="flex justify-between items-center border-b border-gray-100 px-[16px] py-[11px] w-full transition"
 					on:click={() => {
 						goto('/admin');
 						show = false;
@@ -291,11 +291,12 @@
 						}
 					}}
 				>
-					<div class=" self-center mr-3">
+					
+					<div class=" self-center truncate gap-[8px]  text-[17px] leading-[22px]  ">{$i18n.t('Admin Panel')}</div>
+				<div class=" self-center mr-3">
 						<UserGroup className="w-5 h-5" strokeWidth="1.5" />
 					</div>
-					<div class=" self-center truncate gap-[8px]  text-[17px] leading-[22px]  ">{$i18n.t('Admin Panel')}</div>
-				</button>-->
+				</button>
 			{/if}
 
 			{#if help}

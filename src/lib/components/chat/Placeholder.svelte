@@ -228,7 +228,9 @@
 				</div>
 			</div>
 			</div>
-<div class="suggestion-inputbox w-full pb-[40px] sm:pb-[60px]">
+			
+<div class="suggestion-inputbox w-full">
+{#if !webSearchEnabled}
 			<div class="mx-auto  font-primary" in:fade={{ duration: 200, delay: 200 }}>
 		<div class="">
 			<Suggestions
@@ -243,6 +245,7 @@
 			/>
 		</div>
 	</div>
+	{/if}
 
 			<div class="text-base font-normal w-full">
 				<MessageInput

@@ -683,7 +683,7 @@
 							}}
 						>
 							<div
-								class="p-[24px] flex-1 flex flex-col bounded-[12px] shadow-custom3  relative w-full rounded-3xl transition bg-light-bg dark:text-gray-100"
+								class="p-[24px] flex-1 flex flex-col bounded-[12px] shadow-custom3  relative w-full sm:rounded-3xl transition bg-light-bg dark:text-gray-100"
 
 								dir={$settings?.chatDirection ?? 'auto'}
 							>
