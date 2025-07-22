@@ -2046,6 +2046,8 @@
 
 			<PaneGroup direction="horizontal" class="w-full h-full">
 				<Pane defaultSize={50} class="h-full flex relative max-w-full flex-col">
+					
+					<div class=" {!$mobile?'flex':''} w-full h-full">
 					<Navbar
 						bind:this={navbarElement}
 						chat={{
@@ -2066,7 +2068,7 @@
 						{initNewChat}
 					/>
 
-					<div class="flex flex-col flex-auto z-10 w-full @container">
+					<div class="m-auto h-full max-w-[800px] flex-1 flex flex-col flex-auto z-10  @container">
 						{#if $settings?.landingPageMode === 'chat' || createMessagesList(history, history.currentId).length > 0}
 							<div
 								class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden"
@@ -2159,7 +2161,7 @@
 								</div>
 							</div>
 						{:else}
-							<div class="overflow-auto w-full h-full flex items-end">
+							<div class="overflow-auto w-full h-full flex ">
 								<Placeholder
 									{history}
 									{selectedModels}
@@ -2198,6 +2200,7 @@
 								/>
 							</div>
 						{/if}
+					</div>
 					</div>
 				</Pane>
 

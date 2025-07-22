@@ -232,14 +232,14 @@
 
 	<div slot="content">
 		<DropdownMenu.Content
-			class="w-full max-w-[228px] rounded-xl z-50 bg-white dark:bg-gray-850 dark:text-white shadow-custom"
+			class="w-full max-w-[228px] rounded-xl z-50 bg-light-bg text-label-primary dark:text-white shadow-custom"
 			sideOffset={-2}
 			side="bottom"
 			align="start"
 			transition={flyAndScale}
 		>
 			<DropdownMenu.Item
-				class="flex flex-row-reverse justify-between px-[16px] py-[11px] flex items-center text-neutrals-800 gap-[8px]  text-[17px] leading-[22px] font-medium cursor-pointer hover:bg-gradient-bg-2 dark:hover:bg-gray-800 rounded-md"
+				class="flex flex-row-reverse justify-between px-[16px] py-[11px] flex items-center  gap-[8px]  text-[17px] leading-[22px] font-medium cursor-pointer hover:bg-gradient-bg-2 dark:hover:bg-gray-800 rounded-md"
 				on:click={() => {
 					pinHandler();
 				}}
@@ -254,7 +254,7 @@
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
-				class="flex flex-row-reverse justify-between px-[16px] py-[11px] flex items-center text-neutrals-800 gap-[8px]  text-[17px] leading-[22px] cursor-pointer hover:bg-neutrals-hover dark:hover:bg-gray-800 rounded-md"
+				class="flex flex-row-reverse justify-between px-[16px] py-[11px] flex items-center  gap-[8px]  text-[17px] leading-[22px] cursor-pointer hover:bg-neutrals-hover dark:hover:bg-gray-800 rounded-md"
 				on:click={() => {
 					renameHandler();
 				}}
@@ -264,7 +264,7 @@
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
-				class="flex flex-row-reverse justify-between px-[16px] py-[11px] flex items-center text-neutrals-800 gap-[8px]  text-[17px] leading-[22px] cursor-pointer hover:bg-neutrals-hover dark:hover:bg-gray-800 rounded-md"
+				class="flex flex-row-reverse justify-between px-[16px] py-[11px] flex items-center  gap-[8px]  text-[17px] leading-[22px] cursor-pointer hover:bg-neutrals-hover dark:hover:bg-gray-800 rounded-md"
 				on:click={() => {
 					cloneChatHandler();
 				}}
@@ -274,7 +274,7 @@
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
-				class="flex flex-row-reverse justify-between px-[16px] py-[11px] flex items-center text-neutrals-800 gap-[8px]  text-[17px] leading-[22px] cursor-pointer hover:bg-neutrals-hover dark:hover:bg-gray-800 rounded-md"
+				class="flex flex-row-reverse justify-between px-[16px] py-[11px] flex items-center  gap-[8px]  text-[17px] leading-[22px] cursor-pointer hover:bg-neutrals-hover dark:hover:bg-gray-800 rounded-md"
 				on:click={() => {
 					archiveChatHandler();
 				}}
@@ -287,7 +287,7 @@
 
 			<DropdownMenu.Sub>
 				<DropdownMenu.SubTrigger
-					class="flex flex-row-reverse justify-between px-[16px] py-[11px] flex items-center text-neutrals-800 gap-[8px]  text-[17px] leading-[22px] cursor-pointer hover:bg-neutrals-hover dark:hover:bg-gray-800 rounded-md"
+					class="flex flex-row-reverse justify-between px-[16px] py-[11px] flex items-center  gap-[8px]  text-[17px] leading-[22px] cursor-pointer hover:bg-neutrals-hover dark:hover:bg-gray-800 rounded-md"
 				>
 					<Download strokeWidth="2" />
 
@@ -300,7 +300,7 @@
 				>
 					{#if $user?.role === 'admin' || ($user.permissions?.chat?.export ?? true)}
 						<DropdownMenu.Item
-							class=" px-[16px] py-[11px] flex items-center text-neutrals-800 gap-[8px]  text-[17px] leading-[22px] font-medium  cursor-pointer hover:bg-neutrals-hover dark:hover:bg-gray-800 rounded-md"
+							class=" px-[16px] py-[11px] flex items-center  gap-[8px]  text-[17px] leading-[22px] font-medium  cursor-pointer hover:bg-neutrals-hover dark:hover:bg-gray-800 rounded-md"
 							on:click={() => {
 								downloadJSONExport();
 							}}
@@ -310,7 +310,7 @@
 					{/if}
 
 					<DropdownMenu.Item
-						class="px-[16px] py-[11px] flex items-center text-neutrals-800 gap-[8px]  text-[17px] leading-[22px] cursor-pointer hover:bg-neutrals-hover dark:hover:bg-gray-800 rounded-md"
+						class="px-[16px] py-[11px] flex items-center  gap-[8px]  text-[17px] leading-[22px] cursor-pointer hover:bg-neutrals-hover dark:hover:bg-gray-800 rounded-md"
 						on:click={() => {
 							downloadTxt();
 						}}
@@ -319,7 +319,7 @@
 					</DropdownMenu.Item>
 
 					<DropdownMenu.Item
-						class=" px-[16px] py-[11px] flex items-center text-neutrals-800 gap-[8px]  text-[17px] leading-[22px] cursor-pointer hover:bg-neutrals-hover dark:hover:bg-gray-800 rounded-md"
+						class=" px-[16px] py-[11px] flex items-center  gap-[8px]  text-[17px] leading-[22px] cursor-pointer hover:bg-neutrals-hover dark:hover:bg-gray-800 rounded-md"
 						on:click={() => {
 							downloadPdf();
 						}}
@@ -330,7 +330,7 @@
 			</DropdownMenu.Sub>
 			{#if $user?.role === 'admin' || ($user.permissions?.chat?.share ?? true)}
 				<DropdownMenu.Item
-					class="flex flex-row-reverse justify-between px-[16px] py-[11px] flex items-center text-neutrals-800 gap-[8px]  text-[17px] leading-[22px] font-medium cursor-pointer hover:bg-neutrals-hover dark:hover:bg-gray-800  rounded-md"
+					class="flex flex-row-reverse justify-between px-[16px] py-[11px] flex items-center  gap-[8px]  text-[17px] leading-[22px] font-medium cursor-pointer hover:bg-neutrals-hover dark:hover:bg-gray-800  rounded-md"
 					on:click={() => {
 						shareHandler();
 					}}
@@ -340,7 +340,7 @@
 				</DropdownMenu.Item>
 			{/if}
 			<DropdownMenu.Item
-				class="flex flex-row-reverse justify-between px-[16px] py-[11px] flex items-center text-neutrals-800 gap-[8px]  text-[17px] leading-[22px] font-medium cursor-pointer hover:bg-neutrals-hover dark:hover:bg-gray-800 rounded-md"
+				class="flex flex-row-reverse justify-between px-[16px] py-[11px] flex items-center  gap-[8px]  text-[17px] leading-[22px] font-medium cursor-pointer hover:bg-neutrals-hover dark:hover:bg-gray-800 rounded-md"
 				on:click={() => {
 					deleteHandler();
 				}}

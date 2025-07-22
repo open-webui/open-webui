@@ -56,16 +56,16 @@
 
 <ShareChatModal bind:show={showShareChatModal} chatId={$chatId} />
 
-<button
+<!--<button
 	id="new-chat-button"
 	class="hidden"
 	on:click={() => {
 		initNewChat();
 	}}
 	aria-label="New Chat"
-/>
+/>-->
 
-<nav class="w-full flex items-center justify-between px-4 py-0 h-[56px] relative z-30 { $mobile ? ' dark:bg-gray-900 dark:border-gray-800' : 'bg-transparent' }">
+<nav class=" flex items-center justify-between px-4 py-0 h-[56px] relative z-30 { $mobile ? ' w-full fixed dark:bg-gray-900 dark:border-gray-800' : 'bg-transparent' }">
   {#if $mobile}
     <button
       class="flex items-center justify-center rounded-lg size-10 hover:bg-[#e5e7eb] transition"
@@ -74,13 +74,13 @@
     >
       <MaterialIcon name="menu" className="w-6 h-6" />
     </button>
-    <button
+    <!--<button
       class="flex items-center justify-center rounded-lg size-10 hover:bg-[#e5e7eb] transition"
       aria-label="New Chat"
       on:click={() => initNewChat()}
     >
       <MaterialIcon name="add" className="w-[18px] h-[18px]" />
-    </button>
+    </button>-->
   {:else}
 
   <div class="flex items-center">

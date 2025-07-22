@@ -9,12 +9,15 @@ export default {
 		extend: {
 			colors: {
 				surface: '#F9F9FF',
+				'light-bg': 'var(--color-light-bg)',
 				'gradient-bg-2': 'rgba(204, 221, 252, 0.3)',
+				'label-primary': 'var(--color-label-primary)',
 				typography:{
-                    titles:'#23282E',
-					subtext:'#666D7A',
-					'secondary-body-text':'#979EAD',
-					disabled: '#ABB4C5',
+                    titles:'var(--color-titles)',
+					subtext:'var(--color-subtext)',
+					'secondary-body-text':'var(--color-secondary-body-text)',
+					'btn-text-secondary':'var(--color-btn-text-secondary)',
+					disabled: 'var(--color-disabled)',
 				},
 				neutrals:{
                        50: 'var(--color-neutrals-50, #ECEEF1)',
@@ -58,6 +61,7 @@ export default {
 				'custom': '0px 24px 48px 0px rgba(0, 0, 0, 0.08)',
 				'custom2': '0px 48px 100px 0px rgba(0, 84, 242, 0.08)',
 				'custom3': ' 0px 10px 20px 0px rgba(0, 0, 0, 0.10)',
+				'custom4': '0px 16px 30px 0px rgba(103, 124, 161, 0.10)',
 			  },
 			typography: {
 				DEFAULT: {

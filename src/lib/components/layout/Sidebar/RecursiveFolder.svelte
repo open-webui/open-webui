@@ -382,7 +382,7 @@
 		<div class="w-full group">
 			<button
 				id="folder-{folderId}-button"
-				class="flex items-center relative w-full py-[8px] px-[16px] pl-[32px]  rounded-md flex items-center gap-[8px] link-style dark:text-gray-500 text-typography-titles hover:bg-gradient-bg-2 dark:hover:bg-gray-900 transition"
+				class="flex items-center relative w-full py-[8px] px-[16px] pl-[32px]  rounded-md flex items-center gap-[8px] link-style text-typography-titles hover:bg-gradient-bg-2 dark:hover:bg-gray-900 transition"
 				on:dblclick={() => {
 					editHandler();
 				}}

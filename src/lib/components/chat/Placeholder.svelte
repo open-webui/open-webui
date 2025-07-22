@@ -105,9 +105,10 @@
 	{/if}
 
 	<div
-		class="w-full text-3xl text-gray-800 dark:text-gray-100 text-center flex items-center gap-4 font-primary"
+		class="w-full h-full text-3xl text-gray-800 dark:text-gray-100 text-center flex items-center gap-4 font-primary"
 	>
-		<div class="w-full flex flex-col justify-center items-center">
+		<div class="w-full h-full flex flex-col justify-center items-center">
+		<div class="top-box flex-grow flex flex-col justify-center"> 
 			<div class="flex flex-row justify-center ">
 				<!-- <div class="flex shrink-0 justify-center">
 					<div class="flex -space-x-4 mb-0.5" in:fade={{ duration: 100 }}>
@@ -226,7 +227,8 @@
 					{/if}
 				</div>
 			</div>
-
+			</div>
+<div class="suggestion-inputbox w-full">
 			<div class="mx-auto  font-primary" in:fade={{ duration: 200, delay: 200 }}>
 		<div class="">
 			<Suggestions
@@ -276,6 +278,7 @@
 						dispatch('submit', e.detail);
 					}}
 				/>
+			</div>
 			</div>
 		</div>
 	</div>
