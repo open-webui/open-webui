@@ -193,7 +193,8 @@
 	$: showGovKnoButton = $models.find((model)=> model.id==='contextual-rag');
 
 	const saveGovKnoModel = async () => {
-		//settings.set({ ...$settings, models: ['contextual-rag'] });
+		const modelName = govBtnEnable?'contextual-rag':'gpt-4.1';
+		//settings.set({ ...$settings, models: [modelName] });
 		//await updateUserSettings(localStorage.token, { ui: $settings });
 		toast.success($i18n.t('Gov Knowledge model updated'));
 		govBtnEnable = !govBtnEnable
