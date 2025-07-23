@@ -69,9 +69,8 @@
 
 	onMount(async () => {
 		await init();
-		const taskConfigResponse = await getTaskConfig(localStorage.token);
-		taskConfig = taskConfigResponse;
-		defaultPrompts = taskConfigResponse._defaults || {};
+		taskConfig = await getTaskConfig(localStorage.token);
+		defaultPrompts = taskConfig._defaults || {};
 
 		// If any prompt template is empty, set it to the default value
 		if (!taskConfig.TITLE_GENERATION_PROMPT_TEMPLATE) {
