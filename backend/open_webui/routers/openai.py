@@ -4,6 +4,7 @@ import json
 import logging
 from pathlib import Path
 from typing import Literal, Optional, overload
+import fnmatch
 
 import aiohttp
 from aiocache import cached
@@ -93,6 +94,25 @@ async def cleanup_response(
         response.close()
     if session:
         await session.close()
+
+
+def has_wildcards(model_ids):
+    """
+    Check if any model ID contains wildcard patterns
+    """
+    return any('*' in model_id or '?' in model_id for model_id in model_ids)
+
+
+def filter_models_by_patterns(models, patterns):
+    """
+    Filter models based on wildcard patterns using fnmatch
+    """
+    filtered_models = []
+    for model in models:
+        model_id = model.get('id', '')
+        if any(fnmatch.fnmatch(model_id, pattern) for pattern in patterns):
+            filtered_models.append(model)
+    return filtered_models
 
 
 def openai_o_series_handler(payload):
@@ -321,7 +341,17 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
                             user=user,
                         )
                     )
+                elif has_wildcards(model_ids):
+                    # If model_ids contains wildcards, fetch models and filter
+                    request_tasks.append(
+                        send_get_request(
+                            f"{url}/models",
+                            request.app.state.config.OPENAI_API_KEYS[idx],
+                            user=user,
+                        )
+                    )
                 else:
+                    # No wildcards, use exact model IDs
                     model_list = {
                         "object": "list",
                         "data": [
@@ -357,10 +387,20 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
             connection_type = api_config.get("connection_type", "external")
             prefix_id = api_config.get("prefix_id", None)
             tags = api_config.get("tags", [])
+            model_ids = api_config.get("model_ids", [])
 
-            for model in (
-                response if isinstance(response, list) else response.get("data", [])
-            ):
+            # Get the models list
+            models = response if isinstance(response, list) else response.get("data", [])
+            
+            # Filter models if wildcard patterns are present
+            if model_ids and has_wildcards(model_ids) and models:
+                models = filter_models_by_patterns(models, model_ids)
+                if "data" in response:
+                    response["data"] = models
+                else:
+                    responses[idx] = models
+
+            for model in models:
                 if prefix_id:
                     model["id"] = f"{prefix_id}.{model['id']}"
 
