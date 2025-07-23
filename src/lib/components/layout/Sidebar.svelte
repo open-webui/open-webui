@@ -119,7 +119,7 @@
 		}
 	};
 
-	const createFolder = async ({ name, data }) => {
+	const createFolder = async ({ name }) => {
 		if (name === '') {
 			toast.error($i18n.t('Folder name cannot be empty.'));
 			return;
@@ -151,8 +151,7 @@
 		};
 
 		const res = await createNewFolder(localStorage.token, {
-			name,
-			data
+			name
 		}).catch((error) => {
 			toast.error(`${error}`);
 			return null;

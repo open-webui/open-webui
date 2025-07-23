@@ -6,11 +6,6 @@
 	import XMark from '$lib/components/icons/XMark.svelte';
 
 	import { toast } from 'svelte-sonner';
-	import { page } from '$app/stores';
-	import { goto } from '$app/navigation';
-	import Textarea from '$lib/components/common/Textarea.svelte';
-	import Knowledge from '$lib/components/workspace/Models/Knowledge.svelte';
-	import { user } from '$lib/stores';
 	const i18n = getContext('i18n');
 
 	export let show = false;
@@ -21,18 +16,12 @@
 	export let folder = null;
 
 	let name = '';
-	let data = {
-		system_prompt: '',
-		files: []
-	};
-
 	let loading = false;
 
 	const submitHandler = async () => {
 		loading = true;
 		await onSubmit({
-			name,
-			data
+			name
 		});
 		show = false;
 		loading = false;
@@ -40,10 +29,6 @@
 
 	const init = () => {
 		name = folder.name;
-		data = folder.data || {
-			system_prompt: '',
-			files: []
-		};
 	};
 
 	$: if (folder) {
@@ -52,10 +37,6 @@
 
 	$: if (!show && !edit) {
 		name = '';
-		data = {
-			system_prompt: '',
-			files: []
-		};
 	}
 </script>
 
@@ -66,7 +47,7 @@
 				{#if edit}
 					{$i18n.t('Edit Folder')}
 				{:else}
-					{$i18n.t('Create Folder')}
+					创建文件夹
 				{/if}
 			</div>
 			<button
@@ -101,6 +82,7 @@
 						</div>
 					</div>
 
+					<!-- 已删除系统提示和知识库功能
 					<hr class=" border-gray-50 dark:border-gray-850 my-2.5 w-full" />
 
 					{#if $user?.role === 'admin' || ($user?.permissions.chat?.system_prompt ?? true)}
@@ -128,6 +110,7 @@
 							</div>
 						</Knowledge>
 					</div>
+					-->
 
 					<div class="flex justify-end pt-3 text-sm font-medium gap-1.5">
 						<button
