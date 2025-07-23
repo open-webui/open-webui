@@ -75,9 +75,9 @@
 			{$showSidebar ? 'ml-1' : ''}
 			"
 			>
-				{#if showModelSelector}
-					<ModelSelector bind:selectedModels showSetDefault={!shareEnabled} />
-				{/if}
+				<div class="text-xl font-bold text-gray-800 dark:text-gray-200 py-1" style="font-family: 'Cambria', 'Times New Roman', serif;">
+					Emohaa
+				</div>
 			</div>
 
 			<div class="self-start flex flex-none items-center text-gray-600 dark:text-gray-400">

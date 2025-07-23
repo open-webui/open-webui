@@ -85,7 +85,7 @@
 			class=" mt-2 mb-4 text-3xl text-gray-800 dark:text-gray-100 font-medium text-left flex items-center gap-4 font-primary"
 		>
 			<div>
-				<div class=" capitalize line-clamp-1" in:fade={{ duration: 200 }}>
+				<div class=" capitalize line-clamp-1" in:fade={{ duration: 200 }} style="font-family: 'Cambria', 'Times New Roman', serif;">
 					{#if models[selectedModelIdx]?.name}
 						{models[selectedModelIdx]?.name}
 					{:else}
