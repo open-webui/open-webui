@@ -200,7 +200,7 @@
 		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 	}
 	.suggestion-btn:hover {
-		background-color: #EB8486;
+		background-color: #FFAFA7;
 		color: white;
 	}
 	.suggestion-btn.selected {
