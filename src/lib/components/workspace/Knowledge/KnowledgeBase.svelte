@@ -201,28 +201,7 @@
 			handleUploadError(error);
 		}
 	};
-	const daemonUploadDirectoryHandler = async () => {
-		// Check if File System Access API is supported
-		const isFileSystemAccessSupported = 'showDirectoryPicker' in window;
-
-		try {
-			if (isFileSystemAccessSupported) {
-				// Modern browsers (Chrome, Edge) implementation
-				await handleModernBrowserUpload();
-				print("YAHOO")
-			} else {
-				// Firefox fallback
-				await handleFirefoxUpload();
-			}
-		} catch (error) {
-			handleUploadError(error);
-		}
-	};
-	// Helper function to check if a path contains hidden folders
-	const hasHiddenFolder = (path) => {
-		return path.split('/').some((part) => part.startsWith('.'));
-	};
-
+	
 	// Modern browsers implementation using File System Access API
 	const handleModernBrowserUpload = async () => {
 		const dirHandle = await window.showDirectoryPicker();
