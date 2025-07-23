@@ -740,8 +740,8 @@
 								dispatch('submit', prompt);
 							}}
 						>
-						{#if history.currentId && history.messages && Object.values(history.messages).some(message => message.files && message.files.length > 0)}<div class="text-left rounded-tl-[12px] rounded-tr-[12px] bg-[#D6E5FC] border border-[#90C9FF] py-[12px] pb-[50px] mb-[-42px] px-[16px] text-[10px] leading-[16px] text-typography-titles">{$i18n.t('Chat is limited to the \'{{count}}\' uploaded documents.', { count: Object.values(history.messages).reduce((total, message) => total + (message.files ? message.files.length : 0), 0) })}</div>{/if}							
-						
+						{#if history.currentId && history.messages && Object.values(history.messages).some(message => message.files && message.files.length > 0)}<div class="text-left rounded-tl-[12px] rounded-tr-[12px] bg-[#D6E5FC] border border-[#90C9FF] py-[12px] pb-[50px] mb-[-42px] px-[16px] text-[10px] leading-[16px] text-typography-titles">{$i18n.t('Chat is limited to the \'{{count}}\' uploaded documents.', { count: Object.values(history.messages).reduce((total, message) => total + (message.files ? message.files.length : 0), 0) })}</div>{/if}
+
 						<div
 								class="p-[24px] flex-1 flex flex-col bounded-[12px] shadow-custom3 relative w-full sm:rounded-3xl transition bg-light-bg dark:text-gray-100"
 								dir={$settings?.chatDirection ?? 'auto'}
