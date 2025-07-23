@@ -331,6 +331,9 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
 
             enable = api_config.get("enable", True)
             model_ids = api_config.get("model_ids", [])
+            
+            # Debug logging
+            log.info(f"OpenRouter config for idx {idx}: enable={enable}, model_ids={model_ids}")
 
             if enable:
                 if len(model_ids) == 0:
@@ -352,6 +355,7 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
                     )
                 else:
                     # No wildcards, use exact model IDs
+                    log.info(f"Using exact model IDs for idx {idx}: {model_ids}")
                     model_list = {
                         "object": "list",
                         "data": [
@@ -388,13 +392,23 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
             prefix_id = api_config.get("prefix_id", None)
             tags = api_config.get("tags", [])
             model_ids = api_config.get("model_ids", [])
+            
+            # Debug logging for response processing
+            log.info(f"Processing response for idx {idx}, URL: {url}")
+            log.info(f"Config: {api_config}")
+            log.info(f"Response type: {type(response)}, has 'data' key: {'data' in response if isinstance(response, dict) else 'N/A'}")
 
             # Get the models list
             models = response if isinstance(response, list) else response.get("data", [])
             
+            log.info(f"Models count before filtering: {len(models) if models else 0}")
+            
             # Filter models if wildcard patterns are present
             if model_ids and has_wildcards(model_ids) and models:
-                models = filter_models_by_patterns(models, model_ids)
+                log.info(f"Filtering models with wildcard patterns: {model_ids}")
+                filtered_models = filter_models_by_patterns(models, model_ids)
+                log.info(f"Models count after wildcard filtering: {len(filtered_models)}")
+                models = filtered_models
                 if "data" in response:
                     response["data"] = models
                 else:
