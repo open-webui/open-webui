@@ -88,7 +88,6 @@ async def get_task_config(request: Request, user=Depends(get_verified_user)):
     }
 
 
-
 class TaskConfigForm(BaseModel):
     TASK_MODEL: Optional[str]
     TASK_MODEL_EXTERNAL: Optional[str]

@@ -261,7 +261,9 @@
 						>
 							<Textarea
 								bind:value={taskConfig.TITLE_GENERATION_PROMPT_TEMPLATE}
-								placeholder={defaultPrompts.TITLE_GENERATION_PROMPT_TEMPLATE}
+								placeholder={$i18n.t(
+									'Leave empty to use the default prompt, or enter a custom prompt'
+								)}
 							/>
 						</Tooltip>
 					</div>
@@ -285,7 +287,9 @@
 						>
 							<Textarea
 								bind:value={taskConfig.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE}
-								placeholder={defaultPrompts.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE}
+								placeholder={$i18n.t(
+									'Leave empty to use the default prompt, or enter a custom prompt'
+								)}
 							/>
 						</Tooltip>
 					</div>
@@ -309,7 +313,9 @@
 						>
 							<Textarea
 								bind:value={taskConfig.TAGS_GENERATION_PROMPT_TEMPLATE}
-								placeholder={defaultPrompts.TAGS_GENERATION_PROMPT_TEMPLATE}
+								placeholder={$i18n.t(
+									'Leave empty to use the default prompt, or enter a custom prompt'
+								)}
 							/>
 						</Tooltip>
 					</div>
@@ -340,7 +346,9 @@
 					>
 						<Textarea
 							bind:value={taskConfig.QUERY_GENERATION_PROMPT_TEMPLATE}
-							placeholder={defaultPrompts.QUERY_GENERATION_PROMPT_TEMPLATE}
+							placeholder={$i18n.t(
+								'Leave empty to use the default prompt, or enter a custom prompt'
+							)}
 						/>
 					</Tooltip>
 				</div>
@@ -383,7 +391,9 @@
 					>
 						<Textarea
 							bind:value={taskConfig.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE}
-							placeholder={defaultPrompts.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE}
+							placeholder={$i18n.t(
+								'Leave empty to use the default prompt, or enter a custom prompt'
+							)}
 						/>
 					</Tooltip>
 				</div>
@@ -397,7 +407,9 @@
 					>
 						<Textarea
 							bind:value={taskConfig.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE}
-							placeholder={defaultPrompts.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE}
+							placeholder={$i18n.t(
+								'Leave empty to use the default prompt, or enter a custom prompt'
+							)}
 						/>
 					</Tooltip>
 				</div>
