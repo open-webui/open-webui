@@ -117,6 +117,38 @@ This document lists all custom mAI features that must be preserved during Open W
 - Background tasks protected with try-catch blocks
 - No "model runner has unexpectedly stopped" errors
 
+### 8. **OpenRouter Model Restriction Feature** (Commits: `709d3ff27`, `158790e28`, `529a3e31d`)
+**Location:** Admin Settings & Backend Configuration
+
+**Files to check:**
+- `/scripts/openrouter/production_fix.py` - Production-ready initialization script
+- `/scripts/openrouter/manage_models.py` - Model management utility
+- `/scripts/openrouter/fix_openrouter_docker.py` - Direct database fix for Docker
+- `/scripts/openrouter/verify_config.py` - Configuration verification tool
+- `/docs/openrouter/README.md` - Comprehensive documentation hub
+- `/docs/openrouter/production-config.md` - Production best practices
+- `/docs/openrouter/manage-models.md` - Model management guide
+- `/docs/openrouter/quick-reference.md` - Quick reference guide
+
+**✅ What to verify:**
+- Admin can configure model restrictions via environment variables or API
+- Support for 12 specific OpenRouter models:
+  - openai/gpt-4o
+  - openai/gpt-4o-mini
+  - openai/gpt-4-turbo
+  - openai/o1-preview
+  - openai/o1-mini
+  - anthropic/claude-3.5-sonnet:beta
+  - anthropic/claude-3.5-haiku:beta
+  - google/gemini-pro-1.5
+  - x-ai/grok-2-latest
+  - meta-llama/llama-3.1-405b-instruct
+  - perplexity/llama-3.1-sonar-huge-128k-online
+  - deepseek/deepseek-coder
+- Wildcard pattern matching works (e.g., "openai/*", "anthropic/*")
+- Configuration persists across restarts
+- Scripts function correctly in Docker environments
+
 ## 📋 Post-Update Testing Checklist
 
 ### Core Branding
@@ -158,6 +190,13 @@ This document lists all custom mAI features that must be preserved during Open W
 - [ ] Background tasks don't interrupt main flow
 - [ ] Error messages are graceful
 
+### OpenRouter Configuration
+- [ ] Model restriction configuration accessible to admins
+- [ ] 12 specific models appear when configured
+- [ ] Wildcard patterns work (e.g., "openai/*")
+- [ ] Configuration persists after restart
+- [ ] Scripts in /scripts/openrouter/ execute properly
+
 ## 🚨 Critical Files Never to Lose
 
 1. `src/lib/components/chat/Placeholder.svelte` - **Main tagline & branding**
@@ -168,6 +207,8 @@ This document lists all custom mAI features that must be preserved during Open W
 6. `static/static/custom.css` - **Pattern CSS + custom theme definitions**
 7. `src/lib/i18n/locales/pl-PL/translation.json` - **Polish translations**
 8. Custom theme files - **mAI branded themes**
+9. `/scripts/openrouter/` - **OpenRouter configuration scripts**
+10. `/docs/openrouter/` - **OpenRouter documentation**
 
 ## 🔄 Update Process Notes
 
@@ -178,4 +219,4 @@ This document lists all custom mAI features that must be preserved during Open W
 5. **Test Polish language** switching
 6. **Document any new conflicts** in docs/development/upgrade-guide.md
 
-Last Updated: January 19, 2025 - v0.6.17 Update
+Last Updated: July 23, 2025 - OpenRouter Feature & Repository Cleanup

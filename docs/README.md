@@ -11,12 +11,31 @@ Welcome to the mAI documentation. This directory contains all documentation orga
 - [mAI Changelog](./customization/mai-changelog.md) - Changes specific to mAI
 - [Customization Checklist](./customization/customization-checklist.md) - Tracking customizations
 
+### 🚀 [OpenRouter](./openrouter/)
+- [OpenRouter README](./openrouter/README.md) - Comprehensive OpenRouter documentation hub
+- [Production Config](./openrouter/production-config.md) - Production best practices
+- [Manage Models](./openrouter/manage-models.md) - Model management guide
+- [Quick Reference](./openrouter/quick-reference.md) - Quick reference guide
+
 ### 🔧 [Operations](./operations/)
 - [Installation Guide](./operations/installation.md) - How to install mAI
 - [Docker Setup Guide](./operations/docker-setup.md) - Comprehensive Docker configuration
 - [Troubleshooting](./operations/troubleshooting.md) - Common issues and solutions
 
+## Recent Updates
+
+### July 2025
+- **OpenRouter Model Restriction Feature** - Added ability to limit available models with wildcard support
+- **Repository Cleanup** - Organized scripts and documentation for better maintainability
+- **Production Scripts** - Added production-ready configuration tools in `/scripts/openrouter/`
+
+### January 2025
+- **Open WebUI v0.6.17 Upgrade** - Successfully merged while preserving all mAI customizations
+- **Visual Identity System** - Complete branding replacement with custom mAI assets
+- **Polish Localization** - Full translation with dynamic tagline switching
+
 ## Quick Links
 
 - [Main README](../README.md) - Project overview
 - [CLAUDE.md](../CLAUDE.md) - Instructions for Claude Code
+- [Scripts](../scripts/) - Utility scripts including OpenRouter tools
