@@ -516,6 +516,7 @@ export const getTaskConfig = async (token: string = '') => {
 	return res;
 };
 
+
 export const updateTaskConfig = async (token: string, config: object) => {
 	let error = null;
 

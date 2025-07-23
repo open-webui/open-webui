@@ -26,6 +26,16 @@
 
 	const i18n = getContext('i18n');
 
+	// Dynamic default prompt templates fetched from backend
+	let defaultPrompts = {
+		TITLE_GENERATION_PROMPT_TEMPLATE: '',
+		FOLLOW_UP_GENERATION_PROMPT_TEMPLATE: '',
+		TAGS_GENERATION_PROMPT_TEMPLATE: '',
+		QUERY_GENERATION_PROMPT_TEMPLATE: '',
+		IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE: '',
+		TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE: ''
+	};
+
 	let taskConfig = {
 		TASK_MODEL: '',
 		TASK_MODEL_EXTERNAL: '',
@@ -59,7 +69,29 @@
 
 	onMount(async () => {
 		await init();
-		taskConfig = await getTaskConfig(localStorage.token);
+		const taskConfigResponse = await getTaskConfig(localStorage.token);
+		taskConfig = taskConfigResponse;
+		defaultPrompts = taskConfigResponse._defaults || {};
+
+		// If any prompt template is empty, set it to the default value
+		if (!taskConfig.TITLE_GENERATION_PROMPT_TEMPLATE) {
+			taskConfig.TITLE_GENERATION_PROMPT_TEMPLATE = defaultPrompts.TITLE_GENERATION_PROMPT_TEMPLATE || '';
+		}
+		if (!taskConfig.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE) {
+			taskConfig.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE = defaultPrompts.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE || '';
+		}
+		if (!taskConfig.TAGS_GENERATION_PROMPT_TEMPLATE) {
+			taskConfig.TAGS_GENERATION_PROMPT_TEMPLATE = defaultPrompts.TAGS_GENERATION_PROMPT_TEMPLATE || '';
+		}
+		if (!taskConfig.QUERY_GENERATION_PROMPT_TEMPLATE) {
+			taskConfig.QUERY_GENERATION_PROMPT_TEMPLATE = defaultPrompts.QUERY_GENERATION_PROMPT_TEMPLATE || '';
+		}
+		if (!taskConfig.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE) {
+			taskConfig.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE = defaultPrompts.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE || '';
+		}
+		if (!taskConfig.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE) {
+			taskConfig.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = defaultPrompts.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE || '';
+		}
 
 		promptSuggestions = $config?.default_prompt_suggestions ?? [];
 		banners = await getBanners(localStorage.token);
@@ -229,9 +261,7 @@
 						>
 							<Textarea
 								bind:value={taskConfig.TITLE_GENERATION_PROMPT_TEMPLATE}
-								placeholder={$i18n.t(
-									'Leave empty to use the default prompt, or enter a custom prompt'
-								)}
+								placeholder={defaultPrompts.TITLE_GENERATION_PROMPT_TEMPLATE}
 							/>
 						</Tooltip>
 					</div>
@@ -255,9 +285,7 @@
 						>
 							<Textarea
 								bind:value={taskConfig.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE}
-								placeholder={$i18n.t(
-									'Leave empty to use the default prompt, or enter a custom prompt'
-								)}
+								placeholder={defaultPrompts.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE}
 							/>
 						</Tooltip>
 					</div>
@@ -281,9 +309,7 @@
 						>
 							<Textarea
 								bind:value={taskConfig.TAGS_GENERATION_PROMPT_TEMPLATE}
-								placeholder={$i18n.t(
-									'Leave empty to use the default prompt, or enter a custom prompt'
-								)}
+								placeholder={defaultPrompts.TAGS_GENERATION_PROMPT_TEMPLATE}
 							/>
 						</Tooltip>
 					</div>
@@ -314,9 +340,7 @@
 					>
 						<Textarea
 							bind:value={taskConfig.QUERY_GENERATION_PROMPT_TEMPLATE}
-							placeholder={$i18n.t(
-								'Leave empty to use the default prompt, or enter a custom prompt'
-							)}
+							placeholder={defaultPrompts.QUERY_GENERATION_PROMPT_TEMPLATE}
 						/>
 					</Tooltip>
 				</div>
@@ -359,9 +383,7 @@
 					>
 						<Textarea
 							bind:value={taskConfig.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE}
-							placeholder={$i18n.t(
-								'Leave empty to use the default prompt, or enter a custom prompt'
-							)}
+							placeholder={defaultPrompts.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE}
 						/>
 					</Tooltip>
 				</div>
@@ -375,9 +397,7 @@
 					>
 						<Textarea
 							bind:value={taskConfig.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE}
-							placeholder={$i18n.t(
-								'Leave empty to use the default prompt, or enter a custom prompt'
-							)}
+							placeholder={defaultPrompts.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE}
 						/>
 					</Tooltip>
 				</div>

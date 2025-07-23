@@ -17,6 +17,14 @@ from open_webui.utils.task import (
     emoji_generation_template,
     moa_response_generation_template,
 )
+from open_webui.config import (
+    DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE,
+    DEFAULT_FOLLOW_UP_GENERATION_PROMPT_TEMPLATE,
+    DEFAULT_TAGS_GENERATION_PROMPT_TEMPLATE,
+    DEFAULT_QUERY_GENERATION_PROMPT_TEMPLATE,
+    DEFAULT_IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE,
+    DEFAULT_TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
+)
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.constants import TASKS
 
@@ -68,7 +76,17 @@ async def get_task_config(request: Request, user=Depends(get_verified_user)):
         "ENABLE_RETRIEVAL_QUERY_GENERATION": request.app.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION,
         "QUERY_GENERATION_PROMPT_TEMPLATE": request.app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE,
         "TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE": request.app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
+        # Effective prompt templates (config value or default)
+        "_defaults": {
+            "TITLE_GENERATION_PROMPT_TEMPLATE": request.app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE if request.app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE != "" else DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE,
+            "FOLLOW_UP_GENERATION_PROMPT_TEMPLATE": request.app.state.config.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE if request.app.state.config.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE != "" else DEFAULT_FOLLOW_UP_GENERATION_PROMPT_TEMPLATE,
+            "TAGS_GENERATION_PROMPT_TEMPLATE": request.app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE if request.app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE != "" else DEFAULT_TAGS_GENERATION_PROMPT_TEMPLATE,
+            "QUERY_GENERATION_PROMPT_TEMPLATE": request.app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE if request.app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE.strip() != "" else DEFAULT_QUERY_GENERATION_PROMPT_TEMPLATE,
+            "IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE": request.app.state.config.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE if request.app.state.config.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE != "" else DEFAULT_IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE,
+            "TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE": request.app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE if request.app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE != "" else DEFAULT_TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
+        }
     }
+
 
 
 class TaskConfigForm(BaseModel):
