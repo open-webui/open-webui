@@ -20,6 +20,7 @@
 	export let history;
 	export let selectedModels = [];
 
+	export let done = true;
 	export let model = null;
 	export let sources = null;
 
@@ -133,6 +134,7 @@
 		{model}
 		{save}
 		{preview}
+		{done}
 		sourceIds={(sources ?? []).reduce((acc, s) => {
 			let ids = [];
 			s.document.forEach((document, index) => {

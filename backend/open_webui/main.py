@@ -89,6 +89,7 @@ from open_webui.routers import (
 
 from open_webui.routers.retrieval import (
     get_embedding_function,
+    get_reranking_function,
     get_ef,
     get_rf,
 )
@@ -878,6 +879,7 @@ app.state.config.FIRECRAWL_API_KEY = FIRECRAWL_API_KEY
 app.state.config.TAVILY_EXTRACT_DEPTH = TAVILY_EXTRACT_DEPTH
 
 app.state.EMBEDDING_FUNCTION = None
+app.state.RERANKING_FUNCTION = None
 app.state.ef = None
 app.state.rf = None
 
@@ -906,8 +908,8 @@ except Exception as e:
 app.state.EMBEDDING_FUNCTION = get_embedding_function(
     app.state.config.RAG_EMBEDDING_ENGINE,
     app.state.config.RAG_EMBEDDING_MODEL,
-    app.state.ef,
-    (
+    embedding_function=app.state.ef,
+    url=(
         app.state.config.RAG_OPENAI_API_BASE_URL
         if app.state.config.RAG_EMBEDDING_ENGINE == "openai"
         else (
@@ -916,7 +918,7 @@ app.state.EMBEDDING_FUNCTION = get_embedding_function(
             else app.state.config.RAG_AZURE_OPENAI_BASE_URL
         )
     ),
-    (
+    key=(
         app.state.config.RAG_OPENAI_API_KEY
         if app.state.config.RAG_EMBEDDING_ENGINE == "openai"
         else (
@@ -925,12 +927,18 @@ app.state.EMBEDDING_FUNCTION = get_embedding_function(
             else app.state.config.RAG_AZURE_OPENAI_API_KEY
         )
     ),
-    app.state.config.RAG_EMBEDDING_BATCH_SIZE,
+    embedding_batch_size=app.state.config.RAG_EMBEDDING_BATCH_SIZE,
     azure_api_version=(
         app.state.config.RAG_AZURE_OPENAI_API_VERSION
         if app.state.config.RAG_EMBEDDING_ENGINE == "azure_openai"
         else None
     ),
+)
+
+app.state.RERANKING_FUNCTION = get_reranking_function(
+    app.state.config.RAG_RERANKING_ENGINE,
+    app.state.config.RAG_RERANKING_MODEL,
+    reranking_function=app.state.rf,
 )
 
 ########################################
@@ -1396,7 +1404,6 @@ async def chat_completion(
         form_data, metadata, events = await process_chat_payload(
             request, form_data, user, metadata, model
         )
-
     except Exception as e:
         log.debug(f"Error processing chat payload: {e}")
         if metadata.get("chat_id") and metadata.get("message_id"):
@@ -1416,6 +1423,14 @@ async def chat_completion(
 
     try:
         response = await chat_completion_handler(request, form_data, user)
+        if metadata.get("chat_id") and metadata.get("message_id"):
+            Chats.upsert_message_to_chat_by_id_and_message_id(
+                metadata["chat_id"],
+                metadata["message_id"],
+                {
+                    "model": model_id,
+                },
+            )
 
         return await process_chat_response(
             request, response, form_data, user, metadata, model, events, tasks

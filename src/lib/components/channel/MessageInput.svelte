@@ -709,6 +709,7 @@
 												navigator.msMaxTouchPoints > 0
 											))}
 									largeTextAsFile={$settings?.largeTextAsFile ?? false}
+									floatingMenuPlacement={'top-start'}
 									onChange={(e) => {
 										const { md } = e;
 										content = md;

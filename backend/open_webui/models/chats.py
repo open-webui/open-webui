@@ -73,7 +73,6 @@ class ChatForm(BaseModel):
 class ChatImportForm(ChatForm):
     meta: Optional[dict] = {}
     pinned: Optional[bool] = False
-    folder_id: Optional[str] = None
     created_at: Optional[int] = None
     updated_at: Optional[int] = None
 

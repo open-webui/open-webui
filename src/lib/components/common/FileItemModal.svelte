@@ -112,6 +112,12 @@
 								Formatting may be inconsistent from source.
 							</div>
 						{/if}
+
+						{#if item?.knowledge}
+							<div class="capitalize shrink-0">
+								{$i18n.t('Knowledge Base')}
+							</div>
+						{/if}
 					</div>
 
 					{#if edit}
@@ -127,9 +133,9 @@
 							>
 								<div class="flex items-center gap-1.5 text-xs">
 									{#if enableFullContent}
-										Using Entire Document
+										{$i18n.t('Using Entire Document')}
 									{:else}
-										Using Focused Retrieval
+										{$i18n.t('Using Focused Retrieval')}
 									{/if}
 									<Switch
 										bind:state={enableFullContent}
@@ -172,9 +178,11 @@
 					/>
 				{/if}
 
-				<div class="max-h-96 overflow-scroll scrollbar-hidden text-xs whitespace-pre-wrap">
-					{item?.file?.data?.content ?? 'No content'}
-				</div>
+				{#if item?.file?.data}
+					<div class="max-h-96 overflow-scroll scrollbar-hidden text-xs whitespace-pre-wrap">
+						{item?.file?.data?.content ?? 'No content'}
+					</div>
+				{/if}
 			{/if}
 		</div>
 	</div>

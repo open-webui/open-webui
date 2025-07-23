@@ -445,6 +445,17 @@ def get_embedding_function(
         raise ValueError(f"Unknown embedding engine: {embedding_engine}")
 
 
+def get_reranking_function(reranking_engine, reranking_model, reranking_function):
+    if reranking_function is None:
+        return None
+    if reranking_engine == "external":
+        return lambda sentences, user=None: reranking_function.predict(
+            sentences, user=user
+        )
+    else:
+        return lambda sentences, user=None: reranking_function.predict(sentences)
+
+
 def get_sources_from_items(
     request,
     items,
@@ -477,8 +488,12 @@ def get_sources_from_items(
             if item.get("file"):
                 # if item has file data, use it
                 query_result = {
-                    "documents": [[item.get("file").get("data", {}).get("content")]],
-                    "metadatas": [[item.get("file").get("data", {}).get("meta", {})]],
+                    "documents": [
+                        [item.get("file", {}).get("data", {}).get("content")]
+                    ],
+                    "metadatas": [
+                        [item.get("file", {}).get("data", {}).get("meta", {})]
+                    ],
                 }
             else:
                 # Fallback to item content
@@ -493,7 +508,11 @@ def get_sources_from_items(
             # Note Attached
             note = Notes.get_note_by_id(item.get("id"))
 
-            if user.role == "admin" or has_access(user.id, "read", note.access_control):
+            if note and (
+                user.role == "admin"
+                or note.user_id == user.id
+                or has_access(user.id, "read", note.access_control)
+            ):
                 # User has access to the note
                 query_result = {
                     "documents": [[note.data.get("content", {}).get("md", "")]],
@@ -505,12 +524,12 @@ def get_sources_from_items(
                 item.get("context") == "full"
                 or request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL
             ):
-                if item.get("file").get("data", {}):
+                if item.get("file", {}).get("data", {}).get("content", ""):
                     # Manual Full Mode Toggle
                     # Used from chat file modal, we can assume that the file content will be available from item.get("file").get("data", {}).get("content")
                     query_result = {
                         "documents": [
-                            [item.get("file").get("data", {}).get("content", "")]
+                            [item.get("file", {}).get("data", {}).get("content", "")]
                         ],
                         "metadatas": [
                             [
@@ -596,6 +615,9 @@ def get_sources_from_items(
         elif item.get("collection_name"):
             # Direct Collection Name
             collection_names.append(item["collection_name"])
+        elif item.get("collection_names"):
+            # Collection Names List
+            collection_names.extend(item["collection_names"])
 
         # If query_result is None
         # Fallback to collection names and vector search the collections
@@ -925,7 +947,7 @@ class RerankCompressor(BaseDocumentCompressor):
         reranking = self.reranking_function is not None
 
         if reranking:
-            scores = self.reranking_function.predict(
+            scores = self.reranking_function(
                 [(query, doc.page_content) for doc in documents]
             )
         else:

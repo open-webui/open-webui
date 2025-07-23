@@ -42,7 +42,6 @@ def setup(app: FastAPI, db_engine: Engine):
     if OTEL_OTLP_SPAN_EXPORTER == "http":
         exporter = HttpOTLPSpanExporter(
             endpoint=OTEL_EXPORTER_OTLP_ENDPOINT,
-            insecure=OTEL_EXPORTER_OTLP_INSECURE,
             headers=headers,
         )
     else:

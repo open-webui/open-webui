@@ -12,6 +12,11 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Download from '$lib/components/icons/Download.svelte';
 
+	export let align: 'start' | 'end' = 'start';
+	export let onEdit = () => {};
+	export let onExport = () => {};
+	export let onDelete = () => {};
+
 	let show = false;
 </script>
 
@@ -32,23 +37,23 @@
 			class="w-full max-w-[170px] rounded-lg px-1 py-1.5  z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
 			sideOffset={-2}
 			side="bottom"
-			align="start"
+			{align}
 			transition={flyAndScale}
 		>
 			<DropdownMenu.Item
 				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 				on:click={() => {
-					dispatch('rename');
+					onEdit();
 				}}
 			>
 				<Pencil strokeWidth="2" />
-				<div class="flex items-center">{$i18n.t('Rename')}</div>
+				<div class="flex items-center">{$i18n.t('Edit')}</div>
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
 				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 				on:click={() => {
-					dispatch('export');
+					onExport();
 				}}
 			>
 				<Download strokeWidth="2" />
@@ -59,7 +64,7 @@
 			<DropdownMenu.Item
 				class="flex  gap-2  items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 				on:click={() => {
-					dispatch('delete');
+					onDelete();
 				}}
 			>
 				<GarbageBin strokeWidth="2" />

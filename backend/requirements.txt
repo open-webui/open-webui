@@ -14,6 +14,7 @@ async-timeout
 aiocache
 aiofiles
 starlette-compress==1.6.0
+httpx[socks,http2,zstd,cli,brotli]==0.28.1
 
 sqlalchemy==2.0.38
 alembic==1.14.0
@@ -50,6 +51,7 @@ langchain-community==0.3.26
 
 fake-useragent==2.1.0
 chromadb==0.6.3
+posthog==5.4.0
 pymilvus==2.5.0
 qdrant-client==1.14.3
 opensearch-py==2.8.0

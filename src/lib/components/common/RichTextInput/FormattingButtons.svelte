@@ -12,10 +12,13 @@
 	import Italic from '$lib/components/icons/Italic.svelte';
 	import ListBullet from '$lib/components/icons/ListBullet.svelte';
 	import NumberedList from '$lib/components/icons/NumberedList.svelte';
-	import QueueList from '$lib/components/icons/QueueList.svelte';
 	import Strikethrough from '$lib/components/icons/Strikethrough.svelte';
 	import Underline from '$lib/components/icons/Underline.svelte';
+
 	import Tooltip from '../Tooltip.svelte';
+	import CheckBox from '$lib/components/icons/CheckBox.svelte';
+	import ArrowLeftTag from '$lib/components/icons/ArrowLeftTag.svelte';
+	import ArrowRightTag from '$lib/components/icons/ArrowRightTag.svelte';
 </script>
 
 <div
@@ -57,6 +60,31 @@
 		</button>
 	</Tooltip>
 
+	{#if editor?.isActive('bulletList') || editor?.isActive('orderedList') || editor?.isActive('taskList')}
+		<Tooltip placement="top" content={$i18n.t('Lift List')}>
+			<button
+				on:click={() => {
+					editor?.commands.liftListItem(editor?.isActive('taskList') ? 'taskItem' : 'listItem');
+				}}
+				class="hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg p-1.5 transition-all"
+				type="button"
+			>
+				<ArrowLeftTag />
+			</button>
+		</Tooltip>
+
+		<Tooltip placement="top" content={$i18n.t('Sink List')}>
+			<button
+				on:click={() =>
+					editor?.commands.sinkListItem(editor?.isActive('taskList') ? 'taskItem' : 'listItem')}
+				class="hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg p-1.5 transition-all"
+				type="button"
+			>
+				<ArrowRightTag />
+			</button>
+		</Tooltip>
+	{/if}
+
 	<Tooltip placement="top" content={$i18n.t('Bullet List')}>
 		<button
 			on:click={() => editor?.chain().focus().toggleBulletList().run()}
@@ -89,7 +117,7 @@
 				: ''} hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg p-1.5 transition-all"
 			type="button"
 		>
-			<QueueList />
+			<CheckBox />
 		</button>
 	</Tooltip>
 

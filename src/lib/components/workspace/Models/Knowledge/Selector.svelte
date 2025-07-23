@@ -15,6 +15,8 @@
 
 	export let onClose: Function = () => {};
 
+	export let knowledgeItems = [];
+
 	let query = '';
 
 	let items = [];
@@ -51,7 +53,7 @@
 			};
 		});
 
-		let legacy_documents = $knowledge
+		let legacy_documents = knowledgeItems
 			.filter((item) => item?.meta?.document)
 			.map((item) => ({
 				...item,
@@ -86,16 +88,16 @@
 					]
 				: [];
 
-		let collections = $knowledge
+		let collections = knowledgeItems
 			.filter((item) => !item?.meta?.document)
 			.map((item) => ({
 				...item,
 				type: 'collection'
 			}));
 		let collection_files =
-			$knowledge.length > 0
+			knowledgeItems.length > 0
 				? [
-						...$knowledge
+						...knowledgeItems
 							.reduce((a, item) => {
 								return [
 									...new Set([
@@ -141,7 +143,7 @@
 
 	<div slot="content">
 		<DropdownMenu.Content
-			class="w-full max-w-96 rounded-xl px-1 py-1.5 border border-gray-300/30 dark:border-gray-700/50 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
+			class="w-full max-w-96 rounded-xl px-1 py-1.5 border border-gray-300/30 dark:border-gray-700/50 z-[99999999] bg-white dark:bg-gray-850 dark:text-white shadow-lg"
 			sideOffset={8}
 			side="bottom"
 			align="start"
@@ -162,7 +164,7 @@
 
 			<div class="max-h-56 overflow-y-scroll">
 				{#if filteredItems.length === 0}
-					<div class="text-center text-sm text-gray-500 dark:text-gray-400">
+					<div class="text-center text-xs text-gray-500 dark:text-gray-400 py-4">
 						{$i18n.t('No knowledge found')}
 					</div>
 				{:else}

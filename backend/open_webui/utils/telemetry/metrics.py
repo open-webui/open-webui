@@ -34,6 +34,8 @@ from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 
 from open_webui.env import OTEL_SERVICE_NAME, OTEL_EXPORTER_OTLP_ENDPOINT
 
+from open_webui.socket.main import get_active_user_ids
+from open_webui.models.users import Users
 
 _EXPORT_INTERVAL_MILLIS = 10_000  # 10 seconds
 
@@ -58,6 +60,12 @@ def _build_meter_provider() -> MeterProvider:
         View(
             instrument_name="http.server.requests",
             attribute_keys=["http.method", "http.route", "http.status_code"],
+        ),
+        View(
+            instrument_name="webui.users.total",
+        ),
+        View(
+            instrument_name="webui.users.active",
         ),
     ]
 
@@ -85,6 +93,38 @@ def setup_metrics(app: FastAPI) -> None:
         name="http.server.duration",
         description="HTTP request duration",
         unit="ms",
+    )
+
+    def observe_active_users(
+        options: metrics.CallbackOptions,
+    ) -> Sequence[metrics.Observation]:
+        return [
+            metrics.Observation(
+                value=len(get_active_user_ids()),
+            )
+        ]
+
+    def observe_total_registered_users(
+        options: metrics.CallbackOptions,
+    ) -> Sequence[metrics.Observation]:
+        return [
+            metrics.Observation(
+                value=len(Users.get_users()["users"]),
+            )
+        ]
+
+    meter.create_observable_gauge(
+        name="webui.users.total",
+        description="Total number of registered users",
+        unit="users",
+        callbacks=[observe_total_registered_users],
+    )
+
+    meter.create_observable_gauge(
+        name="webui.users.active",
+        description="Number of currently active users",
+        unit="users",
+        callbacks=[observe_active_users],
     )
 
     # FastAPI middleware
