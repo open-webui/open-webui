@@ -1,6 +1,6 @@
 Question: 
 
-The content of "params" function argument for the execute_pipe(pipe, params) function argument under * **File:** `backend/open_webui/functions.py` * **Function:** `generate_function_chat_completion` * **Line of code:** `res = await execute_pipe(pipe, params)` contains information of available tools. I want to modify the code base to include endpoint and api-key of available tools, as additional attributes under "params" argument, so functions can actually use whatever tool that's chosen by the user on the open-webui frontend. Which part of code should I focus on modifying?
+The content of "params" argument in the execute_pipe(pipe, params) function  under * **File:** `backend/open_webui/functions.py` * **Function:** `generate_function_chat_completion` * **Line of code:** `res = await execute_pipe(pipe, params)` contains information of available tools, under params['__tools__']. I want to modify the code base to include endpoint and api-key of available tools, as additional attributes under "params" argument, so functions can actually use whatever tool that's chosen by the user on the open-webui frontend. Which part of code should I focus on modifying?
 
 Answer:
 
