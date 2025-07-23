@@ -160,7 +160,7 @@
 				</div> -->
  
 				<div class="welcome-text">
-				     {#if !$mobile}<div class="mb-[110px] flex justify-center"><LogoV4 strokeWidth="2.5" className="size-5" /></div>{/if}
+				     {#if !$mobile && !webSearchEnabled}<div class="mb-[110px] flex justify-center"><LogoV4 strokeWidth="2.5" className="size-5" /></div>{/if}
 					 <div>
 					 <h1 class="pb-[16px] text-typography-titles text-[28px] leading-[22px] font-Inter_SemiBold">Hey {$user.name}👋🏼</h1>
 					{#if !$mobile} <p class=" text-typography-subtext text-[14px] leading-[26px]">Quick answers. Clear drafts. Trusted knowledge. What’s next?  Enter your request to begin.</p>{/if}
@@ -228,7 +228,9 @@
 				</div>
 			</div>
 			</div>
-<div class="suggestion-inputbox w-full pb-[40px] sm:pb-[60px]">
+			
+<div class="suggestion-inputbox w-full">
+{#if !webSearchEnabled}
 			<div class="mx-auto  font-primary" in:fade={{ duration: 200, delay: 200 }}>
 		<div class="">
 			<Suggestions
@@ -243,6 +245,7 @@
 			/>
 		</div>
 	</div>
+	{/if}
 
 			<div class="text-base font-normal w-full">
 				<MessageInput

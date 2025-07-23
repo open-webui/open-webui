@@ -62,6 +62,8 @@
 	import Language from '../icons/Language.svelte';
 	import Attach from '../icons/Attach.svelte';
 	import Save from '../icons/Save.svelte';
+	import GovKno from '../icons/GovKno.svelte';
+	import { updateUserSettings } from '$lib/apis/users';
 
 
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
@@ -81,7 +83,6 @@
 
 	let selectedModelIds = [];
 	$: selectedModelIds = atSelectedModel !== undefined ? [atSelectedModel.id] : selectedModels;
-
 	export let history;
 	export let taskIds = null;
 
@@ -186,7 +187,19 @@
 
 	let showToolsButton = false;
 	$: showToolsButton = toolServers.length + selectedToolIds.length > 0;
+	
+	let govBtnEnable = false;
+    let showGovKnoButton = false;
+	$: showGovKnoButton = $models.find((model)=> model.id.includes('rag'));
 
+	const saveGovKnoModel = async () => {
+		const modelName = govBtnEnable?'contextual-rag':'gpt-4.1';
+		//settings.set({ ...$settings, models: [modelName] });
+		//await updateUserSettings(localStorage.token, { ui: $settings });
+		toast.success($i18n.t('Gov Knowledge model updated'));
+		govBtnEnable = !govBtnEnable
+	};
+	
 	let showWebSearchButton = true;
 	// $: showWebSearchButton =
 	// 	(atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).length ===
@@ -670,12 +683,12 @@
 							}}
 						>
 							<div
-								class="p-[24px] flex-1 flex flex-col bounded-[12px] shadow-custom3  relative w-full rounded-3xl transition bg-light-bg dark:text-gray-100"
+								class="p-[24px] flex-1 flex flex-col bounded-[12px] shadow-custom3  relative w-full sm:rounded-3xl transition bg-light-bg dark:text-gray-100"
 
 								dir={$settings?.chatDirection ?? 'auto'}
 							>
 								{#if files.length > 0}
-									<div class="mx-2 mt-2.5 -mb-1 flex items-center flex-wrap gap-2">
+									<div class="mb-[24px] flex items-center flex-wrap gap-[8px]">
 										{#each files as file, fileIdx}
 											{#if file.type === 'image'}
 												<div class=" relative group">
@@ -1360,6 +1373,24 @@
 													</Tooltip>
 												{/each}
 
+												{#if showGovKnoButton}
+													<Tooltip content={$i18n.t('Gov Knowledge')} placement="top">
+														<button
+															on:click|preventDefault={() => saveGovKnoModel()}
+															type="button"
+															class="govkno-btn flex items-center px-[12px] gap-[4px] py-[8px] shadow-custom3 border border-[#E5EBF3] bg-[#FBFCFC] text-typography-titles text-[14px] leading-[22px] rounded-full rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-[#CCDDFC] dark:hover:bg-gray-800 {govBtnEnable
+																? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
+																: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
+														>
+															<GovKno  />
+															<span
+																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
+																>{$i18n.t('Gov Knowledge')}</span
+															>
+														</button>
+													</Tooltip>
+												{/if}
+
 												{#if showWebSearchButton}
 													<Tooltip content={$i18n.t('Search the internet')} placement="top">
 														<button
@@ -1427,10 +1458,7 @@
 																? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
 																: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
 														>
-															<Attach
-																strokeWidth="2"
-																className="w-[18px] h-[18px] text-[#36383b]"
-															/>
+															<Attach/>
 															<span
 															class="font-heading font-medium text-[14px] leading-[22px] text-[#36383b] text-left whitespace-nowrap"
 														>
