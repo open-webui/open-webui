@@ -65,7 +65,7 @@ class MistralLoader:
         # This prevents long-running OCR operations from affecting quick operations
         # and improves user experience by failing fast on operations that should be quick
         self.upload_timeout = min(
-            timeout, 120
+            timeout, 300
         )  # Cap upload at 2 minutes - prevents hanging on large files
         self.url_timeout = (
             30  # URL requests should be fast - fail quickly if API is slow
