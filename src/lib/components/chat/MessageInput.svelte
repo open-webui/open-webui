@@ -63,6 +63,8 @@
 	import Attach from '../icons/Attach.svelte';
 	import Save from '../icons/Save.svelte';
 	import GovKno from '../icons/GovKno.svelte';
+	import Filter from '../icons/Filter.svelte'; 
+	import CheckFilter from '../icons/CheckFilter.svelte';
 	import { updateUserSettings } from '$lib/apis/users';
 
 
@@ -96,6 +98,7 @@
 
 	export let imageGenerationEnabled = false;
 	export let webSearchEnabled = false;
+	export let attachFileEnabled = false;
 	export let codeInterpreterEnabled = false;
 	let isOpen = false;
 
@@ -193,9 +196,9 @@
 	$: showGovKnoButton = $models.find((model)=> model.id.includes('rag'));
 
 	const saveGovKnoModel = async () => {
-		const modelName = govBtnEnable?'contextual-rag':'gpt-4.1';
-		//settings.set({ ...$settings, models: [modelName] });
-		//await updateUserSettings(localStorage.token, { ui: $settings });
+		const modelName = govBtnEnable?'govgpt_contextual_rag_pipeline':'gpt-4.1';
+		settings.set({ ...$settings, models: [modelName] });
+		await updateUserSettings(localStorage.token, { ui: $settings });
 		toast.success($i18n.t('Gov Knowledge model updated'));
 		govBtnEnable = !govBtnEnable
 	};
@@ -1366,27 +1369,34 @@
 																<Sparkles className="size-4" strokeWidth="1.75" />
 															{/if}
 															<span
-																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
+																class="whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
 																>{filter?.name}</span
 															>
 														</button>
 													</Tooltip>
 												{/each}
+         {#if $mobile}
+		 <button class="flex items-center px-[12px] gap-[4px] py-[8px] shadow-custom3 border border-[#E5EBF3] bg-[#FBFCFC] text-typography-titles text-[14px] leading-[22px] rounded-full "><Filter/></button>
+		 {/if}
 
+  <div class="{$mobile?'fixed w-full bottom-[0] left-0 z-[40] p-[24px] pb-[40px] bg-white border border-[#E5EBF3] bg-[#FBFCFC] rounded-[24px]':'flex items-center justify-center gap-[8px]'}"> 
 												{#if showGovKnoButton}
 													<Tooltip content={$i18n.t('Gov Knowledge')} placement="top">
 														<button
 															on:click|preventDefault={() => saveGovKnoModel()}
 															type="button"
-															class="govkno-btn flex items-center px-[12px] gap-[4px] py-[8px] shadow-custom3 border border-[#E5EBF3] bg-[#FBFCFC] text-typography-titles text-[14px] leading-[22px] rounded-full rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-[#CCDDFC] dark:hover:bg-gray-800 {govBtnEnable
-																? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
-																: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
+															class="govkno-btn flex items-center {$mobile?'bg-white justify-between w-full p-[16px] rounded-[12px] hover:bg-gradient-bg-2':'px-[12px] py-[8px] shadow-custom3 border border-[#E5EBF3] rounded-full hover:bg-[#CCDDFC]'}  gap-[4px] text-typography-titles text-[14px] leading-[22px] transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden  dark:hover:bg-gray-800 {govBtnEnable
+																? ' bg-[#CCDDFC]  dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
+																: ' bg-[#FBFCFC] text-gray-600 dark:text-gray-300 '}"
 														>
+														<div class="flex items-center justify-center gap-[8px]">
 															<GovKno  />
 															<span
-																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
+																class="whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
 																>{$i18n.t('Gov Knowledge')}</span
 															>
+															</div>
+															{#if $mobile && govBtnEnable}<CheckFilter/>{/if}
 														</button>
 													</Tooltip>
 												{/if}
@@ -1396,16 +1406,19 @@
 														<button
 															on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
 															type="button"
-															class="flex items-center px-[12px] gap-[4px] py-[8px] shadow-custom3 border border-[#E5EBF3] bg-[#FBFCFC] text-typography-titles text-[14px] leading-[22px] rounded-full rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-[#CCDDFC] dark:hover:bg-gray-800 {webSearchEnabled ||
+															class="flex items-center  flex items-center {$mobile?'bg-white justify-between w-full p-[16px] rounded-[12px] hover:bg-gradient-bg-2':'px-[12px]  py-[8px] shadow-custom3 border border-[#E5EBF3] rounded-full hover:bg-[#CCDDFC]'} transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden dark:hover:bg-gray-800 {webSearchEnabled ||
 															($settings?.webSearch ?? false) === 'always'
-																? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
-																: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
+																? 'bg-gradient-bg-2 sm:bg-[#CCDDFC] dark:text-sky-300  dark:bg-sky-200/5'
+																: 'bg-[#FBFCFC] text-gray-600 dark:text-gray-300 '}"
 														>
+														<div class="flex items-center justify-center gap-[8px]">
 															<GlobeAlt className="size-4" strokeWidth="1.75" />
 															<span
-																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
+																class="whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
 																>{$i18n.t('Web Search')}</span
 															>
+															</div>
+															{#if $mobile && webSearchEnabled}<CheckFilter/>{/if}
 														</button>
 													</Tooltip>
 												{/if}
@@ -1416,15 +1429,18 @@
 															on:click|preventDefault={() =>
 																(imageGenerationEnabled = !imageGenerationEnabled)}
 															type="button"
-															class="flex items-center px-[12px] gap-[4px] py-[8px] shadow-custom3 border border-[#E5EBF3] bg-[#FBFCFC] text-typography-titles text-[14px] leading-[22px] rounded-full rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-[#CCDDFC] dark:hover:bg-gray-800 {imageGenerationEnabled
-																? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
+															class="flex items-center  flex items-center {$mobile?'bg-white justify-between w-full p-[16px] rounded-[12px] hover:bg-gradient-bg-2':'px-[12px]  py-[8px] shadow-custom3 border border-[#E5EBF3] bg-[#FBFCFC] rounded-full hover:bg-[#CCDDFC]'}  transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden dark:hover:bg-gray-800 {imageGenerationEnabled
+																? 'bg-gradient-bg-2 sm:bg-[#CCDDFC] dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
 																: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
 														>
+														<div class="flex items-center justify-center gap-[8px]">
 															<Photo className="size-4" strokeWidth="1.75" />
 															<span
-																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
+																class="whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
 																>{$i18n.t('Image')}</span
 															>
+															</div>
+															{#if $mobile}<CheckFilter/>{/if}
 														</button>
 													</Tooltip>
 												{/if}
@@ -1435,15 +1451,18 @@
 															on:click|preventDefault={() =>
 																(codeInterpreterEnabled = !codeInterpreterEnabled)}
 															type="button"
-															class="flex items-center px-[12px] gap-[4px] py-[8px] rounded-full shadow-custom3 border border-[#E5EBF3] bg-[#FBFCFC] text-typography-titles text-[14px] leading-[22px] transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-[#CCDDFC] dark:hover:bg-gray-800 {codeInterpreterEnabled
-																? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
+															class="flex items-center  flex items-center {$mobile?'bg-white justify-between w-full p-[16px] rounded-[12px] hover:bg-gradient-bg-2':'px-[12px]  py-[8px] shadow-custom3 border border-[#E5EBF3] bg-[#FBFCFC] rounded-full hover:bg-[#CCDDFC]'}  dark:hover:bg-gray-800 {codeInterpreterEnabled
+																? 'bg-gradient-bg-2 sm:bg-[#CCDDFC] dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
 																: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
 														>
+														<div class="flex items-center justify-center gap-[8px]">
 															<CommandLine className="size-4" strokeWidth="1.75" />
 															<span
-																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
+																class="whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
 																>{$i18n.t('Code Interpreter')}</span
 															>
+															</div>
+															{#if $mobile}<CheckFilter/>{/if}
 														</button>
 													</Tooltip>
 												{/if}
@@ -1451,23 +1470,27 @@
 												{#if showFileUploadButton}
 													<Tooltip content={$i18n.t('Upload File')} placement="top">
 														<button
-															on:click={() => filesInputElement.click()}
+															on:click={() => {
+																attachFileEnabled=!attachFileEnabled;
+																filesInputElement.click();}}
 															type="button"
-															class="flex items-center px-[12px] gap-[4px] py-[8px] shadow-custom3 border border-[#E5EBF3] bg-[#FBFCFC] text-typography-titles text-[14px] leading-[22px] rounded-full rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-[#CCDDFC] dark:hover:bg-gray-800 {webSearchEnabled ||
-															($settings?.webSearch ?? false) === 'always'
-																? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
-																: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
+															class="flex items-center  flex {$mobile?'bg-white justify-between w-full p-[16px] rounded-[12px] hover:bg-gradient-bg-2':'px-[12px]  py-[8px] shadow-custom3 border border-[#E5EBF3] bg-[#FBFCFC] rounded-full hover:bg-[#CCDDFC]'}   transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden  dark:hover:bg-gray-800 {attachFileEnabled
+																? 'bg-gradient-bg-2 sm:bg-[#CCDDFC] dark:text-sky-300  dark:bg-sky-200/5'
+																: 'bg-[#FBFCFC] text-gray-600 dark:text-gray-300 '}"
 														>
+														<div class="flex items-center justify-center gap-[8px]">
 															<Attach/>
 															<span
 															class="font-heading font-medium text-[14px] leading-[22px] text-[#36383b] text-left whitespace-nowrap"
 														>
 															Attach files
 														</span>
+														</div>
+														{#if $mobile && attachFileEnabled}<CheckFilter/>{/if}
 														</button>
 													</Tooltip>
 												{/if}
-
+</div>
 											</div>
 											<div class="flex gap-[12px] items-center">
 												{#if false}
