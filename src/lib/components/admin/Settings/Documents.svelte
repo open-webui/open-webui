@@ -171,6 +171,19 @@
 		}
 
 		if (
+			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'datalab_marker' &&
+			RAGConfig.DATALAB_MARKER_ADDITIONAL_CONFIG &&
+			RAGConfig.DATALAB_MARKER_ADDITIONAL_CONFIG.trim() !== ''
+		) {
+			try {
+				JSON.parse(RAGConfig.DATALAB_MARKER_ADDITIONAL_CONFIG);
+			} catch (e) {
+				toast.error($i18n.t('Invalid JSON format in Additional Config'));
+				return;
+			}
+		}
+
+		if (
 			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'document_intelligence' &&
 			(RAGConfig.DOCUMENT_INTELLIGENCE_ENDPOINT === '' ||
 				RAGConfig.DOCUMENT_INTELLIGENCE_KEY === '')
@@ -242,6 +255,11 @@
 			null,
 			2
 		);
+
+		// Set default API Base URL if empty
+		if (!config.DATALAB_MARKER_API_BASE_URL) {
+			config.DATALAB_MARKER_API_BASE_URL = 'https://www.datalab.to/api/v1/marker';
+		}
 
 		RAGConfig = config;
 	});
@@ -337,6 +355,19 @@
 							</div>
 						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'datalab_marker'}
 							<div class="my-0.5 flex gap-2 pr-2">
+								<Tooltip
+									content={$i18n.t(
+										'API Base URL for Datalab Marker service. Defaults to: https://www.datalab.to/api/v1/marker'
+									)}
+									placement="top-start"
+									className="w-full"
+								>
+									<input
+										class="flex-1 w-full text-sm bg-transparent outline-hidden"
+										placeholder={$i18n.t('Enter Datalab Marker API Base URL')}
+										bind:value={RAGConfig.DATALAB_MARKER_API_BASE_URL}
+									/>
+								</Tooltip>
 								<SensitiveInput
 									placeholder={$i18n.t('Enter Datalab Marker API Key')}
 									required={false}
@@ -344,24 +375,33 @@
 								/>
 							</div>
 
-							<div class="flex justify-between w-full mt-2">
-								<div class="text-xs font-medium">
-									{$i18n.t('Languages')}
+							<div class="flex flex-col gap-2 mt-2">
+								<div class=" flex flex-col w-full justify-between">
+									<div class=" mb-1 text-xs font-medium">
+										{$i18n.t('Additional Config')}
+									</div>
+									<div class="flex w-full items-center relative">
+										<Tooltip
+											content={$i18n.t(
+												'Additional configuration options for marker. This should be a JSON string with key-value pairs. For example, \'{"key": "value"}\'. Supported keys include: disable_links, keep_pageheader_in_output, keep_pagefooter_in_output, filter_blank_pages, drop_repeated_text, layout_coverage_threshold, merge_threshold, height_tolerance, gap_threshold, image_threshold, min_line_length, level_count, default_level'
+											)}
+											placement="top-start"
+											className="w-full"
+										>
+											<Textarea
+												bind:value={RAGConfig.DATALAB_MARKER_ADDITIONAL_CONFIG}
+												placeholder={$i18n.t('Enter JSON config (e.g., {"disable_links": true})')}
+											/>
+										</Tooltip>
+									</div>
 								</div>
-
-								<input
-									class="text-sm bg-transparent outline-hidden"
-									type="text"
-									bind:value={RAGConfig.DATALAB_MARKER_LANGS}
-									placeholder={$i18n.t('e.g.) en,fr,de')}
-								/>
 							</div>
 
 							<div class="flex justify-between w-full mt-2">
 								<div class="self-center text-xs font-medium">
 									<Tooltip
 										content={$i18n.t(
-											'Significantly improves accuracy by using an LLM to enhance tables, forms, inline math, and layout detection. Will increase latency. Defaults to True.'
+											'Significantly improves accuracy by using an LLM to enhance tables, forms, inline math, and layout detection. Will increase latency. Defaults to False.'
 										)}
 										placement="top-start"
 									>

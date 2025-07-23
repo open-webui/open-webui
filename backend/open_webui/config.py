@@ -2018,10 +2018,16 @@ DATALAB_MARKER_API_KEY = PersistentConfig(
     os.environ.get("DATALAB_MARKER_API_KEY", ""),
 )
 
-DATALAB_MARKER_LANGS = PersistentConfig(
-    "DATALAB_MARKER_LANGS",
-    "rag.datalab_marker_langs",
-    os.environ.get("DATALAB_MARKER_LANGS", ""),
+DATALAB_MARKER_API_BASE_URL = PersistentConfig(
+    "DATALAB_MARKER_API_BASE_URL",
+    "rag.datalab_marker_api_base_url",
+    os.environ.get("DATALAB_MARKER_API_BASE_URL", ""),
+)
+
+DATALAB_MARKER_ADDITIONAL_CONFIG = PersistentConfig(
+    "DATALAB_MARKER_ADDITIONAL_CONFIG",
+    "rag.datalab_marker_additional_config",
+    os.environ.get("DATALAB_MARKER_ADDITIONAL_CONFIG", ""),
 )
 
 DATALAB_MARKER_USE_LLM = PersistentConfig(
