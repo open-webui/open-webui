@@ -4,6 +4,7 @@ import json
 import logging
 from pathlib import Path
 from typing import Literal, Optional, overload
+import fnmatch
 
 import aiohttp
 from aiocache import cached
@@ -93,6 +94,25 @@ async def cleanup_response(
         response.close()
     if session:
         await session.close()
+
+
+def has_wildcards(model_ids):
+    """
+    Check if any model ID contains wildcard patterns
+    """
+    return any('*' in model_id or '?' in model_id for model_id in model_ids)
+
+
+def filter_models_by_patterns(models, patterns):
+    """
+    Filter models based on wildcard patterns using fnmatch
+    """
+    filtered_models = []
+    for model in models:
+        model_id = model.get('id', '')
+        if any(fnmatch.fnmatch(model_id, pattern) for pattern in patterns):
+            filtered_models.append(model)
+    return filtered_models
 
 
 def openai_o_series_handler(payload):
@@ -311,6 +331,9 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
 
             enable = api_config.get("enable", True)
             model_ids = api_config.get("model_ids", [])
+            
+            # Debug logging
+            log.info(f"OpenRouter config for idx {idx}: enable={enable}, model_ids={model_ids}")
 
             if enable:
                 if len(model_ids) == 0:
@@ -321,7 +344,18 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
                             user=user,
                         )
                     )
+                elif has_wildcards(model_ids):
+                    # If model_ids contains wildcards, fetch models and filter
+                    request_tasks.append(
+                        send_get_request(
+                            f"{url}/models",
+                            request.app.state.config.OPENAI_API_KEYS[idx],
+                            user=user,
+                        )
+                    )
                 else:
+                    # No wildcards, use exact model IDs
+                    log.info(f"Using exact model IDs for idx {idx}: {model_ids}")
                     model_list = {
                         "object": "list",
                         "data": [
@@ -357,10 +391,30 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
             connection_type = api_config.get("connection_type", "external")
             prefix_id = api_config.get("prefix_id", None)
             tags = api_config.get("tags", [])
+            model_ids = api_config.get("model_ids", [])
+            
+            # Debug logging for response processing
+            log.info(f"Processing response for idx {idx}, URL: {url}")
+            log.info(f"Config: {api_config}")
+            log.info(f"Response type: {type(response)}, has 'data' key: {'data' in response if isinstance(response, dict) else 'N/A'}")
 
-            for model in (
-                response if isinstance(response, list) else response.get("data", [])
-            ):
+            # Get the models list
+            models = response if isinstance(response, list) else response.get("data", [])
+            
+            log.info(f"Models count before filtering: {len(models) if models else 0}")
+            
+            # Filter models if wildcard patterns are present
+            if model_ids and has_wildcards(model_ids) and models:
+                log.info(f"Filtering models with wildcard patterns: {model_ids}")
+                filtered_models = filter_models_by_patterns(models, model_ids)
+                log.info(f"Models count after wildcard filtering: {len(filtered_models)}")
+                models = filtered_models
+                if "data" in response:
+                    response["data"] = models
+                else:
+                    responses[idx] = models
+
+            for model in models:
                 if prefix_id:
                     model["id"] = f"{prefix_id}.{model['id']}"
 

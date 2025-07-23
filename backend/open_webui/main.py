@@ -625,6 +625,14 @@ app.state.config.OPENAI_API_CONFIGS = OPENAI_API_CONFIGS
 
 app.state.OPENAI_MODELS = {}
 
+# Debug logging for OpenAI configs at startup
+import json
+log.info("=== OpenAI Configuration at Startup ===")
+log.info(f"OPENAI_API_BASE_URLS: {OPENAI_API_BASE_URLS.value}")
+log.info(f"Number of API configs: {len(OPENAI_API_CONFIGS.value)}")
+for idx, config in OPENAI_API_CONFIGS.value.items():
+    log.info(f"Config[{idx}]: {json.dumps(config, indent=2)}")
+
 ########################################
 #
 # TOOL SERVERS

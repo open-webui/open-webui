@@ -15,8 +15,8 @@ services:
       - 'WEBUI_SECRET_KEY='
       - 'WEBUI_NAME=mAI Staging'
       - 'WEBUI_URL=http://localhost:3001'
-    external_links:
-      - ollama
+    networks:
+      - mai_default
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
@@ -27,3 +27,7 @@ services:
 volumes:
   open-webui-staging:
     name: mai_staging_data
+
+networks:
+  mai_default:
+    external: true
