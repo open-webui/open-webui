@@ -390,6 +390,8 @@
 			<Switch bind:state={permissions.features.code_interpreter} />
 		</div>
 
+		<!-- 注释掉笔记功能：用户权限设置中的笔记权限 -->
+		<!--
 		<div class="  flex w-full justify-between my-2 pr-2">
 			<div class=" self-center text-xs font-medium">
 				{$i18n.t('Notes')}
@@ -397,5 +399,6 @@
 
 			<Switch bind:state={permissions.features.notes} />
 		</div>
+		-->
 	</div>
 </div>

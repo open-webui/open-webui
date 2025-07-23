@@ -7,7 +7,8 @@
 	import { knowledge } from '$lib/stores';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import Search from '$lib/components/icons/Search.svelte';
-	import { getNoteList } from '$lib/apis/notes';
+	// 注释掉笔记功能：笔记API导入
+	// import { getNoteList } from '$lib/apis/notes';
 	import dayjs from 'dayjs';
 
 	const i18n = getContext('i18n');
@@ -40,6 +41,8 @@
 	};
 
 	onMount(async () => {
+		// 注释掉笔记功能：获取笔记数据
+		/*
 		let notes = await getNoteList(localStorage.token).catch(() => {
 			return [];
 		});
@@ -52,6 +55,8 @@
 				description: dayjs(note.updated_at / 1000000).fromNow()
 			};
 		});
+		*/
+		let notes = []; // 空数组替代
 
 		let legacy_documents = knowledgeItems
 			.filter((item) => item?.meta?.document)
@@ -195,12 +200,15 @@
 										>
 											File
 										</div>
+									<!-- 注释掉笔记功能：笔记项渲染 -->
+									<!--
 									{:else if item?.type === 'note'}
 										<div
 											class="bg-blue-500/20 text-blue-700 dark:text-blue-200 rounded-sm uppercase text-xs font-bold px-1 shrink-0"
 										>
 											Note
 										</div>
+									-->
 									{:else}
 										<div
 											class="bg-green-500/20 text-green-700 dark:text-green-200 rounded-sm uppercase text-xs font-bold px-1 shrink-0"

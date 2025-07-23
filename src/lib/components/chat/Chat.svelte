@@ -1606,7 +1606,8 @@
 		let files = JSON.parse(JSON.stringify(chatFiles));
 		files.push(
 			...(userMessage?.files ?? []).filter((item) =>
-				['doc', 'text', 'file', 'note', 'collection'].includes(item.type)
+				// 注释掉笔记功能：移除note类型检查
+				['doc', 'text', 'file', /* 'note', */ 'collection'].includes(item.type)
 			)
 		);
 		// Remove duplicates

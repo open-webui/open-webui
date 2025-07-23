@@ -591,6 +591,8 @@
 			</button>
 		</div>
 
+		<!-- 注释掉笔记功能：侧边栏笔记链接 -->
+		<!--
 		{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
 			<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
 				<a
@@ -632,6 +634,7 @@
 				</a>
 			</div>
 		{/if}
+		-->
 
 		{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools}
 			<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">

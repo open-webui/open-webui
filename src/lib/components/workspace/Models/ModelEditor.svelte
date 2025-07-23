@@ -19,7 +19,8 @@
 	import { toast } from 'svelte-sonner';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
-	import { getNoteList } from '$lib/apis/notes';
+	// 注释掉笔记功能：笔记API导入
+	// import { getNoteList } from '$lib/apis/notes';
 
 	const i18n = getContext('i18n');
 

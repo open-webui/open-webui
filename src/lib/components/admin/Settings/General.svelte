@@ -635,6 +635,8 @@
 						<Switch bind:state={adminConfig.ENABLE_MESSAGE_RATING} />
 					</div>
 
+					<!-- 注释掉笔记功能：管理设置中的笔记开关 -->
+					<!--
 					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
 						<div class=" self-center text-xs font-medium">
 							{$i18n.t('Notes')} ({$i18n.t('Beta')})
@@ -642,6 +644,7 @@
 
 						<Switch bind:state={adminConfig.ENABLE_NOTES} />
 					</div>
+					-->
 
 					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
 						<div class=" self-center text-xs font-medium">
