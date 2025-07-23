@@ -38,15 +38,16 @@ class S3VectorClient(VectorDBBase):
 
     def _filter_metadata(self, metadata: Dict[str, Any], item_id: str) -> Dict[str, Any]:
         """
-        Filter metadata to comply with S3 Vector API limit of 10 keys maximum.
+        Filter vector metadata keys to comply with S3 Vector API limit of 10 keys maximum.
         If AWS S3 Vector feature starts supporting more than 10 keys, this should be adjusted, and preferably removed.
+        Limitation is documented here: https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-vectors-limitations.html
         """
         if not isinstance(metadata, dict) or len(metadata) <= 10:
             return metadata
             
         # Keep only the first 10 keys, prioritizing important ones based on actual Open WebUI metadata            
         important_keys = [
-            'text',             # THE MOST IMPORTANT - the actual document content
+            'text',             # The actual document content
             'file_id',          # File ID
             'source',           # Document source file
             'title',            # Document title
@@ -76,34 +77,6 @@ class S3VectorClient(VectorDBBase):
                         
         log.warning(f"Metadata for key '{item_id}' had {len(metadata)} keys, limited to 10 keys")
         return filtered_metadata
-
-    def _check_for_duplicate_file_collections(self, knowledge_collection_name: str, new_items: List[Dict[str, Any]]) -> None:
-        """
-        Check for existing file-specific collections that might create duplicates.
-        """
-        # Extract file IDs from the new items to find corresponding file collections
-        file_ids = set()
-        for item in new_items:
-            metadata = item.get("metadata", {})
-            file_id = metadata.get("file_id")
-            if file_id:
-                file_ids.add(file_id)
-        
-        # Check for existing file-specific collections
-        duplicate_collections = []
-        for file_id in file_ids:
-            file_collection_name = f"file-{file_id}"
-            if self.has_collection(file_collection_name):
-                duplicate_collections.append(file_collection_name)
-        
-        if duplicate_collections:
-            log.warning(f"Found existing file-specific collections that may contain duplicate vectors: {duplicate_collections}")
-            log.warning(f"Consider manually deleting these collections to avoid duplicate storage:")
-            for collection in duplicate_collections:
-                log.warning(f"  - {collection}")
-            log.warning(f"Continuing with insertion to knowledge collection '{knowledge_collection_name}'")
-        else:
-            log.info(f"No duplicate file-specific collections found for knowledge collection '{knowledge_collection_name}'")
 
     def has_collection(self, collection_name: str) -> bool:
         """
@@ -157,9 +130,6 @@ class S3VectorClient(VectorDBBase):
                     distance_metric="cosine",
                 )
             
-            # Check for any existing file-specific collections that might create duplicates
-            self._check_for_duplicate_file_collections(collection_name, items)
-            
             # Prepare vectors for insertion
             vectors = []
             for item in items:
@@ -202,9 +172,6 @@ class S3VectorClient(VectorDBBase):
     def upsert(self, collection_name: str, items: List[Dict[str, Any]]) -> None:
         """
         Insert or update vector items in the S3 Vector index. Create index if it does not exist.
-        
-        Supports both knowledge collections and file-specific collections for compatibility
-        with existing Open WebUI backend logic.
         """
         if not items:
             log.warning("No items to upsert")
@@ -222,9 +189,6 @@ class S3VectorClient(VectorDBBase):
                     data_type="float32",
                     distance_metric="cosine",
                 )
-            
-            # Check for any existing file-specific collections that might create duplicates
-            self._check_for_duplicate_file_collections(collection_name, items)
             
             # Prepare vectors for upsert
             vectors = []
