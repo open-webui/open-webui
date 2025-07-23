@@ -714,7 +714,7 @@
 				</div>
 			{/if}
 
-			{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
+			{#if $user?.role === 'admin' && ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
 				<div class="flex justify-center text-gray-800 dark:text-gray-200">
 					<a
 						class="px-[16px] py-[8px] grow flex items-center rounded-lg hover:bg-gradient-bg-2 dark:hover:bg-gray-900 transition-all duration-300 ease-in-out"
@@ -881,6 +881,7 @@
 					</Folder>
 				{/if}
 
+				{#if $user?.role === 'admin'}
 				<Folder
 					className=""
 					name={$i18n.t('Folders')}
@@ -954,6 +955,7 @@
 						/>
 					{/if}
 				</Folder>
+				{/if}
 
 				{#if false && $pinnedChats.length > 0}
 					<div class="flex flex-col space-y-1 rounded-xl">
