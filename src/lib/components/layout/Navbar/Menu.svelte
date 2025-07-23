@@ -248,6 +248,7 @@
 				<div class="flex items-center">{$i18n.t('Settings')}</div>
 			</DropdownMenu.Item> -->
 
+			<!-- 已删除移动端菜单中的Controls选项
 			{#if $mobile}
 				<DropdownMenu.Item
 					class="flex gap-2 items-center px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md select-none w-full"
@@ -262,6 +263,7 @@
 					<div class="flex items-center">{$i18n.t('Controls')}</div>
 				</DropdownMenu.Item>
 			{/if}
+			-->
 
 			{#if !$temporaryChatEnabled && ($user?.role === 'admin' || ($user.permissions?.chat?.share ?? true))}
 				<DropdownMenu.Item
