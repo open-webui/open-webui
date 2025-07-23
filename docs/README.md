@@ -25,9 +25,10 @@ Welcome to the mAI documentation. This directory contains all documentation orga
 ## Recent Updates
 
 ### July 2025
-- **OpenRouter Model Restriction Feature** - Added ability to limit available models with wildcard support
+- **OpenRouter Docker Integration** - Scripts now included in Docker image for production deployment
+- **OpenRouter Model Restriction Feature** - Added ability to limit available models to 12 curated choices
 - **Repository Cleanup** - Organized scripts and documentation for better maintainability
-- **Production Scripts** - Added production-ready configuration tools in `/scripts/openrouter/`
+- **Production-Ready** - Docker image ready for multi-company deployment on Hetzner
 
 ### January 2025
 - **Open WebUI v0.6.17 Upgrade** - Successfully merged while preserving all mAI customizations

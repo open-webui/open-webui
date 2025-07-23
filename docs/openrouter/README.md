@@ -21,15 +21,21 @@ This directory contains all documentation and scripts related to configuring Ope
 
 ### For Production Deployment
 
-1. Use environment variables in your deployment:
-   ```yaml
-   environment:
-     - OPENROUTER_ALLOWED_MODELS=model1,model2,model3
+**Note: OpenRouter scripts are now included in the Docker image (as of July 2025)**
+
+1. Build the Docker image:
+   ```bash
+   docker build -t mai-production:latest .
    ```
 
-2. Or use the production initialization script:
+2. Run the initialization script on first deployment:
    ```bash
    docker exec mai-prod python /app/scripts/openrouter/production_fix.py init
+   ```
+
+3. Verify configuration:
+   ```bash
+   docker exec mai-prod python /app/scripts/openrouter/verify_config.py
    ```
 
 ### For Managing Models

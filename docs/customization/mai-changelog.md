@@ -10,6 +10,29 @@ This document tracks successful changes and improvements made to the mAI applica
 
 ---
 
+## 2025-07-23 - OpenRouter Docker Integration 🐳
+
+**Type:** UPDATE  
+**Impact:** HIGH  
+**Commit:** `cbc228cb6`
+
+### ✅ Successfully Completed
+- **Integrated OpenRouter scripts into Docker image** - No manual copying needed
+- **Production-ready deployment** - Scripts included in build process
+- **Multi-company ready** - Same image works for all 20 deployments
+
+### 🎯 Implementation
+- Added single line to Dockerfile: `COPY --chown=$UID:$GID ./scripts /app/scripts`
+- Scripts now part of image, survive container recreation
+- Initialization runs once per deployment
+
+### 📝 Notes
+- Eliminates manual script copying previously required
+- Ensures consistency across all deployments
+- Ready for Hetzner production deployment
+
+---
+
 ## 2025-07-23 - OpenRouter Model Restriction & Repository Cleanup 🚀
 
 **Type:** FEATURE + UPDATE  

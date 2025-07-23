@@ -117,7 +117,7 @@ This document lists all custom mAI features that must be preserved during Open W
 - Background tasks protected with try-catch blocks
 - No "model runner has unexpectedly stopped" errors
 
-### 8. **OpenRouter Model Restriction Feature** (Commits: `709d3ff27`, `158790e28`, `529a3e31d`)
+### 8. **OpenRouter Model Restriction Feature** (Commits: `709d3ff27`, `158790e28`, `529a3e31d`, `cbc228cb6`)
 **Location:** Admin Settings & Backend Configuration
 
 **Files to check:**
@@ -129,25 +129,27 @@ This document lists all custom mAI features that must be preserved during Open W
 - `/docs/openrouter/production-config.md` - Production best practices
 - `/docs/openrouter/manage-models.md` - Model management guide
 - `/docs/openrouter/quick-reference.md` - Quick reference guide
+- **Dockerfile** - Scripts now included in Docker image (line 173)
 
 **✅ What to verify:**
-- Admin can configure model restrictions via environment variables or API
+- **Scripts are included in Docker image** (no manual copying needed)
+- Admin can configure model restrictions via scripts
 - Support for 12 specific OpenRouter models:
-  - openai/gpt-4o
+  - anthropic/claude-sonnet-4
+  - google/gemini-2.5-flash
+  - google/gemini-2.5-pro
+  - deepseek/deepseek-chat-v3-0324
+  - anthropic/claude-3.7-sonnet
+  - google/gemini-2.5-flash-lite-preview-06-17
+  - openai/gpt-4.1
+  - x-ai/grok-4
   - openai/gpt-4o-mini
-  - openai/gpt-4-turbo
-  - openai/o1-preview
-  - openai/o1-mini
-  - anthropic/claude-3.5-sonnet:beta
-  - anthropic/claude-3.5-haiku:beta
-  - google/gemini-pro-1.5
-  - x-ai/grok-2-latest
-  - meta-llama/llama-3.1-405b-instruct
-  - perplexity/llama-3.1-sonar-huge-128k-online
-  - deepseek/deepseek-coder
-- Wildcard pattern matching works (e.g., "openai/*", "anthropic/*")
+  - openai/o4-mini-high
+  - openai/o3
+  - openai/chatgpt-4o-latest
 - Configuration persists across restarts
 - Scripts function correctly in Docker environments
+- Same configuration applies to all 20 company deployments
 
 ## 📋 Post-Update Testing Checklist
 
@@ -219,4 +221,4 @@ This document lists all custom mAI features that must be preserved during Open W
 5. **Test Polish language** switching
 6. **Document any new conflicts** in docs/development/upgrade-guide.md
 
-Last Updated: July 23, 2025 - OpenRouter Feature & Repository Cleanup
+Last Updated: July 23, 2025 - OpenRouter Docker Integration
