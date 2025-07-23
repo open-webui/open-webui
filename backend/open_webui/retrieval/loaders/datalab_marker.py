@@ -140,7 +140,7 @@ class DatalabMarkerLoader:
 
         check_url = result.get("request_check_url")
         request_id = result.get("request_id")
-        
+
         # Check if this is a direct response (self-hosted) or polling response (DataLab)
         if check_url:
             # DataLab polling pattern
@@ -191,7 +191,8 @@ class DatalabMarkerLoader:
                     )
             else:
                 raise HTTPException(
-                    status.HTTP_504_GATEWAY_TIMEOUT, detail="Marker processing timed out"
+                    status.HTTP_504_GATEWAY_TIMEOUT,
+                    detail="Marker processing timed out",
                 )
 
             if not poll_result.get("success", False):
@@ -212,10 +213,14 @@ class DatalabMarkerLoader:
                 raw_content = result.get("output")
                 final_result = result
             else:
-                available_fields = list(result.keys()) if isinstance(result, dict) else "non-dict response"
+                available_fields = (
+                    list(result.keys())
+                    if isinstance(result, dict)
+                    else "non-dict response"
+                )
                 raise HTTPException(
-                    status.HTTP_502_BAD_GATEWAY, 
-                    detail=f"Custom Marker endpoint returned success but no 'output' field found. Available fields: {available_fields}. Expected either 'request_check_url' for polling or 'output' field for direct response."
+                    status.HTTP_502_BAD_GATEWAY,
+                    detail=f"Custom Marker endpoint returned success but no 'output' field found. Available fields: {available_fields}. Expected either 'request_check_url' for polling or 'output' field for direct response.",
                 )
 
         if self.output_format.lower() == "json":
