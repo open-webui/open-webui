@@ -67,40 +67,8 @@
 	};
 
 	const saveHandler = async () => {
-		saveSettings({
-			system: system !== '' ? system : undefined,
-			params: {
-				stream_response: params.stream_response !== null ? params.stream_response : undefined,
-				function_calling: params.function_calling !== null ? params.function_calling : undefined,
-				seed: (params.seed !== null ? params.seed : undefined) ?? undefined,
-				stop: params.stop ? params.stop.split(',').filter((e) => e) : undefined,
-				temperature: params.temperature !== null ? params.temperature : undefined,
-				reasoning_effort: params.reasoning_effort !== null ? params.reasoning_effort : undefined,
-				logit_bias: params.logit_bias !== null ? params.logit_bias : undefined,
-				frequency_penalty: params.frequency_penalty !== null ? params.frequency_penalty : undefined,
-				presence_penalty: params.frequency_penalty !== null ? params.frequency_penalty : undefined,
-				repeat_penalty: params.frequency_penalty !== null ? params.frequency_penalty : undefined,
-				repeat_last_n: params.repeat_last_n !== null ? params.repeat_last_n : undefined,
-				mirostat: params.mirostat !== null ? params.mirostat : undefined,
-				mirostat_eta: params.mirostat_eta !== null ? params.mirostat_eta : undefined,
-				mirostat_tau: params.mirostat_tau !== null ? params.mirostat_tau : undefined,
-				top_k: params.top_k !== null ? params.top_k : undefined,
-				top_p: params.top_p !== null ? params.top_p : undefined,
-				min_p: params.min_p !== null ? params.min_p : undefined,
-				tfs_z: params.tfs_z !== null ? params.tfs_z : undefined,
-				num_ctx: params.num_ctx !== null ? params.num_ctx : undefined,
-				num_batch: params.num_batch !== null ? params.num_batch : undefined,
-				num_keep: params.num_keep !== null ? params.num_keep : undefined,
-				max_tokens: params.max_tokens !== null ? params.max_tokens : undefined,
-				use_mmap: params.use_mmap !== null ? params.use_mmap : undefined,
-				use_mlock: params.use_mlock !== null ? params.use_mlock : undefined,
-				num_thread: params.num_thread !== null ? params.num_thread : undefined,
-				num_gpu: params.num_gpu !== null ? params.num_gpu : undefined,
-				think: params.think !== null ? params.think : undefined,
-				keep_alive: params.keep_alive !== null ? params.keep_alive : undefined,
-				format: params.format !== null ? params.format : undefined
-			}
-		});
+		// 简化保存处理，只保存基本设置，删除系统提示词和高级参数
+		saveSettings({});
 		dispatch('save');
 	};
 
@@ -246,62 +214,12 @@
 				</div>
 			{/if}
 
-			<div>
-				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">{$i18n.t('Notifications')}</div>
-
-					<button
-						class="p-1 px-3 text-xs flex rounded-sm transition"
-						on:click={() => {
-							toggleNotification();
-						}}
-						type="button"
-					>
-						{#if notificationEnabled === true}
-							<span class="ml-2 self-center">{$i18n.t('On')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
-					</button>
-				</div>
-			</div>
+			<!-- 删除桌面通知选项 -->
 		</div>
 
-		{#if $user?.role === 'admin' || ($user?.permissions.chat?.system_prompt ?? true)}
-			<hr class="border-gray-50 dark:border-gray-850 my-3" />
+		<!-- 删除系统提示词设置 -->
 
-			<div>
-				<div class=" my-2.5 text-sm font-medium">{$i18n.t('System Prompt')}</div>
-				<Textarea
-					bind:value={system}
-					className={'w-full text-sm outline-hidden resize-vertical' +
-						($settings.highContrastMode
-							? ' p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-850 text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 overflow-y-hidden'
-							: ' bg-white dark:text-gray-300 dark:bg-gray-900')}
-					rows="4"
-					placeholder={$i18n.t('Enter system prompt here')}
-				/>
-			</div>
-		{/if}
-
-		{#if $user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true)}
-			<div class="mt-2 space-y-3 pr-1.5">
-				<div class="flex justify-between items-center text-sm">
-					<div class="  font-medium">{$i18n.t('Advanced Parameters')}</div>
-					<button
-						class=" text-xs font-medium text-gray-500"
-						type="button"
-						on:click={() => {
-							showAdvanced = !showAdvanced;
-						}}>{showAdvanced ? $i18n.t('Hide') : $i18n.t('Show')}</button
-					>
-				</div>
-
-				{#if showAdvanced}
-					<AdvancedParams admin={$user?.role === 'admin'} bind:params />
-				{/if}
-			</div>
-		{/if}
+		<!-- 删除高级参数设置 -->
 	</div>
 
 	<div class="flex justify-end pt-3 text-sm font-medium">

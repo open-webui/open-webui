@@ -1168,51 +1168,7 @@
 				</div>
 			</div>
 
-			<div>
-				<div class=" py-0.5 flex w-full justify-between">
-					<div id="iframe-sandbox-allow-same-origin-label" class=" self-center text-xs">
-						{$i18n.t('iframe Sandbox Allow Same Origin')}
-					</div>
-
-					<button
-						aria-labelledby="iframe-sandbox-allow-same-origin-label"
-						class="p-1 px-3 text-xs flex rounded-sm transition"
-						on:click={() => {
-							toggleIframeSandboxAllowSameOrigin();
-						}}
-						type="button"
-					>
-						{#if iframeSandboxAllowSameOrigin === true}
-							<span class="ml-2 self-center">{$i18n.t('On')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
-					</button>
-				</div>
-			</div>
-
-			<div>
-				<div class=" py-0.5 flex w-full justify-between">
-					<div id="iframe-sandbox-allow-forms-label" class=" self-center text-xs">
-						{$i18n.t('iframe Sandbox Allow Forms')}
-					</div>
-
-					<button
-						aria-labelledby="iframe-sandbox-allow-forms-label"
-						class="p-1 px-3 text-xs flex rounded-sm transition"
-						on:click={() => {
-							toggleIframeSandboxAllowForms();
-						}}
-						type="button"
-					>
-						{#if iframeSandboxAllowForms === true}
-							<span class="ml-2 self-center">{$i18n.t('On')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
-					</button>
-				</div>
-			</div>
+			<!-- 删除外部链接选项（iframe设置） -->
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
