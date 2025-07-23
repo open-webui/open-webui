@@ -1,13 +1,13 @@
 import type { PiiEntity } from '$lib/apis/pii';
 import i18next from 'i18next';
-import { 
-  PiiApiClient, 
-  createPiiApiClient, 
-  type PiiApiClientConfig,
-  type ApiRequestOptions,
-  PiiApiError,
-  PiiApiTimeoutError,
-  PiiApiNetworkError
+import {
+	PiiApiClient,
+	createPiiApiClient,
+	type PiiApiClientConfig,
+	type ApiRequestOptions,
+	PiiApiError,
+	PiiApiTimeoutError,
+	PiiApiNetworkError
 } from '$lib/apis/pii/client';
 
 // Extended PII entity with masking state
@@ -218,7 +218,7 @@ export class PiiSessionManager {
 
 	setApiKey(apiKey: string) {
 		this.apiKey = apiKey;
-		
+
 		// Initialize or update API client when API key changes
 		if (apiKey) {
 			this.initializeApiClient({
@@ -658,18 +658,14 @@ export class PiiSessionManager {
 		const client = this.ensureApiClient();
 		const knownEntities = this.getKnownEntitiesForApi(conversationId);
 		const modifiers = this.getModifiersForApi(conversationId);
-		
+
 		return client.maskText(text, knownEntities, modifiers, createSession, options);
 	}
 
 	/**
 	 * Unmask PII in text (ephemeral - without session)
 	 */
-	async unmaskText(
-		text: string[],
-		entities: PiiEntity[],
-		options?: ApiRequestOptions
-	) {
+	async unmaskText(text: string[], entities: PiiEntity[], options?: ApiRequestOptions) {
 		const client = this.ensureApiClient();
 		return client.unmaskText(text, entities, options);
 	}
@@ -677,34 +673,27 @@ export class PiiSessionManager {
 	/**
 	 * Mask PII in text using current session
 	 */
-	async maskTextWithSession(
-		text: string[],
-		conversationId?: string,
-		options?: ApiRequestOptions
-	) {
+	async maskTextWithSession(text: string[], conversationId?: string, options?: ApiRequestOptions) {
 		const client = this.ensureApiClient();
 		if (!this.sessionId) {
 			throw new Error('No active session. Call createSession() first.');
 		}
-		
+
 		const knownEntities = this.getKnownEntitiesForApi(conversationId);
 		const modifiers = this.getModifiersForApi(conversationId);
-		
+
 		return client.maskTextWithSession(this.sessionId, text, knownEntities, modifiers, options);
 	}
 
 	/**
 	 * Unmask PII in text using current session
 	 */
-	async unmaskTextWithSession(
-		text: string[],
-		options?: ApiRequestOptions
-	) {
+	async unmaskTextWithSession(text: string[], options?: ApiRequestOptions) {
 		const client = this.ensureApiClient();
 		if (!this.sessionId) {
 			throw new Error('No active session. Call createSession() first.');
 		}
-		
+
 		return client.unmaskTextWithSession(this.sessionId, text, options);
 	}
 
