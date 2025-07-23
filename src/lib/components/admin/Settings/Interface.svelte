@@ -6,7 +6,8 @@
 	import { toast } from 'svelte-sonner';
 
 	import { getBackendConfig, getModels, getTaskConfig, updateTaskConfig } from '$lib/apis';
-	import { setDefaultPromptSuggestions } from '$lib/apis/configs';
+	// 注释掉建议功能：不再需要setDefaultPromptSuggestions API
+	// import { setDefaultPromptSuggestions } from '$lib/apis/configs';
 	import { config, settings, user } from '$lib/stores';
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
 
@@ -44,14 +45,16 @@
 		TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE: ''
 	};
 
-	let promptSuggestions = [];
+	// 注释掉建议功能：不再需要promptSuggestions变量
+	// let promptSuggestions = [];
 	let banners: Banner[] = [];
 
 	const updateInterfaceHandler = async () => {
 		taskConfig = await updateTaskConfig(localStorage.token, taskConfig);
 
-		promptSuggestions = promptSuggestions.filter((p) => p.content !== '');
-		promptSuggestions = await setDefaultPromptSuggestions(localStorage.token, promptSuggestions);
+		// 注释掉建议功能：不再处理promptSuggestions
+		// promptSuggestions = promptSuggestions.filter((p) => p.content !== '');
+		// promptSuggestions = await setDefaultPromptSuggestions(localStorage.token, promptSuggestions);
 		await updateBanners();
 
 		await config.set(await getBackendConfig());
@@ -61,7 +64,8 @@
 		await init();
 		taskConfig = await getTaskConfig(localStorage.token);
 
-		promptSuggestions = $config?.default_prompt_suggestions ?? [];
+		// 注释掉建议功能：不再初始化promptSuggestions
+		// promptSuggestions = $config?.default_prompt_suggestions ?? [];
 		banners = await getBanners(localStorage.token);
 	});
 
@@ -429,6 +433,8 @@
 					<Banners bind:banners />
 				</div>
 
+				<!-- 注释掉建议功能：管理设置中的默认提示词建议管理 -->
+				<!--
 				{#if $user?.role === 'admin'}
 					<div class=" space-y-3">
 						<div class="flex w-full justify-between mb-2">
@@ -622,6 +628,7 @@
 						</div>
 					</div>
 				{/if}
+				-->
 			</div>
 		</div>
 

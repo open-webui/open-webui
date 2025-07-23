@@ -19,7 +19,8 @@
 	import { sanitizeResponseContent, extractCurlyBraceWords } from '$lib/utils';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
-	import Suggestions from './Suggestions.svelte';
+	// 注释掉建议功能：不再需要Suggestions组件
+	// import Suggestions from './Suggestions.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
 	import MessageInput from './MessageInput.svelte';
@@ -252,6 +253,8 @@
 			<FolderPlaceholder folder={$selectedFolder} />
 		</div>
 	{:else}
+		<!-- 注释掉建议功能：主聊天页面中的建议组件 -->
+		<!--
 		<div class="mx-auto max-w-2xl font-primary mt-2" in:fade={{ duration: 200, delay: 200 }}>
 			<div class="mx-5">
 				<Suggestions
@@ -264,5 +267,6 @@
 				/>
 			</div>
 		</div>
+		-->
 	{/if}
 </div>

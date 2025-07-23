@@ -33,9 +33,10 @@
 					...modelInfo.meta,
 					profile_image_url:
 						modelInfo.meta.profile_image_url ?? `${WEBUI_BASE_URL}/static/favicon.png`,
-					suggestion_prompts: modelInfo.meta.suggestion_prompts
-						? modelInfo.meta.suggestion_prompts.filter((prompt) => prompt.content !== '')
-						: null
+					// 注释掉建议功能：不再处理suggestion_prompts
+					// suggestion_prompts: modelInfo.meta.suggestion_prompts
+					//	? modelInfo.meta.suggestion_prompts.filter((prompt) => prompt.content !== '')
+					//	: null
 				},
 				params: { ...modelInfo.params }
 			}).catch((error) => {

@@ -69,7 +69,8 @@
 		meta: {
 			profile_image_url: `${WEBUI_BASE_URL}/static/favicon.png`,
 			description: '',
-			suggestion_prompts: null,
+			// 注释掉建议功能：不再初始化suggestion_prompts属性
+			// suggestion_prompts: null,
 			tags: []
 		},
 		params: {
@@ -607,6 +608,8 @@
 
 					<hr class=" border-gray-100 dark:border-gray-850 my-1" />
 
+					<!-- 注释掉建议功能：模型编辑器中的提示词建议功能 -->
+					<!--
 					<div class="my-2">
 						<div class="flex w-full justify-between items-center">
 							<div class="flex w-full justify-between items-center">
@@ -692,6 +695,7 @@
 							</div>
 						{/if}
 					</div>
+					-->
 
 					<hr class=" border-gray-100 dark:border-gray-850 my-1.5" />
 
