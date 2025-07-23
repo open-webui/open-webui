@@ -23,8 +23,7 @@
 - **Current Branch**: `customization` (main: `main`)
 - **Key Features**: Complete mAI visual identity, custom background patterns, multi-language support
 
-**Recent Status**: Successfully merged Open WebUI v0.6.17 preserving all customizations (Jan 2025)
-
+**Recent Status**: Successfully merged Open WebUI v0.6.17 preserving all customizations (July 2025)
 
 ## Detailed Documentation
 
@@ -36,11 +35,6 @@
 
 ## Critical Customization Rules
 
-**Asset Requirements:**
-- Logo files <100KB, proper formats (PNG for logos, ICO for favicons, SVG for scalable)
-- WCAG 2.1 AA compliance, contrast ratios 4.5:1 minimum
-- Test all theme variants and mobile responsiveness
-
 **Files to Preserve During Upgrades:**
 - `package.json`: Keep "name": "mai"
 - `src/lib/components/chat/Chat.svelte`: Background pattern functionality
@@ -48,18 +42,5 @@
 - All theme and asset files in `static/`
 
 **Branch Strategy:**
-- At the start work only on `customization` branch
-
-## Quick Actions
-
-```bash
-# Emergency rollback
-git checkout customization-backup/static-$(date +%Y%m%d)
-
-# Docker quick update (without rebuild)
-docker cp static/static/favicon.ico open-webui:/app/backend/static/
-docker restart open-webui
-
-# Type check before commit
-npm run check && npm run lint
-```
+- Work only on `customization` branch
+- Create feature branches for specific improvements
