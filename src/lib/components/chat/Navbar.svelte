@@ -72,7 +72,7 @@
 />-->
 
 <nav
-	class=" flex items-center justify-between px-4 py-0 h-[56px] relative z-30 {$mobile
+	class=" flex items-center justify-between px-4 py-0 h-[56px] absolute z-30 {$mobile
 		? ' w-full fixed dark:bg-gray-900 dark:border-gray-800'
 		: 'bg-transparent'}"
 >
@@ -96,7 +96,7 @@
 			<img
 				src="/logov4.png"
 				alt="GovGPT Logo"
-				class="w-[28px] h-[28px] filter dark:invert dark:brightness-0 dark:contrast-200"
+				class="w-[56px] h-[56px] filter dark:invert dark:brightness-0 dark:contrast-200"
 			/>
 
 			<!--<div

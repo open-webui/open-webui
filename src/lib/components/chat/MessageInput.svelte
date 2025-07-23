@@ -569,7 +569,7 @@
 			<div
 				class=" p-[20px] flex flex-col px-3 {($settings?.widescreenMode ?? null)
 					? 'max-w-full'
-					: 'max-w-6xl'} w-full"
+					: ''} w-full"
 			>
 				<div class="relative">
 					{#if autoScroll === false && history?.currentId}
@@ -659,7 +659,7 @@
 
 		<div class="{transparentBackground ? 'bg-transparent' : 'bg-transparent dark:bg-gray-900'} ">
 			<div
-				class="{($settings?.widescreenMode ?? null) ? 'max-w-full' : 'max-w-6xl'} mx-auto inset-x-0"
+				class="{($settings?.widescreenMode ?? null) ? 'max-w-full' : ''} mx-auto inset-x-0"
 			>
 				<div class="">
 					<input
@@ -706,7 +706,7 @@
 						/>
 					{:else}
 						<form
-							class="w-full flex flex-col gap-1.5"
+							class="w-full flex flex-col"
 							on:submit|preventDefault={() => {
 								// check if selectedModels support image input
 								dispatch('submit', prompt);
@@ -1896,14 +1896,6 @@
 									</div>
 								</div>
 							</div>
-
-							{#if $config?.license_metadata?.input_footer}
-								<div class=" text-xs text-gray-500 text-center line-clamp-1 marked">
-									{@html DOMPurify.sanitize(marked($config?.license_metadata?.input_footer))}
-								</div>
-							{:else}
-								<div class="mb-1" />
-							{/if}
 						</form>
 					{/if}
 				</div>
