@@ -108,9 +108,9 @@
 		class="w-full h-full text-3xl text-gray-800 dark:text-gray-100 text-center flex items-center gap-4 font-primary"
 	>
 		<div class="w-full h-full flex flex-col justify-center items-center">
-		<div class="top-box flex-grow flex flex-col justify-center"> 
-			<div class="flex flex-row justify-center ">
-				<!-- <div class="flex shrink-0 justify-center">
+			<div class="top-box flex-grow flex flex-col justify-center">
+				<div class="flex flex-row justify-center">
+					<!-- <div class="flex shrink-0 justify-center">
 					<div class="flex -space-x-4 mb-0.5" in:fade={{ duration: 100 }}>
 						{#each models as model, modelIdx}
 							<Tooltip
@@ -140,7 +140,7 @@
 					</div>
 				</div> -->
 
-				<!-- <div
+					<!-- <div
 					class=" text-3xl @sm:text-3xl line-clamp-1 flex items-center"
 					in:fade={{ duration: 100 }}
 				>
@@ -158,17 +158,26 @@
 						{$i18n.t('Hello, {{name}}', { name: $user?.name })}
 					{/if}
 				</div> -->
- 
-				<div class="welcome-text">
-				     {#if !$mobile && !webSearchEnabled}<div class="mb-[110px] flex justify-center"><LogoV4 strokeWidth="2.5" className="size-5" /></div>{/if}
-					 <div>
-					 <h1 class="pb-[16px] text-typography-titles text-[28px] leading-[22px] font-Inter_SemiBold">Hey {$user.name}👋🏼</h1>
-					{#if !$mobile} <p class=" text-typography-subtext text-[14px] leading-[26px]">Quick answers. Clear drafts. Trusted knowledge. What’s next?  Enter your request to begin.</p>{/if}
-					 </div>
-				</div>
-				
 
-				<!--<div class="text-center my-6" in:fade={{ duration: 100 }}>
+					<div class="welcome-text">
+						{#if !$mobile && !webSearchEnabled}<div class="mb-[110px] flex justify-center">
+								<LogoV4 strokeWidth="2.5" className="size-5" />
+							</div>{/if}
+						<div>
+							<h1
+								class="pb-[16px] text-typography-titles text-[28px] leading-[22px] font-Inter_SemiBold"
+							>
+								Hey {$user.name}👋🏼
+							</h1>
+							{#if !$mobile}
+								<p class=" text-typography-subtext text-[14px] leading-[26px]">
+									Quick answers. Clear drafts. Trusted knowledge. What’s next? Enter your request to
+									begin.
+								</p>{/if}
+						</div>
+					</div>
+
+					<!--<div class="text-center my-6" in:fade={{ duration: 100 }}>
 					{#if models[selectedModelIdx]?.name}
 						<Tooltip
 							content={models[selectedModelIdx]?.name}
@@ -187,103 +196,102 @@
 						</p>
 					{/if}
 				</div>-->
-			</div>
+				</div>
 
-			<div class="flex mt-1 mb-2">
-				<div in:fade={{ duration: 100, delay: 50 }}>
-					{#if models[selectedModelIdx]?.info?.meta?.description ?? null}
-						<Tooltip
-							className=" w-fit"
-							content={marked.parse(
-								sanitizeResponseContent(models[selectedModelIdx]?.info?.meta?.description ?? '')
-							)}
-							placement="top"
-						>
-							<div
-								class="mt-0.5 px-2 text-sm font-normal text-gray-500 dark:text-gray-400 line-clamp-2 max-w-xl markdown"
-							>
-								{@html marked.parse(
-									sanitizeResponseContent(models[selectedModelIdx]?.info?.meta?.description)
+				<div class="flex mt-1 mb-2">
+					<div in:fade={{ duration: 100, delay: 50 }}>
+						{#if models[selectedModelIdx]?.info?.meta?.description ?? null}
+							<Tooltip
+								className=" w-fit"
+								content={marked.parse(
+									sanitizeResponseContent(models[selectedModelIdx]?.info?.meta?.description ?? '')
 								)}
-							</div>
-						</Tooltip>
+								placement="top"
+							>
+								<div
+									class="mt-0.5 px-2 text-sm font-normal text-gray-500 dark:text-gray-400 line-clamp-2 max-w-xl markdown"
+								>
+									{@html marked.parse(
+										sanitizeResponseContent(models[selectedModelIdx]?.info?.meta?.description)
+									)}
+								</div>
+							</Tooltip>
 
-						{#if models[selectedModelIdx]?.info?.meta?.user}
-							<div class="mt-0.5 text-sm font-normal text-gray-400 dark:text-gray-500">
-								By
-								{#if models[selectedModelIdx]?.info?.meta?.user.community}
-									<a
-										href="https://openwebui.com/m/{models[selectedModelIdx]?.info?.meta?.user
-											.username}"
-										>{models[selectedModelIdx]?.info?.meta?.user.name
-											? models[selectedModelIdx]?.info?.meta?.user.name
-											: `@${models[selectedModelIdx]?.info?.meta?.user.username}`}</a
-									>
-								{:else}
-									{models[selectedModelIdx]?.info?.meta?.user.name}
-								{/if}
-							</div>
+							{#if models[selectedModelIdx]?.info?.meta?.user}
+								<div class="mt-0.5 text-sm font-normal text-gray-400 dark:text-gray-500">
+									By
+									{#if models[selectedModelIdx]?.info?.meta?.user.community}
+										<a
+											href="https://openwebui.com/m/{models[selectedModelIdx]?.info?.meta?.user
+												.username}"
+											>{models[selectedModelIdx]?.info?.meta?.user.name
+												? models[selectedModelIdx]?.info?.meta?.user.name
+												: `@${models[selectedModelIdx]?.info?.meta?.user.username}`}</a
+										>
+									{:else}
+										{models[selectedModelIdx]?.info?.meta?.user.name}
+									{/if}
+								</div>
+							{/if}
 						{/if}
-					{/if}
+					</div>
 				</div>
 			</div>
-			</div>
-			
-<div class="suggestion-inputbox w-full">
-{#if !webSearchEnabled}
-			<div class="mx-auto  font-primary" in:fade={{ duration: 200, delay: 200 }}>
-		<div class="">
-			<Suggestions
-				suggestionPrompts={atSelectedModel?.info?.meta?.suggestion_prompts ??
-					models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
-					$config?.default_prompt_suggestions ??
-					[]}
-				inputValue={prompt}
-				on:select={(e) => {
-					selectSuggestionPrompt(e.detail);
-				}}
-			/>
-		</div>
-	</div>
-	{/if}
 
-			<div class="text-base font-normal w-full">
-				<MessageInput
-					{history}
-					{selectedModels}
-					bind:files
-					bind:prompt
-					bind:autoScroll
-					bind:selectedToolIds
-					bind:selectedFilterIds
-					bind:imageGenerationEnabled
-					bind:codeInterpreterEnabled
-					bind:webSearchEnabled
-					bind:atSelectedModel
-					{toolServers}
-					{transparentBackground}
-					{stopResponse}
-					{createMessagePair}
-					placeholder={$i18n.t('How can I help you today?')}
-					onChange={(input) => {
-						if (!$temporaryChatEnabled) {
-							if (input.prompt !== null) {
-								localStorage.setItem(`chat-input`, JSON.stringify(input));
-							} else {
-								localStorage.removeItem(`chat-input`);
+			<div class="suggestion-inputbox w-full">
+				{#if !webSearchEnabled}
+					<div class="mx-auto font-primary" in:fade={{ duration: 200, delay: 200 }}>
+						<div class="">
+							<Suggestions
+								suggestionPrompts={atSelectedModel?.info?.meta?.suggestion_prompts ??
+									models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
+									$config?.default_prompt_suggestions ??
+									[]}
+								inputValue={prompt}
+								on:select={(e) => {
+									selectSuggestionPrompt(e.detail);
+								}}
+							/>
+						</div>
+					</div>
+				{/if}
+
+				<div class="text-base font-normal w-full">
+					<MessageInput
+						{history}
+						{selectedModels}
+						bind:files
+						bind:prompt
+						bind:autoScroll
+						bind:selectedToolIds
+						bind:selectedFilterIds
+						bind:imageGenerationEnabled
+						bind:codeInterpreterEnabled
+						bind:webSearchEnabled
+						bind:atSelectedModel
+						{toolServers}
+						{transparentBackground}
+						{stopResponse}
+						{createMessagePair}
+						placeholder={$i18n.t('How can I help you today?')}
+						onChange={(input) => {
+							if (!$temporaryChatEnabled) {
+								if (input.prompt !== null) {
+									localStorage.setItem(`chat-input`, JSON.stringify(input));
+								} else {
+									localStorage.removeItem(`chat-input`);
+								}
 							}
-						}
-					}}
-					on:upload={(e) => {
-						dispatch('upload', e.detail);
-					}}
-					on:submit={(e) => {
-						dispatch('submit', e.detail);
-					}}
-				/>
-			</div>
+						}}
+						on:upload={(e) => {
+							dispatch('upload', e.detail);
+						}}
+						on:submit={(e) => {
+							dispatch('submit', e.detail);
+						}}
+					/>
+				</div>
 			</div>
 		</div>
 	</div>
-	
 </div>

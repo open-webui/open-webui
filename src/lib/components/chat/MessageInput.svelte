@@ -65,7 +65,6 @@
 	import GovKno from '../icons/GovKno.svelte';
 	import { updateUserSettings } from '$lib/apis/users';
 
-
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 
 	const i18n = getContext('i18n');
@@ -187,19 +186,19 @@
 
 	let showToolsButton = false;
 	$: showToolsButton = toolServers.length + selectedToolIds.length > 0;
-	
+
 	let govBtnEnable = false;
-    let showGovKnoButton = false;
-	$: showGovKnoButton = $models.find((model)=> model.id.includes('rag'));
+	let showGovKnoButton = false;
+	$: showGovKnoButton = $models.find((model) => model.id.includes('rag'));
 
 	const saveGovKnoModel = async () => {
-		const modelName = govBtnEnable?'contextual-rag':'gpt-4.1';
+		const modelName = govBtnEnable ? 'contextual-rag' : 'gpt-4.1';
 		//settings.set({ ...$settings, models: [modelName] });
 		//await updateUserSettings(localStorage.token, { ui: $settings });
 		toast.success($i18n.t('Gov Knowledge model updated'));
-		govBtnEnable = !govBtnEnable
+		govBtnEnable = !govBtnEnable;
 	};
-	
+
 	let showWebSearchButton = true;
 	// $: showWebSearchButton =
 	// 	(atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).length ===
@@ -210,7 +209,7 @@
 	let showImageGenerationButton = false;
 	$: showImageGenerationButton =
 		(atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).length ===
-		imageGenerationCapableModels.length &&
+			imageGenerationCapableModels.length &&
 		$config?.features?.enable_image_generation &&
 		($_user.role === 'admin' || $_user?.permissions?.features?.image_generation);
 
@@ -628,9 +627,7 @@
 
 		<div class="{transparentBackground ? 'bg-transparent' : 'bg-transparent dark:bg-gray-900'} ">
 			<div
-				class="{($settings?.widescreenMode ?? null)
-					? 'max-w-full'
-					: 'max-w-6xl'} mx-auto inset-x-0"
+				class="{($settings?.widescreenMode ?? null) ? 'max-w-full' : 'max-w-6xl'} mx-auto inset-x-0"
 			>
 				<div class="">
 					<input
@@ -683,8 +680,7 @@
 							}}
 						>
 							<div
-								class="p-[24px] flex-1 flex flex-col bounded-[12px] shadow-custom3  relative w-full sm:rounded-3xl transition bg-light-bg dark:text-gray-100"
-
+								class="p-[24px] flex-1 flex flex-col bounded-[12px] shadow-custom3 relative w-full sm:rounded-3xl transition bg-light-bg dark:text-gray-100"
 								dir={$settings?.chatDirection ?? 'auto'}
 							>
 								{#if files.length > 0}
@@ -1308,7 +1304,7 @@
 											<!--<div
 												class="flex self-center w-[1px] h-4 mx-1.5 bg-gray-50 dark:bg-gray-800"
 											/>-->
-											<div class="flex gap-[8px] items-center  flex-1">
+											<div class="flex gap-[8px] items-center flex-1">
 												{#if showToolsButton}
 													<Tooltip
 														content={$i18n.t('{{COUNT}} Available Tools', {
@@ -1382,7 +1378,7 @@
 																? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
 																: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
 														>
-															<GovKno  />
+															<GovKno />
 															<span
 																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
 																>{$i18n.t('Gov Knowledge')}</span
@@ -1458,16 +1454,15 @@
 																? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
 																: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
 														>
-															<Attach/>
+															<Attach />
 															<span
-															class="font-heading font-medium text-[14px] leading-[22px] text-[#36383b] text-left whitespace-nowrap"
-														>
-															Attach files
-														</span>
+																class="font-heading font-medium text-[14px] leading-[22px] text-[#36383b] text-left whitespace-nowrap"
+															>
+																Attach files
+															</span>
 														</button>
 													</Tooltip>
 												{/if}
-
 											</div>
 											<div class="flex gap-[12px] items-center">
 												{#if false}
@@ -1506,50 +1501,45 @@
 														{/if}
 													</div>
 												{/if}
-
-
 											</div>
 											<div class="flex gap-[12px] items-center">
 												{#if false}
-<div class="model-box relative inline-block">
-  <!-- Dropdown Button -->
-  <button
-    type="button"
-    on:click={() => isOpen = !isOpen}
-    class="inline-flex gap-2 text-[14px] leading-[22px] font-medium font-NotoKufi-Regular justify-between items-center px-2 py-1 border border-gray-1300 bg-gray-1150 rounded-[40px]"
-  >
-    <svelte:component this={selected.icon} class="w-6 h-6" />
-    {selected.label}
-   <ArrowDown strokeWidth="2" className="size-[1.1rem]" />
+													<div class="model-box relative inline-block">
+														<!-- Dropdown Button -->
+														<button
+															type="button"
+															on:click={() => (isOpen = !isOpen)}
+															class="inline-flex gap-2 text-[14px] leading-[22px] font-medium font-NotoKufi-Regular justify-between items-center px-2 py-1 border border-gray-1300 bg-gray-1150 rounded-[40px]"
+														>
+															<svelte:component this={selected.icon} class="w-6 h-6" />
+															{selected.label}
+															<ArrowDown strokeWidth="2" className="size-[1.1rem]" />
+														</button>
 
-  </button>
-
-  <!-- Dropdown Menu -->
-  {#if isOpen}
-    <div
-      class="absolute z-10 bottom-[40px] w-[211px] bg-white border border-gray-200 rounded-md shadow-lg"
-    >
-      {#each Modeloptions as option}
-        <div
-          on:click={() => selectOption(option)}
-          class="flex px-[14px] py-[15px]  justify-between items-center text-gray-1200 font-medium cursor-pointer leading-[22px] font-NotoKufi-Regular"
-        >
-		<div class="flex gap-2 items-center">
-		<svelte:component this={option.icon} class="w-6 h-6" />
-          {option.label}
-		  </div>
-		   {#if option.label==selected.label}
-		  <CheckNew strokeWidth="2" className="size-[1.1rem]" />
-		  {/if}
-        </div>
-      {/each}
-    </div>
-  {/if}
-</div>
-
-{/if}
-
-</div>
+														<!-- Dropdown Menu -->
+														{#if isOpen}
+															<div
+																class="absolute z-10 bottom-[40px] w-[211px] bg-white border border-gray-200 rounded-md shadow-lg"
+															>
+																{#each Modeloptions as option}
+																	<div
+																		on:click={() => selectOption(option)}
+																		class="flex px-[14px] py-[15px] justify-between items-center text-gray-1200 font-medium cursor-pointer leading-[22px] font-NotoKufi-Regular"
+																	>
+																		<div class="flex gap-2 items-center">
+																			<svelte:component this={option.icon} class="w-6 h-6" />
+																			{option.label}
+																		</div>
+																		{#if option.label == selected.label}
+																			<CheckNew strokeWidth="2" className="size-[1.1rem]" />
+																		{/if}
+																	</div>
+																{/each}
+															</div>
+														{/if}
+													</div>
+												{/if}
+											</div>
 										{/if}
 									</div>
 

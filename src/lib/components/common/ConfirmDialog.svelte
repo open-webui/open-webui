@@ -100,7 +100,9 @@
 			}}
 		>
 			<div class="flex flex-col">
-				<div class="pb-[27px] text-neutrals-800 text-[18px] leading-[26px] font-bold dark:text-gray-200">
+				<div
+					class="pb-[27px] text-neutrals-800 text-[18px] leading-[26px] font-bold dark:text-gray-200"
+				>
 					{#if title !== ''}
 						{title}
 					{:else}

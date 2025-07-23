@@ -29,15 +29,12 @@
 	import Logo from '../icons/Logo.svelte';
 	import LightMode from '../icons/LightMode.svelte';
 	import DarkMode from '../icons/DarkMode.svelte';
-	
-	
 
 	import PencilSquare from '../icons/PencilSquare.svelte';
 	import Banner from '../common/Banner.svelte';
 
 	import MaterialIcon from '$lib/components/common/MaterialIcon.svelte';
 	import { updateUserSettings } from '$lib/apis/users';
-
 
 	const i18n = getContext('i18n');
 
@@ -52,9 +49,9 @@
 
 	let showShareChatModal = false;
 	let showDownloadChatModal = false;
-	 let isOn = false
+	let isOn = false;
 
-	 const setDefaultModel = async () => {
+	const setDefaultModel = async () => {
 		settings.set({ ...$settings, models: ['gpt-4.1'] });
 		await updateUserSettings(localStorage.token, { ui: $settings });
 	};
@@ -74,32 +71,35 @@
 	aria-label="New Chat"
 />-->
 
-<nav class=" flex items-center justify-between px-4 py-0 h-[56px] relative z-30 { $mobile ? ' w-full fixed dark:bg-gray-900 dark:border-gray-800' : 'bg-transparent' }">
-  {#if $mobile}
-    <button
-      class="flex items-center justify-center rounded-lg size-10 hover:bg-[#e5e7eb] transition"
-      aria-label="Toggle Sidebar"
-      on:click={() => showSidebar.set(!$showSidebar)}
-    >
-      <MaterialIcon name="menu" className="w-6 h-6" />
-    </button>
-    <!--<button
+<nav
+	class=" flex items-center justify-between px-4 py-0 h-[56px] relative z-30 {$mobile
+		? ' w-full fixed dark:bg-gray-900 dark:border-gray-800'
+		: 'bg-transparent'}"
+>
+	{#if $mobile}
+		<button
+			class="flex items-center justify-center rounded-lg size-10 hover:bg-[#e5e7eb] transition"
+			aria-label="Toggle Sidebar"
+			on:click={() => showSidebar.set(!$showSidebar)}
+		>
+			<MaterialIcon name="menu" className="w-6 h-6" />
+		</button>
+		<!--<button
       class="flex items-center justify-center rounded-lg size-10 hover:bg-[#e5e7eb] transition"
       aria-label="New Chat"
       on:click={() => initNewChat()}
     >
       <MaterialIcon name="add" className="w-[18px] h-[18px]" />
     </button>-->
-  {:else}
+	{:else}
+		<div class="flex items-center">
+			<img
+				src="/logov4.png"
+				alt="GovGPT Logo"
+				class="w-[28px] h-[28px] filter dark:invert dark:brightness-0 dark:contrast-200"
+			/>
 
-  <div class="flex items-center">
-    <img
-	src="/logov4.png"
-	alt="GovGPT Logo"
-	class="w-[28px] h-[28px] filter dark:invert dark:brightness-0 dark:contrast-200"
-	/>
-                 
-	<!--<div
+			<!--<div
 				class="flex-1 overflow-hidden max-w-full py-0.5
 			{$showSidebar ? 'ml-1' : ''}
 			"
@@ -108,9 +108,9 @@
 						<ModelSelector bind:selectedModels showSetDefault={!shareEnabled} />
 					{/if}
 				</div>-->
-				<div class="self-start flex flex-none items-center text-gray-600 dark:text-gray-400">
-					<!-- <div class="md:hidden flex self-center w-[1px] h-5 mx-2 bg-gray-300 dark:bg-stone-700" /> -->
-					<!--{#if shareEnabled && chat && (chat.id || $temporaryChatEnabled)}
+			<div class="self-start flex flex-none items-center text-gray-600 dark:text-gray-400">
+				<!-- <div class="md:hidden flex self-center w-[1px] h-5 mx-2 bg-gray-300 dark:bg-stone-700" /> -->
+				<!--{#if shareEnabled && chat && (chat.id || $temporaryChatEnabled)}
 						<Menu
 							{chat}
 							{shareEnabled}
@@ -144,7 +144,7 @@
 							</button>
 						</Menu>
 					{/if}-->
-					<!--<div class="flex items-center mr-[12px]">
+				<!--<div class="flex items-center mr-[12px]">
 
 					<label class="relative inline-flex items-center cursor-pointer">
 						<input type="checkbox" bind:checked={isOn} class="sr-only peer" />
@@ -155,7 +155,7 @@
 						</div>
 					</label>
 					</div>-->
-					<!--<Tooltip content={$i18n.t('Controls')}>
+				<!--<Tooltip content={$i18n.t('Controls')}>
 						<button
 							class=" flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
 							on:click={async () => {
@@ -169,8 +169,8 @@
 						</button>
 					</Tooltip>-->
 
-					{#if $user !== undefined && $user !== null}
-						<!--<UserMenu
+				{#if $user !== undefined && $user !== null}
+					<!--<UserMenu
 							className="max-w-[240px]"
 							role={$user?.role}
 							help={true}
@@ -194,12 +194,10 @@
 								</div>
 							</button>
 						</UserMenu>-->
-					{/if}
-				</div>
+				{/if}
 			</div>
+		</div>
 
-
-
-    <!-- No add/new chat icon on desktop -->
-  {/if}
+		<!-- No add/new chat icon on desktop -->
+	{/if}
 </nav>

@@ -26,10 +26,9 @@
 
 {#if loaded}
 	<div
-		class="p-4 flex flex-col w-full h-screen max-h-[100dvh] transition-width duration-200 ease-in-out   {$showSidebar
+		class="p-4 flex flex-col w-full h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
 			? 'md:max-w-[calc(100%-300px)]'
 			: 'md:max-w-[calc(100%-80px)]'} max-w-full"
-			
 	>
 		<div class="bg-white h-[calc(100vh-2rem)] max-h-[100dvh] dark:bg-gray-900">
 			<nav class="px-2.5 pt-1 backdrop-blur-xl drag-region">
@@ -61,7 +60,9 @@
 							>
 
 							<a
-								class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes('/admin/evaluations')
+								class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes(
+									'/admin/evaluations'
+								)
 									? 'active'
 									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
 								href="/admin/evaluations">{$i18n.t('Evaluations')}</a

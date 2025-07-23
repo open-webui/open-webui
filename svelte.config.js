@@ -17,26 +17,6 @@ const config = {
 			assets: 'build',
 			fallback: 'index.html'
 		}),
-		// poll for new version name every 60 seconds (to trigger reload mechanic in +layout.svelte)
-		version: {
-			name: (() => {
-				try {
-					return child_process.execSync('git rev-parse HEAD').toString().trim();
-				} catch {
-					// if git is not available, fallback to package.json version
-					// or current timestamp
-					try {
-						return (
-							JSON.parse(fs.readFileSync(new URL('./package.json', import.meta.url), 'utf8'))
-								?.version || Date.now().toString()
-						);
-					} catch {
-						return Date.now().toString();
-					}
-				}
-			})(),
-			pollInterval: 60000
-		}
 	},
 	vitePlugin: {
 		// inspector: {

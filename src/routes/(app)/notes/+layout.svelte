@@ -42,16 +42,15 @@
 
 {#if loaded}
 	<div
-		class="relative background-gradient-bg flex  w-full h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
+		class="relative background-gradient-bg flex w-full h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
 			? 'md:max-w-[calc(100%-300px)]'
 			: ''} max-w-full"
-	>{#if !$mobile}
-		<nav
-			class=" p-[24px] pb-[72px]">
-
+	>
+		{#if !$mobile}
+			<nav class=" p-[24px] pb-[72px]">
 				<Newlogo />
 
-			<!--<div class=" flex items-center">
+				<!--<div class=" flex items-center">
 				<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center">
 					<button
 						id="sidebar-toggle-button"
@@ -108,18 +107,20 @@
 					</div>
 				</div>
 			</div>-->
-		</nav>
-{/if}
+			</nav>
+		{/if}
 		<div class="max-w-[800px] flex-1 max-h-full @container">
 			<slot />
 		</div>
 
 		<div
-				class="{$mobile ?'fixed right-0 bg-neutrals-50 w-full h-[60px] px-[16px] flex justify-end items-center':'p-[24px] pb-[72px] '} font-bold text-[22px] leading-[30px] text-neutrals-800 touch-auto pointer-events-auto"
-			>
-				<a class="min-w-fit transition" href="/notes">
-					{$i18n.t('Notes')}
-				</a>
-			</div>
+			class="{$mobile
+				? 'fixed right-0 bg-neutrals-50 w-full h-[60px] px-[16px] flex justify-end items-center'
+				: 'p-[24px] pb-[72px] '} font-bold text-[22px] leading-[30px] text-neutrals-800 touch-auto pointer-events-auto"
+		>
+			<a class="min-w-fit transition" href="/notes">
+				{$i18n.t('Notes')}
+			</a>
+		</div>
 	</div>
 {/if}

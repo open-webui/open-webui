@@ -411,95 +411,95 @@
 			{/if}
 
 			{#if false}
-			<div class="px-3">
-				{#if tags && items.filter((item) => !(item.model?.info?.meta?.hidden ?? false)).length > 0}
-					<div
-						class=" flex w-full bg-white dark:bg-gray-850 overflow-x-auto scrollbar-none"
-						on:wheel={(e) => {
-							if (e.deltaY !== 0) {
-								e.preventDefault();
-								e.currentTarget.scrollLeft += e.deltaY;
-							}
-						}}
-					>
+				<div class="px-3">
+					{#if tags && items.filter((item) => !(item.model?.info?.meta?.hidden ?? false)).length > 0}
 						<div
-							class="flex gap-1 w-fit text-center text-sm font-medium rounded-full bg-transparent px-1.5 pb-0.5"
-							bind:this={tagsContainerElement}
+							class=" flex w-full bg-white dark:bg-gray-850 overflow-x-auto scrollbar-none"
+							on:wheel={(e) => {
+								if (e.deltaY !== 0) {
+									e.preventDefault();
+									e.currentTarget.scrollLeft += e.deltaY;
+								}
+							}}
 						>
-							{#if items.find((item) => item.model?.connection_type === 'local') || items.find((item) => item.model?.connection_type === 'external') || items.find((item) => item.model?.direct) || tags.length > 0}
-								<button
-									class="min-w-fit outline-none p-1.5 {selectedTag === '' &&
-									selectedConnectionType === ''
-										? ''
-										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
-									on:click={() => {
-										selectedConnectionType = '';
-										selectedTag = '';
-									}}
-								>
-									{$i18n.t('All')}
-								</button>
-							{/if}
+							<div
+								class="flex gap-1 w-fit text-center text-sm font-medium rounded-full bg-transparent px-1.5 pb-0.5"
+								bind:this={tagsContainerElement}
+							>
+								{#if items.find((item) => item.model?.connection_type === 'local') || items.find((item) => item.model?.connection_type === 'external') || items.find((item) => item.model?.direct) || tags.length > 0}
+									<button
+										class="min-w-fit outline-none p-1.5 {selectedTag === '' &&
+										selectedConnectionType === ''
+											? ''
+											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+										on:click={() => {
+											selectedConnectionType = '';
+											selectedTag = '';
+										}}
+									>
+										{$i18n.t('All')}
+									</button>
+								{/if}
 
-							{#if items.find((item) => item.model?.connection_type === 'local')}
-								<button
-									class="min-w-fit outline-none p-1.5 {selectedConnectionType === 'local'
-										? ''
-										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
-									on:click={() => {
-										selectedTag = '';
-										selectedConnectionType = 'local';
-									}}
-								>
-									{$i18n.t('Local')}
-								</button>
-							{/if}
+								{#if items.find((item) => item.model?.connection_type === 'local')}
+									<button
+										class="min-w-fit outline-none p-1.5 {selectedConnectionType === 'local'
+											? ''
+											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+										on:click={() => {
+											selectedTag = '';
+											selectedConnectionType = 'local';
+										}}
+									>
+										{$i18n.t('Local')}
+									</button>
+								{/if}
 
-							{#if items.find((item) => item.model?.connection_type === 'external')}
-								<button
-									class="min-w-fit outline-none p-1.5 {selectedConnectionType === 'external'
-										? ''
-										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
-									on:click={() => {
-										selectedTag = '';
-										selectedConnectionType = 'external';
-									}}
-								>
-									{$i18n.t('External')}
-								</button>
-							{/if}
+								{#if items.find((item) => item.model?.connection_type === 'external')}
+									<button
+										class="min-w-fit outline-none p-1.5 {selectedConnectionType === 'external'
+											? ''
+											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+										on:click={() => {
+											selectedTag = '';
+											selectedConnectionType = 'external';
+										}}
+									>
+										{$i18n.t('External')}
+									</button>
+								{/if}
 
-							{#if items.find((item) => item.model?.direct)}
-								<button
-									class="min-w-fit outline-none p-1.5 {selectedConnectionType === 'direct'
-										? ''
-										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
-									on:click={() => {
-										selectedTag = '';
-										selectedConnectionType = 'direct';
-									}}
-								>
-									{$i18n.t('Direct')}
-								</button>
-							{/if}
+								{#if items.find((item) => item.model?.direct)}
+									<button
+										class="min-w-fit outline-none p-1.5 {selectedConnectionType === 'direct'
+											? ''
+											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+										on:click={() => {
+											selectedTag = '';
+											selectedConnectionType = 'direct';
+										}}
+									>
+										{$i18n.t('Direct')}
+									</button>
+								{/if}
 
-							{#each tags as tag}
-								<button
-									class="min-w-fit outline-none p-1.5 {selectedTag === tag
-										? ''
-										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
-									on:click={() => {
-										selectedConnectionType = '';
-										selectedTag = tag;
-									}}
-								>
-									{tag}
-								</button>
-							{/each}
+								{#each tags as tag}
+									<button
+										class="min-w-fit outline-none p-1.5 {selectedTag === tag
+											? ''
+											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+										on:click={() => {
+											selectedConnectionType = '';
+											selectedTag = tag;
+										}}
+									>
+										{tag}
+									</button>
+								{/each}
+							</div>
 						</div>
-					</div>
-				{/if}
-			</div>
+					{/if}
+				</div>
 			{/if}
 
 			<div class="p-3 max-h-64 overflow-y-auto group relative max-w-[200px]">

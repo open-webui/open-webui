@@ -66,8 +66,7 @@
 		{
 			key: 'off_topic',
 			header: 'Off-topic and irrelevant',
-			sub: 
-				"Doesnt' address my question"
+			sub: "Doesnt' address my question"
 		},
 		{
 			key: 'too_technical',
@@ -169,18 +168,15 @@
 	<div class="flex justify-between items-center">
 		<div class="text-sm font-medium">
 			<div class="flex items-center gap-1">
-			{#if message?.annotation?.rating === 1}
-				<MaterialIcon name="thumb_up" size="1.1rem" color="green"/>
-			{:else}
-				<MaterialIcon name="thumb_down" size="1.1rem" color="red"/>
-			{/if}
-			<span class="text-sm font-medium px-2">
-			{$i18n.t('How would you rate this response?')}
-			</span>
-		</div>
-
-			
-		
+				{#if message?.annotation?.rating === 1}
+					<MaterialIcon name="thumb_up" size="1.1rem" color="green" />
+				{:else}
+					<MaterialIcon name="thumb_down" size="1.1rem" color="red" />
+				{/if}
+				<span class="text-sm font-medium px-2">
+					{$i18n.t('How would you rate this response?')}
+				</span>
+			</div>
 		</div>
 
 		<!-- <div class=" text-sm">{$i18n.t('Tell us more:')}</div> -->
@@ -205,12 +201,13 @@
 
 	<div>
 		{#if reasons.length > 0}
-		
-
 			<div class="flex flex-wrap gap-1.5 text-sm mt-1.5 py-2">
 				{#each reasons as reason}
 					<button
-						class="px-3 py-0.5 border border-gray-100 dark:border-gray-850 hover:bg-gray-50 dark:hover:bg-gray-850 {selectedReason === reason.key ? 'bg-gray-100 dark:bg-gray-800' : ''} transition rounded-3xl flex flex-col items-center min-w-[200px]"
+						class="px-3 py-0.5 border border-gray-100 dark:border-gray-850 hover:bg-gray-50 dark:hover:bg-gray-850 {selectedReason ===
+						reason.key
+							? 'bg-gray-100 dark:bg-gray-800'
+							: ''} transition rounded-3xl flex flex-col items-center min-w-[200px]"
 						on:click={() => {
 							selectedReason = reason.key;
 						}}
