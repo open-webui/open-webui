@@ -193,7 +193,7 @@
 	let showGovKnoWebSearchToggle = false;
 	let govBtnEnable = false;
 	let showGovKnoButton = false;
-	$: showGovKnoButton = $models.find((model) => !model.id.includes('rag'));
+	$: showGovKnoButton = $models.find((model) => model.id.includes('rag'));
 
 	const handleFilterToggle = () => {
 		showGovKnoWebSearchToggle = !showGovKnoWebSearchToggle;
