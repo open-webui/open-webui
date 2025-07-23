@@ -5,6 +5,7 @@ import os
 import pkgutil
 import sys
 import shutil
+from uuid import uuid4
 from pathlib import Path
 
 import markdown
@@ -128,6 +129,7 @@ else:
         PACKAGE_DATA = {"version": "0.0.0"}
 
 VERSION = PACKAGE_DATA["version"]
+INSTANCE_ID = os.environ.get("INSTANCE_ID", str(uuid4()))
 
 
 # Function to parse each section
@@ -194,6 +196,7 @@ CHANGELOG = changelog_json
 ####################################
 
 SAFE_MODE = os.environ.get("SAFE_MODE", "false").lower() == "true"
+
 
 ####################################
 # ENABLE_FORWARD_USER_INFO_HEADERS
@@ -262,21 +265,40 @@ else:
 
 DATABASE_URL = os.environ.get("DATABASE_URL", f"sqlite:///{DATA_DIR}/webui.db")
 
+DATABASE_TYPE = os.environ.get("DATABASE_TYPE")
+DATABASE_USER = os.environ.get("DATABASE_USER")
+DATABASE_PASSWORD = os.environ.get("DATABASE_PASSWORD")
+
+DATABASE_CRED = ""
+if DATABASE_USER:
+    DATABASE_CRED += f"{DATABASE_USER}"
+if DATABASE_PASSWORD:
+    DATABASE_CRED += f":{DATABASE_PASSWORD}"
+
+DB_VARS = {
+    "db_type": DATABASE_TYPE,
+    "db_cred": DATABASE_CRED,
+    "db_host": os.environ.get("DATABASE_HOST"),
+    "db_port": os.environ.get("DATABASE_PORT"),
+    "db_name": os.environ.get("DATABASE_NAME"),
+}
+
+if all(DB_VARS.values()):
+    DATABASE_URL = f"{DB_VARS['db_type']}://{DB_VARS['db_cred']}@{DB_VARS['db_host']}:{DB_VARS['db_port']}/{DB_VARS['db_name']}"
+
 # Replace the postgres:// with postgresql://
 if "postgres://" in DATABASE_URL:
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://")
 
 DATABASE_SCHEMA = os.environ.get("DATABASE_SCHEMA", None)
 
-DATABASE_POOL_SIZE = os.environ.get("DATABASE_POOL_SIZE", 0)
+DATABASE_POOL_SIZE = os.environ.get("DATABASE_POOL_SIZE", None)
 
-if DATABASE_POOL_SIZE == "":
-    DATABASE_POOL_SIZE = 0
-else:
+if DATABASE_POOL_SIZE != None:
     try:
         DATABASE_POOL_SIZE = int(DATABASE_POOL_SIZE)
     except Exception:
-        DATABASE_POOL_SIZE = 0
+        DATABASE_POOL_SIZE = None
 
 DATABASE_POOL_MAX_OVERFLOW = os.environ.get("DATABASE_POOL_MAX_OVERFLOW", 0)
 
@@ -321,8 +343,18 @@ ENABLE_REALTIME_CHAT_SAVE = (
 ####################################
 
 REDIS_URL = os.environ.get("REDIS_URL", "")
+REDIS_KEY_PREFIX = os.environ.get("REDIS_KEY_PREFIX", "open-webui")
 REDIS_SENTINEL_HOSTS = os.environ.get("REDIS_SENTINEL_HOSTS", "")
 REDIS_SENTINEL_PORT = os.environ.get("REDIS_SENTINEL_PORT", "26379")
+
+# Maximum number of retries for Redis operations when using Sentinel fail-over
+REDIS_SENTINEL_MAX_RETRY_COUNT = os.environ.get("REDIS_SENTINEL_MAX_RETRY_COUNT", "2")
+try:
+    REDIS_SENTINEL_MAX_RETRY_COUNT = int(REDIS_SENTINEL_MAX_RETRY_COUNT)
+    if REDIS_SENTINEL_MAX_RETRY_COUNT < 1:
+        REDIS_SENTINEL_MAX_RETRY_COUNT = 2
+except ValueError:
+    REDIS_SENTINEL_MAX_RETRY_COUNT = 2
 
 ####################################
 # UVICORN WORKERS
@@ -347,9 +379,17 @@ WEBUI_AUTH_TRUSTED_EMAIL_HEADER = os.environ.get(
     "WEBUI_AUTH_TRUSTED_EMAIL_HEADER", None
 )
 WEBUI_AUTH_TRUSTED_NAME_HEADER = os.environ.get("WEBUI_AUTH_TRUSTED_NAME_HEADER", None)
+WEBUI_AUTH_TRUSTED_GROUPS_HEADER = os.environ.get(
+    "WEBUI_AUTH_TRUSTED_GROUPS_HEADER", None
+)
+
 
 BYPASS_MODEL_ACCESS_CONTROL = (
     os.environ.get("BYPASS_MODEL_ACCESS_CONTROL", "False").lower() == "true"
+)
+
+WEBUI_AUTH_SIGNOUT_REDIRECT_URL = os.environ.get(
+    "WEBUI_AUTH_SIGNOUT_REDIRECT_URL", None
 )
 
 ####################################
@@ -384,14 +424,43 @@ WEBUI_AUTH_COOKIE_SECURE = (
 if WEBUI_AUTH and WEBUI_SECRET_KEY == "":
     raise ValueError(ERROR_MESSAGES.ENV_VAR_NOT_FOUND)
 
+ENABLE_COMPRESSION_MIDDLEWARE = (
+    os.environ.get("ENABLE_COMPRESSION_MIDDLEWARE", "True").lower() == "true"
+)
+
+####################################
+# MODELS
+####################################
+
+MODELS_CACHE_TTL = os.environ.get("MODELS_CACHE_TTL", "1")
+if MODELS_CACHE_TTL == "":
+    MODELS_CACHE_TTL = None
+else:
+    try:
+        MODELS_CACHE_TTL = int(MODELS_CACHE_TTL)
+    except Exception:
+        MODELS_CACHE_TTL = 1
+
+
+####################################
+# WEBSOCKET SUPPORT
+####################################
+
 ENABLE_WEBSOCKET_SUPPORT = (
     os.environ.get("ENABLE_WEBSOCKET_SUPPORT", "True").lower() == "true"
 )
 
+
 WEBSOCKET_MANAGER = os.environ.get("WEBSOCKET_MANAGER", "")
 
 WEBSOCKET_REDIS_URL = os.environ.get("WEBSOCKET_REDIS_URL", REDIS_URL)
-WEBSOCKET_REDIS_LOCK_TIMEOUT = os.environ.get("WEBSOCKET_REDIS_LOCK_TIMEOUT", 60)
+
+websocket_redis_lock_timeout = os.environ.get("WEBSOCKET_REDIS_LOCK_TIMEOUT", "60")
+
+try:
+    WEBSOCKET_REDIS_LOCK_TIMEOUT = int(websocket_redis_lock_timeout)
+except ValueError:
+    WEBSOCKET_REDIS_LOCK_TIMEOUT = 60
 
 WEBSOCKET_SENTINEL_HOSTS = os.environ.get("WEBSOCKET_SENTINEL_HOSTS", "")
 
@@ -406,6 +475,11 @@ else:
         AIOHTTP_CLIENT_TIMEOUT = int(AIOHTTP_CLIENT_TIMEOUT)
     except Exception:
         AIOHTTP_CLIENT_TIMEOUT = 300
+
+
+AIOHTTP_CLIENT_SESSION_SSL = (
+    os.environ.get("AIOHTTP_CLIENT_SESSION_SSL", "True").lower() == "true"
+)
 
 AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST = os.environ.get(
     "AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST",
@@ -435,14 +509,68 @@ else:
     except Exception:
         AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA = 10
 
+
+AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL = (
+    os.environ.get("AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL", "True").lower() == "true"
+)
+
+
+####################################
+# SENTENCE TRANSFORMERS
+####################################
+
+
+SENTENCE_TRANSFORMERS_BACKEND = os.environ.get("SENTENCE_TRANSFORMERS_BACKEND", "")
+if SENTENCE_TRANSFORMERS_BACKEND == "":
+    SENTENCE_TRANSFORMERS_BACKEND = "torch"
+
+
+SENTENCE_TRANSFORMERS_MODEL_KWARGS = os.environ.get(
+    "SENTENCE_TRANSFORMERS_MODEL_KWARGS", ""
+)
+if SENTENCE_TRANSFORMERS_MODEL_KWARGS == "":
+    SENTENCE_TRANSFORMERS_MODEL_KWARGS = None
+else:
+    try:
+        SENTENCE_TRANSFORMERS_MODEL_KWARGS = json.loads(
+            SENTENCE_TRANSFORMERS_MODEL_KWARGS
+        )
+    except Exception:
+        SENTENCE_TRANSFORMERS_MODEL_KWARGS = None
+
+
+SENTENCE_TRANSFORMERS_CROSS_ENCODER_BACKEND = os.environ.get(
+    "SENTENCE_TRANSFORMERS_CROSS_ENCODER_BACKEND", ""
+)
+if SENTENCE_TRANSFORMERS_CROSS_ENCODER_BACKEND == "":
+    SENTENCE_TRANSFORMERS_CROSS_ENCODER_BACKEND = "torch"
+
+
+SENTENCE_TRANSFORMERS_CROSS_ENCODER_MODEL_KWARGS = os.environ.get(
+    "SENTENCE_TRANSFORMERS_CROSS_ENCODER_MODEL_KWARGS", ""
+)
+if SENTENCE_TRANSFORMERS_CROSS_ENCODER_MODEL_KWARGS == "":
+    SENTENCE_TRANSFORMERS_CROSS_ENCODER_MODEL_KWARGS = None
+else:
+    try:
+        SENTENCE_TRANSFORMERS_CROSS_ENCODER_MODEL_KWARGS = json.loads(
+            SENTENCE_TRANSFORMERS_CROSS_ENCODER_MODEL_KWARGS
+        )
+    except Exception:
+        SENTENCE_TRANSFORMERS_CROSS_ENCODER_MODEL_KWARGS = None
+
 ####################################
 # OFFLINE_MODE
 ####################################
 
+ENABLE_VERSION_UPDATE_CHECK = (
+    os.environ.get("ENABLE_VERSION_UPDATE_CHECK", "true").lower() == "true"
+)
 OFFLINE_MODE = os.environ.get("OFFLINE_MODE", "false").lower() == "true"
 
 if OFFLINE_MODE:
     os.environ["HF_HUB_OFFLINE"] = "1"
+    ENABLE_VERSION_UPDATE_CHECK = False
 
 ####################################
 # AUDIT LOGGING
@@ -451,6 +579,14 @@ if OFFLINE_MODE:
 AUDIT_LOGS_FILE_PATH = f"{DATA_DIR}/audit.log"
 # Maximum size of a file before rotating into a new log file
 AUDIT_LOG_FILE_ROTATION_SIZE = os.getenv("AUDIT_LOG_FILE_ROTATION_SIZE", "10MB")
+
+# Comma separated list of logger names to use for audit logging
+# Default is "uvicorn.access" which is the access log for Uvicorn
+# You can add more logger names to this list if you want to capture more logs
+AUDIT_UVICORN_LOGGER_NAMES = os.getenv(
+    "AUDIT_UVICORN_LOGGER_NAMES", "uvicorn.access"
+).split(",")
+
 # METADATA | REQUEST | REQUEST_RESPONSE
 AUDIT_LOG_LEVEL = os.getenv("AUDIT_LOG_LEVEL", "NONE").upper()
 try:
@@ -465,13 +601,18 @@ AUDIT_EXCLUDED_PATHS = os.getenv("AUDIT_EXCLUDED_PATHS", "/chats,/chat,/folders"
 AUDIT_EXCLUDED_PATHS = [path.strip() for path in AUDIT_EXCLUDED_PATHS]
 AUDIT_EXCLUDED_PATHS = [path.lstrip("/") for path in AUDIT_EXCLUDED_PATHS]
 
+
 ####################################
 # OPENTELEMETRY
 ####################################
 
 ENABLE_OTEL = os.environ.get("ENABLE_OTEL", "False").lower() == "true"
+ENABLE_OTEL_METRICS = os.environ.get("ENABLE_OTEL_METRICS", "False").lower() == "true"
 OTEL_EXPORTER_OTLP_ENDPOINT = os.environ.get(
     "OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317"
+)
+OTEL_EXPORTER_OTLP_INSECURE = (
+    os.environ.get("OTEL_EXPORTER_OTLP_INSECURE", "False").lower() == "true"
 )
 OTEL_SERVICE_NAME = os.environ.get("OTEL_SERVICE_NAME", "open-webui")
 OTEL_RESOURCE_ATTRIBUTES = os.environ.get(
@@ -480,6 +621,14 @@ OTEL_RESOURCE_ATTRIBUTES = os.environ.get(
 OTEL_TRACES_SAMPLER = os.environ.get(
     "OTEL_TRACES_SAMPLER", "parentbased_always_on"
 ).lower()
+OTEL_BASIC_AUTH_USERNAME = os.environ.get("OTEL_BASIC_AUTH_USERNAME", "")
+OTEL_BASIC_AUTH_PASSWORD = os.environ.get("OTEL_BASIC_AUTH_PASSWORD", "")
+
+
+OTEL_OTLP_SPAN_EXPORTER = os.environ.get(
+    "OTEL_OTLP_SPAN_EXPORTER", "grpc"
+).lower()  # grpc or http
+
 
 ####################################
 # TOOLS/FUNCTIONS PIP OPTIONS

@@ -25,6 +25,19 @@
 		toast.success($i18n.t('Default model updated'));
 	};
 
+	const pinModelHandler = async (modelId) => {
+		let pinnedModels = $settings?.pinnedModels ?? [];
+
+		if (pinnedModels.includes(modelId)) {
+			pinnedModels = pinnedModels.filter((id) => id !== modelId);
+		} else {
+			pinnedModels = [...new Set([...pinnedModels, modelId])];
+		}
+
+		settings.set({ ...$settings, pinnedModels: pinnedModels });
+		await updateUserSettings(localStorage.token, { ui: $settings });
+	};
+
 	$: if (selectedModels.length > 0 && $models.length > 0) {
 		selectedModels = selectedModels.map((model) =>
 			$models.map((m) => m.id).includes(model) ? model : ''
@@ -36,7 +49,7 @@
 	{#each selectedModels as selectedModel, selectedModelIdx}
 		<div class="flex w-full max-w-fit">
 			<div class="overflow-hidden w-full">
-				<div class="mr-1 max-w-full">
+				<div class="max-w-full {($settings?.highContrastMode ?? false) ? 'm-1' : 'mr-1'}">
 					<Selector
 						id={`${selectedModelIdx}`}
 						placeholder={$i18n.t('Select a model')}
@@ -49,6 +62,7 @@
 							? ($user?.permissions?.chat?.temporary ?? true) &&
 								!($user?.permissions?.chat?.temporary_enforced ?? false)
 							: true}
+						{pinModelHandler}
 						bind:value={selectedModel}
 					/>
 				</div>
@@ -114,7 +128,9 @@
 </div>
 
 {#if showSetDefault}
-	<div class=" absolute text-left mt-[1px] ml-1 text-[0.7rem] text-gray-500 font-primary">
+	<div
+		class="absolute text-left mt-[1px] ml-1 text-[0.7rem] text-gray-600 dark:text-gray-400 font-primary"
+	>
 		<button on:click={saveDefaultModel}> {$i18n.t('Set as default')}</button>
 	</div>
 {/if}

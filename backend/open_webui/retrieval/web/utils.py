@@ -25,6 +25,7 @@ from langchain_community.document_loaders.firecrawl import FireCrawlLoader
 from langchain_community.document_loaders.base import BaseLoader
 from langchain_core.documents import Document
 from open_webui.retrieval.loaders.tavily import TavilyLoader
+from open_webui.retrieval.loaders.external_web import ExternalWebLoader
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.config import (
     ENABLE_RAG_LOCAL_WEB_FETCH,
@@ -35,8 +36,10 @@ from open_webui.config import (
     FIRECRAWL_API_KEY,
     TAVILY_API_KEY,
     TAVILY_EXTRACT_DEPTH,
+    EXTERNAL_WEB_LOADER_URL,
+    EXTERNAL_WEB_LOADER_API_KEY,
 )
-from open_webui.env import SRC_LOG_LEVELS
+from open_webui.env import SRC_LOG_LEVELS, AIOHTTP_CLIENT_SESSION_SSL
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -167,7 +170,7 @@ class SafeFireCrawlLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
         continue_on_failure: bool = True,
         api_key: Optional[str] = None,
         api_url: Optional[str] = None,
-        mode: Literal["crawl", "scrape", "map"] = "crawl",
+        mode: Literal["crawl", "scrape", "map"] = "scrape",
         proxy: Optional[Dict[str, str]] = None,
         params: Optional[Dict] = None,
     ):
@@ -225,7 +228,10 @@ class SafeFireCrawlLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
                     mode=self.mode,
                     params=self.params,
                 )
-                yield from loader.lazy_load()
+                for document in loader.lazy_load():
+                    if not document.metadata.get("source"):
+                        document.metadata["source"] = document.metadata.get("sourceURL")
+                    yield document
             except Exception as e:
                 if self.continue_on_failure:
                     log.exception(f"Error loading {url}: {e}")
@@ -245,6 +251,8 @@ class SafeFireCrawlLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
                     params=self.params,
                 )
                 async for document in loader.alazy_load():
+                    if not document.metadata.get("source"):
+                        document.metadata["source"] = document.metadata.get("sourceURL")
                     yield document
             except Exception as e:
                 if self.continue_on_failure:
@@ -507,7 +515,8 @@ class SafeWebBaseLoader(WebBaseLoader):
                         kwargs["ssl"] = False
 
                     async with session.get(
-                        url, **(self.requests_kwargs | kwargs)
+                        url,
+                        **(self.requests_kwargs | kwargs),
                     ) as response:
                         if self.raise_for_status:
                             response.raise_for_status()
@@ -618,6 +627,11 @@ def get_web_loader(
         WebLoaderClass = SafeTavilyLoader
         web_loader_args["api_key"] = TAVILY_API_KEY.value
         web_loader_args["extract_depth"] = TAVILY_EXTRACT_DEPTH.value
+
+    if WEB_LOADER_ENGINE.value == "external":
+        WebLoaderClass = ExternalWebLoader
+        web_loader_args["external_url"] = EXTERNAL_WEB_LOADER_URL.value
+        web_loader_args["external_api_key"] = EXTERNAL_WEB_LOADER_API_KEY.value
 
     if WebLoaderClass:
         web_loader = WebLoaderClass(**web_loader_args)

@@ -11,6 +11,7 @@
 		chatId,
 		tags,
 		showSidebar,
+		showSearch,
 		mobile,
 		showArchivedChats,
 		pinnedChats,
@@ -20,21 +21,19 @@
 		channels,
 		socket,
 		config,
-		isApp
+		isApp,
+		models,
+		selectedFolder
 	} from '$lib/stores';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 
 	const i18n = getContext('i18n');
 
 	import {
-		deleteChatById,
 		getChatList,
 		getAllTags,
-		getChatListBySearchText,
-		createNewChat,
 		getPinnedChatList,
 		toggleChatPinnedStatusById,
-		getChatPinnedStatusById,
 		getChatById,
 		updateChatFolderIdById,
 		importChat
@@ -42,13 +41,12 @@
 	import { createNewFolder, getFolders, updateFolderParentIdById } from '$lib/apis/folders';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
-	import ArchivedChatsModal from './Sidebar/ArchivedChatsModal.svelte';
+	import ArchivedChatsModal from './ArchivedChatsModal.svelte';
 	import UserMenu from './Sidebar/UserMenu.svelte';
 	import ChatItem from './Sidebar/ChatItem.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Loader from '../common/Loader.svelte';
 	import AddFilesPlaceholder from '../AddFilesPlaceholder.svelte';
-	import SearchInput from './Sidebar/SearchInput.svelte';
 	import Folder from '../common/Folder.svelte';
 	import Plus from '../icons/Plus.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
@@ -58,12 +56,13 @@
 	import ChannelItem from './Sidebar/ChannelItem.svelte';
 	import PencilSquare from '../icons/PencilSquare.svelte';
 	import Home from '../icons/Home.svelte';
+	import Search from '../icons/Search.svelte';
+	import SearchModal from './SearchModal.svelte';
+	import FolderModal from './Sidebar/Folders/FolderModal.svelte';
 
 	const BREAKPOINT = 768;
 
 	let navElement;
-	let search = '';
-
 	let shiftKey = false;
 
 	let selectedChatId = null;
@@ -76,6 +75,7 @@
 	let chatListLoading = false;
 	let allChatsLoaded = false;
 
+	let showCreateFolderModal = false;
 	let folders = {};
 	let newFolderId = null;
 
@@ -119,7 +119,7 @@
 		}
 	};
 
-	const createFolder = async (name = 'Untitled') => {
+	const createFolder = async ({ name, data }) => {
 		if (name === '') {
 			toast.error($i18n.t('Folder name cannot be empty.'));
 			return;
@@ -150,13 +150,16 @@
 			}
 		};
 
-		const res = await createNewFolder(localStorage.token, name).catch((error) => {
+		const res = await createNewFolder(localStorage.token, {
+			name,
+			data
+		}).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});
 
 		if (res) {
-			newFolderId = res.id;
+			// newFolderId = res.id;
 			await initFolders();
 		}
 	};
@@ -174,11 +177,7 @@
 		currentChatPage.set(1);
 		allChatsLoaded = false;
 
-		if (search) {
-			await chats.set(await getChatListBySearchText(localStorage.token, search, $currentChatPage));
-		} else {
-			await chats.set(await getChatList(localStorage.token, $currentChatPage));
-		}
+		await chats.set(await getChatList(localStorage.token, $currentChatPage));
 
 		// Enable pagination
 		scrollPaginationEnabled.set(true);
@@ -191,11 +190,7 @@
 
 		let newChatList = [];
 
-		if (search) {
-			newChatList = await getChatListBySearchText(localStorage.token, search, $currentChatPage);
-		} else {
-			newChatList = await getChatList(localStorage.token, $currentChatPage);
-		}
+		newChatList = await getChatList(localStorage.token, $currentChatPage);
 
 		// once the bottom of the list has been reached (no results) there is no need to continue querying
 		allChatsLoaded = newChatList.length === 0;
@@ -204,38 +199,20 @@
 		chatListLoading = false;
 	};
 
-	let searchDebounceTimeout;
-
-	const searchDebounceHandler = async () => {
-		console.log('search', search);
-		chats.set(null);
-
-		if (searchDebounceTimeout) {
-			clearTimeout(searchDebounceTimeout);
-		}
-
-		if (search === '') {
-			await initChatList();
-			return;
-		} else {
-			searchDebounceTimeout = setTimeout(async () => {
-				allChatsLoaded = false;
-				currentChatPage.set(1);
-				await chats.set(await getChatListBySearchText(localStorage.token, search));
-
-				if ($chats.length === 0) {
-					tags.set(await getAllTags(localStorage.token));
-				}
-			}, 1000);
-		}
-	};
-
 	const importChatHandler = async (items, pinned = false, folderId = null) => {
 		console.log('importChatHandler', items, pinned, folderId);
 		for (const item of items) {
 			console.log(item);
 			if (item.chat) {
-				await importChat(localStorage.token, item.chat, item?.meta ?? {}, pinned, folderId);
+				await importChat(
+					localStorage.token,
+					item.chat,
+					item?.meta ?? {},
+					pinned,
+					folderId,
+					item?.created_at ?? null,
+					item?.updated_at ?? null
+				);
 			}
 		}
 
@@ -390,6 +367,10 @@
 			}
 		});
 
+		chats.subscribe((value) => {
+			initFolders();
+		});
+
 		await initChannels();
 		await initChatList();
 
@@ -400,7 +381,7 @@
 		window.addEventListener('touchend', onTouchEnd);
 
 		window.addEventListener('focus', onFocus);
-		window.addEventListener('blur-sm', onBlur);
+		window.addEventListener('blur', onBlur);
 
 		const dropZone = document.getElementById('sidebar');
 
@@ -417,7 +398,7 @@
 		window.removeEventListener('touchend', onTouchEnd);
 
 		window.removeEventListener('focus', onFocus);
-		window.removeEventListener('blur-sm', onBlur);
+		window.removeEventListener('blur', onBlur);
 
 		const dropZone = document.getElementById('sidebar');
 
@@ -429,7 +410,7 @@
 
 <ArchivedChatsModal
 	bind:show={$showArchivedChats}
-	on:change={async () => {
+	onUpdate={async () => {
 		await initChatList();
 	}}
 />
@@ -453,6 +434,14 @@
 	}}
 />
 
+<FolderModal
+	bind:show={showCreateFolderModal}
+	onSubmit={async (folder) => {
+		await createFolder(folder);
+		showCreateFolderModal = false;
+	}}
+/>
+
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 
 {#if $showSidebar}
@@ -465,6 +454,15 @@
 		}}
 	/>
 {/if}
+
+<SearchModal
+	bind:show={$showSearch}
+	onClose={() => {
+		if ($mobile) {
+			showSidebar.set(false);
+		}
+	}}
+/>
 
 <div
 	bind:this={navElement}
@@ -514,10 +512,15 @@
 				draggable="false"
 				on:click={async () => {
 					selectedChatId = null;
-					await goto('/');
-					const newChatButton = document.getElementById('new-chat-button');
+					selectedFolder.set(null);
+
+					if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
+						await temporaryChatEnabled.set(true);
+					} else {
+						await temporaryChatEnabled.set(false);
+					}
+
 					setTimeout(() => {
-						newChatButton?.click();
 						if ($mobile) {
 							showSidebar.set(false);
 						}
@@ -529,11 +532,11 @@
 						<img
 							crossorigin="anonymous"
 							src="{WEBUI_BASE_URL}/static/favicon.png"
-							class=" size-5 -translate-x-1.5 rounded-full"
+							class="sidebar-new-chat-icon size-5 -translate-x-1.5 rounded-full"
 							alt="logo"
 						/>
 					</div>
-					<div class=" self-center font-medium text-sm text-gray-850 dark:text-white font-primary">
+					<div class=" self-center text-sm text-gray-850 dark:text-white font-primary">
 						{$i18n.t('New Chat')}
 					</div>
 				</div>
@@ -570,6 +573,66 @@
 			</div>
 		{/if} -->
 
+		<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
+			<button
+				class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
+				on:click={() => {
+					showSearch.set(true);
+				}}
+				draggable="false"
+			>
+				<div class="self-center">
+					<Search strokeWidth="2" className="size-[1.1rem]" />
+				</div>
+
+				<div class="flex self-center translate-y-[0.5px]">
+					<div class=" self-center text-sm font-primary">{$i18n.t('Search')}</div>
+				</div>
+			</button>
+		</div>
+
+		{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
+			<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
+				<a
+					class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+					href="/notes"
+					on:click={() => {
+						selectedChatId = null;
+						chatId.set('');
+
+						if ($mobile) {
+							showSidebar.set(false);
+						}
+					}}
+					draggable="false"
+				>
+					<div class="self-center">
+						<svg
+							class="size-4"
+							aria-hidden="true"
+							xmlns="http://www.w3.org/2000/svg"
+							width="24"
+							height="24"
+							fill="none"
+							viewBox="0 0 24 24"
+						>
+							<path
+								stroke="currentColor"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M10 3v4a1 1 0 0 1-1 1H5m4 8h6m-6-4h6m4-8v16a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7.914a1 1 0 0 1 .293-.707l3.914-3.914A1 1 0 0 1 9.914 3H18a1 1 0 0 1 1 1Z"
+							/>
+						</svg>
+					</div>
+
+					<div class="flex self-center translate-y-[0.5px]">
+						<div class=" self-center text-sm font-primary">{$i18n.t('Notes')}</div>
+					</div>
+				</a>
+			</div>
+		{/if}
+
 		{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools}
 			<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
 				<a
@@ -603,31 +666,55 @@
 					</div>
 
 					<div class="flex self-center translate-y-[0.5px]">
-						<div class=" self-center font-medium text-sm font-primary">{$i18n.t('Workspace')}</div>
+						<div class=" self-center text-sm font-primary">{$i18n.t('Workspace')}</div>
 					</div>
 				</a>
 			</div>
 		{/if}
 
-		<div class="relative {$temporaryChatEnabled ? 'opacity-20' : ''}">
-			{#if $temporaryChatEnabled}
-				<div class="absolute z-40 w-full h-full flex justify-center"></div>
+		<div class="relative flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
+			{#if ($models ?? []).length > 0 && ($settings?.pinnedModels ?? []).length > 0}
+				<div class="mt-0.5">
+					{#each $settings.pinnedModels as modelId (modelId)}
+						{@const model = $models.find((model) => model.id === modelId)}
+						{#if model}
+							<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
+								<a
+									class="grow flex items-center space-x-2.5 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+									href="/?model={modelId}"
+									on:click={() => {
+										selectedChatId = null;
+										chatId.set('');
+
+										if ($mobile) {
+											showSidebar.set(false);
+										}
+									}}
+									draggable="false"
+								>
+									<div class="self-center shrink-0">
+										<img
+											crossorigin="anonymous"
+											src={model?.info?.meta?.profile_image_url ??
+												`${WEBUI_BASE_URL}/static/favicon.png`}
+											class=" size-5 rounded-full -translate-x-[0.5px]"
+											alt="logo"
+										/>
+									</div>
+
+									<div class="flex self-center translate-y-[0.5px]">
+										<div class=" self-center text-sm font-primary line-clamp-1">
+											{model?.name ?? modelId}
+										</div>
+									</div>
+								</a>
+							</div>
+						{/if}
+					{/each}
+				</div>
 			{/if}
 
-			<SearchInput
-				bind:value={search}
-				on:input={searchDebounceHandler}
-				placeholder={$i18n.t('Search')}
-				showClearButton={true}
-			/>
-		</div>
-
-		<div
-			class="relative flex flex-col flex-1 overflow-y-auto overflow-x-hidden {$temporaryChatEnabled
-				? 'opacity-20'
-				: ''}"
-		>
-			{#if $config?.features?.enable_channels && ($user?.role === 'admin' || $channels.length > 0) && !search}
+			{#if $config?.features?.enable_channels && ($user?.role === 'admin' || $channels.length > 0)}
 				<Folder
 					className="px-2 mt-0.5"
 					name={$i18n.t('Channels')}
@@ -655,13 +742,16 @@
 			{/if}
 
 			<Folder
-				collapsible={!search}
 				className="px-2 mt-0.5"
 				name={$i18n.t('Chats')}
 				onAdd={() => {
-					createFolder();
+					showCreateFolderModal = true;
 				}}
 				onAddLabel={$i18n.t('New Folder')}
+				on:change={async (e) => {
+					selectedFolder.set(null);
+					await goto('/');
+				}}
 				on:import={(e) => {
 					importChatHandler(e.detail);
 				}}
@@ -673,7 +763,15 @@
 							return null;
 						});
 						if (!chat && item) {
-							chat = await importChat(localStorage.token, item.chat, item?.meta ?? {});
+							chat = await importChat(
+								localStorage.token,
+								item.chat,
+								item?.meta ?? {},
+								false,
+								null,
+								item?.created_at ?? null,
+								item?.updated_at ?? null
+							);
 						}
 
 						if (chat) {
@@ -711,11 +809,7 @@
 					}
 				}}
 			>
-				{#if $temporaryChatEnabled}
-					<div class="absolute z-40 w-full h-full flex justify-center"></div>
-				{/if}
-
-				{#if !search && $pinnedChats.length > 0}
+				{#if $pinnedChats.length > 0}
 					<div class="flex flex-col space-y-1 rounded-xl">
 						<Folder
 							className=""
@@ -735,7 +829,15 @@
 										return null;
 									});
 									if (!chat && item) {
-										chat = await importChat(localStorage.token, item.chat, item?.meta ?? {});
+										chat = await importChat(
+											localStorage.token,
+											item.chat,
+											item?.meta ?? {},
+											false,
+											null,
+											item?.created_at ?? null,
+											item?.updated_at ?? null
+										);
 									}
 
 									if (chat) {
@@ -764,7 +866,7 @@
 							<div
 								class="ml-3 pl-1 mt-[1px] flex flex-col overflow-y-auto scrollbar-hidden border-s border-gray-100 dark:border-gray-900"
 							>
-								{#each $pinnedChats as chat, idx}
+								{#each $pinnedChats as chat, idx (`pinned-chat-${chat?.id ?? idx}`)}
 									<ChatItem
 										className=""
 										id={chat.id}
@@ -791,15 +893,20 @@
 					</div>
 				{/if}
 
-				{#if !search && folders}
+				{#if folders}
 					<Folders
 						{folders}
+						{shiftKey}
+						onDelete={(folderId) => {
+							selectedFolder.set(null);
+							initChatList();
+						}}
+						on:update={() => {
+							initChatList();
+						}}
 						on:import={(e) => {
 							const { folderId, items } = e.detail;
 							importChatHandler(items, false, folderId);
-						}}
-						on:update={async (e) => {
-							initChatList();
 						}}
 						on:change={async () => {
 							initChatList();
@@ -810,7 +917,7 @@
 				<div class=" flex-1 flex flex-col overflow-y-auto scrollbar-hidden">
 					<div class="pt-1.5">
 						{#if $chats}
-							{#each $chats as chat, idx}
+							{#each $chats as chat, idx (`chat-${chat?.id ?? idx}`)}
 								{#if idx === 0 || (idx > 0 && chat.time_range !== $chats[idx - 1].time_range)}
 									<div
 										class="w-full pl-2.5 text-xs text-gray-500 dark:text-gray-500 font-medium {idx ===

@@ -23,10 +23,12 @@
 	export let chatId;
 	export let history;
 	export let messageId;
+	export let selectedModels = [];
 
 	export let isLastMessage;
 	export let readOnly = false;
 
+	export let setInputText: Function = () => {};
 	export let updateChat: Function;
 	export let editMessage: Function;
 	export let saveMessage: Function;
@@ -200,9 +202,11 @@
 		await initHandler();
 		await tick();
 
-		const messageElement = document.getElementById(`message-${messageId}`);
-		if (messageElement) {
-			messageElement.scrollIntoView({ block: 'start' });
+		if ($settings?.scrollOnBranchChange ?? true) {
+			const messageElement = document.getElementById(`message-${messageId}`);
+			if (messageElement) {
+				messageElement.scrollIntoView({ block: 'start' });
+			}
 		}
 	});
 </script>
@@ -223,7 +227,7 @@
 					<div
 						class=" snap-center w-full max-w-full m-1 border {history.messages[messageId]
 							?.modelIdx == modelIdx
-							? `border-gray-100 dark:border-gray-850 border-[1.5px] ${
+							? `bg-gray-50 dark:bg-gray-850 border-gray-100 dark:border-gray-800 border-2 ${
 									$mobile ? 'min-w-full' : 'min-w-80'
 								}`
 							: `border-gray-100 dark:border-gray-850 border-dashed ${
@@ -238,10 +242,9 @@
 									messageChildrenIds = history.messages[currentMessageId].childrenIds;
 								}
 								history.currentId = currentMessageId;
-
-								await tick();
-								await updateChat();
-								triggerScroll();
+								// await tick();
+								// await updateChat();
+								// triggerScroll();
 							}
 						}}
 					>
@@ -251,11 +254,13 @@
 									{chatId}
 									{history}
 									messageId={_messageId}
+									{selectedModels}
 									isLastMessage={true}
 									siblings={groupedMessageIds[modelIdx].messageIds}
 									gotoMessage={(message, messageIdx) => gotoMessage(modelIdx, messageIdx)}
 									showPreviousMessage={() => showPreviousMessage(modelIdx)}
 									showNextMessage={() => showNextMessage(modelIdx)}
+									{setInputText}
 									{updateChat}
 									{editMessage}
 									{saveMessage}
@@ -293,7 +298,7 @@
 
 							<div class="w-full rounded-xl pl-5 pr-2 py-2">
 								<Name>
-									Merged Response
+									{$i18n.t('Merged Response')}
 
 									{#if message.timestamp}
 										<span

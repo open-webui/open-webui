@@ -153,7 +153,11 @@
 		await tick();
 		const file = blobToFile(audioBlob, 'recording.wav');
 
-		const res = await transcribeAudio(localStorage.token, file).catch((error) => {
+		const res = await transcribeAudio(
+			localStorage.token,
+			file,
+			$settings?.audio?.stt?.language
+		).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});
@@ -850,6 +854,7 @@
 				</button>
 			{:else}
 				<div class="relative flex video-container w-full max-h-full pt-2 pb-4 md:py-6 px-2 h-full">
+					<!-- svelte-ignore a11y-media-has-caption -->
 					<video
 						id="camera-feed"
 						autoplay

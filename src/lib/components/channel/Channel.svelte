@@ -195,7 +195,7 @@
 </script>
 
 <svelte:head>
-	<title>#{channel?.name ?? 'Channel'} | Open WebUI</title>
+	<title>#{channel?.name ?? 'Channel'} • Open WebUI</title>
 </svelte:head>
 
 <div
@@ -246,7 +246,7 @@
 				{/if}
 			</div>
 
-			<div class=" pb-[1rem]">
+			<div class=" pb-[1rem] px-2.5">
 				<MessageInput
 					id="root"
 					{typingUsers}
@@ -262,7 +262,7 @@
 			{#if threadId !== null}
 				<Drawer
 					show={threadId !== null}
-					on:close={() => {
+					onClose={() => {
 						threadId = null;
 					}}
 				>

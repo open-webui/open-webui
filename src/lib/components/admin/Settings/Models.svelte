@@ -14,12 +14,15 @@
 		toggleModelById,
 		updateModelById
 	} from '$lib/apis/models';
+	import { copyToClipboard } from '$lib/utils';
+	import { page } from '$app/stores';
 
 	import { getModels } from '$lib/apis';
 	import Search from '$lib/components/icons/Search.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import XMark from '$lib/components/icons/XMark.svelte';
 
 	import ModelEditor from '$lib/components/workspace/Models/ModelEditor.svelte';
 	import { toast } from 'svelte-sonner';
@@ -33,6 +36,7 @@
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
 	import Eye from '$lib/components/icons/Eye.svelte';
+	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	let shiftKey = false;
 
@@ -73,6 +77,8 @@
 	};
 
 	const init = async () => {
+		models = null;
+
 		workspaceModels = await getBaseModels(localStorage.token);
 		baseModels = await getModels(localStorage.token, null, true);
 
@@ -124,6 +130,7 @@
 				toast.success($i18n.t('Model updated successfully'));
 			}
 		}
+		await init();
 
 		_models.set(
 			await getModels(
@@ -131,7 +138,6 @@
 				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
 			)
 		);
-		await init();
 	};
 
 	const toggleModelHandler = async (model) => {
@@ -166,7 +172,7 @@
 			hidden: !(model?.meta?.hidden ?? false)
 		};
 
-		console.log(model);
+		console.debug(model);
 
 		toast.success(
 			model.meta.hidden
@@ -181,6 +187,17 @@
 		upsertModelHandler(model);
 	};
 
+	const copyLinkHandler = async (model) => {
+		const baseUrl = window.location.origin;
+		const res = await copyToClipboard(`${baseUrl}/?model=${encodeURIComponent(model.id)}`);
+
+		if (res) {
+			toast.success($i18n.t('Copied link to clipboard'));
+		} else {
+			toast.error($i18n.t('Failed to copy link'));
+		}
+	};
+
 	const exportModelHandler = async (model) => {
 		let blob = new Blob([JSON.stringify([model])], {
 			type: 'application/json'
@@ -190,6 +207,11 @@
 
 	onMount(async () => {
 		await init();
+		const id = $page.url.searchParams.get('id');
+
+		if (id) {
+			selectedModelId = id;
+		}
 
 		const onKeyDown = (event) => {
 			if (event.key === 'Shift') {
@@ -271,6 +293,18 @@
 						bind:value={searchValue}
 						placeholder={$i18n.t('Search Models')}
 					/>
+					{#if searchValue}
+						<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
+							<button
+								class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+								on:click={() => {
+									searchValue = '';
+								}}
+							>
+								<XMark className="size-3" strokeWidth="2" />
+							</button>
+						</div>
+					{/if}
 				</div>
 			</div>
 		</div>
@@ -299,7 +333,7 @@
 										: 'opacity-50 dark:opacity-50'} "
 								>
 									<img
-										src={model?.meta?.profile_image_url ?? '/static/favicon.png'}
+										src={model?.meta?.profile_image_url ?? `${WEBUI_BASE_URL}/static/favicon.png`}
 										alt="modelfile profile"
 										class=" rounded-full w-full h-auto object-cover"
 									/>
@@ -380,6 +414,9 @@
 									}}
 									hideHandler={() => {
 										hideModelHandler(model);
+									}}
+									copyLinkHandler={() => {
+										copyLinkHandler(model);
 									}}
 									onClose={() => {}}
 								>
@@ -495,7 +532,7 @@
 						}}
 					>
 						<div class=" self-center mr-2 font-medium line-clamp-1">
-							{$i18n.t('Export Presets')}
+							{$i18n.t('Export Presets')} ({models.length})
 						</div>
 
 						<div class=" self-center">
@@ -533,6 +570,6 @@
 	{/if}
 {:else}
 	<div class=" h-full w-full flex justify-center items-center">
-		<Spinner />
+		<Spinner className="size-5" />
 	</div>
 {/if}

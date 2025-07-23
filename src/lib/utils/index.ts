@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import sha256 from 'js-sha256';
+import { WEBUI_BASE_URL } from '$lib/constants';
 
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -12,7 +13,6 @@ dayjs.extend(isToday);
 dayjs.extend(isYesterday);
 dayjs.extend(localizedFormat);
 
-import { WEBUI_BASE_URL } from '$lib/constants';
 import { TTS_RESPONSE_SPLIT } from '$lib/types';
 
 import { marked } from 'marked';
@@ -41,8 +41,7 @@ export const replaceTokens = (content, sourceIds, char, user) => {
 		},
 		{
 			regex: /{{HTML_FILE_ID_([a-f0-9-]+)}}/gi,
-			replacement: (_, fileId) =>
-				`<iframe src="${WEBUI_BASE_URL}/api/v1/files/${fileId}/content/html" width="100%" frameborder="0" onload="this.style.height=(this.contentWindow.document.body.scrollHeight+20)+'px';"></iframe>`
+			replacement: (_, fileId) => `<file type="html" id="${fileId}" />`
 		}
 	];
 
@@ -84,15 +83,86 @@ export const sanitizeResponseContent = (content: string) => {
 		.replace(/<\|[a-z]*$/, '')
 		.replace(/<\|[a-z]+\|$/, '')
 		.replace(/<$/, '')
-		.replaceAll(/<\|[a-z]+\|>/g, ' ')
 		.replaceAll('<', '&lt;')
 		.replaceAll('>', '&gt;')
+		.replaceAll(/<\|[a-z]+\|>/g, ' ')
 		.trim();
 };
 
 export const processResponseContent = (content: string) => {
+	content = processChineseContent(content);
 	return content.trim();
 };
+
+function isChineseChar(char: string): boolean {
+	return /\p{Script=Han}/u.test(char);
+}
+
+// Tackle "Model output issue not following the standard Markdown/LaTeX format" in Chinese.
+function processChineseContent(content: string): string {
+	// This function is used to process the response content before the response content is rendered.
+	const lines = content.split('\n');
+	const processedLines = lines.map((line) => {
+		if (/[\u4e00-\u9fa5]/.test(line)) {
+			// Problems caused by Chinese parentheses
+			/* Discription:
+			 *   When `*` has Chinese delimiters on the inside, markdown parser ignore bold or italic style.
+			 *   - e.g. `**中文名（English）**中文内容` will be parsed directly,
+			 *          instead of `<strong>中文名（English）</strong>中文内容`.
+			 * Solution:
+			 *   Adding a `space` before and after the bold/italic part can solve the problem.
+			 *   - e.g. `**中文名（English）**中文内容` -> ` **中文名（English）** 中文内容`
+			 * Note:
+			 *   Similar problem was found with English parentheses and other full delimiters,
+			 *   but they are not handled here because they are less likely to appear in LLM output.
+			 *   Change the behavior in future if needed.
+			 */
+			if (line.includes('*')) {
+				// Handle **bold** and *italic*
+				// 1. With Chinese parentheses
+				if (/（|）/.test(line)) {
+					line = processChineseDelimiters(line, '**', '（', '）');
+					line = processChineseDelimiters(line, '*', '（', '）');
+				}
+				// 2. With Chinese quotations
+				if (/“|”/.test(line)) {
+					line = processChineseDelimiters(line, '**', '“', '”');
+					line = processChineseDelimiters(line, '*', '“', '”');
+				}
+			}
+		}
+		return line;
+	});
+	content = processedLines.join('\n');
+
+	return content;
+}
+
+// Helper function for `processChineseContent`
+function processChineseDelimiters(
+	line: string,
+	symbol: string,
+	leftSymbol: string,
+	rightSymbol: string
+): string {
+	// NOTE: If needed, with a little modification, this function can be applied to more cases.
+	const escapedSymbol = escapeRegExp(symbol);
+	const regex = new RegExp(
+		`(.?)(?<!${escapedSymbol})(${escapedSymbol})([^${escapedSymbol}]+)(${escapedSymbol})(?!${escapedSymbol})(.)`,
+		'g'
+	);
+	return line.replace(regex, (match, l, left, content, right, r) => {
+		const result =
+			(content.startsWith(leftSymbol) && l && l.length > 0 && isChineseChar(l[l.length - 1])) ||
+			(content.endsWith(rightSymbol) && r && r.length > 0 && isChineseChar(r[0]));
+
+		if (result) {
+			return `${l} ${left}${content}${right} ${r}`;
+		} else {
+			return match;
+		}
+	});
+}
 
 export function unescapeHtml(html: string) {
 	const doc = new DOMParser().parseFromString(html, 'text/html');
@@ -276,7 +346,7 @@ export const generateInitialsImage = (name) => {
 		console.log(
 			'generateInitialsImage: failed pixel test, fingerprint evasion is likely. Using default image.'
 		);
-		return '/user.png';
+		return `${WEBUI_BASE_URL}/user.png`;
 	}
 
 	ctx.fillStyle = '#F39C12';
@@ -314,22 +384,25 @@ export const formatDate = (inputDate) => {
 	}
 };
 
-export const copyToClipboard = async (text, formatted = false) => {
+export const copyToClipboard = async (text, html = null, formatted = false) => {
 	if (formatted) {
-		const options = {
-			throwOnError: false,
-			highlight: function (code, lang) {
-				const language = hljs.getLanguage(lang) ? lang : 'plaintext';
-				return hljs.highlight(code, { language }).value;
-			}
-		};
-		marked.use(markedKatexExtension(options));
-		marked.use(markedExtension(options));
+		let styledHtml = '';
+		if (!html) {
+			const options = {
+				throwOnError: false,
+				highlight: function (code, lang) {
+					const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+					return hljs.highlight(code, { language }).value;
+				}
+			};
+			marked.use(markedKatexExtension(options));
+			marked.use(markedExtension(options));
+			// DEVELOPER NOTE: Go to `$lib/components/chat/Messages/Markdown.svelte` to add extra markdown extensions for rendering.
 
-		const htmlContent = marked.parse(text);
+			const htmlContent = marked.parse(text);
 
-		// Add basic styling to make the content look better when pasted
-		const styledHtml = `
+			// Add basic styling to make the content look better when pasted
+			styledHtml = `
 			<div>
 				<style>
 					pre {
@@ -377,6 +450,10 @@ export const copyToClipboard = async (text, formatted = false) => {
 				${htmlContent}
 			</div>
 		`;
+		} else {
+			// If HTML is provided, use it directly
+			styledHtml = html;
+		}
 
 		// Create a blob with HTML content
 		const blob = new Blob([styledHtml], { type: 'text/html' });
@@ -751,7 +828,6 @@ export const removeFormattings = (str: string) => {
 
 			// Cleanup
 			.replace(/\[\^[^\]]*\]/g, '') // Footnotes
-			.replace(/[-*_~]/g, '') // Remaining markers
 			.replace(/\n{2,}/g, '\n')
 	); // Multiple newlines
 };
@@ -779,7 +855,7 @@ export const removeAllDetails = (content) => {
 export const processDetails = (content) => {
 	content = removeDetails(content, ['reasoning', 'code_interpreter']);
 
-	// This regex matches <details> tags with type="tool_calls" and captures their attributes to convert them to <tool_calls> tags
+	// This regex matches <details> tags with type="tool_calls" and captures their attributes to convert them to a string
 	const detailsRegex = /<details\s+type="tool_calls"([^>]*)>([\s\S]*?)<\/details>/gis;
 	const matches = content.match(detailsRegex);
 	if (matches) {
@@ -791,10 +867,7 @@ export const processDetails = (content) => {
 				attributes[attributeMatch[1]] = attributeMatch[2];
 			}
 
-			content = content.replace(
-				match,
-				`<tool_calls name="${attributes.name}" result="${attributes.result}"/>`
-			);
+			content = content.replace(match, `"${attributes.result}"`);
 		}
 	}
 
@@ -869,11 +942,10 @@ export const extractSentencesForAudio = (text: string) => {
 	}, [] as string[]);
 };
 
-export const getMessageContentParts = (content: string, split_on: string = 'punctuation') => {
-	content = removeDetails(content, ['reasoning', 'code_interpreter', 'tool_calls']);
+export const getMessageContentParts = (content: string, splitOn: string = 'punctuation') => {
 	const messageContentParts: string[] = [];
 
-	switch (split_on) {
+	switch (splitOn) {
 		default:
 		case TTS_RESPONSE_SPLIT.PUNCTUATION:
 			messageContentParts.push(...extractSentencesForAudio(content));
@@ -1163,6 +1235,9 @@ export const createMessagesList = (history, messageId) => {
 	}
 
 	const message = history.messages[messageId];
+	if (message === undefined) {
+		return [];
+	}
 	if (message?.parentId) {
 		return [...createMessagesList(history, message.parentId), message];
 	} else {
@@ -1243,58 +1318,269 @@ export const convertOpenApiToToolPayload = (openApiSpec) => {
 
 	for (const [path, methods] of Object.entries(openApiSpec.paths)) {
 		for (const [method, operation] of Object.entries(methods)) {
-			const tool = {
-				type: 'function',
-				name: operation.operationId,
-				description: operation.description || operation.summary || 'No description available.',
-				parameters: {
-					type: 'object',
-					properties: {},
-					required: []
-				}
-			};
-
-			// Extract path and query parameters
-			if (operation.parameters) {
-				operation.parameters.forEach((param) => {
-					tool.parameters.properties[param.name] = {
-						type: param.schema.type,
-						description: param.schema.description || ''
-					};
-
-					if (param.required) {
-						tool.parameters.required.push(param.name);
+			if (operation?.operationId) {
+				const tool = {
+					type: 'function',
+					name: operation.operationId,
+					description: operation.description || operation.summary || 'No description available.',
+					parameters: {
+						type: 'object',
+						properties: {},
+						required: []
 					}
-				});
-			}
+				};
 
-			// Extract and recursively resolve requestBody if available
-			if (operation.requestBody) {
-				const content = operation.requestBody.content;
-				if (content && content['application/json']) {
-					const requestSchema = content['application/json'].schema;
-					const resolvedRequestSchema = resolveSchema(requestSchema, openApiSpec.components);
-
-					if (resolvedRequestSchema.properties) {
-						tool.parameters.properties = {
-							...tool.parameters.properties,
-							...resolvedRequestSchema.properties
+				// Extract path and query parameters
+				if (operation.parameters) {
+					operation.parameters.forEach((param) => {
+						let description = param.schema.description || param.description || '';
+						if (param.schema.enum && Array.isArray(param.schema.enum)) {
+							description += `. Possible values: ${param.schema.enum.join(', ')}`;
+						}
+						tool.parameters.properties[param.name] = {
+							type: param.schema.type,
+							description: description
 						};
 
-						if (resolvedRequestSchema.required) {
-							tool.parameters.required = [
-								...new Set([...tool.parameters.required, ...resolvedRequestSchema.required])
-							];
+						if (param.required) {
+							tool.parameters.required.push(param.name);
 						}
-					} else if (resolvedRequestSchema.type === 'array') {
-						tool.parameters = resolvedRequestSchema; // special case when root schema is an array
+					});
+				}
+
+				// Extract and recursively resolve requestBody if available
+				if (operation.requestBody) {
+					const content = operation.requestBody.content;
+					if (content && content['application/json']) {
+						const requestSchema = content['application/json'].schema;
+						const resolvedRequestSchema = resolveSchema(requestSchema, openApiSpec.components);
+
+						if (resolvedRequestSchema.properties) {
+							tool.parameters.properties = {
+								...tool.parameters.properties,
+								...resolvedRequestSchema.properties
+							};
+
+							if (resolvedRequestSchema.required) {
+								tool.parameters.required = [
+									...new Set([...tool.parameters.required, ...resolvedRequestSchema.required])
+								];
+							}
+						} else if (resolvedRequestSchema.type === 'array') {
+							tool.parameters = resolvedRequestSchema; // special case when root schema is an array
+						}
 					}
 				}
-			}
 
-			toolPayload.push(tool);
+				toolPayload.push(tool);
+			}
 		}
 	}
 
 	return toolPayload;
+};
+
+export const slugify = (str: string): string => {
+	return (
+		str
+			// 1. Normalize: separate accented letters into base + combining marks
+			.normalize('NFD')
+			// 2. Remove all combining marks (the accents)
+			.replace(/[\u0300-\u036f]/g, '')
+			// 3. Replace any sequence of whitespace with a single hyphen
+			.replace(/\s+/g, '-')
+			// 4. Remove all characters except alphanumeric characters and hyphens
+			.replace(/[^a-zA-Z0-9-]/g, '')
+			// 5. Convert to lowercase
+			.toLowerCase()
+	);
+};
+
+export const extractInputVariables = (text: string): Record<string, any> => {
+	const regex = /{{\s*([^|}\s]+)\s*\|\s*([^}]+)\s*}}/g;
+	const regularRegex = /{{\s*([^|}\s]+)\s*}}/g;
+	const variables: Record<string, any> = {};
+	let match;
+	// Use exec() loop instead of matchAll() for better compatibility
+	while ((match = regex.exec(text)) !== null) {
+		const varName = match[1].trim();
+		const definition = match[2].trim();
+		variables[varName] = parseVariableDefinition(definition);
+	}
+	// Then, extract regular variables (without pipe) - only if not already processed
+	while ((match = regularRegex.exec(text)) !== null) {
+		const varName = match[1].trim();
+		// Only add if not already processed as custom variable
+		if (!variables.hasOwnProperty(varName)) {
+			variables[varName] = { type: 'text' }; // Default type for regular variables
+		}
+	}
+	return variables;
+};
+
+export const splitProperties = (str: string, delimiter: string): string[] => {
+	const result: string[] = [];
+	let current = '';
+	let depth = 0;
+	let inString = false;
+	let escapeNext = false;
+
+	for (let i = 0; i < str.length; i++) {
+		const char = str[i];
+
+		if (escapeNext) {
+			current += char;
+			escapeNext = false;
+			continue;
+		}
+
+		if (char === '\\') {
+			current += char;
+			escapeNext = true;
+			continue;
+		}
+
+		if (char === '"' && !escapeNext) {
+			inString = !inString;
+			current += char;
+			continue;
+		}
+
+		if (!inString) {
+			if (char === '{' || char === '[') {
+				depth++;
+			} else if (char === '}' || char === ']') {
+				depth--;
+			}
+
+			if (char === delimiter && depth === 0) {
+				result.push(current.trim());
+				current = '';
+				continue;
+			}
+		}
+
+		current += char;
+	}
+
+	if (current.trim()) {
+		result.push(current.trim());
+	}
+
+	return result;
+};
+
+export const parseVariableDefinition = (definition: string): Record<string, any> => {
+	// Use splitProperties for the main colon delimiter to handle quoted strings
+	const parts = splitProperties(definition, ':');
+	const [firstPart, ...propertyParts] = parts;
+
+	// Parse type (explicit or implied)
+	const type = firstPart.startsWith('type=') ? firstPart.slice(5) : firstPart;
+
+	// Parse properties using reduce
+	const properties = propertyParts.reduce((props, part) => {
+		// Use splitProperties for the equals sign as well, in case there are nested quotes
+		const equalsParts = splitProperties(part, '=');
+		const [propertyName, ...valueParts] = equalsParts;
+		const propertyValue = valueParts.join('='); // Handle values with = signs
+
+		return propertyName && propertyValue
+			? {
+					...props,
+					[propertyName.trim()]: parseJsonValue(propertyValue.trim())
+				}
+			: props;
+	}, {});
+
+	return { type, ...properties };
+};
+
+export const parseJsonValue = (value: string): any => {
+	// Remove surrounding quotes if present (for string values)
+	if (value.startsWith('"') && value.endsWith('"')) {
+		return value.slice(1, -1);
+	}
+
+	// Check if it starts with square or curly brackets (JSON)
+	if (/^[\[{]/.test(value)) {
+		try {
+			return JSON.parse(value);
+		} catch {
+			return value; // Return as string if JSON parsing fails
+		}
+	}
+
+	return value;
+};
+
+export const extractContentFromFile = async (file, pdfjsLib = null) => {
+	// Known text file extensions for extra fallback
+	const textExtensions = [
+		'.txt',
+		'.md',
+		'.csv',
+		'.json',
+		'.js',
+		'.ts',
+		'.css',
+		'.html',
+		'.xml',
+		'.yaml',
+		'.yml',
+		'.rtf'
+	];
+
+	function getExtension(filename) {
+		const dot = filename.lastIndexOf('.');
+		return dot === -1 ? '' : filename.substr(dot).toLowerCase();
+	}
+
+	// Uses pdfjs to extract text from PDF
+	async function extractPdfText(file) {
+		if (!pdfjsLib) {
+			throw new Error('pdfjsLib is required for PDF extraction');
+		}
+
+		const arrayBuffer = await file.arrayBuffer();
+		const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+		let allText = '';
+		for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+			const page = await pdf.getPage(pageNum);
+			const content = await page.getTextContent();
+			const strings = content.items.map((item) => item.str);
+			allText += strings.join(' ') + '\n';
+		}
+		return allText;
+	}
+
+	// Reads file as text using FileReader
+	function readAsText(file) {
+		return new Promise((resolve, reject) => {
+			const reader = new FileReader();
+			reader.onload = () => resolve(reader.result);
+			reader.onerror = reject;
+			reader.readAsText(file);
+		});
+	}
+
+	const type = file.type || '';
+	const ext = getExtension(file.name);
+
+	// PDF check
+	if (type === 'application/pdf' || ext === '.pdf') {
+		return await extractPdfText(file);
+	}
+
+	// Text check (plain or common text-based)
+	if (type.startsWith('text/') || textExtensions.includes(ext)) {
+		return await readAsText(file);
+	}
+
+	// Fallback: try to read as text, if decodable
+	try {
+		return await readAsText(file);
+	} catch (err) {
+		throw new Error('Unsupported or non-text file type: ' + (file.name || type));
+	}
 };

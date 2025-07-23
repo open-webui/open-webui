@@ -13,7 +13,6 @@
 	import Overview from './Overview.svelte';
 	import EllipsisVertical from '../icons/EllipsisVertical.svelte';
 	import Artifacts from './Artifacts.svelte';
-	import { min } from '@floating-ui/utils';
 
 	export let history;
 	export let models = [];
@@ -140,7 +139,7 @@
 		{#if $showControls}
 			<Drawer
 				show={$showControls}
-				on:close={() => {
+				onClose={() => {
 					showControls.set(false);
 				}}
 			>

@@ -10,15 +10,28 @@
 	import Info from '../icons/Info.svelte';
 	import Switch from './Switch.svelte';
 	import Tooltip from './Tooltip.svelte';
+	import dayjs from 'dayjs';
 
 	export let item;
 	export let show = false;
 	export let edit = false;
 
 	let enableFullContent = false;
+
+	let isPdf = false;
+	let isAudio = false;
+
 	$: isPDF =
 		item?.meta?.content_type === 'application/pdf' ||
 		(item?.name && item?.name.toLowerCase().endsWith('.pdf'));
+
+	$: isAudio =
+		(item?.meta?.content_type ?? '').startsWith('audio/') ||
+		(item?.name && item?.name.toLowerCase().endsWith('.mp3')) ||
+		(item?.name && item?.name.toLowerCase().endsWith('.wav')) ||
+		(item?.name && item?.name.toLowerCase().endsWith('.ogg')) ||
+		(item?.name && item?.name.toLowerCase().endsWith('.m4a')) ||
+		(item?.name && item?.name.toLowerCase().endsWith('.webm'));
 
 	onMount(() => {
 		console.log(item);
@@ -65,6 +78,24 @@
 			<div>
 				<div class="flex flex-col items-center md:flex-row gap-1 justify-between w-full">
 					<div class=" flex flex-wrap text-sm gap-1 text-gray-500">
+						{#if item?.type === 'collection'}
+							{#if item?.type}
+								<div class="capitalize shrink-0">{item.type}</div>
+								•
+							{/if}
+
+							{#if item?.description}
+								<div class="line-clamp-1">{item.description}</div>
+								•
+							{/if}
+
+							{#if item?.created_at}
+								<div class="capitalize shrink-0">
+									{dayjs(item.created_at * 1000).format('LL')}
+								</div>
+							{/if}
+						{/if}
+
 						{#if item.size}
 							<div class="capitalize shrink-0">{formatFileSize(item.size)}</div>
 							•
@@ -79,6 +110,12 @@
 								<Info />
 
 								Formatting may be inconsistent from source.
+							</div>
+						{/if}
+
+						{#if item?.knowledge}
+							<div class="capitalize shrink-0">
+								{$i18n.t('Knowledge Base')}
 							</div>
 						{/if}
 					</div>
@@ -96,9 +133,9 @@
 							>
 								<div class="flex items-center gap-1.5 text-xs">
 									{#if enableFullContent}
-										Using Entire Document
+										{$i18n.t('Using Entire Document')}
 									{:else}
-										Using Focused Retrieval
+										{$i18n.t('Using Focused Retrieval')}
 									{/if}
 									<Switch
 										bind:state={enableFullContent}
@@ -115,16 +152,37 @@
 		</div>
 
 		<div class="max-h-[75vh] overflow-auto">
-			{#if isPDF}
+			{#if item?.type === 'collection'}
+				<div>
+					{#each item?.files as file}
+						<div class="flex items-center gap-2 mb-2">
+							<div class="flex-shrink-0 text-xs">
+								{file?.meta?.name}
+							</div>
+						</div>
+					{/each}
+				</div>
+			{:else if isPDF}
 				<iframe
 					title={item?.name}
 					src={`${WEBUI_API_BASE_URL}/files/${item.id}/content`}
 					class="w-full h-[70vh] border-0 rounded-lg mt-4"
 				/>
 			{:else}
-				<div class="max-h-96 overflow-scroll scrollbar-hidden text-xs whitespace-pre-wrap">
-					{item?.file?.data?.content ?? 'No content'}
-				</div>
+				{#if isAudio}
+					<audio
+						src={`${WEBUI_API_BASE_URL}/files/${item.id}/content`}
+						class="w-full border-0 rounded-lg mb-2"
+						controls
+						playsinline
+					/>
+				{/if}
+
+				{#if item?.file?.data}
+					<div class="max-h-96 overflow-scroll scrollbar-hidden text-xs whitespace-pre-wrap">
+						{item?.file?.data?.content ?? 'No content'}
+					</div>
+				{/if}
 			{/if}
 		</div>
 	</div>

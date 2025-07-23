@@ -24,6 +24,12 @@
 	font-display: swap;
 }
 
+@font-face {
+	font-family: 'Vazirmatn';
+	src: url('/assets/fonts/Vazirmatn-Variable.ttf');
+	font-display: swap;
+}
+
 html {
 	word-break: break-word;
 }
@@ -34,8 +40,17 @@ code {
 	width: auto;
 }
 
+.editor-selection {
+	background: rgba(180, 213, 255, 0.5);
+	border-radius: 2px;
+}
+
 .font-secondary {
 	font-family: 'InstrumentSerif', sans-serif;
+}
+
+.marked a {
+	@apply underline;
 }
 
 math {
@@ -55,19 +70,23 @@ textarea::placeholder {
 }
 
 .input-prose {
-	@apply prose dark:prose-invert prose-headings:font-semibold prose-hr:my-4 prose-hr:border-gray-100 prose-hr:dark:border-gray-800 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
+	@apply prose dark:prose-invert prose-headings:font-semibold prose-hr:my-4 prose-hr:border-gray-100 prose-hr:dark:border-gray-800 prose-p:my-1 prose-img:my-1 prose-headings:my-2 prose-pre:my-0 prose-table:my-1 prose-blockquote:my-0 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 whitespace-pre-line;
 }
 
 .input-prose-sm {
-	@apply prose dark:prose-invert prose-headings:font-semibold prose-hr:my-4 prose-hr:border-gray-100 prose-hr:dark:border-gray-800 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line text-sm;
+	@apply prose dark:prose-invert prose-headings:font-medium prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg prose-hr:my-4 prose-hr:border-gray-100 prose-hr:dark:border-gray-800 prose-p:my-1 prose-img:my-1 prose-headings:my-2 prose-pre:my-0 prose-table:my-1 prose-blockquote:my-0 prose-ul:my-1 prose-ol:my-1 prose-li:my-1 whitespace-pre-line text-sm;
 }
 
 .markdown-prose {
 	@apply prose dark:prose-invert prose-blockquote:border-s-gray-100 prose-blockquote:dark:border-gray-800 prose-blockquote:border-s-2 prose-blockquote:not-italic prose-blockquote:font-normal  prose-headings:font-semibold prose-hr:my-4 prose-hr:border-gray-100 prose-hr:dark:border-gray-800 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
 }
 
+.markdown-prose-sm {
+	@apply text-sm prose dark:prose-invert prose-blockquote:border-s-gray-100 prose-blockquote:dark:border-gray-800 prose-blockquote:border-s-2 prose-blockquote:not-italic prose-blockquote:font-normal  prose-headings:font-semibold prose-hr:my-2  prose-hr:border-gray-100 prose-hr:dark:border-gray-800 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
+}
+
 .markdown-prose-xs {
-	@apply text-xs prose dark:prose-invert prose-blockquote:border-s-gray-100 prose-blockquote:dark:border-gray-800 prose-blockquote:border-s-2 prose-blockquote:not-italic prose-blockquote:font-normal  prose-headings:font-semibold prose-hr:my-0  prose-hr:border-gray-100 prose-hr:dark:border-gray-800 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
+	@apply text-xs prose dark:prose-invert prose-blockquote:border-s-gray-100 prose-blockquote:dark:border-gray-800 prose-blockquote:border-s-2 prose-blockquote:not-italic prose-blockquote:font-normal  prose-headings:font-semibold prose-hr:my-0.5  prose-hr:border-gray-100 prose-hr:dark:border-gray-800 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
 }
 
 .markdown a {
@@ -75,7 +94,7 @@ textarea::placeholder {
 }
 
 .font-primary {
-	font-family: 'Archivo', sans-serif;
+	font-family: 'Archivo', 'Vazirmatn', sans-serif;
 }
 
 .drag-region {
@@ -97,7 +116,7 @@ li p {
 
 ::-webkit-scrollbar-thumb {
 	--tw-border-opacity: 1;
-	background-color: rgba(236, 236, 236, 0.8);
+	background-color: rgba(215, 215, 215, 0.8);
 	border-color: rgba(255, 255, 255, var(--tw-border-opacity));
 	border-radius: 9999px;
 	border-width: 1px;
@@ -105,12 +124,12 @@ li p {
 
 /* Dark theme scrollbar styles */
 .dark ::-webkit-scrollbar-thumb {
-	background-color: rgba(42, 42, 42, 0.8); /* Darker color for dark theme */
+	background-color: rgba(67, 67, 67, 0.8); /* Darker color for dark theme */
 	border-color: rgba(0, 0, 0, var(--tw-border-opacity));
 }
 
 ::-webkit-scrollbar {
-	height: 0.8rem;
+	height: 0.6rem;
 	width: 0.4rem;
 }
 
@@ -308,10 +327,150 @@ input[type='number'] {
 .ProseMirror p.is-editor-empty:first-child::before {
 	content: attr(data-placeholder);
 	float: left;
-	color: #adb5bd;
+	/* Below color is from tailwind, and has the proper contrast
+	text-gray-600 from: https://tailwindcss.com/docs/color */
+	color: #676767;
 	pointer-events: none;
 
 	@apply line-clamp-1 absolute;
+}
+
+.tiptap ul[data-type='taskList'] {
+	list-style: none;
+	margin-left: 0;
+	padding: 0;
+
+	li {
+		align-items: start;
+		display: flex;
+
+		> label {
+			flex: 0 0 auto;
+			margin-right: 0.5rem;
+			margin-top: 0.2rem;
+			user-select: none;
+			display: flex;
+		}
+
+		> div {
+			flex: 1 1 auto;
+
+			align-items: center;
+		}
+	}
+
+	/* checked data-checked="true" */
+
+	li[data-checked='true'] {
+		> div {
+			opacity: 0.5;
+			text-decoration: line-through;
+		}
+	}
+
+	input[type='checkbox'] {
+		cursor: pointer;
+	}
+
+	ul[data-type='taskList'] {
+		margin: 0;
+	}
+
+	/* Reset nested regular ul elements to default styling */
+	ul:not([data-type='taskList']) {
+		list-style: disc;
+		padding-left: 1rem;
+
+		li {
+			align-items: initial;
+			display: list-item;
+
+			label {
+				flex: initial;
+				margin-right: initial;
+				margin-top: initial;
+				user-select: initial;
+				display: initial;
+			}
+
+			div {
+				flex: initial;
+				align-items: initial;
+			}
+		}
+	}
+}
+
+.input-prose .tiptap ul[data-type='taskList'] {
+	list-style: none;
+	margin-left: 0;
+	padding: 0;
+
+	li {
+		align-items: start;
+		display: flex;
+
+		> label {
+			flex: 0 0 auto;
+			margin-right: 0.5rem;
+			margin-top: 0.4rem;
+			user-select: none;
+			display: flex;
+		}
+
+		> div {
+			flex: 1 1 auto;
+
+			align-items: center;
+		}
+	}
+
+	/* checked data-checked="true" */
+
+	li[data-checked='true'] {
+		> div {
+			opacity: 0.5;
+			text-decoration: line-through;
+		}
+	}
+
+	input[type='checkbox'] {
+		cursor: pointer;
+	}
+
+	ul[data-type='taskList'] {
+		margin: 0;
+	}
+
+	/* Reset nested regular ul elements to default styling */
+	ul:not([data-type='taskList']) {
+		list-style: disc;
+		padding-left: 1rem;
+
+		li {
+			align-items: initial;
+			display: list-item;
+
+			label {
+				flex: initial;
+				margin-right: initial;
+				margin-top: initial;
+				user-select: initial;
+				display: initial;
+			}
+
+			div {
+				flex: initial;
+				align-items: initial;
+			}
+		}
+	}
+}
+
+@media (prefers-color-scheme: dark) {
+	.ProseMirror p.is-editor-empty:first-child::before {
+		color: #757575;
+	}
 }
 
 .ai-autocompletion::after {
@@ -321,21 +480,21 @@ input[type='number'] {
 	pointer-events: none;
 }
 
-.tiptap > pre > code {
+.tiptap pre > code {
 	border-radius: 0.4rem;
 	font-size: 0.85rem;
 	padding: 0.25em 0.3em;
 
-	@apply dark:bg-gray-800 bg-gray-100;
+	@apply dark:bg-gray-800 bg-gray-50;
 }
 
-.tiptap > pre {
+.tiptap pre {
 	border-radius: 0.5rem;
 	font-family: 'JetBrainsMono', monospace;
 	margin: 1.5rem 0;
 	padding: 0.75rem 1rem;
 
-	@apply dark:bg-gray-800 bg-gray-100;
+	@apply dark:bg-gray-800 bg-gray-50;
 }
 
 .tiptap p code {
@@ -344,7 +503,7 @@ input[type='number'] {
 	padding: 3px 8px;
 	font-size: 0.8em;
 	font-weight: 600;
-	@apply rounded-md dark:bg-gray-800 bg-gray-100 mx-0.5;
+	@apply rounded-md dark:bg-gray-800 bg-gray-50 mx-0.5;
 }
 
 /* Code styling */
@@ -397,4 +556,63 @@ input[type='number'] {
 
 .hljs-strong {
 	font-weight: 700;
+}
+
+/* Table styling for tiptap editors */
+.tiptap table {
+	@apply w-full text-sm text-left text-gray-500 dark:text-gray-400 max-w-full;
+}
+
+.tiptap thead {
+	@apply text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-850 dark:text-gray-400 border-none;
+}
+
+.tiptap th,
+.tiptap td {
+	@apply px-3 py-1.5 border border-gray-100 dark:border-gray-850;
+}
+
+.tiptap th {
+	@apply cursor-pointer text-left text-xs text-gray-700 dark:text-gray-400 font-semibold uppercase bg-gray-50 dark:bg-gray-850;
+}
+
+.tiptap td {
+	@apply text-gray-900 dark:text-white w-max;
+}
+
+.tiptap tr {
+	@apply bg-white dark:bg-gray-900 dark:border-gray-850 text-xs;
+}
+
+.tippy-box[data-theme~='transparent'] {
+	@apply bg-transparent p-0 m-0;
+}
+
+/* this is a rough fix for the first cursor position when the first paragraph is empty */
+.ProseMirror > .ProseMirror-yjs-cursor:first-child {
+	margin-top: 16px;
+}
+/* This gives the remote user caret. The colors are automatically overwritten*/
+.ProseMirror-yjs-cursor {
+	position: relative;
+	margin-left: -1px;
+	margin-right: -1px;
+	border-left: 1px solid black;
+	border-right: 1px solid black;
+	border-color: orange;
+	word-break: normal;
+	pointer-events: none;
+}
+/* This renders the username above the caret */
+.ProseMirror-yjs-cursor > div {
+	position: absolute;
+	top: -1.05em;
+	left: -1px;
+	font-size: 13px;
+	background-color: rgb(250, 129, 0);
+	user-select: none;
+	color: white;
+	padding-left: 2px;
+	padding-right: 2px;
+	white-space: nowrap;
 }

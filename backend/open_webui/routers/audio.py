@@ -7,16 +7,21 @@ from functools import lru_cache
 from pathlib import Path
 from pydub import AudioSegment
 from pydub.silence import split_on_silence
+from concurrent.futures import ThreadPoolExecutor
+from typing import Optional
 
+from fnmatch import fnmatch
 import aiohttp
 import aiofiles
 import requests
 import mimetypes
+from urllib.parse import quote
 
 from fastapi import (
     Depends,
     FastAPI,
     File,
+    Form,
     HTTPException,
     Request,
     UploadFile,
@@ -33,10 +38,12 @@ from open_webui.config import (
     WHISPER_MODEL_AUTO_UPDATE,
     WHISPER_MODEL_DIR,
     CACHE_DIR,
+    WHISPER_LANGUAGE,
 )
 
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import (
+    AIOHTTP_CLIENT_SESSION_SSL,
     AIOHTTP_CLIENT_TIMEOUT,
     ENV,
     SRC_LOG_LEVELS,
@@ -48,7 +55,7 @@ from open_webui.env import (
 router = APIRouter()
 
 # Constants
-MAX_FILE_SIZE_MB = 25
+MAX_FILE_SIZE_MB = 20
 MAX_FILE_SIZE = MAX_FILE_SIZE_MB * 1024 * 1024  # Convert MB to bytes
 AZURE_MAX_FILE_SIZE_MB = 200
 AZURE_MAX_FILE_SIZE = AZURE_MAX_FILE_SIZE_MB * 1024 * 1024  # Convert MB to bytes
@@ -70,31 +77,47 @@ from pydub import AudioSegment
 from pydub.utils import mediainfo
 
 
-def get_audio_format(file_path):
-    """Check if the given file needs to be converted to a different format."""
+def is_audio_conversion_required(file_path):
+    """
+    Check if the given audio file needs conversion to mp3.
+    """
+    SUPPORTED_FORMATS = {"flac", "m4a", "mp3", "mp4", "mpeg", "wav", "webm"}
+
     if not os.path.isfile(file_path):
         log.error(f"File not found: {file_path}")
         return False
 
-    info = mediainfo(file_path)
-    if (
-        info.get("codec_name") == "aac"
-        and info.get("codec_type") == "audio"
-        and info.get("codec_tag_string") == "mp4a"
-    ):
-        return "mp4"
-    elif info.get("format_name") == "ogg":
-        return "ogg"
-    elif info.get("format_name") == "matroska,webm":
-        return "webm"
-    return None
+    try:
+        info = mediainfo(file_path)
+        codec_name = info.get("codec_name", "").lower()
+        codec_type = info.get("codec_type", "").lower()
+        codec_tag_string = info.get("codec_tag_string", "").lower()
+
+        if codec_name == "aac" and codec_type == "audio" and codec_tag_string == "mp4a":
+            # File is AAC/mp4a audio, recommend mp3 conversion
+            return True
+
+        # If the codec name is in the supported formats
+        if codec_name in SUPPORTED_FORMATS:
+            return False
+
+        return True
+    except Exception as e:
+        log.error(f"Error getting audio format: {e}")
+        return False
 
 
-def convert_audio_to_wav(file_path, output_path, conversion_type):
-    """Convert MP4/OGG audio file to WAV format."""
-    audio = AudioSegment.from_file(file_path, format=conversion_type)
-    audio.export(output_path, format="wav")
-    log.info(f"Converted {file_path} to {output_path}")
+def convert_audio_to_mp3(file_path):
+    """Convert audio file to mp3 format."""
+    try:
+        output_path = os.path.splitext(file_path)[0] + ".mp3"
+        audio = AudioSegment.from_file(file_path)
+        audio.export(output_path, format="mp3")
+        log.info(f"Converted {file_path} to {output_path}")
+        return output_path
+    except Exception as e:
+        log.error(f"Error converting audio file: {e}")
+        return None
 
 
 def set_faster_whisper_model(model: str, auto_update: bool = False):
@@ -137,6 +160,7 @@ class TTSConfigForm(BaseModel):
     VOICE: str
     SPLIT_ON: str
     AZURE_SPEECH_REGION: str
+    AZURE_SPEECH_BASE_URL: str
     AZURE_SPEECH_OUTPUT_FORMAT: str
 
 
@@ -145,11 +169,14 @@ class STTConfigForm(BaseModel):
     OPENAI_API_KEY: str
     ENGINE: str
     MODEL: str
+    SUPPORTED_CONTENT_TYPES: list[str] = []
     WHISPER_MODEL: str
     DEEPGRAM_API_KEY: str
     AZURE_API_KEY: str
     AZURE_REGION: str
     AZURE_LOCALES: str
+    AZURE_BASE_URL: str
+    AZURE_MAX_SPEAKERS: str
 
 
 class AudioConfigUpdateForm(BaseModel):
@@ -169,6 +196,7 @@ async def get_audio_config(request: Request, user=Depends(get_admin_user)):
             "VOICE": request.app.state.config.TTS_VOICE,
             "SPLIT_ON": request.app.state.config.TTS_SPLIT_ON,
             "AZURE_SPEECH_REGION": request.app.state.config.TTS_AZURE_SPEECH_REGION,
+            "AZURE_SPEECH_BASE_URL": request.app.state.config.TTS_AZURE_SPEECH_BASE_URL,
             "AZURE_SPEECH_OUTPUT_FORMAT": request.app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT,
         },
         "stt": {
@@ -176,11 +204,14 @@ async def get_audio_config(request: Request, user=Depends(get_admin_user)):
             "OPENAI_API_KEY": request.app.state.config.STT_OPENAI_API_KEY,
             "ENGINE": request.app.state.config.STT_ENGINE,
             "MODEL": request.app.state.config.STT_MODEL,
+            "SUPPORTED_CONTENT_TYPES": request.app.state.config.STT_SUPPORTED_CONTENT_TYPES,
             "WHISPER_MODEL": request.app.state.config.WHISPER_MODEL,
             "DEEPGRAM_API_KEY": request.app.state.config.DEEPGRAM_API_KEY,
             "AZURE_API_KEY": request.app.state.config.AUDIO_STT_AZURE_API_KEY,
             "AZURE_REGION": request.app.state.config.AUDIO_STT_AZURE_REGION,
             "AZURE_LOCALES": request.app.state.config.AUDIO_STT_AZURE_LOCALES,
+            "AZURE_BASE_URL": request.app.state.config.AUDIO_STT_AZURE_BASE_URL,
+            "AZURE_MAX_SPEAKERS": request.app.state.config.AUDIO_STT_AZURE_MAX_SPEAKERS,
         },
     }
 
@@ -197,6 +228,9 @@ async def update_audio_config(
     request.app.state.config.TTS_VOICE = form_data.tts.VOICE
     request.app.state.config.TTS_SPLIT_ON = form_data.tts.SPLIT_ON
     request.app.state.config.TTS_AZURE_SPEECH_REGION = form_data.tts.AZURE_SPEECH_REGION
+    request.app.state.config.TTS_AZURE_SPEECH_BASE_URL = (
+        form_data.tts.AZURE_SPEECH_BASE_URL
+    )
     request.app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT = (
         form_data.tts.AZURE_SPEECH_OUTPUT_FORMAT
     )
@@ -205,16 +239,26 @@ async def update_audio_config(
     request.app.state.config.STT_OPENAI_API_KEY = form_data.stt.OPENAI_API_KEY
     request.app.state.config.STT_ENGINE = form_data.stt.ENGINE
     request.app.state.config.STT_MODEL = form_data.stt.MODEL
+    request.app.state.config.STT_SUPPORTED_CONTENT_TYPES = (
+        form_data.stt.SUPPORTED_CONTENT_TYPES
+    )
+
     request.app.state.config.WHISPER_MODEL = form_data.stt.WHISPER_MODEL
     request.app.state.config.DEEPGRAM_API_KEY = form_data.stt.DEEPGRAM_API_KEY
     request.app.state.config.AUDIO_STT_AZURE_API_KEY = form_data.stt.AZURE_API_KEY
     request.app.state.config.AUDIO_STT_AZURE_REGION = form_data.stt.AZURE_REGION
     request.app.state.config.AUDIO_STT_AZURE_LOCALES = form_data.stt.AZURE_LOCALES
+    request.app.state.config.AUDIO_STT_AZURE_BASE_URL = form_data.stt.AZURE_BASE_URL
+    request.app.state.config.AUDIO_STT_AZURE_MAX_SPEAKERS = (
+        form_data.stt.AZURE_MAX_SPEAKERS
+    )
 
     if request.app.state.config.STT_ENGINE == "":
         request.app.state.faster_whisper_model = set_faster_whisper_model(
             form_data.stt.WHISPER_MODEL, WHISPER_MODEL_AUTO_UPDATE
         )
+    else:
+        request.app.state.faster_whisper_model = None
 
     return {
         "tts": {
@@ -226,6 +270,7 @@ async def update_audio_config(
             "VOICE": request.app.state.config.TTS_VOICE,
             "SPLIT_ON": request.app.state.config.TTS_SPLIT_ON,
             "AZURE_SPEECH_REGION": request.app.state.config.TTS_AZURE_SPEECH_REGION,
+            "AZURE_SPEECH_BASE_URL": request.app.state.config.TTS_AZURE_SPEECH_BASE_URL,
             "AZURE_SPEECH_OUTPUT_FORMAT": request.app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT,
         },
         "stt": {
@@ -233,11 +278,14 @@ async def update_audio_config(
             "OPENAI_API_KEY": request.app.state.config.STT_OPENAI_API_KEY,
             "ENGINE": request.app.state.config.STT_ENGINE,
             "MODEL": request.app.state.config.STT_MODEL,
+            "SUPPORTED_CONTENT_TYPES": request.app.state.config.STT_SUPPORTED_CONTENT_TYPES,
             "WHISPER_MODEL": request.app.state.config.WHISPER_MODEL,
             "DEEPGRAM_API_KEY": request.app.state.config.DEEPGRAM_API_KEY,
             "AZURE_API_KEY": request.app.state.config.AUDIO_STT_AZURE_API_KEY,
             "AZURE_REGION": request.app.state.config.AUDIO_STT_AZURE_REGION,
             "AZURE_LOCALES": request.app.state.config.AUDIO_STT_AZURE_LOCALES,
+            "AZURE_BASE_URL": request.app.state.config.AUDIO_STT_AZURE_BASE_URL,
+            "AZURE_MAX_SPEAKERS": request.app.state.config.AUDIO_STT_AZURE_MAX_SPEAKERS,
         },
     }
 
@@ -280,6 +328,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         log.exception(e)
         raise HTTPException(status_code=400, detail="Invalid JSON payload")
 
+    r = None
     if request.app.state.config.TTS_ENGINE == "openai":
         payload["model"] = request.app.state.config.TTS_MODEL
 
@@ -288,7 +337,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             async with aiohttp.ClientSession(
                 timeout=timeout, trust_env=True
             ) as session:
-                async with session.post(
+                r = await session.post(
                     url=f"{request.app.state.config.TTS_OPENAI_API_BASE_URL}/audio/speech",
                     json=payload,
                     headers={
@@ -296,7 +345,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                         "Authorization": f"Bearer {user.api_key}",
                         **(
                             {
-                                "X-OpenWebUI-User-Name": user.name,
+                                "X-OpenWebUI-User-Name": quote(user.name, safe=" "),
                                 "X-OpenWebUI-User-Id": user.id,
                                 "X-OpenWebUI-User-Email": user.email,
                                 "X-OpenWebUI-User-Role": user.role,
@@ -305,14 +354,16 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                             else {}
                         ),
                     },
-                ) as r:
-                    r.raise_for_status()
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                )
 
-                    async with aiofiles.open(file_path, "wb") as f:
-                        await f.write(await r.read())
+                r.raise_for_status()
 
-                    async with aiofiles.open(file_body_path, "w") as f:
-                        await f.write(json.dumps(payload))
+                async with aiofiles.open(file_path, "wb") as f:
+                    await f.write(await r.read())
+
+                async with aiofiles.open(file_body_path, "w") as f:
+                    await f.write(json.dumps(payload))
 
             return FileResponse(file_path)
 
@@ -320,14 +371,18 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             log.exception(e)
             detail = None
 
-            try:
-                if r.status != 200:
-                    res = await r.json()
+            status_code = 500
+            detail = f"Open WebUI: Server Connection Error"
 
+            if r is not None:
+                status_code = r.status
+
+                try:
+                    res = await r.json()
                     if "error" in res:
-                        detail = f"External: {res['error'].get('message', '')}"
-            except Exception:
-                detail = f"External: {e}"
+                        detail = f"External: {res['error']}"
+                except Exception:
+                    detail = f"External: {e}"
 
             raise HTTPException(
                 status_code=getattr(r, "status", 500) if r else 500,
@@ -360,6 +415,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                         "Content-Type": "application/json",
                         "xi-api-key": request.app.state.config.TTS_API_KEY,
                     },
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
                 ) as r:
                     r.raise_for_status()
 
@@ -395,7 +451,8 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             log.exception(e)
             raise HTTPException(status_code=400, detail="Invalid JSON payload")
 
-        region = request.app.state.config.TTS_AZURE_SPEECH_REGION
+        region = request.app.state.config.TTS_AZURE_SPEECH_REGION or "eastus"
+        base_url = request.app.state.config.TTS_AZURE_SPEECH_BASE_URL
         language = request.app.state.config.TTS_VOICE
         locale = "-".join(request.app.state.config.TTS_VOICE.split("-")[:1])
         output_format = request.app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT
@@ -409,13 +466,15 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                 timeout=timeout, trust_env=True
             ) as session:
                 async with session.post(
-                    f"https://{region}.tts.speech.microsoft.com/cognitiveservices/v1",
+                    (base_url or f"https://{region}.tts.speech.microsoft.com")
+                    + "/cognitiveservices/v1",
                     headers={
                         "Ocp-Apim-Subscription-Key": request.app.state.config.TTS_API_KEY,
                         "Content-Type": "application/ssml+xml",
                         "X-Microsoft-OutputFormat": output_format,
                     },
                     data=data,
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
                 ) as r:
                     r.raise_for_status()
 
@@ -484,11 +543,13 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         return FileResponse(file_path)
 
 
-def transcribe(request: Request, file_path, user):
+def transcription_handler(request: Request, file_path, metadata, user):
     log.info(f"transcribe: {file_path}")
     filename = os.path.basename(file_path)
     file_dir = os.path.dirname(file_path)
     id = filename.split(".")[0]
+
+    metadata = metadata or {}
 
     if request.app.state.config.STT_ENGINE == "":
         if request.app.state.faster_whisper_model is None:
@@ -501,6 +562,7 @@ def transcribe(request: Request, file_path, user):
             file_path,
             beam_size=5,
             vad_filter=request.app.state.config.WHISPER_VAD_FILTER,
+            language=metadata.get("language") or WHISPER_LANGUAGE,
         )
         log.info(
             "Detected language '%s' with probability %f"
@@ -518,23 +580,20 @@ def transcribe(request: Request, file_path, user):
         log.debug(data)
         return data
     elif request.app.state.config.STT_ENGINE == "openai":
-        audio_format = get_audio_format(file_path)
-        if audio_format:
-            os.rename(file_path, file_path.replace(".wav", f".{audio_format}"))
-            # Convert unsupported audio file to WAV format
-            convert_audio_to_wav(
-                file_path.replace(".wav", f".{audio_format}"),
-                file_path,
-                audio_format,
-            )
-
         r = None
         try:
             r = requests.post(
                 url=f"{request.app.state.config.STT_OPENAI_API_BASE_URL}/audio/transcriptions",
                 headers={"Authorization": f"Bearer {user.api_key}"},
                 files={"file": (filename, open(file_path, "rb"))},
-                data={"model": request.app.state.config.STT_MODEL},
+                data={
+                    "model": request.app.state.config.STT_MODEL,
+                    **(
+                        {"language": metadata.get("language")}
+                        if metadata.get("language")
+                        else {}
+                    ),
+                },
             )
 
             r.raise_for_status()
@@ -584,7 +643,7 @@ def transcribe(request: Request, file_path, user):
 
             # Make request to Deepgram API
             r = requests.post(
-                "https://api.deepgram.com/v1/listen",
+                "https://api.deepgram.com/v1/listen?smart_format=true",
                 headers=headers,
                 params=params,
                 data=file_data,
@@ -637,8 +696,10 @@ def transcribe(request: Request, file_path, user):
             )
 
         api_key = request.app.state.config.AUDIO_STT_AZURE_API_KEY
-        region = request.app.state.config.AUDIO_STT_AZURE_REGION
+        region = request.app.state.config.AUDIO_STT_AZURE_REGION or "eastus"
         locales = request.app.state.config.AUDIO_STT_AZURE_LOCALES
+        base_url = request.app.state.config.AUDIO_STT_AZURE_BASE_URL
+        max_speakers = request.app.state.config.AUDIO_STT_AZURE_MAX_SPEAKERS or 3
 
         # IF NO LOCALES, USE DEFAULTS
         if len(locales) < 2:
@@ -662,7 +723,7 @@ def transcribe(request: Request, file_path, user):
         if not api_key or not region:
             raise HTTPException(
                 status_code=400,
-                detail="Azure API key and region are required for Azure STT",
+                detail="Azure API key is required for Azure STT",
             )
 
         r = None
@@ -672,13 +733,16 @@ def transcribe(request: Request, file_path, user):
                 "definition": json.dumps(
                     {
                         "locales": locales.split(","),
-                        "diarization": {"maxSpeakers": 3, "enabled": True},
+                        "diarization": {"maxSpeakers": max_speakers, "enabled": True},
                     }
                     if locales
                     else {}
                 )
             }
-            url = f"https://{region}.api.cognitive.microsoft.com/speechtotext/transcriptions:transcribe?api-version=2024-11-15"
+
+            url = (
+                base_url or f"https://{region}.api.cognitive.microsoft.com"
+            ) + "/speechtotext/transcriptions:transcribe?api-version=2024-11-15"
 
             # Use context manager to ensure file is properly closed
             with open(file_path, "rb") as audio_file:
@@ -737,35 +801,143 @@ def transcribe(request: Request, file_path, user):
             )
 
 
+def transcribe(request: Request, file_path: str, metadata: Optional[dict] = None, user):
+    log.info(f"transcribe: {file_path} {metadata}")
+
+    if is_audio_conversion_required(file_path):
+        file_path = convert_audio_to_mp3(file_path)
+
+    try:
+        file_path = compress_audio(file_path)
+    except Exception as e:
+        log.exception(e)
+
+    # Always produce a list of chunk paths (could be one entry if small)
+    try:
+        chunk_paths = split_audio(file_path, MAX_FILE_SIZE)
+        print(f"Chunk paths: {chunk_paths}")
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(e),
+        )
+
+    results = []
+    try:
+        with ThreadPoolExecutor() as executor:
+            # Submit tasks for each chunk_path
+            futures = [
+                executor.submit(transcription_handler, request, chunk_path, metadata, user)
+                for chunk_path in chunk_paths
+            ]
+            # Gather results as they complete
+            for future in futures:
+                try:
+                    results.append(future.result())
+                except Exception as transcribe_exc:
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail=f"Error transcribing chunk: {transcribe_exc}",
+                    )
+    finally:
+        # Clean up only the temporary chunks, never the original file
+        for chunk_path in chunk_paths:
+            if chunk_path != file_path and os.path.isfile(chunk_path):
+                try:
+                    os.remove(chunk_path)
+                except Exception:
+                    pass
+
+    return {
+        "text": " ".join([result["text"] for result in results]),
+    }
+
+
 def compress_audio(file_path):
     if os.path.getsize(file_path) > MAX_FILE_SIZE:
+        id = os.path.splitext(os.path.basename(file_path))[
+            0
+        ]  # Handles names with multiple dots
         file_dir = os.path.dirname(file_path)
+
         audio = AudioSegment.from_file(file_path)
         audio = audio.set_frame_rate(16000).set_channels(1)  # Compress audio
-        compressed_path = f"{file_dir}/{id}_compressed.opus"
-        audio.export(compressed_path, format="opus", bitrate="32k")
-        log.debug(f"Compressed audio to {compressed_path}")
 
-        if (
-            os.path.getsize(compressed_path) > MAX_FILE_SIZE
-        ):  # Still larger than MAX_FILE_SIZE after compression
-            raise Exception(ERROR_MESSAGES.FILE_TOO_LARGE(size=f"{MAX_FILE_SIZE_MB}MB"))
+        compressed_path = os.path.join(file_dir, f"{id}_compressed.mp3")
+        audio.export(compressed_path, format="mp3", bitrate="32k")
+        # log.debug(f"Compressed audio to {compressed_path}")  # Uncomment if log is defined
+
         return compressed_path
     else:
         return file_path
+
+
+def split_audio(file_path, max_bytes, format="mp3", bitrate="32k"):
+    """
+    Splits audio into chunks not exceeding max_bytes.
+    Returns a list of chunk file paths. If audio fits, returns list with original path.
+    """
+    file_size = os.path.getsize(file_path)
+    if file_size <= max_bytes:
+        return [file_path]  # Nothing to split
+
+    audio = AudioSegment.from_file(file_path)
+    duration_ms = len(audio)
+    orig_size = file_size
+
+    approx_chunk_ms = max(int(duration_ms * (max_bytes / orig_size)) - 1000, 1000)
+    chunks = []
+    start = 0
+    i = 0
+
+    base, _ = os.path.splitext(file_path)
+
+    while start < duration_ms:
+        end = min(start + approx_chunk_ms, duration_ms)
+        chunk = audio[start:end]
+        chunk_path = f"{base}_chunk_{i}.{format}"
+        chunk.export(chunk_path, format=format, bitrate=bitrate)
+
+        # Reduce chunk duration if still too large
+        while os.path.getsize(chunk_path) > max_bytes and (end - start) > 5000:
+            end = start + ((end - start) // 2)
+            chunk = audio[start:end]
+            chunk.export(chunk_path, format=format, bitrate=bitrate)
+
+        if os.path.getsize(chunk_path) > max_bytes:
+            os.remove(chunk_path)
+            raise Exception("Audio chunk cannot be reduced below max file size.")
+
+        chunks.append(chunk_path)
+        start = end
+        i += 1
+
+    return chunks
 
 
 @router.post("/transcriptions")
 def transcription(
     request: Request,
     file: UploadFile = File(...),
+    language: Optional[str] = Form(None),
     user=Depends(get_verified_user),
 ):
     log.info(f"file.content_type: {file.content_type}")
 
-    supported_filetypes = ("audio/mpeg", "audio/wav", "audio/ogg", "audio/x-m4a")
+    stt_supported_content_types = getattr(
+        request.app.state.config, "STT_SUPPORTED_CONTENT_TYPES", []
+    )
 
-    if not file.content_type.startswith(supported_filetypes):
+    if not any(
+        fnmatch(file.content_type, content_type)
+        for content_type in (
+            stt_supported_content_types
+            if stt_supported_content_types
+            and any(t.strip() for t in stt_supported_content_types)
+            else ["audio/*", "video/webm"]
+        )
+    ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.FILE_NOT_SUPPORTED,
@@ -786,19 +958,18 @@ def transcription(
             f.write(contents)
 
         try:
-            try:
-                file_path = compress_audio(file_path)
-            except Exception as e:
-                log.exception(e)
+            metadata = None
 
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=ERROR_MESSAGES.DEFAULT(e),
-                )
+            if language:
+                metadata = {"language": language}
 
-            data = transcribe(request, file_path, user)
-            file_path = file_path.split("/")[-1]
-            return {**data, "filename": file_path}
+            result = transcribe(request, file_path, metadata, user)
+
+            return {
+                **result,
+                "filename": os.path.basename(file_path),
+            }
+
         except Exception as e:
             log.exception(e)
 
@@ -907,7 +1078,10 @@ def get_available_voices(request) -> dict:
     elif request.app.state.config.TTS_ENGINE == "azure":
         try:
             region = request.app.state.config.TTS_AZURE_SPEECH_REGION
-            url = f"https://{region}.tts.speech.microsoft.com/cognitiveservices/voices/list"
+            base_url = request.app.state.config.TTS_AZURE_SPEECH_BASE_URL
+            url = (
+                base_url or f"https://{region}.tts.speech.microsoft.com"
+            ) + "/cognitiveservices/voices/list"
             headers = {
                 "Ocp-Apim-Subscription-Key": request.app.state.config.TTS_API_KEY
             }
