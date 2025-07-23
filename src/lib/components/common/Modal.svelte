@@ -85,7 +85,9 @@
 		}}
 	>
 		<div
-			class="m-auto max-w-[720px] {sizeToWidth(size)}  shadow-custom2 min-h-fit scrollbar-hidden {className}"
+			class="m-auto max-w-[720px] {sizeToWidth(
+				size
+			)}  shadow-custom2 min-h-fit scrollbar-hidden {className}"
 			in:flyAndScale
 			on:mousedown={(e) => {
 				e.stopPropagation();

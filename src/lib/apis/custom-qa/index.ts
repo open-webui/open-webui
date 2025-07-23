@@ -46,7 +46,10 @@ export const getCustomQAConfig = async (token: string): Promise<CustomQAConfig> 
 	return res;
 };
 
-export const updateCustomQAConfig = async (token: string, config: CustomQAConfig): Promise<CustomQAConfig> => {
+export const updateCustomQAConfig = async (
+	token: string,
+	config: CustomQAConfig
+): Promise<CustomQAConfig> => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/custom-qa/config`, {
@@ -75,7 +78,10 @@ export const updateCustomQAConfig = async (token: string, config: CustomQAConfig
 	return res;
 };
 
-export const queryCustomQA = async (token: string, request: CustomQARequest): Promise<CustomQAResponse> => {
+export const queryCustomQA = async (
+	token: string,
+	request: CustomQARequest
+): Promise<CustomQAResponse> => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/custom-qa/query`, {
@@ -168,4 +174,4 @@ export const queryCustomQASingleCollection = async (
 	}
 
 	return res;
-}; 
+};
