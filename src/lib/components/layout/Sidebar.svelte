@@ -18,6 +18,7 @@
 		scrollPaginationEnabled,
 		currentChatPage,
 		temporaryChatEnabled,
+		clearMessageInput,
 		channels,
 		socket,
 		config,
@@ -684,6 +685,9 @@
 						draggable="false"
 						on:click={async () => {
 							selectedChatId = null;
+
+							// Trigger clearing of message input
+							clearMessageInput.set(true);
 
 							await temporaryChatEnabled.set(false);
 							setTimeout(() => {

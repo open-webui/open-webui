@@ -606,6 +606,7 @@
 	"File size should not exceed {{maxSize}} MB.": "File size should not exceed {{maxSize}} MB.",
 	"File Upload": "File Upload",
 	"File uploaded successfully": "File uploaded successfully",
+	"Chat is limited to the '{{count}}' uploaded documents.": "Chat is limited to the '{{count}}' uploaded documents.",
 	"Files": "Files",
 	"Filter is now globally disabled": "Filter is now globally disabled",
 	"Filter is now globally enabled": "Filter is now globally enabled",

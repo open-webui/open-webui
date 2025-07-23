@@ -81,6 +81,9 @@ export const temporaryChatEnabled = writable(false);
 export const scrollPaginationEnabled = writable(false);
 export const currentChatPage = writable(1);
 
+// Store to trigger clearing of message input
+export const clearMessageInput = writable(false);
+
 export const isLastActiveTab = writable(true);
 export const playingNotificationSound = writable(false);
 

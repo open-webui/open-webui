@@ -130,6 +130,34 @@
 		codeInterpreterEnabled
 	});
 
+	// Track previous chat ID to detect changes
+	let previousChatId: string | null = null;
+
+	// Clear prompt and files when switching to a new chat
+	$: if (history?.currentId && previousChatId !== null && previousChatId !== history.currentId) {
+		// Clear prompt and files when chat changes
+		prompt = '';
+		files = [];
+		// Reset other states
+		selectedToolIds = [];
+		selectedFilterIds = [];
+		webSearchEnabled = false;
+		imageGenerationEnabled = false;
+		codeInterpreterEnabled = false;
+		attachFileEnabled = false;
+		// Stop any ongoing response generation
+		if (stopResponse) {
+			stopResponse();
+		}
+		// Update previous chat ID
+		previousChatId = history.currentId;
+	}
+
+	// Initialize previousChatId when component loads
+	$: if (history?.currentId && previousChatId === null) {
+		previousChatId = history.currentId;
+	}
+
 	let showTools = false;
 
 	let loaded = false;
@@ -712,8 +740,9 @@
 								dispatch('submit', prompt);
 							}}
 						>
-						{#if attachFileEnabled}<div class="text-left rounded-tl-[12px] rounded-tr-[12px] bg-[#D6E5FC] border border-[#90C9FF] py-[12px] pb-[50px] mb-[-42px] px-[16px] text-[10px] leading-[16px] text-typography-titles">Chat is limited to the ‘4’ uploaded documents.</div>{/if}
-							<div
+						{#if history.currentId && history.messages && Object.values(history.messages).some(message => message.files && message.files.length > 0)}<div class="text-left rounded-tl-[12px] rounded-tr-[12px] bg-[#D6E5FC] border border-[#90C9FF] py-[12px] pb-[50px] mb-[-42px] px-[16px] text-[10px] leading-[16px] text-typography-titles">{$i18n.t('Chat is limited to the \'{{count}}\' uploaded documents.', { count: Object.values(history.messages).reduce((total, message) => total + (message.files ? message.files.length : 0), 0) })}</div>{/if}							
+						
+						<div
 								class="p-[24px] flex-1 flex flex-col bounded-[12px] shadow-custom3 relative w-full sm:rounded-3xl transition bg-light-bg dark:text-gray-100"
 								dir={$settings?.chatDirection ?? 'auto'}
 							>
@@ -1532,7 +1561,7 @@
 																			Attach files
 																		</span>
 																	</div>
-																	{#if attachFileEnabled}<CheckFilter />{/if}
+																	{#if attachFileEnabled && files.length > 0}<CheckFilter />{/if}
 																</button>
 															</Tooltip>
 														{/if}
