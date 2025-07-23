@@ -23,24 +23,7 @@
 - **Current Branch**: `customization` (main: `main`)
 - **Key Features**: Complete mAI visual identity, custom background patterns, multi-language support
 
-**Recent Status**: Successfully merged Open WebUI v0.6.17 preserving all customizations (Jan 2025)
-
-## Essential Commands
-
-```bash
-# Development start (recommended)
-./start-dev.sh
-
-# Manual start
-cd backend && source .venv/bin/activate && sh dev.sh  # Port 8080
-npm run dev  # Port 5173
-
-# Build & quality checks
-npm run build              # Production build
-npm run check              # Type checking
-npm run lint               # Lint all code
-npm run format             # Format all code
-```
+**Recent Status**: Successfully merged Open WebUI v0.6.17 preserving all customizations (July 2025)
 
 ## Detailed Documentation
 
@@ -53,11 +36,6 @@ npm run format             # Format all code
 
 ## Critical Customization Rules
 
-**Asset Requirements:**
-- Logo files <100KB, proper formats (PNG for logos, ICO for favicons, SVG for scalable)
-- WCAG 2.1 AA compliance, contrast ratios 4.5:1 minimum
-- Test all theme variants and mobile responsiveness
-
 **Files to Preserve During Upgrades:**
 - `package.json`: Keep "name": "mai"
 - `src/lib/components/chat/Chat.svelte`: Background pattern functionality
@@ -67,18 +45,3 @@ npm run format             # Format all code
 **Branch Strategy:**
 - Work only on `customization` branch
 - Create feature branches for specific improvements
-- Never commit to main - keep it clean for upstream merges
-
-## Quick Actions
-
-```bash
-# Emergency rollback
-git checkout customization-backup/static-$(date +%Y%m%d)
-
-# Docker quick update (without rebuild)
-docker cp static/static/favicon.ico open-webui:/app/backend/static/
-docker restart open-webui
-
-# Type check before commit
-npm run check && npm run lint
-```
