@@ -52,7 +52,8 @@
 	export let showCommands = false;
 
 	export let imageGenerationEnabled = false;
-	export let codeInterpreterEnabled = false;
+	// 注释掉代码解释器功能：不再需要codeInterpreterEnabled属性
+	// export let codeInterpreterEnabled = false;
 	export let webSearchEnabled = false;
 
 	export let onSelect = (e) => {};
@@ -216,7 +217,6 @@
 					bind:selectedToolIds
 					bind:selectedFilterIds
 					bind:imageGenerationEnabled
-					bind:codeInterpreterEnabled
 					bind:webSearchEnabled
 					bind:atSelectedModel
 					bind:showCommands

@@ -67,7 +67,8 @@
 	import GlobeAlt from '../icons/GlobeAlt.svelte';
 	import Photo from '../icons/Photo.svelte';
 	import Wrench from '../icons/Wrench.svelte';
-	import CommandLine from '../icons/CommandLine.svelte';
+	// 注释掉代码解释器功能：不再需要CommandLine图标
+	// import CommandLine from '../icons/CommandLine.svelte';
 	import Sparkles from '../icons/Sparkles.svelte';
 
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
@@ -417,13 +418,14 @@
 			$models.find((m) => m.id === model)?.info?.meta?.capabilities?.image_generation ?? true
 	);
 
-	let codeInterpreterCapableModels = [];
-	$: codeInterpreterCapableModels = (
-		atSelectedModel?.id ? [atSelectedModel.id] : selectedModels
-	).filter(
-		(model) =>
-			$models.find((m) => m.id === model)?.info?.meta?.capabilities?.code_interpreter ?? true
-	);
+	// 注释掉代码解释器功能：不再需要codeInterpreterCapableModels变量
+	// let codeInterpreterCapableModels = [];
+	// $: codeInterpreterCapableModels = (
+	//	atSelectedModel?.id ? [atSelectedModel.id] : selectedModels
+	// ).filter(
+	//	(model) =>
+	//		$models.find((m) => m.id === model)?.info?.meta?.capabilities?.code_interpreter ?? true
+	// );
 
 	let toggleFilters = [];
 	$: toggleFilters = (atSelectedModel?.id ? [atSelectedModel.id] : selectedModels)
@@ -447,12 +449,13 @@
 		$config?.features?.enable_image_generation &&
 		($_user.role === 'admin' || $_user?.permissions?.features?.image_generation);
 
-	let showCodeInterpreterButton = false;
-	$: showCodeInterpreterButton =
-		(atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).length ===
-			codeInterpreterCapableModels.length &&
-		$config?.features?.enable_code_interpreter &&
-		($_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter);
+	// 注释掉代码解释器功能：不再需要showCodeInterpreterButton变量
+	// let showCodeInterpreterButton = false;
+	// $: showCodeInterpreterButton =
+	//	(atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).length ===
+	//		codeInterpreterCapableModels.length &&
+	//	$config?.features?.enable_code_interpreter &&
+	//	($_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter);
 
 	const scrollToBottom = () => {
 		const element = document.getElementById('messages-container');
@@ -1258,7 +1261,8 @@
 
 														webSearchEnabled = false;
 														imageGenerationEnabled = false;
-														codeInterpreterEnabled = false;
+														// 注释掉代码解释器功能：不再重置codeInterpreterEnabled
+														// codeInterpreterEnabled = false;
 													}
 												}}
 												on:paste={async (e) => {
@@ -1499,7 +1503,8 @@
 													selectedFilterIds = [];
 													webSearchEnabled = false;
 													imageGenerationEnabled = false;
-													codeInterpreterEnabled = false;
+													// 注释掉代码解释器功能：不再重置codeInterpreterEnabled
+													// codeInterpreterEnabled = false;
 												}
 											}}
 											rows="1"
@@ -1631,7 +1636,7 @@
 											</div>
 										</InputMenu>
 
-										{#if $_user && (showToolsButton || (toggleFilters && toggleFilters.length > 0) || showWebSearchButton || showImageGenerationButton || showCodeInterpreterButton)}
+										{#if $_user && (showToolsButton || (toggleFilters && toggleFilters.length > 0) || showWebSearchButton || showImageGenerationButton /* 注释掉代码解释器功能：移除showCodeInterpreterButton */ /* || showCodeInterpreterButton */)}
 											<div
 												class="flex self-center w-[1px] h-4 mx-1.5 bg-gray-50 dark:bg-gray-800"
 											/>
@@ -1739,6 +1744,8 @@
 													</Tooltip>
 												{/if}
 
+												<!-- 注释掉代码解释器功能：代码解释器按钮 -->
+												<!--
 												{#if showCodeInterpreterButton}
 													<Tooltip content={$i18n.t('Execute code for analysis')} placement="top">
 														<button
@@ -1764,6 +1771,7 @@
 														</button>
 													</Tooltip>
 												{/if}
+												-->
 											</div>
 										{/if}
 									</div>
