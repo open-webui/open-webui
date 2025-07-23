@@ -449,20 +449,41 @@
 		dragged = false;
 	};
 
+	// const onDrop = async (e) => {
+	// 	e.preventDefault();
+	// 	console.log(e);
+
+	// 	if (e.dataTransfer?.files) {
+	// 		const inputFiles = Array.from(e.dataTransfer?.files);
+	// 		if (inputFiles && inputFiles.length > 0) {
+	// 			console.log(inputFiles);
+	// 			inputFilesHandler(inputFiles);
+	// 		}
+	// 	}
+
+	// 	dragged = false;
+	// };
+
 	const onDrop = async (e) => {
 		e.preventDefault();
 		console.log(e);
 
 		if (e.dataTransfer?.files) {
-			const inputFiles = Array.from(e.dataTransfer?.files);
-			if (inputFiles && inputFiles.length > 0) {
-				console.log(inputFiles);
-				inputFilesHandler(inputFiles);
+			const inputFiles = Array.from(e.dataTransfer.files);
+			// Filter only PDF files
+			const pdfFiles = inputFiles.filter(file => file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'));
+
+			if (pdfFiles.length > 0) {
+				console.log(pdfFiles);
+				inputFilesHandler(pdfFiles);
+			} else {
+				toast.error('Only PDF files are allowed.');
 			}
 		}
 
 		dragged = false;
 	};
+
 
 	const onKeyDown = (e) => {
 		if (e.key === 'Shift') {
@@ -634,6 +655,7 @@
 						bind:this={filesInputElement}
 						bind:files={inputFiles}
 						type="file"
+						 accept="application/pdf"
 						hidden
 						multiple
 						on:change={async () => {
@@ -1544,7 +1566,7 @@
 									</div>
 
 									<div class="self-end flex space-x-1 mr-1 shrink-0">
-										{#if (!history?.currentId || history.messages[history.currentId]?.done == true) && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.stt ?? true))}
+										{#if false && (!history?.currentId || history.messages[history.currentId]?.done == true) && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.stt ?? true))}
 											<!-- {$i18n.t('Record voice')} -->
 											<Tooltip content={$i18n.t('Dictate')}>
 												<button
@@ -1618,7 +1640,7 @@
 													</button>
 												</Tooltip>
 											</div>
-										{:else if prompt === '' && files.length === 0 && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.call ?? true))}
+										{:else if false && prompt === '' && files.length === 0 && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.call ?? true))}
 											<div class=" flex items-center">
 												<!-- {$i18n.t('Call')} -->
 												<Tooltip content={$i18n.t('Voice mode')}>
