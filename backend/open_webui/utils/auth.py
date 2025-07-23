@@ -23,6 +23,7 @@ from open_webui.env import (
     TRUSTED_SIGNATURE_KEY,
     STATIC_DIR,
     SRC_LOG_LEVELS,
+    WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
 )
 
 from fastapi import BackgroundTasks, Depends, HTTPException, Request, Response, status
@@ -73,31 +74,37 @@ def override_static(path: str, content: str):
 
 
 def get_license_data(app, key):
-    if key:
-        try:
-            res = requests.post(
-                "https://api.openwebui.com/api/v1/license/",
-                json={"key": key, "version": "1"},
-                timeout=5,
+    def handler(u):
+        res = requests.post(
+            f"{u}/api/v1/license/",
+            json={"key": key, "version": "1"},
+            timeout=5,
+        )
+
+        if getattr(res, "ok", False):
+            payload = getattr(res, "json", lambda: {})()
+            for k, v in payload.items():
+                if k == "resources":
+                    for p, c in v.items():
+                        globals().get("override_static", lambda a, b: None)(p, c)
+                elif k == "count":
+                    setattr(app.state, "USER_COUNT", v)
+                elif k == "name":
+                    setattr(app.state, "WEBUI_NAME", v)
+                elif k == "metadata":
+                    setattr(app.state, "LICENSE_METADATA", v)
+            return True
+        else:
+            log.error(
+                f"License: retrieval issue: {getattr(res, 'text', 'unknown error')}"
             )
 
-            if getattr(res, "ok", False):
-                payload = getattr(res, "json", lambda: {})()
-                for k, v in payload.items():
-                    if k == "resources":
-                        for p, c in v.items():
-                            globals().get("override_static", lambda a, b: None)(p, c)
-                    elif k == "count":
-                        setattr(app.state, "USER_COUNT", v)
-                    elif k == "name":
-                        setattr(app.state, "WEBUI_NAME", v)
-                    elif k == "metadata":
-                        setattr(app.state, "LICENSE_METADATA", v)
-                return True
-            else:
-                log.error(
-                    f"License: retrieval issue: {getattr(res, 'text', 'unknown error')}"
-                )
+    if key:
+        us = ["https://api.openwebui.com", "https://licenses.api.openwebui.com"]
+        try:
+            for u in us:
+                if handler(u):
+                    return True
         except Exception as ex:
             log.exception(f"License: Uncaught Exception: {ex}")
     return False
@@ -157,6 +164,7 @@ def get_http_authorization_cred(auth_header: Optional[str]):
 
 def get_current_user(
     request: Request,
+    response: Response,
     background_tasks: BackgroundTasks,
     auth_token: HTTPAuthorizationCredentials = Depends(bearer_security),
 ):
@@ -225,6 +233,21 @@ def get_current_user(
                 detail=ERROR_MESSAGES.INVALID_TOKEN,
             )
         else:
+            if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
+                trusted_email = request.headers.get(
+                    WEBUI_AUTH_TRUSTED_EMAIL_HEADER, ""
+                ).lower()
+                if trusted_email and user.email != trusted_email:
+                    # Delete the token cookie
+                    response.delete_cookie("token")
+                    # Delete OAuth token if present
+                    if request.cookies.get("oauth_id_token"):
+                        response.delete_cookie("oauth_id_token")
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="User mismatch. Please sign in again.",
+                    )
+
             # Add user info to current span
             current_span = trace.get_current_span()
             if current_span:

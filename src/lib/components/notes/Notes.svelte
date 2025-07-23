@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import fileSaver from 'file-saver';
+	import Fuse from 'fuse.js';
+
 	const { saveAs } = fileSaver;
 
 	import jsPDF from 'jspdf';
@@ -32,7 +34,7 @@
 	import { WEBUI_NAME, config, prompts as _prompts, user } from '$lib/stores';
 
 	import { createNewNote, deleteNoteById, getNotes } from '$lib/apis/notes';
-	import { capitalizeFirstLetter } from '$lib/utils';
+	import { capitalizeFirstLetter, copyToClipboard, getTimeRange } from '$lib/utils';
 
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -44,6 +46,7 @@
 	import NoteMenu from './Notes/NoteMenu.svelte';
 	import FilesOverlay from '../chat/MessageInput/FilesOverlay.svelte';
 	import { marked } from 'marked';
+	import XMark from '../icons/XMark.svelte';
 
 	const i18n = getContext('i18n');
 	let loaded = false;
@@ -51,18 +54,57 @@
 	let importFiles = '';
 	let query = '';
 
-	let notes = [];
+	let noteItems = [];
+	let fuse = null;
+
 	let selectedNote = null;
+	let notes = {};
+	$: if (fuse) {
+		notes = groupNotes(
+			query
+				? fuse.search(query).map((e) => {
+						return e.item;
+					})
+				: noteItems
+		);
+	}
 
 	let showDeleteConfirm = false;
 
+	const groupNotes = (res) => {
+		console.log(res);
+		if (!Array.isArray(res)) {
+			return {}; // or throw new Error("Notes response is not an array")
+		}
+
+		// Build the grouped object
+		const grouped: Record<string, any[]> = {};
+		for (const note of res) {
+			const timeRange = getTimeRange(note.updated_at / 1000000000);
+			if (!grouped[timeRange]) {
+				grouped[timeRange] = [];
+			}
+			grouped[timeRange].push({
+				...note,
+				timeRange
+			});
+		}
+		return grouped;
+	};
+
 	const init = async () => {
-		notes = await getNotes(localStorage.token);
+		noteItems = await getNotes(localStorage.token, true);
+
+		fuse = new Fuse(noteItems, {
+			keys: ['title']
+		});
 	};
 
 	const createNoteHandler = async () => {
+		//  $i18n.t('New Note'),
 		const res = await createNewNote(localStorage.token, {
-			title: $i18n.t('New Note'),
+			// YYYY-MM-DD
+			title: dayjs().format('YYYY-MM-DD'),
 			data: {
 				content: {
 					json: null,
@@ -71,7 +113,7 @@
 				}
 			},
 			meta: null,
-			access_control: null
+			access_control: {}
 		}).catch((error) => {
 			toast.error(`${error}`);
 			return null;
@@ -198,7 +240,7 @@
 						}
 					},
 					meta: null,
-					access_control: null
+					access_control: {}
 				}).catch((error) => {
 					toast.error(`${error}`);
 					return null;
@@ -291,6 +333,34 @@
 			</div>
 		</DeleteConfirmDialog>
 
+		<div class="flex flex-col gap-1 px-3.5">
+			<div class=" flex flex-1 items-center w-full space-x-2">
+				<div class="flex flex-1 items-center">
+					<div class=" self-center ml-1 mr-3">
+						<Search className="size-3.5" />
+					</div>
+					<input
+						class=" w-full text-sm py-1 rounded-r-xl outline-hidden bg-transparent"
+						bind:value={query}
+						placeholder={$i18n.t('Search Notes')}
+					/>
+
+					{#if query}
+						<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
+							<button
+								class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+								on:click={() => {
+									query = '';
+								}}
+							>
+								<XMark className="size-3" strokeWidth="2" />
+							</button>
+						</div>
+					{/if}
+				</div>
+			</div>
+		</div>
+
 		<div class="px-4.5 @container h-full pt-2">
 			{#if Object.keys(notes).length > 0}
 				<div class="pb-10">
@@ -300,7 +370,7 @@
 						</div>
 
 						<div
-							class="mb-5 gap-2.5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
+							class="mb-5 gap-2.5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
 						>
 							{#each notes[timeRange] as note, idx (note.id)}
 								<div
@@ -322,6 +392,16 @@
 
 																downloadHandler(type);
 															}}
+															onCopyLink={async () => {
+																const baseUrl = window.location.origin;
+																const res = await copyToClipboard(`${baseUrl}/notes/${note.id}`);
+
+																if (res) {
+																	toast.success($i18n.t('Copied link to clipboard'));
+																} else {
+																	toast.error($i18n.t('Failed to copy link'));
+																}
+															}}
 															onDelete={() => {
 																selectedNote = note;
 																showDeleteConfirm = true;
@@ -338,7 +418,7 @@
 												</div>
 
 												<div
-													class=" text-xs text-gray-500 dark:text-gray-500 mb-3 line-clamp-5 min-h-18"
+													class=" text-xs text-gray-500 dark:text-gray-500 mb-3 line-clamp-3 min-h-10"
 												>
 													{#if note.data?.content?.md}
 														{note.data?.content?.md}
@@ -462,7 +542,7 @@
 	{/if} -->
 	{:else}
 		<div class="w-full h-full flex justify-center items-center">
-			<Spinner />
+			<Spinner className="size-5" />
 		</div>
 	{/if}
 </div>

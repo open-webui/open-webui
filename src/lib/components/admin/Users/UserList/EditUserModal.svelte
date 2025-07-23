@@ -8,6 +8,7 @@
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
+	import XMark from '$lib/components/icons/XMark.svelte';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -19,6 +20,7 @@
 
 	let _user = {
 		profile_image_url: '',
+		role: 'pending',
 		name: '',
 		email: '',
 		password: ''
@@ -53,16 +55,7 @@
 					show = false;
 				}}
 			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 20 20"
-					fill="currentColor"
-					class="w-5 h-5"
-				>
-					<path
-						d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-					/>
-				</svg>
+				<XMark className={'size-5'} />
 			</button>
 		</div>
 
@@ -96,17 +89,33 @@
 					<div class=" px-5 pt-3 pb-5">
 						<div class=" flex flex-col space-y-1.5">
 							<div class="flex flex-col w-full">
+								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Role')}</div>
+
+								<div class="flex-1">
+									<select
+										class="w-full dark:bg-gray-900 text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-hidden"
+										bind:value={_user.role}
+										disabled={_user.id == sessionUser.id}
+										required
+									>
+										<option value="admin">{$i18n.t('Admin')}</option>
+										<option value="user">{$i18n.t('User')}</option>
+										<option value="pending">{$i18n.t('Pending')}</option>
+									</select>
+								</div>
+							</div>
+
+							<div class="flex flex-col w-full">
 								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Email')}</div>
 
 								<div class="flex-1">
 									<input
-										class="w-full rounded-sm text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-hidden"
+										class="w-full text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-hidden"
 										type="email"
 										bind:value={_user.email}
 										placeholder={$i18n.t('Enter Your Email')}
 										autocomplete="off"
 										required
-										disabled={_user.id == sessionUser.id}
 									/>
 								</div>
 							</div>
@@ -116,7 +125,7 @@
 
 								<div class="flex-1">
 									<input
-										class="w-full rounded-sm text-sm bg-transparent outline-hidden"
+										class="w-full text-sm bg-transparent outline-hidden"
 										type="text"
 										bind:value={_user.name}
 										placeholder={$i18n.t('Enter Your Name')}
@@ -131,7 +140,7 @@
 
 								<div class="flex-1">
 									<input
-										class="w-full rounded-sm text-sm bg-transparent outline-hidden"
+										class="w-full text-sm bg-transparent outline-hidden"
 										type="password"
 										placeholder={$i18n.t('Enter New Password')}
 										bind:value={_user.password}

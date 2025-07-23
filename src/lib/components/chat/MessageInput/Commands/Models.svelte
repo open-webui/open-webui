@@ -1,16 +1,16 @@
 <script lang="ts">
 	import Fuse from 'fuse.js';
 
-	import { createEventDispatcher, onMount } from 'svelte';
+	import { createEventDispatcher, onDestroy, onMount } from 'svelte';
 	import { tick, getContext } from 'svelte';
 
 	import { models } from '$lib/stores';
+	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	const i18n = getContext('i18n');
 
-	const dispatch = createEventDispatcher();
-
 	export let command = '';
+	export let onSelect = (e) => {};
 
 	let selectedIdx = 0;
 	let filteredItems = [];
@@ -51,17 +51,42 @@
 		selectedIdx = Math.min(selectedIdx + 1, filteredItems.length - 1);
 	};
 
+	let container;
+	let adjustHeightDebounce;
+
+	const adjustHeight = () => {
+		if (container) {
+			if (adjustHeightDebounce) {
+				clearTimeout(adjustHeightDebounce);
+			}
+
+			adjustHeightDebounce = setTimeout(() => {
+				if (!container) return;
+
+				// Ensure the container is visible before adjusting height
+				const rect = container.getBoundingClientRect();
+				container.style.maxHeight = Math.max(Math.min(240, rect.bottom - 100), 100) + 'px';
+			}, 100);
+		}
+	};
+
 	const confirmSelect = async (model) => {
-		command = '';
-		dispatch('select', model);
+		onSelect({ type: 'model', data: model });
 	};
 
 	onMount(async () => {
+		window.addEventListener('resize', adjustHeight);
+		adjustHeight();
+
 		await tick();
 		const chatInputElement = document.getElementById('chat-input');
 		await tick();
 		chatInputElement?.focus();
 		await tick();
+	});
+
+	onDestroy(() => {
+		window.removeEventListener('resize', adjustHeight);
 	});
 </script>
 
@@ -75,6 +100,7 @@
 				<div
 					class="m-1 overflow-y-auto p-1 rounded-r-lg space-y-0.5 scrollbar-hidden max-h-60"
 					id="command-options-container"
+					bind:this={container}
 				>
 					{#each filteredItems as model, modelIdx}
 						<button
@@ -92,7 +118,8 @@
 						>
 							<div class="flex font-medium text-black dark:text-gray-100 line-clamp-1">
 								<img
-									src={model?.info?.meta?.profile_image_url ?? '/static/favicon.png'}
+									src={model?.info?.meta?.profile_image_url ??
+										`${WEBUI_BASE_URL}/static/favicon.png`}
 									alt={model?.name ?? model.id}
 									class="rounded-full size-6 items-center mr-2"
 								/>

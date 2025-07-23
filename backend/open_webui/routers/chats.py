@@ -39,13 +39,21 @@ router = APIRouter()
 async def get_session_user_chat_list(
     user=Depends(get_verified_user), page: Optional[int] = None
 ):
-    if page is not None:
-        limit = 60
-        skip = (page - 1) * limit
+    try:
+        if page is not None:
+            limit = 60
+            skip = (page - 1) * limit
 
-        return Chats.get_chat_title_id_list_by_user_id(user.id, skip=skip, limit=limit)
-    else:
-        return Chats.get_chat_title_id_list_by_user_id(user.id)
+            return Chats.get_chat_title_id_list_by_user_id(
+                user.id, skip=skip, limit=limit
+            )
+        else:
+            return Chats.get_chat_title_id_list_by_user_id(user.id)
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
+        )
 
 
 ############################
@@ -684,8 +692,10 @@ async def archive_chat_by_id(id: str, user=Depends(get_verified_user)):
 
 @router.post("/{id}/share", response_model=Optional[ChatResponse])
 async def share_chat_by_id(request: Request, id: str, user=Depends(get_verified_user)):
-    if not has_permission(
-        user.id, "chat.share", request.app.state.config.USER_PERMISSIONS
+    if (user.role != "admin") and (
+        not has_permission(
+            user.id, "chat.share", request.app.state.config.USER_PERMISSIONS
+        )
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

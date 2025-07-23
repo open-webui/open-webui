@@ -175,16 +175,32 @@ def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
         "num_thread": int,
     }
 
-    # Extract keep_alive from options if it exists
-    if "options" in form_data and "keep_alive" in form_data["options"]:
-        form_data["keep_alive"] = form_data["options"]["keep_alive"]
-        del form_data["options"]["keep_alive"]
+    def parse_json(value: str) -> dict:
+        """
+        Parses a JSON string into a dictionary, handling potential JSONDecodeError.
+        """
+        try:
+            return json.loads(value)
+        except Exception as e:
+            return value
 
-    if "options" in form_data and "format" in form_data["options"]:
-        form_data["format"] = form_data["options"]["format"]
-        del form_data["options"]["format"]
+    ollama_root_params = {
+        "format": lambda x: parse_json(x),
+        "keep_alive": lambda x: parse_json(x),
+        "think": bool,
+    }
 
-    return apply_model_params_to_body(params, form_data, mappings)
+    for key, value in ollama_root_params.items():
+        if (param := params.get(key, None)) is not None:
+            # Copy the parameter to new name then delete it, to prevent Ollama warning of invalid option provided
+            form_data[key] = value(param)
+            del params[key]
+
+    # Unlike OpenAI, Ollama does not support params directly in the body
+    form_data["options"] = apply_model_params_to_body(
+        params, (form_data.get("options", {}) or {}), mappings
+    )
+    return form_data
 
 
 def convert_messages_openai_to_ollama(messages: list[dict]) -> list[dict]:
@@ -279,36 +295,48 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
         openai_payload.get("messages")
     )
     ollama_payload["stream"] = openai_payload.get("stream", False)
-
     if "tools" in openai_payload:
         ollama_payload["tools"] = openai_payload["tools"]
-
-    if "format" in openai_payload:
-        ollama_payload["format"] = openai_payload["format"]
 
     # If there are advanced parameters in the payload, format them in Ollama's options field
     if openai_payload.get("options"):
         ollama_payload["options"] = openai_payload["options"]
         ollama_options = openai_payload["options"]
 
+        def parse_json(value: str) -> dict:
+            """
+            Parses a JSON string into a dictionary, handling potential JSONDecodeError.
+            """
+            try:
+                return json.loads(value)
+            except Exception as e:
+                return value
+
+        ollama_root_params = {
+            "format": lambda x: parse_json(x),
+            "keep_alive": lambda x: parse_json(x),
+            "think": bool,
+        }
+
+        # Ollama's options field can contain parameters that should be at the root level.
+        for key, value in ollama_root_params.items():
+            if (param := ollama_options.get(key, None)) is not None:
+                # Copy the parameter to new name then delete it, to prevent Ollama warning of invalid option provided
+                ollama_payload[key] = value(param)
+                del ollama_options[key]
+
         # Re-Mapping OpenAI's `max_tokens` -> Ollama's `num_predict`
         if "max_tokens" in ollama_options:
             ollama_options["num_predict"] = ollama_options["max_tokens"]
-            del ollama_options[
-                "max_tokens"
-            ]  # To prevent Ollama warning of invalid option provided
+            del ollama_options["max_tokens"]
 
         # Ollama lacks a "system" prompt option. It has to be provided as a direct parameter, so we copy it down.
+        # Comment: Not sure why this is needed, but we'll keep it for compatibility.
         if "system" in ollama_options:
             ollama_payload["system"] = ollama_options["system"]
-            del ollama_options[
-                "system"
-            ]  # To prevent Ollama warning of invalid option provided
+            del ollama_options["system"]
 
-        # Extract keep_alive from options if it exists
-        if "keep_alive" in ollama_options:
-            ollama_payload["keep_alive"] = ollama_options["keep_alive"]
-            del ollama_options["keep_alive"]
+        ollama_payload["options"] = ollama_options
 
     # If there is the "stop" parameter in the openai_payload, remap it to the ollama_payload.options
     if "stop" in openai_payload:
@@ -327,5 +355,34 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
         if schema:
             format = schema.get("schema", None)
             ollama_payload["format"] = format
+
+    return ollama_payload
+
+
+def convert_embedding_payload_openai_to_ollama(openai_payload: dict) -> dict:
+    """
+    Convert an embeddings request payload from OpenAI format to Ollama format.
+
+    Args:
+        openai_payload (dict): The original payload designed for OpenAI API usage.
+
+    Returns:
+        dict: A payload compatible with the Ollama API embeddings endpoint.
+    """
+    ollama_payload = {"model": openai_payload.get("model")}
+    input_value = openai_payload.get("input")
+
+    # Ollama expects 'input' as a list, and 'prompt' as a single string.
+    if isinstance(input_value, list):
+        ollama_payload["input"] = input_value
+        ollama_payload["prompt"] = "\n".join(str(x) for x in input_value)
+    else:
+        ollama_payload["input"] = [input_value]
+        ollama_payload["prompt"] = str(input_value)
+
+    # Optionally forward other fields if present
+    for optional_key in ("options", "truncate", "keep_alive"):
+        if optional_key in openai_payload:
+            ollama_payload[optional_key] = openai_payload[optional_key]
 
     return ollama_payload
