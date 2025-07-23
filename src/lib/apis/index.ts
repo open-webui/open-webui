@@ -292,7 +292,7 @@ export const getTaskIdsByChatId = async (token: string, chat_id: string) => {
 	return res;
 };
 
-export const getToolServerData = async (token: string, oAuthAccessToken: string | null = null, url: string) => {
+export const getToolServerData = async (token: string, url: string) => {
 	let error = null;
 
 	const res = await fetch(`${url}`, {
@@ -300,8 +300,7 @@ export const getToolServerData = async (token: string, oAuthAccessToken: string 
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` }),
-			...(oAuthAccessToken && { 'X-Access-Token': oAuthAccessToken })
+			...(token && { authorization: `Bearer ${token}` })
 		}
 	})
 		.then(async (res) => {
@@ -347,7 +346,6 @@ export const getToolServersData = async (i18n, servers: object[]) => {
 				.map(async (server) => {
 					const data = await getToolServerData(
 						(server?.auth_type ?? 'bearer') === 'bearer' || (server?.auth_type ?? 'oauth') === 'oauth' ? server?.key : localStorage.token,
-						(server?.auth_type ?? 'bearer') === 'oauth' ? server?.oAuthAccessToken : null,
 						(server?.path ?? '').includes('://')
 							? server?.path
 							: `${server?.url}${(server?.path ?? '').startsWith('/') ? '' : '/'}${server?.path}`

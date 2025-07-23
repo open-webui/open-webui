@@ -34,7 +34,6 @@
 	let bearerKey = '';
 
 	let oAuthAccessToken = '';
-	let oAuthIdToken = '';
 
 	let popup: WindowProxy | null = null;
 
@@ -69,17 +68,16 @@
 			return;
 		}
 
-		if (auth_type === 'oauth' && oAuthIdToken === '') {
-			toast.error($i18n.t('Please Sign In to your selected provider, or manually enter an ID token.'));
+		if (auth_type === 'oauth' && oAuthAccessToken === '') {
+			toast.error($i18n.t('Please Sign In to your selected provider, or manually enter an Access Token.'));
 			return;
 		}
 
-		const key = auth_type === 'oauth' ? oAuthIdToken : auth_type === 'bearer' ? bearerKey : localStorage.token;
+		const key = auth_type === 'oauth' ? oAuthAccessToken : auth_type === 'bearer' ? bearerKey : localStorage.token;
 
 		if (direct) {
 			const res = await getToolServerData(
 				key,
-				oAuthAccessToken ? oAuthAccessToken : null,
 				path.includes('://') ? path : `${url}${path.startsWith('/') ? '' : '/'}${path}`,
 			).catch((err) => {
 				toast.error($i18n.t('Connection failed'));
@@ -115,7 +113,7 @@
 	};
 
 	const submitHandler = async () => {
-		const key = auth_type === 'oauth' ? oAuthIdToken : auth_type === 'bearer' ? bearerKey : localStorage.token;
+		const key = auth_type === 'oauth' ? oAuthAccessToken : auth_type === 'bearer' ? bearerKey : localStorage.token;
 		loading = true;
 
 		// remove trailing slash from url
@@ -146,7 +144,6 @@
 		path = 'openapi.json';
 		bearerKey = '';
 		oAuthAccessToken = '';
-		oAuthIdToken = '';
 		auth_type = 'bearer';
 
 		name = '';
@@ -163,8 +160,7 @@
 
 			auth_type = connection?.auth_type ?? 'bearer';
 			bearerKey = connection?.key ?? '';
-			oAuthIdToken = connection?.key ?? '';
-			oAuthAccessToken = connection?.oAuthAccessToken ?? '';
+			oAuthAccessToken = connection?.key ?? '';
 
 			name = connection.info?.name ?? '';
 			description = connection.info?.description ?? '';
@@ -195,7 +191,6 @@
 
 			try {
 				if (data.toolserverAuthSuccess) {
-					oAuthIdToken = data.idToken;
 					oAuthAccessToken = data.accessToken;
 					toast.success($i18n.t(`Authentication successful! Access token was set.`));
 					if (popup) popup.close();
@@ -371,7 +366,7 @@
 												class="ml-auto px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
 												on:click={() => startOAuthFlow()}
 											>
-												{$i18n.t(oAuthIdToken === '' ? 'Sign In' : 'Refresh Token')}
+												{$i18n.t(oAuthAccessToken === '' ? 'Sign In' : 'Refresh Token')}
 											</button>
 										{/if}
 									</div>
@@ -380,25 +375,13 @@
 								{#if auth_type === 'oauth'}
 									<div class="mt-2">
 										<div class="text-xs text-gray-500 self-center translate-y-[1px]">
-											{$i18n.t('OAuth ID Token (required)')}
-										</div>
-										<SensitiveInput
-											className="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
-											bind:value={oAuthIdToken}
-											placeholder={$i18n.t('OAuth ID Token')}
-											required={true}
-										/>
-									</div>
-
-									<div class="mt-2">
-										<div class="text-xs text-gray-500 self-center translate-y-[1px]">
 											{$i18n.t('OAuth Access Token')}
 										</div>
 										<SensitiveInput
 											className="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
 											bind:value={oAuthAccessToken}
 											placeholder={$i18n.t('OAuth Access Token')}
-											required={false}
+											required={true}
 										/>
 									</div>
 								{/if}
