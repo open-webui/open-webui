@@ -208,10 +208,6 @@
 			ALLOWED_FILE_EXTENSIONS: RAGConfig.ALLOWED_FILE_EXTENSIONS.split(',')
 				.map((ext) => ext.trim())
 				.filter((ext) => ext !== ''),
-			DATALAB_MARKER_LANGS: RAGConfig.DATALAB_MARKER_LANGS.split(',')
-				.map((code) => code.trim())
-				.filter((code) => code !== '')
-				.join(', '),
 			DOCLING_PICTURE_DESCRIPTION_LOCAL: JSON.parse(
 				RAGConfig.DOCLING_PICTURE_DESCRIPTION_LOCAL || '{}'
 			),
@@ -368,6 +364,8 @@
 										bind:value={RAGConfig.DATALAB_MARKER_API_BASE_URL}
 									/>
 								</Tooltip>
+							</div>
+							<div class="my-0.5 flex gap-2 pr-2">
 								<SensitiveInput
 									placeholder={$i18n.t('Enter Datalab Marker API Key')}
 									required={false}
