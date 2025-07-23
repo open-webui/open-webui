@@ -48,6 +48,10 @@ class Vector:
                 from open_webui.retrieval.vector.dbs.chroma import ChromaClient
 
                 return ChromaClient()
+            case VectorType.WEAVIATE:
+                from open_webui.retrieval.vector.dbs.weaviate import WeaviateClient
+
+                return WeaviateClient()
             case _:
                 raise ValueError(f"Unsupported vector type: {vector_type}")
 
