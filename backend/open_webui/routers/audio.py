@@ -566,7 +566,6 @@ def transcription_handler(request, file_path, metadata):
                 if WHISPER_LANGUAGE == ""
                 else WHISPER_LANGUAGE
             ),
-        )            
         )
         log.info(
             "Detected language '%s' with probability %f"
