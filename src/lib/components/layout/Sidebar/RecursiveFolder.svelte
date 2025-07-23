@@ -353,7 +353,7 @@
 		<div class=" bg-black/80 backdrop-blur-2xl px-2 py-1 rounded-lg w-fit max-w-40">
 			<div class="flex items-center gap-1">
 				<FolderOpen className="size-3.5" strokeWidth="2" />
-				<div class="link-sub-nav-style  text-white line-clamp-1">
+				<div class="link-sub-nav-style text-white line-clamp-1">
 					{folders[folderId].name}
 				</div>
 			</div>
@@ -382,7 +382,7 @@
 		<div class="w-full group">
 			<button
 				id="folder-{folderId}-button"
-				class="flex items-center relative w-full py-[8px] px-[16px] pl-[32px]  rounded-md flex items-center gap-[8px] link-style text-typography-titles hover:bg-gradient-bg-2 dark:hover:bg-gray-900 transition"
+				class="flex items-center relative w-full py-[8px] px-[16px] pl-[32px] rounded-md flex items-center gap-[8px] link-style text-typography-titles hover:bg-gradient-bg-2 dark:hover:bg-gray-900 transition"
 				on:dblclick={() => {
 					editHandler();
 				}}

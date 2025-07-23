@@ -113,7 +113,7 @@
 				}}
 			/>
 		</div>
-      
+
 		<!-- <hr class="border-gray-100 dark:border-gray-850 my-1" /> -->
 
 		<div class="flex flex-col overflow-y-auto h-80 scrollbar-hidden px-[24px] pb-1">
@@ -154,7 +154,7 @@
 					{/if}
 
 					<a
-						class="py-[8px] w-full flex gap-[8px] items-center "
+						class="py-[8px] w-full flex gap-[8px] items-center"
 						href="/c/{chat.id}"
 						draggable="false"
 						data-arrow-selected={selectedIdx === idx ? 'true' : undefined}
@@ -166,11 +166,22 @@
 							onClose();
 						}}
 					>
-					<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
-  <path d="M9.89035 12.4424L9.17752 11.7463L12.4302 8.49359H1.66602V7.49376H12.4365L9.19418 4.24109L9.89035 3.54492L14.339 7.99376L9.89035 12.4424Z" fill="#36383B"/>
-</svg>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							width="16"
+							height="16"
+							viewBox="0 0 16 16"
+							fill="none"
+						>
+							<path
+								d="M9.89035 12.4424L9.17752 11.7463L12.4302 8.49359H1.66602V7.49376H12.4365L9.19418 4.24109L9.89035 3.54492L14.339 7.99376L9.89035 12.4424Z"
+								fill="#36383B"
+							/>
+						</svg>
 						<div class=" flex-1">
-							<div class="text-ellipsis line-clamp-1 w-full text-neutrals-800 text-[16px] leading-[24px] font-medium">
+							<div
+								class="text-ellipsis line-clamp-1 w-full text-neutrals-800 text-[16px] leading-[24px] font-medium"
+							>
 								{chat?.title}
 							</div>
 						</div>

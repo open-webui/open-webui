@@ -7,12 +7,14 @@ This guide is for the GovGPT engineering team to periodically sync our Azure Dev
 These steps are required only once per developer or machine.
 
 1. Clone the internal Azure DevOps repo if not already done:
+
    ```bash
    git clone https://dev.azure.com/your-org/_git/govgpt-openwebui
    cd govgpt-openwebui
    ```
 
 2. Add the Open WebUI GitHub repository as the upstream remote:
+
    ```bash
    git remote add upstream https://github.com/open-webui/open-webui.git
    git fetch upstream
@@ -31,12 +33,14 @@ The `upstream-main` branch should be used only to pull updates from GitHub. No d
 Use the following steps to update the internal repository when Open WebUI releases new changes:
 
 1. Pull the latest upstream changes:
+
    ```bash
    git checkout upstream-main
    git pull upstream main
    ```
 
 2. Merge the updates into your main development branch:
+
    ```bash
    git checkout main
    git merge upstream-main

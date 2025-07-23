@@ -3,23 +3,23 @@
 @config '../tailwind.config.js';
 
 :root {
-  --color-titles: #23282E;
-   --color-subtext: #666D7A;
-   --color-disabled: #ABB4C5;
-   --color-secondary-body-text: #979EAD;
-   --color-light-bg: #FBFCFC;
-   --color-label-primary: #000000;
-   --color-btn-text-secondary: #004280;
+	--color-titles: #23282e;
+	--color-subtext: #666d7a;
+	--color-disabled: #abb4c5;
+	--color-secondary-body-text: #979ead;
+	--color-light-bg: #fbfcfc;
+	--color-label-primary: #000000;
+	--color-btn-text-secondary: #004280;
 }
 
 .dark {
-  --color-titles: #E0EBF6;
-  --color-subtext: #979EAD;
-   --color-disabled: #6B717C;
-   --color-secondary-body-text: #979EAD;
-   --color-light-bg: #010E1D;
-   --color-label-primary: #E0EBF6;
-    --color-btn-text-secondary: #E0EBF6;
+	--color-titles: #e0ebf6;
+	--color-subtext: #979ead;
+	--color-disabled: #6b717c;
+	--color-secondary-body-text: #979ead;
+	--color-light-bg: #010e1d;
+	--color-label-primary: #e0ebf6;
+	--color-btn-text-secondary: #e0ebf6;
 }
 /*
   The default border color has changed to `currentColor` in Tailwind CSS v4,
@@ -30,149 +30,159 @@
   color utility to any element that depends on these defaults.
 */
 @layer base {
-
-    *,
-    ::after,
-    ::before,
-    ::backdrop,
-    ::file-selector-button {
-        border-color: var(--color-gray-200, currentColor);
-    }
+	*,
+	::after,
+	::before,
+	::backdrop,
+	::file-selector-button {
+		border-color: var(--color-gray-200, currentColor);
+	}
 }
 
 @layer base {
+	html,
+	pre {
+		font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Vazirmatn', ui-sans-serif, system-ui,
+			'Segoe UI', Roboto, Ubuntu, Cantarell, 'Noto Sans', sans-serif, 'Helvetica Neue', Arial,
+			'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+	}
 
-    html,
-    pre {
-        font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Vazirmatn', ui-sans-serif, system-ui,
-            'Segoe UI', Roboto, Ubuntu, Cantarell, 'Noto Sans', sans-serif, 'Helvetica Neue', Arial,
-            'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
-    }
+	pre {
+		white-space: pre-wrap;
+	}
 
-    pre {
-        white-space: pre-wrap;
-    }
+	button {
+		@apply cursor-pointer;
+	}
 
-    button {
-        @apply cursor-pointer;
-    }
-
-    input::placeholder,
-    textarea::placeholder {
-        color: theme(--color-gray-400);
-    }
+	input::placeholder,
+	textarea::placeholder {
+		color: theme(--color-gray-400);
+	}
 }
 
 @custom-variant hover (&:hover);
 
-
 .bg-circle {
-    background-color: #F9F9FF;
-    background-image: url('/static/bg-circles.png');
-    background-repeat: no-repeat;
-    background-size: cover;
-    background-position: center center;
-    background-attachment: fixed;
+	background-color: #f9f9ff;
+	background-image: url('/static/bg-circles.png');
+	background-repeat: no-repeat;
+	background-size: cover;
+	background-position: center center;
+	background-attachment: fixed;
 }
 
 html.dark .bg-circle {
-    background-color: #1A1C21;
+	background-color: #1a1c21;
 }
 
 .decorative-image-top {
-    position: absolute;
-    top: 70px;
-    left: 0;
-    width: 407px;
-    height: 248px;
-    background-image: url('./top-left.png');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    border-radius: 0 50px 50px 0;
-    opacity: 0.8;
-    transition: all 0.3s ease;
-    display: none;
+	position: absolute;
+	top: 70px;
+	left: 0;
+	width: 407px;
+	height: 248px;
+	background-image: url('./top-left.png');
+	background-size: cover;
+	background-position: center;
+	background-repeat: no-repeat;
+	border-radius: 0 50px 50px 0;
+	opacity: 0.8;
+	transition: all 0.3s ease;
+	display: none;
 }
 
 @media (min-width: 768px) {
-    .decorative-image-top {
-        display: block;
-    }
+	.decorative-image-top {
+		display: block;
+	}
 }
 
 body.dark .decorative-image-top {
-    opacity: 1;
+	opacity: 1;
 }
 
 .decorative-image-bottom {
-    position: absolute;
-    bottom: 0;
-    right: 0;
-    width: 350px;
-    height: 250px;
-    background-image: url('./bottom-right.png');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    border-radius: 50px 0 0 0;
-    opacity: 0.7;
-    transition: all 0.3s ease;
-    display: none;
+	position: absolute;
+	bottom: 0;
+	right: 0;
+	width: 350px;
+	height: 250px;
+	background-image: url('./bottom-right.png');
+	background-size: cover;
+	background-position: center;
+	background-repeat: no-repeat;
+	border-radius: 50px 0 0 0;
+	opacity: 0.7;
+	transition: all 0.3s ease;
+	display: none;
 }
 
 @media (min-width: 768px) {
-    .decorative-image-bottom {
-        display: block;
-    }
+	.decorative-image-bottom {
+		display: block;
+	}
 }
 
 body.dark .decorative-image-bottom {
-    opacity: 1;
+	opacity: 1;
 }
-
-
 
 .bg-surface {
-    background: radial-gradient(93.48% 68.59% at 40.87% 70.12%, rgba(204, 221, 252, 0.04) 37.67%, rgba(204, 221, 252, 0.40) 100%), 
-                     radial-gradient(70.94% 58.43% at 27.53% 86.82%, rgba(204, 221, 252, 0.25) 0%, rgba(204, 221, 252, 0.00) 100%), 
-                     linear-gradient(0deg, rgba(236, 238, 241, 0.20) 0%, rgba(236, 238, 241, 0.20) 100%), 
-                     #FFF;
-    /* fallback */
-    position: relative;
-    overflow: clip;
+	background: radial-gradient(
+			93.48% 68.59% at 40.87% 70.12%,
+			rgba(204, 221, 252, 0.04) 37.67%,
+			rgba(204, 221, 252, 0.4) 100%
+		),
+		radial-gradient(
+			70.94% 58.43% at 27.53% 86.82%,
+			rgba(204, 221, 252, 0.25) 0%,
+			rgba(204, 221, 252, 0) 100%
+		),
+		linear-gradient(0deg, rgba(236, 238, 241, 0.2) 0%, rgba(236, 238, 241, 0.2) 100%), #fff;
+	/* fallback */
+	position: relative;
+	overflow: clip;
 }
 
-
 .bg-login {
-    background-size: cover;
-    height: 100vh;
-    background-position: top center;
+	background-size: cover;
+	height: 100vh;
+	background-position: top center;
 }
 
 .dark .bg-surface {
-    background: radial-gradient(93.48% 68.59% at 40.87% 70.12%, rgba(7, 45, 90, 0.03) 37.67%, rgba(7, 45, 90, 0.25) 100%), radial-gradient(70.94% 58.43% at 27.53% 86.82%, rgba(7, 45, 90, 0.20) 0%, rgba(7, 45, 90, 0.00) 100%), linear-gradient(0deg, rgba(3, 25, 51, 0.20) 0%, rgba(3, 25, 51, 0.20) 100%), #010E1D;
+	background: radial-gradient(
+			93.48% 68.59% at 40.87% 70.12%,
+			rgba(7, 45, 90, 0.03) 37.67%,
+			rgba(7, 45, 90, 0.25) 100%
+		),
+		radial-gradient(
+			70.94% 58.43% at 27.53% 86.82%,
+			rgba(7, 45, 90, 0.2) 0%,
+			rgba(7, 45, 90, 0) 100%
+		),
+		linear-gradient(0deg, rgba(3, 25, 51, 0.2) 0%, rgba(3, 25, 51, 0.2) 100%), #010e1d;
 }
 
 .btn-primary {
-    padding: 6px 15px;
-    border-radius: 12px;
-    background: #004280;
-    box-shadow: 6px 3px 8px 0px rgba(103, 124, 161, 0.30);
-font-size:14px;
-color: #F3F9FF;
-font-family: 'Inter_24pt-SemiBold';
+	padding: 6px 15px;
+	border-radius: 12px;
+	background: #004280;
+	box-shadow: 6px 3px 8px 0px rgba(103, 124, 161, 0.3);
+	font-size: 14px;
+	color: #f3f9ff;
+	font-family: 'Inter_24pt-SemiBold';
 }
 
 .btn-secondary {
-    padding: 6px 15px;
-    border-radius: 12px;
-border: #E5EBF3;
-background: #FBFCFC;
+	padding: 6px 15px;
+	border-radius: 12px;
+	border: #e5ebf3;
+	background: #fbfcfc;
 
-box-shadow: 6px 3px 8px 0px rgba(103, 124, 161, 0.15);
-font-size:14px;
-color: #004280;
-font-family: 'Inter_24pt-SemiBold';
+	box-shadow: 6px 3px 8px 0px rgba(103, 124, 161, 0.15);
+	font-size: 14px;
+	color: #004280;
+	font-family: 'Inter_24pt-SemiBold';
 }
-
