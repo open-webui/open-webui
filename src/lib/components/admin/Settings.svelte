@@ -35,9 +35,10 @@
 		selectedTab = [
 			'general',
 			'connections',
-			'models',
+			// 注释掉工作空间功能：从有效标签中移除models和tools
+			// 'models',
 			'evaluations',
-			'tools',
+			// 'tools',
 			'documents',
 			'web',
 			'code-execution',
@@ -137,6 +138,8 @@
 			<div class=" self-center">{$i18n.t('Connections')}</div>
 		</button>
 
+		<!-- 注释掉工作空间功能：管理设置中的模型标签 -->
+		<!--
 		<button
 			id="models"
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
@@ -163,6 +166,7 @@
 			</div>
 			<div class=" self-center">{$i18n.t('Models')}</div>
 		</button>
+		-->
 
 		<button
 			id="evaluations"
@@ -180,6 +184,8 @@
 			<div class=" self-center">{$i18n.t('Evaluations')}</div>
 		</button>
 
+		<!-- 注释掉工作空间功能：管理设置中的工具标签 -->
+		<!--
 		<button
 			id="tools"
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
@@ -206,6 +212,7 @@
 			</div>
 			<div class=" self-center">{$i18n.t('Tools')}</div>
 		</button>
+		-->
 
 		<button
 			id="documents"
@@ -449,12 +456,17 @@
 					toast.success($i18n.t('Settings saved successfully!'));
 				}}
 			/>
+		<!-- 注释掉工作空间功能：管理设置中的模型和工具内容显示 -->
+		<!--
 		{:else if selectedTab === 'models'}
 			<Models />
+		-->
 		{:else if selectedTab === 'evaluations'}
 			<Evaluations />
+		<!--
 		{:else if selectedTab === 'tools'}
 			<Tools />
+		-->
 		{:else if selectedTab === 'documents'}
 			<Documents
 				on:save={async () => {

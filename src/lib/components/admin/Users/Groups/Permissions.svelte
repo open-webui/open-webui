@@ -168,6 +168,8 @@
 
 	<hr class=" border-gray-100 dark:border-gray-850 my-2" /> -->
 
+	<!-- 注释掉工作空间功能：用户权限设置中的工作空间权限 -->
+	<!--
 	<div>
 		<div class=" mb-2 text-sm font-medium">{$i18n.t('Workspace Permissions')}</div>
 
@@ -207,9 +209,12 @@
 			</Tooltip>
 		</div>
 	</div>
+	-->
 
 	<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
+	<!-- 注释掉工作空间功能：分享权限设置（与工作空间功能相关） -->
+	<!--
 	<div>
 		<div class=" mb-2 text-sm font-medium">{$i18n.t('Sharing Permissions')}</div>
 
@@ -241,6 +246,7 @@
 			<Switch bind:state={permissions.sharing.public_tools} />
 		</div>
 	</div>
+	-->
 
 	<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 

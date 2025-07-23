@@ -210,6 +210,8 @@
 				]
 			: []),
 
+		// 注释掉工作空间功能：聊天设置中的工具标签
+		/*
 		...($user?.role === 'admin' ||
 		($user?.role === 'user' && $user?.permissions?.features?.direct_tool_servers)
 			? [
@@ -228,6 +230,7 @@
 					}
 				]
 			: []),
+		*/
 
 		{
 			id: 'personalization',
@@ -685,6 +688,8 @@
 									<div class=" self-center">{$i18n.t('Connections')}</div>
 								</button>
 							{/if}
+						<!-- 注释掉工作空间功能：聊天设置中的工具标签页按钮 -->
+						<!--
 						{:else if tabId === 'tools'}
 							{#if $user?.role === 'admin' || ($user?.role === 'user' && $user?.permissions?.features?.direct_tool_servers)}
 								<button
@@ -723,6 +728,7 @@
 									<div class=" self-center">{$i18n.t('Tools')}</div>
 								</button>
 							{/if}
+						-->
 						{:else if tabId === 'personalization'}
 							<button
 								role="tab"
@@ -953,6 +959,8 @@
 							toast.success($i18n.t('Settings saved successfully!'));
 						}}
 					/>
+				<!-- 注释掉工作空间功能：聊天设置中的工具内容显示 -->
+				<!--
 				{:else if selectedTab === 'tools'}
 					<Tools
 						saveSettings={async (updated) => {
@@ -960,6 +968,7 @@
 							toast.success($i18n.t('Settings saved successfully!'));
 						}}
 					/>
+				-->
 				{:else if selectedTab === 'personalization'}
 					<Personalization
 						{saveSettings}
