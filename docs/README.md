@@ -1,42 +1,54 @@
 # mAI Documentation
 
-Welcome to the mAI documentation. This directory contains all documentation organized by category.
+Welcome to the mAI documentation hub.
 
-## Documentation Structure
+## 📚 Documentation
 
-### 🛠️ [Development](./development/)
-- [Upgrade Guide](./development/upgrade-guide.md) - How to merge updates from Open WebUI
+### [🚀 Deployment](./deployment/)
+**Get mAI running in production**
+- [Overview](./deployment/README.md) - Quick start guide
+- [Docker Setup](./deployment/docker.md) - Container configuration
+- [OpenRouter Config](./deployment/openrouter.md) - AI model setup
 
-### 🎨 [Customization](./customization/)
-- [mAI Changelog](./customization/mai-changelog.md) - Changes specific to mAI
-- [Customization Checklist](./customization/customization-checklist.md) - Tracking customizations
+### [🛠️ Development](./development/)
+**Customize and maintain mAI**
+- [Overview](./development/README.md) - Development workflows
+- [Customizations](./development/customizations.md) - mAI features checklist
+- [Upgrade Guide](./development/upgrade-guide.md) - Merge Open WebUI updates
 
-### 🚀 [OpenRouter](./openrouter/)
-- [OpenRouter README](./openrouter/README.md) - Comprehensive OpenRouter documentation hub
-- [Production Config](./openrouter/production-config.md) - Production best practices
-- [Manage Models](./openrouter/manage-models.md) - Model management guide
-- [Quick Reference](./openrouter/quick-reference.md) - Quick reference guide
+### [📖 Reference](./reference/)
+**Technical details**
+- [Architecture](./reference/architecture.md) - System design
+- [Commands](./reference/commands.md) - Common commands
 
-### 🔧 [Operations](./operations/)
-- [Installation Guide](./operations/installation.md) - How to install mAI
-- [Docker Setup Guide](./operations/docker-setup.md) - Comprehensive Docker configuration
-- [Troubleshooting](./operations/troubleshooting.md) - Common issues and solutions
+### [📝 Changelog](./customization/mai-changelog.md)
+**What's changed in mAI**
 
-## Recent Updates
+## 🎯 Project Overview
 
-### July 2025
-- **OpenRouter Docker Integration** - Scripts now included in Docker image for production deployment
-- **OpenRouter Model Restriction Feature** - Added ability to limit available models to 12 curated choices
-- **Repository Cleanup** - Organized scripts and documentation for better maintainability
-- **Production-Ready** - Docker image ready for multi-company deployment on Hetzner
+**mAI** is a customized Open WebUI fork designed for deployment to 20 small companies in Poland.
 
-### January 2025
-- **Open WebUI v0.6.17 Upgrade** - Successfully merged while preserving all mAI customizations
-- **Visual Identity System** - Complete branding replacement with custom mAI assets
-- **Polish Localization** - Full translation with dynamic tagline switching
+### Key Features
+- **🇵🇱 Polish Localization** - Full Polish language support
+- **🎨 Custom Branding** - mAI identity and themes
+- **🤖 OpenRouter Filtering** - 12 curated AI models
+- **🖼️ Background Patterns** - Customizable chat backgrounds
+- **🏢 Multi-Company Ready** - Same deployment for all clients
 
-## Quick Links
+### Recent Updates
 
-- [Main README](../README.md) - Project overview
-- [CLAUDE.md](../CLAUDE.md) - Instructions for Claude Code
-- [Scripts](../scripts/) - Utility scripts including OpenRouter tools
+**July 2025**
+- OpenRouter scripts included in Docker image
+- Production-ready for Hetzner deployment
+- Consolidated documentation
+
+**January 2025**
+- Open WebUI v0.6.17 merged
+- Complete visual identity system
+- Polish translations added
+
+## 🔗 Quick Links
+
+- [Project Root](../README.md) - Main project README
+- [CLAUDE.md](../CLAUDE.md) - AI assistant instructions
+- [Scripts](../scripts/) - Utility scripts

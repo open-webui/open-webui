@@ -1,0 +1,29 @@
+services:
+  open-webui-customization:
+    build:
+      context: .
+      args:
+        OLLAMA_BASE_URL: '/ollama'
+      dockerfile: Dockerfile
+    container_name: open-webui-customization
+    volumes:
+      - open-webui-customization:/app/backend/data
+    ports:
+      - "3002:8080"  # ← Kolejny port
+    environment:
+      - 'OLLAMA_BASE_URL=http://host.docker.internal:11434'
+      - 'WEBUI_SECRET_KEY='
+      - 'WEBUI_NAME=mAI Development'  # ← Wyróżnij development
+      - 'WEBUI_URL=http://localhost:3002'
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  open-webui-customization:
+    name: mai_customization_data

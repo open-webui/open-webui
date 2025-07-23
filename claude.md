@@ -9,7 +9,9 @@
 - **Focus on code verification** through build processes and type checking instead of runtime testing
 - **Be specific and precise** - avoid unnecessary explanations, provide step-by-step solutions
 - **Challenge user's assumptions** if they conflict with better task execution
+- **Always update necessary .md files in docs folder** after commit changes
 
+[Important!] The future of the project (always take this into account when designing solutions): mAI implementations for about 20 small companies in Poland, where each will have from 5 to 20 employees. The production version will be hosted on an external Hetzner server (Docker). However, when designing solutions, do not create production files for implementation on Hetzner, because that will be the last stage of my work.
 **WORKFLOW PRIORITIES:**
 1. Code quality and type safety first
 2. Preserve all mAI customizations during changes
