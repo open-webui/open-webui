@@ -28,9 +28,11 @@ class Vector:
                     return QdrantClient()
             case VectorType.PINECONE:
                 from open_webui.retrieval.vector.dbs.pinecone import PineconeClient
+
                 return PineconeClient()
             case VectorType.S3VECTOR:
                 from open_webui.retrieval.vector.dbs.s3vector import S3VectorClient
+
                 return S3VectorClient()
             case VectorType.OPENSEARCH:
                 from open_webui.retrieval.vector.dbs.opensearch import OpenSearchClient
