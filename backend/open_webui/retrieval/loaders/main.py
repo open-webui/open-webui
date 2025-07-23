@@ -300,6 +300,7 @@ class Loader:
                 disable_image_extraction=self.kwargs.get(
                     "DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION", False
                 ),
+                format_lines=self.kwargs.get("DATALAB_MARKER_FORMAT_LINES", False),
                 output_format=self.kwargs.get(
                     "DATALAB_MARKER_OUTPUT_FORMAT", "markdown"
                 ),

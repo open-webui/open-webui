@@ -489,6 +489,21 @@
 								<div class="self-center text-xs font-medium">
 									<Tooltip
 										content={$i18n.t(
+											'Format the lines in the output. Defaults to False. If set to True, the lines will be formatted to detect inline math and styles.'
+										)}
+										placement="top-start"
+									>
+										{$i18n.t('Format Lines')}
+									</Tooltip>
+								</div>
+								<div class="flex items-center">
+									<Switch bind:state={RAGConfig.DATALAB_MARKER_FORMAT_LINES} />
+								</div>
+							</div>
+							<div class="flex justify-between w-full mt-2">
+								<div class="self-center text-xs font-medium">
+									<Tooltip
+										content={$i18n.t(
 											"The output format for the text. Can be 'json', 'markdown', or 'html'. Defaults to 'markdown'."
 										)}
 										placement="top-start"

@@ -2067,6 +2067,12 @@ DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION = PersistentConfig(
     == "true",
 )
 
+DATALAB_MARKER_FORMAT_LINES = PersistentConfig(
+    "DATALAB_MARKER_FORMAT_LINES",
+    "rag.datalab_marker_format_lines",
+    os.environ.get("DATALAB_MARKER_FORMAT_LINES", "false").lower() == "true",
+)
+
 DATALAB_MARKER_OUTPUT_FORMAT = PersistentConfig(
     "DATALAB_MARKER_OUTPUT_FORMAT",
     "rag.datalab_marker_output_format",

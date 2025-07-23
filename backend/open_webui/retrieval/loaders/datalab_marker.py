@@ -23,6 +23,7 @@ class DatalabMarkerLoader:
         paginate: bool = False,
         strip_existing_ocr: bool = False,
         disable_image_extraction: bool = False,
+        format_lines: bool = False,
         output_format: str = None,
     ):
         self.file_path = file_path
@@ -35,6 +36,7 @@ class DatalabMarkerLoader:
         self.paginate = paginate
         self.strip_existing_ocr = strip_existing_ocr
         self.disable_image_extraction = disable_image_extraction
+        self.format_lines = format_lines
         self.output_format = output_format
 
     def _get_mime_type(self, filename: str) -> str:
@@ -95,6 +97,7 @@ class DatalabMarkerLoader:
             "paginate": str(self.paginate).lower(),
             "strip_existing_ocr": str(self.strip_existing_ocr).lower(),
             "disable_image_extraction": str(self.disable_image_extraction).lower(),
+            "format_lines": str(self.format_lines).lower(),
             "output_format": self.output_format,
         }
 
