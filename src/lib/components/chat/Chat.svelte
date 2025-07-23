@@ -169,8 +169,6 @@
 			loading = false;
 			window.setTimeout(() => scrollToBottom(), 0);
 
-			await tick();
-
 			if (storageChatInput) {
 				try {
 					const input = JSON.parse(storageChatInput);
@@ -1687,6 +1685,9 @@
 				stream: stream,
 				model: model.id,
 				messages: messages,
+				features: {
+					memory: true  // 启用记忆功能
+				},
 				params: {
 					...$settings?.params,
 					...params,

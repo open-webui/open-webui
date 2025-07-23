@@ -35,68 +35,36 @@ log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
 # 预设的硬编码模型配置
+"""
 HARDCODED_MODELS = [
     {
-        "id": "emohaa-chat",
-        "name": "Emohaa共情陪伴模型",
+        "id": "claude-3-opus",
+        "name": "Claude 3 Opus",
         "object": "model",
         "created": int(time.time()),
-        "owned_by": "emohaa",
+        "owned_by": "anthropic",
         "meta": {
             "profile_image_url": "/favicon.png",
-            "description": "基于清华大学CoAI课题组研究的共情陪伴AI模型",
+            "description": "Anthropic's most capable model, with high performance across tasks",
             "capabilities": {
-                "vision": False,
+                "vision": True,
                 "file_upload": True,
-                "web_search": False,
+                "web_search": True,
                 "image_generation": False,
-                "code_interpreter": False,
-                "citations": False,
-            }
-        },
-        "params": {
-            "system": "你是Emohaa，一个专注于共情陪伴的AI助手。请用温暖、理解的语气与用户交流，倾听用户心声，提供情感支持。"
-        },
-        "tags": [{"name": "共情"}, {"name": "陪伴"}, {"name": "情感支持"}],
-    },
-    {
-        "id": "emohaa-analysis",
-        "name": "Emohaa情绪分析模型",
-        "object": "model",
-        "created": int(time.time()),
-        "owned_by": "emohaa",
-        "meta": {
-            "profile_image_url": "/favicon.png",
-            "description": "专门用于情绪分析和心理状态评估的AI模型",
-            "capabilities": {
-                "vision": False,
-                "file_upload": True,
-                "web_search": False,
-                "image_generation": False,
-                "code_interpreter": False,
+                "code_interpreter": True,
                 "citations": True,
+                "memory": True  # 启用记忆功能
             }
         },
         "params": {
-            "system": "你是一个专业的情绪分析AI，能够识别和分析用户的情绪状态，提供专业的心理分析和建议。"
-        },
-        "tags": [{"name": "情绪分析"}, {"name": "心理评估"}],
+            "system": "You are Claude, an AI assistant created by Anthropic. You aim to be helpful while being direct and honest.",
+            "features": {
+                "memory": True  # 启用记忆功能
+            }
+        }
     }
 ]
-
-
-def add_hardcoded_models_to_list(models_list):
-    """将硬编码模型添加到模型列表中"""
-    # 检查硬编码模型是否已存在，避免重复添加
-    existing_ids = {model.get("id") for model in models_list}
-
-    for hardcoded_model in HARDCODED_MODELS:
-        if hardcoded_model["id"] not in existing_ids:
-            models_list.append(hardcoded_model.copy())
-            log.info(f"Added hardcoded model: {hardcoded_model['id']}")
-
-    return models_list
-
+"""
 
 async def fetch_ollama_models(request: Request, user: UserModel = None):
     raw_ollama_models = await ollama.get_all_models(request, user=user)
@@ -154,9 +122,6 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
     # deep copy the base models to avoid modifying the original list
     models = [model.copy() for model in base_models]
     
-    # 添加硬编码模型到列表中 - 已禁用
-    # models = add_hardcoded_models_to_list(models)
-
     # If there are no models, return an empty list
     if len(models) == 0:
         return []
