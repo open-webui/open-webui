@@ -606,6 +606,7 @@
 	"File size should not exceed {{maxSize}} MB.": "يجب ألا يتجاوز حجم الملف {{maxSize}} ميغابايت.",
 	"File Upload": "",
 	"File uploaded successfully": "تم رفع الملف بنجاح",
+	"Chat is limited to the '{{count}}' uploaded documents.": "الدردشة محدودة بـ '{{count}}' من المستندات المرفوعة.",
 	"Files": "الملفات",
 	"Filter is now globally disabled": "تم الآن تعطيل الفلتر على مستوى النظام",
 	"Filter is now globally enabled": "تم الآن تفعيل الفلتر على مستوى النظام",

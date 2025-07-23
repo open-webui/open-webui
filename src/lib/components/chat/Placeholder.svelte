@@ -7,7 +7,7 @@
 
 	const dispatch = createEventDispatcher();
 
-	import { config, user, models as _models, temporaryChatEnabled, mobile } from '$lib/stores';
+	import { config, user, models as _models, temporaryChatEnabled, clearMessageInput, mobile } from '$lib/stores';
 	import { sanitizeResponseContent, extractCurlyBraceWords } from '$lib/utils';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
@@ -88,10 +88,37 @@
 
 	$: models = selectedModels.map((id) => $_models.find((m) => m.id === id));
 
+	// Clear message input when starting new conversation from sidebar
+	$: if ($clearMessageInput) {
+		// Clear input fields
+		prompt = '';
+		files = [];
+		
+		// Clear tool and filter selections
+		selectedToolIds = [];
+		selectedFilterIds = [];
+		
+		// Reset feature toggles
+		webSearchEnabled = false;
+		imageGenerationEnabled = false;
+		codeInterpreterEnabled = false;
+		
+		// Reset model selection
+		atSelectedModel = undefined;
+		
+		// Stop any ongoing response generation
+		if (stopResponse) {
+			stopResponse();
+		}
+		
+		// Reset the store after clearing
+		clearMessageInput.set(false);
+	}
+
 	onMount(() => {});
 </script>
 
-<div class="max-w-[800px] pb-4 w-full mx-auto text-center">
+<div class="max-w-[800px] pb-0 	md:pb-4 w-full mx-auto text-center">
 	{#if $temporaryChatEnabled}
 		<Tooltip
 			content={$i18n.t("This chat won't appear in history and your messages will not be saved.")}

@@ -971,12 +971,12 @@ if default_prompt_suggestions == []:
             "icon_name": "lightbulb",
             "icon_color": "#CC7A00"
         },
-        # {
-        #     "title": ["Draft Message"],
-        #     "content": "Help me draft a message, such as an email or memo regarding the following",
-        #     "icon_name": "contract_edit",
-        #     "icon_color": "#0043C2"
-        # },
+        {
+            "title": ["Draft Message"],
+            "content": "Help me draft a message, such as an email or memo regarding the following",
+            "icon_name": "contract_edit",
+            "icon_color": "#0043C2"
+        },
         {
             "title": ["Compare Content"],
             "content": "Compare the following documents/text and highlight the key differences or similarities.",
@@ -989,18 +989,18 @@ if default_prompt_suggestions == []:
             "icon_name": "psychology",
             "icon_color": "#20A17F"
         },
-        # {
-        #     "title": ["Make a Plan"],
-        #     "content": "Help me create a step-by-step plan to accomplish the following",
-        # "icon_name": "flowchart",
-        # "icon_color": "#0077B6"
-        # },
-        # {
-        # "title": ["Analyze Data"],
-        # "content": "Help me analyze the following dataset and identify key patterns and insights",
-        # "icon_name": "finance_mode",
-        # "icon_color": "#9239FF"
-        # },
+        {
+            "title": ["Make a Plan"],
+            "content": "Help me create a step-by-step plan to accomplish the following",
+        "icon_name": "flowchart",
+        "icon_color": "#0077B6"
+        },
+        {
+        "title": ["Analyze Data"],
+        "content": "Help me analyze the following dataset and identify key patterns and insights",
+        "icon_name": "finance_mode",
+        "icon_color": "#9239FF"
+        },
         {
         "title": ["Brainstorm Ideas"],
         "content": "Let's brainstorm creative ideas for the following",
@@ -1009,7 +1009,7 @@ if default_prompt_suggestions == []:
         }
     ]
 
-    default_prompt_suggestions = random.sample(all_suggestions, 3) if len(all_suggestions) > 3 else all_suggestions
+    default_prompt_suggestions = random.sample(all_suggestions, 4) if len(all_suggestions) > 3 else all_suggestions
 
 DEFAULT_PROMPT_SUGGESTIONS = PersistentConfig(
     "DEFAULT_PROMPT_SUGGESTIONS",

@@ -31,6 +31,7 @@
 		showCallOverlay,
 		currentChatPage,
 		temporaryChatEnabled,
+		clearMessageInput,
 		mobile,
 		showOverview,
 		chatTitle,
@@ -198,6 +199,30 @@
 	let oldSelectedModelIds = [''];
 	$: if (JSON.stringify(selectedModelIds) !== JSON.stringify(oldSelectedModelIds)) {
 		onSelectedModelIdsChange();
+	}
+
+	// Clear message input when starting new conversation from sidebar
+	$: if ($clearMessageInput) {
+		// Clear input fields
+		prompt = '';
+		files = [];
+		chatFiles = [];
+		
+		// Clear tool and filter selections
+		selectedToolIds = [];
+		selectedFilterIds = [];
+		
+		// Reset feature toggles
+		webSearchEnabled = false;
+		imageGenerationEnabled = false;
+		codeInterpreterEnabled = false;
+		
+		// Reset model selection
+		atSelectedModel = undefined;
+		
+		
+		// Reset the store after clearing
+		clearMessageInput.set(false);
 	}
 
 	const onSelectedModelIdsChange = () => {
@@ -2068,7 +2093,7 @@
 						/>
 
 						<div class="m-auto h-full max-w-[1440px] w-full flex-1 flex flex-col flex-auto z-10 @container">
-							{#if $settings?.landingPageMode === 'chat' || createMessagesList(history, history.currentId).length > 0}
+							{#if false && $settings?.landingPageMode === 'chat' || createMessagesList(history, history.currentId).length > 0}
 								<div
 									class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden"
 									id="messages-container"
