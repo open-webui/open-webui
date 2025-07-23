@@ -518,6 +518,10 @@ async def lifespan(app: FastAPI):
     # when the first user lands on the / route.
     log.info("Installing external dependencies of functions and tools...")
     install_tool_and_function_dependencies()
+    
+    # 初始化预设模型 - 已禁用
+    # log.info("Initializing preset models...")
+    # initialize_preset_models()
 
     app.state.redis = get_redis_connection(
         redis_url=REDIS_URL,
@@ -1869,3 +1873,145 @@ else:
     log.warning(
         f"Frontend build directory not found at '{FRONTEND_BUILD_DIR}'. Serving API only."
     )
+
+
+def initialize_preset_models():
+    """初始化预设模型到数据库"""
+    try:
+        # 预设模型配置
+        PRESET_MODELS = [
+            {
+                "id": "emohaa-chat-v1",
+                "base_model_id": None,  # 基础模型，不依赖其他模型
+                "name": "Emohaa共情陪伴模型",
+                "meta": {
+                    "profile_image_url": "/favicon.png",
+                    "description": "基于清华大学CoAI课题组研究的共情陪伴AI模型，擅长倾听用户心声、感受用户经历、引导聊天话题。",
+                    "capabilities": {
+                        "vision": False,
+                        "file_upload": True,
+                        "web_search": True,
+                        "image_generation": False,
+                        "code_interpreter": False,
+                        "citations": False,
+                    },
+                    "tags": [
+                        {"name": "共情"},
+                        {"name": "陪伴"},
+                        {"name": "情感支持"},
+                        {"name": "聆心智能"}
+                    ]
+                },
+                "params": {
+                    "system": """你是Emohaa，聆心智能开发的共情陪伴AI助手。你具有以下特质：
+
+1. **深度共情**：能够深刻理解用户的情感状态，给予温暖的回应
+2. **耐心倾听**：认真倾听用户的困扰和心声，不急于给出建议
+3. **情感引导**：巧妙地引导对话，帮助用户探索内心世界
+4. **温暖陪伴**：提供24小时情感支持和陪伴
+
+请用温暖、理解、富有同理心的语气与用户交流，关注用户的情绪变化，提供个性化的情感支持。"""
+                },
+                "access_control": None,  # 公开访问
+                "is_active": True
+            },
+            {
+                "id": "emohaa-analysis-v1",
+                "base_model_id": None,
+                "name": "Emohaa情绪分析模型",
+                "meta": {
+                    "profile_image_url": "/favicon.png",
+                    "description": "专门用于情绪识别、心理状态分析和情感评估的专业AI模型",
+                    "capabilities": {
+                        "vision": False,
+                        "file_upload": True,
+                        "web_search": False,
+                        "image_generation": False,
+                        "code_interpreter": True,
+                        "citations": True,
+                    },
+                    "tags": [
+                        {"name": "情绪分析"},
+                        {"name": "心理评估"},
+                        {"name": "专业分析"}
+                    ]
+                },
+                "params": {
+                    "system": """你是Emohaa情绪分析专家，具备专业的心理分析能力。你的职责包括：
+
+1. **情绪识别**：准确识别用户的情绪状态和情感表达
+2. **心理分析**：分析用户的心理状态和潜在需求
+3. **专业建议**：基于心理学理论提供专业的建议和指导
+4. **数据分析**：运用代码分析情绪数据和心理量表
+
+请用专业、客观、富有洞察力的方式进行分析，同时保持温暖和理解。"""
+                },
+                "access_control": None,
+                "is_active": True
+            },
+            {
+                "id": "emohaa-counselor-v1",
+                "base_model_id": None,
+                "name": "Emohaa心理咨询师",
+                "meta": {
+                    "profile_image_url": "/favicon.png",
+                    "description": "模拟专业心理咨询师的AI模型，提供心理健康支持和咨询服务",
+                    "capabilities": {
+                        "vision": False,
+                        "file_upload": True,
+                        "web_search": True,
+                        "image_generation": False,
+                        "code_interpreter": False,
+                        "citations": True,
+                    },
+                    "tags": [
+                        {"name": "心理咨询"},
+                        {"name": "心理健康"},
+                        {"name": "专业支持"}
+                    ]
+                },
+                "params": {
+                    "system": """你是一位经验丰富的心理咨询师，名叫Emohaa。你具备：
+
+1. **专业知识**：掌握认知行为疗法、人本主义疗法等多种心理治疗方法
+2. **咨询技巧**：善于倾听、共情、提问和引导
+3. **伦理意识**：严格遵守心理咨询伦理，保护来访者隐私
+4. **危机处理**：能够识别心理危机并提供适当的干预
+
+请用专业的咨询师态度与用户交流，但请明确说明你是AI助手，不能替代真正的心理治疗。"""
+                },
+                "access_control": None,
+                "is_active": True
+            }
+        ]
+
+        # 获取管理员用户作为模型创建者（如果没有管理员，使用系统用户）
+        try:
+            admin_users = Users.get_users(role="admin")
+            if admin_users and len(admin_users) > 0:
+                system_user_id = admin_users[0].id
+            else:
+                # 如果没有管理员，使用系统用户ID
+                system_user_id = "system"
+        except:
+            system_user_id = "system"
+
+        # 插入预设模型到数据库
+        for model_config in PRESET_MODELS:
+            # 检查模型是否已存在
+            existing_model = Models.get_model_by_id(model_config["id"])
+            if not existing_model:
+                from open_webui.models.models import ModelForm
+
+                model_form = ModelForm(**model_config)
+                created_model = Models.insert_new_model(model_form, system_user_id)
+
+                if created_model:
+                    log.info(f"✅ 预设模型已创建: {model_config['name']} (ID: {model_config['id']})")
+                else:
+                    log.error(f"❌ 预设模型创建失败: {model_config['id']}")
+            else:
+                log.info(f"⚠️  预设模型已存在，跳过: {model_config['id']}")
+
+    except Exception as e:
+        log.error(f"初始化预设模型时出错: {e}")

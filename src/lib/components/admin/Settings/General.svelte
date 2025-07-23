@@ -30,7 +30,7 @@
 		latest: ''
 	};
 
-	let adminConfig = null;
+	let adminConfig: any = null;
 	let webhookUrl = '';
 
 	// LDAP
@@ -126,157 +126,61 @@
 
 					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
-					<div class="mb-2.5">
-						<div class=" mb-1 text-xs font-medium flex space-x-2 items-center">
-							<div>
-								{$i18n.t('Version')}
-							</div>
-						</div>
-						<div class="flex w-full justify-between items-center">
-							<div class="flex flex-col text-xs text-gray-700 dark:text-gray-200">
-								<div class="flex gap-1">
-									<Tooltip content={WEBUI_BUILD_HASH}>
-										v{WEBUI_VERSION}
-									</Tooltip>
-
-									{#if $config?.features?.enable_version_update_check}
-										<a
-											href="https://github.com/open-webui/open-webui/releases/tag/v{version.latest}"
-											target="_blank"
-										>
-											{updateAvailable === null
-												? $i18n.t('Checking for updates...')
-												: updateAvailable
-													? `(v${version.latest} ${$i18n.t('available!')})`
-													: $i18n.t('(latest)')}
-										</a>
-									{/if}
-								</div>
-
-								<button
-									class=" underline flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-500"
-									type="button"
-									on:click={() => {
-										showChangelog.set(true);
-									}}
-								>
-									<div>{$i18n.t("See what's new")}</div>
-								</button>
-							</div>
-
-							{#if $config?.features?.enable_version_update_check}
-								<button
-									class=" text-xs px-3 py-1.5 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-lg font-medium"
-									type="button"
-									on:click={() => {
-										checkForVersionUpdates();
-									}}
-								>
-									{$i18n.t('Check for updates')}
-								</button>
-							{/if}
-						</div>
-					</div>
+					<!-- Version information hidden for Emohaa -->
 
 					<div class="mb-2.5">
 						<div class="flex w-full justify-between items-center">
 							<div class="text-xs pr-2">
-								<div class="">
-									{$i18n.t('Help')}
+								<div class="font-medium">
+									{$i18n.t('About Emohaa')}
 								</div>
-								<div class=" text-xs text-gray-500">
-									{$i18n.t('Discover how to use Open WebUI and seek support from the community.')}
+								<div class="text-xs text-gray-500 mt-1">
+									{$i18n.t('Emohaa Empathetic Companion AI')}
 								</div>
 							</div>
-
-							<a
-								class="flex-shrink-0 text-xs font-medium underline"
-								href="https://docs.openwebui.com/"
-								target="_blank"
-							>
-								{$i18n.t('Documentation')}
-							</a>
 						</div>
 
-						<div class="mt-1">
+						<div class="mt-2 p-3 bg-gray-50 dark:bg-gray-850 rounded-lg">
+							<div class="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
+								{$i18n.t('Emohaa description')}
+							</div>
+							
+							<div class="mt-3 text-xs text-gray-600 dark:text-gray-400 whitespace-pre-line">
+								{$i18n.t('Emohaa features')}
+							</div>
+
+							<div class="mt-3 pt-2 border-t border-gray-200 dark:border-gray-700">
+								<div class="text-xs text-gray-500">
+									{$i18n.t('Based on Open WebUI')}
+								</div>
+								<div class="flex items-center space-x-2 mt-1">
+									<span class="text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Lixin Intelligence')}</span>
+									<span class="text-gray-400">•</span>
+									<span class="text-xs text-gray-600 dark:text-gray-400">{$i18n.t('CoAI Lab Tsinghua')}</span>
+								</div>
+							</div>
+						</div>
+
+						<div class="mt-2">
 							<div class="flex space-x-1">
-								<a href="https://discord.gg/5rJgQTnV4s" target="_blank">
-									<img
-										alt="Discord"
-										src="https://img.shields.io/badge/Discord-Open_WebUI-blue?logo=discord&logoColor=white"
-									/>
-								</a>
-
-								<a href="https://twitter.com/OpenWebUI" target="_blank">
-									<img
-										alt="X (formerly Twitter) Follow"
-										src="https://img.shields.io/twitter/follow/OpenWebUI"
-									/>
-								</a>
-
 								<a href="https://github.com/open-webui/open-webui" target="_blank">
 									<img
-										alt="Github Repo"
-										src="https://img.shields.io/github/stars/open-webui/open-webui?style=social&label=Star us on Github"
+										alt="Open WebUI Github"
+										src="https://img.shields.io/github/stars/open-webui/open-webui?style=social&label=Open WebUI"
+									/>
+								</a>
+
+								<a href="https://github.com/your-emohaa-repo" target="_blank">
+									<img
+										alt="Emohaa Github"
+										src="https://img.shields.io/badge/GitHub-Emohaa-blue?logo=github&logoColor=white"
 									/>
 								</a>
 							</div>
 						</div>
 					</div>
 
-					<div class="mb-2.5">
-						<div class="flex w-full justify-between items-center">
-							<div class="text-xs pr-2">
-								<div class="">
-									{$i18n.t('License')}
-								</div>
-
-								{#if $config?.license_metadata}
-									<a
-										href="https://docs.openwebui.com/enterprise"
-										target="_blank"
-										class="text-gray-500 mt-0.5"
-									>
-										<span class=" capitalize text-black dark:text-white"
-											>{$config?.license_metadata?.type}
-											license</span
-										>
-										registered to
-										<span class=" capitalize text-black dark:text-white"
-											>{$config?.license_metadata?.organization_name}</span
-										>
-										for
-										<span class=" font-medium text-black dark:text-white"
-											>{$config?.license_metadata?.seats ?? 'Unlimited'} users.</span
-										>
-									</a>
-									{#if $config?.license_metadata?.html}
-										<div class="mt-0.5">
-											{@html DOMPurify.sanitize($config?.license_metadata?.html)}
-										</div>
-									{/if}
-								{:else}
-									<a
-										class=" text-xs hover:underline"
-										href="https://docs.openwebui.com/enterprise"
-										target="_blank"
-									>
-										<span class="text-gray-500">
-											{$i18n.t(
-												'Upgrade to a licensed plan for enhanced capabilities, including custom theming and branding, and dedicated support.'
-											)}
-										</span>
-									</a>
-								{/if}
-							</div>
-
-							<!-- <button
-								class="flex-shrink-0 text-xs px-3 py-1.5 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-lg font-medium"
-							>
-								{$i18n.t('Activate')}
-							</button> -->
-						</div>
-					</div>
+					<!-- License information hidden for Emohaa -->
 				</div>
 
 				<div class="mb-3">

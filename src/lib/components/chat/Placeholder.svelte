@@ -146,21 +146,9 @@
 						class=" text-3xl @sm:text-3xl line-clamp-1 flex items-center"
 						in:fade={{ duration: 100 }}
 					>
-						{#if models[selectedModelIdx]?.name}
-							<Tooltip
-								content={models[selectedModelIdx]?.name}
-								placement="top"
-								className=" flex items-center "
-							>
-								<span class="line-clamp-1">
-									{models[selectedModelIdx]?.name}
-								</span>
-							</Tooltip>
-						{:else}
-							<span style="font-family: 'Cambria', 'Times New Roman', serif;">
-								{$i18n.t('Hello, {{name}}', { name: $user?.name })}
-							</span>
-						{/if}
+						<span style="font-family: 'Cambria', 'Times New Roman', serif;">
+							{$i18n.t('Hello, {{name}}', { name: $user?.name })}
+						</span>
 					</div>
 				</div>
 

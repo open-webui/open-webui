@@ -875,7 +875,7 @@
 												: `${WEBUI_BASE_URL}/static/favicon.png`)}
 									/>
 									<div class="translate-y-[0.5px]">
-										Talking to <span class=" font-medium">{atSelectedModel.name}</span>
+										Talking to <span class=" font-medium" style="font-family: 'Cambria', 'Times New Roman', serif;">Emohaa</span>
 									</div>
 								</div>
 								<div>
