@@ -83,16 +83,4 @@ export default {
 			  }
 		}
 	},
-	plugins: [
-		typography, 
-		containerQuries,
-		function({ addUtilities }) {
-			const newUtilities = {
-				'.bg-auth': {
-					background: "url('/background.png') center center / cover no-repeat, radial-gradient(93.48% 68.59% at 40.87% 70.12%, rgba(7, 45, 90, 0.03) 37.67%, rgba(7, 45, 90, 0.25) 100%), radial-gradient(70.94% 58.43% at 27.53% 86.82%, rgba(7, 45, 90, 0.20) 0%, rgba(7, 45, 90, 0.00) 100%), linear-gradient(0deg, rgba(3, 25, 51, 0.20) 0%, rgba(3, 25, 51, 0.20) 100%), #010E1D"
-				}
-			}
-			addUtilities(newUtilities)
-		}
-	]
 };
