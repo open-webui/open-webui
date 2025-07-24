@@ -136,8 +136,13 @@ class DoclingLoader:
         self.mime_type = mime_type
 
         self.params = params or {}
+        
+        log.info("DoclingLoader initialized with URL: %s, file: %s, mime_type: %s", 
+                self.url, self.file_path, self.mime_type)
 
     def load(self) -> list[Document]:
+        log.info("Starting Docling document processing for file: %s", self.file_path)
+        
         with open(self.file_path, "rb") as f:
             files = {
                 "files": (
@@ -150,10 +155,13 @@ class DoclingLoader:
             params = {"image_export_mode": "placeholder", "table_mode": "accurate"}
 
             if self.params:
+                log.debug("Processing custom parameters: %s", self.params)
                 if self.params.get("do_picture_description"):
                     params["do_picture_description"] = self.params.get(
                         "do_picture_description"
                     )
+                    log.debug("Picture description enabled: %s", 
+                             self.params.get("do_picture_description"))
 
                     picture_description_mode = self.params.get(
                         "picture_description_mode", ""
@@ -165,6 +173,7 @@ class DoclingLoader:
                         params["picture_description_local"] = json.dumps(
                             self.params.get("picture_description_local", {})
                         )
+                        log.debug("Using local picture description mode")
 
                     elif picture_description_mode == "api" and self.params.get(
                         "picture_description_api", {}
@@ -172,38 +181,129 @@ class DoclingLoader:
                         params["picture_description_api"] = json.dumps(
                             self.params.get("picture_description_api", {})
                         )
+                        log.debug("Using API picture description mode")
 
                 if self.params.get("ocr_engine") and self.params.get("ocr_lang"):
                     params["ocr_engine"] = self.params.get("ocr_engine")
-                    params["ocr_lang"] = [
+                    # Convert list to comma-separated string for API
+                    ocr_langs = [
                         lang.strip()
                         for lang in self.params.get("ocr_lang").split(",")
                         if lang.strip()
                     ]
+                    params["ocr_language"] = ",".join(ocr_langs)
+                    log.debug("OCR settings - engine: %s, languages: %s", 
+                             params["ocr_engine"], params["ocr_language"])
+
+                params["to_formats"] = "md"
 
             endpoint = f"{self.url}/v1alpha/convert/file"
+            log.info("Making request to Docling endpoint: %s", endpoint)
+            log.info("Request parameters: %s", params)
+            
             r = requests.post(endpoint, files=files, data=params)
 
         if r.ok:
+            log.info("Docling API request successful, status code: %d", r.status_code)
             result = r.json()
+            
+            # Check if this is an async task
+            if "task_id" in result:
+                task_id = result["task_id"]
+                log.info("Received task ID: %s, starting polling for completion", task_id)
+                return self._poll_task_result(task_id)
+            
+            # Direct result
             document_data = result.get("document", {})
             text = document_data.get("md_content", "<No text content found>")
 
             metadata = {"Content-Type": self.mime_type} if self.mime_type else {}
 
-            log.debug("Docling extracted text: %s", text)
+            log.info("Docling extracted text: %s", text)
+            log.info("Successfully processed document, extracted %d characters", len(text))
 
             return [Document(page_content=text, metadata=metadata)]
         else:
+            log.error("Docling API request failed with status code: %d", r.status_code)
+            log.error("Response reason: %s", r.reason)
+            if r.text:
+                log.error("Response text: %s", r.text)
+                
             error_msg = f"Error calling Docling API: {r.reason}"
             if r.text:
                 try:
                     error_data = r.json()
                     if "detail" in error_data:
                         error_msg += f" - {error_data['detail']}"
+                        log.error("Error detail from API: %s", error_data['detail'])
                 except Exception:
                     error_msg += f" - {r.text}"
+                    log.error("Failed to parse error response as JSON")
             raise Exception(f"Error calling Docling: {error_msg}")
+
+    def _poll_task_result(self, task_id: str) -> list[Document]:
+        """Poll for task completion and return the result."""
+        import time
+        
+        max_attempts = 60  # 5 minutes with 5-second intervals
+        attempt = 0
+        
+        while attempt < max_attempts:
+            attempt += 1
+            log.info("Polling task %s, attempt %d/%d", task_id, attempt, max_attempts)
+            
+            # Wait before polling
+            if attempt > 1:
+                time.sleep(5)
+            
+            # Check task status
+            status_endpoint = f"{self.url}/v1alpha/tasks/{task_id}"
+            try:
+                r = requests.get(status_endpoint)
+                
+                if r.ok:
+                    result = r.json()
+                    status = result.get("status", "unknown")
+                    log.info("Task %s status: %s", task_id, status)
+                    
+                    if status == "completed":
+                        log.info("Task %s completed successfully", task_id)
+                        document_data = result.get("document", {})
+                        text = document_data.get("md_content", "<No text content found>")
+                        
+                        metadata = {"Content-Type": self.mime_type} if self.mime_type else {}
+                        log.debug("Docling extracted text: %s", text)
+                        log.info("Successfully processed document, extracted %d characters", len(text))
+                        
+                        return [Document(page_content=text, metadata=metadata)]
+                    
+                    elif status == "failed":
+                        error_msg = result.get("error", "Unknown error")
+                        log.error("Task %s failed: %s", task_id, error_msg)
+                        raise Exception(f"Docling task failed: {error_msg}")
+                    
+                    elif status in ["pending", "processing"]:
+                        log.info("Task %s still %s, continuing to poll", task_id, status)
+                        continue
+                    
+                    else:
+                        log.warning("Unknown task status: %s", status)
+                        continue
+                        
+                else:
+                    log.error("Failed to get task status, status code: %d", r.status_code)
+                    if r.text:
+                        log.error("Status response: %s", r.text)
+                    
+            except requests.RequestException as e:
+                log.error("Request error while polling task %s: %s", task_id, str(e))
+                if attempt == max_attempts:
+                    raise Exception(f"Failed to poll task {task_id}: {str(e)}")
+                continue
+        
+        # Timeout
+        log.error("Task %s timed out after %d attempts", task_id, max_attempts)
+        raise Exception(f"Docling task {task_id} timed out after {max_attempts} attempts")
 
 
 class Loader:
