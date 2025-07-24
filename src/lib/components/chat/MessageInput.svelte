@@ -234,7 +234,7 @@
 
 	const saveGovKnoModel = async () => {
         govBtnEnable = !govBtnEnable;
-		const modelId = $models.find((model) => model.id.includes('govgpt_contextual_rag_pipeline'))?.id || '';
+		const modelId = $models.find((model) => model.id.includes('govgpt_rag_wog'))?.id || '';
 		const modelName = govBtnEnable ? modelId : 'gpt-4.1';
 		settings.set({ ...$settings, models: [modelName] });
 		await updateUserSettings(localStorage.token, { ui: $settings });
