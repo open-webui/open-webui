@@ -1451,9 +1451,9 @@
 																<button
 																	on:click|preventDefault={() => saveGovKnoModel()}
 																	type="button"
-																	class="govkno-btn flex items-center bg-white justify-between w-full p-[16px] rounded-[12px] hover:bg-gradient-bg-2 gap-[4px] text-typography-titles text-[14px] leading-[22px] transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden dark:hover:bg-gray-800 {govBtnEnable
-																		? ' bg-gradient-bg-2 sm:bg-[#CCDDFC]  dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
-																		: ' bg-[#FBFCFC] text-gray-600 dark:text-gray-300 '}"
+																	class="govkno-btn flex items-center justify-between w-full p-[16px] rounded-[12px] hover:bg-gradient-bg-2 gap-[4px] text-typography-titles text-[14px] leading-[22px] transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden dark:hover:bg-gray-800 {govBtnEnable
+																		? ' bg-gradient-bg-2 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
+																		: 'text-gray-600 dark:text-gray-300 '}"
 																>
 																	<div class="flex items-center justify-center gap-[8px]">
 																		<GovKno />
@@ -1477,10 +1477,10 @@
 																		attachFileEnabled=false;
 																	}}
 																	type="button"
-																	class="flex items-center flex items-center bg-white justify-between w-full p-[16px] rounded-[12px] hover:bg-gradient-bg-2 transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden dark:hover:bg-gray-800 {webSearchEnabled ||
+																	class="flex items-center flex items-center justify-between w-full p-[16px] rounded-[12px] hover:bg-gradient-bg-2 transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden dark:hover:bg-gray-800 {webSearchEnabled ||
 																	($settings?.webSearch ?? false) === 'always'
-																		? 'bg-gradient-bg-2 sm:bg-[#CCDDFC] dark:text-sky-300  dark:bg-sky-200/5'
-																		: 'bg-[#FBFCFC] text-gray-600 dark:text-gray-300 '}"
+																		? 'bg-gradient-bg-2 dark:text-sky-300  dark:bg-sky-200/5'
+																		: 'text-gray-600 dark:text-gray-300 '}"
 																>
 																	<div class="flex items-center justify-center gap-[8px]">
 																		<GlobeAlt className="size-5" strokeWidth="1.75" />
@@ -1500,7 +1500,7 @@
 																	on:click|preventDefault={() =>
 																		(imageGenerationEnabled = !imageGenerationEnabled)}
 																	type="button"
-																	class="flex items-center flex items-center bg-white justify-between w-full p-[16px] rounded-[12px] hover:bg-gradient-bg-2 transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden dark:hover:bg-gray-800 {imageGenerationEnabled
+																	class="flex items-center flex items-center justify-between w-full p-[16px] rounded-[12px] hover:bg-gradient-bg-2 transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden dark:hover:bg-gray-800 {imageGenerationEnabled
 																		? 'bg-gradient-bg-2 sm:bg-[#CCDDFC] dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
 																		: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
 																>
@@ -1525,7 +1525,7 @@
 																	on:click|preventDefault={() =>
 																		(codeInterpreterEnabled = !codeInterpreterEnabled)}
 																	type="button"
-																	class="flex items-center flex items-center bg-white justify-between w-full p-[16px] rounded-[12px] hover:bg-gradient-bg-2 dark:hover:bg-gray-800 {codeInterpreterEnabled
+																	class="flex items-center flex items-center justify-between w-full p-[16px] rounded-[12px] hover:bg-gradient-bg-2 dark:hover:bg-gray-800 {codeInterpreterEnabled
 																		? 'bg-gradient-bg-2 sm:bg-[#CCDDFC] dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
 																		: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
 																>
@@ -1552,9 +1552,9 @@
 																		webSearchEnabled=false;
 																	}}
 																	type="button"
-																	class="flex items-center flex bg-white justify-between w-full p-[16px] rounded-[12px] hover:bg-gradient-bg-2 transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden dark:hover:bg-gray-800 {attachFileEnabled
-																		? 'bg-gradient-bg-2 sm:bg-[#CCDDFC] dark:text-sky-300  dark:bg-sky-200/5'
-																		: 'bg-[#FBFCFC] text-gray-600 dark:text-gray-300 '}"
+																	class="flex items-center flex justify-between w-full p-[16px] rounded-[12px] hover:bg-gradient-bg-2 transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden dark:hover:bg-gray-800 {attachFileEnabled
+																		? 'bg-gradient-bg-2 dark:text-sky-300  dark:bg-sky-200/5'
+																		: 'text-gray-600 dark:text-gray-300 '}"
 																>
 																	<div class="flex items-center justify-center gap-[8px]">
 																		<Attach />
