@@ -198,6 +198,35 @@ async def update_config(
         if key in keys
     }
 
+    # Auto-sync OpenRouter API key to user's organization in database
+    try:
+        # Check if any URL is OpenRouter and sync the corresponding API key
+        for idx, base_url in enumerate(request.app.state.config.OPENAI_API_BASE_URLS):
+            if "openrouter.ai" in base_url and idx < len(request.app.state.config.OPENAI_API_KEYS):
+                api_key = request.app.state.config.OPENAI_API_KEYS[idx]
+                
+                # Only sync if there's actually an API key
+                if api_key and api_key.strip():
+                    from open_webui.utils.openrouter_client_manager import openrouter_client_manager
+                    
+                    sync_result = openrouter_client_manager.sync_ui_key_to_organization(
+                        user_id=user.id,
+                        api_key=api_key.strip()
+                    )
+                    
+                    if sync_result["success"]:
+                        log.info(f"✅ API key auto-sync: {sync_result['message']} (user: {user.email})")
+                    else:
+                        # Log the failure but don't prevent config update
+                        log.warning(f"⚠️ API key auto-sync failed: {sync_result['message']} (user: {user.email})")
+                    
+                    # Only sync the first OpenRouter URL found
+                    break
+                    
+    except Exception as e:
+        # Log error but don't fail the config update
+        log.error(f"❌ API key auto-sync error for user {user.email}: {e}")
+
     return {
         "ENABLE_OPENAI_API": request.app.state.config.ENABLE_OPENAI_API,
         "OPENAI_API_BASE_URLS": request.app.state.config.OPENAI_API_BASE_URLS,
@@ -979,12 +1008,18 @@ async def generate_chat_completion(
                     # Get provider and timing info with safe access
                     provider = None
                     generation_time = None
+                    external_user = None
                     
                     if isinstance(response, dict):
                         provider_info = response.get("provider")
                         if isinstance(provider_info, dict):
                             provider = provider_info.get("name")
                         generation_time = response.get("generation_time")
+                        
+                        # Capture the external_user from OpenRouter response
+                        external_user = response.get("external_user")
+                        if external_user and client_context.get("is_temporary_user_id"):
+                            log.info(f"DEBUG: Detected external_user from OpenRouter: {external_user}")
                     
                     # Record usage asynchronously (don't block response)
                     asyncio.create_task(
@@ -995,7 +1030,9 @@ async def generate_chat_completion(
                             output_tokens=output_tokens,
                             raw_cost=raw_cost,
                             provider=provider,
-                            generation_time=generation_time
+                            generation_time=generation_time,
+                            external_user=external_user,  # Pass external_user for auto-learning
+                            client_context=client_context  # Pass context to check if update needed
                         )
                     )
                     log.info(f"DEBUG: Usage recording task created successfully")

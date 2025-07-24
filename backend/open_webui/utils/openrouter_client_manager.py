@@ -291,15 +291,41 @@ class OpenRouterClientManager:
             if not client:
                 return None
             
+            # Handle null or empty openrouter_user_id by generating a temporary one
+            # This will be updated automatically when OpenRouter returns the actual external_user
+            openrouter_user_id = mapping.openrouter_user_id
+            if not openrouter_user_id or openrouter_user_id.strip() == '':
+                # Generate temporary ID that will be replaced on first API call
+                openrouter_user_id = f"temp_{user_id}_{int(time.time())}"
+                log.info(f"Generated temporary openrouter_user_id for user {user_id}: {openrouter_user_id}")
+            
             return {
                 "client_org_id": client.id,
                 "client_name": client.name,
                 "api_key": client.openrouter_api_key,
                 "markup_rate": client.markup_rate,
-                "openrouter_user_id": mapping.openrouter_user_id
+                "openrouter_user_id": openrouter_user_id,
+                "is_temporary_user_id": not mapping.openrouter_user_id or mapping.openrouter_user_id.strip() == ''
             }
         except Exception as e:
             log.error(f"Failed to get user client context for {user_id}: {e}")
+            return None
+    
+    def get_client_by_api_key(self, api_key: str) -> Optional[Dict[str, Any]]:
+        """Get client organization by API key"""
+        try:
+            client = ClientOrganizationDB.get_client_by_api_key(api_key)
+            if not client:
+                return None
+            
+            return {
+                "client_org_id": client.id,
+                "client_name": client.name,
+                "api_key": client.openrouter_api_key,
+                "markup_rate": client.markup_rate
+            }
+        except Exception as e:
+            log.error(f"Failed to get client by API key: {e}")
             return None
     
     async def record_real_time_usage(
@@ -310,15 +336,36 @@ class OpenRouterClientManager:
         output_tokens: int,
         raw_cost: float,
         provider: Optional[str] = None,
-        generation_time: Optional[float] = None
+        generation_time: Optional[float] = None,
+        external_user: Optional[str] = None,
+        client_context: Optional[Dict[str, Any]] = None
     ) -> bool:
         """Record usage in real-time when API call is made"""
         try:
-            # Get user's client context
-            context = self.get_user_client_context(user_id)
+            # Get user's client context if not provided
+            context = client_context or self.get_user_client_context(user_id)
             if not context:
                 log.warning(f"No client context found for user {user_id}")
                 return False
+            
+            # Auto-learn external_user if it's temporary and we got the real one from OpenRouter
+            if external_user and context.get("is_temporary_user_id"):
+                log.info(f"Auto-learning external_user for user {user_id}: {external_user}")
+                # Update the user_client_mapping with the real external_user
+                try:
+                    mapping = UserClientMappingDB.get_mapping_by_user_id(user_id)
+                    if mapping:
+                        updates = {
+                            "openrouter_user_id": external_user,
+                            "updated_at": int(time.time())
+                        }
+                        UserClientMappingDB.update_mapping(user_id, updates)
+                        log.info(f"✅ Successfully auto-learned external_user for user {user_id}")
+                        # Update context with the new external_user
+                        context["openrouter_user_id"] = external_user
+                        context["is_temporary_user_id"] = False
+                except Exception as e:
+                    log.error(f"Failed to auto-learn external_user: {e}")
             
             # Calculate markup cost
             markup_cost = raw_cost * context["markup_rate"]
@@ -343,6 +390,77 @@ class OpenRouterClientManager:
         except Exception as e:
             log.error(f"Failed to record real-time usage: {e}")
             return False
+    
+    def sync_ui_key_to_organization(self, user_id: str, api_key: str) -> Dict[str, Any]:
+        """
+        Sync UI settings API key to user's organization in database
+        
+        This method is called when a user updates their OpenRouter API key
+        in Settings → Connections. It automatically updates their organization's
+        API key in the database to ensure seamless operation.
+        
+        Args:
+            user_id: The user who updated the API key
+            api_key: The new OpenRouter API key from UI settings
+            
+        Returns:
+            Dict with success status, message, and organization info
+        """
+        try:
+            # Get user's organization mapping
+            mapping = UserClientMappingDB.get_mapping_by_user_id(user_id)
+            if not mapping:
+                return {
+                    "success": False,
+                    "message": f"No organization mapping found for user {user_id}",
+                    "organization_updated": None
+                }
+            
+            # Get the organization
+            client = ClientOrganizationDB.get_client_by_id(mapping.client_org_id)
+            if not client:
+                return {
+                    "success": False,
+                    "message": f"Organization {mapping.client_org_id} not found",
+                    "organization_updated": None
+                }
+            
+            # Validate API key format (basic check)
+            if not api_key or not api_key.startswith("sk-or-"):
+                return {
+                    "success": False,
+                    "message": "Invalid OpenRouter API key format",
+                    "organization_updated": None
+                }
+            
+            # Update the organization's API key
+            updates = {
+                "openrouter_api_key": api_key,
+                "updated_at": int(time.time())
+            }
+            
+            updated_client = ClientOrganizationDB.update_client(mapping.client_org_id, updates)
+            if updated_client:
+                log.info(f"Successfully synced API key for user {user_id} to organization {mapping.client_org_id}")
+                return {
+                    "success": True,
+                    "message": f"API key synced to organization '{client.name}'",
+                    "organization_updated": mapping.client_org_id
+                }
+            else:
+                return {
+                    "success": False,
+                    "message": "Failed to update organization API key in database",
+                    "organization_updated": None
+                }
+                
+        except Exception as e:
+            log.error(f"Failed to sync API key for user {user_id}: {e}")
+            return {
+                "success": False,
+                "message": f"Internal error: {str(e)}",
+                "organization_updated": None
+            }
 
 
 # Global service instance

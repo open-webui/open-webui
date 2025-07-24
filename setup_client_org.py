@@ -21,7 +21,7 @@ cursor.execute("""
 """, (
     org_id,
     "Default Organization", 
-    "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",  # Your OpenRouter key
+    "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",  # Your OpenRouter key
     "default_hash",
     1.3,
     1000.0,
@@ -39,7 +39,8 @@ if user_result:
     user_id = user_result[0]
     mapping_id = str(uuid.uuid4())
     
-    # Create user-client mapping
+    # Create user-client mapping without pre-configured external_user
+    # The openrouter_user_id will be auto-learned on first API call
     cursor.execute("""
         INSERT INTO user_client_mapping 
         (id, user_id, client_org_id, openrouter_user_id, is_active, created_at, updated_at)
@@ -48,7 +49,7 @@ if user_result:
         mapping_id,
         user_id,
         org_id,
-        f"openrouter_{user_id}",
+        '',  # Will be auto-learned from OpenRouter on first API call
         1,
         current_time,
         current_time
@@ -56,7 +57,7 @@ if user_result:
     
     print(f"✅ Created client organization: {org_id}")
     print(f"✅ Mapped user {user_id} to organization")
-    print(f"✅ OpenRouter user ID: openrouter_{user_id}")
+    print(f"✅ External user ID will be auto-learned on first API call")
 else:
     print("❌ No users found in database")
 

@@ -1,4 +1,5 @@
 import time
+import logging
 from typing import Optional, List, Dict, Any
 from datetime import datetime, date, timedelta
 
@@ -6,6 +7,8 @@ from open_webui.internal.db import Base, JSONField, get_db
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, String, Text, Integer, Float, Date, Index
 from sqlalchemy.orm import relationship
+
+log = logging.getLogger(__name__)
 
 
 ####################
@@ -410,13 +413,14 @@ class ClientOrganizationTable:
                 return None
         except Exception:
             return None
-
+    
     def get_client_by_api_key(self, api_key: str) -> Optional[ClientOrganizationModel]:
         """Get client organization by API key"""
         try:
             with get_db() as db:
                 client = db.query(ClientOrganization).filter_by(
-                    openrouter_api_key=api_key, is_active=1
+                    openrouter_api_key=api_key,
+                    is_active=1
                 ).first()
                 if client:
                     return ClientOrganizationModel.model_validate(client)
@@ -531,6 +535,24 @@ class UserClientMappingTable:
                     return True
                 return False
         except Exception:
+            return False
+    
+    def update_mapping(self, user_id: str, updates: dict) -> bool:
+        """Update a user-client mapping"""
+        try:
+            with get_db() as db:
+                mapping = db.query(UserClientMapping).filter_by(
+                    user_id=user_id, is_active=1
+                ).first()
+                if mapping:
+                    for key, value in updates.items():
+                        setattr(mapping, key, value)
+                    mapping.updated_at = int(time.time())
+                    db.commit()
+                    return True
+                return False
+        except Exception as e:
+            log.error(f"Failed to update mapping for user {user_id}: {e}")
             return False
 
 
