@@ -231,7 +231,8 @@
 	};
 
 	const saveGovKnoModel = async () => {
-		const modelName = govBtnEnable ? 'govgpt_contextual_rag_pipeline' : 'gpt-4.1';
+		const modelId = $models.find((model) => model.id.includes('govgpt_contextual_rag_pipeline'))?.id || '';
+		const modelName = govBtnEnable ? modelId : 'gpt-4.1';
 		settings.set({ ...$settings, models: [modelName] });
 		await updateUserSettings(localStorage.token, { ui: $settings });
 		toast.success($i18n.t('Gov Knowledge model updated'));
