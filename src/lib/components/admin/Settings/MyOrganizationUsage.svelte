@@ -134,10 +134,20 @@
 	};
 
 	const formatCurrency = (amount) => {
+		// For very small amounts, show more decimal places
+		const value = amount || 0;
+		if (value > 0 && value < 0.01) {
+			return new Intl.NumberFormat('en-US', {
+				style: 'currency',
+				currency: 'USD',
+				minimumFractionDigits: 6,
+				maximumFractionDigits: 6
+			}).format(value);
+		}
 		return new Intl.NumberFormat('en-US', {
 			style: 'currency',
 			currency: 'USD'
-		}).format(amount || 0);
+		}).format(value);
 	};
 
 	const formatNumber = (number) => {

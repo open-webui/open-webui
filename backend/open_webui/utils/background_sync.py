@@ -33,7 +33,7 @@ class OpenRouterUsageSync:
             "Content-Type": "application/json"
         }
         
-        url = "https://openrouter.ai/api/v1/generations"
+        url = "https://openrouter.ai/api/v1/generation"
         params = {
             "limit": limit,
             "order": "created_at",
