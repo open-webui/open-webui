@@ -212,6 +212,20 @@ This document lists all custom mAI features that must be preserved during Open W
 9. `/scripts/openrouter/` - **OpenRouter configuration scripts**
 10. `/docs/openrouter/` - **OpenRouter documentation**
 
+### 9. **Admin Usage Tab** (Created: July 24, 2025)
+**Location:** Admin Settings > Usage Tab
+
+**Files to check:**
+- `src/lib/components/admin/Settings/Usage.svelte` - Usage tab component
+- `src/lib/components/admin/Settings.svelte` - Settings integration
+
+**✅ What to verify:**
+- Usage tab appears only for admin users
+- Displays all 12 OpenRouter models with status
+- Model information shows provider and model ID
+- Information banner about centralized access
+- Tab navigation works correctly
+
 ## 🔄 Update Process Notes
 
 1. **Always backup** before updating
@@ -221,4 +235,4 @@ This document lists all custom mAI features that must be preserved during Open W
 5. **Test Polish language** switching
 6. **Document any new conflicts** in docs/development/upgrade-guide.md
 
-Last Updated: July 23, 2025 - OpenRouter Docker Integration
+Last Updated: July 24, 2025 - Admin Usage Tab

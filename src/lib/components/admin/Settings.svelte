@@ -23,6 +23,7 @@
 	import Evaluations from './Settings/Evaluations.svelte';
 	import CodeExecution from './Settings/CodeExecution.svelte';
 	import Tools from './Settings/Tools.svelte';
+	import Usage from './Settings/Usage.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -45,7 +46,8 @@
 			'audio',
 			'images',
 			'pipelines',
-			'db'
+			'db',
+			'usage'
 		].includes(tabFromPath)
 			? tabFromPath
 			: 'general';
@@ -162,6 +164,29 @@
 				</svg>
 			</div>
 			<div class=" self-center">{$i18n.t('Models')}</div>
+		</button>
+
+		<button
+			id="usage"
+			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
+			'usage'
+				? ''
+				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+			on:click={() => {
+				goto('/admin/settings/usage');
+			}}
+		>
+			<div class=" self-center mr-2">
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 20 20"
+					fill="currentColor"
+					class="w-4 h-4"
+				>
+					<path d="M15.5 2A1.5 1.5 0 0 0 14 3.5v13a1.5 1.5 0 0 0 1.5 1.5h1a1.5 1.5 0 0 0 1.5-1.5v-13A1.5 1.5 0 0 0 16.5 2h-1ZM9.5 6A1.5 1.5 0 0 0 8 7.5v9A1.5 1.5 0 0 0 9.5 18h1a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 10.5 6h-1ZM3.5 10A1.5 1.5 0 0 0 2 11.5v5A1.5 1.5 0 0 0 3.5 18h1A1.5 1.5 0 0 0 6 16.5v-5A1.5 1.5 0 0 0 4.5 10h-1Z" />
+				</svg>
+			</div>
+			<div class=" self-center">{$i18n.t('Usage')}</div>
 		</button>
 
 		<button
@@ -512,6 +537,8 @@
 					toast.success($i18n.t('Settings saved successfully!'));
 				}}
 			/>
+		{:else if selectedTab === 'usage'}
+			<Usage />
 		{/if}
 	</div>
 </div>

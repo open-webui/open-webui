@@ -25,7 +25,7 @@
 - **Current Branch**: `customization` (main: `main`)
 - **Key Features**: Complete mAI visual identity, custom background patterns, multi-language support
 
-**Recent Status**: Successfully merged Open WebUI v0.6.17 preserving all customizations (July 2025)
+**Recent Status**: Successfully merged Open WebUI v0.6.18 preserving all customizations (July 2025)
 
 ## Detailed Documentation
 
@@ -34,7 +34,6 @@
 **Docker & Deployment**: @docs/deployment.md
 **Customization Workflows**: @docs/workflows.md
 **File Locations & Structure**: @docs/file-locations.md
-**Troubleshooting & Error Handling**: @docs/troubleshooting.md
 
 ## Critical Customization Rules
 
@@ -47,3 +46,18 @@
 **Branch Strategy:**
 - Work only on `customization` branch
 - Create feature branches for specific improvements
+
+##crawl4ai-mai MCP & Knowledge Integration
+- **Before starting any task**: Use `get_available_sources` to check existing knowledge base
+- **For implementation patterns**: Use `search_code_examples` before writing code
+- **For research**: Use `perform_rag_query` with specific source filtering
+
+##Research → Implement → Validate Workflow
+1. **Research Phase**:
+   - `query_knowledge_graph` for framework patterns
+   - `search_code_examples` for specific implementations
+   - `perform_rag_query` with source filtering for documentation
+
+2. **Implementation Phase**:
+   - Follow patterns from examples/ folder
+   - Reference knowledge graph insights

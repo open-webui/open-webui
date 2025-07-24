@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: mai-production
+    volumes:
+      - mai-data:/app/backend/data
+      - ./scripts/openrouter:/app/scripts/openrouter:ro  # Mount scripts read-only
+    ports:
+      - "${PORT:-3000}:8080"
+    environment:
+      # Core Configuration
+      - 'ENV=production'
+      - 'WEBUI_NAME=mAI'
+      - 'WEBUI_URL=${WEBUI_URL:-https://mai.yourdomain.com}'
+      - 'WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}'
+      
+      # Ollama Configuration
+      - 'OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://ollama:11434}'
+      
+      # OpenRouter Model Filtering
+      - 'ENABLE_PERSISTENT_CONFIG=true'
+      - 'OPENROUTER_ALLOWED_MODELS=anthropic/claude-sonnet-4,google/gemini-2.5-flash,google/gemini-2.5-pro,deepseek/deepseek-chat-v3-0324,anthropic/claude-3.7-sonnet,google/gemini-2.5-flash-lite-preview-06-17,openai/gpt-4.1,x-ai/grok-4,openai/gpt-4o-mini,openai/o4-mini-high,openai/o3,openai/chatgpt-4o-latest'
+      
+      # Database (for production use PostgreSQL)
+      - 'DATABASE_URL=${DATABASE_URL:-sqlite:////app/backend/data/webui.db}'
+      
+      # Security
+      - 'ENABLE_SIGNUP=${ENABLE_SIGNUP:-false}'
+      - 'DEFAULT_USER_ROLE=${DEFAULT_USER_ROLE:-pending}'
+      - 'ENABLE_ADMIN_EXPORT=${ENABLE_ADMIN_EXPORT:-true}'
+      
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - mai-network
+
+  # Optional: Ollama service (if not using external)
+  ollama:
+    image: ollama/ollama:latest
+    container_name: mai-ollama
+    volumes:
+      - ollama-data:/root/.ollama
+    ports:
+      - "11434:11434"
+    restart: unless-stopped
+    networks:
+      - mai-network
+    profiles:
+      - with-ollama  # Only starts if --profile with-ollama is used
+
+networks:
+  mai-network:
+    driver: bridge
+
+volumes:
+  mai-data:
+    name: mai_production_data
+  ollama-data:
+    name: mai_ollama_data

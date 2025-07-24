@@ -163,7 +163,8 @@ RUN pip3 install --no-cache-dir uv && \
 
 # copy built frontend files
 COPY --chown=$UID:$GID --from=build /app/build /app/build
-COPY --chown=$UID:$GID --from=build /app/CHANGELOG.md /app/CHANGELOG.md
+# CHANGELOG.md was removed from the repository
+# COPY --chown=$UID:$GID --from=build /app/CHANGELOG.md /app/CHANGELOG.md
 COPY --chown=$UID:$GID --from=build /app/package.json /app/package.json
 
 # copy backend files
