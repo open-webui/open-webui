@@ -635,9 +635,7 @@
 		{/if}
 		-->
 
-		<!-- 注释掉工作空间功能：侧边栏工作空间链接 -->
-		<!--
-		{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools}
+		{#if $user?.role === 'admin'}
 			<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
 				<a
 					class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
@@ -675,7 +673,6 @@
 				</a>
 			</div>
 		{/if}
-		-->
 
 		<div class="relative flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
 			{#if ($models ?? []).length > 0 && ($settings?.pinnedModels ?? []).length > 0}

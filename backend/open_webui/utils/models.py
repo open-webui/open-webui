@@ -33,39 +33,6 @@ logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
-
-# 预设的硬编码模型配置
-"""
-HARDCODED_MODELS = [
-    {
-        "id": "claude-3-opus",
-        "name": "Claude 3 Opus",
-        "object": "model",
-        "created": int(time.time()),
-        "owned_by": "anthropic",
-        "meta": {
-            "profile_image_url": "/favicon.png",
-            "description": "Anthropic's most capable model, with high performance across tasks",
-            "capabilities": {
-                "vision": True,
-                "file_upload": True,
-                "web_search": True,
-                "image_generation": False,
-                "code_interpreter": True,
-                "citations": True,
-                "memory": True  # 启用记忆功能
-            }
-        },
-        "params": {
-            "system": "You are Claude, an AI assistant created by Anthropic. You aim to be helpful while being direct and honest.",
-            "features": {
-                "memory": True  # 启用记忆功能
-            }
-        }
-    }
-]
-"""
-
 async def fetch_ollama_models(request: Request, user: UserModel = None):
     raw_ollama_models = await ollama.get_all_models(request, user=user)
     return [

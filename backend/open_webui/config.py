@@ -1020,7 +1020,7 @@ DEFAULT_LOCALE = PersistentConfig(
 DEFAULT_MODELS = PersistentConfig(
     "DEFAULT_MODELS", "ui.default_models", 
     # 硬编码默认模型，如果环境变量没有设置就使用这个
-    os.environ.get("DEFAULT_MODELS", "gpt-4.1")
+    os.environ.get("DEFAULT_MODELS", "Emohaa 0701 送测 【C】")
 )
 
 try:
