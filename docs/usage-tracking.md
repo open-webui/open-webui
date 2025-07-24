@@ -4,13 +4,24 @@
 
 The mAI Usage Tracking System provides comprehensive monitoring and billing capabilities for OpenRouter API usage in a multi-tenant reseller environment. The system tracks usage per organization, user, and AI model while maintaining a 1.3x markup pricing structure.
 
+**🎯 Status**: **FULLY OPERATIONAL** - System is live and recording usage automatically.
+
 ## Architecture
 
-### Option 1: Simplified Daily Summaries (Implemented)
+### Hybrid Real-Time + Daily Summaries (Implemented & Tested)
 - **99% storage reduction** compared to per-request logging
 - **Hybrid approach**: Real-time counters for today + daily summaries for history
 - **Live updates**: Today's usage refreshes every 30 seconds
 - **Historical data**: Daily rollups for efficient long-term storage
+- **Automatic recording**: Every OpenRouter API call is tracked immediately
+
+## Data Flow
+
+```
+User API Request → OpenRouter → Response with tokens/cost → Real-time Recording → Database → Admin Dashboard
+     ↓                ↓                    ↓                       ↓              ↓           ↓
+Chat Interface    AI Processing      Usage Extraction         Live Counters   Storage    30s Updates
+```
 
 ## Key Features
 
@@ -41,33 +52,50 @@ The mAI Usage Tracking System provides comprehensive monitoring and billing capa
 
 ## Database Schema
 
-### Core Tables
+### Core Tables (All Implemented & Indexed)
+
+#### `global_settings`
+- Singleton table for system-wide configuration
+- OpenRouter provisioning API key storage
+- Default markup rates and billing currency
+- **Migration**: `e7f8g9h0i1j2_client_usage_tables.py`
 
 #### `client_organizations`
-- Client organization management
-- OpenRouter API key storage
-- Markup rates and monthly limits
-- Billing contact information
+- Client organization management with dedicated API keys
+- OpenRouter API key storage (encrypted)
+- Markup rates (default 1.3x) and monthly limits
+- Billing contact information and active status
+- **Indexed**: API key lookup, active status filtering
 
-#### `user_client_mappings`
-- Maps users to client organizations
-- OpenRouter user ID tracking
+#### `user_client_mapping`
+- Maps Open WebUI users to client organizations
+- OpenRouter user ID tracking for attribution
 - Active/inactive status management
+- **Indexed**: User ID, client org ID, OpenRouter user ID
+
+#### `client_live_counters`
+- **Real-time usage data** for today only
+- Updated immediately after each API call
+- Token counts, costs, request counts
+- **Primary key**: client_org_id (one record per organization)
 
 #### `client_daily_usage`
 - Daily usage summaries per organization
-- Token counts, costs, and request statistics
-- Efficient storage for historical data
+- Historical data rolled up from live counters
+- Token counts, costs, request statistics, primary model
+- **Indexed**: Client org + date, usage date
 
 #### `client_user_daily_usage`
 - Per-user daily usage within organizations
-- Granular user-level tracking
+- Granular user-level tracking and attribution
 - OpenRouter user ID correlation
+- **Indexed**: Client + user + date, user + date
 
 #### `client_model_daily_usage`
 - Per-model daily usage statistics
 - Provider and model performance metrics
-- Cost breakdown by AI model
+- Cost breakdown by AI model (e.g., deepseek, claude, gpt)
+- **Indexed**: Client + model + date, model + date
 
 ## API Endpoints
 
@@ -104,20 +132,44 @@ The mAI Usage Tracking System provides comprehensive monitoring and billing capa
 
 ## Frontend Components
 
-### MyOrganizationUsage.svelte
-Comprehensive usage dashboard with:
-- **Real-time metrics**: Live today's usage with auto-refresh
-- **Historical trends**: Daily usage history visualization
-- **Tabbed interface**: Overview, Stats, By User, By Model views
-- **Usage statistics**: Token counts, costs, request metrics
-- **Responsive design**: Mobile-friendly dashboard layout
+### Admin Settings > Usage Tab (`src/lib/components/admin/Settings/Usage.svelte`)
+**Location**: Admin-only tab in Settings panel
+**Purpose**: Complete usage tracking dashboard for administrators
 
-### Key UI Features
+#### MyOrganizationUsage.svelte (Main Component)
+Comprehensive usage dashboard with:
+
+**📊 Real-Time Metrics Cards:**
+- **Today's Tokens**: Live token count with pulsing indicator
+- **Today's Cost**: Real-time cost with 1.3x markup applied
+- **Month Total**: Aggregated monthly usage and costs
+- **Daily Average**: Calculated average daily spend
+
+**🔄 Auto-Refresh System:**
+- **30-second updates** for today's live data
+- **Manual refresh** button for immediate updates
+- **Last updated** timestamp display
+
+**📈 Tabbed Analytics:**
+1. **Daily Trend**: Historical usage over last 30 days
+2. **Usage Stats**: Detailed comparisons and percentages
+3. **By User**: Per-user breakdown (admin can see all users)
+4. **By Model**: Per-AI-model usage statistics
+
+### Key UI Features (Implemented & Tested)
 - **Live indicators**: Green pulsing dots for real-time data
-- **Auto-refresh**: 30-second intervals for today's usage
-- **Currency formatting**: Proper USD formatting for costs
-- **Number formatting**: Comma-separated large numbers
-- **Tab navigation**: Easy switching between different views
+- **Auto-refresh**: 30-second intervals using `setInterval`
+- **Currency formatting**: Proper USD formatting ($0.000344)
+- **Number formatting**: Comma-separated large numbers (939 tokens)
+- **Tab navigation**: Seamless switching between different views
+- **Error handling**: Graceful failure with user feedback
+- **Mobile responsive**: Works on all screen sizes
+
+### Integration Points
+- **API Client**: `src/lib/apis/organizations/index.ts`
+- **Authentication**: Requires admin user permissions
+- **Real-time Updates**: Automatic background refresh
+- **Error Handling**: Toast notifications for failures
 
 ## Configuration
 
@@ -131,13 +183,43 @@ Comprehensive usage dashboard with:
 - Default markup rates for new organizations
 - Billing currency preferences
 
-## Usage Recording Flow
+## Usage Recording Flow (Verified Implementation)
 
-1. **API Request**: User makes request through mAI
-2. **Organization Lookup**: System identifies user's organization
-3. **Real-time Recording**: Usage recorded immediately in live counters
-4. **Daily Rollup**: At midnight, daily summaries are created/updated
-5. **Multi-level Tracking**: Usage recorded at organization, user, and model levels
+1. **API Request**: User makes request through mAI chat interface
+2. **OpenRouter Processing**: Request sent to OpenRouter API with user tracking
+3. **Response Analysis**: System extracts tokens and cost from OpenRouter response:
+   ```json
+   {
+     "tokens_prompt": 923,
+     "tokens_completion": 16, 
+     "usage": 0.000264656,
+     "provider": {"name": "Chutes"}
+   }
+   ```
+4. **Organization Lookup**: System identifies user's organization from `user_client_mapping`
+5. **Real-time Recording**: Usage recorded immediately in `client_live_counters`
+6. **Multi-level Tracking**: Simultaneous recording in:
+   - `client_user_daily_usage` (per-user tracking)
+   - `client_model_daily_usage` (per-model tracking)
+7. **Daily Rollup**: At midnight, live counters roll into daily summaries
+8. **Frontend Updates**: Dashboard refreshes every 30 seconds
+
+### Recording Implementation Details
+**File**: `backend/open_webui/routers/openai.py` (lines ~956-998)
+```python
+# Usage recording happens after OpenRouter response
+if client_context and isinstance(response, dict) and "usage" in response:
+    asyncio.create_task(
+        openrouter_client_manager.record_real_time_usage(
+            user_id=user.id,
+            model_name=payload.get("model"),
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            raw_cost=raw_cost,
+            provider=provider
+        )
+    )
+```
 
 ## Billing Integration
 
