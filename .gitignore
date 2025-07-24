@@ -21,6 +21,7 @@ static/pyodide/*
 !static/pyodide/pyodide-lock.json
 
 # Distribution / packaging
+.vscode
 .Python
 build/
 develop-eggs/
