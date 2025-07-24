@@ -92,42 +92,43 @@ class WeaviateClient:
             self.create_collection(collection_name)
 
     def create_collection(self, collection_name: str):
+        class_name = self.transform_collection_name(collection_name)
         schema = {
-            "class": self.transform_collection_name(collection_name),
-            "vectorizer": "text2vec-aws",
+            "class": class_name,
+            "vectorizer": "text2vec-aws",  # nome do plugin/integração, ex: text2vec-aws
             "moduleConfig": {
                 "text2vec-aws": {
                     "name": "text",
-                    "region": "sa-east-1",
+                    "region": "us-east-1",
                     "model": "amazon.titan-embed-text-v2:0",
                     "vectorIndexType": "hnsw",
                     "sourceProperties": ["text"]
                 }
             },
             "properties": [
-                {"name": "file_id", "dataType": ["text"]},
-                {"name": "documents", "dataType": ["text"]},
-                {
-                    "name": "metadata",
-                    "dataType": ["object"],
-                    "nestedProperties": [
-                        {"name": "name", "dataType": ["text"]},
-                        {"name": "content_type", "dataType": ["text"]},
-                        {"name": "size", "dataType": ["int"]},
-                        {"name": "collection_name", "dataType": ["text"]},
-                        {"name": "created_by", "dataType": ["text"]},
-                        {"name": "file_id", "dataType": ["text"]},
-                        {"name": "source", "dataType": ["text"]},
-                        {"name": "start_index", "dataType": ["int"]},
-                        {"name": "embedding_config", "dataType": ["text"]},
-                        {"name": "hash", "dataType": ["text"]},
-                    ]
-                }
+                    {"name": "file_id", "dataType": ["text"]},
+                    {"name": "documents", "dataType": ["text"]},
+                    {"name": "hash", "dataType": ["text"]},
+                    {"name": "name", "dataType": ["text"]},
+                    {
+                        "name": "metadata",
+                        "dataType": ["object"],
+                        "nestedProperties": [
+                            {"name": "content_type", "dataType": ["text"]},
+                            {"name": "size", "dataType": ["int"]},
+                            {"name": "collection_name", "dataType": ["text"]},
+                            {"name": "created_by", "dataType": ["text"]},
+                            {"name": "source", "dataType": ["text"]},
+                            {"name": "start_index", "dataType": ["int"]},
+                            {"name": "embedding_config", "dataType": ["text"]},
+                        ]
+                    }
             ]
         }
+
         url = f"{self.base_url}/v1/schema"
         resp = requests.post(url, headers=self.headers, json=schema)
-        log.info(f"Create collection response: {resp.status_code}, {resp.text}")
+        log.info(f"Create collection {class_name}")
         if not resp.ok:
             raise Exception(f"Error creating collection: {resp.text}")
 
@@ -145,13 +146,22 @@ class WeaviateClient:
 
     def insert(self, collection_name: str, items: List[VectorItem]):
         class_name = self.transform_collection_name(collection_name)
+        self._ensure_collection(class_name)
+        log.info(f"Inserting items into collection: {class_name}")
         url = f"{self.base_url}/v1/objects"
         for item in items:
+            # Remover a chave hash
+            hash = item["metadata"].get("hash")
+            name = item["metadata"].get("name")
+            item["metadata"].pop("hash", None)
+            item["metadata"].pop("name", None)
             data = {
                 "class": class_name,
                 "properties": {
                     "file_id": item["id"],
                     "documents": item["text"],
+                    "hash": hash,
+                    "name": name,
                     "metadata": item["metadata"],
                 }
             }
@@ -185,32 +195,65 @@ class WeaviateClient:
                 coll.data.insert(data)
 
     def query(
-        self, collection_name: str, filter: dict, limit: Optional[int] = None
+        self, collection_name: str, filter: dict, limit: Optional[int] = 1
     ) -> Optional[GetResult]:
-        class_name = self.transform_collection_name(collection_name)
+        collection_name = self.transform_collection_name(collection_name)
         where_clause = build_graphql_filter(filter)
-        query = f"""
-        {{
-        Get {{
-            {class_name}(
-            where: {where_clause}
-            limit: {limit}
-            ) {{
-            file_id
-            documents
-            metadata {{
-                name
-                file_id
-                collection_name
-            }}
-            }}
-        }}
-        }}
-        """
+        
+        query = """
+        {
+            Get {
+                %s (limit: %d
+                  where: %s) {
+                  file_id
+                  documents
+                  metadata {
+                    collection_name
+                  }
+                }
+            }
+        }
+        """ % (collection_name, limit, where_clause)
         url = f"{self.base_url}/v1/graphql"
         try:
             resp = requests.post(url, headers=self.headers, json={"query": query})
             resp.raise_for_status()
+            items = resp.json().get("data", {}).get("Get", {}).get(collection_name, [])
+            log.info(items)
+            if items:
+                ids = [obj.get("file_id", "") for obj in items]
+                docs = [obj.get("documents", "") for obj in items]
+                meta = [obj.get("metadata", {}) for obj in items]
+                return GetResult(ids=[ids], documents=[docs], metadatas=[meta])
+        except Exception as e:
+            log.error(f"Erro na query: {e}")
+        return None
+
+    def get(
+        self, collection_name: str, limit: Optional[int] = None
+    ) -> Optional[GetResult]:
+        """
+        Retorna todos os objetos da collection (limitado a 1000 itens).
+        """
+        class_name = self.transform_collection_name(collection_name)
+        url = f"{self.base_url}/v1/graphql"
+        query = ("""
+            {
+            Get {
+                %s {
+                documents
+                file_id
+                hash
+                name
+                }
+            }
+            }
+            """, class_name)
+        
+        body = {"query": query}
+        
+        try:
+            resp = requests.post(url, headers=self.headers, json=body)
             items = resp.json().get("data", {}).get("Get", {}).get(class_name, [])
             log.info(items)
             if items:
@@ -222,57 +265,49 @@ class WeaviateClient:
             log.error(f"Erro na query: {e}")
         return None
 
-    def get(
-        self, collection_name: str, limit: Optional[int] = None
-    ) -> Optional[GetResult]:
-        """
-        Retorna todos os objetos da collection (limitado a 1000 itens).
-        """
-        collection_name = self.transform_collection_name(collection_name)
-        collection = self.client.collections.get(collection_name)
-        response = collection.query.fetch_objects(limit=limit)
-        items = response.objects
-        if items:
-            ids = [obj.properties.get("file_id", "") for obj in items]
-            docs = [obj.properties.get("documents", "") for obj in items]
-            meta = [obj.properties.get("metadata", {}) for obj in items]
-            return GetResult(ids=[ids], documents=[docs], metadatas=[meta])
-        return None
-
     def search(self, collection_name: str, query: str, limit: int = 10) -> Optional[list]:
         """
         Busca por similaridade vetorial usando nearText via GraphQL.
         """
         class_name = self.transform_collection_name(collection_name)
         graphql_query = f"""
-        {{
-        Get {{
-            {class_name}(
-            nearText: {{
-                concepts: ["{query}"]
+            {{
+                Get {{
+                    {class_name} (
+                    nearText: {{
+                        concepts: ["{query}"]
+                    }}
+                    limit: {limit}
+                    ) {{
+                    file_id
+                    documents
+                    name
+                    metadata {{
+                        collection_name
+                    }}
+                    _additional {{
+                        id
+                        distance
+                        vector
+                    }}
+                    }}
+                }}
             }}
-            limit: {limit}
-            ) {{
-            file_id
-            documents
-            metadata {{
-                name
-                file_id
-                collection_name
-            }}
-            _additional {{
-                id
-                distance
-                vector
-            }}
-            }}
-        }}
-        }}
         """
         url = f"{self.base_url}/v1/graphql"
         resp = requests.post(url, headers=self.headers, json={"query": graphql_query})
+        
+        
         if resp.ok:
-            return resp.json().get("data", {}).get("Get", {}).get(class_name, [])
+            items = resp.json().get("data", {}).get("Get", {}).get(class_name, [])
+            ids = [obj.get("file_id", "") for obj in items]
+            docs = [obj.get("documents", "") for obj in items]
+            meta = [obj.get("metadata", {}) for obj in items]
+            distance = [obj.get('_additional', {}).get("distance", "") for obj in items]
+            return SearchResult(
+                ids=[ids], documents=[docs], metadatas=[meta], distances=[distance]
+            )
+           
         else:
             log.error(f"Error in search: {resp.status_code} {resp.text}")
             return None
@@ -294,9 +329,8 @@ class WeaviateClient:
             ) {{
             file_id
             documents
+            name
             metadata {{
-                name
-                file_id
                 collection_name
             }}
             _additional {{
@@ -311,7 +345,14 @@ class WeaviateClient:
         url = f"{self.base_url}/v1/graphql"
         resp = requests.post(url, headers=self.headers, json={"query": graphql_query})
         if resp.ok:
-            return resp.json().get("data", {}).get("Get", {}).get(class_name, [])
+            items = resp.json().get("data", {}).get("Get", {}).get(class_name, [])
+            ids = [obj.get("file_id", "") for obj in items]
+            docs = [obj.get("documents", "") for obj in items]
+            meta = [obj.get("metadata", {}) for obj in items]
+            score = [obj.get('_additional', {}).get("score", "") for obj in items]
+            return SearchResult(
+                ids=[ids], documents=[docs], metadatas=[meta], distances=[score]
+            )
         else:
             log.error(f"Error in hybrid_search: {resp.status_code} {resp.text}")
             return None
