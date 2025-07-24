@@ -1149,7 +1149,6 @@
 							})
 						]
 					: []),
-
 				...(showFormattingButtons
 					? [
 							BubbleMenu.configure({
@@ -1653,26 +1652,6 @@
 		}
 	});
 </script>
-
-{#if showFormattingButtons}
-	<div bind:this={bubbleMenuElement} class="p-0">
-		<FormattingButtons {editor} />
-	</div>
-
-	<div bind:this={floatingMenuElement} class="p-0">
-		<FormattingButtons {editor} />
-	</div>
-{/if}
-
-{#if showFormattingButtons}
-	<div bind:this={bubbleMenuElement} id="bubble-menu" class="p-0">
-		<FormattingButtons {editor} />
-	</div>
-
-	<div bind:this={floatingMenuElement} id="floating-menu" class="p-0">
-		<FormattingButtons {editor} />
-	</div>
-{/if}
 
 {#if showFormattingButtons}
 	<div bind:this={bubbleMenuElement} id="bubble-menu" class="p-0">
