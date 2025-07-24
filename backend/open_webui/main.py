@@ -86,6 +86,7 @@ from open_webui.routers import (
     users,
     utils,
     client_organizations,
+    usage_tracking,
 )
 
 from open_webui.routers.retrieval import (
@@ -1234,6 +1235,7 @@ app.include_router(
 )
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
 app.include_router(client_organizations.router, prefix="/api/v1/client-organizations", tags=["client-organizations"])
+app.include_router(usage_tracking.router, prefix="/api/v1/usage-tracking", tags=["usage-tracking"])
 
 
 try:
