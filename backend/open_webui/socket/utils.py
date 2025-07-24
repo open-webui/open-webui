@@ -1,6 +1,7 @@
 import json
 import uuid
 from open_webui.utils.redis import get_redis_connection
+from open_webui.env import REDIS_KEY_PREFIX
 from typing import Optional, List, Tuple
 import pycrdt as Y
 
@@ -97,7 +98,7 @@ class YdocManager:
     def __init__(
         self,
         redis=None,
-        redis_key_prefix: str = "open-webui:ydoc:documents",
+        redis_key_prefix: str = f"{REDIS_KEY_PREFIX}:ydoc:documents",
     ):
         self._updates = {}
         self._users = {}

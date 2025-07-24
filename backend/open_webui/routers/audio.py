@@ -561,7 +561,11 @@ def transcription_handler(request, file_path, metadata):
             file_path,
             beam_size=5,
             vad_filter=request.app.state.config.WHISPER_VAD_FILTER,
-            language=metadata.get("language") or WHISPER_LANGUAGE,
+            language=(
+                metadata.get("language", None)
+                if WHISPER_LANGUAGE == ""
+                else WHISPER_LANGUAGE
+            ),
         )
         log.info(
             "Detected language '%s' with probability %f"
