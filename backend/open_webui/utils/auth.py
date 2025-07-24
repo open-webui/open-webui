@@ -15,7 +15,7 @@ from typing import Optional, Union, List, Dict
 
 from opentelemetry import trace
 
-from open_webui.models.users import Users
+from open_webui.models.users import UserModel, Users
 
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import (
@@ -167,7 +167,7 @@ def get_current_user(
     response: Response,
     background_tasks: BackgroundTasks,
     auth_token: HTTPAuthorizationCredentials = Depends(bearer_security),
-):
+) -> UserModel:
     token = None
 
     if auth_token is not None:
@@ -266,6 +266,21 @@ def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
+
+
+def get_current_user_optional(
+    request: Request,
+    response: Response,
+    background_tasks: BackgroundTasks,
+    auth_token: HTTPAuthorizationCredentials = Depends(bearer_security),
+) -> Optional[UserModel]:
+    """
+    Returns the current user if authenticated, otherwise returns None.
+    """
+    try:
+        return get_current_user(request, response, background_tasks, auth_token)
+    except HTTPException as e:
+        return None
 
 
 def get_current_user_by_api_key(api_key: str):

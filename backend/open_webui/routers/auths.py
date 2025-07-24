@@ -18,7 +18,7 @@ from open_webui.models.auths import (
     UpdateProfileForm,
     UserResponse,
 )
-from open_webui.models.users import Users
+from open_webui.models.users import UserModel, Users
 from open_webui.models.groups import Groups
 
 from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
@@ -43,15 +43,17 @@ from open_webui.utils.auth import (
     create_api_key,
     create_token,
     get_admin_user,
+    get_current_user_optional,
     get_verified_user,
     get_current_user,
     get_password_hash,
     get_http_authorization_cred,
 )
+from open_webui.utils.oauth import get_oauth_provider_config_for_user
 from open_webui.utils.webhook import post_webhook
 from open_webui.utils.access_control import get_permissions
 
-from typing import Optional, List
+from typing import Optional
 
 from ssl import CERT_NONE, CERT_REQUIRED, PROTOCOL_TLS
 
@@ -667,22 +669,30 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
 
 
 @router.get("/signout")
-async def signout(request: Request, response: Response):
+async def signout(
+    request: Request,
+    response: Response,
+    user: Optional[UserModel] = Depends(get_current_user_optional),
+):
     response.delete_cookie("token")
     response.delete_cookie("oui-session")
+    response.delete_cookie("oauth_id_token")
 
     if ENABLE_OAUTH_SIGNUP.value:
         oauth_id_token = request.cookies.get("oauth_id_token")
-        if oauth_id_token:
+        oauth_provider_config = (
+            get_oauth_provider_config_for_user(user) if user else None
+        )
+        discovery_endpoint = oauth_provider_config.get("discovery_endpoint")
+
+        if oauth_id_token and discovery_endpoint:
             try:
                 async with ClientSession(trust_env=True) as session:
-                    async with session.get(OPENID_PROVIDER_URL.value) as resp:
+                    async with session.get(discovery_endpoint) as resp:
                         if resp.status == 200:
                             openid_data = await resp.json()
                             logout_url = openid_data.get("end_session_endpoint")
                             if logout_url:
-                                response.delete_cookie("oauth_id_token")
-
                                 return JSONResponse(
                                     status_code=200,
                                     content={

@@ -2,6 +2,7 @@ import base64
 import logging
 import mimetypes
 import sys
+from typing import Optional
 import uuid
 import json
 
@@ -15,7 +16,7 @@ from fastapi import (
 from starlette.responses import RedirectResponse
 
 from open_webui.models.auths import Auths
-from open_webui.models.users import Users
+from open_webui.models.users import UserModel, Users
 from open_webui.models.groups import Groups, GroupModel, GroupUpdateForm, GroupForm
 from open_webui.config import (
     DEFAULT_USER_ROLE,
@@ -543,3 +544,14 @@ class OAuthManager:
         redirect_url = f"{redirect_base_url}/auth#token={jwt_token}"
 
         return RedirectResponse(url=redirect_url, headers=response.headers)
+
+
+def get_oauth_provider_config_for_user(user: UserModel) -> dict[str, any]:
+    """Get the OAuth provider for a user based on the users OAuth sub. Empty {} if no provider is found."""
+    if not user or not user.oauth_sub:
+        return {}
+
+    oauth_sub = user.oauth_sub if user.oauth_sub else ""
+    provider_name = oauth_sub.split("@", 1)[0]
+
+    return OAUTH_PROVIDERS.get(provider_name, {})

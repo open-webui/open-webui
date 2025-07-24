@@ -554,12 +554,16 @@ def load_oauth_providers():
     OAUTH_PROVIDERS.clear()
     if GOOGLE_CLIENT_ID.value and GOOGLE_CLIENT_SECRET.value:
 
+        discovery_endpoint = (
+            "https://accounts.google.com/.well-known/openid-configuration"
+        )
+
         def google_oauth_register(client: OAuth):
             client.register(
                 name="google",
                 client_id=GOOGLE_CLIENT_ID.value,
                 client_secret=GOOGLE_CLIENT_SECRET.value,
-                server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+                server_metadata_url=discovery_endpoint,
                 client_kwargs={
                     "scope": GOOGLE_OAUTH_SCOPE.value,
                     **(
@@ -573,6 +577,7 @@ def load_oauth_providers():
 
         OAUTH_PROVIDERS["google"] = {
             "redirect_uri": GOOGLE_REDIRECT_URI.value,
+            "discovery_endpoint": discovery_endpoint,
             "register": google_oauth_register,
         }
 
@@ -582,12 +587,14 @@ def load_oauth_providers():
         and MICROSOFT_CLIENT_TENANT_ID.value
     ):
 
+        discovery_endpoint = f"{MICROSOFT_CLIENT_LOGIN_BASE_URL.value}/{MICROSOFT_CLIENT_TENANT_ID.value}/v2.0/.well-known/openid-configuration?appid={MICROSOFT_CLIENT_ID.value}"
+
         def microsoft_oauth_register(client: OAuth):
             client.register(
                 name="microsoft",
                 client_id=MICROSOFT_CLIENT_ID.value,
                 client_secret=MICROSOFT_CLIENT_SECRET.value,
-                server_metadata_url=f"{MICROSOFT_CLIENT_LOGIN_BASE_URL.value}/{MICROSOFT_CLIENT_TENANT_ID.value}/v2.0/.well-known/openid-configuration?appid={MICROSOFT_CLIENT_ID.value}",
+                server_metadata_url=discovery_endpoint,
                 client_kwargs={
                     "scope": MICROSOFT_OAUTH_SCOPE.value,
                     **(
@@ -602,6 +609,7 @@ def load_oauth_providers():
         OAUTH_PROVIDERS["microsoft"] = {
             "redirect_uri": MICROSOFT_REDIRECT_URI.value,
             "picture_url": MICROSOFT_CLIENT_PICTURE_URL.value,
+            "discovery_endpoint": discovery_endpoint,
             "register": microsoft_oauth_register,
         }
 
@@ -677,6 +685,7 @@ def load_oauth_providers():
         OAUTH_PROVIDERS["oidc"] = {
             "name": OAUTH_PROVIDER_NAME.value,
             "redirect_uri": OPENID_REDIRECT_URI.value,
+            "discovery_endpoint": OPENID_PROVIDER_URL.value,
             "register": oidc_oauth_register,
         }
 
