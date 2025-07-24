@@ -239,11 +239,6 @@ function syncWithSessionManager(
 	// Get all entities from session manager using simplified display logic
 	const sessionEntities = piiSessionManager.getEntitiesForDisplay(conversationId);
 
-	console.log('PiiDetectionExtension: Sync check:', {
-		currentEntities: currentEntities,
-		sessionEntities: sessionEntities
-	});
-
 	// If session manager has fewer entities, some were removed
 	if (sessionEntities.length < currentEntities.length) {
 		// Don't filter entities if session manager is completely empty

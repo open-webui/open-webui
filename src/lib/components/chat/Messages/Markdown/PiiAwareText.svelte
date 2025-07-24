@@ -5,6 +5,7 @@
 	export let text: string;
 	export let id: string = '';
 	export let conversationId: string = '';
+	export let done: boolean = false;
 
 	let containerElement: HTMLElement;
 	let piiSessionManager = PiiSessionManager.getInstance();
@@ -32,7 +33,7 @@
 	$: hasHighlighting = processedText !== text;
 </script>
 
-<span bind:this={containerElement} {id}>
+<span bind:this={containerElement} {id} {done}>
 	{#if hasHighlighting}
 		{@html DOMPurify.sanitize(processedText)}
 	{:else}
