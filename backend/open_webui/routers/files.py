@@ -58,16 +58,16 @@ def upload_file(
         filename = os.path.basename(unsanitized_filename)
 
         # replace filename with uuid
-        id = str(uuid.uuid4())
+        req_id = str(uuid.uuid4())
         name = filename
-        filename = f"{id}_{filename}"
+        filename = f"{req_id}_{filename}"
         contents, file_path = Storage.upload_file(file.file, filename)
 
         file_item = Files.insert_new_file(
             user.id,
             FileForm(
                 **{
-                    "id": id,
+                    "id": req_id,
                     "filename": name,
                     "path": file_path,
                     "meta": {
