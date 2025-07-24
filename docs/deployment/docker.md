@@ -14,24 +14,24 @@ docker build -t mai-dev:latest .
 
 ## Deployment Models
 
-### Single-Client Instance (Production - Hetzner Cloud)
-Each client gets a dedicated mAI instance with isolated database and usage tracking.
+### Multi-Client Deployment (Production - Single Hetzner Server)
+Single Hetzner server running multiple Docker instances (one per client) with isolated databases.
 
 ```yaml
 # docker-compose.yml for individual client deployment
+# Location: /opt/clients/mai-companyabc/docker-compose.yml
 version: '3.8'
 services:
-  mai-client:
+  mai-companyabc:
     image: mai-production:latest
-    container_name: mai-${CLIENT_NAME}
+    container_name: mai-companyabc
     volumes:
       - ./data:/app/backend/data
       - ./backups:/app/backups
     ports:
-      - "80:8080"     # Direct HTTP access
-      - "443:8080"    # HTTPS if SSL termination handled
+      - "8001:8080"   # Unique port per client (8001-8020)
     environment:
-      - WEBUI_NAME=mAI - ${CLIENT_NAME}
+      - WEBUI_NAME=mAI - Company ABC
       - ENABLE_SIGNUP=false
       - ENV=prod
     restart: unless-stopped
@@ -40,10 +40,31 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
 
-volumes:
-  client-data:
-    name: mai_${CLIENT_NAME}_data
+networks:
+  default:
+    name: mai-network
+    external: true
+```
+
+### Server Architecture
+```
+Hetzner Server (16-32 vCPU, 64-128GB RAM)
+├── mai-client1:8001 → Company A (5 users)
+├── mai-client2:8002 → Company B (12 users)  
+├── mai-client3:8003 → Company C (8 users)
+├── ...
+└── mai-client20:8020 → Company T (15 users)
+
+Total: 20 Docker instances, ~200 users
 ```
 
 ### Development Environment
@@ -157,23 +178,97 @@ docker-compose up -d
 docker exec mai-production chown -R $UID:$GID /app/backend/data
 ```
 
-## Client-Specific Deployment (Hetzner Cloud)
+## Multi-Client Deployment (Single Hetzner Server)
 
-### Server Setup for Each Client
+### Server Setup for All Clients
 ```bash
-# SSH into client's Hetzner server
-ssh root@[client-server-ip]
+# SSH into your main Hetzner server
+ssh root@mai-production.hetzner-server.com
 
-# Create deployment directory
-mkdir /opt/mai-client
-cd /opt/mai-client
+# Create Docker network for all clients
+docker network create mai-network
 
-# Environment-specific deployment
-export CLIENT_NAME="companyabc"
-envsubst < docker-compose.template.yml > docker-compose.yml
+# Setup client deployment function
+setup_client() {
+    local CLIENT_NAME=$1
+    local PORT=$2
+    
+    # Create client directory
+    mkdir -p /opt/clients/mai-${CLIENT_NAME}
+    cd /opt/clients/mai-${CLIENT_NAME}
+    
+    # Generate docker-compose.yml
+    cat > docker-compose.yml << EOF
+version: '3.8'
+services:
+  mai-${CLIENT_NAME}:
+    image: mai-production:latest
+    container_name: mai-${CLIENT_NAME}
+    ports:
+      - "${PORT}:8080"
+    environment:
+      - WEBUI_NAME=mAI - ${CLIENT_NAME}
+      - ENABLE_SIGNUP=false
+      - ENV=prod
+    volumes:
+      - ./data:/app/backend/data
+      - ./backups:/app/backups
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+networks:
+  default:
+    name: mai-network
+    external: true
+EOF
+    
+    # Start client instance
+    docker-compose up -d
+    echo "Client ${CLIENT_NAME} deployed on port ${PORT}"
+}
 
-# Start client instance
-docker-compose up -d
+# Deploy multiple clients
+setup_client "companyabc" 8001
+setup_client "companyxyz" 8002
+# ... continue for all 20 clients
+```
+
+### Reverse Proxy Configuration (Nginx)
+```nginx
+# /etc/nginx/sites-available/mai-clients
+upstream mai_companyabc {
+    server localhost:8001;
+}
+
+upstream mai_companyxyz {
+    server localhost:8002;
+}
+
+server {
+    listen 80;
+    server_name companyabc.mai-production.com;
+    location / {
+        proxy_pass http://mai_companyabc;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+
+server {
+    listen 80;
+    server_name companyxyz.mai-production.com;
+    location / {
+        proxy_pass http://mai_companyxyz;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
 ```
 
 ### Per-Client Usage Tracking
@@ -219,7 +314,32 @@ mAI Instance Structure (per client):
 ```
 
 #### Service Provider Benefits
+- **Centralized Infrastructure**: Single server hosting all 20 client instances
+- **Resource Efficiency**: Optimized resource utilization across clients
+- **Simplified Management**: All containers managed from one server
+- **Cost Optimization**: Single server costs vs 20 separate servers
 - **Minimal Client Management**: Clients manage their own users internally
-- **20 Isolated Instances**: Each client has dedicated server and database
 - **Automated User Tracking**: Each user gets unique external_user automatically
 - **OpenRouter Dashboard**: Aggregate view of all client API key usage
+
+### Management Commands
+```bash
+# View all client containers
+docker ps --filter "name=mai-"
+
+# Monitor specific client
+docker logs mai-companyabc --follow
+
+# Restart client instance
+cd /opt/clients/mai-companyabc && docker-compose restart
+
+# Update all clients
+for client in /opt/clients/mai-*; do
+    cd "$client" && docker-compose pull && docker-compose up -d
+done
+
+# Backup all client data
+for client in /opt/clients/mai-*; do
+    tar -czf "${client##*/}-backup-$(date +%Y%m%d).tar.gz" -C "$client" data
+done
+```

@@ -65,32 +65,26 @@ Enter monthly spending limit (USD, or press Enter to skip): 500
 ✅ Single-tenant deployment with full data isolation!
 ```
 
-### Step 3: Deploy Dedicated Client Instance on Hetzner
+### Step 3: Deploy Client Instance on Single Hetzner Server
 
-Create a dedicated Hetzner Cloud server for each client:
+Deploy client's Docker instance on your centralized Hetzner server:
 
-#### Create Hetzner Server
+#### Hetzner Server Specifications
 ```bash
-# Example server specs for each client
-# CPU: 2 vCPUs, RAM: 4GB, Storage: 40GB SSD
+# Single server for all 20 clients
+# CPU: 16-32 vCPUs, RAM: 64-128GB, Storage: 1TB+ SSD
 # Location: Nuremberg (closest to Poland)
-
-# Server naming convention: mai-[client-name]
-# Example: mai-companyabc
+# Estimated resource per client: ~1-2 vCPU, 2-4GB RAM
 ```
 
-#### Docker Deployment on Hetzner
+#### Multi-Client Docker Deployment
 ```bash
-# SSH into client's Hetzner server
-ssh root@[client-server-ip]
-
-# Install Docker (if not already installed)
-curl -fsSL https://get.docker.com -o get-docker.sh
-sh get-docker.sh
+# SSH into your main Hetzner server
+ssh root@mai-production.hetzner-server.com
 
 # Create client-specific deployment directory
-mkdir /opt/mai-companyabc
-cd /opt/mai-companyabc
+mkdir -p /opt/clients/mai-companyabc
+cd /opt/clients/mai-companyabc
 
 # Create docker-compose.yml for client
 cat > docker-compose.yml << EOF
@@ -104,8 +98,7 @@ services:
       - ENABLE_SIGNUP=false
       - ENV=prod
     ports:
-      - "80:8080"    # Direct port 80 for client access
-      - "443:8080"   # HTTPS if SSL termination handled elsewhere
+      - "8001:8080"  # Unique port per client (8001, 8002, 8003...)
     volumes:
       - ./data:/app/backend/data
       - ./backups:/app/backups
@@ -115,20 +108,49 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+
+networks:
+  default:
+    name: mai-network
+    external: true
 EOF
 
-# Start the client's dedicated instance
+# Start the client's instance
 docker-compose up -d
 
 # Verify deployment
-docker-compose logs -f
+docker-compose logs -f mai-companyabc
+```
+
+#### Port Management Strategy
+```bash
+# Client port assignments on single server
+mai-client1:    8001:8080
+mai-client2:    8002:8080  
+mai-client3:    8003:8080
+...
+mai-client20:   8020:8080
+
+# Reverse proxy configuration (Nginx/Caddy)
+client1.mai-production.com → localhost:8001
+client2.mai-production.com → localhost:8002
+client3.mai-production.com → localhost:8003
 ```
 
 Once the Docker instance is running, provide the client administrator with access:
 
 #### Admin Account Setup (Client Administrator)
 Provide the designated client administrator with:
-- **Server URL**: `http://[client-server-ip]` or `https://[client-domain.com]`
+- **Server URL**: `https://companyabc.mai-production.com` (via reverse proxy)
+- **Direct Port Access**: `http://mai-production.hetzner-server.com:8001` (if no proxy)
 - **OpenRouter API Key**: `sk-or-v1-abc123def456789...`
 - **Instructions**: First person to register becomes admin automatically
 
@@ -237,10 +259,12 @@ Shared API Key: sk-or-v1-abc123...
 ```
 
 ### For You (Service Provider)
-- **20 Separate Instances**: Each client has dedicated Hetzner server
+- **Single Hetzner Server**: 20 Docker instances on one powerful server
+- **Resource Efficiency**: Shared server resources with per-client limits
 - **OpenRouter Dashboard**: Aggregate view of all client API keys
 - **Per-Client Billing**: Individual usage tracking for accurate invoicing
-- **Minimal Management**: Clients manage their own users through admin interface
+- **Centralized Management**: All instances managed from single server
+- **Client Self-Service**: Clients manage their own users through admin interface
 
 ## Management Commands
 
@@ -282,8 +306,9 @@ python3 create_client_key_option1.py
 
 ### Server Deployment Issues
 - **Docker installation**: Ensure Docker is properly installed on Hetzner server
-- **Port conflicts**: Verify ports 80/443 are available
-- **Memory issues**: Monitor server resources (4GB RAM minimum)
+- **Port conflicts**: Verify unique ports per client (8001-8020)
+- **Memory issues**: Monitor server resources (2-4GB RAM per client)
+- **Network conflicts**: Ensure mai-network exists (`docker network create mai-network`)
 
 ### API Key Configuration
 - **Wrong API key**: Verify key starts with `sk-or-v1-`
@@ -296,19 +321,36 @@ python3 create_client_key_option1.py
 - **Admin access**: Ensure user has admin permissions for usage tab
 
 ### Client Access Problems
-- **Network**: Verify Hetzner server firewall allows HTTP/HTTPS
-- **DNS**: If using domain, check DNS points to correct server IP
-- **Container status**: Check with `docker ps` that container is running
+- **Port access**: Verify correct port assignment and no conflicts
+- **Reverse proxy**: Check proxy configuration points to correct port
+- **Container status**: Check with `docker ps` that specific client container is running
+- **Resource limits**: Monitor if client hitting CPU/memory limits
+
+### Multi-Client Management
+- **Container naming**: Use consistent naming: `mai-[client-name]`
+- **Port tracking**: Document port assignments (8001-8020)
+- **Resource monitoring**: Monitor overall server resource usage
+- **Backup strategy**: Individual client data backups from `/opt/clients/[client]/data`
 
 ## Scaling Considerations
 
-### Server Resources (Per Client)
-- **Minimum**: 2 vCPU, 4GB RAM, 40GB storage
-- **Recommended**: 4 vCPU, 8GB RAM, 80GB storage (for larger teams)
+### Single Server Resource Planning
+- **Total Server**: 16-32 vCPU, 64-128GB RAM, 1-2TB SSD
+- **Per Client**: ~1-2 vCPU, 2-4GB RAM, 20-50GB storage
 - **Location**: Nuremberg datacenter (closest to Poland)
+- **Network**: High-bandwidth connection for 20 concurrent instances
 
-### Management at Scale (20 Clients)
-- **Automation**: Consider Terraform/Ansible for server provisioning
-- **Monitoring**: Aggregate monitoring across all client servers
-- **Backups**: Automated backup strategy for all client databases
+### Management at Scale (20 Clients on One Server)
+- **Container Orchestration**: Docker Compose per client with resource limits
+- **Port Management**: Systematic port allocation (8001-8020)
+- **Reverse Proxy**: Nginx/Caddy for domain-based routing
+- **Monitoring**: Aggregate monitoring of all containers on single server
+- **Backups**: Automated backup strategy for all client data directories
 - **Updates**: Coordinated update process across all instances
+- **Resource Monitoring**: Server-wide resource usage tracking
+
+### Infrastructure Benefits
+- **Cost Efficiency**: Single server vs 20 separate servers
+- **Simplified Management**: Centralized administration
+- **Resource Optimization**: Better utilization of server resources
+- **Network Efficiency**: Shared bandwidth and infrastructure
