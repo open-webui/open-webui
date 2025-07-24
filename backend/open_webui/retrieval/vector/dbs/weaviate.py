@@ -345,7 +345,14 @@ class WeaviateClient:
         url = f"{self.base_url}/v1/graphql"
         resp = requests.post(url, headers=self.headers, json={"query": graphql_query})
         if resp.ok:
-            return resp.json().get("data", {}).get("Get", {}).get(class_name, [])
+            items = resp.json().get("data", {}).get("Get", {}).get(class_name, [])
+            ids = [obj.get("file_id", "") for obj in items]
+            docs = [obj.get("documents", "") for obj in items]
+            meta = [obj.get("metadata", {}) for obj in items]
+            score = [obj.get('_additional', {}).get("score", "") for obj in items]
+            return SearchResult(
+                ids=[ids], documents=[docs], metadatas=[meta], distances=[score]
+            )
         else:
             log.error(f"Error in hybrid_search: {resp.status_code} {resp.text}")
             return None
