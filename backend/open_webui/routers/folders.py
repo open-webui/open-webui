@@ -47,7 +47,6 @@ async def get_folders(user=Depends(get_verified_user)):
     # folders = Folders.get_folders_by_user_id(user.id)
 
     folders = Folders.get_folders_by_access(user.id)
-    print("1 FOLDERS:", folders)
     return [
         {
             **folder.model_dump(),
@@ -71,6 +70,7 @@ async def get_folders(user=Depends(get_verified_user)):
 
 @router.post("/")
 def create_folder(form_data: FolderForm, user=Depends(get_verified_user)):
+    print("📥 FORM_DATA DITERIMA:", form_data.model_dump())
     folder = Folders.get_folder_by_parent_id_and_user_id_and_name(
         None, user.id, form_data.name
     )

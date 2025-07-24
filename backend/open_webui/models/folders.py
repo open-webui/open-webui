@@ -71,17 +71,14 @@ class FolderTable:
     ) -> Optional[FolderModel]:
         with get_db() as db:
             id = str(uuid.uuid4())
-            user_groups = Groups.get_groups_by_member_id(user_id)
-            group_ids = [g.id for g in user_groups] if user_groups else []
-
             folder = FolderModel(
                 **{
                     "id": id,
                     "user_id": user_id,
                     **(form_data.model_dump(exclude_unset=True) or {}),
-                    "access_control": {
-                        "read": {"user_ids": [user_id], "group_ids": group_ids},
-                        "write": {"user_ids": [user_id], "group_ids": group_ids},
+                    "access_control": form_data.access_control or {
+                        "read": {"user_ids": [user_id], "group_ids": []},
+                        "write": {"user_ids": [user_id], "group_ids": []},
                     },
                     "parent_id": parent_id,
                     "created_at": int(time.time()),
@@ -304,8 +301,6 @@ class FolderTable:
             group_ids = [g.id for g in groups]
             if not group_ids:
                 group_ids = []
-            print("👥 GROUP IDS:", group_ids)
-
             with get_db() as db:
                 folders = db.query(Folder).all()
                 result = []
