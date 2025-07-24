@@ -23,6 +23,7 @@
 
 	export let createMessagePair: Function;
 	export let stopResponse: Function;
+	export let saveSessionSelectedModels: Function = () => {};
 
 	export let autoScroll = false;
 
@@ -300,6 +301,7 @@
 						{transparentBackground}
 						{stopResponse}
 						{createMessagePair}
+						{saveSessionSelectedModels}
 						placeholder={$i18n.t('How can I help you today?')}
 						onChange={(input) => {
 							if (!$temporaryChatEnabled) {

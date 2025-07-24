@@ -42,7 +42,7 @@
 </script>
 
 <div
-	class="flex flex-col justify-between px-5 mb-3 w-full {($settings?.widescreenMode ?? null)
+	class="flex flex-col justify-between px-5 w-full {($settings?.widescreenMode ?? null)
 		? 'max-w-full'
 		: 'max-w-[1440px]'} mx-auto rounded-lg group"
 >

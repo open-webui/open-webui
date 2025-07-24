@@ -32,7 +32,9 @@ export default defineConfig({
 	],
 	define: {
 		APP_VERSION: JSON.stringify(process.env.npm_package_version),
-		APP_BUILD_HASH: JSON.stringify(process.env.APP_BUILD_HASH || 'dev-build')
+		APP_BUILD_HASH: JSON.stringify(process.env.APP_BUILD_HASH || 'dev-build'),
+		GOVGPT_RAG_WOG_MODEL_NAME: JSON.stringify(process.env.GOVGPT_RAG_WOG_MODEL_NAME || 'govgpt_rag_wog'),
+		DEFAULT_MODELS: JSON.stringify(process.env.DEFAULT_MODELS || 'gpt-4.1')
 	},
 	build: {
 		sourcemap: true

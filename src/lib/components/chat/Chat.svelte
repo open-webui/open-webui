@@ -189,9 +189,8 @@
 	}
 
 	const saveSessionSelectedModels = () => {
-		if (selectedModels.length === 0 || (selectedModels.length === 1 && selectedModels[0] === '')) {
-			return;
-		}
+		// Allow saving even if selectedModels is empty or contains empty string
+		// This is needed when switching between models (e.g., Gov Knowledge toggle)
 		sessionStorage.selectedModels = JSON.stringify(selectedModels);
 		console.log('saveSessionSelectedModels', selectedModels, sessionStorage.selectedModels);
 	};
@@ -2129,7 +2128,7 @@
 									<MessageInput
 										{history}
 										{taskIds}
-										{selectedModels}
+										bind:selectedModels
 										bind:files
 										bind:prompt
 										bind:autoScroll
@@ -2143,6 +2142,7 @@
 										transparentBackground={$settings?.backgroundImageUrl ?? false}
 										{stopResponse}
 										{createMessagePair}
+										{saveSessionSelectedModels}
 										onChange={(input) => {
 											if (!$temporaryChatEnabled) {
 												if (input.prompt !== null) {
@@ -2188,7 +2188,7 @@
 								<div class="overflow-auto w-full h-full flex">
 									<Placeholder
 										{history}
-										{selectedModels}
+										bind:selectedModels
 										bind:files
 										bind:prompt
 										bind:autoScroll
