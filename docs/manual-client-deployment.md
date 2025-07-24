@@ -1,6 +1,6 @@
-# Manual Client Organization Deployment Guide
+# Client Organization Deployment Guide
 
-This guide explains how to manually create API keys for client organizations and deploy their mAI instances.
+This guide explains how to create API keys for client organizations and deploy their mAI instances. The process is now **fully automated** with no manual database configuration required.
 
 ## Step-by-Step Process
 
@@ -13,55 +13,66 @@ This guide explains how to manually create API keys for client organizations and
 
 ### Step 2: Create API Key for Client Organization
 
-Run the interactive script:
+Run the client key creation script:
 
 ```bash
 cd /Users/patpil/Documents/Projects/mAI
-python manual_client_setup.py
+python3 create_client_key_option1.py
 ```
 
 **Example Session:**
 ```
-🔑 Manual Client API Key Creation
-==================================================
+🚀 Option 1: Simple Client API Key Creator & Usage Checker
+============================================================
+Select mode:
+1. Create new API key
+2. Check usage of existing API key
+Enter choice (1 or 2): 1
+
 Enter your OpenRouter provisioning key: sk-or-prov-your-key-here
+Enter client organization name: Company ABC
+Enter monthly spending limit (USD, or press Enter to skip): 500
 
-🎯 What would you like to do?
-1. Create API key for new client organization
-2. List all existing client keys
-3. Get information about specific key
-4. Update key spending limit
-5. Disable client key
-6. Exit
-
-Enter your choice (1-6): 1
-
-📋 Creating new client API key...
-Client organization name: Company ABC
-Monthly spending limit in USD (or press Enter for no limit): 500
-Custom label (or press Enter for 'client-company-abc'): 
-
-🔄 Creating API key for 'Company ABC'...
+🔑 Creating API key for client: Company ABC
+📡 Response status: 201
 ✅ API key created successfully!
 
-============================================================
-📋 DEPLOYMENT INSTRUCTIONS FOR: Company ABC
-============================================================
-1. Deploy new mAI instance for: Company ABC
-2. Set OpenAI API Base URL to: https://openrouter.ai/api/v1
-3. Set OpenAI API Key to: sk-or-v1-abc123def456789...
-4. Monthly spending limit: $500.0
-5. Key hash for management: xyz789hash
+📋 CLIENT DATABASE ENTRY:
+{
+  "client_name": "Company ABC",
+  "api_key": "sk-or-v1-abc123def456789...",
+  "key_id": "12345",
+  "monthly_limit": 500.0,
+  "created_at": "2025-07-24T16:00:00",
+  "usage_tracking": "Option 1 - Daily summaries + live counters"
+}
 
-📝 Save this information:
-   Client: Company ABC
-   API Key: sk-or-v1-abc123def456789...
-   Key Hash: xyz789hash
-   Limit: $500.0
-============================================================
+🎯 MANUAL SETUP INSTRUCTIONS:
+1. Give API key to client administrator: sk-or-v1-abc123def456789...
+2. Client enters key in Settings → Connections
+3. System automatically configures organization and usage tracking
+4. External user ID is auto-learned on first API call
+
+✅ Zero manual database configuration required!
 ```
 
-### Step 3: Deploy Client's mAI Instance
+### Step 3: Client Setup (Automated)
+
+**🎉 This step is now fully automated!** Simply give the API key to the client administrator:
+
+1. **Send API key** to client: `sk-or-v1-abc123def456789...`
+2. **Client login** to their mAI instance 
+3. **Client navigates** to Settings → Connections
+4. **Client enters** the API key in OpenAI API Key field
+5. **System automatically**:
+   - Syncs API key to organization database
+   - Configures usage tracking
+   - Learns external_user on first API call
+   - Starts recording usage immediately
+
+**No manual database configuration needed!**
+
+### Step 4: Deploy Client's mAI Instance
 
 For each client organization, create a separate mAI deployment:
 
@@ -76,106 +87,92 @@ cat > docker-compose.yml << EOF
 version: '3.8'
 services:
   mai-companyabc:
-    image: your-mai-image:latest
+    image: mai-production:latest
     environment:
-      - OPENAI_API_BASE_URL=https://openrouter.ai/api/v1
-      - OPENAI_API_KEY=sk-or-v1-abc123def456789...
-      - CLIENT_ORG_NAME=Company ABC
-      - MONTHLY_LIMIT=500
+      - WEBUI_NAME=mAI - Company ABC
+      - ENABLE_SIGNUP=false
     ports:
       - "8081:8080"  # Different port per client
     volumes:
       - ./data:/app/backend/data
+    restart: unless-stopped
 EOF
 
 docker-compose up -d
 ```
 
-#### Option B: Environment Configuration
+**Note**: API keys are now configured through the web UI, not environment variables.
+
+#### Option B: Single Instance (Recommended)
+For production, use a single mAI instance that handles multiple organizations:
+
 ```bash
-# Set environment variables for client's deployment
-export OPENAI_API_BASE_URL="https://openrouter.ai/api/v1"
-export OPENAI_API_KEY="sk-or-v1-abc123def456789..."
-export CLIENT_ORG_NAME="Company ABC"
-export MONTHLY_LIMIT="500"
-
-# Start client's mAI instance
-./start-mai-instance.sh
+# Single deployment for all clients
+docker run -d \
+  --name mai-production \
+  -p 3000:8080 \
+  -v mai-data:/app/backend/data \
+  -e WEBUI_NAME=mAI \
+  -e ENABLE_SIGNUP=false \
+  --restart unless-stopped \
+  mai-production:latest
 ```
 
-### Step 4: Configure Client's Database
+Each client uses the same instance but with their own API key entered through Settings.
 
-Each client needs their own database with their organization record:
+## ✅ Automated Features
 
-```sql
--- Insert client organization record
-INSERT INTO client_organizations (
-    id, name, openrouter_api_key, markup_rate, monthly_limit, 
-    billing_email, is_active, created_at, updated_at
-) VALUES (
-    'company-abc-001',
-    'Company ABC', 
-    'sk-or-v1-abc123def456789...',
-    1.3,
-    500.0,
-    'billing@companyabc.com',
-    1,
-    EXTRACT(EPOCH FROM NOW()) * 1000,
-    EXTRACT(EPOCH FROM NOW()) * 1000
-);
-```
+### API Key Sync
+- When client enters API key in UI, it automatically syncs to database
+- No manual database configuration required
+- Organization record created/updated automatically
 
-### Step 5: Client Access
+### External User Learning
+- System automatically learns OpenRouter's external_user on first API call
+- No need to manually configure external_user mappings
+- Usage tracking starts immediately after first API call
 
-1. **Company ABC employees** access their mAI at: `https://mai-companyabc.yourdomain.com`
-2. **Admin logs in** and sees "My Organization Usage" interface
-3. **Usage is tracked** automatically with 1.3x markup applied
-4. **You monitor** all clients via OpenRouter dashboard
+### Usage Tracking
+- Real-time usage recording with 1.3x markup
+- Admin dashboard with live updates every 30 seconds
+- Historical data and analytics automatically maintained
+
+## Client Access & Management
+
+### For Clients
+1. **Access mAI**: Use provided URL (e.g., `https://mai.yourdomain.com`)
+2. **Login**: Use provided credentials  
+3. **Configure API**: Settings → Connections → Enter OpenRouter API key
+4. **Monitor Usage**: Admin can view usage in Settings → Usage tab
+
+### For You (Service Provider)
+- **Monitor all clients**: OpenRouter dashboard shows aggregate usage
+- **Check client usage**: Each client's admin can see their organization usage
+- **Update limits**: Use OpenRouter dashboard to adjust spending limits
+- **Create new clients**: Run `create_client_key_option1.py` script
 
 ## Management Commands
 
-### List All Client Keys
-```python
-python manual_client_setup.py
-# Choose option 2
+### Create New Client
+```bash
+python3 create_client_key_option1.py
+# Choose mode 1 (Create new API key)
 ```
 
-### Update Client Spending Limit
-```python
-python manual_client_setup.py
-# Choose option 4
-# Enter key hash and new limit
-```
-
-### Disable Client Key
-```python
-python manual_client_setup.py
-# Choose option 5
-# Enter key hash to disable
-```
-
-## File Structure
-
-```
-/Users/patpil/Documents/Projects/mAI/
-├── manual_client_setup.py           # Interactive key creation
-├── deployments/
-│   ├── client-company-abc/          # Company ABC deployment
-│   ├── client-company-xyz/          # Company XYZ deployment
-│   └── client-company-def/          # Company DEF deployment
-└── docs/
-    └── manual-client-deployment.md  # This guide
+### Check Client Usage  
+```bash
+python3 create_client_key_option1.py  
+# Choose mode 2 (Check usage of existing API key)
 ```
 
 ## Best Practices
 
 1. **Keep provisioning key secure** - only you should have it
-2. **Document each client's API key hash** for management
-3. **Set reasonable spending limits** to prevent overuse
-4. **Monitor usage** through OpenRouter dashboard
-5. **Deploy clients on separate domains/ports** for isolation
-6. **Backup client databases** separately
-7. **Test each deployment** before handing over to client
+2. **Set reasonable spending limits** when creating API keys
+3. **Monitor usage** through OpenRouter dashboard and client admin panels
+4. **Use single instance deployment** for easier management
+5. **Test client setup** by making API calls and checking usage appears
+6. **Document client API keys** for future reference
 
 ## Troubleshooting
 
@@ -185,11 +182,27 @@ python manual_client_setup.py
 - Ensure client name doesn't contain special characters
 
 ### Client Can't Access Models
-- Verify OpenAI API Base URL is set to OpenRouter
-- Check API key is correctly configured
+- Verify OpenAI API Base URL is set to `https://openrouter.ai/api/v1`
+- Check API key is correctly entered in Settings → Connections
 - Confirm spending limit hasn't been exceeded
 
 ### Usage Not Tracking
-- Ensure user mapping is configured in client's database
-- Verify OpenRouter user parameter is being sent
-- Check client organization record exists in database
+- ✅ **This is now automated!** Usage tracking starts automatically
+- If still issues: Check Docker logs for auto-learning messages
+- Verify client has made at least one API call after entering key
+- Check Settings → Usage tab for real-time usage display
+
+### Auto-Learning Not Working
+- Check Docker logs: `docker logs [container] | grep "Auto-learning"`
+- Verify API key is correctly entered in UI
+- Ensure user has admin permissions to see usage tracking
+- Try logging out and back in to refresh authentication
+
+## Migration from Manual Setup
+
+If you have existing clients with manual database configuration:
+
+1. **API keys sync automatically** when updated in UI
+2. **External user learning** will update on next API call
+3. **No database changes needed** - system is backward compatible
+4. **Existing usage data** is preserved

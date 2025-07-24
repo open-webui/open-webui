@@ -150,3 +150,24 @@ docker-compose up -d
 # Fix permissions
 docker exec mai-production chown -R $UID:$GID /app/backend/data
 ```
+
+## Multi-Tenant Usage Tracking
+
+mAI includes automated usage tracking for OpenRouter API usage:
+
+### Automated Features
+- **API Key Sync**: OpenRouter keys entered in Settings automatically sync to database
+- **External User Learning**: System learns OpenRouter user mappings automatically  
+- **Real-time Tracking**: Usage recorded immediately with live dashboard updates
+- **Multi-organization Support**: Single instance handles multiple client organizations
+
+### Configuration
+No manual configuration required! Simply:
+1. Deploy container as shown above
+2. Clients enter their OpenRouter API key in Settings → Connections
+3. Usage tracking starts automatically
+
+### Monitoring
+- **Admin Dashboard**: Settings → Usage shows real-time usage statistics
+- **Live Updates**: Dashboard refreshes every 30 seconds
+- **Historical Data**: Daily and monthly usage summaries

@@ -151,6 +151,24 @@ This document lists all custom mAI features that must be preserved during Open W
 - Scripts function correctly in Docker environments
 - Same configuration applies to all 20 company deployments
 
+### 8. **Multi-Tenant Usage Tracking System** (Commits: `38977cf7a`, `9860e892f`)
+**Location:** Admin Settings > Usage Tab
+
+**Files to check:**
+- `backend/open_webui/utils/openrouter_client_manager.py` - Core client management and auto-sync
+- `backend/open_webui/routers/openai.py` - API key sync and usage recording integration
+- `backend/open_webui/models/organization_usage.py` - Database models and operations
+- `src/lib/components/admin/Settings/MyOrganizationUsage.svelte` - Admin usage dashboard
+- `backend/open_webui/migrations/versions/e7f8g9h0i1j2_client_usage_tables.py` - Database schema
+
+**✅ What to verify:**
+- **API Key Auto-Sync**: When admin updates OpenRouter key in Settings → Connections, it automatically syncs to database
+- **External User Auto-Learning**: System automatically learns OpenRouter external_user on first API call
+- **Real-time Usage Tracking**: Usage appears in Settings → Usage tab with 30-second auto-refresh
+- **Multi-Organization Support**: Each client gets isolated usage tracking
+- **Database Tables**: All 7 usage tracking tables exist and function correctly
+- **Admin Dashboard**: Live metrics, historical trends, and per-user/per-model breakdowns
+
 ## 📋 Post-Update Testing Checklist
 
 ### Core Branding
@@ -197,7 +215,15 @@ This document lists all custom mAI features that must be preserved during Open W
 - [ ] 12 specific models appear when configured
 - [ ] Wildcard patterns work (e.g., "openai/*")
 - [ ] Configuration persists after restart
-- [ ] Scripts in /scripts/openrouter/ execute properly
+
+### Usage Tracking System  
+- [ ] Settings → Usage tab shows organization usage dashboard
+- [ ] API key entered in Settings → Connections auto-syncs to database
+- [ ] Real-time usage updates every 30 seconds
+- [ ] External user auto-learning works on first API call
+- [ ] Historical usage data displays correctly
+- [ ] Per-user and per-model breakdowns function
+- [ ] No manual database configuration required
 
 ## 🚨 Critical Files Never to Lose
 
