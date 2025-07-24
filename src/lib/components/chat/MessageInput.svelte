@@ -65,6 +65,7 @@
 	import GovKno from '../icons/GovKno.svelte';
 	import Filter from '../icons/Filter.svelte';
 	import CheckFilter from '../icons/CheckFilter.svelte';
+	import Cross from '../icons/Cross.svelte';
 	import { updateUserSettings } from '$lib/apis/users';
 
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
@@ -103,6 +104,7 @@
     let govBtnDisable= false;
 	let webSearchDisable = false;
 	let attachFileDisable = false;
+	let selectedModelName = '';
 
 	const Modeloptions = [
 		{ label: 'Gov knowledge', icon: MenuBook },
@@ -231,8 +233,9 @@
 	};
 
 	const saveGovKnoModel = async () => {
-		govBtnEnable = !govBtnEnable;
-		const modelName = govBtnEnable ? 'govgpt_contextual_rag_pipeline' : 'gpt-4.1';
+        govBtnEnable = !govBtnEnable;
+		const modelId = $models.find((model) => model.id.includes('govgpt_rag_wog'))?.id || '';
+		const modelName = govBtnEnable ? modelId : 'gpt-4.1';
 		settings.set({ ...$settings, models: [modelName] });
 		await updateUserSettings(localStorage.token, { ui: $settings });
 		toast.success($i18n.t('Gov Knowledge model updated'));
@@ -240,6 +243,7 @@
 		showGovKnoWebSearchToggle = false;
         webSearchEnabled=false;
         attachFileEnabled=false;
+		selectedModelName=govBtnEnable?'Gov Knowledge':'';
 	};
 
 	let showWebSearchButton = true;
@@ -1435,26 +1439,28 @@
 														</button>
 													</Tooltip>
 												{/each}
-												{#if $mobile}
+												
+												<div class="flex items-center justify-center rounded-[60px]  {selectedModelName!==''?'p-[1px] bg-gradient-bg-2':''}">
 													<button
 														on:click={handleFilterToggle}
 														class="flex items-center px-[12px] gap-[4px] py-[8px] shadow-custom3 border border-[#E5EBF3] bg-[#FBFCFC] text-typography-titles text-[14px] leading-[22px] rounded-full"
-														><Filter /></button
-													>
-												{/if}
+														><Filter /></button>
+													{#if selectedModelName !== ''}<div class="px-[8px] font-Inter_Medium flex items-center gap-[8px] text-[14px] leading-[22px] text-typography-titles">{selectedModelName} <button class="flex items-center" on:click={handleFilterToggle}><Cross/><button/></div>{/if}
+												</div>
+												
 
-												{#if $mobile && showGovKnoWebSearchToggle}
+												{#if showGovKnoWebSearchToggle}
 													<div
-														class="fixed w-full bottom-[0] left-0 z-[40] p-[24px] pb-[40px] bg-white border border-[#E5EBF3] bg-[#FBFCFC] rounded-[24px]"
+														class="absolute w-full max-w-[600px] bottom-[0] left-0 z-[40] p-[24px] pb-[40px] bg-white border border-[#E5EBF3] bg-[#FBFCFC] rounded-[24px]"
 													>
 														{#if showGovKnoButton}
 															<Tooltip content={$i18n.t('Gov Knowledge')} placement="top">
 																<button
 																	on:click|preventDefault={() => saveGovKnoModel()}
 																	type="button"
-																	class="govkno-btn flex items-center bg-white justify-between w-full p-[16px] rounded-[12px] hover:bg-gradient-bg-2 gap-[4px] text-typography-titles text-[14px] leading-[22px] transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden dark:hover:bg-gray-800 {govBtnEnable
-																		? ' bg-gradient-bg-2 sm:bg-[#CCDDFC]  dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
-																		: ' bg-[#FBFCFC] text-gray-600 dark:text-gray-300 '}"
+																	class="govkno-btn flex items-center justify-between w-full p-[16px] rounded-[12px] hover:bg-gradient-bg-2 gap-[4px] text-typography-titles text-[14px] leading-[22px] transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden dark:hover:bg-gray-800 {govBtnEnable
+																		? ' bg-gradient-bg-2 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
+																		: 'text-gray-600 dark:text-gray-300 '}"
 																>
 																	<div class="flex items-center justify-center gap-[8px]">
 																		<GovKno />
@@ -1476,12 +1482,13 @@
 																		showGovKnoWebSearchToggle = false;
 																		govBtnEnable=false;
 																		attachFileEnabled=false;
+																		selectedModelName=webSearchEnabled?"Web Search":'';
 																	}}
 																	type="button"
-																	class="flex items-center flex items-center bg-white justify-between w-full p-[16px] rounded-[12px] hover:bg-gradient-bg-2 transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden dark:hover:bg-gray-800 {webSearchEnabled ||
+																	class="flex items-center flex items-center justify-between w-full p-[16px] rounded-[12px] hover:bg-gradient-bg-2 transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden dark:hover:bg-gray-800 {webSearchEnabled ||
 																	($settings?.webSearch ?? false) === 'always'
-																		? 'bg-gradient-bg-2 sm:bg-[#CCDDFC] dark:text-sky-300  dark:bg-sky-200/5'
-																		: 'bg-[#FBFCFC] text-gray-600 dark:text-gray-300 '}"
+																		? 'bg-gradient-bg-2 dark:text-sky-300  dark:bg-sky-200/5'
+																		: 'text-gray-600 dark:text-gray-300 '}"
 																>
 																	<div class="flex items-center justify-center gap-[8px]">
 																		<GlobeAlt className="size-5" strokeWidth="1.75" />
@@ -1501,7 +1508,7 @@
 																	on:click|preventDefault={() =>
 																		(imageGenerationEnabled = !imageGenerationEnabled)}
 																	type="button"
-																	class="flex items-center flex items-center bg-white justify-between w-full p-[16px] rounded-[12px] hover:bg-gradient-bg-2 transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden dark:hover:bg-gray-800 {imageGenerationEnabled
+																	class="flex items-center flex items-center justify-between w-full p-[16px] rounded-[12px] hover:bg-gradient-bg-2 transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden dark:hover:bg-gray-800 {imageGenerationEnabled
 																		? 'bg-gradient-bg-2 sm:bg-[#CCDDFC] dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
 																		: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
 																>
@@ -1526,7 +1533,7 @@
 																	on:click|preventDefault={() =>
 																		(codeInterpreterEnabled = !codeInterpreterEnabled)}
 																	type="button"
-																	class="flex items-center flex items-center bg-white justify-between w-full p-[16px] rounded-[12px] hover:bg-gradient-bg-2 dark:hover:bg-gray-800 {codeInterpreterEnabled
+																	class="flex items-center flex items-center justify-between w-full p-[16px] rounded-[12px] hover:bg-gradient-bg-2 dark:hover:bg-gray-800 {codeInterpreterEnabled
 																		? 'bg-gradient-bg-2 sm:bg-[#CCDDFC] dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
 																		: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
 																>
@@ -1551,11 +1558,12 @@
 																		filesInputElement.click();
 																		govBtnEnable=false;
 																		webSearchEnabled=false;
+																		selectedModelName=attachFileEnabled?"Attach Files":'';
 																	}}
 																	type="button"
-																	class="flex items-center flex bg-white justify-between w-full p-[16px] rounded-[12px] hover:bg-gradient-bg-2 transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden dark:hover:bg-gray-800 {attachFileEnabled
-																		? 'bg-gradient-bg-2 sm:bg-[#CCDDFC] dark:text-sky-300  dark:bg-sky-200/5'
-																		: 'bg-[#FBFCFC] text-gray-600 dark:text-gray-300 '}"
+																	class="flex items-center flex justify-between w-full p-[16px] rounded-[12px] hover:bg-gradient-bg-2 transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden dark:hover:bg-gray-800 {attachFileEnabled
+																		? 'bg-gradient-bg-2 dark:text-sky-300  dark:bg-sky-200/5'
+																		: 'text-gray-600 dark:text-gray-300 '}"
 																>
 																	<div class="flex items-center justify-center gap-[8px]">
 																		<Attach />
@@ -1572,7 +1580,7 @@
 													</div>
 												{/if}
 												{#if !$mobile}
-													<div class="flex items-center justify-center gap-[8px]">
+													<!--<div class="flex items-center justify-center gap-[8px]">
 														{#if showGovKnoButton}
 															<Tooltip content={$i18n.t('Gov Knowledge')} placement="top">
 																<button
@@ -1691,7 +1699,7 @@
 																</button>
 															</Tooltip>
 														{/if}
-													</div>
+													</div>-->
 												{/if}
 											</div>
 											<div class="flex gap-[12px] items-center">

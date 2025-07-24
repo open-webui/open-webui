@@ -197,6 +197,7 @@
 					<MaterialIcon name="translate" size="1.1rem" />
 				</div>
 			</button>
+			{#if role === 'admin'}
 			<div
 				class="flex px-[16px] py-[11px] w-full items-center justify-between border-b border-gray-100"
 			>
@@ -223,7 +224,7 @@
 					</div>
 				</label>
 			</div>
-
+            {/if}
 			<div
 				class="flex px-[16px] py-[11px] w-full items-center justify-between border-b border-gray-100"
 			>
