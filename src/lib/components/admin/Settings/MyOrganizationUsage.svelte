@@ -1,7 +1,7 @@
 <script>
 	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import { getClientUsageSummary, getTodayUsage } from '$lib/apis/organizations';
+	import { getClientUsageSummary, getTodayUsage, getUsageByUser, getUsageByModel } from '$lib/apis/organizations';
 	import Modal from '$lib/components/common/Modal.svelte';
 	import { user } from '$lib/stores';
 
@@ -27,6 +27,11 @@
 		daily_history: [], // Last 30 days
 		client_org_name: 'My Organization'
 	};
+	
+	// Per-user and per-model data
+	let userUsageData = [];
+	let modelUsageData = [];
+	let clientOrgId = 'current'; // Placeholder for client org ID
 
 	let refreshInterval = null;
 
@@ -52,6 +57,17 @@
 			
 			if (response?.success && response.stats) {
 				usageData = response.stats;
+				// Extract client org ID from response if available
+				if (response.client_id) {
+					clientOrgId = response.client_id;
+				}
+			}
+			
+			// Load per-user and per-model data for current tab
+			if (activeTab === 'users') {
+				await loadUserUsage();
+			} else if (activeTab === 'models') {
+				await loadModelUsage();
 			}
 			
 		} catch (error) {
@@ -59,6 +75,28 @@
 			toast.error($i18n.t('Failed to load usage statistics'));
 		} finally {
 			loading = false;
+		}
+	};
+	
+	const loadUserUsage = async () => {
+		try {
+			const response = await getUsageByUser($user.token, clientOrgId);
+			if (response?.success && response.user_usage) {
+				userUsageData = response.user_usage;
+			}
+		} catch (error) {
+			console.error('Failed to load user usage:', error);
+		}
+	};
+	
+	const loadModelUsage = async () => {
+		try {
+			const response = await getUsageByModel($user.token, clientOrgId);
+			if (response?.success && response.model_usage) {
+				modelUsageData = response.model_usage;
+			}
+		} catch (error) {
+			console.error('Failed to load model usage:', error);
 		}
 	};
 
@@ -79,6 +117,15 @@
 	const handleRefresh = async () => {
 		await loadUsageData();
 		toast.success($i18n.t('Usage data refreshed'));
+	};
+	
+	const handleTabChange = async (tab) => {
+		activeTab = tab;
+		if (tab === 'users' && userUsageData.length === 0) {
+			await loadUserUsage();
+		} else if (tab === 'models' && modelUsageData.length === 0) {
+			await loadModelUsage();
+		}
 	};
 
 	const formatCurrency = (amount) => {
@@ -214,15 +261,27 @@
 		<nav class="-mb-px flex space-x-8">
 			<button
 				class="py-2 px-1 border-b-2 font-medium text-sm {activeTab === 'overview' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}"
-				on:click={() => activeTab = 'overview'}
+				on:click={() => handleTabChange('overview')}
 			>
 				{$i18n.t('Daily Trend')}
 			</button>
 			<button
-				class="py-2 px-1 border-b-2 font-medium text-sm {activeTab === 'users' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}"
-				on:click={() => activeTab = 'users'}
+				class="py-2 px-1 border-b-2 font-medium text-sm {activeTab === 'stats' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}"
+				on:click={() => handleTabChange('stats')}
 			>
 				{$i18n.t('Usage Stats')}
+			</button>
+			<button
+				class="py-2 px-1 border-b-2 font-medium text-sm {activeTab === 'users' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}"
+				on:click={() => handleTabChange('users')}
+			>
+				{$i18n.t('By User')}
+			</button>
+			<button
+				class="py-2 px-1 border-b-2 font-medium text-sm {activeTab === 'models' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}"
+				on:click={() => handleTabChange('models')}
+			>
+				{$i18n.t('By Model')}
 			</button>
 		</nav>
 	</div>
@@ -264,7 +323,7 @@
 				<p class="text-gray-600 dark:text-gray-400">{$i18n.t('No usage history available.')}</p>
 			{/if}
 		</div>
-	{:else if activeTab === 'users'}
+	{:else if activeTab === 'stats'}
 		<div class="bg-white dark:bg-gray-850 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 			<h3 class="text-lg font-medium mb-4">{$i18n.t('Usage Statistics')}</h3>
 			
@@ -318,6 +377,118 @@
 					<p>• {$i18n.t('Monthly totals: Combination of daily summaries + today\'s live data')}</p>
 				</div>
 			</div>
+		</div>
+	{:else if activeTab === 'users'}
+		<div class="bg-white dark:bg-gray-850 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+			<h3 class="text-lg font-medium mb-4">{$i18n.t('Usage by User')}</h3>
+			
+			{#if userUsageData && userUsageData.length > 0}
+				<div class="overflow-x-auto">
+					<table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+						<thead>
+							<tr>
+								<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									{$i18n.t('User ID')}
+								</th>
+								<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									{$i18n.t('Total Tokens')}
+								</th>
+								<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									{$i18n.t('Requests')}
+								</th>
+								<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									{$i18n.t('Cost')}
+								</th>
+								<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									{$i18n.t('Days Active')}
+								</th>
+							</tr>
+						</thead>
+						<tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+							{#each userUsageData as userUsage}
+								<tr>
+									<td class="px-4 py-3 whitespace-nowrap text-sm font-medium">
+										{userUsage.user_id}
+									</td>
+									<td class="px-4 py-3 whitespace-nowrap text-sm">
+										{formatNumber(userUsage.total_tokens)}
+									</td>
+									<td class="px-4 py-3 whitespace-nowrap text-sm">
+										{formatNumber(userUsage.total_requests)}
+									</td>
+									<td class="px-4 py-3 whitespace-nowrap text-sm font-medium">
+										{formatCurrency(userUsage.markup_cost)}
+									</td>
+									<td class="px-4 py-3 whitespace-nowrap text-sm">
+										{userUsage.days_active}
+									</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+			{:else}
+				<p class="text-gray-600 dark:text-gray-400">{$i18n.t('No user usage data available.')}</p>
+			{/if}
+		</div>
+	{:else if activeTab === 'models'}
+		<div class="bg-white dark:bg-gray-850 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+			<h3 class="text-lg font-medium mb-4">{$i18n.t('Usage by Model')}</h3>
+			
+			{#if modelUsageData && modelUsageData.length > 0}
+				<div class="overflow-x-auto">
+					<table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+						<thead>
+							<tr>
+								<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									{$i18n.t('Model')}
+								</th>
+								<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									{$i18n.t('Provider')}
+								</th>
+								<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									{$i18n.t('Total Tokens')}
+								</th>
+								<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									{$i18n.t('Requests')}
+								</th>
+								<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									{$i18n.t('Cost')}
+								</th>
+								<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									{$i18n.t('Days Used')}
+								</th>
+							</tr>
+						</thead>
+						<tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+							{#each modelUsageData as modelUsage}
+								<tr>
+									<td class="px-4 py-3 whitespace-nowrap text-sm font-medium">
+										{modelUsage.model_name}
+									</td>
+									<td class="px-4 py-3 whitespace-nowrap text-sm">
+										{modelUsage.provider || 'N/A'}
+									</td>
+									<td class="px-4 py-3 whitespace-nowrap text-sm">
+										{formatNumber(modelUsage.total_tokens)}
+									</td>
+									<td class="px-4 py-3 whitespace-nowrap text-sm">
+										{formatNumber(modelUsage.total_requests)}
+									</td>
+									<td class="px-4 py-3 whitespace-nowrap text-sm font-medium">
+										{formatCurrency(modelUsage.markup_cost)}
+									</td>
+									<td class="px-4 py-3 whitespace-nowrap text-sm">
+										{modelUsage.days_used}
+									</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+			{:else}
+				<p class="text-gray-600 dark:text-gray-400">{$i18n.t('No model usage data available.')}</p>
+			{/if}
 		</div>
 	{/if}
 </div>

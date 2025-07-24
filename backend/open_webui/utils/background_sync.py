@@ -4,8 +4,8 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from open_webui.env import SRC_LOG_LEVELS
-from open_webui.models.organization_usage import OrganizationSettingsDB
-from open_webui.utils.openrouter_org import openrouter_usage_service
+from open_webui.models.organization_usage import GlobalSettingsDB
+# Note: Option 1 doesn't use background sync - simplified to prevent startup errors
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS.get("BACKGROUND_SYNC", logging.INFO))
@@ -47,10 +47,9 @@ class OrganizationUsageBackgroundSync:
         """Main sync loop that runs continuously"""
         while self.is_running:
             try:
-                # Get sync settings
-                settings = OrganizationSettingsDB.get_settings()
-                
-                if not settings or not settings.sync_enabled:
+                # Option 1: No background sync needed
+                log.debug("Option 1: Background sync disabled")
+                if True:
                     log.debug("Organization usage sync is disabled")
                     await asyncio.sleep(3600)  # Check again in 1 hour
                     continue
@@ -91,8 +90,8 @@ class OrganizationUsageBackgroundSync:
         try:
             log.info("Starting organization usage data sync")
             
-            # Sync last 2 days to ensure we don't miss any data
-            result = await openrouter_usage_service.manual_sync(days_back=2)
+            # Option 1: No sync service needed
+            result = {"success": True, "message": "Option 1: No background sync needed"}
             
             if result.get("success"):
                 stats = result.get("stats", {})
@@ -111,7 +110,7 @@ class OrganizationUsageBackgroundSync:
         """Force an immediate sync (for admin triggers)"""
         try:
             log.info("Force sync triggered")
-            result = await openrouter_usage_service.manual_sync(days_back=7)
+            result = {"success": True, "message": "Option 1: No background sync needed"}
             return result
         except Exception as e:
             log.error(f"Force sync failed: {e}")
@@ -119,19 +118,14 @@ class OrganizationUsageBackgroundSync:
     
     def get_status(self) -> dict:
         """Get the current status of the background sync service"""
-        settings = OrganizationSettingsDB.get_settings()
-        
+        # Option 1: Background sync disabled
         status = {
-            "is_running": self.is_running,
-            "sync_enabled": settings.sync_enabled if settings else False,
-            "sync_interval_hours": settings.sync_interval_hours if settings else 1,
-            "last_sync_at": settings.last_sync_at if settings else None,
+            "is_running": False,
+            "sync_enabled": False,
+            "sync_interval_hours": 0,
+            "last_sync_at": None,
+            "message": "Option 1: Background sync not needed - using simplified daily rollup"
         }
-        
-        if settings and settings.last_sync_at:
-            last_sync = datetime.fromtimestamp(settings.last_sync_at)
-            status["last_sync_human"] = last_sync.strftime("%Y-%m-%d %H:%M:%S")
-            status["hours_since_last_sync"] = (datetime.now() - last_sync).total_seconds() / 3600
         
         return status
 
@@ -143,13 +137,9 @@ organization_usage_sync = OrganizationUsageBackgroundSync()
 async def init_background_sync():
     """Initialize the background sync service"""
     try:
-        # Check if organization settings exist and sync is enabled
-        settings = OrganizationSettingsDB.get_settings()
-        if settings and settings.sync_enabled and settings.openrouter_api_key:
-            log.info("Initializing organization usage background sync")
-            await organization_usage_sync.start_sync_service()
-        else:
-            log.info("Organization usage sync not configured or disabled")
+        # Option 1: Background sync disabled - using simplified daily rollup approach
+        log.info("Option 1: Background sync not needed - using simplified daily rollup approach")
+        return
     except Exception as e:
         log.error(f"Failed to initialize background sync: {e}")
 

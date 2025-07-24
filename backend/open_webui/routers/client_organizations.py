@@ -303,6 +303,58 @@ async def get_billing_summary(
             detail=f"Failed to generate billing summary: {str(e)}"
         )
 
+@router.get("/usage/by-user/{client_id}")
+async def get_usage_by_user(
+    client_id: str,
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    user=Depends(get_admin_user)
+):
+    """Get usage breakdown by user for a client organization"""
+    try:
+        user_usage = ClientUsageDB.get_usage_by_user(client_id, start_date, end_date)
+        return {
+            "success": True,
+            "client_id": client_id,
+            "user_usage": user_usage,
+            "period": {
+                "start": start_date.isoformat() if start_date else "last 30 days",
+                "end": end_date.isoformat() if end_date else date.today().isoformat()
+            }
+        }
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "message": str(e)}
+        )
+
+
+@router.get("/usage/by-model/{client_id}")
+async def get_usage_by_model(
+    client_id: str,
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    user=Depends(get_admin_user)
+):
+    """Get usage breakdown by AI model for a client organization"""
+    try:
+        model_usage = ClientUsageDB.get_usage_by_model(client_id, start_date, end_date)
+        return {
+            "success": True,
+            "client_id": client_id,
+            "model_usage": model_usage,
+            "period": {
+                "start": start_date.isoformat() if start_date else "last 30 days",
+                "end": end_date.isoformat() if end_date else date.today().isoformat()
+            }
+        }
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "message": str(e)}
+        )
+
+
 @router.get("/usage/export")
 async def export_usage_data(
     client_id: Optional[str] = None,

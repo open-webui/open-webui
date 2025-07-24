@@ -1,6 +1,6 @@
 import time
 from typing import Optional, List
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 
 from open_webui.internal.db import Base, JSONField, get_db
 from pydantic import BaseModel, ConfigDict
@@ -96,6 +96,64 @@ class ClientDailyUsage(Base):
     )
 
 
+class ClientUserDailyUsage(Base):
+    """
+    Per-user daily usage summaries within each client organization
+    Tracks which users are using how much
+    """
+    __tablename__ = "client_user_daily_usage"
+
+    id = Column(String, primary_key=True)
+    client_org_id = Column(String, nullable=False)
+    user_id = Column(String, nullable=False)  # Open WebUI user ID
+    openrouter_user_id = Column(String, nullable=False)  # OpenRouter tracking ID
+    usage_date = Column(Date, nullable=False)
+    
+    # User's daily totals
+    total_tokens = Column(BigInteger, default=0)
+    total_requests = Column(Integer, default=0)
+    raw_cost = Column(Float, default=0.0)
+    markup_cost = Column(Float, default=0.0)
+    
+    created_at = Column(BigInteger)
+    updated_at = Column(BigInteger)
+    
+    __table_args__ = (
+        Index('idx_client_user_date', 'client_org_id', 'user_id', 'usage_date'),
+        Index('idx_user_date', 'user_id', 'usage_date'),
+    )
+
+
+class ClientModelDailyUsage(Base):
+    """
+    Per-model daily usage summaries within each client organization
+    Tracks which AI models are being used and their costs
+    """
+    __tablename__ = "client_model_daily_usage"
+
+    id = Column(String, primary_key=True)
+    client_org_id = Column(String, nullable=False)
+    model_name = Column(String, nullable=False)  # e.g., "anthropic/claude-3.5-sonnet"
+    usage_date = Column(Date, nullable=False)
+    
+    # Model's daily totals
+    total_tokens = Column(BigInteger, default=0)
+    total_requests = Column(Integer, default=0)
+    raw_cost = Column(Float, default=0.0)
+    markup_cost = Column(Float, default=0.0)
+    
+    # Optional model metadata
+    provider = Column(String, nullable=True)  # e.g., "anthropic", "openai"
+    
+    created_at = Column(BigInteger)
+    updated_at = Column(BigInteger)
+    
+    __table_args__ = (
+        Index('idx_client_model_date', 'client_org_id', 'model_name', 'usage_date'),
+        Index('idx_model_date', 'model_name', 'usage_date'),
+    )
+
+
 class ClientLiveCounters(Base):
     """
     Live counters for today's usage - reset daily at midnight
@@ -173,6 +231,38 @@ class ClientDailyUsageModel(BaseModel):
     markup_cost: float = 0.0
     primary_model: Optional[str] = None
     unique_users: int = 1
+    created_at: int
+    updated_at: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ClientUserDailyUsageModel(BaseModel):
+    id: str
+    client_org_id: str
+    user_id: str
+    openrouter_user_id: str
+    usage_date: date
+    total_tokens: int = 0
+    total_requests: int = 0
+    raw_cost: float = 0.0
+    markup_cost: float = 0.0
+    created_at: int
+    updated_at: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ClientModelDailyUsageModel(BaseModel):
+    id: str
+    client_org_id: str
+    model_name: str
+    usage_date: date
+    total_tokens: int = 0
+    total_requests: int = 0
+    raw_cost: float = 0.0
+    markup_cost: float = 0.0
+    provider: Optional[str] = None
     created_at: int
     updated_at: int
 
@@ -452,28 +542,34 @@ class ClientUsageTable:
     def record_usage(
         self,
         client_org_id: str,
-        tokens: int = 0,
+        user_id: str,
+        openrouter_user_id: str,
+        model_name: str,
+        usage_date: date,
+        input_tokens: int = 0,
+        output_tokens: int = 0,
         raw_cost: float = 0.0,
         markup_cost: float = 0.0,
-        model_name: str = None
+        provider: str = None,
+        request_metadata: dict = None
     ) -> bool:
         """
-        Record API usage - update live counters immediately for real-time UI
+        Record API usage with per-user and per-model tracking
+        Updates live counters for real-time UI and daily summaries
         """
         try:
             with get_db() as db:
                 today = date.today()
                 current_time = int(time.time())
+                total_tokens = input_tokens + output_tokens
                 
-                # Get or create live counter for today
+                # 1. Update client-level live counter
                 live_counter = db.query(ClientLiveCounters).filter_by(
                     client_org_id=client_org_id
                 ).first()
                 
                 if live_counter:
-                    # Check if it's still today
                     if live_counter.current_date != today:
-                        # New day - reset counters after storing yesterday's data
                         self._rollup_to_daily_summary(db, live_counter)
                         live_counter.current_date = today
                         live_counter.today_tokens = 0
@@ -481,24 +577,74 @@ class ClientUsageTable:
                         live_counter.today_raw_cost = 0.0
                         live_counter.today_markup_cost = 0.0
                     
-                    # Update today's counters
-                    live_counter.today_tokens += tokens
+                    live_counter.today_tokens += total_tokens
                     live_counter.today_requests += 1
                     live_counter.today_raw_cost += raw_cost
                     live_counter.today_markup_cost += markup_cost
                     live_counter.last_updated = current_time
                 else:
-                    # Create new live counter
                     live_counter = ClientLiveCounters(
                         client_org_id=client_org_id,
                         current_date=today,
-                        today_tokens=tokens,
+                        today_tokens=total_tokens,
                         today_requests=1,
                         today_raw_cost=raw_cost,
                         today_markup_cost=markup_cost,
                         last_updated=current_time
                     )
                     db.add(live_counter)
+                
+                # 2. Update per-user daily usage
+                user_usage_id = f"{client_org_id}:{user_id}:{usage_date}"
+                user_usage = db.query(ClientUserDailyUsage).filter_by(id=user_usage_id).first()
+                
+                if user_usage:
+                    user_usage.total_tokens += total_tokens
+                    user_usage.total_requests += 1
+                    user_usage.raw_cost += raw_cost
+                    user_usage.markup_cost += markup_cost
+                    user_usage.updated_at = current_time
+                else:
+                    user_usage = ClientUserDailyUsage(
+                        id=user_usage_id,
+                        client_org_id=client_org_id,
+                        user_id=user_id,
+                        openrouter_user_id=openrouter_user_id,
+                        usage_date=usage_date,
+                        total_tokens=total_tokens,
+                        total_requests=1,
+                        raw_cost=raw_cost,
+                        markup_cost=markup_cost,
+                        created_at=current_time,
+                        updated_at=current_time
+                    )
+                    db.add(user_usage)
+                
+                # 3. Update per-model daily usage
+                model_usage_id = f"{client_org_id}:{model_name}:{usage_date}"
+                model_usage = db.query(ClientModelDailyUsage).filter_by(id=model_usage_id).first()
+                
+                if model_usage:
+                    model_usage.total_tokens += total_tokens
+                    model_usage.total_requests += 1
+                    model_usage.raw_cost += raw_cost
+                    model_usage.markup_cost += markup_cost
+                    model_usage.updated_at = current_time
+                else:
+                    model_usage = ClientModelDailyUsage(
+                        id=model_usage_id,
+                        client_org_id=client_org_id,
+                        model_name=model_name,
+                        usage_date=usage_date,
+                        total_tokens=total_tokens,
+                        total_requests=1,
+                        raw_cost=raw_cost,
+                        markup_cost=markup_cost,
+                        provider=provider,
+                        created_at=current_time,
+                        updated_at=current_time
+                    )
+                    db.add(model_usage)
                 
                 db.commit()
                 return True
@@ -604,6 +750,112 @@ class ClientUsageTable:
                     daily_history=daily_history,
                     client_org_name=client_name
                 )
+    
+    def get_usage_by_user(
+        self, client_org_id: str, start_date: date = None, end_date: date = None
+    ) -> List[Dict[str, Any]]:
+        """Get usage breakdown by user for a client organization"""
+        try:
+            with get_db() as db:
+                # Default to last 30 days if no dates provided
+                if not end_date:
+                    end_date = date.today()
+                if not start_date:
+                    start_date = end_date - timedelta(days=30)
+                
+                # Query per-user daily usage
+                user_records = db.query(ClientUserDailyUsage).filter(
+                    ClientUserDailyUsage.client_org_id == client_org_id,
+                    ClientUserDailyUsage.usage_date >= start_date,
+                    ClientUserDailyUsage.usage_date <= end_date
+                ).all()
+                
+                # Aggregate by user
+                user_totals = {}
+                for record in user_records:
+                    if record.user_id not in user_totals:
+                        user_totals[record.user_id] = {
+                            'user_id': record.user_id,
+                            'openrouter_user_id': record.openrouter_user_id,
+                            'total_tokens': 0,
+                            'total_requests': 0,
+                            'raw_cost': 0.0,
+                            'markup_cost': 0.0,
+                            'days_active': set()
+                        }
+                    
+                    user_totals[record.user_id]['total_tokens'] += record.total_tokens
+                    user_totals[record.user_id]['total_requests'] += record.total_requests
+                    user_totals[record.user_id]['raw_cost'] += record.raw_cost
+                    user_totals[record.user_id]['markup_cost'] += record.markup_cost
+                    user_totals[record.user_id]['days_active'].add(record.usage_date)
+                
+                # Convert to list and add days active count
+                result = []
+                for user_data in user_totals.values():
+                    user_data['days_active'] = len(user_data['days_active'])
+                    result.append(user_data)
+                
+                # Sort by markup cost descending
+                result.sort(key=lambda x: x['markup_cost'], reverse=True)
+                
+                return result
+        except Exception as e:
+            print(f"Error getting user usage: {e}")
+            return []
+    
+    def get_usage_by_model(
+        self, client_org_id: str, start_date: date = None, end_date: date = None
+    ) -> List[Dict[str, Any]]:
+        """Get usage breakdown by model for a client organization"""
+        try:
+            with get_db() as db:
+                # Default to last 30 days if no dates provided
+                if not end_date:
+                    end_date = date.today()
+                if not start_date:
+                    start_date = end_date - timedelta(days=30)
+                
+                # Query per-model daily usage
+                model_records = db.query(ClientModelDailyUsage).filter(
+                    ClientModelDailyUsage.client_org_id == client_org_id,
+                    ClientModelDailyUsage.usage_date >= start_date,
+                    ClientModelDailyUsage.usage_date <= end_date
+                ).all()
+                
+                # Aggregate by model
+                model_totals = {}
+                for record in model_records:
+                    if record.model_name not in model_totals:
+                        model_totals[record.model_name] = {
+                            'model_name': record.model_name,
+                            'provider': record.provider,
+                            'total_tokens': 0,
+                            'total_requests': 0,
+                            'raw_cost': 0.0,
+                            'markup_cost': 0.0,
+                            'days_used': set()
+                        }
+                    
+                    model_totals[record.model_name]['total_tokens'] += record.total_tokens
+                    model_totals[record.model_name]['total_requests'] += record.total_requests
+                    model_totals[record.model_name]['raw_cost'] += record.raw_cost
+                    model_totals[record.model_name]['markup_cost'] += record.markup_cost
+                    model_totals[record.model_name]['days_used'].add(record.usage_date)
+                
+                # Convert to list and add days used count
+                result = []
+                for model_data in model_totals.values():
+                    model_data['days_used'] = len(model_data['days_used'])
+                    result.append(model_data)
+                
+                # Sort by markup cost descending
+                result.sort(key=lambda x: x['markup_cost'], reverse=True)
+                
+                return result
+        except Exception as e:
+            print(f"Error getting model usage: {e}")
+            return []
         except Exception as e:
             print(f"Error getting usage stats: {e}")
             return ClientUsageStatsResponse(

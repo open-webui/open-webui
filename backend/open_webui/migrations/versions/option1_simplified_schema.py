@@ -78,6 +78,38 @@ def upgrade():
         sa.Column('updated_at', BigInteger, nullable=False),
     )
     
+    # Per-User Daily Usage table
+    op.create_table(
+        'client_user_daily_usage',
+        sa.Column('id', String, primary_key=True),
+        sa.Column('client_org_id', String, nullable=False),
+        sa.Column('user_id', String, nullable=False),
+        sa.Column('openrouter_user_id', String, nullable=False),
+        sa.Column('usage_date', Date, nullable=False),
+        sa.Column('total_tokens', BigInteger, default=0),
+        sa.Column('total_requests', Integer, default=0),
+        sa.Column('raw_cost', Float, default=0.0),
+        sa.Column('markup_cost', Float, default=0.0),
+        sa.Column('created_at', BigInteger, nullable=False),
+        sa.Column('updated_at', BigInteger, nullable=False),
+    )
+    
+    # Per-Model Daily Usage table
+    op.create_table(
+        'client_model_daily_usage',
+        sa.Column('id', String, primary_key=True),
+        sa.Column('client_org_id', String, nullable=False),
+        sa.Column('model_name', String, nullable=False),
+        sa.Column('usage_date', Date, nullable=False),
+        sa.Column('total_tokens', BigInteger, default=0),
+        sa.Column('total_requests', Integer, default=0),
+        sa.Column('raw_cost', Float, default=0.0),
+        sa.Column('markup_cost', Float, default=0.0),
+        sa.Column('provider', String, nullable=True),
+        sa.Column('created_at', BigInteger, nullable=False),
+        sa.Column('updated_at', BigInteger, nullable=False),
+    )
+    
     # Live Counters table (today's real-time data)
     op.create_table(
         'client_live_counters',
@@ -105,6 +137,14 @@ def upgrade():
     op.create_index('idx_client_date', 'client_daily_usage', ['client_org_id', 'usage_date'])
     op.create_index('idx_usage_date', 'client_daily_usage', ['usage_date'])
     
+    # Per-User Daily Usage indexes
+    op.create_index('idx_client_user_date', 'client_user_daily_usage', ['client_org_id', 'user_id', 'usage_date'])
+    op.create_index('idx_user_date', 'client_user_daily_usage', ['user_id', 'usage_date'])
+    
+    # Per-Model Daily Usage indexes
+    op.create_index('idx_client_model_date', 'client_model_daily_usage', ['client_org_id', 'model_name', 'usage_date'])
+    op.create_index('idx_model_date', 'client_model_daily_usage', ['model_name', 'usage_date'])
+    
     # Live Counters indexes
     op.create_index('idx_client_live_date', 'client_live_counters', ['client_org_id', 'current_date'])
     
@@ -118,6 +158,10 @@ def downgrade():
     
     # Drop indexes first
     op.drop_index('idx_client_live_date', 'client_live_counters')
+    op.drop_index('idx_model_date', 'client_model_daily_usage')
+    op.drop_index('idx_client_model_date', 'client_model_daily_usage')
+    op.drop_index('idx_user_date', 'client_user_daily_usage')
+    op.drop_index('idx_client_user_date', 'client_user_daily_usage')
     op.drop_index('idx_usage_date', 'client_daily_usage')
     op.drop_index('idx_client_date', 'client_daily_usage')
     op.drop_index('idx_openrouter_user_id', 'user_client_mapping')
@@ -128,6 +172,8 @@ def downgrade():
     
     # Drop tables
     op.drop_table('client_live_counters')
+    op.drop_table('client_model_daily_usage')
+    op.drop_table('client_user_daily_usage')
     op.drop_table('client_daily_usage')
     op.drop_table('user_client_mapping')
     op.drop_table('client_organizations')

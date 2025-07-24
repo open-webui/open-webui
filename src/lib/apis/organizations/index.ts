@@ -346,3 +346,71 @@ export const getBillingSummary = async (token: string, daysBack: number = 30) =>
 
 	return res;
 };
+
+export const getUsageByUser = async (token: string, clientId: string, startDate?: string, endDate?: string) => {
+	let error = null;
+	let url = `${WEBUI_API_BASE_URL}/client-organizations/usage/by-user/${clientId}`;
+	
+	const params = new URLSearchParams();
+	if (startDate) params.append('start_date', startDate);
+	if (endDate) params.append('end_date', endDate);
+	if (params.toString()) url += `?${params.toString()}`;
+
+	const res = await fetch(url, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err.detail ?? 'Failed to fetch user usage';
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getUsageByModel = async (token: string, clientId: string, startDate?: string, endDate?: string) => {
+	let error = null;
+	let url = `${WEBUI_API_BASE_URL}/client-organizations/usage/by-model/${clientId}`;
+	
+	const params = new URLSearchParams();
+	if (startDate) params.append('start_date', startDate);
+	if (endDate) params.append('end_date', endDate);
+	if (params.toString()) url += `?${params.toString()}`;
+
+	const res = await fetch(url, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err.detail ?? 'Failed to fetch model usage';
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
