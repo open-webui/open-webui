@@ -15,8 +15,8 @@ from sqlalchemy import String, Text, Integer, Float, BigInteger, Date, Index
 
 
 # revision identifiers, used by Alembic.
-revision = 'option1_simplified_schema'
-down_revision = None
+revision = 'f1a2b3c4d5e6'
+down_revision = '1af9b942657b'
 branch_labels = None
 depends_on = None
 

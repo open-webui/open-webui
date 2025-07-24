@@ -1,5 +1,5 @@
 import time
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from datetime import datetime, date, timedelta
 
 from open_webui.internal.db import Base, JSONField, get_db
@@ -750,6 +750,14 @@ class ClientUsageTable:
                     daily_history=daily_history,
                     client_org_name=client_name
                 )
+        except Exception as e:
+            print(f"Error getting usage stats: {e}")
+            return ClientUsageStatsResponse(
+                today={'tokens': 0, 'cost': 0.0, 'requests': 0, 'last_updated': 'Error'},
+                this_month={'tokens': 0, 'cost': 0.0, 'requests': 0, 'days_active': 0},
+                daily_history=[],
+                client_org_name="Error"
+            )
     
     def get_usage_by_user(
         self, client_org_id: str, start_date: date = None, end_date: date = None
@@ -856,14 +864,6 @@ class ClientUsageTable:
         except Exception as e:
             print(f"Error getting model usage: {e}")
             return []
-        except Exception as e:
-            print(f"Error getting usage stats: {e}")
-            return ClientUsageStatsResponse(
-                today={'tokens': 0, 'cost': 0.0, 'requests': 0, 'last_updated': 'Error'},
-                this_month={'tokens': 0, 'cost': 0.0, 'requests': 0, 'days_active': 0},
-                daily_history=[],
-                client_org_name="Error"
-            )
 
     def get_all_clients_usage_stats(
         self, start_date: Optional[date] = None, end_date: Optional[date] = None
