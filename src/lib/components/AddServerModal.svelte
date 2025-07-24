@@ -92,7 +92,7 @@
 				console.debug('Connection successful', res);
 			}
 		} else {
-			const res = await verifyToolServerConnection(localStorage.token, oAuthAccessToken, {
+			const res = await verifyToolServerConnection(localStorage.token, {
 				url,
 				path,
 				auth_type,
@@ -128,7 +128,6 @@
 			path,
 			auth_type,
 			key,
-			oAuthAccessToken,
 			config: {
 				enable: enable,
 				access_control: accessControl
@@ -185,17 +184,19 @@
 		init();
 	}
 
-	let handleOAuthMessage: (event: MessageEvent) => void;
+	let handleOAuthMessage: (event: MessageEvent, connection: any) => void;
 
 	onMount(() => {
-		handleOAuthMessage = (event: MessageEvent) => {
+		handleOAuthMessage = (event: MessageEvent, connection: any) => {
 			if (event.origin !== WEBUI_BASE_URL) return;
 
 			const data = event.data;
 
 			try {
-				if (data.toolserverAuthSuccess) {
+				if (data.toolserverAuthSuccess && connection) {
 					oAuthAccessToken = data.accessToken;
+					connection.key = data.accessToken;
+					onSubmit(connection);
 					toast.success($i18n.t(`Authentication successful! Access token was set.`));
 					if (popup) popup.close();
 				} else {
@@ -205,12 +206,12 @@
 				toast.error($i18n.t(`Failed to process authentication response: ${e.message}`));
 			}
 		};
-		window.addEventListener('message', handleOAuthMessage);
+		window.addEventListener('message', (event: MessageEvent) => handleOAuthMessage(event, connection));
 		init();
 	});
 
 	onDestroy(() => {
-		window.removeEventListener('message', handleOAuthMessage);
+		window.removeEventListener('message', (event: MessageEvent) => handleOAuthMessage(event, connection));
 	});
 </script>
 

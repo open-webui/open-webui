@@ -470,7 +470,6 @@ export const executeToolServer = async (
 		const headers: Record<string, string> = {
 			'Content-Type': 'application/json',
 			...(token && { authorization: `Bearer ${token}` }),
-			...(oAuthAccessToken && { 'X-Access-Token': oAuthAccessToken })
 		};
 
 		let requestOptions: RequestInit = {

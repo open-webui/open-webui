@@ -172,7 +172,7 @@ export const setToolServerConnections = async (token: string, connections: objec
 	return res;
 };
 
-export const verifyToolServerConnection = async (token: string, oAuthAccessToken: string | null = null, connection: object) => {
+export const verifyToolServerConnection = async (token: string, connection: object) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/tool_servers/verify`, {
@@ -180,7 +180,6 @@ export const verifyToolServerConnection = async (token: string, oAuthAccessToken
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`,
-			...(oAuthAccessToken && { 'X-Access-Token': oAuthAccessToken })
 		},
 		body: JSON.stringify({
 			...connection
