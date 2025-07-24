@@ -1,8 +1,22 @@
 <script>
-	// No dynamic logic required for this static terms page
+	import { goto } from '$app/navigation';
+	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
+
+	function goBack() {
+		goto('/auth');
+	}
 </script>
 
 <div class="w-full min-h-screen dark bg-[#010E1D] flex items-start justify-center p-6 pt-16">
+	<!-- Back arrow for small devices -->
+	<button
+		on:click={goBack}
+		class="fixed top-4 left-4 z-10 p-2 text-white hover:text-gray-300 transition-colors md:hidden"
+		aria-label="Go back"
+	>
+		<ChevronLeft className="w-6 h-6" strokeWidth="2" />
+	</button>
+
 	<div class="max-w-4xl text-left">
 		<h1 class="text-2xl text-white mb-4">Terms & conditions</h1>
 		<p

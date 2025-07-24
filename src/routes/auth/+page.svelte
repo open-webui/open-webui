@@ -139,13 +139,18 @@
 					</button>
 				</div>
 
-				<!-- Main content shifted upward -->
+				
 				<div class="flex-1 flex items-start justify-center min-h-screen pt-20">
 					<div class="flex flex-col items-center text-center max-w-md w-full px-4">
 						<img id="logo" src="/splash.png" alt="GovGPT Logo" class="w-full max-w-[312px] mb-2" />
 						<h1 class="text-3xl lg:text-5xl font-bold mb-2 gradient-text">GovGPT</h1>
-						<p class="text-xl text-gray-300 mb-4">Amplifying Government Potential</p>
-						<p class="text-sm text-gray-400 mb-4">Use your work email to log in & get started!</p>
+						<p
+							class="mb-4 text-center text-typography-titles font-inter text-base font-normal leading-[37px]"
+							
+						>
+							Amplifying Government Potential
+						</p>
+						<p class="text-sm text-typography-titles  mb-4">Use your work email to log in & get started!</p>
 						<button
 							on:click={() => {}}
 							class="text-gray-800 font-medium py-2 px-6 transition"
@@ -153,7 +158,7 @@
 						>
 							Log in using SSO
 						</button>
-						<p class="mt-2 text-xs text-gray-500">
+						<p class="mt-2 text-xs text-white">
 							By continuing, you agree to our <button
 								on:click={() => {
 									navigateToTerms();
@@ -223,8 +228,13 @@
 								submitHandler();
 							}}
 						>
-							<div class="mb-12 text-2xl font-medium">
-								<p class="text-white">Login with your email address</p>
+							<div>
+								<p
+									class="font-inter text-[20px] font-semibold leading-[34px]"
+									style="color: var(--Typography-Titles, #E0EBF6);"
+								>
+									Login with your email address
+								</p>
 							</div>
 							{#if $config?.features.enable_login_form || $config?.features.enable_ldap}
 								<div class="flex flex-col mt-4">
@@ -251,7 +261,8 @@
 										<div class="mb-4">
 											<label
 												for="email"
-												class="text-[14px] leading-[22px] font-medium text-left mb-1 block text-white"
+												class="font-inter font-medium text-left mb-1 block"
+												style="color: var(--Typography-Titles, #E0EBF6); font-size: var(--font-size-body-s, 14px); line-height: var(--line-height-body-s, 22px); leading-trim: both; text-edge: cap;"
 											>
 												{$i18n.t('Email')} address
 											</label>
