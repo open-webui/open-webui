@@ -198,18 +198,13 @@ class WeaviateClient:
         self, collection_name: str, filter: dict, limit: Optional[int] = 1
     ) -> Optional[GetResult]:
         collection_name = self.transform_collection_name(collection_name)
-        path = list(filter.keys())[0]
-        operator_value = list(filter.values())[0]
-        operator = "Equal"  # Default operator
+        where_clause = build_graphql_filter(filter)
+        
         query = """
         {
             Get {
                 %s (limit: %d
-                  where: {
-                  path: ["%s"],
-                  operator: %s,
-                  valueString: "%s"
-                }) {
+                  where: %s) {
                   file_id
                   documents
                   metadata {
@@ -218,7 +213,7 @@ class WeaviateClient:
                 }
             }
         }
-        """ % (collection_name, limit, path, operator, operator_value)
+        """ % (collection_name, limit, where_clause)
         url = f"{self.base_url}/v1/graphql"
         try:
             resp = requests.post(url, headers=self.headers, json={"query": query})
