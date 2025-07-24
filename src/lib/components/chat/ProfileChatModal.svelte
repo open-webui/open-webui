@@ -1,0 +1,114 @@
+<script lang="ts">
+	import { getContext, onMount } from 'svelte';
+	import { models, config } from '$lib/stores';
+
+	import { toast } from 'svelte-sonner';
+	import { deleteSharedChatById, getChatById, shareChatById } from '$lib/apis/chats';
+	import { copyToClipboard } from '$lib/utils';
+
+	import Modal from '../common/Modal.svelte';
+	import Link from '../icons/Link.svelte';
+	import XMark from '$lib/components/icons/XMark.svelte';
+	export let chatId;
+
+	let chat = null;
+	let shareUrl = null;
+	const i18n = getContext('i18n');
+
+	export let show = false;
+
+	const isDifferentChat = (_chat) => {
+		if (!chat) {
+			return true;
+		}
+		if (!_chat) {
+			return false;
+		}
+		return chat.id !== _chat.id || chat.share_id !== _chat.share_id;
+	};
+
+	$: if (show) {
+		(async () => {
+			if (chatId) {
+				const _chat = await getChatById(localStorage.token, chatId);
+				if (isDifferentChat(_chat)) {
+					chat = _chat;
+				}
+				console.log(chat);
+			} else {
+				chat = null;
+				console.log(chat);
+			}
+		})();
+	}
+	let usages = [];
+	function extractUsages(obj) {
+		const results = [];
+		function recurse(item) {
+			if (typeof item === 'object' && item !== null) {
+				for (const key in item) {
+					if (key === 'usage') {
+					results.push(item[key]);
+					} else {
+						recurse(item[key]);
+					}
+				}
+			} else if (Array.isArray(item)) {
+				item.forEach(recurse);
+			}
+		}
+		recurse(obj);
+		return results;
+	}
+
+	function handleParse(chatInput) {
+		try {
+			const parsed = typeof chatInput === 'string' ? JSON.parse(chatInput) : chatInput;
+			usages = extractUsages(parsed);
+			console.log(usages);
+		} catch (error) {
+			alert('Invalid JSON input');
+			usages = [];
+		}
+	}
+	$: if (show) {
+		handleParse(chat); // ✅ only call when chat is freshly fetched
+	}
+</script>
+
+<Modal bind:show size="md">
+	<div>
+		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-0.5">
+			<div class=" text-lg font-medium self-center">{$i18n.t('Chat Profile Data')}</div>
+			<button
+				class="self-center"
+				on:click={() => {
+					show = false;
+				}}
+			>
+				<XMark className={'size-5'} />
+			</button>
+		</div>
+
+		{#if chat}
+			<div class="px-5 pt-4 pb-5 w-full flex flex-col text-left justify-center">
+				<div class="w-full flex flex-col space-y-4 text-left">
+					{#if usages.length > 0}
+						{#each usages as usage, i}
+							<pre class="text-left"><strong  class="block mb-2">Message #{i + 1}:</strong></pre>
+							<div class="grid grid-cols-2 gap-x-6 gap-y-2 border rounded p-4 bg-gray-50">
+								{#each Object.entries(usage) as [key, value]}
+									<div class="font-medium text-left text-gray-700">{key}</div>
+									<div class="text-gray-900 text-left">{String(value)}</div>
+								{/each}
+							</div>
+						{/each}
+					{:else}
+						<p>No usage blocks found yet.</p>
+						<pre>{JSON.stringify(chat, null, 2)}</pre>
+					{/if}
+				</div>
+			</div>
+		{/if}
+	</div>
+</Modal>

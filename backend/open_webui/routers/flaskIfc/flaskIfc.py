@@ -24,7 +24,7 @@ baudrate = '921600'
 #baudrate = '115200'
 exe_path = "/usr/bin/tsi/v0.1.1*/bin/"
 
-DEFAULT_MODEL = "Tiny-llama-F32"
+DEFAULT_MODEL = "tiny-llama"
 DEFAULT_BACKEND = "tSavorite"
 DEFAULT_TOKEN = 10
 DEFAULT_REPEAT_PENALTY = 1.5
@@ -377,7 +377,8 @@ def manual_response(status="sucess",model="ollama",content=None,thinking=None,to
                 "content": content,
                 "thinking": thinking,
                 "tool_calls": tool_calls,
-                "openai_tool_calls": openai_tool_calls
+                "openai_tool_calls": openai_tool_calls,
+                "meta": profile_data
                 },
             "user": {
                 "name": name,
@@ -388,7 +389,8 @@ def manual_response(status="sucess",model="ollama",content=None,thinking=None,to
             "data": {
                 "some_key": some_key,
                 "profile_data": profile_data
-                }
+                },
+            "done": True #This is to indicate that we are one command at a time, not interactive
             }
     print("Response:\n", json.dumps(json_string), "\n")
     response = make_response(json.dumps(json_string))
@@ -533,7 +535,6 @@ def chats():
     extracted_json = extract_json_output(filtered_text)
     chat_history = extract_chat_history(filtered_text)
     final_chat_output = extract_final_output_after_chat_history(chat_history)
-    
     return manual_response(content=final_chat_output,thinking=chat_history,profile_data=profile_text), 200
 
 @app.route('/api/chat', methods=['POST', 'GET'])
@@ -628,10 +629,6 @@ def chat():
     final_chat_output = extract_final_output_after_chat_history(chat_history)
     
     return manual_response(content=final_chat_output,thinking=chat_history,profile_data=profile_text), 200
-
-
-
-
 
 @app.route('/api/restart-txe', methods=['GET', 'POST'])
 def restart_txe_ollama_serial_command():
