@@ -90,7 +90,12 @@
 		// First pass: Initialize all folder entries
 		for (const folder of folderList) {
 			// Ensure folder is added to folders with its data
-			folders[folder.id] = { ...(folders[folder.id] || {}), ...folder };
+			// folders[folder.id] = { ...(folders[folder.id] || {}), ...folder };
+			folders[folder.id] = {
+				...(folders[folder.id] || {}),
+				...folder,
+				accessControl: folder.access_control ?? null // <-- fix: mapping snake_case → camelCase
+			};
 
 			if (newFolderId && folder.id === newFolderId) {
 				folders[folder.id].new = true;
@@ -119,7 +124,7 @@
 		}
 	};
 
-	const createFolder = async ({ name, data }) => {
+	const createFolder = async ({ name, data, accessControl }) => {
 		if (name === '') {
 			toast.error($i18n.t('Folder name cannot be empty.'));
 			return;
@@ -152,7 +157,8 @@
 
 		const res = await createNewFolder(localStorage.token, {
 			name,
-			data
+			data,
+			...(accessControl ? { access_control: accessControl } : {})
 		}).catch((error) => {
 			toast.error(`${error}`);
 			return null;

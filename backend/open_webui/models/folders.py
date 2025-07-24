@@ -61,6 +61,7 @@ class FolderModel(BaseModel):
 class FolderForm(BaseModel):
     name: str
     data: Optional[dict] = None
+    access_control: Optional[dict] = None
     model_config = ConfigDict(extra="allow")
 
 
@@ -70,14 +71,17 @@ class FolderTable:
     ) -> Optional[FolderModel]:
         with get_db() as db:
             id = str(uuid.uuid4())
+            user_groups = Groups.get_groups_by_member_id(user_id)
+            group_ids = [g.id for g in user_groups] if user_groups else []
+
             folder = FolderModel(
                 **{
                     "id": id,
                     "user_id": user_id,
                     **(form_data.model_dump(exclude_unset=True) or {}),
                     "access_control": {
-                        "read": {"user_ids": [user_id], "group_ids": []},
-                        "write": {"user_ids": [user_id], "group_ids": []},
+                        "read": {"user_ids": [user_id], "group_ids": group_ids},
+                        "write": {"user_ids": [user_id], "group_ids": group_ids},
                     },
                     "parent_id": parent_id,
                     "created_at": int(time.time()),
@@ -136,10 +140,6 @@ class FolderTable:
             return None
 
     def get_folders_by_user_id(self, user_id: str) -> list[FolderModel]:
-        groups = Groups.get_groups_by_member_id(user_id)
-        group_ids = [g.id for g in groups]
-        print("👥 GROUP IDS:", group_ids)
-
         with get_db() as db:
             return [
                 FolderModel.model_validate(folder)

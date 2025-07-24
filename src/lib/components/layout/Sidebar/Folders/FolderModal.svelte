@@ -9,6 +9,7 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import Textarea from '$lib/components/common/Textarea.svelte';
+	import AccessControl from '$lib/components/workspace/common/AccessControl.svelte';
 	import Knowledge from '$lib/components/workspace/Models/Knowledge.svelte';
 	import { user } from '$lib/stores';
 	const i18n = getContext('i18n');
@@ -19,6 +20,8 @@
 	export let edit = false;
 
 	export let folder = null;
+
+	let accessControl = null;
 
 	let name = '';
 	let data = {
@@ -32,7 +35,8 @@
 		loading = true;
 		await onSubmit({
 			name,
-			data
+			data,
+			accessControl
 		});
 		show = false;
 		loading = false;
@@ -44,6 +48,7 @@
 			system_prompt: '',
 			files: []
 		};
+		accessControl = folder.accessControl || null;
 	};
 
 	$: if (folder) {
@@ -114,6 +119,16 @@
 									bind:value={data.system_prompt}
 								/>
 							</div>
+						</div>
+					{/if}
+
+					{#if $user?.role === 'admin'}
+						<div class="mt-3">
+							<AccessControl
+								bind:accessControl
+								accessRoles={['read', 'write']}
+								allowPublic={$user?.permissions?.sharing?.public_knowledge || $user?.role === 'admin'}
+							/>
 						</div>
 					{/if}
 

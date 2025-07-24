@@ -30,7 +30,7 @@
 	let showFolderModal = false;
 	let showDeleteConfirm = false;
 
-	const updateHandler = async ({ name, data }) => {
+	const updateHandler = async ({ name, data, accessControl}) => {
 		if (name === '') {
 			toast.error($i18n.t('Folder name cannot be empty.'));
 			return;
@@ -43,7 +43,8 @@
 
 		const res = await updateFolderById(localStorage.token, folder.id, {
 			name,
-			...(data ? { data } : {})
+			...(data ? { data } : {}),
+			...(accessControl ? { accessControl } : {})
 		}).catch((error) => {
 			toast.error(`${error}`);
 
@@ -56,6 +57,7 @@
 			if (data) {
 				folder.data = data;
 			}
+			if (accessControl) folder.accessControl = accessControl;
 
 			toast.success($i18n.t('Folder updated successfully'));
 			selectedFolder.set(folder);
