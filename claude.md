@@ -10,6 +10,7 @@
 - **Be specific and precise** - avoid unnecessary explanations, provide step-by-step solutions
 - **Challenge user's assumptions** if they conflict with better task execution
 - **Always update necessary .md files in docs folder** after commit changes
+- **Always use Sequential thinking MCP** to solve complex problems
 
 [Important!] User is the mAI provider (OWUI fork). The future of the project (always take this into account when designing solutions): mAI implementations for about 20 small companies in Poland, where each will have from 5 to 20 employees. Single Hetzner Cloud server running multiple Docker instances (one per client) with complete data isolation.
 

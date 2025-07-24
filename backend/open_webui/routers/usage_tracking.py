@@ -17,7 +17,7 @@ from fastapi import APIRouter, HTTPException, Depends, Request, BackgroundTasks
 from pydantic import BaseModel, Field
 
 from open_webui.models.users import Users
-from open_webui.utils.utils import get_current_user, get_admin_user
+from open_webui.utils.auth import get_current_user, get_admin_user
 from open_webui.config import DATA_DIR
 
 router = APIRouter()
@@ -58,7 +58,7 @@ async def get_openrouter_generations(api_key: str, limit: int = 100, offset: int
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
-        raise HTTPException(status_code=500, f"OpenRouter API error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"OpenRouter API error: {str(e)}")
 
 def get_client_org_by_api_key(api_key: str) -> Optional[str]:
     """Get client organization ID by API key"""
