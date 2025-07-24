@@ -151,8 +151,10 @@ This document lists all custom mAI features that must be preserved during Open W
 - Scripts function correctly in Docker environments
 - Same configuration applies to all 20 company deployments
 
-### 8. **Multi-Tenant Usage Tracking System** (Commits: `38977cf7a`, `9860e892f`)
+### 8. **Single-Tenant Usage Tracking System** (Commits: `38977cf7a`, `9860e892f`)
 **Location:** Admin Settings > Usage Tab
+
+**Deployment Model**: Each client has a dedicated mAI instance with isolated usage tracking
 
 **Files to check:**
 - `backend/open_webui/utils/openrouter_client_manager.py` - Core client management and auto-sync
@@ -162,12 +164,13 @@ This document lists all custom mAI features that must be preserved during Open W
 - `backend/open_webui/migrations/versions/e7f8g9h0i1j2_client_usage_tables.py` - Database schema
 
 **✅ What to verify:**
-- **API Key Auto-Sync**: When admin updates OpenRouter key in Settings → Connections, it automatically syncs to database
+- **Single-Tenant Architecture**: Each client instance has isolated database and usage tracking
+- **API Key Auto-Sync**: When admin enters OpenRouter key in Settings → Connections, it automatically syncs to database
 - **External User Auto-Learning**: System automatically learns OpenRouter external_user on first API call
 - **Real-time Usage Tracking**: Usage appears in Settings → Usage tab with 30-second auto-refresh
-- **Multi-Organization Support**: Each client gets isolated usage tracking
-- **Database Tables**: All 7 usage tracking tables exist and function correctly
-- **Admin Dashboard**: Live metrics, historical trends, and per-user/per-model breakdowns
+- **Per-Instance Isolation**: No data sharing between client organizations (each on separate Hetzner server)
+- **Database Tables**: All 7 usage tracking tables exist per client instance
+- **Admin Dashboard**: Live metrics, historical trends, and per-user/per-model breakdowns for single organization
 
 ## 📋 Post-Update Testing Checklist
 
@@ -216,14 +219,15 @@ This document lists all custom mAI features that must be preserved during Open W
 - [ ] Wildcard patterns work (e.g., "openai/*")
 - [ ] Configuration persists after restart
 
-### Usage Tracking System  
-- [ ] Settings → Usage tab shows organization usage dashboard
-- [ ] API key entered in Settings → Connections auto-syncs to database
-- [ ] Real-time usage updates every 30 seconds
-- [ ] External user auto-learning works on first API call
-- [ ] Historical usage data displays correctly
-- [ ] Per-user and per-model breakdowns function
-- [ ] No manual database configuration required
+### Usage Tracking System (Single-Tenant)
+- [ ] Settings → Usage tab shows organization usage dashboard for single client
+- [ ] API key entered in Settings → Connections auto-syncs to isolated database
+- [ ] Real-time usage updates every 30 seconds per client instance
+- [ ] External user auto-learning works on first API call per client
+- [ ] Historical usage data displays correctly for single organization
+- [ ] Per-user and per-model breakdowns function within client organization
+- [ ] Complete data isolation between client instances (no cross-client data)
+- [ ] Admin can manage 5-20 company users within single instance
 
 ## 🚨 Critical Files Never to Lose
 

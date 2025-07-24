@@ -1,6 +1,15 @@
 # Client Organization Deployment Guide
 
-This guide explains how to create API keys for client organizations and deploy their mAI instances. The process is now **fully automated** with no manual database configuration required.
+This guide explains how to create API keys for client organizations and deploy dedicated mAI instances on Hetzner Cloud. Each client gets their own Docker instance with isolated database and usage tracking.
+
+## Deployment Architecture
+
+**One Docker Instance Per Client:**
+- Each client gets a dedicated mAI instance on Hetzner Cloud
+- Isolated database (SQLite) per client organization
+- Single OpenRouter API key per client instance
+- One admin account manages multiple company users
+- Automatic usage tracking with external_user auto-learning
 
 ## Step-by-Step Process
 
@@ -37,119 +46,153 @@ Enter monthly spending limit (USD, or press Enter to skip): 500
 📡 Response status: 201
 ✅ API key created successfully!
 
-📋 CLIENT DATABASE ENTRY:
+📋 CLIENT DEPLOYMENT INFO:
 {
   "client_name": "Company ABC",
   "api_key": "sk-or-v1-abc123def456789...",
   "key_id": "12345",
   "monthly_limit": 500.0,
   "created_at": "2025-07-24T16:00:00",
-  "usage_tracking": "Option 1 - Daily summaries + live counters"
+  "deployment": "Dedicated Docker instance with isolated database"
 }
 
-🎯 MANUAL SETUP INSTRUCTIONS:
-1. Give API key to client administrator: sk-or-v1-abc123def456789...
-2. Client enters key in Settings → Connections
-3. System automatically configures organization and usage tracking
+🎯 DEPLOYMENT INSTRUCTIONS:
+1. Deploy dedicated Docker instance for Company ABC
+2. Admin enters API key in Settings → Connections
+3. System automatically configures usage tracking
 4. External user ID is auto-learned on first API call
 
-✅ Zero manual database configuration required!
+✅ Single-tenant deployment with full data isolation!
 ```
 
-### Step 3: Client Setup (Automated)
+### Step 3: Deploy Dedicated Client Instance on Hetzner
 
-**🎉 This step is now fully automated!** Simply give the API key to the client administrator:
+Create a dedicated Hetzner Cloud server for each client:
 
-1. **Send API key** to client: `sk-or-v1-abc123def456789...`
-2. **Client login** to their mAI instance 
-3. **Client navigates** to Settings → Connections
-4. **Client enters** the API key in OpenAI API Key field
-5. **System automatically**:
-   - Syncs API key to organization database
-   - Configures usage tracking
-   - Learns external_user on first API call
-   - Starts recording usage immediately
-
-**No manual database configuration needed!**
-
-### Step 4: Deploy Client's mAI Instance
-
-For each client organization, create a separate mAI deployment:
-
-#### Option A: Docker Deployment
+#### Create Hetzner Server
 ```bash
-# Create client-specific deployment
-mkdir mai-client-companyabc
-cd mai-client-companyabc
+# Example server specs for each client
+# CPU: 2 vCPUs, RAM: 4GB, Storage: 40GB SSD
+# Location: Nuremberg (closest to Poland)
 
-# Create docker-compose.yml
+# Server naming convention: mai-[client-name]
+# Example: mai-companyabc
+```
+
+#### Docker Deployment on Hetzner
+```bash
+# SSH into client's Hetzner server
+ssh root@[client-server-ip]
+
+# Install Docker (if not already installed)
+curl -fsSL https://get.docker.com -o get-docker.sh
+sh get-docker.sh
+
+# Create client-specific deployment directory
+mkdir /opt/mai-companyabc
+cd /opt/mai-companyabc
+
+# Create docker-compose.yml for client
 cat > docker-compose.yml << EOF
 version: '3.8'
 services:
   mai-companyabc:
     image: mai-production:latest
+    container_name: mai-companyabc
     environment:
       - WEBUI_NAME=mAI - Company ABC
       - ENABLE_SIGNUP=false
+      - ENV=prod
     ports:
-      - "8081:8080"  # Different port per client
+      - "80:8080"    # Direct port 80 for client access
+      - "443:8080"   # HTTPS if SSL termination handled elsewhere
     volumes:
       - ./data:/app/backend/data
+      - ./backups:/app/backups
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 EOF
 
+# Start the client's dedicated instance
 docker-compose up -d
+
+# Verify deployment
+docker-compose logs -f
 ```
 
-**Note**: API keys are now configured through the web UI, not environment variables.
+Once the Docker instance is running, provide the client administrator with access:
 
-#### Option B: Single Instance (Recommended)
-For production, use a single mAI instance that handles multiple organizations:
-
+#### Admin Account Creation
 ```bash
-# Single deployment for all clients
-docker run -d \
-  --name mai-production \
-  -p 3000:8080 \
-  -v mai-data:/app/backend/data \
-  -e WEBUI_NAME=mAI \
-  -e ENABLE_SIGNUP=false \
-  --restart unless-stopped \
-  mai-production:latest
+# Access the client's mAI instance
+# URL: http://[client-server-ip] or https://[client-domain.com]
+
+# First user to register automatically becomes admin
+# Provide client with:
+# - Server URL/domain
+# - Instruction to create admin account
+# - OpenRouter API key for configuration
 ```
 
-Each client uses the same instance but with their own API key entered through Settings.
+#### Client Admin Configuration Steps
+1. **Access Instance**: Navigate to `http://[client-server-ip]`
+2. **Create Admin Account**: First registration becomes admin automatically
+3. **Configure OpenRouter**: 
+   - Go to Settings → Connections
+   - Enter OpenRouter API key: `sk-or-v1-abc123def456789...`
+   - Set OpenAI API Base URL: `https://openrouter.ai/api/v1`
+4. **System Auto-Configuration**:
+   - Usage tracking initializes automatically
+   - External user ID learned on first API call
+   - Organization database created automatically
 
-## ✅ Automated Features
+#### User Management
+The admin can now:
+- Create user accounts for company employees (5-20 users per client)
+- Manage user permissions through Admin Settings
+- Monitor organization usage in Settings → Usage tab
 
-### API Key Sync
-- When client enters API key in UI, it automatically syncs to database
-- No manual database configuration required
-- Organization record created/updated automatically
+## ✅ Automated Features (Per Client Instance)
 
-### External User Learning
-- System automatically learns OpenRouter's external_user on first API call
-- No need to manually configure external_user mappings
-- Usage tracking starts immediately after first API call
+### Single-Tenant Architecture
+- Each client has completely isolated mAI instance
+- Dedicated SQLite database per client
+- Independent usage tracking per organization
+- No data sharing between client instances
 
-### Usage Tracking
-- Real-time usage recording with 1.3x markup
-- Admin dashboard with live updates every 30 seconds
-- Historical data and analytics automatically maintained
+### API Key Auto-Sync
+- Admin enters API key once in Settings → Connections
+- System automatically configures organization database
+- No manual database setup required
 
-## Client Access & Management
+### External User Auto-Learning
+- System learns OpenRouter external_user on first API call
+- Automatic mapping between users and OpenRouter usage
+- Immediate usage tracking activation
 
-### For Clients
-1. **Access mAI**: Use provided URL (e.g., `https://mai.yourdomain.com`)
-2. **Login**: Use provided credentials  
-3. **Configure API**: Settings → Connections → Enter OpenRouter API key
-4. **Monitor Usage**: Admin can view usage in Settings → Usage tab
+### Real-Time Usage Tracking
+- Live usage monitoring with 30-second updates
+- Historical usage data and trends
+- Per-user and per-model usage breakdowns
+- 1.3x markup pricing automatically applied
+
+## Client Management
+
+### For Each Client Organization
+1. **Access**: Dedicated URL `http://[client-server-ip]`
+2. **Admin Management**: One admin manages 5-20 company users
+3. **Usage Monitoring**: Real-time usage dashboard in Settings → Usage
+4. **Data Isolation**: Complete separation from other clients
 
 ### For You (Service Provider)
-- **Monitor all clients**: OpenRouter dashboard shows aggregate usage
-- **Check client usage**: Each client's admin can see their organization usage
-- **Update limits**: Use OpenRouter dashboard to adjust spending limits
-- **Create new clients**: Run `create_client_key_option1.py` script
+- **Individual Monitoring**: Each client has isolated usage tracking
+- **OpenRouter Dashboard**: Aggregate view of all client API key usage
+- **Server Management**: 20 separate Hetzner servers to maintain
+- **Billing**: Per-client usage tracking for accurate invoicing
 
 ## Management Commands
 
@@ -165,44 +208,59 @@ python3 create_client_key_option1.py
 # Choose mode 2 (Check usage of existing API key)
 ```
 
-## Best Practices
+## Best Practices for Multi-Instance Deployment
 
-1. **Keep provisioning key secure** - only you should have it
-2. **Set reasonable spending limits** when creating API keys
-3. **Monitor usage** through OpenRouter dashboard and client admin panels
-4. **Use single instance deployment** for easier management
-5. **Test client setup** by making API calls and checking usage appears
-6. **Document client API keys** for future reference
+1. **Server Management**: 
+   - Use consistent naming: `mai-[client-name]`
+   - Document server IPs and client assignments
+   - Regular backups of each client's data volume
+
+2. **Security**:
+   - Keep provisioning key secure (only you have access)
+   - Each client has isolated database and users
+   - No data sharing between client instances
+
+3. **Monitoring**:
+   - Set reasonable spending limits per client API key
+   - Monitor aggregate usage through OpenRouter dashboard
+   - Each client admin monitors their own usage
+
+4. **Client Onboarding**:
+   - Test each deployment before handover
+   - Provide clear admin setup instructions
+   - Document client API keys and server details
 
 ## Troubleshooting
 
-### API Key Creation Fails
-- Check provisioning key is correct
-- Verify you have credits in OpenRouter account
-- Ensure client name doesn't contain special characters
+### Server Deployment Issues
+- **Docker installation**: Ensure Docker is properly installed on Hetzner server
+- **Port conflicts**: Verify ports 80/443 are available
+- **Memory issues**: Monitor server resources (4GB RAM minimum)
 
-### Client Can't Access Models
-- Verify OpenAI API Base URL is set to `https://openrouter.ai/api/v1`
-- Check API key is correctly entered in Settings → Connections
-- Confirm spending limit hasn't been exceeded
+### API Key Configuration
+- **Wrong API key**: Verify key starts with `sk-or-v1-`
+- **Base URL missing**: Ensure `https://openrouter.ai/api/v1` is set
+- **Spending limits**: Check if client has exceeded monthly limit
 
-### Usage Not Tracking
-- ✅ **This is now automated!** Usage tracking starts automatically
-- If still issues: Check Docker logs for auto-learning messages
-- Verify client has made at least one API call after entering key
-- Check Settings → Usage tab for real-time usage display
+### Usage Tracking Issues  
+- **Auto-learning**: Check logs with `docker logs mai-[client] | grep "Auto-learning"`
+- **Database init**: Verify client made first API call after key entry
+- **Admin access**: Ensure user has admin permissions for usage tab
 
-### Auto-Learning Not Working
-- Check Docker logs: `docker logs [container] | grep "Auto-learning"`
-- Verify API key is correctly entered in UI
-- Ensure user has admin permissions to see usage tracking
-- Try logging out and back in to refresh authentication
+### Client Access Problems
+- **Network**: Verify Hetzner server firewall allows HTTP/HTTPS
+- **DNS**: If using domain, check DNS points to correct server IP
+- **Container status**: Check with `docker ps` that container is running
 
-## Migration from Manual Setup
+## Scaling Considerations
 
-If you have existing clients with manual database configuration:
+### Server Resources (Per Client)
+- **Minimum**: 2 vCPU, 4GB RAM, 40GB storage
+- **Recommended**: 4 vCPU, 8GB RAM, 80GB storage (for larger teams)
+- **Location**: Nuremberg datacenter (closest to Poland)
 
-1. **API keys sync automatically** when updated in UI
-2. **External user learning** will update on next API call
-3. **No database changes needed** - system is backward compatible
-4. **Existing usage data** is preserved
+### Management at Scale (20 Clients)
+- **Automation**: Consider Terraform/Ansible for server provisioning
+- **Monitoring**: Aggregate monitoring across all client servers
+- **Backups**: Automated backup strategy for all client databases
+- **Updates**: Coordinated update process across all instances

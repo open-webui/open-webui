@@ -12,22 +12,28 @@ docker build -t mai-production:latest .
 docker build -t mai-dev:latest .
 ```
 
-## Docker Compose Examples
+## Deployment Models
 
-### Production with External Ollama
+### Single-Client Instance (Production - Hetzner Cloud)
+Each client gets a dedicated mAI instance with isolated database and usage tracking.
+
 ```yaml
+# docker-compose.yml for individual client deployment
+version: '3.8'
 services:
-  mai:
+  mai-client:
     image: mai-production:latest
-    container_name: mai-production
+    container_name: mai-${CLIENT_NAME}
     volumes:
-      - mai-data:/app/backend/data
+      - ./data:/app/backend/data
+      - ./backups:/app/backups
     ports:
-      - "3000:8080"
+      - "80:8080"     # Direct HTTP access
+      - "443:8080"    # HTTPS if SSL termination handled
     environment:
-      - WEBUI_NAME=mAI
-      - OLLAMA_BASE_URL=http://ollama-server:11434
+      - WEBUI_NAME=mAI - ${CLIENT_NAME}
       - ENABLE_SIGNUP=false
+      - ENV=prod
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
@@ -36,14 +42,14 @@ services:
       retries: 3
 
 volumes:
-  mai-data:
-    name: mai_production_data
+  client-data:
+    name: mai_${CLIENT_NAME}_data
 ```
 
-### Development with Local Ollama
+### Development Environment
 ```yaml
 services:
-  mai:
+  mai-dev:
     image: mai-dev:latest
     container_name: mai-dev
     volumes:
@@ -54,7 +60,7 @@ services:
       - WEBUI_NAME=mAI Development
       - OLLAMA_BASE_URL=http://host.docker.internal:11434
     extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - "host.docker.internal:host-gateway" 
     restart: unless-stopped
 
 volumes:
@@ -151,23 +157,43 @@ docker-compose up -d
 docker exec mai-production chown -R $UID:$GID /app/backend/data
 ```
 
-## Multi-Tenant Usage Tracking
+## Client-Specific Deployment (Hetzner Cloud)
 
-mAI includes automated usage tracking for OpenRouter API usage:
+### Server Setup for Each Client
+```bash
+# SSH into client's Hetzner server
+ssh root@[client-server-ip]
 
-### Automated Features
-- **API Key Sync**: OpenRouter keys entered in Settings automatically sync to database
-- **External User Learning**: System learns OpenRouter user mappings automatically  
-- **Real-time Tracking**: Usage recorded immediately with live dashboard updates
-- **Multi-organization Support**: Single instance handles multiple client organizations
+# Create deployment directory
+mkdir /opt/mai-client
+cd /opt/mai-client
 
-### Configuration
-No manual configuration required! Simply:
-1. Deploy container as shown above
-2. Clients enter their OpenRouter API key in Settings → Connections
-3. Usage tracking starts automatically
+# Environment-specific deployment
+export CLIENT_NAME="companyabc"
+envsubst < docker-compose.template.yml > docker-compose.yml
 
-### Monitoring
-- **Admin Dashboard**: Settings → Usage shows real-time usage statistics
-- **Live Updates**: Dashboard refreshes every 30 seconds
-- **Historical Data**: Daily and monthly usage summaries
+# Start client instance
+docker-compose up -d
+```
+
+### Per-Client Usage Tracking
+
+Each client instance includes isolated usage tracking:
+
+#### Automated Features (Per Instance)
+- **Single-Tenant Database**: Each client has isolated SQLite database
+- **API Key Auto-Sync**: Admin enters OpenRouter key → automatic database configuration
+- **External User Learning**: System learns user mappings on first API call
+- **Real-time Tracking**: Live usage monitoring with 30-second updates
+
+#### Client Admin Experience
+1. **Initial Setup**: Admin creates account (first user becomes admin)
+2. **API Configuration**: Settings → Connections → Enter OpenRouter API key
+3. **User Management**: Admin creates accounts for 5-20 company employees
+4. **Usage Monitoring**: Settings → Usage tab shows organization usage
+
+#### Service Provider View
+- **20 Separate Instances**: Each client has dedicated Hetzner server
+- **Isolated Databases**: No data sharing between client organizations
+- **Aggregate Monitoring**: OpenRouter dashboard shows all client API key usage
+- **Per-Client Billing**: Individual usage tracking for accurate invoicing

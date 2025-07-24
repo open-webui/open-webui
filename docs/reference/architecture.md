@@ -1,41 +1,117 @@
-Technical Architecture
-Stack Overview
-Frontend (SvelteKit)
-Framework: SvelteKit with TypeScript
-Styling: TailwindCSS with custom themes
-Build Tool: Vite
-Key Dependencies:
-TipTap v3 for rich text editing
-Chart.js for data visualization
-Pyodide for Python code execution
-Socket.io for real-time communication
-i18n support (20+ languages)
-Backend (FastAPI)
-Framework: FastAPI with Python 3.11-3.12
-Database: SQLAlchemy with Alembic migrations
-Supported DBs: PostgreSQL, MySQL, SQLite
-Vector DBs: ChromaDB, Qdrant, Milvus, Pinecone, OpenSearch, ElasticSearch
-Authentication: JWT with OAuth support
-AI Integration: OpenAI, Anthropic, Google Gemini APIs
-Architecture Patterns
-Backend Patterns
-Dependency Injection: FastAPI's dependency system for database sessions, auth
-Repository Pattern: Models in backend/open_webui/models/ with separate business logic
-Router Organization: Feature-based routing in routers/ directory
-Middleware Chain: Authentication, CORS, compression middleware
-Database Abstraction: SQLAlchemy ORM with Alembic migrations
-Frontend Patterns
-Component Architecture: Feature-based component organization
-Store Pattern: Svelte stores for global state management
-API Client Pattern: Centralized API functions in src/lib/apis/
-Layout Hierarchy: Nested layouts in SvelteKit route structure
-Reactive Programming: Svelte's reactive declarations and stores
-Data Flow
-Authentication: JWT tokens with refresh mechanism
-Real-time Updates: Socket.io for live chat and notifications
-File Upload: Chunked uploads with progress tracking
-RAG Pipeline: Document ingestion → Vector embedding → Retrieval → Generation
-Multi-model Support: Abstracted model interface supporting various LLM providers
+# Technical Architecture
+
+## Stack Overview
+
+### Frontend (SvelteKit)
+- **Framework**: SvelteKit with TypeScript
+- **Styling**: TailwindCSS with custom themes
+- **Build Tool**: Vite
+- **Key Dependencies**:
+  - TipTap v3 for rich text editing
+  - Chart.js for data visualization
+  - Pyodide for Python code execution
+  - Socket.io for real-time communication
+  - i18n support (20+ languages)
+
+### Backend (FastAPI)
+- **Framework**: FastAPI with Python 3.11-3.12
+- **Database**: SQLAlchemy with Alembic migrations
+- **Supported DBs**: PostgreSQL, MySQL, SQLite
+- **Vector DBs**: ChromaDB, Qdrant, Milvus, Pinecone, OpenSearch, ElasticSearch
+- **Authentication**: JWT with OAuth support
+- **AI Integration**: OpenAI, Anthropic, Google Gemini APIs
+
+## Deployment Architecture
+
+### Multi-Instance Model (Production)
+**mAI is deployed as 20 separate Docker instances on Hetzner Cloud:**
+
+- **One instance per client organization** (5-20 employees each)
+- **Isolated databases** (SQLite per client)
+- **Dedicated servers** on Hetzner Cloud (Nuremberg datacenter)
+- **Independent usage tracking** per client organization
+- **Single admin per instance** managing company users
+
+#### Instance Specifications (Per Client)
+- **Server**: Hetzner Cloud VPS (2-4 vCPU, 4-8GB RAM, 40-80GB SSD)
+- **Container**: Single Docker container per client
+- **Database**: SQLite (isolated per client)
+- **Users**: 1 admin + 5-20 company employees
+- **API Key**: One OpenRouter API key per client organization
+## Architecture Patterns
+
+### Backend Patterns
+- **Dependency Injection**: FastAPI's dependency system for database sessions, auth
+- **Repository Pattern**: Models in `backend/open_webui/models/` with separate business logic
+- **Router Organization**: Feature-based routing in `routers/` directory
+- **Middleware Chain**: Authentication, CORS, compression middleware
+- **Database Abstraction**: SQLAlchemy ORM with Alembic migrations
+
+### Frontend Patterns
+- **Component Architecture**: Feature-based component organization
+- **Store Pattern**: Svelte stores for global state management
+- **API Client Pattern**: Centralized API functions in `src/lib/apis/`
+- **Layout Hierarchy**: Nested layouts in SvelteKit route structure
+- **Reactive Programming**: Svelte's reactive declarations and stores
+
+### Single-Tenant Isolation
+Each client instance maintains complete isolation:
+
+#### Database Isolation
+```
+Client A (Hetzner Server 1)
+└── SQLite Database A
+    ├── Users (1 admin + employees)
+    ├── Chat history
+    ├── Usage tracking
+    └── Organization settings
+
+Client B (Hetzner Server 2)  
+└── SQLite Database B
+    ├── Users (1 admin + employees)
+    ├── Chat history
+    ├── Usage tracking
+    └── Organization settings
+```
+
+#### Usage Tracking per Instance
+- **API Key Isolation**: Each client has unique OpenRouter API key
+- **External User Learning**: Auto-learned per client organization
+- **Live Counters**: Real-time usage tracking per instance
+- **Historical Data**: Client-specific usage summaries and analytics
+## Data Flow
+
+### Authentication
+- **JWT tokens** with refresh mechanism
+- **Admin-first model**: First registered user becomes admin
+- **User management**: Admin creates accounts for company employees
+
+### Real-time Features
+- **Socket.io**: Live chat and notifications
+- **Usage Dashboard**: 30-second refresh cycles for live usage data
+- **File Upload**: Chunked uploads with progress tracking
+
+### AI Integration Flow
+- **RAG Pipeline**: Document ingestion → Vector embedding → Retrieval → Generation
+- **Multi-model Support**: Abstracted model interface supporting various LLM providers
+- **OpenRouter Integration**: Automatic usage tracking with 1.3x markup pricing
+
+### Usage Tracking Data Flow (Per Instance)
+```
+Client Admin → Settings → Connections → Enter API Key
+                ↓
+        Auto-sync to Database
+                ↓
+        First API Call Made
+                ↓
+    OpenRouter Response Captured
+                ↓
+     External User Auto-Learned
+                ↓
+    Real-time Usage Recording
+                ↓
+     Admin Dashboard Updates
+```
 LLM Integration Architecture
 Model Abstraction
 Unified Interface: Common API for different LLM providers
