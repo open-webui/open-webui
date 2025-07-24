@@ -1386,22 +1386,82 @@ async def chat_completion(
             log.info(f"govGpt-file-search-service: Custom response length: {len(form_data['custom_response'])}")
             log.info(f"govGpt-file-search-service: Custom response preview: '{form_data['custom_response'][:200]}...'")
             
-            # Create a mock response that will be processed normally
-            response = {
-                "choices": [
-                    {
-                        "message": {
-                            "role": "assistant",
-                            "content": form_data["custom_response"],
-                            "metadata": {
-                                "source": "govGpt-file-search-service",
-                                "api_response": True
+            # Check if streaming is requested (either explicitly or if stream parameter is True)
+            if form_data.get("stream_custom_response") or form_data.get("stream") == True:
+                log.info(f"govGpt-file-search-service: Creating streaming response for user {user.id}")
+                log.info(f"govGpt-file-search-service: Stream parameter: {form_data.get('stream')}")
+                log.info(f"govGpt-file-search-service: Stream custom response flag: {form_data.get('stream_custom_response')}")
+                
+                # Create a streaming response generator
+                async def custom_stream_generator():
+                    custom_response = form_data["custom_response"]
+                    custom_metadata = form_data.get("custom_response_metadata", {})
+                    
+                    log.info(f"govGpt-file-search-service: Starting stream with {len(custom_response)} characters")
+                    
+                    # Split the response into chunks for streaming
+                    chunk_size = 50  # Characters per chunk
+                    total_chunks = (len(custom_response) + chunk_size - 1) // chunk_size
+                    log.info(f"govGpt-file-search-service: Will send {total_chunks} chunks")
+                    
+                    for i in range(0, len(custom_response), chunk_size):
+                        chunk = custom_response[i:i + chunk_size]
+                        chunk_number = (i // chunk_size) + 1
+                        
+                        # Create streaming event
+                        event_data = {
+                            "choices": [
+                                {
+                                    "delta": {
+                                        "content": chunk
+                                    }
+                                }
+                            ]
+                        }
+                        
+                        # Add metadata to the first chunk
+                        if i == 0 and custom_metadata:
+                            event_data["choices"][0]["delta"]["metadata"] = custom_metadata
+                            log.info(f"govGpt-file-search-service: Added metadata to first chunk")
+                        
+                        log.debug(f"govGpt-file-search-service: Sending chunk {chunk_number}/{total_chunks} ({len(chunk)} chars)")
+                        yield f"data: {json.dumps(event_data)}\n\n"
+                        
+                        # Small delay to simulate streaming
+                        await asyncio.sleep(0.05)
+                    
+                    # Send completion event
+                    log.info(f"govGpt-file-search-service: Sending completion event")
+                    yield "data: [DONE]\n\n"
+                
+                # Create StreamingResponse
+                response = StreamingResponse(
+                    custom_stream_generator(),
+                    media_type="text/event-stream",
+                    headers={
+                        "Cache-Control": "no-cache",
+                        "Connection": "keep-alive",
+                        "Content-Type": "text/event-stream",
+                    }
+                )
+                log.info(f"govGpt-file-search-service: Created streaming response")
+            else:
+                # Create a mock response that will be processed normally
+                response = {
+                    "choices": [
+                        {
+                            "message": {
+                                "role": "assistant",
+                                "content": form_data["custom_response"],
+                                "metadata": form_data.get("custom_response_metadata", {
+                                    "source": "govGpt-file-search-service",
+                                    "api_response": True
+                                })
                             }
                         }
-                    }
-                ]
-            }
-            log.info(f"govGpt-file-search-service: Created mock response for processing")
+                    ]
+                }
+                log.info(f"govGpt-file-search-service: Created mock response for processing")
         else:
             log.info(f"govGpt-file-search-service: No custom response found, using regular chat completion")
             response = await chat_completion_handler(request, form_data, user)
