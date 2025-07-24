@@ -620,6 +620,11 @@
 			return null;
 		}
 
+		if (fileUploadCapableModels.length !== selectedModels.length) {
+			toast.error($i18n.t('Model(s) do not support file upload'));
+			return null;
+		}
+
 		const tempItemId = uuidv4();
 		const fileItem = {
 			type: 'file',
@@ -1416,6 +1421,13 @@
 																};
 
 																reader.readAsDataURL(blob);
+															} else if (item?.kind === 'file') {
+																const file = item.getAsFile();
+																if (file) {
+																	const _files = [file];
+																	await inputFilesHandler(_files);
+																	e.preventDefault();
+																}
 															} else if (item.type === 'text/plain') {
 																if (($settings?.largeTextAsFile ?? false) && !shiftKey) {
 																	const text = clipboardData.getData('text/plain');
@@ -1641,6 +1653,7 @@
 
 												if (clipboardData && clipboardData.items) {
 													for (const item of clipboardData.items) {
+														console.log(item);
 														if (item.type.indexOf('image') !== -1) {
 															const blob = item.getAsFile();
 															const reader = new FileReader();
@@ -1656,6 +1669,13 @@
 															};
 
 															reader.readAsDataURL(blob);
+														} else if (item?.kind === 'file') {
+															const file = item.getAsFile();
+															if (file) {
+																const _files = [file];
+																await inputFilesHandler(_files);
+																e.preventDefault();
+															}
 														} else if (item.type === 'text/plain') {
 															if (($settings?.largeTextAsFile ?? false) && !shiftKey) {
 																const text = clipboardData.getData('text/plain');

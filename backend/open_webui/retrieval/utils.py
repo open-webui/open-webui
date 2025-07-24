@@ -611,6 +611,9 @@ def get_sources_from_items(
         elif item.get("collection_name"):
             # Direct Collection Name
             collection_names.append(item["collection_name"])
+        elif item.get("collection_names"):
+            # Collection Names List
+            collection_names.extend(item["collection_names"])
 
         # If query_result is None
         # Fallback to collection names and vector search the collections

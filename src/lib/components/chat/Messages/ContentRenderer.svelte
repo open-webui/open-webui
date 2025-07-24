@@ -20,6 +20,7 @@
 	export let history;
 	export let selectedModels = [];
 
+	export let done = true;
 	export let model = null;
 	export let sources = null;
 	export let conversationId = '';
@@ -134,6 +135,7 @@
 		{model}
 		{save}
 		{preview}
+		{done}
 		{conversationId}
 		sourceIds={(sources ?? []).reduce((acc, s) => {
 			let ids = [];

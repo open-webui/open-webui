@@ -1254,7 +1254,7 @@
 			await handleOpenAIError(error, message);
 		}
 
-		if (sources) {
+		if (sources && !message?.sources) {
 			message.sources = sources;
 		}
 
@@ -1378,6 +1378,12 @@
 			);
 
 			history.messages[message.id] = message;
+
+			await tick();
+			if (autoScroll) {
+				scrollToBottom();
+			}
+
 			await chatCompletedHandler(
 				chatId,
 				message.model,
@@ -1387,6 +1393,8 @@
 		}
 
 		//console.log(data);
+		await tick();
+
 		if (autoScroll) {
 			scrollToBottom();
 		}
@@ -2149,12 +2157,13 @@
 >
 	{#if !loading}
 		<div in:fade={{ duration: 50 }} class="w-full h-full flex flex-col">
-			{#if $settings?.backgroundImageUrl ?? null}
+			{#if $settings?.backgroundImageUrl ?? $config?.license_metadata?.background_image_url ?? null}
 				<div
 					class="absolute {$showSidebar
 						? 'md:max-w-[calc(100%-260px)] md:translate-x-[260px]'
 						: ''} top-0 left-0 w-full h-full bg-cover bg-center bg-no-repeat"
-					style="background-image: url({$settings.backgroundImageUrl})  "
+					style="background-image: url({$settings?.backgroundImageUrl ??
+						$config?.license_metadata?.background_image_url})  "
 				/>
 
 				<div
@@ -2185,8 +2194,8 @@
 						showBanners={!showCommands}
 					/>
 
-					<div class="flex flex-col flex-auto z-10 w-full @container">
-						{#if $settings?.landingPageMode === 'chat' || createMessagesList(history, history.currentId).length > 0}
+					<div class="flex flex-col flex-auto z-10 w-full @container overflow-auto">
+						{#if ($settings?.landingPageMode === 'chat' && !$selectedFolder) || createMessagesList(history, history.currentId).length > 0}
 							<div
 								class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden"
 								id="messages-container"
@@ -2203,6 +2212,9 @@
 										bind:history
 										bind:autoScroll
 										bind:prompt
+										setInputText={(text) => {
+											messageInput?.setText(text);
+										}}
 										{selectedModels}
 										{atSelectedModel}
 										{sendPrompt}
@@ -2236,7 +2248,9 @@
 									bind:atSelectedModel
 									bind:showCommands
 									toolServers={$toolServers}
-									transparentBackground={$settings?.backgroundImageUrl ?? false}
+									transparentBackground={$settings?.backgroundImageUrl ??
+										$config?.license_metadata?.background_image_url ??
+										false}
 									{stopResponse}
 									{createMessagePair}
 									chatId={$chatId}
@@ -2282,7 +2296,7 @@
 								</div>
 							</div>
 						{:else}
-							<div class="overflow-auto w-full h-full flex items-center">
+							<div class="flex items-center h-full">
 								<Placeholder
 									{history}
 									{selectedModels}
@@ -2297,7 +2311,9 @@
 									bind:webSearchEnabled
 									bind:atSelectedModel
 									bind:showCommands
-									transparentBackground={$settings?.backgroundImageUrl ?? false}
+									transparentBackground={$settings?.backgroundImageUrl ??
+										$config?.license_metadata?.background_image_url ??
+										false}
 									toolServers={$toolServers}
 									{stopResponse}
 									{createMessagePair}

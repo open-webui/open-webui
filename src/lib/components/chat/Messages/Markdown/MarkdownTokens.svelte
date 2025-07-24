@@ -31,6 +31,8 @@
 	export let attributes = {};
 	export let conversationId: string = '';
 
+	export let done = true;
+
 	export let save = false;
 	export let preview = false;
 
@@ -91,6 +93,7 @@
 			<MarkdownInlineTokens
 				id={`${id}-${tokenIdx}-h`}
 				tokens={token.tokens}
+				{done}
 				{onSourceClick}
 				{conversationId}
 			/>
@@ -140,6 +143,7 @@
 											<MarkdownInlineTokens
 												id={`${id}-${tokenIdx}-header-${headerIdx}`}
 												tokens={header.tokens}
+												{done}
 												{onSourceClick}
 												{conversationId}
 											/>
@@ -161,6 +165,7 @@
 											<MarkdownInlineTokens
 												id={`${id}-${tokenIdx}-row-${rowIdx}-${cellIdx}`}
 												tokens={cell.tokens}
+												{done}
 												{onSourceClick}
 												{conversationId}
 											/>
@@ -193,7 +198,13 @@
 			<AlertRenderer {token} {alert} />
 		{:else}
 			<blockquote dir="auto">
-				<svelte:self id={`${id}-${tokenIdx}`} tokens={token.tokens} {onTaskClick} {onSourceClick} />
+				<svelte:self
+					id={`${id}-${tokenIdx}`}
+					tokens={token.tokens}
+					{done}
+					{onTaskClick}
+					{onSourceClick}
+				/>
 			</blockquote>
 		{/if}
 	{:else if token.type === 'list'}
@@ -223,6 +234,7 @@
 							id={`${id}-${tokenIdx}-${itemIdx}`}
 							tokens={item.tokens}
 							top={token.loose}
+							{done}
 							{onTaskClick}
 							{onSourceClick}
 						/>
@@ -255,6 +267,7 @@
 									id={`${id}-${tokenIdx}-${itemIdx}`}
 									tokens={item.tokens}
 									top={token.loose}
+									{done}
 									{onTaskClick}
 									{onSourceClick}
 								/>
@@ -264,6 +277,7 @@
 								id={`${id}-${tokenIdx}-${itemIdx}`}
 								tokens={item.tokens}
 								top={token.loose}
+								{done}
 								{onTaskClick}
 								{onSourceClick}
 							/>
@@ -285,6 +299,7 @@
 					id={`${id}-${tokenIdx}-d`}
 					tokens={marked.lexer(token.text)}
 					attributes={token?.attributes}
+					{done}
 					{onTaskClick}
 					{onSourceClick}
 				/>
@@ -305,6 +320,7 @@
 			<MarkdownInlineTokens
 				id={`${id}-${tokenIdx}-p`}
 				tokens={token.tokens ?? []}
+				{done}
 				{onSourceClick}
 				{conversationId}
 			/>
@@ -316,6 +332,7 @@
 					<MarkdownInlineTokens
 						id={`${id}-${tokenIdx}-t`}
 						tokens={token.tokens}
+						{done}
 						{onSourceClick}
 						{conversationId}
 					/>
@@ -331,6 +348,7 @@
 			<MarkdownInlineTokens
 				id={`${id}-${tokenIdx}-p`}
 				tokens={token.tokens ?? []}
+				{done}
 				{onSourceClick}
 				{conversationId}
 			/>
