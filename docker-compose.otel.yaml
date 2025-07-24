@@ -34,3 +34,7 @@ services:
 
 networks:
   default:
+
+
+volumes:
+  open-webui: {}
