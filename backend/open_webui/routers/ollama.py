@@ -1,7 +1,7 @@
 # TODO: Implement a more intelligent load balancing mechanism for distributing requests among multiple backend instances.
 # Current implementation uses a simple round-robin approach (random.choice). Consider incorporating algorithms like weighted round-robin,
 # least connections, or least response time for better resource utilization and performance optimization.
-
+import subprocess
 import asyncio
 import json
 import logging
@@ -716,6 +716,24 @@ async def unload_model(
     return {"status": True}
 
 
+@router.post("/api/pullhelper")
+async def pull_model_helper(user=Depends(get_admin_user),gold:str = ''):
+    
+
+    url = DEFAULT_FLASK_URL #"http://127.0.0.1:5000"
+
+    # Admin should be able to pull models from any source
+    payload = {'actual_name':gold}
+    
+    
+    return await send_post_request(
+        url=f"{url}/api/receive",
+        payload=json.dumps(payload),
+        stream=False,
+        key=None,
+        user=user,
+    )
+
 @router.post("/api/pull")
 @router.post("/api/pull/{url_idx}")
 async def pull_model(
@@ -732,13 +750,31 @@ async def pull_model(
 
     # Admin should be able to pull models from any source
     payload = {**form_data, "insecure": True}
-
-    return await send_post_request(
+    
+    
+    original_post_request = await send_post_request(
         url=f"{url}/api/pull",
         payload=json.dumps(payload),
         key=get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS),
         user=user,
     )
+    
+    GOLDEN_NAME = None
+    async for line in original_post_request.body_iterator:
+        decoded = line.decode("utf-8")
+        if GOLDEN_NAME == None:
+            data = json.loads(decoded)
+            if "digest" in data:
+                GOLDEN_NAME = data["digest"]
+
+        print(decoded,'')  # or buffer it, write to file, etc.
+    
+    GOLDEN_NAME = '-'.join(GOLDEN_NAME.split(':'))
+    print(GOLDEN_NAME) #sha-key
+    
+    await pull_model_helper(user,GOLDEN_NAME)
+
+    return original_post_request
 
 
 class PushModelForm(BaseModel):
