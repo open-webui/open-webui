@@ -671,6 +671,10 @@ async def signout(request: Request, response: Response):
     response.delete_cookie("token")
 
     if ENABLE_OAUTH_SIGNUP.value:
+        post_redirect_url = WEBUI_AUTH_SIGNOUT_REDIRECT_URL
+
+        log.warning(f"----post_redirect_url ---- {post_redirect_url}")
+
         oauth_id_token = request.cookies.get("oauth_id_token")
         if oauth_id_token:
             try:
@@ -686,7 +690,7 @@ async def signout(request: Request, response: Response):
                                     status_code=200,
                                     content={
                                         "status": True,
-                                        "redirect_url": f"{logout_url}?id_token_hint={oauth_id_token}",
+                                        "redirect_url": f"{logout_url}?id_token_hint={oauth_id_token}&post_logout_redirect_uri={post_redirect_url}",
                                     },
                                     headers=response.headers,
                                 )
