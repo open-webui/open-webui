@@ -79,17 +79,16 @@
 					// Initially hide logo
 					logo.style.opacity = '0';
 					logo.style.transition = 'opacity 0.4s ease';
-
 					const img = new Image();
 					img.src = '/splash.png';
 					img.onload = () => {
 						logo.src = '/splash.png';
-						logo.style.filter = prefersDark ? 'invert(1)' : '';
+						logo.style.filter = '';
 						logo.style.opacity = '1';
 					};
 					img.onerror = () => {
 						logo.src = '/splash.png';
-						logo.style.filter = prefersDark ? 'invert(1)' : '';
+						logo.style.filter = '';
 						logo.style.opacity = '1';
 					};
 				}
@@ -109,31 +108,68 @@
 			<div
 				style="
 					position: absolute;
-					top: 44%;
+					top: 38%;
 					left: 50%;
 					transform: translate(-50%, -50%);
 					display: flex;
 					flex-direction: column;
 					align-items: center;
+					max-width: 312px;
+					width: 100%;
+					padding: 0 1rem;
 				"
 			>
 				<img
 					id="logo"
 					src="/splash.png"
-					style="width: 80%; max-width: 312px; margin-bottom: 1rem"
+					alt="GovGPT Logo"
+					style="
+						width: 100%;
+						max-width: 312px;
+
+						transition: opacity 0.4s ease;
+					"
 				/>
 
-				<div class="text-center">
-					<h1 class="text-4xl lg:text-2xl text-white font-bold mb-2">Meet GovGPT</h1>
-					<p class="text-xl text-white mb-6">Amplifying Government Potential</p>
-				</div>
+				<h1
+					id="govgpt-title"
+					style="
+						font-size: 1.875rem;
+						font-weight: bold;
+						margin-bottom: 1rem;
+						background: linear-gradient(90deg, #9db7fb 0%, #4174f8 100%);
+						background-clip: text;
+						-webkit-background-clip: text;
+						-webkit-text-fill-color: transparent;
+					"
+				>
+					GovGPT
+				</h1>
+				<p id="tagline" style="font-size: 1.25rem; color: #d1d5db; margin-bottom: 1.5rem">
+					Amplifying Government Potential
+				</p>
 			</div>
 			<div
-			class="absolute bottom-0 left-0 right-0 text-center text-xs text-white bg-[#072d5a] py-3 rounded-b-lg"
+				class="fixed bottom-0 left-0 right-0 text-center text-xs text-white bg-[#072d5a] py-3 z-50"
+				style="
+					position: fixed !important;
+					bottom: 0 !important;
+					left: 0 !important;
+					right: 0 !important;
+					background-color: #072d5a !important;
+					color: white !important;
+					padding: 0.75rem !important;
+					text-align: center !important;
+					font-size: 0.75rem !important;
+					z-index: 50 !important;
+				"
 			>
-				<strong>Disclaimer:</strong> GovGPT is powered by artificial intelligence and may
-				occasionally produce incorrect or outdated responses. Please verify critical information
-				from official sources or consult your department head for confirmation.
+				<strong>Disclaimer:</strong>
+				<span class="text-gray-400"
+					>GovGPT is powered by artificial intelligence and may occasionally produce incorrect or
+					outdated responses. Please verify critical information from official sources or consult
+					your department head for confirmation.</span
+				>
 			</div>
 		</div>
 	</body>
@@ -154,7 +190,7 @@
 		opacity: 1;
 		transition: opacity 0.5s ease;
 		background:
-			url('/background.png') center center / cover no-repeat,
+			url('/background.png') bottom / cover no-repeat,
 			radial-gradient(
 				93.48% 68.59% at 40.87% 70.12%,
 				rgba(7, 45, 90, 0.03) 37.67%,
@@ -166,7 +202,14 @@
 				rgba(7, 45, 90, 0) 100%
 			),
 			linear-gradient(0deg, rgba(3, 25, 51, 0.2) 0%, rgba(3, 25, 51, 0.2) 100%),
-			#010e1d;
+			#072d5a;
+	}
+
+	/* Responsive styles for govgpt title */
+	@media (min-width: 1024px) {
+		#govgpt-title {
+			font-size: 3rem !important;
+		}
 	}
 
 	html.her #splash-screen {
@@ -224,5 +267,12 @@
 
 	.animate-pulse-fast {
 		animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+	}
+
+	.gradient-text {
+		background: linear-gradient(90deg, #9db7fb 0%, #4174f8 100%);
+		background-clip: text;
+		-webkit-background-clip: text;
+		-webkit-text-fill-color: transparent;
 	}
 </style>
