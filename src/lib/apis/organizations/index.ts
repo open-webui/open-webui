@@ -7,7 +7,7 @@ import { WEBUI_API_BASE_URL } from '$lib/constants';
 export const getOpenRouterClientSettings = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/client_organizations/settings`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/client-organizations/settings`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -35,7 +35,7 @@ export const getOpenRouterClientSettings = async (token: string) => {
 export const updateOpenRouterClientSettings = async (token: string, settings: object) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/client_organizations/settings`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/client-organizations/settings`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -64,7 +64,7 @@ export const updateOpenRouterClientSettings = async (token: string, settings: ob
 export const getClientOrganizations = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/client_organizations/clients`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/client-organizations/clients`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -92,7 +92,7 @@ export const getClientOrganizations = async (token: string) => {
 export const createClientOrganization = async (token: string, clientData: object) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/client_organizations/clients`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/client-organizations/clients`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -121,7 +121,7 @@ export const createClientOrganization = async (token: string, clientData: object
 export const updateClientOrganization = async (token: string, clientId: string, updates: object) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/client_organizations/clients/${clientId}`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/client-organizations/clients/${clientId}`, {
 		method: 'PATCH',
 		headers: {
 			Accept: 'application/json',
@@ -150,7 +150,7 @@ export const updateClientOrganization = async (token: string, clientId: string, 
 export const deactivateClientOrganization = async (token: string, clientId: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/client_organizations/clients/${clientId}`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/client-organizations/clients/${clientId}`, {
 		method: 'DELETE',
 		headers: {
 			Accept: 'application/json',
@@ -178,7 +178,7 @@ export const deactivateClientOrganization = async (token: string, clientId: stri
 export const getUserMappings = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/client_organizations/user-mappings`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/client-organizations/user-mappings`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -206,7 +206,7 @@ export const getUserMappings = async (token: string) => {
 export const createUserMapping = async (token: string, mappingData: object) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/client_organizations/user-mappings`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/client-organizations/user-mappings`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -235,7 +235,7 @@ export const createUserMapping = async (token: string, mappingData: object) => {
 export const deactivateUserMapping = async (token: string, userId: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/client_organizations/user-mappings/${userId}`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/client-organizations/user-mappings/${userId}`, {
 		method: 'DELETE',
 		headers: {
 			Accept: 'application/json',
@@ -265,8 +265,8 @@ export const getClientUsageSummary = async (token: string, clientId?: string) =>
 
 	// Use the my-organization endpoint for regular users
 	const url = clientId 
-		? `${WEBUI_API_BASE_URL}/client_organizations/usage/summary?client_id=${clientId}`
-		: `${WEBUI_API_BASE_URL}/client_organizations/usage/my-organization`;
+		? `${WEBUI_API_BASE_URL}/client-organizations/usage/summary?client_id=${clientId}`
+		: `${WEBUI_API_BASE_URL}/client-organizations/usage/my-organization`;
 
 	const res = await fetch(url, {
 		method: 'GET',
@@ -298,8 +298,8 @@ export const getTodayUsage = async (token: string, clientId: string) => {
 
 	// Use the my-organization endpoint for 'current' client ID
 	const url = clientId === 'current'
-		? `${WEBUI_API_BASE_URL}/client_organizations/usage/my-organization/today`
-		: `${WEBUI_API_BASE_URL}/client_organizations/usage/today?client_id=${clientId}`;
+		? `${WEBUI_API_BASE_URL}/client-organizations/usage/my-organization/today`
+		: `${WEBUI_API_BASE_URL}/client-organizations/usage/today?client_id=${clientId}`;
 
 	const res = await fetch(url, {
 		method: 'GET',
@@ -329,7 +329,7 @@ export const getTodayUsage = async (token: string, clientId: string) => {
 export const getBillingSummary = async (token: string, daysBack: number = 30) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/client_organizations/usage/billing?days_back=${daysBack}`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/client-organizations/usage/billing?days_back=${daysBack}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
