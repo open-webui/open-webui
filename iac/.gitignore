@@ -1,0 +1,109 @@
+# Terraform Files
+# =================
+
+# Terraform state files - contain sensitive infrastructure state data
+*.tfstate
+*.tfstate.*
+
+# Terraform plan files - may contain sensitive data
+*.tfplan
+*.tfplan.*
+tfplan
+
+# Terraform backup files
+*.backup
+
+# Terraform crash log files
+crash.log
+crash.*.log
+
+# Terraform directory for providers and modules
+.terraform/
+.terraform.lock.hcl.backup
+
+# Terraform variable files with actual values (keep .example files)
+terraform.tfvars
+*.auto.tfvars
+*.auto.tfvars.json
+
+# Terraform override files
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Include tfplan files - uncomment if you want to include plan files
+# !*.tfplan
+
+# AWS Credentials and Config
+# ==========================
+.aws/
+aws-credentials
+*.pem
+*.key
+
+# IDE and Editor Files
+# ====================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS Generated Files
+# ==================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+# ====
+*.log
+logs/
+
+# Runtime Files
+# =============
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage and Test Results
+# =========================
+coverage/
+.nyc_output/
+.coverage
+htmlcov/
+
+# Environment Files
+# =================
+.env
+.env.local
+.env.*.local
+
+# Archives
+# ========
+*.zip
+*.tar.gz
+*.rar
+
+# Temporary Files
+# ===============
+tmp/
+temp/
+.tmp/
+
+# Local Terraform modules (if using local modules)
+# ================================================
+.terraform.d/
+
+# Terragrunt
+# ==========
+.terragrunt-cache/
+
+# Infracost
+# =========
+.infracost/

@@ -1,0 +1,45 @@
+# AWS Configuration
+aws_region  = "us-east-1"
+aws_profile = "908027381725_AdministratorAccess"
+environment = "production"
+
+# Infrastructure Configuration
+vpc_id                        = "vpc-01bc2784063a567d3"
+private_subnet_ids           = ["subnet-01296c54f7bff84bc", "subnet-00da3547f2178dd85"]
+existing_ecs_security_group_id = "sg-05e12bd2e202e19f6"
+
+# ECS Configuration
+cluster_name      = "webUIcluster2"
+service_name      = "webui3-scaled"
+task_family_name  = "webUIfargate-scaled"
+container_image   = "908027381725.dkr.ecr.us-east-1.amazonaws.com/github/open-webui/open-webui:v0.6.16-custom"
+
+# Scaling Configuration
+desired_count = 3
+cpu          = 2048   # 2 vCPU
+memory       = 8192   # 8 GB RAM
+
+# Storage Configuration
+efs_file_system_id   = "fs-0bffb5d27667773bf"
+efs_access_point_id  = "fsap-0af54ce708a21816e"
+
+# IAM Configuration
+existing_task_execution_role_arn = "arn:aws:iam::908027381725:role/ecsTaskExecutionRole"
+existing_database_secret_arn     = "arn:aws:secretsmanager:us-east-1:908027381725:secret:webUIpostgresDB-IlIf3w"
+
+# Redis Configuration
+redis_node_type     = "cache.t3.micro"
+redis_engine_version = "7.0"
+
+# Network Access Configuration
+entra_proxy_ip = "192.168.144.11/32"
+gg_vpn_cidr   = "192.168.158.0/24"
+
+# Security Group IDs for Integration
+rds_security_group_id     = "sg-09b2b27665b7e7ccc"
+efs_security_group_1_id   = "sg-0dddfef211b1bee1f"
+efs_security_group_2_id   = "sg-0067670c2a1f54b18"
+pipelines_security_group_id = "sg-049461f6151961660"
+docling_serve_security_group_id = "sg-001574b4a259a765f"
+mcpo_security_group_id = "sg-0cdc36e6d551602e4"
+jupyter_notebook_security_group_id = "sg-0cf8422fe6d4ff14d"
