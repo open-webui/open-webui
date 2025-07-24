@@ -100,6 +100,9 @@
 	export let attachFileEnabled = false;
 	export let codeInterpreterEnabled = false;
 	let isOpen = false;
+    let govBtnDisable= false;
+	let webSearchDisable = false;
+	let attachFileDisable = false;
 
 	const Modeloptions = [
 		{ label: 'Gov knowledge', icon: MenuBook },
@@ -1573,11 +1576,16 @@
 														{#if showGovKnoButton}
 															<Tooltip content={$i18n.t('Gov Knowledge')} placement="top">
 																<button
-																	on:click|preventDefault={() => saveGovKnoModel()}
+																	on:click|preventDefault={() =>{
+																		 saveGovKnoModel();
+																		  webSearchDisable = !webSearchDisable;
+			                                                              attachFileDisable = !attachFileDisable;
+																	}}
 																	type="button"
-																	class="govkno-btn flex items-center justify-center gap-[4px] px-[12px] py-[8px] shadow-custom3 border border-[#E5EBF3] rounded-full hover:bg-[#CCDDFC] text-typography-titles text-[14px] leading-[22px] transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden dark:hover:bg-gray-800 {govBtnEnable
-																		? ' bg-[#CCDDFC]  dark:text-sky-300 dark:bg-sky-200/5'
-																		: ' bg-[#FBFCFC] text-gray-600 dark:text-gray-300 '}"
+																	disabled={govBtnDisable}
+																	class="govkno-btn flex items-center justify-center gap-[4px] px-[12px] py-[8px] shadow-custom3 border border-[#E5EBF3] rounded-full hover:bg-[#CCDDFC] text-typography-titles text-[14px] leading-[22px] transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden dark:hover:bg-gray-800  { govBtnDisable ? 'bg-[#D5DBE6] disabled:cursor-not-allowed':''} {govBtnEnable
+																		? ' bg-[#CCDDFC] dark:text-sky-300 dark:bg-sky-200/5'
+																		: ' text-gray-600 dark:text-gray-300 '} "
 																>
 																	<GovKno />
 																	<span
@@ -1596,12 +1604,15 @@
 																		showGovKnoWebSearchToggle = false;
 																		govBtnEnable=false;
 																		attachFileEnabled=false;
+																		govBtnDisable= !govBtnDisable;
+			                                                            attachFileDisable = !attachFileDisable;
 																	}}
 																	type="button"
-																	class="flex items-center flex justify-center gap-[4px] px-[12px] py-[8px] shadow-custom3 border border-[#E5EBF3] rounded-full hover:bg-[#CCDDFC] transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden dark:hover:bg-gray-800 {webSearchEnabled ||
+																	disabled={webSearchDisable}
+																	class="{ webSearchDisable ? 'bg-[#D5DBE6] disabled:cursor-not-allowed':''} flex items-center flex justify-center gap-[4px] px-[12px] py-[8px] shadow-custom3 border border-[#E5EBF3] rounded-full hover:bg-[#CCDDFC] transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden dark:hover:bg-gray-800 {webSearchEnabled ||
 																	($settings?.webSearch ?? false) === 'always'
 																		? 'bg-gradient-bg-2 sm:bg-[#CCDDFC] dark:text-sky-300  dark:bg-sky-200/5'
-																		: 'bg-[#FBFCFC] text-gray-600 dark:text-gray-300 '}"
+																		: ' text-gray-600 dark:text-gray-300 '}"
 																>
 																	<GlobeAlt className="size-4" strokeWidth="1.75" />
 																	<span
@@ -1662,11 +1673,14 @@
 																		filesInputElement.click();
 																		govBtnEnable=false;
 																		webSearchEnabled=false;
+																		govBtnDisable= !govBtnDisable;
+                                                                        webSearchDisable = !webSearchDisable;
 																	}}
 																	type="button"
-																	class="flex items-center flex px-[12px] py-[8px] shadow-custom3 border border-[#E5EBF3] bg-[#FBFCFC] rounded-full hover:bg-[#CCDDFC] transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden dark:hover:bg-gray-800 {attachFileEnabled
-																		? 'bg-gradient-bg-2 sm:bg-[#CCDDFC] dark:text-sky-300  dark:bg-sky-200/5'
-																		: 'bg-[#FBFCFC] text-gray-600 dark:text-gray-300 '}"
+																	disabled={attachFileDisable}
+																	class=" flex items-center flex px-[12px] py-[8px] shadow-custom3 border border-[#E5EBF3] rounded-full hover:bg-[#CCDDFC] transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden dark:hover:bg-gray-800 {attachFileEnabled
+																		? 'bg-[#CCDDFC] dark:text-sky-300  dark:bg-sky-200/5'
+																		: 'text-gray-600 dark:text-gray-300 '} { attachFileDisable ? 'bg-[#D5DBE6] disabled:cursor-not-allowed':'bg-transparent'}"
 																>
 																	<Attach />
 																	<span
