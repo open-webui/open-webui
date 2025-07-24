@@ -524,6 +524,8 @@
 
 	let floatingMenuElement = null;
 	let bubbleMenuElement = null;
+	let element: HTMLElement;
+	
 
 	// PII Detection props
 	export let enablePiiDetection = false;
@@ -542,7 +544,7 @@
 	// PII Loading state
 	let isPiiDetectionInProgress = false;
 
-	let element: HTMLElement;
+
 	let currentModifiers: PiiModifier[] = [];
 	let previousModifiersLength = 0;
 
@@ -1072,13 +1074,17 @@
 			initializeCollaboration();
 		}
 
-		console.log(bubbleMenuElement, floatingMenuElement);
-
 		editor = new Editor({
 			element: element,
 			extensions: [
 				StarterKit.configure({
-					link: link
+					link: link,
+					// Exclude extensions that we're replacing with more advanced versions
+					codeBlock: false, // Using CodeBlockLowlight instead
+					bulletList: false, // Using ListKit instead
+					orderedList: false, // Using ListKit instead
+					listItem: false, // Using ListKit instead
+					listKeymap: false // Using ListKit's keymaps instead
 				}),
 				Placeholder.configure({ placeholder }),
 				SelectionDecoration,
@@ -1088,7 +1094,14 @@
 				}),
 				Highlight,
 				Typography,
-
+				TableKit.configure({
+					table: { resizable: true }
+				}),
+				ListKit.configure({
+					taskItem: {
+						nested: true
+					}
+				}),
 				...(enablePiiDetection
 					? [
 							PiiDetectionExtension.configure({
@@ -1112,14 +1125,6 @@
 							})
 						]
 					: []),
-				TableKit.configure({
-					table: { resizable: true }
-				}),
-				ListKit.configure({
-					taskItem: {
-						nested: true
-					}
-				}),
 				CharacterCount.configure({}),
 				...(image ? [Image] : []),
 				...(fileHandler
@@ -1662,8 +1667,6 @@
 		<FormattingButtons {editor} />
 	</div>
 {/if}
-
-<div bind:this={element} class="relative w-full min-w-full h-full min-h-fit {className}" />
 
 <div class="relative w-full min-w-full h-full min-h-fit {className}">
 	<div bind:this={element} class="w-full h-full min-h-fit" />

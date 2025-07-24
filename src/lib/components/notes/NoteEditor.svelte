@@ -170,6 +170,7 @@
 			const res = await updateNoteById(localStorage.token, id, {
 				title: note?.title === '' ? $i18n.t('Untitled') : note.title,
 				data: {
+					content: note.data.content,
 					files: files
 				},
 				access_control: note?.access_control
@@ -1227,6 +1228,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 									wordCount = editor.storage.characterCount.words();
 									charCount = editor.storage.characterCount.characters();
 								}
+								changeDebounceHandler();
 							}}
 							fileHandler={true}
 							onFileDrop={(currentEditor, files, pos) => {
