@@ -11,7 +11,13 @@
 - **Challenge user's assumptions** if they conflict with better task execution
 - **Always update necessary .md files in docs folder** after commit changes
 
-[Important!] The future of the project (always take this into account when designing solutions): mAI implementations for about 20 small companies in Poland, where each will have from 5 to 20 employees. The production version will be hosted on an external Hetzner server (Docker). However, when designing solutions, do not create production files for implementation on Hetzner, because that will be the last stage of my work.
+[Important!] User is the mAI provider (OWUI fork). The future of the project (always take this into account when designing solutions): mAI implementations for about 20 small companies in Poland, where each will have from 5 to 20 employees. Single Hetzner Cloud server running multiple Docker instances (one per client) with complete data isolation.
+
+**Client User Structure (Per Instance):**
+- **1 Admin User**: First person to register automatically becomes admin, manages OpenRouter API key and creates user accounts
+- **4-19 Regular Users**: Created by admin through mAI web interface (Settings → Admin → Users)
+- **Single Organization**: All users mapped to one organization per instance with individual external_user auto-learning
+- **Automated Usage Tracking**: Each user gets unique external_user from OpenRouter, tracked under shared API key
 **WORKFLOW PRIORITIES:**
 1. Code quality and type safety first
 2. Preserve all mAI customizations during changes
@@ -59,7 +65,3 @@
    - `query_knowledge_graph` for framework patterns
    - `search_code_examples` for specific implementations
    - `perform_rag_query` with source filtering for documentation
-
-2. **Implementation Phase**:
-   - Follow patterns from examples/ folder
-   - Reference knowledge graph insights
