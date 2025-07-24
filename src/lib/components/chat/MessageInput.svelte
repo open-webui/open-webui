@@ -65,6 +65,7 @@
 	import GovKno from '../icons/GovKno.svelte';
 	import Filter from '../icons/Filter.svelte';
 	import CheckFilter from '../icons/CheckFilter.svelte';
+	import Cross from '../icons/Cross.svelte';
 	import { updateUserSettings } from '$lib/apis/users';
 
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
@@ -103,6 +104,7 @@
     let govBtnDisable= false;
 	let webSearchDisable = false;
 	let attachFileDisable = false;
+	let selectedModelName = '';
 
 	const Modeloptions = [
 		{ label: 'Gov knowledge', icon: MenuBook },
@@ -231,6 +233,7 @@
 	};
 
 	const saveGovKnoModel = async () => {
+
 		const modelId = $models.find((model) => model.id.includes('govgpt_contextual_rag_pipeline'))?.id || '';
 		const modelName = govBtnEnable ? modelId : 'gpt-4.1';
 		settings.set({ ...$settings, models: [modelName] });
@@ -240,6 +243,7 @@
 		showGovKnoWebSearchToggle = false;
         webSearchEnabled=false;
         attachFileEnabled=false;
+		selectedModelName=govBtnEnable?'Gov Knowledge':'';
 	};
 
 	let showWebSearchButton = true;
@@ -1435,17 +1439,19 @@
 														</button>
 													</Tooltip>
 												{/each}
-												{#if $mobile}
+												
+												<div class="flex items-center justify-center rounded-[60px]  {selectedModelName!==''?'p-[1px] bg-gradient-bg-2':''}">
 													<button
 														on:click={handleFilterToggle}
 														class="flex items-center px-[12px] gap-[4px] py-[8px] shadow-custom3 border border-[#E5EBF3] bg-[#FBFCFC] text-typography-titles text-[14px] leading-[22px] rounded-full"
-														><Filter /></button
-													>
-												{/if}
+														><Filter /></button>
+													{#if selectedModelName !== ''}<div class="px-[8px] font-Inter_Medium flex items-center gap-[8px] text-[14px] leading-[22px] text-typography-titles">{selectedModelName} <button class="flex items-center" on:click={handleFilterToggle}><Cross/><button/></div>{/if}
+												</div>
+												
 
-												{#if $mobile && showGovKnoWebSearchToggle}
+												{#if showGovKnoWebSearchToggle}
 													<div
-														class="fixed w-full bottom-[0] left-0 z-[40] p-[24px] pb-[40px] bg-white border border-[#E5EBF3] bg-[#FBFCFC] rounded-[24px]"
+														class="absolute w-full max-w-[600px] bottom-[0] left-0 z-[40] p-[24px] pb-[40px] bg-white border border-[#E5EBF3] bg-[#FBFCFC] rounded-[24px]"
 													>
 														{#if showGovKnoButton}
 															<Tooltip content={$i18n.t('Gov Knowledge')} placement="top">
@@ -1476,6 +1482,7 @@
 																		showGovKnoWebSearchToggle = false;
 																		govBtnEnable=false;
 																		attachFileEnabled=false;
+																		selectedModelName=webSearchEnabled?"Web Search":'';
 																	}}
 																	type="button"
 																	class="flex items-center flex items-center justify-between w-full p-[16px] rounded-[12px] hover:bg-gradient-bg-2 transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden dark:hover:bg-gray-800 {webSearchEnabled ||
@@ -1551,6 +1558,7 @@
 																		filesInputElement.click();
 																		govBtnEnable=false;
 																		webSearchEnabled=false;
+																		selectedModelName=attachFileEnabled?"Attach Files":'';
 																	}}
 																	type="button"
 																	class="flex items-center flex justify-between w-full p-[16px] rounded-[12px] hover:bg-gradient-bg-2 transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden dark:hover:bg-gray-800 {attachFileEnabled
@@ -1572,7 +1580,7 @@
 													</div>
 												{/if}
 												{#if !$mobile}
-													<div class="flex items-center justify-center gap-[8px]">
+													<!--<div class="flex items-center justify-center gap-[8px]">
 														{#if showGovKnoButton}
 															<Tooltip content={$i18n.t('Gov Knowledge')} placement="top">
 																<button
@@ -1691,7 +1699,7 @@
 																</button>
 															</Tooltip>
 														{/if}
-													</div>
+													</div>-->
 												{/if}
 											</div>
 											<div class="flex gap-[12px] items-center">
