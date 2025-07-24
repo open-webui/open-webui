@@ -6,7 +6,6 @@
 	import { WEBUI_VERSION } from '$lib/constants';
 	import MaterialIcon from '$lib/components/common/MaterialIcon.svelte';
 	import SuggestionsIcon from '$lib/components/icons/SuggestionsIcon.svelte';
-	
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -84,27 +83,36 @@
 	{/if}
 </div> -->
 
-<div class="w-full flex items-center justify-center ">
-	{#if filteredPrompts.length > 0} 
-		<div class="flex gap-[8px] mt-4  items-center w-full flex-1  {$mobile ? 'overflow-x-auto scrollbar-none ' : 'flex-wrap justify-center' }">
-			{#each filteredPrompts as prompt, idx (prompt.id || prompt.content)}
+<div class="w-full max-w-[800px] m-auto flex items-center justify-center">
+	{#if suggestionPrompts.length > 0}
+	<div
+	class="gap-[8px] mt-4 w-full {$mobile
+		? 'flex overflow-x-auto scrollbar-none items-center'
+		: 'grid justify-center'}"
+	style={!$mobile ? 'grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));' : ''}
+>
+			{#each suggestionPrompts as prompt, idx (prompt.id || prompt.content)}
 				<button
-					class="flex {$mobile ? 'items-center gap-[4px] flex-shrink-0' : 'shadow-custom3 flex-col items-start' } text-typography-subtext hover:text-typography-titles  border border-[#E5EBF3]  hover:border-[#90C9FF] p-[16px] rounded-[20px]  whitespace-nowrap overflow-hidden text-ellipsis transition 
+					class="flex {$mobile
+						? 'items-center gap-[4px] flex-shrink-0'
+						: 'shadow-custom3 flex-col items-start'} text-typography-subtext hover:text-typography-titles border border-[#E5EBF3] hover:border-[#90C9FF] p-[16px] rounded-[20px] whitespace-nowrap overflow-hidden text-ellipsis transition
 							bg-light-bg dark:border-[#2D3642] dark:hover:border-[#004280] dark:hover:text-white"
 					style="animation-delay: {idx * 60}ms;"
 					on:click={() => dispatch('select', prompt.content)}
-					>
-					
+				>
 					{#if prompt.icon_name}
-					<SuggestionsIcon name={prompt.icon_name} />
-				
+						<SuggestionsIcon name={prompt.icon_name} />
 					{:else}
 						<MaterialIcon name="lightbulb" class="w-[24px] h-[24px]" />
 					{/if}
-					<div class="w-full {$mobile ? ' ' : ' mt-[12px]' } text-[14px] leading-[22px] whitespace-nowrap">
+					<div
+						class="w-full text-left {$mobile
+							? ' '
+							: ' mt-[12px]'} text-[14px] leading-[22px] whitespace-nowrap"
+					>
 						{prompt.title?.[0] ?? prompt.content}
 					</div>
-					</button>
+				</button>
 			{/each}
 		</div>
 	{/if}

@@ -41,7 +41,6 @@
 					dispatch('rename');
 				}}
 			>
-				
 				<div class="flex items-center">{$i18n.t('Rename')}</div>
 				<Pencil strokeWidth="2" />
 			</DropdownMenu.Item>
@@ -52,8 +51,6 @@
 					dispatch('export');
 				}}
 			>
-				
-
 				<div class="flex items-center">{$i18n.t('Export')}</div>
 				<Download strokeWidth="2" />
 			</DropdownMenu.Item>
@@ -64,7 +61,6 @@
 					dispatch('delete');
 				}}
 			>
-				
 				<div class="flex items-center">{$i18n.t('Delete')}</div>
 				<GarbageBin strokeWidth="2" />
 			</DropdownMenu.Item>

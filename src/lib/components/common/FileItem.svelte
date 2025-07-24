@@ -11,7 +11,8 @@
 	const dispatch = createEventDispatcher();
 
 	export let className = 'w-60';
-	export let colorClassName = 'bg-white dark:bg-gray-850 border border-gray-100 dark:border-white/5';
+	export let colorClassName =
+		'bg-white dark:bg-gray-850 border border-gray-100 dark:border-white/5';
 	export let url: string | null = null;
 
 	export let dismissible = false;
@@ -134,10 +135,8 @@
 					dispatch('dismiss');
 				}}
 			>
-				
-
 				<MaterialIcon name="delete" className="size-4" />
-			
+
 				<!-- <svg
 					xmlns="http://www.w3.org/2000/svg"
 					viewBox="0 0 20 20"

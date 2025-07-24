@@ -984,25 +984,20 @@ async def chat_completion_files_handler(
                 log.info(f"govGpt-file-search-service found GOV_GPT web search response: {len(govgpt_response)} characters")
                 log.info(f"govGpt-file-search-service response preview: '{govgpt_response[:200]}...'")
                 
-                # Create a direct response with the GOV_GPT web search content
-                body["messages"].append({
-                    "role": "assistant",
-                    "content": govgpt_response,
-                    "metadata": {
-                        "source": "govGpt-web-search-service",
-                        "api_response": True,
-                        "urls": body.get("govgpt_web_search_urls", []),
-                        "queries": body.get("govgpt_web_search_queries", [])
-                    }
-                })
-                
-                log.info(f"govGpt-file-search-service direct response added for user {user.id}")
-                
-                # Mark the body to skip regular chat completion
+                # Mark the body to skip regular chat completion and use streaming
                 body["skip_chat_completion"] = True
                 body["custom_response"] = govgpt_response
+                body["stream_custom_response"] = True
+                body["custom_response_metadata"] = {
+                    "source": "govGpt-web-search-service",
+                    "api_response": True,
+                    "urls": body.get("govgpt_web_search_urls", []),
+                    "queries": body.get("govgpt_web_search_queries", [])
+                }
                 
-                # Return the body with the custom response directly
+                log.info(f"govGpt-file-search-service streaming response configured for user {user.id}")
+                
+                # Return the body with the custom streaming response
                 return body, {"sources": sources}
             
             # Use govGpt-file-search-service instead of regular retrieval
@@ -1076,24 +1071,18 @@ async def chat_completion_files_handler(
                             sources.extend(api_response["sources"])
                             log.info(f"govGpt-file-search-service added {len(api_response['sources'])} sources")
                         
-                        # Create a direct response with the custom content
-                        # Add the custom response as an assistant message
-                        body["messages"].append({
-                            "role": "assistant",
-                            "content": custom_response,
-                            "metadata": {
-                                "source": "govGpt-file-search-service",
-                                "api_response": True
-                            }
-                        })
-                        
-                        log.info(f"govGpt-file-search-service direct response added for user {user.id}")
-                        
-                        # Mark the body to skip regular chat completion
+                        # Mark the body to skip regular chat completion and use streaming
                         body["skip_chat_completion"] = True
                         body["custom_response"] = custom_response
+                        body["stream_custom_response"] = True
+                        body["custom_response_metadata"] = {
+                            "source": "govGpt-file-search-service",
+                            "api_response": True
+                        }
                         
-                        # Return the body with the custom response directly
+                        log.info(f"govGpt-file-search-service streaming response configured for user {user.id}")
+                        
+                        # Return the body with the custom streaming response
                         return body, {"sources": sources}
                     else:
                         log.warning(f"govGpt-file-search-service received empty response for user {user.id}")

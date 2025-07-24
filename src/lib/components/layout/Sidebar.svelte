@@ -18,6 +18,7 @@
 		scrollPaginationEnabled,
 		currentChatPage,
 		temporaryChatEnabled,
+		clearMessageInput,
 		channels,
 		socket,
 		config,
@@ -512,107 +513,109 @@
 	}}
 />
 {#if $showSidebar}
-<div on:click={onSidebarClick} class="block md:hidden fixed z-[40] w-full h-full bg-[#32404D] opacity-50"></div>
+	<div
+		on:click={onSidebarClick}
+		class="block md:hidden fixed z-[40] w-full h-full bg-[#32404D] opacity-50"
+	></div>
 {/if}
 <div
 	bind:this={navElement}
 	id="sidebar"
 	role="navigation"
 	class=" h-screen max-h-[100dvh] min-h-screen select-none shadown-none border-0 {$showSidebar
-		? `md:relative w-[300px] max-w-[300px] ${$mobile ? 'w-[0px]' : 'w-[80px]'}`
+		? `md:relative w-[300px] max-w-[300px] ${$mobile ? 'w-[0px]' : ''}`
 		: $mobile
 			? 'w-[0px] absolute'
-			: 'w-[80px]'} {$isApp
+			: ''} {$isApp
 		? `ml-[4.5rem] md:ml-0`
-		: 'transition-width duration-200 ease-in-out'} shadow-md shrink-0  text-sm z-50 top-0 left-0
+		: 'transition-width duration-200 ease-in-out'} shadow-md shrink-0 text-sm z-50 top-0 left-0
 	}
         "
 	data-state={$showSidebar}
 >
 	<div
-		class="flex flex-col justify-between max-h-[100dvh] overflow-x-hidden z-50 bg-light-bg  shadow-[0px_48px_96px_0px_rgba(0,0,0,0.08)] dark:shadow-none"
+		class="flex flex-col justify-between max-h-[100dvh] overflow-x-hidden z-50 bg-light-bg shadow-[0px_48px_96px_0px_rgba(0,0,0,0.08)] dark:shadow-none"
 	>
 		<div class="px-[8px] py-[24px] sidebar__top h-[calc(100vh-58px)] overflow-y-auto">
-		 {#if $mobile}
-		<div class="sidebar__mobile">
-		 
-			<div class="mb-[30px] px-[16px] search_new-chat flex justify-center text-gray-800 dark:text-gray-200">
-				<a
-					id="sidebar-new-chat-button"
-					class="p-[8px] flex-1 items-center rounded-[8px] h-full bg-gradient-bg-2"
-					class:justify-center={!$showSidebar}
-					href="/"
-					draggable="false"
-					on:click={() => {
-						showSearch.set(true);
-					}}
-				>
-					<div class="flex gap-[8px] items-center">
-						<MaterialIcon name="search" size="1.1rem" />
-
-						<!-- Label -->
-						<div
-							class="self-center font-medium text-typography-disabled text-[16px] leading-[22px] transition-all duration-300 ease-in-out"
-							class:hidden={!$showSidebar}
+			{#if $mobile}
+				<div class="sidebar__mobile">
+					<div
+						class="mb-[30px] px-[16px] search_new-chat flex justify-center text-gray-800 dark:text-gray-200"
+					>
+						<a
+							id="sidebar-new-chat-button"
+							class="p-[8px] flex-1 items-center rounded-[8px] h-full bg-gradient-bg-2"
+							class:justify-center={!$showSidebar}
+							href="/"
+							draggable="false"
+							on:click={() => {
+								showSearch.set(true);
+							}}
 						>
-							{$i18n.t('Search')}
-						</div>
+							<div class="flex gap-[8px] items-center">
+								<MaterialIcon name="search" size="1.1rem" />
+
+								<!-- Label -->
+								<div
+									class="self-center font-medium text-typography-disabled text-[16px] leading-[22px] transition-all duration-300 ease-in-out"
+									class:hidden={!$showSidebar}
+								>
+									{$i18n.t('Search')}
+								</div>
+							</div>
+						</a>
+						<a
+							id="sidebar-new-chat-button"
+							class="pl-[10px] py-[8px] flex items-center rounded-lg h-full text-right hover:bg-gradient-bg-2 dark:hover:bg-gray-900 transition-all duration-300 ease-in-out no-drag-region"
+							class:justify-center={!$showSidebar}
+							href="/"
+							draggable="false"
+							on:click={async () => {
+								selectedChatId = null;
+
+								await temporaryChatEnabled.set(false);
+								setTimeout(() => {
+									if ($mobile) {
+										showSidebar.set(false);
+									}
+								}, 0);
+							}}
+						>
+							<NewChat />
+						</a>
 					</div>
-				</a>
-				<a
-					id="sidebar-new-chat-button"
-					class="pl-[10px] py-[8px] flex items-center rounded-lg h-full text-right hover:bg-gradient-bg-2 dark:hover:bg-gray-900 transition-all duration-300 ease-in-out no-drag-region"
+					<a
+						id="sidebar-new-chat-button"
+						class="px-[16px] py-[8px] flex items-center flex-1 rounded-lg h-full text-right hover:bg-gradient-bg-2 dark:hover:bg-gray-900 transition-all duration-300 ease-in-out no-drag-region"
+						href="/"
+					>
+						<div class="flex gap-[8px] items-center">
+							<!-- Icon -->
+							<div class="flex items-center self-center transition-all duration-300 ease-in-out">
+								<img
+									src="/logov4.png"
+									alt="GovGPT Logo"
+									class="w-[17px] h-[17px] filter dark:invert dark:brightness-0 dark:contrast-200"
+								/>
+							</div>
+
+							<!-- Label -->
+							<div
+								class="self-center link-style text-typography-titles transition-all duration-300 ease-in-out"
+							>
+								GovGPT
+							</div>
+						</div></a
+					>
+				</div>
+			{/if}
+			{#if !$mobile}
+				<div
+					class="mb-[24px] flex justify-between items-center text-gray-600 dark:text-gray-400"
 					class:justify-center={!$showSidebar}
-					href="/"
-					draggable="false"
-					on:click={async () => {
-						selectedChatId = null;
-
-						await temporaryChatEnabled.set(false);
-						setTimeout(() => {
-							if ($mobile) {
-								showSidebar.set(false);
-							}
-						}, 0);
-					}}
 				>
-					<NewChat  />
-				</a>
-			</div>
-			<a
-					id="sidebar-new-chat-button"
-					class="px-[16px] py-[8px] flex items-center flex-1 rounded-lg h-full text-right hover:bg-gradient-bg-2 dark:hover:bg-gray-900 transition-all duration-300 ease-in-out no-drag-region"
-					href="/"
-				>
-					<div class="flex gap-[8px] items-center">
-						<!-- Icon -->
-						<div
-							class="flex  items-center self-center transition-all duration-300 ease-in-out"
-							
-						>
-							 <img
-	src="/logov4.png"
-	alt="GovGPT Logo"
-	class="w-[17px] h-[17px] filter dark:invert dark:brightness-0 dark:contrast-200"
-	/>
-						</div>
+					<!-- Menu Icon behaves like other sidebar buttons -->
 
-						<!-- Label -->
-						<div
-							class="self-center link-style text-typography-titles transition-all duration-300 ease-in-out"
-						>
-							GovGPT
-					</div>
-				</a>
-		</div>
-		{/if}
-		{#if !$mobile}
-			<div
-				class="mb-[24px] flex justify-between items-center text-gray-600 dark:text-gray-400"
-				class:justify-center={!$showSidebar}
-			>
-				<!-- Menu Icon behaves like other sidebar buttons -->
-				
 					<a
 						class="p-[10px] hover:bg-gradient-bg-2 flex items-center rounded-lg transition-all duration-300 ease-in-out"
 						class:justify-center={!$showSidebar}
@@ -621,14 +624,12 @@
 					>
 						<MaterialIcon name="menu" size="1.1rem" />
 					</a>
-			
 
-				<!-- Search icon only when sidebar is expanded, right aligned -->
-				{#if $showSidebar}
-					
+					<!-- Search icon only when sidebar is expanded, right aligned -->
+					{#if $showSidebar}
 						<div class="flex-1 flex justify-end transition-all duration-300 ease-in-out">
 							<button
-								class="flex items-center outline-none rounded-lg  transition-all duration-300 ease-in-out"
+								class="flex items-center outline-none rounded-lg transition-all duration-300 ease-in-out"
 								on:click={() => {
 									showSearch.set(true);
 								}}
@@ -638,9 +639,8 @@
 							</button>
 						</div>
 					{/if}
-				
-			</div>
-{/if}
+				</div>
+			{/if}
 			{#if false && $user?.role === 'admin'}
 				<div class="px-[16px] py-[8px] flex justify-center text-gray-800 dark:text-gray-200">
 					<a
@@ -675,47 +675,50 @@
 					</a>
 				</div>
 			{/if}
-{#if !$mobile}
-			<div class="flex justify-center text-gray-800 dark:text-gray-200">
-				<a
-					id="sidebar-new-chat-button"
-					class="px-[16px] py-[8px] flex items-center flex-1 rounded-lg h-full text-right hover:bg-gradient-bg-2 dark:hover:bg-gray-900 transition-all duration-300 ease-in-out no-drag-region"
-					class:justify-center={!$showSidebar}
-					href="/"
-					draggable="false"
-					on:click={async () => {
-						selectedChatId = null;
+			{#if !$mobile}
+				<div class="flex justify-center text-gray-800 dark:text-gray-200">
+					<a
+						id="sidebar-new-chat-button"
+						class="px-[16px] py-[8px] flex items-center flex-1 rounded-lg h-full text-right hover:bg-gradient-bg-2 dark:hover:bg-gray-900 transition-all duration-300 ease-in-out no-drag-region"
+						class:justify-center={!$showSidebar}
+						href="/"
+						draggable="false"
+						on:click={async () => {
+							selectedChatId = null;
 
-						await temporaryChatEnabled.set(false);
-						setTimeout(() => {
-							if ($mobile) {
-								showSidebar.set(false);
-							}
-						}, 0);
-					}}
-				>
-					<div class="flex items-center">
-						<!-- Icon -->
-						<div
-							class="flex items-center self-center transition-all duration-300 ease-in-out"
-							class:mr-[8px]={$showSidebar}
-						>
-							<NewChat  />
+							// Trigger clearing of message input
+							clearMessageInput.set(true);
+
+							await temporaryChatEnabled.set(false);
+							setTimeout(() => {
+								if ($mobile) {
+									showSidebar.set(false);
+								}
+							}, 0);
+						}}
+					>
+						<div class="flex items-center">
+							<!-- Icon -->
+							<div
+								class="flex items-center self-center transition-all duration-300 ease-in-out"
+								class:mr-[8px]={$showSidebar}
+							>
+								<NewChat />
+							</div>
+
+							<!-- Label -->
+							<div
+								class="self-center link-style text-typography-titles transition-all duration-300 ease-in-out"
+								class:hidden={!$showSidebar}
+							>
+								{$i18n.t('New Chat')}
+							</div>
 						</div>
+					</a>
+				</div>
+			{/if}
 
-						<!-- Label -->
-						<div
-							class="self-center link-style text-typography-titles transition-all duration-300 ease-in-out"
-							class:hidden={!$showSidebar}
-						>
-							{$i18n.t('New Chat')}
-						</div>
-					</div>
-				</a>
-			</div>
-{/if}
-
-			{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
+			{#if $user?.role === 'admin' && ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
 				<div class="flex justify-center text-gray-800 dark:text-gray-200">
 					<a
 						class="px-[16px] py-[8px] grow flex items-center rounded-lg hover:bg-gradient-bg-2 dark:hover:bg-gray-900 transition-all duration-300 ease-in-out"
@@ -736,14 +739,31 @@
 							class="flex items-center self-center transition-all duration-300 ease-in-out"
 							class:mr-[8px]={$showSidebar}
 						>
-							<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
-  <mask id="mask0_293_12936" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="0" y="0" width="20" height="20">
-    <rect width="20" height="20" fill="#D9D9D9"/>
-  </mask>
-  <g mask="url(#mask0_293_12936)">
-    <path d="M4.42443 17.0833C4.00887 17.0833 3.65387 16.9362 3.35943 16.6419C3.06512 16.3474 2.91797 15.9924 2.91797 15.5769V4.42313C2.91797 4.00757 3.06512 3.65257 3.35943 3.35813C3.65387 3.06382 4.00887 2.91667 4.42443 2.91667H8.13276C8.18512 2.45403 8.38707 2.06062 8.73859 1.73646C9.08998 1.41215 9.51089 1.25 10.0013 1.25C10.497 1.25 10.9206 1.41215 11.2721 1.73646C11.6237 2.06062 11.8229 2.45403 11.8698 2.91667H15.5782C15.9937 2.91667 16.3487 3.06382 16.6432 3.35813C16.9375 3.65257 17.0846 4.00757 17.0846 4.42313V15.5769C17.0846 15.9924 16.9375 16.3474 16.6432 16.6419C16.3487 16.9362 15.9937 17.0833 15.5782 17.0833H4.42443ZM4.42443 15.8333H15.5782C15.6423 15.8333 15.7011 15.8066 15.7544 15.7531C15.8079 15.6998 15.8346 15.641 15.8346 15.5769V4.42313C15.8346 4.35896 15.8079 4.30021 15.7544 4.24687C15.7011 4.1934 15.6423 4.16667 15.5782 4.16667H4.42443C4.36026 4.16667 4.30151 4.1934 4.24818 4.24687C4.19471 4.30021 4.16797 4.35896 4.16797 4.42313V15.5769C4.16797 15.641 4.19471 15.6998 4.24818 15.7531C4.30151 15.8066 4.36026 15.8333 4.42443 15.8333ZM6.04297 13.8621H11.4596V12.6123H6.04297V13.8621ZM6.04297 10.625H13.9596V9.375H6.04297V10.625ZM6.04297 7.38771H13.9596V6.13792H6.04297V7.38771ZM10.0013 3.62187C10.1819 3.62187 10.3312 3.56285 10.4492 3.44479C10.5673 3.32674 10.6263 3.17743 10.6263 2.99687C10.6263 2.81632 10.5673 2.66701 10.4492 2.54896C10.3312 2.4309 10.1819 2.37187 10.0013 2.37187C9.82075 2.37187 9.67144 2.4309 9.55339 2.54896C9.43533 2.66701 9.3763 2.81632 9.3763 2.99687C9.3763 3.17743 9.43533 3.32674 9.55339 3.44479C9.67144 3.56285 9.82075 3.62187 10.0013 3.62187Z" fill="#23282E"/>
-  </g>
-</svg>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								width="20"
+								height="20"
+								viewBox="0 0 20 20"
+								fill="none"
+							>
+								<mask
+									id="mask0_293_12936"
+									style="mask-type:alpha"
+									maskUnits="userSpaceOnUse"
+									x="0"
+									y="0"
+									width="20"
+									height="20"
+								>
+									<rect width="20" height="20" fill="#D9D9D9" />
+								</mask>
+								<g mask="url(#mask0_293_12936)">
+									<path
+										d="M4.42443 17.0833C4.00887 17.0833 3.65387 16.9362 3.35943 16.6419C3.06512 16.3474 2.91797 15.9924 2.91797 15.5769V4.42313C2.91797 4.00757 3.06512 3.65257 3.35943 3.35813C3.65387 3.06382 4.00887 2.91667 4.42443 2.91667H8.13276C8.18512 2.45403 8.38707 2.06062 8.73859 1.73646C9.08998 1.41215 9.51089 1.25 10.0013 1.25C10.497 1.25 10.9206 1.41215 11.2721 1.73646C11.6237 2.06062 11.8229 2.45403 11.8698 2.91667H15.5782C15.9937 2.91667 16.3487 3.06382 16.6432 3.35813C16.9375 3.65257 17.0846 4.00757 17.0846 4.42313V15.5769C17.0846 15.9924 16.9375 16.3474 16.6432 16.6419C16.3487 16.9362 15.9937 17.0833 15.5782 17.0833H4.42443ZM4.42443 15.8333H15.5782C15.6423 15.8333 15.7011 15.8066 15.7544 15.7531C15.8079 15.6998 15.8346 15.641 15.8346 15.5769V4.42313C15.8346 4.35896 15.8079 4.30021 15.7544 4.24687C15.7011 4.1934 15.6423 4.16667 15.5782 4.16667H4.42443C4.36026 4.16667 4.30151 4.1934 4.24818 4.24687C4.19471 4.30021 4.16797 4.35896 4.16797 4.42313V15.5769C4.16797 15.641 4.19471 15.6998 4.24818 15.7531C4.30151 15.8066 4.36026 15.8333 4.42443 15.8333ZM6.04297 13.8621H11.4596V12.6123H6.04297V13.8621ZM6.04297 10.625H13.9596V9.375H6.04297V10.625ZM6.04297 7.38771H13.9596V6.13792H6.04297V7.38771ZM10.0013 3.62187C10.1819 3.62187 10.3312 3.56285 10.4492 3.44479C10.5673 3.32674 10.6263 3.17743 10.6263 2.99687C10.6263 2.81632 10.5673 2.66701 10.4492 2.54896C10.3312 2.4309 10.1819 2.37187 10.0013 2.37187C9.82075 2.37187 9.67144 2.4309 9.55339 2.54896C9.43533 2.66701 9.3763 2.81632 9.3763 2.99687C9.3763 3.17743 9.43533 3.32674 9.55339 3.44479C9.67144 3.56285 9.82075 3.62187 10.0013 3.62187Z"
+										fill="#23282E"
+									/>
+								</g>
+							</svg>
 						</div>
 
 						<!-- Label -->
@@ -788,7 +808,7 @@
 							class="self-center translate-y-[0.5px] transition-all duration-300 ease-in-out"
 							class:hidden={!$showSidebar}
 						>
-							<div class="self-center  link-style text-typography-titles">
+							<div class="self-center link-style text-typography-titles">
 								{$i18n.t('Workspace')}
 							</div>
 						</div>
@@ -826,7 +846,7 @@
 										</div>
 
 										<div class="self-center translate-y-[0.5px] {$showSidebar ? '' : 'hidden'}">
-											<div class=" self-center  link-style text-typography-titles line-clamp-1">
+											<div class=" self-center link-style text-typography-titles line-clamp-1">
 												{model?.name ?? modelId}
 											</div>
 										</div>
@@ -865,6 +885,7 @@
 					</Folder>
 				{/if}
 
+				{#if $user?.role === 'admin'}
 				<Folder
 					className=""
 					name={$i18n.t('Folders')}
@@ -938,6 +959,7 @@
 						/>
 					{/if}
 				</Folder>
+				{/if}
 
 				{#if false && $pinnedChats.length > 0}
 					<div class="flex flex-col space-y-1 rounded-xl">
@@ -1017,27 +1039,23 @@
 
 				{#if $showSidebar && $pinnedChats.length > 0}
 					<div class="flex flex-col space-y-1 rounded-xl">
-						<div class="px-[16px] py-[8px] pt-[20px] mt-[12px] text-[12px] sm:text-[14px] leading-[22px] text-typography-secondary-body-text font-medium ">
+						<div
+							class="px-[16px] py-[8px] pt-[20px] mt-[12px] text-[12px] sm:text-[14px] leading-[22px] text-typography-secondary-body-text font-medium"
+						>
 							{$i18n.t('Pinned Chats')}
 						</div>
 						<div class="flex flex-col space-y-1 rounded-xl">
 							{#each $pinnedChats as chat, idx (`pinned-chat-${chat?.id ?? idx}`)}
-								<ChatItem
-									className="pinned"
-									id={chat.id}
-									title={chat.title}
-								/>
+								<ChatItem className="pinned" id={chat.id} title={chat.title} />
 							{/each}
 						</div>
 					</div>
 				{/if}
 
-
-
 				<div class="relative flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
 					{#if $showSidebar}
 						<div class=" flex-1 flex flex-col overflow-y-auto scrollbar-hidden">
-							<div class="py-1.5 ">
+							<div class="py-1.5">
 								{#if $chats}
 									{#each $chats as chat, idx (`chat-${chat?.id ?? idx}`)}
 										{#if idx === 0 || (idx > 0 && chat.time_range !== $chats[idx - 1].time_range)}
@@ -1122,9 +1140,7 @@
 			</div>
 		</div>
 		<div class="p-[8px] pb-[24px] sidebar__bottom">
-			<div
-				class="w-full flex flex-col left-[20px] bottom-[20px]  dark:border-gray-900"
-			>
+			<div class="w-full flex flex-col left-[20px] bottom-[20px] dark:border-gray-900">
 				{#if $user !== undefined && $user !== null}
 					<UserMenu
 						role={$user?.role}
@@ -1142,19 +1158,23 @@
 								showDropdown = !showDropdown;
 							}}
 						>
-						<div class="flex">
-							<div class=" self-center {$showSidebar ? 'mr-[8px]' : ''}">
-								<img
-									src={$user?.profile_image_url}
-									class=" max-w-[30px] object-cover rounded-full"
-									alt="User profile"
-								/>
+							<div class="flex">
+								<div class=" self-center {$showSidebar ? 'mr-[8px]' : ''}">
+									<img
+										src={$user?.profile_image_url}
+										class=" max-w-[30px] object-cover rounded-full"
+										alt="User profile"
+									/>
+								</div>
+								<div
+									class="self-center link-style text-typography-titles {$showSidebar
+										? ''
+										: 'hidden'}"
+								>
+									{$user?.name}
+								</div>
 							</div>
-							<div class="self-center link-style text-typography-titles  {$showSidebar ? '' : 'hidden'}">
-								{$user?.name}
-							</div>
-							</div>
-							{#if $showSidebar}<div><ChevronRight/></div>{/if}
+							{#if $showSidebar}<div><ChevronRight /></div>{/if}
 						</button>
 					</UserMenu>
 				{/if}

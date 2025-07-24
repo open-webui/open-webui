@@ -63,8 +63,11 @@
 	import Attach from '../icons/Attach.svelte';
 	import Save from '../icons/Save.svelte';
 	import GovKno from '../icons/GovKno.svelte';
+	import Filter from '../icons/Filter.svelte';
+	import CheckFilter from '../icons/CheckFilter.svelte';
+	import Cross from '../icons/Cross.svelte';
 	import { updateUserSettings } from '$lib/apis/users';
-
+	import { GOVGPT_RAG_WOG_MODEL_NAME, DEFAULT_MODELS } from '$lib/constants';
 
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 
@@ -96,8 +99,13 @@
 
 	export let imageGenerationEnabled = false;
 	export let webSearchEnabled = false;
+	export let attachFileEnabled = false;
 	export let codeInterpreterEnabled = false;
 	let isOpen = false;
+	let govBtnDisable = false;
+	let webSearchDisable = false;
+	let attachFileDisable = false;
+	let selectedModelName = '';
 
 	const Modeloptions = [
 		{ label: 'Gov knowledge', icon: MenuBook },
@@ -127,6 +135,43 @@
 		webSearchEnabled,
 		codeInterpreterEnabled
 	});
+
+	// Track previous chat ID to detect changes
+	let previousChatId: string | null = null;
+
+	// Clear prompt and files when switching to a new chat
+	$: if (history?.currentId && previousChatId !== null && previousChatId !== history.currentId) {
+		// Clear prompt and files when chat changes
+		prompt = '';
+		files = [];
+		// Reset other states
+		selectedToolIds = [];
+		selectedFilterIds = [];
+		webSearchEnabled = false;
+		imageGenerationEnabled = false;
+		codeInterpreterEnabled = false;
+		attachFileEnabled = false;
+		// Reset loaded state to allow auto-selection in new chat
+		loaded = false;
+		// Stop any ongoing response generation
+		if (stopResponse) {
+			stopResponse();
+		}
+		// Update previous chat ID
+		previousChatId = history.currentId;
+	}
+
+	// Initialize previousChatId when component loads
+	$: if (history?.currentId && previousChatId === null) {
+		previousChatId = history.currentId;
+	}
+
+	// Auto-select model from last message when history changes
+	$: if (history?.messages && Object.keys(history.messages).length > 0 && !loaded) {
+		console.log('Auto-selecting model from last message');
+		autoSelectModelFromLastMessage();
+		loaded = true;
+	}
 
 	let showTools = false;
 
@@ -187,19 +232,163 @@
 
 	let showToolsButton = false;
 	$: showToolsButton = toolServers.length + selectedToolIds.length > 0;
-	
+
+	let showGovKnoWebSearchToggle = false;
 	let govBtnEnable = false;
-    let showGovKnoButton = false;
-	$: showGovKnoButton = $models.find((model)=> model.id.includes('rag'));
+	let showGovKnoButton = false;
+	$: showGovKnoButton = $models.find((model) => model.id.includes(GOVGPT_RAG_WOG_MODEL_NAME));
+
+	// Reactive statement to update selectedModelName based on current state
+	$: selectedModelName = (() => {
+				console.log('Reactive selectedModelName update:', {
+			govBtnEnable,
+			webSearchEnabled,
+			attachFileEnabled,
+			filesLength: files.length,
+			selectedModels,
+			historyMessages: history?.messages ? Object.keys(history.messages).length : 0
+		});
+		
+		// Priority order: Gov Knowledge > Web Search > Files > Specific Model
+		
+		// Check if Gov Knowledge model is selected (highest priority)
+		if (govBtnEnable) {
+			console.log('Returning: Gov Knowledge');
+			return 'Gov Knowledge';
+		}
+		
+		// Check if web search is enabled (second priority)
+		if (webSearchEnabled) {
+			console.log('Returning: Web Search');
+			return 'Web Search';
+		}
+		
+		// Check if files are attached (either in current files or in chat history)
+		if (attachFileEnabled || files.length > 0 || 
+			(history?.messages && Object.values(history.messages).some((message: any) => message.files && message.files.length > 0))) {
+			console.log('Returning: Attach Files');
+			return 'Attach Files';
+		}
+		
+		// Check if a specific model is selected (lowest priority)
+		// if (selectedModels && selectedModels.length > 0 && selectedModels[0] !== '') {
+		// 	const selectedModel = $models.find(model => model.id === selectedModels[0]);
+		// 	if (selectedModel) {
+		// 		console.log('Returning:', selectedModel.name || selectedModel.id);
+		// 		return selectedModel.name || selectedModel.id;
+		// 	}
+		// }
+		
+		console.log('Returning: empty string');
+		return '';
+	})();
+
+	// Function to auto-select model based on last message
+	const autoSelectModelFromLastMessage = () => {
+		if (!history?.messages || Object.keys(history.messages).length === 0) {
+			return;
+		}
+
+		// Get all messages and sort by timestamp to find the latest
+		const allMessages = Object.values(history.messages) as any[];
+		const sortedMessages = allMessages.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+		
+		// Find the last assistant message (which contains the model info)
+		const lastAssistantMessage = sortedMessages.find(msg => msg.role === 'assistant');
+		
+		if (lastAssistantMessage) {
+			console.log('Last assistant message:', lastAssistantMessage);
+
+
+			// Check if it has files attached
+			if (lastAssistantMessage.files && lastAssistantMessage.files.length > 0) {
+				console.log('Auto-selecting Files model');
+				govBtnEnable = false;
+				webSearchEnabled = false;
+				attachFileEnabled = true;
+				selectedModels = [lastAssistantMessage.model || DEFAULT_MODELS];
+				return;
+			}
+			
+			// Check if any message in history has files
+			const hasFilesInHistory = allMessages.some(msg => msg.files && msg.files.length > 0);
+			if (hasFilesInHistory) {
+				console.log('Auto-selecting Files model (from history)');
+				govBtnEnable = false;
+				webSearchEnabled = false;
+				attachFileEnabled = true;
+				selectedModels = [lastAssistantMessage.model || DEFAULT_MODELS];
+				return;
+			}
+
+			
+			// Check if it's a Gov Knowledge model
+			if (lastAssistantMessage.model && lastAssistantMessage.model.includes(GOVGPT_RAG_WOG_MODEL_NAME)) {
+				console.log('Auto-selecting Gov Knowledge model');
+				govBtnEnable = true;
+				webSearchEnabled = false;
+				attachFileEnabled = false;
+				selectedModels = [lastAssistantMessage.model];
+				return;
+			}
+		}
+		
+		// If none of the specific conditions are met, don't select any model
+		console.log('No specific model type detected, not auto-selecting any model');
+		govBtnEnable = false;
+		webSearchEnabled = false;
+		attachFileEnabled = false;
+	};
+
+	// Reference to the toggle content element
+	let toggleContentElement: HTMLElement;
+
+	// Handle click outside the toggle content
+	const handleClickOutside = (event: MouseEvent) => {
+		if (showGovKnoWebSearchToggle && toggleContentElement && !toggleContentElement.contains(event.target as Node)) {
+			// Check if the clicked element is a filter toggle button
+			const target = event.target as HTMLElement;
+			const isFilterButton = target.closest('[data-filter-toggle]');
+			
+			if (!isFilterButton) {
+				showGovKnoWebSearchToggle = false;
+			}
+		}
+	};
+
+	// Add and remove event listener
+	onMount(() => {
+		document.addEventListener('click', handleClickOutside);
+	});
+
+	onDestroy(() => {
+		document.removeEventListener('click', handleClickOutside);
+	});
+
+	const handleFilterToggle = () => {
+		showGovKnoWebSearchToggle = !showGovKnoWebSearchToggle;
+	};
 
 	const saveGovKnoModel = async () => {
-		const modelName = govBtnEnable?'contextual-rag':'gpt-4.1';
-		//settings.set({ ...$settings, models: [modelName] });
-		//await updateUserSettings(localStorage.token, { ui: $settings });
+		govBtnEnable = !govBtnEnable;
+		const modelId = $models.find((model) => model.id.includes(GOVGPT_RAG_WOG_MODEL_NAME))?.id || '';
+		const modelName = govBtnEnable ? modelId : DEFAULT_MODELS;
+
+		// Update the selectedModels prop to trigger the binding
+		selectedModels = [modelName];
+
+		settings.set({ ...$settings, models: [modelName] });
+		await updateUserSettings(localStorage.token, { ui: $settings });
 		toast.success($i18n.t('Gov Knowledge model updated'));
-		govBtnEnable = !govBtnEnable
+
+		showGovKnoWebSearchToggle = false;
+		webSearchEnabled = false;
+		attachFileEnabled = false;
+
+		// Save session selected models
+		sessionStorage.selectedModels = JSON.stringify([modelName]);
 	};
-	
+
 	let showWebSearchButton = true;
 	// $: showWebSearchButton =
 	// 	(atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).length ===
@@ -210,7 +399,7 @@
 	let showImageGenerationButton = false;
 	$: showImageGenerationButton =
 		(atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).length ===
-		imageGenerationCapableModels.length &&
+			imageGenerationCapableModels.length &&
 		$config?.features?.enable_image_generation &&
 		($_user.role === 'admin' || $_user?.permissions?.features?.image_generation);
 
@@ -450,15 +639,37 @@
 		dragged = false;
 	};
 
+	// const onDrop = async (e) => {
+	// 	e.preventDefault();
+	// 	console.log(e);
+
+	// 	if (e.dataTransfer?.files) {
+	// 		const inputFiles = Array.from(e.dataTransfer?.files);
+	// 		if (inputFiles && inputFiles.length > 0) {
+	// 			console.log(inputFiles);
+	// 			inputFilesHandler(inputFiles);
+	// 		}
+	// 	}
+
+	// 	dragged = false;
+	// };
+
 	const onDrop = async (e) => {
 		e.preventDefault();
 		console.log(e);
 
 		if (e.dataTransfer?.files) {
-			const inputFiles = Array.from(e.dataTransfer?.files);
-			if (inputFiles && inputFiles.length > 0) {
-				console.log(inputFiles);
-				inputFilesHandler(inputFiles);
+			const inputFiles = Array.from(e.dataTransfer.files);
+			// Filter only PDF files
+			const pdfFiles = inputFiles.filter(
+				(file) => file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
+			);
+
+			if (pdfFiles.length > 0) {
+				console.log(pdfFiles);
+				inputFilesHandler(pdfFiles);
+			} else {
+				toast.error('Only PDF files are allowed.');
 			}
 		}
 
@@ -538,7 +749,7 @@
 			<div
 				class=" p-[20px] flex flex-col px-3 {($settings?.widescreenMode ?? null)
 					? 'max-w-full'
-					: 'max-w-6xl'} w-full"
+					: ''} w-full"
 			>
 				<div class="relative">
 					{#if autoScroll === false && history?.currentId}
@@ -627,16 +838,13 @@
 		</div>
 
 		<div class="{transparentBackground ? 'bg-transparent' : 'bg-transparent dark:bg-gray-900'} ">
-			<div
-				class="{($settings?.widescreenMode ?? null)
-					? 'max-w-full'
-					: 'max-w-6xl'} mx-auto inset-x-0"
-			>
+			<div class="{($settings?.widescreenMode ?? null) ? 'max-w-full' : ''} mx-auto inset-x-0">
 				<div class="">
 					<input
 						bind:this={filesInputElement}
 						bind:files={inputFiles}
 						type="file"
+						accept="application/pdf"
 						hidden
 						multiple
 						on:change={async () => {
@@ -676,15 +884,25 @@
 						/>
 					{:else}
 						<form
-							class="w-full flex flex-col gap-1.5"
+							class="w-full flex flex-col"
 							on:submit|preventDefault={() => {
 								// check if selectedModels support image input
 								dispatch('submit', prompt);
 							}}
 						>
-							<div
-								class="p-[24px] flex-1 flex flex-col bounded-[12px] shadow-custom3  relative w-full sm:rounded-3xl transition bg-light-bg dark:text-gray-100"
+							{#if history.currentId && history.messages && Object.values(history.messages).some((message) => message.files && message.files.length > 0)}<div
+									class="text-left rounded-tl-[12px] rounded-tr-[12px] bg-[#D6E5FC] border border-[#90C9FF] py-[12px] pb-[50px] mb-[-42px] px-[16px] text-[10px] leading-[16px] text-typography-titles"
+								>
+									{$i18n.t("Chat is limited to the '{{count}}' uploaded documents.", {
+										count: Object.values(history.messages).reduce(
+											(total, message) => total + (message.files ? message.files.length : 0),
+											0
+										)
+									})}
+								</div>{/if}
 
+							<div
+								class="p-[24px] flex-1 flex flex-col bounded-[12px] shadow-custom3 relative w-full rounded-3xl transition bg-light-bg dark:text-gray-100"
 								dir={$settings?.chatDirection ?? 'auto'}
 							>
 								{#if files.length > 0}
@@ -1308,7 +1526,7 @@
 											<!--<div
 												class="flex self-center w-[1px] h-4 mx-1.5 bg-gray-50 dark:bg-gray-800"
 											/>-->
-											<div class="flex gap-[8px] items-center  flex-1">
+											<div class="flex gap-[8px] items-center flex-1">
 												{#if showToolsButton}
 													<Tooltip
 														content={$i18n.t('{{COUNT}} Available Tools', {
@@ -1366,108 +1584,288 @@
 																<Sparkles className="size-4" strokeWidth="1.75" />
 															{/if}
 															<span
-																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
+																class="whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
 																>{filter?.name}</span
 															>
 														</button>
 													</Tooltip>
 												{/each}
 
-												{#if showGovKnoButton}
-													<Tooltip content={$i18n.t('Gov Knowledge')} placement="top">
-														<button
-															on:click|preventDefault={() => saveGovKnoModel()}
-															type="button"
-															class="govkno-btn flex items-center px-[12px] gap-[4px] py-[8px] shadow-custom3 border border-[#E5EBF3] bg-[#FBFCFC] text-typography-titles text-[14px] leading-[22px] rounded-full rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-[#CCDDFC] dark:hover:bg-gray-800 {govBtnEnable
-																? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
-																: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
+												<div
+													class="flex items-center justify-center rounded-[60px] {selectedModelName !==
+													''
+														? 'p-[1px] bg-gradient-bg-2'
+														: ''}"
+												>
+													<button
+														data-filter-toggle
+														on:click={handleFilterToggle}
+														class="flex items-center px-[12px] gap-[4px] py-[8px] shadow-custom3 border border-[#E5EBF3] bg-[#FBFCFC] text-typography-titles text-[14px] leading-[22px] rounded-full"
+														><Filter /></button
+													>
+													{#if selectedModelName !== ''}<div
+															class="px-[8px] font-Inter_Medium flex items-center gap-[8px] text-[14px] leading-[22px] text-typography-titles"
 														>
-															<GovKno  />
-															<span
-																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
-																>{$i18n.t('Gov Knowledge')}</span
+															{selectedModelName}
+															<button 
+																data-filter-toggle
+																class="flex items-center" 
+																on:click={handleFilterToggle}
+															><Cross /></button>
+														</div>{/if}
+												</div>
+
+												{#if showGovKnoWebSearchToggle}
+													<div
+														bind:this={toggleContentElement}
+														class="absolute w-full max-w-[600px] bottom-[0] left-0 z-[40] p-[24px] pb-[40px] bg-white border border-[#E5EBF3] bg-[#FBFCFC] rounded-[24px]"
+													>
+														{#if showGovKnoButton}
+															<Tooltip content={$i18n.t('Gov Knowledge')} placement="top">
+																<button
+																	on:click|preventDefault={() => saveGovKnoModel()}
+																	type="button"
+																	class="govkno-btn flex items-center justify-between w-full p-[16px] rounded-[12px] hover:bg-gradient-bg-2 gap-[4px] text-typography-titles text-[14px] leading-[22px] transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden dark:hover:bg-gray-800 {govBtnEnable
+																		? ' bg-gradient-bg-2 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
+																		: 'text-gray-600 dark:text-gray-300 '}"
+																>
+																	<div class="flex items-center justify-center gap-[8px]">
+																		<GovKno />
+																		<span
+																			class="whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
+																			>{$i18n.t('Gov Knowledge')}</span
+																		>
+																	</div>
+																	{#if govBtnEnable}<CheckFilter />{/if}
+																</button>
+															</Tooltip>
+														{/if}
+
+														{#if showWebSearchButton}
+															<Tooltip content={$i18n.t('Search the internet')} placement="top">
+																<button
+																	on:click|preventDefault={() => {
+																		webSearchEnabled = !webSearchEnabled;
+																		showGovKnoWebSearchToggle = false;
+																		govBtnEnable = false;
+																		attachFileEnabled = false;
+																	}}
+																	type="button"
+																	class="flex items-center flex items-center justify-between w-full p-[16px] rounded-[12px] hover:bg-gradient-bg-2 transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden dark:hover:bg-gray-800 {webSearchEnabled ||
+																	($settings?.webSearch ?? false) === 'always'
+																		? 'bg-gradient-bg-2 dark:text-sky-300  dark:bg-sky-200/5'
+																		: 'text-gray-600 dark:text-gray-300 '}"
+																>
+																	<div class="flex items-center justify-center gap-[8px]">
+																		<GlobeAlt className="size-5" strokeWidth="1.75" />
+																		<span
+																			class="whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
+																			>{$i18n.t('Web Search')}</span
+																		>
+																	</div>
+																	{#if webSearchEnabled}<CheckFilter />{/if}
+																</button>
+															</Tooltip>
+														{/if}
+
+														{#if showImageGenerationButton}
+															<Tooltip content={$i18n.t('Generate an image')} placement="top">
+																<button
+																	on:click|preventDefault={() =>
+																		(imageGenerationEnabled = !imageGenerationEnabled)}
+																	type="button"
+																	class="flex items-center flex items-center justify-between w-full p-[16px] rounded-[12px] hover:bg-gradient-bg-2 transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden dark:hover:bg-gray-800 {imageGenerationEnabled
+																		? 'bg-gradient-bg-2 sm:bg-[#CCDDFC] dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
+																		: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
+																>
+																	<div class="flex items-center justify-center gap-[8px]">
+																		<Photo className="size-4" strokeWidth="1.75" />
+																		<span
+																			class="whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
+																			>{$i18n.t('Image')}</span
+																		>
+																	</div>
+																	{#if $mobile}<CheckFilter />{/if}
+																</button>
+															</Tooltip>
+														{/if}
+
+														{#if showCodeInterpreterButton}
+															<Tooltip
+																content={$i18n.t('Execute code for analysis')}
+																placement="top"
 															>
-														</button>
-													</Tooltip>
-												{/if}
+																<button
+																	on:click|preventDefault={() =>
+																		(codeInterpreterEnabled = !codeInterpreterEnabled)}
+																	type="button"
+																	class="flex items-center flex items-center justify-between w-full p-[16px] rounded-[12px] hover:bg-gradient-bg-2 dark:hover:bg-gray-800 {codeInterpreterEnabled
+																		? 'bg-gradient-bg-2 sm:bg-[#CCDDFC] dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
+																		: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
+																>
+																	<div class="flex items-center justify-center gap-[8px]">
+																		<CommandLine className="size-4" strokeWidth="1.75" />
+																		<span
+																			class="whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
+																			>{$i18n.t('Code Interpreter')}</span
+																		>
+																	</div>
+																	<CheckFilter />
+																</button>
+															</Tooltip>
+														{/if}
 
-												{#if showWebSearchButton}
-													<Tooltip content={$i18n.t('Search the internet')} placement="top">
-														<button
-															on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
-															type="button"
-															class="flex items-center px-[12px] gap-[4px] py-[8px] shadow-custom3 border border-[#E5EBF3] bg-[#FBFCFC] text-typography-titles text-[14px] leading-[22px] rounded-full rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-[#CCDDFC] dark:hover:bg-gray-800 {webSearchEnabled ||
-															($settings?.webSearch ?? false) === 'always'
-																? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
-																: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
-														>
-															<GlobeAlt className="size-4" strokeWidth="1.75" />
-															<span
-																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
-																>{$i18n.t('Web Search')}</span
+														{#if showFileUploadButton}
+															<Tooltip content={$i18n.t('Upload File')} placement="top">
+																<button
+																	on:click={() => {
+																		attachFileEnabled = !attachFileEnabled;
+																		showGovKnoWebSearchToggle = false;
+																		filesInputElement.click();
+																		govBtnEnable = false;
+																		webSearchEnabled = false;
+																	}}
+																	type="button"
+																	class="flex items-center flex justify-between w-full p-[16px] rounded-[12px] hover:bg-gradient-bg-2 transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden dark:hover:bg-gray-800 {attachFileEnabled
+																		? 'bg-gradient-bg-2 dark:text-sky-300  dark:bg-sky-200/5'
+																		: 'text-gray-600 dark:text-gray-300 '}"
+																>
+																	<div class="flex items-center justify-center gap-[8px]">
+																		<Attach />
+																		<span
+																			class="font-heading font-medium text-[14px] leading-[22px] text-[#36383b] text-left whitespace-nowrap"
+																		>
+																			Attach files
+																		</span>
+																	</div>
+																	{#if attachFileEnabled && files.length > 0}<CheckFilter />{/if}
+																</button>
+															</Tooltip>
+														{/if}
+													</div>
+												{/if}
+												{#if !$mobile}
+													<!--<div class="flex items-center justify-center gap-[8px]">
+														{#if showGovKnoButton}
+															<Tooltip content={$i18n.t('Gov Knowledge')} placement="top">
+																<button
+																	on:click|preventDefault={() =>{
+																		 saveGovKnoModel();
+																		  webSearchDisable = !webSearchDisable;
+			                                                              attachFileDisable = !attachFileDisable;
+																	}}
+																	type="button"
+																	disabled={govBtnDisable}
+																	class="govkno-btn flex items-center justify-center gap-[4px] px-[12px] py-[8px] shadow-custom3 border border-[#E5EBF3] rounded-full hover:bg-[#CCDDFC] text-typography-titles text-[14px] leading-[22px] transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden dark:hover:bg-gray-800  { govBtnDisable ? 'bg-[#D5DBE6] disabled:cursor-not-allowed':''} {govBtnEnable
+																		? ' bg-[#CCDDFC] dark:text-sky-300 dark:bg-sky-200/5'
+																		: ' text-gray-600 dark:text-gray-300 '} "
+																>
+																	<GovKno />
+																	<span
+																		class="whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
+																		>{$i18n.t('Gov Knowledge')}</span
+																	>
+																</button>
+															</Tooltip>
+														{/if}
+
+														{#if showWebSearchButton}
+															<Tooltip content={$i18n.t('Search the internet')} placement="top">
+																<button
+																	on:click|preventDefault={() => {
+																		webSearchEnabled = !webSearchEnabled;
+																		showGovKnoWebSearchToggle = false;
+																		govBtnEnable=false;
+																		attachFileEnabled=false;
+																		govBtnDisable= !govBtnDisable;
+			                                                            attachFileDisable = !attachFileDisable;
+																	}}
+																	type="button"
+																	disabled={webSearchDisable}
+																	class="{ webSearchDisable ? 'bg-[#D5DBE6] disabled:cursor-not-allowed':''} flex items-center flex justify-center gap-[4px] px-[12px] py-[8px] shadow-custom3 border border-[#E5EBF3] rounded-full hover:bg-[#CCDDFC] transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden dark:hover:bg-gray-800 {webSearchEnabled ||
+																	($settings?.webSearch ?? false) === 'always'
+																		? 'bg-gradient-bg-2 sm:bg-[#CCDDFC] dark:text-sky-300  dark:bg-sky-200/5'
+																		: ' text-gray-600 dark:text-gray-300 '}"
+																>
+																	<GlobeAlt className="size-4" strokeWidth="1.75" />
+																	<span
+																		class="whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
+																		>{$i18n.t('Web Search')}</span
+																	>
+																</button>
+															</Tooltip>
+														{/if}
+
+														{#if showImageGenerationButton}
+															<Tooltip content={$i18n.t('Generate an image')} placement="top">
+																<button
+																	on:click|preventDefault={() =>
+																		(imageGenerationEnabled = !imageGenerationEnabled)}
+																	type="button"
+																	class="flex items-center flex items-center px-[12px] py-[8px] shadow-custom3 border border-[#E5EBF3] bg-[#FBFCFC] rounded-full hover:bg-[#CCDDFC] transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden dark:hover:bg-gray-800 {imageGenerationEnabled
+																		? 'bg-gradient-bg-2 sm:bg-[#CCDDFC] dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
+																		: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
+																>
+																	<Photo className="size-4" strokeWidth="1.75" />
+																	<span
+																		class="whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
+																		>{$i18n.t('Image')}</span
+																	>
+																</button>
+															</Tooltip>
+														{/if}
+
+														{#if showCodeInterpreterButton}
+															<Tooltip
+																content={$i18n.t('Execute code for analysis')}
+																placement="top"
 															>
-														</button>
-													</Tooltip>
-												{/if}
+																<button
+																	on:click|preventDefault={() =>
+																		(codeInterpreterEnabled = !codeInterpreterEnabled)}
+																	type="button"
+																	class="flex items-center flex items-center px-[12px] py-[8px] shadow-custom3 border border-[#E5EBF3] bg-[#FBFCFC] rounded-full hover:bg-[#CCDDFC] dark:hover:bg-gray-800 {codeInterpreterEnabled
+																		? 'bg-gradient-bg-2 sm:bg-[#CCDDFC] dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
+																		: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
+																>
+																	<CommandLine className="size-4" strokeWidth="1.75" />
+																	<span
+																		class="whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
+																		>{$i18n.t('Code Interpreter')}</span
+																	>
+																</button>
+															</Tooltip>
+														{/if}
 
-												{#if showImageGenerationButton}
-													<Tooltip content={$i18n.t('Generate an image')} placement="top">
-														<button
-															on:click|preventDefault={() =>
-																(imageGenerationEnabled = !imageGenerationEnabled)}
-															type="button"
-															class="flex items-center px-[12px] gap-[4px] py-[8px] shadow-custom3 border border-[#E5EBF3] bg-[#FBFCFC] text-typography-titles text-[14px] leading-[22px] rounded-full rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-[#CCDDFC] dark:hover:bg-gray-800 {imageGenerationEnabled
-																? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
-																: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
-														>
-															<Photo className="size-4" strokeWidth="1.75" />
-															<span
-																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
-																>{$i18n.t('Image')}</span
-															>
-														</button>
-													</Tooltip>
+														{#if showFileUploadButton}
+															<Tooltip content={$i18n.t('Upload File')} placement="top">
+																<button
+																	on:click={() => {
+																		attachFileEnabled = !attachFileEnabled;
+																		showGovKnoWebSearchToggle = false;
+																		filesInputElement.click();
+																		govBtnEnable=false;
+																		webSearchEnabled=false;
+																		govBtnDisable= !govBtnDisable;
+                                                                        webSearchDisable = !webSearchDisable;
+																	}}
+																	type="button"
+																	disabled={attachFileDisable}
+																	class=" flex items-center flex px-[12px] py-[8px] shadow-custom3 border border-[#E5EBF3] rounded-full hover:bg-[#CCDDFC] transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden dark:hover:bg-gray-800 {attachFileEnabled
+																		? 'bg-[#CCDDFC] dark:text-sky-300  dark:bg-sky-200/5'
+																		: 'text-gray-600 dark:text-gray-300 '} { attachFileDisable ? 'bg-[#D5DBE6] disabled:cursor-not-allowed':'bg-transparent'}"
+																>
+																	<Attach />
+																	<span
+																		class="font-heading font-medium text-[14px] leading-[22px] text-[#36383b] text-left whitespace-nowrap"
+																	>
+																		Attach files
+																	</span>
+																</button>
+															</Tooltip>
+														{/if}
+													</div>-->
 												{/if}
-
-												{#if showCodeInterpreterButton}
-													<Tooltip content={$i18n.t('Execute code for analysis')} placement="top">
-														<button
-															on:click|preventDefault={() =>
-																(codeInterpreterEnabled = !codeInterpreterEnabled)}
-															type="button"
-															class="flex items-center px-[12px] gap-[4px] py-[8px] rounded-full shadow-custom3 border border-[#E5EBF3] bg-[#FBFCFC] text-typography-titles text-[14px] leading-[22px] transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-[#CCDDFC] dark:hover:bg-gray-800 {codeInterpreterEnabled
-																? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
-																: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
-														>
-															<CommandLine className="size-4" strokeWidth="1.75" />
-															<span
-																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
-																>{$i18n.t('Code Interpreter')}</span
-															>
-														</button>
-													</Tooltip>
-												{/if}
-
-												{#if showFileUploadButton}
-													<Tooltip content={$i18n.t('Upload File')} placement="top">
-														<button
-															on:click={() => filesInputElement.click()}
-															type="button"
-															class="flex items-center px-[12px] gap-[4px] py-[8px] shadow-custom3 border border-[#E5EBF3] bg-[#FBFCFC] text-typography-titles text-[14px] leading-[22px] rounded-full rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-[#CCDDFC] dark:hover:bg-gray-800 {webSearchEnabled ||
-															($settings?.webSearch ?? false) === 'always'
-																? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
-																: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
-														>
-															<Attach/>
-															<span
-															class="font-heading font-medium text-[14px] leading-[22px] text-[#36383b] text-left whitespace-nowrap"
-														>
-															Attach files
-														</span>
-														</button>
-													</Tooltip>
-												{/if}
-
 											</div>
 											<div class="flex gap-[12px] items-center">
 												{#if false}
@@ -1506,55 +1904,50 @@
 														{/if}
 													</div>
 												{/if}
-
-
 											</div>
 											<div class="flex gap-[12px] items-center">
 												{#if false}
-<div class="model-box relative inline-block">
-  <!-- Dropdown Button -->
-  <button
-    type="button"
-    on:click={() => isOpen = !isOpen}
-    class="inline-flex gap-2 text-[14px] leading-[22px] font-medium font-NotoKufi-Regular justify-between items-center px-2 py-1 border border-gray-1300 bg-gray-1150 rounded-[40px]"
-  >
-    <svelte:component this={selected.icon} class="w-6 h-6" />
-    {selected.label}
-   <ArrowDown strokeWidth="2" className="size-[1.1rem]" />
+													<div class="model-box relative inline-block">
+														<!-- Dropdown Button -->
+														<button
+															type="button"
+															on:click={() => (isOpen = !isOpen)}
+															class="inline-flex gap-2 text-[14px] leading-[22px] font-medium font-NotoKufi-Regular justify-between items-center px-2 py-1 border border-gray-1300 bg-gray-1150 rounded-[40px]"
+														>
+															<svelte:component this={selected.icon} class="w-6 h-6" />
+															{selected.label}
+															<ArrowDown strokeWidth="2" className="size-[1.1rem]" />
+														</button>
 
-  </button>
-
-  <!-- Dropdown Menu -->
-  {#if isOpen}
-    <div
-      class="absolute z-10 bottom-[40px] w-[211px] bg-white border border-gray-200 rounded-md shadow-lg"
-    >
-      {#each Modeloptions as option}
-        <div
-          on:click={() => selectOption(option)}
-          class="flex px-[14px] py-[15px]  justify-between items-center text-gray-1200 font-medium cursor-pointer leading-[22px] font-NotoKufi-Regular"
-        >
-		<div class="flex gap-2 items-center">
-		<svelte:component this={option.icon} class="w-6 h-6" />
-          {option.label}
-		  </div>
-		   {#if option.label==selected.label}
-		  <CheckNew strokeWidth="2" className="size-[1.1rem]" />
-		  {/if}
-        </div>
-      {/each}
-    </div>
-  {/if}
-</div>
-
-{/if}
-
-</div>
+														<!-- Dropdown Menu -->
+														{#if isOpen}
+															<div
+																class="absolute z-10 bottom-[40px] w-[211px] bg-white border border-gray-200 rounded-md shadow-lg"
+															>
+																{#each Modeloptions as option}
+																	<div
+																		on:click={() => selectOption(option)}
+																		class="flex px-[14px] py-[15px] justify-between items-center text-gray-1200 font-medium cursor-pointer leading-[22px] font-NotoKufi-Regular"
+																	>
+																		<div class="flex gap-2 items-center">
+																			<svelte:component this={option.icon} class="w-6 h-6" />
+																			{option.label}
+																		</div>
+																		{#if option.label == selected.label}
+																			<CheckNew strokeWidth="2" className="size-[1.1rem]" />
+																		{/if}
+																	</div>
+																{/each}
+															</div>
+														{/if}
+													</div>
+												{/if}
+											</div>
 										{/if}
 									</div>
 
 									<div class="self-end flex space-x-1 mr-1 shrink-0">
-										{#if (!history?.currentId || history.messages[history.currentId]?.done == true) && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.stt ?? true))}
+										{#if false && (!history?.currentId || history.messages[history.currentId]?.done == true) && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.stt ?? true))}
 											<!-- {$i18n.t('Record voice')} -->
 											<Tooltip content={$i18n.t('Dictate')}>
 												<button
@@ -1628,7 +2021,7 @@
 													</button>
 												</Tooltip>
 											</div>
-										{:else if prompt === '' && files.length === 0 && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.call ?? true))}
+										{:else if false && prompt === '' && files.length === 0 && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.call ?? true))}
 											<div class=" flex items-center">
 												<!-- {$i18n.t('Call')} -->
 												<Tooltip content={$i18n.t('Voice mode')}>
@@ -1721,14 +2114,6 @@
 									</div>
 								</div>
 							</div>
-
-							{#if $config?.license_metadata?.input_footer}
-								<div class=" text-xs text-gray-500 text-center line-clamp-1 marked">
-									{@html DOMPurify.sanitize(marked($config?.license_metadata?.input_footer))}
-								</div>
-							{:else}
-								<div class="mb-1" />
-							{/if}
 						</form>
 					{/if}
 				</div>
