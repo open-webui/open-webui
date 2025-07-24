@@ -65,15 +65,19 @@ steps:
   displayName: 'Push Docker Image to ACR'
 
 - script: |
-    echo "Updating image tag in sandbox.yaml to $(Build.BuildId)"
-    cd gitops/helm-charts/govgpt
-    ls
-    yq e '.image.tag = "$(Build.BuildId)"' -i sandbox.yaml
-    git config user.name "Azure Pipeline"
-    git config user.email "rohit.kamle@dge.gov.ae"
-    git add sandbox.yaml
-    git commit -m "chore: bump govgpt tag to $(Build.BuildId)"
-    git push origin HEAD:main
-  displayName: 'Update Helm image tag in GitOps repo'
-  env:
-    SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+    echo "Build ID: $(Build.BuildId)"
+  displayName: 'Print Build ID'  
+
+# - script: |
+#     echo "Updating image tag in sandbox.yaml to $(Build.BuildId)"
+#     cd gitops/helm-charts/govgpt
+#     ls
+#     yq e '.image.tag = "$(Build.BuildId)"' -i sandbox.yaml
+#     git config user.name "Azure Pipeline"
+#     git config user.email "rohit.kamle@dge.gov.ae"
+#     git add sandbox.yaml
+#     git commit -m "chore: bump govgpt tag to $(Build.BuildId)"
+#     git push origin HEAD:main
+#   displayName: 'Update Helm image tag in GitOps repo'
+#   env:
+#     SYSTEM_ACCESSTOKEN: $(System.AccessToken)
