@@ -1,152 +1,51 @@
 <!doctype html>
 <html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/png" href="/static/favicon.png" />
-		<link rel="icon" type="image/png" href="/static/favicon-96x96.png" sizes="96x96" />
-		<link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
-		<link rel="shortcut icon" href="/static/favicon.ico" />
-		<link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png" />
-		<meta name="apple-mobile-web-app-title" content="Open WebUI" />
 
-		<link rel="manifest" href="/manifest.json" crossorigin="use-credentials" />
-		<link rel="preload" as="image" href="/splash.png" />
-		<link rel="preload" as="image" href="/splash-dark.png" />
-		<meta
-			name="viewport"
-			content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"
-		/>
-		<meta name="theme-color" content="#171717" />
-		<meta name="robots" content="noindex,nofollow" />
-		<meta name="description" content="Open WebUI" />
-		<link
-			rel="search"
-			type="application/opensearchdescription+xml"
-			title="Open WebUI"
-			href="/opensearch.xml"
-		/>
-		<script src="/static/loader.js" defer></script>
-		<link rel="stylesheet" href="/static/custom.css" />
-		<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+<head>
+	<meta charset="utf-8" />
+	<link rel="icon" type="image/png" href="/static/favicon.png" />
+	<link rel="icon" type="image/png" href="/static/favicon-96x96.png" sizes="96x96" />
+	<link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+	<link rel="shortcut icon" href="/static/favicon.ico" />
+	<link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png" />
+	<meta name="apple-mobile-web-app-title" content="Open WebUI" />
 
-		<script>
-			function resizeIframe(obj) {
-				obj.style.height = obj.contentWindow.document.documentElement.scrollHeight + 'px';
-			}
-		</script>
+	<link rel="manifest" href="/manifest.json" crossorigin="use-credentials" />
+	<link rel="preload" as="image" href="/AI.png" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+	<meta name="theme-color" content="#021224" />
+	<meta name="robots" content="noindex,nofollow" />
+	<meta name="description" content="Open WebUI" />
+	<link rel="search" type="application/opensearchdescription+xml" title="Open WebUI" href="/opensearch.xml" />
+	<script src="/static/loader.js" defer></script>
+	<link rel="stylesheet" href="/static/custom.css" />
+	<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link
+		href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap"
+		rel="stylesheet">
 
-		<script>
-			(() => {
-				const metaThemeColorTag = document.querySelector('meta[name="theme-color"]');
-				const prefersDarkTheme = window.matchMedia('(prefers-color-scheme: dark)').matches;
+	<title>GovGPT</title>
+	%sveltekit.head%
+</head>
 
-				if (!localStorage?.theme) localStorage.theme = 'system';
-
-				if (localStorage.theme === 'system') {
-					document.documentElement.classList.add(prefersDarkTheme ? 'dark' : 'light');
-					metaThemeColorTag.setAttribute('content', prefersDarkTheme ? '#171717' : '#ffffff');
-				} else if (localStorage.theme === 'oled-dark') {
-					document.documentElement.style.setProperty('--color-gray-800', '#101010');
-					document.documentElement.style.setProperty('--color-gray-850', '#050505');
-					document.documentElement.style.setProperty('--color-gray-900', '#000000');
-					document.documentElement.style.setProperty('--color-gray-950', '#000000');
-					document.documentElement.classList.add('dark');
-					metaThemeColorTag.setAttribute('content', '#000000');
-				} else if (localStorage.theme === 'light') {
-					document.documentElement.classList.add('light');
-					metaThemeColorTag.setAttribute('content', '#ffffff');
-				} else if (localStorage.theme === 'her') {
-					document.documentElement.classList.add('dark', 'her');
-					metaThemeColorTag.setAttribute('content', '#983724');
-				} else {
-					document.documentElement.classList.add('dark');
-					metaThemeColorTag.setAttribute('content', '#171717');
-				}
-
-				window.matchMedia('(prefers-color-scheme: dark)').addListener((e) => {
-					if (localStorage.theme === 'system') {
-						document.documentElement.classList.toggle('dark', e.matches);
-						document.documentElement.classList.toggle('light', !e.matches);
-						metaThemeColorTag.setAttribute('content', e.matches ? '#171717' : '#ffffff');
-					}
-				});
-
-				function setSplashImage() {
-					const logo = document.getElementById('logo');
-					if (!logo) return;
-
-					const prefersDark = document.documentElement.classList.contains('dark');
-					const splashSrc = prefersDark ? '/splash-dark.png' : '/splash.png';
-
-					// Initially hide logo
-					logo.style.opacity = '0';
-					logo.style.transition = 'opacity 0.4s ease';
-
-					const img = new Image();
-					img.src = splashSrc;
-					img.onload = () => {
-						logo.src = splashSrc;
-						logo.style.filter = '';
-						logo.style.opacity = '1';
-					};
-					img.onerror = () => {
-						logo.src = splashSrc;
-						logo.style.filter = prefersDark ? 'invert(1)' : '';
-						logo.style.opacity = '1';
-					};
-				}
-
-				window.onload = setSplashImage;
-			})();
-		</script>
-
-		<title>GovGPT</title>
-		%sveltekit.head%
-	</head>
-
-	<body data-sveltekit-preload-data="hover">
-		<div id="app" style="opacity: 1; transition: opacity 0.5s ease">%sveltekit.body%</div>
-
-		<div id="splash-screen">
-			<img
-				id="logo"
-				src="/splash.png"
-				style="
-					position: absolute;
-					width: 80%;
-					max-width: 312px;
-					top: 50%;
-					left: 50%;
-					transform: translate(-50%, -50%);
-				"
-			/>
-
-			<div
-				style="
-					position: absolute;
-					top: 33%;
-					left: 50%;
-					width: 24rem;
-					transform: translateX(-50%);
-					display: flex;
-					flex-direction: column;
-					align-items: center;
-				"
-			>
-				<img
-					id="logo-her"
-					style="width: auto; height: 13rem"
-					src="/splash.png"
-					class="animate-pulse-fast"
-				/>
-
-				<div style="position: relative; width: 24rem; margin-top: 0.5rem">
-					<div id="progress-background"></div>
-					<div id="progress-bar" class="bg-white"></div>
-				</div>
+<body data-sveltekit-preload-data="hover">
+	<div id="app" style="opacity: 1; transition: opacity 0.5s ease">%sveltekit.body%</div>
+	<div id="splash-screen">
+		<div class="splash-content">
+			<div class="logo-container">
+				<img src="/splash.svg" alt="GovGPT Logo" class="logo-image" />
+			</div>
+			<div class="title-container">
+				<h1 class="govgpt-title">GovGPT</h1>
+			</div>
+			<div class="tagline-container">
+				<p class="tagline">Amplifying Government Potential</p>
 			</div>
 		</div>
-	</body>
+	</div>
+</body>
+
 </html>
 
 <style type="text/css" nonce="">
@@ -163,91 +62,99 @@
 		height: 100%;
 		opacity: 1;
 		transition: opacity 0.5s ease;
-		background: linear-gradient(
-				288deg,
-				rgba(255, 255, 255, 0.2) 84.56%,
-				rgba(255, 255, 255, 0.11) 109.37%
-			),
-			radial-gradient(
-				82.69% 65.48% at 72.6% 34.85%,
-				rgba(255, 109, 193, 0.2) 0%,
-				rgba(255, 109, 193, 0) 100%
-			),
-			radial-gradient(
-				74.08% 56.97% at 50% 64.75%,
-				rgba(0, 229, 255, 0.17) 0%,
-				rgba(0, 229, 255, 0) 100%
-			),
-			var(--neutrals-white, #fff);
-		background: radial-gradient(
-				93.48% 68.59% at 40.87% 70.12%,
-				rgba(204, 221, 252, 0.04) 37.67%,
-				rgba(204, 221, 252, 0.4) 100%
-			),
-			radial-gradient(
-				70.94% 58.43% at 27.53% 86.82%,
-				rgba(204, 221, 252, 0.4) 0%,
-				rgba(204, 221, 252, 0) 100%
-			),
-			linear-gradient(0deg, rgba(236, 238, 241, 0.2) 0%, rgba(236, 238, 241, 0.2) 100%),
-			var(--Background-background, #fbfcfc);
-		background-color: #eceef1;
+		background: 
+			radial-gradient(circle at 22.275px 1378.6px, rgba(34, 95, 168, 0.3) 0%, rgba(18, 57, 102, 0.65) 50%, rgba(10, 37, 69, 0.825) 75%, rgba(2, 18, 36, 1) 100%),
+			radial-gradient(circle at 1200px -161.57px, rgba(34, 95, 168, 0.3) 0%, rgba(18, 57, 102, 0.65) 50%, rgba(10, 37, 69, 0.825) 75%, rgba(2, 18, 36, 1) 100%),
+			linear-gradient(126.888deg, rgb(2, 18, 36) 0%, rgb(1, 19, 40) 53.846%, rgb(2, 18, 36) 100%);		
 	}
 
-	html.her #splash-screen {
-		background: #983724;
+	#splash-screen.login {
+		background: url('/background.png') bottom / cover no-repeat, radial-gradient(93.48% 68.59% at 40.87% 70.12%, rgba(7, 45, 90, 0.03) 37.67%, rgba(7, 45, 90, 0.25) 100%), radial-gradient(70.94% 58.43% at 27.53% 86.82%, rgba(7, 45, 90, 0.20) 0%, rgba(7, 45, 90, 0.00) 100%), linear-gradient(0deg, rgba(3, 25, 51, 0.20) 0%, rgba(3, 25, 51, 0.20) 100%), #010E1D;
 	}
 
-	#logo-her {
-		display: none;
-	}
 
-	#progress-background,
-	#progress-bar {
-		display: none;
-		position: absolute;
-		height: 0.75rem;
-		border-radius: 9999px;
-	}
-
-	#progress-background {
+	.splash-content {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		height: 100%;
 		width: 100%;
-		background-color: #fafafa9a;
+		gap: 20px;
+		padding: 0 16px;
+		max-width: 360px;
+		margin: 0 auto;
+		text-align: center;
 	}
 
-	#progress-bar {
-		width: 0%;
-		background-color: #fff;
+	.logo-container {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 250px;
+		height: 250px;
 	}
 
-	html.her #logo {
-		display: none;
+	.logo-image {
+		width: 100%;
+		height: 100%;
+	
+		object-fit: contain;
+		transform: rotate(180deg) scaleY(-1);
 	}
 
-	html.her #logo-her {
-		display: block;
-		filter: invert(1);
+	.title-container {
+		text-align: center;
+		margin-top: -80px;
 	}
 
-	html.her #progress-background,
-	html.her #progress-bar {
-		display: block;
+	.govgpt-title {
+		font-family: 'Inter', sans-serif;
+		font-weight: 500;
+		font-size: 50px;
+		line-height: 1.1;
+		letter-spacing: -0.5px;
+		background: linear-gradient(90deg, #9db7fb 0%, #4174f8 100%);
+		background-clip: text;
+		-webkit-background-clip: text;
+		-webkit-text-fill-color: transparent;
+		margin: 0;
+		white-space: nowrap;
 	}
 
-	@media (max-width: 24rem) {
-		html.her #progress-background,
-		html.her #progress-bar {
-			display: none;
+	.tagline-container {
+		text-align: center;
+	}
+
+	.tagline {
+		font-family: 'Inter', sans-serif;
+		font-weight: 400;
+		font-size: 16px;
+		line-height: 37px;
+		color: #e0ebf6;
+		margin: 0;
+	}
+
+	/* Responsive styles */
+	@media (max-width: 768px) {
+		.govgpt-title {
+			font-size: 40px;
+		}
+		
+		.tagline {
+			font-size: 14px;
+			line-height: 32px;
 		}
 	}
 
-	@keyframes pulse {
-		50% {
-			opacity: 0.65;
+	@media (max-width: 480px) {
+		.govgpt-title {
+			font-size: 32px;
 		}
-	}
-
-	.animate-pulse-fast {
-		animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+		
+		.tagline {
+			font-size: 13px;
+			line-height: 28px;
+		}
 	}
 </style>

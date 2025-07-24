@@ -73,7 +73,7 @@
 
 <nav
 	class=" flex items-center justify-between px-4 py-0 h-[56px] absolute z-30  {$mobile
-		? ' w-full fixed dark:bg-gray-900 dark:border-gray-800 bg-surface dark:bg-gray-900'
+		? ' w-full fixed dark:bg-gray-900 dark:border-gray-800'
 		: 'bg-transparent'}"
 >
 	{#if $mobile}

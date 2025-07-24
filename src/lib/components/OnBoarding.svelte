@@ -23,11 +23,11 @@
 
 				darkImage.onload = () => {
 					logo.src = '/static/favicon-dark.png';
-					logo.style.filter = ''; // Ensure no inversion is applied if splash-dark.png exists
+					logo.style.filter = ''; // Ensure no inversion is applied if favicon-dark.png exists
 				};
 
 				darkImage.onerror = () => {
-					logo.style.filter = 'invert(1)'; // Invert image if splash-dark.png is missing
+					logo.style.filter = 'invert(1)'; // Invert image if favicon-dark.png is missing
 				};
 			}
 		}
