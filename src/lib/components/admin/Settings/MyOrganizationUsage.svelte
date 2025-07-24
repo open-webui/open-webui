@@ -73,6 +73,11 @@
 		} catch (error) {
 			console.error('Failed to load usage data:', error);
 			toast.error($i18n.t('Failed to load usage statistics'));
+			
+			// Show helpful message if no organization mapping
+			if (error?.detail?.includes('No organization mapping')) {
+				toast.error($i18n.t('No organization assigned. Please contact your administrator.'));
+			}
 		} finally {
 			loading = false;
 		}
