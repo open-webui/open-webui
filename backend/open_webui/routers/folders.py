@@ -4,6 +4,7 @@ import shutil
 import uuid
 from pathlib import Path
 from typing import Optional
+
 from pydantic import BaseModel
 import mimetypes
 
@@ -13,6 +14,7 @@ from open_webui.models.folders import (
     FolderModel,
     Folders,
 )
+from open_webui.models.groups import Groups
 from open_webui.models.chats import Chats
 
 from open_webui.config import UPLOAD_DIR
@@ -42,8 +44,24 @@ router = APIRouter()
 
 @router.get("/", response_model=list[FolderModel])
 async def get_folders(user=Depends(get_verified_user)):
-    folders = Folders.get_folders_by_user_id(user.id)
+    # folders = Folders.get_folders_by_user_id(user.id)
+    # return [
+    #     {
+    #         **folder.model_dump(),
+    #         "items": {
+    #             "chats": [
+    #                 {"title": chat.title, "id": chat.id, "updated_at": chat.updated_at}
+    #                 for chat in Chats.get_chats_by_folder_id_and_user_id(
+    #                     folder.id, user.id
+    #                 )
+    #             ]
+    #         },
+    #     }
+    #     for folder in folders
+    # ]
 
+    folders = Folders.get_folders_by_access(user.id)
+    print("1 FOLDERS:", folders)
     return [
         {
             **folder.model_dump(),

@@ -3,13 +3,14 @@ import time
 import uuid
 from typing import Optional
 
+from open_webui.models.groups import Groups
 from open_webui.internal.db import Base, get_db
 from open_webui.models.chats import Chats
 
 from open_webui.env import SRC_LOG_LEVELS
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, Text, JSON, Boolean
-from open_webui.utils.access_control import get_permissions
+from open_webui.utils.access_control import get_permissions, has_permission
 
 
 log = logging.getLogger(__name__)
@@ -30,6 +31,7 @@ class Folder(Base):
     items = Column(JSON, nullable=True)
     meta = Column(JSON, nullable=True)
     data = Column(JSON, nullable=True)
+    access_control = Column(JSON, nullable=True)
     is_expanded = Column(Boolean, default=False)
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)
@@ -43,6 +45,7 @@ class FolderModel(BaseModel):
     items: Optional[dict] = None
     meta: Optional[dict] = None
     data: Optional[dict] = None
+    access_control: Optional[dict] = None
     is_expanded: bool = False
     created_at: int
     updated_at: int
@@ -72,6 +75,10 @@ class FolderTable:
                     "id": id,
                     "user_id": user_id,
                     **(form_data.model_dump(exclude_unset=True) or {}),
+                    "access_control": {
+                        "read": {"user_ids": [user_id], "group_ids": []},
+                        "write": {"user_ids": [user_id], "group_ids": []},
+                    },
                     "parent_id": parent_id,
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
@@ -95,7 +102,7 @@ class FolderTable:
     ) -> Optional[FolderModel]:
         try:
             with get_db() as db:
-                folder = db.query(Folder).filter_by(id=id, user_id=user_id).first()
+                folder = db.query(Folder).filter_by(id=id).first()
 
                 if not folder:
                     return None
@@ -119,7 +126,7 @@ class FolderTable:
                         get_children(child)
                         folders.append(child)
 
-                folder = db.query(Folder).filter_by(id=id, user_id=user_id).first()
+                folder = db.query(Folder).filter_by(id=id).first()
                 if not folder:
                     return None
 
@@ -129,10 +136,15 @@ class FolderTable:
             return None
 
     def get_folders_by_user_id(self, user_id: str) -> list[FolderModel]:
+        groups = Groups.get_groups_by_member_id(user_id)
+        group_ids = [g.id for g in groups]
+        print("👥 GROUP IDS:", group_ids)
+
         with get_db() as db:
             return [
                 FolderModel.model_validate(folder)
-                for folder in db.query(Folder).filter_by(user_id=user_id).all()
+                # for folder in db.query(Folder).filter_by(user_id=user_id).all()
+                for folder in db.query(Folder).all()
             ]
 
     def get_folder_by_parent_id_and_user_id_and_name(
@@ -163,7 +175,7 @@ class FolderTable:
             return [
                 FolderModel.model_validate(folder)
                 for folder in db.query(Folder)
-                .filter_by(parent_id=parent_id, user_id=user_id)
+                .filter_by(parent_id=parent_id)
                 .all()
             ]
 
@@ -175,7 +187,7 @@ class FolderTable:
     ) -> Optional[FolderModel]:
         try:
             with get_db() as db:
-                folder = db.query(Folder).filter_by(id=id, user_id=user_id).first()
+                folder = db.query(Folder).filter_by(id=id).first()
 
                 if not folder:
                     return None
@@ -195,7 +207,7 @@ class FolderTable:
     ) -> Optional[FolderModel]:
         try:
             with get_db() as db:
-                folder = db.query(Folder).filter_by(id=id, user_id=user_id).first()
+                folder = db.query(Folder).filter_by(id=id).first()
 
                 if not folder:
                     return None
@@ -207,7 +219,6 @@ class FolderTable:
                     .filter_by(
                         name=form_data.get("name"),
                         parent_id=folder.parent_id,
-                        user_id=user_id,
                     )
                     .first()
                 )
@@ -236,7 +247,7 @@ class FolderTable:
     ) -> Optional[FolderModel]:
         try:
             with get_db() as db:
-                folder = db.query(Folder).filter_by(id=id, user_id=user_id).first()
+                folder = db.query(Folder).filter_by(id=id).first()
 
                 if not folder:
                     return None
@@ -256,7 +267,7 @@ class FolderTable:
     ) -> bool:
         try:
             with get_db() as db:
-                folder = db.query(Folder).filter_by(id=id, user_id=user_id).first()
+                folder = db.query(Folder).filter_by(id=id).first()
                 if not folder:
                     return False
 
@@ -266,9 +277,7 @@ class FolderTable:
 
                 # Delete all children folders
                 def delete_children(folder):
-                    folder_children = self.get_folders_by_parent_id_and_user_id(
-                        folder.id, user_id
-                    )
+                    folder_children = db.query(Folder).filter_by(parent_id=folder.id).all()
                     for folder_child in folder_children:
                         if delete_chats:
                             Chats.delete_chats_by_user_id_and_folder_id(
@@ -288,6 +297,41 @@ class FolderTable:
         except Exception as e:
             log.error(f"delete_folder: {e}")
             return False
+        
+    def get_folders_by_access(self, user_id: str) -> list[FolderModel]:
+        try:
+            groups = Groups.get_groups_by_member_id(user_id)
+            group_ids = [g.id for g in groups]
+            if not group_ids:
+                group_ids = []
+            print("👥 GROUP IDS:", group_ids)
 
+            with get_db() as db:
+                folders = db.query(Folder).all()
+                result = []
+
+                for folder in folders:
+                    access = folder.access_control
+                    if isinstance(access, str):
+                        try:
+                            access = JSON.loads(access)
+                        except Exception:
+                            continue
+
+                    read_users = access.get("read", {}).get("user_ids", [])
+                    read_groups = access.get("read", {}).get("group_ids", [])
+
+                    # Cek jika user_id cocok ATAU salah satu grup user cocok
+                    if user_id in read_users or any(group_id in read_groups for group_id in group_ids):
+                        result.append(FolderModel.model_validate(folder))
+
+                return result
+
+        except Exception as e:
+            log.error(f"get_folders_by_access error: {e}")
+            return []
+    
+        
+    
 
 Folders = FolderTable()
