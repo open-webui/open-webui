@@ -2092,7 +2092,7 @@
 							{initNewChat}
 						/>
 
-						<div class="m-auto h-full max-w-[1440px] w-full flex-1 flex flex-col flex-auto z-10 @container">
+						<div class="m-auto h-full max-w-[1440px] md:px-4 lg:px-8 w-full flex-1 flex flex-col flex-auto z-10 @container">
 							{#if false && $settings?.landingPageMode === 'chat' || createMessagesList(history, history.currentId).length > 0}
 								<div
 									class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden"

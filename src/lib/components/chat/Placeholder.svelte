@@ -118,7 +118,7 @@
 	onMount(() => {});
 </script>
 
-<div class="max-w-[800px] pb-0 	md:pb-4 w-full mx-auto text-center">
+<div class="max-w-[1440px] pb-0 	md:pb-4 w-full mx-auto text-center">
 	{#if $temporaryChatEnabled}
 		<Tooltip
 			content={$i18n.t("This chat won't appear in history and your messages will not be saved.")}

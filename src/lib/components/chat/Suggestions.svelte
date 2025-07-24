@@ -83,15 +83,15 @@
 	{/if}
 </div> -->
 
-<div class="w-full flex items-center justify-center">
-	{#if filteredPrompts.length > 0}
+<div class="w-full max-w-[800px] m-auto flex items-center justify-center">
+	{#if suggestionPrompts.length > 0}
 	<div
 	class="gap-[8px] mt-4 w-full {$mobile
 		? 'flex overflow-x-auto scrollbar-none items-center'
 		: 'grid justify-center'}"
 	style={!$mobile ? 'grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));' : ''}
 >
-			{#each filteredPrompts as prompt, idx (prompt.id || prompt.content)}
+			{#each suggestionPrompts as prompt, idx (prompt.id || prompt.content)}
 				<button
 					class="flex {$mobile
 						? 'items-center gap-[4px] flex-shrink-0'
