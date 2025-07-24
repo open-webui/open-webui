@@ -837,6 +837,13 @@ async def generate_chat_completion(
             "email": user.email,
             "role": user.role,
         }
+    
+    # Add OpenRouter user tracking parameter if this is an OpenRouter call
+    if "openrouter.ai" in url:
+        from open_webui.utils.openrouter_org import openrouter_usage_service
+        openrouter_user_id = openrouter_usage_service.get_user_id_for_request(user.id)
+        if openrouter_user_id:
+            payload["user"] = openrouter_user_id
 
     url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
     key = request.app.state.config.OPENAI_API_KEYS[idx]

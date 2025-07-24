@@ -85,6 +85,7 @@ from open_webui.routers import (
     tools,
     users,
     utils,
+    organization_usage,
 )
 
 from open_webui.routers.retrieval import (
@@ -538,6 +539,13 @@ async def lifespan(app: FastAPI):
 
     asyncio.create_task(periodic_usage_pool_cleanup())
 
+    # Initialize organization usage background sync
+    try:
+        from open_webui.utils.background_sync import init_background_sync
+        asyncio.create_task(init_background_sync())
+    except Exception as e:
+        log.error(f"Failed to initialize organization usage background sync: {e}")
+
     if app.state.config.ENABLE_BASE_MODELS_CACHE:
         await get_all_models(
             Request(
@@ -560,6 +568,13 @@ async def lifespan(app: FastAPI):
         )
 
     yield
+
+    # Shutdown organization usage background sync
+    try:
+        from open_webui.utils.background_sync import shutdown_background_sync
+        await shutdown_background_sync()
+    except Exception as e:
+        log.error(f"Failed to shutdown organization usage background sync: {e}")
 
     if hasattr(app.state, "redis_task_command_listener"):
         app.state.redis_task_command_listener.cancel()
@@ -1218,6 +1233,7 @@ app.include_router(
     evaluations.router, prefix="/api/v1/evaluations", tags=["evaluations"]
 )
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
+app.include_router(organization_usage.router, prefix="/api/v1/organization", tags=["organization"])
 
 
 try:
