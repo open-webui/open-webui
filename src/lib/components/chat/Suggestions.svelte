@@ -106,7 +106,7 @@
 						<MaterialIcon name="lightbulb" class="w-[24px] h-[24px]" />
 					{/if}
 					<div
-						class="w-full {$mobile
+						class="w-full text-left {$mobile
 							? ' '
 							: ' mt-[12px]'} text-[14px] leading-[22px] whitespace-nowrap"
 					>
