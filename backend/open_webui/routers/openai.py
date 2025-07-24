@@ -841,11 +841,13 @@ async def generate_chat_completion(
     # Handle OpenRouter client-specific API keys and user tracking
     client_context = None
     if "openrouter.ai" in request.app.state.config.OPENAI_API_BASE_URLS[idx]:
+        log.info(f"DEBUG: OpenRouter detected for user {user.id}, model {payload.get('model', 'unknown')}")
         from open_webui.utils.openrouter_client_manager import openrouter_client_manager
         client_context = openrouter_client_manager.get_user_client_context(user.id)
         
         if client_context:
             # Use client-specific API key and add user tracking
+            log.info(f"DEBUG: Client context found - using org {client_context['client_org_id']}")
             key = client_context["api_key"]
             payload["user"] = client_context["openrouter_user_id"]
         else:
@@ -954,8 +956,10 @@ async def generate_chat_completion(
             r.raise_for_status()
             
             # Record real-time usage for OpenRouter client requests
+            log.info(f"DEBUG: Usage recording check - client_context: {bool(client_context)}, response type: {type(response)}, has usage: {'usage' in response if isinstance(response, dict) else False}")
             if client_context and isinstance(response, dict) and "usage" in response:
                 try:
+                    log.info(f"DEBUG: Recording usage for user {user.id}")
                     from open_webui.utils.openrouter_client_manager import openrouter_client_manager
                     usage_data = response["usage"]
                     
@@ -970,9 +974,17 @@ async def generate_chat_completion(
                     elif "total_cost" in usage_data:
                         raw_cost = usage_data["total_cost"]
                     
-                    # Get provider and timing info
-                    provider = response.get("provider", {}).get("name") if "provider" in response else None
-                    generation_time = response.get("generation_time")
+                    log.info(f"DEBUG: Usage data - tokens: {input_tokens + output_tokens}, cost: {raw_cost}")
+                    
+                    # Get provider and timing info with safe access
+                    provider = None
+                    generation_time = None
+                    
+                    if isinstance(response, dict):
+                        provider_info = response.get("provider")
+                        if isinstance(provider_info, dict):
+                            provider = provider_info.get("name")
+                        generation_time = response.get("generation_time")
                     
                     # Record usage asynchronously (don't block response)
                     asyncio.create_task(
@@ -986,8 +998,11 @@ async def generate_chat_completion(
                             generation_time=generation_time
                         )
                     )
+                    log.info(f"DEBUG: Usage recording task created successfully")
                 except Exception as usage_error:
                     log.error(f"Failed to record usage for user {user.id}: {usage_error}")
+            else:
+                log.info(f"DEBUG: Skipping usage recording - conditions not met")
             
             return response
     except Exception as e:
