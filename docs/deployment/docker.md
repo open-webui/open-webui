@@ -186,14 +186,40 @@ Each client instance includes isolated usage tracking:
 - **External User Learning**: System learns user mappings on first API call
 - **Real-time Tracking**: Live usage monitoring with 30-second updates
 
-#### Client Admin Experience
-1. **Initial Setup**: Admin creates account (first user becomes admin)
-2. **API Configuration**: Settings → Connections → Enter OpenRouter API key
-3. **User Management**: Admin creates accounts for 5-20 company employees
-4. **Usage Monitoring**: Settings → Usage tab shows organization usage
+#### Admin User Workflow (Per Client)
+1. **Admin Registration**: First user to register automatically becomes admin
+2. **Signup Auto-Disable**: System disables public signup after first user
+3. **API Key Configuration**: Admin enters OpenRouter key in Settings → Connections
+4. **User Account Creation**: Admin creates employee accounts via Admin → Users panel
+   - Navigate to **Admin** (sidebar) → **Users** tab
+   - **Add User** for each employee (name, email, password, role: "user")
+   - Distribute credentials to 4-19 company employees
+5. **Usage Monitoring**: Admin monitors combined usage in Settings → Usage
 
-#### Service Provider View
-- **20 Separate Instances**: Each client has dedicated Hetzner server
-- **Isolated Databases**: No data sharing between client organizations
-- **Aggregate Monitoring**: OpenRouter dashboard shows all client API key usage
-- **Per-Client Billing**: Individual usage tracking for accurate invoicing
+#### Employee User Experience
+- **Login Access**: Use credentials provided by admin
+- **Standard Permissions**: Regular user role (no admin access)
+- **Individual Tracking**: Each user gets unique external_user from OpenRouter
+- **Shared API Key**: All users share organization's OpenRouter API key
+
+#### Open WebUI User Management
+```
+mAI Instance Structure (per client):
+├── Admin User (1)
+│   ├── Full system control
+│   ├── Manages OpenRouter API key
+│   ├── Creates/manages employee accounts
+│   ├── Monitors usage dashboard
+│   └── Configures instance settings
+└── Regular Users (4-19)
+    ├── Standard chat access
+    ├── Individual usage tracking
+    ├── No admin panel access
+    └── Cannot create/manage users
+```
+
+#### Service Provider Benefits
+- **Minimal Client Management**: Clients manage their own users internally
+- **20 Isolated Instances**: Each client has dedicated server and database
+- **Automated User Tracking**: Each user gets unique external_user automatically
+- **OpenRouter Dashboard**: Aggregate view of all client API key usage

@@ -154,7 +154,7 @@ This document lists all custom mAI features that must be preserved during Open W
 ### 8. **Single-Tenant Usage Tracking System** (Commits: `38977cf7a`, `9860e892f`)
 **Location:** Admin Settings > Usage Tab
 
-**Deployment Model**: Each client has a dedicated mAI instance with isolated usage tracking
+**Deployment Model**: Each client has dedicated mAI instance with isolated usage tracking and multi-user support
 
 **Files to check:**
 - `backend/open_webui/utils/openrouter_client_manager.py` - Core client management and auto-sync
@@ -165,12 +165,14 @@ This document lists all custom mAI features that must be preserved during Open W
 
 **✅ What to verify:**
 - **Single-Tenant Architecture**: Each client instance has isolated database and usage tracking
+- **Multi-User Support**: Single organization supports 5-20 users with individual tracking
 - **API Key Auto-Sync**: When admin enters OpenRouter key in Settings → Connections, it automatically syncs to database
-- **External User Auto-Learning**: System automatically learns OpenRouter external_user on first API call
+- **Per-User External Learning**: Each user gets unique external_user auto-learned on first API call
+- **Shared API Key**: All users in organization share same OpenRouter API key
 - **Real-time Usage Tracking**: Usage appears in Settings → Usage tab with 30-second auto-refresh
 - **Per-Instance Isolation**: No data sharing between client organizations (each on separate Hetzner server)
 - **Database Tables**: All 7 usage tracking tables exist per client instance
-- **Admin Dashboard**: Live metrics, historical trends, and per-user/per-model breakdowns for single organization
+- **Admin Dashboard**: Live metrics, historical trends, and per-user/per-model breakdowns for organization
 
 ## 📋 Post-Update Testing Checklist
 
@@ -223,11 +225,23 @@ This document lists all custom mAI features that must be preserved during Open W
 - [ ] Settings → Usage tab shows organization usage dashboard for single client
 - [ ] API key entered in Settings → Connections auto-syncs to isolated database
 - [ ] Real-time usage updates every 30 seconds per client instance
-- [ ] External user auto-learning works on first API call per client
+- [ ] External user auto-learning works on first API call per user
 - [ ] Historical usage data displays correctly for single organization
 - [ ] Per-user and per-model breakdowns function within client organization
 - [ ] Complete data isolation between client instances (no cross-client data)
-- [ ] Admin can manage 5-20 company users within single instance
+- [ ] Admin can manage 5-20 company users through Admin → Users panel
+
+### User Management System (Open WebUI)
+- [ ] First user registration automatically becomes admin
+- [ ] Public signup auto-disables after first user
+- [ ] Admin panel accessible via sidebar (Admin menu item)
+- [ ] Admin → Users tab shows user management interface
+- [ ] Add User modal allows creation of employee accounts
+- [ ] User roles: admin, user, pending (admin can assign roles)
+- [ ] Admin can create, edit, delete user accounts
+- [ ] Employee users cannot access admin panel or create users
+- [ ] Each user gets individual external_user auto-learning
+- [ ] All users share single organization and API key
 
 ## 🚨 Critical Files Never to Lose
 
