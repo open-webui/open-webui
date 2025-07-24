@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.responses import JSONResponse
 from typing import Optional, List
 from datetime import date, datetime, timedelta
@@ -9,7 +9,7 @@ from open_webui.models.organization_usage import (
     GlobalSettingsModel, ClientOrganizationModel, UserClientMappingModel,
     ClientUsageStatsResponse, ClientBillingResponse
 )
-from open_webui.utils.auth import get_admin_user
+from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.openrouter_client_manager import openrouter_client_manager
 
 router = APIRouter()
@@ -217,6 +217,123 @@ async def deactivate_user_mapping(
 ####################
 # Usage and Billing Endpoints
 ####################
+
+@router.get("/usage/my-organization")
+async def get_my_organization_usage(
+    request: Request,
+    user=Depends(get_verified_user)
+):
+    """Get usage summary for the current user's organization"""
+    try:
+        # First, get the user's organization mapping
+        mapping = UserClientMappingDB.get_mapping_by_user_id(user.id)
+        
+        if not mapping:
+            # Auto-create default organization for testing/demo purposes
+            # In production, this should be done through proper admin setup
+            default_org = None
+            all_orgs = ClientOrganizationDB.get_all_active_clients()
+            
+            # Check if there's a default organization
+            for org in all_orgs:
+                if org.name == "Default Organization" or org.name == "Test Organization":
+                    default_org = org
+                    break
+            
+            # If no default org exists, create one
+            if not default_org:
+                from open_webui.models.organization_usage import ClientOrganizationForm
+                org_form = ClientOrganizationForm(
+                    name="Default Organization",
+                    markup_rate=1.3,
+                    monthly_limit=1000.0,
+                    billing_email="admin@example.com"
+                )
+                default_org = ClientOrganizationDB.create_client(
+                    client_form=org_form,
+                    api_key=request.app.state.config.OPENAI_API_KEYS[0] if hasattr(request.app.state.config, 'OPENAI_API_KEYS') and request.app.state.config.OPENAI_API_KEYS else "sk-default-test-key",
+                    key_hash="default_org_hash"
+                )
+            
+            # Create user mapping to default organization
+            if default_org:
+                from open_webui.models.organization_usage import UserClientMappingForm
+                mapping_form = UserClientMappingForm(
+                    user_id=user.id,
+                    client_org_id=default_org.id,
+                    openrouter_user_id=f"openrouter_{user.id}"
+                )
+                mapping = UserClientMappingDB.create_mapping(mapping_form)
+        
+        if not mapping:
+            # If no mapping exists, return empty stats
+            return {
+                "success": True,
+                "stats": {
+                    "today": {
+                        "tokens": 0,
+                        "cost": 0.0,
+                        "requests": 0,
+                        "last_updated": "No organization assigned"
+                    },
+                    "this_month": {
+                        "tokens": 0,
+                        "cost": 0.0,
+                        "requests": 0,
+                        "days_active": 0
+                    },
+                    "daily_history": [],
+                    "client_org_name": "No Organization"
+                }
+            }
+        
+        # Get the usage stats for the user's organization
+        stats = ClientUsageDB.get_usage_stats_by_client(mapping.client_org_id)
+        return {
+            "success": True, 
+            "stats": stats.model_dump(),
+            "client_id": mapping.client_org_id
+        }
+    
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get organization usage: {str(e)}"
+        )
+
+@router.get("/usage/my-organization/today")
+async def get_my_organization_today_usage(
+    user=Depends(get_verified_user)
+):
+    """Get today's usage for the current user's organization"""
+    try:
+        # First, get the user's organization mapping
+        mapping = UserClientMappingDB.get_mapping_by_user_id(user.id)
+        
+        if not mapping:
+            return {
+                "success": True,
+                "today": {
+                    "tokens": 0,
+                    "cost": 0.0,
+                    "requests": 0,
+                    "last_updated": "No organization assigned"
+                }
+            }
+        
+        # Get today's usage for the organization
+        stats = ClientUsageDB.get_usage_stats_by_client(mapping.client_org_id)
+        return {
+            "success": True,
+            "today": stats.today,
+            "last_updated": stats.today.get('last_updated', 'No data')
+        }
+    
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get today's usage: {str(e)}"
+        )
 
 @router.get("/usage/summary")
 async def get_client_usage_summary(

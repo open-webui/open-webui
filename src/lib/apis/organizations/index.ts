@@ -263,10 +263,12 @@ export const deactivateUserMapping = async (token: string, userId: string) => {
 export const getClientUsageSummary = async (token: string, clientId?: string) => {
 	let error = null;
 
-	const params = new URLSearchParams();
-	if (clientId) params.append('client_id', clientId);
+	// Use the my-organization endpoint for regular users
+	const url = clientId 
+		? `${WEBUI_API_BASE_URL}/client_organizations/usage/summary?client_id=${clientId}`
+		: `${WEBUI_API_BASE_URL}/client_organizations/usage/my-organization`;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/client_organizations/usage/summary?${params}`, {
+	const res = await fetch(url, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -294,7 +296,12 @@ export const getClientUsageSummary = async (token: string, clientId?: string) =>
 export const getTodayUsage = async (token: string, clientId: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/client_organizations/usage/today?client_id=${clientId}`, {
+	// Use the my-organization endpoint for 'current' client ID
+	const url = clientId === 'current'
+		? `${WEBUI_API_BASE_URL}/client_organizations/usage/my-organization/today`
+		: `${WEBUI_API_BASE_URL}/client_organizations/usage/today?client_id=${clientId}`;
+
+	const res = await fetch(url, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
