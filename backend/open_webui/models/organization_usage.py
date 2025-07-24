@@ -9,66 +9,114 @@ from sqlalchemy.orm import relationship
 
 
 ####################
-# Organization Usage DB Schema
+# Option 1: Simplified Database Schema
+# Daily summaries + live counters approach for minimal storage
 ####################
 
 
-class OrganizationSettings(Base):
-    __tablename__ = "organization_settings"
+class GlobalSettings(Base):
+    __tablename__ = "global_settings"
 
     id = Column(String, primary_key=True)
-    openrouter_org_id = Column(String, nullable=True)
-    openrouter_api_key = Column(Text, nullable=True)
-    sync_enabled = Column(Integer, default=1)  # Boolean as integer
-    sync_interval_hours = Column(Integer, default=1)
-    last_sync_at = Column(BigInteger, nullable=True)
+    openrouter_provisioning_key = Column(Text, nullable=True)  # For creating client API keys
+    default_markup_rate = Column(Float, default=1.3)
+    billing_currency = Column(String, default="USD")
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)
 
 
-class OpenRouterUserMapping(Base):
-    __tablename__ = "openrouter_user_mapping"
+class ClientOrganization(Base):
+    __tablename__ = "client_organizations"
 
     id = Column(String, primary_key=True)
-    owui_user_id = Column(String, nullable=False)
-    openrouter_user_id = Column(String, nullable=False)
+    name = Column(String, nullable=False)
+    openrouter_api_key = Column(Text, nullable=False, unique=True)  # Dedicated key per client
+    openrouter_key_hash = Column(String, nullable=True)  # OpenRouter's key identifier
+    markup_rate = Column(Float, default=1.3)
+    monthly_limit = Column(Float, nullable=True)  # Optional spending limit
+    billing_email = Column(String, nullable=True)
     is_active = Column(Integer, default=1)  # Boolean as integer
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)
 
     # Add indexes for performance
     __table_args__ = (
-        Index('idx_owui_user_id', 'owui_user_id'),
-        Index('idx_openrouter_user_id', 'openrouter_user_id'),
+        Index('idx_api_key', 'openrouter_api_key'),
+        Index('idx_active', 'is_active'),
     )
 
 
-class OrganizationUsage(Base):
-    __tablename__ = "organization_usage"
+class UserClientMapping(Base):
+    __tablename__ = "user_client_mapping"
 
     id = Column(String, primary_key=True)
-    user_id = Column(String, nullable=False)  # OWUI user ID
-    openrouter_user_id = Column(String, nullable=False)
-    model_name = Column(String, nullable=False)
-    usage_date = Column(Date, nullable=False)
-    input_tokens = Column(BigInteger, default=0)
-    output_tokens = Column(BigInteger, default=0)
-    total_tokens = Column(BigInteger, default=0)
-    total_cost = Column(Float, default=0.0)
-    request_count = Column(Integer, default=0)
-    
-    # Metadata from OpenRouter
-    provider = Column(String, nullable=True)
-    generation_time = Column(Float, nullable=True)  # Time taken for generation
-    
+    user_id = Column(String, nullable=False)  # Open WebUI user ID
+    client_org_id = Column(String, nullable=False)  # References client_organizations.id
+    openrouter_user_id = Column(String, nullable=False)  # For OpenRouter user parameter
+    is_active = Column(Integer, default=1)  # Boolean as integer
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)
 
     # Add indexes for performance
     __table_args__ = (
-        Index('idx_user_date', 'user_id', 'usage_date'),
-        Index('idx_model_date', 'model_name', 'usage_date'),
-        Index('idx_openrouter_user_date', 'openrouter_user_id', 'usage_date'),
+        Index('idx_user_id', 'user_id'),
+        Index('idx_client_org_id', 'client_org_id'),
+        Index('idx_openrouter_user_id', 'openrouter_user_id'),
+    )
+
+
+class ClientDailyUsage(Base):
+    """
+    Daily usage summaries - 99% storage reduction vs per-request tracking
+    One record per client per day instead of thousands of request records
+    """
+    __tablename__ = "client_daily_usage"
+
+    id = Column(String, primary_key=True)
+    client_org_id = Column(String, nullable=False)  # References client_organizations.id
+    usage_date = Column(Date, nullable=False)  # SQL Date type for daily grouping
+
+    # Daily totals
+    total_tokens = Column(BigInteger, default=0)
+    total_requests = Column(Integer, default=0)
+    raw_cost = Column(Float, default=0.0)  # OpenRouter cost
+    markup_cost = Column(Float, default=0.0)  # Client cost (with markup)
+
+    # Optional: Most used model (if needed for reporting)
+    primary_model = Column(String, nullable=True)
+    unique_users = Column(Integer, default=1)  # Count of unique users that day
+
+    created_at = Column(BigInteger)
+    updated_at = Column(BigInteger)
+
+    # Indexes for performance
+    __table_args__ = (
+        Index('idx_client_date', 'client_org_id', 'usage_date'),
+        Index('idx_usage_date', 'usage_date'),
+    )
+
+
+class ClientLiveCounters(Base):
+    """
+    Live counters for today's usage - reset daily at midnight
+    Provides real-time data without storing individual requests
+    """
+    __tablename__ = "client_live_counters"
+
+    client_org_id = Column(String, primary_key=True)  # References client_organizations.id
+    current_date = Column(Date, nullable=False, default=date.today)
+
+    # Today's running totals
+    today_tokens = Column(BigInteger, default=0)
+    today_requests = Column(Integer, default=0)
+    today_raw_cost = Column(Float, default=0.0)
+    today_markup_cost = Column(Float, default=0.0)
+
+    last_updated = Column(BigInteger, default=lambda: int(time.time()))
+
+    # Index for fast lookups
+    __table_args__ = (
+        Index('idx_client_live_date', 'client_org_id', 'current_date'),
     )
 
 
@@ -77,22 +125,36 @@ class OrganizationUsage(Base):
 ####################
 
 
-class OrganizationSettingsModel(BaseModel):
+class GlobalSettingsModel(BaseModel):
     id: str
-    openrouter_org_id: Optional[str] = None
-    openrouter_api_key: Optional[str] = None
-    sync_enabled: bool = True
-    sync_interval_hours: int = 1
-    last_sync_at: Optional[int] = None
+    openrouter_provisioning_key: Optional[str] = None
+    default_markup_rate: float = 1.3
+    billing_currency: str = "USD"
     created_at: int
     updated_at: int
 
     model_config = ConfigDict(from_attributes=True)
 
 
-class OpenRouterUserMappingModel(BaseModel):
+class ClientOrganizationModel(BaseModel):
     id: str
-    owui_user_id: str
+    name: str
+    openrouter_api_key: str
+    openrouter_key_hash: Optional[str] = None
+    markup_rate: float = 1.3
+    monthly_limit: Optional[float] = None
+    billing_email: Optional[str] = None
+    is_active: bool = True
+    created_at: int
+    updated_at: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class UserClientMappingModel(BaseModel):
+    id: str
+    user_id: str
+    client_org_id: str
     openrouter_user_id: str
     is_active: bool = True
     created_at: int
@@ -101,21 +163,30 @@ class OpenRouterUserMappingModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class OrganizationUsageModel(BaseModel):
+class ClientDailyUsageModel(BaseModel):
     id: str
-    user_id: str
-    openrouter_user_id: str
-    model_name: str
+    client_org_id: str
     usage_date: date
-    input_tokens: int = 0
-    output_tokens: int = 0
     total_tokens: int = 0
-    total_cost: float = 0.0
-    request_count: int = 0
-    provider: Optional[str] = None
-    generation_time: Optional[float] = None
+    total_requests: int = 0
+    raw_cost: float = 0.0
+    markup_cost: float = 0.0
+    primary_model: Optional[str] = None
+    unique_users: int = 1
     created_at: int
     updated_at: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ClientLiveCountersModel(BaseModel):
+    client_org_id: str
+    current_date: date
+    today_tokens: int = 0
+    today_requests: int = 0
+    today_raw_cost: float = 0.0
+    today_markup_cost: float = 0.0
+    last_updated: int
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -125,75 +196,68 @@ class OrganizationUsageModel(BaseModel):
 ####################
 
 
-class OrganizationSettingsForm(BaseModel):
-    openrouter_org_id: Optional[str] = None
-    openrouter_api_key: Optional[str] = None
-    sync_enabled: bool = True
-    sync_interval_hours: int = 1
+class GlobalSettingsForm(BaseModel):
+    openrouter_provisioning_key: Optional[str] = None
+    default_markup_rate: float = 1.3
+    billing_currency: str = "USD"
 
 
-class UserMappingForm(BaseModel):
-    owui_user_id: str
+class ClientOrganizationForm(BaseModel):
+    name: str
+    markup_rate: float = 1.3
+    monthly_limit: Optional[float] = None
+    billing_email: Optional[str] = None
+
+
+class UserClientMappingForm(BaseModel):
+    user_id: str
+    client_org_id: str
     openrouter_user_id: str
 
 
-class UsageStatsResponse(BaseModel):
+class ClientUsageStatsResponse(BaseModel):
+    """Simplified usage stats for Option 1"""
+    today: dict  # Real-time today's usage
+    this_month: dict  # Current month totals
+    daily_history: List[dict]  # Last 30 days
+    client_org_name: str
+
+
+class ClientBillingResponse(BaseModel):
+    client_org_id: str
+    client_name: str
     total_tokens: int
-    total_cost: float
+    raw_cost: float
+    markup_cost: float
+    profit_margin: float
     total_requests: int
-    models_used: int
-    date_range: str
-
-
-class UserUsageResponse(BaseModel):
-    user_id: str
-    user_name: str
-    total_tokens: int
-    total_cost: float
-    total_requests: int
-    models: List[dict]
-
-
-class ModelUsageResponse(BaseModel):
-    model_name: str
-    total_tokens: int
-    total_cost: float
-    total_requests: int
-    users: List[dict]
-
-
-class DailyUsageResponse(BaseModel):
-    date: str
-    total_tokens: int
-    total_cost: float
-    total_requests: int
-    breakdown: List[dict]
+    days_active: int
 
 
 ####################
-# Database Operations
+# Database Operations - Option 1 Implementation
 ####################
 
 
-class OrganizationSettingsTable:
-    def get_settings(self) -> Optional[OrganizationSettingsModel]:
-        """Get organization settings (should be singleton)"""
+class GlobalSettingsTable:
+    def get_settings(self) -> Optional[GlobalSettingsModel]:
+        """Get global settings (singleton)"""
         try:
             with get_db() as db:
-                settings = db.query(OrganizationSettings).first()
+                settings = db.query(GlobalSettings).first()
                 if settings:
-                    return OrganizationSettingsModel.model_validate(settings)
+                    return GlobalSettingsModel.model_validate(settings)
                 return None
         except Exception:
             return None
 
     def create_or_update_settings(
-        self, settings_form: OrganizationSettingsForm
-    ) -> Optional[OrganizationSettingsModel]:
-        """Create or update organization settings"""
+        self, settings_form: GlobalSettingsForm
+    ) -> Optional[GlobalSettingsModel]:
+        """Create or update global settings"""
         try:
             with get_db() as db:
-                existing = db.query(OrganizationSettings).first()
+                existing = db.query(GlobalSettings).first()
                 current_time = int(time.time())
                 
                 if existing:
@@ -203,31 +267,108 @@ class OrganizationSettingsTable:
                     existing.updated_at = current_time
                     db.commit()
                     db.refresh(existing)
-                    return OrganizationSettingsModel.model_validate(existing)
+                    return GlobalSettingsModel.model_validate(existing)
                 else:
                     # Create new
                     settings_data = settings_form.model_dump()
                     settings_data.update({
-                        "id": "default",
+                        "id": "global",
                         "created_at": current_time,
                         "updated_at": current_time
                     })
-                    new_settings = OrganizationSettings(**settings_data)
+                    new_settings = GlobalSettings(**settings_data)
                     db.add(new_settings)
                     db.commit()
                     db.refresh(new_settings)
-                    return OrganizationSettingsModel.model_validate(new_settings)
+                    return GlobalSettingsModel.model_validate(new_settings)
         except Exception:
             return None
 
-    def update_last_sync(self) -> bool:
-        """Update the last sync timestamp"""
+
+class ClientOrganizationTable:
+    def create_client(
+        self, client_form: ClientOrganizationForm, api_key: str, key_hash: str = None
+    ) -> Optional[ClientOrganizationModel]:
+        """Create a new client organization"""
         try:
             with get_db() as db:
-                settings = db.query(OrganizationSettings).first()
-                if settings:
-                    settings.last_sync_at = int(time.time())
-                    settings.updated_at = int(time.time())
+                current_time = int(time.time())
+                client_data = client_form.model_dump()
+                client_data.update({
+                    "id": f"client_{client_form.name.lower().replace(' ', '_')}_{current_time}",
+                    "openrouter_api_key": api_key,
+                    "openrouter_key_hash": key_hash,
+                    "created_at": current_time,
+                    "updated_at": current_time
+                })
+                
+                new_client = ClientOrganization(**client_data)
+                db.add(new_client)
+                db.commit()
+                db.refresh(new_client)
+                return ClientOrganizationModel.model_validate(new_client)
+        except Exception:
+            return None
+
+    def get_client_by_id(self, client_id: str) -> Optional[ClientOrganizationModel]:
+        """Get client organization by ID"""
+        try:
+            with get_db() as db:
+                client = db.query(ClientOrganization).filter_by(id=client_id, is_active=1).first()
+                if client:
+                    return ClientOrganizationModel.model_validate(client)
+                return None
+        except Exception:
+            return None
+
+    def get_client_by_api_key(self, api_key: str) -> Optional[ClientOrganizationModel]:
+        """Get client organization by API key"""
+        try:
+            with get_db() as db:
+                client = db.query(ClientOrganization).filter_by(
+                    openrouter_api_key=api_key, is_active=1
+                ).first()
+                if client:
+                    return ClientOrganizationModel.model_validate(client)
+                return None
+        except Exception:
+            return None
+
+    def get_all_active_clients(self) -> List[ClientOrganizationModel]:
+        """Get all active client organizations"""
+        try:
+            with get_db() as db:
+                clients = db.query(ClientOrganization).filter_by(is_active=1).all()
+                return [ClientOrganizationModel.model_validate(c) for c in clients]
+        except Exception:
+            return []
+
+    def update_client(
+        self, client_id: str, updates: dict
+    ) -> Optional[ClientOrganizationModel]:
+        """Update client organization"""
+        try:
+            with get_db() as db:
+                client = db.query(ClientOrganization).filter_by(id=client_id).first()
+                if client:
+                    for key, value in updates.items():
+                        setattr(client, key, value)
+                    client.updated_at = int(time.time())
+                    db.commit()
+                    db.refresh(client)
+                    return ClientOrganizationModel.model_validate(client)
+                return None
+        except Exception:
+            return None
+
+    def deactivate_client(self, client_id: str) -> bool:
+        """Deactivate a client organization"""
+        try:
+            with get_db() as db:
+                client = db.query(ClientOrganization).filter_by(id=client_id).first()
+                if client:
+                    client.is_active = 0
+                    client.updated_at = int(time.time())
                     db.commit()
                     return True
                 return False
@@ -235,59 +376,63 @@ class OrganizationSettingsTable:
             return False
 
 
-class OpenRouterUserMappingTable:
+class UserClientMappingTable:
     def create_mapping(
-        self, mapping_form: UserMappingForm
-    ) -> Optional[OpenRouterUserMappingModel]:
-        """Create a new user mapping"""
+        self, mapping_form: UserClientMappingForm
+    ) -> Optional[UserClientMappingModel]:
+        """Create a new user-client mapping"""
         try:
             with get_db() as db:
                 current_time = int(time.time())
                 mapping_data = mapping_form.model_dump()
                 mapping_data.update({
-                    "id": f"{mapping_form.owui_user_id}_{mapping_form.openrouter_user_id}",
+                    "id": f"{mapping_form.user_id}_{mapping_form.client_org_id}",
                     "created_at": current_time,
                     "updated_at": current_time
                 })
                 
-                new_mapping = OpenRouterUserMapping(**mapping_data)
+                new_mapping = UserClientMapping(**mapping_data)
                 db.add(new_mapping)
                 db.commit()
                 db.refresh(new_mapping)
-                return OpenRouterUserMappingModel.model_validate(new_mapping)
+                return UserClientMappingModel.model_validate(new_mapping)
         except Exception:
             return None
 
-    def get_mapping_by_owui_user_id(
-        self, owui_user_id: str
-    ) -> Optional[OpenRouterUserMappingModel]:
-        """Get mapping by OWUI user ID"""
+    def get_mapping_by_user_id(
+        self, user_id: str
+    ) -> Optional[UserClientMappingModel]:
+        """Get mapping by user ID"""
         try:
             with get_db() as db:
-                mapping = db.query(OpenRouterUserMapping).filter_by(
-                    owui_user_id=owui_user_id, is_active=1
+                mapping = db.query(UserClientMapping).filter_by(
+                    user_id=user_id, is_active=1
                 ).first()
                 if mapping:
-                    return OpenRouterUserMappingModel.model_validate(mapping)
+                    return UserClientMappingModel.model_validate(mapping)
                 return None
         except Exception:
             return None
 
-    def get_all_active_mappings(self) -> List[OpenRouterUserMappingModel]:
-        """Get all active user mappings"""
+    def get_mappings_by_client_id(
+        self, client_org_id: str
+    ) -> List[UserClientMappingModel]:
+        """Get all mappings for a client organization"""
         try:
             with get_db() as db:
-                mappings = db.query(OpenRouterUserMapping).filter_by(is_active=1).all()
-                return [OpenRouterUserMappingModel.model_validate(m) for m in mappings]
+                mappings = db.query(UserClientMapping).filter_by(
+                    client_org_id=client_org_id, is_active=1
+                ).all()
+                return [UserClientMappingModel.model_validate(m) for m in mappings]
         except Exception:
             return []
 
-    def deactivate_mapping(self, owui_user_id: str) -> bool:
-        """Deactivate a user mapping"""
+    def deactivate_mapping(self, user_id: str) -> bool:
+        """Deactivate a user-client mapping"""
         try:
             with get_db() as db:
-                mapping = db.query(OpenRouterUserMapping).filter_by(
-                    owui_user_id=owui_user_id
+                mapping = db.query(UserClientMapping).filter_by(
+                    user_id=user_id
                 ).first()
                 if mapping:
                     mapping.is_active = 0
@@ -299,132 +444,207 @@ class OpenRouterUserMappingTable:
             return False
 
 
-class OrganizationUsageTable:
+class ClientUsageTable:
+    """
+    Option 1: Simplified usage tracking with daily summaries + live counters
+    """
+    
     def record_usage(
         self,
-        user_id: str,
-        openrouter_user_id: str,
-        model_name: str,
-        usage_date: date,
-        input_tokens: int = 0,
-        output_tokens: int = 0,
-        cost: float = 0.0,
-        provider: Optional[str] = None,
-        generation_time: Optional[float] = None
-    ) -> Optional[OrganizationUsageModel]:
-        """Record or update daily usage for a user/model combination"""
+        client_org_id: str,
+        tokens: int = 0,
+        raw_cost: float = 0.0,
+        markup_cost: float = 0.0,
+        model_name: str = None
+    ) -> bool:
+        """
+        Record API usage - update live counters immediately for real-time UI
+        """
         try:
             with get_db() as db:
-                # Check if record exists for this user/model/date
-                existing = db.query(OrganizationUsage).filter_by(
-                    user_id=user_id,
-                    model_name=model_name,
-                    usage_date=usage_date
+                today = date.today()
+                current_time = int(time.time())
+                
+                # Get or create live counter for today
+                live_counter = db.query(ClientLiveCounters).filter_by(
+                    client_org_id=client_org_id
                 ).first()
                 
-                current_time = int(time.time())
-                total_tokens = input_tokens + output_tokens
-                
-                if existing:
-                    # Update existing record
-                    existing.input_tokens += input_tokens
-                    existing.output_tokens += output_tokens
-                    existing.total_tokens += total_tokens
-                    existing.total_cost += cost
-                    existing.request_count += 1
-                    existing.updated_at = current_time
-                    if generation_time:
-                        existing.generation_time = generation_time
-                    db.commit()
-                    db.refresh(existing)
-                    return OrganizationUsageModel.model_validate(existing)
-                else:
-                    # Create new record
-                    usage_data = {
-                        "id": f"{user_id}_{model_name}_{usage_date.isoformat()}",
-                        "user_id": user_id,
-                        "openrouter_user_id": openrouter_user_id,
-                        "model_name": model_name,
-                        "usage_date": usage_date,
-                        "input_tokens": input_tokens,
-                        "output_tokens": output_tokens,
-                        "total_tokens": total_tokens,
-                        "total_cost": cost,
-                        "request_count": 1,
-                        "provider": provider,
-                        "generation_time": generation_time,
-                        "created_at": current_time,
-                        "updated_at": current_time
-                    }
+                if live_counter:
+                    # Check if it's still today
+                    if live_counter.current_date != today:
+                        # New day - reset counters after storing yesterday's data
+                        self._rollup_to_daily_summary(db, live_counter)
+                        live_counter.current_date = today
+                        live_counter.today_tokens = 0
+                        live_counter.today_requests = 0
+                        live_counter.today_raw_cost = 0.0
+                        live_counter.today_markup_cost = 0.0
                     
-                    new_usage = OrganizationUsage(**usage_data)
-                    db.add(new_usage)
-                    db.commit()
-                    db.refresh(new_usage)
-                    return OrganizationUsageModel.model_validate(new_usage)
-        except Exception:
-            return None
-
-    def get_usage_by_date_range(
-        self, start_date: date, end_date: date
-    ) -> List[OrganizationUsageModel]:
-        """Get usage records within date range"""
+                    # Update today's counters
+                    live_counter.today_tokens += tokens
+                    live_counter.today_requests += 1
+                    live_counter.today_raw_cost += raw_cost
+                    live_counter.today_markup_cost += markup_cost
+                    live_counter.last_updated = current_time
+                else:
+                    # Create new live counter
+                    live_counter = ClientLiveCounters(
+                        client_org_id=client_org_id,
+                        current_date=today,
+                        today_tokens=tokens,
+                        today_requests=1,
+                        today_raw_cost=raw_cost,
+                        today_markup_cost=markup_cost,
+                        last_updated=current_time
+                    )
+                    db.add(live_counter)
+                
+                db.commit()
+                return True
+        except Exception as e:
+            print(f"Error recording usage: {e}")
+            return False
+    
+    def _rollup_to_daily_summary(self, db, live_counter: ClientLiveCounters):
+        """Move yesterday's live counters to daily summary table"""
+        if live_counter.today_tokens > 0:  # Only create summary if there was usage
+            summary_id = f"{live_counter.client_org_id}_{live_counter.current_date.isoformat()}"
+            daily_summary = ClientDailyUsage(
+                id=summary_id,
+                client_org_id=live_counter.client_org_id,
+                usage_date=live_counter.current_date,
+                total_tokens=live_counter.today_tokens,
+                total_requests=live_counter.today_requests,
+                raw_cost=live_counter.today_raw_cost,
+                markup_cost=live_counter.today_markup_cost,
+                created_at=int(time.time()),
+                updated_at=int(time.time())
+            )
+            db.add(daily_summary)
+    
+    def get_usage_stats_by_client(
+        self, client_org_id: str
+    ) -> ClientUsageStatsResponse:
+        """Get hybrid usage stats for Option 1 - real-time today + daily history"""
         try:
             with get_db() as db:
-                usage_records = db.query(OrganizationUsage).filter(
-                    OrganizationUsage.usage_date >= start_date,
-                    OrganizationUsage.usage_date <= end_date
+                # Get today's live data
+                live_counter = db.query(ClientLiveCounters).filter_by(
+                    client_org_id=client_org_id
+                ).first()
+                
+                today_data = {
+                    'tokens': 0,
+                    'cost': 0.0,
+                    'requests': 0,
+                    'last_updated': 'No usage today'
+                }
+                
+                if live_counter and live_counter.current_date == date.today():
+                    today_data = {
+                        'tokens': live_counter.today_tokens,
+                        'cost': live_counter.today_markup_cost,
+                        'requests': live_counter.today_requests,
+                        'last_updated': datetime.fromtimestamp(live_counter.last_updated).strftime('%H:%M:%S')
+                    }
+                
+                # Get daily history (last 30 days)
+                daily_records = db.query(ClientDailyUsage).filter(
+                    ClientDailyUsage.client_org_id == client_org_id
+                ).order_by(ClientDailyUsage.usage_date.desc()).limit(30).all()
+                
+                daily_history = []
+                for record in daily_records:
+                    daily_history.append({
+                        'date': record.usage_date.isoformat(),
+                        'tokens': record.total_tokens,
+                        'cost': record.markup_cost,
+                        'requests': record.total_requests
+                    })
+                
+                # Calculate this month totals
+                current_month = date.today().replace(day=1)
+                month_records = db.query(ClientDailyUsage).filter(
+                    ClientDailyUsage.client_org_id == client_org_id,
+                    ClientDailyUsage.usage_date >= current_month
                 ).all()
-                return [OrganizationUsageModel.model_validate(record) for record in usage_records]
+                
+                month_tokens = sum(r.total_tokens for r in month_records)
+                month_cost = sum(r.markup_cost for r in month_records)
+                month_requests = sum(r.total_requests for r in month_records)
+                days_active = len(month_records)
+                
+                # Add today's usage to month totals
+                month_tokens += today_data['tokens']
+                month_cost += today_data['cost']
+                month_requests += today_data['requests']
+                if today_data['tokens'] > 0:
+                    days_active += 1
+                
+                this_month = {
+                    'tokens': month_tokens,
+                    'cost': month_cost,
+                    'requests': month_requests,
+                    'days_active': days_active
+                }
+                
+                # Get client name
+                client_name = "Unknown"
+                try:
+                    client = ClientOrganizationDB.get_client_by_id(client_org_id)
+                    if client:
+                        client_name = client.name
+                except:
+                    pass
+                
+                return ClientUsageStatsResponse(
+                    today=today_data,
+                    this_month=this_month,
+                    daily_history=daily_history,
+                    client_org_name=client_name
+                )
+        except Exception as e:
+            print(f"Error getting usage stats: {e}")
+            return ClientUsageStatsResponse(
+                today={'tokens': 0, 'cost': 0.0, 'requests': 0, 'last_updated': 'Error'},
+                this_month={'tokens': 0, 'cost': 0.0, 'requests': 0, 'days_active': 0},
+                daily_history=[],
+                client_org_name="Error"
+            )
+
+    def get_all_clients_usage_stats(
+        self, start_date: Optional[date] = None, end_date: Optional[date] = None
+    ) -> List[ClientBillingResponse]:
+        """Get usage statistics for all clients for billing purposes"""
+        try:
+            with get_db() as db:
+                # Get all active clients
+                clients = ClientOrganizationDB.get_all_active_clients()
+                billing_data = []
+                
+                for client in clients:
+                    stats = self.get_usage_stats_by_client(client.id)
+                    if stats.this_month['tokens'] > 0:  # Only include clients with usage
+                        profit_margin = stats.this_month['cost'] - (stats.this_month['cost'] / client.markup_rate)
+                        billing_data.append(ClientBillingResponse(
+                            client_org_id=client.id,
+                            client_name=client.name,
+                            total_tokens=stats.this_month['tokens'],
+                            raw_cost=stats.this_month['cost'] / client.markup_rate,
+                            markup_cost=stats.this_month['cost'],
+                            profit_margin=profit_margin,
+                            total_requests=stats.this_month['requests'],
+                            days_active=stats.this_month['days_active']
+                        ))
+                
+                return billing_data
         except Exception:
             return []
 
-    def get_usage_stats(
-        self, start_date: Optional[date] = None, end_date: Optional[date] = None
-    ) -> UsageStatsResponse:
-        """Get aggregated usage statistics"""
-        try:
-            with get_db() as db:
-                query = db.query(OrganizationUsage)
-                
-                if start_date:
-                    query = query.filter(OrganizationUsage.usage_date >= start_date)
-                if end_date:
-                    query = query.filter(OrganizationUsage.usage_date <= end_date)
-                
-                records = query.all()
-                
-                total_tokens = sum(r.total_tokens for r in records)
-                total_cost = sum(r.total_cost for r in records)
-                total_requests = sum(r.request_count for r in records)
-                models_used = len(set(r.model_name for r in records))
-                
-                date_range = "All time"
-                if start_date and end_date:
-                    date_range = f"{start_date} to {end_date}"
-                elif start_date:
-                    date_range = f"From {start_date}"
-                elif end_date:
-                    date_range = f"Until {end_date}"
-                
-                return UsageStatsResponse(
-                    total_tokens=total_tokens,
-                    total_cost=total_cost,
-                    total_requests=total_requests,
-                    models_used=models_used,
-                    date_range=date_range
-                )
-        except Exception:
-            return UsageStatsResponse(
-                total_tokens=0,
-                total_cost=0.0,
-                total_requests=0,
-                models_used=0,
-                date_range="Error"
-            )
-
 
 # Singleton instances
-OrganizationSettingsDB = OrganizationSettingsTable()
-OpenRouterUserMappingDB = OpenRouterUserMappingTable()
-OrganizationUsageDB = OrganizationUsageTable()
+GlobalSettingsDB = GlobalSettingsTable()
+ClientOrganizationDB = ClientOrganizationTable()
+UserClientMappingDB = UserClientMappingTable()
+ClientUsageDB = ClientUsageTable()

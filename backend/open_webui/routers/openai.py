@@ -838,15 +838,24 @@ async def generate_chat_completion(
             "role": user.role,
         }
     
-    # Add OpenRouter user tracking parameter if this is an OpenRouter call
-    if "openrouter.ai" in url:
-        from open_webui.utils.openrouter_org import openrouter_usage_service
-        openrouter_user_id = openrouter_usage_service.get_user_id_for_request(user.id)
-        if openrouter_user_id:
-            payload["user"] = openrouter_user_id
+    # Handle OpenRouter client-specific API keys and user tracking
+    client_context = None
+    if "openrouter.ai" in request.app.state.config.OPENAI_API_BASE_URLS[idx]:
+        from open_webui.utils.openrouter_client_manager import openrouter_client_manager
+        client_context = openrouter_client_manager.get_user_client_context(user.id)
+        
+        if client_context:
+            # Use client-specific API key and add user tracking
+            key = client_context["api_key"]
+            payload["user"] = client_context["openrouter_user_id"]
+        else:
+            # Fallback to original configuration if no client context
+            log.warning(f"No client context found for user {user.id}, using default OpenRouter config")
+            key = request.app.state.config.OPENAI_API_KEYS[idx]
+    else:
+        key = request.app.state.config.OPENAI_API_KEYS[idx]
 
     url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
-    key = request.app.state.config.OPENAI_API_KEYS[idx]
 
     # Check if model is from "o" series
     is_o_series = payload["model"].lower().startswith(("o1", "o3", "o4"))
@@ -943,6 +952,43 @@ async def generate_chat_completion(
                 response = await r.text()
 
             r.raise_for_status()
+            
+            # Record real-time usage for OpenRouter client requests
+            if client_context and isinstance(response, dict) and "usage" in response:
+                try:
+                    from open_webui.utils.openrouter_client_manager import openrouter_client_manager
+                    usage_data = response["usage"]
+                    
+                    # Extract token counts and cost
+                    input_tokens = usage_data.get("prompt_tokens", 0)
+                    output_tokens = usage_data.get("completion_tokens", 0)
+                    
+                    # Get cost from OpenRouter response or calculate approximate cost
+                    raw_cost = 0.0
+                    if "cost" in response:
+                        raw_cost = response["cost"]
+                    elif "total_cost" in usage_data:
+                        raw_cost = usage_data["total_cost"]
+                    
+                    # Get provider and timing info
+                    provider = response.get("provider", {}).get("name") if "provider" in response else None
+                    generation_time = response.get("generation_time")
+                    
+                    # Record usage asynchronously (don't block response)
+                    asyncio.create_task(
+                        openrouter_client_manager.record_real_time_usage(
+                            user_id=user.id,
+                            model_name=payload.get("model", "unknown"),
+                            input_tokens=input_tokens,
+                            output_tokens=output_tokens,
+                            raw_cost=raw_cost,
+                            provider=provider,
+                            generation_time=generation_time
+                        )
+                    )
+                except Exception as usage_error:
+                    log.error(f"Failed to record usage for user {user.id}: {usage_error}")
+            
             return response
     except Exception as e:
         log.exception(e)

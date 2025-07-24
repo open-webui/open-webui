@@ -16,6 +16,8 @@
 1. Code quality and type safety first
 2. Preserve all mAI customizations during changes
 3. Follow commit prefixes: `brand:`, `theme:`, `ui:`, `assets:`
+### Business model:
+- hybrid pricing (subscription + token usage from OepenRouter x1.3)
 
 ## Project Overview
 
