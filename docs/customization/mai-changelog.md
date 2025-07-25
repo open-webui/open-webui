@@ -281,6 +281,62 @@ This document tracks successful changes and improvements made to the mAI applica
 
 ---
 
+## 2025-07-25 - Polish Złoty (PLN) Currency Conversion 💰
+
+**Type:** FEATURE  
+**Impact:** HIGH  
+**Commit:** `8152c4821`
+
+### ✅ Successfully Completed
+- **Implemented Polish złoty (PLN) currency conversion** for all usage tracking displays
+- **Integrated National Bank of Poland (NBP) API** for real-time exchange rates
+- **Enhanced user interface** with dual currency display format: "$12.50 (50.00 zł)"
+- **Added intelligent caching system** with NBP-aware refresh schedules
+- **Implemented graceful fallback** when NBP API is unavailable
+
+### 🎯 Features
+- **Real-time Exchange Rates:**
+  - Fetches USD/PLN rates from NBP Table C (sell rates)
+  - Smart caching with 24-hour TTL and 8:15 AM CET refresh alignment
+  - Weekend/holiday handling using most recent available rates
+  - Exchange rate indicators with effective dates
+
+- **Comprehensive UI Integration:**
+  - Today's Cost cards show dual currency with live exchange rate
+  - Monthly Total displays with Polish złoty equivalents
+  - User and model usage tables include PLN columns
+  - Exchange rate status notifications and warnings
+
+- **Technical Implementation:**
+  - Async NBP API client following OpenRouter client patterns
+  - Non-blocking error handling preserves USD functionality
+  - Enhanced currency formatting with Polish locale support
+  - Proper resource cleanup in FastAPI lifespan management
+
+### 🏗️ Implementation Details
+- **Backend Components:**
+  - `backend/open_webui/utils/nbp_client.py` - NBP API client with caching
+  - `backend/open_webui/routers/client_organizations.py` - Enhanced APIs with PLN conversion
+  - `backend/open_webui/main.py` - NBP client lifecycle management
+
+- **Frontend Updates:**
+  - `src/lib/components/admin/Settings/MyOrganizationUsage.svelte` - Dual currency display
+  - Enhanced `formatCurrency()` and new `formatDualCurrency()` functions
+  - Exchange rate status indicators and fallback messaging
+
+- **API Response Enhancements:**
+  - Added `cost_pln`, `exchange_rate`, `exchange_rate_date` fields
+  - Root-level `exchange_rate_info` with NBP metadata
+  - Graceful degradation flag `pln_conversion_available`
+
+### 📝 Notes
+- Provides transparent cost visibility for Polish business clients
+- Maintains full backward compatibility with existing USD workflows
+- No database schema changes required (conversion at API response time)
+- Ready for 20+ Polish client deployments on Hetzner infrastructure
+
+---
+
 ## Template for Future Entries
 
 ```markdown
