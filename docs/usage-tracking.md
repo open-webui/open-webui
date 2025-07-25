@@ -582,10 +582,8 @@ Potential future features:
 - **CSV export** for billing data and accounting integration
 - **Usage alerts** for approaching monthly limits
 - **Advanced analytics** with interactive charts and graphs
-- **Custom reporting** with flexible date range selection
 - **Webhook integration** for external billing and accounting systems
 - **Multi-currency support** for international deployments
-- **Usage forecasting** based on historical trends
 
 ### Scalability Improvements
 - **Redis caching** for high-frequency dashboard queries

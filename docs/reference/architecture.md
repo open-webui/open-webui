@@ -93,7 +93,6 @@ Client B (Hetzner Server 2)
 - **User management**: Admin creates accounts for company employees
 
 ### Real-time Features
-- **Socket.io**: Live chat and notifications
 - **Usage Dashboard**: 30-second refresh cycles for live usage data
 - **File Upload**: Chunked uploads with progress tracking
 

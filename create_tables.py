@@ -120,11 +120,25 @@ def create_tables():
             )
         ''')
         
+        # 8. Processed Generations Table (for deduplication)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS processed_generations (
+                id TEXT PRIMARY KEY,
+                client_org_id TEXT NOT NULL,
+                generation_date DATE NOT NULL,
+                processed_at INTEGER NOT NULL,
+                total_cost REAL NOT NULL,
+                total_tokens INTEGER NOT NULL
+            )
+        ''')
+        
         # Create indexes for performance
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_client_date ON client_daily_usage(client_org_id, usage_date)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_client_date ON client_user_daily_usage(client_org_id, user_id, usage_date)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_model_client_date ON client_model_daily_usage(client_org_id, model_name, usage_date)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_live_client ON client_live_counters(client_org_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_processed_client_date ON processed_generations(client_org_id, generation_date)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_processed_at ON processed_generations(processed_at)')
         
         conn.commit()
         print("✅ All database tables created successfully")
