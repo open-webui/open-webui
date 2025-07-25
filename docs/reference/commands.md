@@ -1,22 +1,26 @@
-Technical Architecture
-Stack Overview
-Frontend (SvelteKit)
-Framework: SvelteKit with TypeScript
-Styling: TailwindCSS with custom themes
-Build Tool: Vite
-Key Dependencies:
-TipTap v3 for rich text editing
-Chart.js for data visualization
-Pyodide for Python code execution
-Socket.io for real-time communication
-i18n support (20+ languages)
-Backend (FastAPI)
-Framework: FastAPI with Python 3.11-3.12
-Database: SQLAlchemy with Alembic migrations
-Supported DBs: PostgreSQL, MySQL, SQLite
-Vector DBs: ChromaDB, Qdrant, Milvus, Pinecone, OpenSearch, ElasticSearch
-Authentication: JWT with OAuth support
-AI Integration: OpenAI, Anthropic, Google Gemini APIs
+# Technical Architecture
+
+## Stack Overview
+
+### Frontend (SvelteKit)
+- **Framework**: SvelteKit with TypeScript
+- **Styling**: TailwindCSS with custom themes
+- **Build Tool**: Vite
+- **Key Dependencies**:
+  - TipTap v3 for rich text editing
+  - Chart.js for data visualization
+  - Pyodide for Python code execution
+  - Socket.io for real-time communication
+  - i18n support (20+ languages)
+
+### Backend (FastAPI)
+- **Framework**: FastAPI with Python 3.11-3.12
+- **Database**: SQLAlchemy with Alembic migrations
+- **Supported DBs**: PostgreSQL, MySQL, SQLite
+- **Vector DBs**: ChromaDB, Qdrant, Milvus, Pinecone, OpenSearch, ElasticSearch
+- **Authentication**: JWT with OAuth support
+- **AI Integration**: OpenAI, Anthropic, Google Gemini APIs
+- **Usage Tracking**: OpenRouter background sync service
 Architecture Patterns
 Backend Patterns
 Dependency Injection: FastAPI's dependency system for database sessions, auth
@@ -92,8 +96,69 @@ HF_HUB_OFFLINE=1            # Offline mode
 
 # Database
 DATABASE_URL=sqlite:///./webui.db
+
+# Usage Tracking
+OPENROUTER_USAGE_SYNC_INTERVAL=600  # Background sync interval (10 minutes)
+OPENROUTER_USAGE_SYNC_DAYS_BACK=1   # Days to sync backwards
+LOG_LEVEL=INFO                      # Logging level for background sync
 Audio & Media Processing
 FFmpeg: Full audio processing support (installed)
 Faster-whisper: Speech transcription
 Audio Upload: Chunked uploads with progress tracking
 Format Support: Multiple audio/video formats
+
+## Usage Tracking API Endpoints
+
+### Background Sync Service
+```bash
+# Manual sync trigger (Admin only)
+curl -X POST "http://localhost:3000/api/v1/usage-tracking/sync/openrouter-usage" \
+  -H "Authorization: Bearer {admin_token}" \
+  -H "Content-Type: application/json" \
+  -d '{"days_back": 1}'
+
+# Check real-time usage
+curl "http://localhost:3000/api/v1/usage-tracking/usage/real-time/{client_org_id}" \
+  -H "Authorization: Bearer {token}"
+
+# Manual usage recording (Testing)
+curl -X POST "http://localhost:3000/api/v1/usage-tracking/usage/manual-record" \
+  -H "Authorization: Bearer {admin_token}" \
+  -H "Content-Type: application/json" \
+  -d '{"model": "deepseek-ai/deepseek-v3", "tokens": 1000, "cost": 0.002}'
+```
+
+### Database Management Tools
+```bash
+# Initialize database with sample data
+python create_tables.py
+
+# Clean usage data safely (preserves configuration)
+python clean_usage_database.py
+
+# Complete database reset (use with caution)
+python complete_usage_reset.py
+```
+
+### Container Health Checks
+```bash
+# Check background sync status
+docker logs mai-container | grep -i "background sync"
+
+# Verify usage data recording
+docker exec mai-container python -c "
+from datetime import date
+import sqlite3
+conn = sqlite3.connect('/app/backend/data/webui.db')
+cursor = conn.cursor()
+cursor.execute('SELECT * FROM client_live_counters WHERE current_date = ?', (date.today(),))
+result = cursor.fetchone()
+if result: print(f'Usage: {result[2]} tokens, ${result[5]:.6f}')
+else: print('No usage data')
+conn.close()
+"
+
+# Test OpenRouter API connectivity
+curl -H "Authorization: Bearer sk-or-v1-your-key" \
+  "https://openrouter.ai/api/v1/generation?limit=1"
+```

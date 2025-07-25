@@ -4,7 +4,7 @@ This guide covers deploying mAI for production use.
 
 ## Overview
 
-mAI is deployed using Docker and is designed to serve 20 small companies in Poland, each with 5-20 employees.
+mAI is deployed using Docker and is designed to serve 20 small companies in Poland, each with 5-20 employees. Each deployment includes automated OpenRouter usage tracking with 1.3x markup pricing.
 
 ## Quick Start
 
@@ -38,18 +38,17 @@ mAI is deployed using Docker and is designed to serve 20 small companies in Pola
    docker-compose up -d
    ```
 
-4. **Initialize OpenRouter** (first time only):
+4. **Initialize Database** (first time only):
    ```bash
-   docker exec mai-company-name python /app/scripts/openrouter/production_fix.py init
+   # Initialize usage tracking database with sample data
+   docker exec mai-company-name python /app/create_tables.py
    ```
 
-## Key Features
-
-- **OpenRouter Filtering**: 12 curated AI models
-- **Polish Localization**: Full Polish language support
-- **Custom Branding**: mAI branding and themes
-- **Background Patterns**: Customizable chat backgrounds
-- **Multi-Company Ready**: Same image for all deployments
+5. **Configure OpenRouter Usage Tracking**:
+   - Admin logs in and navigates to Settings → Connections
+   - Enters OpenRouter API key
+   - Background sync starts automatically (every 10 minutes)
+   - Usage data appears in Settings → Usage dashboard
 
 ## Configuration
 
@@ -64,14 +63,19 @@ Essential variables for production:
 - `OLLAMA_BASE_URL` - Ollama server URL
 - `WEBUI_SECRET_KEY` - Security key (auto-generated if not set)
 - `ENABLE_SIGNUP` - Set to `false` for production
+- `OPENROUTER_USAGE_SYNC_INTERVAL` - Background sync interval in seconds (default: 600)
+- `LOG_LEVEL` - Logging level for monitoring (default: INFO)
 
 ## Multi-Company Deployment
 
 Each company gets:
-- Same Docker image
-- Same 12 OpenRouter models
-- Separate data volume
-- Custom display name
+- Same Docker image with production-ready usage tracking
+- Access to all OpenRouter models with transparent pricing
+- Separate isolated database (SQLite per container)
+- Custom display name and branding
+- Automated usage monitoring with 1.3x markup
+- Real-time usage dashboard for admin users
+- Background sync service for accurate billing
 
 Example for multiple companies:
 ```bash

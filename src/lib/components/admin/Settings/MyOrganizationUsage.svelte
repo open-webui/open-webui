@@ -1,14 +1,14 @@
 <script>
 	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import { getClientUsageSummary, getTodayUsage, getUsageByUser, getUsageByModel } from '$lib/apis/organizations';
+	import { getClientUsageSummary, getTodayUsage, getUsageByUser, getUsageByModel, getMAIModelPricing } from '$lib/apis/organizations';
 	import Modal from '$lib/components/common/Modal.svelte';
 	import { user } from '$lib/stores';
 
 	const i18n = getContext('i18n');
 
 	let loading = false;
-	let activeTab = 'overview';
+	let activeTab = 'stats';
 	
 	// Option 1: Simplified data structure
 	let usageData = {
@@ -24,7 +24,7 @@
 			requests: 0,
 			days_active: 0
 		},
-		daily_history: [], // Last 30 days
+		// daily_history removed - no longer needed
 		client_org_name: 'My Organization'
 	};
 	
@@ -32,8 +32,145 @@
 	let userUsageData = [];
 	let modelUsageData = [];
 	let clientOrgId = 'current'; // Placeholder for client org ID
+	
+	// Model pricing data - will be loaded from API
+	let modelPricingData = [];
+	let loadingPricing = false;
+	
+	// Fallback static data (used if API fails)
+	const fallbackPricingData = [
+		{
+			id: 'anthropic/claude-sonnet-4',
+			name: 'Claude Sonnet 4',
+			provider: 'Anthropic',
+			price_per_million_input: 8.00,
+			price_per_million_output: 24.00,
+			context_length: 1000000,
+			category: 'Premium'
+		},
+		{
+			id: 'google/gemini-2.5-flash',
+			name: 'Gemini 2.5 Flash',
+			provider: 'Google',
+			price_per_million_input: 1.50,
+			price_per_million_output: 6.00,
+			context_length: 2000000,
+			category: 'Fast'
+		},
+		{
+			id: 'google/gemini-2.5-pro',
+			name: 'Gemini 2.5 Pro',
+			provider: 'Google',
+			price_per_million_input: 3.00,
+			price_per_million_output: 12.00,
+			context_length: 2000000,
+			category: 'Premium'
+		},
+		{
+			id: 'deepseek/deepseek-chat-v3-0324',
+			name: 'DeepSeek Chat v3',
+			provider: 'DeepSeek',
+			price_per_million_input: 0.14,
+			price_per_million_output: 0.28,
+			context_length: 128000,
+			category: 'Budget'
+		},
+		{
+			id: 'anthropic/claude-3.7-sonnet',
+			name: 'Claude 3.7 Sonnet',
+			provider: 'Anthropic',
+			price_per_million_input: 6.00,
+			price_per_million_output: 18.00,
+			context_length: 200000,
+			category: 'Premium'
+		},
+		{
+			id: 'google/gemini-2.5-flash-lite-preview-06-17',
+			name: 'Gemini 2.5 Flash Lite',
+			provider: 'Google',
+			price_per_million_input: 0.50,
+			price_per_million_output: 2.00,
+			context_length: 1000000,
+			category: 'Budget'
+		},
+		{
+			id: 'openai/gpt-4.1',
+			name: 'GPT-4.1',
+			provider: 'OpenAI',
+			price_per_million_input: 10.00,
+			price_per_million_output: 30.00,
+			context_length: 128000,
+			category: 'Premium'
+		},
+		{
+			id: 'x-ai/grok-4',
+			name: 'Grok 4',
+			provider: 'xAI',
+			price_per_million_input: 8.00,
+			price_per_million_output: 24.00,
+			context_length: 131072,
+			category: 'Premium'
+		},
+		{
+			id: 'openai/gpt-4o-mini',
+			name: 'GPT-4o Mini',
+			provider: 'OpenAI',
+			price_per_million_input: 0.15,
+			price_per_million_output: 0.60,
+			context_length: 128000,
+			category: 'Budget'
+		},
+		{
+			id: 'openai/o4-mini-high',
+			name: 'O4 Mini High',
+			provider: 'OpenAI',
+			price_per_million_input: 3.00,
+			price_per_million_output: 12.00,
+			context_length: 128000,
+			category: 'Standard'
+		},
+		{
+			id: 'openai/o3',
+			name: 'O3',
+			provider: 'OpenAI',
+			price_per_million_input: 60.00,
+			price_per_million_output: 240.00,
+			context_length: 200000,
+			category: 'Reasoning'
+		},
+		{
+			id: 'openai/chatgpt-4o-latest',
+			name: 'ChatGPT-4o Latest',
+			provider: 'OpenAI',
+			price_per_million_input: 5.00,
+			price_per_million_output: 15.00,
+			context_length: 128000,
+			category: 'Standard'
+		}
+	];
 
 	let refreshInterval = null;
+
+	const loadModelPricing = async () => {
+		try {
+			loadingPricing = true;
+			const response = await getMAIModelPricing();
+			
+			if (response?.success && response.models) {
+				modelPricingData = response.models;
+				console.log(`Loaded ${response.models.length} models from OpenRouter API`);
+			} else {
+				console.warn('Invalid response from OpenRouter API, using fallback data');
+				modelPricingData = fallbackPricingData;
+			}
+		} catch (error) {
+			console.error('Failed to load model pricing from OpenRouter:', error);
+			modelPricingData = fallbackPricingData;
+			toast.error($i18n.t('Failed to load real-time pricing. Using cached data.'));
+		} finally {
+			loadingPricing = false;
+		}
+	};
 
 	onMount(async () => {
 		await loadUsageData();
@@ -52,7 +189,7 @@
 		try {
 			loading = true;
 			
-			// Get Option 1 hybrid data (today real-time + daily history)
+			// Get usage summary data (today real-time + monthly totals)
 			const response = await getClientUsageSummary($user.token);
 			
 			if (response?.success && response.stats) {
@@ -119,10 +256,6 @@
 		}
 	};
 
-	const handleRefresh = async () => {
-		await loadUsageData();
-		toast.success($i18n.t('Usage data refreshed'));
-	};
 	
 	const handleTabChange = async (tab) => {
 		activeTab = tab;
@@ -130,6 +263,8 @@
 			await loadUserUsage();
 		} else if (tab === 'models' && modelUsageData.length === 0) {
 			await loadModelUsage();
+		} else if (tab === 'pricing' && modelPricingData.length === 0) {
+			await loadModelPricing();
 		}
 	};
 
@@ -154,36 +289,16 @@
 		return new Intl.NumberFormat('en-US').format(number || 0);
 	};
 
-	const formatDate = (dateString) => {
-		return new Date(dateString).toLocaleDateString();
-	};
 
-	const getDailyAverage = () => {
-		if (usageData.this_month.days_active > 0) {
-			return usageData.this_month.cost / usageData.this_month.days_active;
-		}
-		return 0;
-	};
 </script>
 
 <div class="mb-6">
 	<div class="flex items-center justify-between mb-4">
 		<h2 class="text-lg font-semibold">{$i18n.t('My Organization Usage')}</h2>
-		<div class="flex items-center gap-3">
-			<div class="text-sm text-gray-500">
-				Last updated: {usageData.today.last_updated}
-			</div>
-			<button
-				class="px-3 py-1.5 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition"
-				on:click={handleRefresh}
-			>
-				{$i18n.t('Refresh')}
-			</button>
-		</div>
 	</div>
 
 	<!-- Real-time Today + Monthly Summary Cards -->
-	<div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+	<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
 		<!-- Today's Usage (Real-time) -->
 		<div class="bg-white dark:bg-gray-850 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 			<div class="flex items-center justify-between">
@@ -250,36 +365,11 @@
 			</div>
 		</div>
 
-		<!-- Daily Average -->
-		<div class="bg-white dark:bg-gray-850 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-			<div class="flex items-center justify-between">
-				<div>
-					<p class="text-sm font-medium text-gray-600 dark:text-gray-400">Daily Average</p>
-					<p class="text-2xl font-semibold text-gray-900 dark:text-white">
-						{formatCurrency(getDailyAverage())}
-					</p>
-					<p class="text-xs text-gray-500 mt-1">This month</p>
-				</div>
-				<div class="flex-shrink-0">
-					<div class="w-8 h-8 bg-orange-100 dark:bg-orange-900 rounded-lg flex items-center justify-center">
-						<svg class="w-4 h-4 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-						</svg>
-					</div>
-				</div>
-			</div>
-		</div>
 	</div>
 
 	<!-- Tabs Navigation -->
 	<div class="border-b border-gray-200 dark:border-gray-700 mb-6">
 		<nav class="-mb-px flex space-x-8">
-			<button
-				class="py-2 px-1 border-b-2 font-medium text-sm {activeTab === 'overview' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}"
-				on:click={() => handleTabChange('overview')}
-			>
-				{$i18n.t('Daily Trend')}
-			</button>
 			<button
 				class="py-2 px-1 border-b-2 font-medium text-sm {activeTab === 'stats' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}"
 				on:click={() => handleTabChange('stats')}
@@ -298,6 +388,12 @@
 			>
 				{$i18n.t('By Model')}
 			</button>
+			<button
+				class="py-2 px-1 border-b-2 font-medium text-sm {activeTab === 'pricing' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}"
+				on:click={() => handleTabChange('pricing')}
+			>
+				{$i18n.t('Model Pricing')}
+			</button>
 		</nav>
 	</div>
 
@@ -306,37 +402,6 @@
 		<div class="flex items-center justify-center py-12">
 			<div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white"></div>
 			<span class="ml-2 text-gray-600 dark:text-gray-400">{$i18n.t('Loading usage data...')}</span>
-		</div>
-	{:else if activeTab === 'overview'}
-		<div class="bg-white dark:bg-gray-850 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-			<h3 class="text-lg font-medium mb-4">{$i18n.t('Daily Usage Trend')}</h3>
-			
-			{#if usageData.daily_history && usageData.daily_history.length > 0}
-				<div class="space-y-2">
-					{#each usageData.daily_history.slice(-10) as day, index}
-						<div class="flex justify-between items-center py-3 border-b border-gray-100 dark:border-gray-700 last:border-b-0">
-							<div class="text-sm font-medium">
-								{formatDate(day.date)}
-								{#if day.date === new Date().toISOString().split('T')[0]}
-									<span class="text-green-600 text-xs ml-2 font-semibold">• Today (Live)</span>
-								{/if}
-							</div>
-							<div class="text-right">
-								<div class="text-sm font-semibold">{formatCurrency(day.cost)}</div>
-								<div class="text-xs text-gray-500">{formatNumber(day.tokens)} tokens • {day.requests} requests</div>
-							</div>
-						</div>
-					{/each}
-				</div>
-				
-				{#if usageData.daily_history.length > 10}
-					<div class="mt-4 text-center">
-						<p class="text-sm text-gray-500">Showing last 10 days • Total history: {usageData.daily_history.length} days</p>
-					</div>
-				{/if}
-			{:else}
-				<p class="text-gray-600 dark:text-gray-400">{$i18n.t('No usage history available.')}</p>
-			{/if}
 		</div>
 	{:else if activeTab === 'stats'}
 		<div class="bg-white dark:bg-gray-850 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
@@ -384,14 +449,6 @@
 				</div>
 			</div>
 
-			<div class="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-				<h4 class="text-sm font-medium text-blue-800 dark:text-blue-300 mb-2">{$i18n.t('Data Refresh Information')}</h4>
-				<div class="text-sm text-blue-700 dark:text-blue-400 space-y-1">
-					<p>• {$i18n.t('Today\'s usage: Real-time updates every 30 seconds')}</p>
-					<p>• {$i18n.t('Historical data: Daily summaries (updated at midnight)')}</p>
-					<p>• {$i18n.t('Monthly totals: Combination of daily summaries + today\'s live data')}</p>
-				</div>
-			</div>
 		</div>
 	{:else if activeTab === 'users'}
 		<div class="bg-white dark:bg-gray-850 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
@@ -505,7 +562,135 @@
 				<p class="text-gray-600 dark:text-gray-400">{$i18n.t('No model usage data available.')}</p>
 			{/if}
 		</div>
-	{/if}
+	{:else if activeTab === 'pricing'}
+	<div class="bg-white dark:bg-gray-850 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+		<div class="flex items-center justify-between mb-4">
+			<h3 class="text-lg font-medium">{$i18n.t('Available Models & Pricing')}</h3>
+			<div class="text-sm text-gray-500 dark:text-gray-400">
+				{#if loadingPricing}
+					{$i18n.t('Loading pricing information...')}
+				{:else}
+					{$i18n.t('Current pricing rates')}
+				{/if}
+			</div>
+		</div>
+		
+		<div class="mb-4 text-sm text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
+			<p><strong>ℹ️ Pricing Information:</strong></p>
+			<p>• All prices are per 1 million tokens in USD</p>
+			<p>• Input and output tokens are priced separately</p>
+			<p>• Context length shows maximum input size per request</p>
+		</div>
+		
+		<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+			<!-- Category filters -->
+			<div class="flex flex-wrap gap-2">
+				<span class="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">Budget</span>
+				<span class="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">Standard</span>
+				<span class="px-2 py-1 text-xs bg-purple-100 text-purple-800 rounded-full">Premium</span>
+				<span class="px-2 py-1 text-xs bg-orange-100 text-orange-800 rounded-full">Fast</span>
+				<span class="px-2 py-1 text-xs bg-red-100 text-red-800 rounded-full">Reasoning</span>
+			</div>
+			<div class="text-right text-sm text-gray-600 dark:text-gray-400">
+				{modelPricingData.length} models available
+			</div>
+		</div>
+		
+		{#if loadingPricing}
+			<div class="flex items-center justify-center py-12">
+				<div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white"></div>
+				<span class="ml-2 text-gray-600 dark:text-gray-400">{$i18n.t('Loading model pricing...')}</span>
+			</div>
+		{:else}
+			<div class="overflow-x-auto">
+				<table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+				<thead>
+					<tr>
+						<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+							{$i18n.t('Model')}
+						</th>
+						<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+							{$i18n.t('Provider')}
+						</th>
+						<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+							{$i18n.t('Input (per 1M tokens)')}
+						</th>
+						<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+							{$i18n.t('Output (per 1M tokens)')}
+						</th>
+						<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+							{$i18n.t('Context Length')}
+						</th>
+						<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+							{$i18n.t('Category')}
+						</th>
+					</tr>
+				</thead>
+				<tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+					{#each modelPricingData as model}
+						<tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+							<td class="px-4 py-3 whitespace-nowrap">
+								<div>
+									<div class="text-sm font-medium text-gray-900 dark:text-white">
+										{model.name}
+									</div>
+									<div class="text-xs text-gray-500 font-mono">
+										{model.id}
+									</div>
+								</div>
+							</td>
+							<td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+								{model.provider}
+							</td>
+							<td class="px-4 py-3 whitespace-nowrap text-sm">
+								<div class="font-medium text-gray-900 dark:text-white">
+									${model.price_per_million_input.toFixed(2)}
+								</div>
+							</td>
+							<td class="px-4 py-3 whitespace-nowrap text-sm">
+								<div class="font-medium text-gray-900 dark:text-white">
+									${model.price_per_million_output.toFixed(2)}
+								</div>
+							</td>
+							<td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+								{formatNumber(model.context_length)} tokens
+							</td>
+							<td class="px-4 py-3 whitespace-nowrap">
+								<span class="px-2 py-1 text-xs rounded-full
+									{model.category === 'Budget' ? 'bg-green-100 text-green-800' :
+									 model.category === 'Standard' ? 'bg-blue-100 text-blue-800' :
+									 model.category === 'Premium' ? 'bg-purple-100 text-purple-800' :
+									 model.category === 'Fast' ? 'bg-orange-100 text-orange-800' :
+									 'bg-red-100 text-red-800'}">
+									{model.category}
+								</span>
+							</td>
+						</tr>
+					{/each}
+					</tbody>
+				</table>
+			</div>
+		{/if}
+		
+		<div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+			<div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+				<h4 class="font-medium text-gray-900 dark:text-white mb-2">💰 Pricing</h4>
+				<p class="text-gray-600 dark:text-gray-400 mb-1">Transparent per-million token pricing</p>
+				<p class="text-xs text-gray-500">Input and output tokens priced separately</p>
+			</div>
+			<div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+				<h4 class="font-medium text-gray-900 dark:text-white mb-2">📊 Usage Tracking</h4>
+				<p class="text-gray-600 dark:text-gray-400 mb-1">All usage automatically tracked</p>
+				<p class="text-xs text-gray-500">View detailed usage in other tabs</p>
+			</div>
+			<div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+				<h4 class="font-medium text-gray-900 dark:text-white mb-2">⚡ Model Availability</h4>
+				<p class="text-gray-600 dark:text-gray-400 mb-1">12 premium AI models available</p>
+				<p class="text-xs text-gray-500">Choose the best model for your task</p>
+			</div>
+		</div>
+	</div>
+{/if}
 </div>
 
 <style>

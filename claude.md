@@ -19,12 +19,14 @@
 - **4-19 Regular Users**: Created by admin through mAI web interface (Settings → Admin → Users)
 - **Single Organization**: All users mapped to one organization per instance with individual external_user auto-learning
 - **Automated Usage Tracking**: Each user gets unique external_user from OpenRouter, tracked under shared API key
+
 **WORKFLOW PRIORITIES:**
 1. Code quality and type safety first
 2. Preserve all mAI customizations during changes
 3. Follow commit prefixes: `brand:`, `theme:`, `ui:`, `assets:`
+
 ### Business model:
-- hybrid pricing (subscription + token usage from OepenRouter x1.3)
+- hybrid pricing (subscription + token usage from OpenRouter x1.3)
 
 ## Project Overview
 
@@ -32,9 +34,7 @@
 - **Frontend**: SvelteKit + TypeScript + TailwindCSS
 - **Backend**: FastAPI + Python 3.11-3.12
 - **Current Branch**: `customization` (main: `main`)
-- **Key Features**: Complete mAI visual identity, custom background patterns, multi-language support
-
-**Recent Status**: Successfully merged Open WebUI v0.6.18 preserving all customizations (July 2025)
+- **Key Features**: Complete mAI visual identity, custom background patterns, multi-language support, usage monitoring
 
 ## Detailed Documentation
 
@@ -50,19 +50,17 @@
 - `package.json`: Keep "name": "mai"
 - `src/lib/components/chat/Chat.svelte`: Background pattern functionality
 - `src/lib/i18n/locales/pl-PL/translation.json`: Polish customizations
-- All theme and asset files in `static/`
 
 **Branch Strategy:**
 - Work only on `customization` branch
-- Create feature branches for specific improvements
 
 ##crawl4ai-mai MCP & Knowledge Integration
-- **Before starting any task**: Use `get_available_sources` to check existing knowledge base
+
 - **For implementation patterns**: Use `search_code_examples` before writing code
 - **For research**: Use `perform_rag_query` with specific source filtering
 
 ##Research → Implement → Validate Workflow
+
 1. **Research Phase**:
-   - `query_knowledge_graph` for framework patterns
    - `search_code_examples` for specific implementations
    - `perform_rag_query` with source filtering for documentation

@@ -15,7 +15,7 @@ log.setLevel(SRC_LOG_LEVELS.get("BACKGROUND_SYNC", logging.INFO))
 
 # Background sync configuration
 SYNC_INTERVAL = 600  # 10 minutes
-SYNC_DAYS_BACK = 1   # Sync last 1 day of data
+SYNC_DAYS_BACK = 0   # Sync only today's new data (start fresh)
 
 # Database path
 DB_PATH = f"{DATA_DIR}/webui.db"

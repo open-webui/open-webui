@@ -20,6 +20,7 @@
 - **Vector DBs**: ChromaDB, Qdrant, Milvus, Pinecone, OpenSearch, ElasticSearch
 - **Authentication**: JWT with OAuth support
 - **AI Integration**: OpenAI, Anthropic, Google Gemini APIs
+- **Usage Tracking**: OpenRouter API integration with background sync service
 
 ## Deployment Architecture
 
@@ -43,7 +44,8 @@
 ### Backend Patterns
 - **Dependency Injection**: FastAPI's dependency system for database sessions, auth
 - **Repository Pattern**: Models in `backend/open_webui/models/` with separate business logic
-- **Router Organization**: Feature-based routing in `routers/` directory
+- **Router Organization**: Feature-based routing in `routers/` directory (includes usage_tracking.py)
+- **Background Services**: Async background tasks for data synchronization
 - **Middleware Chain**: Authentication, CORS, compression middleware
 - **Database Abstraction**: SQLAlchemy ORM with Alembic migrations
 
@@ -74,11 +76,15 @@ Client B (Hetzner Server 2)
     └── Organization settings
 ```
 
-#### Usage Tracking per Instance
+#### Usage Tracking per Instance ✅ PRODUCTION IMPLEMENTATION
 - **API Key Isolation**: Each client has unique OpenRouter API key
 - **External User Learning**: Auto-learned per client organization
 - **Live Counters**: Real-time usage tracking per instance
 - **Historical Data**: Client-specific usage summaries and analytics
+- **Background Sync Service**: Automatic OpenRouter API polling every 10 minutes
+- **Database Tools**: Production-ready initialization and cleanup tools
+- **Currency Precision**: Fixed formatting for accurate cost display (6 decimal places)
+- **Error Recovery**: Robust error handling for container restarts and API failures
 ## Data Flow
 
 ### Authentication
@@ -96,21 +102,27 @@ Client B (Hetzner Server 2)
 - **Multi-model Support**: Abstracted model interface supporting various LLM providers
 - **OpenRouter Integration**: Automatic usage tracking with 1.3x markup pricing
 
-### Usage Tracking Data Flow (Per Instance)
+### Usage Tracking Data Flow (Per Instance) - UPDATED IMPLEMENTATION
 ```
 Client Admin → Settings → Connections → Enter API Key
                 ↓
         Auto-sync to Database
                 ↓
-        First API Call Made
+        Chat Request Made
                 ↓
-    OpenRouter Response Captured
+    OpenRouter Streaming Response (SSE)
                 ↓
-     External User Auto-Learned
+     Background Sync (Every 10 min)
                 ↓
-    Real-time Usage Recording
+    Poll OpenRouter /generation API
                 ↓
-     Admin Dashboard Updates
+    Fetch Actual Usage Data
+                ↓
+    External User Auto-Learned
+                ↓
+    Database Recording with Aggregation
+                ↓
+     Admin Dashboard Updates (Live)
 ```
 LLM Integration Architecture
 Model Abstraction
@@ -141,6 +153,7 @@ Database Indexing: Proper indexes on frequently queried fields
 Connection Pooling: SQLAlchemy connection management
 Caching: Redis integration for session and data caching
 Async Operations: FastAPI's async capabilities for I/O operations
+Background Tasks: OpenRouter usage sync service with automatic startup/shutdown
 Customization Framework
 Theme System
 CSS Variables: Theme-based styling system in static/themes/

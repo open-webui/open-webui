@@ -6,20 +6,29 @@ The mAI Usage Tracking System provides comprehensive monitoring and billing capa
 
 **🎯 Status**: **FULLY OPERATIONAL** - System is live and recording usage automatically.
 
+**Recent Updates (July 2025)**:
+- ✅ Fixed OpenRouter API endpoint from `/generations` to `/generation`
+- ✅ Resolved currency formatting issue ($0.00 → $0.002002 for small amounts)
+- ✅ Added database initialization tools with sample data
+- ✅ Implemented safe database cleanup tools for production
+- ✅ Cleaned repository of 29+ debugging/testing files for production deployment
+
 ## Architecture
 
-### Option C: OpenRouter API Polling Implementation (Production Ready)
-- **Background Sync**: Automatic polling of OpenRouter `/generations` API every 10 minutes
+### Option C: OpenRouter API Polling Implementation (Production Ready) ✅ IMPLEMENTED
+- **Background Sync**: Automatic polling of OpenRouter `/generation` API every 10 minutes (Fixed endpoint URL)
 - **Real-time Updates**: Live counters updated immediately upon sync
 - **99% storage reduction** compared to per-request logging
 - **Multi-tenant Support**: Isolated usage tracking per client organization
-- **Production Ready**: Handles failures gracefully with proper logging
+- **Production Ready**: Handles failures gracefully with proper logging and error recovery
 - **Docker Compatible**: Designed for multi-container Hetzner deployment
+- **Currency Display**: Fixed frontend formatting to show small amounts (e.g., $0.002002 instead of $0.00)
+- **Historical Data**: Complete database initialization with sample data for testing
 
 ## Data Flow
 
 ```
-OpenRouter API Call → Streaming Response → Background Sync → OpenRouter /generations API → Database → Admin Dashboard
+OpenRouter API Call → Streaming Response → Background Sync → OpenRouter /generation API → Database → Admin Dashboard
         ↓                     ↓                   ↓                      ↓                  ↓           ↓
    Chat Interface      Real-time Chat     Every 10 minutes        Usage Data          Storage    Live Updates
 ```
@@ -29,7 +38,7 @@ OpenRouter API Call → Streaming Response → Background Sync → OpenRouter /g
 The current implementation solves the **streaming response issue** where OpenRouter returns Server-Sent Events (SSE) that bypass traditional usage recording:
 
 1. **Streaming Problem**: OpenRouter responses use `text/event-stream` which returns immediately, never reaching usage recording code
-2. **API Polling Solution**: Background service polls OpenRouter's `/generations` API every 10 minutes to fetch actual usage data
+2. **API Polling Solution**: Background service polls OpenRouter's `/generation` API every 10 minutes to fetch actual usage data
 3. **Production Ready**: This approach is more reliable than trying to parse streaming responses and works perfectly in Docker containers
 
 ## Key Features
@@ -232,6 +241,7 @@ Comprehensive usage dashboard with:
 - **30-second updates** for today's live data
 - **Manual refresh** button for immediate updates
 - **Last updated** timestamp display
+- **Fixed Currency Display**: Shows 6 decimal places for amounts under $0.01 (e.g., $0.002002)
 
 **📈 Tabbed Analytics:**
 1. **Daily Trend**: Historical usage over last 30 days
@@ -242,9 +252,10 @@ Comprehensive usage dashboard with:
 ### Key UI Features (Implemented & Tested)
 - **Live indicators**: Green pulsing dots for real-time data
 - **Auto-refresh**: 30-second intervals using `setInterval`
-- **Currency formatting**: Proper USD formatting ($0.000344)
-- **Number formatting**: Comma-separated large numbers (939 tokens)
+- **Currency formatting**: Fixed USD formatting with 6 decimal places for small amounts ($0.002002)
+- **Number formatting**: Comma-separated large numbers (1,751 tokens)
 - **Tab navigation**: Seamless switching between different views
+- **Historical data**: Daily Trend, By User, and By Model tabs now populated with sample data
 - **Error handling**: Graceful failure with user feedback
 - **Mobile responsive**: Works on all screen sizes
 

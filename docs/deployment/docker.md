@@ -275,11 +275,14 @@ server {
 
 Each client instance includes isolated usage tracking:
 
-#### Automated Features (Per Instance)
+#### Automated Features (Per Instance) ✅ PRODUCTION READY
 - **Single-Tenant Database**: Each client has isolated SQLite database
 - **API Key Auto-Sync**: Admin enters OpenRouter key → automatic database configuration
 - **External User Learning**: System learns user mappings on first API call
 - **Real-time Tracking**: Live usage monitoring with 30-second updates
+- **Background Usage Sync**: Automatic OpenRouter API polling every 10 minutes
+- **Currency Display Fix**: Proper formatting for all cost amounts (including small values)
+- **Production Database Tools**: Safe cleanup and initialization scripts included
 
 #### Admin User Workflow (Per Client)
 1. **Admin Registration**: First user to register automatically becomes admin
@@ -321,6 +324,9 @@ mAI Instance Structure (per client):
 - **Minimal Client Management**: Clients manage their own users internally
 - **Automated User Tracking**: Each user gets unique external_user automatically
 - **OpenRouter Dashboard**: Aggregate view of all client API key usage
+- **Production Ready**: Clean codebase with debugging files removed
+- **Reliable Usage Tracking**: Background sync ensures accurate billing data
+- **1.3x Markup Pricing**: Automated profit calculation and tracking
 
 ### Management Commands
 ```bash

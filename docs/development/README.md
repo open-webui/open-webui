@@ -36,12 +36,6 @@ cp -r static/static customization-backup/static-$(date +%Y%m%d)
 # - Themes: static/themes/
 ```
 
-### 2. Testing Requirements
-- All theme variants (Light/Dark/OLED)
-- Mobile responsiveness
-- WCAG 2.1 AA compliance
-- Contrast ratios 4.5:1 minimum
-
 ### 3. Commit Guidelines
 
 Use proper prefixes:
@@ -59,28 +53,6 @@ Example:
 git add .
 git commit -m "brand: Update logo assets and favicon"
 ```
-
-## Key Customizations
-
-See [Customizations Guide](./customizations.md) for detailed checklist of mAI features.
-
-### Core Features
-1. **mAI Branding** - Name, tagline, logos
-2. **Polish Localization** - Full translation
-3. **Background Patterns** - Customizable chat backgrounds
-4. **Custom Themes** - mAI Professional, Minimalist, Creative, Warm
-5. **OpenRouter Filtering** - 12 curated AI models
-
-## Upgrading from Open WebUI
-
-See [Upgrade Guide](./upgrade-guide.md) for detailed instructions.
-
-### Quick Process
-1. Ensure clean working directory
-2. Create backup branch
-3. Fetch and merge upstream
-4. Resolve conflicts preserving mAI customizations
-5. Test all features
 
 ## Development Commands
 
@@ -124,11 +96,3 @@ docker run -d -p 3002:8080 --name mai-dev mai-dev:latest
 - Logos: `static/static/`
 - Themes: `static/themes/`
 - Custom CSS: `static/custom.css`
-
-## Best Practices
-
-1. **Test locally** before committing
-2. **Document changes** in commit messages
-3. **Preserve customizations** during merges
-4. **Update documentation** when adding features
-5. **Follow code style** of existing code
