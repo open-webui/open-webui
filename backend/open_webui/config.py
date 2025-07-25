@@ -914,6 +914,13 @@ OPENAI_API_BASE_URL = os.environ.get("OPENAI_API_BASE_URL", "")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 GEMINI_API_BASE_URL = os.environ.get("GEMINI_API_BASE_URL", "")
 
+# OpenRouter Configuration (mAI Client Environment Integration)
+OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
+OPENROUTER_HOST = os.environ.get("OPENROUTER_HOST", "https://openrouter.ai/api/v1")
+OPENROUTER_EXTERNAL_USER = os.environ.get("OPENROUTER_EXTERNAL_USER", "")
+ORGANIZATION_NAME = os.environ.get("ORGANIZATION_NAME", "")
+SPENDING_LIMIT = os.environ.get("SPENDING_LIMIT", "")
+
 
 if OPENAI_API_BASE_URL == "":
     OPENAI_API_BASE_URL = "https://api.openai.com/v1"

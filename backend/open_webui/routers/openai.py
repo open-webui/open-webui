@@ -20,6 +20,11 @@ from starlette.background import BackgroundTask
 from open_webui.models.models import Models
 from open_webui.config import (
     CACHE_DIR,
+    OPENROUTER_API_KEY,
+    OPENROUTER_HOST,
+    OPENROUTER_EXTERNAL_USER,
+    ORGANIZATION_NAME,
+    SPENDING_LIMIT,
 )
 from open_webui.env import (
     MODELS_CACHE_TTL,
@@ -871,18 +876,33 @@ async def generate_chat_completion(
     client_context = None
     if "openrouter.ai" in request.app.state.config.OPENAI_API_BASE_URLS[idx]:
         log.info(f"DEBUG: OpenRouter detected for user {user.id}, model {payload.get('model', 'unknown')}")
-        from open_webui.utils.openrouter_client_manager import openrouter_client_manager
-        client_context = openrouter_client_manager.get_user_client_context(user.id)
         
-        if client_context:
-            # Use client-specific API key and add user tracking
-            log.info(f"DEBUG: Client context found - using org {client_context['client_org_id']}")
-            key = client_context["api_key"]
-            payload["user"] = client_context["openrouter_user_id"]
+        # Check if environment-based OpenRouter configuration is available
+        if OPENROUTER_API_KEY and OPENROUTER_EXTERNAL_USER:
+            log.info(f"DEBUG: Using environment-based OpenRouter configuration for {ORGANIZATION_NAME}")
+            key = OPENROUTER_API_KEY
+            payload["user"] = OPENROUTER_EXTERNAL_USER
+            # Create a simple client context for usage tracking compatibility
+            client_context = {
+                "api_key": OPENROUTER_API_KEY,
+                "openrouter_user_id": OPENROUTER_EXTERNAL_USER,
+                "client_org_id": ORGANIZATION_NAME or "env-client",
+                "is_env_based": True
+            }
         else:
-            # Fallback to original configuration if no client context
-            log.warning(f"No client context found for user {user.id}, using default OpenRouter config")
-            key = request.app.state.config.OPENAI_API_KEYS[idx]
+            # Fallback to database-based client management
+            from open_webui.utils.openrouter_client_manager import openrouter_client_manager
+            client_context = openrouter_client_manager.get_user_client_context(user.id)
+            
+            if client_context:
+                # Use client-specific API key and add user tracking
+                log.info(f"DEBUG: Client context found - using org {client_context['client_org_id']}")
+                key = client_context["api_key"]
+                payload["user"] = client_context["openrouter_user_id"]
+            else:
+                # Fallback to original configuration if no client context
+                log.warning(f"No client context found for user {user.id}, using default OpenRouter config")
+                key = request.app.state.config.OPENAI_API_KEYS[idx]
     else:
         key = request.app.state.config.OPENAI_API_KEYS[idx]
 
@@ -1022,19 +1042,28 @@ async def generate_chat_completion(
                             log.info(f"DEBUG: Detected external_user from OpenRouter: {external_user}")
                     
                     # Record usage asynchronously (don't block response)
-                    asyncio.create_task(
-                        openrouter_client_manager.record_real_time_usage(
-                            user_id=user.id,
-                            model_name=payload.get("model", "unknown"),
-                            input_tokens=input_tokens,
-                            output_tokens=output_tokens,
-                            raw_cost=raw_cost,
-                            provider=provider,
-                            generation_time=generation_time,
-                            external_user=external_user,  # Pass external_user for auto-learning
-                            client_context=client_context  # Pass context to check if update needed
+                    if client_context.get("is_env_based"):
+                        # For environment-based configuration, log usage info
+                        log.info(f"Environment-based OpenRouter usage - User: {user.id}, "
+                               f"Model: {payload.get('model', 'unknown')}, "
+                               f"Tokens: {input_tokens + output_tokens}, "
+                               f"Cost: {raw_cost}, "
+                               f"Organization: {ORGANIZATION_NAME}")
+                    else:
+                        # Use the original database-based usage tracking
+                        asyncio.create_task(
+                            openrouter_client_manager.record_real_time_usage(
+                                user_id=user.id,
+                                model_name=payload.get("model", "unknown"),
+                                input_tokens=input_tokens,
+                                output_tokens=output_tokens,
+                                raw_cost=raw_cost,
+                                provider=provider,
+                                generation_time=generation_time,
+                                external_user=external_user,  # Pass external_user for auto-learning
+                                client_context=client_context  # Pass context to check if update needed
+                            )
                         )
-                    )
                     log.info(f"DEBUG: Usage recording task created successfully")
                 except Exception as usage_error:
                     log.error(f"Failed to record usage for user {user.id}: {usage_error}")

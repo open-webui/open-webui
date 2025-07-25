@@ -6,13 +6,15 @@ services:
         OLLAMA_BASE_URL: '/ollama'
       dockerfile: Dockerfile
     container_name: open-webui-customization
+    env_file:
+      - .env
     volumes:
       - open-webui-customization:/app/backend/data
     ports:
       - "3002:8080"  # ← Kolejny port
     environment:
       - 'OLLAMA_BASE_URL=http://host.docker.internal:11434'
-      - 'WEBUI_SECRET_KEY='
+      - 'WEBUI_SECRET_KEY=mai-secret-key-development-2025'
       - 'WEBUI_NAME=mAI Development'  # ← Wyróżnij development
       - 'WEBUI_URL=http://localhost:3002'
     extra_hosts:
