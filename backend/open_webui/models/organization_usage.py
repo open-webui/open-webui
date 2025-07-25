@@ -5,7 +5,7 @@ from datetime import datetime, date, timedelta
 
 from open_webui.internal.db import Base, JSONField, get_db
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text, Integer, Float, Date, Index
+from sqlalchemy import BigInteger, Column, String, Text, Integer, Float, Date, Index, Boolean
 from sqlalchemy.orm import relationship
 
 log = logging.getLogger(__name__)
@@ -26,6 +26,23 @@ class GlobalSettings(Base):
     billing_currency = Column(String, default="USD")
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)
+
+
+class ProcessedGeneration(Base):
+    """Track processed OpenRouter generations to prevent duplicates"""
+    __tablename__ = "processed_generations"
+
+    id = Column(String, primary_key=True)  # OpenRouter generation ID
+    client_org_id = Column(String, nullable=False)
+    generation_date = Column(Date, nullable=False)
+    processed_at = Column(BigInteger, nullable=False)
+    total_cost = Column(Float, nullable=False)
+    total_tokens = Column(Integer, nullable=False)
+
+    __table_args__ = (
+        Index('idx_client_date', 'client_org_id', 'generation_date'),
+        Index('idx_processed_at', 'processed_at'),
+    )
 
 
 class ClientOrganization(Base):
@@ -1018,8 +1035,101 @@ class ClientUsageTable:
             }
 
 
+####################
+# Processed Generation Management
+####################
+
+class ProcessedGenerationTable:
+    """Database operations for generation deduplication"""
+
+    def is_generation_processed(self, generation_id: str, client_org_id: str) -> bool:
+        """Check if a generation has already been processed"""
+        try:
+            with get_db() as db:
+                processed = db.query(ProcessedGeneration).filter_by(
+                    id=generation_id,
+                    client_org_id=client_org_id
+                ).first()
+                return processed is not None
+        except Exception as e:
+            log.error(f"Error checking processed generation {generation_id}: {e}")
+            return False
+
+    def mark_generation_processed(self, generation_id: str, client_org_id: str, 
+                                 generation_date: date, total_cost: float, 
+                                 total_tokens: int) -> bool:
+        """Mark a generation as processed"""
+        try:
+            with get_db() as db:
+                processed_gen = ProcessedGeneration(
+                    id=generation_id,
+                    client_org_id=client_org_id,
+                    generation_date=generation_date,
+                    processed_at=int(time.time()),
+                    total_cost=total_cost,
+                    total_tokens=total_tokens
+                )
+                db.add(processed_gen)
+                db.commit()
+                return True
+        except Exception as e:
+            log.error(f"Error marking generation {generation_id} as processed: {e}")
+            return False
+
+    def cleanup_old_processed_generations(self, days_to_keep: int = 90) -> int:
+        """Clean up old processed generation records to prevent table bloat"""
+        try:
+            cutoff_date = date.today() - timedelta(days=days_to_keep)
+            cutoff_timestamp = int(time.time()) - (days_to_keep * 24 * 3600)
+            
+            with get_db() as db:
+                deleted = db.query(ProcessedGeneration).filter(
+                    ProcessedGeneration.processed_at < cutoff_timestamp
+                ).delete()
+                db.commit()
+                
+                log.info(f"Cleaned up {deleted} old processed generation records")
+                return deleted
+        except Exception as e:
+            log.error(f"Error cleaning up processed generations: {e}")
+            return 0
+
+    def get_processed_generations_stats(self, client_org_id: str, 
+                                      start_date: date = None, 
+                                      end_date: date = None) -> Dict[str, Any]:
+        """Get statistics about processed generations for debugging"""
+        try:
+            with get_db() as db:
+                query = db.query(ProcessedGeneration).filter_by(client_org_id=client_org_id)
+                
+                if start_date:
+                    query = query.filter(ProcessedGeneration.generation_date >= start_date)
+                if end_date:
+                    query = query.filter(ProcessedGeneration.generation_date <= end_date)
+                
+                generations = query.all()
+                
+                total_cost = sum(g.total_cost for g in generations)
+                total_tokens = sum(g.total_tokens for g in generations)
+                
+                return {
+                    "client_org_id": client_org_id,
+                    "total_processed": len(generations),
+                    "total_cost": total_cost,
+                    "total_tokens": total_tokens,
+                    "date_range": {
+                        "start": start_date.isoformat() if start_date else None,
+                        "end": end_date.isoformat() if end_date else None
+                    }
+                }
+        except Exception as e:
+            log.error(f"Error getting processed generation stats: {e}")
+            return {}
+
+
 # Singleton instances
 GlobalSettingsDB = GlobalSettingsTable()
 ClientOrganizationDB = ClientOrganizationTable()
 UserClientMappingDB = UserClientMappingTable()
 ClientUsageDB = ClientUsageTable()
+ProcessedGenerationDB = ProcessedGenerationTable()
