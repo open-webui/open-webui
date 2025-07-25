@@ -98,19 +98,43 @@ class OpenRouterUsageSync:
                 ClientDailyUsage, ClientUserDailyUsage, ClientModelDailyUsage, 
                 ClientLiveCounters, ProcessedGenerationDB, get_db
             )
+            from open_webui.utils.cost_calculator import calculate_batch_costs, CostCalculationError
             import time
             from datetime import datetime
             
-            processed_count = 0
-            skipped_count = 0
-            total_tokens = 0
-            total_cost = 0.0
+            # Use standardized cost calculation
+            try:
+                cost_result = calculate_batch_costs(generations, client_org_id)
+            except CostCalculationError as e:
+                log.error(f"Cost calculation failed for client {client_org_id}: {e}")
+                return {
+                    "processed": 0,
+                    "skipped": 0,
+                    "total_tokens": 0,
+                    "total_cost": 0.0,
+                    "error": str(e)
+                }
             
-            # Group generations by date for efficient processing
+            # Extract results from cost calculation
+            client_context = cost_result["client_context"]
+            totals = cost_result["totals"]
+            generation_costs = cost_result["generations"]
+            
+            processed_count = totals["processed_count"]
+            skipped_count = totals["skipped_count"]
+            total_tokens = totals["tokens"]
+            total_cost = totals["markup_cost"]
+            
+            log.debug(f"Batch cost calculation: {processed_count} processed, {skipped_count} skipped, {total_tokens} tokens, ${total_cost:.6f}")
+            
+            # Group processed generations by date for efficient database operations
             generations_by_date = {}
             
+            # Match original generations with their cost calculations
+            generation_id_to_cost = {gc["id"]: gc for gc in generation_costs}
+            
             for generation in generations:
-                # Generate unique generation ID (OpenRouter should provide this)
+                # Generate unique generation ID (same logic as in cost calculator)
                 generation_id = generation.get("id")
                 if not generation_id:
                     # Fallback: create hash-based ID from generation data
@@ -119,9 +143,12 @@ class OpenRouterUsageSync:
                     ).hexdigest()
                     generation_id = f"bg_sync_{gen_hash}"
                 
+                # Skip if not in processed costs (means it was filtered out)
+                if generation_id not in generation_id_to_cost:
+                    continue
+                
                 # Check if already processed
                 if ProcessedGenerationDB.is_generation_processed(generation_id, client_org_id):
-                    skipped_count += 1
                     continue
                 
                 # Parse generation date
@@ -141,25 +168,19 @@ class OpenRouterUsageSync:
                 if usage_date not in generations_by_date:
                     generations_by_date[usage_date] = []
                 
-                # Extract generation details
-                gen_tokens = generation.get("total_tokens", 0)
-                gen_raw_cost = float(generation.get("total_cost", 0.0))
-                gen_markup_cost = gen_raw_cost * 1.3  # mAI markup
-                model_name = generation.get("model", "unknown")
+                # Get pre-calculated cost data
+                cost_data = generation_id_to_cost[generation_id]
+                model_name = cost_data["model"]
                 provider = model_name.split("/")[0] if "/" in model_name else "unknown"
                 
                 generations_by_date[usage_date].append({
                     "id": generation_id,
-                    "tokens": gen_tokens,
-                    "raw_cost": gen_raw_cost,
-                    "markup_cost": gen_markup_cost,
+                    "tokens": cost_data["tokens"],
+                    "raw_cost": cost_data["raw_cost"],
+                    "markup_cost": cost_data["markup_cost"],
                     "model": model_name,
                     "provider": provider
                 })
-                
-                total_tokens += gen_tokens
-                total_cost += gen_markup_cost
-                processed_count += 1
             
             # Process all generations in a single database transaction
             with get_db() as db:

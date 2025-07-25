@@ -82,15 +82,36 @@ def record_usage_to_db(
 ):
     """Record usage data to mAI database using consolidated ORM approach"""
     try:
-        from open_webui.models.organization_usage import ClientUsageDB
+        from open_webui.models.organization_usage import ClientUsageDB, ClientOrganizationDB
         
         today = date.today()
+        
+        # Get client markup rate for accurate cost calculations
+        client = ClientOrganizationDB.get_client_by_id(client_org_id)
+        if not client:
+            raise Exception(f"Client organization not found: {client_org_id}")
+        
+        markup_rate = client.markup_rate
+        
+        # Validate markup rate
+        if markup_rate <= 0:
+            raise Exception(f"Invalid markup rate for client {client.name}: {markup_rate}")
         
         # Extract usage details
         model_name = usage_data.get("model", "unknown")
         total_tokens = usage_data.get("total_tokens", 0)
         raw_cost = float(usage_data.get("total_cost", 0.0))
-        markup_cost = raw_cost * 1.3  # mAI markup
+        
+        # Validate input data
+        if raw_cost < 0:
+            raise Exception(f"Negative cost not allowed: ${raw_cost:.6f}")
+        
+        if total_tokens < 0:
+            raise Exception(f"Negative tokens not allowed: {total_tokens}")
+        
+        # Calculate markup cost using standardized utility
+        from open_webui.utils.cost_calculator import calculate_markup_cost
+        markup_cost = calculate_markup_cost(raw_cost, markup_rate)
         
         # Parse model to get input/output tokens (simplified assumption)
         # In real usage, these should be separate fields from OpenRouter
