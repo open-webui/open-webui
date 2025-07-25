@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.6.18n1] - 2025-07-25
 
+### Fixed
+
 - 🔒 **improved PII highlighting formatted texts**: PII highlighting and unmasking now works also for multiple formatting in the model answers.
 
 ## [0.6.18] - 2025-07-19
