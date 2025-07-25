@@ -132,6 +132,9 @@ firecrawl-py==1.12.0
 # Sougou API SDK(Tencentcloud SDK)
 tencentcloud-sdk-python==3.0.1336
 
+## CLI
+typer==0.15.1
+
 ## Trace
 opentelemetry-api==1.32.1
 opentelemetry-sdk==1.32.1

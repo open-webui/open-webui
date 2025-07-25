@@ -228,6 +228,37 @@ async def update_user_settings_by_session_user(
         # If the user is not an admin and does not have permission to use tool servers, remove the key
         updated_user_settings["ui"].pop("toolServers", None)
 
+    # AUTO-SYNC OPENROUTER API KEY TO ORGANIZATION
+    # When client saves OpenRouter API key in Settings → Connections, automatically map it to their organization
+    try:
+        ui_settings = updated_user_settings.get("ui", {})
+        direct_connections = ui_settings.get("directConnections", {})
+        api_keys = direct_connections.get("OPENAI_API_KEYS", [])
+        api_urls = direct_connections.get("OPENAI_API_BASE_URLS", [])
+        
+        # Look for OpenRouter API key (starts with sk-or-)
+        openrouter_api_key = None
+        for i, (url, key) in enumerate(zip(api_urls, api_keys)):
+            if key and key.startswith("sk-or-") and "openrouter.ai" in url.lower():
+                openrouter_api_key = key
+                break
+        
+        if openrouter_api_key:
+            # Import here to avoid circular imports
+            from open_webui.utils.openrouter_client_manager import openrouter_client_manager
+            
+            # Sync the API key to user's organization
+            sync_result = openrouter_client_manager.sync_ui_key_to_organization(user.id, openrouter_api_key)
+            
+            if sync_result["success"]:
+                log.info(f"✅ Auto-synced OpenRouter API key for user {user.id} to organization {sync_result['organization_updated']}")
+            else:
+                log.warning(f"⚠️ Failed to auto-sync OpenRouter API key for user {user.id}: {sync_result['message']}")
+                
+    except Exception as e:
+        # Don't fail the entire settings update if API key sync fails
+        log.error(f"❌ Error during OpenRouter API key auto-sync for user {user.id}: {e}")
+
     user = Users.update_user_settings_by_id(user.id, updated_user_settings)
     if user:
         return user.settings

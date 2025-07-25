@@ -26,6 +26,7 @@ from open_webui.config import (
     ORGANIZATION_NAME,
     SPENDING_LIMIT,
 )
+from open_webui.utils.user_mapping import get_external_user_id, user_mapping_service
 from open_webui.env import (
     MODELS_CACHE_TTL,
     AIOHTTP_CLIENT_SESSION_SSL,
@@ -881,13 +882,26 @@ async def generate_chat_completion(
         if OPENROUTER_API_KEY and OPENROUTER_EXTERNAL_USER:
             log.info(f"DEBUG: Using environment-based OpenRouter configuration for {ORGANIZATION_NAME}")
             key = OPENROUTER_API_KEY
-            payload["user"] = OPENROUTER_EXTERNAL_USER
-            # Create a simple client context for usage tracking compatibility
+            
+            # Generate user-specific external_user_id for proper tracking
+            try:
+                user_external_id = get_external_user_id(user.id, user.name)
+                payload["user"] = user_external_id
+                log.info(f"DEBUG: Generated user-specific external_user_id: {user_external_id} for user {user.name}")
+            except Exception as e:
+                # Fallback to organization-wide ID for backward compatibility
+                log.warning(f"Failed to generate user-specific external_user_id: {e}, using fallback")
+                payload["user"] = user_mapping_service.get_fallback_external_user_id()
+            
+            # Create client context for usage tracking compatibility
             client_context = {
                 "api_key": OPENROUTER_API_KEY,
-                "openrouter_user_id": OPENROUTER_EXTERNAL_USER,
+                "openrouter_user_id": payload["user"],  # Use the generated user ID
+                "mai_user_id": user.id,  # Store original mAI user ID
+                "mai_user_name": user.name,  # Store user name for logging
                 "client_org_id": ORGANIZATION_NAME or "env-client",
-                "is_env_based": True
+                "is_env_based": True,
+                "user_mapping_enabled": True
             }
         else:
             # Fallback to database-based client management

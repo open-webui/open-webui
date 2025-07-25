@@ -19,6 +19,7 @@ from pydantic import BaseModel, Field
 from open_webui.models.users import Users
 from open_webui.utils.auth import get_current_user, get_admin_user
 from open_webui.config import DATA_DIR, ORGANIZATION_NAME, OPENROUTER_EXTERNAL_USER
+from open_webui.utils.user_mapping import get_external_user_id, user_mapping_service
 
 router = APIRouter()
 
@@ -409,42 +410,160 @@ async def get_my_organization_today_usage(user=Depends(get_current_user)):
             }
         }
 
+def get_environment_client_org_id() -> Optional[str]:
+    """Get client organization ID for environment-based setup"""
+    try:
+        from open_webui.models.organization_usage import ClientOrganizationDB
+        
+        # For environment-based setup, get the first (and should be only) active client
+        orgs = ClientOrganizationDB.get_all_active_clients()
+        if orgs:
+            return orgs[0].id
+        
+        # Fallback: create a default client org ID based on organization name
+        if ORGANIZATION_NAME:
+            import hashlib
+            org_hash = hashlib.md5(ORGANIZATION_NAME.encode()).hexdigest()[:8]
+            return f"env_client_{org_hash}"
+        
+        return "env_client_default"
+    except Exception as e:
+        print(f"Warning: Failed to get client org ID: {e}")
+        return None
+
 @router.get("/my-organization/usage-by-user")
 async def get_my_organization_usage_by_user(user=Depends(get_current_user)):
     """Get usage breakdown by user for the current organization (environment-based)"""
     try:
-        # For now, return the current user's usage
+        from open_webui.models.organization_usage import ClientUsageDB
+        
+        # Get client organization ID
+        client_org_id = get_environment_client_org_id()
+        if not client_org_id:
+            return {
+                "success": False,
+                "error": "No client organization found",
+                "user_usage": [],
+                "organization_name": ORGANIZATION_NAME or "My Organization",
+                "total_users": 0
+            }
+        
+        # Get actual usage data from database using current month calculation
+        usage_data = ClientUsageDB.get_usage_by_user(client_org_id)
+        
+        # Get all users to create complete list with user details
+        all_users = Users.get_users()
+        user_dict = {u.id: u for u in all_users}
+        
+        # Enhance usage data with user details
+        user_usage_list = []
+        for usage in usage_data:
+            user_obj = user_dict.get(usage['user_id'])
+            enhanced_usage = {
+                "user_id": usage['user_id'],
+                "user_name": user_obj.name if user_obj else usage['user_id'],
+                "user_email": user_obj.email if user_obj else "unknown@example.com",
+                "external_user_id": usage.get('openrouter_user_id', 'unknown'),
+                "total_tokens": usage['total_tokens'],
+                "total_requests": usage['total_requests'],
+                "markup_cost": usage['markup_cost'],
+                "cost_pln": usage['markup_cost'] * 4.1234,  # TODO: Use real exchange rate
+                "days_active": usage['days_active'],
+                "last_activity": None,  # Could be enhanced with last usage date
+                "user_mapping_enabled": True
+            }
+            user_usage_list.append(enhanced_usage)
+        
+        # Add users with no usage data
+        users_with_usage = {u['user_id'] for u in user_usage_list}
+        for user_obj in all_users:
+            if user_obj.id not in users_with_usage:
+                try:
+                    external_user_id = get_external_user_id(user_obj.id, user_obj.name)
+                    user_usage_list.append({
+                        "user_id": user_obj.id,
+                        "user_name": user_obj.name,
+                        "user_email": user_obj.email,
+                        "external_user_id": external_user_id,
+                        "total_tokens": 0,
+                        "total_requests": 0,
+                        "markup_cost": 0.0,
+                        "cost_pln": 0.0,
+                        "days_active": 0,
+                        "last_activity": None,
+                        "user_mapping_enabled": True
+                    })
+                except Exception as e:
+                    user_usage_list.append({
+                        "user_id": user_obj.id,
+                        "user_name": user_obj.name,
+                        "user_email": user_obj.email,
+                        "external_user_id": "mapping_error",
+                        "total_tokens": 0,
+                        "total_requests": 0,
+                        "markup_cost": 0.0,
+                        "cost_pln": 0.0,
+                        "days_active": 0,
+                        "last_activity": None,
+                        "user_mapping_enabled": False,
+                        "error": str(e)
+                    })
+        
         return {
             "success": True,
-            "user_usage": [
-                {
-                    "user_id": user.id,
-                    "user_name": user.name,
-                    "user_email": user.email,
-                    "total_tokens": 0,
-                    "total_requests": 0,
-                    "markup_cost": 0.0,
-                    "cost_pln": 0.0,
-                    "days_active": 0
-                }
-            ]
+            "user_usage": user_usage_list,
+            "organization_name": ORGANIZATION_NAME or "My Organization",
+            "total_users": len(user_usage_list),
+            "user_mapping_info": user_mapping_service.get_mapping_info()
         }
+        
     except Exception as e:
         return {
             "success": False,
             "error": str(e),
-            "user_usage": []
+            "user_usage": [],
+            "organization_name": ORGANIZATION_NAME or "My Organization",
+            "total_users": 0
         }
 
 @router.get("/my-organization/usage-by-model")
 async def get_my_organization_usage_by_model(user=Depends(get_current_user)):
     """Get usage breakdown by model for the current organization (environment-based)"""
     try:
+        from open_webui.models.organization_usage import ClientUsageDB
+        
+        # Get client organization ID
+        client_org_id = get_environment_client_org_id()
+        if not client_org_id:
+            return {
+                "success": False,
+                "error": "No client organization found",
+                "model_usage": []
+            }
+        
+        # Get actual usage data from database using current month calculation
+        usage_data = ClientUsageDB.get_usage_by_model(client_org_id)
+        
+        # Enhance data with PLN conversion
+        model_usage_list = []
+        for usage in usage_data:
+            enhanced_usage = {
+                "model_name": usage['model_name'],
+                "provider": usage.get('provider', 'Unknown'),
+                "total_tokens": usage['total_tokens'],
+                "total_requests": usage['total_requests'],
+                "markup_cost": usage['markup_cost'],
+                "cost_pln": usage['markup_cost'] * 4.1234,  # TODO: Use real exchange rate
+                "days_used": usage.get('days_used', 0)
+            }
+            model_usage_list.append(enhanced_usage)
+        
         return {
             "success": True,
-            "model_usage": []
+            "model_usage": model_usage_list
         }
     except Exception as e:
+        print(f"Error getting model usage: {e}")
         return {
             "success": False,
             "error": str(e),

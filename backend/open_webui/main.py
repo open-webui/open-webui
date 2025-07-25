@@ -86,6 +86,7 @@ from open_webui.routers import (
     users,
     utils,
     usage_tracking,
+    user_mapping_admin,
 )
 
 from open_webui.routers.retrieval import (
@@ -1242,6 +1243,7 @@ app.include_router(
 )
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
 app.include_router(usage_tracking.router, prefix="/api/v1/usage-tracking", tags=["usage-tracking"])
+app.include_router(user_mapping_admin.router, prefix="/api/v1/admin/user-mapping", tags=["admin", "user-mapping"])
 
 
 try:

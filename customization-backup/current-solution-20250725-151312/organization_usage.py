@@ -942,11 +942,11 @@ class ClientUsageTable:
         """Get usage breakdown by user for a client organization"""
         try:
             with get_db() as db:
-                # Default to current month (from 1st day until now) if no dates provided
+                # Default to last 30 days if no dates provided
                 if not end_date:
                     end_date = date.today()
                 if not start_date:
-                    start_date = end_date.replace(day=1)  # First day of current month
+                    start_date = end_date - timedelta(days=30)
                 
                 # Query per-user daily usage
                 user_records = db.query(ClientUserDailyUsage).filter(
@@ -992,14 +992,14 @@ class ClientUsageTable:
     def get_usage_by_model(
         self, client_org_id: str, start_date: date = None, end_date: date = None
     ) -> List[Dict[str, Any]]:
-        """Get usage breakdown by model for a client organization - shows ALL 12 available models"""
+        """Get usage breakdown by model for a client organization"""
         try:
             with get_db() as db:
-                # Default to current month (from 1st day until now) if no dates provided
+                # Default to last 30 days if no dates provided
                 if not end_date:
                     end_date = date.today()
                 if not start_date:
-                    start_date = end_date.replace(day=1)  # First day of current month
+                    start_date = end_date - timedelta(days=30)
                 
                 # Query per-model daily usage
                 model_records = db.query(ClientModelDailyUsage).filter(
@@ -1008,65 +1008,33 @@ class ClientUsageTable:
                     ClientModelDailyUsage.usage_date <= end_date
                 ).all()
                 
-                # Aggregate by model (only models with usage)
-                usage_by_model = {}
+                # Aggregate by model
+                model_totals = {}
                 for record in model_records:
-                    if record.model_name not in usage_by_model:
-                        usage_by_model[record.model_name] = {
+                    if record.model_name not in model_totals:
+                        model_totals[record.model_name] = {
+                            'model_name': record.model_name,
+                            'provider': record.provider,
                             'total_tokens': 0,
                             'total_requests': 0,
                             'raw_cost': 0.0,
                             'markup_cost': 0.0,
-                            'days_used': set(),
-                            'provider': record.provider
+                            'days_used': set()
                         }
                     
-                    usage_by_model[record.model_name]['total_tokens'] += record.total_tokens
-                    usage_by_model[record.model_name]['total_requests'] += record.total_requests
-                    usage_by_model[record.model_name]['raw_cost'] += record.raw_cost
-                    usage_by_model[record.model_name]['markup_cost'] += record.markup_cost
-                    usage_by_model[record.model_name]['days_used'].add(record.usage_date)
+                    model_totals[record.model_name]['total_tokens'] += record.total_tokens
+                    model_totals[record.model_name]['total_requests'] += record.total_requests
+                    model_totals[record.model_name]['raw_cost'] += record.raw_cost
+                    model_totals[record.model_name]['markup_cost'] += record.markup_cost
+                    model_totals[record.model_name]['days_used'].add(record.usage_date)
                 
-                # Define ALL 12 available models (matching frontend fallbackPricingData)
-                all_models = [
-                    {'id': 'anthropic/claude-sonnet-4', 'name': 'Claude Sonnet 4', 'provider': 'Anthropic'},
-                    {'id': 'google/gemini-2.5-flash', 'name': 'Gemini 2.5 Flash', 'provider': 'Google'},
-                    {'id': 'google/gemini-2.5-pro', 'name': 'Gemini 2.5 Pro', 'provider': 'Google'},
-                    {'id': 'deepseek/deepseek-chat-v3-0324', 'name': 'DeepSeek Chat v3', 'provider': 'DeepSeek'},
-                    {'id': 'anthropic/claude-3.7-sonnet', 'name': 'Claude 3.7 Sonnet', 'provider': 'Anthropic'},
-                    {'id': 'google/gemini-2.5-flash-lite-preview-06-17', 'name': 'Gemini 2.5 Flash Lite', 'provider': 'Google'},
-                    {'id': 'openai/gpt-4.1', 'name': 'GPT-4.1', 'provider': 'OpenAI'},
-                    {'id': 'x-ai/grok-4', 'name': 'Grok 4', 'provider': 'xAI'},
-                    {'id': 'openai/gpt-4o-mini', 'name': 'GPT-4o Mini', 'provider': 'OpenAI'},
-                    {'id': 'openai/o4-mini-high', 'name': 'O4 Mini High', 'provider': 'OpenAI'},
-                    {'id': 'openai/o3', 'name': 'O3', 'provider': 'OpenAI'},
-                    {'id': 'openai/chatgpt-4o-latest', 'name': 'ChatGPT-4o Latest', 'provider': 'OpenAI'}
-                ]
-                
-                # Create result with ALL 12 models, merging usage data where available
+                # Convert to list and add days used count
                 result = []
-                for model in all_models:
-                    model_id = model['id']
-                    usage = usage_by_model.get(model_id, {
-                        'total_tokens': 0,
-                        'total_requests': 0,
-                        'raw_cost': 0.0,
-                        'markup_cost': 0.0,  # This is the key field - 1.3x markup cost
-                        'days_used': set(),
-                        'provider': model['provider']
-                    })
-                    
-                    result.append({
-                        'model_name': model_id,
-                        'provider': usage['provider'],
-                        'total_tokens': usage['total_tokens'],
-                        'total_requests': usage['total_requests'],
-                        'raw_cost': usage['raw_cost'],
-                        'markup_cost': usage['markup_cost'],  # 1.3x markup rate applied
-                        'days_used': len(usage['days_used'])  # Convert set to count
-                    })
+                for model_data in model_totals.values():
+                    model_data['days_used'] = len(model_data['days_used'])
+                    result.append(model_data)
                 
-                # Sort by markup cost descending (models with usage first)
+                # Sort by markup cost descending
                 result.sort(key=lambda x: x['markup_cost'], reverse=True)
                 
                 return result

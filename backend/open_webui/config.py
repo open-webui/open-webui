@@ -960,10 +960,21 @@ else:
         "OPENAI_API_BASE_URLS", "openai.api_base_urls", OPENAI_API_BASE_URLS
     )
 
+# Parse OPENAI_API_CONFIGS from environment variable
+OPENAI_API_CONFIGS_ENV = os.environ.get("OPENAI_API_CONFIGS", "")
+if OPENAI_API_CONFIGS_ENV:
+    try:
+        OPENAI_API_CONFIGS_DEFAULT = json.loads(OPENAI_API_CONFIGS_ENV)
+    except json.JSONDecodeError:
+        logging.warning("Invalid JSON in OPENAI_API_CONFIGS environment variable, using empty config")
+        OPENAI_API_CONFIGS_DEFAULT = {}
+else:
+    OPENAI_API_CONFIGS_DEFAULT = {}
+
 OPENAI_API_CONFIGS = PersistentConfig(
     "OPENAI_API_CONFIGS",
     "openai.api_configs",
-    {},
+    OPENAI_API_CONFIGS_DEFAULT,
 )
 
 # Get the actual OpenAI API key based on the base URL
