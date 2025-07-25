@@ -59,12 +59,9 @@ export interface PiiUnmaskResponse {
 export type PiiSession = Session;
 
 // Create a session for consistent masking/unmasking
-export const createPiiSession = async (
-	apiKey: string,
-	ttl: string = '24h'
-): Promise<Session> => {
+export const createPiiSession = async (apiKey: string, ttl: string = '24h'): Promise<Session> => {
 	configureClient(apiKey);
-	
+
 	const response = await createSessionSessionsPost({
 		body: {
 			ttl,
