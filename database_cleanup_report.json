@@ -1,0 +1,55 @@
+{
+  "timestamp": "2025-07-25T21:35:59.481878",
+  "backup_path": "backend/data/webui.db.backup_20250725_213559",
+  "non_conforming_ids_removed": [
+    "client_default_organization_1753362006",
+    "test_comprehensive_1753430666",
+    "test_direct_1753430540",
+    "test_direct_1753431251"
+  ],
+  "cleanup_stats": {
+    "client_organizations": 4,
+    "user_daily_usage": 12,
+    "model_daily_usage": 15,
+    "processed_generations": 6,
+    "other_tables": 17
+  },
+  "verification": {
+    "client_organizations": 0,
+    "user_daily_usage": 0,
+    "model_daily_usage": 0,
+    "processed_generations": 0,
+    "conforming_clients": [],
+    "remaining_non_conforming": []
+  },
+  "cleanup_log": [
+    "Backup created: backend/data/webui.db.backup_20250725_213559",
+    "Deleted client_organizations: client_default_organization_1753362006",
+    "Deleted client_organizations: test_comprehensive_1753430666",
+    "Deleted client_organizations: test_direct_1753430540",
+    "Deleted client_organizations: test_direct_1753431251",
+    "Deleted 1 client_user_daily_usage records for: client_default_organization_1753362006",
+    "Deleted 9 client_user_daily_usage records for: test_comprehensive_1753430666",
+    "Deleted 1 client_user_daily_usage records for: test_direct_1753430540",
+    "Deleted 1 client_user_daily_usage records for: test_direct_1753431251",
+    "Deleted 1 client_model_daily_usage records for: client_default_organization_1753362006",
+    "Deleted 12 client_model_daily_usage records for: test_comprehensive_1753430666",
+    "Deleted 1 client_model_daily_usage records for: test_direct_1753430540",
+    "Deleted 1 client_model_daily_usage records for: test_direct_1753431251",
+    "Deleted 2 processed_generations records for: cleanup_test_org",
+    "Deleted 2 processed_generations records for: demo_org_001",
+    "Deleted 2 processed_generations records for: test_org_cleanup",
+    "Deleted 1 client_daily_usage records for: client_default_organization_1753362006",
+    "Deleted 3 client_daily_usage records for: test_comprehensive_1753430666",
+    "Deleted 1 client_daily_usage records for: test_direct_1753430540",
+    "Deleted 1 client_daily_usage records for: test_direct_1753431251",
+    "Deleted 1 client_live_counters records for: client_default_organization_1753362006",
+    "Deleted 1 client_live_counters records for: test_comprehensive_1753430666",
+    "Deleted 1 client_live_counters records for: test_direct_1753430540",
+    "Deleted 1 client_live_counters records for: test_direct_1753431251",
+    "Deleted 2 user_client_mapping records for: client_default_organization_1753362006",
+    "Deleted 3 user_client_mapping records for: test_comprehensive_1753430666",
+    "Deleted 1 user_client_mapping records for: test_direct_1753430540",
+    "Deleted 1 user_client_mapping records for: test_direct_1753431251"
+  ]
+}
