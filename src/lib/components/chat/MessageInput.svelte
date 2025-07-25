@@ -365,7 +365,8 @@
 		document.removeEventListener('click', handleClickOutside);
 	});
 
-	const handleFilterToggle = () => {
+	const handleFilterToggle = (event) => {
+		event.preventDefault(); 
 		showGovKnoWebSearchToggle = !showGovKnoWebSearchToggle;
 	};
 
