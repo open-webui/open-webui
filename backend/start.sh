@@ -10,8 +10,6 @@ if [[ "${WEB_LOADER_ENGINE,,}" == "playwright" ]]; then
         playwright install chromium
         playwright install-deps chromium
     fi
-
-    python -c "import nltk; nltk.download('punkt_tab')"
 fi
 
 if [ -n "${WEBUI_SECRET_KEY_FILE}" ]; then
@@ -35,15 +33,7 @@ if test "$WEBUI_SECRET_KEY $WEBUI_JWT_SECRET_KEY" = " "; then
   WEBUI_SECRET_KEY=$(cat "$KEY_FILE")
 fi
 
-if [[ "${USE_OLLAMA_DOCKER,,}" == "true" ]]; then
-    echo "USE_OLLAMA is set to true, starting ollama serve."
-    ollama serve &
-fi
 
-if [[ "${USE_CUDA_DOCKER,,}" == "true" ]]; then
-  echo "CUDA is enabled, appending LD_LIBRARY_PATH to include torch/cudnn & cublas libraries."
-  export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/usr/local/lib/python3.11/site-packages/torch/lib:/usr/local/lib/python3.11/site-packages/nvidia/cudnn/lib"
-fi
 
 # Check if SPACE_ID is set, if so, configure for space
 if [ -n "$SPACE_ID" ]; then

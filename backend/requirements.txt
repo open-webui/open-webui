@@ -59,11 +59,6 @@ playwright==1.49.1 # Caution: version must match docker-compose.playwright.yaml
 elasticsearch==9.0.1
 pinecone==6.0.2
 
-transformers
-sentence-transformers==4.1.0
-accelerate
-colbert-ai==0.2.21
-einops==0.8.1
 
 
 ftfy==6.2.3
@@ -82,18 +77,11 @@ pyxlsb==1.0.10
 xlrd==2.0.1
 validators==0.35.0
 psutil
-sentencepiece
-soundfile==0.13.1
 azure-ai-documentintelligence==1.0.2
 
-pillow==11.2.1
-opencv-python-headless==4.11.0.86
-rapidocr-onnxruntime==1.4.4
 rank-bm25==0.2.2
 
-onnxruntime==1.20.1
 
-faster-whisper==1.1.1
 
 PyJWT[crypto]==2.10.1
 authlib==1.4.1
@@ -103,7 +91,6 @@ langfuse==2.44.0
 youtube-transcript-api==1.1.0
 pytube==15.0.0
 
-pydub
 ddgs==9.0.0
 
 ## Google Drive
