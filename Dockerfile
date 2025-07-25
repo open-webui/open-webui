@@ -77,7 +77,7 @@ RUN pip3 install --no-cache-dir --retries 3 --timeout 300 uv
 
 # Install minimal requirements without ML dependencies
 RUN grep -v "sentence-transformers\|transformers\|torch\|accelerate\|datasets\|faster-whisper\|opencv-python\|rapidocr-onnxruntime\|onnxruntime" requirements.txt > requirements-minimal.txt && \
-    UV_HTTP_TIMEOUT=300 uv pip install --system -r requirements-minimal.txt --no-cache-dir
+    UV_HTTP_TIMEOUT=300 UV_HTTP_RETRIES=5 uv pip install --system -r requirements-minimal.txt --no-cache-dir
 
 
 # Set ownership
