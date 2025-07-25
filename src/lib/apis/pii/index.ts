@@ -1,40 +1,53 @@
-// PII Detection API using NENNA.ai
+// PII Detection API using NENNA.ai with auto-generated client
 import { config } from '$lib/stores';
 import { get } from 'svelte/store';
+import {
+	createSessionSessionsPost,
+	deleteSessionSessionsSessionIdDelete,
+	getSessionSessionsSessionIdGet,
+	maskTextTextMaskPost,
+	unmaskTextTextUnmaskPost,
+	maskTextWithSessionSessionsSessionIdTextMaskPost,
+	unmaskTextWithSessionSessionsSessionIdTextUnmaskPost,
+	type PiiEntity,
+	type Session,
+	type SessionCreate,
+	type TextMaskResponse,
+	type TextUnmaskResponse
+} from './generated';
+import { client } from './generated/client.gen';
 
 // Get the PII API base URL from the config store
 const getPiiApiBaseUrl = (): string => {
-	const configValue = get(config);
+	const configValue = get(config) as any;
 	return configValue?.pii?.api_base_url || 'https://api.nenna.ai/latest';
 };
 
-export interface PiiEntity {
-	id: number;
-	type: string;
-	label: string;
-	raw_text: string;
-	occurrences: Array<{
-		start_idx: number;
-		end_idx: number;
-	}>;
-}
+// Configure the generated client
+const configureClient = (apiKey: string) => {
+	client.setConfig({
+		baseUrl: getPiiApiBaseUrl(),
+		headers: {
+			'X-API-Key': apiKey
+		}
+	});
+};
 
-// Interface for known entities to send to API
+// Re-export types from generated client
+export type { PiiEntity, Session };
+
+// Legacy interface for backward compatibility
 export interface KnownPiiEntity {
 	id: number;
 	label: string;
-	name: string;
+	name: string; // maps to raw_text in PiiEntity
 }
 
+// Response interfaces that match the API
 export interface PiiMaskResponse {
 	text: string[];
 	pii: PiiEntity[][];
-	session?: {
-		session_id: string;
-		ttl: string;
-		created_at: string;
-		expires_at?: string;
-	};
+	session?: Session;
 }
 
 export interface PiiUnmaskResponse {
@@ -42,35 +55,28 @@ export interface PiiUnmaskResponse {
 	pii?: PiiEntity[];
 }
 
-export interface PiiSession {
-	session_id: string;
-	ttl: string;
-	created_at: string;
-	expires_at?: string;
-}
+// Legacy alias
+export type PiiSession = Session;
 
 // Create a session for consistent masking/unmasking
 export const createPiiSession = async (
 	apiKey: string,
 	ttl: string = '24h'
-): Promise<PiiSession> => {
-	const response = await fetch(`${getPiiApiBaseUrl()}/sessions`, {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			'X-API-Key': apiKey
-		},
-		body: JSON.stringify({
+): Promise<Session> => {
+	configureClient(apiKey);
+	
+	const response = await createSessionSessionsPost({
+		body: {
 			ttl,
 			description: 'Open WebUI PII Detection Session'
-		})
+		}
 	});
 
-	if (!response.ok) {
-		throw new Error(`Failed to create PII session: ${response.statusText}`);
+	if (response.error) {
+		throw new Error(`Failed to create PII session: ${response.error}`);
 	}
 
-	return response.json();
+	return response.data;
 };
 
 // Interface for Shield API modifiers
@@ -89,9 +95,7 @@ export const maskPiiText = async (
 	createSession: boolean = false,
 	quiet: boolean = false
 ): Promise<PiiMaskResponse> => {
-	const url = new URL(`${getPiiApiBaseUrl()}/text/mask`);
-	if (createSession) url.searchParams.set('create_session', 'true');
-	if (quiet) url.searchParams.set('quiet', 'true');
+	configureClient(apiKey);
 
 	const requestBody: {
 		text: string[];
@@ -115,20 +119,23 @@ export const maskPiiText = async (
 		requestBody.modifiers = modifiers;
 	}
 
-	const response = await fetch(url.toString(), {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			'X-API-Key': apiKey
-		},
-		body: JSON.stringify(requestBody)
+	const response = await maskTextTextMaskPost({
+		body: requestBody,
+		query: {
+			create_session: createSession,
+			quiet: quiet
+		}
 	});
 
-	if (!response.ok) {
-		throw new Error(`Failed to mask PII: ${response.statusText}`);
+	if (response.error) {
+		throw new Error(`Failed to mask PII: ${response.error}`);
 	}
 
-	return response.json();
+	return {
+		text: response.data.text,
+		pii: response.data.pii || [],
+		session: response.data.session || undefined
+	};
 };
 
 // Unmask PII in text (ephemeral - without session)
