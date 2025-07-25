@@ -684,6 +684,135 @@ def load_oauth_providers():
 load_oauth_providers()
 
 ####################################
+# Tool Server OAuth Providers
+####################################
+
+# Google
+TOOL_GOOGLE_CLIENT_ID = PersistentConfig(
+    "TOOL_GOOGLE_CLIENT_ID",
+    "toolserver.google.client_id",
+    os.environ.get("TOOL_GOOGLE_CLIENT_ID", ""),
+)
+
+TOOL_GOOGLE_CLIENT_SECRET = PersistentConfig(
+    "TOOL_GOOGLE_CLIENT_SECRET",
+    "toolserver.google.client_secret",
+    os.environ.get("TOOL_GOOGLE_CLIENT_SECRET", ""),
+)
+
+TOOL_GOOGLE_REDIRECT_URI = PersistentConfig(
+    "TOOL_GOOGLE_REDIRECT_URI",
+    "toolserver.google.redirect_uri",
+    os.environ.get("TOOL_GOOGLE_REDIRECT_URI", ""),
+)
+
+TOOL_GOOGLE_SCOPE = PersistentConfig(
+    "TOOL_GOOGLE_SCOPE",
+    "toolserver.google.scope",
+    os.environ.get("TOOL_GOOGLE_SCOPE", ""),
+)
+
+# Atlassian
+TOOL_ATLASSIAN_CLIENT_ID = PersistentConfig(
+    "TOOL_ATLASSIAN_CLIENT_ID",
+    "toolserver.atlassian.client_id",
+    os.environ.get("TOOL_ATLASSIAN_CLIENT_ID", ""),
+)
+
+TOOL_ATLASSIAN_CLIENT_SECRET = PersistentConfig(
+    "TOOL_ATLASSIAN_CLIENT_SECRET",
+    "toolserver.atlassian.client_secret",
+    os.environ.get("TOOL_ATLASSIAN_CLIENT_SECRET", ""),
+)
+
+TOOL_ATLASSIAN_AUTHORIZE_URL = PersistentConfig(
+    "TOOL_ATLASSIAN_AUTHORIZE_URL",
+    "toolserver.atlassian.authorize_url",
+    os.environ.get("TOOL_ATLASSIAN_AUTHORIZE_URL", "https://auth.atlassian.com/authorize"),
+)
+
+TOOL_ATLASSIAN_API_BASE_URL = PersistentConfig(
+    "TOOL_ATLASSIAN_API_BASE_URL",
+    "toolserver.atlassian.api_base_url",
+    os.environ.get("TOOL_ATLASSIAN_API_BASE_URL", "https://mcp.atlassian.com"),
+)
+
+TOOL_ATLASSIAN_REDIRECT_URI = PersistentConfig(
+    "TOOL_ATLASSIAN_REDIRECT_URI",
+    "toolserver.atlassian.redirect_uri",
+    os.environ.get("TOOL_ATLASSIAN_REDIRECT_URI", ""),
+)
+
+TOOL_ATLASSIAN_USERINFO_ENDPOINT = PersistentConfig(
+    "TOOL_ATLASSIAN_USERINFO_ENDPOINT",
+    "toolserver.atlassian.userinfo_endpoint",
+    os.environ.get("TOOL_ATLASSIAN_USERINFO_ENDPOINT", "https://api.atlassian.com/me"),
+)
+
+TOOL_ATLASSIAN_SCOPE = PersistentConfig(
+    "TOOL_ATLASSIAN_SCOPE",
+    "toolserver.atlassian.scope",
+    os.environ.get("TOOL_ATLASSIAN_SCOPE", ""),
+)
+
+TOOL_ATLASSIAN_AUDIENCE = PersistentConfig(
+    "TOOL_ATLASSIAN_AUDIENCE",
+    "toolserver.atlassian.audience",
+    os.environ.get("TOOL_ATLASSIAN_AUDIENCE", "mcp.atlassian.com"),
+)
+
+TOOL_ATLASSIAN_ACCESS_TOKEN_URL = PersistentConfig(
+    "TOOL_ATLASSIAN_ACCESS_TOKEN_URL",
+    "toolserver.atlassian.access_token_url",
+    os.environ.get("TOOL_ATLASSIAN_ACCESS_TOKEN_URL", "https://auth.atlassian.com/oauth/token"),
+)
+
+def load_tool_server_oauth_providers():
+    providers = {}
+    
+    if TOOL_GOOGLE_CLIENT_ID.value and TOOL_GOOGLE_CLIENT_SECRET.value:
+        def google_oauth_register(oauth):
+            oauth.register(
+                name="google",
+                client_id=TOOL_GOOGLE_CLIENT_ID.value,
+                client_secret=TOOL_GOOGLE_CLIENT_SECRET.value,
+                server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+                client_kwargs={"scope": TOOL_GOOGLE_SCOPE.value},
+                redirect_uri=TOOL_GOOGLE_REDIRECT_URI.value,
+            )
+        
+        providers["google"] = {
+            "redirect_uri": TOOL_GOOGLE_REDIRECT_URI.value,
+            "register": google_oauth_register,
+        }
+
+    if TOOL_ATLASSIAN_CLIENT_ID.value and TOOL_ATLASSIAN_CLIENT_SECRET.value:
+        def atlassian_oauth_register(oauth):
+            oauth.register(
+                name="atlassian",
+                client_id=TOOL_ATLASSIAN_CLIENT_ID.value,
+                client_secret=TOOL_ATLASSIAN_CLIENT_SECRET.value,
+                authorize_url=TOOL_ATLASSIAN_AUTHORIZE_URL.value,
+                access_token_url=TOOL_ATLASSIAN_ACCESS_TOKEN_URL.value,
+                api_base_url=TOOL_ATLASSIAN_API_BASE_URL.value,
+                userinfo_endpoint=TOOL_ATLASSIAN_USERINFO_ENDPOINT.value,
+                client_kwargs={
+                    "scope": TOOL_ATLASSIAN_SCOPE.value,
+                    "audience": TOOL_ATLASSIAN_AUDIENCE.value,
+                    "prompt": "consent",
+                },
+                redirect_uri=TOOL_ATLASSIAN_REDIRECT_URI.value,
+            )
+        
+        providers["atlassian"] = {
+            "redirect_uri": TOOL_ATLASSIAN_REDIRECT_URI.value,
+            "register": atlassian_oauth_register,
+        }
+    return providers
+
+TOOL_SERVER_OAUTH_PROVIDERS = load_tool_server_oauth_providers()
+
+####################################
 # Static DIR
 ####################################
 

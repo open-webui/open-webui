@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { getContext, onMount } from 'svelte';
+	import { getContext, onDestroy, onMount } from 'svelte';
 	const i18n = getContext('i18n');
 
 	import { settings } from '$lib/stores';
@@ -12,12 +12,14 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Tags from './common/Tags.svelte';
-	import { getToolServerData } from '$lib/apis';
+	import { getToolServerData, getToolServerOAuthProviders } from '$lib/apis';
 	import { verifyToolServerConnection } from '$lib/apis/configs';
 	import AccessControl from './workspace/common/AccessControl.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 
+	import { WEBUI_BASE_URL } from '$lib/constants';
+  
 	export let onSubmit: Function = () => {};
 	export let onDelete: Function = () => {};
 
@@ -31,7 +33,13 @@
 	let path = 'openapi.json';
 
 	let auth_type = 'bearer';
-	let key = '';
+	let oAuthProviders: string[] = [];
+	let oAuthProvider = '';
+	let bearerKey = '';
+
+	let oAuthAccessToken = '';
+
+	let popup: WindowProxy | null = null;
 
 	let accessControl = {};
 
@@ -41,6 +49,17 @@
 	let enable = true;
 
 	let loading = false;
+
+	const startOAuthFlow = async () => {
+		// Idea: Pass the server_url and do whole OAuth login + Verify Connection flow?
+		const loginUrl = `${WEBUI_BASE_URL}/toolserver/${oAuthProvider}/login`;
+
+		popup = window.open(
+			loginUrl,
+			'oauthPopup',
+			'width=500,height=600'
+		);
+	};
 
 	const verifyHandler = async () => {
 		if (url === '') {
@@ -53,10 +72,17 @@
 			return;
 		}
 
+		if (auth_type === 'oauth' && oAuthAccessToken === '') {
+			toast.error($i18n.t('Please Sign In to your selected provider, or manually enter an Access Token.'));
+			return;
+		}
+
+		const key = auth_type === 'oauth' ? oAuthAccessToken : auth_type === 'bearer' ? bearerKey : localStorage.token;
+
 		if (direct) {
 			const res = await getToolServerData(
-				auth_type === 'bearer' ? key : localStorage.token,
-				path.includes('://') ? path : `${url}${path.startsWith('/') ? '' : '/'}${path}`
+				key,
+				path.includes('://') ? path : `${url}${path.startsWith('/') ? '' : '/'}${path}`,
 			).catch((err) => {
 				toast.error($i18n.t('Connection failed'));
 			});
@@ -91,6 +117,7 @@
 	};
 
 	const submitHandler = async () => {
+		const key = auth_type === 'oauth' ? oAuthAccessToken : auth_type === 'bearer' ? bearerKey : localStorage.token;
 		loading = true;
 
 		// remove trailing slash from url
@@ -118,7 +145,8 @@
 
 		url = '';
 		path = 'openapi.json';
-		key = '';
+		bearerKey = '';
+		oAuthAccessToken = '';
 		auth_type = 'bearer';
 
 		name = '';
@@ -134,7 +162,8 @@
 			path = connection?.path ?? 'openapi.json';
 
 			auth_type = connection?.auth_type ?? 'bearer';
-			key = connection?.key ?? '';
+			bearerKey = connection?.key ?? '';
+			oAuthAccessToken = connection?.key ?? '';
 
 			name = connection.info?.name ?? '';
 			description = connection.info?.description ?? '';
@@ -142,14 +171,47 @@
 			enable = connection.config?.enable ?? true;
 			accessControl = connection.config?.access_control ?? null;
 		}
+
+		getToolServerOAuthProviders().then((providers) => {
+			if (providers.length > 0) {
+				oAuthProviders = providers;
+				oAuthProvider = oAuthProviders[0];
+			}
+		});
 	};
 
 	$: if (show) {
 		init();
 	}
 
+	let handleOAuthMessage: (event: MessageEvent, connection: any) => void;
+
 	onMount(() => {
+		handleOAuthMessage = (event: MessageEvent, connection: any) => {
+			if (event.origin !== WEBUI_BASE_URL) return;
+
+			const data = event.data;
+
+			try {
+				if (data.toolserverAuthSuccess && connection) {
+					oAuthAccessToken = data.accessToken;
+					connection.key = data.accessToken;
+					onSubmit(connection);
+					toast.success($i18n.t(`Authentication successful! Access token was set.`));
+					if (popup) popup.close();
+				} else {
+					toast.error($i18n.t(`Failed to authenticate to ${data.provider}`));
+				}
+			} catch (e: any) {
+				toast.error($i18n.t(`Failed to process authentication response: ${e.message}`));
+			}
+		};
+		window.addEventListener('message', (event: MessageEvent) => handleOAuthMessage(event, connection));
 		init();
+	});
+
+	onDestroy(() => {
+		window.removeEventListener('message', (event: MessageEvent) => handleOAuthMessage(event, connection));
 	});
 </script>
 
@@ -265,14 +327,15 @@
 
 						<div class="flex gap-2 mt-2">
 							<div class="flex flex-col w-full">
+								<div class="text-xs text-gray-500">{$i18n.t('Auth')}</div>
 								<label
 									for="select-bearer-or-session"
 									class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
 									>{$i18n.t('Auth')}</label
 								>
 
-								<div class="flex gap-2">
-									<div class="flex-shrink-0 self-start">
+								<div class="flex items-center gap-2">
+									<div class="flex-shrink-0">
 										<select
 											id="select-bearer-or-session"
 											class={`w-full text-sm bg-transparent pr-5 ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
@@ -280,13 +343,33 @@
 										>
 											<option value="bearer">Bearer</option>
 											<option value="session">Session</option>
+											<option value="oauth">OAuth</option>
 										</select>
 									</div>
 
-									<div class="flex flex-1 items-center">
+									{#if auth_type === 'oauth'}
+										<div class="flex-shrink-0">
+											{#if oAuthProviders.length === 0}
+												<div class="text-xs text-gray-500 self-center translate-y-[1px]">
+													{$i18n.t('No OAuth providers configured. Please contact your administrator.')}
+												</div>
+											{:else}
+											<select
+												class="w-full text-sm bg-transparent dark:bg-gray-900 placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden pr-5"
+												bind:value={oAuthProvider}
+											>
+												{#each oAuthProviders as provider}
+													<option value={provider}>{provider.charAt(0).toUpperCase() + provider.slice(1)}</option>
+												{/each}
+											</select>
+											{/if}
+										</div>
+									{/if}
+									<div class="flex-1">
 										{#if auth_type === 'bearer'}
 											<SensitiveInput
-												bind:value={key}
+												className="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
+												bind:value={bearerKey}
 												placeholder={$i18n.t('API Key')}
 												required={false}
 											/>
@@ -296,9 +379,30 @@
 											>
 												{$i18n.t('Forwards system user session credentials to authenticate')}
 											</div>
+										{:else if auth_type === 'oauth' && oAuthProvider !== ''}
+											<button
+												class="ml-auto px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
+												on:click={() => startOAuthFlow()}
+											>
+												{$i18n.t(oAuthAccessToken === '' ? 'Sign In' : 'Refresh Token')}
+											</button>
 										{/if}
 									</div>
 								</div>
+
+								{#if auth_type === 'oauth'}
+									<div class="mt-2">
+										<div class="text-xs text-gray-500 self-center translate-y-[1px]">
+											{$i18n.t('OAuth Access Token')}
+										</div>
+										<SensitiveInput
+											className="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
+											bind:value={oAuthAccessToken}
+											placeholder={$i18n.t('OAuth Access Token')}
+											required={true}
+										/>
+									</div>
+								{/if}
 							</div>
 						</div>
 

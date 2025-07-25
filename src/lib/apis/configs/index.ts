@@ -179,7 +179,7 @@ export const verifyToolServerConnection = async (token: string, connection: obje
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
+			Authorization: `Bearer ${token}`,
 		},
 		body: JSON.stringify({
 			...connection
