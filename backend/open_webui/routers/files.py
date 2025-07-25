@@ -81,8 +81,8 @@ def upload_file(
         )
 
         try:
-            process_file(request, ProcessFileForm(file_id=id), user=user)
-            file_item = Files.get_file_by_id(id=id)
+            process_file(request, ProcessFileForm(file_id=req_id), user=user)
+            file_item = Files.get_file_by_id(id=req_id)
         except Exception as e:
             log.exception(e)
             log.error(f"Error processing file: {file_item.id}")
