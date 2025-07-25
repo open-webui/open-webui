@@ -5,6 +5,7 @@ from chromadb.utils.batch_utils import create_batches
 
 from typing import Optional
 
+from open_webui.retrieval.vector.utils import stringify_nested_datastructures
 from open_webui.retrieval.vector.main import (
     VectorDBBase,
     VectorItem,
@@ -146,6 +147,9 @@ class ChromaClient(VectorDBBase):
         embeddings = [item["vector"] for item in items]
         metadatas = [item["metadata"] for item in items]
 
+        # Chroma can only handle flat structures of basic types
+        stringify_nested_datastructures(metadatas)
+
         for batch in create_batches(
             api=self.client,
             documents=documents,
@@ -165,6 +169,9 @@ class ChromaClient(VectorDBBase):
         documents = [item["text"] for item in items]
         embeddings = [item["vector"] for item in items]
         metadatas = [item["metadata"] for item in items]
+
+        # Chroma can only handle flat structures of basic types
+        stringify_nested_datastructures(metadatas)
 
         collection.upsert(
             ids=ids, documents=documents, embeddings=embeddings, metadatas=metadatas

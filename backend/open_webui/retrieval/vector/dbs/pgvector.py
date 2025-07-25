@@ -26,6 +26,7 @@ from pgvector.sqlalchemy import Vector
 from sqlalchemy.ext.mutable import MutableDict
 from sqlalchemy.exc import NoSuchTableError
 
+from open_webui.retrieval.vector.utils import stringify_nested_datastructures
 from open_webui.retrieval.vector.main import (
     VectorDBBase,
     VectorItem,
@@ -235,7 +236,7 @@ class PgvectorClient(VectorDBBase):
                         vector=vector,
                         collection_name=collection_name,
                         text=item["text"],
-                        vmetadata=item["metadata"],
+                        vmetadata=stringify_nested_datastructures(item["metadata"]),
                     )
                     new_items.append(new_chunk)
                 self.session.bulk_save_objects(new_items)
@@ -292,7 +293,9 @@ class PgvectorClient(VectorDBBase):
                     if existing:
                         existing.vector = vector
                         existing.text = item["text"]
-                        existing.vmetadata = item["metadata"]
+                        existing.vmetadata = stringify_nested_datastructures(
+                            item["metadata"]
+                        )
                         existing.collection_name = (
                             collection_name  # Update collection_name if necessary
                         )
@@ -302,7 +305,7 @@ class PgvectorClient(VectorDBBase):
                             vector=vector,
                             collection_name=collection_name,
                             text=item["text"],
-                            vmetadata=item["metadata"],
+                            vmetadata=stringify_nested_datastructures(item["metadata"]),
                         )
                         self.session.add(new_chunk)
                 self.session.commit()
