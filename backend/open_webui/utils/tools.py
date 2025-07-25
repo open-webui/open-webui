@@ -446,11 +446,9 @@ async def get_tool_server_data(token: str, url: str) -> Dict[str, Any]:
         headers["Authorization"] = f"Bearer {token}"
 
     error = None
-    session = None
     try:
         timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA)
-        session = aiohttp.ClientSession(timeout=timeout, trust_env=True)
-        try:
+        async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
             async with session.get(
                 url, headers=headers, ssl=AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL
             ) as response:
@@ -464,13 +462,6 @@ async def get_tool_server_data(token: str, url: str) -> Dict[str, Any]:
                     res = yaml.safe_load(text_content)
                 else:
                     res = await response.json()
-        finally:
-            if session and not session.closed:
-                await session.close()
-                
-    except asyncio.CancelledError:
-        log.debug(f"Tool server data fetch cancelled for URL: {url}")
-        raise
     except Exception as err:
         log.exception(f"Could not fetch tool server spec from {url}")
         if isinstance(err, dict) and "detail" in err:
@@ -478,13 +469,6 @@ async def get_tool_server_data(token: str, url: str) -> Dict[str, Any]:
         else:
             error = str(err)
         raise Exception(error)
-    finally:
-        # Additional cleanup to handle any remaining session
-        if session and not session.closed:
-            try:
-                await session.close()
-            except Exception as cleanup_error:
-                log.debug(f"Error during session cleanup: {cleanup_error}")
 
     data = {
         "openapi": res,
@@ -567,7 +551,6 @@ async def execute_tool_server(
     token: str, url: str, name: str, params: Dict[str, Any], server_data: Dict[str, Any]
 ) -> Any:
     error = None
-    session = None
     try:
         openapi = server_data.get("openapi", {})
         paths = openapi.get("paths", {})
@@ -631,9 +614,7 @@ async def execute_tool_server(
         if token:
             headers["Authorization"] = f"Bearer {token}"
 
-        # Create session explicitly to ensure proper cleanup on cancellation
-        session = aiohttp.ClientSession(trust_env=True)
-        try:
+        async with aiohttp.ClientSession(trust_env=True) as session:
             request_method = getattr(session, http_method.lower())
 
             if http_method in ["post", "put", "patch"]:
@@ -657,22 +638,8 @@ async def execute_tool_server(
                         text = await response.text()
                         raise Exception(f"HTTP error {response.status}: {text}")
                     return await response.json()
-        finally:
-            # Ensure session is closed even on cancellation
-            if session and not session.closed:
-                await session.close()
 
-    except asyncio.CancelledError:
-        log.debug(f"Tool execution cancelled for operation: {name}")
-        raise
     except Exception as err:
         error = str(err)
         log.exception(f"API Request Error: {error}")
         return {"error": error}
-    finally:
-        # Additional cleanup to handle any remaining session
-        if session and not session.closed:
-            try:
-                await session.close()
-            except Exception as cleanup_error:
-                log.debug(f"Error during session cleanup: {cleanup_error}")
