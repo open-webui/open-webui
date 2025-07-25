@@ -226,6 +226,9 @@ async def chat_completion_tools_handler(
                         tool_function = tool["callable"]
                         tool_result = await tool_function(**tool_function_params)
 
+                except asyncio.CancelledError:
+                    log.debug(f"Tool execution cancelled for: {tool_function_name}")
+                    raise
                 except Exception as e:
                     tool_result = str(e)
 
@@ -2191,6 +2194,9 @@ async def process_chat_response(
                                         **tool_function_params
                                     )
 
+                            except asyncio.CancelledError:
+                                log.debug(f"Tool execution cancelled for: {tool_name}")
+                                raise
                             except Exception as e:
                                 tool_result = str(e)
 
