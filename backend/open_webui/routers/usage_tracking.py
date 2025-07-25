@@ -587,10 +587,10 @@ async def get_my_organization_subscription_billing(user=Depends(get_current_user
 
 @router.get("/model-pricing")
 async def get_mai_model_pricing():
-    """Get mAI model pricing information"""
+    """Get mAI model pricing information - returns all 12 available models"""
     try:
-        # Return static pricing data for now
-        # TODO: Implement real-time pricing fetch from OpenRouter
+        # Complete list of all 12 available models with current pricing
+        # Synchronized with frontend fallbackPricingData
         models = [
             {
                 "id": "anthropic/claude-sonnet-4",
@@ -611,6 +611,60 @@ async def get_mai_model_pricing():
                 "category": "Fast"
             },
             {
+                "id": "google/gemini-2.5-pro",
+                "name": "Gemini 2.5 Pro",
+                "provider": "Google",
+                "price_per_million_input": 3.00,
+                "price_per_million_output": 12.00,
+                "context_length": 2000000,
+                "category": "Premium"
+            },
+            {
+                "id": "deepseek/deepseek-chat-v3-0324",
+                "name": "DeepSeek Chat v3",
+                "provider": "DeepSeek",
+                "price_per_million_input": 0.14,
+                "price_per_million_output": 0.28,
+                "context_length": 128000,
+                "category": "Budget"
+            },
+            {
+                "id": "anthropic/claude-3.7-sonnet",
+                "name": "Claude 3.7 Sonnet",
+                "provider": "Anthropic",
+                "price_per_million_input": 6.00,
+                "price_per_million_output": 18.00,
+                "context_length": 200000,
+                "category": "Premium"
+            },
+            {
+                "id": "google/gemini-2.5-flash-lite-preview-06-17",
+                "name": "Gemini 2.5 Flash Lite",
+                "provider": "Google",
+                "price_per_million_input": 0.50,
+                "price_per_million_output": 2.00,
+                "context_length": 1000000,
+                "category": "Budget"
+            },
+            {
+                "id": "openai/gpt-4.1",
+                "name": "GPT-4.1",
+                "provider": "OpenAI",
+                "price_per_million_input": 10.00,
+                "price_per_million_output": 30.00,
+                "context_length": 128000,
+                "category": "Premium"
+            },
+            {
+                "id": "x-ai/grok-4",
+                "name": "Grok 4",
+                "provider": "xAI",
+                "price_per_million_input": 8.00,
+                "price_per_million_output": 24.00,
+                "context_length": 131072,
+                "category": "Premium"
+            },
+            {
                 "id": "openai/gpt-4o-mini",
                 "name": "GPT-4o Mini",
                 "provider": "OpenAI",
@@ -618,6 +672,33 @@ async def get_mai_model_pricing():
                 "price_per_million_output": 0.60,
                 "context_length": 128000,
                 "category": "Budget"
+            },
+            {
+                "id": "openai/o4-mini-high",
+                "name": "O4 Mini High",
+                "provider": "OpenAI",
+                "price_per_million_input": 3.00,
+                "price_per_million_output": 12.00,
+                "context_length": 128000,
+                "category": "Standard"
+            },
+            {
+                "id": "openai/o3",
+                "name": "O3",
+                "provider": "OpenAI",
+                "price_per_million_input": 60.00,
+                "price_per_million_output": 240.00,
+                "context_length": 200000,
+                "category": "Reasoning"
+            },
+            {
+                "id": "openai/chatgpt-4o-latest",
+                "name": "ChatGPT-4o Latest",
+                "provider": "OpenAI",
+                "price_per_million_input": 5.00,
+                "price_per_million_output": 15.00,
+                "context_length": 128000,
+                "category": "Standard"
             }
         ]
         
