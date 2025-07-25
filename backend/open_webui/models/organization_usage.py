@@ -774,19 +774,73 @@ class ClientUsageTable:
                         if live_counter.today_tokens > 0:
                             self._rollup_to_daily_summary(db, live_counter)
                         
-                        # Reset counter to today with zero values
-                        live_counter.current_date = date.today()
-                        live_counter.today_tokens = 0
-                        live_counter.today_requests = 0
-                        live_counter.today_raw_cost = 0.0
-                        live_counter.today_markup_cost = 0.0
-                        live_counter.last_updated = int(time.time())
+                        # Fallback: Check if today's data exists in daily summaries
+                        today = date.today()
+                        today_summary = db.query(ClientDailyUsage).filter_by(
+                            client_org_id=client_org_id,
+                            usage_date=today
+                        ).first()
                         
-                        # Commit the reset
+                        if today_summary:
+                            # Found today's data in daily summaries - populate live counter
+                            live_counter.current_date = today
+                            live_counter.today_tokens = today_summary.total_tokens
+                            live_counter.today_requests = today_summary.total_requests
+                            live_counter.today_raw_cost = today_summary.raw_cost
+                            live_counter.today_markup_cost = today_summary.markup_cost
+                            live_counter.last_updated = int(time.time())
+                            
+                            today_data = {
+                                'tokens': today_summary.total_tokens,
+                                'cost': today_summary.markup_cost,
+                                'requests': today_summary.total_requests,
+                                'last_updated': 'Restored from daily summary'
+                            }
+                            
+                            log.info(f"Restored live counter from daily summary for client {client_org_id}: {today_summary.total_tokens} tokens")
+                        else:
+                            # No today's data found - reset to zero
+                            live_counter.current_date = today
+                            live_counter.today_tokens = 0
+                            live_counter.today_requests = 0
+                            live_counter.today_raw_cost = 0.0
+                            live_counter.today_markup_cost = 0.0
+                            live_counter.last_updated = int(time.time())
+                            
+                            today_data['last_updated'] = 'Reset to today'
+                        
+                        # Commit the reset/restore
+                        db.commit()
+                else:
+                    # No live counter exists - check daily summaries for today's data
+                    today = date.today()
+                    today_summary = db.query(ClientDailyUsage).filter_by(
+                        client_org_id=client_org_id,
+                        usage_date=today
+                    ).first()
+                    
+                    if today_summary:
+                        # Create live counter from daily summary
+                        live_counter = ClientLiveCounters(
+                            client_org_id=client_org_id,
+                            current_date=today,
+                            today_tokens=today_summary.total_tokens,
+                            today_requests=today_summary.total_requests,
+                            today_raw_cost=today_summary.raw_cost,
+                            today_markup_cost=today_summary.markup_cost,
+                            last_updated=int(time.time())
+                        )
+                        db.add(live_counter)
                         db.commit()
                         
-                        # Today data remains as zero/default values
-                        today_data['last_updated'] = 'Reset to today'
+                        today_data = {
+                            'tokens': today_summary.total_tokens,
+                            'cost': today_summary.markup_cost,
+                            'requests': today_summary.total_requests,
+                            'last_updated': 'Created from daily summary'
+                        }
+                        
+                        log.info(f"Created live counter from daily summary for client {client_org_id}: {today_summary.total_tokens} tokens")
                 
                 # Get daily history (last 30 days)
                 daily_records = db.query(ClientDailyUsage).filter(

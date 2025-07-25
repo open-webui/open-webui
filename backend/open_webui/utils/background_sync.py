@@ -96,7 +96,7 @@ class OpenRouterUsageSync:
         try:
             from open_webui.models.organization_usage import (
                 ClientDailyUsage, ClientUserDailyUsage, ClientModelDailyUsage, 
-                ProcessedGenerationDB, get_db
+                ClientLiveCounters, ProcessedGenerationDB, get_db
             )
             import time
             from datetime import datetime
@@ -231,6 +231,51 @@ class OpenRouterUsageSync:
                             generation["id"], client_org_id, usage_date, 
                             generation["raw_cost"], generation["tokens"]
                         )
+                
+                # 4. Update live counters for today's data to ensure real-time UI accuracy
+                today = date.today()
+                today_generations = generations_by_date.get(today, [])
+                
+                if today_generations:
+                    today_tokens = sum(g["tokens"] for g in today_generations)
+                    today_requests = len(today_generations)
+                    today_raw_cost = sum(g["raw_cost"] for g in today_generations)
+                    today_markup_cost = sum(g["markup_cost"] for g in today_generations)
+                    
+                    # Update or create live counter for today
+                    live_counter = db.query(ClientLiveCounters).filter_by(
+                        client_org_id=client_org_id
+                    ).first()
+                    
+                    if live_counter:
+                        # Check if live counter is for today or needs rollover
+                        if live_counter.current_date != today:
+                            # Stale counter - reset for today
+                            live_counter.current_date = today
+                            live_counter.today_tokens = today_tokens
+                            live_counter.today_requests = today_requests
+                            live_counter.today_raw_cost = today_raw_cost
+                            live_counter.today_markup_cost = today_markup_cost
+                        else:
+                            # Current counter - add to existing totals
+                            live_counter.today_tokens += today_tokens
+                            live_counter.today_requests += today_requests
+                            live_counter.today_raw_cost += today_raw_cost
+                            live_counter.today_markup_cost += today_markup_cost
+                        
+                        live_counter.last_updated = current_time
+                    else:
+                        # Create new live counter
+                        live_counter = ClientLiveCounters(
+                            client_org_id=client_org_id,
+                            current_date=today,
+                            today_tokens=today_tokens,
+                            today_requests=today_requests,
+                            today_raw_cost=today_raw_cost,
+                            today_markup_cost=today_markup_cost,
+                            last_updated=current_time
+                        )
+                        db.add(live_counter)
                 
                 db.commit()
             

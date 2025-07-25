@@ -80,13 +80,11 @@ def record_usage_to_db(
     usage_data: Dict[str, Any],
     external_user: Optional[str] = None
 ):
-    """Record usage data to mAI database"""
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    
+    """Record usage data to mAI database using consolidated ORM approach"""
     try:
+        from open_webui.models.organization_usage import ClientUsageDB
+        
         today = date.today()
-        timestamp = int(datetime.now().timestamp())
         
         # Extract usage details
         model_name = usage_data.get("model", "unknown")
@@ -94,99 +92,39 @@ def record_usage_to_db(
         raw_cost = float(usage_data.get("total_cost", 0.0))
         markup_cost = raw_cost * 1.3  # mAI markup
         
-        # Update live counters
-        cursor.execute("""
-            INSERT OR REPLACE INTO client_live_counters 
-            (client_org_id, current_date, today_tokens, today_requests, 
-             today_raw_cost, today_markup_cost, last_updated)
-            VALUES (
-                ?, ?, 
-                COALESCE((SELECT today_tokens FROM client_live_counters 
-                         WHERE client_org_id = ? AND current_date = ?), 0) + ?,
-                COALESCE((SELECT today_requests FROM client_live_counters 
-                         WHERE client_org_id = ? AND current_date = ?), 0) + 1,
-                COALESCE((SELECT today_raw_cost FROM client_live_counters 
-                         WHERE client_org_id = ? AND current_date = ?), 0.0) + ?,
-                COALESCE((SELECT today_markup_cost FROM client_live_counters 
-                         WHERE client_org_id = ? AND current_date = ?), 0.0) + ?,
-                ?
-            )
-        """, (
-            client_org_id, today,
-            client_org_id, today, total_tokens,
-            client_org_id, today,
-            client_org_id, today, raw_cost,
-            client_org_id, today, markup_cost,
-            timestamp
-        ))
+        # Parse model to get input/output tokens (simplified assumption)
+        # In real usage, these should be separate fields from OpenRouter
+        input_tokens = int(total_tokens * 0.7)  # Rough estimate
+        output_tokens = total_tokens - input_tokens
         
-        # Update daily usage summary
-        cursor.execute("""
-            INSERT OR REPLACE INTO client_daily_usage
-            (id, client_org_id, usage_date, total_tokens, total_requests,
-             raw_cost, markup_cost, primary_model, unique_users, created_at, updated_at)
-            VALUES (
-                COALESCE((SELECT id FROM client_daily_usage 
-                         WHERE client_org_id = ? AND usage_date = ?), ?),
-                ?, ?,
-                COALESCE((SELECT total_tokens FROM client_daily_usage 
-                         WHERE client_org_id = ? AND usage_date = ?), 0) + ?,
-                COALESCE((SELECT total_requests FROM client_daily_usage 
-                         WHERE client_org_id = ? AND usage_date = ?), 0) + 1,
-                COALESCE((SELECT raw_cost FROM client_daily_usage 
-                         WHERE client_org_id = ? AND usage_date = ?), 0.0) + ?,
-                COALESCE((SELECT markup_cost FROM client_daily_usage 
-                         WHERE client_org_id = ? AND usage_date = ?), 0.0) + ?,
-                ?, 1, ?, ?
-            )
-        """, (
-            client_org_id, today, str(uuid.uuid4()),
-            client_org_id, today,
-            client_org_id, today, total_tokens,
-            client_org_id, today,
-            client_org_id, today, raw_cost,
-            client_org_id, today, markup_cost,
-            model_name, timestamp, timestamp
-        ))
+        # Use the consolidated ORM method from organization_usage.py
+        user_id = external_user or "manual_webhook"
+        openrouter_user_id = f"webhook_{external_user or 'system'}"
+        provider = model_name.split("/")[0] if "/" in model_name else "openrouter"
         
-        # Record per-model usage
-        cursor.execute("""
-            INSERT OR REPLACE INTO client_model_daily_usage
-            (id, client_org_id, model_name, usage_date, total_tokens, total_requests,
-             raw_cost, markup_cost, provider, created_at, updated_at)
-            VALUES (
-                COALESCE((SELECT id FROM client_model_daily_usage 
-                         WHERE client_org_id = ? AND model_name = ? AND usage_date = ?), ?),
-                ?, ?, ?,
-                COALESCE((SELECT total_tokens FROM client_model_daily_usage 
-                         WHERE client_org_id = ? AND model_name = ? AND usage_date = ?), 0) + ?,
-                COALESCE((SELECT total_requests FROM client_model_daily_usage 
-                         WHERE client_org_id = ? AND model_name = ? AND usage_date = ?), 0) + 1,
-                COALESCE((SELECT raw_cost FROM client_model_daily_usage 
-                         WHERE client_org_id = ? AND model_name = ? AND usage_date = ?), 0.0) + ?,
-                COALESCE((SELECT markup_cost FROM client_model_daily_usage 
-                         WHERE client_org_id = ? AND model_name = ? AND usage_date = ?), 0.0) + ?,
-                'openrouter', ?, ?
-            )
-        """, (
-            client_org_id, model_name, today, str(uuid.uuid4()),
-            client_org_id, model_name, today,
-            client_org_id, model_name, today, total_tokens,
-            client_org_id, model_name, today,
-            client_org_id, model_name, today, raw_cost,
-            client_org_id, model_name, today, markup_cost,
-            timestamp, timestamp
-        ))
+        success = ClientUsageDB.record_usage(
+            client_org_id=client_org_id,
+            user_id=user_id,
+            openrouter_user_id=openrouter_user_id,
+            model_name=model_name,
+            usage_date=today,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            raw_cost=raw_cost,
+            markup_cost=markup_cost,
+            provider=provider,
+            request_metadata={"source": "webhook", "external_user": external_user}
+        )
         
-        conn.commit()
-        print(f"✅ Recorded {total_tokens} tokens, ${markup_cost:.6f} for {model_name}")
-        
+        if success:
+            print(f"✅ Recorded {total_tokens} tokens, ${markup_cost:.6f} for {model_name}")
+        else:
+            print(f"❌ Failed to record usage for {model_name}")
+            raise Exception("Database recording failed")
+            
     except Exception as e:
         print(f"❌ Database error: {e}")
-        conn.rollback()
         raise
-    finally:
-        conn.close()
 
 @router.post("/webhook/openrouter-usage")
 async def openrouter_usage_webhook(
@@ -306,42 +244,33 @@ async def get_real_time_usage(
     client_org_id: str,
     user=Depends(get_current_user)
 ):
-    """Get real-time usage data for a client organization"""
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    
+    """Get real-time usage data for a client organization using consolidated ORM approach"""
     try:
-        today = date.today()
+        from open_webui.models.organization_usage import ClientUsageDB
         
-        cursor.execute("""
-            SELECT today_tokens, today_requests, today_markup_cost, last_updated
-            FROM client_live_counters
-            WHERE client_org_id = ? AND current_date = ?
-        """, (client_org_id, today))
+        # Use the consolidated ORM method
+        stats = ClientUsageDB.get_usage_stats_by_client(client_org_id)
         
-        result = cursor.fetchone()
+        return {
+            "client_org_id": client_org_id,
+            "date": date.today().isoformat(),
+            "tokens": stats.today.get("tokens", 0),
+            "requests": stats.today.get("requests", 0),
+            "cost": stats.today.get("cost", 0.0),
+            "last_updated": stats.today.get("last_updated", "No data")
+        }
         
-        if result:
-            return {
-                "client_org_id": client_org_id,
-                "date": today.isoformat(),
-                "tokens": result[0],
-                "requests": result[1],
-                "cost": result[2],
-                "last_updated": result[3]
-            }
-        else:
-            return {
-                "client_org_id": client_org_id,
-                "date": today.isoformat(),
-                "tokens": 0,
-                "requests": 0,
-                "cost": 0.0,
-                "last_updated": 0
-            }
-            
-    finally:
-        conn.close()
+    except Exception as e:
+        # Fallback to empty data on error
+        return {
+            "client_org_id": client_org_id,
+            "date": date.today().isoformat(),
+            "tokens": 0,
+            "requests": 0,
+            "cost": 0.0,
+            "last_updated": 0,
+            "error": str(e)
+        }
 
 @router.post("/usage/manual-record")
 async def manual_record_usage(
@@ -350,18 +279,17 @@ async def manual_record_usage(
     cost: float,
     user=Depends(get_admin_user)
 ):
-    """Manually record usage (for testing or corrections)"""
+    """Manually record usage (for testing or corrections) using consolidated ORM approach"""
     try:
-        # Get the first active organization
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
+        from open_webui.models.organization_usage import ClientOrganizationDB
         
-        cursor.execute("SELECT id FROM client_organizations WHERE is_active = 1 LIMIT 1")
-        org = cursor.fetchone()
-        conn.close()
+        # Get the first active organization using ORM
+        orgs = ClientOrganizationDB.get_all_active_clients()
         
-        if not org:
+        if not orgs:
             raise HTTPException(status_code=404, detail="No active organization found")
+        
+        org = orgs[0]  # Use first active organization
         
         usage_data = {
             "model": model,
@@ -369,11 +297,11 @@ async def manual_record_usage(
             "total_cost": cost
         }
         
-        record_usage_to_db(org[0], usage_data)
+        record_usage_to_db(org.id, usage_data, "manual_admin")
         
         return {
             "status": "success",
-            "message": f"Recorded {tokens} tokens, ${cost} for {model}"
+            "message": f"Recorded {tokens} tokens, ${cost} for {model} in organization {org.name}"
         }
         
     except Exception as e:
