@@ -8,17 +8,28 @@ services:
       - "4318:4318"   # OTLP/HTTP
     restart: unless-stopped
 
+
   open-webui:
-    image: ghcr.io/open-webui/open-webui:main
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ghcr.io/open-webui/open-webui:${WEBUI_DOCKER_TAG-main}
     container_name: open-webui
-    depends_on: [grafana]
+    volumes:
+      - open-webui:/app/backend/data
+    depends_on:
+      - grafana
+    ports:
+      - ${OPEN_WEBUI_PORT-8088}:8080
     environment:
       - ENABLE_OTEL=true
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://grafana:4317 
+      - ENABLE_OTEL_METRICS=true
+      - OTEL_EXPORTER_OTLP_INSECURE=true # Use insecure connection for OTLP, remove in production
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://grafana:4317
       - OTEL_SERVICE_NAME=open-webui
-    ports:
-      - "8088:8080"
-    networks: [default]
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    restart: unless-stopped
 
-networks:
-  default:
+volumes:
+  open-webui: {}
