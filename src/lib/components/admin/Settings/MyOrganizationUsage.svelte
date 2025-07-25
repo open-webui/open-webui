@@ -394,21 +394,31 @@
 		}
 	};
 
-	const formatCurrency = (amount) => {
+	const formatCurrency = (amount, currency = 'USD') => {
 		// For very small amounts, show more decimal places
 		const value = amount || 0;
-		if (value > 0 && value < 0.01) {
+		const currencyOptions = currency === 'PLN' 
+			? { style: 'currency', currency: 'PLN' }
+			: { style: 'currency', currency: 'USD' };
+			
+		if (value > 0 && value < 0.01 && currency === 'USD') {
 			return new Intl.NumberFormat('en-US', {
-				style: 'currency',
-				currency: 'USD',
+				...currencyOptions,
 				minimumFractionDigits: 6,
 				maximumFractionDigits: 6
 			}).format(value);
 		}
-		return new Intl.NumberFormat('en-US', {
-			style: 'currency',
-			currency: 'USD'
-		}).format(value);
+		
+		return new Intl.NumberFormat(currency === 'PLN' ? 'pl-PL' : 'en-US', currencyOptions).format(value);
+	};
+	
+	const formatDualCurrency = (usdAmount, plnAmount) => {
+		// Format as "$X.XX (Y.YY zł)"
+		if (plnAmount !== undefined && plnAmount !== null) {
+			return `${formatCurrency(usdAmount)} (${formatCurrency(plnAmount, 'PLN')})`;
+		}
+		// Fallback to USD only if PLN not available
+		return formatCurrency(usdAmount);
 	};
 
 	const formatNumber = (number) => {
@@ -422,6 +432,23 @@
 	<div class="flex items-center justify-between mb-4">
 		<h2 class="text-lg font-semibold">{$i18n.t('My Organization Usage')}</h2>
 	</div>
+
+	<!-- Exchange Rate Status Notice -->
+	{#if usageData.exchange_rate_info}
+		<div class="mb-4 text-xs text-gray-600 dark:text-gray-400 flex items-center justify-between bg-gray-50 dark:bg-gray-800 p-2 rounded">
+			<span>
+				Exchange rate: 1 USD = {usageData.exchange_rate_info.usd_pln.toFixed(4)} PLN 
+				(NBP rate from {usageData.exchange_rate_info.effective_date})
+			</span>
+		</div>
+	{:else if usageData.pln_conversion_available === false}
+		<div class="mb-4 text-xs text-orange-600 dark:text-orange-400 flex items-center bg-orange-50 dark:bg-orange-900/20 p-2 rounded">
+			<svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+				<path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+			</svg>
+			<span>PLN conversion temporarily unavailable - showing USD only</span>
+		</div>
+	{/if}
 
 	<!-- Real-time Today + Monthly Summary Cards -->
 	<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
@@ -454,11 +481,18 @@
 				<div>
 					<p class="text-sm font-medium text-gray-600 dark:text-gray-400">Today's Cost</p>
 					<p class="text-2xl font-semibold text-gray-900 dark:text-white">
-						{formatCurrency(usageData.today.cost)}
+						{formatDualCurrency(usageData.today.cost, usageData.today.cost_pln)}
 					</p>
-					<div class="flex items-center text-xs text-green-600 mt-1">
-						<div class="w-2 h-2 bg-green-500 rounded-full mr-1 animate-pulse"></div>
-						Live
+					<div class="flex items-center justify-between mt-1">
+						<div class="flex items-center text-xs text-green-600">
+							<div class="w-2 h-2 bg-green-500 rounded-full mr-1 animate-pulse"></div>
+							Live
+						</div>
+						{#if usageData.today.exchange_rate}
+							<span class="text-xs text-gray-500" title="Exchange rate date: {usageData.today.exchange_rate_date}">
+								1 USD = {usageData.today.exchange_rate.toFixed(4)} PLN
+							</span>
+						{/if}
 					</div>
 				</div>
 				<div class="flex-shrink-0">
@@ -477,7 +511,7 @@
 				<div>
 					<p class="text-sm font-medium text-gray-600 dark:text-gray-400">Month Total</p>
 					<p class="text-2xl font-semibold text-gray-900 dark:text-white">
-						{formatCurrency(usageData.this_month.cost)}
+						{formatDualCurrency(usageData.this_month.cost, usageData.this_month.cost_pln)}
 					</p>
 					<p class="text-xs text-gray-500 mt-1">{usageData.this_month.days_active} days active</p>
 				</div>
@@ -555,11 +589,11 @@
 					<div class="space-y-2">
 						<div class="flex justify-between">
 							<span class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Today Cost')}:</span>
-							<span class="text-sm font-medium">{formatCurrency(usageData.today.cost)}</span>
+							<span class="text-sm font-medium">{formatDualCurrency(usageData.today.cost, usageData.today.cost_pln)}</span>
 						</div>
 						<div class="flex justify-between">
 							<span class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Month Total')}:</span>
-							<span class="text-sm font-medium">{formatCurrency(usageData.this_month.cost)}</span>
+							<span class="text-sm font-medium">{formatDualCurrency(usageData.this_month.cost, usageData.this_month.cost_pln)}</span>
 						</div>
 					</div>
 				</div>
@@ -621,7 +655,7 @@
 										{formatNumber(userUsage.total_requests)}
 									</td>
 									<td class="px-4 py-3 whitespace-nowrap text-sm font-medium">
-										{formatCurrency(userUsage.markup_cost)}
+										{formatDualCurrency(userUsage.markup_cost, userUsage.cost_pln)}
 									</td>
 									<td class="px-4 py-3 whitespace-nowrap text-sm">
 										{userUsage.days_active}
@@ -696,7 +730,7 @@
 										{formatNumber(modelUsage.total_requests)}
 									</td>
 									<td class="px-4 py-3 whitespace-nowrap text-sm font-medium">
-										{formatCurrency(modelUsage.markup_cost)}
+										{formatDualCurrency(modelUsage.markup_cost, modelUsage.cost_pln)}
 									</td>
 									<td class="px-4 py-3 whitespace-nowrap text-sm">
 										{modelUsage.days_used}

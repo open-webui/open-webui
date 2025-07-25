@@ -11,8 +11,59 @@ from open_webui.models.organization_usage import (
 )
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.openrouter_client_manager import openrouter_client_manager
+from open_webui.utils.nbp_client import nbp_client
 
 router = APIRouter()
+
+####################
+# Helper Functions
+####################
+
+async def add_pln_conversion(usage_data: dict) -> dict:
+    """
+    Add PLN conversion to usage data
+    Modifies the input dict in place and returns it
+    """
+    try:
+        # Get current exchange rate
+        rate_data = await nbp_client.get_usd_pln_rate()
+        
+        if rate_data and rate_data.get('rate'):
+            exchange_rate = rate_data['rate']
+            effective_date = rate_data.get('effective_date', 'N/A')
+            
+            # Convert today's cost
+            if 'today' in usage_data and 'cost' in usage_data['today']:
+                usage_data['today']['cost_pln'] = round(usage_data['today']['cost'] * exchange_rate, 2)
+                usage_data['today']['exchange_rate'] = exchange_rate
+                usage_data['today']['exchange_rate_date'] = effective_date
+            
+            # Convert this month's cost
+            if 'this_month' in usage_data and 'cost' in usage_data['this_month']:
+                usage_data['this_month']['cost_pln'] = round(usage_data['this_month']['cost'] * exchange_rate, 2)
+                usage_data['this_month']['exchange_rate'] = exchange_rate
+                usage_data['this_month']['exchange_rate_date'] = effective_date
+            
+            # Convert daily history if present
+            if 'daily_history' in usage_data and isinstance(usage_data['daily_history'], list):
+                for day in usage_data['daily_history']:
+                    if 'markup_cost' in day:
+                        day['cost_pln'] = round(day['markup_cost'] * exchange_rate, 2)
+            
+            # Add exchange rate info to root
+            usage_data['exchange_rate_info'] = {
+                'usd_pln': exchange_rate,
+                'effective_date': effective_date,
+                'source': 'NBP Table C'
+            }
+    except Exception as e:
+        # Log error but don't fail the request
+        import logging
+        logging.getLogger(__name__).error(f"Failed to add PLN conversion: {e}")
+        # Add a flag to indicate conversion failed
+        usage_data['pln_conversion_available'] = False
+    
+    return usage_data
 
 ####################
 # Global Settings Endpoints
@@ -289,9 +340,14 @@ async def get_my_organization_usage(
         
         # Get the usage stats for the user's organization
         stats = ClientUsageDB.get_usage_stats_by_client(mapping.client_org_id)
+        stats_dict = stats.model_dump()
+        
+        # Add PLN conversion
+        await add_pln_conversion(stats_dict)
+        
         return {
             "success": True, 
-            "stats": stats.model_dump(),
+            "stats": stats_dict,
             "client_id": mapping.client_org_id
         }
     
@@ -323,10 +379,19 @@ async def get_my_organization_today_usage(
         
         # Get today's usage for the organization
         stats = ClientUsageDB.get_usage_stats_by_client(mapping.client_org_id)
-        return {
-            "success": True,
+        
+        # Create a response with today's data
+        response_data = {
             "today": stats.today,
             "last_updated": stats.today.get('last_updated', 'No data')
+        }
+        
+        # Add PLN conversion
+        await add_pln_conversion(response_data)
+        
+        return {
+            "success": True,
+            **response_data
         }
     
     except Exception as e:
@@ -345,7 +410,12 @@ async def get_client_usage_summary(
         if client_id:
             # Get stats for specific client (Option 1 format)
             stats = ClientUsageDB.get_usage_stats_by_client(client_id)
-            return {"success": True, "stats": stats.model_dump()}
+            stats_dict = stats.model_dump()
+            
+            # Add PLN conversion
+            await add_pln_conversion(stats_dict)
+            
+            return {"success": True, "stats": stats_dict}
         else:
             # Get billing data for all clients
             billing_data = ClientUsageDB.get_all_clients_usage_stats()
@@ -368,10 +438,19 @@ async def get_today_usage(
     """Get real-time usage for today only (for live updates)"""
     try:
         stats = ClientUsageDB.get_usage_stats_by_client(client_id)
-        return {
-            "success": True,
+        
+        # Create a response with today's data
+        response_data = {
             "today": stats.today,
             "last_updated": stats.today.get('last_updated', 'No data')
+        }
+        
+        # Add PLN conversion
+        await add_pln_conversion(response_data)
+        
+        return {
+            "success": True,
+            **response_data
         }
     
     except Exception as e:

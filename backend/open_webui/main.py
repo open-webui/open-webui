@@ -577,6 +577,14 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         log.error(f"Failed to shutdown organization usage background sync: {e}")
 
+    # Shutdown NBP client
+    try:
+        from open_webui.utils.nbp_client import nbp_client
+        await nbp_client.close()
+        log.info("NBP client closed successfully")
+    except Exception as e:
+        log.error(f"Failed to close NBP client: {e}")
+
     if hasattr(app.state, "redis_task_command_listener"):
         app.state.redis_task_command_listener.cancel()
 
