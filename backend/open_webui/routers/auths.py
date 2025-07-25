@@ -58,6 +58,10 @@ from ssl import CERT_NONE, CERT_REQUIRED, PROTOCOL_TLS
 from ldap3 import Server, Connection, NONE, Tls
 from ldap3.utils.conv import escape_filter_chars
 
+from open_webui.env import MS_LOGOUT_URL
+
+from urllib.parse import quote, urljoin
+
 router = APIRouter()
 
 log = logging.getLogger(__name__)
@@ -671,9 +675,11 @@ async def signout(request: Request, response: Response):
     response.delete_cookie("token")
 
     if ENABLE_OAUTH_SIGNUP.value:
-        post_redirect_url = WEBUI_AUTH_SIGNOUT_REDIRECT_URL
+        base_url = str(request.base_url)
+        continue_path = "/api/v1/auths/signout/continue"
+        continue_url = urljoin(base_url, continue_path)
 
-        log.warning(f"----post_redirect_url ---- {post_redirect_url}")
+        log.info(f" OAUTH signout : continue_url for MS logout call : {continue_url}")
 
         oauth_id_token = request.cookies.get("oauth_id_token")
         if oauth_id_token:
@@ -690,7 +696,7 @@ async def signout(request: Request, response: Response):
                                     status_code=200,
                                     content={
                                         "status": True,
-                                        "redirect_url": f"{logout_url}?id_token_hint={oauth_id_token}&post_logout_redirect_uri={post_redirect_url}",
+                                        "redirect_url": f"{logout_url}?id_token_hint={oauth_id_token}&post_logout_redirect_uri={continue_url}",
                                     },
                                     headers=response.headers,
                                 )
@@ -719,6 +725,21 @@ async def signout(request: Request, response: Response):
     return JSONResponse(
         status_code=200, content={"status": True}, headers=response.headers
     )
+
+@router.get("/signout/continue")
+async def signout_continue():
+    log.info(" OAUTH signout : Inside /signout/continue")
+
+    frontend_redirect = WEBUI_AUTH_SIGNOUT_REDIRECT_URL
+    ms_logout_url = MS_LOGOUT_URL
+
+    ms_logout_with_redirect = (
+        f"{ms_logout_url}?post_logout_redirect_uri={quote(frontend_redirect, safe='')}"
+    )
+
+    log.info(f" OAUTH signout : MS logout redirect: {ms_logout_with_redirect}")
+
+    return RedirectResponse(url=ms_logout_with_redirect)
 
 
 ############################
