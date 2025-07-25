@@ -334,7 +334,7 @@
 	onClose={closeLeaderboardModal}
 />
 
-<div class="mt-0.5 mb-2 gap-1 flex flex-col md:flex-row justify-between">
+<div class="mt-0.5 mb-2 gap-1 flex flex-col md:flex-row justify-between sticky top-0 z-10 bg-gray-50 dark:bg-gray-900 py-2">
 	<div class="flex md:self-center text-lg font-medium px-0.5 shrink-0 items-center">
 		<div class=" gap-1">
 			{$i18n.t('Leaderboard')}
