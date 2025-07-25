@@ -1,5 +1,14 @@
 import type { PiiEntity } from '$lib/apis/pii';
 import i18next from 'i18next';
+import {
+	PiiApiClient,
+	createPiiApiClient,
+	type PiiApiClientConfig,
+	type ApiRequestOptions,
+	PiiApiError,
+	PiiApiTimeoutError,
+	PiiApiNetworkError
+} from '$lib/apis/pii/client';
 
 // Extended PII entity with masking state
 export interface ExtendedPiiEntity extends PiiEntity {
@@ -180,6 +189,7 @@ export class PiiSessionManager {
 	private sessionId: string | null = null;
 	private apiKey: string = '';
 	private conversationStates: Map<string, ConversationPiiState> = new Map();
+	private apiClient: PiiApiClient | null = null;
 
 	// Error recovery backup for failed saves
 	private errorBackup: Map<string, ConversationPiiState> = new Map();
@@ -208,6 +218,39 @@ export class PiiSessionManager {
 
 	setApiKey(apiKey: string) {
 		this.apiKey = apiKey;
+
+		// Initialize or update API client when API key changes
+		if (apiKey) {
+			this.initializeApiClient({
+				apiKey,
+				quiet: true // Default to quiet mode for session manager operations
+			});
+		}
+	}
+
+	/**
+	 * Initialize the PII API client with configuration
+	 */
+	initializeApiClient(config: PiiApiClientConfig) {
+		this.apiClient = createPiiApiClient(config);
+		this.apiKey = config.apiKey;
+	}
+
+	/**
+	 * Get the current API client instance
+	 */
+	getApiClient(): PiiApiClient | null {
+		return this.apiClient;
+	}
+
+	/**
+	 * Ensure API client is available and configured
+	 */
+	private ensureApiClient(): PiiApiClient {
+		if (!this.apiClient || !this.apiKey) {
+			throw new Error('PII API client not initialized. Call setApiKey() first.');
+		}
+		return this.apiClient;
 	}
 
 	activateTemporaryState() {
@@ -563,6 +606,122 @@ export class PiiSessionManager {
 		const entity = this.temporaryState.entities.find((e) => e.label === entityId);
 		if (entity) {
 			entity.shouldMask = shouldMask;
+		}
+	}
+
+	// ==================================================
+	// API CLIENT WRAPPER METHODS
+	// ==================================================
+
+	/**
+	 * Create a PII detection session
+	 */
+	async createSession(ttl: string = '24h', options?: ApiRequestOptions) {
+		const client = this.ensureApiClient();
+		const session = await client.createSession(ttl, options);
+		this.sessionId = session.session_id;
+		return session;
+	}
+
+	/**
+	 * Get current session information
+	 */
+	async getSessionInfo(options?: ApiRequestOptions) {
+		const client = this.ensureApiClient();
+		if (!this.sessionId) {
+			throw new Error('No active session. Call createSession() first.');
+		}
+		return client.getSession(this.sessionId, options);
+	}
+
+	/**
+	 * Delete the current session
+	 */
+	async deleteSession(options?: ApiRequestOptions) {
+		const client = this.ensureApiClient();
+		if (!this.sessionId) {
+			throw new Error('No active session to delete.');
+		}
+		await client.deleteSession(this.sessionId, options);
+		this.sessionId = null;
+	}
+
+	/**
+	 * Mask PII in text (ephemeral - without session)
+	 */
+	async maskText(
+		text: string[],
+		conversationId?: string,
+		createSession: boolean = false,
+		options?: ApiRequestOptions
+	) {
+		const client = this.ensureApiClient();
+		const knownEntities = this.getKnownEntitiesForApi(conversationId);
+		const modifiers = this.getModifiersForApi(conversationId);
+
+		return client.maskText(text, knownEntities, modifiers, createSession, options);
+	}
+
+	/**
+	 * Unmask PII in text (ephemeral - without session)
+	 */
+	async unmaskText(text: string[], entities: PiiEntity[], options?: ApiRequestOptions) {
+		const client = this.ensureApiClient();
+		return client.unmaskText(text, entities, options);
+	}
+
+	/**
+	 * Mask PII in text using current session
+	 */
+	async maskTextWithSession(text: string[], conversationId?: string, options?: ApiRequestOptions) {
+		const client = this.ensureApiClient();
+		if (!this.sessionId) {
+			throw new Error('No active session. Call createSession() first.');
+		}
+
+		const knownEntities = this.getKnownEntitiesForApi(conversationId);
+		const modifiers = this.getModifiersForApi(conversationId);
+
+		return client.maskTextWithSession(this.sessionId, text, knownEntities, modifiers, options);
+	}
+
+	/**
+	 * Unmask PII in text using current session
+	 */
+	async unmaskTextWithSession(text: string[], options?: ApiRequestOptions) {
+		const client = this.ensureApiClient();
+		if (!this.sessionId) {
+			throw new Error('No active session. Call createSession() first.');
+		}
+
+		return client.unmaskTextWithSession(this.sessionId, text, options);
+	}
+
+	/**
+	 * Cancel all pending API requests
+	 */
+	cancelAllRequests() {
+		if (this.apiClient) {
+			this.apiClient.cancelAllRequests();
+		}
+	}
+
+	/**
+	 * Get API client statistics
+	 */
+	getApiStats() {
+		if (this.apiClient) {
+			return this.apiClient.getStats();
+		}
+		return null;
+	}
+
+	/**
+	 * Update API client configuration
+	 */
+	updateApiConfig(config: Partial<PiiApiClientConfig>) {
+		if (this.apiClient) {
+			this.apiClient.updateConfig(config);
 		}
 	}
 }

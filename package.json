@@ -6,7 +6,7 @@
 		"dev": "npm run pyodide:fetch && vite dev --host",
 		"dev:fast": "vite dev --host",
 		"dev:5050": "npm run pyodide:fetch && vite dev --port 5050",
-		"build": "npm run pyodide:fetch && vite build",
+		"build": "npm run generate:api && npm run pyodide:fetch && vite build",
 		"build:watch": "npm run pyodide:fetch && vite build --watch",
 		"preview": "vite preview",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
@@ -20,9 +20,12 @@
 		"i18n:parse": "i18next --config i18next-parser.config.ts && prettier --write \"src/lib/i18n/**/*.{js,json}\"",
 		"cy:open": "cypress open",
 		"test:frontend": "vitest --passWithNoTests",
-		"pyodide:fetch": "node scripts/prepare-pyodide.js"
+		"pyodide:fetch": "node scripts/prepare-pyodide.js",
+		"generate:api": "openapi-ts",
+		"generate:api:watch": "openapi-ts --watch"
 	},
 	"devDependencies": {
+		"@hey-api/openapi-ts": "0.80.1",
 		"@sveltejs/adapter-auto": "3.2.2",
 		"@sveltejs/adapter-static": "^3.0.2",
 		"@sveltejs/kit": "^2.5.20",
