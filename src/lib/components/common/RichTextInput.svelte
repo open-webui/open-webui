@@ -525,7 +525,6 @@
 	let floatingMenuElement = null;
 	let bubbleMenuElement = null;
 	let element: HTMLElement;
-	
 
 	// PII Detection props
 	export let enablePiiDetection = false;
@@ -543,7 +542,6 @@
 
 	// PII Loading state
 	let isPiiDetectionInProgress = false;
-
 
 	let currentModifiers: PiiModifier[] = [];
 	let previousModifiersLength = 0;

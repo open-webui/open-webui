@@ -341,6 +341,7 @@
 						text={unescapeHtml(token.text)}
 						id={`${id}-${tokenIdx}-text`}
 						{conversationId}
+						{done}
 					/>
 				{/if}
 			</p>
@@ -357,6 +358,7 @@
 				text={unescapeHtml(token.text)}
 				id={`${id}-${tokenIdx}-text-inline`}
 				{conversationId}
+				{done}
 			/>
 		{/if}
 	{:else if token.type === 'inlineKatex'}

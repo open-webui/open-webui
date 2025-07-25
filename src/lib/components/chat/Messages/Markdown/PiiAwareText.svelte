@@ -1,6 +1,7 @@
 <script lang="ts">
 	import DOMPurify from 'dompurify';
 	import { PiiSessionManager, unmaskAndHighlightTextForDisplay } from '$lib/utils/pii';
+	import { fade } from 'svelte/transition';
 
 	export let text: string;
 	export let id: string = '';
@@ -33,13 +34,23 @@
 	$: hasHighlighting = processedText !== text;
 </script>
 
-<span bind:this={containerElement} {id} {done}>
-	{#if hasHighlighting}
-		{@html DOMPurify.sanitize(processedText)}
-	{:else}
-		{text}
-	{/if}
-</span>
+{#if done}
+	<span bind:this={containerElement} {id}>
+		{#if hasHighlighting}
+			{@html DOMPurify.sanitize(processedText)}
+		{:else}
+			{text}
+		{/if}
+	</span>
+{:else}
+	<span bind:this={containerElement} {id} transition:fade={{ duration: 100 }}>
+		{#if hasHighlighting}
+			{@html DOMPurify.sanitize(processedText)}
+		{:else}
+			{text}
+		{/if}
+	</span>
+{/if}
 
 <style>
 	/* Ensure PII highlights are interactive */
