@@ -1309,6 +1309,12 @@ ENABLE_ADMIN_CHAT_ACCESS = (
     os.environ.get("ENABLE_ADMIN_CHAT_ACCESS", "True").lower() == "true"
 )
 
+ENABLE_ADMIN_USER_WORKSPACE_ACCESS = PersistentConfig(
+    "ENABLE_ADMIN_USER_WORKSPACE_ACCESS",
+    "admin.enable_admin_user_workspace_access", 
+    os.environ.get("ENABLE_ADMIN_USER_WORKSPACE_ACCESS", "True").lower() == "true"
+)
+
 ENABLE_COMMUNITY_SHARING = PersistentConfig(
     "ENABLE_COMMUNITY_SHARING",
     "ui.enable_community_sharing",
