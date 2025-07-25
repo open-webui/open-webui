@@ -925,26 +925,40 @@ SPENDING_LIMIT = os.environ.get("SPENDING_LIMIT", "")
 if OPENAI_API_BASE_URL == "":
     OPENAI_API_BASE_URL = "https://api.openai.com/v1"
 
-OPENAI_API_KEYS = os.environ.get("OPENAI_API_KEYS", "")
-OPENAI_API_KEYS = OPENAI_API_KEYS if OPENAI_API_KEYS != "" else OPENAI_API_KEY
+# OpenRouter Environment Integration - Override OpenAI config when OpenRouter is configured
+if OPENROUTER_API_KEY and OPENROUTER_HOST:
+    print(f"🔗 mAI: Using OpenRouter configuration (Org: {ORGANIZATION_NAME or 'Environment-based'})")
+    # Use OpenRouter as the primary API
+    OPENAI_API_KEYS = [OPENROUTER_API_KEY]
+    OPENAI_API_BASE_URLS = [OPENROUTER_HOST]
+    OPENAI_API_KEYS = PersistentConfig(
+        "OPENAI_API_KEYS", "openai.api_keys", OPENAI_API_KEYS
+    )
+    OPENAI_API_BASE_URLS = PersistentConfig(
+        "OPENAI_API_BASE_URLS", "openai.api_base_urls", OPENAI_API_BASE_URLS
+    )
+else:
+    # Fallback to original OpenAI configuration
+    OPENAI_API_KEYS = os.environ.get("OPENAI_API_KEYS", "")
+    OPENAI_API_KEYS = OPENAI_API_KEYS if OPENAI_API_KEYS != "" else OPENAI_API_KEY
 
-OPENAI_API_KEYS = [url.strip() for url in OPENAI_API_KEYS.split(";")]
-OPENAI_API_KEYS = PersistentConfig(
-    "OPENAI_API_KEYS", "openai.api_keys", OPENAI_API_KEYS
-)
+    OPENAI_API_KEYS = [url.strip() for url in OPENAI_API_KEYS.split(";")]
+    OPENAI_API_KEYS = PersistentConfig(
+        "OPENAI_API_KEYS", "openai.api_keys", OPENAI_API_KEYS
+    )
 
-OPENAI_API_BASE_URLS = os.environ.get("OPENAI_API_BASE_URLS", "")
-OPENAI_API_BASE_URLS = (
-    OPENAI_API_BASE_URLS if OPENAI_API_BASE_URLS != "" else OPENAI_API_BASE_URL
-)
+    OPENAI_API_BASE_URLS = os.environ.get("OPENAI_API_BASE_URLS", "")
+    OPENAI_API_BASE_URLS = (
+        OPENAI_API_BASE_URLS if OPENAI_API_BASE_URLS != "" else OPENAI_API_BASE_URL
+    )
 
-OPENAI_API_BASE_URLS = [
-    url.strip() if url != "" else "https://api.openai.com/v1"
-    for url in OPENAI_API_BASE_URLS.split(";")
-]
-OPENAI_API_BASE_URLS = PersistentConfig(
-    "OPENAI_API_BASE_URLS", "openai.api_base_urls", OPENAI_API_BASE_URLS
-)
+    OPENAI_API_BASE_URLS = [
+        url.strip() if url != "" else "https://api.openai.com/v1"
+        for url in OPENAI_API_BASE_URLS.split(";")
+    ]
+    OPENAI_API_BASE_URLS = PersistentConfig(
+        "OPENAI_API_BASE_URLS", "openai.api_base_urls", OPENAI_API_BASE_URLS
+    )
 
 OPENAI_API_CONFIGS = PersistentConfig(
     "OPENAI_API_CONFIGS",

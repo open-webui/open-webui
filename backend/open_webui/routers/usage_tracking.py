@@ -18,7 +18,7 @@ from pydantic import BaseModel, Field
 
 from open_webui.models.users import Users
 from open_webui.utils.auth import get_current_user, get_admin_user
-from open_webui.config import DATA_DIR
+from open_webui.config import DATA_DIR, ORGANIZATION_NAME, OPENROUTER_EXTERNAL_USER
 
 router = APIRouter()
 
@@ -327,3 +327,188 @@ async def manual_record_usage(
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to record usage: {str(e)}")
+
+# Environment-based Usage Tracking Endpoints
+# These endpoints work with the new environment-based configuration
+
+@router.get("/my-organization/usage-summary")
+async def get_my_organization_usage_summary(user=Depends(get_current_user)):
+    """Get usage summary for the current organization (environment-based)"""
+    try:
+        # Use environment-based organization name
+        org_name = ORGANIZATION_NAME or "My Organization"
+        external_user = OPENROUTER_EXTERNAL_USER or f"user_{user.id}"
+        
+        # For now, return mock data that matches the expected structure
+        # TODO: Implement actual usage tracking once OpenRouter integration is complete
+        return {
+            "success": True,
+            "stats": {
+                "today": {
+                    "tokens": 0,
+                    "cost": 0.0,
+                    "cost_pln": 0.0,
+                    "requests": 0,
+                    "last_updated": "No usage today",
+                    "exchange_rate": 4.1234,
+                    "exchange_rate_date": date.today().isoformat()
+                },
+                "this_month": {
+                    "tokens": 0,
+                    "cost": 0.0,
+                    "cost_pln": 0.0,
+                    "requests": 0,
+                    "days_active": 0
+                },
+                "client_org_name": org_name,
+                "exchange_rate_info": {
+                    "usd_pln": 4.1234,
+                    "effective_date": date.today().isoformat()
+                },
+                "pln_conversion_available": True
+            },
+            "client_id": "env_based"
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "stats": {
+                "today": {"tokens": 0, "cost": 0, "requests": 0, "last_updated": "Error loading data"},
+                "this_month": {"tokens": 0, "cost": 0, "requests": 0, "days_active": 0},
+                "client_org_name": ORGANIZATION_NAME or "My Organization"
+            },
+            "client_id": "env_based"
+        }
+
+@router.get("/my-organization/today-usage")
+async def get_my_organization_today_usage(user=Depends(get_current_user)):
+    """Get today's usage for the current organization (environment-based)"""
+    try:
+        return {
+            "success": True,
+            "today": {
+                "tokens": 0,
+                "cost": 0.0,
+                "cost_pln": 0.0,
+                "requests": 0,
+                "last_updated": datetime.now().isoformat(),
+                "exchange_rate": 4.1234,
+                "exchange_rate_date": date.today().isoformat()
+            }
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "today": {
+                "tokens": 0,
+                "cost": 0,
+                "requests": 0,
+                "last_updated": "Error loading data"
+            }
+        }
+
+@router.get("/my-organization/usage-by-user")
+async def get_my_organization_usage_by_user(user=Depends(get_current_user)):
+    """Get usage breakdown by user for the current organization (environment-based)"""
+    try:
+        # For now, return the current user's usage
+        return {
+            "success": True,
+            "user_usage": [
+                {
+                    "user_id": user.id,
+                    "user_name": user.name,
+                    "user_email": user.email,
+                    "total_tokens": 0,
+                    "total_requests": 0,
+                    "markup_cost": 0.0,
+                    "cost_pln": 0.0,
+                    "days_active": 0
+                }
+            ]
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "user_usage": []
+        }
+
+@router.get("/my-organization/usage-by-model")
+async def get_my_organization_usage_by_model(user=Depends(get_current_user)):
+    """Get usage breakdown by model for the current organization (environment-based)"""
+    try:
+        return {
+            "success": True,
+            "model_usage": []
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "model_usage": []
+        }
+
+@router.get("/my-organization/subscription-billing")
+async def get_my_organization_subscription_billing(user=Depends(get_current_user)):
+    """Get subscription billing data for the current organization (environment-based)"""
+    try:
+        return {
+            "success": True,
+            "subscription_data": None  # No subscription billing in environment-based mode
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "subscription_data": None
+        }
+
+@router.get("/model-pricing")
+async def get_mai_model_pricing():
+    """Get mAI model pricing information"""
+    try:
+        # Return static pricing data for now
+        # TODO: Implement real-time pricing fetch from OpenRouter
+        models = [
+            {
+                "id": "anthropic/claude-sonnet-4",
+                "name": "Claude Sonnet 4",
+                "provider": "Anthropic",
+                "price_per_million_input": 8.00,
+                "price_per_million_output": 24.00,
+                "context_length": 1000000,
+                "category": "Premium"
+            },
+            {
+                "id": "google/gemini-2.5-flash",
+                "name": "Gemini 2.5 Flash",
+                "provider": "Google",
+                "price_per_million_input": 1.50,
+                "price_per_million_output": 6.00,
+                "context_length": 2000000,
+                "category": "Fast"
+            },
+            {
+                "id": "openai/gpt-4o-mini",
+                "name": "GPT-4o Mini",
+                "provider": "OpenAI",
+                "price_per_million_input": 0.15,
+                "price_per_million_output": 0.60,
+                "context_length": 128000,
+                "category": "Budget"
+            }
+        ]
+        
+        return {
+            "success": True,
+            "models": models
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "models": []
+        }
