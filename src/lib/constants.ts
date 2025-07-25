@@ -97,10 +97,6 @@ export const SUPPORTED_FILE_EXTENSIONS = [
 
 export const PASTED_TEXT_CHARACTER_LIMIT = 1000;
 
-// Model Configuration
-export const GOVGPT_RAG_WOG_MODEL_NAME = (globalThis as any).GOVGPT_RAG_WOG_MODEL_NAME || 'govgpt_rag_wog';
-export const DEFAULT_MODELS = (globalThis as any).DEFAULT_MODELS || 'gpt-4.1';
-
 // Source: https://kit.svelte.dev/docs/modules#$env-static-public
 // This feature, akin to $env/static/private, exclusively incorporates environment variables
 // that are prefixed with config.kit.env.publicPrefix (usually set to PUBLIC_).

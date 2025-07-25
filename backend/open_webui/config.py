@@ -1174,6 +1174,11 @@ USER_PERMISSIONS_FEATURES_NOTES = (
     os.environ.get("USER_PERMISSIONS_FEATURES_NOTES", "True").lower() == "true"
 )
 
+GOVGPT_RAG_WOG_MODEL_NAME = PersistentConfig(
+    "GOVGPT_RAG_WOG_MODEL_NAME",
+    "ui.govgpt_rag_wog_model_name",
+    os.environ.get("GOVGPT_RAG_WOG_MODEL_NAME", "govgpt_rag_wog"),
+)
 
 DEFAULT_USER_PERMISSIONS = {
     "workspace": {

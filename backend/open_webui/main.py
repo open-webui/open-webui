@@ -330,6 +330,7 @@ from open_webui.config import (
     DEFAULT_PROMPT_SUGGESTIONS,
     DEFAULT_MODELS,
     DEFAULT_ARENA_MODEL,
+    GOVGPT_RAG_WOG_MODEL_NAME,
     MODEL_ORDER_LIST,
     EVALUATION_ARENA_MODELS,
     # WebUI (OAuth)
@@ -643,6 +644,7 @@ app.state.config.ADMIN_EMAIL = ADMIN_EMAIL
 app.state.config.DEFAULT_MODELS = DEFAULT_MODELS
 app.state.config.DEFAULT_PROMPT_SUGGESTIONS = DEFAULT_PROMPT_SUGGESTIONS
 app.state.config.DEFAULT_USER_ROLE = DEFAULT_USER_ROLE
+app.state.config.GOVGPT_RAG_WOG_MODEL_NAME = GOVGPT_RAG_WOG_MODEL_NAME
 
 app.state.config.PENDING_USER_OVERLAY_CONTENT = PENDING_USER_OVERLAY_CONTENT
 app.state.config.PENDING_USER_OVERLAY_TITLE = PENDING_USER_OVERLAY_TITLE
@@ -1633,7 +1635,7 @@ async def get_app_config(request: Request):
         },
         **(
             {
-                "default_models": app.state.config.DEFAULT_MODELS,
+               "default_models": app.state.config.DEFAULT_MODELS,
                 "default_prompt_suggestions": app.state.config.DEFAULT_PROMPT_SUGGESTIONS,
                 "user_count": user_count,
                 "code": {
@@ -1672,6 +1674,9 @@ async def get_app_config(request: Request):
                     "pending_user_overlay_content": app.state.config.PENDING_USER_OVERLAY_CONTENT,
                     "response_watermark": app.state.config.RESPONSE_WATERMARK,
                 },
+                "govgpt": {
+                    "rag_wog_model_name": app.state.config.GOVGPT_RAG_WOG_MODEL_NAME,
+                },
                 "license_metadata": app.state.LICENSE_METADATA,
                 **(
                     {
@@ -1697,7 +1702,10 @@ async def get_app_config_mobile():
         "maxFileSizeAllowed": int(MAX_FILE_SIZE),
         "fileTypesAllowed": ALLOWED_FILE_TYPES.split(","),
         "privacyPolicyURL": PRIVACY_POLICY_URL, #url will be provided later
-        "termsConditionsURL": TERMS_CONDITIONS_URL #url will be provided later
+        "termsConditionsURL": TERMS_CONDITIONS_URL, #url will be provided later
+        "govgpt": {
+            "rag_wog_model_name": app.state.config.GOVGPT_RAG_WOG_MODEL_NAME,
+        }
     })
 
 class UrlForm(BaseModel):
