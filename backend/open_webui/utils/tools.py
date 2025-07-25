@@ -446,9 +446,11 @@ async def get_tool_server_data(token: str, url: str) -> Dict[str, Any]:
         headers["Authorization"] = f"Bearer {token}"
 
     error = None
+    session = None
     try:
         timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA)
-        async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
+        session = aiohttp.ClientSession(timeout=timeout, trust_env=True)
+        try:
             async with session.get(
                 url, headers=headers, ssl=AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL
             ) as response:
@@ -462,6 +464,16 @@ async def get_tool_server_data(token: str, url: str) -> Dict[str, Any]:
                     res = yaml.safe_load(text_content)
                 else:
                     res = await response.json()
+        finally:
+            # Ensure session is closed even on cancellation
+            if session and not session.closed:
+                await session.close()
+    except asyncio.CancelledError:
+        # Handle task cancellation explicitly to ensure proper cleanup
+        log.info(f"Tool server data fetch from {url} was cancelled")
+        if session and not session.closed:
+            await session.close()
+        raise  # Re-raise the CancelledError to propagate cancellation
     except Exception as err:
         log.exception(f"Could not fetch tool server spec from {url}")
         if isinstance(err, dict) and "detail" in err:
@@ -551,6 +563,7 @@ async def execute_tool_server(
     token: str, url: str, name: str, params: Dict[str, Any], server_data: Dict[str, Any]
 ) -> Any:
     error = None
+    session = None
     try:
         openapi = server_data.get("openapi", {})
         paths = openapi.get("paths", {})
@@ -614,7 +627,8 @@ async def execute_tool_server(
         if token:
             headers["Authorization"] = f"Bearer {token}"
 
-        async with aiohttp.ClientSession(trust_env=True) as session:
+        session = aiohttp.ClientSession(trust_env=True)
+        try:
             request_method = getattr(session, http_method.lower())
 
             if http_method in ["post", "put", "patch"]:
@@ -638,7 +652,17 @@ async def execute_tool_server(
                         text = await response.text()
                         raise Exception(f"HTTP error {response.status}: {text}")
                     return await response.json()
+        finally:
+            # Ensure session is closed even on cancellation
+            if session and not session.closed:
+                await session.close()
 
+    except asyncio.CancelledError:
+        # Handle task cancellation explicitly to ensure proper cleanup
+        log.info(f"Tool server request to {name} was cancelled")
+        if session and not session.closed:
+            await session.close()
+        raise  # Re-raise the CancelledError to propagate cancellation
     except Exception as err:
         error = str(err)
         log.exception(f"API Request Error: {error}")
