@@ -152,6 +152,11 @@
 
 	let refreshInterval = null;
 
+	// Reactive: Ensure non-admin users don't access admin-only tabs
+	$: if ($user?.role !== 'admin' && (activeTab === 'users' || activeTab === 'models')) {
+		activeTab = 'stats';
+	}
+
 	const loadModelPricing = async () => {
 		try {
 			loadingPricing = true;
@@ -362,6 +367,12 @@
 
 	
 	const handleTabChange = async (tab) => {
+		// Prevent non-admin users from accessing admin-only tabs
+		if ($user?.role !== 'admin' && (tab === 'users' || tab === 'models')) {
+			toast.error($i18n.t('Access denied. Administrator privileges required.'));
+			return;
+		}
+		
 		activeTab = tab;
 		
 		// Only load data if we have a validated client ID
@@ -491,18 +502,20 @@
 			>
 				{$i18n.t('Usage Stats')}
 			</button>
-			<button
-				class="py-2 px-1 border-b-2 font-medium text-sm {activeTab === 'users' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}"
-				on:click={() => handleTabChange('users')}
-			>
-				{$i18n.t('By User')}
-			</button>
-			<button
-				class="py-2 px-1 border-b-2 font-medium text-sm {activeTab === 'models' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}"
-				on:click={() => handleTabChange('models')}
-			>
-				{$i18n.t('By Model')}
-			</button>
+			{#if $user?.role === 'admin'}
+				<button
+					class="py-2 px-1 border-b-2 font-medium text-sm {activeTab === 'users' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}"
+					on:click={() => handleTabChange('users')}
+				>
+					{$i18n.t('By User')}
+				</button>
+				<button
+					class="py-2 px-1 border-b-2 font-medium text-sm {activeTab === 'models' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}"
+					on:click={() => handleTabChange('models')}
+				>
+					{$i18n.t('By Model')}
+				</button>
+			{/if}
 			<button
 				class="py-2 px-1 border-b-2 font-medium text-sm {activeTab === 'pricing' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}"
 				on:click={() => handleTabChange('pricing')}
@@ -534,12 +547,6 @@
 							<span class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Month Total')}:</span>
 							<span class="text-sm font-medium">{formatNumber(usageData.this_month.tokens)}</span>
 						</div>
-						<div class="flex justify-between">
-							<span class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Today % of Month')}:</span>
-							<span class="text-sm font-medium">
-								{usageData.this_month.tokens > 0 ? ((usageData.today.tokens / usageData.this_month.tokens) * 100).toFixed(1) : 0}%
-							</span>
-						</div>
 					</div>
 				</div>
 				
@@ -554,18 +561,12 @@
 							<span class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Month Total')}:</span>
 							<span class="text-sm font-medium">{formatCurrency(usageData.this_month.cost)}</span>
 						</div>
-						<div class="flex justify-between">
-							<span class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Avg per Token')}:</span>
-							<span class="text-sm font-medium">
-								{usageData.this_month.tokens > 0 ? formatCurrency((usageData.this_month.cost / usageData.this_month.tokens) * 1000) + '/1K' : '$0.00/1K'}
-							</span>
-						</div>
 					</div>
 				</div>
 			</div>
 
 		</div>
-	{:else if activeTab === 'users'}
+	{:else if activeTab === 'users' && $user?.role === 'admin'}
 		<div class="bg-white dark:bg-gray-850 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 			<h3 class="text-lg font-medium mb-4">{$i18n.t('Usage by User')}</h3>
 			
@@ -634,7 +635,7 @@
 				<p class="text-gray-600 dark:text-gray-400">{$i18n.t('No user usage data available.')}</p>
 			{/if}
 		</div>
-	{:else if activeTab === 'models'}
+	{:else if activeTab === 'models' && $user?.role === 'admin'}
 		<div class="bg-white dark:bg-gray-850 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 			<h3 class="text-lg font-medium mb-4">{$i18n.t('Usage by Model')}</h3>
 			
