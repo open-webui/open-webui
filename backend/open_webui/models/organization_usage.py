@@ -45,6 +45,31 @@ class ProcessedGeneration(Base):
     )
 
 
+class ProcessedGenerationCleanupLog(Base):
+    """Track cleanup operations for audit and monitoring"""
+    __tablename__ = "processed_generation_cleanup_log"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    cleanup_date = Column(Date, nullable=False)  # Date when cleanup was performed
+    cutoff_date = Column(Date, nullable=False)   # Records older than this were deleted
+    days_retained = Column(Integer, nullable=False)  # Retention period used
+    records_before = Column(Integer, nullable=False)
+    records_deleted = Column(Integer, nullable=False)
+    records_remaining = Column(Integer, nullable=False)
+    old_tokens_removed = Column(BigInteger, nullable=False)
+    old_cost_removed = Column(Float, nullable=False)
+    storage_saved_kb = Column(Float, nullable=False)
+    cleanup_duration_seconds = Column(Float, nullable=False)
+    success = Column(Boolean, nullable=False, default=True)
+    error_message = Column(Text, nullable=True)
+    created_at = Column(BigInteger, nullable=False)
+
+    __table_args__ = (
+        Index('idx_cleanup_date', 'cleanup_date'),
+        Index('idx_success', 'success'),
+    )
+
+
 class ClientOrganization(Base):
     __tablename__ = "client_organizations"
 
@@ -1133,23 +1158,154 @@ class ProcessedGenerationTable:
             log.error(f"Error marking generation {generation_id} as processed: {e}")
             return False
 
-    def cleanup_old_processed_generations(self, days_to_keep: int = 90) -> int:
-        """Clean up old processed generation records to prevent table bloat"""
+    def cleanup_old_processed_generations(self, days_to_keep: int = 90) -> Dict[str, Any]:
+        """
+        Clean up old processed generation records to prevent table bloat.
+        Returns detailed statistics about the cleanup operation.
+        
+        Args:
+            days_to_keep: Number of days of records to keep (default: 90)
+            
+        Returns:
+            Dict with cleanup statistics including records deleted, storage saved, etc.
+        """
+        cleanup_start_time = time.time()
+        
         try:
             cutoff_date = date.today() - timedelta(days=days_to_keep)
             cutoff_timestamp = int(time.time()) - (days_to_keep * 24 * 3600)
             
             with get_db() as db:
-                deleted = db.query(ProcessedGeneration).filter(
+                # First, get statistics before cleanup for logging
+                total_records_query = db.query(ProcessedGeneration).count()
+                records_to_delete_query = db.query(ProcessedGeneration).filter(
+                    ProcessedGeneration.processed_at < cutoff_timestamp
+                ).count()
+                
+                # Get breakdown by organization for audit trail
+                org_breakdown_query = db.query(
+                    ProcessedGeneration.client_org_id,
+                    db.func.count(ProcessedGeneration.id).label('count'),
+                    db.func.sum(ProcessedGeneration.total_tokens).label('tokens'),
+                    db.func.sum(ProcessedGeneration.total_cost).label('cost')
+                ).filter(
+                    ProcessedGeneration.processed_at < cutoff_timestamp
+                ).group_by(ProcessedGeneration.client_org_id).all()
+                
+                org_stats = {}
+                total_old_tokens = 0
+                total_old_cost = 0.0
+                
+                for org_id, count, tokens, cost in org_breakdown_query:
+                    org_stats[org_id] = {
+                        "records": count,
+                        "tokens": tokens or 0,
+                        "cost": cost or 0.0
+                    }
+                    total_old_tokens += tokens or 0
+                    total_old_cost += cost or 0.0
+                
+                # Perform the actual cleanup
+                deleted_count = db.query(ProcessedGeneration).filter(
                     ProcessedGeneration.processed_at < cutoff_timestamp
                 ).delete()
+                
                 db.commit()
                 
-                log.info(f"Cleaned up {deleted} old processed generation records")
-                return deleted
+                # Calculate cleanup duration and storage estimates
+                cleanup_duration = time.time() - cleanup_start_time
+                records_remaining = total_records_query - deleted_count
+                
+                # Estimate storage savings (approximate)
+                avg_record_size_bytes = 100  # Rough estimate per record
+                storage_saved_kb = (deleted_count * avg_record_size_bytes) / 1024
+                
+                # Log cleanup operation to audit table
+                cleanup_log_entry = ProcessedGenerationCleanupLog(
+                    cleanup_date=date.today(),
+                    cutoff_date=cutoff_date,
+                    days_retained=days_to_keep,
+                    records_before=total_records_query,
+                    records_deleted=deleted_count,
+                    records_remaining=records_remaining,
+                    old_tokens_removed=total_old_tokens,
+                    old_cost_removed=total_old_cost,
+                    storage_saved_kb=storage_saved_kb,
+                    cleanup_duration_seconds=cleanup_duration,
+                    success=True,
+                    created_at=int(time.time())
+                )
+                db.add(cleanup_log_entry)
+                db.commit()
+                
+                cleanup_result = {
+                    "success": True,
+                    "cutoff_date": cutoff_date.isoformat(),
+                    "days_to_keep": days_to_keep,
+                    "records_before": total_records_query,
+                    "records_deleted": deleted_count,
+                    "records_remaining": records_remaining,
+                    "old_tokens_removed": total_old_tokens,
+                    "old_cost_removed": total_old_cost,
+                    "storage_saved_kb": round(storage_saved_kb, 2),
+                    "cleanup_duration_seconds": round(cleanup_duration, 3),
+                    "organization_breakdown": org_stats,
+                    "cleanup_timestamp": int(time.time())
+                }
+                
+                # Enhanced logging for production monitoring
+                if deleted_count > 0:
+                    log.info(f"🧹 Processed generations cleanup completed: "
+                           f"{deleted_count:,} records deleted ({records_remaining:,} remaining), "
+                           f"{total_old_tokens:,} tokens, ${total_old_cost:.6f} removed, "
+                           f"~{storage_saved_kb:.1f}KB saved in {cleanup_duration:.2f}s")
+                    
+                    # Log organization breakdown for audit
+                    for org_id, stats in org_stats.items():
+                        log.debug(f"  • {org_id}: {stats['records']} records, "
+                                f"{stats['tokens']:,} tokens, ${stats['cost']:.6f}")
+                else:
+                    log.debug(f"Processed generations cleanup: No old records found (cutoff: {cutoff_date})")
+                
+                return cleanup_result
+                
         except Exception as e:
-            log.error(f"Error cleaning up processed generations: {e}")
-            return 0
+            cleanup_duration = time.time() - cleanup_start_time
+            
+            # Log failed cleanup to audit table (if possible)
+            try:
+                with get_db() as db:
+                    cutoff_date = date.today() - timedelta(days=days_to_keep)
+                    cleanup_log_entry = ProcessedGenerationCleanupLog(
+                        cleanup_date=date.today(),
+                        cutoff_date=cutoff_date,
+                        days_retained=days_to_keep,
+                        records_before=0,
+                        records_deleted=0,
+                        records_remaining=0,
+                        old_tokens_removed=0,
+                        old_cost_removed=0.0,
+                        storage_saved_kb=0.0,
+                        cleanup_duration_seconds=cleanup_duration,
+                        success=False,
+                        error_message=str(e)[:500],  # Truncate long error messages
+                        created_at=int(time.time())
+                    )
+                    db.add(cleanup_log_entry)
+                    db.commit()
+            except Exception as log_error:
+                log.error(f"Failed to log cleanup error to audit table: {log_error}")
+            
+            error_result = {
+                "success": False,
+                "error": str(e),
+                "days_to_keep": days_to_keep,
+                "cleanup_duration_seconds": round(cleanup_duration, 3),
+                "cleanup_timestamp": int(time.time())
+            }
+            
+            log.error(f"❌ Error cleaning up processed generations: {e}")
+            return error_result
 
     def get_processed_generations_stats(self, client_org_id: str, 
                                       start_date: date = None, 

@@ -555,13 +555,25 @@ class OpenRouterUsageSync:
                     log.info("Performing scheduled daily rollover")
                     await self.daily_rollover_task()
                     
-                    # Also clean up old processed generations
+                    # Also clean up old processed generations (90-day retention)
                     try:
                         from open_webui.models.organization_usage import ProcessedGenerationDB
-                        cleaned = ProcessedGenerationDB.cleanup_old_processed_generations(90)
-                        log.info(f"Cleaned up {cleaned} old processed generation records")
+                        cleanup_result = ProcessedGenerationDB.cleanup_old_processed_generations(90)
+                        
+                        if cleanup_result.get("success"):
+                            deleted = cleanup_result.get("records_deleted", 0)
+                            if deleted > 0:
+                                log.info(f"🧹 Automatic cleanup: {deleted:,} old processed generation records removed")
+                                # Log summary for Docker container monitoring
+                                log.info(f"   Storage saved: ~{cleanup_result.get('storage_saved_kb', 0):.1f}KB, "
+                                       f"Duration: {cleanup_result.get('cleanup_duration_seconds', 0):.2f}s")
+                            else:
+                                log.debug("Automatic cleanup: No old processed generation records to remove")
+                        else:
+                            log.error(f"Automatic cleanup failed: {cleanup_result.get('error', 'Unknown error')}")
+                            
                     except Exception as e:
-                        log.error(f"Error cleaning up processed generations: {e}")
+                        log.error(f"Error during automatic processed generations cleanup: {e}")
                         
             except asyncio.CancelledError:
                 break
