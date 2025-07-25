@@ -232,16 +232,19 @@
 		// Priority order: Gov Knowledge > Web Search > Files > Specific Model
 		
 		// Check if Gov Knowledge model is selected (highest priority)
+
+		if (webSearchEnabled) {
+			console.log('Returning: Web Search');
+			return 'Web Search';
+		}
+
 		if (govBtnEnable) {
 			console.log('Returning: Gov Knowledge');
 			return 'Gov Knowledge';
 		}
 		
 		// Check if web search is enabled (second priority)
-		if (webSearchEnabled) {
-			console.log('Returning: Web Search');
-			return 'Web Search';
-		}
+		
 		
 		// Check if files are attached (either in current files or in chat history)
 		if (attachFileEnabled || files.length > 0 || 

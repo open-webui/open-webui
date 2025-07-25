@@ -725,21 +725,32 @@ async def run_gov_gpt_web_search(user_query, user, session_id, user_message, eve
             # Call custom /search API with current state
             log.info(f"GOV_GPT Web Search: Preparing to call custom API at {CUSTOM_WEB_SEARCH_URL}")
             
+            # Get chat history from form_data messages
+            chat_history = []
+            messages = form_data.get("messages", [])
+            for i in range(0, len(messages) - 1, 2):  # Skip the last user message
+                if i + 1 < len(messages):
+                    chat_history.append({
+                        "role": "user",
+                        "content": messages[i].get("content", "")
+                    })
+                    chat_history.append({
+                        "role": "assistant", 
+                        "content": messages[i + 1].get("content", "")
+                    })
+            
+            log.info(f"GOV_GPT Web Search: Prepared {len(chat_history)} chat history messages")
+            
             payload = {
                 "user_query": org_query,
                 "user_name": user_name,
                 "user_id": user_id,
                 "session_id": session_id,
-                "chat_history": [],
+                "chat_history": chat_history,
                 "website_results": website_results
             }
-            
-            log.info(f"GOV_GPT Web Search: Request payload:")
-            log.info(f"  User query: '{payload['user_query']}'")
-            log.info(f"  User name: '{payload['user_name']}'")
-            log.info(f"  User ID: '{payload['user_id']}'")
-            log.info(f"  Session ID: '{payload['session_id']}'")
-            log.info(f"  Website results count: {len(payload['website_results'])}")
+
+            log.info(f"GOV_GPT Web Search: Request payload: {json.dumps(payload, indent=2)}")
             
             if website_results:
                 log.info(f"GOV_GPT Web Search: Website results preview:")
