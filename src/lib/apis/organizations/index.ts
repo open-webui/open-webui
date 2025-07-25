@@ -541,3 +541,40 @@ export const getUsageByModel = async (token: string, clientId: string, startDate
 
 	return res;
 };
+
+/**
+ * Get subscription billing information with proportional monthly rates
+ * For admin users only - calculates tiered pricing based on user count and addition dates
+ */
+export const getSubscriptionBilling = async (token: string, clientId?: string) => {
+	let error = null;
+	let url = `${WEBUI_API_BASE_URL}/client-organizations/subscription/billing`;
+	
+	if (clientId) {
+		url += `?client_id=${clientId}`;
+	}
+
+	const res = await fetch(url, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err.detail ?? 'Failed to fetch subscription billing';
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};

@@ -603,3 +603,176 @@ async def export_usage_data(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to export usage data: {str(e)}"
         )
+
+@router.get("/subscription/billing")
+async def get_subscription_billing(
+    client_id: Optional[str] = None,
+    user=Depends(get_admin_user)
+):
+    """Get subscription billing information with proportional monthly rates"""
+    try:
+        from open_webui.models.users import Users
+        from datetime import datetime, date
+        import calendar
+        
+        # Get current user's organization if no client_id provided
+        if not client_id:
+            mapping = UserClientMappingDB.get_mapping_by_user_id(user.id)
+            if not mapping:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="No organization mapping found for current user"
+                )
+            client_id = mapping.client_org_id
+        
+        # Get organization details
+        client_org = ClientOrganizationDB.get_client_by_id(client_id)
+        if not client_org:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Client organization not found"
+            )
+        
+        # Get all user mappings for this organization
+        user_mappings = UserClientMappingDB.get_mappings_by_client_id(client_id)
+        if not user_mappings:
+            return {
+                "success": True,
+                "client_id": client_id,
+                "client_name": client_org.name,
+                "subscription_data": {
+                    "current_month": {
+                        "total_users": 0,
+                        "total_cost_pln": 0.0,
+                        "tier_breakdown": [],
+                        "user_details": []
+                    },
+                    "pricing_tiers": [
+                        {"range": "1-3 users", "price_pln": 79},
+                        {"range": "4-9 users", "price_pln": 69},
+                        {"range": "10-19 users", "price_pln": 59},
+                        {"range": "20+ users", "price_pln": 54}
+                    ]
+                }
+            }
+        
+        # Get user IDs from mappings
+        user_ids = [mapping.user_id for mapping in user_mappings]
+        
+        # Get user details with creation dates
+        users_data = Users.get_users_by_user_ids(user_ids)
+        
+        # Current month calculations
+        now = datetime.now()
+        current_month = now.month
+        current_year = now.year
+        days_in_month = calendar.monthrange(current_year, current_month)[1]
+        
+        # Subscription pricing tiers (PLN)
+        def get_tier_price(user_count):
+            if user_count <= 3:
+                return 79
+            elif user_count <= 9:
+                return 69
+            elif user_count <= 19:
+                return 59
+            else:
+                return 54
+        
+        # Calculate proportional billing for current month
+        user_billing_details = []
+        monthly_cost_breakdown = {}
+        
+        for user_data in users_data:
+            created_date = datetime.fromtimestamp(user_data.created_at)
+            
+            # Check if user was created in current month
+            if created_date.month == current_month and created_date.year == current_year:
+                days_remaining = days_in_month - created_date.day + 1
+                proportion = days_remaining / days_in_month
+            else:
+                # User created in previous months - full month billing
+                proportion = 1.0
+                days_remaining = days_in_month
+            
+            user_billing_details.append({
+                "user_id": user_data.id,
+                "user_name": user_data.name,
+                "user_email": user_data.email,
+                "created_at": user_data.created_at,
+                "created_date": created_date.strftime("%Y-%m-%d"),
+                "days_remaining_when_added": days_remaining,
+                "billing_proportion": round(proportion, 3)
+            })
+        
+        # Sort users by creation date
+        user_billing_details.sort(key=lambda x: x["created_at"])
+        
+        # Calculate tiered billing
+        total_users = len(user_billing_details)
+        tier_price = get_tier_price(total_users)
+        
+        # Calculate total proportional cost
+        total_proportional_cost = 0
+        for user_detail in user_billing_details:
+            user_cost = tier_price * user_detail["billing_proportion"]
+            user_detail["monthly_cost_pln"] = round(user_cost, 2)
+            total_proportional_cost += user_cost
+        
+        # Tier breakdown
+        tier_breakdown = [
+            {
+                "tier_range": "1-3 users",
+                "price_per_user_pln": 79,
+                "is_current_tier": total_users <= 3,
+                "user_count_in_tier": min(total_users, 3) if total_users <= 3 else 0
+            },
+            {
+                "tier_range": "4-9 users", 
+                "price_per_user_pln": 69,
+                "is_current_tier": 4 <= total_users <= 9,
+                "user_count_in_tier": total_users if 4 <= total_users <= 9 else 0
+            },
+            {
+                "tier_range": "10-19 users",
+                "price_per_user_pln": 59, 
+                "is_current_tier": 10 <= total_users <= 19,
+                "user_count_in_tier": total_users if 10 <= total_users <= 19 else 0
+            },
+            {
+                "tier_range": "20+ users",
+                "price_per_user_pln": 54,
+                "is_current_tier": total_users >= 20,
+                "user_count_in_tier": total_users if total_users >= 20 else 0
+            }
+        ]
+        
+        return {
+            "success": True,
+            "client_id": client_id,
+            "client_name": client_org.name,
+            "subscription_data": {
+                "current_month": {
+                    "month": current_month,
+                    "year": current_year,
+                    "days_in_month": days_in_month,
+                    "total_users": total_users,
+                    "current_tier_price_pln": tier_price,
+                    "total_cost_pln": round(total_proportional_cost, 2),
+                    "tier_breakdown": tier_breakdown,
+                    "user_details": user_billing_details
+                },
+                "pricing_tiers": [
+                    {"range": "1-3 users", "price_pln": 79},
+                    {"range": "4-9 users", "price_pln": 69}, 
+                    {"range": "10-19 users", "price_pln": 59},
+                    {"range": "20+ users", "price_pln": 54}
+                ]
+            }
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get subscription billing: {str(e)}"
+        )
