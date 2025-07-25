@@ -268,7 +268,7 @@
 					if ($settings?.notificationSoundAlways ?? false) {
 						playingNotificationSound.set(true);
 
-						const audio = new Audio(`/audio/notification.mp3`);
+						const audio = new Audio(`${WEBUI_BASE_URL}/audio/notification.mp3`);
 						audio.play().finally(() => {
 							// Ensure the global state is reset after the sound finishes
 							playingNotificationSound.set(false);
@@ -626,7 +626,7 @@
 
 			document.getElementById('splash-screen')?.remove();
 
-			const audio = new Audio(`/audio/greeting.mp3`);
+			const audio = new Audio(`${WEBUI_BASE_URL}/audio/greeting.mp3`);
 			const playAudio = () => {
 				audio.play();
 				document.removeEventListener('click', playAudio);
@@ -652,8 +652,8 @@
 
 	<!-- rosepine themes have been disabled as it's not up to date with our latest version. -->
 	<!-- feel free to make a PR to fix if anyone wants to see it return -->
-	<!-- <link rel="stylesheet" type="text/css" href="/themes/rosepine.css" />
-	<link rel="stylesheet" type="text/css" href="/themes/rosepine-dawn.css" /> -->
+	<!-- <link rel="stylesheet" type="text/css" href="{WEBUI_BASE_URL}/themes/rosepine.css" />
+	<link rel="stylesheet" type="text/css" href="{WEBUI_BASE_URL}/themes/rosepine-dawn.css" /> -->
 </svelte:head>
 
 {#if loaded}

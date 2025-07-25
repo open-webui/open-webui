@@ -7,6 +7,7 @@
 	import { onMount, getContext, onDestroy, tick } from 'svelte';
 	const i18n = getContext('i18n');
 
+	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import {
@@ -753,7 +754,9 @@
 								<div class=" flex-1 text-xl font-medium">
 									<a
 										class="hover:text-gray-500 dark:hover:text-gray-100 hover:underline grow line-clamp-1"
-										href={selectedFile.id ? `/api/v1/files/${selectedFile.id}/content` : '#'}
+										href={selectedFile.id
+											? `${WEBUI_API_BASE_URL}/files/${selectedFile.id}/content`
+											: '#'}
 										target="_blank"
 									>
 										{decodeString(selectedFile?.meta?.name)}
