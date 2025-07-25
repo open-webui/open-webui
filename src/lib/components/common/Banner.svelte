@@ -14,7 +14,7 @@
 		title: '',
 		content: '',
 		url: '',
-		dismissable: true,
+		dismissible: true,
 		timestamp: Math.floor(Date.now() / 1000)
 	};
 	export let className = 'mx-4';
