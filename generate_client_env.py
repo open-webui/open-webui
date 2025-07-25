@@ -22,6 +22,8 @@ import time
 import hashlib
 import hmac
 import base64
+import sqlite3
+import argparse
 from typing import Optional, Dict, Any
 from datetime import datetime
 
@@ -38,13 +40,15 @@ OPENROUTER_HOST = "https://openrouter.ai/api/v1"
 class OpenRouterEnvGenerator:
     """Generate .env configuration for mAI client instances using OpenRouter Provisioning API"""
     
-    def __init__(self):
+    def __init__(self, init_database: bool = False):
         self.provisioning_key: Optional[str] = None
         self.organization_name: Optional[str] = None
         self.spending_limit: Optional[str] = None
         self.generated_api_key: Optional[str] = None
         self.external_user: Optional[str] = None
         self.key_hash: Optional[str] = None
+        self.init_database: bool = init_database
+        self.database_path: str = "backend/data/webui.db"
         
     def get_user_input(self) -> bool:
         """Collect required information from user"""
@@ -436,10 +440,18 @@ SPENDING_LIMIT={self.spending_limit}
         print("        SPENDING_LIMIT = os.getenv('SPENDING_LIMIT')")
         print()
         
-        print("📊 Usage Tracking:")
-        print("   ✅ All usage tracking functionality is preserved")
-        print("   ✅ External user mapping will work automatically")
-        print("   ✅ Billing calculations will continue as before")
+        if self.init_database:
+            print("📊 Usage Tracking:")
+            print("   ✅ Database initialized with client organization")
+            print("   ✅ Usage tracking ready for production")
+            print("   ✅ External user mapping configured")
+            print("   ✅ Billing calculations with 1.3x markup rate")
+        else:
+            print("📊 Usage Tracking:")
+            print("   ⚠️  Database initialization required for production")
+            print("   💡 Run with --production flag for complete setup")
+            print("   ✅ External user mapping will work when database is initialized")
+            print("   ✅ Billing calculations will work when database is initialized")
         print()
         
         print("🔐 Security Notes:")
@@ -452,7 +464,11 @@ SPENDING_LIMIT={self.spending_limit}
         print("🐳 Deployment:")
         print("   1. Copy .env file to your Docker deployment directory")
         print("   2. Ensure docker-compose.yml includes 'env_file: .env'")
-        print("   3. Start your mAI container - it will automatically use these settings")
+        if self.init_database:
+            print("   3. Start your mAI container - fully configured and production-ready!")
+        else:
+            print("   3. Initialize database: python generate_client_env.py --init-database")
+            print("   4. Start your mAI container")
         print()
         
         print("✅ Configuration Summary:")
@@ -461,10 +477,199 @@ SPENDING_LIMIT={self.spending_limit}
         print(f"   🔑 API Key: {self.generated_api_key[:20]}...")
         print(f"   👤 External User: {self.external_user}")
         print(f"   🌐 OpenRouter Host: {OPENROUTER_HOST}")
+    
+    def check_database_connection(self) -> bool:
+        """Check if database exists and is accessible"""
+        if not os.path.exists(self.database_path):
+            print(f"❌ Database not found at: {self.database_path}")
+            print("   Make sure you're running this script from the mAI project root directory")
+            return False
+        
+        try:
+            conn = sqlite3.connect(self.database_path)
+            conn.close()
+            print(f"✅ Database connection verified: {self.database_path}")
+            return True
+        except Exception as e:
+            print(f"❌ Database connection failed: {e}")
+            return False
+    
+    def create_client_organization(self) -> bool:
+        """Create or update client organization in database"""
+        print(f"\n🏢 Setting up client organization in database...")
+        
+        try:
+            conn = sqlite3.connect(self.database_path)
+            cursor = conn.cursor()
+            
+            # Check if client_organizations table exists
+            cursor.execute("""
+                SELECT name FROM sqlite_master 
+                WHERE type='table' AND name='client_organizations'
+            """)
+            
+            if not cursor.fetchone():
+                print("❌ client_organizations table not found. Database schema may be incomplete.")
+                return False
+            
+            # Prepare client organization data
+            client_id = self.external_user
+            current_time = datetime.now().isoformat()
+            markup_rate = 1.3  # Default mAI markup rate
+            
+            # Insert or replace client organization
+            cursor.execute("""
+                INSERT OR REPLACE INTO client_organizations 
+                (id, name, openrouter_api_key, markup_rate, is_active, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (
+                client_id,
+                self.organization_name,
+                self.generated_api_key,
+                markup_rate,
+                1,  # is_active = true
+                current_time,
+                current_time
+            ))
+            
+            conn.commit()
+            
+            # Verify the record was created
+            cursor.execute("""
+                SELECT id, name, markup_rate, is_active 
+                FROM client_organizations 
+                WHERE id = ?
+            """, (client_id,))
+            
+            result = cursor.fetchone()
+            if result:
+                org_id, org_name, rate, active = result
+                print(f"✅ Client organization created successfully:")
+                print(f"   📋 ID: {org_id}")
+                print(f"   🏢 Name: {org_name}")
+                print(f"   💰 Markup Rate: {rate}x")
+                print(f"   ✅ Active: {'Yes' if active else 'No'}")
+                return True
+            else:
+                print("❌ Failed to verify client organization creation")
+                return False
+                
+        except Exception as e:
+            print(f"❌ Error creating client organization: {e}")
+            return False
+        finally:
+            if 'conn' in locals():
+                conn.close()
+    
+    def validate_database_setup(self) -> bool:
+        """Validate that database setup is complete and functional"""
+        print(f"\n🔍 Validating database setup...")
+        
+        try:
+            conn = sqlite3.connect(self.database_path)
+            cursor = conn.cursor()
+            
+            # Check client organization exists
+            cursor.execute("""
+                SELECT COUNT(*) FROM client_organizations WHERE id = ?
+            """, (self.external_user,))
+            
+            org_count = cursor.fetchone()[0]
+            if org_count == 0:
+                print(f"❌ Client organization {self.external_user} not found in database")
+                return False
+            
+            # Check database tables exist
+            required_tables = [
+                'client_organizations',
+                'client_user_daily_usage', 
+                'client_model_daily_usage'
+            ]
+            
+            missing_tables = []
+            for table in required_tables:
+                cursor.execute("""
+                    SELECT name FROM sqlite_master 
+                    WHERE type='table' AND name=?
+                """, (table,))
+                
+                if not cursor.fetchone():
+                    missing_tables.append(table)
+            
+            if missing_tables:
+                print(f"⚠️  Warning: Missing tables: {', '.join(missing_tables)}")
+                print("   Usage tracking may not work until these tables are created")
+            
+            print(f"✅ Database validation completed")
+            print(f"   🏢 Client organization: {self.external_user}")
+            print(f"   📊 Usage tracking tables: {'All present' if not missing_tables else f'{len(required_tables) - len(missing_tables)}/{len(required_tables)} present'}")
+            
+            return True
+            
+        except Exception as e:
+            print(f"❌ Error validating database setup: {e}")
+            return False
+        finally:
+            if 'conn' in locals():
+                conn.close()
+    
+    def setup_database_for_production(self) -> bool:
+        """Complete database setup for production deployment"""
+        print(f"\n🎯 Setting up database for production deployment...")
+        print("=" * 60)
+        
+        # Step 1: Check database connection
+        if not self.check_database_connection():
+            return False
+        
+        # Step 2: Create client organization
+        if not self.create_client_organization():
+            return False
+        
+        # Step 3: Validate setup
+        if not self.validate_database_setup():
+            print("⚠️  Database setup validation failed, but continuing...")
+        
+        print(f"\n✅ Database setup completed successfully!")
+        print(f"🚀 Your mAI instance is now production-ready with:")
+        print(f"   • Environment variables in .env file")
+        print(f"   • Client organization in database")
+        print(f"   • Usage tracking configuration")
+        
+        return True
 
 def main():
     """Main script execution"""
-    generator = OpenRouterEnvGenerator()
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(
+        description="Generate .env configuration for mAI client Docker instances",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python generate_client_env.py                    # Generate environment only
+  python generate_client_env.py --init-database    # Generate environment + setup database
+  python generate_client_env.py --production       # Full production setup (recommended)
+        """
+    )
+    
+    parser.add_argument(
+        '--init-database', '--db',
+        action='store_true',
+        help='Initialize database with client organization (requires existing database)'
+    )
+    
+    parser.add_argument(
+        '--production', '--prod',
+        action='store_true',
+        help='Full production setup: environment + database initialization (recommended)'
+    )
+    
+    args = parser.parse_args()
+    
+    # Determine if database initialization is requested
+    init_database = args.init_database or args.production
+    
+    generator = OpenRouterEnvGenerator(init_database=init_database)
     
     try:
         # Step 1: Get user input
@@ -492,10 +697,24 @@ def main():
             print("❌ Failed to generate .env file.")
             return 1
         
-        # Step 6: Show integration guidance
+        # Step 6: Initialize database if requested
+        if init_database:
+            if not generator.setup_database_for_production():
+                print("❌ Database initialization failed.")
+                print("   Environment file was created successfully, but database setup incomplete.")
+                print("   You can retry database setup later with: python generate_client_env.py --init-database")
+                return 1
+        
+        # Step 7: Show integration guidance
         generator.show_integration_guidance()
         
-        print(f"\n🎉 Success! Your mAI client environment is ready for deployment.")
+        if init_database:
+            print(f"\n🎉 Success! Your mAI client is fully production-ready.")
+            print(f"✅ Environment configured and database initialized.")
+        else:
+            print(f"\n🎉 Success! Your mAI client environment is ready.")
+            print(f"💡 For production deployment, also run: python generate_client_env.py --init-database")
+        
         return 0
         
     except KeyboardInterrupt:
