@@ -11,6 +11,17 @@ from open_webui.env import SRC_LOG_LEVELS, PIP_OPTIONS, PIP_PACKAGE_INDEX_OPTION
 from open_webui.models.functions import Functions
 from open_webui.models.tools import Tools
 
+def validate_function_content(content: str) -> bool:
+    """
+    Validates the function content to ensure it is safe to execute.
+    This can include checks for disallowed imports, restricted keywords, etc.
+    """
+    disallowed_keywords = ["exec", "eval", "import os", "import subprocess"]
+    for keyword in disallowed_keywords:
+        if keyword in content:
+            return False
+    return True
+
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
@@ -141,10 +152,21 @@ def load_function_module_by_id(function_id: str, content: str | None = None):
             f.write(content)
         module.__dict__["__file__"] = temp_file.name
 
-        # Execute the modified content in the created module's namespace
-        exec(content, module.__dict__)
+        # Validate the content before execution
+        if not validate_function_content(content):
+            raise Exception("Invalid function content")
+
+        # Write the content to a temporary file and load it as a module
+        with open(temp_file.name, "w", encoding="utf-8") as f:
+            f.write(content)
+
+        spec = util.spec_from_file_location(module_name, temp_file.name)
+        loaded_module = util.module_from_spec(spec)
+        sys.modules[module_name] = loaded_module
+        spec.loader.exec_module(loaded_module)
+
         frontmatter = extract_frontmatter(content)
-        log.info(f"Loaded module: {module.__name__}")
+        log.info(f"Loaded module: {loaded_module.__name__}")
 
         # Create appropriate object based on available class type in the module
         if hasattr(module, "Pipe"):
