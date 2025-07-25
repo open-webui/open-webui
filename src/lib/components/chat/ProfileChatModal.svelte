@@ -42,19 +42,21 @@
 		})();
 	}
 	let usages = [];
+	let allUnique = [];
+
 	function extractUsages(obj) {
 		const results = [];
 		function recurse(item) {
-			if (typeof item === 'object' && item !== null) {
+			if (Array.isArray(item)) {
+				item.forEach(recurse);  // 🟢 Recurse into array elements
+			} else if (typeof item === 'object' && item !== null) {
 				for (const key in item) {
 					if (key === 'usage') {
-					results.push(item[key]);
+						results.push(item[key]);  // 🎯 Found a usage!
 					} else {
-						recurse(item[key]);
+						recurse(item[key]);      // 🔄 Recurse into nested objects
 					}
 				}
-			} else if (Array.isArray(item)) {
-				item.forEach(recurse);
 			}
 		}
 		recurse(obj);
@@ -70,6 +72,15 @@
 			alert('Invalid JSON input');
 			usages = [];
 		}
+		const seen = new Set();
+		allUnique = usages.filter(obj => {
+			const serialized = JSON.stringify(obj);
+			if (seen.has(serialized)) {
+				return false; // Duplicate
+			}
+			seen.add(serialized);
+			return true; // Unique
+		});
 	}
 	$: if (show) {
 		handleParse(chat); // ✅ only call when chat is freshly fetched
@@ -94,7 +105,7 @@
 			<div class="px-5 pt-4 pb-5 w-full flex flex-col text-left justify-center">
 				<div class="w-full flex flex-col space-y-4 text-left">
 					{#if usages.length > 0}
-						{#each usages as usage, i}
+						{#each allUnique as usage, i}
 							<pre class="text-left"><strong  class="block mb-2">Message #{i + 1}:</strong></pre>
 							<div class="grid grid-cols-2 gap-x-6 gap-y-2 border rounded p-4 bg-gray-50">
 								{#each Object.entries(usage) as [key, value]}
