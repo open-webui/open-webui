@@ -55,6 +55,7 @@ class ClientOrganization(Base):
     markup_rate = Column(Float, default=1.3)
     monthly_limit = Column(Float, nullable=True)  # Optional spending limit
     billing_email = Column(String, nullable=True)
+    timezone = Column(String, default="Europe/Warsaw")  # Client's local timezone for accurate date calculations
     is_active = Column(Integer, default=1)  # Boolean as integer
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)
@@ -222,6 +223,7 @@ class ClientOrganizationModel(BaseModel):
     markup_rate: float = 1.3
     monthly_limit: Optional[float] = None
     billing_email: Optional[str] = None
+    timezone: str = "Europe/Warsaw"
     is_active: bool = True
     created_at: int
     updated_at: int
@@ -317,6 +319,7 @@ class ClientOrganizationForm(BaseModel):
     markup_rate: float = 1.3
     monthly_limit: Optional[float] = None
     billing_email: Optional[str] = None
+    timezone: str = "Europe/Warsaw"
 
 
 class UserClientMappingForm(BaseModel):
@@ -740,7 +743,7 @@ class ClientUsageTable:
             db.add(daily_summary)
     
     def get_usage_stats_by_client(
-        self, client_org_id: str
+        self, client_org_id: str, use_client_timezone: bool = True
     ) -> ClientUsageStatsResponse:
         """Get hybrid usage stats for Option 1 - real-time today + daily history"""
         try:
