@@ -411,7 +411,7 @@ def get_embedding_function(
         return lambda query, prefix=None, user=None: embedding_function.encode(
             query, **({"prompt": prefix} if prefix else {})
         ).tolist()
-    elif embedding_engine in ["ollama", "openai", "azure_openai"]:
+    elif embedding_engine in ["ollama", "openai", "azure_openai", "google"]:
         func = lambda query, prefix=None, user=None: generate_embeddings(
             engine=embedding_engine,
             model=embedding_model,
@@ -823,6 +823,64 @@ def generate_azure_openai_batch_embeddings(
         return None
 
 
+def generate_google_batch_embeddings(
+    model: str,
+    texts: list[str],
+    url: str = "https://generativelanguage.googleapis.com/v1beta",
+    key: str = "",
+    prefix: str = None,
+    user: UserModel = None,
+) -> Optional[list[list[float]]]:
+    try:
+        log.debug(
+            f"generate_google_batch_embeddings:model {model} batch size: {len(texts)}"
+        )
+        
+        # Google's embedding API uses a different request format
+        json_data = {
+            "requests": [
+                {
+                    "model": f"models/{model}",
+                    "content": {"parts": [{"text": text}]}
+                } for text in texts
+            ]
+        }
+        
+        # Google's embeddings endpoint doesn't need /embeddings appended
+        # Use the batch embeddings endpoint
+        endpoint_url = f"{url}/models/{model}:batchEmbedContents"
+        
+        r = requests.post(
+            endpoint_url,
+            headers={
+                "Content-Type": "application/json",
+                "x-goog-api-key": key,
+                **(
+                    {
+                        "X-OpenWebUI-User-Name": quote(user.name, safe=" "),
+                        "X-OpenWebUI-User-Id": user.id,
+                        "X-OpenWebUI-User-Email": user.email,
+                        "X-OpenWebUI-User-Role": user.role,
+                    }
+                    if ENABLE_FORWARD_USER_INFO_HEADERS and user
+                    else {}
+                ),
+            },
+            json=json_data,
+        )
+        r.raise_for_status()
+        data = r.json()
+        
+        # Google's response format: {"embeddings": [{"values": [...]}, ...]}
+        if "embeddings" in data:
+            return [embedding["values"] for embedding in data["embeddings"]]
+        else:
+            raise Exception("Something went wrong with Google embeddings :/")
+    except Exception as e:
+        log.exception(f"Error generating google batch embeddings: {e}")
+        return None
+
+
 def generate_ollama_batch_embeddings(
     model: str,
     texts: list[str],
@@ -913,6 +971,11 @@ def generate_embeddings(
             azure_api_version,
             prefix,
             user,
+        )
+        return embeddings[0] if isinstance(text, str) else embeddings
+    elif engine == "google":
+        embeddings = generate_google_batch_embeddings(
+            model, text if isinstance(text, list) else [text], url, key, prefix, user
         )
         return embeddings[0] if isinstance(text, str) else embeddings
 
