@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="blueGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4f94d4;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#9333ea;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Simplified "b" shape with gradient -->
+  <path d="M4 4 C4 4 4 2 6 2 L14 2 C20 2 24 6 24 12 C24 15 22 17 20 18 C23 19 26 22 26 26 C26 30 22 30 18 30 L6 30 C4 30 4 28 4 28 Z M8 6 L8 14 L14 14 C16 14 18 12 18 10 C18 8 16 6 14 6 Z M8 18 L8 26 L16 26 C18 26 20 24 20 22 C20 20 18 18 16 18 Z" 
+        fill="url(#blueGradient)"/>
+</svg>

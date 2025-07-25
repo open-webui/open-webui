@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1
 # Initialize device type args
 # use build args in the docker build command with --build-arg="BUILDARG=true"
 ARG USE_CUDA=false
@@ -29,12 +28,13 @@ WORKDIR /app
 # to store git revision in build
 RUN apk add --no-cache git
 
-COPY package.json package-lock.json ./
-RUN npm ci --force
+COPY package.json yarn.lock ./
+RUN yarn config set network-timeout 300000 && \
+    yarn install --frozen-lockfile --ignore-scripts || yarn install --ignore-scripts
 
 COPY . .
 ENV APP_BUILD_HASH=${BUILD_HASH}
-RUN npm run build
+RUN NODE_OPTIONS="--max-old-space-size=4096" yarn build
 
 ######## WebUI backend ########
 FROM python:3.11-slim-bookworm AS base
@@ -135,22 +135,36 @@ RUN if [ "$USE_OLLAMA" = "true" ]; then \
 # install python dependencies
 COPY --chown=$UID:$GID ./backend/requirements.txt ./requirements.txt
 
-RUN pip3 install --no-cache-dir uv && \
-    if [ "$USE_CUDA" = "true" ]; then \
-    # If you use CUDA the whisper and embedding model will be downloaded on first use
-    pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/$USE_CUDA_DOCKER_VER --no-cache-dir && \
-    uv pip install --system -r requirements.txt --no-cache-dir && \
-    python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ['RAG_EMBEDDING_MODEL'], device='cpu')" && \
-    python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])"; \
-    python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])"; \
+# Create necessary directories first
+RUN mkdir -p /app/backend/data/
+
+# Install uv package manager
+RUN pip3 install --no-cache-dir --retries 3 --timeout 300 uv
+
+# Install dependencies conditionally
+RUN if [ "$USE_CUDA" = "true" ] || [ "$ENABLE_RAG_HYBRID_SEARCH" = "true" ] || [ "$ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION" = "true" ]; then \
+    # Install full requirements including ML dependencies
+    pip3 install --retries 5 --timeout 1200 torch torchvision torchaudio --index-url https://download.pytorch.org/whl/$USE_CUDA_DOCKER_VER --no-cache-dir && \
+    uv pip install --system -r requirements.txt --no-cache-dir; \
     else \
-    pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --no-cache-dir && \
-    uv pip install --system -r requirements.txt --no-cache-dir && \
-    python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ['RAG_EMBEDDING_MODEL'], device='cpu')" && \
-    python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])"; \
-    python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])"; \
-    fi; \
-    chown -R $UID:$GID /app/backend/data/
+    # Install minimal requirements without ML dependencies
+    grep -v "sentence-transformers\|transformers\|torch\|accelerate\|datasets" requirements.txt > requirements-minimal.txt || cp requirements.txt requirements-minimal.txt && \
+    uv pip install --system -r requirements-minimal.txt --no-cache-dir; \
+    fi
+
+# Download models (optional step that can fail without breaking the build)
+RUN if [ "$USE_CUDA" = "true" ]; then \
+    python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ['RAG_EMBEDDING_MODEL'], device='cpu')" || echo "Warning: Failed to download sentence transformer model" && \
+    python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])" || echo "Warning: Failed to download whisper model" && \
+    python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])" || echo "Warning: Failed to download tiktoken encoding"; \
+    else \
+    python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ['RAG_EMBEDDING_MODEL'], device='cpu')" || echo "Warning: Failed to download sentence transformer model" && \
+    python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])" || echo "Warning: Failed to download whisper model" && \
+    python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])" || echo "Warning: Failed to download tiktoken encoding"; \
+    fi
+
+# Set ownership
+RUN chown -R $UID:$GID /app/backend/data/
 
 
 
