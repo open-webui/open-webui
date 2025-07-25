@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.6.18n2] - 2025-07-25
 
-## Added
+### Added
 
 - 🚀 **onboarding support**
 
