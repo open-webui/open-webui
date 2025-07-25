@@ -133,6 +133,9 @@ from open_webui.config import (
     CODE_EXECUTION_JUPYTER_AUTH_TOKEN,
     CODE_EXECUTION_JUPYTER_AUTH_PASSWORD,
     CODE_EXECUTION_JUPYTER_TIMEOUT,
+    # OpenRouter Environment Configuration
+    OPENROUTER_EXTERNAL_USER,
+    ORGANIZATION_NAME,
     ENABLE_CODE_INTERPRETER,
     CODE_INTERPRETER_ENGINE,
     CODE_INTERPRETER_PROMPT_TEMPLATE,
@@ -539,6 +542,18 @@ async def lifespan(app: FastAPI):
         limiter.total_tokens = THREAD_POOL_SIZE
 
     asyncio.create_task(periodic_usage_pool_cleanup())
+
+    # Initialize environment-based usage tracking
+    if OPENROUTER_EXTERNAL_USER and ORGANIZATION_NAME:
+        try:
+            from open_webui.utils.usage_tracking_init import initialize_usage_tracking_from_environment
+            init_result = await initialize_usage_tracking_from_environment()
+            if init_result:
+                log.info(f"✅ Usage tracking initialized for {ORGANIZATION_NAME}")
+            else:
+                log.warning("Failed to initialize usage tracking from environment")
+        except Exception as e:
+            log.error(f"Error initializing usage tracking: {e}")
 
     # Initialize organization usage background sync
     try:
