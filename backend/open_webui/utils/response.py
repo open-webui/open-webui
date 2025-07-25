@@ -131,7 +131,8 @@ def extract_llama_cpp_metrics(perf_text):
                 "reasoning_tokens": 0,
                 "accepted_prediction_tokens": 0,
                 "rejected_prediction_tokens": 0
-            }
+            },
+            "raw": perf_text
     }
     return metrics
 

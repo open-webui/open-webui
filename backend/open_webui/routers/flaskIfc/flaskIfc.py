@@ -457,7 +457,6 @@ def chats():
     serial_script.pre_and_post_check(port,baudrate)
     
     data = request.get_json()
-    
     if 'options' in data:
         for item in parameters:
             if item in data['options']:
@@ -467,14 +466,16 @@ def chats():
     flattened_prompt = re.sub(r'\s+', ' ', original_prompt).strip()
     tmpprompt = flattened_prompt.replace('"', '\\"').encode('utf-8')
     prompt = tmpprompt.decode('utf-8')
-      
-    model = DEFAULT_MODEL
+
+    #model = DEFAULT_MODEL
 
     if parameters['target'] == 'cpu':
         backend = 'none'
     elif parameters['target'] == 'opu':
         backend = 'tSavorite'
-    
+    if 'model' in data:
+        model = data['model']
+    model = DEFAULT_MODEL
     tokens = parameters['num_predict']
     repeat_penalty = parameters['repeat_penalty']
     batch_size = parameters['num_batch']
@@ -487,7 +488,7 @@ def chats():
     # Define the model path (update with actual paths)
     model_paths = {
         "tiny-llama": "tinyllama-vo-5m-para.gguf",
-        "Tiny-llama-F32": "Tiny-Llama-v0.3-FP32-1.1B-F32.gguf"
+        "TinyLlama:latest": "Tiny-Llama-v0.3-FP32-1.1B-F32.gguf"
     }
     model_path = model_paths.get(model, "")
     if not model_path:
@@ -559,13 +560,15 @@ def chat():
     tmpprompt = flattened_prompt.replace('"', '\\"').encode('utf-8')
     prompt = tmpprompt.decode('utf-8')
       
-    model = DEFAULT_MODEL
+    #model = DEFAULT_MODEL
 
     if parameters['target'] == 'cpu':
         backend = 'none'
     elif parameters['target'] == 'opu':
         backend = 'tSavorite'
-    
+    if 'model' in data:
+        model = data['model']
+    model = DEFAULT_MODEL
     tokens = parameters['num_predict']
     repeat_penalty = parameters['repeat_penalty']
     batch_size = parameters['num_batch']
@@ -578,7 +581,7 @@ def chat():
     # Define the model path (update with actual paths)
     model_paths = {
         "tiny-llama": "tinyllama-vo-5m-para.gguf",
-        "Tiny-llama-F32": "Tiny-Llama-v0.3-FP32-1.1B-F32.gguf"
+        "TinyLlama:latest": "Tiny-Llama-v0.3-FP32-1.1B-F32.gguf"
     }
     model_path = model_paths.get(model, "")
     if not model_path:
