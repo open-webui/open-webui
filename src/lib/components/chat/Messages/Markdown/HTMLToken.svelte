@@ -5,9 +5,12 @@
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import Source from './Source.svelte';
 	import { settings } from '$lib/stores';
+	import PiiAwareText from './PiiAwareText.svelte';
 
 	export let id: string;
 	export let token: Token;
+	export let conversationId: string = '';
+	export let done: boolean = true;
 
 	export let onSourceClick: Function = () => {};
 
@@ -36,7 +39,7 @@
 				allowfullscreen
 			></video>
 		{:else}
-			{token.text}
+			<PiiAwareText text={token.text} id={`${id}-text-html`} {conversationId} {done} />
 		{/if}
 	{:else if html && html.includes('<audio')}
 		{@const audio = html.match(/<audio[^>]*>([\s\S]*?)<\/audio>/)}
@@ -50,7 +53,7 @@
 				controls
 			></audio>
 		{:else}
-			{token.text}
+			<PiiAwareText text={token.text} id={`${id}-text-html`} {conversationId} {done} />
 		{/if}
 	{:else if token.text && token.text.match(/<iframe\s+[^>]*src="https:\/\/www\.youtube\.com\/embed\/([a-zA-Z0-9_-]{11})(?:\?[^"]*)?"[^>]*><\/iframe>/)}
 		{@const match = token.text.match(
@@ -82,7 +85,7 @@
 				onload="this.style.height=(this.contentWindow.document.body.scrollHeight+20)+'px';"
 			></iframe>
 		{:else}
-			{token.text}
+			<PiiAwareText text={token.text} id={`${id}-text-html`} {conversationId} {done} />
 		{/if}
 	{:else if token.text && token.text.includes('<status')}
 		{@const match = token.text.match(/<status title="([^"]+)" done="(true|false)" ?\/?>/)}
@@ -99,7 +102,7 @@
 				</div>
 			</div>
 		{:else}
-			{token.text}
+			<PiiAwareText text={token.text} id={`${id}-text-html`} {conversationId} {done} />
 		{/if}
 	{:else if token.text.includes(`<file type="html"`)}
 		{@const match = token.text.match(/<file type="html" id="([^"]+)"/)}
@@ -122,6 +125,6 @@
 	{:else if token.text.includes(`<source_id`)}
 		<Source {id} {token} onClick={onSourceClick} />
 	{:else}
-		{token.text}
+		<PiiAwareText text={token.text} id={`${id}-text-html`} {conversationId} {done} />
 	{/if}
 {/if}
