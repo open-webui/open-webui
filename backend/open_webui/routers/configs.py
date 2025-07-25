@@ -269,6 +269,7 @@ async def set_models_config(
 ):
     request.app.state.config.DEFAULT_MODELS = form_data.DEFAULT_MODELS
     request.app.state.config.MODEL_ORDER_LIST = form_data.MODEL_ORDER_LIST
+    
     return {
         "DEFAULT_MODELS": request.app.state.config.DEFAULT_MODELS,
         "MODEL_ORDER_LIST": request.app.state.config.MODEL_ORDER_LIST,

@@ -67,7 +67,6 @@
 	import CheckFilter from '../icons/CheckFilter.svelte';
 	import Cross from '../icons/Cross.svelte';
 	import { updateUserSettings } from '$lib/apis/users';
-	import { GOVGPT_RAG_WOG_MODEL_NAME, DEFAULT_MODELS } from '$lib/constants';
 
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 
@@ -140,7 +139,8 @@
 	let previousChatId: string | null = null;
 
 	// Clear prompt and files when switching to a new chat
-	$: if (history?.currentId && previousChatId !== null && previousChatId !== history.currentId) {
+	if (!history?.currentId) {
+		debugger;
 		// Clear prompt and files when chat changes
 		prompt = '';
 		files = [];
@@ -151,26 +151,6 @@
 		imageGenerationEnabled = false;
 		codeInterpreterEnabled = false;
 		attachFileEnabled = false;
-		// Reset loaded state to allow auto-selection in new chat
-		loaded = false;
-		// Stop any ongoing response generation
-		if (stopResponse) {
-			stopResponse();
-		}
-		// Update previous chat ID
-		previousChatId = history.currentId;
-	}
-
-	// Initialize previousChatId when component loads
-	$: if (history?.currentId && previousChatId === null) {
-		previousChatId = history.currentId;
-	}
-
-	// Auto-select model from last message when history changes
-	$: if (history?.messages && Object.keys(history.messages).length > 0 && !loaded) {
-		console.log('Auto-selecting model from last message');
-		autoSelectModelFromLastMessage();
-		loaded = true;
 	}
 
 	let showTools = false;
@@ -236,7 +216,7 @@
 	let showGovKnoWebSearchToggle = false;
 	let govBtnEnable = false;
 	let showGovKnoButton = false;
-	$: showGovKnoButton = $models.find((model) => model.id.includes(GOVGPT_RAG_WOG_MODEL_NAME));
+	$: showGovKnoButton = $models.find((model) => model.id.includes($config.govgpt.rag_wog_model_name));
 
 	// Reactive statement to update selectedModelName based on current state
 	$: selectedModelName = (() => {
@@ -299,14 +279,20 @@
 		if (lastAssistantMessage) {
 			console.log('Last assistant message:', lastAssistantMessage);
 
+			if(lastAssistantMessage.statusHistory && lastAssistantMessage.statusHistory.some((x: any) => x.action === 'web_search')) {
+				webSearchEnabled = true;
+				attachFileEnabled = false;
+				selectedModels = [lastAssistantMessage.model || $config.default_models];
+				return;
+			}
 
 			// Check if it has files attached
 			if (lastAssistantMessage.files && lastAssistantMessage.files.length > 0) {
 				console.log('Auto-selecting Files model');
 				govBtnEnable = false;
-				webSearchEnabled = false;
+				// webSearchEnabled = false;
 				attachFileEnabled = true;
-				selectedModels = [lastAssistantMessage.model || DEFAULT_MODELS];
+				selectedModels = [lastAssistantMessage.model || $config.default_models];
 				return;
 			}
 			
@@ -315,18 +301,18 @@
 			if (hasFilesInHistory) {
 				console.log('Auto-selecting Files model (from history)');
 				govBtnEnable = false;
-				webSearchEnabled = false;
+				// webSearchEnabled = false;
 				attachFileEnabled = true;
-				selectedModels = [lastAssistantMessage.model || DEFAULT_MODELS];
+				selectedModels = [lastAssistantMessage.model || $config.default_models];
 				return;
 			}
 
 			
 			// Check if it's a Gov Knowledge model
-			if (lastAssistantMessage.model && lastAssistantMessage.model.includes(GOVGPT_RAG_WOG_MODEL_NAME)) {
+			if (lastAssistantMessage.model && lastAssistantMessage.model.includes($config.govgpt.rag_wog_model_name)) {
 				console.log('Auto-selecting Gov Knowledge model');
 				govBtnEnable = true;
-				webSearchEnabled = false;
+				// webSearchEnabled = false;
 				attachFileEnabled = false;
 				selectedModels = [lastAssistantMessage.model];
 				return;
@@ -339,6 +325,8 @@
 		webSearchEnabled = false;
 		attachFileEnabled = false;
 	};
+
+	autoSelectModelFromLastMessage();
 
 	// Reference to the toggle content element
 	let toggleContentElement: HTMLElement;
@@ -371,15 +359,15 @@
 
 	const saveGovKnoModel = async () => {
 		govBtnEnable = !govBtnEnable;
-		const modelId = $models.find((model) => model.id.includes(GOVGPT_RAG_WOG_MODEL_NAME))?.id || '';
-		const modelName = govBtnEnable ? modelId : DEFAULT_MODELS;
+		const modelId = $models.find((model) => model.id.includes($config.govgpt.rag_wog_model_name))?.id || '';
+		const modelName = govBtnEnable ? modelId : $config.default_models;
 
 		// Update the selectedModels prop to trigger the binding
 		selectedModels = [modelName];
 
 		settings.set({ ...$settings, models: [modelName] });
 		await updateUserSettings(localStorage.token, { ui: $settings });
-		toast.success($i18n.t('Gov Knowledge model updated'));
+		// toast.success($i18n.t('Gov Knowledge model updated'));
 
 		showGovKnoWebSearchToggle = false;
 		webSearchEnabled = false;
