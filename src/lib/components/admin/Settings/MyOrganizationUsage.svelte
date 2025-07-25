@@ -31,7 +31,8 @@
 	// Per-user and per-model data
 	let userUsageData = [];
 	let modelUsageData = [];
-	let clientOrgId = 'current'; // Placeholder for client org ID
+	let clientOrgId = null; // Will be determined from API response
+	let clientOrgIdValidated = false; // Track if client ID has been validated
 	
 	// Model pricing data - will be loaded from API
 	let modelPricingData = [];
@@ -185,6 +186,40 @@
 		};
 	});
 
+	/**
+	 * Fallback mechanism to determine client organization ID
+	 * when primary method fails or returns invalid ID
+	 */
+	const getClientIdFallback = async () => {
+		try {
+			// Try to get client organizations list (if user has access)
+			const orgsResponse = await getClientOrganizations($user.token);
+			if (orgsResponse && orgsResponse.length > 0) {
+				// Return the first active organization
+				const activeOrg = orgsResponse.find(org => org.is_active);
+				if (activeOrg) {
+					return activeOrg.id;
+				}
+			}
+		} catch (orgError) {
+			console.log('Unable to fetch organizations list, trying alternative methods');
+		}
+
+		// Alternative: derive from current user context if possible
+		// This would work if the API provides user-organization mapping
+		try {
+			// Call my-organization endpoint explicitly to trigger auto-creation
+			const response = await getClientUsageSummary($user.token);
+			if (response?.client_id && response.client_id !== 'current') {
+				return response.client_id;
+			}
+		} catch (altError) {
+			console.log('Alternative client ID resolution failed');
+		}
+
+		return null;
+	};
+
 	const loadUsageData = async () => {
 		try {
 			loading = true;
@@ -194,17 +229,41 @@
 			
 			if (response?.success && response.stats) {
 				usageData = response.stats;
-				// Extract client org ID from response if available
-				if (response.client_id) {
+				
+				// Validate and set client org ID with proper error handling
+				if (response.client_id && response.client_id !== 'current') {
 					clientOrgId = response.client_id;
+					clientOrgIdValidated = true;
+					console.log(`Client organization ID resolved: ${clientOrgId}`);
+				} else {
+					// Fallback: try to extract from organization name or stats
+					const extractedId = await getClientIdFallback();
+					if (extractedId) {
+						clientOrgId = extractedId;
+						clientOrgIdValidated = true;
+						console.log(`Client organization ID resolved via fallback: ${clientOrgId}`);
+					} else {
+						console.warn('Unable to determine client organization ID, some features may be limited');
+						clientOrgIdValidated = false;
+					}
+				}
+			} else {
+				// If primary API fails, try fallback
+				const extractedId = await getClientIdFallback();
+				if (extractedId) {
+					clientOrgId = extractedId;
+					clientOrgIdValidated = true;
+					console.log(`Client organization ID resolved via fallback after primary failure: ${clientOrgId}`);
 				}
 			}
 			
-			// Load per-user and per-model data for current tab
-			if (activeTab === 'users') {
-				await loadUserUsage();
-			} else if (activeTab === 'models') {
-				await loadModelUsage();
+			// Load per-user and per-model data for current tab if we have a valid client ID
+			if (clientOrgIdValidated) {
+				if (activeTab === 'users') {
+					await loadUserUsage();
+				} else if (activeTab === 'models') {
+					await loadModelUsage();
+				}
 			}
 			
 		} catch (error) {
@@ -215,55 +274,111 @@
 			if (error?.detail?.includes('No organization mapping')) {
 				toast.error($i18n.t('No organization assigned. Please contact your administrator.'));
 			}
+			
+			// Try fallback even on error
+			try {
+				const extractedId = await getClientIdFallback();
+				if (extractedId) {
+					clientOrgId = extractedId;
+					clientOrgIdValidated = true;
+					console.log(`Client organization ID resolved via fallback after error: ${clientOrgId}`);
+				}
+			} catch (fallbackError) {
+				console.error('Fallback client ID resolution also failed:', fallbackError);
+			}
 		} finally {
 			loading = false;
 		}
 	};
 	
 	const loadUserUsage = async () => {
+		// Validate client ID before making API call
+		if (!clientOrgIdValidated || !clientOrgId) {
+			console.warn('Cannot load user usage: client organization ID not available');
+			toast.error($i18n.t('Unable to load user usage data. Please try refreshing the page.'));
+			return;
+		}
+
 		try {
 			const response = await getUsageByUser($user.token, clientOrgId);
 			if (response?.success && response.user_usage) {
 				userUsageData = response.user_usage;
+			} else {
+				console.warn('User usage API returned unsuccessful response:', response);
+				userUsageData = [];
 			}
 		} catch (error) {
 			console.error('Failed to load user usage:', error);
+			toast.error($i18n.t('Failed to load user usage data'));
+			userUsageData = [];
 		}
 	};
 	
 	const loadModelUsage = async () => {
+		// Validate client ID before making API call
+		if (!clientOrgIdValidated || !clientOrgId) {
+			console.warn('Cannot load model usage: client organization ID not available');
+			toast.error($i18n.t('Unable to load model usage data. Please try refreshing the page.'));
+			return;
+		}
+
 		try {
 			const response = await getUsageByModel($user.token, clientOrgId);
 			if (response?.success && response.model_usage) {
 				modelUsageData = response.model_usage;
+			} else {
+				console.warn('Model usage API returned unsuccessful response:', response);
+				modelUsageData = [];
 			}
 		} catch (error) {
 			console.error('Failed to load model usage:', error);
+			toast.error($i18n.t('Failed to load model usage data'));
+			modelUsageData = [];
 		}
 	};
 
 	const loadTodaysUsage = async () => {
 		// Refresh only today's live counters (lightweight)
+		// Skip if client ID is not validated to avoid API errors
+		if (!clientOrgIdValidated || !clientOrgId) {
+			console.log('Skipping today\'s usage refresh: client organization ID not available');
+			return;
+		}
+
 		try {
-			const response = await getTodayUsage($user.token, 'current'); // Using 'current' as placeholder
+			const response = await getTodayUsage($user.token, clientOrgId);
 			
 			if (response?.success && response.today) {
 				usageData.today = response.today;
+			} else {
+				console.warn('Today usage API returned unsuccessful response:', response);
 			}
 			
 		} catch (error) {
 			console.error('Failed to refresh today data:', error);
+			// Don't show error toast for background refresh failures
 		}
 	};
 
 	
 	const handleTabChange = async (tab) => {
 		activeTab = tab;
-		if (tab === 'users' && userUsageData.length === 0) {
-			await loadUserUsage();
-		} else if (tab === 'models' && modelUsageData.length === 0) {
-			await loadModelUsage();
-		} else if (tab === 'pricing' && modelPricingData.length === 0) {
+		
+		// Only load data if we have a validated client ID
+		if (clientOrgIdValidated && clientOrgId) {
+			if (tab === 'users' && userUsageData.length === 0) {
+				await loadUserUsage();
+			} else if (tab === 'models' && modelUsageData.length === 0) {
+				await loadModelUsage();
+			}
+		} else if (tab === 'users' || tab === 'models') {
+			// Show informative message for usage tabs when client ID is not available
+			console.warn(`Cannot load ${tab} data: client organization ID not validated`);
+			toast.error($i18n.t('Organization data not available. Please refresh the page.'));
+		}
+		
+		// Pricing tab doesn't need client ID
+		if (tab === 'pricing' && modelPricingData.length === 0) {
 			await loadModelPricing();
 		}
 	};
@@ -454,7 +569,23 @@
 		<div class="bg-white dark:bg-gray-850 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 			<h3 class="text-lg font-medium mb-4">{$i18n.t('Usage by User')}</h3>
 			
-			{#if userUsageData && userUsageData.length > 0}
+			{#if !clientOrgIdValidated}
+				<div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-4">
+					<div class="flex">
+						<div class="flex-shrink-0">
+							<svg class="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+								<path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+							</svg>
+						</div>
+						<div class="ml-3">
+							<p class="text-sm text-yellow-800 dark:text-yellow-200">
+								{$i18n.t('Organization data unavailable. User usage cannot be displayed.')}<br>
+								<span class="text-xs">{$i18n.t('Please refresh the page or contact your administrator.')}</span>
+							</p>
+						</div>
+					</div>
+				</div>
+			{:else if userUsageData && userUsageData.length > 0}
 				<div class="overflow-x-auto">
 					<table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
 						<thead>
@@ -507,7 +638,23 @@
 		<div class="bg-white dark:bg-gray-850 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 			<h3 class="text-lg font-medium mb-4">{$i18n.t('Usage by Model')}</h3>
 			
-			{#if modelUsageData && modelUsageData.length > 0}
+			{#if !clientOrgIdValidated}
+				<div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-4">
+					<div class="flex">
+						<div class="flex-shrink-0">
+							<svg class="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+								<path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+							</svg>
+						</div>
+						<div class="ml-3">
+							<p class="text-sm text-yellow-800 dark:text-yellow-200">
+								{$i18n.t('Organization data unavailable. Model usage cannot be displayed.')}<br>
+								<span class="text-xs">{$i18n.t('Please refresh the page or contact your administrator.')}</span>
+							</p>
+						</div>
+					</div>
+				</div>
+			{:else if modelUsageData && modelUsageData.length > 0}
 				<div class="overflow-x-auto">
 					<table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
 						<thead>
