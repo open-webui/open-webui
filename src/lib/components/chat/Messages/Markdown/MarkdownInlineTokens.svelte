@@ -49,15 +49,39 @@
 	{:else if token.type === 'image'}
 		<Image src={token.href} alt={token.text} />
 	{:else if token.type === 'strong'}
-		<strong><svelte:self id={`${id}-strong`} tokens={token.tokens} {onSourceClick} {conversationId} {done} /></strong>
+		<strong
+			><svelte:self
+				id={`${id}-strong`}
+				tokens={token.tokens}
+				{onSourceClick}
+				{conversationId}
+				{done}
+			/></strong
+		>
 	{:else if token.type === 'em'}
-		<em><svelte:self id={`${id}-em`} tokens={token.tokens} {onSourceClick} {conversationId} {done} /></em>
+		<em
+			><svelte:self
+				id={`${id}-em`}
+				tokens={token.tokens}
+				{onSourceClick}
+				{conversationId}
+				{done}
+			/></em
+		>
 	{:else if token.type === 'codespan'}
 		<CodespanToken {token} {done} />
 	{:else if token.type === 'br'}
 		<br />
 	{:else if token.type === 'del'}
-		<del><svelte:self id={`${id}-del`} tokens={token.tokens} {onSourceClick} {conversationId} {done} /></del>
+		<del
+			><svelte:self
+				id={`${id}-del`}
+				tokens={token.tokens}
+				{onSourceClick}
+				{conversationId}
+				{done}
+			/></del
+		>
 	{:else if token.type === 'inlineKatex'}
 		{#if token.text}
 			<KatexRenderer content={token.text} displayMode={false} />

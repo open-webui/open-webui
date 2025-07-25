@@ -7,4 +7,4 @@
 	export let done: boolean;
 </script>
 
-<PiiAwareText {text} {id} {conversationId} {done} /> 
+<PiiAwareText {text} {id} {conversationId} {done} />
