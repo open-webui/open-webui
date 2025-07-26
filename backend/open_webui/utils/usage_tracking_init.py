@@ -39,7 +39,10 @@ async def initialize_usage_tracking_from_environment() -> bool:
     try:
         # Use the database context manager
         with get_db() as db:
-            # Check if client organization already exists
+            # STEP 1: Ensure usage tracking tables exist FIRST (before any queries)
+            await ensure_usage_tracking_tables(db)
+            
+            # STEP 2: Now safely check if client organization already exists
             existing_org = db.execute(
                 text("SELECT id FROM client_organizations WHERE id = :org_id"),
                 {"org_id": openrouter_external_user}
@@ -84,9 +87,6 @@ async def initialize_usage_tracking_from_environment() -> bool:
                         "updated_at": current_time
                     }
                 )
-            
-            # Ensure usage tracking tables exist
-            await ensure_usage_tracking_tables(db)
             
             db.commit()
             log.info(f"✅ Usage tracking initialized for {organization_name} ({openrouter_external_user})")

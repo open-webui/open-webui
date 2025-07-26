@@ -3,7 +3,8 @@
 ## Claude Behavior Guidelines
 
 **CRITICAL RULES:**
-- **NEVER test solutions by running development server** - user always has server running and sees changes in real time
+- **Do not create extensive scripts above 700 lines of code**. Always be guided by good practices in this regard and SOLID principles.
+- **Always remember to finally create production solutions.** It is forbidden for you, e.g., adding missing records to the database that should be correctly mapped by an automatic solution.
 - **ALWAYS work on `customization` branch** - never commit directly to main
 - **ALWAYS create backups before asset modifications**: `cp -r static/static customization-backup/static-$(date +%Y%m%d)`
 - **Focus on code verification** through build processes and type checking instead of runtime testing
@@ -22,7 +23,6 @@
 
 **WORKFLOW PRIORITIES:**
 1. Code quality and type safety first
-2. Preserve all mAI customizations during changes
 3. Follow commit prefixes: `brand:`, `theme:`, `ui:`, `assets:`
 
 ### Business model:
@@ -46,21 +46,13 @@
 
 ## Critical Customization Rules
 
-**Files to Preserve During Upgrades:**
-- `package.json`: Keep "name": "mai"
-- `src/lib/components/chat/Chat.svelte`: Background pattern functionality
-- `src/lib/i18n/locales/pl-PL/translation.json`: Polish customizations
-
-**Branch Strategy:**
-- Work only on `customization` branch
-
 ##crawl4ai-mai MCP & Knowledge Integration
 
 - **For implementation patterns**: Use `search_code_examples` before writing code
 - **For research**: Use `perform_rag_query` with specific source filtering
 
-##Research → Implement → Validate Workflow
+##Research → Implement
 
-1. **Research Phase**:
+**Research Phase**:
    - `search_code_examples` for specific implementations
    - `perform_rag_query` with source filtering for documentation

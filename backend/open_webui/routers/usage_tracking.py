@@ -574,11 +574,108 @@ async def get_my_organization_usage_by_model(user=Depends(get_current_user)):
 async def get_my_organization_subscription_billing(user=Depends(get_current_user)):
     """Get subscription billing data for the current organization (environment-based)"""
     try:
+        from open_webui.models.users import Users
+        from datetime import datetime, date
+        import calendar
+        
+        # In environment-based mode, all users belong to the same organization
+        # Get all users from the system
+        users_response = Users.get_users()
+        all_users = users_response.get('users', []) if isinstance(users_response, dict) else []
+        
+        # Define pricing tiers
+        pricing_tiers = [
+            {"min": 1, "max": 5, "price": 49},
+            {"min": 6, "max": 10, "price": 39},
+            {"min": 11, "max": 15, "price": 29},
+            {"min": 16, "max": float('inf'), "price": 19}
+        ]
+        
+        # Get current month info
+        now = datetime.now()
+        current_month = now.month
+        current_year = now.year
+        days_in_month = calendar.monthrange(current_year, current_month)[1]
+        
+        # Get user details and calculate billing
+        user_details = []
+        total_users = len(all_users)
+        
+        # Determine current pricing tier
+        current_tier_price = 49  # default
+        for tier in pricing_tiers:
+            if tier["min"] <= total_users <= tier["max"]:
+                current_tier_price = tier["price"]
+                break
+        
+        # Calculate billing for each user
+        total_cost = 0.0
+        for user_obj in all_users:
+            # Calculate proportional billing
+            created_date = datetime.fromtimestamp(user_obj.created_at)
+            
+            # If user was created this month, calculate proportional cost
+            if created_date.year == current_year and created_date.month == current_month:
+                days_remaining = days_in_month - created_date.day + 1
+                billing_proportion = days_remaining / days_in_month
+            else:
+                # Full month billing
+                days_remaining = days_in_month
+                billing_proportion = 1.0
+            
+            user_cost = current_tier_price * billing_proportion
+            total_cost += user_cost
+            
+            user_details.append({
+                "user_id": user_obj.id,
+                "user_name": user_obj.name,
+                "user_email": user_obj.email,
+                "created_date": created_date.strftime("%Y-%m-%d"),
+                "days_remaining_when_added": days_remaining,
+                "billing_proportion": billing_proportion,
+                "monthly_cost_pln": round(user_cost, 2)
+            })
+        
+        # Build tier breakdown with current tier marking
+        tier_breakdown = []
+        for i, tier in enumerate(pricing_tiers):
+            max_display = str(tier["max"]) if tier["max"] != float('inf') else "+"
+            min_display = str(tier["min"])
+            
+            if tier["max"] == float('inf'):
+                tier_range = f"{min_display}+ users"
+            else:
+                tier_range = f"{min_display}-{max_display} users"
+            
+            is_current = tier["min"] <= total_users <= tier["max"]
+            
+            tier_breakdown.append({
+                "tier_range": tier_range,
+                "price_per_user_pln": tier["price"],
+                "is_current_tier": is_current
+            })
+        
+        # Build subscription data
+        subscription_data = {
+            "current_month": {
+                "month": current_month,
+                "year": current_year,
+                "total_users": total_users,
+                "current_tier_price_pln": current_tier_price,
+                "total_cost_pln": round(total_cost, 2),
+                "tier_breakdown": tier_breakdown,
+                "user_details": user_details
+            }
+        }
+        
         return {
             "success": True,
-            "subscription_data": None  # No subscription billing in environment-based mode
+            "subscription_data": subscription_data
         }
     except Exception as e:
+        import traceback
+        print(f"Error in subscription billing: {e}")
+        print(traceback.format_exc())
         return {
             "success": False,
             "error": str(e),
