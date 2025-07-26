@@ -200,28 +200,6 @@ class ClientModelDailyUsage(Base):
     )
 
 
-class ClientLiveCounters(Base):
-    """
-    Live counters for today's usage - reset daily at midnight
-    Provides real-time data without storing individual requests
-    """
-    __tablename__ = "client_live_counters"
-
-    client_org_id = Column(String, primary_key=True)  # References client_organizations.id
-    current_date = Column(Date, nullable=False, default=date.today)
-
-    # Today's running totals
-    today_tokens = Column(BigInteger, default=0)
-    today_requests = Column(Integer, default=0)
-    today_raw_cost = Column(Float, default=0.0)
-    today_markup_cost = Column(Float, default=0.0)
-
-    last_updated = Column(BigInteger, default=lambda: int(time.time()))
-
-    # Index for fast lookups
-    __table_args__ = (
-        Index('idx_client_live_date', 'client_org_id', 'current_date'),
-    )
 
 
 ####################
@@ -316,16 +294,6 @@ class ClientModelDailyUsageModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class ClientLiveCountersModel(BaseModel):
-    client_org_id: str
-    current_date: date
-    today_tokens: int = 0
-    today_requests: int = 0
-    today_raw_cost: float = 0.0
-    today_markup_cost: float = 0.0
-    last_updated: int
-
-    model_config = ConfigDict(from_attributes=True)
 
 
 ####################
@@ -354,10 +322,10 @@ class UserClientMappingForm(BaseModel):
 
 
 class ClientUsageStatsResponse(BaseModel):
-    """Simplified usage stats for Option 1"""
-    today: dict  # Real-time today's usage
-    this_month: dict  # Current month totals
-    daily_history: List[dict]  # Last 30 days
+    """Admin-focused daily breakdown stats (no real-time)"""
+    current_month: dict  # Current month totals and summary
+    daily_breakdown: List[dict]  # Daily summaries for current month
+    monthly_summary: dict  # Statistical summary for the month
     client_org_name: str
 
 
@@ -605,7 +573,7 @@ class UserClientMappingTable:
 
 class ClientUsageTable:
     """
-    Option 1: Simplified usage tracking with daily summaries + live counters
+    Simplified usage tracking with daily summaries only (no live counters)
     """
     
     def record_usage(
@@ -624,292 +592,163 @@ class ClientUsageTable:
     ) -> bool:
         """
         Record API usage with per-user and per-model tracking
-        Updates live counters for real-time UI and daily summaries
-        Includes transaction safety and retry logic for concurrent access
+        Updates daily summaries directly (no live counters)
         """
-        
-        # Retry logic for handling concurrent access
-        max_retries = 3
-        retry_delay = 0.1  # 100ms
-        
-        for attempt in range(max_retries):
-            try:
-                with get_db() as db:
-                    # Begin explicit transaction for atomicity
-                    db.begin()
-                    
-                    today = date.today()
-                    current_time = int(time.time())
-                    total_tokens = input_tokens + output_tokens
-                    
-                    try:
-                        # 1. Update client-level live counter with row-level locking
-                        live_counter = db.query(ClientLiveCounters).filter_by(
-                            client_org_id=client_org_id
-                        ).with_for_update().first()  # Pessimistic locking
-                        
-                        if live_counter:
-                            if live_counter.current_date != today:
-                                self._rollup_to_daily_summary(db, live_counter)
-                                live_counter.current_date = today
-                                live_counter.today_tokens = 0
-                                live_counter.today_requests = 0
-                                live_counter.today_raw_cost = 0.0
-                                live_counter.today_markup_cost = 0.0
-                            
-                            live_counter.today_tokens += total_tokens
-                            live_counter.today_requests += 1
-                            live_counter.today_raw_cost += raw_cost
-                            live_counter.today_markup_cost += markup_cost
-                            live_counter.last_updated = current_time
-                        else:
-                            live_counter = ClientLiveCounters(
-                                client_org_id=client_org_id,
-                                current_date=today,
-                                today_tokens=total_tokens,
-                                today_requests=1,
-                                today_raw_cost=raw_cost,
-                                today_markup_cost=markup_cost,
-                                last_updated=current_time
-                            )
-                            db.add(live_counter)
-                        
-                        # 2. Update per-user daily usage
-                        user_usage_id = f"{client_org_id}:{user_id}:{usage_date}"
-                        user_usage = db.query(ClientUserDailyUsage).filter_by(id=user_usage_id).first()
-                        
-                        if user_usage:
-                            user_usage.total_tokens += total_tokens
-                            user_usage.total_requests += 1
-                            user_usage.raw_cost += raw_cost
-                            user_usage.markup_cost += markup_cost
-                            user_usage.updated_at = current_time
-                        else:
-                            user_usage = ClientUserDailyUsage(
-                                id=user_usage_id,
-                                client_org_id=client_org_id,
-                                user_id=user_id,
-                                openrouter_user_id=openrouter_user_id,
-                                usage_date=usage_date,
-                                total_tokens=total_tokens,
-                                total_requests=1,
-                                raw_cost=raw_cost,
-                                markup_cost=markup_cost,
-                                created_at=current_time,
-                                updated_at=current_time
-                            )
-                            db.add(user_usage)
-                        
-                        # 3. Update per-model daily usage
-                        model_usage_id = f"{client_org_id}:{model_name}:{usage_date}"
-                        model_usage = db.query(ClientModelDailyUsage).filter_by(id=model_usage_id).first()
-                        
-                        if model_usage:
-                            model_usage.total_tokens += total_tokens
-                            model_usage.total_requests += 1
-                            model_usage.raw_cost += raw_cost
-                            model_usage.markup_cost += markup_cost
-                            model_usage.updated_at = current_time
-                        else:
-                            model_usage = ClientModelDailyUsage(
-                                id=model_usage_id,
-                                client_org_id=client_org_id,
-                                model_name=model_name,
-                                usage_date=usage_date,
-                                total_tokens=total_tokens,
-                                total_requests=1,
-                                raw_cost=raw_cost,
-                                markup_cost=markup_cost,
-                                provider=provider,
-                                created_at=current_time,
-                                updated_at=current_time
-                            )
-                            db.add(model_usage)
-                        
-                        # Commit all changes atomically
-                        db.commit()
-                        return True
-                        
-                    except Exception as inner_e:
-                        # Rollback transaction on error
-                        db.rollback()
-                        raise inner_e
-                    
-            except Exception as e:
-                # Handle specific retry-able exceptions
-                if attempt < max_retries - 1:
-                    if "database is locked" in str(e).lower() or "deadlock" in str(e).lower():
-                        log.warning(f"Database conflict on attempt {attempt + 1}/{max_retries}: {e}")
-                        import time
-                        time.sleep(retry_delay * (attempt + 1))  # Exponential backoff
-                        continue
+        try:
+            with get_db() as db:
+                current_time = int(time.time())
+                total_tokens = input_tokens + output_tokens
                 
-                # Final attempt failed or non-retryable error
-                log.error(f"Failed to record usage for {client_org_id}: {e}")
-                return False
+                # 1. Update client daily usage
+                client_usage_id = f"{client_org_id}:{usage_date}"
+                client_usage = db.query(ClientDailyUsage).filter_by(id=client_usage_id).first()
                 
-        # All retries exhausted
-        log.error(f"All retry attempts exhausted for usage recording: {client_org_id}")
-        return False
+                if client_usage:
+                    client_usage.total_tokens += total_tokens
+                    client_usage.total_requests += 1
+                    client_usage.raw_cost += raw_cost
+                    client_usage.markup_cost += markup_cost
+                    client_usage.updated_at = current_time
+                else:
+                    client_usage = ClientDailyUsage(
+                        id=client_usage_id,
+                        client_org_id=client_org_id,
+                        usage_date=usage_date,
+                        total_tokens=total_tokens,
+                        total_requests=1,
+                        raw_cost=raw_cost,
+                        markup_cost=markup_cost,
+                        primary_model=model_name,
+                        unique_users=1,
+                        created_at=current_time,
+                        updated_at=current_time
+                    )
+                    db.add(client_usage)
+                
+                # 2. Update per-user daily usage
+                user_usage_id = f"{client_org_id}:{user_id}:{usage_date}"
+                user_usage = db.query(ClientUserDailyUsage).filter_by(id=user_usage_id).first()
+                
+                if user_usage:
+                    user_usage.total_tokens += total_tokens
+                    user_usage.total_requests += 1
+                    user_usage.raw_cost += raw_cost
+                    user_usage.markup_cost += markup_cost
+                    user_usage.updated_at = current_time
+                else:
+                    user_usage = ClientUserDailyUsage(
+                        id=user_usage_id,
+                        client_org_id=client_org_id,
+                        user_id=user_id,
+                        openrouter_user_id=openrouter_user_id,
+                        usage_date=usage_date,
+                        total_tokens=total_tokens,
+                        total_requests=1,
+                        raw_cost=raw_cost,
+                        markup_cost=markup_cost,
+                        created_at=current_time,
+                        updated_at=current_time
+                    )
+                    db.add(user_usage)
+                
+                # 3. Update per-model daily usage
+                model_usage_id = f"{client_org_id}:{model_name}:{usage_date}"
+                model_usage = db.query(ClientModelDailyUsage).filter_by(id=model_usage_id).first()
+                
+                if model_usage:
+                    model_usage.total_tokens += total_tokens
+                    model_usage.total_requests += 1
+                    model_usage.raw_cost += raw_cost
+                    model_usage.markup_cost += markup_cost
+                    model_usage.updated_at = current_time
+                else:
+                    model_usage = ClientModelDailyUsage(
+                        id=model_usage_id,
+                        client_org_id=client_org_id,
+                        model_name=model_name,
+                        usage_date=usage_date,
+                        total_tokens=total_tokens,
+                        total_requests=1,
+                        raw_cost=raw_cost,
+                        markup_cost=markup_cost,
+                        provider=provider,
+                        created_at=current_time,
+                        updated_at=current_time
+                    )
+                    db.add(model_usage)
+                
+                db.commit()
+                return True
+                
+        except Exception as e:
+            log.error(f"Failed to record usage for {client_org_id}: {e}")
+            return False
     
-    def _rollup_to_daily_summary(self, db, live_counter: ClientLiveCounters):
-        """Move yesterday's live counters to daily summary table"""
-        if live_counter.today_tokens > 0:  # Only create summary if there was usage
-            summary_id = f"{live_counter.client_org_id}_{live_counter.current_date.isoformat()}"
-            daily_summary = ClientDailyUsage(
-                id=summary_id,
-                client_org_id=live_counter.client_org_id,
-                usage_date=live_counter.current_date,
-                total_tokens=live_counter.today_tokens,
-                total_requests=live_counter.today_requests,
-                raw_cost=live_counter.today_raw_cost,
-                markup_cost=live_counter.today_markup_cost,
-                created_at=int(time.time()),
-                updated_at=int(time.time())
-            )
-            db.add(daily_summary)
     
     def get_usage_stats_by_client(
         self, client_org_id: str, use_client_timezone: bool = True
     ) -> ClientUsageStatsResponse:
-        """Get hybrid usage stats for Option 1 - real-time today + daily history"""
+        """Get admin-focused daily breakdown stats (no real-time features)"""
         try:
             with get_db() as db:
-                # Get today's live data
-                live_counter = db.query(ClientLiveCounters).filter_by(
-                    client_org_id=client_org_id
-                ).first()
+                # Get current month boundaries
+                today = date.today()
+                current_month_start = today.replace(day=1)
                 
-                today_data = {
-                    'tokens': 0,
-                    'cost': 0.0,
-                    'requests': 0,
-                    'last_updated': 'No usage today'
-                }
-                
-                if live_counter:
-                    if live_counter.current_date == date.today():
-                        # Live counter is current - use its data
-                        today_data = {
-                            'tokens': live_counter.today_tokens,
-                            'cost': live_counter.today_markup_cost,
-                            'requests': live_counter.today_requests,
-                            'last_updated': datetime.fromtimestamp(live_counter.last_updated).strftime('%H:%M:%S')
-                        }
-                    else:
-                        # Live counter is stale - rollover and reset for today
-                        log.warning(f"Stale live counter detected for client {client_org_id}. Date: {live_counter.current_date}, Today: {date.today()}")
-                        
-                        # Perform rollover if there was usage yesterday
-                        if live_counter.today_tokens > 0:
-                            self._rollup_to_daily_summary(db, live_counter)
-                        
-                        # Fallback: Check if today's data exists in daily summaries
-                        today = date.today()
-                        today_summary = db.query(ClientDailyUsage).filter_by(
-                            client_org_id=client_org_id,
-                            usage_date=today
-                        ).first()
-                        
-                        if today_summary:
-                            # Found today's data in daily summaries - populate live counter
-                            live_counter.current_date = today
-                            live_counter.today_tokens = today_summary.total_tokens
-                            live_counter.today_requests = today_summary.total_requests
-                            live_counter.today_raw_cost = today_summary.raw_cost
-                            live_counter.today_markup_cost = today_summary.markup_cost
-                            live_counter.last_updated = int(time.time())
-                            
-                            today_data = {
-                                'tokens': today_summary.total_tokens,
-                                'cost': today_summary.markup_cost,
-                                'requests': today_summary.total_requests,
-                                'last_updated': 'Restored from daily summary'
-                            }
-                            
-                            log.info(f"Restored live counter from daily summary for client {client_org_id}: {today_summary.total_tokens} tokens")
-                        else:
-                            # No today's data found - reset to zero
-                            live_counter.current_date = today
-                            live_counter.today_tokens = 0
-                            live_counter.today_requests = 0
-                            live_counter.today_raw_cost = 0.0
-                            live_counter.today_markup_cost = 0.0
-                            live_counter.last_updated = int(time.time())
-                            
-                            today_data['last_updated'] = 'Reset to today'
-                        
-                        # Commit the reset/restore
-                        db.commit()
-                else:
-                    # No live counter exists - check daily summaries for today's data
-                    today = date.today()
-                    today_summary = db.query(ClientDailyUsage).filter_by(
-                        client_org_id=client_org_id,
-                        usage_date=today
-                    ).first()
-                    
-                    if today_summary:
-                        # Create live counter from daily summary
-                        live_counter = ClientLiveCounters(
-                            client_org_id=client_org_id,
-                            current_date=today,
-                            today_tokens=today_summary.total_tokens,
-                            today_requests=today_summary.total_requests,
-                            today_raw_cost=today_summary.raw_cost,
-                            today_markup_cost=today_summary.markup_cost,
-                            last_updated=int(time.time())
-                        )
-                        db.add(live_counter)
-                        db.commit()
-                        
-                        today_data = {
-                            'tokens': today_summary.total_tokens,
-                            'cost': today_summary.markup_cost,
-                            'requests': today_summary.total_requests,
-                            'last_updated': 'Created from daily summary'
-                        }
-                        
-                        log.info(f"Created live counter from daily summary for client {client_org_id}: {today_summary.total_tokens} tokens")
-                
-                # Get daily history (last 30 days)
-                daily_records = db.query(ClientDailyUsage).filter(
-                    ClientDailyUsage.client_org_id == client_org_id
-                ).order_by(ClientDailyUsage.usage_date.desc()).limit(30).all()
-                
-                daily_history = []
-                for record in daily_records:
-                    daily_history.append({
-                        'date': record.usage_date.isoformat(),
-                        'tokens': record.total_tokens,
-                        'cost': record.markup_cost,
-                        'requests': record.total_requests
-                    })
-                
-                # Calculate this month totals
-                current_month = date.today().replace(day=1)
+                # Get all daily records for current month (1st to last day)
                 month_records = db.query(ClientDailyUsage).filter(
                     ClientDailyUsage.client_org_id == client_org_id,
-                    ClientDailyUsage.usage_date >= current_month
-                ).all()
+                    ClientDailyUsage.usage_date >= current_month_start,
+                    ClientDailyUsage.usage_date <= today
+                ).order_by(ClientDailyUsage.usage_date).all()
                 
-                month_tokens = sum(r.total_tokens for r in month_records)
-                month_cost = sum(r.markup_cost for r in month_records)
-                month_requests = sum(r.total_requests for r in month_records)
-                days_active = len(month_records)
+                # Build daily breakdown for current month
+                daily_breakdown = []
+                for record in month_records:
+                    daily_breakdown.append({
+                        'date': record.usage_date.isoformat(),
+                        'day_name': record.usage_date.strftime('%A'),
+                        'day_number': record.usage_date.day,
+                        'tokens': record.total_tokens,
+                        'cost': record.markup_cost,
+                        'cost_pln': record.markup_cost * 4.1234,  # TODO: Use real exchange rate
+                        'requests': record.total_requests,
+                        'primary_model': record.primary_model,
+                        'unique_users': record.unique_users,
+                        'last_activity': datetime.fromtimestamp(record.updated_at).strftime('%H:%M')
+                    })
                 
-                # Add today's usage to month totals
-                month_tokens += today_data['tokens']
-                month_cost += today_data['cost']
-                month_requests += today_data['requests']
-                if today_data['tokens'] > 0:
-                    days_active += 1
+                # Calculate current month totals and averages
+                total_tokens = sum(r.total_tokens for r in month_records)
+                total_cost = sum(r.markup_cost for r in month_records)
+                total_requests = sum(r.total_requests for r in month_records)
+                days_with_usage = len(month_records)
                 
-                this_month = {
-                    'tokens': month_tokens,
-                    'cost': month_cost,
-                    'requests': month_requests,
-                    'days_active': days_active
+                # Calculate averages (business insights)
+                avg_daily_tokens = total_tokens / max(today.day, 1)
+                avg_daily_cost = total_cost / max(today.day, 1)
+                avg_usage_day_tokens = total_tokens / max(days_with_usage, 1) if days_with_usage > 0 else 0
+                
+                current_month = {
+                    'month': today.strftime('%B %Y'),
+                    'total_tokens': total_tokens,
+                    'total_cost': total_cost,
+                    'total_cost_pln': total_cost * 4.1234,  # TODO: Use real exchange rate
+                    'total_requests': total_requests,
+                    'days_with_usage': days_with_usage,
+                    'days_in_month': today.day,  # Days elapsed so far
+                    'usage_percentage': (days_with_usage / today.day * 100) if today.day > 0 else 0
+                }
+                
+                # Monthly summary with business insights
+                monthly_summary = {
+                    'average_daily_tokens': round(avg_daily_tokens),
+                    'average_daily_cost': round(avg_daily_cost, 4),
+                    'average_usage_day_tokens': round(avg_usage_day_tokens),
+                    'busiest_day': max(month_records, key=lambda x: x.total_tokens).usage_date.isoformat() if month_records else None,
+                    'highest_cost_day': max(month_records, key=lambda x: x.markup_cost).usage_date.isoformat() if month_records else None,
+                    'total_unique_users': len(set(r.unique_users for r in month_records)) if month_records else 0,
+                    'most_used_model': max(month_records, key=lambda x: x.total_tokens).primary_model if month_records else None
                 }
                 
                 # Get client name
@@ -922,17 +761,17 @@ class ClientUsageTable:
                     pass
                 
                 return ClientUsageStatsResponse(
-                    today=today_data,
-                    this_month=this_month,
-                    daily_history=daily_history,
+                    current_month=current_month,
+                    daily_breakdown=daily_breakdown,
+                    monthly_summary=monthly_summary,
                     client_org_name=client_name
                 )
         except Exception as e:
             print(f"Error getting usage stats: {e}")
             return ClientUsageStatsResponse(
-                today={'tokens': 0, 'cost': 0.0, 'requests': 0, 'last_updated': 'Error'},
-                this_month={'tokens': 0, 'cost': 0.0, 'requests': 0, 'days_active': 0},
-                daily_history=[],
+                current_month={'month': 'Error', 'total_tokens': 0, 'total_cost': 0.0, 'total_requests': 0, 'days_with_usage': 0, 'days_in_month': 0, 'usage_percentage': 0},
+                daily_breakdown=[],
+                monthly_summary={'average_daily_tokens': 0, 'average_daily_cost': 0, 'average_usage_day_tokens': 0, 'busiest_day': None, 'highest_cost_day': None, 'total_unique_users': 0, 'most_used_model': None},
                 client_org_name="Error"
             )
     
@@ -1103,52 +942,6 @@ class ClientUsageTable:
         except Exception:
             return []
 
-    def perform_daily_rollover_all_clients(self) -> Dict[str, Any]:
-        """
-        Perform daily rollover for all client organizations
-        This should be called at midnight to ensure proper date transitions
-        """
-        try:
-            with get_db() as db:
-                # Get all live counters that need rollover
-                live_counters = db.query(ClientLiveCounters).filter(
-                    ClientLiveCounters.current_date < date.today()
-                ).all()
-                
-                rollover_count = 0
-                for live_counter in live_counters:
-                    try:
-                        # Perform rollover for this client
-                        self._rollup_to_daily_summary(db, live_counter)
-                        
-                        # Reset counter for today
-                        live_counter.current_date = date.today()
-                        live_counter.today_tokens = 0
-                        live_counter.today_requests = 0
-                        live_counter.today_raw_cost = 0.0
-                        live_counter.today_markup_cost = 0.0
-                        live_counter.last_updated = int(time.time())
-                        
-                        rollover_count += 1
-                        
-                    except Exception as e:
-                        log.error(f"Failed to rollover client {live_counter.client_org_id}: {e}")
-                
-                db.commit()
-                
-                return {
-                    "success": True,
-                    "rollovers_performed": rollover_count,
-                    "timestamp": datetime.now().isoformat()
-                }
-                
-        except Exception as e:
-            log.error(f"Daily rollover failed: {e}")
-            return {
-                "success": False,
-                "error": str(e),
-                "timestamp": datetime.now().isoformat()
-            }
 
 
 ####################

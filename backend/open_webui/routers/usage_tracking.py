@@ -334,81 +334,90 @@ async def manual_record_usage(
 
 @router.get("/my-organization/usage-summary")
 async def get_my_organization_usage_summary(user=Depends(get_current_user)):
-    """Get usage summary for the current organization (environment-based)"""
+    """Get admin-focused daily breakdown for current organization (no real-time)"""
     try:
-        # Use environment-based organization name
-        org_name = ORGANIZATION_NAME or "My Organization"
-        external_user = OPENROUTER_EXTERNAL_USER or f"user_{user.id}"
+        from open_webui.models.organization_usage import ClientUsageDB
         
-        # For now, return mock data that matches the expected structure
-        # TODO: Implement actual usage tracking once OpenRouter integration is complete
-        return {
-            "success": True,
-            "stats": {
-                "today": {
-                    "tokens": 0,
-                    "cost": 0.0,
-                    "cost_pln": 0.0,
-                    "requests": 0,
-                    "last_updated": "No usage today",
-                    "exchange_rate": 4.1234,
-                    "exchange_rate_date": date.today().isoformat()
+        # Get client organization ID for environment-based setup
+        client_org_id = get_environment_client_org_id()
+        org_name = ORGANIZATION_NAME or "My Organization"
+        
+        if client_org_id:
+            # Get actual usage data using the new admin-focused method
+            stats = ClientUsageDB.get_usage_stats_by_client(client_org_id)
+            
+            return {
+                "success": True,
+                "stats": {
+                    "current_month": stats.current_month,
+                    "daily_breakdown": stats.daily_breakdown,
+                    "monthly_summary": stats.monthly_summary,
+                    "client_org_name": stats.client_org_name,
+                    "exchange_rate_info": {
+                        "usd_pln": 4.1234,
+                        "effective_date": date.today().isoformat()
+                    },
+                    "pln_conversion_available": True
                 },
-                "this_month": {
-                    "tokens": 0,
-                    "cost": 0.0,
-                    "cost_pln": 0.0,
-                    "requests": 0,
-                    "days_active": 0
+                "client_id": client_org_id
+            }
+        else:
+            # Fallback for environments without proper client setup
+            return {
+                "success": True,
+                "stats": {
+                    "current_month": {
+                        "month": date.today().strftime('%B %Y'),
+                        "total_tokens": 0,
+                        "total_cost": 0.0,
+                        "total_cost_pln": 0.0,
+                        "total_requests": 0,
+                        "days_with_usage": 0,
+                        "days_in_month": date.today().day,
+                        "usage_percentage": 0
+                    },
+                    "daily_breakdown": [],
+                    "monthly_summary": {
+                        "average_daily_tokens": 0,
+                        "average_daily_cost": 0,
+                        "average_usage_day_tokens": 0,
+                        "busiest_day": None,
+                        "highest_cost_day": None,
+                        "total_unique_users": 0,
+                        "most_used_model": None
+                    },
+                    "client_org_name": org_name,
+                    "exchange_rate_info": {
+                        "usd_pln": 4.1234,
+                        "effective_date": date.today().isoformat()
+                    },
+                    "pln_conversion_available": True
                 },
-                "client_org_name": org_name,
-                "exchange_rate_info": {
-                    "usd_pln": 4.1234,
-                    "effective_date": date.today().isoformat()
-                },
-                "pln_conversion_available": True
-            },
-            "client_id": "env_based"
-        }
+                "client_id": "env_fallback"
+            }
+            
     except Exception as e:
         return {
             "success": False,
             "error": str(e),
             "stats": {
-                "today": {"tokens": 0, "cost": 0, "requests": 0, "last_updated": "Error loading data"},
-                "this_month": {"tokens": 0, "cost": 0, "requests": 0, "days_active": 0},
+                "current_month": {"month": "Error", "total_tokens": 0, "total_cost": 0, "total_requests": 0, "days_with_usage": 0, "days_in_month": 0, "usage_percentage": 0},
+                "daily_breakdown": [],
+                "monthly_summary": {"average_daily_tokens": 0, "average_daily_cost": 0, "average_usage_day_tokens": 0, "busiest_day": None, "highest_cost_day": None, "total_unique_users": 0, "most_used_model": None},
                 "client_org_name": ORGANIZATION_NAME or "My Organization"
             },
-            "client_id": "env_based"
+            "client_id": "error"
         }
 
 @router.get("/my-organization/today-usage")
 async def get_my_organization_today_usage(user=Depends(get_current_user)):
-    """Get today's usage for the current organization (environment-based)"""
-    try:
-        return {
-            "success": True,
-            "today": {
-                "tokens": 0,
-                "cost": 0.0,
-                "cost_pln": 0.0,
-                "requests": 0,
-                "last_updated": datetime.now().isoformat(),
-                "exchange_rate": 4.1234,
-                "exchange_rate_date": date.today().isoformat()
-            }
-        }
-    except Exception as e:
-        return {
-            "success": False,
-            "error": str(e),
-            "today": {
-                "tokens": 0,
-                "cost": 0,
-                "requests": 0,
-                "last_updated": "Error loading data"
-            }
-        }
+    """DEPRECATED: Real-time today usage endpoint removed for business simplification"""
+    return {
+        "success": False,
+        "message": "Real-time usage tracking has been simplified. Please use /my-organization/usage-summary for daily breakdown data.",
+        "deprecated": True,
+        "alternative_endpoint": "/my-organization/usage-summary"
+    }
 
 def get_environment_client_org_id() -> Optional[str]:
     """Get client organization ID for environment-based setup"""

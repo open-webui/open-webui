@@ -10,21 +10,28 @@
 	let loading = false;
 	let activeTab = 'stats';
 	
-	// Option 1: Simplified data structure
+	// Admin-focused daily breakdown structure (no real-time)
 	let usageData = {
-		today: {
-			tokens: 0,
-			cost: 0,
-			requests: 0,
-			last_updated: 'No usage today'
+		current_month: {
+			month: 'Loading...',
+			total_tokens: 0,
+			total_cost: 0,
+			total_cost_pln: 0,
+			total_requests: 0,
+			days_with_usage: 0,
+			days_in_month: 0,
+			usage_percentage: 0
 		},
-		this_month: {
-			tokens: 0,
-			cost: 0,
-			requests: 0,
-			days_active: 0
+		daily_breakdown: [],
+		monthly_summary: {
+			average_daily_tokens: 0,
+			average_daily_cost: 0,
+			average_usage_day_tokens: 0,
+			busiest_day: null,
+			highest_cost_day: null,
+			total_unique_users: 0,
+			most_used_model: null
 		},
-		// daily_history removed - no longer needed
 		client_org_name: 'My Organization'
 	};
 	
@@ -151,7 +158,7 @@
 		}
 	];
 
-	let refreshInterval = null;
+	// Removed refreshInterval - no more real-time updates for business simplification
 
 	// Reactive: Ensure non-admin users don't access admin-only tabs
 	$: if ($user?.role !== 'admin' && (activeTab === 'users' || activeTab === 'models' || activeTab === 'subscription')) {
@@ -181,15 +188,8 @@
 
 	onMount(async () => {
 		await loadUsageData();
-		// Refresh today's data every 30 seconds for real-time updates
-		refreshInterval = setInterval(loadTodaysUsage, 30000);
-		
-		// Cleanup interval on component destroy
-		return () => {
-			if (refreshInterval) {
-				clearInterval(refreshInterval);
-			}
-		};
+		// No more real-time refresh - admin-focused daily breakdown approach
+		// Data loads once on component mount for business oversight purposes
 	});
 
 	/**
@@ -230,7 +230,7 @@
 		try {
 			loading = true;
 			
-			// Get usage summary data (today real-time + monthly totals)
+			// Get admin-focused daily breakdown data (no real-time)
 			const response = await getClientUsageSummary($user.token);
 			
 			if (response?.success && response.stats) {
@@ -343,28 +343,7 @@
 		}
 	};
 
-	const loadTodaysUsage = async () => {
-		// Refresh only today's live counters (lightweight)
-		// Skip if client ID is not validated to avoid API errors
-		if (!clientOrgIdValidated || !clientOrgId) {
-			console.log('Skipping today\'s usage refresh: client organization ID not available');
-			return;
-		}
-
-		try {
-			const response = await getTodayUsage($user.token, clientOrgId);
-			
-			if (response?.success && response.today) {
-				usageData.today = response.today;
-			} else {
-				console.warn('Today usage API returned unsuccessful response:', response);
-			}
-			
-		} catch (error) {
-			console.error('Failed to refresh today data:', error);
-			// Don't show error toast for background refresh failures
-		}
-	};
+	// Removed loadTodaysUsage - no more real-time updates for business simplification
 
 	const loadSubscriptionData = async () => {
 		// Validate client ID before making API call
@@ -476,20 +455,17 @@
 		</div>
 	{/if}
 
-	<!-- Real-time Today + Monthly Summary Cards -->
+	<!-- Monthly Summary Cards (Admin Overview) -->
 	<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-		<!-- Today's Usage (Real-time) -->
+		<!-- Monthly Tokens -->
 		<div class="bg-white dark:bg-gray-850 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 			<div class="flex items-center justify-between">
 				<div>
-					<p class="text-sm font-medium text-gray-600 dark:text-gray-400">Today's Tokens</p>
+					<p class="text-sm font-medium text-gray-600 dark:text-gray-400">Total Tokens</p>
 					<p class="text-2xl font-semibold text-gray-900 dark:text-white">
-						{formatNumber(usageData.today.tokens)}
+						{formatNumber(usageData.current_month.total_tokens)}
 					</p>
-					<div class="flex items-center text-xs text-green-600 mt-1">
-						<div class="w-2 h-2 bg-green-500 rounded-full mr-1 animate-pulse"></div>
-						Live
-					</div>
+					<p class="text-xs text-gray-500 mt-1">{usageData.current_month.month}</p>
 				</div>
 				<div class="flex-shrink-0">
 					<div class="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
@@ -501,25 +477,15 @@
 			</div>
 		</div>
 
-		<!-- Today's Cost (Real-time) -->
+		<!-- Monthly Cost -->
 		<div class="bg-white dark:bg-gray-850 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 			<div class="flex items-center justify-between">
 				<div>
-					<p class="text-sm font-medium text-gray-600 dark:text-gray-400">Today's Cost</p>
+					<p class="text-sm font-medium text-gray-600 dark:text-gray-400">Total Cost</p>
 					<p class="text-2xl font-semibold text-gray-900 dark:text-white">
-						{formatDualCurrency(usageData.today.cost, usageData.today.cost_pln)}
+						{formatDualCurrency(usageData.current_month.total_cost, usageData.current_month.total_cost_pln)}
 					</p>
-					<div class="flex items-center justify-between mt-1">
-						<div class="flex items-center text-xs text-green-600">
-							<div class="w-2 h-2 bg-green-500 rounded-full mr-1 animate-pulse"></div>
-							Live
-						</div>
-						{#if usageData.today.exchange_rate}
-							<span class="text-xs text-gray-500" title="Exchange rate date: {usageData.today.exchange_rate_date}">
-								1 USD = {usageData.today.exchange_rate.toFixed(4)} PLN
-							</span>
-						{/if}
-					</div>
+					<p class="text-xs text-gray-500 mt-1">{usageData.current_month.total_requests} requests</p>
 				</div>
 				<div class="flex-shrink-0">
 					<div class="w-8 h-8 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
@@ -531,15 +497,15 @@
 			</div>
 		</div>
 
-		<!-- This Month Total -->
+		<!-- Usage Activity -->
 		<div class="bg-white dark:bg-gray-850 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 			<div class="flex items-center justify-between">
 				<div>
-					<p class="text-sm font-medium text-gray-600 dark:text-gray-400">Month Total</p>
+					<p class="text-sm font-medium text-gray-600 dark:text-gray-400">Usage Activity</p>
 					<p class="text-2xl font-semibold text-gray-900 dark:text-white">
-						{formatDualCurrency(usageData.this_month.cost, usageData.this_month.cost_pln)}
+						{usageData.current_month.days_with_usage}/{usageData.current_month.days_in_month}
 					</p>
-					<p class="text-xs text-gray-500 mt-1">{usageData.this_month.days_active} days active</p>
+					<p class="text-xs text-gray-500 mt-1">{Math.round(usageData.current_month.usage_percentage)}% active days</p>
 				</div>
 				<div class="flex-shrink-0">
 					<div class="w-8 h-8 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center">
@@ -598,39 +564,121 @@
 			<span class="ml-2 text-gray-600 dark:text-gray-400">{$i18n.t('Loading usage data...')}</span>
 		</div>
 	{:else if activeTab === 'stats'}
-		<div class="bg-white dark:bg-gray-850 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-			<h3 class="text-lg font-medium mb-4">{$i18n.t('Usage Statistics')}</h3>
-			
-			<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-				<div>
-					<h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{$i18n.t('Today vs Month')}</h4>
-					<div class="space-y-2">
-						<div class="flex justify-between">
-							<span class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Today Tokens')}:</span>
-							<span class="text-sm font-medium">{formatNumber(usageData.today.tokens)}</span>
-						</div>
-						<div class="flex justify-between">
-							<span class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Month Total')}:</span>
-							<span class="text-sm font-medium">{formatNumber(usageData.this_month.tokens)}</span>
+		<div class="space-y-6">
+			<!-- Monthly Summary Insights -->
+			<div class="bg-white dark:bg-gray-850 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+				<h3 class="text-lg font-medium mb-4">{$i18n.t('Monthly Summary')}</h3>
+				
+				<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+					<div>
+						<h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{$i18n.t('Usage Averages')}</h4>
+						<div class="space-y-2">
+							<div class="flex justify-between">
+								<span class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Daily Average')}:</span>
+								<span class="text-sm font-medium">{formatNumber(usageData.monthly_summary.average_daily_tokens)} tokens</span>
+							</div>
+							<div class="flex justify-between">
+								<span class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Usage Day Average')}:</span>
+								<span class="text-sm font-medium">{formatNumber(usageData.monthly_summary.average_usage_day_tokens)} tokens</span>
+							</div>
 						</div>
 					</div>
-				</div>
-				
-				<div>
-					<h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{$i18n.t('Cost Analysis')}</h4>
-					<div class="space-y-2">
-						<div class="flex justify-between">
-							<span class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Today Cost')}:</span>
-							<span class="text-sm font-medium">{formatDualCurrency(usageData.today.cost, usageData.today.cost_pln)}</span>
+					
+					<div>
+						<h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{$i18n.t('Peak Usage')}</h4>
+						<div class="space-y-2">
+							<div class="flex justify-between">
+								<span class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Busiest Day')}:</span>
+								<span class="text-sm font-medium">{usageData.monthly_summary.busiest_day || 'N/A'}</span>
+							</div>
+							<div class="flex justify-between">
+								<span class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Highest Cost Day')}:</span>
+								<span class="text-sm font-medium">{usageData.monthly_summary.highest_cost_day || 'N/A'}</span>
+							</div>
 						</div>
-						<div class="flex justify-between">
-							<span class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Month Total')}:</span>
-							<span class="text-sm font-medium">{formatDualCurrency(usageData.this_month.cost, usageData.this_month.cost_pln)}</span>
+					</div>
+					
+					<div>
+						<h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{$i18n.t('Most Used')}</h4>
+						<div class="space-y-2">
+							<div class="flex justify-between">
+								<span class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Primary Model')}:</span>
+								<span class="text-sm font-medium">{usageData.monthly_summary.most_used_model || 'N/A'}</span>
+							</div>
+							<div class="flex justify-between">
+								<span class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Active Users')}:</span>
+								<span class="text-sm font-medium">{usageData.monthly_summary.total_unique_users}</span>
+							</div>
 						</div>
 					</div>
 				</div>
 			</div>
 
+			<!-- Daily Breakdown Table -->
+			<div class="bg-white dark:bg-gray-850 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+				<h3 class="text-lg font-medium mb-4">{$i18n.t('Daily Breakdown')} - {usageData.current_month.month}</h3>
+				
+				{#if usageData.daily_breakdown && usageData.daily_breakdown.length > 0}
+					<div class="overflow-x-auto">
+						<table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+							<thead>
+								<tr>
+									<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+										{$i18n.t('Date')}
+									</th>
+									<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+										{$i18n.t('Day')}
+									</th>
+									<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+										{$i18n.t('Tokens')}
+									</th>
+									<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+										{$i18n.t('Cost')}
+									</th>
+									<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+										{$i18n.t('Requests')}
+									</th>
+									<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+										{$i18n.t('Primary Model')}
+									</th>
+									<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+										{$i18n.t('Last Activity')}
+									</th>
+								</tr>
+							</thead>
+							<tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+								{#each usageData.daily_breakdown as day}
+									<tr>
+										<td class="px-4 py-3 whitespace-nowrap text-sm font-medium">
+											{day.date}
+										</td>
+										<td class="px-4 py-3 whitespace-nowrap text-sm">
+											{day.day_name}
+										</td>
+										<td class="px-4 py-3 whitespace-nowrap text-sm">
+											{formatNumber(day.tokens)}
+										</td>
+										<td class="px-4 py-3 whitespace-nowrap text-sm font-medium">
+											{formatDualCurrency(day.cost, day.cost_pln)}
+										</td>
+										<td class="px-4 py-3 whitespace-nowrap text-sm">
+											{formatNumber(day.requests)}
+										</td>
+										<td class="px-4 py-3 whitespace-nowrap text-sm">
+											{day.primary_model || 'N/A'}
+										</td>
+										<td class="px-4 py-3 whitespace-nowrap text-sm">
+											{day.last_activity}
+										</td>
+									</tr>
+								{/each}
+							</tbody>
+						</table>
+					</div>
+				{:else}
+					<p class="text-gray-600 dark:text-gray-400">{$i18n.t('No usage data available for this month.')}</p>
+				{/if}
+			</div>
 		</div>
 	{:else if activeTab === 'users' && $user?.role === 'admin'}
 		<div class="bg-white dark:bg-gray-850 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
