@@ -178,7 +178,7 @@ print(black.format_str("""${code.replace(/\\/g, '\\\\').replace(/`/g, '\\`').rep
 	export const formatPythonCodeHandler = async () => {
 		if (codeEditor) {
 			const res = await (
-				$user?.role === 'admin'
+				($user?.role === 'admin' || $user?.permissions?.features?.code_interpreter)
 					? formatPythonCode(localStorage.token, _value)
 					: formatPythonCodePyodide(_value)
 			).catch((error) => {
