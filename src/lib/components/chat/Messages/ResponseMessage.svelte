@@ -219,11 +219,10 @@
 
 		const content = removeAllDetails(message.content);
 
-		// Use optional chaining for config access
 		const ttsEngine = $config?.audio?.tts?.engine;
 		const ttsSplitOn = $config?.audio?.tts?.split_on ?? 'punctuation';
 
-		if (ttsEngine === '') { // This is for 'Web API' option
+		if (ttsEngine === '') {
 			let voices = [];
 			const getVoicesLoop = setInterval(() => {
 				voices = speechSynthesis.getVoices();
@@ -291,8 +290,6 @@
 				if (!$TTSWorker) {
 					await TTSWorker.set(
 						new KokoroWorker({
-							// Pass the API Base URL if the worker needs it for fetching models/voices
-							// This property should exist in $config.audio.tts if it's needed by the worker
 							baseUrl: $config?.audio?.tts?.kokoro_api_base_url,
 							dtype: $settings.audio?.tts?.engineConfig?.dtype ?? 'fp32'
 						})

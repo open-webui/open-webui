@@ -535,9 +535,7 @@
 							</div>
 						</div>
 					</div>
-				{/if}
-
-				{#if STT_ENGINE === ''}
+				{:else if STT_ENGINE === ''}
 					<div>
 						<div class=" mb-1.5 text-xs font-medium">{$i18n.t('STT Model')}</div>
 
