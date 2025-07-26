@@ -75,11 +75,11 @@ COPY --chown=$UID:$GID ./backend/requirements.txt ./requirements.txt
 RUN mkdir -p /app/backend/data/
 
 # Install uv package manager
-RUN pip3 install --no-cache-dir --retries 3 --timeout 300 uv
+RUN pip3 install --no-cache-dir --retries 10 --timeout 600 uv
 
 # Install minimal requirements without ML dependencies
 RUN grep -v "sentence-transformers\|transformers\|torch\|accelerate\|datasets\|faster-whisper\|opencv-python\|rapidocr-onnxruntime\|onnxruntime" requirements.txt > requirements-minimal.txt && \
-    UV_HTTP_TIMEOUT=300 UV_HTTP_RETRIES=5 uv pip install --system -r requirements-minimal.txt --no-cache-dir
+    UV_HTTP_TIMEOUT=600 UV_HTTP_RETRIES=10 uv pip install --system -r requirements-minimal.txt --no-cache-dir
 
 
 # Set ownership
