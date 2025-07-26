@@ -293,7 +293,7 @@
 			if (lastAssistantMessage.files && lastAssistantMessage.files.length > 0) {
 				console.log('Auto-selecting Files model');
 				govBtnEnable = false;
-				// webSearchEnabled = false;
+				webSearchEnabled = false;
 				attachFileEnabled = true;
 				selectedModels = [lastAssistantMessage.model || $config.default_models];
 				return;
@@ -304,7 +304,7 @@
 			if (hasFilesInHistory) {
 				console.log('Auto-selecting Files model (from history)');
 				govBtnEnable = false;
-				// webSearchEnabled = false;
+				webSearchEnabled = false;
 				attachFileEnabled = true;
 				selectedModels = [lastAssistantMessage.model || $config.default_models];
 				return;
@@ -315,7 +315,7 @@
 			if (lastAssistantMessage.model && lastAssistantMessage.model.includes($config.govgpt.rag_wog_model_name)) {
 				console.log('Auto-selecting Gov Knowledge model');
 				govBtnEnable = true;
-				// webSearchEnabled = false;
+				webSearchEnabled = false;
 				attachFileEnabled = false;
 				selectedModels = [lastAssistantMessage.model];
 				return;
@@ -323,10 +323,10 @@
 		}
 		
 		// If none of the specific conditions are met, don't select any model
-		console.log('No specific model type detected, not auto-selecting any model');
-		govBtnEnable = false;
-		webSearchEnabled = false;
-		attachFileEnabled = false;
+		// console.log('No specific model type detected, not auto-selecting any model');
+		// govBtnEnable = false;
+		// webSearchEnabled = false;
+		// attachFileEnabled = false;
 	};
 
 	autoSelectModelFromLastMessage();
