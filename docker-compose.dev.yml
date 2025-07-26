@@ -1,0 +1,47 @@
+# Development Docker Compose - Fast iteration with hot-reloading
+# Usage: docker-compose -f docker-compose.dev.yml up
+services:
+  open-webui-dev:
+    build:
+      context: .
+      args:
+        OLLAMA_BASE_URL: '/ollama'
+      dockerfile: Dockerfile
+    container_name: open-webui-dev
+    env_file:
+      - .env.dev
+    volumes:
+      # Mount source code for hot-reloading
+      - ./backend:/app/backend
+      - ./src:/app/src
+      - ./static:/app/static
+      # Persist data
+      - open-webui-dev-data:/app/backend/data
+      # Prevent node_modules from being overwritten
+      - /app/node_modules
+      - /app/backend/.venv
+    ports:
+      - "3001:8080"  # Different port from production
+    environment:
+      - 'OLLAMA_BASE_URL=http://host.docker.internal:11434'
+      - 'WEBUI_SECRET_KEY=mai-secret-key-development-2025'
+      - 'WEBUI_NAME=mAI Development (HOT-RELOAD)'
+      - 'WEBUI_URL=http://localhost:3001'
+      # Enable hot-reloading
+      - 'UVICORN_RELOAD=true'
+      - 'UVICORN_HOST=0.0.0.0'
+      - 'UVICORN_PORT=8080'
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    command: >
+      sh -c "cd /app/backend && 
+             python -m uvicorn open_webui.main:app 
+             --host 0.0.0.0 
+             --port 8080 
+             --reload 
+             --reload-dir /app/backend"
+
+volumes:
+  open-webui-dev-data:
+    name: mai_dev_data

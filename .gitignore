@@ -6,6 +6,8 @@ node_modules
 .env
 .env.*
 !.env.example
+.env.dev
+docker-compose.override.yml
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 # Byte-compiled / optimized / DLL files
