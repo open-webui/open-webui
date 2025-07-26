@@ -650,6 +650,7 @@
 										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 										bind:value={TTS_MODEL}
 										placeholder="CMU ARCTIC speaker embedding name"
+										required
 									/>
 
 									<datalist id="model-list">
@@ -692,6 +693,7 @@
 											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 											bind:value={TTS_VOICE}
 											placeholder="Select a voice"
+											required
 										/>
 
 										<datalist id="voice-list">
@@ -711,6 +713,7 @@
 											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 											bind:value={TTS_MODEL}
 											placeholder="Select a model"
+											required
 										/>
 
 										<datalist id="tts-model-list">
@@ -733,6 +736,7 @@
 											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 											bind:value={TTS_VOICE}
 											placeholder="Select a voice"
+											required
 										/>
 
 										<datalist id="voice-list">
@@ -752,6 +756,7 @@
 											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 											bind:value={TTS_MODEL}
 											placeholder="Select a model"
+											required
 										/>
 
 										<datalist id="tts-model-list">
@@ -777,6 +782,7 @@
 													TTS_KOKORO_CUSTOM_COMBINATION_STRING = voices[0].id;
 												}
 											}}
+											required
 										>
 											<option value="">{$i18n.t('Select a voice')}</option>
 											<option value="_custom_kokoro_combination_">
@@ -832,6 +838,7 @@
 										<select
 											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 											bind:value={TTS_MODEL}
+											required
 										>
 											<option value="">{$i18n.t('Select a model')}</option>
 											{#each models as model (model.id)}
@@ -855,6 +862,7 @@
 											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 											bind:value={TTS_VOICE}
 											placeholder="Select a voice"
+											required
 										/>
 
 										<datalist id="voice-list">
