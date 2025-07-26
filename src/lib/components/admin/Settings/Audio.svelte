@@ -36,8 +36,7 @@
 	let TTS_AZURE_SPEECH_BASE_URL = '';
 	let TTS_AZURE_SPEECH_OUTPUT_FORMAT = '';
 	let TTS_KOKORO_API_BASE_URL = '';
-	let TTS_KOKORO_ENABLE_NORMALIZATION: boolean = true; // New variable for normalization toggle
-	// New variable for the custom Kokoro voice combination string
+	let TTS_KOKORO_ENABLE_NORMALIZATION: boolean = true;
 	let TTS_KOKORO_CUSTOM_COMBINATION_STRING: string = '';
 
 	let STT_OPENAI_API_BASE_URL = '';
@@ -139,7 +138,6 @@
 				}
 			}, 100);
 		} else {
-			// For OpenAI, ElevenLabs, Azure (assuming their _getVoices returns {id, name} or similar)
 			const res = await _getVoices(localStorage.token).catch((e) => {
 				toast.error(`${e}`);
 			});
@@ -162,7 +160,7 @@
 			tts: {
 				OPENAI_API_BASE_URL: TTS_OPENAI_API_BASE_URL,
 				OPENAI_API_KEY: TTS_OPENAI_API_KEY,
-				API_KEY: TTS_API_KEY, // This is already included and will be set for Kokoro if provided
+				API_KEY: TTS_API_KEY,
 				ENGINE: TTS_ENGINE,
 				MODEL: TTS_MODEL,
 				VOICE: (() => {
@@ -176,7 +174,7 @@
 				AZURE_SPEECH_BASE_URL: TTS_AZURE_SPEECH_BASE_URL,
 				AZURE_SPEECH_OUTPUT_FORMAT: TTS_AZURE_SPEECH_OUTPUT_FORMAT,
 				KOKORO_API_BASE_URL: TTS_KOKORO_API_BASE_URL,
-				...(TTS_ENGINE === 'kokoro' && { // Only include if KokoroTTS is selected
+				...(TTS_ENGINE === 'kokoro' && {
 					KOKORO_NORMALIZATION_OPTIONS: { normalize: TTS_KOKORO_ENABLE_NORMALIZATION }
 				})
 			},
@@ -240,7 +238,7 @@
 			TTS_AZURE_SPEECH_BASE_URL = res.tts.AZURE_SPEECH_BASE_URL;
 			TTS_AZURE_SPEECH_OUTPUT_FORMAT = res.tts.AZURE_SPEECH_OUTPUT_FORMAT;
 			TTS_KOKORO_API_BASE_URL = res.tts.KOKORO_API_BASE_URL || '';
-			TTS_KOKORO_ENABLE_NORMALIZATION = res.tts.KOKORO_NORMALIZATION_OPTIONS?.normalize ?? true; // Load normalization setting
+			TTS_KOKORO_ENABLE_NORMALIZATION = res.tts.KOKORO_NORMALIZATION_OPTIONS?.normalize ?? true;
 
 			STT_OPENAI_API_BASE_URL = res.stt.OPENAI_API_BASE_URL;
 			STT_OPENAI_API_KEY = res.stt.OPENAI_API_KEY;
@@ -536,7 +534,7 @@
 							<option value="transformers">{$i18n.t('Transformers')} ({$i18n.t('Local')})</option>
 							<option value="openai">{$i18n.t('OpenAI')}</option>
 							<option value="elevenlabs">{$i18n.t('ElevenLabs')}</option>
-							<option value="kokoro">KokoroTTS</option>
+							<option value="kokoro">{$i18n.t('KokoroTTS')}</option>
 							<option value="azure">{$i18n.t('Azure AI Speech')}</option>
 						</select>
 					</div>
@@ -579,7 +577,6 @@
 									await getModels();
 								}}
 							/>
-							<!-- ADDED: API Key input for KokoroTTS -->
 							<SensitiveInput placeholder={$i18n.t('API Key (Optional)')} bind:value={TTS_API_KEY} required={false} />
 						</div>
 					</div>
@@ -776,7 +773,6 @@
 											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 											bind:value={TTS_VOICE}
 											on:change={() => {
-												// If "Custom Combination" is selected, pre-fill with a common voice if string is empty
 												if (TTS_VOICE === '_custom_kokoro_combination_' && !TTS_KOKORO_CUSTOM_COMBINATION_STRING && voices.length > 0) {
 													TTS_KOKORO_CUSTOM_COMBINATION_STRING = voices[0].id;
 												}
