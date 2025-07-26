@@ -70,14 +70,21 @@
 	let voices: DisplayVoice[] = [];
 	let models: FetchedModel[] = [];
 
+	// Helper to get a clean URL for KokoroTTS
+	const getCleanKokoroUrl = (url: string) => {
+		if (!url) return '';
+		return url.replace(/\/+$/, ''); // Remove trailing slashes
+	};
+
 	const getModels = async () => {
 		if (TTS_ENGINE === 'kokoro') {
-			if (!TTS_KOKORO_API_BASE_URL) {
+			const cleanUrl = getCleanKokoroUrl(TTS_KOKORO_API_BASE_URL);
+			if (!cleanUrl) {
 				models = [];
 				return;
 			}
 			try {
-				const response = await fetch(`${TTS_KOKORO_API_BASE_URL}/v1/models`);
+				const response = await fetch(`${cleanUrl}/v1/models`);
 				if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 				const data = await response.json();
 				// Filter for "kokoro" owned models based on your example response
@@ -108,12 +115,13 @@
 		let fetchedVoices: DisplayVoice[] = [];
 
 		if (TTS_ENGINE === 'kokoro') {
-			if (!TTS_KOKORO_API_BASE_URL) {
+			const cleanUrl = getCleanKokoroUrl(TTS_KOKORO_API_BASE_URL);
+			if (!cleanUrl) {
 				voices = [];
 				return;
 			}
 			try {
-				const response = await fetch(`${TTS_KOKORO_API_BASE_URL}/v1/audio/voices`);
+				const response = await fetch(`${cleanUrl}/v1/audio/voices`);
 				if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 				const data = await response.json();
 				fetchedVoices = (data.voices as string[]).map((voiceName) => ({
@@ -173,7 +181,7 @@
 				AZURE_SPEECH_REGION: TTS_AZURE_SPEECH_REGION,
 				AZURE_SPEECH_BASE_URL: TTS_AZURE_SPEECH_BASE_URL,
 				AZURE_SPEECH_OUTPUT_FORMAT: TTS_AZURE_SPEECH_OUTPUT_FORMAT,
-				KOKORO_API_BASE_URL: TTS_KOKORO_API_BASE_URL,
+				KOKORO_API_BASE_URL: getCleanKokoroUrl(TTS_KOKORO_API_BASE_URL), // Store clean URL
 				...(TTS_ENGINE === 'kokoro' && {
 					KOKORO_NORMALIZATION_OPTIONS: { normalize: TTS_KOKORO_ENABLE_NORMALIZATION }
 				})
@@ -237,7 +245,7 @@
 			TTS_AZURE_SPEECH_REGION = res.tts.AZURE_SPEECH_REGION;
 			TTS_AZURE_SPEECH_BASE_URL = res.tts.AZURE_SPEECH_BASE_URL;
 			TTS_AZURE_SPEECH_OUTPUT_FORMAT = res.tts.AZURE_SPEECH_OUTPUT_FORMAT;
-			TTS_KOKORO_API_BASE_URL = res.tts.KOKORO_API_BASE_URL || '';
+			TTS_KOKORO_API_BASE_URL = res.tts.KOKORO_API_BASE_URL || ''; // Load the stored URL
 			TTS_KOKORO_ENABLE_NORMALIZATION = res.tts.KOKORO_NORMALIZATION_OPTIONS?.normalize ?? true;
 
 			STT_OPENAI_API_BASE_URL = res.stt.OPENAI_API_BASE_URL;
@@ -264,7 +272,11 @@
 	class="flex flex-col h-full justify-between space-y-3 text-sm"
 	on:submit|preventDefault={async () => {
 		// Basic client-side validation for custom Kokoro voice string
-		if (TTS_ENGINE === 'kokoro' && TTS_VOICE === '_custom_kokoro_combination_' && !TTS_KOKORO_CUSTOM_COMBINATION_STRING) {
+		if (
+			TTS_ENGINE === 'kokoro' &&
+			TTS_VOICE === '_custom_kokoro_combination_' &&
+			!TTS_KOKORO_CUSTOM_COMBINATION_STRING
+		) {
 			toast.error($i18n.t('Please enter a custom voice combination for KokoroTTS.'));
 			return; // Prevent saving
 		}
@@ -577,7 +589,11 @@
 									await getModels();
 								}}
 							/>
-							<SensitiveInput placeholder={$i18n.t('API Key (Optional)')} bind:value={TTS_API_KEY} required={false} />
+							<SensitiveInput
+								placeholder={$i18n.t('API Key (Optional)')}
+								bind:value={TTS_API_KEY}
+								required={false}
+							/>
 						</div>
 					</div>
 				{:else if TTS_ENGINE === 'azure'}
@@ -778,7 +794,11 @@
 											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 											bind:value={TTS_VOICE}
 											on:change={() => {
-												if (TTS_VOICE === '_custom_kokoro_combination_' && !TTS_KOKORO_CUSTOM_COMBINATION_STRING && voices.length > 0) {
+												if (
+													TTS_VOICE === '_custom_kokoro_combination_' &&
+													!TTS_KOKORO_CUSTOM_COMBINATION_STRING &&
+													voices.length > 0
+												) {
 													TTS_KOKORO_CUSTOM_COMBINATION_STRING = voices[0].id;
 												}
 											}}
