@@ -2,6 +2,8 @@ fastapi==0.115.7
 uvicorn[standard]==0.35.0
 pydantic==2.11.7
 python-multipart==0.0.20
+itsdangerous==2.2.0
+pydub==0.25.1
 
 python-socketio==5.13.0
 python-jose==3.4.0

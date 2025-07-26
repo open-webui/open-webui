@@ -20,6 +20,8 @@ RUN yarn config set network-timeout 300000 && \
 
 COPY . .
 ENV APP_BUILD_HASH=${BUILD_HASH}
+ENV CHOKIDAR_USEPOLLING=true
+ENV CHOKIDAR_INTERVAL=1000
 RUN NODE_OPTIONS="--max-old-space-size=4096" yarn build
 
 ######## WebUI backend ########
