@@ -310,3 +310,10 @@ dist
 cypress/videos
 cypress/screenshots
 .vscode/settings.json
+
+# Docker exported images
+*.tar
+*.tar.gz
+*.tar.bz2
+open-webui.tar*
+emohaa-webui.tar*
