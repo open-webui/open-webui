@@ -549,6 +549,11 @@ def transcription_handler(request, file_path, metadata):
     id = filename.split(".")[0]
 
     metadata = metadata or {}
+    selected_language=(
+        metadata.get("language", None)
+        if WHISPER_LANGUAGE == ""
+        else WHISPER_LANGUAGE
+    )
 
     if request.app.state.config.STT_ENGINE == "":
         if request.app.state.faster_whisper_model is None:
@@ -561,11 +566,7 @@ def transcription_handler(request, file_path, metadata):
             file_path,
             beam_size=5,
             vad_filter=request.app.state.config.WHISPER_VAD_FILTER,
-            language=(
-                metadata.get("language", None)
-                if WHISPER_LANGUAGE == ""
-                else WHISPER_LANGUAGE
-            ),
+            language=selected_language,
         )
         log.info(
             "Detected language '%s' with probability %f"
@@ -594,8 +595,8 @@ def transcription_handler(request, file_path, metadata):
                 data={
                     "model": request.app.state.config.STT_MODEL,
                     **(
-                        {"language": metadata.get("language")}
-                        if metadata.get("language")
+                        {"language": selected_language}
+                        if selected_language
                         else {}
                     ),
                 },
@@ -647,7 +648,9 @@ def transcription_handler(request, file_path, metadata):
                 params["model"] = request.app.state.config.STT_MODEL
 
             # Make request to Deepgram API
-            params["language"] = metadata.get("language") or WHISPER_LANGUAGE
+            params["language"] = selected_language
+            if params["language"] == "":
+                del params["language"]
             # Make request to Deepgram API
             max_retries = 3
             retry_count = 0
