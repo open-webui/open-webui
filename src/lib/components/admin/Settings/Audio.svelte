@@ -35,6 +35,10 @@
 	let TTS_AZURE_SPEECH_REGION = '';
 	let TTS_AZURE_SPEECH_BASE_URL = '';
 	let TTS_AZURE_SPEECH_OUTPUT_FORMAT = '';
+	let TTS_KOKORO_API_BASE_URL = '';
+	let TTS_KOKORO_ENABLE_NORMALIZATION: boolean = true; // New variable for normalization toggle
+	// New variable for the custom Kokoro voice combination string
+	let TTS_KOKORO_CUSTOM_COMBINATION_STRING: string = '';
 
 	let STT_OPENAI_API_BASE_URL = '';
 	let STT_OPENAI_API_KEY = '';
@@ -48,15 +52,43 @@
 	let STT_AZURE_BASE_URL = '';
 	let STT_AZURE_MAX_SPEAKERS = '';
 	let STT_DEEPGRAM_API_KEY = '';
-
 	let STT_WHISPER_MODEL_LOADING = false;
 
-	// eslint-disable-next-line no-undef
-	let voices: SpeechSynthesisVoice[] = [];
-	let models: Awaited<ReturnType<typeof _getModels>>['models'] = [];
+	// Unified Voice Type for rendering in select dropdowns
+	type DisplayVoice = {
+		id: string; // Unique identifier (voiceURI, actual API ID, or voice name itself)
+		name: string; // Name to display in the dropdown
+	};
+
+	type FetchedModel = {
+		id: string;
+		object: string;
+		created: number;
+		owned_by: string;
+		name?: string; // Some APIs might have a name field for models
+	};
+
+	let voices: DisplayVoice[] = [];
+	let models: FetchedModel[] = [];
 
 	const getModels = async () => {
-		if (TTS_ENGINE === '') {
+		if (TTS_ENGINE === 'kokoro') {
+			if (!TTS_KOKORO_API_BASE_URL) {
+				models = [];
+				return;
+			}
+			try {
+				const response = await fetch(`${TTS_KOKORO_API_BASE_URL}/v1/models`);
+				if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+				const data = await response.json();
+				// Filter for "kokoro" owned models based on your example response
+				models = data.data.filter((m: FetchedModel) => m.owned_by === 'kokoro');
+				console.log('KokoroTTS models:', models);
+			} catch (e: any) {
+				toast.error(`Failed to fetch KokoroTTS models: ${e.message}`);
+				models = [];
+			}
+		} else if (TTS_ENGINE === '') {
 			models = [];
 		} else {
 			const res = await _getModels(
@@ -74,27 +106,55 @@
 	};
 
 	const getVoices = async () => {
-		if (TTS_ENGINE === '') {
-			const getVoicesLoop = setInterval(() => {
-				voices = speechSynthesis.getVoices();
+		let fetchedVoices: DisplayVoice[] = [];
 
-				// do your loop
-				if (voices.length > 0) {
-					clearInterval(getVoicesLoop);
-					voices.sort((a, b) => a.name.localeCompare(b.name, $i18n.resolvedLanguage));
+		if (TTS_ENGINE === 'kokoro') {
+			if (!TTS_KOKORO_API_BASE_URL) {
+				voices = [];
+				return;
+			}
+			try {
+				const response = await fetch(`${TTS_KOKORO_API_BASE_URL}/v1/audio/voices`);
+				if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+				const data = await response.json();
+				fetchedVoices = (data.voices as string[]).map((voiceName) => ({
+					id: voiceName,
+					name: voiceName
+				}));
+				fetchedVoices.sort((a, b) => a.name.localeCompare(b.name, $i18n.resolvedLanguage));
+				console.log('KokoroTTS voices:', fetchedVoices);
+			} catch (e: any) {
+				toast.error(`Failed to fetch KokoroTTS voices: ${e.message}`);
+			}
+		} else if (TTS_ENGINE === '') {
+			const getBrowserVoicesLoop = setInterval(() => {
+				const browserVoices = speechSynthesis.getVoices();
+				if (browserVoices.length > 0) {
+					clearInterval(getBrowserVoicesLoop);
+					fetchedVoices = browserVoices.map((voice) => ({
+						id: voice.voiceURI,
+						name: voice.name
+					}));
+					fetchedVoices.sort((a, b) => a.name.localeCompare(b.name, $i18n.resolvedLanguage));
 				}
 			}, 100);
 		} else {
+			// For OpenAI, ElevenLabs, Azure (assuming their _getVoices returns {id, name} or similar)
 			const res = await _getVoices(localStorage.token).catch((e) => {
 				toast.error(`${e}`);
 			});
 
 			if (res) {
 				console.log(res);
-				voices = res.voices;
-				voices.sort((a, b) => a.name.localeCompare(b.name, $i18n.resolvedLanguage));
+				// Assuming res.voices directly contains objects with id and name or can be mapped to it
+				fetchedVoices = res.voices.map((v: any) => ({
+					id: v.id || v.name, // Fallback to name if id not present (e.g., some ElevenLabs voices)
+					name: v.name || v.id // Fallback to id if name not present
+				}));
+				fetchedVoices.sort((a, b) => a.name.localeCompare(b.name, $i18n.resolvedLanguage));
 			}
 		}
+		voices = fetchedVoices;
 	};
 
 	const updateConfigHandler = async () => {
@@ -102,14 +162,23 @@
 			tts: {
 				OPENAI_API_BASE_URL: TTS_OPENAI_API_BASE_URL,
 				OPENAI_API_KEY: TTS_OPENAI_API_KEY,
-				API_KEY: TTS_API_KEY,
+				API_KEY: TTS_API_KEY, // This is already included and will be set for Kokoro if provided
 				ENGINE: TTS_ENGINE,
 				MODEL: TTS_MODEL,
-				VOICE: TTS_VOICE,
+				VOICE: (() => {
+					if (TTS_ENGINE === 'kokoro' && TTS_VOICE === '_custom_kokoro_combination_') {
+						return TTS_KOKORO_CUSTOM_COMBINATION_STRING;
+					}
+					return TTS_VOICE;
+				})(),
 				SPLIT_ON: TTS_SPLIT_ON,
 				AZURE_SPEECH_REGION: TTS_AZURE_SPEECH_REGION,
 				AZURE_SPEECH_BASE_URL: TTS_AZURE_SPEECH_BASE_URL,
-				AZURE_SPEECH_OUTPUT_FORMAT: TTS_AZURE_SPEECH_OUTPUT_FORMAT
+				AZURE_SPEECH_OUTPUT_FORMAT: TTS_AZURE_SPEECH_OUTPUT_FORMAT,
+				KOKORO_API_BASE_URL: TTS_KOKORO_API_BASE_URL,
+				...(TTS_ENGINE === 'kokoro' && { // Only include if KokoroTTS is selected
+					KOKORO_NORMALIZATION_OPTIONS: { normalize: TTS_KOKORO_ENABLE_NORMALIZATION }
+				})
 			},
 			stt: {
 				OPENAI_API_BASE_URL: STT_OPENAI_API_BASE_URL,
@@ -150,13 +219,28 @@
 
 			TTS_ENGINE = res.tts.ENGINE;
 			TTS_MODEL = res.tts.MODEL;
-			TTS_VOICE = res.tts.VOICE;
+
+			// Handle initial loading of KokoroTTS voice
+			if (res.tts.ENGINE === 'kokoro' && res.tts.VOICE) {
+				// Check if the loaded voice string indicates a custom combination (contains '+' or '(')
+				if (res.tts.VOICE.includes('+') || res.tts.VOICE.includes('(')) {
+					TTS_KOKORO_CUSTOM_COMBINATION_STRING = res.tts.VOICE;
+					TTS_VOICE = '_custom_kokoro_combination_'; // Set special value to show custom input
+				} else {
+					TTS_VOICE = res.tts.VOICE;
+				}
+			} else {
+				TTS_VOICE = res.tts.VOICE;
+				TTS_KOKORO_CUSTOM_COMBINATION_STRING = ''; // Ensure it's clear for other engines
+			}
 
 			TTS_SPLIT_ON = res.tts.SPLIT_ON || TTS_RESPONSE_SPLIT.PUNCTUATION;
 
 			TTS_AZURE_SPEECH_REGION = res.tts.AZURE_SPEECH_REGION;
 			TTS_AZURE_SPEECH_BASE_URL = res.tts.AZURE_SPEECH_BASE_URL;
 			TTS_AZURE_SPEECH_OUTPUT_FORMAT = res.tts.AZURE_SPEECH_OUTPUT_FORMAT;
+			TTS_KOKORO_API_BASE_URL = res.tts.KOKORO_API_BASE_URL || '';
+			TTS_KOKORO_ENABLE_NORMALIZATION = res.tts.KOKORO_NORMALIZATION_OPTIONS?.normalize ?? true; // Load normalization setting
 
 			STT_OPENAI_API_BASE_URL = res.stt.OPENAI_API_BASE_URL;
 			STT_OPENAI_API_KEY = res.stt.OPENAI_API_KEY;
@@ -181,6 +265,12 @@
 <form
 	class="flex flex-col h-full justify-between space-y-3 text-sm"
 	on:submit|preventDefault={async () => {
+		// Basic client-side validation for custom Kokoro voice string
+		if (TTS_ENGINE === 'kokoro' && TTS_VOICE === '_custom_kokoro_combination_' && !TTS_KOKORO_CUSTOM_COMBINATION_STRING) {
+			toast.error($i18n.t('Please enter a custom voice combination for KokoroTTS.'));
+			return; // Prevent saving
+		}
+
 		await updateConfigHandler();
 		dispatch('save');
 	}}
@@ -354,7 +444,9 @@
 							</div>
 						</div>
 					</div>
-				{:else if STT_ENGINE === ''}
+				{/if}
+
+				{#if STT_ENGINE === ''}
 					<div>
 						<div class=" mb-1.5 text-xs font-medium">{$i18n.t('STT Model')}</div>
 
@@ -426,16 +518,17 @@
 							bind:value={TTS_ENGINE}
 							placeholder="Select a mode"
 							on:change={async (e) => {
-								await updateConfigHandler();
-								await getVoices();
-								await getModels();
+								TTS_VOICE = ''; // Clear voice selection on engine change
+								TTS_MODEL = ''; // Clear model selection on engine change
+								TTS_KOKORO_CUSTOM_COMBINATION_STRING = ''; // Clear custom combination string
+								TTS_KOKORO_ENABLE_NORMALIZATION = true; // Reset normalization toggle on engine change
+								await updateConfigHandler(); // Save current config (including new engine)
+								await getVoices(); // Fetch voices for the new engine
+								await getModels(); // Fetch models for the new engine
 
 								if (e.target?.value === 'openai') {
 									TTS_VOICE = 'alloy';
 									TTS_MODEL = 'tts-1';
-								} else {
-									TTS_VOICE = '';
-									TTS_MODEL = '';
 								}
 							}}
 						>
@@ -443,6 +536,7 @@
 							<option value="transformers">{$i18n.t('Transformers')} ({$i18n.t('Local')})</option>
 							<option value="openai">{$i18n.t('OpenAI')}</option>
 							<option value="elevenlabs">{$i18n.t('ElevenLabs')}</option>
+							<option value="kokoro">KokoroTTS</option>
 							<option value="azure">{$i18n.t('Azure AI Speech')}</option>
 						</select>
 					</div>
@@ -470,6 +564,23 @@
 								bind:value={TTS_API_KEY}
 								required
 							/>
+						</div>
+					</div>
+				{:else if TTS_ENGINE === 'kokoro'}
+					<div>
+						<div class="mt-1 flex gap-2 mb-1">
+							<input
+								class="flex-1 w-full bg-transparent outline-hidden"
+								placeholder={$i18n.t('API Base URL')}
+								bind:value={TTS_KOKORO_API_BASE_URL}
+								required
+								on:blur={async () => {
+									await getVoices();
+									await getModels();
+								}}
+							/>
+							<!-- ADDED: API Key input for KokoroTTS -->
+							<SensitiveInput placeholder={$i18n.t('API Key (Optional)')} bind:value={TTS_API_KEY} required={false} />
 						</div>
 					</div>
 				{:else if TTS_ENGINE === 'azure'}
@@ -519,12 +630,14 @@
 										bind:value={TTS_VOICE}
 									>
 										<option value="" selected={TTS_VOICE !== ''}>{$i18n.t('Default')}</option>
-										{#each voices as voice}
+										{#each voices as voice (voice.id)}
 											<option
-												value={voice.voiceURI}
+												value={voice.id}
 												class="bg-gray-100 dark:bg-gray-700"
-												selected={TTS_VOICE === voice.voiceURI}>{voice.name}</option
+												selected={TTS_VOICE === voice.id}
 											>
+												{voice.name}
+											</option>
 										{/each}
 									</select>
 								</div>
@@ -585,7 +698,7 @@
 										/>
 
 										<datalist id="voice-list">
-											{#each voices as voice}
+											{#each voices as voice (voice.id)}
 												<option value={voice.id}>{voice.name}</option>
 											{/each}
 										</datalist>
@@ -604,7 +717,7 @@
 										/>
 
 										<datalist id="tts-model-list">
-											{#each models as model}
+											{#each models as model (model.id)}
 												<option value={model.id} class="bg-gray-50 dark:bg-gray-700" />
 											{/each}
 										</datalist>
@@ -626,7 +739,7 @@
 										/>
 
 										<datalist id="voice-list">
-											{#each voices as voice}
+											{#each voices as voice (voice.id)}
 												<option value={voice.id}>{voice.name}</option>
 											{/each}
 										</datalist>
@@ -645,10 +758,92 @@
 										/>
 
 										<datalist id="tts-model-list">
-											{#each models as model}
+											{#each models as model (model.id)}
 												<option value={model.id} class="bg-gray-50 dark:bg-gray-700" />
 											{/each}
 										</datalist>
+									</div>
+								</div>
+							</div>
+						</div>
+					{:else if TTS_ENGINE === 'kokoro'}
+						<div class=" flex gap-2">
+							<div class="w-full">
+								<div class=" mb-1.5 text-xs font-medium">{$i18n.t('TTS Voice')}</div>
+								<div class="flex w-full">
+									<div class="flex-1">
+										<select
+											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+											bind:value={TTS_VOICE}
+											on:change={() => {
+												// If "Custom Combination" is selected, pre-fill with a common voice if string is empty
+												if (TTS_VOICE === '_custom_kokoro_combination_' && !TTS_KOKORO_CUSTOM_COMBINATION_STRING && voices.length > 0) {
+													TTS_KOKORO_CUSTOM_COMBINATION_STRING = voices[0].id;
+												}
+											}}
+										>
+											<option value="">{$i18n.t('Select a voice')}</option>
+											<option value="_custom_kokoro_combination_">
+												{$i18n.t('Custom Combination...')}
+											</option>
+											{#each voices as voice (voice.id)}
+												<option value={voice.id} selected={TTS_VOICE === voice.id}>
+													{voice.name}
+												</option>
+											{/each}
+										</select>
+									</div>
+								</div>
+
+								{#if TTS_VOICE === '_custom_kokoro_combination_'}
+									<div class="flex-1 mt-2">
+										<input
+											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+											bind:value={TTS_KOKORO_CUSTOM_COMBINATION_STRING}
+											placeholder={$i18n.t('e.g., af_bella+af_sky or af_bella(2)+af_sky(1)')}
+											required
+										/>
+										<div class="mt-2 mb-1 text-xs text-gray-400 dark:text-gray-500">
+											{$i18n.t(
+												'Enter voice combinations (e.g., af_alloy+af_heart) or weighted combinations (e.g., af_bella(2)+af_sky(1)).'
+											)}
+										</div>
+									</div>
+								{/if}
+
+								<!-- Normalization Toggle (always visible for KokoroTTS) -->
+								<div class="mt-2 mb-2 flex w-full justify-between items-center">
+									<div class="text-xs font-medium">{$i18n.t('Enable Text Normalization')}</div>
+									<label class="relative inline-flex items-center cursor-pointer">
+										<input
+											type="checkbox"
+											class="sr-only peer"
+											bind:checked={TTS_KOKORO_ENABLE_NORMALIZATION}
+										/>
+										<div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600" />
+									</label>
+								</div>
+								<div class="mt-2 mb-1 text-xs text-gray-400 dark:text-gray-500">
+									{$i18n.t(
+										'Disable text normalization if words are missing or timestamps are incorrect in the generated audio.'
+									)}
+								</div>
+							</div>
+							<div class="w-full">
+								<div class=" mb-1.5 text-xs font-medium">{$i18n.t('TTS Model')}</div>
+								<div class="flex w-full">
+									<div class="flex-1">
+										<select
+											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+											bind:value={TTS_MODEL}
+										>
+											<option value="">{$i18n.t('Select a model')}</option>
+											{#each models as model (model.id)}
+												<option value={model.id} selected={TTS_MODEL === model.id}>
+													{model.id}
+												</option>
+											{/each}
+										</select>
 									</div>
 								</div>
 							</div>
@@ -667,7 +862,7 @@
 										/>
 
 										<datalist id="voice-list">
-											{#each voices as voice}
+											{#each voices as voice (voice.id)}
 												<option value={voice.id}>{voice.name}</option>
 											{/each}
 										</datalist>

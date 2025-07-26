@@ -3147,6 +3147,14 @@ AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT = PersistentConfig(
     ),
 )
 
+AUDIO_TTS_KOKORO_API_BASE_URL = PersistentConfig(
+    "AUDIO_TTS_KOKORO_API_BASE_URL",
+    "audio.tts.kokoro.api_base_url",
+    os.getenv
+        ("AUDIO_TTS_KOKORO_API_BASE_URL", ""
+    ),
+)
+
 
 ####################################
 # LDAP

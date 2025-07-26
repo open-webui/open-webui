@@ -29,7 +29,7 @@ from fastapi import (
     APIRouter,
 )
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
 
@@ -162,6 +162,7 @@ class TTSConfigForm(BaseModel):
     AZURE_SPEECH_REGION: str
     AZURE_SPEECH_BASE_URL: str
     AZURE_SPEECH_OUTPUT_FORMAT: str
+    KOKORO_API_BASE_URL: str
 
 
 class STTConfigForm(BaseModel):
@@ -198,6 +199,7 @@ async def get_audio_config(request: Request, user=Depends(get_admin_user)):
             "AZURE_SPEECH_REGION": request.app.state.config.TTS_AZURE_SPEECH_REGION,
             "AZURE_SPEECH_BASE_URL": request.app.state.config.TTS_AZURE_SPEECH_BASE_URL,
             "AZURE_SPEECH_OUTPUT_FORMAT": request.app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT,
+            "KOKORO_API_BASE_URL": request.app.state.config.TTS_KOKORO_API_BASE_URL,
         },
         "stt": {
             "OPENAI_API_BASE_URL": request.app.state.config.STT_OPENAI_API_BASE_URL,
@@ -234,6 +236,7 @@ async def update_audio_config(
     request.app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT = (
         form_data.tts.AZURE_SPEECH_OUTPUT_FORMAT
     )
+    request.app.state.config.TTS_KOKORO_API_BASE_URL = form_data.tts.KOKORO_API_BASE_URL
 
     request.app.state.config.STT_OPENAI_API_BASE_URL = form_data.stt.OPENAI_API_BASE_URL
     request.app.state.config.STT_OPENAI_API_KEY = form_data.stt.OPENAI_API_KEY
@@ -272,6 +275,7 @@ async def update_audio_config(
             "AZURE_SPEECH_REGION": request.app.state.config.TTS_AZURE_SPEECH_REGION,
             "AZURE_SPEECH_BASE_URL": request.app.state.config.TTS_AZURE_SPEECH_BASE_URL,
             "AZURE_SPEECH_OUTPUT_FORMAT": request.app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT,
+            "KOKORO_API_BASE_URL": request.app.state.config.TTS_KOKORO_API_BASE_URL,
         },
         "stt": {
             "OPENAI_API_BASE_URL": request.app.state.config.STT_OPENAI_API_BASE_URL,
@@ -308,11 +312,15 @@ def load_speech_pipeline(request):
 @router.post("/speech")
 async def speech(request: Request, user=Depends(get_verified_user)):
     body = await request.body()
-    name = hashlib.sha256(
-        body
-        + str(request.app.state.config.TTS_ENGINE).encode("utf-8")
-        + str(request.app.state.config.TTS_MODEL).encode("utf-8")
-    ).hexdigest()
+    # Use all relevant config values to ensure unique cache key
+    name_elements = [
+        body,
+        str(request.app.state.config.TTS_ENGINE).encode("utf-8"),
+        str(request.app.state.config.TTS_MODEL).encode("utf-8"),
+        str(request.app.state.config.TTS_VOICE).encode("utf-8"),
+        str(request.app.state.config.TTS_KOKORO_API_BASE_URL).encode("utf-8"),
+    ]
+    name = hashlib.sha256(b"".join(name_elements)).hexdigest()
 
     file_path = SPEECH_CACHE_DIR.joinpath(f"{name}.mp3")
     file_body_path = SPEECH_CACHE_DIR.joinpath(f"{name}.json")
@@ -388,6 +396,73 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                 status_code=status_code,
                 detail=detail,
             )
+
+    # --- START NEW KOKOROTTS LOGIC ---
+    elif request.app.state.config.TTS_ENGINE == "kokoro":
+        kokoro_api_base_url = request.app.state.config.TTS_KOKORO_API_BASE_URL
+        if not kokoro_api_base_url:
+            raise HTTPException(status_code=400, detail="KokoroTTS API Base URL is not configured.")
+
+        # Construct payload for KokoroTTS
+        kokoro_payload = {
+            "input": payload.get("input"), # Assuming 'input' key from frontend
+            "model": request.app.state.config.TTS_MODEL,
+            "voice": request.app.state.config.TTS_VOICE,
+            # Add other required parameters for KokoroTTS if any, based on its API spec
+        }
+
+        try:
+            timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+            async with aiohttp.ClientSession(
+                timeout=timeout, trust_env=True
+            ) as session:
+                r = await session.post(
+                    url=f"{kokoro_api_base_url}/v1/audio/speech",
+                    json=kokoro_payload,
+                    headers={
+                        "Content-Type": "application/json",
+                        # KokoroTTS might require an API Key in headers if not part of base_url
+                        # "Authorization": f"Bearer {YOUR_KOKORO_API_KEY}",
+                    },
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                )
+
+                r.raise_for_status() # Raise HTTPError for bad responses (4xx, 5xx)
+
+                # IMPORTANT: Get the Content-Type from KokoroTTS response
+                content_type = r.headers.get("Content-Type", "audio/mpeg") # Default to mpeg if not provided
+
+                async with aiofiles.open(file_path, "wb") as f:
+                    await f.write(await r.read())
+
+                async with aiofiles.open(file_body_path, "w") as f:
+                    await f.write(json.dumps(kokoro_payload)) # Cache the request payload
+
+            return FileResponse(file_path, media_type=content_type) # Specify media_type for correct response
+
+        except Exception as e:
+            log.exception(e)
+            detail = None
+            status_code = 500
+
+            if r is not None:
+                status_code = r.status
+                try:
+                    res = await r.json() # Try to get error message if JSON
+                    if "error" in res:
+                        detail = f"External (KokoroTTS): {res['error']}"
+                    else: # If not 'error' key, just return the raw JSON response
+                        detail = f"External (KokoroTTS): {json.dumps(res)}"
+                except Exception: # If not JSON, return raw text or generic error
+                    detail = f"External (KokoroTTS): {await r.text() if r.text else str(e)}"
+            else:
+                detail = f"Open WebUI: Server Connection Error with KokoroTTS ({str(e)})"
+
+            raise HTTPException(
+                status_code=status_code,
+                detail=detail,
+            )
+    # --- END NEW KOKOROTTS LOGIC ---
 
     elif request.app.state.config.TTS_ENGINE == "elevenlabs":
         voice_id = payload.get("voice", "")
@@ -1011,6 +1086,28 @@ def get_available_models(request: Request) -> list[dict]:
                 available_models = [{"id": "tts-1"}, {"id": "tts-1-hd"}]
         else:
             available_models = [{"id": "tts-1"}, {"id": "tts-1-hd"}]
+    # --- START NEW KOKOROTTS MODELS LOGIC ---
+    elif request.app.state.config.TTS_ENGINE == "kokoro":
+        kokoro_api_base_url = request.app.state.config.TTS_KOKORO_API_BASE_URL
+        if kokoro_api_base_url: # Only try to fetch if URL is set
+            try:
+                response = requests.get(f"{kokoro_api_base_url}/v1/models", timeout=5)
+                response.raise_for_status()
+                data = response.json()
+                # Assuming KokoroTTS models response format { "object": "list", "data": [ { "id": "tts-1", ... } ] }
+                available_models = [
+                    {"id": m["id"], "object": m["object"], "created": m["created"], "owned_by": m["owned_by"]}
+                    for m in data.get("data", [])
+                    if m.get("owned_by") == "kokoro" # Filter based on your example
+                ]
+            except requests.RequestException as e:
+                log.error(f"Error fetching KokoroTTS models from {kokoro_api_base_url}/v1/models: {str(e)}")
+                # Fallback or empty list if fetching fails
+                available_models = []
+        else:
+            log.warning("KokoroTTS API Base URL not set, cannot fetch models.")
+            available_models = []
+    # --- END NEW KOKOROTTS MODELS LOGIC ---
     elif request.app.state.config.TTS_ENGINE == "elevenlabs":
         try:
             response = requests.get(
@@ -1072,6 +1169,25 @@ def get_available_voices(request) -> dict:
                 "nova": "nova",
                 "shimmer": "shimmer",
             }
+    # --- START NEW KOKOROTTS VOICES LOGIC ---
+    elif request.app.state.config.TTS_ENGINE == "kokoro":
+        kokoro_api_base_url = request.app.state.config.TTS_KOKORO_API_BASE_URL
+        if kokoro_api_base_url: # Only try to fetch if URL is set
+            try:
+                response = requests.get(f"{kokoro_api_base_url}/v1/audio/voices", timeout=5)
+                response.raise_for_status()
+                data = response.json()
+                # Assuming KokoroTTS voices response format { "voices": [ "af_alloy", ... ] }
+                for voice_name in data.get("voices", []):
+                    available_voices[voice_name] = voice_name # id and name are the same string
+            except requests.RequestException as e:
+                log.error(f"Error fetching KokoroTTS voices from {kokoro_api_base_url}/v1/audio/voices: {str(e)}")
+                # Fallback or empty dict if fetching fails
+                available_voices = {}
+        else:
+            log.warning("KokoroTTS API Base URL not set, cannot fetch voices.")
+            available_voices = {}
+    # --- END NEW KOKOROTTS VOICES LOGIC ---
     elif request.app.state.config.TTS_ENGINE == "elevenlabs":
         try:
             available_voices = get_elevenlabs_voices(
@@ -1134,8 +1250,6 @@ def get_elevenlabs_voices(api_key: str) -> dict:
         # Avoid @lru_cache with exception
         log.error(f"Error fetching voices: {str(e)}")
         raise RuntimeError(f"Error fetching voices: {str(e)}")
-
-    return voices
 
 
 @router.get("/voices")
