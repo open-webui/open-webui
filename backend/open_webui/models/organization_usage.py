@@ -685,11 +685,16 @@ class ClientUsageTable:
             return False
     
     
-    def get_usage_stats_by_client(
+    async def get_usage_stats_by_client(
         self, client_org_id: str, use_client_timezone: bool = True
     ) -> ClientUsageStatsResponse:
         """Get admin-focused daily breakdown stats (no real-time features)"""
         try:
+            # Get current exchange rate information
+            from open_webui.utils.currency_converter import get_exchange_rate_info
+            exchange_info = await get_exchange_rate_info()
+            usd_pln_rate = exchange_info['usd_pln']
+            
             with get_db() as db:
                 # Get current month boundaries
                 today = date.today()
@@ -711,11 +716,12 @@ class ClientUsageTable:
                         'day_number': record.usage_date.day,
                         'tokens': record.total_tokens,
                         'cost': record.markup_cost,
-                        'cost_pln': record.markup_cost * 4.1234,  # TODO: Use real exchange rate
+                        'cost_pln': round(record.markup_cost * usd_pln_rate, 2),
                         'requests': record.total_requests,
                         'primary_model': record.primary_model,
                         'unique_users': record.unique_users,
-                        'last_activity': datetime.fromtimestamp(record.updated_at).strftime('%H:%M')
+                        'last_activity': datetime.fromtimestamp(record.updated_at).strftime('%H:%M'),
+                        'exchange_rate_used': usd_pln_rate
                     })
                 
                 # Calculate current month totals and averages
@@ -733,11 +739,12 @@ class ClientUsageTable:
                     'month': today.strftime('%B %Y'),
                     'total_tokens': total_tokens,
                     'total_cost': total_cost,
-                    'total_cost_pln': total_cost * 4.1234,  # TODO: Use real exchange rate
+                    'total_cost_pln': round(total_cost * usd_pln_rate, 2),
                     'total_requests': total_requests,
                     'days_with_usage': days_with_usage,
                     'days_in_month': today.day,  # Days elapsed so far
-                    'usage_percentage': (days_with_usage / today.day * 100) if today.day > 0 else 0
+                    'usage_percentage': (days_with_usage / today.day * 100) if today.day > 0 else 0,
+                    'exchange_rate_info': exchange_info
                 }
                 
                 # Monthly summary with business insights

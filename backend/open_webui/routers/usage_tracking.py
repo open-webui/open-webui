@@ -344,7 +344,7 @@ async def get_my_organization_usage_summary(user=Depends(get_current_user)):
         
         if client_org_id:
             # Get actual usage data using the new admin-focused method
-            stats = ClientUsageDB.get_usage_stats_by_client(client_org_id)
+            stats = await ClientUsageDB.get_usage_stats_by_client(client_org_id)
             
             return {
                 "success": True,
@@ -353,16 +353,15 @@ async def get_my_organization_usage_summary(user=Depends(get_current_user)):
                     "daily_breakdown": stats.daily_breakdown,
                     "monthly_summary": stats.monthly_summary,
                     "client_org_name": stats.client_org_name,
-                    "exchange_rate_info": {
-                        "usd_pln": 4.1234,
-                        "effective_date": date.today().isoformat()
-                    },
                     "pln_conversion_available": True
                 },
                 "client_id": client_org_id
             }
         else:
             # Fallback for environments without proper client setup
+            from open_webui.utils.currency_converter import get_exchange_rate_info
+            exchange_info = await get_exchange_rate_info()
+            
             return {
                 "success": True,
                 "stats": {
@@ -374,7 +373,8 @@ async def get_my_organization_usage_summary(user=Depends(get_current_user)):
                         "total_requests": 0,
                         "days_with_usage": 0,
                         "days_in_month": date.today().day,
-                        "usage_percentage": 0
+                        "usage_percentage": 0,
+                        "exchange_rate_info": exchange_info
                     },
                     "daily_breakdown": [],
                     "monthly_summary": {
@@ -387,10 +387,6 @@ async def get_my_organization_usage_summary(user=Depends(get_current_user)):
                         "most_used_model": None
                     },
                     "client_org_name": org_name,
-                    "exchange_rate_info": {
-                        "usd_pln": 4.1234,
-                        "effective_date": date.today().isoformat()
-                    },
                     "pln_conversion_available": True
                 },
                 "client_id": "env_fallback"
@@ -445,6 +441,10 @@ async def get_my_organization_usage_by_user(user=Depends(get_current_user)):
     """Get usage breakdown by user for the current organization (environment-based)"""
     try:
         from open_webui.models.organization_usage import ClientUsageDB
+        from open_webui.utils.currency_converter import get_current_usd_pln_rate
+        
+        # Get current exchange rate
+        usd_pln_rate = await get_current_usd_pln_rate()
         
         # Get client organization ID
         client_org_id = get_environment_client_org_id()
@@ -476,7 +476,7 @@ async def get_my_organization_usage_by_user(user=Depends(get_current_user)):
                 "total_tokens": usage['total_tokens'],
                 "total_requests": usage['total_requests'],
                 "markup_cost": usage['markup_cost'],
-                "cost_pln": usage['markup_cost'] * 4.1234,  # TODO: Use real exchange rate
+                "cost_pln": round(usage['markup_cost'] * usd_pln_rate, 2),
                 "days_active": usage['days_active'],
                 "last_activity": None,  # Could be enhanced with last usage date
                 "user_mapping_enabled": True
@@ -540,6 +540,10 @@ async def get_my_organization_usage_by_model(user=Depends(get_current_user)):
     """Get usage breakdown by model for the current organization (environment-based)"""
     try:
         from open_webui.models.organization_usage import ClientUsageDB
+        from open_webui.utils.currency_converter import get_current_usd_pln_rate
+        
+        # Get current exchange rate
+        usd_pln_rate = await get_current_usd_pln_rate()
         
         # Get client organization ID
         client_org_id = get_environment_client_org_id()
@@ -562,7 +566,7 @@ async def get_my_organization_usage_by_model(user=Depends(get_current_user)):
                 "total_tokens": usage['total_tokens'],
                 "total_requests": usage['total_requests'],
                 "markup_cost": usage['markup_cost'],
-                "cost_pln": usage['markup_cost'] * 4.1234,  # TODO: Use real exchange rate
+                "cost_pln": round(usage['markup_cost'] * usd_pln_rate, 2),
                 "days_used": usage.get('days_used', 0)
             }
             model_usage_list.append(enhanced_usage)

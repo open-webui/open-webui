@@ -90,55 +90,182 @@ class NBPClient:
     async def get_usd_pln_rate(self) -> Optional[Dict[str, Any]]:
         """
         Get current USD/PLN exchange rate from NBP Table C (buy/sell rates)
-        Returns the sell (ask) rate which is used for converting USD to PLN
+        
+        Hybrid approach combining holiday calendar optimization with robust fallback:
+        - Known Polish holidays: skip API calls, use last working day
+        - Weekends: use Friday rate
+        - Unknown non-publication days: enhanced 404 fallback search
+        - Technical issues: automatic retry with working day search
         
         Returns:
             {
                 "rate": 4.0123,           # USD/PLN sell rate
                 "effective_date": "2024-01-15",  # Date when rate was published
-                "table_no": "012/C/NBP/2024"     # NBP table number
+                "table_no": "012/C/NBP/2024",    # NBP table number
+                "rate_source": "current|working_day|holiday_skip|fallback_404"
+                "skip_reason": "Known holiday/weekend/etc" # Why API call was skipped
             }
         """
         # Check cache first
         cache_key = "usd_pln_rate"
         cached = self._cache.get(cache_key)
         if cached:
-            log.debug(f"Using cached USD/PLN rate: {cached['rate']}")
+            log.debug(f"Using cached USD/PLN rate: {cached['rate']} from {cached.get('rate_source', 'unknown')}")
             return cached
         
-        # Try to get today's rate
-        today = date.today()
-        data = await self._fetch_exchange_rate_for_date(today)
+        from .polish_holidays import polish_holidays
         
+        now = datetime.now()
+        today = date.today()
+        nbp_publish_time = datetime.combine(today, datetime_time(8, 15))  # 8:15 AM CET
+        
+        # TIER 1: Holiday Calendar Optimization
+        # Check if we know this day won't have data
+        if not polish_holidays.is_working_day(today):
+            # Skip API call for known non-working days
+            fallback_date = polish_holidays.get_last_working_day_before(today)
+            data = await self._fetch_exchange_rate_for_date(fallback_date)
+            
+            if data:
+                skip_reason = "Weekend" if today.weekday() >= 5 else f"Polish holiday: {polish_holidays.get_holiday_name(today)}"
+                data.update({
+                    'rate_source': 'holiday_skip',
+                    'skip_reason': skip_reason,
+                    'original_target_date': today.isoformat(),
+                    'fallback_date': fallback_date.isoformat()
+                })
+                
+                # Cache with appropriate TTL
+                ttl = self._calculate_cache_ttl(data, now, today, nbp_publish_time)
+                self._cache.set(cache_key, data, ttl)
+                
+                log.info(f"🗓️  {skip_reason}: Using rate from {fallback_date} (rate: {data['rate']})")
+                return data
+        
+        # TIER 2: Working Day Strategy with Time Logic
+        data = None
+        rate_source = "current"
+        
+        if now < nbp_publish_time:
+            # Before 8:15 AM - might not have today's rate yet
+            log.debug("Before NBP publish time (8:15 AM)")
+            
+            # Try today's rate first (might be available)
+            data = await self._fetch_exchange_rate_for_date(today)
+            
+            if not data:
+                # No current rate - use previous working day
+                fallback_date = polish_holidays.get_last_working_day_before(today)
+                data = await self._fetch_exchange_rate_for_date(fallback_date)
+                rate_source = "working_day"
+                log.info(f"⏰ Before publish time, no current rate: Using {fallback_date}")
+        else:
+            # After 8:15 AM - current rate should be available
+            log.debug("After NBP publish time (8:15 AM)")
+            data = await self._fetch_exchange_rate_for_date(today)
+            
+            if not data:
+                log.warning(f"⚠️  No rate available on expected working day {today} after publish time")
+                # Fall through to TIER 3 for robust handling
+        
+        # TIER 3: Enhanced 404 Fallback (handles unknown non-publication days)
         if not data:
-            # If today's rate not available (weekend/holiday), try previous days
-            for days_back in range(1, 8):  # Check up to 7 days back
-                check_date = today - timedelta(days=days_back)
-                data = await self._fetch_exchange_rate_for_date(check_date)
-                if data:
-                    log.info(f"Using USD/PLN rate from {check_date} (latest available)")
-                    break
+            log.info("🔍 Using enhanced fallback search for unknown non-publication day")
+            data = await self._enhanced_fallback_search(today)
+            if data:
+                rate_source = "fallback_404"
         
         if data:
-            # Cache the result
-            # If it's today's data and before 8:15 AM CET, cache only until 8:15 AM
-            # Otherwise cache for 24 hours
-            now = datetime.now()
-            if data['effective_date'] == today.isoformat():
-                nbp_update_time = datetime.combine(today, datetime_time(8, 15))  # 8:15 AM CET
-                if now < nbp_update_time:
-                    ttl = nbp_update_time - now
-                else:
-                    ttl = timedelta(hours=24)
-            else:
-                # Historical rate, cache for 24 hours
-                ttl = timedelta(hours=24)
+            # Add metadata
+            if 'rate_source' not in data:
+                data['rate_source'] = rate_source
             
+            # Smart caching
+            ttl = self._calculate_cache_ttl(data, now, today, nbp_publish_time)
             self._cache.set(cache_key, data, ttl)
+            
+            log.info(f"✅ USD/PLN rate: {data['rate']} from {data['effective_date']} (source: {data['rate_source']})")
             return data
         
-        log.error("Failed to get USD/PLN rate from NBP")
+        log.error("❌ Failed to get USD/PLN rate - all strategies exhausted")
         return None
+    
+    async def _enhanced_fallback_search(self, target_date: date, max_days_back: int = 10) -> Optional[Dict[str, Any]]:
+        """
+        Enhanced fallback search for unknown non-publication days.
+        Handles technical issues, undeclared holidays, bank strikes, etc.
+        
+        Args:
+            target_date: The date we originally wanted data for
+            max_days_back: Maximum days to search backwards
+            
+        Returns:
+            Rate data from the most recent available working day
+        """
+        from .polish_holidays import polish_holidays
+        
+        log.info(f"🔍 Enhanced fallback search from {target_date} (max {max_days_back} days back)")
+        
+        # Strategy: Try working days going backwards, skip known non-working days
+        days_checked = 0
+        current_date = target_date - timedelta(days=1)
+        
+        while days_checked < max_days_back:
+            # Skip weekends and known holidays to avoid unnecessary API calls
+            if polish_holidays.is_working_day(current_date):
+                log.debug(f"  Trying working day: {current_date}")
+                data = await self._fetch_exchange_rate_for_date(current_date)
+                
+                if data:
+                    log.info(f"  ✅ Found rate from {current_date} (fallback from {target_date})")
+                    data.update({
+                        'fallback_info': {
+                            'original_target': target_date.isoformat(),
+                            'days_back': (target_date - current_date).days,
+                            'reason': 'Unknown non-publication day (404 fallback)'
+                        }
+                    })
+                    return data
+                else:
+                    log.debug(f"  ❌ No data available for {current_date}")
+            else:
+                # Skip known non-working day
+                skip_reason = "weekend" if current_date.weekday() >= 5 else "holiday"
+                log.debug(f"  ⏭️  Skipping {current_date} ({skip_reason})")
+            
+            current_date -= timedelta(days=1)
+            days_checked += 1
+        
+        log.warning(f"Enhanced fallback search exhausted - no data found within {max_days_back} days")
+        return None
+    
+    def _calculate_cache_ttl(self, data: Dict[str, Any], now: datetime, today: date, nbp_publish_time: datetime) -> timedelta:
+        """Calculate appropriate cache TTL based on rate source and timing"""
+        rate_source = data.get('rate_source', 'current')
+        effective_date = data.get('effective_date')
+        
+        if rate_source == 'holiday_skip':
+            # Holiday or weekend rates - cache until next working day
+            from .polish_holidays import polish_holidays
+            next_working_day = polish_holidays.get_next_working_day_after(today)
+            next_publish_time = datetime.combine(next_working_day, datetime_time(8, 15))
+            return max(next_publish_time - now, timedelta(minutes=5))
+            
+        elif rate_source == 'working_day' and now < nbp_publish_time:
+            # Using previous working day before publish time - refresh at publish time
+            return max(nbp_publish_time - now, timedelta(minutes=5))
+            
+        elif rate_source == 'fallback_404':
+            # Unknown non-publication day - cache for shorter period to detect recovery
+            return timedelta(hours=4)  # Check again in 4 hours
+            
+        elif effective_date == today.isoformat() and now < nbp_publish_time:
+            # Current day rate but before publish time - check again at publish time
+            return max(nbp_publish_time - now, timedelta(minutes=5))
+            
+        else:
+            # Standard 24-hour cache for stable current rates
+            return timedelta(hours=24)
     
     async def _fetch_exchange_rate_for_date(self, check_date: date) -> Optional[Dict[str, Any]]:
         """Fetch exchange rate for a specific date"""
