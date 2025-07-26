@@ -101,27 +101,27 @@ Client B (Hetzner Server 2)
 - **Multi-model Support**: Abstracted model interface supporting various LLM providers
 - **OpenRouter Integration**: Automatic usage tracking with 1.3x markup pricing
 
-### Usage Tracking Data Flow (Per Instance) - UPDATED IMPLEMENTATION
+### Usage Tracking Data Flow (Per Instance) - PRODUCTION IMPLEMENTATION
 ```
-Client Admin → Settings → Connections → Enter API Key
+Environment Variables (.env) → Container Startup
                 ↓
-        Auto-sync to Database
+    Automatic Database Initialization
                 ↓
-        Chat Request Made
+    Create Usage Tracking Tables
                 ↓
-    OpenRouter Streaming Response (SSE)
+    Create/Update Client Organization
                 ↓
-     Background Sync (Every 10 min)
+        User Makes Query
                 ↓
-    Poll OpenRouter /generation API
+    OpenRouter API Call with external_user
                 ↓
-    Fetch Actual Usage Data
+    Response with Usage Data
                 ↓
-    External User Auto-Learned
+    openrouter_client_manager.record_real_time_usage()
                 ↓
-    Database Recording with Aggregation
+    Save to client_user_daily_usage & client_model_daily_usage
                 ↓
-     Admin Dashboard Updates (Live)
+    UI Dashboard Shows Real Usage Data
 ```
 LLM Integration Architecture
 Model Abstraction
