@@ -647,12 +647,26 @@ def transcription_handler(request, file_path, metadata):
                 params["model"] = request.app.state.config.STT_MODEL
 
             # Make request to Deepgram API
-            r = requests.post(
-                "https://api.deepgram.com/v1/listen?smart_format=true",
-                headers=headers,
-                params=params,
-                data=file_data,
-            )
+            params["language"] = metadata.get("language") or WHISPER_LANGUAGE
+            # Make request to Deepgram API
+            max_retries = 3
+            retry_count = 0
+            while retry_count < max_retries:
+                r = requests.post(
+                    "https://api.deepgram.com/v1/listen?smart_format=true",
+                    headers=headers,
+                    params=params,
+                    data=file_data,
+                )
+                if r.status_code == 200:
+                    break
+                elif r.status_code == 400 and "language" in params.keys():
+                    log.warning(
+                        "Retrying deepgram API call without the language param:"
+                        f" \"{params['language']}\""
+                    )
+                    del params["language"]
+                retry_count += 1
             r.raise_for_status()
             response_data = r.json()
 
