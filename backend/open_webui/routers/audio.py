@@ -801,7 +801,7 @@ def transcription_handler(request: Request, file_path, metadata, user):
             )
 
 
-def transcribe(request: Request, file_path: str, metadata: Optional[dict] = None, user):
+def transcribe(request: Request, file_path: str, metadata: Optional[dict] = None, user=None):
     log.info(f"transcribe: {file_path} {metadata}")
 
     if is_audio_conversion_required(file_path):
