@@ -72,11 +72,16 @@
 		name: string;
 		weight: number;
 		percentage: number;
+		isValid: boolean;
 	};
 
 	let voices: DisplayVoice[] = [];
 	let models: FetchedModel[] = [];
 	let kokoroVoiceCombinations: KokoroVoiceCombination[] = [];
+
+	// --- Validation State ---
+	let isKokoroCombinationInputValid = true;
+	let kokoroCombinationError: string | null = null;
 
 	// Helper to get a clean URL for KokoroTTS
 	const getCleanKokoroUrl = (url: string) => {
@@ -88,23 +93,36 @@
 	const parseKokoroVoiceCombinations = (combinationString: string | null | undefined) => {
 		if (!combinationString) {
 			kokoroVoiceCombinations = [];
+			isKokoroCombinationInputValid = true;
+			kokoroCombinationError = null;
 			return;
 		}
 
 		const combinations: KokoroVoiceCombination[] = [];
 		let totalWeight = 0;
+		const invalidVoices: string[] = [];
 
-		// Regex to capture voice name and weight (e.g., "voice_name(weight)")
-		const voiceRegex = /([\w-]+)(?:\((\d+(?:\.\d+)?)\))?/g;
+		// Regex to capture voice names. It looks for:
+		// 1. `([\w-]+)`: Captures the voice name (alphanumeric + hyphen).
+		// 2. `(?:\([^)]+\))?`: Optionally matches a weight in parentheses (any characters inside), but doesn't capture it.
+		// The 'g' flag ensures we find all matches.
+		const voiceRegex = /([\w-]+)(?:\([^)]+\))?/g;
 		let match;
 
+		// Create a set of available VOICE IDs for quick lookup
+		const availableVoiceIds = new Set(voices.map(voice => voice.id));
+
 		while ((match = voiceRegex.exec(combinationString)) !== null) {
-			const voiceName = match[1];
-			const weightString = match[2];
-			const weight = weightString ? parseFloat(weightString) : 1; // Default weight is 1
+			const voiceName = match[1]; // This is the captured voice name
+			const weightMatch = match[0].match(/\((\d+(?:\.\d+)?)\)/); // Extract weight separately if it exists
+			const weight = weightMatch ? parseFloat(weightMatch[1]) : 1; // Default weight is 1
 
 			if (voiceName) {
-				combinations.push({ name: voiceName, weight, percentage: 0 });
+				const isValid = availableVoiceIds.has(voiceName); // VALIDATE AGAINST VOICE IDs
+				if (!isValid) {
+					invalidVoices.push(voiceName); // Add to the list of invalid voices
+				}
+				combinations.push({ name: voiceName, weight, percentage: 0, isValid });
 				totalWeight += weight;
 			}
 		}
@@ -117,9 +135,17 @@
 		}
 
 		kokoroVoiceCombinations = combinations;
+		isKokoroCombinationInputValid = invalidVoices.length === 0;
+
+		if (!isKokoroCombinationInputValid) {
+			const invalidVoicesString = invalidVoices.join('", "');
+			kokoroCombinationError = $i18n.t('Invalid voice names found: "{{voiceNames}}". Please check the available voices.', { voiceNames: invalidVoicesString });
+		} else {
+			kokoroCombinationError = null;
+		}
 	};
 
-	// Watch for changes in TTS_KOKORO_CUSTOM_COMBINATION_STRING to update percentages
+	// Watch for changes in TTS_KOKORO_CUSTOM_COMBINATION_STRING to update percentages and validation
 	$: if (TTS_ENGINE === 'kokoro' && TTS_VOICE === '_custom_kokoro_combination_') {
 		parseKokoroVoiceCombinations(TTS_KOKORO_CUSTOM_COMBINATION_STRING);
 	}
@@ -210,6 +236,11 @@
 	};
 
 	const updateConfigHandler = async () => {
+		if (TTS_ENGINE === 'kokoro' && TTS_VOICE === '_custom_kokoro_combination_' && !isKokoroCombinationInputValid) {
+			toast.error(kokoroCombinationError || $i18n.t('Please correct the invalid voice names in the combination.'));
+			return false;
+		}
+
 		const res = await updateAudioConfig(localStorage.token, {
 			tts: {
 				OPENAI_API_BASE_URL: TTS_OPENAI_API_BASE_URL,
@@ -251,7 +282,9 @@
 		if (res) {
 			saveHandler();
 			config.set(await getBackendConfig());
+			return true;
 		}
+		return false;
 	};
 
 	const sttModelUpdateHandler = async () => {
@@ -276,7 +309,7 @@
 				if (res.tts.VOICE.includes('+') || res.tts.VOICE.includes('(')) {
 					TTS_KOKORO_CUSTOM_COMBINATION_STRING = res.tts.VOICE;
 					TTS_VOICE = '_custom_kokoro_combination_';
-					parseKokoroVoiceCombinations(res.tts.VOICE); // Parse initial value
+					// Parse will be called by reactive block
 				} else {
 					TTS_VOICE = res.tts.VOICE;
 				}
@@ -310,6 +343,9 @@
 
 		await getVoices();
 		await getModels();
+		if (TTS_ENGINE === 'kokoro' && TTS_VOICE === '_custom_kokoro_combination_') {
+			parseKokoroVoiceCombinations(TTS_KOKORO_CUSTOM_COMBINATION_STRING);
+		}
 	});
 </script>
 
@@ -324,9 +360,10 @@
 			toast.error($i18n.t('Please enter a custom voice combination for KokoroTTS.'));
 			return;
 		}
-
-		await updateConfigHandler();
-		dispatch('save');
+		const saveSuccess = await updateConfigHandler();
+		if (saveSuccess) {
+			dispatch('save');
+		}
 	}}
 >
 	<div class=" space-y-3 overflow-y-scroll scrollbar-hidden h-full">
@@ -576,7 +613,9 @@
 								TTS_MODEL = '';
 								TTS_KOKORO_CUSTOM_COMBINATION_STRING = '';
 								TTS_KOKORO_ENABLE_NORMALIZATION = true;
-								kokoroVoiceCombinations = []; // Clear combinations on engine change
+								kokoroVoiceCombinations = [];
+								isKokoroCombinationInputValid = true;
+								kokoroCombinationError = null;
 								await updateConfigHandler();
 								await getVoices();
 								await getModels();
@@ -630,8 +669,12 @@
 								bind:value={TTS_KOKORO_API_BASE_URL}
 								required
 								on:blur={async () => {
-									await getVoices();
-									await getModels();
+									// Fetching voices/models might fail if API URL is invalid,
+									// but we should still try to parse the combination.
+									await getVoices(); // Fetch voices for validation
+									await getModels(); // Fetch models for selection elsewhere
+									// Re-parse to update validation status based on new voices
+									parseKokoroVoiceCombinations(TTS_KOKORO_CUSTOM_COMBINATION_STRING);
 								}}
 							/>
 							<SensitiveInput
@@ -841,13 +884,14 @@
 											on:change={(e) => {
 												const selectedValue = e.target.value;
 												if (selectedValue === '_custom_kokoro_combination_') {
-													// If custom is selected, ensure we have a default or prompt for input
 													if (!TTS_KOKORO_CUSTOM_COMBINATION_STRING && voices.length > 0) {
 														TTS_KOKORO_CUSTOM_COMBINATION_STRING = voices[0].id;
 													}
-													parseKokoroVoiceCombinations(TTS_KOKORO_CUSTOM_COMBINATION_STRING); // Ensure parsing on selection
+													// The reactive block will handle parsing and validation
 												} else {
 													kokoroVoiceCombinations = []; // Clear combinations if a specific voice is selected
+													isKokoroCombinationInputValid = true;
+													kokoroCombinationError = null;
 												}
 											}}
 											required
@@ -868,10 +912,13 @@
 								{#if TTS_VOICE === '_custom_kokoro_combination_'}
 									<div class="flex-1 mt-2">
 										<input
-											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden
+                                                {isKokoroCombinationInputValid ? '' : 'border-red-500 dark:border-red-700'}"
 											bind:value={TTS_KOKORO_CUSTOM_COMBINATION_STRING}
 											placeholder={$i18n.t('e.g., af_bella+af_sky or af_bella(2)+af_sky(1)')}
 											required
+											aria-invalid={!isKokoroCombinationInputValid}
+											aria-describedby={!isKokoroCombinationInputValid ? 'kokoro-combination-error' : undefined}
 										/>
 										<div class="mt-2 mb-1 text-xs text-gray-400 dark:text-gray-500">
 											{$i18n.t(
@@ -879,7 +926,12 @@
 											)}
 										</div>
 
-										<!-- Displaying percentages -->
+										{#if !isKokoroCombinationInputValid && kokoroCombinationError}
+											<p id="kokoro-combination-error" class="mt-1 text-xs text-red-500 dark:text-red-400">
+												{kokoroCombinationError}
+											</p>
+										{/if}
+
 										{#if kokoroVoiceCombinations.length > 0}
 											<div class="mt-3 p-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
 												<div class="text-xs font-medium mb-1.5">{$i18n.t('Voice Distribution')}</div>
