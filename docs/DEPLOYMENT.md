@@ -110,14 +110,22 @@ docker images | grep open-webui
 ## 导出镜像
 
 ### 使用导出脚本（推荐）
+
+**步骤：**
+1. **确保脚本有执行权限**
+```bash
+chmod +x export_image.sh
+```
+
+2. **运行导出脚本**
 ```bash
 ./export_image.sh
 ```
 
-脚本会：
-- 检查镜像是否存在
+**脚本功能：**
+- 自动检查镜像 `emohaa-open-webui:main` 是否存在
 - 导出并压缩镜像为 `emohaa-open-webui.tar.gz`
-- 显示文件大小和后续步骤
+- 显示文件大小和后续步骤提示
 
 ### 手动导出（可选）
 ```bash
@@ -166,16 +174,39 @@ ssh user@your-server-ip
 docker load < emohaa-open-webui.tar.gz
 ```
 
-### 3. 复制运行脚本
-将 `run_docker.sh` 脚本传输到服务器：
+### 3. 传输运行脚本到服务器
 ```bash
 scp run_docker.sh user@your-server-ip:/home/user/
 ```
 
-### 4. 运行容器
+### 4. 使用脚本运行容器（推荐）
+
+**步骤：**
+1. **确保脚本有执行权限**
 ```bash
 chmod +x run_docker.sh
+```
+
+2. **运行部署脚本**
+```bash
 ./run_docker.sh
+```
+
+**脚本功能：**
+- 自动检查镜像 `emohaa-open-webui:main` 是否存在
+- 处理已存在的容器（提示是否删除重建）
+- 启动容器并显示访问信息
+- 提供常用管理命令提示
+
+### 5. 手动运行容器（可选）
+```bash
+docker run -d \
+  --name emohaa-open-webui \
+  -p 3000:8080 \
+  -v emohaa-open-webui:/app/backend/data \
+  --add-host=host.docker.internal:host-gateway \
+  --restart always \
+  emohaa-open-webui:main
 ```
 
 ## 端口配置
