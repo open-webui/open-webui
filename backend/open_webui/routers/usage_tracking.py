@@ -581,20 +581,21 @@ async def get_my_organization_subscription_billing(user=Depends(get_current_user
         # In environment-based mode, all users belong to the same organization
         # Get all users from the system
         users_response = Users.get_users()
-        all_users = users_response.get('users', []) if isinstance(users_response, dict) else []
+        all_users = users_response.users if hasattr(users_response, 'users') else []
         
         # Define pricing tiers
         pricing_tiers = [
-            {"min": 1, "max": 5, "price": 49},
-            {"min": 6, "max": 10, "price": 39},
-            {"min": 11, "max": 15, "price": 29},
-            {"min": 16, "max": float('inf'), "price": 19}
+            {"min": 1, "max": 3, "price": 79},
+            {"min": 4, "max": 9, "price": 69},
+            {"min": 10, "max": 19, "price": 59},
+            {"min": 20, "max": float('inf'), "price": 54}
         ]
         
         # Get current month info
         now = datetime.now()
         current_month = now.month
         current_year = now.year
+        # calendar.monthrange correctly handles all month lengths (28, 29, 30, 31 days)
         days_in_month = calendar.monthrange(current_year, current_month)[1]
         
         # Get user details and calculate billing
@@ -602,7 +603,7 @@ async def get_my_organization_subscription_billing(user=Depends(get_current_user
         total_users = len(all_users)
         
         # Determine current pricing tier
-        current_tier_price = 49  # default
+        current_tier_price = 79  # default (1-3 users)
         for tier in pricing_tiers:
             if tier["min"] <= total_users <= tier["max"]:
                 current_tier_price = tier["price"]
