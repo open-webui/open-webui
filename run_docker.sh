@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # 设置镜像名称
-IMAGE_NAME="ghcr.io/open-webui/open-webui:main"
+IMAGE_NAME="emohaa-open-webui:main"
 CONTAINER_NAME="emohaa-open-webui"
 PORT="3000:8080"
-VOLUME_NAME="open-webui"
+VOLUME_NAME="emohaa-open-webui"
 
 # 颜色输出
 GREEN='\033[0;32m'

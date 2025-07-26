@@ -316,4 +316,4 @@ cypress/screenshots
 *.tar.gz
 *.tar.bz2
 open-webui.tar*
-emohaa-webui.tar*
+emohaa-open-webui.tar*
