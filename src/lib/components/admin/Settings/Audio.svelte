@@ -67,14 +67,62 @@
 		name?: string; // Some APIs might have a name field for models
 	};
 
+	// Type for parsed KokoroTTS voice combinations
+	type KokoroVoiceCombination = {
+		name: string;
+		weight: number;
+		percentage: number;
+	};
+
 	let voices: DisplayVoice[] = [];
 	let models: FetchedModel[] = [];
+	let kokoroVoiceCombinations: KokoroVoiceCombination[] = [];
 
 	// Helper to get a clean URL for KokoroTTS
 	const getCleanKokoroUrl = (url: string) => {
 		if (!url) return '';
 		return url.replace(/\/+$/, ''); // Remove trailing slashes
 	};
+
+	// Function to parse KokoroTTS voice combination string and calculate percentages
+	const parseKokoroVoiceCombinations = (combinationString: string | null | undefined) => {
+		if (!combinationString) {
+			kokoroVoiceCombinations = [];
+			return;
+		}
+
+		const combinations: KokoroVoiceCombination[] = [];
+		let totalWeight = 0;
+
+		// Regex to capture voice name and weight (e.g., "voice_name(weight)")
+		const voiceRegex = /([\w-]+)(?:\((\d+(?:\.\d+)?)\))?/g;
+		let match;
+
+		while ((match = voiceRegex.exec(combinationString)) !== null) {
+			const voiceName = match[1];
+			const weightString = match[2];
+			const weight = weightString ? parseFloat(weightString) : 1; // Default weight is 1
+
+			if (voiceName) {
+				combinations.push({ name: voiceName, weight, percentage: 0 });
+				totalWeight += weight;
+			}
+		}
+
+		// Calculate percentages
+		if (totalWeight > 0) {
+			combinations.forEach((combo) => {
+				combo.percentage = (combo.weight / totalWeight) * 100;
+			});
+		}
+
+		kokoroVoiceCombinations = combinations;
+	};
+
+	// Watch for changes in TTS_KOKORO_CUSTOM_COMBINATION_STRING to update percentages
+	$: if (TTS_ENGINE === 'kokoro' && TTS_VOICE === '_custom_kokoro_combination_') {
+		parseKokoroVoiceCombinations(TTS_KOKORO_CUSTOM_COMBINATION_STRING);
+	}
 
 	const getModels = async () => {
 		if (TTS_ENGINE === 'kokoro') {
@@ -87,7 +135,6 @@
 				const response = await fetch(`${cleanUrl}/v1/models`);
 				if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 				const data = await response.json();
-				// Filter for "kokoro" owned models based on your example response
 				models = data.data.filter((m: FetchedModel) => m.owned_by === 'kokoro');
 				console.log('KokoroTTS models:', models);
 			} catch (e: any) {
@@ -152,10 +199,9 @@
 
 			if (res) {
 				console.log(res);
-				// Assuming res.voices directly contains objects with id and name or can be mapped to it
 				fetchedVoices = res.voices.map((v: any) => ({
-					id: v.id || v.name, // Fallback to name if id not present (e.g., some ElevenLabs voices)
-					name: v.name || v.id // Fallback to id if name not present
+					id: v.id || v.name,
+					name: v.name || v.id
 				}));
 				fetchedVoices.sort((a, b) => a.name.localeCompare(b.name, $i18n.resolvedLanguage));
 			}
@@ -181,7 +227,7 @@
 				AZURE_SPEECH_REGION: TTS_AZURE_SPEECH_REGION,
 				AZURE_SPEECH_BASE_URL: TTS_AZURE_SPEECH_BASE_URL,
 				AZURE_SPEECH_OUTPUT_FORMAT: TTS_AZURE_SPEECH_OUTPUT_FORMAT,
-				KOKORO_API_BASE_URL: getCleanKokoroUrl(TTS_KOKORO_API_BASE_URL), // Store clean URL
+				KOKORO_API_BASE_URL: getCleanKokoroUrl(TTS_KOKORO_API_BASE_URL),
 				...(TTS_ENGINE === 'kokoro' && {
 					KOKORO_NORMALIZATION_OPTIONS: { normalize: TTS_KOKORO_ENABLE_NORMALIZATION }
 				})
@@ -226,18 +272,17 @@
 			TTS_ENGINE = res.tts.ENGINE;
 			TTS_MODEL = res.tts.MODEL;
 
-			// Handle initial loading of KokoroTTS voice
 			if (res.tts.ENGINE === 'kokoro' && res.tts.VOICE) {
-				// Check if the loaded voice string indicates a custom combination (contains '+' or '(')
 				if (res.tts.VOICE.includes('+') || res.tts.VOICE.includes('(')) {
 					TTS_KOKORO_CUSTOM_COMBINATION_STRING = res.tts.VOICE;
-					TTS_VOICE = '_custom_kokoro_combination_'; // Set special value to show custom input
+					TTS_VOICE = '_custom_kokoro_combination_';
+					parseKokoroVoiceCombinations(res.tts.VOICE); // Parse initial value
 				} else {
 					TTS_VOICE = res.tts.VOICE;
 				}
 			} else {
 				TTS_VOICE = res.tts.VOICE;
-				TTS_KOKORO_CUSTOM_COMBINATION_STRING = ''; // Ensure it's clear for other engines
+				TTS_KOKORO_CUSTOM_COMBINATION_STRING = '';
 			}
 
 			TTS_SPLIT_ON = res.tts.SPLIT_ON || TTS_RESPONSE_SPLIT.PUNCTUATION;
@@ -245,7 +290,7 @@
 			TTS_AZURE_SPEECH_REGION = res.tts.AZURE_SPEECH_REGION;
 			TTS_AZURE_SPEECH_BASE_URL = res.tts.AZURE_SPEECH_BASE_URL;
 			TTS_AZURE_SPEECH_OUTPUT_FORMAT = res.tts.AZURE_SPEECH_OUTPUT_FORMAT;
-			TTS_KOKORO_API_BASE_URL = res.tts.KOKORO_API_BASE_URL || ''; // Load the stored URL
+			TTS_KOKORO_API_BASE_URL = res.tts.KOKORO_API_BASE_URL || '';
 			TTS_KOKORO_ENABLE_NORMALIZATION = res.tts.KOKORO_NORMALIZATION_OPTIONS?.normalize ?? true;
 
 			STT_OPENAI_API_BASE_URL = res.stt.OPENAI_API_BASE_URL;
@@ -271,14 +316,13 @@
 <form
 	class="flex flex-col h-full justify-between space-y-3 text-sm"
 	on:submit|preventDefault={async () => {
-		// Basic client-side validation for custom Kokoro voice string
 		if (
 			TTS_ENGINE === 'kokoro' &&
 			TTS_VOICE === '_custom_kokoro_combination_' &&
 			!TTS_KOKORO_CUSTOM_COMBINATION_STRING
 		) {
 			toast.error($i18n.t('Please enter a custom voice combination for KokoroTTS.'));
-			return; // Prevent saving
+			return;
 		}
 
 		await updateConfigHandler();
@@ -528,13 +572,14 @@
 							bind:value={TTS_ENGINE}
 							placeholder="Select a mode"
 							on:change={async (e) => {
-								TTS_VOICE = ''; // Clear voice selection on engine change
-								TTS_MODEL = ''; // Clear model selection on engine change
-								TTS_KOKORO_CUSTOM_COMBINATION_STRING = ''; // Clear custom combination string
-								TTS_KOKORO_ENABLE_NORMALIZATION = true; // Reset normalization toggle on engine change
-								await updateConfigHandler(); // Save current config (including new engine)
-								await getVoices(); // Fetch voices for the new engine
-								await getModels(); // Fetch models for the new engine
+								TTS_VOICE = '';
+								TTS_MODEL = '';
+								TTS_KOKORO_CUSTOM_COMBINATION_STRING = '';
+								TTS_KOKORO_ENABLE_NORMALIZATION = true;
+								kokoroVoiceCombinations = []; // Clear combinations on engine change
+								await updateConfigHandler();
+								await getVoices();
+								await getModels();
 
 								if (e.target?.value === 'openai') {
 									TTS_VOICE = 'alloy';
@@ -793,13 +838,16 @@
 										<select
 											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 											bind:value={TTS_VOICE}
-											on:change={() => {
-												if (
-													TTS_VOICE === '_custom_kokoro_combination_' &&
-													!TTS_KOKORO_CUSTOM_COMBINATION_STRING &&
-													voices.length > 0
-												) {
-													TTS_KOKORO_CUSTOM_COMBINATION_STRING = voices[0].id;
+											on:change={(e) => {
+												const selectedValue = e.target.value;
+												if (selectedValue === '_custom_kokoro_combination_') {
+													// If custom is selected, ensure we have a default or prompt for input
+													if (!TTS_KOKORO_CUSTOM_COMBINATION_STRING && voices.length > 0) {
+														TTS_KOKORO_CUSTOM_COMBINATION_STRING = voices[0].id;
+													}
+													parseKokoroVoiceCombinations(TTS_KOKORO_CUSTOM_COMBINATION_STRING); // Ensure parsing on selection
+												} else {
+													kokoroVoiceCombinations = []; // Clear combinations if a specific voice is selected
 												}
 											}}
 											required
@@ -830,10 +878,22 @@
 												'Enter voice combinations (e.g., af_alloy+af_heart) or weighted combinations (e.g., af_bella(2)+af_sky(1)).'
 											)}
 										</div>
+
+										<!-- Displaying percentages -->
+										{#if kokoroVoiceCombinations.length > 0}
+											<div class="mt-3 p-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
+												<div class="text-xs font-medium mb-1.5">{$i18n.t('Voice Distribution')}</div>
+												{#each kokoroVoiceCombinations as combo (combo.name)}
+													<div class="flex justify-between text-xs">
+														<span>{combo.name}:</span>
+														<span>{combo.percentage.toFixed(1)}%</span>
+													</div>
+												{/each}
+											</div>
+										{/if}
 									</div>
 								{/if}
 
-								<!-- Normalization Toggle (always visible for KokoroTTS) -->
 								<div class="mt-2 mb-2 flex w-full justify-between items-center">
 									<div class="text-xs font-medium">{$i18n.t('Enable Text Normalization')}</div>
 									<label class="relative inline-flex items-center cursor-pointer">
