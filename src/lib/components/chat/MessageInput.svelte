@@ -151,6 +151,8 @@
 		imageGenerationEnabled = false;
 		codeInterpreterEnabled = false;
 		attachFileEnabled = false;
+
+		sessionStorage.selectedModels = JSON.stringify([$config.default_models]);
 	}
 
 	let showTools = false;
