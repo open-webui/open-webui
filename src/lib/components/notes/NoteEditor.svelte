@@ -713,7 +713,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 				><ArrowLeftNew />back</a
 			>
 			<div
-				class="relative max-w-[800px] mx-auto p-[16px] h-[85%] rounded-[12px] w-full flex flex-col bg-white/88"
+				class="relative max-w-[800px] mx-auto p-[16px] h-[85%] rounded-[12px] w-full flex flex-col bg-white/88 dark:bg-transparent dark:border"
 			>
 				<div class="shrink-0 w-full flex justify-between items-center">
 					<div class="w-full flex items-center">
