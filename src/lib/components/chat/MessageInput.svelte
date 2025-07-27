@@ -829,7 +829,7 @@
 			</div>
 		</div>
 
-		<div class="{transparentBackground ? 'bg-transparent' : 'bg-transparent dark:bg-gray-900'} ">
+		<div class="bg-transparent">
 			<div class="{($settings?.widescreenMode ?? null) ? 'max-w-full' : ''} mx-auto inset-x-0">
 				<div class="">
 					<input
