@@ -583,7 +583,19 @@
 										updateModelsHandler();
 									}}
 								>
-									<ArrowPath className="w-4 h-4" />
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										viewBox="0 0 16 16"
+										fill="currentColor"
+										class="w-4 h-4"
+									>
+										<path
+											d="M7 1a.75.75 0 0 1 .75.75V6h-1.5V1.75A.75.75 0 0 1 7 1ZM6.25 6v2.94L5.03 7.72a.75.75 0 0 0-1.06 1.06l2.5 2.5a.75.75 0 0 0 1.06 0l2.5-2.5a.75.75 0 1 0-1.06-1.06L7.75 8.94V6H10a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h2.25Z"
+										/>
+										<path
+											d="M4.268 14A2 2 0 0 0 6 15h6a2 2 0 0 0 2-2v-3a2 2 0 0 0-1-1.732V11a3 3 0 0 1-3 3H4.268Z"
+										/>
+									</svg>
 								</button>
 							</Tooltip>
 						</div>
@@ -656,7 +668,22 @@
 														cancelModelPullHandler(model);
 													}}
 												>
-													<XMark className="w-4 h-4" />
+													<svg
+														class="w-4 h-4 text-gray-800 dark:text-white"
+														aria-hidden="true"
+														xmlns="http://www.w3.org/2000/svg"
+														width="24"
+														height="24"
+														fill="currentColor"
+														viewBox="0 0 24 24"
+													>
+														<path
+															stroke="currentColor"
+															stroke-linecap="round"
+															stroke-linejoin="round"
+															stroke-width="2"
+															d="M6 18 17.94 6M18 18 6.06 6"
+														/>
 												</button>
 											</Tooltip>
 										</div>
