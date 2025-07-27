@@ -344,6 +344,8 @@ from open_webui.config import (
     GOOGLE_PSE_ENGINE_ID,
     GOOGLE_DRIVE_CLIENT_ID,
     GOOGLE_DRIVE_API_KEY,
+    GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON,
+    ENABLE_GOOGLE_DRIVE_FOLDER_SYNC,
     ENABLE_ONEDRIVE_INTEGRATION,
     ONEDRIVE_CLIENT_ID_PERSONAL,
     ONEDRIVE_CLIENT_ID_BUSINESS,
@@ -472,6 +474,7 @@ from open_webui.env import (
     AUDIT_INCLUDED_PATHS,
     AUDIT_LOG_LEVEL,
     CHANGELOG,
+    ENV,
     REDIS_URL,
     REDIS_CLUSTER,
     REDIS_KEY_PREFIX,
@@ -560,6 +563,8 @@ from open_webui.tasks import (
     stop_task,
     list_tasks,
 )  # Import from tasks.py
+
+from open_webui.services.google_drive_scheduler import google_drive_scheduler
 
 from open_webui.utils.redis import get_sentinels_from_env
 
@@ -702,10 +707,30 @@ async def lifespan(app: FastAPI):
     # Mark application as ready to accept traffic from a startup perspective.
     app.state.startup_complete = True
 
+    # Start Google Drive sync scheduler if enabled
+    if app.state.config.ENABLE_GOOGLE_DRIVE_FOLDER_SYNC:
+        try:
+            await google_drive_scheduler.start()
+            log.info("Google Drive sync scheduler started successfully")
+        except Exception as e:
+            log.error(f"Failed to start Google Drive sync scheduler: {e}")
+            # Non-critical failure - continue application startup
+
     yield
 
     if hasattr(app.state, 'redis_task_command_listener'):
         app.state.redis_task_command_listener.cancel()
+
+    # Stop Google Drive sync scheduler
+    if (
+        hasattr(app.state, "config")
+        and app.state.config.ENABLE_GOOGLE_DRIVE_FOLDER_SYNC
+    ):
+        try:
+            await google_drive_scheduler.stop()
+            log.info("Google Drive sync scheduler stopped")
+        except Exception as e:
+            log.error(f"Error stopping Google Drive sync scheduler: {e}")
 
 
 app = FastAPI(
@@ -1046,6 +1071,10 @@ app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = BYPASS_WEB_SEARCH_E
 app.state.config.BYPASS_WEB_SEARCH_WEB_LOADER = BYPASS_WEB_SEARCH_WEB_LOADER
 
 app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION = ENABLE_GOOGLE_DRIVE_INTEGRATION
+app.state.config.GOOGLE_DRIVE_API_KEY = GOOGLE_DRIVE_API_KEY
+app.state.config.GOOGLE_DRIVE_CLIENT_ID = GOOGLE_DRIVE_CLIENT_ID
+app.state.config.GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON = GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON
+app.state.config.ENABLE_GOOGLE_DRIVE_FOLDER_SYNC = ENABLE_GOOGLE_DRIVE_FOLDER_SYNC
 app.state.config.ENABLE_ONEDRIVE_INTEGRATION = ENABLE_ONEDRIVE_INTEGRATION
 
 app.state.config.OLLAMA_CLOUD_WEB_SEARCH_API_KEY = OLLAMA_CLOUD_WEB_SEARCH_API_KEY
@@ -2076,6 +2105,7 @@ async def get_app_config(request: Request):
                     'enable_admin_chat_access': ENABLE_ADMIN_CHAT_ACCESS,
                     'enable_admin_analytics': ENABLE_ADMIN_ANALYTICS,
                     'enable_google_drive_integration': app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
+                    'enable_google_drive_folder_sync': app.state.config.ENABLE_GOOGLE_DRIVE_FOLDER_SYNC,
                     'enable_onedrive_integration': app.state.config.ENABLE_ONEDRIVE_INTEGRATION,
                     'enable_memories': app.state.config.ENABLE_MEMORIES,
                     **(
@@ -2123,6 +2153,9 @@ async def get_app_config(request: Request):
                 'google_drive': {
                     'client_id': GOOGLE_DRIVE_CLIENT_ID.value,
                     'api_key': GOOGLE_DRIVE_API_KEY.value,
+                },
+                'google_drive_folder_sync': {
+                    'service_account_json': GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON.value,
                 },
                 'onedrive': {
                     'client_id_personal': ONEDRIVE_CLIENT_ID_PERSONAL,
