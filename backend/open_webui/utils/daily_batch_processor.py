@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """
 Daily Batch Processor for mAI Usage Tracking
-Runs at 00:00 daily to process and aggregate usage data with NBP exchange rates
+Runs at 00:00 daily to validate and aggregate usage data with NBP exchange rates
 
 This script:
-1. Processes previous day's usage data
-2. Updates cumulative monthly totals (1st to current day)
-3. Fetches fresh NBP exchange rates for PLN conversion
-4. Maintains database consistency without real-time overhead
+1. Updates NBP exchange rates for PLN conversion
+2. Updates model pricing from OpenRouter API
+3. Validates and corrects previous day's usage data
+4. Updates cumulative monthly totals (1st to current day)
+5. Cleans up old processed generation records
 """
 
 import asyncio
@@ -60,15 +61,23 @@ class DailyBatchProcessor:
                 "details": exchange_result
             })
             
-            # 2. Process and consolidate daily usage data
-            consolidation_result = await self._consolidate_daily_usage(processing_date)
+            # 2. Update model pricing from OpenRouter
+            pricing_result = await self._update_model_pricing()
             results["operations"].append({
-                "operation": "daily_consolidation", 
-                "success": consolidation_result["success"],
-                "details": consolidation_result
+                "operation": "model_pricing_update",
+                "success": pricing_result["success"],
+                "details": pricing_result
             })
             
-            # 3. Update monthly cumulative totals (1st to current day)
+            # 3. Validate and correct daily usage data
+            validation_result = await self._consolidate_daily_usage(processing_date)
+            results["operations"].append({
+                "operation": "daily_validation", 
+                "success": validation_result["success"],
+                "details": validation_result
+            })
+            
+            # 4. Update monthly cumulative totals (1st to current day)
             monthly_result = await self._update_monthly_totals(today)
             results["operations"].append({
                 "operation": "monthly_totals_update",
@@ -76,7 +85,7 @@ class DailyBatchProcessor:
                 "details": monthly_result
             })
             
-            # 4. Clean up old processed generations
+            # 5. Clean up old processed generations
             cleanup_result = await self._cleanup_old_data()
             results["operations"].append({
                 "operation": "data_cleanup",
@@ -143,11 +152,41 @@ class DailyBatchProcessor:
             log.warning(f"⚠️ NBP API unavailable, using fallback rate: {fallback_result['usd_pln_rate']} PLN")
             return fallback_result
     
+    async def _update_model_pricing(self) -> Dict[str, Any]:
+        """Update model pricing from OpenRouter API"""
+        try:
+            from open_webui.utils.openrouter_models import get_dynamic_model_pricing
+            
+            # Force refresh to get latest pricing
+            pricing_data = await get_dynamic_model_pricing(force_refresh=True)
+            
+            pricing_result = {
+                "success": pricing_data.get("success", False),
+                "models_count": len(pricing_data.get("models", [])),
+                "source": pricing_data.get("source", "unknown"),
+                "last_updated": pricing_data.get("last_updated"),
+                "fetched_at": datetime.now().isoformat()
+            }
+            
+            if pricing_result["success"]:
+                log.info(f"💰 Model pricing updated: {pricing_result['models_count']} models from {pricing_result['source']}")
+            else:
+                log.warning(f"⚠️ Model pricing update failed, using cached/fallback data")
+            
+            return pricing_result
+            
+        except Exception as e:
+            log.error(f"❌ Failed to update model pricing: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "fetched_at": datetime.now().isoformat()
+            }
+    
     async def _consolidate_daily_usage(self, processing_date: date) -> Dict[str, Any]:
         """
-        Consolidate and validate daily usage data for the given date
-        1. Migrate data from client_live_counters to client_daily_usage
-        2. Validate and correct existing records
+        Validate and correct daily usage data for the given date
+        Ensures markup costs are calculated correctly for all records
         """
         try:
             conn = sqlite3.connect(self.db_path)
@@ -162,69 +201,11 @@ class DailyBatchProcessor:
                 "clients_processed": 0,
                 "total_records_verified": 0,
                 "data_corrections": 0,
-                "records_migrated": 0,
                 "clients_data": []
             }
             
             for client_id, client_name, markup_rate in clients:
-                # STEP 1: Migrate data from client_live_counters to client_daily_usage
-                cursor.execute("""
-                    SELECT current_date, today_tokens, today_requests, today_raw_cost, today_markup_cost, last_updated
-                    FROM client_live_counters 
-                    WHERE client_org_id = ? AND current_date = ?
-                """, (client_id, processing_date))
-                
-                live_data = cursor.fetchone()
-                
-                if live_data:
-                    # Found live data for processing date
-                    live_date, live_tokens, live_requests, live_raw_cost, live_markup_cost, last_updated = live_data
-                    
-                    # Check if record already exists in client_daily_usage
-                    daily_record_id = f"{client_id}:{processing_date}"
-                    cursor.execute("""
-                        SELECT total_tokens, total_requests, raw_cost, markup_cost 
-                        FROM client_daily_usage 
-                        WHERE id = ?
-                    """, (daily_record_id,))
-                    
-                    existing_record = cursor.fetchone()
-                    
-                    if not existing_record:
-                        # Migrate live data to daily usage table with duplicate prevention
-                        # Calculate proper markup cost if needed
-                        if live_markup_cost == 0.0 and live_raw_cost > 0.0:
-                            calculated_markup_cost = live_raw_cost * markup_rate
-                        else:
-                            calculated_markup_cost = live_markup_cost
-                        
-                        # Use INSERT OR IGNORE to prevent duplicates in production
-                        cursor.execute("""
-                            INSERT OR IGNORE INTO client_daily_usage 
-                            (id, client_org_id, usage_date, total_tokens, total_requests, 
-                             raw_cost, markup_cost, primary_model, unique_users, created_at, updated_at)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        """, (
-                            daily_record_id, client_id, processing_date, 
-                            live_tokens, live_requests, live_raw_cost, calculated_markup_cost,
-                            'unknown',  # We'll improve model tracking later
-                            1,  # Default unique users
-                            int(time.time()), int(time.time())
-                        ))
-                        
-                        # Check if record was actually inserted (not ignored due to duplicate)
-                        if cursor.rowcount > 0:
-                            consolidation_stats["records_migrated"] += 1
-                            log.info(f"📦 Migrated live data for {client_name}: {live_tokens} tokens, {live_requests} requests, ${calculated_markup_cost:.6f}")
-                        else:
-                            log.info(f"⚠️ Record already exists for {client_name} on {processing_date} - skipped to prevent duplicate")
-                    else:
-                        log.info(f"📋 Record already exists for {client_name} on {processing_date} - validating only")
-                else:
-                    # No live data found for processing date - this is normal in production
-                    log.info(f"📅 No live data found for {client_name} on {processing_date} - client had no usage that day")
-                
-                # STEP 2: Validate and correct existing records
+                # Validate and correct existing records
                 # Get daily usage for this client and date
                 cursor.execute("""
                     SELECT total_tokens, total_requests, raw_cost, markup_cost, primary_model
@@ -279,7 +260,6 @@ class DailyBatchProcessor:
             conn.close()
             
             log.info(f"📊 Daily consolidation completed: {consolidation_stats['clients_processed']} clients, "
-                    f"{consolidation_stats['records_migrated']} records migrated, "
                     f"{consolidation_stats['total_records_verified']} records verified, "
                     f"{consolidation_stats['data_corrections']} corrections made")
             

@@ -173,15 +173,13 @@
 			
 			if (response?.success && response.models) {
 				modelPricingData = response.models;
-				console.log(`Loaded ${response.models.length} models from OpenRouter API`);
 			} else {
-				console.warn('Invalid response from OpenRouter API, using fallback data');
-				modelPricingData = fallbackPricingData;
+				// Use fallback data if API fails
+				modelPricingData = response?.models || fallbackPricingData;
 			}
 		} catch (error) {
-			console.error('Failed to load model pricing from OpenRouter:', error);
+			console.error('Failed to load model pricing:', error);
 			modelPricingData = fallbackPricingData;
-			toast.error($i18n.t('Failed to load real-time pricing. Using cached data.'));
 		} finally {
 			loadingPricing = false;
 		}
@@ -1075,13 +1073,13 @@
 		</div>
 	{:else if activeTab === 'pricing'}
 	<div class="bg-white dark:bg-gray-850 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-		<div class="flex items-center justify-between mb-4">
+		<div class="mb-4">
 			<h3 class="text-lg font-medium">{$i18n.t('Available Models & Pricing')}</h3>
 			<div class="text-sm text-gray-500 dark:text-gray-400">
 				{#if loadingPricing}
 					{$i18n.t('Loading pricing information...')}
 				{:else}
-					{$i18n.t('Current pricing rates')}
+					{$i18n.t('Prices updated daily at 00:00')}
 				{/if}
 			</div>
 		</div>
