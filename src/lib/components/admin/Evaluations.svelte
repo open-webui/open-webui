@@ -2,6 +2,7 @@
 	import { getContext, tick, onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
+	import { config } from '$lib/stores';
 
 	import Leaderboard from './Evaluations/Leaderboard.svelte';
 	import Feedbacks from './Evaluations/Feedbacks.svelte';
@@ -117,7 +118,10 @@
 			{#if selectedTab === 'leaderboard'}
 				<Leaderboard {feedbacks} />
 			{:else if selectedTab === 'feedbacks'}
-				<Feedbacks {feedbacks} />
+				<Feedbacks
+					{feedbacks}
+					enable_community_sharing={$config?.features?.enable_community_sharing}
+				/>
 			{/if}
 		</div>
 	</div>

@@ -26,6 +26,7 @@
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	export let feedbacks = [];
+	export let enable_community_sharing = false;
 
 	let page = 1;
 	$: paginatedFeedbacks = sortedFeedbacks.slice((page - 1) * 10, page * 10);
@@ -390,7 +391,7 @@
 	{/if}
 </div>
 
-{#if feedbacks.length > 0}
+{#if feedbacks.length > 0 && enable_community_sharing}
 	<div class=" flex flex-col justify-end w-full text-right gap-1">
 		<div class="line-clamp-1 text-gray-500 text-xs">
 			{$i18n.t('Help us create the best community leaderboard by sharing your feedback history!')}
