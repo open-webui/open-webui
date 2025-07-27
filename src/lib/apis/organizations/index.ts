@@ -33,28 +33,17 @@ export const getClientUsageSummary = async (token: string) => {
 };
 
 export const getTodayUsage = async (token: string, _clientOrgId?: string) => {
-	try {
-		const response = await fetch(`${BASE_URL}/my-organization/today-usage`, {
-			method: 'GET',
-			headers: {
-				'Authorization': `Bearer ${token}`,
-				'Content-Type': 'application/json'
-			}
-		});
-		
-		if (!response.ok) {
-			throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-		}
-		
-		return await response.json();
-	} catch (error) {
-		console.error('Failed to fetch today usage:', error);
-		return {
-			success: false,
-			error: error instanceof Error ? error.message : 'Unknown error',
-			today: { tokens: 0, cost: 0, requests: 0, last_updated: 'Error loading data' }
-		};
-	}
+	// DEPRECATED: This function is deprecated. Use getClientUsageSummary instead.
+	console.warn('getTodayUsage is deprecated. Use getClientUsageSummary for daily breakdown data.');
+	
+	// Return mock data without making the deprecated API call
+	return {
+		success: false,
+		deprecated: true,
+		message: 'Real-time usage tracking has been simplified. Please use getClientUsageSummary for daily breakdown data.',
+		alternative_function: 'getClientUsageSummary',
+		today: { tokens: 0, cost: 0, requests: 0, last_updated: 'Deprecated - Use summary endpoint' }
+	};
 };
 
 export const getUsageByUser = async (token: string, _clientOrgId?: string) => {

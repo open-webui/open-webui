@@ -492,9 +492,9 @@
 				<div>
 					<p class="text-sm font-medium text-gray-600 dark:text-gray-400">Total Tokens</p>
 					<p class="text-2xl font-semibold text-gray-900 dark:text-white">
-						{formatNumber(usageData.current_month.total_tokens)}
+						{formatNumber(usageData.current_month?.total_tokens || 0)}
 					</p>
-					<p class="text-xs text-gray-500 mt-1">{usageData.current_month.month}</p>
+					<p class="text-xs text-gray-500 mt-1">{usageData.current_month?.month || 'Loading...'}</p>
 				</div>
 				<div class="flex-shrink-0">
 					<div class="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
@@ -512,9 +512,9 @@
 				<div>
 					<p class="text-sm font-medium text-gray-600 dark:text-gray-400">Total Cost</p>
 					<p class="text-2xl font-semibold text-gray-900 dark:text-white">
-						{formatDualCurrency(usageData.current_month.total_cost, usageData.current_month.total_cost_pln)}
+						{formatDualCurrency(usageData.current_month?.total_cost || 0, usageData.current_month?.total_cost_pln || 0)}
 					</p>
-					<p class="text-xs text-gray-500 mt-1">{usageData.current_month.total_requests} requests</p>
+					<p class="text-xs text-gray-500 mt-1">{usageData.current_month?.total_requests || 0} requests</p>
 				</div>
 				<div class="flex-shrink-0">
 					<div class="w-8 h-8 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
@@ -532,9 +532,9 @@
 				<div>
 					<p class="text-sm font-medium text-gray-600 dark:text-gray-400">Usage Activity</p>
 					<p class="text-2xl font-semibold text-gray-900 dark:text-white">
-						{usageData.current_month.days_with_usage}/{usageData.current_month.days_in_month}
+						{usageData.current_month?.days_with_usage || 0}/{usageData.current_month?.days_in_month || 0}
 					</p>
-					<p class="text-xs text-gray-500 mt-1">{Math.round(usageData.current_month.usage_percentage)}% active days</p>
+					<p class="text-xs text-gray-500 mt-1">{Math.round(usageData.current_month?.usage_percentage || 0)}% active days</p>
 				</div>
 				<div class="flex-shrink-0">
 					<div class="w-8 h-8 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center">
@@ -604,11 +604,11 @@
 						<div class="space-y-2">
 							<div class="flex justify-between">
 								<span class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Daily Average')}:</span>
-								<span class="text-sm font-medium">{formatNumber(usageData.monthly_summary.average_daily_tokens)} tokens</span>
+								<span class="text-sm font-medium">{formatNumber(usageData.monthly_summary?.average_daily_tokens || 0)} tokens</span>
 							</div>
 							<div class="flex justify-between">
 								<span class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Usage Day Average')}:</span>
-								<span class="text-sm font-medium">{formatNumber(usageData.monthly_summary.average_usage_day_tokens)} tokens</span>
+								<span class="text-sm font-medium">{formatNumber(usageData.monthly_summary?.average_usage_day_tokens || 0)} tokens</span>
 							</div>
 						</div>
 					</div>
@@ -618,11 +618,11 @@
 						<div class="space-y-2">
 							<div class="flex justify-between">
 								<span class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Busiest Day')}:</span>
-								<span class="text-sm font-medium">{usageData.monthly_summary.busiest_day || 'N/A'}</span>
+								<span class="text-sm font-medium">{usageData.monthly_summary?.busiest_day || 'N/A'}</span>
 							</div>
 							<div class="flex justify-between">
 								<span class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Highest Cost Day')}:</span>
-								<span class="text-sm font-medium">{usageData.monthly_summary.highest_cost_day || 'N/A'}</span>
+								<span class="text-sm font-medium">{usageData.monthly_summary?.highest_cost_day || 'N/A'}</span>
 							</div>
 						</div>
 					</div>
@@ -632,11 +632,11 @@
 						<div class="space-y-2">
 							<div class="flex justify-between">
 								<span class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Primary Model')}:</span>
-								<span class="text-sm font-medium">{usageData.monthly_summary.most_used_model || 'N/A'}</span>
+								<span class="text-sm font-medium">{usageData.monthly_summary?.most_used_model || 'N/A'}</span>
 							</div>
 							<div class="flex justify-between">
 								<span class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Active Users')}:</span>
-								<span class="text-sm font-medium">{usageData.monthly_summary.total_unique_users}</span>
+								<span class="text-sm font-medium">{usageData.monthly_summary?.total_unique_users || 0}</span>
 							</div>
 						</div>
 					</div>
@@ -645,7 +645,7 @@
 
 			<!-- Daily Breakdown Table -->
 			<div class="bg-white dark:bg-gray-850 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-				<h3 class="text-lg font-medium mb-4">{$i18n.t('Daily Breakdown')} - {usageData.current_month.month}</h3>
+				<h3 class="text-lg font-medium mb-4">{$i18n.t('Daily Breakdown')} - {usageData.current_month?.month || 'Current Month'}</h3>
 				
 				{#if usageData.daily_breakdown && usageData.daily_breakdown.length > 0}
 					<div class="overflow-x-auto">
@@ -679,25 +679,25 @@
 								{#each usageData.daily_breakdown as day}
 									<tr>
 										<td class="px-4 py-3 whitespace-nowrap text-sm font-medium">
-											{day.date}
+											{day?.date || 'N/A'}
 										</td>
 										<td class="px-4 py-3 whitespace-nowrap text-sm">
-											{day.day_name}
+											{day?.day_name || 'N/A'}
 										</td>
 										<td class="px-4 py-3 whitespace-nowrap text-sm">
-											{formatNumber(day.tokens)}
+											{formatNumber(day?.tokens || 0)}
 										</td>
 										<td class="px-4 py-3 whitespace-nowrap text-sm font-medium">
-											{formatDualCurrency(day.cost, day.cost_pln)}
+											{formatDualCurrency(day?.cost || 0, day?.cost_pln || 0)}
 										</td>
 										<td class="px-4 py-3 whitespace-nowrap text-sm">
-											{formatNumber(day.requests)}
+											{formatNumber(day?.requests || 0)}
 										</td>
 										<td class="px-4 py-3 whitespace-nowrap text-sm">
-											{day.primary_model || 'N/A'}
+											{day?.primary_model || 'N/A'}
 										</td>
 										<td class="px-4 py-3 whitespace-nowrap text-sm">
-											{day.last_activity}
+											{day?.last_activity || 'N/A'}
 										</td>
 									</tr>
 								{/each}
