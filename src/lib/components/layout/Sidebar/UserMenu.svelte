@@ -215,7 +215,7 @@
 					<div
 						class="w-[40px] h-[20px] {isOnNotification
 							? 'bg-neutrals-green'
-							: 'bg-neutrals-50'} rounded-full peer duration-300"
+							: 'bg-neutrals-50 dark:bg-gray-500'} rounded-full peer duration-300"
 					>
 						<div
 							class=" flex items-center justify-center absolute {isOnNotification
@@ -242,7 +242,7 @@
 					<div
 						class="w-[40px] h-[20px] {isOnThemeToggle
 							? 'bg-neutrals-green'
-							: 'bg-neutrals-50'} rounded-full peer duration-300"
+							: 'bg-neutrals-50 dark:bg-gray-500'} rounded-full peer duration-300"
 					>
 						<div
 							class=" flex items-center justify-center absolute {isOnThemeToggle
