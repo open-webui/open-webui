@@ -233,10 +233,10 @@ docker exec container sqlite3 /app/backend/data/webui.db \
 - Production-ready Docker deployment architecture
 
 ### **🔄 Active Components:**
-- **Usage Tracking Router** (`usage_tracking.py`) - API endpoints for UI
+- **Usage Tracking API** (`usage_tracking/`) - Clean API Architecture with Router → Service → Repository layers for UI endpoints
 - **Daily Batch Processor** (`daily_batch_processor.py`) - 00:00 automation
 - **OpenRouter Models API** (`openrouter_models.py`) - Dynamic pricing
-- **Organization Usage Models** (`organization_usage.py`) - Database schema and duplicate prevention
+- **Organization Usage Models** (`organization_usage/`) - Clean Architecture with domain, infrastructure, and repository patterns for database operations
 - **OpenRouter Client Manager** (`openrouter_client_manager.py`) - Real-time usage recording with duplicate protection
 - **OpenAI Router** (`openai.py`) - OpenRouter response processing and generation_id extraction
 - **Currency Converter** - NBP exchange rate integration

@@ -27,11 +27,16 @@ The new `.env`-based approach replaces the complex database-driven API key manag
 
 ### Step 1: Generate Client Environment
 
-Run the environment generator script:
+Run the environment generator script (now using Clean Architecture):
 
 ```bash
 python generate_client_env.py
 ```
+
+**Note**: The script now uses Clean Architecture with proper separation of concerns:
+- **Domain Layer**: Business entities and validation logic
+- **Infrastructure Layer**: OpenRouter API client, database operations, file generation
+- **Presentation Layer**: CLI interface and user interactions
 
 The script will prompt you for:
 - **Provisioning Key**: Your OpenRouter provisioning API key
