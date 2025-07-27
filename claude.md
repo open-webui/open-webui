@@ -1,155 +1,115 @@
 # CLAUDE.md
 
-## Core Project Rules
-
+## Project Context
 **mAI** - OpenWebUI fork for Polish SMEs (300+ users, 20 Docker instances)
 
-### Critical Rules (Non-Negotiable)
-- **NEVER exceed 700 lines per file** - split into smaller modules
-- **ALWAYS work on `customization` branch** - never commit to `main`
-- **ALWAYS backup assets**: `cp -r static/static customization-backup/static-$(date +%Y%m%d)`
-- **Production solutions only** - no manual fixes or temporary hacks
-- **Sequential Thinking MCP** for complex problems
+Multi-tenant SaaS with Docker isolation, OpenRouter integration (1.3x markup), SQLite per container.
 
-### Commit Prefixes (Mandatory)
-```
-brand:    # mAI branding changes
-theme:    # UI styling modifications  
-ui:       # Interface improvements
-assets:   # Static file changes
-feat:     # New features
-fix:      # Bug fixes
-refactor: # Code improvements
-```
+## Critical Development Rules
+
+### Safety-First Approach
+- **ALWAYS backup before changes**: `git add . && git commit -m "CHECKPOINT: {description}"`
+- **Work on `customization` branch only** - never commit to `main`
+- **Test after every change**: Verify imports and basic functionality work
+- **Preserve business logic 100%** - refactoring moves code, never changes behavior
 
 ### Code Quality Standards
-- **Max function length**: 20 lines
+- **Max 700 lines per file** - split larger files using systematic refactoring
+- **Max 20 lines per function** 
+- **Use sub-agents for complex refactoring** tasks
 - **Type safety**: 100% TypeScript coverage for new code
-- **Error handling**: Structured exceptions with proper HTTP codes
-- **SOLID principles**: Apply to new components only
+- **Follow SOLID principles** for new components
 
-### Business Context
-- **Multi-tenant**: Docker isolation per client via environment variables
-- **Usage tracking**: Real-time OpenRouter integration with 1.3x markup
-- **Database**: SQLite per container, daily usage aggregation
-- **Deployment**: Single Hetzner server, docker-compose per client
-
-### Docker Development Environment
-- **`mai-open-webui-dev`**: Development container running on port 3001
-  - Used for testing new features and debugging
-  - Environment-based configuration with `OPENROUTER_EXTERNAL_USER=dev_mai_client_d460a478`
-  - Hot reload for rapid development
-- **`mai-open-webui-customization`**: Production-ready container for customization branch
-  - Used for testing production deployments and client customizations
-  - Full production environment simulation
-  - Stable build for client testing
-
-## Key Implementation Notes
-
-- **Database**: Use existing models in `backend/open_webui/models/organization_usage.py`
-- **Frontend**: Extend stores in `/src/lib/stores/index.ts`, don't replace
-- **Routers**: Follow patterns in `backend/open_webui/routers/usage_tracking.py`
-- **Environment**: Use `generate_client_env.py` for client setup
-
-## Architecture Context
-
-### Current Tech Stack
+### Commit Conventions
 ```
-Frontend: SvelteKit + TypeScript + TailwindCSS
-Backend: FastAPI + SQLAlchemy + Redis
-Database: SQLite (per container)
-APIs: OpenRouter with usage webhooks
+feat:     # New features
+fix:      # Bug fixes  
+refactor: # Code improvements
+ui:       # Interface changes
+brand:    # mAI branding
+theme:    # Styling
+assets:   # Static files
 ```
 
-### Key Existing Models (Don't Modify)
-- `ClientOrganization` - Client management with API keys
-- `ClientDailyUsage` - Daily usage aggregation 
-- `ClientUserDailyUsage` - Per-user tracking
-- `ProcessedGeneration` - Duplicate prevention
+## Development Environment
 
-### Extend, Don't Replace
-- Use existing `Users` model from OpenWebUI
-- Extend existing stores in `/src/lib/stores/`
-- Add routers following existing patterns
-- Follow existing auth and permission patterns
-
-## Development Environment Setup
-
-### Python Environment (Required Before Any Development)
+### Required Setup
 ```bash
-# Navigate to project root
-cd /path/to/mAI
-
-# Check Python availability
-python3 --version  # Required: 3.11+ (project requirement)
-
-# Backend setup
-cd backend
-python3 -m venv venv
-source venv/bin/activate  # Linux/macOS
-# OR: venv\Scripts\activate  # Windows
-
-# Install dependencies
+# Backend (Python 3.11+)
+cd backend && python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
 
-# Verify installation
-python3 -c "import typer; print('Dependencies OK')"
-```
-
-### Standard Commands (Always Use These)
-```bash
-# Testing (from backend/ directory with venv activated)
-cd backend && source venv/bin/activate
-python3 -m pytest tests/
-python3 backend/tests/test_dynamic_pricing.py  # Direct script execution
-
-# Development server
-cd backend && source venv/bin/activate
-./dev.sh  # Hot reload development server
-
-# Production server  
-cd backend && source venv/bin/activate
-./start.sh
-```
-
-### Docker Development (Preferred)
-```bash
-# First time setup
+# Docker (Preferred)
 python3 generate_client_env_dev.py  # Generate .env.dev
-docker-compose -f docker-compose.dev.yml build
 docker-compose -f docker-compose.dev.yml up -d
 # Access: http://localhost:3001
-
-# Daily development
-docker-compose -f docker-compose.dev.yml up -d
-docker-compose -f docker-compose.dev.yml logs -f
 ```
 
-### Environment Validation Before Tests
+### Standard Commands
 ```bash
-# Run this before any Python testing
-cd backend
-source venv/bin/activate
-python3 -c "
-import sys
-sys.path.insert(0, '.')
-from open_webui.utils.openrouter_models import get_dynamic_model_pricing
-print('✅ Environment ready')
-"
+# Development
+./dev.sh                    # Hot reload server
+python3 -m pytest tests/    # Run tests
+
+# Docker
+docker-compose -f docker-compose.dev.yml logs -f  # View logs
 ```
 
-### Common Error Solutions
-- **`python: command not found`** → Use `python3`
-- **`ModuleNotFoundError: No module named 'typer'`** → Activate venv, install requirements
-- **Import errors in tests** → Run from `backend/` directory with activated venv
-- **`PYTHONPATH` issues** → Use `python3 -m pytest` instead of direct script execution
+## Architecture Guidelines
 
-## MCP Research Process
-1. **Code patterns**: `search_code_examples` for existing implementations
-2. **Documentation**: `perform_rag_query` with source filtering  
-3. **Complex problems**: Sequential Thinking MCP
-4. **Integration**: Check existing OpenWebUI patterns first
+### Current Stack
+- **Frontend**: SvelteKit + TypeScript + TailwindCSS
+- **Backend**: FastAPI + SQLAlchemy + Redis  
+- **Database**: SQLite per container
+- **APIs**: OpenRouter with usage webhooks
+
+### Key Patterns
+- **Extend existing stores** in `/src/lib/stores/` - don't replace
+- **Follow router patterns** in `backend/open_webui/routers/usage_tracking.py`
+- **Use existing models**: `ClientOrganization`, `ClientDailyUsage`, `ClientUserDailyUsage`
+- **Environment setup**: Use `generate_client_env.py` for client configuration
+
+## Sub-Agent Usage
+
+### When to Use universal-refactoring-architect
+- Files exceeding 700 lines
+- Complex architectural changes
+- Multi-file refactoring tasks
+- Component decomposition
+
+### Usage Pattern
+```
+Use universal-refactoring-architect agent to [analyze/refactor] {file_path} 
+according to {pattern}. Maintain 100% functionality while improving architecture.
+```
+
+## Error Prevention
+
+### Common Issues
+- **`python: command not found`** → Use `python3`
+- **Module import errors** → Activate venv, install requirements
+- **PYTHONPATH issues** → Run from `backend/` directory
+- **Docker port conflicts** → Check port 3001 availability
+
+### Validation Checklist
+```bash
+# Before deployment
+python3 -m py_compile {modified_files}
+curl http://localhost:3001/health
+docker-compose -f docker-compose.dev.yml ps  # All services up
+```
+
+## Business Context
+
+### Docker Containers
+- **`mai-open-webui-dev`**: Development (port 3001)
+- **`mai-open-webui-customization`**: Production testing
+
+### Key Integration Points
+- **Usage tracking**: Real-time OpenRouter webhooks
+- **Multi-tenancy**: Environment-based client isolation
+- **Database**: Per-container SQLite with daily aggregation
 
 ---
 
-**Core Principle**: Build on the solid OpenWebUI foundation. Usage tracking and multi-tenancy are operational - focus on enhancing existing functionality.
+**Core Principle**: Build on OpenWebUI foundation. Preserve existing functionality while enhancing architecture through systematic, safe refactoring.
