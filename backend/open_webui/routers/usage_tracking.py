@@ -405,15 +405,7 @@ async def get_my_organization_usage_summary(user=Depends(get_current_user)):
             "client_id": "error"
         }
 
-@router.get("/my-organization/today-usage")
-async def get_my_organization_today_usage(user=Depends(get_current_user)):
-    """DEPRECATED: Real-time today usage endpoint removed for business simplification"""
-    return {
-        "success": False,
-        "message": "Real-time usage tracking has been simplified. Please use /my-organization/usage-summary for daily breakdown data.",
-        "deprecated": True,
-        "alternative_endpoint": "/my-organization/usage-summary"
-    }
+# REMOVED: today-usage endpoint - daily batch processing approach only
 
 def get_environment_client_org_id() -> Optional[str]:
     """Get client organization ID for environment-based setup"""

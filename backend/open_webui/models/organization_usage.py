@@ -1031,11 +1031,12 @@ class ProcessedGenerationTable:
                 ).count()
                 
                 # Get breakdown by organization for audit trail
+                from sqlalchemy import func
                 org_breakdown_query = db.query(
                     ProcessedGeneration.client_org_id,
-                    db.func.count(ProcessedGeneration.id).label('count'),
-                    db.func.sum(ProcessedGeneration.total_tokens).label('tokens'),
-                    db.func.sum(ProcessedGeneration.total_cost).label('cost')
+                    func.count(ProcessedGeneration.id).label('count'),
+                    func.sum(ProcessedGeneration.total_tokens).label('tokens'),
+                    func.sum(ProcessedGeneration.total_cost).label('cost')
                 ).filter(
                     ProcessedGeneration.processed_at < cutoff_timestamp
                 ).group_by(ProcessedGeneration.client_org_id).all()

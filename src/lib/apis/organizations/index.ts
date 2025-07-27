@@ -32,19 +32,8 @@ export const getClientUsageSummary = async (token: string) => {
 	}
 };
 
-export const getTodayUsage = async (token: string, _clientOrgId?: string) => {
-	// DEPRECATED: This function is deprecated. Use getClientUsageSummary instead.
-	console.warn('getTodayUsage is deprecated. Use getClientUsageSummary for daily breakdown data.');
-	
-	// Return mock data without making the deprecated API call
-	return {
-		success: false,
-		deprecated: true,
-		message: 'Real-time usage tracking has been simplified. Please use getClientUsageSummary for daily breakdown data.',
-		alternative_function: 'getClientUsageSummary',
-		today: { tokens: 0, cost: 0, requests: 0, last_updated: 'Deprecated - Use summary endpoint' }
-	};
-};
+// REMOVED: getTodayUsage function has been completely removed
+// Use getClientUsageSummary instead for usage data
 
 export const getUsageByUser = async (token: string, _clientOrgId?: string) => {
 	try {

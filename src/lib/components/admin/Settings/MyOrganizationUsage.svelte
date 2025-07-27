@@ -1,7 +1,8 @@
 <script>
+	// Daily Batch Processing v4.0 - Data updates at 00:00 daily
 	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import { getClientUsageSummary, getTodayUsage, getUsageByUser, getUsageByModel, getMAIModelPricing, getSubscriptionBilling } from '$lib/apis/organizations';
+	import { getClientUsageSummary, getUsageByUser, getUsageByModel, getMAIModelPricing, getSubscriptionBilling } from '$lib/apis/organizations';
 	import Modal from '$lib/components/common/Modal.svelte';
 	import { user } from '$lib/stores';
 
@@ -10,7 +11,7 @@
 	let loading = false;
 	let activeTab = 'stats';
 	
-	// Admin-focused daily breakdown structure (no real-time)
+	// Daily batch processing structure - data updated at 00:00
 	let usageData = {
 		current_month: {
 			month: 'Loading...',
@@ -158,7 +159,7 @@
 		}
 	];
 
-	// Removed refreshInterval - no more real-time updates for business simplification
+	// Daily batch processing - no refresh intervals needed, data updated at 00:00
 
 	// Reactive: Ensure non-admin users don't access admin-only tabs
 	$: if ($user?.role !== 'admin' && (activeTab === 'users' || activeTab === 'models' || activeTab === 'subscription')) {
@@ -188,8 +189,8 @@
 
 	onMount(async () => {
 		await loadUsageData();
-		// No more real-time refresh - admin-focused daily breakdown approach
-		// Data loads once on component mount for business oversight purposes
+		// Daily batch processing approach - data loads once per session
+		// Fresh data available after 00:30 daily when batch processing completes
 	});
 
 	/**
@@ -372,7 +373,7 @@
 		}
 	};
 
-	// Removed loadTodaysUsage - no more real-time updates for business simplification
+	// Daily batch processing - all data consolidated at 00:00 with NBP rates
 
 	const loadSubscriptionData = async () => {
 		// Validate client ID before making API call
@@ -465,6 +466,12 @@
 <div class="mb-6">
 	<div class="flex items-center justify-between mb-4">
 		<h2 class="text-lg font-semibold">{$i18n.t('My Organization Usage')}</h2>
+		<div class="text-xs text-gray-500 dark:text-gray-400 flex items-center">
+			<svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+			</svg>
+			Data updated daily at 00:00
+		</div>
 	</div>
 
 	<!-- Exchange Rate Status Notice -->
@@ -484,6 +491,21 @@
 		</div>
 	{/if}
 
+	<!-- Daily Batch Processing Status Notice -->
+	<div class="mb-4 text-xs text-blue-600 dark:text-blue-400 flex items-center justify-between bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
+		<div class="flex items-center">
+			<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+			</svg>
+			<span>
+				<strong>Daily Batch Processing:</strong> Data consolidated at 00:00 with NBP exchange rates &amp; monthly totals (1st to current day)
+			</span>
+		</div>
+		<div class="text-xs bg-blue-100 dark:bg-blue-800 px-2 py-1 rounded">
+			Business Intelligence
+		</div>
+	</div>
+
 	<!-- Monthly Summary Cards (Admin Overview) -->
 	<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
 		<!-- Monthly Tokens -->
@@ -494,7 +516,7 @@
 					<p class="text-2xl font-semibold text-gray-900 dark:text-white">
 						{formatNumber(usageData.current_month?.total_tokens || 0)}
 					</p>
-					<p class="text-xs text-gray-500 mt-1">{usageData.current_month?.month || 'Loading...'}</p>
+					<p class="text-xs text-gray-500 mt-1">{usageData.current_month?.month || 'Loading...'} • Batch Calculated</p>
 				</div>
 				<div class="flex-shrink-0">
 					<div class="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
@@ -514,7 +536,7 @@
 					<p class="text-2xl font-semibold text-gray-900 dark:text-white">
 						{formatDualCurrency(usageData.current_month?.total_cost || 0, usageData.current_month?.total_cost_pln || 0)}
 					</p>
-					<p class="text-xs text-gray-500 mt-1">{usageData.current_month?.total_requests || 0} requests</p>
+					<p class="text-xs text-gray-500 mt-1">{usageData.current_month?.total_requests || 0} requests • NBP Daily Rates</p>
 				</div>
 				<div class="flex-shrink-0">
 					<div class="w-8 h-8 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
@@ -534,7 +556,7 @@
 					<p class="text-2xl font-semibold text-gray-900 dark:text-white">
 						{usageData.current_month?.days_with_usage || 0}/{usageData.current_month?.days_in_month || 0}
 					</p>
-					<p class="text-xs text-gray-500 mt-1">{Math.round(usageData.current_month?.usage_percentage || 0)}% active days</p>
+					<p class="text-xs text-gray-500 mt-1">{Math.round(usageData.current_month?.usage_percentage || 0)}% active • Cumulative 1st-Current</p>
 				</div>
 				<div class="flex-shrink-0">
 					<div class="w-8 h-8 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center">
@@ -590,17 +612,25 @@
 	{#if loading}
 		<div class="flex items-center justify-center py-12">
 			<div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white"></div>
-			<span class="ml-2 text-gray-600 dark:text-gray-400">{$i18n.t('Loading usage data...')}</span>
+			<span class="ml-2 text-gray-600 dark:text-gray-400">{$i18n.t('Loading daily batch data...')}</span>
 		</div>
 	{:else if activeTab === 'stats'}
 		<div class="space-y-6">
 			<!-- Monthly Summary Insights -->
 			<div class="bg-white dark:bg-gray-850 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-				<h3 class="text-lg font-medium mb-4">{$i18n.t('Monthly Summary')}</h3>
+				<div class="flex items-center justify-between mb-4">
+					<h3 class="text-lg font-medium">{$i18n.t('Monthly Summary')}</h3>
+					<div class="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded flex items-center">
+						<svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+						</svg>
+						Daily Batch Calculated
+					</div>
+				</div>
 				
 				<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
 					<div>
-						<h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{$i18n.t('Usage Averages')}</h4>
+						<h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{$i18n.t('Usage Averages')} 📊</h4>
 						<div class="space-y-2">
 							<div class="flex justify-between">
 								<span class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Daily Average')}:</span>
@@ -614,7 +644,7 @@
 					</div>
 					
 					<div>
-						<h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{$i18n.t('Peak Usage')}</h4>
+						<h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{$i18n.t('Peak Usage')} 🔥</h4>
 						<div class="space-y-2">
 							<div class="flex justify-between">
 								<span class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Busiest Day')}:</span>
@@ -628,7 +658,7 @@
 					</div>
 					
 					<div>
-						<h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{$i18n.t('Most Used')}</h4>
+						<h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{$i18n.t('Most Used')} ⭐</h4>
 						<div class="space-y-2">
 							<div class="flex justify-between">
 								<span class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Primary Model')}:</span>
@@ -645,7 +675,15 @@
 
 			<!-- Daily Breakdown Table -->
 			<div class="bg-white dark:bg-gray-850 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-				<h3 class="text-lg font-medium mb-4">{$i18n.t('Daily Breakdown')} - {usageData.current_month?.month || 'Current Month'}</h3>
+				<div class="flex items-center justify-between mb-4">
+					<h3 class="text-lg font-medium">{$i18n.t('Daily Breakdown')} - {usageData.current_month?.month || 'Current Month'}</h3>
+					<div class="text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded flex items-center">
+						<svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+						</svg>
+						Updated at 00:00 Daily
+					</div>
+				</div>
 				
 				{#if usageData.daily_breakdown && usageData.daily_breakdown.length > 0}
 					<div class="overflow-x-auto">
@@ -705,7 +743,13 @@
 						</table>
 					</div>
 				{:else}
-					<p class="text-gray-600 dark:text-gray-400">{$i18n.t('No usage data available for this month.')}</p>
+					<div class="text-center py-8">
+						<svg class="w-12 h-12 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+						</svg>
+						<p class="text-gray-600 dark:text-gray-400 text-lg font-medium">{$i18n.t('No usage data available for this month.')}</p>
+						<p class="text-gray-500 dark:text-gray-500 text-sm mt-2">Data is processed daily at 00:00. Usage will appear after first API calls.</p>
+					</div>
 				{/if}
 			</div>
 		</div>
@@ -1158,6 +1202,38 @@
 		</div>
 	</div>
 {/if}
+
+	<!-- Daily Batch Processing Help Information -->
+	<div class="mt-6 bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+		<h4 class="font-medium text-gray-900 dark:text-white mb-3 flex items-center">
+			<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+			</svg>
+			Daily Batch Processing Information
+		</h4>
+		<div class="text-sm text-gray-600 dark:text-gray-400 space-y-2">
+			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+				<div>
+					<p class="font-medium text-gray-700 dark:text-gray-300 mb-1">🕰️ Processing Schedule</p>
+					<p>• Data updates automatically at 00:00 daily</p>
+					<p>• Monthly totals calculated from 1st to current day</p>
+					<p>• NBP exchange rates refreshed with holiday-aware logic</p>
+				</div>
+				<div>
+					<p class="font-medium text-gray-700 dark:text-gray-300 mb-1">📊 Business Intelligence</p>
+					<p>• All metrics pre-calculated for fast loading</p>
+					<p>• Automated data validation and corrections</p>
+					<p>• Complete usage history maintained indefinitely</p>
+				</div>
+			</div>
+			<div class="pt-2 border-t border-gray-200 dark:border-gray-600">
+				<p class="text-xs text-gray-500 dark:text-gray-500">
+					<strong>Best viewing time:</strong> After 00:30 daily when batch processing completes. 
+					No real-time updates needed - designed for business oversight and strategic planning.
+				</p>
+			</div>
+		</div>
+	</div>
 </div>
 
 <style>

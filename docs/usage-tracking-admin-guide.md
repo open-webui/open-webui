@@ -1,8 +1,8 @@
 # mAI Usage Tracking System - Admin Guide
 
 **Date**: July 27, 2025  
-**Status**: ✅ **PRODUCTION READY** - Business-focused admin interface with holiday-aware NBP integration  
-**Version**: 3.1 (Admin-focused daily breakdown with intelligent currency conversion)
+**Status**: ✅ **PRODUCTION READY** - Daily batch processing with holiday-aware NBP integration  
+**Version**: 4.0 (Daily batch processing architecture with intelligent currency conversion)
 
 ---
 
@@ -14,6 +14,7 @@ The mAI Usage Tracking System provides **business-focused administrative oversig
 - **Administrative Interface**: Clean monthly overview for management decisions
 - **Daily Breakdown**: Complete usage patterns from 1st to last day of month  
 - **Business Intelligence**: Peak usage days, cost averages, model preferences
+- **Daily Batch Processing**: Data updates at 00:00 daily for consistent business reporting
 - **No Real-time Overload**: Single page load for business oversight purposes
 
 ---
@@ -48,21 +49,25 @@ Date        Day      Tokens   Cost      Requests  Primary Model    Last Activity
 
 ## Core System Architecture
 
-### Simplified Data Flow (Business-Appropriate)
+### Daily Batch Processing Architecture (Business-Appropriate)
 ```
-OpenRouter API Call → Usage Recording → Daily Summaries → Admin Dashboard
-                              ↓
-                    Multi-table Storage
-                    ├── client_daily_usage (primary)
+OpenRouter API Call → Usage Recording → Daily Batch (00:00) → Admin Dashboard
+                              ↓              ↓
+                    Live Storage      Daily Consolidation
+                         ↓              ↓
+                    Multi-table Storage with Monthly Totals
+                    ├── client_daily_usage (consolidated)
                     ├── client_user_daily_usage 
                     └── client_model_daily_usage
 ```
 
 ### Key Features
-- **Single Source of Truth**: All data in daily summaries
-- **Immediate Recording**: Usage visible after each API call (no rollover delays)
+- **Daily Batch Processing**: Data consolidation at 00:00 for reliable business reporting
+- **Monthly Cumulative Totals**: Automatically calculated from 1st day to current day
+- **Holiday-Aware Exchange Rates**: Fresh NBP rates fetched daily with intelligent fallback
 - **Business Intelligence**: Automatically calculated insights and trends
 - **Multi-tenant Support**: Isolated data per client organization
+- **Automated Data Integrity**: Daily validation and correction of markup calculations
 
 ---
 
@@ -144,7 +149,13 @@ CREATE TABLE client_daily_usage (
 
 ---
 
-## Administrative Use Cases
+## Daily Batch Processing System
+
+### 🕰️ **Automated Daily Processing (00:00)**
+1. **Exchange Rate Update** - Fresh NBP rates with holiday-aware logic
+2. **Usage Data Consolidation** - Validate and correct daily summaries
+3. **Monthly Totals Update** - Calculate cumulative totals from 1st to current day
+4. **Data Cleanup** - Remove old processed generation records
 
 ### 📊 **Monthly Business Review**
 1. **Load Admin Dashboard** - Single page load, no refresh needed
@@ -280,9 +291,10 @@ Authorization: Bearer {admin_token}
 ## Admin Operations Guide
 
 ### Daily Admin Tasks
-1. **Review Usage Dashboard** - Check monthly progress and daily patterns
+1. **Review Usage Dashboard** - Check monthly progress and daily patterns (data updated at 00:00)
 2. **Monitor Cost Trends** - Ensure spending within budget parameters
 3. **Check User Activity** - Verify expected usage levels
+4. **Verify Batch Processing** - Check logs for successful daily processing at 00:00
 
 ### Weekly Admin Tasks
 1. **Analyze Peak Days** - Identify unusual usage patterns
@@ -299,10 +311,11 @@ Authorization: Bearer {admin_token}
 ## Performance & Reliability
 
 ### System Performance
-- **No Real-time Overhead**: Single page load, no auto-refresh
-- **Optimized Queries**: Direct daily summary access
+- **Daily Batch Processing**: Eliminates real-time calculation overhead
+- **Optimized Queries**: Pre-calculated daily and monthly summaries
 - **Minimal Server Load**: 99% reduction in dashboard API calls
 - **Fast Response Times**: Single database query pattern
+- **Automated Maintenance**: Daily data validation and cleanup at 00:00
 
 ### Business Benefits
 - **Appropriate Complexity**: Perfect for administrative oversight
@@ -335,8 +348,12 @@ Authorization: Bearer {admin_token}
 - **Audit Trail**: Complete usage history for compliance
 - **Backup Strategy**: Daily database backups with retention
 
-### Cleanup Operations
-- **Automated Cleanup**: Old processed generation logs
+### Daily Batch Operations
+- **00:00 Scheduled Processing**: Fully automated daily batch execution
+- **Exchange Rate Updates**: Holiday-aware NBP integration with fallback
+- **Data Validation**: Automatic markup cost verification and correction
+- **Monthly Calculations**: Cumulative totals from 1st day to current day
+- **Automated Cleanup**: Old processed generation logs (90-day retention)
 - **Storage Optimization**: Efficient daily summary storage
 - **Performance Maintenance**: Regular database optimization
 
@@ -352,9 +369,9 @@ Authorization: Bearer {admin_token}
 - **Verification**: Check if users are actively using the system
 
 #### "Loading usage data..."
-- **Cause**: Initial page load or network delay
-- **Solution**: Wait for single data load to complete
-- **Note**: No auto-refresh - manual page refresh if needed
+- **Cause**: Data being processed by daily batch (if viewing early morning)
+- **Solution**: Wait for 00:00 batch processing to complete, then refresh
+- **Note**: Data updates once daily at 00:00 - no real-time updates
 
 #### "Monthly summary shows zero"
 - **Cause**: First month of usage or new organization
@@ -385,6 +402,12 @@ docker exec container sqlite3 /app/backend/data/webui.db \
   "SELECT id, name, markup_rate FROM client_organizations 
    WHERE is_active = 1;"
 
+# Test daily batch processor
+docker exec container python -m open_webui.utils.daily_batch_processor
+
+# Check batch processing logs
+docker exec container ls -la /app/logs/daily_batch_*.log
+
 # Verify NBP exchange rate system
 curl "http://localhost:8080/api/v1/usage-tracking/exchange-rate/USD/PLN" \
   -H "Authorization: Bearer {admin_token}"
@@ -395,10 +418,11 @@ curl "http://localhost:8080/api/v1/usage-tracking/exchange-rate/USD/PLN" \
 ## Best Practices for Admins
 
 ### Dashboard Usage
-1. **Load Once**: Access dashboard when needed - no need for constant monitoring
-2. **Weekly Reviews**: Check trends and patterns weekly for insights
-3. **Monthly Planning**: Use monthly summaries for budget and capacity planning
-4. **Cost Monitoring**: Review daily costs for budget tracking
+1. **Load Once**: Access dashboard when needed - data refreshes daily at 00:00
+2. **Morning Reviews**: Best time to check dashboard is after 00:30 when batch processing completes
+3. **Weekly Reviews**: Check trends and patterns weekly for insights
+4. **Monthly Planning**: Use monthly summaries for budget and capacity planning
+5. **Cost Monitoring**: Review daily costs for budget tracking
 
 ### Data Interpretation
 - **Usage Percentage**: Target 60-80% active days for optimal utilization
@@ -419,12 +443,14 @@ curl "http://localhost:8080/api/v1/usage-tracking/exchange-rate/USD/PLN" \
 The mAI Usage Tracking System provides administrators with a clean, business-focused interface for monitoring OpenRouter API usage. The system eliminates unnecessary real-time complexity while providing comprehensive business intelligence for decision-making, budgeting, and strategic planning.
 
 **Key Admin Benefits:**
+- ✅ **Daily Batch Processing** - Reliable 00:00 data consolidation and validation
 - ✅ **Clean Monthly Overview** - Perfect for management review
-- ✅ **Daily Breakdown Analysis** - Complete usage patterns  
-- ✅ **Business Intelligence** - Automated insights and trends
+- ✅ **Daily Breakdown Analysis** - Complete usage patterns with automated integrity checks
+- ✅ **Business Intelligence** - Automated insights and trends with monthly cumulative calculations
 - ✅ **Cost Control** - Transparent pricing with holiday-aware PLN support
 - ✅ **Strategic Planning** - Data-driven capacity and budget planning
-- ✅ **Currency Reliability** - Intelligent NBP integration with 3-tier fallback system
+- ✅ **Currency Reliability** - Daily NBP integration with 3-tier fallback system
+- ✅ **Automated Maintenance** - Self-managing system with daily cleanup and optimization
 
 ---
 
