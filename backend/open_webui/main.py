@@ -399,9 +399,10 @@ from open_webui.env import (
     AUDIT_LOG_LEVEL,
     CHANGELOG,
     REDIS_URL,
-    REDIS_KEY_PREFIX,
     REDIS_SENTINEL_HOSTS,
     REDIS_SENTINEL_PORT,
+    REDIS_CLUSTER_MODE,
+    REDIS_KEY_PREFIX,
     GLOBAL_LOG_LEVEL,
     MAX_BODY_LOG_SIZE,
     SAFE_MODE,
@@ -525,6 +526,7 @@ async def lifespan(app: FastAPI):
             REDIS_SENTINEL_HOSTS, REDIS_SENTINEL_PORT
         ),
         async_mode=True,
+        cluster_mode=REDIS_CLUSTER_MODE,
     )
 
     if app.state.redis is not None:
@@ -579,6 +581,7 @@ app.state.instance_id = None
 app.state.config = AppConfig(
     redis_url=REDIS_URL,
     redis_sentinels=get_sentinels_from_env(REDIS_SENTINEL_HOSTS, REDIS_SENTINEL_PORT),
+    redis_cluster=REDIS_CLUSTER_MODE,
     redis_key_prefix=REDIS_KEY_PREFIX,
 )
 app.state.redis = None

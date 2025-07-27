@@ -345,9 +345,10 @@ ENABLE_REALTIME_CHAT_SAVE = (
 ####################################
 
 REDIS_URL = os.environ.get("REDIS_URL", "")
-REDIS_KEY_PREFIX = os.environ.get("REDIS_KEY_PREFIX", "open-webui")
 REDIS_SENTINEL_HOSTS = os.environ.get("REDIS_SENTINEL_HOSTS", "")
 REDIS_SENTINEL_PORT = os.environ.get("REDIS_SENTINEL_PORT", "26379")
+REDIS_CLUSTER_MODE = os.environ.get("REDIS_CLUSTER_MODE", "False").lower() == "true"
+REDIS_KEY_PREFIX = os.environ.get("REDIS_KEY_PREFIX", "open-webui")
 
 # Maximum number of retries for Redis operations when using Sentinel fail-over
 REDIS_SENTINEL_MAX_RETRY_COUNT = os.environ.get("REDIS_SENTINEL_MAX_RETRY_COUNT", "2")
@@ -443,7 +444,6 @@ else:
     except Exception:
         MODELS_CACHE_TTL = 1
 
-
 ####################################
 # WEBSOCKET SUPPORT
 ####################################
@@ -452,21 +452,19 @@ ENABLE_WEBSOCKET_SUPPORT = (
     os.environ.get("ENABLE_WEBSOCKET_SUPPORT", "True").lower() == "true"
 )
 
-
 WEBSOCKET_MANAGER = os.environ.get("WEBSOCKET_MANAGER", "")
 
 WEBSOCKET_REDIS_URL = os.environ.get("WEBSOCKET_REDIS_URL", REDIS_URL)
+WEBSOCKET_SENTINEL_HOSTS = os.environ.get("WEBSOCKET_SENTINEL_HOSTS", "")
+WEBSOCKET_SENTINEL_PORT = os.environ.get("WEBSOCKET_SENTINEL_PORT", "26379")
+WEBSOCKET_REDIS_CLUSTER_MODE = os.environ.get("WEBSOCKET_REDIS_CLUSTER_MODE",
+                                              str(REDIS_CLUSTER_MODE)).lower() == "true"
 
 websocket_redis_lock_timeout = os.environ.get("WEBSOCKET_REDIS_LOCK_TIMEOUT", "60")
-
 try:
     WEBSOCKET_REDIS_LOCK_TIMEOUT = int(websocket_redis_lock_timeout)
 except ValueError:
     WEBSOCKET_REDIS_LOCK_TIMEOUT = 60
-
-WEBSOCKET_SENTINEL_HOSTS = os.environ.get("WEBSOCKET_SENTINEL_HOSTS", "")
-
-WEBSOCKET_SENTINEL_PORT = os.environ.get("WEBSOCKET_SENTINEL_PORT", "26379")
 
 AIOHTTP_CLIENT_TIMEOUT = os.environ.get("AIOHTTP_CLIENT_TIMEOUT", "")
 
@@ -477,7 +475,6 @@ else:
         AIOHTTP_CLIENT_TIMEOUT = int(AIOHTTP_CLIENT_TIMEOUT)
     except Exception:
         AIOHTTP_CLIENT_TIMEOUT = 300
-
 
 AIOHTTP_CLIENT_SESSION_SSL = (
     os.environ.get("AIOHTTP_CLIENT_SESSION_SSL", "True").lower() == "true"

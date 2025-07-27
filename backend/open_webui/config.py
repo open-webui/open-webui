@@ -7,7 +7,7 @@ import redis
 
 from datetime import datetime
 from pathlib import Path
-from typing import Generic, Optional, TypeVar
+from typing import Generic, Union, Optional, TypeVar
 from urllib.parse import urlparse
 
 import requests
@@ -21,9 +21,10 @@ from open_webui.env import (
     DATABASE_URL,
     ENV,
     REDIS_URL,
-    REDIS_KEY_PREFIX,
     REDIS_SENTINEL_HOSTS,
     REDIS_SENTINEL_PORT,
+    REDIS_CLUSTER_MODE,
+    REDIS_KEY_PREFIX,
     FRONTEND_BUILD_DIR,
     OFFLINE_MODE,
     OPEN_WEBUI_DIR,
@@ -213,13 +214,14 @@ class PersistentConfig(Generic[T]):
 
 class AppConfig:
     _state: dict[str, PersistentConfig]
-    _redis: Optional[redis.Redis] = None
+    _redis: Union[redis.Redis, redis.cluster.RedisCluster] = None
     _redis_key_prefix: str
 
     def __init__(
         self,
         redis_url: Optional[str] = None,
         redis_sentinels: Optional[list] = [],
+        redis_cluster: Optional[bool] = False,
         redis_key_prefix: str = "open-webui",
     ):
         super().__setattr__("_state", {})
@@ -227,7 +229,7 @@ class AppConfig:
         if redis_url:
             super().__setattr__(
                 "_redis",
-                get_redis_connection(redis_url, redis_sentinels, decode_responses=True),
+                get_redis_connection(redis_url, redis_sentinels, cluster_mode=redis_cluster, decode_responses=True),
             )
 
     def __setattr__(self, key, value):
