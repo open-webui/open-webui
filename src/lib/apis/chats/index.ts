@@ -33,6 +33,106 @@ export const createNewChat = async (token: string, chat: object, folderId: strin
 	return res;
 };
 
+export const resetChatStatsById = async (token: string, chatId: string): Promise<boolean> => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${chatId}/reset_stats`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	}).catch((e) => {
+		error = e;
+		return null;
+	});
+
+	if (error) {
+		throw error;
+	}
+
+	return res?.ok ?? false;
+};
+
+export const incrementCloneCountById = async (token: string, id: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}/clone/inc`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err;
+
+			if ('detail' in err) {
+				error = err.detail;
+			} else {
+				error = err;
+			}
+
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getSharedChats = async (
+	token: string = '',
+	page: number = 1,
+	query: string = '',
+	orderBy?: string,
+	direction?: string,
+	startDate?: number,
+	endDate?: number
+) => {
+	let error = null;
+
+	const params = new URLSearchParams();
+	params.append('page', page.toString());
+	if (query) params.append('query', query);
+	if (orderBy) params.append('order_by', orderBy);
+	if (direction) params.append('direction', direction);
+	if (startDate) params.append('start_date', startDate.toString());
+	if (endDate) params.append('end_date', endDate.toString());
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/shared?${params.toString()}`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const importChat = async (
 	token: string,
 	chat: object,
@@ -702,7 +802,9 @@ export const cloneSharedChatById = async (token: string, id: string) => {
 	return res;
 };
 
-export const shareChatById = async (token: string, id: string) => {
+import { sharedChats } from '$lib/stores';
+
+export const shareChatById = async (token: string, id: string, share_id: string = '') => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}/share`, {
@@ -711,14 +813,14 @@ export const shareChatById = async (token: string, id: string) => {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			...(token && { authorization: `Bearer ${token}` })
-		}
+		},
+		body: JSON.stringify({
+			share_id: share_id
+		})
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
 			return res.json();
-		})
-		.then((json) => {
-			return json;
 		})
 		.catch((err) => {
 			error = err;
@@ -1021,6 +1123,62 @@ export const deleteTagsById = async (token: string, id: string) => {
 		.catch((err) => {
 			error = err;
 
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const revokeAllSharedChats = async (token: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/shared/all`, {
+		method: 'DELETE',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const resetAllChatStats = async (token: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/shared/all/reset_stats`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
 			console.error(err);
 			return null;
 		});

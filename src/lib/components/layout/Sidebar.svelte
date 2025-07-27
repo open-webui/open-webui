@@ -11,6 +11,7 @@
 		chatId,
 		tags,
 		showSidebar,
+		chatsUpdated,
 		showSearch,
 		mobile,
 		showArchivedChats,
@@ -330,6 +331,13 @@
 	onMount(async () => {
 		showPinnedChat = localStorage?.showPinnedChat ? localStorage.showPinnedChat === 'true' : true;
 
+		chatsUpdated.subscribe((updated) => {
+			if (updated) {
+				initChatList();
+				chatsUpdated.set(false);
+			}
+		});
+
 		mobile.subscribe((value) => {
 			if ($showSidebar && value) {
 				showSidebar.set(false);
@@ -468,7 +476,7 @@
 	bind:this={navElement}
 	id="sidebar"
 	class="h-screen max-h-[100dvh] min-h-screen select-none {$showSidebar
-		? 'md:relative w-[260px] max-w-[260px]'
+		? 'w-[260px] max-w-[260px]'
 		: '-translate-x-[260px] w-[0px]'} {$isApp
 		? `ml-[4.5rem] md:ml-0 `
 		: 'transition-width duration-200 ease-in-out'}  shrink-0 bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-200 text-sm fixed z-50 top-0 left-0 overflow-x-hidden

@@ -8,7 +8,11 @@
 	import { settings, chatId, WEBUI_NAME, models, config } from '$lib/stores';
 	import { convertMessagesToHistory, createMessagesList } from '$lib/utils';
 
-	import { getChatByShareId, cloneSharedChatById } from '$lib/apis/chats';
+	import {
+		getChatByShareId,
+		cloneSharedChatById,
+		incrementCloneCountById
+	} from '$lib/apis/chats';
 
 	import Messages from '$lib/components/chat/Messages.svelte';
 	import Navbar from '$lib/components/layout/Navbar.svelte';
@@ -137,6 +141,8 @@
 		});
 
 		if (res) {
+			const originalChatId = chat.user_id.replace('shared-', '');
+			await incrementCloneCountById(localStorage.token, originalChatId);
 			goto(`/c/${res.id}`);
 		}
 	};
@@ -168,9 +174,47 @@
 
 						<div class="flex text-sm justify-between items-center mt-1">
 							<div class="text-gray-400">
-								{dayjs(chat.chat.timestamp).format('LLL')}
+								{$i18n.t('Conversation from')}: {dayjs(chat.chat.timestamp).format('LLL')}
 							</div>
 						</div>
+
+						{#if user}
+							<div class="flex items-center space-x-2 text-sm text-gray-500 mt-2">
+								<img
+									src={user.profile_image_url}
+									alt={user.name}
+									class="w-6 h-6 rounded-full"
+								/>
+								<span>Shared by {user.name}</span>
+							</div>
+						{/if}
+					</div>
+
+					<div class="px-3 mt-4">
+						<details>
+							<summary class="cursor-pointer text-sm font-medium"
+								>{$i18n.t('Chat Recipe')}</summary
+							>
+							<div class="mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm space-y-1">
+								<p>
+									<strong>{$i18n.t('Model')}:</strong>
+									{selectedModels.join(', ')}
+								</p>
+
+								{#if chat.chat.params && Object.values(chat.chat.params).some(v => v !== null)}
+									<div class="pt-2">
+										<p class="font-medium">{$i18n.t('Advanced Parameters')}:</p>
+										<ul class="list-disc list-inside">
+											{#each Object.entries(chat.chat.params) as [key, value]}
+												{#if value !== null}
+													<li><strong>{key}:</strong> {value}</li>
+												{/if}
+											{/each}
+										</ul>
+									</div>
+								{/if}
+							</div>
+						</details>
 					</div>
 				</div>
 
@@ -198,13 +242,16 @@
 			<div
 				class="absolute bottom-0 right-0 left-0 flex justify-center w-full bg-linear-to-b from-transparent to-white dark:to-gray-900"
 			>
-				<div class="pb-5">
+				<div class="pb-5 text-center">
 					<button
 						class="px-4 py-2 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 						on:click={cloneSharedChat}
 					>
 						{$i18n.t('Clone Chat')}
 					</button>
+					<div class="text-xs text-gray-500 mt-2">
+						{$i18n.t('Continue this conversation in your own account.')}
+					</div>
 				</div>
 			</div>
 		</div>

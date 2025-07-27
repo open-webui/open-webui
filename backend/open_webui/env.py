@@ -16,14 +16,17 @@ from open_webui.constants import ERROR_MESSAGES
 # Load .env file
 ####################################
 
-OPEN_WEBUI_DIR = Path(__file__).parent  # the path containing this file
-print(OPEN_WEBUI_DIR)
+# Use .resolve() to get the canonical path, removing any '..' or '.' components
+_this_file_path_resolved = Path(__file__).resolve()
 
-BACKEND_DIR = OPEN_WEBUI_DIR.parent  # the path containing this file
-BASE_DIR = BACKEND_DIR.parent  # the path containing the backend/
+# OPEN_WEBUI_DIR should be the directory where env.py resides (open_webui/)
+OPEN_WEBUI_DIR = _this_file_path_resolved.parent
 
-print(BACKEND_DIR)
-print(BASE_DIR)
+# BACKEND_DIR is the parent of OPEN_WEBUI_DIR (backend/)
+BACKEND_DIR = OPEN_WEBUI_DIR.parent
+
+# BASE_DIR is the parent of BACKEND_DIR (open-webui-dev/)
+BASE_DIR = BACKEND_DIR.parent
 
 try:
     from dotenv import find_dotenv, load_dotenv

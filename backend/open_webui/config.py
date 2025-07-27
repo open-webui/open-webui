@@ -1169,6 +1169,10 @@ USER_PERMISSIONS_CHAT_SHARE = (
     os.environ.get("USER_PERMISSIONS_CHAT_SHARE", "True").lower() == "true"
 )
 
+USER_PERMISSIONS_CHAT_CLONE = (
+    os.environ.get("USER_PERMISSIONS_CHAT_CLONE", "True").lower() == "true"
+)
+
 USER_PERMISSIONS_CHAT_EXPORT = (
     os.environ.get("USER_PERMISSIONS_CHAT_EXPORT", "True").lower() == "true"
 )
@@ -1243,6 +1247,7 @@ DEFAULT_USER_PERMISSIONS = {
         "delete": USER_PERMISSIONS_CHAT_DELETE,
         "edit": USER_PERMISSIONS_CHAT_EDIT,
         "share": USER_PERMISSIONS_CHAT_SHARE,
+        "clone": USER_PERMISSIONS_CHAT_CLONE,
         "export": USER_PERMISSIONS_CHAT_EXPORT,
         "stt": USER_PERMISSIONS_CHAT_STT,
         "tts": USER_PERMISSIONS_CHAT_TTS,

@@ -48,6 +48,7 @@ export const chatTitle = writable('');
 
 export const channels = writable([]);
 export const chats = writable(null);
+export const chatsUpdated = writable(false);
 export const pinnedChats = writable([]);
 export const tags = writable([]);
 
@@ -82,6 +83,9 @@ export const artifactCode = writable(null);
 
 export const temporaryChatEnabled = writable(false);
 export const scrollPaginationEnabled = writable(false);
+export const sharedChats = writable([]);
+export const sharedChatsUpdated = writable(false);
+export const selectedSharedChatIds = writable([]);
 export const currentChatPage = writable(1);
 
 export const isLastActiveTab = writable(true);

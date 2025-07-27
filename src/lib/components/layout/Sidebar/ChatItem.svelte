@@ -26,7 +26,9 @@
 		showSidebar,
 		currentChatPage,
 		tags,
-		selectedFolder
+		selectedFolder,
+		sharedChatsUpdated,
+		user
 	} from '$lib/stores';
 
 	import ChatMenu from './ChatMenu.svelte';
@@ -87,6 +89,7 @@
 			await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			await pinnedChats.set(await getPinnedChatList(localStorage.token));
 
+			sharedChatsUpdated.set(true);
 			dispatch('change');
 		}
 	};
@@ -126,7 +129,7 @@
 				await chatId.set('');
 				await tick();
 			}
-
+			sharedChatsUpdated.set(true);
 			dispatch('change');
 		}
 	};
@@ -485,6 +488,7 @@
 					cloneChatHandler={() => {
 						cloneChatHandler(id);
 					}}
+					showCloneChat={($user?.permissions?.chat?.clone) ?? true}
 					shareHandler={() => {
 						showShareChatModal = true;
 					}}
