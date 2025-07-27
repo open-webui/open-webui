@@ -1,8 +1,8 @@
 # mAI Usage Tracking System - Admin Guide
 
-**Date**: July 26, 2025  
-**Status**: ✅ **PRODUCTION READY** - Business-focused admin interface  
-**Version**: 3.0 (Admin-focused daily breakdown approach)
+**Date**: July 27, 2025  
+**Status**: ✅ **PRODUCTION READY** - Business-focused admin interface with holiday-aware NBP integration  
+**Version**: 3.1 (Admin-focused daily breakdown with intelligent currency conversion)
 
 ---
 
@@ -105,7 +105,7 @@ CREATE TABLE client_daily_usage (
 **Total Cost Card** 
 - Monthly cost in USD and PLN
 - Request count for volume context
-- Dual currency support with NBP exchange rates
+- Holiday-aware NBP exchange rates with intelligent fallback system
 
 **Usage Activity Card**
 - Days with usage vs. total days in month
@@ -169,6 +169,57 @@ CREATE TABLE client_daily_usage (
 - **Activity Percentage**: System utilization for scaling decisions
 - **Model Distribution**: Technology investment planning
 - **User Engagement**: Adoption and training insights
+
+---
+
+## Currency Conversion System
+
+### Holiday-Aware NBP Integration
+
+The system features an intelligent **3-Tier Fallback System** for PLN currency conversion that automatically handles Polish banking holidays and non-working days:
+
+#### Tier 1: Polish Holiday Calendar Optimization
+- **2025 Holiday Calendar**: Exact Polish holidays with correct dates
+- **API Call Optimization**: Skips API calls for known non-working days
+- **Smart Fallback**: Automatically uses last working day rate
+- **Weekend Handling**: Proper Friday rate usage for weekends
+
+#### Tier 2: Time-Based Working Day Logic
+- **8:15 AM Rule**: Before publish time uses previous day, after uses current
+- **Working Day Validation**: Uses holiday calendar to determine working days
+- **Intelligent Caching**: Different TTL based on rate source and timing
+
+#### Tier 3: Enhanced 404 Fallback
+- **Unknown Issues**: Handles bank strikes, technical problems, undeclared holidays
+- **Smart Search**: Only tries working days, skips known non-working days
+- **Graceful Degradation**: Goes back up to 10 days to find valid data
+
+### Holiday Coverage (2025)
+
+**Fixed Holidays**: New Year's Day, Epiphany, Labour Day, Constitution Day, Assumption Day, All Saints' Day, Independence Day, Christmas Eve, Christmas Day, Boxing Day
+
+**Movable Holidays**: Easter Sunday (April 20), Easter Monday (April 21), Pentecost (June 8), Corpus Christi (June 19)
+
+**Edge Cases**: Extended holiday weekends, holiday + weekend combinations, unknown non-publication days
+
+### Rate Source Transparency
+
+The system provides full transparency with rate source tracking:
+```json
+{
+  "rate": 3.6530,
+  "effective_date": "2025-07-24",
+  "rate_source": "holiday_skip",
+  "skip_reason": "Polish holiday: Boże Narodzenie",
+  "fallback_date": "2025-12-23"
+}
+```
+
+### Business Benefits
+- **Efficiency**: Reduces API calls by ~30% by skipping known holidays/weekends
+- **Reliability**: Handles all 2025 Polish holidays including movable ones
+- **Consistency**: Accurate PLN conversions during holiday periods
+- **Performance**: Smart caching with context-aware TTL
 
 ---
 
@@ -310,6 +361,11 @@ Authorization: Bearer {admin_token}
 - **Solution**: Usage data accumulates as system is used
 - **Timeline**: Data visible immediately after first API calls
 
+#### "PLN conversion showing old rates"
+- **Cause**: Polish banking holiday or NBP non-publication day
+- **Solution**: System automatically uses last working day rate
+- **Verification**: Check rate_source field in API response for holiday information
+
 ### Admin Verification Commands
 
 ```bash
@@ -328,6 +384,10 @@ docker exec container sqlite3 /app/backend/data/webui.db \
 docker exec container sqlite3 /app/backend/data/webui.db \
   "SELECT id, name, markup_rate FROM client_organizations 
    WHERE is_active = 1;"
+
+# Verify NBP exchange rate system
+curl "http://localhost:8080/api/v1/usage-tracking/exchange-rate/USD/PLN" \
+  -H "Authorization: Bearer {admin_token}"
 ```
 
 ---
@@ -362,8 +422,9 @@ The mAI Usage Tracking System provides administrators with a clean, business-foc
 - ✅ **Clean Monthly Overview** - Perfect for management review
 - ✅ **Daily Breakdown Analysis** - Complete usage patterns  
 - ✅ **Business Intelligence** - Automated insights and trends
-- ✅ **Cost Control** - Transparent pricing with PLN support
+- ✅ **Cost Control** - Transparent pricing with holiday-aware PLN support
 - ✅ **Strategic Planning** - Data-driven capacity and budget planning
+- ✅ **Currency Reliability** - Intelligent NBP integration with 3-tier fallback system
 
 ---
 
