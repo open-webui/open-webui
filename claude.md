@@ -1,58 +1,84 @@
 # CLAUDE.md
 
-## Claude Behavior Guidelines
+## Core Project Rules
 
-**CRITICAL RULES:**
-- **Do not create extensive scripts above 700 lines of code**. Always be guided by good practices in this regard and SOLID principles.
-- **Always remember to finally create production solutions.** It is forbidden for you, e.g., adding missing records to the database that should be correctly mapped by an automatic solution.
-- **ALWAYS work on `customization` branch** - never commit directly to main
-- **ALWAYS create backups before asset modifications**: `cp -r static/static customization-backup/static-$(date +%Y%m%d)`
-- **Focus on code verification** through build processes and type checking instead of runtime testing
-- **Be specific and precise** - avoid unnecessary explanations, provide step-by-step solutions
-- **Challenge user's assumptions** if they conflict with better task execution
-- **Always update necessary .md files in docs folder** after commit changes
-- **Always use Sequential thinking MCP** to solve complex problems
+**mAI** - OpenWebUI fork for Polish SMEs (300+ users, 20 Docker instances)
 
-[Important!] User is the mAI provider (OWUI fork). The future of the project (always take this into account when designing solutions): mAI implementations for about 20 small companies in Poland, where each will have from 5 to 20 employees. Single Hetzner Cloud server running multiple Docker instances (one per client) with complete data isolation.
+### Critical Rules (Non-Negotiable)
+- **NEVER exceed 700 lines per file** - split into smaller modules
+- **ALWAYS work on `customization` branch** - never commit to `main`
+- **ALWAYS backup assets**: `cp -r static/static customization-backup/static-$(date +%Y%m%d)`
+- **Production solutions only** - no manual fixes or temporary hacks
+- **Sequential Thinking MCP** for complex problems
 
-**Client User Structure (Per Instance):**
-- **1 Admin User**: First person to register automatically becomes admin, manages OpenRouter API key and creates user accounts
-- **4-19 Regular Users**: Created by admin through mAI web interface (Settings → Admin → Users)
-- **Single Organization**: All users mapped to one organization per instance with individual external_user auto-learning
-- **Automated Usage Tracking**: Each user gets unique external_user from OpenRouter, tracked under shared API key
+### Commit Prefixes (Mandatory)
+```
+brand:    # mAI branding changes
+theme:    # UI styling modifications  
+ui:       # Interface improvements
+assets:   # Static file changes
+feat:     # New features
+fix:      # Bug fixes
+refactor: # Code improvements
+```
 
-**WORKFLOW PRIORITIES:**
-1. Code quality and type safety first
-3. Follow commit prefixes: `brand:`, `theme:`, `ui:`, `assets:`
+### Code Quality Standards
+- **Max function length**: 20 lines
+- **Type safety**: 100% TypeScript coverage for new code
+- **Error handling**: Structured exceptions with proper HTTP codes
+- **SOLID principles**: Apply to new components only
 
-### Business model:
-- hybrid pricing (subscription + token usage from OpenRouter x1.3)
+### Business Context
+- **Multi-tenant**: Docker isolation per client via environment variables
+- **Usage tracking**: Real-time OpenRouter integration with 1.3x markup
+- **Database**: SQLite per container, daily usage aggregation
+- **Deployment**: Single Hetzner server, docker-compose per client
 
-## Project Overview
+### Docker Development Environment
+- **`mai-open-webui-dev`**: Development container running on port 3001
+  - Used for testing new features and debugging
+  - Environment-based configuration with `OPENROUTER_EXTERNAL_USER=dev_mai_client_d460a478`
+  - Hot reload for rapid development
+- **`mai-open-webui-customization`**: Production-ready container for customization branch
+  - Used for testing production deployments and client customizations
+  - Full production environment simulation
+  - Stable build for client testing
 
-**mAI** - Customized Open WebUI fork
-- **Frontend**: SvelteKit + TypeScript + TailwindCSS
-- **Backend**: FastAPI + Python 3.11-3.12
-- **Current Branch**: `customization` (main: `main`)
-- **Key Features**: Complete mAI visual identity, custom background patterns, multi-language support, usage monitoring
+## Key Implementation Notes
 
-## Detailed Documentation
+- **Database**: Use existing models in `backend/open_webui/models/organization_usage.py`
+- **Frontend**: Extend stores in `/src/lib/stores/index.ts`, don't replace
+- **Routers**: Follow patterns in `backend/open_webui/routers/usage_tracking.py`
+- **Environment**: Use `generate_client_env.py` for client setup
 
-**Development Commands & Scripts**: @docs/commands.md
-**Architecture & Technical Details**: @docs/architecture.md  
-**Docker & Deployment**: @docs/deployment.md
-**Customization Workflows**: @docs/workflows.md
-**File Locations & Structure**: @docs/file-locations.md
+## Architecture Context
 
-## Critical Customization Rules
+### Current Tech Stack
+```
+Frontend: SvelteKit + TypeScript + TailwindCSS
+Backend: FastAPI + SQLAlchemy + Redis
+Database: SQLite (per container)
+APIs: OpenRouter with usage webhooks
+```
 
-##crawl4ai-mai MCP & Knowledge Integration
+### Key Existing Models (Don't Modify)
+- `ClientOrganization` - Client management with API keys
+- `ClientDailyUsage` - Daily usage aggregation 
+- `ClientUserDailyUsage` - Per-user tracking
+- `ProcessedGeneration` - Duplicate prevention
 
-- **For implementation patterns**: Use `search_code_examples` before writing code
-- **For research**: Use `perform_rag_query` with specific source filtering
+### Extend, Don't Replace
+- Use existing `Users` model from OpenWebUI
+- Extend existing stores in `/src/lib/stores/`
+- Add routers following existing patterns
+- Follow existing auth and permission patterns
 
-##Research → Implement
+## MCP Research Process
+1. **Code patterns**: `search_code_examples` for existing implementations
+2. **Documentation**: `perform_rag_query` with source filtering  
+3. **Complex problems**: Sequential Thinking MCP
+4. **Integration**: Check existing OpenWebUI patterns first
 
-**Research Phase**:
-   - `search_code_examples` for specific implementations
-   - `perform_rag_query` with source filtering for documentation
+---
+
+**Core Principle**: Build on the solid OpenWebUI foundation. Usage tracking and multi-tenancy are operational - focus on enhancing existing functionality.

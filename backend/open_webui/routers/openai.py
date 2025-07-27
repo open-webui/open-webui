@@ -893,6 +893,10 @@ async def generate_chat_completion(
                 log.warning(f"Failed to generate user-specific external_user_id: {e}, using fallback")
                 payload["user"] = user_mapping_service.get_fallback_external_user_id()
             
+            # Enable OpenRouter usage accounting for detailed cost tracking
+            payload["usage"] = {"include": True}
+            log.info(f"DEBUG: Enabled OpenRouter usage accounting for detailed cost tracking")
+            
             # Create client context for usage tracking compatibility
             client_context = {
                 "api_key": OPENROUTER_API_KEY,
@@ -1030,12 +1034,20 @@ async def generate_chat_completion(
                     input_tokens = usage_data.get("prompt_tokens", 0)
                     output_tokens = usage_data.get("completion_tokens", 0)
                     
-                    # Get cost from OpenRouter response or calculate approximate cost
+                    # Get cost from OpenRouter response with usage accounting enabled
                     raw_cost = 0.0
-                    if "cost" in response:
-                        raw_cost = response["cost"]
+                    if "usage" in response:
+                        usage_response = response["usage"]
+                        if isinstance(usage_response, dict) and "cost" in usage_response:
+                            # OpenRouter usage accounting enabled - structured response
+                            raw_cost = float(usage_response["cost"])
+                        elif isinstance(usage_response, (int, float)):
+                            # OpenRouter usage accounting disabled - simple cost field
+                            raw_cost = float(usage_response)
+                    elif "cost" in response:
+                        raw_cost = float(response["cost"])
                     elif "total_cost" in usage_data:
-                        raw_cost = usage_data["total_cost"]
+                        raw_cost = float(usage_data["total_cost"])
                     
                     log.info(f"DEBUG: Usage data - tokens: {input_tokens + output_tokens}, cost: {raw_cost}")
                     
@@ -1056,28 +1068,20 @@ async def generate_chat_completion(
                             log.info(f"DEBUG: Detected external_user from OpenRouter: {external_user}")
                     
                     # Record usage asynchronously (don't block response)
-                    if client_context.get("is_env_based"):
-                        # For environment-based configuration, log usage info
-                        log.info(f"Environment-based OpenRouter usage - User: {user.id}, "
-                               f"Model: {payload.get('model', 'unknown')}, "
-                               f"Tokens: {input_tokens + output_tokens}, "
-                               f"Cost: {raw_cost}, "
-                               f"Organization: {ORGANIZATION_NAME}")
-                    else:
-                        # Use the original database-based usage tracking
-                        asyncio.create_task(
-                            openrouter_client_manager.record_real_time_usage(
-                                user_id=user.id,
-                                model_name=payload.get("model", "unknown"),
-                                input_tokens=input_tokens,
-                                output_tokens=output_tokens,
-                                raw_cost=raw_cost,
-                                provider=provider,
-                                generation_time=generation_time,
-                                external_user=external_user,  # Pass external_user for auto-learning
-                                client_context=client_context  # Pass context to check if update needed
-                            )
+                    # Always record to database for subscription billing (both env-based and database-based)
+                    asyncio.create_task(
+                        openrouter_client_manager.record_real_time_usage(
+                            user_id=user.id,
+                            model_name=json.loads(payload).get("model", "unknown"),
+                            input_tokens=input_tokens,
+                            output_tokens=output_tokens,
+                            raw_cost=raw_cost,
+                            provider=provider,
+                            generation_time=generation_time,
+                            external_user=external_user,
+                            client_context=client_context
                         )
+                    )
                     log.info(f"DEBUG: Usage recording task created successfully")
                 except Exception as usage_error:
                     log.error(f"Failed to record usage for user {user.id}: {usage_error}")
