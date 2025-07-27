@@ -2,6 +2,8 @@
 	import { createEventDispatcher, getContext } from 'svelte';
 	import { tags } from '$lib/stores';
 	import { toast } from 'svelte-sonner';
+	import Check from '$lib/components/icons/Check.svelte';
+	import Plus from '$lib/components/icons/Plus.svelte';
 	const dispatch = createEventDispatcher();
 
 	const i18n = getContext('i18n');
@@ -44,20 +46,7 @@
 			</datalist>
 
 			<button type="button" aria-label={$i18n.t('Save Tag')} on:click={addTagHandler}>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 16 16"
-					fill="currentColor"
-					stroke-width="2"
-					aria-hidden="true"
-					class="w-3 h-3"
-				>
-					<path
-						fill-rule="evenodd"
-						d="M12.416 3.376a.75.75 0 0 1 .208 1.04l-5 7.5a.75.75 0 0 1-1.154.114l-3-3a.75.75 0 0 1 1.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 0 1 1.04-.207Z"
-						clip-rule="evenodd"
-					/>
-				</svg>
+				<Check className="w-3 h-3" />
 			</button>
 		</div>
 	{/if}
@@ -71,17 +60,7 @@
 		}}
 	>
 		<div class=" m-auto self-center">
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				viewBox="0 0 16 16"
-				aria-hidden="true"
-				fill="currentColor"
-				class="w-3 h-3 {showTagInput ? 'rotate-45' : ''} transition-all transform"
-			>
-				<path
-					d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z"
-				/>
-			</svg>
+			<Plus className="w-3 h-3 {showTagInput ? 'rotate-45' : ''} transition-all transform" />
 		</div>
 	</button>
 

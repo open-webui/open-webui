@@ -73,6 +73,10 @@
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 	import InputVariablesModal from './MessageInput/InputVariablesModal.svelte';
 	import Voice from '../icons/Voice.svelte';
+	import ArrowDown from '../icons/ArrowDown.svelte';
+	import Plus from '../icons/Plus.svelte';
+	import Stop from '../icons/Stop.svelte';
+	import ArrowUp from '../icons/ArrowUp.svelte';
 	const i18n = getContext('i18n');
 
 	export let transparentBackground = false;
@@ -838,18 +842,7 @@
 									scrollToBottom();
 								}}
 							>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									viewBox="0 0 20 20"
-									fill="currentColor"
-									class="w-5 h-5"
-								>
-									<path
-										fill-rule="evenodd"
-										d="M10 3a.75.75 0 01.75.75v10.638l3.96-4.158a.75.75 0 111.08 1.04l-5.25 5.5a.75.75 0 01-1.08 0l-5.25-5.5a.75.75 0 111.08-1.04l3.96 4.158V3.75A.75.75 0 0110 3z"
-										clip-rule="evenodd"
-									/>
-								</svg>
+								<ArrowDown class="w-5 h-5" />
 							</button>
 						</div>
 					{/if}
@@ -1012,19 +1005,7 @@
 																		.join(', ')
 																})}
 															>
-																<svg
-																	xmlns="http://www.w3.org/2000/svg"
-																	viewBox="0 0 24 24"
-																	fill="currentColor"
-																	aria-hidden="true"
-																	class="size-4 fill-yellow-300"
-																>
-																	<path
-																		fill-rule="evenodd"
-																		d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003ZM12 8.25a.75.75 0 0 1 .75.75v3.75a.75.75 0 0 1-1.5 0V9a.75.75 0 0 1 .75-.75Zm0 8.25a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z"
-																		clip-rule="evenodd"
-																	/>
-																</svg>
+																<XMark className="size-4 fill-yellow-300" />
 															</Tooltip>
 														{/if}
 													</div>
@@ -1041,17 +1022,7 @@
 																files = files;
 															}}
 														>
-															<svg
-																xmlns="http://www.w3.org/2000/svg"
-																viewBox="0 0 20 20"
-																fill="currentColor"
-																aria-hidden="true"
-																class="size-4"
-															>
-																<path
-																	d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-																/>
-															</svg>
+															<XMark className="size-4" />
 														</button>
 													</div>
 												</div>
@@ -1618,17 +1589,7 @@
 											<div
 												class="bg-transparent hover:bg-gray-100 text-gray-800 dark:text-white dark:hover:bg-gray-800 rounded-full p-1.5 outline-hidden focus:outline-hidden"
 											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													viewBox="0 0 20 20"
-													aria-hidden="true"
-													fill="currentColor"
-													class="size-5"
-												>
-													<path
-														d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"
-													/>
-												</svg>
+												<Plus class="size-5" />
 											</div>
 										</InputMenu>
 
@@ -1805,17 +1766,7 @@
 													}}
 													aria-label="Voice Input"
 												>
-													<svg
-														xmlns="http://www.w3.org/2000/svg"
-														viewBox="0 0 20 20"
-														fill="currentColor"
-														class="w-5 h-5 translate-y-[0.5px]"
-													>
-														<path d="M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4z" />
-														<path
-															d="M5.5 9.643a.75.75 0 00-1.5 0V10c0 3.06 2.29 5.585 5.25 5.954V17.5h-1.5a.75.75 0 000 1.5h4.5a.75.75 0 000-1.5h-1.5v-1.546A6.001 6.001 0 0016 10v-.357a.75.75 0 00-1.5 0V10a4.5 4.5 0 01-9 0v-.357z"
-														/>
-													</svg>
+													<Voice className="w-5 h-5" />
 												</button>
 											</Tooltip>
 										{/if}
@@ -1829,18 +1780,7 @@
 															stopResponse();
 														}}
 													>
-														<svg
-															xmlns="http://www.w3.org/2000/svg"
-															viewBox="0 0 24 24"
-															fill="currentColor"
-															class="size-5"
-														>
-															<path
-																fill-rule="evenodd"
-																d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm6-2.438c0-.724.588-1.312 1.313-1.312h4.874c.725 0 1.313.588 1.313 1.313v4.874c0 .725-.588 1.313-1.313 1.313H9.564a1.312 1.312 0 01-1.313-1.313V9.564z"
-																clip-rule="evenodd"
-															/>
-														</svg>
+														<Stop className="size-5" />
 													</button>
 												</Tooltip>
 											</div>
@@ -1918,18 +1858,7 @@
 														type="submit"
 														disabled={prompt === '' && files.length === 0}
 													>
-														<svg
-															xmlns="http://www.w3.org/2000/svg"
-															viewBox="0 0 16 16"
-															fill="currentColor"
-															class="size-5"
-														>
-															<path
-																fill-rule="evenodd"
-																d="M8 14a.75.75 0 0 1-.75-.75V4.56L4.03 7.78a.75.75 0 0 1-1.06-1.06l4.5-4.5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.75 4.56v8.69A.75.75 0 0 1 8 14Z"
-																clip-rule="evenodd"
-															/>
-														</svg>
+														<ArrowUp className="size-5" />
 													</button>
 												</Tooltip>
 											</div>
