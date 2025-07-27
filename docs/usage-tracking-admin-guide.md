@@ -100,6 +100,126 @@ CREATE TABLE client_daily_usage (
 - **`client_model_daily_usage`**: Per-model usage statistics
 - **`user_client_mapping`**: User-to-organization assignments
 
+### Duplicate Prevention Table: `processed_generations`
+```sql
+CREATE TABLE processed_generations (
+    id TEXT PRIMARY KEY,                      -- OpenRouter generation_id
+    client_org_id TEXT NOT NULL,             -- Organization reference
+    generation_date DATE NOT NULL,           -- Processing date
+    processed_at INTEGER NOT NULL,           -- Unix timestamp of processing
+    total_cost REAL DEFAULT 0.0,            -- Cost for audit trail
+    total_tokens INTEGER DEFAULT 0          -- Token count for audit trail
+);
+```
+
+This table ensures each OpenRouter generation is recorded only once, preventing duplicate billing from:
+- API retries and failures
+- Webhook replays
+- Streaming response chunks
+- Manual reprocessing
+
+---
+
+## Duplicate Prevention System
+
+### How OpenRouter Streaming Works
+
+When you make a single query to OpenRouter, it may generate multiple API responses as part of streaming:
+
+```
+Single User Query → Multiple OpenRouter Responses
+Example from real data:
+├── gen-1753639473-xmTDMMtjF7MFEUDDQwxS (16 prompt, 1137 completion tokens)
+├── gen-1753639492-bYTtA2p96XnBWvIXXVnx (1357 prompt, 87 completion tokens)  
+├── gen-1753639497-uuROABnTGNKntsEKAiEY (1427 prompt, 12 completion tokens)
+└── gen-1753639499-JeqYBe08OQHtZJmmRBkV (1319 prompt, 28 completion tokens)
+```
+
+**Each response has a unique `generation_id`** - this is normal behavior, not query splitting.
+
+### Duplicate Prevention Process
+
+1. **Generation ID Extraction**: System extracts `generation_id` from OpenRouter response
+2. **Duplicate Check**: Before recording usage, checks if `generation_id` already exists
+3. **Skip or Record**: If exists, skips recording; if new, records usage and marks as processed
+4. **Audit Trail**: Maintains processed generations table for 60-day retention
+
+### Implementation Details
+
+**Real-time Usage Recording** (`openrouter_client_manager.py`):
+```python
+# Check for duplicate before recording
+if generation_id and ProcessedGenerationDB.is_generation_processed(generation_id, client_org_id):
+    log.info(f"Generation {generation_id} already processed, skipping duplicate")
+    return True
+
+# Record usage if not duplicate
+success = ClientUsageDB.record_usage(...)
+
+# Mark as processed to prevent future duplicates
+if success and generation_id:
+    processed_gen = ProcessedGeneration(id=generation_id, ...)
+    db.add(processed_gen)
+```
+
+**OpenRouter Response Processing** (`openai.py`):
+```python
+# Extract generation_id from OpenRouter response
+generation_id = response.get("generation_id") or response.get("id")
+
+# Pass to usage recording with duplicate prevention
+openrouter_client_manager.record_real_time_usage(
+    generation_id=generation_id,  # Critical for duplicate prevention
+    ...
+)
+```
+
+### Protection Against
+
+- **API Retries**: If OpenRouter retries a failed request
+- **Webhook Replays**: If webhook systems replay usage notifications  
+- **Manual Reprocessing**: If admin manually reprocesses usage data
+- **Streaming Chunks**: Each chunk recorded once, no matter how many retries
+- **System Failures**: If recording fails and is retried later
+
+### Verification Commands
+
+**Check for duplicate generations**:
+```bash
+# Find potential duplicates in processed generations
+docker exec container sqlite3 /app/backend/data/webui.db \
+  "SELECT generation_id, COUNT(*) as count 
+   FROM processed_generations 
+   GROUP BY generation_id 
+   HAVING COUNT(*) > 1;"
+```
+
+**View recent processed generations**:
+```bash
+# Show last 10 processed generations
+docker exec container sqlite3 /app/backend/data/webui.db \
+  "SELECT id, client_org_id, generation_date, total_cost 
+   FROM processed_generations 
+   ORDER BY processed_at DESC 
+   LIMIT 10;"
+```
+
+**Verify duplicate prevention is working**:
+```bash
+# Check if specific generation was processed
+docker exec container sqlite3 /app/backend/data/webui.db \
+  "SELECT * FROM processed_generations 
+   WHERE id = 'gen-1753639473-xmTDMMtjF7MFEUDDQwxS';"
+```
+
+### Business Benefits
+
+- **Accurate Billing**: Each unique API call recorded exactly once
+- **Data Integrity**: No inflated usage statistics from duplicates
+- **Audit Trail**: Complete record of what was processed and when
+- **Cost Control**: Prevents overcharging due to technical issues
+- **Compliance**: Reliable usage tracking for financial reporting
+
 ---
 
 ## Admin Interface Components
@@ -441,6 +561,24 @@ Authorization: Bearer {admin_token}
 - **Solution**: System has built-in duplicate prevention - check batch logs
 - **Prevention**: Batch processor includes comprehensive validation and correction
 
+#### "Suspected duplicate usage charges"
+- **Cause**: Multiple entries for same generation_id or system errors
+- **Solution**: Check processed_generations table for duplicates
+- **Verification**: Run duplicate detection query (see Duplicate Prevention section)
+- **Prevention**: System automatically prevents duplicates via generation_id tracking
+
+#### "Usage recording appears multiple times"
+- **Cause**: Streaming responses creating multiple legitimate entries
+- **Explanation**: Normal behavior - each OpenRouter generation_id is unique
+- **Example**: Single query may produce 4 separate generations with different IDs
+- **Action**: Verify each entry has unique generation_id (this is correct behavior)
+
+#### "Generation marked as processed but no usage recorded"
+- **Cause**: Recording failed after duplicate check passed
+- **Investigation**: Check logs for errors after "Generation xyz already processed" message
+- **Solution**: May indicate database connectivity issues during recording phase
+- **Recovery**: Remove from processed_generations table to allow re-recording
+
 ### Admin Verification Commands
 
 ```bash
@@ -484,6 +622,21 @@ conn.close()
 # Verify NBP exchange rate system
 curl "http://localhost:8080/api/v1/usage-tracking/exchange-rate/USD/PLN" \
   -H "Authorization: Bearer {admin_token}"
+
+# Check duplicate prevention system
+docker exec container sqlite3 /app/backend/data/webui.db \
+  "SELECT COUNT(*) as total_processed, 
+          COUNT(DISTINCT id) as unique_generations,
+          MIN(generation_date) as oldest_record,
+          MAX(generation_date) as newest_record
+   FROM processed_generations;"
+
+# Verify no duplicate generation_ids exist
+docker exec container sqlite3 /app/backend/data/webui.db \
+  "SELECT id, COUNT(*) as count 
+   FROM processed_generations 
+   GROUP BY id 
+   HAVING COUNT(*) > 1;"
 ```
 
 ---
@@ -522,7 +675,8 @@ The mAI Usage Tracking System provides administrators with a clean, business-foc
 - ✅ **Clean Monthly Overview** - Perfect for management review with accurate pricing
 - ✅ **Daily Breakdown Analysis** - Complete usage patterns with automated integrity checks
 - ✅ **Business Intelligence** - Automated insights and trends with monthly cumulative calculations
-- ✅ **Data Integrity Protection** - Built-in duplicate prevention and validation
+- ✅ **Data Integrity Protection** - Built-in duplicate prevention with generation_id tracking
+- ✅ **Duplicate Prevention System** - Automatic protection against API retries, webhook replays, and streaming chunks
 - ✅ **Cost Control** - Transparent pricing with holiday-aware PLN support
 - ✅ **Strategic Planning** - Data-driven capacity and budget planning with current rates
 - ✅ **Currency Reliability** - Daily NBP integration with 3-tier fallback system

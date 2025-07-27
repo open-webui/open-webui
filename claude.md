@@ -73,6 +73,77 @@ APIs: OpenRouter with usage webhooks
 - Add routers following existing patterns
 - Follow existing auth and permission patterns
 
+## Development Environment Setup
+
+### Python Environment (Required Before Any Development)
+```bash
+# Navigate to project root
+cd /path/to/mAI
+
+# Check Python availability
+python3 --version  # Required: 3.11+ (project requirement)
+
+# Backend setup
+cd backend
+python3 -m venv venv
+source venv/bin/activate  # Linux/macOS
+# OR: venv\Scripts\activate  # Windows
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Verify installation
+python3 -c "import typer; print('Dependencies OK')"
+```
+
+### Standard Commands (Always Use These)
+```bash
+# Testing (from backend/ directory with venv activated)
+cd backend && source venv/bin/activate
+python3 -m pytest tests/
+python3 backend/tests/test_dynamic_pricing.py  # Direct script execution
+
+# Development server
+cd backend && source venv/bin/activate
+./dev.sh  # Hot reload development server
+
+# Production server  
+cd backend && source venv/bin/activate
+./start.sh
+```
+
+### Docker Development (Preferred)
+```bash
+# First time setup
+python3 generate_client_env_dev.py  # Generate .env.dev
+docker-compose -f docker-compose.dev.yml build
+docker-compose -f docker-compose.dev.yml up -d
+# Access: http://localhost:3001
+
+# Daily development
+docker-compose -f docker-compose.dev.yml up -d
+docker-compose -f docker-compose.dev.yml logs -f
+```
+
+### Environment Validation Before Tests
+```bash
+# Run this before any Python testing
+cd backend
+source venv/bin/activate
+python3 -c "
+import sys
+sys.path.insert(0, '.')
+from open_webui.utils.openrouter_models import get_dynamic_model_pricing
+print('✅ Environment ready')
+"
+```
+
+### Common Error Solutions
+- **`python: command not found`** → Use `python3`
+- **`ModuleNotFoundError: No module named 'typer'`** → Activate venv, install requirements
+- **Import errors in tests** → Run from `backend/` directory with activated venv
+- **`PYTHONPATH` issues** → Use `python3 -m pytest` instead of direct script execution
+
 ## MCP Research Process
 1. **Code patterns**: `search_code_examples` for existing implementations
 2. **Documentation**: `perform_rag_query` with source filtering  

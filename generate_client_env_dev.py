@@ -115,6 +115,8 @@ SPENDING_LIMIT={self.spending_limit}
         print("   ✅ Separate database (mai_dev_data volume)")
         print("   ✅ Separate API key from production")
         print("   ✅ External user prefixed with 'dev_'")
+        print("   ✅ Duplicate prevention system included")
+        print("   ✅ Safe for testing without affecting production data")
         print()
         
         print("⚠️  Important:")

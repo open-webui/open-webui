@@ -1055,6 +1055,7 @@ async def generate_chat_completion(
                     provider = None
                     generation_time = None
                     external_user = None
+                    generation_id = None
                     
                     if isinstance(response, dict):
                         provider_info = response.get("provider")
@@ -1066,6 +1067,12 @@ async def generate_chat_completion(
                         external_user = response.get("external_user")
                         if external_user and client_context.get("is_temporary_user_id"):
                             log.info(f"DEBUG: Detected external_user from OpenRouter: {external_user}")
+                        
+                        # Extract generation_id for duplicate prevention
+                        # OpenRouter returns generation_id, not just id
+                        generation_id = response.get("generation_id") or response.get("id")
+                        if generation_id:
+                            log.debug(f"OpenRouter generation_id: {generation_id}")
                     
                     # Record usage asynchronously (don't block response)
                     # Always record to database for subscription billing (both env-based and database-based)
@@ -1076,6 +1083,7 @@ async def generate_chat_completion(
                             input_tokens=input_tokens,
                             output_tokens=output_tokens,
                             raw_cost=raw_cost,
+                            generation_id=generation_id,
                             provider=provider,
                             generation_time=generation_time,
                             external_user=external_user,

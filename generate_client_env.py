@@ -446,6 +446,8 @@ SPENDING_LIMIT={self.spending_limit}
             print("   ✅ Usage tracking ready for production")
             print("   ✅ External user mapping configured")
             print("   ✅ Billing calculations with 1.3x markup rate")
+            print("   ✅ Duplicate prevention system active")
+            print("   ✅ Generation ID tracking enabled")
         else:
             print("📊 Usage Tracking:")
             print("   ⚠️  Database initialization required for production")
@@ -583,7 +585,9 @@ SPENDING_LIMIT={self.spending_limit}
             required_tables = [
                 'client_organizations',
                 'client_user_daily_usage', 
-                'client_model_daily_usage'
+                'client_model_daily_usage',
+                'processed_generations',
+                'processed_generation_cleanup_log'
             ]
             
             missing_tables = []
@@ -598,7 +602,13 @@ SPENDING_LIMIT={self.spending_limit}
             
             if missing_tables:
                 print(f"⚠️  Warning: Missing tables: {', '.join(missing_tables)}")
-                print("   Usage tracking may not work until these tables are created")
+                print("   Usage tracking and duplicate prevention may not work until these tables are created")
+                
+                # Check specifically for duplicate prevention tables
+                duplicate_prevention_tables = ['processed_generations', 'processed_generation_cleanup_log']
+                missing_dp_tables = [t for t in missing_tables if t in duplicate_prevention_tables]
+                if missing_dp_tables:
+                    print(f"   ❌ Duplicate prevention disabled: Missing {', '.join(missing_dp_tables)}")
             
             print(f"✅ Database validation completed")
             print(f"   🏢 Client organization: {self.external_user}")
@@ -635,6 +645,8 @@ SPENDING_LIMIT={self.spending_limit}
         print(f"   • Environment variables in .env file")
         print(f"   • Client organization in database")
         print(f"   • Usage tracking configuration")
+        print(f"   • Duplicate prevention system")
+        print(f"   • Generation ID tracking enabled")
         
         return True
 

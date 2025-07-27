@@ -15,7 +15,7 @@ from open_webui.config import (
     DATA_DIR
 )
 from open_webui.env import SRC_LOG_LEVELS
-from open_webui.models.organization_usage import ClientUsageDB, ClientOrganizationDB
+from open_webui.models.organization_usage import ClientUsageDB, ClientOrganizationDB, ProcessedGenerationDB
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
@@ -72,6 +72,7 @@ class OpenRouterClientManager:
         input_tokens: int,
         output_tokens: int,
         raw_cost: float,
+        generation_id: Optional[str] = None,
         provider: Optional[str] = None,
         generation_time: Optional[float] = None,
         external_user: Optional[str] = None,
@@ -81,7 +82,7 @@ class OpenRouterClientManager:
         Record usage data in real-time from OpenRouter API responses
         """
         try:
-            # Determine client organization ID
+            # Determine client organization ID first (needed for duplicate check)
             if self.is_env_based:
                 client_org_id = OPENROUTER_EXTERNAL_USER
                 if not client_org_id:
@@ -93,6 +94,11 @@ class OpenRouterClientManager:
                     log.error(f"No client context for user {user_id}")
                     return False
                 client_org_id = client_context["client_org_id"]
+            
+            # Check for duplicate generation if generation_id is provided
+            if generation_id and ProcessedGenerationDB.is_generation_processed(generation_id, client_org_id):
+                log.info(f"Generation {generation_id} already processed, skipping duplicate recording")
+                return True
             
             # Get client organization for markup rate
             client = ClientOrganizationDB.get_client_by_id(client_org_id)
@@ -136,6 +142,28 @@ class OpenRouterClientManager:
             if success:
                 total_tokens = input_tokens + output_tokens
                 log.info(f"✅ Recorded usage: {total_tokens} tokens, ${markup_cost:.6f} for {model_name}")
+                
+                # Mark generation as processed to prevent duplicates
+                if generation_id:
+                    try:
+                        from open_webui.internal.db import get_db
+                        from open_webui.models.organization_usage import ProcessedGeneration
+                        
+                        with get_db() as db:
+                            processed_gen = ProcessedGeneration(
+                                id=generation_id,
+                                client_org_id=client_org_id,
+                                generation_date=date.today(),
+                                processed_at=int(datetime.now().timestamp()),
+                                total_cost=markup_cost,
+                                total_tokens=total_tokens
+                            )
+                            db.add(processed_gen)
+                            db.commit()
+                            log.debug(f"Marked generation {generation_id} as processed")
+                    except Exception as e:
+                        log.warning(f"Failed to mark generation {generation_id} as processed: {e}")
+                        # Don't fail the overall operation if we can't mark as processed
             else:
                 log.error(f"Failed to record usage for {model_name}")
             
