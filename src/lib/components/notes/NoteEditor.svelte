@@ -710,7 +710,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 			<a
 				href="/notes"
 				class="items-center mb-[17px] ml-[12px] inline-flex gap-[4px] text-neutrals-800 text-[14px] leading-[22px] font-bold"
-				><ArrowLeftNew />back</a
+				><ArrowLeftNew />Back</a
 			>
 			<div
 				class="relative max-w-[800px] mx-auto p-[16px] h-[85%] rounded-[12px] w-full flex flex-col bg-white/88 dark:bg-transparent dark:border"
