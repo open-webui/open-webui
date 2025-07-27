@@ -369,7 +369,7 @@ def system_info_serial_command():
     except subprocess.CalledProcessError as e:
         return f"Error executing script: {e.stderr}", 500
 
-def manual_response(status="sucess",model="ollama",content=None,thinking=None,tool_calls=None,openai_tool_calls=None,name="Alice",id="12345",email="alice@example.com",role="admin",some_key="some_value",profile_data=None):
+def manual_response(status="success",model="ollama",content=None,thinking=None,tool_calls=None,openai_tool_calls=None,name="Alice",id="12345",email="alice@example.com",role="admin",some_key="some_value",profile_data=None):
     json_string ={
             "status": status,
             "model": model,
@@ -641,6 +641,16 @@ def restart_txe_ollama_serial_command():
     internal_restart_txe()
     
     return manual_response(content="Restarted OPU",thinking="Restarted OPU"), 200
+
+@app.route('/api/system-info', methods=['GET', 'POST'])
+def system_info_ollama_serial_command():
+    result, error = system_info_serial_command()
+    return manual_response(content=result,thinking="System Info"), error
+
+@app.route('/api/health-check', methods=['GET', 'POST'])
+def health_check_ollama_serial_command():
+    result, error = health_check_serial_command()
+    return manual_response(content=result,thinking="Health Check"), error
 
 @app.route('/submit', methods=['POST'])
 def submit():

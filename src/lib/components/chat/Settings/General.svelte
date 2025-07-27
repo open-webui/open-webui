@@ -11,7 +11,7 @@
 	import AdvancedParams from './Advanced/AdvancedParams.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
 
-	import { restartOpu } from '../Controls/Controls.svelte';
+	import { restartOpu, systemInfoOpu, healthCheckOpu } from '../Controls/Controls.svelte';
 
 	export let saveSettings: Function;
 	export let getModels: Function;
@@ -26,6 +26,13 @@
 	let system = '';
 
 	let showAdvanced = false;
+	let showHealthCheck = false;
+	let showHealthModal = false;
+	let healthOutput = {};
+
+	let showSystemInfo = false;
+	let showSystemInfoModal = false;
+	let systemInfoOutput = {};
 
 	const toggleNotification = async () => {
 		const permission = await Notification.requestPermission();
@@ -190,7 +197,6 @@
 		localStorage.setItem('theme', _theme);
 		applyTheme(_theme);
 	};
-
 </script>
 
 <div class="flex flex-col h-full justify-between text-sm" id="tab-general">
@@ -311,6 +317,59 @@
 					}>{$isRestarting ? $i18n.t('Restarting...') : $i18n.t('Restart Now')}
 				</button>
 				</div>
+                        </div>
+                {/if}
+
+                {#if ($user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true)) && (params.target === 'cpu' || params.target === 'opu') }
+                        <div class="mt-2 space-y-3 pr-1.5">
+                                <div class="flex justify-between items-center text-sm">
+                                        <div class="  font-medium">{$i18n.t('Opu System Info')}</div>
+                                <button
+                                        class={
+						'w-auto text-sm px-2 py-1 rounded-md transition-colors duration-200' +
+						($settings.highContrastMode ?
+						' border-2 border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-850 text-gray-900 dark:text-gray-100 hover:bg-blue-100 dark:hover:bg-blue-900'
+						: ' bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-600')
+                                        }
+                                        on:click={async() => {
+							systemInfoOutput = await systemInfoOpu(); // SystemInfo logic
+							showSystemInfoModal = true
+                                                        showSystemInfo = !showSystemInfo;
+                                                }
+                                        }>{showSystemInfo ? $i18n.t('Hide') : $i18n.t('Show')}
+                                </button>
+                                </div>
+                                {#if showSystemInfo && showSystemInfoModal && systemInfoOutput?.message?.content}
+                                        <div class="...">
+                                                <pre>{systemInfoOutput.message.content}</pre>
+                                        </div>
+                                {/if}
+                        </div>
+                {/if}
+
+                {#if ($user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true)) && (params.target === 'cpu' || params.target === 'opu') }
+                        <div class="mt-2 space-y-3 pr-1.5">
+                                <div class="flex justify-between items-center text-sm">
+                                        <div class="  font-medium">{$i18n.t('Opu Health Check')}</div>
+                                <button
+                                        class={
+                                                'w-auto text-sm px-2 py-1 rounded-md transition-colors duration-200' +
+                                                ($settings.highContrastMode ?
+                                                ' border-2 border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-850 text-gray-900 dark:text-gray-100 hover:bg-blue-100 dark:hover:bg-blue-900'
+                                                : ' bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-600')
+                                        }
+					on:click={async() => {
+							healthOutput = await healthCheckOpu();
+							showHealthModal = true;
+                                                        showHealthCheck = !showHealthCheck;
+						}}>{showHealthCheck ? $i18n.t('Hide') : $i18n.t('Show')}
+				</button>
+                                </div>
+				{#if showHealthCheck && showHealthModal && healthOutput?.message?.content}
+					<div class="...">
+						<pre>{healthOutput.message.content}</pre>
+					</div>
+				{/if}
                         </div>
                 {/if}
 

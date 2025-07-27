@@ -38,6 +38,42 @@
 			isRestarting.set(false);
 		}
 	}
+        export async function healthCheckOpu() {
+                try {
+                        const response = await fetch('/ollama/api/healthcheckopu', {
+                                method: 'POST',
+                                headers: {
+                                        'Content-Type': 'application/json',
+                                },
+				body: JSON.stringify({ target: 'opu' }),
+                        });
+                        if (!response.ok) throw new Error('Health check failed');
+			const data = await response.json(); // ✅ Parse JSON
+			return data; // 🔁 Return the parsed object!
+		} catch (error) {
+			console.error('Error Health Check of OPU:', error);
+			alert('Something went wrong while health checking of OPU.');
+			return null;
+		}
+        }
+        export async function systemInfoOpu() {
+                try {
+                        const response = await fetch('/ollama/api/systeminfoopu', {
+                                method: 'POST',
+                                headers: {
+                                        'Content-Type': 'application/json',
+                                },
+				body: JSON.stringify({ target: 'opu' }),
+                        });
+                        if (!response.ok) throw new Error('System info failed');
+                        const data = await response.json(); // ✅ Parse JSON
+                        return data; // 🔁 Return the parsed object!
+                } catch (error) {
+                        console.error('Error System Info of OPU:', error);
+                        alert('Something went wrong while getting system info of OPU.');
+                        return null;
+                }
+        }
 </script>
 
 <div class=" dark:text-white">
