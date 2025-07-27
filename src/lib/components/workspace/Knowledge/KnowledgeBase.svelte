@@ -50,6 +50,11 @@
 		description: string;
 		data: {
 			file_ids: string[];
+			// Google Drive sync fields
+			google_drive_folder_id?: string;
+			google_drive_include_nested?: boolean;
+			google_drive_sync_interval_days?: number;
+			google_drive_last_sync?: number;
 		};
 		files: any[];
 	};

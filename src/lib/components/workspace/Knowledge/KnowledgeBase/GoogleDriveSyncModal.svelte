@@ -45,16 +45,17 @@
 	});
 
 	const loadExistingConfiguration = (): void => {
-		if (knowledgeData) {
+		if (knowledgeData && knowledgeData.data) {
 			// Load existing Google Drive configuration from knowledge base data
-			if (knowledgeData.google_drive_folder_id) {
-				folderId = knowledgeData.google_drive_folder_id;
+			const data = knowledgeData.data;
+			if (data.google_drive_folder_id) {
+				folderId = data.google_drive_folder_id;
 			}
-			if (knowledgeData.google_drive_include_nested !== undefined) {
-				includeNested = knowledgeData.google_drive_include_nested;
+			if (data.google_drive_include_nested !== undefined) {
+				includeNested = data.google_drive_include_nested;
 			}
-			if (knowledgeData.google_drive_sync_interval_days) {
-				syncIntervalDays = knowledgeData.google_drive_sync_interval_days;
+			if (data.google_drive_sync_interval_days) {
+				syncIntervalDays = data.google_drive_sync_interval_days;
 			}
 		}
 	};
@@ -140,6 +141,7 @@
 				class="self-center"
 				on:click={() => {
 					show = false;
+					// Don't reset fields - keep them for next time
 				}}
 			>
 				<svg
@@ -231,6 +233,7 @@
 					class="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
 					on:click={() => {
 						show = false;
+						// Don't reset fields - keep them for next time
 					}}
 				>
 					{$i18n.t('Cancel')}
