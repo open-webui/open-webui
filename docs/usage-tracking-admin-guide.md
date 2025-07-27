@@ -49,21 +49,23 @@ Date        Day      Tokens   Cost      Requests  Primary Model    Last Activity
 
 ## Core System Architecture
 
-### Daily Batch Processing Architecture (Business-Appropriate)
+### Dynamic Pricing & Daily Batch Processing Architecture
 ```
 OpenRouter API Call → Usage Recording → Daily Batch (00:00) → Admin Dashboard
-                              ↓              ↓
-                    Live Storage      Daily Consolidation
-                         ↓              ↓
-                    Multi-table Storage with Monthly Totals
-                    ├── client_daily_usage (consolidated)
-                    ├── client_user_daily_usage 
-                    └── client_model_daily_usage
+        ↓                    ↓                   ↓
+  Dynamic Pricing      Daily Usage      Pricing Refresh
+  (24hr Cache)         Aggregation      Exchange Rates
+        ↓                    ↓                   ↓
+    Live Pricing       Multi-table Storage with Monthly Totals
+    Updated Daily      ├── client_daily_usage (consolidated)
+                       ├── client_user_daily_usage 
+                       └── client_model_daily_usage
 ```
 
 ### Key Features
+- **Dynamic Model Pricing**: Live OpenRouter API integration with 24-hour TTL cache
 - **Daily Batch Processing**: Data consolidation at 00:00 for reliable business reporting
-- **Automated Data Migration**: Live usage data automatically moved to permanent daily summaries
+- **Automated Pricing Updates**: Fresh model pricing fetched daily with fallback system
 - **Monthly Cumulative Totals**: Automatically calculated from 1st day to current day
 - **Holiday-Aware Exchange Rates**: Fresh NBP rates fetched daily with intelligent fallback
 - **Business Intelligence**: Automatically calculated insights and trends
@@ -155,8 +157,8 @@ CREATE TABLE client_daily_usage (
 
 ### 🕰️ **Automated Daily Processing (00:00)**
 1. **Exchange Rate Update** - Fresh NBP rates with holiday-aware logic
-2. **Data Migration** - Move complete daily data from live counters to permanent storage
-3. **Usage Data Consolidation** - Validate and correct daily summaries with duplicate prevention
+2. **Model Pricing Refresh** - Updated OpenRouter API pricing with cache invalidation
+3. **Usage Data Validation** - Validate and correct daily summaries with duplicate prevention
 4. **Monthly Totals Update** - Calculate cumulative totals from 1st to current day
 5. **Data Cleanup** - Remove old processed generation records (90-day retention)
 
@@ -245,6 +247,32 @@ GET /api/v1/usage-tracking/my-organization/usage-summary
 Authorization: Bearer {admin_token}
 ```
 
+### Dynamic Pricing Endpoint
+```http
+GET /api/v1/usage-tracking/model-pricing
+Authorization: Bearer {admin_token}
+```
+
+**Response Structure** (Live pricing with fallback):
+```json
+{
+  "success": true,
+  "models": [
+    {
+      "id": "anthropic/claude-sonnet-4",
+      "name": "Claude Sonnet 4",
+      "provider": "Anthropic",
+      "price_per_million_input": 8.00,
+      "price_per_million_output": 24.00,
+      "context_length": 1000000,
+      "category": "Premium"
+    }
+  ],
+  "last_updated": "2025-07-27T00:00:15.123Z",
+  "source": "openrouter_api"
+}
+```
+
 **Response Structure** (Business-focused):
 ```json
 {
@@ -286,8 +314,9 @@ Authorization: Bearer {admin_token}
 
 ### Additional Admin Endpoints
 - **User Breakdown**: `GET /my-organization/usage-by-user`
-- **Model Analytics**: `GET /my-organization/usage-by-model`
+- **Model Analytics**: `GET /my-organization/usage-by-model` (includes all 12 available models)
 - **Subscription Billing**: `GET /my-organization/subscription-billing`
+- **Live Model Pricing**: `GET /model-pricing` (24-hour cache with daily refresh)
 
 ---
 
@@ -295,9 +324,10 @@ Authorization: Bearer {admin_token}
 
 ### Daily Admin Tasks
 1. **Review Usage Dashboard** - Check monthly progress and daily patterns (data updated at 00:00)
-2. **Monitor Cost Trends** - Ensure spending within budget parameters
-3. **Check User Activity** - Verify expected usage levels
-4. **Verify Batch Processing** - Check logs for successful daily processing at 00:00
+2. **Monitor Cost Trends** - Ensure spending within budget parameters with current pricing
+3. **Check Model Pricing** - Verify pricing updates are current (refreshed daily at 00:00)
+4. **Check User Activity** - Verify expected usage levels
+5. **Verify Batch Processing** - Check logs for successful daily processing at 00:00
 
 ### Weekly Admin Tasks
 1. **Analyze Peak Days** - Identify unusual usage patterns
@@ -350,14 +380,15 @@ Authorization: Bearer {admin_token}
 - **Permanent Retention**: Daily summaries stored indefinitely
 - **Audit Trail**: Complete usage history for compliance
 - **Backup Strategy**: Daily database backups with retention
+- **Dynamic Pricing Cache**: 24-hour TTL with automatic refresh
 
 ### Daily Batch Operations
 - **00:00 Scheduled Processing**: Fully automated daily batch execution
-- **Data Migration**: Live counters → Daily usage tables (yesterday's complete data)
 - **Exchange Rate Updates**: Holiday-aware NBP integration with fallback
+- **Model Pricing Refresh**: Live OpenRouter API pricing with cache invalidation
 - **Data Validation**: Automatic markup cost verification and correction
 - **Monthly Calculations**: Cumulative totals from 1st day to current day
-- **Duplicate Prevention**: INSERT OR IGNORE protection against reprocessing
+- **Duplicate Prevention**: Built-in protection against data reprocessing
 - **Automated Cleanup**: Old processed generation logs (90-day retention)
 - **Storage Optimization**: Efficient daily summary storage
 - **Performance Maintenance**: Regular database optimization
@@ -395,20 +426,20 @@ Authorization: Bearer {admin_token}
 - **Solution**: System automatically uses last working day rate
 - **Verification**: Check rate_source field in API response for holiday information
 
-#### "Daily batch processing shows 0 records migrated"
-- **Cause**: No usage data available for processing date (yesterday)
-- **Solution**: Normal behavior - clients may not have usage every day
-- **Verification**: Check if live usage data exists for the processing date
+#### "Model pricing shows old rates"
+- **Cause**: OpenRouter API unavailable or cache not refreshed
+- **Solution**: System automatically uses cached pricing or hardcoded fallback
+- **Verification**: Check `source` field in `/model-pricing` endpoint response
 
-#### "UI shows zeros despite live usage data"
-- **Cause**: Data migration from live counters to daily usage incomplete
-- **Solution**: Run manual batch processing to migrate pending data
+#### "UI shows zeros despite usage activity"
+- **Cause**: Daily batch processing hasn't completed or data validation issues
+- **Solution**: Run manual batch processing or check logs
 - **Command**: `docker exec container python -m open_webui.utils.daily_batch_processor`
 
 #### "Monthly totals incorrect after batch processing"
 - **Cause**: Duplicate processing or data integrity issue
 - **Solution**: System has built-in duplicate prevention - check batch logs
-- **Prevention**: Batch processor uses INSERT OR IGNORE for duplicate protection
+- **Prevention**: Batch processor includes comprehensive validation and correction
 
 ### Admin Verification Commands
 
@@ -435,20 +466,9 @@ docker exec container python -m open_webui.utils.daily_batch_processor
 # Check batch processing logs
 docker exec container ls -la /app/logs/daily_batch_*.log
 
-# Check live counters vs daily usage migration status
-docker exec container python -c "
-import sqlite3
-from datetime import date, timedelta
-conn = sqlite3.connect('/app/backend/data/webui.db')
-cursor = conn.cursor()
-cursor.execute('SELECT current_date, today_tokens FROM client_live_counters')
-live_data = cursor.fetchall()
-cursor.execute('SELECT usage_date, total_tokens FROM client_daily_usage ORDER BY usage_date DESC LIMIT 5')
-daily_data = cursor.fetchall()
-print('Live counters:', live_data)
-print('Daily usage (latest 5):', daily_data)
-conn.close()
-"
+# Check model pricing source and cache status
+curl "http://localhost:8080/api/v1/usage-tracking/model-pricing" \
+  -H "Authorization: Bearer {admin_token}" | jq '.source, .last_updated'
 
 # Verify data integrity and monthly totals
 docker exec container python -c "
@@ -496,14 +516,15 @@ curl "http://localhost:8080/api/v1/usage-tracking/exchange-rate/USD/PLN" \
 The mAI Usage Tracking System provides administrators with a clean, business-focused interface for monitoring OpenRouter API usage. The system eliminates unnecessary real-time complexity while providing comprehensive business intelligence for decision-making, budgeting, and strategic planning.
 
 **Key Admin Benefits:**
+- ✅ **Dynamic Model Pricing** - Live OpenRouter API integration with 24-hour TTL cache
 - ✅ **Daily Batch Processing** - Reliable 00:00 data consolidation and validation
-- ✅ **Automated Data Migration** - Seamless live data to permanent storage transfer
-- ✅ **Clean Monthly Overview** - Perfect for management review
+- ✅ **Automated Pricing Updates** - Fresh model pricing with comprehensive fallback system
+- ✅ **Clean Monthly Overview** - Perfect for management review with accurate pricing
 - ✅ **Daily Breakdown Analysis** - Complete usage patterns with automated integrity checks
 - ✅ **Business Intelligence** - Automated insights and trends with monthly cumulative calculations
 - ✅ **Data Integrity Protection** - Built-in duplicate prevention and validation
 - ✅ **Cost Control** - Transparent pricing with holiday-aware PLN support
-- ✅ **Strategic Planning** - Data-driven capacity and budget planning
+- ✅ **Strategic Planning** - Data-driven capacity and budget planning with current rates
 - ✅ **Currency Reliability** - Daily NBP integration with 3-tier fallback system
 - ✅ **Automated Maintenance** - Self-managing system with daily cleanup and optimization
 - ✅ **Production Deployment** - Complete cron scripts and Docker integration
