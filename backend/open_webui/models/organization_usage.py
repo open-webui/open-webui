@@ -690,10 +690,24 @@ class ClientUsageTable:
     ) -> ClientUsageStatsResponse:
         """Get admin-focused daily breakdown stats (no real-time features)"""
         try:
-            # Get current exchange rate information
+            # Get current exchange rate information with timeout and fallback
             from open_webui.utils.currency_converter import get_exchange_rate_info
-            exchange_info = await get_exchange_rate_info()
-            usd_pln_rate = exchange_info['usd_pln']
+            import asyncio
+            
+            try:
+                # Add 5-second timeout to prevent hanging
+                exchange_info = await asyncio.wait_for(get_exchange_rate_info(), timeout=5.0)
+                usd_pln_rate = exchange_info['usd_pln']
+            except (asyncio.TimeoutError, Exception) as e:
+                # Fallback to default rate if NBP API is slow/unavailable
+                print(f"NBP API timeout/error, using fallback rate: {e}")
+                exchange_info = {
+                    'usd_pln': 4.0,  # Fallback exchange rate
+                    'effective_date': date.today().isoformat(),
+                    'rate_source': 'fallback',
+                    'error': 'NBP API unavailable'
+                }
+                usd_pln_rate = 4.0
             
             with get_db() as db:
                 # Get current month boundaries

@@ -208,21 +208,11 @@
 				}
 			}
 		} catch (orgError) {
-			console.log('Unable to fetch organizations list, trying alternative methods');
+			console.log('Unable to fetch organizations list:', orgError);
 		}
 
-		// Alternative: derive from current user context if possible
-		// This would work if the API provides user-organization mapping
-		try {
-			// Call my-organization endpoint explicitly to trigger auto-creation
-			const response = await getClientUsageSummary($user.token);
-			if (response?.client_id && response.client_id !== 'current') {
-				return response.client_id;
-			}
-		} catch (altError) {
-			console.log('Alternative client ID resolution failed');
-		}
-
+		// If no organizations found, return a fallback identifier
+		console.log('No fallback client ID methods available');
 		return null;
 	};
 
@@ -230,8 +220,16 @@
 		try {
 			loading = true;
 			
+			// Add timeout to prevent hanging on slow API responses
+			const timeoutPromise = new Promise((_, reject) => 
+				setTimeout(() => reject(new Error('Request timeout')), 10000)
+			);
+			
 			// Get admin-focused daily breakdown data (no real-time)
-			const response = await getClientUsageSummary($user.token);
+			const response = await Promise.race([
+				getClientUsageSummary($user.token),
+				timeoutPromise
+			]);
 			
 			if (response?.success && response.stats) {
 				usageData = response.stats;
@@ -242,25 +240,36 @@
 					clientOrgIdValidated = true;
 					console.log(`Client organization ID resolved: ${clientOrgId}`);
 				} else {
-					// Fallback: try to extract from organization name or stats
-					const extractedId = await getClientIdFallback();
-					if (extractedId) {
-						clientOrgId = extractedId;
-						clientOrgIdValidated = true;
-						console.log(`Client organization ID resolved via fallback: ${clientOrgId}`);
-					} else {
-						console.warn('Unable to determine client organization ID, some features may be limited');
-						clientOrgIdValidated = false;
-					}
+					console.warn('Unable to determine client organization ID from response');
+					clientOrgIdValidated = false;
 				}
 			} else {
-				// If primary API fails, try fallback
-				const extractedId = await getClientIdFallback();
-				if (extractedId) {
-					clientOrgId = extractedId;
-					clientOrgIdValidated = true;
-					console.log(`Client organization ID resolved via fallback after primary failure: ${clientOrgId}`);
-				}
+				console.warn('Invalid response from usage summary API');
+				// Set empty data instead of failing completely
+				usageData = {
+					current_month: {
+						month: 'No Data',
+						total_tokens: 0,
+						total_cost: 0,
+						total_cost_pln: 0,
+						total_requests: 0,
+						days_with_usage: 0,
+						days_in_month: new Date().getDate(),
+						usage_percentage: 0
+					},
+					daily_breakdown: [],
+					monthly_summary: {
+						average_daily_tokens: 0,
+						average_daily_cost: 0,
+						average_usage_day_tokens: 0,
+						busiest_day: null,
+						highest_cost_day: null,
+						total_unique_users: 0,
+						most_used_model: null
+					},
+					client_org_name: 'My Organization'
+				};
+				clientOrgIdValidated = false;
 			}
 			
 			// Load per-user and per-model data for current tab if we have a valid client ID
@@ -274,24 +283,44 @@
 			
 		} catch (error) {
 			console.error('Failed to load usage data:', error);
-			toast.error($i18n.t('Failed to load usage statistics'));
+			
+			// Show user-friendly error message
+			if (error.message === 'Request timeout') {
+				toast.error($i18n.t('Request timed out. The server may be slow. Please try again.'));
+			} else {
+				toast.error($i18n.t('Failed to load usage statistics'));
+			}
 			
 			// Show helpful message if no organization mapping
 			if (error?.detail?.includes('No organization mapping')) {
 				toast.error($i18n.t('No organization assigned. Please contact your administrator.'));
 			}
 			
-			// Try fallback even on error
-			try {
-				const extractedId = await getClientIdFallback();
-				if (extractedId) {
-					clientOrgId = extractedId;
-					clientOrgIdValidated = true;
-					console.log(`Client organization ID resolved via fallback after error: ${clientOrgId}`);
-				}
-			} catch (fallbackError) {
-				console.error('Fallback client ID resolution also failed:', fallbackError);
-			}
+			// Set error state with empty data
+			usageData = {
+				current_month: {
+					month: 'Error Loading Data',
+					total_tokens: 0,
+					total_cost: 0,
+					total_cost_pln: 0,
+					total_requests: 0,
+					days_with_usage: 0,
+					days_in_month: new Date().getDate(),
+					usage_percentage: 0
+				},
+				daily_breakdown: [],
+				monthly_summary: {
+					average_daily_tokens: 0,
+					average_daily_cost: 0,
+					average_usage_day_tokens: 0,
+					busiest_day: null,
+					highest_cost_day: null,
+					total_unique_users: 0,
+					most_used_model: null
+				},
+				client_org_name: 'Error'
+			};
+			clientOrgIdValidated = false;
 		} finally {
 			loading = false;
 		}
