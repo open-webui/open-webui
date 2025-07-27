@@ -99,7 +99,7 @@ print('App uses database at:', DATA_DIR + '/webui.db')
 2. **Dynamic Pricing Refresh** - Updated OpenRouter model pricing 
 3. **Usage Data Validation** - Corrects markup calculations and data integrity
 4. **Monthly Totals Update** - Cumulative month-to-date aggregations
-5. **Database Cleanup** - Removes old processed generation records (90-day retention)
+5. **Database Cleanup** - Removes old processed generation records (60-day retention)
 
 ### **Real-Time vs Batch Processing:**
 - **Real-Time**: Usage recording, duplicate prevention, live API calls
@@ -140,7 +140,7 @@ print('App uses database at:', DATA_DIR + '/webui.db')
 ### **📊 Key Metrics:**
 - **Storage Efficiency**: 99% reduction vs per-request tracking
 - **Pricing Accuracy**: Live OpenRouter API with 24-hour cache
-- **Data Retention**: 90-day processed generation cleanup
+- **Data Retention**: 60-day processed generation cleanup
 - **Performance**: Optimized with database indexes and aggregation
 - **Reliability**: Fallback systems for API failures
 

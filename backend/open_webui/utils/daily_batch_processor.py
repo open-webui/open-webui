@@ -397,8 +397,8 @@ class DailyBatchProcessor:
         try:
             from open_webui.models.organization_usage import ProcessedGenerationDB
             
-            # Clean up records older than 90 days
-            cleanup_result = ProcessedGenerationDB.cleanup_old_processed_generations(days_to_keep=90)
+            # Clean up records older than 60 days
+            cleanup_result = ProcessedGenerationDB.cleanup_old_processed_generations(days_to_keep=60)
             
             if cleanup_result["success"]:
                 log.info(f"🧹 Data cleanup completed: {cleanup_result['records_deleted']} old records removed, "

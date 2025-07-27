@@ -1006,7 +1006,7 @@ class ProcessedGenerationTable:
             log.error(f"Error marking generation {generation_id} as processed: {e}")
             return False
 
-    def cleanup_old_processed_generations(self, days_to_keep: int = 90) -> Dict[str, Any]:
+    def cleanup_old_processed_generations(self, days_to_keep: int = 60) -> Dict[str, Any]:
         """
         Clean up old processed generation records to prevent table bloat.
         Returns detailed statistics about the cleanup operation.

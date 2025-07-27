@@ -160,7 +160,7 @@ CREATE TABLE client_daily_usage (
 2. **Model Pricing Refresh** - Updated OpenRouter API pricing with cache invalidation
 3. **Usage Data Validation** - Validate and correct daily summaries with duplicate prevention
 4. **Monthly Totals Update** - Calculate cumulative totals from 1st to current day
-5. **Data Cleanup** - Remove old processed generation records (90-day retention)
+5. **Data Cleanup** - Remove old processed generation records (60-day retention)
 
 ### 📊 **Monthly Business Review**
 1. **Load Admin Dashboard** - Single page load, no refresh needed
@@ -389,7 +389,7 @@ Authorization: Bearer {admin_token}
 - **Data Validation**: Automatic markup cost verification and correction
 - **Monthly Calculations**: Cumulative totals from 1st day to current day
 - **Duplicate Prevention**: Built-in protection against data reprocessing
-- **Automated Cleanup**: Old processed generation logs (90-day retention)
+- **Automated Cleanup**: Old processed generation logs (60-day retention)
 - **Storage Optimization**: Efficient daily summary storage
 - **Performance Maintenance**: Regular database optimization
 
