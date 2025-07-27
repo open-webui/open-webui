@@ -1,8 +1,8 @@
 # mAI Usage Tracking System - Admin Guide
 
 **Date**: July 27, 2025  
-**Status**: ✅ **PRODUCTION READY** - Daily batch processing with holiday-aware NBP integration  
-**Version**: 4.0 (Daily batch processing architecture with intelligent currency conversion)
+**Status**: ✅ **PRODUCTION READY** - Complete daily batch processing with automated data migration  
+**Version**: 4.1 (Production-ready daily batch processing with data integrity protection)
 
 ---
 
@@ -63,11 +63,13 @@ OpenRouter API Call → Usage Recording → Daily Batch (00:00) → Admin Dashbo
 
 ### Key Features
 - **Daily Batch Processing**: Data consolidation at 00:00 for reliable business reporting
+- **Automated Data Migration**: Live usage data automatically moved to permanent daily summaries
 - **Monthly Cumulative Totals**: Automatically calculated from 1st day to current day
 - **Holiday-Aware Exchange Rates**: Fresh NBP rates fetched daily with intelligent fallback
 - **Business Intelligence**: Automatically calculated insights and trends
 - **Multi-tenant Support**: Isolated data per client organization
 - **Automated Data Integrity**: Daily validation and correction of markup calculations
+- **Duplicate Prevention**: Built-in protection against data reprocessing
 
 ---
 
@@ -153,9 +155,10 @@ CREATE TABLE client_daily_usage (
 
 ### 🕰️ **Automated Daily Processing (00:00)**
 1. **Exchange Rate Update** - Fresh NBP rates with holiday-aware logic
-2. **Usage Data Consolidation** - Validate and correct daily summaries
-3. **Monthly Totals Update** - Calculate cumulative totals from 1st to current day
-4. **Data Cleanup** - Remove old processed generation records
+2. **Data Migration** - Move complete daily data from live counters to permanent storage
+3. **Usage Data Consolidation** - Validate and correct daily summaries with duplicate prevention
+4. **Monthly Totals Update** - Calculate cumulative totals from 1st to current day
+5. **Data Cleanup** - Remove old processed generation records (90-day retention)
 
 ### 📊 **Monthly Business Review**
 1. **Load Admin Dashboard** - Single page load, no refresh needed
@@ -350,12 +353,21 @@ Authorization: Bearer {admin_token}
 
 ### Daily Batch Operations
 - **00:00 Scheduled Processing**: Fully automated daily batch execution
+- **Data Migration**: Live counters → Daily usage tables (yesterday's complete data)
 - **Exchange Rate Updates**: Holiday-aware NBP integration with fallback
 - **Data Validation**: Automatic markup cost verification and correction
 - **Monthly Calculations**: Cumulative totals from 1st day to current day
+- **Duplicate Prevention**: INSERT OR IGNORE protection against reprocessing
 - **Automated Cleanup**: Old processed generation logs (90-day retention)
 - **Storage Optimization**: Efficient daily summary storage
 - **Performance Maintenance**: Regular database optimization
+
+### Production Deployment Scripts
+- **`scripts/daily_batch_cron.sh`**: Cron script for automated scheduling
+- **`scripts/docker_daily_batch.sh`**: Docker container batch processing
+- **Cron Setup**: `0 0 * * * /path/to/mAI/scripts/daily_batch_cron.sh`
+- **Manual Execution**: `./docker_daily_batch.sh container_name`
+- **Batch Logs**: `/app/logs/daily_batch_YYYYMMDD.log`
 
 ---
 
@@ -383,6 +395,21 @@ Authorization: Bearer {admin_token}
 - **Solution**: System automatically uses last working day rate
 - **Verification**: Check rate_source field in API response for holiday information
 
+#### "Daily batch processing shows 0 records migrated"
+- **Cause**: No usage data available for processing date (yesterday)
+- **Solution**: Normal behavior - clients may not have usage every day
+- **Verification**: Check if live usage data exists for the processing date
+
+#### "UI shows zeros despite live usage data"
+- **Cause**: Data migration from live counters to daily usage incomplete
+- **Solution**: Run manual batch processing to migrate pending data
+- **Command**: `docker exec container python -m open_webui.utils.daily_batch_processor`
+
+#### "Monthly totals incorrect after batch processing"
+- **Cause**: Duplicate processing or data integrity issue
+- **Solution**: System has built-in duplicate prevention - check batch logs
+- **Prevention**: Batch processor uses INSERT OR IGNORE for duplicate protection
+
 ### Admin Verification Commands
 
 ```bash
@@ -407,6 +434,32 @@ docker exec container python -m open_webui.utils.daily_batch_processor
 
 # Check batch processing logs
 docker exec container ls -la /app/logs/daily_batch_*.log
+
+# Check live counters vs daily usage migration status
+docker exec container python -c "
+import sqlite3
+from datetime import date, timedelta
+conn = sqlite3.connect('/app/backend/data/webui.db')
+cursor = conn.cursor()
+cursor.execute('SELECT current_date, today_tokens FROM client_live_counters')
+live_data = cursor.fetchall()
+cursor.execute('SELECT usage_date, total_tokens FROM client_daily_usage ORDER BY usage_date DESC LIMIT 5')
+daily_data = cursor.fetchall()
+print('Live counters:', live_data)
+print('Daily usage (latest 5):', daily_data)
+conn.close()
+"
+
+# Verify data integrity and monthly totals
+docker exec container python -c "
+import sqlite3
+conn = sqlite3.connect('/app/backend/data/webui.db')
+cursor = conn.cursor()
+cursor.execute('SELECT COUNT(*), SUM(total_tokens), SUM(markup_cost) FROM client_daily_usage WHERE usage_date >= date(\\'now\\',\\'start of month\\')')
+result = cursor.fetchone()
+print(f'Current month: {result[0]} days, {result[1]} tokens, \${result[2]:.6f}')
+conn.close()
+"
 
 # Verify NBP exchange rate system
 curl "http://localhost:8080/api/v1/usage-tracking/exchange-rate/USD/PLN" \
@@ -444,13 +497,16 @@ The mAI Usage Tracking System provides administrators with a clean, business-foc
 
 **Key Admin Benefits:**
 - ✅ **Daily Batch Processing** - Reliable 00:00 data consolidation and validation
+- ✅ **Automated Data Migration** - Seamless live data to permanent storage transfer
 - ✅ **Clean Monthly Overview** - Perfect for management review
 - ✅ **Daily Breakdown Analysis** - Complete usage patterns with automated integrity checks
 - ✅ **Business Intelligence** - Automated insights and trends with monthly cumulative calculations
+- ✅ **Data Integrity Protection** - Built-in duplicate prevention and validation
 - ✅ **Cost Control** - Transparent pricing with holiday-aware PLN support
 - ✅ **Strategic Planning** - Data-driven capacity and budget planning
 - ✅ **Currency Reliability** - Daily NBP integration with 3-tier fallback system
 - ✅ **Automated Maintenance** - Self-managing system with daily cleanup and optimization
+- ✅ **Production Deployment** - Complete cron scripts and Docker integration
 
 ---
 
