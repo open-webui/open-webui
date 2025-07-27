@@ -241,6 +241,7 @@ type Config = {
 	name: string;
 	version: string;
 	default_locale: string;
+	environment?: string;
 	default_models: string;
 	default_prompt_suggestions: PromptSuggestion[];
 	features: {
@@ -251,6 +252,7 @@ type Config = {
 		enable_login_form: boolean;
 		enable_web_search?: boolean;
 		enable_google_drive_integration: boolean;
+		enable_google_drive_folder_sync?: boolean;
 		enable_onedrive_integration: boolean;
 		enable_image_generation: boolean;
 		enable_admin_export: boolean;

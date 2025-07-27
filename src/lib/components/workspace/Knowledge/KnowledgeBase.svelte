@@ -2,32 +2,19 @@
 	import Fuse from 'fuse.js';
 	import { toast } from 'svelte-sonner';
 	import { v4 as uuidv4 } from 'uuid';
-	import { PaneGroup, Pane, PaneResizer } from 'paneforge';
 
-	import { onMount, getContext, onDestroy, tick } from 'svelte';
+	import { getContext, onDestroy, onMount } from 'svelte';
 	const i18n = getContext('i18n');
 
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import {
-		mobile,
-		showSidebar,
-		knowledge as _knowledge,
-		config,
-		user,
-		settings
-	} from '$lib/stores';
+	import { knowledge as _knowledge, config, showSidebar, user, settings } from '$lib/stores';
 
-	import {
-		updateFileDataContentById,
-		uploadFile,
-		deleteFileById,
-		getFileById
-	} from '$lib/apis/files';
+	import { getFileById, updateFileDataContentById, uploadFile } from '$lib/apis/files';
 	import {
 		addFileToKnowledgeById,
-		getKnowledgeById,
 		getKnowledgeBases,
+		getKnowledgeById,
 		removeFileFromKnowledgeById,
 		resetKnowledgeById,
 		updateFileFromKnowledgeById,
@@ -35,21 +22,21 @@
 	} from '$lib/apis/knowledge';
 	import { blobToFile } from '$lib/utils';
 
+	import AddFilesPlaceholder from '$lib/components/AddFilesPlaceholder.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Files from './KnowledgeBase/Files.svelte';
-	import AddFilesPlaceholder from '$lib/components/AddFilesPlaceholder.svelte';
 
 	import AddContentMenu from './KnowledgeBase/AddContentMenu.svelte';
 	import AddTextContentModal from './KnowledgeBase/AddTextContentModal.svelte';
 
-	import SyncConfirmDialog from '../../common/ConfirmDialog.svelte';
-	import RichTextInput from '$lib/components/common/RichTextInput.svelte';
-	import EllipsisVertical from '$lib/components/icons/EllipsisVertical.svelte';
 	import Drawer from '$lib/components/common/Drawer.svelte';
+	import RichTextInput from '$lib/components/common/RichTextInput.svelte';
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
+	import SyncConfirmDialog from '../../common/ConfirmDialog.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
 	import Search from '$lib/components/icons/Search.svelte';
+	import GoogleDriveSyncModal from './KnowledgeBase/GoogleDriveSyncModal.svelte';
 
 	let largeScreen = true;
 
@@ -74,6 +61,7 @@
 	let showAddTextContentModal = false;
 	let showSyncConfirmModal = false;
 	let showAccessControlModal = false;
+	let showGoogleDriveSyncModal = false;
 
 	let inputFiles = null;
 
@@ -648,6 +636,16 @@
 	}}
 />
 
+<GoogleDriveSyncModal
+	bind:show={showGoogleDriveSyncModal}
+	knowledgeId={id}
+	knowledgeData={knowledge}
+	on:sync={(e) => {
+		knowledge = e.detail;
+		toast.success($i18n.t('Google Drive folder synced successfully'));
+	}}
+/>
+
 <input
 	id="files-input"
 	bind:files={inputFiles}
@@ -885,7 +883,11 @@
 											}
 										}}
 										on:sync={(e) => {
-											showSyncConfirmModal = true;
+											if (e.detail.type === 'google-drive') {
+												showGoogleDriveSyncModal = true;
+											} else {
+												showSyncConfirmModal = true;
+											}
 										}}
 									/>
 								</div>

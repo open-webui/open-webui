@@ -1,4 +1,5 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
+import type { GoogleDriveServiceAccount, GoogleDriveSyncResponse } from '$lib/types/google-drive';
 
 export const createNewKnowledge = async (
 	token: string,
@@ -335,6 +336,81 @@ export const deleteKnowledgeById = async (token: string, id: string) => {
 		.catch((err) => {
 			error = err.detail;
 
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getGoogleDriveServiceAccountEmail = async (
+	token: string
+): Promise<GoogleDriveServiceAccount | null> => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/google-drive/service-account-email`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const syncGoogleDriveFolder = async (
+	token: string,
+	knowledgeId: string,
+	folderId: string,
+	includeNested: boolean = true,
+	syncIntervalDays: number = 1
+): Promise<GoogleDriveSyncResponse | null> => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${knowledgeId}/google-drive/sync`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			folder_id: folderId,
+			include_nested: includeNested,
+			sync_interval_days: syncIntervalDays
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err.detail;
 			console.error(err);
 			return null;
 		});

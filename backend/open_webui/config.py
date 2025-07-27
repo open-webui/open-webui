@@ -1981,6 +1981,19 @@ GOOGLE_DRIVE_API_KEY = PersistentConfig(
     os.environ.get("GOOGLE_DRIVE_API_KEY", ""),
 )
 
+GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON = PersistentConfig(
+    "GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON",
+    "google_drive.service_account_json",
+    os.environ.get("GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON", ""),
+)
+
+# If configured, Google Drive folder sync will be available for knowledge bases.
+ENABLE_GOOGLE_DRIVE_FOLDER_SYNC = PersistentConfig(
+    "ENABLE_GOOGLE_DRIVE_FOLDER_SYNC",
+    "google_drive.enable_folder_sync",
+    os.getenv("ENABLE_GOOGLE_DRIVE_FOLDER_SYNC", "False").lower() == "true",
+)
+
 ENABLE_ONEDRIVE_INTEGRATION = PersistentConfig(
     "ENABLE_ONEDRIVE_INTEGRATION",
     "onedrive.enable",
