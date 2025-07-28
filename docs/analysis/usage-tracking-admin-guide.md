@@ -1,8 +1,8 @@
 # mAI Usage Tracking System - Admin Guide
 
-**Date**: July 27, 2025  
-**Status**: ✅ **PRODUCTION READY** - Complete daily batch processing with automated data migration  
-**Version**: 4.1 (Production-ready daily batch processing with data integrity protection)
+**Date**: July 28, 2025  
+**Status**: ✅ **PRODUCTION READY** - Complete daily batch processing with NBP Table A integration  
+**Version**: 4.2 (Enhanced with NBP Table A average rates and top models analytics)
 
 ---
 
@@ -32,9 +32,10 @@ The mAI Usage Tracking System provides **business-focused administrative oversig
 
 ### Business Insights Section
 ```
-Usage Averages          Peak Usage              Most Used
-• Daily Average: 4,367   • Busiest Day: 2025-07-15  • Primary Model: Claude Sonnet 4
-• Usage Day Avg: 4,367   • Highest Cost: 2025-07-15 • Active Users: 2
+Usage Averages          Peak Usage              Top Models
+• Daily Average: 4,367   • Busiest Day: 2025-07-15  • 1. Claude Sonnet 4 (15,200 tokens)
+• Usage Day Avg: 4,367   • Highest Cost: 2025-07-15 • 2. GPT-4o (8,500 tokens)
+                                                    • 3. Gemini Pro (6,100 tokens)
 ```
 
 ### Daily Breakdown Table
@@ -67,7 +68,7 @@ OpenRouter API Call → Usage Recording → Daily Batch (00:00) → Admin Dashbo
 - **Daily Batch Processing**: Data consolidation at 00:00 for reliable business reporting
 - **Automated Pricing Updates**: Fresh model pricing fetched daily with fallback system
 - **Monthly Cumulative Totals**: Automatically calculated from 1st day to current day
-- **Holiday-Aware Exchange Rates**: Fresh NBP rates fetched daily with intelligent fallback
+- **Holiday-Aware Exchange Rates**: Fresh NBP Table A rates fetched daily with intelligent fallback
 - **Business Intelligence**: Automatically calculated insights and trends
 - **Multi-tenant Support**: Isolated data per client organization
 - **Automated Data Integrity**: Daily validation and correction of markup calculations
@@ -254,9 +255,9 @@ docker exec container sqlite3 /app/backend/data/webui.db \
 - Pattern recognition for capacity planning
 
 **Resource Utilization**
-- Most used AI model for optimization
+- Top 3 AI models with token usage for optimization
 - Active user count for licensing
-- Model preference insights
+- Detailed model preference insights with usage volumes
 
 ### 3. Daily Breakdown Table
 
@@ -295,30 +296,32 @@ docker exec container sqlite3 /app/backend/data/webui.db \
 - **Currency Conversion**: Polish Złoty support for local budgeting
 
 ### 🔍 **Usage Optimization**
-- **Model Preferences**: Identify most-used AI models for contract negotiation
+- **Top Model Analytics**: Identify top 3 models by token usage for contract negotiation
 - **User Activity**: Monitor active users for licensing optimization
 - **Daily Patterns**: Understand peak usage for resource allocation
 - **Cost Per Token**: ROI analysis and pricing optimization
+- **Model Distribution**: Detailed token-based usage ranking for strategic planning
 
 ### 📈 **Strategic Planning**
 - **Usage Trends**: Month-over-month growth analysis
 - **Activity Percentage**: System utilization for scaling decisions
-- **Model Distribution**: Technology investment planning
+- **Top Models Analytics**: Data-driven technology investment planning
 - **User Engagement**: Adoption and training insights
+- **Token-Based Rankings**: Optimize model portfolio based on actual usage data
 
 ---
 
 ## Currency Conversion System
 
-### Holiday-Aware NBP Integration
+### Holiday-Aware NBP Table A Integration
 
-The system features an intelligent **3-Tier Fallback System** for PLN currency conversion that automatically handles Polish banking holidays and non-working days:
+The system features an intelligent **3-Tier Fallback System** for PLN currency conversion using **NBP Table A (average rates)** that automatically handles Polish banking holidays and non-working days:
 
 #### Tier 1: Polish Holiday Calendar Optimization
 - **2025 Holiday Calendar**: Exact Polish holidays with correct dates
 - **API Call Optimization**: Skips API calls for known non-working days
-- **Smart Fallback**: Automatically uses last working day rate
-- **Weekend Handling**: Proper Friday rate usage for weekends
+- **Smart Fallback**: Automatically uses last working day Table A rate
+- **Weekend Handling**: Proper Friday Table A rate usage for weekends
 
 #### Tier 2: Time-Based Working Day Logic
 - **8:15 AM Rule**: Before publish time uses previous day, after uses current
@@ -340,21 +343,23 @@ The system features an intelligent **3-Tier Fallback System** for PLN currency c
 
 ### Rate Source Transparency
 
-The system provides full transparency with rate source tracking:
+The system provides full transparency with Table A rate source tracking:
 ```json
 {
-  "rate": 3.6530,
+  "rate": 3.6446,
   "effective_date": "2025-07-24",
-  "rate_source": "holiday_skip",
+  "rate_source": "nbp_table_a",
+  "table_no": "142/A/NBP/2025",
   "skip_reason": "Polish holiday: Boże Narodzenie",
   "fallback_date": "2025-12-23"
 }
 ```
 
 ### Business Benefits
+- **Accuracy**: Uses NBP Table A average rates (more representative than buying/selling rates)
 - **Efficiency**: Reduces API calls by ~30% by skipping known holidays/weekends
 - **Reliability**: Handles all 2025 Polish holidays including movable ones
-- **Consistency**: Accurate PLN conversions during holiday periods
+- **Consistency**: Accurate PLN conversions using average market rates during holiday periods
 - **Performance**: Smart caching with context-aware TTL
 
 ---
@@ -425,7 +430,11 @@ Authorization: Bearer {admin_token}
       "average_daily_cost": 0.0156,
       "busiest_day": "2025-07-15",
       "highest_cost_day": "2025-07-15", 
-      "most_used_model": "anthropic/claude-sonnet-4",
+      "top_models": [
+        {"model_name": "anthropic/claude-sonnet-4", "total_tokens": 15200},
+        {"model_name": "openai/gpt-4o", "total_tokens": 8500},
+        {"model_name": "google/gemini-pro", "total_tokens": 6100}
+      ],
       "total_unique_users": 2
     }
   }
@@ -653,14 +662,82 @@ docker exec container sqlite3 /app/backend/data/webui.db \
 ### Data Interpretation
 - **Usage Percentage**: Target 60-80% active days for optimal utilization
 - **Peak Days**: Normal to have 2-3x average usage on busy days
-- **Model Distribution**: Expect 70-80% usage on 2-3 primary models
+- **Top Models Analytics**: Expect 70-80% usage concentrated in top 3 models
+- **Token Distribution**: Primary model typically accounts for 40-60% of total tokens
 - **Cost Trends**: Monthly costs should align with business activity
 
 ### Optimization Strategies
-- **Model Selection**: Focus training on most cost-effective models
+- **Model Portfolio**: Focus training on top-performing models from analytics
 - **Usage Patterns**: Schedule intensive tasks during off-peak times
-- **User Training**: Optimize prompts to reduce token consumption
-- **Budget Control**: Set monthly limits based on usage trends
+- **User Training**: Optimize prompts to reduce token consumption on high-usage models
+- **Budget Control**: Set monthly limits based on usage trends and top model analytics
+- **Contract Negotiation**: Use top models data for volume-based pricing discussions
+
+---
+
+## Recent System Enhancements (July 2025)
+
+### NBP API Migration from Table C to Table A
+
+**What Changed:**
+- **API Endpoint**: Migrated from `/exchangerates/tables/c/` to `/exchangerates/tables/a/`
+- **Rate Field**: Changed from `ask` (buying rate) to `mid` (average rate)
+- **Rate Values**: More accurate average rates (~3.64 PLN/USD) instead of buying rates (~4.12 PLN/USD)
+- **Documentation**: Updated all references from Table C to Table A
+
+**Business Impact:**
+- **More Accurate Pricing**: Table A provides average market rates, more representative for business calculations
+- **Better Budgeting**: PLN conversions now use fair market rates instead of bank buying rates
+- **Consistent Rates**: Average rates are less volatile than buying/selling spreads
+
+**Admin Verification:**
+```bash
+# Verify Table A integration
+curl "http://localhost:8080/api/v1/usage-tracking/exchange-rate/USD/PLN" \
+  -H "Authorization: Bearer {admin_token}" | jq '.rate_source, .table_no'
+```
+
+### Model Analytics Enhancement: most_used_model → top_models
+
+**What Changed:**
+- **Data Structure**: Replaced single `most_used_model` string with `top_models` array
+- **Enhanced Data**: Each model now includes `model_name` and `total_tokens`
+- **Business Intelligence**: Top 3 models ranked by token usage instead of just the primary model
+- **UI Enhancement**: Admin dashboard now shows detailed model ranking with usage volumes
+
+**Before (Old Structure):**
+```json
+{
+  "monthly_summary": {
+    "most_used_model": "anthropic/claude-sonnet-4"
+  }
+}
+```
+
+**After (New Structure):**
+```json
+{
+  "monthly_summary": {
+    "top_models": [
+      {"model_name": "anthropic/claude-sonnet-4", "total_tokens": 15200},
+      {"model_name": "openai/gpt-4o", "total_tokens": 8500},
+      {"model_name": "google/gemini-pro", "total_tokens": 6100}
+    ]
+  }
+}
+```
+
+**Business Benefits:**
+- **Strategic Planning**: Complete visibility into model usage distribution
+- **Contract Negotiation**: Data-driven discussions with model providers
+- **Cost Optimization**: Identify high-usage models for focused optimization
+- **Portfolio Management**: Make informed decisions about model portfolio
+
+**Technical Implementation:**
+- New `_calculate_top_models_by_tokens()` helper function
+- Aggregates usage across all days in current month
+- Returns top 3 models sorted by total token consumption
+- Handles edge cases: empty data, fewer than 3 models
 
 ---
 
@@ -679,6 +756,7 @@ The mAI Usage Tracking System provides administrators with a clean, business-foc
 - ✅ **Duplicate Prevention System** - Automatic protection against API retries, webhook replays, and streaming chunks
 - ✅ **Cost Control** - Transparent pricing with holiday-aware PLN support
 - ✅ **Strategic Planning** - Data-driven capacity and budget planning with current rates
-- ✅ **Currency Reliability** - Daily NBP integration with 3-tier fallback system
+- ✅ **Currency Reliability** - Daily NBP Table A integration with 3-tier fallback system
+- ✅ **Top Models Analytics** - Enhanced with top 3 models ranking by token usage
 - ✅ **Automated Maintenance** - Self-managing system with daily cleanup and optimization
 - ✅ **Production Deployment** - Complete cron scripts and Docker integration
