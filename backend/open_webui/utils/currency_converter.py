@@ -1,5 +1,5 @@
 """
-Currency conversion utilities using NBP (Polish National Bank) exchange rates
+Currency conversion utilities using NBP (Polish National Bank) Table A average exchange rates
 """
 
 import logging
@@ -9,15 +9,16 @@ from .nbp_client import nbp_client
 log = logging.getLogger(__name__)
 
 # Fallback exchange rate in case NBP API is unavailable
-FALLBACK_USD_PLN_RATE = 4.1234
+# Using Table A average rate range (~3.64)
+FALLBACK_USD_PLN_RATE = 3.64
 
 async def get_current_usd_pln_rate() -> float:
     """
-    Get current USD to PLN exchange rate from NBP API.
+    Get current USD to PLN exchange rate from NBP Table A (average rates).
     Returns fallback rate if API is unavailable.
     
     Returns:
-        float: USD to PLN exchange rate
+        float: USD to PLN average exchange rate from Table A
     """
     try:
         rate_data = await nbp_client.get_usd_pln_rate()
@@ -32,10 +33,11 @@ async def get_current_usd_pln_rate() -> float:
 
 async def get_exchange_rate_info() -> Dict[str, Any]:
     """
-    Get detailed exchange rate information including metadata.
+    Get detailed exchange rate information including metadata from NBP Table A.
     
     Returns:
-        Dict containing rate, effective_date, rate_source, etc.
+        Dict containing average rate, effective_date, rate_source, etc.
+        Uses Table A average rates (mid rates) from NBP API.
     """
     try:
         rate_data = await nbp_client.get_usd_pln_rate()
@@ -61,13 +63,13 @@ async def get_exchange_rate_info() -> Dict[str, Any]:
 
 async def convert_usd_to_pln(usd_amount: float) -> Dict[str, Any]:
     """
-    Convert USD amount to PLN with detailed conversion info.
+    Convert USD amount to PLN using NBP Table A average rates with detailed conversion info.
     
     Args:
         usd_amount: Amount in USD to convert
         
     Returns:
-        Dict containing USD amount, PLN amount, rate, and metadata
+        Dict containing USD amount, PLN amount, average rate from Table A, and metadata
     """
     rate_info = await get_exchange_rate_info()
     pln_amount = usd_amount * rate_info['usd_pln']
@@ -84,14 +86,14 @@ async def convert_usd_to_pln(usd_amount: float) -> Dict[str, Any]:
 def convert_usd_to_pln_sync(usd_amount: float, rate: Optional[float] = None) -> float:
     """
     Synchronous USD to PLN conversion for cases where async is not possible.
-    Uses provided rate or fallback rate.
+    Uses provided rate or fallback Table A average rate.
     
     Args:
         usd_amount: Amount in USD to convert
-        rate: Optional exchange rate to use (if None, uses fallback)
+        rate: Optional exchange rate to use (if None, uses Table A fallback rate)
         
     Returns:
-        float: Amount in PLN
+        float: Amount in PLN using average exchange rate
     """
     if rate is None:
         rate = FALLBACK_USD_PLN_RATE
