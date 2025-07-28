@@ -11,6 +11,7 @@ from langchain_core.documents import Document
 
 
 from open_webui.config import VECTOR_DB
+from open_webui.constants import VECTOR_COLLECTION_PREFIXES
 from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
 
 from open_webui.models.users import UserModel
@@ -253,8 +254,10 @@ def query_collection(
                         )
 
                         # Extract file ID from collection name (format: file-{file_id})
-                        if collection_name.startswith("file-"):
-                            file_id = collection_name.replace("file-", "")
+                        if collection_name.startswith(VECTOR_COLLECTION_PREFIXES.FILE):
+                            file_id = collection_name.replace(
+                                VECTOR_COLLECTION_PREFIXES.FILE, ""
+                            )
 
                             # Try to re-index the file
                             try:
@@ -572,7 +575,9 @@ def get_sources_from_files(
                 if file.get("legacy"):
                     collection_names.append(f"{file['id']}")
                 else:
-                    collection_names.append(f"file-{file['id']}")
+                    collection_names.append(
+                        f"{VECTOR_COLLECTION_PREFIXES.FILE}{file['id']}"
+                    )
 
             collection_names = set(collection_names).difference(extracted_collections)
             if not collection_names:

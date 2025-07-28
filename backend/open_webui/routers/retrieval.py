@@ -4,6 +4,7 @@ import os
 import re
 import shutil
 import hashlib
+import time
 
 import uuid
 from datetime import datetime, timedelta
@@ -23,6 +24,7 @@ from pydantic import BaseModel
 from langchain.text_splitter import RecursiveCharacterTextSplitter, TokenTextSplitter
 from langchain_core.documents import Document
 
+from open_webui.constants import VECTOR_COLLECTION_PREFIXES
 from open_webui.models.files import FileModel, Files
 from open_webui.models.knowledge import Knowledges
 from open_webui.models.chats import Chats
@@ -759,13 +761,13 @@ def save_docs_to_vector_db(
                     "model": request.app.state.config.RAG_EMBEDDING_MODEL,
                 }
             ),
-            "created_at": datetime.now().isoformat(),
+            "created_at": int(time.time()),
             "collection_type": (
                 "file"
-                if collection_name.startswith("file-")
+                if collection_name.startswith(VECTOR_COLLECTION_PREFIXES.FILE)
                 else (
                     "web_search"
-                    if collection_name.startswith("web-search-")
+                    if collection_name.startswith(VECTOR_COLLECTION_PREFIXES.WEB_SEARCH)
                     else "knowledge"
                 )
             ),
@@ -861,13 +863,15 @@ def process_file(
         collection_name = form_data.collection_name
 
         if collection_name is None:
-            collection_name = f"file-{file.id}"
+            collection_name = f"{VECTOR_COLLECTION_PREFIXES.FILE}{file.id}"
 
         if form_data.content:
             # Update the content in the file
             # Usage: /files/{file_id}/data/content/update
 
-            VECTOR_DB_CLIENT.delete_collection(collection_name=f"file-{file.id}")
+            VECTOR_DB_CLIENT.delete_collection(
+                collection_name=f"{VECTOR_COLLECTION_PREFIXES.FILE}{file.id}"
+            )
 
             docs = [
                 Document(
@@ -888,7 +892,8 @@ def process_file(
             # Usage: /knowledge/{id}/file/add, /knowledge/{id}/file/update
 
             result = VECTOR_DB_CLIENT.query(
-                collection_name=f"file-{file.id}", filter={"file_id": file.id}
+                collection_name=f"{VECTOR_COLLECTION_PREFIXES.FILE}{file.id}",
+                filter={"file_id": file.id},
             )
 
             if (
@@ -1369,7 +1374,7 @@ async def process_web_search(
                 doc.metadata = {}
             doc.metadata.update(
                 {
-                    "created_at": datetime.now().isoformat(),
+                    "created_at": int(time.time()),
                     "search_query": form_data.query,
                     "search_engine": request.app.state.config.RAG_WEB_SEARCH_ENGINE,
                     "type": "web_search",
@@ -1438,8 +1443,10 @@ def query_doc_handler(
             )
 
             # Extract file ID from collection name if it's a file collection
-            if form_data.collection_name.startswith("file-"):
-                file_id = form_data.collection_name.replace("file-", "")
+            if form_data.collection_name.startswith(VECTOR_COLLECTION_PREFIXES.FILE):
+                file_id = form_data.collection_name.replace(
+                    VECTOR_COLLECTION_PREFIXES.FILE, ""
+                )
                 log.info(f"Attempting to re-index file {file_id}")
 
                 # Try to re-index the file
@@ -1511,8 +1518,8 @@ def query_collection_handler(
 
         # Attempt to re-index missing file collections
         for collection_name in missing_collections:
-            if collection_name.startswith("file-"):
-                file_id = collection_name.replace("file-", "")
+            if collection_name.startswith(VECTOR_COLLECTION_PREFIXES.FILE):
+                file_id = collection_name.replace(VECTOR_COLLECTION_PREFIXES.FILE, "")
                 log.info(
                     f"Attempting to re-index missing file collection: {collection_name}"
                 )
@@ -1724,7 +1731,7 @@ def process_files_batch(
 
 def cleanup_file_vectors(file_id: str, collection_name: str = None) -> bool:
     """
-    Clean up vectors associated with a specific file from Qdrant.
+    Clean up vectors associated with a specific file from the vector database.
 
     Args:
         file_id: The ID of the file to clean up
@@ -1735,7 +1742,9 @@ def cleanup_file_vectors(file_id: str, collection_name: str = None) -> bool:
     """
     try:
         # Use specific collection name or default to file-{file_id}
-        target_collection = collection_name or f"file-{file_id}"
+        target_collection = (
+            collection_name or f"{VECTOR_COLLECTION_PREFIXES.FILE}{file_id}"
+        )
 
         log.info(
             f"Cleaning up vectors for file {file_id} in collection {target_collection}"
@@ -1744,7 +1753,9 @@ def cleanup_file_vectors(file_id: str, collection_name: str = None) -> bool:
         # Check if collection exists
         if VECTOR_DB_CLIENT.has_collection(collection_name=target_collection):
             # For file-specific collections (file-{file_id}), delete the entire collection
-            if target_collection.startswith(f"file-{file_id}"):
+            if target_collection.startswith(
+                f"{VECTOR_COLLECTION_PREFIXES.FILE}{file_id}"
+            ):
                 VECTOR_DB_CLIENT.delete_collection(collection_name=target_collection)
                 log.info(f"Deleted entire collection {target_collection}")
             else:
@@ -1802,15 +1813,10 @@ def cleanup_orphaned_vectors() -> dict:
         }
 
         # Get all collections from vector DB
-        # Check if we're using Qdrant
-        if hasattr(VECTOR_DB_CLIENT, "client") and hasattr(
-            VECTOR_DB_CLIENT.client, "get_collections"
-        ):
-            # Qdrant client
-            collections_response = VECTOR_DB_CLIENT.client.get_collections()
-            collections = [col.name for col in collections_response.collections]
+        if hasattr(VECTOR_DB_CLIENT, "list_collections"):
+            collections = VECTOR_DB_CLIENT.list_collections()
         else:
-            # Other clients that might not have this method
+            # Fallback for clients that don't support listing collections
             collections = []
             log.warning(
                 "Vector DB client does not support listing collections for cleanup"
@@ -1840,11 +1846,11 @@ def cleanup_orphaned_vectors() -> dict:
                     continue
 
                 # Only process standalone file collections (file-*)
-                if not collection_name.startswith("file-"):
+                if not collection_name.startswith(VECTOR_COLLECTION_PREFIXES.FILE):
                     continue
 
                 # Extract file ID from collection name
-                file_id = collection_name.replace("file-", "")
+                file_id = collection_name.replace(VECTOR_COLLECTION_PREFIXES.FILE, "")
 
                 # Check if file still exists in database
                 try:
@@ -1896,12 +1902,8 @@ def get_vector_db_stats(user) -> dict:
         # Get collections in a compatible way
         collections = []
         try:
-            if hasattr(VECTOR_DB_CLIENT, "client") and hasattr(
-                VECTOR_DB_CLIENT.client, "get_collections"
-            ):
-                # Qdrant client
-                collections_response = VECTOR_DB_CLIENT.client.get_collections()
-                collections = [col.name for col in collections_response.collections]
+            if hasattr(VECTOR_DB_CLIENT, "list_collections"):
+                collections = VECTOR_DB_CLIENT.list_collections()
             else:
                 # For other vector DBs, we'll need to implement collection listing
                 log.warning(
@@ -1939,7 +1941,7 @@ def get_vector_db_stats(user) -> dict:
 
             # Categorize collection by name pattern
             if collection_name.startswith("file_") or collection_name.startswith(
-                "file-"
+                VECTOR_COLLECTION_PREFIXES.FILE
             ):
                 stats["file_collections"] += 1
                 category = "file"
@@ -2048,12 +2050,8 @@ def cleanup_expired_web_searches(max_age_days: int = 30) -> dict:
         # Get collections in a compatible way
         collections = []
         try:
-            if hasattr(VECTOR_DB_CLIENT, "client") and hasattr(
-                VECTOR_DB_CLIENT.client, "get_collections"
-            ):
-                # Qdrant client
-                collections_response = VECTOR_DB_CLIENT.client.get_collections()
-                collections = [col.name for col in collections_response.collections]
+            if hasattr(VECTOR_DB_CLIENT, "list_collections"):
+                collections = VECTOR_DB_CLIENT.list_collections()
             else:
                 log.warning(
                     "Vector DB client does not support listing collections for web search cleanup"
@@ -2079,38 +2077,31 @@ def cleanup_expired_web_searches(max_age_days: int = 30) -> dict:
                 cleanup_summary["collections_checked"] += 1
 
                 # Get collection info to check if it has expired metadata
-                # For Qdrant, we can scroll to get a sample of points
                 should_delete = False
 
                 try:
-                    if hasattr(VECTOR_DB_CLIENT, "client") and hasattr(
-                        VECTOR_DB_CLIENT.client, "scroll"
-                    ):
-                        # Qdrant client - get a sample point to check metadata
-                        points, _ = VECTOR_DB_CLIENT.client.scroll(
-                            collection_name=collection_name, limit=1, with_payload=True
+                    if hasattr(VECTOR_DB_CLIENT, "get_collection_sample_metadata"):
+                        # Get sample metadata to check for expiry
+                        metadata = VECTOR_DB_CLIENT.get_collection_sample_metadata(
+                            collection_name
                         )
 
-                        if points:  # If there are points
-                            point = points[0]
-                            if hasattr(point, "payload") and point.payload:
-                                # Check if timestamp indicates expiry
-                                created_at = point.payload.get("metadata", {}).get(
-                                    "created_at"
-                                )
-                                if created_at:
-                                    try:
-                                        point_timestamp = datetime.fromisoformat(
-                                            created_at.replace("Z", "+00:00")
-                                        )
-                                        if point_timestamp < cutoff_timestamp:
-                                            should_delete = True
-                                    except (ValueError, TypeError):
-                                        # If timestamp is invalid, consider it old
+                        if metadata:
+                            # Check if timestamp indicates expiry
+                            created_at = metadata.get("created_at")
+                            if created_at:
+                                try:
+                                    point_timestamp = datetime.fromisoformat(
+                                        created_at.replace("Z", "+00:00")
+                                    )
+                                    if point_timestamp < cutoff_timestamp:
                                         should_delete = True
-                                else:
-                                    # No timestamp means it's from before we added timestamps
+                                except (ValueError, TypeError):
+                                    # If timestamp is invalid, consider it old
                                     should_delete = True
+                            else:
+                                # No timestamp means it's from before we added timestamps
+                                should_delete = True
                         else:
                             # Empty collection should be cleaned up
                             should_delete = True
@@ -2470,7 +2461,7 @@ def cleanup_orphaned_files_by_reference():
 
                 try:
                     # Delete vector collection
-                    collection_name = f"file-{file.id}"
+                    collection_name = f"{VECTOR_COLLECTION_PREFIXES.FILE}{file.id}"
                     if VECTOR_DB_CLIENT.has_collection(collection_name):
                         VECTOR_DB_CLIENT.delete_collection(collection_name)
                         cleanup_summary["collections_cleaned"] += 1
@@ -2536,13 +2527,17 @@ def cleanup_old_chat_collections(max_age_days: int = 1) -> dict:
 
         # Get all collections
         try:
-            if hasattr(VECTOR_DB_CLIENT.client, "get_collections"):
-                collections_response = VECTOR_DB_CLIENT.client.get_collections()
-                collections = collections_response.collections
+            if hasattr(VECTOR_DB_CLIENT, "list_collections"):
+                collection_names = VECTOR_DB_CLIENT.list_collections()
+                # Create collection objects with name attribute for compatibility
+                collections = [
+                    type("Collection", (), {"name": name})()
+                    for name in collection_names
+                ]
             else:
-                log.error("Vector DB client does not support get_collections method")
+                log.error("Vector DB client does not support list_collections method")
                 return {
-                    "error": "Vector DB client does not support get_collections method"
+                    "error": "Vector DB client does not support list_collections method"
                 }
         except Exception as e:
             log.error(f"Failed to get collections: {e}")
@@ -2569,21 +2564,21 @@ def cleanup_old_chat_collections(max_age_days: int = 1) -> dict:
             collection_name = collection.name
 
             # Skip knowledge base collections
-            if collection_name.startswith("file-"):
-                file_id = collection_name.replace("file-", "")
+            if collection_name.startswith(VECTOR_COLLECTION_PREFIXES.FILE):
+                file_id = collection_name.replace(VECTOR_COLLECTION_PREFIXES.FILE, "")
                 if file_id in kb_file_ids:
                     cleanup_summary["kb_collections_preserved"] += 1
                     log.debug(f"Preserving KB collection: {collection_name}")
                     continue
 
             # Skip web search collections (they have their own cleanup)
-            if collection_name.startswith("web-search-"):
+            if collection_name.startswith(VECTOR_COLLECTION_PREFIXES.WEB_SEARCH):
                 cleanup_summary["web_search_collections_preserved"] += 1
                 log.debug(f"Preserving web search collection: {collection_name}")
                 continue
 
             # Skip knowledge collections (these are permanent)
-            if not collection_name.startswith("file-"):
+            if not collection_name.startswith(VECTOR_COLLECTION_PREFIXES.FILE):
                 log.debug(f"Skipping non-file collection: {collection_name}")
                 continue
 
@@ -2591,8 +2586,10 @@ def cleanup_old_chat_collections(max_age_days: int = 1) -> dict:
             try:
                 # For file collections, check if the file still exists and is old
                 is_old_collection = False
-                if collection_name.startswith("file-"):
-                    file_id = collection_name.replace("file-", "")
+                if collection_name.startswith(VECTOR_COLLECTION_PREFIXES.FILE):
+                    file_id = collection_name.replace(
+                        VECTOR_COLLECTION_PREFIXES.FILE, ""
+                    )
 
                     # Get file from database to check its age
                     try:
@@ -2660,7 +2657,7 @@ def reindex_file_on_demand(file_id: str, request: Request, user=None) -> bool:
             return False
 
         # Check if collection already exists
-        collection_name = f"file-{file_id}"
+        collection_name = f"{VECTOR_COLLECTION_PREFIXES.FILE}{file_id}"
         if VECTOR_DB_CLIENT and VECTOR_DB_CLIENT.has_collection(collection_name):
             log.debug(
                 f"Collection {collection_name} already exists, no re-indexing needed"
@@ -2695,7 +2692,7 @@ def reindex_file_on_demand(file_id: str, request: Request, user=None) -> bool:
             ]
 
             # Use the existing save_docs_to_vector_db function
-            collection_name = f"file-{file_id}"
+            collection_name = f"{VECTOR_COLLECTION_PREFIXES.FILE}{file_id}"
             result = save_docs_to_vector_db(
                 request=request,
                 docs=docs,
@@ -2749,11 +2746,8 @@ def cleanup_orphaned_chat_files() -> dict:
 
         # Get all file collections from vector DB
         collections = []
-        if hasattr(VECTOR_DB_CLIENT, "client") and hasattr(
-            VECTOR_DB_CLIENT.client, "get_collections"
-        ):
-            collections_response = VECTOR_DB_CLIENT.client.get_collections()
-            collections = [col.name for col in collections_response.collections]
+        if hasattr(VECTOR_DB_CLIENT, "list_collections"):
+            collections = VECTOR_DB_CLIENT.list_collections()
         else:
             log.warning(
                 "Vector DB client does not support listing collections for chat cleanup"
@@ -2802,11 +2796,11 @@ def cleanup_orphaned_chat_files() -> dict:
                     continue
 
                 # Skip non-file collections
-                if not collection_name.startswith("file-"):
+                if not collection_name.startswith(VECTOR_COLLECTION_PREFIXES.FILE):
                     continue
 
                 # Extract file ID
-                file_id = collection_name.replace("file-", "")
+                file_id = collection_name.replace(VECTOR_COLLECTION_PREFIXES.FILE, "")
 
                 # NEVER delete files that belong to knowledge bases
                 if file_id in kb_referenced_files:
