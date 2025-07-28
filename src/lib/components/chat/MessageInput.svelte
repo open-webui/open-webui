@@ -361,6 +361,14 @@
 		showGovKnoWebSearchToggle = !showGovKnoWebSearchToggle;
 	};
 
+	const clearFilterToggle = (event) => {
+		event.preventDefault(); 
+		showGovKnoWebSearchToggle = false;
+		webSearchEnabled =false;
+		govBtnEnable=false;
+		attachFileEnabled=false;
+	};
+
 	const saveGovKnoModel = async () => {
 		govBtnEnable = !govBtnEnable;
 		const modelId = $models.find((model) => model.id.includes($config.govgpt.rag_wog_model_name))?.id || '';
@@ -1602,7 +1610,7 @@
 															<button 
 																data-filter-toggle
 																class="flex items-center" 
-																on:click={handleFilterToggle}
+																on:click={clearFilterToggle}
 															><Cross /></button>
 														</div>{/if}
 												</div>
