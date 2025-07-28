@@ -93,11 +93,11 @@
     </button>-->
 	{:else}
 		<div class="flex items-center">
-			<img
+			<!-- <img
 				src="/logov4.png"
 				alt="GovGPT Logo"
 				class="w-[56px] h-[56px] filter dark:invert dark:brightness-0 dark:contrast-200"
-			/>
+			/> -->
 
 			<!--<div
 				class="flex-1 overflow-hidden max-w-full py-0.5
