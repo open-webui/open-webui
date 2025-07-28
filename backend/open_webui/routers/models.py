@@ -7,6 +7,8 @@ from open_webui.models.models import (
     ModelUserResponse,
     Models,
 )
+
+from pydantic import BaseModel
 from open_webui.constants import ERROR_MESSAGES
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
@@ -76,6 +78,22 @@ async def create_new_model(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=ERROR_MESSAGES.DEFAULT(),
             )
+
+
+############################
+# SyncModels
+############################
+
+
+class SyncModelsForm(BaseModel):
+    models: list[ModelModel] = []
+
+
+@router.post("/sync", response_model=list[ModelModel])
+async def sync_models(
+    request: Request, form_data: SyncModelsForm, user=Depends(get_admin_user)
+):
+    return Models.sync_models(user.id, form_data.models)
 
 
 ###########################
