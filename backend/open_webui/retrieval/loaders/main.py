@@ -152,7 +152,7 @@ class DoclingLoader:
                 )
             }
 
-            params = {"image_export_mode": "placeholder", "table_mode": "fast", "to_formats": "md", "pdf_backend": "pypdfium2", "pipeline": "standard", "do_table_structure": True, "include_images": True}
+            params = {"image_export_mode": "embedded", "table_mode": "fast", "to_formats": "md", "pdf_backend": "pypdfium2", "pipeline": "standard", "do_table_structure": True, "include_images": True}
 
             if self.params:
                 log.debug("Processing custom parameters: %s", self.params)
