@@ -16,7 +16,7 @@
 
 	import { splitStream } from '$lib/utils';
 	import Collapsible from '../common/Collapsible.svelte';
-
+	import abortTaskOpu from '../chat/Controls/Controls.svelte';
 	import Messages from '$lib/components/playground/Chat/Messages.svelte';
 	import ChevronUp from '../icons/ChevronUp.svelte';
 	import ChevronDown from '../icons/ChevronDown.svelte';
@@ -55,6 +55,7 @@
 	};
 
 	const stopResponse = () => {
+		abortTaskOpu();
 		stopResponseFlag = true;
 		console.log('stopResponse');
 	};

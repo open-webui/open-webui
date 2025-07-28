@@ -83,6 +83,7 @@
 	import Messages from '$lib/components/chat/Messages.svelte';
 	import Navbar from '$lib/components/chat/Navbar.svelte';
 	import ChatControls from './ChatControls.svelte';
+	import {abortTaskOpu} from './Controls/Controls.svelte';
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
 	import Placeholder from './Placeholder.svelte';
 	import NotificationToast from '../NotificationToast.svelte';
@@ -1835,6 +1836,11 @@
 	};
 
 	const stopResponse = async () => {
+		if (($user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true)) && (params.target === 'cpu' || params.target === 'opu')) {
+			const res = await abortTaskOpu().catch((error) => {
+				toast.error(`${error}`);
+			});
+		}
 		if (taskIds) {
 			for (const taskId of taskIds) {
 				const res = await stopTask(localStorage.token, taskId).catch((error) => {

@@ -652,6 +652,18 @@ def health_check_ollama_serial_command():
     result, error = health_check_serial_command()
     return manual_response(content=result,thinking="Health Check"), error
 
+def aborttask():
+    try:
+        result = serial_script.abort_serial_portion(port,baudrate)
+        return result, 200
+    except subprocess.CalledProcessError as e:
+        return f"Error executing script: {e.stderr}", 500
+
+@app.route('/api/abort-task', methods=['GET', 'POST'])
+def abort_task_ollama_serial_command():
+    result, error = aborttask()
+    return manual_response(content=result,thinking="Abort Task"), error
+
 @app.route('/submit', methods=['POST'])
 def submit():
 

@@ -74,6 +74,25 @@
                         return null;
                 }
         }
+	export async function abortTaskOpu() {
+                try {
+                        const response = await fetch('/ollama/api/aborttaskopu', {
+                                method: 'POST',
+                                headers: {
+                                        'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({ target: 'opu' }),
+                        });
+                        if (!response.ok) throw new Error('System info failed');
+                        const data = await response.json(); // ✅ Parse JSON
+                        alert('Task aborted on OPU.');
+                        return data; // 🔁 Return the parsed object!
+                } catch (error) {
+                        console.error('Error System Info of OPU:', error);
+                        alert('Something went wrong while aborting task on OPU.');
+                        return null;
+                }
+        }
 </script>
 
 <div class=" dark:text-white">

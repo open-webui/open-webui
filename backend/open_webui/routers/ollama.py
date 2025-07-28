@@ -1478,6 +1478,24 @@ async def healthcheck_opu(
         user=user,
     )
 
+@router.post("/api/aborttaskopu")
+async def aborttask_opu(
+    request: Request,
+    form_data: dict,
+    url_idx: Optional[int] = None,
+    user=Depends(get_verified_user),
+    bypass_filter: Optional[bool] = False,
+):
+    url = DEFAULT_FLASK_URL
+    return await send_post_request(
+        url=f"{url}/api/abort-task",
+        payload=None,
+        stream=False,
+        key=None,
+        content_type="application/x-ndjson",
+        user=user,
+    )
+
 # TODO: we should update this part once Ollama supports other types
 class OpenAIChatMessageContent(BaseModel):
     type: str
