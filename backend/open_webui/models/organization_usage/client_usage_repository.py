@@ -16,6 +16,47 @@ from .repositories import IClientUsageRepository
 log = logging.getLogger(__name__)
 
 
+def _calculate_top_models_by_tokens(client_org_id: str, current_month_start: date, today: date, db) -> List[Dict[str, Any]]:
+    """
+    Calculate top 3 models by token count for the current month.
+    Returns array with model name and token count for each model.
+    Handles edge cases: empty records, fewer than 3 models.
+    """
+    try:
+        # Query model usage for current month
+        model_records = db.query(ClientModelDailyUsage).filter(
+            ClientModelDailyUsage.client_org_id == client_org_id,
+            ClientModelDailyUsage.usage_date >= current_month_start,
+            ClientModelDailyUsage.usage_date <= today
+        ).all()
+        
+        if not model_records:
+            return []
+        
+        # Aggregate by model name
+        model_totals = {}
+        for record in model_records:
+            if record.model_name not in model_totals:
+                model_totals[record.model_name] = {
+                    'model_name': record.model_name,
+                    'total_tokens': 0
+                }
+            model_totals[record.model_name]['total_tokens'] += record.total_tokens
+        
+        # Sort by total tokens descending and take top 3
+        sorted_models = sorted(
+            model_totals.values(),
+            key=lambda x: x['total_tokens'],
+            reverse=True
+        )
+        
+        return sorted_models[:3]  # Return top 3 models
+        
+    except Exception as e:
+        log.error(f"Error calculating top models for client {client_org_id}: {e}")
+        return []
+
+
 class ClientUsageRepository(IClientUsageRepository):
     """
     Implementation of client usage repository with complex business logic
@@ -192,6 +233,11 @@ class ClientUsageRepository(IClientUsageRepository):
                     'exchange_rate_info': exchange_info
                 }
                 
+                # Calculate top 3 models by token count
+                top_models = _calculate_top_models_by_tokens(
+                    client_org_id, current_month_start, today, db
+                )
+                
                 # Monthly summary with business insights
                 monthly_summary = {
                     'average_daily_tokens': round(avg_daily_tokens),
@@ -200,7 +246,7 @@ class ClientUsageRepository(IClientUsageRepository):
                     'busiest_day': max(month_records, key=lambda x: x.total_tokens).usage_date.isoformat() if month_records else None,
                     'highest_cost_day': max(month_records, key=lambda x: x.markup_cost).usage_date.isoformat() if month_records else None,
                     'total_unique_users': len(set(r.unique_users for r in month_records)) if month_records else 0,
-                    'most_used_model': max(month_records, key=lambda x: x.total_tokens).primary_model if month_records else None
+                    'top_models': top_models
                 }
                 
                 # Get client name (forward reference resolution)
@@ -225,7 +271,7 @@ class ClientUsageRepository(IClientUsageRepository):
             return ClientUsageStatsResponse(
                 current_month={'month': 'Error', 'total_tokens': 0, 'total_cost': 0.0, 'total_requests': 0, 'days_with_usage': 0, 'days_in_month': 0, 'usage_percentage': 0},
                 daily_breakdown=[],
-                monthly_summary={'average_daily_tokens': 0, 'average_daily_cost': 0, 'average_usage_day_tokens': 0, 'busiest_day': None, 'highest_cost_day': None, 'total_unique_users': 0, 'most_used_model': None},
+                monthly_summary={'average_daily_tokens': 0, 'average_daily_cost': 0, 'average_usage_day_tokens': 0, 'busiest_day': None, 'highest_cost_day': None, 'total_unique_users': 0, 'top_models': []},
                 client_org_name="Error"
             )
     
