@@ -108,7 +108,11 @@
 		const chatSearch = document.getElementById('chat-search');
 
 		if (!searchContainer.contains(e.target) && !chatSearch.contains(e.target)) {
-			if (e.target.id.startsWith('search-tag-') || e.target.id.startsWith('search-option-')) {
+			if (
+				e.target.id.startsWith('search-tag-') ||
+				e.target.id.startsWith('search-option-') ||
+				e.target.id.startsWith('search-folder-')
+			) {
 				return;
 			}
 			focused = false;
@@ -225,7 +229,7 @@
 									? 'bg-gray-100 dark:bg-gray-900'
 									: ''}"
 								id="search-tag-{tagIdx}"
-								on:click|stopPropagation={async () => {
+								on:mousedown|preventDefault|stopPropagation={async () => {
 									const words = value.split(' ');
 
 									words.pop();
@@ -256,7 +260,7 @@
 									? 'bg-gray-100 dark:bg-gray-900'
 									: ''}"
 								id="search-folder-{folderIdx}"
-								on:click|stopPropagation={async () => {
+								on:mousedown|preventDefault|stopPropagation={async () => {
 									const words = value.split(' ');
 
 									words.pop();
@@ -290,7 +294,7 @@
 									? 'bg-gray-100 dark:bg-gray-900'
 									: ''}"
 								id="search-option-{optionIdx}"
-								on:click|stopPropagation={async () => {
+								on:mousedown|preventDefault|stopPropagation={async () => {
 									const words = value.split(' ');
 									words.pop();
 									words.push(option.name);
