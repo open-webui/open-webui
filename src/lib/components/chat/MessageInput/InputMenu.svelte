@@ -94,7 +94,7 @@
 
 	<div slot="content">
 		<DropdownMenu.Content
-			class="w-auto max-w-[300px] rounded-xl px-1 py-1 border border-gray-300/30 dark:border-gray-700/50 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-sm"
+			class="w-auto max-w-[250px] rounded-xl px-1 py-1 border border-gray-300/30 dark:border-gray-700/50 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-sm"
 			sideOffset={10}
 			alignOffset={-8}
 			side="top"
