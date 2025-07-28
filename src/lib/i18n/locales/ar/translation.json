@@ -208,7 +208,7 @@
 	"Clipboard write permission denied. Please check your browser settings to grant the necessary access.": "تم رفض إذن الكتابة إلى الحافظة. يرجى التحقق من إعدادات المتصفح لمنح الوصول اللازم.",
 	"Clone": "استنساخ",
 	"Clone Chat": "استنساخ المحادثة",
-	"Clone of {{TITLE}}": "استنساخ لـ {{TITLE}}",
+	"Copy of {{TITLE}}": "استنساخ لـ {{TITLE}}",
 	"Close": "إغلاق",
 	"Close modal": "",
 	"Close settings modal": "",
@@ -1450,5 +1450,14 @@
 	"Low": "منخفض",
 	"Medium": "متوسط",
 	"High": "عالي",
-	"Group": "المجموعة"
+	"Group": "المجموعة",
+	"GovGPT":"",
+	"Loading...":"",
+	"Switch to Arabic":"التبديل إلى اللغة الإنجليزية",
+	"Talking to":"",
+	"Attach files":"",
+	"Gov Knowledge":"",
+	"Duplicate":"ينسخ",
+	"Start of the channel":"",
+	"Enhanced":""
 }

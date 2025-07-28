@@ -189,9 +189,7 @@
 				on:click={() => changeLanguage(document.documentElement.lang === 'en-US' ? 'ar' : 'en-US')}
 			>
 				<div class=" self-center truncate gap-[8px] text-[17px] leading-[22px]">
-					{document.documentElement.lang === 'en-US'
-						? 'Switch to Arabic'
-						: 'التبديل إلى اللغة الإنجليزية'}
+					{$i18n.t('Switch to Arabic')}
 				</div>
 				<div class=" self-center {$mobile ? '' : 'mr-3'} ">
 					<MaterialIcon name="translate" size="1.1rem" />
