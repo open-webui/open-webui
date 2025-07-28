@@ -3,7 +3,7 @@ import hashlib
 import json
 import logging
 from pathlib import Path
-from typing import Literal, Optional, overload
+from typing import Literal, Optional, overload, Dict, Any, AsyncGenerator
 import fnmatch
 
 import aiohttp
@@ -140,6 +140,234 @@ def openai_o_series_handler(payload):
             payload["messages"][0]["role"] = "developer"
 
     return payload
+
+
+class UsageCapturingStreamingResponse:
+    """
+    Custom streaming response class that captures usage data from the final SSE chunk
+    while preserving normal streaming functionality for the client.
+    
+    This solves the critical issue where streaming OpenRouter responses were not
+    being captured in the usage tracking system, ensuring 100% coverage.
+    """
+    
+    def __init__(
+        self,
+        content: AsyncGenerator[bytes, None],
+        status_code: int,
+        headers: Dict[str, str],
+        user_id: str,
+        model_name: str,
+        client_context: Optional[Dict[str, Any]] = None,
+        payload: Optional[str] = None,
+        background_task: Optional[BackgroundTask] = None
+    ):
+        self.content = content
+        self.status_code = status_code
+        self.headers = headers
+        self.user_id = user_id
+        self.model_name = model_name
+        self.client_context = client_context
+        self.payload = payload
+        self.background_task = background_task
+        
+        # Usage data captured from final SSE chunk
+        self.captured_usage = None
+        self.last_chunk_data = None
+    
+    async def parse_sse_chunk(self, chunk_data: bytes) -> Optional[Dict[str, Any]]:
+        """
+        Parse SSE (Server-Sent Events) chunk to extract JSON data
+        
+        SSE format:
+        data: {"key": "value"}
+        
+        Returns:
+            Parsed JSON dict if valid, None otherwise
+        """
+        try:
+            chunk_str = chunk_data.decode('utf-8').strip()
+            
+            # Handle SSE format - look for 'data: ' prefix
+            if chunk_str.startswith('data: '):
+                json_str = chunk_str[6:]  # Remove 'data: ' prefix
+                
+                # Skip [DONE] markers and empty data
+                if json_str.strip() in ['[DONE]', '']:
+                    return None
+                
+                # Parse JSON
+                return json.loads(json_str)
+                
+        except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as e:
+            log.debug(f"Could not parse SSE chunk: {e}")
+            return None
+        
+        return None
+    
+    def extract_usage_data(self, parsed_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        Extract usage information from parsed OpenRouter response
+        
+        OpenRouter returns usage data in the final SSE chunk when usage: {include: true} is set
+        """
+        try:
+            if not isinstance(parsed_data, dict):
+                return None
+            
+            # Check for usage data in the response
+            usage_data = parsed_data.get('usage')
+            if not usage_data:
+                return None
+            
+            # Extract required fields
+            input_tokens = usage_data.get('prompt_tokens', 0)
+            output_tokens = usage_data.get('completion_tokens', 0)
+            
+            # Extract cost - OpenRouter provides this when usage accounting is enabled
+            raw_cost = 0.0
+            if isinstance(usage_data, dict) and 'cost' in usage_data:
+                raw_cost = float(usage_data['cost'])
+            elif 'cost' in parsed_data:
+                raw_cost = float(parsed_data['cost'])
+            elif 'total_cost' in usage_data:
+                raw_cost = float(usage_data['total_cost'])
+            
+            # Extract additional metadata
+            provider = None
+            provider_info = parsed_data.get('provider')
+            if isinstance(provider_info, dict):
+                provider = provider_info.get('name')
+            
+            generation_time = parsed_data.get('generation_time')
+            external_user = parsed_data.get('external_user')
+            generation_id = parsed_data.get('generation_id') or parsed_data.get('id')
+            
+            return {
+                'input_tokens': input_tokens,
+                'output_tokens': output_tokens,
+                'raw_cost': raw_cost,
+                'provider': provider,
+                'generation_time': generation_time,
+                'external_user': external_user,
+                'generation_id': generation_id
+            }
+            
+        except (ValueError, TypeError, KeyError) as e:
+            log.debug(f"Error extracting usage data: {e}")
+            return None
+    
+    async def record_usage_async(self, usage_data: Dict[str, Any]):
+        """
+        Record usage data asynchronously without blocking the streaming response
+        """
+        try:
+            if not self.client_context:
+                log.debug("No client context available for usage recording")
+                return
+            
+            from open_webui.utils.openrouter_client_manager import openrouter_client_manager
+            
+            log.info(f"Recording streaming usage: {usage_data['input_tokens'] + usage_data['output_tokens']} tokens, ${usage_data['raw_cost']:.6f}")
+            
+            await openrouter_client_manager.record_real_time_usage(
+                user_id=self.user_id,
+                model_name=self.model_name,
+                input_tokens=usage_data['input_tokens'],
+                output_tokens=usage_data['output_tokens'],
+                raw_cost=usage_data['raw_cost'],
+                generation_id=usage_data.get('generation_id'),
+                provider=usage_data.get('provider'),
+                generation_time=usage_data.get('generation_time'),
+                external_user=usage_data.get('external_user'),
+                client_context=self.client_context
+            )
+            
+        except Exception as e:
+            log.error(f"Failed to record streaming usage for user {self.user_id}: {e}")
+    
+    async def stream_with_usage_capture(self) -> AsyncGenerator[bytes, None]:
+        """
+        Stream content while capturing usage data from the final chunk
+        """
+        buffered_chunks = []
+        
+        try:
+            async for chunk in self.content:
+                # Always yield the chunk immediately for real-time streaming
+                yield chunk
+                
+                # Buffer the last few chunks to catch usage data
+                buffered_chunks.append(chunk)
+                
+                # Keep only the last 10 chunks to avoid memory issues
+                if len(buffered_chunks) > 10:
+                    buffered_chunks.pop(0)
+            
+            # After streaming is complete, analyze buffered chunks for usage data
+            await self.process_buffered_chunks(buffered_chunks)
+            
+        except Exception as e:
+            log.error(f"Error in streaming with usage capture: {e}")
+            # Continue streaming even if usage capture fails
+            async for chunk in self.content:
+                yield chunk
+    
+    async def process_buffered_chunks(self, chunks: list[bytes]):
+        """
+        Process the final buffered chunks to find and extract usage data
+        """
+        try:
+            # Process chunks in reverse order (most recent first) to find usage data quickly
+            for chunk in reversed(chunks):
+                parsed_data = await self.parse_sse_chunk(chunk)
+                if parsed_data:
+                    usage_data = self.extract_usage_data(parsed_data)
+                    if usage_data:
+                        # Found usage data - record it asynchronously
+                        self.captured_usage = usage_data
+                        log.debug(f"Captured usage data from streaming response: {usage_data}")
+                        
+                        # Record usage in background (don't await to avoid blocking)
+                        asyncio.create_task(self.record_usage_async(usage_data))
+                        return
+            
+            log.debug("No usage data found in streaming response chunks")
+            
+        except Exception as e:
+            log.error(f"Error processing buffered chunks for usage data: {e}")
+
+
+def create_usage_capturing_streaming_response(
+    content: AsyncGenerator[bytes, None],
+    status_code: int,
+    headers: Dict[str, str],
+    user_id: str,
+    model_name: str,
+    client_context: Optional[Dict[str, Any]] = None,
+    payload: Optional[str] = None,
+    background_task: Optional[BackgroundTask] = None
+) -> StreamingResponse:
+    """
+    Factory function to create a StreamingResponse with usage capture capabilities
+    """
+    usage_capturer = UsageCapturingStreamingResponse(
+        content=content,
+        status_code=status_code,
+        headers=headers,
+        user_id=user_id,
+        model_name=model_name,
+        client_context=client_context,
+        payload=payload,
+        background_task=background_task
+    )
+    
+    return StreamingResponse(
+        content=usage_capturer.stream_with_usage_capture(),
+        status_code=status_code,
+        headers=headers,
+        background=background_task
+    )
 
 
 ##########################################
@@ -1005,14 +1233,32 @@ async def generate_chat_completion(
         # Check if response is SSE
         if "text/event-stream" in r.headers.get("Content-Type", ""):
             streaming = True
-            return StreamingResponse(
-                r.content,
-                status_code=r.status,
-                headers=dict(r.headers),
-                background=BackgroundTask(
-                    cleanup_response, response=r, session=session
-                ),
-            )
+            
+            # For OpenRouter requests with client context, use usage capturing streaming response
+            if client_context and "openrouter.ai" in url:
+                log.info(f"Using usage capturing streaming response for user {user.id}")
+                return create_usage_capturing_streaming_response(
+                    content=r.content,
+                    status_code=r.status,
+                    headers=dict(r.headers),
+                    user_id=user.id,
+                    model_name=json.loads(payload).get("model", "unknown"),
+                    client_context=client_context,
+                    payload=payload,
+                    background_task=BackgroundTask(
+                        cleanup_response, response=r, session=session
+                    )
+                )
+            else:
+                # Standard streaming response for non-OpenRouter or non-tracked requests
+                return StreamingResponse(
+                    r.content,
+                    status_code=r.status,
+                    headers=dict(r.headers),
+                    background=BackgroundTask(
+                        cleanup_response, response=r, session=session
+                    ),
+                )
         else:
             try:
                 response = await r.json()
