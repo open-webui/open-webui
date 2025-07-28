@@ -1459,5 +1459,11 @@
 	"Gov Knowledge":"Gov Knowledge",
 	"Duplicate":"Duplicate",
 	"Start of the channel":"Start of the channel",
-	"Enhanced":"Enhanced"
+	"Enhanced":"Enhanced",
+	"Profile":"Profile",
+	"Extracted Lines":"extracted lines",
+	"Formatting may be inconsistent from source.":"Formatting may be inconsistent from source.",
+	"Using Entire Document":"استخدام المستند بأكمله",
+	"Using Focused Retrieval":"Using Focused Retrieval",
+	"No content":"No content"
 }

@@ -1459,5 +1459,11 @@
 	"Gov Knowledge":"المعرفة الحكومية",
 	"Duplicate":"ينسخ",
 	"Start of the channel":"بداية القناة",
-	"Enhanced":"معزز"
+	"Enhanced":"معزز",
+	"Profile":"حساب تعريفي",
+	"Extracted Lines":"الخطوط المستخرجة",
+	"Formatting may be inconsistent from source.":"قد يكون التنسيق غير متسق مع المصدر.",
+	"Using Entire Document":"استخدام المستند بأكمله",
+	"Using Focused Retrieval":"استخدام الاسترجاع المركّز",
+	"No content":"لا يوجد محتوى"
 }
