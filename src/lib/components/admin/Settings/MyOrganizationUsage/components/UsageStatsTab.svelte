@@ -29,56 +29,37 @@
 <div class="space-y-6">
 	<!-- Monthly Summary Insights -->
 	<div class="bg-white dark:bg-gray-850 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-		<div class="flex items-center justify-between mb-4">
+		<div class="mb-4">
 			<h3 class="text-lg font-medium">{$i18n.t('Monthly Summary')}</h3>
-			<NoticeCard type="info" title="Daily Batch Calculated" showIcon={true}>
-				<div slot="actions" class="text-xs bg-blue-100 dark:bg-blue-800 px-2 py-1 rounded">
-					Business Intelligence
-				</div>
-			</NoticeCard>
 		</div>
 		
-		<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-			<!-- Usage Averages -->
+		<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+			<!-- Top Models -->
 			<div>
-				<h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{$i18n.t('Usage Averages')} 📊</h4>
+				<h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{$i18n.t('Top 3 Models')} ⭐</h4>
 				<div class="space-y-2">
-					<div class="flex justify-between">
-						<span class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Daily Average')}:</span>
-						<span class="text-sm font-medium">{FormatterService.formatNumber(usageData.monthly_summary?.average_daily_tokens || 0)} tokens</span>
-					</div>
-					<div class="flex justify-between">
-						<span class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Usage Day Average')}:</span>
-						<span class="text-sm font-medium">{FormatterService.formatNumber(usageData.monthly_summary?.average_usage_day_tokens || 0)} tokens</span>
-					</div>
+					{#if usageData.monthly_summary?.top_models && usageData.monthly_summary.top_models.length > 0}
+						{#each usageData.monthly_summary.top_models as model, index}
+							<div class="flex justify-between">
+								<span class="text-sm text-gray-600 dark:text-gray-400">{index + 1}. {model.model_name}:</span>
+								<span class="text-sm font-medium">{FormatterService.formatNumber(model.total_tokens)} tokens</span>
+							</div>
+						{/each}
+					{:else}
+						<div class="flex justify-between">
+							<span class="text-sm text-gray-600 dark:text-gray-400">No models:</span>
+							<span class="text-sm font-medium">N/A</span>
+						</div>
+					{/if}
 				</div>
 			</div>
 			
-			<!-- Peak Usage -->
+			<!-- Active Users -->
 			<div>
-				<h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{$i18n.t('Peak Usage')} 🔥</h4>
+				<h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{$i18n.t('Active Users')} 👥</h4>
 				<div class="space-y-2">
 					<div class="flex justify-between">
-						<span class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Busiest Day')}:</span>
-						<span class="text-sm font-medium">{usageData.monthly_summary?.busiest_day || 'N/A'}</span>
-					</div>
-					<div class="flex justify-between">
-						<span class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Highest Cost Day')}:</span>
-						<span class="text-sm font-medium">{usageData.monthly_summary?.highest_cost_day || 'N/A'}</span>
-					</div>
-				</div>
-			</div>
-			
-			<!-- Most Used -->
-			<div>
-				<h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{$i18n.t('Most Used')} ⭐</h4>
-				<div class="space-y-2">
-					<div class="flex justify-between">
-						<span class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Primary Model')}:</span>
-						<span class="text-sm font-medium">{usageData.monthly_summary?.most_used_model || 'N/A'}</span>
-					</div>
-					<div class="flex justify-between">
-						<span class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Active Users')}:</span>
+						<span class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Aktywni użytkownicy')}:</span>
 						<span class="text-sm font-medium">{usageData.monthly_summary?.total_unique_users || 0}</span>
 					</div>
 				</div>

@@ -25,14 +25,14 @@ export interface DailyBreakdown {
 	last_activity: string;
 }
 
+export interface TopModel {
+	model_name: string;
+	total_tokens: number;
+}
+
 export interface MonthlySummary {
-	average_daily_tokens: number;
-	average_daily_cost: number;
-	average_usage_day_tokens: number;
-	busiest_day: string | null;
-	highest_cost_day: string | null;
 	total_unique_users: number;
-	most_used_model: string | null;
+	top_models: TopModel[];
 }
 
 export interface ExchangeRateInfo {
