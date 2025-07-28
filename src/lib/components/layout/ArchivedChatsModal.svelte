@@ -4,10 +4,19 @@
 
 	import { toast } from 'svelte-sonner';
 	import { getContext } from 'svelte';
-	import { archiveChatById, getAllArchivedChats, getArchivedChatList } from '$lib/apis/chats';
+	import { goto } from '$app/navigation';
+	import { chats, scrollPaginationEnabled, currentChatPage } from '$lib/stores';
+	import {
+		archiveChatById,
+		getAllArchivedChats,
+		getArchivedChatList,
+		archiveAllChats,
+		getChatList
+	} from '$lib/apis/chats';
 
 	import ChatsModal from './ChatsModal.svelte';
 	import UnarchiveAllConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import ArchiveAllConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -26,6 +35,7 @@
 	let searchDebounceTimeout;
 
 	let showUnarchiveAllConfirmDialog = false;
+	let showArchiveAllConfirmDialog = false;
 
 	let filter = {};
 	$: filter = {
@@ -117,7 +127,28 @@
 	$: if (show) {
 		init();
 	}
+
+	const archiveAllChatsHandler = async () => {
+		await archiveAllChats(localStorage.token).catch((error) => {
+			toast.error(`${error}`);
+		});
+
+		currentChatPage.set(1);
+		await chats.set(await getChatList(localStorage.token, $currentChatPage));
+		scrollPaginationEnabled.set(true);
+		onUpdate();
+		init();
+	};
 </script>
+
+<ArchiveAllConfirmDialog
+	bind:show={showArchiveAllConfirmDialog}
+	message={$i18n.t('Are you sure you want to archive all chats?')}
+	confirmLabel={$i18n.t('Archive All')}
+	on:confirm={() => {
+		archiveAllChatsHandler();
+	}}
+/>
 
 <UnarchiveAllConfirmDialog
 	bind:show={showUnarchiveAllConfirmDialog}
@@ -146,6 +177,14 @@
 >
 	<div slot="footer">
 		<div class="flex flex-wrap text-sm font-medium gap-1.5 mt-2 m-1 justify-end w-full">
+			<button
+				class=" px-3.5 py-1.5 font-medium hover:bg-black/5 dark:hover:bg-white/5 outline outline-1 outline-gray-100 dark:outline-gray-800 rounded-3xl"
+				on:click={() => {
+					showArchiveAllConfirmDialog = true;
+				}}
+			>
+				{$i18n.t('Archive All Chats')}
+			</button>
 			<button
 				class=" px-3.5 py-1.5 font-medium hover:bg-black/5 dark:hover:bg-white/5 outline outline-1 outline-gray-100 dark:outline-gray-800 rounded-3xl"
 				on:click={() => {
