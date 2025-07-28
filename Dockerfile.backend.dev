@@ -1,0 +1,94 @@
+# Backend Development Dockerfile - API only for hot reload
+FROM python:3.11-slim-bookworm
+
+# Use args
+ARG USE_CUDA=false
+ARG USE_OLLAMA=false
+ARG USE_CUDA_VER=cu128
+ARG USE_EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+ARG USE_RERANKING_MODEL=""
+ARG UID=0
+ARG GID=0
+
+## Environment Variables ##
+ENV ENV=dev \
+    PORT=8080 \
+    USE_OLLAMA_DOCKER=${USE_OLLAMA} \
+    USE_CUDA_DOCKER=${USE_CUDA} \
+    USE_CUDA_DOCKER_VER=${USE_CUDA_VER} \
+    USE_EMBEDDING_MODEL_DOCKER=${USE_EMBEDDING_MODEL} \
+    USE_RERANKING_MODEL_DOCKER=${USE_RERANKING_MODEL}
+
+## Basis URL Config ##
+ENV OLLAMA_BASE_URL="/ollama" \
+    OPENAI_API_BASE_URL=""
+
+## API Key and Security Config ##
+ENV OPENAI_API_KEY="" \
+    WEBUI_SECRET_KEY="" \
+    SCARF_NO_ANALYTICS=true \
+    DO_NOT_TRACK=true \
+    ANONYMIZED_TELEMETRY=false
+
+#### Model configurations ####
+ENV WHISPER_MODEL="base" \
+    WHISPER_MODEL_DIR="/app/backend/data/cache/whisper/models" \
+    RAG_EMBEDDING_MODEL="$USE_EMBEDDING_MODEL_DOCKER" \
+    RAG_RERANKING_MODEL="$USE_RERANKING_MODEL_DOCKER" \
+    SENTENCE_TRANSFORMERS_HOME="/app/backend/data/cache/embedding/models" \
+    TIKTOKEN_ENCODING_NAME="cl100k_base" \
+    TIKTOKEN_CACHE_DIR="/app/backend/data/cache/tiktoken" \
+    HF_HOME="/app/backend/data/cache/embedding/models"
+
+WORKDIR /app/backend
+
+ENV HOME=/root
+
+# Create user and group if not root
+RUN if [ $UID -ne 0 ]; then \
+    if [ $GID -ne 0 ]; then \
+    addgroup --gid $GID app; \
+    fi; \
+    adduser --uid $UID --gid $GID --home $HOME --disabled-password --no-create-home app; \
+    fi
+
+RUN mkdir -p $HOME/.cache/chroma
+RUN echo -n 00000000-0000-0000-0000-000000000000 > $HOME/.cache/chroma/telemetry_user_id
+
+# Make sure the user has access to the app and root directory
+RUN chown -R $UID:$GID /app $HOME
+
+# Install system dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends git build-essential pandoc gcc netcat-openbsd curl jq && \
+    apt-get install -y --no-install-recommends gcc python3-dev && \
+    apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+COPY --chown=$UID:$GID ./backend/requirements.txt ./requirements.txt
+
+RUN pip3 install --no-cache-dir uv && \
+    pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --no-cache-dir && \
+    uv pip install --system -r requirements.txt --no-cache-dir && \
+    python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ['RAG_EMBEDDING_MODEL'], device='cpu')" && \
+    python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])" && \
+    python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])" && \
+    chown -R $UID:$GID /app/backend/data/
+
+# Copy backend files (source will be mounted as volume for hot reload)
+COPY --chown=$UID:$GID ./backend .
+
+# Copy OpenRouter scripts
+COPY --chown=$UID:$GID ./scripts /app/scripts
+
+EXPOSE 8080
+
+HEALTHCHECK CMD curl --silent --fail http://localhost:${PORT:-8080}/health | jq -ne 'input.status == true' || exit 1
+
+USER $UID:$GID
+
+ENV DOCKER=true
+
+# Development command with hot reload
+CMD ["python", "-m", "uvicorn", "open_webui.main:app", "--host", "0.0.0.0", "--port", "8080", "--reload", "--reload-dir", "/app/backend"]

@@ -28,5 +28,33 @@ export default defineConfig({
 	},
 	esbuild: {
 		pure: process.env.ENV === 'dev' ? [] : ['console.log', 'console.debug']
+	},
+	server: {
+		host: process.env.VITE_HOST || 'localhost',
+		port: 5173,
+		strictPort: true,
+		hmr: {
+			port: 5173,
+			host: 'localhost'
+		},
+		// API proxy for Docker development
+		proxy: process.env.DOCKER_DEV === 'true' ? {
+			'/api': {
+				target: 'http://backend-dev:8080',
+				changeOrigin: true,
+				secure: false
+			},
+			'/static': {
+				target: 'http://backend-dev:8080',
+				changeOrigin: true,
+				secure: false
+			},
+			'/socket.io': {
+				target: 'http://backend-dev:8080',
+				changeOrigin: true,
+				secure: false,
+				ws: true
+			}
+		} : {}
 	}
 });

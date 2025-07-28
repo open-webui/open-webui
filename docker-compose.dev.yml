@@ -1,47 +1,83 @@
-# Development Docker Compose - Fast iteration with hot-reloading
+# Development Docker Compose - Two-Container Architecture with Hot Reload
+# Frontend: Vite dev server with HMR
+# Backend: FastAPI with uvicorn --reload
 # Usage: docker-compose -f docker-compose.dev.yml up
 services:
-  open-webui-dev:
+  # Frontend Development Service - Vite with Hot Module Replacement
+  frontend-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend.dev
+    container_name: mai-frontend-dev
+    volumes:
+      # Mount source code for hot reload
+      - ./src:/app/src
+      - ./static:/app/static
+      - ./package.json:/app/package.json
+      - ./package-lock.json:/app/package-lock.json
+      - ./vite.config.ts:/app/vite.config.ts
+      - ./svelte.config.js:/app/svelte.config.js
+      - ./tsconfig.json:/app/tsconfig.json
+      - ./tailwind.config.js:/app/tailwind.config.js
+      - ./postcss.config.js:/app/postcss.config.js
+      # Preserve node_modules volume
+      - /app/node_modules
+    ports:
+      - "5173:5173"  # Vite dev server
+    environment:
+      - 'VITE_HOST=0.0.0.0'
+      - 'DOCKER_DEV=true'
+      - 'NODE_ENV=development'
+    restart: unless-stopped
+    depends_on:
+      - backend-dev
+    networks:
+      - mai-dev-network
+
+  # Backend Development Service - FastAPI with hot reload  
+  backend-dev:
     build:
       context: .
       args:
         OLLAMA_BASE_URL: '/ollama'
-      dockerfile: Dockerfile
-    container_name: open-webui-dev
+      dockerfile: Dockerfile.backend.dev
+    container_name: mai-backend-dev
     env_file:
       - .env.dev
     volumes:
-      # Mount source code for hot-reloading
+      # Mount backend source code for hot reload
       - ./backend:/app/backend
-      - ./src:/app/src
-      - ./static:/app/static
       # Persist data
-      - open-webui-dev-data:/app/backend/data
-      # Prevent node_modules from being overwritten
-      - /app/node_modules
+      - mai-backend-dev-data:/app/backend/data
+      # Preserve virtual environment
       - /app/backend/.venv
     ports:
-      - "3001:8080"  # Different port from production
+      - "8080:8080"  # FastAPI backend
     environment:
       - 'OLLAMA_BASE_URL=http://host.docker.internal:11434'
       - 'WEBUI_SECRET_KEY=mai-secret-key-development-2025'
-      - 'WEBUI_NAME=mAI Development (HOT-RELOAD)'
-      - 'WEBUI_URL=http://localhost:3001'
-      # Enable hot-reloading
-      - 'UVICORN_RELOAD=true'
-      - 'UVICORN_HOST=0.0.0.0'
-      - 'UVICORN_PORT=8080'
+      - 'WEBUI_NAME=mAI Development (BACKEND)'
+      - 'WEBUI_URL=http://localhost:5173'
+      # CORS for frontend dev server
+      - 'CORS_ALLOW_ORIGIN=http://localhost:5173;http://localhost:3001'
+      - 'ENV=dev'
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
-    command: >
-      sh -c "cd /app/backend && 
-             python -m uvicorn open_webui.main:app 
-             --host 0.0.0.0 
-             --port 8080 
-             --reload 
-             --reload-dir /app/backend"
+    healthcheck:
+      test: ["CMD", "curl", "--silent", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - mai-dev-network
 
 volumes:
-  open-webui-dev-data:
-    name: mai_dev_data
+  mai-backend-dev-data:
+    name: mai_backend_dev_data
+
+networks:
+  mai-dev-network:
+    driver: bridge
+    name: mai-dev-network
