@@ -83,6 +83,7 @@ from open_webui.utils.filter import (
     process_filter_functions,
 )
 from open_webui.utils.code_interpreter import execute_code_jupyter
+from open_webui.utils.payload import apply_model_system_prompt_to_body
 
 from open_webui.tasks import create_task
 
@@ -774,8 +775,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
             if folder and folder.data:
                 if "system_prompt" in folder.data:
-                    form_data["messages"] = add_or_update_system_message(
-                        folder.data["system_prompt"], form_data["messages"]
+                    form_data = apply_model_system_prompt_to_body(
+                        folder.data["system_prompt"], 
+                        form_data, 
+                        metadata, 
+                        user
                     )
                 if "files" in folder.data:
                     form_data["files"] = [
