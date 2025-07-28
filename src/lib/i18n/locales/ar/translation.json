@@ -1465,5 +1465,11 @@
 	"Formatting may be inconsistent from source.":"قد يكون التنسيق غير متسق مع المصدر.",
 	"Using Entire Document":"استخدام المستند بأكمله",
 	"Using Focused Retrieval":"استخدام الاسترجاع المركّز",
-	"No content":"لا يوجد محتوى"
+	"No content":"لا يوجد محتوى",
+	"Legacy":"إرث",
+	"Active":"نشيط",
+	"Away":"بعيد",
+	"Registered to":"مسجل ل",
+	"For":"ل",
+	"Updating":"تحديث"
 }

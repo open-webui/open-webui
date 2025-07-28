@@ -215,10 +215,10 @@
 							placeholder="Select an engine"
 						>
 							<option value="">{$i18n.t('Whisper (Local)')}</option>
-							<option value="openai">OpenAI</option>
+							<option value="openai">{$i18n.t('OpenAI')}</option>
 							<option value="web">{$i18n.t('Web API')}</option>
-							<option value="deepgram">Deepgram</option>
-							<option value="azure">Azure AI Speech</option>
+							<option value="deepgram">{$i18n.t('Deepgram')}</option>
+							<option value="azure">{$i18n.t('Azure AI Speech')}</option>
 						</select>
 					</div>
 				</div>

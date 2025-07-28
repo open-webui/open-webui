@@ -1463,7 +1463,13 @@
 	"Profile":"Profile",
 	"Extracted Lines":"extracted lines",
 	"Formatting may be inconsistent from source.":"Formatting may be inconsistent from source.",
-	"Using Entire Document":"استخدام المستند بأكمله",
+	"Using Entire Document":"Using Entire Document",
 	"Using Focused Retrieval":"Using Focused Retrieval",
-	"No content":"No content"
+	"No content":"No content",
+	"Legacy":"Legacy",
+	"Active":"Active",
+	"Away":"Away",
+	"Registered to":"registered to",
+	"For":"for",
+	"Updating":"Updating"
 }
