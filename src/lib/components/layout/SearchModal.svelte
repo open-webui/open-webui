@@ -100,6 +100,7 @@
 			}, 500);
 		}
 
+		selectedIdx = 0;
 		selectedChat = null;
 		messages = null;
 		history = null;

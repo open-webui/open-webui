@@ -612,8 +612,20 @@ class ChatTable:
             if word.startswith("tag:")
         ]
 
+        folder_names = [
+            word.replace("folder:", "").replace(" ", "_").lower()
+            for word in search_text_words
+            if word.startswith("folder:")
+        ]
+
+        is_pinned = "pinned:true" in search_text
+
         search_text_words = [
-            word for word in search_text_words if not word.startswith("tag:")
+            word
+            for word in search_text_words
+            if not word.startswith("tag:")
+            and not word.startswith("folder:")
+            and not word.startswith("pinned:")
         ]
 
         search_text = " ".join(search_text_words)
@@ -623,6 +635,9 @@ class ChatTable:
 
             if not include_archived:
                 query = query.filter(Chat.archived == False)
+
+            if is_pinned:
+                query = query.filter(Chat.pinned == True)
 
             query = query.order_by(Chat.updated_at.desc())
 
@@ -673,6 +688,16 @@ class ChatTable:
                             ]
                         )
                     )
+                if folder_names:
+                    # similar to tags, but for folders
+                    # first get the folder ids from the folder names
+                    from open_webui.models.folders import Folders
+
+                    folder_ids = Folders.get_folder_ids_by_names_and_user_id(
+                        folder_names, user_id
+                    )
+
+                    query = query.filter(Chat.folder_id.in_(folder_ids))
 
             elif dialect_name == "postgresql":
                 # PostgreSQL relies on proper JSON query for search
@@ -720,6 +745,16 @@ class ChatTable:
                             ]
                         )
                     )
+
+                if folder_names:
+                    # similar to tags, but for folders
+                    # first get the folder ids from the folder names
+                    from open_webui.models.folders import Folders
+
+                    folder_ids = Folders.get_folder_ids_by_names_and_user_id(
+                        folder_names, user_id
+                    )
+                    query = query.filter(Chat.folder_id.in_(folder_ids))
             else:
                 raise NotImplementedError(
                     f"Unsupported dialect: {db.bind.dialect.name}"
