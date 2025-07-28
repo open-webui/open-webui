@@ -32,6 +32,14 @@
 		{
 			name: 'pinned:true',
 			description: $i18n.t('search for pinned chats')
+		},
+		{
+			name: 'shared:true',
+			description: $i18n.t('search for shared chats')
+		},
+		{
+			name: 'archived:true',
+			description: $i18n.t('search for archived chats')
 		}
 	];
 	let focused = false;

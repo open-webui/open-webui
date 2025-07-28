@@ -619,6 +619,8 @@ class ChatTable:
         ]
 
         is_pinned = "pinned:true" in search_text
+        is_archived = "archived:true" in search_text
+        is_shared = "shared:true" in search_text
 
         search_text_words = [
             word
@@ -626,6 +628,8 @@ class ChatTable:
             if not word.startswith("tag:")
             and not word.startswith("folder:")
             and not word.startswith("pinned:")
+            and not word.startswith("archived:")
+            and not word.startswith("shared:")
         ]
 
         search_text = " ".join(search_text_words)
@@ -633,11 +637,16 @@ class ChatTable:
         with get_db() as db:
             query = db.query(Chat).filter(Chat.user_id == user_id)
 
-            if not include_archived:
+            if is_archived:
+                query = query.filter(Chat.archived == True)
+            elif not include_archived:
                 query = query.filter(Chat.archived == False)
 
             if is_pinned:
                 query = query.filter(Chat.pinned == True)
+
+            if is_shared:
+                query = query.filter(Chat.share_id != None)
 
             query = query.order_by(Chat.updated_at.desc())
 
