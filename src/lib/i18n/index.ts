@@ -60,7 +60,8 @@ export const initI18n = (defaultLocale?: string | undefined) => {
 			fallbackLng: {
 				default: fallbackDefaultLocale
 			},
-			ns: 'translation',
+			ns: ['translation', 'terms', 'privacy'],
+			defaultNS: 'translation',
 			returnEmptyString: false,
 			interpolation: {
 				escapeValue: false // not needed for svelte as it escapes by default

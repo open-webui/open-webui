@@ -1,0 +1,48 @@
+{
+	"title": "Privacy Policy",
+	"version": "Version 1.0 - 2025 (First Release)",
+	"introduction": {
+		"title": "Introduction",
+		"content": "Welcome to GovGPT. GovGPT is a Department of Government Enablement (DGE) platform, operated under the mandate of the Abu Dhabi Government and is designed to facilitate data sharing and collaboration among Abu Dhabi Government Entities (ADGEs). Access is limited to authorised government employees and supports day-to-day operations, service delivery, and digital-enablement initiatives across the Abu Dhabi Government."
+	},
+	"what_we_collect": {
+		"title": "What Information We Collect",
+		"content": "GovGPT collects and processes user data necessary for authentication, authorization, and secure data exchange. The data collected includes: Personal information (captured via enterprise Single Sign-On): name, work email, job title, and department. Technical information: Web: browser type/version, OS, screen resolution, IP address, region. Mobile: device model/OS, device identifier (e.g., UDID), push-notification token (user-controlled in device settings). Usage information: page views, search queries, API calls, time-stamped login attempts, and audit-log events. Metadata: User prompts, files voluntarily uploaded, and model responses (logged solely for security auditing, bias detection, and quality improvement—never for commercial purposes). Non-Personal Information: Aggregated statistics that cannot be used to identify individual users."
+	},
+	"how_we_collect": {
+		"title": "How We Collect Information",
+		"content": "We gather information through two methods: Information you provide directly: When using our services, you may share information with us, such as when signing in or submitting a query. Information collected automatically: Certain data is collected automatically as you use our services, including details about your usage patterns, IP address, and device information."
+	},
+	"how_we_use": {
+		"title": "How We Use Information",
+		"content": "This data is exclusively used for: Ensure platform security and authenticate authorised users. Monitor system health and improve overall performance. Enforce data-access policies and governance regulations. Deliver the services requested by the user (e.g., chat responses, document processing). Improve GovGPT functionality via aggregated, anonymised analytics. Meet legal, regulatory, compliance, and audit obligations that apply to Abu Dhabi Government entities under DGE's mandate."
+	},
+	"how_we_protect": {
+		"title": "How We Protect Information",
+		"content": "GovGPT employs industry-leading security measures to protect user data, including: Enterprise Single Sign-On (SSO) with multiple-factor authentication (MFA) for secure login. Role-Based Access Control (RBAC) ensuring users can only access permitted datasets. All data is hosted in UAE sovereign data centres to maintain residency and sovereignty. Encryption mechanisms for data at rest and in transit. Continuous monitoring to detect and prevent unauthorized access. Every prompt, response, and system action are logged; authorized employees check logs for bias, misuse, and security anomalies. Reuses user inputs only under strict confidentiality to improve models, not for advertising or profiling."
+	},
+	"data_sharing": {
+		"title": "Data Sharing and Third-Party Access",
+		"content": "User data is not shared with third parties except where legally required by Abu Dhabi government regulations. Users must adhere to data-sharing agreements defined within GovGPT. GovGPT may surface present hyperlinks to external websites or third-party content (e.g., public web pages). We do not control third-part content or their data processing practices. We advise all users to consult each external site's privacy policy before providing personal data."
+	},
+	"data_retention": {
+		"title": "Data Retention and Compliance",
+		"content": "All personal data is stored and processed within UAE-hosted infrastructure, in compliance with data residency laws. Security practices mirror those applied to the web platform and are governed by DGE cybersecurity protocols. Retention Periods: Data is stored according to Abu Dhabi government-mandated retention period; session and long-term memory for three years, audit logs for three years (subject to final cybersecurity annex), and uploaded files for a maximum of 180 days or upon user deletion. GovGPT complies with Data Protection, Data Sharing and Data Privacy regulations applicable to Abu Dhabi government entities."
+	},
+	"breach_notification": {
+		"title": "Breach Notification",
+		"content": "In case of a data breach: Users will be notified within the legally mandated timeframe. Affected data subjects will receive details on the nature of the breach and recommended security actions. Security teams will investigate and implement corrective measures."
+	},
+	"cookie_policy": {
+		"title": "Cookie Policy",
+		"content": "We use cookies to enhance your experience on our platform, remember your preferences, and gather analytics to improve our site. You can adjust your browser settings to block or restrict cookies or receive alerts when cookies are used. However, disabling or rejecting cookies may limit access to certain features or affect GovGPT's functionality."
+	},
+	"external_links": {
+		"title": "Links to Other Websites",
+		"content": "GovGPT may contain hyperlinks that direct users to external websites or third-party applications. DGE assumes no responsibility for the privacy or security practices of these destinations; users are expected to review the applicable privacy notices before disclosing any personal information."
+	},
+	"consent": {
+		"title": "User Consent",
+		"content": "By proceeding to log in and use the GovGPT, you confirm that you have read, understood, and agreed to the Privacy Policy outlined above."
+	}
+} 
