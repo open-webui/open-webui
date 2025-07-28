@@ -89,7 +89,7 @@ class NBPClient:
     
     async def get_usd_pln_rate(self) -> Optional[Dict[str, Any]]:
         """
-        Get current USD/PLN exchange rate from NBP Table C (buy/sell rates)
+        Get current USD/PLN exchange rate from NBP Table A (average rates)
         
         Hybrid approach combining holiday calendar optimization with robust fallback:
         - Known Polish holidays: skip API calls, use last working day
@@ -99,9 +99,9 @@ class NBPClient:
         
         Returns:
             {
-                "rate": 4.0123,           # USD/PLN sell rate
+                "rate": 3.6446,           # USD/PLN average rate
                 "effective_date": "2024-01-15",  # Date when rate was published
-                "table_no": "012/C/NBP/2024",    # NBP table number
+                "table_no": "012/A/NBP/2024",    # NBP table number
                 "rate_source": "current|working_day|holiday_skip|fallback_404"
                 "skip_reason": "Known holiday/weekend/etc" # Why API call was skipped
             }
@@ -269,8 +269,8 @@ class NBPClient:
     
     async def _fetch_exchange_rate_for_date(self, check_date: date) -> Optional[Dict[str, Any]]:
         """Fetch exchange rate for a specific date"""
-        # Format: /exchangerates/tables/c/2024-01-15/
-        endpoint = f"/exchangerates/tables/c/{check_date.isoformat()}/"
+        # Format: /exchangerates/tables/a/2024-01-15/
+        endpoint = f"/exchangerates/tables/a/{check_date.isoformat()}/"
         
         response = await self._make_request(endpoint)
         if response and isinstance(response, list) and len(response) > 0:
@@ -281,10 +281,9 @@ class NBPClient:
             for rate in rates:
                 if rate.get('code') == 'USD':
                     return {
-                        'rate': rate.get('ask'),  # Sell rate (for buying PLN with USD)
+                        'rate': rate.get('mid'),  # Average rate from Table A
                         'effective_date': table.get('effectiveDate'),
                         'table_no': table.get('no'),
-                        'bid': rate.get('bid'),   # Buy rate (informational)
                         'trading_date': table.get('tradingDate')
                     }
         
@@ -297,8 +296,8 @@ class NBPClient:
         Returns:
             {
                 "usd": 100.00,
-                "pln": 401.23,
-                "rate": 4.0123,
+                "pln": 364.46,
+                "rate": 3.6446,
                 "effective_date": "2024-01-15"
             }
         """
