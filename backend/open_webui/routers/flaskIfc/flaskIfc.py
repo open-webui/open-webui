@@ -24,9 +24,9 @@ baudrate = '921600'
 #baudrate = '115200'
 exe_path = "/usr/bin/tsi/v0.1.1*/bin/"
 
-DEFAULT_MODEL = "tiny-llama"
+DEFAULT_MODEL = "TinyLlama:latest"
 DEFAULT_BACKEND = "tSavorite"
-DEFAULT_TOKEN = 10
+DEFAULT_TOKEN = 12
 DEFAULT_REPEAT_PENALTY = 1.5
 DEFAULT_BATCH_SIZE = 1024
 DEFAULT_TOP_K = 50
@@ -467,7 +467,7 @@ def chats():
     tmpprompt = flattened_prompt.replace('"', '\\"').encode('utf-8')
     prompt = tmpprompt.decode('utf-8')
 
-    #model = DEFAULT_MODEL
+    model = DEFAULT_MODEL
 
     if parameters['target'] == 'cpu':
         backend = 'none'
@@ -475,7 +475,7 @@ def chats():
         backend = 'tSavorite'
     if 'model' in data:
         model = data['model']
-    model = DEFAULT_MODEL
+
     tokens = parameters['num_predict']
     repeat_penalty = parameters['repeat_penalty']
     batch_size = parameters['num_batch']
@@ -560,7 +560,7 @@ def chat():
     tmpprompt = flattened_prompt.replace('"', '\\"').encode('utf-8')
     prompt = tmpprompt.decode('utf-8')
       
-    #model = DEFAULT_MODEL
+    model = DEFAULT_MODEL
 
     if parameters['target'] == 'cpu':
         backend = 'none'
@@ -568,7 +568,7 @@ def chat():
         backend = 'tSavorite'
     if 'model' in data:
         model = data['model']
-    model = DEFAULT_MODEL
+
     tokens = parameters['num_predict']
     repeat_penalty = parameters['repeat_penalty']
     batch_size = parameters['num_batch']
