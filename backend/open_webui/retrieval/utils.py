@@ -242,6 +242,103 @@ async def query_doc_with_hybrid_search(
         ):
             log.warning(f"query_doc_with_hybrid_search:no_docs {collection_name}")
             return {"documents": [], "metadatas": [], "distances": []}
+        
+        # Use Qdrant's integrated search
+        if VECTOR_DB == "qdrant":
+            log.info("Using Qdrant search (hybrid if enabled)")
+            
+            # Generate query embedding
+            query_embedding = embedding_function(query, RAG_EMBEDDING_QUERY_PREFIX)
+            
+            # Use Qdrant's search method with query_text
+            result = VECTOR_DB_CLIENT.search(
+                collection_name=collection_name,
+                vectors=[query_embedding],
+                limit=k_reranker,  # Get more results for reranking
+                query_text=query,  # type: ignore  # Enables hybrid search internally
+            )
+            
+            if result and result.documents and result.documents[0]:
+                # Convert SearchResult to the expected format
+                documents = result.documents[0]
+                metadatas = result.metadatas[0] if result.metadatas else [{}] * len(documents)
+                distances = result.distances[0] if result.distances else [0.0] * len(documents)
+                
+                # Apply reranking if available
+                if reranking_function and len(documents) > 1:
+                    log.debug("Applying reranking to Qdrant hybrid search results")
+                    
+                    # Create documents for reranking
+                    docs_for_reranking = [
+                        Document(page_content=doc, metadata=meta) 
+                        for doc, meta in zip(documents, metadatas)
+                    ]
+                    
+                    # Apply reranking - call with correct signature (single argument: list of query-doc pairs)
+                    query_doc_pairs = [(query, doc.page_content) for doc in docs_for_reranking]
+                    scores = reranking_function(query_doc_pairs)
+                    
+                    # Process scores into ranked documents (similar to RerankCompressor)
+                    docs_with_scores = list(zip(docs_for_reranking, scores.tolist() if not isinstance(scores, list) else scores))
+                    
+                    # Filter by relevance threshold
+                    if r > 0.0:
+                        docs_with_scores = [(d, s) for d, s in docs_with_scores if s >= r]
+                    
+                    # Sort by score (highest first) and limit to k
+                    docs_with_scores = sorted(docs_with_scores, key=lambda x: x[1], reverse=True)[:k]
+                    
+                    if docs_with_scores:
+                        # Extract final results
+                        final_documents = [doc.page_content for doc, score in docs_with_scores]
+                        final_metadatas = []
+                        final_distances = []
+                        
+                        for doc, score in docs_with_scores:
+                            metadata = doc.metadata.copy()
+                            metadata["score"] = score
+                            final_metadatas.append(metadata)
+                            final_distances.append(score)
+                        
+                        result_dict = {
+                            "distances": [final_distances],
+                            "documents": [final_documents],
+                            "metadatas": [final_metadatas],
+                        }
+                    else:
+                        # No documents passed relevance threshold, return empty result
+                        result_dict = {
+                            "distances": [[]],
+                            "documents": [[]],
+                            "metadatas": [[]],
+                        }
+                else:
+                    # No reranking, just apply relevance threshold and limit
+                    if r > 0.0:
+                        # Filter by relevance threshold
+                        filtered_indices = [i for i, score in enumerate(distances) if score >= r][:k]
+                        filtered_documents = [documents[i] for i in filtered_indices]
+                        filtered_metadatas = [metadatas[i] for i in filtered_indices]
+                        filtered_distances = [distances[i] for i in filtered_indices]
+                    else:
+                        # No threshold, just limit to k
+                        filtered_documents = documents[:k]
+                        filtered_metadatas = metadatas[:k]
+                        filtered_distances = distances[:k]
+                    
+                    result_dict = {
+                        "distances": [filtered_distances],
+                        "documents": [filtered_documents],
+                        "metadatas": [filtered_metadatas],
+                    }
+                
+                log.info(
+                    f"query_doc_with_hybrid_search:qdrant_native_result {len(result_dict['documents'][0])} documents"
+                )
+                return result_dict
+            else:
+                log.warning("Qdrant hybrid search returned no results, falling back to LangChain approach")
+
 
         log.debug(f"query_doc_with_hybrid_search:doc {collection_name}")
 
@@ -313,7 +410,7 @@ async def query_doc_with_hybrid_search(
         }
 
         log.info(
-            "query_doc_with_hybrid_search:result "
+            "query_doc_with_hybrid_search:langchain_result "
             + f'{result["metadatas"]} {result["distances"]}'
         )
         return result
@@ -1290,6 +1387,8 @@ class RerankCompressor(BaseDocumentCompressor):
         scores = None
         if reranking:
             scores = self.reranking_function(query, documents)
+            # query_doc_pairs = [(query, doc.page_content) for doc in documents]
+            # scores = self.reranking_function(query_doc_pairs)
         else:
             if not SENTENCE_TRANSFORMERS_AVAILABLE:
                 raise ImportError("sentence_transformers is not available. Please install it to use reranking functionality.")

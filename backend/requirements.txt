@@ -54,6 +54,7 @@ opensearch-py==2.8.0
 
 transformers==4.57.3
 sentence-transformers==5.1.2
+fastembed==0.7.1
 accelerate
 pyarrow==20.0.0 # fix: pin pyarrow version to 20 for rpi compatibility #15897
 einops==0.8.1 

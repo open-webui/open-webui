@@ -94,6 +94,9 @@ ENV TIKTOKEN_ENCODING_NAME="cl100k_base" \
 ## Hugging Face download cache ##
 ENV HF_HOME="/app/backend/data/cache/embedding/models"
 
+## FastEmbed cache directory ##
+ENV FASTEMBED_CACHE_PATH="/app/backend/data/cache/fastembed"
+
 ## Torch Extensions ##
 # ENV TORCH_EXTENSIONS_DIR="/.cache/torch_extensions"
 
