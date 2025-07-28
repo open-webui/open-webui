@@ -173,7 +173,7 @@ class ClientUsageRepository(IClientUsageRepository):
                 total_tokens = sum(r.total_tokens for r in month_records)
                 total_cost = sum(r.markup_cost for r in month_records)
                 total_requests = sum(r.total_requests for r in month_records)
-                days_with_usage = self._calculate_account_existence_days(client_org_id, current_month_start, today, db)
+                days_with_usage = len(month_records)
                 
                 # Calculate averages (business insights)
                 avg_daily_tokens = total_tokens / max(today.day, 1)
@@ -389,41 +389,3 @@ class ClientUsageRepository(IClientUsageRepository):
         except Exception:
             return []
     
-    def _calculate_account_existence_days(self, client_org_id: str, month_start: date, month_end: date, db) -> int:
-        """
-        Calculate total account existence days for all users in current month.
-        New business logic: Sum of days each user account existed in the month.
-        """
-        try:
-            # Get all user records for this client to find account creation dates
-            user_records = db.query(ClientUserDailyUsage).filter_by(
-                client_org_id=client_org_id
-            ).all()
-            
-            if not user_records:
-                return 0
-            
-            # Find earliest usage date per user (proxy for account creation)
-            user_first_dates = {}
-            for record in user_records:
-                if record.user_id not in user_first_dates:
-                    user_first_dates[record.user_id] = record.usage_date
-                elif record.usage_date < user_first_dates[record.user_id]:
-                    user_first_dates[record.user_id] = record.usage_date
-            
-            # Calculate account existence days in current month for each user
-            total_existence_days = 0
-            for user_id, first_date in user_first_dates.items():
-                # Account start date within current month boundaries
-                account_start_in_month = max(first_date, month_start)
-                
-                # Only count if account existed during this month
-                if account_start_in_month <= month_end:
-                    days_existed = (month_end - account_start_in_month).days + 1
-                    total_existence_days += days_existed
-            
-            return total_existence_days
-            
-        except Exception as e:
-            log.error(f"Error calculating account existence days: {e}")
-            return 0  # Fallback to 0 if calculation fails
