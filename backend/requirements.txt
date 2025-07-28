@@ -98,6 +98,8 @@ llama-index-workflows==1.1.0
 llama-cloud==0.1.19
 llama-cloud-services==0.6.22
 llama-parse==0.6.22
+llama-index-tools-openapi==0.4.0
+llama-index-tools-requests==0.4.0
 
 ## Langchain
 langchain==0.3.19
@@ -220,3 +222,4 @@ typing-inspection==0.4.0
 typing_extensions==4.13.2
 tzdata==2025.2
 wrapt==1.17.2
+jsonschema==4.25.0

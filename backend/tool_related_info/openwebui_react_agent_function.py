@@ -17,7 +17,12 @@ from llama_index.llms.azure_openai import AzureOpenAI
 from llama_index.embeddings.azure_openai import AzureOpenAIEmbedding
 from llama_index.core.tools import FunctionTool, ToolSelection, ToolOutput, BaseTool
 from llama_index.core.llms import ChatMessage, MessageRole, LLM
+from llama_index.tools.openapi import OpenAPIToolSpec
+from llama_index.tools.requests import RequestsToolSpec
+from pydantic import create_model
 import json
+from urllib.parse import urlparse
+import httpx
 
 # Azure Search imports
 from azure.core.credentials import AzureKeyCredential
@@ -503,13 +508,20 @@ class Pipe:
                 response=f"Error during Azure Search: {str(e)}", source_nodes=[]
             )
 
-    async def pipe(self, body: dict, __user__: dict) -> AsyncIterator[str]:
+    async def pipe(
+        self, body: dict, __user__: dict, __tools__: Optional[dict] = None
+    ) -> AsyncIterator[str]:
         """
         This is the main execution method for the Open-WebUI pipe.
         It receives the request body and user information, processes it through the
         ReAct agent workflow, and streams back the response.
         """
         try:
+            if __tools__:
+                self.logger.info(f"Tools received: {json.dumps(__tools__, default=str)}")
+            else:
+                self.logger.info("No tools received in __tools__.")
+
             messages = body.get("messages", [])
             if not messages:
                 yield "Error: No messages found in the request body."
@@ -555,6 +567,59 @@ class Pipe:
                             fn_schema=SearchPayload,
                         ),
                     ]
+
+                    if __tools__:
+                        endpoints = {}
+                        for tool_name, tool_data in __tools__.items():
+                            endpoint = tool_data.get("endpoint")
+                            api_key = tool_data.get("api_key")
+                            if endpoint and endpoint not in endpoints:
+                                endpoints[endpoint] = api_key
+
+                        for endpoint, api_key in endpoints.items():
+                            try:
+                                spec_url = f"{endpoint}/openapi.json"
+                                self.logger.info(f"Loading OpenAPI spec from: {spec_url}")
+
+                                # Fetch the OpenAPI spec manually to inspect and modify it
+                                async with httpx.AsyncClient() as client:
+                                    response = await client.get(spec_url)
+                                    response.raise_for_status()
+                                    spec_dict = response.json()
+
+                                # If 'servers' key is missing, add it based on the endpoint
+                                if "servers" not in spec_dict or not spec_dict["servers"]:
+                                    self.logger.warning(
+                                        f"OpenAPI spec from {spec_url} is missing 'servers' key. "
+                                        f"Injecting default server URL: {endpoint}"
+                                    )
+                                    spec_dict["servers"] = [{"url": endpoint}]
+
+                                openapi_spec = OpenAPIToolSpec(spec=spec_dict)
+
+                                headers = {}
+                                if api_key:
+                                    # Assuming Bearer token authentication as a common standard
+                                    headers["Authorization"] = f"Bearer {api_key}"
+
+                                domain = urlparse(endpoint).netloc
+                                requests_spec = RequestsToolSpec(
+                                    domain_headers={domain: headers} if headers else {}
+                                )
+
+                                openapi_tools = openapi_spec.to_tool_list()
+                                requests_tools = requests_spec.to_tool_list()
+
+                                tools_list.extend(openapi_tools)
+                                tools_list.extend(requests_tools)
+                                self.logger.info(
+                                    f"Successfully loaded {len(openapi_tools)} tools from {endpoint}"
+                                )
+                            except Exception as e:
+                                self.logger.error(
+                                    f"Failed to load tools from endpoint {endpoint}: {e}",
+                                    exc_info=True,
+                                )
 
                     system_prompt = """You are an AI assistant designed to help with search tasks.
 When responding, you MUST use the following format:
