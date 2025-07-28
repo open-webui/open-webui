@@ -223,23 +223,6 @@
 		</div>
 	</NoticeCard>
 
-	<!-- Current USD Rate Display -->
-	{#if usageData?.current_month?.exchange_rate_info}
-		<div class="mt-2 text-sm text-gray-600 dark:text-gray-400 flex items-center">
-			<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
-			</svg>
-			Current USD rate: {usageData.current_month.exchange_rate_info.usd_pln.toFixed(4)} PLN (NBP - {usageData.current_month.exchange_rate_info.effective_date})
-		</div>
-	{:else}
-		<div class="mt-2 text-sm text-gray-500 dark:text-gray-500 flex items-center">
-			<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"></path>
-			</svg>
-			Current USD rate: Loading...
-		</div>
-	{/if}
-
 	<!-- Monthly Summary Cards -->
 	{#if usageData}
 		<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
