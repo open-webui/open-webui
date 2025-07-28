@@ -383,10 +383,28 @@ class ChatTable:
         except Exception:
             return None
 
+
     def archive_all_chats_by_user_id(self, user_id: str) -> bool:
         try:
             with get_db() as db:
-                db.query(Chat).filter_by(user_id=user_id).update({"archived": True})
+                # Archive all chats that are not in a folder
+                db.query(Chat).filter_by(user_id=user_id, folder_id=None).update(
+                    {"archived": True}
+                )
+
+                # Get all folder IDs for the user
+                from open_webui.models.folders import Folders
+
+                folder_ids = [
+                    folder.id for folder in Folders.get_folders_by_user_id(user_id)
+                ]
+
+                # Archive all chats in those folders
+                if folder_ids:
+                    db.query(Chat).filter(Chat.folder_id.in_(folder_ids)).update(
+                        {"archived": True}
+                    )
+
                 db.commit()
                 return True
         except Exception:
