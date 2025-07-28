@@ -87,6 +87,7 @@ class SignupForm(BaseModel):
     name: str
     email: str
     password: str
+    confirm_password: str
     profile_image_url: Optional[str] = "/user.png"
 
 

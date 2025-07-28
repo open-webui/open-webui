@@ -290,6 +290,7 @@ export const userSignUp = async (
 	name: string,
 	email: string,
 	password: string,
+	confirm_password: string,
 	profile_image_url: string
 ) => {
 	let error = null;
@@ -304,6 +305,7 @@ export const userSignUp = async (
 			name: name,
 			email: email,
 			password: password,
+			confirm_password: confirm_password,
 			profile_image_url: profile_image_url
 		})
 	})
