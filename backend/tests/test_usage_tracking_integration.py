@@ -79,14 +79,16 @@ class TestUsageTrackingIntegration:
                 "id": "gen_test_001",
                 "created_at": datetime.now().isoformat() + "Z",
                 "model": "anthropic/claude-3.5-sonnet",
-                "total_tokens": 1500,
+                "tokens_prompt": 1000,
+                "tokens_completion": 500,
                 "total_cost": 0.045  # $0.045
             },
             {
                 "id": "gen_test_002", 
                 "created_at": datetime.now().isoformat() + "Z",
                 "model": "openai/gpt-4",
-                "total_tokens": 800,
+                "tokens_prompt": 600,
+                "tokens_completion": 200,
                 "total_cost": 0.024  # $0.024
             }
         ]

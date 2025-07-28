@@ -23,10 +23,16 @@ export const pricingActions = {
 	 * Set pricing data
 	 */
 	setPricingData: (data: ModelPricing[]) => {
-		pricingStore.update(state => ({
-			...state,
-			modelPricingData: data
-		}));
+		console.log('[DEBUG] pricingActions: setPricingData called with data count:', data?.length);
+		console.log('[DEBUG] pricingActions: Data sample:', data?.[0]);
+		pricingStore.update(state => {
+			const newState = {
+				...state,
+				modelPricingData: data
+			};
+			console.log('[DEBUG] pricingActions: Updated store, new data count:', newState.modelPricingData.length);
+			return newState;
+		});
 	},
 
 	/**

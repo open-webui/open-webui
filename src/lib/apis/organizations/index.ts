@@ -87,6 +87,7 @@ export const getUsageByModel = async (token: string, _clientOrgId?: string) => {
 
 export const getMAIModelPricing = async () => {
 	try {
+		console.log('[DEBUG] API: Calling model pricing endpoint:', `${BASE_URL}/model-pricing`);
 		const response = await fetch(`${BASE_URL}/model-pricing`, {
 			method: 'GET',
 			headers: {
@@ -94,18 +95,24 @@ export const getMAIModelPricing = async () => {
 			}
 		});
 		
+		console.log('[DEBUG] API: Response status:', response.status, response.statusText);
+		
 		if (!response.ok) {
 			throw new Error(`HTTP ${response.status}: ${response.statusText}`);
 		}
 		
-		return await response.json();
+		const data = await response.json();
+		console.log('[DEBUG] API: Response data:', data);
+		return data;
 	} catch (error) {
 		console.error('Failed to fetch model pricing:', error);
-		return {
+		const errorResponse = {
 			success: false,
 			error: error instanceof Error ? error.message : 'Unknown error',
 			models: []
 		};
+		console.log('[DEBUG] API: Returning error response:', errorResponse);
+		return errorResponse;
 	}
 };
 

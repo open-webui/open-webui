@@ -119,9 +119,13 @@ def calculate_generation_costs(
         context = get_client_cost_context(client_org_id)
         markup_rate = context["markup_rate"]
         
-        # Extract generation details
-        tokens = generation_data.get("total_tokens", 0)
-        raw_cost = float(generation_data.get("total_cost", 0.0))
+        # Extract generation details - use correct OpenRouter API field names
+        # Use normalized tokens (not native tokens) as per OpenRouter docs
+        prompt_tokens = generation_data.get("tokens_prompt", 0)
+        completion_tokens = generation_data.get("tokens_completion", 0)
+        tokens = prompt_tokens + completion_tokens
+        # Use 'usage' field for cost (not 'total_cost')
+        raw_cost = float(generation_data.get("usage", 0.0))
         
         # Validate inputs
         validate_cost_inputs(raw_cost, tokens, markup_rate)
@@ -170,9 +174,13 @@ def calculate_batch_costs(
         
         for generation in generations:
             try:
-                # Extract and validate generation data
-                gen_tokens = generation.get("total_tokens", 0)
-                gen_raw_cost = float(generation.get("total_cost", 0.0))
+                # Extract and validate generation data - use correct OpenRouter API field names
+                # Use normalized tokens (not native tokens) as per OpenRouter docs
+                gen_prompt_tokens = generation.get("tokens_prompt", 0)
+                gen_completion_tokens = generation.get("tokens_completion", 0)
+                gen_tokens = gen_prompt_tokens + gen_completion_tokens
+                # Use 'usage' field for cost (not 'total_cost')
+                gen_raw_cost = float(generation.get("usage", 0.0))
                 gen_id = generation.get("id", "unknown")
                 
                 # Validate individual generation

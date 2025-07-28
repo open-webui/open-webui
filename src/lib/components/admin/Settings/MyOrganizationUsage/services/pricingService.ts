@@ -130,10 +130,13 @@ export class PricingService {
 		error?: string;
 	}> {
 		try {
+			console.log('[DEBUG] PricingService: Starting getModelPricing()');
 			const response: ModelPricingResponse = await getMAIModelPricing();
+			console.log('[DEBUG] PricingService: API response:', response);
 			
 			// Check if we have valid models data (success=true and non-empty models array)
 			if (response?.success && response.models && response.models.length > 0) {
+				console.log('[DEBUG] PricingService: Using API data, models count:', response.models.length);
 				return {
 					success: true,
 					data: response.models
@@ -142,12 +145,16 @@ export class PricingService {
 
 			// Use fallback data if API failed or returned empty models
 			// Backend returns success=false when using fallback, or models could be empty array
+			console.log('[DEBUG] PricingService: Using fallback data, fallback count:', this.FALLBACK_PRICING.length);
+			const fallbackData = response?.models && response.models.length > 0 ? response.models : this.FALLBACK_PRICING;
+			console.log('[DEBUG] PricingService: Final fallback data count:', fallbackData.length);
 			return {
 				success: true,
-				data: response?.models && response.models.length > 0 ? response.models : this.FALLBACK_PRICING
+				data: fallbackData
 			};
 		} catch (error) {
 			console.error('Failed to load model pricing:', error);
+			console.log('[DEBUG] PricingService: Using fallback after error, count:', this.FALLBACK_PRICING.length);
 			return {
 				success: true, // Still success with fallback data
 				data: this.FALLBACK_PRICING,

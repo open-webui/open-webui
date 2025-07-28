@@ -154,6 +154,24 @@ class ProcessedGenerationTable:
     def is_generation_processed(self, generation_id, client_org_id):
         return self._repository.is_generation_processed(generation_id, client_org_id)
     
+    def is_duplicate(self, request_id, model, cost):
+        """Check if generation is duplicate based on request_id, model, and cost"""
+        try:
+            from open_webui.internal.db import get_db
+            from .database import ProcessedGeneration
+            
+            with get_db() as db:
+                existing = db.query(ProcessedGeneration).filter_by(id=request_id).first()
+                if existing:
+                    # Additional checks for model and cost to ensure it's the same generation
+                    # Note: We don't store model in ProcessedGeneration, so we check cost as primary identifier
+                    return abs(existing.total_cost - cost) < 0.000001  # Float comparison with tolerance
+                return False
+        except Exception as e:
+            # Log error but don't block processing
+            print(f"Warning: Error checking duplicate generation {request_id}: {e}")
+            return False
+    
     def mark_generation_processed(self, generation_id, client_org_id, generation_date, total_cost, total_tokens):
         """Legacy method signature - converts to domain object and delegates"""
         generation_info = ProcessedGenerationInfo(

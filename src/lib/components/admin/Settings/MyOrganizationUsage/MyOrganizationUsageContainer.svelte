@@ -147,11 +147,16 @@
 	 * Load model pricing data
 	 */
 	const loadModelPricing = async (): Promise<void> => {
+		console.log('[DEBUG] Container: Starting loadModelPricing()');
 		pricingActions.setLoading(true);
 		
 		try {
 			const result = await PricingService.getModelPricing();
+			console.log('[DEBUG] Container: Received pricing result:', result);
+			console.log('[DEBUG] Container: Data count:', result.data?.length);
+			
 			pricingActions.setPricingData(result.data);
+			console.log('[DEBUG] Container: Called setPricingData with data count:', result.data?.length);
 			
 			if (result.error) {
 				console.warn('Pricing API error, using fallback data:', result.error);
@@ -161,6 +166,7 @@
 			toast.error($i18n.t('Failed to load model pricing'));
 		} finally {
 			pricingActions.setLoading(false);
+			console.log('[DEBUG] Container: Finished loadModelPricing()');
 		}
 	};
 	
@@ -192,7 +198,10 @@
 		
 		// Pricing tab doesn't need client ID
 		if (tab === 'pricing' && modelPricingData.length === 0) {
+			console.log('[DEBUG] Container: Loading pricing data for pricing tab');
 			await loadModelPricing();
+		} else if (tab === 'pricing') {
+			console.log('[DEBUG] Container: Pricing tab already has data, count:', modelPricingData.length);
 		}
 	};
 </script>

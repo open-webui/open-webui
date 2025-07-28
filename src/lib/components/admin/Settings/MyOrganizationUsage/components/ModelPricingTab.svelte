@@ -12,6 +12,13 @@
 	
 	const i18n = getContext('i18n');
 	
+	// Debug reactive statements
+	$: {
+		console.log('[DEBUG] ModelPricingTab: Received modelPricingData count:', modelPricingData?.length);
+		console.log('[DEBUG] ModelPricingTab: Loading state:', loading);
+		console.log('[DEBUG] ModelPricingTab: Data sample:', modelPricingData?.[0]);
+	}
+	
 	const tableHeaders = [
 		$i18n.t('Model'),
 		$i18n.t('Provider'),
@@ -64,7 +71,7 @@
 			data={modelPricingData} 
 			emptyMessage="No pricing data available"
 		>
-			{#each data as model}
+			{#each modelPricingData as model}
 				<tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
 					<td class="px-4 py-3 whitespace-nowrap">
 						<div>

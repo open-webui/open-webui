@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Model Pricing Fix Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 5px; }
+        .model { margin: 10px 0; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Model Pricing Fix Test</h1>
+    <p>Testing the fixed Model Pricing API endpoint:</p>
+    
+    <div id="results">
+        <p>Loading...</p>
+    </div>
+
+    <script>
+        async function testModelPricing() {
+            const resultsDiv = document.getElementById('results');
+            
+            try {
+                const response = await fetch('http://localhost:3001/api/v1/usage-tracking/model-pricing');
+                const data = await response.json();
+                
+                let html = `
+                    <h2 class="success">✅ API Response Received</h2>
+                    <p><strong>Status Code:</strong> ${response.status}</p>
+                    <p><strong>Success:</strong> ${data.success}</p>
+                    <p><strong>Models Count:</strong> ${data.models ? data.models.length : 0}</p>
+                    <p><strong>Source:</strong> ${data.source || 'undefined'}</p>
+                `;
+                
+                if (data.models && data.models.length > 0) {
+                    html += `<h3 class="success">✅ Models Data Available (${data.models.length} models)</h3>`;
+                    html += '<div><strong>Sample Models:</strong></div>';
+                    data.models.slice(0, 3).forEach(model => {
+                        html += `
+                            <div class="model">
+                                <strong>${model.name}</strong> (${model.id})<br>
+                                Provider: ${model.provider}<br>
+                                Input: $${model.price_per_million_input}/1M tokens<br>
+                                Output: $${model.price_per_million_output}/1M tokens
+                            </div>
+                        `;
+                    });
+                } else {
+                    html += '<h3 class="error">❌ No Models Data</h3>';
+                }
+                
+                html += `<details><summary>Full Response JSON</summary><pre>${JSON.stringify(data, null, 2)}</pre></details>`;
+                
+                resultsDiv.innerHTML = html;
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <h2 class="error">❌ API Error</h2>
+                    <p>Error: ${error.message}</p>
+                    <p class="info">Make sure backend is running on http://localhost:3001</p>
+                `;
+            }
+        }
+        
+        // Test immediately when page loads
+        testModelPricing();
+    </script>
+</body>
+</html>

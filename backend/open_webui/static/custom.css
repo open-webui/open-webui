@@ -1,0 +1,105 @@
+/* mAI Custom Styles - Theme-specific overrides and background patterns */
+
+/* Professional theme specific overrides - Corporate Navy */
+.mai-professional .mai-accent {
+  color: #2563eb;
+}
+
+/* Creative theme specific overrides - Vibrant Purple */
+.mai-creative .mai-accent {
+  color: #a855f7;
+}
+
+/* Minimalist theme specific overrides - Ultra Clean */
+.mai-minimalist .mai-accent {
+  color: #212529;
+}
+
+/* Warm theme specific overrides - Cozy Amber */
+.mai-warm .mai-accent {
+  color: #f59e0b;
+}
+
+
+/* Layout & Spacing Customization */
+
+/* Font Size */
+.font-size-small {
+  font-size: 0.875rem;
+}
+
+.font-size-normal {
+  font-size: 1rem;
+}
+
+.font-size-large {
+  font-size: 1.125rem;
+}
+
+.font-size-extra-large {
+  font-size: 1.25rem;
+}
+
+/* Font size responsive classes for markdown prose */
+.font-size-small .markdown-prose {
+  font-size: 0.875rem;
+}
+
+.font-size-normal .markdown-prose {
+  font-size: 1rem;
+}
+
+.font-size-large .markdown-prose {
+  font-size: 1.125rem;
+}
+
+.font-size-extra-large .markdown-prose {
+  font-size: 1.25rem;
+}
+
+/* Background Patterns */
+:root {
+  --background-pattern-opacity: 0.05;
+}
+
+.background-pattern-dots {
+  background-image: radial-gradient(circle, rgba(0, 0, 0, var(--background-pattern-opacity)) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.dark .background-pattern-dots {
+  background-image: radial-gradient(circle, rgba(255, 255, 255, var(--background-pattern-opacity)) 1px, transparent 1px);
+}
+
+.background-pattern-grid {
+  background-image: 
+    linear-gradient(rgba(0, 0, 0, var(--background-pattern-opacity)) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, var(--background-pattern-opacity)) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.dark .background-pattern-grid {
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, var(--background-pattern-opacity)) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, var(--background-pattern-opacity)) 1px, transparent 1px);
+}
+
+.background-pattern-diagonal {
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(0, 0, 0, calc(var(--background-pattern-opacity) * 0.5)) 0px,
+    rgba(0, 0, 0, calc(var(--background-pattern-opacity) * 0.5)) 1px,
+    transparent 1px,
+    transparent 20px
+  );
+}
+
+.dark .background-pattern-diagonal {
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(255, 255, 255, calc(var(--background-pattern-opacity) * 0.5)) 0px,
+    rgba(255, 255, 255, calc(var(--background-pattern-opacity) * 0.5)) 1px,
+    transparent 1px,
+    transparent 20px
+  );
+}
