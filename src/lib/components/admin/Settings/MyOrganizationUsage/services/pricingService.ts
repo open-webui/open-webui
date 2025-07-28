@@ -132,17 +132,19 @@ export class PricingService {
 		try {
 			const response: ModelPricingResponse = await getMAIModelPricing();
 			
-			if (response?.success && response.models) {
+			// Check if we have valid models data (success=true and non-empty models array)
+			if (response?.success && response.models && response.models.length > 0) {
 				return {
 					success: true,
 					data: response.models
 				};
 			}
 
-			// Use fallback data if API doesn't return models
+			// Use fallback data if API failed or returned empty models
+			// Backend returns success=false when using fallback, or models could be empty array
 			return {
 				success: true,
-				data: response?.models || this.FALLBACK_PRICING
+				data: response?.models && response.models.length > 0 ? response.models : this.FALLBACK_PRICING
 			};
 		} catch (error) {
 			console.error('Failed to load model pricing:', error);
