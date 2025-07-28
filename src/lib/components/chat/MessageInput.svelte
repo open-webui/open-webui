@@ -28,7 +28,8 @@
 		user as _user,
 		showControls,
 		TTSWorker,
-		temporaryChatEnabled
+		temporaryChatEnabled,
+		mergedResponseActive
 	} from '$lib/stores';
 
 	import {
@@ -1820,7 +1821,7 @@
 											</Tooltip>
 										{/if}
 
-										{#if (taskIds && taskIds.length > 0) || (history.currentId && history.messages[history.currentId]?.done != true)}
+										{#if (taskIds && taskIds.length > 0) || (history.currentId && history.messages[history.currentId]?.done != true) || $mergedResponseActive}
 											<div class=" flex items-center">
 												<Tooltip content={$i18n.t('Stop')}>
 													<button

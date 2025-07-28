@@ -37,7 +37,8 @@
 		showArtifacts,
 		tools,
 		toolServers,
-		selectedFolder
+		selectedFolder,
+		mergedResponseActive
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
@@ -114,6 +115,7 @@
 	let eventCallback = null;
 
 	let chatIdUnsubscriber: Unsubscriber | undefined;
+	let mergeAbortController = new AbortController();
 
 	let selectedModels = [''];
 	let atSelectedModel: Model | undefined;
@@ -525,6 +527,10 @@
 		chatInput?.focus();
 
 		chats.subscribe(() => {});
+
+		eventTarget.addEventListener('chat:finish', () => {
+			mergedResponseActive.set(false);
+		});
 	});
 
 	onDestroy(() => {
@@ -1857,6 +1863,9 @@
 				scrollToBottom();
 			}
 		}
+		mergedResponseActive.set(false);
+		mergeAbortController.abort();
+		mergeAbortController = new AbortController();
 	};
 
 	const submitMessage = async (parentId, prompt) => {
@@ -1936,7 +1945,7 @@
 		}
 	};
 
-	const mergeResponses = async (messageId, responses, _chatId) => {
+	const mergeResponses = async (messageId, responses, _chatId, signal) => {
 		console.log('mergeResponses', messageId, responses);
 		const message = history.messages[messageId];
 		const mergedResponse = {
@@ -1951,7 +1960,8 @@
 				localStorage.token,
 				message.model,
 				history.messages[message.parentId].content,
-				responses
+				responses,
+				signal
 			);
 
 			if (res && res.ok && res.body) {
@@ -1979,7 +1989,9 @@
 				console.error(res);
 			}
 		} catch (e) {
-			console.error(e);
+			if (e.name !== 'AbortError') {
+				console.error(e);
+			}
 		}
 	};
 
@@ -2142,7 +2154,8 @@
 										{submitMessage}
 										{continueResponse}
 										{regenerateResponse}
-										{mergeResponses}
+										mergeResponses={(messageId, responses, chatId) =>
+											mergeResponses(messageId, responses, chatId, mergeAbortController.signal)}
 										{chatActionHandler}
 										{addMessages}
 										bottomPadding={files.length > 0}
