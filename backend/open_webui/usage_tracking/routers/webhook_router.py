@@ -46,8 +46,14 @@ async def sync_openrouter_usage(
     user=Depends(get_admin_user)
 ):
     """
-    Manually sync usage data from OpenRouter API
-    This is the primary method since OpenRouter doesn't have webhooks
+    DEPRECATED: OpenRouter bulk sync endpoint
+    
+    This endpoint has been disabled because the OpenRouter API does not provide
+    a bulk generations endpoint (/api/v1/generations). Previous attempts to use
+    this functionality resulted in 404 errors.
+    
+    Real-time usage tracking via webhooks is the primary method for collecting usage data.
+    This endpoint is maintained for backward compatibility but will return a deprecation message.
     """
     try:
         result = await webhook_service.sync_openrouter_usage(request)

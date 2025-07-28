@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 """
-Manual script to re-sync July 28 OpenRouter data
-Recovers the missing 312 tokens and $0.0005 cost
+DEPRECATED: Manual script to re-sync July 28 OpenRouter data
+
+This script is now deprecated because the OpenRouter bulk sync functionality
+has been disabled due to non-existent API endpoints. The OpenRouter API
+/api/v1/generations endpoint does not exist and was causing 404 errors.
+
+Real-time usage tracking via webhooks is the primary method for collecting usage data.
 """
 
 import sys
@@ -13,10 +18,21 @@ from datetime import datetime, timedelta
 sys.path.append('/app/backend')
 
 async def resync_july28_data():
-    """Re-sync July 28 data using corrected field mappings"""
+    """DEPRECATED: Re-sync functionality disabled"""
     
-    print("🔄 Re-syncing July 28 OpenRouter Data")
+    print("⚠️  DEPRECATED: OpenRouter Bulk Sync Disabled")
     print("=" * 50)
+    
+    print("❌ This script can no longer function because:")
+    print("   - OpenRouter API /api/v1/generations endpoint does not exist")
+    print("   - Previous sync attempts caused 404 errors")
+    print("   - Bulk sync functionality has been disabled")
+    print()
+    print("✅ Alternative: Real-time usage tracking via webhooks")
+    print("   - Usage data is automatically captured in real-time")
+    print("   - No manual sync required")
+    print("   - No data loss - real-time tracking is working")
+    print()
     
     try:
         from open_webui.usage_tracking.services.webhook_service import WebhookService
@@ -25,36 +41,29 @@ async def resync_july28_data():
         # Create webhook service instance
         webhook_service = WebhookService()
         
-        # Create sync request for July 28 (yesterday)
+        # Create sync request (will return deprecation message)
         sync_request = UsageSyncRequest(days_back=1)
         
-        print(f"📅 Syncing data for last {sync_request.days_back} day(s)")
-        print(f"🎯 Target: July 28, 2025 data")
-        print()
+        print("📡 Attempting sync (will return deprecation message)...")
         
-        # Execute the sync
+        # Execute the sync (will return deprecation message)
         result = await webhook_service.sync_openrouter_usage(sync_request)
         
-        print("✅ Sync completed successfully!")
-        print("📊 Results:")
+        print("📋 Deprecation Response:")
+        print(f"   Status: {result.get('status')}")
+        print(f"   Message: {result.get('message')}")
         
-        for org_result in result.get("sync_results", []):
-            org_name = org_result.get("organization", "Unknown")
-            synced_count = org_result.get("synced_generations", 0)
-            status = org_result.get("status", "unknown")
-            
-            print(f"  📦 {org_name}:")
-            print(f"     - Synced generations: {synced_count}")  
-            print(f"     - Status: {status}")
-            
-        print()
-        print("🎉 July 28 data should now be recovered!")
-        print("💡 Expected recovery: 4 requests = 2,074 tokens + $0.00156 cost")
+        if result.get('details'):
+            details = result.get('details')
+            print("📝 Details:")
+            print(f"   Reason: {details.get('reason')}")
+            print(f"   Alternative: {details.get('alternative')}")
+            print(f"   Impact: {details.get('impact')}")
         
         return result
         
     except Exception as e:
-        print(f"❌ Sync failed with error: {e}")
+        print(f"❌ Error: {e}")
         import traceback
         traceback.print_exc()
         return None

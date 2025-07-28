@@ -64,119 +64,33 @@ class WebhookService:
             raise Exception(f"Failed to process webhook: {str(e)}")
     
     async def sync_openrouter_usage(self, request: UsageSyncRequest) -> Dict[str, Any]:
-        """Manually sync usage data from OpenRouter API with deduplication"""
-        try:
-            # Get all active client organizations
-            orgs = self.client_repo.get_all_active_clients()
-            
-            if not orgs:
-                raise Exception("No active organizations found")
-            
-            sync_results = []
-            
-            for org_id, org_name, api_key in orgs:
-                try:
-                    synced_count = 0
-                    duplicates_skipped = 0
-                    total_fetched = 0
-                    
-                    # Implement pagination to get all recent generations
-                    offset = 0
-                    limit = 100  # Increased limit per page
-                    
-                    while True:
-                        # Fetch generations with pagination
-                        generations_data = await self.openrouter_service.get_generations(
-                            api_key, limit=limit, offset=offset
-                        )
-                        generations = generations_data.get("data", [])
-                        
-                        if not generations:
-                            break  # No more data
-                        
-                        total_fetched += len(generations)
-                        
-                        # Process each generation with deduplication
-                        for generation in generations:
-                            generation_id = generation.get("id")
-                            if not generation_id:
-                                continue
-                            
-                            # Check if this generation is from the last N days
-                            created_at = generation.get("created_at")
-                            if created_at:
-                                gen_date = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
-                                if gen_date.date() >= (date.today() - timedelta(days=request.days_back)):
-                                    
-                                    # Check for duplicates using generation ID
-                                    if self.webhook_repo.is_duplicate_generation(
-                                        generation_id, 
-                                        generation.get("model", "unknown"), 
-                                        generation.get("usage", 0.0)
-                                    ):
-                                        duplicates_skipped += 1
-                                        continue
-                                    
-                                    # Record this usage - use correct OpenRouter API field names
-                                    prompt_tokens = generation.get("tokens_prompt", 0)
-                                    completion_tokens = generation.get("tokens_completion", 0)
-                                    total_tokens = prompt_tokens + completion_tokens
-                                    
-                                    usage_data = {
-                                        "model": generation.get("model", "unknown"),
-                                        "total_tokens": total_tokens,
-                                        "total_cost": generation.get("usage", 0.0)
-                                    }
-                                    
-                                    # Record usage
-                                    success = self.usage_service.record_usage_from_webhook(
-                                        org_id, usage_data, generation.get("user")
-                                    )
-                                    
-                                    if success:
-                                        # Mark as processed to prevent future duplicates
-                                        self.webhook_repo.mark_generation_processed(
-                                            generation_id, 
-                                            generation.get("model", "unknown"), 
-                                            generation.get("usage", 0.0),
-                                            org_id, 
-                                            {"external_user": generation.get("user"), "sync_source": "api"}
-                                        )
-                                        synced_count += 1
-                        
-                        # Check if we should continue pagination
-                        if len(generations) < limit:
-                            break  # Last page
-                        
-                        offset += limit
-                        
-                        # Safety limit to prevent infinite loops
-                        if offset > 1000:  # Max 1000 generations per sync
-                            break
-                    
-                    sync_results.append({
-                        "organization": org_name,
-                        "synced_generations": synced_count,
-                        "duplicates_skipped": duplicates_skipped,
-                        "total_fetched": total_fetched,
-                        "status": "success"
-                    })
-                    
-                except Exception as e:
-                    sync_results.append({
-                        "organization": org_name,
-                        "error": str(e),
-                        "status": "failed"
-                    })
-            
-            return {
-                "status": "completed",
-                "results": sync_results,
-                "total_organizations": len(orgs)
-            }
-            
-        except Exception as e:
-            raise Exception(f"Sync failed: {str(e)}")
+        """
+        DEPRECATED: OpenRouter bulk sync is disabled
+        
+        This method has been disabled because the OpenRouter API does not provide
+        a bulk generations endpoint. The previous implementation was causing 404 errors.
+        
+        Real-time usage tracking via webhooks is the primary method for collecting usage data.
+        """
+        # Get organization count for response compatibility
+        orgs = self.client_repo.get_all_active_clients()
+        org_count = len(orgs) if orgs else 0
+        
+        return {
+            "status": "deprecated",
+            "message": "Bulk sync functionality has been disabled due to non-existent OpenRouter API endpoint",
+            "details": {
+                "reason": "The OpenRouter API /api/v1/generations endpoint does not exist and was causing 404 errors",
+                "alternative": "Real-time usage tracking via webhooks is the primary method for collecting usage data",
+                "impact": "No data loss - real-time tracking continues to work normally"
+            },
+            "results": [{
+                "organization": "All Organizations",
+                "status": "skipped",
+                "message": "Bulk sync disabled - using real-time tracking instead"
+            }],
+            "total_organizations": org_count
+        }
     
     def manual_record_usage(self, model: str, tokens: int, cost: float) -> Dict[str, str]:
         """Manually record usage for testing or corrections"""
