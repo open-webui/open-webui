@@ -123,9 +123,6 @@
 								Days in Month
 							</th>
 							<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-								Billing %
-							</th>
-							<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
 								Monthly Cost
 							</th>
 						</tr>
@@ -148,9 +145,6 @@
 								</td>
 								<td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
 									{userDetail.days_remaining_when_added}
-								</td>
-								<td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-									{Math.round(userDetail.billing_proportion * 100)}%
 								</td>
 								<td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
 									{userDetail.monthly_cost_pln} PLN

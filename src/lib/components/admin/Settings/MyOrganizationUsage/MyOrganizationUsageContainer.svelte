@@ -219,7 +219,7 @@
 
 	<!-- Monthly Summary Cards -->
 	{#if usageData}
-		<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+		<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
 			<StatCard
 				title="Total Tokens"
 				value={FormatterService.formatNumber(usageData.current_month?.total_tokens || 0)}
@@ -236,13 +236,6 @@
 				iconPath="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
 			/>
 			
-			<StatCard
-				title="Usage Activity"
-				value="{usageData.current_month?.days_with_usage || 0}/{usageData.current_month?.days_in_month || 0}"
-				subtitle="{FormatterService.formatPercentage(usageData.current_month?.usage_percentage || 0)} active • Cumulative 1st-Current"
-				iconColor="purple"
-				iconPath="M8 7V3a2 2 0 012-2h8a2 2 0 012 2v4m0 0V7a2 2 0 11-4 0m4 0a2 2 0 104 0M3 19h18m-9-15a2 2 0 11-4 0m4 0V3a2 2 0 11-4 0"
-			/>
 		</div>
 	{/if}
 
