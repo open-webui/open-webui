@@ -135,7 +135,7 @@
 								class="text-[14px] text-[#CEE7FF] cursor-pointer"
 								on:click={() => (showInitialScreen = false)}
 							>
-								Login using Credentials
+								{$i18n.t('Login using Credentials')}
 							</button>
 						</div>
 						<div class="splash-content">
@@ -146,35 +146,37 @@
 								<h1 class="govgpt-title">GovGPT</h1>
 							</div>
 							<div class="tagline-container">
-								<p class="tagline">Amplifying Government Potential</p>
+								<p class="tagline">{$i18n.t('Amplifying Government Potential')}</p>
 							</div>
 							<p
 								class="hidden sm:block mb-[30px] text-typography-titles text-[16px] leading-[24px]"
 							>
-								Use your work email to log in & get started!
+								{$i18n.t('Use your work email to log in & get started!')}
 							</p>
 							<div class="absolute sm:static bottom-[20px]">
 								<button
-								on:click={() => {
-									window.location.href = `${WEBUI_BASE_URL}/oauth/oidc/login`;
-								}}
+									on:click={() => {
+										window.location.href = `${WEBUI_BASE_URL}/oauth/oidc/login`;
+									}}
 									class="mb-[24px] text-[14px] text-[rgba(7, 45, 90, 0.88)] py-[16px] w-[334px] rounded-[12px] bg-[linear-gradient(90deg,_#A5C7E6_0%,_#CEE7FF_38.94%,_#A5C7E6_100%)] shadow-[inset_6px_3px_8px_0_#BFDBF6]"
 								>
-									Log in using SSO
+									{$i18n.t('Log in using SSO')}
 								</button>
 								<p class="text-typography-titles text-[12px] leading-[16px] max-w-[240px] mx-auto">
-									By continuing, you agree to our <button
+									{$i18n.t('By continuing, you agree to our')}
+									<button
 										on:click={() => {
 											navigateToTerms();
 										}}
-										class="text-[#89B7FF] underline cursor-pointer">Terms</button
+										class="text-[#89B7FF] underline cursor-pointer">{$i18n.t('Terms')}</button
 									>
-									and have read our
+									{$i18n.t('and have read our')}
 									<button
 										on:click={() => {
 											navigateToPrivacy();
 										}}
-										class="text-[#89B7FF] underline cursor-pointer">Privacy Policy</button
+										class="text-[#89B7FF] underline cursor-pointer"
+										>{$i18n.t('Privacy Policy')}</button
 									>.
 								</p>
 							</div>
@@ -189,7 +191,7 @@
 								class="text-sm text-blue-200 cursor-pointer hover:text-blue-100 bg-transparent border-none p-2"
 								on:click={() => (showInitialScreen = true)}
 							>
-								Login using SSO
+								{$i18n.t('Login using SSO')}
 							</button>
 						</div>
 
@@ -205,7 +207,7 @@
 									<div
 										class="text-center mb-[34px] text-[20px] leading-[34px] text-typography-titles"
 									>
-										Login with your email address
+										{$i18n.t('Login with your email address')}
 									</div>
 									{#if $config?.features.enable_login_form || $config?.features.enable_ldap}
 										<div class="flex flex-col mt-4">
@@ -234,7 +236,7 @@
 														for="email"
 														class=" text-left pb-[8px] text-[14px] leading-[22px] font-medium text-typography-titles"
 													>
-														{$i18n.t('Email')} address
+														{$i18n.t('Email address')}
 													</label>
 													<input
 														bind:value={email}
@@ -308,19 +310,23 @@
 												</button>
 											{/if}
 										{/if}
-										<p class="block sm:hidden text-typography-titles text-[12px] leading-[16px] max-w-[240px] mx-auto">
-											By continuing, you agree to our <button
+										<p
+											class="block sm:hidden text-typography-titles text-[12px] leading-[16px] max-w-[240px] mx-auto"
+										>
+											{$i18n.t('By continuing, you agree to our')}
+											<button
 												on:click={() => {
 													navigateToTerms();
 												}}
-												class="text-[#89B7FF] underline cursor-pointer">Terms</button
+												class="text-[#89B7FF] underline cursor-pointer">{$i18n.t('Terms')}</button
 											>
-											and have read our
+											{$i18n.t('and have read our')}
 											<button
 												on:click={() => {
 													navigateToPrivacy();
 												}}
-												class="text-[#89B7FF] underline cursor-pointer">Privacy Policy</button
+												class="text-[#89B7FF] underline cursor-pointer"
+												>{$i18n.t('Privacy Policy')}</button
 											>.
 										</p>
 									</div>
@@ -332,10 +338,10 @@
 				<div
 					class="p-[16px] hidden sm:block fixed bottom-0 left-0 right-0 text-center text-typography-subtext text-[10px] leading-[16px] bg-[#072D5A] z-50"
 				>
-					<span class="text-typography-titles">Disclaimer:</span>
-					GovGPT is powered by artificial intelligence and may occasionally produce incorrect or outdated
-					responses. Please verify critical information from official sources or consult your department
-					head for confirmation.
+					<span class="text-typography-titles">{$i18n.t('Disclaimer')}:</span>
+					{$i18n.t(
+						'GovGPT is powered by artificial intelligence and may occasionally produce incorrect or outdated responses. Please verify critical information from official sources or consult your department head for confirmation.'
+					)}
 				</div>
 			</div>
 		</div>

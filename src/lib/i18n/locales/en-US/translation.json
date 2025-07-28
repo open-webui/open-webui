@@ -1450,5 +1450,21 @@
 	"Low": "Low",
 	"Medium": "Medium",
 	"High": "High",
-	"Group": "Group"
+	"Group": "Group",
+	"Hey": "Hey",
+	"Quick answers. Clear drafts. Trusted knowledge. What's next? Enter your request to begin.": "Quick answers. Clear drafts. Trusted knowledge. What's next? Enter your request to begin." ,
+	"Amplifying Government Potential": "Amplifying Government Potential",
+	"Login using Credentials": "Login using Credentials",
+	"Use your work email to log in & get started!": "Use your work email to log in & get started!",
+	"Log in using SSO": "Log in using SSO",
+	"By continuing, you agree to our": "By continuing, you agree to our",
+	"Terms": "Terms",
+	"and have read our": "and have read our",
+	"Privacy Policy": "Privacy Policy",
+	"Login using SSO": "Login using SSO",
+	"Login with your email address": "Login with your email address",
+	"Email address": "Email address",
+	"Email or phone number": "Email or phone number",
+	"Disclaimer": "Disclaimer",
+	"GovGPT is powered by artificial intelligence and may occasionally produce incorrect or outdated responses. Please verify critical information from official sources or consult your department head for confirmation.": "GovGPT is powered by artificial intelligence and may occasionally produce incorrect or outdated responses. Please verify critical information from official sources or consult your department head for confirmation."
 }
