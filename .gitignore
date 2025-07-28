@@ -309,3 +309,13 @@ dist
 cypress/videos
 cypress/screenshots
 .vscode/settings.json
+
+# Security: API Keys and Secrets
+clients.yaml
+**/clients.yaml
+*.key
+*.pem
+**/api-keys/
+openrouter_api_key*
+**/secrets/
+.secrets

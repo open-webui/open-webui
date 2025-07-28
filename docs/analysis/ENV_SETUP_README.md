@@ -59,7 +59,7 @@ The script creates:
 # Spending Limit: 1000.0
 
 # OpenRouter Configuration
-OPENROUTER_API_KEY=sk-or-v1-abc123def456...
+OPENROUTER_API_KEY=sk-or-v1-YOUR_OPENROUTER_API_KEY_HERE
 OPENROUTER_HOST=https://openrouter.ai/api/v1
 OPENROUTER_EXTERNAL_USER=mai_client_a1b2c3d4
 
