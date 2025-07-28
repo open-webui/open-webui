@@ -159,7 +159,7 @@ class UsageService:
                             "busiest_day": None,
                             "highest_cost_day": None,
                             "total_unique_users": 0,
-                            "most_used_model": None
+                            "top_models": []
                         },
                         "client_org_name": org_name,
                         "pln_conversion_available": True
@@ -182,7 +182,7 @@ class UsageService:
                         "average_daily_tokens": 0, "average_daily_cost": 0,
                         "average_usage_day_tokens": 0, "busiest_day": None,
                         "highest_cost_day": None, "total_unique_users": 0, 
-                        "most_used_model": None
+                        "top_models": []
                     },
                     "client_org_name": ORGANIZATION_NAME or "My Organization"
                 },
