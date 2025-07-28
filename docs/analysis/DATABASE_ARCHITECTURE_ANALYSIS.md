@@ -16,14 +16,23 @@
 
 ## 🔄 **Data Flow: How Usage Settings Work**
 
+### **Production Architecture:**
 ```
-User Browser → Frontend (Port 3002) → Backend API → Container Database → Back to UI
-     ↑                                       ↓
-     └─── Usage Settings Tabs ←──── JSON Response
+User Browser → Single Container (Port 3001) → Backend API → Container Database → Back to UI
+     ↑                                              ↓
+     └─── Usage Settings Tabs ←────────── JSON Response
+```
+
+### **Development Architecture (Two-Container):**
+```
+User Browser → Frontend Dev (Port 5173) → API Proxy → Backend Dev (Port 8080) → Container DB → Back to UI
+     ↑                                                           ↓
+     └─── Usage Settings Tabs ←─────────────────────── JSON Response
 ```
 
 ### **Step-by-Step Data Flow:**
 
+#### **Production (Single Container):**
 1. **User opens Usage Settings** → Browser loads UI components
 2. **Frontend makes API calls**:
    - `GET /api/v1/usage-tracking/my-organization/usage-by-user`
@@ -31,6 +40,13 @@ User Browser → Frontend (Port 3002) → Backend API → Container Database →
 3. **Backend processes requests** (inside Docker container)
 4. **Backend queries database** → `/app/backend/data/webui.db` (Container Database)
 5. **Backend returns JSON data** → Frontend displays in tabs
+
+#### **Development (Two-Container):**
+1. **User opens Usage Settings** → Frontend dev server (Port 5173)
+2. **Vite proxy forwards API calls** → Backend dev container (Port 8080)
+3. **Backend processes requests** → Queries mounted database volume
+4. **Backend returns JSON data** → Proxy forwards to frontend
+5. **Frontend displays data** → With instant HMR updates
 
 ## ⚠️ **CRITICAL DISCOVERY: Why UI Shows Empty Data**
 
@@ -41,17 +57,22 @@ The reason your Usage Settings tabs were empty:
 
 ## 🐳 **Docker Volume Architecture**
 
-Your `docker-compose-customization.yaml`:
+### **Production (`docker-compose-customization.yaml`):**
 ```yaml
 volumes:
   - open-webui-customization:/app/backend/data  # NAMED VOLUME (isolated)
 ```
 
-**NOT** a bind mount like:
+### **Development (`docker-compose.dev.yml`):**
 ```yaml
+# Backend development container
 volumes:
-  - ./backend/data:/app/backend/data  # This would connect host to container
+  - ./backend:/app/backend                    # BIND MOUNT (host to container)
+  - mai-backend-dev-data:/app/backend/data   # NAMED VOLUME (data persistence)
+  - /app/backend/.venv                       # PRESERVE (virtual environment)
 ```
+
+**Key Difference**: Development uses bind mounts for hot reload, production uses isolated named volumes.
 
 ## 🔍 **Verification Commands**
 
@@ -60,14 +81,28 @@ volumes:
 sqlite3 backend/data/webui.db "SELECT COUNT(*) FROM client_user_daily_usage;"
 ```
 
-### **Check Container Database:**
+### **Check Production Container Database:**
 ```bash
 docker exec open-webui-customization sqlite3 /app/backend/data/webui.db "SELECT COUNT(*) FROM client_user_daily_usage;"
 ```
 
-### **Verify UI Data Source:**
+### **Check Development Container Database:**
+```bash
+docker exec mai-backend-dev sqlite3 /app/backend/data/webui.db "SELECT COUNT(*) FROM client_user_daily_usage;"
+```
+
+### **Verify UI Data Source (Production):**
 ```bash
 docker exec open-webui-customization python3 -c "
+import sys; sys.path.append('/app/backend')
+from open_webui.config import DATA_DIR
+print('App uses database at:', DATA_DIR + '/webui.db')
+"
+```
+
+### **Verify UI Data Source (Development):**
+```bash
+docker exec mai-backend-dev python3 -c "
 import sys; sys.path.append('/app/backend')
 from open_webui.config import DATA_DIR
 print('App uses database at:', DATA_DIR + '/webui.db')
@@ -214,6 +249,7 @@ docker exec container sqlite3 /app/backend/data/webui.db \
 - **Per-Client Containers**: Isolated SQLite databases via Docker volumes
 - **Environment-Based Configuration**: `OPENROUTER_EXTERNAL_USER` per client
 - **Centralized Management**: Single Hetzner server with docker-compose orchestration
+- **Development Environment**: Two-container architecture with `mai-frontend-dev` + `mai-backend-dev`
 
 ### **Database Lifecycle:**
 1. **Container Creation**: Automatic schema initialization
@@ -258,4 +294,17 @@ docker exec container sqlite3 /app/backend/data/webui.db \
 4. **API Rate Limiting** - Per-client usage quotas
 5. **Backup Strategy** - Automated database backups
 
-The production database architecture is now fully mature with dynamic pricing, automated maintenance, bulletproof duplicate prevention, and comprehensive usage tracking suitable for 300+ users across 20+ Docker instances.
+## 🏗️ **ARCHITECTURE SUMMARY**
+
+### **Production Environment:**
+- **Single-Container**: All-in-one mAI application with built frontend
+- **Database**: Isolated SQLite per client via Docker named volumes
+- **Deployment**: 20+ Docker instances serving 300+ users
+
+### **Development Environment:**
+- **Two-Container**: Frontend dev server + Backend API server
+- **Hot Reload**: Vite HMR (frontend) + uvicorn --reload (backend)
+- **Database**: Shared development database with volume mounts
+- **Workflow**: `./dev-hot-reload.sh up` → http://localhost:5173
+
+The production database architecture is now fully mature with dynamic pricing, automated maintenance, bulletproof duplicate prevention, and comprehensive usage tracking. The development environment provides instant feedback with hot reload capabilities while maintaining production compatibility.

@@ -2,6 +2,13 @@
 
 This guide explains how to set up environment-based OpenRouter configuration for mAI client Docker instances.
 
+## Environment Types
+
+- **Production Environment**: Single-container deployment for client instances
+- **Development Environment**: Two-container architecture with hot reload capabilities
+
+> 💡 **For Development**: See [ENV_SETUP_DEV_README.md](ENV_SETUP_DEV_README.md) for the two-container development setup with hot reload.
+
 ## Overview
 
 The new `.env`-based approach replaces the complex database-driven API key management with simple environment variables. Each client Docker instance gets its own `.env` file with:
@@ -25,13 +32,17 @@ The new `.env`-based approach replaces the complex database-driven API key manag
 
 ## Usage
 
-### Step 1: Generate Client Environment
+### Production Environment Setup
 
-Run the environment generator script (now using Clean Architecture):
+#### Step 1: Generate Client Environment
+
+For **production deployment**, run the environment generator script:
 
 ```bash
 python generate_client_env.py
 ```
+
+> 📝 **Note**: For development, use `python generate_client_env_dev.py` instead to create `.env.dev` with development-specific configuration.
 
 **Note**: The script now uses Clean Architecture with proper separation of concerns:
 - **Domain Layer**: Business entities and validation logic
@@ -43,13 +54,15 @@ The script will prompt you for:
 - **Organization Name**: Client company name (e.g., "ABC Company Sp. z o.o.")
 - **Spending Limit**: Either "unlimited" or a dollar amount (e.g., "1000.0")
 
-### Step 2: Generated Files
+#### Step 2: Generated Files
 
-The script creates:
+The production script creates:
 
 ```bash
-.env                    # Environment configuration for Docker
+.env                    # Production environment configuration for Docker
 ```
+
+**Development Alternative**: The development script creates `.env.dev` instead to avoid conflicts.
 
 **Example .env content:**
 ```bash
@@ -68,7 +81,7 @@ ORGANIZATION_NAME=ABC Company Sp. z o.o.
 SPENDING_LIMIT=1000.0
 ```
 
-### Step 3: Docker Deployment
+#### Step 3: Production Docker Deployment
 
 1. **Copy .env to deployment directory:**
    ```bash
@@ -88,7 +101,27 @@ SPENDING_LIMIT=1000.0
    docker-compose up -d
    ```
 
-## Architecture Benefits
+### Development Environment Setup
+
+For development with hot reload capabilities:
+
+1. **Generate development configuration:**
+   ```bash
+   python generate_client_env_dev.py
+   ```
+
+2. **Start development environment:**
+   ```bash
+   ./dev-hot-reload.sh up
+   ```
+
+3. **Access development instance:**
+   - Primary URL: http://localhost:5173
+   - Backend API: http://localhost:8080
+
+> 📖 **Full Development Guide**: See [ENV_SETUP_DEV_README.md](ENV_SETUP_DEV_README.md) for complete development setup instructions.
+
+## Production Architecture Benefits
 
 ### 🔒 **Security & Isolation**
 - Each client gets dedicated API key
@@ -113,6 +146,11 @@ SPENDING_LIMIT=1000.0
 - Complete data isolation
 - Independent scaling per client
 - Simplified client onboarding
+
+### 🚀 **Development vs Production**
+- **Production**: Single-container, optimized for deployment
+- **Development**: Two-container with hot reload for rapid iteration
+- **Consistency**: Same environment variables, different container architecture
 
 ## User Identification
 
@@ -158,6 +196,19 @@ To verify your setup:
 3. **Test Docker deployment loads environment variables**
 4. **Monitor first API requests show usage tracking**
 
+## Environment Comparison
+
+| Aspect | Production | Development |
+|--------|-------------|-------------|
+| **Script** | `generate_client_env.py` | `generate_client_env_dev.py` |
+| **Config File** | `.env` | `.env.dev` |
+| **Architecture** | Single container | Two containers |
+| **Ports** | 3001 | 5173 (FE) + 8080 (BE) |
+| **Hot Reload** | No | Yes (HMR + uvicorn) |
+| **External User** | `mai_client_*` | `dev_mai_client_*` |
+| **Database** | Client-specific volume | `mai_backend_dev_data` |
+| **Startup** | `docker-compose up -d` | `./dev-hot-reload.sh up` |
+
 ## Migration from Current System
 
 If migrating from the existing database-driven system:
@@ -167,7 +218,9 @@ If migrating from the existing database-driven system:
    bash cleanup_current_solution.sh
    ```
 
-2. **Generate new .env configuration**
+2. **Generate new environment configuration:**
+   - Production: `python generate_client_env.py`
+   - Development: `python generate_client_env_dev.py`
 3. **Update application code to read from environment variables**
 4. **Deploy with new configuration**
 
@@ -179,6 +232,21 @@ For issues or questions:
 - Ensure all environment variables are properly set
 - Monitor OpenRouter usage in their dashboard
 
+## Quick Reference
+
+### Production Deployment
+```bash
+python generate_client_env.py          # Generate .env
+docker-compose up -d                   # Deploy
+```
+
+### Development Environment
+```bash
+python generate_client_env_dev.py      # Generate .env.dev
+./dev-hot-reload.sh up                 # Start dev environment
+# Access: http://localhost:5173
+```
+
 ---
 
-**✅ Ready for Production**: This approach is production-ready and scales perfectly for your 20-client deployment model.
+**✅ Ready for Production**: This approach is production-ready and scales perfectly for your 20-client deployment model with full development environment support.

@@ -55,6 +55,7 @@ if OPENROUTER_EXTERNAL_USER and ORGANIZATION_NAME:
 
 ### **Testing the Implementation:**
 
+#### **Production Environment:**
 1. **Restart Docker Container:**
    ```bash
    docker-compose -f docker-compose-customization.yaml down
@@ -66,12 +67,37 @@ if OPENROUTER_EXTERNAL_USER and ORGANIZATION_NAME:
    docker logs open-webui-customization 2>&1 | grep "Usage tracking"
    ```
 
+#### **Development Environment:**
+1. **Restart Development Containers:**
+   ```bash
+   ./dev-hot-reload.sh restart
+   ```
+
+2. **Check Development Logs:**
+   ```bash
+   ./dev-hot-reload.sh logs-be | grep "Usage tracking"
+   # or
+   docker logs mai-backend-dev 2>&1 | grep "Usage tracking"
+   ```
+
 3. **Expected Log:**
    ```
    ✅ Usage tracking initialized for Company_A
    ```
 
 4. **Verify Database:**
+   
+   **Production:**
+   ```bash
+   docker exec open-webui-customization sqlite3 /app/backend/data/webui.db "SELECT name FROM client_organizations;"
+   ```
+   
+   **Development:**
+   ```bash
+   docker exec mai-backend-dev sqlite3 /app/backend/data/webui.db "SELECT name FROM client_organizations;"
+   ```
+   
+   Expected results:
    - Client organization created/updated
    - Usage tracking tables exist
    - Data ready for Usage Settings UI
@@ -79,17 +105,35 @@ if OPENROUTER_EXTERNAL_USER and ORGANIZATION_NAME:
 ### **Multi-Client Deployment:**
 
 Each mAI instance will:
-1. Read its own `.env` file
+1. Read its own `.env` file (production) or `.env.dev` file (development)
 2. Auto-initialize its own database
 3. Track usage independently
 4. No manual intervention needed
 
+#### **Environment-Specific Behavior:**
+- **Production**: Uses single-container architecture with isolated volumes
+- **Development**: Uses two-container architecture with `mai_backend_dev_data` volume
+- **Both**: Automatic database initialization on container startup
+
 ### **Next Steps:**
 
 The automatic initialization is now production-ready. Every time a container starts:
-- ✅ Reads environment variables
+- ✅ Reads environment variables (`.env` or `.env.dev`)
 - ✅ Creates/updates database records
 - ✅ Ensures schema is correct
 - ✅ Ready for usage tracking
 
-**No more manual database initialization required!**
+#### **Environment-Specific Access:**
+
+**Production Access:**
+- Container: `open-webui-customization`
+- URL: http://localhost:3001
+- Configuration: `.env`
+
+**Development Access:**
+- Containers: `mai-frontend-dev` + `mai-backend-dev`
+- URL: http://localhost:5173 (frontend) + http://localhost:8080 (backend)
+- Configuration: `.env.dev`
+- Hot Reload: Instant updates for development
+
+**No more manual database initialization required for either environment!**

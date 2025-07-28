@@ -90,8 +90,9 @@ SPENDING_LIMIT={org.spending_limit}
 # This is a DEVELOPMENT environment with:
 # - Separate API key from production
 # - External user prefixed with 'dev_'
-# - Isolated database volume (mai_dev_data)
-# - Hot-reloading for instant code changes
+# - Isolated database volume (mai_backend_dev_data)
+# - Two-container hot reload architecture
+# - Frontend HMR + Backend auto-restart
 # - Safe for testing without affecting production
 """
         
@@ -157,18 +158,20 @@ class DevEnvironmentGeneratorApplication(EnvironmentGeneratorApplication):
         print()
         
         print("📋 Next Steps:")
-        print("1. Start the development container:")
-        print("   docker-compose -f docker-compose.dev.yml up -d")
+        print("1. Start the development environment:")
+        print("   ./dev-hot-reload.sh up")
         print()
         print("2. Access development instance at:")
-        print("   http://localhost:3001")
+        print("   http://localhost:5173")
         print()
         print("3. First user to register becomes admin")
         print()
         
         print("🔧 Development Features:")
-        print("   ✅ Hot-reloading enabled (instant code changes)")
-        print("   ✅ Separate database (mai_dev_data volume)")
+        print("   ✅ Two-container architecture with hot reload")
+        print("   ✅ Frontend: Vite dev server with HMR (port 5173)")
+        print("   ✅ Backend: FastAPI with uvicorn --reload (port 8080)")
+        print("   ✅ Separate database (mai_backend_dev_data volume)")
         print("   ✅ Separate API key from production")
         print("   ✅ External user prefixed with 'dev_'")
         print("   ✅ Duplicate prevention system included")
@@ -177,7 +180,8 @@ class DevEnvironmentGeneratorApplication(EnvironmentGeneratorApplication):
         
         print("⚠️  Important:")
         print("   - This is completely separate from production")
-        print("   - Changes to code are reflected instantly")
+        print("   - Frontend changes update instantly via HMR")
+        print("   - Backend changes trigger automatic restart")
         print("   - Database is isolated from production")
         print("   - Safe for testing and experimentation")
         print()
@@ -237,8 +241,8 @@ Examples:
     print()
     
     if args.production and init_database:
-        output.print_info("Note: Database initialization in dev uses the dev volume")
-        output.print_info("The database will be created when you start the container")
+        output.print_info("Note: Database initialization in dev uses mai_backend_dev_data volume")
+        output.print_info("The database will be created when you start the containers with ./dev-hot-reload.sh up")
         print()
     
     try:

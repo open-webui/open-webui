@@ -105,7 +105,10 @@ npm run dev               # Frontend only (port 5173)
 - **Extend existing stores** in `/src/lib/stores/` - don't replace
 - **Follow router patterns** in `backend/open_webui/routers/usage_tracking.py`
 - **Use existing models**: `ClientOrganization`, `ClientDailyUsage`, `ClientUserDailyUsage`
-- **Environment setup**: Use `generate_client_env.py` for client configuration
+- **Environment setup**: 
+  - Production: `generate_client_env.py` creates `.env`
+  - Development: `generate_client_env_dev.py` creates `.env.dev`
+  - Documentation: See `docs/analysis/ENV_SETUP_README.md` and `ENV_SETUP_DEV_README.md`
 
 ## Sub-Agent Usage
 
@@ -186,8 +189,9 @@ python3 -m py_compile {modified_files}  # Syntax check
 
 ### Key Integration Points
 - **Usage tracking**: Real-time OpenRouter webhooks
-- **Multi-tenancy**: Environment-based client isolation
+- **Multi-tenancy**: Environment-based client isolation (`.env` for production, `.env.dev` for development)
 - **Database**: Per-container SQLite with daily aggregation
+- **Environment setup**: Use `generate_client_env.py` (production) or `generate_client_env_dev.py` (development)
 
 ---
 
