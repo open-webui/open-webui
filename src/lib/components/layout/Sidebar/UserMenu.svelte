@@ -179,14 +179,14 @@
 
 	<slot name="content">
 		<DropdownMenu.Content
-			class="w-full {className} rounded-[8px] z-50 bg-light-bg dark:border dark:border-gray-100 text-label-primary shadow-custom font-primary"
+			class="w-full {className} rounded-[8px] z-50 bg-light-bg dark:border dark:border-gray-800 text-label-primary shadow-custom font-primary"
 			sideOffset={1}
 			side="bottom"
 			align="end"
 			transition={(e) => fade(e, { duration: 100 })}
 		>
 			<button
-				class="flex justify-between items-center border-b border-gray-100 px-[16px] py-[11px] w-full transition cursor-pointer"
+				class="flex justify-between items-center border-b border-gray-100 dark:border-transparent px-[16px] py-[11px] w-full transition cursor-pointer"
 				on:click={() => changeLanguage(document.documentElement.lang === 'en-US' ? 'ar' : 'en-US')}
 			>
 				<div class=" self-center truncate gap-[8px] text-[17px] leading-[22px]">
@@ -200,7 +200,7 @@
 			</button>
 			{#if role === 'admin'}
 			<div
-				class="flex px-[16px] py-[11px] w-full items-center justify-between border-b border-gray-100"
+				class="flex px-[16px] py-[11px] w-full items-center justify-between border-b border-gray-100 dark:border-transparent"
 			>
 				<label class="flex items-center gap-[8px] text-[17px] leading-[22px]">
 					{$i18n.t('Notifications')}</label
@@ -227,7 +227,7 @@
 			</div>
             {/if}
 			<div
-				class="flex px-[16px] py-[11px] w-full items-center justify-between border-b border-gray-100"
+				class="flex px-[16px] py-[11px] w-full items-center justify-between border-b border-gray-100 dark:border-transparent"
 			>
 				<label class="flex items-center gap-[8px] text-[17px] leading-[22px]">
 					{$i18n.t('Theme')}</label
@@ -254,7 +254,7 @@
 			</div>
 			{#if role === 'admin'}
 				<button
-					class="flex justify-between items-center border-b border-gray-100 px-[16px] py-[11px] w-full transition"
+					class="flex justify-between items-center border-b border-gray-100 dark:border-transparent px-[16px] py-[11px] w-full transition"
 					on:click={async () => {
 						await showSettings.set(true);
 						show = false;
@@ -273,7 +273,7 @@
 				</button>
 			{/if}
 			<button
-				class="flex justify-between items-center border-b border-gray-100 px-[16px] py-[11px] w-full transition"
+				class="flex justify-between items-center border-b border-gray-100 dark:border-transparent px-[16px] py-[11px] w-full transition"
 				on:click={() => {
 					dispatch('show', 'archived-chat');
 					show = false;
@@ -293,7 +293,7 @@
 
 			{#if role === 'admin'}
 				<button
-					class="flex justify-between items-center border-b border-gray-100 px-[16px] py-[11px] w-full transition"
+					class="flex justify-between items-center border-b border-gray-100 dark:border-transparent px-[16px] py-[11px] w-full transition"
 					on:click={() => {
 						goto('/playground');
 						show = false;
@@ -312,7 +312,7 @@
 				</button>
 
 				<button
-					class="flex justify-between items-center border-b border-gray-100 px-[16px] py-[11px] w-full transition"
+					class="flex justify-between items-center border-b border-gray-100 dark:border-transparent px-[16px] py-[11px] w-full transition"
 					on:click={() => {
 						goto('/admin');
 						show = false;
@@ -377,7 +377,7 @@
 
 			{#if role === 'admin'}
 				<button
-					class="flex px-[16px] justify-between items-center border-b border-gray-100 py-[11px] w-full transition"
+					class="flex px-[16px] justify-between items-center border-b border-gray-100 dark:border-transparent py-[11px] w-full transition"
 					on:click={() => {
 						goto('/playground');
 					}}
@@ -392,7 +392,7 @@
 			{/if}
 
 			<button
-				class="flex px-[16px] justify-between items-center border-b border-gray-100 py-[11px] w-full transition"
+				class="flex px-[16px] justify-between items-center border-b border-gray-100 dark:border-transparent py-[11px] w-full transition"
 				on:click={async () => {
 					const res = await userSignOut();
 					user.set(null);
