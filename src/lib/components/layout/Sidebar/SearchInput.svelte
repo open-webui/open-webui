@@ -264,7 +264,11 @@
 									const words = value.split(' ');
 
 									words.pop();
-									words.push(`folder:${folder.id} `);
+									words.push(
+										`folder:${
+											folder.name.indexOf(' ') > -1 ? `"${folder.name}"` : folder.name
+										} `
+									);
 
 									value = words.join(' ');
 
