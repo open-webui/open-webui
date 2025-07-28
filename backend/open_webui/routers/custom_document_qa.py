@@ -13,19 +13,15 @@ from open_webui.models.files import Files
 from open_webui.retrieval.utils import get_sources_from_files
 from open_webui.env import SRC_LOG_LEVELS
 
+from open_webui.env import CUSTOM_QA_TIMEOUT, GOVGPT_FILE_SEARCH_API_URL, USE_CUSTOM_QA_API
+
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 router = APIRouter()
 
 # Configuration for the external API
-CUSTOM_QA_API_URL = os.environ.get("GOVGPT_FILE_SEARCH_API_URL", "http://40.119.184.8:8102/query")
-CUSTOM_QA_TIMEOUT = int(os.environ.get("GOVGPT_FILE_SEARCH_TIMEOUT", "30"))
 SERVICE_NAME = "govGpt-file-search-service"
-
-# Global configuration flag - can be set via environment variable
-USE_CUSTOM_QA_API = os.environ.get("ENABLE_GOVGPT_FILE_SEARCH", "false").lower() == "true"
-
 
 class CustomQARequest(BaseModel):
     user_query: str
@@ -97,19 +93,19 @@ async def call_custom_qa_api(
     }
     
     # Log the request details
-    log.info(f"{SERVICE_NAME} REQUEST to {CUSTOM_QA_API_URL}")
+    log.info(f"{SERVICE_NAME} REQUEST to {GOVGPT_FILE_SEARCH_API_URL}")
     log.info(f"{SERVICE_NAME} REQUEST payload: {json.dumps(payload, indent=2)}")
     log.info(f"{SERVICE_NAME} REQUEST user_query: '{user_query}'")
     log.info(f"{SERVICE_NAME} REQUEST document_texts size: {len(document_texts)} ")
     log.info(f"{SERVICE_NAME} REQUEST chat_history length: {len(chat_history or [])} messages")
     
     try:
-        log.info(f"{SERVICE_NAME} REQUEST starting API call to {CUSTOM_QA_API_URL}")
+        log.info(f"{SERVICE_NAME} REQUEST starting API call to {GOVGPT_FILE_SEARCH_API_URL}")
         start_time = time.time()
         
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=CUSTOM_QA_TIMEOUT)) as session:
             async with session.post(
-                CUSTOM_QA_API_URL,
+                GOVGPT_FILE_SEARCH_API_URL,
                 headers={"Content-Type": "application/json"},
                 json=payload
             ) as response:
