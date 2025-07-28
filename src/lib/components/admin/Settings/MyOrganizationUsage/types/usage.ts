@@ -12,6 +12,7 @@ export interface CurrentMonthUsage {
 	days_with_usage: number;
 	days_in_month: number;
 	usage_percentage: number;
+	exchange_rate_info?: ExchangeRateInfo;
 }
 
 export interface DailyBreakdown {
@@ -45,7 +46,6 @@ export interface UsageData {
 	daily_breakdown: DailyBreakdown[];
 	monthly_summary: MonthlySummary;
 	client_org_name: string;
-	exchange_rate_info?: ExchangeRateInfo;
 	pln_conversion_available?: boolean;
 }
 
