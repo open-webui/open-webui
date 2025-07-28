@@ -81,6 +81,16 @@ async def create_new_model(
 
 
 ############################
+# ExportModels
+############################
+
+
+@router.get("/export", response_model=list[ModelModel])
+async def export_models(user=Depends(get_admin_user)):
+    return Models.get_models()
+
+
+############################
 # SyncModels
 ############################
 
@@ -120,7 +130,7 @@ async def get_model_by_id(id: str, user=Depends(get_verified_user)):
 
 
 ############################
-# ToggelModelById
+# ToggleModelById
 ############################
 
 
