@@ -1429,6 +1429,34 @@ def query_doc_handler(
     user=Depends(get_verified_user),
 ):
     try:
+        # Check if collection exists, if not try to re-index on-demand
+        if VECTOR_DB_CLIENT and not VECTOR_DB_CLIENT.has_collection(
+            form_data.collection_name
+        ):
+            log.info(
+                f"Collection {form_data.collection_name} not found, attempting on-demand re-indexing..."
+            )
+
+            # Extract file ID from collection name if it's a file collection
+            if form_data.collection_name.startswith("file-"):
+                file_id = form_data.collection_name.replace("file-", "")
+                log.info(f"Attempting to re-index file {file_id}")
+
+                # Try to re-index the file
+                if reindex_file_on_demand(file_id, request, user):
+                    log.info(f"Successfully re-indexed file {file_id}")
+                else:
+                    log.warning(f"Failed to re-index file {file_id}")
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail=f"Collection {form_data.collection_name} not found and could not be re-created",
+                    )
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Collection {form_data.collection_name} not found",
+                )
+
         if request.app.state.config.ENABLE_RAG_HYBRID_SEARCH:
             return query_doc_with_hybrid_search(
                 collection_name=form_data.collection_name,
@@ -1448,6 +1476,9 @@ def query_doc_handler(
                 query_embedding=request.app.state.EMBEDDING_FUNCTION(form_data.query),
                 k=form_data.k if form_data.k else request.app.state.config.TOP_K,
             )
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
     except Exception as e:
         log.exception(e)
         raise HTTPException(
@@ -1471,6 +1502,32 @@ def query_collection_handler(
     user=Depends(get_verified_user),
 ):
     try:
+        # Check if any collections need re-indexing
+        missing_collections = []
+        if VECTOR_DB_CLIENT:
+            for collection_name in form_data.collection_names:
+                if not VECTOR_DB_CLIENT.has_collection(collection_name):
+                    missing_collections.append(collection_name)
+
+        # Attempt to re-index missing file collections
+        for collection_name in missing_collections:
+            if collection_name.startswith("file-"):
+                file_id = collection_name.replace("file-", "")
+                log.info(
+                    f"Attempting to re-index missing file collection: {collection_name}"
+                )
+
+                if reindex_file_on_demand(file_id, request, user):
+                    log.info(f"Successfully re-indexed file {file_id}")
+                else:
+                    log.warning(f"Failed to re-index file {file_id}")
+                    # Remove the failed collection from the query
+                    form_data.collection_names.remove(collection_name)
+
+        # If no collections remain, return empty results
+        if not form_data.collection_names:
+            return []
+
         if request.app.state.config.ENABLE_RAG_HYBRID_SEARCH:
             return query_collection_with_hybrid_search(
                 collection_names=form_data.collection_names,
@@ -2182,6 +2239,9 @@ def api_comprehensive_cleanup(max_age_days: int = None, user=Depends(get_admin_u
         orphaned_result = cleanup_orphaned_vectors()
         web_search_result = cleanup_expired_web_searches(max_age_days)
         chat_files_result = cleanup_orphaned_chat_files()
+        old_collections_result = cleanup_old_chat_collections(
+            max_age_days=1
+        )  # 1 day for collection cleanup
 
         return {
             "status": "success",
@@ -2191,10 +2251,43 @@ def api_comprehensive_cleanup(max_age_days: int = None, user=Depends(get_admin_u
                 "orphaned_vectors": orphaned_result,
                 "web_search_vectors": web_search_result,
                 "chat_files": chat_files_result,
+                "old_collections": old_collections_result,
             },
         }
     except Exception as e:
         log.error(f"Comprehensive vector cleanup API failed: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "status": "error",
+                "timestamp": datetime.now().isoformat(),
+                "error": str(e),
+            },
+        )
+
+
+@router.post("/maintenance/cleanup/old-collections")
+def api_cleanup_old_collections(max_age_days: int = 1, user=Depends(get_admin_user)):
+    """
+    API endpoint to cleanup old chat file collections to prevent uncontrolled growth.
+
+    This addresses the concern about accumulating collections since conversations
+    don't have an expiry and users don't delete old conversations.
+
+    Collections older than max_age_days will be deleted but can be re-created on-demand.
+    Used by K8s CronJobs for proactive collection management.
+    """
+    try:
+        result = cleanup_old_chat_collections(max_age_days)
+        return {
+            "status": "success",
+            "timestamp": datetime.now().isoformat(),
+            "max_age_days": max_age_days,
+            "cleanup_result": result,
+            "note": "Deleted collections can be recreated on-demand when accessed",
+        }
+    except Exception as e:
+        log.error(f"Old collections cleanup API failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={
@@ -2407,6 +2500,227 @@ def cleanup_orphaned_files_by_reference():
         error_msg = f"Error in reference-based file cleanup: {e}"
         log.error(error_msg)
         return {"error": error_msg}
+
+
+def cleanup_old_chat_collections(max_age_days: int = 1) -> dict:
+    """
+    Clean up old chat file collections to prevent uncontrolled growth.
+    Collections older than max_age_days will be deleted, but can be recreated on-demand.
+
+    This addresses the concern about uncontrolled growth of Qdrant collections
+    since conversations don't have an expiry and users don't delete old conversations.
+
+    Args:
+        max_age_days: Age threshold in days (default: 1 day for quick cleanup)
+
+    Returns:
+        dict: Summary of cleanup operations
+    """
+    try:
+        cleanup_summary = {
+            "collections_checked": 0,
+            "old_collections_found": 0,
+            "collections_deleted": 0,
+            "kb_collections_preserved": 0,
+            "web_search_collections_preserved": 0,
+            "errors": [],
+        }
+
+        log.info(
+            f"Starting cleanup of chat collections older than {max_age_days} days..."
+        )
+
+        if not VECTOR_DB_CLIENT:
+            log.warning("Vector DB client not available")
+            return {"error": "Vector DB client not available"}
+
+        # Get all collections
+        try:
+            if hasattr(VECTOR_DB_CLIENT.client, "get_collections"):
+                collections_response = VECTOR_DB_CLIENT.client.get_collections()
+                collections = collections_response.collections
+            else:
+                log.error("Vector DB client does not support get_collections method")
+                return {
+                    "error": "Vector DB client does not support get_collections method"
+                }
+        except Exception as e:
+            log.error(f"Failed to get collections: {e}")
+            return {"error": f"Failed to get collections: {e}"}
+
+        # Get knowledge base files to preserve their collections
+        kb_file_ids = set()
+        try:
+            existing_knowledge_bases = Knowledges.get_knowledge_bases()
+            for kb in existing_knowledge_bases:
+                if kb.data and isinstance(kb.data, dict):
+                    file_ids = kb.data.get("file_ids", [])
+                    if isinstance(file_ids, list):
+                        kb_file_ids.update(file_ids)
+            log.info(f"Found {len(kb_file_ids)} knowledge base files to preserve")
+        except Exception as e:
+            log.error(f"Error getting knowledge base files: {e}")
+            kb_file_ids = set()
+
+        cutoff_time = datetime.now() - timedelta(days=max_age_days)
+
+        for collection in collections:
+            cleanup_summary["collections_checked"] += 1
+            collection_name = collection.name
+
+            # Skip knowledge base collections
+            if collection_name.startswith("file-"):
+                file_id = collection_name.replace("file-", "")
+                if file_id in kb_file_ids:
+                    cleanup_summary["kb_collections_preserved"] += 1
+                    log.debug(f"Preserving KB collection: {collection_name}")
+                    continue
+
+            # Skip web search collections (they have their own cleanup)
+            if collection_name.startswith("web-search-"):
+                cleanup_summary["web_search_collections_preserved"] += 1
+                log.debug(f"Preserving web search collection: {collection_name}")
+                continue
+
+            # Skip knowledge collections (these are permanent)
+            if not collection_name.startswith("file-"):
+                log.debug(f"Skipping non-file collection: {collection_name}")
+                continue
+
+            # Check collection age by checking the corresponding file's creation time
+            try:
+                # For file collections, check if the file still exists and is old
+                is_old_collection = False
+                if collection_name.startswith("file-"):
+                    file_id = collection_name.replace("file-", "")
+
+                    # Get file from database to check its age
+                    try:
+                        file = Files.get_file_by_id(file_id)
+                        if file:
+                            # Check if file is old based on its creation timestamp
+                            if hasattr(file, "created_at") and file.created_at:
+                                if file.created_at < cutoff_time:
+                                    is_old_collection = True
+                            else:
+                                # If no timestamp, consider it old for cleanup
+                                is_old_collection = True
+                        else:
+                            # File doesn't exist in database, collection is orphaned
+                            is_old_collection = True
+                    except Exception as e:
+                        log.debug(f"Could not check file {file_id} age: {e}")
+                        # If we can't check the file, assume collection is old for cleanup
+                        is_old_collection = True
+
+                if is_old_collection:
+                    cleanup_summary["old_collections_found"] += 1
+
+                    # Delete the old collection
+                    VECTOR_DB_CLIENT.delete_collection(collection_name)
+                    cleanup_summary["collections_deleted"] += 1
+                    log.info(f"Deleted old chat collection: {collection_name}")
+                else:
+                    log.debug(f"Collection {collection_name} is recent, preserving")
+
+            except Exception as e:
+                error_msg = f"Error processing collection {collection_name}: {e}"
+                log.error(error_msg)
+                cleanup_summary["errors"].append(error_msg)
+
+        log.info(f"Old chat collections cleanup completed: {cleanup_summary}")
+        return cleanup_summary
+
+    except Exception as e:
+        error_msg = f"Error in old chat collections cleanup: {e}"
+        log.error(error_msg)
+        return {"error": error_msg}
+
+
+def reindex_file_on_demand(file_id: str, request: Request, user=None) -> bool:
+    """
+    Re-index a file on-demand if its collection was deleted during cleanup.
+    This enables the "re-index on the fly if needed" approach suggested in the PR.
+
+    Args:
+        file_id: ID of the file to re-index
+        request: FastAPI request object for accessing app state
+        user: User object for permissions
+
+    Returns:
+        bool: True if re-indexing was successful, False otherwise
+    """
+    try:
+        log.info(f"Re-indexing file {file_id} on demand...")
+
+        # Get file from database
+        file = Files.get_file_by_id(file_id)
+        if not file:
+            log.error(f"File {file_id} not found in database")
+            return False
+
+        # Check if collection already exists
+        collection_name = f"file-{file_id}"
+        if VECTOR_DB_CLIENT and VECTOR_DB_CLIENT.has_collection(collection_name):
+            log.debug(
+                f"Collection {collection_name} already exists, no re-indexing needed"
+            )
+            return True
+
+        # Re-create the collection by processing the file
+        log.info(f"Re-creating collection for file {file_id}: {file.filename}")
+
+        # Get the file content from the database (it's already stored there)
+        try:
+            if hasattr(file, "data") and file.data and "content" in file.data:
+                file_content = file.data["content"]
+                log.info(f"Using file content from database for {file_id}")
+            else:
+                # Fallback: try to load from storage
+                file_content_bytes = Storage.get_file(file.path)
+                if not file_content_bytes:
+                    log.error(f"Could not load file content for {file_id}")
+                    return False
+                file_content = file_content_bytes.decode("utf-8", errors="ignore")
+                log.info(f"Loaded file content from storage for {file_id}")
+        except Exception as e:
+            log.error(f"Error loading file content for {file_id}: {e}")
+            return False
+
+        # Process the file content and create vectors
+        try:
+            # Create documents from the content
+            docs = [
+                Document(page_content=file_content, metadata={"source": file.filename})
+            ]
+
+            # Use the existing save_docs_to_vector_db function
+            collection_name = f"file-{file_id}"
+            result = save_docs_to_vector_db(
+                request=request,
+                docs=docs,
+                collection_name=collection_name,
+                metadata={
+                    "file_id": file_id,
+                    "filename": file.filename,
+                },
+                user=user,
+            )
+
+            if result:
+                log.info(f"Successfully re-indexed file {file_id}")
+                return True
+            else:
+                log.error(f"Failed to save vectors for file {file_id}")
+                return False
+
+        except Exception as e:
+            log.error(f"Error re-indexing file {file_id}: {e}")
+            return False
+
+    except Exception as e:
+        log.error(f"Error in on-demand re-indexing for file {file_id}: {e}")
+        return False
 
 
 def cleanup_orphaned_chat_files() -> dict:

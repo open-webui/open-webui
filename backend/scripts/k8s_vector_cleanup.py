@@ -91,7 +91,13 @@ def main():
 
         # Log cleanup configuration
         web_search_expiry_days = int(os.getenv("VECTOR_DB_WEB_SEARCH_EXPIRY_DAYS", "7"))
+        collection_cleanup_days = int(
+            os.getenv("VECTOR_DB_COLLECTION_CLEANUP_DAYS", "1")
+        )
         logger.info(f"⏰ Web search cleanup: {web_search_expiry_days} days retention")
+        logger.info(
+            f"⏰ Collection cleanup: {collection_cleanup_days} days retention (prevents uncontrolled growth)"
+        )
 
         logger.info("✓ Environment validation completed")
 
@@ -101,6 +107,7 @@ def main():
             cleanup_expired_web_searches,
             cleanup_orphaned_chat_files,
             cleanup_orphaned_files_by_reference,
+            cleanup_old_chat_collections,
         )
         from open_webui.models.knowledge import Knowledges
 
@@ -152,7 +159,23 @@ def main():
         #     else:
         #         logger.info("✓ [DRY RUN] Would clean orphaned chat files")
 
-        # 3. Clean up expired web search results
+        # 3. Clean up old chat collections to prevent uncontrolled growth
+        collection_cleanup_days = int(
+            os.getenv("VECTOR_DB_COLLECTION_CLEANUP_DAYS", "1")
+        )
+        logger.info(
+            f"🔍 Cleaning chat collections older than {collection_cleanup_days} days..."
+        )
+        if not args.dry_run:
+            result = cleanup_old_chat_collections(max_age_days=collection_cleanup_days)
+            cleanup_results["old_collections"] = result
+            logger.info(f"✓ Old collections cleanup: {result}")
+        else:
+            logger.info(
+                f"✓ [DRY RUN] Would clean chat collections older than {collection_cleanup_days} days"
+            )
+
+        # 4. Clean up expired web search results
         logger.info(
             f"🔍 Cleaning web search results older than {web_search_expiry_days} days..."
         )

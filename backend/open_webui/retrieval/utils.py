@@ -245,6 +245,151 @@ def query_collection(
                     if result is not None:
                         results.append(result.model_dump())
                 except Exception as e:
+                    # Check if this is a "collection not found" error and try to re-index
+                    error_str = str(e)
+                    if "doesn't exist" in error_str or "not found" in error_str.lower():
+                        log.info(
+                            f"Collection {collection_name} not found, attempting re-indexing..."
+                        )
+
+                        # Extract file ID from collection name (format: file-{file_id})
+                        if collection_name.startswith("file-"):
+                            file_id = collection_name.replace("file-", "")
+
+                            # Try to re-index the file
+                            try:
+                                from open_webui.routers.retrieval import (
+                                    reindex_file_on_demand,
+                                )
+                                from open_webui.models.users import Users
+
+                                # Get the file to find the user
+                                file = Files.get_file_by_id(file_id)
+                                if file:
+                                    # Get user object
+                                    user = (
+                                        Users.get_user_by_id(file.user_id)
+                                        if file.user_id
+                                        else None
+                                    )
+
+                                    # Import the main app to get current configuration
+                                    try:
+                                        from open_webui.main import app as main_app
+
+                                        current_config = main_app.state.config
+                                        current_ef = getattr(main_app.state, "ef", None)
+                                    except ImportError:
+                                        # Fallback: get configuration from database/environment
+                                        try:
+                                            from open_webui.config import (
+                                                RAG_EMBEDDING_ENGINE,
+                                                RAG_EMBEDDING_MODEL,
+                                                RAG_TEXT_SPLITTER,
+                                                CHUNK_SIZE,
+                                                CHUNK_OVERLAP,
+                                                RAG_RERANKING_MODEL,
+                                                RAG_EMBEDDING_BATCH_SIZE,
+                                                DEFAULT_RAG_TEMPLATE,
+                                            )
+
+                                            current_config = type(
+                                                "obj",
+                                                (object,),
+                                                {
+                                                    "RAG_EMBEDDING_ENGINE": RAG_EMBEDDING_ENGINE.value,
+                                                    "RAG_EMBEDDING_MODEL": RAG_EMBEDDING_MODEL.value,
+                                                    "TEXT_SPLITTER": RAG_TEXT_SPLITTER.value,
+                                                    "CHUNK_SIZE": CHUNK_SIZE.value,
+                                                    "CHUNK_OVERLAP": CHUNK_OVERLAP.value,
+                                                    "RAG_TEMPLATE": DEFAULT_RAG_TEMPLATE,
+                                                    "RAG_RERANKING_MODEL": RAG_RERANKING_MODEL.value,
+                                                    "RAG_EMBEDDING_BATCH_SIZE": RAG_EMBEDDING_BATCH_SIZE.value,
+                                                    "RAG_OPENAI_API_BASE_URL": "",
+                                                    "RAG_OPENAI_API_KEY": "",
+                                                    "RAG_OLLAMA_BASE_URL": "",
+                                                    "RAG_OLLAMA_API_KEY": "",
+                                                },
+                                            )()
+                                        except ImportError:
+                                            # Ultimate fallback with minimal defaults
+                                            current_config = type(
+                                                "obj",
+                                                (object,),
+                                                {
+                                                    "RAG_EMBEDDING_ENGINE": "",
+                                                    "RAG_EMBEDDING_MODEL": "sentence-transformers/all-MiniLM-L6-v2",
+                                                    "TEXT_SPLITTER": "character",
+                                                    "CHUNK_SIZE": 1000,
+                                                    "CHUNK_OVERLAP": 100,
+                                                    "RAG_TEMPLATE": "",
+                                                    "RAG_RERANKING_MODEL": "",
+                                                    "RAG_EMBEDDING_BATCH_SIZE": 1,
+                                                    "RAG_OPENAI_API_BASE_URL": "",
+                                                    "RAG_OPENAI_API_KEY": "",
+                                                    "RAG_OLLAMA_BASE_URL": "",
+                                                    "RAG_OLLAMA_API_KEY": "",
+                                                },
+                                            )()
+                                        current_ef = None
+
+                                    # Create a mock request object with current configuration and embedding function
+                                    class MockRequest:
+                                        def __init__(self, config, ef):
+                                            # Create a mock app with state and current config
+                                            self.app = type(
+                                                "obj",
+                                                (object,),
+                                                {
+                                                    "state": type(
+                                                        "obj",
+                                                        (object,),
+                                                        {"config": config, "ef": ef},
+                                                    )()
+                                                },
+                                            )()
+
+                                    mock_request = MockRequest(
+                                        current_config, current_ef
+                                    )
+
+                                    # Attempt re-indexing (correct parameter order: file_id first, then request)
+                                    if reindex_file_on_demand(
+                                        file_id, mock_request, user
+                                    ):
+                                        log.info(
+                                            f"Re-indexing successful for {file_id}, retrying query..."
+                                        )
+
+                                        # Retry the query after successful re-indexing
+                                        try:
+                                            result = query_doc(
+                                                collection_name=collection_name,
+                                                k=k,
+                                                query_embedding=query_embedding,
+                                            )
+                                            if result is not None:
+                                                results.append(result.model_dump())
+                                                log.info(
+                                                    f"Query successful after re-indexing for {collection_name}"
+                                                )
+                                                continue  # Skip the error logging below
+                                        except Exception as retry_e:
+                                            log.error(
+                                                f"Query failed even after re-indexing {collection_name}: {retry_e}"
+                                            )
+                                    else:
+                                        log.error(f"Re-indexing failed for {file_id}")
+                                else:
+                                    log.error(
+                                        f"File {file_id} not found in database for re-indexing"
+                                    )
+                            except Exception as reindex_e:
+                                log.error(
+                                    f"Error during re-indexing attempt for {file_id}: {reindex_e}"
+                                )
+
+                    # Log the original error if re-indexing wasn't attempted or failed
                     log.exception(f"Error when querying the collection: {e}")
             else:
                 pass
