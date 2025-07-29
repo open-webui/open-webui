@@ -789,7 +789,8 @@
 					importChatHandler(e.detail);
 				}}
 				on:drop={async (e) => {
-					const { type, id, item } = e.detail;
+					const data = JSON.parse(e.detail);
+					const { type, id, item } = data;
 
 					if (type === 'chat') {
 						let chat = await getChatById(localStorage.token, id).catch((error) => {
@@ -855,7 +856,8 @@
 								importChatHandler(e.detail, true);
 							}}
 							on:drop={async (e) => {
-								const { type, id, item } = e.detail;
+								const data = JSON.parse(e.detail);
+								const { type, id, item } = data;
 
 								if (type === 'chat') {
 									let chat = await getChatById(localStorage.token, id).catch((error) => {
