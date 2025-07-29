@@ -101,7 +101,7 @@
 		>
 			<div class="flex flex-col">
 				<div
-					class="pb-[27px] text-neutrals-800 text-[18px] leading-[26px] font-bold dark:text-gray-200"
+					class="pb-[20px] text-neutrals-800 text-[18px] leading-[26px] font-bold dark:text-gray-200"
 				>
 					{#if title !== ''}
 						{title}
@@ -131,7 +131,7 @@
 					</div>
 				</slot>
 
-				<div class="flex justify-end gap-[6px]">
+				<div class="flex justify-end gap-[6px] mt-[20px]">
 					<button
 						class="px-[12px] py-[8px] bg-white border border-neutrals-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white font-medium rounded-full transition"
 						on:click={() => {

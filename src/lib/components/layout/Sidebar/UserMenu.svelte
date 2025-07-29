@@ -231,7 +231,7 @@
 			transition={(e) => fade(e, { duration: 100 })}
 		>
 			<button
-				class="flex justify-between items-center border-b border-gray-100 dark:border-transparent px-[16px] py-[11px] w-full transition cursor-pointer"
+				class="flex justify-between items-center border-b border-gray-100 dark:border-transparent px-[16px] py-[11px] w-full transition cursor-pointer hover:bg-gradient-bg-2 dark:hover:bg-gray-850"
 				on:click={() => changeLanguage(document.documentElement.lang === 'en-US' ? 'ar' : 'en-US')}
 			>
 				<div class=" self-center truncate gap-[8px] text-[17px] leading-[22px]">
@@ -243,7 +243,7 @@
 			</button>
 			{#if role === 'admin'}
 			<div
-				class="flex px-[16px] py-[11px] w-full items-center justify-between border-b border-gray-100 dark:border-transparent"
+				class="flex px-[16px] py-[11px] w-full items-center justify-between border-b border-gray-100 dark:border-transparent hover:bg-gradient-bg-2 dark:hover:bg-gray-850"
 			>
 				<label class="flex items-center gap-[8px] text-[17px] leading-[22px]">
 					{$i18n.t('Notifications')}</label
@@ -271,7 +271,7 @@
             {/if}
             
             <div
-                class="flex px-[16px] py-[11px] w-full items-center justify-between border-b border-gray-100 dark:border-transparent"
+                class="flex px-[16px] py-[11px] w-full items-center justify-between border-b border-gray-100 dark:border-transparent hover:bg-gradient-bg-2 dark:hover:bg-gray-850"
             >
                 <label for="theme-toggle" class="flex items-center gap-[8px] text-[17px] leading-[22px]">
                     {$i18n?.t?.('Theme') || 'Theme'}
@@ -300,7 +300,7 @@
             
             {#if role === 'admin'}
                 <button
-                    class="flex justify-between items-center border-b border-gray-100 dark:border-transparent px-[16px] py-[11px] w-full transition hover:bg-gray-50 dark:hover:bg-gray-700"
+                    class="flex justify-between items-center border-b border-gray-100 dark:border-transparent px-[16px] py-[11px] w-full transition hover:bg-gradient-bg-2 dark:hover:bg-gray-850"
                     on:click={async () => {
                         await showSettings.set(true);
                         show = false;
@@ -320,7 +320,7 @@
             {/if}
             
             <button
-                class="flex justify-between items-center border-b border-gray-100 dark:border-transparent px-[16px] py-[11px] w-full transition hover:bg-gray-50 dark:hover:bg-gray-700"
+                class="flex justify-between items-center border-b border-gray-100 dark:border-transparent px-[16px] py-[11px] w-full transition hover:bg-gradient-bg-2 dark:hover:bg-gray-850"
                 on:click={() => {
                     dispatch('show', 'archived-chat');
                     show = false;
@@ -340,7 +340,7 @@
 
             {#if role === 'admin'}
                 <button
-                    class="flex justify-between items-center border-b border-gray-100 dark:border-transparent px-[16px] py-[11px] w-full transition hover:bg-gray-50 dark:hover:bg-gray-700"
+                    class="flex justify-between items-center border-b border-gray-100 dark:border-transparent px-[16px] py-[11px] w-full transition hover:bg-gradient-bg-2 dark:hover:bg-gray-850"
                     on:click={() => {
                         goto('/playground');
                         show = false;
@@ -359,7 +359,7 @@
                 </button>
 
                 <button
-                    class="flex justify-between items-center border-b border-gray-100 dark:border-transparent px-[16px] py-[11px] w-full transition hover:bg-gray-50 dark:hover:bg-gray-700"
+                    class="flex justify-between items-center border-b border-gray-100 dark:border-transparent px-[16px] py-[11px] w-full transition hover:bg-gradient-bg-2 dark:hover:bg-gray-850"
                     on:click={() => {
                         goto('/admin');
                         show = false;
@@ -382,7 +382,7 @@
                 <hr class="border-gray-100 dark:border-gray-800 my-1 p-0" />
 
                 <DropdownMenu.Item
-                    class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-neutrals-hover dark:hover:bg-gray-800 rounded-md transition"
+                    class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-gradient-bg-2 dark:hover:bg-gray-850 rounded-md transition"
                     id="documentation-link"
                     on:click={() => {
                         window.open('https://docs.openwebui.com', '_blank');
@@ -396,7 +396,7 @@
                 </DropdownMenu.Item>
 
                 <DropdownMenu.Item
-                    class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-neutrals-hover dark:hover:bg-gray-800 rounded-md transition"
+                    class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-gradient-bg-2 dark:hover:bg-gray-850 rounded-md transition"
                     id="releases-link"
                     on:click={() => {
                         window.open('https://github.com/open-webui/open-webui/releases', '_blank');
@@ -410,7 +410,7 @@
                 </DropdownMenu.Item>
 
                 <DropdownMenu.Item
-                    class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-neutrals-hover dark:hover:bg-gray-800 rounded-md transition"
+                    class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-gradient-bg-2 dark:hover:bg-gray-850 rounded-md transition"
                     id="shortcuts-button"
                     on:click={() => {
                         showShortcuts = !showShortcuts;
@@ -426,7 +426,7 @@
 
             {#if role === 'admin'}
                 <button
-                    class="flex px-[16px] justify-between items-center border-b border-gray-100 dark:border-transparent py-[11px] w-full transition hover:bg-gray-50 dark:hover:bg-gray-700"
+                    class="flex px-[16px] justify-between items-center border-b border-gray-100 dark:border-transparent py-[11px] w-full transition hover:bg-gradient-bg-2 dark:hover:bg-gray-850"
                     on:click={() => {
                         goto('/playground');
                     }}
@@ -441,7 +441,7 @@
             {/if}
 
             <button
-                class="flex px-[16px] justify-between items-center border-b border-gray-100 dark:border-transparent py-[11px] w-full transition hover:bg-gray-50 dark:hover:bg-gray-700"
+                class="flex px-[16px] justify-between items-center border-b border-gray-100 dark:border-transparent py-[11px] w-full transition hover:bg-gradient-bg-2 dark:hover:bg-gray-850"
                 on:click={async () => {
                     const res = await userSignOut();
                     user.set(null);

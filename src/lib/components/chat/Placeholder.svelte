@@ -187,25 +187,12 @@
 				</div> -->
 
 					<div class="welcome-text gap-40">
-						{#if !$mobile && !webSearchEnabled}
-							<div class="flex justify-center">
-							<img
-								src="/PlaceHolder.png"
-								alt="Placeholder Logo"
-								class="h-[250px] w-[250px]"
-							/>
-							</div>
-						{/if}
 						<div>
 							<h1
 								class="pb-[16px] text-typography-titles text-[28px] leading-[22px] font-Inter_SemiBold"
 							>
 							{$i18n.t('Hey')} {$user.name}👋🏼
 							</h1>
-							{#if !$mobile}
-								<p class=" text-typography-subtext text-[14px] leading-[26px]">
-									{$i18n.t("Quick answers. Clear drafts. Trusted knowledge. What's next? Enter your request to begin.")}
-								</p>{/if}
 						</div>
 					</div>
 

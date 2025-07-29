@@ -62,7 +62,8 @@ export default {
 				custom: '0px 24px 48px 0px rgba(0, 0, 0, 0.08)',
 				custom2: '0px 48px 100px 0px rgba(0, 84, 242, 0.08)',
 				custom3: ' 0px 10px 20px 0px rgba(0, 0, 0, 0.10)',
-				custom4: '0px 16px 30px 0px rgba(103, 124, 161, 0.10)'
+				custom4: '0px 16px 30px 0px rgba(103, 124, 161, 0.10)',
+				custom5: '0px 50px 80px 0px rgba(204, 221, 252, 0.30))',
 			},
 			typography: {
 				DEFAULT: {

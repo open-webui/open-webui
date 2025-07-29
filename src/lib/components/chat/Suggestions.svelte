@@ -95,7 +95,7 @@
 				<button
 					class="flex {$mobile
 						? 'items-center gap-[4px] flex-shrink-0'
-						: 'shadow-custom3 flex-col items-start'} text-typography-subtext hover:text-typography-titles border border-[#E5EBF3] hover:border-[#90C9FF] p-[16px] rounded-[20px] whitespace-nowrap overflow-hidden text-ellipsis transition
+						: 'shadow-custom3 flex-col items-start'} text-typography-subtext hover:text-typography-titles border border-[#E5EBF3] hover:border-[#90C9FF] p-[16px] rounded-[8px] whitespace-nowrap overflow-hidden text-ellipsis transition
 							bg-light-bg dark:border-[#2D3642] dark:hover:border-[#004280] dark:hover:text-white"
 					style="animation-delay: {idx * 60}ms;"
 					on:click={() => dispatch('select', prompt.content)}

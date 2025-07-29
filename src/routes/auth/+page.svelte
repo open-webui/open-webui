@@ -303,7 +303,7 @@
 												</button>
 											{:else}
 												<button
-													class="mb-[24px] cursor-pointer text-[14px] leading-[24px] w-full p-[16px] pl-[16px] rounded-[8px] text-[rgba(7, 45, 90, 0.88)] bg-[linear-gradient(90deg,_#A5C7E6_0%,_#CEE7FF_38.94%,_#A5C7E6_100%)] shadow-[inset_6px_3px_8px_0_#BFDBF6]"
+													class="mb-[24px] cursor-pointer text-[14px] leading-[24px] py-[6px] pl-[8px] pr-[16px] w-full h-[48px] rounded-[12px] text-[rgba(7, 45, 90, 0.88)] bg-[linear-gradient(90deg,_#A5C7E6_0%,_#CEE7FF_38.94%,_#A5C7E6_100%)] shadow-[inset_6px_3px_8px_0_#BFDBF6]"
 													type="submit"
 												>
 													{mode === 'signin' ? $i18n.t('Sign in') : $i18n.t('Create Account')}
