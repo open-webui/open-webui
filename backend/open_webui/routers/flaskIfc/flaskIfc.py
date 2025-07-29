@@ -1,4 +1,4 @@
-from urllib.parse import quote as url_quote
+from urllib.parse import quote as url_quotie
 from flask import Flask, render_template, request, jsonify, make_response
 import subprocess
 import threading
@@ -12,6 +12,8 @@ import serial
 import serial_script
 import re
 from werkzeug.datastructures import FileStorage
+from werkzeug.utils import secure_filename
+
 
 
 job_status = {"running": False, "result": "", "thread": None}
@@ -187,13 +189,11 @@ def actual_transfer(file):
         # Save the file if it exists
         if file:
             filename = file.filename #secure_filename(file.filename)
-            process = subprocess.Popen(["./copy2fpga-x86.sh", filename], text=True)
-            copy2fpgax86prints = "Starting copy2fpga-x86 and sending file..."
-            print (copy2fpgax86prints)
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            time.sleep(3)
+            process = subprocess.Popen(["./copy2fpga-setup.sh"], text=True)
+            stdout, stderr = process.communicate()
             script_path = "./recvFromHost "
             command = f"cd {exe_path}; {script_path} {destn_path}{filename}"
+            
             def scriptRecvFromHost():
                  try:
                      result = serial_script.send_serial_command(port,baudrate,command)
@@ -207,20 +207,46 @@ def actual_transfer(file):
             thread = threading.Thread(target=scriptRecvFromHost)
             job_status = {"running": True, "result": "", "thread": thread}
             thread.start()
-            thread.join()
-            stdout, stderr = process.communicate()
-        time.sleep(1)
-        read_cmd_from_serial(port,baudrate,f"cd {destn_path}; ls -lt")
-        time.sleep(1)
+            
+            time.sleep(1) 
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            process = subprocess.Popen(["./copy2fpga-x86.sh", filename], text=True)  
+            process.wait(timeout=5000)
+            print("Starting copy2fpga-x86 and sending file..." )
+            time.sleep(1) 
+            
+            
 
 @app.route('/api/receive', methods=['GET', 'POST'])
 def receive_pull_model():
+
     data = request.get_json()
-    path = "/usr/share/ollama/.ollama/models/blobs/" + data['actual_name']
+
+    time.sleep(1)
+    
+    read_cmd_from_serial(port,baudrate,f"cd {destn_path}; rm {data['human_name']}")
+    
+    time.sleep(1)
+
+    if os.path.exists("/var/snap/ollama/common/models/blobs/"):
+        path = "/var/snap/ollama/common/models/blobs/" + data['actual_name']
+    elif os.path.exists("/usr/share/ollama/.ollama/models/blobs/"):
+        path = "/usr/share/ollama/.ollama/models/blobs/" + data['actual_name']
+    else:
+        return "No valid filepath found"
+
     file_obj = open(path, "rb")
     upload = FileStorage(stream=file_obj, filename=data['actual_name'], content_type="application/octet-stream")
 
     actual_transfer(upload)
+    
+    time.sleep(1)
+
+    read_cmd_from_serial(port,baudrate,f"cd {destn_path}; mv {data['actual_name']} {data['human_name']}")
+
+    time.sleep(1)
+
+    read_cmd_from_serial(port,baudrate,f"cd {destn_path}; ls -lt")
 
     return manual_response(content="File Download Done",thinking="File Download Done",), 200
 

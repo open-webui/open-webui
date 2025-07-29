@@ -717,13 +717,13 @@ async def unload_model(
 
 
 @router.post("/api/pullhelper")
-async def pull_model_helper(user=Depends(get_admin_user),gold:str = ''):
+async def pull_model_helper(user=Depends(get_admin_user),gold:str = '',human_name:str = ''):
     
 
     url = DEFAULT_FLASK_URL #"http://127.0.0.1:5000"
 
     # Admin should be able to pull models from any source
-    payload = {'actual_name':gold}
+    payload = {'actual_name':gold,'human_name':human_name}
     
     
     return await send_post_request(
@@ -760,6 +760,7 @@ async def pull_model(
     )
     
     GOLDEN_NAME = None
+    print('HUMAN MODEL NAME: ',form_data["model"])
     async for line in original_post_request.body_iterator:
         decoded = line.decode("utf-8")
         if GOLDEN_NAME == None:
@@ -772,7 +773,7 @@ async def pull_model(
     GOLDEN_NAME = '-'.join(GOLDEN_NAME.split(':'))
     print(GOLDEN_NAME) #sha-key
     
-    await pull_model_helper(user,GOLDEN_NAME)
+    await pull_model_helper(user,GOLDEN_NAME,form_data["model"])
 
     return original_post_request
 
