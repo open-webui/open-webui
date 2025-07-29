@@ -201,7 +201,8 @@
 				}
 			});
 
-			while (true) {
+			const condition = true
+			while (condition) {
 				try {
 					const { value, done } = await reader.read();
 					if (done) break;
@@ -252,11 +253,8 @@
 					}
 				} catch (error) {
 					console.log(error);
-					if (typeof error !== 'string') {
-						error = error.message;
-					}
-
-					toast.error(`${error}`);
+					let errorMessage = (typeof error === 'string') ? error : error.message;
+					toast.error(`${errorMessage}`);
 					// opts.callback({ success: false, error, modelName: opts.modelName });
 					break;
 				}
