@@ -58,7 +58,12 @@ class BatchOrchestrator:
     async def run_daily_batch(self) -> BatchResult:
         """
         Main daily batch processing function
-        Should be called at 00:00 daily via cron or scheduler
+        Should be called at 13:00 (1 PM) CET daily via cron or scheduler
+        
+        Timing rationale:
+        - NBP publishes USD/PLN rates at 11:30 AM CET based on 11:00 AM calculations
+        - 13:00 execution ensures same-day exchange rates are used for daily cost conversion
+        - Eliminates 1-day lag where Monday's costs used Friday's rates
         """
         batch_start = time.time()
         self.logger.start()
@@ -230,7 +235,7 @@ class BatchOrchestrator:
 async def run_daily_batch() -> Dict[str, Any]:
     """
     Entry point for daily batch processing
-    Can be called from cron job or scheduler
+    Should be scheduled for 13:00 (1 PM) CET daily to align with NBP exchange rate publication
     """
     orchestrator = BatchOrchestrator()
     result = await orchestrator.run_daily_batch()

@@ -87,6 +87,7 @@ from open_webui.routers import (
     utils,
     usage_tracking,
     user_mapping_admin,
+    batch_admin,
 )
 
 from open_webui.routers.retrieval import (
@@ -562,6 +563,13 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         log.error(f"Failed to initialize organization usage background sync: {e}")
 
+    # Initialize daily batch processing scheduler
+    try:
+        from open_webui.utils.batch_scheduler import init_batch_scheduler
+        await init_batch_scheduler()
+    except Exception as e:
+        log.error(f"Failed to initialize daily batch scheduler: {e}")
+
     if app.state.config.ENABLE_BASE_MODELS_CACHE:
         await get_all_models(
             Request(
@@ -591,6 +599,13 @@ async def lifespan(app: FastAPI):
         await shutdown_background_sync()
     except Exception as e:
         log.error(f"Failed to shutdown organization usage background sync: {e}")
+
+    # Shutdown daily batch processing scheduler
+    try:
+        from open_webui.utils.batch_scheduler import shutdown_batch_scheduler
+        await shutdown_batch_scheduler()
+    except Exception as e:
+        log.error(f"Failed to shutdown daily batch scheduler: {e}")
 
     # Shutdown NBP client
     try:
@@ -1259,6 +1274,7 @@ app.include_router(
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
 app.include_router(usage_tracking.router, prefix="/api/v1/usage-tracking", tags=["usage-tracking"])
 app.include_router(user_mapping_admin.router, prefix="/api/v1/admin/user-mapping", tags=["admin", "user-mapping"])
+app.include_router(batch_admin.router, prefix="/api/v1/admin/batch", tags=["admin", "batch"])
 
 
 try:

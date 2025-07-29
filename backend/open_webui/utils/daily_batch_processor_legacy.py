@@ -55,7 +55,7 @@ class DailyBatchProcessor:
 async def run_daily_batch() -> Dict[str, Any]:
     """
     Entry point for daily batch processing
-    Can be called from cron job or scheduler
+    Should be scheduled for 13:00 (1 PM) CET daily to align with NBP exchange rate publication
     
     This is the primary API - use this instead of DailyBatchProcessor class
     """

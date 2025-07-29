@@ -22,7 +22,7 @@ class OpenRouterModelsAPI:
     
     def __init__(self):
         self.api_url = "https://openrouter.ai/api/v1/models"
-        # Cache for 24 hours - prices update daily at 00:00
+        # Cache for 24 hours - prices update daily at 13:00 CET
         self.cache = TTLCache(maxsize=1, ttl=86400)
         self.cache_key = "openrouter_models"
         

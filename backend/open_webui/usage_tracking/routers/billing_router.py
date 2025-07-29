@@ -36,7 +36,7 @@ async def get_my_organization_subscription_billing(user=Depends(get_current_user
 async def get_mai_model_pricing():
     """
     Get mAI model pricing information - dynamically fetched from OpenRouter API
-    Prices are cached for 24 hours and refreshed daily at 00:00
+    Prices are cached for 24 hours and refreshed daily at 13:00 CET
     """
     try:
         result = await pricing_service.get_model_pricing()

@@ -16,7 +16,7 @@ class PricingService:
     async def get_model_pricing() -> Dict[str, Any]:
         """
         Get mAI model pricing information - dynamically fetched from OpenRouter API
-        Prices are cached for 24 hours and refreshed daily at 00:00
+        Prices are cached for 24 hours and refreshed daily at 13:00 CET
         """
         try:
             from open_webui.utils.openrouter_models import get_dynamic_model_pricing

@@ -55,7 +55,7 @@ def generate_performance_report():
     print("├─ 100 clients: ~48% faster (connection pooling benefits)")
     print("└─ 300+ clients: ~50% faster (optimized batch processing)")
     
-    print("\n✅ Ready for production deployment at 00:00 daily!")
+    print("\n✅ Ready for production deployment at 13:00 (1 PM CET) daily!")
 
 if __name__ == "__main__":
     generate_performance_report()
