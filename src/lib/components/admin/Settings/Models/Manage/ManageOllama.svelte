@@ -82,7 +82,8 @@
 					.pipeThrough(splitStream('\n'))
 					.getReader();
 
-				while (true) {
+				const condition = true
+				while (condition) {
 					try {
 						const { value, done } = await reader.read();
 						if (done) break;
@@ -166,7 +167,8 @@
 				}
 			});
 
-			while (true) {
+			const condition = true
+			while (condition) {
 				try {
 					const { value, done } = await reader.read();
 					if (done) break;
@@ -217,12 +219,9 @@
 					}
 				} catch (err) {
 					console.error(err);
-					if (typeof err !== 'string') {
-						err = err.message;
-					}
-
-					toast.error(`${err}`);
-					// opts.callback({ success: false, error, modelName: opts.modelName });
+					const errorMessage = (typeof err === 'string') ? err : err.message;
+					toast.error(`${errorMessage}`);
+					// opts.callback({ success: false, error: errorMessage, modelName: opts.modelName });
 				}
 			}
 
@@ -290,7 +289,8 @@
 				.pipeThrough(splitStream('\n'))
 				.getReader();
 
-			while (true) {
+			const condition = true
+			while (condition) {
 				const { value, done } = await reader.read();
 				if (done) break;
 
@@ -341,7 +341,8 @@
 					.pipeThrough(splitStream('\n'))
 					.getReader();
 
-				while (true) {
+				const condition = true
+				while (condition) {
 					const { value, done } = await reader.read();
 					if (done) break;
 
@@ -472,7 +473,8 @@
 				.pipeThrough(splitStream('\n'))
 				.getReader();
 
-			while (true) {
+			const condition = true
+			while (condition) {
 				const { value, done } = await reader.read();
 				if (done) break;
 

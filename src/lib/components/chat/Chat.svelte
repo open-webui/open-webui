@@ -169,7 +169,9 @@
 						imageGenerationEnabled = input.imageGenerationEnabled;
 						codeInterpreterEnabled = input.codeInterpreterEnabled;
 					}
-				} catch (e) {}
+				} catch (e) {
+					toast.error($i18n.t('Error'));
+				}
 			}
 
 			if (chatIdProp && (await loadChat())) {
@@ -206,20 +208,19 @@
 		prompt = '';
 		files = [];
 		chatFiles = [];
-		
+
 		// Clear tool and filter selections
 		selectedToolIds = [];
 		selectedFilterIds = [];
-		
+
 		// Reset feature toggles
 		webSearchEnabled = false;
 		imageGenerationEnabled = false;
 		codeInterpreterEnabled = false;
-		
+
 		// Reset model selection
 		atSelectedModel = undefined;
-		
-		
+
 		// Reset the store after clearing
 		clearMessageInput.set(false);
 	}
@@ -493,7 +494,9 @@
 					imageGenerationEnabled = input.imageGenerationEnabled;
 					codeInterpreterEnabled = input.codeInterpreterEnabled;
 				}
-			} catch (e) {}
+			} catch (e) {
+				toast.error($i18n.t('Error'));
+			}
 		}
 
 		if (!chatIdProp) {
@@ -1366,7 +1369,10 @@
 	const submitPrompt = async (userPrompt, { _raw = false } = {}) => {
 		console.log('submitPrompt', userPrompt, $chatId);
 
-		if(sessionStorage.selectedModels && sessionStorage.selectedModels !== JSON.stringify(selectedModels)) {
+		if (
+			sessionStorage.selectedModels &&
+			sessionStorage.selectedModels !== JSON.stringify(selectedModels)
+		) {
 			selectedModels = JSON.parse(sessionStorage.selectedModels);
 		}
 
@@ -2095,8 +2101,10 @@
 							{initNewChat}
 						/>
 
-						<div class="m-auto h-full max-w-[1440px] md:px-4 lg:px-8 w-full flex-1 flex flex-col flex-auto z-10 @container">
-							{#if false && $settings?.landingPageMode === 'chat' || createMessagesList(history, history.currentId).length > 0}
+						<div
+							class="m-auto h-full max-w-[1440px] md:px-4 lg:px-8 w-full flex-1 flex flex-col flex-auto z-10 @container"
+						>
+							{#if (false && $settings?.landingPageMode === 'chat') || createMessagesList(history, history.currentId).length > 0}
 								<div
 									class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden"
 									id="messages-container"
