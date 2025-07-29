@@ -16,6 +16,8 @@ from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.code_interpreter import execute_code_jupyter
 from open_webui.env import SRC_LOG_LEVELS
 
+from open_webui.routers.chats import get_chat_by_id
+from fastapi import Path
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
@@ -86,6 +88,54 @@ async def get_html_from_markdown(
 class ChatForm(BaseModel):
     title: str
     messages: list[dict]
+
+@router.get("/export/{format}/{chat_id}")
+async def export_chat_by_id(
+    format: str = Path(..., regex="^(pdf|txt|json)$"),
+    chat_id: str = Path(...),
+    user=Depends(get_verified_user),
+):
+    log.warning(f"Export Chat: format req- {format}")
+
+    try:
+        chat_data = await get_chat_by_id(chat_id, user)
+
+        if not chat_data:
+            raise HTTPException(status_code=404, detail="Chat not found")
+
+        form = ChatTitleMessagesForm(
+            title=chat_data.title,
+            messages=list(chat_data.chat["history"]["messages"].values())
+        )
+
+        if format == "pdf":
+            pdf_bytes = PDFGenerator(form).generate_chat_pdf()
+            return Response(
+                content=pdf_bytes,
+                media_type="application/pdf",
+                headers={"Content-Disposition": f"attachment;filename={chat_id}.pdf"},
+            )
+
+        elif format == "txt":
+            text_output = "\n\n".join(
+                [f"{msg['role'].title()}:\n{msg['content']}" for msg in form.messages]
+            )
+            return Response(
+                content=text_output,
+                media_type="text/plain",
+                headers={"Content-Disposition": f"attachment;filename={chat_id}.txt"},
+            )
+
+        elif format == "json":
+            return Response(
+                content=form.json(),
+                media_type="application/json",
+                headers={"Content-Disposition": f"attachment;filename={chat_id}.json"},
+            )
+
+    except Exception as e:
+        log.exception(f"Export error for chat {chat_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to export chat")
 
 
 @router.post("/pdf")
