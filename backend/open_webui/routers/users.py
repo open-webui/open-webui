@@ -388,9 +388,16 @@ async def update_user_by_id(
                 )
 
         if form_data.password:
-            hashed = get_password_hash(form_data.password)
-            log.debug(f"hashed: {hashed}")
-            Auths.update_user_password_by_id(user_id, hashed)
+            # Check if user is an OAuth user - if so, prevent password update
+            if user.oauth_sub:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=ERROR_MESSAGES.PASSWORD_CHANGE_NOT_ALLOWED_FOR_OAUTH,
+                )
+            else:
+                hashed = get_password_hash(form_data.password)
+                log.debug(f"hashed: {hashed}")
+                Auths.update_user_password_by_id(user_id, hashed)
 
         Auths.update_email_by_id(user_id, form_data.email.lower())
         updated_user = Users.update_user_by_id(
