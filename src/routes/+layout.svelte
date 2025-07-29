@@ -650,6 +650,8 @@
 	<title>{$WEBUI_NAME}</title>
 	<link crossorigin="anonymous" rel="icon" href="{WEBUI_BASE_URL}/static/favicon.png" />
 
+	<!-- External CSS Themes -->
+	<link rel="stylesheet" type="text/css" href="/themes/alest-gol.css" />
 	<!-- rosepine themes have been disabled as it's not up to date with our latest version. -->
 	<!-- feel free to make a PR to fix if anyone wants to see it return -->
 	<!-- <link rel="stylesheet" type="text/css" href="/themes/rosepine.css" />

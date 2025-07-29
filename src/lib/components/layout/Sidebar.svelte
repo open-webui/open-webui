@@ -480,6 +480,18 @@
 			? ''
 			: 'invisible'}"
 	>
+		<!-- 🧡 BRANDING PARCERIA ALEST + GOL -->
+		<div class="px-3 py-2 mb-2 border-b border-gray-200 dark:border-gray-800">
+			<div class="flex items-center justify-center space-x-2 mb-1">
+				<img src="/AlestLogo.png" alt="Alest" class="h-6 w-auto partnership-logo" />
+				<span class="text-partnership-orange font-semibold text-lg">×</span>
+				<img src="/LogoGol.png" alt="GOL" class="h-6 w-auto partnership-logo" />
+			</div>
+			<p class="text-xs text-center text-gray-500 dark:text-gray-400">
+				Parceria Alest + GOL
+			</p>
+		</div>
+
 		<div class="px-1.5 flex justify-between space-x-1 text-gray-600 dark:text-gray-400">
 			<button
 				class=" cursor-pointer p-[7px] flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-900 transition"

@@ -21,6 +21,27 @@ export default {
 					850: 'var(--color-gray-850, #262626)',
 					900: 'var(--color-gray-900, #171717)',
 					950: 'var(--color-gray-950, #0d0d0d)'
+				},
+				// 🧡 TEMA PARCERIA ALEST + GOL
+				'alest-gol': {
+					50: '#fff7ed',
+					100: '#ffedd5',
+					200: '#fed7aa',
+					300: '#fdba74',
+					400: '#fb923c',
+					500: '#FF6600', // Cor principal da parceria
+					600: '#ea580c',
+					700: '#c2410c',
+					800: '#9a3412',
+					900: '#7c2d12'
+				},
+				'partnership': {
+					orange: '#FF6600',    // Laranja unificado
+					blue: '#003366',      // Azul GOL
+					gray: '#2C2C2C',      // Cinza Alest
+					'light-orange': '#FF8533',
+					'dark-orange': '#CC5200',
+					'pale-orange': '#FFE5CC'
 				}
 			},
 			typography: {

@@ -1,0 +1,228 @@
+/* 🧡 TEMA ALEST + GOL - PARCERIA CORPORATIVA */
+/* Baseado nas especificações da documentação oficial */
+/* Cor principal: #FF6600 (Laranja unificado da parceria) */
+
+.alest-gol * {
+	color: #ffffff !important;
+	stroke: #FF6600 !important;
+}
+
+.alest-gol .app > * {
+	background-color: #1a1a1a !important;
+}
+
+/* 🧡 HEADER/NAVBAR - Branding prominente */
+.alest-gol #nav {
+	background-color: #003366 !important; /* Azul GOL */
+	border-bottom: 2px solid #FF6600 !important; /* Laranja principal */
+}
+
+.alest-gol .navbar {
+	background: linear-gradient(135deg, #FF6600 0%, #003366 100%) !important;
+}
+
+/* 🧡 SIDEBAR - Navegação corporativa */
+.alest-gol .py-2\.5.my-auto.flex.flex-col.justify-between.h-screen {
+	background: #2C2C2C !important; /* Cinza Alest */
+	border-right: 1px solid #FF6600 !important;
+}
+
+.alest-gol .sidebar {
+	background-color: #2C2C2C !important;
+}
+
+/* 🧡 CHAT INTERFACE - Conversação premium */
+.alest-gol .chat-message {
+	border: 1px solid #FF6600 !important;
+}
+
+.alest-gol .message-user {
+	background: linear-gradient(135deg, #FF8533, #FF6600) !important;
+}
+
+.alest-gol .message-assistant {
+	background: #333333 !important;
+	border-left: 4px solid #FF6600 !important;
+}
+
+/* 🧡 CARDS/PANELS - Containers com identidade visual */
+.alest-gol .bg-white.dark\:bg-gray-800,
+.alest-gol .card,
+.alest-gol .panel {
+	background: #333333 !important;
+	border: 1px solid #FF6600 !important;
+	border-radius: 8px !important;
+}
+
+/* 🧡 BUTTONS - CTAs com cores da marca */
+.alest-gol .btn-primary,
+.alest-gol button[class*="bg-blue"],
+.alest-gol .button-primary {
+	background: linear-gradient(135deg, #FF6600, #CC5200) !important;
+	border: none !important;
+	color: #ffffff !important;
+	transition: all 0.3s ease !important;
+}
+
+.alest-gol .btn-primary:hover,
+.alest-gol button[class*="bg-blue"]:hover {
+	background: linear-gradient(135deg, #FF8533, #FF6600) !important;
+	transform: translateY(-1px) !important;
+	box-shadow: 0 4px 12px rgba(255, 102, 0, 0.3) !important;
+}
+
+/* 🧡 INPUT DE CHAT - Interface premium */
+.alest-gol #chat-input,
+.alest-gol .message-input,
+.alest-gol textarea {
+	background: #404040 !important;
+	border: 2px solid #FF6600 !important;
+	border-radius: 8px !important;
+	color: #ffffff !important;
+}
+
+.alest-gol #chat-input:focus,
+.alest-gol textarea:focus {
+	border-color: #FF8533 !important;
+	box-shadow: 0 0 0 3px rgba(255, 102, 0, 0.2) !important;
+}
+
+/* 🧡 FORMS - Inputs elegantes e funcionais */
+.alest-gol input[type="text"],
+.alest-gol input[type="email"],
+.alest-gol input[type="password"],
+.alest-gol select {
+	background: #404040 !important;
+	border: 1px solid #FF6600 !important;
+	border-radius: 6px !important;
+	color: #ffffff !important;
+}
+
+/* 🧡 ÍCONES - Linguagem visual unificada */
+.alest-gol .w-4.h-4,
+.alest-gol .icon,
+.alest-gol svg {
+	fill: #FF6600 !important;
+	stroke: #FF6600 !important;
+}
+
+/* 🧡 LOADING STATES - Animações branded */
+.alest-gol .spinner,
+.alest-gol .loading {
+	color: #FF6600 !important;
+	border-color: #FF6600 !important;
+}
+
+.alest-gol .loading-dot {
+	background: #FF6600 !important;
+}
+
+/* 🧡 MODAL/DIALOGS - Overlays profissionais */
+.alest-gol .modal,
+.alest-gol .dialog {
+	background: #2C2C2C !important;
+	border: 2px solid #FF6600 !important;
+	border-radius: 12px !important;
+}
+
+.alest-gol .modal-header {
+	background: linear-gradient(135deg, #FF6600, #003366) !important;
+	color: #ffffff !important;
+}
+
+/* 🧡 MENU E DROPDOWN */
+.alest-gol .dropdown-menu {
+	background: #333333 !important;
+	border: 1px solid #FF6600 !important;
+	border-radius: 6px !important;
+}
+
+.alest-gol .dropdown-item:hover {
+	background: rgba(255, 102, 0, 0.1) !important;
+}
+
+/* 🧡 SCROLLBAR CUSTOMIZADA */
+.alest-gol ::-webkit-scrollbar {
+	width: 8px !important;
+}
+
+.alest-gol ::-webkit-scrollbar-track {
+	background: #2C2C2C !important;
+}
+
+.alest-gol ::-webkit-scrollbar-thumb {
+	background: #FF6600 !important;
+	border-radius: 4px !important;
+}
+
+.alest-gol ::-webkit-scrollbar-thumb:hover {
+	background: #FF8533 !important;
+}
+
+/* 🧡 TIPOGRAFIA - Hierarquia clara */
+.alest-gol h1, .alest-gol h2, .alest-gol h3 {
+	color: #FF6600 !important;
+	font-weight: 600 !important;
+}
+
+.alest-gol .text-primary {
+	color: #FF6600 !important;
+}
+
+.alest-gol .text-secondary {
+	color: #FFE5CC !important;
+}
+
+/* 🧡 LINKS */
+.alest-gol a {
+	color: #FF8533 !important;
+	text-decoration: none !important;
+}
+
+.alest-gol a:hover {
+	color: #FF6600 !important;
+	text-decoration: underline !important;
+}
+
+/* 🧡 GRADIENTES E PATTERNS */
+.alest-gol .gradient-bg {
+	background: linear-gradient(135deg, #FF6600 0%, #003366 50%, #2C2C2C 100%) !important;
+}
+
+.alest-gol .pattern-overlay {
+	background-image: 
+		radial-gradient(circle at 25% 25%, rgba(255, 102, 0, 0.1) 0%, transparent 50%),
+		radial-gradient(circle at 75% 75%, rgba(0, 51, 102, 0.1) 0%, transparent 50%) !important;
+}
+
+/* 🧡 RESPONSIVIDADE */
+@media (max-width: 768px) {
+	.alest-gol .sidebar {
+		background: rgba(44, 44, 44, 0.95) !important;
+		backdrop-filter: blur(10px) !important;
+	}
+}
+
+/* 🧡 ANIMAÇÕES SUAVES */
+.alest-gol * {
+	transition: all 0.3s ease !important;
+}
+
+.alest-gol .hover-lift:hover {
+	transform: translateY(-2px) !important;
+	box-shadow: 0 8px 25px rgba(255, 102, 0, 0.2) !important;
+}
+
+/* 🧡 PARCERIA BRANDING - Elementos específicos */
+.alest-gol .partnership-badge {
+	background: linear-gradient(135deg, #FF6600, #003366) !important;
+	color: #ffffff !important;
+	padding: 4px 12px !important;
+	border-radius: 20px !important;
+	font-size: 12px !important;
+	font-weight: 600 !important;
+}
+
+.alest-gol .partnership-logo {
+	filter: drop-shadow(0 2px 4px rgba(255, 102, 0, 0.3)) !important;
+} 
