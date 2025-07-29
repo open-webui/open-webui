@@ -69,6 +69,7 @@
 	import { updateUserSettings } from '$lib/apis/users';
 
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
+	import { isRTL } from '$lib/i18n';
 
 	const i18n = getContext('i18n');
 
@@ -994,6 +995,7 @@
 								<div class="">
 									{#if $settings?.richTextInput ?? true}
 										<div
+										dir={ $isRTL ? 'rtl' : 'ltr' }
 											class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-gray-100 outline-hidden w-full text-[16px] leading-[24px] text-disabled resize-none h-fit max-h-80 overflow-auto"
 											id="chat-input-container"
 										>
