@@ -91,7 +91,7 @@ def _calculate_top_models_by_tokens(client_org_id: str, current_month_start: dat
 
 ### 1.5 UI Display Logic
 **File**: `/src/lib/components/admin/Settings/MyOrganizationUsage/components/UsageStatsTab.svelte`
-**Lines**: 41-54
+**Lines**: 44-62 (Updated 2025-01-29)
 
 ```svelte
 {#if usageData.monthly_summary?.top_models && usageData.monthly_summary.top_models.length > 0}
@@ -169,7 +169,7 @@ The active users calculation now properly queries the `ClientUserDailyUsage` tab
 
 ### 2.5 UI Display Logic
 **File**: `/src/lib/components/admin/Settings/MyOrganizationUsage/components/UsageStatsTab.svelte`
-**Lines**: 61-64
+**Lines**: 67-71 (Updated 2025-01-29)
 
 ```svelte
 <div class="flex justify-between">
@@ -280,6 +280,40 @@ ClientOrganization (1) -> (*) ClientModelDailyUsage
 - **History Retention**: Indefinite (no automatic cleanup)
 
 ## 6. ✅ RESOLVED: Critical Frontend/Backend Fixes (2025-01-29)
+
+### 6.0 ✅ Daily Breakdown Table Simplification (2025-01-29)
+
+**✅ UI SIMPLIFICATION COMPLETED**:
+**File**: `/src/lib/components/admin/Settings/MyOrganizationUsage/components/UsageStatsTab.svelte`
+
+**Changes Implemented**:
+```typescript
+// BEFORE (7 columns - complex display)
+const tableHeaders = [
+    $i18n.t('Date'),
+    $i18n.t('Day'), 
+    $i18n.t('Tokens'),
+    $i18n.t('Cost'),
+    $i18n.t('Requests'),
+    $i18n.t('Primary Model'),
+    $i18n.t('Last Activity')
+];
+
+// AFTER (3 columns - simplified display)
+const tableHeaders = [
+    $i18n.t('Date'),
+    $i18n.t('Tokens'),
+    $i18n.t('Cost')
+];
+```
+
+**Impact**: 
+- **Improved UX**: Cleaner, more focused daily breakdown table
+- **Essential Data**: Shows only Date, Tokens, and Cost columns
+- **Maintained Functionality**: Proper formatting and responsive design preserved
+- **Code Quality**: Removed unused formatters and template code
+
+### 6.1 ✅ Monthly Summary Display Fix (2025-01-29)
 
 ### 6.0 ✅ Monthly Summary Display Fix (2025-01-29)
 
@@ -426,9 +460,9 @@ WHERE client_org_id = 'test_client'
 
 ## Conclusion
 
-**PRODUCTION ACHIEVEMENT (2025-01-27)**: The Monthly Summary feature has been transformed into a world-class system with **100% OpenRouter usage tracking** and production-quality real-time data capture.
+**PRODUCTION ACHIEVEMENT (2025-01-29)**: The Monthly Summary feature has been transformed into a world-class system with **100% OpenRouter usage tracking**, production-quality real-time data capture, and **simplified user interface**.
 
-The system now implements sophisticated real-time usage capture combined with daily batch processing, providing accurate business intelligence patterns with complete data integrity.
+The system now implements sophisticated real-time usage capture combined with daily batch processing, providing accurate business intelligence patterns with complete data integrity and an optimized user experience through the simplified daily breakdown table.
 
 ### Production Excellence Achieved
 
