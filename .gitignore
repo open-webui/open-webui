@@ -313,3 +313,4 @@ cypress/screenshots
 /.vscode
 .vscode/launch.json
 backend/.vscode/launch.json
+backend/tool_related_info/set_env.sh

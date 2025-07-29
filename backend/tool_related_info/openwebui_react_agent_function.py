@@ -339,51 +339,51 @@ class SearchPayload(BaseModel):
 class Pipe:
     class Valves(BaseModel):
         AZURE_API_KEY: str = Field(
-            default=os.getenv("AZURE_API_KEY", "default"),
+            default=os.getenv("AZURE_API_KEY", ""),
             description="API key for Azure OpenAI services.",
         )
         AZURE_ENDPOINT: str = Field(
-            default=os.getenv("AZURE_ENDPOINT", "https://llm-api.amd.com"),
+            default=os.getenv("AZURE_ENDPOINT", ""),
             description="Endpoint URL for Azure OpenAI services.",
         )
         AZURE_API_VERSION: str = Field(
-            default=os.getenv("AZURE_API_VERSION", "default"),
+            default=os.getenv("AZURE_API_VERSION", ""),
             description="API version for Azure OpenAI services.",
         )
         AZURE_SUBSCRIPTION_KEY: str = Field(
-            default=os.getenv("AZURE_SUBSCRIPTION_KEY", "7cce1ac73d98442c844bb040b983114c"),
+            default=os.getenv("AZURE_SUBSCRIPTION_KEY", ""),
             description="Subscription key for Azure services.",
         )
         LLAMAINDEX_MODEL_NAME: str = Field(
-            default=os.getenv("LLAMAINDEX_MODEL_NAME", "gpt-4.1"),
+            default=os.getenv("LLAMAINDEX_MODEL_NAME", ""),
             description="Deployment name of the LLM model to use.",
         )
         LLAMAINDEX_EMBEDDING_MODEL_NAME: str = Field(
-            default="text-embedding-ada-002",
+            default=os.getenv("LLAMAINDEX_EMBEDDING_MODEL_NAME", ""),
             description="Name of the embedding model to use.",
         )
         AZURE_SEARCH_API_KEY: str = Field(
-            default=os.getenv("AZURE_SEARCH_API_KEY", "SbEBqR8O01YJ7WwhFJo32DGEhG4pRqk9YZ7rjGEfrhAzSeAnryoB"),
+            default=os.getenv("AZURE_SEARCH_API_KEY", ""),
             description="API key for Azure AI Search.",
         )
         AZURE_SEARCH_ENDPOINT: str = Field(
-            default=os.getenv("AZURE_SEARCH_ENDPOINT", "https://pdase-cepm-search.search.windows.net"),
+            default=os.getenv("AZURE_SEARCH_ENDPOINT", ""),
             description="Endpoint URL for Azure AI Search.",
         )
         AZURE_SEARCH_ADMIN_KEY: str = Field(
-            default=os.getenv("AZURE_SEARCH_ADMIN_KEY", "cNK2ZylNjszCu7HnNhFYQYPLyHOGkP4nJh6cZxa0rGAzSeDa9nt7"),
+            default=os.getenv("AZURE_SEARCH_ADMIN_KEY", ""),
             description="Admin key for Azure AI Search.",
         )
         LANGFUSE_PUBLIC_KEY: Optional[str] = Field(
-            default=os.getenv("LANGFUSE_PUBLIC_KEY", "pk-lf-dc0f9f5d-7f02-472c-9032-8b5112a92d0c"),
+            default=os.getenv("LANGFUSE_PUBLIC_KEY"),
             description="Public key for Langfuse observability.",
         )
         LANGFUSE_SECRET_KEY: Optional[str] = Field(
-            default=os.getenv("LANGFUSE_SECRET_KEY", "sk-lf-15e0fb26-b64f-4cc7-bab9-5b073daad037"),
+            default=os.getenv("LANGFUSE_SECRET_KEY"),
             description="Secret key for Langfuse observability.",
         )
         LANGFUSE_HOST: Optional[str] = Field(
-            default=os.getenv("LANGFUSE_HOST", "https://us.cloud.langfuse.com"),
+            default=os.getenv("LANGFUSE_HOST"),
             description="Host URL for Langfuse.",
         )
 
@@ -519,7 +519,9 @@ class Pipe:
         """
         try:
             if __tools__:
-                self.logger.info(f"Tools received: {json.dumps(__tools__, default=str)}")
+                self.logger.info(
+                    f"Tools received: {json.dumps(__tools__, default=str)}"
+                )
             else:
                 self.logger.info("No tools received in __tools__.")
 
@@ -580,19 +582,23 @@ class Pipe:
                         for endpoint, api_key in endpoints.items():
                             try:
                                 spec_url = f"{endpoint}/openapi.json"
-                                self.logger.info(f"Loading OpenAPI spec from: {spec_url}")
+                                self.logger.info(
+                                    f"Loading OpenAPI spec from: {spec_url}"
+                                )
 
                                 # Fetch the OpenAPI spec manually to inspect and modify it
                                 loop = asyncio.get_running_loop()
                                 response = await loop.run_in_executor(
-                                    None, 
-                                    lambda: requests.get(spec_url, timeout=30)
+                                    None, lambda: requests.get(spec_url, timeout=30)
                                 )
                                 response.raise_for_status()
                                 spec_dict = response.json()
 
                                 # If 'servers' key is missing, add it based on the endpoint
-                                if "servers" not in spec_dict or not spec_dict["servers"]:
+                                if (
+                                    "servers" not in spec_dict
+                                    or not spec_dict["servers"]
+                                ):
                                     self.logger.warning(
                                         f"OpenAPI spec from {spec_url} is missing 'servers' key. "
                                         f"Injecting default server URL: {endpoint}"
@@ -805,7 +811,9 @@ if __name__ == "__main__":
 
         try:
             # The pipe method is an async generator, so we iterate over it with 'async for'
-            async for chunk in pipe_instance.pipe(body=body, __user__=params["__user__"] , __tools__=params["__tools__"]):
+            async for chunk in pipe_instance.pipe(
+                body=body, __user__=params["__user__"], __tools__=params["__tools__"]
+            ):
                 print(chunk, end="", flush=True)
         except Exception as e:
             logger.error(f"Error during pipe test: {e}", exc_info=True)
