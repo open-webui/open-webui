@@ -73,17 +73,26 @@ class ClientRepository:
             from open_webui.config import ORGANIZATION_NAME
             import hashlib
             
+            print(f"🔍 [DEBUG] ClientRepository.get_environment_client_id called")
+            print(f"🔍 [DEBUG] ORGANIZATION_NAME: {ORGANIZATION_NAME}")
+            
             # For environment-based setup, get the first (and should be only) active client
             orgs = ClientOrganizationDB.get_all_active_clients()
+            print(f"🔍 [DEBUG] Found {len(orgs)} active client organizations")
             if orgs:
-                return orgs[0].id
+                client_id = orgs[0].id
+                print(f"🔍 [DEBUG] Using first active client ID: {client_id}")
+                return client_id
             
             # Fallback: create a default client org ID based on organization name
             if ORGANIZATION_NAME:
                 org_hash = hashlib.md5(ORGANIZATION_NAME.encode()).hexdigest()[:8]
-                return f"env_client_{org_hash}"
+                fallback_id = f"env_client_{org_hash}"
+                print(f"🔍 [DEBUG] No active clients found, using fallback ID: {fallback_id}")
+                return fallback_id
             
+            print(f"🔍 [DEBUG] No organization name set, using default ID")
             return "env_client_default"
         except Exception as e:
-            print(f"Warning: Failed to get client org ID: {e}")
+            print(f"❌ [DEBUG] Failed to get client org ID: {e}")
             return None

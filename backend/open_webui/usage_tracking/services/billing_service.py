@@ -25,14 +25,20 @@ class BillingService:
             from open_webui.utils.user_mapping import get_external_user_id, user_mapping_service
             from open_webui.config import ORGANIZATION_NAME
             
+            print(f"🔍 [DEBUG] Starting get_user_usage_breakdown...")
+            
             # Get current exchange rate
             usd_pln_rate = await get_current_usd_pln_rate()
+            print(f"🔍 [DEBUG] USD/PLN rate: {usd_pln_rate}")
             
             # Get client organization ID
             if not client_org_id:
                 client_org_id = self.client_repo.get_environment_client_id()
             
+            print(f"🔍 [DEBUG] Client org ID: {client_org_id}")
+            
             if not client_org_id:
+                print("❌ [DEBUG] No client organization found")
                 return {
                     "success": False,
                     "error": "No client organization found",
@@ -43,6 +49,8 @@ class BillingService:
             
             # Get actual usage data from database using current month calculation
             usage_data = self.usage_repo.get_usage_by_user(client_org_id)
+            print(f"🔍 [DEBUG] Raw usage data from DB: {len(usage_data)} records")
+            print(f"🔍 [DEBUG] Usage data sample: {usage_data[:2] if usage_data else 'No data'}")
             
             # Get all users to create complete list with user details
             all_users = Users.get_users()

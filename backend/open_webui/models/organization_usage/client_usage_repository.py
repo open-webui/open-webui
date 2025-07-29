@@ -304,12 +304,33 @@ class ClientUsageRepository(IClientUsageRepository):
                 if not start_date:
                     start_date = end_date.replace(day=1)  # First day of current month
                 
+                print(f"🔍 [DEBUG] ClientUsageRepository.get_usage_by_user: client_org_id={client_org_id}, date_range={start_date} to {end_date}")
+                
                 # Query per-user daily usage
                 user_records = db.query(ClientUserDailyUsage).filter(
                     ClientUserDailyUsage.client_org_id == client_org_id,
                     ClientUserDailyUsage.usage_date >= start_date,
                     ClientUserDailyUsage.usage_date <= end_date
                 ).all()
+                
+                print(f"🔍 [DEBUG] Found {len(user_records)} user usage records in DB")
+                
+                # Let's also check if there are ANY records for this client
+                all_client_records = db.query(ClientUserDailyUsage).filter(
+                    ClientUserDailyUsage.client_org_id == client_org_id
+                ).all()
+                print(f"🔍 [DEBUG] Total records for client {client_org_id}: {len(all_client_records)}")
+                
+                # Check if there are any records at all in the table
+                total_records = db.query(ClientUserDailyUsage).count()
+                print(f"🔍 [DEBUG] Total records in ClientUserDailyUsage table: {total_records}")
+                
+                # Show sample of existing data
+                if total_records > 0:
+                    sample_records = db.query(ClientUserDailyUsage).limit(3).all()
+                    for rec in sample_records:
+                        print(f"🔍 [DEBUG] Sample record: client_id={rec.client_org_id}, user_id={rec.user_id}, date={rec.usage_date}, tokens={rec.total_tokens}")
+                
                 
                 # Aggregate by user
                 user_totals = {}

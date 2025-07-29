@@ -33,7 +33,7 @@
 			data={userUsageData || []} 
 			emptyMessage="{$i18n.t('No user usage data available.')}"
 		>
-			{#each data as userUsage}
+			{#each userUsageData as userUsage}
 				<tr>
 					<td class="px-4 py-3 whitespace-nowrap text-sm font-medium">
 						{userUsage.user_id}

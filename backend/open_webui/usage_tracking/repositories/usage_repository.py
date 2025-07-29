@@ -80,8 +80,12 @@ class UsageRepository:
         """Get usage breakdown by user"""
         try:
             from open_webui.models.organization_usage import ClientUsageDB
-            return ClientUsageDB.get_usage_by_user(client_org_id)
-        except Exception:
+            print(f"🔍 [DEBUG] UsageRepository.get_usage_by_user called with client_org_id: {client_org_id}")
+            result = ClientUsageDB.get_usage_by_user(client_org_id)
+            print(f"🔍 [DEBUG] ClientUsageDB.get_usage_by_user returned {len(result)} records")
+            return result
+        except Exception as e:
+            print(f"❌ [DEBUG] Error in UsageRepository.get_usage_by_user: {e}")
             return []
     
     @staticmethod
