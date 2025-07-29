@@ -4,10 +4,40 @@ import time
 #This is just a test to see if I can make changes on my local machine and copy them over to fpga4! Thank you!
 #It worked! Thank you!
 
+#API to do clean up of TXE Manager after aborting the task
+def clean_up_after_abort(ser):
+
+    #Make sure the CTRL_C was effective by sending it two more time
+    ser.write(b'\x03') # b'\x03' is Ctrl-C! 
+    ser.write(b'\x03') # b'\x03' is Ctrl-C! 
+
+    #wait for the CTRL_C to take effect
+
+    time.sleep(3)
+
+    #Login to TXE Manager
+    ser.write(("telnet localhost 8000" +'\n').encode())
+    
+    time.sleep(3)
+    
+    #close the TXE manager application and kill them to restart
+    ser.write(("close all" + '\n').encode())
+
+    time.sleep(3)
+
+    #Restart TXE Manager
+    ser.write(("../install/tsi-start" + '\n').encode())
+
+    #Wait for TXE manager to be up
+    time.sleep(20)
+
+
 def abort_serial_portion(port,baudrate):
     ser = serial.Serial(port, baudrate)
 
     ser.write(b'\x03') # b'\x03' is Ctrl-C! 
+
+    clean_up_after_abort(ser)
 
     ser.close()
 
