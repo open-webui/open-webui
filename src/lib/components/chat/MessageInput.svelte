@@ -1653,7 +1653,7 @@
 																	attachFileEnabled = false;
 																}}
 																type="button"
-																class="flex items-center flex items-center justify-between w-full p-[16px] rounded-[12px] hover:bg-gradient-bg-2 transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden dark:hover:bg-gray-200 {webSearchEnabled ||
+																class="flex items-center flex justify-between w-full p-[16px] rounded-[12px] hover:bg-gradient-bg-2 transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden dark:hover:bg-gray-200 {webSearchEnabled ||
 																($settings?.webSearch ?? false) === 'always'
 																	? 'bg-gradient-bg-2 dark:text-sky-300  dark:bg-sky-200/5'
 																	: 'text-gray-600 dark:text-gray-300 '}"

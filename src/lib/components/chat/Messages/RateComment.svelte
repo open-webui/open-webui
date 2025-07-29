@@ -169,16 +169,28 @@
 		<div class="text-sm font-medium">
 			<div class="flex items-center gap-1">
 				{#if message?.annotation?.rating === 1}
-					<MaterialIcon name="thumb_up" size="1.1rem" color="green" />
+					<div>
+						<MaterialIcon name="thumb_up" size="1.4rem" color="#18795F" />
+						<div class="mt-2 text-[#2FA27F] font-inter text-[24px] font-semibold leading-[30px]">
+							{$i18n.t('Glad that helped!')}
+						</div>
+						<div class="mt-1 text-[#2FA27F] font-inter text-[16px] font-medium leading-[24px]">
+							{$i18n.t('Thank you for your feedback. Please let me know what did you find helpful?')}
+						</div>
+					</div>
 				{:else}
-					<MaterialIcon name="thumb_down" size="1.1rem" color="red" />
+					<div>
+						<MaterialIcon name="thumb_down" size="1.4rem" color="#E6620D" />
+						<div class="mt-2 text-[#E6620D] font-inter text-[24px] font-semibold leading-[30px]">
+							{$i18n.t('Sorry about that')}
+						</div>
+						<div class="mt-1 text-[#E6620D] font-inter text-[16px] font-medium leading-[24px]">
+							{$i18n.t('Help us improve, what went wrong with the response?')}
+						</div>
+					</div>
 				{/if}
-				<span class="text-sm font-medium px-2">
-					{$i18n.t('How would you rate this response?')}
-				</span>
 			</div>
 		</div>
-
 		<!-- <div class=" text-sm">{$i18n.t('Tell us more:')}</div> -->
 
 		<button
