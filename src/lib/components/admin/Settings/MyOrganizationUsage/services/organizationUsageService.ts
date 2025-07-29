@@ -80,7 +80,8 @@ export class OrganizationUsageService {
 			console.log('🔍 getUserUsage - response.success:', response?.success);
 			console.log('🔍 getUserUsage - response.user_usage:', response?.user_usage);
 			
-			if (response?.success && response.user_usage) {
+			// Accept response if it has user_usage array (even if success is false)
+			if (response && Array.isArray(response.user_usage)) {
 				return {
 					success: true,
 					data: response.user_usage
