@@ -1752,17 +1752,21 @@ Respond to the user query using the provided context, incorporating inline citat
 - If the context is unreadable or of poor quality, inform the user and provide the best possible answer.
 - If the answer isn't present in the context but you possess the knowledge, explain this to the user and provide the answer using your own understanding.
 - **Only include inline citations using [source_id] when a <source_id> tag is explicitly provided in the context.**
+- **For web search results (few sources): Cite ALL relevant sources that contain pertinent information.**
+- **For knowledge base queries (many sources): Prioritize citing the most authoritative and relevant sources to avoid overwhelming the response.**
+- **Use multiple citations when different sources provide complementary information.**
 - Do not cite if the <source_id> tag is not provided in the context.
 - Do not use XML tags in your response.
 - Ensure citations are concise and directly related to the information provided.
 
-### Example of Citation:
-If the user asks about a specific topic and the information is found in "whitepaper.pdf" with a provided <source_id>, the response should include the citation like so:
-* "According to the study, the proposed method increases efficiency by 20% [whitepaper.pdf]."
+### Citation Examples:
+Single source: "According to the study, the proposed method increases efficiency by 20% [whitepaper.pdf]."
+Web search with multiple sources: "The current prime minister is Justin Trudeau [https://en.wikipedia.org/wiki/Prime_Minister_of_Canada][https://www.pm.gc.ca/en][https://unpartnerships.un.org/prime-minister-canada-justin-trudeau]."
+Knowledge base with selective citation: "The methodology described in the research shows promising results [research_paper_2023.pdf]."
 If no <source_id> is present, the response should omit the citation.
 
 ### Output:
-Provide a clear and direct response to the user's query, including inline citations in the format [source_id] only when the <source_id> tag is present in the context.
+Provide a clear and direct response to the user's query, including inline citations in the format [source_id] only when the <source_id> tag is present in the context. For web searches (typically ≤5 sources), cite all relevant sources. For knowledge bases (typically >5 sources), focus on the most authoritative sources.
 
 <context>
 {{CONTEXT}}

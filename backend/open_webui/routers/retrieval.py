@@ -1311,19 +1311,121 @@ async def process_web_search(
             log.info(f"✅ Using cached web search results: {cached_collection}")
             # Return cached results without doing new web search
             try:
-                # Query the cached collection to get some sample results
-                result = query_collection(
-                    collection_names=[cached_collection],
-                    queries=[form_data.query],
-                    embedding_function=request.app.state.EMBEDDING_FUNCTION,
-                    k=5,
+                # Get ALL documents from the cached collection to extract ALL original URLs
+                # Don't limit to k results - we want all the original URLs that were cached
+                log.info(
+                    f"Getting all documents from cached collection: {cached_collection}"
+                )
+                cached_result = VECTOR_DB_CLIENT.get(collection_name=cached_collection)
+
+                cached_urls = []
+
+                if cached_result and cached_result.metadatas:
+                    # Extract unique URLs from all cached documents
+                    # NOTE: For Qdrant, metadatas is a list of lists: [[metadata1], [metadata2], [metadata3]]
+                    log.info(
+                        f"Processing {len(cached_result.metadatas)} metadata groups"
+                    )
+                    for i, metadata_group in enumerate(cached_result.metadatas):
+                        # Each metadata_group is a list containing one metadata dict
+                        if isinstance(metadata_group, list) and len(metadata_group) > 0:
+                            metadata = metadata_group[0]  # Get the actual metadata dict
+                            log.info(f"Metadata group {i}: {metadata}")
+                            if isinstance(metadata, dict) and "source" in metadata:
+                                url = metadata["source"]
+                                if url not in cached_urls:
+                                    cached_urls.append(url)
+                                    log.info(f"✅ Added URL from metadata {i}: {url}")
+                            else:
+                                log.warning(
+                                    f"⚠️ Metadata {i} missing 'source' field or not a dict: {metadata}"
+                                )
+                        else:
+                            log.warning(
+                                f"⚠️ Metadata group {i} is not a list or empty: {metadata_group}"
+                            )
+
+                log.info(
+                    f"🎯 Extracted {len(cached_urls)} unique URLs from cached metadata"
                 )
 
+                # If no URLs found, fall back to similarity search
+                if not cached_urls:
+                    log.warning(
+                        "No URLs found in cached metadata, falling back to similarity search"
+                    )
+                    result = query_collection(
+                        collection_names=[cached_collection],
+                        queries=[form_data.query],
+                        embedding_function=request.app.state.EMBEDDING_FUNCTION,
+                        k=request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+                    )
+
+                    if (
+                        result
+                        and result.get("metadatas")
+                        and len(result["metadatas"]) > 0
+                    ):
+                        for metadata in result["metadatas"][0]:
+                            if "source" in metadata:
+                                url = metadata["source"]
+                                if url not in cached_urls:
+                                    cached_urls.append(url)
+
+                # Final fallback
+                if not cached_urls:
+                    log.warning("No URLs found in cached results, using fallback")
+                    cached_urls = ["cached_results"]
+
+                log.info(f"🎯 Returning {len(cached_urls)} cached URLs: {cached_urls}")
                 return {
                     "status": True,
                     "collection_name": cached_collection,
-                    "filenames": ["cached_results"],
-                    "loaded_count": len(result.get("documents", [])),
+                    "filenames": cached_urls,
+                    "loaded_count": (
+                        len(cached_result.metadatas)
+                        if cached_result and cached_result.metadatas
+                        else 0
+                    ),
+                    "cached": True,
+                }
+                if not cached_urls:
+                    log.warning(
+                        "No URLs found in cached metadata, falling back to similarity search"
+                    )
+                    result = query_collection(
+                        collection_names=[cached_collection],
+                        queries=[form_data.query],
+                        embedding_function=request.app.state.EMBEDDING_FUNCTION,
+                        k=request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+                    )
+
+                    if (
+                        result
+                        and result.get("metadatas")
+                        and len(result["metadatas"]) > 0
+                    ):
+                        for metadata in result["metadatas"][0]:
+                            if "source" in metadata:
+                                url = metadata["source"]
+                                if url not in cached_urls:
+                                    cached_urls.append(url)
+
+                # Final fallback
+                if not cached_urls:
+                    log.warning("No URLs found in cached results, using fallback")
+                    cached_urls = ["cached_results"]
+
+                log.info(f"Returning {len(cached_urls)} cached URLs: {cached_urls}")
+                return {
+                    "status": True,
+                    "collection_name": cached_collection,
+                    "filenames": cached_urls,
+                    "loaded_count": (
+                        len(cached_result.metadatas)
+                        if cached_result and cached_result.metadatas
+                        else 0
+                    ),
                     "cached": True,
                 }
             except Exception as e:
