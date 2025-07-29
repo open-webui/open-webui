@@ -68,11 +68,13 @@
 	import SearchNew from '../icons/SearchNew.svelte';
 	import NewChat from '../icons/NewChat.svelte';
 	import ChevronRight from '../icons/ChevronRight.svelte';
+	import ChevronLeft from '../icons/ChevronLeft.svelte';
 	import Home from '../icons/Home.svelte';
 	import MagnifyingGlass from '../icons/MagnifyingGlass.svelte';
 	import LogoText from '../icons/LogoText.svelte';
 	import Toggle from '../icons/Toggle.svelte';
 	import SearchModal from './SearchModal.svelte';
+	import { isRTL } from '$lib/i18n';
 
 	const BREAKPOINT = 768;
 
@@ -701,7 +703,7 @@
 							<!-- Icon -->
 							<div
 								class="flex items-center self-center transition-all duration-300 ease-in-out"
-								class:mr-[8px]={$showSidebar}
+								class:me-[8px]={$showSidebar}
 							>
 								<NewChat />
 							</div>
@@ -737,7 +739,7 @@
 						<!-- Icon -->
 						<div
 							class="flex items-center self-center transition-all duration-300 ease-in-out"
-							class:mr-[8px]={$showSidebar}
+							class:me-[8px]={$showSidebar}
 						>
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
@@ -798,7 +800,7 @@
 						<!-- Icon -->
 						<div
 							class="flex items-center self-center transition-all duration-300 ease-in-out"
-							class:mr-[8px]={$showSidebar}
+							class:me-[8px]={$showSidebar}
 						>
 							<MaterialIcon name="workspaces" size="1.1rem" />
 						</div>
@@ -1159,7 +1161,7 @@
 							}}
 						>
 							<div class="flex">
-								<div class=" self-center {$showSidebar ? 'mr-[8px]' : ''}">
+								<div class=" self-center {$showSidebar ? 'me-[8px]' : ''}">
 									<img
 										src={$user?.profile_image_url}
 										class=" max-w-[30px] object-cover rounded-full"
@@ -1174,7 +1176,15 @@
 									{$user?.name}
 								</div>
 							</div>
-							{#if $showSidebar}<div><ChevronRight /></div>{/if}
+							{#if $showSidebar}
+								<div>
+									{#if $isRTL}
+										<ChevronLeft />
+									{:else}
+										<ChevronRight />
+									{/if}
+								</div>
+							{/if}
 						</button>
 					</UserMenu>
 				{/if}
