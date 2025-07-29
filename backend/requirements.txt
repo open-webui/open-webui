@@ -62,6 +62,7 @@ azure-identity==1.21.0
 azure-storage-blob==12.24.1
 azure-common==1.1.28
 azure-core==1.33.0
+azure-ai-documentintelligence==1.0.0
 
 ## AI & Machine Learning Core
 openai==1.95.1
