@@ -75,6 +75,11 @@ export class OrganizationUsageService {
 		try {
 			const response = await getUsageByUser(token, clientId);
 			
+			// Debug: Log the actual API response
+			console.log('🔍 getUserUsage - Raw API response:', response);
+			console.log('🔍 getUserUsage - response.success:', response?.success);
+			console.log('🔍 getUserUsage - response.user_usage:', response?.user_usage);
+			
 			if (response?.success && response.user_usage) {
 				return {
 					success: true,
