@@ -87,6 +87,7 @@
 			data={usageData.daily_breakdown || []} 
 			emptyMessage="{$i18n.t('No usage data available for this month.')}"
 			{formatters}
+			let:data
 		>
 			{#each data as day}
 				<tr>
