@@ -38,7 +38,7 @@
 			{#if loading.loading}
 				{$i18n.t('Loading pricing information...')}
 			{:else}
-				{$i18n.t('Prices updated daily at 00:00')}
+				{$i18n.t('Prices updated daily at 13:00 CET')}
 			{/if}
 		</div>
 	</div>
