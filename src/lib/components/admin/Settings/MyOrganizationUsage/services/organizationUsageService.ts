@@ -38,6 +38,11 @@ export class OrganizationUsageService {
 				this.createTimeoutPromise()
 			]);
 
+			// Debug: Log raw API response
+			console.log('🔍 Service - Raw API response:', response);
+			console.log('🔍 Service - response.stats:', response?.stats);
+			console.log('🔍 Service - response.stats.monthly_summary:', response?.stats?.monthly_summary);
+
 			if (response?.success && response.stats) {
 				return {
 					success: true,

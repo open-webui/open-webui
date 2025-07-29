@@ -238,6 +238,11 @@ class ClientUsageRepository(IClientUsageRepository):
                     client_org_id, current_month_start, today, db
                 )
                 
+                # Debug: Log the top models calculation
+                print(f"🔍 DEBUG REPO - Client: {client_org_id}")
+                print(f"🔍 DEBUG REPO - Top models calculated: {top_models}")
+                print(f"🔍 DEBUG REPO - Top models length: {len(top_models)}")
+                
                 # Calculate unique users from ClientUserDailyUsage (correct implementation)
                 user_records = db.query(ClientUserDailyUsage.user_id).filter(
                     ClientUserDailyUsage.client_org_id == client_org_id,
@@ -256,6 +261,10 @@ class ClientUsageRepository(IClientUsageRepository):
                     'total_unique_users': total_unique_users,
                     'top_models': top_models
                 }
+                
+                # Debug: Log the complete monthly summary
+                print(f"🔍 DEBUG REPO - Monthly summary: {monthly_summary}")
+                print(f"🔍 DEBUG REPO - Unique users: {total_unique_users}")
                 
                 # Get client name (forward reference resolution)
                 client_name = "Unknown"

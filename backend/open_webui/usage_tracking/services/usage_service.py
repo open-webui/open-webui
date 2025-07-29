@@ -121,6 +121,11 @@ class UsageService:
                 # Get actual usage data using the new admin-focused method
                 stats = await self.usage_repo.get_usage_stats_by_client_async(client_org_id)
                 
+                # Debug: Log the stats to help diagnose the issue
+                print(f"🔍 DEBUG - Client ID: {client_org_id}")
+                print(f"🔍 DEBUG - Stats object: {stats}")
+                print(f"🔍 DEBUG - Monthly summary: {getattr(stats, 'monthly_summary', 'NOT FOUND')}")
+                
                 return {
                     "success": True,
                     "stats": {

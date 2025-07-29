@@ -9,6 +9,14 @@
 	
 	const i18n = getContext('i18n');
 	
+	// Debug: Log usage data to console
+	$: {
+		console.log('🔍 UsageStatsTab - usageData:', usageData);
+		console.log('🔍 UsageStatsTab - monthly_summary:', usageData?.monthly_summary);
+		console.log('🔍 UsageStatsTab - top_models:', usageData?.monthly_summary?.top_models);
+		console.log('🔍 UsageStatsTab - total_unique_users:', usageData?.monthly_summary?.total_unique_users);
+	}
+	
 	const tableHeaders = [
 		$i18n.t('Date'),
 		$i18n.t('Day'),
@@ -71,7 +79,7 @@
 	<div class="bg-white dark:bg-gray-850 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 		<div class="flex items-center justify-between mb-4">
 			<h3 class="text-lg font-medium">{$i18n.t('Daily Breakdown')} - {usageData.current_month?.month || 'Current Month'}</h3>
-			<NoticeCard type="success" title="Updated at 00:00 Daily" showIcon={true} />
+			<NoticeCard type="success" title="Updated daily at 13:00 CET" showIcon={true} />
 		</div>
 		
 		<DataTable 
@@ -109,7 +117,7 @@
 		
 		{#if !usageData.daily_breakdown || usageData.daily_breakdown.length === 0}
 			<div class="text-center py-8">
-				<p class="text-gray-500 dark:text-gray-500 text-sm mt-2">Data is processed daily at 00:00. Usage will appear after first API calls.</p>
+				<p class="text-gray-500 dark:text-gray-500 text-sm mt-2">Data is processed daily at 13:00 CET using current NBP exchange rate. Usage will appear after first API calls.</p>
 			</div>
 		{/if}
 	</div>

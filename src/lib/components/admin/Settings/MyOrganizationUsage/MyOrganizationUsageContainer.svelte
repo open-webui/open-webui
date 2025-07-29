@@ -61,6 +61,11 @@
 		try {
 			const result = await OrganizationUsageService.getUsageSummary($user.token);
 			
+			// Debug: Log API response
+			console.log('🔍 Container - API result:', result);
+			console.log('🔍 Container - result.data:', result.data);
+			console.log('🔍 Container - result.data.monthly_summary:', result.data?.monthly_summary);
+			
 			if (result.success && result.data) {
 				usageActions.setUsageData(result.data, result.clientId);
 			} else {
@@ -214,7 +219,7 @@
 			<svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
 			</svg>
-			Data updated daily at 00:00
+			Data updated daily at 13:00 CET
 		</div>
 	</div>
 
@@ -226,7 +231,7 @@
 	{/if}
 
 	<!-- Daily Batch Processing Status Notice -->
-	<NoticeCard type="info" title="Daily Batch Processing: Data consolidated at 00:00 with NBP exchange rates & monthly totals (1st to current day)">
+	<NoticeCard type="info" title="Daily Batch Processing: Data consolidated at 13:00 CET using current NBP exchange rate & monthly totals (1st to current day)">
 		<div slot="actions" class="text-xs bg-blue-100 dark:bg-blue-800 px-2 py-1 rounded">
 			Business Intelligence
 		</div>
@@ -238,7 +243,7 @@
 			<StatCard
 				title="Total Tokens"
 				value={FormatterService.formatNumber(usageData.current_month?.total_tokens || 0)}
-				subtitle="{usageData.current_month?.month || 'Loading...'} • Batch Calculated"
+				subtitle="{usageData.current_month?.month || 'Loading...'} • Updated daily at 13:00 CET"
 				iconColor="blue"
 				iconPath="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
 			/>
@@ -246,7 +251,7 @@
 			<StatCard
 				title="Total Cost"
 				value={FormatterService.formatDualCurrency(usageData.current_month?.total_cost || 0, usageData.current_month?.total_cost_pln || 0)}
-				subtitle="{currentMonthName} • Batch Calculated"
+				subtitle="{currentMonthName} • Updated daily at 13:00 CET"
 				iconColor="green"
 				iconPath="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
 			/>
@@ -294,7 +299,7 @@
 
 	<!-- Tab Content -->
 	{#if loading.loading}
-		<LoadingState message="{$i18n.t('Loading daily batch data...')}" />
+		<LoadingState message="{$i18n.t('Loading usage data...')}" />
 	{:else if activeTab === 'stats' && usageData}
 		<UsageStatsTab {usageData} />
 	{:else if activeTab === 'users' && $user?.role === 'admin'}
@@ -319,7 +324,7 @@
 			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 				<div>
 					<p class="font-medium text-gray-700 dark:text-gray-300 mb-1">🕰️ Processing Schedule</p>
-					<p>• Data updates automatically at 00:00 daily</p>
+					<p>• Data updates automatically at 13:00 CET daily</p>
 					<p>• Monthly totals calculated from 1st to current day</p>
 					<p>• NBP exchange rates refreshed with holiday-aware logic</p>
 				</div>
@@ -332,7 +337,7 @@
 			</div>
 			<div class="pt-2 border-t border-gray-200 dark:border-gray-600">
 				<p class="text-xs text-gray-500 dark:text-gray-500">
-					<strong>Best viewing time:</strong> After 00:30 daily when batch processing completes. 
+					<strong>Best viewing time:</strong> After 13:30 CET daily when batch processing completes. 
 					No real-time updates needed - designed for business oversight and strategic planning.
 				</p>
 			</div>
