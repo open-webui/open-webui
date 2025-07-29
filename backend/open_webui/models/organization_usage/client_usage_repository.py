@@ -210,16 +210,11 @@ class ClientUsageRepository(IClientUsageRepository):
                         'exchange_rate_used': usd_pln_rate
                     })
                 
-                # Calculate current month totals and averages
+                # Calculate current month totals
                 total_tokens = sum(r.total_tokens for r in month_records)
                 total_cost = sum(r.markup_cost for r in month_records)
                 total_requests = sum(r.total_requests for r in month_records)
                 days_with_usage = len(month_records)
-                
-                # Calculate averages (business insights)
-                avg_daily_tokens = total_tokens / max(today.day, 1)
-                avg_daily_cost = total_cost / max(today.day, 1)
-                avg_usage_day_tokens = total_tokens / max(days_with_usage, 1) if days_with_usage > 0 else 0
                 
                 current_month = {
                     'month': today.strftime('%B %Y'),
@@ -251,13 +246,8 @@ class ClientUsageRepository(IClientUsageRepository):
                 ).distinct().all()
                 total_unique_users = len(user_records)
                 
-                # Monthly summary with business insights
+                # Monthly summary with only used fields
                 monthly_summary = {
-                    'average_daily_tokens': round(avg_daily_tokens),
-                    'average_daily_cost': round(avg_daily_cost, 4),
-                    'average_usage_day_tokens': round(avg_usage_day_tokens),
-                    'busiest_day': max(month_records, key=lambda x: x.total_tokens).usage_date.isoformat() if month_records else None,
-                    'highest_cost_day': max(month_records, key=lambda x: x.markup_cost).usage_date.isoformat() if month_records else None,
                     'total_unique_users': total_unique_users,
                     'top_models': top_models
                 }
@@ -288,7 +278,7 @@ class ClientUsageRepository(IClientUsageRepository):
             return ClientUsageStatsResponse(
                 current_month={'month': 'Error', 'total_tokens': 0, 'total_cost': 0.0, 'total_requests': 0, 'days_with_usage': 0, 'days_in_month': 0, 'usage_percentage': 0},
                 daily_breakdown=[],
-                monthly_summary={'average_daily_tokens': 0, 'average_daily_cost': 0, 'average_usage_day_tokens': 0, 'busiest_day': None, 'highest_cost_day': None, 'total_unique_users': 0, 'top_models': []},
+                monthly_summary={'total_unique_users': 0, 'top_models': []},
                 client_org_name="Error"
             )
     

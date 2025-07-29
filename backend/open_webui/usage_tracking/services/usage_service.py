@@ -158,11 +158,6 @@ class UsageService:
                         },
                         "daily_breakdown": [],
                         "monthly_summary": {
-                            "average_daily_tokens": 0,
-                            "average_daily_cost": 0,
-                            "average_usage_day_tokens": 0,
-                            "busiest_day": None,
-                            "highest_cost_day": None,
                             "total_unique_users": 0,
                             "top_models": []
                         },
@@ -184,9 +179,7 @@ class UsageService:
                     },
                     "daily_breakdown": [],
                     "monthly_summary": {
-                        "average_daily_tokens": 0, "average_daily_cost": 0,
-                        "average_usage_day_tokens": 0, "busiest_day": None,
-                        "highest_cost_day": None, "total_unique_users": 0, 
+                        "total_unique_users": 0, 
                         "top_models": []
                     },
                     "client_org_name": ORGANIZATION_NAME or "My Organization"
