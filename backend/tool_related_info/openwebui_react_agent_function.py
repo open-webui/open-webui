@@ -41,6 +41,8 @@ import logging
 import sys
 import asyncio
 import time
+import threading
+import contextlib
 
 # LlamaIndex Workflow imports
 from llama_index.core.agent import ReActChatFormatter, ReActOutputParser
@@ -390,53 +392,67 @@ class Pipe:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         self.valves = self.Valves()
+        self.llm = None
+        self.index_client = None
+        self.instrumentor = None
+        self._initialized = False
+        self._init_lock = threading.Lock()
 
-        self.logger.info("Initializing pipe...")
-        self.logger.info(f"Using Azure endpoint: {self.valves.AZURE_ENDPOINT}")
-        self.logger.warning(f"Using model: {self.valves.LLAMAINDEX_MODEL_NAME}")
+    def _initialize(self):
+        with self._init_lock:
+            if self._initialized:
+                return
 
-        azure_headers = {
-            "Ocp-Apim-Subscription-Key": self.valves.AZURE_SUBSCRIPTION_KEY
-        }
+            self.logger.info("Initializing pipe dependencies...")
+            self.logger.info(f"Using Azure endpoint: {self.valves.AZURE_ENDPOINT}")
+            self.logger.warning(f"Using model: {self.valves.LLAMAINDEX_MODEL_NAME}")
 
-        self.instrumentor = LlamaIndexInstrumentor(
-            public_key=self.valves.LANGFUSE_PUBLIC_KEY,
-            secret_key=self.valves.LANGFUSE_SECRET_KEY,
-            host=self.valves.LANGFUSE_HOST,
-        )
-        self.instrumentor.start()
-        self.logger.info("Langfuse instrumentation initialized and started")
+            azure_headers = {
+                "Ocp-Apim-Subscription-Key": self.valves.AZURE_SUBSCRIPTION_KEY
+            }
 
-        @retry(
-            wait=wait_exponential(multiplier=1, min=4, max=60),
-            stop=stop_after_attempt(5),
-        )
-        def create_llm():
-            return AzureOpenAI(
-                model=self.valves.LLAMAINDEX_MODEL_NAME,
-                deployment_name=self.valves.LLAMAINDEX_MODEL_NAME,
-                api_key=self.valves.AZURE_API_KEY,
-                azure_endpoint=self.valves.AZURE_ENDPOINT,
-                api_version=self.valves.AZURE_API_VERSION,
-                default_headers=azure_headers,
-                max_retries=3,
-                timeout=60,
-                temperature=0,
+            if self.valves.LANGFUSE_PUBLIC_KEY and self.valves.LANGFUSE_SECRET_KEY:
+                self.instrumentor = LlamaIndexInstrumentor(
+                    public_key=self.valves.LANGFUSE_PUBLIC_KEY,
+                    secret_key=self.valves.LANGFUSE_SECRET_KEY,
+                    host=self.valves.LANGFUSE_HOST,
+                )
+                self.instrumentor.start()
+                self.logger.info("Langfuse instrumentation initialized and started")
+
+            @retry(
+                wait=wait_exponential(multiplier=1, min=4, max=60),
+                stop=stop_after_attempt(5),
             )
+            def create_llm():
+                return AzureOpenAI(
+                    model=self.valves.LLAMAINDEX_MODEL_NAME,
+                    deployment_name=self.valves.LLAMAINDEX_MODEL_NAME,
+                    api_key=self.valves.AZURE_API_KEY,
+                    azure_endpoint=self.valves.AZURE_ENDPOINT,
+                    api_version=self.valves.AZURE_API_VERSION,
+                    default_headers=azure_headers,
+                    max_retries=3,
+                    timeout=60,
+                    temperature=0,
+                )
 
-        self.llm = create_llm()
+            self.llm = create_llm()
 
-        def create_AzureSearchClient():
-            return SearchIndexClient(
-                endpoint=self.valves.AZURE_SEARCH_ENDPOINT,
-                credential=AzureKeyCredential(self.valves.AZURE_SEARCH_ADMIN_KEY),
-            )
+            def create_AzureSearchClient():
+                return SearchIndexClient(
+                    endpoint=self.valves.AZURE_SEARCH_ENDPOINT,
+                    credential=AzureKeyCredential(self.valves.AZURE_SEARCH_ADMIN_KEY),
+                )
 
-        self.index_client = create_AzureSearchClient()
-        self.logger.info("Pipe initialization complete.")
+            self.index_client = create_AzureSearchClient()
+            self._initialized = True
+            self.logger.info("Pipe initialization complete.")
 
     def get_azure_search_index_list(self) -> str:
         """Retrieves the list of Azure Search indexes."""
+        if not self.index_client:
+            return "Error: Azure Search client not initialized."
         try:
             index_list = self.index_client.list_indexes()
             index_names = [index.name for index in index_list]
@@ -448,6 +464,8 @@ class Pipe:
 
     def get_azure_search_index_schema(self, input: str) -> str:
         """Retrieves the schema of a specific Azure Search index."""
+        if not self.index_client:
+            return "Error: Azure Search client not initialized."
         try:
             index_definition = self.index_client.get_index(name=input)
             logger.info(
@@ -517,6 +535,9 @@ class Pipe:
         It receives the request body and user information, processes it through the
         ReAct agent workflow, and streams back the response.
         """
+        if not self._initialized:
+            self._initialize()
+
         try:
             if __tools__:
                 self.logger.info(
@@ -548,9 +569,16 @@ class Pipe:
                 "user_id": user_id_to_use,
             }
 
-            with self.instrumentor.observe() as trace:
+            trace_context = (
+                self.instrumentor.observe()
+                if self.instrumentor
+                else contextlib.nullcontext()
+            )
+
+            with trace_context as trace:
                 try:
-                    trace.update(metadata=metadata, user_id=user_id_to_use)
+                    if trace:
+                        trace.update(metadata=metadata, user_id=user_id_to_use)
 
                     tools_list: List[BaseTool] = [
                         FunctionTool.from_defaults(
@@ -716,23 +744,30 @@ Important: You may never skip a phase—or return final output—until all sub-q
                         self.logger.info(
                             f"Final response from workflow: {final_answer_content}"
                         )
-                        trace.score(name="success", value=1.0)
-                        trace.update(
-                            metadata={
-                                "execution_time_seconds": execution_time,
-                                "response_length": len(str(final_answer_content)),
-                                "reasoning_steps_count": len(reasoning_steps),
-                            }
-                        )
+                        if trace:
+                            trace.score(name="success", value=1.0)
+                            trace.update(
+                                metadata={
+                                    "execution_time_seconds": execution_time,
+                                    "response_length": len(
+                                        str(final_answer_content)
+                                    ),
+                                    "reasoning_steps_count": len(reasoning_steps),
+                                }
+                            )
                     else:
-                        self.logger.error("Workflow returned no final result object.")
-                        trace.score(name="failure_no_result", value=0.0)
+                        self.logger.error(
+                            "Workflow returned no final result object."
+                        )
+                        if trace:
+                            trace.score(name="failure_no_result", value=0.0)
                         yield "No response generated from workflow."
 
                 except Exception as e:
                     self.logger.error(f"Error in pipe: {str(e)}", exc_info=True)
-                    trace.update(metadata={"error": str(e)})
-                    trace.score(name="error", value=0.0)
+                    if trace:
+                        trace.update(metadata={"error": str(e)})
+                        trace.score(name="error", value=0.0)
                     yield f"Pipeline execution failed: {str(e)}"
         finally:
             if self.instrumentor:
