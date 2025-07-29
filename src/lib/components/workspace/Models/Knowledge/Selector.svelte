@@ -136,19 +136,19 @@
 											<div
 												class="bg-gray-500/20 text-gray-700 dark:text-gray-200 rounded-sm uppercase text-xs font-bold px-1"
 											>
-												Legacy
+												{$i18n.t('Legacy')}
 											</div>
 										{:else if item?.meta?.document}
 											<div
 												class="bg-gray-500/20 text-gray-700 dark:text-gray-200 rounded-sm uppercase text-xs font-bold px-1"
 											>
-												Document
+												{$i18n.t('Document')}
 											</div>
 										{:else}
 											<div
 												class="bg-green-500/20 text-green-700 dark:text-green-200 rounded-sm uppercase text-xs font-bold px-1"
 											>
-												Collection
+												{$i18n.t('Collection')}
 											</div>
 										{/if}
 									</div>

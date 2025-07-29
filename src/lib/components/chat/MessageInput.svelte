@@ -363,6 +363,14 @@
 		showGovKnoWebSearchToggle = !showGovKnoWebSearchToggle;
 	};
 
+	const clearFilterToggle = (event) => {
+		event.preventDefault(); 
+		showGovKnoWebSearchToggle = false;
+		webSearchEnabled =false;
+		govBtnEnable=false;
+		attachFileEnabled=false;
+	};
+
 	const saveGovKnoModel = async () => {
 		govBtnEnable = !govBtnEnable;
 		const modelId = $models.find((model) => model.id.includes($config.govgpt.rag_wog_model_name))?.id || '';
@@ -792,7 +800,7 @@
 												: `${WEBUI_BASE_URL}/static/favicon.png`)}
 									/>
 									<div class="translate-y-[0.5px]">
-										Talking to <span class=" font-medium">{atSelectedModel.name}</span>
+										{$i18n.t('Talking to')} <span class=" font-medium">{atSelectedModel.name}</span>
 									</div>
 								</div>
 								<div>
@@ -831,7 +839,7 @@
 			</div>
 		</div>
 
-		<div class="{transparentBackground ? 'bg-transparent' : 'bg-transparent dark:bg-gray-900'} ">
+		<div class="bg-transparent">
 			<div class="{($settings?.widescreenMode ?? null) ? 'max-w-full' : ''} mx-auto inset-x-0">
 				<div class="">
 					<input
@@ -1601,11 +1609,11 @@
 													{#if selectedModelName !== ''}<div
 															class="px-[8px] font-Inter_Medium flex items-center gap-[8px] text-[14px] leading-[22px] text-typography-titles"
 														>
-															{selectedModelName}
+															{$i18n.t(selectedModelName)}
 															<button 
 																data-filter-toggle
 																class="flex items-center" 
-																on:click={handleFilterToggle}
+																on:click={clearFilterToggle}
 															><Cross /></button>
 														</div>{/if}
 												</div>

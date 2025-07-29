@@ -265,8 +265,8 @@
 											class="w-full text-sm bg-transparent dark:bg-gray-900 placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden pr-5"
 											bind:value={auth_type}
 										>
-											<option value="bearer">Bearer</option>
-											<option value="session">Session</option>
+											<option value="bearer">{$i18n.t('Bearer')}</option>
+											<option value="session">{$i18n.t('Session')}</option>
 										</select>
 									</div>
 

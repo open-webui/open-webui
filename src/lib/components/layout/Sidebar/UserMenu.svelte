@@ -33,6 +33,7 @@
     import UserGroup from '$lib/components/icons/UserGroup.svelte';
     import SignOut from '$lib/components/icons/SignOut.svelte';
     import MaterialIcon from '$lib/components/common/MaterialIcon.svelte';
+	import Support from '$lib/components/icons/Support.svelte';
 
     const i18n = getContext('i18n');
 
@@ -221,61 +222,56 @@
         <slot />
     </DropdownMenu.Trigger>
 
-    <slot name="content">
-        <DropdownMenu.Content
-            class="w-full {className} rounded-[8px] z-50 bg-light-bg dark:border dark:border-gray-100 text-label-primary shadow-custom font-primary"
-            sideOffset={1}
-            side="bottom"
-            align="end"
-            transition={(e) => fade(e, { duration: 100 })}
-        >
-            <button
-                class="flex justify-between items-center border-b border-gray-100 px-[16px] py-[11px] w-full transition cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 {isLanguageSwitching ? 'opacity-50 cursor-wait' : ''}"
-                on:click={handleLanguageSwitch}
-                disabled={isLanguageSwitching}
-            >
-                <div class="self-center truncate gap-[8px] text-[17px] leading-[22px]">
-                    {currentLanguage === 'en-US'
-                        ? 'Switch to Arabic'
-                        : 'التبديل إلى اللغة الإنجليزية'}
-                </div>
-                <div class="self-center {$mobile ? '' : 'mr-3'}">
-                    <MaterialIcon name="translate" size="1.1rem" />
-                </div>
-            </button>
-            
-            {#if role === 'admin'}
-            <div
-                class="flex px-[16px] py-[11px] w-full items-center justify-between border-b border-gray-100"
-            >
-                <label for="notification-toggle" class="flex items-center gap-[8px] text-[17px] leading-[22px]">
-                    {$i18n?.t?.('Notifications') || 'Notifications'}
-                </label>
-                <label class="relative inline-flex items-center cursor-pointer">
-                    <input
-                        id="notification-toggle"
-                        type="checkbox"
-                        bind:checked={isOnNotification}
-                        on:change={() => toggleNotification()}
-                        class="sr-only peer"
-                    />
-                    <div
-                        class="w-[40px] h-[20px] {isOnNotification
-                            ? 'bg-neutrals-green'
-                            : 'bg-neutrals-50'} rounded-full peer duration-300"
-                    >
-                        <div
-                            class="flex items-center justify-center absolute {isOnNotification
-                                ? 'left-[1px]'
-                                : 'right-[1px]'} top-[1px] bg-neutrals-white w-[18px] h-[18px] rounded-full transition-transform duration-300 peer-checked:translate-x-5"
-                        ></div>
-                    </div>
-                </label>
-            </div>
+	<slot name="content">
+		<DropdownMenu.Content
+			class="w-full {className} rounded-[8px] z-50 bg-light-bg dark:border dark:border-gray-800 text-label-primary shadow-custom font-primary"
+			sideOffset={1}
+			side="bottom"
+			align="end"
+			transition={(e) => fade(e, { duration: 100 })}
+		>
+			<button
+				class="flex justify-between items-center border-b border-gray-100 dark:border-transparent px-[16px] py-[11px] w-full transition cursor-pointer"
+				on:click={() => changeLanguage(document.documentElement.lang === 'en-US' ? 'ar' : 'en-US')}
+			>
+				<div class=" self-center truncate gap-[8px] text-[17px] leading-[22px]">
+					{$i18n.t('Switch to Arabic')}
+				</div>
+				<div class=" self-center {$mobile ? '' : 'mr-3'} ">
+					<MaterialIcon name="translate" size="1.1rem" />
+				</div>
+			</button>
+			{#if role === 'admin'}
+			<div
+				class="flex px-[16px] py-[11px] w-full items-center justify-between border-b border-gray-100 dark:border-transparent"
+			>
+				<label class="flex items-center gap-[8px] text-[17px] leading-[22px]">
+					{$i18n.t('Notifications')}</label
+				>
+				<label class="relative inline-flex items-center cursor-pointer">
+					<input
+						type="checkbox"
+						bind:checked={isOnNotification}
+						on:change={() => toggleNotification()}
+						class="sr-only peer"
+					/>
+					<div
+						class="w-[40px] h-[20px] {isOnNotification
+							? 'bg-neutrals-green'
+							: 'bg-neutrals-50 dark:bg-gray-500'} rounded-full peer duration-300"
+					>
+						<div
+							class=" flex items-center justify-center absolute {isOnNotification
+								? 'left-[1px]'
+								: 'right-[1px]'}  top-[1px] bg-neutrals-white w-[18px] h-[18px] rounded-full transition-transform duration-300 peer-checked:translate-x-5"
+						></div>
+					</div>
+				</label>
+			</div>
             {/if}
             
             <div
-                class="flex px-[16px] py-[11px] w-full items-center justify-between border-b border-gray-100"
+                class="flex px-[16px] py-[11px] w-full items-center justify-between border-b border-gray-100 dark:border-transparent"
             >
                 <label for="theme-toggle" class="flex items-center gap-[8px] text-[17px] leading-[22px]">
                     {$i18n?.t?.('Theme') || 'Theme'}
@@ -291,7 +287,7 @@
                     <div
                         class="w-[40px] h-[20px] {isOnThemeToggle
                             ? 'bg-neutrals-green'
-                            : 'bg-neutrals-50'} rounded-full peer duration-300"
+                            : 'bg-neutrals-50 dark:bg-gray-500'} rounded-full peer duration-300"
                     >
                         <div
                             class="flex items-center justify-center absolute {isOnThemeToggle
@@ -304,7 +300,7 @@
             
             {#if role === 'admin'}
                 <button
-                    class="flex justify-between items-center border-b border-gray-100 px-[16px] py-[11px] w-full transition hover:bg-gray-50 dark:hover:bg-gray-700"
+                    class="flex justify-between items-center border-b border-gray-100 dark:border-transparent px-[16px] py-[11px] w-full transition hover:bg-gray-50 dark:hover:bg-gray-700"
                     on:click={async () => {
                         await showSettings.set(true);
                         show = false;
@@ -324,7 +320,7 @@
             {/if}
             
             <button
-                class="flex justify-between items-center border-b border-gray-100 px-[16px] py-[11px] w-full transition hover:bg-gray-50 dark:hover:bg-gray-700"
+                class="flex justify-between items-center border-b border-gray-100 dark:border-transparent px-[16px] py-[11px] w-full transition hover:bg-gray-50 dark:hover:bg-gray-700"
                 on:click={() => {
                     dispatch('show', 'archived-chat');
                     show = false;
@@ -344,7 +340,7 @@
 
             {#if role === 'admin'}
                 <button
-                    class="flex justify-between items-center border-b border-gray-100 px-[16px] py-[11px] w-full transition hover:bg-gray-50 dark:hover:bg-gray-700"
+                    class="flex justify-between items-center border-b border-gray-100 dark:border-transparent px-[16px] py-[11px] w-full transition hover:bg-gray-50 dark:hover:bg-gray-700"
                     on:click={() => {
                         goto('/playground');
                         show = false;
@@ -363,7 +359,7 @@
                 </button>
 
                 <button
-                    class="flex justify-between items-center border-b border-gray-100 px-[16px] py-[11px] w-full transition hover:bg-gray-50 dark:hover:bg-gray-700"
+                    class="flex justify-between items-center border-b border-gray-100 dark:border-transparent px-[16px] py-[11px] w-full transition hover:bg-gray-50 dark:hover:bg-gray-700"
                     on:click={() => {
                         goto('/admin');
                         show = false;
@@ -430,7 +426,7 @@
 
             {#if role === 'admin'}
                 <button
-                    class="flex px-[16px] justify-between items-center border-b border-gray-100 py-[11px] w-full transition hover:bg-gray-50 dark:hover:bg-gray-700"
+                    class="flex px-[16px] justify-between items-center border-b border-gray-100 dark:border-transparent py-[11px] w-full transition hover:bg-gray-50 dark:hover:bg-gray-700"
                     on:click={() => {
                         goto('/playground');
                     }}
@@ -439,24 +435,13 @@
                         {$i18n?.t?.('Support') || 'Support'}
                     </div>
                     <div class="self-center mr-3">
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="20"
-                            height="20"
-                            viewBox="0 0 20 20"
-                            fill="none"
-                        >
-                            <path
-                                d="M10 1.875C8.39303 1.875 6.82214 2.35152 5.486 3.24431C4.14985 4.1371 3.10844 5.40605 2.49348 6.8907C1.87852 8.37535 1.71762 10.009 2.03112 11.5851C2.34463 13.1612 3.11846 14.6089 4.25476 15.7452C5.39106 16.8815 6.8388 17.6554 8.4149 17.9689C9.99099 18.2824 11.6247 18.1215 13.1093 17.5065C14.594 16.8916 15.8629 15.8502 16.7557 14.514C17.6485 13.1779 18.125 11.607 18.125 10C18.1227 7.84581 17.266 5.78051 15.7427 4.25727C14.2195 2.73403 12.1542 1.87727 10 1.875ZM13.0547 12.1711C13.5069 11.5375 13.7499 10.7784 13.7499 10C13.7499 9.22156 13.5069 8.46254 13.0547 7.82891L15.2813 5.60313C16.311 6.83689 16.8751 8.39295 16.8751 10C16.8751 11.607 16.311 13.1631 15.2813 14.3969L13.0547 12.1711ZM7.5 10C7.5 9.50555 7.64663 9.0222 7.92133 8.61107C8.19603 8.19995 8.58648 7.87952 9.04329 7.6903C9.50011 7.50108 10.0028 7.45157 10.4877 7.54804C10.9727 7.6445 11.4181 7.8826 11.7678 8.23223C12.1174 8.58186 12.3555 9.02732 12.452 9.51227C12.5484 9.99723 12.4989 10.4999 12.3097 10.9567C12.1205 11.4135 11.8001 11.804 11.3889 12.0787C10.9778 12.3534 10.4945 12.5 10 12.5C9.33696 12.5 8.70108 12.2366 8.23224 11.7678C7.7634 11.2989 7.5 10.663 7.5 10ZM14.3969 4.71875L12.1711 6.94531C11.5375 6.49312 10.7784 6.25006 10 6.25006C9.22156 6.25006 8.46254 6.49312 7.82891 6.94531L5.60313 4.71875C6.83689 3.68898 8.39296 3.12492 10 3.12492C11.607 3.12492 13.1631 3.68898 14.3969 4.71875ZM4.71875 5.60313L6.94532 7.82891C6.49312 8.46254 6.25006 9.22156 6.25006 10C6.25006 10.7784 6.49312 11.5375 6.94532 12.1711L4.71875 14.3969C3.68899 13.1631 3.12493 11.607 3.12493 10C3.12493 8.39295 3.68899 6.83689 4.71875 5.60313ZM5.60313 15.2812L7.82891 13.0547C8.46254 13.5069 9.22156 13.7499 10 13.7499C10.7784 13.7499 11.5375 13.5069 12.1711 13.0547L14.3969 15.2812C13.1631 16.311 11.607 16.8751 10 16.8751C8.39296 16.8751 6.83689 16.311 5.60313 15.2812Z"
-                                fill="#36383B"
-                            />
-                        </svg>
+                        <Support className="w-5 h-5" />
                     </div>
                 </button>
             {/if}
 
             <button
-                class="flex px-[16px] justify-between items-center border-b border-gray-100 py-[11px] w-full transition hover:bg-gray-50 dark:hover:bg-gray-700"
+                class="flex px-[16px] justify-between items-center border-b border-gray-100 dark:border-transparent py-[11px] w-full transition hover:bg-gray-50 dark:hover:bg-gray-700"
                 on:click={async () => {
                     const res = await userSignOut();
                     user.set(null);

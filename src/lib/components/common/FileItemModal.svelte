@@ -84,13 +84,13 @@
 
 						{#if item?.file?.data?.content}
 							<div class="capitalize shrink-0">
-								{getLineCount(item?.file?.data?.content ?? '')} extracted lines
+								{getLineCount(item?.file?.data?.content ?? '')} {$i18n.t('Extracted Lines')}
 							</div>
 
 							<div class="flex items-center gap-1 shrink-0">
 								<Info />
 
-								Formatting may be inconsistent from source.
+								{$i18n.t('Formatting may be inconsistent from source.')}
 							</div>
 						{/if}
 					</div>
@@ -108,9 +108,10 @@
 							>
 								<div class="flex items-center gap-1.5 text-xs">
 									{#if enableFullContent}
-										Using Entire Document
+									{$i18n.t('Using Entire Document')}
+
 									{:else}
-										Using Focused Retrieval
+										{$i18n.t('Using Focused Retrieval')}
 									{/if}
 									<Switch
 										bind:state={enableFullContent}
@@ -144,7 +145,7 @@
 				{/if}
 
 				<div class="max-h-96 overflow-scroll scrollbar-hidden text-xs whitespace-pre-wrap">
-					{item?.file?.data?.content ?? 'No content'}
+					{item?.file?.data?.content ?? $i18n.t('No content')}
 				</div>
 			{/if}
 		</div>
