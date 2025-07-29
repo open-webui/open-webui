@@ -370,7 +370,7 @@
 
 	<Collapsible
 		bind:open
-		className="w-full pl-4"
+		className="w-full ps-4"
 		buttonClassName="w-full"
 		hide={(folders[folderId]?.childrenIds ?? []).length === 0 &&
 			(folders[folderId].items?.chats ?? []).length === 0}
@@ -382,7 +382,7 @@
 		<div class="w-full group">
 			<button
 				id="folder-{folderId}-button"
-				class="flex items-center relative w-full py-[8px] px-[16px] pl-[32px] rounded-md flex items-center gap-[8px] link-style text-typography-titles hover:bg-gradient-bg-2 dark:hover:bg-gray-900 transition"
+				class="flex items-center relative w-full py-[8px] px-[16px] ps-[32px] rounded-md gap-[8px] link-style text-typography-titles hover:bg-gradient-bg-2 dark:hover:bg-gray-900 transition"
 				on:dblclick={() => {
 					editHandler();
 				}}
@@ -432,7 +432,7 @@
 				</div>
 
 				<button
-					class="absolute z-10 right-2 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
+					class="absolute z-10 end-2 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
 					on:pointerup={(e) => {
 						e.stopPropagation();
 					}}

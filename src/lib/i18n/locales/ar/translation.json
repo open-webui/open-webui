@@ -1450,5 +1450,21 @@
 	"Low": "منخفض",
 	"Medium": "متوسط",
 	"High": "عالي",
-	"Group": "المجموعة"
+	"Group": "المجموعة",
+	"Hey": "مرحبا",
+	"Quick answers. Clear drafts. Trusted knowledge. What's next? Enter your request to begin.": "إجابات سريعة. مسودات واضحة. معرفة موثوقة. ما هو التالي؟ أدخل طلبك للبدء.",
+	"Amplifying Government Potential": "تعزيز إمكانيات الحكومة",
+	"Login using Credentials": "تسجيل الدخول باستخدام بيانات الاعتماد",
+	"Use your work email to log in & get started!": "استخدم بريدك الإلكتروني للعمل لتسجيل الدخول والبدء!",
+	"Log in using SSO": "تسجيل الدخول باستخدام تسجيل الدخول الموحد",
+	"By continuing, you agree to our": "بالمتابعة، فإنك توافق على",
+	"Terms": "الشروط",
+	"and have read our": "وقد قرأت",
+	"Privacy Policy": "سياسة الخصوصية",
+	"Login using SSO": "تسجيل الدخول باستخدام تسجيل الدخول الموحد",
+	"Login with your email address": "تسجيل الدخول باستخدام عنوان بريدك الإلكتروني",
+	"Email address": "عنوان البريد الإلكتروني",
+	"Email or phone number": "البريد الإلكتروني أو رقم الهاتف",
+	"Disclaimer": "إخلاء المسؤولية",
+	"GovGPT is powered by artificial intelligence and may occasionally produce incorrect or outdated responses. Please verify critical information from official sources or consult your department head for confirmation.": "تم تشغيل GovGPT بواسطة الذكاء الاصطناعي وقد ينتج أحيانًا ردودًا غير صحيحة أو قديمة. يرجى التحقق من المعلومات المهمة من المصادر الرسمية أو استشارة رئيس قسمك للتأكيد."
 }
