@@ -1,11 +1,14 @@
 """
-Automatic database initialization for environment-based usage tracking
+Extended automatic database initialization for environment-based usage tracking
+Includes organization table creation and model linking
 """
 
 import os
 import logging
+import json
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List, Dict
+import time
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -39,8 +42,8 @@ async def initialize_usage_tracking_from_environment() -> bool:
     try:
         # Use the database context manager
         with get_db() as db:
-            # STEP 1: Ensure usage tracking tables exist FIRST (before any queries)
-            await ensure_usage_tracking_tables(db)
+            # STEP 1: Ensure ALL tables exist (including organization tables)
+            await ensure_all_tables(db)
             
             # STEP 2: Now safely check if client organization already exists
             existing_org = db.execute(
@@ -51,7 +54,7 @@ async def initialize_usage_tracking_from_environment() -> bool:
             if existing_org:
                 log.debug(f"Client organization already exists: {openrouter_external_user}")
                 # Update the API key in case it changed
-                import time
+                current_time = int(time.time())
                 db.execute(
                     text("""
                         UPDATE client_organizations 
@@ -63,14 +66,13 @@ async def initialize_usage_tracking_from_environment() -> bool:
                     {
                         "api_key": openrouter_api_key,
                         "name": organization_name,
-                        "updated_at": int(time.time()),
+                        "updated_at": current_time,
                         "org_id": openrouter_external_user
                     }
                 )
             else:
                 # Create new client organization
                 log.info(f"Creating new client organization: {openrouter_external_user}")
-                import time
                 current_time = int(time.time())
                 
                 db.execute(
@@ -96,6 +98,13 @@ async def initialize_usage_tracking_from_environment() -> bool:
                     }
                 )
             
+            # STEP 3: Link models to organization if new
+            await ensure_organization_models(db, openrouter_external_user, organization_name)
+            
+            # STEP 4: Auto-populate members in development mode
+            if "dev" in openrouter_external_user.lower() or "DEV" in organization_name:
+                await populate_development_members(db, openrouter_external_user)
+            
             db.commit()
             log.info(f"✅ Usage tracking initialized for {organization_name} ({openrouter_external_user})")
             return True
@@ -103,6 +112,269 @@ async def initialize_usage_tracking_from_environment() -> bool:
     except Exception as e:
         log.error(f"Failed to initialize usage tracking: {e}")
         return False
+
+
+async def ensure_all_tables(db: Session) -> None:
+    """
+    Ensure ALL required tables exist, including organization tables.
+    This is a comprehensive initialization that covers both usage tracking and organization model access.
+    """
+    try:
+        # First, ensure usage tracking tables
+        await ensure_usage_tracking_tables(db)
+        
+        # Then add organization-specific tables
+        await ensure_organization_tables(db)
+        
+        # Create the user_available_models view
+        await create_user_available_models_view(db)
+        
+        log.info("✅ All database tables initialized (usage tracking + organization access)")
+        
+    except Exception as e:
+        log.error(f"Error ensuring all tables: {e}")
+        raise
+
+
+async def ensure_organization_tables(db: Session) -> None:
+    """Create organization-specific tables for model access control"""
+    try:
+        log.info("📦 Creating organization access tables...")
+        
+        # 1. Organization Models - links organizations to their available models
+        db.execute(text("""
+            CREATE TABLE IF NOT EXISTS organization_models (
+                id TEXT PRIMARY KEY,
+                organization_id TEXT NOT NULL,
+                model_id TEXT NOT NULL,
+                is_active INTEGER DEFAULT 1,
+                created_at INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL,
+                UNIQUE(organization_id, model_id),
+                FOREIGN KEY (organization_id) REFERENCES client_organizations(id),
+                FOREIGN KEY (model_id) REFERENCES model(id)
+            )
+        """))
+        
+        # 2. Organization Members - tracks which users belong to which organizations
+        db.execute(text("""
+            CREATE TABLE IF NOT EXISTS organization_members (
+                id TEXT PRIMARY KEY,
+                organization_id TEXT NOT NULL,
+                user_id TEXT NOT NULL,
+                role TEXT DEFAULT 'member',
+                is_active INTEGER DEFAULT 1,
+                joined_at INTEGER NOT NULL,
+                UNIQUE(organization_id, user_id),
+                FOREIGN KEY (organization_id) REFERENCES client_organizations(id),
+                FOREIGN KEY (user_id) REFERENCES user(id)
+            )
+        """))
+        
+        # Create indexes for organization tables
+        await create_organization_indexes(db)
+        
+        log.info("✅ Organization tables created/verified")
+        
+    except Exception as e:
+        log.error(f"Error creating organization tables: {e}")
+        raise
+
+
+async def create_organization_indexes(db: Session) -> None:
+    """Create performance indexes for organization tables"""
+    try:
+        # Organization members indexes
+        db.execute(text("""
+            CREATE INDEX IF NOT EXISTS idx_org_members_user_active 
+            ON organization_members(user_id, is_active)
+        """))
+        
+        db.execute(text("""
+            CREATE INDEX IF NOT EXISTS idx_org_members_org_active 
+            ON organization_members(organization_id, is_active)
+        """))
+        
+        # Organization models indexes
+        db.execute(text("""
+            CREATE INDEX IF NOT EXISTS idx_org_models_org_active 
+            ON organization_models(organization_id, is_active)
+        """))
+        
+        db.execute(text("""
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_org_models_org_model 
+            ON organization_models(organization_id, model_id)
+        """))
+        
+        log.info("✅ Organization indexes created")
+        
+    except Exception as e:
+        log.error(f"Error creating organization indexes: {e}")
+        raise
+
+
+async def create_user_available_models_view(db: Session) -> None:
+    """Create a view that shows which models each user can access through their organizations"""
+    try:
+        # Drop existing view if it exists (views can't use CREATE IF NOT EXISTS in SQLite)
+        db.execute(text("DROP VIEW IF EXISTS user_available_models"))
+        
+        # Create the view
+        db.execute(text("""
+            CREATE VIEW user_available_models AS
+            SELECT DISTINCT
+                om.user_id,
+                u.name as user_name,
+                u.email as user_email,
+                orgm.model_id,
+                m.name as model_name,
+                org.name as organization_name,
+                org.id as organization_id
+            FROM organization_members om
+            JOIN organization_models orgm ON om.organization_id = orgm.organization_id
+            JOIN user u ON om.user_id = u.id
+            JOIN model m ON orgm.model_id = m.id
+            JOIN client_organizations org ON om.organization_id = org.id
+            WHERE om.is_active = 1 
+                AND orgm.is_active = 1 
+                AND org.is_active = 1
+                AND m.is_active = 1
+        """))
+        
+        log.info("✅ User available models view created")
+        
+    except Exception as e:
+        log.error(f"Error creating user_available_models view: {e}")
+        # Non-critical error, don't raise
+
+
+async def ensure_organization_models(db: Session, org_id: str, org_name: str) -> None:
+    """
+    Ensure organization has access to configured models.
+    Links all OpenRouter models to the organization if not already linked.
+    """
+    try:
+        # Check if organization already has models
+        existing_count = db.execute(
+            text("SELECT COUNT(*) FROM organization_models WHERE organization_id = :org_id"),
+            {"org_id": org_id}
+        ).scalar()
+        
+        if existing_count > 0:
+            log.debug(f"Organization {org_id} already has {existing_count} models linked")
+            return
+        
+        # Get configured OpenRouter models from config
+        config_result = db.execute(
+            text("SELECT data FROM config ORDER BY id DESC LIMIT 1")
+        ).fetchone()
+        
+        if not config_result:
+            log.warning("No config found, skipping model linking")
+            return
+        
+        config = json.loads(config_result[0])
+        openai_config = config.get('openai', {}).get('api_configs', {}).get('0', {})
+        model_ids = openai_config.get('model_ids', [])
+        
+        if not model_ids:
+            log.warning("No OpenRouter models configured")
+            return
+        
+        log.info(f"Linking {len(model_ids)} models to organization {org_name}")
+        
+        # Link each model to the organization
+        timestamp = int(time.time())
+        for model_id in model_ids:
+            unique_id = f"{org_id}_{model_id}_{timestamp}"
+            try:
+                db.execute(
+                    text("""
+                        INSERT OR IGNORE INTO organization_models 
+                        (id, organization_id, model_id, is_active, created_at, updated_at)
+                        VALUES (:id, :org_id, :model_id, 1, :created_at, :updated_at)
+                    """),
+                    {
+                        "id": unique_id,
+                        "org_id": org_id,
+                        "model_id": model_id,
+                        "created_at": timestamp,
+                        "updated_at": timestamp
+                    }
+                )
+            except Exception as e:
+                log.warning(f"Could not link model {model_id}: {e}")
+        
+        log.info(f"✅ Models linked to organization {org_name}")
+        
+    except Exception as e:
+        log.error(f"Error linking models to organization: {e}")
+        # Non-critical error, don't raise
+
+
+async def populate_development_members(db: Session, org_id: str) -> None:
+    """
+    In development mode, automatically add all non-system users to the organization.
+    This simplifies testing and development.
+    """
+    try:
+        log.info(f"🔧 Development mode: Auto-populating organization members")
+        
+        # Get all non-system users
+        users = db.execute(
+            text("""
+                SELECT id, name, email 
+                FROM user 
+                WHERE email != 'system@mai.local' 
+                    AND role != 'pending'
+            """)
+        ).fetchall()
+        
+        if not users:
+            log.debug("No users to add to organization")
+            return
+        
+        timestamp = int(time.time())
+        added_count = 0
+        
+        for user_id, user_name, user_email in users:
+            # Check if already a member
+            existing = db.execute(
+                text("""
+                    SELECT 1 FROM organization_members 
+                    WHERE organization_id = :org_id AND user_id = :user_id
+                """),
+                {"org_id": org_id, "user_id": user_id}
+            ).fetchone()
+            
+            if existing:
+                continue
+            
+            unique_id = f"{org_id}_{user_id}_{timestamp}"
+            try:
+                db.execute(
+                    text("""
+                        INSERT INTO organization_members
+                        (id, organization_id, user_id, role, is_active, joined_at)
+                        VALUES (:id, :org_id, :user_id, 'member', 1, :joined_at)
+                    """),
+                    {
+                        "id": unique_id,
+                        "org_id": org_id,
+                        "user_id": user_id,
+                        "joined_at": timestamp
+                    }
+                )
+                added_count += 1
+                log.debug(f"Added user {user_name} ({user_email}) to organization")
+            except Exception as e:
+                log.warning(f"Could not add user {user_id}: {e}")
+        
+        log.info(f"✅ Added {added_count} users to development organization")
+        
+    except Exception as e:
+        log.error(f"Error populating development members: {e}")
+        # Non-critical error, don't raise
 
 
 def _ensure_correct_table_schema(db: Session) -> None:
@@ -135,6 +407,7 @@ def _ensure_correct_table_schema(db: Session) -> None:
     except Exception as e:
         log.warning(f"Schema check failed, will create tables normally: {e}")
 
+
 async def ensure_usage_tracking_tables(db: Session) -> None:
     """
     Ensure all required usage tracking tables exist with proper schema.
@@ -144,6 +417,7 @@ async def ensure_usage_tracking_tables(db: Session) -> None:
     try:
         # First, ensure correct schema by checking existing tables
         _ensure_correct_table_schema(db)
+        
         # 1. Global Settings - for system-wide configuration
         db.execute(text("""
             CREATE TABLE IF NOT EXISTS global_settings (
@@ -241,8 +515,7 @@ async def ensure_usage_tracking_tables(db: Session) -> None:
             )
         """))
         
-        
-        # 8. Processed Generations - deduplication tracking
+        # 7. Processed Generations - deduplication tracking
         db.execute(text("""
             CREATE TABLE IF NOT EXISTS processed_generations (
                 id TEXT PRIMARY KEY,
@@ -255,7 +528,7 @@ async def ensure_usage_tracking_tables(db: Session) -> None:
             )
         """))
         
-        # 9. Processed Generation Cleanup Log - audit trail
+        # 8. Processed Generation Cleanup Log - audit trail
         db.execute(text("""
             CREATE TABLE IF NOT EXISTS processed_generation_cleanup_log (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -278,7 +551,7 @@ async def ensure_usage_tracking_tables(db: Session) -> None:
         # Create indexes for optimal query performance
         _create_usage_tracking_indexes(db)
         
-        log.info("✅ Simplified usage tracking database schema created/verified (8 tables)")
+        log.info("✅ Usage tracking database schema created/verified")
         
     except Exception as e:
         log.error(f"Error ensuring usage tracking tables: {e}")
@@ -308,7 +581,6 @@ def _create_usage_tracking_indexes(db: Session) -> None:
     # Client Model Daily Usage indexes
     db.execute(text("CREATE INDEX IF NOT EXISTS idx_model_daily_client_model_date ON client_model_daily_usage(client_org_id, model_name, usage_date)"))
     db.execute(text("CREATE INDEX IF NOT EXISTS idx_model_daily_model_date ON client_model_daily_usage(model_name, usage_date)"))
-    
     
     # Processed Generations indexes
     db.execute(text("CREATE INDEX IF NOT EXISTS idx_proc_client_date ON processed_generations(client_org_id, generation_date)"))
