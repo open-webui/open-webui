@@ -49,6 +49,7 @@
 
 	import { beforeNavigate } from '$app/navigation';
 	import { updated } from '$app/state';
+	import { get } from 'svelte/store';
 
 	// handle frontend updates (https://svelte.dev/docs/kit/configuration#version)
 	beforeNavigate(({ willUnload, to }) => {
@@ -643,6 +644,11 @@
 			window.removeEventListener('resize', onResize);
 		};
 	});
+
+	$: {
+		const lang = document.documentElement.lang || 'en-US';
+		document.documentElement.dir = lang.startsWith('ar') ? 'rtl' : 'ltr';
+	}
 </script>
 
 <svelte:head>

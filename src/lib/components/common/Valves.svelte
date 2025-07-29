@@ -116,5 +116,5 @@
 		</div>
 	{/each}
 {:else}
-	<div class="text-xs">No valves</div>
+	<div class="text-xs">{$i18n.t('No valves')}</div>
 {/if}

@@ -687,7 +687,7 @@
 										</div>
 									{/each}
 								{:else}
-									<div class="text-xs text-center">No suggestion prompts</div>
+									<div class="text-xs text-center">{$i18n.t('No suggestion prompts')}</div>
 								{/if}
 							</div>
 						{/if}

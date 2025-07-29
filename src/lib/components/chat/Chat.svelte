@@ -1366,8 +1366,6 @@
 	const submitPrompt = async (userPrompt, { _raw = false } = {}) => {
 		console.log('submitPrompt', userPrompt, $chatId);
 
-		debugger;
-
 		if(sessionStorage.selectedModels && sessionStorage.selectedModels !== JSON.stringify(selectedModels)) {
 			selectedModels = JSON.parse(sessionStorage.selectedModels);
 		}

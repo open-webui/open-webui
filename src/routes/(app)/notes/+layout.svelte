@@ -42,7 +42,7 @@
 
 {#if loaded}
 	<div
-		class="relative background-gradient-bg flex w-full h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
+		class="relative background-gradient-bg text-gray-700 dark:text-gray-100 bg-surface dark:bg-gray-900 flex w-full h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
 			? 'md:max-w-[calc(100%-300px)]'
 			: ''} max-w-full"
 	>

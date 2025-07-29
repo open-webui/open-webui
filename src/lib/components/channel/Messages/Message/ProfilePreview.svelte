@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { DropdownMenu } from 'bits-ui';
-
+import { getContext } from 'svelte';
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import { getUserActiveStatusById } from '$lib/apis/users';
@@ -12,7 +12,7 @@
 	let show = false;
 
 	let active = false;
-
+    const i18n = getContext('i18n');
 	const getActiveStatus = async () => {
 		const res = await getUserActiveStatusById(localStorage.token, user.id).catch((error) => {
 			console.error('Error fetching user active status:', error);
@@ -76,7 +76,7 @@
 								</div>
 
 								<div class=" -translate-y-[1px]">
-									<span class="text-xs"> Active </span>
+									<span class="text-xs"> {$i18n.t('Active')} </span>
 								</div>
 							{:else}
 								<div>
@@ -86,7 +86,7 @@
 								</div>
 
 								<div class=" -translate-y-[1px]">
-									<span class="text-xs"> Away </span>
+									<span class="text-xs"> {$i18n.t('Away')} </span>
 								</div>
 							{/if}
 						</div>

@@ -69,6 +69,7 @@
 	import { updateUserSettings } from '$lib/apis/users';
 
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
+	import { isRTL } from '$lib/i18n';
 
 	const i18n = getContext('i18n');
 
@@ -140,7 +141,6 @@
 
 	// Clear prompt and files when switching to a new chat
 	if (!history?.currentId) {
-		debugger;
 		// Clear prompt and files when chat changes
 		prompt = '';
 		files = [];
@@ -361,6 +361,14 @@
 	const handleFilterToggle = (event) => {
 		event.preventDefault(); 
 		showGovKnoWebSearchToggle = !showGovKnoWebSearchToggle;
+	};
+
+	const clearFilterToggle = (event) => {
+		event.preventDefault(); 
+		showGovKnoWebSearchToggle = false;
+		webSearchEnabled =false;
+		govBtnEnable=false;
+		attachFileEnabled=false;
 	};
 
 	const saveGovKnoModel = async () => {
@@ -792,7 +800,7 @@
 												: `${WEBUI_BASE_URL}/static/favicon.png`)}
 									/>
 									<div class="translate-y-[0.5px]">
-										Talking to <span class=" font-medium">{atSelectedModel.name}</span>
+										{$i18n.t('Talking to')} <span class=" font-medium">{atSelectedModel.name}</span>
 									</div>
 								</div>
 								<div>
@@ -831,7 +839,7 @@
 			</div>
 		</div>
 
-		<div class="{transparentBackground ? 'bg-transparent' : 'bg-transparent dark:bg-gray-900'} ">
+		<div class="bg-transparent">
 			<div class="{($settings?.widescreenMode ?? null) ? 'max-w-full' : ''} mx-auto inset-x-0">
 				<div class="">
 					<input
@@ -995,6 +1003,7 @@
 								<div class="">
 									{#if $settings?.richTextInput ?? true}
 										<div
+										dir={ $isRTL ? 'rtl' : 'ltr' }
 											class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-gray-100 outline-hidden w-full text-[16px] leading-[24px] text-disabled resize-none h-fit max-h-80 overflow-auto"
 											id="chat-input-container"
 										>
@@ -1600,11 +1609,11 @@
 													{#if selectedModelName !== ''}<div
 															class="px-[8px] font-Inter_Medium flex items-center gap-[8px] text-[14px] leading-[22px] text-typography-titles"
 														>
-															{selectedModelName}
+															{$i18n.t(selectedModelName)}
 															<button 
 																data-filter-toggle
 																class="flex items-center" 
-																on:click={handleFilterToggle}
+																on:click={clearFilterToggle}
 															><Cross /></button>
 														</div>{/if}
 												</div>

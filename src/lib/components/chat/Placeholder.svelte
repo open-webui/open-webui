@@ -197,7 +197,7 @@
 							<h1
 								class="pb-[16px] text-typography-titles text-[28px] leading-[22px] font-Inter_SemiBold"
 							>
-								Hey {firstName} 👋🏼
+							{$i18n.t('Hey')} {firstName} 👋🏼
 							</h1>
 						</div>
 					</div>

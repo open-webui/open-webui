@@ -463,6 +463,8 @@ from open_webui.utils.redis import get_sentinels_from_env
 from open_webui.env import MOBILE_INPUT_LINES, FILE_UPLOAD_COUNT_ALLOWED, ALLOWED_FILE_TYPES, \
     PRIVACY_POLICY_URL, TERMS_CONDITIONS_URL, MAX_FILE_SIZE
 
+from open_webui.env import ALLOW_CREDENTIALS_LOGIN
+
 if SAFE_MODE:
     print("SAFE MODE ENABLED")
     Functions.deactivate_all_functions()
@@ -1707,7 +1709,8 @@ async def get_app_config_mobile():
         "termsConditionsURL": TERMS_CONDITIONS_URL, #url will be provided later
         "govgpt": {
             "rag_wog_model_name": app.state.config.GOVGPT_RAG_WOG_MODEL_NAME,
-        }
+        },
+        "allowCredentialsLogin": ALLOW_CREDENTIALS_LOGIN
     })
 
 class UrlForm(BaseModel):

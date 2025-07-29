@@ -671,7 +671,7 @@
 
 					{#if updateModelId}
 						<div class="text-xs">
-							Updating "{updateModelId}" {updateProgress ? `(${updateProgress}%)` : ''}
+							{$i18n.t('Updating')} "{updateModelId}" {updateProgress ? `(${updateProgress}%)` : ''}
 						</div>
 					{/if}
 

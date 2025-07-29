@@ -68,11 +68,13 @@
 	import SearchNew from '../icons/SearchNew.svelte';
 	import NewChat from '../icons/NewChat.svelte';
 	import ChevronRight from '../icons/ChevronRight.svelte';
+	import ChevronLeft from '../icons/ChevronLeft.svelte';
 	import Home from '../icons/Home.svelte';
 	import MagnifyingGlass from '../icons/MagnifyingGlass.svelte';
 	import LogoText from '../icons/LogoText.svelte';
 	import Toggle from '../icons/Toggle.svelte';
 	import SearchModal from './SearchModal.svelte';
+	import { isRTL } from '$lib/i18n';
 
 	const BREAKPOINT = 768;
 
@@ -603,7 +605,7 @@
 							<div
 								class="self-center link-style text-typography-titles transition-all duration-300 ease-in-out"
 							>
-								GovGPT
+								{$i18n.t('GovGPT')}
 							</div>
 						</div></a
 					>
@@ -701,7 +703,7 @@
 							<!-- Icon -->
 							<div
 								class="flex items-center self-center transition-all duration-300 ease-in-out"
-								class:mr-[8px]={$showSidebar}
+								class:me-[8px]={$showSidebar}
 							>
 								<NewChat />
 							</div>
@@ -737,7 +739,7 @@
 						<!-- Icon -->
 						<div
 							class="flex items-center self-center transition-all duration-300 ease-in-out"
-							class:mr-[8px]={$showSidebar}
+							class:me-[8px]={$showSidebar}
 						>
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
@@ -760,7 +762,7 @@
 								<g mask="url(#mask0_293_12936)">
 									<path
 										d="M4.42443 17.0833C4.00887 17.0833 3.65387 16.9362 3.35943 16.6419C3.06512 16.3474 2.91797 15.9924 2.91797 15.5769V4.42313C2.91797 4.00757 3.06512 3.65257 3.35943 3.35813C3.65387 3.06382 4.00887 2.91667 4.42443 2.91667H8.13276C8.18512 2.45403 8.38707 2.06062 8.73859 1.73646C9.08998 1.41215 9.51089 1.25 10.0013 1.25C10.497 1.25 10.9206 1.41215 11.2721 1.73646C11.6237 2.06062 11.8229 2.45403 11.8698 2.91667H15.5782C15.9937 2.91667 16.3487 3.06382 16.6432 3.35813C16.9375 3.65257 17.0846 4.00757 17.0846 4.42313V15.5769C17.0846 15.9924 16.9375 16.3474 16.6432 16.6419C16.3487 16.9362 15.9937 17.0833 15.5782 17.0833H4.42443ZM4.42443 15.8333H15.5782C15.6423 15.8333 15.7011 15.8066 15.7544 15.7531C15.8079 15.6998 15.8346 15.641 15.8346 15.5769V4.42313C15.8346 4.35896 15.8079 4.30021 15.7544 4.24687C15.7011 4.1934 15.6423 4.16667 15.5782 4.16667H4.42443C4.36026 4.16667 4.30151 4.1934 4.24818 4.24687C4.19471 4.30021 4.16797 4.35896 4.16797 4.42313V15.5769C4.16797 15.641 4.19471 15.6998 4.24818 15.7531C4.30151 15.8066 4.36026 15.8333 4.42443 15.8333ZM6.04297 13.8621H11.4596V12.6123H6.04297V13.8621ZM6.04297 10.625H13.9596V9.375H6.04297V10.625ZM6.04297 7.38771H13.9596V6.13792H6.04297V7.38771ZM10.0013 3.62187C10.1819 3.62187 10.3312 3.56285 10.4492 3.44479C10.5673 3.32674 10.6263 3.17743 10.6263 2.99687C10.6263 2.81632 10.5673 2.66701 10.4492 2.54896C10.3312 2.4309 10.1819 2.37187 10.0013 2.37187C9.82075 2.37187 9.67144 2.4309 9.55339 2.54896C9.43533 2.66701 9.3763 2.81632 9.3763 2.99687C9.3763 3.17743 9.43533 3.32674 9.55339 3.44479C9.67144 3.56285 9.82075 3.62187 10.0013 3.62187Z"
-										fill="#23282E"
+										fill="currentColor"
 									/>
 								</g>
 							</svg>
@@ -798,7 +800,7 @@
 						<!-- Icon -->
 						<div
 							class="flex items-center self-center transition-all duration-300 ease-in-out"
-							class:mr-[8px]={$showSidebar}
+							class:me-[8px]={$showSidebar}
 						>
 							<MaterialIcon name="workspaces" size="1.1rem" />
 						</div>
@@ -1121,7 +1123,7 @@
 												class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2"
 											>
 												<Spinner className=" size-4" />
-												<div class=" ">Loading...</div>
+												<div class=" ">{$i18n.t('Loading')}</div>
 											</div>
 										</Loader>
 									{/if}
@@ -1130,7 +1132,7 @@
 										class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2"
 									>
 										<Spinner className=" size-4" />
-										<div class=" ">Loading...</div>
+										<div class=" ">{$i18n.t('Loading')}</div>
 									</div>
 								{/if}
 							</div>
@@ -1159,7 +1161,7 @@
 							}}
 						>
 							<div class="flex">
-								<div class=" self-center {$showSidebar ? 'mr-[8px]' : ''}">
+								<div class=" self-center {$showSidebar ? 'me-[8px]' : ''}">
 									<img
 										src={$user?.profile_image_url}
 										class=" max-w-[30px] object-cover rounded-full"
@@ -1174,7 +1176,15 @@
 									{$user?.name}
 								</div>
 							</div>
-							{#if $showSidebar}<div><ChevronRight /></div>{/if}
+							{#if $showSidebar}
+								<div>
+									{#if $isRTL}
+										<ChevronLeft />
+									{:else}
+										<ChevronRight />
+									{/if}
+								</div>
+							{/if}
 						</button>
 					</UserMenu>
 				{/if}
