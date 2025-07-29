@@ -55,11 +55,6 @@
 				>
 					Hi {$user?.name ?? 'there'} 👋🏼
 				</div>
-				<div
-					class=" text-typography-subtext text-[14px] leading-[26px] text-center dark:text-gray-100 w-[350px] text-center m-auto"
-				>
-					Quick answers. Clear drafts. Trusted knowledge. What’s next? Enter your request to begin.
-				</div>
 			</div>
 		</div>
 		<div class="w-full font-primary" in:fade={{ duration: 200, delay: 300 }}>

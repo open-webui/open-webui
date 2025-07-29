@@ -960,52 +960,92 @@ except Exception as e:
 if default_prompt_suggestions == []:
     all_suggestions =  [
         {
-            "title": ["Find Document"],
+            "id": "find_document",
+            "title": "Find Document",
+            "title_ar": "البحث عن مستند",
             "content": "Help me find the official document, policy, or guideline related to",
+            "content_ar": "ساعدني في العثور على الوثيقة الرسمية أو السياسة أو الإرشادات المتعلقة بـ",
             "icon_name": "find_in_page",
-            "icon_color": "#F57851"
+            "icon_color": "#F57851",
+            "category": "search",
+            "keywords": ["document", "policy", "guide", "بحث"]
         },
         {
-            "title": ["Summarize Text"],
+            "id": "summarize_text",
+            "title": "Summarize Text",
+            "title_ar": "تلخيص نص",
             "content": "Please summarize the following text and highlight the key points or conclusions",
+            "content_ar": "يرجى تلخيص النص التالي وتسليط الضوء على النقاط أو الاستنتاجات الرئيسية",
             "icon_name": "lightbulb",
-            "icon_color": "#CC7A00"
+            "icon_color": "#CC7A00",
+            "category": "analysis",
+            "keywords": ["summary", "text", "key points", "تلخيص"]
         },
         {
-            "title": ["Draft Message"],
+            "id": "draft_message",
+            "title": "Draft Message",
+            "title_ar": "انشاء مسودة رسالة",
             "content": "Help me draft a message, such as an email or memo regarding the following",
+            "content_ar": "ساعدني في صياغة رسالة، مثل بريد إلكتروني أو مذكرة بخصوص ما يلي",
             "icon_name": "contract_edit",
-            "icon_color": "#0043C2"
+            "icon_color": "#0043C2",
+            "category": "writing",
+            "keywords": ["email", "draft", "memo", "رسالة"]
         },
         {
-            "title": ["Compare Content"],
+            "id": "compare_content",
+            "title": "Compare Content",
+            "title_ar": "مقارنة محتوي",
             "content": "Compare the following documents/text and highlight the key differences or similarities.",
+            "content_ar": "قارن بين المستندات/النصوص التالية وأبرز الاختلافات أو أوجه التشابه الرئيسية.",
             "icon_name": "library_books",
-            "icon_color": "#008A57"
+            "icon_color": "#008A57",
+            "category": "analysis",
+            "keywords": ["compare", "difference", "similarity", "مقارنة"]
         },
         {
-            "title": ["Explain Simply"],
+            "id": "explain_simply",
+            "title": "Explain Simply",
+            "title_ar": "شرح مبسط",
             "content": "Explain the following in a simple and easy-to-understand way",
+            "content_ar": "اشرح ما يلي بطريقة بسيطة وسهلة الفهم",
             "icon_name": "psychology",
-            "icon_color": "#20A17F"
+            "icon_color": "#20A17F",
+            "category": "education",
+            "keywords": ["explain", "simple", "clarify", "شرح"]
         },
         {
-            "title": ["Make a Plan"],
+            "id": "make_plan",
+            "title": "Make a Plan",
+            "title_ar": "انشاء خطة",
             "content": "Help me create a step-by-step plan to accomplish the following",
-        "icon_name": "flowchart",
-        "icon_color": "#0077B6"
+            "content_ar": "ساعدني في إنشاء خطة خطوة بخطوة لإنجاز ما يلي",
+            "icon_name": "flowchart",
+            "icon_color": "#0077B6",
+            "category": "planning",
+            "keywords": ["plan", "steps", "strategy", "خطة"]
         },
         {
-        "title": ["Analyze Data"],
-        "content": "Help me analyze the following dataset and identify key patterns and insights",
-        "icon_name": "finance_mode",
-        "icon_color": "#9239FF"
+            "id": "analyze_data",
+            "title": "Analyze Data",
+            "title_ar": "تحليل بيانات",
+            "content": "Help me analyze the following dataset and identify key patterns and insights",
+            "content_ar": "ساعدني في تحليل مجموعة البيانات التالية وتحديد الأنماط والرؤى الرئيسية",
+            "icon_name": "finance_mode",
+            "icon_color": "#9239FF",
+            "category": "data",
+            "keywords": ["data", "analysis", "patterns", "بيانات"]
         },
         {
-        "title": ["Brainstorm Ideas"],
-        "content": "Let's brainstorm creative ideas for the following",
-        "icon_name": "lightbulb",
-        "icon_color": "#cc7a00"
+            "id": "brainstorm_ideas",
+            "title": "Brainstorm Ideas",
+            "title_ar": "تبادل الأفكار",
+            "content": "Let's brainstorm creative ideas for the following",
+            "content_ar": "دعنا نفكر في أفكار إبداعية لما يلي",
+            "icon_name": "lightbulb",
+            "icon_color": "#cc7a00",
+            "category": "creativity",
+            "keywords": ["brainstorm", "ideas", "innovation", "أفكار"]
         }
     ]
 

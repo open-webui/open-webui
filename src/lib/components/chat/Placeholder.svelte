@@ -115,10 +115,12 @@
 		clearMessageInput.set(false);
 	}
 
+	$: firstName = $user?.name?.split(' ')[0] ?? 'there';
+
 	onMount(() => {});
 </script>
 
-<div class="max-w-[1440px] pb-0 	md:pb-4 w-full mx-auto text-center">
+<div class="max-w-[1020px] md:px-4 md:pb-4 w-full mx-auto text-center">
 	{#if $temporaryChatEnabled}
 		<Tooltip
 			content={$i18n.t("This chat won't appear in history and your messages will not be saved.")}
@@ -191,7 +193,7 @@
 							<h1
 								class="pb-[16px] text-typography-titles text-[28px] leading-[22px] font-Inter_SemiBold"
 							>
-							{$i18n.t('Hey')} {$user.name}👋🏼
+							{$i18n.t('Hey')} {firstName} 👋🏼
 							</h1>
 						</div>
 					</div>

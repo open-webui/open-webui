@@ -749,7 +749,7 @@
 	<div class="w-full font-primary">
 		<div class=" mx-auto inset-x-0 bg-transparent flex justify-center">
 			<div
-				class=" p-[20px] flex flex-col px-3 {($settings?.widescreenMode ?? null)
+				class=" p-[10px] flex flex-col px-3 {($settings?.widescreenMode ?? null)
 					? 'max-w-full'
 					: ''} w-full"
 			>
@@ -1454,7 +1454,7 @@
 									{/if}
 								</div>
 
-								<div class=" flex justify-between mt-[48px] max-w-full" dir="ltr">
+								<div class=" flex justify-between mt-[48px] max-w-full" dir={ $isRTL ? 'rtl' : 'ltr' }>
 									<div class="ml-1 self-end flex items-center flex-1 max-w-[80%]">
 										<!--<InputMenu
 											bind:selectedToolIds
