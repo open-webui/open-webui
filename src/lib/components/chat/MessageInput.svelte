@@ -1621,7 +1621,7 @@
 												{#if showGovKnoWebSearchToggle}
 													<div
 														bind:this={toggleContentElement}
-														class="absolute w-full max-w-[600px] bottom-[0] left-0 z-[40] p-[24px] pb-[40px] bg-white border border-[#E5EBF3] bg-[#FBFCFC] rounded-[24px]"
+														class="absolute w-full max-w-[250px] bottom-[0] start-4 z-[40] p-[20px] mb-20 bg-white border border-[#E5EBF3] bg-[#FBFCFC] rounded-[24px]"
 													>
 														{#if showGovKnoButton}
 															<Tooltip content={$i18n.t('Gov Knowledge')} placement="top">
