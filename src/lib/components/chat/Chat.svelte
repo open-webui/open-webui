@@ -2100,7 +2100,7 @@
 						<div class="m-auto h-full w-full flex-1 flex flex-col flex-auto z-10 @container">
 							{#if false && $settings?.landingPageMode === 'chat' || createMessagesList(history, history.currentId).length > 0}
 								<div
-									class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden"
+									class="w-full mx-auto  pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden"
 									id="messages-container"
 									bind:this={messagesContainerElement}
 									on:scroll={(e) => {
@@ -2109,7 +2109,7 @@
 											messagesContainerElement.clientHeight + 5;
 									}}
 								>
-									<div class=" h-full w-full flex flex-col">
+									<div class="max-w-[1020px] mx-auto h-full w-full flex flex-col">
 										<Messages
 											chatId={$chatId}
 											bind:history
@@ -2130,7 +2130,8 @@
 									</div>
 								</div>
 
-								<div class="pb-[0px] md:pb-[20px]">
+								<div class="pb-[0px]">
+									<div class="max-w-[1020px] md:px-4 md:pb-4 w-full mx-auto text-center">
 									<MessageInput
 										{history}
 										{taskIds}
@@ -2183,12 +2184,7 @@
 											}
 										}}
 									/>
-
-									<div
-										class="absolute bottom-1 text-xs text-gray-500 text-center line-clamp-1 right-0 left-0"
-									>
-										<!-- {$i18n.t('LLMs can make mistakes. Verify important information.')} -->
-									</div>
+</div>
 								</div>
 							{:else}
 								<div class="overflow-auto w-full h-full flex">
