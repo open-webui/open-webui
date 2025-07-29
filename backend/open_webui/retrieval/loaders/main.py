@@ -196,7 +196,7 @@ class DoclingLoader:
                              params["ocr_engine"], params["ocr_language"])
 
 
-            endpoint = f"{self.url}/v1/convert/file"
+            endpoint = f"{self.url}/v1alpha/convert/file"
             log.info("Making request to Docling endpoint: %s", endpoint)
             log.info("Request parameters: %s", params)
             
