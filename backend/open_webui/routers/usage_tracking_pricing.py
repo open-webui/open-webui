@@ -6,6 +6,7 @@ Fetches dynamic pricing from OpenRouter API
 import logging
 from fastapi import APIRouter, HTTPException
 from open_webui.env import SRC_LOG_LEVELS
+from open_webui.constants import MAI_BUSINESS_MODEL_IDS
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
@@ -31,25 +32,12 @@ async def get_mai_model_pricing(force_refresh: bool = False):
         pricing_data = await get_dynamic_model_pricing(force_refresh=force_refresh)
         
         # Filter to only include models we actively use in mAI
-        mai_model_ids = {
-            "anthropic/claude-sonnet-4",
-            "google/gemini-2.5-flash", 
-            "google/gemini-2.5-pro",
-            "deepseek/deepseek-chat-v3-0324",
-            "anthropic/claude-3.7-sonnet",
-            "google/gemini-2.5-flash-lite-preview-06-17",
-            "openai/gpt-4.1",
-            "x-ai/grok-4",
-            "openai/gpt-4o-mini",
-            "openai/o4-mini-high",
-            "openai/o3",
-            "openai/chatgpt-4o-latest"
-        }
+        mai_model_ids = MAI_BUSINESS_MODEL_IDS
         
         # Filter models to only include our supported ones
         filtered_models = [
             model for model in pricing_data.get("models", [])
-            if model["id"] in mai_model_ids
+            if model["id"] in MAI_BUSINESS_MODEL_IDS
         ]
         
         # If no models found or API failed, use hardcoded fallback

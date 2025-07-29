@@ -119,3 +119,21 @@ class TASKS(str, Enum):
     AUTOCOMPLETE_GENERATION = "autocomplete_generation"
     FUNCTION_CALLING = "function_calling"
     MOA_RESPONSE_GENERATION = "moa_response_generation"
+
+
+# mAI Business Models Configuration
+# These are the 12 selected models available to mAI organizations
+MAI_BUSINESS_MODEL_IDS = {
+    "anthropic/claude-sonnet-4",
+    "google/gemini-2.5-flash", 
+    "google/gemini-2.5-pro",
+    "deepseek/deepseek-chat-v3-0324",
+    "anthropic/claude-3.7-sonnet",
+    "google/gemini-2.5-flash-lite-preview-06-17",
+    "openai/gpt-4.1",
+    "x-ai/grok-4",
+    "openai/gpt-4o-mini",
+    "openai/o4-mini-high",
+    "openai/o3",
+    "openai/chatgpt-4o-latest"
+}

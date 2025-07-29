@@ -15,7 +15,6 @@ from sqlalchemy.orm import Session
 
 from open_webui.internal.db import get_db
 from open_webui.env import SRC_LOG_LEVELS
-from open_webui.constants import MAI_BUSINESS_MODEL_IDS
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
@@ -251,8 +250,8 @@ async def create_user_available_models_view(db: Session) -> None:
 
 async def ensure_organization_models(db: Session, org_id: str, org_name: str) -> None:
     """
-    Ensure organization has access to the 12 mAI business models.
-    Links only the specific mAI models to the organization.
+    Ensure organization has access to configured models.
+    Links all OpenRouter models to the organization if not already linked.
     """
     try:
         # Check if organization already has models
@@ -265,19 +264,29 @@ async def ensure_organization_models(db: Session, org_id: str, org_name: str) ->
             log.debug(f"Organization {org_id} already has {existing_count} models linked")
             return
         
-        # Use the 12 mAI business models
-        model_ids = list(MAI_BUSINESS_MODEL_IDS)
+        # Get configured OpenRouter models from config
+        config_result = db.execute(
+            text("SELECT data FROM config ORDER BY id DESC LIMIT 1")
+        ).fetchone()
         
-        log.info(f"Linking {len(model_ids)} mAI business models to organization {org_name}")
+        if not config_result:
+            log.warning("No config found, skipping model linking")
+            return
         
-        # First, ensure these models exist in the Models table
-        await ensure_mai_models_exist(db, model_ids)
+        config = json.loads(config_result[0])
+        openai_config = config.get('openai', {}).get('api_configs', {}).get('0', {})
+        model_ids = openai_config.get('model_ids', [])
+        
+        if not model_ids:
+            log.warning("No OpenRouter models configured")
+            return
+        
+        log.info(f"Linking {len(model_ids)} models to organization {org_name}")
         
         # Link each model to the organization
         timestamp = int(time.time())
-        linked_count = 0
         for model_id in model_ids:
-            unique_id = f"{org_id}_{model_id.replace('/', '_')}_{timestamp}"
+            unique_id = f"{org_id}_{model_id}_{timestamp}"
             try:
                 db.execute(
                     text("""
@@ -293,72 +302,13 @@ async def ensure_organization_models(db: Session, org_id: str, org_name: str) ->
                         "updated_at": timestamp
                     }
                 )
-                linked_count += 1
             except Exception as e:
                 log.warning(f"Could not link model {model_id}: {e}")
         
-        log.info(f"✅ {linked_count}/{len(model_ids)} mAI business models linked to organization {org_name}")
+        log.info(f"✅ Models linked to organization {org_name}")
         
     except Exception as e:
         log.error(f"Error linking models to organization: {e}")
-        # Non-critical error, don't raise
-
-
-async def ensure_mai_models_exist(db: Session, model_ids: list) -> None:
-    """
-    Ensure the 12 mAI business models exist in the Models table.
-    Creates missing models with default configuration.
-    """
-    try:
-        timestamp = int(time.time())
-        created_count = 0
-        
-        for model_id in model_ids:
-            # Check if model exists
-            existing = db.execute(
-                text("SELECT COUNT(*) FROM model WHERE id = :model_id"),
-                {"model_id": model_id}
-            ).scalar()
-            
-            if existing == 0:
-                # Create the model
-                try:
-                    # Extract provider and model name for display
-                    parts = model_id.split('/')
-                    provider = parts[0] if len(parts) > 1 else 'Unknown'
-                    model_name = parts[1] if len(parts) > 1 else model_id
-                    
-                    db.execute(
-                        text("""
-                            INSERT OR IGNORE INTO model 
-                            (id, user_id, base_model_id, name, meta, params, is_active, created_at, updated_at)
-                            VALUES (:id, 'system', :base_model_id, :name, :meta, '{}', 1, :created_at, :updated_at)
-                        """),
-                        {
-                            "id": model_id,
-                            "base_model_id": model_id,  # Set to same as id to make it visible in get_models()
-                            "name": f"{model_name.title()} ({provider})",
-                            "meta": json.dumps({
-                                "provider": provider,
-                                "model_type": "openrouter",
-                                "description": f"mAI Business Model - {model_name}"
-                            }),
-                            "created_at": timestamp,
-                            "updated_at": timestamp
-                        }
-                    )
-                    created_count += 1
-                    log.debug(f"Created model: {model_id}")
-                except Exception as e:
-                    log.warning(f"Could not create model {model_id}: {e}")
-        
-        if created_count > 0:
-            log.info(f"✅ Created {created_count} missing mAI business models")
-        else:
-            log.debug("All mAI business models already exist")
-            
-    except Exception as e:
-        log.error(f"Error ensuring mAI models exist: {e}")
         # Non-critical error, don't raise
 
 
