@@ -140,7 +140,6 @@
 
 	// Clear prompt and files when switching to a new chat
 	if (!history?.currentId) {
-		debugger;
 		// Clear prompt and files when chat changes
 		prompt = '';
 		files = [];
