@@ -4,8 +4,9 @@
 	import DOMPurify from 'dompurify';
 	import { marked } from 'marked';
 
-	import { getContext, tick } from 'svelte';
+	import { getContext, tick, createEventDispatcher } from 'svelte';
 	const i18n = getContext('i18n');
+	const dispatch = createEventDispatcher();
 
 	import { chatCompletion } from '$lib/apis/openai';
 
@@ -17,6 +18,7 @@
 	export let id = '';
 	export let model = null;
 	export let messages = [];
+	export let isMergedResponse = false;
 	export let onAdd = () => {};
 
 	let floatingInput = false;
@@ -239,36 +241,48 @@
 			<div
 				class="flex flex-row gap-0.5 shrink-0 p-1 bg-white dark:bg-gray-850 dark:text-gray-100 text-medium rounded-lg shadow-xl"
 			>
-				<button
-					class="px-1 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-sm flex items-center gap-1 min-w-fit"
-					on:click={async () => {
-						selectedText = window.getSelection().toString();
-						floatingInput = true;
+				{#if isMergedResponse}
+					<button
+						class="px-1 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-sm flex items-center gap-1 min-w-fit"
+						on:click={() => {
+							dispatch('stop');
+						}}
+					>
+						<LightBulb className="size-3 shrink-0" />
+						<div class="shrink-0">{$i18n.t('Stop')}</div>
+					</button>
+				{:else}
+					<button
+						class="px-1 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-sm flex items-center gap-1 min-w-fit"
+						on:click={async () => {
+							selectedText = window.getSelection().toString();
+							floatingInput = true;
 
-						await tick();
-						setTimeout(() => {
-							const input = document.getElementById('floating-message-input');
-							if (input) {
-								input.focus();
-							}
-						}, 0);
-					}}
-				>
-					<ChatBubble className="size-3 shrink-0" />
+							await tick();
+							setTimeout(() => {
+								const input = document.getElementById('floating-message-input');
+								if (input) {
+									input.focus();
+								}
+							}, 0);
+						}}
+					>
+						<ChatBubble className="size-3 shrink-0" />
 
-					<div class="shrink-0">{$i18n.t('Ask')}</div>
-				</button>
-				<button
-					class="px-1 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-sm flex items-center gap-1 min-w-fit"
-					on:click={() => {
-						selectedText = window.getSelection().toString();
-						explainHandler();
-					}}
-				>
-					<LightBulb className="size-3 shrink-0" />
+						<div class="shrink-0">{$i18n.t('Ask')}</div>
+					</button>
+					<button
+						class="px-1 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-sm flex items-center gap-1 min-w-fit"
+						on:click={() => {
+							selectedText = window.getSelection().toString();
+							explainHandler();
+						}}
+					>
+						<LightBulb className="size-3 shrink-0" />
 
-					<div class="shrink-0">{$i18n.t('Explain')}</div>
-				</button>
+						<div class="shrink-0">{$i18n.t('Explain')}</div>
+					</button>
+				{/if}
 			</div>
 		{:else}
 			<div

@@ -137,6 +137,7 @@
 
 	export let isLastMessage = true;
 	export let readOnly = false;
+	export let isMergedResponse = false;
 
 	let buttonsContainerElement: HTMLDivElement;
 	let showDeleteConfirm = false;
@@ -803,6 +804,7 @@
 										content={message.content}
 										sources={message.sources}
 										floatingButtons={message?.done && !readOnly}
+										{isMergedResponse}
 										save={!readOnly}
 										preview={!readOnly}
 										done={($settings?.chatFadeStreamingText ?? true)

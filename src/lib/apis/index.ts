@@ -957,13 +957,14 @@ export const generateMoACompletion = async (
 	token: string = '',
 	model: string,
 	prompt: string,
-	responses: string[]
+	responses: string[],
+	signal: AbortSignal
 ) => {
 	const controller = new AbortController();
 	let error = null;
 
 	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/tasks/moa/completions`, {
-		signal: controller.signal,
+		signal: signal,
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',

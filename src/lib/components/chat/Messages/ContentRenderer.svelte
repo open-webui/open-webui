@@ -27,6 +27,7 @@
 	export let save = false;
 	export let preview = false;
 	export let floatingButtons = true;
+	export let isMergedResponse = false;
 
 	export let onSave = (e) => {};
 	export let onSourceClick = (e) => {};
@@ -201,6 +202,7 @@
 				? selectedModels.at(0)
 				: model?.id}
 		messages={createMessagesList(history, id)}
+		{isMergedResponse}
 		onAdd={({ modelId, parentId, messages }) => {
 			console.log(modelId, parentId, messages);
 			onAddMessages({ modelId, parentId, messages });

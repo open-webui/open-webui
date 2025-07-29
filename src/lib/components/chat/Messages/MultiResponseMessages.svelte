@@ -3,7 +3,7 @@
 	import { onMount, tick, getContext } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
 
-	import { mobile, settings } from '$lib/stores';
+	import { mobile, settings, mergedResponseActive } from '$lib/stores';
 
 	import { generateMoACompletion } from '$lib/apis';
 	import { updateChatById } from '$lib/apis/chats';
@@ -189,6 +189,7 @@
 	};
 
 	const mergeResponsesHandler = async () => {
+		mergedResponseActive.set(true);
 		const responses = Object.keys(groupedMessageIds).map((modelIdx) => {
 			const { messageIds } = groupedMessageIds[modelIdx];
 			const messageId = messageIds[groupedMessageIdsIdx[modelIdx]];
@@ -256,6 +257,7 @@
 									messageId={_messageId}
 									{selectedModels}
 									isLastMessage={true}
+									isMergedResponse={history.messages[messageId]?.merged?.status}
 									siblings={groupedMessageIds[modelIdx].messageIds}
 									gotoMessage={(message, messageIdx) => gotoMessage(modelIdx, messageIdx)}
 									showPreviousMessage={() => showPreviousMessage(modelIdx)}
