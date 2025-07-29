@@ -1,0 +1,104 @@
+{
+  "timestamp": "2025-07-29T13:51:27.044522",
+  "investigation_summary": {
+    "environment_variables": {
+      "OPENROUTER_EXTERNAL_USER": {
+        "set": false,
+        "value": "NOT SET",
+        "masked_value": null
+      },
+      "ORGANIZATION_NAME": {
+        "set": false,
+        "value": "NOT SET",
+        "masked_value": null
+      },
+      "OPENROUTER_API_KEY": {
+        "set": false,
+        "value": "NOT SET",
+        "masked_value": null
+      },
+      "DATABASE_URL": {
+        "set": false,
+        "value": "NOT SET",
+        "masked_value": null
+      },
+      "DATA_DIR": {
+        "set": false,
+        "value": "NOT SET",
+        "masked_value": null
+      }
+    },
+    "database_files": [
+      {
+        "path": "/Users/patpil/Documents/Projects/mAI/backend/data/webui.db",
+        "size": 356352,
+        "modified": "2025-07-29T13:30:10.316923",
+        "readable": true,
+        "writable": true
+      },
+      {
+        "path": "/Users/patpil/Documents/Projects/mAI/backend/data/webui.db",
+        "size": 356352,
+        "modified": "2025-07-29T13:30:10.316923",
+        "readable": true,
+        "writable": true
+      }
+    ],
+    "client_organizations": {
+      "organizations": [
+        {
+          "id": "dev_mai_client_d460a478",
+          "name": "Test Organization",
+          "openrouter_api_key": "test_api_key",
+          "openrouter_key_hash": null,
+          "markup_rate": 1.3,
+          "monthly_limit": null,
+          "billing_email": null,
+          "timezone": "Europe/Warsaw",
+          "is_active": 1,
+          "created_at": 1753568400,
+          "updated_at": 1753568400
+        },
+        {
+          "id": "mai_client_63a4eb6d",
+          "name": "Company_A",
+          "openrouter_api_key": "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",
+          "openrouter_key_hash": null,
+          "markup_rate": 1.3,
+          "monthly_limit": null,
+          "billing_email": null,
+          "timezone": "Europe/Warsaw",
+          "is_active": 1,
+          "created_at": 1753734124,
+          "updated_at": 1753740436
+        }
+      ],
+      "current_org_record": null,
+      "environment_org": null,
+      "environment_external_user": null
+    },
+    "processed_generations": null,
+    "daily_usage_records": {
+      "daily_records": [],
+      "total_tokens_recorded": 0,
+      "missing_tokens": 5677
+    },
+    "initialization_status": false,
+    "openrouter_client_manager": false,
+    "streaming_response": false
+  },
+  "critical_issues": [
+    "OPENROUTER_EXTERNAL_USER environment variable not set",
+    "ORGANIZATION_NAME environment variable not set",
+    "Current organization not found in database",
+    "OpenRouterClientManager not working properly",
+    "UsageCapturingStreamingResponse not found or not working"
+  ],
+  "recommendations": [
+    "1. Fix environment variable configuration",
+    "2. Verify database connectivity and organization setup",
+    "3. Check OpenRouter client manager implementation",
+    "4. Verify streaming response usage capture",
+    "5. Review initialization process and logs"
+  ]
+}

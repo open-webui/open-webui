@@ -173,7 +173,6 @@ export class OrganizationUsageService {
 				total_tokens: 0,
 				total_cost: 0,
 				total_cost_pln: 0,
-				total_requests: 0,
 				days_with_usage: 0,
 				days_in_month: new Date().getDate(),
 				usage_percentage: 0

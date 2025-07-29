@@ -1,0 +1,86 @@
+{
+  "cleanup": {
+    "investigation": {
+      "client_user_daily_usage": {
+        "total_records": 0,
+        "test_data_patterns": {}
+      },
+      "client_daily_usage": {
+        "total_records": 1,
+        "test_data_patterns": {}
+      },
+      "client_model_daily_usage": {
+        "total_records": 1,
+        "test_data_patterns": {}
+      }
+    },
+    "execution": {
+      "client_user_daily_usage": [
+        {
+          "query": "DELETE FROM client_user_daily_usage WHERE user_id = 'test_user'",
+          "deleted_records": 0
+        },
+        {
+          "query": "DELETE FROM client_user_daily_usage WHERE user_id LIKE '%test%'",
+          "deleted_records": 0
+        },
+        {
+          "query": "DELETE FROM client_user_daily_usage WHERE user_id LIKE '%Test%'",
+          "deleted_records": 0
+        }
+      ],
+      "client_daily_usage": [
+        {
+          "query": "DELETE FROM client_daily_usage \n                   WHERE client_org_id IN (\n                       SELECT DISTINCT client_org_id \n                       FROM client_user_daily_usage \n                       WHERE user_id LIKE '%test%'\n                   ) \n                   AND client_org_id NOT IN (\n                       SELECT DISTINCT client_org_id \n                       FROM client_user_daily_usage \n                       WHERE user_id NOT LIKE '%test%'\n                   )",
+          "deleted_records": 0
+        }
+      ],
+      "client_model_daily_usage": [
+        {
+          "query": "DELETE FROM client_model_daily_usage \n                   WHERE client_org_id IN (\n                       SELECT DISTINCT client_org_id \n                       FROM client_user_daily_usage \n                       WHERE user_id LIKE '%test%'\n                   ) \n                   AND client_org_id NOT IN (\n                       SELECT DISTINCT client_org_id \n                       FROM client_user_daily_usage \n                       WHERE user_id NOT LIKE '%test%'\n                   )",
+          "deleted_records": 0
+        }
+      ]
+    }
+  },
+  "investigation": {
+    "target_criteria": {
+      "dates": [
+        "2025-07-28",
+        "2025-07-29"
+      ],
+      "target_tokens": 5677,
+      "target_cost": 0.002103
+    },
+    "daily_usage_records": [],
+    "user_aggregates": [],
+    "client_aggregates": [],
+    "exact_match": null,
+    "close_matches": [],
+    "detailed_data": {}
+  },
+  "real_user_data": {},
+  "recommendations": [
+    {
+      "priority": "HIGH",
+      "category": "Data Missing",
+      "issue": "No user found with 5,677 tokens for July 28-29",
+      "action": "Investigate data sync issues or check if dates/tokens are correct"
+    },
+    {
+      "priority": "HIGH",
+      "category": "Environment Config",
+      "issue": "Could not resolve current client_org_id from environment",
+      "action": "Check CLIENT_ORG_ID, CLIENT_ID, or CONTAINER_NAME environment variables"
+    }
+  ],
+  "api_verification": {
+    "environment_variables": {
+      "CLIENT_ORG_ID": "Not set",
+      "CONTAINER_NAME": "Not set",
+      "INSTANCE_ID": "Not set",
+      "CLIENT_ID": "Not set"
+    },
+    "resolved_client_id": null
+  }
+}

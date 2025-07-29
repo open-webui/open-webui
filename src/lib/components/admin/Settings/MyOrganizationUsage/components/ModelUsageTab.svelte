@@ -14,7 +14,6 @@
 		$i18n.t('Model'),
 		$i18n.t('Provider'),
 		$i18n.t('Total Tokens'),
-		$i18n.t('Requests'),
 		$i18n.t('Cost'),
 		$i18n.t('Days Used')
 	];
@@ -34,28 +33,27 @@
 			data={modelUsageData || []} 
 			emptyMessage="{$i18n.t('No model usage data available.')}"
 		>
-			{#each data as modelUsage}
-				<tr>
-					<td class="px-4 py-3 whitespace-nowrap text-sm font-medium">
-						{modelUsage.model_name}
-					</td>
-					<td class="px-4 py-3 whitespace-nowrap text-sm">
-						{modelUsage.provider || 'N/A'}
-					</td>
-					<td class="px-4 py-3 whitespace-nowrap text-sm">
-						{FormatterService.formatNumber(modelUsage.total_tokens)}
-					</td>
-					<td class="px-4 py-3 whitespace-nowrap text-sm">
-						{FormatterService.formatNumber(modelUsage.total_requests)}
-					</td>
-					<td class="px-4 py-3 whitespace-nowrap text-sm font-medium">
-						{FormatterService.formatDualCurrency(modelUsage.markup_cost, modelUsage.cost_pln)}
-					</td>
-					<td class="px-4 py-3 whitespace-nowrap text-sm">
-						{modelUsage.days_used}
-					</td>
-				</tr>
-			{/each}
+			<svelte:fragment slot="default" let:data>
+				{#each data as modelUsage}
+					<tr>
+						<td class="px-4 py-3 whitespace-nowrap text-sm font-medium">
+							{modelUsage.model_name}
+						</td>
+						<td class="px-4 py-3 whitespace-nowrap text-sm">
+							{modelUsage.provider || 'N/A'}
+						</td>
+						<td class="px-4 py-3 whitespace-nowrap text-sm">
+							{FormatterService.formatNumber(modelUsage.total_tokens)}
+						</td>
+						<td class="px-4 py-3 whitespace-nowrap text-sm font-medium">
+							{FormatterService.formatDualCurrency(modelUsage.markup_cost, modelUsage.cost_pln)}
+						</td>
+						<td class="px-4 py-3 whitespace-nowrap text-sm">
+							{modelUsage.days_used}
+						</td>
+					</tr>
+				{/each}
+			</svelte:fragment>
 		</DataTable>
 	{/if}
 </div>

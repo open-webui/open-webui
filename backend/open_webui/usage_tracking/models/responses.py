@@ -46,7 +46,6 @@ class UserUsageItem(BaseModel):
     user_email: str
     external_user_id: str
     total_tokens: int
-    total_requests: int
     markup_cost: float
     cost_pln: float
     days_active: int
@@ -70,7 +69,6 @@ class ModelUsageItem(BaseModel):
     model_name: str
     provider: str
     total_tokens: int
-    total_requests: int
     markup_cost: float
     cost_pln: float
     days_used: int

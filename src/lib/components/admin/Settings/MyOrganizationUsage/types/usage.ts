@@ -8,7 +8,6 @@ export interface CurrentMonthUsage {
 	total_tokens: number;
 	total_cost: number;
 	total_cost_pln: number;
-	total_requests: number;
 	days_with_usage: number;
 	days_in_month: number;
 	usage_percentage: number;
@@ -21,7 +20,6 @@ export interface DailyBreakdown {
 	tokens: number;
 	cost: number;
 	cost_pln: number;
-	requests: number;
 	primary_model: string;
 	last_activity: string;
 }
@@ -51,8 +49,8 @@ export interface UsageData {
 
 export interface UserUsage {
 	user_id: string;
+	user_email: string;
 	total_tokens: number;
-	total_requests: number;
 	markup_cost: number;
 	cost_pln: number;
 	days_active: number;
@@ -62,7 +60,6 @@ export interface ModelUsage {
 	model_name: string;
 	provider: string;
 	total_tokens: number;
-	total_requests: number;
 	markup_cost: number;
 	cost_pln: number;
 	days_used: number;

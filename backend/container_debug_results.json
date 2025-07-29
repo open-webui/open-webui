@@ -1,0 +1,65 @@
+{
+  "timestamp": "2025-07-29T12:09:19.017456",
+  "investigation": "Container environment check for missing 5,677 tokens",
+  "location": "docker_container",
+  "environment": {
+    "OPENROUTER_API_KEY": {
+      "set": true,
+      "value": "sk-or-v1-834744e7019...",
+      "length": 73
+    },
+    "OPENROUTER_EXTERNAL_USER": {
+      "set": true,
+      "value": "dev_mai_client_d460a478",
+      "length": 23
+    },
+    "ORGANIZATION_NAME": {
+      "set": true,
+      "value": "Org_dev_test (DEV)",
+      "length": 18
+    },
+    "ENV": {
+      "set": true,
+      "value": "dev",
+      "length": 3
+    },
+    "WEBUI_NAME": {
+      "set": true,
+      "value": "mAI Development (BACKEND)",
+      "length": 25
+    },
+    "CORS_ALLOW_ORIGIN": {
+      "set": true,
+      "value": "http://localhost:5173;http://localhost:3001",
+      "length": 43
+    }
+  },
+  "paths": null,
+  "imports": {
+    "open_webui.utils.usage_tracking_init": true,
+    "open_webui.utils.openrouter_client_manager": true,
+    "open_webui.models.organization_usage": true,
+    "uvicorn": true,
+    "pydantic": true,
+    "sqlalchemy": true
+  },
+  "initialization": {
+    "init_result": "<coroutine object initialize_usage_tracking_from_environment at 0xffff313c3290>",
+    "is_env_based": true,
+    "can_record": true
+  },
+  "database": {
+    "error": "no such column: created_at"
+  },
+  "recording": {
+    "can_record": true,
+    "test_data": {
+      "model": "anthropic/claude-3-sonnet",
+      "prompt_tokens": 100,
+      "completion_tokens": 200,
+      "total_tokens": 300,
+      "cost": 0.0045,
+      "user_id": "test_user_123"
+    }
+  }
+}

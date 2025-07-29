@@ -11,9 +11,8 @@
 	const i18n = getContext('i18n');
 	
 	const tableHeaders = [
-		$i18n.t('User ID'),
+		$i18n.t('Email'),
 		$i18n.t('Total Tokens'),
-		$i18n.t('Requests'),
 		$i18n.t('Cost'),
 		$i18n.t('Days Active')
 	];
@@ -33,25 +32,24 @@
 			data={userUsageData || []} 
 			emptyMessage="{$i18n.t('No user usage data available.')}"
 		>
-			{#each userUsageData as userUsage}
-				<tr>
-					<td class="px-4 py-3 whitespace-nowrap text-sm font-medium">
-						{userUsage.user_id}
-					</td>
-					<td class="px-4 py-3 whitespace-nowrap text-sm">
-						{FormatterService.formatNumber(userUsage.total_tokens)}
-					</td>
-					<td class="px-4 py-3 whitespace-nowrap text-sm">
-						{FormatterService.formatNumber(userUsage.total_requests)}
-					</td>
-					<td class="px-4 py-3 whitespace-nowrap text-sm font-medium">
-						{FormatterService.formatDualCurrency(userUsage.markup_cost, userUsage.cost_pln)}
-					</td>
-					<td class="px-4 py-3 whitespace-nowrap text-sm">
-						{userUsage.days_active}
-					</td>
-				</tr>
-			{/each}
+			<svelte:fragment slot="default" let:data>
+				{#each data as userUsage}
+					<tr>
+						<td class="px-4 py-3 whitespace-nowrap text-sm font-medium">
+							{userUsage.user_email}
+						</td>
+						<td class="px-4 py-3 whitespace-nowrap text-sm">
+							{FormatterService.formatNumber(userUsage.total_tokens)}
+						</td>
+						<td class="px-4 py-3 whitespace-nowrap text-sm font-medium">
+							{FormatterService.formatDualCurrency(userUsage.markup_cost, userUsage.cost_pln)}
+						</td>
+						<td class="px-4 py-3 whitespace-nowrap text-sm">
+							{userUsage.days_active}
+						</td>
+					</tr>
+				{/each}
+			</svelte:fragment>
 		</DataTable>
 	{/if}
 </div>

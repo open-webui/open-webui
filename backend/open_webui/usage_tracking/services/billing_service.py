@@ -53,7 +53,8 @@ class BillingService:
             print(f"🔍 [DEBUG] Usage data sample: {usage_data[:2] if usage_data else 'No data'}")
             
             # Get all users to create complete list with user details
-            all_users = Users.get_users()
+            all_users_response = Users.get_users()
+            all_users = all_users_response.get("users", []) if isinstance(all_users_response, dict) else all_users_response
             user_dict = {u.id: u for u in all_users}
             
             # Enhance usage data with user details
@@ -66,7 +67,6 @@ class BillingService:
                     "user_email": user_obj.email if user_obj else "unknown@example.com",
                     "external_user_id": usage.get('openrouter_user_id', 'unknown'),
                     "total_tokens": usage['total_tokens'],
-                    "total_requests": usage['total_requests'],
                     "markup_cost": usage['markup_cost'],
                     "cost_pln": round(usage['markup_cost'] * usd_pln_rate, 2),
                     "days_active": usage['days_active'],
@@ -87,7 +87,6 @@ class BillingService:
                             "user_email": user_obj.email,
                             "external_user_id": external_user_id,
                             "total_tokens": 0,
-                            "total_requests": 0,
                             "markup_cost": 0.0,
                             "cost_pln": 0.0,
                             "days_active": 0,
@@ -101,7 +100,6 @@ class BillingService:
                             "user_email": user_obj.email,
                             "external_user_id": "mapping_error",
                             "total_tokens": 0,
-                            "total_requests": 0,
                             "markup_cost": 0.0,
                             "cost_pln": 0.0,
                             "days_active": 0,
@@ -156,7 +154,6 @@ class BillingService:
                     "model_name": usage['model_name'],
                     "provider": usage.get('provider', 'Unknown'),
                     "total_tokens": usage['total_tokens'],
-                    "total_requests": usage['total_requests'],
                     "markup_cost": usage['markup_cost'],
                     "cost_pln": round(usage['markup_cost'] * usd_pln_rate, 2),
                     "days_used": usage.get('days_used', 0)
@@ -184,7 +181,7 @@ class BillingService:
             # In environment-based mode, all users belong to the same organization
             # Get all users from the system
             users_response = Users.get_users()
-            all_users = users_response.users if hasattr(users_response, 'users') else []
+            all_users = users_response.get("users", []) if isinstance(users_response, dict) else users_response
             
             # Define pricing tiers
             pricing_tiers = [

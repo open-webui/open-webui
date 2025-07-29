@@ -1,0 +1,15 @@
+{
+  "timestamp": "2025-07-29T13:56:21.857044",
+  "tests": {
+    "environment_variables": false,
+    "database_initialization": null,
+    "client_manager": false,
+    "streaming_integration": true,
+    "test_scenario": false
+  },
+  "summary": {
+    "tests_run": 4,
+    "tests_passed": 1,
+    "success_rate": "25.0%"
+  }
+}
