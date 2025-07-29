@@ -7,6 +7,9 @@
 	import MaterialIcon from '$lib/components/common/MaterialIcon.svelte';
 	import type { i18n as i18nType } from 'i18next';
 	import type { Writable } from 'svelte/store';
+	import ArrowLeftNew from '$lib/components/icons/ArrowLeftNew.svelte';
+	import ArrowRight from '$lib/components/icons/ArrowRight.svelte';
+	import { isRTL } from '$lib/i18n';
 
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
@@ -248,12 +251,17 @@
 
 	<div class="mt-2 gap-1.5 flex justify-end">
 		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+			class="inline-flex items-center space-x-1 text-[#004280] text-sm leading-none hover:underline"
 			on:click={() => {
 				saveHandler();
 			}}
 		>
-			{$i18n.t('Save')}
+			<span class="text-sm">Submit feedback</span>
+			{#if $isRTL }
+				<ArrowLeftNew />
+			{:else}
+				<ArrowRight />
+			{/if}
 		</button>
 	</div>
 </div>
