@@ -86,6 +86,11 @@
 		if (pinnedModelsList) {
 			new Sortable(pinnedModelsList, {
 				animation: 150,
+				onDragStart: (event) => {
+					if (event.dataTransfer) {
+						event.dataTransfer.setData('text/plain', null);
+					}
+				},
 				onUpdate: async (event) => {
 					const modelId = event.item.dataset.id;
 					const newIndex = event.newIndex;
@@ -294,7 +299,7 @@
 		console.log(e); // Log the drop event
 
 		// Perform file drop check and handle it accordingly
-		if (e.dataTransfer?.files) {
+		if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
 			const inputFiles = Array.from(e.dataTransfer?.files);
 
 			if (inputFiles && inputFiles.length > 0) {
