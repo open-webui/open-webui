@@ -13,15 +13,14 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 import json
 
-
+from enum import StrEnum
 from datetime import datetime, timedelta
-import pytz
 from pytz import UTC
-from typing import Optional, Union, List, Dict
+from typing import Optional, Union
 
 from opentelemetry import trace
 
-from open_webui.models.users import Users
+from open_webui.models.users import UserModel, Users
 
 from open_webui.constants import ERROR_MESSAGES
 
@@ -35,6 +34,7 @@ from open_webui.env import (
     SRC_LOG_LEVELS,
     WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
 )
+from open_webui.config import ENABLE_LDAP
 
 from fastapi import BackgroundTasks, Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -49,9 +49,37 @@ log.setLevel(SRC_LOG_LEVELS["OAUTH"])
 SESSION_SECRET = WEBUI_SECRET_KEY
 ALGORITHM = "HS256"
 
+
+class LoginMethod(StrEnum):
+    LOCAL = "local"
+    OIDC = "oidc"
+    LDAP = "ldap"
+    TRUSTED_HEADER = "trusted_header"
+
+
 ##############
 # Auth Utils
 ##############
+
+
+def determine_login_method(user: UserModel) -> str:
+    """
+    Determine the login method based on user attributes and authentication context.
+
+    Args:
+        user: The user model
+
+    Returns:
+        The login method as a string
+    """
+    if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
+        return LoginMethod.TRUSTED_HEADER
+    elif user.oauth_sub:
+        return LoginMethod.OIDC
+    elif ENABLE_LDAP.value:
+        return LoginMethod.LDAP
+    else:
+        return LoginMethod.LOCAL
 
 
 def verify_signature(payload: str, signature: str) -> bool:
@@ -211,7 +239,7 @@ def get_current_user(
     response: Response,
     background_tasks: BackgroundTasks,
     auth_token: HTTPAuthorizationCredentials = Depends(bearer_security),
-):
+) -> UserModel:
     token = None
 
     if auth_token is not None:
@@ -312,7 +340,7 @@ def get_current_user(
         )
 
 
-def get_current_user_by_api_key(api_key: str):
+def get_current_user_by_api_key(api_key: str) -> UserModel:
     user = Users.get_user_by_api_key(api_key)
 
     if user is None:

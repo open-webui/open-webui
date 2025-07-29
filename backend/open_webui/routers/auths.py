@@ -18,7 +18,7 @@ from open_webui.models.auths import (
     UpdateProfileForm,
     UserResponse,
 )
-from open_webui.models.users import Users
+from open_webui.models.users import UserModel, Users
 from open_webui.models.groups import Groups
 
 from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
@@ -47,6 +47,8 @@ from open_webui.utils.auth import (
     get_current_user,
     get_password_hash,
     get_http_authorization_cred,
+    LoginMethod,
+    determine_login_method,
 )
 from open_webui.utils.webhook import post_webhook
 from open_webui.utils.access_control import get_permissions
@@ -69,13 +71,14 @@ log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
 class SessionUserResponse(Token, UserResponse):
+    login_method: str
     expires_at: Optional[int] = None
     permissions: Optional[dict] = None
 
 
 @router.get("/", response_model=SessionUserResponse)
 async def get_session_user(
-    request: Request, response: Response, user=Depends(get_current_user)
+    request: Request, response: Response, user: UserModel = Depends(get_current_user)
 ):
 
     auth_header = request.headers.get("Authorization")
@@ -112,6 +115,8 @@ async def get_session_user(
         user.id, request.app.state.config.USER_PERMISSIONS
     )
 
+    login_method = determine_login_method(user)
+
     return {
         "token": token,
         "token_type": "Bearer",
@@ -122,6 +127,7 @@ async def get_session_user(
         "role": user.role,
         "profile_image_url": user.profile_image_url,
         "permissions": user_permissions,
+        "login_method": login_method,
     }
 
 
@@ -438,6 +444,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                     "role": user.role,
                     "profile_image_url": user.profile_image_url,
                     "permissions": user_permissions,
+                    "login_method": LoginMethod.LDAP,
                 }
             else:
                 raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
@@ -544,6 +551,7 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
             "role": user.role,
             "profile_image_url": user.profile_image_url,
             "permissions": user_permissions,
+            "login_method": determine_login_method(user),
         }
     else:
         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
@@ -658,6 +666,7 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                 "role": user.role,
                 "profile_image_url": user.profile_image_url,
                 "permissions": user_permissions,
+                "login_method": LoginMethod.LOCAL,
             }
         else:
             raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_USER_ERROR)
