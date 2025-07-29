@@ -1048,7 +1048,18 @@
 						</div>
 						<div class="flex flex-col space-y-1 rounded-xl">
 							{#each $pinnedChats as chat, idx (`pinned-chat-${chat?.id ?? idx}`)}
-								<ChatItem className="pinned" id={chat.id} title={chat.title} />
+								<ChatItem
+											className=""
+											id={chat.id}
+											title={chat.title}
+											{shiftKey}
+											selected={selectedChatId === chat.id}
+											
+											on:change={async () => {
+												initChatList();
+											}}
+											
+										/>
 							{/each}
 						</div>
 					</div>
