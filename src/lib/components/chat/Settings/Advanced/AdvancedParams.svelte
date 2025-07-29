@@ -14,7 +14,7 @@
 
 	const defaultParams = {
 		// Advanced
-		target: null,
+		target: 'native',
 		stream_response: null, // Set stream responses for this model individually
 		function_calling: null,
 		seed: null,
@@ -98,7 +98,7 @@
 			>
 			<div class="flex w-full justify-between">
 			<div class="self-center text-xs font-medium">
-					{$i18n.t('target')}
+					{$i18n.t('Target')}
 			</div>
 				<select
 					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden bg-white text-black dark:bg-gray-800 dark:text-white"

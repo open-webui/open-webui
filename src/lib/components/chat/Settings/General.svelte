@@ -65,7 +65,7 @@
 		mirostat_eta: null,
 		mirostat_tau: null,
 		top_k: null,
-		target: null,
+		target: 'native',
 		top_p: null,
 		min_p: null,
 		stop: null,
