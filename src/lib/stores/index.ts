@@ -282,5 +282,6 @@ type SessionUser = {
 	email: string;
 	name: string;
 	role: string;
+	login_method: string;
 	profile_image_url: string;
 };
