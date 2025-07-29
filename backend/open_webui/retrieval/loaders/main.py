@@ -152,7 +152,7 @@ class DoclingLoader:
                 )
             }
 
-            params = {"image_export_mode": "placeholder", "table_mode": "accurate"}
+            params = {"image_export_mode": "embedded", "table_mode": "fast", "to_formats": "md", "pdf_backend": "pypdfium2", "pipeline": "standard", "do_table_structure": True, "include_images": True}
 
             if self.params:
                 log.debug("Processing custom parameters: %s", self.params)
@@ -195,7 +195,6 @@ class DoclingLoader:
                     log.debug("OCR settings - engine: %s, languages: %s", 
                              params["ocr_engine"], params["ocr_language"])
 
-                params["to_formats"] = "md"
 
             endpoint = f"{self.url}/v1alpha/convert/file"
             log.info("Making request to Docling endpoint: %s", endpoint)
@@ -257,7 +256,7 @@ class DoclingLoader:
                 time.sleep(5)
             
             # Check task status
-            status_endpoint = f"{self.url}/v1alpha/tasks/{task_id}"
+            status_endpoint = f"{self.url}/v1/tasks/{task_id}"
             try:
                 r = requests.get(status_endpoint)
                 

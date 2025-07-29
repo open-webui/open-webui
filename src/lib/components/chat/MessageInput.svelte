@@ -749,7 +749,7 @@
 	<div class="w-full font-primary">
 		<div class=" mx-auto inset-x-0 bg-transparent flex justify-center">
 			<div
-				class=" p-[20px] flex flex-col px-3 {($settings?.widescreenMode ?? null)
+				class=" p-[10px] flex flex-col px-3 {($settings?.widescreenMode ?? null)
 					? 'max-w-full'
 					: ''} w-full"
 			>

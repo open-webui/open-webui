@@ -466,25 +466,31 @@
 										<div class="flex border-b border-gray-100 dark:border-gray-850 w-full">
 											<input
 												class="px-3 py-1.5 text-xs w-full bg-transparent outline-hidden border-r border-gray-100 dark:border-gray-850"
-												placeholder={$i18n.t('Title (e.g. Tell me a fun fact)')}
-												bind:value={prompt.title[0]}
+												placeholder="ID"
+												bind:value={prompt.id}
 											/>
-
 											<input
 												class="px-3 py-1.5 text-xs w-full bg-transparent outline-hidden border-r border-gray-100 dark:border-gray-850"
-												placeholder={$i18n.t('Subtitle (e.g. about the Roman Empire)')}
-												bind:value={prompt.title[1]}
+												placeholder="Icon Name"
+												bind:value={prompt.icon_name}
+											/>
+											<input
+												class="px-3 py-1.5 text-xs w-full bg-transparent outline-hidden"
+												placeholder="Category"
+												bind:value={prompt.category}
 											/>
 										</div>
 
-										<textarea
-											class="px-3 py-1.5 text-xs w-full bg-transparent outline-hidden border-r border-gray-100 dark:border-gray-850 resize-none"
-											placeholder={$i18n.t(
-												'Prompt (e.g. Tell me a fun fact about the Roman Empire)'
-											)}
-											rows="3"
-											bind:value={prompt.content}
-										/>
+										<div class="flex border-b border-gray-100 dark:border-gray-850 w-full">
+											<div class="px-3 py-1.5 text-xs w-full bg-transparent outline-hidden border-r border-gray-100 dark:border-gray-850">
+												<div class="text-gray-500">English Title: {$i18n.t(`suggestion.${prompt.id}.title`)}</div>
+												<div class="text-gray-500">English Content: {$i18n.t(`suggestion.${prompt.id}.content`)}</div>
+											</div>
+											<div class="px-3 py-1.5 text-xs w-full bg-transparent outline-hidden">
+												<div class="text-gray-500">Arabic Title: {$i18n.t(`suggestion.${prompt.id}.title`)}</div>
+												<div class="text-gray-500">Arabic Content: {$i18n.t(`suggestion.${prompt.id}.content`)}</div>
+											</div>
+										</div>
 									</div>
 
 									<button
@@ -535,13 +541,22 @@
 										try {
 											let suggestions = JSON.parse(event.target.result);
 
-											suggestions = suggestions.map((s) => {
-												if (typeof s.title === 'string') {
-													s.title = [s.title, ''];
-												} else if (!Array.isArray(s.title)) {
-													s.title = ['', ''];
+																						suggestions = suggestions.map((s) => {
+												// Ensure id exists
+												if (!s.id) {
+													s.id = 'suggestion_' + Math.random().toString(36).substr(2, 9);
 												}
-
+												
+												// Ensure icon_name exists
+												if (!s.icon_name) {
+													s.icon_name = 'lightbulb';
+												}
+												
+												// Ensure category exists
+												if (!s.category) {
+													s.category = 'general';
+												}
+												
 												return s;
 											});
 
