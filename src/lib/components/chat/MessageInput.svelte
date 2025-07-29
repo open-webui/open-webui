@@ -1454,7 +1454,7 @@
 									{/if}
 								</div>
 
-								<div class=" flex justify-between mt-[48px] max-w-full" dir="ltr">
+								<div class=" flex justify-between mt-[48px] max-w-full" dir={ $isRTL ? 'rtl' : 'ltr' }>
 									<div class="ml-1 self-end flex items-center flex-1 max-w-[80%]">
 										<!--<InputMenu
 											bind:selectedToolIds
