@@ -572,6 +572,7 @@ MAX_FILE_SIZE = os.getenv("MAX_FILE_SIZE")
 ALLOWED_FILE_TYPES = os.getenv("ALLOWED_FILE_TYPES")
 PRIVACY_POLICY_URL = os.getenv("PRIVACY_POLICY_URL")
 TERMS_CONDITIONS_URL = os.getenv("TERMS_CONDITIONS_URL")
+ALLOW_CREDENTIALS_LOGIN = os.environ.get("ALLOW_CREDENTIALS_LOGIN", "false").lower() == "true"
 
 ###################################
 GOV_GPT_WEB_SEARCH = os.getenv("GOV_GPT_WEB_SEARCH")
