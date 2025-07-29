@@ -1186,7 +1186,7 @@
 								{#if message.usage}
 									<Tooltip
 										content={message.usage
-											? `<pre>${sanitizeResponseContent(
+											? `<div style="max-width:900px; max-height:600px; overflow:auto;">${sanitizeResponseContent(
 													JSON.stringify(message.usage, null, 2)
 														.replace(/"([^(")"]+)":/g, '$1:')
 														.slice(1, -1)
@@ -1194,7 +1194,7 @@
 														.map((line) => line.slice(2))
 														.map((line) => (line.endsWith(',') ? line.slice(0, -1) : line))
 														.join('\n')
-												)}</pre>`
+												)}</duv>`
 											: ''}
 										placement="bottom"
 									>
