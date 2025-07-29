@@ -19,18 +19,13 @@
 	
 	const tableHeaders = [
 		$i18n.t('Date'),
-		$i18n.t('Day'),
 		$i18n.t('Tokens'),
-		$i18n.t('Cost'),
-		$i18n.t('Requests'),
-		$i18n.t('Primary Model'),
-		$i18n.t('Last Activity')
+		$i18n.t('Cost')
 	];
 	
 	const formatters = {
 		tokens: FormatterService.formatNumber,
-		cost: (value: any) => FormatterService.formatDualCurrency(value?.cost || 0, value?.cost_pln || 0),
-		requests: FormatterService.formatNumber
+		cost: (value: any) => FormatterService.formatDualCurrency(value?.cost || 0, value?.cost_pln || 0)
 	};
 </script>
 
@@ -95,22 +90,10 @@
 						{day?.date || 'N/A'}
 					</td>
 					<td class="px-4 py-3 whitespace-nowrap text-sm">
-						{day?.day_name || 'N/A'}
-					</td>
-					<td class="px-4 py-3 whitespace-nowrap text-sm">
 						{FormatterService.formatNumber(day?.tokens || 0)}
 					</td>
 					<td class="px-4 py-3 whitespace-nowrap text-sm font-medium">
 						{FormatterService.formatDualCurrency(day?.cost || 0, day?.cost_pln || 0)}
-					</td>
-					<td class="px-4 py-3 whitespace-nowrap text-sm">
-						{FormatterService.formatNumber(day?.requests || 0)}
-					</td>
-					<td class="px-4 py-3 whitespace-nowrap text-sm">
-						{day?.primary_model || 'N/A'}
-					</td>
-					<td class="px-4 py-3 whitespace-nowrap text-sm">
-						{day?.last_activity || 'N/A'}
 					</td>
 				</tr>
 			{/each}
