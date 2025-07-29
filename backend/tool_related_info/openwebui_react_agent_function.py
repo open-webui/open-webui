@@ -23,6 +23,7 @@ from pydantic import create_model
 import json
 from urllib.parse import urlparse
 import httpx
+import requests
 
 # Azure Search imports
 from azure.core.credentials import AzureKeyCredential
@@ -582,10 +583,13 @@ class Pipe:
                                 self.logger.info(f"Loading OpenAPI spec from: {spec_url}")
 
                                 # Fetch the OpenAPI spec manually to inspect and modify it
-                                async with httpx.AsyncClient() as client:
-                                    response = await client.get(spec_url)
-                                    response.raise_for_status()
-                                    spec_dict = response.json()
+                                loop = asyncio.get_running_loop()
+                                response = await loop.run_in_executor(
+                                    None, 
+                                    lambda: requests.get(spec_url, timeout=30)
+                                )
+                                response.raise_for_status()
+                                spec_dict = response.json()
 
                                 # If 'servers' key is missing, add it based on the endpoint
                                 if "servers" not in spec_dict or not spec_dict["servers"]:
@@ -745,18 +749,63 @@ if __name__ == "__main__":
             "messages": [
                 {
                     "role": "user",
-                    "content": "How many OPNs will we offer for Granite Ridge and Strix Halo? Help me to create a table to list all the OPN, spec./frequency/clock ...etc. for comparison.",
+                    # "content": "How many OPNs will we offer for Granite Ridge and Strix Halo? Help me to create a table to list all the OPN, spec./frequency/clock ...etc. for comparison.",
+                    "content": "Perform 10 test tool calls for tool “tool_hello_post”, with different name on each test.",
                 }
             ],
         }
 
-        # Example user object from Open-WebUI
-        user = {"id": "test-user-id", "email": "test@example.com"}
-
         print("--- Starting Pipe Test ---")
+        # Sample params
+        params = {
+            "body": {
+                "model": "react_agent",
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": 'Available Tools: [{"type": "function", "name": "tool_hello_post", "description": "Hello", "parameters": {"type": "object", "properties": {"name": {"type": "string", "title": "Name", "description": ""}}, "required": ["name"]}}, {"type": "function", "name": "tool_get_project_sheet_list_post", "description": "Tool Name: get_project_sheet_list\\n\\nPurpose:\\nRetrieves a list of sheets for a specific project (non-CRM workspaces) from the backend API.\\nThis is determined by the provided workspace, user email, and a RFQ_ID.\\nThe tool outputs a Markdown formatted table detailing information for each sheet.\\n\\nParameters:\\n    Workspace (str):\\n        Required. Specifies the current workspace context. Must NOT be \'CRM\'.\\n        Common values include: \'E2E\', \'Thermal\', \'PPA\'.\\n        Example: \'E2E\'\\n\\n    Email (str):\\n        Required. The email address of the user making the request for permission checks.\\n        Example: \'user@example.com\'\\n\\n    RFQ_ID (int):\\n        Required. The unique identifier for the project.\\n        Example: 123", "parameters": {"type": "object", "properties": {"Workspace": {"type": "string"}, "Email": {"type": "string"}, "RFQ_ID": {"type": "integer"}}, "required": ["Workspace", "Email", "RFQ_ID"]}}, {"type": "function", "name": "tool_get_program_sheet_list_post", "description": "Tool Name: get_program_sheet_list\\n\\nPurpose:\\nRetrieves a list of sheets for a specific program from the backend API.\\nThis is determined by the user email, a programID, and the workspace.\\nThe tool outputs a Markdown formatted table detailing information for each sheet.\\n\\nParameters:\\n    Email (str):\\n        Required. The email address of the user making the request for permission checks.\\n        Example: \'user@example.com\'\\n\\n    ProgramID (int):\\n        Required. The unique identifier for the program.\\n        Example: 456\\n        \\n    Workspace (str, optional):\\n        The workspace for the program. Defaults to \'CRM\'.\\n        For future use, this parameter can specify other workspaces.\\n        Example: \'CRM\'", "parameters": {"type": "object", "properties": {"Email": {"type": "string"}, "ProgramID": {"type": "integer"}, "Workspace": {"type": "string"}}, "required": ["Email", "ProgramID"]}}, {"type": "function", "name": "tool_get_project_sheet_tool_post", "description": "Tool Name: get_project_sheet_tool\\n\\nPurpose:\\nRetrieves detailed cell data for a specific sheet template within a non-CRM project.\\nThe data is contextualized by workspace, section, user email, and RFQ_ID.\\nThe output is a Markdown table representing the sheet\'s content.\\n\\nParameters:\\n    Workspace (str):\\n        Required. Specifies the current workspace context. Must NOT be \'CRM\'.\\n        Example: \'E2E\'\\n\\n    Section (str):\\n        Required. The name of the section where the sheet template resides.\\n        Example: \'General Info\'\\n\\n    Email (str):\\n        Required. The email address of the user making the request for permission checks.\\n        Example: \'user@example.com\'\\n\\n    SheetTemplateID (int):\\n        Required. The unique identifier of the sheet template to retrieve.\\n        Example: 789\\n\\n    RFQ_ID (int):\\n        Required. The unique identifier for the project.\\n        Example: 123", "parameters": {"type": "object", "properties": {"Workspace": {"type": "string"}, "Section": {"type": "string"}, "Email": {"type": "string"}, "SheetTemplateID": {"type": "integer"}, "RFQ_ID": {"type": "integer"}}, "required": ["Workspace", "Section", "Email", "SheetTemplateID", "RFQ_ID"]}}, {"type": "function", "name": "tool_get_program_sheet_tool_post", "description": "Tool Name: get_program_sheet_tool\\n\\nPurpose:\\nRetrieves detailed cell data for a specific sheet template within a program-based workspace (typically CRM).\\nThe data is contextualized by section, user email, programID, and workspace.\\nThe output is a Markdown table representing the sheet\'s content.\\n\\nParameters:\\n    Section (str):\\n        Required. The name of the section where the sheet template resides.\\n        Example: \'General Info\'\\n\\n    Email (str):\\n        Required. The email address of the user making the request for permission checks.\\n        Example: \'user@example.com\'\\n\\n    SheetTemplateID (int):\\n        Required. The unique identifier of the sheet template to retrieve.\\n        Example: 789\\n\\n    ProgramID (int):\\n        Required. The unique identifier for the program.\\n        Example: 456\\n        \\n    Workspace (str, optional):\\n        The workspace for the program. Defaults to \'CRM\'.\\n        For future use, this parameter can specify other program-based workspaces.\\n        Example: \'CRM\'", "parameters": {"type": "object", "properties": {"Section": {"type": "string"}, "Email": {"type": "string"}, "SheetTemplateID": {"type": "integer"}, "ProgramID": {"type": "integer"}, "Workspace": {"type": "string"}}, "required": ["Section", "Email", "SheetTemplateID", "ProgramID"]}}, {"type": "function", "name": "tool_get_project_list_post", "description": "Tool Name: get_project_list\\n\\nPurpose:\\nRetrieves a list of Projects from the backend API based on the user\'s email, with a required dynamic filter.\\n\\nParameters:\\n    Email (str):\\n        Required. The email address of the user making the request.\\n    Filters (dict):\\n        Required. A dictionary of filters to apply.\\n        Example: {\\"ODM\\": \\"LCFC\\", \\"Key_Program\\": \\"Hawk Point\\"}\\n        Available columns for filtering include:\\n        - RFQ_ID\\n        - APM_ID\\n        - OEM\\n        - ODM\\n        - OEMCodename\\n        - Key_Program\\n\\nReturns:\\n    str: A Markdown table containing the list of Projects.", "parameters": {"type": "object", "properties": {"Email": {"type": "string"}, "Filters": {"type": "object", "properties": {}, "required": []}}, "required": ["Email", "Filters"]}}, {"type": "function", "name": "tool_get_program_list_post", "description": "Tool Name: get_program_list\\n\\nPurpose:\\nRetrieves a list of programs from the backend API based on the user\'s email.\\nProgram list includes IP Year, Main Representing Key Program and it\'s Corresponding Key Program.\\n\\nParameters:\\n    Email (str):\\n        Required. The email address of the user making the request.\\n\\nReturns:\\n    str: A Markdown table containing the list of programs.", "parameters": {"type": "object", "properties": {"Email": {"type": "string"}}, "required": ["Email"]}}, {"type": "function", "name": "tool_get_component_list_post", "description": "Tool Name: get_component_list\\n\\nPurpose:\\nRetrieves a list of components from the backend API based on the CpmID and user\'s email.\\nThe component list contains all the parts and detailed specifications of the project, such as part number, vendor name, etc.\\n\\nParameters:\\n    CpmID (int):\\n        Required. The unique identifier for the CPM.\\n    Email (str):\\n        Required. The email address of the user making the request for permission checks.\\n\\nReturns:\\n    str: A Markdown table containing the list of components.", "parameters": {"type": "object", "properties": {"RFQ_ID": {"type": "integer"}, "Email": {"type": "string"}}, "required": ["RFQ_ID", "Email"]}}]\n\nYour task is to choose and return the correct tool(s) from the list of available tools based on the query. Follow these guidelines:\n\n- Return only the JSON object, without any additional text or explanation.\n\n- If no tools match the query, return an empty array: \n   {\n     "tool_calls": []\n   }\n\n- If one or more tools match the query, construct a JSON response containing a "tool_calls" array with objects that include:\n   - "name": The tool\'s name.\n   - "parameters": A dictionary of required parameters and their corresponding values.\n\nThe format for the JSON response is strictly:\n{\n  "tool_calls": [\n    {"name": "toolName1", "parameters": {"key1": "value1"}},\n    {"name": "toolName2", "parameters": {"key2": "value2"}}\n  ]\n}',
+                    },
+                    {
+                        "role": "user",
+                        "content": 'Query: History:\nUSER: """Perform 10 test tool calls for tool “tool_hello_post”, with different name on each test."""\nQuery: Perform 10 test tool calls for tool “tool_hello_post”, with different name on each test.',
+                    },
+                ],
+                "stream": False,
+            },
+            "__user__": {
+                "id": "cbfbe0b7-309c-4456-82f7-00f6daf16ed7",
+                "email": "kai@datar.ai",
+                "name": "Admin",
+                "role": "admin",
+            },
+            "__tools__": {
+                "tool_hello_post": {
+                    "tool_id": "server:0",
+                    "spec": {
+                        "type": "function",
+                        "name": "tool_hello_post",
+                        "description": "Hello",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "name": {
+                                    "type": "string",
+                                    "title": "Name",
+                                    "description": "",
+                                }
+                            },
+                            "required": ["name"],
+                        },
+                    },
+                    "endpoint": "http://localhost:8000",
+                    "api_key": "top-secret",
+                },
+            },
+        }
+
         try:
             # The pipe method is an async generator, so we iterate over it with 'async for'
-            async for chunk in pipe_instance.pipe(body=body, __user__=user):
+            async for chunk in pipe_instance.pipe(body=body, __user__=params["__user__"] , __tools__=params["__tools__"]):
                 print(chunk, end="", flush=True)
         except Exception as e:
             logger.error(f"Error during pipe test: {e}", exc_info=True)
