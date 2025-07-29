@@ -533,7 +533,15 @@
 		files = [...files, fileItem];
 
 		if (!$temporaryChatEnabled) {
+			let loadingToastId = null;
+
 			try {
+				// Show loading toast for decryption if enabled in config
+				if ($config?.file?.decryption_enabled ?? false) {
+					loadingToastId = toast.loading($i18n.t('Decrypting and uploading file...'));
+				} else {
+					loadingToastId = toast.loading($i18n.t('Uploading file...'));
+				}
 				// If the file is an audio file, provide the language for STT.
 				let metadata = null;
 				if (
@@ -568,11 +576,22 @@
 					fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
 
 					files = files;
+					toast.success($i18n.t('File uploaded successfully.'), { id: loadingToastId });
 				} else {
 					files = files.filter((item) => item?.itemId !== tempItemId);
+					toast.dismiss(loadingToastId);
 				}
 			} catch (e) {
-				toast.error(`${e}`);
+				toast.dismiss(loadingToastId);
+				const errMsg = typeof e === 'string' ? e : (e?.message || `${e}`);
+				if (
+					errMsg.toLowerCase().includes('decryption') ||
+					errMsg.toLowerCase().includes('azure function error')
+				) {
+					toast.error($i18n.t('File decryption failed: {{error}}', { error: errMsg }));
+				} else {
+					toast.error(`${errMsg}`);
+				}
 				files = files.filter((item) => item?.itemId !== tempItemId);
 			}
 		} else {

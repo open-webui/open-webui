@@ -26,6 +26,10 @@ from open_webui.config import (
     AZURE_STORAGE_KEY,
     STORAGE_PROVIDER,
     UPLOAD_DIR,
+    ENABLE_FILE_DECRYPTION,
+    FILE_DECRYPTION_ENDPOINT,
+    FILE_DECRYPTION_API_KEY,
+    FILE_DECRYPTION_TIMEOUT,
 )
 from google.cloud import storage
 from google.cloud.exceptions import GoogleCloudError, NotFound
@@ -35,9 +39,34 @@ from azure.storage.blob import BlobServiceClient
 from azure.core.exceptions import ResourceNotFoundError
 from open_webui.env import SRC_LOG_LEVELS
 
+from open_webui.utils.decryption import (
+    decrypt_file_via_azure,
+    DecryptionError,
+)
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
+
+
+def _decrypt_content_if_enabled(filename: str, contents: bytes) -> bytes:
+    """Checks config and decrypts file contents if enabled."""
+
+    if ENABLE_FILE_DECRYPTION and FILE_DECRYPTION_ENDPOINT and FILE_DECRYPTION_API_KEY:
+        try:
+            decrypted_contents = decrypt_file_via_azure(
+                filename,
+                contents,
+                FILE_DECRYPTION_ENDPOINT,
+                FILE_DECRYPTION_API_KEY,
+                FILE_DECRYPTION_TIMEOUT,
+            )
+            log.info(f"File {filename} decrypted successfully.")
+            return decrypted_contents
+        except Exception as e:
+            log.error(f"File decryption failed: {e}")
+            # Raise a specific error to be caught by the API layer
+            raise DecryptionError(f"File decryption failed: {e}")
+    return contents
 
 
 class StorageProvider(ABC):
@@ -68,6 +97,10 @@ class LocalStorageProvider(StorageProvider):
         contents = file.read()
         if not contents:
             raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
+
+        # Decrypt contents if decryption is enabled in the config
+        contents = _decrypt_content_if_enabled(filename, contents)
+
         file_path = f"{UPLOAD_DIR}/{filename}"
         with open(file_path, "wb") as f:
             f.write(contents)

@@ -223,6 +223,10 @@ from open_webui.config import (
     RAG_AZURE_OPENAI_API_VERSION,
     RAG_OLLAMA_BASE_URL,
     RAG_OLLAMA_API_KEY,
+    ENABLE_FILE_DECRYPTION,
+    FILE_DECRYPTION_ENDPOINT,
+    FILE_DECRYPTION_API_KEY,
+    FILE_DECRYPTION_TIMEOUT,
     CHUNK_OVERLAP,
     CHUNK_SIZE,
     CONTENT_EXTRACTION_ENGINE,
@@ -817,6 +821,11 @@ app.state.config.RAG_AZURE_OPENAI_API_VERSION = RAG_AZURE_OPENAI_API_VERSION
 
 app.state.config.RAG_OLLAMA_BASE_URL = RAG_OLLAMA_BASE_URL
 app.state.config.RAG_OLLAMA_API_KEY = RAG_OLLAMA_API_KEY
+
+app.state.config.ENABLE_FILE_DECRYPTION = ENABLE_FILE_DECRYPTION
+app.state.config.FILE_DECRYPTION_ENDPOINT = FILE_DECRYPTION_ENDPOINT
+app.state.config.FILE_DECRYPTION_API_KEY = FILE_DECRYPTION_API_KEY
+app.state.config.FILE_DECRYPTION_TIMEOUT = FILE_DECRYPTION_TIMEOUT
 
 app.state.config.PDF_EXTRACT_IMAGES = PDF_EXTRACT_IMAGES
 
@@ -1616,6 +1625,7 @@ async def get_app_config(request: Request):
                         "width": app.state.config.FILE_IMAGE_COMPRESSION_WIDTH,
                         "height": app.state.config.FILE_IMAGE_COMPRESSION_HEIGHT,
                     },
+                    "decryption_enabled": app.state.config.ENABLE_FILE_DECRYPTION,
                 },
                 "permissions": {**app.state.config.USER_PERMISSIONS},
                 "google_drive": {

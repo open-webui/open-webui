@@ -137,6 +137,14 @@
 
 	const submitHandler = async () => {
 		if (
+			RAGConfig.ENABLE_FILE_DECRYPTION &&
+			(!RAGConfig.FILE_DECRYPTION_ENDPOINT || !RAGConfig.FILE_DECRYPTION_API_KEY)
+		) {
+			toast.error($i18n.t('Endpoint URL and API Key are required when file decryption is enabled.'));
+			return;
+		}
+
+		if (
 			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'external' &&
 			RAGConfig.EXTERNAL_DOCUMENT_LOADER_URL === ''
 		) {
@@ -192,6 +200,10 @@
 
 		const res = await updateRAGConfig(localStorage.token, {
 			...RAGConfig,
+			ENABLE_FILE_DECRYPTION: RAGConfig.ENABLE_FILE_DECRYPTION ?? false,
+			FILE_DECRYPTION_ENDPOINT: RAGConfig.FILE_DECRYPTION_ENDPOINT ?? '',
+			FILE_DECRYPTION_API_KEY: RAGConfig.FILE_DECRYPTION_API_KEY ?? '',
+			FILE_DECRYPTION_TIMEOUT: RAGConfig.FILE_DECRYPTION_TIMEOUT ?? 30,
 			ALLOWED_FILE_EXTENSIONS: RAGConfig.ALLOWED_FILE_EXTENSIONS.split(',')
 				.map((ext) => ext.trim())
 				.filter((ext) => ext !== ''),
@@ -1057,6 +1069,62 @@
 					<div class=" mb-2.5 text-base font-medium">{$i18n.t('Files')}</div>
 
 					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+
+					<div class="mb-2.5 flex w-full justify-between">
+						<div class="self-center text-xs font-medium">{$i18n.t('File Decryption')}</div>
+						<div class="flex items-center relative">
+							<Switch bind:state={RAGConfig.ENABLE_FILE_DECRYPTION} />
+						</div>
+					</div>
+
+					{#if RAGConfig.ENABLE_FILE_DECRYPTION}
+						<div
+							class="space-y-2.5 pl-6 border-l-2 border-gray-100 dark:border-gray-800 ml-1"
+						>
+							<div class="flex w-full justify-between items-center">
+								<div class="self-center text-xs font-medium">
+									{$i18n.t('Decryption Endpoint URL')}
+								</div>
+								<input
+									class="flex-1 w-full text-sm bg-transparent outline-hidden text-right"
+									type="text"
+									placeholder={$i18n.t('Enter Azure Function Endpoint')}
+									bind:value={RAGConfig.FILE_DECRYPTION_ENDPOINT}
+									autocomplete="off"
+									required
+								/>
+							</div>
+
+							<div class="flex w-full justify-between items-center">
+								<div class="self-center text-xs font-medium">{$i18n.t('API Key')}</div>
+								<div class="max-w-[180px]">
+									<SensitiveInput
+										placeholder={$i18n.t('Enter API Key')}
+										bind:value={RAGConfig.FILE_DECRYPTION_API_KEY}
+										required
+									/>
+								</div>
+							</div>
+
+							<div class="flex w-full justify-between items-center">
+								<div class="self-center text-xs font-medium">{$i18n.t('Timeout (seconds)')}</div>
+								<input
+									class="w-auto text-sm bg-transparent outline-hidden text-right"
+									type="number"
+									placeholder="30"
+									bind:value={RAGConfig.FILE_DECRYPTION_TIMEOUT}
+									autocomplete="off"
+									min="1"
+								/>
+							</div>
+
+							{#if !RAGConfig.FILE_DECRYPTION_ENDPOINT || !RAGConfig.FILE_DECRYPTION_API_KEY}
+								<div class="text-xs text-red-500 text-right">
+									{$i18n.t('Endpoint URL and API Key are required when file decryption is enabled.')}
+								</div>
+							{/if}
+						</div>
+					{/if}
 
 					<div class="  mb-2.5 flex w-full justify-between">
 						<div class=" self-center text-xs font-medium">{$i18n.t('Allowed File Extensions')}</div>

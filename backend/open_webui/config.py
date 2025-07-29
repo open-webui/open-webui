@@ -2250,6 +2250,28 @@ RAG_ALLOWED_FILE_EXTENSIONS = PersistentConfig(
     ],
 )
 
+# File decryption settings
+ENABLE_FILE_DECRYPTION = PersistentConfig(
+    "ENABLE_FILE_DECRYPTION",
+    "file_decryption.enable",
+    os.environ.get("ENABLE_FILE_DECRYPTION", "False").lower() == "true",
+)
+FILE_DECRYPTION_ENDPOINT = PersistentConfig(
+    "FILE_DECRYPTION_ENDPOINT",
+    "file_decryption.endpoint",
+    os.environ.get("FILE_DECRYPTION_ENDPOINT", ""),
+)
+FILE_DECRYPTION_API_KEY = PersistentConfig(
+    "FILE_DECRYPTION_API_KEY",
+    "file_decryption.api_key",
+    os.environ.get("FILE_DECRYPTION_API_KEY", ""),
+)
+FILE_DECRYPTION_TIMEOUT = PersistentConfig(
+    "FILE_DECRYPTION_TIMEOUT",
+    "file_decryption.timeout",
+    int(os.environ.get("FILE_DECRYPTION_TIMEOUT", "30")),
+)
+
 RAG_EMBEDDING_ENGINE = PersistentConfig(
     "RAG_EMBEDDING_ENGINE",
     "rag.embedding_engine",
