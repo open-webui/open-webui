@@ -238,6 +238,14 @@ class ClientUsageRepository(IClientUsageRepository):
                     client_org_id, current_month_start, today, db
                 )
                 
+                # Calculate unique users from ClientUserDailyUsage (correct implementation)
+                user_records = db.query(ClientUserDailyUsage.user_id).filter(
+                    ClientUserDailyUsage.client_org_id == client_org_id,
+                    ClientUserDailyUsage.usage_date >= current_month_start,
+                    ClientUserDailyUsage.usage_date <= today
+                ).distinct().all()
+                total_unique_users = len(user_records)
+                
                 # Monthly summary with business insights
                 monthly_summary = {
                     'average_daily_tokens': round(avg_daily_tokens),
@@ -245,7 +253,7 @@ class ClientUsageRepository(IClientUsageRepository):
                     'average_usage_day_tokens': round(avg_usage_day_tokens),
                     'busiest_day': max(month_records, key=lambda x: x.total_tokens).usage_date.isoformat() if month_records else None,
                     'highest_cost_day': max(month_records, key=lambda x: x.markup_cost).usage_date.isoformat() if month_records else None,
-                    'total_unique_users': len(set(r.unique_users for r in month_records)) if month_records else 0,
+                    'total_unique_users': total_unique_users,
                     'top_models': top_models
                 }
                 
