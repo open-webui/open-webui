@@ -216,8 +216,12 @@
 			<div class="flex flex-wrap gap-1.5 text-sm mt-1.5 py-2">
 				{#each reasons as reason}
 					<button
-						class="px-3 py-0.5 border border-gray-100 dark:border-gray-850 hover:bg-gray-50 dark:hover:bg-gray-850 {selectedReason ===
-						reason.key
+						class="px-3 py-0.5 border border-gray-100 dark:border-gray-850 dark:hover:text-gray-850 {
+						message?.annotation?.rating === 1 
+							? 'hover:bg-[#C1EFE1] dark:hover:bg-[#C1EFE1]' 
+							: 'hover:bg-[#FFE5D4] dark:hover:bg-[#FFE5D4]'
+						} {
+						selectedReason === reason.key
 							? 'bg-gray-100 dark:bg-gray-800'
 							: ''} transition rounded-3xl flex flex-col items-center min-w-[200px]"
 						on:click={() => {
