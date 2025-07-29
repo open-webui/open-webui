@@ -2,7 +2,7 @@ import i18next from 'i18next';
 import resourcesToBackend from 'i18next-resources-to-backend';
 import LanguageDetector from 'i18next-browser-languagedetector';
 import type { i18n as i18nType } from 'i18next';
-import { writable } from 'svelte/store';
+import { writable, derived } from 'svelte/store';
 
 const createI18nStore = (i18n: i18nType) => {
 	const i18nWritable = writable(i18n);
@@ -60,7 +60,8 @@ export const initI18n = (defaultLocale?: string | undefined) => {
 			fallbackLng: {
 				default: fallbackDefaultLocale
 			},
-			ns: 'translation',
+			ns: ['translation', 'terms', 'privacy'],
+			defaultNS: 'translation',
 			returnEmptyString: false,
 			interpolation: {
 				escapeValue: false // not needed for svelte as it escapes by default
@@ -81,7 +82,13 @@ export const getLanguages = async () => {
 export const changeLanguage = (lang: string) => {
 	document.documentElement.setAttribute('lang', lang);
 	i18next.changeLanguage(lang);
+	document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
 };
+
+export const isRTL = derived(i18n, ($i18n) => {
+	const lang = $i18n?.language || document.documentElement.lang || 'en-US';
+	return lang.startsWith('ar');
+});
 
 export default i18n;
 export const isLoading = isLoadingStore;

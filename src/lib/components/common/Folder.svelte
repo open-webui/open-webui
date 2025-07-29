@@ -142,7 +142,7 @@
 					<!-- Icon -->
 					<div
 						class="self-center transition-all duration-300 ease-in-out"
-						class:mr-[8px]={showSidebar}
+						class:me-[8px]={showSidebar}
 					>
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
@@ -208,7 +208,7 @@
 				<!-- Plus button -->
 				{#if onAdd && showSidebar}
 					<button
-						class="absolute z-10 right-8 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
+						class="absolute z-10 end-8 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
 						on:pointerup={(e) => e.stopPropagation()}
 						on:click={(e) => {
 							e.stopPropagation();

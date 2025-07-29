@@ -572,6 +572,7 @@ MAX_FILE_SIZE = os.getenv("MAX_FILE_SIZE")
 ALLOWED_FILE_TYPES = os.getenv("ALLOWED_FILE_TYPES")
 PRIVACY_POLICY_URL = os.getenv("PRIVACY_POLICY_URL")
 TERMS_CONDITIONS_URL = os.getenv("TERMS_CONDITIONS_URL")
+ALLOW_CREDENTIALS_LOGIN = os.environ.get("ALLOW_CREDENTIALS_LOGIN", "false").lower() == "true"
 
 ###################################
 GOV_GPT_WEB_SEARCH = os.getenv("GOV_GPT_WEB_SEARCH")
@@ -579,3 +580,6 @@ MAX_RETRIALS_WEB_SEARCH = os.getenv("MAX_RETRIALS_WEB_SEARCH")
 CUSTOM_WEB_SEARCH_URL = os.getenv("CUSTOM_WEB_SEARCH_URL")
 MS_LOGOUT_URL = os.getenv("MS_LOGOUT_URL")
 
+GOVGPT_FILE_SEARCH_API_URL = os.environ.get("GOVGPT_FILE_SEARCH_API_URL", "http://40.119.184.8:8102/query")
+CUSTOM_QA_TIMEOUT = int(os.environ.get("GOVGPT_FILE_SEARCH_TIMEOUT", "30"))
+USE_CUSTOM_QA_API = os.environ.get("ENABLE_GOVGPT_FILE_SEARCH", "false").lower() == "true"

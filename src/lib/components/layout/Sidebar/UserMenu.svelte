@@ -1,181 +1,226 @@
 <script lang="ts">
-	import { DropdownMenu } from 'bits-ui';
-	import { createEventDispatcher, getContext, onMount } from 'svelte';
-	import { toast } from 'svelte-sonner';
-	import { flyAndScale } from '$lib/utils/transitions';
-	import { goto } from '$app/navigation';
-	import { fade, slide } from 'svelte/transition';
-	import { changeLanguage, getLanguages } from '$lib/i18n';
+    import { DropdownMenu } from 'bits-ui';
+    import { createEventDispatcher, getContext, onMount } from 'svelte';
+    import { toast } from 'svelte-sonner';
+    import { flyAndScale } from '$lib/utils/transitions';
+    import { goto } from '$app/navigation';
+    import { fade, slide } from 'svelte/transition';
+    import { changeLanguage, getLanguages } from '$lib/i18n';
 
-	import { getUsage, getModels as _getModels } from '$lib/apis';
-	import { userSignOut } from '$lib/apis/auths';
-	import { updateUserSettings } from '$lib/apis/users';
+    import { getUsage, getModels as _getModels } from '$lib/apis';
+    import { userSignOut } from '$lib/apis/auths';
+    import { updateUserSettings } from '$lib/apis/users';
 
-	import {
-		config,
-		showSettings,
-		mobile,
-		showSidebar,
-		user,
-		settings,
-		models,
-		theme
-	} from '$lib/stores';
+    import {
+        config,
+        showSettings,
+        mobile,
+        showSidebar,
+        user,
+        settings,
+        models,
+        theme
+    } from '$lib/stores';
 
-	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
-	import QuestionMarkCircle from '$lib/components/icons/QuestionMarkCircle.svelte';
-	import Map from '$lib/components/icons/Map.svelte';
-	import Keyboard from '$lib/components/icons/Keyboard.svelte';
-	import ShortcutsModal from '$lib/components/chat/ShortcutsModal.svelte';
-	import Settings from '$lib/components/icons/Settings.svelte';
-	import Code from '$lib/components/icons/Code.svelte';
-	import UserGroup from '$lib/components/icons/UserGroup.svelte';
-	import SignOut from '$lib/components/icons/SignOut.svelte';
-	import MaterialIcon from '$lib/components/common/MaterialIcon.svelte';
+    import Tooltip from '$lib/components/common/Tooltip.svelte';
+    import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
+    import QuestionMarkCircle from '$lib/components/icons/QuestionMarkCircle.svelte';
+    import Map from '$lib/components/icons/Map.svelte';
+    import Keyboard from '$lib/components/icons/Keyboard.svelte';
+    import ShortcutsModal from '$lib/components/chat/ShortcutsModal.svelte';
+    import Settings from '$lib/components/icons/Settings.svelte';
+    import Code from '$lib/components/icons/Code.svelte';
+    import UserGroup from '$lib/components/icons/UserGroup.svelte';
+    import SignOut from '$lib/components/icons/SignOut.svelte';
+    import MaterialIcon from '$lib/components/common/MaterialIcon.svelte';
 	import Support from '$lib/components/icons/Support.svelte';
 
-	const i18n = getContext('i18n');
+    const i18n = getContext('i18n');
 
-	export let show = false;
-	export let role = '';
-	export let help = false;
-	export let className = 'max-w-[240px]';
+    export let show = false;
+    export let role = '';
+    export let help = false;
+    export let className = 'max-w-[240px]';
 
-	let showShortcuts = false;
+    let showShortcuts = false;
+    let currentLanguage = 'en-US';
 
-	const dispatch = createEventDispatcher();
+    const dispatch = createEventDispatcher();
 
-	let usage = null;
+    // Track language state for UI updates
+    let isLanguageSwitching = false;
+    
+    // Reactive statement to track current language
+    $: if ($i18n?.language) {
+        currentLanguage = $i18n.language;
+    }
 
-	let isOnNotification = false;
-	let notificationEnabled = false;
-	let isOnThemeToggle = true;
-	let themeEnabled = false;
-	// General
-	let themes = ['dark', 'light'];
-	let selectedTheme = 'light';
-	const toggleNotification = async () => {
-		const permission = await Notification.requestPermission();
-		if (permission === 'granted') {
-			notificationEnabled = !notificationEnabled;
-			saveSettings({ notificationEnabled: notificationEnabled });
-		} else {
-			toast.error(
-				$i18n.t(
-					'Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.'
-				)
-			);
-		}
-	};
+    let usage = null;
 
-	const saveSettings = async (updated) => {
-		console.log(updated);
-		await settings.set({ ...$settings, ...updated });
-		await models.set(await getModels());
-		await updateUserSettings(localStorage.token, { ui: $settings });
-	};
-	const getModels = async () => {
-		return await _getModels(
-			localStorage.token,
-			$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
-		);
-	};
-	const getUsageInfo = async () => {
-		const res = await getUsage(localStorage.token).catch((error) => {
-			console.error('Error fetching usage info:', error);
-		});
+    let isOnNotification = false;
+    let notificationEnabled = false;
+    let isOnThemeToggle = true;
+    let themeEnabled = false;
+    // General
+    let themes = ['dark', 'light'];
+    let selectedTheme = 'light';
+    const toggleNotification = async () => {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+            notificationEnabled = !notificationEnabled;
+            saveSettings({ notificationEnabled: notificationEnabled });
+        } else {
+            toast.error(
+                'Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.'
+            );
+        }
+    };
 
-		if (res) {
-			usage = res;
-		} else {
-			usage = null;
-		}
-	};
+    const saveSettings = async (updated: any) => {
+        console.log(updated);
+        await settings.set({ ...$settings, ...updated });
+        await models.set(await getModels());
+        await updateUserSettings(localStorage.token, { ui: $settings });
+    };
+    
+    const getModels = async () => {
+        return await _getModels(
+            localStorage.token,
+            $config?.features?.enable_direct_connections && ($settings?.connections ?? null)
+        );
+    };
+    
+    const getUsageInfo = async () => {
+        const res = await getUsage(localStorage.token).catch((error) => {
+            console.error('Error fetching usage info:', error);
+        });
 
-	$: if (show) {
-		getUsageInfo();
-	}
+        if (res) {
+            usage = res;
+        } else {
+            usage = null;
+        }
+    };
 
-	const applyTheme = (_theme: string) => {
-		let themeToApply = _theme === 'oled-dark' ? 'dark' : _theme;
+    $: if (show) {
+        getUsageInfo();
+    }
 
-		if (_theme === 'system') {
-			themeToApply = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-		}
+    const applyTheme = (_theme: string) => {
+        let themeToApply = _theme === 'oled-dark' ? 'dark' : _theme;
 
-		if (themeToApply === 'dark') {
-			document.documentElement.style.setProperty('--color-gray-800', '#333');
-			document.documentElement.style.setProperty('--color-gray-850', '#262626');
-			document.documentElement.style.setProperty('--color-gray-900', '#171717');
-			document.documentElement.style.setProperty('--color-gray-950', '#0d0d0d');
-			document.documentElement.style.setProperty('--Schemes-Surface', '#36383B');
-			document.documentElement.style.setProperty('--color-neutrals-800', '#fff');
-		} else {
-			document.documentElement.style = '';
-		}
+        if (_theme === 'system') {
+            themeToApply = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
 
-		themes
-			.filter((e) => e !== themeToApply)
-			.forEach((e) => {
-				e.split(' ').forEach((e) => {
-					document.documentElement.classList.remove(e);
-				});
-			});
+        if (themeToApply === 'dark') {
+            document.documentElement.style.setProperty('--color-gray-800', '#333');
+            document.documentElement.style.setProperty('--color-gray-850', '#262626');
+            document.documentElement.style.setProperty('--color-gray-900', '#171717');
+            document.documentElement.style.setProperty('--color-gray-950', '#0d0d0d');
+            document.documentElement.style.setProperty('--Schemes-Surface', '#36383B');
+            document.documentElement.style.setProperty('--color-neutrals-800', '#fff');
+        } else {
+            document.documentElement.style = '';
+        }
 
-		themeToApply.split(' ').forEach((e) => {
-			document.documentElement.classList.add(e);
-		});
+        themes
+            .filter((e) => e !== themeToApply)
+            .forEach((e) => {
+                e.split(' ').forEach((e) => {
+                    document.documentElement.classList.remove(e);
+                });
+            });
 
-		const metaThemeColor = document.querySelector('meta[name="theme-color"]');
-		if (metaThemeColor) {
-			if (_theme.includes('system')) {
-				const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
-					? 'dark'
-					: 'light';
-				console.log('Setting system meta theme color: ' + systemTheme);
-				metaThemeColor.setAttribute('content', systemTheme === 'light' ? '#ffffff' : '#171717');
-			} else {
-				console.log('Setting meta theme color: ' + _theme);
-				metaThemeColor.setAttribute(
-					'content',
-					_theme === 'dark'
-						? '#171717'
-						: _theme === 'oled-dark'
-							? '#000000'
-							: _theme === 'her'
-								? '#983724'
-								: '#ffffff'
-				);
-			}
-		}
+        themeToApply.split(' ').forEach((e) => {
+            document.documentElement.classList.add(e);
+        });
 
-		if (typeof window !== 'undefined' && window.applyTheme) {
-			window.applyTheme();
-		}
+        const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+        if (metaThemeColor) {
+            if (_theme.includes('system')) {
+                const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
+                    ? 'dark'
+                    : 'light';
+                console.log('Setting system meta theme color: ' + systemTheme);
+                metaThemeColor.setAttribute('content', systemTheme === 'light' ? '#ffffff' : '#171717');
+            } else {
+                console.log('Setting meta theme color: ' + _theme);
+                metaThemeColor.setAttribute(
+                    'content',
+                    _theme === 'dark'
+                        ? '#171717'
+                        : _theme === 'oled-dark'
+                            ? '#000000'
+                            : _theme === 'her'
+                                ? '#983724'
+                                : '#ffffff'
+                );
+            }
+        }
 
-		console.log(_theme);
-	};
+        if (typeof window !== 'undefined' && window.applyTheme) {
+            window.applyTheme();
+        }
 
-	const themeChangeHandler = (_theme: string) => {
-		theme.set(_theme);
-		localStorage.setItem('theme', _theme);
-		applyTheme(_theme);
-	};
+        console.log(_theme);
+    };
+
+    const themeChangeHandler = (_theme: string) => {
+        theme.set(_theme);
+        localStorage.setItem('theme', _theme);
+        applyTheme(_theme);
+    };
+
+   
+    const handleLanguageSwitch = async () => {
+        if (isLanguageSwitching) return; // Prevent double clicks
+        
+        try {
+            isLanguageSwitching = true;
+            const currentLang = currentLanguage || 'en-US';
+            const newLang = currentLang === 'en-US' ? 'ar' : 'en-US';
+            
+            // Update local state immediately for instant UI feedback
+            currentLanguage = newLang;
+            
+           
+            localStorage.setItem('locale', newLang);
+            
+            
+            changeLanguage(newLang);
+            
+            // Update user settings on server if logged in
+            if (localStorage.token) {
+                await updateUserSettings(localStorage.token, { 
+                    ui: { ...$settings, locale: newLang } 
+                });
+            }
+            
+            // Small delay to ensure everything updates properly
+            await new Promise(resolve => setTimeout(resolve, 150));
+        } catch (error) {
+            console.error('Language switching error:', error);
+            // Revert language on error
+            currentLanguage = currentLanguage === 'en-US' ? 'ar' : 'en-US';
+        } finally {
+            isLanguageSwitching = false;
+        }
+    };
 </script>
 
 <ShortcutsModal bind:show={showShortcuts} />
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <DropdownMenu.Root
-	bind:open={show}
-	onOpenChange={(state) => {
-		dispatch('change', state);
-	}}
+    bind:open={show}
+    onOpenChange={(state) => {
+        dispatch('change', state);
+    }}
 >
-	<DropdownMenu.Trigger>
-		<slot />
-	</DropdownMenu.Trigger>
+    <DropdownMenu.Trigger>
+        <slot />
+    </DropdownMenu.Trigger>
 
 	<slot name="content">
 		<DropdownMenu.Content
@@ -190,9 +235,7 @@
 				on:click={() => changeLanguage(document.documentElement.lang === 'en-US' ? 'ar' : 'en-US')}
 			>
 				<div class=" self-center truncate gap-[8px] text-[17px] leading-[22px]">
-					{document.documentElement.lang === 'en-US'
-						? 'Switch to Arabic'
-						: 'التبديل إلى اللغة الإنجليزية'}
+					{$i18n.t('Switch to Arabic')}
 				</div>
 				<div class=" self-center {$mobile ? '' : 'mr-3'} ">
 					<MaterialIcon name="translate" size="1.1rem" />
@@ -226,189 +269,199 @@
 				</label>
 			</div>
             {/if}
-			<div
-				class="flex px-[16px] py-[11px] w-full items-center justify-between border-b border-gray-100 dark:border-transparent"
-			>
-				<label class="flex items-center gap-[8px] text-[17px] leading-[22px]">
-					{$i18n.t('Theme')}</label
-				>
-				<label class="relative inline-flex items-center cursor-pointer">
-					<input
-						type="checkbox"
-						bind:checked={isOnThemeToggle}
-						on:change={() => themeChangeHandler(isOnThemeToggle ? 'light' : 'dark')}
-						class="sr-only peer"
-					/>
-					<div
-						class="w-[40px] h-[20px] {isOnThemeToggle
-							? 'bg-neutrals-green'
-							: 'bg-neutrals-50 dark:bg-gray-500'} rounded-full peer duration-300"
-					>
-						<div
-							class=" flex items-center justify-center absolute {isOnThemeToggle
-								? 'left-[1px]'
-								: 'right-[1px]'}  top-[1px] bg-neutrals-white w-[18px] h-[18px] rounded-full transition-transform duration-300 peer-checked:translate-x-5"
-						></div>
-					</div>
-				</label>
-			</div>
-			{#if role === 'admin'}
-				<button
-					class="flex justify-between items-center border-b border-gray-100 dark:border-transparent px-[16px] py-[11px] w-full transition"
-					on:click={async () => {
-						await showSettings.set(true);
-						show = false;
+            
+            <div
+                class="flex px-[16px] py-[11px] w-full items-center justify-between border-b border-gray-100 dark:border-transparent"
+            >
+                <label for="theme-toggle" class="flex items-center gap-[8px] text-[17px] leading-[22px]">
+                    {$i18n?.t?.('Theme') || 'Theme'}
+                </label>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input
+                        id="theme-toggle"
+                        type="checkbox"
+                        bind:checked={isOnThemeToggle}
+                        on:change={() => themeChangeHandler(isOnThemeToggle ? 'light' : 'dark')}
+                        class="sr-only peer"
+                    />
+                    <div
+                        class="w-[40px] h-[20px] {isOnThemeToggle
+                            ? 'bg-neutrals-green'
+                            : 'bg-neutrals-50 dark:bg-gray-500'} rounded-full peer duration-300"
+                    >
+                        <div
+                            class="flex items-center justify-center absolute {isOnThemeToggle
+                                ? 'left-[1px]'
+                                : 'right-[1px]'} top-[1px] bg-neutrals-white w-[18px] h-[18px] rounded-full transition-transform duration-300 peer-checked:translate-x-5"
+                        ></div>
+                    </div>
+                </label>
+            </div>
+            
+            {#if role === 'admin'}
+                <button
+                    class="flex justify-between items-center border-b border-gray-100 dark:border-transparent px-[16px] py-[11px] w-full transition hover:bg-gray-50 dark:hover:bg-gray-700"
+                    on:click={async () => {
+                        await showSettings.set(true);
+                        show = false;
 
-						if ($mobile) {
-							showSidebar.set(false);
-						}
-					}}
-				>
-					<div class=" self-center truncate gap-[8px] text-[17px] leading-[22px]">
-						{$i18n.t('Settings')}
-					</div>
-					<div class=" self-center mr-3">
-						<Settings className="w-5 h-5" strokeWidth="1.5" />
-					</div>
-				</button>
-			{/if}
-			<button
-				class="flex justify-between items-center border-b border-gray-100 dark:border-transparent px-[16px] py-[11px] w-full transition"
-				on:click={() => {
-					dispatch('show', 'archived-chat');
-					show = false;
+                        if ($mobile) {
+                            showSidebar.set(false);
+                        }
+                    }}
+                >
+                    <div class="self-center truncate gap-[8px] text-[17px] leading-[22px]">
+                        {$i18n?.t?.('Settings') || 'Settings'}
+                    </div>
+                    <div class="self-center mr-3">
+                        <Settings className="w-5 h-5" />
+                    </div>
+                </button>
+            {/if}
+            
+            <button
+                class="flex justify-between items-center border-b border-gray-100 dark:border-transparent px-[16px] py-[11px] w-full transition hover:bg-gray-50 dark:hover:bg-gray-700"
+                on:click={() => {
+                    dispatch('show', 'archived-chat');
+                    show = false;
 
-					if ($mobile) {
-						showSidebar.set(false);
-					}
-				}}
-			>
-				<div class=" self-center truncate gap-[8px] text-[17px] leading-[22px]">
-					{$i18n.t('Archived Chats')}
-				</div>
-				<div class=" self-center mr-3">
-					<ArchiveBox className="size-5" strokeWidth="1.5" />
-				</div>
-			</button>
+                    if ($mobile) {
+                        showSidebar.set(false);
+                    }
+                }}
+            >
+                <div class="self-center truncate gap-[8px] text-[17px] leading-[22px]">
+                    {$i18n?.t?.('Archived Chats') || 'Archived Chats'}
+                </div>
+                <div class="self-center mr-3">
+                    <ArchiveBox className="size-5" />
+                </div>
+            </button>
 
-			{#if role === 'admin'}
-				<button
-					class="flex justify-between items-center border-b border-gray-100 dark:border-transparent px-[16px] py-[11px] w-full transition"
-					on:click={() => {
-						goto('/playground');
-						show = false;
+            {#if role === 'admin'}
+                <button
+                    class="flex justify-between items-center border-b border-gray-100 dark:border-transparent px-[16px] py-[11px] w-full transition hover:bg-gray-50 dark:hover:bg-gray-700"
+                    on:click={() => {
+                        goto('/playground');
+                        show = false;
 
-						if ($mobile) {
-							showSidebar.set(false);
-						}
-					}}
-				>
-					<div class=" self-center truncate gap-[8px] text-[17px] leading-[22px]">
-						{$i18n.t('Playground')}
-					</div>
-					<div class=" self-center mr-3">
-						<Code className="size-5" strokeWidth="1.5" />
-					</div>
-				</button>
+                        if ($mobile) {
+                            showSidebar.set(false);
+                        }
+                    }}
+                >
+                    <div class="self-center truncate gap-[8px] text-[17px] leading-[22px]">
+                        {$i18n?.t?.('Playground') || 'Playground'}
+                    </div>
+                    <div class="self-center mr-3">
+                        <Code className="size-5" />
+                    </div>
+                </button>
 
-				<button
-					class="flex justify-between items-center border-b border-gray-100 dark:border-transparent px-[16px] py-[11px] w-full transition"
-					on:click={() => {
-						goto('/admin');
-						show = false;
+                <button
+                    class="flex justify-between items-center border-b border-gray-100 dark:border-transparent px-[16px] py-[11px] w-full transition hover:bg-gray-50 dark:hover:bg-gray-700"
+                    on:click={() => {
+                        goto('/admin');
+                        show = false;
 
-						if ($mobile) {
-							showSidebar.set(false);
-						}
-					}}
-				>
-					<div class=" self-center truncate gap-[8px] text-[17px] leading-[22px]">
-						{$i18n.t('Admin Panel')}
-					</div>
-					<div class=" self-center mr-3">
-						<UserGroup className="w-5 h-5" strokeWidth="1.5" />
-					</div>
-				</button>
-			{/if}
+                        if ($mobile) {
+                            showSidebar.set(false);
+                        }
+                    }}
+                >
+                    <div class="self-center truncate gap-[8px] text-[17px] leading-[22px]">
+                        {$i18n?.t?.('Admin Panel') || 'Admin Panel'}
+                    </div>
+                    <div class="self-center mr-3">
+                        <UserGroup className="w-5 h-5" />
+                    </div>
+                </button>
+            {/if}
 
-			{#if help}
-				<hr class=" border-gray-100 dark:border-gray-800 my-1 p-0" />
+            {#if help}
+                <hr class="border-gray-100 dark:border-gray-800 my-1 p-0" />
 
-				<!-- {$i18n.t('Help')} -->
-				<DropdownMenu.Item
-					class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-neutrals-hover dark:hover:bg-gray-800 rounded-md transition"
-					id="chat-share-button"
-					on:click={() => {
-						window.open('https://docs.openwebui.com', '_blank');
-						show = false;
-					}}
-				>
-					<QuestionMarkCircle className="size-5" />
-					<div class="flex items-center gap-[8px] text-[17px] leading-[22px]">
-						{$i18n.t('Documentation')}
-					</div>
-				</DropdownMenu.Item>
+                <DropdownMenu.Item
+                    class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-neutrals-hover dark:hover:bg-gray-800 rounded-md transition"
+                    id="documentation-link"
+                    on:click={() => {
+                        window.open('https://docs.openwebui.com', '_blank');
+                        show = false;
+                    }}
+                >
+                    <QuestionMarkCircle className="size-5" />
+                    <div class="flex items-center gap-[8px] text-[17px] leading-[22px]">
+                        {$i18n?.t?.('Documentation') || 'Documentation'}
+                    </div>
+                </DropdownMenu.Item>
 
-				<!-- Releases -->
-				<DropdownMenu.Item
-					class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-neutrals-hover dark:hover:bg-gray-800 rounded-md transition"
-					id="menu-item-releases"
-					on:click={() => {
-						window.open('https://github.com/open-webui/open-webui/releases', '_blank');
-						show = false;
-					}}
-				>
-					<Map className="size-5" />
-					<div class="flex items-center">{$i18n.t('Releases')}</div>
-				</DropdownMenu.Item>
+                <DropdownMenu.Item
+                    class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-neutrals-hover dark:hover:bg-gray-800 rounded-md transition"
+                    id="releases-link"
+                    on:click={() => {
+                        window.open('https://github.com/open-webui/open-webui/releases', '_blank');
+                        show = false;
+                    }}
+                >
+                    <Map className="size-5" />
+                    <div class="flex items-center">
+                        {$i18n?.t?.('Releases') || 'Releases'}
+                    </div>
+                </DropdownMenu.Item>
 
-				<DropdownMenu.Item
-					class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-neutrals-hover dark:hover:bg-gray-800 rounded-md transition"
-					id="chat-share-button"
-					on:click={() => {
-						showShortcuts = !showShortcuts;
-						show = false;
-					}}
-				>
-					<Keyboard className="size-5" />
-					<div class="flex items-center">{$i18n.t('Keyboard shortcuts')}</div>
-				</DropdownMenu.Item>
-			{/if}
+                <DropdownMenu.Item
+                    class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-neutrals-hover dark:hover:bg-gray-800 rounded-md transition"
+                    id="shortcuts-button"
+                    on:click={() => {
+                        showShortcuts = !showShortcuts;
+                        show = false;
+                    }}
+                >
+                    <Keyboard className="size-5" />
+                    <div class="flex items-center">
+                        {$i18n?.t?.('Keyboard shortcuts') || 'Keyboard shortcuts'}
+                    </div>
+                </DropdownMenu.Item>
+            {/if}
 
-			{#if role === 'admin'}
-				<button
-					class="flex px-[16px] justify-between items-center border-b border-gray-100 dark:border-transparent py-[11px] w-full transition"
-					on:click={() => {
-						goto('/playground');
-					}}
-				>
-					<div class=" self-center truncate gap-[8px] text-[17px] leading-[22px]">
-						{$i18n.t('Support')}
-					</div>
-					<div class=" self-center mr-3">
-						<Support className="w-5 h-5" />
-					</div>
-				</button>
-			{/if}
+            {#if role === 'admin'}
+                <button
+                    class="flex px-[16px] justify-between items-center border-b border-gray-100 dark:border-transparent py-[11px] w-full transition hover:bg-gray-50 dark:hover:bg-gray-700"
+                    on:click={() => {
+                        goto('/playground');
+                    }}
+                >
+                    <div class="self-center truncate gap-[8px] text-[17px] leading-[22px]">
+                        {$i18n?.t?.('Support') || 'Support'}
+                    </div>
+                    <div class="self-center mr-3">
+                        <Support className="w-5 h-5" />
+                    </div>
+                </button>
+            {/if}
 
-			<button
-				class="flex px-[16px] justify-between items-center border-b border-gray-100 dark:border-transparent py-[11px] w-full transition"
-				on:click={async () => {
-					const res = await userSignOut();
-					user.set(null);
-					localStorage.removeItem('token');
+            <button
+                class="flex px-[16px] justify-between items-center border-b border-gray-100 dark:border-transparent py-[11px] w-full transition hover:bg-gray-50 dark:hover:bg-gray-700"
+                on:click={async () => {
+                    const res = await userSignOut();
+                    user.set(null);
+                    localStorage.removeItem('token');
 
-					location.href = res?.redirect_url ?? '/auth';
-					show = false;
-				}}
-			>
-				<div class=" self-center truncate gap-[8px] text-[17px] leading-[22px]">
-					{$i18n.t('Sign Out')}
-				</div>
-				<div class=" self-center mr-3">
-					<SignOut className="w-5 h-5" strokeWidth="1.5" />
-				</div>
-			</button>
+                    if (res?.redirect_url) {
+                        location.href = res.redirect_url;
+                    } else {
+                        location.href = '/auth';
+                    }
+                    show = false;
+                }}
+            >
+                <div class="self-center truncate gap-[8px] text-[17px] leading-[22px]">
+                    {$i18n?.t?.('Sign Out') || 'Sign Out'}
+                </div>
+                <div class="self-center mr-3">
+                    <SignOut className="w-5 h-5" />
+                </div>
+            </button>
 
 			<!--{#if usage && role === 'admin'}
 				{#if usage?.user_ids?.length > 0}
@@ -450,6 +503,6 @@
 			<!-- <DropdownMenu.Item class="flex items-center py-1.5 px-3 text-sm ">
 				<div class="flex items-center">Profile</div>
 			</DropdownMenu.Item> -->
-		</DropdownMenu.Content>
-	</slot>
+        </DropdownMenu.Content>
+    </slot>
 </DropdownMenu.Root>

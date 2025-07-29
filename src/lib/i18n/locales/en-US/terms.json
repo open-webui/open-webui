@@ -1,0 +1,36 @@
+{
+	"title": "Terms & Conditions",
+	"version": "Version 1.0 - 2025 (First Release)",
+	"user_responsibilities": {
+		"title": "User Responsibilities",
+		"content": "Users of GovGPT must: Provide accurate and updated personal information. Use data responsibly and in compliance with Abu Dhabi data governance policies. Not engage in unauthorized data sharing, modification, or deletion. Maintain confidentiality of access credentials."
+	},
+	"user_rights": {
+		"title": "User Rights",
+		"content": "Users have the right to: Access, or correct, their data in accordance with Abu Dhabi regulations. Receive timely notifications in the event of a data breach affecting their information. Users are responsible for complying with security policies and protecting their credentials to prevent unauthorized access."
+	},
+	"prohibited_activities": {
+		"title": "Prohibited Activities",
+		"content": "The following activities are strictly prohibited: Unauthorized access to datasets or attempting to bypass security controls. Sharing data with unauthorized entities. Misuse of platform functionalities for personal or unauthorized purposes. Engaging in activities that compromise platform integrity. Using the platform for any illegal, abusive, or unethical activities that violate laws, regulations, or standards."
+	},
+	"data_access": {
+		"title": "Data Access, Correction, and Deletion",
+		"content": "Users must comply with all data sharing agreements and government security protocols. Data accessed through GovGPT must not be used for commercial or non-governmental purposes. Any data misuse or breach will result in immediate revocation of access and potential legal consequences. Users may request a copy or correction of their personal information. Data deletion is not permitted as all inputs fall under Abu Dhabi Government data ownership provisions."
+	},
+	"termination": {
+		"title": "Termination of Access",
+		"content": "GovGPT administrators reserve the right to terminate user access in cases of: Non-compliance with data policies and security measures. Detection of unauthorized activities or breach attempts. Violation of government-mandated regulations."
+	},
+	"disclaimer": {
+		"title": "Disclaimer of Liability",
+		"content": "GovGPT and its managing authorities provide the platform and its services on an \"as-is\" basis, without warranties regarding the accuracy, completeness, or availability of the data. While GovGPT has implemented robust security measures, including encryption, access controls, and continuous monitoring, it is not liable for security breaches, data misuse, or service disruptions caused by external threats, system interruptions, or user misconduct. Users are responsible for exercising due diligence when accessing and utilizing shared datasets. GovGPT is intended only for government-authorised users aged 18 and above. Access by minors is strictly prohibited and actively monitored."
+	},
+	"contact": {
+		"title": "How Can You Contact Us?",
+		"content": "If you have any questions about GovGPT Privacy Policy, you can contact us at support.govgpt@dge.gov.ae"
+	},
+	"consent": {
+		"title": "User Consent",
+		"content": "By proceeding to log in and use the GovGPT, you confirm that you have read, understood, and agreed to the Terms & Conditions outlined above."
+	}
+} 

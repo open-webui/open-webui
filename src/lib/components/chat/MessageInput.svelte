@@ -69,6 +69,7 @@
 	import { updateUserSettings } from '$lib/apis/users';
 
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
+	import { isRTL } from '$lib/i18n';
 
 	const i18n = getContext('i18n');
 
@@ -140,7 +141,6 @@
 
 	// Clear prompt and files when switching to a new chat
 	if (!history?.currentId) {
-		debugger;
 		// Clear prompt and files when chat changes
 		prompt = '';
 		files = [];
@@ -151,6 +151,8 @@
 		imageGenerationEnabled = false;
 		codeInterpreterEnabled = false;
 		attachFileEnabled = false;
+
+		sessionStorage.selectedModels = JSON.stringify([$config.default_models]);
 	}
 
 	let showTools = false;
@@ -293,7 +295,7 @@
 			if (lastAssistantMessage.files && lastAssistantMessage.files.length > 0) {
 				console.log('Auto-selecting Files model');
 				govBtnEnable = false;
-				// webSearchEnabled = false;
+				webSearchEnabled = false;
 				attachFileEnabled = true;
 				selectedModels = [lastAssistantMessage.model || $config.default_models];
 				return;
@@ -304,7 +306,7 @@
 			if (hasFilesInHistory) {
 				console.log('Auto-selecting Files model (from history)');
 				govBtnEnable = false;
-				// webSearchEnabled = false;
+				webSearchEnabled = false;
 				attachFileEnabled = true;
 				selectedModels = [lastAssistantMessage.model || $config.default_models];
 				return;
@@ -315,7 +317,7 @@
 			if (lastAssistantMessage.model && lastAssistantMessage.model.includes($config.govgpt.rag_wog_model_name)) {
 				console.log('Auto-selecting Gov Knowledge model');
 				govBtnEnable = true;
-				// webSearchEnabled = false;
+				webSearchEnabled = false;
 				attachFileEnabled = false;
 				selectedModels = [lastAssistantMessage.model];
 				return;
@@ -323,10 +325,10 @@
 		}
 		
 		// If none of the specific conditions are met, don't select any model
-		console.log('No specific model type detected, not auto-selecting any model');
-		govBtnEnable = false;
-		webSearchEnabled = false;
-		attachFileEnabled = false;
+		// console.log('No specific model type detected, not auto-selecting any model');
+		// govBtnEnable = false;
+		// webSearchEnabled = false;
+		// attachFileEnabled = false;
 	};
 
 	autoSelectModelFromLastMessage();
@@ -359,6 +361,14 @@
 	const handleFilterToggle = (event) => {
 		event.preventDefault(); 
 		showGovKnoWebSearchToggle = !showGovKnoWebSearchToggle;
+	};
+
+	const clearFilterToggle = (event) => {
+		event.preventDefault(); 
+		showGovKnoWebSearchToggle = false;
+		webSearchEnabled =false;
+		govBtnEnable=false;
+		attachFileEnabled=false;
 	};
 
 	const saveGovKnoModel = async () => {
@@ -790,7 +800,7 @@
 												: `${WEBUI_BASE_URL}/static/favicon.png`)}
 									/>
 									<div class="translate-y-[0.5px]">
-										Talking to <span class=" font-medium">{atSelectedModel.name}</span>
+										{$i18n.t('Talking to')} <span class=" font-medium">{atSelectedModel.name}</span>
 									</div>
 								</div>
 								<div>
@@ -993,6 +1003,7 @@
 								<div class="">
 									{#if $settings?.richTextInput ?? true}
 										<div
+										dir={ $isRTL ? 'rtl' : 'ltr' }
 											class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-gray-100 outline-hidden w-full text-[16px] leading-[24px] text-disabled resize-none h-fit max-h-80 overflow-auto"
 											id="chat-input-container"
 										>
@@ -1598,11 +1609,11 @@
 													{#if selectedModelName !== ''}<div
 															class="px-[8px] font-Inter_Medium flex items-center gap-[8px] text-[14px] leading-[22px] text-typography-titles"
 														>
-															{selectedModelName}
+															{$i18n.t(selectedModelName)}
 															<button 
 																data-filter-toggle
 																class="flex items-center" 
-																on:click={handleFilterToggle}
+																on:click={clearFilterToggle}
 															><Cross /></button>
 														</div>{/if}
 												</div>

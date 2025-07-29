@@ -33,7 +33,7 @@
 	$: command = prompt?.split('\n').pop()?.split(' ')?.pop() ?? '';
 
 	let show = false;
-	$: show = ['/', '#', '@'].includes(command?.charAt(0)) || '\\#' === command.slice(0, 2);
+	$: show = ['/', '#'].includes(command?.charAt(0)) || '\\#' === command.slice(0, 2);
 
 	$: if (show) {
 		init();

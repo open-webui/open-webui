@@ -233,13 +233,13 @@
 									>
 										<span class=" capitalize text-black dark:text-white"
 											>{$config?.license_metadata?.type}
-											license</span
+											{$i18n.t('License')}</span
 										>
-										registered to
+										{$i18n.t('Registered to')}
 										<span class=" capitalize text-black dark:text-white"
 											>{$config?.license_metadata?.organization_name}</span
 										>
-										for
+										{$i18n.t('for')}
 										<span class=" font-medium text-black dark:text-white"
 											>{$config?.license_metadata?.seats ?? 'Unlimited'} users.</span
 										>

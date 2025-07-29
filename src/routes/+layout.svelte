@@ -49,6 +49,7 @@
 
 	import { beforeNavigate } from '$app/navigation';
 	import { updated } from '$app/state';
+	import { get } from 'svelte/store';
 
 	// handle frontend updates (https://svelte.dev/docs/kit/configuration#version)
 	beforeNavigate(({ willUnload, to }) => {
@@ -594,9 +595,10 @@
 						await goto(`/auth?redirect=${encodedUrl}`);
 					}
 				} else {
-					// Don't redirect if we're already on the auth page
+					// Don't redirect if we're already on public pages
 					// Needed because we pass in tokens from OAuth logins via URL fragments
-					if ($page.url.pathname !== '/auth') {
+					const publicPaths = ['/auth', '/terms', '/privacy'];
+					if (!publicPaths.includes($page.url.pathname)) {
 						await goto(`/auth?redirect=${encodedUrl}`);
 					}
 				}
@@ -642,6 +644,11 @@
 			window.removeEventListener('resize', onResize);
 		};
 	});
+
+	$: {
+		const lang = document.documentElement.lang || 'en-US';
+		document.documentElement.dir = lang.startsWith('ar') ? 'rtl' : 'ltr';
+	}
 </script>
 
 <svelte:head>

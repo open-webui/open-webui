@@ -7,6 +7,9 @@ import requests
 import json
 import sys
 
+from open_webui.env import GOVGPT_FILE_SEARCH_API_URL
+
+
 def test_govgpt_service():
     """
     Test the govGpt-file-search-service integration
@@ -17,9 +20,10 @@ def test_govgpt_service():
     
     # Test 1: Check if the external service is accessible
     print("\n1. Testing external service connectivity...")
+    query_url = GOVGPT_FILE_SEARCH_API_URL
     try:
         response = requests.post(
-            "http://40.119.184.8:8102/query",
+            query_url,
             headers={"Content-Type": "application/json"},
             json={
                 "user_query": "test query",

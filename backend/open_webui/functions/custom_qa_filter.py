@@ -27,6 +27,10 @@ from open_webui.routers.custom_document_qa import (
     get_last_user_message
 )
 
+from open_webui.env import GOVGPT_FILE_SEARCH_API_URL
+
+from open_webui.env import CUSTOM_QA_TIMEOUT
+
 log = logging.getLogger(__name__)
 
 
@@ -43,8 +47,8 @@ class Filter:
         self.priority = 100  # High priority to run early in the pipeline
         
         # External API configuration
-        self.api_url = "http://40.119.184.8:8102/query"
-        self.timeout = 30
+        self.api_url = GOVGPT_FILE_SEARCH_API_URL
+        self.timeout = CUSTOM_QA_TIMEOUT
         
     async def inlet(self, body: Dict[str, Any], __user__: Dict[str, Any], __request__: Any, **kwargs) -> Dict[str, Any]:
         """

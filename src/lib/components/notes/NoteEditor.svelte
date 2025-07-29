@@ -977,7 +977,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 											<Spinner className="size-5" />
 										{:else}
 											<SparklesSolid />
-										{/if} Enhanced
+										{/if} {$i18n.t('Enhanced')} 
 									</button>
 								</Tooltip>
 							</div>

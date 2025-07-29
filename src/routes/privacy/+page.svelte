@@ -1,13 +1,23 @@
-<script>
+<script lang="ts">
 	import { goto } from '$app/navigation';
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
+	import { getContext } from 'svelte';
+	import { changeLanguage } from '$lib/i18n';
+	import { get, type Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
+
+	const i18n: Writable<i18nType> = getContext('i18n');
 
 	function goBack() {
 		goto('/auth');
 	}
+
+	function switchLanguage(lang: string) {
+		changeLanguage(lang);
+	}
 </script>
 
-<div class="w-full min-h-screen bg-[#010E1D] text-white flex items-start justify-center p-6 pt-16">
+<div class="w-full h-screen dark bg-[#010E1D] p-6 pt-16 overflow-y-auto" dir={$i18n.language === 'ar' ? 'rtl' : 'ltr'}>
 	<button
 		on:click={goBack}
 		class="fixed top-4 left-4 z-10 p-2 text-white hover:text-gray-300 transition-colors md:hidden"
@@ -16,67 +26,145 @@
 		<ChevronLeft className="w-6 h-6" strokeWidth="2" />
 	</button>
 
-	<div class="max-w-4xl text-left">
-		<h1 class="text-2xl font-bold mb-4">Privacy Policy</h1>
-		<p
-			class="mb-4 font-inter text-xs font-normal leading-4 tracking-[0.12px]"
-			style="color: var(--Typography-Body-subtext, #979EAD);"
-		>
-			GovGPT is committed to protecting the privacy and security of its users. The platform operates
-			within the guidelines of government data protection regulations and does not collect
-			personally identifiable information unless explicitly required for authentication or service
-			personalization. Any data inputted into the system during usage is processed temporarily and
-			used solely to generate relevant responses during that session.
-		</p>
-		<p
-			class="mb-4 font-inter text-xs font-normal leading-4 tracking-[0.12px]"
-			style="color: var(--Typography-Body-subtext, #979EAD);"
-		>
-			GovGPT does not store user conversations or sensitive information beyond the session scope,
-			unless such data is needed for operational improvement and has been approved by the relevant
-			authorities. In such cases, all stored data is anonymized and encrypted in accordance with
-			government cybersecurity standards. The platform is regularly audited to ensure compliance
-			with internal and national data protection laws.
-		</p>
-		<p
-			class="mb-4 font-inter text-xs font-normal leading-4 tracking-[0.12px]"
-			style="color: var(--Typography-Body-subtext, #979EAD);"
-		>
-			By using GovGPT, you consent to limited data processing necessary to enable functionality,
-			monitor usage trends, and enhance system performance. Users are encouraged to avoid entering
-			confidential personal or classified information into the chat interface. For any concerns
-			related to privacy, data handling, or access rights, please contact your department's IT or
-			Data Governance office.
-		</p>
-		<p
-			class="mb-4 font-inter text-xs font-normal leading-4 tracking-[0.12px]"
-			style="color: var(--Typography-Body-subtext, #979EAD);"
-		>
-			GovGPT is committed to protecting the privacy and security of its users. The platform operates
-			within the guidelines of government data protection regulations and does not collect
-			personally identifiable information unless explicitly required for authentication or service
-			personalization. Any data inputted into the system during usage is processed temporarily and
-			used solely to generate relevant responses during that session.
-		</p>
-		<p
-			class="mb-4 font-inter text-xs font-normal leading-4 tracking-[0.12px]"
-			style="color: var(--Typography-Body-subtext, #979EAD);"
-		>
-			GovGPT does not store user conversations or sensitive information beyond the session scope,
-			unless such data is needed for operational improvement and has been approved by the relevant
-			authorities. In such cases, all stored data is anonymized and encrypted in accordance with
-			government cybersecurity standards. The platform is regularly audited to ensure compliance
-			with internal and national data protection laws.
-		</p>
-		<p
-			class="mb-4 font-inter text-xs font-normal leading-4 tracking-[0.12px]"
-			style="color: var(--Typography-Body-subtext, #979EAD);"
-		>
-			By using GovGPT, you consent to limited data processing necessary to enable functionality,
-			monitor usage trends, and enhance system performance. Users are encouraged to avoid entering
-			confidential personal or classified information into the chat interface. For any concerns
-			related to privacy, data handling, or access rights, please contact your department's IT or
-			Data Governance office.
-		</p>
+	<!-- Language Switcher -->
+	<div class="fixed top-4 z-10" class:right-4={$i18n.language !== 'ar'} class:left-4={$i18n.language === 'ar'}>
+		{#if $i18n.language === 'ar'}
+			<button
+				on:click={() => switchLanguage('en-US')}
+				class="px-3 py-1 text-sm bg-transparent text-white rounded transition-colors shadow-md"
+			>
+				English
+			</button>
+		{:else}
+			<button
+				on:click={() => switchLanguage('ar')}
+				class="px-3 py-1 text-sm bg-transparent text-white rounded transition-colors shadow-md"
+			>
+				العربية
+			</button>
+		{/if}
+	</div>
+
+	<div class="w-full max-w-4xl mx-auto overflow-y-auto">
+		<div class="bg-transparent">
+			<h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+				{$i18n.t('privacy:title')}
+			</h1>
+			<p class="text-sm text-gray-600 dark:text-gray-400 mb-8 text-justify">
+				{$i18n.t('privacy:version')}
+			</p>
+
+			<div class="space-y-8">
+				<!-- Introduction -->
+				<section>
+					<h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-3">
+						{$i18n.t('privacy:introduction.title')}
+					</h2>
+					<p class="text-gray-700 dark:text-gray-300 leading-relaxed text-justify">
+						{$i18n.t('privacy:introduction.content')}
+					</p>
+				</section>
+
+				<!-- What We Collect -->
+				<section>
+					<h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-3">
+						{$i18n.t('privacy:what_we_collect.title')}
+					</h2>
+					<p class="text-gray-700 dark:text-gray-300 leading-relaxed text-justify">
+						{$i18n.t('privacy:what_we_collect.content')}
+					</p>
+				</section>
+
+				<!-- How We Collect -->
+				<section>
+					<h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-3">
+						{$i18n.t('privacy:how_we_collect.title')}
+					</h2>
+					<p class="text-gray-700 dark:text-gray-300 leading-relaxed text-justify">
+						{$i18n.t('privacy:how_we_collect.content')}
+					</p>
+				</section>
+
+				<!-- How We Use -->
+				<section>
+					<h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-3">
+						{$i18n.t('privacy:how_we_use.title')}
+					</h2>
+					<p class="text-gray-700 dark:text-gray-300 leading-relaxed text-justify">
+						{$i18n.t('privacy:how_we_use.content')}
+					</p>
+				</section>
+
+				<!-- How We Protect -->
+				<section>
+					<h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-3">
+						{$i18n.t('privacy:how_we_protect.title')}
+					</h2>
+					<p class="text-gray-700 dark:text-gray-300 leading-relaxed text-justify">
+						{$i18n.t('privacy:how_we_protect.content')}
+					</p>
+				</section>
+
+				<!-- Data Sharing -->
+				<section>
+					<h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-3">
+						{$i18n.t('privacy:data_sharing.title')}
+					</h2>
+					<p class="text-gray-700 dark:text-gray-300 leading-relaxed text-justify">
+						{$i18n.t('privacy:data_sharing.content')}
+					</p>
+				</section>
+
+				<!-- Data Retention -->
+				<section>
+					<h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-3">
+						{$i18n.t('privacy:data_retention.title')}
+					</h2>
+					<p class="text-gray-700 dark:text-gray-300 leading-relaxed text-justify">
+						{$i18n.t('privacy:data_retention.content')}
+					</p>
+				</section>
+
+				<!-- Breach Notification -->
+				<section>
+					<h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-3">
+						{$i18n.t('privacy:breach_notification.title')}
+					</h2>
+					<p class="text-gray-700 dark:text-gray-300 leading-relaxed text-justify">
+						{$i18n.t('privacy:breach_notification.content')}
+					</p>
+				</section>
+
+				<!-- Cookie Policy -->
+				<section>
+					<h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-3">
+						{$i18n.t('privacy:cookie_policy.title')}
+					</h2>
+					<p class="text-gray-700 dark:text-gray-300 leading-relaxed text-justify">
+						{$i18n.t('privacy:cookie_policy.content')}
+					</p>
+				</section>
+
+				<!-- External Links -->
+				<section>
+					<h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-3">
+						{$i18n.t('privacy:external_links.title')}
+					</h2>
+					<p class="text-gray-700 dark:text-gray-300 leading-relaxed text-justify">
+						{$i18n.t('privacy:external_links.content')}
+					</p>
+				</section>
+
+				<!-- Consent -->
+				<section class="border-t pt-6">
+					<h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-3">
+						{$i18n.t('privacy:consent.title')}
+					</h2>
+					<p class="text-gray-700 dark:text-gray-300 leading-relaxed text-justify">
+						{$i18n.t('privacy:consent.content')}
+					</p>
+				</section>
+			</div>
+		</div>
 	</div>
 </div>
