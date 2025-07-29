@@ -324,7 +324,7 @@ The system features an intelligent **3-Tier Fallback System** for PLN currency c
 - **Weekend Handling**: Proper Friday Table A rate usage for weekends
 
 #### Tier 2: Time-Based Working Day Logic
-- **8:15 AM Rule**: Before publish time uses previous day, after uses current
+- **11:30 AM Rule**: Before publish time uses previous day, after uses current (based on NBP Resolution No. 51/2002)
 - **Working Day Validation**: Uses holiday calendar to determine working days
 - **Intelligent Caching**: Different TTL based on rate source and timing
 

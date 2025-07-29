@@ -70,8 +70,8 @@ async def get_usd_pln_rate() -> Optional[Dict[str, Any]]:
     # - Use last working day rate automatically
     
     # TIER 2: Working Day Strategy with Time Logic
-    # - Before 8:15 AM: Might use previous day's rate
-    # - After 8:15 AM: Current day rate should be available
+    # - Before 11:30 AM: Might use previous day's rate
+    # - After 11:30 AM: Current day rate should be available
     
     # TIER 3: Enhanced 404 Fallback
     # - Handles unknown non-publication days
@@ -80,7 +80,7 @@ async def get_usd_pln_rate() -> Optional[Dict[str, Any]]:
 
 **Business Rules**:
 - **NBP Table A** (Average rates) used for consistency
-- **Publication Time**: 8:15 AM CET daily
+- **Publication Time**: 11:30 AM CET daily (based on NBP Resolution No. 51/2002)
 - **Cache TTL**: 24 hours for standard rates, shorter for fallback scenarios
 - **Fallback Rate**: 4.0 PLN if NBP unavailable
 

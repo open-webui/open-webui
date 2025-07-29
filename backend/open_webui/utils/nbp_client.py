@@ -91,6 +91,10 @@ class NBPClient:
         """
         Get current USD/PLN exchange rate from NBP Table A (average rates)
         
+        Based on official NBP Resolution No. 51/2002, USD exchange rates are calculated 
+        at 11:00 AM CET and published shortly after. This implementation uses 11:30 AM 
+        as the publication time threshold (allowing 30 minutes buffer).
+        
         Hybrid approach combining holiday calendar optimization with robust fallback:
         - Known Polish holidays: skip API calls, use last working day
         - Weekends: use Friday rate
@@ -117,7 +121,7 @@ class NBPClient:
         
         now = datetime.now()
         today = date.today()
-        nbp_publish_time = datetime.combine(today, datetime_time(8, 15))  # 8:15 AM CET
+        nbp_publish_time = datetime.combine(today, datetime_time(11, 30))  # 11:30 AM CET (NBP calculation at 11:00 AM + 30min buffer)
         
         # TIER 1: Holiday Calendar Optimization
         # Check if we know this day won't have data
@@ -147,8 +151,8 @@ class NBPClient:
         rate_source = "current"
         
         if now < nbp_publish_time:
-            # Before 8:15 AM - might not have today's rate yet
-            log.debug("Before NBP publish time (8:15 AM)")
+            # Before 11:30 AM - might not have today's rate yet
+            log.debug("Before NBP publish time (11:30 AM)")
             
             # Try today's rate first (might be available)
             data = await self._fetch_exchange_rate_for_date(today)
@@ -158,14 +162,14 @@ class NBPClient:
                 fallback_date = polish_holidays.get_last_working_day_before(today)
                 data = await self._fetch_exchange_rate_for_date(fallback_date)
                 rate_source = "working_day"
-                log.info(f"⏰ Before publish time, no current rate: Using {fallback_date}")
+                log.info(f"⏰ Before publish time (11:30 AM), no current rate: Using {fallback_date}")
         else:
-            # After 8:15 AM - current rate should be available
-            log.debug("After NBP publish time (8:15 AM)")
+            # After 11:30 AM - current rate should be available
+            log.debug("After NBP publish time (11:30 AM)")
             data = await self._fetch_exchange_rate_for_date(today)
             
             if not data:
-                log.warning(f"⚠️  No rate available on expected working day {today} after publish time")
+                log.warning(f"⚠️  No rate available on expected working day {today} after publish time (11:30 AM)")
                 # Fall through to TIER 3 for robust handling
         
         # TIER 3: Enhanced 404 Fallback (handles unknown non-publication days)
@@ -248,7 +252,7 @@ class NBPClient:
             # Holiday or weekend rates - cache until next working day
             from .polish_holidays import polish_holidays
             next_working_day = polish_holidays.get_next_working_day_after(today)
-            next_publish_time = datetime.combine(next_working_day, datetime_time(8, 15))
+            next_publish_time = datetime.combine(next_working_day, datetime_time(11, 30))
             return max(next_publish_time - now, timedelta(minutes=5))
             
         elif rate_source == 'working_day' and now < nbp_publish_time:

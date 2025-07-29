@@ -81,7 +81,7 @@ The mAI project implements a sophisticated exchange rate system that integrates 
 **Business Logic Flow**:
 1. Check in-memory cache for unexpired rate
 2. Evaluate Polish holiday calendar for API call optimization
-3. Apply time-aware logic based on NBP publish schedule (8:15 AM CET)
+3. Apply time-aware logic based on NBP publish schedule (11:30 AM CET)
 4. Execute enhanced fallback search for unknown non-publication days
 5. Return rate with comprehensive metadata
 
@@ -200,7 +200,7 @@ START: Client requests USD/PLN rate
 │  │     └─ Cache with holiday-specific TTL ✅
 │  │
 ├─ STEP 3: Time-Aware Strategy
-│  ├─ Before 8:15 AM CET?
+│  ├─ Before 11:30 AM CET?
 │  │  ├─ YES → Try current, fallback to previous working day
 │  │  └─ NO → Expect current day rate
 │  │
@@ -229,10 +229,10 @@ START: Client requests USD/PLN rate
 CACHE TTL Decision Tree:
 │
 ├─ Holiday Skip (weekend/holiday)
-│  └─ TTL = Time until next working day publish time (8:15 AM)
+│  └─ TTL = Time until next working day publish time (11:30 AM)
 │
 ├─ Working Day Rate (before publish time)
-│  └─ TTL = Time until publish time (8:15 AM today)
+│  └─ TTL = Time until publish time (11:30 AM today)
 │
 ├─ Fallback 404 (unknown non-publication)
 │  └─ TTL = 4 hours (shorter for recovery detection)
@@ -323,7 +323,7 @@ interface ExchangeRateInfo {
     'table_no': '012/A/NBP/2024',
     'rate_source': 'current'
   },
-  'expires_at': datetime(2024, 1, 16, 8, 15, 0)  # Dynamic expiration
+  'expires_at': datetime(2024, 1, 16, 11, 30, 0)  # Dynamic expiration
 }
 ```
 
@@ -379,7 +379,7 @@ User-Agent: mAI/1.0
 
 ### Holiday Publication Schedule
 
-**Publication Time**: 8:15 AM CET daily
+**Publication Time**: 11:30 AM CET daily (calculated at 11:00 AM per NBP Resolution No. 51/2002, published with 30-minute buffer)
 **Working Days**: Monday-Friday (excluding Polish holidays)
 **Non-Publication Days**:
 - Weekends (Saturday, Sunday)
@@ -409,7 +409,7 @@ User-Agent: mAI/1.0
 - Prevents unnecessary API calls during known non-publication periods
 
 **Pre-Publish Working Day Rates**:
-- Cache until current day publish time (8:15 AM)
+- Cache until current day publish time (11:30 AM)
 - Allows fresh rate pickup when available
 
 **Fallback Rates (404 scenarios)**:
@@ -439,7 +439,7 @@ User-Agent: mAI/1.0
 
 #### Tier 2: Time-Aware Strategy
 **Purpose**: Handle publish time uncertainty
-**Mechanism**: 8:15 AM CET threshold logic
+**Mechanism**: 11:30 AM CET threshold logic (based on official NBP Resolution No. 51/2002)
 **Action**: Intelligent current vs. previous day selection
 **Benefits**: Handles early morning scenarios
 
