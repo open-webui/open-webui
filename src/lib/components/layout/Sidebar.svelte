@@ -613,18 +613,18 @@
 			{/if}
 			{#if !$mobile}
 				<div
-					class="mb-[24px] flex justify-between items-center text-gray-600 dark:text-gray-400"
+					class="mb-[24px] flex justify-between px-[8px] items-center h-[40px] text-gray-600 dark:text-gray-400"
 					class:justify-center={!$showSidebar}
 				>
 					<!-- Menu Icon behaves like other sidebar buttons -->
 
 					<a
-						class="p-[10px] hover:bg-gradient-bg-2 flex items-center rounded-lg transition-all duration-300 ease-in-out"
+						class="hover:bg-gradient-bg-2 pl-[8px] flex items-center rounded-lg transition-all duration-300 ease-in-out"
 						class:justify-center={!$showSidebar}
 						href="#"
 						on:click={onSidebarClick}
 					>
-						<MaterialIcon name="menu" size="1.1rem" />
+						<MaterialIcon name="menu" size="1.25rem"  />
 					</a>
 
 					<!-- Search icon only when sidebar is expanded, right aligned -->
@@ -637,7 +637,7 @@
 								}}
 								draggable="false"
 							>
-								<MaterialIcon name="search" size="1.1rem" />
+								<MaterialIcon name="search" size="1.25rem" />
 							</button>
 						</div>
 					{/if}
