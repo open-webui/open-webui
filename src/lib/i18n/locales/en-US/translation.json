@@ -1503,5 +1503,7 @@
 	"Away":"Away",
 	"Registered to":"registered to",
 	"For":"for",
-	"Updating":"Updating"
+	"Updating":"Updating",
+	"Logout": "Logout",
+	"How can I assist you with your work today?": "How can I assist you with your work today?"
 }

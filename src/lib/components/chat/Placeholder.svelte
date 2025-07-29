@@ -299,7 +299,7 @@
 						{stopResponse}
 						{createMessagePair}
 						{saveSessionSelectedModels}
-						placeholder={$i18n.t('How can I help you today?')}
+						placeholder={$i18n.t('How can I assist you with your work today?')}
 						onChange={(input) => {
 							if (!$temporaryChatEnabled) {
 								if (input.prompt !== null) {
