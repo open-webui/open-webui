@@ -221,57 +221,52 @@
         <slot />
     </DropdownMenu.Trigger>
 
-    <slot name="content">
-        <DropdownMenu.Content
-            class="w-full {className} rounded-[8px] z-50 bg-light-bg dark:border dark:border-gray-100 text-label-primary shadow-custom font-primary"
-            sideOffset={1}
-            side="bottom"
-            align="end"
-            transition={(e) => fade(e, { duration: 100 })}
-        >
-            <button
-                class="flex justify-between items-center border-b border-gray-100 px-[16px] py-[11px] w-full transition cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 {isLanguageSwitching ? 'opacity-50 cursor-wait' : ''}"
-                on:click={handleLanguageSwitch}
-                disabled={isLanguageSwitching}
-            >
-                <div class="self-center truncate gap-[8px] text-[17px] leading-[22px]">
-                    {currentLanguage === 'en-US'
-                        ? 'Switch to Arabic'
-                        : 'التبديل إلى اللغة الإنجليزية'}
-                </div>
-                <div class="self-center {$mobile ? '' : 'mr-3'}">
-                    <MaterialIcon name="translate" size="1.1rem" />
-                </div>
-            </button>
-            
-            {#if role === 'admin'}
-            <div
-                class="flex px-[16px] py-[11px] w-full items-center justify-between border-b border-gray-100"
-            >
-                <label for="notification-toggle" class="flex items-center gap-[8px] text-[17px] leading-[22px]">
-                    {$i18n?.t?.('Notifications') || 'Notifications'}
-                </label>
-                <label class="relative inline-flex items-center cursor-pointer">
-                    <input
-                        id="notification-toggle"
-                        type="checkbox"
-                        bind:checked={isOnNotification}
-                        on:change={() => toggleNotification()}
-                        class="sr-only peer"
-                    />
-                    <div
-                        class="w-[40px] h-[20px] {isOnNotification
-                            ? 'bg-neutrals-green'
-                            : 'bg-neutrals-50'} rounded-full peer duration-300"
-                    >
-                        <div
-                            class="flex items-center justify-center absolute {isOnNotification
-                                ? 'left-[1px]'
-                                : 'right-[1px]'} top-[1px] bg-neutrals-white w-[18px] h-[18px] rounded-full transition-transform duration-300 peer-checked:translate-x-5"
-                        ></div>
-                    </div>
-                </label>
-            </div>
+	<slot name="content">
+		<DropdownMenu.Content
+			class="w-full {className} rounded-[8px] z-50 bg-light-bg dark:border dark:border-gray-100 text-label-primary shadow-custom font-primary"
+			sideOffset={1}
+			side="bottom"
+			align="end"
+			transition={(e) => fade(e, { duration: 100 })}
+		>
+			<button
+				class="flex justify-between items-center border-b border-gray-100 px-[16px] py-[11px] w-full transition cursor-pointer"
+				on:click={() => changeLanguage(document.documentElement.lang === 'en-US' ? 'ar' : 'en-US')}
+			>
+				<div class=" self-center truncate gap-[8px] text-[17px] leading-[22px]">
+					{$i18n.t('Switch to Arabic')}
+				</div>
+				<div class=" self-center {$mobile ? '' : 'mr-3'} ">
+					<MaterialIcon name="translate" size="1.1rem" />
+				</div>
+			</button>
+			{#if role === 'admin'}
+			<div
+				class="flex px-[16px] py-[11px] w-full items-center justify-between border-b border-gray-100"
+			>
+				<label class="flex items-center gap-[8px] text-[17px] leading-[22px]">
+					{$i18n.t('Notifications')}</label
+				>
+				<label class="relative inline-flex items-center cursor-pointer">
+					<input
+						type="checkbox"
+						bind:checked={isOnNotification}
+						on:change={() => toggleNotification()}
+						class="sr-only peer"
+					/>
+					<div
+						class="w-[40px] h-[20px] {isOnNotification
+							? 'bg-neutrals-green'
+							: 'bg-neutrals-50'} rounded-full peer duration-300"
+					>
+						<div
+							class=" flex items-center justify-center absolute {isOnNotification
+								? 'left-[1px]'
+								: 'right-[1px]'}  top-[1px] bg-neutrals-white w-[18px] h-[18px] rounded-full transition-transform duration-300 peer-checked:translate-x-5"
+						></div>
+					</div>
+				</label>
+			</div>
             {/if}
             
             <div

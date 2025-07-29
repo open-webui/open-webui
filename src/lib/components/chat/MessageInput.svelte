@@ -800,7 +800,7 @@
 												: `${WEBUI_BASE_URL}/static/favicon.png`)}
 									/>
 									<div class="translate-y-[0.5px]">
-										Talking to <span class=" font-medium">{atSelectedModel.name}</span>
+										{$i18n.t('Talking to')} <span class=" font-medium">{atSelectedModel.name}</span>
 									</div>
 								</div>
 								<div>
@@ -1609,7 +1609,7 @@
 													{#if selectedModelName !== ''}<div
 															class="px-[8px] font-Inter_Medium flex items-center gap-[8px] text-[14px] leading-[22px] text-typography-titles"
 														>
-															{selectedModelName}
+															{$i18n.t(selectedModelName)}
 															<button 
 																data-filter-toggle
 																class="flex items-center" 

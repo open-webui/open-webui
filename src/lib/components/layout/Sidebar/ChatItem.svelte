@@ -94,7 +94,7 @@
 		const res = await cloneChatById(
 			localStorage.token,
 			id,
-			$i18n.t('Clone of {{TITLE}}', {
+			$i18n.t('Copy of {{TITLE}}', {
 				TITLE: title
 			})
 		).catch((error) => {
