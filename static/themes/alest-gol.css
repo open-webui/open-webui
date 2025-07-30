@@ -1,228 +1,582 @@
-/* 🧡 TEMA ALEST + GOL - PARCERIA CORPORATIVA */
-/* Baseado nas especificações da documentação oficial */
+/* �� TEMA ALEST + GOL - VERSÃO LIMPA E ORGANIZADA */
 /* Cor principal: #FF6600 (Laranja unificado da parceria) */
 
-.alest-gol * {
-	color: #ffffff !important;
-	stroke: #FF6600 !important;
+/* ═══════════════════════════════════════════════════════════════════════════════════ */
+/* 🎨 CORES GLOBAIS - LARANJA DA PARCERIA                                               */
+/* ═══════════════════════════════════════════════════════════════════════════════════ */
+
+.alest-gol {
+  color: #ffffff !important;
+}
+
+/* 🔤 TEXTOS DA SIDEBAR - 100% BRANCOS */
+/* Regra base para todos os textos da sidebar */
+.alest-gol .sidebar,
+.alest-gol nav,
+.alest-gol [id="sidebar"],
+.alest-gol .min-w-\[4\.5rem\],
+.alest-gol .py-2\.5\.my-auto {
+  color: #ffffff !important;
+}
+
+/* Força branco em todos os elementos de texto */
+.alest-gol .sidebar *:not(svg):not(path):not(circle):not(rect):not(line),
+.alest-gol [id="sidebar"] *:not(svg):not(path):not(circle):not(rect):not(line),
+.alest-gol .min-w-\[4\.5rem\] *:not(svg):not(path):not(circle):not(rect):not(line) {
+  color: #ffffff !important;
+}
+
+/* Elementos específicos que precisam ser brancos */
+.alest-gol .sidebar button,
+.alest-gol .sidebar a,
+.alest-gol [role="menuitem"],
+.alest-gol .text-gray-500,
+.alest-gol .text-gray-600,
+.alest-gol .text-gray-700,
+.alest-gol .text-gray-800,
+.alest-gol .text-gray-850,
+.alest-gol .text-gray-900,
+.alest-gol .dark\:text-gray-200,
+.alest-gol .dark\:text-gray-400,
+.alest-gol .dark\:text-white,
+.alest-gol .font-semibold,
+.alest-gol .font-bold,
+.alest-gol .font-medium,
+.alest-gol .text-sm,
+.alest-gol .text-xs,
+.alest-gol div[class*="text-gray"],
+.alest-gol .partnership-logos *,
+.alest-gol .partnership-badge * {
+  color: #ffffff !important;
+}
+
+/* Força branco em textos específicos da sidebar */
+.alest-gol #sidebar-new-chat-button *:not(svg),
+.alest-gol .sidebar-new-chat-icon + div,
+.alest-gol .font-primary *:not(svg),
+.alest-gol [class*="text-gray"] *:not(svg) {
+  color: #ffffff !important;
+}
+
+/* Exceções para manter outros elementos não-texto intactos */
+.alest-gol .sidebar svg,
+.alest-gol [id="sidebar"] svg,
+.alest-gol .min-w-\[4\.5rem\] svg {
+  color: #FF6600 !important;
+}
+
+/* EXCEÇÃO: Texto do INPUT DE CHAT deve ser cinza, não branco */
+.alest-gol textarea,
+.alest-gol input {
+  color: #9CA3AF !important; /* CINZA PARA INPUTS */
+}
+
+/* FORÇA ESPECÍFICA PARA O TEXTAREA DO CHAT */
+.alest-gol textarea[placeholder*="Como posso"],
+.alest-gol textarea[placeholder*="Como"],
+.alest-gol div[contenteditable="true"],
+.alest-gol textarea.w-full {
+  color: #9CA3AF !important; /* FORÇA CINZA NO TEXTAREA DE CHAT */
+  caret-color: #9CA3AF !important; /* CURSOR TAMBÉM CINZA */
 }
 
 .alest-gol .app > * {
-	background-color: #1a1a1a !important;
+  background-color: #1a1a1a !important;
 }
 
-/* 🧡 HEADER/NAVBAR - Branding prominente */
-.alest-gol #nav {
-	background-color: #003366 !important; /* Azul GOL */
-	border-bottom: 2px solid #FF6600 !important; /* Laranja principal */
+/* Ícones laranja - identidade visual da parceria */
+.alest-gol svg {
+  fill: #FF6600 !important;
+  stroke: #FF6600 !important;
 }
 
-.alest-gol .navbar {
-	background: linear-gradient(135deg, #FF6600 0%, #003366 100%) !important;
+/* 🎯 OVERRIDE CRÍTICO - TEXTAREA DO CHAT EM CINZA */
+.alest-gol textarea {
+  color: #9CA3AF !important; /* FORÇA CINZA ABSOLUTA */
+  caret-color: #9CA3AF !important; /* CURSOR CINZA */
 }
 
-/* 🧡 SIDEBAR - Navegação corporativa */
-.alest-gol .py-2\.5.my-auto.flex.flex-col.justify-between.h-screen {
-	background: #2C2C2C !important; /* Cinza Alest */
-	border-right: 1px solid #FF6600 !important;
+.alest-gol textarea:focus {
+  color: #9CA3AF !important; /* MANTER CINZA NO FOCO */
 }
 
+.alest-gol input[type="text"] {
+  color: #9CA3AF !important; /* FORÇA CINZA INPUTS */
+}
+
+/* Textos principais em laranja */
+.alest-gol h1,
+.alest-gol h2, 
+.alest-gol h3 {
+  color: #FF6600 !important;
+  font-weight: 600 !important;
+}
+
+.alest-gol .text-primary:not(.sidebar *) {
+  color: #FF6600 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════════ */
+/* 🧡 SIDEBAR E NAVEGAÇÃO                                                               */
+/* ═══════════════════════════════════════════════════════════════════════════════════ */
+
+.alest-gol .py-2\.5.my-auto.flex.flex-col.justify-between.h-screen,
 .alest-gol .sidebar {
-	background-color: #2C2C2C !important;
+  background: #2C2C2C !important;
+  border-right: 1px solid rgba(255, 102, 0, 0.2) !important;
 }
 
-/* 🧡 CHAT INTERFACE - Conversação premium */
-.alest-gol .chat-message {
-	border: 1px solid #FF6600 !important;
+/* ═══════════════════════════════════════════════════════════════════════════════════ */
+/* 🎯 LOGOS DA PARCERIA ALEST + GOL                                                     */
+/* ═══════════════════════════════════════════════════════════════════════════════════ */
+
+.alest-gol img[src*="Logo-Alest-Branco"],
+.alest-gol img[src*="logo-gol.svg"],
+.alest-gol img[alt="Alest"],
+.alest-gol img[alt="GOL"] {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  filter: none !important;
+  opacity: 0.95 !important;
+  height: 20px !important;
+  width: auto !important;
+  max-width: none !important;
+  vertical-align: middle !important;
+  flex-shrink: 0 !important;
+  object-fit: contain !important;
 }
 
-.alest-gol .message-user {
-	background: linear-gradient(135deg, #FF8533, #FF6600) !important;
+.alest-gol div[class*="flex items-center justify-center space-x-3"] {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 6px 4px !important;
+  margin: 6px 0 !important;
+  min-height: 28px !important;
+  overflow: visible !important;
+  box-shadow: none !important;
 }
 
-.alest-gol .message-assistant {
-	background: #333333 !important;
-	border-left: 4px solid #FF6600 !important;
+/* ═══════════════════════════════════════════════════════════════════════════════════ */
+/* 📝 INPUT DE TEXTO - SOMBRA ARREDONDADA CORRETA                                       */
+/* ═══════════════════════════════════════════════════════════════════════════════════ */
+
+/* Container do input com sombra arredondada harmoniosamente */
+.alest-gol .flex-1.flex.flex-col.relative.w-full.shadow-lg.rounded-3xl.border {
+  border-radius: 1.5rem !important;
+  box-shadow: none !important; /* Remove sombra do container principal */
+  background: #2C2C2C !important;
+  border: none !important;
+  overflow: hidden !important; /* Garante que o conteúdo respeite o border-radius */
+  isolation: isolate !important; /* Cria novo contexto de empilhamento */
 }
 
-/* 🧡 CARDS/PANELS - Containers com identidade visual */
-.alest-gol .bg-white.dark\:bg-gray-800,
-.alest-gol .card,
-.alest-gol .panel {
-	background: #333333 !important;
-	border: 1px solid #FF6600 !important;
-	border-radius: 8px !important;
+/* Força o arredondamento da sombra */
+.alest-gol .flex-1.flex.flex-col.relative.w-full.shadow-lg.rounded-3xl.border::after {
+  content: "" !important;
+  position: absolute !important;
+  inset: -15px !important; /* Maior que a sombra */
+  border-radius: 2rem !important; /* Ligeiramente maior que o container */
+  z-index: -1 !important;
+  pointer-events: none !important;
+  background: #2C2C2C !important;
+  box-shadow: 0 8px 20px -2px rgba(0, 0, 0, 0.25),
+              0 4px 10px -2px rgba(0, 0, 0, 0.1) !important;
+  filter: blur(8px) !important; /* Suaviza as bordas da sombra */
 }
 
-/* 🧡 BUTTONS - CTAs com cores da marca */
+/* Input interno sem bordas - texto cinza ambientalizado */
+.alest-gol #chat-input,
+.alest-gol .message-input,
+.alest-gol textarea,
+.alest-gol input {
+  background: transparent !important;
+  border: none !important;
+  color: #9CA3AF !important; /* Cinza suave para ambientalizar */
+}
+
+/* Força específica para textarea dentro do container do input */
+.alest-gol .flex-1.flex.flex-col.relative.w-full textarea,
+.alest-gol .flex-1.flex.flex-col.relative.w-full input,
+.alest-gol .shadow-lg textarea,
+.alest-gol .shadow-lg input {
+  color: #9CA3AF !important; /* Força cinza no texto */
+}
+
+.alest-gol input:focus,
+.alest-gol textarea:focus {
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  color: #D1D5DB !important; /* Cinza mais claro quando ativo */
+}
+
+/* FORÇA MÁXIMA - TEXTAREA DO CHAT ESPECÍFICO */
+.alest-gol form textarea,
+.alest-gol form input,
+.alest-gol div[contenteditable] {
+  color: #9CA3AF !important; /* FORÇA CINZA NO CHAT */
+}
+
+.alest-gol form textarea:focus,
+.alest-gol form input:focus,
+.alest-gol div[contenteditable]:focus {
+  color: #9CA3AF !important; /* MANTER CINZA MESMO NO FOCO */
+}
+
+/* SUPER ESPECÍFICO - TEXTAREA NA ÁREA DE DIGITAÇÃO */
+.alest-gol .shadow-lg textarea,
+.alest-gol .rounded-3xl textarea,
+.alest-gol .border textarea,
+.alest-gol textarea[rows],
+.alest-gol textarea.resize-none {
+  color: #9CA3AF !important; /* TEXTO CINZA NA ÁREA DE DIGITAÇÃO */
+  caret-color: #9CA3AF !important; /* CURSOR CINZA */
+  background: #2C2C2C !important; /* FORÇA BACKGROUND CINZA */
+}
+
+/* FORÇA BACKGROUND CINZA NO CONTAINER DO INPUT */
+.alest-gol div[class*="shadow-lg"][class*="rounded-3xl"],
+.alest-gol div[class*="flex-1"][class*="border"],
+.alest-gol .message-input-container {
+  background: #2C2C2C !important;
+  border: none !important;
+}
+
+/* FORÇA ABSOLUTA PARA QUALQUER TEXTAREA */
+.alest-gol textarea {
+  color: #9CA3AF !important; /* FORÇA ABSOLUTA CINZA */
+}
+
+/* Placeholder do input - cinza ainda mais sutil */
+.alest-gol input::placeholder,
+.alest-gol textarea::placeholder {
+  color: #6B7280 !important;
+  opacity: 0.7 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════════ */
+/* ⚙️  MODAL DE CONFIGURAÇÕES - SEM CORTE DE TEXTO                                      */
+/* ═══════════════════════════════════════════════════════════════════════════════════ */
+
+/* Container principal do modal (Modal.svelte linha 99) */
+.alest-gol .shadow-3xl.scrollbar-hidden {
+  border-radius: 0.75rem !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+}
+
+/* Modal de configurações específico */
+.alest-gol .font-primary {
+  border-radius: 0.75rem !important;
+  overflow: visible !important;
+}
+
+/* Navegação lateral - sem corte de texto */
+.alest-gol .font-primary .tabs {
+  border-radius: 0 !important;
+  overflow: visible !important;
+}
+
+/* Botões da navegação */
+.alest-gol .font-primary .tabs button,
+.alest-gol .font-primary .tabs a {
+  border-radius: 0.375rem !important;
+  overflow: visible !important;
+}
+
+/* Área de conteúdo */
+.alest-gol .font-primary .flex-1 {
+  border-radius: 0 !important;
+  overflow: visible !important;
+}
+
+/* Elementos de texto sempre visíveis */
+.alest-gol .font-primary span,
+.alest-gol .font-primary p,
+.alest-gol .font-primary label,
+.alest-gol .font-primary div[class*="text-"] {
+  border-radius: 0 !important;
+  overflow: visible !important;
+  white-space: normal !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════════ */
+/* 🎨 ÍCONES REFINADOS E ELEGANTES                                                      */
+/* ═══════════════════════════════════════════════════════════════════════════════════ */
+
+/* 🎨 ÍCONES - ESTILO MINIMALISTA */
+/* Regra base para todos os ícones (exceto logos) */
+.alest-gol svg:not([class*="logo"]):not([class*="brand"]):not([width="240"]):not([height="104"]),
+.alest-gol .sidebar svg[class*="size-4"],
+.alest-gol nav svg[class*="size-4"],
+.alest-gol button svg[class*="size-4"] {
+  stroke-width: 1 !important;
+  width: 20px !important;
+  height: 20px !important;
+  fill: none !important;
+  stroke: #FF6600 !important;
+}
+
+/* Força estilo minimalista em todos os ícones da sidebar */
+.alest-gol .sidebar svg,
+.alest-gol nav svg,
+.alest-gol [role="menuitem"] svg,
+.alest-gol .text-gray-800 svg,
+.alest-gol .dark\:text-gray-200 svg,
+/* Seletor super específico para o ícone de notas */
+.alest-gol svg.size-4,
+.alest-gol .size-4 svg,
+.alest-gol svg[class*="size-4"],
+.alest-gol [class*="size-4"] svg {
+  stroke: #FF6600 !important;
+  fill: none !important;
+  stroke-width: 1 !important;
+}
+
+/* Força absoluta para o ícone de notas */
+.alest-gol .s-CQzCIXq4wXlR {
+  stroke: #FF6600 !important;
+  fill: none !important;
+  stroke-width: 1 !important;
+  color: #FF6600 !important;
+}
+
+/* Ícones de navegação principal - estilo outline */
+.alest-gol .sidebar svg:not([class*="logo"]):not([class*="brand"]),
+.alest-gol nav svg,
+.alest-gol button svg,
+.alest-gol [role="menuitem"] svg {
+  stroke-width: 1 !important;
+  fill: none !important;
+  stroke: #FF6600 !important;
+}
+
+/* Ícones que precisam de preenchimento */
+.alest-gol svg[fill="currentColor"]:not([class*="logo"]):not([class*="brand"]),
+.alest-gol .filled-icon svg {
+  fill: #FF6600 !important;
+  stroke: none !important;
+}
+
+/* Ajuste fino para ícones específicos */
+.alest-gol .settings-icon svg,
+.alest-gol .archive-icon svg,
+.alest-gol .playground-icon svg,
+.alest-gol .admin-icon svg,
+.alest-gol .docs-icon svg,
+.alest-gol .releases-icon svg,
+/* Ícones do menu de configurações */
+.alest-gol .font-primary .tabs svg,
+.alest-gol [class*="settings"] svg,
+.alest-gol [class*="config"] svg,
+.alest-gol .interface-icon svg,
+.alest-gol .connections-icon svg,
+.alest-gol .tools-icon svg,
+.alest-gol .personalization-icon svg,
+.alest-gol .audio-icon svg,
+.alest-gol .chats-icon svg,
+.alest-gol .account-icon svg,
+.alest-gol .about-icon svg,
+/* Seletores específicos do menu de configurações */
+.alest-gol .tabs button svg,
+.alest-gol .settings-menu svg,
+.alest-gol .settings-panel svg {
+  stroke-width: 1 !important;
+  fill: none !important;
+  stroke: #FF6600 !important;
+  width: 20px !important;
+  height: 20px !important;
+}
+
+/* Ícones específicos que precisam de fill */
+.alest-gol .notification-icon svg,
+.alest-gol .theme-icon svg,
+.alest-gol .language-icon svg {
+  fill: #FF6600 !important;
+  stroke: none !important;
+  width: 20px !important;
+  height: 20px !important;
+}
+
+/* Hover suave nos ícones */
+.alest-gol svg:hover {
+  opacity: 0.9 !important;
+  transform: scale(1.05) !important;
+  transition: all 0.2s ease !important;
+}
+
+/* Força máxima para ícones de ação */
+.alest-gol .action-icon svg,
+.alest-gol .interactive-icon svg,
+.alest-gol [class*="icon"] svg:not([class*="logo"]):not([class*="brand"]) {
+  stroke-width: 0.75 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════════ */
+/* 🔄 AVATARES E ELEMENTOS CIRCULARES                                                    */
+/* ═══════════════════════════════════════════════════════════════════════════════════ */
+
+.alest-gol img[alt*="profile"],
+.alest-gol img[alt*="User"],
+.alest-gol img[class*="rounded-full"],
+.alest-gol .profile-image,
+.alest-gol .user-avatar,
+.alest-gol div[class*="rounded-full"],
+.alest-gol span[class*="rounded-full"] {
+  border-radius: 50% !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════════ */
+/* 🧡 BOTÕES E INTERAÇÕES                                                               */
+/* ═══════════════════════════════════════════════════════════════════════════════════ */
+
 .alest-gol .btn-primary,
 .alest-gol button[class*="bg-blue"],
 .alest-gol .button-primary {
-	background: linear-gradient(135deg, #FF6600, #CC5200) !important;
-	border: none !important;
-	color: #ffffff !important;
-	transition: all 0.3s ease !important;
+  background: linear-gradient(135deg, #FF6600, #CC5200) !important;
+  border: none !important;
+  color: #ffffff !important;
+  border-radius: 0.75rem !important;
 }
 
 .alest-gol .btn-primary:hover,
 .alest-gol button[class*="bg-blue"]:hover {
-	background: linear-gradient(135deg, #FF8533, #FF6600) !important;
-	transform: translateY(-1px) !important;
-	box-shadow: 0 4px 12px rgba(255, 102, 0, 0.3) !important;
+  background: linear-gradient(135deg, #FF8533, #FF6600) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(255, 102, 0, 0.3) !important;
 }
 
-/* 🧡 INPUT DE CHAT - Interface premium */
-.alest-gol #chat-input,
-.alest-gol .message-input,
-.alest-gol textarea {
-	background: #404040 !important;
-	border: 2px solid #FF6600 !important;
-	border-radius: 8px !important;
-	color: #ffffff !important;
+/* ═══════════════════════════════════════════════════════════════════════════════════ */
+/* 📄 CARDS E CONTAINERS                                                                */
+/* ═══════════════════════════════════════════════════════════════════════════════════ */
+
+.alest-gol .bg-white.dark\:bg-gray-800,
+.alest-gol .card,
+.alest-gol .panel {
+  background: #333333 !important;
+  border: none !important;
+  border-radius: 0.75rem !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
 }
 
-.alest-gol #chat-input:focus,
-.alest-gol textarea:focus {
-	border-color: #FF8533 !important;
-	box-shadow: 0 0 0 3px rgba(255, 102, 0, 0.2) !important;
+/* ═══════════════════════════════════════════════════════════════════════════════════ */
+/* 💬 CHAT E MENSAGENS                                                                  */
+/* ═══════════════════════════════════════════════════════════════════════════════════ */
+
+.alest-gol .chat-message {
+  border: none !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
 }
 
-/* 🧡 FORMS - Inputs elegantes e funcionais */
-.alest-gol input[type="text"],
-.alest-gol input[type="email"],
-.alest-gol input[type="password"],
-.alest-gol select {
-	background: #404040 !important;
-	border: 1px solid #FF6600 !important;
-	border-radius: 6px !important;
-	color: #ffffff !important;
+.alest-gol .message-user {
+  background: linear-gradient(135deg, #FF8533, #FF6600) !important;
 }
 
-/* 🧡 ÍCONES - Linguagem visual unificada */
-.alest-gol .w-4.h-4,
-.alest-gol .icon,
-.alest-gol svg {
-	fill: #FF6600 !important;
-	stroke: #FF6600 !important;
+.alest-gol .message-assistant {
+  background: #333333 !important;
+  border-left: 3px solid rgba(255, 102, 0, 0.6) !important;
 }
 
-/* 🧡 LOADING STATES - Animações branded */
-.alest-gol .spinner,
-.alest-gol .loading {
-	color: #FF6600 !important;
-	border-color: #FF6600 !important;
-}
-
-.alest-gol .loading-dot {
-	background: #FF6600 !important;
-}
-
-/* 🧡 MODAL/DIALOGS - Overlays profissionais */
-.alest-gol .modal,
-.alest-gol .dialog {
-	background: #2C2C2C !important;
-	border: 2px solid #FF6600 !important;
-	border-radius: 12px !important;
-}
-
-.alest-gol .modal-header {
-	background: linear-gradient(135deg, #FF6600, #003366) !important;
-	color: #ffffff !important;
-}
-
-/* 🧡 MENU E DROPDOWN */
-.alest-gol .dropdown-menu {
-	background: #333333 !important;
-	border: 1px solid #FF6600 !important;
-	border-radius: 6px !important;
-}
-
-.alest-gol .dropdown-item:hover {
-	background: rgba(255, 102, 0, 0.1) !important;
-}
-
-/* 🧡 SCROLLBAR CUSTOMIZADA */
-.alest-gol ::-webkit-scrollbar {
-	width: 8px !important;
-}
-
-.alest-gol ::-webkit-scrollbar-track {
-	background: #2C2C2C !important;
-}
-
-.alest-gol ::-webkit-scrollbar-thumb {
-	background: #FF6600 !important;
-	border-radius: 4px !important;
-}
-
-.alest-gol ::-webkit-scrollbar-thumb:hover {
-	background: #FF8533 !important;
-}
-
-/* 🧡 TIPOGRAFIA - Hierarquia clara */
-.alest-gol h1, .alest-gol h2, .alest-gol h3 {
-	color: #FF6600 !important;
-	font-weight: 600 !important;
-}
-
-.alest-gol .text-primary {
-	color: #FF6600 !important;
-}
+/* ═══════════════════════════════════════════════════════════════════════════════════ */
+/* 📚 TIPOGRAFIA - CORES LARANJA MANTIDAS                                               */
+/* ═══════════════════════════════════════════════════════════════════════════════════ */
 
 .alest-gol .text-secondary {
-	color: #FFE5CC !important;
+  color: #FFE5CC !important;
 }
 
-/* 🧡 LINKS */
 .alest-gol a {
-	color: #FF8533 !important;
-	text-decoration: none !important;
+  color: #FF8533 !important;
+  text-decoration: none !important;
 }
 
 .alest-gol a:hover {
-	color: #FF6600 !important;
-	text-decoration: underline !important;
+  color: #FF6600 !important;
+  text-decoration: underline !important;
 }
 
-/* 🧡 GRADIENTES E PATTERNS */
-.alest-gol .gradient-bg {
-	background: linear-gradient(135deg, #FF6600 0%, #003366 50%, #2C2C2C 100%) !important;
+/* ═══════════════════════════════════════════════════════════════════════════════════ */
+/* 📜 SCROLLBAR CUSTOMIZADA - LARANJA                                                   */
+/* ═══════════════════════════════════════════════════════════════════════════════════ */
+
+.alest-gol ::-webkit-scrollbar {
+  width: 8px !important;
 }
 
-.alest-gol .pattern-overlay {
-	background-image: 
-		radial-gradient(circle at 25% 25%, rgba(255, 102, 0, 0.1) 0%, transparent 50%),
-		radial-gradient(circle at 75% 75%, rgba(0, 51, 102, 0.1) 0%, transparent 50%) !important;
+.alest-gol ::-webkit-scrollbar-track {
+  background: #2C2C2C !important;
 }
 
-/* 🧡 RESPONSIVIDADE */
-@media (max-width: 768px) {
-	.alest-gol .sidebar {
-		background: rgba(44, 44, 44, 0.95) !important;
-		backdrop-filter: blur(10px) !important;
-	}
+.alest-gol ::-webkit-scrollbar-thumb {
+  background: #FF6600 !important;
+  border-radius: 4px !important;
 }
 
-/* 🧡 ANIMAÇÕES SUAVES */
+.alest-gol ::-webkit-scrollbar-thumb:hover {
+  background: #FF8533 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════════ */
+/* 🎨 ELEMENTOS ADICIONAIS EM LARANJA                                                   */
+/* ═══════════════════════════════════════════════════════════════════════════════════ */
+
+/* Loading e spinners */
+.alest-gol .spinner,
+.alest-gol .loading {
+  color: #FF6600 !important;
+  border-color: #FF6600 !important;
+}
+
+.alest-gol .loading-dot {
+  background: #FF6600 !important;
+}
+
+/* Elementos interativos em hover */
+.alest-gol .dropdown-item:hover {
+  background: rgba(255, 102, 0, 0.1) !important;
+}
+
+/* Bordas de destaque */
+.alest-gol .border-primary {
+  border-color: #FF6600 !important;
+}
+
+/* Backgrounds de destaque */
+.alest-gol .bg-primary {
+  background-color: #FF6600 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════════ */
+/* 🔧 LIMPEZA E CORREÇÕES FINAIS                                                        */
+/* ═══════════════════════════════════════════════════════════════════════════════════ */
+
+/* Remover animações desnecessárias */
 .alest-gol * {
-	transition: all 0.3s ease !important;
+  transition: none !important;
 }
 
-.alest-gol .hover-lift:hover {
-	transform: translateY(-2px) !important;
-	box-shadow: 0 8px 25px rgba(255, 102, 0, 0.2) !important;
+/* Elementos que nunca devem ter border-radius */
+.alest-gol body,
+.alest-gol html,
+.alest-gol #app,
+.alest-gol .app,
+.alest-gol main {
+  border-radius: 0 !important;
 }
 
-/* 🧡 PARCERIA BRANDING - Elementos específicos */
-.alest-gol .partnership-badge {
-	background: linear-gradient(135deg, #FF6600, #003366) !important;
-	color: #ffffff !important;
-	padding: 4px 12px !important;
-	border-radius: 20px !important;
-	font-size: 12px !important;
-	font-weight: 600 !important;
+/* Remover sombras desnecessárias (exceto input e modal) */
+.alest-gol [class*="shadow"]:not([class*="rounded-3xl"]):not([class*="shadow-3xl"]) {
+  box-shadow: none !important;
 }
 
-.alest-gol .partnership-logo {
-	filter: drop-shadow(0 2px 4px rgba(255, 102, 0, 0.3)) !important;
+/* ═══════════════════════════════════════════════════════════════════════════════════ */
+/* 📱 RESPONSIVIDADE                                                                    */
+/* ═══════════════════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  .alest-gol .sidebar {
+    background: rgba(44, 44, 44, 0.95) !important;
+    backdrop-filter: blur(10px) !important;
+  }
 } 
