@@ -905,8 +905,18 @@ ENABLE_OPENAI_API = PersistentConfig(
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 OPENAI_API_BASE_URL = os.environ.get("OPENAI_API_BASE_URL", "")
 
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-GEMINI_API_BASE_URL = os.environ.get("GEMINI_API_BASE_URL", "")
+# Configurações do Gemini
+GEMINI_API_KEY = PersistentConfig(
+    "GEMINI_API_KEY", 
+    "gemini.api_key", 
+    os.environ.get("GEMINI_API_KEY", "AIzaSyDrqEFhXHRauPLVk4qUpvS0VSQSHh4LKKI")
+)
+
+GEMINI_API_BASE_URL = PersistentConfig(
+    "GEMINI_API_BASE_URL", 
+    "gemini.api_base_url", 
+    os.environ.get("GEMINI_API_BASE_URL", "https://generativelanguage.googleapis.com/v1beta")
+)
 
 
 if OPENAI_API_BASE_URL == "":

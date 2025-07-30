@@ -114,6 +114,9 @@ from open_webui.config import (
     OPENAI_API_BASE_URLS,
     OPENAI_API_KEYS,
     OPENAI_API_CONFIGS,
+    # Gemini
+    GEMINI_API_KEY,
+    GEMINI_API_BASE_URL,
     # Direct Connections
     ENABLE_DIRECT_CONNECTIONS,
     # Model list
@@ -622,6 +625,10 @@ app.state.config.ENABLE_OPENAI_API = ENABLE_OPENAI_API
 app.state.config.OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS
 app.state.config.OPENAI_API_KEYS = OPENAI_API_KEYS
 app.state.config.OPENAI_API_CONFIGS = OPENAI_API_CONFIGS
+
+# Configurações do Gemini
+app.state.config.GEMINI_API_KEY = GEMINI_API_KEY
+app.state.config.GEMINI_API_BASE_URL = GEMINI_API_BASE_URL
 
 app.state.OPENAI_MODELS = {}
 
