@@ -1025,31 +1025,28 @@ except Exception as e:
 if default_prompt_suggestions == []:
     default_prompt_suggestions = [
         {
-            "title": ["Help me study", "vocabulary for a college entrance exam"],
-            "content": "Help me study vocabulary: write a sentence for me to fill in the blank, and I'll try to pick the correct option.",
+            "title": ["Planejar minha viagem", "com a GOL Linhas Aéreas"],
+            "content": "Me ajude a planejar uma viagem com a GOL: quais são os melhores horários de voo, como escolher assentos e quais benefícios do programa Smiles posso usar?",
         },
         {
-            "title": ["Give me ideas", "for what to do with my kids' art"],
-            "content": "What are 5 creative things I could do with my kids' art? I don't want to throw them away, but it's also so much clutter.",
+            "title": ["Curiosidades sobre aviação", "e a história da GOL"],
+            "content": "Me conte curiosidades interessantes sobre a aviação comercial no Brasil e a história da GOL Linhas Aéreas desde sua fundação.",
         },
         {
-            "title": ["Tell me a fun fact", "about the Roman Empire"],
-            "content": "Tell me a random fun fact about the Roman Empire",
+            "title": ["Como funciona", "o programa de fidelidade Smiles"],
+            "content": "Explique como funciona o programa Smiles da GOL: como acumular milhas, categorias de membros e melhores formas de resgatar benefícios.",
         },
         {
-            "title": ["Show me a code snippet", "of a website's sticky header"],
-            "content": "Show me a code snippet of a website's sticky header in CSS and JavaScript.",
+            "title": ["Dicas de viagem", "para voos domésticos no Brasil"],
+            "content": "Quais são as melhores dicas para voos domésticos no Brasil? Inclua informações sobre documentação, bagagem e procedimentos de check-in.",
         },
         {
-            "title": [
-                "Explain options trading",
-                "if I'm familiar with buying and selling stocks",
-            ],
-            "content": "Explain options trading in simple terms if I'm familiar with buying and selling stocks.",
+            "title": ["Destinos GOL", "mais procurados e rotas"],
+            "content": "Quais são os destinos mais procurados da GOL no Brasil e América do Sul? Me fale sobre as principais rotas e conexões disponíveis.",
         },
         {
-            "title": ["Overcome procrastination", "give me tips"],
-            "content": "Could you start by asking me about instances when I procrastinate the most and then give me some suggestions to overcome it?",
+            "title": ["Procedimentos de segurança", "em voos comerciais"],
+            "content": "Explique os principais procedimentos de segurança em voos comerciais, desde o embarque até o desembarque, incluindo medidas de emergência.",
         },
     ]
 

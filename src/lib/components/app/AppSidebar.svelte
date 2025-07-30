@@ -10,11 +10,11 @@
 	<div class="flex justify-center relative">
 		{#if selected === 'home'}
 			<div class="absolute top-0 left-0 flex h-full">
-				<div class="my-auto rounded-r-lg w-1 h-8 bg-black dark:bg-white"></div>
+				<div class="my-auto rounded-r-lg w-1 h-8 bg-partnership-orange"></div>
 			</div>
 		{/if}
 
-		<Tooltip content="Home" placement="right">
+		<Tooltip content="Parceria Alest × GOL" placement="right">
 			<button
 				class=" cursor-pointer {selected === 'home' ? 'rounded-2xl' : 'rounded-full'}"
 				on:click={() => {
@@ -25,12 +25,21 @@
 					}
 				}}
 			>
-				<img
-					src="{WEBUI_BASE_URL}/static/splash.png"
-					class="size-11 dark:invert p-0.5"
-					alt="logo"
-					draggable="false"
-				/>
+				<!-- Logos da Parceria Alest × GOL -->
+				<div class="partnership-logos flex items-center gap-1 p-0.5">
+					<img
+						src="http://localhost:8080/static/Logo-Alest-Branco-240x104-1-1.png"
+						class="h-4 w-auto"
+						alt="Alest"
+						draggable="false"
+					/>
+					<img
+						src="http://localhost:8080/static/logo-gol.svg"
+						class="h-4 w-auto"
+						alt="GOL"
+						draggable="false"
+					/>
+				</div>
 			</button>
 		</Tooltip>
 	</div>
@@ -40,7 +49,7 @@
 	<div class="flex justify-center relative group">
 		{#if selected === ''}
 			<div class="absolute top-0 left-0 flex h-full">
-				<div class="my-auto rounded-r-lg w-1 h-8 bg-black dark:bg-white"></div>
+				<div class="my-auto rounded-r-lg w-1 h-8 bg-partnership-orange"></div>
 			</div>
 		{/if}
 		<button
@@ -49,12 +58,23 @@
 				selected = '';
 			}}
 		>
-			<img
-				src="{WEBUI_BASE_URL}/static/favicon.png"
-				class="size-10 {selected === '' ? 'rounded-2xl' : 'rounded-full'}"
-				alt="logo"
-				draggable="false"
-			/>
+			<!-- Logo da Parceria compacto -->
+			<div class="partnership-badge rounded-full p-1 bg-gray-700">
+				<div class="flex items-center gap-0.5">
+					<img
+						src="http://localhost:8080/static/Logo-Alest-Branco-240x104-1-1.png"
+						class="h-3 w-auto"
+						alt="Alest"
+						draggable="false"
+					/>
+					<img
+						src="http://localhost:8080/static/logo-gol.svg"
+						class="h-3 w-auto"
+						alt="GOL"
+						draggable="false"
+					/>
+				</div>
+			</div>
 		</button>
 	</div>
 

@@ -9,6 +9,32 @@
   color: #ffffff !important;
 }
 
+/* 🔤 TEXTOS SUGERIDOS - LARANJA */
+/* Títulos dos prompts em laranja */
+.alest-gol .grid.grid-cols-2 button h2,
+.alest-gol .grid.grid-cols-2 button h3,
+.alest-gol .grid.grid-cols-2 button p:first-of-type {
+  color: #FF6600 !important;
+  font-weight: 600 !important;
+}
+
+/* Subtítulos em cinza mais claro */
+.alest-gol .grid.grid-cols-2 button p:not(:first-of-type) {
+  color: #9CA3AF !important;
+  font-weight: normal !important;
+  opacity: 0.8 !important;
+}
+
+/* Texto "Chats" em laranja */
+.alest-gol .translate-y-\[0\.5px\] {
+  color: #ffffff !important;
+}
+
+.alest-gol .translate-y-\[0\.5px\] + div:contains("Chats") {
+  color: #FF6600 !important;
+  font-weight: 600 !important;
+}
+
 /* 🔤 TEXTOS DA SIDEBAR - 100% BRANCOS */
 /* Regra base para todos os textos da sidebar */
 .alest-gol .sidebar,
@@ -54,8 +80,27 @@
 .alest-gol #sidebar-new-chat-button *:not(svg),
 .alest-gol .sidebar-new-chat-icon + div,
 .alest-gol .font-primary *:not(svg),
-.alest-gol [class*="text-gray"] *:not(svg) {
+.alest-gol [class*="text-gray"] *:not(svg):not([class*="suggested-prompts"] *) {
   color: #ffffff !important;
+}
+
+/* Força laranja nos textos dos prompts sugeridos */
+.alest-gol .suggested-prompts h2,
+.alest-gol .suggested-prompts h3,
+.alest-gol .suggested-prompts .text-lg,
+.alest-gol .suggested-prompts .font-semibold,
+.alest-gol .grid.grid-cols-2 button div:first-of-type,
+.alest-gol [class*="prompt-suggestions"] button div:first-of-type,
+.alest-gol [class*="prompt-suggestions"] button p {
+  color: #FF6600 !important;
+  font-weight: 600 !important;
+}
+
+/* Força laranja em todos os textos dos prompts */
+.alest-gol .prompt-suggestion,
+.alest-gol .suggested-prompt,
+.alest-gol [class*="prompt"] button > div {
+  color: #FF6600 !important;
 }
 
 /* Exceções para manter outros elementos não-texto intactos */
@@ -117,13 +162,149 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════════ */
-/* 🧡 SIDEBAR E NAVEGAÇÃO                                                               */
+/* 🧡 SIDEBAR E NAVEGAÇÃO - SEM RETÂNGULOS */
 /* ═══════════════════════════════════════════════════════════════════════════════════ */
 
+/* Remove backgrounds da sidebar */
+.alest-gol .sidebar,
 .alest-gol .py-2\.5.my-auto.flex.flex-col.justify-between.h-screen,
-.alest-gol .sidebar {
-  background: #2C2C2C !important;
+.alest-gol [id="sidebar"],
+.alest-gol .min-w-\[4\.5rem\] {
+  background: #1a1a1a !important;
   border-right: 1px solid rgba(255, 102, 0, 0.2) !important;
+}
+
+/* Remove backgrounds dos itens da sidebar */
+.alest-gol .sidebar button,
+.alest-gol .sidebar a,
+.alest-gol .sidebar [role="menuitem"],
+.alest-gol .sidebar [class*="rounded-lg"],
+.alest-gol .sidebar [class*="rounded-xl"],
+.alest-gol .sidebar [class*="bg-gray"],
+.alest-gol .sidebar .dark\:bg-gray-900,
+.alest-gol .sidebar .dark\:hover\:bg-gray-900,
+.alest-gol .sidebar .hover\:bg-gray-100,
+/* Seletor específico para o botão de pesquisa */
+.alest-gol button.grow.flex.items-center.space-x-3.rounded-lg.px-2.py-\[7px\],
+.alest-gol .grow.flex.items-center.space-x-3.rounded-lg.px-2.py-\[7px\],
+.alest-gol button[class*="grow"][class*="flex"][class*="items-center"][class*="space-x-3"],
+.alest-gol button[class*="rounded-lg"][class*="px-2"][class*="py-[7px]"],
+.alest-gol .sidebar button.grow,
+.alest-gol .sidebar .grow.flex {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* Remove backgrounds do botão de menu */
+.alest-gol button.cursor-pointer.p-\[7px\].flex.rounded-xl,
+.alest-gol button.cursor-pointer.p-\[7px\],
+.alest-gol button[class*="cursor-pointer"][class*="rounded-xl"],
+.alest-gol button[class*="hover:bg-gray-100"],
+.alest-gol button[class*="dark:hover:bg-gray-900"] {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* Remove backgrounds específicos do botão de pesquisa */
+.alest-gol .sidebar button:has(div:contains("Pesquisar")),
+.alest-gol .sidebar button:has(.self-center:contains("Pesquisar")),
+.alest-gol .sidebar button.grow.flex.items-center,
+.alest-gol .sidebar .grow.flex.items-center {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* Arredonda botão de áudio */
+.alest-gol button.bg-black.text-white.hover\:bg-gray-900.dark\:bg-white.dark\:text-black.dark\:hover\:bg-gray-100,
+.alest-gol button[class*="bg-black"][class*="text-white"],
+.alest-gol button.dark\:bg-white.dark\:text-black {
+  border-radius: 9999px !important;
+  background: transparent !important;
+  border: none !important;
+  padding: 8px !important;
+  transition: all 0.2s ease !important;
+}
+
+/* Hover do botão de áudio */
+.alest-gol button.bg-black.text-white:hover,
+.alest-gol button[class*="bg-black"][class*="text-white"]:hover {
+  background: rgba(255, 102, 0, 0.1) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* Remove background da div de sugestões */
+.alest-gol .max-h-40.overflow-auto.scrollbar-none,
+.alest-gol div.max-h-40.overflow-auto,
+.alest-gol .items-start.s-KiMLslekMZU0,
+.alest-gol [class*="max-h-40"][class*="overflow-auto"],
+.alest-gol [class*="items-start"][class*="s-KiMLslekMZU0"] {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* Remove background dos botões de ação */
+.alest-gol button.bg-black.text-white,
+.alest-gol button.hover\:bg-gray-900,
+.alest-gol button.dark\:bg-white,
+.alest-gol button.dark\:text-black,
+.alest-gol button.dark\:hover\:bg-gray-100,
+.alest-gol [class*="bg-black"][class*="text-white"],
+.alest-gol [class*="hover:bg-gray-900"],
+.alest-gol [class*="dark:bg-white"],
+.alest-gol [class*="dark:text-black"] {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* Hover estado */
+.alest-gol button.bg-black.text-white:hover,
+.alest-gol button.hover\:bg-gray-900:hover,
+.alest-gol button.dark\:bg-white:hover {
+  background: rgba(255, 102, 0, 0.1) !important;
+}
+
+/* Remove background do botão waterfall */
+.alest-gol button.waterfall.flex.flex-col.flex-1.shrink-0.w-full.justify-between,
+.alest-gol .waterfall.flex.flex-col,
+.alest-gol button[class*="waterfall"][class*="flex-col"],
+.alest-gol button[class*="w-full"][class*="justify-between"],
+.alest-gol button[class*="px-3"][class*="py-2"],
+.alest-gol .waterfall.flex {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* Hover do botão waterfall */
+.alest-gol button.waterfall:hover,
+.alest-gol .waterfall.flex:hover {
+  background: rgba(255, 102, 0, 0.1) !important;
+  border-radius: 0.5rem !important;
+}
+
+/* Hover sutil em laranja */
+.alest-gol .sidebar button:hover,
+.alest-gol .sidebar a:hover,
+.alest-gol .sidebar [role="menuitem"]:hover {
+  background: rgba(255, 102, 0, 0.1) !important;
+  border-radius: 0.5rem !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════════ */
@@ -431,20 +612,91 @@
 /* 🧡 BOTÕES E INTERAÇÕES                                                               */
 /* ═══════════════════════════════════════════════════════════════════════════════════ */
 
-.alest-gol .btn-primary,
-.alest-gol button[class*="bg-blue"],
-.alest-gol .button-primary {
-  background: linear-gradient(135deg, #FF6600, #CC5200) !important;
+/* 🎯 SEÇÕES DE SUGESTÕES - SEM RETÂNGULOS */
+.alest-gol .grid.grid-cols-2 button,
+.alest-gol [class*="suggested-prompts"] button,
+.alest-gol .prompt-suggestions button {
+  background: transparent !important;
   border: none !important;
-  color: #ffffff !important;
-  border-radius: 0.75rem !important;
+  box-shadow: none !important;
+  transition: none !important;
 }
 
+.alest-gol .grid.grid-cols-2 button:hover,
+.alest-gol [class*="suggested-prompts"] button:hover,
+.alest-gol .prompt-suggestions button:hover {
+  background: rgba(255, 102, 0, 0.1) !important;
+  transform: none !important;
+}
+
+/* 🔘 BOTÕES - TEMA CINZA */
+/* Botão específico de salvar */
+.alest-gol button.bg-black,
+.alest-gol button.bg-gray-900,
+.alest-gol button.dark\:bg-gray-800,
+.alest-gol button.dark\:bg-gray-700,
+.alest-gol button[class*="bg-black"],
+.alest-gol button[class*="bg-gray-900"],
+.alest-gol button.px-3\.5.py-1\.5 {
+  background-color: #2C2C2C !important;
+  border: 1px solid #3C3C3C !important;
+  color: #ffffff !important;
+  border-radius: 0.5rem !important;
+}
+
+/* Força o background em todos os estados */
+.alest-gol button.bg-black,
+.alest-gol button.hover\:bg-gray-900:hover,
+.alest-gol button.dark\:bg-gray-800,
+.alest-gol button.dark\:hover\:bg-gray-700:hover {
+  background-color: #2C2C2C !important;
+}
+
+/* Hover mais específico */
+.alest-gol button.bg-black:hover,
+.alest-gol button.bg-gray-900:hover,
+.alest-gol button.dark\:bg-gray-800:hover,
+.alest-gol button.dark\:bg-gray-700:hover,
+.alest-gol button.hover\:bg-gray-900:hover {
+  background-color: #3C3C3C !important;
+  border-color: #4C4C4C !important;
+}
+.alest-gol .btn-primary,
+.alest-gol button[class*="bg-blue"],
+.alest-gol .button-primary,
+.alest-gol button[type="submit"],
+.alest-gol button[class*="bg-partnership"],
+.alest-gol .bg-blue-500 {
+  background: #2C2C2C !important;
+  border: 1px solid #3C3C3C !important;
+  color: #ffffff !important;
+  border-radius: 0.5rem !important;
+  transition: all 0.2s ease !important;
+}
+
+/* Hover dos botões */
 .alest-gol .btn-primary:hover,
-.alest-gol button[class*="bg-blue"]:hover {
-  background: linear-gradient(135deg, #FF8533, #FF6600) !important;
+.alest-gol button[class*="bg-blue"]:hover,
+.alest-gol .button-primary:hover,
+.alest-gol button[type="submit"]:hover,
+.alest-gol button[class*="bg-partnership"]:hover,
+.alest-gol .bg-blue-500:hover {
+  background: #3C3C3C !important;
+  border-color: #4C4C4C !important;
   transform: translateY(-1px) !important;
-  box-shadow: 0 4px 12px rgba(255, 102, 0, 0.3) !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Botões desabilitados */
+.alest-gol button:disabled,
+.alest-gol .btn-primary:disabled,
+.alest-gol button[class*="bg-blue"]:disabled {
+  background: #1C1C1C !important;
+  border-color: #2C2C2C !important;
+  color: #666666 !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+  box-shadow: none !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════════ */
