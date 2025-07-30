@@ -16,10 +16,10 @@ log = logging.getLogger(__name__)
 
 # SQL Server Connection Configuration
 # Priority: Environment Variables > Default Values
-SQL_SERVER = os.getenv("SQL_SERVER", "pdase-cepm-sqlmi.c46da62ba3d7.database.windows.net")
-SQL_DATABASE = os.getenv("SQL_DATABASE", "AMD_Excel_Clone")
-SQL_USERNAME = os.getenv("SQL_USERNAME", "cepm_ro")
-SQL_PASSWORD = os.getenv("SQL_PASSWORD", "TtztZXVGPJjWIgGMqER9t0X")
+SQL_SERVER = os.getenv("SQL_SERVER", "")
+SQL_DATABASE = os.getenv("SQL_DATABASE", "")
+SQL_USERNAME = os.getenv("SQL_USERNAME", "")
+SQL_PASSWORD = os.getenv("SQL_PASSWORD", "")
 SQL_DRIVER = os.getenv("SQL_DRIVER", "ODBC Driver 17 for SQL Server")
 SQL_TIMEOUT = int(os.getenv("SQL_TIMEOUT", "5"))
 SQL_ENCRYPT = "yes" if os.getenv("SQL_ENCRYPT", "yes").lower() == "yes" else "no"
