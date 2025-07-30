@@ -122,7 +122,8 @@
 				.pipeThrough(splitStream('\n'))
 				.getReader();
 
-			while (true) {
+			const condition = true
+			while (condition) {
 				const { value, done } = await reader.read();
 				if (done || stopResponseFlag) {
 					if (stopResponseFlag) {

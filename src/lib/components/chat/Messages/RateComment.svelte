@@ -7,6 +7,9 @@
 	import MaterialIcon from '$lib/components/common/MaterialIcon.svelte';
 	import type { i18n as i18nType } from 'i18next';
 	import type { Writable } from 'svelte/store';
+	import ArrowLeftNew from '$lib/components/icons/ArrowLeftNew.svelte';
+	import ArrowRight from '$lib/components/icons/ArrowRight.svelte';
+	import { isRTL } from '$lib/i18n';
 
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
@@ -169,16 +172,28 @@
 		<div class="text-sm font-medium">
 			<div class="flex items-center gap-1">
 				{#if message?.annotation?.rating === 1}
-					<MaterialIcon name="thumb_up" size="1.1rem" color="green" />
+					<div>
+						<MaterialIcon name="thumb_up" size="1.4rem" color="#18795F" />
+						<div class="mt-2 text-[#2FA27F] font-inter text-[24px] font-semibold leading-[30px]">
+							{$i18n.t('Glad that helped!')}
+						</div>
+						<div class="mt-1 text-[#2FA27F] font-inter text-[16px] font-medium leading-[24px]">
+							{$i18n.t('Thank you for your feedback. Please let me know what did you find helpful?')}
+						</div>
+					</div>
 				{:else}
-					<MaterialIcon name="thumb_down" size="1.1rem" color="red" />
+					<div>
+						<MaterialIcon name="thumb_down" size="1.4rem" color="#E6620D" />
+						<div class="mt-2 text-[#E6620D] font-inter text-[24px] font-semibold leading-[30px]">
+							{$i18n.t('Sorry about that')}
+						</div>
+						<div class="mt-1 text-[#E6620D] font-inter text-[16px] font-medium leading-[24px]">
+							{$i18n.t('Help us improve, what went wrong with the response?')}
+						</div>
+					</div>
 				{/if}
-				<span class="text-sm font-medium px-2">
-					{$i18n.t('How would you rate this response?')}
-				</span>
 			</div>
 		</div>
-
 		<!-- <div class=" text-sm">{$i18n.t('Tell us more:')}</div> -->
 
 		<button
@@ -204,8 +219,12 @@
 			<div class="flex flex-wrap gap-1.5 text-sm mt-1.5 py-2">
 				{#each reasons as reason}
 					<button
-						class="px-3 py-0.5 border border-gray-100 dark:border-gray-850 hover:bg-gray-50 dark:hover:bg-gray-850 {selectedReason ===
-						reason.key
+						class="px-3 py-0.5 border border-gray-100 dark:border-gray-850 dark:hover:text-gray-850 {
+						message?.annotation?.rating === 1 
+							? 'hover:bg-[#C1EFE1] dark:hover:bg-[#C1EFE1]' 
+							: 'hover:bg-[#FFE5D4] dark:hover:bg-[#FFE5D4]'
+						} {
+						selectedReason === reason.key
 							? 'bg-gray-100 dark:bg-gray-800'
 							: ''} transition rounded-3xl flex flex-col items-center min-w-[200px]"
 						on:click={() => {
@@ -232,12 +251,17 @@
 
 	<div class="mt-2 gap-1.5 flex justify-end">
 		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+			class="inline-flex items-center space-x-1 text-[#004280] text-sm leading-none hover:underline"
 			on:click={() => {
 				saveHandler();
 			}}
 		>
-			{$i18n.t('Save')}
+			<span class="text-sm">Submit feedback</span>
+			{#if $isRTL }
+				<ArrowLeftNew />
+			{:else}
+				<ArrowRight />
+			{/if}
 		</button>
 	</div>
 </div>

@@ -368,7 +368,7 @@ input[type='number'] {
 }
 
 .tippy-box[data-theme~='dark'] {
-	@apply rounded-lg bg-gray-950 text-xs border border-gray-900 shadow-xl;
+	@apply rounded-lg bg-gradient-bg-2 dark:bg-gray-900 text-xs text-black  dark:text-white border border-gray-300 dark:border-gray-700 shadow-xl;
 }
 
 .password {

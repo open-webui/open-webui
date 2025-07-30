@@ -50,6 +50,7 @@
 	let parentMessage;
 	let groupedMessageIds = {};
 	let groupedMessageIdsIdx = {};
+	let isHover = true
 
 	let message = JSON.parse(JSON.stringify(history.messages[messageId]));
 	$: if (history.messages) {
@@ -322,7 +323,7 @@
 								<button
 									type="button"
 									id="merge-response-button"
-									class="{true
+									class="{isHover
 										? 'visible'
 										: 'invisible group-hover:visible'} p-1 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition regenerate-response-button"
 									on:click={() => {
