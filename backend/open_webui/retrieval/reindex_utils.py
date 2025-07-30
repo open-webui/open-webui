@@ -62,10 +62,16 @@ def create_config_from_fallback() -> Dict[str, Any]:
 def create_mock_request_from_config(config: Dict[str, Any], ef=None):
     """Create a mock request object with the given configuration."""
 
+    class MockConfig:
+        def __init__(self, config_dict):
+            # Set all config values as attributes
+            for key, value in config_dict.items():
+                setattr(self, key, value)
+
     class MockRequest:
         def __init__(self, config_dict, embedding_function):
             # Create mock app state structure
-            config_obj = type("Config", (), config_dict)()
+            config_obj = MockConfig(config_dict)
             state_obj = type(
                 "State", (), {"config": config_obj, "ef": embedding_function}
             )()
@@ -97,7 +103,13 @@ def get_current_config_and_ef():
     except ImportError:
         # Fallback to creating config from environment/database
         config_dict = create_config_from_fallback()
-        config_obj = type("Config", (), config_dict)()
+
+        class FallbackConfig:
+            def __init__(self, config_dict):
+                for key, value in config_dict.items():
+                    setattr(self, key, value)
+
+        config_obj = FallbackConfig(config_dict)
         return config_obj, None
 
 
