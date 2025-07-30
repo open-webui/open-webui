@@ -85,7 +85,7 @@ def set_aak_groups(user_data):
     so we cannot rely on Open WebUI's claims mapping. Parses the relevant AAK claims and adds them
     to the "groups" list. This enables us to rely on Open WebUI's role management for user role assignment.
 
-    To ensure unique group names, they are constructed as "<aak_department_name> (<aak_department_id>)".
+    To ensure unique group names they are constructed as "<aak_department_name> (<aak_department_id>)".
 
     Example claims:
 
