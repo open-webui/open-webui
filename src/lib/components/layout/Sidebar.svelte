@@ -58,6 +58,9 @@
 	import Home from '../icons/Home.svelte';
 	import Search from '../icons/Search.svelte';
 	import SearchModal from './SearchModal.svelte';
+	import FolderModal from './Sidebar/Folders/FolderModal.svelte';
+	import Sortable from 'sortablejs';
+	import { updateUserSettings } from '$lib/apis/users';
 
 	const BREAKPOINT = 768;
 
@@ -74,8 +77,31 @@
 	let chatListLoading = false;
 	let allChatsLoaded = false;
 
+	let showCreateFolderModal = false;
 	let folders = {};
 	let newFolderId = null;
+
+	const initPinnedModelsSortable = () => {
+		const pinnedModelsList = document.getElementById('pinned-models-list');
+		if (pinnedModelsList) {
+			new Sortable(pinnedModelsList, {
+				animation: 150,
+				onUpdate: async (event) => {
+					const modelId = event.item.dataset.id;
+					const newIndex = event.newIndex;
+
+					const pinnedModels = $settings.pinnedModels;
+					const oldIndex = pinnedModels.indexOf(modelId);
+
+					pinnedModels.splice(oldIndex, 1);
+					pinnedModels.splice(newIndex, 0, modelId);
+
+					settings.set({ ...$settings, pinnedModels: pinnedModels });
+					await updateUserSettings(localStorage.token, { ui: $settings });
+				}
+			});
+		}
+	};
 
 	const initFolders = async () => {
 		const folderList = await getFolders(localStorage.token).catch((error) => {
@@ -117,7 +143,7 @@
 		}
 	};
 
-	const createFolder = async (name = 'Untitled') => {
+	const createFolder = async ({ name, data }) => {
 		if (name === '') {
 			toast.error($i18n.t('Folder name cannot be empty.'));
 			return;
@@ -148,13 +174,16 @@
 			}
 		};
 
-		const res = await createNewFolder(localStorage.token, name).catch((error) => {
+		const res = await createNewFolder(localStorage.token, {
+			name,
+			data
+		}).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});
 
 		if (res) {
-			newFolderId = res.id;
+			// newFolderId = res.id;
 			await initFolders();
 		}
 	};
@@ -363,13 +392,12 @@
 		});
 
 		chats.subscribe((value) => {
-			if ($selectedFolder) {
-				initFolders();
-			}
+			initFolders();
 		});
 
 		await initChannels();
 		await initChatList();
+		initPinnedModelsSortable();
 
 		window.addEventListener('keydown', onKeyDown);
 		window.addEventListener('keyup', onKeyUp);
@@ -428,6 +456,14 @@
 			await initChannels();
 			showCreateChannel = false;
 		}
+	}}
+/>
+
+<FolderModal
+	bind:show={showCreateFolderModal}
+	onSubmit={async (folder) => {
+		await createFolder(folder);
+		showCreateFolderModal = false;
 	}}
 />
 
@@ -662,12 +698,15 @@
 		{/if}
 
 		<div class="relative flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
-			{#if ($models ?? []).length > 0 && ($settings?.pinnedModels ?? []).length > 0}
-				<div class="mt-0.5">
+			<div class="mt-0.5" id="pinned-models-list">
+				{#if ($models ?? []).length > 0 && ($settings?.pinnedModels ?? []).length > 0}
 					{#each $settings.pinnedModels as modelId (modelId)}
 						{@const model = $models.find((model) => model.id === modelId)}
 						{#if model}
-							<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
+							<div
+								class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200 cursor-grab"
+								data-id={modelId}
+							>
 								<a
 									class="grow flex items-center space-x-2.5 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 									href="/?model={modelId}"
@@ -700,8 +739,8 @@
 							</div>
 						{/if}
 					{/each}
-				</div>
-			{/if}
+				{/if}
+			</div>
 
 			{#if $config?.features?.enable_channels && ($user?.role === 'admin' || $channels.length > 0)}
 				<Folder
@@ -734,11 +773,12 @@
 				className="px-2 mt-0.5"
 				name={$i18n.t('Chats')}
 				onAdd={() => {
-					createFolder();
+					showCreateFolderModal = true;
 				}}
 				onAddLabel={$i18n.t('New Folder')}
-				on:change={(e) => {
+				on:change={async (e) => {
 					selectedFolder.set(null);
+					await goto('/');
 				}}
 				on:import={(e) => {
 					importChatHandler(e.detail);

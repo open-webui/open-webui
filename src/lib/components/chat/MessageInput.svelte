@@ -72,6 +72,7 @@
 
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 	import InputVariablesModal from './MessageInput/InputVariablesModal.svelte';
+	import Voice from '../icons/Voice.svelte';
 	const i18n = getContext('i18n');
 
 	export let transparentBackground = false;
@@ -1902,7 +1903,7 @@
 														}}
 														aria-label={$i18n.t('Voice mode')}
 													>
-														<Headphone className="size-5" />
+														<Voice className="size-5" strokeWidth="2.5" />
 													</button>
 												</Tooltip>
 											</div>

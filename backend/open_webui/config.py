@@ -689,6 +689,17 @@ load_oauth_providers()
 
 STATIC_DIR = Path(os.getenv("STATIC_DIR", OPEN_WEBUI_DIR / "static")).resolve()
 
+try:
+    if STATIC_DIR.exists():
+        for item in STATIC_DIR.iterdir():
+            if item.is_file() or item.is_symlink():
+                try:
+                    item.unlink()
+                except Exception as e:
+                    pass
+except Exception as e:
+    pass
+
 for file_path in (FRONTEND_BUILD_DIR / "static").glob("**/*"):
     if file_path.is_file():
         target_path = STATIC_DIR / file_path.relative_to(
@@ -767,12 +778,6 @@ if CUSTOM_NAME:
         log.exception(e)
         pass
 
-
-####################################
-# LICENSE_KEY
-####################################
-
-LICENSE_KEY = os.environ.get("LICENSE_KEY", "")
 
 ####################################
 # STORAGE PROVIDER
@@ -1945,6 +1950,10 @@ PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME", "open-webui-index")
 PINECONE_DIMENSION = int(os.getenv("PINECONE_DIMENSION", 1536))  # or 3072, 1024, 768
 PINECONE_METRIC = os.getenv("PINECONE_METRIC", "cosine")
 PINECONE_CLOUD = os.getenv("PINECONE_CLOUD", "aws")  # or "gcp" or "azure"
+
+# S3 Vector
+S3_VECTOR_BUCKET_NAME = os.environ.get("S3_VECTOR_BUCKET_NAME", None)
+S3_VECTOR_REGION = os.environ.get("S3_VECTOR_REGION", None)
 
 ####################################
 # Information Retrieval (RAG)

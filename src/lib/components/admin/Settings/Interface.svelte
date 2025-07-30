@@ -57,14 +57,6 @@
 		await config.set(await getBackendConfig());
 	};
 
-	onMount(async () => {
-		await init();
-		taskConfig = await getTaskConfig(localStorage.token);
-
-		promptSuggestions = $config?.default_prompt_suggestions ?? [];
-		banners = await getBanners(localStorage.token);
-	});
-
 	const updateBanners = async () => {
 		_banners.set(await setBanners(localStorage.token, banners));
 	};
@@ -75,6 +67,10 @@
 	let models = null;
 
 	const init = async () => {
+		taskConfig = await getTaskConfig(localStorage.token);
+		promptSuggestions = $config?.default_prompt_suggestions ?? [];
+		banners = await getBanners(localStorage.token);
+
 		workspaceModels = await getBaseModels(localStorage.token);
 		baseModels = await getModels(localStorage.token, null, false);
 
@@ -99,6 +95,10 @@
 
 		console.debug('models', models);
 	};
+
+	onMount(async () => {
+		await init();
+	});
 </script>
 
 {#if models !== null && taskConfig}

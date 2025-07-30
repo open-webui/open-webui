@@ -392,7 +392,7 @@
 							<div class="flex flex-row w-max">
 								<img
 									class=" rounded-full w-6 h-6 object-cover mr-2.5"
-									src={user.profile_image_url.startsWith(WEBUI_BASE_URL) ||
+									src={user?.profile_image_url?.startsWith(WEBUI_BASE_URL) ||
 									user.profile_image_url.startsWith('https://www.gravatar.com/avatar/') ||
 									user.profile_image_url.startsWith('data:')
 										? user.profile_image_url

@@ -9,7 +9,7 @@
 	import { getUsage } from '$lib/apis';
 	import { userSignOut } from '$lib/apis/auths';
 
-	import { showSettings, mobile, showSidebar, user } from '$lib/stores';
+	import { showSettings, mobile, showSidebar, showShortcuts, user } from '$lib/stores';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
@@ -28,8 +28,6 @@
 	export let role = '';
 	export let help = false;
 	export let className = 'max-w-[240px]';
-
-	let showShortcuts = false;
 
 	const dispatch = createEventDispatcher();
 
@@ -51,7 +49,7 @@
 	}
 </script>
 
-<ShortcutsModal bind:show={showShortcuts} />
+<ShortcutsModal bind:show={$showShortcuts} />
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <DropdownMenu.Root
@@ -73,7 +71,7 @@
 			transition={(e) => fade(e, { duration: 100 })}
 		>
 			<DropdownMenu.Item
-				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer"
 				on:click={async () => {
 					await showSettings.set(true);
 					show = false;
@@ -90,7 +88,7 @@
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
-				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer"
 				on:click={() => {
 					dispatch('show', 'archived-chat');
 					show = false;
@@ -107,73 +105,75 @@
 			</DropdownMenu.Item>
 
 			{#if role === 'admin'}
-				<DropdownMenu.Item
+				<a
 					class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition select-none"
+					href="/playground"
 					on:click={() => {
 						show = false;
 						if ($mobile) {
 							showSidebar.set(false);
 						}
-						goto('/playground');
 					}}
 				>
 					<div class=" self-center mr-3">
 						<Code className="size-5" strokeWidth="1.5" />
 					</div>
 					<div class=" self-center truncate">{$i18n.t('Playground')}</div>
-				</DropdownMenu.Item>
+				</a>
 
-				<DropdownMenu.Item
+				<a
 					class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition select-none"
+					href="/admin"
 					on:click={() => {
 						show = false;
 						if ($mobile) {
 							showSidebar.set(false);
 						}
-						goto('/admin');
 					}}
 				>
 					<div class=" self-center mr-3">
 						<UserGroup className="w-5 h-5" strokeWidth="1.5" />
 					</div>
 					<div class=" self-center truncate">{$i18n.t('Admin Panel')}</div>
-				</DropdownMenu.Item>
+				</a>
 			{/if}
 
 			{#if help}
 				<hr class=" border-gray-100 dark:border-gray-800 my-1 p-0" />
 
 				<!-- {$i18n.t('Help')} -->
-				<DropdownMenu.Item
+				<a
 					class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition"
 					id="chat-share-button"
+					href="https://docs.openwebui.com"
+					target="_blank"
 					on:click={() => {
-						window.open('https://docs.openwebui.com', '_blank');
 						show = false;
 					}}
 				>
 					<QuestionMarkCircle className="size-5" />
 					<div class="flex items-center">{$i18n.t('Documentation')}</div>
-				</DropdownMenu.Item>
+				</a>
 
 				<!-- Releases -->
-				<DropdownMenu.Item
+				<a
 					class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition"
 					id="menu-item-releases"
+					href="https://github.com/open-webui/open-webui/releases"
+					target="_blank"
 					on:click={() => {
-						window.open('https://github.com/open-webui/open-webui/releases', '_blank');
 						show = false;
 					}}
 				>
 					<Map className="size-5" />
 					<div class="flex items-center">{$i18n.t('Releases')}</div>
-				</DropdownMenu.Item>
+				</a>
 
 				<DropdownMenu.Item
-					class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition"
+					class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition cursor-pointer"
 					id="chat-share-button"
 					on:click={() => {
-						showShortcuts = !showShortcuts;
+						showShortcuts.set(!$showShortcuts);
 						show = false;
 					}}
 				>
@@ -184,7 +184,7 @@
 
 			<hr class=" border-gray-100 dark:border-gray-800 my-1 p-0" />
 
-			<DropdownMenu.Item
+			<button
 				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
 				on:click={async () => {
 					const res = await userSignOut();
@@ -199,7 +199,7 @@
 					<SignOut className="w-5 h-5" strokeWidth="1.5" />
 				</div>
 				<div class=" self-center truncate">{$i18n.t('Sign Out')}</div>
-			</DropdownMenu.Item>
+			</button>
 
 			{#if usage}
 				{#if usage?.user_ids?.length > 0}

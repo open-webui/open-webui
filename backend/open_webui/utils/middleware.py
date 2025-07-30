@@ -83,6 +83,7 @@ from open_webui.utils.filter import (
     process_filter_functions,
 )
 from open_webui.utils.code_interpreter import execute_code_jupyter
+from open_webui.utils.payload import apply_model_system_prompt_to_body
 
 from open_webui.tasks import create_task
 
@@ -774,8 +775,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
             if folder and folder.data:
                 if "system_prompt" in folder.data:
-                    form_data["messages"] = add_or_update_system_message(
-                        folder.data["system_prompt"], form_data["messages"]
+                    form_data = apply_model_system_prompt_to_body(
+                        folder.data["system_prompt"], 
+                        form_data, 
+                        metadata, 
+                        user
                     )
                 if "files" in folder.data:
                     form_data["files"] = [
@@ -1381,14 +1385,6 @@ async def process_chat_response(
         task_id = str(uuid4())  # Create a unique task ID.
         model_id = form_data.get("model", "")
 
-        Chats.upsert_message_to_chat_by_id_and_message_id(
-            metadata["chat_id"],
-            metadata["message_id"],
-            {
-                "model": model_id,
-            },
-        )
-
         def split_content_and_whitespace(content):
             content_stripped = content.rstrip()
             original_whitespace = (
@@ -1472,12 +1468,12 @@ async def process_chat_response(
 
                         if reasoning_duration is not None:
                             if raw:
-                                content = f'{content}\n<{block["start_tag"]}>{block["content"]}<{block["end_tag"]}>\n'
+                                content = f'{content}\n{block["start_tag"]}{block["content"]}{block["end_tag"]}\n'
                             else:
                                 content = f'{content}\n<details type="reasoning" done="true" duration="{reasoning_duration}">\n<summary>Thought for {reasoning_duration} seconds</summary>\n{reasoning_display_content}\n</details>\n'
                         else:
                             if raw:
-                                content = f'{content}\n<{block["start_tag"]}>{block["content"]}<{block["end_tag"]}>\n'
+                                content = f'{content}\n{block["start_tag"]}{block["content"]}{block["end_tag"]}\n'
                             else:
                                 content = f'{content}\n<details type="reasoning" done="false">\n<summary>Thinking…</summary>\n{reasoning_display_content}\n</details>\n'
 
@@ -1575,16 +1571,14 @@ async def process_chat_response(
                 if content_blocks[-1]["type"] == "text":
                     for start_tag, end_tag in tags:
 
-                        if start_tag.startswith("<") and end_tag.endswith(">"):
+                        start_tag_pattern = rf"{re.escape(start_tag)}"
+                        if start_tag.startswith("<") and start_tag.endswith(">"):
                             # Match start tag e.g., <tag> or <tag attr="value">
                             # remove both '<' and '>' from start_tag
-                            start_tag = start_tag[1:-1]
-
                             # Match start tag with attributes
-                            start_tag_pattern = rf"<{re.escape(start_tag)}(\s.*?)?>"
-                        else:
-                            # Handle cases where start_tag is just a tag name
-                            start_tag_pattern = rf"{re.escape(start_tag)}"
+                            start_tag_pattern = (
+                                rf"<{re.escape(start_tag[1:-1])}(\s.*?)?>"
+                            )
 
                         match = re.search(start_tag_pattern, content)
                         if match:
@@ -1714,8 +1708,17 @@ async def process_chat_response(
                                 )
 
                         # Clean processed content
+                        start_tag_pattern = rf"{re.escape(start_tag)}"
+                        if start_tag.startswith("<") and start_tag.endswith(">"):
+                            # Match start tag e.g., <tag> or <tag attr="value">
+                            # remove both '<' and '>' from start_tag
+                            # Match start tag with attributes
+                            start_tag_pattern = (
+                                rf"<{re.escape(start_tag[1:-1])}(\s.*?)?>"
+                            )
+
                         content = re.sub(
-                            rf"<{re.escape(start_tag)}(.*?)>(.|\n)*?<{re.escape(end_tag)}>",
+                            rf"{start_tag_pattern}(.|\n)*?{re.escape(end_tag)}",
                             "",
                             content,
                             flags=re.DOTALL,
@@ -2055,7 +2058,7 @@ async def process_chat_response(
                             if done:
                                 pass
                             else:
-                                log.debug("Error: ", e)
+                                log.debug(f"Error: {e}")
                                 continue
 
                     if content_blocks:

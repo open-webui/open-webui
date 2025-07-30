@@ -25,6 +25,7 @@ from open_webui.env import (
     WEBSOCKET_REDIS_LOCK_TIMEOUT,
     WEBSOCKET_SENTINEL_PORT,
     WEBSOCKET_SENTINEL_HOSTS,
+    REDIS_KEY_PREFIX,
 )
 from open_webui.utils.auth import decode_token
 from open_webui.socket.utils import RedisDict, RedisLock, YdocManager
@@ -92,17 +93,17 @@ if WEBSOCKET_MANAGER == "redis":
         WEBSOCKET_SENTINEL_HOSTS, WEBSOCKET_SENTINEL_PORT
     )
     SESSION_POOL = RedisDict(
-        "open-webui:session_pool",
+        f"{REDIS_KEY_PREFIX}:session_pool",
         redis_url=WEBSOCKET_REDIS_URL,
         redis_sentinels=redis_sentinels,
     )
     USER_POOL = RedisDict(
-        "open-webui:user_pool",
+        f"{REDIS_KEY_PREFIX}:user_pool",
         redis_url=WEBSOCKET_REDIS_URL,
         redis_sentinels=redis_sentinels,
     )
     USAGE_POOL = RedisDict(
-        "open-webui:usage_pool",
+        f"{REDIS_KEY_PREFIX}:usage_pool",
         redis_url=WEBSOCKET_REDIS_URL,
         redis_sentinels=redis_sentinels,
     )
@@ -126,7 +127,7 @@ else:
 
 YDOC_MANAGER = YdocManager(
     redis=REDIS,
-    redis_key_prefix="open-webui:ydoc:documents",
+    redis_key_prefix=f"{REDIS_KEY_PREFIX}:ydoc:documents",
 )
 
 
@@ -581,7 +582,7 @@ async def yjs_document_leave(sid, data):
         )
 
         if (
-            YDOC_MANAGER.document_exists(document_id)
+            await YDOC_MANAGER.document_exists(document_id)
             and len(await YDOC_MANAGER.get_users(document_id)) == 0
         ):
             log.info(f"Cleaning up document {document_id} as no users are left")

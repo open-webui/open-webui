@@ -10,8 +10,9 @@
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
 	import Pencil from '$lib/components/icons/Pencil.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import Download from '$lib/components/icons/Download.svelte';
+	import Download from '$lib/components/icons/ArrowDownTray.svelte';
 
+	export let align: 'start' | 'end' = 'start';
 	export let onEdit = () => {};
 	export let onExport = () => {};
 	export let onDelete = () => {};
@@ -36,7 +37,7 @@
 			class="w-full max-w-[170px] rounded-lg px-1 py-1.5  z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
 			sideOffset={-2}
 			side="bottom"
-			align="start"
+			{align}
 			transition={flyAndScale}
 		>
 			<DropdownMenu.Item

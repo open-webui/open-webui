@@ -139,7 +139,7 @@ export const Image = Node.create<ImageOptions>({
 				if (file) {
 					img.setAttribute('src', file.url || '');
 				} else {
-					img.setAttribute('src', node.attrs.src || '');
+					img.setAttribute('src', '/image-placeholder.png');
 				}
 			} else {
 				img.setAttribute('src', node.attrs.src || '');
@@ -155,7 +155,7 @@ export const Image = Node.create<ImageOptions>({
 					if (file) {
 						img.setAttribute('src', file.url || '');
 					} else {
-						img.setAttribute('src', node.attrs.src || '');
+						img.setAttribute('src', '/image-placeholder.png');
 					}
 				}
 			});

@@ -56,6 +56,7 @@
 
 	import { Fragment, DOMParser } from 'prosemirror-model';
 	import { EditorState, Plugin, PluginKey, TextSelection, Selection } from 'prosemirror-state';
+	import { Decoration, DecorationSet } from 'prosemirror-view';
 	import { Editor, Extension } from '@tiptap/core';
 
 	// Yjs imports
@@ -120,6 +121,55 @@
 	export let image = false;
 	export let fileHandler = false;
 
+	export let onFileDrop = (currentEditor, files, pos) => {
+		files.forEach((file) => {
+			const fileReader = new FileReader();
+
+			fileReader.readAsDataURL(file);
+			fileReader.onload = () => {
+				currentEditor
+					.chain()
+					.insertContentAt(pos, {
+						type: 'image',
+						attrs: {
+							src: fileReader.result
+						}
+					})
+					.focus()
+					.run();
+			};
+		});
+	};
+
+	export let onFilePaste = (currentEditor, files, htmlContent) => {
+		files.forEach((file) => {
+			if (htmlContent) {
+				// if there is htmlContent, stop manual insertion & let other extensions handle insertion via inputRule
+				// you could extract the pasted file from this url string and upload it to a server for example
+				console.log(htmlContent); // eslint-disable-line no-console
+				return false;
+			}
+
+			const fileReader = new FileReader();
+
+			fileReader.readAsDataURL(file);
+			fileReader.onload = () => {
+				currentEditor
+					.chain()
+					.insertContentAt(currentEditor.state.selection.anchor, {
+						type: 'image',
+						attrs: {
+							src: fileReader.result
+						}
+					})
+					.focus()
+					.run();
+			};
+		});
+	};
+
+	export let onSelectionUpdate = (e) => {};
+
 	export let id = '';
 	export let value = '';
 	export let html = '';
@@ -144,6 +194,8 @@
 	let htmlValue = '';
 	let jsonValue = '';
 	let mdValue = '';
+
+	let lastSelectionBookmark = null;
 
 	// Yjs setup
 	let ydoc = null;
@@ -608,6 +660,10 @@
 	export const setText = (text: string) => {
 		if (!editor) return;
 		text = text.replaceAll('\n\n', '\n');
+
+		// reset the editor content
+		editor.commands.clearContent();
+
 		const { state, view } = editor;
 		const { schema, tr } = state;
 
@@ -776,6 +832,33 @@
 		}
 	};
 
+	const SelectionDecoration = Extension.create({
+		name: 'selectionDecoration',
+		addProseMirrorPlugins() {
+			return [
+				new Plugin({
+					key: new PluginKey('selection'),
+					props: {
+						decorations: (state) => {
+							const { selection } = state;
+							const { focused } = this.editor;
+
+							if (focused || selection.empty) {
+								return null;
+							}
+
+							return DecorationSet.create(state.doc, [
+								Decoration.inline(selection.from, selection.to, {
+									class: 'editor-selection'
+								})
+							]);
+						}
+					}
+				})
+			];
+		}
+	});
+
 	onMount(async () => {
 		content = value;
 
@@ -831,6 +914,7 @@
 					link: link
 				}),
 				Placeholder.configure({ placeholder }),
+				SelectionDecoration,
 
 				CodeBlockLowlight.configure({
 					lowlight
@@ -847,57 +931,12 @@
 					}
 				}),
 				CharacterCount.configure({}),
-
 				...(image ? [Image] : []),
 				...(fileHandler
 					? [
 							FileHandler.configure({
-								allowedMimeTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp'],
-								onDrop: (currentEditor, files, pos) => {
-									files.forEach((file) => {
-										const fileReader = new FileReader();
-
-										fileReader.readAsDataURL(file);
-										fileReader.onload = () => {
-											currentEditor
-												.chain()
-												.insertContentAt(pos, {
-													type: 'image',
-													attrs: {
-														src: fileReader.result
-													}
-												})
-												.focus()
-												.run();
-										};
-									});
-								},
-								onPaste: (currentEditor, files, htmlContent) => {
-									files.forEach((file) => {
-										if (htmlContent) {
-											// if there is htmlContent, stop manual insertion & let other extensions handle insertion via inputRule
-											// you could extract the pasted file from this url string and upload it to a server for example
-											console.log(htmlContent); // eslint-disable-line no-console
-											return false;
-										}
-
-										const fileReader = new FileReader();
-
-										fileReader.readAsDataURL(file);
-										fileReader.onload = () => {
-											currentEditor
-												.chain()
-												.insertContentAt(currentEditor.state.selection.anchor, {
-													type: 'image',
-													attrs: {
-														src: fileReader.result
-													}
-												})
-												.focus()
-												.run();
-										};
-									});
-								}
+								onDrop: onFileDrop,
+								onPaste: onFilePaste
 							})
 						]
 					: []),
@@ -1162,7 +1201,8 @@
 				if (files) {
 					editor.storage.files = files;
 				}
-			}
+			},
+			onSelectionUpdate: onSelectionUpdate
 		});
 
 		if (messageInput) {

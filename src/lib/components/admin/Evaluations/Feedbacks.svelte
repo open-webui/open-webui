@@ -24,6 +24,7 @@
 	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { config } from '$lib/stores';
 
 	export let feedbacks = [];
 
@@ -390,7 +391,7 @@
 	{/if}
 </div>
 
-{#if feedbacks.length > 0}
+{#if feedbacks.length > 0 && $config?.features?.enable_community_sharing}
 	<div class=" flex flex-col justify-end w-full text-right gap-1">
 		<div class="line-clamp-1 text-gray-500 text-xs">
 			{$i18n.t('Help us create the best community leaderboard by sharing your feedback history!')}

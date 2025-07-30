@@ -815,7 +815,11 @@ async def update_rag_config(
         f"Updating reranking model: {request.app.state.config.RAG_RERANKING_MODEL} to {form_data.RAG_RERANKING_MODEL}"
     )
     try:
-        request.app.state.config.RAG_RERANKING_MODEL = form_data.RAG_RERANKING_MODEL
+        request.app.state.config.RAG_RERANKING_MODEL = (
+            form_data.RAG_RERANKING_MODEL
+            if form_data.RAG_RERANKING_MODEL is not None
+            else request.app.state.config.RAG_RERANKING_MODEL
+        )
 
         try:
             request.app.state.rf = get_rf(
