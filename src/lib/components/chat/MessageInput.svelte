@@ -72,6 +72,7 @@
 
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 	import InputVariablesModal from './MessageInput/InputVariablesModal.svelte';
+	import Voice from '../icons/Voice.svelte';
 	const i18n = getContext('i18n');
 
 	export let transparentBackground = false;
@@ -1316,7 +1317,7 @@
 											id="chat-input"
 											dir={$settings?.chatDirection ?? 'auto'}
 											bind:this={chatInputElement}
-											class="scrollbar-hidden bg-transparent dark:text-gray-200 outline-hidden w-full pt-3 px-1 resize-none"
+											class="scrollbar-hidden bg-transparent dark:text-gray-200 outline-hidden w-full pt-4 pb-1 px-1 resize-none"
 											placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
 											bind:value={prompt}
 											on:input={() => {
@@ -1902,7 +1903,7 @@
 														}}
 														aria-label={$i18n.t('Voice mode')}
 													>
-														<Headphone className="size-5" />
+														<Voice className="size-5" strokeWidth="2.5" />
 													</button>
 												</Tooltip>
 											</div>

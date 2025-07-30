@@ -102,7 +102,6 @@ from open_webui.models.users import UserModel, Users
 from open_webui.models.chats import Chats
 
 from open_webui.config import (
-    LICENSE_KEY,
     # Ollama
     ENABLE_OLLAMA_API,
     OLLAMA_BASE_URLS,
@@ -395,6 +394,7 @@ from open_webui.config import (
     reset_config,
 )
 from open_webui.env import (
+    LICENSE_KEY,
     AUDIT_EXCLUDED_PATHS,
     AUDIT_LOG_LEVEL,
     CHANGELOG,
@@ -1407,7 +1407,6 @@ async def chat_completion(
         form_data, metadata, events = await process_chat_payload(
             request, form_data, user, metadata, model
         )
-
     except Exception as e:
         log.debug(f"Error processing chat payload: {e}")
         if metadata.get("chat_id") and metadata.get("message_id"):
@@ -1427,6 +1426,14 @@ async def chat_completion(
 
     try:
         response = await chat_completion_handler(request, form_data, user)
+        if metadata.get("chat_id") and metadata.get("message_id"):
+            Chats.upsert_message_to_chat_by_id_and_message_id(
+                metadata["chat_id"],
+                metadata["message_id"],
+                {
+                    "model": model_id,
+                },
+            )
 
         return await process_chat_response(
             request, response, form_data, user, metadata, model, events, tasks
@@ -1644,7 +1651,7 @@ async def get_app_config(request: Request):
                     else {}
                 ),
             }
-            if user is not None
+            if user is not None and (user.role in ["admin", "user"])
             else {
                 **(
                     {
@@ -1772,7 +1779,6 @@ async def get_manifest_json():
             "start_url": "/",
             "display": "standalone",
             "background_color": "#343541",
-            "orientation": "any",
             "icons": [
                 {
                     "src": "/static/logo.png",
