@@ -234,10 +234,10 @@
 				</div>
 			</div>
 			{#if $i18n.language === 'en-US'}
-				<div class="mb-2 text-xs text-gray-400 dark:text-gray-500">
+				<div class="mb-2 text-xs text-gray-400 dark:text-gray-500 hc-text">
 					Couldn't find your language?
 					<a
-						class=" text-gray-300 font-medium underline"
+						class=" text-gray-300 font-medium underline hc-text"
 						href="https://github.com/open-webui/open-webui/blob/main/docs/CONTRIBUTING.md#-translations-and-internationalization"
 						target="_blank"
 					>
@@ -276,7 +276,7 @@
 					bind:value={system}
 					className={'w-full text-sm outline-hidden resize-vertical' +
 						($settings.highContrastMode
-							? ' p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-850 text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 overflow-y-hidden'
+							? ' p-2.5 border-2 border-gray-300 dark:border-gray-700  placeholder-black dark:placeholder-gray-100 rounded-lg bg-gray-50 dark:bg-gray-850 text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 overflow-y-hidden'
 							: ' bg-white dark:text-gray-300 dark:bg-gray-900')}
 					rows="4"
 					placeholder={$i18n.t('Enter system prompt here')}
@@ -289,7 +289,7 @@
 				<div class="flex justify-between items-center text-sm">
 					<div class="  font-medium">{$i18n.t('Advanced Parameters')}</div>
 					<button
-						class=" text-xs font-medium text-gray-500"
+						class=" text-xs font-medium text-gray-500 hc-text"
 						type="button"
 						on:click={() => {
 							showAdvanced = !showAdvanced;

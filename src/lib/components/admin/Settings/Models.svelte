@@ -446,7 +446,7 @@
 				{/each}
 			{:else}
 				<div class="flex flex-col items-center justify-center w-full h-20">
-					<div class="text-gray-500 dark:text-gray-400 text-xs">
+					<div class="text-gray-500 dark:text-gray-400 text-xs hc-text">
 						{$i18n.t('No models found')}
 					</div>
 				</div>

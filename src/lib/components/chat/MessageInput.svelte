@@ -860,7 +860,7 @@
 							class="px-3 pb-0.5 pt-1.5 text-left w-full flex flex-col absolute bottom-0 left-0 right-0 bg-linear-to-t from-white dark:from-gray-900 z-10"
 						>
 							<div class="flex items-center justify-between w-full">
-								<div class="pl-[1px] flex items-center gap-2 text-sm dark:text-gray-500">
+								<div class="pl-[1px] flex items-center gap-2 text-sm dark:text-gray-500 hc-text">
 									<img
 										crossorigin="anonymous"
 										alt="model profile"
@@ -1316,7 +1316,7 @@
 											id="chat-input"
 											dir={$settings?.chatDirection ?? 'auto'}
 											bind:this={chatInputElement}
-											class="scrollbar-hidden bg-transparent dark:text-gray-200 outline-hidden w-full pt-3 px-1 resize-none"
+											class="scrollbar-hidden bg-transparent dark:text-gray-200 outline-hidden w-full pt-3 px-1 resize-none hc-text"
 											placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
 											bind:value={prompt}
 											on:input={() => {

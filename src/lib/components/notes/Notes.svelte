@@ -456,11 +456,11 @@
 			{:else}
 				<div class="w-full h-full flex flex-col items-center justify-center">
 					<div class="pb-20 text-center">
-						<div class=" text-xl font-medium text-gray-400 dark:text-gray-600">
+						<div class=" text-xl font-medium text-gray-400 dark:text-gray-600 hc-text">
 							{$i18n.t('No Notes')}
 						</div>
 
-						<div class="mt-1 text-sm text-gray-300 dark:text-gray-700">
+						<div class="mt-1 text-sm text-gray-300 dark:text-gray-700 hc-text">
 							{$i18n.t('Create your first note by clicking on the plus button below.')}
 						</div>
 					</div>

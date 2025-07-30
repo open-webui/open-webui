@@ -154,7 +154,7 @@
 								</div>
 
 								<button
-									class=" underline flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-500"
+									class=" underline flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-500 hc-text"
 									type="button"
 									on:click={() => {
 										showChangelog.set(true);
@@ -184,7 +184,7 @@
 								<div class="">
 									{$i18n.t('Help')}
 								</div>
-								<div class=" text-xs text-gray-500">
+								<div class=" text-xs text-gray-500 hc-text">
 									{$i18n.t('Discover how to use Open WebUI and seek support from the community.')}
 								</div>
 							</div>
@@ -261,7 +261,7 @@
 										href="https://docs.openwebui.com/enterprise"
 										target="_blank"
 									>
-										<span class="text-gray-500">
+										<span class="text-gray-500 hc-text">
 											{$i18n.t(
 												'Upgrade to a licensed plan for enhanced capabilities, including custom theming and branding, and dedicated support.'
 											)}
@@ -393,9 +393,9 @@
 							/>
 						</div>
 
-						<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+						<div class="mt-2 text-xs text-gray-400 dark:text-gray-500 hc-text">
 							{$i18n.t('Valid time units:')}
-							<span class=" text-gray-300 font-medium"
+							<span class=" text-gray-300 font-medium hc-text"
 								>{$i18n.t("'s', 'm', 'h', 'd', 'w' or '-1' for no expiration.")}</span
 							>
 						</div>
@@ -683,7 +683,7 @@
 							/>
 						</div>
 
-						<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+						<div class="mt-2 text-xs text-gray-400 dark:text-gray-500 hc-text">
 							{$i18n.t(
 								'Enter the public URL of your WebUI. This URL will be used to generate links in the notifications.'
 							)}

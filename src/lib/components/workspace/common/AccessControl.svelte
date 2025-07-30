@@ -151,7 +151,7 @@
 					{/if}
 				</select>
 
-				<div class=" text-xs text-gray-400 font-medium">
+				<div class=" text-xs text-gray-400 font-medium hc-text">
 					{#if accessControl !== null}
 						{$i18n.t('Only select users and groups with permission can access')}
 					{:else}

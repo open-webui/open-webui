@@ -89,9 +89,23 @@
 		saveSettings({ splitLargeChunks: splitLargeChunks });
 	};
 
+	// Function to toggle high contrast mode on/off 
 	const toggleHighContrastMode = async () => {
+		//Flip the boolean value of highContrastMode
+		// If it was true, set to false; if false set to true
 		highContrastMode = !highContrastMode;
-		saveSettings({ highContrastMode: highContrastMode });
+
+		// Update the HTML root element's class list based on the new value 
+		if (highContrastMode) {
+			// If high contrast mode is now enabled, add the class 
+			// This triggers the CSS rules (e.g. `.high-contrast:not(.dark)`)
+			document.documentElement.classList.add('high-contrast');
+		} else {
+			// If high contrast mode is now disabled, remove the class 
+			document.documentElement.classList.remove('high-contrast'); 
+		}
+		// Persist hte new setting so the mode is remembered across sessions
+		saveSettings({ highContrastMode });
 	};
 
 	const togglePromptAutocomplete = async () => {
@@ -303,6 +317,10 @@
 
 		highContrastMode = $settings?.highContrastMode ?? false;
 
+		// Set the HTML class based on the saved value
+		if (highContrastMode) {
+			document.documentElement.classList.add('high-contrast'); 
+		}
 		detectArtifacts = $settings?.detectArtifacts ?? true;
 		responseAutoCopy = $settings?.responseAutoCopy ?? false;
 

@@ -227,7 +227,7 @@
 						{#if !direct}
 							<div class="flex gap-2">
 								<div class="flex w-full justify-between items-center">
-									<div class=" text-xs text-gray-500">{$i18n.t('Connection Type')}</div>
+									<div class=" text-xs text-gray-500 hc-text">{$i18n.t('Connection Type')}</div>
 
 									<div class="">
 										<button
@@ -252,7 +252,7 @@
 							<div class="flex flex-col w-full">
 								<label
 									for="url-input"
-									class={`mb-0.5 text-xs text-gray-500
+									class={`mb-0.5 text-xs text-gray-500 
 								${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
 									>{$i18n.t('URL')}</label
 								>

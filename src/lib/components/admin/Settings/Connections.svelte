@@ -345,10 +345,10 @@
 								</div>
 							</div>
 
-							<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+							<div class="mt-1 text-xs text-gray-400 dark:text-gray-500 hc-text">
 								{$i18n.t('Trouble accessing Ollama?')}
 								<a
-									class=" text-gray-300 font-medium underline"
+									class=" text-gray-300 font-medium underline hc-text"
 									href="https://github.com/open-webui/open-webui#troubleshooting"
 									target="_blank"
 								>
@@ -360,7 +360,7 @@
 				</div>
 
 				<div class="my-2">
-					<div class="flex justify-between items-center text-sm">
+					<div class="flex justify-between items-center text-sm hc-text">
 						<div class="  font-medium">{$i18n.t('Direct Connections')}</div>
 
 						<div class="flex items-center">
@@ -375,7 +375,7 @@
 						</div>
 					</div>
 
-					<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+					<div class="mt-1 text-xs text-gray-400 dark:text-gray-500 hc-text">
 						{$i18n.t(
 							'Direct Connections allow users to connect to their own OpenAI compatible API endpoints.'
 						)}
@@ -385,7 +385,7 @@
 				<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
 				<div class="my-2">
-					<div class="flex justify-between items-center text-sm">
+					<div class="flex justify-between items-center text-sm hc-text">
 						<div class=" text-xs font-medium">{$i18n.t('Cache Base Model List')}</div>
 
 						<div class="flex items-center">
@@ -400,7 +400,7 @@
 						</div>
 					</div>
 
-					<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+					<div class="mt-1 text-xs text-gray-400 dark:text-gray-500 hc-text">
 						{$i18n.t(
 							'Base Model List Cache speeds up access by fetching base models only at startup or on settings save—faster, but may not show recent base model changes.'
 						)}

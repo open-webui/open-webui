@@ -611,3 +611,34 @@ input[type='number'] {
 	padding-right: 2px;
 	white-space: nowrap;
 }
+
+
+/* Applies black text in light mode when high contrast is enabled */
+.high-contrast:not(.dark) {
+	color: #000 !important;
+}
+
+/* Applies white text in dark mode when high contrast is enabled */
+.dark.high-contrast {
+	color: #f8f8f8 !important;
+}
+/* Overrides child elements (with .hc-text) to use a different color in high-contrast mode */
+.high-contrast .hc-text {
+	color: #343333e4 !important;
+}
+
+/* Same, but for dark + high contrast: override to white */
+.dark.high-contrast .hc-text {
+	color: #fff !important;
+}
+
+/* Light mode high-contrast override */
+.high-contrast .ProseMirror p.is-editor-empty:first-child::before {
+	color: #1f2937 !important; /* Strong black for accessibility */
+}
+
+/* Dark mode high-contrast override */
+.dark.high-contrast .ProseMirror p.is-editor-empty:first-child::before {
+	color: #f3f4f6 !important; /* High-contrast white in dark mode */
+}
+

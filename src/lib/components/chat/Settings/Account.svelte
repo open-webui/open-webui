@@ -195,7 +195,7 @@
 
 					<div>
 						<button
-							class=" text-xs text-center text-gray-800 dark:text-gray-400 rounded-full px-4 py-0.5 bg-gray-100 dark:bg-gray-850"
+							class=" text-xs text-center text-gray-800 dark:text-gray-400 rounded-full px-4 py-0.5 bg-gray-100 dark:bg-gray-850 hc-text"
 							on:click={async () => {
 								if (canvasPixelTest()) {
 									profileImageUrl = generateInitialsImage(name);
@@ -213,7 +213,7 @@
 						>
 
 						<button
-							class=" text-xs text-center text-gray-800 dark:text-gray-400 rounded-full px-4 py-0.5 bg-gray-100 dark:bg-gray-850"
+							class=" text-xs text-center text-gray-800 dark:text-gray-400 rounded-full px-4 py-0.5 bg-gray-100 dark:bg-gray-850 hc-text"
 							on:click={async () => {
 								const url = await getGravatarUrl(localStorage.token, $user?.email);
 
@@ -222,7 +222,7 @@
 						>
 
 						<button
-							class=" text-xs text-center text-gray-800 dark:text-gray-400 rounded-lg px-2 py-1"
+							class=" text-xs text-center text-gray-800 dark:text-gray-400 rounded-lg px-2 py-1 hc-text"
 							on:click={async () => {
 								profileImageUrl = `${WEBUI_BASE_URL}/user.png`;
 							}}>{$i18n.t('Remove')}</button
@@ -250,15 +250,21 @@
 			{#if $config?.features?.enable_user_webhooks}
 				<div class="pt-2">
 					<div class="flex flex-col w-full">
-						<div class=" mb-1 text-xs font-medium">{$i18n.t('Notification Webhook')}</div>
+						<div class="mb-1 text-xs font-medium">{$i18n.t('Notification Webhook')}</div>
 
 						<div class="flex-1">
 							<input
-								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+								class={
+									'w-full rounded-lg py-2 px-4 text-sm outline-hidden ' +
+									($settings.highContrastMode
+										? ' text-black dark:text-white placeholder-black dark:placeholder-gray-100 bg-gray-50 dark:bg-gray-850'
+										: ' text-gray-900 dark:text-gray-300 placeholder-gray-500 dark:placeholder-gray-400 dark:bg-gray-850')
+								}
 								type="url"
 								placeholder={$i18n.t('Enter your webhook URL')}
 								bind:value={webhookUrl}
 								required
+								style={$settings.highContrastMode ? '::placeholder { color: black; }' : ''}
 							/>
 						</div>
 					</div>
@@ -276,7 +282,7 @@
 			<div class="flex justify-between items-center text-sm mb-2">
 				<div class="  font-medium">{$i18n.t('API keys')}</div>
 				<button
-					class=" text-xs font-medium text-gray-500"
+					class=" text-xs font-medium text-gray-500 hc-text"
 					type="button"
 					on:click={() => {
 						showAPIKeys = !showAPIKeys;

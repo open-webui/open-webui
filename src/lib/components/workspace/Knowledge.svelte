@@ -100,7 +100,7 @@
 			<div class="flex md:self-center text-xl font-medium px-0.5 items-center">
 				{$i18n.t('Knowledge')}
 				<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
-				<span class="text-lg font-medium text-gray-500 dark:text-gray-300"
+				<span class="text-lg font-medium text-gray-800 dark:text-gray-100"
 					>{filteredItems.length}</span
 				>
 			</div>
@@ -186,7 +186,7 @@
 						</div>
 
 						<div class="mt-3 flex justify-between">
-							<div class="text-xs text-gray-500">
+							<div class="text-xs text-gray-800 dark:text-gray-100">
 								<Tooltip
 									content={item?.user?.email ?? $i18n.t('Deleted User')}
 									className="flex shrink-0"
@@ -210,7 +210,7 @@
 		{/each}
 	</div>
 
-	<div class=" text-gray-500 text-xs mt-1 mb-2">
+	<div class=" text-gray-500 hc-text text-xs mt-1 mb-2">
 		ⓘ {$i18n.t("Use '#' in the prompt input to load and include your knowledge.")}
 	</div>
 {:else}

@@ -377,7 +377,7 @@
 		</div>
 	{/if}
 	{#if (rankedModels ?? []).length === 0}
-		<div class="text-center text-xs text-gray-500 dark:text-gray-400 py-1">
+		<div class="text-center text-xs text-gray-500 dark:text-gray-400 py-1 hc-text">
 			{$i18n.t('No models found')}
 		</div>
 	{:else}
@@ -564,7 +564,7 @@
 	{/if}
 </div>
 
-<div class=" text-gray-500 text-xs mt-1.5 w-full flex justify-end">
+<div class=" text-gray-500 text-xs mt-1.5 w-full flex justify-end hc-text">
 	<div class=" text-right">
 		<div class="line-clamp-1">
 			ⓘ {$i18n.t(

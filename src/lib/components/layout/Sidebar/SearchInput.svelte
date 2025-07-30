@@ -91,12 +91,12 @@
 
 <div class="px-1 mb-1 flex justify-center space-x-2 relative z-10" id="search-container">
 	<div class="flex w-full rounded-xl" id="chat-search">
-		<div class="self-center py-2 rounded-l-xl bg-transparent dark:text-gray-300">
+		<div class="self-center py-2 rounded-l-xl bg-transparent dark:text-gray-300 hc-text">
 			<Search />
 		</div>
 
 		<input
-			class="w-full rounded-r-xl py-1.5 pl-2.5 text-sm bg-transparent dark:text-gray-300 outline-hidden"
+			class="w-full rounded-r-xl py-1.5 pl-2.5 text-sm bg-transparent dark:text-gray-100 text-gray-800 outline-hidden"
 			placeholder={placeholder ? placeholder : $i18n.t('Search')}
 			bind:value
 			on:input={() => {

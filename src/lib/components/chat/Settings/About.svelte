@@ -75,7 +75,7 @@
 					</div>
 
 					<button
-						class=" underline flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-500"
+						class=" underline flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-500 hc-text"
 						on:click={() => {
 							showChangelog.set(true);
 						}}
@@ -146,7 +146,7 @@
 			</div>
 		{/if}
 
-		<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+		<div class="mt-2 text-xs hc-text text-gray-400 dark:text-gray-500">
 			Emoji graphics provided by
 			<a href="https://github.com/jdecked/twemoji" target="_blank">Twemoji</a>, licensed under
 			<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank">CC-BY 4.0</a>.
@@ -154,7 +154,7 @@
 
 		<div>
 			<pre
-				class="text-xs text-gray-400 dark:text-gray-500">Copyright (c) {new Date().getFullYear()} <a
+				class="text-xs hc-text text-gray-400 dark:text-gray-500">Copyright (c) {new Date().getFullYear()} <a
 					href="https://openwebui.com"
 					target="_blank"
 					class="underline">Open WebUI (Timothy Jaeryang Baek)</a
@@ -194,10 +194,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 </pre>
 		</div>
 
-		<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+		<div class="mt-2 text-xs text-gray-400 dark:text-gray-500 hc-text">
 			{$i18n.t('Created by')}
 			<a
-				class=" text-gray-500 dark:text-gray-300 font-medium"
+				class=" text-gray-500 dark:text-gray-300 font-medium hc-text"
 				href="https://github.com/tjbck"
 				target="_blank">Timothy J. Baek</a
 			>

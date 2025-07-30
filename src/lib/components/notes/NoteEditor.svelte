@@ -1111,7 +1111,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 							<div
 								class="flex gap-1 items-center text-xs font-medium text-gray-500 dark:text-gray-500 w-fit"
 							>
-								<button class=" flex items-center gap-1 w-fit py-1 px-1.5 rounded-lg min-w-fit">
+								<button class=" flex items-center gap-1 w-fit py-1 px-1.5 rounded-lg min-w-fit hc-text">
 									<Calendar className="size-3.5" strokeWidth="2" />
 
 									<!-- check for same date, yesterday, last week, and other -->
@@ -1138,7 +1138,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 								</button>
 
 								<button
-									class=" flex items-center gap-1 w-fit py-1 px-1.5 rounded-lg min-w-fit"
+									class=" flex items-center gap-1 w-fit py-1 px-1.5 rounded-lg min-w-fit hc-text"
 									on:click={() => {
 										showAccessControlModal = true;
 									}}
@@ -1150,7 +1150,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 								</button>
 
 								{#if editor}
-									<div class="flex items-center gap-1 px-1 min-w-fit">
+									<div class="flex items-center gap-1 px-1 min-w-fit hc-text">
 										<div>
 											{$i18n.t('{{COUNT}} words', {
 												COUNT: wordCount

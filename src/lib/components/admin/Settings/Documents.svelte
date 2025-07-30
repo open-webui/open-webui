@@ -832,7 +832,7 @@
 								{/if}
 							</div>
 
-							<div class="mt-1 mb-1 text-xs text-gray-400 dark:text-gray-500">
+							<div class="mt-1 mb-1 text-xs text-gray-400 dark:text-gray-500 hc-text">
 								{$i18n.t(
 									'Warning: If you update or change your embedding model, you will need to re-import all documents.'
 								)}

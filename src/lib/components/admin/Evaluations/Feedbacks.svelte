@@ -197,7 +197,7 @@
 	class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full rounded-sm pt-0.5"
 >
 	{#if (feedbacks ?? []).length === 0}
-		<div class="text-center text-xs text-gray-500 dark:text-gray-400 py-1">
+		<div class="text-center text-xs text-gray-500 dark:text-gray-400 hc-text py-1">
 			{$i18n.t('No feedbacks found')}
 		</div>
 	{:else}

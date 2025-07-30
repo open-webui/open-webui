@@ -356,7 +356,7 @@
 			class="flex w-full text-left px-0.5 bg-transparent truncate {triggerClassName} justify-between {($settings?.highContrastMode ??
 			false)
 				? 'dark:placeholder-gray-100 placeholder-gray-800'
-				: 'placeholder-gray-400'}"
+				: 'placeholder-gray-40'}"
 			on:mouseenter={async () => {
 				models.set(
 					await getModels(

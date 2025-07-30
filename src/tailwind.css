@@ -36,10 +36,23 @@
 		@apply cursor-pointer;
 	}
 
+	/* Default (non-high contrast) placeholder*/ 
 	input::placeholder,
 	textarea::placeholder {
 		color: theme(--color-gray-400);
 	}
+
+	/* High contrast placeholder override */ 
+	.high-contrast input::placeholder,
+	.high-contrast textarea::placeholder {
+		color: #1f2937 !important; /* or white if dark mode is also on */
+	}
+
+	/* High contrast & dark mode placeholder override */ 
+	.dark.high-contrast input::placeholder,
+	.dark.high-contrast textarea::placeholder {
+		color: #dce0e7d8 !important;
+	}	
 
 	input[type='checkbox'] {
 		@apply appearance-none size-3.5 align-middle bg-white border border-gray-300 rounded transition cursor-pointer focus:ring-2 focus:ring-blue-500 focus:outline-none dark:bg-gray-800 dark:border-gray-600 self-center;
