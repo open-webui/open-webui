@@ -203,7 +203,9 @@
 					audioParts[speakingIdx]!.pause();
 					audioParts[speakingIdx]!.currentTime = 0;
 				}
-			} catch {}
+			} catch {
+				toast.error($i18n.t('Error'));
+			}
 
 			speaking = false;
 			speakingIdx = undefined;

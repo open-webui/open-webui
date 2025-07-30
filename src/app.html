@@ -24,12 +24,11 @@
 	<link
 		href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap"
 		rel="stylesheet">
-
 	<title>GovGPT</title>
 	%sveltekit.head%
 </head>
 
-<body data-sveltekit-preload-data="hover">
+<body data-sveltekit-preload-data="hover" style="opacity: 0;">
 	<div id="app" style="opacity: 1; transition: opacity 0.5s ease">%sveltekit.body%</div>
 	<div id="splash-screen">
 		<div class="splash-content">
@@ -53,6 +52,10 @@
 		overflow-y: hidden !important;
 	}
 
+	body {
+		transition: opacity 0.5s ease;
+	}
+
 	#splash-screen {
 		position: fixed;
 		z-index: 100;
@@ -62,16 +65,24 @@
 		height: 100%;
 		opacity: 1;
 		transition: opacity 0.5s ease;
-		background: 
+		background:
 			radial-gradient(circle at 22.275px 1378.6px, rgba(34, 95, 168, 0.3) 0%, rgba(18, 57, 102, 0.65) 50%, rgba(10, 37, 69, 0.825) 75%, rgba(2, 18, 36, 1) 100%),
 			radial-gradient(circle at 1200px -161.57px, rgba(34, 95, 168, 0.3) 0%, rgba(18, 57, 102, 0.65) 50%, rgba(10, 37, 69, 0.825) 75%, rgba(2, 18, 36, 1) 100%),
-			linear-gradient(126.888deg, rgb(2, 18, 36) 0%, rgb(1, 19, 40) 53.846%, rgb(2, 18, 36) 100%);		
+			linear-gradient(126.888deg, rgb(2, 18, 36) 0%, rgb(1, 19, 40) 53.846%, rgb(2, 18, 36) 100%);
+	}
+
+	.hidden {
+		opacity: 0 !important;
+		visibility: hidden !important;
+		pointer-events: none !important;
 	}
 
 	#splash-screen.login {
-		background: url('/background.png') bottom / cover no-repeat, radial-gradient(93.48% 68.59% at 40.87% 70.12%, rgba(7, 45, 90, 0.03) 37.67%, rgba(7, 45, 90, 0.25) 100%), radial-gradient(70.94% 58.43% at 27.53% 86.82%, rgba(7, 45, 90, 0.20) 0%, rgba(7, 45, 90, 0.00) 100%), linear-gradient(0deg, rgba(3, 25, 51, 0.20) 0%, rgba(3, 25, 51, 0.20) 100%), #010E1D;
+		background: url('/background.png') bottom / cover no-repeat,
+			radial-gradient(93.48% 68.59% at 40.87% 70.12%, rgba(7, 45, 90, 0.03) 37.67%, rgba(7, 45, 90, 0.25) 100%),
+			radial-gradient(70.94% 58.43% at 27.53% 86.82%, rgba(7, 45, 90, 0.20) 0%, rgba(7, 45, 90, 0.00) 100%),
+			linear-gradient(0deg, rgba(3, 25, 51, 0.20) 0%, rgba(3, 25, 51, 0.20) 100%), #010E1D;
 	}
-
 
 	.splash-content {
 		display: flex;
@@ -98,7 +109,6 @@
 	.logo-image {
 		width: 100%;
 		height: 100%;
-	
 		object-fit: contain;
 		transform: rotate(180deg) scaleY(-1);
 	}
@@ -135,12 +145,11 @@
 		margin: 0;
 	}
 
-	/* Responsive styles */
 	@media (max-width: 768px) {
 		.govgpt-title {
 			font-size: 40px;
 		}
-		
+
 		.tagline {
 			font-size: 14px;
 			line-height: 32px;
@@ -151,7 +160,7 @@
 		.govgpt-title {
 			font-size: 32px;
 		}
-		
+
 		.tagline {
 			font-size: 13px;
 			line-height: 28px;
