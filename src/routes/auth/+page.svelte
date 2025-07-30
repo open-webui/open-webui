@@ -140,7 +140,7 @@
 						</div>
 						<div class="splash-content">
 							<div class="logo-container">
-								<img src="/splash.svg" alt="GovGPT Logo" class="logo-image" />
+								<img src="/GovGPT.gif" alt="GovGPT Logo" class="logo-image" />
 							</div>
 							<img src="/GovGPT-background.gif" alt="GovGPT Logo" class="logo-image-bottom" />
 							<div class="title-container">
