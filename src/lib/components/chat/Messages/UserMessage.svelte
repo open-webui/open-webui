@@ -470,7 +470,7 @@
 								</button>
 							</Tooltip>
 
-							{#if !readOnly}
+							{#if !readOnly && (!isFirstMessage || siblings.length > 1)}
 								<Tooltip content={$i18n.t('Delete')} placement="bottom">
 									<button
 										class=" p-1 rounded-sm dark:hover:text-white hover:text-black transition"
