@@ -1621,7 +1621,7 @@
 												{#if showGovKnoWebSearchToggle}
 													<div
 														bind:this={toggleContentElement}
-														class="absolute w-full max-w-[600px] bottom-[0] left-0 z-[40] p-[24px] pb-[40px] bg-white border border-[#E5EBF3] bg-[#FBFCFC] rounded-[24px]"
+														class="absolute w-full max-w-[250px] bottom-[0] start-4 z-[40] p-[20px] mb-20 bg-white border border-[#E5EBF3] bg-[#FBFCFC] rounded-[24px]"
 													>
 														{#if showGovKnoButton}
 															<Tooltip content={$i18n.t('Gov Knowledge')} placement="top">
@@ -1645,30 +1645,28 @@
 														{/if}
 
 														{#if showWebSearchButton}
-															<Tooltip content={$i18n.t('Search the internet')} placement="top">
-																<button
-																	on:click|preventDefault={() => {
-																		webSearchEnabled = !webSearchEnabled;
-																		showGovKnoWebSearchToggle = false;
-																		govBtnEnable = false;
-																		attachFileEnabled = false;
-																	}}
-																	type="button"
-																	class="flex items-center flex items-center justify-between w-full p-[16px] rounded-[12px] hover:bg-gradient-bg-2 transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden dark:hover:bg-gray-800 {webSearchEnabled ||
-																	($settings?.webSearch ?? false) === 'always'
-																		? 'bg-gradient-bg-2 dark:text-sky-300  dark:bg-sky-200/5'
-																		: 'text-gray-600 dark:text-gray-300 '}"
-																>
-																	<div class="flex items-center justify-center gap-[8px]">
-																		<GlobeAlt className="size-5" strokeWidth="1.75" />
-																		<span
-																			class="whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
-																			>{$i18n.t('Web Search')}</span
-																		>
-																	</div>
-																	{#if webSearchEnabled}<CheckFilter />{/if}
-																</button>
-															</Tooltip>
+															<button
+																on:click|preventDefault={() => {
+																	webSearchEnabled = !webSearchEnabled;
+																	showGovKnoWebSearchToggle = false;
+																	govBtnEnable = false;
+																	attachFileEnabled = false;
+																}}
+																type="button"
+																class="flex items-center flex justify-between w-full p-[16px] rounded-[12px] hover:bg-gradient-bg-2 transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden dark:hover:bg-gray-200 {webSearchEnabled ||
+																($settings?.webSearch ?? false) === 'always'
+																	? 'bg-gradient-bg-2 dark:text-sky-300  dark:bg-sky-200/5'
+																	: 'text-gray-600 dark:text-gray-300 '}"
+															>
+																<div class="flex items-center justify-center gap-[8px]">
+																	<GlobeAlt className="size-5" strokeWidth="1.75" />
+																	<span
+																		class="font-heading font-medium text-[14px] leading-[22px] text-[#36383b] text-left whitespace-nowrap"
+																		>{$i18n.t('Web Search')}</span
+																	>
+																</div>
+																{#if webSearchEnabled}<CheckFilter />{/if}
+															</button>
 														{/if}
 
 														{#if showImageGenerationButton}
@@ -1719,31 +1717,29 @@
 														{/if}
 
 														{#if showFileUploadButton}
-															<Tooltip content={$i18n.t('Upload File')} placement="top">
-																<button
-																	on:click={() => {
-																		attachFileEnabled = !attachFileEnabled;
-																		showGovKnoWebSearchToggle = false;
-																		filesInputElement.click();
-																		govBtnEnable = false;
-																		webSearchEnabled = false;
-																	}}
-																	type="button"
-																	class="flex items-center flex justify-between w-full p-[16px] rounded-[12px] hover:bg-gradient-bg-2 transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden dark:hover:bg-gray-800 {attachFileEnabled
-																		? 'bg-gradient-bg-2 dark:text-sky-300  dark:bg-sky-200/5'
-																		: 'text-gray-600 dark:text-gray-300 '}"
-																>
-																	<div class="flex items-center justify-center gap-[8px]">
-																		<Attach />
-																		<span
-																			class="font-heading font-medium text-[14px] leading-[22px] text-[#36383b] text-left whitespace-nowrap"
-																		>
-																			Attach files
-																		</span>
-																	</div>
-																	{#if attachFileEnabled && files.length > 0}<CheckFilter />{/if}
-																</button>
-															</Tooltip>
+															<button
+																on:click={() => {
+																	attachFileEnabled = !attachFileEnabled;
+																	showGovKnoWebSearchToggle = false;
+																	filesInputElement.click();
+																	govBtnEnable = false;
+																	webSearchEnabled = false;
+																}}
+																type="button"
+																class="flex items-center flex justify-between w-full p-[16px] rounded-[12px] hover:bg-gradient-bg-2 transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden dark:hover:bg-gray-200 {attachFileEnabled
+																	? 'bg-gradient-bg-2 dark:text-sky-300  dark:bg-sky-200/5'
+																	: 'text-gray-600 dark:text-gray-300 '}"
+															>
+																<div class="flex items-center justify-center gap-[8px]">
+																	<Attach />
+																	<span
+																		class="font-heading font-medium text-[14px] leading-[22px] text-[#36383b] text-left whitespace-nowrap"
+																	>
+																	{$i18n.t('Attach files')}
+																	</span>
+																</div>
+																{#if attachFileEnabled && files.length > 0}<CheckFilter />{/if}
+															</button>
 														{/if}
 													</div>
 												{/if}

@@ -707,6 +707,7 @@
 	"Generating...": "جارٍ التوليد...",
 	"Get started": "ابدأ الآن",
 	"Get started with {{WEBUI_NAME}}": "ابدأ باستخدام {{WEBUI_NAME}}",
+	"Glad that helped!": "يسعدني أن ذلك ساعد!",
 	"Global": "عام",
 	"Good Response": "استجابة جيدة",
 	"Google Drive": "Google Drive",
@@ -1217,6 +1218,7 @@
 	"sk-1234": "sk-1234",
 	"Skip Cache": "تجاوز الذاكرة المؤقتة",
 	"Skip the cache and re-run the inference. Defaults to False.": "تجاوز ذاكرة التخزين المؤقت وأعد الاستدلال. افتراضي: معطل.",
+	"Sorry about that": "Sorry about that",
 	"Sougou Search API sID": "معرّف sID لواجهة Sougou Search API",
 	"Sougou Search API SK": "المفتاح السري SK لواجهة Sougou Search API",
 	"Source": "المصدر",
@@ -1495,5 +1497,7 @@
 	"Low": "منخفض",
 	"Medium": "متوسط",
 	"High": "عالي",
-	"Group": "مجموعة"
+	"Group": "مجموعة",
+	"Thank you for your feedback. Please let me know what did you find helpful?": "شكرًا لتعليقك. أرجو أن تخبرني ما الذي وجدته مفيدًا؟",
+	"Help us improve, what went wrong with the response?": "ساعدنا على التحسين، ما الخطأ الذي حدث في الاستجابة؟"
 }
