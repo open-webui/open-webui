@@ -764,7 +764,7 @@
 											id="save-new-message-button"
 											class="flex items-center gap-[8px] text-[14px] text-typography-btn-text-secondary font-Inter_SemiBold"
 											on:click={() => {
-												saveAsCopyHandler();
+												copyToClipboard(message.content);
 											}}
 										>
 											<Copy />{$i18n.t('Copy')}
