@@ -23,7 +23,7 @@
 			<div class="relative w-full h-full flex flex-col">
 				<div class="splash-content">
 					<div class="logo-container">
-						<img src="/splash.svg" alt="GovGPT Logo" class="logo-image" />
+						<img src="/GovGPT.svg" alt="GovGPT Logo" class="logo-image" />
 					</div>
 					<div class="title-container">
 						<h1 class="govgpt-title">GovGPT</h1>
@@ -36,7 +36,8 @@
 					</p>
 
 					<p class="text-typography-subtext text-[14px] leading-[24px]">
-						You’re on the GovGPT waitlist!  We’re unlocking access in phases. We’ll let you know by email  as soon as it’s your turn.
+						You’re on the GovGPT waitlist! We’re unlocking access in phases. We’ll let you know by
+						email  as soon as it’s your turn.
 					</p>
 					<div class=" mt-6 mx-auto relative group w-fit">
 						<button
