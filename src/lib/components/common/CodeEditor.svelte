@@ -175,7 +175,9 @@ print(black.format_str("""${code.replace(/\\/g, '\\\\').replace(/`/g, '\\`').rep
 				worker.removeEventListener('error', handleError);
 				try {
 					worker.terminate();
-				} catch {}
+				} catch {
+					toast.error($i18n.t('Error'));
+				}
 				pyodideWorkerInstance = null;
 				reject('Execution Time Limit Exceeded');
 			}, 60000);

@@ -31,12 +31,13 @@ module.exports = {
 	ignorePatterns: ['static/pyodide/**s'],
 	rules: {
         // Base ESLint rules
-        'no-async-promise-executor': 'off', // 1
-        'no-constant-condition': 'off',
+        //'no-async-promise-executor': 'off', // 1
+        //'no-constant-condition': 'off',
+		//'no-console': 'error', // 738
         'no-control-regex': 'off', // 2
-		"no-debugger": "error",
-        'no-empty': 'off', // 4
-        'no-ex-assign': 'off', // 2
+		'no-debugger': 'error',
+        //'no-empty': 'off', // 4
+        //'no-ex-assign': 'off', // 2
         'no-irregular-whitespace': 'off', // 1
         'no-prototype-builtins': 'off', // 1
         'no-undef': 'off', //10
@@ -50,7 +51,7 @@ module.exports = {
         '@typescript-eslint/no-unsafe-function-type': 'off', // 166
         '@typescript-eslint/no-unused-expressions': 'off', // 12
         '@typescript-eslint/no-unused-vars': 'off', // 811
-		
+
         // Svelte rules
         'svelte/no-at-html-tags': 'off', // 8
         'svelte/no-inner-declarations': 'off', // 2

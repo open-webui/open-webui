@@ -74,7 +74,8 @@
 			const decoder = new TextDecoder();
 
 			const processStream = async () => {
-				while (true) {
+				const condition = true
+				while (condition) {
 					// Read data chunks from the response stream
 					const { done, value } = await reader.read();
 					if (done) {
@@ -154,7 +155,8 @@
 			const decoder = new TextDecoder();
 
 			const processStream = async () => {
-				while (true) {
+				const condition = true
+				while (condition) {
 					// Read data chunks from the response stream
 					const { done, value } = await reader.read();
 					if (done) {

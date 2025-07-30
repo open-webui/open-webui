@@ -13,8 +13,7 @@
 	export let suggestionPrompts: any[] = [];
 	export let className = '';
 	let sortedPrompts: any[] = [];
-
-
+	let selectedIndex = -1;
 
 	// Track current locale for reactivity
 	let currentLocale = localStorage.getItem('locale') || 'en-US';
@@ -26,6 +25,7 @@
 	
 	$: if (suggestionPrompts) {
 		sortedPrompts = [...(suggestionPrompts ?? [])].sort(() => Math.random() - 0.5);
+		selectedIndex = -1;
 	}
 	
 	// Listen for storage changes (when locale is changed from other components)
@@ -42,6 +42,12 @@
 			window.removeEventListener('storage', handleStorageChange);
 		};
 	});
+
+	const handlePromptSelect = async (prompt: any, index: number) => {
+		selectedIndex = index;
+		const content = $i18n.t(`suggestion.${prompt.id}.content`);
+		dispatch('select', content);
+	};
 </script>
 
 <!-- <div class="mb-1 flex gap-1 text-xs font-medium items-center text-gray-600 dark:text-gray-400">
@@ -73,13 +79,13 @@
 				<button
 					class="flex {$mobile
 						? 'items-center gap-[4px] flex-shrink-0'
-						: 'shadow-custom3 flex-col items-start'} text-typography-subtext hover:text-typography-titles border border-[#E5EBF3] hover:border-[#90C9FF] p-[16px] rounded-[8px] whitespace-nowrap overflow-hidden text-ellipsis transition
-							bg-light-bg dark:border-[#2D3642] dark:hover:border-[#004280] dark:hover:text-white"
+						: 'shadow-custom3 flex-col items-start'} text-typography-subtext p-[16px] rounded-[8px] whitespace-nowrap overflow-hidden text-ellipsis transition
+							bg-light-bg
+							{selectedIndex === idx
+								? 'border border-[##90C9FF] dark:border-[##90C9FF] text-typography-titles dark:text-white shadow-lg'
+								: 'border border-[#E5EBF3] hover:border-[#90C9FF] dark:border-[#2D3642] dark:hover:border-[#004280] hover:text-typography-titles dark:hover:text-white'}"
 					style="animation-delay: {idx * 60}ms;"
-					on:click={() => {
-						const content = $i18n.t(`suggestion.${prompt.id}.content`);
-						dispatch('select', content);
-					}}
+					on:click={() => handlePromptSelect(prompt, idx)}
 				>
 					{#if prompt.icon_name}
 						<SuggestionsIcon name={prompt.icon_name} />

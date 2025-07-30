@@ -132,8 +132,9 @@
 			if (obj && typeof obj === 'object') {
 				return true;
 			}
-		} catch (e) {}
-		return false;
+		} catch (e) {
+			return false;
+		}
 	};
 
 	const saveHandler = async () => {
