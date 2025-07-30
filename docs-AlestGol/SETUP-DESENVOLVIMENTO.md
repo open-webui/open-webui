@@ -9,6 +9,7 @@ Este guia mostra exatamente como rodamos o projeto durante o desenvolvimento, co
 ## 📋 Pré-requisitos
 
 ### **Software Necessário**
+
 ```bash
 # Node.js (versão 18 ou superior)
 node --version  # deve mostrar v18.x.x ou superior
@@ -25,6 +26,7 @@ git --version
 ### **Instalação dos Pré-requisitos**
 
 #### **macOS**
+
 ```bash
 # Instalar Node.js via Homebrew
 brew install node
@@ -37,6 +39,7 @@ node --version && python3 --version
 ```
 
 #### **Ubuntu/Debian**
+
 ```bash
 # Atualizar sistema
 sudo apt update
@@ -53,6 +56,7 @@ node --version && python3.11 --version
 ```
 
 #### **Windows**
+
 ```bash
 # Instalar via Chocolatey
 choco install nodejs python311
@@ -67,19 +71,56 @@ choco install nodejs python311
 ## 🚀 Setup do Projeto
 
 ### **1. Clone do Repositório**
+
 ```bash
 # Clone do projeto
-git clone https://github.com/open-webui/open-webui.git
+git clone https://github.com/EduPereiraAlest/open-webui.git
 cd open-webui
 
-# Checkout da branch com tema Alest+GOL
+# Checkout da branch principal (nossa master)
 git checkout feature.alest.gol.theme
 
 # Verificar se está na branch correta
 git branch  # deve mostrar * feature.alest.gol.theme
 ```
 
-### **2. Setup do Backend (Python/FastAPI)**
+### **2. ⚠️ IMPORTANTE: Criar Sua Branch de Desenvolvimento**
+
+**🚨 NUNCA desenvolva diretamente na `feature.alest.gol.theme`!**
+
+Esta é nossa branch principal (master) e deve ser protegida. Sempre crie uma branch específica para suas alterações:
+
+```bash
+# Criar e trocar para sua branch de desenvolvimento
+git checkout -b feature/minha-funcionalidade
+
+# Ou para correções:
+git checkout -b fix/correcao-bug
+
+# Ou para sua branch pessoal:
+git checkout -b dev/seu-nome
+
+# Exemplos práticos:
+git checkout -b feature/melhorar-chat
+git checkout -b fix/logo-quebrada
+git checkout -b dev/joao-silva
+
+# Verificar se está na nova branch
+git branch  # deve mostrar * sua-nova-branch
+```
+
+### **📋 Convenção de Nomes de Branch:**
+
+```
+feature/nome-da-funcionalidade    # Para novas funcionalidades
+fix/nome-do-bug                   # Para correções de bugs
+hotfix/nome-da-correcao          # Para correções urgentes
+dev/seu-nome                     # Para desenvolvimento pessoal
+experiment/nome-do-teste         # Para testes/experimentos
+```
+
+### **3. Setup do Backend (Python/FastAPI)**
+
 ```bash
 # Navegar para pasta do backend
 cd backend
@@ -104,7 +145,8 @@ pip install -r requirements.txt
 pip list | grep fastapi  # deve mostrar FastAPI instalado
 ```
 
-### **3. Setup do Frontend (Node.js/SvelteKit)**
+### **4. Setup do Frontend (Node.js/SvelteKit)**
+
 ```bash
 # Voltar para raiz do projeto
 cd ..  # ou cd /caminho/para/open-webui
@@ -121,6 +163,7 @@ npm list --depth=0 | grep svelte  # deve mostrar SvelteKit
 ## 🔧 Configuração do Ambiente
 
 ### **1. Variáveis de Ambiente do Backend**
+
 ```bash
 # Criar arquivo .env na pasta backend
 cd backend
@@ -149,6 +192,7 @@ EOF
 ```
 
 ### **2. Configuração do Frontend**
+
 ```bash
 # Voltar para raiz
 cd ..
@@ -164,6 +208,7 @@ cd ..
 ## 🚀 Rodando o Projeto
 
 ### **Método 1: Usando o Script Personalizado (Recomendado)**
+
 ```bash
 # Na raiz do projeto, usar o script que criamos
 ./start-alest-gol.sh
@@ -177,6 +222,7 @@ cd ..
 ### **Método 2: Rodando Separadamente (Para Debug)**
 
 #### **Terminal 1 - Backend**
+
 ```bash
 # Navegar para backend
 cd backend
@@ -194,6 +240,7 @@ python -m uvicorn open_webui.main:app --port 8080 --host 0.0.0.0 --reload
 ```
 
 #### **Terminal 2 - Frontend**
+
 ```bash
 # Na raiz do projeto (novo terminal)
 npm run dev
@@ -205,6 +252,7 @@ npm run dev
 ```
 
 #### **Terminal 3 - Ollama (Opcional)**
+
 ```bash
 # Se quiser rodar Ollama local
 docker run -d -v ollama:/root/.ollama -p 11434:11434 --name ollama ollama/ollama
@@ -218,6 +266,7 @@ docker exec -it ollama ollama pull gemma2:2b
 ## 🔍 Verificação do Setup
 
 ### **1. Verificar Backend**
+
 ```bash
 # Testar se backend está funcionando
 curl http://localhost:8080/health
@@ -232,6 +281,7 @@ curl http://localhost:8080/api/v1/configs
 ```
 
 ### **2. Verificar Frontend**
+
 ```bash
 # Abrir no navegador
 open http://localhost:5173  # macOS
@@ -244,6 +294,7 @@ open http://localhost:5173  # macOS
 ```
 
 ### **3. Verificar Assets**
+
 ```bash
 # Verificar se logos estão disponíveis
 curl -I http://localhost:8080/static/logo-gol.svg
@@ -257,6 +308,7 @@ curl -I http://localhost:8080/static/Logo-Alest-Branco-240x104-1-1.png
 ## 📁 Estrutura de Desenvolvimento
 
 ### **Portas Usadas**
+
 ```
 Frontend (SvelteKit): http://localhost:5173
 Backend (FastAPI):    http://localhost:8080
@@ -264,6 +316,7 @@ Ollama (opcional):    http://localhost:11434
 ```
 
 ### **Arquivos Importantes**
+
 ```
 open-webui/
 ├── backend/
@@ -294,6 +347,7 @@ open-webui/
 ### **Problemas Comuns**
 
 #### **"Backend não inicia"**
+
 ```bash
 # Verificar se ambiente virtual está ativo
 which python  # deve apontar para venv
@@ -309,6 +363,7 @@ python -m uvicorn open_webui.main:app --port 8080 --log-level debug
 ```
 
 #### **"Frontend não conecta com backend"**
+
 ```bash
 # Verificar se backend está rodando
 curl http://localhost:8080/health
@@ -322,6 +377,7 @@ grep -A 10 "proxy" vite.config.ts
 ```
 
 #### **"Logos não aparecem"**
+
 ```bash
 # Verificar se assets foram copiados
 ls -la backend/open_webui/static/
@@ -332,6 +388,7 @@ cp static/Logo-Alest-Branco-240x104-1-1.png backend/open_webui/static/
 ```
 
 #### **"Tema não está ativo"**
+
 ```bash
 # Verificar se tema está sendo carregado
 curl http://localhost:5173/themes/alest-gol.css
@@ -347,7 +404,24 @@ grep "alest-gol" src/app.html
 
 ## 🔄 Workflow de Desenvolvimento
 
-### **Desenvolvimento Típico**
+### **Fluxo Completo de Desenvolvimento**
+
+#### **1. Preparação (Uma vez por funcionalidade)**
+
+```bash
+# Atualizar branch principal
+git checkout feature.alest.gol.theme
+git pull origin feature.alest.gol.theme
+
+# Criar sua branch de desenvolvimento
+git checkout -b feature/minha-nova-funcionalidade
+
+# Verificar branch ativa
+git branch  # deve mostrar * feature/minha-nova-funcionalidade
+```
+
+#### **2. Desenvolvimento Diário**
+
 ```bash
 # 1. Ativar ambiente
 cd backend && source venv/bin/activate
@@ -368,7 +442,57 @@ npm run dev
 # - Backend API: http://localhost:8080/docs
 ```
 
+#### **3. Salvando Progresso**
+
+```bash
+# Verificar alterações
+git status
+
+# Adicionar arquivos modificados
+git add .
+# ou específicos: git add src/lib/components/chat/Chat.svelte
+
+# Commit com mensagem descritiva
+git commit -m "feat: adiciona nova funcionalidade de chat"
+
+# Push da sua branch
+git push origin feature/minha-nova-funcionalidade
+```
+
+#### **4. Finalizando (Pull Request)**
+
+```bash
+# Quando terminar a funcionalidade:
+# 1. Fazer push final
+git push origin feature/minha-nova-funcionalidade
+
+# 2. Abrir Pull Request no GitHub:
+# - De: feature/minha-nova-funcionalidade
+# - Para: feature.alest.gol.theme
+# - Adicionar descrição detalhada
+# - Solicitar review da equipe
+
+# 3. Após aprovação e merge:
+# Voltar para branch principal e atualizar
+git checkout feature.alest.gol.theme
+git pull origin feature.alest.gol.theme
+
+# 4. Deletar branch local (opcional)
+git branch -d feature/minha-nova-funcionalidade
+```
+
+### **⚠️ Regras Importantes do Git**
+
+```bash
+# ❌ NUNCA fazer isso:
+git push origin feature.alest.gol.theme  # Push direto na master
+
+# ✅ SEMPRE fazer isso:
+git push origin sua-branch-de-desenvolvimento  # Push na sua branch
+```
+
 ### **Comandos Úteis**
+
 ```bash
 # Ver logs do backend
 tail -f backend/logs/app.log
@@ -394,6 +518,7 @@ cd backend && python -m py_compile open_webui/main.py
 ## 📊 Monitoramento Durante Desenvolvimento
 
 ### **Logs Importantes**
+
 ```bash
 # Backend logs
 tail -f backend/logs/uvicorn.log
@@ -407,6 +532,7 @@ tail -f backend/logs/uvicorn.log
 ```
 
 ### **Endpoints de Debug**
+
 ```bash
 # Health check
 curl http://localhost:8080/health
@@ -426,6 +552,7 @@ open http://localhost:8080/docs
 ## 🚀 Deploy para Testes
 
 ### **Build de Produção Local**
+
 ```bash
 # Build do frontend
 npm run build
@@ -440,6 +567,7 @@ python -m build
 ```
 
 ### **Docker (Opcional)**
+
 ```bash
 # Build da imagem
 docker build -t alest-gol-platform .
@@ -453,6 +581,7 @@ docker run -p 3000:8080 alest-gol-platform
 ## 📞 Suporte para Equipe
 
 ### **Contatos**
+
 ```
 🐛 Problemas técnicos: dev-team@alest.com
 📚 Dúvidas de código: code-review@alest.com
@@ -460,6 +589,7 @@ docker run -p 3000:8080 alest-gol-platform
 ```
 
 ### **Recursos**
+
 - **Slack**: #alest-gol-dev
 - **Documentação**: Esta pasta docs-AlestGol/
 - **Issues**: GitHub repository
@@ -470,16 +600,19 @@ docker run -p 3000:8080 alest-gol-platform
 ## 📋 Checklist para Novos Desenvolvedores
 
 ### **Setup Inicial**
+
 - [ ] Node.js 18+ instalado
 - [ ] Python 3.11+ instalado
 - [ ] Git configurado
 - [ ] Repositório clonado
 - [ ] Branch feature.alest.gol.theme ativa
+- [ ] **BRANCH PRÓPRIA CRIADA** (nunca desenvolver na master!)
 - [ ] Dependências backend instaladas
 - [ ] Dependências frontend instaladas
 - [ ] Arquivo .env criado no backend
 
 ### **Teste do Ambiente**
+
 - [ ] Backend roda na porta 8080
 - [ ] Frontend roda na porta 5173
 - [ ] Health check do backend retorna OK
@@ -489,11 +622,55 @@ docker run -p 3000:8080 alest-gol-platform
 - [ ] Gemini API responde
 
 ### **Desenvolvimento**
+
 - [ ] Hot reload funciona (backend e frontend)
 - [ ] Console sem erros críticos
 - [ ] Consegue fazer login/registro
 - [ ] Pode criar e usar chats
 - [ ] Upload de arquivos funciona
+
+### **Git e Colaboração**
+
+- [ ] Está trabalhando na sua própria branch
+- [ ] Commits têm mensagens descritivas
+- [ ] Push apenas da sua branch (nunca da master)
+- [ ] Pull Requests criados para merge
+- [ ] Code review solicitado antes do merge
+
+---
+
+## 📝 Convenções de Commit
+
+### **Formato de Mensagem**
+```
+tipo(escopo): descrição curta
+
+Descrição mais detalhada se necessário
+```
+
+### **Tipos de Commit**
+```
+feat:     Nova funcionalidade
+fix:      Correção de bug
+docs:     Documentação
+style:    Formatação, ponto e vírgula, etc
+refactor: Refatoração de código
+test:     Testes
+chore:    Manutenção, build, etc
+```
+
+### **Exemplos Práticos**
+```bash
+# Boa mensagem
+git commit -m "feat(chat): adiciona upload de imagens no chat"
+git commit -m "fix(auth): corrige erro de login com Google OAuth"
+git commit -m "docs: atualiza README com instruções de deploy"
+
+# Mensagem ruim
+git commit -m "fix"
+git commit -m "mudanças"
+git commit -m "atualizações"
+```
 
 **🎯 Ambiente pronto para desenvolvimento!** 🚀
 
