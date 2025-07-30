@@ -14,7 +14,6 @@
 		console.log('🔍 UsageStatsTab - usageData:', usageData);
 		console.log('🔍 UsageStatsTab - monthly_summary:', usageData?.monthly_summary);
 		console.log('🔍 UsageStatsTab - top_models:', usageData?.monthly_summary?.top_models);
-		console.log('🔍 UsageStatsTab - total_unique_users:', usageData?.monthly_summary?.total_unique_users);
 	}
 	
 	const tableHeaders = [
@@ -36,7 +35,7 @@
 			<h3 class="text-lg font-medium">{$i18n.t('Monthly Summary')}</h3>
 		</div>
 		
-		<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+		<div class="grid grid-cols-1 gap-6">
 			<!-- Top Models -->
 			<div>
 				<h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{$i18n.t('Top 3 Models')} ⭐</h4>
@@ -54,17 +53,6 @@
 							<span class="text-sm font-medium">N/A</span>
 						</div>
 					{/if}
-				</div>
-			</div>
-			
-			<!-- Active Users -->
-			<div>
-				<h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{$i18n.t('Active Users')} 👥</h4>
-				<div class="space-y-2">
-					<div class="flex justify-between">
-						<span class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Aktywni użytkownicy')}:</span>
-						<span class="text-sm font-medium">{usageData.monthly_summary?.total_unique_users || 0}</span>
-					</div>
 				</div>
 			</div>
 		</div>
