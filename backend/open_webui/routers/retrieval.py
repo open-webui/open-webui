@@ -1330,12 +1330,12 @@ async def process_web_search(
                         # Each metadata_group is a list containing one metadata dict
                         if isinstance(metadata_group, list) and len(metadata_group) > 0:
                             metadata = metadata_group[0]  # Get the actual metadata dict
-                            log.info(f"Metadata group {i}: {metadata}")
+                            log.debug(f"Metadata group {i}: {metadata}")
                             if isinstance(metadata, dict) and "source" in metadata:
                                 url = metadata["source"]
                                 if url not in cached_urls:
                                     cached_urls.append(url)
-                                    log.info(f"✅ Added URL from metadata {i}: {url}")
+                                    log.debug(f"✅ Added URL from metadata {i}: {url}")
                             else:
                                 log.warning(
                                     f"⚠️ Metadata {i} missing 'source' field or not a dict: {metadata}"
