@@ -56,14 +56,13 @@
     }
 
     let usage = null;
-
+     const currentTheme = localStorage.getItem('theme');
     let isOnNotification = false;
     let notificationEnabled = false;
-    let isOnThemeToggle = true;
+    let isOnThemeToggle = currentTheme=='dark' ? false : true;
     let themeEnabled = false;
     // General
     let themes = ['dark', 'light'];
-    let selectedTheme = 'light';
     const toggleNotification = async () => {
         const permission = await Notification.requestPermission();
         if (permission === 'granted') {
@@ -207,6 +206,11 @@
             isLanguageSwitching = false;
         }
     };
+
+    onMount(async () => {
+        const currentTheme = localStorage.getItem('theme');
+        applyTheme(currentTheme)
+    });
 </script>
 
 <ShortcutsModal bind:show={showShortcuts} />
