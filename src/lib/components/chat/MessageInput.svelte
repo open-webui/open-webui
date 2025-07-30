@@ -70,6 +70,7 @@
 
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 	import { isRTL } from '$lib/i18n';
+	import Attachment from '../icons/Attachment.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -893,7 +894,7 @@
 							}}
 						>
 							{#if history.currentId && history.messages && Object.values(history.messages).some((message) => message.files && message.files.length > 0)}<div
-									class="text-left rounded-tl-[12px] rounded-tr-[12px] dark:text-gray-700 bg-[#D6E5FC] border border-[#90C9FF] py-[12px] pb-[50px] mb-[-42px] px-[16px] text-[10px] leading-[16px] text-typography-titles"
+									class="text-left rounded-tl-[12px] rounded-tr-[12px] dark:text-white bg-[#D6E5FC] border border-[#90C9FF] dark:bg-[#004280] dark:border-[#002866] py-[12px] pb-[50px] mb-[-42px] px-[16px] text-[11px] leading-[16px] text-typography-titles "
 								>
 									{$i18n.t("Chat is limited to the '{{count}}' uploaded documents.", {
 										count: Object.values(history.messages).reduce(
@@ -1603,8 +1604,8 @@
 													<button
 														data-filter-toggle
 														on:click={handleFilterToggle}
-														class="flex items-center px-[12px] gap-[4px] py-[8px] shadow-custom3 border border-[#E5EBF3] bg-[#FBFCFC] text-typography-titles text-[14px] leading-[22px] rounded-full"
-														><Filter /></button
+														class="flex items-center px-[12px] gap-[4px] py-[8px] shadow-custom3 border border-[#E5EBF3] bg-[#FBFCFC] dark:border-[#004280] dark:bg-[#004280] text-typography-titles text-[14px] leading-[22px] rounded-full"
+														><Filter />{$i18n.t('Tools')}</button
 													>
 													{#if selectedModelName !== ''}<div
 															class="px-[8px] font-Inter_Medium flex items-center gap-[8px] text-[14px] leading-[22px] text-typography-titles"
@@ -1621,7 +1622,7 @@
 												{#if showGovKnoWebSearchToggle}
 													<div
 														bind:this={toggleContentElement}
-														class="absolute w-full max-w-[250px] bottom-[0] start-4 z-[40] p-[20px] mb-20 bg-white border-[#E5EBF3] dark:bg-gray-900 dark:border-gray-900 border rounded-[24px]"
+														class="absolute w-full max-w-[250px] bottom-[0] start-4 z-[40] p-2 mb-20 bg-white border-[#E5EBF3] dark:border-gray-800 dark:bg-[#010E1D] dark:border-gray-00 border rounded-[24px]"
 													>
 														{#if showGovKnoButton}
 															<Tooltip content={$i18n.t('Gov Knowledge')} placement="top">
@@ -1642,6 +1643,32 @@
 																	{#if govBtnEnable}<CheckFilter />{/if}
 																</button>
 															</Tooltip>
+														{/if}
+
+														{#if showFileUploadButton}
+															<button
+																on:click={() => {
+																	attachFileEnabled = !attachFileEnabled;
+																	showGovKnoWebSearchToggle = false;
+																	filesInputElement.click();
+																	govBtnEnable = false;
+																	webSearchEnabled = false;
+																}}
+																type="button"
+																class="flex items-center flex justify-between w-full p-[16px] rounded-[12px] hover:bg-gradient-bg-2 transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden dark:hover:bg-gray-700 {attachFileEnabled
+																	? 'bg-gradient-bg-2 dark:text-sky-300  dark:bg-sky-200/5'
+																	: 'text-gray-600 dark:text-white '}"
+															>
+																<div class="flex items-center justify-center gap-[8px]">
+																	<Attachment />
+																	<span
+																		class="font-heading font-medium text-[14px] leading-[22px] text-[#36383b] dark:text-white text-left whitespace-nowrap"
+																	>
+																	{$i18n.t('Attach files')}
+																	</span>
+																</div>
+																{#if attachFileEnabled && files.length > 0}<CheckFilter />{/if}
+															</button>
 														{/if}
 
 														{#if showWebSearchButton}
@@ -1716,31 +1743,7 @@
 															</Tooltip>
 														{/if}
 
-														{#if showFileUploadButton}
-															<button
-																on:click={() => {
-																	attachFileEnabled = !attachFileEnabled;
-																	showGovKnoWebSearchToggle = false;
-																	filesInputElement.click();
-																	govBtnEnable = false;
-																	webSearchEnabled = false;
-																}}
-																type="button"
-																class="flex items-center flex justify-between w-full p-[16px] rounded-[12px] hover:bg-gradient-bg-2 transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden dark:hover:bg-gray-700 {attachFileEnabled
-																	? 'bg-gradient-bg-2 dark:text-sky-300  dark:bg-sky-200/5'
-																	: 'text-gray-600 dark:text-white '}"
-															>
-																<div class="flex items-center justify-center gap-[8px]">
-																	<Attach />
-																	<span
-																		class="font-heading font-medium text-[14px] leading-[22px] text-[#36383b] dark:text-white text-left whitespace-nowrap"
-																	>
-																	{$i18n.t('Attach files')}
-																	</span>
-																</div>
-																{#if attachFileEnabled && files.length > 0}<CheckFilter />{/if}
-															</button>
-														{/if}
+														
 													</div>
 												{/if}
 												{#if !$mobile}
