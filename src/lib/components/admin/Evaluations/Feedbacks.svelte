@@ -355,17 +355,20 @@
 								</div>
 							</div>
 						</td>
-						<td class="px-3 py-1 text-right font-medium text-gray-900 dark:text-white w-max">
-							<div class=" flex justify-end">
-								{#if feedback.data.rating.toString() === '1'}
-									<Badge type="info" content={$i18n.t('Won')} />
-								{:else if feedback.data.rating.toString() === '0'}
-									<Badge type="muted" content={$i18n.t('Draw')} />
-								{:else if feedback.data.rating.toString() === '-1'}
-									<Badge type="error" content={$i18n.t('Lost')} />
-								{/if}
-							</div>
-						</td>
+
+						{#if feedback?.data?.rating}
+							<td class="px-3 py-1 text-right font-medium text-gray-900 dark:text-white w-max">
+								<div class=" flex justify-end">
+									{#if feedback?.data?.rating.toString() === '1'}
+										<Badge type="info" content={$i18n.t('Won')} />
+									{:else if feedback?.data?.rating.toString() === '0'}
+										<Badge type="muted" content={$i18n.t('Draw')} />
+									{:else if feedback?.data?.rating.toString() === '-1'}
+										<Badge type="error" content={$i18n.t('Lost')} />
+									{/if}
+								</div>
+							</td>
+						{/if}
 
 						<td class=" px-3 py-1 text-right font-medium">
 							{dayjs(feedback.updated_at * 1000).fromNow()}
