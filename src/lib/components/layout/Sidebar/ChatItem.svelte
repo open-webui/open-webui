@@ -345,7 +345,7 @@
 		</div>
 	{:else}
 		<a
-			class=" w-full flex items-center justify-between text-typography-titles link-style rounded-[8px] px-[16px] py-[15px] {id ===
+			class=" w-full flex items-center justify-between text-typography-titles link-style rounded-[8px] px-[16px] py-[15px] truncate {id ===
 				$chatId || confirmEdit
 				? 'bg-gradient-bg-2 dark:bg-gray-900'
 				: selected
@@ -376,7 +376,7 @@
 			draggable="false"
 		>
 			<div class=" flex items-center justify-between self-center flex-1 w-full">
-				<div dir="auto" class="text-left self-center overflow-hidden w-full h-[20px]">
+				<div dir="auto" class="text-left self-center overflow-hidden w-full h-[22px] mr-[8px] truncate">
 					{title}
 				</div>
 				{#if className === 'pinned'}<div class="visible group-hover:invisible">
