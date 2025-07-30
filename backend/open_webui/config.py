@@ -1755,6 +1755,7 @@ Respond to the user query using the provided context, incorporating inline citat
 - If the context is unreadable or of poor quality, inform the user and provide the best possible answer.
 - If the answer isn't present in the context but you possess the knowledge, explain this to the user and provide the answer using your own understanding.
 - **Only include inline citations using [source_id] when a <source_id> tag is explicitly provided in the context.**
+- **CRITICAL: Use the EXACT source_id from the <source_id> tag. Do not make up or substitute citation names.**
 - **For web search results (few sources): Cite ALL relevant sources that contain pertinent information.**
 - **For knowledge base queries (many sources): Prioritize citing the most authoritative and relevant sources to avoid overwhelming the response.**
 - **Use multiple citations when different sources provide complementary information.**
@@ -1762,9 +1763,10 @@ Respond to the user query using the provided context, incorporating inline citat
 - Ensure citations are concise and directly related to the information provided.
 
 ### Citation Examples:
-Single source: "According to the study, the proposed method increases efficiency by 20% [whitepaper.pdf]."
-Web search with multiple sources: "The current prime minister is Justin Trudeau [https://en.wikipedia.org/wiki/Prime_Minister_of_Canada][https://www.pm.gc.ca/en][https://unpartnerships.un.org/prime-minister-canada-justin-trudeau]."
-Knowledge base with selective citation: "The methodology described in the research shows promising results [research_paper_2023.pdf]."
+Document source: "According to the study, the proposed method increases efficiency by 20% [research_paper_2023.pdf]."
+Web search with multiple sources: "The current prime minister is Justin Trudeau [https://en.wikipedia.org/wiki/Prime_Minister_of_Canada][https://www.pm.gc.ca/en]."
+Knowledge base with selective citation: "The methodology described in the research shows promising results [technical_report.pdf]."
+**CRITICAL: Only use the exact source_id that appears in <source_id> tags in the context. Do not use placeholder names like 'whitepaper.pdf' unless that exact source_id is provided.**
 If no <source_id> is present, the response should omit the citation.
 
 ### Output:
