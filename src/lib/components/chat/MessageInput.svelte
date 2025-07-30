@@ -893,7 +893,7 @@
 							}}
 						>
 							{#if history.currentId && history.messages && Object.values(history.messages).some((message) => message.files && message.files.length > 0)}<div
-									class="text-left rounded-tl-[12px] rounded-tr-[12px] bg-[#D6E5FC] border border-[#90C9FF] py-[12px] pb-[50px] mb-[-42px] px-[16px] text-[10px] leading-[16px] text-typography-titles"
+									class="text-left rounded-tl-[12px] rounded-tr-[12px] dark:text-gray-700 bg-[#D6E5FC] border border-[#90C9FF] py-[12px] pb-[50px] mb-[-42px] px-[16px] text-[10px] leading-[16px] text-typography-titles"
 								>
 									{$i18n.t("Chat is limited to the '{{count}}' uploaded documents.", {
 										count: Object.values(history.messages).reduce(
@@ -1621,7 +1621,7 @@
 												{#if showGovKnoWebSearchToggle}
 													<div
 														bind:this={toggleContentElement}
-														class="absolute w-full max-w-[250px] bottom-[0] start-4 z-[40] p-[20px] mb-20 bg-white border border-[#E5EBF3] bg-[#FBFCFC] rounded-[24px]"
+														class="absolute w-full max-w-[250px] bottom-[0] start-4 z-[40] p-[20px] mb-20 bg-white border-[#E5EBF3] dark:bg-gray-900 dark:border-gray-900 border rounded-[24px]"
 													>
 														{#if showGovKnoButton}
 															<Tooltip content={$i18n.t('Gov Knowledge')} placement="top">
@@ -1653,15 +1653,15 @@
 																	attachFileEnabled = false;
 																}}
 																type="button"
-																class="flex items-center flex justify-between w-full p-[16px] rounded-[12px] hover:bg-gradient-bg-2 transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden dark:hover:bg-gray-200 {webSearchEnabled ||
+																class="flex items-center flex justify-between w-full p-[16px] rounded-[12px] hover:bg-gradient-bg-2 transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden dark:hover:bg-gray-700 {webSearchEnabled ||
 																($settings?.webSearch ?? false) === 'always'
 																	? 'bg-gradient-bg-2 dark:text-sky-300  dark:bg-sky-200/5'
-																	: 'text-gray-600 dark:text-gray-300 '}"
+																	: 'text-gray-600 dark:text-white '}"
 															>
 																<div class="flex items-center justify-center gap-[8px]">
 																	<GlobeAlt className="size-5" strokeWidth="1.75" />
 																	<span
-																		class="font-heading font-medium text-[14px] leading-[22px] text-[#36383b] text-left whitespace-nowrap"
+																		class="font-heading font-medium text-[14px] leading-[22px] text-[#36383b] dark:text-white text-left whitespace-nowrap"
 																		>{$i18n.t('Web Search')}</span
 																	>
 																</div>
@@ -1726,14 +1726,14 @@
 																	webSearchEnabled = false;
 																}}
 																type="button"
-																class="flex items-center flex justify-between w-full p-[16px] rounded-[12px] hover:bg-gradient-bg-2 transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden dark:hover:bg-gray-200 {attachFileEnabled
+																class="flex items-center flex justify-between w-full p-[16px] rounded-[12px] hover:bg-gradient-bg-2 transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden dark:hover:bg-gray-700 {attachFileEnabled
 																	? 'bg-gradient-bg-2 dark:text-sky-300  dark:bg-sky-200/5'
-																	: 'text-gray-600 dark:text-gray-300 '}"
+																	: 'text-gray-600 dark:text-white '}"
 															>
 																<div class="flex items-center justify-center gap-[8px]">
 																	<Attach />
 																	<span
-																		class="font-heading font-medium text-[14px] leading-[22px] text-[#36383b] text-left whitespace-nowrap"
+																		class="font-heading font-medium text-[14px] leading-[22px] text-[#36383b] dark:text-white text-left whitespace-nowrap"
 																	>
 																	{$i18n.t('Attach files')}
 																	</span>
