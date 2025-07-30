@@ -42,11 +42,13 @@ class QdrantClient:
         documents = []
         metadatas = []
 
-        # Iterate over the tuple of records
-        for record in result[0]:
-            ids.append([record.id])
-            documents.append([record.payload["text"]])
-            metadatas.append([record.payload["metadata"]])
+        # Check if result is valid and has records
+        if result and len(result) > 0 and len(result[0]) > 0:
+            # Iterate over the tuple of records
+            for record in result[0]:
+                ids.append([record.id])
+                documents.append([record.payload["text"]])
+                metadatas.append([record.payload["metadata"]])
 
         return GetResult(
             **{
@@ -80,6 +82,25 @@ class QdrantClient:
     def has_collection(self, collection_name: str) -> bool:
         # Check if the collection exists based on the collection name.
         return self.client.collection_exists(collection_name=collection_name)
+
+    def list_collections(self) -> list[str]:
+        # List all collection names.
+        collections_response = self.client.get_collections()
+        return [collection.name for collection in collections_response.collections]
+
+    def get_collection_sample_metadata(self, collection_name: str) -> Optional[dict]:
+        """Get metadata from a sample point in the collection to check properties like age."""
+        try:
+            points, _ = self.client.scroll(
+                collection_name=collection_name, limit=1, with_payload=True
+            )
+            if points and len(points) > 0:
+                point = points[0]
+                if hasattr(point, "payload") and point.payload:
+                    return point.payload.get("metadata", {})
+            return None
+        except Exception:
+            return None
 
     def delete_collection(self, collection_name: str):
         # Delete the collection based on the collection name.

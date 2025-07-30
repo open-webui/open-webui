@@ -11,6 +11,7 @@ from langchain_core.documents import Document
 
 
 from open_webui.config import VECTOR_DB
+from open_webui.constants import VECTOR_COLLECTION_PREFIXES
 from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
 
 from open_webui.models.users import UserModel
@@ -236,16 +237,19 @@ def query_collection(
         query_embedding = embedding_function(query)
         for collection_name in collection_names:
             if collection_name:
-                try:
-                    result = query_doc(
-                        collection_name=collection_name,
-                        k=k,
-                        query_embedding=query_embedding,
-                    )
-                    if result is not None:
-                        results.append(result.model_dump())
-                except Exception as e:
-                    log.exception(f"Error when querying the collection: {e}")
+                # Use the clean reindex utility function
+                from open_webui.retrieval.reindex_utils import (
+                    handle_collection_query_with_reindex,
+                )
+
+                result = handle_collection_query_with_reindex(
+                    collection_name=collection_name,
+                    k=k,
+                    query_embedding=query_embedding,
+                )
+
+                if result is not None:
+                    results.append(result)
             else:
                 pass
 
@@ -427,7 +431,9 @@ def get_sources_from_files(
                 if file.get("legacy"):
                     collection_names.append(f"{file['id']}")
                 else:
-                    collection_names.append(f"file-{file['id']}")
+                    collection_names.append(
+                        f"{VECTOR_COLLECTION_PREFIXES.FILE}{file['id']}"
+                    )
 
             collection_names = set(collection_names).difference(extracted_collections)
             if not collection_names:

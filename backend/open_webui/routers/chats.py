@@ -1,4 +1,5 @@
 import logging
+import json
 from typing import Optional
 
 from open_webui.models.chats import (
@@ -60,6 +61,25 @@ async def delete_all_user_chats(request: Request, user=Depends(get_verified_user
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
+    log.info(f"User {user.id} deleting all chats and associated files")
+
+    # Note: File cleanup now handled by background job to prevent
+    # deleting shared files when chats are cloned
+    user_chats = Chats.get_chat_list_by_user_id(user.id, include_archived=True)
+    total_file_references = 0
+
+    for chat in user_chats:
+        try:
+            file_ids = extract_file_ids_from_chat(chat)
+            total_file_references += len(file_ids)
+        except Exception as e:
+            log.error(f"Error extracting file IDs from chat {chat.id}: {e}")
+
+    log.info(
+        f"Found {total_file_references} total file references across all chats - cleanup will be handled by background job"
+    )
+
+    # Delete all chats from database
     result = Chats.delete_chats_by_user_id(user.id)
     return result
 
@@ -379,12 +399,28 @@ async def update_chat_by_id(
 async def delete_chat_by_id(request: Request, id: str, user=Depends(get_verified_user)):
     if user.role == "admin":
         chat = Chats.get_chat_by_id(id)
+        if not chat:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=ERROR_MESSAGES.NOT_FOUND,
+            )
+
+        log.info(f"Admin deleting chat {id} and associated files")
+
+        # Note: File cleanup now handled by background job to prevent
+        # deleting shared files when chats are cloned
+        file_ids = extract_file_ids_from_chat(chat)
+        log.info(
+            f"Chat {id} contains {len(file_ids)} file references - cleanup will be handled by background job"
+        )
+
+        # Clean up tags
         for tag in chat.meta.get("tags", []):
             if Chats.count_chats_by_tag_name_and_user_id(tag, user.id) == 1:
                 Tags.delete_tag_by_name_and_user_id(tag, user.id)
 
+        # Delete chat from database
         result = Chats.delete_chat_by_id(id)
-
         return result
     else:
         if not has_permission(
@@ -396,10 +432,34 @@ async def delete_chat_by_id(request: Request, id: str, user=Depends(get_verified
             )
 
         chat = Chats.get_chat_by_id(id)
+        if not chat:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=ERROR_MESSAGES.NOT_FOUND,
+            )
+
+        # Verify user owns the chat
+        if chat.user_id != user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+            )
+
+        log.info(f"User {user.id} deleting chat {id} and associated files")
+
+        # Note: File cleanup now handled by background job to prevent
+        # deleting shared files when chats are cloned
+        file_ids = extract_file_ids_from_chat(chat)
+        log.info(
+            f"Chat {id} contains {len(file_ids)} file references - cleanup will be handled by background job"
+        )
+
+        # Clean up tags
         for tag in chat.meta.get("tags", []):
             if Chats.count_chats_by_tag_name_and_user_id(tag, user.id) == 1:
                 Tags.delete_tag_by_name_and_user_id(tag, user.id)
 
+        # Delete chat from database
         result = Chats.delete_chat_by_id_and_user_id(id, user.id)
         return result
 
@@ -694,3 +754,44 @@ async def delete_all_tags_by_id(id: str, user=Depends(get_verified_user)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND
         )
+
+
+def extract_file_ids_from_chat(chat):
+    """
+    Extract all file IDs from chat messages to enable proper cleanup.
+
+    Args:
+        chat: Chat object with chat data containing messages
+
+    Returns:
+        set: Set of unique file IDs found in the chat
+    """
+    file_ids = set()
+
+    try:
+        # Get messages from chat data
+        messages = chat.chat.get("messages", []) if chat.chat else []
+
+        for message in messages:
+            # Check if message has files
+            if isinstance(message, dict) and message.get("files"):
+                files = message["files"]
+                if isinstance(files, list):
+                    for file_item in files:
+                        if isinstance(file_item, dict):
+                            # Extract file ID from various possible formats
+                            file_id = (
+                                file_item.get("id")
+                                or file_item.get("file", {}).get("id")
+                                if isinstance(file_item.get("file"), dict)
+                                else None
+                            )
+                            if file_id:
+                                file_ids.add(file_id)
+
+        log.info(f"Extracted {len(file_ids)} file IDs from chat {chat.id}")
+        return file_ids
+
+    except Exception as e:
+        log.error(f"Error extracting file IDs from chat {chat.id}: {e}")
+        return set()

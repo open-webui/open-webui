@@ -117,3 +117,14 @@ class TASKS(str, Enum):
     AUTOCOMPLETE_GENERATION = "autocomplete_generation"
     FUNCTION_CALLING = "function_calling"
     MOA_RESPONSE_GENERATION = "moa_response_generation"
+
+
+class VECTOR_COLLECTION_PREFIXES(str, Enum):
+    """Constants for vector database collection naming prefixes."""
+
+    def __str__(self) -> str:
+        return super().__str__()
+
+    FILE = "file-"
+    WEB_SEARCH = "web-search-"
+    KNOWLEDGE_BASE = "knowledge-"  # For future use
