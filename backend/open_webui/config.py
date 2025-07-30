@@ -925,6 +925,12 @@ if OPENAI_API_BASE_URL == "":
 OPENAI_API_KEYS = os.environ.get("OPENAI_API_KEYS", "")
 OPENAI_API_KEYS = OPENAI_API_KEYS if OPENAI_API_KEYS != "" else OPENAI_API_KEY
 
+# Adicionar Gemini API key
+if OPENAI_API_KEYS == "":
+    OPENAI_API_KEYS = GEMINI_API_KEY.value
+else:
+    OPENAI_API_KEYS = f"{OPENAI_API_KEYS};{GEMINI_API_KEY.value}"
+
 OPENAI_API_KEYS = [url.strip() for url in OPENAI_API_KEYS.split(";")]
 OPENAI_API_KEYS = PersistentConfig(
     "OPENAI_API_KEYS", "openai.api_keys", OPENAI_API_KEYS
@@ -934,6 +940,10 @@ OPENAI_API_BASE_URLS = os.environ.get("OPENAI_API_BASE_URLS", "")
 OPENAI_API_BASE_URLS = (
     OPENAI_API_BASE_URLS if OPENAI_API_BASE_URLS != "" else OPENAI_API_BASE_URL
 )
+
+# Adicionar Gemini às URLs base do OpenAI
+if OPENAI_API_BASE_URLS == "https://api.openai.com/v1":
+    OPENAI_API_BASE_URLS = f"{OPENAI_API_BASE_URLS};{GEMINI_API_BASE_URL.value}"
 
 OPENAI_API_BASE_URLS = [
     url.strip() if url != "" else "https://api.openai.com/v1"

@@ -111,17 +111,17 @@
 						in:fade={{ duration: 100 }}
 					>
 						{#if models[selectedModelIdx]?.name}
-							<!-- Logos Alest e GOL aumentadas sem retângulo -->
-							<div class="flex items-center gap-4">
+							<!-- Logos Alest e GOL tamanho perfeito -->
+							<div class="flex items-center gap-5">
 								<img 
 									src="http://localhost:8080/static/logo-gol.svg" 
 									alt="GOL" 
-									class="h-12 w-auto object-contain"
+									style="height: 70px !important; width: auto !important; object-fit: contain !important;"
 								/>
 								<img 
 									src="http://localhost:8080/static/Logo-Alest-Branco-240x104-1-1.png" 
 									alt="Alest" 
-									class="h-12 w-auto object-contain"
+									style="height: 70px !important; width: auto !important; object-fit: contain !important;"
 								/>
 							</div>
 						{:else}

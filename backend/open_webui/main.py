@@ -511,6 +511,41 @@ async def lifespan(app: FastAPI):
     app.state.instance_id = INSTANCE_ID
     start_logger()
 
+    # Copiar assets estáticos essenciais (logos, favicon, etc.)
+    try:
+        import shutil
+        from pathlib import Path
+        
+        static_src = Path(__file__).parent.parent.parent / "static"
+        static_dst = Path(__file__).parent / "static"
+        
+        # Criar diretório se não existir
+        static_dst.mkdir(exist_ok=True)
+        
+        # Lista de arquivos essenciais para copiar
+        essential_files = [
+            "Logo-Alest-Branco-240x104-1-1.png",
+            "logo-gol.svg", 
+            "favicon.png",
+            "user.png",
+            "doge.png",
+            "image-placeholder.png",
+            "manifest.json"
+        ]
+        
+        for file in essential_files:
+            src_file = static_src / file
+            dst_file = static_dst / file
+            if src_file.exists():
+                shutil.copy2(src_file, dst_file)
+                log.info(f"✅ Copiado: {file}")
+            else:
+                log.warning(f"⚠️  Não encontrado: {file}")
+                
+        log.info("🎨 Assets da parceria Alest+GOL carregados!")
+    except Exception as e:
+        log.error(f"❌ Erro ao copiar assets: {e}")
+
     if RESET_CONFIG_ON_START:
         reset_config()
 

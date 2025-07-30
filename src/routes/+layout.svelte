@@ -648,7 +648,7 @@
 
 <svelte:head>
 	<title>{$WEBUI_NAME}</title>
-	<link crossorigin="anonymous" rel="icon" href="{WEBUI_BASE_URL}/static/favicon.png" />
+	<link crossorigin="anonymous" rel="icon" href="{WEBUI_BASE_URL}/static/favicon.png?v=alest-gol" />
 
 	<!-- External CSS Themes -->
 	<link rel="stylesheet" type="text/css" href="/themes/alest-gol.css" />
