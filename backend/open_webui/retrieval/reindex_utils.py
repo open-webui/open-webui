@@ -44,21 +44,19 @@ def create_config_from_fallback() -> Dict[str, Any]:
             "RAG_OLLAMA_API_KEY": "",
         }
     except ImportError:
-        # Ultimate fallback with minimal defaults
-        return {
-            "RAG_EMBEDDING_ENGINE": "",
-            "RAG_EMBEDDING_MODEL": "sentence-transformers/all-MiniLM-L6-v2",
-            "TEXT_SPLITTER": "character",
-            "CHUNK_SIZE": 1000,
-            "CHUNK_OVERLAP": 100,
-            "RAG_TEMPLATE": "",
-            "RAG_RERANKING_MODEL": "",
-            "RAG_EMBEDDING_BATCH_SIZE": 1,
-            "RAG_OPENAI_API_BASE_URL": "",
-            "RAG_OPENAI_API_KEY": "",
-            "RAG_OLLAMA_BASE_URL": "",
-            "RAG_OLLAMA_API_KEY": "",
-        }
+        # Critical error: Cannot import required configuration modules
+        error_msg = (
+            "Critical configuration error: Unable to import required config modules. "
+            "This will likely cause re-indexing and querying to fail due to potentially "
+            "incorrect embedding model configuration."
+        )
+        log.error(error_msg)
+
+        # Instead of silently falling back, raise an error to indicate the serious issue
+        raise RuntimeError(
+            "Configuration system unavailable. Cannot safely proceed with re-indexing "
+            "operations as embedding model compatibility cannot be guaranteed."
+        )
 
 
 def create_mock_request_from_config(config: Dict[str, Any], ef=None):
