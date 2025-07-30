@@ -140,8 +140,9 @@
 						</div>
 						<div class="splash-content">
 							<div class="logo-container">
-								<img src="/splash.svg" alt="GovGPT Logo" class="logo-image" />
+								<img src="/GovGPT.gif" alt="GovGPT Logo" class="logo-image" />
 							</div>
+							<img src="/GovGPT-background.gif" alt="GovGPT Logo" class="logo-image-bottom" />
 							<div class="title-container">
 								<h1 class="govgpt-title">GovGPT</h1>
 							</div>
@@ -155,9 +156,9 @@
 							</p>
 							<div class="absolute sm:static bottom-[20px]">
 								<button
-								on:click={() => {
-									window.location.href = `${WEBUI_BASE_URL}/oauth/oidc/login`;
-								}}
+									on:click={() => {
+										window.location.href = `${WEBUI_BASE_URL}/oauth/oidc/login`;
+									}}
 									class="mb-[24px] text-[14px] text-[rgba(7, 45, 90, 0.88)] py-[6px] pl-[8px] pr-[16px] w-[334px] h-[48px] rounded-[12px] bg-[linear-gradient(90deg,_#A5C7E6_0%,_#CEE7FF_38.94%,_#A5C7E6_100%)] shadow-[inset_6px_3px_8px_0_#BFDBF6]"
 								>
 									{$i18n.t('Log in using SSO')}
@@ -333,6 +334,7 @@
 								</form>
 							</div>
 						</div>
+						<img src="/GovGPT-background.gif" alt="GovGPT Logo" class="logo-image-bottom" />
 					</div>
 				{/if}
 				<div

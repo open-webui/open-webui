@@ -33,7 +33,7 @@
 	<div id="splash-screen">
 		<div class="splash-content">
 			<div class="logo-container">
-				<img src="/splash.svg" alt="GovGPT Logo" class="logo-image" />
+				<img src="/GovGPT.gif" alt="GovGPT Logo" class="logo-image" />
 			</div>
 			<div class="title-container">
 				<h1 class="govgpt-title">GovGPT</h1>
@@ -42,6 +42,8 @@
 				<p class="tagline">Amplifying Government Potential</p>
 			</div>
 		</div>
+
+		<img src="/GovGPT-background.gif" alt="Arc Glow Animation" class="background-image" />
 	</div>
 </body>
 
@@ -78,7 +80,7 @@
 	}
 
 	#splash-screen.login {
-		background: url('/background.png') bottom / cover no-repeat,
+		background:
 			radial-gradient(93.48% 68.59% at 40.87% 70.12%, rgba(7, 45, 90, 0.03) 37.67%, rgba(7, 45, 90, 0.25) 100%),
 			radial-gradient(70.94% 58.43% at 27.53% 86.82%, rgba(7, 45, 90, 0.20) 0%, rgba(7, 45, 90, 0.00) 100%),
 			linear-gradient(0deg, rgba(3, 25, 51, 0.20) 0%, rgba(3, 25, 51, 0.20) 100%), #010E1D;
@@ -113,9 +115,23 @@
 		transform: rotate(180deg) scaleY(-1);
 	}
 
+	.logo-image-bottom {
+		position: absolute;
+		bottom: 0;
+		height: auto;
+		pointer-events: none;
+		z-index: 1;
+		background-repeat: no-repeat;
+		background-position: bottom center;
+		background-size: contain;
+		object-fit: cover;
+		filter: blur(8px);
+		transform: scale(3) translateY(54%);
+	}
+
 	.title-container {
 		text-align: center;
-		margin-top: -80px;
+		margin-top: -50px;
 	}
 
 	.govgpt-title {
