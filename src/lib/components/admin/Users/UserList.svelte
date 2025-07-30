@@ -142,8 +142,7 @@
 				type: 'error',
 				title: 'License Error',
 				content:
-					'Exceeded the number of seats in your license. Please contact support to increase the number of seats.',
-				dismissable: true
+					'Exceeded the number of seats in your license. Please contact support to increase the number of seats.'
 			}}
 		/>
 	</div>
