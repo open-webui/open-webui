@@ -8,7 +8,7 @@
 	fill="none"
 	viewBox="0 0 24 24"
 	stroke-width={strokeWidth}
-	stroke="#36383b"
+	stroke="currentColor"
 	class={className}
 >
 	<path
