@@ -184,7 +184,9 @@ async def generate_function_chat_completion(
         # Get the signature of the function
         sig = inspect.signature(function_module.pipe)
         params = {"body": form_data} | {
-            k: v for k, v in extra_params.items() if k in sig.parameters
+            k: v
+            for k, v in extra_params.items()
+            if k in sig.parameters or k == "__tools__"
         }
 
         if "__user__" in params and hasattr(function_module, "UserValves"):

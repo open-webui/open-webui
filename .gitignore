@@ -307,3 +307,8 @@ dist
 cypress/videos
 cypress/screenshots
 .vscode/settings.json
+/.zenai_storage
+/backend/.zenai_storage
+
+/backend/pipe-functions
+backend/set_env.ps1
