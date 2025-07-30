@@ -129,7 +129,7 @@
 	{#if dismissible}
 		<div class="">
 			<button
-				class=" bg-white text-black border border-gray-50 rounded-full group-hover:visible invisible transition"
+				class=" bg-white text-red-500 border border-gray-50 rounded-full group-hover:visible invisible transition hover:text-red-600"
 				type="button"
 				on:click|stopPropagation={() => {
 					dispatch('dismiss');
@@ -138,14 +138,14 @@
 				<MaterialIcon name="delete" className="size-4" />
 
 				<!-- <svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 20 20"
+				xmlns="http://www.w3.org/2000/svg"
+				viewBox="0 0 20 20"
 					fill="currentColor"
 					class="w-4 h-4"
-				>
-					<path
+			>
+				<path
 						d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-					/>
+				/>
 				</svg> -->
 			</button>
 

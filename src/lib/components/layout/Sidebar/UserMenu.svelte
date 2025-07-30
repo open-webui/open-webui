@@ -456,7 +456,7 @@
                 }}
             >
                 <div class="self-center truncate gap-[8px] text-[17px] leading-[22px]">
-                    {$i18n?.t?.('Sign Out') || 'Sign Out'}
+                    {$i18n?.t?.('Logout') || 'Logout'}
                 </div>
                 <div class="self-center mr-3">
                     <SignOut className="w-5 h-5" />

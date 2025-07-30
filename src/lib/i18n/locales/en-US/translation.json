@@ -1505,7 +1505,9 @@
 	"Away":"Away",
 	"Registered to":"registered to",
 	"For":"for",
-	"Updating":"Updating",
 	"Thank you for your feedback. Please let me know what did you find helpful?": "Thank you for your feedback. Please let me know what did you find helpful?",
-	"Help us improve, what went wrong with the response?": "Help us improve, what went wrong with the response?"
+	"Help us improve, what went wrong with the response?": "Help us improve, what went wrong with the response?",
+	"Updating":"Updating",
+	"Logout": "Logout",
+	"How can I assist you with your work today?": "How can I assist you with your work today?"
 }

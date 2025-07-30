@@ -1497,7 +1497,9 @@
 	"Low": "منخفض",
 	"Medium": "متوسط",
 	"High": "عالي",
-	"Group": "مجموعة",
 	"Thank you for your feedback. Please let me know what did you find helpful?": "شكرًا لتعليقك. أرجو أن تخبرني ما الذي وجدته مفيدًا؟",
-	"Help us improve, what went wrong with the response?": "ساعدنا على التحسين، ما الخطأ الذي حدث في الاستجابة؟"
+	"Help us improve, what went wrong with the response?": "ساعدنا على التحسين، ما الخطأ الذي حدث في الاستجابة؟",
+	"Group": "مجموعة",
+	"Logout": "تسجيل الخروج",
+	"How can I assist you with your work today?": "كيف يمكنني مساعدتك في عملك اليوم؟"
 }

@@ -233,8 +233,8 @@
 	<div slot="content">
 		<DropdownMenu.Content
 			class="w-full max-w-[228px] rounded-xl z-50 bg-light-bg text-label-primary dark:text-white shadow-custom"
-			sideOffset={-2}
-			side="bottom"
+			sideOffset={22}
+			side="right"
 			align="start"
 			transition={flyAndScale}
 		>
