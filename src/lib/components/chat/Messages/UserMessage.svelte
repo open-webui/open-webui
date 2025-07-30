@@ -269,19 +269,7 @@
 							/>
 						</div>
 
-						<div class="mt-[20px] flex justify-between text-sm font-medium">
-							<div>
-								<button
-									id="save-edit-message-button"
-									class=" btn-primary"
-									on:click={() => {
-										editMessageConfirmHandler(false);
-									}}
-								>
-									{$i18n.t('Save')}
-								</button>
-							</div>
-
+						<div class="mt-[20px] flex justify-end text-sm font-medium">
 							<div class="flex space-x-1.5">
 								<button
 									id="close-edit-message-button"
@@ -311,7 +299,7 @@
 							<div
 								class="rounded-[16px] text-[14px] text-typography-titles leading-[24px] {($settings?.chatBubble ??
 								true)
-									? `max-w-[90%] p-[24px] bg-light-bg shadow-custom4 ${
+									? `max-w-[90%] px-[24px] py-[17px] bg-light-bg shadow-custom4 ${
 											message.files ? 'rounded-tr-lg' : ''
 										}`
 									: ' w-full'}"

@@ -79,9 +79,9 @@
 				<button
 					class="flex {$mobile
 						? 'items-center gap-[4px] flex-shrink-0'
-						: 'shadow-custom3 flex-col items-start'} text-typography-subtext p-[16px] rounded-[20px] whitespace-nowrap overflow-hidden text-ellipsis transition
+						: 'shadow-custom3 flex-col items-start'} text-typography-subtext p-[16px] rounded-[8px] whitespace-nowrap overflow-hidden text-ellipsis transition
 							bg-light-bg
-							{selectedIndex === idx 
+							{selectedIndex === idx
 								? 'border border-[##90C9FF] dark:border-[##90C9FF] text-typography-titles dark:text-white shadow-lg'
 								: 'border border-[#E5EBF3] hover:border-[#90C9FF] dark:border-[#2D3642] dark:hover:border-[#004280] hover:text-typography-titles dark:hover:text-white'}"
 					style="animation-delay: {idx * 60}ms;"

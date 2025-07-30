@@ -14,7 +14,6 @@
 	import Suggestions from './Suggestions.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
-	import LogoV4 from '$lib/components/icons/LogoV4.svelte';
 	import MessageInput from './MessageInput.svelte';
 
 	const i18n = getContext('i18n');
@@ -189,10 +188,7 @@
 					{/if}
 				</div> -->
 
-					<div class="welcome-text">
-						{#if !$mobile && !webSearchEnabled}<div class="mb-[110px] flex justify-center">
-								<LogoV4 strokeWidth="2.5" className="size-5" />
-							</div>{/if}
+					<div class="welcome-text gap-40">
 						<div>
 							<h1
 								class="pb-[16px] text-typography-titles text-[28px] leading-[22px] font-Inter_SemiBold"

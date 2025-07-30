@@ -132,7 +132,7 @@
 						<div class="absolute top-[28px] right-[28px] z-10">
 							<button
 								type="button"
-								class="text-[14px] text-[#CEE7FF] cursor-pointer"
+								class="text-[14px] text-[#CEE7FF] leading-normal font-medium cursor-pointer"
 								on:click={() => (showInitialScreen = false)}
 							>
 								{$i18n.t('Login using Credentials')}
@@ -155,10 +155,10 @@
 							</p>
 							<div class="absolute sm:static bottom-[20px]">
 								<button
-									on:click={() => {
-										window.location.href = `${WEBUI_BASE_URL}/oauth/oidc/login`;
-									}}
-									class="mb-[24px] text-[14px] text-[rgba(7, 45, 90, 0.88)] py-[16px] w-[334px] rounded-[12px] bg-[linear-gradient(90deg,_#A5C7E6_0%,_#CEE7FF_38.94%,_#A5C7E6_100%)] shadow-[inset_6px_3px_8px_0_#BFDBF6]"
+								on:click={() => {
+									window.location.href = `${WEBUI_BASE_URL}/oauth/oidc/login`;
+								}}
+									class="mb-[24px] text-[14px] text-[rgba(7, 45, 90, 0.88)] py-[6px] pl-[8px] pr-[16px] w-[334px] h-[48px] rounded-[12px] bg-[linear-gradient(90deg,_#A5C7E6_0%,_#CEE7FF_38.94%,_#A5C7E6_100%)] shadow-[inset_6px_3px_8px_0_#BFDBF6]"
 								>
 									{$i18n.t('Log in using SSO')}
 								</button>
@@ -303,7 +303,7 @@
 												</button>
 											{:else}
 												<button
-													class="mb-[24px] cursor-pointer text-[14px] leading-[24px] w-full p-[16px] pl-[16px] rounded-[8px] text-[rgba(7, 45, 90, 0.88)] bg-[linear-gradient(90deg,_#A5C7E6_0%,_#CEE7FF_38.94%,_#A5C7E6_100%)] shadow-[inset_6px_3px_8px_0_#BFDBF6]"
+													class="mb-[24px] cursor-pointer text-[14px] leading-[24px] py-[6px] pl-[8px] pr-[16px] w-full h-[48px] rounded-[12px] text-[rgba(7, 45, 90, 0.88)] bg-[linear-gradient(90deg,_#A5C7E6_0%,_#CEE7FF_38.94%,_#A5C7E6_100%)] shadow-[inset_6px_3px_8px_0_#BFDBF6]"
 													type="submit"
 												>
 													{mode === 'signin' ? $i18n.t('Sign in') : $i18n.t('Create Account')}
