@@ -28,6 +28,7 @@
 		removeDetails,
 		removeAllDetails
 	} from '$lib/utils';
+	import { TTSElement, TTSManager } from '$lib/utils/tts';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import Name from './Name.svelte';
@@ -150,11 +151,6 @@
 
 	let messageIndexEdit = false;
 
-	let audioParts: Record<number, HTMLAudioElement | null> = {};
-	let speaking = false;
-	let speakingIdx: number | undefined;
-
-	let loadingSpeech = false;
 	let generatingImage = false;
 
 	let showRateComment = false;
@@ -172,180 +168,42 @@
 		}
 	};
 
-	const playAudio = (idx: number) => {
-		return new Promise<void>((res) => {
-			speakingIdx = idx;
-			const audio = audioParts[idx];
+	let tts: undefined | TTSElement;
 
-			if (!audio) {
-				return res();
-			}
+	let queuedSpeech = false;
+	let loadingSpeech = false;
+	let speaking = false;
 
-			audio.play();
-			audio.onended = async () => {
-				await new Promise((r) => setTimeout(r, 300));
-
-				if (Object.keys(audioParts).length - 1 === idx) {
-					speaking = false;
-				}
-
-				res();
-			};
-		});
-	};
-
-	const toggleSpeakMessage = async () => {
-		if (speaking) {
-			try {
-				speechSynthesis.cancel();
-
-				if (speakingIdx !== undefined && audioParts[speakingIdx]) {
-					audioParts[speakingIdx]!.pause();
-					audioParts[speakingIdx]!.currentTime = 0;
-				}
-			} catch {}
-
-			speaking = false;
-			speakingIdx = undefined;
+	const toggleSpeakMessage = () => {
+		if (tts && (queuedSpeech || loadingSpeech || speaking)) {
+			TTSManager.cancel(tts);
 			return;
 		}
 
-		if (!(message?.content ?? '').trim().length) {
-			toast.info($i18n.t('No content to speak'));
-			return;
-		}
+		tts = new TTSElement(removeAllDetails(message.content));
 
-		speaking = true;
-
-		const content = removeAllDetails(message.content);
-
-		if ($config.audio.tts.engine === '') {
-			let voices = [];
-			const getVoicesLoop = setInterval(() => {
-				voices = speechSynthesis.getVoices();
-				if (voices.length > 0) {
-					clearInterval(getVoicesLoop);
-
-					const voice =
-						voices
-							?.filter(
-								(v) => v.voiceURI === ($settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice)
-							)
-							?.at(0) ?? undefined;
-
-					console.log(voice);
-
-					const speak = new SpeechSynthesisUtterance(content);
-					speak.rate = $settings.audio?.tts?.playbackRate ?? 1;
-
-					console.log(speak);
-
-					speak.onend = () => {
-						speaking = false;
-						if ($settings.conversationMode) {
-							document.getElementById('voice-input-button')?.click();
-						}
-					};
-
-					if (voice) {
-						speak.voice = voice;
-					}
-
-					speechSynthesis.speak(speak);
-				}
-			}, 100);
-		} else {
+		tts.onLoading = () => {
+			queuedSpeech = false;
 			loadingSpeech = true;
-
-			const messageContentParts: string[] = getMessageContentParts(
-				content,
-				$config?.audio?.tts?.split_on ?? 'punctuation'
-			);
-
-			if (!messageContentParts.length) {
-				console.log('No content to speak');
-				toast.info($i18n.t('No content to speak'));
-
-				speaking = false;
-				loadingSpeech = false;
-				return;
+		};
+		tts.onSpeaking = () => {
+			loadingSpeech = false;
+			speaking = true;
+		};
+		tts.onFinish = () => {
+			speaking = false;
+			if ($settings.conversationMode) {
+				document.getElementById('voice-input-button')?.click();
 			}
+		};
+		tts.onCancel = () => {
+			queuedSpeech = false;
+			loadingSpeech = false;
+			speaking = false;
+		};
 
-			console.debug('Prepared message content for TTS', messageContentParts);
-
-			audioParts = messageContentParts.reduce(
-				(acc, _sentence, idx) => {
-					acc[idx] = null;
-					return acc;
-				},
-				{} as typeof audioParts
-			);
-
-			let lastPlayedAudioPromise = Promise.resolve(); // Initialize a promise that resolves immediately
-
-			if ($settings.audio?.tts?.engine === 'browser-kokoro') {
-				if (!$TTSWorker) {
-					await TTSWorker.set(
-						new KokoroWorker({
-							dtype: $settings.audio?.tts?.engineConfig?.dtype ?? 'fp32'
-						})
-					);
-
-					await $TTSWorker.init();
-				}
-
-				for (const [idx, sentence] of messageContentParts.entries()) {
-					const blob = await $TTSWorker
-						.generate({
-							text: sentence,
-							voice: $settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice
-						})
-						.catch((error) => {
-							console.error(error);
-							toast.error(`${error}`);
-
-							speaking = false;
-							loadingSpeech = false;
-						});
-
-					if (blob) {
-						const audio = new Audio(blob);
-						audio.playbackRate = $settings.audio?.tts?.playbackRate ?? 1;
-
-						audioParts[idx] = audio;
-						loadingSpeech = false;
-						lastPlayedAudioPromise = lastPlayedAudioPromise.then(() => playAudio(idx));
-					}
-				}
-			} else {
-				for (const [idx, sentence] of messageContentParts.entries()) {
-					const res = await synthesizeOpenAISpeech(
-						localStorage.token,
-						$settings?.audio?.tts?.defaultVoice === $config.audio.tts.voice
-							? ($settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice)
-							: $config?.audio?.tts?.voice,
-						sentence
-					).catch((error) => {
-						console.error(error);
-						toast.error(`${error}`);
-
-						speaking = false;
-						loadingSpeech = false;
-					});
-
-					if (res) {
-						const blob = await res.blob();
-						const blobUrl = URL.createObjectURL(blob);
-						const audio = new Audio(blobUrl);
-						audio.playbackRate = $settings.audio?.tts?.playbackRate ?? 1;
-
-						audioParts[idx] = audio;
-						loadingSpeech = false;
-						lastPlayedAudioPromise = lastPlayedAudioPromise.then(() => playAudio(idx));
-					}
-				}
-			}
-		}
+		queuedSpeech = true;
+		TTSManager.queue(tts);
 	};
 
 	let preprocessedDetailsCache = [];
@@ -1046,7 +904,19 @@
 												}
 											}}
 										>
-											{#if loadingSpeech}
+											{#if queuedSpeech}
+												<svg
+													fill="none"
+													viewBox="0 0 24 24"
+													aria-hidden="true"
+													stroke-width="2.3"
+													stroke="currentColor"
+													class="w-4 h-4"
+												>
+													<path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2" />
+													<circle cx="12" cy="12" r="10" />
+												</svg>
+											{:else if loadingSpeech}
 												<svg
 													class=" w-4 h-4"
 													fill="currentColor"
