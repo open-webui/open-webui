@@ -309,9 +309,5 @@ cypress/screenshots
 .vscode/settings.json
 /.zenai_storage
 /backend/.zenai_storage
-/.vscode
-/.vscode
-.vscode/launch.json
-backend/.vscode/launch.json
-backend/tool_related_info/set_env.sh
-/backend/.vscode
+
+/backend/pipe-functions
