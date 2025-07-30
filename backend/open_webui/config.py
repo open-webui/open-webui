@@ -1745,7 +1745,10 @@ CHUNK_OVERLAP = PersistentConfig(
 DEFAULT_RAG_TEMPLATE = """### Task:
 Respond to the user query using the provided context, incorporating inline citations in the format [source_id] **only when the <source_id> tag is explicitly provided** in the context.
 
-### Guidelines:
+### Critical Guidelines:
+- **NEVER include XML tags, angle brackets, or any raw markup in your response text**
+- **Do not output tags like <source_id>, </source>, <context>, </context>, or any similar XML/HTML tags**
+- **Your response must be clean text with only [source_id] citations when appropriate**
 - If you don't know the answer, clearly state that.
 - If uncertain, ask the user for clarification.
 - Respond in the same language as the user's query.
@@ -1756,7 +1759,6 @@ Respond to the user query using the provided context, incorporating inline citat
 - **For knowledge base queries (many sources): Prioritize citing the most authoritative and relevant sources to avoid overwhelming the response.**
 - **Use multiple citations when different sources provide complementary information.**
 - Do not cite if the <source_id> tag is not provided in the context.
-- Do not use XML tags in your response.
 - Ensure citations are concise and directly related to the information provided.
 
 ### Citation Examples:
@@ -1766,6 +1768,7 @@ Knowledge base with selective citation: "The methodology described in the resear
 If no <source_id> is present, the response should omit the citation.
 
 ### Output:
+**IMPORTANT: Your response must be clean, readable text. Do not include any XML tags, angle brackets, or markup in your output.**
 Provide a clear and direct response to the user's query, including inline citations in the format [source_id] only when the <source_id> tag is present in the context. For web searches (typically ≤5 sources), cite all relevant sources. For knowledge bases (typically >5 sources), focus on the most authoritative sources.
 
 <context>
