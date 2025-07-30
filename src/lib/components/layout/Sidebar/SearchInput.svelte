@@ -18,19 +18,11 @@
 	let lastWord = '';
 	$: lastWord = value ? value.split(' ').at(-1) : value;
 
-	let options = [
-		{
-			name: 'tag:',
-			description: $i18n.t('search for tags')
-		}
-	];
+
 	let focused = false;
 	let loading = false;
 
-	let filteredOptions = options;
-	$: filteredOptions = options.filter((option) => {
-		return option.name.startsWith(lastWord);
-	});
+
 
 	let filteredTags = [];
 	$: filteredTags = lastWord.startsWith('tag:')
@@ -85,6 +77,7 @@
 
 	onDestroy(() => {
 		document.removeEventListener('click', documentClickHandler);
+		clearSearchInput();
 	});
 </script>
 
@@ -106,7 +99,7 @@
 		</div>-->
 
 		<input
-			class="w-full py-[24px] px-[16px] text-neutrals-400 text-[16px] leading-[24px] bg-transparent dark:text-gray-300 outline-hidden"
+			class="w-full py-[24px] px-[16px] text-neutrals-700 text-[16px] leading-[24px] bg-transparent dark:text-gray-300 outline-hidden"
 			placeholder={placeholder ? placeholder : $i18n.t('Search')}
 			bind:value
 			on:input={() => {
@@ -114,19 +107,13 @@
 			}}
 			on:focus={() => {
 				focused = true;
-				initTags();
+				// initTags();
 			}}
 			on:keydown={(e) => {
 				if (e.key === 'Enter') {
 					if (filteredTags.length > 0) {
 						const tagElement = document.getElementById(`search-tag-${selectedIdx}`);
 						tagElement.click();
-						return;
-					}
-
-					if (filteredOptions.length > 0) {
-						const optionElement = document.getElementById(`search-option-${selectedIdx}`);
-						optionElement.click();
 						return;
 					}
 				}
@@ -139,8 +126,6 @@
 
 					if (filteredTags.length > 0) {
 						selectedIdx = Math.min(selectedIdx + 1, filteredTags.length - 1);
-					} else {
-						selectedIdx = Math.min(selectedIdx + 1, filteredOptions.length - 1);
 					}
 				} else {
 					// if the user types something, reset to the top selection.
@@ -154,18 +139,18 @@
 		/>
 
 		{#if showClearButton && value}
-			<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
+			<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent mr-[18px]">
 				<button
 					class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 					on:click={clearSearchInput}
 				>
-					<XMark className="size-3" strokeWidth="2" />
+					<XMark className="size-4" strokeWidth="2" />
 				</button>
 			</div>
 		{/if}
 	</div>
 
-	{#if focused && (filteredOptions.length > 0 || filteredTags.length > 0)}
+	{#if focused && ( filteredTags.length > 0)}
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
 		<div
 			class="absolute top-[20px] mt-8 left-0 right-1 border border-gray-100 dark:border-gray-900 bg-gray-50 dark:bg-gray-950 rounded-lg z-10 shadow-lg"
@@ -207,38 +192,6 @@
 
 								<div class=" text-gray-500 line-clamp-1">
 									{tag.id}
-								</div>
-							</button>
-						{/each}
-					</div>
-				{:else if filteredOptions.length > 0}
-					<div class="px-1 font-medium dark:text-gray-300 text-gray-700 mb-1">
-						{$i18n.t('Search options')}
-					</div>
-
-					<div class=" max-h-60 overflow-auto">
-						{#each filteredOptions as option, optionIdx}
-							<button
-								class=" px-1.5 py-0.5 flex gap-1 hover:bg-gray-100 dark:hover:bg-gray-900 w-full rounded {selectedIdx ===
-								optionIdx
-									? 'bg-gray-100 dark:bg-gray-900'
-									: ''}"
-								id="search-option-{optionIdx}"
-								on:click|stopPropagation={async () => {
-									const words = value.split(' ');
-
-									words.pop();
-									words.push('tag:');
-
-									value = words.join(' ');
-
-									dispatch('input');
-								}}
-							>
-								<div class="dark:text-gray-300 text-gray-700 font-medium">{option.name}</div>
-
-								<div class=" text-gray-500 line-clamp-1">
-									{option.description}
 								</div>
 							</button>
 						{/each}
