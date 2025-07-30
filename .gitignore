@@ -311,4 +311,4 @@ cypress/screenshots
 /backend/.zenai_storage
 
 /backend/pipe-functions
-backend/set_env.bat
+backend/set_env.ps1
