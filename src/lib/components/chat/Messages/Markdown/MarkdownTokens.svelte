@@ -14,6 +14,7 @@
 	import CodeBlock from '$lib/components/chat/Messages/CodeBlock.svelte';
 	import MarkdownInlineTokens from '$lib/components/chat/Messages/Markdown/MarkdownInlineTokens.svelte';
 	import KatexRenderer from './KatexRenderer.svelte';
+	import SsmlRenderer from './SsmlRenderer.svelte';
 	import AlertRenderer, { alertComponent } from './AlertRenderer.svelte';
 	import Collapsible from '$lib/components/common/Collapsible.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -352,6 +353,8 @@
 		{/if}
 	{:else if token.type === 'space'}
 		<div class="my-2" />
+	{:else if token.type === 'ssml'}
+		<SsmlRenderer content={token.raw} {done} />
 	{:else}
 		{console.log('Unknown token', token)}
 	{/if}

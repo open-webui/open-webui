@@ -12,12 +12,17 @@ const _internal = Symbol('TTSManagerInternal');
 export class TTSElement {
 	private readonly id: string;
 	public readonly content: string;
+	public readonly ssml: boolean;
 	private abortController;
 
-	private engine: 'webAPI' | 'browser-kokoro' | 'external' = 'webAPI';
+	private engine: 'webAPI' | 'browser-kokoro' | 'external' | 'external-all' = 'webAPI';
 	private webApiSpeak: undefined | SpeechSynthesisUtterance;
 	private messageContentParts: string[] = [];
 	private playingAudio: undefined | HTMLAudioElement;
+
+	private getSsmlStripped(): string {
+		return this.content.replace(/<[^>]*>/g, '');
+	}
 
 	[_internal] = {
 		getId: () => this.id,
@@ -52,7 +57,8 @@ export class TTSElement {
 
 					console.log(voice);
 
-					this.webApiSpeak = new SpeechSynthesisUtterance(this.content);
+					// Browser does not support SSML so use stripped
+					this.webApiSpeak = new SpeechSynthesisUtterance(this.getSsmlStripped());
 					this.webApiSpeak.rate = currentSettings.audio?.tts?.playbackRate ?? 1;
 
 					if (voice) {
@@ -63,45 +69,77 @@ export class TTSElement {
 
 					resolve();
 				} else {
-					this.messageContentParts = getMessageContentParts(
-						this.content,
-						currentConfig?.audio?.tts?.split_on ?? 'punctuation'
-					);
-
-					if (!this.messageContentParts.length) {
-						console.log('No content to speak');
-						toast.info('No content to speak');
-
-						reject();
-					}
-
-					console.debug('Prepared message content for TTS', this.messageContentParts);
-
-					if (audioEngine === 'browser-kokoro') {
-						// Kokoro
-						this.engine = 'browser-kokoro';
-
-						const currentTTSWorker = get(TTSWorker);
-						if (currentTTSWorker) {
-							await TTSWorker.set(
-								new KokoroWorker({
-									dtype: currentSettings?.audio?.tts?.engineConfig?.dtype ?? 'fp32'
-								})
-							);
-
-							await get(TTSWorker)?.init?.();
-						}
-					} else {
+					if (audioEngine !== 'browser-kokoro' && this.ssml) {
 						// External (OpenAI, Azure, etc - call backend)
+						// This is an SSML message so send all at once
 
-						this.engine = 'external';
+						this.engine = 'external-all';
+
+						const res = await synthesizeOpenAISpeech(
+							localStorage.token,
+							currentSettings?.audio?.tts?.defaultVoice === currentConfig?.audio.tts.voice
+								? (currentSettings?.audio?.tts?.voice ?? currentConfig?.audio?.tts?.voice)
+								: currentConfig?.audio?.tts?.voice,
+							this.content,
+							undefined,
+							true
+						).catch((error) => {
+							console.error(error);
+							toast.error(`${error}`);
+
+							reject();
+						});
+
+						if (res) {
+							const blob = await res.blob();
+							const blobUrl = URL.createObjectURL(blob);
+							const audio = new Audio(blobUrl);
+							audio.playbackRate = currentSettings.audio?.tts?.playbackRate ?? 1;
+
+							this.playingAudio = audio;
+						}
+
+						resolve();
+					} else {
+						this.messageContentParts = getMessageContentParts(
+							this.getSsmlStripped(),
+							currentConfig?.audio?.tts?.split_on ?? 'punctuation'
+						);
+
+						if (!this.messageContentParts.length) {
+							console.log('No content to speak');
+							toast.info('No content to speak');
+
+							reject();
+						}
+
+						console.debug('Prepared message content for TTS', this.messageContentParts);
+
+						if (audioEngine === 'browser-kokoro') {
+							// Kokoro
+							this.engine = 'browser-kokoro';
+
+							const currentTTSWorker = get(TTSWorker);
+							if (currentTTSWorker) {
+								await TTSWorker.set(
+									new KokoroWorker({
+										dtype: currentSettings?.audio?.tts?.engineConfig?.dtype ?? 'fp32'
+									})
+								);
+
+								await get(TTSWorker)?.init?.();
+							}
+						} else {
+							// External (OpenAI, Azure, etc - call backend)
+
+							this.engine = 'external';
+						}
+
+						resolve();
 					}
-
-					resolve();
 				}
 			});
 		},
-
 		play: async () => {
 			if (this.abortController.signal.aborted) return;
 
@@ -110,7 +148,11 @@ export class TTSElement {
 				this.abortController.signal.addEventListener('abort', () => {
 					if (this.engine === 'webAPI') {
 						speechSynthesis.cancel();
-					} else if (this.engine === 'browser-kokoro' || this.engine === 'external') {
+					} else if (
+						this.engine === 'browser-kokoro' ||
+						this.engine === 'external' ||
+						this.engine === 'external-all'
+					) {
 						this.playingAudio!.pause();
 						this.playingAudio!.currentTime = 0;
 					}
@@ -209,6 +251,12 @@ export class TTSElement {
 							playPart();
 						}
 					}
+				} else if (this.engine === 'external-all') {
+					this.playingAudio!.onended = () => {
+						resolve();
+					};
+
+					this.playingAudio!.play();
 				}
 			});
 		},
@@ -229,9 +277,10 @@ export class TTSElement {
 	onFinish?: () => void;
 	onCancel?: () => void;
 
-	constructor(content: string) {
+	constructor(content: string, ssml?: boolean) {
 		this.id = uuidv4();
 		this.content = content;
+		this.ssml = ssml ?? false;
 		this.abortController = new AbortController();
 	}
 }

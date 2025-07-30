@@ -9,6 +9,7 @@ from pydub import AudioSegment
 from pydub.silence import split_on_silence
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional
+import re
 
 from fnmatch import fnmatch
 import aiohttp
@@ -328,9 +329,15 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         log.exception(e)
         raise HTTPException(status_code=400, detail="Invalid JSON payload")
 
+    stripSsml = lambda content: re.sub(r'<[^>]*>', '', content)
+
     r = None
     if request.app.state.config.TTS_ENGINE == "openai":
         payload["model"] = request.app.state.config.TTS_MODEL
+
+        ssml = payload.get("ssml", False)
+        payload["input"] = stripSsml(payload["input"]) if ssml else payload["input"]
+        payload.pop("ssml", None)
 
         try:
             timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
@@ -458,7 +465,8 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         output_format = request.app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT
 
         try:
-            data = f"""<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="{locale}">
+            ssml = payload.get("ssml", False)
+            data = payload["input"] if ssml else f"""<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="{locale}">
                 <voice name="{language}">{payload["input"]}</voice>
             </speak>"""
             timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
@@ -530,8 +538,10 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             embeddings_dataset[speaker_index]["xvector"]
         ).unsqueeze(0)
 
+        ssml = payload.get("ssml", False)
+
         speech = request.app.state.speech_synthesiser(
-            payload["input"],
+            stripSsml(payload["input"]) if ssml else payload["input"],
             forward_params={"speaker_embeddings": speaker_embedding},
         )
 

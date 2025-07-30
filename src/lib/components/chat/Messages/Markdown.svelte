@@ -5,6 +5,7 @@
 
 	import markedExtension from '$lib/utils/marked/extension';
 	import markedKatexExtension from '$lib/utils/marked/katex-extension';
+	import markedSsmlExtension from "$lib/utils/marked/ssml-extension";
 
 	import MarkdownTokens from './Markdown/MarkdownTokens.svelte';
 
@@ -32,6 +33,7 @@
 		breaks: true
 	};
 
+	marked.use(markedSsmlExtension(options));
 	marked.use(markedKatexExtension(options));
 	marked.use(markedExtension(options));
 

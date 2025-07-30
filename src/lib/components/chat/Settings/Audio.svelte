@@ -35,6 +35,10 @@
 	let voices = [];
 	let voice = '';
 
+	let showSSML = false;
+	let autoplaySSML = false;
+	let SSMLOverridesCall = false;
+
 	// Audio speed control
 	let playbackRate = 1;
 
@@ -84,6 +88,21 @@
 		saveSettings({ speechAutoSend: speechAutoSend });
 	};
 
+	const toggleAutoplaySSML = async () => {
+		autoplaySSML = !autoplaySSML;
+		saveSettings({ audio: { ssml: { autoplay: autoplaySSML } } });
+	};
+
+	const toggleSSMLOverridesCall = async () => {
+		SSMLOverridesCall = !SSMLOverridesCall;
+		saveSettings({ audio: { ssml: { overrideCall: SSMLOverridesCall } } });
+	};
+
+	const toggleShowSSML = async () => {
+		showSSML = !showSSML;
+		saveSettings({ audio: { ssml: { show: showSSML } } });
+	};
+
 	onMount(async () => {
 		playbackRate = $settings.audio?.tts?.playbackRate ?? 1;
 		conversationMode = $settings.conversationMode ?? false;
@@ -103,6 +122,10 @@
 		}
 
 		nonLocalVoices = $settings.audio?.tts?.nonLocalVoices ?? false;
+
+		showSSML = $settings?.audio?.ssml?.show ?? true;
+		autoplaySSML = $settings?.audio?.ssml?.autoplay ?? false;
+		SSMLOverridesCall = $settings?.audio?.ssml?.overrideCall ?? false;
 
 		await getVoices();
 	});
@@ -170,6 +193,10 @@
 					voice: voice !== '' ? voice : undefined,
 					defaultVoice: $config?.audio?.tts?.voice ?? '',
 					nonLocalVoices: $config.audio.tts.engine === '' ? nonLocalVoices : undefined
+				},
+				ssml: {
+					show: showSSML,
+					autoplay: autoplaySSML
 				}
 			}
 		});
@@ -399,6 +426,69 @@
 				</div>
 			</div>
 		{/if}
+
+		<hr class=" border-gray-100 dark:border-gray-850" />
+
+		<div>
+			<div class=" mb-1 text-sm font-medium">{$i18n.t('Speech Block Settings')}</div>
+
+			<div class=" py-0.5 flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">{$i18n.t('Auto-play Speech Blocks')}</div>
+
+				<button
+					class="p-1 px-3 text-xs flex rounded-sm transition"
+					on:click={() => {
+						toggleAutoplaySSML();
+					}}
+					type="button"
+				>
+					{#if autoplaySSML === true}
+						<span class="ml-2 self-center">{$i18n.t('On')}</span>
+					{:else}
+						<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+					{/if}
+				</button>
+			</div>
+
+			<div class=" py-0.5 flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Override Conversation Response with Speech Blocks')}
+				</div>
+
+				<button
+					class="p-1 px-3 text-xs flex rounded-sm transition disabled:opacity-60 disabled:cursor-default"
+					on:click={() => {
+						toggleSSMLOverridesCall();
+					}}
+					type="button"
+					disabled={!autoplaySSML}
+				>
+					{#if SSMLOverridesCall === true}
+						<span class="ml-2 self-center">{$i18n.t('On')}</span>
+					{:else}
+						<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+					{/if}
+				</button>
+			</div>
+
+			<div class=" py-0.5 flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">{$i18n.t('Show Speech Blocks')}</div>
+
+				<button
+					class="p-1 px-3 text-xs flex rounded-sm transition"
+					on:click={() => {
+						toggleShowSSML();
+					}}
+					type="button"
+				>
+					{#if showSSML === true}
+						<span class="ml-2 self-center">{$i18n.t('On')}</span>
+					{:else}
+						<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+					{/if}
+				</button>
+			</div>
+		</div>
 	</div>
 
 	<div class="flex justify-end text-sm font-medium">
