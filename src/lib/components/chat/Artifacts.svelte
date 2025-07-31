@@ -32,6 +32,7 @@
 		getContents();
 	}
 
+	// HERE IS THE CONTENT GET MECHANISM FROM THE MESSAGES
 	const getContents = () => {
 		contents = [];
 		messages.forEach((message) => {
@@ -63,27 +64,29 @@
 					}
 				});
 
-				const inlineHtml = message.content.match(/<html>[\s\S]*?<\/html>/gi);
-				const inlineCss = message.content.match(/<style>[\s\S]*?<\/style>/gi);
-				const inlineJs = message.content.match(/<script>[\s\S]*?<\/script>/gi);
+				if (!htmlContent && !cssContent && !jsContent) {
+					const inlineHtml = message.content.match(/<html>[\s\S]*?<\/html>/gi);
+					const inlineCss = message.content.match(/<style>[\s\S]*?<\/style>/gi);
+					const inlineJs = message.content.match(/<script>[\s\S]*?<\/script>/gi);
 
-				if (inlineHtml) {
-					inlineHtml.forEach((block) => {
-						const content = block.replace(/<\/?html>/gi, ''); // Remove <html> tags
-						htmlContent += content + '\n';
-					});
-				}
-				if (inlineCss) {
-					inlineCss.forEach((block) => {
-						const content = block.replace(/<\/?style>/gi, ''); // Remove <style> tags
-						cssContent += content + '\n';
-					});
-				}
-				if (inlineJs) {
-					inlineJs.forEach((block) => {
-						const content = block.replace(/<\/?script>/gi, ''); // Remove <script> tags
-						jsContent += content + '\n';
-					});
+					if (inlineHtml) {
+						inlineHtml.forEach((block: string) => {
+							const content = block.replace(/<\/?html>/gi, ''); // Remove <html> tags
+							htmlContent += content + '\n';
+						});
+					}
+					if (inlineCss) {
+						inlineCss.forEach((block: string) => {
+							const content = block.replace(/<\/?style>/gi, ''); // Remove <style> tags
+							cssContent += content + '\n';
+						});
+					}
+					if (inlineJs) {
+						inlineJs.forEach((block: string) => {
+							const content = block.replace(/<\/?script>/gi, ''); // Remove <script> tags
+							jsContent += content + '\n';
+						});
+					}
 				}
 
 				if (htmlContent || cssContent || jsContent) {
@@ -142,43 +145,46 @@
 	}
 
 	const iframeLoadHandler = () => {
-		iframeElement.contentWindow.addEventListener(
-			'click',
-			function (e) {
-				const target = e.target.closest('a');
-				if (target && target.href) {
-					e.preventDefault();
-					const url = new URL(target.href, iframeElement.baseURI);
-					if (url.origin === window.location.origin) {
-						iframeElement.contentWindow.history.pushState(
-							null,
-							'',
-							url.pathname + url.search + url.hash
-						);
-					} else {
-						console.info('External navigation blocked:', url.href);
+		if (iframeElement.contentWindow) {
+			iframeElement.contentWindow.addEventListener(
+				'click',
+				function (e) {
+					const target = e.target as HTMLElement;
+					const link = target?.closest('a');
+					if (link && link.href) {
+						e.preventDefault();
+						const url = new URL(link.href, iframeElement.baseURI);
+						if (url.origin === window.location.origin) {
+							iframeElement.contentWindow?.history.pushState(
+								null,
+								'',
+								url.pathname + url.search + url.hash
+							);
+						} else {
+							console.info('External navigation blocked:', url.href);
+						}
 					}
-				}
-			},
-			true
-		);
+				},
+				true
+			);
 
-		// Cancel drag when hovering over iframe
-		iframeElement.contentWindow.addEventListener('mouseenter', function (e) {
-			e.preventDefault();
-			iframeElement.contentWindow.addEventListener('dragstart', (event) => {
-				event.preventDefault();
+			// Cancel drag when hovering over iframe
+			iframeElement.contentWindow.addEventListener('mouseenter', function (e) {
+				e.preventDefault();
+				iframeElement.contentWindow?.addEventListener('dragstart', (event) => {
+					event.preventDefault();
+				});
 			});
-		});
+		}
 	};
 
 	const showFullScreen = () => {
 		if (iframeElement.requestFullscreen) {
 			iframeElement.requestFullscreen();
-		} else if (iframeElement.webkitRequestFullscreen) {
-			iframeElement.webkitRequestFullscreen();
-		} else if (iframeElement.msRequestFullscreen) {
-			iframeElement.msRequestFullscreen();
+		} else if ((iframeElement as any).webkitRequestFullscreen) {
+			(iframeElement as any).webkitRequestFullscreen();
+		} else if ((iframeElement as any).msRequestFullscreen) {
+			(iframeElement as any).msRequestFullscreen();
 		}
 	};
 
@@ -329,6 +335,7 @@
 			<div class=" h-full flex flex-col">
 				{#if contents.length > 0}
 					<div class="max-w-full w-full h-full">
+						<!-- HERE IS THE IFRAME IMPLEMENTATION -->
 						{#if contents[selectedContentIdx].type === 'iframe'}
 							<iframe
 								bind:this={iframeElement}
