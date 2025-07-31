@@ -416,13 +416,15 @@
 			: selected
 				? 'from-gray-100 dark:from-gray-950'
 				: `${$mobile ? 'visible' : 'invisible group-hover:visible'} `}
-            absolute {className === 'pr-2'
+             {className === 'pr-2'
 			? $isRTL
 				? 'left-[8px]'
 				: 'right-[8px]'
 			: $isRTL
 				? 'left-1'
 				: 'right-1'} top-[10px] py-1 {$isRTL ? 'pl-0.5 ml-1.5 pr-5' : 'pr-0.5 mr-1.5 pl-5'}"
+				: 'invisible group-hover:visible '}
+             {className === 'pr-2' ? 'right-[8px]' : 'right-1'} top-[10px] py-1 pr-0.5 mr-1.5 pl-5"
 		on:mouseenter={(e) => {
 			mouseOver = true;
 		}}
