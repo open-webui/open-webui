@@ -93,9 +93,9 @@ class WeaviateClient:
         if not test_connection(url):
             logging.error(f"Could not connect to Weaviate at {url} by https, using http. Please check your configuration.")
             if WEAVIATE_HTTP_PORT == 80:
-                self.base_url = f"https://{WEAVIATE_HTTP_HOST}"
+                self.base_url = f"http://{WEAVIATE_HTTP_HOST}"
             else:
-                self.base_url = f"https://{WEAVIATE_HTTP_HOST}:{WEAVIATE_HTTP_PORT}"
+                self.base_url = f"http://{WEAVIATE_HTTP_HOST}:{WEAVIATE_HTTP_PORT}"
             if not test_connection(self.base_url):
                 return False
             else:
