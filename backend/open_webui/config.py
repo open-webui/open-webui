@@ -1880,6 +1880,10 @@ if VECTOR_DB == "oracle23ai" and ORACLE_DB_USE_WALLET and (not ORACLE_WALLET_DIR
         "Oracle23ai requires setting ORACLE_WALLET_DIR and ORACLE_WALLET_PASSWORD when using wallet authentication."
     )
 
+# S3 Vector
+S3_VECTOR_BUCKET_NAME = os.environ.get("S3_VECTOR_BUCKET_NAME", None)
+S3_VECTOR_REGION = os.environ.get("S3_VECTOR_REGION", None)
+
 ####################################
 # Information Retrieval (RAG)
 ####################################
