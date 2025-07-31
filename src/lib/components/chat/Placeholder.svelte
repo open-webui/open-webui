@@ -7,7 +7,14 @@
 
 	const dispatch = createEventDispatcher();
 
-	import { config, user, models as _models, temporaryChatEnabled, clearMessageInput, mobile } from '$lib/stores';
+	import {
+		config,
+		user,
+		models as _models,
+		temporaryChatEnabled,
+		clearMessageInput,
+		mobile
+	} from '$lib/stores';
 	import { sanitizeResponseContent, extractCurlyBraceWords } from '$lib/utils';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
@@ -93,24 +100,24 @@
 		// Clear input fields
 		prompt = '';
 		files = [];
-		
+
 		// Clear tool and filter selections
 		selectedToolIds = [];
 		selectedFilterIds = [];
-		
+
 		// Reset feature toggles
 		webSearchEnabled = false;
 		imageGenerationEnabled = false;
 		codeInterpreterEnabled = false;
-		
+
 		// Reset model selection
 		atSelectedModel = undefined;
-		
+
 		// Stop any ongoing response generation
 		if (stopResponse) {
 			stopResponse();
 		}
-		
+
 		// Reset the store after clearing
 		clearMessageInput.set(false);
 	}
@@ -193,7 +200,8 @@
 							<h1
 								class="pb-[16px] text-typography-titles text-[28px] leading-[22px] font-Inter_SemiBold"
 							>
-							{$i18n.t('Hey')} {firstName} 👋🏼
+								{$i18n.t('Hey')}
+								{firstName} 👋🏼
 							</h1>
 						</div>
 					</div>

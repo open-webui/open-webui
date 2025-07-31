@@ -176,6 +176,7 @@
 
 	let user = null;
 	export let placeholder = '';
+	$: placeholderText = placeholder || $i18n.t('Send a Message');
 
 	let visionCapableModels = [];
 	$: visionCapableModels = (atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).filter(
@@ -219,11 +220,13 @@
 	let showGovKnoWebSearchToggle = false;
 	let govBtnEnable = false;
 	let showGovKnoButton = false;
-	$: showGovKnoButton = $models.find((model) => model.id.includes($config.govgpt.rag_wog_model_name));
+	$: showGovKnoButton = $models.find((model) =>
+		model.id.includes($config.govgpt.rag_wog_model_name)
+	);
 
 	// Reactive statement to update selectedModelName based on current state
 	$: selectedModelName = (() => {
-				console.log('Reactive selectedModelName update:', {
+		console.log('Reactive selectedModelName update:', {
 			govBtnEnable,
 			webSearchEnabled,
 			attachFileEnabled,
@@ -231,9 +234,9 @@
 			selectedModels,
 			historyMessages: history?.messages ? Object.keys(history.messages).length : 0
 		});
-		
+
 		// Priority order: Gov Knowledge > Web Search > Files > Specific Model
-		
+
 		// Check if Gov Knowledge model is selected (highest priority)
 
 		if (webSearchEnabled) {
@@ -245,17 +248,22 @@
 			console.log('Returning: Gov Knowledge');
 			return 'Gov Knowledge';
 		}
-		
+
 		// Check if web search is enabled (second priority)
-		
-		
+
 		// Check if files are attached (either in current files or in chat history)
-		if (attachFileEnabled || files.length > 0 || 
-			(history?.messages && Object.values(history.messages).some((message: any) => message.files && message.files.length > 0))) {
+		if (
+			attachFileEnabled ||
+			files.length > 0 ||
+			(history?.messages &&
+				Object.values(history.messages).some(
+					(message: any) => message.files && message.files.length > 0
+				))
+		) {
 			console.log('Returning: Attach Files');
 			return 'Attach Files';
 		}
-		
+
 		// Check if a specific model is selected (lowest priority)
 		// if (selectedModels && selectedModels.length > 0 && selectedModels[0] !== '') {
 		// 	const selectedModel = $models.find(model => model.id === selectedModels[0]);
@@ -264,7 +272,7 @@
 		// 		return selectedModel.name || selectedModel.id;
 		// 	}
 		// }
-		
+
 		console.log('Returning: empty string');
 		return '';
 	})();
@@ -278,14 +286,17 @@
 		// Get all messages and sort by timestamp to find the latest
 		const allMessages = Object.values(history.messages) as any[];
 		const sortedMessages = allMessages.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-		
+
 		// Find the last assistant message (which contains the model info)
-		const lastAssistantMessage = sortedMessages.find(msg => msg.role === 'assistant');
-		
+		const lastAssistantMessage = sortedMessages.find((msg) => msg.role === 'assistant');
+
 		if (lastAssistantMessage) {
 			console.log('Last assistant message:', lastAssistantMessage);
 
-			if(lastAssistantMessage.statusHistory && lastAssistantMessage.statusHistory.some((x: any) => x.action === 'web_search')) {
+			if (
+				lastAssistantMessage.statusHistory &&
+				lastAssistantMessage.statusHistory.some((x: any) => x.action === 'web_search')
+			) {
 				webSearchEnabled = true;
 				attachFileEnabled = false;
 				selectedModels = [lastAssistantMessage.model || $config.default_models];
@@ -301,9 +312,9 @@
 				selectedModels = [lastAssistantMessage.model || $config.default_models];
 				return;
 			}
-			
+
 			// Check if any message in history has files
-			const hasFilesInHistory = allMessages.some(msg => msg.files && msg.files.length > 0);
+			const hasFilesInHistory = allMessages.some((msg) => msg.files && msg.files.length > 0);
 			if (hasFilesInHistory) {
 				console.log('Auto-selecting Files model (from history)');
 				govBtnEnable = false;
@@ -313,9 +324,11 @@
 				return;
 			}
 
-			
 			// Check if it's a Gov Knowledge model
-			if (lastAssistantMessage.model && lastAssistantMessage.model.includes($config.govgpt.rag_wog_model_name)) {
+			if (
+				lastAssistantMessage.model &&
+				lastAssistantMessage.model.includes($config.govgpt.rag_wog_model_name)
+			) {
 				console.log('Auto-selecting Gov Knowledge model');
 				govBtnEnable = true;
 				webSearchEnabled = false;
@@ -324,7 +337,7 @@
 				return;
 			}
 		}
-		
+
 		// If none of the specific conditions are met, don't select any model
 		// console.log('No specific model type detected, not auto-selecting any model');
 		// govBtnEnable = false;
@@ -339,11 +352,15 @@
 
 	// Handle click outside the toggle content
 	const handleClickOutside = (event: MouseEvent) => {
-		if (showGovKnoWebSearchToggle && toggleContentElement && !toggleContentElement.contains(event.target as Node)) {
+		if (
+			showGovKnoWebSearchToggle &&
+			toggleContentElement &&
+			!toggleContentElement.contains(event.target as Node)
+		) {
 			// Check if the clicked element is a filter toggle button
 			const target = event.target as HTMLElement;
 			const isFilterButton = target.closest('[data-filter-toggle]');
-			
+
 			if (!isFilterButton) {
 				showGovKnoWebSearchToggle = false;
 			}
@@ -360,24 +377,22 @@
 	});
 
 	const handleFilterToggle = (event) => {
-		event.preventDefault(); 
+		event.preventDefault();
 		showGovKnoWebSearchToggle = !showGovKnoWebSearchToggle;
 	};
 
 	const clearFilterToggle = (event) => {
-		event.preventDefault(); 
+		event.preventDefault();
 		showGovKnoWebSearchToggle = false;
-		webSearchEnabled =false;
-		govBtnEnable=false;
-		if(attachFileEnabled) {
-			files = [];
-		}
-		attachFileEnabled=false;
+		webSearchEnabled = false;
+		govBtnEnable = false;
+		attachFileEnabled = false;
 	};
 
 	const saveGovKnoModel = async () => {
 		govBtnEnable = !govBtnEnable;
-		const modelId = $models.find((model) => model.id.includes($config.govgpt.rag_wog_model_name))?.id || '';
+		const modelId =
+			$models.find((model) => model.id.includes($config.govgpt.rag_wog_model_name))?.id || '';
 		const modelName = govBtnEnable ? modelId : $config.default_models;
 
 		// Update the selectedModels prop to trigger the binding
@@ -897,7 +912,7 @@
 							}}
 						>
 							{#if history.currentId && history.messages && attachFileEnabled && Object.values(history.messages).some((message) => message.files && message.files.length > 0)}<div
-									class="text-left rounded-tl-[12px] rounded-tr-[12px] dark:text-white bg-[#D6E5FC] border border-[#90C9FF] dark:bg-[#004280] dark:border-[#002866] py-[12px] pb-[50px] mb-[-42px] px-[16px] text-[11px] leading-[16px] text-typography-titles "
+									class="text-left rounded-tl-[12px] rounded-tr-[12px] dark:text-white bg-[#D6E5FC] border border-[#90C9FF] dark:bg-[#004280] dark:border-[#002866] py-[12px] pb-[50px] mb-[-42px] px-[16px] text-[11px] leading-[16px] text-typography-titles"
 								>
 									{$i18n.t("Chat is limited to the '{{count}}' uploaded documents.", {
 										count: Object.values(history.messages).reduce(
@@ -907,15 +922,15 @@
 									})}
 								</div>{/if}
 							{#if webSearchEnabled}<div
-								class="text-left rounded-tl-[12px] rounded-tr-[12px] dark:text-white bg-[#D6E5FC] border border-[#90C9FF] dark:bg-[#004280] dark:border-[#002866] py-[12px] pb-[50px] mb-[-42px] px-[16px] text-[11px] leading-[16px] text-typography-titles "
-							>
-								{$i18n.t("Chat is limited to Web Search.")}
-							</div>{/if}
+									class="text-left rounded-tl-[12px] rounded-tr-[12px] dark:text-white bg-[#D6E5FC] border border-[#90C9FF] dark:bg-[#004280] dark:border-[#002866] py-[12px] pb-[50px] mb-[-42px] px-[16px] text-[11px] leading-[16px] text-typography-titles"
+								>
+									{$i18n.t('Chat is limited to Web Search.')}
+								</div>{/if}
 							{#if govBtnEnable}<div
-								class="text-left rounded-tl-[12px] rounded-tr-[12px] dark:text-white bg-[#D6E5FC] border border-[#90C9FF] dark:bg-[#004280] dark:border-[#002866] py-[12px] pb-[50px] mb-[-42px] px-[16px] text-[11px] leading-[16px] text-typography-titles "
-							>
-								{$i18n.t("Chat is limited to the Gov Knowledge Base.")}
-							</div>{/if}
+									class="text-left rounded-tl-[12px] rounded-tr-[12px] dark:text-white bg-[#D6E5FC] border border-[#90C9FF] dark:bg-[#004280] dark:border-[#002866] py-[12px] pb-[50px] mb-[-42px] px-[16px] text-[11px] leading-[16px] text-typography-titles"
+								>
+									{$i18n.t('Chat is limited to the Gov Knowledge Base.')}
+								</div>{/if}
 
 							<div
 								class="p-[24px] flex-1 flex flex-col bounded-[12px] shadow-custom5 relative w-full rounded-3xl transition bg-light-bg dark:text-gray-100"
@@ -1017,8 +1032,8 @@
 								<div class="">
 									{#if $settings?.richTextInput ?? true}
 										<div
-										dir={ $isRTL ? 'rtl' : 'ltr' }
-											class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-gray-100 outline-hidden w-full text-[16px] leading-[24px] text-disabled resize-none h-fit max-h-80 overflow-auto"
+											dir={$isRTL ? 'rtl' : 'ltr'}
+											class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-gray-100 outline-hidden w-full text-[16px] leading-[24px] text-disabled resize-none h-fit max-h-[175px] overflow-auto"
 											id="chat-input-container"
 										>
 											<RichTextInput
@@ -1033,7 +1048,7 @@
 															navigator.maxTouchPoints > 0 ||
 															navigator.msMaxTouchPoints > 0
 														))}
-												placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
+												placeholder={placeholderText}
 												largeTextAsFile={($settings?.largeTextAsFile ?? false) && !shiftKey}
 												autocomplete={$config?.features?.enable_autocomplete_generation &&
 													($settings?.promptAutocomplete ?? false)}
@@ -1468,7 +1483,10 @@
 									{/if}
 								</div>
 
-								<div class=" flex justify-between mt-[48px] max-w-full" dir={ $isRTL ? 'rtl' : 'ltr' }>
+								<div
+									class=" flex justify-between mt-[48px] max-w-full"
+									dir={$isRTL ? 'rtl' : 'ltr'}
+								>
 									<div class="ml-1 self-end flex items-center flex-1 max-w-[80%]">
 										<!--<InputMenu
 											bind:selectedToolIds
@@ -1618,17 +1636,17 @@
 														data-filter-toggle
 														on:click={handleFilterToggle}
 														class="flex items-center px-[12px] gap-[4px] py-[8px] shadow-custom3 border border-[#E5EBF3] bg-[#FBFCFC] dark:border-[#004280] dark:bg-[#004280] text-typography-titles text-[14px] leading-[22px] rounded-full"
-														><Filter />{ $mobile ? '' : $i18n.t('Tools')}</button
+														><Filter />{$mobile ? '' : $i18n.t('Tools')}</button
 													>
 													{#if selectedModelName !== ''}<div
 															class="px-[8px] font-Inter_Medium flex items-center gap-[8px] text-[14px] leading-[22px] text-typography-titles"
 														>
 															{$i18n.t(selectedModelName)}
-															<button 
+															<button
 																data-filter-toggle
-																class="flex items-center" 
-																on:click={(e)=>clearFilterToggle(e)}
-															><Cross /></button>
+																class="flex items-center"
+																on:click={clearFilterToggle}><Cross /></button
+															>
 														</div>{/if}
 												</div>
 
@@ -1677,7 +1695,7 @@
 																	<span
 																		class="font-heading font-medium text-[14px] leading-[22px] text-[#36383b] dark:text-white text-left whitespace-nowrap"
 																	>
-																	{$i18n.t('Attach files')}
+																		{$i18n.t('Attach files')}
 																	</span>
 																</div>
 																{#if attachFileEnabled && files.length > 0}<CheckFilter />{/if}
@@ -1756,7 +1774,31 @@
 															</Tooltip>
 														{/if}
 
-														
+														{#if showFileUploadButton}
+															<button
+																on:click={() => {
+																	attachFileEnabled = !attachFileEnabled;
+																	showGovKnoWebSearchToggle = false;
+																	filesInputElement.click();
+																	govBtnEnable = false;
+																	webSearchEnabled = false;
+																}}
+																type="button"
+																class="flex items-center flex justify-between w-full p-[16px] rounded-[12px] hover:bg-gradient-bg-2 transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden dark:hover:bg-gray-700 {attachFileEnabled
+																	? 'bg-gradient-bg-2 dark:text-sky-300  dark:bg-sky-200/5'
+																	: 'text-gray-600 dark:text-white '}"
+															>
+																<div class="flex items-center justify-center gap-[8px]">
+																	<Attach />
+																	<span
+																		class="font-heading font-medium text-[14px] leading-[22px] text-[#36383b] dark:text-white text-left whitespace-nowrap"
+																	>
+																		{$i18n.t('Attach files')}
+																	</span>
+																</div>
+																{#if attachFileEnabled && files.length > 0}<CheckFilter />{/if}
+															</button>
+														{/if}
 													</div>
 												{/if}
 												{#if !$mobile}

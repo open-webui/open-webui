@@ -1,5 +1,4 @@
 <script lang="ts">
-
 	import Bolt from '$lib/components/icons/Bolt.svelte';
 	import { onMount, getContext, createEventDispatcher } from 'svelte';
 	import i18n from '$lib/i18n';
@@ -17,17 +16,17 @@
 
 	// Track current locale for reactivity
 	let currentLocale = localStorage.getItem('locale') || 'en-US';
-	
+
 	// Create a reactive statement that updates when locale changes
 	$: {
 		currentLocale = localStorage.getItem('locale') || 'en-US';
 	}
-	
+
 	$: if (suggestionPrompts) {
 		sortedPrompts = [...(suggestionPrompts ?? [])].sort(() => Math.random() - 0.5);
 		selectedIndex = -1;
 	}
-	
+
 	// Listen for storage changes (when locale is changed from other components)
 	onMount(() => {
 		const handleStorageChange = (e: StorageEvent) => {
@@ -35,9 +34,9 @@
 				currentLocale = e.newValue || 'en-US';
 			}
 		};
-		
+
 		window.addEventListener('storage', handleStorageChange);
-		
+
 		return () => {
 			window.removeEventListener('storage', handleStorageChange);
 		};
@@ -69,12 +68,12 @@
 
 <div class="w-full max-w-[1020px] m-auto flex items-center justify-center">
 	{#if suggestionPrompts.length > 0}
-	<div
-	class="gap-[8px] mt-4 w-full justify-center {$mobile
-		? 'flex justify-start overflow-x-auto scrollbar-none items-center mx-4'
-		: 'grid'}"
-	style={!$mobile ? 'grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));' : ''}
->
+		<div
+			class="gap-[8px] mt-4 w-full justify-center {$mobile
+				? 'flex justify-start overflow-x-auto scrollbar-none items-center mx-4'
+				: 'grid'}"
+			style={!$mobile ? 'grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));' : ''}
+		>
 			{#each sortedPrompts as prompt, idx (prompt.id || prompt.content)}
 				<button
 					class="flex {$mobile
@@ -82,8 +81,8 @@
 						: 'shadow-custom3 flex-col items-start'} text-typography-subtext p-[16px] rounded-[8px] whitespace-nowrap overflow-hidden text-ellipsis transition
 							bg-light-bg
 							{selectedIndex === idx
-								? 'border border-[##90C9FF] dark:border-[##90C9FF] text-typography-titles dark:text-white shadow-lg'
-								: 'border border-[#E5EBF3] hover:border-[#90C9FF] dark:border-[#2D3642] dark:hover:border-[#004280] hover:text-typography-titles dark:hover:text-white'}"
+						? 'border border-[##90C9FF] dark:border-[##90C9FF] text-typography-titles dark:text-white shadow-lg'
+						: 'border border-[#E5EBF3] hover:border-[#90C9FF] dark:border-[#2D3642] dark:hover:border-[#004280] hover:text-typography-titles dark:hover:text-white'}"
 					style="animation-delay: {idx * 60}ms;"
 					on:click={() => handlePromptSelect(prompt, idx)}
 				>
@@ -93,7 +92,7 @@
 						<MaterialIcon name="lightbulb" className="w-[24px] h-[24px]" />
 					{/if}
 					<div
-						class="w-full text-left {$mobile
+						class="w-full text-justify {$mobile
 							? ' '
 							: ' mt-[12px]'} text-[14px] leading-[22px] whitespace-nowrap"
 					>
