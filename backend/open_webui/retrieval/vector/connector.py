@@ -23,10 +23,6 @@ elif VECTOR_DB == "weaviate":
     VECTOR_DB_CLIENT = WeaviateClient()
     if not VECTOR_DB_CLIENT.warmup():
         logging.error("Weaviate client warmup failed. Please check your configuration.")
-        VECTOR_DB = "chroma"  # Fallback to Chroma if Weaviate fails
-        from open_webui.retrieval.vector.dbs.chroma import ChromaClient
-
-        VECTOR_DB_CLIENT = ChromaClient()
         
 else:
     from open_webui.retrieval.vector.dbs.chroma import ChromaClient
