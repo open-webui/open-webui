@@ -489,15 +489,7 @@ async def get_tool_servers_data(
         if server.get("config", {}).get("enable"):
             # Path (to OpenAPI spec URL) can be either a full URL or a path to append to the base URL
             openapi_path = server.get("path", "openapi.json")
-            if "://" in openapi_path:
-                # If it contains "://", it's a full URL
-                full_url = openapi_path
-            else:
-                if not openapi_path.startswith("/"):
-                    # Ensure the path starts with a slash
-                    openapi_path = f"/{openapi_path}"
-
-                full_url = f"{server.get('url')}{openapi_path}"
+            full_url = build_tool_server_url(server.get("url"), openapi_path)
 
             info = server.get("info", {})
 
@@ -643,3 +635,16 @@ async def execute_tool_server(
         error = str(err)
         log.exception(f"API Request Error: {error}")
         return {"error": error}
+
+
+def build_tool_server_url(url: Optional[str], path: str) -> str:
+    """
+    Build the full URL for a tool server, given a base url and a path.
+    """
+    if "://" in path:
+        # If it contains "://", it's a full URL
+        return path
+    if not path.startswith("/"):
+        # Ensure the path starts with a slash
+        path = f"/{path}"
+    return f"{url}{path}"
