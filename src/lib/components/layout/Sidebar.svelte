@@ -619,7 +619,7 @@
 					<!-- Menu Icon behaves like other sidebar buttons -->
 
 					<a
-						class="hover:bg-gradient-bg-2 pl-[8px] flex items-center rounded-lg transition-all duration-300 ease-in-out"
+						class="hover:bg-gradient-bg-2 ml-[8px] flex items-center rounded-lg transition-all duration-300 ease-in-out"
 						class:justify-center={!$showSidebar}
 						href="#"
 						on:click={onSidebarClick}
