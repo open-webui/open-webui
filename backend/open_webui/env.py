@@ -385,6 +385,23 @@ WEBUI_AUTH_TRUSTED_NAME_HEADER = os.environ.get("WEBUI_AUTH_TRUSTED_NAME_HEADER"
 WEBUI_AUTH_TRUSTED_GROUPS_HEADER = os.environ.get(
     "WEBUI_AUTH_TRUSTED_GROUPS_HEADER", None
 )
+WEBUI_AUTH_TRUSTED_ROLES_HEADER = os.environ.get(
+    "WEBUI_AUTH_TRUSTED_ROLES_HEADER", None
+)
+WEBUI_AUTH_TRUSTED_HEADER_ALLOWED_ROLES = [
+    role.strip()
+    for role in os.environ.get(
+        "WEBUI_AUTH_TRUSTED_HEADER_ALLOWED_ROLES", "user,admin"
+    ).split(",")
+    if role.strip()
+]
+WEBUI_AUTH_TRUSTED_HEADER_ADMIN_ROLES = [
+    role.strip()
+    for role in os.environ.get("WEBUI_AUTH_TRUSTED_HEADER_ADMIN_ROLES", "admin").split(
+        ","
+    )
+    if role.strip()
+]
 
 
 BYPASS_MODEL_ACCESS_CONTROL = (
