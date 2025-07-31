@@ -1501,5 +1501,9 @@
 	"Help us improve, what went wrong with the response?": "ساعدنا على التحسين، ما الخطأ الذي حدث في الاستجابة؟",
 	"Group": "مجموعة",
 	"Logout": "تسجيل الخروج",
-	"How can I assist you with your work today?": "كيف يمكنني مساعدتك في عملك اليوم؟"
+	"How can I assist you with your work today?": "كيف يمكنني مساعدتك في عملك اليوم؟",
+	"waitList": {
+		"title": "أنت على قائمة الانتظار!",
+		"description": "أشياء كبيرة قادمة. سنقوم بفتح الوصول قريبًا، وأنت بالفعل على القائمة!"
+	}
 }

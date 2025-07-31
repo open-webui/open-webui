@@ -2,6 +2,7 @@
 	import { getAdminDetails } from '$lib/apis/auths';
 	import { onMount, tick, getContext } from 'svelte';
 	import { config } from '$lib/stores';
+	import SplashContainer from '$lib/components/common/Splash/index.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -19,46 +20,27 @@
 	<div class="relative w-full h-full flex flex-col">
 		<!-- Login using Credentials button in top right corner -->
 
-		<div id="splash-screen" class="login">
-			<div class="relative w-full h-full flex flex-col">
-				<div class="splash-content">
-					<div class="logo-container">
-						<img src="/GovGPT.svg" alt="GovGPT Logo" class="logo-image" />
-					</div>
-					<div class="title-container">
-						<h1 class="govgpt-title">GovGPT</h1>
-					</div>
-					<div class="tagline-container">
-						<p class="tagline">Amplifying Government Potential</p>
-					</div>
-					<p class="mb-[30px] text-typography-titles text-[28px] leading-[36px]">
-						Welcome to the future of Government Intelligence
-					</p>
+		<SplashContainer>
+			<div class="tagline-container">
+				<p class="waiting text-typography-titles text-[28px] leading-[36px]">
+					{$i18n.t('waitList.title')}
+				</p>
+				<p class="text-[#979EAD] mt-5 description">
+					{$i18n.t('waitList.description')}
+				</p>
+			</div>
 
-					<p class="text-typography-subtext text-[14px] leading-[24px]">
-						You’re on the GovGPT waitlist! We’re unlocking access in phases. We’ll let you know by
-						email  as soon as it’s your turn.
-					</p>
-					<div class=" mt-6 mx-auto relative group w-fit">
-						<button
-							class="text-xs text-center w-full mt-2 text-gray-400 underline"
-							on:click={async () => {
-								localStorage.removeItem('token');
-								location.href = '/auth';
-							}}>{$i18n.t('Sign Out')}</button
-						>
-					</div>
-				</div>
+			<div class=" mt-6 mx-auto relative group w-fit">
+				<button
+					type="button"
+					class="flex h-[48px] w-[200px] sm:w-[250px] md:w-[300px] px-[16px] py-[6px] pl-[8px] justify-center items-center gap-[4px] self-stretch rounded-[12px] bg-gradient-to-r from-[#A5C7E6] via-[#CEE7FF] to-[#A5C7E6] shadow-[inset_6px_3px_8px_0_#BFDBF6]"
+					on:click={async () => {
+						localStorage.removeItem('token');
+						location.href = '/auth';
+					}}>{$i18n.t('Logout')}</button
+				>
 			</div>
-			<div
-				class="p-[16px] hidden sm:block fixed bottom-0 left-0 right-0 text-center text-typography-subtext text-[10px] leading-[16px] bg-[#072D5A] z-50"
-			>
-				<span class="text-typography-titles">Disclaimer:</span>
-				GovGPT is powered by artificial intelligence and may occasionally produce incorrect or outdated
-				responses. Please verify critical information from official sources or consult your department
-				head for confirmation.
-			</div>
-		</div>
+		</SplashContainer>
 	</div>
 </div>
 
@@ -121,3 +103,24 @@
 		</div>
 	</div>
 </div> -->
+<style>
+	@media (max-width: 768px) {
+		.waiting {
+			font-size: 24px;
+		}
+
+		.description {
+			font-size: 12px;
+		}
+	}
+
+	@media (max-width: 480px) {
+		.waiting {
+			font-size: 20px;
+		}
+
+		.description {
+			font-size: 10px;
+		}
+	}
+</style>
