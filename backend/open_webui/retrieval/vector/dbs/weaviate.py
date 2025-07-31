@@ -16,13 +16,33 @@ from open_webui.env import SRC_LOG_LEVELS
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
-WEAVIATE_URL = f"http://{WEAVIATE_HTTP_HOST}:{WEAVIATE_HTTP_PORT}"
-
 def get_headers() -> dict:
     return {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {WEAVIATE_API_KEY}"
     }
+    
+def test_connection(url):
+    headers = get_headers()
+    
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+        if response.status_code == 200:
+            return True
+        else:
+            return False
+    except:
+        return False
+
+WEAVIATE_URL = f"https://{WEAVIATE_HTTP_HOST}:{WEAVIATE_HTTP_PORT}"
+
+url = f"{WEAVIATE_URL}/v1/schema"
+
+
+if not test_connection(url):
+    logging.error(f"Could not connect to Weaviate at {url} by https, using http. Please check your configuration.")
+    WEAVIATE_URL = f"http://{WEAVIATE_HTTP_HOST}:{WEAVIATE_HTTP_PORT}"
+
 
 def build_graphql_filter(filter_dict, operator="Equal"):
     """
