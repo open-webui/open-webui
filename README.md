@@ -230,6 +230,47 @@ If you are running Open WebUI in an offline environment, you can set the `HF_HUB
 export HF_HUB_OFFLINE=1
 ```
 
+## RAG Embeddings Configuration 📚
+
+Open WebUI supports various embedding providers for Retrieval Augmented Generation (RAG). You can configure different embedding engines using environment variables:
+
+### Supported Embedding Providers
+
+- **OpenAI**: Default provider with various models
+- **Google**: Support for Google's text-embedding models
+- **Cohere**: Enterprise-grade embedding models
+- **Ollama**: Local embedding models
+
+### Configuration Example
+
+```bash
+# Google Embeddings
+RAG_EMBEDDING_ENGINE=google
+RAG_EMBEDDING_MODEL=text-embedding-004
+OPENAI_API_KEY=${GOOGLE_API_KEY}
+
+# OpenAI Embeddings (default)
+RAG_EMBEDDING_ENGINE=openai
+RAG_EMBEDDING_MODEL=text-embedding-3-small
+OPENAI_API_KEY=${OPENAI_API_KEY}
+```
+
+### ⚠️ Important: Embedding Migration Considerations
+
+When switching between embedding providers, be aware that:
+
+- **Different models have unique semantic biases** - What OpenAI embeddings consider similar may differ from Google's or Cohere's representations
+- **Downstream prompts may require minor adjustments** - The same query might retrieve different context after switching providers
+- **Multilingual setups are particularly sensitive** - Cross-language semantic relationships vary between providers
+- **Silent context mismatches can occur** - The system may retrieve seemingly relevant but actually incorrect context
+
+### Best Practices for Embedding Migration
+
+1. **Test thoroughly before production deployment** - Compare retrieval quality across different document types
+2. **Implement evaluation frameworks** - Set up metrics to detect semantic drift
+3. **Consider hybrid approaches** - Some production systems use multiple embedding models for robustness
+4. **Document your testing process** - Keep records of what works best for your specific use case
+
 ## What's Next? 🌟
 
 Discover upcoming features on our roadmap in the [Open WebUI Documentation](https://docs.openwebui.com/roadmap/).
