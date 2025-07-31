@@ -247,7 +247,7 @@
 								/>
 							</div>
 						{:else if $showArtifacts}
-							<Artifacts {history} overlay={dragged} />
+							<!-- <Artifacts {history} overlay={dragged} />-->
 						{:else if $showOverview}
 							<Overview
 								{history}
