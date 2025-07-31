@@ -2221,6 +2221,9 @@
 					{stopResponse}
 					{showMessage}
 					{eventTarget}
+					on:sendMessage={(e) => {
+						prompt = e.detail.message;
+					}}
 				/>
 			</PaneGroup>
 		</div>

@@ -109,6 +109,19 @@
 
 							<${''}script>
                             	${jsContent}
+							
+								// Function to send message to parent window
+								function sendToChat(message) {
+									if (window.parent) {
+										window.parent.postMessage({
+											type: 'chat-message',
+											message: message
+										}, '*');
+									}
+								}
+								
+								// Make sendToChat available globally
+								window.sendToChat = sendToChat;
 							</${''}script>
                         </body>
                         </html>
@@ -146,6 +159,15 @@
 
 	const iframeLoadHandler = () => {
 		if (iframeElement.contentWindow) {
+			window.addEventListener('message', function (event) {
+				// Here we verify the message is from the iframe
+				if (event.source === iframeElement.contentWindow) {
+					if (event.data.type === 'chat-message') {
+						dispatch('sendMessage', { message: event.data.message });
+					}
+				}
+			});
+
 			iframeElement.contentWindow.addEventListener(
 				'click',
 				function (e) {
@@ -342,7 +364,8 @@
 								title="Content"
 								srcdoc={contents[selectedContentIdx].content}
 								class="w-full border-0 h-full rounded-none"
-								sandbox="allow-scripts allow-downloads{($settings?.iframeSandboxAllowForms ?? false)
+								sandbox="allow-scripts allow-downloads allow-modals{($settings?.iframeSandboxAllowForms ??
+								false)
 									? ' allow-forms'
 									: ''}{($settings?.iframeSandboxAllowSameOrigin ?? false)
 									? ' allow-same-origin'

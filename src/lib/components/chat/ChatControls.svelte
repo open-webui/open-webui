@@ -3,7 +3,7 @@
 	import { slide } from 'svelte/transition';
 	import { Pane, PaneResizer } from 'paneforge';
 
-	import { onDestroy, onMount, tick } from 'svelte';
+	import { onDestroy, onMount, tick, createEventDispatcher } from 'svelte';
 	import { mobile, showControls, showCallOverlay, showOverview, showArtifacts } from '$lib/stores';
 
 	import Modal from '../common/Modal.svelte';
@@ -31,6 +31,8 @@
 	export let modelId;
 
 	export let pane;
+	
+	const dispatch = createEventDispatcher();
 
 	let mediaQuery;
 	let largeScreen = false;
@@ -166,7 +168,12 @@
 							/>
 						</div>
 					{:else if $showArtifacts}
-						<Artifacts {history} />
+						<Artifacts 
+							{history} 
+							on:sendMessage={(e) => {
+								dispatch('sendMessage', e.detail);
+							}}
+						/>
 					{:else if $showOverview}
 						<Overview
 							{history}
@@ -247,7 +254,13 @@
 								/>
 							</div>
 						{:else if $showArtifacts}
-							<Artifacts {history} overlay={dragged} />
+							<Artifacts 
+								{history} 
+								overlay={dragged}
+								on:sendMessage={(e) => {
+									dispatch('sendMessage', e.detail);
+								}}
+							/>
 						{:else if $showOverview}
 							<Overview
 								{history}
