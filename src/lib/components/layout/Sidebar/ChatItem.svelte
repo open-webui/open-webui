@@ -40,6 +40,7 @@
 	import Document from '$lib/components/icons/Document.svelte';
 	import Sparkles from '$lib/components/icons/Sparkles.svelte';
 	import { generateTitle } from '$lib/apis';
+	import { isRTL } from '$lib/i18n';
 
 	export let className = '';
 
@@ -376,7 +377,7 @@
 			draggable="false"
 		>
 			<div class=" flex items-center justify-between self-center flex-1 w-full">
-				<div dir="auto" class="text-left self-center overflow-hidden w-full h-[22px] mr-[8px] truncate">
+				<div dir="auto" class="{$isRTL ? 'text-right' : 'text-left'} self-center overflow-hidden w-full h-[22px] {$isRTL ? 'ml-[8px]' : 'mr-[8px]'} truncate">
 					{title}
 				</div>
 				{#if className === 'pinned'}<div class="visible group-hover:invisible">
@@ -406,8 +407,8 @@
 				? 'from-gray-100 dark:from-gray-950'
 				: `${$mobile ? 'visible' : 'invisible group-hover:visible'} `}
             absolute {className === 'pr-2'
-			? 'right-[8px]'
-			: 'right-1'} top-[10px] py-1 pr-0.5 mr-1.5 pl-5"
+			? ($isRTL ? 'left-[8px]' : 'right-[8px]')
+			: ($isRTL ? 'left-1' : 'right-1')} top-[10px] py-1 {$isRTL ? 'pl-0.5 ml-1.5 pr-5' : 'pr-0.5 mr-1.5 pl-5'}"
 		on:mouseenter={(e) => {
 			mouseOver = true;
 		}}
