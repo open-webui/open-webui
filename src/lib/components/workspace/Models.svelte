@@ -216,6 +216,28 @@
 			window.removeEventListener('blur-sm', onBlur);
 		};
 	});
+
+	$: langCode = $i18n.language?.split('-')[0] || 'de';
+
+	function getTranslatedLabel(label, langCode) {
+		if (!label) return '';
+
+		try {
+			// If it's already an object, use it directly
+			const translations = typeof label === 'object' ? label : JSON.parse(label);
+			return (
+				translations[langCode] ||
+				translations.en ||
+				translations.de ||
+				translations.fr ||
+				translations.it ||
+				''
+			);
+		} catch (e) {
+			// If parsing fails, return the original value
+			return label;
+		}
+	}
 </script>
 
 <svelte:head>
@@ -350,7 +372,9 @@
 								className=" w-fit"
 								placement="top-start"
 							>
-								<div class=" font-semibold line-clamp-1">{model.name}</div>
+								<div class=" font-semibold line-clamp-1">
+									{getTranslatedLabel(model.name, langCode)}
+								</div>
 							</Tooltip>
 
 							<div class="flex gap-1 text-xs overflow-hidden">

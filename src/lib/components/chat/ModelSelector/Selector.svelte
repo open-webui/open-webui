@@ -333,6 +333,28 @@
 			);
 		}
 	};
+
+	$: langCode = $i18n.language?.split('-')[0] || 'de';
+
+	function getTranslatedLabel(label, langCode) {
+		if (!label) return '';
+
+		try {
+			// If it's already an object, use it directly
+			const translations = typeof label === 'object' ? label : JSON.parse(label);
+			return (
+				translations[langCode] ||
+				translations.en ||
+				translations.de ||
+				translations.fr ||
+				translations.it ||
+				''
+			);
+		} catch (e) {
+			// If parsing fails, return the original value
+			return label;
+		}
+	}
 </script>
 
 <DropdownMenu.Root
@@ -367,7 +389,7 @@
 			}}
 		>
 			{#if selectedModel}
-				{selectedModel.label}
+				{getTranslatedLabel(selectedModel.label, langCode)}
 			{:else}
 				{placeholder}
 			{/if}

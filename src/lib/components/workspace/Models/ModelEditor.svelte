@@ -20,6 +20,7 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import { getNoteList } from '$lib/apis/notes';
+	import PencilSolid from '$lib/components/icons/PencilSolid.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -113,7 +114,7 @@
 		loading = true;
 
 		info.id = id;
-		info.name = name;
+		info.name = getTitleForBackend();
 
 		if (id === '') {
 			toast.error('Model ID is required.');
@@ -273,6 +274,60 @@
 
 		loaded = true;
 	});
+
+	let showPromptModal = false;
+	let newPrompt = { de: 'de', en: 'en', fr: 'fr', it: 'it' };
+	let editingIndex = null; // null = new prompt, number = editing existing prompt
+	$: langCode = $i18n.language?.split('-')[0] || 'de';
+
+	// Add state for title editing
+	let showTitleModal = false;
+
+	// Object for editing translations
+	let titleTranslations = {
+		de: '',
+		en: '',
+		fr: '',
+		it: ''
+	};
+
+	// Call this when the component loads with existing data
+	function initializeTitleTranslations(existingName) {
+		if (existingName) {
+			try {
+				// If existingName is already an object, use it directly
+				if (typeof existingName === 'object') {
+					titleTranslations = { de: '', en: '', fr: '', it: '', ...existingName };
+				} else {
+					// If it's a JSON string, parse it
+					const parsed = JSON.parse(existingName);
+					titleTranslations = { de: '', en: '', fr: '', it: '', ...parsed };
+				}
+			} catch (e) {
+				// If parsing fails, treat as a simple string and put it in the default language
+				titleTranslations = { de: existingName, en: '', fr: '', it: '' };
+			}
+		} else {
+			titleTranslations = { de: '', en: '', fr: '', it: '' };
+		}
+	}
+
+	$: if (info?.name) {
+		initializeTitleTranslations(info.name);
+	}
+
+	// Keep info.name in sync as JSON string
+	$: info.name = JSON.stringify(titleTranslations);
+
+	// Function to get the JSON string for the backend
+	function getTitleForBackend() {
+		return JSON.stringify(titleTranslations);
+	}
+
+	// Function to get the display value for the current language
+	function getTitleDisplayValue(langCode) {
+		return titleTranslations[langCode] || titleTranslations.de || '';
+	}
 </script>
 
 {#if loaded}
@@ -445,186 +500,140 @@
 
 				<div class="w-full">
 					<div class="mt-2 my-2 flex flex-col">
-						<div class="flex-1">
-							<div>
-								<input
-									class="text-3xl font-semibold w-full bg-transparent outline-hidden"
-									placeholder={$i18n.t('Model Name')}
-									bind:value={name}
-									required
-								/>
+						<!-- INPUT ROW WITH LANG-SPECIFIC VALUE -->
+						<div class="w-full">
+							<div class="mt-2 my-2 flex flex-col">
+								<!-- INPUT ROW WITH LANG-SPECIFIC VALUE -->
+								<div class="flex-1">
+									<div class="flex items-center">
+										<input
+											class="text-3xl font-semibold w-full bg-transparent outline-hidden"
+											placeholder={$i18n.t('Model Name')}
+											bind:value={titleTranslations[langCode]}
+											required
+										/>
+
+										{#if titleTranslations[langCode]}
+											<button class="ml-2" type="button" on:click={() => (showTitleModal = true)}>
+												<div class="self-center mr-2">
+													<PencilSolid />
+												</div>
+											</button>
+										{/if}
+									</div>
+								</div>
+
+								<div class="flex-1">
+									<div>
+										<input
+											class="text-xs w-full bg-transparent text-gray-500 outline-hidden"
+											placeholder={$i18n.t('Model ID')}
+											bind:value={id}
+											disabled={edit}
+											required
+										/>
+									</div>
+								</div>
 							</div>
-						</div>
-
-						<div class="flex-1">
-							<div>
-								<input
-									class="text-xs w-full bg-transparent text-gray-500 outline-hidden"
-									placeholder={$i18n.t('Model ID')}
-									bind:value={id}
-									disabled={edit}
-									required
-								/>
-							</div>
-						</div>
-					</div>
-
-					{#if preset}
-						<div class="my-1">
-							<div class=" text-sm font-semibold mb-1">{$i18n.t('Base Model (From)')}</div>
-
-							<div>
-								<select
-									class="text-sm w-full bg-transparent outline-hidden"
-									placeholder="Select a base model (e.g. llama3, gpt-4o)"
-									bind:value={info.base_model_id}
-									on:change={(e) => {
-										addUsage(e.target.value);
-									}}
-									required
-								>
-									<option value={null} class=" text-gray-900"
-										>{$i18n.t('Select a base model')}</option
-									>
-									{#each $models.filter((m) => (model ? m.id !== model.id : true) && !m?.preset && m?.owned_by !== 'arena') as model}
-										<option value={model.id} class=" text-gray-900">{model.name}</option>
-									{/each}
-								</select>
-							</div>
-						</div>
-					{/if}
-
-					<div class="my-1">
-						<div class="mb-1 flex w-full justify-between items-center">
-							<div class=" self-center text-sm font-semibold">{$i18n.t('Description')}</div>
-
-							<button
-								class="p-1 text-xs flex rounded-sm transition"
-								type="button"
-								aria-pressed={enableDescription ? 'true' : 'false'}
-								aria-label={enableDescription
-									? $i18n.t('Custom description enabled')
-									: $i18n.t('Default description enabled')}
-								on:click={() => {
-									enableDescription = !enableDescription;
-								}}
-							>
-								{#if !enableDescription}
-									<span class="ml-2 self-center">{$i18n.t('Default')}</span>
-								{:else}
-									<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
-								{/if}
-							</button>
-						</div>
-
-						{#if enableDescription}
-							<Textarea
-								className=" text-sm w-full bg-transparent outline-hidden resize-none overflow-y-hidden "
-								placeholder={$i18n.t('Add a short description about what this model does')}
-								bind:value={info.meta.description}
-							/>
-						{/if}
-					</div>
-
-					<div class=" mt-2 my-1">
-						<div class="">
-							<Tags
-								tags={info?.meta?.tags ?? []}
-								on:delete={(e) => {
-									const tagName = e.detail;
-									info.meta.tags = info.meta.tags.filter((tag) => tag.name !== tagName);
-								}}
-								on:add={(e) => {
-									const tagName = e.detail;
-									if (!(info?.meta?.tags ?? null)) {
-										info.meta.tags = [{ name: tagName }];
-									} else {
-										info.meta.tags = [...info.meta.tags, { name: tagName }];
-									}
-								}}
-							/>
-						</div>
-					</div>
-
-					<div class="my-2">
-						<div class="px-3 py-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
-							<AccessControl
-								bind:accessControl
-								accessRoles={['read', 'write']}
-								allowPublic={$user?.permissions?.sharing?.public_models || $user?.role === 'admin'}
-							/>
-						</div>
-					</div>
-
-					<hr class=" border-gray-100 dark:border-gray-850 my-1.5" />
-
-					<div class="my-2">
-						<div class="flex w-full justify-between">
-							<div class=" self-center text-sm font-semibold">{$i18n.t('Model Params')}</div>
-						</div>
-
-						<div class="mt-2">
-							<div class="my-1">
-								<div class=" text-xs font-semibold mb-2">{$i18n.t('System Prompt')}</div>
+							<div class="flex-1">
 								<div>
-									<Textarea
-										className=" text-sm w-full bg-transparent outline-hidden resize-none overflow-y-hidden "
-										placeholder={`Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.`}
-										rows={4}
-										bind:value={system}
+									<input
+										class="text-xs w-full bg-transparent text-gray-500 outline-hidden"
+										placeholder={$i18n.t('Model ID')}
+										bind:value={id}
+										disabled={edit}
+										required
 									/>
 								</div>
 							</div>
-
-							<div class="flex w-full justify-between">
-								<div class=" self-center text-xs font-semibold">
-									{$i18n.t('Advanced Params')}
-								</div>
-
-								<button
-									class="p-1 px-3 text-xs flex rounded-sm transition"
-									type="button"
-									on:click={() => {
-										showAdvanced = !showAdvanced;
-									}}
-								>
-									{#if showAdvanced}
-										<span class="ml-2 self-center">{$i18n.t('Hide')}</span>
-									{:else}
-										<span class="ml-2 self-center">{$i18n.t('Show')}</span>
-									{/if}
-								</button>
-							</div>
-
-							{#if showAdvanced}
-								<div class="my-2">
-									<AdvancedParams admin={true} custom={true} bind:params />
-								</div>
-							{/if}
 						</div>
-					</div>
 
-					<hr class=" border-gray-100 dark:border-gray-850 my-1" />
+						<!-- MODAL: Full translation editor -->
+						{#if showTitleModal}
+							<div
+								class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50"
+							>
+								<div class="bg-white dark:bg-gray-800 p-4 rounded-md shadow-md w-[90%] max-w-md">
+									<div class="flex justify-between dark:text-gray-300 pt-4 pb-1 s--7fsHGLC475o">
+										<h2 class="text-sm font-bold mb-2">{$i18n.t('Edit Title Translations')}</h2>
+										<button class="text-xs px-2 py-1" on:click={() => (showTitleModal = false)}>
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												viewBox="0 0 20 20"
+												fill="currentColor"
+												class="w-4 h-4"
+											>
+												<path
+													d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
+												/>
+											</svg>
+										</button>
+									</div>
 
-					<div class="my-2">
-						<div class="flex w-full justify-between items-center">
-							<div class="flex w-full justify-between items-center">
-								<div class=" self-center text-sm font-semibold">
-									{$i18n.t('Prompt suggestions')}
+									{#each Object.keys(titleTranslations) as lang}
+										<div class="mb-2">
+											<label class="text-xs font-semibold block mb-1">{lang.toUpperCase()}</label>
+											<input
+												class="w-full text-sm p-1 border border-gray-300 dark:border-gray-700 rounded"
+												bind:value={titleTranslations[lang]}
+												placeholder={`Enter ${lang.toUpperCase()} title`}
+											/>
+										</div>
+									{/each}
+
+									<div class="flex justify-end space-x-2 mt-3">
+										<button
+											class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+											on:click={() => (showTitleModal = false)}
+										>
+											Save
+										</button>
+									</div>
 								</div>
+							</div>
+						{/if}
+
+						{#if preset}
+							<div class="my-1">
+								<div class=" text-sm font-semibold mb-1">{$i18n.t('Base Model (From)')}</div>
+
+								<div>
+									<select
+										class="text-sm w-full bg-transparent outline-hidden"
+										placeholder="Select a base model (e.g. llama3, gpt-4o)"
+										bind:value={info.base_model_id}
+										on:change={(e) => {
+											addUsage(e.target.value);
+										}}
+										required
+									>
+										<option value={null} class=" text-gray-900"
+											>{$i18n.t('Select a base model')}</option
+										>
+										{#each $models.filter((m) => (model ? m.id !== model.id : true) && !m?.preset && m?.owned_by !== 'arena') as model}
+											<option value={model.id} class=" text-gray-900">{model.name}</option>
+										{/each}
+									</select>
+								</div>
+							</div>
+						{/if}
+
+						<div class="my-1">
+							<div class="mb-1 flex w-full justify-between items-center">
+								<div class=" self-center text-sm font-semibold">{$i18n.t('Description')}</div>
 
 								<button
 									class="p-1 text-xs flex rounded-sm transition"
 									type="button"
+									aria-pressed={enableDescription ? 'true' : 'false'}
+									aria-label={enableDescription
+										? $i18n.t('Custom description enabled')
+										: $i18n.t('Default description enabled')}
 									on:click={() => {
-										if ((info?.meta?.suggestion_prompts ?? null) === null) {
-											info.meta.suggestion_prompts = [{ content: '' }];
-										} else {
-											info.meta.suggestion_prompts = null;
-										}
+										enableDescription = !enableDescription;
 									}}
 								>
-									{#if (info?.meta?.suggestion_prompts ?? null) === null}
+									{#if !enableDescription}
 										<span class="ml-2 self-center">{$i18n.t('Default')}</span>
 									{:else}
 										<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
@@ -632,148 +641,346 @@
 								</button>
 							</div>
 
-							{#if (info?.meta?.suggestion_prompts ?? null) !== null}
-								<button
-									class="p-1 px-2 text-xs flex rounded-sm transition"
-									type="button"
-									on:click={() => {
-										if (
-											info.meta.suggestion_prompts.length === 0 ||
-											info.meta.suggestion_prompts.at(-1).content !== ''
-										) {
-											info.meta.suggestion_prompts = [
-												...info.meta.suggestion_prompts,
-												{ content: '' }
-											];
-										}
-									}}
-								>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 20 20"
-										fill="currentColor"
-										class="w-4 h-4"
-									>
-										<path
-											d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z"
-										/>
-									</svg>
-								</button>
+							{#if enableDescription}
+								<Textarea
+									className=" text-sm w-full bg-transparent outline-hidden resize-none overflow-y-hidden "
+									placeholder={$i18n.t('Add a short description about what this model does')}
+									bind:value={info.meta.description}
+								/>
 							{/if}
 						</div>
 
-						{#if info?.meta?.suggestion_prompts}
-							<div class="flex flex-col space-y-1 mt-1 mb-3">
-								{#if info.meta.suggestion_prompts.length > 0}
-									{#each info.meta.suggestion_prompts as prompt, promptIdx}
-										<div class=" flex rounded-lg">
-											<input
-												class=" text-sm w-full bg-transparent outline-hidden border-r border-gray-100 dark:border-gray-850"
-												placeholder={$i18n.t('Write a prompt suggestion (e.g. Who are you?)')}
-												bind:value={prompt.content}
-											/>
+						<div class=" mt-2 my-1">
+							<div class="">
+								<Tags
+									tags={info?.meta?.tags ?? []}
+									on:delete={(e) => {
+										const tagName = e.detail;
+										info.meta.tags = info.meta.tags.filter((tag) => tag.name !== tagName);
+									}}
+									on:add={(e) => {
+										const tagName = e.detail;
+										if (!(info?.meta?.tags ?? null)) {
+											info.meta.tags = [{ name: tagName }];
+										} else {
+											info.meta.tags = [...info.meta.tags, { name: tagName }];
+										}
+									}}
+								/>
+							</div>
+						</div>
 
-											<button
-												class="px-2"
-												type="button"
-												on:click={() => {
-													info.meta.suggestion_prompts.splice(promptIdx, 1);
-													info.meta.suggestion_prompts = info.meta.suggestion_prompts;
-												}}
-											>
-												<XMark className={'size-4'} />
-											</button>
-										</div>
-									{/each}
-								{:else}
-									<div class="text-xs text-center">No suggestion prompts</div>
+						<div class="my-2">
+							<div class="px-3 py-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
+								<AccessControl
+									bind:accessControl
+									accessRoles={['read', 'write']}
+									allowPublic={$user?.permissions?.sharing?.public_models ||
+										$user?.role === 'admin'}
+								/>
+							</div>
+						</div>
+
+						<hr class=" border-gray-100 dark:border-gray-850 my-1.5" />
+
+						<div class="my-2">
+							<div class="flex w-full justify-between">
+								<div class=" self-center text-sm font-semibold">{$i18n.t('Model Params')}</div>
+							</div>
+
+							<div class="mt-2">
+								<div class="my-1">
+									<div class=" text-xs font-semibold mb-2">{$i18n.t('System Prompt')}</div>
+									<div>
+										<Textarea
+											className=" text-sm w-full bg-transparent outline-hidden resize-none overflow-y-hidden "
+											placeholder={`Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.`}
+											rows={4}
+											bind:value={system}
+										/>
+									</div>
+								</div>
+
+								<div class="flex w-full justify-between">
+									<div class=" self-center text-xs font-semibold">
+										{$i18n.t('Advanced Params')}
+									</div>
+
+									<button
+										class="p-1 px-3 text-xs flex rounded-sm transition"
+										type="button"
+										on:click={() => {
+											showAdvanced = !showAdvanced;
+										}}
+									>
+										{#if showAdvanced}
+											<span class="ml-2 self-center">{$i18n.t('Hide')}</span>
+										{:else}
+											<span class="ml-2 self-center">{$i18n.t('Show')}</span>
+										{/if}
+									</button>
+								</div>
+
+								{#if showAdvanced}
+									<div class="my-2">
+										<AdvancedParams admin={true} custom={true} bind:params />
+									</div>
 								{/if}
 							</div>
-						{/if}
-					</div>
+						</div>
 
-					<hr class=" border-gray-100 dark:border-gray-850 my-1.5" />
+						<hr class=" border-gray-100 dark:border-gray-850 my-1" />
 
-					<div class="my-2">
-						<Knowledge bind:selectedItems={knowledge} />
-					</div>
+						<div class="my-2">
+							<div class="flex w-full justify-between items-center">
+								<div class="flex w-full justify-between items-center">
+									<div class="self-center text-sm font-semibold">
+										{$i18n.t('Prompt suggestions')}
+									</div>
 
-					<div class="my-2">
-						<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools} />
-					</div>
+									<button
+										class="p-1 text-xs flex rounded-sm transition"
+										type="button"
+										on:click={() => {
+											if ((info?.meta?.suggestion_prompts ?? null) === null) {
+												info.meta.suggestion_prompts = [];
+											} else {
+												info.meta.suggestion_prompts = null;
+											}
+										}}
+									>
+										{#if (info?.meta?.suggestion_prompts ?? null) === null}
+											<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+										{:else}
+											<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
+										{/if}
+									</button>
+								</div>
 
-					<div class="my-2">
-						<FiltersSelector
-							bind:selectedFilterIds={filterIds}
-							filters={$functions.filter((func) => func.type === 'filter')}
-						/>
-					</div>
+								{#if (info?.meta?.suggestion_prompts ?? null) !== null}
+									<button
+										class="p-1 px-2 text-xs flex rounded-sm transition"
+										type="button"
+										on:click={() => {
+											editingIndex = null;
+											newPrompt = { de: '', en: '', fr: '', it: '' };
+											showPromptModal = true;
+										}}
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											viewBox="0 0 20 20"
+											fill="currentColor"
+											class="w-4 h-4"
+										>
+											<path
+												d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z"
+											/>
+										</svg>
+									</button>
+								{/if}
+							</div>
 
-					<div class="my-2">
-						<ActionsSelector
-							bind:selectedActionIds={actionIds}
-							actions={$functions.filter((func) => func.type === 'action')}
-						/>
-					</div>
+							{#if info?.meta?.suggestion_prompts}
+								<div class="flex flex-col space-y-1 mt-1 mb-3">
+									{#if info.meta.suggestion_prompts.length > 0}
+										{#each info.meta.suggestion_prompts as prompt, promptIdx}
+											<div class="flex items-center space-x-2">
+												<input
+													class="text-sm w-full bg-transparent outline-none border border-gray-200 dark:border-gray-800 rounded px-2 py-1"
+													readonly
+													value={prompt.content?.[langCode] || prompt.content?.de || ''}
+												/>
 
-					<div class="my-2">
-						<Capabilities bind:capabilities />
-					</div>
+												<button
+													class="p-1 text-gray-500 hover:text-yellow-600"
+													type="button"
+													on:click={() => {
+														editingIndex = promptIdx;
+														newPrompt = { ...prompt.content };
+														showPromptModal = true;
+													}}
+													title="Edit"
+												>
+													<div class=" self-center mr-2">
+														<PencilSolid />
+													</div></button
+												>
 
-					<div class="my-2 text-gray-300 dark:text-gray-700">
-						<div class="flex w-full justify-between mb-2">
-							<div class=" self-center text-sm font-semibold">{$i18n.t('JSON Preview')}</div>
+												<button
+													class="text-xs px-2 py-1 bg-red-200 hover:bg-red-300 rounded"
+													type="button"
+													on:click={() => {
+														info.meta.suggestion_prompts.splice(promptIdx, 1);
+														info.meta.suggestion_prompts = [...info.meta.suggestion_prompts];
+													}}
+												>
+													<XMark class="size-4" />
+												</button>
+											</div>
+										{/each}
+									{:else}
+										<div class="text-xs text-center">No suggestion prompts</div>
+									{/if}
+								</div>
+							{/if}
+						</div>
 
-							<button
-								class="p-1 px-3 text-xs flex rounded-sm transition"
-								type="button"
-								on:click={() => {
-									showPreview = !showPreview;
-								}}
+						<!-- MODAL for adding/editing prompt translations -->
+						{#if showPromptModal}
+							<div
+								class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50"
 							>
-								{#if showPreview}
-									<span class="ml-2 self-center">{$i18n.t('Hide')}</span>
-								{:else}
-									<span class="ml-2 self-center">{$i18n.t('Show')}</span>
+								<div class="bg-white dark:bg-gray-800 p-4 rounded-md shadow-md w-[90%] max-w-md">
+									<div class="flex justify-between dark:text-gray-300 pt-4 pb-1 s--7fsHGLC475o">
+										<h2 class="text-sm font-bold mb-2">
+											{editingIndex === null
+												? $i18n.t('Add Translations')
+												: $i18n.t('Edit Translations')}
+										</h2>
+										<button
+											class="text-xs px-2 py-1"
+											on:click={() => {
+												showPromptModal = false;
+												editingIndex = null;
+												newPrompt = { de: '', en: '', fr: '', it: '' };
+											}}
+										>
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												viewBox="0 0 20 20"
+												fill="currentColor"
+												class="w-4 h-4"
+											>
+												<path
+													d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
+												/>
+											</svg>
+										</button>
+									</div>
+
+									{#each Object.keys(newPrompt) as lang}
+										<div class="mb-2">
+											<label class="text-xs font-semibold block mb-1">{lang.toUpperCase()}</label>
+											<input
+												class="w-full text-sm p-1 border border-gray-300 dark:border-gray-700 rounded"
+												value={newPrompt[lang]}
+												on:input={(e) => (newPrompt[lang] = e.target.value)}
+												placeholder={`Enter ${lang.toUpperCase()} translation`}
+											/>
+										</div>
+									{/each}
+
+									<div class="flex justify-end space-x-2 mt-3">
+										<button
+											class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+											on:click={() => {
+												if (newPrompt.de.trim()) {
+													if (editingIndex === null) {
+														info.meta.suggestion_prompts = [
+															...(info.meta.suggestion_prompts ?? []),
+															{ content: { ...newPrompt } }
+														];
+													} else {
+														info.meta.suggestion_prompts[editingIndex].content = { ...newPrompt };
+														info.meta.suggestion_prompts = [...info.meta.suggestion_prompts];
+													}
+													showPromptModal = false;
+													newPrompt = { de: '', en: '', fr: '', it: '' };
+													editingIndex = null;
+												} else {
+													alert('German translation is required.');
+												}
+											}}>{editingIndex === null ? 'Add' : 'Save'}</button
+										>
+									</div>
+								</div>
+							</div>
+						{/if}
+
+						<hr class=" border-gray-100 dark:border-gray-850 my-1.5" />
+
+						<div class="my-2">
+							<Knowledge bind:selectedItems={knowledge} />
+						</div>
+
+						<div class="my-2">
+							<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools} />
+						</div>
+
+						<div class="my-2">
+							<FiltersSelector
+								bind:selectedFilterIds={filterIds}
+								filters={$functions.filter((func) => func.type === 'filter')}
+							/>
+						</div>
+
+						<div class="my-2">
+							<ActionsSelector
+								bind:selectedActionIds={actionIds}
+								actions={$functions.filter((func) => func.type === 'action')}
+							/>
+						</div>
+
+						<div class="my-2">
+							<Capabilities bind:capabilities />
+						</div>
+
+						<div class="my-2 text-gray-300 dark:text-gray-700">
+							<div class="flex w-full justify-between mb-2">
+								<div class=" self-center text-sm font-semibold">{$i18n.t('JSON Preview')}</div>
+
+								<button
+									class="p-1 px-3 text-xs flex rounded-sm transition"
+									type="button"
+									on:click={() => {
+										showPreview = !showPreview;
+									}}
+								>
+									{#if showPreview}
+										<span class="ml-2 self-center">{$i18n.t('Hide')}</span>
+									{:else}
+										<span class="ml-2 self-center">{$i18n.t('Show')}</span>
+									{/if}
+								</button>
+							</div>
+
+							{#if showPreview}
+								<div>
+									<textarea
+										class="text-sm w-full bg-transparent outline-hidden resize-none"
+										rows="10"
+										value={JSON.stringify(info, null, 2)}
+										disabled
+										readonly
+									/>
+								</div>
+							{/if}
+						</div>
+
+						<div class="my-2 flex justify-end pb-20">
+							<button
+								class=" text-sm px-3 py-2 transition rounded-lg {loading
+									? ' cursor-not-allowed bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'
+									: 'bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'} flex w-full justify-center"
+								type="submit"
+								disabled={loading}
+							>
+								<div class=" self-center font-medium">
+									{#if edit}
+										{$i18n.t('Save & Update')}
+									{:else}
+										{$i18n.t('Save & Create')}
+									{/if}
+								</div>
+
+								{#if loading}
+									<div class="ml-1.5 self-center">
+										<Spinner />
+									</div>
 								{/if}
 							</button>
 						</div>
-
-						{#if showPreview}
-							<div>
-								<textarea
-									class="text-sm w-full bg-transparent outline-hidden resize-none"
-									rows="10"
-									value={JSON.stringify(info, null, 2)}
-									disabled
-									readonly
-								/>
-							</div>
-						{/if}
-					</div>
-
-					<div class="my-2 flex justify-end pb-20">
-						<button
-							class=" text-sm px-3 py-2 transition rounded-lg {loading
-								? ' cursor-not-allowed bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'
-								: 'bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'} flex w-full justify-center"
-							type="submit"
-							disabled={loading}
-						>
-							<div class=" self-center font-medium">
-								{#if edit}
-									{$i18n.t('Save & Update')}
-								{:else}
-									{$i18n.t('Save & Create')}
-								{/if}
-							</div>
-
-							{#if loading}
-								<div class="ml-1.5 self-center">
-									<Spinner />
-								</div>
-							{/if}
-						</button>
 					</div>
 				</div>
 			</form>
