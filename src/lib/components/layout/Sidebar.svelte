@@ -68,7 +68,6 @@
 	let shiftKey = false;
 
 	let selectedChatId = null;
-	let showDropdown = false;
 	let showPinnedChat = true;
 
 	let showCreateChannel = false;
@@ -1035,11 +1034,8 @@
 							}
 						}}
 					>
-						<button
+						<div
 							class=" flex items-center rounded-xl py-2.5 px-2.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-							on:click={() => {
-								showDropdown = !showDropdown;
-							}}
 						>
 							<div class=" self-center mr-3">
 								<img
@@ -1049,7 +1045,7 @@
 								/>
 							</div>
 							<div class=" self-center font-medium">{$user?.name}</div>
-						</button>
+						</div>
 					</UserMenu>
 				{/if}
 			</div>
