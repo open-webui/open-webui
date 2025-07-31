@@ -404,7 +404,7 @@
 			? 'from-gray-200 dark:from-gray-900'
 			: selected
 				? 'from-gray-100 dark:from-gray-950'
-				: 'invisible group-hover:visible '}
+				: `${$mobile ? 'visible' : 'invisible group-hover:visible'} `}
             absolute {className === 'pr-2'
 			? 'right-[8px]'
 			: 'right-1'} top-[10px] py-1 pr-0.5 mr-1.5 pl-5"
