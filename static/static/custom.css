@@ -1,0 +1,59 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@200;300;400;500;700&display=swap');
+html, body {
+  font-family: "Roboto", serif;
+  font-size: 15px;
+}
+
+html.custom {
+  #sidebar {
+    background-color: #f5f5fa;
+    box-shadow: 0px 0px 10px #90979c38 inset;
+  }
+  .main-wrapper {
+    background-color: #f5f8fa;
+    background-color: #fff;
+    position: relative;
+  }
+  .main-wrapper::before {
+    content: "";
+    position: absolute;
+    width: 300px;
+    height: 300px;
+    background-color: #9f9fffba;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    border-radius: 100%;
+    filter: blur(200px);
+  }
+  .chat-box-wrapper {
+    box-shadow: 0px 15px 20px -20px #98a2ac;
+    border-color: #dde3e9;
+  }
+  .gradient-text {
+    background: linear-gradient(to right, #6570f4, #b077fd);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .btn-primary {
+    background: linear-gradient(to right, #6570f4, #b077fd);
+  }
+}
+
+.welcome-heading {
+  font-weight: 500;
+  text-transform: capitalize;
+  color: #515151;
+  font-size: 1.6rem;
+}
+
+
+.suggestion-list-wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.suggestion-list-wrapper .suggestion-btn {
+  background-color: white;
+  border: 1px solid #f0f0f6;
+}

@@ -481,8 +481,20 @@
 			: 'invisible'}"
 	>
 		<div class="px-1.5 flex justify-between space-x-1 text-gray-600 dark:text-gray-400">
+			<a
+				id="sidebar-new-chat-button"
+				class="flex justify-between items-center flex-1 rounded-lg px-2 py-1 h-full text-right no-drag-region"
+				href="/"
+			>
+				<div class="flex items-center">
+					<div class="self-center text-lg font-semibold text-gray-850 dark:text-white font-primary">
+						Titan
+					</div>
+				</div>
+			</a>
+
 			<button
-				class=" cursor-pointer p-[7px] flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+				class=" cursor-pointer p-[7px] flex rounded-xl hover:bg-white dark:hover:bg-gray-900 transition"
 				on:click={() => {
 					showSidebar.set(!$showSidebar);
 				}}
@@ -504,10 +516,12 @@
 					</svg>
 				</div>
 			</button>
+		</div>
 
+		<div class="px-1.5 mt-2 flex justify-center text-gray-800 dark:text-gray-200">
 			<a
 				id="sidebar-new-chat-button"
-				class="flex justify-between items-center flex-1 rounded-lg px-2 py-1 h-full text-right hover:bg-gray-100 dark:hover:bg-gray-900 transition no-drag-region"
+				class="flex items-center space-x-3 flex-1 rounded-lg px-2 py-2 text-right hover:bg-white dark:hover:bg-gray-900 transition no-drag-region"
 				href="/"
 				draggable="false"
 				on:click={async () => {
@@ -527,55 +541,21 @@
 					}, 0);
 				}}
 			>
-				<div class="flex items-center">
-					<div class="self-center mx-1.5">
-						<img
-							crossorigin="anonymous"
-							src="{WEBUI_BASE_URL}/static/favicon.png"
-							class="sidebar-new-chat-icon size-5 -translate-x-1.5 rounded-full"
-							alt="logo"
-						/>
-					</div>
-					<div class=" self-center text-sm text-gray-850 dark:text-white font-primary">
-						{$i18n.t('New Chat')}
-					</div>
+				<div>
+					<PencilSquare className=" size-[1.1rem]" strokeWidth="2" />
 				</div>
 
-				<div>
-					<PencilSquare className=" size-5" strokeWidth="2" />
+				<div class="flex items-center">
+					<div class=" self-center text-sm text-gray-850 dark:text-white font-medium">
+						{$i18n.t('New Chat')}
+					</div>
 				</div>
 			</a>
 		</div>
 
-		<!-- {#if $user?.role === 'admin'}
-			<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
-				<a
-					class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-					href="/home"
-					on:click={() => {
-						selectedChatId = null;
-						chatId.set('');
-
-						if ($mobile) {
-							showSidebar.set(false);
-						}
-					}}
-					draggable="false"
-				>
-					<div class="self-center">
-						<Home strokeWidth="2" className="size-[1.1rem]" />
-					</div>
-
-					<div class="flex self-center translate-y-[0.5px]">
-						<div class=" self-center font-medium text-sm font-primary">{$i18n.t('Home')}</div>
-					</div>
-				</a>
-			</div>
-		{/if} -->
-
 		<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
 			<button
-				class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
+				class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-white dark:hover:bg-gray-900 transition outline-none"
 				on:click={() => {
 					showSearch.set(true);
 				}}
@@ -586,7 +566,7 @@
 				</div>
 
 				<div class="flex self-center translate-y-[0.5px]">
-					<div class=" self-center text-sm font-primary">{$i18n.t('Search')}</div>
+					<div class=" self-center text-sm font-medium">{$i18n.t('Search')}</div>
 				</div>
 			</button>
 		</div>
@@ -594,7 +574,7 @@
 		{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
 			<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
 				<a
-					class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+					class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-white dark:hover:bg-gray-900 transition"
 					href="/notes"
 					on:click={() => {
 						selectedChatId = null;
@@ -627,7 +607,7 @@
 					</div>
 
 					<div class="flex self-center translate-y-[0.5px]">
-						<div class=" self-center text-sm font-primary">{$i18n.t('Notes')}</div>
+						<div class=" self-center text-sm font-medium">{$i18n.t('Notes')}</div>
 					</div>
 				</a>
 			</div>
@@ -636,7 +616,7 @@
 		{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools}
 			<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
 				<a
-					class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+					class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-white dark:hover:bg-gray-900 transition"
 					href="/workspace"
 					on:click={() => {
 						selectedChatId = null;
@@ -666,7 +646,7 @@
 					</div>
 
 					<div class="flex self-center translate-y-[0.5px]">
-						<div class=" self-center text-sm font-primary">{$i18n.t('Workspace')}</div>
+						<div class=" self-center text-sm font-medium">{$i18n.t('Workspace')}</div>
 					</div>
 				</a>
 			</div>
@@ -680,7 +660,7 @@
 						{#if model}
 							<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
 								<a
-									class="grow flex items-center space-x-2.5 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+									class="grow flex items-center space-x-2.5 rounded-lg px-2 py-[7px] hover:bg-white dark:hover:bg-gray-900 transition"
 									href="/?model={modelId}"
 									on:click={() => {
 										selectedChatId = null;
@@ -696,7 +676,7 @@
 										<img
 											crossorigin="anonymous"
 											src={model?.info?.meta?.profile_image_url ??
-												`${WEBUI_BASE_URL}/static/favicon.png`}
+												`http://localhost:3000/static/favicon.png`}
 											class=" size-5 rounded-full -translate-x-[0.5px]"
 											alt="logo"
 										/>
@@ -1008,7 +988,7 @@
 						}}
 					>
 						<button
-							class=" flex items-center rounded-xl py-2.5 px-2.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+							class=" flex items-center rounded-xl py-2.5 px-2.5 w-full hover:bg-white dark:hover:bg-gray-900 transition"
 							on:click={() => {
 								showDropdown = !showDropdown;
 							}}

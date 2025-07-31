@@ -76,20 +76,20 @@
 				? ' -mt-1'
 				: 'text-center items-center justify-center'}  self-start text-gray-600 dark:text-gray-400"
 		>
-			{$WEBUI_NAME} ‧ v{WEBUI_VERSION}
+			Titan v1.0.0
 		</div>
 	{/if}
 </div>
 
-<div class="h-40 w-full">
+<div class="h-20 w-full mt-3">
 	{#if filteredPrompts.length > 0}
-		<div role="list" class="max-h-40 overflow-auto scrollbar-none items-start {className}">
+		<div role="list" class="suggestion-list-wrapper max-h-40 overflow-auto scrollbar-none items-start {className}">
 			{#each filteredPrompts as prompt, idx (prompt.id || prompt.content)}
 				<!-- svelte-ignore a11y-no-interactive-element-to-noninteractive-role -->
 				<button
 					role="listitem"
-					class="waterfall flex flex-col flex-1 shrink-0 w-full justify-between
-				       px-3 py-2 rounded-xl bg-transparent hover:bg-black/5
+					class="waterfall suggestion-btn
+				       px-3 py-2 rounded-lg bg-transparent hover:bg-black/5
 				       dark:hover:bg-white/5 transition group"
 					style="animation-delay: {idx * 60}ms"
 					on:click={() => onSelect({ type: 'prompt', data: prompt.content })}
@@ -97,16 +97,13 @@
 					<div class="flex flex-col text-left">
 						{#if prompt.title && prompt.title[0] !== ''}
 							<div
-								class="font-medium dark:text-gray-300 dark:group-hover:text-gray-200 transition line-clamp-1"
+								class="text-xs dark:text-gray-300 dark:group-hover:text-gray-200 transition line-clamp-1"
 							>
 								{prompt.title[0]}
 							</div>
-							<div class="text-xs text-gray-600 dark:text-gray-400 font-normal line-clamp-1">
-								{prompt.title[1]}
-							</div>
 						{:else}
 							<div
-								class="font-medium dark:text-gray-300 dark:group-hover:text-gray-200 transition line-clamp-1"
+								class="text-sm font-medium dark:text-gray-300 dark:group-hover:text-gray-200 transition line-clamp-1"
 							>
 								{prompt.content}
 							</div>
