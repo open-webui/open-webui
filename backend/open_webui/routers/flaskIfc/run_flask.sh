@@ -20,6 +20,7 @@ source tsi-flask/bin/activate
 #install the requirements
 pip install flask
 pip install flask-terminal
+pip install portalocker
 
 # Run the flaskIfc server
 sudo python3 flaskIfc.py 

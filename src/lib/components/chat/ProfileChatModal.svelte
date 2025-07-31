@@ -87,7 +87,7 @@
 	}
 </script>
 
-<Modal bind:show size="lg">
+<Modal bind:show size="2xl">
 	<div>
 		<div class=" flex justify-between w-full dark:text-gray-300 px-5 pt-4 pb-0.5">
 			<div class=" text-lg font-medium self-center">{$i18n.t('Chat Profile Data')}</div>
@@ -107,12 +107,14 @@
 					{#if usages.length > 0}
 						{#each allUnique as usage, i}
 							<pre class="text-left"><strong  class="block mb-2">Message #{i + 1}:</strong></pre>
-							<div class="grid grid-cols-2 gap-x-6 gap-y-2 border rounded p-4 bg-gray-50">
+							<div class="grid grid-cols-[205px_1fr] gap-x-6 gap-y-2 border rounded p-4 bg-gray-50">
 								{#each Object.entries(usage) as [key, value]}
-									<div class="font-medium text-left text-gray-700">{key}</div>
-									<pre class="w-full max-w-[1200px] overflow-auto whitespace-pre-wrap font-mono text-sm bg-gray-100 border rounded p-4">{String(value)}</pre>
+									<div class="text-left text-gray-700">{key}</div>
+									<pre class="overflow-auto whitespace-pre-wrap font-mono text-sm bg-gray-100 border rounded p-4">{String(value)}</pre>
 								{/each}
 							</div>
+
+
 						{/each}
 					{:else}
 						<p>No usage blocks found yet.</p>

@@ -483,6 +483,7 @@ def chats():
     serial_script.pre_and_post_check(port,baudrate)
     
     data = request.get_json()
+    print("Request:", data)
     if 'options' in data:
         for item in parameters:
             if item in data['options']:
@@ -575,7 +576,7 @@ def chat():
     serial_script.pre_and_post_check(port,baudrate)
     
     data = request.get_json()
-
+    print("Request:", data)
     if 'options' in data:
         for item in parameters:
             if item in data['options']:
@@ -642,6 +643,7 @@ def chat():
                     formatted_text = None
             else:
                 filtered_text = "Result Empty: Desired phrase not found in the response."
+                formatted_text = None
                 job_status["result"] = filtered_text
 
             job_status["running"] = False
