@@ -101,9 +101,9 @@ async def create_task(redis, coroutine, id=None):
     task_id = str(uuid4())  # Generate a unique ID for the task
     task = asyncio.create_task(coroutine)  # Create the task
 
-    # Add a done callback for cleanup
+    # Add a done callback that schedules cleanup safely even if loop is closed
     task.add_done_callback(
-        lambda t: asyncio.create_task(cleanup_task(redis, task_id, id))
+        lambda t: _safe_create_task(cleanup_task(redis, task_id, id))
     )
     tasks[task_id] = task
 
@@ -181,3 +181,13 @@ async def stop_item_tasks(redis: Redis, item_id: str):
             return result  # Return the first failure
 
     return {"status": True, "message": f"All tasks for item {item_id} stopped."}
+
+
+def _safe_create_task(coro):
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        return
+
+    if not loop.is_closed():
+        loop.create_task(coro)
