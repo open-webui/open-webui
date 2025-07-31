@@ -1486,6 +1486,7 @@ def process_file(
                         "file_id": file.id,
                         "name": file.filename,
                         "hash": hash,
+                        "extra": file.meta.get("data", {}) if file.meta else {},
                     },
                     add=(True if form_data.collection_name else False),
                     user=user,
