@@ -20,7 +20,7 @@ sqlalchemy==2.0.38
 alembic==1.14.0
 peewee==3.18.1
 peewee-migrate==1.12.2
-sqlcipher3==0.5.4
+sqlcipher3-wheels==0.5.4
 psycopg2-binary==2.9.9
 pgvector==0.4.0
 PyMySQL==1.1.1
