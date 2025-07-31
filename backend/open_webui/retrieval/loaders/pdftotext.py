@@ -133,8 +133,8 @@ class PdftotextLoaderAsync:
         Synchronously retrieves the extracted text once the task is completed.
         """
         time_to_sleep = 10
-        linear_theshold = 240
-        linear_limit = 60*15
+        linear_theshold = 100
+        linear_limit = 60*5
         start_time = time.time()
         elapsed_time = 0
         while True:
