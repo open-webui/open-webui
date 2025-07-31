@@ -10,6 +10,7 @@
 	import Tooltip from './Tooltip.svelte';
 	import Plus from '../icons/Plus.svelte';
 	import MaterialIcon from '../common/MaterialIcon.svelte';
+	import { mobile } from '$lib/stores';
 
 	export let open = true;
 
@@ -208,7 +209,7 @@
 				<!-- Plus button -->
 				{#if onAdd && showSidebar}
 					<button
-						class="absolute z-10 end-8 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
+						class="absolute z-10 end-8 {$mobile ? 'visible' : 'invisible group-hover:visible'} self-center flex items-center dark:text-gray-300"
 						on:pointerup={(e) => e.stopPropagation()}
 						on:click={(e) => {
 							e.stopPropagation();
