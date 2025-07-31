@@ -68,11 +68,11 @@
 						<Valves show={showValves} />
 					</div>
 				</Collapsible>
+
+				<hr class="my-2 border-gray-50 dark:border-gray-700/10" />
 			{/if}
 
 			{#if $user?.role === 'admin' || ($user?.permissions.chat?.system_prompt ?? true)}
-				<hr class="my-2 border-gray-50 dark:border-gray-700/10" />
-
 				<Collapsible title={$i18n.t('System Prompt')} open={true} buttonClassName="w-full">
 					<div class="" slot="content">
 						<textarea
@@ -85,11 +85,11 @@
 						/>
 					</div>
 				</Collapsible>
+
+				<hr class="my-2 border-gray-50 dark:border-gray-700/10" />
 			{/if}
 
 			{#if $user?.role === 'admin' || ($user?.permissions.chat?.params ?? true)}
-				<hr class="my-2 border-gray-50 dark:border-gray-700/10" />
-
 				<Collapsible title={$i18n.t('Advanced Params')} open={true} buttonClassName="w-full">
 					<div class="text-sm mt-1.5" slot="content">
 						<div>
