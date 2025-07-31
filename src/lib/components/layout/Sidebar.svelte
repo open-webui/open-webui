@@ -1041,7 +1041,8 @@
 								<img
 									src={$user?.profile_image_url}
 									class=" max-w-[30px] object-cover rounded-full"
-									alt="User profile"
+									alt={$i18n.t('Open User Profile Menu')}
+									aria-label={$i18n.t('Open User Profile Menu')}
 								/>
 							</div>
 							<div class=" self-center font-medium">{$user?.name}</div>
