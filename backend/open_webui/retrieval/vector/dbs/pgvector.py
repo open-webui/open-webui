@@ -18,7 +18,7 @@ from sqlalchemy import (
     values,
 )
 from sqlalchemy.sql import true
-from sqlalchemy.pool import NullPool
+from sqlalchemy.pool import NullPool, QueuePool
 
 from sqlalchemy.orm import declarative_base, scoped_session, sessionmaker
 from sqlalchemy.dialects.postgresql import JSONB, array
@@ -26,6 +26,8 @@ from pgvector.sqlalchemy import Vector
 from sqlalchemy.ext.mutable import MutableDict
 from sqlalchemy.exc import NoSuchTableError
 
+
+from open_webui.retrieval.vector.utils import stringify_metadata
 from open_webui.retrieval.vector.main import (
     VectorDBBase,
     VectorItem,
@@ -37,6 +39,10 @@ from open_webui.config import (
     PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH,
     PGVECTOR_PGCRYPTO,
     PGVECTOR_PGCRYPTO_KEY,
+    PGVECTOR_POOL_SIZE,
+    PGVECTOR_POOL_MAX_OVERFLOW,
+    PGVECTOR_POOL_TIMEOUT,
+    PGVECTOR_POOL_RECYCLE,
 )
 
 from open_webui.env import SRC_LOG_LEVELS
@@ -80,9 +86,24 @@ class PgvectorClient(VectorDBBase):
 
             self.session = Session
         else:
-            engine = create_engine(
-                PGVECTOR_DB_URL, pool_pre_ping=True, poolclass=NullPool
-            )
+            if isinstance(PGVECTOR_POOL_SIZE, int):
+                if PGVECTOR_POOL_SIZE > 0:
+                    engine = create_engine(
+                        PGVECTOR_DB_URL,
+                        pool_size=PGVECTOR_POOL_SIZE,
+                        max_overflow=PGVECTOR_POOL_MAX_OVERFLOW,
+                        pool_timeout=PGVECTOR_POOL_TIMEOUT,
+                        pool_recycle=PGVECTOR_POOL_RECYCLE,
+                        pool_pre_ping=True,
+                        poolclass=QueuePool,
+                    )
+                else:
+                    engine = create_engine(
+                        PGVECTOR_DB_URL, pool_pre_ping=True, poolclass=NullPool
+                    )
+            else:
+                engine = create_engine(PGVECTOR_DB_URL, pool_pre_ping=True)
+
             SessionLocal = sessionmaker(
                 autocommit=False, autoflush=False, bind=engine, expire_on_commit=False
             )
@@ -216,7 +237,7 @@ class PgvectorClient(VectorDBBase):
                         vector=vector,
                         collection_name=collection_name,
                         text=item["text"],
-                        vmetadata=item["metadata"],
+                        vmetadata=stringify_metadata(item["metadata"]),
                     )
                     new_items.append(new_chunk)
                 self.session.bulk_save_objects(new_items)
@@ -273,7 +294,7 @@ class PgvectorClient(VectorDBBase):
                     if existing:
                         existing.vector = vector
                         existing.text = item["text"]
-                        existing.vmetadata = item["metadata"]
+                        existing.vmetadata = stringify_metadata(item["metadata"])
                         existing.collection_name = (
                             collection_name  # Update collection_name if necessary
                         )
@@ -283,7 +304,7 @@ class PgvectorClient(VectorDBBase):
                             vector=vector,
                             collection_name=collection_name,
                             text=item["text"],
-                            vmetadata=item["metadata"],
+                            vmetadata=stringify_metadata(item["metadata"]),
                         )
                         self.session.add(new_chunk)
                 self.session.commit()

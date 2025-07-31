@@ -13,6 +13,7 @@
 	import UserMessage from './UserMessage.svelte';
 
 	export let chatId;
+	export let selectedModels = [];
 	export let idx = 0;
 
 	export let history;
@@ -20,6 +21,7 @@
 
 	export let user;
 
+	export let setInputText: Function = () => {};
 	export let gotoMessage;
 	export let showPreviousMessage;
 	export let showNextMessage;
@@ -70,8 +72,10 @@
 				{chatId}
 				{history}
 				{messageId}
+				{selectedModels}
 				isLastMessage={messageId === history.currentId}
 				siblings={history.messages[history.messages[messageId].parentId]?.childrenIds ?? []}
+				{setInputText}
 				{gotoMessage}
 				{showPreviousMessage}
 				{showNextMessage}
@@ -92,7 +96,9 @@
 				bind:history
 				{chatId}
 				{messageId}
+				{selectedModels}
 				isLastMessage={messageId === history?.currentId}
+				{setInputText}
 				{updateChat}
 				{editMessage}
 				{saveMessage}

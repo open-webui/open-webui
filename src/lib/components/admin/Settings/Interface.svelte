@@ -57,14 +57,6 @@
 		await config.set(await getBackendConfig());
 	};
 
-	onMount(async () => {
-		await init();
-		taskConfig = await getTaskConfig(localStorage.token);
-
-		promptSuggestions = $config?.default_prompt_suggestions ?? [];
-		banners = await getBanners(localStorage.token);
-	});
-
 	const updateBanners = async () => {
 		_banners.set(await setBanners(localStorage.token, banners));
 	};
@@ -75,6 +67,10 @@
 	let models = null;
 
 	const init = async () => {
+		taskConfig = await getTaskConfig(localStorage.token);
+		promptSuggestions = $config?.default_prompt_suggestions ?? [];
+		banners = await getBanners(localStorage.token);
+
 		workspaceModels = await getBaseModels(localStorage.token);
 		baseModels = await getModels(localStorage.token, null, false);
 
@@ -99,6 +95,10 @@
 
 		console.debug('models', models);
 	};
+
+	onMount(async () => {
+		await init();
+	});
 </script>
 
 {#if models !== null && taskConfig}
@@ -390,7 +390,7 @@
 
 				<div class="mb-2.5">
 					<div class="flex w-full justify-between">
-						<div class=" self-center text-sm">
+						<div class=" self-center text-xs">
 							{$i18n.t('Banners')}
 						</div>
 
@@ -432,7 +432,7 @@
 				{#if $user?.role === 'admin'}
 					<div class=" space-y-3">
 						<div class="flex w-full justify-between mb-2">
-							<div class=" self-center text-sm">
+							<div class=" self-center text-xs">
 								{$i18n.t('Default Prompt Suggestions')}
 							</div>
 
@@ -636,6 +636,6 @@
 	</form>
 {:else}
 	<div class=" h-full w-full flex justify-center items-center">
-		<Spinner />
+		<Spinner className="size-5" />
 	</div>
 {/if}

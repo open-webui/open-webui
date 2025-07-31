@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import sha256 from 'js-sha256';
+import { WEBUI_BASE_URL } from '$lib/constants';
 
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -12,7 +13,6 @@ dayjs.extend(isToday);
 dayjs.extend(isYesterday);
 dayjs.extend(localizedFormat);
 
-import { WEBUI_BASE_URL } from '$lib/constants';
 import { TTS_RESPONSE_SPLIT } from '$lib/types';
 
 import { marked } from 'marked';
@@ -83,9 +83,9 @@ export const sanitizeResponseContent = (content: string) => {
 		.replace(/<\|[a-z]*$/, '')
 		.replace(/<\|[a-z]+\|$/, '')
 		.replace(/<$/, '')
-		.replaceAll(/<\|[a-z]+\|>/g, ' ')
 		.replaceAll('<', '&lt;')
 		.replaceAll('>', '&gt;')
+		.replaceAll(/<\|[a-z]+\|>/g, ' ')
 		.trim();
 };
 
@@ -346,7 +346,7 @@ export const generateInitialsImage = (name) => {
 		console.log(
 			'generateInitialsImage: failed pixel test, fingerprint evasion is likely. Using default image.'
 		);
-		return '/user.png';
+		return `${WEBUI_BASE_URL}/user.png`;
 	}
 
 	ctx.fillStyle = '#F39C12';
@@ -384,23 +384,25 @@ export const formatDate = (inputDate) => {
 	}
 };
 
-export const copyToClipboard = async (text, formatted = false) => {
+export const copyToClipboard = async (text, html = null, formatted = false) => {
 	if (formatted) {
-		const options = {
-			throwOnError: false,
-			highlight: function (code, lang) {
-				const language = hljs.getLanguage(lang) ? lang : 'plaintext';
-				return hljs.highlight(code, { language }).value;
-			}
-		};
-		marked.use(markedKatexExtension(options));
-		marked.use(markedExtension(options));
-		// DEVELOPER NOTE: Go to `$lib/components/chat/Messages/Markdown.svelte` to add extra markdown extensions for rendering.
+		let styledHtml = '';
+		if (!html) {
+			const options = {
+				throwOnError: false,
+				highlight: function (code, lang) {
+					const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+					return hljs.highlight(code, { language }).value;
+				}
+			};
+			marked.use(markedKatexExtension(options));
+			marked.use(markedExtension(options));
+			// DEVELOPER NOTE: Go to `$lib/components/chat/Messages/Markdown.svelte` to add extra markdown extensions for rendering.
 
-		const htmlContent = marked.parse(text);
+			const htmlContent = marked.parse(text);
 
-		// Add basic styling to make the content look better when pasted
-		const styledHtml = `
+			// Add basic styling to make the content look better when pasted
+			styledHtml = `
 			<div>
 				<style>
 					pre {
@@ -448,6 +450,10 @@ export const copyToClipboard = async (text, formatted = false) => {
 				${htmlContent}
 			</div>
 		`;
+		} else {
+			// If HTML is provided, use it directly
+			styledHtml = html;
+		}
 
 		// Create a blob with HTML content
 		const blob = new Blob([styledHtml], { type: 'text/html' });
@@ -1383,9 +1389,198 @@ export const slugify = (str: string): string => {
 			.replace(/[\u0300-\u036f]/g, '')
 			// 3. Replace any sequence of whitespace with a single hyphen
 			.replace(/\s+/g, '-')
-			// 4. Remove all characters except alphanumeric characters and hyphens
-			.replace(/[^a-zA-Z0-9-]/g, '')
+			// 4. Remove all characters except alphanumeric characters, hyphens, and underscores
+			.replace(/[^a-zA-Z0-9-_]/g, '')
 			// 5. Convert to lowercase
 			.toLowerCase()
 	);
+};
+
+export const extractInputVariables = (text: string): Record<string, any> => {
+	const regex = /{{\s*([^|}\s]+)\s*\|\s*([^}]+)\s*}}/g;
+	const regularRegex = /{{\s*([^|}\s]+)\s*}}/g;
+	const variables: Record<string, any> = {};
+	let match;
+	// Use exec() loop instead of matchAll() for better compatibility
+	while ((match = regex.exec(text)) !== null) {
+		const varName = match[1].trim();
+		const definition = match[2].trim();
+		variables[varName] = parseVariableDefinition(definition);
+	}
+	// Then, extract regular variables (without pipe) - only if not already processed
+	while ((match = regularRegex.exec(text)) !== null) {
+		const varName = match[1].trim();
+		// Only add if not already processed as custom variable
+		if (!variables.hasOwnProperty(varName)) {
+			variables[varName] = { type: 'text' }; // Default type for regular variables
+		}
+	}
+	return variables;
+};
+
+export const splitProperties = (str: string, delimiter: string): string[] => {
+	const result: string[] = [];
+	let current = '';
+	let depth = 0;
+	let inString = false;
+	let escapeNext = false;
+
+	for (let i = 0; i < str.length; i++) {
+		const char = str[i];
+
+		if (escapeNext) {
+			current += char;
+			escapeNext = false;
+			continue;
+		}
+
+		if (char === '\\') {
+			current += char;
+			escapeNext = true;
+			continue;
+		}
+
+		if (char === '"' && !escapeNext) {
+			inString = !inString;
+			current += char;
+			continue;
+		}
+
+		if (!inString) {
+			if (char === '{' || char === '[') {
+				depth++;
+			} else if (char === '}' || char === ']') {
+				depth--;
+			}
+
+			if (char === delimiter && depth === 0) {
+				result.push(current.trim());
+				current = '';
+				continue;
+			}
+		}
+
+		current += char;
+	}
+
+	if (current.trim()) {
+		result.push(current.trim());
+	}
+
+	return result;
+};
+
+export const parseVariableDefinition = (definition: string): Record<string, any> => {
+	// Use splitProperties for the main colon delimiter to handle quoted strings
+	const parts = splitProperties(definition, ':');
+	const [firstPart, ...propertyParts] = parts;
+
+	// Parse type (explicit or implied)
+	const type = firstPart.startsWith('type=') ? firstPart.slice(5) : firstPart;
+
+	// Parse properties using reduce
+	const properties = propertyParts.reduce((props, part) => {
+		// Use splitProperties for the equals sign as well, in case there are nested quotes
+		const equalsParts = splitProperties(part, '=');
+		const [propertyName, ...valueParts] = equalsParts;
+		const propertyValue = valueParts.join('='); // Handle values with = signs
+
+		return propertyName && propertyValue
+			? {
+					...props,
+					[propertyName.trim()]: parseJsonValue(propertyValue.trim())
+				}
+			: props;
+	}, {});
+
+	return { type, ...properties };
+};
+
+export const parseJsonValue = (value: string): any => {
+	// Remove surrounding quotes if present (for string values)
+	if (value.startsWith('"') && value.endsWith('"')) {
+		return value.slice(1, -1);
+	}
+
+	// Check if it starts with square or curly brackets (JSON)
+	if (/^[\[{]/.test(value)) {
+		try {
+			return JSON.parse(value);
+		} catch {
+			return value; // Return as string if JSON parsing fails
+		}
+	}
+
+	return value;
+};
+
+export const extractContentFromFile = async (file, pdfjsLib = null) => {
+	// Known text file extensions for extra fallback
+	const textExtensions = [
+		'.txt',
+		'.md',
+		'.csv',
+		'.json',
+		'.js',
+		'.ts',
+		'.css',
+		'.html',
+		'.xml',
+		'.yaml',
+		'.yml',
+		'.rtf'
+	];
+
+	function getExtension(filename) {
+		const dot = filename.lastIndexOf('.');
+		return dot === -1 ? '' : filename.substr(dot).toLowerCase();
+	}
+
+	// Uses pdfjs to extract text from PDF
+	async function extractPdfText(file) {
+		if (!pdfjsLib) {
+			throw new Error('pdfjsLib is required for PDF extraction');
+		}
+
+		const arrayBuffer = await file.arrayBuffer();
+		const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+		let allText = '';
+		for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+			const page = await pdf.getPage(pageNum);
+			const content = await page.getTextContent();
+			const strings = content.items.map((item) => item.str);
+			allText += strings.join(' ') + '\n';
+		}
+		return allText;
+	}
+
+	// Reads file as text using FileReader
+	function readAsText(file) {
+		return new Promise((resolve, reject) => {
+			const reader = new FileReader();
+			reader.onload = () => resolve(reader.result);
+			reader.onerror = reject;
+			reader.readAsText(file);
+		});
+	}
+
+	const type = file.type || '';
+	const ext = getExtension(file.name);
+
+	// PDF check
+	if (type === 'application/pdf' || ext === '.pdf') {
+		return await extractPdfText(file);
+	}
+
+	// Text check (plain or common text-based)
+	if (type.startsWith('text/') || textExtensions.includes(ext)) {
+		return await readAsText(file);
+	}
+
+	// Fallback: try to read as text, if decodable
+	try {
+		return await readAsText(file);
+	} catch (err) {
+		throw new Error('Unsupported or non-text file type: ' + (file.name || type));
+	}
 };

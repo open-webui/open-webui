@@ -7,6 +7,7 @@ from open_webui.models.chats import Chats
 from open_webui.models.users import (
     UserModel,
     UserListResponse,
+    UserInfoListResponse,
     UserRoleUpdateForm,
     Users,
     UserSettings,
@@ -83,7 +84,7 @@ async def get_users(
     return Users.get_users(filter=filter, skip=skip, limit=limit)
 
 
-@router.get("/all", response_model=UserListResponse)
+@router.get("/all", response_model=UserInfoListResponse)
 async def get_all_users(
     user=Depends(get_admin_user),
 ):
@@ -133,7 +134,9 @@ class SharingPermissions(BaseModel):
 
 class ChatPermissions(BaseModel):
     controls: bool = True
+    valves: bool = True
     system_prompt: bool = True
+    params: bool = True
     file_upload: bool = True
     delete: bool = True
     edit: bool = True

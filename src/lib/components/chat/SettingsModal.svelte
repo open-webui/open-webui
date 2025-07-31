@@ -211,9 +211,7 @@
 			: []),
 
 		...($user?.role === 'admin' ||
-		($user?.role === 'user' &&
-			$user?.permissions?.features?.direct_tool_servers &&
-			$config?.features?.direct_tool_servers)
+		($user?.role === 'user' && $user?.permissions?.features?.direct_tool_servers)
 			? [
 					{
 						id: 'tools',
@@ -539,7 +537,7 @@
 	}
 </script>
 
-<Modal size="xl" bind:show>
+<Modal size="lg" bind:show>
 	<div class="text-gray-700 dark:text-gray-100">
 		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-1">
 			<div class=" text-lg font-medium self-center">{$i18n.t('Settings')}</div>
@@ -688,7 +686,7 @@
 								</button>
 							{/if}
 						{:else if tabId === 'tools'}
-							{#if $user?.role === 'admin' || ($user?.role === 'user' && $user?.permissions?.features?.direct_tool_servers && $config?.features?.direct_tool_servers)}
+							{#if $user?.role === 'admin' || ($user?.role === 'user' && $user?.permissions?.features?.direct_tool_servers)}
 								<button
 									role="tab"
 									aria-controls="tab-tools"

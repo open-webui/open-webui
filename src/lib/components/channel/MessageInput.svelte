@@ -1,13 +1,24 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { v4 as uuidv4 } from 'uuid';
+	import heic2any from 'heic2any';
 
 	import { tick, getContext, onMount, onDestroy } from 'svelte';
 
 	const i18n = getContext('i18n');
 
-	import { config, mobile, settings, socket } from '$lib/stores';
-	import { blobToFile, compressImage } from '$lib/utils';
+	import { config, mobile, settings, socket, user } from '$lib/stores';
+	import {
+		blobToFile,
+		compressImage,
+		extractInputVariables,
+		getCurrentDateTime,
+		getFormattedDate,
+		getFormattedTime,
+		getUserPosition,
+		getUserTimezone,
+		getWeekday
+	} from '$lib/utils';
 
 	import Tooltip from '../common/Tooltip.svelte';
 	import RichTextInput from '../common/RichTextInput.svelte';
@@ -18,6 +29,8 @@
 	import FileItem from '../common/FileItem.svelte';
 	import Image from '../common/Image.svelte';
 	import FilesOverlay from '../chat/MessageInput/FilesOverlay.svelte';
+	import Commands from '../chat/MessageInput/Commands.svelte';
+	import InputVariablesModal from '../chat/MessageInput/InputVariablesModal.svelte';
 
 	export let placeholder = $i18n.t('Send a Message');
 	export let transparentBackground = false;
@@ -30,15 +43,184 @@
 	let content = '';
 	let files = [];
 
+	export let chatInputElement;
+
+	let commandsElement;
 	let filesInputElement;
 	let inputFiles;
 
 	export let typingUsers = [];
+	export let inputLoading = false;
 
-	export let onSubmit: Function;
-	export let onChange: Function;
+	export let onSubmit: Function = (e) => {};
+	export let onChange: Function = (e) => {};
+	export let onStop: Function = (e) => {};
+
 	export let scrollEnd = true;
 	export let scrollToBottom: Function = () => {};
+
+	export let acceptFiles = true;
+	export let showFormattingButtons = true;
+
+	let showInputVariablesModal = false;
+	let inputVariables: Record<string, any> = {};
+	let inputVariableValues = {};
+
+	const inputVariableHandler = async (text: string) => {
+		inputVariables = extractInputVariables(text);
+		if (Object.keys(inputVariables).length > 0) {
+			showInputVariablesModal = true;
+		}
+	};
+
+	const textVariableHandler = async (text: string) => {
+		if (text.includes('{{CLIPBOARD}}')) {
+			const clipboardText = await navigator.clipboard.readText().catch((err) => {
+				toast.error($i18n.t('Failed to read clipboard contents'));
+				return '{{CLIPBOARD}}';
+			});
+
+			const clipboardItems = await navigator.clipboard.read();
+
+			let imageUrl = null;
+			for (const item of clipboardItems) {
+				// Check for known image types
+				for (const type of item.types) {
+					if (type.startsWith('image/')) {
+						const blob = await item.getType(type);
+						imageUrl = URL.createObjectURL(blob);
+					}
+				}
+			}
+
+			if (imageUrl) {
+				files = [
+					...files,
+					{
+						type: 'image',
+						url: imageUrl
+					}
+				];
+			}
+
+			text = text.replaceAll('{{CLIPBOARD}}', clipboardText);
+		}
+
+		if (text.includes('{{USER_LOCATION}}')) {
+			let location;
+			try {
+				location = await getUserPosition();
+			} catch (error) {
+				toast.error($i18n.t('Location access not allowed'));
+				location = 'LOCATION_UNKNOWN';
+			}
+			text = text.replaceAll('{{USER_LOCATION}}', String(location));
+		}
+
+		if (text.includes('{{USER_NAME}}')) {
+			const name = $user?.name || 'User';
+			text = text.replaceAll('{{USER_NAME}}', name);
+		}
+
+		if (text.includes('{{USER_LANGUAGE}}')) {
+			const language = localStorage.getItem('locale') || 'en-US';
+			text = text.replaceAll('{{USER_LANGUAGE}}', language);
+		}
+
+		if (text.includes('{{CURRENT_DATE}}')) {
+			const date = getFormattedDate();
+			text = text.replaceAll('{{CURRENT_DATE}}', date);
+		}
+
+		if (text.includes('{{CURRENT_TIME}}')) {
+			const time = getFormattedTime();
+			text = text.replaceAll('{{CURRENT_TIME}}', time);
+		}
+
+		if (text.includes('{{CURRENT_DATETIME}}')) {
+			const dateTime = getCurrentDateTime();
+			text = text.replaceAll('{{CURRENT_DATETIME}}', dateTime);
+		}
+
+		if (text.includes('{{CURRENT_TIMEZONE}}')) {
+			const timezone = getUserTimezone();
+			text = text.replaceAll('{{CURRENT_TIMEZONE}}', timezone);
+		}
+
+		if (text.includes('{{CURRENT_WEEKDAY}}')) {
+			const weekday = getWeekday();
+			text = text.replaceAll('{{CURRENT_WEEKDAY}}', weekday);
+		}
+
+		inputVariableHandler(text);
+		return text;
+	};
+
+	const replaceVariables = (variables: Record<string, any>) => {
+		if (!chatInputElement) return;
+		console.log('Replacing variables:', variables);
+
+		chatInputElement.replaceVariables(variables);
+		chatInputElement.focus();
+	};
+
+	export const setText = async (text?: string) => {
+		if (!chatInputElement) return;
+
+		text = await textVariableHandler(text || '');
+
+		chatInputElement?.setText(text);
+		chatInputElement?.focus();
+	};
+
+	const getCommand = () => {
+		if (!chatInputElement) return;
+
+		let word = '';
+		word = chatInputElement?.getWordAtDocPos();
+
+		return word;
+	};
+
+	const replaceCommandWithText = (text) => {
+		if (!chatInputElement) return;
+
+		chatInputElement?.replaceCommandWithText(text);
+	};
+
+	const insertTextAtCursor = async (text: string) => {
+		text = await textVariableHandler(text);
+
+		if (command) {
+			replaceCommandWithText(text);
+		} else {
+			const selection = window.getSelection();
+			if (selection && selection.rangeCount > 0) {
+				const range = selection.getRangeAt(0);
+				range.deleteContents();
+				range.insertNode(document.createTextNode(text));
+				range.collapse(false);
+				selection.removeAllRanges();
+				selection.addRange(range);
+			}
+		}
+
+		await tick();
+		const chatInputContainer = document.getElementById('chat-input-container');
+		if (chatInputContainer) {
+			chatInputContainer.scrollTop = chatInputContainer.scrollHeight;
+		}
+
+		await tick();
+		if (chatInputElement) {
+			chatInputElement.focus();
+		}
+	};
+
+	let command = '';
+
+	export let showCommands = false;
+	$: showCommands = ['/'].includes(command?.charAt(0));
 
 	const screenCaptureHandler = async () => {
 		try {
@@ -78,7 +260,7 @@
 	};
 
 	const inputFilesHandler = async (inputFiles) => {
-		inputFiles.forEach((file) => {
+		inputFiles.forEach(async (file) => {
 			console.info('Processing file:', {
 				name: file.name,
 				type: file.type,
@@ -102,43 +284,50 @@
 				return;
 			}
 
-			if (
-				['image/gif', 'image/webp', 'image/jpeg', 'image/png', 'image/avif'].includes(file['type'])
-			) {
+			if (file['type'].startsWith('image/')) {
+				const compressImageHandler = async (imageUrl, settings = {}, config = {}) => {
+					// Quick shortcut so we don’t do unnecessary work.
+					const settingsCompression = settings?.imageCompression ?? false;
+					const configWidth = config?.file?.image_compression?.width ?? null;
+					const configHeight = config?.file?.image_compression?.height ?? null;
+
+					// If neither settings nor config wants compression, return original URL.
+					if (!settingsCompression && !configWidth && !configHeight) {
+						return imageUrl;
+					}
+
+					// Default to null (no compression unless set)
+					let width = null;
+					let height = null;
+
+					// If user/settings want compression, pick their preferred size.
+					if (settingsCompression) {
+						width = settings?.imageCompressionSize?.width ?? null;
+						height = settings?.imageCompressionSize?.height ?? null;
+					}
+
+					// Apply config limits as an upper bound if any
+					if (configWidth && (width === null || width > configWidth)) {
+						width = configWidth;
+					}
+					if (configHeight && (height === null || height > configHeight)) {
+						height = configHeight;
+					}
+
+					// Do the compression if required
+					if (width || height) {
+						return await compressImage(imageUrl, width, height);
+					}
+					return imageUrl;
+				};
+
 				let reader = new FileReader();
 
 				reader.onload = async (event) => {
 					let imageUrl = event.target.result;
 
-					if (
-						($settings?.imageCompression ?? false) ||
-						($config?.file?.image_compression?.width ?? null) ||
-						($config?.file?.image_compression?.height ?? null)
-					) {
-						let width = null;
-						let height = null;
-
-						if ($settings?.imageCompression ?? false) {
-							width = $settings?.imageCompressionSize?.width ?? null;
-							height = $settings?.imageCompressionSize?.height ?? null;
-						}
-
-						if (
-							($config?.file?.image_compression?.width ?? null) ||
-							($config?.file?.image_compression?.height ?? null)
-						) {
-							if (width > ($config?.file?.image_compression?.width ?? null)) {
-								width = $config?.file?.image_compression?.width ?? null;
-							}
-							if (height > ($config?.file?.image_compression?.height ?? null)) {
-								height = $config?.file?.image_compression?.height ?? null;
-							}
-						}
-
-						if (width || height) {
-							imageUrl = await compressImage(imageUrl, width, height);
-						}
-					}
+					// Compress the image if settings or config require it
+					imageUrl = await compressImageHandler(imageUrl, $settings, $config);
 
 					files = [
 						...files,
@@ -149,7 +338,11 @@
 					];
 				};
 
-				reader.readAsDataURL(file);
+				reader.readAsDataURL(
+					file['type'] === 'image/heic'
+						? await heic2any({ blob: file, toType: 'image/jpeg' })
+						: file
+				);
 			} else {
 				uploadFileHandler(file);
 			}
@@ -247,7 +440,7 @@
 	const onDrop = async (e) => {
 		e.preventDefault();
 
-		if (e.dataTransfer?.files) {
+		if (e.dataTransfer?.files && acceptFiles) {
 			const inputFiles = Array.from(e.dataTransfer?.files);
 			if (inputFiles && inputFiles.length > 0) {
 				console.log(inputFiles);
@@ -273,10 +466,13 @@
 		content = '';
 		files = [];
 
-		await tick();
+		if (chatInputElement) {
+			chatInputElement?.setText('');
 
-		const chatInputElement = document.getElementById(`chat-input-${id}`);
-		chatInputElement?.focus();
+			await tick();
+
+			chatInputElement.focus();
+		}
 	};
 
 	$: if (content) {
@@ -285,9 +481,10 @@
 
 	onMount(async () => {
 		window.setTimeout(() => {
-			const chatInput = document.getElementById(`chat-input-${id}`);
-			chatInput?.focus();
-		}, 0);
+			if (chatInputElement) {
+				chatInputElement.focus();
+			}
+		}, 100);
 
 		window.addEventListener('keydown', handleKeyDown);
 		await tick();
@@ -314,27 +511,39 @@
 
 <FilesOverlay show={draggedOver} />
 
-<input
-	bind:this={filesInputElement}
-	bind:files={inputFiles}
-	type="file"
-	hidden
-	multiple
-	on:change={async () => {
-		if (inputFiles && inputFiles.length > 0) {
-			inputFilesHandler(Array.from(inputFiles));
-		} else {
-			toast.error($i18n.t(`File not found.`));
-		}
+{#if acceptFiles}
+	<input
+		bind:this={filesInputElement}
+		bind:files={inputFiles}
+		type="file"
+		hidden
+		multiple
+		on:change={async () => {
+			if (inputFiles && inputFiles.length > 0) {
+				inputFilesHandler(Array.from(inputFiles));
+			} else {
+				toast.error($i18n.t(`File not found.`));
+			}
 
-		filesInputElement.value = '';
+			filesInputElement.value = '';
+		}}
+	/>
+{/if}
+
+<InputVariablesModal
+	bind:show={showInputVariablesModal}
+	variables={inputVariables}
+	onSave={(variableValues) => {
+		inputVariableValues = { ...inputVariableValues, ...variableValues };
+		replaceVariables(inputVariableValues);
 	}}
 />
+
 <div class="bg-transparent">
 	<div
 		class="{($settings?.widescreenMode ?? null)
 			? 'max-w-full'
-			: 'max-w-6xl'} px-2.5 mx-auto inset-x-0 relative"
+			: 'max-w-6xl'}  mx-auto inset-x-0 relative"
 	>
 		<div class="absolute top-0 left-0 right-0 mx-auto inset-x-0 bg-transparent flex justify-center">
 			<div class="flex flex-col px-3 w-full">
@@ -378,6 +587,13 @@
 							</div>
 						{/if}
 					</div>
+
+					<Commands
+						bind:this={commandsElement}
+						show={showCommands}
+						{command}
+						insertTextHandler={insertTextAtCursor}
+					/>
 				</div>
 			</div>
 		</div>
@@ -390,15 +606,23 @@
 						recording = false;
 
 						await tick();
-						document.getElementById(`chat-input-${id}`)?.focus();
+
+						if (chatInputElement) {
+							chatInputElement.focus();
+						}
 					}}
 					onConfirm={async (data) => {
 						const { text, filename } = data;
-						content = `${content}${text} `;
 						recording = false;
 
 						await tick();
-						document.getElementById(`chat-input-${id}`)?.focus();
+						insertTextAtCursor(text);
+
+						await tick();
+
+						if (chatInputElement) {
+							chatInputElement.focus();
+						}
 					}}
 				/>
 			{:else}
@@ -470,40 +694,96 @@
 
 						<div class="px-2.5">
 							<div
-								class="scrollbar-hidden font-primary text-left bg-transparent dark:text-gray-100 outline-hidden w-full pt-3 px-1 rounded-xl resize-none h-fit max-h-80 overflow-auto"
+								class="scrollbar-hidden font-primary text-left bg-transparent dark:text-gray-100 outline-hidden w-full pt-3 px-1 resize-none h-fit max-h-80 overflow-auto"
 							>
 								<RichTextInput
-									bind:value={content}
-									id={`chat-input-${id}`}
+									bind:this={chatInputElement}
+									json={true}
 									messageInput={true}
-									shiftEnter={!$mobile ||
-										!(
-											'ontouchstart' in window ||
-											navigator.maxTouchPoints > 0 ||
-											navigator.msMaxTouchPoints > 0
-										)}
-									{placeholder}
-									largeTextAsFile={$settings?.largeTextAsFile ?? false}
-									on:keydown={async (e) => {
-										e = e.detail.event;
-										const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
-										if (
-											!$mobile ||
+									{showFormattingButtons}
+									shiftEnter={!($settings?.ctrlEnterToSend ?? false) &&
+										(!$mobile ||
 											!(
 												'ontouchstart' in window ||
 												navigator.maxTouchPoints > 0 ||
 												navigator.msMaxTouchPoints > 0
-											)
-										) {
-											// Prevent Enter key from creating a new line
-											// Uses keyCode '13' for Enter key for chinese/japanese keyboards
-											if (e.keyCode === 13 && !e.shiftKey) {
+											))}
+									largeTextAsFile={$settings?.largeTextAsFile ?? false}
+									floatingMenuPlacement={'top-start'}
+									onChange={(e) => {
+										const { md } = e;
+										content = md;
+										command = getCommand();
+									}}
+									on:keydown={async (e) => {
+										e = e.detail.event;
+										const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
+
+										const commandsContainerElement = document.getElementById('commands-container');
+
+										if (commandsContainerElement) {
+											if (commandsContainerElement && e.key === 'ArrowUp') {
 												e.preventDefault();
+												commandsElement.selectUp();
+
+												const commandOptionButton = [
+													...document.getElementsByClassName('selected-command-option-button')
+												]?.at(-1);
+												commandOptionButton.scrollIntoView({ block: 'center' });
 											}
 
-											// Submit the content when Enter key is pressed
-											if (content !== '' && e.keyCode === 13 && !e.shiftKey) {
-												submitHandler();
+											if (commandsContainerElement && e.key === 'ArrowDown') {
+												e.preventDefault();
+												commandsElement.selectDown();
+
+												const commandOptionButton = [
+													...document.getElementsByClassName('selected-command-option-button')
+												]?.at(-1);
+												commandOptionButton.scrollIntoView({ block: 'center' });
+											}
+
+											if (commandsContainerElement && e.key === 'Tab') {
+												e.preventDefault();
+
+												const commandOptionButton = [
+													...document.getElementsByClassName('selected-command-option-button')
+												]?.at(-1);
+
+												commandOptionButton?.click();
+											}
+
+											if (commandsContainerElement && e.key === 'Enter') {
+												e.preventDefault();
+
+												const commandOptionButton = [
+													...document.getElementsByClassName('selected-command-option-button')
+												]?.at(-1);
+
+												if (commandOptionButton) {
+													commandOptionButton?.click();
+												} else {
+													document.getElementById('send-message-button')?.click();
+												}
+											}
+										} else {
+											if (
+												!$mobile ||
+												!(
+													'ontouchstart' in window ||
+													navigator.maxTouchPoints > 0 ||
+													navigator.msMaxTouchPoints > 0
+												)
+											) {
+												// Prevent Enter key from creating a new line
+												// Uses keyCode '13' for Enter key for chinese/japanese keyboards
+												if (e.keyCode === 13 && !e.shiftKey) {
+													e.preventDefault();
+												}
+
+												// Submit the content when Enter key is pressed
+												if (content !== '' && e.keyCode === 13 && !e.shiftKey) {
+													submitHandler();
+												}
 											}
 										}
 
@@ -520,30 +800,34 @@
 						</div>
 
 						<div class=" flex justify-between mb-2.5 mt-1.5 mx-0.5">
-							<div class="ml-1 self-end flex space-x-1">
-								<InputMenu
-									{screenCaptureHandler}
-									uploadFilesHandler={() => {
-										filesInputElement.click();
-									}}
-								>
-									<button
-										class="bg-transparent hover:bg-white/80 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5 outline-hidden focus:outline-hidden"
-										type="button"
-										aria-label="More"
-									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											viewBox="0 0 20 20"
-											fill="currentColor"
-											class="size-5"
+							<div class="ml-1 self-end flex space-x-1 flex-1">
+								<slot name="menu">
+									{#if acceptFiles}
+										<InputMenu
+											{screenCaptureHandler}
+											uploadFilesHandler={() => {
+												filesInputElement.click();
+											}}
 										>
-											<path
-												d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"
-											/>
-										</svg>
-									</button>
-								</InputMenu>
+											<button
+												class="bg-transparent hover:bg-white/80 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5 outline-hidden focus:outline-hidden"
+												type="button"
+												aria-label="More"
+											>
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													viewBox="0 0 20 20"
+													fill="currentColor"
+													class="size-5"
+												>
+													<path
+														d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"
+													/>
+												</svg>
+											</button>
+										</InputMenu>
+									{/if}
+								</slot>
 							</div>
 
 							<div class="self-end flex space-x-1 mr-1">
@@ -594,31 +878,57 @@
 								{/if}
 
 								<div class=" flex items-center">
-									<div class=" flex items-center">
-										<Tooltip content={$i18n.t('Send message')}>
-											<button
-												id="send-message-button"
-												class="{content !== '' || files.length !== 0
-													? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
-													: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
-												type="submit"
-												disabled={content === '' && files.length === 0}
-											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													viewBox="0 0 16 16"
-													fill="currentColor"
-													class="size-5"
+									{#if inputLoading && onStop}
+										<div class=" flex items-center">
+											<Tooltip content={$i18n.t('Stop')}>
+												<button
+													class="bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5"
+													on:click={() => {
+														onStop();
+													}}
 												>
-													<path
-														fill-rule="evenodd"
-														d="M8 14a.75.75 0 0 1-.75-.75V4.56L4.03 7.78a.75.75 0 0 1-1.06-1.06l4.5-4.5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.75 4.56v8.69A.75.75 0 0 1 8 14Z"
-														clip-rule="evenodd"
-													/>
-												</svg>
-											</button>
-										</Tooltip>
-									</div>
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														viewBox="0 0 24 24"
+														fill="currentColor"
+														class="size-5"
+													>
+														<path
+															fill-rule="evenodd"
+															d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm6-2.438c0-.724.588-1.312 1.313-1.312h4.874c.725 0 1.313.588 1.313 1.313v4.874c0 .725-.588 1.313-1.313 1.313H9.564a1.312 1.312 0 01-1.313-1.313V9.564z"
+															clip-rule="evenodd"
+														/>
+													</svg>
+												</button>
+											</Tooltip>
+										</div>
+									{:else}
+										<div class=" flex items-center">
+											<Tooltip content={$i18n.t('Send message')}>
+												<button
+													id="send-message-button"
+													class="{content !== '' || files.length !== 0
+														? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
+														: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
+													type="submit"
+													disabled={content === '' && files.length === 0}
+												>
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														viewBox="0 0 16 16"
+														fill="currentColor"
+														class="size-5"
+													>
+														<path
+															fill-rule="evenodd"
+															d="M8 14a.75.75 0 0 1-.75-.75V4.56L4.03 7.78a.75.75 0 0 1-1.06-1.06l4.5-4.5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.75 4.56v8.69A.75.75 0 0 1 8 14Z"
+															clip-rule="evenodd"
+														/>
+													</svg>
+												</button>
+											</Tooltip>
+										</div>
+									{/if}
 								</div>
 							</div>
 						</div>

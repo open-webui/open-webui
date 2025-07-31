@@ -13,12 +13,15 @@ from urllib.parse import urlparse
 import requests
 from pydantic import BaseModel
 from sqlalchemy import JSON, Column, DateTime, Integer, func
+from authlib.integrations.starlette_client import OAuth
+
 
 from open_webui.env import (
     DATA_DIR,
     DATABASE_URL,
     ENV,
     REDIS_URL,
+    REDIS_KEY_PREFIX,
     REDIS_SENTINEL_HOSTS,
     REDIS_SENTINEL_PORT,
     FRONTEND_BUILD_DIR,
@@ -211,11 +214,16 @@ class PersistentConfig(Generic[T]):
 class AppConfig:
     _state: dict[str, PersistentConfig]
     _redis: Optional[redis.Redis] = None
+    _redis_key_prefix: str
 
     def __init__(
-        self, redis_url: Optional[str] = None, redis_sentinels: Optional[list] = []
+        self,
+        redis_url: Optional[str] = None,
+        redis_sentinels: Optional[list] = [],
+        redis_key_prefix: str = "open-webui",
     ):
         super().__setattr__("_state", {})
+        super().__setattr__("_redis_key_prefix", redis_key_prefix)
         if redis_url:
             super().__setattr__(
                 "_redis",
@@ -230,7 +238,7 @@ class AppConfig:
             self._state[key].save()
 
             if self._redis:
-                redis_key = f"open-webui:config:{key}"
+                redis_key = f"{self._redis_key_prefix}:config:{key}"
                 self._redis.set(redis_key, json.dumps(self._state[key].value))
 
     def __getattr__(self, key):
@@ -239,7 +247,7 @@ class AppConfig:
 
         # If Redis is available, check for an updated value
         if self._redis:
-            redis_key = f"open-webui:config:{key}"
+            redis_key = f"{self._redis_key_prefix}:config:{key}"
             redis_value = self._redis.get(redis_key)
 
             if redis_value is not None:
@@ -431,6 +439,18 @@ OAUTH_SCOPES = PersistentConfig(
     os.environ.get("OAUTH_SCOPES", "openid email profile"),
 )
 
+OAUTH_TIMEOUT = PersistentConfig(
+    "OAUTH_TIMEOUT",
+    "oauth.oidc.oauth_timeout",
+    os.environ.get("OAUTH_TIMEOUT", ""),
+)
+
+OAUTH_TOKEN_ENDPOINT_AUTH_METHOD = PersistentConfig(
+    "OAUTH_TOKEN_ENDPOINT_AUTH_METHOD",
+    "oauth.oidc.token_endpoint_auth_method",
+    os.environ.get("OAUTH_TOKEN_ENDPOINT_AUTH_METHOD", None),
+)
+
 OAUTH_CODE_CHALLENGE_METHOD = PersistentConfig(
     "OAUTH_CODE_CHALLENGE_METHOD",
     "oauth.oidc.code_challenge_method",
@@ -534,13 +554,20 @@ def load_oauth_providers():
     OAUTH_PROVIDERS.clear()
     if GOOGLE_CLIENT_ID.value and GOOGLE_CLIENT_SECRET.value:
 
-        def google_oauth_register(client):
+        def google_oauth_register(client: OAuth):
             client.register(
                 name="google",
                 client_id=GOOGLE_CLIENT_ID.value,
                 client_secret=GOOGLE_CLIENT_SECRET.value,
                 server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
-                client_kwargs={"scope": GOOGLE_OAUTH_SCOPE.value},
+                client_kwargs={
+                    "scope": GOOGLE_OAUTH_SCOPE.value,
+                    **(
+                        {"timeout": int(OAUTH_TIMEOUT.value)}
+                        if OAUTH_TIMEOUT.value
+                        else {}
+                    ),
+                },
                 redirect_uri=GOOGLE_REDIRECT_URI.value,
             )
 
@@ -555,7 +582,7 @@ def load_oauth_providers():
         and MICROSOFT_CLIENT_TENANT_ID.value
     ):
 
-        def microsoft_oauth_register(client):
+        def microsoft_oauth_register(client: OAuth):
             client.register(
                 name="microsoft",
                 client_id=MICROSOFT_CLIENT_ID.value,
@@ -563,6 +590,11 @@ def load_oauth_providers():
                 server_metadata_url=f"{MICROSOFT_CLIENT_LOGIN_BASE_URL.value}/{MICROSOFT_CLIENT_TENANT_ID.value}/v2.0/.well-known/openid-configuration?appid={MICROSOFT_CLIENT_ID.value}",
                 client_kwargs={
                     "scope": MICROSOFT_OAUTH_SCOPE.value,
+                    **(
+                        {"timeout": int(OAUTH_TIMEOUT.value)}
+                        if OAUTH_TIMEOUT.value
+                        else {}
+                    ),
                 },
                 redirect_uri=MICROSOFT_REDIRECT_URI.value,
             )
@@ -575,7 +607,7 @@ def load_oauth_providers():
 
     if GITHUB_CLIENT_ID.value and GITHUB_CLIENT_SECRET.value:
 
-        def github_oauth_register(client):
+        def github_oauth_register(client: OAuth):
             client.register(
                 name="github",
                 client_id=GITHUB_CLIENT_ID.value,
@@ -584,7 +616,14 @@ def load_oauth_providers():
                 authorize_url="https://github.com/login/oauth/authorize",
                 api_base_url="https://api.github.com",
                 userinfo_endpoint="https://api.github.com/user",
-                client_kwargs={"scope": GITHUB_CLIENT_SCOPE.value},
+                client_kwargs={
+                    "scope": GITHUB_CLIENT_SCOPE.value,
+                    **(
+                        {"timeout": int(OAUTH_TIMEOUT.value)}
+                        if OAUTH_TIMEOUT.value
+                        else {}
+                    ),
+                },
                 redirect_uri=GITHUB_CLIENT_REDIRECT_URI.value,
             )
 
@@ -600,9 +639,19 @@ def load_oauth_providers():
         and OPENID_PROVIDER_URL.value
     ):
 
-        def oidc_oauth_register(client):
+        def oidc_oauth_register(client: OAuth):
             client_kwargs = {
                 "scope": OAUTH_SCOPES.value,
+                **(
+                    {
+                        "token_endpoint_auth_method": OAUTH_TOKEN_ENDPOINT_AUTH_METHOD.value
+                    }
+                    if OAUTH_TOKEN_ENDPOINT_AUTH_METHOD.value
+                    else {}
+                ),
+                **(
+                    {"timeout": int(OAUTH_TIMEOUT.value)} if OAUTH_TIMEOUT.value else {}
+                ),
             }
 
             if (
@@ -639,6 +688,17 @@ load_oauth_providers()
 ####################################
 
 STATIC_DIR = Path(os.getenv("STATIC_DIR", OPEN_WEBUI_DIR / "static")).resolve()
+
+try:
+    if STATIC_DIR.exists():
+        for item in STATIC_DIR.iterdir():
+            if item.is_file() or item.is_symlink():
+                try:
+                    item.unlink()
+                except Exception as e:
+                    pass
+except Exception as e:
+    pass
 
 for file_path in (FRONTEND_BUILD_DIR / "static").glob("**/*"):
     if file_path.is_file():
@@ -718,12 +778,6 @@ if CUSTOM_NAME:
         log.exception(e)
         pass
 
-
-####################################
-# LICENSE_KEY
-####################################
-
-LICENSE_KEY = os.environ.get("LICENSE_KEY", "")
 
 ####################################
 # STORAGE PROVIDER
@@ -894,6 +948,18 @@ try:
 except Exception:
     pass
 OPENAI_API_BASE_URL = "https://api.openai.com/v1"
+
+
+####################################
+# MODELS
+####################################
+
+ENABLE_BASE_MODELS_CACHE = PersistentConfig(
+    "ENABLE_BASE_MODELS_CACHE",
+    "models.base_models_cache",
+    os.environ.get("ENABLE_BASE_MODELS_CACHE", "False").lower() == "true",
+)
+
 
 ####################################
 # TOOL_SERVERS
@@ -1077,8 +1143,16 @@ USER_PERMISSIONS_CHAT_CONTROLS = (
     os.environ.get("USER_PERMISSIONS_CHAT_CONTROLS", "True").lower() == "true"
 )
 
+USER_PERMISSIONS_CHAT_VALVES = (
+    os.environ.get("USER_PERMISSIONS_CHAT_VALVES", "True").lower() == "true"
+)
+
 USER_PERMISSIONS_CHAT_SYSTEM_PROMPT = (
     os.environ.get("USER_PERMISSIONS_CHAT_SYSTEM_PROMPT", "True").lower() == "true"
+)
+
+USER_PERMISSIONS_CHAT_PARAMS = (
+    os.environ.get("USER_PERMISSIONS_CHAT_PARAMS", "True").lower() == "true"
 )
 
 USER_PERMISSIONS_CHAT_FILE_UPLOAD = (
@@ -1166,7 +1240,9 @@ DEFAULT_USER_PERMISSIONS = {
     },
     "chat": {
         "controls": USER_PERMISSIONS_CHAT_CONTROLS,
+        "valves": USER_PERMISSIONS_CHAT_VALVES,
         "system_prompt": USER_PERMISSIONS_CHAT_SYSTEM_PROMPT,
+        "params": USER_PERMISSIONS_CHAT_PARAMS,
         "file_upload": USER_PERMISSIONS_CHAT_FILE_UPLOAD,
         "delete": USER_PERMISSIONS_CHAT_DELETE,
         "edit": USER_PERMISSIONS_CHAT_EDIT,
@@ -1794,11 +1870,12 @@ MILVUS_IVF_FLAT_NLIST = int(os.environ.get("MILVUS_IVF_FLAT_NLIST", "128"))
 QDRANT_URI = os.environ.get("QDRANT_URI", None)
 QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY", None)
 QDRANT_ON_DISK = os.environ.get("QDRANT_ON_DISK", "false").lower() == "true"
-QDRANT_PREFER_GRPC = os.environ.get("QDRANT_PREFER_GRPC", "False").lower() == "true"
+QDRANT_PREFER_GRPC = os.environ.get("QDRANT_PREFER_GRPC", "false").lower() == "true"
 QDRANT_GRPC_PORT = int(os.environ.get("QDRANT_GRPC_PORT", "6334"))
 ENABLE_QDRANT_MULTITENANCY_MODE = (
-    os.environ.get("ENABLE_QDRANT_MULTITENANCY_MODE", "false").lower() == "true"
+    os.environ.get("ENABLE_QDRANT_MULTITENANCY_MODE", "true").lower() == "true"
 )
+QDRANT_COLLECTION_PREFIX = os.environ.get("QDRANT_COLLECTION_PREFIX", "open-webui")
 
 # OpenSearch
 OPENSEARCH_URI = os.environ.get("OPENSEARCH_URI", "https://localhost:9200")
@@ -1836,6 +1913,45 @@ if PGVECTOR_PGCRYPTO and not PGVECTOR_PGCRYPTO_KEY:
     raise ValueError(
         "PGVECTOR_PGCRYPTO is enabled but PGVECTOR_PGCRYPTO_KEY is not set. Please provide a valid key."
     )
+
+
+PGVECTOR_POOL_SIZE = os.environ.get("PGVECTOR_POOL_SIZE", None)
+
+if PGVECTOR_POOL_SIZE != None:
+    try:
+        PGVECTOR_POOL_SIZE = int(PGVECTOR_POOL_SIZE)
+    except Exception:
+        PGVECTOR_POOL_SIZE = None
+
+PGVECTOR_POOL_MAX_OVERFLOW = os.environ.get("PGVECTOR_POOL_MAX_OVERFLOW", 0)
+
+if PGVECTOR_POOL_MAX_OVERFLOW == "":
+    PGVECTOR_POOL_MAX_OVERFLOW = 0
+else:
+    try:
+        PGVECTOR_POOL_MAX_OVERFLOW = int(PGVECTOR_POOL_MAX_OVERFLOW)
+    except Exception:
+        PGVECTOR_POOL_MAX_OVERFLOW = 0
+
+PGVECTOR_POOL_TIMEOUT = os.environ.get("PGVECTOR_POOL_TIMEOUT", 30)
+
+if PGVECTOR_POOL_TIMEOUT == "":
+    PGVECTOR_POOL_TIMEOUT = 30
+else:
+    try:
+        PGVECTOR_POOL_TIMEOUT = int(PGVECTOR_POOL_TIMEOUT)
+    except Exception:
+        PGVECTOR_POOL_TIMEOUT = 30
+
+PGVECTOR_POOL_RECYCLE = os.environ.get("PGVECTOR_POOL_RECYCLE", 3600)
+
+if PGVECTOR_POOL_RECYCLE == "":
+    PGVECTOR_POOL_RECYCLE = 3600
+else:
+    try:
+        PGVECTOR_POOL_RECYCLE = int(PGVECTOR_POOL_RECYCLE)
+    except Exception:
+        PGVECTOR_POOL_RECYCLE = 3600
 
 # Pinecone
 PINECONE_API_KEY = os.environ.get("PINECONE_API_KEY", None)

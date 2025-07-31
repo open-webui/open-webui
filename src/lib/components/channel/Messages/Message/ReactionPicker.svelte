@@ -5,6 +5,7 @@
 	import emojiShortCodes from '$lib/emoji-shortcodes.json';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import VirtualList from '@sveltejs/svelte-virtual-list';
+	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	export let onClose = () => {};
 	export let onSubmit = (name) => {};
@@ -147,7 +148,7 @@
 												on:click={() => selectEmoji(emojiItem)}
 											>
 												<img
-													src="/assets/emojis/{emojiItem.name.toLowerCase()}.svg"
+													src="{WEBUI_BASE_URL}/assets/emojis/{emojiItem.name.toLowerCase()}.svg"
 													alt={emojiItem.name}
 													class="size-5"
 													loading="lazy"

@@ -9,7 +9,7 @@
 	import { getUsage } from '$lib/apis';
 	import { userSignOut } from '$lib/apis/auths';
 
-	import { showSettings, mobile, showSidebar, user } from '$lib/stores';
+	import { showSettings, mobile, showSidebar, showShortcuts, user } from '$lib/stores';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
@@ -28,8 +28,6 @@
 	export let role = '';
 	export let help = false;
 	export let className = 'max-w-[240px]';
-
-	let showShortcuts = false;
 
 	const dispatch = createEventDispatcher();
 
@@ -51,7 +49,7 @@
 	}
 </script>
 
-<ShortcutsModal bind:show={showShortcuts} />
+<ShortcutsModal bind:show={$showShortcuts} />
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <DropdownMenu.Root
@@ -72,8 +70,8 @@
 			align="start"
 			transition={(e) => fade(e, { duration: 100 })}
 		>
-			<button
-				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+			<DropdownMenu.Item
+				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer"
 				on:click={async () => {
 					await showSettings.set(true);
 					show = false;
@@ -87,10 +85,10 @@
 					<Settings className="w-5 h-5" strokeWidth="1.5" />
 				</div>
 				<div class=" self-center truncate">{$i18n.t('Settings')}</div>
-			</button>
+			</DropdownMenu.Item>
 
-			<button
-				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+			<DropdownMenu.Item
+				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer"
 				on:click={() => {
 					dispatch('show', 'archived-chat');
 					show = false;
@@ -104,15 +102,15 @@
 					<ArchiveBox className="size-5" strokeWidth="1.5" />
 				</div>
 				<div class=" self-center truncate">{$i18n.t('Archived Chats')}</div>
-			</button>
+			</DropdownMenu.Item>
 
 			{#if role === 'admin'}
-				<button
-					class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+				<DropdownMenu.Item
+					as="a"
+					href="/playground"
+					class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition select-none"
 					on:click={() => {
-						goto('/playground');
 						show = false;
-
 						if ($mobile) {
 							showSidebar.set(false);
 						}
@@ -122,14 +120,13 @@
 						<Code className="size-5" strokeWidth="1.5" />
 					</div>
 					<div class=" self-center truncate">{$i18n.t('Playground')}</div>
-				</button>
-
-				<button
-					class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+				</DropdownMenu.Item>
+				<DropdownMenu.Item
+					as="a"
+					href="/admin"
+					class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition select-none"
 					on:click={() => {
-						goto('/admin');
 						show = false;
-
 						if ($mobile) {
 							showSidebar.set(false);
 						}
@@ -139,20 +136,22 @@
 						<UserGroup className="w-5 h-5" strokeWidth="1.5" />
 					</div>
 					<div class=" self-center truncate">{$i18n.t('Admin Panel')}</div>
-				</button>
+				</DropdownMenu.Item>
 			{/if}
 
 			{#if help}
 				<hr class=" border-gray-100 dark:border-gray-800 my-1 p-0" />
 
 				<!-- {$i18n.t('Help')} -->
+
 				<DropdownMenu.Item
+					as="a"
 					class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition"
 					id="chat-share-button"
 					on:click={() => {
-						window.open('https://docs.openwebui.com', '_blank');
 						show = false;
 					}}
+					href="https://docs.openwebui.com'"
 				>
 					<QuestionMarkCircle className="size-5" />
 					<div class="flex items-center">{$i18n.t('Documentation')}</div>
@@ -160,22 +159,23 @@
 
 				<!-- Releases -->
 				<DropdownMenu.Item
+					as="a"
 					class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition"
-					id="menu-item-releases"
+					id="chat-share-button"
 					on:click={() => {
-						window.open('https://github.com/open-webui/open-webui/releases', '_blank');
 						show = false;
 					}}
+					href="https://github.com/open-webui/"
 				>
 					<Map className="size-5" />
 					<div class="flex items-center">{$i18n.t('Releases')}</div>
 				</DropdownMenu.Item>
 
 				<DropdownMenu.Item
-					class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition"
+					class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition cursor-pointer"
 					id="chat-share-button"
 					on:click={() => {
-						showShortcuts = !showShortcuts;
+						showShortcuts.set(!$showShortcuts);
 						show = false;
 					}}
 				>
@@ -186,7 +186,7 @@
 
 			<hr class=" border-gray-100 dark:border-gray-800 my-1 p-0" />
 
-			<button
+			<DropdownMenu.Item
 				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
 				on:click={async () => {
 					const res = await userSignOut();
@@ -201,7 +201,7 @@
 					<SignOut className="w-5 h-5" strokeWidth="1.5" />
 				</div>
 				<div class=" self-center truncate">{$i18n.t('Sign Out')}</div>
-			</button>
+			</DropdownMenu.Item>
 
 			{#if usage}
 				{#if usage?.user_ids?.length > 0}

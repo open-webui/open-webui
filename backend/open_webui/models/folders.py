@@ -29,6 +29,7 @@ class Folder(Base):
     name = Column(Text)
     items = Column(JSON, nullable=True)
     meta = Column(JSON, nullable=True)
+    data = Column(JSON, nullable=True)
     is_expanded = Column(Boolean, default=False)
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)
@@ -41,6 +42,7 @@ class FolderModel(BaseModel):
     name: str
     items: Optional[dict] = None
     meta: Optional[dict] = None
+    data: Optional[dict] = None
     is_expanded: bool = False
     created_at: int
     updated_at: int
@@ -55,12 +57,13 @@ class FolderModel(BaseModel):
 
 class FolderForm(BaseModel):
     name: str
+    data: Optional[dict] = None
     model_config = ConfigDict(extra="allow")
 
 
 class FolderTable:
     def insert_new_folder(
-        self, user_id: str, name: str, parent_id: Optional[str] = None
+        self, user_id: str, form_data: FolderForm, parent_id: Optional[str] = None
     ) -> Optional[FolderModel]:
         with get_db() as db:
             id = str(uuid.uuid4())
@@ -68,7 +71,7 @@ class FolderTable:
                 **{
                     "id": id,
                     "user_id": user_id,
-                    "name": name,
+                    **(form_data.model_dump(exclude_unset=True) or {}),
                     "parent_id": parent_id,
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
@@ -187,8 +190,8 @@ class FolderTable:
             log.error(f"update_folder: {e}")
             return
 
-    def update_folder_name_by_id_and_user_id(
-        self, id: str, user_id: str, name: str
+    def update_folder_by_id_and_user_id(
+        self, id: str, user_id: str, form_data: FolderForm
     ) -> Optional[FolderModel]:
         try:
             with get_db() as db:
@@ -197,16 +200,28 @@ class FolderTable:
                 if not folder:
                     return None
 
+                form_data = form_data.model_dump(exclude_unset=True)
+
                 existing_folder = (
                     db.query(Folder)
-                    .filter_by(name=name, parent_id=folder.parent_id, user_id=user_id)
+                    .filter_by(
+                        name=form_data.get("name"),
+                        parent_id=folder.parent_id,
+                        user_id=user_id,
+                    )
                     .first()
                 )
 
-                if existing_folder:
+                if existing_folder and existing_folder.id != id:
                     return None
 
-                folder.name = name
+                folder.name = form_data.get("name", folder.name)
+                if "data" in form_data:
+                    folder.data = {
+                        **(folder.data or {}),
+                        **form_data["data"],
+                    }
+
                 folder.updated_at = int(time.time())
 
                 db.commit()

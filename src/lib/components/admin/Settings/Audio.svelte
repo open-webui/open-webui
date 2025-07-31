@@ -12,6 +12,7 @@
 	} from '$lib/apis/audio';
 	import { config, settings } from '$lib/stores';
 
+	import Spinner from '$lib/components/common/Spinner.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 
 	import { TTS_RESPONSE_SPLIT } from '$lib/types';
@@ -199,7 +200,9 @@
 								<input
 									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 									bind:value={STT_SUPPORTED_CONTENT_TYPES}
-									placeholder={$i18n.t('e.g., audio/wav,audio/mpeg (leave blank for defaults)')}
+									placeholder={$i18n.t(
+										'e.g., audio/wav,audio/mpeg,video/* (leave blank for defaults)'
+									)}
 								/>
 							</div>
 						</div>
@@ -373,33 +376,7 @@
 							>
 								{#if STT_WHISPER_MODEL_LOADING}
 									<div class="self-center">
-										<svg
-											class=" w-4 h-4"
-											viewBox="0 0 24 24"
-											fill="currentColor"
-											xmlns="http://www.w3.org/2000/svg"
-										>
-											<style>
-												.spinner_ajPY {
-													transform-origin: center;
-													animation: spinner_AtaB 0.75s infinite linear;
-												}
-
-												@keyframes spinner_AtaB {
-													100% {
-														transform: rotate(360deg);
-													}
-												}
-											</style>
-											<path
-												d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
-												opacity=".25"
-											/>
-											<path
-												d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
-												class="spinner_ajPY"
-											/>
-										</svg>
+										<Spinner />
 									</div>
 								{:else}
 									<svg

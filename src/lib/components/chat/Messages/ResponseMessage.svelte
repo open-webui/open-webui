@@ -106,6 +106,7 @@
 	export let chatId = '';
 	export let history;
 	export let messageId;
+	export let selectedModels = [];
 
 	let message: MessageType = JSON.parse(JSON.stringify(history.messages[messageId]));
 	$: if (history.messages) {
@@ -116,6 +117,7 @@
 
 	export let siblings;
 
+	export let setInputText: Function = () => {};
 	export let gotoMessage: Function = () => {};
 	export let showPreviousMessage: Function;
 	export let showNextMessage: Function;
@@ -164,7 +166,7 @@
 			text = `${text}\n\n${$config?.ui?.response_watermark}`;
 		}
 
-		const res = await _copyToClipboard(text, $settings?.copyFormatted ?? false);
+		const res = await _copyToClipboard(text, null, $settings?.copyFormatted ?? false);
 		if (res) {
 			toast.success($i18n.t('Copying to clipboard was successful!'));
 		}
@@ -601,15 +603,17 @@
 		id="message-{message.id}"
 		dir={$settings.chatDirection}
 	>
-		<div class={`shrink-0 ltr:mr-3 rtl:ml-3 hidden @lg:flex `}>
+		<div class={`shrink-0 ltr:mr-3 rtl:ml-3 hidden @lg:flex mt-1 `}>
 			<ProfileImage
 				src={model?.info?.meta?.profile_image_url ??
-					($i18n.language === 'dg-DG' ? `/doge.png` : `${WEBUI_BASE_URL}/static/favicon.png`)}
+					($i18n.language === 'dg-DG'
+						? `${WEBUI_BASE_URL}/doge.png`
+						: `${WEBUI_BASE_URL}/favicon.png`)}
 				className={'size-8 assistant-message-profile-image'}
 			/>
 		</div>
 
-		<div class="flex-auto w-0 pl-1 relative -translate-y-0.5">
+		<div class="flex-auto w-0 pl-1 relative">
 			<Name>
 				<Tooltip content={model?.name ?? message.model} placement="top-start">
 					<span class="line-clamp-1 text-black dark:text-white">
@@ -795,11 +799,15 @@
 									<ContentRenderer
 										id={message.id}
 										{history}
+										{selectedModels}
 										content={message.content}
 										sources={message.sources}
 										floatingButtons={message?.done && !readOnly}
 										save={!readOnly}
 										preview={!readOnly}
+										done={($settings?.chatFadeStreamingText ?? true)
+											? (message?.done ?? false)
+											: true}
 										{model}
 										onTaskClick={async (e) => {
 											console.log(e);
@@ -1457,12 +1465,18 @@
 						/>
 					{/if}
 
-					{#if isLastMessage && message.done && !readOnly && (message?.followUps ?? []).length > 0}
+					{#if (isLastMessage || ($settings?.keepFollowUpPrompts ?? false)) && message.done && !readOnly && (message?.followUps ?? []).length > 0}
 						<div class="mt-2.5" in:fade={{ duration: 100 }}>
 							<FollowUps
 								followUps={message?.followUps}
 								onClick={(prompt) => {
-									submitMessage(message?.id, prompt);
+									if ($settings?.insertFollowUpPrompt ?? false) {
+										// Insert the follow-up prompt into the input box
+										setInputText(prompt);
+									} else {
+										// Submit the follow-up prompt directly
+										submitMessage(message?.id, prompt);
+									}
 								}}
 							/>
 						</div>

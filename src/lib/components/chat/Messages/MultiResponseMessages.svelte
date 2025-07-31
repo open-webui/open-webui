@@ -23,10 +23,12 @@
 	export let chatId;
 	export let history;
 	export let messageId;
+	export let selectedModels = [];
 
 	export let isLastMessage;
 	export let readOnly = false;
 
+	export let setInputText: Function = () => {};
 	export let updateChat: Function;
 	export let editMessage: Function;
 	export let saveMessage: Function;
@@ -252,11 +254,13 @@
 									{chatId}
 									{history}
 									messageId={_messageId}
+									{selectedModels}
 									isLastMessage={true}
 									siblings={groupedMessageIds[modelIdx].messageIds}
 									gotoMessage={(message, messageIdx) => gotoMessage(modelIdx, messageIdx)}
 									showPreviousMessage={() => showPreviousMessage(modelIdx)}
 									showNextMessage={() => showNextMessage(modelIdx)}
+									{setInputText}
 									{updateChat}
 									{editMessage}
 									{saveMessage}
