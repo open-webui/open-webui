@@ -1296,7 +1296,7 @@ async def get_models(
         models = get_filtered_models(models, user)
 
     log.debug(
-        f"/api/models returned filtered models accessible to the user: {json.dumps([model['id'] for model in models])}"
+        f"/api/models returned filtered models accessible to the user: {json.dumps([model.get('id') for model in models])}"
     )
     return {"data": models}
 
