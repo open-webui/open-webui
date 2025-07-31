@@ -1605,7 +1605,7 @@
 														data-filter-toggle
 														on:click={handleFilterToggle}
 														class="flex items-center px-[12px] gap-[4px] py-[8px] shadow-custom3 border border-[#E5EBF3] bg-[#FBFCFC] dark:border-[#004280] dark:bg-[#004280] text-typography-titles text-[14px] leading-[22px] rounded-full"
-														><Filter />{$i18n.t('Tools')}</button
+														><Filter />{ $mobile ? '' : $i18n.t('Tools')}</button
 													>
 													{#if selectedModelName !== ''}<div
 															class="px-[8px] font-Inter_Medium flex items-center gap-[8px] text-[14px] leading-[22px] text-typography-titles"
