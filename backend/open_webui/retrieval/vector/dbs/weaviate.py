@@ -83,14 +83,19 @@ class WeaviateClient:
             return False
         
     def warmup(self):
-        
-        self.base_url = f"https://{WEAVIATE_HTTP_HOST}:{WEAVIATE_HTTP_PORT}"
+        if WEAVIATE_HTTP_PORT == 443:
+            self.base_url = f"https://{WEAVIATE_HTTP_HOST}"
+        else:
+            self.base_url = f"https://{WEAVIATE_HTTP_HOST}:{WEAVIATE_HTTP_PORT}"
 
         url = f"{self.base_url}/v1/schema"
 
         if not test_connection(url):
             logging.error(f"Could not connect to Weaviate at {url} by https, using http. Please check your configuration.")
-            self.base_url = f"http://{WEAVIATE_HTTP_HOST}:{WEAVIATE_HTTP_PORT}"
+            if WEAVIATE_HTTP_PORT == 80:
+                self.base_url = f"https://{WEAVIATE_HTTP_HOST}"
+            else:
+                self.base_url = f"https://{WEAVIATE_HTTP_HOST}:{WEAVIATE_HTTP_PORT}"
             if not test_connection(self.base_url):
                 return False
             else:
