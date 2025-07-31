@@ -178,12 +178,15 @@ class ChromaClient(VectorDBBase):
     ):
         # Delete the items from the collection based on the ids.
         try:
-            collection = self.client.get_collection(name=collection_name)
-            if collection:
-                if ids:
-                    collection.delete(ids=ids)
-                elif filter:
-                    collection.delete(where=filter)
+            if not ids or not filter:
+                collection = self.client.get_collection(name=collection_name)
+                result = collection.get()
+                ids = result["ids"]
+            
+            if ids:
+                collection.delete(ids=ids)
+            elif filter:
+                collection.delete(where=filter)
         except Exception as e:
             # If collection doesn't exist, that's fine - nothing to delete
             log.debug(

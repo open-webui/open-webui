@@ -280,10 +280,10 @@ export const removeFileFromKnowledgeById = async (token: string, id: string, fil
 
 	return res;
 };
-export const endEmbed= async (token: string) => {
+export const endEmbed = async (token: string, id: string,) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/progress/process/file/stop`, {
+	await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/process/file/stop`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -291,8 +291,23 @@ export const endEmbed= async (token: string) => {
 			authorization: `Bearer ${token}`
 		},
 	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err.detail;
 
+			console.log(err);
+			return null;
+		});
 
+	if (error) {
+		throw error;
+	}
 
 }
 export const resetKnowledgeById = async (token: string, id: string) => {

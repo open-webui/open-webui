@@ -6,7 +6,7 @@ import json
 import threading
 
 progress_queue = asyncio.Queue()
-stopWhileRun = False
+stop_event = asyncio.Event()
 
 def update_progress(current, total):
     progress = round((current / total) * 100, 2)
@@ -23,15 +23,14 @@ def update_progress(current, total):
     # Use a thread to ensure it always runs outside blocking context
     threading.Thread(target=push_to_queue).start()
 
-
+def triggerStop():
+    stop_event.set()
 
 def getStop():
-    global stopWhileRun
-    return stopWhileRun
+    return stop_event.is_set()
 
 def resetStop():
-    global stopWhileRun
-    stopWhileRun = False
+    stop_event.clear()
 
 router = APIRouter()
 
@@ -61,11 +60,9 @@ async def process_file_stream(request: Request):
     return StreamingResponse(event_stream(), media_type="text/event-stream")
 
 
-@router.post("/process/file/stop")
 def endWhileRun():
     clear_queue(progress_queue)
-    global stopWhileRun
-    stopWhileRun = True
+    triggerStop()
 
 
 

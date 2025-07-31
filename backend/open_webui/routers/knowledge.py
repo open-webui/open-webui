@@ -2,7 +2,7 @@ from typing import List, Optional
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 import logging
-
+from open_webui.routers.progress import endWhileRun
 from open_webui.models.knowledge import (
     Knowledges,
     KnowledgeForm,
@@ -10,6 +10,7 @@ from open_webui.models.knowledge import (
     KnowledgeUserResponse,
 )
 
+from open_webui.routers.retrieval import get_file_id
 from open_webui.utils.parser import PARSER_TYPE
 from open_webui.models.files import Files, FileModel, FileMetadataResponse
 from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
@@ -27,7 +28,7 @@ from open_webui.utils.access_control import has_access, has_permission
 
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.models.models import Models, ModelForm
-
+from pathlib import Path
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
@@ -535,10 +536,11 @@ def remove_file_from_knowledge_by_id(
     file_collection = f"file-{form_data.file_id}"
     parsers = get_file_relevant_parsers(request, file.filename)
     for parser in parsers:
-        parser.delete_doc(knowledge.id, file.filename)
+        parser.delete_segment_by_file_id(file_collection, file.filename)
+        parser.delete_doc(file_collection)
         # note that this is only deleting the file-specific collection
         parser.delete_collection(file_collection)
-
+        parser.compact_chroma_fts()
     # Delete file from database
     Files.delete_file_by_id(form_data.file_id)
 
@@ -553,6 +555,12 @@ def remove_file_from_knowledge_by_id(
             knowledge = Knowledges.update_knowledge_data_by_id(id=id, data=data)
 
             if knowledge:
+                if file.path:
+                    try:
+                        Path(file.path).unlink(missing_ok=True)
+                        log.info(f'Deleted physical path: {file.path}')
+                    except Exception as e:
+                        log.error(f'Failed to delete file: {e}')
                 files = Files.get_file_metadatas_by_ids(file_ids)
 
                 return KnowledgeFilesResponse(
@@ -574,8 +582,31 @@ def remove_file_from_knowledge_by_id(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
+    
 
 
+@router.post("/{id}/process/file/stop", response_model=Optional[KnowledgeFilesResponse])
+def endduringembedding(
+        request: Request,
+        id: str,
+        user=Depends(get_verified_user),
+):
+    knowledge = Knowledges.get_knowledge_by_id(id=id)
+    if (
+        knowledge.user_id != user.id
+        and not has_access(user.id, "write", knowledge.access_control)
+        and user.role != "admin"
+):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    endWhileRun()
+    file_id = get_file_id()
+    Files.delete_file_by_id(id=file_id)
+
+            
 ############################
 # DeleteKnowledgeById
 ############################

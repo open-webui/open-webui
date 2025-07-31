@@ -451,7 +451,16 @@
 			toast.error(`${e}`);
 		}
 	};
-
+	const deleteWhileEmbed = async () => {
+		try {
+			// Remove from knowledge base only
+ 			await endEmbed(localStorage.token, id);
+		} catch (e) {
+			console.error('Error in deleteWhileEmbed:', e);
+			toast.error(`${e}`);
+		}
+	};
+		
 	const updateFileContentHandler = async () => {
 		const fileId = selectedFile.id;
 		const content = selectedFileContent;
@@ -954,7 +963,7 @@
 
 										}else if(e.detail.status === 'processing' ){
 											console.log(e.detail.id);
-											endEmbed(localStorage.token);
+											deleteWhileEmbed();
 											selectedFileId = null;
 											deleteTempUpload(e.detail.id);
 										}else{
