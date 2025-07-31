@@ -558,7 +558,7 @@
 							crossorigin="anonymous"
 							src="{WEBUI_BASE_URL}/static/favicon.png"
 							class="sidebar-new-chat-icon size-5 -translate-x-1.5 rounded-full"
-							alt="logo"
+							alt=""
 						/>
 					</div>
 					<div class=" self-center text-sm text-gray-850 dark:text-white font-primary">
