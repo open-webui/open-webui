@@ -489,7 +489,7 @@ async def get_tool_servers_data(
         if server.get("config", {}).get("enable"):
             # Path (to OpenAPI spec URL) can be either a full URL or a path to append to the base URL
             openapi_path = server.get("path", "openapi.json")
-            full_url = build_tool_server_url(server.get("url"), openapi_path)
+            full_url = get_tool_server_url(server.get("url"), openapi_path)
 
             info = server.get("info", {})
 
@@ -637,7 +637,7 @@ async def execute_tool_server(
         return {"error": error}
 
 
-def build_tool_server_url(url: Optional[str], path: str) -> str:
+def get_tool_server_url(url: Optional[str], path: str) -> str:
     """
     Build the full URL for a tool server, given a base url and a path.
     """
