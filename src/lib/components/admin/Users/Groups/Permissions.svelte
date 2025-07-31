@@ -266,29 +266,31 @@
 			<Switch bind:state={permissions.chat.controls} />
 		</div>
 
-		<div class="  flex w-full justify-between my-2 pr-2">
-			<div class=" self-center text-xs font-medium">
-				{$i18n.t('Allow Chat Valves')}
+		{#if permissions.chat.controls}
+			<div class="  flex w-full justify-between my-2 pr-2">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Allow Chat Valves')}
+				</div>
+
+				<Switch bind:state={permissions.chat.valves} />
 			</div>
 
-			<Switch bind:state={permissions.chat.valves} />
-		</div>
+			<div class="  flex w-full justify-between my-2 pr-2">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Allow Chat System Prompt')}
+				</div>
 
-		<div class="  flex w-full justify-between my-2 pr-2">
-			<div class=" self-center text-xs font-medium">
-				{$i18n.t('Allow Chat System Prompt')}
+				<Switch bind:state={permissions.chat.system_prompt} />
 			</div>
 
-			<Switch bind:state={permissions.chat.system_prompt} />
-		</div>
+			<div class="  flex w-full justify-between my-2 pr-2">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Allow Chat Params')}
+				</div>
 
-		<div class="  flex w-full justify-between my-2 pr-2">
-			<div class=" self-center text-xs font-medium">
-				{$i18n.t('Allow Chat Params')}
+				<Switch bind:state={permissions.chat.params} />
 			</div>
-
-			<Switch bind:state={permissions.chat.params} />
-		</div>
+		{/if}
 
 		<div class="  flex w-full justify-between my-2 pr-2">
 			<div class=" self-center text-xs font-medium">
