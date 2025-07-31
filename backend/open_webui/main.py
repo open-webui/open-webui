@@ -1657,7 +1657,10 @@ async def get_app_config(request: Request):
                         "metadata": {
                             "login_footer": app.state.LICENSE_METADATA.get(
                                 "login_footer", ""
-                            )
+                            ),
+                            "auth_logo_position": app.state.LICENSE_METADATA.get(
+                                "auth_logo_position", ""
+                            ),
                         }
                     }
                     if app.state.LICENSE_METADATA
