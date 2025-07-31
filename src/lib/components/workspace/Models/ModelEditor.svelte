@@ -4,7 +4,7 @@
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
-	import Tags from '$lib/components/common/Tags.svelte';
+	import Tags from '$gclib/components/common/Tags.svelte';
 	import Knowledge from '$lib/components/workspace/Models/Knowledge.svelte';
 	import ToolsSelector from '$lib/components/workspace/Models/ToolsSelector.svelte';
 	import FiltersSelector from '$lib/components/workspace/Models/FiltersSelector.svelte';

@@ -17,6 +17,9 @@ const config = {
 			assets: 'build',
 			fallback: 'index.html'
 		}),
+		alias: {
+			$gclib: 'src/gclib'
+		},
 		// poll for new version name every 60 seconds (to trigger reload mechanic in +layout.svelte)
 		version: {
 			name: (() => {
