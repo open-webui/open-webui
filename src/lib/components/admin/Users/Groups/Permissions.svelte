@@ -21,6 +21,9 @@
 		},
 		chat: {
 			controls: true,
+			valves: true,
+			system_prompt: true,
+			params: true,
 			file_upload: true,
 			delete: true,
 			edit: true,
@@ -265,10 +268,26 @@
 
 		<div class="  flex w-full justify-between my-2 pr-2">
 			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Allow Chat Valves')}
+			</div>
+
+			<Switch bind:state={permissions.chat.valves} />
+		</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
 				{$i18n.t('Allow Chat System Prompt')}
 			</div>
 
 			<Switch bind:state={permissions.chat.system_prompt} />
+		</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Allow Chat Params')}
+			</div>
+
+			<Switch bind:state={permissions.chat.params} />
 		</div>
 
 		<div class="  flex w-full justify-between my-2 pr-2">
