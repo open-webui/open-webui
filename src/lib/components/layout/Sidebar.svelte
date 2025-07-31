@@ -568,7 +568,7 @@
 						</a>
 						<a
 							id="sidebar-new-chat-button"
-							class="pl-[10px] py-[8px] flex items-center rounded-lg h-full text-right hover:bg-gradient-bg-2 dark:hover:bg-gray-900 transition-all duration-300 ease-in-out no-drag-region"
+							class="ps-[10px] py-[8px] flex items-center rounded-lg h-full text-right hover:bg-gradient-bg-2 dark:hover:bg-gray-900 transition-all duration-300 ease-in-out no-drag-region"
 							class:justify-center={!$showSidebar}
 							href="/"
 							draggable="false"
