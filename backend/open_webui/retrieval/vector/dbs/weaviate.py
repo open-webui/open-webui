@@ -34,15 +34,6 @@ def test_connection(url):
     except:
         return False
 
-WEAVIATE_URL = f"https://{WEAVIATE_HTTP_HOST}:{WEAVIATE_HTTP_PORT}"
-
-url = f"{WEAVIATE_URL}/v1/schema"
-
-
-if not test_connection(url):
-    logging.error(f"Could not connect to Weaviate at {url} by https, using http. Please check your configuration.")
-    WEAVIATE_URL = f"http://{WEAVIATE_HTTP_HOST}:{WEAVIATE_HTTP_PORT}"
-
 
 def build_graphql_filter(filter_dict, operator="Equal"):
     """
@@ -80,8 +71,35 @@ def build_graphql_filter(filter_dict, operator="Equal"):
 
 class WeaviateClient:
     def __init__(self):
-        self.base_url = WEAVIATE_URL
         self.headers = get_headers()
+    def test_connection(self, url):
+        try:
+            response = requests.get(url, headers=self.headers, timeout=10)
+            if response.status_code == 200:
+                return True
+            else:
+                return False
+        except:
+            return False
+        
+    def warmup(self):
+        
+        self.base_url = f"https://{WEAVIATE_HTTP_HOST}:{WEAVIATE_HTTP_PORT}"
+
+        url = f"{self.base_url}/v1/schema"
+
+        if not test_connection(url):
+            logging.error(f"Could not connect to Weaviate at {url} by https, using http. Please check your configuration.")
+            self.base_url = f"http://{WEAVIATE_HTTP_HOST}:{WEAVIATE_HTTP_PORT}"
+            if not test_connection(self.base_url):
+                return False
+            else:
+                return True
+        else:
+            
+            return True
+
+                
 
     def transform_collection_name(self, collection_name: str) -> str:
         """
