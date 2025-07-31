@@ -351,11 +351,11 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
             user = Users.get_user_by_email(email)
             if not user:
                 try:
-                    user_count = Users.get_num_users()
+                    has_users = has_users or Users.has_users()
 
                     role = (
                         "admin"
-                        if user_count == 0
+                        if not has_users
                         else request.app.state.config.DEFAULT_USER_ROLE
                     )
 
@@ -489,7 +489,7 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
         if Users.get_user_by_email(admin_email.lower()):
             user = Auths.authenticate_user(admin_email.lower(), admin_password)
         else:
-            if Users.get_num_users() != 0:
+            if Users.has_users():
                 raise HTTPException(400, detail=ERROR_MESSAGES.EXISTING_USERS)
 
             await signup(
@@ -557,6 +557,8 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
 @router.post("/signup", response_model=SessionUserResponse)
 async def signup(request: Request, response: Response, form_data: SignupForm):
 
+    has_users = None
+
     if WEBUI_AUTH:
         if (
             not request.app.state.config.ENABLE_SIGNUP
@@ -566,12 +568,12 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                 status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED
             )
     else:
-        if Users.get_num_users() != 0:
+        has_users = Users.has_users()
+        if has_users:
             raise HTTPException(
                 status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED
             )
 
-    user_count = Users.get_num_users()
     if not validate_email_format(form_data.email.lower()):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
@@ -580,9 +582,10 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
     if Users.get_user_by_email(form_data.email.lower()):
         raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
 
+    has_users = has_users or Users.has_users()
     try:
         role = (
-            "admin" if user_count == 0 else request.app.state.config.DEFAULT_USER_ROLE
+            "admin" if not has_users else request.app.state.config.DEFAULT_USER_ROLE
         )
 
         # The password passed to bcrypt must be 72 bytes or fewer. If it is longer, it will be truncated before hashing.
@@ -644,7 +647,7 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                 user.id, request.app.state.config.USER_PERMISSIONS
             )
 
-            if user_count == 0:
+            if not has_users:
                 # Disable signup after the first user is created
                 request.app.state.config.ENABLE_SIGNUP = False
 

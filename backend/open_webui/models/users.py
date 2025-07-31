@@ -257,6 +257,10 @@ class UsersTable:
     def get_num_users(self) -> Optional[int]:
         with get_db() as db:
             return db.query(User).count()
+        
+    def has_users(self) -> bool:
+        with get_db() as db:
+            return db.query(db.query(User).exists()).scalar()
 
     def get_first_user(self) -> UserModel:
         try:

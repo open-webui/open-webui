@@ -1542,11 +1542,10 @@ async def get_app_config(request: Request):
         if data is not None and "id" in data:
             user = Users.get_user_by_id(data["id"])
 
-    user_count = Users.get_num_users()
     onboarding = False
 
     if user is None:
-        onboarding = user_count == 0
+        onboarding = not Users.has_users()
 
     return {
         **({"onboarding": True} if onboarding else {}),
@@ -1595,7 +1594,7 @@ async def get_app_config(request: Request):
             {
                 "default_models": app.state.config.DEFAULT_MODELS,
                 "default_prompt_suggestions": app.state.config.DEFAULT_PROMPT_SUGGESTIONS,
-                "user_count": user_count,
+                "user_count": Users.get_num_users(),
                 "code": {
                     "engine": app.state.config.CODE_EXECUTION_ENGINE,
                 },
