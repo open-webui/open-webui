@@ -35,9 +35,9 @@
 	let voices = [];
 	let voice = '';
 
-	let showSSML = false;
 	let autoplaySSML = false;
 	let SSMLOverridesCall = false;
+	let showSSML = false;
 
 	// Audio speed control
 	let playbackRate = 1;
@@ -452,7 +452,7 @@
 
 			<div class=" py-0.5 flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">
-					{$i18n.t('Override Conversation Response with Speech Blocks')}
+					{$i18n.t('Override Call Response with Speech Blocks')}
 				</div>
 
 				<button
