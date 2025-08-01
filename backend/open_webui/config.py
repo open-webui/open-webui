@@ -2187,6 +2187,18 @@ ENABLE_RAG_HYBRID_SEARCH = PersistentConfig(
     os.environ.get("ENABLE_RAG_HYBRID_SEARCH", "").lower() == "true",
 )
 
+RAG_ENABLE_GROUNDING_STEP = PersistentConfig(
+    "RAG_ENABLE_GROUNDING_STEP",
+    "rag.enable_grounding_step",
+    os.environ.get("RAG_ENABLE_GROUNDING_STEP", "False").lower() == "true",
+)
+
+RAG_GROUNDING_THRESHOLD = PersistentConfig(
+    "RAG_GROUNDING_THRESHOLD",
+    "rag.grounding_threshold",
+    float(os.environ.get("RAG_GROUNDING_THRESHOLD", "0.3")),
+)
+
 RAG_FULL_CONTEXT = PersistentConfig(
     "RAG_FULL_CONTEXT",
     "rag.full_context",
