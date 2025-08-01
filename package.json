@@ -98,7 +98,7 @@
 		"html-entities": "^2.5.3",
 		"html2canvas-pro": "^1.5.11",
 		"i18next": "^23.10.0",
-		"i18next-browser-languagedetector": "^7.2.0",
+		"i18next-browser-languagedetector": "^8.2.0",
 		"i18next-resources-to-backend": "^1.2.0",
 		"idb": "^7.1.1",
 		"js-sha256": "^0.10.1",
