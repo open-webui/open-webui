@@ -22,9 +22,10 @@ from open_webui.env import (
     ENABLE_WEBSOCKET_SUPPORT,
     WEBSOCKET_MANAGER,
     WEBSOCKET_REDIS_URL,
-    WEBSOCKET_REDIS_LOCK_TIMEOUT,
     WEBSOCKET_SENTINEL_PORT,
     WEBSOCKET_SENTINEL_HOSTS,
+    WEBSOCKET_REDIS_CLUSTER_MODE,
+    WEBSOCKET_REDIS_LOCK_TIMEOUT,
     REDIS_KEY_PREFIX,
 )
 from open_webui.utils.auth import decode_token
@@ -87,6 +88,7 @@ if WEBSOCKET_MANAGER == "redis":
             WEBSOCKET_SENTINEL_HOSTS, WEBSOCKET_SENTINEL_PORT
         ),
         async_mode=True,
+        cluster_mode=WEBSOCKET_REDIS_CLUSTER_MODE,
     )
 
     redis_sentinels = get_sentinels_from_env(
@@ -96,16 +98,19 @@ if WEBSOCKET_MANAGER == "redis":
         f"{REDIS_KEY_PREFIX}:session_pool",
         redis_url=WEBSOCKET_REDIS_URL,
         redis_sentinels=redis_sentinels,
+        cluster_mode=WEBSOCKET_REDIS_CLUSTER_MODE,
     )
     USER_POOL = RedisDict(
         f"{REDIS_KEY_PREFIX}:user_pool",
         redis_url=WEBSOCKET_REDIS_URL,
         redis_sentinels=redis_sentinels,
+        cluster_mode=WEBSOCKET_REDIS_CLUSTER_MODE,
     )
     USAGE_POOL = RedisDict(
         f"{REDIS_KEY_PREFIX}:usage_pool",
         redis_url=WEBSOCKET_REDIS_URL,
         redis_sentinels=redis_sentinels,
+        cluster_mode=WEBSOCKET_REDIS_CLUSTER_MODE,
     )
 
     clean_up_lock = RedisLock(
@@ -113,6 +118,7 @@ if WEBSOCKET_MANAGER == "redis":
         lock_name="usage_cleanup_lock",
         timeout_secs=WEBSOCKET_REDIS_LOCK_TIMEOUT,
         redis_sentinels=redis_sentinels,
+        cluster_mode=WEBSOCKET_REDIS_CLUSTER_MODE,
     )
     aquire_func = clean_up_lock.aquire_lock
     renew_func = clean_up_lock.renew_lock

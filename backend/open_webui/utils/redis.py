@@ -96,8 +96,8 @@ class SentinelRedisProxy:
 
 def parse_redis_service_url(redis_url):
     parsed_url = urlparse(redis_url)
-    if parsed_url.scheme != "redis":
-        raise ValueError("Invalid Redis URL scheme. Must be 'redis'.")
+    if parsed_url.scheme != "redis" and parsed_url.scheme != "rediss":
+        raise ValueError("Invalid Redis URL scheme. Must be 'redis' or 'rediss'.")
 
     return {
         "username": parsed_url.username or None,
@@ -109,7 +109,7 @@ def parse_redis_service_url(redis_url):
 
 
 def get_redis_connection(
-    redis_url, redis_sentinels, async_mode=False, decode_responses=True
+    redis_url, redis_sentinels, async_mode=False, cluster_mode=False, decode_responses=True
 ):
 
     cache_key = (redis_url, tuple(redis_sentinels) if redis_sentinels else (), async_mode, decode_responses)
@@ -122,7 +122,6 @@ def get_redis_connection(
     if async_mode:
         import redis.asyncio as redis
 
-        # If using sentinel in async mode
         if redis_sentinels:
             redis_config = parse_redis_service_url(redis_url)
             sentinel = redis.sentinel.Sentinel(
@@ -138,6 +137,10 @@ def get_redis_connection(
                 redis_config["service"],
                 async_mode=async_mode,
             )
+        elif cluster_mode:
+            if not redis_url:
+                raise ValueError("Redis URL must be provided for cluster mode.")
+            return redis.cluster.RedisCluster.from_url(redis_url, decode_responses=decode_responses)
         elif redis_url:
             connection = redis.from_url(redis_url, decode_responses=decode_responses)
     else:
@@ -158,6 +161,10 @@ def get_redis_connection(
                 redis_config["service"],
                 async_mode=async_mode,
             )
+        elif cluster_mode:
+            if not redis_url:
+                raise ValueError("Redis URL must be provided for cluster mode.")
+            return redis.cluster.RedisCluster.from_url(redis_url, decode_responses=decode_responses)
         elif redis_url:
             connection = redis.Redis.from_url(redis_url, decode_responses=decode_responses)
 
