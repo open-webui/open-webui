@@ -71,7 +71,7 @@
 	{#if suggestionPrompts.length > 0}
 	<div
 	class="gap-[8px] mt-4 w-full justify-center {$mobile
-		? 'flex overflow-x-auto scrollbar-none items-center mx-4'
+		? 'flex justify-start overflow-x-auto scrollbar-none items-center mx-4'
 		: 'grid'}"
 	style={!$mobile ? 'grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));' : ''}
 >
