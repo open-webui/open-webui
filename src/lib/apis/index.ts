@@ -354,7 +354,7 @@ export const getToolServersData = async (i18n, servers: object[]) => {
 				.filter((server) => server?.config?.enable)
 				.map(async (server) => {
 					const data = await getToolServerData(
-						(server?.auth_type ?? 'bearer') === 'bearer' ? server?.key : localStorage.token,
+						(server?.auth_type ?? 'bearer') === 'bearer' || (server?.auth_type ?? 'oauth') === 'oauth' ? server?.key : localStorage.token,
 						(server?.path ?? '').includes('://')
 							? server?.path
 							: `${server?.url}${(server?.path ?? '').startsWith('/') ? '' : '/'}${server?.path}`
@@ -383,8 +383,15 @@ export const getToolServersData = async (i18n, servers: object[]) => {
 	).filter((server) => server);
 };
 
+export const getToolServerOAuthProviders = async () => {
+	const res = await fetch(`${WEBUI_BASE_URL}/toolserver/providers`);
+	if (!res.ok) throw await res.json();
+	return res.json();
+};
+
 export const executeToolServer = async (
 	token: string,
+	oAuthAccessToken: string | null = null,
 	url: string,
 	name: string,
 	params: Record<string, any>,
@@ -462,7 +469,7 @@ export const executeToolServer = async (
 		// Prepare headers and request options
 		const headers: Record<string, string> = {
 			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
+			...(token && { authorization: `Bearer ${token}` }),
 		};
 
 		let requestOptions: RequestInit = {

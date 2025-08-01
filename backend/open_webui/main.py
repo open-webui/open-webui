@@ -39,7 +39,7 @@ from fastapi import (
 from fastapi.openapi.docs import get_swagger_ui_html
 
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
 from starlette_compress import CompressMiddleware
@@ -390,6 +390,7 @@ from open_webui.config import (
     QUERY_GENERATION_PROMPT_TEMPLATE,
     AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE,
     AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH,
+    TOOL_SERVER_OAUTH_PROVIDERS,
     AppConfig,
     reset_config,
 )
@@ -450,6 +451,7 @@ from open_webui.utils.auth import (
 )
 from open_webui.utils.plugin import install_tool_and_function_dependencies
 from open_webui.utils.oauth import OAuthManager
+from open_webui.utils.oauth import ToolServerOAuthManager
 from open_webui.utils.security_headers import SecurityHeadersMiddleware
 from open_webui.utils.redis import get_redis_connection
 
@@ -575,6 +577,8 @@ app = FastAPI(
 )
 
 oauth_manager = OAuthManager(app)
+
+toolserver_oauth_manager = ToolServerOAuthManager(app)
 
 app.state.instance_id = None
 app.state.config = AppConfig(
@@ -1743,7 +1747,7 @@ async def get_current_usage(user=Depends(get_verified_user)):
 ############################
 
 # SessionMiddleware is used by authlib for oauth
-if len(OAUTH_PROVIDERS) > 0:
+if len(OAUTH_PROVIDERS) > 0 or len(TOOL_SERVER_OAUTH_PROVIDERS) > 0:
     app.add_middleware(
         SessionMiddleware,
         secret_key=WEBUI_SECRET_KEY,
@@ -1767,6 +1771,56 @@ async def oauth_login(provider: str, request: Request):
 @app.get("/oauth/{provider}/callback")
 async def oauth_callback(provider: str, request: Request, response: Response):
     return await oauth_manager.handle_callback(request, provider, response)
+
+
+@app.get("/toolserver/providers")
+async def fetch_toolserver_providers(request: Request):
+    return list(TOOL_SERVER_OAUTH_PROVIDERS.keys())
+
+
+@app.get("/toolserver/{provider}/login")
+async def toolserver_oauth_login(
+    provider: str,
+    request: Request
+):
+    # Idea: Pass the server_url and do whole OAuth login + Verify Connection flow?
+    # server_url = request.query_params['server_url']
+    # if not server_url:
+    #     raise HTTPException(400, detail="Missing server URL")
+
+    return await toolserver_oauth_manager.handle_toolserver_login(
+        request, provider
+    )
+
+@app.get("/toolserver/{provider}/callback")
+async def toolserver_oauth_callback(
+    provider: str, 
+    request: Request,
+    response: Response
+):
+    token_data = await toolserver_oauth_manager.handle_toolserver_callback(request, provider)
+    print(f"toolserver_oauth_callback - {token_data}")
+
+    import json
+    payload = json.dumps({
+        "toolserverAuthSuccess": True,
+        "accessToken": token_data["access_token"],
+        "refreshToken": token_data["refresh_token"],
+        "expiresAt": token_data["expires_at"],
+        "idToken": token_data["id_token"],
+        "provider": token_data["provider"],
+    })
+
+    html = f"""
+    <html><body>
+      <script>
+        window.opener.postMessage({payload}, "http://localhost:5173");
+        window.close();
+      </script>
+      <p>Authentication successful! You can close this window if you're not redirected.</p>
+    </body></html>
+    """
+    return HTMLResponse(html)
 
 
 @app.get("/manifest.json")
