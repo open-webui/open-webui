@@ -21,8 +21,7 @@ elif VECTOR_DB == "weaviate":
     from open_webui.retrieval.vector.dbs.weaviate import WeaviateClient
 
     VECTOR_DB_CLIENT = WeaviateClient()
-    if not VECTOR_DB_CLIENT.warmup():
-        logging.error("Weaviate client warmup failed. Please check your configuration.")
+    VECTOR_DB_CLIENT.warmup()
         
 else:
     from open_webui.retrieval.vector.dbs.chroma import ChromaClient

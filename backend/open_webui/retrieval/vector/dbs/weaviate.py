@@ -73,15 +73,6 @@ def build_graphql_filter(filter_dict, operator="Equal"):
 class WeaviateClient:
     def __init__(self):
         self.headers = get_headers()
-    def test_connection(self, url):
-        try:
-            response = requests.get(url, headers=self.headers, timeout=10)
-            if response.status_code == 200:
-                return True
-            else:
-                return False
-        except:
-            return False
         
     def warmup(self):
         if WEAVIATE_HTTP_PORT == 443 or WEAVIATE_HTTP_PORT == 80:
