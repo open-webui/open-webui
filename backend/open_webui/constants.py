@@ -47,6 +47,7 @@ class ERROR_MESSAGES(str, Enum):
     INVALID_PASSWORD = (
         "The password provided is incorrect. Please check for typos and try again."
     )
+    PASSWORD_CHANGE_NOT_ALLOWED_FOR_OAUTH = "Password changes are not allowed for OAuth/SSO users. Please use your OAuth provider to manage your password."
     INVALID_TRUSTED_HEADER = "Your provider has not provided a trusted header. Please contact your administrator for assistance."
 
     EXISTING_USERS = "You can't turn off authentication because there are existing users. If you want to disable WEBUI_AUTH, make sure your web interface doesn't have any existing users and is a fresh installation."
