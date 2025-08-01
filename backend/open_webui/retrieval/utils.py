@@ -23,6 +23,7 @@ from open_webui.models.notes import Notes
 
 from open_webui.retrieval.vector.main import GetResult
 from open_webui.utils.access_control import has_access
+from open_webui.retrieval.grounding import apply_grounding_step, format_documents_for_retrieval
 
 
 from open_webui.env import (
@@ -34,6 +35,8 @@ from open_webui.config import (
     RAG_EMBEDDING_QUERY_PREFIX,
     RAG_EMBEDDING_CONTENT_PREFIX,
     RAG_EMBEDDING_PREFIX_FIELD_NAME,
+    RAG_ENABLE_GROUNDING_STEP,
+    RAG_GROUNDING_THRESHOLD,
 )
 
 log = logging.getLogger(__name__)
@@ -679,6 +682,62 @@ def get_sources_from_items(
                     sources.append(source)
         except Exception as e:
             log.exception(e)
+
+    # Apply grounding step if enabled
+    if RAG_ENABLE_GROUNDING_STEP.value and sources and embedding_function:
+        try:
+            log.debug(f"Applying grounding step to {len(sources)} sources with threshold {RAG_GROUNDING_THRESHOLD.value}")
+            
+            # Generate query embeddings for grounding
+            query_embeddings = []
+            for query in queries:
+                query_embedding = embedding_function([query], prefix=RAG_EMBEDDING_QUERY_PREFIX, user=user)
+                if query_embedding:
+                    query_embeddings.append(query_embedding[0])
+            
+            if query_embeddings:
+                # Apply grounding step to each source
+                grounded_sources = []
+                for source in sources:
+                    # Convert source to document format for grounding
+                    documents = []
+                    for i, doc in enumerate(source["document"]):
+                        documents.append({
+                            "document": doc,
+                            "metadata": source["metadata"][i] if i < len(source["metadata"]) else {},
+                            "distance": source.get("distances", [0.0])[i] if "distances" in source and i < len(source.get("distances", [])) else 0.0,
+                        })
+                    
+                    # Apply grounding with first query embedding (could be enhanced to use all queries)
+                    grounding_result = apply_grounding_step(
+                        query=queries[0],  # Use first query for now
+                        query_embedding=query_embeddings[0],
+                        retrieved_documents=documents,
+                        embedding_function=lambda texts, prefix=None, user=user: embedding_function(texts, prefix=prefix, user=user),
+                        threshold=RAG_GROUNDING_THRESHOLD.value,
+                        user=user,
+                    )
+                    
+                    if grounding_result.validated_documents:
+                        # Convert back to source format
+                        grounded_source = {
+                            "source": source["source"],
+                            "document": [doc.get("document", "") for doc in grounding_result.validated_documents],
+                            "metadata": [doc.get("metadata", {}) for doc in grounding_result.validated_documents],
+                        }
+                        if "distances" in source:
+                            grounded_source["distances"] = [doc.get("distance", 0.0) for doc in grounding_result.validated_documents]
+                        
+                        grounded_sources.append(grounded_source)
+                        
+                        if grounding_result.filtered_count > 0:
+                            log.info(f"Grounding step filtered {grounding_result.filtered_count} documents from source {source['source'].get('name', 'unknown')}")
+                
+                sources = grounded_sources
+                log.debug(f"Grounding step completed, {len(sources)} sources remaining")
+        
+        except Exception as e:
+            log.warning(f"Grounding step failed, using original sources: {e}")
 
     return sources
 
