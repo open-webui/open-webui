@@ -1568,6 +1568,7 @@ WEAVIATE_HTTP_HOST = os.environ.get("WEAVIATE_HTTP_HOST", "localhost")
 WEAVIATE_HTTP_PORT = os.environ.get("WEAVIATE_HTTP_PORT", 8080)
 WEAVIATE_GRPC_HOST = os.environ.get("WEAVIATE_GRPC_HOST", "localhost")
 WEAVIATE_GRPC_PORT = os.environ.get("WEAVIATE_GRPC_PORT", 50051)
+WEAVIATE_HTTP_PROTOCOL = os.environ.get("WEAVIATE_HTTP_PROTOCOL", "https")
 WEAVIATE_API_KEY = os.environ.get("WEAVIATE_API_KEY", "")
 
 

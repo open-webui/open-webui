@@ -8,6 +8,7 @@ from open_webui.retrieval.vector.main import VectorItem, SearchResult, GetResult
 from open_webui.config import (
     WEAVIATE_HTTP_HOST,
     WEAVIATE_HTTP_PORT,
+    WEAVIATE_HTTP_PROTOCOL,
     WEAVIATE_API_KEY,
 )
 
@@ -83,29 +84,11 @@ class WeaviateClient:
             return False
         
     def warmup(self):
-        if WEAVIATE_HTTP_PORT == 443:
-            self.base_url = f"https://{WEAVIATE_HTTP_HOST}"
+        if WEAVIATE_HTTP_PORT == 443 or WEAVIATE_HTTP_PORT == 80:
+            self.base_url = f"{WEAVIATE_HTTP_PROTOCOL}://{WEAVIATE_HTTP_HOST}"
         else:
-            self.base_url = f"https://{WEAVIATE_HTTP_HOST}:{WEAVIATE_HTTP_PORT}"
-
-        url = f"{self.base_url}/v1/schema"
-
-        if not test_connection(url):
-            logging.error(f"Could not connect to Weaviate at {url} by https, using http. Please check your configuration.")
-            if WEAVIATE_HTTP_PORT == 80:
-                self.base_url = f"http://{WEAVIATE_HTTP_HOST}"
-            else:
-                self.base_url = f"http://{WEAVIATE_HTTP_HOST}:{WEAVIATE_HTTP_PORT}"
-            if not test_connection(self.base_url):
-                return False
-            else:
-                return True
-        else:
-            
-            return True
-
-                
-
+            self.base_url = f"{WEAVIATE_HTTP_PROTOCOL}://{WEAVIATE_HTTP_HOST}:{WEAVIATE_HTTP_PORT}"
+        log.info(f"Connecting to Weaviate at {self.base_url}")
     def transform_collection_name(self, collection_name: str) -> str:
         """
         Transforms the collection name to a valid Weaviate class name.
