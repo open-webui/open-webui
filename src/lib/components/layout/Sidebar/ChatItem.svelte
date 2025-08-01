@@ -41,7 +41,7 @@
 	import Document from '$lib/components/icons/Document.svelte';
 	import Sparkles from '$lib/components/icons/Sparkles.svelte';
 	import { generateTitle } from '$lib/apis';
-	import { isRTL } from '$lib/i18n';
+
 
 	export let className = '';
 
