@@ -1,7 +1,8 @@
-from elasticsearch import Elasticsearch, BadRequestError
+from elasticsearch import Elasticsearch
 from typing import Optional
 import ssl
 from elasticsearch.helpers import bulk, scan
+from open_webui.retrieval.vector.utils import stringify_metadata
 from open_webui.retrieval.vector.main import (
     VectorDBBase,
     VectorItem,
@@ -243,7 +244,7 @@ class ElasticsearchClient(VectorDBBase):
                         "collection": collection_name,
                         "vector": item["vector"],
                         "text": item["text"],
-                        "metadata": item["metadata"],
+                        "metadata": stringify_metadata(item["metadata"]),
                     },
                 }
                 for item in batch
@@ -264,7 +265,7 @@ class ElasticsearchClient(VectorDBBase):
                         "collection": collection_name,
                         "vector": item["vector"],
                         "text": item["text"],
-                        "metadata": item["metadata"],
+                        "metadata": stringify_metadata(item["metadata"]),
                     },
                     "doc_as_upsert": True,
                 }
