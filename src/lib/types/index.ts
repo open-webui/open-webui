@@ -13,3 +13,6 @@ export enum TTS_RESPONSE_SPLIT {
 	PARAGRAPHS = 'paragraphs',
 	NONE = 'none'
 }
+
+// Re-export Google Drive types for convenience
+export * from './google-drive';

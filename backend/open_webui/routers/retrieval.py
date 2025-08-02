@@ -81,6 +81,7 @@ from open_webui.utils.misc import (
     calculate_sha256_string,
 )
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.services.google_drive import google_drive_service
 
 from open_webui.config import (
     ENV,
@@ -439,6 +440,10 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "ALLOWED_FILE_EXTENSIONS": request.app.state.config.ALLOWED_FILE_EXTENSIONS,
         # Integration settings
         "ENABLE_GOOGLE_DRIVE_INTEGRATION": request.app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
+        "GOOGLE_DRIVE_API_KEY": request.app.state.config.GOOGLE_DRIVE_API_KEY,
+        "GOOGLE_DRIVE_CLIENT_ID": request.app.state.config.GOOGLE_DRIVE_CLIENT_ID,
+        "GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON": request.app.state.config.GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON,
+        "ENABLE_GOOGLE_DRIVE_FOLDER_SYNC": request.app.state.config.ENABLE_GOOGLE_DRIVE_FOLDER_SYNC,
         "ENABLE_ONEDRIVE_INTEGRATION": request.app.state.config.ENABLE_ONEDRIVE_INTEGRATION,
         # Web search settings
         "web": {
@@ -609,6 +614,10 @@ class ConfigForm(BaseModel):
 
     # Integration settings
     ENABLE_GOOGLE_DRIVE_INTEGRATION: Optional[bool] = None
+    GOOGLE_DRIVE_API_KEY: Optional[str] = None
+    GOOGLE_DRIVE_CLIENT_ID: Optional[str] = None
+    GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON: Optional[str] = None
+    ENABLE_GOOGLE_DRIVE_FOLDER_SYNC: Optional[bool] = None
     ENABLE_ONEDRIVE_INTEGRATION: Optional[bool] = None
 
     # Web search settings
@@ -883,11 +892,35 @@ async def update_rag_config(
         if form_data.ENABLE_GOOGLE_DRIVE_INTEGRATION is not None
         else request.app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION
     )
+    request.app.state.config.GOOGLE_DRIVE_API_KEY = (
+        form_data.GOOGLE_DRIVE_API_KEY
+        if form_data.GOOGLE_DRIVE_API_KEY is not None
+        else request.app.state.config.GOOGLE_DRIVE_API_KEY
+    )
+    request.app.state.config.GOOGLE_DRIVE_CLIENT_ID = (
+        form_data.GOOGLE_DRIVE_CLIENT_ID
+        if form_data.GOOGLE_DRIVE_CLIENT_ID is not None
+        else request.app.state.config.GOOGLE_DRIVE_CLIENT_ID
+    )
+    request.app.state.config.GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON = (
+        form_data.GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON
+        if form_data.GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON is not None
+        else request.app.state.config.GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON
+    )
+    request.app.state.config.ENABLE_GOOGLE_DRIVE_FOLDER_SYNC = (
+        form_data.ENABLE_GOOGLE_DRIVE_FOLDER_SYNC
+        if form_data.ENABLE_GOOGLE_DRIVE_FOLDER_SYNC is not None
+        else request.app.state.config.ENABLE_GOOGLE_DRIVE_FOLDER_SYNC
+    )
     request.app.state.config.ENABLE_ONEDRIVE_INTEGRATION = (
         form_data.ENABLE_ONEDRIVE_INTEGRATION
         if form_data.ENABLE_ONEDRIVE_INTEGRATION is not None
         else request.app.state.config.ENABLE_ONEDRIVE_INTEGRATION
     )
+
+    # Refresh Google Drive service if service account JSON was updated
+    if form_data.GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON is not None:
+        google_drive_service.refresh_configuration()
 
     if form_data.web is not None:
         # Web search settings
@@ -1044,6 +1077,10 @@ async def update_rag_config(
         "ALLOWED_FILE_EXTENSIONS": request.app.state.config.ALLOWED_FILE_EXTENSIONS,
         # Integration settings
         "ENABLE_GOOGLE_DRIVE_INTEGRATION": request.app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
+        "GOOGLE_DRIVE_API_KEY": request.app.state.config.GOOGLE_DRIVE_API_KEY,
+        "GOOGLE_DRIVE_CLIENT_ID": request.app.state.config.GOOGLE_DRIVE_CLIENT_ID,
+        "GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON": request.app.state.config.GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON,
+        "ENABLE_GOOGLE_DRIVE_FOLDER_SYNC": request.app.state.config.ENABLE_GOOGLE_DRIVE_FOLDER_SYNC,
         "ENABLE_ONEDRIVE_INTEGRATION": request.app.state.config.ENABLE_ONEDRIVE_INTEGRATION,
         # Web search settings
         "web": {

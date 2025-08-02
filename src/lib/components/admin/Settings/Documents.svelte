@@ -186,6 +186,33 @@
 			return;
 		}
 
+		// Google Drive validation
+		if (RAGConfig.ENABLE_GOOGLE_DRIVE_INTEGRATION && !RAGConfig.GOOGLE_DRIVE_API_KEY) {
+			toast.error($i18n.t('Google Drive API Key is required when integration is enabled.'));
+			return;
+		}
+
+		// Folder sync specific validation
+		if (RAGConfig.ENABLE_GOOGLE_DRIVE_FOLDER_SYNC) {
+			if (!RAGConfig.GOOGLE_DRIVE_CLIENT_ID) {
+				toast.error($i18n.t('Google Drive Client ID is required when folder sync is enabled.'));
+				return;
+			}
+
+			if (!RAGConfig.GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON) {
+				toast.error($i18n.t('Service Account JSON is required when folder sync is enabled.'));
+				return;
+			}
+
+			// Validate Service Account JSON format
+			try {
+				JSON.parse(RAGConfig.GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON);
+			} catch (e) {
+				toast.error($i18n.t('Invalid Service Account JSON format.'));
+				return;
+			}
+		}
+
 		if (!RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL) {
 			await embeddingModelUpdateHandler();
 		}
@@ -1177,7 +1204,115 @@
 						</div>
 					</div>
 
-					<div class="  mb-2.5 flex w-full justify-between">
+					{#if RAGConfig.ENABLE_GOOGLE_DRIVE_INTEGRATION}
+						<div class="space-y-2.5 mt-2">
+							<div class="flex flex-col gap-2">
+								<div class="text-xs font-medium mb-1">
+									<Tooltip
+										content={$i18n.t('API Key for Google Drive Picker - Required for basic file selection')}
+										placement="top-start"
+									>
+										{$i18n.t('API Key')} <span class="text-red-500">*</span>
+									</Tooltip>
+								</div>
+								<SensitiveInput
+									placeholder={$i18n.t('Enter Google Drive API Key')}
+									bind:value={RAGConfig.GOOGLE_DRIVE_API_KEY}
+									required={true}
+								/>
+								<div class="text-xs text-gray-400 dark:text-gray-500">
+									{$i18n.t('Required for basic Google Drive file picker functionality')}
+								</div>
+							</div>
+
+							<div class="flex flex-col gap-2">
+								<div class="text-xs font-medium mb-1">
+									<Tooltip
+										content={$i18n.t('OAuth 2.0 Client ID for Google Drive Picker - Allows users to select files through the UI')}
+										placement="top-start"
+									>
+										{$i18n.t('Client ID')}
+									</Tooltip>
+								</div>
+								<input
+									class="w-full text-sm bg-transparent outline-hidden"
+									placeholder={$i18n.t('Enter Google Drive Client ID')}
+									bind:value={RAGConfig.GOOGLE_DRIVE_CLIENT_ID}
+								/>
+								<div class="text-xs text-gray-400 dark:text-gray-500">
+									{$i18n.t('Required for OAuth authentication when using the file picker')}
+								</div>
+							</div>
+
+							<hr class="border-gray-100 dark:border-gray-800 my-3" />
+
+							<div class="flex w-full justify-between">
+								<div class="self-center text-xs font-medium">
+									<Tooltip
+										content={$i18n.t('Enable automatic folder synchronization for knowledge bases (requires additional setup)')}
+										placement="top-start"
+									>
+										{$i18n.t('Enable Folder Sync')}
+									</Tooltip>
+								</div>
+								<div class="flex items-center relative">
+									<Switch bind:state={RAGConfig.ENABLE_GOOGLE_DRIVE_FOLDER_SYNC} />
+								</div>
+							</div>
+
+							{#if RAGConfig.ENABLE_GOOGLE_DRIVE_FOLDER_SYNC}
+								<div class="space-y-2.5 mt-2">
+									<div class="text-xs text-orange-600 dark:text-orange-400 font-medium mb-2">
+										{$i18n.t('Folder Sync Configuration')}
+									</div>
+
+									<div class="flex flex-col gap-2">
+										<div class="text-xs font-medium mb-1">
+											<Tooltip
+												content={$i18n.t('Service Account JSON for server-side sync operations')}
+												placement="top-start"
+											>
+												{$i18n.t('Service Account JSON')} <span class="text-red-500">*</span>
+											</Tooltip>
+										</div>
+										<Textarea
+											bind:value={RAGConfig.GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON}
+											placeholder={$i18n.t('Paste your Google Service Account JSON here')}
+											rows="4"
+										/>
+										<div class="text-xs text-gray-400 dark:text-gray-500">
+											{$i18n.t('Required for server-side folder sync. Create a service account in Google Cloud Console.')}
+										</div>
+									</div>
+									<div class="text-xs text-gray-400 dark:text-gray-500">
+										{$i18n.t('Follow these steps to set up Google Drive folder sync')}:<br />
+										{$i18n.t('1. Create or select a project in Google Cloud Console and ensure Google Drive API is enabled')}<br />
+										{$i18n.t('2. Create a service account and download the JSON key')}<br />
+										{$i18n.t('3. Share your Google Drive folder with the service account email')}
+									</div>
+									<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+										<a
+											class="hover:underline dark:text-gray-200 text-gray-800"
+											href="https://console.cloud.google.com/apis/credentials"
+											target="_blank"
+										>
+											{$i18n.t('Open Google Cloud Console')}
+										</a>
+										{' • '}
+										<a
+											class="hover:underline dark:text-gray-200 text-gray-800"
+											href="https://developers.google.com/drive/api/guides/about-auth"
+											target="_blank"
+										>
+											{$i18n.t('View documentation')}
+										</a>
+									</div>
+								</div>
+							{/if}
+						</div>
+					{/if}
+
+					<div class="mb-2.5 flex w-full justify-between mt-4">
 						<div class=" self-center text-xs font-medium">{$i18n.t('OneDrive')}</div>
 						<div class="flex items-center relative">
 							<Switch bind:state={RAGConfig.ENABLE_ONEDRIVE_INTEGRATION} />

@@ -1,15 +1,16 @@
 <script lang="ts">
-	import { DropdownMenu } from 'bits-ui';
 	import { flyAndScale } from '$lib/utils/transitions';
-	import { getContext, createEventDispatcher } from 'svelte';
+	import { DropdownMenu } from 'bits-ui';
+	import { createEventDispatcher, getContext } from 'svelte';
 	const dispatch = createEventDispatcher();
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import ArrowPath from '$lib/components/icons/ArrowPath.svelte';
 	import ArrowUpCircle from '$lib/components/icons/ArrowUpCircle.svelte';
 	import BarsArrowUp from '$lib/components/icons/BarsArrowUp.svelte';
 	import FolderOpen from '$lib/components/icons/FolderOpen.svelte';
-	import ArrowPath from '$lib/components/icons/ArrowPath.svelte';
+	import { config } from '$lib/stores';
 
 	const i18n = getContext('i18n');
 
@@ -102,6 +103,27 @@
 				<BarsArrowUp strokeWidth="2" />
 				<div class="flex items-center">{$i18n.t('Add text content')}</div>
 			</DropdownMenu.Item>
+
+			{#if $config?.features?.enable_google_drive_folder_sync}
+				<DropdownMenu.Item
+					class="flex  gap-2  items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+					on:click={() => {
+						dispatch('sync', { type: 'google-drive' });
+					}}
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 24 24"
+						fill="currentColor"
+						class="w-4 h-4"
+					>
+						<path
+							d="M6.28 3l5.72 10H22l-5.72-10H6.28zm0 0L.56 13H10.28l5.72-10H6.28zm5.72 10l-5.72 10H16.28L22 13H12z"
+						/>
+					</svg>
+					<div class="flex items-center">{$i18n.t('Sync Google Drive folder')}</div>
+				</DropdownMenu.Item>
+			{/if}
 		</DropdownMenu.Content>
 	</div>
 </Dropdown>
