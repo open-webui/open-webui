@@ -13,31 +13,31 @@ from opentelemetry._logs import set_logger_provider
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from open_webui.env import (
     OTEL_SERVICE_NAME,
-    OTEL_EXPORTER_OTLP_ENDPOINT,
-    OTEL_EXPORTER_OTLP_INSECURE,
-    OTEL_BASIC_AUTH_USERNAME,
-    OTEL_BASIC_AUTH_PASSWORD,
-    OTEL_OTLP_SPAN_EXPORTER,
+    OTEL_LOGS_EXPORTER_OTLP_ENDPOINT,
+    OTEL_LOGS_EXPORTER_OTLP_INSECURE,
+    OTEL_LOGS_BASIC_AUTH_USERNAME,
+    OTEL_LOGS_BASIC_AUTH_PASSWORD,
+    OTEL_LOGS_OTLP_SPAN_EXPORTER,
 )
 
 
 def setup_logging():
     headers = []
-    if OTEL_BASIC_AUTH_USERNAME and OTEL_BASIC_AUTH_PASSWORD:
-        auth_string = f"{OTEL_BASIC_AUTH_USERNAME}:{OTEL_BASIC_AUTH_PASSWORD}"
+    if OTEL_LOGS_BASIC_AUTH_USERNAME and OTEL_LOGS_BASIC_AUTH_PASSWORD:
+        auth_string = f"{OTEL_LOGS_BASIC_AUTH_USERNAME}:{OTEL_LOGS_BASIC_AUTH_PASSWORD}"
         auth_header = b64encode(auth_string.encode()).decode()
         headers = [("authorization", f"Basic {auth_header}")]
     resource = Resource.create(attributes={SERVICE_NAME: OTEL_SERVICE_NAME})
 
-    if OTEL_OTLP_SPAN_EXPORTER == "http":
+    if OTEL_LOGS_OTLP_SPAN_EXPORTER == "http":
         exporter = HttpOTLPLogExporter(
-            endpoint=OTEL_EXPORTER_OTLP_ENDPOINT,
+            endpoint=OTEL_LOGS_EXPORTER_OTLP_ENDPOINT,
             headers=headers,
         )
     else:
         exporter = OTLPLogExporter(
-            endpoint=OTEL_EXPORTER_OTLP_ENDPOINT,
-            insecure=OTEL_EXPORTER_OTLP_INSECURE,
+            endpoint=OTEL_LOGS_EXPORTER_OTLP_ENDPOINT,
+            insecure=OTEL_LOGS_EXPORTER_OTLP_INSECURE,
             headers=headers,
         )
     logger_provider = LoggerProvider(resource=resource)
