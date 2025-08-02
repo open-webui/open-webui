@@ -255,7 +255,7 @@ def send_serial_command(port, baudrate, command):
                     if (first_time == 1) :
                         first_time = 0
                     else:
-                        if 'read in progress' not in read_next_line:
+                        if not any(keyword in read_next_line for keyword in ['read in progress', 'tSavorite']):
                             data += (read_next_line.strip() + '\n')  # Keep the line as-is with newline
                 else:
                     break  # Exit loop if no data is received
