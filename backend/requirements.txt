@@ -75,7 +75,7 @@ docx2txt==0.8
 python-pptx==1.0.2
 unstructured==0.16.17
 nltk==3.9.1
-Markdown==3.7
+Markdown==3.8.2
 pypandoc==1.15
 pandas==2.2.3
 openpyxl==3.1.5
