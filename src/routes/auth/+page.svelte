@@ -64,9 +64,11 @@
 	};
 
 	const signUpHandler = async () => {
-		if (password !== confirmPassword) {
-			toast.error($i18n.t('Passwords do not match.'));
-			return;
+		if ($config?.features?.enable_signup_password_confirmation) {
+			if (password !== confirmPassword) {
+				toast.error($i18n.t('Passwords do not match.'));
+				return;
+			}
 		}
 
 		const sessionUser = await userSignUp(name, email, password, generateInitialsImage(name)).catch(
