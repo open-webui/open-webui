@@ -288,6 +288,9 @@ DB_VARS = {
 
 if all(DB_VARS.values()):
     DATABASE_URL = f"{DB_VARS['db_type']}://{DB_VARS['db_cred']}@{DB_VARS['db_host']}:{DB_VARS['db_port']}/{DB_VARS['db_name']}"
+elif DATABASE_TYPE == "sqlite+sqlcipher" and not os.environ.get("DATABASE_URL"):
+    # Handle SQLCipher with local file when DATABASE_URL wasn't explicitly set
+    DATABASE_URL = f"sqlite+sqlcipher:///{DATA_DIR}/webui.db"
 
 # Replace the postgres:// with postgresql://
 if "postgres://" in DATABASE_URL:
