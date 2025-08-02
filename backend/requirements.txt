@@ -49,7 +49,7 @@ tiktoken
 langchain==0.3.26
 langchain-community==0.3.26
 
-fake-useragent==2.1.0
+fake-useragent==2.2.0
 chromadb==0.6.3
 posthog==5.4.0
 pymilvus==2.5.0
