@@ -4,7 +4,7 @@
 	import DOMPurify from 'dompurify';
 	import { marked } from 'marked';
 
-	import { getContext, tick } from 'svelte';
+	import { getContext, tick, onDestroy } from 'svelte';
 	const i18n = getContext('i18n');
 
 	import { chatCompletion } from '$lib/apis/openai';
@@ -27,15 +27,18 @@
 	let prompt = '';
 	let responseContent = null;
 	let responseDone = false;
+	let controller = null;
 
 	const autoScroll = async () => {
-		// Scroll to bottom only if the scroll is at the bottom give 50px buffer
 		const responseContainer = document.getElementById('response-container');
-		if (
-			responseContainer.scrollHeight - responseContainer.clientHeight <=
-			responseContainer.scrollTop + 50
-		) {
-			responseContainer.scrollTop = responseContainer.scrollHeight;
+		if (responseContainer) {
+			// Scroll to bottom only if the scroll is at the bottom give 50px buffer
+			if (
+				responseContainer.scrollHeight - responseContainer.clientHeight <=
+				responseContainer.scrollTop + 50
+			) {
+				responseContainer.scrollTop = responseContainer.scrollHeight;
+			}
 		}
 	};
 
@@ -54,7 +57,8 @@
 		floatingInputValue = '';
 
 		responseContent = '';
-		const [res, controller] = await chatCompletion(localStorage.token, {
+		let res;
+		[res, controller] = await chatCompletion(localStorage.token, {
 			model: model,
 			messages: [
 				...messages,
@@ -116,7 +120,13 @@
 			};
 
 			// Process the stream in the background
-			await processStream();
+			try {
+				await processStream();
+			} catch (e) {
+				if (e.name !== 'AbortError') {
+					console.error(e);
+				}
+			}
 		} else {
 			toast.error('An error occurred while fetching the explanation');
 		}
@@ -134,7 +144,8 @@
 		prompt = `${quotedText}\n\nExplain`;
 
 		responseContent = '';
-		const [res, controller] = await chatCompletion(localStorage.token, {
+		let res;
+		[res, controller] = await chatCompletion(localStorage.token, {
 			model: model,
 			messages: [
 				...messages,
@@ -196,7 +207,13 @@
 			};
 
 			// Process the stream in the background
-			await processStream();
+			try {
+				await processStream();
+			} catch (e) {
+				if (e.name !== 'AbortError') {
+					console.error(e);
+				}
+			}
 		} else {
 			toast.error('An error occurred while fetching the explanation');
 		}
@@ -227,6 +244,12 @@
 		floatingInput = false;
 		floatingInputValue = '';
 	};
+
+	onDestroy(() => {
+		if (controller) {
+			controller.abort();
+		}
+	});
 </script>
 
 <div

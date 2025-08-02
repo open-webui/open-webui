@@ -10,6 +10,9 @@ from open_webui.env import REDIS_SENTINEL_MAX_RETRY_COUNT
 log = logging.getLogger(__name__)
 
 
+_CONNECTION_CACHE = {}
+
+
 class SentinelRedisProxy:
     def __init__(self, sentinel, service, *, async_mode: bool = True, **kw):
         self._sentinel = sentinel
@@ -108,6 +111,14 @@ def parse_redis_service_url(redis_url):
 def get_redis_connection(
     redis_url, redis_sentinels, async_mode=False, decode_responses=True
 ):
+
+    cache_key = (redis_url, tuple(redis_sentinels) if redis_sentinels else (), async_mode, decode_responses)
+
+    if cache_key in _CONNECTION_CACHE:
+        return _CONNECTION_CACHE[cache_key]
+
+    connection = None
+
     if async_mode:
         import redis.asyncio as redis
 
@@ -122,15 +133,13 @@ def get_redis_connection(
                 password=redis_config["password"],
                 decode_responses=decode_responses,
             )
-            return SentinelRedisProxy(
+            connection = SentinelRedisProxy(
                 sentinel,
                 redis_config["service"],
                 async_mode=async_mode,
             )
         elif redis_url:
-            return redis.from_url(redis_url, decode_responses=decode_responses)
-        else:
-            return None
+            connection = redis.from_url(redis_url, decode_responses=decode_responses)
     else:
         import redis
 
@@ -144,15 +153,16 @@ def get_redis_connection(
                 password=redis_config["password"],
                 decode_responses=decode_responses,
             )
-            return SentinelRedisProxy(
+            connection = SentinelRedisProxy(
                 sentinel,
                 redis_config["service"],
                 async_mode=async_mode,
             )
         elif redis_url:
-            return redis.Redis.from_url(redis_url, decode_responses=decode_responses)
-        else:
-            return None
+            connection = redis.Redis.from_url(redis_url, decode_responses=decode_responses)
+
+    _CONNECTION_CACHE[cache_key] = connection
+    return connection
 
 
 def get_sentinels_from_env(sentinel_hosts_env, sentinel_port_env):

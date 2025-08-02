@@ -28,6 +28,7 @@
 	let name = '';
 	let email = '';
 	let password = '';
+	let confirmPassword = '';
 
 	let ldapUsername = '';
 
@@ -63,6 +64,13 @@
 	};
 
 	const signUpHandler = async () => {
+		if ($config?.features?.enable_signup_password_confirmation) {
+			if (password !== confirmPassword) {
+				toast.error($i18n.t('Passwords do not match.'));
+				return;
+			}
+		}
+
 		const sessionUser = await userSignUp(name, email, password, generateInitialsImage(name)).catch(
 			(error) => {
 				toast.error(`${error}`);
@@ -178,8 +186,6 @@
 	<div class="w-full absolute top-0 left-0 right-0 h-8 drag-region" />
 
 	{#if loaded}
-		
-
 		<div
 			class="fixed bg-transparent min-h-screen w-full flex justify-center font-primary z-50 text-black dark:text-white"
 			id="auth-container"
@@ -202,6 +208,17 @@
 				{:else}
 					<div class="my-auto flex flex-col justify-center items-center">
 						<div class=" sm:max-w-md my-auto pb-10 w-full dark:text-gray-100">
+							{#if $config?.metadata?.auth_logo_position === 'center'}
+								<div class="flex justify-center mb-6">
+									<img
+										id="logo"
+										crossorigin="anonymous"
+										src="{WEBUI_BASE_URL}/static/favicon.png"
+										class="size-24 rounded-full"
+										alt=""
+									/>
+								</div>
+							{/if}
 							<form
 								class=" flex flex-col justify-center"
 								on:submit={(e) => {
@@ -300,6 +317,26 @@
 												required
 											/>
 										</div>
+
+										{#if mode === 'signup' && $config?.features?.enable_signup_password_confirmation}
+											<div class="mt-2">
+												<label
+													for="confirm-password"
+													class="text-sm font-medium text-left mb-1 block"
+													>{$i18n.t('Confirm Password')}</label
+												>
+												<input
+													bind:value={confirmPassword}
+													type="password"
+													id="confirm-password"
+													class="my-0.5 w-full text-sm outline-hidden bg-transparent"
+													placeholder={$i18n.t('Confirm Your Password')}
+													autocomplete="new-password"
+													name="confirm-password"
+													required
+												/>
+											</div>
+										{/if}
 									</div>
 								{/if}
 								<div class="mt-5">
@@ -505,18 +542,20 @@
 			</div>
 		</div>
 
-		<div class="fixed m-10 z-50">
-			<div class="flex space-x-2">
-				<div class=" self-center">
-					<img
-						id="logo"
-						crossorigin="anonymous"
-						src="{WEBUI_BASE_URL}/static/favicon.png"
-						class=" w-6 rounded-full"
-						alt=""
-					/>
+		{#if !$config?.metadata?.auth_logo_position}
+			<div class="fixed m-10 z-50">
+				<div class="flex space-x-2">
+					<div class=" self-center">
+						<img
+							id="logo"
+							crossorigin="anonymous"
+							src="{WEBUI_BASE_URL}/static/favicon.png"
+							class=" w-6 rounded-full"
+							alt=""
+						/>
+					</div>
 				</div>
 			</div>
-		</div>
+		{/if}
 	{/if}
 </div>

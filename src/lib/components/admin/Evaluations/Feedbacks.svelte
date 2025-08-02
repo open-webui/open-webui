@@ -24,6 +24,7 @@
 	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { config } from '$lib/stores';
 
 	export let feedbacks = [];
 
@@ -354,17 +355,20 @@
 								</div>
 							</div>
 						</td>
-						<td class="px-3 py-1 text-right font-medium text-gray-900 dark:text-white w-max">
-							<div class=" flex justify-end">
-								{#if feedback.data.rating.toString() === '1'}
-									<Badge type="info" content={$i18n.t('Won')} />
-								{:else if feedback.data.rating.toString() === '0'}
-									<Badge type="muted" content={$i18n.t('Draw')} />
-								{:else if feedback.data.rating.toString() === '-1'}
-									<Badge type="error" content={$i18n.t('Lost')} />
-								{/if}
-							</div>
-						</td>
+
+						{#if feedback?.data?.rating}
+							<td class="px-3 py-1 text-right font-medium text-gray-900 dark:text-white w-max">
+								<div class=" flex justify-end">
+									{#if feedback?.data?.rating.toString() === '1'}
+										<Badge type="info" content={$i18n.t('Won')} />
+									{:else if feedback?.data?.rating.toString() === '0'}
+										<Badge type="muted" content={$i18n.t('Draw')} />
+									{:else if feedback?.data?.rating.toString() === '-1'}
+										<Badge type="error" content={$i18n.t('Lost')} />
+									{/if}
+								</div>
+							</td>
+						{/if}
 
 						<td class=" px-3 py-1 text-right font-medium">
 							{dayjs(feedback.updated_at * 1000).fromNow()}
@@ -390,7 +394,7 @@
 	{/if}
 </div>
 
-{#if feedbacks.length > 0}
+{#if feedbacks.length > 0 && $config?.features?.enable_community_sharing}
 	<div class=" flex flex-col justify-end w-full text-right gap-1">
 		<div class="line-clamp-1 text-gray-500 text-xs">
 			{$i18n.t('Help us create the best community leaderboard by sharing your feedback history!')}

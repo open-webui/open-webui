@@ -412,6 +412,7 @@ from open_webui.env import (
     WEBUI_SECRET_KEY,
     WEBUI_SESSION_COOKIE_SAME_SITE,
     WEBUI_SESSION_COOKIE_SECURE,
+    ENABLE_SIGNUP_PASSWORD_CONFIRMATION,
     WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
     WEBUI_AUTH_TRUSTED_NAME_HEADER,
     WEBUI_AUTH_SIGNOUT_REDIRECT_URL,
@@ -1296,7 +1297,7 @@ async def get_models(
         models = get_filtered_models(models, user)
 
     log.debug(
-        f"/api/models returned filtered models accessible to the user: {json.dumps([model['id'] for model in models])}"
+        f"/api/models returned filtered models accessible to the user: {json.dumps([model.get('id') for model in models])}"
     )
     return {"data": models}
 
@@ -1404,7 +1405,6 @@ async def chat_completion(
         form_data, metadata, events = await process_chat_payload(
             request, form_data, user, metadata, model
         )
-
     except Exception as e:
         log.debug(f"Error processing chat payload: {e}")
         if metadata.get("chat_id") and metadata.get("message_id"):
@@ -1424,6 +1424,14 @@ async def chat_completion(
 
     try:
         response = await chat_completion_handler(request, form_data, user)
+        if metadata.get("chat_id") and metadata.get("message_id"):
+            Chats.upsert_message_to_chat_by_id_and_message_id(
+                metadata["chat_id"],
+                metadata["message_id"],
+                {
+                    "model": model_id,
+                },
+            )
 
         return await process_chat_response(
             request, response, form_data, user, metadata, model, events, tasks
@@ -1563,6 +1571,7 @@ async def get_app_config(request: Request):
         "features": {
             "auth": WEBUI_AUTH,
             "auth_trusted_header": bool(app.state.AUTH_TRUSTED_EMAIL_HEADER),
+            "enable_signup_password_confirmation": ENABLE_SIGNUP_PASSWORD_CONFIRMATION,
             "enable_ldap": app.state.config.ENABLE_LDAP,
             "enable_api_key": app.state.config.ENABLE_API_KEY,
             "enable_signup": app.state.config.ENABLE_SIGNUP,
@@ -1641,14 +1650,17 @@ async def get_app_config(request: Request):
                     else {}
                 ),
             }
-            if user is not None
+            if user is not None and (user.role in ["admin", "user"])
             else {
                 **(
                     {
                         "metadata": {
                             "login_footer": app.state.LICENSE_METADATA.get(
                                 "login_footer", ""
-                            )
+                            ),
+                            "auth_logo_position": app.state.LICENSE_METADATA.get(
+                                "auth_logo_position", ""
+                            ),
                         }
                     }
                     if app.state.LICENSE_METADATA
@@ -1769,7 +1781,6 @@ async def get_manifest_json():
             "start_url": "/",
             "display": "standalone",
             "background_color": "#343541",
-            "orientation": "any",
             "icons": [
                 {
                     "src": "/static/logo.png",

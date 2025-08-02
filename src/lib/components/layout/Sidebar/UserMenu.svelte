@@ -71,7 +71,7 @@
 			transition={(e) => fade(e, { duration: 100 })}
 		>
 			<DropdownMenu.Item
-				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer"
 				on:click={async () => {
 					await showSettings.set(true);
 					show = false;
@@ -88,7 +88,7 @@
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
-				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer"
 				on:click={() => {
 					dispatch('show', 'archived-chat');
 					show = false;
@@ -106,13 +106,14 @@
 
 			{#if role === 'admin'}
 				<DropdownMenu.Item
+					as="a"
+					href="/playground"
 					class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition select-none"
 					on:click={() => {
 						show = false;
 						if ($mobile) {
 							showSidebar.set(false);
 						}
-						goto('/playground');
 					}}
 				>
 					<div class=" self-center mr-3">
@@ -120,15 +121,15 @@
 					</div>
 					<div class=" self-center truncate">{$i18n.t('Playground')}</div>
 				</DropdownMenu.Item>
-
 				<DropdownMenu.Item
+					as="a"
+					href="/admin"
 					class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition select-none"
 					on:click={() => {
 						show = false;
 						if ($mobile) {
 							showSidebar.set(false);
 						}
-						goto('/admin');
 					}}
 				>
 					<div class=" self-center mr-3">
@@ -142,13 +143,15 @@
 				<hr class=" border-gray-100 dark:border-gray-800 my-1 p-0" />
 
 				<!-- {$i18n.t('Help')} -->
+
 				<DropdownMenu.Item
+					as="a"
 					class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition"
 					id="chat-share-button"
 					on:click={() => {
-						window.open('https://docs.openwebui.com', '_blank');
 						show = false;
 					}}
+					href="https://docs.openwebui.com"
 				>
 					<QuestionMarkCircle className="size-5" />
 					<div class="flex items-center">{$i18n.t('Documentation')}</div>
@@ -156,19 +159,20 @@
 
 				<!-- Releases -->
 				<DropdownMenu.Item
+					as="a"
 					class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition"
-					id="menu-item-releases"
+					id="chat-share-button"
 					on:click={() => {
-						window.open('https://github.com/open-webui/open-webui/releases', '_blank');
 						show = false;
 					}}
+					href="https://github.com/open-webui/"
 				>
 					<Map className="size-5" />
 					<div class="flex items-center">{$i18n.t('Releases')}</div>
 				</DropdownMenu.Item>
 
 				<DropdownMenu.Item
-					class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition"
+					class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition cursor-pointer"
 					id="chat-share-button"
 					on:click={() => {
 						showShortcuts.set(!$showShortcuts);

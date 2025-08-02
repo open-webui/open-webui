@@ -59,8 +59,8 @@
 	};
 
 	const validateCommandString = (inputString) => {
-		// Regular expression to match only alphanumeric characters and hyphen
-		const regex = /^[a-zA-Z0-9-]+$/;
+		// Regular expression to match only alphanumeric characters, hyphen, and underscore
+		const regex = /^[a-zA-Z0-9-_]+$/;
 
 		// Test the input string against the regular expression
 		return regex.test(inputString);

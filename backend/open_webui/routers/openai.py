@@ -362,7 +362,9 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
                 response if isinstance(response, list) else response.get("data", [])
             ):
                 if prefix_id:
-                    model["id"] = f"{prefix_id}.{model['id']}"
+                    model["id"] = (
+                        f"{prefix_id}.{model.get('id', model.get('name', ''))}"
+                    )
 
                 if tags:
                     model["tags"] = tags

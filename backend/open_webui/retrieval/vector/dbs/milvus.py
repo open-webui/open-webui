@@ -3,6 +3,8 @@ from pymilvus import FieldSchema, DataType
 import json
 import logging
 from typing import Optional
+
+from open_webui.retrieval.vector.utils import stringify_metadata
 from open_webui.retrieval.vector.main import (
     VectorDBBase,
     VectorItem,
@@ -311,7 +313,7 @@ class MilvusClient(VectorDBBase):
                     "id": item["id"],
                     "vector": item["vector"],
                     "data": {"text": item["text"]},
-                    "metadata": item["metadata"],
+                    "metadata": stringify_metadata(item["metadata"]),
                 }
                 for item in items
             ],
@@ -347,7 +349,7 @@ class MilvusClient(VectorDBBase):
                     "id": item["id"],
                     "vector": item["vector"],
                     "data": {"text": item["text"]},
-                    "metadata": item["metadata"],
+                    "metadata": stringify_metadata(item["metadata"]),
                 }
                 for item in items
             ],

@@ -7,7 +7,11 @@ from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.config import get_config, save_config
 from open_webui.config import BannerModel
 
-from open_webui.utils.tools import get_tool_server_data, get_tool_servers_data
+from open_webui.utils.tools import (
+    get_tool_server_data,
+    get_tool_servers_data,
+    get_tool_server_url,
+)
 
 
 router = APIRouter()
@@ -135,7 +139,7 @@ async def verify_tool_servers_config(
         elif form_data.auth_type == "session":
             token = request.state.token.credentials
 
-        url = f"{form_data.url}/{form_data.path}"
+        url = get_tool_server_url(form_data.url, form_data.path)
         return await get_tool_server_data(token, url)
     except Exception as e:
         raise HTTPException(
