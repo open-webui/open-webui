@@ -820,13 +820,17 @@
 		editor.commands.setContent(content);
 	};
 
+	let selectTemplateTimeout = null;
+
 	const selectTemplate = () => {
 		if (value !== '') {
 			// After updating the state, try to find and select the next template
-			setTimeout(() => {
-				const templateFound = selectNextTemplate(editor.view.state, editor.view.dispatch);
-				if (!templateFound) {
-					editor.commands.focus('end');
+			selectTemplateTimeout = setTimeout(() => {
+				if (editor && !editor.isDestroyed) {
+					const templateFound = selectNextTemplate(editor.view.state, editor.view.dispatch);
+					if (!templateFound) {
+						editor.commands.focus('end');
+					}
 				}
 			}, 0);
 		}
@@ -1211,6 +1215,10 @@
 	});
 
 	onDestroy(() => {
+		if (selectTemplateTimeout) {
+			clearTimeout(selectTemplateTimeout);
+		}
+
 		if (provider) {
 			provider.destroy();
 		}

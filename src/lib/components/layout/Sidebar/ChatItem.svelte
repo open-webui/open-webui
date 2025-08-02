@@ -32,6 +32,7 @@
 	import ChatMenu from './ChatMenu.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import ShareChatModal from '$lib/components/chat/ShareChatModal.svelte';
+	import ConfirmArchiveModal from '$lib/components/chat/ConfirmArchiveModal.svelte';
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
@@ -67,6 +68,12 @@
 	};
 
 	let showShareChatModal = false;
+	$: if (!showShareChatModal) {
+		(async () => {
+			chat = await getChatById(localStorage.token, id);
+		})();
+	}
+	let showConfirmArchiveModal = false;
 	let confirmEdit = false;
 
 	let chatTitle = title;
@@ -132,8 +139,12 @@
 	};
 
 	const archiveChatHandler = async (id) => {
-		await archiveChatById(localStorage.token, id);
-		dispatch('change');
+		if (chat?.share_id) {
+			showConfirmArchiveModal = true;
+		} else {
+			await archiveChatById(localStorage.token, id);
+			dispatch('change');
+		}
 	};
 
 	let itemElement;
@@ -282,6 +293,13 @@
 </script>
 
 <ShareChatModal bind:show={showShareChatModal} chatId={id} />
+<ConfirmArchiveModal
+	bind:show={showConfirmArchiveModal}
+	{chat}
+	on:change={() => {
+		dispatch('change');
+	}}
+/>
 
 <DeleteConfirmDialog
 	bind:show={showDeleteConfirm}
