@@ -26,11 +26,8 @@ from open_webui.env import (
 
 def setup(app: FastAPI, db_engine: Engine):
     # set up trace
-    trace.set_tracer_provider(
-        TracerProvider(
-            resource=Resource.create(attributes={SERVICE_NAME: OTEL_SERVICE_NAME})
-        )
-    )
+    resource = Resource.create(attributes={SERVICE_NAME: OTEL_SERVICE_NAME})
+    trace.set_tracer_provider(TracerProvider(resource=resource))
 
     # Add basic auth header only if both username and password are not empty
     headers = []
@@ -56,4 +53,4 @@ def setup(app: FastAPI, db_engine: Engine):
 
     # set up metrics only if enabled
     if ENABLE_OTEL_METRICS:
-        setup_metrics(app)
+        setup_metrics(app, resource)

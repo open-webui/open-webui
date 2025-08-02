@@ -82,7 +82,7 @@
 
 	const initPinnedModelsSortable = () => {
 		const pinnedModelsList = document.getElementById('pinned-models-list');
-		if (pinnedModelsList) {
+		if (pinnedModelsList && !$mobile) {
 			new Sortable(pinnedModelsList, {
 				animation: 150,
 				onUpdate: async (event) => {
