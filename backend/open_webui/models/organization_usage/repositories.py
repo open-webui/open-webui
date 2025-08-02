@@ -11,7 +11,7 @@ from .domain import (
     ClientOrganizationModel, ClientOrganizationForm,
     UserClientMappingModel, UserClientMappingForm,
     ClientUsageStatsResponse, ClientBillingResponse,
-    UsageRecordDTO, ProcessedGenerationInfo, CleanupStatsResult
+    UsageRecordDTO, CleanupStatsResult
 )
 
 
@@ -146,29 +146,5 @@ class IClientUsageRepository(ABC):
         pass
 
 
-class IProcessedGenerationRepository(ABC):
-    """Interface for processed generation data access"""
-    
-    @abstractmethod
-    def is_generation_processed(self, generation_id: str, client_org_id: str) -> bool:
-        """Check if a generation has already been processed"""
-        pass
-    
-    @abstractmethod
-    def mark_generation_processed(
-        self, generation_info: ProcessedGenerationInfo
-    ) -> bool:
-        """Mark a generation as processed"""
-        pass
-    
-    @abstractmethod
-    def cleanup_old_processed_generations(self, days_to_keep: int = 60) -> CleanupStatsResult:
-        """Clean up old processed generation records to prevent table bloat"""
-        pass
-    
-    @abstractmethod
-    def get_processed_generations_stats(
-        self, client_org_id: str, start_date: date = None, end_date: date = None
-    ) -> Dict[str, Any]:
-        """Get statistics about processed generations for debugging"""
-        pass
+# IProcessedGenerationRepository removed - InfluxDB-First architecture
+# handles deduplication via request_id tags, no longer needed

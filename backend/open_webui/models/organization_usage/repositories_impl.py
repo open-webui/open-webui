@@ -11,7 +11,7 @@ from open_webui.internal.db import get_db
 from sqlalchemy import func
 
 from .database import (
-    GlobalSettings, ProcessedGeneration, ProcessedGenerationCleanupLog,
+    GlobalSettings,
     ClientOrganization, UserClientMapping, ClientDailyUsage,
     ClientUserDailyUsage, ClientModelDailyUsage
 )
@@ -20,12 +20,11 @@ from .domain import (
     ClientOrganizationModel, ClientOrganizationForm,
     UserClientMappingModel, UserClientMappingForm,
     ClientUsageStatsResponse, ClientBillingResponse,
-    UsageRecordDTO, ProcessedGenerationInfo, CleanupStatsResult
+    UsageRecordDTO, CleanupStatsResult
 )
 from .repositories import (
     IGlobalSettingsRepository, IClientOrganizationRepository,
-    IUserClientMappingRepository, IClientUsageRepository,
-    IProcessedGenerationRepository
+    IUserClientMappingRepository, IClientUsageRepository
 )
 
 log = logging.getLogger(__name__)
@@ -268,215 +267,5 @@ class UserClientMappingRepository(IUserClientMappingRepository):
             return False
 
 
-class ProcessedGenerationRepository(IProcessedGenerationRepository):
-    """Implementation of processed generation repository"""
-
-    def is_generation_processed(self, generation_id: str, client_org_id: str) -> bool:
-        """Check if a generation has already been processed"""
-        try:
-            with get_db() as db:
-                processed = db.query(ProcessedGeneration).filter_by(
-                    id=generation_id,
-                    client_org_id=client_org_id
-                ).first()
-                return processed is not None
-        except Exception as e:
-            log.error(f"Error checking processed generation {generation_id}: {e}")
-            return False
-
-    def mark_generation_processed(
-        self, generation_info: ProcessedGenerationInfo
-    ) -> bool:
-        """Mark a generation as processed"""
-        try:
-            with get_db() as db:
-                processed_gen = ProcessedGeneration(
-                    id=generation_info.generation_id,
-                    client_org_id=generation_info.client_org_id,
-                    generation_date=generation_info.generation_date,
-                    processed_at=generation_info.processed_at,
-                    total_cost=generation_info.total_cost,
-                    total_tokens=generation_info.total_tokens
-                )
-                db.add(processed_gen)
-                db.commit()
-                return True
-        except Exception as e:
-            log.error(f"Error marking generation {generation_info.generation_id} as processed: {e}")
-            return False
-
-    def cleanup_old_processed_generations(self, days_to_keep: int = 60) -> CleanupStatsResult:
-        """Clean up old processed generation records to prevent table bloat"""
-        cleanup_start_time = time.time()
-        
-        try:
-            cutoff_date = date.today() - timedelta(days=days_to_keep)
-            cutoff_timestamp = int(time.time()) - (days_to_keep * 24 * 3600)
-            
-            with get_db() as db:
-                # First, get statistics before cleanup for logging
-                total_records_query = db.query(ProcessedGeneration).count()
-                records_to_delete_query = db.query(ProcessedGeneration).filter(
-                    ProcessedGeneration.processed_at < cutoff_timestamp
-                ).count()
-                
-                # Get breakdown by organization for audit trail
-                org_breakdown_query = db.query(
-                    ProcessedGeneration.client_org_id,
-                    func.count(ProcessedGeneration.id).label('count'),
-                    func.sum(ProcessedGeneration.total_tokens).label('tokens'),
-                    func.sum(ProcessedGeneration.total_cost).label('cost')
-                ).filter(
-                    ProcessedGeneration.processed_at < cutoff_timestamp
-                ).group_by(ProcessedGeneration.client_org_id).all()
-                
-                org_stats = {}
-                total_old_tokens = 0
-                total_old_cost = 0.0
-                
-                for org_id, count, tokens, cost in org_breakdown_query:
-                    org_stats[org_id] = {
-                        "records": count,
-                        "tokens": tokens or 0,
-                        "cost": cost or 0.0
-                    }
-                    total_old_tokens += tokens or 0
-                    total_old_cost += cost or 0.0
-                
-                # Perform the actual cleanup
-                deleted_count = db.query(ProcessedGeneration).filter(
-                    ProcessedGeneration.processed_at < cutoff_timestamp
-                ).delete()
-                
-                db.commit()
-                
-                # Calculate cleanup duration and storage estimates
-                cleanup_duration = time.time() - cleanup_start_time
-                records_remaining = total_records_query - deleted_count
-                
-                # Estimate storage savings (approximate)
-                avg_record_size_bytes = 100  # Rough estimate per record
-                storage_saved_kb = (deleted_count * avg_record_size_bytes) / 1024
-                
-                # Log cleanup operation to audit table
-                cleanup_log_entry = ProcessedGenerationCleanupLog(
-                    cleanup_date=date.today(),
-                    cutoff_date=cutoff_date,
-                    days_retained=days_to_keep,
-                    records_before=total_records_query,
-                    records_deleted=deleted_count,
-                    records_remaining=records_remaining,
-                    old_tokens_removed=total_old_tokens,
-                    old_cost_removed=total_old_cost,
-                    storage_saved_kb=storage_saved_kb,
-                    cleanup_duration_seconds=cleanup_duration,
-                    success=True,
-                    created_at=int(time.time())
-                )
-                db.add(cleanup_log_entry)
-                db.commit()
-                
-                # Enhanced logging for production monitoring
-                if deleted_count > 0:
-                    log.info(f"🧹 Processed generations cleanup completed: "
-                           f"{deleted_count:,} records deleted ({records_remaining:,} remaining), "
-                           f"{total_old_tokens:,} tokens, ${total_old_cost:.6f} removed, "
-                           f"~{storage_saved_kb:.1f}KB saved in {cleanup_duration:.2f}s")
-                    
-                    # Log organization breakdown for audit
-                    for org_id, stats in org_stats.items():
-                        log.debug(f"  • {org_id}: {stats['records']} records, "
-                                f"{stats['tokens']:,} tokens, ${stats['cost']:.6f}")
-                else:
-                    log.debug(f"Processed generations cleanup: No old records found (cutoff: {cutoff_date})")
-                
-                return CleanupStatsResult(
-                    success=True,
-                    cutoff_date=cutoff_date.isoformat(),
-                    days_to_keep=days_to_keep,
-                    records_before=total_records_query,
-                    records_deleted=deleted_count,
-                    records_remaining=records_remaining,
-                    old_tokens_removed=total_old_tokens,
-                    old_cost_removed=total_old_cost,
-                    storage_saved_kb=round(storage_saved_kb, 2),
-                    cleanup_duration_seconds=round(cleanup_duration, 3),
-                    organization_breakdown=org_stats,
-                    cleanup_timestamp=int(time.time())
-                )
-                
-        except Exception as e:
-            cleanup_duration = time.time() - cleanup_start_time
-            
-            # Log failed cleanup to audit table (if possible)
-            try:
-                with get_db() as db:
-                    cutoff_date = date.today() - timedelta(days=days_to_keep)
-                    cleanup_log_entry = ProcessedGenerationCleanupLog(
-                        cleanup_date=date.today(),
-                        cutoff_date=cutoff_date,
-                        days_retained=days_to_keep,
-                        records_before=0,
-                        records_deleted=0,
-                        records_remaining=0,
-                        old_tokens_removed=0,
-                        old_cost_removed=0.0,
-                        storage_saved_kb=0.0,
-                        cleanup_duration_seconds=cleanup_duration,
-                        success=False,
-                        error_message=str(e)[:500],  # Truncate long error messages
-                        created_at=int(time.time())
-                    )
-                    db.add(cleanup_log_entry)
-                    db.commit()
-            except Exception as log_error:
-                log.error(f"Failed to log cleanup error to audit table: {log_error}")
-            
-            log.error(f"❌ Error cleaning up processed generations: {e}")
-            return CleanupStatsResult(
-                success=False,
-                cutoff_date="",
-                days_to_keep=days_to_keep,
-                records_before=0,
-                records_deleted=0,
-                records_remaining=0,
-                old_tokens_removed=0,
-                old_cost_removed=0.0,
-                storage_saved_kb=0.0,
-                cleanup_duration_seconds=round(cleanup_duration, 3),
-                organization_breakdown={},
-                cleanup_timestamp=int(time.time()),
-                error=str(e)
-            )
-
-    def get_processed_generations_stats(
-        self, client_org_id: str, start_date: date = None, end_date: date = None
-    ) -> Dict[str, Any]:
-        """Get statistics about processed generations for debugging"""
-        try:
-            with get_db() as db:
-                query = db.query(ProcessedGeneration).filter_by(client_org_id=client_org_id)
-                
-                if start_date:
-                    query = query.filter(ProcessedGeneration.generation_date >= start_date)
-                if end_date:
-                    query = query.filter(ProcessedGeneration.generation_date <= end_date)
-                
-                generations = query.all()
-                
-                total_cost = sum(g.total_cost for g in generations)
-                total_tokens = sum(g.total_tokens for g in generations)
-                
-                return {
-                    "client_org_id": client_org_id,
-                    "total_processed": len(generations),
-                    "total_cost": total_cost,
-                    "total_tokens": total_tokens,
-                    "date_range": {
-                        "start": start_date.isoformat() if start_date else None,
-                        "end": end_date.isoformat() if end_date else None
-                    }
-                }
-        except Exception as e:
-            log.error(f"Error getting processed generation stats: {e}")
-            return {}
+# ProcessedGenerationRepository removed - InfluxDB-First architecture
+# handles deduplication via request_id tags, no longer needed

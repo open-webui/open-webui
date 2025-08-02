@@ -692,15 +692,31 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
 
 
 async def get_filtered_models(models, user):
-    # Filter models based on user access control
+    """Filter models based on user's organization access"""
+    # No admin bypass - all users should see only their organization's models
+    
+    # Get models accessible through organizations
+    from open_webui.models.models import Models
+    org_accessible_models = Models.get_models_by_user_id(user.id)
+    org_model_ids = {m.id for m in org_accessible_models}
+    
     filtered_models = []
     for model in models.get("data", []):
-        model_info = Models.get_model_by_id(model["id"])
+        model_id = model.get("id", "")
+        
+        # Check if model is in user's organization models
+        if model_id in org_model_ids:
+            filtered_models.append(model)
+            continue
+            
+        # Legacy check for individual model access
+        model_info = Models.get_model_by_id(model_id)
         if model_info:
             if user.id == model_info.user_id or has_access(
                 user.id, type="read", access_control=model_info.access_control
             ):
                 filtered_models.append(model)
+    
     return filtered_models
 
 
@@ -860,7 +876,8 @@ async def get_models(
                 error_detail = f"Unexpected error: {str(e)}"
                 raise HTTPException(status_code=500, detail=error_detail)
 
-    if user.role == "user" and not BYPASS_MODEL_ACCESS_CONTROL:
+    # Apply filtering for all users (including admins) unless bypass is enabled
+    if not BYPASS_MODEL_ACCESS_CONTROL:
         models["data"] = await get_filtered_models(models, user)
 
     return models

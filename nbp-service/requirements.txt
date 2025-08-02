@@ -1,0 +1,12 @@
+# NBP Service Requirements
+fastapi==0.115.7
+uvicorn[standard]==0.35.0
+aiohttp==3.11.11
+pydantic==2.11.7
+python-dateutil==2.9.0.post0
+redis==5.2.1
+pytest==8.3.4
+pytest-asyncio==0.25.0
+httpx==0.28.1
+python-dotenv==1.0.1
+psutil==6.1.1

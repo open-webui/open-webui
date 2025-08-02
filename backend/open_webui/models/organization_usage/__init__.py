@@ -5,7 +5,7 @@ Main module providing backward-compatible public API
 
 # Import all database models (preserve existing imports)
 from .database import (
-    GlobalSettings, ProcessedGeneration, ProcessedGenerationCleanupLog,
+    GlobalSettings,
     ClientOrganization, UserClientMapping, ClientDailyUsage,
     ClientUserDailyUsage, ClientModelDailyUsage
 )
@@ -16,13 +16,13 @@ from .domain import (
     ClientDailyUsageModel, ClientUserDailyUsageModel, ClientModelDailyUsageModel,
     GlobalSettingsForm, ClientOrganizationForm, UserClientMappingForm,
     ClientUsageStatsResponse, ClientBillingResponse,
-    UsageRecordDTO, ProcessedGenerationInfo, CleanupStatsResult
+    UsageRecordDTO, CleanupStatsResult
 )
 
 # Import repository implementations
 from .repositories_impl import (
     GlobalSettingsRepository, ClientOrganizationRepository,
-    UserClientMappingRepository, ProcessedGenerationRepository
+    UserClientMappingRepository
 )
 from .client_usage_repository import ClientUsageRepository
 
@@ -146,52 +146,35 @@ class ClientUsageTable:
 
 
 class ProcessedGenerationTable:
-    """Legacy table class - delegates to repository with signature adaptation"""
+    """Legacy table class - InfluxDB-First architecture stub"""
     
     def __init__(self):
-        self._repository = ProcessedGenerationRepository()
+        pass
     
     def is_generation_processed(self, generation_id, client_org_id):
-        return self._repository.is_generation_processed(generation_id, client_org_id)
+        """Always return False - InfluxDB handles deduplication via request_id tags"""
+        return False
     
     def is_duplicate(self, request_id, model, cost):
-        """Check if generation is duplicate based on request_id, model, and cost"""
-        try:
-            from open_webui.internal.db import get_db
-            from .database import ProcessedGeneration
-            
-            with get_db() as db:
-                existing = db.query(ProcessedGeneration).filter_by(id=request_id).first()
-                if existing:
-                    # Additional checks for model and cost to ensure it's the same generation
-                    # Note: We don't store model in ProcessedGeneration, so we check cost as primary identifier
-                    return abs(existing.total_cost - cost) < 0.000001  # Float comparison with tolerance
-                return False
-        except Exception as e:
-            # Log error but don't block processing
-            print(f"Warning: Error checking duplicate generation {request_id}: {e}")
-            return False
+        """Always return False - InfluxDB handles deduplication via request_id tags"""
+        return False
     
     def mark_generation_processed(self, generation_id, client_org_id, generation_date, total_cost, total_tokens):
-        """Legacy method signature - converts to domain object and delegates"""
-        generation_info = ProcessedGenerationInfo(
-            generation_id=generation_id,
-            client_org_id=client_org_id,
-            generation_date=generation_date,
-            total_cost=total_cost,
-            total_tokens=total_tokens,
-            processed_at=int(time.time())
-        )
-        return self._repository.mark_generation_processed(generation_info)
+        """No-op - InfluxDB handles deduplication via request_id tags"""
+        return True
     
     def cleanup_old_processed_generations(self, days_to_keep=60):
-        """Legacy method signature - returns dict for backward compatibility"""
-        result = self._repository.cleanup_old_processed_generations(days_to_keep)
-        # Convert Pydantic model to dict for backward compatibility
-        return result.model_dump() if result else {}
+        """No-op - InfluxDB handles retention via bucket policies"""
+        return {
+            "success": True,
+            "records_deleted": 0,
+            "storage_saved_kb": 0,
+            "message": "InfluxDB handles retention automatically"
+        }
     
     def get_processed_generations_stats(self, client_org_id, start_date=None, end_date=None):
-        return self._repository.get_processed_generations_stats(client_org_id, start_date, end_date)
+        """No-op - Use InfluxDB queries for statistics"""
+        return {}
 
 
 ####################
@@ -203,7 +186,7 @@ GlobalSettingsDB = GlobalSettingsTable()
 ClientOrganizationDB = ClientOrganizationTable()
 UserClientMappingDB = UserClientMappingTable()
 ClientUsageDB = ClientUsageTable()
-ProcessedGenerationDB = ProcessedGenerationTable()
+ProcessedGenerationDB = ProcessedGenerationTable()  # Stub for InfluxDB-First architecture
 
 
 ####################
@@ -212,7 +195,7 @@ ProcessedGenerationDB = ProcessedGenerationTable()
 
 __all__ = [
     # Database Models
-    'GlobalSettings', 'ProcessedGeneration', 'ProcessedGenerationCleanupLog',
+    'GlobalSettings',
     'ClientOrganization', 'UserClientMapping', 'ClientDailyUsage',
     'ClientUserDailyUsage', 'ClientModelDailyUsage',
     

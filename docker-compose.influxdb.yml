@@ -1,0 +1,82 @@
+version: '3.8'
+
+# InfluxDB Development Stack for mAI
+# This file defines InfluxDB and NBP services for local development
+# Usage: docker-compose -f docker-compose.influxdb.yml up -d
+
+services:
+  # Local InfluxDB for development testing
+  influxdb:
+    image: influxdb:2.7
+    container_name: mai-influxdb-dev
+    restart: unless-stopped
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=adminpassword123
+      - DOCKER_INFLUXDB_INIT_ORG=mAI-dev
+      - DOCKER_INFLUXDB_INIT_BUCKET=mai_usage_raw_dev
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=dev-token-for-testing-only
+    ports:
+      - "8086:8086"
+    volumes:
+      - ./docker/influxdb/data:/var/lib/influxdb2
+    healthcheck:
+      test: ["CMD", "influx", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - mai-dev-network
+
+  # NBP Service for PLN exchange rates
+  nbp-service:
+    build: 
+      context: ./nbp-service
+      dockerfile: Dockerfile
+    container_name: mai-nbp-service-dev
+    restart: unless-stopped
+    environment:
+      - ENV=development
+      - MOCK_MODE=true
+      - NBP_API_URL=https://api.nbp.pl/api/exchangerates/rates/a/usd/
+      - FETCH_INTERVAL=3600
+      - CACHE_TTL=7200
+      - PORT=8001
+    ports:
+      - "8001:8001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+    networks:
+      - mai-dev-network
+
+  # Optional: Grafana for InfluxDB visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: mai-grafana-dev
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_INSTALL_PLUGINS=
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana-storage:/var/lib/grafana
+    depends_on:
+      - influxdb
+    networks:
+      - mai-dev-network
+
+volumes:
+  grafana-storage:
+    driver: local
+
+# Use the existing network from docker-compose.dev.yml
+networks:
+  mai-dev-network:
+    external: true

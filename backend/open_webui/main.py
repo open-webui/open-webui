@@ -1302,8 +1302,24 @@ async def get_models(
     request: Request, refresh: bool = False, user=Depends(get_verified_user)
 ):
     def get_filtered_models(models, user):
+        """Filter models based on user's organization access"""
+        # No admin bypass - all users should see only their organization's models
+        
+        # Get models accessible through organizations
+        from open_webui.models.models import Models
+        org_accessible_models = Models.get_models_by_user_id(user.id)
+        org_model_ids = {m.id for m in org_accessible_models}
+        
         filtered_models = []
         for model in models:
+            model_id = model.get("id", "")
+            
+            # Check if model is in user's organization models
+            if model_id in org_model_ids:
+                filtered_models.append(model)
+                continue
+                
+            # Legacy check for arena models
             if model.get("arena"):
                 if has_access(
                     user.id,
@@ -1314,8 +1330,9 @@ async def get_models(
                 ):
                     filtered_models.append(model)
                 continue
-
-            model_info = Models.get_model_by_id(model["id"])
+            
+            # Legacy check for individual model access
+            model_info = Models.get_model_by_id(model_id)
             if model_info:
                 if user.id == model_info.user_id or has_access(
                     user.id, type="read", access_control=model_info.access_control
@@ -1357,7 +1374,8 @@ async def get_models(
         )
 
     # Filter out models that the user does not have access to
-    if user.role == "user" and not BYPASS_MODEL_ACCESS_CONTROL:
+    # Apply filtering for all users (including admins) unless bypass is enabled
+    if not BYPASS_MODEL_ACCESS_CONTROL:
         models = get_filtered_models(models, user)
 
     log.debug(

@@ -200,16 +200,32 @@ class EnvironmentFileService:
     def _generate_openrouter_section(configuration: EnvironmentConfiguration) -> str:
         """Generate OpenRouter configuration section."""
         org = configuration.organization
+        # Get all OpenRouter variables including new ones
+        openrouter_vars = configuration.get_openrouter_variables()
+        
         return f"""# =============================================================================
 # OpenRouter Configuration (mAI Client-specific)
 # =============================================================================
-OPENROUTER_API_KEY={org.api_key}
-OPENROUTER_HOST={configuration.openrouter_host}
-OPENROUTER_EXTERNAL_USER={org.external_user}
+# API Keys and Host Configuration
+OPENROUTER_API_KEY={openrouter_vars['OPENROUTER_API_KEY']}
+OPENROUTER_HOST={openrouter_vars['OPENROUTER_HOST']}
+OPENROUTER_EXTERNAL_USER={openrouter_vars['OPENROUTER_EXTERNAL_USER']}
+
+# OpenAI API Configuration (uses OpenRouter)
+ENABLE_OPENAI_API={openrouter_vars['ENABLE_OPENAI_API']}
+OPENAI_API_BASE_URL={openrouter_vars['OPENAI_API_BASE_URL']}
+OPENAI_API_KEY={openrouter_vars['OPENAI_API_KEY']}
 
 # Organization Configuration  
-ORGANIZATION_NAME={org.name}
-SPENDING_LIMIT={org.spending_limit}
+ORGANIZATION_NAME={openrouter_vars['ORGANIZATION_NAME']}
+SPENDING_LIMIT={openrouter_vars['SPENDING_LIMIT']}
+
+# Model Access Control
+ENABLE_MODEL_FILTER={openrouter_vars['ENABLE_MODEL_FILTER']}
+BYPASS_MODEL_ACCESS_CONTROL={openrouter_vars['BYPASS_MODEL_ACCESS_CONTROL']}
+
+# OpenRouter Model Configuration - Limit to 12 mAI business models
+OPENAI_API_CONFIGS={openrouter_vars['OPENAI_API_CONFIGS']}
 
 # Optional: Key management (for reference only)
 # OPENROUTER_KEY_HASH={org.key_hash or 'N/A'}
@@ -321,6 +337,120 @@ class DatabaseSetupService:
             
             # Non-critical tables missing - log warning but allow to continue
             # This will be handled by the caller
+    
+    @staticmethod
+    def get_table_creation_sql() -> Dict[str, str]:
+        """
+        Get SQL statements for creating required database tables.
+        
+        Returns:
+            Dictionary mapping table names to their CREATE TABLE SQL
+        """
+        return {
+            'processed_generation_cleanup_log': """
+                CREATE TABLE IF NOT EXISTS processed_generation_cleanup_log (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    cleanup_date DATE NOT NULL,
+                    cutoff_date DATE NOT NULL,
+                    days_retained INTEGER NOT NULL,
+                    records_before INTEGER NOT NULL,
+                    records_deleted INTEGER NOT NULL,
+                    records_remaining INTEGER NOT NULL,
+                    old_tokens_removed INTEGER NOT NULL,
+                    old_cost_removed REAL NOT NULL,
+                    storage_saved_kb REAL NOT NULL,
+                    cleanup_duration_seconds REAL NOT NULL,
+                    success INTEGER NOT NULL DEFAULT 1,
+                    error_message TEXT,
+                    created_at INTEGER NOT NULL
+                )
+            """,
+            'processed_generations': """
+                CREATE TABLE IF NOT EXISTS processed_generations (
+                    id TEXT PRIMARY KEY,
+                    client_org_id TEXT NOT NULL,
+                    generation_date DATE NOT NULL,
+                    processed_at INTEGER NOT NULL,
+                    total_cost REAL NOT NULL,
+                    total_tokens INTEGER NOT NULL,
+                    FOREIGN KEY (client_org_id) REFERENCES client_organizations(id)
+                )
+            """,
+            'client_organizations': """
+                CREATE TABLE IF NOT EXISTS client_organizations (
+                    id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    openrouter_api_key TEXT NOT NULL UNIQUE,
+                    openrouter_key_hash TEXT,
+                    markup_rate REAL DEFAULT 1.3,
+                    monthly_limit REAL,
+                    billing_email TEXT,
+                    timezone TEXT DEFAULT 'Europe/Warsaw',
+                    is_active INTEGER DEFAULT 1,
+                    created_at INTEGER NOT NULL,
+                    updated_at INTEGER NOT NULL
+                )
+            """,
+            'client_user_daily_usage': """
+                CREATE TABLE IF NOT EXISTS client_user_daily_usage (
+                    id TEXT PRIMARY KEY,
+                    client_org_id TEXT NOT NULL,
+                    user_id TEXT NOT NULL,
+                    usage_date DATE NOT NULL,
+                    openrouter_user_id TEXT NOT NULL,
+                    total_tokens INTEGER DEFAULT 0,
+                    total_requests INTEGER DEFAULT 0,
+                    raw_cost REAL DEFAULT 0.0,
+                    markup_cost REAL DEFAULT 0.0,
+                    created_at INTEGER NOT NULL,
+                    updated_at INTEGER NOT NULL,
+                    FOREIGN KEY (client_org_id) REFERENCES client_organizations(id)
+                )
+            """,
+            'client_model_daily_usage': """
+                CREATE TABLE IF NOT EXISTS client_model_daily_usage (
+                    id TEXT PRIMARY KEY,
+                    client_org_id TEXT NOT NULL,
+                    model_name TEXT NOT NULL,
+                    provider TEXT,
+                    usage_date DATE NOT NULL,
+                    total_tokens INTEGER DEFAULT 0,
+                    total_requests INTEGER DEFAULT 0,
+                    raw_cost REAL DEFAULT 0.0,
+                    markup_cost REAL DEFAULT 0.0,
+                    created_at INTEGER NOT NULL,
+                    updated_at INTEGER NOT NULL,
+                    FOREIGN KEY (client_org_id) REFERENCES client_organizations(id)
+                )
+            """
+        }
+    
+    @staticmethod
+    def get_index_creation_sql() -> Dict[str, str]:
+        """
+        Get SQL statements for creating database indexes.
+        
+        Returns:
+            Dictionary mapping index names to their CREATE INDEX SQL
+        """
+        return {
+            'idx_cleanup_log_date': """
+                CREATE INDEX IF NOT EXISTS idx_cleanup_log_date 
+                ON processed_generation_cleanup_log(cleanup_date)
+            """,
+            'idx_cleanup_success': """
+                CREATE INDEX IF NOT EXISTS idx_cleanup_success 
+                ON processed_generation_cleanup_log(success)
+            """,
+            'idx_processed_generations_date': """
+                CREATE INDEX IF NOT EXISTS idx_processed_generations_date 
+                ON processed_generations(generation_date)
+            """,
+            'idx_processed_generations_org': """
+                CREATE INDEX IF NOT EXISTS idx_processed_generations_org 
+                ON processed_generations(client_org_id)
+            """
+        }
     
     @staticmethod
     def prepare_organization_for_database(organization: ClientOrganization) -> dict:

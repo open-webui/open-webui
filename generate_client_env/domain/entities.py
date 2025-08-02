@@ -94,12 +94,48 @@ class EnvironmentConfiguration:
     
     def get_openrouter_variables(self) -> dict:
         """Get OpenRouter-specific environment variables."""
+        # Define the 12 mAI business models
+        mai_models = [
+            "anthropic/claude-sonnet-4",
+            "google/gemini-2.5-flash",
+            "google/gemini-2.5-pro",
+            "deepseek/deepseek-chat-v3-0324",
+            "anthropic/claude-3.7-sonnet",
+            "google/gemini-2.5-flash-lite-preview-06-17",
+            "openai/gpt-4.1",
+            "x-ai/grok-4",
+            "openai/gpt-4o-mini",
+            "openai/o4-mini-high",
+            "openai/o3",
+            "openai/chatgpt-4o-latest"
+        ]
+        
+        # Create OPENAI_API_CONFIGS JSON string
+        openai_api_configs = {
+            "0": {
+                "enable": True,
+                "model_ids": mai_models
+            }
+        }
+        
+        import json
+        openai_api_configs_str = json.dumps(openai_api_configs, separators=(',', ':'))
+        
         return {
             'OPENROUTER_API_KEY': self.organization.api_key,
             'OPENROUTER_HOST': self.openrouter_host,
             'OPENROUTER_EXTERNAL_USER': self.organization.external_user,
             'ORGANIZATION_NAME': self.organization.name,
             'SPENDING_LIMIT': self.organization.spending_limit,
+            # OpenAI API Configuration
+            'ENABLE_OPENAI_API': 'True',
+            'OPENAI_API_BASE_URL': self.openrouter_host,
+            'OPENAI_API_KEY': self.organization.api_key,
+            # Model Access Control
+            'ENABLE_MODEL_FILTER': 'True',
+            'BYPASS_MODEL_ACCESS_CONTROL': 'False',
+            # Model Configuration
+            'OPENAI_API_CONFIGS': openai_api_configs_str,
         }
 
     def get_merged_variables(self) -> dict:

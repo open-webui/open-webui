@@ -22,46 +22,9 @@ class GlobalSettings(Base):
     updated_at = Column(BigInteger)
 
 
-class ProcessedGeneration(Base):
-    """Track processed OpenRouter generations to prevent duplicates"""
-    __tablename__ = "processed_generations"
-
-    id = Column(String, primary_key=True)  # OpenRouter generation ID
-    client_org_id = Column(String, nullable=False)
-    generation_date = Column(Date, nullable=False)
-    processed_at = Column(BigInteger, nullable=False)
-    total_cost = Column(Float, nullable=False)
-    total_tokens = Column(Integer, nullable=False)
-
-    __table_args__ = (
-        Index('idx_client_date', 'client_org_id', 'generation_date'),
-        Index('idx_processed_at', 'processed_at'),
-    )
-
-
-class ProcessedGenerationCleanupLog(Base):
-    """Track cleanup operations for audit and monitoring"""
-    __tablename__ = "processed_generation_cleanup_log"
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    cleanup_date = Column(Date, nullable=False)  # Date when cleanup was performed
-    cutoff_date = Column(Date, nullable=False)   # Records older than this were deleted
-    days_retained = Column(Integer, nullable=False)  # Retention period used
-    records_before = Column(Integer, nullable=False)
-    records_deleted = Column(Integer, nullable=False)
-    records_remaining = Column(Integer, nullable=False)
-    old_tokens_removed = Column(BigInteger, nullable=False)
-    old_cost_removed = Column(Float, nullable=False)
-    storage_saved_kb = Column(Float, nullable=False)
-    cleanup_duration_seconds = Column(Float, nullable=False)
-    success = Column(Boolean, nullable=False, default=True)
-    error_message = Column(Text, nullable=True)
-    created_at = Column(BigInteger, nullable=False)
-
-    __table_args__ = (
-        Index('idx_cleanup_date', 'cleanup_date'),
-        Index('idx_success', 'success'),
-    )
+# ProcessedGeneration and ProcessedGenerationCleanupLog models removed
+# InfluxDB-First architecture handles deduplication via request_id tags
+# No longer needed in SQLite database
 
 
 class ClientOrganization(Base):
@@ -191,4 +154,27 @@ class ClientModelDailyUsage(Base):
     __table_args__ = (
         Index('idx_client_model_date', 'client_org_id', 'model_name', 'usage_date'),
         Index('idx_model_date', 'model_name', 'usage_date'),
+    )
+
+
+class DailyExchangeRate(Base):
+    """
+    Daily exchange rates for currency conversion
+    Stores PLN rates from NBP (National Bank of Poland) service
+    """
+    __tablename__ = "daily_exchange_rates"
+
+    id = Column(String, primary_key=True)
+    date = Column(Date, nullable=False)  # Date for the exchange rate
+    currency_from = Column(String, nullable=False)  # e.g., "USD"
+    currency_to = Column(String, nullable=False)    # e.g., "PLN"
+    rate = Column(Float, nullable=False)             # Exchange rate value
+    source = Column(String, nullable=False)         # e.g., "NBP"
+    
+    created_at = Column(BigInteger)
+    updated_at = Column(BigInteger)
+    
+    __table_args__ = (
+        Index('idx_date_currency', 'date', 'currency_from', 'currency_to'),
+        Index('idx_date', 'date'),
     )

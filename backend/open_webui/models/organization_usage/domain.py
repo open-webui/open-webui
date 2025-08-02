@@ -168,14 +168,8 @@ class UsageRecordDTO(BaseModel):
         return self.input_tokens + self.output_tokens
 
 
-class ProcessedGenerationInfo(BaseModel):
-    """Information about processed OpenRouter generations"""
-    generation_id: str
-    client_org_id: str
-    generation_date: date
-    total_cost: float
-    total_tokens: int
-    processed_at: int
+# ProcessedGenerationInfo removed - InfluxDB-First architecture
+# handles deduplication via request_id tags, no longer needed
 
 
 class CleanupStatsResult(BaseModel):

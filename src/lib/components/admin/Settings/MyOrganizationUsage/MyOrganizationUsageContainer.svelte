@@ -243,7 +243,7 @@
 			<StatCard
 				title="Total Tokens"
 				value={FormatterService.formatNumber(usageData.current_month?.total_tokens || 0)}
-				subtitle="{usageData.current_month?.month || 'Loading...'} • Updated daily at 13:00 CET"
+				subtitle="The total includes final historical data and estimated live consumption for today's date."
 				iconColor="blue"
 				iconPath="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
 			/>
@@ -251,7 +251,7 @@
 			<StatCard
 				title="Total Cost"
 				value={FormatterService.formatDualCurrency(usageData.current_month?.total_cost || 0, usageData.current_month?.total_cost_pln || 0)}
-				subtitle="{currentMonthName} • Updated daily at 13:00 CET"
+				subtitle="The total includes final historical data and estimated live consumption for today's date."
 				iconColor="green"
 				iconPath="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
 			/>

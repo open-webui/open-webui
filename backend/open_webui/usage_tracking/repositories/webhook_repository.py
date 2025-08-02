@@ -1,34 +1,28 @@
 """
-Webhook Repository - Data access for webhook processing
-Handles duplicate prevention and webhook state management
+Webhook Repository - InfluxDB-First Architecture
+Deduplication handled by InfluxDB request_id tags, no SQLite tracking needed
 """
 
 from typing import Dict, Any, Optional
+import logging
+
+log = logging.getLogger(__name__)
 
 
 class WebhookRepository:
-    """Repository for webhook processing data operations"""
+    """Repository for webhook processing data operations - InfluxDB-First"""
     
     @staticmethod
     def is_duplicate_generation(request_id: str, model: str, cost: float) -> bool:
-        """Check if a generation has already been processed (duplicate prevention)"""
-        try:
-            from open_webui.models.organization_usage import ProcessedGenerationDB
-            return ProcessedGenerationDB.is_duplicate(request_id, model, cost)
-        except Exception:
-            # In case of error, assume not duplicate to avoid blocking valid requests
-            return False
+        """InfluxDB-First: Deduplication handled by InfluxDB request_id tags"""
+        # InfluxDB handles deduplication via request_id tags automatically
+        # No need for SQLite tracking
+        return False
     
     @staticmethod
     def mark_generation_processed(request_id: str, model: str, cost: float, 
                                  client_org_id: str, metadata: Dict[str, Any]) -> bool:
-        """Mark a generation as processed for duplicate prevention"""
-        try:
-            from open_webui.models.organization_usage import ProcessedGenerationDB
-            return ProcessedGenerationDB.mark_processed(
-                request_id, model, cost, client_org_id, metadata
-            )
-        except Exception:
-            # Continue processing even if marking fails
-            print(f"Warning: Failed to mark generation as processed: {request_id}")
-            return False
+        """InfluxDB-First: No need to mark as processed, InfluxDB handles deduplication"""
+        # InfluxDB handles deduplication via request_id tags automatically
+        # This is a no-op in InfluxDB-First architecture
+        return True

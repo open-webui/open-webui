@@ -17,7 +17,7 @@ from open_webui.models.organization_usage import *
 # Preserve the exact same public API
 __all__ = [
     # Database Models
-    'GlobalSettings', 'ProcessedGeneration', 'ProcessedGenerationCleanupLog',
+    'GlobalSettings',
     'ClientOrganization', 'UserClientMapping', 'ClientDailyUsage',
     'ClientUserDailyUsage', 'ClientModelDailyUsage',
     
