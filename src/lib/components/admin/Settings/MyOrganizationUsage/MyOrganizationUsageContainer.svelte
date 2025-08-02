@@ -43,8 +43,8 @@
 		year: 'numeric' 
 	});
 	
-	// Reactive: Ensure non-admin users don't access admin-only tabs
-	$: if ($user?.role !== 'admin' && (activeTab === 'users' || activeTab === 'models' || activeTab === 'subscription')) {
+	// Reactive: Ensure users without permission don't access restricted tabs
+	$: if (!$user?.can_view_usage && (activeTab === 'users' || activeTab === 'models' || activeTab === 'subscription')) {
 		usageActions.setActiveTab('stats');
 	}
 	
@@ -90,7 +90,7 @@
 	};
 	
 	/**
-	 * Load user usage data (admin only)
+	 * Load user usage data (requires can_view_usage permission)
 	 */
 	const loadUserUsage = async (): Promise<void> => {
 		if (!clientOrgIdValidated || !clientOrgId) {
@@ -110,7 +110,7 @@
 	};
 	
 	/**
-	 * Load model usage data (admin only)
+	 * Load model usage data (requires can_view_usage permission)
 	 */
 	const loadModelUsage = async (): Promise<void> => {
 		if (!clientOrgIdValidated || !clientOrgId) {
@@ -130,7 +130,7 @@
 	};
 	
 	/**
-	 * Load subscription billing data (admin only)
+	 * Load subscription billing data (requires can_view_usage permission)
 	 */
 	const loadSubscriptionData = async (): Promise<void> => {
 		if (!clientOrgIdValidated || !clientOrgId) {
@@ -179,9 +179,9 @@
 	 * Handle tab change with lazy loading
 	 */
 	const handleTabChange = async (tab: TabType): Promise<void> => {
-		// Prevent non-admin users from accessing admin-only tabs
-		if ($user?.role !== 'admin' && (tab === 'users' || tab === 'models' || tab === 'subscription')) {
-			toast.error($i18n.t('Access denied. Administrator privileges required.'));
+		// Prevent users without permission from accessing restricted tabs
+		if (!$user?.can_view_usage && (tab === 'users' || tab === 'models' || tab === 'subscription')) {
+			toast.error($i18n.t('Access denied. Usage viewing privileges required.'));
 			return;
 		}
 		
@@ -243,7 +243,7 @@
 			<StatCard
 				title="Total Tokens"
 				value={FormatterService.formatNumber(usageData.current_month?.total_tokens || 0)}
-				subtitle="{usageData.current_month?.month || 'Loading...'} • Updated daily at 13:00 CET"
+				subtitle="The total includes final historical data and estimated live consumption for today's date."
 				iconColor="blue"
 				iconPath="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
 			/>
@@ -251,7 +251,7 @@
 			<StatCard
 				title="Total Cost"
 				value={FormatterService.formatDualCurrency(usageData.current_month?.total_cost || 0, usageData.current_month?.total_cost_pln || 0)}
-				subtitle="{currentMonthName} • Updated daily at 13:00 CET"
+				subtitle="The total includes final historical data and estimated live consumption for today's date."
 				iconColor="green"
 				iconPath="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
 			/>
@@ -268,7 +268,7 @@
 			>
 				{$i18n.t('Usage Stats')}
 			</button>
-			{#if $user?.role === 'admin'}
+			{#if $user?.can_view_usage}
 				<button
 					class="py-2 px-1 border-b-2 font-medium text-sm {activeTab === 'users' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}"
 					on:click={() => handleTabChange('users')}
@@ -302,11 +302,11 @@
 		<LoadingState message="{$i18n.t('Loading usage data...')}" />
 	{:else if activeTab === 'stats' && usageData}
 		<UsageStatsTab {usageData} />
-	{:else if activeTab === 'users' && $user?.role === 'admin'}
+	{:else if activeTab === 'users' && $user?.can_view_usage}
 		<UserDetailsTab {userUsageData} {clientOrgIdValidated} />
-	{:else if activeTab === 'models' && $user?.role === 'admin'}
+	{:else if activeTab === 'models' && $user?.can_view_usage}
 		<ModelUsageTab {modelUsageData} {clientOrgIdValidated} />
-	{:else if activeTab === 'subscription' && $user?.role === 'admin'}
+	{:else if activeTab === 'subscription' && $user?.can_view_usage}
 		<BillingTab {subscriptionData} {clientOrgIdValidated} />
 	{:else if activeTab === 'pricing'}
 		<ModelPricingTab {modelPricingData} loading={pricingLoading} />

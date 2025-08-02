@@ -27,8 +27,8 @@ class BatchScheduler:
             return
             
         try:
-            # Import here to avoid circular imports
-            from open_webui.utils.daily_batch_processor import run_daily_batch
+            # Import unified batch processor
+            from open_webui.utils.unified_batch_processor import run_unified_daily_batch
             
             # Create scheduler with CET timezone
             cet_tz = pytz.timezone('Europe/Warsaw')  # CET/CEST timezone
@@ -38,8 +38,8 @@ class BatchScheduler:
             self.scheduler.add_job(
                 func=self._run_batch_with_error_handling,
                 trigger=CronTrigger(hour=13, minute=0, timezone=cet_tz),
-                id='daily_batch_processing',
-                name='Daily Batch Processing',
+                id='unified_daily_batch_processing',
+                name='Unified Daily Batch Processing (InfluxDB-First)',
                 replace_existing=True,
                 max_instances=1,  # Prevent overlapping runs
                 coalesce=True,    # Combine missed runs
@@ -49,7 +49,7 @@ class BatchScheduler:
             self.scheduler.start()
             self.is_running = True
             
-            next_run = self.scheduler.get_job('daily_batch_processing').next_run_time
+            next_run = self.scheduler.get_job('unified_daily_batch_processing').next_run_time
             log.info(f"✅ Daily batch scheduler started - next run: {next_run}")
             
         except Exception as e:
@@ -73,22 +73,24 @@ class BatchScheduler:
     async def _run_batch_with_error_handling(self):
         """Wrapper to handle batch processing with comprehensive error handling"""
         try:
-            log.info("🕐 Starting scheduled daily batch processing at 13:00 CET")
+            log.info("🕐 Starting scheduled unified daily batch processing at 13:00 CET")
             
-            # Import here to avoid circular imports
-            from open_webui.utils.daily_batch_processor import run_daily_batch
+            # Import unified batch processor
+            from open_webui.utils.unified_batch_processor import run_unified_daily_batch
             
-            result = await run_daily_batch()
+            result = await run_unified_daily_batch()
             
             if result.get('success', False):
-                operations = result.get('operations', [])
-                successful_ops = sum(1 for op in operations if op.get('success', False))
-                total_ops = len(operations)
-                duration = result.get('batch_duration_seconds', 0)
+                clients_processed = result.get('clients_processed', 0)
+                influxdb_records = result.get('influxdb_records_processed', 0)
+                sqlite_summaries = result.get('sqlite_summaries_created', 0)
+                duration = result.get('total_duration_seconds', 0)
+                data_source = result.get('data_source', 'unknown')
                 
                 log.info(
-                    f"✅ Scheduled batch processing completed successfully: "
-                    f"{successful_ops}/{total_ops} operations in {duration:.2f}s"
+                    f"✅ Scheduled unified batch processing completed successfully: "
+                    f"{clients_processed} clients, {influxdb_records} InfluxDB records, "
+                    f"{sqlite_summaries} SQLite summaries in {duration:.2f}s ({data_source})"
                 )
             else:
                 error = result.get('error', 'Unknown error')
@@ -103,7 +105,7 @@ class BatchScheduler:
         if not self.scheduler or not self.is_running:
             return None
             
-        job = self.scheduler.get_job('daily_batch_processing')
+        job = self.scheduler.get_job('unified_daily_batch_processing')
         return job.next_run_time if job else None
     
     def is_scheduler_running(self) -> bool:
@@ -149,8 +151,8 @@ async def trigger_batch_manually():
     try:
         log.info("🔧 Manual batch processing trigger initiated")
         
-        from open_webui.utils.daily_batch_processor import run_daily_batch
-        result = await run_daily_batch()
+        from open_webui.utils.unified_batch_processor import run_unified_daily_batch
+        result = await run_unified_daily_batch()
         
         log.info("✅ Manual batch processing completed")
         return result

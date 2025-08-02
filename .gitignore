@@ -319,3 +319,8 @@ clients.yaml
 openrouter_api_key*
 **/secrets/
 .secrets
+backend/venv-312/
+
+# Custom ignores for project data
+backend/venv-312/
+docker/influxdb/data/

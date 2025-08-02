@@ -1,0 +1,12 @@
+# Test requirements for InfluxDB service
+pytest>=8.3.4
+pytest-asyncio>=0.25.0
+pytest-cov>=5.0.0
+pytest-mock>=3.14.0
+
+# InfluxDB client (already in main requirements)
+influxdb-client>=1.45.0
+
+# Additional testing utilities
+coverage>=7.6.0
+mock>=5.1.0

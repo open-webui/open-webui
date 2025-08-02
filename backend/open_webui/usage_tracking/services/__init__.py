@@ -8,8 +8,9 @@ from .webhook_service import WebhookService
 from .billing_service import BillingService
 from .openrouter_service import OpenRouterService
 from .pricing_service import PricingService
+from .influxdb_service import InfluxDBService
 
 __all__ = [
     "UsageService", "WebhookService", "BillingService", 
-    "OpenRouterService", "PricingService"
+    "OpenRouterService", "PricingService", "InfluxDBService"
 ]

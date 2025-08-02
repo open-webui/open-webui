@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
 	import { FormatterService } from '../services/formatters';
+	import { DateHelperService } from '../services/dateHelpers';
 	import DataTable from './shared/DataTable.svelte';
 	import NoticeCard from './shared/NoticeCard.svelte';
 	import type { UsageData } from '../types';
@@ -73,15 +74,30 @@
 			let:data
 		>
 			{#each data as day}
-				<tr>
+				<tr class="{DateHelperService.isLiveData(day?.date) ? 'bg-blue-50 dark:bg-blue-900/20' : ''}">
 					<td class="px-4 py-3 whitespace-nowrap text-sm font-medium">
-						{day?.date || 'N/A'}
+						{#if DateHelperService.isLiveData(day?.date)}
+							<span class="flex items-center" title="Estimated live data - updates throughout the day">
+								{DateHelperService.formatDateWithLiveIndicator(day?.date)}
+								<svg class="w-3 h-3 ml-1 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+								</svg>
+							</span>
+						{:else}
+							{FormatterService.formatDate(day?.date || 'N/A')}
+						{/if}
 					</td>
 					<td class="px-4 py-3 whitespace-nowrap text-sm">
 						{FormatterService.formatNumber(day?.tokens || 0)}
 					</td>
 					<td class="px-4 py-3 whitespace-nowrap text-sm font-medium">
-						{FormatterService.formatDualCurrency(day?.cost || 0, day?.cost_pln || 0)}
+						{#if DateHelperService.isLiveData(day?.date)}
+							<span title="Estimated live cost - may change throughout the day">
+								~{FormatterService.formatDualCurrency(day?.cost || 0, day?.cost_pln || 0)}
+							</span>
+						{:else}
+							{FormatterService.formatDualCurrency(day?.cost || 0, day?.cost_pln || 0)}
+						{/if}
 					</td>
 				</tr>
 			{/each}

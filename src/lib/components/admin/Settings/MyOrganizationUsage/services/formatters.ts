@@ -37,6 +37,14 @@ export class FormatterService {
 	}
 
 	/**
+	 * Format estimated currency with tilde prefix for live data
+	 */
+	static formatEstimatedCurrency(usdAmount: number, plnAmount?: number): string {
+		const formattedCurrency = this.formatDualCurrency(usdAmount, plnAmount);
+		return `~${formattedCurrency}`;
+	}
+
+	/**
 	 * Format numbers with proper thousand separators
 	 */
 	static formatNumber(number: number): string {

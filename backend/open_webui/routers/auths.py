@@ -31,6 +31,7 @@ from open_webui.env import (
     WEBUI_AUTH_COOKIE_SECURE,
     WEBUI_AUTH_SIGNOUT_REDIRECT_URL,
     SRC_LOG_LEVELS,
+    MAI_USAGE_VIEWER_EMAIL,
 )
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse, Response, JSONResponse
@@ -64,6 +65,48 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 ############################
+# Helper Functions
+############################
+
+
+def build_session_user_response(
+    user, token: str, expires_at: Optional[int], permissions: dict
+) -> dict:
+    """
+    Build a complete SessionUserResponse dictionary with can_view_usage flag.
+    
+    Args:
+        user: User object from database
+        token: JWT token string
+        expires_at: Token expiration timestamp
+        permissions: User permissions dictionary
+    
+    Returns:
+        Complete response dictionary for authentication endpoints
+    """
+    # Check if user can view usage tab (admin or specifically configured email)
+    can_view_usage = user.role == "admin" or user.email == MAI_USAGE_VIEWER_EMAIL
+    
+    # Debug logging for can_view_usage calculation
+    log.info(f"build_session_user_response: user.email={user.email}, user.role={user.role}")
+    log.info(f"build_session_user_response: MAI_USAGE_VIEWER_EMAIL={MAI_USAGE_VIEWER_EMAIL}")
+    log.info(f"build_session_user_response: can_view_usage={can_view_usage}")
+    
+    return {
+        "token": token,
+        "token_type": "Bearer", 
+        "expires_at": expires_at,
+        "id": user.id,
+        "email": user.email,
+        "name": user.name,
+        "role": user.role,
+        "profile_image_url": user.profile_image_url,
+        "permissions": permissions,
+        "can_view_usage": can_view_usage,
+    }
+
+
+############################
 # GetSessionUser
 ############################
 
@@ -71,6 +114,7 @@ log.setLevel(SRC_LOG_LEVELS["MAIN"])
 class SessionUserResponse(Token, UserResponse):
     expires_at: Optional[int] = None
     permissions: Optional[dict] = None
+    can_view_usage: bool
 
 
 @router.get("/", response_model=SessionUserResponse)
@@ -112,17 +156,7 @@ async def get_session_user(
         user.id, request.app.state.config.USER_PERMISSIONS
     )
 
-    return {
-        "token": token,
-        "token_type": "Bearer",
-        "expires_at": expires_at,
-        "id": user.id,
-        "email": user.email,
-        "name": user.name,
-        "role": user.role,
-        "profile_image_url": user.profile_image_url,
-        "permissions": user_permissions,
-    }
+    return build_session_user_response(user, token, expires_at, user_permissions)
 
 
 ############################
@@ -428,17 +462,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                     except Exception as e:
                         log.error(f"Failed to sync groups for user {user.id}: {e}")
 
-                return {
-                    "token": token,
-                    "token_type": "Bearer",
-                    "expires_at": expires_at,
-                    "id": user.id,
-                    "email": user.email,
-                    "name": user.name,
-                    "role": user.role,
-                    "profile_image_url": user.profile_image_url,
-                    "permissions": user_permissions,
-                }
+                return build_session_user_response(user, token, expires_at, user_permissions)
             else:
                 raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
         else:
@@ -534,17 +558,7 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
             user.id, request.app.state.config.USER_PERMISSIONS
         )
 
-        return {
-            "token": token,
-            "token_type": "Bearer",
-            "expires_at": expires_at,
-            "id": user.id,
-            "email": user.email,
-            "name": user.name,
-            "role": user.role,
-            "profile_image_url": user.profile_image_url,
-            "permissions": user_permissions,
-        }
+        return build_session_user_response(user, token, expires_at, user_permissions)
     else:
         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
@@ -648,17 +662,7 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                 # Disable signup after the first user is created
                 request.app.state.config.ENABLE_SIGNUP = False
 
-            return {
-                "token": token,
-                "token_type": "Bearer",
-                "expires_at": expires_at,
-                "id": user.id,
-                "email": user.email,
-                "name": user.name,
-                "role": user.role,
-                "profile_image_url": user.profile_image_url,
-                "permissions": user_permissions,
-            }
+            return build_session_user_response(user, token, expires_at, user_permissions)
         else:
             raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_USER_ERROR)
     except Exception as err:

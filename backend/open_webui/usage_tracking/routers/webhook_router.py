@@ -3,11 +3,14 @@ Webhook Router - HTTP endpoints for webhook processing
 Handles OpenRouter webhooks and manual synchronization
 """
 
+import logging
 from fastapi import APIRouter, HTTPException, Request, BackgroundTasks, Depends
 from open_webui.utils.auth import get_admin_user
 from ..models.requests import UsageWebhookPayload, UsageSyncRequest, ManualUsageRequest
 from ..models.responses import WebhookResponse, SyncResponse
 from ..services.webhook_service import WebhookService
+
+logger = logging.getLogger(__name__)
 
 webhook_router = APIRouter()
 webhook_service = WebhookService()
@@ -30,7 +33,7 @@ async def openrouter_usage_webhook(
             try:
                 await webhook_service.process_webhook(payload)
             except Exception as e:
-                print(f"Background webhook processing failed: {e}")
+                logger.error(f"Background webhook processing failed: {e}", exc_info=True)
         
         background_tasks.add_task(process_in_background)
         
@@ -70,10 +73,23 @@ async def manual_record_usage(
 ):
     """Manually record usage (for testing or corrections)"""
     try:
-        result = webhook_service.manual_record_usage(
+        result = await webhook_service.manual_record_usage(
             request.model, request.tokens, request.cost
         )
         return result
         
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@webhook_router.get("/webhook/status")
+async def get_webhook_service_status(user=Depends(get_admin_user)):
+    """
+    Get the status of webhook service and its storage backends
+    Shows InfluxDB integration status and dual-write mode configuration
+    """
+    try:
+        status = await webhook_service.get_service_status()
+        return status
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

@@ -220,6 +220,46 @@ class DatabaseClient:
         except DatabaseError:
             return False, [], required_tables
     
+    def create_missing_tables(self, missing_tables: List[str]) -> bool:
+        """
+        Create missing tables in the database.
+        
+        Args:
+            missing_tables: List of table names to create
+            
+        Returns:
+            bool: True if all tables created successfully, False otherwise
+        """
+        try:
+            from ..domain.services import DatabaseSetupService
+            
+            table_sql = DatabaseSetupService.get_table_creation_sql()
+            index_sql = DatabaseSetupService.get_index_creation_sql()
+            
+            with sqlite3.connect(self.database_path) as connection:
+                cursor = connection.cursor()
+                
+                # Create missing tables
+                for table_name in missing_tables:
+                    if table_name in table_sql:
+                        cursor.execute(table_sql[table_name])
+                        
+                # Create indexes for created tables
+                for index_name, sql in index_sql.items():
+                    try:
+                        cursor.execute(sql)
+                    except sqlite3.Error:
+                        # Index creation is non-critical, continue if it fails
+                        pass
+                
+                connection.commit()
+                return True
+                
+        except sqlite3.Error as e:
+            raise DatabaseError(f"Failed to create missing tables: {e}")
+        except Exception as e:
+            raise DatabaseError(f"Unexpected error creating tables: {e}")
+    
     def get_database_info(self) -> Dict[str, Any]:
         """
         Get general database information.

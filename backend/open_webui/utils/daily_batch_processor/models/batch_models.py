@@ -48,6 +48,9 @@ class ClientConsolidationStats(BaseModel):
     primary_model: Optional[str] = None
     data_validated: bool = True
     markup_cost_corrected: Optional[Dict[str, float]] = None
+    # InfluxDB-First specific fields
+    raw_records_processed: Optional[int] = None
+    data_source: Optional[str] = None
 
 
 class UsageConsolidationResult(BaseModel):
@@ -59,6 +62,9 @@ class UsageConsolidationResult(BaseModel):
     data_corrections: int = 0
     clients_data: List[ClientConsolidationStats] = Field(default_factory=list)
     error: Optional[str] = None
+    # InfluxDB-First specific fields
+    influxdb_records_processed: Optional[int] = None
+    data_source: Optional[str] = None
 
 
 class ClientMonthlyStats(BaseModel):
@@ -107,3 +113,25 @@ class BatchResult(BaseModel):
     batch_duration_seconds: Optional[float] = None
     operations: List[BatchOperationResult] = Field(default_factory=list)
     error: Optional[str] = None
+    # Additional fields
+    batch_end_time: Optional[str] = None
+    total_duration_seconds: Optional[float] = None
+    data_source: Optional[str] = None
+
+
+class InfluxDBBatchRunRecord(BaseModel):
+    """Model for tracking InfluxDB batch processing runs"""
+    id: Optional[int] = None
+    processing_date: date
+    batch_start_time: datetime
+    batch_end_time: Optional[datetime] = None
+    duration_seconds: Optional[float] = None
+    success: bool
+    clients_processed: int = 0
+    influxdb_records_processed: int = 0
+    sqlite_summaries_created: int = 0
+    data_corrections: int = 0
+    error_message: Optional[str] = None
+    data_source: str = "influxdb_first"
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None

@@ -15,7 +15,8 @@ from open_webui.config import (
     DATA_DIR
 )
 from open_webui.env import SRC_LOG_LEVELS
-from open_webui.models.organization_usage import ClientUsageDB, ClientOrganizationDB, ProcessedGenerationDB
+from open_webui.models.organization_usage import ClientOrganizationDB
+from open_webui.usage_tracking.services.influxdb_first_service import influxdb_first_service
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
@@ -95,10 +96,8 @@ class OpenRouterClientManager:
                     return False
                 client_org_id = client_context["client_org_id"]
             
-            # Check for duplicate generation if generation_id is provided
-            if generation_id and ProcessedGenerationDB.is_generation_processed(generation_id, client_org_id):
-                log.info(f"Generation {generation_id} already processed, skipping duplicate recording")
-                return True
+            # Deduplication is now handled by InfluxDB-First service using request_id tags
+            # No need for SQLite-based duplicate checking
             
             # Get client organization for markup rate
             client = ClientOrganizationDB.get_client_by_id(client_org_id)
@@ -119,53 +118,32 @@ class OpenRouterClientManager:
             # Use external_user if provided, otherwise use user_id
             openrouter_user_id = external_user or f"{client_org_id}_user_{user_id[:8]}"
             
-            # Record usage using the ORM
-            success = ClientUsageDB.record_usage(
-                client_org_id=client_org_id,
-                user_id=user_id,
-                openrouter_user_id=openrouter_user_id,
-                model_name=model_name,
-                usage_date=date.today(),
-                input_tokens=input_tokens,
-                output_tokens=output_tokens,
-                raw_cost=raw_cost,
-                markup_cost=markup_cost,
-                provider=provider,
-                request_metadata={
-                    "source": "real_time",
-                    "generation_time": generation_time,
-                    "external_user": external_user,
-                    "recorded_at": datetime.now().isoformat()
-                }
-            )
+            # Prepare usage data for InfluxDB-First service
+            usage_data = {
+                "client_org_id": client_org_id,
+                "model": model_name,
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
+                "total_tokens": input_tokens + output_tokens,
+                "cost_usd": markup_cost,
+                "timestamp": datetime.now().isoformat(),
+                "external_user": openrouter_user_id,
+                "request_id": generation_id,
+                "provider": provider,
+                "source": "real_time",
+                "generation_time": generation_time
+            }
+            
+            # Write directly to InfluxDB (no SQLite fallback)
+            success = await influxdb_first_service.write_usage_record(usage_data)
             
             if success:
                 total_tokens = input_tokens + output_tokens
-                log.info(f"✅ Recorded usage: {total_tokens} tokens, ${markup_cost:.6f} for {model_name}")
-                
-                # Mark generation as processed to prevent duplicates
-                if generation_id:
-                    try:
-                        from open_webui.internal.db import get_db
-                        from open_webui.models.organization_usage import ProcessedGeneration
-                        
-                        with get_db() as db:
-                            processed_gen = ProcessedGeneration(
-                                id=generation_id,
-                                client_org_id=client_org_id,
-                                generation_date=date.today(),
-                                processed_at=int(datetime.now().timestamp()),
-                                total_cost=markup_cost,
-                                total_tokens=total_tokens
-                            )
-                            db.add(processed_gen)
-                            db.commit()
-                            log.debug(f"Marked generation {generation_id} as processed")
-                    except Exception as e:
-                        log.warning(f"Failed to mark generation {generation_id} as processed: {e}")
-                        # Don't fail the overall operation if we can't mark as processed
+                log.info(f"✅ Recorded usage: {total_tokens} tokens, ${markup_cost:.6f} for {model_name} (InfluxDB-First)")
             else:
-                log.error(f"Failed to record usage for {model_name}")
+                log.error(f"Failed to record usage for {model_name} in InfluxDB")
+                # Log fallback info but don't write to SQLite
+                log.warning(f"Usage data not recorded: {total_tokens} tokens, ${markup_cost:.6f} for {model_name}")
             
             return success
             

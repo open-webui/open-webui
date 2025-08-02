@@ -1,0 +1,36 @@
+# Development dependencies for mAI
+
+# Testing
+pytest>=8.3.4
+pytest-asyncio>=0.25.0
+pytest-cov>=5.0.0
+pytest-mock>=3.14.0
+pytest-docker>=3.1.1
+
+# InfluxDB testing and development
+influxdb-client[test]>=1.45.0
+
+# Code quality
+black==25.1.0
+ruff>=0.5.0
+mypy>=1.10.0
+types-requests
+types-redis
+types-python-dateutil
+
+# Development tools
+ipython>=8.26.0
+ipdb>=0.13.13
+watchdog>=4.0.0
+
+# Documentation
+mkdocs>=1.6.0
+mkdocs-material>=9.5.0
+mkdocstrings[python]>=0.25.0
+
+# Performance profiling
+line-profiler>=4.1.0
+memory-profiler>=0.61.0
+
+# Load testing
+locust>=2.28.0

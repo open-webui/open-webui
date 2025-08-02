@@ -8,7 +8,8 @@ ENV NODE_OPTIONS="--max-old-space-size=4096"
 
 # Install dependencies first (better Docker layer caching)
 COPY package.json package-lock.json ./
-RUN npm ci --force
+# Use legacy-peer-deps to match how the lock file was generated
+RUN npm ci --force --legacy-peer-deps
 
 # Copy source code for hot reload development
 COPY . .

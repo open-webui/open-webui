@@ -5,6 +5,8 @@ Coordinates all layers of the clean architecture and provides the main entry poi
 """
 
 import sys
+import os
+from pathlib import Path
 from typing import Optional
 
 # Domain layer imports
@@ -36,7 +38,11 @@ class ApplicationError(Exception):
 class EnvironmentGeneratorApplication:
     """Main application that coordinates all operations."""
     
-    def __init__(self, database_path: str = "backend/data/webui.db"):
+    def __init__(self, database_path: Optional[str] = None):
+        # Determine database path using the same logic as the main application
+        if database_path is None:
+            database_path = self._determine_database_path()
+        
         # Initialize infrastructure components
         self.openrouter_client = OpenRouterClient()
         self.database_client = DatabaseClient(database_path)
@@ -48,6 +54,32 @@ class EnvironmentGeneratorApplication:
         
         # Configuration
         self.database_path = database_path
+    
+    def _determine_database_path(self) -> str:
+        """
+        Determine database path using the same logic as the main application.
+        
+        This replicates the logic from backend/open_webui/env.py to ensure
+        the client initialization script uses the same database path as the
+        running application.
+        """
+        # Determine base directories (same as env.py)
+        open_webui_dir = Path("backend/open_webui").resolve()
+        backend_dir = open_webui_dir.parent
+        
+        # Check if running in Docker
+        docker = os.environ.get("DOCKER", "False").lower() == "true"
+        
+        # Determine DATA_DIR based on environment
+        if docker:
+            data_dir = Path(os.getenv("DATA_DIR", open_webui_dir / "data")).resolve()
+        else:
+            data_dir = Path(os.getenv("DATA_DIR", backend_dir / "data")).resolve()
+        
+        # Return the database file path
+        database_path = str(data_dir / "webui.db")
+        
+        return database_path
     
     def run(self, args: Optional[list] = None) -> int:
         """
@@ -302,13 +334,36 @@ class EnvironmentGeneratorApplication:
             schema_valid, existing_tables, missing_tables = self.database_client.validate_database_schema()
             if missing_tables:
                 self.output.print_warning(f"Missing tables: {', '.join(missing_tables)}")
-                self.output.print_info("Usage tracking and duplicate prevention may not work until these tables are created")
+                self.output.print_info("Creating missing tables for complete functionality...")
                 
+                # Create missing tables
+                try:
+                    success = self.database_client.create_missing_tables(missing_tables)
+                    if success:
+                        self.output.print_success(f"Successfully created {len(missing_tables)} missing tables")
+                        # Verify tables were created
+                        _, existing_after, remaining_missing = self.database_client.validate_database_schema()
+                        if remaining_missing:
+                            self.output.print_warning(f"Some tables still missing: {', '.join(remaining_missing)}")
+                        else:
+                            self.output.print_success("All required tables are now present")
+                    else:
+                        self.output.print_error("Failed to create missing tables")
+                        return False
+                except Exception as e:
+                    self.output.print_error(f"Error creating missing tables: {e}")
+                    return False
+            
+            # Re-check schema after potential table creation
+            schema_valid, existing_tables, missing_tables = self.database_client.validate_database_schema()
+            if missing_tables:
                 # Check specifically for duplicate prevention tables
                 duplicate_prevention_tables = ['processed_generations', 'processed_generation_cleanup_log']
                 missing_dp_tables = [t for t in missing_tables if t in duplicate_prevention_tables]
                 if missing_dp_tables:
                     self.output.print_warning(f"Duplicate prevention disabled: Missing {', '.join(missing_dp_tables)}")
+                else:
+                    self.output.print_info("All critical tables present - duplicate prevention enabled")
             
             # Create/update client organization
             org_data = DatabaseSetupService.prepare_organization_for_database(organization)
