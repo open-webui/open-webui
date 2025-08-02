@@ -3,7 +3,11 @@
 ## Project Context
 **mAI** - OpenWebUI fork for Polish SMEs (300+ users)
 
+<<<<<<< HEAD
 Multi-tenant SaaS, OpenRouter integration (1.3x markup), SQLite and InfluxDB.
+=======
+OpenRouter integration (1.3x markup), SQLite and InfluxDB.
+>>>>>>> f57858284 (feat(usage): Implement standalone usage page for authorized users)
 
 [Important]: Prepare only and exclusively production solutions. It is forbidden by you to manually add, for example, missing tables.
 
@@ -12,7 +16,11 @@ Multi-tenant SaaS, OpenRouter integration (1.3x markup), SQLite and InfluxDB.
 ## Critical Development Rules
 
 ### Safety-First Approach
+<<<<<<< HEAD
 - **Work on `customization` branch only** - never commit to `main`
+=======
+- **Work on `develop-b2b` branch only**
+>>>>>>> f57858284 (feat(usage): Implement standalone usage page for authorized users)
 - **Preserve business logic 100%** - refactoring moves code, never changes behavior
 
 ### Code Quality Standards
@@ -43,11 +51,18 @@ assets:   # Static files
 ### Current Stack
 - **Frontend**: SvelteKit + TypeScript + TailwindCSS
 - **Backend**: FastAPI + SQLAlchemy + Redis  
+<<<<<<< HEAD
 - **Database**: SQLite, InfluxDB
 - **APIs**: OpenRouter, NBP
 
 ### Current Development Environment (Docker Containers)
 Based on screenshot from 2025-07-31 16:50:24, the active development setup includes:
+=======
+- **Database**: SQLite, InfluxDB in the future PostresQL [Neon + vectorDB]
+- **APIs**: OpenRouter, NBP
+
+### Current Development Environment (Docker Containers)
+>>>>>>> f57858284 (feat(usage): Implement standalone usage page for authorized users)
 
 1. **mai** - Main project container (parent)
 2. **backend-dev** (`mai-backend-dev`) - FastAPI backend with hot reload
@@ -129,8 +144,11 @@ and generate refactoring recommendations prioritized by functionality.
 
 ### Key Integration Points
 - **Usage tracking**
+<<<<<<< HEAD
 - **Multi-tenancy**: Environment-based client isolation
 - **Database**: SQLite and InfluxDB
+=======
+>>>>>>> f57858284 (feat(usage): Implement standalone usage page for authorized users)
 
 ## InfluxDB Migration Plan
 
@@ -140,11 +158,14 @@ and generate refactoring recommendations prioritized by functionality.
 3. **Dual-Write Mode**: Write to both SQLite and InfluxDB for validation
 4. **NBP Service**: Standalone microservice with mock mode
 
+<<<<<<< HEAD
 ### Current Development Workflow (Docker-based)
 **Environment Files**:
 - `.env.dev` - Used by `docker-compose.dev.yml` (container networking)
 - `.env` - Used for local development (localhost networking)
 
+=======
+>>>>>>> f57858284 (feat(usage): Implement standalone usage page for authorized users)
 **Development Commands**:
 ```bash
 *# Start development environment*
@@ -167,6 +188,7 @@ docker-compose -f docker-compose.dev.yml down
 - Backend communicates with InfluxDB via `http://mai-influxdb-dev:8086`
 - NBP service accessible at `http://mai-nbp-service:8001`
 - All containers connected via `mai-dev-network`
+<<<<<<< HEAD
 
 ### InfluxDB Configuration
 ```python
@@ -186,8 +208,9 @@ INFLUXDB_BUCKET = "mai_usage_raw"
 - **Scalability**: Time-series optimized storage
 - **Cost Efficiency**: Shared NBP service, single InfluxDB instance
 - **Data Retention**: 30-day raw data, compressed archives
+=======
+>>>>>>> f57858284 (feat(usage): Implement standalone usage page for authorized users)
 
----
 
 **Core Principle**: Build on OpenWebUI foundation. Preserve existing functionality while enhancing architecture through systematic, safe refactoring.
 

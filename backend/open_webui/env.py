@@ -388,6 +388,13 @@ WEBUI_AUTH_TRUSTED_GROUPS_HEADER = os.environ.get(
     "WEBUI_AUTH_TRUSTED_GROUPS_HEADER", None
 )
 
+####################################
+# mAI SPECIFIC CONFIG
+####################################
+
+# Email address of user who should have access to Usage tab (in addition to admins)
+MAI_USAGE_VIEWER_EMAIL = os.environ.get("MAI_USAGE_VIEWER_EMAIL", "")
+
 
 BYPASS_MODEL_ACCESS_CONTROL = (
     os.environ.get("BYPASS_MODEL_ACCESS_CONTROL", "False").lower() == "true"

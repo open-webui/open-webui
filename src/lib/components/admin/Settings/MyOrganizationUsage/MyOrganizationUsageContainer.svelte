@@ -43,8 +43,8 @@
 		year: 'numeric' 
 	});
 	
-	// Reactive: Ensure non-admin users don't access admin-only tabs
-	$: if ($user?.role !== 'admin' && (activeTab === 'users' || activeTab === 'models' || activeTab === 'subscription')) {
+	// Reactive: Ensure users without permission don't access restricted tabs
+	$: if (!$user?.can_view_usage && (activeTab === 'users' || activeTab === 'models' || activeTab === 'subscription')) {
 		usageActions.setActiveTab('stats');
 	}
 	
@@ -90,7 +90,7 @@
 	};
 	
 	/**
-	 * Load user usage data (admin only)
+	 * Load user usage data (requires can_view_usage permission)
 	 */
 	const loadUserUsage = async (): Promise<void> => {
 		if (!clientOrgIdValidated || !clientOrgId) {
@@ -110,7 +110,7 @@
 	};
 	
 	/**
-	 * Load model usage data (admin only)
+	 * Load model usage data (requires can_view_usage permission)
 	 */
 	const loadModelUsage = async (): Promise<void> => {
 		if (!clientOrgIdValidated || !clientOrgId) {
@@ -130,7 +130,7 @@
 	};
 	
 	/**
-	 * Load subscription billing data (admin only)
+	 * Load subscription billing data (requires can_view_usage permission)
 	 */
 	const loadSubscriptionData = async (): Promise<void> => {
 		if (!clientOrgIdValidated || !clientOrgId) {
@@ -179,9 +179,9 @@
 	 * Handle tab change with lazy loading
 	 */
 	const handleTabChange = async (tab: TabType): Promise<void> => {
-		// Prevent non-admin users from accessing admin-only tabs
-		if ($user?.role !== 'admin' && (tab === 'users' || tab === 'models' || tab === 'subscription')) {
-			toast.error($i18n.t('Access denied. Administrator privileges required.'));
+		// Prevent users without permission from accessing restricted tabs
+		if (!$user?.can_view_usage && (tab === 'users' || tab === 'models' || tab === 'subscription')) {
+			toast.error($i18n.t('Access denied. Usage viewing privileges required.'));
 			return;
 		}
 		
@@ -268,7 +268,7 @@
 			>
 				{$i18n.t('Usage Stats')}
 			</button>
-			{#if $user?.role === 'admin'}
+			{#if $user?.can_view_usage}
 				<button
 					class="py-2 px-1 border-b-2 font-medium text-sm {activeTab === 'users' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}"
 					on:click={() => handleTabChange('users')}
@@ -302,11 +302,11 @@
 		<LoadingState message="{$i18n.t('Loading usage data...')}" />
 	{:else if activeTab === 'stats' && usageData}
 		<UsageStatsTab {usageData} />
-	{:else if activeTab === 'users' && $user?.role === 'admin'}
+	{:else if activeTab === 'users' && $user?.can_view_usage}
 		<UserDetailsTab {userUsageData} {clientOrgIdValidated} />
-	{:else if activeTab === 'models' && $user?.role === 'admin'}
+	{:else if activeTab === 'models' && $user?.can_view_usage}
 		<ModelUsageTab {modelUsageData} {clientOrgIdValidated} />
-	{:else if activeTab === 'subscription' && $user?.role === 'admin'}
+	{:else if activeTab === 'subscription' && $user?.can_view_usage}
 		<BillingTab {subscriptionData} {clientOrgIdValidated} />
 	{:else if activeTab === 'pricing'}
 		<ModelPricingTab {modelPricingData} loading={pricingLoading} />

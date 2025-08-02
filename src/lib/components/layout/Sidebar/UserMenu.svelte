@@ -21,6 +21,7 @@
 	import Code from '$lib/components/icons/Code.svelte';
 	import UserGroup from '$lib/components/icons/UserGroup.svelte';
 	import SignOut from '$lib/components/icons/SignOut.svelte';
+	import ChartBar from '$lib/components/icons/ChartBar.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -86,6 +87,24 @@
 				</div>
 				<div class=" self-center truncate">{$i18n.t('Settings')}</div>
 			</DropdownMenu.Item>
+
+			{#if $user?.can_view_usage}
+				<DropdownMenu.Item
+					class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+					on:click={() => {
+						show = false;
+						if ($mobile) {
+							showSidebar.set(false);
+						}
+						goto('/usage');
+					}}
+				>
+					<div class=" self-center mr-3">
+						<ChartBar className="w-5 h-5" strokeWidth="1.5" />
+					</div>
+					<div class=" self-center truncate">{$i18n.t('Usage')}</div>
+				</DropdownMenu.Item>
+			{/if}
 
 			<DropdownMenu.Item
 				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
