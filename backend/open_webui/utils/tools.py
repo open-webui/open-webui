@@ -528,6 +528,9 @@ async def get_tool_servers_data(
         openapi_data = response.get("openapi", {})
 
         if info and isinstance(openapi_data, dict):
+            if "info" not in openapi_data:
+                openapi_data["info"] = {}
+
             if "name" in info:
                 openapi_data["info"]["title"] = info.get("name", "Tool Server")
 
