@@ -612,8 +612,24 @@ class ChatTable:
             if word.startswith("tag:")
         ]
 
+        folder_names = [
+            word.replace("folder:", "").replace(" ", "_").lower()
+            for word in search_text_words
+            if word.startswith("folder:")
+        ]
+
+        is_pinned = "pinned:true" in search_text
+        is_archived = "archived:true" in search_text
+        is_shared = "shared:true" in search_text
+
         search_text_words = [
-            word for word in search_text_words if not word.startswith("tag:")
+            word
+            for word in search_text_words
+            if not word.startswith("tag:")
+            and not word.startswith("folder:")
+            and not word.startswith("pinned:")
+            and not word.startswith("archived:")
+            and not word.startswith("shared:")
         ]
 
         search_text = " ".join(search_text_words)
@@ -621,8 +637,16 @@ class ChatTable:
         with get_db() as db:
             query = db.query(Chat).filter(Chat.user_id == user_id)
 
-            if not include_archived:
+            if is_archived:
+                query = query.filter(Chat.archived == True)
+            elif not include_archived:
                 query = query.filter(Chat.archived == False)
+
+            if is_pinned:
+                query = query.filter(Chat.pinned == True)
+
+            if is_shared:
+                query = query.filter(Chat.share_id != None)
 
             query = query.order_by(Chat.updated_at.desc())
 
@@ -673,6 +697,16 @@ class ChatTable:
                             ]
                         )
                     )
+                if folder_names:
+                    # similar to tags, but for folders
+                    # first get the folder ids from the folder names
+                    from open_webui.models.folders import Folders
+
+                    folder_ids = Folders.get_folder_ids_by_names_and_user_id(
+                        folder_names, user_id
+                    )
+
+                    query = query.filter(Chat.folder_id.in_(folder_ids))
 
             elif dialect_name == "postgresql":
                 # PostgreSQL relies on proper JSON query for search
@@ -720,6 +754,16 @@ class ChatTable:
                             ]
                         )
                     )
+
+                if folder_names:
+                    # similar to tags, but for folders
+                    # first get the folder ids from the folder names
+                    from open_webui.models.folders import Folders
+
+                    folder_ids = Folders.get_folder_ids_by_names_and_user_id(
+                        folder_names, user_id
+                    )
+                    query = query.filter(Chat.folder_id.in_(folder_ids))
             else:
                 raise NotImplementedError(
                     f"Unsupported dialect: {db.bind.dialect.name}"

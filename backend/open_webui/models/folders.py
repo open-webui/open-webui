@@ -167,6 +167,17 @@ class FolderTable:
                 .all()
             ]
 
+    def get_folder_ids_by_names_and_user_id(
+        self, names: list[str], user_id: str
+    ) -> list[str]:
+        with get_db() as db:
+            return [
+                folder.id
+                for folder in db.query(Folder)
+                .filter(Folder.name.in_(names), Folder.user_id == user_id)
+                .all()
+            ]
+
     def update_folder_parent_id_by_id_and_user_id(
         self,
         id: str,

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { getAllTags } from '$lib/apis/chats';
-	import { tags } from '$lib/stores';
+	import { getFolders } from '$lib/apis/folders';
+	import { tags, folders } from '$lib/stores';
 	import { getContext, createEventDispatcher, onMount, onDestroy, tick } from 'svelte';
 	import { fade } from 'svelte/transition';
 	import Search from '$lib/components/icons/Search.svelte';
@@ -23,6 +24,22 @@
 		{
 			name: 'tag:',
 			description: $i18n.t('search for tags')
+		},
+		{
+			name: 'folder:',
+			description: $i18n.t('search for folders')
+		},
+		{
+			name: 'pinned:true',
+			description: $i18n.t('search for pinned chats')
+		},
+		{
+			name: 'shared:true',
+			description: $i18n.t('search for shared chats')
+		},
+		{
+			name: 'archived:true',
+			description: $i18n.t('search for archived chats')
 		}
 	];
 	let focused = false;
@@ -57,9 +74,27 @@
 			})
 		: [];
 
-	const initTags = async () => {
+	let filteredFolders = [];
+	$: filteredFolders = lastWord.startsWith('folder:')
+		? $folders.filter((folder) => {
+				const folderName = lastWord.slice(7);
+				if (folderName) {
+					const folderId = folderName.replace(' ', '_').toLowerCase();
+					if (folder.id !== folderId) {
+						return folder.id.startsWith(folderId);
+					} else {
+						return false;
+					}
+				} else {
+					return true;
+				}
+			})
+		: [];
+
+	const init = async () => {
 		loading = true;
 		await tags.set(await getAllTags(localStorage.token));
+		await folders.set(await getFolders(localStorage.token, null));
 		loading = false;
 	};
 
@@ -73,7 +108,11 @@
 		const chatSearch = document.getElementById('chat-search');
 
 		if (!searchContainer.contains(e.target) && !chatSearch.contains(e.target)) {
-			if (e.target.id.startsWith('search-tag-') || e.target.id.startsWith('search-option-')) {
+			if (
+				e.target.id.startsWith('search-tag-') ||
+				e.target.id.startsWith('search-option-') ||
+				e.target.id.startsWith('search-folder-')
+			) {
 				return;
 			}
 			focused = false;
@@ -105,7 +144,7 @@
 			}}
 			on:focus={() => {
 				focused = true;
-				initTags();
+				init();
 			}}
 			on:blur={() => {
 				focused = false;
@@ -115,6 +154,10 @@
 					if (filteredTags.length > 0) {
 						const tagElement = document.getElementById(`search-tag-${selectedIdx}`);
 						tagElement.click();
+						return;
+					} else if (filteredFolders.length > 0) {
+						const folderElement = document.getElementById(`search-folder-${selectedIdx}`);
+						folderElement.click();
 						return;
 					}
 
@@ -133,6 +176,8 @@
 
 					if (filteredTags.length > 0) {
 						selectedIdx = Math.min(selectedIdx + 1, filteredTags.length - 1);
+					} else if (filteredFolders.length > 0) {
+						selectedIdx = Math.min(selectedIdx + 1, filteredFolders.length - 1);
 					} else {
 						selectedIdx = Math.min(selectedIdx + 1, filteredOptions.length - 1);
 					}
@@ -159,7 +204,7 @@
 		{/if}
 	</div>
 
-	{#if focused && (filteredOptions.length > 0 || filteredTags.length > 0)}
+	{#if focused && (filteredOptions.length > 0 || filteredTags.length > 0 || filteredFolders.length > 0)}
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
 		<div
 			class="absolute top-0 mt-8 left-0 right-1 border border-gray-100 dark:border-gray-900 bg-gray-50 dark:bg-gray-950 rounded-lg z-10 shadow-lg"
@@ -184,7 +229,7 @@
 									? 'bg-gray-100 dark:bg-gray-900'
 									: ''}"
 								id="search-tag-{tagIdx}"
-								on:click|stopPropagation={async () => {
+								on:mousedown|preventDefault|stopPropagation={async () => {
 									const words = value.split(' ');
 
 									words.pop();
@@ -205,6 +250,41 @@
 							</button>
 						{/each}
 					</div>
+				{:else if filteredFolders.length > 0}
+					<div class="px-1 font-medium dark:text-gray-300 text-gray-700 mb-1">Folders</div>
+					<div class="max-h-60 overflow-auto">
+						{#each filteredFolders as folder, folderIdx}
+							<button
+								class=" px-1.5 py-0.5 flex gap-1 hover:bg-gray-100 dark:hover:bg-gray-900 w-full rounded {selectedIdx ===
+								folderIdx
+									? 'bg-gray-100 dark:bg-gray-900'
+									: ''}"
+								id="search-folder-{folderIdx}"
+								on:mousedown|preventDefault|stopPropagation={async () => {
+									const words = value.split(' ');
+
+									words.pop();
+									words.push(
+										`folder:${
+											folder.name.indexOf(' ') > -1 ? `"${folder.name}"` : folder.name
+										} `
+									);
+
+									value = words.join(' ');
+
+									dispatch('input');
+								}}
+							>
+								<div class="dark:text-gray-300 text-gray-700 font-medium line-clamp-1 shrink-0">
+									{folder.name}
+								</div>
+
+								<div class=" text-gray-500 line-clamp-1">
+									{folder.id}
+								</div>
+							</button>
+						{/each}
+					</div>
 				{:else if filteredOptions.length > 0}
 					<div class="px-1 font-medium dark:text-gray-300 text-gray-700 mb-1">
 						{$i18n.t('Search options')}
@@ -218,15 +298,17 @@
 									? 'bg-gray-100 dark:bg-gray-900'
 									: ''}"
 								id="search-option-{optionIdx}"
-								on:click|stopPropagation={async () => {
+								on:mousedown|preventDefault|stopPropagation={async () => {
 									const words = value.split(' ');
-
 									words.pop();
-									words.push('tag:');
-
+									words.push(option.name);
 									value = words.join(' ');
-
 									dispatch('input');
+									await tick();
+									const searchInput = document.getElementById('search-input');
+									if (searchInput) {
+										searchInput.focus();
+									}
 								}}
 							>
 								<div class="dark:text-gray-300 text-gray-700 font-medium">{option.name}</div>
