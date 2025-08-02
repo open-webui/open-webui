@@ -1320,7 +1320,6 @@ export const convertOpenApiToToolPayload = (openApiSpec) => {
 		for (const [method, operation] of Object.entries(methods)) {
 			if (operation?.operationId) {
 				const tool = {
-					type: 'function',
 					name: operation.operationId,
 					description: operation.description || operation.summary || 'No description available.',
 					parameters: {

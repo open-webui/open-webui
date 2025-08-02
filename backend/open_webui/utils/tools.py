@@ -377,7 +377,6 @@ def convert_openapi_to_tool_payload(openapi_spec):
         for method, operation in methods.items():
             if operation.get("operationId"):
                 tool = {
-                    "type": "function",
                     "name": operation.get("operationId"),
                     "description": operation.get(
                         "description",
