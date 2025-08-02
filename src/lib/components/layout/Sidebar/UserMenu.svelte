@@ -151,7 +151,7 @@
 					on:click={() => {
 						show = false;
 					}}
-					href="https://docs.openwebui.com'"
+					href="https://docs.openwebui.com"
 				>
 					<QuestionMarkCircle className="size-5" />
 					<div class="flex items-center">{$i18n.t('Documentation')}</div>
