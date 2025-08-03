@@ -171,6 +171,25 @@ class UsersTable:
         except Exception:
             return None
 
+    def get_user_by_email_or_name(self, email_or_name: str) -> Optional[UserModel]:
+        try:
+            with get_db() as db:
+                user = (
+                    db.query(User)
+                    .filter(
+                        or_(
+                            User.email.ilike(email_or_name),
+                            User.name.ilike(email_or_name),
+                        )
+                    )
+                    .first()
+                )
+                if user:
+                    return UserModel.model_validate(user)
+                return None
+        except Exception:
+            return None
+
     def get_user_by_oauth_sub(self, sub: str) -> Optional[UserModel]:
         try:
             with get_db() as db:

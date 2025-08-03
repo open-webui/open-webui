@@ -144,7 +144,7 @@ async def update_profile(
         else:
             raise HTTPException(400, detail=ERROR_MESSAGES.DEFAULT())
     else:
-        raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+        raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_EMAIL_CRED)
 
 
 ############################
@@ -167,7 +167,7 @@ async def update_password(
         else:
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_PASSWORD)
     else:
-        raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+        raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_EMAIL_CRED)
 
 
 ############################
@@ -440,7 +440,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                     "permissions": user_permissions,
                 }
             else:
-                raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+                raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_EMAIL_CRED)
         else:
             raise HTTPException(400, "User record mismatch.")
     except Exception as e:
@@ -500,7 +500,7 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
 
             user = Auths.authenticate_user(admin_email.lower(), admin_password)
     else:
-        user = Auths.authenticate_user(form_data.email.lower(), form_data.password)
+        user = Auths.authenticate_user(form_data.email_or_username, form_data.password)
 
     if user:
 
@@ -546,7 +546,10 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
             "permissions": user_permissions,
         }
     else:
-        raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+        if form_data.login_method == "username":
+            raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_USERNAME_CRED)
+        else:
+            raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_EMAIL_CRED)
 
 
 ############################

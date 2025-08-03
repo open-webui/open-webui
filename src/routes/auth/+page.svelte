@@ -18,6 +18,7 @@
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import OnBoarding from '$lib/components/OnBoarding.svelte';
+	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -26,9 +27,11 @@
 	let mode = $config?.features.enable_ldap ? 'ldap' : 'signin';
 
 	let name = '';
-	let email = '';
 	let password = '';
 	let confirmPassword = '';
+
+	let emailOrUsername = '';
+	let loginMethod = 'email';
 
 	let ldapUsername = '';
 
@@ -55,7 +58,7 @@
 	};
 
 	const signInHandler = async () => {
-		const sessionUser = await userSignIn(email, password).catch((error) => {
+		const sessionUser = await userSignIn(emailOrUsername, password, loginMethod).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});
@@ -71,12 +74,15 @@
 			}
 		}
 
-		const sessionUser = await userSignUp(name, email, password, generateInitialsImage(name)).catch(
-			(error) => {
-				toast.error(`${error}`);
-				return null;
-			}
-		);
+		const sessionUser = await userSignUp(
+			name,
+			emailOrUsername,
+			password,
+			generateInitialsImage(name)
+		).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
 
 		await setSessionUser(sessionUser);
 	};
@@ -286,19 +292,35 @@
 											</div>
 										{:else}
 											<div class="mb-2">
-												<label for="email" class="text-sm font-medium text-left mb-1 block"
-													>{$i18n.t('Email')}</label
-												>
-												<input
-													bind:value={email}
-													type="email"
-													id="email"
-													class="my-0.5 w-full text-sm outline-hidden bg-transparent"
-													autocomplete="email"
-													name="email"
-													placeholder={$i18n.t('Enter Your Email')}
-													required
-												/>
+												{#if mode === 'signin' && loginMethod === 'username'}
+													<label for="username" class="text-sm font-medium text-left mb-1 block"
+														>{$i18n.t('Username')}</label
+													>
+													<input
+														bind:value={emailOrUsername}
+														type="text"
+														id="username"
+														class="my-0.5 w-full text-sm outline-hidden bg-transparent"
+														autocomplete="username"
+														name="username"
+														placeholder={$i18n.t('Enter Your Username')}
+														required
+													/>
+												{:else}
+													<label for="email" class="text-sm font-medium text-left mb-1 block"
+														>{$i18n.t('Email')}</label
+													>
+													<input
+														bind:value={emailOrUsername}
+														type="email"
+														id="email"
+														class="my-0.5 w-full text-sm outline-hidden bg-transparent"
+														autocomplete="email"
+														name="email"
+														placeholder={$i18n.t('Enter Your Email')}
+														required
+													/>
+												{/if}
 											</div>
 										{/if}
 
@@ -306,7 +328,7 @@
 											<label for="password" class="text-sm font-medium text-left mb-1 block"
 												>{$i18n.t('Password')}</label
 											>
-											<input
+											<SensitiveInput
 												bind:value={password}
 												type="password"
 												id="password"
@@ -325,7 +347,7 @@
 													class="text-sm font-medium text-left mb-1 block"
 													>{$i18n.t('Confirm Password')}</label
 												>
-												<input
+												<SensitiveInput
 													bind:value={confirmPassword}
 													type="password"
 													id="confirm-password"
@@ -359,6 +381,22 @@
 														? $i18n.t('Create Admin Account')
 														: $i18n.t('Create Account')}
 											</button>
+
+											{#if mode === 'signin'}
+												<div class="mt-2 text-sm text-center">
+													<button
+														class="font-medium underline"
+														type="button"
+														on:click={() => {
+															loginMethod = loginMethod === 'email' ? 'username' : 'email';
+														}}
+													>
+														{loginMethod === 'email'
+															? $i18n.t('Sign in with Username')
+															: $i18n.t('Sign in with Email')}
+													</button>
+												</div>
+											{/if}
 
 											{#if $config?.features.enable_signup && !($config?.onboarding ?? false)}
 												<div class=" mt-4 text-sm text-center">

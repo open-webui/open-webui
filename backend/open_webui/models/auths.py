@@ -60,8 +60,9 @@ class SigninResponse(Token, UserResponse):
 
 
 class SigninForm(BaseModel):
-    email: str
+    email_or_username: str
     password: str
+    login_method: str
 
 
 class LdapForm(BaseModel):
@@ -127,10 +128,12 @@ class AuthsTable:
             else:
                 return None
 
-    def authenticate_user(self, email: str, password: str) -> Optional[UserModel]:
-        log.info(f"authenticate_user: {email}")
+    def authenticate_user(
+        self, email_or_username: str, password: str
+    ) -> Optional[UserModel]:
+        log.info(f"authenticate_user: {email_or_username}")
 
-        user = Users.get_user_by_email(email)
+        user = Users.get_user_by_email_or_name(email_or_username)
         if not user:
             return None
 
