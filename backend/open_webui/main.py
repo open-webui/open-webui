@@ -1691,9 +1691,12 @@ class OAuthRedirectMiddleware(BaseHTTPMiddleware):
         try:
             return await call_next(request)
         except HTTPException as exc:
-            if exc.status_code == status.HTTP_401_UNAUTHORIZED:
-                login_url = request.url_for("oauth_login", provider=self.provider)
-                return RedirectResponse(f"{login_url}")
+            is_api_request = (
+                request.url.path.startswith("/api")
+                or "application/json" in request.headers.get("accept", "")
+            )
+            if exc.status_code == status.HTTP_401_UNAUTHORIZED and not is_api_request:
+                return RedirectResponse(f"{request.url_for("oauth_login", provider=self.provider)}")
             raise
 
 if WEBUI_AUTH_SSO_PROVIDER_REDIRECT_ON_UNAUTORIZED:
