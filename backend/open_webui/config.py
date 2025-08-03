@@ -914,35 +914,67 @@ OPENAI_API_BASE_URL = os.environ.get("OPENAI_API_BASE_URL", "")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 GEMINI_API_BASE_URL = os.environ.get("GEMINI_API_BASE_URL", "")
 
+# OpenRouter Configuration (mAI Client Environment Integration)
+OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
+OPENROUTER_HOST = os.environ.get("OPENROUTER_HOST", "https://openrouter.ai/api/v1")
+OPENROUTER_EXTERNAL_USER = os.environ.get("OPENROUTER_EXTERNAL_USER", "")
+ORGANIZATION_NAME = os.environ.get("ORGANIZATION_NAME", "")
+SPENDING_LIMIT = os.environ.get("SPENDING_LIMIT", "")
+
 
 if OPENAI_API_BASE_URL == "":
     OPENAI_API_BASE_URL = "https://api.openai.com/v1"
 
-OPENAI_API_KEYS = os.environ.get("OPENAI_API_KEYS", "")
-OPENAI_API_KEYS = OPENAI_API_KEYS if OPENAI_API_KEYS != "" else OPENAI_API_KEY
+# OpenRouter Environment Integration - Override OpenAI config when OpenRouter is configured
+if OPENROUTER_API_KEY and OPENROUTER_HOST:
+    print(f"🔗 mAI: Using OpenRouter configuration (Org: {ORGANIZATION_NAME or 'Environment-based'})")
+    # Use OpenRouter as the primary API
+    OPENAI_API_KEYS = [OPENROUTER_API_KEY]
+    OPENAI_API_BASE_URLS = [OPENROUTER_HOST]
+    OPENAI_API_KEYS = PersistentConfig(
+        "OPENAI_API_KEYS", "openai.api_keys", OPENAI_API_KEYS
+    )
+    OPENAI_API_BASE_URLS = PersistentConfig(
+        "OPENAI_API_BASE_URLS", "openai.api_base_urls", OPENAI_API_BASE_URLS
+    )
+else:
+    # Fallback to original OpenAI configuration
+    OPENAI_API_KEYS = os.environ.get("OPENAI_API_KEYS", "")
+    OPENAI_API_KEYS = OPENAI_API_KEYS if OPENAI_API_KEYS != "" else OPENAI_API_KEY
 
-OPENAI_API_KEYS = [url.strip() for url in OPENAI_API_KEYS.split(";")]
-OPENAI_API_KEYS = PersistentConfig(
-    "OPENAI_API_KEYS", "openai.api_keys", OPENAI_API_KEYS
-)
+    OPENAI_API_KEYS = [url.strip() for url in OPENAI_API_KEYS.split(";")]
+    OPENAI_API_KEYS = PersistentConfig(
+        "OPENAI_API_KEYS", "openai.api_keys", OPENAI_API_KEYS
+    )
 
-OPENAI_API_BASE_URLS = os.environ.get("OPENAI_API_BASE_URLS", "")
-OPENAI_API_BASE_URLS = (
-    OPENAI_API_BASE_URLS if OPENAI_API_BASE_URLS != "" else OPENAI_API_BASE_URL
-)
+    OPENAI_API_BASE_URLS = os.environ.get("OPENAI_API_BASE_URLS", "")
+    OPENAI_API_BASE_URLS = (
+        OPENAI_API_BASE_URLS if OPENAI_API_BASE_URLS != "" else OPENAI_API_BASE_URL
+    )
 
-OPENAI_API_BASE_URLS = [
-    url.strip() if url != "" else "https://api.openai.com/v1"
-    for url in OPENAI_API_BASE_URLS.split(";")
-]
-OPENAI_API_BASE_URLS = PersistentConfig(
-    "OPENAI_API_BASE_URLS", "openai.api_base_urls", OPENAI_API_BASE_URLS
-)
+    OPENAI_API_BASE_URLS = [
+        url.strip() if url != "" else "https://api.openai.com/v1"
+        for url in OPENAI_API_BASE_URLS.split(";")
+    ]
+    OPENAI_API_BASE_URLS = PersistentConfig(
+        "OPENAI_API_BASE_URLS", "openai.api_base_urls", OPENAI_API_BASE_URLS
+    )
+
+# Parse OPENAI_API_CONFIGS from environment variable
+OPENAI_API_CONFIGS_ENV = os.environ.get("OPENAI_API_CONFIGS", "")
+if OPENAI_API_CONFIGS_ENV:
+    try:
+        OPENAI_API_CONFIGS_DEFAULT = json.loads(OPENAI_API_CONFIGS_ENV)
+    except json.JSONDecodeError:
+        logging.warning("Invalid JSON in OPENAI_API_CONFIGS environment variable, using empty config")
+        OPENAI_API_CONFIGS_DEFAULT = {}
+else:
+    OPENAI_API_CONFIGS_DEFAULT = {}
 
 OPENAI_API_CONFIGS = PersistentConfig(
     "OPENAI_API_CONFIGS",
     "openai.api_configs",
-    {},
+    OPENAI_API_CONFIGS_DEFAULT,
 )
 
 # Get the actual OpenAI API key based on the base URL

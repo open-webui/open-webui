@@ -4,6 +4,7 @@
 	"private": true,
 	"scripts": {
 		"dev": "npm run pyodide:fetch && vite dev --host",
+		"dev:docker": "npm run pyodide:fetch && vite dev --host 0.0.0.0 --port 5173",
 		"dev:5050": "npm run pyodide:fetch && vite dev --port 5050",
 		"build": "NODE_OPTIONS='--max-old-space-size=4096' npm run pyodide:fetch && NODE_OPTIONS='--max-old-space-size=4096' vite build",
 		"build:watch": "NODE_OPTIONS='--max-old-space-size=4096' npm run pyodide:fetch && NODE_OPTIONS='--max-old-space-size=4096' vite build --watch",

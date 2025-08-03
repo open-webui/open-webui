@@ -1,0 +1,40 @@
+# Example client configuration for mAI multi-tenant deployment
+# Copy this file to clients.yaml and customize for your clients
+
+clients:
+  - name: "company_a"
+    organization_name: "Company A Sp. z o.o."
+    openrouter_api_key: "sk-or-v1-YOUR_OPENROUTER_API_KEY_HERE_REPLACE_WITH_REAL_KEY"
+    external_user_id: "mai_client_company_a_001"
+    port_offset: 0  # Ports 3000, 8080
+    server_ip: "192.168.1.100"
+
+  - name: "company_b" 
+    organization_name: "Company B Ltd."
+    openrouter_api_key: "sk-or-v1-YOUR_OPENROUTER_API_KEY_HERE_REPLACE_WITH_REAL_KEY"
+    external_user_id: "mai_client_company_b_002"
+    port_offset: 10  # Ports 3010, 8090
+    server_ip: "192.168.1.100"
+
+  - name: "company_c"
+    organization_name: "Company C GmbH"
+    openrouter_api_key: "sk-or-v1-YOUR_OPENROUTER_API_KEY_HERE_REPLACE_WITH_REAL_KEY"
+    external_user_id: "mai_client_company_c_003"
+    port_offset: 20  # Ports 3020, 8100
+    server_ip: "192.168.1.101"
+
+  - name: "company_d"
+    organization_name: "Company D S.A."
+    openrouter_api_key: "sk-or-v1-YOUR_OPENROUTER_API_KEY_HERE_REPLACE_WITH_REAL_KEY"
+    external_user_id: "mai_client_company_d_004"
+    port_offset: 30  # Ports 3030, 8110
+    server_ip: "192.168.1.101"
+
+# Add more clients as needed...
+# Each client should have:
+# - Unique name (used for container and directory names)
+# - Unique organization_name (displayed in UI)
+# - Unique openrouter_api_key (from OpenRouter dashboard)
+# - Unique external_user_id (for usage tracking)
+# - Unique port_offset (to avoid conflicts)
+# - server_ip (for multi-server deployments)

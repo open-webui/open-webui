@@ -1,0 +1,50 @@
+# E2E Test Requirements
+# Install with: pip install -r requirements-test.txt
+
+# Core testing framework
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+pytest-timeout>=2.1.0
+
+# HTTP client for API testing
+httpx>=0.24.0
+
+# Time mocking for test control
+freezegun>=1.2.0
+
+# Data validation and parsing
+pydantic>=2.0.0
+
+# Async support
+aiofiles>=23.0.0
+
+# Database testing
+pytest-postgresql>=5.0.0  # Optional: for PostgreSQL testing
+
+# Test reporting and coverage
+pytest-html>=3.1.0        # HTML test reports
+pytest-cov>=4.0.0         # Code coverage
+pytest-xdist>=3.0.0       # Parallel test execution
+
+# Mock and patch utilities
+pytest-mock>=3.10.0
+responses>=0.23.0          # For mocking HTTP responses
+
+# Development and debugging
+pytest-pdb>=0.2.0         # PDB integration
+pytest-clarity>=1.0.0     # Better test output
+
+# Performance and monitoring
+memory-profiler>=0.60.0   # Memory usage profiling
+psutil>=5.9.0             # System resource monitoring
+
+# Additional utilities
+python-dotenv>=1.0.0      # Environment variable management
+colorlog>=6.0.0           # Colored logging
+tabulate>=0.9.0           # Table formatting for reports
+
+# InfluxDB client (if testing InfluxDB integration)
+influxdb-client>=1.36.0
+
+# NBP API testing
+requests>=2.28.0

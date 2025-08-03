@@ -157,9 +157,12 @@ try:
     changelog_path = BASE_DIR / "CHANGELOG.md"
     with open(str(changelog_path.absolute()), "r", encoding="utf8") as file:
         changelog_content = file.read()
-
 except Exception:
-    changelog_content = (pkgutil.get_data("open_webui", "CHANGELOG.md") or b"").decode()
+    try:
+        changelog_content = (pkgutil.get_data("open_webui", "CHANGELOG.md") or b"").decode()
+    except Exception:
+        # If CHANGELOG.md doesn't exist, provide a minimal changelog
+        changelog_content = "## [0.0.0] - Unknown\n### Added\n- Initial version"
 
 # Convert markdown content to HTML
 html_content = markdown.markdown(changelog_content)
@@ -384,6 +387,13 @@ WEBUI_AUTH_TRUSTED_NAME_HEADER = os.environ.get("WEBUI_AUTH_TRUSTED_NAME_HEADER"
 WEBUI_AUTH_TRUSTED_GROUPS_HEADER = os.environ.get(
     "WEBUI_AUTH_TRUSTED_GROUPS_HEADER", None
 )
+
+####################################
+# mAI SPECIFIC CONFIG
+####################################
+
+# Email address of user who should have access to Usage tab (in addition to admins)
+MAI_USAGE_VIEWER_EMAIL = os.environ.get("MAI_USAGE_VIEWER_EMAIL", "")
 
 
 BYPASS_MODEL_ACCESS_CONTROL = (

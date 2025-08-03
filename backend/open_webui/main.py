@@ -85,6 +85,9 @@ from open_webui.routers import (
     tools,
     users,
     utils,
+    usage_tracking,
+    user_mapping_admin,
+    batch_admin,
 )
 
 from open_webui.routers.retrieval import (
@@ -131,6 +134,9 @@ from open_webui.config import (
     CODE_EXECUTION_JUPYTER_AUTH_TOKEN,
     CODE_EXECUTION_JUPYTER_AUTH_PASSWORD,
     CODE_EXECUTION_JUPYTER_TIMEOUT,
+    # OpenRouter Environment Configuration
+    OPENROUTER_EXTERNAL_USER,
+    ORGANIZATION_NAME,
     ENABLE_CODE_INTERPRETER,
     CODE_INTERPRETER_ENGINE,
     CODE_INTERPRETER_PROMPT_TEMPLATE,
@@ -538,6 +544,32 @@ async def lifespan(app: FastAPI):
 
     asyncio.create_task(periodic_usage_pool_cleanup())
 
+    # Initialize environment-based usage tracking
+    if OPENROUTER_EXTERNAL_USER and ORGANIZATION_NAME:
+        try:
+            from open_webui.utils.usage_tracking_init import initialize_usage_tracking_from_environment
+            init_result = await initialize_usage_tracking_from_environment()
+            if init_result:
+                log.info(f"✅ Usage tracking initialized for {ORGANIZATION_NAME}")
+            else:
+                log.warning("Failed to initialize usage tracking from environment")
+        except Exception as e:
+            log.error(f"Error initializing usage tracking: {e}")
+
+    # Initialize organization usage background sync
+    try:
+        from open_webui.utils.background_sync import init_background_sync
+        asyncio.create_task(init_background_sync())
+    except Exception as e:
+        log.error(f"Failed to initialize organization usage background sync: {e}")
+
+    # Initialize daily batch processing scheduler
+    try:
+        from open_webui.utils.batch_scheduler import init_batch_scheduler
+        await init_batch_scheduler()
+    except Exception as e:
+        log.error(f"Failed to initialize daily batch scheduler: {e}")
+
     if app.state.config.ENABLE_BASE_MODELS_CACHE:
         await get_all_models(
             Request(
@@ -560,6 +592,28 @@ async def lifespan(app: FastAPI):
         )
 
     yield
+
+    # Shutdown organization usage background sync
+    try:
+        from open_webui.utils.background_sync import shutdown_background_sync
+        await shutdown_background_sync()
+    except Exception as e:
+        log.error(f"Failed to shutdown organization usage background sync: {e}")
+
+    # Shutdown daily batch processing scheduler
+    try:
+        from open_webui.utils.batch_scheduler import shutdown_batch_scheduler
+        await shutdown_batch_scheduler()
+    except Exception as e:
+        log.error(f"Failed to shutdown daily batch scheduler: {e}")
+
+    # Shutdown NBP client
+    try:
+        from open_webui.utils.nbp_client import nbp_client
+        await nbp_client.close()
+        log.info("NBP client closed successfully")
+    except Exception as e:
+        log.error(f"Failed to close NBP client: {e}")
 
     if hasattr(app.state, "redis_task_command_listener"):
         app.state.redis_task_command_listener.cancel()
@@ -1218,6 +1272,9 @@ app.include_router(
     evaluations.router, prefix="/api/v1/evaluations", tags=["evaluations"]
 )
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
+app.include_router(usage_tracking.router, prefix="/api/v1/usage-tracking", tags=["usage-tracking"])
+app.include_router(user_mapping_admin.router, prefix="/api/v1/admin/user-mapping", tags=["admin", "user-mapping"])
+app.include_router(batch_admin.router, prefix="/api/v1/admin/batch", tags=["admin", "batch"])
 
 
 try:
@@ -1245,8 +1302,24 @@ async def get_models(
     request: Request, refresh: bool = False, user=Depends(get_verified_user)
 ):
     def get_filtered_models(models, user):
+        """Filter models based on user's organization access"""
+        # No admin bypass - all users should see only their organization's models
+        
+        # Get models accessible through organizations
+        from open_webui.models.models import Models
+        org_accessible_models = Models.get_models_by_user_id(user.id)
+        org_model_ids = {m.id for m in org_accessible_models}
+        
         filtered_models = []
         for model in models:
+            model_id = model.get("id", "")
+            
+            # Check if model is in user's organization models
+            if model_id in org_model_ids:
+                filtered_models.append(model)
+                continue
+                
+            # Legacy check for arena models
             if model.get("arena"):
                 if has_access(
                     user.id,
@@ -1257,8 +1330,9 @@ async def get_models(
                 ):
                     filtered_models.append(model)
                 continue
-
-            model_info = Models.get_model_by_id(model["id"])
+            
+            # Legacy check for individual model access
+            model_info = Models.get_model_by_id(model_id)
             if model_info:
                 if user.id == model_info.user_id or has_access(
                     user.id, type="read", access_control=model_info.access_control
@@ -1300,7 +1374,8 @@ async def get_models(
         )
 
     # Filter out models that the user does not have access to
-    if user.role == "user" and not BYPASS_MODEL_ACCESS_CONTROL:
+    # Apply filtering for all users (including admins) unless bypass is enabled
+    if not BYPASS_MODEL_ACCESS_CONTROL:
         models = get_filtered_models(models, user)
 
     log.debug(

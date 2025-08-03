@@ -31,6 +31,7 @@ boto3==1.35.53
 
 argon2-cffi==23.1.0
 APScheduler==3.10.4
+pytz==2024.2
 
 pycrdt==0.12.25
 
@@ -132,6 +133,9 @@ firecrawl-py==1.12.0
 # Sougou API SDK(Tencentcloud SDK)
 tencentcloud-sdk-python==3.0.1336
 
+## CLI
+typer==0.15.1
+
 ## Trace
 opentelemetry-api==1.32.1
 opentelemetry-sdk==1.32.1
@@ -144,3 +148,7 @@ opentelemetry-instrumentation-requests==0.53b1
 opentelemetry-instrumentation-logging==0.53b1
 opentelemetry-instrumentation-httpx==0.53b1
 opentelemetry-instrumentation-aiohttp-client==0.53b1
+
+## InfluxDB Integration
+influxdb-client==1.45.0
+influxdb-client[async]==1.45.0

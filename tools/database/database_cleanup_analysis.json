@@ -1,0 +1,13 @@
+{
+  "client_organizations": [],
+  "user_daily_usage": [],
+  "model_daily_usage": [],
+  "processed_generations": [],
+  "non_conforming_records": [],
+  "summary": {
+    "total_client_orgs": 0,
+    "total_non_conforming": 0,
+    "tables_analyzed": 13,
+    "correct_prefix_expected": "mai_client_"
+  }
+}

@@ -1,47 +1,217 @@
-# CLAUDE.md
+# # CLAUDE.md
 
-## Claude Behavior Guidelines
+## Project Context
+**mAI** - OpenWebUI fork for Polish SMEs (300+ users)
 
-**CRITICAL RULES:**
-- **NEVER test solutions by running development server** - user always has server running and sees changes in real time
-- **ALWAYS work on `customization` branch** - never commit directly to main
-- **ALWAYS create backups before asset modifications**: `cp -r static/static customization-backup/static-$(date +%Y%m%d)`
-- **Focus on code verification** through build processes and type checking instead of runtime testing
-- **Be specific and precise** - avoid unnecessary explanations, provide step-by-step solutions
-- **Challenge user's assumptions** if they conflict with better task execution
+<<<<<<< HEAD
+Multi-tenant SaaS, OpenRouter integration (1.3x markup), SQLite and InfluxDB.
+=======
+OpenRouter integration (1.3x markup), SQLite and InfluxDB.
+>>>>>>> f57858284 (feat(usage): Implement standalone usage page for authorized users)
 
-**WORKFLOW PRIORITIES:**
-1. Code quality and type safety first
-2. Preserve all mAI customizations during changes
-3. Follow commit prefixes: `brand:`, `theme:`, `ui:`, `assets:`
+[Important]: Prepare only and exclusively production solutions. It is forbidden by you to manually add, for example, missing tables.
 
-## Project Overview
+[Important]: Prepare only and exclusively production solutions, especially in the area of initialization processes. It is forbidden by you to manually add, for example, missing tables. Focus on how I will host the future application: Hetzner Cloud and a separate Docker image for each client along with a separate database.
 
-**mAI** - Customized Open WebUI fork
+## Critical Development Rules
+
+### Safety-First Approach
+<<<<<<< HEAD
+- **Work on `customization` branch only** - never commit to `main`
+=======
+- **Work on `develop-b2b` branch only**
+>>>>>>> f57858284 (feat(usage): Implement standalone usage page for authorized users)
+- **Preserve business logic 100%** - refactoring moves code, never changes behavior
+
+### Code Quality Standards
+- **Max 700 lines per file** - split larger files using systematic refactoring
+- **Max 20 lines per function** 
+- **Use sub-agents for complex refactoring** tasks
+- **Type safety**: 100% TypeScript coverage for new code
+- **Follow SOLID principles** for new components
+
+### Python Command Usage
+- **ALWAYS use `python3`** - never use `python` command
+- **Python executable**: System uses `python3`, not `python`
+- **Script execution**: Always run `python3 script_name.py`
+
+### Commit Conventions
+```
+feat:     # New features
+fix:      # Bug fixes  
+refactor: # Code improvements
+ui:       # Interface changes
+brand:    # mAI branding
+theme:    # Styling
+assets:   # Static files
+```
+
+## Architecture Guidelines
+
+### Current Stack
 - **Frontend**: SvelteKit + TypeScript + TailwindCSS
-- **Backend**: FastAPI + Python 3.11-3.12
-- **Current Branch**: `customization` (main: `main`)
-- **Key Features**: Complete mAI visual identity, custom background patterns, multi-language support
+- **Backend**: FastAPI + SQLAlchemy + Redis  
+<<<<<<< HEAD
+- **Database**: SQLite, InfluxDB
+- **APIs**: OpenRouter, NBP
 
-**Recent Status**: Successfully merged Open WebUI v0.6.17 preserving all customizations (July 2025)
+### Current Development Environment (Docker Containers)
+Based on screenshot from 2025-07-31 16:50:24, the active development setup includes:
+=======
+- **Database**: SQLite, InfluxDB in the future PostresQL [Neon + vectorDB]
+- **APIs**: OpenRouter, NBP
 
-## Detailed Documentation
+### Current Development Environment (Docker Containers)
+>>>>>>> f57858284 (feat(usage): Implement standalone usage page for authorized users)
 
-**Development Commands & Scripts**: @docs/commands.md
-**Architecture & Technical Details**: @docs/architecture.md  
-**Docker & Deployment**: @docs/deployment.md
-**Customization Workflows**: @docs/workflows.md
-**File Locations & Structure**: @docs/file-locations.md
-**Troubleshooting & Error Handling**: @docs/troubleshooting.md
+1. **mai** - Main project container (parent)
+2. **backend-dev** (`mai-backend-dev`) - FastAPI backend with hot reload
+3. **frontend-dev** (`mai-frontend-dev`) - SvelteKit frontend with Vite HMR
+4. **grafana** (`grafana/grafana:latest`) - Monitoring and visualization dashboard
+5. **influxdb** (`influxdb:2.7`) - Time-series database for webhook data
+6. **nbp-service** (`mai-nbp-service`) - Polish NBP currency exchange rate service
 
-## Critical Customization Rules
+**Development URLs**:
+- Frontend: http://localhost:5173 (Vite dev server)
+- Backend: http://localhost:8080 (FastAPI with uvicorn --reload)
+- InfluxDB UI: http://localhost:8086 (Time-series data visualization)
+- Grafana: http://localhost:3000 (Monitoring dashboards)
 
-**Files to Preserve During Upgrades:**
-- `package.json`: Keep "name": "mai"
-- `src/lib/components/chat/Chat.svelte`: Background pattern functionality
-- `src/lib/i18n/locales/pl-PL/translation.json`: Polish customizations
-- All theme and asset files in `static/`
+### Future Stack (InfluxDB Migration)
+- **Time-Series DB**: InfluxDB Cloud for webhook data (2-5ms writes)
+- **Batch Processing**: Daily at 13:00 CET/CEST
+- **NBP Service**: Shared microservice for PLN rates
+- **Archive Storage**: Compressed CSV for long-term data
 
-**Branch Strategy:**
-- Work only on `customization` branch
-- Create feature branches for specific improvements
+### Key Patterns
+- **Extend existing stores** in `/src/lib/stores/` - don't replace
+- **Follow router patterns** in `backend/open_webui/routers/usage_tracking.py`
+- **Use existing models**: `ClientOrganization`, `ClientDailyUsage`, `ClientUserDailyUsage`
+
+## ## 🎯 SUB-AGENT USAGE GUIDELINES
+
+### When to Use code-quality-architect
+- Files exceeding 700 lines requiring refactoring
+- Complex architectural changes
+- Multi-file refactoring tasks
+- Component decomposition
+- Code quality improvements and bug detection
+- Docker and development environment issues
+- Container orchestration problems
+- Hot reload and build system fixes
+
+### When to Use business-logic-analyst
+- Documenting function workflows and business processes
+- Creating workflow reports for complex features
+- Mapping business logic flow from input to output
+- Understanding how features work end-to-end
+
+### When to Use debugging-specialist
+- Investigating bugs and functional issues
+- Root cause analysis of application problems
+- Systematic bug isolation and resolution
+- API failures and data inconsistencies
+
+### When to Use repository-analyzer
+- Comprehensive codebase assessment
+- Performance bottleneck identification
+- Strategic refactoring planning
+- Technical debt analysis and prioritization
+
+### Usage Patterns
+```bash
+# For code refactoring and quality issues
+Use code-quality-architect agent to [analyze/refactor] {file_path} 
+according to {pattern}. Maintain 100% functionality.
+
+# For development environment issues
+Use code-quality-architect agent to [analyze/fix] development environment
+
+# For workflow documentation
+Use business-logic-analyst agent to analyze and document the {feature_name} 
+workflow. Generate report in docs/{feature}-workflow-analysis.md
+
+# For bug investigation
+Use debugging-specialist agent to investigate {issue_description} 
+and identify root cause with systematic analysis.
+
+# For repository analysis
+Use repository-analyzer agent to perform comprehensive analysis 
+and generate refactoring recommendations prioritized by functionality.
+
+
+## Business Context
+
+### Key Integration Points
+- **Usage tracking**
+<<<<<<< HEAD
+- **Multi-tenancy**: Environment-based client isolation
+- **Database**: SQLite and InfluxDB
+=======
+>>>>>>> f57858284 (feat(usage): Implement standalone usage page for authorized users)
+
+## InfluxDB Migration Plan
+
+### Development Environment Setup
+1. **Local InfluxDB**: Docker Compose with dev configuration
+2. **Feature Flags**: `INFLUXDB_ENABLED` environment variable
+3. **Dual-Write Mode**: Write to both SQLite and InfluxDB for validation
+4. **NBP Service**: Standalone microservice with mock mode
+
+<<<<<<< HEAD
+### Current Development Workflow (Docker-based)
+**Environment Files**:
+- `.env.dev` - Used by `docker-compose.dev.yml` (container networking)
+- `.env` - Used for local development (localhost networking)
+
+=======
+>>>>>>> f57858284 (feat(usage): Implement standalone usage page for authorized users)
+**Development Commands**:
+```bash
+*# Start development environment*
+docker-compose -f docker-compose.dev.yml up
+
+*# Start individual services*
+docker-compose -f docker-compose.dev.yml up backend-dev
+docker-compose -f docker-compose.dev.yml up frontend-dev
+docker-compose -f docker-compose.dev.yml up influxdb
+
+*# View logs*
+docker-compose -f docker-compose.dev.yml logs -f backend-dev
+docker-compose -f docker-compose.dev.yml logs -f influxdb
+
+*# Stop environment*
+docker-compose -f docker-compose.dev.yml down
+```
+
+**Container Networking**:
+- Backend communicates with InfluxDB via `http://mai-influxdb-dev:8086`
+- NBP service accessible at `http://mai-nbp-service:8001`
+- All containers connected via `mai-dev-network`
+<<<<<<< HEAD
+
+### InfluxDB Configuration
+```python
+*# Development settings*
+INFLUXDB_URL = "http://localhost:8086"
+INFLUXDB_TOKEN = "dev-token"
+INFLUXDB_ORG = "mai-dev"
+INFLUXDB_BUCKET = "mai_usage_raw_dev"
+
+*# Production (future)*
+INFLUXDB_URL = "https://eu-central-1-1.aws.cloud2.influxdata.com"
+INFLUXDB_BUCKET = "mai_usage_raw"
+```
+
+### Key Benefits
+- **Performance**: 2-5ms webhook writes (vs SQLite bottlenecks)
+- **Scalability**: Time-series optimized storage
+- **Cost Efficiency**: Shared NBP service, single InfluxDB instance
+- **Data Retention**: 30-day raw data, compressed archives
+=======
+>>>>>>> f57858284 (feat(usage): Implement standalone usage page for authorized users)
+
+
+**Core Principle**: Build on OpenWebUI foundation. Preserve existing functionality while enhancing architecture through systematic, safe refactoring.
+
+**For InfluxDB migration details, see: `new_deployment.md`**

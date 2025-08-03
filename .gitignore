@@ -6,6 +6,8 @@ node_modules
 .env
 .env.*
 !.env.example
+.env.dev
+docker-compose.override.yml
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 # Byte-compiled / optimized / DLL files
@@ -307,3 +309,19 @@ dist
 cypress/videos
 cypress/screenshots
 .vscode/settings.json
+
+# Security: API Keys and Secrets
+clients.yaml
+**/clients.yaml
+*.key
+*.pem
+**/api-keys/
+openrouter_api_key*
+**/secrets/
+.secrets
+backend/venv-312/
+
+# Custom ignores for project data
+backend/venv-312/
+docker/influxdb/data/
+webui_container.db

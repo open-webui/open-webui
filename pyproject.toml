@@ -170,7 +170,6 @@ allow-direct-references = true
 path = "package.json"
 pattern = '"version":\s*"(?P<version>[^"]+)"'
 
-[tool.hatch.build.hooks.custom]  # keep this for reading hooks from `hatch_build.py`
 
 [tool.hatch.build.targets.wheel]
 sources = ["backend"]

@@ -3,7 +3,7 @@ import hashlib
 import json
 import logging
 from pathlib import Path
-from typing import Literal, Optional, overload
+from typing import Literal, Optional, overload, Dict, Any, AsyncGenerator
 import fnmatch
 
 import aiohttp
@@ -20,7 +20,13 @@ from starlette.background import BackgroundTask
 from open_webui.models.models import Models
 from open_webui.config import (
     CACHE_DIR,
+    OPENROUTER_API_KEY,
+    OPENROUTER_HOST,
+    OPENROUTER_EXTERNAL_USER,
+    ORGANIZATION_NAME,
+    SPENDING_LIMIT,
 )
+from open_webui.utils.user_mapping import get_external_user_id, user_mapping_service
 from open_webui.env import (
     MODELS_CACHE_TTL,
     AIOHTTP_CLIENT_SESSION_SSL,
@@ -136,6 +142,234 @@ def openai_o_series_handler(payload):
     return payload
 
 
+class UsageCapturingStreamingResponse:
+    """
+    Custom streaming response class that captures usage data from the final SSE chunk
+    while preserving normal streaming functionality for the client.
+    
+    This solves the critical issue where streaming OpenRouter responses were not
+    being captured in the usage tracking system, ensuring 100% coverage.
+    """
+    
+    def __init__(
+        self,
+        content: AsyncGenerator[bytes, None],
+        status_code: int,
+        headers: Dict[str, str],
+        user_id: str,
+        model_name: str,
+        client_context: Optional[Dict[str, Any]] = None,
+        payload: Optional[str] = None,
+        background_task: Optional[BackgroundTask] = None
+    ):
+        self.content = content
+        self.status_code = status_code
+        self.headers = headers
+        self.user_id = user_id
+        self.model_name = model_name
+        self.client_context = client_context
+        self.payload = payload
+        self.background_task = background_task
+        
+        # Usage data captured from final SSE chunk
+        self.captured_usage = None
+        self.last_chunk_data = None
+    
+    async def parse_sse_chunk(self, chunk_data: bytes) -> Optional[Dict[str, Any]]:
+        """
+        Parse SSE (Server-Sent Events) chunk to extract JSON data
+        
+        SSE format:
+        data: {"key": "value"}
+        
+        Returns:
+            Parsed JSON dict if valid, None otherwise
+        """
+        try:
+            chunk_str = chunk_data.decode('utf-8').strip()
+            
+            # Handle SSE format - look for 'data: ' prefix
+            if chunk_str.startswith('data: '):
+                json_str = chunk_str[6:]  # Remove 'data: ' prefix
+                
+                # Skip [DONE] markers and empty data
+                if json_str.strip() in ['[DONE]', '']:
+                    return None
+                
+                # Parse JSON
+                return json.loads(json_str)
+                
+        except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as e:
+            log.debug(f"Could not parse SSE chunk: {e}")
+            return None
+        
+        return None
+    
+    def extract_usage_data(self, parsed_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        Extract usage information from parsed OpenRouter response
+        
+        OpenRouter returns usage data in the final SSE chunk when usage: {include: true} is set
+        """
+        try:
+            if not isinstance(parsed_data, dict):
+                return None
+            
+            # Check for usage data in the response
+            usage_data = parsed_data.get('usage')
+            if not usage_data:
+                return None
+            
+            # Extract required fields
+            input_tokens = usage_data.get('prompt_tokens', 0)
+            output_tokens = usage_data.get('completion_tokens', 0)
+            
+            # Extract cost - OpenRouter provides this when usage accounting is enabled
+            raw_cost = 0.0
+            if isinstance(usage_data, dict) and 'cost' in usage_data:
+                raw_cost = float(usage_data['cost'])
+            elif 'cost' in parsed_data:
+                raw_cost = float(parsed_data['cost'])
+            elif 'total_cost' in usage_data:
+                raw_cost = float(usage_data['total_cost'])
+            
+            # Extract additional metadata
+            provider = None
+            provider_info = parsed_data.get('provider')
+            if isinstance(provider_info, dict):
+                provider = provider_info.get('name')
+            
+            generation_time = parsed_data.get('generation_time')
+            external_user = parsed_data.get('external_user')
+            generation_id = parsed_data.get('generation_id') or parsed_data.get('id')
+            
+            return {
+                'input_tokens': input_tokens,
+                'output_tokens': output_tokens,
+                'raw_cost': raw_cost,
+                'provider': provider,
+                'generation_time': generation_time,
+                'external_user': external_user,
+                'generation_id': generation_id
+            }
+            
+        except (ValueError, TypeError, KeyError) as e:
+            log.debug(f"Error extracting usage data: {e}")
+            return None
+    
+    async def record_usage_async(self, usage_data: Dict[str, Any]):
+        """
+        Record usage data asynchronously without blocking the streaming response
+        """
+        try:
+            if not self.client_context:
+                log.debug("No client context available for usage recording")
+                return
+            
+            from open_webui.utils.openrouter_client_manager import openrouter_client_manager
+            
+            log.info(f"Recording streaming usage: {usage_data['input_tokens'] + usage_data['output_tokens']} tokens, ${usage_data['raw_cost']:.6f}")
+            
+            await openrouter_client_manager.record_real_time_usage(
+                user_id=self.user_id,
+                model_name=self.model_name,
+                input_tokens=usage_data['input_tokens'],
+                output_tokens=usage_data['output_tokens'],
+                raw_cost=usage_data['raw_cost'],
+                generation_id=usage_data.get('generation_id'),
+                provider=usage_data.get('provider'),
+                generation_time=usage_data.get('generation_time'),
+                external_user=usage_data.get('external_user'),
+                client_context=self.client_context
+            )
+            
+        except Exception as e:
+            log.error(f"Failed to record streaming usage for user {self.user_id}: {e}")
+    
+    async def stream_with_usage_capture(self) -> AsyncGenerator[bytes, None]:
+        """
+        Stream content while capturing usage data from the final chunk
+        """
+        buffered_chunks = []
+        
+        try:
+            async for chunk in self.content:
+                # Always yield the chunk immediately for real-time streaming
+                yield chunk
+                
+                # Buffer the last few chunks to catch usage data
+                buffered_chunks.append(chunk)
+                
+                # Keep only the last 10 chunks to avoid memory issues
+                if len(buffered_chunks) > 10:
+                    buffered_chunks.pop(0)
+            
+            # After streaming is complete, analyze buffered chunks for usage data
+            await self.process_buffered_chunks(buffered_chunks)
+            
+        except Exception as e:
+            log.error(f"Error in streaming with usage capture: {e}")
+            # Continue streaming even if usage capture fails
+            async for chunk in self.content:
+                yield chunk
+    
+    async def process_buffered_chunks(self, chunks: list[bytes]):
+        """
+        Process the final buffered chunks to find and extract usage data
+        """
+        try:
+            # Process chunks in reverse order (most recent first) to find usage data quickly
+            for chunk in reversed(chunks):
+                parsed_data = await self.parse_sse_chunk(chunk)
+                if parsed_data:
+                    usage_data = self.extract_usage_data(parsed_data)
+                    if usage_data:
+                        # Found usage data - record it asynchronously
+                        self.captured_usage = usage_data
+                        log.debug(f"Captured usage data from streaming response: {usage_data}")
+                        
+                        # Record usage in background (don't await to avoid blocking)
+                        asyncio.create_task(self.record_usage_async(usage_data))
+                        return
+            
+            log.debug("No usage data found in streaming response chunks")
+            
+        except Exception as e:
+            log.error(f"Error processing buffered chunks for usage data: {e}")
+
+
+def create_usage_capturing_streaming_response(
+    content: AsyncGenerator[bytes, None],
+    status_code: int,
+    headers: Dict[str, str],
+    user_id: str,
+    model_name: str,
+    client_context: Optional[Dict[str, Any]] = None,
+    payload: Optional[str] = None,
+    background_task: Optional[BackgroundTask] = None
+) -> StreamingResponse:
+    """
+    Factory function to create a StreamingResponse with usage capture capabilities
+    """
+    usage_capturer = UsageCapturingStreamingResponse(
+        content=content,
+        status_code=status_code,
+        headers=headers,
+        user_id=user_id,
+        model_name=model_name,
+        client_context=client_context,
+        payload=payload,
+        background_task=background_task
+    )
+    
+    return StreamingResponse(
+        content=usage_capturer.stream_with_usage_capture(),
+        status_code=status_code,
+        headers=headers,
+        background=background_task
+    )
+
+
 ##########################################
 #
 # API routes
@@ -197,6 +431,35 @@ async def update_config(
         for key, value in request.app.state.config.OPENAI_API_CONFIGS.items()
         if key in keys
     }
+
+    # Auto-sync OpenRouter API key to user's organization in database
+    try:
+        # Check if any URL is OpenRouter and sync the corresponding API key
+        for idx, base_url in enumerate(request.app.state.config.OPENAI_API_BASE_URLS):
+            if "openrouter.ai" in base_url and idx < len(request.app.state.config.OPENAI_API_KEYS):
+                api_key = request.app.state.config.OPENAI_API_KEYS[idx]
+                
+                # Only sync if there's actually an API key
+                if api_key and api_key.strip():
+                    from open_webui.utils.openrouter_client_manager import openrouter_client_manager
+                    
+                    sync_result = openrouter_client_manager.sync_ui_key_to_organization(
+                        user_id=user.id,
+                        api_key=api_key.strip()
+                    )
+                    
+                    if sync_result["success"]:
+                        log.info(f"✅ API key auto-sync: {sync_result['message']} (user: {user.email})")
+                    else:
+                        # Log the failure but don't prevent config update
+                        log.warning(f"⚠️ API key auto-sync failed: {sync_result['message']} (user: {user.email})")
+                    
+                    # Only sync the first OpenRouter URL found
+                    break
+                    
+    except Exception as e:
+        # Log error but don't fail the config update
+        log.error(f"❌ API key auto-sync error for user {user.email}: {e}")
 
     return {
         "ENABLE_OPENAI_API": request.app.state.config.ENABLE_OPENAI_API,
@@ -429,15 +692,31 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
 
 
 async def get_filtered_models(models, user):
-    # Filter models based on user access control
+    """Filter models based on user's organization access"""
+    # No admin bypass - all users should see only their organization's models
+    
+    # Get models accessible through organizations
+    from open_webui.models.models import Models
+    org_accessible_models = Models.get_models_by_user_id(user.id)
+    org_model_ids = {m.id for m in org_accessible_models}
+    
     filtered_models = []
     for model in models.get("data", []):
-        model_info = Models.get_model_by_id(model["id"])
+        model_id = model.get("id", "")
+        
+        # Check if model is in user's organization models
+        if model_id in org_model_ids:
+            filtered_models.append(model)
+            continue
+            
+        # Legacy check for individual model access
+        model_info = Models.get_model_by_id(model_id)
         if model_info:
             if user.id == model_info.user_id or has_access(
                 user.id, type="read", access_control=model_info.access_control
             ):
                 filtered_models.append(model)
+    
     return filtered_models
 
 
@@ -597,7 +876,8 @@ async def get_models(
                 error_detail = f"Unexpected error: {str(e)}"
                 raise HTTPException(status_code=500, detail=error_detail)
 
-    if user.role == "user" and not BYPASS_MODEL_ACCESS_CONTROL:
+    # Apply filtering for all users (including admins) unless bypass is enabled
+    if not BYPASS_MODEL_ACCESS_CONTROL:
         models["data"] = await get_filtered_models(models, user)
 
     return models
@@ -837,9 +1117,59 @@ async def generate_chat_completion(
             "email": user.email,
             "role": user.role,
         }
+    
+    # Handle OpenRouter client-specific API keys and user tracking
+    client_context = None
+    if "openrouter.ai" in request.app.state.config.OPENAI_API_BASE_URLS[idx]:
+        log.info(f"DEBUG: OpenRouter detected for user {user.id}, model {payload.get('model', 'unknown')}")
+        
+        # Check if environment-based OpenRouter configuration is available
+        if OPENROUTER_API_KEY and OPENROUTER_EXTERNAL_USER:
+            log.info(f"DEBUG: Using environment-based OpenRouter configuration for {ORGANIZATION_NAME}")
+            key = OPENROUTER_API_KEY
+            
+            # Generate user-specific external_user_id for proper tracking
+            try:
+                user_external_id = get_external_user_id(user.id, user.name)
+                payload["user"] = user_external_id
+                log.info(f"DEBUG: Generated user-specific external_user_id: {user_external_id} for user {user.name}")
+            except Exception as e:
+                # Fallback to organization-wide ID for backward compatibility
+                log.warning(f"Failed to generate user-specific external_user_id: {e}, using fallback")
+                payload["user"] = user_mapping_service.get_fallback_external_user_id()
+            
+            # Enable OpenRouter usage accounting for detailed cost tracking
+            payload["usage"] = {"include": True}
+            log.info(f"DEBUG: Enabled OpenRouter usage accounting for detailed cost tracking")
+            
+            # Create client context for usage tracking compatibility
+            client_context = {
+                "api_key": OPENROUTER_API_KEY,
+                "openrouter_user_id": payload["user"],  # Use the generated user ID
+                "mai_user_id": user.id,  # Store original mAI user ID
+                "mai_user_name": user.name,  # Store user name for logging
+                "client_org_id": ORGANIZATION_NAME or "env-client",
+                "is_env_based": True,
+                "user_mapping_enabled": True
+            }
+        else:
+            # Fallback to database-based client management
+            from open_webui.utils.openrouter_client_manager import openrouter_client_manager
+            client_context = openrouter_client_manager.get_user_client_context(user.id)
+            
+            if client_context:
+                # Use client-specific API key and add user tracking
+                log.info(f"DEBUG: Client context found - using org {client_context['client_org_id']}")
+                key = client_context["api_key"]
+                payload["user"] = client_context["openrouter_user_id"]
+            else:
+                # Fallback to original configuration if no client context
+                log.warning(f"No client context found for user {user.id}, using default OpenRouter config")
+                key = request.app.state.config.OPENAI_API_KEYS[idx]
+    else:
+        key = request.app.state.config.OPENAI_API_KEYS[idx]
 
     url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
-    key = request.app.state.config.OPENAI_API_KEYS[idx]
 
     # Check if model is from "o" series
     is_o_series = payload["model"].lower().startswith(("o1", "o3", "o4"))
@@ -920,14 +1250,32 @@ async def generate_chat_completion(
         # Check if response is SSE
         if "text/event-stream" in r.headers.get("Content-Type", ""):
             streaming = True
-            return StreamingResponse(
-                r.content,
-                status_code=r.status,
-                headers=dict(r.headers),
-                background=BackgroundTask(
-                    cleanup_response, response=r, session=session
-                ),
-            )
+            
+            # For OpenRouter requests with client context, use usage capturing streaming response
+            if client_context and "openrouter.ai" in url:
+                log.info(f"Using usage capturing streaming response for user {user.id}")
+                return create_usage_capturing_streaming_response(
+                    content=r.content,
+                    status_code=r.status,
+                    headers=dict(r.headers),
+                    user_id=user.id,
+                    model_name=json.loads(payload).get("model", "unknown"),
+                    client_context=client_context,
+                    payload=payload,
+                    background_task=BackgroundTask(
+                        cleanup_response, response=r, session=session
+                    )
+                )
+            else:
+                # Standard streaming response for non-OpenRouter or non-tracked requests
+                return StreamingResponse(
+                    r.content,
+                    status_code=r.status,
+                    headers=dict(r.headers),
+                    background=BackgroundTask(
+                        cleanup_response, response=r, session=session
+                    ),
+                )
         else:
             try:
                 response = await r.json()
@@ -936,6 +1284,81 @@ async def generate_chat_completion(
                 response = await r.text()
 
             r.raise_for_status()
+            
+            # Record real-time usage for OpenRouter client requests
+            log.info(f"DEBUG: Usage recording check - client_context: {bool(client_context)}, response type: {type(response)}, has usage: {'usage' in response if isinstance(response, dict) else False}")
+            if client_context and isinstance(response, dict) and "usage" in response:
+                try:
+                    log.info(f"DEBUG: Recording usage for user {user.id}")
+                    from open_webui.utils.openrouter_client_manager import openrouter_client_manager
+                    usage_data = response["usage"]
+                    
+                    # Extract token counts and cost
+                    input_tokens = usage_data.get("prompt_tokens", 0)
+                    output_tokens = usage_data.get("completion_tokens", 0)
+                    
+                    # Get cost from OpenRouter response with usage accounting enabled
+                    raw_cost = 0.0
+                    if "usage" in response:
+                        usage_response = response["usage"]
+                        if isinstance(usage_response, dict) and "cost" in usage_response:
+                            # OpenRouter usage accounting enabled - structured response
+                            raw_cost = float(usage_response["cost"])
+                        elif isinstance(usage_response, (int, float)):
+                            # OpenRouter usage accounting disabled - simple cost field
+                            raw_cost = float(usage_response)
+                    elif "cost" in response:
+                        raw_cost = float(response["cost"])
+                    elif "total_cost" in usage_data:
+                        raw_cost = float(usage_data["total_cost"])
+                    
+                    log.info(f"DEBUG: Usage data - tokens: {input_tokens + output_tokens}, cost: {raw_cost}")
+                    
+                    # Get provider and timing info with safe access
+                    provider = None
+                    generation_time = None
+                    external_user = None
+                    generation_id = None
+                    
+                    if isinstance(response, dict):
+                        provider_info = response.get("provider")
+                        if isinstance(provider_info, dict):
+                            provider = provider_info.get("name")
+                        generation_time = response.get("generation_time")
+                        
+                        # Capture the external_user from OpenRouter response
+                        external_user = response.get("external_user")
+                        if external_user and client_context.get("is_temporary_user_id"):
+                            log.info(f"DEBUG: Detected external_user from OpenRouter: {external_user}")
+                        
+                        # Extract generation_id for duplicate prevention
+                        # OpenRouter returns generation_id, not just id
+                        generation_id = response.get("generation_id") or response.get("id")
+                        if generation_id:
+                            log.debug(f"OpenRouter generation_id: {generation_id}")
+                    
+                    # Record usage asynchronously (don't block response)
+                    # Always record to database for subscription billing (both env-based and database-based)
+                    asyncio.create_task(
+                        openrouter_client_manager.record_real_time_usage(
+                            user_id=user.id,
+                            model_name=json.loads(payload).get("model", "unknown"),
+                            input_tokens=input_tokens,
+                            output_tokens=output_tokens,
+                            raw_cost=raw_cost,
+                            generation_id=generation_id,
+                            provider=provider,
+                            generation_time=generation_time,
+                            external_user=external_user,
+                            client_context=client_context
+                        )
+                    )
+                    log.info(f"DEBUG: Usage recording task created successfully")
+                except Exception as usage_error:
+                    log.error(f"Failed to record usage for user {user.id}: {usage_error}")
+            else:
+                log.info(f"DEBUG: Skipping usage recording - conditions not met")
+            
             return response
     except Exception as e:
         log.exception(e)

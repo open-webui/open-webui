@@ -10,7 +10,7 @@ from open_webui.models.users import Users, UserResponse
 
 from pydantic import BaseModel, ConfigDict
 
-from sqlalchemy import or_, and_, func
+from sqlalchemy import or_, and_, func, text
 from sqlalchemy.dialects import postgresql, sqlite
 from sqlalchemy import BigInteger, Column, Text, JSON, Boolean
 
@@ -196,15 +196,87 @@ class ModelsTable:
             ]
 
     def get_models_by_user_id(
-        self, user_id: str, permission: str = "write"
+        self, user_id: str, permission: str = "read"
     ) -> list[ModelUserResponse]:
+        """Get models accessible to a user, including organization-based access"""
         models = self.get_models()
+        
+        # First, check if model access control is bypassed
+        from open_webui.env import BYPASS_MODEL_ACCESS_CONTROL
+        if BYPASS_MODEL_ACCESS_CONTROL:
+            return models
+            
+        # Get user's organizations with transaction safety
+        user_org_models = set()
+        try:
+            with get_db() as db:
+                # Use explicit transaction for atomic reads
+                with db.begin():
+                    # Get user's organizations from organization_members table
+                    user_orgs = db.execute(
+                        text("""
+                            SELECT DISTINCT organization_id 
+                            FROM organization_members 
+                            WHERE user_id = :user_id AND is_active = 1
+                        """),
+                        {"user_id": user_id}
+                    ).fetchall()
+                    
+                    if user_orgs:
+                        # Get models available to these organizations
+                        org_ids = [org[0] for org in user_orgs]
+                        
+                        # Use proper parameterization with named parameters
+                        # This avoids SQL injection vulnerabilities
+                        if len(org_ids) == 1:
+                            # Single organization - simple query
+                            org_models = db.execute(
+                                text("""
+                                    SELECT DISTINCT model_id 
+                                    FROM organization_models 
+                                    WHERE organization_id = :org_id AND is_active = 1
+                                """),
+                                {"org_id": org_ids[0]}
+                            ).fetchall()
+                        else:
+                            # Multiple organizations - use SQLAlchemy's bindparam
+                            from sqlalchemy import bindparam
+                            
+                            # Create a parameterized query with proper binding
+                            params = {}
+                            param_names = []
+                            for i, org_id in enumerate(org_ids):
+                                param_name = f"org_{i}"
+                                params[param_name] = org_id
+                                param_names.append(f":{param_name}")
+                            
+                            # Build query with named parameters
+                            query = text(f"""
+                                SELECT DISTINCT model_id 
+                                FROM organization_models 
+                                WHERE organization_id IN ({', '.join(param_names)}) 
+                                AND is_active = 1
+                            """)
+                            
+                            org_models = db.execute(query, params).fetchall()
+                        
+                        user_org_models = {model[0] for model in org_models}
+                        
+        except Exception as e:
+            log.error(f"Failed to get organization models for user {user_id}: {e}")
+            # In case of error, fall back to direct access control only
+            # This ensures the method doesn't fail completely
+            pass
+        
+        # Filter models based on organization membership or direct access control
         return [
             model
             for model in models
-            if model.user_id == user_id
-            or has_access(user_id, permission, model.access_control)
+            if model.id in user_org_models  # Organization-based access
+            or model.user_id == user_id  # Owner access
+            or has_access(user_id, permission, model.access_control)  # Direct access control
         ]
+
 
     def get_model_by_id(self, id: str) -> Optional[ModelModel]:
         try:

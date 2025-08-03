@@ -1,0 +1,28 @@
+# Production Dockerfile for mAI with OpenRouter filtering
+FROM ghcr.io/open-webui/open-webui:main
+
+# Copy OpenRouter scripts into the image
+COPY scripts/openrouter /app/scripts/openrouter
+
+# Create initialization script
+RUN cat > /app/init-openrouter.sh << 'EOF'
+#!/bin/bash
+# Initialize OpenRouter configuration on first run
+
+if [ ! -f /app/backend/data/.openrouter_initialized ]; then
+    echo "Initializing OpenRouter configuration..."
+    python /app/scripts/openrouter/production_fix.py init
+    touch /app/backend/data/.openrouter_initialized
+    echo "OpenRouter configuration completed."
+else
+    echo "OpenRouter already configured."
+fi
+
+# Continue with the original start script
+exec bash /app/start.sh "$@"
+EOF
+
+RUN chmod +x /app/init-openrouter.sh
+
+# Override entrypoint to run our initialization
+ENTRYPOINT ["/app/init-openrouter.sh"]

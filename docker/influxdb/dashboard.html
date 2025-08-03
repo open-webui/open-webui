@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>mAI InfluxDB Quick Access</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .info-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+        }
+        .info-box h3 {
+            margin: 0 0 10px 0;
+            color: #495057;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .info-box p {
+            margin: 0;
+            font-family: 'Courier New', monospace;
+            color: #212529;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .button {
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            display: inline-block;
+            transition: background 0.2s;
+        }
+        .button:hover {
+            background: #0056b3;
+        }
+        .button.secondary {
+            background: #6c757d;
+        }
+        .button.secondary:hover {
+            background: #545b62;
+        }
+        .query-section {
+            margin-top: 40px;
+        }
+        .query-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            border: 1px solid #e9ecef;
+        }
+        .query-box h4 {
+            margin: 0 0 10px 0;
+            color: #495057;
+        }
+        .query-box pre {
+            margin: 0;
+            padding: 10px;
+            background: #fff;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 13px;
+        }
+        .status {
+            padding: 20px;
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            border-radius: 6px;
+            color: #0c5460;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>mAI InfluxDB Development Dashboard</h1>
+        <p class="subtitle">Local InfluxDB instance for usage tracking development</p>
+
+        <div class="status" id="status">
+            Checking InfluxDB connection...
+        </div>
+
+        <div class="info-grid">
+            <div class="info-box">
+                <h3>InfluxDB URL</h3>
+                <p>http://localhost:8086</p>
+            </div>
+            <div class="info-box">
+                <h3>Username</h3>
+                <p>admin</p>
+            </div>
+            <div class="info-box">
+                <h3>Password</h3>
+                <p>adminpassword123</p>
+            </div>
+            <div class="info-box">
+                <h3>Organization</h3>
+                <p>mAI-dev</p>
+            </div>
+            <div class="info-box">
+                <h3>Bucket</h3>
+                <p>mai_usage_raw_dev</p>
+            </div>
+            <div class="info-box">
+                <h3>Token</h3>
+                <p>dev-token-for-testing-only</p>
+            </div>
+        </div>
+
+        <div class="button-group">
+            <a href="http://localhost:8086" target="_blank" class="button">Open InfluxDB UI</a>
+            <a href="http://localhost:3001" target="_blank" class="button secondary">Open Grafana</a>
+            <a href="http://localhost:8001/docs" target="_blank" class="button secondary">NBP Service API</a>
+        </div>
+
+        <div class="query-section">
+            <h2>Sample Queries</h2>
+            
+            <div class="query-box">
+                <h4>Recent Webhook Activity (Last Hour)</h4>
+                <pre>from(bucket: "mai_usage_raw_dev")
+  |> range(start: -1h)
+  |> filter(fn: (r) => r._measurement == "usage_tracking")
+  |> sort(columns: ["_time"], desc: true)
+  |> limit(n: 50)</pre>
+            </div>
+
+            <div class="query-box">
+                <h4>Daily Token Usage by Model</h4>
+                <pre>from(bucket: "mai_usage_raw_dev")
+  |> range(start: -7d)
+  |> filter(fn: (r) => r._measurement == "usage_tracking")
+  |> filter(fn: (r) => r._field == "total_tokens")
+  |> group(columns: ["model"])
+  |> aggregateWindow(every: 1d, fn: sum)</pre>
+            </div>
+
+            <div class="query-box">
+                <h4>Cost Analysis with Markup</h4>
+                <pre>from(bucket: "mai_usage_raw_dev")
+  |> range(start: -30d)
+  |> filter(fn: (r) => r._measurement == "usage_tracking")
+  |> filter(fn: (r) => r._field == "cost_usd")
+  |> group(columns: ["client_org_id"])
+  |> sum()
+  |> map(fn: (r) => ({ r with _value: r._value * 1.3 }))</pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Check InfluxDB connection
+        async function checkConnection() {
+            const statusEl = document.getElementById('status');
+            try {
+                const response = await fetch('http://localhost:8086/health');
+                if (response.ok) {
+                    statusEl.innerHTML = '✅ InfluxDB is running and accessible';
+                    statusEl.style.background = '#d4edda';
+                    statusEl.style.borderColor = '#c3e6cb';
+                    statusEl.style.color = '#155724';
+                } else {
+                    throw new Error('Not accessible');
+                }
+            } catch (error) {
+                statusEl.innerHTML = '❌ InfluxDB is not accessible. Make sure the container is running.';
+                statusEl.style.background = '#f8d7da';
+                statusEl.style.borderColor = '#f5c6cb';
+                statusEl.style.color = '#721c24';
+            }
+        }
+
+        // Check on load
+        checkConnection();
+        
+        // Check every 5 seconds
+        setInterval(checkConnection, 5000);
+    </script>
+</body>
+</html>

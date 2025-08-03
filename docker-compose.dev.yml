@@ -1,0 +1,143 @@
+# Development Docker Compose - Two-Container Architecture with Hot Reload
+# Frontend: Vite dev server with HMR
+# Backend: FastAPI with uvicorn --reload
+# Usage: docker-compose -f docker-compose.dev.yml up
+services:
+  # Frontend Development Service - Vite with Hot Module Replacement
+  frontend-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend.dev
+    container_name: mai-frontend-dev
+    volumes:
+      # Mount source code for hot reload
+      - ./src:/app/src
+      - ./static:/app/static
+      - ./package.json:/app/package.json
+      - ./package-lock.json:/app/package-lock.json
+      - ./vite.config.ts:/app/vite.config.ts
+      - ./svelte.config.js:/app/svelte.config.js
+      - ./tsconfig.json:/app/tsconfig.json
+      - ./tailwind.config.js:/app/tailwind.config.js
+      - ./postcss.config.js:/app/postcss.config.js
+      # Preserve node_modules volume
+      - /app/node_modules
+    ports:
+      - "5173:5173"  # Vite dev server
+    environment:
+      - 'VITE_HOST=0.0.0.0'
+      - 'DOCKER_DEV=true'
+      - 'NODE_ENV=development'
+    restart: unless-stopped
+    depends_on:
+      - backend-dev
+    networks:
+      - mai-dev-network
+
+  # Backend Development Service - FastAPI with hot reload  
+  backend-dev:
+    build:
+      context: .
+      args:
+        OLLAMA_BASE_URL: '/ollama'
+      dockerfile: Dockerfile.backend.dev
+    container_name: mai-backend-dev
+    env_file:
+      - .env
+      - .env.dev
+    volumes:
+      # Mount backend source code for hot reload
+      - ./backend:/app/backend
+      # Persist data
+      - mai-backend-dev-data:/app/backend/data
+      # Preserve virtual environment
+      - /app/backend/.venv
+    ports:
+      - "8080:8080"  # FastAPI backend
+    environment:
+      - 'OLLAMA_BASE_URL=http://host.docker.internal:11434'
+      - 'WEBUI_URL=http://localhost:5173'
+      - 'CORS_ALLOW_ORIGIN=http://localhost:5173;http://localhost:3001'
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "--silent", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - mai-dev-network
+    depends_on:
+      - influxdb
+      - nbp-service
+
+  # InfluxDB Development Service
+  influxdb:
+    image: influxdb:2.7
+    container_name: mai-influxdb-dev
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+<<<<<<< HEAD
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=mai-dev-password
+      - DOCKER_INFLUXDB_INIT_ORG=mAI-dev
+      - DOCKER_INFLUXDB_INIT_BUCKET=mai_usage_raw_dev
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=dev-token-for-testing-only
+=======
+      - DOCKER_INFLUXDB_INIT_USERNAME=${INFLUXDB_USER}
+      - DOCKER_INFLUXDB_INIT_PASSWORD=${INFLUXDB_PASSWORD}
+      - DOCKER_INFLUXDB_INIT_ORG=mAI-dev
+      - DOCKER_INFLUXDB_INIT_BUCKET=mai_usage_raw_dev
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=${INFLUXDB_TOKEN}
+>>>>>>> f57858284 (feat(usage): Implement standalone usage page for authorized users)
+      - INFLUXDB_HTTP_BIND_ADDRESS=:8086
+    ports:
+      - "8086:8086"  # InfluxDB UI and API
+    volumes:
+      - mai-influxdb-dev-data:/var/lib/influxdb2
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8086/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - mai-dev-network
+
+  # NBP Currency Service
+  nbp-service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.nbp
+    container_name: mai-nbp-service
+    environment:
+      - NBP_API_URL=https://api.nbp.pl/api/exchangerates/rates/a/usd/
+      - FETCH_INTERVAL=3600
+      - CACHE_TTL=7200
+      - PORT=8001
+      - MOCK_MODE=false
+    ports:
+      - "8001:8001"  # NBP service API
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request,sys;sys.exit(0 if urllib.request.urlopen('http://localhost:8001/health',timeout=3).getcode()==200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - mai-dev-network
+
+volumes:
+  mai-backend-dev-data:
+    name: mai_backend_dev_data
+  mai-influxdb-dev-data:
+    name: mai_influxdb_dev_data
+
+networks:
+  mai-dev-network:
+    driver: bridge
+    name: mai-dev-network
