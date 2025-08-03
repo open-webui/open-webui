@@ -364,8 +364,8 @@ WEBUI_AUTH_SIGNOUT_REDIRECT_URL = os.environ.get(
 )
 
 WEBUI_AUTH_SSO_REDIRECT_ON_UNAUTORIZED = os.environ.get(
-    "WEBUI_AUTH_SSO_REDIRECT_ON_UNAUTORIZED", None
-)
+    "WEBUI_AUTH_SSO_REDIRECT_ON_UNAUTORIZED"
+) == "true"
 
 ####################################
 # WEBUI_SECRET_KEY
