@@ -413,6 +413,7 @@ from open_webui.env import (
     WEBUI_SECRET_KEY,
     WEBUI_SESSION_COOKIE_SAME_SITE,
     WEBUI_SESSION_COOKIE_SECURE,
+    ENABLE_SIGNUP_PASSWORD_CONFIRMATION,
     WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
     WEBUI_AUTH_TRUSTED_NAME_HEADER,
     WEBUI_AUTH_SIGNOUT_REDIRECT_URL,
@@ -1299,7 +1300,7 @@ async def get_models(
         models = get_filtered_models(models, user)
 
     log.debug(
-        f"/api/models returned filtered models accessible to the user: {json.dumps([model['id'] for model in models])}"
+        f"/api/models returned filtered models accessible to the user: {json.dumps([model.get('id') for model in models])}"
     )
     return {"data": models}
 
@@ -1573,6 +1574,7 @@ async def get_app_config(request: Request):
         "features": {
             "auth": WEBUI_AUTH,
             "auth_trusted_header": bool(app.state.AUTH_TRUSTED_EMAIL_HEADER),
+            "enable_signup_password_confirmation": ENABLE_SIGNUP_PASSWORD_CONFIRMATION,
             "enable_ldap": app.state.config.ENABLE_LDAP,
             "enable_api_key": app.state.config.ENABLE_API_KEY,
             "enable_signup": app.state.config.ENABLE_SIGNUP,
@@ -1658,7 +1660,10 @@ async def get_app_config(request: Request):
                         "metadata": {
                             "login_footer": app.state.LICENSE_METADATA.get(
                                 "login_footer", ""
-                            )
+                            ),
+                            "auth_logo_position": app.state.LICENSE_METADATA.get(
+                                "auth_logo_position", ""
+                            ),
                         }
                     }
                     if app.state.LICENSE_METADATA

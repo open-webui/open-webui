@@ -55,6 +55,7 @@
 	export let webSearchEnabled = false;
 
 	export let onSelect = (e) => {};
+	export let onChange = (e) => {};
 
 	export let toolServers = [];
 
@@ -224,15 +225,7 @@
 					{stopResponse}
 					{createMessagePair}
 					placeholder={$i18n.t('How can I help you today?')}
-					onChange={(input) => {
-						if (!$temporaryChatEnabled) {
-							if (input.prompt !== null) {
-								sessionStorage.setItem(`chat-input`, JSON.stringify(input));
-							} else {
-								sessionStorage.removeItem(`chat-input`);
-							}
-						}
-					}}
+					{onChange}
 					on:upload={(e) => {
 						dispatch('upload', e.detail);
 					}}

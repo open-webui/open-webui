@@ -114,59 +114,66 @@
 					} else {
 						// Handle the drag-and-drop data for folders or chats (same as before)
 						const dataTransfer = e.dataTransfer.getData('text/plain');
-						const data = JSON.parse(dataTransfer);
-						console.log(data);
 
-						const { type, id, item } = data;
+						try {
+							const data = JSON.parse(dataTransfer);
+							console.log(data);
 
-						if (type === 'folder') {
-							open = true;
-							if (id === folderId) {
-								return;
-							}
-							// Move the folder
-							const res = await updateFolderParentIdById(localStorage.token, id, folderId).catch(
-								(error) => {
-									toast.error(`${error}`);
-									return null;
+							const { type, id, item } = data;
+
+							if (type === 'folder') {
+								open = true;
+								if (id === folderId) {
+									return;
 								}
-							);
+								// Move the folder
+								const res = await updateFolderParentIdById(localStorage.token, id, folderId).catch(
+									(error) => {
+										toast.error(`${error}`);
+										return null;
+									}
+								);
 
-							if (res) {
-								dispatch('update');
-							}
-						} else if (type === 'chat') {
-							open = true;
+								if (res) {
+									dispatch('update');
+								}
+							} else if (type === 'chat') {
+								open = true;
 
-							let chat = await getChatById(localStorage.token, id).catch((error) => {
-								return null;
-							});
-							if (!chat && item) {
-								chat = await importChat(
+								let chat = await getChatById(localStorage.token, id).catch((error) => {
+									return null;
+								});
+								if (!chat && item) {
+									chat = await importChat(
+										localStorage.token,
+										item.chat,
+										item?.meta ?? {},
+										false,
+										null,
+										item?.created_at ?? null,
+										item?.updated_at ?? null
+									).catch((error) => {
+										toast.error(`${error}`);
+										return null;
+									});
+								}
+
+								// Move the chat
+								const res = await updateChatFolderIdById(
 									localStorage.token,
-									item.chat,
-									item?.meta ?? {},
-									false,
-									null,
-									item?.created_at ?? null,
-									item?.updated_at ?? null
+									chat.id,
+									folderId
 								).catch((error) => {
 									toast.error(`${error}`);
 									return null;
 								});
-							}
 
-							// Move the chat
-							const res = await updateChatFolderIdById(localStorage.token, chat.id, folderId).catch(
-								(error) => {
-									toast.error(`${error}`);
-									return null;
+								if (res) {
+									dispatch('update');
 								}
-							);
-
-							if (res) {
-								dispatch('update');
 							}
+						} catch (error) {
+							console.log('Error parsing dataTransfer:', error);
 						}
 					}
 				}
