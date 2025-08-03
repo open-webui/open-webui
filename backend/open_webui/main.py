@@ -1695,7 +1695,7 @@ class OAuthRedirectMiddleware(BaseHTTPMiddleware):
             raise
 
 if WEBUI_AUTH_SSO_REDIRECT_ON_UNAUTORIZED:
-    app.add_middleware()
+    app.add_middleware(OAuthRedirectMiddleware)
 
 
 @app.get("/oauth/{provider}/login")
