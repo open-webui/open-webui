@@ -4,7 +4,7 @@
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 
-	import { config } from '$lib/stores';
+	import { config, user } from '$lib/stores';
 	import { getBackendConfig } from '$lib/apis';
 	import Database from './Settings/Database.svelte';
 
@@ -166,6 +166,7 @@
 			<div class=" self-center">{$i18n.t('Models')}</div>
 		</button>
 
+		{#if $user?.can_view_usage}
 		<button
 			id="usage"
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
@@ -188,6 +189,7 @@
 			</div>
 			<div class=" self-center">{$i18n.t('Usage')}</div>
 		</button>
+		{/if}
 
 		<button
 			id="evaluations"
@@ -537,7 +539,7 @@
 					toast.success($i18n.t('Settings saved successfully!'));
 				}}
 			/>
-		{:else if selectedTab === 'usage'}
+		{:else if selectedTab === 'usage' && $user?.can_view_usage}
 			<Usage />
 		{/if}
 	</div>

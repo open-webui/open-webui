@@ -43,6 +43,7 @@ services:
       dockerfile: Dockerfile.backend.dev
     container_name: mai-backend-dev
     env_file:
+      - .env
       - .env.dev
     volumes:
       # Mount backend source code for hot reload
@@ -55,12 +56,8 @@ services:
       - "8080:8080"  # FastAPI backend
     environment:
       - 'OLLAMA_BASE_URL=http://host.docker.internal:11434'
-      - 'WEBUI_SECRET_KEY=mai-secret-key-development-2025'
-      - 'WEBUI_NAME=mAI Development (BACKEND)'
       - 'WEBUI_URL=http://localhost:5173'
-      # CORS for frontend dev server
       - 'CORS_ALLOW_ORIGIN=http://localhost:5173;http://localhost:3001'
-      - 'ENV=dev'
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
@@ -82,11 +79,19 @@ services:
     container_name: mai-influxdb-dev
     environment:
       - DOCKER_INFLUXDB_INIT_MODE=setup
+<<<<<<< HEAD
       - DOCKER_INFLUXDB_INIT_USERNAME=admin
       - DOCKER_INFLUXDB_INIT_PASSWORD=mai-dev-password
       - DOCKER_INFLUXDB_INIT_ORG=mAI-dev
       - DOCKER_INFLUXDB_INIT_BUCKET=mai_usage_raw_dev
       - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=dev-token-for-testing-only
+=======
+      - DOCKER_INFLUXDB_INIT_USERNAME=${INFLUXDB_USER}
+      - DOCKER_INFLUXDB_INIT_PASSWORD=${INFLUXDB_PASSWORD}
+      - DOCKER_INFLUXDB_INIT_ORG=mAI-dev
+      - DOCKER_INFLUXDB_INIT_BUCKET=mai_usage_raw_dev
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=${INFLUXDB_TOKEN}
+>>>>>>> f57858284 (feat(usage): Implement standalone usage page for authorized users)
       - INFLUXDB_HTTP_BIND_ADDRESS=:8086
     ports:
       - "8086:8086"  # InfluxDB UI and API
