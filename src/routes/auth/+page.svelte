@@ -18,6 +18,7 @@
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import OnBoarding from '$lib/components/OnBoarding.svelte';
+	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -306,7 +307,7 @@
 											<label for="password" class="text-sm font-medium text-left mb-1 block"
 												>{$i18n.t('Password')}</label
 											>
-											<input
+											<SensitiveInput
 												bind:value={password}
 												type="password"
 												id="password"
@@ -325,7 +326,7 @@
 													class="text-sm font-medium text-left mb-1 block"
 													>{$i18n.t('Confirm Password')}</label
 												>
-												<input
+												<SensitiveInput
 													bind:value={confirmPassword}
 													type="password"
 													id="confirm-password"
