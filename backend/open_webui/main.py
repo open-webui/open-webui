@@ -411,7 +411,7 @@ from open_webui.env import (
     WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
     WEBUI_AUTH_TRUSTED_NAME_HEADER,
     WEBUI_AUTH_SIGNOUT_REDIRECT_URL,
-    WEBUI_AUTH_SSO_REDIRECT_ON_UNAUTORIZED,
+    WEBUI_AUTH_SSO_PROVIDER_REDIRECT_ON_UNAUTORIZED,
     ENABLE_COMPRESSION_MIDDLEWARE,
     ENABLE_WEBSOCKET_SUPPORT,
     BYPASS_MODEL_ACCESS_CONTROL,
@@ -1685,17 +1685,19 @@ if len(OAUTH_PROVIDERS) > 0:
     )
 
 class OAuthRedirectMiddleware(BaseHTTPMiddleware):
+    def __init__(self, provider: str):
+        self.provider = provider
     async def dispatch(self, request, call_next):
         try:
             return await call_next(request)
         except HTTPException as exc:
             if exc.status_code == status.HTTP_401_UNAUTHORIZED:
-                login_url = request.url_for("oauth_login", provider="oidc")
+                login_url = request.url_for("oauth_login", provider=self.provider)
                 return RedirectResponse(f"{login_url}")
             raise
 
-if WEBUI_AUTH_SSO_REDIRECT_ON_UNAUTORIZED:
-    app.add_middleware(OAuthRedirectMiddleware)
+if WEBUI_AUTH_SSO_PROVIDER_REDIRECT_ON_UNAUTORIZED:
+    app.add_middleware(OAuthRedirectMiddleware, provider=WEBUI_AUTH_SSO_PROVIDER_REDIRECT_ON_UNAUTORIZED)
 
 
 @app.get("/oauth/{provider}/login")
