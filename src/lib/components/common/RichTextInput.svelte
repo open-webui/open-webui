@@ -27,14 +27,57 @@
 	});
 
 	import TurndownService from 'turndown';
-	import { gfm } from 'turndown-plugin-gfm';
+	import { gfm } from '@joplin/turndown-plugin-gfm';
 	const turndownService = new TurndownService({
 		codeBlockStyle: 'fenced',
 		headingStyle: 'atx'
 	});
 	turndownService.escape = (string) => string;
+
 	// Use turndown-plugin-gfm for proper GFM table support
 	turndownService.use(gfm);
+
+	// Add custom table header rule before using GFM plugin
+	turndownService.addRule('tableHeaders', {
+		filter: 'th',
+		replacement: function (content, node) {
+			return content;
+		}
+	});
+
+	// Add custom table rule to handle headers properly
+	turndownService.addRule('tables', {
+		filter: 'table',
+		replacement: function (content, node) {
+			// Extract rows
+			const rows = Array.from(node.querySelectorAll('tr'));
+			if (rows.length === 0) return content;
+
+			let markdown = '\n';
+
+			rows.forEach((row, rowIndex) => {
+				const cells = Array.from(row.querySelectorAll('th, td'));
+				const cellContents = cells.map((cell) => {
+					// Get the text content and clean it up
+					let cellContent = turndownService.turndown(cell.innerHTML).trim();
+					// Remove extra paragraph tags that might be added
+					cellContent = cellContent.replace(/^\n+|\n+$/g, '');
+					return cellContent;
+				});
+
+				// Add the row
+				markdown += '| ' + cellContents.join(' | ') + ' |\n';
+
+				// Add separator after first row (which should be headers)
+				if (rowIndex === 0) {
+					const separator = cells.map(() => '---').join(' | ');
+					markdown += '| ' + separator + ' |\n';
+				}
+			});
+
+			return markdown + '\n';
+		}
+	});
 
 	turndownService.addRule('taskListItems', {
 		filter: (node) =>
