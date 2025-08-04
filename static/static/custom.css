@@ -1,19 +1,28 @@
 
 /* Findlay Park theme */
 html.findlay-park .app > * {
-        background-color: #E2DAD3;
+        background-color: #E2DAD3 !important;
 }
 
 html.findlay-park #sidebar,
 html.findlay-park #sidebar > div {
-        background-color: #E9E3DE;
+        background-color: #E9E3DE !important;
 }
 
 html.findlay-park .bg-white {
-        background-color: #E2DAD3;
+        background-color: #E2DAD3 !important;
 }
 
 html.findlay-park .bg-gray-50 {
-        background-color: #E9E3DE;
+        background-color: #E9E3DE !important;
+}
+
+/* More specific overrides for main layout elements */
+html.findlay-park.light .bg-white {
+        background-color: #E2DAD3 !important;
+}
+
+html.findlay-park.light div[class*="bg-white"] {
+        background-color: #E2DAD3 !important;
 }
 
