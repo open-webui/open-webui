@@ -14,7 +14,8 @@
 		temporaryChatEnabled,
 		selectedFolder,
 		chats,
-		currentChatPage
+		currentChatPage,
+		theme
 	} from '$lib/stores';
 	import { sanitizeResponseContent, extractCurlyBraceWords } from '$lib/utils';
 	import { WEBUI_BASE_URL } from '$lib/constants';
@@ -85,14 +86,16 @@
 	{/if}
 
 	<!-- FP Logo Section -->
-	<div class="flex justify-center items-center mb-8">
-		<img
-			src="/fplogo.png"
-			alt="Findlay Park Logo"
-			class="h-16 w-auto object-contain drop-shadow-sm"
-			draggable="false"
-		/>
-	</div>
+	{#if !$theme.includes('dark') && $theme !== 'system' || ($theme === 'system' && !window.matchMedia('(prefers-color-scheme: dark)').matches)}
+		<div class="flex justify-center items-center mb-8">
+			<img
+				src="/fplogo.png"
+				alt="Findlay Park Logo"
+				class="h-32 w-auto object-contain drop-shadow-sm"
+				draggable="false"
+			/>
+		</div>
+	{/if}
 
 	<div
 		class="w-full text-3xl text-gray-800 dark:text-gray-100 text-center flex items-center gap-4 font-primary"

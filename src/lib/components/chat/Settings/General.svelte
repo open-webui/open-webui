@@ -105,7 +105,7 @@
 	};
 
 	onMount(async () => {
-		selectedTheme = localStorage.theme ?? 'system';
+		selectedTheme = localStorage.theme ?? 'findlay-park';
 
 		languages = await getLanguages();
 
