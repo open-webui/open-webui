@@ -731,8 +731,11 @@ async def pull_model_helper(user=Depends(get_admin_user),gold:str = '',human_nam
         payload=json.dumps(payload),
         stream=False,
         key=None,
+        content_type = "application/x-ndjson",
         user=user,
     )
+    
+    
 
 @router.post("/api/pull")
 @router.post("/api/pull/{url_idx}")
@@ -751,6 +754,8 @@ async def pull_model(
     # Admin should be able to pull models from any source
     payload = {**form_data, "insecure": True}
     
+    print('URL in original_request: ', f"{url}/api/pull")
+
     
     original_post_request = await send_post_request(
         url=f"{url}/api/pull",
@@ -758,6 +763,8 @@ async def pull_model(
         key=get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS),
         user=user,
     )
+
+    #async def test(original_post_request):
     
     GOLDEN_NAME = None
     print('HUMAN MODEL NAME: ',form_data["model"])
@@ -773,9 +780,15 @@ async def pull_model(
     GOLDEN_NAME = '-'.join(GOLDEN_NAME.split(':'))
     print(GOLDEN_NAME) #sha-key
     
-    await pull_model_helper(user,GOLDEN_NAME,form_data["model"])
 
-    return original_post_request
+    
+    result = await pull_model_helper(user,GOLDEN_NAME,form_data["model"])
+    
+    print('RESULT: ', result)
+
+    return result
+    #syncio.create_task(test(original_post_request))
+    #return original_post_request
 
 
 class PushModelForm(BaseModel):
@@ -1808,7 +1821,6 @@ async def download_file_stream(
 
                     done = current_size == total_size
                     progress = round((current_size / total_size) * 100, 2)
-
                     yield f'data: {{"progress": {progress}, "completed": {current_size}, "total": {total_size}}}\n\n'
 
                 if done:
@@ -1842,6 +1854,7 @@ async def download_model(
     url_idx: Optional[int] = None,
     user=Depends(get_admin_user),
 ):
+    
     allowed_hosts = ["https://huggingface.co/", "https://github.com/"]
 
     if not any(form_data.url.startswith(host) for host in allowed_hosts):
@@ -1858,7 +1871,6 @@ async def download_model(
 
     if file_name:
         file_path = f"{UPLOAD_DIR}/{file_name}"
-
         return StreamingResponse(
             download_file_stream(url, form_data.url, file_path, file_name),
         )
@@ -1875,6 +1887,7 @@ async def upload_model(
     url_idx: Optional[int] = None,
     user=Depends(get_admin_user),
 ):
+    
     if url_idx is None:
         url_idx = 0
     ollama_url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]

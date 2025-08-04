@@ -6,4 +6,5 @@
 #echo "  Inside copy2fpga-x86.sh "
 #sudo ./copy2fpga-setup.sh
 echo "sudo ./copy2fpga-x86 $1"
+sleep 5
 sudo ./copy2fpga-x86 $1
