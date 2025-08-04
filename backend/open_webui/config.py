@@ -686,6 +686,19 @@ def load_oauth_providers():
             "register": oidc_oauth_register,
         }
 
+    configured_providers = []
+    if GOOGLE_CLIENT_ID.value:
+        configured_providers.append("Google")
+    if MICROSOFT_CLIENT_ID.value:
+        configured_providers.append("Microsoft") 
+    if GITHUB_CLIENT_ID.value:
+        configured_providers.append("GitHub")
+    
+    if configured_providers and not OPENID_PROVIDER_URL.value:
+        provider_list = ", ".join(configured_providers)
+        log.warning(f"⚠️  OAuth providers configured ({provider_list}) but OPENID_PROVIDER_URL not set - logout will not work!")
+        log.warning(f"Set OPENID_PROVIDER_URL to your OAuth provider's OpenID Connect discovery endpoint to fix logout functionality.")
+
 
 load_oauth_providers()
 
