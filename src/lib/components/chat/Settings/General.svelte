@@ -14,7 +14,7 @@
 	export let getModels: Function;
 
 	// General
-        let themes = ['dark', 'light', 'oled-dark', 'findlay-park light'];
+        let themes = ['dark', 'light', 'oled-dark', 'findlay-park'];
 	let selectedTheme = 'system';
 
 	let languages: Awaited<ReturnType<typeof getLanguages>> = [];
@@ -117,12 +117,7 @@
 	});
 
 	const applyTheme = (_theme: string) => {
-                let themeToApply =
-                        _theme === 'oled-dark'
-                                ? 'dark'
-                                : _theme === 'findlay-park'
-                                        ? 'findlay-park light'
-                                        : _theme;
+                let themeToApply = _theme === 'oled-dark' ? 'dark' : _theme;
 
 		if (_theme === 'system') {
 			themeToApply = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
@@ -135,17 +130,21 @@
 			document.documentElement.style.setProperty('--color-gray-950', '#0d0d0d');
 		}
 
-		themes
-			.filter((e) => e !== themeToApply)
-			.forEach((e) => {
-				e.split(' ').forEach((e) => {
-					document.documentElement.classList.remove(e);
-				});
-			});
+                themes
+                        .filter((e) => e !== themeToApply)
+                        .forEach((e) => {
+                                e.split(' ').forEach((e) => {
+                                        document.documentElement.classList.remove(e);
+                                });
+                        });
 
-		themeToApply.split(' ').forEach((e) => {
-			document.documentElement.classList.add(e);
-		});
+                themeToApply.split(' ').forEach((e) => {
+                        document.documentElement.classList.add(e);
+                });
+
+                if (_theme === 'findlay-park') {
+                        document.documentElement.classList.add('light');
+                }
 
 		const metaThemeColor = document.querySelector('meta[name="theme-color"]');
 		if (metaThemeColor) {

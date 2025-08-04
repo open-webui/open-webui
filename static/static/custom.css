@@ -1,19 +1,19 @@
 
 /* Findlay Park theme */
-.findlay-park .app > * {
-        background-color: #E2DAD3 !important;
-}
-
-.findlay-park #sidebar,
-.findlay-park #sidebar > div {
-        background-color: #E9E3DE;
-}
-
-.findlay-park .bg-white {
+html.findlay-park .app > * {
         background-color: #E2DAD3;
 }
 
-.findlay-park .bg-gray-50 {
+html.findlay-park #sidebar,
+html.findlay-park #sidebar > div {
+        background-color: #E9E3DE;
+}
+
+html.findlay-park .bg-white {
+        background-color: #E2DAD3;
+}
+
+html.findlay-park .bg-gray-50 {
         background-color: #E9E3DE;
 }
 
