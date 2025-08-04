@@ -252,11 +252,6 @@
 			2
 		);
 
-		// Set default API Base URL if empty
-		if (!config.DATALAB_MARKER_API_BASE_URL) {
-			config.DATALAB_MARKER_API_BASE_URL = 'https://www.datalab.to/api/v1/marker';
-		}
-
 		RAGConfig = config;
 	});
 </script>
