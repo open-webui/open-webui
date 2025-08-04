@@ -3137,6 +3137,24 @@ AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT = PersistentConfig(
     ),
 )
 
+DEFAULT_SHOW_SSML = PersistentConfig(
+  "DEFAULT_SHOW_SSML",
+  "audio.ssml.show",
+  os.getenv("DEFAULT_SHOW_SSML", False),
+)
+
+DEFAULT_AUTOPLAY_SSML = PersistentConfig(
+  "DEFAULT_AUTOPLAY_SSML",
+  "audio.ssml.autoplay",
+  os.getenv("DEFAULT_AUTOPLAY_SSML", False),
+)
+
+DEFAULT_SSML_OVERRIDE_CALL = PersistentConfig(
+  "DEFAULT_SSML_OVERRIDE_CALL",
+  "audio.ssml.ovreideCall",
+  os.getenv("DEFAULT_SSML_OVERRIDE_CALL", False),
+)
+
 
 ####################################
 # LDAP

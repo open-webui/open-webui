@@ -123,9 +123,9 @@
 
 		nonLocalVoices = $settings.audio?.tts?.nonLocalVoices ?? false;
 
-		showSSML = $settings?.audio?.ssml?.show ?? true;
-		autoplaySSML = $settings?.audio?.ssml?.autoplay ?? false;
-		SSMLOverridesCall = $settings?.audio?.ssml?.overrideCall ?? false;
+		showSSML = $settings?.audio?.ssml?.show ?? $config.audio.ssml.show;
+		autoplaySSML = $settings?.audio?.ssml?.autoplay ?? $config.audio.ssml.autoplay;
+		SSMLOverridesCall = $settings?.audio?.ssml?.overrideCall ?? $config.audio.ssml.overrideCall;
 
 		await getVoices();
 	});

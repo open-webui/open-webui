@@ -59,15 +59,15 @@
 	let showingTranscript = false;
 
 	if (
-		($settings?.audio?.ssml?.autoplay ?? false) &&
-		!($showCallOverlay && !($settings.audio?.ssml.overrideCall ?? false)) &&
+		($settings?.audio?.ssml?.autoplay ?? $config.audio.ssml.autoplay) &&
+		!($showCallOverlay && !($settings.audio?.ssml.overrideCall ?? $config.audio.ssml.overrideCall)) &&
 		!done
 	) {
 		toggleSpeakMessage();
 	}
 </script>
 
-{#if $settings?.audio?.ssml?.show ?? true}
+{#if $settings?.audio?.ssml?.show ?? $config.audio.ssml.show}
 	<div class="rounded-xl bg-gray-50 dark:bg-gray-850 w-fit my-1 p-2 flex flex-col">
 		<button
 			class="visible p-1.5 w-fit hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"

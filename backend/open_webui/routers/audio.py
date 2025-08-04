@@ -180,9 +180,16 @@ class STTConfigForm(BaseModel):
     AZURE_MAX_SPEAKERS: str
 
 
+class SSMLConfigForm(BaseModel):
+  DEFAULT_AUTOPLAY_SSML: bool
+  DEFAULT_SSML_OVERRIDE_CALL: bool
+  DEFAULT_SHOW_SSML: bool
+
+
 class AudioConfigUpdateForm(BaseModel):
     tts: TTSConfigForm
     stt: STTConfigForm
+    ssml: SSMLConfigForm
 
 
 @router.get("/config")
@@ -214,6 +221,11 @@ async def get_audio_config(request: Request, user=Depends(get_admin_user)):
             "AZURE_BASE_URL": request.app.state.config.AUDIO_STT_AZURE_BASE_URL,
             "AZURE_MAX_SPEAKERS": request.app.state.config.AUDIO_STT_AZURE_MAX_SPEAKERS,
         },
+        "ssml": {
+          "DEFAULT_AUTOPLAY_SSML": request.app.state.config.DEFAULT_AUTOPLAY_SSML,
+          "DEFAULT_SSML_OVERRIDE_CALL": request.app.state.config.DEFAULT_SSML_OVERRIDE_CALL,
+          "DEFAULT_SHOW_SSML": request.app.state.config.DEFAULT_SHOW_SSML
+        }
     }
 
 
@@ -261,6 +273,10 @@ async def update_audio_config(
     else:
         request.app.state.faster_whisper_model = None
 
+    request.app.state.config.DEFAULT_AUTOPLAY_SSML = form_data.ssml.DEFAULT_AUTOPLAY_SSML
+    request.app.state.config.DEFAULT_SSML_OVERRIDE_CALL = form_data.ssml.DEFAULT_SSML_OVERRIDE_CALL
+    request.app.state.config.DEFAULT_SHOW_SSML = form_data.ssml.DEFAULT_SHOW_SSML
+
     return {
         "tts": {
             "OPENAI_API_BASE_URL": request.app.state.config.TTS_OPENAI_API_BASE_URL,
@@ -288,6 +304,11 @@ async def update_audio_config(
             "AZURE_BASE_URL": request.app.state.config.AUDIO_STT_AZURE_BASE_URL,
             "AZURE_MAX_SPEAKERS": request.app.state.config.AUDIO_STT_AZURE_MAX_SPEAKERS,
         },
+        "ssml": {
+          "DEFAULT_AUTOPLAY_SSML": request.app.state.config.DEFAULT_AUTOPLAY_SSML,
+          "DEFAULT_SSML_OVERRIDE_CALL": request.app.state.config.DEFAULT_SSML_OVERRIDE_CALL,
+          "DEFAULT_SHOW_SSML": request.app.state.config.DEFAULT_SHOW_SSML
+        }
     }
 
 
