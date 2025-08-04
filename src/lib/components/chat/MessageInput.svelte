@@ -283,7 +283,7 @@
 
 		if (chatInput) {
 			if ($settings?.richTextInput ?? true) {
-				word = getWordAtDocPosFromRichText();
+				word = chatInputElement?.getWordAtDocPos();
 			} else {
 				const cursor = chatInput ? chatInput.selectionStart : prompt.length;
 				word = getWordAtCursor(prompt, cursor);
@@ -383,8 +383,6 @@
 
 	let chatInputContainerElement;
 	let chatInputElement;
-
-	let getWordAtDocPosFromRichText = () => '';
 
 	let filesInputElement;
 	let commandsElement;
@@ -1093,9 +1091,6 @@
 												onChange={(e) => {
 													prompt = e.md;
 													command = getCommand();
-												}}
-												getWordAtDocPosCallback={(func) => {
-													getWordAtDocPosFromRichText = func;
 												}}
 												json={true}
 												messageInput={true}
