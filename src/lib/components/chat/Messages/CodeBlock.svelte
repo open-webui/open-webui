@@ -426,14 +426,14 @@
 			{/if}
 		{:else}
 			<div class="text-text-300 absolute pl-4 py-1.5 text-xs font-medium dark:text-white">
-				{lang}
+				{lang === "html" ? "GoWit" : lang}
 			</div>
 
 			<div
 				class="sticky {stickyButtonsClassName} mb-1 py-1 pr-2.5 flex items-center justify-end z-10 text-xs text-black dark:text-white"
 			>
 				<div class="flex items-center gap-0.5 translate-y-[1px]">
-					<button
+					<!-- <button
 						class="flex gap-1 items-center bg-none border-none bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
 						on:click={collapseCodeBlock}
 					>
@@ -444,7 +444,7 @@
 						<div>
 							{collapsed ? $i18n.t('Expand') : $i18n.t('Collapse')}
 						</div>
-					</button>
+					</button> -->
 
 					{#if preview && ['html', 'svg'].includes(lang)}
 						<button
@@ -512,7 +512,11 @@
 				<div class=" pt-7 bg-gray-50 dark:bg-gray-850"></div>
 
 				{#if !collapsed}
-					<CodeEditor
+					<div class="text-sm p-4 flex flex-col gap-2">
+						<span>You can see the code in the preview pane on the right side of the screen. </span>
+						<span>Please click the preview button to see the code.</span>
+					</div>
+					<!-- <CodeEditor
 						value={code}
 						{id}
 						{lang}
@@ -522,7 +526,7 @@
 						onChange={(value) => {
 							_code = value;
 						}}
-					/>
+					/> -->
 				{:else}
 					<div
 						class="bg-gray-50 dark:bg-black dark:text-white rounded-b-lg! pt-2 pb-2 px-4 flex flex-col gap-2 text-xs"
