@@ -2,6 +2,7 @@ from opensearchpy import OpenSearch
 from opensearchpy.helpers import bulk
 from typing import Optional
 
+from open_webui.retrieval.vector.utils import stringify_metadata
 from open_webui.retrieval.vector.main import (
     VectorDBBase,
     VectorItem,
@@ -200,7 +201,7 @@ class OpenSearchClient(VectorDBBase):
                     "_source": {
                         "vector": item["vector"],
                         "text": item["text"],
-                        "metadata": item["metadata"],
+                        "metadata": stringify_metadata(item["metadata"]),
                     },
                 }
                 for item in batch
@@ -222,7 +223,7 @@ class OpenSearchClient(VectorDBBase):
                     "doc": {
                         "vector": item["vector"],
                         "text": item["text"],
-                        "metadata": item["metadata"],
+                        "metadata": stringify_metadata(item["metadata"]),
                     },
                     "doc_as_upsert": True,
                 }
