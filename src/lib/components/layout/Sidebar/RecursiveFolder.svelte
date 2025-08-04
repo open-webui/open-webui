@@ -60,6 +60,27 @@
 
 	let name = '';
 
+	let timer = null;
+	const handleSingleClick = async () => {
+		await goto('/');
+		selectedFolder.set(folders[folderId]);
+	};
+	const clickHandler = (event) => {
+		if (timer) {
+			clearTimeout(timer);
+			timer = null;
+			open = !open; // Revert the toggle from the first click
+			showFolderModal = true;
+			event.stopPropagation();
+			event.preventDefault();
+		} else {
+			timer = setTimeout(() => {
+				timer = null;
+				handleSingleClick();
+			}, 250);
+		}
+	};
+
 	const onDragOver = (e) => {
 		e.preventDefault();
 		e.stopPropagation();
@@ -429,14 +450,7 @@
 				folderId
 					? 'bg-gray-100 dark:bg-gray-900'
 					: ''}"
-				on:dblclick={() => {
-					showFolderModal = true;
-				}}
-				on:click={async (e) => {
-					await goto('/');
-
-					selectedFolder.set(folders[folderId]);
-				}}
+				on:click={clickHandler}
 			>
 				<div class="text-gray-300 dark:text-gray-600">
 					<FolderIcon {open} className="size-3.5" strokeWidth="2" />
