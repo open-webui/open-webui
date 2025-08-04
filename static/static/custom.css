@@ -1,0 +1,19 @@
+
+/* Findlay Park theme */
+html.findlay-park .app > * {
+        background-color: #E2DAD3;
+}
+
+html.findlay-park #sidebar,
+html.findlay-park #sidebar > div {
+        background-color: #E9E3DE;
+}
+
+html.findlay-park .bg-white {
+        background-color: #E2DAD3;
+}
+
+html.findlay-park .bg-gray-50 {
+        background-color: #E9E3DE;
+}
+
