@@ -153,7 +153,9 @@
 		<Spinner className="size-5" />
 	</div>
 {:else}
-	<div class="mt-0.5 mb-2 gap-1 flex flex-col md:flex-row justify-between sticky top-0 z-10 bg-gray-50 dark:bg-gray-900">
+	<div
+		class="pt-0.5 pb-2 gap-1 flex flex-col md:flex-row justify-between sticky top-0 z-10 bg-gray-50 dark:bg-gray-900"
+	>
 		<div class="flex md:self-center text-lg font-medium px-0.5">
 			<div class="flex-shrink-0">
 				{$i18n.t('Users')}
@@ -494,7 +496,7 @@
 	</div>
 
 	{#if total > 30}
-	<Pagination bind:page count={total} perPage={30} />
+		<Pagination bind:page count={total} perPage={30} />
 	{/if}
 {/if}
 
