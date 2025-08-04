@@ -25,11 +25,10 @@
 		updateChatFolderIdById
 	} from '$lib/apis/chats';
 
-	import ChevronDown from '../../icons/ChevronDown.svelte';
-	import ChevronRight from '../../icons/ChevronRight.svelte';
 	import Collapsible from '../../common/Collapsible.svelte';
 	import DragGhost from '$lib/components/common/DragGhost.svelte';
 
+	import FolderIcon from '$lib/components/icons/FolderIcon.svelte';
 	import FolderOpen from '$lib/components/icons/FolderOpen.svelte';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 
@@ -440,11 +439,7 @@
 				}}
 			>
 				<div class="text-gray-300 dark:text-gray-600">
-					{#if open}
-						<ChevronDown className=" size-3" strokeWidth="2.5" />
-					{:else}
-						<ChevronRight className=" size-3" strokeWidth="2.5" />
-					{/if}
+					<FolderIcon {open} className="size-3.5" strokeWidth="2" />
 				</div>
 
 				<div class="translate-y-[0.5px] flex-1 justify-start text-start line-clamp-1">
