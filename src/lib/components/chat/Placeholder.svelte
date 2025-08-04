@@ -84,6 +84,16 @@
 		</Tooltip>
 	{/if}
 
+	<!-- FP Logo Section -->
+	<div class="flex justify-center items-center mb-8">
+		<img
+			src="/fplogo.png"
+			alt="Findlay Park Logo"
+			class="h-16 w-auto object-contain drop-shadow-sm"
+			draggable="false"
+		/>
+	</div>
+
 	<div
 		class="w-full text-3xl text-gray-800 dark:text-gray-100 text-center flex items-center gap-4 font-primary"
 	>

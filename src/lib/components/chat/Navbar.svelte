@@ -105,12 +105,24 @@
 				</div>
 
 				<div
-					class="flex-1 overflow-hidden max-w-full py-0.5
+					class="flex-1 overflow-hidden max-w-full py-0.5 flex items-center gap-3
 			{$showSidebar ? 'ml-1' : ''}
 			"
 				>
+					<!-- FP Logo in Navbar -->
+					<div class="flex-shrink-0">
+						<img
+							src="/fplogo.png"
+							alt="Findlay Park Logo"
+							class="h-8 w-auto object-contain"
+							draggable="false"
+						/>
+					</div>
+					
 					{#if showModelSelector}
-						<ModelSelector bind:selectedModels showSetDefault={!shareEnabled} />
+						<div class="flex-1 min-w-0">
+							<ModelSelector bind:selectedModels showSetDefault={!shareEnabled} />
+						</div>
 					{/if}
 				</div>
 

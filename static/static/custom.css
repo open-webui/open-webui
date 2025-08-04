@@ -26,3 +26,8 @@ html.findlay-park.light div[class*="bg-white"] {
         background-color: #E2DAD3 !important;
 }
 
+/* Fix navbar gradient for Findlay Park theme */
+html.findlay-park nav .bg-linear-to-b {
+        background: linear-gradient(to bottom, #E2DAD3 50%, #E2DAD3 50%, transparent) !important;
+}
+
