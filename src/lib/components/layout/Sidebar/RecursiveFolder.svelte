@@ -430,7 +430,7 @@
 					? 'bg-gray-100 dark:bg-gray-900'
 					: ''}"
 				on:dblclick={() => {
-					renameHandler();
+					showFolderModal = true;
 				}}
 				on:click={async (e) => {
 					await goto('/');
