@@ -14,7 +14,7 @@
 	export let getModels: Function;
 
 	// General
-	let themes = ['dark', 'light', 'oled-dark'];
+        let themes = ['dark', 'light', 'oled-dark', 'findlay-park light'];
 	let selectedTheme = 'system';
 
 	let languages: Awaited<ReturnType<typeof getLanguages>> = [];
@@ -117,7 +117,12 @@
 	});
 
 	const applyTheme = (_theme: string) => {
-		let themeToApply = _theme === 'oled-dark' ? 'dark' : _theme;
+                let themeToApply =
+                        _theme === 'oled-dark'
+                                ? 'dark'
+                                : _theme === 'findlay-park'
+                                        ? 'findlay-park light'
+                                        : _theme;
 
 		if (_theme === 'system') {
 			themeToApply = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
@@ -152,16 +157,18 @@
 				metaThemeColor.setAttribute('content', systemTheme === 'light' ? '#ffffff' : '#171717');
 			} else {
 				console.log('Setting meta theme color: ' + _theme);
-				metaThemeColor.setAttribute(
-					'content',
-					_theme === 'dark'
-						? '#171717'
-						: _theme === 'oled-dark'
-							? '#000000'
-							: _theme === 'her'
-								? '#983724'
-								: '#ffffff'
-				);
+                                metaThemeColor.setAttribute(
+                                        'content',
+                                        _theme === 'dark'
+                                                ? '#171717'
+                                                : _theme === 'oled-dark'
+                                                        ? '#000000'
+                                                        : _theme === 'her'
+                                                                ? '#983724'
+                                                                : _theme === 'findlay-park'
+                                                                        ? '#E2DAD3'
+                                                                        : '#ffffff'
+                                );
 			}
 		}
 
@@ -205,12 +212,13 @@
 					>
 						<option value="system">⚙️ {$i18n.t('System')}</option>
 						<option value="dark">🌑 {$i18n.t('Dark')}</option>
-						<option value="oled-dark">🌃 {$i18n.t('OLED Dark')}</option>
-						<option value="light">☀️ {$i18n.t('Light')}</option>
-						<option value="her">🌷 Her</option>
-						<!-- <option value="rose-pine dark">🪻 {$i18n.t('Rosé Pine')}</option>
-						<option value="rose-pine-dawn light">🌷 {$i18n.t('Rosé Pine Dawn')}</option> -->
-					</select>
+                                                <option value="oled-dark">🌃 {$i18n.t('OLED Dark')}</option>
+                                                <option value="light">☀️ {$i18n.t('Light')}</option>
+                                                <option value="findlay-park">🌲 Findlay Park</option>
+                                                <option value="her">🌷 Her</option>
+                                                <!-- <option value="rose-pine dark">🪻 {$i18n.t('Rosé Pine')}</option>
+                                                <option value="rose-pine-dawn light">🌷 {$i18n.t('Rosé Pine Dawn')}</option> -->
+                                        </select>
 				</div>
 			</div>
 
