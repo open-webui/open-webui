@@ -116,7 +116,7 @@ class PdftotextLoaderAsync:
                 f"Failed to extract text from PDF using OCR after retries: {e}")
             raise e
         
-    def wait_for_task_status(self, target_task_id, interval=1, timeout=120):
+    def wait_for_task_status(self, target_task_id, interval=1, timeout=900):
         """Consome fila RabbitMQ até encontrar task_id com status final (completed/failure)."""
         params = pika.URLParameters(CELERY_BROKER_URL)
         connection = pika.BlockingConnection(params)
