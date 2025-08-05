@@ -73,6 +73,11 @@ transformers
 sentence-transformers==3.3.1
 accelerate
 colbert-ai==0.2.21
+# actual dependency tree:
+# pyarrow==20.0.0
+# └── datasets==2.14.4 [requires: pyarrow>=8.0.0]
+#     └── colbert-ai==0.2.21 [requires: datasets]
+pyarrow==20.0.0 ## required by colbert-ai, latests version is 21.0.0, which breaks compatibility with sentence-transformers
 einops==0.8.1
 onnxruntime==1.20.1
 faster-whisper==1.1.1
