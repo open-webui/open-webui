@@ -296,6 +296,9 @@ class ChatTable:
                     "user_id": f"shared-{chat_id}",
                     "title": chat.title,
                     "chat": chat.chat,
+                    "meta": chat.meta,
+                    "pinned": chat.pinned,
+                    "folder_id": chat.folder_id,
                     "created_at": chat.created_at,
                     "updated_at": int(time.time()),
                 }
@@ -327,7 +330,9 @@ class ChatTable:
 
                 shared_chat.title = chat.title
                 shared_chat.chat = chat.chat
-
+                shared_chat.meta = chat.meta
+                shared_chat.pinned = chat.pinned
+                shared_chat.folder_id = chat.folder_id
                 shared_chat.updated_at = int(time.time())
                 db.commit()
                 db.refresh(shared_chat)

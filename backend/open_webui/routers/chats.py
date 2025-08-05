@@ -657,7 +657,17 @@ async def clone_shared_chat_by_id(id: str, user=Depends(get_verified_user)):
             "title": f"Clone of {chat.title}",
         }
 
-        chat = Chats.insert_new_chat(user.id, ChatForm(**{"chat": updated_chat}))
+        chat = Chats.import_chat(
+            user.id,
+            ChatImportForm(
+                **{
+                    "chat": updated_chat,
+                    "meta": chat.meta,
+                    "pinned": chat.pinned,
+                    "folder_id": chat.folder_id,
+                }
+            ),
+        )
         return ChatResponse(**chat.model_dump())
     else:
         raise HTTPException(
