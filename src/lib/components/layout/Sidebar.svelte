@@ -61,6 +61,7 @@
 	import FolderModal from './Sidebar/Folders/FolderModal.svelte';
 	import Sortable from 'sortablejs';
 	import { updateUserSettings } from '$lib/apis/users';
+	import GarbageBin from '../icons/GarbageBin.svelte';
 
 	const BREAKPOINT = 768;
 
@@ -69,6 +70,8 @@
 
 	let selectedChatId = null;
 	let showPinnedChat = true;
+
+	let hoveredModelId = '';
 
 	let showCreateChannel = false;
 
@@ -717,8 +720,14 @@
 						{@const model = $models.find((model) => model.id === modelId)}
 						{#if model}
 							<div
-								class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200 cursor-grab"
+								class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200 cursor-grab relative"
 								data-id={modelId}
+								on:mouseenter={() => {
+									hoveredModelId = modelId;
+								}}
+								on:mouseleave={() => {
+									hoveredModelId = '';
+								}}
 							>
 								<a
 									class="grow flex items-center space-x-2.5 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
@@ -749,6 +758,26 @@
 										</div>
 									</div>
 								</a>
+
+								{#if shiftKey && hoveredModelId === modelId}
+									<div class="absolute right-3 top-1/2 -translate-y-1/2">
+										<Tooltip content={$i18n.t('Unpin')}>
+											<button
+												class=" self-center dark:hover:text-white transition"
+												on:click={async () => {
+													const pinnedModels = $settings.pinnedModels.filter(
+														(id) => id !== modelId
+													);
+													settings.set({ ...$settings, pinnedModels: pinnedModels });
+													await updateUserSettings(localStorage.token, { ui: $settings });
+												}}
+												type="button"
+											>
+												<GarbageBin className="size-4" strokeWidth="2" />
+											</button>
+										</Tooltip>
+									</div>
+								{/if}
 							</div>
 						{/if}
 					{/each}
@@ -764,8 +793,14 @@
 							{@const model = $models.find((model) => model.id === modelId)}
 							{#if model}
 								<div
-									class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200 cursor-grab"
+									class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200 cursor-grab relative"
 									data-id={modelId}
+									on:mouseenter={() => {
+										hoveredModelId = modelId;
+									}}
+									on:mouseleave={() => {
+										hoveredModelId = '';
+									}}
 								>
 									<a
 										class="grow flex items-center space-x-2.5 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
@@ -796,6 +831,25 @@
 											</div>
 										</div>
 									</a>
+								{#if shiftKey && hoveredModelId === modelId}
+									<div class="absolute right-3 top-1/2 -translate-y-1/2">
+										<Tooltip content={$i18n.t('Unpin')}>
+											<button
+												class=" self-center dark:hover:text-white transition"
+												on:click={async () => {
+													const pinnedModels = $settings.pinnedModels.filter(
+														(id) => id !== modelId
+													);
+													settings.set({ ...$settings, pinnedModels: pinnedModels });
+													await updateUserSettings(localStorage.token, { ui: $settings });
+												}}
+												type="button"
+											>
+												<GarbageBin className="size-4" strokeWidth="2" />
+											</button>
+										</Tooltip>
+									</div>
+								{/if}
 								</div>
 							{/if}
 						{/each}
