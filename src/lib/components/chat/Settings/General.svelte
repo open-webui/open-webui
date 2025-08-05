@@ -314,7 +314,7 @@
 					on:click={() => {
 						restartOpu(); // Restart logic
 						}
-					}>{$isRestarting ? $i18n.t('Restarting...') : $i18n.t('Restart Now')}
+					}>{$isRestarting ? $i18n.t('OPU Restarting...') : $i18n.t('Restart OPU Now')}
 				</button>
 				</div>
                         </div>

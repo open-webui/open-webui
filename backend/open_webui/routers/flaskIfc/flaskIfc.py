@@ -13,9 +13,6 @@ import serial_script
 import re
 from werkzeug.datastructures import FileStorage
 from werkzeug.utils import secure_filename
-import tkinter as tk
-from tkinter import messagebox
-
 
 
 
@@ -475,7 +472,6 @@ def manual_response(status="success",model="ollama",content=None,thinking=None,t
                 },
             "data": {
                 "some_key": some_key,
-                "profile_data": profile_data
                 },
             "done": True #This is to indicate that we are one command at a time, not interactive
             }

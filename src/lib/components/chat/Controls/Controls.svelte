@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { createEventDispatcher, getContext } from 'svelte';
+	import { createEventDispatcher, getContext, onMount } from 'svelte';
 	const dispatch = createEventDispatcher();
 	const i18n = getContext('i18n');
 
@@ -13,6 +13,11 @@
 	export let models = [];
 	export let chatFiles = [];
 	export let params = {};
+
+       onMount(async () => {
+                params = { ...params, ...$settings.params };
+                params.stop = $settings?.params?.stop ? ($settings?.params?.stop ?? []).join(',') : null;
+        });
 
 	let showValves = false;
 </script>
@@ -164,29 +169,28 @@
 
                 {#if ($user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true)) && (params.target === 'cpu' || params.target === 'opu') }
                         <hr class="border-gray-50 dark:border-gray-850 my-3" />
+                        <div class="mt-2 space-y-3 pr-1.5">
+                                <div class="flex justify-between items-center text-sm">
+                                        <div class="  font-medium">{$i18n.t('Restart Opu')}</div>
 
-			<Collapsible title={$i18n.t('Restart Opu')} open={false} buttonClassName="w-full">
-				<div class="" slot="content">
-					<!-- Main Restart Now button -->
-					<button
-						disabled={$isRestarting}
-						class={
-							'w-auto text-sm px-2 py-1 rounded-md transition-colors duration-200' +
-							($settings.highContrastMode?
-							 ' border-2 border-gray-300 dark : border-gray-700 bg-gray-50 dark:bg-gray-850 text-gray-900 dark:text-gray-100 ' +
-							($isRestarting ? 'opacity-50 cursor-not-allowed' :
-							'hover:bg-blue-100 dark:hover:bg-blue-900') : ' bg-blue-600 text-white ' +
-							($isRestarting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700 dark:bg-blue-600'))
-						}
-						on:click={() => {
-							restartOpu(); // Restart logic
-							}
-						}
-						>
-						{$isRestarting ? $i18n.t('Restarting...') : $i18n.t('Restart Now')}
-					</button>
-				</div>
-			</Collapsible>
+                                <button
+                                        disabled={$isRestarting}
+                                        class={
+                                                'w-auto text-sm px-2 py-1 rounded-md transition-colors duration-200' +
+                                                ($settings.highContrastMode ?
+                                                ' border-2 border-gray-300 dark : border-gray-700 bg-gray-50 dark:bg-gray-850 text-gray-900 dark:text-gray-100 ' +
+                                                ($isRestarting ? 'opacity-50 cursor-not-allowed' :
+                                                'hover:bg-blue-100 dark:hover:bg-blue-900') : ' bg-blue-600 text-white ' +
+                                                ($isRestarting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700 dark:bg-blue-600'))
+                                        }
+                                        on:click={() => {
+                                                restartOpu(); // Restart logic
+                                                }
+                                        }>{$isRestarting ? $i18n.t('OPU Restarting...') : $i18n.t('Restart OPU Now')}
+                                </button>
+                                </div>
+                        </div>
+
 		{/if}
 
 		{#if $user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true)}
