@@ -27,6 +27,7 @@
 	let userLocation = false;
 
 	// Interface
+	let stickyPinnedModels = false;
 	let defaultModelId = '';
 	let showUsername = false;
 
@@ -111,6 +112,11 @@
 	const toggleWidescreenMode = async () => {
 		widescreenMode = !widescreenMode;
 		saveSettings({ widescreenMode: widescreenMode });
+	};
+
+	const toggleStickyPinnedModels = async () => {
+		stickyPinnedModels = !stickyPinnedModels;
+		saveSettings({ stickyPinnedModels: stickyPinnedModels });
 	};
 
 	const toggleChatBubble = async () => {
@@ -352,6 +358,7 @@
 		widescreenMode = $settings?.widescreenMode ?? false;
 		splitLargeChunks = $settings?.splitLargeChunks ?? false;
 		scrollOnBranchChange = $settings?.scrollOnBranchChange ?? true;
+		stickyPinnedModels = $settings?.stickyPinnedModels ?? false;
 		chatDirection = $settings?.chatDirection ?? 'auto';
 		userLocation = $settings?.userLocation ?? false;
 
@@ -434,6 +441,29 @@
 						type="button"
 					>
 						{#if highContrastMode === true}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div id="sticky-pinned-models-label" class=" self-center text-xs">
+						{$i18n.t('Stick Pinned Models')}
+					</div>
+
+					<button
+						class="p-1 px-3 text-xs flex rounded-sm transition"
+						on:click={() => {
+							toggleStickyPinnedModels();
+						}}
+						aria-labelledby="sticky-pinned-models-label"
+						type="button"
+					>
+						{#if stickyPinnedModels === true}
 							<span class="ml-2 self-center">{$i18n.t('On')}</span>
 						{:else}
 							<span class="ml-2 self-center">{$i18n.t('Off')}</span>

@@ -81,26 +81,40 @@
 	let newFolderId = null;
 
 	const initPinnedModelsSortable = () => {
-		const pinnedModelsList = document.getElementById('pinned-models-list');
-		if (pinnedModelsList && !$mobile) {
-			new Sortable(pinnedModelsList, {
-				animation: 150,
-				onUpdate: async (event) => {
-					const modelId = event.item.dataset.id;
-					const newIndex = event.newIndex;
+		const stickyList = document.getElementById('pinned-models-list-sticky');
+		const scrollableList = document.getElementById('pinned-models-list-scrollable');
 
-					const pinnedModels = $settings.pinnedModels;
-					const oldIndex = pinnedModels.indexOf(modelId);
+		const initSortable = (element) => {
+			if (element && !$mobile) {
+				new Sortable(element, {
+					animation: 150,
+					onUpdate: async (event) => {
+						const modelId = event.item.dataset.id;
+						const newIndex = event.newIndex;
 
-					pinnedModels.splice(oldIndex, 1);
-					pinnedModels.splice(newIndex, 0, modelId);
+						const pinnedModels = $settings.pinnedModels;
+						const oldIndex = pinnedModels.indexOf(modelId);
 
-					settings.set({ ...$settings, pinnedModels: pinnedModels });
-					await updateUserSettings(localStorage.token, { ui: $settings });
-				}
-			});
+						pinnedModels.splice(oldIndex, 1);
+						pinnedModels.splice(newIndex, 0, modelId);
+
+						settings.set({ ...$settings, pinnedModels: pinnedModels });
+						await updateUserSettings(localStorage.token, { ui: $settings });
+					}
+				});
+			}
+		};
+
+		if ($settings.stickyPinnedModels) {
+			initSortable(stickyList);
+		} else {
+			initSortable(scrollableList);
 		}
 	};
+
+	$: if ($settings.stickyPinnedModels !== undefined) {
+		tick().then(initPinnedModelsSortable);
+	}
 
 	const initFolders = async () => {
 		const folderList = await getFolders(localStorage.token).catch((error) => {
@@ -696,8 +710,8 @@
 			</div>
 		{/if}
 
-		<div class="relative flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
-			<div class="mt-0.5" id="pinned-models-list">
+		{#if $settings.stickyPinnedModels}
+			<div class="mt-0.5" id="pinned-models-list-sticky">
 				{#if ($models ?? []).length > 0 && ($settings?.pinnedModels ?? []).length > 0}
 					{#each $settings.pinnedModels as modelId (modelId)}
 						{@const model = $models.find((model) => model.id === modelId)}
@@ -740,6 +754,54 @@
 					{/each}
 				{/if}
 			</div>
+		{/if}
+
+		<div class="relative flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
+			{#if !$settings.stickyPinnedModels}
+				<div class="mt-0.5" id="pinned-models-list-scrollable">
+					{#if ($models ?? []).length > 0 && ($settings?.pinnedModels ?? []).length > 0}
+						{#each $settings.pinnedModels as modelId (modelId)}
+							{@const model = $models.find((model) => model.id === modelId)}
+							{#if model}
+								<div
+									class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200 cursor-grab"
+									data-id={modelId}
+								>
+									<a
+										class="grow flex items-center space-x-2.5 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+										href="/?model={modelId}"
+										on:click={() => {
+											selectedChatId = null;
+											chatId.set('');
+
+											if ($mobile) {
+												showSidebar.set(false);
+											}
+										}}
+										draggable="false"
+									>
+										<div class="self-center shrink-0">
+											<img
+												crossorigin="anonymous"
+												src={model?.info?.meta?.profile_image_url ??
+													`${WEBUI_BASE_URL}/static/favicon.png`}
+												class=" size-5 rounded-full -translate-x-[0.5px]"
+												alt="logo"
+											/>
+										</div>
+
+										<div class="flex self-center translate-y-[0.5px]">
+											<div class=" self-center text-sm font-primary line-clamp-1">
+												{model?.name ?? modelId}
+											</div>
+										</div>
+									</a>
+								</div>
+							{/if}
+						{/each}
+					{/if}
+				</div>
+			{/if}
 
 			{#if $config?.features?.enable_channels && ($user?.role === 'admin' || $channels.length > 0)}
 				<Folder
