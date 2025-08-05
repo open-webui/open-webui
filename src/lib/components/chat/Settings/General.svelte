@@ -11,7 +11,7 @@
 	import AdvancedParams from './Advanced/AdvancedParams.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
 
-	import { restartOpu, systemInfoOpu, healthCheckOpu } from '../Controls/Controls.svelte';
+	import { handleRestartClick, restartOpu, systemInfoOpu, healthCheckOpu } from '../Controls/Controls.svelte';
 
 	export let saveSettings: Function;
 	export let getModels: Function;
@@ -308,11 +308,11 @@
 						($settings.highContrastMode ?
 						' border-2 border-gray-300 dark : border-gray-700 bg-gray-50 dark:bg-gray-850 text-gray-900 dark:text-gray-100 ' +
 						($isRestarting ? 'opacity-50 cursor-not-allowed' :
-						'hover:bg-blue-100 dark:hover:bg-blue-900') : ' bg-blue-600 text-white ' +
-						($isRestarting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700 dark:bg-blue-600'))
+						'hover:bg-red-100 dark:hover:bg-red-900') : ' bg-red-600 text-white ' +
+						($isRestarting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-700 dark:bg-red-600'))
 					}
 					on:click={() => {
-						restartOpu(); // Restart logic
+						handleRestartClick(); //Pop up confirmation dialog and instantiate restart once confirmed
 						}
 					}>{$isRestarting ? $i18n.t('OPU Restarting...') : $i18n.t('Restart OPU Now')}
 				</button>
