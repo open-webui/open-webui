@@ -204,40 +204,48 @@
 			</DropdownMenu.Item>
 
 			{#if usage}
-				{#if usage?.user_ids?.length > 0}
-					<hr class=" border-gray-100 dark:border-gray-800 my-1 p-0" />
+				<hr class=" border-gray-100 dark:border-gray-800 my-1 p-0" />
 
-					<Tooltip
-						content={usage?.model_ids && usage?.model_ids.length > 0
-							? `${$i18n.t('Running')}: ${usage.model_ids.join(', ')} ✨`
-							: ''}
+				<Tooltip
+					content={usage?.requests_per_model && Object.keys(usage?.requests_per_model).length > 0
+						? `${$i18n.t('Running')}: ${Object.entries(usage?.requests_per_model).reduce((a, b) => a + b[0] + ' (' + b[1] + '), ', '').slice(0, -2)} ✨`
+						: ''}
+				>
+					<div
+						class="flex rounded-md py-1 px-3 text-xs gap-2.5 items-center"
+						on:mouseenter={() => {
+							getUsageInfo();
+						}}
 					>
-						<div
-							class="flex rounded-md py-1 px-3 text-xs gap-2.5 items-center"
-							on:mouseenter={() => {
-								getUsageInfo();
-							}}
-						>
-							<div class=" flex items-center">
-								<span class="relative flex size-2">
-									<span
-										class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"
-									/>
-									<span class="relative inline-flex rounded-full size-2 bg-green-500" />
-								</span>
-							</div>
+						<div class=" flex items-center">
+							<span class="relative flex size-2">
+								<span
+									class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"
+								/>
+								<span class="relative inline-flex rounded-full size-2 bg-green-500" />
+							</span>
+						</div>
 
-							<div class=" ">
+						<div class=" ">
+							{#if usage?.users_count}
 								<span class="">
 									{$i18n.t('Active Users')}:
 								</span>
 								<span class=" font-semibold">
-									{usage?.user_ids?.length}
+									{usage?.users_count}<br>
 								</span>
-							</div>
+							{/if}
+							{#if usage?.requests_per_model}
+								<span class="">
+									{$i18n.t('Running Requests')}:
+								</span>
+								<span class=" font-semibold">
+									{Object.values(usage?.requests_per_model).reduce((a, b) => a + b, 0)}
+								</span>
+							{/if}
 						</div>
-					</Tooltip>
-				{/if}
+					</div>
+				</Tooltip>
 			{/if}
 
 			<!-- <DropdownMenu.Item class="flex items-center py-1.5 px-3 text-sm ">
