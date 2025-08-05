@@ -88,11 +88,12 @@ class OAuthManager:
         return self.oauth.create_client(provider_name)
 
     def get_user_role(self, user, user_data):
-        if user and Users.get_num_users() == 1:
+        user_count = Users.get_num_users()
+        if user and user_count == 1:
             # If the user is the only user, assign the role "admin" - actually repairs role for single user on login
             log.debug("Assigning the only user the admin role")
             return "admin"
-        if not user and Users.get_num_users() == 0:
+        if not user and user_count == 0:
             # If there are no users, assign the role "admin", as the first user will be an admin
             log.debug("Assigning the first user the admin role")
             return "admin"
@@ -449,8 +450,6 @@ class OAuthManager:
                         log.debug(f"Updated profile picture for user {user.email}")
 
         if not user:
-            user_count = Users.get_num_users()
-
             # If the user does not exist, check if signups are enabled
             if auth_manager_config.ENABLE_OAUTH_SIGNUP:
                 # Check if an existing user with the same email already exists
