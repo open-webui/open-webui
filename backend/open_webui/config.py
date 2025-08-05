@@ -690,14 +690,18 @@ def load_oauth_providers():
     if GOOGLE_CLIENT_ID.value:
         configured_providers.append("Google")
     if MICROSOFT_CLIENT_ID.value:
-        configured_providers.append("Microsoft") 
+        configured_providers.append("Microsoft")
     if GITHUB_CLIENT_ID.value:
         configured_providers.append("GitHub")
-    
+
     if configured_providers and not OPENID_PROVIDER_URL.value:
         provider_list = ", ".join(configured_providers)
-        log.warning(f"⚠️  OAuth providers configured ({provider_list}) but OPENID_PROVIDER_URL not set - logout will not work!")
-        log.warning(f"Set OPENID_PROVIDER_URL to your OAuth provider's OpenID Connect discovery endpoint to fix logout functionality.")
+        log.warning(
+            f"⚠️  OAuth providers configured ({provider_list}) but OPENID_PROVIDER_URL not set - logout will not work!"
+        )
+        log.warning(
+            f"Set OPENID_PROVIDER_URL to your OAuth provider's OpenID Connect discovery endpoint to fix logout functionality."
+        )
 
 
 load_oauth_providers()
@@ -1328,6 +1332,10 @@ WEBHOOK_URL = PersistentConfig(
 
 ENABLE_ADMIN_EXPORT = os.environ.get("ENABLE_ADMIN_EXPORT", "True").lower() == "true"
 
+ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS = (
+    os.environ.get("ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS", "True").lower() == "true"
+)
+
 ENABLE_ADMIN_CHAT_ACCESS = (
     os.environ.get("ENABLE_ADMIN_CHAT_ACCESS", "True").lower() == "true"
 )
@@ -1367,7 +1375,7 @@ def validate_cors_origin(origin):
     parsed_url = urlparse(origin)
 
     # Check if the scheme is either http or https, or a custom scheme
-    schemes = ["http", "https" ] + CORS_ALLOW_CUSTOM_SCHEME
+    schemes = ["http", "https"] + CORS_ALLOW_CUSTOM_SCHEME
     if parsed_url.scheme not in schemes:
         raise ValueError(
             f"Invalid scheme in CORS_ALLOW_ORIGIN: '{origin}'. Only 'http' and 'https' and CORS_ALLOW_CUSTOM_SCHEME are allowed."
