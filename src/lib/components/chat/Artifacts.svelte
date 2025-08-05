@@ -110,18 +110,18 @@
 							<${''}script>
                             	${jsContent}
 							
-								// Function to send message to parent window
-								function sendToChat(message) {
+								// Function to send follow up message to parent window
+								function handleAdditionalArgs(message) {
 									if (window.parent) {
 										window.parent.postMessage({
-											type: 'chat-message',
+											type: 'handleAdditionalArgs',
 											message: message
-										}, '*');
+										}, '*'); // TODO: Change to window.location.origin
 									}
 								}
 								
-								// Make sendToChat available globally
-								window.sendToChat = sendToChat;
+								// Make handleAdditionalArgs available globally
+								window.handleAdditionalArgs = handleAdditionalArgs;
 							</${''}script>
                         </body>
                         </html>
@@ -162,8 +162,9 @@
 			window.addEventListener('message', function (event) {
 				// Here we verify the message is from the iframe
 				if (event.source === iframeElement.contentWindow) {
-					if (event.data.type === 'chat-message') {
-						dispatch('sendMessage', { message: event.data.message });
+					// TODO: Add checks for event.origin === window.location.origin
+					if (event.data.type === 'handleAdditionalArgs') {
+						dispatch('handleAdditionalArgs', { message: event.data.message });
 					}
 				}
 			});

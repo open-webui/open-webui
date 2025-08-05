@@ -56,6 +56,7 @@
 	import FilesOverlay from './MessageInput/FilesOverlay.svelte';
 	import Commands from './MessageInput/Commands.svelte';
 	import ToolServersModal from './ToolServersModal.svelte';
+	import AdditionalArgs from './MessageInput/AdditionalArgs.svelte';
 
 	import RichTextInput from '../common/RichTextInput.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
@@ -92,6 +93,7 @@
 	export let taskIds = null;
 
 	export let prompt = '';
+	export let additionalArgs = {};
 	export let files = [];
 
 	export let toolServers = [];
@@ -1082,18 +1084,29 @@
 											class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-gray-100 outline-hidden w-full pt-2.5 pb-[5px] px-1 resize-none h-fit max-h-80 overflow-auto"
 											id="chat-input-container"
 										>
+											{#if additionalArgs && Object.keys(additionalArgs).length > 0}
+												<AdditionalArgs
+													{additionalArgs}
+													onReset={() => {
+														additionalArgs = {};
+													}}
+												/>
+											{/if}
+
 											{#key $settings?.showFormattingToolbar ?? false}
 												<RichTextInput
 													bind:this={chatInputElement}
 													id="chat-input"
 													onChange={(e) => {
-														prompt = e.md;
+														// Upstream expects markdown/json payload; keep your `prompt` state in sync
+														// and preserve command detection
+														prompt = e.md ?? e.text ?? '';
 														command = getCommand();
 													}}
 													json={true}
 													messageInput={true}
 													showFormattingToolbar={$settings?.showFormattingToolbar ?? false}
-													floatingMenuPlacement={'top-start'}
+													floatingMenuPlacement="top-start"
 													insertPromptAsRichText={$settings?.insertPromptAsRichText ?? false}
 													shiftEnter={!($settings?.ctrlEnterToSend ?? false) &&
 														(!$mobile ||
@@ -1110,7 +1123,6 @@
 														if (selectedModelIds.length === 0 || !selectedModelIds.at(0)) {
 															toast.error($i18n.t('Please select a model first.'));
 														}
-
 														const res = await generateAutoCompletion(
 															localStorage.token,
 															selectedModelIds.at(0),
@@ -1120,19 +1132,15 @@
 																: null
 														).catch((error) => {
 															console.log(error);
-
 															return null;
 														});
-
-														console.log(res);
 														return res;
 													}}
 													oncompositionstart={() => (isComposing = true)}
 													oncompositionend={() => (isComposing = false)}
 													on:keydown={async (e) => {
 														e = e.detail.event;
-
-														const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
+														const isCtrlPressed = e.ctrlKey || e.metaKey;
 														const commandsContainerElement =
 															document.getElementById('commands-container');
 
@@ -1140,94 +1148,79 @@
 															stopResponse();
 														}
 
-														// Command/Ctrl + Shift + Enter to submit a message pair
+														// Cmd/Ctrl + Shift + Enter: submit a message pair
 														if (isCtrlPressed && e.key === 'Enter' && e.shiftKey) {
 															e.preventDefault();
 															createMessagePair(prompt);
 														}
 
-														// Check if Ctrl + R is pressed
+														// Cmd/Ctrl + R with empty prompt: regenerate last
 														if (prompt === '' && isCtrlPressed && e.key.toLowerCase() === 'r') {
 															e.preventDefault();
-															console.log('regenerate');
-
-															const regenerateButton = [
+															const btn = [
 																...document.getElementsByClassName('regenerate-response-button')
 															]?.at(-1);
-
-															regenerateButton?.click();
+															btn?.click();
 														}
 
+														// ArrowUp with empty prompt: edit last user msg
 														if (prompt === '' && e.key == 'ArrowUp') {
 															e.preventDefault();
-
-															const userMessageElement = [
-																...document.getElementsByClassName('user-message')
-															]?.at(-1);
-
-															if (userMessageElement) {
-																userMessageElement.scrollIntoView({ block: 'center' });
-																const editButton = [
+															const el = [...document.getElementsByClassName('user-message')]?.at(
+																-1
+															);
+															if (el) {
+																el.scrollIntoView({ block: 'center' });
+																const editBtn = [
 																	...document.getElementsByClassName('edit-user-message-button')
 																]?.at(-1);
-
-																editButton?.click();
+																editBtn?.click();
 															}
 														}
 
+														// Commands menu navigation
 														if (commandsContainerElement) {
-															if (commandsContainerElement && e.key === 'ArrowUp') {
+															if (e.key === 'ArrowUp') {
 																e.preventDefault();
 																commandsElement.selectUp();
-
-																const commandOptionButton = [
+																const opt = [
 																	...document.getElementsByClassName(
 																		'selected-command-option-button'
 																	)
 																]?.at(-1);
-																commandOptionButton.scrollIntoView({ block: 'center' });
+																opt?.scrollIntoView({ block: 'center' });
 															}
-
-															if (commandsContainerElement && e.key === 'ArrowDown') {
+															if (e.key === 'ArrowDown') {
 																e.preventDefault();
 																commandsElement.selectDown();
-
-																const commandOptionButton = [
+																const opt = [
 																	...document.getElementsByClassName(
 																		'selected-command-option-button'
 																	)
 																]?.at(-1);
-																commandOptionButton.scrollIntoView({ block: 'center' });
+																opt?.scrollIntoView({ block: 'center' });
 															}
-
-															if (commandsContainerElement && e.key === 'Tab') {
+															if (e.key === 'Tab') {
 																e.preventDefault();
-
-																const commandOptionButton = [
+																const opt = [
 																	...document.getElementsByClassName(
 																		'selected-command-option-button'
 																	)
 																]?.at(-1);
-
-																commandOptionButton?.click();
+																opt?.click();
 															}
-
-															if (commandsContainerElement && e.key === 'Enter') {
+															if (e.key === 'Enter') {
 																e.preventDefault();
-
-																const commandOptionButton = [
+																const opt = [
 																	...document.getElementsByClassName(
 																		'selected-command-option-button'
 																	)
 																]?.at(-1);
-
-																if (commandOptionButton) {
-																	commandOptionButton?.click();
-																} else {
-																	document.getElementById('send-message-button')?.click();
-																}
+																if (opt) opt?.click();
+																else document.getElementById('send-message-button')?.click();
 															}
 														} else {
+															// Send on Enter depending on setting (preserve upstream logic)
 															if (
 																!$mobile ||
 																!(
@@ -1236,14 +1229,8 @@
 																	navigator.msMaxTouchPoints > 0
 																)
 															) {
-																if (isComposing) {
-																	return;
-																}
+																if (isComposing) return;
 
-																// Uses keyCode '13' for Enter key for chinese/japanese keyboards.
-																//
-																// Depending on the user's settings, it will send the message
-																// either when Enter is pressed or when Ctrl+Enter is pressed.
 																const enterPressed =
 																	($settings?.ctrlEnterToSend ?? false)
 																		? (e.key === 'Enter' || e.keyCode === 13) && isCtrlPressed
@@ -1259,11 +1246,9 @@
 														}
 
 														if (e.key === 'Escape') {
-															console.log('Escape');
 															atSelectedModel = undefined;
 															selectedToolIds = [];
 															selectedFilterIds = [];
-
 															webSearchEnabled = false;
 															imageGenerationEnabled = false;
 															codeInterpreterEnabled = false;
@@ -1271,8 +1256,6 @@
 													}}
 													on:paste={async (e) => {
 														e = e.detail.event;
-														console.log(e);
-
 														const clipboardData = e.clipboardData || window.clipboardData;
 
 														if (clipboardData && clipboardData.items) {
@@ -1280,40 +1263,30 @@
 																if (item.type.indexOf('image') !== -1) {
 																	const blob = item.getAsFile();
 																	const reader = new FileReader();
-
-																	reader.onload = function (e) {
+																	reader.onload = function (ev) {
 																		files = [
 																			...files,
-																			{
-																				type: 'image',
-																				url: `${e.target.result}`
-																			}
+																			{ type: 'image', url: `${ev.target.result}` }
 																		];
 																	};
-
 																	reader.readAsDataURL(blob);
 																} else if (item?.kind === 'file') {
 																	const file = item.getAsFile();
 																	if (file) {
-																		const _files = [file];
-																		await inputFilesHandler(_files);
+																		await inputFilesHandler([file]);
 																		e.preventDefault();
 																	}
 																} else if (item.type === 'text/plain') {
 																	if (($settings?.largeTextAsFile ?? false) && !shiftKey) {
 																		const text = clipboardData.getData('text/plain');
-
 																		if (text.length > PASTED_TEXT_CHARACTER_LIMIT) {
 																			e.preventDefault();
 																			const blob = new Blob([text], { type: 'text/plain' });
 																			const file = new File(
 																				[blob],
 																				`Pasted_Text_${Date.now()}.txt`,
-																				{
-																					type: 'text/plain'
-																				}
+																				{ type: 'text/plain' }
 																			);
-
 																			await uploadFileHandler(file, true);
 																		}
 																	}

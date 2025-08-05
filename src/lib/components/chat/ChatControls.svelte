@@ -167,10 +167,10 @@
 							/>
 						</div>
 					{:else if $showArtifacts}
-						<Artifacts 
-							{history} 
-							on:sendMessage={(e) => {
-								dispatch('sendMessage', e.detail);
+						<Artifacts
+							{history}
+							on:handleAdditionalArgs={(e) => {
+								dispatch('handleAdditionalArgs', e.detail);
 							}}
 						/>
 					{:else if $showOverview}
@@ -253,11 +253,11 @@
 								/>
 							</div>
 						{:else if $showArtifacts}
-							<Artifacts 
-								{history} 
+							<Artifacts
+								{history}
 								overlay={dragged}
-								on:sendMessage={(e) => {
-									dispatch('sendMessage', e.detail);
+								on:handleAdditionalArgs={(e) => {
+									dispatch('handleAdditionalArgs', e.detail);
 								}}
 							/>
 						{:else if $showOverview}

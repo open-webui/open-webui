@@ -145,6 +145,7 @@
 
 	// Chat Input
 	let prompt = '';
+	let additionalArgs = {};
 	let chatFiles = [];
 	let files = [];
 	let params = {};
@@ -1466,7 +1467,8 @@
 			content: userPrompt,
 			files: _files.length > 0 ? _files : undefined,
 			timestamp: Math.floor(Date.now() / 1000), // Unix epoch
-			models: selectedModels
+			models: selectedModels,
+			...(additionalArgs && { additionalArgs })
 		};
 
 		// Add message to history and Set currentId to messageId
@@ -1481,6 +1483,11 @@
 		// focus on chat input
 		const chatInput = document.getElementById('chat-input');
 		chatInput?.focus();
+
+		// Reset additionalArgs after using it
+		if (additionalArgs) {
+			additionalArgs = {};
+		}
 
 		saveSessionSelectedModels();
 
@@ -1676,6 +1683,7 @@
 		messages = messages
 			.map((message, idx, arr) => ({
 				role: message.role,
+				...(message.additionalArgs && { additionalArgs: message.additionalArgs }),
 				...((message.files?.filter((file) => file.type === 'image').length > 0 ?? false) &&
 				message.role === 'user'
 					? {
@@ -2244,6 +2252,7 @@
 									{selectedModels}
 									bind:files
 									bind:prompt
+									bind:additionalArgs
 									bind:autoScroll
 									bind:selectedToolIds
 									bind:selectedFilterIds
@@ -2362,8 +2371,8 @@
 					{stopResponse}
 					{showMessage}
 					{eventTarget}
-					on:sendMessage={(e) => {
-						prompt = e.detail.message;
+					on:handleAdditionalArgs={(e) => {
+						additionalArgs = e.detail.message;
 					}}
 				/>
 			</PaneGroup>
