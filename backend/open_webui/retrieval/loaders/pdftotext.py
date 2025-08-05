@@ -184,9 +184,9 @@ class PdftotextLoaderAsync:
         """
         status = self.wait_for_task_status(queue_id)
         if status == 'completed':
-            status_response = self.check_status(task_id)
-            if status_response.get("result").get("status") == "completed":
-                return status_response.get("result").get('result')
+            result = self.check_status(task_id)
+            if result.get("result").get("status") == "completed":
+                return result.get("result").get('result')
         elif status == 'failed':
             raise Exception(f"OCR task {task_id} failed")
         else:
