@@ -128,6 +128,9 @@
 
 	let showCommands = false;
 
+	let generating = false;
+	let generationController = null;
+
 	let chat = null;
 	let tags = [];
 
@@ -1857,6 +1860,12 @@
 				scrollToBottom();
 			}
 		}
+
+		if (generating) {
+			generating = false;
+			generationController?.abort();
+			generationController = null;
+		}
 	};
 
 	const submitMessage = async (parentId, prompt) => {
@@ -1947,6 +1956,7 @@
 		history.messages[messageId] = message;
 
 		try {
+			generating = true;
 			const [res, controller] = await generateMoACompletion(
 				localStorage.token,
 				message.model,
@@ -1954,11 +1964,14 @@
 				responses
 			);
 
-			if (res && res.ok && res.body) {
+			if (res && res.ok && res.body && generating) {
+				generationController = controller;
 				const textStream = await createOpenAITextStream(res.body, $settings.splitLargeChunks);
 				for await (const update of textStream) {
 					const { value, done, sources, error, usage } = update;
 					if (error || done) {
+						generating = false;
+						generationController = null;
 						break;
 					}
 
@@ -2190,6 +2203,7 @@
 									transparentBackground={$settings?.backgroundImageUrl ??
 										$config?.license_metadata?.background_image_url ??
 										false}
+									{generating}
 									{stopResponse}
 									{createMessagePair}
 									onChange={(data) => {
