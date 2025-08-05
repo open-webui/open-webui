@@ -5,7 +5,7 @@
 
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
-	import { settings, showCallOverlay } from '$lib/stores';
+	import { settings, showCallOverlay, config } from '$lib/stores';
 
 	import VoiceVisualiser from './VoiceVisualiser.svelte';
 

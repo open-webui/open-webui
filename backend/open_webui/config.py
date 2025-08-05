@@ -3151,7 +3151,7 @@ DEFAULT_AUTOPLAY_SSML = PersistentConfig(
 
 DEFAULT_SSML_OVERRIDE_CALL = PersistentConfig(
   "DEFAULT_SSML_OVERRIDE_CALL",
-  "audio.ssml.ovreideCall",
+  "audio.ssml.overrideCall",
   os.getenv("DEFAULT_SSML_OVERRIDE_CALL", False),
 )
 

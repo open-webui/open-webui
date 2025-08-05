@@ -1618,7 +1618,7 @@ async def get_app_config(request: Request):
                     "ssml": {
                         "show": app.state.config.DEFAULT_SHOW_SSML,
                         "autoplay": app.state.config.DEFAULT_AUTOPLAY_SSML,
-                        "overideCall": app.state.config.DEFAULT_SSML_OVERRIDE_CALL,
+                        "overrideCall": app.state.config.DEFAULT_SSML_OVERRIDE_CALL,
                     }
                 },
                 "file": {
