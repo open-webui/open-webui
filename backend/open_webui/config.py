@@ -1994,6 +1994,41 @@ PINECONE_DIMENSION = int(os.getenv("PINECONE_DIMENSION", 1536))  # or 3072, 1024
 PINECONE_METRIC = os.getenv("PINECONE_METRIC", "cosine")
 PINECONE_CLOUD = os.getenv("PINECONE_CLOUD", "aws")  # or "gcp" or "azure"
 
+# ORACLE23AI (Oracle23ai Vector Search)
+
+ORACLE_DB_USE_WALLET = os.environ.get("ORACLE_DB_USE_WALLET", "false").lower() == "true"
+ORACLE_DB_USER = os.environ.get("ORACLE_DB_USER", None)              #
+ORACLE_DB_PASSWORD = os.environ.get("ORACLE_DB_PASSWORD", None) #
+ORACLE_DB_DSN = os.environ.get("ORACLE_DB_DSN", None)                  #
+ORACLE_WALLET_DIR = os.environ.get("ORACLE_WALLET_DIR", None)
+ORACLE_WALLET_PASSWORD = os.environ.get("ORACLE_WALLET_PASSWORD", None)
+ORACLE_VECTOR_LENGTH = os.environ.get("ORACLE_VECTOR_LENGTH", 768)
+
+ORACLE_DB_POOL_MIN = int(os.environ.get("ORACLE_DB_POOL_MIN", 2))
+ORACLE_DB_POOL_MAX = int(os.environ.get("ORACLE_DB_POOL_MAX", 10))
+ORACLE_DB_POOL_INCREMENT = int(os.environ.get("ORACLE_DB_POOL_INCREMENT", 1))
+
+log.info(f"VECTOR_DB: {VECTOR_DB}")
+log.info(f"ORACLE_DB_USE_WALLET: {ORACLE_DB_USE_WALLET}/type: {type(ORACLE_DB_USE_WALLET)}")
+log.info(f"ORACLE_DB_USER: {ORACLE_DB_USER}/type: {type(ORACLE_DB_USER)}")
+log.info(f"ORACLE_DB_PASSWORD: {ORACLE_DB_PASSWORD}/type: {type(ORACLE_DB_PASSWORD)}")
+log.info(f"ORACLE_DB_DSN: {ORACLE_DB_DSN}/type: {type(ORACLE_DB_DSN)}")
+log.info(f"ORACLE_WALLET_DIR: {ORACLE_WALLET_DIR}/type: {type(ORACLE_WALLET_DIR)}")
+log.info(f"ORACLE_WALLET_PASSWORD: {ORACLE_WALLET_PASSWORD}/type: {type(ORACLE_WALLET_PASSWORD)}")
+log.info(f"ORACLE_VECTOR_LENGTH: {ORACLE_VECTOR_LENGTH}")
+log.info(f"ORACLE_DB_POOL_MIN: {ORACLE_DB_POOL_MIN}")
+log.info(f"ORACLE_DB_POOL_MAX: {ORACLE_DB_POOL_MAX}")
+log.info(f"ORACLE_DB_POOL_INCREMENT: {ORACLE_DB_POOL_INCREMENT}")
+
+if VECTOR_DB == "oracle23ai" and not ORACLE_DB_USER or not ORACLE_DB_PASSWORD or not ORACLE_DB_DSN:
+    raise ValueError(
+        "Oracle23ai requires setting ORACLE_DB_USER, ORACLE_DB_PASSWORD, and ORACLE_DB_DSN."
+    )
+if VECTOR_DB == "oracle23ai" and ORACLE_DB_USE_WALLET and (not ORACLE_WALLET_DIR or not ORACLE_WALLET_PASSWORD):
+    raise ValueError(
+        "Oracle23ai requires setting ORACLE_WALLET_DIR and ORACLE_WALLET_PASSWORD when using wallet authentication."
+    )
+
 # S3 Vector
 S3_VECTOR_BUCKET_NAME = os.environ.get("S3_VECTOR_BUCKET_NAME", None)
 S3_VECTOR_REGION = os.environ.get("S3_VECTOR_REGION", None)
