@@ -2095,11 +2095,7 @@ async def process_chat_response(
                                         }
                                     )
 
-                        if (
-                            content_blocks[-1]["type"] == "reasoning"
-                            and content_blocks[-1].get("attributes", {}).get("type")
-                            == "reasoning_content"
-                        ):
+                        if content_blocks[-1]["type"] == "reasoning":
                             reasoning_block = content_blocks[-1]
                             if reasoning_block.get("ended_at") is None:
                                 reasoning_block["ended_at"] = time.time()
