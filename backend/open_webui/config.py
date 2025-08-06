@@ -856,6 +856,22 @@ ENABLE_DIRECT_CONNECTIONS = PersistentConfig(
 )
 
 ####################################
+# SCIM Configuration
+####################################
+
+SCIM_ENABLED = PersistentConfig(
+    "SCIM_ENABLED",
+    "scim.enabled",
+    os.environ.get("SCIM_ENABLED", "False").lower() == "true",
+)
+
+SCIM_TOKEN = PersistentConfig(
+    "SCIM_TOKEN",
+    "scim.token",
+    os.environ.get("SCIM_TOKEN", ""),
+)
+
+####################################
 # OLLAMA_BASE_URL
 ####################################
 
