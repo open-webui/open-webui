@@ -289,7 +289,7 @@
 
 	<div class=" space-y-3 overflow-y-scroll max-h-[28rem] lg:max-h-full">
 		<div>
-			<h1 class=" mb-2 text-base font-medium">{$i18n.t('UI')}</h1>
+			<h1 class=" mb-2 text-sm font-medium">{$i18n.t('UI')}</h1>
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
