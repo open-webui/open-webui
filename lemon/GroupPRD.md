@@ -164,7 +164,26 @@ Open WebUI 功能說明：使用者、群組與工具管理
 
 *   **新增成員**：如果 SQL Server 的記錄顯示使用者應屬於某個（或某些）群組，而使用者在 Open WebUI 中尚未加入，則系統會將使用者加入到這些群組中。如果 Open WebUI 系統中不存在具有相應名稱的群組，則會自動建立該群組。
 *   **移除成員**：如果 SQL Server 的記錄顯示使用者不應再屬於某個（或某些）群組（例如，該群組不再與該使用者關聯，或使用者在 SQL Server 中已無有效的群組記錄），而使用者在 Open WebUI 中仍是該群組的成員，則系統會將使用者從這些群組中移除。
+*   **安全群組例外**：具有 `"secureGroup_"` 前綴的群組為安全群組，具有特殊的同步行為：
+    *   使用者**可以**透過 SQL 同步被加入到安全群組
+    *   使用者**不會**因為 SQL 同步而被移除出安全群組
+    *   這確保了某些關鍵權限群組的成員資格不會因為 SQL 資料變更而意外丟失
 *   **執行時機**：此同步邏輯在每次使用者成功登入後執行。
+
+**安全群組 (Secure Groups) 詳細說明：**
+
+安全群組是一種特殊類型的群組，用於管理需要持久保護的權限。這些群組具有以下特性：
+
+1. **識別方式**：群組名稱以 `"secureGroup_"` 前綴開頭（例如：`secureGroup_Administrators`、`secureGroup_DataScientists`）
+2. **單向同步**：
+   - SQL Server 可以將使用者**加入**安全群組
+   - SQL Server **不能**將使用者從安全群組中移除
+   - 只有管理員透過 Open WebUI 介面才能將使用者從安全群組中移除
+3. **使用場景**：
+   - 需要額外保護的管理權限群組
+   - 專案關鍵成員群組
+   - 需要手動審核才能移除的特殊權限群組
+4. **優先級**：安全群組的保護優先級高於 SQL Server 的同步資料
 
 **詳細實施步驟：**
 
@@ -203,7 +222,14 @@ Open WebUI 功能說明：使用者、群組與工具管理
                 *   從結果中提取群組 ID，形成一個集合 `current_ouw_group_ids_set`。
             *   **C. 比較並執行同步操作 (基於 `final_target_ouw_group_ids_set` 和 `current_ouw_group_ids_set`)**：
                 *   **要加入的群組** (`groups_to_add_ids = final_target_ouw_group_ids_set - current_ouw_group_ids_set`)：對於每個 ID，調用 `groups_table.add_user_to_group(user_id=user.id, group_id=group_id_to_add)`。記錄結果。
-                *   **要移除的群組** (`groups_to_remove_ids = current_ouw_group_ids_set - final_target_ouw_group_ids_set`)：對於每個 ID，調用 `groups_table.remove_user_from_group(user_id=user.id, group_id=group_id_to_remove)`。記錄結果。
+                *   **要移除的群組** (需要特殊處理安全群組)：
+                    *   首先計算初步的移除集合：`groups_to_remove_ids_initial = current_ouw_group_ids_set - final_target_ouw_group_ids_set`
+                    *   **過濾安全群組**：對於 `groups_to_remove_ids_initial` 中的每個群組 ID：
+                        *   調用 `groups_table.get_group_by_id(group_id)` 獲取群組資訊
+                        *   檢查群組名稱是否以 `"secureGroup_"` 開頭
+                        *   如果是安全群組，將其從移除列表中排除，並記錄日誌說明該使用者保留在安全群組中
+                    *   最終得到 `groups_to_remove_ids_filtered`（不包含安全群組）
+                    *   對於 `groups_to_remove_ids_filtered` 中的每個 ID，調用 `groups_table.remove_user_from_group(user_id=user.id, group_id=group_id_to_remove)`。記錄結果。
     *   **錯誤處理與日誌**：函式內部應包含完整的 `try-except` 結構，詳細記錄操作和錯誤，確保任何同步失敗都不會影響核心登入/註冊流程（即不應向上拋出未處理的異常給呼叫它的 `auths.py` 中的函式）。
     *   **依賴**：此服務函式需要引入 `UserModel`, `Groups`, `GroupForm`, `Session`, `log`。
 
@@ -312,3 +338,25 @@ Open WebUI 功能說明：使用者、群組與工具管理
     *   在 `backend/open_webui/services/group_sync_service.py` 的 `synchronize_user_groups_from_sql` 函式內部，也應有詳細的錯誤處理和日誌記錄。
     *   核心目標：確保即使群組同步功能出現任何未預期的失敗（例如 SQL Server 連線問題、資料庫操作錯誤等），也**不會影響核心的使用者登入/註冊流程的完成**。
     *   應詳細記錄流程中的每一步操作及任何潛在的錯誤，例如 SQL 連線失敗、查詢無結果、群組建立/更新失敗、使用者加入/移除群組失敗等情況，以便於後續追蹤和調試。
+
+5.  **安全群組實作細節：**
+    *   **定義常數**：在 `group_sync_service.py` 中定義 `SECURE_GROUP_PREFIX = "secureGroup_"`
+    *   **檢查函式**：建立輔助函式 `is_secure_group(group_name: str) -> bool` 來判斷群組是否為安全群組
+    *   **同步邏輯修改**：
+        ```python
+        # 在計算要移除的群組時
+        groups_to_remove_ids_initial = current_ouw_group_ids_set - final_target_ouw_group_ids_set
+        groups_to_remove_ids_filtered = set()
+        
+        for group_id in groups_to_remove_ids_initial:
+            group = groups_table.get_group_by_id(group_id)
+            if group and group.name.startswith(SECURE_GROUP_PREFIX):
+                log.info(f"Skipping removal of user {user.email} from secure group '{group.name}' (ID: {group_id})")
+            else:
+                groups_to_remove_ids_filtered.add(group_id)
+        ```
+    *   **日誌記錄**：特別記錄安全群組的處理情況，包括跳過移除的原因
+    *   **測試建議**：
+        *   測試使用者被加入安全群組的情況
+        *   測試使用者不會被從安全群組移除的情況
+        *   測試混合情況（同時有普通群組和安全群組）

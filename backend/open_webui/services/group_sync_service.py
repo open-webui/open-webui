@@ -14,6 +14,24 @@ from ..models.groups import Groups, GroupForm, GroupModel
 
 log = logging.getLogger(__name__)
 
+# Secure Group Configuration
+SECURE_GROUP_PREFIX = "secureGroup_"
+
+def is_secure_group(group_name: str) -> bool:
+    """
+    Check if a group is a secure group based on its name prefix.
+    
+    Secure groups have special protection - users cannot be removed from them
+    during SQL synchronization. They can only be removed manually by admins.
+    
+    Args:
+        group_name: The name of the group to check
+        
+    Returns:
+        bool: True if the group is a secure group, False otherwise
+    """
+    return group_name.startswith(SECURE_GROUP_PREFIX) if group_name else False
+
 # SQL Server Connection Configuration
 # Priority: Environment Variables > Default Values
 SQL_SERVER = os.getenv("SQL_SERVER", "")
@@ -357,7 +375,22 @@ async def synchronize_user_groups_from_sql(user: UserModel, db: Session):
 
         # 2.C. Compare and execute sync operations
         groups_to_add_ids = final_target_ouw_group_ids_set - current_ouw_group_ids_set
-        groups_to_remove_ids = current_ouw_group_ids_set - final_target_ouw_group_ids_set
+        
+        # Calculate groups to remove, filtering out secure groups
+        groups_to_remove_ids_initial = current_ouw_group_ids_set - final_target_ouw_group_ids_set
+        groups_to_remove_ids = set()
+        
+        # Filter out secure groups from removal
+        for group_id_to_check in groups_to_remove_ids_initial:
+            try:
+                group = groups_table.get_group_by_id(group_id_to_check)
+                if group and is_secure_group(group.name):
+                    log.info(f"Preserving user {user.email} membership in secure group '{group.name}' (ID: {group_id_to_check}) - secure groups cannot be removed via SQL sync")
+                else:
+                    groups_to_remove_ids.add(group_id_to_check)
+            except Exception as e:
+                log.warning(f"Error checking group {group_id_to_check} for secure status: {str(e)}. Including in removal list.")
+                groups_to_remove_ids.add(group_id_to_check)
 
         if groups_to_add_ids:
             log.info(f"Adding user {user.email} to {len(groups_to_add_ids)} new groups: {groups_to_add_ids}")
@@ -384,8 +417,9 @@ async def synchronize_user_groups_from_sql(user: UserModel, db: Session):
                     log.error(f"Error removing user {user.email} from group ID {group_id_to_remove}: {str(e_remove)}", exc_info=True)
 
         total_time = time.time() - start_time
+        secure_groups_preserved = len(groups_to_remove_ids_initial) - len(groups_to_remove_ids)
         log.info(f"Group synchronization completed for user {user.email} in {total_time:.2f} seconds")
-        log.info(f"Summary for {user.email}: Added to {len(groups_to_add_ids)} groups, Removed from {len(groups_to_remove_ids)} groups.")
+        log.info(f"Summary for {user.email}: Added to {len(groups_to_add_ids)} groups, Removed from {len(groups_to_remove_ids)} groups, Preserved {secure_groups_preserved} secure group(s).")
 
     except Exception as e:
         log.error(f"Unhandled error during group synchronization for user {user.email}: {str(e)}", exc_info=True)
