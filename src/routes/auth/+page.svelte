@@ -101,18 +101,19 @@
 	};
 
 	const checkOauthCallback = async () => {
-		if (!$page.url.hash) {
-			return;
+		// Get the value of the 'token' cookie
+		function getCookie(name) {
+			const match = document.cookie.match(
+				new RegExp('(?:^|; )' + name.replace(/([.$?*|{}()[\]\\/+^])/g, '\\$1') + '=([^;]*)')
+			);
+			return match ? decodeURIComponent(match[1]) : null;
 		}
-		const hash = $page.url.hash.substring(1);
-		if (!hash) {
-			return;
-		}
-		const params = new URLSearchParams(hash);
-		const token = params.get('token');
+
+		const token = getCookie('token');
 		if (!token) {
 			return;
 		}
+
 		const sessionUser = await getSessionUser(token).catch((error) => {
 			toast.error(`${error}`);
 			return null;
@@ -120,6 +121,7 @@
 		if (!sessionUser) {
 			return;
 		}
+
 		localStorage.token = token;
 		await setSessionUser(sessionUser);
 	};

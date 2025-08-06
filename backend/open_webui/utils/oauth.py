@@ -520,7 +520,7 @@ class OAuthManager:
         response.set_cookie(
             key="token",
             value=jwt_token,
-            httponly=True,  # Ensures the cookie is not accessible via JavaScript
+            httponly=False,  # Required for frontend access
             samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
             secure=WEBUI_AUTH_COOKIE_SECURE,
         )
@@ -539,6 +539,6 @@ class OAuthManager:
         redirect_base_url = str(request.app.state.config.WEBUI_URL or request.base_url)
         if redirect_base_url.endswith("/"):
             redirect_base_url = redirect_base_url[:-1]
-        redirect_url = f"{redirect_base_url}/auth#token={jwt_token}"
+        redirect_url = f"{redirect_base_url}/auth"
 
         return RedirectResponse(url=redirect_url, headers=response.headers)
