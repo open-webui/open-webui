@@ -62,6 +62,7 @@
 	import FolderModal from './Sidebar/Folders/FolderModal.svelte';
 	import Sortable from 'sortablejs';
 	import { updateUserSettings } from '$lib/apis/users';
+	import Sidebar from '../icons/Sidebar.svelte';
 
 	const BREAKPOINT = 768;
 
@@ -518,15 +519,15 @@
 	data-state={$showSidebar}
 >
 	<div
-		class=" my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[260px] overflow-x-hidden z-50 {$showSidebar
+		class=" my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[260px] overflow-x-hidden scrollbar-hidden z-50 {$showSidebar
 			? ''
 			: 'invisible'}"
 	>
 		<div
-			class="px-1.5 py-2 flex justify-between space-x-1 text-gray-600 dark:text-gray-400 sticky top-0 z-10 bg-gray-50 dark:bg-gray-950"
+			class="px-1.5 pt-2 pb-1.5 flex justify-between space-x-1 text-gray-600 dark:text-gray-400 sticky top-0 z-10 bg-gray-50 dark:bg-gray-950"
 		>
 			<a
-				class="flex items-center rounded-lg p-1.5 h-full justify-center hover:bg-gray-100 dark:hover:bg-gray-900 transition no-drag-region"
+				class="flex items-center rounded-lg p-1.5 h-full justify-center hover:bg-gray-100 dark:hover:bg-gray-850 transition no-drag-region"
 				href="/"
 				draggable="false"
 				on:click={newChatHandler}
@@ -539,34 +540,23 @@
 				/>
 			</a>
 
-			<div class="flex flex-1 px-2">
+			<a href="/" class="flex flex-1 px-1.5" on:click={newChatHandler}>
 				<div class=" self-center font-medium text-gray-850 dark:text-white font-primary">
 					{$WEBUI_NAME}
 				</div>
-			</div>
-			<button
-				class=" cursor-pointer p-[7px] flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-				on:click={() => {
-					showSidebar.set(!$showSidebar);
-				}}
-			>
-				<div class=" m-auto self-center">
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke-width="2"
-						stroke="currentColor"
-						class="size-5"
-					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12"
-						/>
-					</svg>
-				</div>
-			</button>
+			</a>
+			<Tooltip content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}>
+				<button
+					class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition cursor-"
+					on:click={() => {
+						showSidebar.set(!$showSidebar);
+					}}
+				>
+					<div class=" self-center p-1.5">
+						<Sidebar />
+					</div>
+				</button>
+			</Tooltip>
 		</div>
 
 		<!-- {#if $user?.role === 'admin'}

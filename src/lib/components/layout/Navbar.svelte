@@ -21,12 +21,11 @@
 	import Menu from './Navbar/Menu.svelte';
 	import { page } from '$app/stores';
 	import UserMenu from './Sidebar/UserMenu.svelte';
-	import MenuLines from '../icons/MenuLines.svelte';
 	import AdjustmentsHorizontal from '../icons/AdjustmentsHorizontal.svelte';
 	import Map from '../icons/Map.svelte';
-	import { stringify } from 'postcss';
 	import PencilSquare from '../icons/PencilSquare.svelte';
 	import Plus from '../icons/Plus.svelte';
+	import Sidebar from '../icons/Sidebar.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -56,18 +55,19 @@
 					? 'md:hidden'
 					: ''} mr-1 self-start flex flex-none items-center text-gray-600 dark:text-gray-400"
 			>
-				<button
-					id="sidebar-toggle-button"
-					class="cursor-pointer px-2 py-2 flex rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-					on:click={() => {
-						showSidebar.set(!$showSidebar);
-					}}
-					aria-label="Toggle Sidebar"
-				>
-					<div class=" m-auto self-center">
-						<MenuLines />
-					</div>
-				</button>
+				<Tooltip content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}>
+					<button
+						id="sidebar-toggle-button"
+						class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition cursor-"
+						on:click={() => {
+							showSidebar.set(!$showSidebar);
+						}}
+					>
+						<div class=" self-center p-1.5">
+							<Sidebar />
+						</div>
+					</button>
+				</Tooltip>
 			</div>
 
 			<div
