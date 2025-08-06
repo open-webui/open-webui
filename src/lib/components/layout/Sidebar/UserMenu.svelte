@@ -140,7 +140,7 @@
 			{/if}
 
 			{#if help}
-				<hr class=" border-gray-100 dark:border-gray-800 my-1 p-0" />
+				<hr class=" border-gray-50 dark:border-gray-800 my-1 p-0" />
 
 				<!-- {$i18n.t('Help')} -->
 
@@ -186,7 +186,7 @@
 				</DropdownMenu.Item>
 			{/if}
 
-			<hr class=" border-gray-100 dark:border-gray-800 my-1 p-0" />
+			<hr class=" border-gray-50 dark:border-gray-800 my-1 p-0" />
 
 			<DropdownMenu.Item
 				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
@@ -207,7 +207,7 @@
 
 			{#if usage}
 				{#if usage?.user_ids?.length > 0}
-					<hr class=" border-gray-100 dark:border-gray-800 my-1 p-0" />
+					<hr class=" border-gray-50 dark:border-gray-800 my-1 p-0" />
 
 					<Tooltip
 						content={usage?.model_ids && usage?.model_ids.length > 0
