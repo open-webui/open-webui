@@ -121,7 +121,7 @@ async function* streamLargeDeltasAsRandomChunks(
 		}
 
 		let content = textStreamUpdate.value;
-		if (content.length < 5) {
+		if (content.length < 3) {
 			yield { done: false, value: content };
 			continue;
 		}
