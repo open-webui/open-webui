@@ -89,61 +89,59 @@
 		</Tooltip>
 	</div>
 
-	{#if admin}
-		<div class=" py-0.5 w-full justify-between">
-			<Tooltip
-				content={$i18n.t(
-					'Sets the number of tokens to batch before emitting events while streaming. Higher values reduce CPU usage of server, client and Redis, but may lead to choppy streaming.'
-				)}
-				placement="top-start"
-				className="inline-tooltip"
-			>
-				<div class="flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">
-						{$i18n.t('Streaming Batch Size')}
-					</div>
-					<button
-						class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
-						type="button"
-						on:click={() => {
-							params.streaming_batch_size = (params?.streaming_batch_size ?? null) === null ? 1 : null;
-						}}
-					>
-						{#if (params?.streaming_batch_size ?? null) === null}
-							<span class="ml-2 self-center"> {$i18n.t('Default')} </span>
-						{:else}
-							<span class="ml-2 self-center"> {$i18n.t('Custom')} </span>
-						{/if}
-					</button>
+	<div class=" py-0.5 w-full justify-between">
+		<Tooltip
+			content={$i18n.t(
+				'Sets the number of tokens to batch before emitting events while streaming. Higher values improve performance, but may lead to choppy streaming.'
+			)}
+			placement="top-start"
+			className="inline-tooltip"
+		>
+			<div class="flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Streaming Batch Size')}
 				</div>
-			</Tooltip>
+				<button
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
+					type="button"
+					on:click={() => {
+						params.streaming_batch_size = (params?.streaming_batch_size ?? null) === null ? 1 : null;
+					}}
+				>
+					{#if (params?.streaming_batch_size ?? null) === null}
+						<span class="ml-2 self-center"> {$i18n.t('Default')} </span>
+					{:else}
+						<span class="ml-2 self-center"> {$i18n.t('Custom')} </span>
+					{/if}
+				</button>
+			</div>
+		</Tooltip>
 
-			{#if (params?.streaming_batch_size ?? null) !== null}
-				<div class="flex mt-0.5 space-x-2">
-					<div class=" flex-1">
-						<input
-							id="steps-range"
-							type="range"
-							min="1"
-							max="100"
-							step="1"
-							bind:value={params.streaming_batch_size}
-							class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-						/>
-					</div>
-					<div>
-						<input
-							bind:value={params.streaming_batch_size}
-							type="number"
-							class=" bg-transparent text-center w-14"
-							min="1"
-							step="1"
-						/>
-					</div>
+		{#if (params?.streaming_batch_size ?? null) !== null}
+			<div class="flex mt-0.5 space-x-2">
+				<div class=" flex-1">
+					<input
+						id="steps-range"
+						type="range"
+						min="1"
+						max="100"
+						step="1"
+						bind:value={params.streaming_batch_size}
+						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+					/>
 				</div>
-			{/if}
-		</div>
-	{/if}
+				<div>
+					<input
+						bind:value={params.streaming_batch_size}
+						type="number"
+						class=" bg-transparent text-center w-14"
+						min="1"
+						step="1"
+					/>
+				</div>
+			</div>
+		{/if}
+	</div>
 
 	<div>
 		<Tooltip

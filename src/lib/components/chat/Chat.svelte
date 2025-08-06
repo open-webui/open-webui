@@ -1634,11 +1634,12 @@
 			params?.stream_response ??
 			true;
 
-		const stream_batch_size =
-			model?.info?.params?.streaming_batch_size ??
-			$settings?.params?.streaming_batch_size ??
-			params?.streaming_batch_size ??
-			1;
+		const stream_batch_size = Math.max(
+			model?.info?.params?.streaming_batch_size ?? 0,
+			$settings?.params?.streaming_batch_size ?? 0,
+			params?.streaming_batch_size ?? 0,
+			1
+			);
 
 		let messages = [
 			params?.system || $settings.system
