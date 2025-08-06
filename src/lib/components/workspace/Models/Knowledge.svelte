@@ -181,7 +181,7 @@
 						loading={file.status === 'uploading'}
 						type={file?.legacy
 							? `Legacy${file.type ? ` ${file.type}` : ''}`
-							: (file?.type ?? 'Collection')}
+							: (file?.type ?? 'collection')}
 						dismissible
 						on:dismiss={(e) => {
 							selectedItems = selectedItems.filter((_, idx) => idx !== fileIdx);
