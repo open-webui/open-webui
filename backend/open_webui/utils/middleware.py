@@ -1463,14 +1463,17 @@ async def process_chat_response(
 
                         reasoning_duration = block.get("duration", None)
 
+                        start_tag = block.get("start_tag", "")
+                        end_tag = block.get("end_tag", "")
+
                         if reasoning_duration is not None:
                             if raw:
-                                content = f'{content}\n{block["start_tag"]}{block["content"]}{block["end_tag"]}\n'
+                                content = f'{content}\n{start_tag}{block["content"]}{end_tag}\n'
                             else:
                                 content = f'{content}\n<details type="reasoning" done="true" duration="{reasoning_duration}">\n<summary>Thought for {reasoning_duration} seconds</summary>\n{reasoning_display_content}\n</details>\n'
                         else:
                             if raw:
-                                content = f'{content}\n{block["start_tag"]}{block["content"]}{block["end_tag"]}\n'
+                                content = f'{content}\n{start_tag}{block["content"]}{end_tag}\n'
                             else:
                                 content = f'{content}\n<details type="reasoning" done="false">\n<summary>Thinking…</summary>\n{reasoning_display_content}\n</details>\n'
 
@@ -1511,7 +1514,7 @@ async def process_chat_response(
 
                 return content.strip()
 
-            def convert_content_blocks_to_messages(content_blocks):
+            def convert_content_blocks_to_messages(content_blocks, raw=False):
                 messages = []
 
                 temp_blocks = []
@@ -1520,7 +1523,7 @@ async def process_chat_response(
                         messages.append(
                             {
                                 "role": "assistant",
-                                "content": serialize_content_blocks(temp_blocks),
+                                "content": serialize_content_blocks(temp_blocks, raw),
                                 "tool_calls": block.get("content"),
                             }
                         )
@@ -1540,7 +1543,7 @@ async def process_chat_response(
                         temp_blocks.append(block)
 
                 if temp_blocks:
-                    content = serialize_content_blocks(temp_blocks)
+                    content = serialize_content_blocks(temp_blocks, raw)
                     if content:
                         messages.append(
                             {
@@ -1936,8 +1939,8 @@ async def process_chat_response(
                                         ):
                                             reasoning_block = {
                                                 "type": "reasoning",
-                                                "start_tag": "think",
-                                                "end_tag": "/think",
+                                                "start_tag": "<think>",
+                                                "end_tag": "</think>",
                                                 "attributes": {
                                                     "type": "reasoning_content"
                                                 },
@@ -2253,7 +2256,9 @@ async def process_chat_response(
                             "tools": form_data["tools"],
                             "messages": [
                                 *form_data["messages"],
-                                *convert_content_blocks_to_messages(content_blocks),
+                                *convert_content_blocks_to_messages(
+                                    content_blocks, True
+                                ),
                             ],
                         }
 
